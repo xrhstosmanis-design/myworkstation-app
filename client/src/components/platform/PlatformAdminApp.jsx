@@ -148,6 +148,7 @@ export default function PlatformAdminApp(){
   const [showChatChooser,setShowChatChooser]=useState(false);
   const [showInternetSearch,setShowInternetSearch]=useState(false);
   const [showAiCommandCenter,setShowAiCommandCenter]=useState(false);
+  const [aiTwinSelection,setAiTwinSelection]=useState(null);
   const routingFormValues=useMemo(()=>deviceRoutingFormValues(terminalManager?.routing,routingTerminalPos),[terminalManager?.routing,routingTerminalPos]);
   const routingFormKey=[routingFormValues.terminalPos,routingFormValues.fiscalDeviceCode,routingFormValues.fiscalDisplayName,routingFormValues.storeEftposCode,routingFormValues.storeEftposName,routingFormValues.deliveryEftposCode,routingFormValues.deliveryEftposName].join("|");
 
@@ -160,7 +161,7 @@ export default function PlatformAdminApp(){
 
   const clearSession=(clearError=true)=>{
     localStorage.removeItem("token");localStorage.removeItem("platformUser");
-    setUser(null);setData(null);setShowSecurity(false);if(clearError)setError("");
+    setUser(null);setData(null);setShowSecurity(false);setAiTwinSelection(null);if(clearError)setError("");
   };
   const logout=async(clearError=true)=>{
     try{if(localStorage.getItem("token"))await request("/api/auth/logout",{method:"POST",body:"{}"})}catch{}
@@ -573,6 +574,7 @@ export default function PlatformAdminApp(){
     {showInternetSearch&&<InternetProductSearchPanel api={request} basePath="/api/platform/internet-product-search" companies={(data?.companies||[]).filter(company=>company.active)} onClose={()=>setShowInternetSearch(false)}/>}
     {showAiCommandCenter&&<AiCommandCenter
       request={request} companies={data?.companies||[]} loading={loading}
+      initialTwinSelection={aiTwinSelection} onTwinSelectionChange={setAiTwinSelection}
       onClose={()=>setShowAiCommandCenter(false)} onRefresh={load}
       onOpenChecks={()=>{setShowAiCommandCenter(false);setAnalyticsResult({page:true})}}
       onOpenCash={()=>{setShowAiCommandCenter(false);loadCashReport()}}
