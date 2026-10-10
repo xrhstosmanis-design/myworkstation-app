@@ -47,5 +47,31 @@ test('offer async success resets the submitted form and selection and reads back
   assert.equal(calls.filter(x=>x.options?.method==='POST').length,1);
   await input(query,'Two');await click(document.querySelector('.offers-product-search button'));
   assert.equal(document.querySelector('.promotion-product-list input').checked,false);
+  await act(async()=>{const type=form.elements.promotionType;type.value='BUY_X_GET_Y';type.dispatchEvent(new dom.window.Event('change',{bubbles:true}))});
+  const giftPicker=document.querySelector('.offers-workspace .promotion-gift-picker');
+  assert.ok(giftPicker,'gift offers must expose the required allowed-gift selection in this same form');
+  assert.match(giftPicker.textContent,/Two/);
+  await click(giftPicker.querySelector('input'));
+  assert.equal(giftPicker.querySelector('input').checked,true);
+  await input(query,'One');await click(document.querySelector('.offers-product-search button'));
+  assert.match(giftPicker.querySelector('.promotion-selected-gifts').textContent,/Two/);
+  await click(giftPicker.querySelector('.promotion-selected-gifts button'));
+  assert.match(giftPicker.textContent,/0 επιλεγμένα/);
+  await click(document.querySelector('.offers-product-search + .promotion-product-list input'));
+  await input(form.elements.buyQuantity,'1');await input(form.elements.freeQuantity,'1');
+  await act(async()=>form.dispatchEvent(new dom.window.SubmitEvent('submit',{bubbles:true,cancelable:true})));
+  assert.match(document.querySelector('.op-alert.error').textContent,/Επίλεξε τα προϊόντα/);
+  assert.equal(calls.filter(x=>x.options?.method==='POST').length,1,'no gift pool must never submit');
+  await input(query,'Two');await click(document.querySelector('.offers-product-search button'));
+  await click(giftPicker.querySelector('input'));
+  await act(async()=>form.dispatchEvent(new dom.window.SubmitEvent('submit',{bubbles:true,cancelable:true})));
+  const giftPayload=JSON.parse(calls.filter(x=>x.options?.method==='POST')[1].options.body);
+  assert.deepEqual(giftPayload.productIds,['p1']);assert.deepEqual(giftPayload.giftProductIds,['p2']);assert.equal(giftPayload.promotionType,'GIFT');
+  await act(async()=>{resolveCreate();await new Promise(r=>setTimeout(r,5))});
+  assert.equal(form.elements.promotionType.value,'PERCENT');
+  await act(async()=>{const type=form.elements.promotionType;type.value='BUY_X_GET_Y';type.dispatchEvent(new dom.window.Event('change',{bubbles:true}))});
+  assert.match(document.querySelector('.promotion-gift-picker').textContent,/0 επιλεγμένα/);
+
+
  }finally{await act(async()=>root.unmount());dom.window.close();for(const [key,descriptor] of previous){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key]}}
 });

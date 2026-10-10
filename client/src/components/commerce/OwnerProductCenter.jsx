@@ -2072,6 +2072,7 @@ export default function OwnerProductCenter({
                 </label>
               )}
               {promotionType === "BUY_X_GET_Y" && (
+                <>
                 <div className="op-two">
                   <label>
                     Αγορά Χ
@@ -2094,6 +2095,19 @@ export default function OwnerProductCenter({
                     />
                   </label>
                 </div>
+                <div className="promotion-product-picker promotion-gift-picker">
+                  <div className="section-heading">
+                    <div><b>Επιτρεπόμενα προϊόντα δώρου</b><small>{promotionGiftProducts.length} επιλεγμένα · μόνο αυτά θα εμφανιστούν στο POS</small></div>
+                    <div className="promotion-picker-actions">
+                      <button type="button" className="secondary" onClick={() => setPromotionGiftProducts(previous => [...new Set([...previous, ...visiblePromotionProducts.map(product => product.id)])])}>Όλα τα εμφανιζόμενα</button>
+                      <button type="button" className="secondary" onClick={() => setPromotionGiftProducts([])}>Κανένα</button>
+                    </div>
+                  </div>
+                  <p>Χρησιμοποίησε την αναζήτηση προϊόντων επάνω για να βρεις τα επιτρεπόμενα δώρα.</p>
+                  <div className="promotion-product-list">{visiblePromotionProducts.map(product => <label className="check" key={`offer-gift-${product.id}`}><input type="checkbox" checked={promotionGiftProducts.includes(product.id)} onChange={event => setPromotionGiftProducts(previous => event.target.checked ? [...new Set([...previous, product.id])] : previous.filter(id => id !== product.id))}/><span><b>{product.name}</b><small>{product.sku || "χωρίς SKU"} · {money(effectiveSalePrice(product))}</small></span></label>)}</div>
+                  <div className="promotion-selected-gifts">{promotionGiftProducts.map(id => {const product = promotionSelectionDetails[id] || catalog.find(row => row.id === id); return <div key={id}><span>{product?.name || "Επιλεγμένο δώρο"}</span><button type="button" className="secondary" onClick={() => setPromotionGiftProducts(previous => previous.filter(productId => productId !== id))}>Αφαίρεση δώρου: {product?.name || id}</button></div>})}</div>
+                </div>
+                </>
               )}
               {promotionType === "FIXED_PRICE" && (
                 <label>
