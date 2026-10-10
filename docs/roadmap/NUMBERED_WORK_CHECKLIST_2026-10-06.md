@@ -326,7 +326,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 ## 46 — Μαζική αλλαγή τιμών — preview, ταχύτητα και εφαρμογή
 
-- **Υπόλοιπο / όριο:** OWNER-BULK-SCROLL-01 (08Oct20:03) ολοκληρώθηκε: USER-reported PASS κύλισης στη μεγιστοποιημένη Μαζική αλλαγή τιμών· εικόνα170325/δεξιά μπάρα. SourcePR1903/merge1cd34448 με green CI και exact healthy deployment. Δεν εφαρμόστηκαν τιμές· screenshot client revision/ρόλος μη εκτεθειμένα. Πλήρες TODAY-04 preview/εφαρμογή/ταχύτητα audit μένει OPEN στον codex/central-management-live-audit-20261007. Δεν επαναλαμβάνεται η περασμένη κύλιση.
+- **Υπόλοιπο / όριο:** OWNER-BULK-SCROLL-01 (08Oct20:03) ολοκληρώθηκε: USER-reported PASS κύλισης στη μεγιστοποιημένη Μαζική αλλαγή τιμών· εικόνα170325/δεξιά μπάρα. SourcePR1903/merge1cd34448 με green CI και exact healthy deployment. Δεν εφαρμόστηκαν τιμές· screenshot client revision/ρόλος μη εκτεθειμένα. N46 preview/εφαρμογή/ταχύτητα ASSIGNED codex/n46-bulk-price-acceptance-20261010 με ρητή οδηγία10Oct13:11:59· checkpoint CHECKPOINTS/CHANGES/2026-10-10-n46-bulk-price-acceptance.md. Τα υπόλοιπα TODAY-04 μένουν στον προηγούμενο owner. Δεν επαναλαμβάνεται η περασμένη κύλιση.
 
 - **Tracker ID:** `TODAY-04`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** IN PROGRESS
