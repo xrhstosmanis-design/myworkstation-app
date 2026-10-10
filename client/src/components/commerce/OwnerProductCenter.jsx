@@ -572,7 +572,7 @@ export default function OwnerProductCenter({
       setBusy(false);
     }
   };
-  const createPromotion = async (event) => {
+  const createPromotion = async (event, barcodeEntry = false) => {
     event.preventDefault();
     clearStatus();
     setBusy(true);
@@ -582,7 +582,17 @@ export default function OwnerProductCenter({
     const storeIds = activeStores
       .filter((s) => f.get(`store_${s.id}`) === "on")
       .map((s) => s.id);
-    if (!promotionProducts.length) {
+    let productIds = promotionProducts;
+    if (barcodeEntry) {
+      try {
+        const barcode = String(f.get("barcode") || "").trim();
+        const rows = await api(`/api/owner-products/catalog?q=${encodeURIComponent(barcode)}&_=${Date.now()}`);
+        const matches = (rows || []).filter(product => (product.barcodes || []).some(row => row.barcode === barcode));
+        if (matches.length !== 1) throw new Error(matches.length ? "Το barcode έχει πολλαπλές αντιστοιχίσεις. Χρειάζεται έλεγχος." : "Δεν βρέθηκε ενεργό προϊόν με αυτό το barcode.");
+        productIds = [matches[0].id];
+      } catch (e) { setBusy(false); return setError(e.message); }
+    }
+    if (!productIds.length) {
       setBusy(false);
       return setError("Επίλεξε τουλάχιστον ένα προϊόν.");
     }
@@ -590,7 +600,7 @@ export default function OwnerProductCenter({
       setBusy(false);
       return setError("Επίλεξε τουλάχιστον ένα κατάστημα.");
     }
-    if (type === "FIXED_PRICE" && promotionProducts.length > 1) {
+    if (type === "FIXED_PRICE" && productIds.length > 1) {
       setBusy(false);
       return setError(
         "Η κοινή τελική τιμή επιτρέπεται μόνο σε ένα προϊόν. Για πολλά προϊόντα επίλεξε ποσοστό ή έκπτωση σε ευρώ.",
@@ -601,10 +611,12 @@ export default function OwnerProductCenter({
       return setError("Επίλεξε τα προϊόντα που επιτρέπεται να δοθούν ως δώρο.");
     }
     try {
-      const result = await api("/api/price-catalog/promotions/scoped/bulk", {
+      const result = await api(barcodeEntry ? "/api/price-catalog/promotions/scoped/barcode" : "/api/price-catalog/promotions/scoped/bulk", {
         method: "POST",
         body: JSON.stringify({
-          productIds: promotionProducts,
+          productIds,
+          barcode: barcodeEntry ? String(f.get("barcode") || "").trim() : undefined,
+          name: barcodeEntry ? String(f.get("name") || "").trim() : undefined,
           giftProductIds: type === "BUY_X_GET_Y" ? promotionGiftProducts : [],
           promotionType: type === "BUY_X_GET_Y" ? "GIFT" : "LEAFLET",
           offerMode:
@@ -689,7 +701,8 @@ export default function OwnerProductCenter({
     event.preventDefault();
     clearStatus();
     if (!excelFile) return setError("Επίλεξε αρχείο Excel.");
-    const f = new FormData(event.currentTarget),
+    const form = event.currentTarget;
+    const f = new FormData(form),
       sourceStoreId = String(f.get("sourceStoreId") || "");
     const targetStoreIds = activeStores
       .filter((s) => s.id !== sourceStoreId && f.get(`target_${s.id}`) === "on")
@@ -706,12 +719,10 @@ export default function OwnerProductCenter({
         method: "POST",
         body: JSON.stringify({ dataUrl, sourceStoreId, targetStoreIds }),
       });
-      setMessage(
-        `Εισήχθησαν ${result.created} γραμμές και εφαρμόστηκαν σε ${result.stores} καταστήματα.`,
-      );
       setExcelFile(null);
-      event.currentTarget.reset();
+      form.reset();
       await loadPromotions();
+      setMessage(`Εισήχθησαν ${result.created} γραμμές και εφαρμόστηκαν σε ${result.stores} καταστήματα.`);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -994,7 +1005,7 @@ export default function OwnerProductCenter({
         <div className="op-grid two promotion-import-workspace">
           <section className="op-box">
             <div className="promotion-import-heading"><span>1</span><div><h3>Νέα προσφορά με Barcode</h3><p>Σκάναρε το προϊόν και συμπλήρωσε την προσφορά.</p></div></div>
-            <form className="op-form" onSubmit={createPromotion}>
+            <form className="op-form" onSubmit={event => createPromotion(event, true)}>
               <label>
                 Barcode προϊόντος
                 <input
@@ -1088,13 +1099,12 @@ export default function OwnerProductCenter({
                     <input
                       name={`store_${store.id}`}
                       type="checkbox"
-                      defaultChecked
                     />
                     {store.name}
                   </label>
                 ))}
               </fieldset>
-              <button className="primary">Δημιουργία με barcode</button>
+              <button className="primary" disabled={busy}>Δημιουργία με barcode</button>
             </form>
           </section>
           <section className="op-box">
@@ -2170,7 +2180,7 @@ export default function OwnerProductCenter({
               {promotions.map((p) => (
                 <article key={p.id}>
                   <div>
-                    <b>{p.productName}</b>
+                    <b>{p.productName}</b>{p.name && <small>{p.name}</small>}
                     <small>
                       {p.promotionType === "GIFT"
                         ? `Αγορά ${Number(p.saleQuantity)} + ${Number(p.bonusQuantity)} δωρεάν`
