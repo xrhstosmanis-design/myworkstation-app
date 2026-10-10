@@ -1,0 +1,83 @@
+name: N40 one-time claim reconciliation
+on:
+  push:
+    branches: [codex/n40-full-twin-navigation-audit-20261010]
+permissions:
+  contents: read
+jobs:
+  reconcile:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: n40-claim-reconcile
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/n40-full-twin-navigation-audit-20261010
+          fetch-depth: 0
+      - name: Reconcile only exact claim files, never overwrite another owner
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess
+          read=lambda ref,path: subprocess.check_output(['git','show',f'{ref}:{path}']).decode()
+          tracker='docs/roadmap/OPEN_WORK_TRACKER.md'
+          active='CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md'
+          pending='docs/roadmap/PENDING_WORK.md'
+          numbered='docs/roadmap/NUMBERED_WORK_CHECKLIST_2026-10-06.md'
+          pdfs=['docs/roadmap/MyWorkStation_Numbered_Checklist_2026-10-06.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf']
+          ours=read('HEAD',tracker)
+          pattern=r'^### AI-CC-LIMITS .*?(?=^### |\Z)'
+          claim=re.search(pattern,ours,re.M|re.S).group()
+          assert 'codex/n40-full-twin-navigation-audit-20261010' in claim
+          entry=ours.split('\n## ',1)[0].rstrip()+'\n'
+          assert 'N40-NAV-CLAIM-20261010' in entry
+          section=re.search(r'^## 40 .*?(?=^## |\Z)',read('HEAD',numbered),re.M|re.S).group()
+          subprocess.run(['git','merge','--no-commit','--no-edit','origin/main'],check=False)
+          conflicts=set(subprocess.check_output(['git','diff','--name-only','--diff-filter=U']).decode().splitlines())
+          assert conflicts <= {tracker,active,pending,numbered,*pdfs}, f'Unexpected conflicts: {conflicts}'
+          latest=read('origin/main',tracker)
+          match=re.search(pattern,latest,re.M|re.S); assert match
+          assert 'Пр' not in match.group()
+          assert ('**Υπεύθυνη σελίδα / branch:** Προηγούμενος owner — νέα επέκταση μόνο με ανάθεση' in match.group()), 'N40 claimed elsewhere; stop'
+          Path(tracker).write_text(latest[:match.start()]+claim+latest[match.end():]+'\n\n'+entry)
+          for path in [active,pending]:
+              latest=read('origin/main',path)
+              assert 'N40-NAV-CLAIM-20261010' not in latest
+              Path(path).write_text(latest.rstrip()+'\n\n'+entry)
+          latest=read('origin/main',numbered)
+          match=re.search(r'^## 40 .*?(?=^## |\Z)',latest,re.M|re.S); assert match
+          Path(numbered).write_text(latest[:match.start()]+section+latest[match.end():])
+          checkpoint=Path('CHECKPOINTS/CHANGES/2026-10-10-n40-claim-validation.md')
+          checkpoint.write_text(checkpoint.read_text()+'\nConcurrent main changed shared documentation while PR2040 was open (mergeable_state dirty). Reconciliation retains fresh main wholesale outside the exact N40 section; N40 claim entries are appended to active/pending rather than competing with other owners at the top. PDFs regenerated from the combined source. No application changes; normal exact-head CI still required.\n')
+          PY
+          python3 -m pip install 'reportlab==4.4.9'
+          python3 docs/roadmap/generate-open-work-tracker.py
+          python3 docs/roadmap/generate-numbered-work-checklist.py
+          git rm .github/workflows/n40-reconcile-20261010.yml
+          git add CHECKPOINTS/CHANGES/2026-10-10-n40-claim-validation.md CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/NUMBERED_WORK_CHECKLIST_2026-10-06.md docs/roadmap/MyWorkStation_Numbered_Checklist_2026-10-06.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          test -z "$(git diff --name-only --diff-filter=U)"
+          git diff --cached --check -- '*.md' '.github/workflows/*.yml'
+          git commit -m 'docs(n40): reconcile exact ownership claim with concurrent main'
+          git push origin HEAD:refs/heads/codex/n40-full-twin-navigation-audit-20261010
+      - name: Export reconciled tracked source
+        run: |
+          git archive --format=tar.gz --output="$RUNNER_TEMP/n40-source-review.tar.gz" HEAD
+          git rev-parse HEAD > "$RUNNER_TEMP/n40-source-revision.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: n40-reconciled-source
+          path: |
+            ${{ runner.temp }}/n40-source-review.tar.gz
+            ${{ runner.temp }}/n40-source-revision.txt
+          retention-days: 1
