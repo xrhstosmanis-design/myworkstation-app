@@ -1,3 +1,13 @@
+## 10/10/2026 18:40 Athens — VOICE-ASSISTANT-01 / tracker32: ASSIGNED Owner cash entry / NOT TESTED
+
+Owner `codex/unified-voice-assistant-20261010` retained; related tracker32/printed30 has no named current implementing owner. Explicit user «ο ιδιοκτητης θα το εχει με module μονο για τα δικα του καταστηματα» and «συνεχισε». Bounded claim: existing AI_OWNER_ASSISTANT entry in CommerceHub, exact active selected store/current authorized company, canonical Owner cash source, opt-in voice/text and server module/role/store revalidation before provider, around reads and before returning an answer. No N40/N50 hierarchy/N51 StoreCloudPage redesign or other owner takeover.
+
+Protected input USER PASS and current-date Platform cash LIVE PASS published PR2130/main4b8ffe0c; sourcePR2123/release818d3f45. Owner capability currently absent/NOT TESTED, existing module commercialReady:false. Same OpenAI connection; fixed canonical GET/original session, strict date only, whitelisted report fields, closed shifts/call limits, no model/client scope/URL/SQL/write. Missing/foreign/inactive store, ordinary non-Owner, revoked company/role/session, inactive license/module or store override must fail before I/O. Existing authentication/OwnerCompanyAccess and store module rules reused, no empty-to-global fallback. Selected store/company/module changes abort speech/Ask and reject late results.
+
+Catalog can become available only for the implemented bounded cash capability, without automatic entitlement/price/credential/company-access grant. No new business/schema/financial/stock/fiscal operation. Read current AGENTS, active list, relevant module/auth/Owner/N51 checkpoints, manual/tracker/pending and mainhistory; preserve canonical calculations and all previous PASS. Full CI/exact healthy release required before live acceptance. Independent normal Owner enabled/disabled module, own/foreign/empty/inactive/switched-store and revocation/source failures remain separate from SuperAdmin support preview/CI. No security-sensitive test activation by this claim.
+
+Overall VOICE and32 OPEN/ASSIGNED. Sales/product/date/current-store and other domains/POS rollout remain future bounded work. Single next action after green claim/main: Owner cash entry source implementation and regression tests. Assignment retained until completion or named handoff.
+
 ## 10/10/2026 18:26 Athens - DAILY-BITE-IMPORT / PASS / definitive catalog saved
 
 **Owner/completion:** codex/daily-bite-browser-acceptance-20261010; original user-authorized handoff, issue #2054 importer scope only. Browser and Excel chooser worked. Synthetic LAB PASS published in PR #2134 (head fa61b731, full CI 38062587961 SUCCESS, merge e3d967c0); no replay or cleanup. DAILY BITE remains 9 departments; LAB remains 10.
@@ -2088,15 +2098,15 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 32 — AI Βοηθός Ιδιοκτήτη
 
-**Κατάσταση:** OPEN
+**Κατάσταση:** OPEN / ASSIGNED / Owner cash entry NOT TESTED
 
-**Υπόλοιπο / όρια PASS:** Σαφές επιτρεπόμενο scope, υλοποίηση και πραγματική αποδοχή.
+**Υπόλοιπο / όρια PASS:** Υπάρχον AI_OWNER_ASSISTANT μόνο με ενεργό module και δικά του ενεργά επιλεγμένα καταστήματα/current company. Bounded cash entry, permissions/module/context/revocation acceptance, κατόπιν sales/product/date και λοιπά domains. Platform LIVE PASS δεν αποτελεί Owner PASS.
 
-**Υπεύθυνη σελίδα / branch:** Δεν μεταφέρεται ανάθεση — έλεγχος τρέχοντος checkpoint πριν claim
+**Υπεύθυνη σελίδα / branch:** `codex/unified-voice-assistant-20261010`; no N40/N50/N51 takeover.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026 18:40Athens explicit Owner module/own-stores requirement and «συνεχισε». Entry/current-store guards/canonical Owner cash reader, same existing connection. `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`. Claim green/main before source.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Owner NOT TESTED. Separate input USER PASS and current-date Platform cash LIVE PASS preserved(PR2130). No entitlement/price/credential change. Next guarded entry/fullCI/exact release/actual scoped acceptance.
 
 ### 33 — Μηνιαία Αναφορά Ιδιοκτήτη
 
