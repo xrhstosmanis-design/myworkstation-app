@@ -1,6 +1,7 @@
-## N45 — populated Master clipping FAIL / same owner
+## 2026-10-10T12:46:52+03:00 — N45 / TODAY-03 remaining: final USER visual acceptance
 
-Bounded Master-only layout fix AWAITING LAB; exact de7d5c2e1363×936 selected TEST2 clips discount save/history. Final visual/no outer scroll OPEN. Owner codex/n45-product-center-visual-20261010; checkpoint2026-10-10-n45-product-center-visual.md. Other owners and prior PASS preserved.
+Populated Master layout/no overlap/maximized no outer scroll and normal/internal history reachability LIVE PASS exactee817cb1; sourcePR2061/2064 green fullCI/mainCI/Render. Completed clipping/overlap correction and live verification removed from pending. Only owner review of master-final-maximized.jpg remains. Same owner codex/n45-product-center-visual-20261010 retained; checkpoint2026-10-10-n45-product-center-visual.md/manual/tracker/PDF synchronized. No saved discount/price/stock/financial action or other-owner takeover; mobile/physical/broader business scope NOT TESTED. Single next action: explicit owner visual acceptance, then synchronize final45 closure. Historical claims below are superseded for45 by this current entry.
+
 
 ## N39 draft mutation/finalization race — isolated FAIL reproduced; bounded correction AWAITING CI/LAB
 
@@ -1128,21 +1129,8 @@ Same owner continues agent/today03-full-page-live-record-20261004. PR1700/PRCI42
 
 Bounded CSS-only follow-up limits desktop product picker list to250px and suppresses scrolling of the background document/overlay only while this colorful workspace is maximized. The shell retains overflow:auto for shorter/narrower screens; no controls clipped, fields/handlers unchanged, arbitrary result lists scroll. No overall VISUAL PASS; owner final production-image acceptance, mobile/tablet and populated Master fit NOT TESTED. TODAY01PASS/supplier preservation and other claimed work protected. Node20 frontend build / TABLE_SERVICE bundle guard and git diff --check PASS. Full CI/exact guarded deploy and fresh desktop geometry/screenshot AWAITING. Single next action: exact deployed desktop must have shell scrollHeight=clientHeight and all four offer types' controls visible; show owner real screenshot.
 
-## 04/10/2026 — TODAY-03 full-page request / same owner
 
-ASSIGNED agent/today03-full-page-20261004, same page. PR1699/CI4271–4272/guarded Render1965 succeeded; exact production720e4f2 health verified. Owner supplied screenshot and requested whole-page opening without scrolling. Production1363×936 offers screen observed shell908px/scrollHeight1230 and form818px: fields below fold. This supersedes the prior scrolling-card design, not the protected functionality PASS records.
 
-Bounded CSS-only change: maximized colorful workspace uses border-box full viewport without overlay padding; desktop offers product picker and settings placed side by side while keeping the same form/controls, handlers, store defaults and submit validation. Remove prior Master420px nested scroll. Product/result lists retain accessible scrolling for arbitrary record counts; narrow/short screens retain natural overflow rather than clipping controls. No source logic, API, pricing, offers submission, stock, auth or tenant changes. Current production data save/offer submission NOT TESTED, no financial/stock action. Existing TODAY01PASS, supplier preservation and separate counter/efood/Archive scopes protected. No new VISUAL PASS.
-
-Node20 frontend build / TABLE_SERVICE bundle guard and git diff --check PASS. Full CI and exact guarded deployment AWAITING. Next action: read-only production offer layout check for all four offer types, no submit, screenshot owner review. Mobile/full Master-card fit and owner final production acceptance NOT TESTED.
-
-## 04/10/2026 — TODAY-03 populated compact follow-up / same owner
-
-ASSIGNED agent/today03-colorful-live-evidence-20261004, same continuation. Colorful tabs LIVEc147747 afterPR1698/CI4269–4270/Render1964. Actual populated card1129px pushes history below viewport; CSS-only420px desktop scrolling card/compact discount fields follow-up AWAITING CI/LIVE/USER. All fields/handlers retained, mobile card unrestricted. No production save or new VISUAL PASS. Next: exactdeploy populated screen review; owner remains current page. Other scopes unchanged. See CHECKPOINTS/CHANGES/2026-10-04-today03-colorful-compact.md.
-
-## 04/10/2026 19:43 Athens — TODAY-03 approved visual direction / same owner
-
-ASSIGNED agent/today03-colorful-compact-20261004, continuation of the current TODAY page. Sparse prior appearance USER rejected; colorful compact mockup approved19:42 and implementation requested19:43. Shared CSS/class-only implementation AWAITING CI/LIVE/USER. No new VISUAL PASS. Preserve actual fields, product selection/edit/activation, prices, discounts, imports and API logic. See CHECKPOINTS/CHANGES/2026-10-04-today03-colorful-compact.md. TODAY-02 save and TODAY-04 counter failure remain outstanding; other TODAY-05–09 ownership unchanged. Do not touch independent efood/Archive/Gates.
 
 ## 04/10/2026 - TODAY UI continuation
 

@@ -321,8 +321,8 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 ## 45 — Κεντρική διαχείριση προϊόντων — τελική αποδοχή οθόνης
 
 - **Tracker ID:** `TODAY-03`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** IN PROGRESS
-- **Υπόλοιπο / όριο:** Πλήρης visual αποδοχή και no outer scroll. Ανάληψη10/10/2026 codex/n45-product-center-visual-20261010· populated Master clipping LIVE FAIL· bounded fix AWAITING LAB.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** SCOPED LIVE VISUAL PASS / AWAITING USER
+- **Υπόλοιπο / όριο:** Populated normal/maximize/no overlap/maximized no outer scroll PASS10/10/2026 exactee817cb1, sourcePR2061/2064 green fullCI/deploy. Μόνο τελική οπτική αποδοχή χρήστη εκκρεμεί· owner codex/n45-product-center-visual-20261010 retained. Manual/checkpoint/τελικές εικόνες ενημερώθηκαν· mobile/physical/πλήρεις άλλες λειτουργίες NOT TESTED.
 
 ## 46 — Μαζική αλλαγή τιμών — preview, ταχύτητα και εφαρμογή
 
