@@ -9,7 +9,7 @@ import OwnerWorkforceHub from "./components/cloud/OwnerWorkforceHub.jsx";
 
 const api=async(path,options={})=>{
   const token=localStorage.getItem("token");
-  const r=await fetch(path,{headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})},...options});
+  const r=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});
   const data=await r.json(); if(!r.ok)throw new Error(data.error||"Σφάλμα"); return data;
 };
 
