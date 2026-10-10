@@ -172,9 +172,10 @@ async function authoritativeShiftTotals(db,companyId,storeId,sessionId){
     SELECT COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SALE_CASH','CUSTOMER_RECEIPT_CASH') AND "reversedAt" IS NULL),0) AS "cashSales",
       COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SALE_CARD','SALE_IRIS','CUSTOMER_RECEIPT_CARD') AND "reversedAt" IS NULL),0) AS "cardSales",
       COALESCE(SUM("amount") FILTER (WHERE "type"='TRANSFER_AMOUNT' AND "reversedAt" IS NULL),0) AS "transferIn",
+      COALESCE(SUM("amount") FILTER (WHERE "type"='TRANSFER_OUT' AND "reversedAt" IS NULL),0) AS "transferOut",
       COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=true AND "reversedAt" IS NULL),0) AS "expenses"
     FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "sessionId"=${sessionId}`;
-  return {cashSales:money(rows[0]?.cashSales),cardSales:money(rows[0]?.cardSales),transferIn:money(rows[0]?.transferIn),expenses:money(rows[0]?.expenses)};
+  return {cashSales:money(rows[0]?.cashSales),cardSales:money(rows[0]?.cardSales),transferIn:money(rows[0]?.transferIn),transferOut:money(rows[0]?.transferOut),expenses:money(rows[0]?.expenses)};
 }
 async function existingAuditTables(db){
   const rows=await db.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"') AS "operator",to_regclass('"PosSaleActionAudit"') AS "actions",to_regclass('"PosSaleSafetyAudit"') AS "safety"`;
@@ -484,7 +485,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     const previousSafe=money(session.openingSafe),safeDelta=Number((body.safe-previousSafe).toFixed(2)),safeReason=String(body.safeReason||"").trim();
     if(safeDelta < -0.009 && safeReason.length < 3){const error=new Error(`Το Χρηματοκιβώτιο μειώθηκε από ${previousSafe.toFixed(2)} € σε ${body.safe.toFixed(2)} €. Απαιτείται αιτιολογία πριν κλείσει η βάρδια.`);error.status=409;throw error}
     const ledger=await authoritativeShiftTotals(tx,req.user.companyId,session.storeId,session.id);
-    const expected=session.openingOperational+ledger.cashSales+ledger.transferIn-ledger.expenses;
+    const expected=session.openingOperational+ledger.cashSales+ledger.transferIn-ledger.expenses-ledger.transferOut;
     const actual=body.drawer+body.custody+body.coins,variance=actual-expected,cardVariance=ledger.cardSales-body.eftposTotal;
     if(variance < -0.009){
       const shortage=Math.abs(variance),attemptedAt=new Date(),eventType=body.forceCloseWithShortage?'SHIFT_CLOSED_WITH_CONFIRMED_SHORTAGE':'SHIFT_CLOSE_SHORTAGE_ATTEMPT',details=JSON.stringify({sessionId:session.id,shiftLabel:session.shiftLabel,terminalPos:session.terminalPos,attemptedAt:attemptedAt.toISOString(),decision:body.forceCloseWithShortage?'CLOSE_WITH_SHORTAGE':'RECOUNT_OFFERED',declared:{drawer:body.drawer,custody:body.custody,coins:body.coins,safe:body.safe,eftposTotal:body.eftposTotal},declaredOperational:actual,expectedOperational:expected,variance,shortage});

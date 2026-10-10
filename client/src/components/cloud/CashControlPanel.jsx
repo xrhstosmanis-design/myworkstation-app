@@ -23,7 +23,7 @@ export default function CashControlPanel({api,store}){
   const [reportDate,setReportDate]=useState(()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()));
   const [fromTime,setFromTime]=useState("00:00"),[toTime,setToTime]=useState("23:59");
   const [openForm,setOpenForm]=useState({shiftLabel:"Πρωινή βάρδια",...initialAmounts,note:""});
-  const [closeForm,setCloseForm]=useState({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",...initialAmounts,note:""});
+  const [closeForm,setCloseForm]=useState({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",transferOut:"0",...initialAmounts,note:""});
 
   const load=async()=>{
     setLoading(true);setError("");
@@ -42,13 +42,14 @@ export default function CashControlPanel({api,store}){
         let ledgerSummary=null;
         try{
           const ledger=await api(`/api/transactions/stores/${store.id}/overview`);
-          ledgerSummary=ledger.summary||null;
+          ledgerSummary=ledger.summaryBySession?.[result.openSession.id]||ledger.summary||null;
         }catch{}
         setCloseForm(form=>({...form,
           cashSales:String(ledgerSummary?.cashSales??form.cashSales??0),
           cardSales:String(ledgerSummary?.cardSales??form.cardSales??0),
           expenses:String(ledgerSummary?.expensesTotal??form.expenses??0),
           transferIn:String(ledgerSummary?.transferIn??form.transferIn??0),
+          transferOut:String(ledgerSummary?.transferOut??form.transferOut??0),
           drawer:String(result.openSession.openingDrawer||0),
           custody:String(result.openSession.openingCustody||0),
           coins:String(result.openSession.openingCoins||0),
@@ -66,8 +67,8 @@ export default function CashControlPanel({api,store}){
   const closingOperational=useMemo(()=>number(closeForm.drawer)+number(closeForm.custody)+number(closeForm.coins),[closeForm]);
   const expectedOperational=useMemo(()=>{
     const opening=number(data?.openSession?.openingOperational);
-    return opening+number(closeForm.cashSales)+number(closeForm.transferIn)-number(closeForm.expenses);
-  },[data,closeForm.cashSales,closeForm.transferIn,closeForm.expenses]);
+    return opening+number(closeForm.cashSales)+number(closeForm.transferIn)-number(closeForm.expenses)-number(closeForm.transferOut);
+  },[data,closeForm.cashSales,closeForm.transferIn,closeForm.expenses,closeForm.transferOut]);
   const variance=closingOperational-expectedOperational;
   const lastClosed=(data?.recent||[]).find(row=>row.status==="CLOSED");
 
@@ -99,7 +100,7 @@ export default function CashControlPanel({api,store}){
       if(result.emailNotification?.status==="SENT")setMessage(`Η βάρδια έκλεισε και η αναφορά στάλθηκε με email. Διαφορά: ${money(result.variance)}. Έναρξη επόμενης: ${money(result.nextOpeningTotal)}.`);
       if(result.emailNotification?.status==="FAILED")setError("Η βάρδια έκλεισε κανονικά, αλλά το email αναφοράς δεν στάλθηκε. Ενημέρωσε τον διαχειριστή.");
       setEftposReview(result);
-      setCloseForm({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",...initialAmounts,note:""});await load();
+      setCloseForm({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",transferOut:"0",...initialAmounts,note:""});await load();
     }catch(err){setError(err.message)}finally{setBusy(false)}
   };
 

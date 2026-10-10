@@ -36,6 +36,9 @@ function storeRuntimePermissions(profile){
 
 function enforceStorePaymentPermissions(req,res,permissions){
   if(req.method!=="POST"||!String(req.originalUrl||"").startsWith("/api/transactions/stores/"))return true;
+  if(/\/cash-transfer(?:\?|$)/.test(String(req.originalUrl||""))&&(!permissions.includes("TRANSFER_AMOUNT")||req.body?.direction!=="OUT")){
+    res.status(403).json({error:"Δεν έχεις δικαίωμα μεταφοράς μετρητών προς τον Ιδιοκτήτη."});return false;
+  }
   const type=String(req.body?.type||"");
   const payment=type==="SUPPLIER_PAYMENT"||type==="OTHER_EXPENSE";
   if(type==="SUPPLIER_PAYMENT"&&!permissions.includes("SUPPLIER_PAYMENT")){
