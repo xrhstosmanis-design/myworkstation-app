@@ -320,7 +320,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `TODAY-03`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** IN PROGRESS
-- **Υπόλοιπο / όριο:** Πλήρης visual αποδοχή και no outer scroll.
+- **Υπόλοιπο / όριο:** Πλήρης visual αποδοχή και no outer scroll. Ανάληψη10/10/2026 codex/n45-product-center-visual-20261010· νέο LIVE visual check AWAITING.
 
 ## 46 — Μαζική αλλαγή τιμών — preview, ταχύτητα και εφαρμογή
 
