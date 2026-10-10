@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "[{\"controls\":[{\"count\":95,\"digest\":\"6797e90ae33958a54e6440064de0e4bd\",\"kind\":\"stock\"},{\"count\":86,\"digest\":\"10b073c7bbd68b34611e56bfc5063e52\",\"kind\":\"movement\"},{\"count\":80,\"digest\":\"eb85dc3a33b0834b825b0903377108ec\",\"kind\":\"sale\"},{\"count\":80,\"digest\":\"d10c39853f6863df392defd3274c32e5\",\"kind\":\"payment\"},{\"count\":36,\"digest\":\"ade9c3b7608a6046b4187407a51ba527\",\"kind\":\"shift\"},{\"count\":118,\"digest\":\"ed142a01d3cfbd16986b9931d14c474b\",\"kind\":\"transaction\"},{\"count\":6777,\"digest\":\"0548c1771d63b553ae571e07c5dbfbf1\",\"kind\":\"control_other_stock\"}],\"fixture_count\":2,\"observed\":\"2026-10-10T15:08:31.528151Z\",\"shifts\":[{\"cardSales\":0,\"cashSales\":0,\"eftposTotal\":0,\"expenses\":0,\"id\":\"3953929c-0be6-44d9-827a-282faab1dc6f\",\"status\":\"OPEN\",\"terminalPos\":\"MAIN\"},{\"cardSales\":0,\"cashSales\":0,\"eftposTotal\":0,\"expenses\":0,\"id\":\"f23ce42c-4ea2-453c-9710-65d09eb90480\",\"status\":\"OPEN\",\"terminalPos\":\"LAB-POS-02\"}]}]"
+    }
+  ],
+  "isError": false
+}
