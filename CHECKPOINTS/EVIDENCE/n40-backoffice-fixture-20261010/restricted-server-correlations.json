@@ -1,0 +1,158 @@
+{
+  "revision": "2e1f4afe7d7eca6803f39c81d95ab19a70cd01f7",
+  "terminal": "Chrome cloud tab22",
+  "fixture": "n40.backoffice.20261010@myworkstation.invalid",
+  "passwordGateCompletedObserved": true,
+  "records": [
+    {
+      "timestamp": "2026-10-10T16:24:18.923297198Z",
+      "version": 1,
+      "traceId": "n40-1f3a54d0e54a4ed79bf350055929cd76",
+      "route": "/api/platform/store-modules/companies/:value/stores/:value/check-packages",
+      "method": "GET",
+      "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+      "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+      "companyIds": [
+        "cmtpopbgk000prhb5qc60zxus"
+      ],
+      "storeIds": [
+        "cmtpopbgo000trhb5ng9ytiru"
+      ],
+      "storeScopeInvalid": false,
+      "companyScopeInvalid": false,
+      "scopeTruncated": false,
+      "storeMatches": true,
+      "companyMatches": true,
+      "status": 403,
+      "role": "EMPLOYEE",
+      "supportStoreId": null,
+      "side": "server",
+      "source": "correlation-header"
+    },
+    {
+      "timestamp": "2026-10-10T16:24:19.047503081Z",
+      "version": 1,
+      "traceId": "n40-530b80fbc344472c85fa2451c1b35622",
+      "route": "/api/platform/companies/:value/stores/:value/device-routing",
+      "method": "GET",
+      "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+      "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+      "companyIds": [
+        "cmtpopbgk000prhb5qc60zxus"
+      ],
+      "storeIds": [
+        "cmtpopbgo000trhb5ng9ytiru"
+      ],
+      "storeScopeInvalid": false,
+      "companyScopeInvalid": false,
+      "scopeTruncated": false,
+      "storeMatches": true,
+      "companyMatches": true,
+      "status": 403,
+      "role": "EMPLOYEE",
+      "supportStoreId": null,
+      "side": "server",
+      "source": "correlation-header"
+    },
+    {
+      "timestamp": "2026-10-10T16:24:19.415603409Z",
+      "version": 1,
+      "traceId": "n40-273a126929e046efb7eab53ac679aa44",
+      "route": "/api/platform/cash-control/daily",
+      "method": "GET",
+      "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+      "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+      "companyIds": [
+        "cmtpopbgk000prhb5qc60zxus"
+      ],
+      "storeIds": [
+        "cmtpopbgo000trhb5ng9ytiru"
+      ],
+      "storeScopeInvalid": false,
+      "companyScopeInvalid": false,
+      "scopeTruncated": false,
+      "storeMatches": true,
+      "companyMatches": true,
+      "status": 403,
+      "role": "EMPLOYEE",
+      "supportStoreId": null,
+      "side": "server",
+      "source": "correlation-header"
+    },
+    {
+      "timestamp": "2026-10-10T16:24:19.603868863Z",
+      "version": 1,
+      "traceId": "n40-b8310bfce5404ea9bd69281db796c11f",
+      "route": "/api/platform/store-modules/companies/:value/stores/:value",
+      "method": "GET",
+      "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+      "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+      "companyIds": [
+        "cmtpopbgk000prhb5qc60zxus"
+      ],
+      "storeIds": [
+        "cmtpopbgo000trhb5ng9ytiru"
+      ],
+      "storeScopeInvalid": false,
+      "companyScopeInvalid": false,
+      "scopeTruncated": false,
+      "storeMatches": true,
+      "companyMatches": true,
+      "status": 403,
+      "role": "EMPLOYEE",
+      "supportStoreId": null,
+      "side": "server",
+      "source": "correlation-header"
+    },
+    {
+      "timestamp": "2026-10-10T16:24:19.699809318Z",
+      "version": 1,
+      "traceId": "n40-1a1f37ce97264c22b49bfdeb7619a664",
+      "route": "/api/platform/companies/:value/stores/:value/video-connection",
+      "method": "GET",
+      "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+      "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+      "companyIds": [
+        "cmtpopbgk000prhb5qc60zxus"
+      ],
+      "storeIds": [
+        "cmtpopbgo000trhb5ng9ytiru"
+      ],
+      "storeScopeInvalid": false,
+      "companyScopeInvalid": false,
+      "scopeTruncated": false,
+      "storeMatches": true,
+      "companyMatches": true,
+      "status": 403,
+      "role": "EMPLOYEE",
+      "supportStoreId": null,
+      "side": "server",
+      "source": "correlation-header"
+    },
+    {
+      "timestamp": "2026-10-10T16:24:27.866654454Z",
+      "version": 1,
+      "traceId": "n40-21f107e4757c4fa4a5a9f28516721e5e",
+      "route": "/api/platform/store-modules/companies/:value/stores/:value/check-packages",
+      "method": "GET",
+      "expectedCompanyId": "cmtpopbgk000prhb5qc60zxus",
+      "expectedStoreId": "cmtpopbgo000trhb5ng9ytiru",
+      "companyIds": [
+        "cmtpopbgk000prhb5qc60zxus"
+      ],
+      "storeIds": [
+        "cmtpopbgo000trhb5ng9ytiru"
+      ],
+      "storeScopeInvalid": false,
+      "companyScopeInvalid": false,
+      "scopeTruncated": false,
+      "storeMatches": true,
+      "companyMatches": true,
+      "status": 401,
+      "role": null,
+      "supportStoreId": null,
+      "side": "server",
+      "source": "correlation-header"
+    }
+  ]
+}
