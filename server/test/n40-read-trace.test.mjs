@@ -55,6 +55,16 @@ test("server diagnostic emission is bounded and resets without blocking requests
   const send=()=>{const res=new EventEmitter();res.statusCode=200;middleware({method:"GET",url:"/api/platform",headers:{"x-mws-n40-store":N40_LAB_STORE,"x-mws-n40-company":scope.companyId,"x-mws-n40-trace":id}},res,()=>next++);res.emit("finish")};
   send();send();send();assert.equal(logs.length,2);assert.equal(next,3);clock+=60000;send();assert.equal(logs.length,3);assert.equal(next,4);
 });
+test("legacy support polling cannot consume the correlated Twin request budget",()=>{
+  const logs=[];let next=0,clock=100000;
+  const middleware=createN40ReadTrace({log:(...args)=>logs.push(JSON.parse(args[1])),now:()=>clock,limit:2,legacyLimit:1});
+  const send=correlated=>{const res=new EventEmitter();res.statusCode=200;middleware({method:"GET",url:"/api/platform/report?storeId="+N40_LAB_STORE,headers:correlated?n40ReadHeaders("/api/platform/report",scope,"GET",uuid).headers:{} ,user:{tokenType:"BACKOFFICE_USER",isSuperAdmin:true,companyId:scope.companyId,supportContext:scope}},res,()=>next++);res.emit("finish")};
+  // Node header names match the real HTTP boundary's lowercase representation.
+  const headerSend=()=>{const res=new EventEmitter();res.statusCode=200;middleware({method:"GET",url:"/api/platform/report",headers:{"x-mws-n40-store":N40_LAB_STORE,"x-mws-n40-company":scope.companyId,"x-mws-n40-trace":id}},res,()=>next++);res.emit("finish")};
+  for(let i=0;i<100;i++)send(false);headerSend();headerSend();headerSend();
+  assert.equal(logs.filter(x=>x.source==="authenticated-support-context").length,1);assert.equal(logs.filter(x=>x.source==="correlation-header").length,2);assert.equal(next,103);
+  clock+=60000;send(false);headerSend();assert.equal(logs.length,5);assert.equal(next,105);
+});
 test("real local HTTP response retains denial and correlates only sanitized GET metadata",async()=>{
   const logs=[],middleware=createN40ReadTrace({log:(...args)=>logs.push(args)});
   const server=createServer((req,res)=>middleware(req,res,()=>{res.statusCode=403;res.end("ordinary-denial-body")}));
