@@ -1,3 +1,7 @@
+## 10/10/2026 20:18 Athens — DAILY BITE POS screenshot preset v2 / AWAITING CI
+
+Owner `codex/daily-bite-pos-layout-20261010`, issue #2054. Supersedes conflicted PR #2148 only as source-delivery vehicle; scope is unchanged. Current-main rebased implementation adds a Super Admin read-only DAILY BITE screenshot preset resolver: DAILY BITE company only, exact normalized active-product matching only, missing/ambiguous items reported instead of guessed, MyWorkStation theme, no automatic publication and no product/store mutation. Ten supplied screenshot categories are mapped; four category slots remain blank. Coffee/KAT modifier reuse remains a separate next step. Protected state: 9 departments / 8,753 imported DAILY BITE products; no reimport or department recreation.
+
 ## 10/10/2026 20:04 Athens - VOICE-ASSISTANT-01 / tracker32: LAB company module activation LIVE PASS; normal Owner sign-in OPEN
 
 Same owner `codex/unified-voice-assistant-20261010` retained. User action-time approval «εγκρινω» at19:59:25 Athens covers only AI_OWNER_ASSISTANT in MYWORKSTATION LAB and its two current virtual stores, no pricing/plan/other-company change. Existing pre-action claim/handoff main204f9cec/PR2143/docs CI38068245468+38068294528 SUCCESS. No source or deploy change; fresh actual browser health17:00:55.359Z ok/version0.22.0+kat-test-pos/exact released2e1f4afe7d7eca6803f39c81d95ab19a70cd01f7 (full source/main2188/0/0, PR2139+2141, guardedRender38067034314).
