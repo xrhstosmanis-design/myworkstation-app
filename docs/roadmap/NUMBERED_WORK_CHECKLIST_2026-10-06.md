@@ -263,7 +263,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Συνέχεια 10/10:** PR2020/2026 merged, παραγωγή aec8323 περιλαμβάνει τις διορθώσεις. TEST1 stock9· ledger9/difference0/11κινήσεις/duplicates0 LIVE read-only PASS μετά επαναφορά browser. Named continuation ίδιας ανάθεσης, πλήρες39 OPEN. Checkpoint `2026-10-10-n39-resume.md`.
 
-- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER PASS21:13: normal/max κύλιση και πλήρες Έναρξη/κάτω περιεχόμενο. PR1916/full CI PASS, independently verified1a71471 LIVE. Bounded scroll CLOSED· πλήρες INVENTORY-ADV OPEN / ASSIGNED codex/n39-inventory-acceptance-2026101010Oct; TODAY-07 retains previous owner. Bounded live report-ledger finalization LAB PASS10Oct:11→10/report−1/oneledger−1. FullN39OPEN: αιτιολογία/recount/roles/concurrency/transfer/waste/expiry/ownconsumption. LIVE FAIL προορισμών μεταφοράς από scoped operations· bounded fix AWAITING LAB, χωρίς πράξη stock. Gate2 και TODAY-07 προστατεύονται.
+- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER PASS21:13: normal/max κύλιση και πλήρες Έναρξη/κάτω περιεχόμενο. PR1916/full CI PASS, independently verified1a71471 LIVE. Bounded scroll CLOSED· πλήρες INVENTORY-ADV OPEN / ASSIGNED codex/n39-inventory-acceptance-2026101010Oct; TODAY-07 retains previous owner. Bounded live report-ledger finalization LAB PASS10Oct:11→10/report−1/oneledger−1. FullN39OPEN: αιτιολογία/recount/roles/concurrency/transfer/waste/expiry/ownconsumption. LIVE PASS επιλογέα προορισμού PR2039· νέα TRANSFER-01 LIVE FAIL χωρίς postings: SQL-managed Product/ανύπαρκτο Prisma delegate, bounded lookup fix AWAITING LAB. Gate2 και TODAY-07 προστατεύονται.
 
 - **Tracker ID:** `INVENTORY-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN / ASSIGNED — updated10/10/2026, codex/n39-inventory-acceptance-20261010
@@ -273,6 +273,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 - **Tracker ID:** `AI-CC-LIMITS`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΑΡΧΙΚΟ ΠΛΑΝΟ CLOSED / NOT TESTED
 - **Υπόλοιπο / όριο:** Τα clicks μετάβασης Full Digital Twin δεν δοκιμάστηκαν· οι οπτικές αποδοχές 1–14 δεν ανοίγουν ξανά.
+- **Νεότερη ανάληψη 10/10/2026:** OPEN / ASSIGNED `codex/n40-full-twin-navigation-audit-20261010` — έξι μεταβάσεις Full Digital Twin, διατήρηση/επιστροφή καταστήματος και ασφαλής ακύρωση μη έγκυρης επιλογής. PR #2040 / N40-NAV-CLAIM-20261010. Υλοποίηση και LAB NOT TESTED· οπτικές αποδοχές 1–14 προστατευμένες.
 
 ## 41 — Oxygen, Radio, προαιρετικά modules και χρεώσεις
 

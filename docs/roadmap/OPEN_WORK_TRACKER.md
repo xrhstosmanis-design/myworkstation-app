@@ -2,6 +2,10 @@
 
 Same owner codex/n44-product-vat-acceptance-20261010; claim PR2038/CI38034609966 merged61ddb47. One TEST2 name-only save rejected with mandatory barcode snapshot message. VAT editor omits expectedBarcodeIds; existing server guard from PR1834/5e4c8a8b is protected LAB PASS and must remain. No successful product mutation/restore needed. Current catalog already returns barcode row IDs. Bounded fix sends IDs of the freshly opened card from this third editor; preserve supplierCodes, barcode attributes, stores, same-page reload and server stale409. Test actual handlers reject missing snapshot and retain draft on stale rejection. No backend/schema/data/stock/fiscal/payment/auth changes. Exact deploy and fresh LAB save/readback required; supplier fixture and alternateVAT/storecontrol acceptance remain NOT TESTED. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n44-product-vat-acceptance.md.
 
+## N39 transfer product lookup — LIVE FAIL / bounded fix AWAITING LAB
+
+Same owner codex/n39-inventory-acceptance-20261010. PR2039/mainfbfe12dc/full PR2025PASS/0FAIL/0SKIP/mainCI38035242201/guardedRender38035420093SUCCESS and exacthealth verified. Destination selector now LIVE PASS from scoped operations with fixed source. New qty1 TRANSFER-01 failed internalerror before postings; source9/ledger9/9/diff0/11moves/duplicates0 and destination0rows, MAIN5tx/3.50cash/card0/IRIS0/total3.50 and control2tx/0cash/card0/IRIS0/total0/expense120 unchanged after refresh. No retry/compensation. Actual handler reproduction proves prisma.product undefined (SQL-managed table), TypeError findFirst, transactionsStarted0. One-line bounded Product lookup correction keeps company/active constraints and all posting/replay rules. Native actual-route PG regression added; local8PASS/1PGSKIP, fullCI required before merge/deploy/freshbaseline/new TRANSFER-02. Checkpoint2026-10-10-n39-transfer-live.md and synchronized ledger screenshot. Full39 remains OPEN for transfer acceptance, ownconsumption, concurrent movements/count/import/edit and reason/recount/roles/live repeat-finalization. No other scope change.
+
 ## 2026-10-10 10:52 Europe/Athens — OPERATOR-CHECKBOX-01 returns permission OFF/ON bounded LIVE PASS / overall OPEN
 
 Same owner codex/operator-checkbox-audit-20261009, No33/tracker35 OPEN. Previous online UI permission result published mainPR2041/4775af52, exactdocsCI38035820790 SUCCESS. User10:47:27 approval covers exact sequentialrightsrestore. LABPOS2 ordinaryEMPLOYEE/testingstore cmtpopbgo000trhb5ng9ytiru, catalog11/94, before/aftercart0,total0,queue0. Noeconomic/stock/shift/product submits or completedpayment replay.
@@ -1860,13 +1864,13 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### AI-CC-LIMITS — AI Command Center όρια PASS
 
-**Κατάσταση:** ΑΡΧΙΚΟ ΠΛΑΝΟ CLOSED / NOT TESTED
+**Κατάσταση:** OPEN / ASSIGNED / NAVIGATION NOT TESTED; visual phases 1–14 remain CLOSED
 
 **Υπόλοιπο / όρια PASS:** Τα κλικ μετάβασης Full Digital Twin δεν δοκιμάστηκαν. Δεν ανοίγουν ξανά οι οπτικές αποδοχές 1–14.
 
-**Υπεύθυνη σελίδα / branch:** Προηγούμενος owner — νέα επέκταση μόνο με ανάθεση
+**Υπεύθυνη σελίδα / branch:** `codex/n40-full-twin-navigation-audit-20261010` — explicit owner assignment for printed40, 10/10/2026.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-10T10:51:38+03:00 — N40-NAV-CLAIM-20261010; Full Digital Twin six-tile navigation only: selected-company/store handoff, safe invalidation and return to the same Twin. `CHECKPOINTS/CHANGES/2026-10-10-n40-full-twin-navigation-audit.md`; PR #2040. No takeover of visual phases1–14, AI-CREDITS-01, inventory/workforce/video/invoice business flows or other owners.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
@@ -2071,3 +2075,8 @@ Current owner remains codex/ai-credit-alerts-20261009. Production push CI/guarde
 
 Single next action: verify guarded release of source42bee637, then deployment administrator securely sets same-organization OPENAI_BILLING_ADMIN_KEY and Super Admin confirms current prepaid balance in AI Command Center. Do not paste secrets into chat. Perform read-only LIVE alert/settings acceptance after configuration; maintain same owner until explicit handoff. Setup: docs/ops/ai-credit-alerts-20261009.md.
 
+
+
+## 2026-10-10T10:51:38+03:00 — N40-NAV-CLAIM-20261010 / AI-CC-LIMITS / ASSIGNED / AWAITING IMPLEMENTATION AND LAB
+
+Same conversation that created audit PR2040, now explicitly instructed «ξεκινα» to implement its findings. Owner `codex/n40-full-twin-navigation-audit-20261010`. Bounded six-tile navigation, selected-store handoff/return/invalidation only. Source inspection found generic POS/EFTPOS/Cash callbacks and stale-selection fallback; this is not proof of a server-side data leak. Preserve visual phases1–14 and every other assigned module. Source fix and all authenticated LAB navigation tests NOT TESTED. No sales, payments, stock, staff, fiscal, camera or billing mutation. Claim publication requires this PR final green CI and main merge before application changes. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-full-twin-navigation-audit.md`.
