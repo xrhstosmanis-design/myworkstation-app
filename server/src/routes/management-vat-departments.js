@@ -20,6 +20,7 @@ const EXEMPTIONS=[
   {code:"16",description:"Χωρίς ΦΠΑ - άρθρο 45 του Κώδικα ΦΠΑ"},
   {code:"17",description:"Χωρίς ΦΠΑ - άρθρο 47 του Κώδικα ΦΠΑ"},
   {code:"18",description:"Χωρίς ΦΠΑ - άρθρο 48 του Κώδικα ΦΠΑ"},
+  // AADE myDATA API v1.0.11, VAT exemption table: other VAT exemptions.
   {code:"27",description:"Λοιπές Εξαιρέσεις ΦΠΑ"}
 ];
 
