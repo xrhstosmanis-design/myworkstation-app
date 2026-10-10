@@ -1,3 +1,7 @@
+## N49 mobile new-entry implementation — AWAITING CI / exact deploy / LAB
+
+Ownercodex/n49-unknown-barcode-acceptance-20261010 retained; claimPR2093/CI38052975045SUCCESS/mainb526c96c precedes edits. Explicit user15:40:56mobile new-entry. Actualcomponent originalnewbutton→missingformFAIL; boundedmountedform/scopedatomicproduct+zero-stockstore+sameDRAFTline+PRODUCT_CREATEevent, localDOMreturn/cancel/readbackretrywithoutduplicate/aliaslookup PASS andnativePGCIrequired. PriorN39/Gate2/scroll/N47 and ownersN48/33/DAILYBITE/40 protected. NoLIVEproduct/stock/payment/finalization/grant yet. Checkpoint2026-10-10-n49-unknown-barcode-acceptance.md. Next greenfullCI/exacthealthyreload thenfresh per-actionLAB DRAFT/newbarcodeattach/newitem/sameinventoryreturn; physicalmobile/PIN/scanner separate NOTTESTED.
+
 ## 10/10/2026 15:38:03 Europe/Athens — N49 / TODAY-07 / ASSIGNED
 
 Explicit user «ανελαβε το49». ΑΝΑΛΗΨΗ ΑΠΟ υπάρχουσα TODAY σελίδα / agent/today-ui-verification-20261004 — ASSIGNED codex/n49-unknown-barcode-acceptance-20261010 for numbered49 only: unknown barcode in active inventory, attach existing own-store product or create new, return to the same active inventory; mobile/tablet web flow acceptance. No parallel takeover of N48 Excel/Barcode offers, N39 accepted stocktake/stock actions, N33 permissions/transfers, invoice or DAILY BITE importer. Existing Gate2/N39 and desktop scroll PASS protected, no historical transaction replay.
