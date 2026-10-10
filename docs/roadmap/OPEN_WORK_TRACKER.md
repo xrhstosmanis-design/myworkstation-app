@@ -1,3 +1,9 @@
+## 10/10/2026 15:11 Athens — N47 / TODAY-05 / scoped LAB PASS / COMPLETED
+
+Numbered47 agreeddesktopLAB selectedreview/removal and realtargetedoffercreation/readback complete; ownercodex/n47-offers-acceptance-20261010 completed. SourcePR2081 fixesPrismavoidlock, asyncformreset/successreadback, missingallowedgiftpicker. FinalfullCI38049632717/mainCI38049821330 attempt2 SUCCESS2095/0/0 actualnativePG846PASS; guardedRender38050134762SUCCESS, independentexacthealthy191ed9b0839ae8d281cb65e41e38975e629aad56 thenactualbrowserreload. SingleTEST2/LAB10%future11Oct10:00→11:00 createdwithsuccess/reset0/independentreopen; separatelyfreshbaselinepause andsecondreloadconfirminactive, oldTEST1giftactivepreserved. Eachactionfreshprice2.40/history2/stock−2/ledger2/diff0/duplicates0 andMAIN7cash4/outgoing0.10/control2total0expense120 unchanged. Concurrentotherownertransfer precededours; no47financialeffect. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n47-offers-acceptance.md; manualproducts-master-catalog/PASS.md; evidenceCHECKPOINTS/EVIDENCE/n47-offers-20261010/created.jpg andpaused.jpg.
+
+Readonlygiftselection/cache/removal confirmed; isolatedactualDOMvalidatesdifferentgiftpayload/emptygiftvalidation/reset. NativeCIcheckscreation/roles/tenant/overlap/atomic/date/pause separatefromLIVE. Otherpricingtypes/newgiftLIVEcreation/POScheckout/maxload/multistore/mobile/physical/independentOwner/internalpromotionID/centralAuditcount NOTTESTED/outside thisclosure. Historical47OPEN/AWAITING superseded onlyforagreedscope, no wholeTODAY04/No40 auditPASS. N44/45/46/39/33 andotherowners preserved. No nexttask started.
+
 ## 10Oct2026 14:52 Athens — N39 / INVENTORY-ADV — agreed residual LIVE PASS
 
 Same owner codex/n39-inventory-acceptance-20261010 completed the user-authorized final residual on observed production revision5dc10820082a570705616f163e8118c7ae4ba2a9. ClaimPR2079 and beforePR2082 were green/merged before closure; AFTER FINALIZE01 / BEFORE STALE01 PR2083 head122f3b6f CI38049838190 SUCCESS merged3a25529d before late submit. FINALIZE01 at14:49:05: existing N39-LAB-20261010-RECOUNT-REASON-01 FINALIZED expected5/count4/diff-1; source5→4 and exactly one new STOCKTAKE_ADJUSTMENT out1/balance4 with persisted reason. Ledger15→16, current4/recorded4/diff0/duplicates0.
@@ -2086,15 +2092,15 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### TODAY-05 — Προσφορές UI
 
-**Κατάσταση:** ASSIGNED / ΜΕΡΙΚΟ VISUAL / OPEN
+**Κατάσταση:** PASS / scoped desktop LAB / numbered47 COMPLETED 10Oct15:11Athens
 
-**Υπόλοιπο / όρια PASS:** Προβολή/αφαίρεση επιλεγμένων, λειτουργική δημιουργία/αποστολή.
+**Υπόλοιπο / όρια PASS:** Επιλογή/προβολή/αφαίρεση και πραγματική δημιουργία/στοχευμένη αποστολή/readback/reset επιβεβαιώθηκαν. TEST2 μόνο10%11Oct10:00→11:00 LAB, χωριστήπαύση μενέοπριν/μετά· αρχικήτιμή/απόθεμα/ιστορικό/ταμείααμετάβλητα. ΝέοLIVEgift/POScheckout/άλλοιτύποι/mobile/physical/πολλάκαταστήματα/maxload/liveinternalID/centralAuditcount NOTTESTED, ξεχωριστάαπόnativeCI.
 
-**Υπεύθυνη σελίδα / branch:** codex/n47-offers-acceptance-20261010 — explicit numbered47 transfer10Oct14:33:22 from existingTODAYpage.
+**Υπεύθυνη σελίδα / branch:** codex/n47-offers-acceptance-20261010 — completed scoped47; otherTODAYowners retained.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct14:33:22Athens, selected review/removal + functionalcreate/targeteddelivery/readback LAB. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n47-offers-acceptance.md; claimpublication precedes source/persistedLAB. Otherowners/PASS protected.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct14:33:22Athens explicituser47; claimPR2078/greenCI mergedbeforechanges. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n47-offers-acceptance.md.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 10Oct15:11Athens scopedLABPASS; sourcePR2081, finalfullCI38049632717/main38049821330 attempt2 SUCCESS2095/0/0/native846PASS, Render38050134762SUCCESS/exacthealthy191ed9b0. Actualcreate/reset/reload andseparatepause/reload plusfreshstock/history/financialcontrols. Manualproducts-master-catalog/PASS.md/evidencecreated.jpg/paused.jpg. NoTask20salereplay.
 
 ### TODAY-06 — Excel / Barcode UI
 

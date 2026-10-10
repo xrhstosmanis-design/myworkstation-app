@@ -342,9 +342,8 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 ## 47 — Προσφορές — επιλογή ειδών και πραγματική αποστολή
 
 - **Tracker ID:** `TODAY-05`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** ASSIGNED / ΜΕΡΙΚΟ VISUAL / OPEN
-
-- **Υπόλοιπο / όριο:** Επιλογή/προβολή/αφαίρεση, πραγματική δημιουργία/αποστολή/readback σεLAB. Ownercodex/n47-offers-acceptance-20261010 μετά ρητή οδηγία10Oct14:33:22· checkpoint2026-10-10-n47-offers-acceptance.md. Δεν επαναλαμβάνεται προηγούμενοTask20δώρο/πώληση ούτεN46.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** PASS — επικαιροποίηση10/10/2026 15:11 / scoped desktop LAB
+- **Υπόλοιπο / όριο:** Συμφωνημένο47ολοκληρώθηκε: επιλεγμέναπαραμένουνσεαναζήτηση/προβολή/αφαίρεση, επιλογήδώρωνδιαθέσιμη, πραγματικήπροσφοράTEST2/LAB10%11Oct10:00→11:00/σωστόreadback/reset0, χωριστήπαύσημενέοπριν/μετά. Τιμή2.40/ιστορικό2/stock−2/ledger2/MAIN7cash4outgoing0.10/control2total0expense120αμετάβλητα. SourcePR2081/exacthealthy191ed9b0/fullCI2095PASS/nativePG846PASS. Άλλοιτύποι/newLIVEgift/POSsale/πολυκατάστημα/maxload/mobile/physical/ανεξάρτητοςOwner/liveinternalID/centralAuditcountεκτόςscope/NOTTESTED. ΠροηγούμενοTask20/N44/45/46/39/33καιάλλοιownersδιατηρούνται. Checkpoint2026-10-10-n47-offers-acceptance.md/manualproducts-master-catalog/PASS.md/evidencecreated.jpg/paused.jpg.
 
 ## 48 — Excel / Barcode — λειτουργικές δοκιμές νέας οθόνης
 
