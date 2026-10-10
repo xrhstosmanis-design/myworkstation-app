@@ -19,7 +19,8 @@ const EXEMPTIONS=[
   {code:"15",description:"Χωρίς ΦΠΑ - άρθρο 44 του Κώδικα ΦΠΑ"},
   {code:"16",description:"Χωρίς ΦΠΑ - άρθρο 45 του Κώδικα ΦΠΑ"},
   {code:"17",description:"Χωρίς ΦΠΑ - άρθρο 47 του Κώδικα ΦΠΑ"},
-  {code:"18",description:"Χωρίς ΦΠΑ - άρθρο 48 του Κώδικα ΦΠΑ"}
+  {code:"18",description:"Χωρίς ΦΠΑ - άρθρο 48 του Κώδικα ΦΠΑ"},
+  {code:"27",description:"Λοιπές Εξαιρέσεις ΦΠΑ"}
 ];
 
 function requireAccess(req,res,next){

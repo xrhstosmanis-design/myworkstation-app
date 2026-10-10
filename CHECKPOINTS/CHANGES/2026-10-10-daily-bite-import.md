@@ -1,3 +1,7 @@
+## 10/10/2026 — DAILY BITE exemption 27 / AWAITING CI and LAB
+
+Owner `codex/daily-bite-import-20261010`, claim merged PR #2089 / CI 38052330968 SUCCESS / main 865e29e. Bounded additive option `27 — Λοιπές Εξαιρέσεις ΦΠΑ`, per AADE myDATA API v1.0.11 exemption table and source department 9 screenshot. Existing codes, roles, company scoping, schema, product VAT and fiscal/POS settings preserved. Actual registered GET/POST handler tests verify option list, exact department 9 fields persisted and read back within company, foreign company absence and operator denial with no writes. Node 20.20.2 targeted VAT regressions: 14/14 PASS. Full CI, exact deployed revision and fictional LAB acceptance remain pending; department 9 remains unsaved and DAILY BITE still has eight departments, no imported products. Importer work remains separate and NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-daily-bite-import.md`.
+
 # DAILY BITE import and VAT preparation
 
 ## DAILY-BITE-IMPORT / 10/10/2026 / ASSIGNED / NOT TESTED implementation
