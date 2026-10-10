@@ -2320,15 +2320,15 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### TODAY-09 — Σελίδα ιδιοκτήτη UI
 
-**Κατάσταση:** IN PROGRESS
+**Κατάσταση:** OPEN / ASSIGNED — N51 acceptance NOT TESTED
 
-**Υπόλοιπο / όρια PASS:** Απλοποίηση και πραγματική αποδοχή βαρδιών/πληρωμών.
+**Υπόλοιπο / όρια PASS:** Selected-store landing simplification; shifts andOwner/Managerpayments primary,secondarytools behindcleartiles. Actualread-onlynavigation/layout/store/two-terminalreadback acceptance pending. No replay ofacceptedfinancialactions.
 
-**Υπεύθυνη σελίδα / branch:** Υπάρχουσα TODAY σελίδα
+**Υπεύθυνη σελίδα / branch:** codex/n51-owner-page-acceptance-20261010; explicit transfer51only fromagent/today-ui-verification-20261004.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct17:02Athens; CHECKPOINTS/CHANGES/2026-10-10-n51-owner-page-acceptance.md; greenclaimPR/main beforechanges.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** No new51PASS; nextfreshreadonlylanding/controlinspection. Otherassignedscopes/priorPASSprotected.
 
 ### DOC-NUM-01 — Κεντρική αριθμημένη λίστα και κανόνας PASS
 
