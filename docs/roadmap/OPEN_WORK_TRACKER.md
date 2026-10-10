@@ -2743,15 +2743,17 @@ Local Node24.19.0:8/8 focused diagnostic tests PASS, including real local HTTP40
 
 ### TODAY-08 — Εμπορικά modules UI
 
-**Κατάσταση:** PARTIAL LIVE PASS / OPEN — desktop hierarchy/navigation PASS; authorization residual OPEN
+**Κατάσταση:** PARTIAL LIVE PASS / OPEN — desktop hierarchy/navigation and normalOWNER module UI PASS; authorization residual OPEN
 
-**Υπόλοιπο / όρια PASS:** 22 upper navigation destinations and11 read-only status cards observed in authorized SUPER_ADMIN LAB, normal/maximized hierarchy and internal reachability PASS. Direct Price Catalog→Operators stale hidden content corrected and exact-LIVE rechecked in both modes. NormalOWNER/restrictedrole/inactive-license/foreign-store LIVE acceptance remains NOT TESTED; privileged all-active session cannot prove denial. Separate physical palette USER acceptance retains its owner; Analytics scroll USERPASS preserved. No business/financial/stock/PIN/permission/module action.
+**Υπόλοιπο / όρια PASS:** 22 upper navigation destinations and11 read-only status cards observed in authorized SUPER_ADMIN LAB, normal/maximized hierarchy and internal reachability PASS. Direct Price Catalog→Operators stale hidden content corrected and exact-LIVE rechecked in both modes. NormalOWNER entry/one-option selected LAB/direct Price Catalog→Operators/read-only11cards and native disabled module UI PASS on exacthealthy196dd62a. Restricted-role, server inactive-license/foreign-store denial and wider normalOWNER function/data acceptance remain NOT TESTED. Separate physical palette USER acceptance retains its owner; Analytics scroll USERPASS preserved. No business/financial/stock/PIN/permission/module action.
 
 **Υπεύθυνη σελίδα / branch:** `codex/n50-commercial-acceptance-20261010` — retained; source `codex/n50-catalog-navigation-20261010`; final records `codex/n50-live-handoff-20261010`.
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct17:09Athens · user «ξεκινα την 50» · ΑΝΑΛΗΨΗ ΑΠΟ `agent/today-ui-verification-20261004`, only50. ClaimPR2116/head87f2f21a/CI38058644251SUCCESS/merge5140a7aa. `CHECKPOINTS/CHANGES/2026-10-10-n50-commercial-acceptance.md`. Other owners and accepted flows retained.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-10T17:35:25+03:00 · scopedLIVEPASS, whole50OPEN. SourcePR2119/head5b06fc3a/fullCI38059144866SUCCESS/2125pass0fail0skip, merge/exacthealthde5503986fac0a4d7fa56402267c004f36896bc2; mainCI38059339679attempt2SUCCESS after unrelated capacity-timing test failure onattempt1; guard38059729109SUCCESS. FreshLAB normal/max direct navigation bothpass,3-operatorpanelvisible/nohiddenclass. `CHECKPOINTS/CHANGES/2026-10-10-n50-commercial-acceptance.md`, `docs/manual/commerce/PASS.md`, `CHECKPOINTS/EVIDENCE/n50-commercial-20261010/`. Read-only route mounts only, not dataset/calculation/permission/tenant/module-negative PASS. Single next action existing separately authorized normal/restricted LAB session and inactive-module fixture; no new security access or repeat accepted transaction/navigation. Final docs merge/CI is the publication record.
+
+**Νεότερη πραγματική συνέχεια:** 2026-10-10T23:18:42+03:00 — ordinary OWNER LAB secure sign-in succeeded; previous session blocker superseded for OWNER. Eleven read-only cards/sevenactive/fourlocked; native disabled Attendance/RBS/Pending/Suggestions; actual three-operator host visible after direct catalog navigation. UI only, no forced controls/business mutations/API denial or price-data PASS. Evidence owner-modules.jpg; records codex/n50-owner-license-acceptance-20261010. Single next action existing separately authorized restricted LAB login then readonly denial checks. Whole50 remains OPEN.
 
 ### TODAY-09 — Σελίδα ιδιοκτήτη UI
 
