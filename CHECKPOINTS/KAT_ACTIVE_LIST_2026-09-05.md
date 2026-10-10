@@ -5653,3 +5653,11 @@ Measured result:
 - Startup log: `DAILY BITE coffee behavior applied: 16 products, 11 name normalizations; recipes/ingredients untouched.`
 
 This is a **LIVE PASS for the bounded modifier/name-normalization scope only**. Recipe ingredient consumption, physical POS interaction, production printing and cashier-facing acceptance remain separate/not covered by this PASS.
+
+## 10 Oct 2026 21:44 Athens — BACKOFFICE-SESSION-01 / deployed; LIMITED LIVE UI PASS; OPEN
+
+Owner codex/backoffice-session-boundary-20261010 retained. Source PR2163 head8ebd4d5743b718cd9ccdf59c189a35514285bec8/fullCI38076132149 SUCCESS:2239PASS/0FAIL/0SKIP; merge e6bdd31be656e29b85c113effef5e3402d4db146/main fullCI38076406343 SUCCESS/guarded deploy38076636135 SUCCESS. Render dep-db58cpflk1mc7393hru0 LIVE18:41:13.953UTC; separate browser /api/health returned ok:true and exact e6bdd31be.
+
+Fresh root browser21:43Athens visibly showed attributable inactive-session notice and removed normal Backoffice view; explicit New sign-in opened existing login form without submitting credentials. LIMITED LIVE UI PASS for notice/recovery-form only, not independent network-stop measurement or healthy logged-in polling/cross-tab replacement/store isolation. Initial reloaded tab was blank without application console error; one fresh tab resolved that observation. No business request, login, token inspection, storage mutation, session revocation or other-owner session replay. Evidence CHECKPOINTS/EVIDENCE/backoffice-session-20261010/inactive-session.jpg. Manual docs/manual/backoffice-session/PASS.md records only this limited observed flow.
+
+Full acceptance and production401/404 root cause remain OPEN. Failed-request identities not established; no attribution to Diadoxou, no storage resolution claim. Five application/test changes central main.jsx boundary only; N51/N40/VOICE/DAILY ownership and prior PASS protected. Existing old client tabs require ordinary reload to receive new assets. Next: securely authenticate a named existing account for healthy read-only refresh and bounded context-change acceptance, without interfering with another owner's active session. Main shared-history deletion observed in concurrent docs; retain complete historical entries plus their new claim, never silently remove assignments/evidence.
