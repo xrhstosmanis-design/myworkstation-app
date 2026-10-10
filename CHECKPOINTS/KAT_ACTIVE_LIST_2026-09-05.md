@@ -1,3 +1,9 @@
+## N39 SELF-01 — bounded LIVE PASS — 10 Oct 2026 11:47:54 Athens
+
+Same owner codex/n39-inventory-acceptance-20261010. New authorized qty1 TEST1 own consumption via LABPOS2 StoreMode/tab29 on observed release de7d5c2e0d5acf1ef4c9b65bf43ebbc28cac9258. Fresh before stock8/ledger8/8/diff0/12moves/duplicates0/latest11:15:01TRANSFER_OUT; MAIN5tx/cash3.50/card0/IRIS0/total3.50/expense0/latest09:51; controlLAB-POS-02 2tx/cash0/card0/IRIS0/total0/expense120/latest—. Newcart qty1/reference1.20/stock8; gift popup closed without TEST2 selection. One ΙΔΙΑ ΚΑΤΑΝΑΛΩΣΗ submit.
+
+After stock7/ledger7/7/diff0/13moves/duplicates0, exactlyone ΠΡΟΣΩΠΙΚΗ ΚΑΤΑΝΑΛΩΣΗ out1/LABPOS2 at11:47:54, Sale cc8ad2db-7ac5-4e9e-9506-b5ac4ca9053d. Fresh finance MAIN and LAB-POS-02 unchanged in all above metrics. POS cleared cart/total0/queue0, no payment/receipt. Ledger intentionally derives the SaleLine; do not add duplicate StockMovement or replay. Evidence CHECKPOINTS/EVIDENCE/n39-self01-ledger-20261010.jpg; checkpoint2026-10-10-n39-consumption-live.md. Prior secure-session blocker superseded by fresh positivelyauthenticated tab. Virtual cloud terminal only; physical-device identity and wider role/replay/isolation/concurrency NOT TESTED. Full39 stays OPEN for reason/recount/roles/concurrent movements/count/import/edit/finalization/device acceptance. Existing transfer/expired/stocktake/Gate2/scroll PASS preserved; No33/44/40/TODAY-07 untouched. Next new simultaneous BackOffice waste pair only after fresh recorded baseline; no existing stock action repeated.
+
 ## 2026-10-10 — No33 price permission: bounded LIVE PASS after PR2045
 
 Owner codex/operator-checkbox-audit-20261009. No33/tracker35 remains OPEN. Exact release e687b51a, PR2045 final ad31c0c8/full CI38036860695 SUCCESS; mainCI38037072058 and guardedRender38037273211 SUCCESS, independently observed health ok/exact SHA then fresh LABPOS2 EMPLOYEE POS.
