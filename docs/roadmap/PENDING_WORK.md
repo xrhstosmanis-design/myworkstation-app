@@ -1,3 +1,11 @@
+## 10/10/2026 22:43 Αθήνα — Νο33 προσωπική κάρτα/QR και καταμέτρηση: USER PASS
+
+Owner `codex/operator-checkbox-audit-20261009`, No33/tracker35 **OPEN**. Ο ιδιοκτήτης επιβεβαίωσε: «η προσωπική κάρτα/QR και η καταμέτρηση αυτα τα εχω κανει..ειναι οκ». Καταγράφονται ως **USER PASS** και δεν επαναλαμβάνονται ούτε ζητούνται κωδικοί/QR στη συνομιλία. Η παλαιότερη απαίτηση επανελέγχου αυτών των δύο σκελών έχει υπερκαλυφθεί από αυτή την επιβεβαίωση.
+
+Δεν πρόκειται για νέα παρατήρηση του Codex: χρόνος αρχικής δοκιμής, revision, μετρήσεις και Audit IDs δεν δόθηκαν. Δεν προκύπτει από αυτή τη δήλωση PASS τελικής υποβολής κλεισίματος, νέας βάρδιας ή αρχικού ταμείου. Αυτά και οι υπόλοιπες εκκρεμότητες του Νο33 παραμένουν OPEN. Δεν έγινε νέα συναλλαγή, καταμέτρηση, μεταβολή δικαιωμάτων ή οικονομική/stock/shift υποβολή για τεκμηρίωση. Η υπάρχουσα έγκριση αναγκαίων εικονικών δοκιμών διατηρείται.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-10-10-operator-card-count-user-pass.md`. Επόμενο: ανεξάρτητο εκκρεμές δικαίωμα ή ο μετρημένος τελικός έλεγχος κλεισίματος/αρχικού ταμείου, χωρίς επανάληψη προσωπικής κάρτας/QR και καταμέτρησης. No39/τιμολόγια/scanner/μήνυμα ρέστων και άλλοι owners παραμένουν εκτός scope.
+
 ## 10 Oct 2026 22:05 Athens — No40 / ASSIGNED / remaining scope only
 
 Owner `codex/n40-full-twin-navigation-audit-20261010` retained; No40 OPEN. Approved CONTROL `cmv2qanca000psigeizep8o9m` exists: do not recreate. Second-store six normal roundtrips/current destinations, six matched control GETs and original7/control0 Workforce switch with four matched reads completed LIMITED LIVE PASS on69456df3 and removed from pending work. Source observation extension PR2173/fullCI38077255150/main38077455028/guard38077625384/Renderdep-db58jlflot8c73e3am60 exact LIVE; no new business action. Earlier No40 source-ready/awaiting second-control notes are superseded only for these completed scopes. Phases1–14/Stock6097485640/restricted403401/primarysixGETs protected. Checkpoint2026-10-10-n40-read-trace.md and super-admin manual record actual limits.

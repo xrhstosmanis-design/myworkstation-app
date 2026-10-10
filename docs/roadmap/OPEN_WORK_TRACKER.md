@@ -1,3 +1,11 @@
+## 10/10/2026 22:43 Αθήνα — Νο33 προσωπική κάρτα/QR και καταμέτρηση: USER PASS
+
+Owner `codex/operator-checkbox-audit-20261009`, No33/tracker35 **OPEN**. Ο ιδιοκτήτης επιβεβαίωσε: «η προσωπική κάρτα/QR και η καταμέτρηση αυτα τα εχω κανει..ειναι οκ». Καταγράφονται ως **USER PASS** και δεν επαναλαμβάνονται ούτε ζητούνται κωδικοί/QR στη συνομιλία. Η παλαιότερη απαίτηση επανελέγχου αυτών των δύο σκελών έχει υπερκαλυφθεί από αυτή την επιβεβαίωση.
+
+Δεν πρόκειται για νέα παρατήρηση του Codex: χρόνος αρχικής δοκιμής, revision, μετρήσεις και Audit IDs δεν δόθηκαν. Δεν προκύπτει από αυτή τη δήλωση PASS τελικής υποβολής κλεισίματος, νέας βάρδιας ή αρχικού ταμείου. Αυτά και οι υπόλοιπες εκκρεμότητες του Νο33 παραμένουν OPEN. Δεν έγινε νέα συναλλαγή, καταμέτρηση, μεταβολή δικαιωμάτων ή οικονομική/stock/shift υποβολή για τεκμηρίωση. Η υπάρχουσα έγκριση αναγκαίων εικονικών δοκιμών διατηρείται.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-10-10-operator-card-count-user-pass.md`. Επόμενο: ανεξάρτητο εκκρεμές δικαίωμα ή ο μετρημένος τελικός έλεγχος κλεισίματος/αρχικού ταμείου, χωρίς επανάληψη προσωπικής κάρτας/QR και καταμέτρησης. No39/τιμολόγια/scanner/μήνυμα ρέστων και άλλοι owners παραμένουν εκτός scope.
+
 ## 10 Oct 2026 22:05 Athens — No40 second LAB control: LIMITED LIVE PASS / overall OPEN
 
 Owner remains `codex/n40-full-twin-navigation-audit-20261010`. Explicit approval21:29Athens covered creation of one empty N40 CONTROL 20261010 and read-only checks in that store plus the original LAB only. Control company `cmtpopbgk000prhb5qc60zxus`, store `cmv2qanca000psigeizep8o9m`; original store `cmtpopbgo000trhb5ng9ytiru`. No isolated-label/real-store tests, sales, payments, stock/staff/rights/module edits, analysis execution, email or device commands. Browser cloudChrome26 / SuperAdminΧρήστοςΜάνης; physical terminal/operator/shift/item/quantity/payment N/A for navigation.
