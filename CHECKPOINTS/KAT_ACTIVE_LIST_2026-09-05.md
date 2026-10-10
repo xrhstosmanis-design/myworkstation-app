@@ -1,3 +1,7 @@
+## 10Oct13:46 Athens — N46 price application LIVE FAIL / SQL result type candidate
+
+Same owner codex/n46-bulk-price-acceptance-20261010. On exacthealthy866ef94d aftergreenPR2073/main/Render, actualselectedrefs/search/modepreviews worked; exactlyone confirmed TEST2/LAB+10% application returned internalerror. No retry. Freshreadbacks price2.40/stock−2/history0 and MAIN6cash4/control2total0 unchanged. SuspectedPrisma queryRaw PostgreSQLvoid lockresult. One bounded booleanprojection preserveslock/isolation/stale/audit; actualroute nativePG regression must reproduceoldtypeerror and validatecommit/rollbackcontrols. LocalnativeSKIP; AWAITING fullCI/exactdeploy/LAB. Checkpoint2026-10-10-n46-bulk-price-acceptance.md. PriorN44/N45/scroll and otherTODAY04/No33/N39 owners protected.
+
 ## 2026-10-10 13:31–13:34 Athens — No33 transfer entry / directions / Cancel bounded LIVE PASS
 
 Owner codex/operator-checkbox-audit-20261009; No33/tracker35 OPEN. PR2071 final93cadf3bfbdb0af2d1d14c27cf466c3d51c8d686/fullCI38044458793SUCCESS includingnativePG, main d6f8e429060a2b7e8ddfbe2470285dc1379f9a73/fullmainCI38044711647SUCCESS/guardedRender38044863683SUCCESS; independent browserhealth exactd6f8/ok thenfreshPOS+BackOfficereload. Original23 LABPOS2EMPLOYEE independently confirmed beforetest, noflag/role/PIN changes, cart0/queue0.

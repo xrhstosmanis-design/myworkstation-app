@@ -74,7 +74,7 @@ router.post("/prices/bulk/preview",async(req,res,next)=>{try{const companyId=req
 router.post("/prices/bulk/commit",async(req,res,next)=>{try{
   const companyId=req.user.companyId,body=commitSchema.parse(req.body||{}),actorName=req.user.fullName||req.user.email||"Χρήστης";
   const result=await prisma.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`bulk-price:${companyId}`})) AS locked`;
+    await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`bulk-price:${companyId}`})) IS NULL) AS locked`;
     const preview=await buildPreview(tx,companyId,body);if(preview.resolutionErrors.length){const e=new Error("Η επιλογή προϊόντων/καταστημάτων άλλαξε.");e.status=409;e.code="BULK_PREVIEW_STALE";throw e}if(preview.previewHash!==body.previewHash){const e=new Error("Οι πραγματικές τιμές ή η επιλογή άλλαξαν μετά την προεπισκόπηση. Κάνε νέα προεπισκόπηση.");e.status=409;e.code="BULK_PREVIEW_STALE";throw e}if(preview.counts.skipped>0&&!body.acceptSkipped){const e=new Error(`Υπάρχουν ${preview.counts.skipped} συνδυασμοί χωρίς προϊόν στο κατάστημα. Επιβεβαίωσε ρητά ότι θα παραλειφθούν.`);e.status=409;e.code="BULK_SKIPPED_CONFIRMATION_REQUIRED";throw e}
     const productIds=preview.products.map(row=>row.id),storeIds=preview.stores.map(row=>row.id),currentRows=await tx.$queryRaw`SELECT sp."storeId",sp."productId",sp."salePrice",sp."active",p."salePrice" AS "basePrice" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId} WHERE sp."storeId"=ANY(${storeIds}::text[]) AND sp."productId"=ANY(${productIds}::text[]) FOR UPDATE OF sp`;
     const current=new Map(currentRows.map(row=>[`${row.storeId}:${row.productId}`,row])),changes=[];
