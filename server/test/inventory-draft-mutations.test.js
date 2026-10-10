@@ -79,7 +79,7 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
     for(const [path,body] of cases){
       await reset();
       const finalized=gate(),releaseFinal=gate(),mutationEntered=gate();
-      const closing=db.$transaction(async tx=>{await finalizeInventoryStocktake(tx,st,'owner');finalized.resolve();await releaseFinal.promise},{timeout:15000});
+      const closing=db.$transaction(async tx=>{await finalizeInventoryStocktake(tx,st,'owner','Isolated counted inventory');finalized.resolve();await releaseFinal.promise},{timeout:15000});
       await finalized.promise;
       // Other connection sees committed DRAFT, then starts its transaction while finalizer holds the parent/line locks.
       const racing=routes({$queryRaw:db.$queryRaw.bind(db),$executeRaw:db.$executeRaw.bind(db),$transaction:fn=>db.$transaction(async tx=>{mutationEntered.resolve();return fn(tx)},{timeout:15000})})(path,request(body));
@@ -91,7 +91,7 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
     await reset();const counted=gate(),releaseCount=gate(),closingEntered=gate();
     const counting=routes({$queryRaw:db.$queryRaw.bind(db),$transaction:fn=>db.$transaction(async tx=>{const result=await fn(tx);counted.resolve();await releaseCount.promise;return result},{timeout:15000})})(cases[0][0],request(cases[0][1]));
     await counted.promise;
-    const closing=db.$transaction(async tx=>{closingEntered.resolve();await finalizeInventoryStocktake(tx,st,'owner')},{timeout:15000});
+    const closing=db.$transaction(async tx=>{closingEntered.resolve();await finalizeInventoryStocktake(tx,st,'owner','Isolated counted inventory')},{timeout:15000});
     await closingEntered.promise;releaseCount.resolve();assert.equal((await counting).status,200);await closing;
     let after=await observe();assert.equal(after.stock,9);assert.equal(after.parent[0].snapshotJson.totalDifference,-1);assert.equal(after.lines[0].countVersion,2);assert.equal(after.events.length,1);assert.equal(after.events[0].actorId,'owner');assert.equal(Number(after.movements[0].quantity),-1);
     // Concurrent same event replays once under the parent lock; competing versions reject.
@@ -101,9 +101,9 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
     // Recount policy still prevents closing after the first changed count and allows it after the recount.
     await reset();await db.$executeRaw`UPDATE "Stocktake" SET "recountPolicy"='DIFFERENCES'`;await db.$executeRaw`UPDATE "StocktakeLine" SET "countedQuantity"=NULL,"countVersion"=0`;
     const first={...cases[0][1],expectedVersion:0,clientEventId:'first'};assert.equal((await invoke(cases[0][0],request(first))).result.recountRequired,true);
-    await assert.rejects(db.$transaction(tx=>finalizeInventoryStocktake(tx,st,'owner')),{status:409});assert.equal((await observe()).stock,10);
+    await assert.rejects(db.$transaction(tx=>finalizeInventoryStocktake(tx,st,'owner','Isolated counted inventory')),{status:409});assert.equal((await observe()).stock,10);
     assert.equal((await invoke(cases[0][0],request({...first,expectedVersion:1,clientEventId:'recount'}))).result.recountRequired,false);
-    await db.$transaction(tx=>finalizeInventoryStocktake(tx,st,'owner'));assert.equal((await observe()).stock,9);
+    await db.$transaction(tx=>finalizeInventoryStocktake(tx,st,'owner','Isolated counted inventory'));assert.equal((await observe()).stock,9);
     // Existing company, counter stocktake/zone and owner boundaries are unchanged.
     await reset();const baseline=await observe();
     assert.equal((await invoke(cases[0][0],request(cases[0][1],{companyId:'foreign'}))).status,404);

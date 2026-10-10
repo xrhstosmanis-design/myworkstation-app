@@ -29,19 +29,22 @@ test('isolated PostgreSQL preserves stocktake differences, committed movements a
       await db.$executeRaw`INSERT INTO "StocktakeLine"("id","stocktakeId","productId","expectedQuantity","countedQuantity","unitCost","recountRequired") VALUES('line','take','product',10,${counted},1,${recount})`;
       await db.$executeRaw`INSERT INTO "StoreProduct" VALUES('store','product',10,NULL),('store','unrelated',25,NULL),('control','product',30,NULL)`;
     };
-    const finish=()=>db.$transaction(tx=>finalizeInventoryStocktake(tx,stocktake,'owner'),{timeout:15000});
+    const finish=()=>db.$transaction(tx=>finalizeInventoryStocktake(tx,stocktake,'owner','Isolated counted inventory'),{timeout:15000});
     const read=async()=>{
       const [line]=await db.$queryRaw`SELECT "expectedQuantity","countedQuantity" FROM "StocktakeLine" WHERE "id"='line'`;
       const [parent]=await db.$queryRaw`SELECT "status","snapshotJson" FROM "Stocktake" WHERE "id"='take'`;
       const stocks=await db.$queryRaw`SELECT "storeId","productId","currentStock" FROM "StoreProduct" ORDER BY "storeId","productId"`;
-      const movements=await db.$queryRaw`SELECT "quantity" FROM "StockMovement" WHERE "sourceType"='INVENTORY_V2'`;
+      const movements=await db.$queryRaw`SELECT "quantity","note" FROM "StockMovement" WHERE "sourceType"='INVENTORY_V2'`;
       const adjustments=await db.$queryRaw`SELECT "quantity" FROM "StocktakeMovementAdjustment"`;
       assert.equal(Number(stocks.find(row=>row.storeId==='control').currentStock),30);
       assert.equal(Number(stocks.find(row=>row.productId==='unrelated').currentStock),25);
-      return {expected:Number(line.expectedQuantity),counted:line.countedQuantity===null?null:Number(line.countedQuantity),status:parent.status,snapshot:parent.snapshotJson,stock:Number(stocks.find(row=>row.storeId==='store'&&row.productId==='product').currentStock),movements:movements.map(row=>Number(row.quantity)),adjustments:adjustments.map(row=>Number(row.quantity))};
+      return {expected:Number(line.expectedQuantity),counted:line.countedQuantity===null?null:Number(line.countedQuantity),status:parent.status,snapshot:parent.snapshotJson,stock:Number(stocks.find(row=>row.storeId==='store'&&row.productId==='product').currentStock),movements:movements.map(row=>Number(row.quantity)),notes:movements.map(row=>row.note),adjustments:adjustments.map(row=>Number(row.quantity))};
     };
-    await reset();await finish();
-    let result=await read();assert.equal(result.expected,10);assert.equal(result.stock,8);assert.equal(result.snapshot.totalDifference,-2);assert.deepEqual(result.movements,[-2]);assert.deepEqual(result.adjustments,[]);
+    await reset();
+    const untouched=await read();
+    for(const cause of [undefined,'   ','ab','x'.repeat(301)]){await assert.rejects(db.$transaction(tx=>finalizeInventoryStocktake(tx,stocktake,'owner',cause)),{status:400});assert.deepEqual(await read(),untouched)}
+    await finish();
+    let result=await read();assert.equal(result.snapshot.reason,'Isolated counted inventory');assert.deepEqual(result.notes,['Οριστικοποίηση μερικής Inventory 2.0 · Isolated counted inventory']);assert.equal(result.expected,10);assert.equal(result.stock,8);assert.equal(result.snapshot.totalDifference,-2);assert.deepEqual(result.movements,[-2]);assert.deepEqual(result.adjustments,[]);
     await assert.rejects(finish(),{status:409});assert.deepEqual(await read(),result);
     await reset();const concurrent=await Promise.allSettled([finish(),finish()]);
     assert.equal(concurrent.filter(row=>row.status==='fulfilled').length,1);
@@ -57,6 +60,7 @@ test('isolated PostgreSQL preserves stocktake differences, committed movements a
       await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"="currentStock"-3 WHERE "storeId"='store' AND "productId"='product'`;
       await tx.$executeRaw`INSERT INTO "StockMovement"("id","storeId","productId","movementType","quantity") VALUES('sale','store','product','SALE',-3)`;
     });await finish();result=await read();assert.equal(result.expected,7);assert.equal(result.stock,8);assert.deepEqual(result.movements,[1]);assert.deepEqual(result.adjustments,[-3]);assert.equal(result.snapshot.totalDifference,1);
-    await reset();await assert.rejects(db.$transaction(async tx=>{await finalizeInventoryStocktake(tx,stocktake,'owner');throw new Error('forced rollback')}),/forced rollback/);result=await read();assert.equal(result.status,'DRAFT');assert.equal(result.stock,10);assert.deepEqual(result.movements,[]);
+    await reset(true,10);await finish();result=await read();assert.equal(result.stock,10);assert.equal(result.snapshot.reason,'Isolated counted inventory');assert.equal(result.snapshot.totalDifference,0);assert.deepEqual(result.movements,[]);
+    await reset();await assert.rejects(db.$transaction(async tx=>{await finalizeInventoryStocktake(tx,stocktake,'owner','Isolated counted inventory');throw new Error('forced rollback')}),/forced rollback/);result=await read();assert.equal(result.status,'DRAFT');assert.equal(result.stock,10);assert.deepEqual(result.movements,[]);
   }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

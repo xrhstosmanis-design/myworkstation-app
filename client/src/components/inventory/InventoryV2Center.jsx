@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
   Boxes,
@@ -31,7 +31,11 @@ export default function InventoryV2Center({
     [finalSummary, setFinalSummary] = useState(null),
     [investigation, setInvestigation] = useState(null),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [finalizeReason, setFinalizeReason] = useState(""),
+    [finalizing, setFinalizing] = useState(false);
+  const finalizingRef = useRef(false);
+  useEffect(() => { setFinalizeReason(""); }, [current?.id]);
   const grantUrl = grant ? `${window.location.origin}${grant.accessUrl}` : "";
   useEffect(() => {
     if (!grantUrl) return setGrantQr("");
@@ -151,16 +155,25 @@ export default function InventoryV2Center({
     }
   };
   const finalize = async () => {
+    if (finalizingRef.current || current?.status !== "DRAFT") return;
+    const reason = finalizeReason.trim();
+    if (reason.length < 3 || reason.length > 300) {
+      setError("Γράψε αιτιολογία οριστικοποίησης από 3 έως 300 χαρακτήρες.");
+      return;
+    }
     if (
       !confirm(
         `Οριστικοποίηση ${current.scopeType === "FULL" ? "πλήρους" : "μερικής"} απογραφής; Θα ενημερωθούν μόνο τα προϊόντα αυτής της απογραφής.`,
       )
     )
       return;
+    finalizingRef.current = true;
+    setFinalizing(true);
+    setError("");
     try {
       await api(`/api/inventory-v2/stocktakes/${current.id}/finalize`, {
         method: "POST",
-        body: "{}",
+        body: JSON.stringify({ reason }),
       });
       const report = await api(
         `/api/inventory-v2/stocktakes/${current.id}/audit`,
@@ -170,6 +183,9 @@ export default function InventoryV2Center({
       await loadList();
     } catch (x) {
       setError(x.message);
+    } finally {
+      finalizingRef.current = false;
+      setFinalizing(false);
     }
   };
   const exportCsv = () => {
@@ -610,11 +626,22 @@ export default function InventoryV2Center({
                   <Smartphone />
                   QR/PIN και πολλαπλοί καταμετρητές
                 </span>
-                {current.status === "DRAFT" && (
-                  <button className="primary" onClick={finalize}>
-                    Οριστικοποίηση & αποτέλεσμα απογραφής
-                  </button>
-                )}
+                {current.status === "DRAFT" ? (
+                  <div className="inv2-finalization">
+                    <label>
+                      Αιτιολογία οριστικοποίησης
+                      <textarea value={finalizeReason} maxLength={300} required disabled={finalizing}
+                        onChange={(event) => setFinalizeReason(event.target.value)}
+                        placeholder="Τεκμηρίωσε τον έλεγχο και τις διαφορές της απογραφής" />
+                    </label>
+                    <button className="primary" onClick={finalize}
+                      disabled={finalizing || finalizeReason.trim().length < 3}>
+                      {finalizing ? "Οριστικοποίηση…" : "Οριστικοποίηση & αποτέλεσμα απογραφής"}
+                    </button>
+                  </div>
+                ) : current.snapshotJson?.reason ? (
+                  <p className="inv2-finalization-reason"><b>Αιτιολογία οριστικοποίησης:</b> {current.snapshotJson.reason}</p>
+                ) : null}
               </footer>
             </>
           ) : (
