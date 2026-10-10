@@ -2286,15 +2286,36 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### AI-CC-LIMITS — AI Command Center όρια PASS
 
-**Κατάσταση:** OPEN / ASSIGNED / LIMITED BROWSER NAVIGATION PASS; request/auth acceptance NOT TESTED; visual phases 1–14 remain CLOSED
+**Κατάσταση:** OPEN / ASSIGNED / LIMITED BROWSER NAVIGATION + RESTRICTED PLATFORM ROLE / OWN-SESSION REVOCATION LAB PASS; remaining request/tenant/module/race acceptance NOT TESTED; phases1–14 CLOSED
 
-**Υπόλοιπο / όρια PASS:** Πέντε assistant-browser tile/normal-close round trips και protected Stock USER visual sequence επιβεβαιώθηκαν. Actual request isolation, network races, Stock support audit και unexecuted backend role/module/revocation παραμένουν NOT TESTED. Δεν ανοίγουν ξανά οι οπτικές αποδοχές 1–14.
+**Υπόλοιπο / όρια PASS:** Πέντε assistant-browser tile/normal-close round trips και protected Stock USER visual sequence επιβεβαιώθηκαν. Five restricted EMPLOYEE Platform GET denials403 and own-session old-token401 are now LIMITED LAB PASS. Actual six-destination request isolation, network races, Stock support audit and remaining tenant/module/role/revocation cases stay NOT TESTED. Δεν ανοίγουν ξανά οι οπτικές αποδοχές 1–14.
 
 **Υπεύθυνη σελίδα / branch:** `codex/n40-full-twin-navigation-audit-20261010` — explicit owner assignment for printed40, 10/10/2026.
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-10T10:51:38+03:00 — N40-NAV-CLAIM-20261010; Full Digital Twin six-tile navigation only: selected-company/store handoff, safe invalidation and return to the same Twin. `CHECKPOINTS/CHANGES/2026-10-10-n40-full-twin-navigation-audit.md`; PR #2040. No takeover of visual phases1–14, AI-CREDITS-01, inventory/workforce/video/invoice business flows or other owners.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 10/10/2026 18:54 Athens — fixed restricted Backoffice user created by user; one secure first login positively observed; mandatory final-password handoff pending in cloud tab22. Deployed9d3424ed / PR2133; no new source/deploy. Actual backend role/module/tenant/revocation/request/race checks NOT TESTED; No40 OPEN. CHECKPOINTS/CHANGES/2026-10-10-n40-backoffice-fixture.md.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 10/10/2026 19:25 Athens — five EMPLOYEE Platform GETs403 and own-session old-token401 matched server traces; LIMITED LAB PASS on2e1f4afe. Other request/tenant/module/race and Stock audit criteria OPEN. CHECKPOINTS/CHANGES/2026-10-10-n40-backoffice-fixture.md.
+
+**10 Oct 2026 19:25 Athens — No40 restricted Platform GET denial / own-session revocation LIMITED LAB PASS; OPEN**
+
+Owner codex/n40-full-twin-navigation-audit-20261010 unchanged. User completed mandatory final-password change after 19:23:26 reply. Fresh cloud Chrome tab22 visibly showed “Ο προσωρινός κωδικός αντικαταστάθηκε μέσω της κανονικής διαδικασίας” and read-only controls, so the mandatory-password gate was no longer active. No credentials entered/read by agent. Fixture n40.backoffice.20261010@myworkstation.invalid, EMPLOYEE, MYWORKSTATION LAB cmtpopbgk000prhb5qc60zxus; exact checker store ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ cmtpopbgo000trhb5ng9ytiru. No POS shift/item/SKU/quantity/payment (N/A); no business/device/permission/module changes.
+
+Before probes: latest Render dep-db56a7vlot8c73dshc0g LIVE, finished16:19:24UTC; independent browser /api/health ok:true/version0.22.0+kat-test-pos/exact revision2e1f4afe7d7eca6803f39c81d95ab19a70cd01f7. No deployment by this page. Browser checker session originated with released PR2133; loaded client asset revision not independently attested. Current main read2e1f4afe. Preserve other owners' concurrent work.
+
+One read-only five-GET batch at16:24:18.968–16:24:19.734UTC returned five403s. Then normal own-fixture-session logout and one retained-old-token GET returned401 at16:24:27.900UTC; private fixture session cleared, login form shown. No other session revoked. Business response bodies discarded by released checker; no response data, token or passwords exported.
+
+| Observed probe | HTTP | Server role | Exact client/server trace ID |
+| --- | --- | --- | --- |
+| POS | 403 | EMPLOYEE | n40-1f3a54d0e54a4ed79bf350055929cd76 |
+| EFTPOS / Ταμειακές | 403 | EMPLOYEE | n40-530b80fbc344472c85fa2451c1b35622 |
+| Ταμείο | 403 | EMPLOYEE | n40-273a126929e046efb7eab53ac679aa44 |
+| Modules προσωπικού | 403 | EMPLOYEE | n40-b8310bfce5404ea9bd69281db796c11f |
+| Κάμερες | 403 | EMPLOYEE | n40-1a1f37ce97264c22b49bfdeb7619a664 |
+| Own-session old-token probe | 401 | null | n40-21f107e4757c4fa4a5a9f28516721e5e |
+
+Each exact trace matched one Render server record: side server/source correlation-header, methodGET, company/store IDs exactly target, companyMatches/storeMatches true, no invalid/truncated scope; roleEMPLOYEE on403, role null on401. Sanitized evidence CHECKPOINTS/EVIDENCE/n40-backoffice-fixture-20261010/restricted-server-correlations.json and screenshot n40-restricted-results-1791649502689.jpg. This is LIMITED LAB PASS only for denial of these five Platform/SuperAdmin routes to this EMPLOYEE and rejection of this one session's old token after logout. It is not module-license denial, direct Workforce business endpoint authorization, cross-company/store rejection, positive authorized access, or six Twin-destination request isolation. DB/audit/session-count deltas NOT TESTED.
+
+No40 remains OPEN. Preserve phases1–14, Stock USER6097485640, five prior normal-close navigation roundtrips and disabled-POS denial without repetition. Still outstanding: six-destination attributable request isolation, authenticated tenant/module negatives beyond this batch, stale/network race cases, existing Twin client attestation and Stock support-exit Audit. No39/internal stock/business calculations outside scope. Next action: obtain per-transition client/server-correlated traces of the existing five destinations without executing analyses or commands, then remaining negatives/races and Stock audit readback; do not replay the Stock USER visual. Password/login handoffs now historical and completed; do not recreate/reset fixture or repeat this batch only for documentation.
 
 **10 Oct 2026 18:54 Athens — No40 Backoffice fixture created / first login observed / final-password HANDOFF / OPEN**
 

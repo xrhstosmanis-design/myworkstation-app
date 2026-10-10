@@ -1,3 +1,13 @@
+## 10/10/2026 — No40 limited restricted Platform role and own-session revocation LAB PASS
+
+Super Admin may use the additive No40 LAB audit screen from canonical https://myworkstation-app.onrender.com/platform-admin. Fixed fixture n40.backoffice.20261010@myworkstation.invalid is company-scoped EMPLOYEE; it is separate from the disabled POS operator and has no invented per-store User grant. This checker only requests MYWORKSTATION LAB → ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ.
+
+Verified flow: fixture account created by user; secure sign-in; mandatory password replacement completed manually by user; public completion status and read-only controls shown. Click “Έλεγχος απόρριψης Super Admin GET” once: five fixed Platform routes (POS packages, device routing, daily cash, personnel module metadata, video connection) returned403. Click “Έξοδος εικονικού χρήστη και έλεγχος ανάκλησης”: own-session logout followed by one old-token POS GET returned401 and login form appeared. Exact six client trace IDs matched server records at16:24:18–16:24:27UTC on revision2e1f4afe7d7eca6803f39c81d95ab19a70cd01f7, with EMPLOYEE for403 and null role for401. See CHECKPOINTS/CHANGES/2026-10-10-n40-backoffice-fixture.md and sanitized correlation JSON/screenshot.
+
+PASS criteria: these five SuperAdmin routes deny this authenticated EMPLOYEE after password change, and this single session's old token is rejected after normal logout. No credentials/business data exported; response bodies discarded; no other session/business/device/module/permission action. Reload loses private per-tab session; use secure login if future testing requires it, never reset/recreate fixture. A403 while mustChangePassword is active is not role-denial proof. Unexpected HTTP status stops the batch; investigate before any PASS.
+
+Known limits: no full No40 PASS, no license/module-denial proof, no direct Workforce authorization, no cross-store/company negative, no full destination request isolation/races, no Stock support-exit Audit or independent loaded-client revision attestation. Prior Stock USER visual and navigation PASS remain protected. Do not repeat this completed batch solely for documentation.
+
 ## 10/10/2026 — VOICE-ASSISTANT-01: LIVE PASS ερώτησης προβλήματος μετρητών
 
 **Ποιος / πού:** Super Admin στο [Platform Admin](https://myworkstation-app.onrender.com/platform-admin) → «AI Command Center» → «Ρώτα το MyWorkStation». Πρόκειται για ρητή κεντρική αναζήτηση σε όλα τα καταστήματα. Η αντίστοιχη Owner λειτουργία με module και μόνο δικά του καταστήματα παραμένει υπό υλοποίηση.
