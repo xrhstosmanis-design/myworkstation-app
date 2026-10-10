@@ -36,6 +36,21 @@ router.put("/audience-settings/:storeId",async(req,res,next)=>{
   }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Συμπλήρωσε κάθε ονομασία δικαιούχου με 1–60 χαρακτήρες."});next(error)}
 });
 const palette=["#1597a5","#287e9e","#4f8fbe","#dc7a27","#3978b8","#9aa82f","#9a5353","#76558e"];
+
+const DAILY_BITE_PRESET=[
+  {label:"ΣΦΟΛΙΑΤΕΣ",products:["ΚΡΟΥΑΣΑΝ ΒΟΥΤΥΡΟΥ","ΚΡΟΥΑΣΑΝ ΣΟΚΟΛΑΤΑΣ","ΜΠΟΥΓΑΤΣΑ ΚΡΕΜΑ","ΤΥΡΟΠΙΤΑ ΤΡΙΓΩΝΗ ΗΠ.","ΜΠΡΙΖΟΛΑ ΣΦΟΛΙΑΤΑ","ΠΙΤΣΑ","ΚΡΟΥΑΣΑΝ ΖΑΜΠΟΝ ΤΥΡΙ ΣΠΕΣΙΑΛ","ΣΤΑΜΝΑΓΚΑΘΙ ΜΥΖΗΘΡΑ","ΠΕΤΑΛΟ ΤΥΡΙ U","ΛΟΥΚΑΝΙΚΟΠΙΤΑ","ΦΛΟΓΕΡΑ ΤΥΡΙ ΚΡΕΜΑ","ΦΛΟΓΕΡΑ ΟΛΙΚΗΣ ΤΥΡΙ ΚΡΕΜΑ","ΠΑΤΑΤΟΠΙΤΑ ΝΗΣΤΙΣΙΜΗ","ΚΑΣΕΡΟΠΙΤΑ ΠΑΤΗΤΗ","ΤΥΡΟΠΙΤΑ ΣΦΟΛΙΑΤΑ ΔΙΑΤ.","ΚΟΥΛΟΥΡΙ ΓΑΛΟΠΟΥΛΑ ΦΙΛΑΔΕΛΦΕΙΑ","ΚΟΤΟΠΙΤΑ ΤΑΨΙΟΥ Δ.","ΠΡΑΣΟΠΙΤΑ ΤΑΨΙΟΥ Δ.","ΜΠΟΥΓΑΤΣΑ ΖΑΜΠΟΝ-ΤΥΡΙ","ΣΠΑΝΑΚΟΠΙΤΑ ΤΑΨΙΟΥ Δ.","ΤΥΡΟΠΙΤΑ ΤΑΨΙΟΥ Δ.","ΠΡΑΣΟΠΙΤΑ ΤΑΨΙΟΥ ΝΗΣΤΙΣΙΜΗ Δ.","ΚΟΥΛΟΥΡΙ ΝΤΟΜΑΤΑ ΕΛΙΑ","ΜΠΟΥΓΑΤΣΑ ΚΙΜΑΣ","ΚΡΟΥΑΣΑΝ SPECULOOS","ΝΤΟΝΑΤΣ MIDI COOKIES","ΝΤΟΝΑΤΣ ΜΠΙΦΤΕΚΙ","ΚΟΥΛΟΥΡΙ ΦΕΤΑ","ΝΤΟΝΑΤΣ ΦΡΑΟΥΛΑ","ΝΤΟΝΑΤΣ ΒΑΝΙΛΙΑ","ΝΤΟΝΑΤΣ ΚΑΝΕΛΑ","ΛΟΥΚΟΥΜΑΣ","ΠΙΡΟΣΚΙ ΖΑΜΠΟΝ - ΤΥΡΙ","ΠΙΡΟΣΚΙ ΛΟΥΚΑΝΙΚΟ"]},
+  {label:"ΜΠΑΡΕΣ ΓΚΡΑΝΟΛΑ",products:["ΜΠΑΡΑ ΓΚΡΑΝΟΛΑ","DARK CRUNCH CUP","BOUBOUKI CHOCO CUP","ΜΑΝΤΟΛΑΤΟ ΦΡΟΥΤΩΝ 60ΓΡ","ΚΟΡΩΝΑ ΠΟΤΗΡΑΚΙ ΣΟΚΟΛΑΤΑ","ΓΛΥΚΟΣΟΦΙΕΣ ΝΤΑΚΟΠΑΣΤΕΛΟ ΦΥΣΤΙΚΙ 60ΓΡ"]},
+  {label:"ΧΩΡΙΣ BARCODE",products:["SLIME CRYSTAL MUD","ΓΛΥΦΙΤΖΟΥΡΙ CHUPA CHUPS","MENTOS NANO BOTTLE SPEARMINT","MONSTER","ΛΟΥΤΡΙΝΑ ΖΩΑΚΙΑ","WATER GAME","ΜΕΛΙ ΜΕΡΙΔΑ STICK ΠΑΡΑΓΩΓΗΣ","ΑΥΓΑ OSCAR","BUBBLE BAR","ΚΡΟΥΑΣΑΝ COOKIES","ΠΟΤΗΡΙ ΜΕ ΠΑΓΟ","JELLYFISH","ΛΟΥΤΡΙΝΑ ΣΥΝΝΕΦΑΚΙΑ","ΛΟΥΤΡΙΝΑ KEY CHAINS","ΚΡΙ ΚΡΙ MASTER ΠΑΓΩΤΟΓΕΜΙΣΤΑ ΚΑΚΑΟ 75g","ΔΕΛΤΑ SMART ΦΡΑΟΥΛΑ 140GR","ΤΣΟΥΡΕΚΙ ΠΟΡΤΟΚΑΛΙ","ΛΟΥΤΡΙΝΟ JUNGLE","UNO","SQUISHY CAPYBARA","ΔΕΛΤΑ SMART ΜΠΑΝΑΝΑ 140GR","ΔΕΛΤΑ SMART ΜΠΙΣΚΟΤΟ 140GR","SQUISHY DUMPLING","SQUEEZE ΠΑΤΟΥΣΑ","ΡΟΛΟΙ","BOUNCE BALL","ΜΠΡΕΛΟΚ ΜΠΑΛΑ","PINCH FAMILY","ΔΕΛΤΑ ADVANCE 140GR","DINOSAUR BUBBLE STICK","KEY CHAIN","PINCH FAMILY ΜΠΙΣΚΟΤΟ","PINCH FAMILY ΚΑΡΔΙΑ","ΜΠΑΛΑ ΠΛΑΣΤΙΚΗ 2.5€","ΜΠΑΛΑ ΠΟΔΟΣΦΑΙΡΟΥ ΜΙΚΡΗ"]},
+  {label:"ΚΙΣΣΑΣ",products:["ΖΕΛΕ ΚΕΡΑΣΙ ΚΙΣΣΑΣ 200GR","ΖΕΛΕ ΠΟΡΤΟΚΑΛΙ ΚΙΣΣΑΣ 200GR","ΖΕΛΕ ΦΡΑΟΥΛΑ ΚΙΣΣΑΣ 200GR"]},
+  {label:"ΤΑΡΤΕΣ - ΓΛΥΚΑ",products:["ΠΕΡΕΚΟΠΙΤΑ ΚΙΜΑΣ","ΤΡΙΓΩΝΗ ΜΠΟΥΓΑΤΣΑ ΜΕ ΚΑΤΣΙΚΙΣΙΟ ΤΥΡΙ","ΚΟΥΡΟΥ ΟΛΙΚΗΣ ΦΙΛΑΔΕΛΦΕΙΑ ΣΧΟΙΝΟΠΡΑΣΟ","ΚΟΥΡΟΥ ΑΛΛΑΝΤΙΚΩΝ","ΠΙΤΑ ΠΙΤΣΑ","ΠΕΡΕΚΟΠΙΤΑ ΤΥΡΙ","FOCACCIA ΚΟΤΟΠΟΥΛΟ","ΜΑΝΙΤΑΡΟΠΙΤΑ","ΚΟΥΛΟΥΡΙ ΣΟΚΟΛΑΤΑ ΤΑΧΙΝΙ","DANISH ΒΟΥΤΥΡΟΥ ΚΕΡΑΣΙ","ΚΡΟΥΑΣΑΝ SPECULOOS","ΚΟΥΡΟΥ ΚΑΣΕΡΙ","ΛΟΥΚΑΝΙΚΟΠΙΤΑ ΚΟΥΡΟΥ","ΚΙΜΑΔΟΠΙΤΑ","ΦΛΟΓΕΡΑ ΜΠΕΙΚΟΝ ΠΑΡΜΕΖΑΝΑ","ΤΥΡΟΠΙΤΑ ΚΟΥΡΟΥ","FOCACCIA ΓΑΛΟΠΟΥΛΑ ΜΑΝΙΤΑΡΙ 4 ΤΥΡΙΑ","ΤΡΙΓΩΝΗ ΣΠΑΝΑΚΙ","ΛΟΥΚΑΝΙΚΟΠΙΤΑ ΔΙΠΛΟ ΛΟΥΚ.","LAURA ΜΠΙΣΚΟΤΑ ΣΟΚΟΛΑΤΑ","ΜΕΣΟΓΕΙΑΚΟ","FOCACCIA ΤΥΡΙ ΤΟΜΑΤΑ ΕΛΙΑ","ΧΩΡΙΑΤΙΚΗ ΠΙΤΑ ΚΑΣΕΡΙ","ΜΠΟΥΓΑΤΣΑ ΤΥΡΙ","BOMBOLONI","ΚΡΟΥΑΣΑΝ COOKIES","ΠΕΙΝΙΡΛΙ","BURRITO ΚΟΤΟΠΟΥΛΟ","ΜΑΦΙΝ ΚΑΡΑΜΕΛΑ","COOKIES ΓΕΜΙΣΤΑ ΣΟΚΟΛΑΤΑ","ΚΟΥΛΟΥΡΙ ΣΟΚΟΛΑΤΑ","BURRITO ΚΙΜΑ","ΚΟΛΟΚΥΘΟΠΙΤΑ ΓΛΥΚΙΑ","LAURA ΔΙΑΦΟΡΑ ΜΠΙΣΚΟΤΑ ΖΑΧΑΡΟΠΑΣΤΑΣ"]},
+  {label:"DELISNACKS",products:["ΜΠΑΓΚΕΤΑ ΖΑΜΠΟΝ","ΑΡΑΒΙΚΗ ΖΑΜΠΟΝ","ΚΟΥΛΟΥΡΙ ΜΑΡΓΑΡΙΤΑ ΓΑΛΟΠΟΥΛΑ","NUGGETS","ΒΡΑΣΤΑ ΛΑΧΑΝΙΚΑ","ΜΠΑΓΚΕΤΑ ΓΑΛΟΠΟΥΛΑ","ΑΡΑΒΙΚΗ ΓΑΛΟΠΟΥΛΑ","CLUB ΖΑΜΠΟΝ","ΤΣΙΑΠΑΤΑ ΦΕΤΑ ΝΤΟΜΑΤΑ ΑΓΓΟΥΡΙ","ΤΑΜΠΟΥΛΕ","ΜΠΑΓΚΕΤΑ ΚΑΛΑΜΠΟΚΙΟΥ NUGGETS","ΑΡΑΒΙΚΗ ΜΠΙΦΤΕΚΙ ΛΑΧΑΝΙΚΩΝ","ΜΠΑΓΚΕΤΑ ΤΟΝΟΣΑΛΑΤΑ","CLUB ΚΟΤΟΠΟΥΛΟ ΜΠΕΙΚΟΝ","ΚΑΙΣΑΡΑ","ΣΤΟΥΤΓΚΑΡΔΗΣ ΑΥΓΟ","ΑΡΑΒΙΚΗ ΓΑΛΟΠΟΥΛΑ COTTAGE","BAGEL ΜΟΤΣΑΡΕΛΑ PESTO","ΤΣΙΑΠΑΤΑ ΚΟΤΟΠΟΥΛΟ ΚΑΤΙΚΙ","ΣΑΛΑΤΑ ΣΕΦ","ΜΠΑΓΚΕΤΑ ΟΛΙΚΗΣ ΓΑΛΟΠΟΥΛΑ","ΚΛΑΜΠ ΓΑΛΟΠΟΥΛΑ","FOCACCIA ΜΟΤΣΑΡΕΛΑ","ΚΛΑΜΠ ΜΑΥΡΟ ΤΟΝΟΣΑΛΑΤΑ","ΣΑΛΑΤΑ ΖΥΜΑΡΙΚΩΝ ΓΑΛΟΠΟΥΛΑ","ΜΠΑΓΚΕΤΑ BRETZEL ΑΛΜ./ΚΩΝ","ΜΠΑΓΚΕΤΑ ΚΟΤΟΠΟΥΛΟ","ΝΤΟΝΑΤΣ ΓΑΛΟΠΟΥΛΑ","ΣΑΛΑΤΑ ΝΤΑΚΟΣ ΦΕΤΑ","ΣΑΛΑΤΑ ΤΟΝΟΣ","ΜΠΑΓΚΕΤΑ ΜΟΡΤΑΔΕΛΑ","ΜΠΑΓΚΕΤΑ ΖΑΜΠΟΝ ΛΟΥΚΑΝΙΚΟ","CHEESEBURGER","ΑΡΑΒΙΚΗ ΠΙΤΑ ΛΑΧΑΝΙΚΩΝ","ΣΑΛΑΤΑ ΡΙΖΟΤΟ ΛΑΧΑΝΙΚΩΝ"]},
+  {label:"ΜΠΑΛΕΣ",products:["ΜΠΑΛΑ ΠΟΔΟΣΦΑΙΡΟΥ","ΜΠΑΛΑ ΒΟΛΕΥ","ΜΠΑΛΑ ΜΙΚΡΗ"]},
+  {label:"ΜΑΓΑΚΗΣ",products:["ΤΟΣΤ ΓΑΛΟΠΟΥΛΑ ΜΑΓ.","ΑΡΑΒΙΚΗ ΚΑΙΣΑΡΑ","ΤΟΣΤ ΜΕ ΔΙΠΛΟ ΤΥΡΙ ΜΑΓΑΚΗΣ","ΑΡΑΒΙΚΗ ΑΛΛΑΝΤΙΚΩΝ","ΑΡΑΒΙΚΗ ΓΑΛΟΠΟΥΛΑ ΣΩΣ","ΜΠΑΓΚΕΤΑ ΧΟΙΡ. ΩΜΟΠΛΑΤΗ GOUDA","ΣΑΛΑΤΑ ΜΕ ΡΟΚΑ ΜΑΓΑΚΗΣ","ΣΑΛΑΤΑ ΝΤΑΚΟΣ","ΑΡΑΒΙΚΗ ΓΑΛΟΠΟΥΛΑ ΝΤΟΜΑΤΑ","ΑΡΑΒΙΚΗ ΓΑΛΟΠΟΥΛΑ ΦΑΡΜΑ","ΜΑΓΑΚΗΣ ΣΑΛΑΤΑ ΣΟΛΟΜΟΥ","ΤΟΣΤ ΧΟΙΡΙΝΗ ΩΜΟΠΛΑΤΗ","ΤΟΣΤ ΓΑΛΟΠΟΥΛΑ ΤΥΡΙ ΜΑΓΙΟΝΕΖΑ"]},
+  {label:"ΚΕΙΚ",products:["ΚΕΙΚ ΑΝΑΜΕΙΚΤΟ ΣΤΡΟΓΓΥΛΟ","ΜΗΛΟΠΙΤΑΚΙ","ΜΙΚΡΗ ΛΑΓΑΝΑ","ΤΣΟΥΡΕΚΙ ΠΡΩΙΝΑ ΜΑΣΤΟΡΑΣ","BROOKIES DUBAI CHOCOLATE 150GR","ΤΣΟΥΡΕΚΙ","COOKIES ΑΜΥΓΔΑΛΟΥ","ΣΤΑΦΙΔΟΨΩΜΟ","ΤΣΟΥΡΕΚΙ ΜΑΣΤΟΡΑΣ","ΤΣΟΥΡΕΚΙ ΣΤΑΦΙΔΑ 80GR","ΒΑΤΟΜΟΥΡΟΠΙΤΑΚΙ","COOKIES ΚΑΡΥΔΑΣ ΜΕ ΣΟΚ.","ΤΑΧΙΝΟΠΙΤΑ","ΣΤΑΦΙΔΟΚΕΙΚ","ΚΕΙΚ ΦΕΤΑ 80ΓΡ. ΠΟΡΤ. ΚΑΙ ΑΝΑΜ. ΜΑΓ.","COOKIES ΚΑΝΕΛΑΣ","COOKIES ΒΑΝΙΛΙΑΣ ΜΕ ΣΟΚ.","ΣΟΚΟΛΑΤΟΨΩΜΟ","SOFT COOKIES ΔΙΑΦΟΡΑ","AHA DOUBLE CHOCO COOKIES 80 GR","COFFEE RING ΜΕ ΣΟΚΟΛΑΤΑ","SOFT CHOCO ROLLS","ΕΛΙΟΨΩΜΟ","AHA COOKIES CINNAMON CARAMEL 80GR","ΚΕΙΚ ΒΑΝΙΛΙΑ MINI"]},
+  {label:"ΠΑΙΧΝΙΔΙΑ",products:["SQUISHY BUN MINI","CANDY GANGS BUILD BOX FLOWERS","FINGER GUESSING GAME","SHERMAN","ΟΠΛΟ ΑΕΡΟΠΛΑΝΟ"]}
+];
+const dailyBiteNameKey=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR").replace(/[^0-9A-ZΑ-Ω€]+/g," ").trim().replace(/\s+/g," ");
+
 const fixedButtons=[
   {id:"cancel",label:"ΑΚΥΡΩΣΗ",action:"CLEAR_CART",color:"#ef4444",visible:true},
   {id:"hold",label:"ΑΝΑΜΟΝΗ",action:"HOLD",color:"#edf2f1",visible:true},
@@ -89,6 +104,25 @@ router.get("/company-products",async(req,res,next)=>{try{
  const rows=await prisma.$queryRaw`SELECT p."id",p."id" AS "sourceCode",p."sku" AS "displayCode",p."name",p."salePrice" AS "defaultRetailPrice",c."name" AS "categoryName",ARRAY[]::text[] AS "barcodes" FROM "Product" p LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" WHERE p."companyId"=${body.companyId} AND p."active"=true AND ((cardinality(${ids}::text[])>0 AND p."id"=ANY(${ids}::text[])) OR (${q}<>'' AND (p."name" ILIKE ${'%'+q+'%'} OR p."sku" ILIKE ${'%'+q+'%'} OR EXISTS(SELECT 1 FROM "ProductBarcode" b WHERE b."productId"=p."id" AND b."barcode"=${q})))) ORDER BY p."name",p."id" LIMIT 100`;
  res.json({rows});
 }catch(error){next(error)}});
+
+router.post("/prepare-daily-bite-layout",async(req,res,next)=>{try{
+ const body=z.object({companyId:z.string().min(1).max(120)}).parse(req.body||{});
+ const companies=await prisma.$queryRaw`SELECT "id","name" FROM "Company" WHERE "id"=${body.companyId} LIMIT 1`;
+ const company=companies[0];
+ if(!company||!dailyBiteNameKey(company.name).includes("DAILY BITE"))return res.status(400).json({error:"Η προετοιμασία αυτή επιτρέπεται μόνο για την εταιρεία DAILY BITE."});
+ const rows=await prisma.$queryRaw`SELECT "id","name" FROM "Product" WHERE "companyId"=${body.companyId} AND "active"=true ORDER BY "name","id"`;
+ const byKey=new Map();for(const row of rows){const key=dailyBiteNameKey(row.name);if(!byKey.has(key))byKey.set(key,[]);byKey.get(key).push(row)}
+ const missing=[],ambiguous=[];
+ const categories=DAILY_BITE_PRESET.map((group,index)=>{
+   const ids=[];
+   for(const wanted of group.products){const found=byKey.get(dailyBiteNameKey(wanted))||[];if(found.length===1)ids.push(found[0].id);else if(found.length===0)missing.push({category:group.label,name:wanted});else ambiguous.push({category:group.label,name:wanted,matches:found.map(x=>({id:x.id,name:x.name}))})}
+   return {...blankCategory(index),label:group.label,categoryName:group.label,productCodes:uniqueCodes(ids,MAX_CATEGORY_PRODUCTS),color:index%2===0?"#dfeee9":"#cfe5dc"};
+ });
+ while(categories.length<CATEGORY_COUNT)categories.push({...blankCategory(categories.length),color:"#edf5f2"});
+ const layout=normalizeLayout({catalogCompanyId:body.companyId,title:"DAILY BITE POS",productColumns:5,showSku:false,buttonFontScale:1.15,theme:{headerColor:"#033d2f",accentColor:"#087a52",surfaceColor:"#ffffff"},categories});
+ res.json({layout,matchedProducts:categories.reduce((sum,row)=>sum+row.productCodes.length,0),missingProducts:missing,ambiguousProducts:ambiguous,source:"USER_SCREENSHOTS_2026-10-10"});
+}catch(error){next(error)}});
+
 const importSchema=z.object({companyId:z.string().min(1).max(120),quickKeys:z.array(z.object({productId:z.string().min(1).max(120)})).max(20),categories:z.array(z.object({label:z.string().trim().min(1).max(80),productIds:z.array(z.string().min(1).max(120)).max(40)})).length(14)});
 router.post("/prepare-company-layout",async(req,res,next)=>{try{
  const body=importSchema.parse(req.body||{}),ids=[...new Set([...body.quickKeys.map(x=>x.productId),...body.categories.flatMap(x=>x.productIds)])];
