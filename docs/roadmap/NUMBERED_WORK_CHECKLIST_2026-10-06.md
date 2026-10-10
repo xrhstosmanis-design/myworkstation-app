@@ -1,3 +1,7 @@
+## 10/10/2026 16:35 — Νο33 / tracker35: Online Master περιορισμένο LIVE UI PASS, συνολικάOPEN
+
+Sameowner codex/operator-checkbox-audit-20261009. NormalEMPLOYEE επέστρεψεσωστόMasterπροϊόν+barcode απόμία ακριβήtypeddescription/Online καιακύρωσεπρότασηχωρίςκαταχώριση· original23/cart0queue0/MAINcontrolαμετάβλητα. Numericbarcode/externalsearch/registration/Auditrecord/actualreturn/printing/initialcash/closing/broaderfixturesπαραμένουνεκκρεμή. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-operator-online-master-live.md/manual καιauthoritativeTracker ενημερωμένα. Nextsingleaction νέαειδικήέγκριση γιανεαvirtualsaleSKU2270/1τεμ/1€ καιεπιστροφήτης ίδιας, μεnarrowstockbefore/after· τίποταδενυποβλήθηκε. PriorPR2099/2103boundedshiftPASSκαιανεξάρτητοιownersπροστατεύονται.
+
 ## 10/10/2026 16:13 Athens — Νο33 / tracker35: ανεξαρτησία βάρδιας περιορισμένο LIVE PASS, συνολικά OPEN
 
 Same owner codex/operator-checkbox-audit-20261009. PR2099/fullCI/mainCI/guardedRender, exactdeployed55819e98: επιστροφέςOFF+συναλλαγέςON φόρτωσε8 κινήσεις· own/all OFF/ON7→8 στην ίδια προβολή/noPOSrefresh. Αρχικά23EMPLOYEE/καλάθι0/ουρά0 επαναφέρθηκαν, MAIN/controlαμετάβλητα, Audit1195→1199 μόνο4rights. No33 OPEN· actualreturn/printing/initialcash/closing/positiveonline/broaderrole/store/module και negativeLIVE εκκρεμή. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-operator-shift-return-independent.md, POSmanual και authoritative OPEN_WORK_TRACKER ενημερωμένα. Προγενέστερα PASS και ανεξάρτητοιNo39/48/49/invoice/scanner/change owners διατηρούνται.
