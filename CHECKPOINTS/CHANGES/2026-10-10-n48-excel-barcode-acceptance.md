@@ -6,3 +6,16 @@ Read AGENTS/current numbered/tracker/active/pending/products-master-catalog manu
 
 Acceptance: existing forms retain correct company/store/product selection, barcode identifies intended item or rejects unknown, one named test barcode offer persists and reads back; one bounded Excel offer fixture imports only correct rows/products/date/price/store scope, visible truthful completion/reset and independently reopened results; invalid input must not partially apply. Cleanup only reversible pause of newly created LAB records with fresh baseline, no historical deletion. Fix only reproduced causal failures, require fullCI/exactdeployment before LIVE. Physical/mobile/POScheckout/widerrole/maxcapacity remain separate unless explicitly tested. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n48-excel-barcode-acceptance.md. Single next action: inspect current UI and source after claim publication; preserve owner until completed/named handoff.
 
+
+## Source diagnosis after green claim PR #2090 (main 52f61c0846fab4a2d1dfdf21e1efb28ea2b16707)
+- NOT TESTED LIVE: Barcode form reuses selection-based createPromotion; barcode/name are ignored and empty selection is rejected. A stale Offers selection could target the wrong product.
+- NOT TESTED LIVE: Excel writes legacy Promotion/PromotionStore, whereas current list and POS read PriceCatalogPromotion/scoped stores. Async event.currentTarget.reset also loses the form; loadPromotions clears success.
+- Bounded correction: exact company/active barcode resolution, common atomic scoped persistence for Excel, durable offer name, stable form/reset/readback, no default blanket barcode distribution. Preserve existing bulk/gift/date/overlap/tenant rules and N47 regression coverage.
+- Required isolated regressions: exact barcode vs stale selection; unknown/ambiguous barcode rejection; delayed Excel response/reset/one POST; normalized import atomically rejects invalid rows/overlap/foreign or inactive store; no price/stock mutation. All LIVE acceptance remains NOT TESTED.
+
+## Isolated verification — AWAITING LAB
+- Mounted original main form reproduces failure: unknown barcode reports «Επίλεξε τουλάχιστον ένα προϊόν.» instead of resolving/rejecting the barcode (regression exit 1).
+- Corrected mounted Barcode/Excel delayed-response regression PASS; previous N47 offer/gift form regression PASS.
+- Node 20.20.2 local server suite: 2,090 tests, 2,077 PASS, 13 environment-dependent SKIP, 0 FAIL. Frontend build PASS; server preparation/Prisma generation PASS. Native PostgreSQL barcode/name/import/atomic rollback coverage added to existing isolated offer test and requires CI PostgreSQL execution.
+- Additive optional promotion name column uses existing idempotent route schema setup, with no migration/seed invoked from this sandbox. Existing offers retain null names. Barcode target store boxes now require explicit selection. Excel X+Y names this same barcode product as the allowed gift product; other-product gifts remain in Offers workflow.
+- Read-only fresh LAB candidate: LAB EXCEL TEST 2, LAB-EXCEL-20260909-02, source stock −2, retail 2.40 €, existing barcodes 2900000000018 / 2900000000025 / 4006381333932 updated 10/10 11:42:09. No new LAB persisted action has occurred. N47 future offer remains protected.
