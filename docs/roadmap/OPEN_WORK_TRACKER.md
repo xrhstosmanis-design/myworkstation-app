@@ -139,6 +139,14 @@ Agreed desktopLAB48 COMPLETE: one correct named barcodeoffer, unknownbarcode rej
 
 ## 10/10/2026 15:25 Athens — Νο33 δικές του / όλες: cross-actor περιορισμένο LIVE PASS
 
+## 10/10/2026 — DAILY-BITE-IMPORT resumed / ASSIGNED / live precision confirmed
+
+ΑΝΑΛΗΨΗ ΑΠΟ `codex/daily-bite-import-20261010` — ASSIGNED `codex/daily-bite-price-precision-20261010`, same issue #2054 and user-authorized handoff. Preserve all other owners and PASS. Existing 9 departments/0 products remain protected, never recreate departments. Secure browser positively authenticated Χρήστος Μάνης / Platform Admin in this new conversation.
+
+Independent Render read-only information_schema query on myworkstation-db confirmed public.Product.costPrice NUMERIC(14,4); Product.salePrice and StoreProduct.salePrice remain NUMERIC(14,4). Original XLSX SHA2562307c282c299d2716af17078315ab9b461e5748521dd9eff0dce80bb64fe8ff2 retained; 8753 eligible, purchase precision max6 decimals (424 five-decimal +515 six-decimal), max cost87.8. No source edits or business writes. PR2096 remains draft/unreleased. Actual browser preview/import and new LAB acceptance NOT TESTED.
+
+Bounded next action: preserve the same 10 integer digits while widening only Product.costPrice to NUMERIC(16,6) through reviewed deployment bootstrap, with an explicit runtime capacity check before source preview/import and atomic readback. No production migration from this sandbox. Existing stored values must compare exactly before/after; sale prices, stock, RBS/Kiosk/commonPOS/otherstore business records unchanged. Isolated PostgreSQL migration/import regressions, full green CI, exact deployment and synthetic measured LAB must precede original DAILY BITE preview and definitive import. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-daily-bite-import.md. Importer remains OPEN, no new manual PASS.
+
 ## DAILY-BITE-IMPORT / 10/10/2026 13:12 UTC / ASSIGNED / setup LIVE readback; importer BLOCKED
 
 Owner `codex/daily-bite-import-20261010`, issue #2054. Existing DAILY BITE Ε Ε /801875420/storecmv25lf3h000ueegf0kkii3pb: **9 departments saved/read back, 0 products**. Department9 UUID7de765d1-e960-4b52-8bc2-65c184f2e2a6 /register9/code45/VAT0/active+commerce/exemption27; never recreate1–9. VATsourcePR2091/2095 CI SUCCESS; exacthealthy55819e98851a89eb55f59c42ae1ee37b1517ee4f, mainCI38053942859/guardedRender38054259808SUCCESS. LAB read-only form option27 selected/cancelled,1department/15products unchanged; no persistedLAB/import/fiscal PASS.
