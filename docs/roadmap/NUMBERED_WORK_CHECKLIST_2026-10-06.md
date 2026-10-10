@@ -335,7 +335,9 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 ## 47 — Προσφορές — επιλογή ειδών και πραγματική αποστολή
 
 - **Tracker ID:** `TODAY-05`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ VISUAL / OPEN
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** ASSIGNED / ΜΕΡΙΚΟ VISUAL / OPEN
+
+- **Υπόλοιπο / όριο:** Επιλογή/προβολή/αφαίρεση, πραγματική δημιουργία/αποστολή/readback σεLAB. Ownercodex/n47-offers-acceptance-20261010 μετά ρητή οδηγία10Oct14:33:22· checkpoint2026-10-10-n47-offers-acceptance.md. Δεν επαναλαμβάνεται προηγούμενοTask20δώρο/πώληση ούτεN46.
 
 ## 48 — Excel / Barcode — λειτουργικές δοκιμές νέας οθόνης
 
