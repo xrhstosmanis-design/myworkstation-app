@@ -190,3 +190,21 @@ Single next action: securely authenticate LABPOS2 with existing personalPIN on t
 ### Publication reconciliation
 
 Latest fetched main51a74f533d986651b4a6af34b0c55bb5f3b1ba0a retained in full, including independent N39 before-baseline/handoff and scanner historical integrity records. Complete latest active history preserved byte-for-byte beneath this audit's new top entry. No source changes. Read-only health subsequently returned ok=true/exactf410a1d648ed82e81a62b79270623b2c225e77f7; this is newer independent scanner deployment, not this audit's source release. Bounded UI evidence remains the observed session and priorb075health; no clientSHA inferred. Updated PDFs regenerated against combined current records. Documentation CI is not full source CI or overallLABPASS.
+## 10/10/2026 08:37 Europe/Athens — secure reentry verified / BEFORE independent payment-tab denial
+
+DocsPR2017/head1a284ee3c48c4ff51377060f86699867d59fe0f7 full documentation CI38027912484 SUCCESS (build-and-test correctly skipped fordocs-only), mergeda39466c8eec518613521b00bfa56b5349f3f96b1. SecureexistingPIN requestsubmitted; freshAX positivelyshows LABPOS2connected/catalog11/93/cart0,total0,localqueue0,invoiceentrypresent. No credentialvalues read or changed. This supersedessecure-reentrypending in prior published snapshot, not isolatedactive-only acceptance or broaderpass.
+
+Opened read-only Payments with originalbothsupplier/thirdtrue. Actual tabs Λοιπάέξοδα/Πληρωμέςπρομηθευτών–Ετεροχρονισμένες/ΚατάθεσηΤράπεζας, cashfromactiveshift currentlyenabled. This differs from oldstaleshift observedpreviousday; currentshift identity/count/balances andphysical/control/Audit notcaptured, no inferredfinancialdelta or opening/closingbythisaudit. No amount/declaration/photo/submit.
+
+BEFORE scopedprofilechange: original23details active/POStrue, edit/cardOnly/hidefalse,remainingtrue,orders=true,ordinaryrole; currentcart0,total0. DenyonlythirdPartyPaymenttrue→false,keep suppliertrue,inspectindependentexpense/suppliertabavailabilitywithoutfinancialsubmit; then restorethirdtrue anddenysupplieronly; exactrestorebothtrue. Financial/stock/control/Audit baseline NOTTESTED; noeconomicoperationplanned.
+
+
+## 10/10/2026 — PAYMENT-MODAL-RUNTIME observed LIVE FAIL / BEFORE bounded source fix
+
+After secure reentry, Payments opened with bothrights true. DenyonlythirdPartyPaymentfalse in LABPOS2, retain suppliertrue, save, actualfooterrefresh, reopenfreshAX confirmsfalse/true. Existing paymentmodal keeps Λοιπάέξοδα even after outerPOSrefreshes; after close/reopen, actualmodal omits expense tab and selects supplier. No amount/declaration/upload/submit. This is current open-modal runtime revocation UI FAIL, not evidence of unauthorized financial submission. Restorethirdtrue, save, refresh/reopenfreshAX confirms original. Closed paymentmodal; originalcart0 remains.
+
+Causal source read: StorePosPaymentsModal snapshots cached/accessGET once on mount; StorePosStandardModals does not receive/pass mounted POSliveAccess. Existing server financial authorization unchanged. Before source editing: latestmain d9a83a65 includes original resumed auditPR2017 and independent scannerUSERPASS; protect completeactivehistory, scannerknownadd/focus USERPASS, invoices/assistant/Inventory and sameShift/staleshift/tenant/financial/idempotency/fiscal gates. Scope is only paymentmodal currentrights propagation through existing parent chain, no newAPI or financial UX. Add actualmountedPOS/React regression grant/revoke/regrant expense/supplier/sameShift, preserveunsavedform/cart, nofinancialwrite, initialGETsnapshotcannotoverridecurrentrights. Fullsource/mainCI/build/E2E andguardedexacthealth then LIVE modalopenrevocation required. NoCIonlymanualPASS. Sameowner printed33/tracker35 OPEN.
+
+### Local validation / reconciliation
+
+Node20 targeted mounted POS/checkbox/scanner: 7PASS/0FAIL/0SKIP; frontend build PASS. Full server:2011 tests/2005PASS/0FAIL/6 isolated DB skips. Initial added no-write assertion was overbroad for existing audit/audience-selection POSTs; corrected to permit those existing events while excluding economic writes. Generated unrelated kiosk-reports-audit.js change restored. Latest main ccb6b8ad retained independent N39 LAB PASS and POS change-notice owner/history. Source CI/deploy/live pending.
