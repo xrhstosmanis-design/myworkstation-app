@@ -1,3 +1,7 @@
+## 10/10/2026 20:33 Athens - Owner troubleshooting: UI identity and assistant session disagree (NOT PASS)
+
+Approved LAB module and prior support-only cash PASS remain protected. A signed-in greeting «Υπεύθυνος Εργαστηρίου» and two LAB store buttons were observed, but selected-store assistant disabled Ask with «Επίλεξε το κατάστημα μέσα από την κανονική υποστήριξη.»; after one normal reload own-company listing failed «Η επιλογή εταιρείας αφορά τον ιδιοκτήτη.». No normal Owner question succeeded and no Owner authorization PASS is claimed. Do not use the greeting/module matrix/support answer as proof. Next use user-chosen secure existing Owner sign-in and fresh own-company/selected-store status; stop on repeated denial, retain evidence and inspect only authorized visible status/server records. Never bypass the guard/reset credentials/export tokens or revoke another session. Source/session-transition cause unverified; no source fix made. Newest checkpoint/evidence is authoritative for this blocked acceptance.
+
 ## 10/10/2026 20:04 - LAB Owner assistant module activation: bounded LIVE PASS
 
 **Who / where:** Existing Super Admin, canonical [Platform Admin](https://myworkstation-app.onrender.com/platform-admin) -> Συνδρομές & Modules -> MYWORKSTATION LAB. This verified grant applies only to its two virtual stores. Existing Owner usage/authentication remains NOT TESTED.
