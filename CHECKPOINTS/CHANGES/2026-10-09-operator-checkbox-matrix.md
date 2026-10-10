@@ -1,3 +1,25 @@
+## 10/10/2026 15:20 Europe/Athens — Νο33: μεταφορά ποσού / περιορισμένο LIVE PASS
+
+Owner `codex/operator-checkbox-audit-20261009`, Νο33 / tracker35 **OPEN**. Με ειδική έγκριση χρήστη 14:57 έγιναν μόνο μία εικονική έξοδος 0,10€ LAB POS2 MAIN→Ιδιοκτήτης (15:02, αιτιολογία `No33 virtual OUT 20261010`) και μία εικονική είσοδος 0,10€ Ιδιοκτήτης→MAIN (15:18, αιτιολογία `No33 virtual IN 20261010`). Κάθε επιτυχία επιβεβαιώθηκε στη φόρμα, στην ανανεωμένη βάρδια και με μία ξεχωριστή εγγραφή Audit. Καμία επανάληψη παλιάς πληρωμής ή επιτυχούς εξόδου.
+
+Το δικαίωμα «Μεταφορά ποσού» OFF15:00 έκλεισε την ήδη ανοικτή φόρμα με το κανονικό runtime poll, χωρίς refresh POS, και απενεργοποίησε την είσοδο. ON15:01 επανέφερε την είσοδο· επιβεβαιώθηκαν όλα τα αρχικά23 δικαιώματα και ο EMPLOYEE, χωρίς προαγωγή/PIN. LIVE IN φόρμα απέρριψε κενό ποσό και κενή αιτιολογία πριν την επιτυχή καταχώριση. Οι προγραμματισμένες δύο επιτυχείς καταχωρίσεις εξαντλήθηκαν· δεν υπάρχει άδεια επιπλέον οικονομικής δοκιμής.
+
+Ενδιάμεσο IN LIVE FAIL «Απαιτείται σύνδεση.» δεν πρόσθεσε Audit/μεταφορά (1190 παρέμεινε1190). Ενεργή σύνδεση επιβεβαιώθηκε στη σωστή platform-admin. Αίτιο: το BackOffice API αντικαθιστούσε Authorization/Content-Type όταν το IN προσέθετε terminal header. Διορθώθηκε μέσω PR2085/head a508c87b/fullCI38050770531SUCCESS/main6b08e72a/fullmainCI38050974318SUCCESS/guardedRender38051178498SUCCESS. Ανεξάρτητο browserhealth exact6b08e72a9c14f973a62cc1e3a43f8600aef9fef4/ok, νέο POS+BackOffice reload, φρέσκα baseline πριν το IN· το επιτυχές IN επιβεβαιώνει τη διόρθωση LIVE. Αρχική OUT υλοποίηση PR2071/αποδοχή φορμών PR2075 διατηρούνται.
+
+| Έλεγχος | Πριν | Μετά |
+| --- | --- | --- |
+| MAIN κινήσεις | 6 | 8, ακριβώς +2 μεταφορές |
+| MAIN πωλήσεις / μετρητά πωλήσεων | 4,00€ | 4,00€ |
+| MAIN κάρτες / IRIS / έξοδα | 0 / 0 / 0 | 0 / 0 / 0 |
+| MAIN από / προς Ιδιοκτήτη | 0 / 0 | 0,10€ / 0,10€ |
+| LAB-POS-02 control | 2 κινήσεις, πωλήσεις0, έξοδα120, IN0/OUT0 | αμετάβλητο |
+| Audit, μαζί με header | 1187 | 1191: δύο αλλαγές δικαιώματος + δύο επιτυχείς μεταφορές |
+| LAB POS2 | EMPLOYEE, αρχικά23, καλάθι0/ουρά0 | ίδιο |
+
+Τελευταία SALE MAIN11:59 παραμένει ίδια. Πριν1187 περιλαμβάνει εξωτερική Νο39 απογραφή14:49· δεν επαναλήφθηκε/αναλήφθηκε. Κανένα affectedSKU/stock/shift/fiscal/τραπεζική ή φυσική μεταφορά δεν εκτελέστηκε. Full stock ledger **NOT TESTED**, χωρίς πρόσβαση Inventory. Η επίδραση σε οριστικό κλείσιμο, overdraft/κλειστή βάρδια/παράνομο server POST/δίκτυο-replay LIVE και πραγματική παράδοση μετρητών παραμένουν **NOT TESTED**, ανεξάρτητα από native CI proof. Το PASS αφορά τις συγκεκριμένες εικονικές καταχωρίσεις, terminal/control/Audit, φόρμες και runtime δικαίωμα· όχι όλο το Νο33.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-operator-transfer-financial-live.md`. Evidence `CHECKPOINTS/EVIDENCE/operator-transfer-20261010/`: permission-off-pass, out-posted-pass, in-auth-fail, reason-required-pass, in-posted-pass, totals-pass. Επόμενο: πραγματικός cross-actor έλεγχος δικών του/όλων με την ήδη υπάρχουσα νέα IN κίνηση, χωρίς νέα οικονομική fixture. Υπόλοιπα Νο33: θετική online αναζήτηση, πραγματικές επιστροφές/εκτύπωση, αρχικό ταμείο/κλείσιμο και υπόλοιποι ρόλοι/εταιρείες/καταστήματα/modules. Απαιτείται ειδική έγκριση πριν επιπλέον οικονομική/stock/shift υποβολή.
+
 ## 2026-10-10 13:31–13:34 Athens — No33 transfer entry / directions / Cancel bounded LIVE PASS
 
 Owner codex/operator-checkbox-audit-20261009; No33/tracker35 OPEN. PR2071 final93cadf3bfbdb0af2d1d14c27cf466c3d51c8d686/fullCI38044458793SUCCESS includingnativePG, main d6f8e429060a2b7e8ddfbe2470285dc1379f9a73/fullmainCI38044711647SUCCESS/guardedRender38044863683SUCCESS; independent browserhealth exactd6f8/ok thenfreshPOS+BackOfficereload. Original23 LABPOS2EMPLOYEE independently confirmed beforetest, noflag/role/PIN changes, cart0/queue0.
