@@ -32,24 +32,25 @@ export async function readCanonicalPlatformCash(req,date,{fetchImpl=fetch,port=p
   return cashEvidence(await response.json());
 }
 
-export async function runCashAssistant({prompt,requestProvider,readCash}){
+export async function runCashAssistant({prompt,requestProvider,readCash,tool=cashTool}){
   const input=[{role:"user",content:prompt}],evidence=[];
   let calls=0;
   // At most two read calls and three model requests per explicit Ask. Every
   // continuation replays reasoning/output items without storing a response.
   for(let round=0;round<3;round++){
-    const provider=await requestProvider({input,tools:[cashTool],parallel_tool_calls:false,tool_choice:round===2?"none":"auto",store:false});
+    const provider=await requestProvider({input,tools:[tool],parallel_tool_calls:false,tool_choice:round===2?"none":"auto",store:false});
     if(!provider.response.ok)return {...provider,evidence};
     const toolCalls=(provider.raw.output||[]).filter(item=>item.type==="function_call");
     if(!toolCalls.length)return {...provider,evidence};
     if(round===2||toolCalls.length!==1||calls>=2)throw Object.assign(new Error("Ο βοηθός έφτασε το όριο ανάγνωσης. Ζήτησε έναν συγκεκριμένο έλεγχο."),{status:502});
-    const tool=toolCalls[0];
-    if(tool.name!==cashTool.name||typeof tool.call_id!=="string"||!tool.call_id||typeof tool.arguments!=="string"||tool.arguments.length>200)throw Object.assign(new Error("Μη επιτρεπόμενη αναζήτηση από τον βοηθό."),{status:502});
-    let args;try{args=cashToolArguments.parse(JSON.parse(tool.arguments))}catch{throw Object.assign(new Error("Η ημερομηνία του ελέγχου δεν είναι έγκυρη. Διευκρίνισε την ημερομηνία."),{status:422})}
+    const call=toolCalls[0];
+    if(call.name!==cashTool.name||typeof call.call_id!=="string"||!call.call_id||typeof call.arguments!=="string"||call.arguments.length>200)throw Object.assign(new Error("Μη επιτρεπόμενη αναζήτηση από τον βοηθό."),{status:502});
+    let args;try{args=cashToolArguments.parse(JSON.parse(call.arguments))}catch{throw Object.assign(new Error("Η ημερομηνία του ελέγχου δεν είναι έγκυρη. Διευκρίνισε την ημερομηνία."),{status:422})}
     calls++;
     const report=await readCash(args.date);
     evidence.push(report);
-    input.push(...provider.raw.output,{type:"function_call_output",call_id:tool.call_id,output:JSON.stringify(report)});
+    input.push(...provider.raw.output,{type:"function_call_output",call_id:call.call_id,output:JSON.stringify(report)});
   }
   throw Object.assign(new Error("Ο βοηθός δεν ολοκλήρωσε την απάντηση."),{status:502});
 }
+
