@@ -1,3 +1,13 @@
+## VOICE-ASSISTANT-01 — SOURCE DEPLOYED / AWAITING PHYSICAL LAB — 10/10/2026 16:53 Athens
+
+Owner remains `codex/unified-voice-assistant-20261010`; no transfer/release. First bounded Greek voice input merged PR #2104 at `d7520c9fefa233551820a26d986ab50b81e16a89` after exact-head full CI38056825294 SUCCESS (2123 tests PASS, zero failed/skipped, build, Windows, production invariants and isolated PostgreSQL/HTTP E2E). Main full CI38057041198 SUCCESS. Guarded Render38057218388/job114228066922 SUCCESS; rollback captured and not executed. Fresh actual browser health at2026-10-10T13:53:02.470Z: ok=true/version0.22.0+kat-test-pos/exact revisiond7520c9fefa233551820a26d986ab50b81e16a89. Health attests server; cached authenticated client SHA not independently verified.
+
+Existing OpenAI connection/key/model retained as selected by user. Released scope only: reusable opt-in speech controls/controller in the existing Super Admin snapshot question form, editable final text, explicit «Ρώτα», Greek recognition request, stop/cancel/error/unsupported fallback, late-result cancellation on store switch/disappearance, visibility/unmount, and separate provider-reported token telemetry. No new project/key/paid service, provider call from client, audio upload to our API, automatic listening/submission/action, role/module/fiscal/data mutation or report-tool claim. The browser may use an external recognition service, disclosed before activation. Real monetary cost remains unverified, not derived from token logs.
+
+Physical microphone/camera/Android recognition, Greek accuracy, authenticated responsive UI and live provider response remain NOT TESTED. Canonical platform-admin opened in the actual cloud browser showed the Super Admin login form; no credential entry, login attempt, business action or microphone activation performed. Isolated UI/controller/handler tests do not become LAB/USER PASS. Existing visual1–14/N40/N49/manual evidence and other assignments preserved. Overall VOICE-ASSISTANT-01 OPEN / ASSIGNED / DEPLOYED INPUT / AWAITING LAB; no manual PASS or numbered task closure.
+
+Remaining requested scope: canonical sales by exact product/date/current store, POS/Backoffice input entry, other authorized read-only domain tools, ambiguous-entity/date clarification, source/filter/report reconciliation, role/module/tenant negatives and optional answer speech. Single next action: read-only acceptance of the released input on an identified actual LAB terminal/operator/browser/microphone (speak → review/edit → explicit Ask, cancel/error/context change), with exact revision and observation, before the next bounded report capability. No synthetic sale or business mutation is needed. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`.
+
 # VOICE-ASSISTANT-01 — Ενιαίος φωνητικός βοηθός MyWorkStation
 
 Ημερομηνία: 10/10/2026, Europe/Athens.
@@ -60,3 +70,20 @@ All source changes require green full CI, merge, exact healthy deployment and re
 ## Next action / ownership
 
 Publish the claim on main after documentation CI, preserving every current shared-document prefix. Then implement the common voice input as the first bounded change. This owner retains only VOICE-ASSISTANT-01; N40 and existing business-module owners are untouched. If interrupted, retain assignment and publish exact remaining scope instead of declaring completion.
+
+
+## VOICE-ASSISTANT-01 — κοινή φωνητική είσοδος / SOURCE READY / AWAITING LAB (2026-10-10T13:30:01.232Z)
+
+Owner remains `codex/unified-voice-assistant-20261010`; source branch `feat/unified-voice-input-20261010`. Claim PR #2100 merged `944f3d901a297b9798c65ae2ac45b4e240ea26db` after documentation CI38054844508. User selected reuse of the existing OpenAI connection («προτεινω να κρατησουμε την ιδια»). No new credential/project/provider/service configured.
+
+First bounded source addition: opt-in Greek browser speech input in existing Super Admin Command Center; editable final text, explicit «Ρώτα», stop/cancel, unsupported/denied/silent/timeout fallback, no background restart, discard on selected-company/store change, hidden tab and unmount. Existing server-only OpenAI key/model and Super Admin/snapshot limits retained. Optional validated inputChannel defaults to text; token telemetry distinguishes VOICE_ASSISTANT/COMMAND_CENTER, contains no question/audio/key, and never invents dollar cost or missing tokens. Browser recognition may use its own external service; disclosed before activation.
+
+Node20 isolated local tests: 26 PASS (8 controller/usage, 1 mounted actual Command Center/voice controls, 2 actual schema/ask-handler tests, 15 existing snapshot regressions). Mock speech/API tests are not physical microphone or LAB acceptance. Full source CI, merge and exact healthy deployment still pending at this entry. No authenticated LAB, live provider call, microphone/camera/Android accuracy, responsive browser observation or report acceptance claimed; no business/fiscal/data/device mutation. Manual PASS and dated numbered checklist unchanged. Supersedes previous implementation-NOT-TESTED wording only for the described local source/tests; overall VOICE-ASSISTANT-01 OPEN / ASSIGNED / AWAITING LAB.
+
+Remaining: physical microphone input acceptance, canonical item/date/current-store sales lookup, POS/Backoffice entry and other domain tools/role/module authorization, optional answer speech. Existing N40, AI credit alerts and all other assignments/PASS preserved. Next: full CI and release of this bounded input change, then actual read-only LAB acceptance before expanding tools. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`.
+
+## Exact source validation scope
+
+Browser SpeechRecognition/webkitSpeechRecognition is used only on secure contexts. Audio is handled by the browser recognition service, not sent as audio to the existing OpenAI route. A final transcript is accepted once on end, appended to current input, and never truncated into a different query. The 600-character limit rejects overflow visibly. Request rights remain the existing authenticated Super Admin-only read-only snapshot path; arbitrary dated product-sales requests remain unsupported pending step3. Optional inputChannel is telemetry metadata only, not authorization or an accounting ledger.
+
+No new key was requested/read/printed or client-side provider call added. Actual billed costs and provider/audio quality NOT TESTED. Source baseline 896b955d6896c5eccfc91a7bfb786c511201e0e0; current source matches inspected 74cf5b66da97c119b1c88016c771f58f1e80996e for both touched host/route files. Shared records retain their entire pinned-current text with only the new owned block prepended; no N40/manual/numbered claim edited.

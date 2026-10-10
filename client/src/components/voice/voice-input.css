@@ -1,0 +1,8 @@
+.mws-voice-input{width:100%;min-width:0;grid-column:1/-1}
+.mws-voice-input-actions{display:flex;gap:8px;flex-wrap:wrap}
+.mws-voice-input .mws-voice-input-actions button{min-height:44px;padding:10px 14px;display:inline-flex;align-items:center;gap:8px;white-space:normal}
+.mws-voice-input-actions button[aria-pressed="true"]{outline:2px solid #b91c1c;outline-offset:2px}
+.mws-voice-input-actions svg{width:18px;height:18px;flex:none}
+.mws-voice-input .mws-voice-input-note{font-size:12px;line-height:1.5;margin:8px 0;color:#475569}
+.mws-voice-input-status{font-size:14px;line-height:1.5;overflow-wrap:anywhere;color:#15324b}
+.mws-voice-input .mws-voice-input-error{font-size:13px;line-height:1.5;color:#991b1b;margin:8px 0;overflow-wrap:anywhere}
