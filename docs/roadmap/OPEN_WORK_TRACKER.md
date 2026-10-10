@@ -1,3 +1,9 @@
+## 10/10/2026 10:25 Europe/Athens — N44 / TODAY-02 / ASSIGNED / AWAITING LAB SAVE-READBACK
+
+ΑΝΑΛΗΨΗ ΑΠΟ agent/today02-preserve-suppliers-20261004 / agent/today-ui-verification-20261004 — ASSIGNED codex/n44-product-vat-acceptance-20261010, explicit owner instruction10/10/2026 10:22:50 «θελω να ξεκινησης την εργασια 44 απο την λιστα». Transfer only printed44/TODAY-02 residual; TODAY03–09 and all other owners remain protected. Existing production VAT-department pencil/editor and supplier-preservationPR1694/large-dropdownPR1704 are prior implementation, not to rebuild without a new causal FAIL. Current tracker IN PROGRESS: save/readback, multiple supplier preservation, final acceptance. Latest prior real observation69de72 opened correct LAB EXCEL TEST1 card and cancelled; save NOT TESTED. Checkpoints2026-10-03-vat-department-product-edit.md,2026-10-04-today02-large-editor-real-dropdowns.md,2026-10-04-today-ui-live-handoff.md read; broader historic Gates/manual PASS retained.
+
+Bounded next scope: authenticated LAB VAT-department editor baseline, reversible core-field/VAT selection save and fresh readback, verify all existing supplier IDs/codes and barcode/store metadata are unchanged, confirm return to same department/page and unaffected-store control. Record exact before/after before any identified save, restore test changes and do not run sale/payment/stock/fiscal/invoice/import/bulk-price actions. Read-only browser23 canonical Platform Admin reused existing signed-in SuperAdmin Χρήστος Μάνης; no credential/permission change. Virtual MYWORKSTATION LAB/storecmtpopbgo000trhb5ng9ytiru only, real stores untouched. If multi-supplier fixture absent or evidence unavailable, report that exact gap rather than invent PASS or use real data. No source or state-changing LAB before green claim/main merge. Any actual failure requires one bounded fix, regression/fullCI/exact deploy before retest. CI alone never LAB PASS. Final accepted result synchronizes checkpoint/active/tracker/manual/pending/numbered/PDF; unfinished scope retains this owner and named next action. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n44-product-vat-acceptance.md.
+
 ## 10/10/2026 10:25 Europe/Athens — N39 / ledger diagnostic recheck LIVE READ-ONLY PASS
 
 User explicitly approves all necessary N39 actions until final PASS, including previously requested repository publication/PR/green-CI merge and authorized virtual LAB tests. Same named owner retained. Browser reset restored existing tab22 and existing ledger popup. Positively observed current9/recorded9/difference0/11 movements/possibleduplicates0. Exact expired01 WASTE09:04:26 out1/stock9/reason retained alongside legitimate10Sep WASTEout1. No movement repeated, deleted or rewritten. Screenshot visually inspected in browser output; shared-file synchronization did not make a local copy available, so no repository screenshot artifact is claimed. This supersedes the prior diagnostic FAIL for this sample only. Native transaction-key duplicate controls have CI coverage; broader LAB role/device/replay/concurrency remains OPEN. Observed service revision aec8323 includes PR2026/92be07a9; no new stock/financial action.
@@ -1880,9 +1886,9 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 **Υπόλοιπο / όρια PASS:** Save/readback, διατήρηση πολλών προμηθευτών και τελική αποδοχή.
 
-**Υπεύθυνη σελίδα / branch:** Υπάρχουσα TODAY σελίδα
+**Υπεύθυνη σελίδα / branch:** codex/n44-product-vat-acceptance-20261010
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026 ανάληψη από την προηγούμενη TODAY σελίδα, ρητή ανάθεση ιδιοκτήτη για Νο44. Save/readback, διατήρηση πολλών προμηθευτών και τελική αποδοχή· CHECKPOINTS/CHANGES/2026-10-10-n44-product-vat-acceptance.md.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
