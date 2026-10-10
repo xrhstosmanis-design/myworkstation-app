@@ -2318,9 +2318,22 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### AI-CC-LIMITS — AI Command Center όρια PASS
 
+**10 Oct 2026 20:33 Athens — No40 five transitions / six exact GET correlations: LIMITED LAB PASS; OPEN**
+
+Owner `codex/n40-full-twin-navigation-audit-20261010` unchanged. Source PR2145 head39da5f1 CI38070860861 SUCCESS, merge/release23abcfa0c8c739574e144c827898ef09ee0a7897; main CI38071116248 and guarded deploy38071354640 SUCCESS. Render dep-db5782142hec73fv3ik0 LIVE17:22:55UTC; independently observed browser /api/health exact revision before tests. Source also restores the full active-list history lost by concurrent main changes, retaining their new receipts.
+
+Actual browser20:30:49–20:32:27Athens: target MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ only. POS -> Checks with locked company/store; EFTPOS -> Auto CashCheck; Cash -> same finding-dependent Auto CashCheck; Personnel -> WorkforceV2; Cameras -> Video connection settings. Each normal top close returned to Full Digital Twin with the same selected LAB. Six already-issued GET trace IDs matched exactly in Render server records; all company/store matches true, invalid/truncated false. POS/check-packages, EFTPOS/daily, Cash/daily, Personnel/module metadata server200. Personnel/workforce read and Cameras/video-connection server304 with browser Fetch200 (HTTP cache revalidation), explicitly preserved rather than mislabeled exact equal status.
+
+LIMITED PASS covers these observed destinations, normal-close selection persistence and these six scoped requests. No proof of all HTTP traffic, tenant enforcement, module/license denial or delayed-response invalidation. WorkforceV2 showed “Δεν φορτώθηκαν τα δεδομένα” despite its two traced completions: UI data loading remains an OPEN finding, no screen-wide PASS. No analysis execution button, sale/payment, staff/stock/license mutation, email or camera command was invoked. Existing Auto CashCheck read presentation is not a new user-triggered analysis execution.
+
+Stock USER visual6097485640 remains protected and was not repeated. Security's latest30 audit window did not include the old15:26Athens Stock sequence; old Stock support audit NOT TESTED, no attribution from other owners' events. Prior phases1–14 and restricted EMPLOYEE403/own-token401 acceptance remain unchanged. Other tenant/module/revoked-store/race/unavailable-source/client-asset criteria remain OPEN / NOT TESTED. No40 is OPEN.
+
+Evidence: `CHECKPOINTS/EVIDENCE/n40-read-trace-20261010/five-transition-correlations.json`. Actual screenshot saved n40-transition-proof-1791653574664.jpg; no credentials or business payload in correlation evidence.
+
+
 **Κατάσταση:** OPEN / ASSIGNED / LIMITED BROWSER NAVIGATION + RESTRICTED PLATFORM ROLE / OWN-SESSION REVOCATION LAB PASS; remaining request/tenant/module/race acceptance NOT TESTED; phases1–14 CLOSED
 
-**Υπόλοιπο / όρια PASS:** Πέντε assistant-browser tile/normal-close round trips και protected Stock USER visual sequence επιβεβαιώθηκαν. Five restricted EMPLOYEE Platform GET denials403 and own-session old-token401 are now LIMITED LAB PASS. Actual six-destination request isolation, network races, Stock support audit and remaining tenant/module/role/revocation cases stay NOT TESTED. Δεν ανοίγουν ξανά οι οπτικές αποδοχές 1–14.
+**Υπόλοιπο / όρια PASS:** Πέντε assistant-browser tile/normal-close round trips και protected Stock USER visual sequence επιβεβαιώθηκαν. Five restricted EMPLOYEE Platform GET denials403 and own-session old-token401 are now LIMITED LAB PASS. Five transitions / six exact scoped GET correlations additionally LIMITED PASS on23abcfa0. Stock request/audit, all-traffic isolation, network races and remaining tenant/module/role/revocation cases stay NOT TESTED; WorkforceV2 UI data loading remains OPEN. Δεν ανοίγουν ξανά οι οπτικές αποδοχές 1–14.
 
 **Υπεύθυνη σελίδα / branch:** `codex/n40-full-twin-navigation-audit-20261010` — explicit owner assignment for printed40, 10/10/2026.
 

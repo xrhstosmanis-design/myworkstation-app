@@ -1,3 +1,15 @@
+## 10 Oct 2026 20:33 Athens — No40 five transitions / six exact GET correlations: LIMITED LAB PASS; OPEN
+
+Owner `codex/n40-full-twin-navigation-audit-20261010` unchanged. Source PR2145 head39da5f1 CI38070860861 SUCCESS, merge/release23abcfa0c8c739574e144c827898ef09ee0a7897; main CI38071116248 and guarded deploy38071354640 SUCCESS. Render dep-db5782142hec73fv3ik0 LIVE17:22:55UTC; independently observed browser /api/health exact revision before tests. Source also restores the full active-list history lost by concurrent main changes, retaining their new receipts.
+
+Actual browser20:30:49–20:32:27Athens: target MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ only. POS -> Checks with locked company/store; EFTPOS -> Auto CashCheck; Cash -> same finding-dependent Auto CashCheck; Personnel -> WorkforceV2; Cameras -> Video connection settings. Each normal top close returned to Full Digital Twin with the same selected LAB. Six already-issued GET trace IDs matched exactly in Render server records; all company/store matches true, invalid/truncated false. POS/check-packages, EFTPOS/daily, Cash/daily, Personnel/module metadata server200. Personnel/workforce read and Cameras/video-connection server304 with browser Fetch200 (HTTP cache revalidation), explicitly preserved rather than mislabeled exact equal status.
+
+LIMITED PASS covers these observed destinations, normal-close selection persistence and these six scoped requests. No proof of all HTTP traffic, tenant enforcement, module/license denial or delayed-response invalidation. WorkforceV2 showed “Δεν φορτώθηκαν τα δεδομένα” despite its two traced completions: UI data loading remains an OPEN finding, no screen-wide PASS. No analysis execution button, sale/payment, staff/stock/license mutation, email or camera command was invoked. Existing Auto CashCheck read presentation is not a new user-triggered analysis execution.
+
+Stock USER visual6097485640 remains protected and was not repeated. Security's latest30 audit window did not include the old15:26Athens Stock sequence; old Stock support audit NOT TESTED, no attribution from other owners' events. Prior phases1–14 and restricted EMPLOYEE403/own-token401 acceptance remain unchanged. Other tenant/module/revoked-store/race/unavailable-source/client-asset criteria remain OPEN / NOT TESTED. No40 is OPEN.
+
+Evidence: `CHECKPOINTS/EVIDENCE/n40-read-trace-20261010/five-transition-correlations.json`. Actual screenshot saved n40-transition-proof-1791653574664.jpg; no credentials or business payload in correlation evidence.
+
 ## 10/10/2026 20:32 Athens — DAILY BITE coffee preview / AWAITING CI
 Owner `codex/daily-bite-coffee-kat-behavior-20261010`. Read-only compatibility preview implemented: DAILY-only target, KAT behavior source, unique coffee signatures only, name suggestions only, modifier description/price preview, no writes or publication. Recipe/stock and live rename/modifier application remain NOT TESTED and are not part of this step. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-daily-bite-coffee-preview.md`.
 
