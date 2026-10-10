@@ -67,7 +67,7 @@
 
 ## 10Oct2026 — bounded transfer destination selector LIVE PASS
 
-Από BackOffice επιλεγμένου LAB → Λοιπές εμπορικές λειτουργίες → Αποθήκη → επιλογή είδους → Μεταφορά. Το Από κατάστημα παραμένει το επιλεγμένο LAB και το Προς κατάστημα προσφέρει το άλλο ενεργό κατάστημα της ίδιας εταιρείας, μετά το PR2039/fbfe12dc. Πρόκειται μόνο για PASS προετοιμασίας επιλογέα. Η νέα TRANSFER-01 καταχώριση επέστρεψε εσωτερικό σφάλμα χωρίς postings και η λειτουργική μεταφορά παραμένει FAIL/AWAITING LAB. Μην επαναλαμβάνετε το αίτημα μέχρι διόρθωση, exact-deploy και φρέσκια βάση· κρατήστε ποσότητα/reason/ledger.
+Από BackOffice επιλεγμένου LAB → Λοιπές εμπορικές λειτουργίες → Αποθήκη → επιλογή είδους → Μεταφορά. Το Από κατάστημα παραμένει το επιλεγμένο LAB και το Προς κατάστημα προσφέρει το άλλο ενεργό κατάστημα της ίδιας εταιρείας, μετά το PR2039/fbfe12dc. Πρόκειται μόνο για PASS προετοιμασίας επιλογέα. Η TRANSFER-01 επέστρεψε εσωτερικό σφάλμα χωρίς postings (ιστορικό FAIL). Η νεότερη TRANSFER-02 παρακάτω επιβεβαίωσε την λειτουργική μεταφορά· η TRANSFER-01 δεν επαναλαμβάνεται.
 
 ## N39 TRANSFER-02 — bounded LIVE PASS / overall OPEN — 10/10/2026 11:15 Athens
 
@@ -86,3 +86,17 @@ After stock7/ledger7/7/diff0/13moves/duplicates0, exactlyone ΠΡΟΣΩΠΙΚΗ 
 ## N39 WASTE-PAIR-01 — bounded LIVE pair PASS — 10 Oct 11:54:12–13 Athens
 
 Owner codex/n39-inventory-acceptance-20261010 retained. SELF-01 published PR2053/full docsCI38039304684 SUCCESS/merged8d0aba2037fad0f8dd62053def51afa977077dbc. Two prepared virtual BackOffice forms same TEST1/sourceLAB/stock7, qty1 each, distinct reasons WASTE-PAIR-01A/01B; both buttons submitted exactlyonce in one Promise.allSettled UI batch. Both success. Ledger shows B11:54:12 out1 stock6, A11:54:13 out1 stock5, actorΧρήστοςΜάνης, exact N39-LAB-20261010 reasons. Source7→5, ledger5/5/diff0/moves13→15/duplicates0; no lost subtraction/no extra posting. RefreshedMAIN5tx/cash3.50/card0/IRIS0/total3.50/expense0/latest09:51 and controlLAB-POS-02 2tx/cash0/card0/IRIS0/total0/expense120/latest— unchanged before/after. Earlier transfer and SELF-01 retained, no replay/compensation/TEST2 action. Evidence CHECKPOINTS/EVIDENCE/n39-waste-pair01-ledger-20261010.jpg, checkpoint2026-10-10-n39-consumption-live.md. This closes AWAITING LAB for the bounded near-simultaneous waste pair after PR2020 only; exact lock overlap not observable in browser, isolated PG coverage remains separate. Full39 OPEN for mandatory stocktake cause/recount/roles, count/import/line-edit versus finalize, broader replay/isolation and physical/device acceptance. No33/44/40/TODAY-07 unchanged. Next causal source review of generic finalization reason and draft-mutation race; do not repeat accepted stock postings.
+
+## 10/10/2026 13:31 — Απόλυτη διόρθωση καταμέτρησης: περιορισμένο LIVE PASS
+
+Επιβεβαιώθηκε για εξουσιοδοτημένο Ιδιοκτήτη/Super Admin στο εικονικό MYWORKSTATION LAB, υπάρχουσα μερική LIVE/ALL απογραφή, έκδοση a90bfd3 (PR2070). Το μολύβι πλέον αντικαθιστά τη συνολική μέτρηση: 8→4, θεωρητικό5, διαφορά−1. Stock5/ledger5/15κινήσεις και δύο ταμεία παρέμειναν αμετάβλητα. Το προηγούμενο pencil-additive FAIL δεν ισχύει στο συγκεκριμένο διορθωμένο δείγμα.
+
+1. Στο σωστό επιλεγμένο κατάστημα ανοίξτε Κεντρική Διαχείριση → Προϊόντα, Τιμές, Προσφορές & Απογραφή → Απογραφή και την υπάρχουσα DRAFT.
+2. Πατήστε Διόρθωση στη συγκεκριμένη γραμμή. Η ποσότητα προσυμπληρώνεται με την προηγούμενη συνολική μέτρηση.
+3. Γράψτε τη νέα συνολική ποσότητα και ελέγξτε «Αντικατάσταση καταμέτρησης 8 με 4». Πατήστε μία φορά Καταχώρηση & επόμενο.
+4. Ελέγξτε πραγματική μέτρηση4/διαφορά−1/αξία4.80 και ότι η απογραφή παραμένει DRAFT. Το stock δεν αλλάζει πριν την οριστικοποίηση.
+5. Κενή Αιτιολογία οριστικοποίησης κρατά το τελικό κουμπί ανενεργό. Στο συγκεκριμένο δείγμα συμπληρώθηκε αιτιολογία ως προετοιμασία, χωρίς ακόμη ολοκληρωμένη οριστικοποίηση.
+
+Η κανονική αναζήτηση/barcode καταχώριση διατηρεί την πρόσθεση νέας ποσότητας· χρησιμοποιήστε το μολύβι για συνολική διόρθωση. Αν δείτε προσθετική προεπισκόπηση αντί αντικατάστασης, σταματήστε πριν την υποβολή και φορτώστε την τρέχουσα έκδοση. Σε σύγκρουση ανανεώστε την ίδια απογραφή και συγκρίνετε τη μέτρηση πριν νέα διακριτή πράξη. Δεν επαναλαμβάνετε επιτυχημένη κίνηση stock.
+
+Τα υπάρχοντα company/store/role όρια παραμένουν υποχρεωτικά· αυτό το LIVE δείγμα δεν πιστοποιεί άλλους ρόλους/tenant ή φυσικές συσκευές. Τελική reasoned closure, persisted reason/read-only/stale-tab προστασία παραμένουν OPEN έως πραγματικό έλεγχο, καθώς το native browser dialog χρειάζεται manual handoff. CI-only ασφάλεια/lock proofs δεν περιλαμβάνονται στο LIVE PASS. Checkpoint2026-10-10-n39-recount-reason-live.md.
