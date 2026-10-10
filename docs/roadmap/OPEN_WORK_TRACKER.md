@@ -1,3 +1,15 @@
+## 10/10/2026 21:40 Athens — VOICE-ASSISTANT-01 / tracker32: product/date sales RELEASED, acceptance BLOCKED
+
+Owner remains `codex/unified-voice-assistant-20261010`; branch `feat/voice-owner-product-sales-20261010`. Pre-source claim PR2164/head676da4e7/CI38074782867 SUCCESS/merge5a44ced0. Source PR2167/head55aa53f7c1b7fefbb7c3de8b733f6ddf7bf6fda2, fullCI38075261178 SUCCESS (2216 tests/2216 PASS/0 FAIL/0 SKIP), merge`dece8453ca3f4df4106c1cae2fe697d20dfa2f15`, main fullCI38075499712 SUCCESS (2216/0/0), guarded Render38075728235 SUCCESS. Render dep-db586frbc2fs73elktog LIVE18:28:02.944498UTC; actual browser /api/health ok=true/exact dece8453 before fresh Owner reload. Subsequent DAILY main78438151 retained every uploaded source blob unchanged and its deployment became LIVE18:29:46UTC. Source is implemented/released, not sales LAB PASS.
+
+Implemented strict read-only sales_by_product by name/SKU and explicit inclusive Europe/Athens dates, selected authorized own store only, canonical reversal-aware completed non-credit report quantities/gross/net/VAT. AI_OWNER_ASSISTANT plus INVENTORY for sales, CASH_CONTROL for cash; fresh effective domain/session/scope checks around reads/provider/final. Existing connection reused. Nonunique candidates need clarification; missing/capped results do not prove zero stock or complete totals. Optional unchecked «Ώρα Ελλάδας» canonical report filter allows future same-filter reconciliation; legacy filters/arithmetic unchanged. Local55 focused tests PASS including13 new real mounted route/UI/domain/calendar/privacy cases. No grants, credentials, schema, central auth source or business writes by this feature.
+
+Actual acceptance attempt: fresh reload of previously valid normal Owner tab29 first denied own-company selection; one visible normal Έξοδος and one secure browserAuth existing-account request returned submitted. Subsequent rendered root showed «Καλώς ήρθες, Χρήστος Μάνης» plus «Η φόρτωση διακόπηκε: Η συνεδρία δεν είναι έγκυρη.». Mandatory fresh verification tab38 independently rendered same invalid-session error at18:40UTC. Greeting is insufficient Owner authorization; submitted is not login PASS. Stop auth retries; no sales assistant Ask/provider/canonical tool call executed. Earlier rendered zero-row sales reports were pre-verification observations only, NOT a sales no-data PASS. Cause/account/session transition unverified; no attribution to another actor or to this sales source. Screenshot inspected once, but shared-file synchronization failed; no broken evidence link or fabricated attachment published.
+
+Historical normal Owner cash LIVE PASS PR2161/af36b491 and prior input/Platform/support/module grant PASS remain protected for their observed scope; new session block prevents this sales test, not a retrospective reversal. Central BACKOFFICE-SESSION-01 remains independently owned; its PR2163 merged e6bdd31 and release was in progress at this observation, no fix claim or takeover. No guard bypass, reset, token inspection/export, repeated activation or transaction.
+
+Current32/printed30/fullVOICE OPEN/ASSIGNED. Remaining actual sales/provider/normal-report reconciliation, blank/own-store switch, late context, role/module/session/tenant negatives, physical microphone and remaining domains/POS are NOT TESTED live. Single next action: user-assisted normal existing LAB Owner entry and fresh positive own-company/selected-store status, then verify current deployed revision and one existing-record product/date question against the ordinary report with «Ώρα Ελλάδας». Do not restart implementation or repeat cash/business actions. Assignment retained until complete or named transfer.
+
 ## 10 Oct 2026 21:29 Athens — No40 approved second LAB control / ASSIGNED, OPEN
 
 Owner remains codex/n40-full-twin-navigation-audit-20261010. User explicitly approved prepared N40 CONTROL 20261010 in MYWORKSTATION LAB, city ΔΟΚΙΜΑΣΤΙΚΟ ΠΕΡΙΒΑΛΛΟΝ, three default shift templates only. Existing creation was submitted once around18:29UTC under Super Admin Χρήστος Μάνης / cloud Chrome26, no POS/operator/shift/SKU/payment applicable. Before: LAB2stores/global5, employees9/38, users2/4. After one create: new store cmv2qanca000psigeizep8o9m, independent reload LAB3/global6, same employees/users; success message and one new row. Creation form displayed Cannot read properties of null (reading 'reset') after successful save; no repeat submission. Form cleanup is FAIL, store existence confirmed only, not overall create UX PASS.
@@ -2208,9 +2220,9 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 ### 32 — AI Βοηθός Ιδιοκτήτη
 
-**Κατάσταση:** OPEN / ASSIGNED / selected-store cash normal Owner LIVE PASS / LAB module activation LIVE PASS / full lifecycle and other domains OPEN
+**Κατάσταση:** OPEN / ASSIGNED / selected-store cash normal Owner LIVE PASS / LAB module activation LIVE PASS / full lifecycle and other domains OPEN / product-date source released / sales acceptance BLOCKED
 
-**Υπόλοιπο / όρια PASS:** Κανονικός Owner μόνο ενεργό AI_OWNER_ASSISTANT+CASH_CONTROL και δικά του εξουσιοδοτημένα ενεργά καταστήματα/current company. Υλοποιημένα server session/role/company/store/module/revocation και privacy/canonical guards· 44 local/2188 fullCI fixtures, όχι Owner LIVE proof. Catalog available only for cash. Approved20:01-20:04 LAB company activation persisted; both virtual-store matrices Owner AI ΝΑΙ/CASH ΝΑΙ/Employee AI ΟΧΙ, no price/plan change. Normal Owner positive selected-store cash query LIVE PASS20:52; module/role/session/tenant lifecycle still NOT TESTED live; sales/product/date and other domains remain OPEN.
+**Υπόλοιπο / όρια PASS:** Κανονικός Owner μόνο ενεργό AI_OWNER_ASSISTANT+CASH_CONTROL και δικά του εξουσιοδοτημένα ενεργά καταστήματα/current company. Υλοποιημένα server session/role/company/store/module/revocation και privacy/canonical guards· 44 local/2188 fullCI fixtures, όχι Owner LIVE proof. Catalog now exposes only effective cash/sales domain tools; sales actual acceptance BLOCKED by invalid session. Approved20:01-20:04 LAB company activation persisted; both virtual-store matrices Owner AI ΝΑΙ/CASH ΝΑΙ/Employee AI ΟΧΙ, no price/plan change. Normal Owner positive selected-store cash query LIVE PASS20:52; module/role/session/tenant lifecycle still NOT TESTED live; sales/product/date and other domains remain OPEN.
 
 **Υπεύθυνη σελίδα / branch:** `codex/unified-voice-assistant-20261010`; no N40/N50/N51 takeover, assignment retained.
 
@@ -2223,6 +2235,9 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 
 **Νεότερο LIVE PASS20:52Athens:** Fresh ordinary Owner sign-in -> permitted current LAB-store status -> explicit text Ask17:49:12.857Z -> real provider answer17:49:47.816Z -> refreshed normal cash report17:51:26.111Z matches TEST QR ΕΠΑΝΑΜΕΤΡΗΣΗ/MAIN/2026-10-10/close08:13/−5.50€. Actual healthy af36b491/fullCI38072060986(2194/0/0)/guardedRender38072264270. Evidence voice-normal-owner-cash-answer-1791654637023.jpg and voice-normal-owner-canonical-cash-1791654727065.jpg. Supersedes previous positive-Owner-query BLOCKED only; historical identity transition cause unverified. No bypass/new grant/auth code change/business action. Actual lifecycle/context negatives, sales/product/date and other domains remain OPEN. Single next action blank/own-store-switch read-only acceptance, then canonical product/date/current-store sales capability; same owner retained.
+
+
+**Νεότερο21:40Athens:** PR2167/dece8453 full2216/0/0 + guardedRender38075728235 SUCCESS, exact healthy release. One secure sign-in and fresh verification still invalid session; no sales Ask executed. Source implemented, LIVE sales NOT TESTED. Fresh valid ordinary Owner entry then canonical Athens report comparison is the single next action; full scope remains OPEN/ASSIGNED.
 
 ### 33 — Μηνιαία Αναφορά Ιδιοκτήτη
 
@@ -2763,9 +2778,9 @@ Single next action: verify guarded release of source42bee637, then deployment ad
 
 ### VOICE-ASSISTANT-01 — Ενιαίος φωνητικός βοηθός POS / Backoffice / Super Admin
 
-**Κατάσταση:** OPEN / ASSIGNED / input USER PASS / Platform/support cash LIVE PASS / normal Owner selected-store cash LIVE PASS / LAB module activation LIVE PASS / full domains OPEN
+**Κατάσταση:** OPEN / ASSIGNED / input USER PASS / Platform/support cash LIVE PASS / normal Owner selected-store cash LIVE PASS / LAB module activation LIVE PASS / full domains OPEN / product-date source released / sales acceptance BLOCKED
 
-**Υπόλοιπο / όρια PASS:** Πρώτες δύο προηγούμενες επιβεβαιώσεις διατηρούνται. Νέο περιορισμένο LIVE PASS: unchanged module-refresh retention and real selected LAB support query/canonical date/store/shift/terminal/close/cash-variance reconciliation. Normal Owner module/tenant/lifecycle, sales by exact product/date/current store, remaining domains/POS, physical speech/devices and broad source/context negatives still OPEN. Existing connection, no automatic business actions, no fallback global scope. Module availability cash only. User-approved LAB company entitlement active in both virtual stores; unchanged visible price/plan and effective matrices verified, no other-company grant. Support preview never ordinary Owner proof.
+**Υπόλοιπο / όρια PASS:** Πρώτες δύο προηγούμενες επιβεβαιώσεις διατηρούνται. Νέο περιορισμένο LIVE PASS: unchanged module-refresh retention and real selected LAB support query/canonical date/store/shift/terminal/close/cash-variance reconciliation. Normal Owner module/tenant/lifecycle, sales by exact product/date/current store, remaining domains/POS, physical speech/devices and broad source/context negatives still OPEN. Existing connection, no automatic business actions, no fallback global scope. Module availability now follows effective cash/sales domain entitlements; sales actual acceptance BLOCKED. User-approved LAB company entitlement active in both virtual stores; unchanged visible price/plan and effective matrices verified, no other-company grant. Support preview never ordinary Owner proof.
 
 **Υπεύθυνη σελίδα / branch:** `codex/unified-voice-assistant-20261010`; retained until named handoff.
 
@@ -2783,3 +2798,6 @@ Single next action: verify guarded release of source42bee637, then deployment ad
 
 ## 10/10/2026 21:31 Athens — DAILY BITE coffee KAT-behavior / LIVE PASS
 Issue #2054. Revision `78438151a7babb82eff78ffd1f0728180ca43d28`, Render `dep-db586shj9rms73arfqlg` LIVE. One-shot exact 16-SKU apply succeeded once: 6 DAILY modifier groups, 26 modifiers, 16 preparation-enabled products, 84 product-group links, 11 name-only normalizations. No stock movement/sale/payment created; mapped stock remains 0; no recipe/ingredient/stock-consumption copy. Existing 8,753-product/9-department import PASS preserved. Physical POS/production-printer acceptance remains OPEN.
+
+
+**Νεότερο21:40Athens:** PR2167/dece8453 full2216/0/0 + guardedRender38075728235 SUCCESS, exact healthy release. One secure sign-in and fresh verification still invalid session; no sales Ask executed. Source implemented, LIVE sales NOT TESTED. Fresh valid ordinary Owner entry then canonical Athens report comparison is the single next action; full scope remains OPEN/ASSIGNED.
