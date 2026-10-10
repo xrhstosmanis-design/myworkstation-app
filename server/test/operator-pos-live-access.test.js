@@ -17,6 +17,8 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
  const calls=[],denied={confirmDeleteSale:false,deleteSaleReason:false,customerCardOnly:false,onlineBarcode:false,editPosButtons:false};
  const api=async(path,options={})=>{calls.push({path,options});
   if(path==='/api/store-pos/stores/A')return {products:[product],access:{...denied,onlineProductSearch:false},layout:{quickKeys:[{id:'quick',visible:true,label:'CONTROL',productQuery:'CONTROL-SKU'}],categories:[]}};
+  if(path.endsWith('/access'))return {access:{thirdPartyPayment:true,supplierPayment:true,sameShiftPayments:true}};
+  if(path.endsWith('/overview'))return {openSession:{id:'isolated-shift',openedAt:new Date().toISOString()},suppliers:[]};
   if(path.includes('/barcode-registration'))return {rows:[{...product,barcodes:[]}]};
   if(path.endsWith('/label-settings'))return {settings:{}};
   if(path.endsWith('/table-service')||path==='/api/netlink/status')throw Error('inactive');
@@ -54,6 +56,27 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
   await render(denied);assert.equal(document.querySelector('.store-pos-top'),panel);assert.equal(document.querySelector('.standard-lines').textContent,cart);
   await click(find('ΑΚΥΡΩΣΗ'));assert.equal(confirmations,2);assert.equal(reasons,1);assert.match(document.querySelector('.standard-lines').textContent,/Νέα συναλλαγή/);
   assert.equal(calls.filter(c=>c.path==='/api/store-pos/stores/A').length,1);
+  const paymentRights={...denied,thirdPartyPayment:true,supplierPayment:true,sameShiftPayments:true};
+  await render(paymentRights);await click(find('ΠΛΗΡΩΜΕΣ'));
+  const paymentModal=document.querySelector('.pos-standard-modal');
+  assert.ok(find('Λοιπά έξοδα'));assert.ok(find('Πληρωμές προμηθευτών – Ετεροχρονισμένες'));
+  await click(paymentModal.querySelector('.pos-inline-keypad button'));
+  const amount=()=>[...paymentModal.querySelectorAll('label')].find(l=>l.textContent==='Ποσό').querySelector('input').value;
+  assert.equal(amount(),'7');
+  await render({...paymentRights,thirdPartyPayment:false});
+  assert.equal(find('Λοιπά έξοδα'),undefined);assert.ok(find('Πληρωμές προμηθευτών – Ετεροχρονισμένες'));
+  assert.equal(document.querySelector('.pos-standard-modal'),paymentModal);
+  await render({...paymentRights,supplierPayment:false,sameShiftPayments:false});
+  assert.ok(find('Λοιπά έξοδα'));assert.equal(find('Πληρωμές προμηθευτών – Ετεροχρονισμένες'),undefined);
+  assert.equal(find('Μετρητά από ενεργή βάρδια').disabled,true);assert.equal(amount(),'7');
+  await render({...paymentRights,thirdPartyPayment:false,supplierPayment:false});
+  assert.match(paymentModal.textContent,/Δεν έχεις ενεργό δικαίωμα πληρωμών/);
+  assert.equal(find('Καταχώριση εξόδου'),undefined);
+  await render(paymentRights);assert.ok(find('Λοιπά έξοδα'));assert.ok(find('Πληρωμές προμηθευτών – Ετεροχρονισμένες'));
+  assert.equal(find('Μετρητά από ενεργή βάρδια').disabled,false);assert.equal(amount(),'7');
+  assert.equal(calls.filter(c=>c.path==='/api/store-pos/stores/A/access').length,1);
+  assert.equal(calls.some(c=>c.options.method&&c.options.method!=='GET'&&!/\/(audit|audience-selection)$/.test(c.path)),false);
+  await click(paymentModal.querySelector('header button'));
   assert.equal(calls.some(c=>/checkout|\/sales|finalize|sessions\/open/.test(c.path)),false);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const[k,v]of previous){if(v)Object.defineProperty(globalThis,k,v);else delete globalThis[k]}}
 });
