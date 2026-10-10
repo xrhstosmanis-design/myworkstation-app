@@ -1,3 +1,7 @@
+## 10Oct17:27 — No33 / tracker35 OPEN: νέα πώληση και ολική επιστροφή LIVE PASS
+
+Normal LABPOS2EMPLOYEE/αρχικά23: νέο SKU2270 qty1 CASH1€ και μία ολική επιστροφή της ίδιας νέας πώλησης, stock−13→−14→−13, MAIN4→5→4€, control2/0 unchanged, αιτιολογία/Audit/returned-sale exclusion. Raw return stock ledger/fiscal/physicalprint και υπόλοιπο No33 NOT TESTED. Checkpoint 2026-10-10-operator-sale-return-live.md, ίδια ανάθεση. Νέα οικονομική έγκριση17:17 ισχύει για αναγκαίες εικονικές δοκιμές.
+
 ## 10/10/2026 16:35 — Νο33 / tracker35: Online Master περιορισμένο LIVE UI PASS, συνολικάOPEN
 
 Sameowner codex/operator-checkbox-audit-20261009. NormalEMPLOYEE επέστρεψεσωστόMasterπροϊόν+barcode απόμία ακριβήtypeddescription/Online καιακύρωσεπρότασηχωρίςκαταχώριση· original23/cart0queue0/MAINcontrolαμετάβλητα. Numericbarcode/externalsearch/registration/Auditrecord/actualreturn/printing/initialcash/closing/broaderfixturesπαραμένουνεκκρεμή. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-operator-online-master-live.md/manual καιauthoritativeTracker ενημερωμένα. Nextsingleaction νέαειδικήέγκριση γιανεαvirtualsaleSKU2270/1τεμ/1€ καιεπιστροφήτης ίδιας, μεnarrowstockbefore/after· τίποταδενυποβλήθηκε. PriorPR2099/2103boundedshiftPASSκαιανεξάρτητοιownersπροστατεύονται.
