@@ -220,10 +220,10 @@
 ## 33 — Τελικές δοκιμές χρηστών, ρόλων και modules
 
 - **Tracker ID:** `35`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** PARTIAL LIVE PASS / BROWSER HANDOFF / OPEN (ενημέρωση10/10)
-- **Υπόλοιπο / όριο:** LIVE23στοιχεία+1orders,55 αφαιρέσεις/24 επιλογές. Περιορισμένο POS και αποκλεισμός και των δύο επιλογών πελάτη PASS7ebfab49. Online κουμπί ενημερώνεται χωρίς reload, όχι PASS αποτελέσματος αναζήτησης. Προφίλ23+orders επαναφέρθηκε ακριβώς. Browser προστασία ζητά χειροκίνητη ανάληψη. Εκκρεμούν λειτουργίες/native ακύρωση/card-only/layout/linebarcode/πραγματικές πράξεις/active+posAccess/ρόλοι/εταιρεία/κατάστημα/modules. Owner codex/operator-checkbox-audit-20261009.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** PARTIAL LIVE PASS / AWAITING SECURE REENTRY / OPEN (ενημέρωση10/10)
+- **Υπόλοιπο / όριο:** 55 αφαιρέσεις/24 επιλογές. Νεότερο UI: card-only ζωντανή αλλαγή/επαναφορά, editor πλήκτρου ανοίγει, linebarcode σωστόSKU, posAccess αποκλεισμός/Retry. Αρχικά23+orders επαναφέρθηκαν. Εκκρεμούν ασφαλής επανείσοδος, isolated active, native ακύρωση, λοιπάcontrols/πραγματικές πράξεις/ρόλοι/εταιρεία/κατάστημα/modules. Owner codex/operator-checkbox-audit-20261009.
 
-- **Ενημέρωση 10/10/2026:** PR2002,2009CI PASS,main attempt2 PASS,guard37997476523 και exacthealth7ebfab49. Τελευταία ορατό καλάθι0 πριν τη μη ολοκληρωμένη παρατήρηση Online GET· χωρίς οικονομική/product/stock/shift υποβολή. Checkpoint2026-10-09-operator-checkbox-audit.md. Επόμενο: χειροκίνητη ανάληψη ίδιας καρτέλας και συνέχεια του ελέγχου. Συνολικό PASS OPEN.
+- **Ενημέρωση 10/10/2026:** PR2002,2009CI PASS,main attempt2 PASS,guard37997476523 και exacthealth7ebfab49. Τελευταία ορατό καλάθι0 πριν τη μη ολοκληρωμένη παρατήρηση Online GET· χωρίς οικονομική/product/stock/shift υποβολή. Checkpoint2026-10-09-operator-checkbox-audit.md. Επόμενο: ασφαλής επανείσοδος LAB POS2 μετά τον έλεγχο ανενεργού χειριστή και συνέχεια. Συνολικό PASS OPEN.
 
 ## 34 — Πλήρες εγχειρίδιο εργαζομένου, ιδιοκτήτη και Super Admin
 
