@@ -1,3 +1,9 @@
+## 10/10/2026 — Νο33 όλα τα καταστήματα: περιορισμένο LIVE UI, συνολικά OPEN
+
+Ίδιος owner `codex/operator-checkbox-audit-20261009`. Η νέα ασφαλής σύνδεση Platform Admin και 2FA πέτυχε. Άνοιξαν η μήτρα δικαιωμάτων και η σωστή φόρμα Store Mode και στα έξι καταστήματα των τεσσάρων εταιρειών: DAILY BITE, Διαδόχου Παύλου, ΚΑΤ, N40 CONTROL, εργαστήριο ετικέτας και Εργαστήριο Δοκιμών. Δεν εμφανίστηκε 401/404 στις συγκεκριμένες προβολές. Στα DAILY BITE, N40 και εργαστήριο ετικέτας δεν εμφανίστηκε ενεργό προσωπικό PIN. Δεν έγιναν αλλαγές ή πραγματικές συναλλαγές. Αυτό δεν αποδεικνύει authenticated POS, λειτουργία κάθε module/ρόλου ή επίλυση των συνεχών server 401/404. Backoffice, βάρδιες, ταμεία και αποδοχή μετά το deploy παραμένουν NOT TESTED. Παρατηρημένο health πριν το νέο deploy: ok:true / revision196dd62a. PR2192 merged50dfaff με πλήρες PR CI2252/0/0, αλλά mainCI38084456319 απέτυχε στην policy λόγω απουσίας active-list diff. Η συμπλήρωση PR2193 πέρασε το πλήρες PR CI38084694913 και merged02c809ea. Το πλήρες mainCI38084931212, deploy και πραγματική αποδοχή παραμένουν εκκρεμή.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-operator-all-store-access.md`, manual `docs/manual/pos/PASS.md`. Νο33/tracker35 OPEN. Όλες οι ανεξάρτητες αναθέσεις και τα παλιά PASS προστατεύονται.
+
 ## 10/10/2026 — Νο33 / PLATFORM-LATE-AUTH-01: ASSIGNED, NOT TESTED LIVE
 
 Owner `codex/operator-checkbox-audit-20261009`; implementation branch `codex/operator-auth-loss-fix-20261010`. User23:24 Athens requested resolution of the No33 session blocker. Independent PlatformAdminApp overview-load callback ownership only; central main.jsx/Login/Backoffice boundary remains with `codex/backoffice-session-boundary-20261010`; no N51/N40 source takeover.
