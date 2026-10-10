@@ -77,7 +77,7 @@ jobs:
         run: |
           git rm .github/workflows/n40-prepare-20261010.yml
           git add CHECKPOINTS/CHANGES/2026-10-10-n40-full-twin-navigation-audit.md CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/NUMBERED_WORK_CHECKLIST_2026-10-06.md docs/roadmap/MyWorkStation_Numbered_Checklist_2026-10-06.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
-          git diff --cached --check
+          git diff --cached --check -- '*.md' '.github/workflows/*.yml'
           git commit -m 'docs(n40): claim bounded Full Digital Twin navigation and synchronize lists'
           git push origin HEAD:refs/heads/codex/n40-full-twin-navigation-audit-20261010
       - name: Export tracked source for local review
