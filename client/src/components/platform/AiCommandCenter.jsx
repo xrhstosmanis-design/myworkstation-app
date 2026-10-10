@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {twinScopeKey} from "./ai-command-twin-navigation.js";
 import AiCreditAlert from "./AiCreditAlert.jsx";
+import VoiceInputControls from "../voice/VoiceInputControls.jsx";
 import {resolveTwinSelection,twinSelectionFor} from "./ai-command-twin-selection.js";
 import {AlertTriangle,BarChart3,BrainCircuit,Building2,Camera,CheckCircle2,ChevronRight,CreditCard,FileSearch,Landmark,MessageCircle,Monitor,MoonStar,ReceiptText,RefreshCw,ShieldCheck,Store,Sunrise,UsersRound,WalletCards,X} from "lucide-react";
 
@@ -19,6 +20,8 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
   const [twinDevices,setTwinDevices]=useState({loading:true,rows:{}});
   const [twinSelection,setTwinSelection]=useState(()=>initialTwinSelection);
   const [question,setQuestion]=useState("");
+  const [questionInputChannel,setQuestionInputChannel]=useState("text");
+  const [voiceActive,setVoiceActive]=useState(false);
   const [askState,setAskState]=useState({loading:false,error:"",result:null});
   const loadProblems=async()=>{
     setProblems(current=>({...current,loading:true,error:""}));
@@ -216,11 +219,11 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
   const refresh=()=>{onRefresh?.();loadProblems();loadInvoiceIntel();loadTwinDevices()};
   const ask=async event=>{
     event.preventDefault();
-    const value=question.trim()||"Ποια σημεία χρειάζονται έλεγχο σήμερα;";if(askState.loading)return;
+    const value=question.trim()||"Ποια σημεία χρειάζονται έλεγχο σήμερα;";if(askState.loading||voiceActive)return;
     setAskState({loading:true,error:"",result:null});
     try{
       const companyStates=companies.map(company=>({name:company.name,active:Boolean(company.active),stores:company.stores?.length||0}));
-      const result=await request("/api/platform/ai-command-center/ask",{method:"POST",body:JSON.stringify({question:value,snapshot:{
+      const result=await request("/api/platform/ai-command-center/ask",{method:"POST",body:JSON.stringify({question:value,inputChannel:questionInputChannel,snapshot:{
         generatedAt:new Date().toISOString(),
         companies:{active:summary.activeCompanies,inactive:summary.inactiveCompanies,stores:summary.stores,attention:summary.attention},
         problems:{total:problemSummary.total,cash:problemSummary.cashIssues,payments:problemSummary.payments,paymentDiscrepancies:problemSummary.paymentDiscrepancies,bank:problemSummary.bank,bankDiscrepancies:problemSummary.bankDiscrepancies},
@@ -347,8 +350,8 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
 
       <section className="ai-command-ask">
         <div className="ai-command-panel-title"><div><small>ΡΩΤΑ ΤΟ MYWORKSTATION · ΦΑΣΗ 3</small><h2>Τι χρειάζεται την προσοχή μου;</h2><p>Η απάντηση βασίζεται μόνο στη σημερινή επισκόπηση και στους μετρητές των υπαρχόντων ελέγχων.</p></div><MessageCircle/></div>
-        <form onSubmit={ask}><textarea value={question} onChange={event=>setQuestion(event.target.value)} maxLength={600} rows={3} placeholder="π.χ. Ποια σημεία χρειάζονται έλεγχο σήμερα;"/><button type="submit" disabled={askState.loading}><MessageCircle/>{askState.loading?"Ανάλυση…":"Ρώτα"}</button></form>
-        <div className="ai-command-prompts"><button type="button" onClick={()=>setQuestion("Ποια σημεία χρειάζονται έλεγχο σήμερα;")}>Τι χρειάζεται έλεγχο;</button><button type="button" onClick={()=>setQuestion("Υπάρχουν ανενεργές εταιρείες ή καταστήματα χωρίς κάλυψη;")}>Κατάσταση δικτύου</button><button type="button" onClick={()=>setQuestion("Σε ποια κανονική οθόνη πρέπει να πάω πρώτα και γιατί;")}>Πού να πάω πρώτα;</button></div>
+        <form onSubmit={ask}><textarea aria-label="Ερώτηση για το MyWorkStation" value={question} onChange={event=>{setQuestion(event.target.value);if(!event.target.value)setQuestionInputChannel("text")}} disabled={voiceActive} maxLength={600} rows={3} placeholder="π.χ. Ποια σημεία χρειάζονται έλεγχο σήμερα;"/><button type="submit" disabled={askState.loading||voiceActive}><MessageCircle/>{askState.loading?"Ανάλυση…":"Ρώτα"}</button><VoiceInputControls value={question} onChange={text=>{setQuestion(text);setQuestionInputChannel("voice")}} onActiveChange={setVoiceActive} disabled={askState.loading} contextKey={twinScopeKey(twinSelection)} maxLength={600}/></form>
+        <div className="ai-command-prompts"><button type="button" disabled={voiceActive} onClick={()=>{setQuestion("Ποια σημεία χρειάζονται έλεγχο σήμερα;");setQuestionInputChannel("text")}}>Τι χρειάζεται έλεγχο;</button><button type="button" disabled={voiceActive} onClick={()=>{setQuestion("Υπάρχουν ανενεργές εταιρείες ή καταστήματα χωρίς κάλυψη;");setQuestionInputChannel("text")}}>Κατάσταση δικτύου</button><button type="button" disabled={voiceActive} onClick={()=>{setQuestion("Σε ποια κανονική οθόνη πρέπει να πάω πρώτα και γιατί;");setQuestionInputChannel("text")}}>Πού να πάω πρώτα;</button></div>
         {askState.error&&<div className="ai-command-problem-error"><AlertTriangle/>{askState.error}</div>}
         {askState.result&&<article className="ai-command-answer"><div className="ai-command-answer-head"><BrainCircuit/><b>Απάντηση MyWorkStation</b><span>Μόνο ανάγνωση</span></div><p>{askState.result.answer}</p>{askState.result.highlights?.length>0&&<ul>{askState.result.highlights.map((item,index)=><li key={index}>{item}</li>)}</ul>}<small><b>Πηγές:</b> {askState.result.sources?.join(" · ")||"Τρέχουσα επισκόπηση"}</small>{askState.result.limitations&&<small><b>Όριο:</b> {askState.result.limitations}</small>}</article>}
       </section>
@@ -360,3 +363,4 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
     </section>
   </div>;
 }
+
