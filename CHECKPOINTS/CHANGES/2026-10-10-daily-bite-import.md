@@ -1,3 +1,13 @@
+## 10/10/2026 19:27 Athens — DAILY BITE POS screenshot mapping / ASSIGNED
+
+**Owner:** `codex/daily-bite-pos-layout-20261010` — explicit user continuation of issue #2054 after definitive catalog import PASS. This is a new bounded POS-layout/data-mapping scope; it does not reopen or repeat the catalog import.
+
+**User-confirmed requirements:** preserve MyWorkStation visual language/colors; for coffee products reuse the already-existing KAT product/modifier behavior but bind it only to DAILY BITE products/data; where KAT has a cleaner/correcter coffee product label, change **only the DAILY BITE display/name**, not SKU/barcode/prices/VAT/departments/stock/supplier links or tenant/store ownership. Categories/products captured from the supplied Kiosk Manager screenshots include: ΣΦΟΛΙΑΤΕΣ, ΜΠΑΡΕΣ ΓΚΡΑΝΟΛΑ, ΧΩΡΙΣ BARCODE, ΚΙΣΣΑΣ, ΤΑΡΤΕΣ - ΓΛΥΚΑ, DELISNACKS, ΜΠΑΛΕΣ, ΜΑΓΑΚΗΣ, ΚΕΙΚ and ΠΑΙΧΝΙΔΙΑ. Ellipsis/blank screenshot buttons are not guessed or created.
+
+**Protected state:** DAILY BITE existing store `cmv25lf3h000ueegf0kkii3pb`, 9 departments and 8,753 imported products remain authoritative. Never reimport the source workbook or recreate departments. No fiscal/RBS, stock, payment, shift, employee, online-ordering, other-store or permission mutation in this scope. Existing KAT behavior is reference-only; no KAT product/data reassignment.
+
+**Current evidence:** screenshot mapping is USER-provided design/input evidence only. Source/code implementation and exact product-ID matching are **NOT TESTED** yet. Before code, inspect current main/KAT POS designer and current DAILY BITE catalog APIs/models, then implement additive store-scoped mapping with regression tests. CI PASS is not LAB/LIVE PASS. Final browser/store acceptance remains required.
+
 ## 10/10/2026 18:26 Athens - DAILY-BITE-IMPORT / PASS / definitive catalog saved
 
 **Owner/completion:** codex/daily-bite-browser-acceptance-20261010; original user-authorized handoff, issue #2054 importer scope only. Browser and Excel chooser worked. Synthetic LAB PASS published in PR #2134 (head fa61b731, full CI 38062587961 SUCCESS, merge e3d967c0); no replay or cleanup. DAILY BITE remains 9 departments; LAB remains 10.
