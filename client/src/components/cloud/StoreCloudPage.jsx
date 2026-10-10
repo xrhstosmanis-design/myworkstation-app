@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from "react";
-import {ArrowLeft,BriefcaseBusiness,Copy,KeyRound,RefreshCw,Users} from "lucide-react";
+import {ArrowLeft,BriefcaseBusiness,Barcode,Copy,KeyRound,RefreshCw,ShieldCheck,Users,WalletCards} from "lucide-react";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
@@ -28,7 +28,11 @@ const ledgerFingerprint=result=>{
   });
 };
 
-export default function StoreCloudPage({api,store,onBack,onWorkforce}){
+export default function StoreCloudPage(props){
+  return <StoreWorkspace key={props.store.id} {...props}/>;
+}
+
+function StoreWorkspace({api,store,onBack,onWorkforce}){
   const [version,setVersion]=useState(0);
   const lastSyncValue=useRef(null);
   const lastServerFingerprint=useRef(null);
@@ -40,6 +44,7 @@ export default function StoreCloudPage({api,store,onBack,onWorkforce}){
   const [pairingCopied,setPairingCopied]=useState(false);
   const [writerState,setWriterState]=useState({loading:true,configured:false,online:false,lastSeenAt:null});
   const [toolOpen,setToolOpen]=useState("");
+  const [primary,setPrimary]=useState("shifts");
 
   const createPairingCode=async()=>{
     if(pairing&&Date.parse(pairing.expiresAt)>Date.now()&&!window.confirm("Θα ακυρωθεί ο προηγούμενος κωδικός, αν δεν έχει ήδη χρησιμοποιηθεί. Να δημιουργηθεί νέος;"))return;
@@ -139,15 +144,31 @@ export default function StoreCloudPage({api,store,onBack,onWorkforce}){
       </div>
     </div>
 
-    <section className="owner-store-tools" aria-label="Πρόσθετες λειτουργίες">
-      <h3>Πρόσθετες λειτουργίες</h3>
+    <nav className="owner-primary-nav" aria-label="Βάρδιες και πληρωμές">
+      <button type="button" aria-pressed={primary==="shifts"} onClick={()=>setPrimary("shifts")}><WalletCards/>Βάρδιες & ταμεία</button>
+      <button type="button" aria-pressed={primary==="payments"} onClick={()=>setPrimary("payments")}><BriefcaseBusiness/>Πληρωμές Ιδιοκτήτη / Διαχειριστή</button>
+    </nav>
+    {primary==="shifts"&&<section aria-label="Βάρδιες και έλεγχος ταμείων">
+      <div id="backoffice-transactions" className="backoffice-anchor"><StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/></div>
+      <details className="owner-cash-details">
+        <summary>Αυτόματος έλεγχος και κλεισμένες βάρδιες</summary>
+        <div id="backoffice-cash" className="backoffice-anchor"><CashControlPanel key={`cash-${version}`} api={api} store={store}/></div>
+      </details>
+    </section>}
+    {primary==="payments"&&<div className="store-operations-actions"><OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/></div>}
+    <details className="owner-store-tools">
+      <summary>Πρόσθετες λειτουργίες</summary>
       <div className="owner-store-tool-grid">
+
         {onWorkforce&&<button type="button" onClick={onWorkforce}><Users/><b>Προσωπικό & Πρόγραμμα</b><span>Εργαζόμενοι, κάρτες και QR</span></button>}
-        <button type="button" className={toolOpen==="rbs"?"active":""} onClick={()=>setToolOpen(v=>v==="rbs"?"":"rbs")}><KeyRound/><b>Σύνδεση RBS</b><span>CAP Driver / Writer</span></button>
+        <button type="button" aria-expanded={toolOpen==="rbs"} className={toolOpen==="rbs"?"active":""} onClick={()=>setToolOpen(v=>v==="rbs"?"":"rbs")}><KeyRound/><b>Σύνδεση RBS</b><span>CAP Driver / Writer</span></button>
         <button type="button" onClick={()=>window.dispatchEvent(new CustomEvent("mws:commerce-open",{detail:{view:"operations",storeId:store.id}}))}><BriefcaseBusiness/><b>Λοιπές εμπορικές λειτουργίες</b><span>Λειτουργίες και modules καταστήματος</span></button>
-        <button type="button" className={toolOpen==="transactions"?"active":""} onClick={()=>setToolOpen(v=>v==="transactions"?"":"transactions")}><RefreshCw/><b>Συναλλαγές</b><span>Αναλυτικές κινήσεις καταστήματος</span></button>
+        <button type="button" aria-expanded={toolOpen==="barcode"} className={toolOpen==="barcode"?"active":""} onClick={()=>setToolOpen(v=>v==="barcode"?"":"barcode")}><Barcode/><b>Barcode & Online Ράδιο</b><span>Τιμές, αναφορές και σταθμοί</span></button>
+        <button type="button" aria-expanded={toolOpen==="approvals"} className={toolOpen==="approvals"?"active":""} onClick={()=>setToolOpen(v=>v==="approvals"?"":"approvals")}><ShieldCheck/><b>Εκκρεμείς επιβεβαιώσεις</b><span>Πληρωμές και αποδεικτικά</span></button>
       </div>
-    </section>
+    {toolOpen&&<button className="owner-tool-close" type="button" onClick={()=>setToolOpen("")}>Κλείσιμο πρόσθετης λειτουργίας</button>}
+    {toolOpen==="barcode"&&<BarcodeRadioManagement api={api} store={store}/>}
+    {toolOpen==="approvals"&&<OwnerPendingApprovals api={api} store={store} onChanged={refresh} refreshToken={version}/>}
     {toolOpen==="rbs"&&<section aria-label="Σύνδεση RBS CAP Driver" style={{background:"#fff",border:"1px solid #dce5ef",borderRadius:18,padding:18,margin:"0 0 18px",boxShadow:"0 8px 24px rgba(15,23,42,.05)"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <KeyRound aria-hidden="true" size={20}/>
@@ -171,15 +192,7 @@ export default function StoreCloudPage({api,store,onBack,onWorkforce}){
       {pairingError&&<p role="alert" style={{margin:"10px 0 0",color:"#b42318"}}>{pairingError}</p>}
     </section>}
 
-
-    {toolOpen==="transactions"&&<div id="backoffice-transactions" className="backoffice-anchor"><StoreTransactionsPanel key={`transactions-${version}`} api={api} store={store}/></div>}
-    <div id="backoffice-cash" className="backoffice-anchor">
-      <CashControlPanel key={`cash-${version}`} api={api} store={store}/>
-    </div>
-    <div className="store-operations-actions">
-      <div className="owner-store-secondary-actions"><BarcodeRadioManagement api={api} store={store}/><OwnerPendingApprovals api={api} store={store} onChanged={refresh} refreshToken={version}/></div>
-      <OwnerPaymentQuickActions api={api} store={store} onChanged={refresh}/>
-    </div>
-    <style>{`.owner-store-tools{background:#fff;border:1px solid #dce5ef;border-radius:18px;padding:18px;margin:0 0 18px}.owner-store-tools h3{font-size:22px;margin:0 0 14px}.owner-store-tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.owner-store-tool-grid button{min-height:112px;border:1px solid #cddae6;border-radius:16px;background:#f8fbff;padding:16px;display:grid;grid-template-columns:30px 1fr;grid-template-rows:auto auto;text-align:left;align-items:center;gap:5px 10px;cursor:pointer}.owner-store-tool-grid button.active{border:2px solid #087eb8;background:#eef8ff}.owner-store-tool-grid svg{grid-row:1/3;width:26px;height:26px}.owner-store-tool-grid b{font-size:18px}.owner-store-tool-grid span{font-size:15px;color:#526276}.store-operations-front .cloud-hero h2{font-size:32px}.store-operations-front .cloud-hero p{font-size:17px;line-height:1.5}.owner-store-secondary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media(max-width:850px){.owner-store-tool-grid{grid-template-columns:1fr}.owner-store-tool-grid button{min-height:90px}.owner-store-secondary-actions{grid-template-columns:1fr}}`}</style>
+    </details>
+    <style>{`.owner-store-tools{background:#fff;border:1px solid #dce5ef;border-radius:18px;padding:18px;margin:0 0 18px}.owner-store-tools>summary,.owner-cash-details>summary{font-size:18px;font-weight:800;cursor:pointer;padding:12px 0;min-height:44px;box-sizing:border-box}.owner-store-tools[open]>summary{margin-bottom:14px}.owner-cash-details{margin:14px 0 18px;background:#fff;border:1px solid #dce5ef;border-radius:16px;padding:0 18px}.owner-tool-close{min-height:44px;padding:10px 14px;margin:14px 0;border:1px solid #cddae6;border-radius:10px;background:#fff;font-weight:700;cursor:pointer}.owner-primary-nav{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 18px}.owner-primary-nav button{flex:1 1 240px;min-width:0;min-height:64px;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border:1px solid #cddae6;border-radius:14px;background:#fff;color:#123b5d;font-size:18px;font-weight:800;cursor:pointer}.owner-primary-nav button[aria-pressed="true"]{background:#123b5d;color:#fff;border-color:#123b5d}.owner-primary-nav svg{flex-shrink:0;width:24px;height:24px}.owner-primary-nav button:focus-visible,.owner-store-tools summary:focus-visible,.owner-cash-details summary:focus-visible{outline:3px solid #087eb8;outline-offset:3px}.owner-store-tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.owner-store-tool-grid button{min-height:112px;border:1px solid #cddae6;border-radius:16px;background:#f8fbff;padding:16px;display:grid;grid-template-columns:30px 1fr;grid-template-rows:auto auto;text-align:left;align-items:center;gap:5px 10px;cursor:pointer}.owner-store-tool-grid button.active{border:2px solid #087eb8;background:#eef8ff}.owner-store-tool-grid svg{grid-row:1/3;width:26px;height:26px}.owner-store-tool-grid b{font-size:18px}.owner-store-tool-grid span{font-size:15px;color:#526276}.store-operations-front .cloud-hero h2{font-size:32px}.store-operations-front .cloud-hero p{font-size:17px;line-height:1.5}.owner-store-secondary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media(max-width:850px){.owner-store-tool-grid{grid-template-columns:1fr}.owner-store-tool-grid button{min-height:90px}.owner-store-secondary-actions{grid-template-columns:1fr}}`}</style>
   </section>;
 }

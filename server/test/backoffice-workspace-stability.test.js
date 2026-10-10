@@ -36,7 +36,7 @@ test("store operations entry opens existing functions with the selected store", 
     external:["react","react-dom","react-dom/client","react/jsx-runtime"],loader:{".css":"empty"},
     plugins:[{name:"isolated-child-panels",setup(b){b.onLoad({filter:/\.jsx$/},args=>{
       const name=path.basename(args.path);if(keep.has(name))return;
-      return {contents:'import React from "react";export default function Panel(p){return <div data-fixture="'+name+'" data-store={p.activeStoreId||p.storeId||""}/>}',loader:"jsx"};
+      return {contents:'import React from "react";export default function Panel(p){return <div data-fixture="'+name+'" data-store={p.activeStoreId||p.storeId||p.store?.id||""}/>}',loader:"jsx"};
     })}}]
   });
   const module={exports:{}};new Function("require","module","exports",result.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
@@ -55,7 +55,7 @@ test("store operations entry opens existing functions with the selected store", 
     const data=url==="/api/stores"?(storeResponses.length?await storeResponses.shift():stores):license;
     return {ok:true,json:async()=>data};
   };
-  const api=async()=>({devices:[]});
+  const api=async(url,options={})=>{calls.push({url,method:options.method||"GET"});return {devices:[]}};
   const mount=async id=>act(async()=>root.render(React.createElement(Fixture,{store:stores.find(s=>s.id===id),api,onBack:()=>{}})));
   const button=text=>[...document.querySelectorAll("button")].find(b=>b.textContent===text||b.querySelector("b")?.textContent===text);
   const click=async el=>act(async()=>el.dispatchEvent(new dom.window.MouseEvent("click",{bubbles:true})));
@@ -64,6 +64,34 @@ test("store operations entry opens existing functions with the selected store", 
   const selection=()=>document.querySelector(".commerce-hub > .panel label select");
   try{
     await mount("B");
+    await t.test("owner landing prioritizes shifts and payments; tool and store changes cannot retain old panels",async()=>{
+      const panel=name=>document.querySelector('[data-fixture="'+name+'.jsx"]');
+      assert.equal(panel("StoreTransactionsPanel").dataset.store,"B");
+      assert.equal(panel("OwnerPaymentQuickActions"),null);
+      assert.equal(panel("BarcodeRadioManagement"),null);
+      assert.equal(panel("OwnerPendingApprovals"),null);
+      assert.equal(document.querySelector(".owner-store-tools").open,false);
+      await click(button("Πληρωμές Ιδιοκτήτη / Διαχειριστή"));
+      assert.equal(panel("OwnerPaymentQuickActions").dataset.store,"B");
+      assert.equal(panel("StoreTransactionsPanel"),null);
+      await click(button("Barcode & Online Ράδιο"));
+      assert.equal(panel("BarcodeRadioManagement").dataset.store,"B");
+      await click(button("Εκκρεμείς επιβεβαιώσεις"));
+      assert.equal(panel("BarcodeRadioManagement"),null);
+      assert.equal(panel("OwnerPendingApprovals").dataset.store,"B");
+      await click(button("Κλείσιμο πρόσθετης λειτουργίας"));
+      assert.equal(panel("OwnerPendingApprovals"),null);
+      await click(button("Σύνδεση RBS"));
+      assert.ok(document.querySelector('[aria-label="Σύνδεση RBS CAP Driver"]'));
+      await mount("A");
+      assert.equal(panel("OwnerPaymentQuickActions"),null);
+      assert.equal(panel("OwnerPendingApprovals"),null);
+      assert.equal(document.querySelector('[aria-label="Σύνδεση RBS CAP Driver"]'),null);
+      assert.equal(panel("StoreTransactionsPanel").dataset.store,"A");
+      assert.equal(document.querySelector(".owner-primary-nav button").getAttribute("aria-pressed"),"true");
+      assert.ok(calls.every(c=>c.method==="GET"),"navigation never submits business actions");
+      await mount("B");
+    });
     await t.test("upper entry remains product workspace; lower entry opens real module functions",async()=>{
       await click(button("Εμπορική λειτουργία"));
       assert.ok(document.querySelector('[data-fixture="KioskStyleProductCenterWithStock.jsx"]'));
