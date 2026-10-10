@@ -181,6 +181,68 @@ router.get("/daily-bite-coffee-preview",async(req,res,next)=>{try{
  res.json({company:{id:company.id,name:company.name},katTemplate:{storeId:katStore.id,companyId:katStore.companyId,name:katStore.name},matched:matches,unresolved,ambiguous,katModifierGroups:[...grouped.values()],dailyModifierGroups:dailyGroups.map(x=>({description:x.description,modifierCount:Number(x.modifierCount||0)})),safeForBehaviorApply:matches.length>0&&ambiguous.length===0&&grouped.size>0,mutated:false});
 }catch(error){next(error)}});
 
+
+router.post("/daily-bite-coffee-apply",async(req,res,next)=>{try{
+ const body=z.object({companyId:z.string().min(1).max(120),confirm:z.literal("DAILY_BITE_COFFEE"),renameProducts:z.boolean().default(true)}).parse(req.body||{});
+ const company=(await prisma.$queryRaw`SELECT "id","name" FROM "Company" WHERE "id"=${body.companyId} LIMIT 1`)[0];
+ if(!company||!dailyBiteNameKey(company.name).includes("DAILY BITE"))return res.status(400).json({error:"Η εφαρμογή καφέ επιτρέπεται μόνο για DAILY BITE."});
+ const katStore=(await prisma.$queryRaw`SELECT s."id",s."companyId",s."name" FROM "Store" s WHERE s."active"=true AND (UPPER(s."name") LIKE '%ΚΑΤ%' OR UPPER(s."name") LIKE '%KAT%') ORDER BY s."createdAt" LIMIT 1`)[0];
+ if(!katStore)return res.status(409).json({error:"Δεν βρέθηκε ενεργό κατάστημα ΚΑΤ ως πρότυπο συμπεριφοράς."});
+ const [katProducts,dailyProducts]=await Promise.all([
+   prisma.$queryRaw`SELECT "id","sku","name" FROM "Product" WHERE "companyId"=${katStore.companyId} AND "active"=true AND "sku" LIKE 'MWS-KAT-BEV-%' ORDER BY "name","id"`,
+   prisma.$queryRaw`SELECT "id","sku","name" FROM "Product" WHERE "companyId"=${body.companyId} AND "active"=true ORDER BY "name","id"`
+ ]);
+ const sourceBySig=new Map();for(const row of katProducts){const sig=coffeeSignature(row.name);if(!sig)continue;if(!sourceBySig.has(sig))sourceBySig.set(sig,[]);sourceBySig.get(sig).push(row)}
+ const targetBySig=new Map();for(const row of dailyProducts.filter(row=>coffeeLikeName(row.name))){const sig=coffeeSignature(row.name);if(!sig)continue;if(!targetBySig.has(sig))targetBySig.set(sig,[]);targetBySig.get(sig).push(row)}
+ const signatures=[...new Set([...sourceBySig.keys(),...targetBySig.keys()])];
+ const pairs=[],problems=[];
+ for(const signature of signatures){const source=sourceBySig.get(signature)||[],target=targetBySig.get(signature)||[];if(source.length===1&&target.length===1)pairs.push({signature,kat:source[0],daily:target[0]});else if(source.length||target.length)problems.push({signature,katCount:source.length,dailyCount:target.length})}
+ if(problems.length)return res.status(409).json({error:"Υπάρχουν αμφίσημες ή ελλιπείς αντιστοιχίσεις καφέ. Δεν έγινε καμία αλλαγή.",problems});
+ if(!pairs.length)return res.status(409).json({error:"Δεν βρέθηκαν ασφαλείς αντιστοιχίσεις καφέ. Δεν έγινε καμία αλλαγή."});
+ const katProductIds=pairs.map(x=>x.kat.id);
+ const katLinks=await prisma.$queryRaw`
+   SELECT pg."productId",pg."required",pg."minSelections",pg."maxSelections",pg."sequence",
+          g."id" AS "groupId",g."legacyId",g."description" AS "groupDescription",
+          m."id" AS "modifierId",m."sequence" AS "modifierSequence",m."description" AS "modifierDescription",m."price",m."costNet"
+   FROM "PreparationProductModifierGroup" pg
+   JOIN "ManagementModifierGroup" g ON g."id"=pg."groupId" AND g."companyId"=pg."companyId" AND g."active"=true
+   LEFT JOIN "ManagementModifier" m ON m."groupId"=g."id" AND m."companyId"=g."companyId" AND m."active"=true
+   WHERE pg."companyId"=${katStore.companyId} AND pg."productId"=ANY(${katProductIds}::text[])
+   ORDER BY pg."productId",pg."sequence",g."description",m."sequence",m."description"`;
+ const byKatProduct=new Map();for(const row of katLinks){if(!byKatProduct.has(row.productId))byKatProduct.set(row.productId,new Map());const groups=byKatProduct.get(row.productId);if(!groups.has(row.groupId))groups.set(row.groupId,{legacyId:row.legacyId,description:row.groupDescription,required:Boolean(row.required),minSelections:Number(row.minSelections||0),maxSelections:Number(row.maxSelections||1),sequence:Number(row.sequence||0),items:[]});if(row.modifierId)groups.get(row.groupId).items.push({sequence:Number(row.modifierSequence||0),description:row.modifierDescription,price:Number(row.price||0),costNet:Number(row.costNet||0)})}
+ const result=await prisma.$transaction(async tx=>{
+   const groupIds=new Map(),modifierCounts=new Map();
+   const allGroups=new Map();for(const groups of byKatProduct.values())for(const group of groups.values())if(!allGroups.has(group.description))allGroups.set(group.description,group);
+   for(const group of allGroups.values()){
+     let existing=(await tx.$queryRaw`SELECT "id" FROM "ManagementModifierGroup" WHERE "companyId"=${body.companyId} AND LOWER("description")=LOWER(${group.description}) LIMIT 1`)[0];
+     if(!existing){existing={id:crypto.randomUUID()};await tx.$executeRaw`INSERT INTO "ManagementModifierGroup" ("id","companyId","legacyId","description","active") VALUES (${existing.id},${body.companyId},${group.legacyId??null},${group.description},true)`}
+     else await tx.$executeRaw`UPDATE "ManagementModifierGroup" SET "active"=true,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${existing.id} AND "companyId"=${body.companyId}`;
+     groupIds.set(group.description,existing.id);
+     let count=0;
+     for(const item of group.items){
+       let mod=(await tx.$queryRaw`SELECT "id" FROM "ManagementModifier" WHERE "companyId"=${body.companyId} AND "groupId"=${existing.id} AND LOWER("description")=LOWER(${item.description}) LIMIT 1`)[0];
+       if(!mod){mod={id:crypto.randomUUID()};await tx.$executeRaw`INSERT INTO "ManagementModifier" ("id","companyId","groupId","sequence","description","price","costNet","active") VALUES (${mod.id},${body.companyId},${existing.id},${item.sequence},${item.description},${item.price},${item.costNet},true)`}
+       else await tx.$executeRaw`UPDATE "ManagementModifier" SET "sequence"=${item.sequence},"price"=${item.price},"costNet"=${item.costNet},"active"=true,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${mod.id} AND "companyId"=${body.companyId}`;
+       count++;
+     }
+     modifierCounts.set(group.description,count);
+   }
+   let linkedProducts=0,renamedProducts=0;
+   const renameLog=[];
+   for(const pair of pairs){
+     const groups=[...(byKatProduct.get(pair.kat.id)?.values()||[])];
+     const wanted=[];
+     for(const group of groups){const groupId=groupIds.get(group.description);if(!groupId)continue;wanted.push(groupId);await tx.$executeRaw`INSERT INTO "PreparationProductModifierGroup" ("id","companyId","productId","groupId","required","minSelections","maxSelections","sequence") VALUES (${crypto.randomUUID()},${body.companyId},${pair.daily.id},${groupId},${group.required},${group.minSelections},${group.maxSelections},${group.sequence}) ON CONFLICT ("companyId","productId","groupId") DO UPDATE SET "required"=EXCLUDED."required","minSelections"=EXCLUDED."minSelections","maxSelections"=EXCLUDED."maxSelections","sequence"=EXCLUDED."sequence"`}
+     if(wanted.length)await tx.$executeRaw`DELETE FROM "PreparationProductModifierGroup" WHERE "companyId"=${body.companyId} AND "productId"=${pair.daily.id} AND NOT ("groupId"=ANY(${wanted}::text[]))`;
+     await tx.$executeRaw`INSERT INTO "PreparationProductSettings" ("companyId","productId","preparationEnabled","environmentalFee","productionStation","autoPrint","recipeProfileVersion") VALUES (${body.companyId},${pair.daily.id},true,0,'ΠΑΡΑΓΩΓΗ',true,0) ON CONFLICT ("companyId","productId") DO UPDATE SET "preparationEnabled"=true,"environmentalFee"=0,"productionStation"='ΠΑΡΑΓΩΓΗ',"autoPrint"=true,"updatedAt"=NOW()`;
+     linkedProducts++;
+     if(body.renameProducts&&dailyBiteNameKey(pair.daily.name)!==dailyBiteNameKey(pair.kat.name)){await tx.$executeRaw`UPDATE "Product" SET "name"=${pair.kat.name},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pair.daily.id} AND "companyId"=${body.companyId}`;renamedProducts++;renameLog.push({productId:pair.daily.id,from:pair.daily.name,to:pair.kat.name})}
+   }
+   return{linkedProducts,renamedProducts,renameLog,groupCount:groupIds.size,modifierCount:[...modifierCounts.values()].reduce((a,b)=>a+b,0)};
+ });
+ res.json({ok:true,...result,recipeStockConsumptionConfigured:false,note:"Εφαρμόστηκαν μόνο modifiers/παρασκευή UI και προαιρετικά ονόματα. Δεν αντιγράφηκαν συνταγές ή ingredient stock consumption του ΚΑΤ."});
+}catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Απαιτείται ρητή επιβεβαίωση DAILY_BITE_COFFEE."});next(error)}});
+
 const importSchema=z.object({companyId:z.string().min(1).max(120),quickKeys:z.array(z.object({productId:z.string().min(1).max(120)})).max(20),categories:z.array(z.object({label:z.string().trim().min(1).max(80),productIds:z.array(z.string().min(1).max(120)).max(40)})).length(14)});
 router.post("/prepare-company-layout",async(req,res,next)=>{try{
  const body=importSchema.parse(req.body||{}),ids=[...new Set([...body.quickKeys.map(x=>x.productId),...body.categories.flatMap(x=>x.productIds)])];
