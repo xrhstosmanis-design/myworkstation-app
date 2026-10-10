@@ -467,7 +467,7 @@ router.post("/promotions/import-excel",requireCompanyModule("INVENTORY"),async(r
     const body=z.object({dataUrl:z.string().max(4200000),sourceStoreId:z.string().min(1),targetStoreIds:z.array(z.string().min(1)).max(500).default([])}).parse(req.body||{});
     const match=/^data:application\/(?:vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|vnd\.ms-excel);base64,([A-Za-z0-9+/=]+)$/.exec(body.dataUrl);if(!match)return res.status(400).json({error:"Απαιτείται αρχείο Excel .xlsx ή .xls."});
     const storeIds=[...new Set([body.sourceStoreId,...body.targetStoreIds])];const valid=await prisma.store.findMany({where:{companyId:company,id:{in:storeIds}},select:{id:true}});if(valid.length!==storeIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο κατάστημα."});
-    const workbook=XLSX.read(Buffer.from(match[1],"base64"),{type:"buffer",cellDates:true}),sheet=workbook.Sheets[workbook.SheetNames[0]],rows=XLSX.utils.sheet_to_json(sheet,{defval:""});
+    const workbook=XLSX.read(Buffer.from(match[1],"base64"),{type:"buffer",cellDates:false}),sheet=workbook.Sheets[workbook.SheetNames[0]],rows=XLSX.utils.sheet_to_json(sheet,{defval:""});
     if(!rows.length||rows.length>1000)return res.status(400).json({error:"Το Excel πρέπει να περιέχει 1 έως 1.000 γραμμές."});
     const parsed=[];
     for(let i=0;i<rows.length;i++){
@@ -475,7 +475,12 @@ router.post("/promotions/import-excel",requireCompanyModule("INVENTORY"),async(r
       const product=await productByBarcode(company,barcode);
       if(!product)return res.status(400).json({error:`Γραμμή ${i+2}: δεν βρέθηκε προϊόν για barcode ${barcode||"(κενό)"}.`});
       // Excel serial dates are timezone-free wall-clock values in the store timezone.
-      const excelDate=value=>parsePromotionDate(value instanceof Date&&!Number.isNaN(value.getTime())?value.toISOString().slice(0,19):value);
+      const excelDate=value=>{
+        if(typeof value!=="number")return parsePromotionDate(value);
+        const parts=XLSX.SSF.parse_date_code(value);
+        if(!parts)return new Date(NaN);
+        return parsePromotionDate(new Date(Date.UTC(parts.y,parts.m-1,parts.d,parts.H,parts.M,Math.floor(parts.S))).toISOString().slice(0,19));
+      };
       const startsAt=excelDate(r["Από"]||r.StartsAt||r.startsAt), endsAt=excelDate(r["Έως"]||r.EndsAt||r.endsAt);
       if(!name||name.length>180||!["PERCENT","BUY_X_GET_Y","FIXED_PRICE"].includes(type)||!(startsAt instanceof Date)||!(endsAt instanceof Date)||Number.isNaN(startsAt.getTime())||Number.isNaN(endsAt.getTime())||endsAt<=startsAt)return res.status(400).json({error:`Γραμμή ${i+2}: ελέγξτε όνομα, τύπο και ημερομηνίες.`});
       const numeric=(key,alias)=>Number(r[key]??r[alias]);
