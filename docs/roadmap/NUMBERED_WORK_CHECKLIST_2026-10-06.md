@@ -1,3 +1,7 @@
+## 10Oct17:36 — No33 / tracker35 OPEN: mounted CLOSE revoke/restore LIVE PASS
+
+NormalEMPLOYEE alreadyopenCLOSE disappeared afterOFF withoutrefresh, menu disabled; ON restoredoriginal23 and newly mountedblankform, closedwithoutsubmit. MAIN11/4/control2/0 unchanged, Audittwo rights only. Actualclose/initialcash requirevalidpersonalQR+count/device evidence; financialapproval17:17 persists. Checkpoint2026-10-10-operator-close-runtime-live.md.
+
 ## 10Oct17:27 — No33 / tracker35 OPEN: νέα πώληση και ολική επιστροφή LIVE PASS
 
 Normal LABPOS2EMPLOYEE/αρχικά23: νέο SKU2270 qty1 CASH1€ και μία ολική επιστροφή της ίδιας νέας πώλησης, stock−13→−14→−13, MAIN4→5→4€, control2/0 unchanged, αιτιολογία/Audit/returned-sale exclusion. Raw return stock ledger/fiscal/physicalprint και υπόλοιπο No33 NOT TESTED. Checkpoint 2026-10-10-operator-sale-return-live.md, ίδια ανάθεση. Νέα οικονομική έγκριση17:17 ισχύει για αναγκαίες εικονικές δοκιμές.
