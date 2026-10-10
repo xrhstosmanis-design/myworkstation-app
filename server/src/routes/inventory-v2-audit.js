@@ -1,3 +1,4 @@
+import {inventoryStocktakeScopeAllowed} from "../lib/inventory-stocktake-scope.js";
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import {
@@ -11,11 +12,12 @@ const router = Router(),
   roles = new Set(["SUPER_ADMIN", "OWNER", "ADMIN", "MANAGER"]);
 const access = async (req, id) => {
   if (!(roles.has(req.user?.role) || req.user?.isSuperAdmin)) return null;
-  return (
+  const stocktake = (
     (
       await prisma.$queryRaw`SELECT st.*,s."name" AS "storeName",u."fullName" AS "createdByName",fu."fullName" AS "finalizedByName" FROM "Stocktake" st JOIN "Store" s ON s."id"=st."storeId" LEFT JOIN "User" u ON u."id"=st."createdByUserId" LEFT JOIN "User" fu ON fu."id"=st."finalizedByUserId" WHERE st."id"=${id} AND st."companyId"=${req.user.companyId} LIMIT 1`
     )[0] || null
   );
+  return inventoryStocktakeScopeAllowed(req.user, stocktake) ? stocktake : null;
 };
 const requireLossDetection = async (req, res, stocktake) => {
   if (isPlatformSuperAdmin(req.user)) return true;
