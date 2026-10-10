@@ -24,6 +24,11 @@ Read AGENTS/current numbered/tracker/active/pending/products-master-catalog manu
 
 Acceptance: existing forms retain correct company/store/product selection, barcode identifies intended item or rejects unknown, one named test barcode offer persists and reads back; one bounded Excel offer fixture imports only correct rows/products/date/price/store scope, visible truthful completion/reset and independently reopened results; invalid input must not partially apply. Cleanup only reversible pause of newly created LAB records with fresh baseline, no historical deletion. Fix only reproduced causal failures, require fullCI/exactdeployment before LIVE. Physical/mobile/POScheckout/widerrole/maxcapacity remain separate unless explicitly tested. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n48-excel-barcode-acceptance.md. Single next action: inspect current UI and source after claim publication; preserve owner until completed/named handoff.
 
+
+## 10/10/2026 — N48 / TODAY-06 — code AWAITING LAB
+Claim PR #2090 green and merged 52f61c0. Exact barcode resolution, normalized atomic Excel offer persistence, durable names and delayed form reset/readback correction prepared on `codex/n48-excel-barcode-fix-20261010`. Original mounted form regression reproduced; local Node20 suite 2077 PASS / 13 SKIP / 0 FAIL, client/server build PASS. Native PostgreSQL CI + exact deployment + fresh bounded LAB acceptance remain required. No N48 persisted LAB offer/import executed; prior scroll USER PASS and N39/N44–47 remain protected.
+Checkpoint: `CHECKPOINTS/CHANGES/2026-10-10-n48-excel-barcode-acceptance.md`.
+
 ## 10/10/2026 15:25 Athens — Νο33 δικές του / όλες: cross-actor περιορισμένο LIVE PASS
 
 ## DAILY-BITE-IMPORT / 10/10/2026 / ASSIGNED / NOT TESTED implementation

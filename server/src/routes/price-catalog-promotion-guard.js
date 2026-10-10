@@ -10,6 +10,13 @@ const id = () => crypto.randomUUID();
 const n = (value) => Number(value || 0);
 const round4 = (value) => Number(Number(value || 0).toFixed(4));
 let offerModeReady = false;
+let promotionNameReady = false;
+async function ensurePromotionName() {
+  if (!promotionNameReady) {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "PriceCatalogPromotion" ADD COLUMN IF NOT EXISTS "name" TEXT`);
+    promotionNameReady = true;
+  }
+}
 async function ensurePromotionUsageColumns() {
   await prisma.$executeRawUnsafe(
     `ALTER TABLE "SaleLine" ADD COLUMN IF NOT EXISTS "promotionId" TEXT`,
@@ -44,6 +51,7 @@ router.use(async (req, res, next) => {
       );
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PriceCatalogPromotionGiftProduct" ("promotionId" TEXT NOT NULL,"companyId" TEXT NOT NULL,"productId" TEXT NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY("promotionId","productId"))`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PriceCatalogPromotionGiftProduct_company_product_idx" ON "PriceCatalogPromotionGiftProduct"("companyId","productId","promotionId")`);
+      await ensurePromotionName();
       offerModeReady = true;
     }
     next();
@@ -54,6 +62,7 @@ router.use(async (req, res, next) => {
 
 const storeIdsSchema = z.array(z.string().min(1)).max(200).default([]);
 const commonFields = {
+  name: z.string().trim().min(1).max(180).optional(),
   offerMode: z
     .enum(["DISCOUNT_PERCENT", "DISCOUNT_AMOUNT", "FIXED_PRICE"])
     .optional(),
@@ -298,82 +307,48 @@ router.post("/promotions/scoped", async (req, res, next) => {
   }
 });
 
-router.post("/promotions/scoped/bulk", async (req, res, next) => {
-  try {
-    const companyId = req.user.companyId,
-      b = bulkCreateBody.parse(req.body || {}),
+export async function createScopedPromotionBatch(user, bodies) {
+  if (user?.tokenType === "STORE_OPERATOR" || !roles.has(user?.role)) throw Object.assign(new Error("Δεν επιτρέπεται η διαχείριση προσφορών."), {status:403});
+  if (!bodies.length || bodies.length > 1000) throw Object.assign(new Error("Απαιτούνται 1 έως 1.000 γραμμές προσφορών."), {status:400});
+  await ensurePromotionName();
+  const entries = [];
+  for (const body of bodies) {
+    const companyId = user.companyId,
+      b = bulkCreateBody.parse(body || {}),
       productIds = [...new Set(b.productIds)],
       stores = await storesFor(companyId, b.storeIds),
       giftProducts = await giftProductsFor(companyId, b.giftProductIds);
     if (b.promotionType === "GIFT" && !giftProducts.length)
-      return res.status(400).json({
-        error: "Επίλεξε τουλάχιστον ένα επιτρεπόμενο προϊόν δώρου.",
-      });
+      throw Object.assign(new Error("Επίλεξε τουλάχιστον ένα επιτρεπόμενο προϊόν δώρου."), {status: 400});
     if (b.active && !stores.length)
-      return res
-        .status(400)
-        .json({
-          error: "Επίλεξε τουλάχιστον ένα κατάστημα POS για ενεργή προσφορά.",
-        });
+      throw Object.assign(new Error("Επίλεξε τουλάχιστον ένα κατάστημα POS για ενεργή προσφορά."), {status: 400});
     if (productIds.length * stores.length > 10000)
-      return res
-        .status(400)
-        .json({
-          error:
-            "Η μαζική προσφορά ξεπερνά το ασφαλές όριο των 10.000 συνδυασμών προϊόντος/καταστήματος.",
-        });
+      throw Object.assign(new Error("Η μαζική προσφορά ξεπερνά το ασφαλές όριο των 10.000 συνδυασμών προϊόντος/καταστήματος."), {status: 400});
     if (
       b.promotionType === "LEAFLET" &&
       (b.offerMode || "FIXED_PRICE") === "FIXED_PRICE" &&
       productIds.length > 1
     )
-      return res
-        .status(400)
-        .json({
-          error:
-            "Η κοινή τελική τιμή επιτρέπεται μόνο για ένα προϊόν. Για πολλά προϊόντα χρησιμοποίησε ποσοστό ή έκπτωση σε ευρώ.",
-        });
+      throw Object.assign(new Error("Η κοινή τελική τιμή επιτρέπεται μόνο για ένα προϊόν. Για πολλά προϊόντα χρησιμοποίησε ποσοστό ή έκπτωση σε ευρώ."), {status: 400});
     const products =
       await prisma.$queryRaw`SELECT "id","name","salePrice" FROM "Product" WHERE "companyId"=${companyId} AND "active"=true AND "id"=ANY(${productIds}::text[]) ORDER BY "id"`;
     if (products.length !== productIds.length)
-      return res
-        .status(400)
-        .json({
-          error:
-            "Ένα ή περισσότερα προϊόντα δεν ανήκουν στην εταιρεία ή δεν είναι ενεργά.",
-        });
+      throw Object.assign(new Error("Ένα ή περισσότερα προϊόντα δεν ανήκουν στην εταιρεία ή δεν είναι ενεργά."), {status: 400});
     const validFrom = asDate(b.validFrom, true),
       validUntil = asDate(b.validUntil, false);
     if (validUntil && validUntil < validFrom)
-      return res
-        .status(400)
-        .json({
-          error: "Η λήξη προσφοράς δεν μπορεί να είναι πριν από την έναρξη.",
-        });
-    const actor = req.user.fullName || req.user.email || "Χρήστης",
-      storeIds = stores.map((store) => store.id),
-      created = [];
-    await prisma.$transaction(async (tx) => {
-      for (const product of products) {
-        await lockScope(tx, {
-          companyId,
-          productId: product.id,
-          promotionType: b.promotionType,
-          storeIds,
-        });
-        const overlaps = b.active
-          ? await findOverlap(tx, {
-              companyId,
-              productId: product.id,
-              promotionType: b.promotionType,
-              validFrom,
-              validUntil,
-              storeIds,
-            })
-          : [];
-        if (overlaps.length) throw overlapError(overlaps);
-      }
-      for (const product of products) {
+      throw Object.assign(new Error("Η λήξη προσφοράς δεν μπορεί να είναι πριν από την έναρξη."), {status: 400});
+    for (const product of products) entries.push({product,b,stores,giftProducts,validFrom,validUntil});
+  }
+  if (entries.reduce((total,row)=>total+row.stores.length,0)>10000) throw Object.assign(new Error("Ξεπεράστηκε το όριο συνδυασμών προϊόντος/καταστήματος."),{status:400});
+  const companyId=user.companyId, actor=user.fullName||user.email||"Χρήστης", created=[];
+  entries.sort((a,b)=>`${a.product.id}:${a.b.promotionType}`.localeCompare(`${b.product.id}:${b.b.promotionType}`));
+  await prisma.$transaction(async tx=>{
+    for (const {product,b,stores} of entries) await lockScope(tx,{companyId,productId:product.id,promotionType:b.promotionType,storeIds:stores.map(store=>store.id)});
+    for (const {product,b,stores,giftProducts,validFrom,validUntil} of entries) {
+      const storeIds=stores.map(store=>store.id);
+      const overlaps=b.active?await findOverlap(tx,{companyId,productId:product.id,promotionType:b.promotionType,validFrom,validUntil,storeIds}):[];
+      if(overlaps.length)throw overlapError(overlaps);
         const promotionId = id(),
           offerMode =
             b.promotionType === "LEAFLET"
@@ -402,30 +377,29 @@ router.post("/promotions/scoped/bulk", async (req, res, next) => {
                     )
                   : 0
               : b.discountPercent;
-        await tx.$executeRaw`INSERT INTO "PriceCatalogPromotion" ("id","companyId","productId","promotionType","offerMode","originalPrice","offerPrice","discountPercent","discountAmount","saleQuantity","bonusQuantity","customerPoints","validFrom","validUntil","active","createdByUserId","createdByName") VALUES (${promotionId},${companyId},${product.id},${b.promotionType},${offerMode},${originalPrice},${offerPrice},${discount},${b.discountAmount || 0},${b.saleQuantity},${b.bonusQuantity},${b.customerPoints},${validFrom},${validUntil},${b.active},${req.user.id},${actor})`;
+        await tx.$executeRaw`INSERT INTO "PriceCatalogPromotion" ("id","companyId","productId","name","promotionType","offerMode","originalPrice","offerPrice","discountPercent","discountAmount","saleQuantity","bonusQuantity","customerPoints","validFrom","validUntil","active","createdByUserId","createdByName") VALUES (${promotionId},${companyId},${product.id},${b.name || null},${b.promotionType},${offerMode},${originalPrice},${offerPrice},${discount},${b.discountAmount || 0},${b.saleQuantity},${b.bonusQuantity},${b.customerPoints},${validFrom},${validUntil},${b.active},${user.id},${actor})`;
         await replaceStores(tx, companyId, promotionId, stores);
         if (b.promotionType === "GIFT")
           await replaceGiftProducts(tx, companyId, promotionId, giftProducts);
         created.push({ id: promotionId, productId: product.id });
-      }
-    });
-    res
-      .status(201)
-      .json({
-        created: created.length,
-        items: created,
-        storeIds,
-        giftProductIds: giftProducts.map((product) => product.id),
-        posActive: b.active && stores.length > 0,
-      });
-  } catch (error) {
-    routeError(
-      res,
-      next,
-      error,
-      "Ελέγξτε τα προϊόντα, την έκπτωση και τα καταστήματα της μαζικής προσφοράς.",
-    );
-  }
+    }
+  });
+  return {created:created.length,items:created,storeIds:[...new Set(entries.flatMap(row=>row.stores.map(store=>store.id)))],giftProductIds:[...new Set(entries.flatMap(row=>row.giftProducts.map(product=>product.id)))],posActive:entries.some(row=>row.b.active&&row.stores.length>0)};
+}
+
+router.post("/promotions/scoped/barcode", async (req,res,next)=>{
+  try {
+    const barcode=z.string().trim().min(3).max(80).parse(req.body?.barcode);
+    const rows=await prisma.$queryRaw`SELECT DISTINCT p."id" FROM "Product" p JOIN "ProductBarcode" b ON b."productId"=p."id" WHERE p."companyId"=${req.user.companyId} AND p."active"=true AND b."barcode"=${barcode} LIMIT 2`;
+    if(rows.length!==1)return res.status(400).json({error:rows.length?"Το barcode έχει πολλαπλές αντιστοιχίσεις. Χρειάζεται έλεγχος.":"Δεν βρέθηκε ενεργό προϊόν με αυτό το barcode."});
+    const name=z.string().trim().min(1).max(180).parse(req.body?.name);
+    res.status(201).json(await createScopedPromotionBatch(req.user,[{...req.body,name,productIds:[rows[0].id]}]));
+  }catch(error){routeError(res,next,error,"Ελέγξτε το barcode και την προσφορά.");}
+});
+
+router.post("/promotions/scoped/bulk", async (req,res,next)=>{
+  try { res.status(201).json(await createScopedPromotionBatch(req.user,[req.body||{}])); }
+  catch(error){routeError(res,next,error,"Ελέγξτε τα προϊόντα, την έκπτωση και τα καταστήματα της μαζικής προσφοράς.");}
 });
 
 router.patch("/promotions/:promotionId/scoped", async (req, res, next) => {
@@ -575,7 +549,7 @@ router.get("/promotions/scoped", async (req, res, next) => {
   try {
     const companyId = req.user.companyId;
     const rows =
-      await prisma.$queryRaw`SELECT pr."id",pr."productId",p."name" AS "productName",p."sku",pr."promotionType",pr."offerMode",pr."originalPrice",pr."offerPrice",pr."discountPercent",pr."discountAmount",pr."saleQuantity",pr."bonusQuantity",pr."validFrom",pr."validUntil",pr."active",pr."createdAt",pr."createdByName",COALESCE(json_agg(json_build_object('id',s."id",'name',s."name")) FILTER (WHERE s."id" IS NOT NULL),'[]'::json) AS "stores"
+      await prisma.$queryRaw`SELECT pr."id",pr."name",pr."productId",p."name" AS "productName",p."sku",pr."promotionType",pr."offerMode",pr."originalPrice",pr."offerPrice",pr."discountPercent",pr."discountAmount",pr."saleQuantity",pr."bonusQuantity",pr."validFrom",pr."validUntil",pr."active",pr."createdAt",pr."createdByName",COALESCE(json_agg(json_build_object('id',s."id",'name',s."name")) FILTER (WHERE s."id" IS NOT NULL),'[]'::json) AS "stores"
     FROM "PriceCatalogPromotion" pr
     JOIN "Product" p ON p."id"=pr."productId" AND p."companyId"=pr."companyId"
     LEFT JOIN "PriceCatalogPromotionStore" ps ON ps."promotionId"=pr."id" AND ps."companyId"=pr."companyId"
