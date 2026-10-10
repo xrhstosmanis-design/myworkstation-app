@@ -1,3 +1,9 @@
+## 10/10/2026 20:12 - Normal Owner sign-in blocked; LAB entitlement remains verified
+
+The user-approved saved LAB entitlement/matrix PASS below remains authoritative. A secure normal Backoffice sign-in submission displayed «Χρήστος Μάνης» and «Η συνεδρία δεν είναι έγκυρη.»; one fresh verification page reproduced the same alert. This is not a verified LAB Owner session, role-denial or assistant failure. No assistant query was submitted. Do not treat unloaded zero dashboard cards as business balances or automatically retry/reset credentials.
+
+Troubleshooting: use only an explicitly requested fresh secure sign-in for the existing LAB «Υπεύθυνος Εργαστηρίου» account; never ask for passwords in chat. Confirm actual LAB company/Owner identity and a valid loaded session before selected-store assistant acceptance. Do not re-enable the module (already saved) or use SuperAdmin support/N40 fixture as Owner proof. Cause/credentials/role unverified. Screenshot/checkpoint `CHECKPOINTS/EVIDENCE/voice-owner-cash-20261010/voice-owner-login-blocked-1791652339457.jpg` and `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`. Full Owner/domain scope remains OPEN.
+
 ## 10/10/2026 20:04 - LAB Owner assistant module activation: bounded LIVE PASS
 
 **Who / where:** Existing Super Admin, canonical [Platform Admin](https://myworkstation-app.onrender.com/platform-admin) -> Συνδρομές & Modules -> MYWORKSTATION LAB. This verified grant applies only to its two virtual stores. Existing Owner usage/authentication remains NOT TESTED.
