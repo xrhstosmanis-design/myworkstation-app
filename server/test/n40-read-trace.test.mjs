@@ -41,8 +41,14 @@ test("server completion records real status after middleware, does not alter req
 });
 test("writes, ordinary requests and log failures never alter authorization flow",()=>{
   const middleware=createN40ReadTrace({log:()=>{throw Error("sink failed")},now:()=>100000});
-  for(const method of ["POST","PATCH","DELETE","GET"]){const res=new EventEmitter();let next=0;middleware({method,url:"/api/platform",headers:{}},res,()=>next++);assert.equal(next,1);assert.equal(res.listenerCount("finish"),0)}
+  for(const method of ["POST","PATCH","DELETE"]){const res=new EventEmitter();let next=0;middleware({method,url:"/api/platform",headers:{}},res,()=>next++);assert.equal(next,1);assert.equal(res.listenerCount("finish"),0)}
   const res=new EventEmitter();res.statusCode=401;let next=0;middleware({method:"GET",url:"/api/platform",headers:{"x-mws-n40-store":N40_LAB_STORE,"x-mws-n40-company":scope.companyId,"x-mws-n40-trace":id}},res,()=>next++);assert.doesNotThrow(()=>res.emit("finish"));assert.equal(next,1);
+});
+test("legacy support readers are observed only after authenticated Super Admin target-LAB context",()=>{
+  const logs=[],middleware=createN40ReadTrace({log:(...args)=>logs.push(args)});
+  const send=user=>{const req={method:"GET",url:"/api/platform/report",headers:{}};const res=new EventEmitter();res.statusCode=200;middleware(req,res,()=>{});req.user=user;res.emit("finish")};
+  send(null);send({role:"OWNER",supportContext:scope});send({tokenType:"BACKOFFICE_USER",isSuperAdmin:true,companyId:scope.companyId,supportContext:{...scope,storeId:"other-store"}});send({tokenType:"BACKOFFICE_USER",isSuperAdmin:true,companyId:"different-company",supportContext:scope});assert.equal(logs.length,0);
+  send({tokenType:"BACKOFFICE_USER",isSuperAdmin:true,platformRole:"SUPER_ADMIN",companyId:scope.companyId,supportContext:scope});assert.equal(logs.length,1);const record=JSON.parse(logs[0][1]);assert.equal(record.source,"authenticated-support-context");assert.equal(record.expectedStoreId,N40_LAB_STORE);assert.equal(record.role,"SUPER_ADMIN");
 });
 test("server diagnostic emission is bounded and resets without blocking requests",()=>{
   const logs=[];let clock=100000,next=0;const middleware=createN40ReadTrace({log:(...args)=>logs.push(args),now:()=>clock,limit:2});
