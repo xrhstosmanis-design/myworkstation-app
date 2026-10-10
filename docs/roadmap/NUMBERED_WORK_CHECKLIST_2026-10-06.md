@@ -1,3 +1,7 @@
+## N39 scoped transfer destination regression — AWAITING LAB
+
+Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry fixes source to LAB; its scoped stores list correctly contains only source but the transfer modal incorrectly reused that list, leaving destination empty despite another active authorized LAB store. No transfer submitted. Isolated fix: transfer opening fetches the existing company-authorized /api/stores list into separate transferStores; source selection and all module stores remain fixed. Reject missing/inactive source and fetch failures without fallback; ignore response if source changes. Server transfer tenant/active/sufficient-stock/paired-movement/idempotency rules unchanged. Unit cases7/7 pass Node20; frontend npm run build required. Full39 OPEN. After green CI/merge/exact deployed revision, refresh all baseline values in CHECKPOINTS/CHANGES/2026-10-10-n39-transfer-live.md before new qty1 TRANSFER-01. No new manual PASS until LIVE before/after balances and control verified.
+
 # MyWorkStation — Κεντρική αριθμημένη λίστα εργασιών
 
 **Έκδοση:** 06/10/2026 · **Στιγμιότυπο tracker:** `329792bad1efc5705fff663d093fc89377b97500`  
@@ -259,7 +263,7 @@
 
 - **Συνέχεια 10/10:** PR2020/2026 merged, παραγωγή aec8323 περιλαμβάνει τις διορθώσεις. TEST1 stock9· ledger9/difference0/11κινήσεις/duplicates0 LIVE read-only PASS μετά επαναφορά browser. Named continuation ίδιας ανάθεσης, πλήρες39 OPEN. Checkpoint `2026-10-10-n39-resume.md`.
 
-- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER PASS21:13: normal/max κύλιση και πλήρες Έναρξη/κάτω περιεχόμενο. PR1916/full CI PASS, independently verified1a71471 LIVE. Bounded scroll CLOSED· πλήρες INVENTORY-ADV OPEN / ASSIGNED codex/n39-inventory-acceptance-2026101010Oct; TODAY-07 retains previous owner. Bounded live report-ledger finalization LAB PASS10Oct:11→10/report−1/oneledger−1. FullN39OPEN: αιτιολογία/recount/roles/concurrency/transfer/waste/expiry/ownconsumption. Gate2 και TODAY-07 προστατεύονται.
+- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER PASS21:13: normal/max κύλιση και πλήρες Έναρξη/κάτω περιεχόμενο. PR1916/full CI PASS, independently verified1a71471 LIVE. Bounded scroll CLOSED· πλήρες INVENTORY-ADV OPEN / ASSIGNED codex/n39-inventory-acceptance-2026101010Oct; TODAY-07 retains previous owner. Bounded live report-ledger finalization LAB PASS10Oct:11→10/report−1/oneledger−1. FullN39OPEN: αιτιολογία/recount/roles/concurrency/transfer/waste/expiry/ownconsumption. LIVE FAIL προορισμών μεταφοράς από scoped operations· bounded fix AWAITING LAB, χωρίς πράξη stock. Gate2 και TODAY-07 προστατεύονται.
 
 - **Tracker ID:** `INVENTORY-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN / ASSIGNED — updated10/10/2026, codex/n39-inventory-acceptance-20261010
