@@ -2767,6 +2767,8 @@ Local Node24.19.0:8/8 focused diagnostic tests PASS, including real local HTTP40
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 10Oct17:57 scopeddesktopLIVEPASS, whole51OPEN. PR2118/fullCI2124pass0fail0skip plus CSSPR2124/fullCI38060344455SUCCESS; exacthealthy818d3f45ad4afd2de5f461701c07b7c94389a34e/mainCI38060563876attempt3SUCCESS/Render38061084383SUCCESS; freshreload/readable515×64buttons. Two tills MAIN11/4/control2/0expense120 and TEST2−2/ledger−2/2moves/diff0/history2 agree. Concurrent No33 MAIN8→11/Audit1204→1213 recorded, not claimed unchanged wholeperiod. Ten form entries open/close without submit, other-store reset and lower realcommerce single window observed. Manualowner-store-page/PASS.md and final shifts/payments JPEGs; PDF/list publication CI recorded by final PR. Next user visual review/actual own viewport, ownerretained, no financial replay.
 
+**Νεότερη διάγνωση 10Oct23:17:** secure retry/fresh tab inactive-session; current main463465e4 actual ordinary Login mishandles synthetic SUPER_ADMIN mfaRequired/setupRequired as final session (Node20 exact-handler reproduction). Actual submitted identity/response/servedrevision unverified: possible immediate401 route, not confirmed LIVEcause. Central BACKOFFICE-SESSION-01 owner codex/backoffice-session-boundary-20261010 retained; no parallel auth edit. Checkpoint2026-10-10-n51-backoffice-login-diagnosis.md and fixture-only evidence; N51 remains partial/open.
+
 ### DOC-NUM-01 — Κεντρική αριθμημένη λίστα και κανόνας PASS
 
 **Κατάσταση:** PASS · DOCUMENTATION COMPLETE
