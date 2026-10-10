@@ -12,6 +12,27 @@ Implemented module catalog availability covers only this current-store read-only
 
 Handoff retained with same owner: next action is specific approval for activating the existing AI_OWNER_ASSISTANT in virtual MYWORKSTATION LAB only, then legitimate existing Owner authentication and normal module/scope acceptance. Company activation would cover its two current virtual stores; no real customer/company grant, credential reset, new account or pricing/plan change. No activation performed/pre-approved by this receipt. After that acceptance, next bounded capability is sales by exact product/date/current store. Immediate checkpoint/active/manual/pending/tracker/PDF publication required before pause; completed support retention/query removed from pending, independent residual retained.
 
+## 10 Oct 2026 19:25 Athens — No40 restricted Platform GET denial / own-session revocation LIMITED LAB PASS; OPEN
+
+Owner codex/n40-full-twin-navigation-audit-20261010 unchanged. User completed mandatory final-password change after 19:23:26 reply. Fresh cloud Chrome tab22 visibly showed “Ο προσωρινός κωδικός αντικαταστάθηκε μέσω της κανονικής διαδικασίας” and read-only controls, so the mandatory-password gate was no longer active. No credentials entered/read by agent. Fixture n40.backoffice.20261010@myworkstation.invalid, EMPLOYEE, MYWORKSTATION LAB cmtpopbgk000prhb5qc60zxus; exact checker store ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ cmtpopbgo000trhb5ng9ytiru. No POS shift/item/SKU/quantity/payment (N/A); no business/device/permission/module changes.
+
+Before probes: latest Render dep-db56a7vlot8c73dshc0g LIVE, finished16:19:24UTC; independent browser /api/health ok:true/version0.22.0+kat-test-pos/exact revision2e1f4afe7d7eca6803f39c81d95ab19a70cd01f7. No deployment by this page. Browser checker session originated with released PR2133; loaded client asset revision not independently attested. Current main read2e1f4afe. Preserve other owners' concurrent work.
+
+One read-only five-GET batch at16:24:18.968–16:24:19.734UTC returned five403s. Then normal own-fixture-session logout and one retained-old-token GET returned401 at16:24:27.900UTC; private fixture session cleared, login form shown. No other session revoked. Business response bodies discarded by released checker; no response data, token or passwords exported.
+
+| Observed probe | HTTP | Server role | Exact client/server trace ID |
+| --- | --- | --- | --- |
+| POS | 403 | EMPLOYEE | n40-1f3a54d0e54a4ed79bf350055929cd76 |
+| EFTPOS / Ταμειακές | 403 | EMPLOYEE | n40-530b80fbc344472c85fa2451c1b35622 |
+| Ταμείο | 403 | EMPLOYEE | n40-273a126929e046efb7eab53ac679aa44 |
+| Modules προσωπικού | 403 | EMPLOYEE | n40-b8310bfce5404ea9bd69281db796c11f |
+| Κάμερες | 403 | EMPLOYEE | n40-1a1f37ce97264c22b49bfdeb7619a664 |
+| Own-session old-token probe | 401 | null | n40-21f107e4757c4fa4a5a9f28516721e5e |
+
+Each exact trace matched one Render server record: side server/source correlation-header, methodGET, company/store IDs exactly target, companyMatches/storeMatches true, no invalid/truncated scope; roleEMPLOYEE on403, role null on401. Sanitized evidence CHECKPOINTS/EVIDENCE/n40-backoffice-fixture-20261010/restricted-server-correlations.json and screenshot n40-restricted-results-1791649502689.jpg. This is LIMITED LAB PASS only for denial of these five Platform/SuperAdmin routes to this EMPLOYEE and rejection of this one session's old token after logout. It is not module-license denial, direct Workforce business endpoint authorization, cross-company/store rejection, positive authorized access, or six Twin-destination request isolation. DB/audit/session-count deltas NOT TESTED.
+
+No40 remains OPEN. Preserve phases1–14, Stock USER6097485640, five prior normal-close navigation roundtrips and disabled-POS denial without repetition. Still outstanding: six-destination attributable request isolation, authenticated tenant/module negatives beyond this batch, stale/network race cases, existing Twin client attestation and Stock support-exit Audit. No39/internal stock/business calculations outside scope. Next action: obtain per-transition client/server-correlated traces of the existing five destinations without executing analyses or commands, then remaining negatives/races and Stock audit readback; do not replay the Stock USER visual. Password/login handoffs now historical and completed; do not recreate/reset fixture or repeat this batch only for documentation.
+
 ## 10/10/2026 19:06 Athens — VOICE-ASSISTANT-01 / tracker32: Owner entry LIVE FAIL / bounded refresh fix AWAITING RETEST
 
 Same owner `codex/unified-voice-assistant-20261010`; sourcePR2139 headb07c321b25f05da5adb0e8ee9f86f9e1f787f567/fullPRCI38065505073/fullmainCI38065763641 SUCCESS(2188 tests/0fail/0skip), merge/released `e8ee8e8230d900653df366a358bbc44a0eeb47a5`; guardedRender38066003510/job114253694545 SUCCESS pins e8 even though workflow head3125d2a4 is docs. Actual browser exact health2026-10-10T16:04:42.315Z ok/version0.22.0+kat-test-pos/e8. Rollback artifact captured, not executed.
