@@ -113,8 +113,19 @@ router.post("/stores/:storeId/online-product-create",async(req,res,next)=>{
 router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
   try{
     const store=await ownedStore(req,req.params.storeId);
+    const shiftView=req.query?.view==="SHIFT",operator=req.user?.tokenType==="STORE_OPERATOR";
+    if(shiftView&&operator&&!req.user.permissions?.includes("SHIFT_TRANSACTIONS"))return res.status(403).json({error:"Δεν έχεις δικαίωμα «Συναλλαγές βάρδιας» από το BackOffice."});
+    const ownShift=shiftView&&operator&&!req.user.permissions?.includes("STORE_LEDGER_REVIEW");
+    let terminalPos=null;
+    if(shiftView&&operator){
+      terminalPos=String(req.user.terminalPos||"").trim().toUpperCase().slice(0,120);
+      if(!terminalPos){
+        const profiles=await prisma.$queryRaw`SELECT COALESCE(NULLIF(TRIM("terminalPos"),''),'MAIN') AS "terminalPos" FROM "StoreOperatorProfile" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "employeeId"=${req.user.employeeId} LIMIT 1`;
+        terminalPos=String(profiles[0]?.terminalPos||"MAIN").trim().toUpperCase().slice(0,120);
+      }
+    }
     const rows=await prisma.$queryRaw`
-      SELECT s."id",s."receiptNumber",s."total",s."subtotal",s."discount",s."audience",s."occurredAt",s."createdAt",
+      SELECT s."id",s."operatorEmployeeId",s."receiptNumber",s."total",s."subtotal",s."discount",s."audience",s."occurredAt",s."createdAt",
              s."transactionMode",s."delayedReason",s."reversalState",s."reversalKind",s."originalSaleId",s."fiscalStatus",s."source",c."name" AS "customerName",
              COALESCE((SELECT st."sessionId" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),NULL) AS "sessionId",
              COALESCE((SELECT st."actorName" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),'Πωλητής') AS "actorName",
@@ -123,6 +134,14 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
       FROM "Sale" s
       LEFT JOIN "Customer" c ON c."id"=s."customerId" AND c."companyId"=s."companyId"
       WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id}
+        AND (${!ownShift} OR s."operatorEmployeeId"=${req.user.employeeId||null})
+        AND (${!shiftView} OR EXISTS (
+          SELECT 1 FROM "StoreTransaction" tx JOIN "CashShiftSession" shift ON shift."id"=tx."sessionId"
+          WHERE tx."companyId"=s."companyId" AND tx."storeId"=s."storeId"
+            AND shift."companyId"=s."companyId" AND shift."storeId"=s."storeId" AND shift."status"='OPEN'
+            AND (${!operator} OR shift."terminalPos"=${terminalPos})
+            AND COALESCE(tx."description",'') LIKE ('%'||s."id"||'%')
+        ))
         AND s."source" IN ('POS','EXCHANGE','POS_REVERSAL','WASTE') AND s."status"='COMPLETED'
       ORDER BY s."createdAt" DESC LIMIT 50`;
     res.json({store,rows:rows.map(normalizeSale)});
