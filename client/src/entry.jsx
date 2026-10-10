@@ -1,3 +1,4 @@
+import {installN40VisibleReadTrace} from "./utils/n40VisibleReadTrace.js";
 import React,{useState} from "react";
 import {createRoot} from "react-dom/client";
 import StoreOperatorApp from "./components/store/StoreOperatorWithOnlineOrders.jsx";
@@ -107,6 +108,7 @@ const storeApi=async(path,options={})=>{
 
 function RemoteAssistAcceptance({jobId}){const[code,setCode]=useState(""),[message,setMessage]=useState(""),[error,setError]=useState("");const accept=async e=>{e.preventDefault();setError("");const response=await fetch(`/api/platform/device-operations/remote/${encodeURIComponent(jobId)}/accept`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})});const data=await response.json();if(!response.ok)return setError(data.error||"Ο κωδικός δεν έγινε δεκτός.");setMessage(data.message)};return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",background:"#eef3f6",padding:24}}><form onSubmit={accept} style={{width:"min(480px,100%)",background:"white",padding:32,borderRadius:18,boxShadow:"0 20px 60px #1234",display:"grid",gap:16}}><h1>MyWorkStation REMOTE</h1><p>Γράψε τον εξαψήφιο κωδικό που σου έδωσε ο υπεύθυνος υποστήριξης. Η σύνδεση δεν ξεκινά χωρίς τη δική σου αποδοχή.</p><input value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" pattern="\d{6}" placeholder="000000" required style={{fontSize:32,textAlign:"center",letterSpacing:8,padding:12}}/><button style={{padding:14,fontWeight:800}}>Αποδοχή REMOTE</button>{error&&<b style={{color:"#b91c1c"}}>{error}</b>}{message&&<b style={{color:"#047857"}}>{message}</b>}<small>Η αποδοχή καταγράφεται. Δεν στέλνονται εντολές σε RBS, EFTPOS ή φορολογικό μηχανισμό.</small></form></main>}
 
+if(platformMatch||(!chatMatch&&!posMatch&&!storeMatch&&!inspectionMatch&&!inventoryMatch&&!remoteAssistMatch&&!katTestMatch&&!n40AuditMatch))installN40VisibleReadTrace();
 installPosCheckoutSafety();
 if(!n40AuditMatch&&!chatMatch&&!posMatch&&!storeMatch&&!inspectionMatch&&!inventoryMatch&&!remoteAssistMatch)installBackofficeSessionRenewal();
 installTouchKeyboard();

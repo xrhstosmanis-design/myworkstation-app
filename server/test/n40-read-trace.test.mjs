@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {EventEmitter} from "node:events";
 import {createServer} from "node:http";
-import {n40ReadHeaders,n40ReadRecord,N40_LAB_STORE} from "../../shared/n40-read-trace.mjs";
+import {n40ReadHeaders,n40ReadRecord,N40_LAB_STORE,n40PublishRead,N40_VISIBLE_TRACE_EVENT} from "../../shared/n40-read-trace.mjs";
 import {createN40ReadTrace} from "../src/n40-read-trace.js";
 const scope={companyId:"company-lab",storeId:N40_LAB_STORE},id="n40-"+"a".repeat(32);
 const uuid=()=>"a".repeat(32);
@@ -74,4 +74,19 @@ test("real local HTTP response retains denial and correlates only sanitized GET 
     assert.equal(response.status,403);assert.equal(await response.text(),"ordinary-denial-body");
     assert.equal(logs.length,1);const record=JSON.parse(logs[0][1]);assert.equal(record.traceId,id);assert.equal(record.status,403);assert.equal(record.storeMatches,true);assert.equal(JSON.stringify(logs).includes("private-search"),false);assert.equal(JSON.stringify(logs).includes("ordinary-denial-body"),false);
   }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve))}
+});
+
+test("visible client event projects safe metadata without carrying credentials or query values",()=>{
+  const events=[],target={console:{info(){}},CustomEvent:class{constructor(type,{detail}){this.type=type;this.detail=detail}},dispatchEvent:event=>events.push(event)};
+  const record=n40PublishRead("/api/platform/stores/"+N40_LAB_STORE+"/employees/private-person?password=private-secret&search=private-name",scope,id,403,{role:"EMPLOYEE",password:"private-secret"},target);
+  assert.equal(events.length,1);assert.equal(events[0].type,N40_VISIBLE_TRACE_EVENT);
+  assert.equal(record.status,403);assert.equal(record.side,"client");assert.equal(record.storeMatches,true);
+  assert.ok(record.observedAt);assert.ok(!JSON.stringify(events).includes("private-"));
+  assert.equal(n40PublishRead("/api/platform",{...scope,storeId:"other-store"},id,200,null,target),null);
+  assert.equal(events.length,1);
+});
+test("unavailable or throwing diagnostic event and console do not change normal read completion",()=>{
+  const target={console:{info(){throw Error("console denied")}},CustomEvent:class{constructor(){throw Error("event unavailable")}},dispatchEvent(){throw Error("dispatch unavailable")}};
+  assert.equal(n40PublishRead("/api/platform/stores/"+N40_LAB_STORE,scope,id,200,null,target).status,200);
+  assert.equal(n40PublishRead("/api/platform/stores/"+N40_LAB_STORE,scope,id,200,null,{}).status,200);
 });

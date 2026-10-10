@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from "react";
-import {n40ReadHeaders,n40ReadRecord,N40_TRACE_PREFIX} from "../../../../shared/n40-read-trace.mjs";
+import {n40ReadHeaders,n40PublishRead} from "../../../../shared/n40-read-trace.mjs";
 import {AlertTriangle,BrainCircuit,Building2,CalendarDays,Camera,CheckCircle2,Copy,DatabaseBackup,Download,ExternalLink,Globe2,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,MessageCircle,Monitor,Plus,Printer,RefreshCw,Send,ShieldCheck,ShoppingBag,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
@@ -91,7 +91,7 @@ async function request(path,options={}){
     ...fetchOptions,
     headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{}),...(trace?.headers||{})}
   });
-  if(trace){try{console.info(N40_TRACE_PREFIX,JSON.stringify({...n40ReadRecord(path,n40Scope,trace.traceId,response.status),side:"client"}))}catch{}}
+  if(trace)n40PublishRead(path,n40Scope,trace.traceId,response.status);
   const text=await response.text();
   let data={};
   if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}

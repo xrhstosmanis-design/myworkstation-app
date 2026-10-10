@@ -1,0 +1,31 @@
+{
+  "product_count": 8753,
+  "barcode_count": 9306,
+  "leading_zero_barcodes": 164,
+  "full_product_digest": "ef47586e7ad50b0ca269a9062f4c7c8c",
+  "barcode_digest": "c0dd05b17ec69cf78b7020726a27e5a3",
+  "held": 199,
+  "excluded": 878,
+  "supplier_summary": {
+    "digest": "a109a6653226b2a6eb973318335957a0",
+    "linked_count": 7658
+  },
+  "canonical_product_fields": [
+    "sku",
+    "trimmed name",
+    "sale price numeric14,4",
+    "cost price numeric16,6",
+    "VAT numeric5,2",
+    "department description",
+    "cash register department",
+    "unit",
+    "active",
+    "store stock numeric14,4",
+    "store price numeric14,4",
+    "category",
+    "subcategory"
+  ],
+  "encoding": "UTF-8; sorted by SKU C, fields |, records newline, no final newline",
+  "direct_product_digest": "9fa4c37c7fc1f4e92db3354fc4cd69a8",
+  "sale_price_sum": "33263.22"
+}

@@ -1,0 +1,12 @@
+{
+  "status": "fulfilled",
+  "value": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"linked_products\":7658,\"supplier_digest\":\"a109a6653226b2a6eb973318335957a0\"}]"
+      }
+    ],
+    "isError": false
+  }
+}

@@ -1,3 +1,37 @@
+## 10/10/2026 20:04 - LAB Owner assistant module activation: bounded LIVE PASS
+
+**Who / where:** Existing Super Admin, canonical [Platform Admin](https://myworkstation-app.onrender.com/platform-admin) -> Συνδρομές & Modules -> MYWORKSTATION LAB. This verified grant applies only to its two virtual stores. Existing Owner usage/authentication remains NOT TESTED.
+
+**Verified steps:** Obtain specific approval for this company grant; cancel an old unsaved proposal and refresh subscriptions before editing. Open only LAB configuration; record inactive assistant/count20/total104.70€/AI COMPLETE. Toggle only «AI Βοηθός Ιδιοκτήτη»; preserve prices/plan/status/dates/other modules. Click «Αποθήκευση συνδρομής» once, wait until panel closes, then reopen. Verified saved active assistant/count21/monthly0€/setup0€/same total104.70€; all other visible fields unchanged. Cancel the reopened read-only panel without another Save.
+
+**Effective access readback:** Company Καταστήματα -> each LAB store -> Έλεγχος δικαιωμάτων. Both matrices show active company license, AI_OWNER_ASSISTANT from company license, Owner ΝΑΙ/Employee ΟΧΙ/SuperAdmin ΠΑΝΤΑ, CASH_CONTROL Owner ΝΑΙ. Matrix is read-only and no new grant itself. Configure only explicitly approved company; store-entry queries must remain restricted to the selected authorized store.
+
+**PASS / limits:** Only entitlement persistence, unchanged visible commercial terms and effective matrix readbacks verified on release2e1f4afe at17:01-17:04UTC. This does not prove normal Owner/API/role/tenant/module-lifecycle authorization, physical speech or sales/product/date. No business/financial/stock/device/fiscal actions; DB/audit/ledger deltas unmeasured. If saved panel or matrix disagrees, stop and inspect permission/license source; do not rely on unsaved active styling or repeat a Save blindly. Next use secure existing LAB Owner sign-in, not support or N40 fixture.
+
+Evidence/checkpoint: `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`, `CHECKPOINTS/EVIDENCE/voice-owner-cash-20261010/voice-owner-module-active-1791651751072.jpg`. Earlier inactive-module statements below describe the19:23 historical baseline; this20:04 receipt supersedes current activation status only.
+
+## 10/10/2026 — Βοηθός Ιδιοκτήτη: επιλεγμένο κατάστημα, δοκιμή υποστήριξης LIVE PASS
+
+Επαληθεύτηκε μόνο η υπάρχουσα σύνδεση Super Admin σε προβολή υποστήριξης του MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, release `2e1f4afe7d7eca6803f39c81d95ab19a70cd01f7`, PR2139+2141/CI38066533003+38066789813/Render38067034314. Δεν αποτελεί επαλήθευση κανονικού Ιδιοκτήτη ή ενεργοποίησης module· ο πίνακας δικαιωμάτων έδειξε AI_OWNER_ASSISTANT Owner ΟΧΙ και CASH_CONTROL ΝΑΙ. Κανένα module/δικαίωμα δεν ενεργοποιήθηκε.
+
+Επαληθευμένη χρήση υποστήριξης: από [Platform Admin](https://myworkstation-app.onrender.com/platform-admin), Καταστήματα του MYWORKSTATION LAB -> ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ -> Πλήρες Backoffice -> Εμπορική λειτουργία -> Λοιπές εμπορικές λειτουργίες -> Βοηθός Ιδιοκτήτη. Επιβεβαίωσε το επιλεγμένο κατάστημα και την ένδειξη «Προβολή υποστήριξης Super Admin». Πληκτρολόγησε «Ποια βάρδια είχε διαφορά μετρητών στις 10/10/2026; Δείξε κατάστημα, βάρδια και ποσό.» και πάτησε Ρώτα. Το κείμενο διατηρήθηκε28seconds παρά τις ανανεώσεις άδειας, η πραγματική απάντηση εμφάνισε σωστή βάρδια/ημερομηνία/−5,50€ και τον πίνακα πηγής μόνο για το επιλεγμένο κατάστημα.
+
+Διασταύρωση: κλείσε μόνο το παράθυρο Εμπορικής λειτουργίας, άνοιξε «Αυτόματος έλεγχος και κλεισμένες βάρδιες» και πάτησε τη δική του Ανανέωση. Ίδια ημερομηνία2026-10-10/00:00–23:59, μία κλεισμένη TEST QR ΕΠΑΝΑΜΕΤΡΗΣΗ / MAIN, κλείσιμο08:13:02 και διαφορά−5,50€. Τα αναμενόμενα/καταμετρημένα/sessionID/cardVariance του πίνακα βοηθού δεν εμφανίζονται ανεξάρτητα εδώ και δεν λαμβάνουν ξεχωριστό PASS. Η λειτουργία είναι μόνο ανάγνωση· διαφορά δεν αποδεικνύει αιτία ή ευθύνη.
+
+Αν το πεδίο αδειάζει από απλή ανανέωση άδειας, έλεγξε ότι φόρτωσε η διορθωμένη έκδοση2141 και επανάνοιξε την είσοδο από το επιλεγμένο κατάστημα. Πριν τη διόρθωση παρατηρήθηκε αυτό το FAIL και το παραπάνω πραγματικό retest το έκλεισε μόνο στο scope υποστήριξης. Για απουσία πρόσβασης ή λάθος κατάστημα μη χρησιμοποιήσεις παλιά απάντηση· ζήτησε έλεγχο δικαιωμάτων. Φυσική φωνή σε αυτή την είσοδο, κανονικός Owner με module, άλλες εταιρείες/καταστήματα, ανάκληση άδειας, source failure, ιστορική/κενή αναφορά, sales/product/date και υπόλοιπα domains παραμένουν NOT TESTED/OPEN. Προγενέστερο input USER PASS και Platform cash LIVE PASS διατηρούνται χωριστά.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`, screenshots `CHECKPOINTS/EVIDENCE/voice-owner-cash-20261010/voice-owner-cash-live-1791649326035.jpg` και `voice-owner-cash-answer-1791649348275.jpg`. Καμία πώληση/πληρωμή/απογραφή/κλείσιμο/αποστολή email/ενεργοποίηση module δεν εκτελέστηκε.
+
+## 10/10/2026 — No40 limited restricted Platform role and own-session revocation LAB PASS
+
+Super Admin may use the additive No40 LAB audit screen from canonical https://myworkstation-app.onrender.com/platform-admin. Fixed fixture n40.backoffice.20261010@myworkstation.invalid is company-scoped EMPLOYEE; it is separate from the disabled POS operator and has no invented per-store User grant. This checker only requests MYWORKSTATION LAB → ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ.
+
+Verified flow: fixture account created by user; secure sign-in; mandatory password replacement completed manually by user; public completion status and read-only controls shown. Click “Έλεγχος απόρριψης Super Admin GET” once: five fixed Platform routes (POS packages, device routing, daily cash, personnel module metadata, video connection) returned403. Click “Έξοδος εικονικού χρήστη και έλεγχος ανάκλησης”: own-session logout followed by one old-token POS GET returned401 and login form appeared. Exact six client trace IDs matched server records at16:24:18–16:24:27UTC on revision2e1f4afe7d7eca6803f39c81d95ab19a70cd01f7, with EMPLOYEE for403 and null role for401. See CHECKPOINTS/CHANGES/2026-10-10-n40-backoffice-fixture.md and sanitized correlation JSON/screenshot.
+
+PASS criteria: these five SuperAdmin routes deny this authenticated EMPLOYEE after password change, and this single session's old token is rejected after normal logout. No credentials/business data exported; response bodies discarded; no other session/business/device/module/permission action. Reload loses private per-tab session; use secure login if future testing requires it, never reset/recreate fixture. A403 while mustChangePassword is active is not role-denial proof. Unexpected HTTP status stops the batch; investigate before any PASS.
+
+Known limits: no full No40 PASS, no license/module-denial proof, no direct Workforce authorization, no cross-store/company negative, no full destination request isolation/races, no Stock support-exit Audit or independent loaded-client revision attestation. Prior Stock USER visual and navigation PASS remain protected. Do not repeat this completed batch solely for documentation.
+
 ## 10/10/2026 — VOICE-ASSISTANT-01: LIVE PASS ερώτησης προβλήματος μετρητών
 
 **Ποιος / πού:** Super Admin στο [Platform Admin](https://myworkstation-app.onrender.com/platform-admin) → «AI Command Center» → «Ρώτα το MyWorkStation». Πρόκειται για ρητή κεντρική αναζήτηση σε όλα τα καταστήματα. Η αντίστοιχη Owner λειτουργία με module και μόνο δικά του καταστήματα παραμένει υπό υλοποίηση.

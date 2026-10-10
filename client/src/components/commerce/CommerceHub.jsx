@@ -12,6 +12,7 @@ import DispatchProviderPanel from "./DispatchProviderPanel.jsx";
 import ConnectorObserverPanel from "./ConnectorObserverPanel.jsx";
 import PendingCenterPanel from "./PendingCenterPanel.jsx";
 import BackofficeVideoAuditPanel from "./BackofficeVideoAuditPanel.jsx";
+import OwnerAssistantPanel from "../voice/OwnerAssistantPanel.jsx";
 import "./commerce-hub.css";
 import "./commerce-external-tabs.css";
 
@@ -25,6 +26,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   const [catalog,setCatalog]=useState([]);
   const [tab,setTab]=useState("modules");
   const [storeId,setStoreId]=useState(stores[0]?.id||"");
+  const [assistantStoreId,setAssistantStoreId]=useState(()=>stores.find(s=>s.id===activeStoreId)?.id||"");
   const [overview,setOverview]=useState(null);
   const [products,setProducts]=useState([]);
   const [inventory,setInventory]=useState([]);
@@ -43,6 +45,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
   const active=new Set(activeModules);
 
   useEffect(()=>{const preferred=stores.find(store=>store.id===activeStoreId)?.id||stores[0]?.id||"";if(preferred&&storeId!==preferred)setStoreId(preferred)},[stores,activeStoreId]);
+  useEffect(()=>{setAssistantStoreId(stores.find(s=>s.id===activeStoreId)?.id||"")},[stores,activeStoreId]);
   useEffect(()=>{
     const onModules=e=>setActiveModules(e.detail?.activeModules||readActive());
     window.addEventListener("myworkstation:modules-updated",onModules);
@@ -157,6 +160,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
       <div className="panel-head"><div><h2>Εμπορική λειτουργία</h2><p>POS, αποθήκη, παραστατικά, αναλύσεις και παράδοση βάρδιας πάνω στην ενιαία βάση MyWorkStation.</p></div><button onClick={event=>{if(!event.currentTarget.dispatchEvent(new CustomEvent("purchase-orders:refresh",{bubbles:true,cancelable:true})))return;loadCatalog();if(tab==="inventory")loadInventory();if(tab==="analytics")loadAnalytics();}}><RefreshCw/>Ανανέωση</button></div>
       <div className="commerce-module-strip">
         <button className={tab==="modules"?"active":""} onClick={()=>setTab("modules")}>Modules</button>
+        <button type="button" className={tab==="ownerAssistant"?"active":""} onClick={()=>setTab("ownerAssistant")}>Βοηθός Ιδιοκτήτη</button>
         <button disabled={!active.has("INVENTORY")} className={`${tab==="inventory"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("inventory")}><Boxes/> Αποθήκη</button>
         <button disabled={!active.has("INVENTORY")} className={tab==="supplierComparison"?"active":""} onClick={()=>setTab("supplierComparison")}>Σύγκριση Προμηθευτών</button>
         <button disabled={!active.has("ORDER_SUGGESTIONS")} className={tab==="orderSuggestions"?"active":""} onClick={()=>setTab("orderSuggestions")}>Προτάσεις Παραγγελίας</button>
@@ -171,12 +175,13 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
         <button disabled={!active.has("CONNECTOR_RBS")} className={`${tab==="observer"?"active":""} ${!active.has("CONNECTOR_RBS")?"locked":""}`} onClick={()=>setTab("observer")}><RadioTower/> RBS Observer</button>
         <button disabled={!active.has("VIDEO_EVENTS")} className={`${tab==="video"?"active":""} ${!active.has("VIDEO_EVENTS")?"locked":""}`} onClick={()=>setTab("video")}><Camera/> Κάμερες / Video Audit</button>
       </div>
-      <label>Κατάστημα <select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      <label>Κατάστημα <select value={tab==="ownerAssistant"?assistantStoreId:storeId} onChange={e=>{setStoreId(e.target.value);setAssistantStoreId(e.target.value)}}>{tab==="ownerAssistant"&&<option value="">Επίλεξε κατάστημα</option>}{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       {error&&<div className="commerce-error">{error}</div>}{message&&<div className="commerce-success">{message}</div>}
     </section>
 
     {tab==="modules"&&<section className="commerce-status-grid commerce-reference-modules">{statusModules.map(module=>{const visual=moduleVisuals[module.key]||{tone:"blue",icon:"◆",subtitle:module.description};return <article key={module.key} className={`commerce-status-card commerce-reference-card tone-${visual.tone} ${module.active?"active":""} ${!module.commercialReady?"locked":""}`}><span className="commerce-reference-icon" aria-hidden="true">{visual.icon}</span><div className="commerce-reference-copy"><b>{module.name}</b><p>{visual.subtitle||module.description}</p></div><span className="commerce-reference-arrow" aria-hidden="true"><ChevronRight/></span><em>{module.active?"ΕΝΕΡΓΟ":module.commercialReady?"ΔΙΑΘΕΣΙΜΟ":"ΚΛΕΙΔΩΜΕΝΟ"}</em>{!module.commercialReady&&<LockKeyhole className="commerce-reference-lock"/>}</article>})}</section>}
 
+    {tab==="ownerAssistant"&&<OwnerAssistantPanel key={assistantStoreId} api={api} storeId={stores.find(s=>s.id===assistantStoreId)?.id||""} storeName={stores.find(s=>s.id===assistantStoreId)?.name||""}/>}
     {tab==="video"&&active.has("VIDEO_EVENTS")&&<BackofficeVideoAuditPanel api={api} storeId={storeId}/>}
     {tab==="supplierComparison"&&active.has("INVENTORY")&&<SupplierPriceComparisonPanel key={storeId} api={api} storeId={storeId}/>}
     {tab==="orderSuggestions"&&active.has("ORDER_SUGGESTIONS")&&<OrderSuggestionsPanel key={storeId} api={api} storeId={storeId}/> }
@@ -222,3 +227,4 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
     {tab==="observer"&&<ConnectorObserverPanel api={api} storeId={storeId}/>}
   </div>;
 }
+

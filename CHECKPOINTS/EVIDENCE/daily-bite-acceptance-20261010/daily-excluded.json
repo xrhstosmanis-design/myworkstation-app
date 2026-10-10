@@ -1,0 +1,12 @@
+{
+  "status": "fulfilled",
+  "value": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"held_excluded_present\":0}]"
+      }
+    ],
+    "isError": false
+  }
+}
