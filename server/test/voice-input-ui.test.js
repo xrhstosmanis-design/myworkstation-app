@@ -18,7 +18,7 @@ test("mounted voice input only submits reviewed text on the existing Ask action"
   const keys = ["window", "document", "navigator", "HTMLElement", "Event", "IS_REACT_ACT_ENVIRONMENT"];
   const previous = new Map(keys.map(k => [k, Object.getOwnPropertyDescriptor(globalThis, k)]));
   for (const k of keys) Object.defineProperty(globalThis, k, {configurable: true, writable: true, value: k === "IS_REACT_ACT_ENVIRONMENT" ? true : dom.window[k]});
-  const recordings = [], calls = [];
+  const recordings = [], calls = [];let deferAsk=false,resolveLate;
   class Recognition {
     constructor() { recordings.push(this); this.starts = 0; this.aborts = 0; }
     start() { this.starts++; }
@@ -29,7 +29,8 @@ test("mounted voice input only submits reviewed text on the existing Ask action"
   window.SpeechRecognition = Recognition;
   const request = async (url, options = {}) => {
     calls.push({url, ...options});
-    if (options.method === "POST") { assert.equal(url, "/api/platform/ai-command-center/ask"); return {answer: "Fixture read-only answer", sources: [], highlights: []}; }
+    if(options.method==="POST"&&deferAsk)return new Promise(resolve=>{resolveLate=resolve});
+    if (options.method === "POST") { assert.equal(url, "/api/platform/ai-command-center/ask"); return {answer: "Fixture read-only answer", sources: [], highlights: [],evidence:[{date:"2026-10-10",fromTime:"00:00",toTime:"23:59",rows:[{companyName:"Fixture company",storeName:"Store A",sessionId:"shift-a",shiftLabel:"Πρωί",terminalPos:"MAIN",closedAt:"2026-10-10T10:00:00Z",expectedOperational:100,actualOperational:87.5,variance:-12.5,cardVariance:0,auditRule:{mode:"FULL"}}],totalRows:1,truncated:false}]}; }
     if (url.includes("cash-control")) return {totals: {}, stores: []};
     if (url.includes("invoice-learning")) return {state: {documents: [], profiles: {}}};
     if (url.includes("installation-terminals") || url.includes("device-routing") || url.includes("video-connection")) return {};
@@ -56,6 +57,7 @@ test("mounted voice input only submits reviewed text on the existing Ask action"
     await act(async () => first.onend());
     assert.equal(textarea().value, "Τι χρειάζεται έλεγχο σήμερα;"); assert.equal(textarea().disabled, false); assert.equal(posts().length, 0);
     await click(submit()); assert.equal(posts().length, 1);
+    assert.match(document.querySelector('.mws-cash-evidence').textContent,/Store A/);assert.match(document.querySelector('.mws-cash-evidence').textContent,/-12,50/);assert.match(document.querySelector('.mws-cash-evidence').textContent,/shift-a/);
     assert.equal(JSON.parse(posts()[0].body).inputChannel, "voice"); assert.equal(JSON.parse(posts()[0].body).question, textarea().value);
     await click(mic()); const denied = recordings.at(-1);
     await act(async () => denied.onerror({error: "not-allowed"}));
@@ -66,6 +68,7 @@ test("mounted voice input only submits reviewed text on the existing Ask action"
     assert.equal(cancelled.aborts, 1); assert.equal(textarea().value, "Τι χρειάζεται έλεγχο σήμερα;");
     await click(mic()); const changedStore = recordings.at(-1), oldResult = changedStore.onresult, oldEnd = changedStore.onend;
     await click([...document.querySelectorAll('.ai-full-twin-selector button')].find(el => el.textContent === "Store B"));
+    assert.equal(document.querySelector('.mws-cash-evidence'),null);assert.equal(posts()[0].signal.aborted,true);
     await act(async () => { oldResult(result("Old store")); oldEnd(); });
     assert.equal(changedStore.aborts, 1); assert.equal(textarea().disabled, false); assert.equal(textarea().value, "Τι χρειάζεται έλεγχο σήμερα;");
     await click(mic()); const invalidated = recordings.at(-1), invalidResult = invalidated.onresult, invalidEnd = invalidated.onend;
@@ -83,6 +86,11 @@ test("mounted voice input only submits reviewed text on the existing Ask action"
     assert.equal(mic().disabled, true); assert.equal(textarea().disabled, false);
     await click(document.querySelector('.ai-command-prompts button')); await click(submit());
     assert.equal(posts().length, 2); assert.equal(JSON.parse(posts()[1].body).inputChannel, "text");
+    deferAsk=true;await click(submit());assert.equal(posts().length,3);
+    await click([...document.querySelectorAll('.ai-full-twin-selector button')].find(el=>el.textContent==="Store B"));
+    assert.equal(posts()[2].signal.aborted,true);
+    await act(async()=>resolveLate({answer:"LATE ANSWER FROM OLD CONTEXT",evidence:[],highlights:[],sources:[]}));
+    assert.equal(document.body.textContent.includes("LATE ANSWER FROM OLD CONTEXT"),false);assert.equal(document.querySelector('.mws-cash-evidence'),null);assert.equal(submit().disabled,false);
     await act(async () => fallback.unmount());
   } finally {
     await act(async () => root.unmount()); dom.window.close();
