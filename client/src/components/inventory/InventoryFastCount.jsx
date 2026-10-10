@@ -27,6 +27,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
   const [lookup, setLookup] = useState("");
   const [selected, setSelected] = useState(null);
   const [quantity, setQuantity] = useState("");
+  const [replaceCount, setReplaceCount] = useState(false);
   const [showAll, setShowAll] = useState(current.status !== "DRAFT");
   const [matches, setMatches] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -78,11 +79,12 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
     return () => window.removeEventListener("mws:product-created", productCreated);
   }, [api, current.id, current.status, reload, setError]);
 
-  const choose = (line) => {
+  const choose = (line, replace = false) => {
     setSelected(line);
     setMatches([]);
     setLookup(line.barcode || line.sku || line.name);
-    setQuantity("1");
+    setReplaceCount(replace);
+    setQuantity(replace ? String(line.countedQuantity ?? 0) : "1");
     setTimeout(() => {
       quantityRef.current?.focus();
       quantityRef.current?.select();
@@ -116,16 +118,17 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
         method: "POST",
         body: JSON.stringify({
           lineId: selected.id,
-          quantity: previous + Number(quantity),
+          quantity: replaceCount ? Number(quantity) : previous + Number(quantity),
           expectedVersion: selected.countVersion,
           clientEventId: crypto.randomUUID(),
-          source: "SCANNER",
+          source: replaceCount ? "BACKOFFICE" : "SCANNER",
         }),
       });
       await reload(current.id);
       setLookup("");
       setSelected(null);
       setQuantity("");
+      setReplaceCount(false);
       setMatches([]);
       setTimeout(() => barcodeRef.current?.focus());
     } catch (error) {
@@ -207,7 +210,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
               </span>
             </label>
             <label>
-              <b>2. Νέα ποσότητα που βρήκες</b>
+              <b>{replaceCount ? "2. Διόρθωση συνολικής καταμέτρησης" : "2. Νέα ποσότητα που βρήκες"}</b>
               <span className="inv2-quantity-row">
                 <input
                   ref={quantityRef}
@@ -233,7 +236,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
               <span>Απόθεμα {selected.expectedQuantity}</span>
               <span>Αγορά {euro(selected.unitCost)}</span>
               <span>Λιανική {euro(selected.salePrice)}</span>
-              {selected.countedQuantity !== null && <strong>Προηγούμενα {selected.countedQuantity} + νέα {n(quantity)} = σύνολο {n(selected.countedQuantity) + n(quantity)}</strong>}
+              {replaceCount ? <strong>Αντικατάσταση καταμέτρησης {selected.countedQuantity ?? "—"} με {n(quantity)}</strong> : selected.countedQuantity !== null && <strong>Προηγούμενα {selected.countedQuantity} + νέα {n(quantity)} = σύνολο {n(selected.countedQuantity) + n(quantity)}</strong>}
             </div>
           )}
           {matches.length > 1 && (
@@ -272,7 +275,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
                 <td>{line.expectedQuantity}</td><td>{line.countedQuantity ?? "—"}</td><td>{counted - n(line.expectedQuantity)}</td>
                 <td>{euro(counted * n(line.salePrice))}</td><td>{euro(counted * n(line.unitCost))}</td>
                 <td className="inv2-row-actions">
-                  {current.status === "DRAFT" && <><button title="Διόρθωση" onClick={() => choose(line)}><Pencil /></button><button title="Διαγραφή καταμέτρησης" disabled={line.countedQuantity === null} onClick={() => clearCount(line)}><Trash2 /></button></>}
+                  {current.status === "DRAFT" && <><button title="Διόρθωση" onClick={() => choose(line, true)}><Pencil /></button><button title="Διαγραφή καταμέτρησης" disabled={line.countedQuantity === null} onClick={() => clearCount(line)}><Trash2 /></button></>}
                   <button title="Εκτύπωση barcode" onClick={() => window.print()}><Printer /></button>
                 </td>
               </tr>;
