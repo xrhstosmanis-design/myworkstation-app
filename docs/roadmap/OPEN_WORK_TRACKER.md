@@ -1,3 +1,9 @@
+## 10/10/2026 10:25 Europe/Athens — N44 / TODAY-02 / ASSIGNED / AWAITING LAB SAVE-READBACK
+
+ΑΝΑΛΗΨΗ ΑΠΟ agent/today02-preserve-suppliers-20261004 / agent/today-ui-verification-20261004 — ASSIGNED codex/n44-product-vat-acceptance-20261010, explicit owner instruction10/10/2026 10:22:50 «θελω να ξεκινησης την εργασια 44 απο την λιστα». Transfer only printed44/TODAY-02 residual; TODAY03–09 and all other owners remain protected. Existing production VAT-department pencil/editor and supplier-preservationPR1694/large-dropdownPR1704 are prior implementation, not to rebuild without a new causal FAIL. Current tracker IN PROGRESS: save/readback, multiple supplier preservation, final acceptance. Latest prior real observation69de72 opened correct LAB EXCEL TEST1 card and cancelled; save NOT TESTED. Checkpoints2026-10-03-vat-department-product-edit.md,2026-10-04-today02-large-editor-real-dropdowns.md,2026-10-04-today-ui-live-handoff.md read; broader historic Gates/manual PASS retained.
+
+Bounded next scope: authenticated LAB VAT-department editor baseline, reversible core-field/VAT selection save and fresh readback, verify all existing supplier IDs/codes and barcode/store metadata are unchanged, confirm return to same department/page and unaffected-store control. Record exact before/after before any identified save, restore test changes and do not run sale/payment/stock/fiscal/invoice/import/bulk-price actions. Read-only browser23 canonical Platform Admin reused existing signed-in SuperAdmin Χρήστος Μάνης; no credential/permission change. Virtual MYWORKSTATION LAB/storecmtpopbgo000trhb5ng9ytiru only, real stores untouched. If multi-supplier fixture absent or evidence unavailable, report that exact gap rather than invent PASS or use real data. No source or state-changing LAB before green claim/main merge. Any actual failure requires one bounded fix, regression/fullCI/exact deploy before retest. CI alone never LAB PASS. Final accepted result synchronizes checkpoint/active/tracker/manual/pending/numbered/PDF; unfinished scope retains this owner and named next action. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n44-product-vat-acceptance.md.
+
 ## 2026-10-10 10:02 Europe/Athens — OPERATOR-CHECKBOX-01 cancellation confirmation/reason/Audit bounded LIVE PASS / overall OPEN
 
 Same owner codex/operator-checkbox-audit-20261009, printed33/tracker35 OPEN. ResumePR2032 headbec576de/docsCI38032612049 SUCCESS merged e8e00df4; mainCI38032670033 SUCCESS. Independent sourcePR2031/aec8323a fullmainCI38032390760/guard38032568109 SUCCESS/exacthealthaec8323acb2f12d89b5412ca17ea312ccfbefa60 verified before fresh POS reload. Ordinary LABPOS2 EMPLOYEE, MYWORKSTATION LAB/testingstore cmtpopbgo000trhb5ng9ytiru, activeMAIN08:13:26, catalog11/93. No profile saves or promotion; original23details/orders retained. Fresh auth via secure browserAuth, no secrets in chat. Reload restored keypadON. Start/end cart0/total0/localqueue0. No economic/stock/shift/fiscal/product/print submission or completed-payment replay.
@@ -1852,9 +1858,9 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 **Υπόλοιπο / όρια PASS:** Save/readback, διατήρηση πολλών προμηθευτών και τελική αποδοχή.
 
-**Υπεύθυνη σελίδα / branch:** Υπάρχουσα TODAY σελίδα
+**Υπεύθυνη σελίδα / branch:** codex/n44-product-vat-acceptance-20261010
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026 ανάληψη από την προηγούμενη TODAY σελίδα, ρητή ανάθεση ιδιοκτήτη για Νο44. Save/readback, διατήρηση πολλών προμηθευτών και τελική αποδοχή· CHECKPOINTS/CHANGES/2026-10-10-n44-product-vat-acceptance.md.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
