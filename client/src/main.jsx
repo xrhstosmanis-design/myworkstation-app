@@ -1,6 +1,6 @@
 
 import React,{useEffect,useMemo,useState} from "react";
-import {n40ReadHeaders,n40ReadRecord,N40_TRACE_PREFIX} from "../../shared/n40-read-trace.mjs";
+import {n40ReadHeaders,n40PublishRead} from "../../shared/n40-read-trace.mjs";
 import {createRoot} from "react-dom/client";
 import {Users,CalendarDays,Building2,LayoutDashboard,LogOut,MessageCircle,Plus,Settings2,Edit3,Power,Palmtree,Printer,Send,UserRoundCheck} from "lucide-react";
 import "./styles.css";
@@ -13,7 +13,7 @@ const api=async(path,options={})=>{
   const trace=n40ReadHeaders(path,scope,options.method||"GET");
   const token=localStorage.getItem("token");
   const r=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{}),...(trace?.headers||{})}});
-  if(trace){try{console.info(N40_TRACE_PREFIX,JSON.stringify({...n40ReadRecord(path,scope,trace.traceId,r.status),side:"client"}))}catch{}}
+  if(trace)n40PublishRead(path,scope,trace.traceId,r.status);
   const data=await r.json(); if(!r.ok)throw new Error(data.error||"Σφάλμα"); return data;
 };
 
