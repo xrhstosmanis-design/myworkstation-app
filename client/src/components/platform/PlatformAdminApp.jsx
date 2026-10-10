@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from "react";
+import {n40ReadHeaders,n40ReadRecord,N40_TRACE_PREFIX} from "../../../../shared/n40-read-trace.mjs";
 import {AlertTriangle,BrainCircuit,Building2,CalendarDays,Camera,CheckCircle2,Copy,DatabaseBackup,Download,ExternalLink,Globe2,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,MessageCircle,Monitor,Plus,Printer,RefreshCw,Send,ShieldCheck,ShoppingBag,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
 import PlatformSecurityPanel from "./PlatformSecurityPanel.jsx";
@@ -83,11 +84,14 @@ const cashShiftResult=row=>{
 };
 
 async function request(path,options={}){
+  const {n40Scope,...fetchOptions}=options;
+  const trace=n40ReadHeaders(path,n40Scope,options.method||"GET");
   const token=localStorage.getItem("token");
   const response=await fetch(path,{
-    ...options,
-    headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}
+    ...fetchOptions,
+    headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{}),...(trace?.headers||{})}
   });
+  if(trace){try{console.info(N40_TRACE_PREFIX,JSON.stringify({...n40ReadRecord(path,n40Scope,trace.traceId,response.status),side:"client"}))}catch{}}
   const text=await response.text();
   let data={};
   if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}
@@ -157,7 +161,7 @@ export default function PlatformAdminApp(){
   const aiTwinOriginRef=useRef(null),dataRef=useRef(data),cashLoadSequence=useRef(0);
   dataRef.current=data;
   const currentTwinOrigin=origin=>Boolean(origin&&aiTwinOriginRef.current===origin&&resolveTwinContext(dataRef.current?.companies,origin));
-  const twinRequest=useMemo(()=>aiTwinOrigin?guardTwinRequest(request,()=>currentTwinOrigin(aiTwinOrigin)):request,[aiTwinOrigin]);
+  const twinRequest=useMemo(()=>aiTwinOrigin?guardTwinRequest((path,options={})=>request(path,{...options,n40Scope:aiTwinOrigin}),()=>currentTwinOrigin(aiTwinOrigin)):request,[aiTwinOrigin]);
   const scopeFor=destination=>aiTwinOrigin?.destination===destination?aiTwinOrigin:null;
   const requestFor=destination=>scopeFor(destination)?twinRequest:request;
   const clearTwinOrigin=()=>{aiTwinOriginRef.current=null;setAiTwinOrigin(null);cashLoadSequence.current++};
@@ -671,3 +675,4 @@ export default function PlatformAdminApp(){
     {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;
 }
+
