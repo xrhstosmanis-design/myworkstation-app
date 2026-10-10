@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {EventEmitter} from "node:events";
 import {createServer} from "node:http";
-import {n40ReadHeaders,n40ReadRecord,N40_LAB_STORE,n40PublishRead,N40_VISIBLE_TRACE_EVENT} from "../../shared/n40-read-trace.mjs";
+import {n40ReadHeaders,n40ReadRecord,N40_LAB_STORE,N40_CONTROL_STORE,n40PublishRead,N40_VISIBLE_TRACE_EVENT} from "../../shared/n40-read-trace.mjs";
 import {createN40ReadTrace} from "../src/n40-read-trace.js";
 const scope={companyId:"company-lab",storeId:N40_LAB_STORE},id="n40-"+"a".repeat(32);
 const uuid=()=>"a".repeat(32);
@@ -89,4 +89,17 @@ test("unavailable or throwing diagnostic event and console do not change normal 
   const target={console:{info(){throw Error("console denied")}},CustomEvent:class{constructor(){throw Error("event unavailable")}},dispatchEvent(){throw Error("dispatch unavailable")}};
   assert.equal(n40PublishRead("/api/platform/stores/"+N40_LAB_STORE,scope,id,200,null,target).status,200);
   assert.equal(n40PublishRead("/api/platform/stores/"+N40_LAB_STORE,scope,id,200,null,{}).status,200);
+});
+
+test("only the exact approved control is observable and scope matching uses its own store",()=>{
+ const control={...scope,storeId:N40_CONTROL_STORE};
+ const path="/api/platform/companies/"+scope.companyId+"/stores/"+N40_CONTROL_STORE+"/check-packages";
+ assert.ok(n40ReadHeaders(path,control,"GET",uuid));
+ const own=n40ReadRecord(path,control,id,200);assert.equal(own.expectedStoreId,N40_CONTROL_STORE);assert.equal(own.storeMatches,true);assert.equal(own.companyMatches,true);
+ const wrong=n40ReadRecord("/api/platform/stores/"+N40_LAB_STORE,control,id,200);assert.equal(wrong.storeMatches,false);assert.equal(wrong.expectedStoreId,N40_CONTROL_STORE);
+ assert.equal(n40ReadHeaders(path,{...control,storeId:"cmuk8gxui000ppabfykdxwb1y"},"GET",uuid),null);
+ assert.equal(n40ReadHeaders(path,control,"POST",uuid),null);
+ const logs=[],middleware=createN40ReadTrace({log:(...args)=>logs.push(JSON.parse(args[1]))});
+ const res=new EventEmitter();res.statusCode=403;middleware({method:"GET",url:path,headers:{"x-mws-n40-store":N40_CONTROL_STORE,"x-mws-n40-company":scope.companyId,"x-mws-n40-trace":id}},res,()=>{});res.emit("finish");
+ assert.equal(logs.length,1);assert.equal(logs[0].status,403);assert.equal(logs[0].expectedStoreId,N40_CONTROL_STORE);assert.equal(logs[0].storeMatches,true);
 });

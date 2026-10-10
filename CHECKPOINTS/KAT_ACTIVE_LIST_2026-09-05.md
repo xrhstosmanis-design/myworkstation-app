@@ -24,6 +24,8 @@ Bounded next step: create one idempotent DAILY-only published layout using MyWor
 
 Current state: ASSIGNED / NOT TESTED.
 
+No40 control trace release receipt: PR2173 includes exact approved second-store metadata observation;13 local tests green. CI38076890294 failed checkpoint-policy because separate restoration omitted the active-file delta from this PR; restore the required bounded own-section delta here without modifying the gate. Full CI / guarded deploy / LAB AWAITING. Same owner, OPEN. Canonical Super Admin reauthenticated after session invalidity; no module denial inferred.
+
 ## 10 Oct 2026 21:29 Athens — No40 approved second LAB control / ASSIGNED, OPEN
 
 Owner remains codex/n40-full-twin-navigation-audit-20261010. User explicitly approved prepared N40 CONTROL 20261010 in MYWORKSTATION LAB, city ΔΟΚΙΜΑΣΤΙΚΟ ΠΕΡΙΒΑΛΛΟΝ, three default shift templates only. Existing creation was submitted once around18:29UTC under Super Admin Χρήστος Μάνης / cloud Chrome26, no POS/operator/shift/SKU/payment applicable. Before: LAB2stores/global5, employees9/38, users2/4. After one create: new store cmv2qanca000psigeizep8o9m, independent reload LAB3/global6, same employees/users; success message and one new row. Creation form displayed Cannot read properties of null (reading 'reset') after successful save; no repeat submission. Form cleanup is FAIL, store existence confirmed only, not overall create UX PASS.

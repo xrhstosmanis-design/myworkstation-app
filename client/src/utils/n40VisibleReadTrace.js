@@ -1,4 +1,4 @@
-import {N40_LAB_STORE,N40_VISIBLE_TRACE_EVENT} from "../../../shared/n40-read-trace.mjs";
+import {n40ObservedStore,N40_VISIBLE_TRACE_EVENT} from "../../../shared/n40-read-trace.mjs";
 const LAB_COMPANY="cmtpopbgk000prhb5qc60zxus";
 export function installN40VisibleReadTrace(){
   let host,list,count,records=[];
@@ -13,9 +13,9 @@ export function installN40VisibleReadTrace(){
   };
   const receive=event=>{
     const r=event.detail;
-    if(r?.expectedStoreId!==N40_LAB_STORE||r.expectedCompanyId!==LAB_COMPANY||r.side!=="client"||r.method!=="GET"||!/^n40-[a-f0-9]{32}$/.test(r.traceId)||!/^\/api\/(?:[a-z0-9-]+|:value)(?:\/(?:[a-z0-9-]+|:value))*$/.test(r.route))return;
+    if(!n40ObservedStore(r?.expectedStoreId)||r.expectedCompanyId!==LAB_COMPANY||r.side!=="client"||r.method!=="GET"||!/^n40-[a-f0-9]{32}$/.test(r.traceId)||!/^\/api\/(?:[a-z0-9-]+|:value)(?:\/(?:[a-z0-9-]+|:value))*$/.test(r.route))return;
     // Explicit projection: even unexpected extra event fields cannot enter the UI.
-    const clean={traceId:r.traceId,route:r.route,method:"GET",expectedCompanyId:LAB_COMPANY,expectedStoreId:N40_LAB_STORE,companyIds:Array.isArray(r.companyIds)?r.companyIds.filter(x=>/^[a-zA-Z0-9_-]{3,80}$/.test(x)).slice(0,8):[],storeIds:Array.isArray(r.storeIds)?r.storeIds.filter(x=>/^[a-zA-Z0-9_-]{3,80}$/.test(x)).slice(0,8):[],companyMatches:r.companyMatches===null?null:r.companyMatches===true,storeMatches:r.storeMatches===null?null:r.storeMatches===true,status:Number.isInteger(r.status)&&r.status>=100&&r.status<=599?r.status:null,side:"client",observedAt:/^\d{4}-\d{2}-\d{2}T[0-9:.]+Z$/.test(r.observedAt)?r.observedAt:null};
+    const clean={traceId:r.traceId,route:r.route,method:"GET",expectedCompanyId:LAB_COMPANY,expectedStoreId:r.expectedStoreId,companyIds:Array.isArray(r.companyIds)?r.companyIds.filter(x=>/^[a-zA-Z0-9_-]{3,80}$/.test(x)).slice(0,8):[],storeIds:Array.isArray(r.storeIds)?r.storeIds.filter(x=>/^[a-zA-Z0-9_-]{3,80}$/.test(x)).slice(0,8):[],companyMatches:r.companyMatches===null?null:r.companyMatches===true,storeMatches:r.storeMatches===null?null:r.storeMatches===true,status:Number.isInteger(r.status)&&r.status>=100&&r.status<=599?r.status:null,side:"client",observedAt:/^\d{4}-\d{2}-\d{2}T[0-9:.]+Z$/.test(r.observedAt)?r.observedAt:null};
     records=[...records,clean].slice(-80);if(!host)create();render();
   };
   window.addEventListener(N40_VISIBLE_TRACE_EVENT,receive);
