@@ -72,3 +72,19 @@ If old labels persist, refresh Ctrl+Shift+R, reopen selected-store BackOffice an
 - Κάθε τομέας χρησιμοποιεί μόνο τα ήδη φορτωμένα read-only δεδομένα των Φάσεων 12–13. Δεν δημιουργείται δεύτερο score/dataset και δεν εκτελείται ενέργεια σε συσκευή, βάρδια, πληρωμή, stock, προσωπικό ή NVR.
 - Για διαχείριση ανοίγεται η υπάρχουσα κανονική οθόνη του τομέα. Τα έξι κλικ μετάβασης δεν επιβεβαιώθηκαν στο συγκεκριμένο οπτικό PASS.
 - Αν οι ενδείξεις φαίνονται παλιές ή μη διαθέσιμες, πατά πρώτα `Ανανέωση` και συνεχίζει τον έλεγχο στην κανονική οθόνη· δεν διορθώνει δεδομένα μέσα από το Twin.
+
+
+## Full Digital Twin — LIMITED BROWSER NAVIGATION PASS 10/10/2026
+
+Super Admin only, canonical platform-admin -> AI Command Center -> Full Digital Twin -> select MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Actual assistant-controlled browser verified the following existing destinations and normal top-close return to the same selected Twin:
+- POS: Έλεγχοι & Αναλύσεις, company/store selectors locked to target. Do not execute a check for navigation.
+- EFTPOS/Ταμειακές: Αυτόματος Έλεγχος Ταμείων, target selector locked; current existing target result loaded.
+- Ταμείο: same Cash destination for current serious-cash finding; alternative finding-dependent destinations not tested.
+- Προσωπικό: Workforce V2, target-only main selector and seven target employees.
+- Κάμερες: Video Events connection settings with correct target heading; do not save, pair, test, request image/video or control a device.
+
+Use the normal destination top close. Command Center reopens automatically and its Full Digital Twin heading shows the same company/store; do not manually reopen or use browser Back as acceptance evidence. Existing Stock entry -> correct Backoffice -> Επιστροφή στο Super Admin -> retained Twin USER visual sequence in PR2065 comment6097485640 remains protected and was not repeated. Historical visual phases1–14 unchanged.
+
+Server health observed6b08e72a9c14f973a62cc1e3a43f8600aef9fef4, descendant of release5dc10820; cached client hash not independently attested. No submitted business/device/permission action. Cash results load automatically on opening; no run control pressed. Wait for normal read-only loading before interpreting counters. Workforce employee editor contains company store references; this check covers main context/employee list, not editor business behavior.
+
+PASS criteria are correct visible destination/context and automatic same-Twin normal-close return in this Super Admin LAB session only. Actual HTTP request isolation, network-race negative tests, Stock support-exit Audit and backend role/module/revocation scenarios remain NOT TESTED. Full No40 stays OPEN. Missing context must be investigated without sales/payments/stock/staff/permission or device changes. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n40-browser-navigation-readonly.md.
