@@ -6,7 +6,7 @@ import "./store-cash-transfer.css";
 export default function StoreCashTransferModal({api,store,direction="OUT",allowed=true,onClose,onChanged}){
  const [overview,setOverview]=useState(null),[sessionId,setSessionId]=useState(""),[amount,setAmount]=useState(""),[reason,setReason]=useState(""),[error,setError]=useState(""),[busy,setBusy]=useState(false),[done,setDone]=useState(false);
  const lock=useRef(false),key=useRef(crypto.randomUUID()),live=useRef(true),access=useRef(allowed);access.current=allowed;
- useEffect(()=>{let current=true;live.current=true;api(`/api/transactions/stores/${encodeURIComponent(store.id)}/overview`).then(value=>{if(current){setOverview(value);setSessionId(value.openSession?.id||"")}}).catch(e=>{if(current)setError(e.message)});return()=>{current=false;live.current=false}},[api,store.id]);
+ useEffect(()=>{let current=true;live.current=true;api(`/api/transactions/stores/${encodeURIComponent(store.id)}/cash-transfer/context`).then(value=>{if(current){setOverview(value);setSessionId(value.openSession?.id||"")}}).catch(e=>{if(current)setError(e.message)});return()=>{current=false;live.current=false}},[api,store.id]);
  useEffect(()=>{if(!allowed)onClose()},[allowed,onClose]);
  const sessions=overview?.openSessions||[],session=sessions.find(s=>s.id===sessionId),incoming=direction==="IN";
  const submit=async event=>{

@@ -21,6 +21,15 @@ test("fresh middleware denies revoked permission and employee incoming before tr
  assert.equal(enforce(req,res,[]),false);assert.equal(code,403);assert.equal(enforce(req,res,["TRANSFER_AMOUNT"]),true);
  req.body.direction="IN";assert.equal(enforce(req,res,["TRANSFER_AMOUNT"]),false);
 });
+test("transfer permission alone allows only minimal transfer context, not the general ledger",()=>{
+ const source=fs.readFileSync(new URL("../src/routes/store-transactions.js",import.meta.url),"utf8"),start=source.indexOf("function requireLedgerAccess("),end=source.indexOf("function assertStoreAccess(",start);
+ const guard=vm.runInNewContext(`(${source.slice(start,end).trim()})`);
+ let next=0,code;const res={status(v){code=v;return this},json(){return this}};
+ const req={method:"GET",originalUrl:"/api/transactions/stores/store/cash-transfer/context",user:operator};
+ guard(req,res,()=>next++);assert.equal(next,1);
+ req.originalUrl="/api/transactions/stores/store/overview";guard(req,res,()=>next++);assert.equal(next,1);assert.equal(code,403);
+ req.originalUrl="/api/transactions/stores/store/cash-transfer/context";req.user={...operator,permissions:[]};guard(req,res,()=>next++);assert.equal(next,1);
+});
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==="test"&&["localhost","127.0.0.1","postgres"].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 test("native PostgreSQL cash directions, exact replay, concurrent outgoing and shift/tenant isolation",{skip:!isolated()},async()=>{
  const {PrismaClient}=await import("@prisma/client"),admin=new PrismaClient(),schema=`cash_transfer_${crypto.randomUUID().replaceAll("-","")}`;

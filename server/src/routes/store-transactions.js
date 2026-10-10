@@ -185,8 +185,9 @@ function requireLedgerAccess(req,res,next){
     permissions.includes("THIRD_PARTY_PAYMENT")||
     permissions.includes("TRANSFER_AMOUNT")
   );
+  const transferContext=req.method==="GET"&&/\/stores\/[^/]+\/cash-transfer\/context(?:\?|$)/.test(String(req.originalUrl||""))&&permissions.includes("TRANSFER_AMOUNT");
   const operator=req.user?.tokenType==="STORE_OPERATOR"&&(
-    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission
+    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission||transferContext
   );
   if(!backoffice&&!superAdmin&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
   next();
@@ -907,6 +908,14 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     recent,
     access:{canReviewStoreLedger,canReverse,canForceClose:req.user?.tokenType!=="STORE_OPERATOR"&&["SUPER_ADMIN","OWNER"].includes(req.user?.role)}
   });
+}));
+
+router.get("/stores/:storeId/cash-transfer/context",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req),operator=req.user?.tokenType==="STORE_OPERATOR";
+  if(operator&&!req.user.permissions?.includes("TRANSFER_AMOUNT"))return res.status(403).json({error:"Δεν έχεις δικαίωμα Μεταφοράς ποσού."});
+  const sessions=await prisma.$queryRaw`SELECT "id","terminalPos","shiftLabel" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='OPEN' AND (${!operator} OR "terminalPos"=${terminalPos}) ORDER BY "openedAt" DESC`;
+  res.json({openSessions:sessions,openSession:sessions.find(s=>s.terminalPos===terminalPos)||sessions[0]||null});
 }));
 
 router.post("/stores/:storeId/cash-transfer",route(async(req,res)=>{
