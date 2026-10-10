@@ -110,7 +110,7 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
     await reset();const baseline=await observe();
     assert.equal((await invoke(cases[0][0],request(cases[0][1],{companyId:'foreign'}))).status,404);
     assert.equal((await invoke(cases[0][0],request(cases[0][1],{tokenType:'INVENTORY_COUNTER',role:'EMPLOYEE',stocktakeId:'other'}))).status,404);
-    assert.equal((await invoke(cases[0][0],request(cases[0][1],{tokenType:'INVENTORY_COUNTER',role:'EMPLOYEE',stocktakeId:'take',zoneId:'other'}))).status,403);
+    assert.equal((await invoke(cases[0][0],request(cases[0][1],{tokenType:'INVENTORY_COUNTER',role:'EMPLOYEE',stocktakeId:'take',storeId:'store',zoneId:'other'}))).status,403);
     for(const path of [cases[1][0],cases[2][0],cases[3][0],cases[5][0],'post/stocktakes/:stocktakeId/finalize'])assert.equal((await invoke(path,request({}, {role:'EMPLOYEE'}))).status,403);
     assert.deepEqual(await observe(),baseline);
     // Store-bound manager/owner requests cannot escape their authenticated store,
