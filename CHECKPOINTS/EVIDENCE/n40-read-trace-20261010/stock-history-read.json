@@ -1,0 +1,43 @@
+{
+  "release": "aa02830124c26376ba216c3f515a5bf2f4a08963",
+  "window": {
+    "start": "2026-10-10T12:00:00.000Z",
+    "end": "2026-10-10T12:30:00.000Z"
+  },
+  "label": "MYWORKSTATION LAB · ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "records": [
+    {
+      "event": "SUPER_ADMIN_SUPPORT_ACCESS",
+      "time": "2026-10-10T12:06:58.173Z",
+      "success": true
+    },
+    {
+      "event": "SUPER_ADMIN_SUPPORT_ACCESS",
+      "time": "2026-10-10T12:11:38.475Z",
+      "success": true
+    },
+    {
+      "event": "SUPER_ADMIN_SUPPORT_EXIT",
+      "time": "2026-10-10T12:13:36.108Z",
+      "success": true
+    },
+    {
+      "event": "SUPER_ADMIN_SUPPORT_ACCESS",
+      "time": "2026-10-10T12:17:42.984Z",
+      "success": true
+    },
+    {
+      "event": "SUPER_ADMIN_SUPPORT_EXIT",
+      "time": "2026-10-10T12:18:30.634Z",
+      "success": true
+    }
+  ],
+  "truncated": false,
+  "result": "bounded historical read; no automatic Full Twin PASS",
+  "limitations": [
+    "No destination/store ID/session correlation stored",
+    "No record at prior Stock visual15:26Athens",
+    "Initial403 resolved after secure canonical Super Admin authentication on unchanged source; exact prior session cause unproven"
+  ],
+  "owner": "codex/n40-full-twin-navigation-audit-20261010"
+}
