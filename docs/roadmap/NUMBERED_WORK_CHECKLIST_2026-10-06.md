@@ -355,8 +355,8 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 ## 49 — Άγνωστο barcode — επιστροφή στην ίδια ενεργή απογραφή
 
 - **Tracker ID:** `TODAY-07`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** IN PROGRESS
-- **Υπόλοιπο / όριο:** Δοκιμή σύνδεσης/δημιουργίας και επιστροφής σε mobile/tablet.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** ASSIGNED / IN PROGRESS — επικαιροποίηση10Oct15:38:03
+- **Υπόλοιπο / όριο:** Σύνδεση υπάρχοντος / δημιουργία νέου είδους και επιστροφή στην ίδια ενεργή DRAFT απογραφή σε mobile/tablet web flow. Ownercodex/n49-unknown-barcode-acceptance-20261010 μετά ρητή οδηγία49· checkpoint2026-10-10-n49-unknown-barcode-acceptance.md. Φυσική συσκευή/scanner χωριστά NOT TESTED· προηγούμεναN39/Gate2/scrollPASS και ownersN48/33/DAILYBITE διατηρούνται. Όχι επανάληψη stock/finalization/payments.
 
 ## 50 — Εμπορικά modules — hierarchy και εξουσιοδοτημένες λειτουργίες
 

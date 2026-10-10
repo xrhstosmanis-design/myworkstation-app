@@ -1,3 +1,11 @@
+## 10/10/2026 15:38:03 Europe/Athens — N49 / TODAY-07 / ASSIGNED
+
+Explicit user «ανελαβε το49». ΑΝΑΛΗΨΗ ΑΠΟ υπάρχουσα TODAY σελίδα / agent/today-ui-verification-20261004 — ASSIGNED codex/n49-unknown-barcode-acceptance-20261010 for numbered49 only: unknown barcode in active inventory, attach existing own-store product or create new, return to the same active inventory; mobile/tablet web flow acceptance. No parallel takeover of N48 Excel/Barcode offers, N39 accepted stocktake/stock actions, N33 permissions/transfers, invoice or DAILY BITE importer. Existing Gate2/N39 and desktop scroll PASS protected, no historical transaction replay.
+
+Read AGENTS, current numbered/tracker/active/pending, inventory manual,03Octunknown-barcode and04OctTODAYhandoff; mainhistory through52f61c08 and newer47/39/33 closures preserved. Implementation previously recorded AWAITING CI, functional unknown attach/new-product/mobile return NOT TESTED LIVE. First publish this claim greenCI/main before source or persistedLAB. Inspect actual handlers/UI and test coverage; one bounded correction only after recorded causalFAIL. FullCI/nativePG/build/productiongates, exact healthy deployment/reload then actualLAB when source changes.
+
+Acceptance: company/store/role scoped search, exactbarcode conflict guard, attach once to intended existingproduct andsameDRAFT without duplicateproduct; separately identified newLABproduct/barcode continuation returns to exactsameDRAFT without context/count loss. Fresh before each persistedaction: LAB/store/operator/virtualterminal/action/SKU/barcode/qty/paymentnone/time, own/control till counts/cash/card/IRIS/expense/total/incoming/outgoing; relevantproductprice/stock/latestledger/draftlines/count/audit IDs. Write baseline before action, single submit, independentafterrefresh/readback andsamecontrol sources. Do not finalize or poststock just to prove return; newfixtures remain DRAFT, no delete ofhistoricalproduct/barcode/draft. No realstore/payment/fiscal/schema/seed/auth changes. Actualphysicalmobile/scanner/camera, broaderroles/tenant/load remain NOT TESTED unless independently observed; DOM/nativeCI and webresponsive UI evidence explicitly distinguished. Current owner retained until completion/namedhandoff. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n49-unknown-barcode-acceptance.md.
+
 ## 10Oct2026 15:30 Athens — N48 / TODAY-06 — ASSIGNED / functional NOT TESTED
 
 Explicit user instruction «ξεκινα την εργασια48». ΑΝΑΛΗΨΗ ΑΠΟ υπάρχουσα TODAY σελίδα / agent/today-ui-verification-20261004 — ASSIGNED codex/n48-excel-barcode-acceptance-20261010 for numbered48 only: refreshed Excel / Barcode functional creation, import and scoped distribution acceptance in virtual MYWORKSTATION LAB. Previous scroll USER PASS08Oct20:42 and visual evidence retained without retest/replay; other TODAY/N47/39/44/45/46/operator/scanner/invoice owners untouched. User's assignment transfers only48, not the broader TODAY audit.
@@ -2164,15 +2172,15 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### TODAY-07 — Άγνωστο barcode απογραφής
 
-**Κατάσταση:** IN PROGRESS
+**Κατάσταση:** ASSIGNED / IN PROGRESS / functional LIVE NOT TESTED
 
-**Υπόλοιπο / όρια PASS:** Σύνδεση/δημιουργία και επιστροφή στην ίδια ενεργή απογραφή σε mobile/tablet.
+**Υπόλοιπο / όρια PASS:** Σύνδεση υπάρχοντος / δημιουργία νέου είδους και επιστροφή στην ίδια ενεργή απογραφή σε mobile/tablet web flow. Προστασία company/store/role/duplicate barcode και προηγούμενων stocktake PASS. Φυσική συσκευή/scanner/κάμερα χωριστά NOT TESTED.
 
-**Υπεύθυνη σελίδα / branch:** Υπάρχουσα TODAY σελίδα
+**Υπεύθυνη σελίδα / branch:** codex/n49-unknown-barcode-acceptance-20261010 — explicit user49 transfer15:38:03 from existingTODAYpage; N48/39/33/DAILYBITE owners retained.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct15:38:03Athens, unknown attach/new-product/sameDRAFT continuation; checkpoint CHECKPOINTS/CHANGES/2026-10-10-n49-unknown-barcode-acceptance.md. Claim publication green/main precedes source andpersistedLAB.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** NOT TESTED; prior03Octimplementation/04Octhandoff are not functionalLIVEPASS. Fresh per-action baseline required; no repeated acceptedstocktake/finalization/payment.
 
 ### TODAY-08 — Εμπορικά modules UI
 
