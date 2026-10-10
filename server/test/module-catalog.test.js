@@ -28,7 +28,7 @@ test("catalog view merges customer entitlements",()=>{
 });
 
 test("new owner modules are registered but cannot be sold before implementation",()=>{
-  const expected=["OFFERS_ADVANCED","INVOICE_CHANNEL","CASHIER_PERFORMANCE","PROFITABILITY","AI_OWNER_ASSISTANT","SUPPLIER_COMPARISON","ORDER_SUGGESTIONS","LOW_VALUE_PRODUCTS","OWNER_MONTHLY_REPORT","SMART_AUDIT"];
+  const expected=["OFFERS_ADVANCED","INVOICE_CHANNEL","CASHIER_PERFORMANCE","PROFITABILITY","SUPPLIER_COMPARISON","ORDER_SUGGESTIONS","LOW_VALUE_PRODUCTS","OWNER_MONTHLY_REPORT","SMART_AUDIT"];
   for(const key of expected){
     const module=moduleCatalog.find(row=>row.key===key);
     assert.ok(module,`${key} must be registered`);
@@ -43,4 +43,13 @@ test("new owner modules are registered but cannot be sold before implementation"
   const pendingCenter=moduleCatalog.find(row=>row.key==="PENDING_CENTER");
   assert.equal(pendingCenter.commercialReady,true);
   assert.ok(ownerRestrictedModuleKeys.includes("PENDING_CENTER"));
+});
+
+test("implemented Owner cash assistant remains opt-in and owner restricted; availability never grants entitlement",()=>{
+  const assistant=catalogView([]).find(row=>row.key==="AI_OWNER_ASSISTANT");
+  assert.equal(assistant.commercialReady,true);
+  assert.equal(assistant.active,false);
+  assert.equal(assistant.ownerOnly,true);
+  assert.ok(ownerRestrictedModuleKeys.includes(assistant.key));
+  for(const defaults of Object.values(planDefaults))assert.equal(defaults.includes(assistant.key),false);
 });
