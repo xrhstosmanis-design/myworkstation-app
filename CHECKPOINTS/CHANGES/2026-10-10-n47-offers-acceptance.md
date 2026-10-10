@@ -1,0 +1,10 @@
+# N47 — Προσφορές: επιλογή ειδών και πραγματική αποστολή
+
+## 10/10/2026 14:33:22 Europe/Athens — N47 / TODAY-05 / ASSIGNED
+
+Explicit user «συνεχισε με την47». ΑΝΑΛΗΨΗ ΑΠΟ υπάρχουσα TODAY σελίδα / agent/today-ui-verification-20261004 — ASSIGNED codex/n47-offers-acceptance-20261010 for numbered47 only: selected-product review/removal, functional offer creation and actual targeted delivery/readback in virtualMYWORKSTATIONLAB. This explicit new instruction transfers only47, not broadTODAY04/48/othermodules. Existing N44/N45/N46 and Task20 gift/stock/POS PASS preserved; no historical gift/sale/payment replay.
+
+Read AGENTS/currentmanual/numbered/tracker/pending and relevant03/04Octoffers +01Octplatform-list/Task20 evidence. Latest main5dc10820 includes otherownerN40 canonicalnavigation; no competing new47claim observed. Historicaloffers has only limitedvisual evidence; currentcreation/delivery NOTTESTED. Claim must merge withgreenCI before source or persistedLAB. Each create/pause/cleanup action requires freshprice/promotion/Audit/stock/latestmovement and MAIN/controlterminalfinancial baseline written first, one identifiedaction and independentafterread. Only virtualLAB testoffer, clearlynamed/future-dated if possible; no realstore/stock/payment/fiscal/schema/seed or existingpromotion mutation. Protect roles/company/store/date/overlap/atomicbulk and current pricing/calculation/POSgift behavior.
+
+Acceptance: on-demand search, selections survivequery and canbereviewed/removed, chosenproducts/stores/type/dates correct; one identifiednewLABoffer visibleafterindependentreopen with exactID/details, safeinactive cleanup whereauthorized with freshbaseline and unchangedstock/financialcontrol. Sourcechanges requirefullCI/exactdeployment/reload thenLAB; CI alone isnotPASS. Mobile/physical/maxload/POScheckout are separate unlessnewscoperequires, no alreadyaccepted Task20sale replay. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n47-offers-acceptance.md. Ownerretaineduntilcomplete/namedhandoff.
+
