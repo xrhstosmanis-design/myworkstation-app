@@ -23,3 +23,17 @@ Evidence: CHECKPOINTS/EVIDENCE/operator-all-store-access-20261010/module-matrix.
 Completion PR2193 head e000447775c0cb5aa4a76b92d7a7910ce2d6a6ee / fullCI38084694913 SUCCESS merged02c809eaaf9f6e1b13d275cb6b2b1f620ac56f9e. Full mainCI38084931212 in progress; guarded deployment and fresh exact health pending. No claim that continuous401/404 stopped. Fresh LAB POS2 visible connected/cart0/queue0, no overlay or submission. Original23 rights still not freshly reverified; no rights changed during this continuation.
 
 Main02c809ea CI38084931212 cancelled when central owner's independent PR2194 merged586900d8961a212adeff5d13b05abdca345bdb92. Current full mainCI38085014049 in progress. That revision contains No33 Platform fix and central MFA gate; preserve central owner evidence. All-store docs rebased on currentmain, not a claim of new source or live deployment.
+
+## Six-store readiness GET observation — approximately23:48–23:49 Athens
+Each actual store-specific Readiness screen loaded the correct store. No save, backup-download, designation, lock or checkbox mutation. These are preexisting readiness metadata, not new completed store tests, and do not override independent user-confirmed No33 card/QR/count PASS.
+| Store | Mandatory pending | Active staff | PIN / cards shown | Open shift |
+|---|---:|---:|---|---|
+| DAILY BITE | 9 | 0 | 0 / 0 | No |
+| Diadochou Pavlou | 6 | 5 | 5 / 5 | No |
+| KAT | 3 | 19 | 10 / 0 | No |
+| N40 CONTROL | 9 | 0 | 0 / 0 | No |
+| Label-isolation LAB | 9 | 0 | 0 / 0 | No |
+| Primary LAB | 5 | 9 | 3 / 2 | Yes — no repeated open |
+All six show zero designated Store Mode responsible persons. Config gaps remain with the respective setup owners; no role promotion/grant/reset. Primary LAB open-shift state protects already-authorized current tests from duplicate opening. Fresh production server401/404 logs not available in this tool session; Platform browser captured error-console filter401/404 returnedempty, which is not evidence of absence in server logs. Screenshot daily-readiness.jpg records real DAILY screen and pending9.
+
+Full exact main586900d CI38085014049 SUCCESS. Guarded Render workflow38085253808 in progress. No manual deployment or skipped security gate. Exacthealth and actual support entry still pending.
