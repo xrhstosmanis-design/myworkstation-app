@@ -1,0 +1,7 @@
+# Task50 / TODAY-08 — commercial hierarchy acceptance
+
+## 2026-10-10T17:09:21+03:00 — N50 / TODAY-08 — ASSIGNED / LIVE acceptance OPEN
+
+ΑΝΑΛΗΨΗ ΑΠΟ `agent/today-ui-verification-20261004` — ASSIGNED `codex/n50-commercial-acceptance-20261010`, by explicit user «ξεκινα την 50». Transfer only numbered50 / TODAY-08 residual hierarchy and authorized-function acceptance. Source PR1775 merged a707adc616a6b28a295b4cb102e6d0b5837ede73; newest reference base bef2cfc7. Existing hierarchy implemented; current new LIVE result NOT TESTED. Read-only LAB desktop normal/maximized hierarchy and reachable licensed destinations first; disabled controls must remain disabled and lower status read-only. No module/permission/grant activation, transactions, stock, fiscal, import, invoice finalization or existing accepted-flow replay. Separate palette owner codex/owner-commerce-palette-20261008 awaiting physical USER and Analytics scroll USER PASS retained; other owners protected. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n50-commercial-acceptance.md`. Single next action: publish claim, observe actual current LAB module screen and authorized read-only destinations.
+
+The newest navy/teal/white palette supersedes historical vivid/pastel styling; semantic hierarchy and no outer desktop scroll remain binding. Prior bounded Analytics scroll PASS is not repeated. Whole50 remains OPEN until its agreed residual has actual evidence.

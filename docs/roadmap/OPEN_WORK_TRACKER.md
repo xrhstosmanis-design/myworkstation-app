@@ -2312,9 +2312,9 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 **Υπόλοιπο / όρια PASS:** Exact LIVE visual αποδοχή νέας ιεραρχίας και εξουσιοδοτημένων λειτουργιών.
 
-**Υπεύθυνη σελίδα / branch:** Υπάρχουσα TODAY σελίδα / PR1775
+**Υπεύθυνη σελίδα / branch:** `codex/n50-commercial-acceptance-20261010` — user-directed takeover from `agent/today-ui-verification-20261004`; only50. PR1775 existing source.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-10T17:09:21+03:00 · user «ξεκινα την 50» · ΑΝΑΛΗΨΗ ΑΠΟ `agent/today-ui-verification-20261004` — ASSIGNED `codex/n50-commercial-acceptance-20261010`. Read-only LAB hierarchy/authorized navigation acceptance first. Palette independent owner and accepted Analytics/Inventory/Excel remain protected. `CHECKPOINTS/CHANGES/2026-10-10-n50-commercial-acceptance.md`. New LIVE result NOT TESTED; claim publication precedes source or state-changing LAB.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
