@@ -2336,7 +2336,7 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct17:02Athens; CHECKPOINTS/CHANGES/2026-10-10-n51-owner-page-acceptance.md; greenclaimPR/main beforechanges.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** No new51PASS; nextfreshreadonlylanding/controlinspection. Otherassignedscopes/priorPASSprotected.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Observed desktop hierarchy FAIL (tools beforecash, paymentsy2618); source primary shifts/payments and collapsed secondary controls AWAITING LIVE. Focused mounted/scoped regressions41PASS. ClaimPR2113/CI38058619671SUCCESS/merge1acb954f; checkpointupdated17:16. Otherassignedscopes/priorPASSprotected.
 
 ### DOC-NUM-01 — Κεντρική αριθμημένη λίστα και κανόνας PASS
 
