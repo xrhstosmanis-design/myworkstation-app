@@ -26,6 +26,10 @@ Evidence/checkpoint: `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`
 
 Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`, screenshots `CHECKPOINTS/EVIDENCE/voice-owner-cash-20261010/voice-owner-cash-live-1791649326035.jpg` και `voice-owner-cash-answer-1791649348275.jpg`. Καμία πώληση/πληρωμή/απογραφή/κλείσιμο/αποστολή email/ενεργοποίηση module δεν εκτελέστηκε.
 
+## 10 Oct 2026 — No40 Workforce initial read LIMITED LAB PASS
+
+Who: authenticated Super Admin. Open AI Command Center -> Full Digital Twin -> MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ -> Προσωπικό. Allow the initial read to finish before classifying the temporary empty/error-looking panel. Actual17:45:59UTC/af36b491 two exact scoped GET traces completed (server304/browser200), then7 LAB employees,3roles,2rules,3templates rendered automatically. Normal top close returned to the same Twin. Do not click employee, payment, module, invitation or card actions during navigation acceptance. Troubleshooting: a persistent error after completion remains unaccepted; the initial message alone did not prove one. Company-wide2store metadata is visible in the creation form: full data isolation and business/role/module/payroll tests are not included. No40 overall OPEN; previous scoped PASS protected.
+
 ## 10 Oct 2026 20:33 Athens — No40 five transitions / six exact GET correlations: LIMITED LAB PASS; OPEN
 
 Owner `codex/n40-full-twin-navigation-audit-20261010` unchanged. Source PR2145 head39da5f1 CI38070860861 SUCCESS, merge/release23abcfa0c8c739574e144c827898ef09ee0a7897; main CI38071116248 and guarded deploy38071354640 SUCCESS. Render dep-db5782142hec73fv3ik0 LIVE17:22:55UTC; independently observed browser /api/health exact revision before tests. Source also restores the full active-list history lost by concurrent main changes, retaining their new receipts.
