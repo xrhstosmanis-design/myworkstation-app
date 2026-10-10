@@ -8,6 +8,8 @@ import { sendLedgerAlertEmail } from "../services/mail.js";
 import { expenseReviewStatus } from "./expense-review-policy.js";
 import { ownerSupplierProofError, readBankDepositProofPdf, readSupplierProofPdf, supplierProofMismatch } from "./supplier-proof-pdf-check.js";
 
+import {recordCashTransfer} from "../lib/store-cash-transfer.js";
+
 const router=Router();
 let tablesPromise;
 
@@ -183,8 +185,9 @@ function requireLedgerAccess(req,res,next){
     permissions.includes("THIRD_PARTY_PAYMENT")||
     permissions.includes("TRANSFER_AMOUNT")
   );
+  const transferContext=req.method==="GET"&&/\/stores\/[^/]+\/cash-transfer\/context(?:\?|$)/.test(String(req.originalUrl||""))&&permissions.includes("TRANSFER_AMOUNT");
   const operator=req.user?.tokenType==="STORE_OPERATOR"&&(
-    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission
+    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission||transferContext
   );
   if(!backoffice&&!superAdmin&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
   next();
@@ -257,6 +260,7 @@ function totals(rows){
     cardSales:sum("SALE_CARD")+sum("SALE_IRIS")+sum("CUSTOMER_RECEIPT_CARD"),
     irisSales:sum("SALE_IRIS"),
     transferIn:sum("TRANSFER_AMOUNT"),
+    transferOut:sum("TRANSFER_OUT"),
     supplierPayments,
     otherExpenses,
     cashExpensesTotal:deductedSupplierPayments+deductedOtherExpenses,
@@ -887,9 +891,9 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     ORDER BY p."documentDate" DESC,p."id" DESC LIMIT 100
   `;
   const openSessionIds=openRows.map(row=>row.id),sessionRows=!openSession?[]:isBackoffice
-    ?(await prisma.$queryRaw`SELECT "type","amount","subtractFromShift","reversedAt" FROM "StoreTransaction" WHERE "sessionId"=ANY(${openSessionIds}::text[]) AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}`).map(normalize)
+    ?(await prisma.$queryRaw`SELECT "type","amount","subtractFromShift","reversedAt","sessionId" FROM "StoreTransaction" WHERE "sessionId"=ANY(${openSessionIds}::text[]) AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}`).map(normalize)
     :(await prisma.$queryRaw`
-      SELECT "type","amount","subtractFromShift","reversedAt"
+      SELECT "type","amount","subtractFromShift","reversedAt","sessionId"
       FROM "StoreTransaction"
       WHERE "sessionId"=${openSession.id} AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}
     `).map(normalize);
@@ -898,6 +902,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     openSession,
     openSessions:openRows,
     summary:totals(sessionRows),
+    summaryBySession:Object.fromEntries(openRows.map(session=>[session.id,totals(sessionRows.filter(row=>row.sessionId===session.id))])),
     suppliers,
     purchaseDocuments:purchaseDocuments.map(row=>({...row,totalGross:Number(row.totalGross||0)})),
     recent,
@@ -905,7 +910,23 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   });
 }));
 
+router.get("/stores/:storeId/cash-transfer/context",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req),operator=req.user?.tokenType==="STORE_OPERATOR";
+  if(operator&&!req.user.permissions?.includes("TRANSFER_AMOUNT"))return res.status(403).json({error:"Δεν έχεις δικαίωμα Μεταφοράς ποσού."});
+  const sessions=await prisma.$queryRaw`SELECT "id","terminalPos","shiftLabel" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='OPEN' AND (${!operator} OR "terminalPos"=${terminalPos}) ORDER BY "openedAt" DESC`;
+  res.json({openSessions:sessions,openSession:sessions.find(s=>s.terminalPos===terminalPos)||sessions[0]||null});
+}));
+
+router.post("/stores/:storeId/cash-transfer",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
+  const result=await recordCashTransfer(prisma,{user:req.user,storeId:store.id,terminalPos,body:req.body});
+  res.status(result.duplicate?200:201).json({ok:true,...result,transaction:normalize(result.transaction)});
+}));
+
 router.post("/stores/:storeId",route(async(req,res)=>{
+  if(req.user?.tokenType==="STORE_OPERATOR"&&req.body?.type==="TRANSFER_AMOUNT")return res.status(403).json({error:"Η μεταφορά χειριστή γίνεται προς τον Ιδιοκτήτη από τη λειτουργία Μεταφοράς μετρητών."});
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const body=transactionSchema.parse(req.body||{});

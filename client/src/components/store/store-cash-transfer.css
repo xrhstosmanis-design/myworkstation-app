@@ -1,0 +1,9 @@
+.cash-transfer-modal{width:min(720px,96vw);grid-template-rows:auto minmax(0,1fr)}
+.cash-transfer-modal .shift-close-body{display:grid;gap:16px;overflow:auto;padding:20px;font-size:18px}
+.cash-transfer-modal label{display:grid;gap:8px;font-weight:750}
+.cash-transfer-modal input,.cash-transfer-modal select{box-sizing:border-box;width:100%;min-height:52px;padding:10px 14px;border:1px solid #b9cbd8;border-radius:10px;background:white;font-size:20px}
+.cash-transfer-modal form>button{min-height:52px;border:1px solid #b9cbd8;border-radius:10px;background:white;color:#17486d;font-size:18px;font-weight:800;cursor:pointer}
+.cash-transfer-modal form>button[type=submit]{background:#0f766e;color:white;border-color:#0f766e}
+.cash-transfer-modal button:disabled{opacity:.45;cursor:not-allowed}
+.cash-transfer-modal [role=alert]{padding:12px;background:#fff0f0;color:#b42318;border-radius:10px}
+.cash-transfer-modal [role=status]{padding:12px;background:#eaf8ef;color:#08783e;border-radius:10px}
