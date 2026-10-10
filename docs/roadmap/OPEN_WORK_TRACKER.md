@@ -1,3 +1,9 @@
+## 10/10/2026 08:37 Europe/Athens — N39 / BOUNDED LIVE STOCKTAKE REPORT-LEDGER LAB PASS / OVERALL OPEN
+
+Owner codex/n39-inventory-acceptance-20261010 retained. Authorized new N39-LAB-20261010-0530-STOCKTAKE on virtual MYWORKSTATION LAB/storecmtpopbgo000trhb5ng9ytiru, SuperAdmin Χρήστος Μάνης/cloudtab12, inventoryonly/no payment. Baseline published PR2015/c3e0f104/docsCI38027728941 SUCCESS/merge51a74f53 before Start. Exact public sourcef410a1d (includes N39 sourcePR2010/b075d84 and green nativePGCI); no scanner/TODAY-07 scope change. One partial LIVE/NONE-recount TEST1 expected11,count10 at08:32:35, finalization08:33:44: FINALIZED/report−1, archive11→10, exactlyoneSTOCKTAKE_ADJUSTMENT−1, ledgercurrent10/recorded10/difference0/movements9→10/duplicates0. Reopened final UI offers no count/delete/finalize controls. TEST2−2/ledger−2/difference0/movements2/duplicates0 and latest1Octsale unchanged. Audit CSV records Χρήστος Μάνης/SCANNER/oneCOUNT. Evidence n39-stocktake-result-20261010-visible.jpg, n39-stocktake-ledger-20261010.jpg, n39-stocktake-count-audit-20261010.csv and n39-stocktake-ledger-20261010.csv under CHECKPOINTS/EVIDENCE.
+
+An independent water500ML CASH sale occurred08:31 (not submitted by this page): initialMAIN0/0 became1/cash0.50/card0/IRIS0/total0.50. Creation financialdelta not attributed and not certified. Fresh1/0.50 baseline recorded before count/finalize and refreshed after each: unchanged. Control LAB-POS-02 transactions2/cash0/card0/IRIS0/total0/expenses120 unchanged. No payment/sale/shift action from this page. Physical hardware, native-concurrent UI overlap, live repeat API rejection and mandatory cause input are NOT TESTED; finalization posts a generic reason. Report/ledger causal regression acceptance only is PASS; full #39 OPEN for reason/recount/roles, count-import-edit concurrency, transfers, waste/expired goods and own consumption. Do not repeat this passed finalization for evidence. Next new identified waste/expired1unit on TEST1stock10 after fresh before/after controls. Gate2 and desktop scroll PASS retained. Checkpoint2026-10-10-n39-live-tests.md; manual inventory/PASS.md and pending/numbered/tracker PDFs synchronized.
+
 ## 10/10/2026 08:38 Europe/Athens — POS-CHANGE-NOTICE-01 / ASSIGNED / NOT TESTED
 
 Owner fix/pos-change-notice-20261010, explicitly requested by Χρήστος Μανής: clear change-due notice when using the received-money keypad, disappearing after3seconds. Screenshot image(20261010-053252).png shows cart ΝΕΡΟ1,5LT/SKU2270 quantity1/total1.00EUR, received20.00EUR/change19.00EUR; negative-stock warning is existing evidence, not an invitation to repeat a sale. No real sale/payment/stock/fiscal action by this page. Source currently has persistent keypad received/change values but no large dedicated change notice; generic success message lasts8seconds and load clears it, so the new notice must be independent.
@@ -1687,13 +1693,13 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 **Κατάσταση:** OPEN / ASSIGNED
 
-**Υπόλοιπο / όρια PASS:** Απογραφή/αιτιολογία, μεταφορές, φύρα/ληγμένα, ιδιοκατανάλωση, ταυτόχρονες κινήσεις. Χωριστά από Gate 2.
+**Υπόλοιπο / όρια PASS:** Υποχρεωτική αιτιολογία/επανακαταμέτρηση/ρόλοι, concurrent count/import/line edits, μεταφορές, φύρα/ληγμένα, ιδιοκατανάλωση. Bounded live report-ledger finalization LAB PASS10Oct (11→10/report−1/oneledger−1); δεν επαναλαμβάνεται. Χωριστά από Gate 2.
 
 **Υπεύθυνη σελίδα / branch:** `codex/n39-inventory-acceptance-20261010` — explicit user assignment10/10/2026; TODAY-07 remains with prior owner.
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026 01:46 Europe/Athens — N39 stocktake/reason, transfers, waste/expired, own consumption and concurrent movements; preserve Gate2 and scroll PASS; excludes assigned TODAY-07. CHECKPOINTS/CHANGES/2026-10-10-n39-inventory-acceptance.md. Full residual NOT TESTED.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 10Oct08:37 bounded partialLIVE/NONE finalization report-ledger LAB PASS. TEST1 11→10, expected11/count10/report−1, oneadjustment08:33:44, controls unchanged against fresh1/0.50 baseline. SourcePR2010/nativePGCI38026423139 green/deployedf410a1d includesb075d84. CHECKPOINTS/CHANGES/2026-10-10-n39-live-tests.md; docs/manual/inventory/PASS.md; full residual OPEN.
 
 ### AI-CC-LIMITS — AI Command Center όρια PASS
 
