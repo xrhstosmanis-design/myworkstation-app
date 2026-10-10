@@ -1,0 +1,140 @@
+{
+  "phase": "read-only before deployment or LAB writes",
+  "sourcePr": 2120,
+  "sourceHead": "f0255e83799b6c31c1319843026794c0e6462e31",
+  "fullPrCi": {
+    "run": 38059475765,
+    "pass": 2140,
+    "fail": 0,
+    "nativeImport": "PASS"
+  },
+  "merge": "eb40882c4ad1d36694cfadf6f0506093a0ed9507",
+  "globalCosts": {
+    "products": 6883,
+    "sum": "22451.1953",
+    "canonicalDigest": "b2cdec8b238d38567a862a0b54ef5885",
+    "precision": 14,
+    "scale": 4
+  },
+  "lab": {
+    "store": "cmtpopbgo000trhb5ng9ytiru",
+    "company": "cmtpopbgk000prhb5qc60zxus",
+    "storeProducts": 95,
+    "stockSum": 45140,
+    "movements": 86,
+    "sales": 80,
+    "saleTotal": "63.1",
+    "payments": {
+      "IRIS": {
+        "count": 2,
+        "sum": "0"
+      },
+      "CARD": {
+        "count": 6,
+        "sum": "2.9"
+      },
+      "CASH": {
+        "count": 72,
+        "sum": "60.2"
+      }
+    },
+    "openShifts": [
+      {
+        "id": "f23ce42c-4ea2-453c-9710-65d09eb90480",
+        "terminal": "LAB-POS-02",
+        "cashSales": 0,
+        "cardSales": 0,
+        "eftposTotal": 0
+      },
+      {
+        "id": "3953929c-0be6-44d9-827a-282faab1dc6f",
+        "terminal": "MAIN",
+        "cashSales": 0,
+        "cardSales": 0,
+        "eftposTotal": 0
+      }
+    ],
+    "visibleMainShift": {
+      "transactions": 11,
+      "cash": "4.00",
+      "card": "0.00",
+      "iris": "0.00",
+      "total": "4.00",
+      "ownerIn": "0.10",
+      "ownerOut": "0.10"
+    },
+    "controlLabPos02": {
+      "transactions": 2,
+      "cash": "0.00",
+      "cardIris": "0.00",
+      "total": "0.00"
+    },
+    "controlDigests": {
+      "movement": {
+        "count": 86,
+        "digest": "3e11dcbcc5ad8a5018f0b2a87556100d"
+      },
+      "payment": {
+        "count": 80,
+        "digest": "c193330961a236c49fdfbe41397392ed"
+      },
+      "sale": {
+        "count": 80,
+        "digest": "858f5541bd863395c6f935adfac1d25a"
+      },
+      "shift": {
+        "count": 36,
+        "digest": "0c3bf7f9debf1c9bc52939316ff82ebd"
+      },
+      "stock": {
+        "count": 95,
+        "digest": "79c7136945389fdb35b1a1f83c145175"
+      },
+      "transaction": {
+        "count": 118,
+        "digest": "5401181d157235c4ee46cd5c31c19fa2"
+      }
+    }
+  },
+  "dailyBite": {
+    "products": 0,
+    "savedDepartments": 9
+  },
+  "unchangedOriginalSource": {
+    "sha256": "2307c282c299d2716af17078315ab9b461e5748521dd9eff0dce80bb64fe8ff2",
+    "rows": 8753,
+    "barcodes": 9306,
+    "pricesDepartmentsMd5": "185252c44c5cf530d939142e3b35aabc",
+    "barcodePairsMd5": "b8715fc96c6482698e91fb515a9ba620"
+  },
+  "action": "9 new LAB test departments each saved once; no product import, checkout, payment or shift action",
+  "fullMainCi": {
+    "revision": "92e7fbf440b9171d4ffa4176b4e56cc7a15e7040",
+    "run": 38059863377,
+    "pass": 2148,
+    "fail": 0,
+    "skipped": 0,
+    "nativeImport": "PASS",
+    "httpE2e": "PASS"
+  },
+  "afterWidening": {
+    "products": 6883,
+    "sum": "22451.195300",
+    "canonicalDigest": "b2cdec8b238d38567a862a0b54ef5885",
+    "precision": 16,
+    "scale": 6,
+    "equalValues": true
+  },
+  "setupAfter": {
+    "observedAt": "2026-10-10T14:43:43.359307Z",
+    "dailyProducts": 0,
+    "dailyDepartments": 9,
+    "labDepartments": 10,
+    "labFixtureProducts": 0,
+    "controlDigestsUnchanged": true,
+    "labDepartmentFieldsVerified": true
+  },
+  "importAcceptance": "NOT TESTED: filechooser blocked before upload; documented new-tab and runtime reset failed",
+  "healthyRevision": "92e7fbf440b9171d4ffa4176b4e56cc7a15e7040",
+  "deploy": "dep-db54r15ckfvc738vh0n0"
+}
