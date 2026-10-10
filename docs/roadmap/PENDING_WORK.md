@@ -1,3 +1,7 @@
+## N45 — populated Master clipping FAIL / same owner
+
+Bounded Master-only layout fix AWAITING LAB; exact de7d5c2e1363×936 selected TEST2 clips discount save/history. Final visual/no outer scroll OPEN. Owner codex/n45-product-center-visual-20261010; checkpoint2026-10-10-n45-product-center-visual.md. Other owners and prior PASS preserved.
+
 ## N39 draft mutation/finalization race — isolated FAIL reproduced; bounded correction AWAITING CI/LAB
 
 Same owner codex/n39-inventory-acceptance-20261010, base9505a0bb/PR2056 preserves every bounded LIVE PASS. Actual six handlers accepted stale DRAFT after FINALIZED (count/bulk/clear/import/addline/attachbarcode, 1–2 writes each) in controlled isolated reproduction. One common transactional parent DRAFT lock now precedes every mutation and is shared with finalization; no quantity/role/zone/company/schema/auth/finance/barcode-workflow change. Actual handler regressions19PASS/0FAIL with two nativePG checks locallySKIP; Node20 frontend build PASS; fullCI pending. New guarded native PostgreSQL actual-handler test covers both lock orders, six rejected late mutations, replay/version, recount and company/zone/owner denial with unchanged unrelated/control stock. CI is not LAB PASS; mandatory reason remains separate and full39 OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n39-draft-mutations.md. After full nativeCI/green merge/exact deploy, fresh identified LAB recount/finalized protection acceptance; no accepted posting repeated. Other owners33/44/40/TODAY-07 unchanged.
