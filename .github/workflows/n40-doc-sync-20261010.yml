@@ -75,11 +75,18 @@ jobs:
           for p,sha in trees.items():
               if git('rev-parse',tree+':'+p).strip()!=sha:raise RuntimeError('Verified source changed: '+p)
           if git('diff','--name-only','--diff-filter=U').strip():raise RuntimeError('Unresolved conflicts')
+          pdfs={}
+          for p in git('diff','--cached','--name-only').splitlines():
+              if p.lower().endswith('.pdf'):
+                  sha=git('rev-parse',main+':'+p).strip()
+                  if git('rev-parse',tree+':'+p).strip()!=sha:raise RuntimeError('Concurrent PDF bytes changed: '+p)
+                  pdfs[p]=sha
           out=Path(os.environ['RUNNER_TEMP'])/'n40-sync'
-          (out/'evidence.json').write_text(json.dumps({'main':main,'input':own,'preserved_code_trees':trees,'documents':evidence,'resolved_conflicts':conflicts},indent=2))
-          check=subprocess.run(['git','diff','--cached','--check'],text=True,capture_output=True)
+          (out/'evidence.json').write_text(json.dumps({'main':main,'input':own,'preserved_code_trees':trees,'preserved_main_pdf_blobs':pdfs,'documents':evidence,'resolved_conflicts':conflicts},indent=2))
+          check=subprocess.run(['git','diff','--cached','--check','--','.',':(exclude)*.pdf'],text=True,capture_output=True)
           (out/'whitespace-check.txt').write_text(check.stdout+check.stderr)
-          if check.returncode:raise RuntimeError('Whitespace check failed: '+check.stdout+check.stderr)
+          if check.returncode:raise RuntimeError('Text whitespace check failed: '+check.stdout+check.stderr)
+          print('All code trees, complete main document prefixes and main PDF blobs preserved; text whitespace check passed.')
           PY
           git commit -m 'docs(N40): preserve concurrent owner records after full CI success'
           git rev-parse HEAD > "$RUNNER_TEMP/n40-sync/revision.txt"
