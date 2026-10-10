@@ -23,3 +23,14 @@ export function n40ReadHeaders(path,scope,method="GET",uuid=()=>globalThis.crypt
   if(!n40ReadRecord(path,scope,traceId))return null;
   return {traceId,headers:{"X-MWS-N40-Trace":traceId,"X-MWS-N40-Store":scope.storeId,"X-MWS-N40-Company":scope.companyId}};
 }
+
+export const N40_VISIBLE_TRACE_EVENT="mws:n40-read-trace";
+export function n40PublishRead(path,scope,traceId,status,actor=null,target=globalThis){
+  const record=n40ReadRecord(path,scope,traceId,status,actor);
+  if(!record)return null;
+  const detail={...record,side:"client",observedAt:new Date().toISOString()};
+  try{target.console?.info(N40_TRACE_PREFIX,JSON.stringify(detail))}catch{}
+  // Only regenerated allowlisted metadata crosses this event, never caller objects.
+  try{if(typeof target.dispatchEvent==="function"&&typeof target.CustomEvent==="function")target.dispatchEvent(new target.CustomEvent(N40_VISIBLE_TRACE_EVENT,{detail}))}catch{}
+  return detail;
+}
