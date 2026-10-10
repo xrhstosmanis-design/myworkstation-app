@@ -6,6 +6,8 @@ import {prisma} from "../prisma.js";
 import {importFullArchive} from "./inventory-archive-full-import.js";
 import {ensureProductCompanySchema} from "./management-product-companies.js";
 import {ensureVatDepartmentSchema} from "./management-vat-departments.js";
+import {attachSourceWorkbook,validateSourceDepartments} from "./inventory-source-workbook.js";
+import {assertSourceCostStorage,fitsSourcePrice} from "../product-cost-precision.js";
 
 const router=Router();
 const uid=()=>crypto.randomUUID();
@@ -28,7 +30,7 @@ export function readWorkbook(dataUrl){
   const match=/^data:[^;]+;base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl||""));
   if(!match){const e=new Error("Δεν διαβάστηκε το αρχείο Excel/CSV.");e.status=400;throw e}
   const workbook=XLSX.read(Buffer.from(match[1],"base64"),{type:"buffer",cellDates:true});
-  const sheet=workbook.Sheets[workbook.SheetNames[0]];return XLSX.utils.sheet_to_json(sheet,{defval:""});
+  const sheet=workbook.Sheets[workbook.SheetNames[0]];return attachSourceWorkbook(workbook,XLSX.utils.sheet_to_json(sheet,{defval:""}),XLSX);
 }
 export function normalizeRows(raw){
   return raw.map((r,index)=>{
@@ -41,7 +43,8 @@ export function normalizeRows(raw){
     const sourceVatCode=txt(val(r,["ΚΩΔ. ΦΠΑ"]));
     const sourceDepartment=txt(val(r,["Τμήμα ΦΠΑ"]));
     const explicitVat=num(val(r,["ΦΠΑ","% ΦΠΑ","VAT","VatRate"]));
-    const vatRate=sourceVatCode&&Object.hasOwn(SOURCE_VAT_RATES,sourceVatCode)?SOURCE_VAT_RATES[sourceVatCode]:sourceDepartment&&Object.hasOwn(SOURCE_DEPARTMENT_RATES,sourceDepartment)?SOURCE_DEPARTMENT_RATES[sourceDepartment]:explicitVat;
+    const sourceDefinition=raw.sourceProfile?.departments.find(d=>d.description===sourceDepartment);
+    const vatRate=raw.sourceProfile?(sourceDefinition?.vatRate??null):sourceVatCode&&Object.hasOwn(SOURCE_VAT_RATES,sourceVatCode)?SOURCE_VAT_RATES[sourceVatCode]:sourceDepartment&&Object.hasOwn(SOURCE_DEPARTMENT_RATES,sourceDepartment)?SOURCE_DEPARTMENT_RATES[sourceDepartment]:explicitVat;
     const stock=num(val(r,["Απόθεμα","Stock","STOCK","Ποσότητα"]));
     const activeRaw=val(r,["Ενεργό","Active","ACTIVE"]);const active=activeRaw===""?true:yes(activeRaw);
     const errors=[];if(!name)errors.push("Λείπει περιγραφή");if(!sku&&!barcode)errors.push("Χρειάζεται SKU ή Barcode");if(salePrice!==null&&salePrice<0)errors.push("Μη έγκυρη λιανική");if(costPrice!==null&&costPrice<0)errors.push("Μη έγκυρο κόστος");if(vatRate!==null&&(vatRate<0||vatRate>100))errors.push("Μη έγκυρο ΦΠΑ");if(stock!==null&&stock<0)errors.push("Μη έγκυρο απόθεμα");
@@ -54,8 +57,20 @@ export function normalizeRows(raw){
     const discountA=num(val(r,["Εκπτ. Α"]));
     const discountB=num(val(r,["Εκπτ. Β"]));
     const discountC=num(val(r,["Εκπτ. Γ"]));
-    if(sourceVatCode&&!Object.hasOwn(SOURCE_VAT_RATES,sourceVatCode))errors.push(`Άγνωστος κωδικός ΦΠΑ ${sourceVatCode}`);
-    if(sourceDepartment&&!Object.hasOwn(SOURCE_DEPARTMENT_RATES,sourceDepartment))errors.push(`Άγνωστο τμήμα ΦΠΑ ${sourceDepartment}`);
+    if(raw.sourceProfile){
+      if(!sourceDefinition)errors.push(`Άγνωστο τμήμα ΦΠΑ ${sourceDepartment}`);
+      if(sourceDefinition&&Number(r["Τμήμα ταμειακής"])!==sourceDefinition.cashRegisterDepartment)errors.push("Το τμήμα ταμειακής διαφωνεί με την πηγή");
+      if(sourceVatCode&&sourceVatCode!==sourceDefinition?.legacyVatCode)errors.push("Ο κωδικός ΦΠΑ διαφωνεί με το τμήμα της πηγής");
+      if(explicitVat===null||explicitVat!==vatRate)errors.push("Λείπει ή διαφωνεί το ποσοστό ΦΠΑ της πηγής");
+      if(stock!==0)errors.push("Η πρώτη εισαγωγή απαιτεί αρχικό απόθεμα 0");
+      if(txt(r["Μονάδα Kiosk"])!=="TEM")errors.push("Μη υποστηριζόμενη μονάδα πηγής");
+      if(salePrice===null||costPrice===null)errors.push("Λείπει τιμή πώλησης ή αγοράς της πηγής");
+      if(!fitsSourcePrice(salePrice,4))errors.push("Η λιανική της πηγής δεν χωρά ακριβώς στη βάση (4 δεκαδικά, 10 ακέραια ψηφία).");
+      if(!fitsSourcePrice(costPrice,6))errors.push("Η τιμή αγοράς της πηγής δεν χωρά ακριβώς στη βάση (6 δεκαδικά, 10 ακέραια ψηφία). Δεν επιτρέπεται στρογγυλοποίηση.");
+    }else{
+      if(sourceVatCode&&!Object.hasOwn(SOURCE_VAT_RATES,sourceVatCode))errors.push(`Άγνωστος κωδικός ΦΠΑ ${sourceVatCode}`);
+      if(sourceDepartment&&!Object.hasOwn(SOURCE_DEPARTMENT_RATES,sourceDepartment))errors.push(`Άγνωστο τμήμα ΦΠΑ ${sourceDepartment}`);
+    }
     if(categoryName.toUpperCase().includes("ΤΥΠΟΣ")||sourceDepartment.toUpperCase().includes("ΤΥΠΟΣ"))errors.push("Ο Τύπος εξαιρείται από αυτή την εισαγωγή");
     if(sourceVatCode&&explicitVat!==null&&explicitVat!==vatRate)errors.push("Ο κωδικός ΦΠΑ διαφωνεί με το ποσοστό ΦΠΑ");
     if(sourceDepartment&&explicitVat!==null&&explicitVat!==vatRate)errors.push("Το τμήμα ΦΠΑ διαφωνεί με το ποσοστό ΦΠΑ");
@@ -63,29 +78,30 @@ export function normalizeRows(raw){
     // import blocked until the full archive path has been wired and verified.
     if(!sourceDepartment&&(supplierName||supplierCode||subcategoryName||brandName||staffPrice!==null||minStock!==null||discountA!==null||discountB!==null||discountC!==null))errors.push("Εκκρεμεί πλήρης αντιστοίχιση στοιχείων καρτέλας είδους");
     if(sourceDepartment&&vatRate===null)errors.push("Λείπει αντιστοίχιση τμήματος ΦΠΑ");
-    return {row:index+2,sku,name,barcode,categoryName,subcategoryName,supplierName,supplierCode,brandName,staffPrice,minStock,discountA,discountB,discountC,salePrice,costPrice,vatRate,sourceVatCode,sourceDepartment,stock,active,errors};
+    return {row:index+2,sku,name,barcode,barcodes:r.sourceBarcodes||[barcode].filter(Boolean),categoryName,subcategoryName,supplierName,supplierCode,brandName,staffPrice,minStock,discountA,discountB,discountC,salePrice,costPrice,vatRate,sourceVatCode,sourceDepartment,stock,active,errors};
   });
 }
 async function scopedStore(req,storeId){const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true}});if(!store){const e=new Error("Δεν βρέθηκε ενεργό κατάστημα.");e.status=404;throw e}return store}
-async function classify(companyId,rows){
+export async function classify(companyId,rows,db=prisma){
   const skus=[...new Set(rows.map(row=>row.sku).filter(Boolean))];
-  const barcodes=[...new Set(rows.map(row=>row.barcode).filter(Boolean))];
+  const barcodes=[...new Set(rows.flatMap(row=>row.barcodes||[row.barcode]).filter(Boolean))];
   const [products,barcodeProducts]=await Promise.all([
-    skus.length?prisma.$queryRaw`SELECT "id","sku","name" FROM "Product" WHERE "companyId"=${companyId} AND "sku"=ANY(${skus}::text[])`:[],
-    barcodes.length?prisma.$queryRaw`SELECT pb."barcode",p."id",p."sku",p."name" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${companyId} AND pb."barcode"=ANY(${barcodes}::text[])`:[]
+    skus.length?db.$queryRaw`SELECT "id","sku","name" FROM "Product" WHERE "companyId"=${companyId} AND "sku"=ANY(${skus}::text[])`:[],
+    barcodes.length?db.$queryRaw`SELECT pb."barcode",p."id",p."sku",p."name" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${companyId} AND pb."barcode"=ANY(${barcodes}::text[])`:[]
   ]);
   const bySku=new Map(products.map(row=>[row.sku,row]));
   const byBarcode=new Map();for(const match of barcodeProducts){if(byBarcode.has(match.barcode)&&byBarcode.get(match.barcode)?.id!==match.id)byBarcode.set(match.barcode,null);else if(!byBarcode.has(match.barcode))byBarcode.set(match.barcode,match)}
   const seenSku=new Map(),seenBarcode=new Map();
   for(const row of rows){
-    for(const [label,value,seen] of [["SKU",row.sku,seenSku],["barcode",row.barcode,seenBarcode]]){
+    for(const [label,value,seen] of [["SKU",row.sku,seenSku],...(row.barcodes||[row.barcode]).map(value=>["barcode",value,seenBarcode])]){
       if(!value)continue;
       if(seen.has(value))row.errors.push(`Διπλό ${label} με τη γραμμή ${seen.get(value)}`);
       else seen.set(value,row.row);
     }
     if(row.errors.length){row.action="INVALID";continue}
-    if(row.barcode&&byBarcode.has(row.barcode)&&byBarcode.get(row.barcode)===null){row.errors.push("Το barcode ανήκει σε περισσότερα από ένα υπάρχοντα είδη");row.action="INVALID";continue}
-    const skuMatch=bySku.get(row.sku),barcodeMatch=byBarcode.get(row.barcode);
+    const matches=(row.barcodes||[row.barcode]).filter(Boolean).filter(b=>byBarcode.has(b)).map(b=>byBarcode.get(b));
+    if(matches.some(m=>m===null)||new Set(matches.map(m=>m?.id)).size>1){row.errors.push("Τα barcode αντιστοιχούν σε περισσότερα από ένα υπάρχοντα είδη");row.action="INVALID";continue}
+    const skuMatch=bySku.get(row.sku),barcodeMatch=matches[0];
     if(barcodeMatch?.sku&&row.sku&&barcodeMatch.sku!==row.sku){row.errors.push("Το υπάρχον barcode έχει διαφορετικό εσωτερικό κωδικό");row.action="INVALID";continue}
     if(skuMatch&&barcodeMatch&&skuMatch.id!==barcodeMatch.id){row.errors.push("Το SKU και το barcode αντιστοιχούν σε διαφορετικά είδη");row.action="INVALID";continue}
     const existing=skuMatch||barcodeMatch||null;
@@ -94,12 +110,25 @@ async function classify(companyId,rows){
   return rows;
 }
 
+export async function prepareArchiveRows(db,companyId,raw){
+  if(raw.sourceProfile){
+    await assertSourceCostStorage(db);
+    const departments=await db.$queryRaw`SELECT "id","description","vatRate","legacyVatCode","cashRegisterDepartment","commerce","active","exemptionCode","exemptionDescription" FROM "ManagementVatDepartment" WHERE "companyId"=${companyId}`;
+    validateSourceDepartments(raw.sourceProfile,departments);
+  }
+  const rows=await classify(companyId,normalizeRows(raw),db);
+  if(raw.sourceProfile)for(const row of rows){
+    if(row.action==="UPDATE"){row.errors.push("Η πρώτη εισαγωγή δεν ενημερώνει υπάρχον SKU ή barcode. Απαιτείται ξεχωριστός έλεγχος.");row.action="INVALID";}
+  }
+  return rows;
+}
+
 router.post("/import-preview",async(req,res,next)=>{
   try{
     const body=z.object({storeId:z.string().min(1),dataUrl:z.string().max(12000000)}).parse(req.body||{});await scopedStore(req,body.storeId);
     const raw=readWorkbook(body.dataUrl);if(!raw.length||raw.length>MAX_IMPORT_ROWS)return res.status(400).json({error:`Το αρχείο πρέπει να έχει 1 έως ${MAX_IMPORT_ROWS.toLocaleString("el-GR")} γραμμές.`});
-    const rows=await classify(req.user.companyId,normalizeRows(raw));
-    res.json({rows,summary:{total:rows.length,create:rows.filter(r=>r.action==="CREATE").length,update:rows.filter(r=>r.action==="UPDATE").length,invalid:rows.filter(r=>r.action==="INVALID").length}});
+    const rows=await prepareArchiveRows(prisma,req.user.companyId,raw);
+    res.json({rows,summary:{total:rows.length,create:rows.filter(r=>r.action==="CREATE").length,update:rows.filter(r=>r.action==="UPDATE").length,invalid:rows.filter(r=>r.action==="INVALID").length,barcodes:rows.reduce((n,r)=>n+r.barcodes.length,0),sourceProfile:raw.sourceProfile?.name||null}});
   }catch(error){next(error)}
 });
 
@@ -107,12 +136,26 @@ router.post("/import",async(req,res,next)=>{
   try{
     const body=z.object({storeId:z.string().min(1),dataUrl:z.string().max(12000000),applyStock:z.boolean().default(false)}).parse(req.body||{});const store=await scopedStore(req,body.storeId);
     const raw=readWorkbook(body.dataUrl);if(!raw.length||raw.length>MAX_IMPORT_ROWS)return res.status(400).json({error:`Το αρχείο πρέπει να έχει 1 έως ${MAX_IMPORT_ROWS.toLocaleString("el-GR")} γραμμές.`});
-    const rows=await classify(req.user.companyId,normalizeRows(raw));const invalid=rows.filter(r=>r.action==="INVALID");if(invalid.length)return res.status(409).json({error:`Υπάρχουν ${invalid.length} μη έγκυρες γραμμές. Διορθώστε το αρχείο και ξανακάντε preview.`});
+    const rows=await prepareArchiveRows(prisma,req.user.companyId,raw);const invalid=rows.filter(r=>r.action==="INVALID");if(invalid.length)return res.status(409).json({error:`Υπάρχουν ${invalid.length} μη έγκυρες γραμμές. Διορθώστε το αρχείο και ξανακάντε preview.`});
     if(raw[0]&&Object.hasOwn(raw[0],"Τμήμα ΦΠΑ")){
-      if(body.applyStock)return res.status(400).json({error:"Το αρχείο Διαδόχου δεν περιλαμβάνει ποσότητες αποθέματος."});
+      if(body.applyStock)return res.status(400).json({error:"Η πλήρης εισαγωγή δεν ενημερώνει απόθεμα υπαρχόντων ειδών."});
       if(rows.some(row=>!row.sourceDepartment))return res.status(400).json({error:"Λείπει τμήμα ΦΠΑ από γραμμή του αρχείου."});
       await ensureProductCompanySchema();await ensureVatDepartmentSchema();
-      const result=await prisma.$transaction(tx=>importFullArchive(tx,req.user.companyId,store.id,rows),{maxWait:10000,timeout:300000});
+      const result=await prisma.$transaction(async tx=>{
+        if(!raw.sourceProfile)return importFullArchive(tx,req.user.companyId,store.id,rows);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${req.user.companyId+":product-sku"}))`;
+        const barcodes=[...new Set(rows.flatMap(row=>row.barcodes))].sort();
+        if(barcodes.length)await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext($1||':barcode:'||barcode)) FROM (SELECT unnest($2::text[]) AS barcode ORDER BY barcode) b`,req.user.companyId,barcodes);
+        // Older barcode writers do not all take advisory locks. Hold a short
+        // write lock through final collision readback and insertion; POS reads
+        // remain available, and no other company's data is modified.
+        await tx.$executeRawUnsafe('LOCK TABLE "ProductBarcode" IN SHARE ROW EXCLUSIVE MODE');
+        const stores=await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "id"=${store.id} AND "companyId"=${req.user.companyId} AND "active"=true FOR SHARE`;
+        if(!stores.length){const error=new Error("Το κατάστημα άλλαξε. Κάντε νέα προεπισκόπηση.");error.status=409;throw error}
+        const fresh=await prepareArchiveRows(tx,req.user.companyId,raw);
+        if(fresh.some(row=>row.action!=="CREATE")){const error=new Error("Άλλαξε η αντιστοίχιση SKU ή barcode. Δεν εισήχθη κανένα είδος. Κάντε νέα προεπισκόπηση.");error.status=409;throw error}
+        return importFullArchive(tx,req.user.companyId,store.id,fresh,{sourceProfile:raw.sourceProfile});
+      },{maxWait:10000,timeout:300000});
       return res.status(201).json({ok:true,...result,applyStock:false});
     }
     let created=0,updated=0;

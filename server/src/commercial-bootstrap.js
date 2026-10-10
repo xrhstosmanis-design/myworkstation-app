@@ -1,4 +1,5 @@
 import {prisma} from "./prisma.js";
+import {ensureProductCostPrecision} from "./product-cost-precision.js";
 
 const statements=[
 `CREATE TABLE IF NOT EXISTS "ProductCategory" (
@@ -25,7 +26,7 @@ const statements=[
   "unit" TEXT NOT NULL DEFAULT 'PIECE',
   "vatRate" DECIMAL(6,3) NOT NULL DEFAULT 24,
   "salePrice" DECIMAL(14,4) NOT NULL DEFAULT 0,
-  "costPrice" DECIMAL(14,4) NOT NULL DEFAULT 0,
+  "costPrice" DECIMAL(16,6) NOT NULL DEFAULT 0,
   "trackStock" BOOLEAN NOT NULL DEFAULT true,
   "active" BOOLEAN NOT NULL DEFAULT true,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -355,5 +356,6 @@ export async function ensureCommercialSchema(){
   for(const statement of statements){
     await prisma.$executeRawUnsafe(statement);
   }
+  await ensureProductCostPrecision(prisma);
   console.log("Commercial Database V1 schema bootstrap completed.");
 }

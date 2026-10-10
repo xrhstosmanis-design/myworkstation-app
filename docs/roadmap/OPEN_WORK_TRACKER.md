@@ -145,6 +145,20 @@ Agreed desktopLAB48 COMPLETE: one correct named barcodeoffer, unknownbarcode rej
 
 ## 10/10/2026 15:25 Athens — Νο33 δικές του / όλες: cross-actor περιορισμένο LIVE PASS
 
+### CI correction — prepared-query cache after widening
+
+PR2120 initialheade92706f2/fullCI38059252939 FAIL: native PostgreSQL test caught cached-plan result-type mismatch when a product reader prepared before widening was reused afterwards. No merge/deploy/business mutation. Bootstrap now disconnects its Prisma pool after successful widening, before HTTP startup; the same actual native reader must reconnect and preserve controls. This does not claim control over a separate old deployment process. All widening runs through guarded deployment only, before LAB/original upload. FullCI rerun required; overall OPEN/AWAITING LAB.
+
+## 10/10/2026 — DAILY BITE precision/import source ready / AWAITING CI and LAB
+
+Owner `codex/daily-bite-price-precision-20261010`, handoff PR2115/headbaed33774b7bb446692193000311e2804b64278e/fullCI38058787868SUCCESS/merged6f97ac4081156d30af743d0767327995c10e5cd6. Incorporates the unreleased source-profile implementation from draft2096, preserving legacy Diadochou behavior. New bounded deployment bootstrap widens only exact NUMERIC(14,4) purchase-cost storage to NUMERIC(16,6), preserving ten integer digits and every old value, with bounded lock/statement timeouts; compatible wider storage is never narrowed and unexpected shapes fail closed. No production schema command executed from Work. SalePrice, StoreProduct prices and stock schema unchanged.
+
+Source preview/import checks actual cost-column capacity (including recheck inside final transaction), rejects unsupported decimals/range without tolerance or rounding, maps all9306barcodes, uses only8753eligible rows, validates nine existing departments and refuses existing SKU/barcode/stock overwrite. Atomic readback remains required. Native isolated PostgreSQL regression now exercises old-column rejection, widening/idempotency, exact five/six-decimal costs, replay rollback and unchanged controls; native local test skipped because no isolated Postgres service. Full CI native acceptance pending.
+
+Node20.20.2 local full server suite2115PASS/16SKIP/0FAIL after Prisma generation; build:productionPASS. Initial test launch before generated Prisma was ready failed; setup corrected and complete rerun passed. Unchanged original workbook exactSHA2307c282c299d2716af17078315ab9b461e5748521dd9eff0dce80bb64fe8ff2: actual parser8753rows/0invalid/9306barcodes/164leading-zero/stock0; DB000017=.64602,DB000030=.719037,DB000036=.51865 retained. This is local parser evidence, NOT live preview or LAB PASS.
+
+Read-only production snapshot before deployment:6883products/costsum22451.1953/canonicalcostdigestb2cdec8b238d38567a862a0b54ef5885. Independent fresh store counts:DAILYBITE0products;LAB95products (older15counts superseded by other authorized sessions, do not reset). No product/departments writes or original import yet. Remaining: fullgreenCI, exacthealthydeployment, independently confirmed liveprecision/controlreadback, measured new syntheticLAB fixture, originalDAILYBITEpreview/conflictcheck and definitiveimport. Preserve nine DAILYBITEdepartments, all other owners/PASS, RBS/Kiosk/commonPOS/otherstorebusinessrecords. Importer overallOPEN; no new manualPASS.
+
 ## 10/10/2026 — DAILY-BITE-IMPORT resumed / ASSIGNED / live precision confirmed
 
 ΑΝΑΛΗΨΗ ΑΠΟ `codex/daily-bite-import-20261010` — ASSIGNED `codex/daily-bite-price-precision-20261010`, same issue #2054 and user-authorized handoff. Preserve all other owners and PASS. Existing 9 departments/0 products remain protected, never recreate departments. Secure browser positively authenticated Χρήστος Μάνης / Platform Admin in this new conversation.
