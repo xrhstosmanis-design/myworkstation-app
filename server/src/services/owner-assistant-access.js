@@ -2,11 +2,11 @@ import {prisma} from "../prisma.js";
 import {companyModuleState,effectiveModuleEnabled} from "../middleware/module-access.js";
 
 const fail=(status,message,code)=>{throw Object.assign(new Error(message),{status,code})};
-const keys=["AI_OWNER_ASSISTANT","CASH_CONTROL"];
+const moduleLabels={CASH_CONTROL:"Ο Έλεγχος Ταμείων",INVENTORY:"Οι Αναφορές Αποθήκης / Πωλήσεων"};
 
 // A fresh session/role/company/store/entitlement check runs before every model
 // request, around each canonical read and before an answer leaves the server.
-export async function authorizeOwnerAssistant(req,{db=prisma,getState=companyModuleState,now=new Date()}={}){
+export async function authorizeOwnerAssistant(req,{db=prisma,getState=companyModuleState,now=new Date(),requiredModules=["CASH_CONTROL"]}={}){
   const user=req.user||{},storeId=req.params?.storeId;
   if(user.tokenType!=="BACKOFFICE_USER"||user.role!=="OWNER")fail(403,"Ο βοηθός είναι διαθέσιμος μόνο στον Ιδιοκτήτη.","OWNER_ASSISTANT_ROLE_DENIED");
   if(typeof storeId!=="string"||!storeId.trim()||storeId.length>160||!user.companyId)fail(400,"Επίλεξε έγκυρο κατάστημα.","OWNER_ASSISTANT_STORE_REQUIRED");
@@ -29,10 +29,11 @@ export async function authorizeOwnerAssistant(req,{db=prisma,getState=companyMod
   if(!store)fail(404,"Δεν βρέθηκε ενεργό δικό σου κατάστημα.","OWNER_ASSISTANT_STORE_DENIED");
   const state=await getState(user.companyId);
   if(!state||(!support&&!state.licenseAllowed))fail(403,"Η άδεια της εταιρείας δεν είναι ενεργή.","LICENSE_INACTIVE");
-  if(!support)for(const moduleKey of keys){
+  if(!Array.isArray(requiredModules)||requiredModules.some(key=>!Object.hasOwn(moduleLabels,key)))fail(500,"Μη έγκυρη δυνατότητα βοηθού.","OWNER_ASSISTANT_CAPABILITY_INVALID");
+  if(!support)for(const moduleKey of new Set(["AI_OWNER_ASSISTANT",...requiredModules])){
     const rows=await db.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${store.id} AND "companyId"=${user.companyId} AND "moduleKey"=${moduleKey} LIMIT 1`;
     const override=rows[0]?{...rows[0],configured:true}:{configured:false};
-    if(!effectiveModuleEnabled(state.activeModules.includes(moduleKey),override))fail(403,moduleKey==="AI_OWNER_ASSISTANT"?"Το module AI Βοηθός Ιδιοκτήτη δεν είναι ενεργό για το κατάστημα.":"Ο Έλεγχος Ταμείων δεν είναι ενεργός για το κατάστημα.","MODULE_DISABLED");
+    if(!effectiveModuleEnabled(state.activeModules.includes(moduleKey),override))fail(403,moduleKey==="AI_OWNER_ASSISTANT"?"Το module AI Βοηθός Ιδιοκτήτη δεν είναι ενεργό για το κατάστημα.":`${moduleLabels[moduleKey]} δεν είναι ενεργός για το κατάστημα.`,"MODULE_DISABLED");
   }
   return {companyId:user.companyId,companyName:state.name,storeId:store.id,storeName:store.name,supportPreview:support};
 }
