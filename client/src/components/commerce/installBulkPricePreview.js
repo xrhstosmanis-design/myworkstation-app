@@ -12,6 +12,13 @@ async function api(path,options={}){
 function isBulkForm(form){return Boolean(form?.matches?.("form.op-box.op-form")&&[...form.querySelectorAll("h3")].some(h=>h.textContent.includes("Μαζική αλλαγή τιμών")))}
 function textNodeValue(element){return [...(element?.childNodes||[])].filter(node=>node.nodeType===Node.TEXT_NODE).map(node=>node.textContent).join(" ").trim()}
 function selectionFromForm(form){
+  const saved=form.elements.bulkSelection;
+  if(saved){
+    const selection=JSON.parse(saved.value),mode=form.querySelector(".op-two select")?.value||"SET",value=Number(form.elements.value?.value||0);
+    if(!selection.productRefs?.length||!selection.storeNames?.length)throw new Error("Επίλεξε τουλάχιστον ένα προϊόν και ένα κατάστημα.");
+    if(!Number.isFinite(value)||value<0)throw new Error("Η τιμή ή το ποσοστό δεν είναι έγκυρο.");
+    return {...selection,mode,value};
+  }
   const fields=form.querySelectorAll("fieldset");
   if(fields.length<2)throw new Error("Δεν βρέθηκαν οι επιλογές προϊόντων και καταστημάτων.");
   const productRefs=[...fields[0].querySelectorAll("label.check")].filter(label=>label.querySelector('input[type="checkbox"]')?.checked).map(label=>{const span=label.querySelector("span"),name=textNodeValue(span)||textNodeValue(label),small=span?.querySelector("small")?.textContent||"",sku=String(small.split("·")[0]||"").trim();return {name,sku:sku&&sku!=="—"?sku:null}}).filter(row=>row.name);

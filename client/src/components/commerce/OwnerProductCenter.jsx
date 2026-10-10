@@ -107,7 +107,8 @@ export default function OwnerProductCenter({
   const [promotionSearchBusy, setPromotionSearchBusy] = useState(false);
   const [promotionSelectionOpen, setPromotionSelectionOpen] = useState(false);
   const [promotionSelectionDetails, setPromotionSelectionDetails] = useState({});
-  const [bulkProducts, setBulkProducts] = useState([]);
+  const [bulkSelected, setBulkSelected] = useState({});
+  const bulkProducts = Object.keys(bulkSelected);
   const [bulkQuery, setBulkQuery] = useState("");
   const [bulkResults, setBulkResults] = useState([]);
   const [bulkCategory, setBulkCategory] = useState("");
@@ -891,7 +892,8 @@ export default function OwnerProductCenter({
       {error && <div className="op-alert error">{error}</div>}
       {message && <div className="op-alert success">{message}</div>}
       {tab === "bulk" && (
-        <form className="op-box op-form bulk-price-workflow bulk-price-scroll-region" onSubmit={saveBulkPrices}>
+        <form className="op-box op-form bulk-price-workflow bulk-price-scroll-region" onSubmit={saveBulkPrices} onReset={() => { setBulkSelected({}); setBulkStores([]); setBulkMode("SET"); }}>
+          <input type="hidden" name="bulkSelection" value={JSON.stringify({productRefs: Object.values(bulkSelected).map(({name, sku}) => ({name, sku: sku || null})), storeNames: activeStores.filter(store => bulkStores.includes(store.id)).map(store => store.name)})} readOnly />
           <h3>Μαζική αλλαγή τιμών με επιλογή προϊόντων</h3>
           <p>
             Επίλεξε συγκεκριμένα προϊόντα και καταστήματα. Κάθε αλλαγή
@@ -910,13 +912,15 @@ export default function OwnerProductCenter({
                   <input
                     type="checkbox"
                     checked={bulkProducts.includes(product.id)}
-                    onChange={(e) =>
-                      setBulkProducts((current) =>
-                        e.target.checked
-                          ? [...current, product.id]
-                          : current.filter((id) => id !== product.id),
-                      )
-                    }
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setBulkSelected((current) => {
+                        const next = {...current};
+                        if (checked) next[product.id] = {id: product.id, name: product.name, sku: product.sku};
+                        else delete next[product.id];
+                        return next;
+                      });
+                    }}
                   />
                   <span>
                     {product.name}
@@ -926,6 +930,10 @@ export default function OwnerProductCenter({
               ))}
               {!visibleBulkResults.length&&!bulkSearchBusy&&<div className="bulk-search-hint">Αναζήτησε προϊόν για να εμφανιστούν μόνο τα σχετικά αποτελέσματα.</div>}
             </div>
+            {bulkProducts.length > 0 && <div className="bulk-selected-products">
+              <strong>Επιλεγμένα προϊόντα ({bulkProducts.length})</strong>
+              {Object.values(bulkSelected).map(product => <button type="button" key={product.id} onClick={() => setBulkSelected(current => { const next = {...current}; delete next[product.id]; return next; })}>Αφαίρεση: {product.name}</button>)}
+            </div>}
           </fieldset>
           <fieldset>
             <legend>2. Επιλογή καταστημάτων</legend>
