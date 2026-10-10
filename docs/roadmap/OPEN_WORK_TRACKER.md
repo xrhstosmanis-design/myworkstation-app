@@ -139,6 +139,10 @@ Agreed desktopLAB48 COMPLETE: one correct named barcodeoffer, unknownbarcode rej
 
 ## 10/10/2026 15:25 Athens — Νο33 δικές του / όλες: cross-actor περιορισμένο LIVE PASS
 
+### CI correction — prepared-query cache after widening
+
+PR2120 initialheade92706f2/fullCI38059252939 FAIL: native PostgreSQL test caught cached-plan result-type mismatch when a product reader prepared before widening was reused afterwards. No merge/deploy/business mutation. Bootstrap now disconnects its Prisma pool after successful widening, before HTTP startup; the same actual native reader must reconnect and preserve controls. This does not claim control over a separate old deployment process. All widening runs through guarded deployment only, before LAB/original upload. FullCI rerun required; overall OPEN/AWAITING LAB.
+
 ## 10/10/2026 — DAILY BITE precision/import source ready / AWAITING CI and LAB
 
 Owner `codex/daily-bite-price-precision-20261010`, handoff PR2115/headbaed33774b7bb446692193000311e2804b64278e/fullCI38058787868SUCCESS/merged6f97ac4081156d30af743d0767327995c10e5cd6. Incorporates the unreleased source-profile implementation from draft2096, preserving legacy Diadochou behavior. New bounded deployment bootstrap widens only exact NUMERIC(14,4) purchase-cost storage to NUMERIC(16,6), preserving ten integer digits and every old value, with bounded lock/statement timeouts; compatible wider storage is never narrowed and unexpected shapes fail closed. No production schema command executed from Work. SalePrice, StoreProduct prices and stock schema unchanged.
@@ -2346,7 +2350,7 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct17:02Athens; CHECKPOINTS/CHANGES/2026-10-10-n51-owner-page-acceptance.md; greenclaimPR/main beforechanges.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** No new51PASS; nextfreshreadonlylanding/controlinspection. Otherassignedscopes/priorPASSprotected.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Observed desktop hierarchy FAIL (tools beforecash, paymentsy2618); source primary shifts/payments and collapsed secondary controls AWAITING LIVE. Focused mounted/scoped regressions41PASS. ClaimPR2113/CI38058619671SUCCESS/merge1acb954f; checkpointupdated17:16. Otherassignedscopes/priorPASSprotected.
 
 ### DOC-NUM-01 — Κεντρική αριθμημένη λίστα και κανόνας PASS
 

@@ -124,6 +124,10 @@ Observed server revision remains `6b08e72a9c14f973a62cc1e3a43f8600aef9fef4`. No 
 
 ## 10/10/2026 15:25 Athens — Νο33 δικές του / όλες: cross-actor περιορισμένο LIVE PASS
 
+### CI correction — prepared-query cache after widening
+
+PR2120 initialheade92706f2/fullCI38059252939 FAIL: native PostgreSQL test caught cached-plan result-type mismatch when a product reader prepared before widening was reused afterwards. No merge/deploy/business mutation. Bootstrap now disconnects its Prisma pool after successful widening, before HTTP startup; the same actual native reader must reconnect and preserve controls. This does not claim control over a separate old deployment process. All widening runs through guarded deployment only, before LAB/original upload. FullCI rerun required; overall OPEN/AWAITING LAB.
+
 ## 10/10/2026 — DAILY BITE precision/import source ready / AWAITING CI and LAB
 
 Owner `codex/daily-bite-price-precision-20261010`, handoff PR2115/headbaed33774b7bb446692193000311e2804b64278e/fullCI38058787868SUCCESS/merged6f97ac4081156d30af743d0767327995c10e5cd6. Incorporates the unreleased source-profile implementation from draft2096, preserving legacy Diadochou behavior. New bounded deployment bootstrap widens only exact NUMERIC(14,4) purchase-cost storage to NUMERIC(16,6), preserving ten integer digits and every old value, with bounded lock/statement timeouts; compatible wider storage is never narrowed and unexpected shapes fail closed. No production schema command executed from Work. SalePrice, StoreProduct prices and stock schema unchanged.

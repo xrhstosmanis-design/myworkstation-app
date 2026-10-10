@@ -26,6 +26,9 @@ export async function ensureProductCostPrecision(db){
     await tx.$executeRawUnsafe('ALTER TABLE "Product" ALTER COLUMN "costPrice" TYPE NUMERIC(16,6)');
     await assertSourceCostStorage(tx);
   },{maxWait:10000,timeout:45000});
+  // Numeric typmod changes invalidate prepared result plans. This bootstrap
+  // runs before HTTP serving; reopen its pool before any product reader runs.
+  await db.$disconnect();
 }
 
 // Exact decimal digit checks: no tolerance, rounding or mutation of the value.
