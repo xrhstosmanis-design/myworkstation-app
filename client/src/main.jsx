@@ -1,5 +1,6 @@
 
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
+import {createBackofficeSessionBoundary,readBackofficeContext,watchBackofficeContext} from "./utils/backofficeSessionBoundary.mjs";
 import {n40ReadHeaders,n40PublishRead} from "../../shared/n40-read-trace.mjs";
 import {createRoot} from "react-dom/client";
 import {Users,CalendarDays,Building2,LayoutDashboard,LogOut,MessageCircle,Plus,Settings2,Edit3,Power,Palmtree,Printer,Send,UserRoundCheck} from "lucide-react";
@@ -14,17 +15,26 @@ const api=async(path,options={})=>{
   const token=localStorage.getItem("token");
   const r=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{}),...(trace?.headers||{})}});
   if(trace)n40PublishRead(path,scope,trace.traceId,r.status);
-  const data=await r.json(); if(!r.ok)throw new Error(data.error||"Σφάλμα"); return data;
+  const data=await r.json(); if(!r.ok)throw Object.assign(new Error(data.error||"Σφάλμα"),{status:r.status}); return data;
 };
 
 function Login({onLogin}){
  const [email,setEmail]=useState("admin@myworkstationapp.gr"),[password,setPassword]=useState("ChangeMe123!"),[error,setError]=useState("");
- const submit=async e=>{e.preventDefault();try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({email,password})});localStorage.setItem("token",d.token);localStorage.setItem("user",JSON.stringify(d.user));onLogin(d.user)}catch(x){setError(x.message)}};
+ const submit=async e=>{e.preventDefault();try{const before=readBackofficeContext(localStorage).key;const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({email,password})});if(readBackofficeContext(localStorage).key!==before)throw new Error("Η σύνδεση άλλαξε όσο περίμενες. Δοκίμασε ξανά με τον λογαριασμό που θέλεις.");localStorage.removeItem("supportContext");sessionStorage.removeItem("platformToken");localStorage.setItem("token",d.token);localStorage.setItem("user",JSON.stringify(d.user));onLogin(d.user)}catch(x){setError(x.message)}};
  return <div className="login-shell"><form className="login-card" onSubmit={submit}><div className="mark">MW</div><h1>MyWorkStation</h1><p>Διαχείριση προσωπικού και βαρδιών</p><label>Email<input value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Κωδικός<input type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<div className="error">{error}</div>}<button>Σύνδεση</button></form></div>
 }
 
 function App(){
  const [user,setUser]=useState(()=>JSON.parse(localStorage.getItem("user")||"null"));
+ const [sessionProblem,setSessionProblem]=useState("");
+ const boundaryRef=useRef(null),mountedRef=useRef(true);
+ const boundary=useMemo(()=>{
+   const next=createBackofficeSessionBoundary({readContext:()=>readBackofficeContext(localStorage),request:api,isCurrent:()=>boundaryRef.current===next,onInvalidated:reason=>{if(mountedRef.current)setSessionProblem(reason)}});
+   return next;
+ },[user]);
+ boundaryRef.current=boundary;
+ const scopedApi=boundary.request;
+ useEffect(()=>{mountedRef.current=true;const stop=user?watchBackofficeContext(boundary,window,document):()=>{};return ()=>{mountedRef.current=false;stop()}},[boundary,user]);
  const params=new URLSearchParams(window.location.search),supportPage=params.get("supportPage"),supportStore=params.get("supportStore");
  const normalizedInitialPage=["employees","schedule","leaves"].includes(supportPage)?"workforce":(supportPage||"dashboard");
  const [ownerCompanies,setOwnerCompanies]=useState([]),[page,setPage]=useState(normalizedInitialPage),[stats,setStats]=useState(null),[employees,setEmployees]=useState([]),[stores,setStores]=useState([]),[activeModules,setActiveModules]=useState([]),[schedule,setSchedule]=useState(null),[warnings,setWarnings]=useState([]),[metrics,setMetrics]=useState(null),[leaves,setLeaves]=useState([]),[selectedStore,setSelectedStore]=useState(null),[chatStore,setChatStore]=useState(null),[loadError,setLoadError]=useState("");
@@ -34,25 +44,27 @@ function App(){
  const companyName=user?.company?.name||supportContext?.companyName||"MyWorkStation";
  const returnToPlatform=async()=>{
    const platformToken=sessionStorage.getItem("platformToken");
-   try{await api("/api/platform/support-access/exit",{method:"POST",body:"{}"})}catch(error){console.warn("Support access exit audit failed",error)}
+   try{await scopedApi("/api/platform/support-access/exit",{method:"POST",body:"{}"})}catch(error){console.warn("Support access exit audit failed",error)}
+   if(!boundary.check())return;
    if(platformToken)localStorage.setItem("token",platformToken);else localStorage.removeItem("token");
    sessionStorage.removeItem("platformToken");localStorage.removeItem("supportContext");localStorage.removeItem("user");
    window.location.href="/platform-admin";
  };
- const selectOwnerStore=async(companyId,storeId)=>{try{setLoadError("");if(companyId===user.company?.id){const target=stores.find(row=>row.id===storeId);setSelectedStore(target||null);setPage("stores");return}const result=await api("/api/auth/owner-companies/select",{method:"POST",body:JSON.stringify({companyId})});localStorage.setItem("token",result.token);localStorage.setItem("user",JSON.stringify(result.user));sessionStorage.setItem("ownerSelectedStoreId",storeId);window.location.assign("/")}catch(error){setLoadError(error.message||"Δεν ήταν δυνατή η επιλογή καταστήματος.")}};
- const load=async()=>{setLoadError("");const [st,emps,strs,lvs,license]=await Promise.all([api("/api/dashboard"),api("/api/employees"),api("/api/stores"),api("/api/leaves"),api("/api/license/current")]);setStats(st);setEmployees(emps);setStores(strs);setLeaves(lvs);setActiveModules(license.activeModules||[]);if(user?.role==="OWNER"&&!supportContext){const available=await api("/api/auth/owner-companies");setOwnerCompanies(available.companies||[])}const pendingStoreId=sessionStorage.getItem("ownerSelectedStoreId");if(pendingStoreId){sessionStorage.removeItem("ownerSelectedStoreId");const pending=strs.find(row=>row.id===pendingStoreId);if(pending){setSelectedStore(pending);setPage("stores")}}const target=strs.find(row=>row.id===supportStore);if(target&&supportPage==="stores")setSelectedStore(target);const scheduleStore=target||strs[0];if(scheduleStore){const sc=await api(`/api/schedules/latest?storeId=${scheduleStore.id}`);setSchedule(sc)}};
+ const selectOwnerStore=async(companyId,storeId)=>{try{setLoadError("");if(!boundary.check())return;if(companyId===user.company?.id){const target=stores.find(row=>row.id===storeId);setSelectedStore(target||null);setPage("stores");return}const result=await scopedApi("/api/auth/owner-companies/select",{method:"POST",body:JSON.stringify({companyId})});if(!boundary.check())return;localStorage.setItem("token",result.token);localStorage.setItem("user",JSON.stringify(result.user));sessionStorage.setItem("ownerSelectedStoreId",storeId);window.location.assign("/")}catch(error){setLoadError(error.message||"Δεν ήταν δυνατή η επιλογή καταστήματος.")}};
+ const load=async()=>{setLoadError("");const [st,emps,strs,lvs,license]=await Promise.all([scopedApi("/api/dashboard"),scopedApi("/api/employees"),scopedApi("/api/stores"),scopedApi("/api/leaves"),scopedApi("/api/license/current")]);if(!boundary.check())return;setStats(st);setEmployees(emps);setStores(strs);setLeaves(lvs);setActiveModules(license.activeModules||[]);if(user?.role==="OWNER"&&!supportContext){const available=await scopedApi("/api/auth/owner-companies");setOwnerCompanies(available.companies||[])}const pendingStoreId=sessionStorage.getItem("ownerSelectedStoreId");if(pendingStoreId){sessionStorage.removeItem("ownerSelectedStoreId");const pending=strs.find(row=>row.id===pendingStoreId);if(pending){setSelectedStore(pending);setPage("stores")}}const target=strs.find(row=>row.id===supportStore);if(target&&supportPage==="stores")setSelectedStore(target);const scheduleStore=target||strs[0];if(scheduleStore){const sc=await scopedApi(`/api/schedules/latest?storeId=${scheduleStore.id}`);setSchedule(sc)}};
  useEffect(()=>{if(user)load().catch(error=>setLoadError(error.message||"Η φόρτωση απέτυχε."))},[user]);
- const logout=()=>{localStorage.clear();setUser(null)};
- if(!user)return <Login onLogin={setUser}/>;
+ const logout=()=>{localStorage.clear();setSessionProblem("");setUser(null)};
+ if(!user)return <Login onLogin={next=>{setSessionProblem("");setUser(next)}}/>;
+ if(sessionProblem)return <div className="login-shell"><section className="login-card" role="alert"><h1>Η προβολή Backoffice διακόπηκε</h1><p>{sessionProblem==="unauthorized"?"Η συνεδρία δεν είναι πλέον ενεργή.":"Η σύνδεση άλλαξε. Τα δεδομένα της προηγούμενης προβολής αποσύρθηκαν."}</p><p>Οι αυτόματες ανανεώσεις αυτής της προβολής σταμάτησαν. Άνοιξε ξανά το Backoffice ή συνδέσου με τον λογαριασμό που θέλεις.</p><button type="button" onClick={()=>window.location.assign("/")}>Άνοιγμα Backoffice</button><button type="button" onClick={()=>{setSessionProblem("");setUser(null)}}>Νέα σύνδεση</button></section></div>;
  return <div className="app"><aside><div className="brand"><div className="mark">MW</div><div><b>MyWorkStation</b><small>{companyName}</small></div></div>
  <nav><Nav active={page==="dashboard"} onClick={()=>setPage("dashboard")} icon={<LayoutDashboard/>}>Αρχική</Nav><Nav active={page==="workforce"} onClick={()=>setPage("workforce")} icon={<Users/>}>Προσωπικό & Πρόγραμμα</Nav><Nav active={page==="stores"} onClick={()=>{setSelectedStore(null);setPage("stores")}} icon={<Building2/>}>Καταστήματα</Nav>{activeModules.includes("STORE_CHAT")&&<Nav active={page==="chat"} onClick={()=>setPage("chat")} icon={<MessageCircle/>}>Chat</Nav>}</nav>
  {supportContext&&<button className="logout" onClick={returnToPlatform}><LogOut/>Επιστροφή στο Super Admin</button>}{!supportContext&&<button className="logout" onClick={logout}><LogOut/>Έξοδος</button>}</aside>
  <main><header><div><h1>{({dashboard:"Αρχική",workforce:"Προσωπικό & Πρόγραμμα",stores:"Καταστήματα",chat:"Chat καταστημάτων"})[page]}</h1><p>{supportContext?`ΠΡΟΣΒΑΣΗ SUPER ADMIN · ${supportContext.companyName}${supportContext.storeName?` · ${supportContext.storeName}`:""}`:`Καλώς ήρθες, ${user.fullName}`}</p></div></header>{loadError&&<div role="alert" className="notice">Η φόρτωση διακόπηκε: {loadError} <button type="button" onClick={()=>load().catch(error=>setLoadError(error.message||"Η φόρτωση απέτυχε."))}>Δοκίμασε ξανά</button></div>}
  {page==="dashboard"&&<>{user?.role==="OWNER"&&!supportContext&&<section className="panel"><h2>Οι επιχειρήσεις και τα καταστήματά μου</h2><p>Κάθε ΑΦΜ έχει δικά του είδη, προσωπικό, ταμεία και συσκευές.</p><div className="store-grid">{ownerCompanies.map(company=><article className="store-card" key={company.id}><Building2/><h3>{company.name}</h3><p>ΑΦΜ {company.taxId||"Δεν έχει καταχωριστεί"}</p>{(company.stores||[]).map(store=><button className="store-open" key={store.id} onClick={()=>selectOwnerStore(company.id,store.id)}>{store.name} · Άνοιγμα</button>)}</article>)}</div></section>}<div className="cards"><Card t="Καταστήματα" v={stats?.stores||0}/><Card t="Ενεργοί εργαζόμενοι" v={stats?.employees||0}/><Card t="Έκτακτοι" v={stats?.temporary||0}/><Card t="Ακάλυπτες βάρδιες" v={stats?.uncovered||0}/></div><section className="panel"><h2>MyWorkStation v0.6</h2><p>Smart Shift Engine 2.0 με κανόνες ανάπαυσης, όρια ωρών και δείκτη ποιότητας.</p><div className="notice">Η μηχανή εξηγεί τις αναθέσεις, αποφεύγει πρωινή μετά από νύχτα και περιορίζει τη χρήση έκτακτων.</div></section></>}
- {page==="workforce"&&<OwnerWorkforceHub key={`${user.companyId||user.company?.id}:${workforceStoreId}`} company={{id:user.companyId||user.company?.id,name:companyName}} stores={stores} initialStoreId={workforceStoreId} request={api}/>}
- {page==="stores"&&(selectedStore?<StoreCloudPage api={api} store={selectedStore} onWorkforce={()=>openWorkforce(selectedStore)} onBack={()=>setSelectedStore(null)}/>:<Stores rows={stores} onOpen={setSelectedStore}/>)}
+ {page==="workforce"&&<OwnerWorkforceHub key={`${user.companyId||user.company?.id}:${workforceStoreId}`} company={{id:user.companyId||user.company?.id,name:companyName}} stores={stores} initialStoreId={workforceStoreId} request={scopedApi}/>}
+ {page==="stores"&&(selectedStore?<StoreCloudPage api={scopedApi} store={selectedStore} onWorkforce={()=>openWorkforce(selectedStore)} onBack={()=>setSelectedStore(null)}/>:<Stores rows={stores} onOpen={setSelectedStore}/>)}
  {page==="chat"&&activeModules.includes("STORE_CHAT")&&<ChatStores rows={stores} onOpen={setChatStore}/>}
- {chatStore&&<StoreChatPanel api={api} store={chatStore} onClose={()=>setChatStore(null)}/>}
+ {chatStore&&<StoreChatPanel api={scopedApi} store={chatStore} onClose={()=>setChatStore(null)}/>}
  </main></div>
 }
 const Nav=({active,onClick,icon,children})=><button className={active?"active":""} onClick={onClick}>{icon}{children}</button>;
