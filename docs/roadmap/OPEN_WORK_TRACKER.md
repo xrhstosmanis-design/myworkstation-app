@@ -1856,13 +1856,13 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### AI-CC-LIMITS — AI Command Center όρια PASS
 
-**Κατάσταση:** ΑΡΧΙΚΟ ΠΛΑΝΟ CLOSED / NOT TESTED
+**Κατάσταση:** OPEN / ASSIGNED / NAVIGATION NOT TESTED; visual phases 1–14 remain CLOSED
 
 **Υπόλοιπο / όρια PASS:** Τα κλικ μετάβασης Full Digital Twin δεν δοκιμάστηκαν. Δεν ανοίγουν ξανά οι οπτικές αποδοχές 1–14.
 
-**Υπεύθυνη σελίδα / branch:** Προηγούμενος owner — νέα επέκταση μόνο με ανάθεση
+**Υπεύθυνη σελίδα / branch:** `codex/n40-full-twin-navigation-audit-20261010` — explicit owner assignment for printed40, 10/10/2026.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-10T10:51:38+03:00 — N40-NAV-CLAIM-20261010; Full Digital Twin six-tile navigation only: selected-company/store handoff, safe invalidation and return to the same Twin. `CHECKPOINTS/CHANGES/2026-10-10-n40-full-twin-navigation-audit.md`; PR #2040. No takeover of visual phases1–14, AI-CREDITS-01, inventory/workforce/video/invoice business flows or other owners.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
@@ -2067,3 +2067,8 @@ Current owner remains codex/ai-credit-alerts-20261009. Production push CI/guarde
 
 Single next action: verify guarded release of source42bee637, then deployment administrator securely sets same-organization OPENAI_BILLING_ADMIN_KEY and Super Admin confirms current prepaid balance in AI Command Center. Do not paste secrets into chat. Perform read-only LIVE alert/settings acceptance after configuration; maintain same owner until explicit handoff. Setup: docs/ops/ai-credit-alerts-20261009.md.
 
+
+
+## 2026-10-10T10:51:38+03:00 — N40-NAV-CLAIM-20261010 / AI-CC-LIMITS / ASSIGNED / AWAITING IMPLEMENTATION AND LAB
+
+Same conversation that created audit PR2040, now explicitly instructed «ξεκινα» to implement its findings. Owner `codex/n40-full-twin-navigation-audit-20261010`. Bounded six-tile navigation, selected-store handoff/return/invalidation only. Source inspection found generic POS/EFTPOS/Cash callbacks and stale-selection fallback; this is not proof of a server-side data leak. Preserve visual phases1–14 and every other assigned module. Source fix and all authenticated LAB navigation tests NOT TESTED. No sales, payments, stock, staff, fiscal, camera or billing mutation. Claim publication requires this PR final green CI and main merge before application changes. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-full-twin-navigation-audit.md`.

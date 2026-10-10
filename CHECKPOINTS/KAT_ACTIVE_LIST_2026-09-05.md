@@ -4720,4 +4720,6 @@ PR #1827 remains merged with green CI and is included in c880. PR #1831 now carr
 
 Baseline before new work: existing 01/10/2026 read-only USER/LAB PASS at revision `35a52c4ef056453955b3764aefc8cf16e978f750` remains the only tested result. New Owner-live and already-disabled-provider checks are NOT TESTED. No changes to prices/VAT/provider configuration, proposal/approval, orders, payment or stock. Existing task #14 UI clipping belongs to TODAY-04 owner and is untouched.
 
+## 2026-10-10T10:51:38+03:00 — N40-NAV-CLAIM-20261010 / AI-CC-LIMITS / ASSIGNED / AWAITING IMPLEMENTATION AND LAB
 
+Same conversation that created audit PR2040, now explicitly instructed «ξεκινα» to implement its findings. Owner `codex/n40-full-twin-navigation-audit-20261010`. Bounded six-tile navigation, selected-store handoff/return/invalidation only. Source inspection found generic POS/EFTPOS/Cash callbacks and stale-selection fallback; this is not proof of a server-side data leak. Preserve visual phases1–14 and every other assigned module. Source fix and all authenticated LAB navigation tests NOT TESTED. No sales, payments, stock, staff, fiscal, camera or billing mutation. Claim publication requires this PR final green CI and main merge before application changes. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-full-twin-navigation-audit.md`.

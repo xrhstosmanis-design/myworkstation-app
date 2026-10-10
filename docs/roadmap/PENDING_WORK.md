@@ -1580,3 +1580,6 @@ Bounded mitigation: standalone MIXED checks configured writer before checkout tr
 ### 04/10/2026 — TODAY-02 UI continuation
 PR #1704: large readable VAT-department product editor aligned with Central Product Management; Category uses real catalog categories and VAT uses active tenant VAT departments. Supplier-preservation logic remains intact. Awaiting green CI, LIVE publication, LAB save/readback and USER visual acceptance; do not mark PASS yet.
 
+## 2026-10-10T10:51:38+03:00 — N40-NAV-CLAIM-20261010 / AI-CC-LIMITS / ASSIGNED / AWAITING IMPLEMENTATION AND LAB
+
+Same conversation that created audit PR2040, now explicitly instructed «ξεκινα» to implement its findings. Owner `codex/n40-full-twin-navigation-audit-20261010`. Bounded six-tile navigation, selected-store handoff/return/invalidation only. Source inspection found generic POS/EFTPOS/Cash callbacks and stale-selection fallback; this is not proof of a server-side data leak. Preserve visual phases1–14 and every other assigned module. Source fix and all authenticated LAB navigation tests NOT TESTED. No sales, payments, stock, staff, fiscal, camera or billing mutation. Claim publication requires this PR final green CI and main merge before application changes. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-full-twin-navigation-audit.md`.
