@@ -387,8 +387,8 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 ## 50 — Εμπορικά modules — hierarchy και εξουσιοδοτημένες λειτουργίες
 
 - **Tracker ID:** `TODAY-08`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** CODE CI PASS / OPEN
-- **Υπόλοιπο / όριο:** PR1775 hierarchy/permission acceptance OPEN με προηγούμενο owner. Ανεξάρτητο OWNER-COMMERCE-PALETTE-01 ASSIGNED codex/owner-commerce-palette-20261008: navy/teal/white,18px τίτλοι,12px badges· local normal/max10cases + scroll regressions PASS· PR1921/full CI37824415478 PASS,10abeaa2 LIVE/exact health/main37824771286/guard37825083488 SUCCESS· AWAITING USER visual acceptance. OWNER-ANALYTICS-SCROLL-01: four-line CSS correction; local normal/max6cases + prior scroll regression PASS; PR1927/fullCI37829183225/main37829516669/guard37829815837 SUCCESS;45366912 LIVE/exact health19:10:44Z; USER «einai ok» 08/10 22:30 Athens closes bounded maximized Analytics scroll (CLOSED / USER VISUAL PASS), physical client revision unknown; no Gate7 takeover.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** PARTIAL LIVE PASS / OPEN
+- **Υπόλοιπο / όριο:** 10/10 desktop SUPER_ADMIN LAB:22προορισμοί/11read-onlyκάρτες, normal/max hierarchy και άμεση Τιμοκατάλογος→Χειριστές PASS. PR2119/fullCI2125pass/mainretrySUCCESS/guard38059729109/exacthealthyde550398. Υπόλοιπο LIVE: κανονικόςOwner, περιορισμένοςρόλος, ανενεργήάδεια/ξένοκατάστημα· υπάρχουσαprivilegedσυνεδρίαδεντααποδεικνύει. Owner codex/n50-commercial-acceptance-20261010 retained. Palette ανεξάρτητη AWAITING USER/codex/owner-commerce-palette-20261008· Analytics scroll USERPASS08/10 προστατεύεται. Checkpoint 2026-10-10-n50-commercial-acceptance.md.
 
 ## 51 — Σελίδα ιδιοκτήτη — απλοποίηση και τελική αποδοχή
 
