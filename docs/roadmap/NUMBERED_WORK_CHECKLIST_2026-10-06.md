@@ -396,7 +396,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `TODAY-08`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** PARTIAL LIVE PASS / OPEN
-- **Υπόλοιπο / όριο:** 10/10 desktop SUPER_ADMIN LAB:22προορισμοί/11read-onlyκάρτες, normal/max hierarchy και άμεση Τιμοκατάλογος→Χειριστές PASS. PR2119/fullCI2125pass/mainretrySUCCESS/guard38059729109/exacthealthyde550398. Υπόλοιπο LIVE: κανονικόςOwner, περιορισμένοςρόλος, ανενεργήάδεια/ξένοκατάστημα· υπάρχουσαprivilegedσυνεδρίαδεντααποδεικνύει. Owner codex/n50-commercial-acceptance-20261010 retained. Palette ανεξάρτητη AWAITING USER/codex/owner-commerce-palette-20261008· Analytics scroll USERPASS08/10 προστατεύεται. Checkpoint 2026-10-10-n50-commercial-acceptance.md.
+- **Υπόλοιπο / όριο:** SUPER_ADMIN22προορισμοί/11read-onlyκάρτες, normal/max hierarchy και άμεση Τιμοκατάλογος→Χειριστές PASS. Νεότερο normalOWNER LAB: επιλογέας μόνοLAB, άμεση μετάβασηΧειριστών,11read-onlyκάρτες/7ενεργά/4κλειδωμένα και4native-disabledκουμπιά UI PASS· exacthealthy196dd62a/evidenceowner-modules.jpg. Υπόλοιπο: restricted-role και serverinactive-license/foreign-store denial, ευρύτεραOwnerfunctions/data NOTTESTED. Owner codex/n50-commercial-acceptance-20261010 retained. Palette USER/Analytics PASS/άλλοιowners προστατεύονται. Checkpoint2026-10-10-n50-commercial-acceptance.md/manualcommerce. Whole50 OPEN.
 
 ## 51 — Σελίδα ιδιοκτήτη — απλοποίηση και τελική αποδοχή
 
