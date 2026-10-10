@@ -1,3 +1,11 @@
+## 2026-10-10T12:46:52+03:00 — N45 / TODAY-03 scoped LIVE VISUAL PASS / AWAITING USER
+
+Owner codex/n45-product-center-visual-20261010 retained. Exact healthy production ee817cb1ea7e39ca7848a74f3f1255a50b1bb5cc, fresh reload; sourcePR2061/2064, finalfullCI38041725276 2059passed/0failed/0skipped, mainCI38041928209 SUCCESS, Render38042074799 SUCCESS. Actual cloud desktop1363×880, authenticated SuperAdmin, virtual MYWORKSTATION LAB cmtpopbgo000trhb5ng9ytiru, LAB EXCEL TEST2/SKULAB-EXCEL-20260909-02; no physical terminal/shift/quantity/payment action. Search/select only; no activation/save/discount/price/offer/import/stock/financial/fiscal/auth mutation.
+
+Scoped PASS: maximized shell880/content880 and Master731/content731, width1308/content1308, populated product/base-price/store-price/VAT/discount fields and both lower actions visible; activation76px, discount-save bottom804, history-read bottom847, activation-to-discount gap8px, no overlap or outer scrollbar. Normal shell827/content827, Master678/content690, gap8; real inner wheel reaches scrollTop12, final explanatory text bottom819 inside root834. Read-only history loaded3 existing rules/3 historical records; root content1061 and real inner scroll330 reaches last record bottom847 inside root860, outer overflowhidden. Five other tabs opened read-only (store prices/bulk/offers/Excel/Inventory), bulk0×0; existing scroll owners preserved. This is navigation reachability, not their functional acceptance. Fresh final Master reopened with no history expansion and same TEST2 for review.
+
+Evidence CHECKPOINTS/EVIDENCE/n45-product-center-20261010/master-final-maximized.jpg and master-final-normal.jpg; earlier clipping/overlap retained as history. Previous de7d/f535 FAIL resolved within this exact tested scope. Prior Master discounts/bulk/Excel/inventory and CLOSED44 PASS protected. Mobile/shorter geometry/physical terminals/independentOwner/full six-tab business flows and financial/stock deltas NOT TESTED. Manual updated in same record. Only remaining45 action: owner review actual final production image and explicit visual acceptance; assignment retained, no new transaction/repeated save or takeover of other owners. Browser kept at populated maximized Master for that review. Record PR/CI metadata authoritative on publication; source is deployed, documentation publication pending green merge.
+
 ## N39 draft mutation/finalization race — isolated FAIL reproduced; bounded correction AWAITING CI/LAB
 
 Same owner codex/n39-inventory-acceptance-20261010, base9505a0bb/PR2056 preserves every bounded LIVE PASS. Actual six handlers accepted stale DRAFT after FINALIZED (count/bulk/clear/import/addline/attachbarcode, 1–2 writes each) in controlled isolated reproduction. One common transactional parent DRAFT lock now precedes every mutation and is shared with finalization; no quantity/role/zone/company/schema/auth/finance/barcode-workflow change. Actual handler regressions19PASS/0FAIL with two nativePG checks locallySKIP; Node20 frontend build PASS; fullCI pending. New guarded native PostgreSQL actual-handler test covers both lock orders, six rejected late mutations, replay/version, recount and company/zone/owner denial with unchanged unrelated/control stock. CI is not LAB PASS; mandatory reason remains separate and full39 OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n39-draft-mutations.md. After full nativeCI/green merge/exact deploy, fresh identified LAB recount/finalized protection acceptance; no accepted posting repeated. Other owners33/44/40/TODAY-07 unchanged.
@@ -1999,15 +2007,15 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### TODAY-03 — Κεντρικά προϊόντα UI
 
-**Κατάσταση:** IN PROGRESS
+**Κατάσταση:** SCOPED LIVE VISUAL PASS / AWAITING USER
 
-**Υπόλοιπο / όρια PASS:** N45 LIVE FAIL: populated Master clips discount save/history at1363×936 on de7d5c2e. Bounded layout correction AWAITING LAB; final visual/no outer scroll OPEN.
+**Υπόλοιπο / όρια PASS:** Populated Master normal/maximize reachability, no overlap and maximized no outer scroll PASS at1363×880. Final owner visual acceptance only OPEN; mobile/physical/full other-tab business flows NOT TESTED.
 
 **Υπεύθυνη σελίδα / branch:** codex/n45-product-center-visual-20261010
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026 12:00:27Athens explicit transfer from prior TODAY03 owner, only visual/no-outer-scroll residual; checkpoint2026-10-10-n45-product-center-visual.md.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026 12:00:27Athens explicit transfer, only visual/no-outer-scroll residual; checkpoint2026-10-10-n45-product-center-visual.md; claimPR2058.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-10T12:46:52+03:00, scoped LIVE PASS exactee817cb1; PR2061/2064, fullCI38041725276 2059/2059/mainCI38041928209/Render38042074799 SUCCESS. Manual/normal+maximized images; final visual user response pending, same owner retained.
 
 ### TODAY-04 — Κεντρική Διαχείριση: πλήρης LIVE έλεγχος
 
