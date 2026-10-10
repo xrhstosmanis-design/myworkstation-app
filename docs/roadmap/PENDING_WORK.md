@@ -1,3 +1,9 @@
+## 10/10/2026 — VOICE-ASSISTANT-01 / ASSIGNED / implementation NOT TESTED
+
+Owner `codex/unified-voice-assistant-20261010`. Explicit owner request «Ναι θέλω για όλα φωνητικό βοηθό»: common Greek press-to-talk assistant in POS, Backoffice and central management; editable transcript, exact current-store/role/module scope, genuine canonical report data and visible ambiguity/date resolution. Initial voice input then dated product-sales report, followed by independently accepted stock/invoice/supplier/payment/expenses/cash/workforce/pending/navigation capabilities. Changes/messages/payments/finalization require preview and explicit existing-form confirmation; no voice-autonomous fiscal/financial write.
+
+New independent extension, not takeover of N40/AI-CC-LIMITS, AI-CREDITS-01, invoice, operator, catalog, DAILY BITE or other owners. Current source ask supports only SuperAdmin snapshot Q&A; arbitrary dated product sales and all-module execution do not exist by this observation. Source baseline689fe33b; real browser health55819e98/ok/version0.22.0+kat-test-pos. Prior phase1–14/manual/N40/other PASS preserved. All new voice/report/role/device behavior NOT TESTED; no business/LAB mutation. Read current AGENTS/registers/manual/phase3 checkpoints and scoped mainhistory. Publish claim greenCI/main before code. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`; next common opt-in speech input and regression tests. Assignment retained until completion/named handoff; full module rollout OPEN.
+
 ## 10 Oct 2026 — No40 / AI-CC-LIMITS — read-only authentication evidence; OPEN
 
 Same owner `codex/n40-full-twin-navigation-audit-20261010`. Prior visual phases 1–14, Stock USER evidence comment 6097485640 and five browser round trips recorded by PR #2092 are preserved without replay.

@@ -1,3 +1,9 @@
+## 10/10/2026 — VOICE-ASSISTANT-01 / ASSIGNED / implementation NOT TESTED
+
+Owner `codex/unified-voice-assistant-20261010`. Explicit owner request «Ναι θέλω για όλα φωνητικό βοηθό»: common Greek press-to-talk assistant in POS, Backoffice and central management; editable transcript, exact current-store/role/module scope, genuine canonical report data and visible ambiguity/date resolution. Initial voice input then dated product-sales report, followed by independently accepted stock/invoice/supplier/payment/expenses/cash/workforce/pending/navigation capabilities. Changes/messages/payments/finalization require preview and explicit existing-form confirmation; no voice-autonomous fiscal/financial write.
+
+New independent extension, not takeover of N40/AI-CC-LIMITS, AI-CREDITS-01, invoice, operator, catalog, DAILY BITE or other owners. Current source ask supports only SuperAdmin snapshot Q&A; arbitrary dated product sales and all-module execution do not exist by this observation. Source baseline689fe33b; real browser health55819e98/ok/version0.22.0+kat-test-pos. Prior phase1–14/manual/N40/other PASS preserved. All new voice/report/role/device behavior NOT TESTED; no business/LAB mutation. Read current AGENTS/registers/manual/phase3 checkpoints and scoped mainhistory. Publish claim greenCI/main before code. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`; next common opt-in speech input and regression tests. Assignment retained until completion/named handoff; full module rollout OPEN.
+
 ## 10 Oct 2026 — No40 / AI-CC-LIMITS — read-only authentication evidence; OPEN
 
 Same owner `codex/n40-full-twin-navigation-audit-20261010`. Prior visual phases 1–14, Stock USER evidence comment 6097485640 and five browser round trips recorded by PR #2092 are preserved without replay.
@@ -2326,3 +2332,16 @@ Five actual tile/normal-close round trips observed: POS -> Έλεγχοι & Αν
 Protected Stock USER-BROWSER VISUAL entry/return/selected-Twin sequence from PR2065 comment6097485640 retained, not repeated. Prior visual1–14 remain closed. This is bounded navigation/UI-context PASS, not whole No40 completion or internal domain calculation acceptance. Actual HTTP request capture unavailable in documented browser APIs; request isolation, network races, client SHA, Stock support-exit audit and unexecuted backend role/module/revocation scenarios remain NOT TESTED. Workforce employee editor exposes company store references while main context remains target; no editor action tested or scope leak inferred. Transient zero/loading counters after normal reopen resolved on read-only loading; not classified as business-data failures.
 
 Overall No40 OPEN / partial navigation verified. Single next action: obtain permitted request-level observation and read-only negative authorization coverage without business/permission mutations; preserve existing round trips and Stock evidence. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-browser-navigation-readonly.md`; manual super-admin/PASS updated only for observed usage. Same owner retained; other owners untouched.
+
+
+### VOICE-ASSISTANT-01 — Ενιαίος φωνητικός βοηθός POS / Backoffice / Super Admin
+
+**Κατάσταση:** OPEN / ASSIGNED / REQUIREMENTS RECORDED / implementation and LAB NOT TESTED
+
+**Υπόλοιπο / όρια PASS:** Κοινή φωνητική είσοδος ελληνικών, πραγματικές αναφορές πωλήσεων ανά είδος/ημερομηνία/κατάστημα και ανεξάρτητες επιτρεπόμενες read-only δυνατότητες όλων των ενοτήτων. Φωνή/AI δεν εκτελούν αυτόματα αλλαγή, πληρωμή, αποστολή ή οριστικοποίηση. Κάθε capability χρειάζεται canonical source, server permissions/modules, διευκρίνιση, ακύρωση stale context και πραγματικό LAB. Existing ask snapshot δεν θεωρείται πλήρης βοηθός.
+
+**Υπεύθυνη σελίδα / branch:** `codex/unified-voice-assistant-20261010`.
+
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026, explicit owner request «Ναι θέλω για όλα φωνητικό βοηθό». Independent new VOICE-ASSISTANT-01; no N40/AI-credit/business-module takeover. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`. Claim publication before source.
+
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** NOT TESTED; no new business/LAB action or manual PASS. Next: common opt-in editable speech input; full rollout remains OPEN.
