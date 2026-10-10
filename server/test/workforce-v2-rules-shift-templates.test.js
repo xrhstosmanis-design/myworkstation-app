@@ -96,7 +96,12 @@ test("Super Admin Workforce exposes a store selector and remounts store-scoped d
   assert.match(scheduler,/setTarget\(next\)/);
   assert.match(scheduler,/key=\{`\$\{selectedCompany\.id\}:\$\{selectedStore\.id\}`\}/);
   assert.match(scheduler,/companies=\[\]/);
-  assert.match(admin,/companies=\{data\?\.companies\|\|\[\]\}/);
+  // Central entry still receives every authorized company. Only a Twin-origin
+  // entry narrows the options to its exact pair (mounted regression tests cover both).
+  const schedulerMount=admin.split("\n").find(line=>line.includes("{workforceTarget&&<SuperAdminStaffScheduler"));
+  assert.ok(schedulerMount,"The existing Workforce shell must remain mounted");
+  assert.match(schedulerMount,/companies=\{scopeFor\("workforce"\)\?twinCompanies:data\?\.companies\|\|\[\]\}/);
+  assert.match(schedulerMount,/request=\{requestFor\("workforce"\)\}/);
 });
 
 test("new Workforce server modules pass Node syntax check",()=>{
