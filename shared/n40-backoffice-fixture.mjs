@@ -1,0 +1,1 @@
+export const N40_FIXTURE=Object.freeze({email:"n40.backoffice.20261010@myworkstation.invalid",fullName:"N40 Backoffice Εικονικός Έλεγχος 20261010",role:"EMPLOYEE",companyId:"cmtpopbgk000prhb5qc60zxus",storeId:"cmtpopbgo000trhb5ng9ytiru"});

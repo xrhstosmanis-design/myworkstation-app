@@ -24,6 +24,7 @@ import {buildRbsGuidedInstallationPackage} from "../services/rbs-guided-installa
 
 import {sendHikvisionPrecheck} from "../services/video-installation-package.js";
 import aiCreditRoutes from "./platform-ai-credits.js";
+import {createN40FixtureHandlers} from "../services/n40-backoffice-fixture.mjs";
 
 const router=Router();
 router.use(auth);
@@ -34,6 +35,9 @@ router.use((req,res,next)=>{
 });
 
 router.use("/ai-credits",aiCreditRoutes);
+const n40Fixture=createN40FixtureHandlers({prisma,hash:bcrypt.hash});
+router.get("/n40-backoffice-fixture",n40Fixture.read);
+router.post("/n40-backoffice-fixture",n40Fixture.create);
 
 router.get("/backup-monitoring",async(_req,res,next)=>{
   try{res.json(await backupMonitorSummary())}catch(error){next(error)}

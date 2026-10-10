@@ -4,6 +4,7 @@ import StoreOperatorApp from "./components/store/StoreOperatorWithOnlineOrders.j
 import PosInspectionApp from "./components/store/PosInspectionApp.jsx";
 import StoreChatNotificationPage from "./components/store/StoreChatNotificationPage.jsx";
 import PlatformAdminApp from "./components/platform/PlatformAdminApp.jsx";
+import N40ReadonlyAudit from "./components/platform/N40ReadonlyAudit.jsx";
 import CommercialLicenseCenter from "./components/platform/CommercialLicenseCenter.jsx";
 import MasterCatalogCenter from "./components/platform/MasterCatalogCenter.jsx";
 import PlatformPromotionCenter from "./components/platform/PlatformPromotionCenter.jsx";
@@ -72,6 +73,7 @@ import "./components/commerce/leaflet-import.css";
 import "./components/commerce/bulk-price-preview.css";
 
 const chatMatch=window.location.pathname.match(/^\/chat\/([^/]+)\/?$/);
+const n40AuditMatch=window.location.pathname.match(/^\/platform-admin\/n40-audit\/?$/);
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
 const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/?$/);
 const posMatch=window.location.pathname.match(/^\/pos\/([^/]+)\/?$/);
@@ -106,7 +108,7 @@ const storeApi=async(path,options={})=>{
 function RemoteAssistAcceptance({jobId}){const[code,setCode]=useState(""),[message,setMessage]=useState(""),[error,setError]=useState("");const accept=async e=>{e.preventDefault();setError("");const response=await fetch(`/api/platform/device-operations/remote/${encodeURIComponent(jobId)}/accept`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})});const data=await response.json();if(!response.ok)return setError(data.error||"Ο κωδικός δεν έγινε δεκτός.");setMessage(data.message)};return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",background:"#eef3f6",padding:24}}><form onSubmit={accept} style={{width:"min(480px,100%)",background:"white",padding:32,borderRadius:18,boxShadow:"0 20px 60px #1234",display:"grid",gap:16}}><h1>MyWorkStation REMOTE</h1><p>Γράψε τον εξαψήφιο κωδικό που σου έδωσε ο υπεύθυνος υποστήριξης. Η σύνδεση δεν ξεκινά χωρίς τη δική σου αποδοχή.</p><input value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" pattern="\d{6}" placeholder="000000" required style={{fontSize:32,textAlign:"center",letterSpacing:8,padding:12}}/><button style={{padding:14,fontWeight:800}}>Αποδοχή REMOTE</button>{error&&<b style={{color:"#b91c1c"}}>{error}</b>}{message&&<b style={{color:"#047857"}}>{message}</b>}<small>Η αποδοχή καταγράφεται. Δεν στέλνονται εντολές σε RBS, EFTPOS ή φορολογικό μηχανισμό.</small></form></main>}
 
 installPosCheckoutSafety();
-if(!chatMatch&&!posMatch&&!storeMatch&&!inspectionMatch&&!inventoryMatch&&!remoteAssistMatch)installBackofficeSessionRenewal();
+if(!n40AuditMatch&&!chatMatch&&!posMatch&&!storeMatch&&!inspectionMatch&&!inventoryMatch&&!remoteAssistMatch)installBackofficeSessionRenewal();
 installTouchKeyboard();
 installBackofficeColumnFilters();
 installBulkPricePreview();
@@ -134,7 +136,8 @@ installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafel
 const purchaseOrdersHostObserver=new MutationObserver(()=>{syncKioskReportStore();installReportsSafely();installPurchaseOrdersSafely();installSupplierControlSafely();installCustomerControlSafely();installPriceCatalogSafely();installPromotionStoreScopeSafely();installPromotionStoreGuardSafely();installLeafletImportSafely();installOperatorManagementSafely()});
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["data-report-store-id"]});
 
-if(chatMatch){document.title="MyWorkStation Chat";createRoot(document.getElementById("root")).render(<StoreChatNotificationPage storeId={decodeURIComponent(chatMatch[1])}/>)}
+if(n40AuditMatch){document.title="MyWorkStation No40 LAB audit";createRoot(document.getElementById("root")).render(<N40ReadonlyAudit/>)}
+else if(chatMatch){document.title="MyWorkStation Chat";createRoot(document.getElementById("root")).render(<StoreChatNotificationPage storeId={decodeURIComponent(chatMatch[1])}/>)}
 else if(inspectionMatch){document.title="MyWorkStation POS Inspection";createRoot(document.getElementById("root")).render(<PosInspectionApp storeId={decodeURIComponent(inspectionMatch[1])}/>)}
 else if(remoteAssistMatch){document.title="MyWorkStation REMOTE";createRoot(document.getElementById("root")).render(<RemoteAssistAcceptance jobId={decodeURIComponent(remoteAssistMatch[1])}/>)}
 else if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}
