@@ -1,3 +1,12 @@
+## 10 Oct 2026 - No40 authorized virtual single-store fixture; ASSIGNED / OPEN
+
+Owner unchanged `codex/n40-full-twin-navigation-audit-20261010`. User explicitly authorized creation of a new virtual restricted-access user and network checks at 16:27 Athens. Expanded scope only: new N40 fixture in MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ (`cmtpopbgo000trhb5ng9ytiru`), existing accounts/No33 rights untouched. No sales/payments/stock/scheduling/module/device changes. Prior visual1-14/Stock6097485640/PR2092/2097/2101 retained; No40 OPEN.
+
+Prepared unsaved new operator form: username `n40_audit_20261010`, name N40 Εικονικός Έλεγχος 20261010, role EMPLOYEE, active false, no PIN/email/phone. Baseline current operator list with active filter OFF: 3 existing operators (2 previously visible active); no N40 fixture. Create only this inert record after this claim is green and merged. Then disable POS and business permissions and prepare minimal Backoffice read access while credential remains inactive. Credential/PIN establishment requires secure user handoff; actual access grants require browser action-time confirmation. Do not expose credentials or reuse existing operator identities. No before financial/stock delta claimed: account-only change, no business action; audit count not independently captured yet.
+
+Source inspected at `896b955d6896c5eccfc91a7bfb786c511201e0e0`: normal User is company-bound; store operator credentials/profile are store-bound. An operator fixture does not equal a company-owner account. Network approval does not add a tool capability: documented browser API exposes console logs but no network capture; no permitted authenticated request trace is available yet. No token extraction, injected fetch or network interception outside browser APIs. Restricted fixture and all remaining server tenant/role/race/revocation tests NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-restricted-fixture.md`.
+
+
 ## 10/10/2026 — N49 / TODAY-07 — scoped mobile web LAB PASS / COMPLETED
 
 Owner `codex/n49-unknown-barcode-acceptance-20261010` completed the agreed numbered49 residual; final documentation branch `codex/n49-final-pass-20261010`. Explicit mobile new-entry requirement15:40:56 included. SourcePR2098/finalhead557f1510/fullCI38054236104 SUCCESS2112PASS0FAIL0SKIP (actual React/mobile and native PostgreSQL test executed); mainCI38054484680 and guardedRender38054697840 SUCCESS, independent exacthealthy689fe33b197c33009b3f4a1155e78cffd573973e and realreload precede LAB.
