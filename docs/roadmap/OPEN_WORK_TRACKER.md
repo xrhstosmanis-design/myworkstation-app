@@ -1,3 +1,6 @@
+## 10/10/2026 20:25 Athens — DAILY BITE coffee / KAT behavior reuse — ASSIGNED
+Owner `codex/daily-bite-coffee-kat-behavior-20261010`, issue #2054. Begins after merged PR #2149. Scope: DAILY BITE coffee product UI/modifier behavior aligned with KAT while staying company/store scoped to DAILY BITE; MyWorkStation styling; KAT label may replace a DAILY label only as a name after exact mapping. KAT IDs, ingredient IDs, recipe stock writes, catalog fields and all non-name economics are protected. Initial source change must be read-only/preview-first and fail closed on missing or ambiguous matches. Existing DAILY import PASS (9 departments/8,753 products) preserved. LAB/LIVE NOT TESTED.
+
 ## 10/10/2026 20:04 Athens - VOICE-ASSISTANT-01 / tracker32: LAB company module activation LIVE PASS; normal Owner sign-in OPEN
 
 Same owner `codex/unified-voice-assistant-20261010` retained. User action-time approval «εγκρινω» at19:59:25 Athens covers only AI_OWNER_ASSISTANT in MYWORKSTATION LAB and its two current virtual stores, no pricing/plan/other-company change. Existing pre-action claim/handoff main204f9cec/PR2143/docs CI38068245468+38068294528 SUCCESS. No source or deploy change; fresh actual browser health17:00:55.359Z ok/version0.22.0+kat-test-pos/exact released2e1f4afe7d7eca6803f39c81d95ab19a70cd01f7 (full source/main2188/0/0, PR2139+2141, guardedRender38067034314).
