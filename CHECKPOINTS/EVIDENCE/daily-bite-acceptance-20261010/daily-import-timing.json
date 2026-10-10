@@ -1,0 +1,12 @@
+{
+  "status": "fulfilled",
+  "value": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"earliest\":\"2026-10-10T15:16:46.106Z\",\"latest\":\"2026-10-10T15:16:46.106Z\"}]"
+      }
+    ],
+    "isError": false
+  }
+}

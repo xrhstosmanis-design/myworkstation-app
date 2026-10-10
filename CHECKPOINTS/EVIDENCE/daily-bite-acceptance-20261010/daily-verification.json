@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "[{\"barcode_digest\":\"c0dd05b17ec69cf78b7020726a27e5a3\",\"barcodes\":9306,\"leading_zero_barcodes\":164,\"missing_departments\":0,\"nonzero_stock\":0,\"observed\":\"2026-10-10T15:25:40.830556Z\",\"product_digest\":\"ef47586e7ad50b0ca269a9062f4c7c8c\",\"products\":8753}]"
+    }
+  ],
+  "isError": false
+}
