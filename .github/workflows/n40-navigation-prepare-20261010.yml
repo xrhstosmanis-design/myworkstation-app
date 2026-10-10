@@ -29,7 +29,15 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git fetch origin main
           git merge --no-edit origin/main
-          python3 CHECKPOINTS/tmp/n40-apply-navigation.py
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('CHECKPOINTS/tmp/n40-apply-navigation.py')
+          source=path.read_text()
+          anchor="end=text.find('\\n\\n',at);assert end>=0"
+          assert source.count(anchor)==1
+          source=source.replace(anchor,"end=text.find('\\n\\n',at);end=len(text) if end<0 else end")
+          exec(compile(source,str(path),'exec'),{'__name__':'__main__'})
+          PY
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
