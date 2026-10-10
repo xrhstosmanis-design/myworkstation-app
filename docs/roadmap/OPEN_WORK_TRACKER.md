@@ -113,13 +113,9 @@ Read AGENTS, current numbered/tracker/active/pending, inventory manual,03Octunkn
 
 Acceptance: company/store/role scoped search, exactbarcode conflict guard, attach once to intended existingproduct andsameDRAFT without duplicateproduct; separately identified newLABproduct/barcode continuation returns to exactsameDRAFT without context/count loss. Fresh before each persistedaction: LAB/store/operator/virtualterminal/action/SKU/barcode/qty/paymentnone/time, own/control till counts/cash/card/IRIS/expense/total/incoming/outgoing; relevantproductprice/stock/latestledger/draftlines/count/audit IDs. Write baseline before action, single submit, independentafterrefresh/readback andsamecontrol sources. Do not finalize or poststock just to prove return; newfixtures remain DRAFT, no delete ofhistoricalproduct/barcode/draft. No realstore/payment/fiscal/schema/seed/auth changes. Actualphysicalmobile/scanner/camera, broaderroles/tenant/load remain NOT TESTED unless independently observed; DOM/nativeCI and webresponsive UI evidence explicitly distinguished. Current owner retained until completion/namedhandoff. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n49-unknown-barcode-acceptance.md.
 
-## 10Oct2026 15:30 Athens — N48 / TODAY-06 — ASSIGNED / functional NOT TESTED
+## 10Oct2026 16:48 Athens — N48 / TODAY-06 — FINAL scoped LAB PASS
 
-Explicit user instruction «ξεκινα την εργασια48». ΑΝΑΛΗΨΗ ΑΠΟ υπάρχουσα TODAY σελίδα / agent/today-ui-verification-20261004 — ASSIGNED codex/n48-excel-barcode-acceptance-20261010 for numbered48 only: refreshed Excel / Barcode functional creation, import and scoped distribution acceptance in virtual MYWORKSTATION LAB. Previous scroll USER PASS08Oct20:42 and visual evidence retained without retest/replay; other TODAY/N47/39/44/45/46/operator/scanner/invoice owners untouched. User's assignment transfers only48, not the broader TODAY audit.
-
-Read AGENTS/current numbered/tracker/active/pending/products-master-catalog manual,03OctExcel checkpoint/04OctTODAY handoff/08Octscroll checkpoint and main history through4bf79457936ebd3c64f63d8e2d6338335548f5a6. Current functional create/import/send NOT TESTED; no source or persistedLAB change. First publish claim greenCI/main, inspect handlers and existing test coverage. Before each new persistedLAB offer/import/pause, identify future-dated LAB fixture/item/barcode, capture stock/ledger/latestmovement/price/promotion/Audit and both tills financial controls, write fresh before checkpoint; one action at a time and independent reload/after. Existing paid/stock/product/promotion actions must not be replayed. No real-store recipients/payment/stock/fiscal/migrations/seeds/credentials changes.
-
-Acceptance: existing forms retain correct company/store/product selection, barcode identifies intended item or rejects unknown, one named test barcode offer persists and reads back; one bounded Excel offer fixture imports only correct rows/products/date/price/store scope, visible truthful completion/reset and independently reopened results; invalid input must not partially apply. Cleanup only reversible pause of newly created LAB records with fresh baseline, no historical deletion. Fix only reproduced causal failures, require fullCI/exactdeployment before LIVE. Physical/mobile/POScheckout/widerrole/maxcapacity remain separate unless explicitly tested. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n48-excel-barcode-acceptance.md. Single next action: inspect current UI and source after claim publication; preserve owner until completed/named handoff.
+Agreed desktopLAB48 COMPLETE: one correct named barcodeoffer, unknownbarcode rejection, invalidExcel wholefile rejection, one native-date Exceloffer with two explicitLABstoreassignments, success/reset/independentreadback and bothnewofferspaused. Stock/ledger/price-history/bothtills unchanged; concurrentNo33Auditevents identified. PreviousscrollUSERPASS protected. SourcePR2094/fullCI2100PASS/exacthealthy55819e9/mainCI38053942859/Render38054259808SUCCESS. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n48-excel-barcode-acceptance.md, manualproducts-master-catalog/PASS.md. ClosingPR2110 synchronizesallregisters/PDFs; detailed TODAY06 sectionbelow authoritative, no further agreed48work. Physical/mobile/POScheckout/independentOwner/otheroffertypes/capacity outsideagreed48scope NOTTESTED. No replay, stock/payment/fiscal/realstore action; otherowners untouched.
 
 ## 10/10/2026 15:25 Athens — Νο33 δικές του / όλες: cross-actor περιορισμένο LIVE PASS
 
@@ -2267,15 +2263,15 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### TODAY-06 — Excel / Barcode UI
 
-**Κατάσταση:** OPEN / ASSIGNED — N48 functional acceptance NOT TESTED
+**Κατάσταση:** PASS / CLOSED — agreed N48 desktop LAB + protected scroll USER PASS
 
-**Υπόλοιπο / όρια PASS:** Actual barcode offer creation and Excel import/scoped distribution/readback. Protected scroll USER PASS08Oct20:42. Physical/mobile/POScheckout and wider role/capacity separate NOT TESTED.
+**Υπόλοιπο / όρια PASS:** 10Oct2026 16:48 Athens: agreed48 desktopLAB residual COMPLETE. Unknownbarcode rejected; one named barcodeTEST2/5%/11Oct12–13/sourceLABonly, invalidExcel rejectedwholefile/no partial, one native-date ExcelTEST2/5%/11Oct14–15/twoexplicitLABstoreassignments persisted with correctreset/success and independentreload. Bothnewofferspaused, prior2protected. Stock−2/ledger2/diff0/price2.40/history2 and MAIN8cash4total4expense0/control2total0expense120 unchanged, card/IRIS0; Audit concurrentNo33events identified. SourcePR2094/fullCI2100PASS/native851PASS/exacthealthy55819e9/mainCI38053942859/Render38054259808SUCCESS. Checkpoint2026-10-10-n48-excel-barcode-acceptance.md, manualproducts-master-catalog/PASS.md, evidencefixtures/finalpaused.jpg. Physical/mobile/POScheckout/independentOwner/otheroffer types/widerrole/capacity/liveinternalIDs outsidescope NOTTESTED; secondLABproductinactive. Previous08OctscrollUSERPASS preserved. No further agreed48 work/replay.
 
-**Υπεύθυνη σελίδα / branch:** codex/n48-excel-barcode-acceptance-20261010; explicit transfer of48 only from agent/today-ui-verification-20261004.
+**Υπεύθυνη σελίδα / branch:** codex/n48-excel-barcode-acceptance-20261010 completed; closure codex/n48-excel-barcode-pass-20261010.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct2026 15:30 Athens; CHECKPOINTS/CHANGES/2026-10-10-n48-excel-barcode-acceptance.md; green claim PR required before changes.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct15:30Athens, explicit transfer48only; claimPR2090 green merged52f61c0.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** No new functional PASS yet; previous visual/scroll PASS retained. Next source/UI inspection, then bounded future LAB fixtures with fresh before/after/control and truthful persistence.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 10Oct16:48Athens scopedLIVEPASS; sourcePR2094/CI38053372227SUCCESS, healthy55819e9/mainCI38053942859/Render38054259808SUCCESS; closingPR carries final docsCI/merge.
 
 ### TODAY-07 — Άγνωστο barcode απογραφής
 
