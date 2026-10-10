@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useRef,useState} from "react";
 import {twinScopeKey} from "./ai-command-twin-navigation.js";
 import AiCreditAlert from "./AiCreditAlert.jsx";
 import VoiceInputControls from "../voice/VoiceInputControls.jsx";
+import CashAssistantEvidence from "../voice/CashAssistantEvidence.jsx";
 import {resolveTwinSelection,twinSelectionFor} from "./ai-command-twin-selection.js";
 import {AlertTriangle,BarChart3,BrainCircuit,Building2,Camera,CheckCircle2,ChevronRight,CreditCard,FileSearch,Landmark,MessageCircle,Monitor,MoonStar,ReceiptText,RefreshCw,ShieldCheck,Store,Sunrise,UsersRound,WalletCards,X} from "lucide-react";
 
@@ -15,6 +16,7 @@ const invoiceLineNet=line=>{const stored=invoiceNumber(line.netValue??line.netAm
 
 export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=false,navigationError="",request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices,onOpenStock,onOpenWorkforce,onOpenVideo,initialTwinSelection=null,onTwinSelectionChange}){
   const deviceLoadSequence=useRef(0);
+  const askSequence=useRef(0),askAbort=useRef(null);
   const [problems,setProblems]=useState({loading:true,error:"",cash:null,payments:null,bank:null});
   const [invoiceIntel,setInvoiceIntel]=useState({loading:true,error:"",workspace:null});
   const [twinDevices,setTwinDevices]=useState({loading:true,rows:{}});
@@ -190,6 +192,10 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
     }));
   },[companies,onOpenChecks,storeStatuses,twinDevices.rows]);
   const selectedTwin=useMemo(()=>resolveTwinSelection(digitalTwin,twinSelection),[digitalTwin,twinSelection]);
+  useEffect(()=>{
+    askSequence.current++;askAbort.current?.abort();setAskState({loading:false,error:"",result:null});
+    return ()=>{askSequence.current++;askAbort.current?.abort()};
+  },[selectedTwin?.companyId,selectedTwin?.id]);
   const selectTwin=twin=>{
     const selection=twinSelectionFor(twin);
     setTwinSelection(selection);onTwinSelectionChange?.(selection);
@@ -220,17 +226,18 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
   const ask=async event=>{
     event.preventDefault();
     const value=question.trim()||"Ποια σημεία χρειάζονται έλεγχο σήμερα;";if(askState.loading||voiceActive)return;
+    const sequence=++askSequence.current;askAbort.current?.abort();const controller=new AbortController();askAbort.current=controller;
     setAskState({loading:true,error:"",result:null});
     try{
       const companyStates=companies.map(company=>({name:company.name,active:Boolean(company.active),stores:company.stores?.length||0}));
-      const result=await request("/api/platform/ai-command-center/ask",{method:"POST",body:JSON.stringify({question:value,inputChannel:questionInputChannel,snapshot:{
+      const result=await request("/api/platform/ai-command-center/ask",{method:"POST",signal:controller.signal,body:JSON.stringify({question:value,inputChannel:questionInputChannel,snapshot:{
         generatedAt:new Date().toISOString(),
         companies:{active:summary.activeCompanies,inactive:summary.inactiveCompanies,stores:summary.stores,attention:summary.attention},
         problems:{total:problemSummary.total,cash:problemSummary.cashIssues,payments:problemSummary.payments,paymentDiscrepancies:problemSummary.paymentDiscrepancies,bank:problemSummary.bank,bankDiscrepancies:problemSummary.bankDiscrepancies},
         companyStates
       }})});
-      setAskState({loading:false,error:"",result});
-    }catch(error){setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
+      if(sequence===askSequence.current)setAskState({loading:false,error:"",result});
+    }catch(error){if(sequence===askSequence.current)setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
   return <div className="ai-command-page" data-ai-command-center="phase-14">
@@ -349,11 +356,11 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
       </section>
 
       <section className="ai-command-ask">
-        <div className="ai-command-panel-title"><div><small>ΡΩΤΑ ΤΟ MYWORKSTATION · ΦΑΣΗ 3</small><h2>Τι χρειάζεται την προσοχή μου;</h2><p>Η απάντηση βασίζεται μόνο στη σημερινή επισκόπηση και στους μετρητές των υπαρχόντων ελέγχων.</p></div><MessageCircle/></div>
+        <div className="ai-command-panel-title"><div><small>ΡΩΤΑ ΤΟ MYWORKSTATION · ΦΑΣΗ 3</small><h2>Τι χρειάζεται την προσοχή μου;</h2><p>Κεντρική ερώτηση για όλα τα καταστήματα. Για μετρητά και διαφορές ταμείων ο βοηθός διαβάζει τον κανονικό έλεγχο κλεισμένων βαρδιών, με την ημερομηνία που ζητάς.</p></div><MessageCircle/></div>
         <form onSubmit={ask}><textarea aria-label="Ερώτηση για το MyWorkStation" value={question} onChange={event=>{setQuestion(event.target.value);if(!event.target.value)setQuestionInputChannel("text")}} disabled={voiceActive} maxLength={600} rows={3} placeholder="π.χ. Ποια σημεία χρειάζονται έλεγχο σήμερα;"/><button type="submit" disabled={askState.loading||voiceActive}><MessageCircle/>{askState.loading?"Ανάλυση…":"Ρώτα"}</button><VoiceInputControls value={question} onChange={text=>{setQuestion(text);setQuestionInputChannel("voice")}} onActiveChange={setVoiceActive} disabled={askState.loading} contextKey={selectedTwin?twinScopeKey({companyId:selectedTwin.companyId,storeId:selectedTwin.id}):"no-selection"} maxLength={600}/></form>
         <div className="ai-command-prompts"><button type="button" disabled={voiceActive} onClick={()=>{setQuestion("Ποια σημεία χρειάζονται έλεγχο σήμερα;");setQuestionInputChannel("text")}}>Τι χρειάζεται έλεγχο;</button><button type="button" disabled={voiceActive} onClick={()=>{setQuestion("Υπάρχουν ανενεργές εταιρείες ή καταστήματα χωρίς κάλυψη;");setQuestionInputChannel("text")}}>Κατάσταση δικτύου</button><button type="button" disabled={voiceActive} onClick={()=>{setQuestion("Σε ποια κανονική οθόνη πρέπει να πάω πρώτα και γιατί;");setQuestionInputChannel("text")}}>Πού να πάω πρώτα;</button></div>
         {askState.error&&<div className="ai-command-problem-error"><AlertTriangle/>{askState.error}</div>}
-        {askState.result&&<article className="ai-command-answer"><div className="ai-command-answer-head"><BrainCircuit/><b>Απάντηση MyWorkStation</b><span>Μόνο ανάγνωση</span></div><p>{askState.result.answer}</p>{askState.result.highlights?.length>0&&<ul>{askState.result.highlights.map((item,index)=><li key={index}>{item}</li>)}</ul>}<small><b>Πηγές:</b> {askState.result.sources?.join(" · ")||"Τρέχουσα επισκόπηση"}</small>{askState.result.limitations&&<small><b>Όριο:</b> {askState.result.limitations}</small>}</article>}
+        {askState.result&&<article className="ai-command-answer"><div className="ai-command-answer-head"><BrainCircuit/><b>Απάντηση MyWorkStation</b><span>Μόνο ανάγνωση</span></div><p>{askState.result.answer}</p>{askState.result.highlights?.length>0&&<ul>{askState.result.highlights.map((item,index)=><li key={index}>{item}</li>)}</ul>}<small><b>Πηγές:</b> {askState.result.sources?.join(" · ")||"Τρέχουσα επισκόπηση"}</small>{askState.result.limitations&&<small><b>Όριο:</b> {askState.result.limitations}</small>}<CashAssistantEvidence evidence={askState.result.evidence||[]}/></article>}
       </section>
 
       <section className="ai-command-roadmap">
