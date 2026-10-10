@@ -1,3 +1,13 @@
+## 10/10/2026 22:49 Athens - Owner exact product/date sales LIMITED LIVE PASS
+
+Who: existing authorized Owner, active AI_OWNER_ASSISTANT and the canonical report's INVENTORY domain for the selected own store. Tested ordinary Υπεύθυνος Εργαστηρίου in MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, actual healthy69456df3/full2241/0/0/guard38077625384. No Super Admin support preview used.
+
+Verified flow: normal secure Backoffice sign-in -> own-company list -> ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ -> Εμπορική λειτουργία -> Λοιπές εμπορικές λειτουργίες. Explicitly check/select ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ in the commercial selector (launcher initially selected another own LAB store; automatic inheritance is not verified). First open Αναφορές -> Στατιστικά πωλήσεων, Από/Έως2026-10-10, Είδος/SKU2269, checked «Ώρα Ελλάδας», Search. Note the one ΝΕΡΟ500ML row. Close report -> Βοηθός Ιδιοκτήτη, confirm «Μόνο για ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ» and enabled textbox. Type/edit the date-specific question and click Ρώτα. Actual19:49UTC provider/source table and normal report agree:4units, gross2.00EUR, net1.77EUR, VAT0.23EUR, same store/day/product/SKU. This confirms this exact single-day example, not every date/product/role.
+
+Read-only/current-store boundaries: completed non-credit reversal-aware nonfiscal report; no writes, all-store fallback, financial recalculation or inferred stock. Canonical report source reversal0 shown only in assistant source, not independently reconciled. No physical microphone, multi-day/DST/ambiguous/missing/capped/source failures/module/role/session/tenant lifecycle acceptance. Existing cash/module PASS preserved. Evidence CHECKPOINTS/EVIDENCE/voice-owner-sales-20261010/product-sales-observation.json is an observed DOM transcription; session-changed JPEG is the later denial only.
+
+Current troubleshooting: after the successful answer, visible «Η σύνδεση άλλαξε» withdrew the Backoffice data; assistant cleared question/reply and disabled Ask with support-context denial. Stop queries when this appears; heading alone is not authority. Use normal chosen account entry, no bypass/token export/reset/other-session action. Cause/actor unknown. Blank/own-store switching and after-Ask report refresh could not be tested. Earlier BLOCKED entries below are superseded only for the observed positive query. Full assistant scope remains OPEN.
+
 ## No40 — approved second LAB control / LIMITED LIVE PASS 10/10/2026
 
 Super Admin only. Open https://myworkstation-app.onrender.com/platform-admin -> AI Command Center -> FULL DIGITAL TWIN -> N40 CONTROL 20261010 in MYWORKSTATION LAB. Tested21:56–22:03Athens on production69456df3b48cdad35acee6d4b062f358de5e5156; same assigned owner retained.
