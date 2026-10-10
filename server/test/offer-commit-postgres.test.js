@@ -47,7 +47,7 @@ test('native PostgreSQL scoped offers create atomically, reject overlap/foreign 
   const namedRow=(await db.$queryRaw`SELECT * FROM "PriceCatalogPromotion" WHERE "id"=${barcode.data.items[0].id}`)[0];assert.equal(namedRow.productId,'a');assert.equal(namedRow.name,'Barcode fixture');
   const count=async()=>Number((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "PriceCatalogPromotion"`)[0].count);
   assert.equal((await request('POST','/promotions/scoped/barcode',{...named,barcode:'unknown'})).status,400);assert.equal(await count(),2);
-  const row={Barcode:'87654321','Όνομα προσφοράς':'Excel fixture','Τύπος':'PERCENT','Από':'2026-10-13T10:00','Έως':'2026-10-13T11:00','Έκπτωση %':5};
+  const row={Barcode:'87654321','Όνομα προσφοράς':'Excel fixture','Τύπος':'PERCENT','Από':new Date('2026-10-13T10:00:00Z'),'Έως':new Date('2026-10-13T11:00:00Z'),'Έκπτωση %':5};
   const importRows=(rows,sourceStoreId='store',targetStoreIds=[])=>new Promise(resolve=>{
    const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.json_to_sheet(rows),'Offers');const dataUrl='data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,'+XLSX.write(book,{type:'base64',bookType:'xlsx'});let status=200;
    ownerRouter.handle({method:'POST',url:'/promotions/import-excel',user:{role:'SUPER_ADMIN',companyId:'company',id:'owner',fullName:'Isolated Owner'},body:{dataUrl,sourceStoreId,targetStoreIds}},{status(c){status=c;return this},json(data){resolve({status,data})}},error=>resolve({status:error?.status||500,error}));

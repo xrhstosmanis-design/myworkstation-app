@@ -474,7 +474,9 @@ router.post("/promotions/import-excel",requireCompanyModule("INVENTORY"),async(r
       const r=rows[i], barcode=String(r.Barcode||r.BARCODE||r.barcode||"").trim(), name=String(r["Όνομα προσφοράς"]||r.Name||r.name||"").trim(), type=String(r["Τύπος"]||r.Type||r.type||"").trim().toUpperCase();
       const product=await productByBarcode(company,barcode);
       if(!product)return res.status(400).json({error:`Γραμμή ${i+2}: δεν βρέθηκε προϊόν για barcode ${barcode||"(κενό)"}.`});
-      const startsAt=parsePromotionDate(r["Από"]||r.StartsAt||r.startsAt), endsAt=parsePromotionDate(r["Έως"]||r.EndsAt||r.endsAt);
+      // Excel serial dates are timezone-free wall-clock values in the store timezone.
+      const excelDate=value=>parsePromotionDate(value instanceof Date&&!Number.isNaN(value.getTime())?value.toISOString().slice(0,19):value);
+      const startsAt=excelDate(r["Από"]||r.StartsAt||r.startsAt), endsAt=excelDate(r["Έως"]||r.EndsAt||r.endsAt);
       if(!name||name.length>180||!["PERCENT","BUY_X_GET_Y","FIXED_PRICE"].includes(type)||!(startsAt instanceof Date)||!(endsAt instanceof Date)||Number.isNaN(startsAt.getTime())||Number.isNaN(endsAt.getTime())||endsAt<=startsAt)return res.status(400).json({error:`Γραμμή ${i+2}: ελέγξτε όνομα, τύπο και ημερομηνίες.`});
       const numeric=(key,alias)=>Number(r[key]??r[alias]);
       const percentOff=numeric("Έκπτωση %","PercentOff"), buyQuantity=numeric("Αγορά X","BuyX"), freeQuantity=numeric("Δωρεάν Y","FreeY"), fixedPrice=numeric("Τελική τιμή","FixedPrice");
