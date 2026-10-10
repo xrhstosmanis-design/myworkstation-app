@@ -120,6 +120,16 @@ test("N40: canonical six-tile navigation keeps scope, returns, and rejects late 
    await close();const since=calls.length;await press(button(".platform-action-group button","Ταμεία"));assert.ok(!document.querySelector(".cash-report-filters select").disabled);assert.equal(document.querySelector(".cash-report-filters select").value,"");assert.equal(calls.slice(since).filter(c=>c.p==="/api/platform/cash-control/daily")[0].query.has("storeId"),false);
    await press(document.querySelector(".cash-report-dialog .modal-close"));assert.equal(document.querySelector(".ai-command-page"),null);await open();returned();
   });
+  await t.test("Central Workforce retains all stores, switches scoped data and closes normally",async()=>{
+   await close();const since=calls.length;await press(button(".platform-action-group button","Προσωπικό & Πρόγραμμα"));
+   const s=document.querySelector(".workforce-store-selector select");assert.ok(s&&!s.disabled);
+   assert.deepEqual([...s.options].map(o=>o.value),["store-a","store-b"]);assert.equal(s.value,"store-a");
+   await act(async()=>{s.value="store-b";s.dispatchEvent(new window.Event("change",{bubbles:true}))});
+   assert.equal(s.value,"store-b");
+   const reads=calls.slice(since).filter(c=>c.p.startsWith("/api/platform/store-modules/companies/"));
+   assert.deepEqual(reads.map(c=>c.p),["/api/platform/store-modules/companies/company-a/stores/store-a","/api/platform/store-modules/companies/company-b/stores/store-b"]);
+   await press(document.querySelector(".staff-scheduler-modal .modal-close"));assert.equal(document.querySelector(".ai-command-page"),null);await open();returned();
+  });
   await t.test("Stock keeps the existing support exchange and returns after a simulated full-page cycle",async()=>{
    await press(area("Stock"));const access=calls.findLast(c=>c.p.endsWith("/support-access"));assert.deepEqual(access.body,{storeId:"store-b",destination:"BACKOFFICE"});assert.match(navigations.at(-1),/supportStore=store-b/);
    const hint=JSON.parse(sessionStorage.getItem(TWIN_RETURN_KEY));assert.equal(hint.userId,"actor");assert.equal(hint.storeId,"store-b");assert.ok(!("token"in hint));
