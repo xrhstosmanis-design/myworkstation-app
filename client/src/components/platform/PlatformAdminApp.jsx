@@ -466,7 +466,7 @@ export default function PlatformAdminApp(){
     const sequence=++cashLoadSequence.current;
     setBusy("cash-report");setError("");
     try{
-      const api=twinOrigin?guardTwinRequest(request,()=>currentTwinOrigin(twinOrigin)):request;
+      const api=twinOrigin?guardTwinRequest((path,options={})=>request(path,{...options,n40Scope:twinOrigin}),()=>currentTwinOrigin(twinOrigin)):request;
       const filters=withTwinScope({date,fromTime:cashFromTime,toTime:cashToTime,...(cashStoreId?{storeId:cashStoreId}:{})},twinOrigin);
       const result=await api(`/api/platform/cash-control/daily?${new URLSearchParams(filters)}`);
       if(sequence!==cashLoadSequence.current)return false;
@@ -482,7 +482,7 @@ export default function PlatformAdminApp(){
     if(!context){setAiTwinNavigationError("Το επιλεγμένο κατάστημα δεν είναι διαθέσιμο. Επίλεξέ το ξανά.");return}
     const origin={companyId:selection.companyId,storeId:selection.storeId,destination};
     aiTwinOriginRef.current=origin;setAiTwinOrigin(origin);setAiTwinSelection(selection);setAiTwinNavigationError("");
-    const {company,store}=context,api=guardTwinRequest(request,()=>currentTwinOrigin(origin));
+    const {company,store}=context,api=guardTwinRequest((path,options={})=>request(path,{...options,n40Scope:origin}),()=>currentTwinOrigin(origin));
     try{
       if(destination==="cash"){if(!await loadCashReport(cashReportDate,origin))return}
       else if(destination==="video"){
