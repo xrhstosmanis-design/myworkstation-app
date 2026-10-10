@@ -137,3 +137,12 @@ All24 retained controls have independently reopened grant/restrictive/restoratio
 | orders | LIVE invoice/intake entry visibility deny/grant PASS | Current workspace/write acceptance NOT TESTED; earlier module PASS protected |
 | posAccess | Original true independently restored | Revocation/reentry NOT TESTED; secure PIN if required |
 | active | Original true independently restored | Revocation/reentry NOT TESTED; secure PIN if required |
+
+
+## 10/10/2026 — OPERATOR-CHECKBOX-01 resumed LIVE UI / AWAITING SECURE REENTRY / overall OPEN
+
+Owner codex/operator-checkbox-audit-20261009 retained, printed33/tracker35 OPEN. Browser observation recovered on original tab11; LABPOS2 connected/cart0/catalog11/93. Current read-only healthb075d84d; independent Inventory, scanner and invoice source/owners preserved, physical client SHA unknown. Newly observed UI: customer-card-only placeholder changes false→true→false withoutreload; edit permission opens real quickbuttoneditor/cancel; linebarcode opens scoped registration withSKU2270 and matchingproduct/barcode; freshdocument posAccessfalse shows explicitdisabledaccess, restoredtrue+Retry reenterssamevalidsession. No layout/product/barcode/price/financial/stock/shift/fiscal save. Temporarycartqty1/unit1 removed via line trash, actualcart0/total0. Economic/stock/control/Audit deltas/IDs NOT TESTED.
+
+Inactiveprofile removesoperatorfromactivefilter and sessionreturnslogin; isolatedactive-only revocation NOT TESTED because intermediateposAccessfalse was also observed. Explicitly restoredbothactive/POStrue; refreshedlist/reopenedfreshAX+screenshot original23details, Accessorders=true, roleEMPLOYEE; filtertrue. FreshloginagainoffersLABPOS2. Authenticatedreturnafteractive test needssecurePIN. Evidence operator-resume-profile-20261010.jpg and operator-resume-restored-20261010.jpg; checkpoint2026-10-09-operator-checkbox-audit.md. Prior55removed/24retained and bounded7ebPASS protected.
+
+Remaining: secure reentry, nativecancel/reason, remoteonlineoutcome, current individualpaymenttabs/own-allledger/label/price controls, actualproduct/financial/physicalactions, isolatedactive-only revocation, role/company/store/module breadth. transferAmountserverguardexists but modernPOSentryabsent. No fullPASS or secondowner. Single next action: existingsecurePIN authenticationLABPOS2 then emptycart/currentprofile verification and continue remainingnegativechecks.
