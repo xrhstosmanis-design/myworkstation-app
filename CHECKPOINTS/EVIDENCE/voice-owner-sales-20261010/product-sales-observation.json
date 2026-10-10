@@ -1,0 +1,43 @@
+{
+  "kind": "observed-rendered-DOM-transcription",
+  "readOnly": true,
+  "companyId": "cmtpopbgk000prhb5qc60zxus",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "storeName": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "operator": "Υπεύθυνος Εργαστηρίου",
+  "browser": "cloud Chrome1 tab40",
+  "product": "ΝΕΡΟ 500ML",
+  "sku": "2269",
+  "from": "2026-10-10",
+  "to": "2026-10-10",
+  "timeZone": "Europe/Athens",
+  "independentReportObservedAt": "2026-10-10T19:48:40.403Z",
+  "askAt": "2026-10-10T19:49:13.218Z",
+  "answerObservedAt": "2026-10-10T19:49:33.749Z",
+  "normalReport": {
+    "salesQuantity": 4,
+    "grossSales": 2,
+    "netSales": 1.77,
+    "vatValue": 0.23
+  },
+  "actualAssistantAnswer": "Καταστήμα: ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ Περίοδος: 10/10/2026 Είδος/SKU: ΝΕΡΟ 500ML / 2269 Πωλήθηκαν: 4 τεμάχια Τζίρος με ΦΠΑ: 2,00 € Καθαρή αξία: 1,77 € ΦΠΑ: 0,23 €",
+  "assistantSource": {
+    "product": "ΝΕΡΟ 500ML",
+    "sku": "2269",
+    "salesQuantity": 4,
+    "grossSales": 2,
+    "netSales": 1.77,
+    "vatValue": 0.23,
+    "reversalCount": 0,
+    "returnGrossValue": 0
+  },
+  "healthBeforeAsk": {
+    "ok": true,
+    "revision": "69456df3b48cdad35acee6d4b062f358de5e5156"
+  },
+  "limitations": [
+    "Normal report independently refreshed before Ask; after-Ask report refresh blocked by subsequent session-change notice.",
+    "No physical microphone, business transaction, multi-day/DST/ambiguity/no-match/cap/module/role/tenant lifecycle acceptance.",
+    "Subsequent visible session-change notice; old question/answer cleared and Ask disabled with support-context denial; cause and actor unknown."
+  ]
+}
