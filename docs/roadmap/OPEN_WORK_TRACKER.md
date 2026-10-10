@@ -2053,9 +2053,9 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### AI-CC-LIMITS — AI Command Center όρια PASS
 
-**Κατάσταση:** OPEN / ASSIGNED / NAVIGATION NOT TESTED; visual phases 1–14 remain CLOSED
+**Κατάσταση:** OPEN / ASSIGNED / LIMITED BROWSER NAVIGATION PASS; request/auth acceptance NOT TESTED; visual phases 1–14 remain CLOSED
 
-**Υπόλοιπο / όρια PASS:** Τα κλικ μετάβασης Full Digital Twin δεν δοκιμάστηκαν. Δεν ανοίγουν ξανά οι οπτικές αποδοχές 1–14.
+**Υπόλοιπο / όρια PASS:** Πέντε assistant-browser tile/normal-close round trips και protected Stock USER visual sequence επιβεβαιώθηκαν. Actual request isolation, network races, Stock support audit και unexecuted backend role/module/revocation παραμένουν NOT TESTED. Δεν ανοίγουν ξανά οι οπτικές αποδοχές 1–14.
 
 **Υπεύθυνη σελίδα / branch:** `codex/n40-full-twin-navigation-audit-20261010` — explicit owner assignment for printed40, 10/10/2026.
 
@@ -2297,3 +2297,13 @@ Concurrent main 1069f6cd78c922f90fb33668dbbbe8d2df0850c7 contains documentation/
 ## N40-RELEASE-20261010 — deployed healthy at 14:35:44 Athens / AWAITING LAB
 
 Same owner `codex/n40-full-twin-navigation-audit-20261010`, no transfer. PR2065 merged5dc10820082a570705616f163e8118c7ae4ba2a9; exact-head fullCI38048402182 SUCCESS, main fullCI38048617906 SUCCESS including server/build/Windows/production/isolated PostgreSQL/HTTP E2E. Guarded Render38048828414/job114203686437 SUCCESS; actual health at2026-10-10T11:35:44.9138943Z ok=true/version0.22.0+kat-test-pos/exactrevision5dc10820. Previous rollback1069f6cd/artifact11667934393 captured, not executed. Supersedes prior release-pending wording only. Source routes/return/invalidation released; actual six-tile LAB, real Stock browser return and unexecuted auth/module/revocation scenarios NOT TESTED. No browser authentication available; no business/device/permission mutation. Overall40 OPEN / DEPLOYED / AWAITING LAB; visual1–14 and every other owner preserved. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-deployed-readback.md`. Next one authenticated read-only virtual-LAB navigation/return batch with actual context/evidence, not repeated transactions. No manual or final numbered/PDF acceptance claimed.
+
+## 10/10/2026 15:33-15:38 Athens — N40 bounded browser navigation PASS; overall OPEN
+
+Same owner `codex/n40-full-twin-navigation-audit-20261010`. Actual assistant-controlled cloud browser, authenticated Super Admin Χρήστος Μάνης, canonical platform-admin; exclusively MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Fresh service health ok/version0.22.0+kat-test-pos/revision6b08e72a9c14f973a62cc1e3a43f8600aef9fef4; GitHub compare confirms descendant of released5dc10820 (19commits), preserving N40 release. Health attests server, not independently hashed cached client bundle.
+
+Five actual tile/normal-close round trips observed: POS -> Έλεγχοι & Αναλύσεις with company/store selectors disabled and correct LAB; EFTPOS/Ταμειακές -> Αυτόματος Έλεγχος Ταμείων with disabled LAB selector and only LAB result; Ταμείο -> same Cash destination for current serious-cash finding; Προσωπικό -> Workforce V2 with only target main-selector option and seven target employees; Κάμερες -> Video Events connection screen, target company/store heading and existing OFFLINE/one-camera settings. Each normal destination top close automatically reopened Command Center with Full Digital Twin heading ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ / MYWORKSTATION LAB; no manual CC reopen or browser Back. No execute-analysis, email, exports, saves, package/permission toggles, financial/stock/staff/shift/fiscal/device commands submitted. Cash screen loaded existing read-only analysis automatically; no run control pressed.
+
+Protected Stock USER-BROWSER VISUAL entry/return/selected-Twin sequence from PR2065 comment6097485640 retained, not repeated. Prior visual1–14 remain closed. This is bounded navigation/UI-context PASS, not whole No40 completion or internal domain calculation acceptance. Actual HTTP request capture unavailable in documented browser APIs; request isolation, network races, client SHA, Stock support-exit audit and unexecuted backend role/module/revocation scenarios remain NOT TESTED. Workforce employee editor exposes company store references while main context remains target; no editor action tested or scope leak inferred. Transient zero/loading counters after normal reopen resolved on read-only loading; not classified as business-data failures.
+
+Overall No40 OPEN / partial navigation verified. Single next action: obtain permitted request-level observation and read-only negative authorization coverage without business/permission mutations; preserve existing round trips and Stock evidence. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-browser-navigation-readonly.md`; manual super-admin/PASS updated only for observed usage. Same owner retained; other owners untouched.

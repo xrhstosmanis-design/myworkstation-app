@@ -297,12 +297,12 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 - **Tracker ID:** `INVENTORY-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** PASS — updated10/10/2026 14:52 Athens, agreed residual, codex/n39-inventory-acceptance-20261010
 
-## 40 — AI Command Center — μη ελεγμένες μεταβάσεις
+## 40 — AI Command Center — μεταβάσεις και υπόλοιπα αποδοχής
 
 - **Tracker ID:** `AI-CC-LIMITS`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΑΡΧΙΚΟ ΠΛΑΝΟ CLOSED / NOT TESTED
-- **Υπόλοιπο / όριο:** Τα clicks μετάβασης Full Digital Twin δεν δοκιμάστηκαν· οι οπτικές αποδοχές 1–14 δεν ανοίγουν ξανά.
-- **Νεότερη ανάληψη 10/10/2026:** OPEN / ASSIGNED `codex/n40-full-twin-navigation-audit-20261010` — έξι μεταβάσεις Full Digital Twin, διατήρηση/επιστροφή καταστήματος και ασφαλής ακύρωση μη έγκυρης επιλογής. PR #2040 / N40-NAV-CLAIM-20261010. Υλοποίηση και LAB NOT TESTED· οπτικές αποδοχές 1–14 προστατευμένες.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN / LIMITED NAVIGATION PASS / REQUEST-AUTH NOT TESTED (update10/10)
+- **Υπόλοιπο / όριο:** LIMITED BROWSER NAVIGATION PASS για πέντε tile/close round trips· Stock USER visual διατηρείται. Actual request isolation, races και backend role/module/revocation NOT TESTED. Συνολικό40 OPEN· οπτικές1–14 προστατευμένες.
+- **Νεότερη ανάληψη 10/10/2026:** OPEN / ASSIGNED `codex/n40-full-twin-navigation-audit-20261010` — έξι μεταβάσεις Full Digital Twin, διατήρηση/επιστροφή καταστήματος και ασφαλής ακύρωση μη έγκυρης επιλογής. PR #2040 / N40-NAV-CLAIM-20261010. Released5dc10820· actual bounded navigation at server6b08e72a; full acceptance OPEN· οπτικές αποδοχές1–14 προστατευμένες.
 
 ## 41 — Oxygen, Radio, προαιρετικά modules και χρεώσεις
 
