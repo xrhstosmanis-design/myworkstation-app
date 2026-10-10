@@ -19,7 +19,7 @@ router.post("/stock-transfer",async(req,res,next)=>{
     if(body.sourceStoreId===body.destinationStoreId)return res.status(400).json({error:"Το κατάστημα προορισμού πρέπει να είναι διαφορετικό."});
     const stores=await prisma.store.findMany({where:{companyId:req.user.companyId,id:{in:[body.sourceStoreId,body.destinationStoreId]},active:true},select:{id:true,name:true}});
     if(stores.length!==2)return res.status(404).json({error:"Η μεταφορά επιτρέπεται μόνο μεταξύ ενεργών καταστημάτων της ίδιας εταιρείας."});
-    const product=await prisma.product.findFirst({where:{id:body.productId,companyId:req.user.companyId,active:true},select:{id:true,name:true,costPrice:true,salePrice:true}});
+    const [product]=await prisma.$queryRaw`SELECT "id","name","costPrice","salePrice" FROM "Product" WHERE "id"=${body.productId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!product)return res.status(404).json({error:"Δεν βρέθηκε ενεργό προϊόν της εταιρείας."});
     const transferId=`inventory-transfer:${body.idempotencyKey}`;
     const result=await prisma.$transaction(async tx=>{
