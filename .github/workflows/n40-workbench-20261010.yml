@@ -1,0 +1,39 @@
+name: N40 isolated navigation workbench
+on:
+  push:
+    branches: [fix/n40-scoped-navigation-20261010]
+    paths: [.github/workflows/n40-workbench-20261010.yml]
+permissions:
+  contents: read
+jobs:
+  baseline:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Read public health and export exact tracked source
+        run: |
+          mkdir -p "$RUNNER_TEMP/n40-review"
+          curl --fail --silent --show-error --max-time 30 https://myworkstation-app.onrender.com/api/health > "$RUNNER_TEMP/n40-review/health.json"
+          cat "$RUNNER_TEMP/n40-review/health.json"
+          git rev-parse HEAD > "$RUNNER_TEMP/n40-review/revision.txt"
+          git log --first-parent -60 --format='%H %aI %s' > "$RUNNER_TEMP/n40-review/history.txt"
+          git archive --format=tar.gz HEAD > "$RUNNER_TEMP/n40-review/source.tar.gz"
+      - name: Prepare isolated public testing dependencies
+        run: |
+          mkdir -p "$RUNNER_TEMP/n40-deps"
+          npm install --prefix "$RUNNER_TEMP/n40-deps" --ignore-scripts --no-audit --no-fund react@19.0.0 react-dom@19.0.0 esbuild@0.25.12 jsdom@26.1.0 lucide-react@0.475.0
+          tar -czf "$RUNNER_TEMP/n40-review/test-deps.tar.gz" -C "$RUNNER_TEMP/n40-deps" node_modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: n40-workbench
+          path: ${{ runner.temp }}/n40-review/
+          retention-days: 1
+          if-no-files-found: error
