@@ -1,3 +1,7 @@
+## 10/10/2026 16:13 Athens — Νο33 / tracker35: ανεξαρτησία βάρδιας περιορισμένο LIVE PASS, συνολικά OPEN
+
+Same owner codex/operator-checkbox-audit-20261009. PR2099/fullCI/mainCI/guardedRender, exactdeployed55819e98: επιστροφέςOFF+συναλλαγέςON φόρτωσε8 κινήσεις· own/all OFF/ON7→8 στην ίδια προβολή/noPOSrefresh. Αρχικά23EMPLOYEE/καλάθι0/ουρά0 επαναφέρθηκαν, MAIN/controlαμετάβλητα, Audit1195→1199 μόνο4rights. No33 OPEN· actualreturn/printing/initialcash/closing/positiveonline/broaderrole/store/module και negativeLIVE εκκρεμή. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-operator-shift-return-independent.md, POSmanual και authoritative OPEN_WORK_TRACKER ενημερωμένα. Προγενέστερα PASS και ανεξάρτητοιNo39/48/49/invoice/scanner/change owners διατηρούνται.
+
 ## 10 Oct 2026 — No40 / AI-CC-LIMITS — read-only authentication evidence; OPEN
 
 Same owner `codex/n40-full-twin-navigation-audit-20261010`. Prior visual phases 1–14, Stock USER evidence comment 6097485640 and five browser round trips recorded by PR #2092 are preserved without replay.
