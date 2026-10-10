@@ -1,3 +1,6 @@
+## 10/10/2026 20:32 Athens — DAILY BITE coffee preview / AWAITING CI
+Owner `codex/daily-bite-coffee-kat-behavior-20261010`. Read-only compatibility preview implemented: DAILY-only target, KAT behavior source, unique coffee signatures only, name suggestions only, modifier description/price preview, no writes or publication. Recipe/stock and live rename/modifier application remain NOT TESTED and are not part of this step. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-daily-bite-coffee-preview.md`.
+
 ## 10/10/2026 20:25 Athens — DAILY BITE coffee / KAT behavior reuse — ASSIGNED
 Owner `codex/daily-bite-coffee-kat-behavior-20261010`, issue #2054. PR #2149 screenshot POS preset is merged after CI SUCCESS. New bounded scope: reuse KAT coffee modifier/preparation interaction for DAILY BITE products only; MyWorkStation visuals; optional KAT→DAILY coffee **name-only** normalization where exact match is established. Never copy KAT IDs/data, never change SKU/barcode/prices/VAT/departments/stock/suppliers, and never reimport 8,753 items or recreate 9 departments. KAT recipe stock logic is not copied until DAILY BITE company-scoped ingredient availability is measured. Missing/ambiguous matches must fail closed. Runtime/LAB acceptance NOT TESTED.
 
