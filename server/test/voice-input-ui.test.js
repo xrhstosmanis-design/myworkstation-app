@@ -68,6 +68,11 @@ test("mounted voice input only submits reviewed text on the existing Ask action"
     await click([...document.querySelectorAll('.ai-full-twin-selector button')].find(el => el.textContent === "Store B"));
     await act(async () => { oldResult(result("Old store")); oldEnd(); });
     assert.equal(changedStore.aborts, 1); assert.equal(textarea().disabled, false); assert.equal(textarea().value, "Τι χρειάζεται έλεγχο σήμερα;");
+    await click(mic()); const invalidated = recordings.at(-1), invalidResult = invalidated.onresult, invalidEnd = invalidated.onend;
+    await act(async () => root.render(React.createElement(Center, {request, companies: [{...companies[0], stores: [companies[0].stores[0]]}]})));
+    await act(async () => { invalidResult(result("Removed store")); invalidEnd(); });
+    assert.equal(invalidated.aborts, 1); assert.equal(textarea().disabled, false); assert.equal(textarea().value, "Τι χρειάζεται έλεγχο σήμερα;");
+    assert.ok(document.querySelector('[data-ai-twin-selection-unavailable="true"]'));
     await click(mic()); const removed = recordings.at(-1), removedResult = removed.onresult, removedEnd = removed.onend;
     await act(async () => root.unmount());
     await act(async () => { removedResult(result("After close")); removedEnd(); });
