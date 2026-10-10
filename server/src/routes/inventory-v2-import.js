@@ -1,3 +1,4 @@
+import {inventoryStocktakeScopeAllowed} from "../lib/inventory-stocktake-scope.js";
 import {lockDraftInventoryStocktake} from "../lib/inventory-stocktake-draft.js";
 import { Router } from "express";
 import crypto from "crypto";
@@ -16,7 +17,7 @@ router.post(
       const st = (
         await prisma.$queryRaw`SELECT "id","companyId","storeId","status","recountPolicy" FROM "Stocktake" WHERE "id"=${req.params.stocktakeId} AND "companyId"=${req.user.companyId} LIMIT 1`
       )[0];
-      if (!st)
+      if (!inventoryStocktakeScopeAllowed(req.user, st))
         return res.status(404).json({ error: "Δεν βρέθηκε η απογραφή." });
       if (st.status !== "DRAFT")
         return res.status(409).json({ error: "Η απογραφή δεν είναι ανοικτή." });
