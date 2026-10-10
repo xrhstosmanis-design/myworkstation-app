@@ -24,6 +24,19 @@ Node20.20.2 isolated focused45/45 PASS, including actual mounted App + unchanged
 
 Newer main aa028301/N40 history reader and VOICE normal Owner cash PASS records preserved; no replay or attribution of their successful/failed sessions. Limitation: only central main.jsx App/bootstrap/request-prop children; independently mounted CommerceLauncher/Platform/POS readers remain their owners' scope. Existing already-open old client assets require a normal reload after release. No claim that production401 spike, every404 or DB storage issue is resolved. Required exact full CI/guard/main/deployed health and actual read-only session-change/healthy-refresh acceptance before closure. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-backoffice-session-boundary.md`. No manual/numbered PASS closure or business action. Next source PR/fullCI then guarded release and bounded read-only acceptance; owner retained.
 
+## 10 Oct 2026 21:16 Athens — No40 historical Stock support read: bounded result, OPEN
+
+Same owner `codex/n40-full-twin-navigation-audit-20261010`. Source PR2160 head d1b1a0189e2e2ac0798e880173d86cf6b240db89 / full CI38073805957 SUCCESS / merge aa02830124c26376ba216c3f515a5bf2f4a08963. Main CI38074081272 and guarded deploy38074265215 SUCCESS; Render dep-db57s8cs728c73c5ggrg LIVE at18:06:11.924479UTC, independent browser /api/health exact aa028301 verified before read.
+
+First historical read returned403 canonical-SA guard error. Subsequent canonical Platform navigation displayed login. Source review showed normal session issuance and middleware preserve BACKOFFICE_USER/isSuperAdmin/session identity; no guard relaxed, no token/credential/storage inspection. User securely completed Super Admin email/password and Authenticator2FA; fresh Platform page identified Χρήστος Μάνης. Same deployed source then returned five own-actor successful fixed-label support records, truncated=false. This resolves the blocked read without a code change; it does not establish the precise earlier session failure cause.
+
+Fixed window12:00–12:30UTC (15:00–15:30Athens):
+- ACCESS12:06:58.173; ACCESS12:11:38.475; EXIT12:13:36.108; ACCESS12:17:42.984; EXIT12:18:30.634.
+- No returned event at the prior Stock visual15:26Athens. Legacy schema stores actor/label/time, not destination/storeID/session correlation. Do not attribute these events to that visual sequence or upgrade Stock network acceptance.
+- No Stock replay, business mutation, fixture login/reset, email, device command or analysis execution. Historical reader successful bounded read only; no new Full Twin criterion PASS. Stock USER visual comment6097485640 and previous restricted403/401/six GET correlations/phases1–14 remain protected.
+- Evidence: CHECKPOINTS/EVIDENCE/n40-read-trace-20261010/stock-history-read.json and stock-history-read.jpg. No tokens, IPs, user agents, session identifiers or audit IDs exported.
+
+No40 remains OPEN. Residual tenant/second authorized control-store, module/unavailable, revoked store access, delayed response and complete request/audit attribution criteria are not proven. Original explicit scope remains primary ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ only; isolated-label store and real stores remain excluded. Next step: prepare/review a named empty LAB control-store scope before any second-store testing; do not invent authorization or mark missing evidence PASS.
 
 ## 10 Oct 2026 20:48 Athens — No40 Workforce initial-load reconciliation / bounded Stock audit readback ASSIGNED; OPEN
 
