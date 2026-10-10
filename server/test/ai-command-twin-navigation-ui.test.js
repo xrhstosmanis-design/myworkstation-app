@@ -83,7 +83,7 @@ test("N40: canonical six-tile navigation keeps scope, returns, and rejects late 
    await press(document.querySelector('[aria-label="Κλείσιμο ελέγχων και αναλύσεων"]'));returned();
   });
   await t.test("EFTPOS opens existing cash report; refresh and export never broaden scope",async()=>{
-   const since=calls.length;await press(area("EFTPOS / Ταμειακές"));const s=document.querySelector(".cash-report-filters select");assert.equal(s.value,"store-b");assert.ok(s.disabled);
+   const since=calls.length;await press(area("EFTPOS / Ταμειακές"));const s=document.querySelector(".cash-report-filters select");assert.equal(s.value,"store-b");assert.ok(s.disabled);assert.deepEqual([...s.options].map(o=>o.value),["store-b"]);
    await press(button(".cash-report-filters button","Εμφάνιση"));await press(button(".cash-report-filters button","Excel ελλειμμάτων καταστήματος"));
    scoped(since,["/api/platform/cash-control/daily","/api/platform/cash-control/shortages"]);assert.ok(downloads.some(name=>name.includes("Store B")));
    await press(document.querySelector(".cash-report-dialog .modal-close"));returned();
@@ -118,7 +118,27 @@ test("N40: canonical six-tile navigation keeps scope, returns, and rejects late 
   });
   await t.test("Ordinary central entry stays unscoped and close does not reopen the Twin",async()=>{
    await close();const since=calls.length;await press(button(".platform-action-group button","Ταμεία"));assert.ok(!document.querySelector(".cash-report-filters select").disabled);assert.equal(document.querySelector(".cash-report-filters select").value,"");assert.equal(calls.slice(since).filter(c=>c.p==="/api/platform/cash-control/daily")[0].query.has("storeId"),false);
+   const s=document.querySelector(".cash-report-filters select");assert.deepEqual([...s.options].map(o=>o.value),["","store-a","store-b"]);
+   await act(async()=>{s.value="store-a";s.dispatchEvent(new window.Event("change",{bubbles:true}))});await press(button(".cash-report-filters button","Εμφάνιση"));
+   assert.equal(calls.findLast(c=>c.p==="/api/platform/cash-control/daily").query.get("storeId"),"store-a");
+   await act(async()=>{s.value="";s.dispatchEvent(new window.Event("change",{bubbles:true}))});await press(button(".cash-report-filters button","Εμφάνιση"));
+   assert.equal(calls.findLast(c=>c.p==="/api/platform/cash-control/daily").query.has("storeId"),false);
    await press(document.querySelector(".cash-report-dialog .modal-close"));assert.equal(document.querySelector(".ai-command-page"),null);await open();returned();
+  });
+  await t.test("Central Checks retains selectable scope, explicit all-store execution and ordinary close",async()=>{
+   await close();await press(button(".platform-action-group button","Κέντρο Ελέγχων"));
+   const selects=[...document.querySelectorAll(".sa-checks-filters select")];assert.deepEqual(selects.map(s=>s.value),["",""]);assert.ok(selects.every(s=>!s.disabled));
+   assert.deepEqual([...selects[0].options].map(o=>o.value),["","company-a","company-b"]);
+   assert.deepEqual([...selects[1].options].map(o=>o.value),["","store-a","store-b"]);
+   await act(async()=>{selects[0].value="company-b";selects[0].dispatchEvent(new window.Event("change",{bubbles:true}))});
+   await act(async()=>{selects[1].value="store-b";selects[1].dispatchEvent(new window.Event("change",{bubbles:true}))});
+   const since=calls.length;await press(button(".sa-filter-actions button","Εκτέλεση ελέγχου"));
+   scoped(since,["/api/platform/super-admin-analytics/execute","/api/transactions/bank-ledger/summary","/api/transactions/bank-ledger/review","/api/transactions/supplier-settlements/review","/api/transactions/other-expenses/review"]);
+   await press(button(".sa-filter-actions button","Καθαρισμός"));assert.deepEqual(selects.map(s=>s.value),["",""]);
+   const allSince=calls.length;await press(button(".sa-filter-actions button","Εκτέλεση ελέγχου"));
+   assert.deepEqual(calls.findLast(c=>c.p==="/api/platform/super-admin-analytics/execute").body,{});
+   for(const c of calls.slice(allSince).filter(c=>c.method==="GET"&&c.p.startsWith("/api/transactions/"))){assert.equal(c.query.has("storeId"),false);assert.equal(c.query.has("companyId"),false)}
+   await press(document.querySelector('[aria-label="Κλείσιμο ελέγχων και αναλύσεων"]'));assert.equal(document.querySelector(".ai-command-page"),null);await open();returned();
   });
   await t.test("Central Workforce retains all stores, switches scoped data and closes normally",async()=>{
    await close();const since=calls.length;await press(button(".platform-action-group button","Προσωπικό & Πρόγραμμα"));
