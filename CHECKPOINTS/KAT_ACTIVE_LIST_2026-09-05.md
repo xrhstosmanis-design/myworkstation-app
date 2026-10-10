@@ -8,6 +8,10 @@ Calendar limitation demonstrated: existing report parses date-only values in ser
 
 Sales implementation/LAB NOT TESTED. Overall32/printed30/VOICE OPEN/ASSIGNED. Context/lifecycle/roles/module negatives and physical speech remain separate OPEN; no completed transaction/login/module activation repeated for evidence. No N40/N50/N51/central BACKOFFICE-SESSION-01/DAILY/source auth/store core/real company change. Next after green common claim merge: bounded sales source/tests -> exact full CI/main/guarded healthy release -> ordinary Owner existing-record query and normal report reconciliation, then immediate checkpoint/manual/pending/tracker/PDF publication. Assignment remains until complete or named transfer.
 
+## 10/10/2026 20:55 Athens — DAILY BITE coffee behavior apply v4 / AWAITING CI
+Owner `codex/daily-bite-coffee-kat-behavior-20261010`, issue #2054. Supersedes PR #2159 only as merge vehicle after another concurrent main update. Same guarded exact-match/fail-closed behavior, DAILY-owned modifiers and product links, optional name-only normalization, no KAT recipe/ingredient/stock copy, no catalog-economics changes, no runtime apply yet. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-daily-bite-coffee-apply-v4.md`.
+
+
 ## 10/10/2026 20:52 Athens - VOICE-ASSISTANT-01 / tracker32: normal Owner selected-store cash query LIVE PASS
 
 Same owner `codex/unified-voice-assistant-20261010` retained. User20:45:48 said continue and authorized proceeding as project owner. Used normal existing Owner secure authentication; no authentication/module/tenant guard bypass, reset, new account or further grant. Prior module persistence/effective matrix PASS PR2147 and input/Platform/support cash PASS protected. Supersedes PR2155/main7be3d5e3 authentication/identity BLOCKED only for this new successful ordinary Owner query; historical mismatch cause remains unverified.
