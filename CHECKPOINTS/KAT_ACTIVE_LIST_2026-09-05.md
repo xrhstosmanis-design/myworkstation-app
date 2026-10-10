@@ -1,3 +1,7 @@
+## 2026-10-10T10:56:49.751521+03:00 Athens — N44 / TODAY-02 LAB SAVE FAIL / bounded fix AWAITING LAB
+
+Same owner codex/n44-product-vat-acceptance-20261010; claim PR2038/CI38034609966 merged61ddb47. One TEST2 name-only save rejected with mandatory barcode snapshot message. VAT editor omits expectedBarcodeIds; existing server guard from PR1834/5e4c8a8b is protected LAB PASS and must remain. No successful product mutation/restore needed. Current catalog already returns barcode row IDs. Bounded fix sends IDs of the freshly opened card from this third editor; preserve supplierCodes, barcode attributes, stores, same-page reload and server stale409. Test actual handlers reject missing snapshot and retain draft on stale rejection. No backend/schema/data/stock/fiscal/payment/auth changes. Exact deploy and fresh LAB save/readback required; supplier fixture and alternateVAT/storecontrol acceptance remain NOT TESTED. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n44-product-vat-acceptance.md.
+
 ## 2026-10-10 10:52 Europe/Athens — OPERATOR-CHECKBOX-01 returns permission OFF/ON bounded LIVE PASS / overall OPEN
 
 Same owner codex/operator-checkbox-audit-20261009, No33/tracker35 OPEN. Previous online UI permission result published mainPR2041/4775af52, exactdocsCI38035820790 SUCCESS. User10:47:27 approval covers exact sequentialrightsrestore. LABPOS2 ordinaryEMPLOYEE/testingstore cmtpopbgo000trhb5ng9ytiru, catalog11/94, before/aftercart0,total0,queue0. Noeconomic/stock/shift/product submits or completedpayment replay.
