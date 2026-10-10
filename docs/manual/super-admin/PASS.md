@@ -1,3 +1,15 @@
+## 10/10/2026 20:04 - LAB Owner assistant module activation: bounded LIVE PASS
+
+**Who / where:** Existing Super Admin, canonical [Platform Admin](https://myworkstation-app.onrender.com/platform-admin) -> Συνδρομές & Modules -> MYWORKSTATION LAB. This verified grant applies only to its two virtual stores. Existing Owner usage/authentication remains NOT TESTED.
+
+**Verified steps:** Obtain specific approval for this company grant; cancel an old unsaved proposal and refresh subscriptions before editing. Open only LAB configuration; record inactive assistant/count20/total104.70€/AI COMPLETE. Toggle only «AI Βοηθός Ιδιοκτήτη»; preserve prices/plan/status/dates/other modules. Click «Αποθήκευση συνδρομής» once, wait until panel closes, then reopen. Verified saved active assistant/count21/monthly0€/setup0€/same total104.70€; all other visible fields unchanged. Cancel the reopened read-only panel without another Save.
+
+**Effective access readback:** Company Καταστήματα -> each LAB store -> Έλεγχος δικαιωμάτων. Both matrices show active company license, AI_OWNER_ASSISTANT from company license, Owner ΝΑΙ/Employee ΟΧΙ/SuperAdmin ΠΑΝΤΑ, CASH_CONTROL Owner ΝΑΙ. Matrix is read-only and no new grant itself. Configure only explicitly approved company; store-entry queries must remain restricted to the selected authorized store.
+
+**PASS / limits:** Only entitlement persistence, unchanged visible commercial terms and effective matrix readbacks verified on release2e1f4afe at17:01-17:04UTC. This does not prove normal Owner/API/role/tenant/module-lifecycle authorization, physical speech or sales/product/date. No business/financial/stock/device/fiscal actions; DB/audit/ledger deltas unmeasured. If saved panel or matrix disagrees, stop and inspect permission/license source; do not rely on unsaved active styling or repeat a Save blindly. Next use secure existing LAB Owner sign-in, not support or N40 fixture.
+
+Evidence/checkpoint: `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`, `CHECKPOINTS/EVIDENCE/voice-owner-cash-20261010/voice-owner-module-active-1791651751072.jpg`. Earlier inactive-module statements below describe the19:23 historical baseline; this20:04 receipt supersedes current activation status only.
+
 ## 10/10/2026 — Βοηθός Ιδιοκτήτη: επιλεγμένο κατάστημα, δοκιμή υποστήριξης LIVE PASS
 
 Επαληθεύτηκε μόνο η υπάρχουσα σύνδεση Super Admin σε προβολή υποστήριξης του MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, release `2e1f4afe7d7eca6803f39c81d95ab19a70cd01f7`, PR2139+2141/CI38066533003+38066789813/Render38067034314. Δεν αποτελεί επαλήθευση κανονικού Ιδιοκτήτη ή ενεργοποίησης module· ο πίνακας δικαιωμάτων έδειξε AI_OWNER_ASSISTANT Owner ΟΧΙ και CASH_CONTROL ΝΑΙ. Κανένα module/δικαίωμα δεν ενεργοποιήθηκε.
