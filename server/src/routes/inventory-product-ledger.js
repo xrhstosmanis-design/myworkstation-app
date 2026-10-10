@@ -141,6 +141,8 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
         WHERE sm."storeId"=${storeId} AND sm."productId"=${productId}
           AND st."companyId"=${companyId} AND p."companyId"=${companyId}
           AND sm."sourceType" IS NOT NULL AND sm."sourceId" IS NOT NULL
+          -- PRODUCT_CARD sourceId identifies a reusable product, not a posting operation.
+          AND sm."sourceType"<>'PRODUCT_CARD'
         GROUP BY sm."sourceType",sm."sourceId",sm."movementType",sm."quantity"
         HAVING COUNT(*)>1
         ORDER BY COUNT(*) DESC`:Promise.resolve([])
