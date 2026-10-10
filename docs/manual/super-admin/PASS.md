@@ -1,3 +1,11 @@
+## 10/10/2026 — Νο33 έξι καταστήματα: Super Admin support entry/return, περιορισμένο LIVE PASS
+
+Ο εξουσιοδοτημένος Platform Super Admin συνδέεται με 2FA στη https://myworkstation-app.onrender.com/platform-admin. Επιλέγει τη συγκεκριμένη εταιρεία → Καταστήματα → Πλήρες Backoffice για το συγκεκριμένο κατάστημα. Περιμένει την ολοκλήρωση φόρτωσης και ελέγχει εταιρεία, όνομα καταστήματος και πραγματικό Κέντρο βαρδιών. Επιστρέφει με «Επιστροφή στο Super Admin», χωρίς logout ή χειροκίνητη αντικατάσταση συνεδρίας. Η επιστροφή στην επώνυμη οθόνη εταιρειών πρέπει να ολοκληρωθεί πριν την επόμενη επιλογή.
+
+Η πραγματική διαδρομή και η σωστή προβολή βαρδιών πέτυχαν και στα έξι διαθέσιμα καταστήματα: κύριο LAB, DAILY BITE, Διαδόχου Παύλου, Κυλικείο ΚΑΤ, N40 CONTROL και εργαστήριο ετικέτας, μετά το exact healthy586900d / full2274PASS / guarded38085253808. Στο κύριο LAB διατηρήθηκαν τα δύο ταμεία MAIN11/4€ και LAB-POS-02 2/0€, ενώ στα άλλα πέντε εμφανίστηκε καμία ανοικτή βάρδια. Δεν ανοίγουμε βάρδια ή υποβάλλουμε πληρωμή για να ελέγξουμε μια κενή προβολή. Οι κανονικές καταγραφές support entry/exit δεν είναι οικονομική συναλλαγή· raw Audit IDs δεν ελέγχθηκαν εδώ.
+
+Όρια: αυτό είναι support Super Admin πρόσβαση και ανάγνωση. Δεν αποτελεί ordinary Owner ή EMPLOYEE PASS για κάθε κατάστημα, οριστική λύση όλων των server401/404, λειτουργία κάθε module, physical POS, έλεγχο printing/shift close ή συνολικό Νο33 PASS. Η controlled LIVE καθυστέρηση παλιού auth response/renewal δεν δοκιμάστηκε· τα six extracted callback tests παραμένουν CI evidence. Σε νέο denial καταγράφουμε σωστή εταιρεία/κατάστημα και ακριβές μήνυμα, σταματάμε την υποβολή και χρησιμοποιούμε την κανονική ασφαλή είσοδο. Δεν παρακάμπτουμε isolation ή διαγράφουμε tokens άλλης συνεδρίας. Τα προσωπική κάρτα/QR και καταμέτρηση USER PASS διατηρούνται χωρίς επανάληψη. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-10-operator-all-store-access.md`.
+
 ## 10/10/2026 22:49 Athens - Owner exact product/date sales LIMITED LIVE PASS
 
 Who: existing authorized Owner, active AI_OWNER_ASSISTANT and the canonical report's INVENTORY domain for the selected own store. Tested ordinary Υπεύθυνος Εργαστηρίου in MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, actual healthy69456df3/full2241/0/0/guard38077625384. No Super Admin support preview used.
