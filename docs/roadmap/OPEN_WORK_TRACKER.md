@@ -1,3 +1,7 @@
+## 2026-10-10T10:51:38+03:00 — N40-NAV-CLAIM-20261010 / AI-CC-LIMITS / ASSIGNED / AWAITING IMPLEMENTATION AND LAB
+
+Same conversation that created audit PR2040, now explicitly instructed «ξεκινα» to implement its findings. Owner `codex/n40-full-twin-navigation-audit-20261010`. Bounded six-tile navigation, selected-store handoff/return/invalidation only. Source inspection found generic POS/EFTPOS/Cash callbacks and stale-selection fallback; this is not proof of a server-side data leak. Preserve visual phases1–14 and every other assigned module. Source fix and all authenticated LAB navigation tests NOT TESTED. No sales, payments, stock, staff, fiscal, camera or billing mutation. Claim publication requires this PR final green CI and main merge before application changes. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-n40-full-twin-navigation-audit.md`.
+
 ## N39 scoped transfer destination regression — AWAITING LAB
 
 Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry fixes source to LAB; its scoped stores list correctly contains only source but the transfer modal incorrectly reused that list, leaving destination empty despite another active authorized LAB store. No transfer submitted. Isolated fix: transfer opening fetches the existing company-authorized /api/stores list into separate transferStores; source selection and all module stores remain fixed. Reject missing/inactive source and fetch failures without fallback; ignore response if source changes. Server transfer tenant/active/sufficient-stock/paired-movement/idempotency rules unchanged. Unit cases7/7 pass Node20; frontend npm run build required. Full39 OPEN. After green CI/merge/exact deployed revision, refresh all baseline values in CHECKPOINTS/CHANGES/2026-10-10-n39-transfer-live.md before new qty1 TRANSFER-01. No new manual PASS until LIVE before/after balances and control verified.
@@ -1838,13 +1842,13 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### AI-CC-LIMITS — AI Command Center όρια PASS
 
-**Κατάσταση:** ΑΡΧΙΚΟ ΠΛΑΝΟ CLOSED / NOT TESTED
+**Κατάσταση:** OPEN / ASSIGNED / NAVIGATION NOT TESTED; visual phases 1–14 remain CLOSED
 
 **Υπόλοιπο / όρια PASS:** Τα κλικ μετάβασης Full Digital Twin δεν δοκιμάστηκαν. Δεν ανοίγουν ξανά οι οπτικές αποδοχές 1–14.
 
-**Υπεύθυνη σελίδα / branch:** Προηγούμενος owner — νέα επέκταση μόνο με ανάθεση
+**Υπεύθυνη σελίδα / branch:** `codex/n40-full-twin-navigation-audit-20261010` — explicit owner assignment for printed40, 10/10/2026.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 2026-10-10T10:51:38+03:00 — N40-NAV-CLAIM-20261010; Full Digital Twin six-tile navigation only: selected-company/store handoff, safe invalidation and return to the same Twin. `CHECKPOINTS/CHANGES/2026-10-10-n40-full-twin-navigation-audit.md`; PR #2040. No takeover of visual phases1–14, AI-CREDITS-01, inventory/workforce/video/invoice business flows or other owners.
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 

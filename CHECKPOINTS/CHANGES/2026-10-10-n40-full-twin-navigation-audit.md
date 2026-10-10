@@ -65,3 +65,7 @@ Not executed: application source fix, build, lint, unit/integration suite, authe
 The current tool session has repository access but no connected authenticated browser runtime. Local repository cloning also failed because the execution environment could not resolve github.com. These are execution limitations, not application functional failures. No browser PASS, CI PASS, merge or live revision is inferred from them.
 
 N40 remains OPEN. Next executable implementation step: publish the exact scoped central claim and trace the canonical destination interfaces before a minimal source patch.
+
+## 2026-10-10T10:51:38+03:00 — implementation instruction and scoped claim
+
+N40-NAV-CLAIM-20261010: owner explicitly instructed «ξεκινα» after the audit. Same owner `codex/n40-full-twin-navigation-audit-20261010`. The central tracker, active list, pending list and numbered list now contain the bounded N40 claim on this branch. This supersedes only the earlier note that those files were not updated; publication to main still requires final green CI and merge. No application source or LAB action yet. Temporary preparation operates only on PR2040 head branch, never main, removes itself before final review and preserves concurrent main updates. The local clone failed DNS resolution again; tracked repository source is exported as a short-lived review artifact, without credentials or untracked files. Next: inspect complete source/checkpoints and implement one causal navigation fix after claim merge. Full N40 OPEN / NOT TESTED.

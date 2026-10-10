@@ -273,6 +273,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 - **Tracker ID:** `AI-CC-LIMITS`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΑΡΧΙΚΟ ΠΛΑΝΟ CLOSED / NOT TESTED
 - **Υπόλοιπο / όριο:** Τα clicks μετάβασης Full Digital Twin δεν δοκιμάστηκαν· οι οπτικές αποδοχές 1–14 δεν ανοίγουν ξανά.
+- **Νεότερη ανάληψη 10/10/2026:** OPEN / ASSIGNED `codex/n40-full-twin-navigation-audit-20261010` — έξι μεταβάσεις Full Digital Twin, διατήρηση/επιστροφή καταστήματος και ασφαλής ακύρωση μη έγκυρης επιλογής. PR #2040 / N40-NAV-CLAIM-20261010. Υλοποίηση και LAB NOT TESTED· οπτικές αποδοχές 1–14 προστατευμένες.
 
 ## 41 — Oxygen, Radio, προαιρετικά modules και χρεώσεις
 
