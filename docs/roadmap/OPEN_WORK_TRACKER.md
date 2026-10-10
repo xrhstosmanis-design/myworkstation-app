@@ -14,6 +14,10 @@ Fresh final MAIN5/cash3.50/cards0/IRIS0/expenses0/total3.50/latest09:51 and cont
 
 This supersedes source AWAITING LAB only for tested keyboard denial, restored local-price/Audit and mounted editor closure. Server negative response, checkout/fiscal/refund, offline/concurrent devices, full stock ledger, physical printing, transfers, initialcash/shift closing and broader roles/companies/stores/modules remain OPEN/NOT TESTED. Next: own/all shift transactions and label printing visibility within existing specific approval; no financial/stock/shift submit or payment replay.
 
+## 2026-10-10T11:43:58+03:00 — N44 / TODAY-02 LAB PASS scoped; AWAITING USER final visual acceptance
+
+Owner codex/n44-product-vat-acceptance-20261010 retained. VAT save/readback, original-name restore, two supplier IDs/codes and three barcode attributes retained: LAB PASS at dd85719d/PR2044. Last-link deletion/fixture cleanup: LAB PASS at independently healthy de7d5c2e0d5acf1ef4c9b65bf43ebbc28cac9258, PR2049/headbd0c6bfe/fullCI38038134278 SUCCESS2048/2048, mainCI38038293816 SUCCESS, guardedRender38038479008 SUCCESS. Fresh reopen supplier table empty, original TEST2 name/SKU/category/subcategory/unit/retail2.40/cost0/VAT13/stock-2/flags/three barcode values and multipliers restored; no temporary active supplier links remain. Barcode timestamps11:42:09 are existing full-card replacement behavior, not ownership transfer. Five identified successful card saves total (fixture, name, name restore, first cleanup, final cleanup); first cleanup was functional FAIL, fixed before fresh cleanup. No economic/stock quantity action. AlternateVAT transition, physical/mobile and independent full financial/ledger/storecontrol deltas NOT TESTED. USER final visual acceptance pending, not overall USER PASS. Source acceptance complete for these scoped flows; no further state-changing test requested. Single next action: owner reviews VAT product editor appearance/use and confirms acceptance. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-n44-product-vat-acceptance.md, products manual, proof CHECKPOINTS/EVIDENCE/n44-product-vat-20261010/n44-card-restored-1791621751699.jpg and n44-suppliers-restored-1791621743319.jpg. Other owners protected.
+
 ## N39 TRANSFER-02 — bounded LIVE PASS / overall OPEN — 10/10/2026 11:15 Athens
 
 Owner codex/n39-inventory-acceptance-20261010 retained. PR2039 selector and PR2043 SQL-managed Product lookup corrections are LIVE verified on bbea3bda7646720abd75d90f9699c1222429daa7, full PR CI38036227841 SUCCESS2027PASS/0FAIL/0SKIP, mainCI38036434279 SUCCESS, guardedRender38036628204 SUCCESS and independent exact health. Fresh baseline recorded before one TRANSFER-02 submit: TEST1 source9 / ledger9/9/diff0/11moves/duplicates0, destination ALL exactSKU absent/0; MAIN5tx cash/total3.50/card0/IRIS0/expense0, controlLAB-POS-02 2tx cash/card/IRIS/total0/expense120; destination no open shift.
@@ -1947,15 +1951,15 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### TODAY-02 — Επεξεργασία είδους/ΦΠΑ
 
-**Κατάσταση:** IN PROGRESS
+**Κατάσταση:** AWAITING USER
 
-**Υπόλοιπο / όρια PASS:** Περιορισμένο LAB PASS save/readback και δύο προμηθευτών στο dd85719d. Υπόλοιπο: καθαρισμός fixture N44-LAB-A και τελική αποδοχή χρήστη. AlternateVAT/πλήρεις οικονομικές και storecontrol διαφορές NOT TESTED.
+**Υπόλοιπο / όρια PASS:** LAB PASS name-only save/readback, διατήρηση δύο προμηθευτών/τριών barcode, ίδια σελίδα και επαναφορά fixture. Απομένει τελική οπτική αποδοχή χρήστη. AlternateVAT/πλήρεις οικονομικές και storecontrol διαφορές NOT TESTED.
 
 **Υπεύθυνη σελίδα / branch:** codex/n44-product-vat-acceptance-20261010
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026 ανάληψη από την προηγούμενη TODAY σελίδα, ρητή ανάθεση ιδιοκτήτη για Νο44. Save/readback, διατήρηση πολλών προμηθευτών και τελική αποδοχή· CHECKPOINTS/CHANGES/2026-10-10-n44-product-vat-acceptance.md.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 2026-10-10T11:43:58+03:00, scoped LAB PASS PR2044/dd85719d και cleanup PR2049/de7d5c2e, fullCI38038134278 2048/2048 PASS/mainCI38038293816/Render38038479008 SUCCESS. Φρέσκια καρτέλα αρχική/προμηθευτές κενό/stock−2, checkpoint/manual/proof. Overall USER PASS εκκρεμεί.
 
 ### TODAY-03 — Κεντρικά προϊόντα UI
 
