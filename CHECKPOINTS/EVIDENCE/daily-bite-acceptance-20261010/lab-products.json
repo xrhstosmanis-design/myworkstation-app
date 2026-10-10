@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "[{\"barcodes\":[\"0001010202602\",\"9901010202601\"],\"costPrice\":0.719037,\"currentStock\":0,\"id\":\"9893bcd8-654f-4156-b89d-6593aee95d79\",\"name\":\"Synthetic six-decimal source item\",\"salePrice\":2.2500,\"sku\":\"LAB-DB-PREC-20261010-A-1\",\"storeId\":\"cmtpopbgo000trhb5ng9ytiru\",\"unit\":\"PIECE\",\"vatDepartmentId\":\"815e0531-9f42-4dd6-b5b8-f4ff37efdfa6\",\"vatRate\":13.000},{\"barcodes\":[\"9901010202603\"],\"costPrice\":0.646020,\"currentStock\":0,\"id\":\"38ab5a04-f869-494d-b5fc-cf58164817e3\",\"name\":\"Synthetic five-decimal cards\",\"salePrice\":10.0000,\"sku\":\"LAB-DB-PREC-20261010-A-2\",\"storeId\":\"cmtpopbgo000trhb5ng9ytiru\",\"unit\":\"PIECE\",\"vatDepartmentId\":\"4bd3cb7a-431a-4941-9e5f-81d1e9999505\",\"vatRate\":0}]"
+    }
+  ],
+  "isError": false
+}
