@@ -140,7 +140,7 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.doesNotMatch(panel,/Promise\.allSettled\(nextRows\.map/);
   assert.match(owner,/activeModules\.includes\("STORE_CHAT"\)/);
   assert.match(owner,/Chat ανά κατάστημα/);
-  assert.match(owner,/<StoreChatPanel api=\{api\}/);
+  assert.match(owner,/<StoreChatPanel api=\{scopedApi\}/);
   assert.match(platform,/<StoreChatPanel api=\{request\}/);
   assert.match(platform,/setShowChatChooser\(true\)/);
   assert.match(platform,/Επίλεξε κατάστημα…/);

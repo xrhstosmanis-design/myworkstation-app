@@ -1,21 +1,3 @@
-## 10 Oct 2026 — No40 exact control-store GET trace prepared / AWAITING LAB
-
-Claim PR2171 merge e19dbe1fe1213c90caf77c83b3c1cc261997f8ac / CI38076101628 SUCCESS. Original No40 owner retained. Add exact cmv2qanca000psigeizep8o9m to existing primary-LAB diagnostic store allowlist; matching and visible projection retain actual expectedStoreId. Existing server middleware reuses shared projection; no new endpoint/auth authority/body/credential access. Tests cover exact control, primary mismatch, excluded isolated store, writes, realHTTP403/privacy and visible dual-store projection.13 focused tests PASS; fullCI/guarded deployment/actual control GET evidence NOT TESTED. No40 OPEN. Form-reset FAIL remains separate/unfixed; primaryStock visual not replayed.
-
-## 10 Oct 2026 21:29 Athens — No40 approved second LAB control / ASSIGNED, OPEN
-
-Owner remains codex/n40-full-twin-navigation-audit-20261010. User explicitly approved prepared N40 CONTROL 20261010 in MYWORKSTATION LAB, city ΔΟΚΙΜΑΣΤΙΚΟ ΠΕΡΙΒΑΛΛΟΝ, three default shift templates only. Existing creation was submitted once around18:29UTC under Super Admin Χρήστος Μάνης / cloud Chrome26, no POS/operator/shift/SKU/payment applicable. Before: LAB2stores/global5, employees9/38, users2/4. After one create: new store cmv2qanca000psigeizep8o9m, independent reload LAB3/global6, same employees/users; success message and one new row. Creation form displayed Cannot read properties of null (reading 'reset') after successful save; no repeat submission. Form cleanup is FAIL, store existence confirmed only, not overall create UX PASS.
-
-Approval extends read-only No40 second-store navigation/isolation checks solely to primary cmtpopbgo000trhb5ng9ytiru and this new control within company cmtpopbgk000prhb5qc60zxus. No isolated-label or real-store tests, business mutation, module/rights changes, fixture resets, email, analysis execution or device command. Existing phases1–14/Stock6097485640/restricted403401/six matched GETs protected. Main78438151 browserhealth exact / Renderdep-db586shj9rms73arfqlgLIVE18:29:46UTC verified. Current diagnostic trace allowlist supports primary only; extend observation to this exact authorized control if needed, with sanitized metadata/privatefail-safe/no auth change and privacy tests/fullCI/guarded release before acceptance.
-
-Fresh main78438151 active file was truncated to409characters by PR2169. Restore full last confirmed3bd4a024 active history1193444characters verbatim and retain exact current DAILY BITE409character entry. This is preservation, not takeover. Other pages remain assigned. Source before/after reset symptom recorded; do not fix unrelated business flow without causal scoped claim. Next read-only secondTwin checks / exact two-store trace readiness. No40 OPEN; no new Full Twin criterion PASS.
-
-
-
-## 10/10/2026 21:42 Athens — DAILY BITE coffee one-shot LIVE apply v3 / AWAITING CI
-Owner `codex/daily-bite-coffee-kat-behavior-20261010`, issue #2054. Current-main rebase of the already-green exact 16-SKU one-shot implementation. This entry is appended to reduce collisions with concurrent owners. No LIVE apply executed yet. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-daily-bite-coffee-live-apply-v3.md`.
-
-## 10/10/2026 - VOICE-ASSISTANT-01 / tracker32: bounded Owner product/date sales extension ASSIGNED / NOT TESTED
 
 Owner remains `codex/unified-voice-assistant-20261010`; implementation branch `feat/voice-owner-product-sales-20261010`. User21:02Athens said «ξεκινα» after normal Owner cash LIVE PASS. Same existing OpenAI connection selected previously; no new key/project/credentials/grant. Main aa028301 includes PR2161 cash PASS and independent No40 PR2160; current AGENTS/checklist/tracker/pending/manual, complete previously read active list plus exact new No40 delta, own checkpoint and post-PASS history reconciled. Existing normal Owner tab29 still shows selected LAB and matching cash report; no new Ask or business action. Latest cash evidence af36b491/full2194/0/0/guardedRender38072264270 protected.
 
@@ -52,6 +34,15 @@ Owner `codex/backoffice-session-boundary-20261010`, explicit owner correction re
 Scope: detect shared login/support context replacement or removal, stop rendering/polling stale Backoffice view, reject late results across the boundary and show explicit fresh-entry/reload notice. Never snapshot an old credential for continued use, clear another tab's storage, auto-login/revoke sessions, weaken server auth/ownedStore, alter data or treat all401/404 as this mechanism. Keep normal same-context refresh, support return/Owner login, N40 trace and N51 navigation intact. Bounded error handling may suspend this view after an attributable401; generic404,403,5xx or network outage are not global logout. Synthetic candidate mechanism established; production failed-request identities and401 root cause remain unverified. Latest other-owner signed-in heading/server-session mismatch is evidence to preserve, not cause attribution or takeover.
 
 Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-backoffice-session-boundary.md`. Acceptance: healthy same-context polling; cross-tab token/user/support replacement/removal and missed storage events before a request; in-flight context change rejects late success/error; stale callback cannot invalidate a newer view; legitimate same-tab login/company selection/support exit; explicit recovery; no shared credential mutation. Full build/server/production/isolated E2E CI and exact healthy deploy before actual read-only acceptance. No new business/LAB transaction or manual/numbered PASS. Assignment retained until completed/named handoff. Next: publish claim then bounded central boundary + mounted regressions.
+
+## 2026-10-10T18:04:44.670113+00:00 — BACKOFFICE-SESSION-01 / SOURCE IMPLEMENTED / AWAITING FULL CI + LIVE
+
+Same owner `codex/backoffice-session-boundary-20261010`; source `fix/backoffice-session-boundary-20261010`. Independent claim PR2158/head eaabafa9 / docsCI38073522058 SUCCESS / merge2d9bcdea precedes source. Central App request boundary blocks replaced/removed login/support context before fetch, discards late results, unmounts stale child polling and shows explicit fresh entry/sign-in. Current401 suspends this guarded view; pre-renewal401 does not reject renewed credentials; ordinary403/404/5xx/network errors remain ordinary failures. Same-session identity/scope renewal stays live and every request uses current token/server auth. Normal explicit successful sign-in removes obsolete support metadata; denied or superseded in-flight sign-in changes nothing. Support exit/company-selection recheck context before writing transition credentials. No N51/StoreCloudPage, N40 navigation/trace/fixture, VOICE source or server/schema/business change.
+
+Node20.20.2 isolated focused45/45 PASS, including actual mounted App + unchanged StoreCloudPage timer cleanup, healthy refresh/renewal, stale callback protection, denied/superseded/successful explicit sign-in and current401 suspension. Full prepared server suite2216tests/2200PASS/0FAIL/16isolated-PostgreSQLskips; frontend build18.04s/TABLE_SERVICE PASS and server Prisma generation PASS. Initial broad-suite failure was the chat integration assertion expecting the previous API variable; only that expectation updated to guarded scopedApi, all tenant/category/storage checks retained. Build preparation's unrelated audit-route mutation restored and excluded. Local/CI are not LIVE/LAB PASS.
+
+Newer main aa028301/N40 history reader and VOICE normal Owner cash PASS records preserved; no replay or attribution of their successful/failed sessions. Limitation: only central main.jsx App/bootstrap/request-prop children; independently mounted CommerceLauncher/Platform/POS readers remain their owners' scope. Existing already-open old client assets require a normal reload after release. No claim that production401 spike, every404 or DB storage issue is resolved. Required exact full CI/guard/main/deployed health and actual read-only session-change/healthy-refresh acceptance before closure. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-backoffice-session-boundary.md`. No manual/numbered PASS closure or business action. Next source PR/fullCI then guarded release and bounded read-only acceptance; owner retained.
+
 
 ## 10/10/2026 20:33 Athens - VOICE-ASSISTANT-01 / tracker32: signed-in UI observed; Owner acceptance BLOCKED by identity mismatch
 
@@ -113,6 +104,18 @@ Fresh actual browser health17:00:55.359Z ok=true/version0.22.0+kat-test-pos/exac
 ## 10/10/2026 19:27 Athens — DAILY BITE POS screenshot mapping — ASSIGNED
 Owner `codex/daily-bite-pos-layout-20261010`, issue #2054. New bounded scope after definitive catalog import PASS: MyWorkStation colors/layout, DAILY BITE-only product bindings, KAT coffee modifier behavior reused only as behavior, and coffee label normalization from KAT by **name only**. User supplied Kiosk screenshots for ΣΦΟΛΙΑΤΕΣ, ΜΠΑΡΕΣ ΓΚΡΑΝΟΛΑ, ΧΩΡΙΣ BARCODE, ΚΙΣΣΑΣ, ΤΑΡΤΕΣ - ΓΛΥΚΑ, DELISNACKS, ΜΠΑΛΕΣ, ΜΑΓΑΚΗΣ, ΚΕΙΚ, ΠΑΙΧΝΙΔΙΑ. Do not guess ellipsis/blank buttons. Preserve 9 departments/8,753 imported items; no reimport, department recreation, fiscal/RBS, stock, payments, shifts, employees, online ordering, permissions, KAT data mutation or other-store changes. Implementation/LAB acceptance NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-daily-bite-import.md`.
 
+
+## 10 Oct 2026 — No40 exact control-store GET trace prepared / AWAITING LAB
+
+Claim PR2171 merge e19dbe1fe1213c90caf77c83b3c1cc261997f8ac / CI38076101628 SUCCESS. Original No40 owner retained. Add exact cmv2qanca000psigeizep8o9m to existing primary-LAB diagnostic store allowlist; matching and visible projection retain actual expectedStoreId. Existing server middleware reuses shared projection; no new endpoint/auth authority/body/credential access.13 focused privacy/isolation/denial tests PASS. FullCI/guarded deployment/actual control GET evidence AWAITING LAB. No40 OPEN; creation-form reset FAIL separate/unfixed. Fresh main e6bdd31b preserved; its full active history retained, missing No40 control claim restored from mergedPR2171. PrimaryStock6097485640 not replayed.
+
+## 10 Oct 2026 21:29 Athens — No40 approved second LAB control / ASSIGNED, OPEN
+
+Owner remains codex/n40-full-twin-navigation-audit-20261010. User explicitly approved prepared N40 CONTROL 20261010 in MYWORKSTATION LAB, city ΔΟΚΙΜΑΣΤΙΚΟ ΠΕΡΙΒΑΛΛΟΝ, three default shift templates only. Existing creation was submitted once around18:29UTC under Super Admin Χρήστος Μάνης / cloud Chrome26, no POS/operator/shift/SKU/payment applicable. Before: LAB2stores/global5, employees9/38, users2/4. After one create: new store cmv2qanca000psigeizep8o9m, independent reload LAB3/global6, same employees/users; success message and one new row. Creation form displayed Cannot read properties of null (reading 'reset') after successful save; no repeat submission. Form cleanup is FAIL, store existence confirmed only, not overall create UX PASS.
+
+Approval extends read-only No40 second-store navigation/isolation checks solely to primary cmtpopbgo000trhb5ng9ytiru and this new control within company cmtpopbgk000prhb5qc60zxus. No isolated-label or real-store tests, business mutation, module/rights changes, fixture resets, email, analysis execution or device command. Existing phases1–14/Stock6097485640/restricted403401/six matched GETs protected. Main78438151 browserhealth exact / Renderdep-db586shj9rms73arfqlgLIVE18:29:46UTC verified. Current diagnostic trace allowlist supports primary only; extend observation to this exact authorized control if needed, with sanitized metadata/privatefail-safe/no auth change and privacy tests/fullCI/guarded release before acceptance.
+
+Fresh main78438151 active file was truncated to409characters by PR2169. Restore full last confirmed3bd4a024 active history1193444characters verbatim and retain exact current DAILY BITE409character entry. This is preservation, not takeover. Other pages remain assigned. Source before/after reset symptom recorded; do not fix unrelated business flow without causal scoped claim. Next read-only secondTwin checks / exact two-store trace readiness. No40 OPEN; no new Full Twin criterion PASS.
 
 ## 10 Oct 2026 21:16 Athens — No40 historical Stock support read: bounded result, OPEN
 
@@ -5623,3 +5626,21 @@ Same owner `codex/n40-full-twin-navigation-audit-20261010`. Claim PR2114 finalhe
 
 Local Node24.19.0:8/8 focused diagnostic tests PASS, including real local HTTP403 correlation preserving ordinary response and privacy/negative/malformed/rate-limit cases. Existing transfer-auth VM harness imports the real diagnostic helpers and preserves authentication assertions; combined local tests9/9 PASS. Server/module syntax checks PASS. This is synthetic local evidence, not supported Node20 fullCI or deployed acceptance. No code deployment or real new tracedLAB observation yet. Browser actual request/race/role/module/revocation acceptance remains NOT TESTED; no restricted company User created. Previous restrictedPOSdenial, Stock6097485640 and visual1-14 preserved. No40 OPEN. Next: full CI on exact sourcehead, then reviewed release for read-only target-LAB trace acceptance. Inspect any scope mismatch and retain other owners' business work.
 
+## 10/10/2026 21:31 Athens — DAILY BITE coffee KAT-behavior / LIVE PASS
+Issue #2054, owner `codex/daily-bite-coffee-kat-behavior-20261010`.
+
+Revision `78438151a7babb82eff78ffd1f0728180ca43d28` deployed LIVE on Render deploy `dep-db586shj9rms73arfqlg` (finished 18:29:46Z). One-shot marker `DAILY_BITE_COFFEE_KAT_BEHAVIOR_20261010_V1` applied exactly once at 18:29:37Z.
+
+Measured result:
+- DAILY BITE remains 8,753 active products and 9 existing departments.
+- 16 exact prepared-coffee SKUs received KAT-equivalent modifier behavior using DAILY-owned IDs.
+- 6 active DAILY modifier groups / 26 active DAILY modifiers.
+- 16 mapped products are preparation-enabled with environmental fee 0.
+- 84 product↔modifier-group links created.
+- 11 product names were normalized only to the matched KAT labels.
+- SKU, barcode, sale price, cost price, VAT, VAT department, category, stock and supplier identity were not changed by this patch.
+- No KAT recipe rows, ingredient IDs or stock-consumption rules were copied.
+- Post-apply control: 0 mapped nonzero stock, 0 new stock movements, 0 sales and 0 payments in DAILY BITE during the apply window.
+- Startup log: `DAILY BITE coffee behavior applied: 16 products, 11 name normalizations; recipes/ingredients untouched.`
+
+This is a **LIVE PASS for the bounded modifier/name-normalization scope only**. Recipe ingredient consumption, physical POS interaction, production printing and cashier-facing acceptance remain separate/not covered by this PASS.
