@@ -1,3 +1,4 @@
+import {inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed} from "../src/lib/inventory-stocktake-scope.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,7 +12,7 @@ test('actual finalization rejects missing/blank/oversize cause without starting 
   const handlers=new Map(),Router=()=>Object.fromEntries(['get','post','delete'].map(m=>[m,(p,...hs)=>handlers.set(m+p,hs)]));
   const prisma={$queryRaw:async()=>[{id:'take',companyId:'company',storeId:'store',status:'DRAFT'}],$transaction:async fn=>{transactions++;await fn({})}};
   const source=fs.readFileSync(new URL('../src/routes/inventory-v2.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export .*;\n/gm,'');
-  new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake',source)(Router,z,crypto,prisma,{},()=>{},async(_tx,_st,_actor,reason)=>{passedReason=reason},lockDraftInventoryStocktake);
+  new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed',source)(Router,z,crypto,prisma,{},()=>{},async(_tx,_st,_actor,reason)=>{passedReason=reason},lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed);
   const invoke=async reason=>{let error,result;await handlers.get('post/stocktakes/:stocktakeId/finalize').at(-1)({user:{id:'owner',role:'OWNER',companyId:'company'},params:{stocktakeId:'take'},body:{reason}},{json:x=>{result=x},status(){return this}},e=>{error=e});return {error,result}};
   for(const reason of [undefined,null,'','  ','ab','x'.repeat(301)])assert.equal((await invoke(reason)).error?.name,'ZodError');
   assert.equal(transactions,0);

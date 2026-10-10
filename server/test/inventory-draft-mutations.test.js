@@ -1,3 +1,4 @@
+import {inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed} from "../src/lib/inventory-stocktake-scope.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -14,13 +15,13 @@ const cases=[
   ['post/stocktakes/:stocktakeId/attach-barcode',{productId:'extra',barcode:'VIRTUAL-01'}],
   ['post/stocktakes/:stocktakeId/import-counts',{rows:[{sku:'VIRTUAL',quantity:9}]}],
 ];
-const request=(body,user={})=>({user:{id:'owner',role:'OWNER',companyId:'company',fullName:'Virtual owner',...user},params:{stocktakeId:'take',lineId:'line'},body});
+const request=(body,user={})=>({user:{id:'owner',role:'OWNER',companyId:'company',fullName:'Virtual owner',...user},params:{stocktakeId:'take',lineId:'line'},query:{},body});
 function routes(prisma) {
   const handlers=new Map();
   const Router=()=>Object.fromEntries(['get','post','delete'].map(method=>[method,(path,...hs)=>handlers.set(method+path,hs)]));
   for(const file of ['inventory-v2.js','inventory-v2-import.js']) {
     const source=fs.readFileSync(new URL('../src/routes/'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export .*;\n/gm,'');
-    new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake',source)(Router,z,crypto,prisma,{},()=>{},finalizeInventoryStocktake,lockDraftInventoryStocktake);
+    new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed',source)(Router,z,crypto,prisma,{},()=>{},finalizeInventoryStocktake,lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed);
   }
   return async(path,req)=>{
     let status=200,result,error;
@@ -52,8 +53,9 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
   try{
     await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
     const tables=[
+      'CREATE TABLE "InventoryZone"("id" text,"companyId" text,"storeId" text,"code" text,"name" text,"active" bool,"createdAt" timestamp)',
       'CREATE TABLE "Store"("id" text primary key,"name" text)',
-      'CREATE TABLE "Stocktake"("id" text primary key,"companyId" text,"storeId" text,"name" text,"status" text,"scopeType" text,"scopeJson" jsonb,"liveDuringTrading" bool,"recountPolicy" text,"startedAt" timestamp,"finalizedAt" timestamp,"finalizedByUserId" text,"snapshotJson" jsonb,"updatedAt" timestamp)',
+      'CREATE TABLE "Stocktake"("id" text primary key,"companyId" text,"storeId" text,"name" text,"status" text,"scopeType" text,"scopeJson" jsonb,"liveDuringTrading" bool,"recountPolicy" text,"startedAt" timestamp,"finalizedAt" timestamp,"finalizedByUserId" text,"snapshotJson" jsonb,"inventoryVersion" int default 2,"updatedAt" timestamp)',
       'CREATE TABLE "StocktakeLine"("id" text primary key,"stocktakeId" text,"productId" text,"zoneId" text,"expectedQuantity" numeric,"countedQuantity" numeric,"unitCost" numeric,"recountRequired" bool default false,"countVersion" int default 0,"countedByUserId" text,"countedAt" timestamp,"countSource" text,"updatedAt" timestamp,unique("stocktakeId","productId"))',
       'CREATE TABLE "StoreProduct"("storeId" text,"productId" text,"currentStock" numeric,"active" bool,"updatedAt" timestamp,primary key("storeId","productId"))',
       'CREATE TABLE "Product"("id" text primary key,"companyId" text,"sku" text,"name" text,"costPrice" numeric,"active" bool)',
@@ -63,7 +65,7 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
     ];
     for(const sql of tables)await db.$executeRawUnsafe(sql);
     const reset=async()=>{
-      await db.$executeRawUnsafe('TRUNCATE "InventoryCountEvent","StockMovement","ProductBarcode","Product","StocktakeLine","StoreProduct","Stocktake","Store"');
+      await db.$executeRawUnsafe('TRUNCATE "InventoryZone","InventoryCountEvent","StockMovement","ProductBarcode","Product","StocktakeLine","StoreProduct","Stocktake","Store"');
       await db.$executeRaw`INSERT INTO "Store" VALUES('store','Virtual')`;
       await db.$executeRaw`INSERT INTO "Stocktake"("id","companyId","storeId","name","status","scopeType","scopeJson","liveDuringTrading","recountPolicy") VALUES('take','company','store','Virtual','DRAFT','PARTIAL_PRODUCTS','{}',false,'NONE')`;
       await db.$executeRaw`INSERT INTO "StocktakeLine"("id","stocktakeId","productId","zoneId","expectedQuantity","countedQuantity","unitCost","recountRequired","countVersion") VALUES('line','take','product','zone',10,8,1,false,1)`;
@@ -73,7 +75,7 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
     const observe=async()=>{
       const rows=await db.$queryRaw`SELECT "storeId","productId","currentStock" FROM "StoreProduct" ORDER BY "storeId","productId"`;
       assert.equal(Number(rows.find(r=>r.storeId==='control').currentStock),30);assert.equal(Number(rows.find(r=>r.productId==='extra').currentStock),25);
-      return {stock:Number(rows.find(r=>r.storeId==='store'&&r.productId==='product').currentStock),parent:await db.$queryRaw`SELECT "status","snapshotJson" FROM "Stocktake"`,lines:await db.$queryRaw`SELECT "id","countedQuantity","countVersion","recountRequired" FROM "StocktakeLine" ORDER BY "id"`,events:await db.$queryRaw`SELECT "eventType","actorId","clientEventId" FROM "InventoryCountEvent" ORDER BY "id"`,barcodes:await db.$queryRaw`SELECT "barcode" FROM "ProductBarcode"`,movements:await db.$queryRaw`SELECT "quantity","sourceId" FROM "StockMovement"`};
+      return {stock:Number(rows.find(r=>r.storeId==='store'&&r.productId==='product').currentStock),parent:await db.$queryRaw`SELECT "status","snapshotJson" FROM "Stocktake"`,lines:await db.$queryRaw`SELECT "id","countedQuantity","countVersion","recountRequired" FROM "StocktakeLine" ORDER BY "id"`,events:await db.$queryRaw`SELECT "eventType","actorId","clientEventId","source" FROM "InventoryCountEvent" ORDER BY "id"`,barcodes:await db.$queryRaw`SELECT "barcode" FROM "ProductBarcode"`,movements:await db.$queryRaw`SELECT "quantity","sourceId" FROM "StockMovement"`};
     };
     const invoke=routes({$queryRaw:db.$queryRaw.bind(db),$executeRaw:db.$executeRaw.bind(db),$transaction:fn=>db.$transaction(fn,{timeout:15000})});
     for(const [path,body] of cases){
@@ -108,8 +110,27 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
     await reset();const baseline=await observe();
     assert.equal((await invoke(cases[0][0],request(cases[0][1],{companyId:'foreign'}))).status,404);
     assert.equal((await invoke(cases[0][0],request(cases[0][1],{tokenType:'INVENTORY_COUNTER',role:'EMPLOYEE',stocktakeId:'other'}))).status,404);
-    assert.equal((await invoke(cases[0][0],request(cases[0][1],{tokenType:'INVENTORY_COUNTER',role:'EMPLOYEE',stocktakeId:'take',zoneId:'other'}))).status,403);
+    assert.equal((await invoke(cases[0][0],request(cases[0][1],{tokenType:'INVENTORY_COUNTER',role:'EMPLOYEE',stocktakeId:'take',storeId:'store',zoneId:'other'}))).status,403);
     for(const path of [cases[1][0],cases[2][0],cases[3][0],cases[5][0],'post/stocktakes/:stocktakeId/finalize'])assert.equal((await invoke(path,request({}, {role:'EMPLOYEE'}))).status,403);
     assert.deepEqual(await observe(),baseline);
+    // Store-bound manager/owner requests cannot escape their authenticated store,
+    // even when the body names a valid stocktake in the same company.
+    for(const [path,body] of [...cases,['post/stocktakes/:stocktakeId/finalize',{reason:'Scope test'}],['get/stocktakes/:stocktakeId',{}],['get/stocktakes/:stocktakeId/product-search',{}],['delete/stocktakes/:stocktakeId',{}]])assert.equal((await invoke(path,request(body,{storeId:'control',tokenType:'STORE_OPERATOR'}))).status,404,path);
+    for(const [path,body] of [['post/zones',{storeId:'store',code:'VIRTUAL',name:'Virtual'}],['post/stocktakes',{storeId:'store',name:'Virtual'}]])assert.equal((await invoke(path,request(body,{storeId:'control',tokenType:'STORE_OPERATOR'}))).status,404,path);
+    assert.deepEqual(await observe(),baseline);
+    // A valid scoped counter keeps count/recount access and its own actor/source audit.
+    const counter={id:undefined,role:'EMPLOYEE',tokenType:'INVENTORY_COUNTER',grantId:'grant',stocktakeId:'take',storeId:'store',zoneId:'zone',fullName:'Virtual scoped counter'};
+    assert.equal((await invoke(cases[0][0],request({...cases[0][1],clientEventId:'scoped-counter',source:'QR_PIN'},counter))).status,200);
+    after=await observe();assert.equal(after.stock,10);assert.equal(after.events.length,1);assert.equal(after.events[0].actorId,'grant');assert.equal(after.events[0].source,'QR_PIN');
+    await db.$transaction(tx=>finalizeInventoryStocktake(tx,st,'owner','Scoped count verified'));assert.equal((await observe()).stock,9);
+    // Actual list/zone SQL retains company-wide owner access, but filters a bound store.
+    await reset();await db.$executeRaw`INSERT INTO "Store" VALUES('control','Control')`;
+    await db.$executeRaw`INSERT INTO "Stocktake"("id","companyId","storeId","name","status","scopeType","liveDuringTrading","recountPolicy") VALUES('control-take','company','control','Control','DRAFT','PARTIAL_PRODUCTS',false,'NONE')`;
+    await db.$executeRaw`INSERT INTO "InventoryZone" VALUES('z1','company','store','A','Source',true,NOW()),('z2','company','control','B','Control',true,NOW())`;
+    assert.equal((await invoke('get/stocktakes',request({}))).result.length,2);
+    assert.deepEqual((await invoke('get/stocktakes',request({},{storeId:'store'}))).result.map(x=>x.id),['take']);
+    assert.equal((await invoke('get/zones',request({}))).result.length,2);
+    assert.deepEqual((await invoke('get/zones',request({},{storeId:'store'}))).result.map(x=>x.id),['z1']);
+    assert.deepEqual((await invoke('get/zones',{...request({},{storeId:'store'}),query:{storeId:'control'}})).result,[]);
   }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
