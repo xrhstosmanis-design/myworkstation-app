@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
+import {createN40SupportHistoryHandler} from "../services/n40-support-history.mjs";
 import {
   buildOtpAuthUri,
   consumeRecoveryCode,
@@ -304,6 +305,8 @@ router.post("/2fa/verify",async(req,res,next)=>{
     next(error);
   }
 });
+
+router.get("/security/n40-stock-support-history",auth,createN40SupportHistoryHandler({prisma}));
 
 router.get("/security",auth,async(req,res,next)=>{
   try{
