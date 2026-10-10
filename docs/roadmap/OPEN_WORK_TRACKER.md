@@ -1589,6 +1589,13 @@ Remaining: secure reentry, nativecancel/reason, remoteonlineoutcome, current ind
 
 ## 35 — Τελικές δοκιμές ρόλων/modules
 
+### 10/10/2026 09:17 Europe/Athens — OPERATOR-CHECKBOX-01 / PHOTO-CAMERA-EVIDENCE USER PASS
+
+Χρήστος Μάνης επιβεβαίωσε ρητά: «η πραγματική επισύναψη φωτογραφίας, η κάμερα και η εμφάνιση του αποδεικτικού παραμένουν ανεπιβεβαίωτα. εχουν επιβεβαιωθει απο εμενα». Καταγράφεται owner-reported USER PASS για πραγματική επισύναψη φωτογραφίας, χρήση κάμερας και εμφάνιση αποδεικτικού. Αυτά τα τρία σκέλη αφαιρούνται από το ενεργό υπόλοιπο. Οι παλιότερες NOT TESTED/OPEN εγγραφές για αυτά υπερκαλύπτονται από τη σημερινή επιβεβαίωση και δεν ζητείται επανάληψη ή νέα πληρωμή μόνο για τεκμήριο.
+
+Η επιβεβαίωση δεν περιλαμβάνει νέα ανεξάρτητη μέτρηση από τον agent, συγκεκριμένο store/terminal/operator/shift/revision, ποσά, filename, νέο screenshot ή PDF-specific/quality/blur/size/format variants. Δεν συνάγονται νέα financial/stock/Audit deltas ή συνολικό PASS. Ο περιορισμός του agent browser παραμένει μόνο για τους υπόλοιπους ελέγχους, όχι εμπόδιο αποδοχής των τριών επιβεβαιωμένων σκελών. Προστατεύεται το PR2022/PR2025 mounted Payments LIVE UI PASS και το αρχικό αποκατεστημένο προφίλ. Ίδιος owner codex/operator-checkbox-audit-20261009, printed33/tracker35 συνολικά OPEN για native cancel/reason, online αποτέλεσμα, λοιπά controls/τιμές/επιστροφές/μεταφορές/αρχικό ταμείο/κλείσιμο/εκτύπωση, isolated active-only και ευρύτερους ρόλους/εταιρεία/κατάστημα/modules. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-operator-photo-browser-handoff.md.
+
+
 ### 10/10/2026 — OPERATOR-CHECKBOX-01 / mounted Payments LIVE UI PASS / overall OPEN
 
 Owner codex/operator-checkbox-audit-20261009 retained; printed33/tracker35 OPEN. Source PR2022 head7270614550bca902ffef8465a92898ed37b89269 merged0ab33f3177c32d94f241fa753406aae8ab2e77a0. Full PR CI38028855432 and exact-main CI38029057435 SUCCESS2019PASS/0FAIL/0SKIP; guarded Render38029245686 SUCCESS; independent health ok=true/exact0ab33f31. Fresh own-store LABPOS2 EMPLOYEE POS connected/catalog11/93/cart0/total0/localqueue0. Secure reentry already verified; prior reentry-pending and payment-fix-awaiting entries below are historical.
@@ -1600,7 +1607,7 @@ Photo NOT TESTED: enabled PC photo/PDF controls observed with correct accept typ
 Evidence CHECKPOINTS/EVIDENCE/operator-payment-original-20261010.jpg and operator-payment-denied-20261010.jpg; checkpoint CHECKPOINTS/CHANGES/2026-10-09-operator-checkbox-audit.md. Next: recover supported browser runtime/session, resume remaining same-owner controls from original baseline; do not replay accepted financial transactions.
 
 
-**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / PAYMENT MODAL LIVE UI PASS / BROWSER BLOCKED / OPEN — OPERATOR-CHECKBOX-01
+**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / PAYMENT MODAL LIVE UI PASS / PHOTO-CAMERA-EVIDENCE USER PASS / OPEN — OPERATOR-CHECKBOX-01
 
 ## 2026-10-09T22:19:36.611256+00:00 — OPERATOR-CHECKBOX-01 bounded LIVE PASS / BROWSER HANDOFF / overall OPEN
 
