@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from "react";
+import {readBackofficeContext} from "../../utils/backofficeSessionBoundary.mjs";
 import {n40ReadHeaders,n40PublishRead} from "../../../../shared/n40-read-trace.mjs";
 import {AlertTriangle,BrainCircuit,Building2,CalendarDays,Camera,CheckCircle2,Copy,DatabaseBackup,Download,ExternalLink,Globe2,KeyRound,LayoutDashboard,LayoutTemplate,LogOut,MessageCircle,Monitor,Plus,Printer,RefreshCw,Send,ShieldCheck,ShoppingBag,Store,Trash2,Users,UsersRound,WalletCards,X} from "lucide-react";
 import PlatformSecureLogin from "./PlatformSecureLogin.jsx";
@@ -105,6 +106,7 @@ export default function PlatformAdminApp(){
   });
   const [returnedTwin]=useState(()=>localStorage.getItem("supportContext")?null:readTwinReturn(sessionStorage,user?.id));
   useEffect(()=>{if(!localStorage.getItem("supportContext"))clearTwinReturn(sessionStorage)},[]);
+  const overviewLoadSequence=useRef(0);
   const [data,setData]=useState(null);
   const [backupMonitor,setBackupMonitor]=useState(null);
   const [owners,setOwners]=useState([]);
@@ -193,6 +195,7 @@ export default function PlatformAdminApp(){
   },[readiness]);
 
   const clearSession=(clearError=true)=>{
+    overviewLoadSequence.current++;setLoading(false);
     localStorage.removeItem("token");localStorage.removeItem("platformUser");
     setUser(null);setData(null);setShowSecurity(false);setAiTwinSelection(null);clearTwinOrigin();clearTwinReturn(sessionStorage);setShowAiCommandCenter(false);setCashReport(null);setAnalyticsResult(null);setShowSupplierSettlementReview(false);setShowBankLedgerReview(false);setVideoConnectionManager(null);setWorkforceTarget(null);if(clearError)setError("");
   };
@@ -201,14 +204,21 @@ export default function PlatformAdminApp(){
     clearSession(clearError);
   };
   const load=async()=>{
+    const sequence=++overviewLoadSequence.current;
+    const context=readBackofficeContext(localStorage).key;
+    const current=()=>sequence===overviewLoadSequence.current&&readBackofficeContext(localStorage).key===context;
     setLoading(true);setError("");
-    try{const [overview,linkedOwners,backup]=await Promise.all([request("/api/platform/overview"),request("/api/platform/owners"),request("/api/platform/backup-monitoring").catch(()=>({configured:false,status:"OVERDUE",lastSuccess:null}))]);setData(overview);setOwners(linkedOwners.owners||[]);setBackupMonitor(backup)}
-    catch(err){
+    try{
+      const [overview,linkedOwners,backup]=await Promise.all([request("/api/platform/overview"),request("/api/platform/owners"),request("/api/platform/backup-monitoring").catch(()=>({configured:false,status:"OVERDUE",lastSuccess:null}))]);
+      if(!current())return;
+      setData(overview);setOwners(linkedOwners.owners||[]);setBackupMonitor(backup);
+    }catch(err){
+      if(!current())return;
       setError(err.message);
       if(/σύνδεση|συνεδρία|Super Admin|2FA/i.test(err.message))clearSession(false);
-    }finally{setLoading(false)}
+    }finally{if(current())setLoading(false)}
   };
-  useEffect(()=>{if(user)load()},[user]);
+  useEffect(()=>{if(user)load();return()=>{overviewLoadSequence.current++}},[user]);
 
   const runSuperAdminAnalytics=async()=>{
     setBusy("super-admin-analytics");setError("");setMessage("");
