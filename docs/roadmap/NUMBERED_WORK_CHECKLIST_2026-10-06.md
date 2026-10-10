@@ -279,9 +279,14 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 ## 39 — Inventory 2.0 — απογραφή, μεταφορές, φύρα και ιδιοκατανάλωση
 
-- **Υπόλοιπο / όριο:** Full39 OPEN / ASSIGNED codex/n39-inventory-acceptance-20261010. Προστατευμένα Gate2 και desktop-scroll USER PASS08Oct. Bounded LIVE PASS10Oct: αρχική μερική LIVE/NONE απογραφή11→10/report−1/μία κίνηση, expired10→9, TRANSFER-02 πηγή9→8/προορισμός0→1, SELF-01 8→7, WASTE-PAIR-01 7→5/δύο διακριτές κινήσεις. Ledger συμφωνία/duplicates0 και οικονομικά controls αμετάβλητα σε κάθε μετρημένο σενάριο. Δεν επαναλαμβάνονται. Parent-lock PR2060/full nativePG CI38040227918 attempt2 SUCCESS2055/0/0/merged85a5f82 προστατεύει έξι line mutations έναντι οριστικοποίησης, AWAITING exact deploy/LAB. Υποχρεωτική αιτιολογία3–300chars σε UI/API/snapshot/ledger AWAITING CI/deploy/LAB. Νέα ALL επαναμέτρηση, αρχική απόρριψη ελλιπούς recount και late stale-tab count rejection εκκρεμούν. Native replay/version/company-zone-owner guards CI μόνο· physical/mobile/νέα πραγματικά καταστήματα NOT TESTED. TODAY-07 και λοιποί owners προστατεύονται. Checkpoints n39-consumption-live/n39-draft-mutations/n39-finalization-reason, inventory manual και τρέχον tracker.
+- **Συνέχεια 10/10:** PR2020/2026 merged, παραγωγή aec8323 περιλαμβάνει τις διορθώσεις. TEST1 stock9· ledger9/difference0/11κινήσεις/duplicates0 LIVE read-only PASS μετά επαναφορά browser. Named continuation ίδιας ανάθεσης, πλήρες39 OPEN. Checkpoint `2026-10-10-n39-resume.md`.
+
+- **Υπόλοιπο / όριο:** OWNER-INVENTORY-SCROLL-01 USER PASS21:13: normal/max κύλιση και πλήρες Έναρξη/κάτω περιεχόμενο. PR1916/full CI PASS, independently verified1a71471 LIVE. Bounded scroll CLOSED· πλήρες INVENTORY-ADV OPEN / ASSIGNED codex/n39-inventory-acceptance-2026101010Oct; TODAY-07 retains previous owner. Bounded live report-ledger finalization LAB PASS10Oct:11→10/report−1/oneledger−1. FullN39OPEN: αιτιολογία/recount/roles/concurrency/transfer/waste/expiry/ownconsumption. LIVE PASS επιλογέα PR2039 και μονής TRANSFER-02 μετά PR2043: πηγή9→8/προορισμός0→1/ένα OUT-IN11:15:01/οικονομικά control αμετάβλητα. TRANSFER-01 ιστορικό FAIL χωρίς postings. SELF-01 ιδιοκατανάλωση LIVE PASS11:47:54:8→7/μία κίνηση/οικονομικά και δεύτερο ταμείο αμετάβλητα. WASTE-PAIR-01 LIVE PASS11:54:12–13:7→5/δύο κινήσεις/οικονομικά control αμετάβλητα. Υπόλοιπο υποχρεωτική αιτιολογία απογραφής/recount/roles/count-import-edit versus finalize/device OPEN. Gate2 και TODAY-07 προστατεύονται.
+
 - **Tracker ID:** `INVENTORY-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN / ASSIGNED — updated10/10/2026, codex/n39-inventory-acceptance-20261010
+
+**10/10 νεότερος έλεγχος:** απομονωμένο stale-DRAFT FAIL στις έξι μεταβολές· κοινός transactional parent lock, AWAITING CI/exact deploy/LAB. Αιτιολογία παραμένει χωριστό OPEN. Προστατευμένα LIVE PASS αμετάβλητα, συνολικό39 OPEN. Checkpoint2026-10-10-n39-draft-mutations.md.
 
 ## 40 — AI Command Center — μη ελεγμένες μεταβάσεις
 
@@ -317,7 +322,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `TODAY-03`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** IN PROGRESS
-- **Υπόλοιπο / όριο:** Πλήρης visual αποδοχή και no outer scroll. Ανάληψη10/10/2026 codex/n45-product-center-visual-20261010· νέο LIVE visual check AWAITING.
+- **Υπόλοιπο / όριο:** Πλήρης visual αποδοχή και no outer scroll. Ανάληψη10/10/2026 codex/n45-product-center-visual-20261010· populated Master clipping LIVE FAIL· bounded fix AWAITING LAB.
 
 ## 46 — Μαζική αλλαγή τιμών — preview, ταχύτητα και εφαρμογή
 
