@@ -1559,9 +1559,17 @@ Checkpoint: CHECKPOINTS/CHANGES/2026-10-07-n19-supplier-pdf.md · manual docs/ma
 
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 09Oct19:59:07–20:00:56UTC /23:01Athens — LIVE PASS δύο LAB και report normal/maximized σε1348×936, Super Admin support. Testing1049/61categories all matching, foreign search0, positive ΝΕΡΟ 500ML160/refresh160; isolation0/refresh0 with stale testing URL ignored. Report height1003.44/580px instead of old2px, controls/rows/toolbar reachable. SourcePR1984/fullCI37980435854 (1981/1981/0fail/0skip)/main884efea2; mainCI37980797209 rerun SUCCESS/guard37981497519 SUCCESS/exact healthy884efea2. Final docsPR1988 requires fresh exact-head green CI and main merge. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-audit-store-acceptance.md; manual docs/manual/reports/PASS.md; evidence CHECKPOINTS/EVIDENCE/audit-store-20261009/records.json. Completed pending context entries removed. No transactions/replay or next claim.
 
-### 35 — Τελικές δοκιμές ρόλων/modules
+### 10/10/2026 — OPERATOR-CHECKBOX-01 resumed LIVE UI / AWAITING SECURE REENTRY / overall OPEN
 
-**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / BROWSER HANDOFF / OPEN — OPERATOR-CHECKBOX-01
+Owner codex/operator-checkbox-audit-20261009 retained, printed33/tracker35 OPEN. Browser observation recovered on original tab11; LABPOS2 connected/cart0/catalog11/93. Current read-only healthb075d84d; independent Inventory, scanner and invoice source/owners preserved, physical client SHA unknown. Newly observed UI: customer-card-only placeholder changes false→true→false withoutreload; edit permission opens real quickbuttoneditor/cancel; linebarcode opens scoped registration withSKU2270 and matchingproduct/barcode; freshdocument posAccessfalse shows explicitdisabledaccess, restoredtrue+Retry reenterssamevalidsession. No layout/product/barcode/price/financial/stock/shift/fiscal save. Temporarycartqty1/unit1 removed via line trash, actualcart0/total0. Economic/stock/control/Audit deltas/IDs NOT TESTED.
+
+Inactiveprofile removesoperatorfromactivefilter and sessionreturnslogin; isolatedactive-only revocation NOT TESTED because intermediateposAccessfalse was also observed. Explicitly restoredbothactive/POStrue; refreshedlist/reopenedfreshAX+screenshot original23details, Accessorders=true, roleEMPLOYEE; filtertrue. FreshloginagainoffersLABPOS2. Authenticatedreturnafteractive test needssecurePIN. Evidence operator-resume-profile-20261010.jpg and operator-resume-restored-20261010.jpg; checkpoint2026-10-09-operator-checkbox-audit.md. Prior55removed/24retained and bounded7ebPASS protected.
+
+Remaining: secure reentry, nativecancel/reason, remoteonlineoutcome, current individualpaymenttabs/own-allledger/label/price controls, actualproduct/financial/physicalactions, isolatedactive-only revocation, role/company/store/module breadth. transferAmountserverguardexists but modernPOSentryabsent. No fullPASS or secondowner. Single next action: existingsecurePIN authenticationLABPOS2 then emptycart/currentprofile verification and continue remainingnegativechecks.
+
+## 35 — Τελικές δοκιμές ρόλων/modules
+
+**Κατάσταση:** ASSIGNED / PARTIAL LIVE PASS / AWAITING SECURE REENTRY / OPEN — OPERATOR-CHECKBOX-01
 
 ## 2026-10-09T22:19:36.611256+00:00 — OPERATOR-CHECKBOX-01 bounded LIVE PASS / BROWSER HANDOFF / overall OPEN
 
