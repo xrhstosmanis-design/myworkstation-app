@@ -2770,3 +2770,7 @@ Single next action: verify guarded release of source42bee637, then deployment ad
 
 
 **Νεότερο LIVE PASS20:52Athens:** Fresh ordinary Owner sign-in -> permitted current LAB-store status -> explicit text Ask17:49:12.857Z -> real provider answer17:49:47.816Z -> refreshed normal cash report17:51:26.111Z matches TEST QR ΕΠΑΝΑΜΕΤΡΗΣΗ/MAIN/2026-10-10/close08:13/−5.50€. Actual healthy af36b491/fullCI38072060986(2194/0/0)/guardedRender38072264270. Evidence voice-normal-owner-cash-answer-1791654637023.jpg and voice-normal-owner-canonical-cash-1791654727065.jpg. Supersedes previous positive-Owner-query BLOCKED only; historical identity transition cause unverified. No bypass/new grant/auth code change/business action. Actual lifecycle/context negatives, sales/product/date and other domains remain OPEN. Single next action blank/own-store-switch read-only acceptance, then canonical product/date/current-store sales capability; same owner retained.
+
+
+## 10/10/2026 21:31 Athens — DAILY BITE coffee KAT-behavior / LIVE PASS
+Issue #2054. Revision `78438151a7babb82eff78ffd1f0728180ca43d28`, Render `dep-db586shj9rms73arfqlg` LIVE. One-shot exact 16-SKU apply succeeded once: 6 DAILY modifier groups, 26 modifiers, 16 preparation-enabled products, 84 product-group links, 11 name-only normalizations. No stock movement/sale/payment created; mapped stock remains 0; no recipe/ingredient/stock-consumption copy. Existing 8,753-product/9-department import PASS preserved. Physical POS/production-printer acceptance remains OPEN.
