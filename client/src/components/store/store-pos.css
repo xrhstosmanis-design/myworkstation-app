@@ -99,3 +99,5 @@
 .pos-change-notice>span{font-size:clamp(22px,3vw,32px);font-weight:900;letter-spacing:.06em}
 .pos-change-notice>strong{font-size:clamp(40px,6vw,76px);line-height:1.15;font-weight:900;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 @media(max-width:600px){.pos-change-notice{padding:20px 24px}}
+
+.pos-cancel-reasons{z-index:5000}.pos-cancel-reasons>section{width:min(580px,94vw);background:#fff;border-radius:18px;overflow:hidden}.pos-cancel-reason-choices{display:grid;gap:12px;padding:22px}.pos-cancel-reason-choices>button{min-height:76px;padding:16px;border:2px solid #0f766e;border-radius:12px;background:#f0fdfa;color:#12354b;font-size:24px;font-weight:900;cursor:pointer}.pos-cancel-reason-choices>button:hover,.pos-cancel-reason-choices>button:focus-visible{background:#0f766e;color:#fff;outline:3px solid #12354b;outline-offset:2px}.pos-cancel-reasons footer{padding:0 22px 22px}.pos-cancel-reasons footer button{width:100%;min-height:52px;border:1px solid #ccd5df;border-radius:10px;background:#edf2f7;color:#12354b;font-size:18px;font-weight:800;cursor:pointer}

@@ -15,7 +15,9 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
  const m={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);
  const product={id:'p',name:'CONTROL',sku:'CONTROL-SKU',salePrice:2,currentStock:20,barcodes:[]};
  const calls=[],denied={confirmDeleteSale:false,deleteSaleReason:false,customerCardOnly:false,onlineBarcode:false,editPosButtons:false};
+ let rejectCancel=false,pendingCancel=null;
  const api=async(path,options={})=>{calls.push({path,options});
+  if(path.endsWith("/audit")&&JSON.parse(options.body||"{}").actionType==="CART_CANCEL"){if(rejectCancel)throw Error("AUDIT_REJECTED");if(pendingCancel)await pendingCancel;}
   if(path==='/api/store-pos/stores/A')return {products:[product],access:{...denied,onlineProductSearch:false},layout:{quickKeys:[{id:'quick',visible:true,label:'CONTROL',productQuery:'CONTROL-SKU'}],categories:[]}};
   if(path.endsWith('/access'))return {access:{thirdPartyPayment:true,supplierPayment:true,sameShiftPayments:true}};
   if(path.endsWith('/overview'))return {openSession:{id:'isolated-shift',openedAt:new Date().toISOString()},suppliers:[]};
@@ -37,7 +39,7 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
   const panel=document.querySelector('.store-pos-top'),cart=document.querySelector('.standard-lines').textContent;
   await render({...denied,confirmDeleteSale:true,deleteSaleReason:true});
   await click(find('ΑΚΥΡΩΣΗ'));assert.equal(confirmations,1);assert.equal(reasons,0);assert.equal(document.querySelector('.standard-lines').textContent,cart);
-  confirmResult=true;await click(find('ΑΚΥΡΩΣΗ'));assert.equal(confirmations,2);assert.equal(reasons,1);assert.match(document.body.textContent,/τουλάχιστον 3 χαρακτήρων/);assert.equal(document.querySelector('.standard-lines').textContent,cart);
+  confirmResult=true;await click(find('ΑΚΥΡΩΣΗ'));assert.equal(confirmations,2);assert.equal(reasons,0);assert.equal(document.querySelectorAll(".pos-cancel-reason-choices button").length,3);await click(find("Επιστροφή στο καλάθι"));assert.equal(document.querySelector('.standard-lines').textContent,cart);
   assert.equal(calls.some(c=>c.path.endsWith('/audit')&&JSON.parse(c.options.body||'{}').actionType==='CART_CANCEL'),false);
   await click(document.querySelector('.line-name-action'));assert.equal(find('Διόρθωση περιγραφής'),undefined);
   await click(find('Προσθήκη νέου barcode'));assert.match(document.body.textContent,/Έλεγχος και καταχώρηση νέου Barcode/);
@@ -54,7 +56,7 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
   await render({...denied,onlineBarcode:true});assert.ok(find('Online αναζήτηση'));
   await render(denied);assert.equal(find('Online αναζήτηση'),undefined);
   await render(denied);assert.equal(document.querySelector('.store-pos-top'),panel);assert.equal(document.querySelector('.standard-lines').textContent,cart);
-  await click(find('ΑΚΥΡΩΣΗ'));assert.equal(confirmations,2);assert.equal(reasons,1);assert.match(document.querySelector('.standard-lines').textContent,/Νέα συναλλαγή/);
+  await click(find('ΑΚΥΡΩΣΗ'));assert.equal(confirmations,2);assert.equal(reasons,0);assert.match(document.querySelector('.standard-lines').textContent,/Νέα συναλλαγή/);
   assert.equal(calls.filter(c=>c.path==='/api/store-pos/stores/A').length,1);
   const paymentRights={...denied,thirdPartyPayment:true,supplierPayment:true,sameShiftPayments:true};
   await render(paymentRights);await click(find('ΠΛΗΡΩΜΕΣ'));
@@ -77,6 +79,32 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
   assert.equal(calls.filter(c=>c.path==='/api/store-pos/stores/A/access').length,1);
   assert.equal(calls.some(c=>c.options.method&&c.options.method!=='GET'&&!/\/(audit|audience-selection)$/.test(c.path)),false);
   await click(paymentModal.querySelector('header button'));
+
+  const cancelCalls=()=>calls.filter(c=>c.path.endsWith('/audit')&&JSON.parse(c.options.body||'{}').actionType==='CART_CANCEL');
+  const reasonRights={...denied,deleteSaleReason:true};
+  for(const reason of ['Λάθος χειριστή','Έλεγχος τιμών','Ακύρωση από πελάτη']){
+   await render(reasonRights);await click(document.querySelector('.standard-quick button:not([disabled])'));
+   const before=cancelCalls().length;await click(find('ΑΚΥΡΩΣΗ'));
+   const dialog=document.querySelector('[aria-labelledby="pos-cancel-reasons-title"]');assert.ok(dialog);assert.equal(dialog.querySelector('input,textarea,select'),null);
+   assert.deepEqual([...dialog.querySelectorAll('.pos-cancel-reason-choices button')].map(b=>b.textContent),['Λάθος χειριστή','Έλεγχος τιμών','Ακύρωση από πελάτη']);
+   assert.equal(document.activeElement.textContent,'Επιστροφή στο καλάθι');
+   await click(find(reason));assert.equal(cancelCalls().length,before+1);
+   const last=cancelCalls().at(-1);assert.equal(last.path,'/api/store-pos/stores/A/audit');
+   assert.deepEqual(JSON.parse(last.options.body),{actionType:'CART_CANCEL',details:{items:[{productId:'p',name:'CONTROL',quantity:1,price:2}],total:2},reason});
+   assert.match(document.querySelector('.standard-lines').textContent,/Νέα συναλλαγή/);
+   assert.equal(document.activeElement,document.querySelector('[data-pos-scanner]'));
+  }
+  await click(document.querySelector('.standard-quick button:not([disabled])'));const retained=document.querySelector('.standard-lines').textContent;
+  const beforeDismiss=cancelCalls().length;await click(find('ΑΚΥΡΩΣΗ'));
+  await act(async()=>document.querySelector('[aria-labelledby="pos-cancel-reasons-title"]').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true})));
+  assert.equal(cancelCalls().length,beforeDismiss);assert.equal(document.querySelector('.standard-lines').textContent,retained);
+  await click(find('ΑΚΥΡΩΣΗ'));await render(denied);assert.equal(document.querySelector('.pos-cancel-reasons'),null);assert.equal(cancelCalls().length,beforeDismiss);
+  await render(reasonRights);rejectCancel=true;await click(find('ΑΚΥΡΩΣΗ'));await click(find('Λάθος χειριστή'));assert.match(document.body.textContent,/AUDIT_REJECTED/);assert.equal(document.querySelector('.standard-lines').textContent,retained);
+  rejectCancel=false;let releaseCancel;pendingCancel=new Promise(resolve=>{releaseCancel=resolve});
+  const beforePending=cancelCalls().length;await click(find('ΑΚΥΡΩΣΗ'));await click(find('Έλεγχος τιμών'));
+  assert.equal(find('ΑΚΥΡΩΣΗ').disabled,true);assert.equal(document.querySelector('[data-pos-scanner]').disabled,true);assert.ok(document.querySelector('[aria-label="Καταγραφή ακύρωσης"]'));await click(find('ΑΚΥΡΩΣΗ'));assert.equal(cancelCalls().length,beforePending+1);assert.equal(document.querySelector('.standard-lines').textContent,retained);
+  await act(async()=>{releaseCancel();await new Promise(r=>setTimeout(r,15))});pendingCancel=null;assert.match(document.querySelector('.standard-lines').textContent,/Νέα συναλλαγή/);
+  assert.equal(reasons,0);
   assert.equal(calls.some(c=>/checkout|\/sales|finalize|sessions\/open/.test(c.path)),false);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const[k,v]of previous){if(v)Object.defineProperty(globalThis,k,v);else delete globalThis[k]}}
 });
