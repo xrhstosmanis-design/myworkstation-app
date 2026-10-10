@@ -1,3 +1,13 @@
+## 2026-10-10 — No33 label preview / hidePrinter bounded LIVE PASS
+
+Owner codex/operator-checkbox-audit-20261009, No33/tracker35 OPEN. Original LABPOS2 EMPLOYEE, cart0/queue0. One newlocalSKU2270 qty1/unit1 at11:50; linefactsstock−13. Preview displayed teststore/water1.5/EAN5201005080034/price1.00/LABprinter/60×40mm. Closedpreview withoutphysicalPrint. OnlyhidePrintertrue persisted11:51; samealreadyopenline menu button disappeared afternormalruntimepoll (initialprepoll stillvisible, immediatetimingNOTTESTED). Immediatelyonlyfalse restored11:52; buttonreturnedwithoutreaddingrow, exact23originalEMPLOYEE. Removedonlylocaltestrow11:53, finalcart0/queue0.
+
+Audit1173→1180rowsinclheader: four own add/rightsOFF/rightsrestore/remove, three externalNo39login11:45/addLABEXCELTEST1 11:46/personalconsumption11:47 cc8ad2db notthisowner; preservedmainPR2053. LABEL_PREVIEW_OPENED absentfromcentralAuditsurface, underlyingauditrow NOTTESTED (noPASSclaim). Financialfreshbeforecleanup MAIN5cash3.50/cards0/IRIS0/expenses0/total3.50/latest09:51; controlLAB-POS-02 2cash0/cards+IRIS0/total0/latestnone unchanged. Freshpostcleanupfinancialalso unchanged at11:55 (sameMAIN5/3.50/control2/0), lastproductstock−13 fromPOSfacts; fullmovementledger/finalindependentstock NOTTESTED/excludedNo39. No sale/financial/stock/shift/product/barcode/scanner action or historicalpaymentprint/replay. Physical printer output, servernegativehidePrinter enforcement, alreadyopenpopuprevocation and actual printAudit remainNOTTESTED.
+
+Also closeShiftON read-onlypreview opened/closed, asksphysicaldrawermeasurement andopeningoperatorpersonalQR; allamountfields initiallydisabled/submitdisabled. Nothingentered/submitted; actualclose/initialcash OPEN. ShiftmountedfixPR2052 78ccdb80 CI38039208608SUCCESS then newerconcurrentNo39docs requiremerge/re-runfinalCI; sourceAWAITINGLAB. NextfinishexactshiftreleaseCI/deploy/LIVE, thenmoderntransferentry andremainingauthorizedchecks.
+
+Evidence CHECKPOINTS/EVIDENCE/operator-label-20261010/{preview,hidden,empty}.jpg.
+
 ## 2026-10-10 11:45 Europe/Athens — No33 mounted shift transactions LIVE FAIL / fix AWAITING LAB
 
 Owner codex/operator-checkbox-audit-20261009, No33/tracker35 OPEN. Existing approval applied one allShiftTransactionsOFF/ON and one shiftTransactionsOFF/ON to normal LABPOS2 EMPLOYEE; exact23original restored/cart0/queue0. All ON loaded five MAIN sales3.50, allLABPOS2actors/ownpayments0. Only allShiftTransactionsOFF persisted11:40 thenfreshPOSrefresh: label Οι δικές μου κινήσεις and samefiveownsales. ON11:41 updated alreadyopenview to Όλες οι κινήσεις via runtimepoll. UI mode switch PASS; otheractor exclusion NOTTESTED as nootheractorsfixture authorized.
