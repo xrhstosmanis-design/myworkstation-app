@@ -1,3 +1,7 @@
+## 10/10/2026 21:40 Athens — Owner session troubleshooting (NOT PASS)
+
+Fresh root verification after one normal secure sign-in displayed «Η φόρτωση διακόπηκε: Η συνεδρία δεν είναι έγκυρη.» in both original and fresh verification tabs. Greeting alone does not prove Owner access. Stop queries/retries and use the normal existing Owner entry; no guard bypass, credential reset or token export. Product/date sales acceptance remains BLOCKED/NOT TESTED; no verified sales usage is added here. Prior20:52 cash LIVE PASS below remains historical scoped evidence. Central session scope is independently assigned. Checkpoint `CHECKPOINTS/CHANGES/2026-10-10-unified-voice-assistant.md`.
+
 ## 10/10/2026 - normal Owner selected-store cash question LIVE PASS
 
 Who: the existing authorized Owner of MYWORKSTATION LAB with active AI_OWNER_ASSISTANT and CASH_CONTROL for the selected own store. This is an ordinary Owner flow, separate from Super Admin support.
