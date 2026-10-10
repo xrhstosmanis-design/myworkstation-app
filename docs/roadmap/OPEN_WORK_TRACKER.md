@@ -2001,7 +2001,7 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 **Κατάσταση:** IN PROGRESS
 
-**Υπόλοιπο / όρια PASS:** Πλήρης visual αποδοχή και no outer scroll.
+**Υπόλοιπο / όρια PASS:** N45 LIVE FAIL: populated Master clips discount save/history at1363×936 on de7d5c2e. Bounded layout correction AWAITING LAB; final visual/no outer scroll OPEN.
 
 **Υπεύθυνη σελίδα / branch:** codex/n45-product-center-visual-20261010
 

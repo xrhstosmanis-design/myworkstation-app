@@ -1266,6 +1266,88 @@ body:has(.commerce-shell.window-maximized .owner-products-colorful) {
   overflow: hidden;
 }
 
+/* N45: bound Master separately, so a populated card cannot disappear below the window. */
+.commerce-shell:not(.window-minimized):has(.owner-products > .op-master-workspace) {
+  box-sizing: border-box;
+  max-height: calc(100dvh - 28px);
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+.commerce-shell.window-maximized:has(.owner-products > .op-master-workspace) {
+  height: 100dvh !important;
+  max-height: 100dvh;
+}
+.commerce-shell:has(.owner-products > .op-master-workspace) > :is(.commerce-window-bar, .commerce-mode-switch) { flex: 0 0 auto; }
+.commerce-shell:has(.owner-products > .op-master-workspace) > div:has(> .kiosk-shell),
+.commerce-shell .kiosk-shell:has(> .owner-products > .op-master-workspace) {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.commerce-shell .kiosk-shell > .owner-products:has(> .op-master-workspace) {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+@media (min-width: 1201px) {
+  .owner-products-colorful:has(> .op-master-workspace) {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    grid-template-rows: auto auto minmax(320px, 1fr) auto;
+    align-content: start;
+    gap: 10px;
+  }
+  .owner-products-colorful:has(> .op-master-workspace) > :is(.owner-products-head, .owner-product-tabs, .op-alert) { grid-column: 1 / -1; }
+  .owner-products-colorful:has(> .op-master-workspace) .owner-products-head h2 { font-size: 24px; }
+  .owner-products-colorful:has(> .op-master-workspace) .owner-products-head p { font-size: 14px; }
+  .owner-products-colorful:has(> .op-master-workspace) .owner-product-tabs button { min-height: 76px; padding: 10px; }
+  .owner-products-colorful .op-master-workspace { display: contents; }
+  .owner-products-colorful .op-master-workspace > section { grid-column: 1; grid-row: 3; min-height: 0; display: flex; flex-direction: column; }
+  .owner-products-colorful .op-master-workspace .op-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .owner-products-colorful .op-master-workspace > aside { grid-column: 2; grid-row: 3 / 5; }
+  .owner-products-colorful .op-master-workspace > aside:not(.empty) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-content: start;
+    align-items: start;
+    gap: 8px;
+    padding: 12px;
+  }
+  .owner-products-colorful .op-master-workspace > aside > :is(h3, p) { margin: 0; }
+  .owner-products-colorful .op-master-workspace > aside > label { grid-column: 1; margin: 0; }
+  .owner-products-colorful .op-master-workspace > aside > .store-price-list { grid-column: 2; grid-row: 2 / 5; margin: 0; max-height: 220px; overflow-y: auto; }
+  .owner-products-colorful .op-master-workspace > aside > :is(.op-alert, button) { grid-column: 1; margin: 0; }
+  .owner-products-colorful .op-master-workspace > aside > .op-form {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+  }
+  .owner-products-colorful .op-master-workspace aside .op-form > h4 { grid-column: 1; margin: 0; }
+  .owner-products-colorful .op-master-workspace aside .op-form > .op-discount-mode { grid-column: 2 / 4; margin: 0; }
+  .owner-products-colorful .op-master-workspace aside .op-form > p { margin: 0; }
+  .owner-products-colorful .op-master-workspace aside .op-form > button { grid-column: 1 / 3; }
+  .owner-products-colorful .op-master-workspace aside .op-form > small { grid-column: 3; }
+  .owner-products-colorful:has(> .op-master-workspace) > .op-box[aria-label="Ιστορικό εκπτώσεων δικαιούχων"] {
+    grid-column: 1;
+    grid-row: 4;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 12px;
+    gap: 8px;
+  }
+  .owner-products-colorful:has(> .op-master-workspace) > .op-box[aria-label="Ιστορικό εκπτώσεων δικαιούχων"] > button { grid-column: 1 / -1; }
+  .owner-products-colorful:has(> .op-master-workspace):has(> .op-alert) { grid-template-rows: auto auto auto minmax(320px, 1fr) auto; }
+  .owner-products-colorful:has(> .op-alert) .op-master-workspace > section { grid-row: 4; }
+  .owner-products-colorful:has(> .op-alert) .op-master-workspace > aside { grid-row: 4 / 6; }
+  .owner-products-colorful:has(> .op-master-workspace):has(> .op-alert) > .op-box[aria-label="Ιστορικό εκπτώσεων δικαιούχων"] { grid-row: 5; }
+}
+
 /* TODAY-04 fast on-demand bulk product search */
 .bulk-product-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin-bottom:10px}.bulk-product-search input{min-height:52px;border:1px solid #c5d4e0;border-radius:10px;padding:10px 14px;font-size:16px}.bulk-product-search button{min-height:52px;padding:10px 18px;border:0;border-radius:10px;background:#0f766e;color:#fff;font-weight:850}.bulk-search-hint{padding:14px;color:#60758a;background:#f7fafc;border:1px dashed #c8d7e4;border-radius:9px}@media(max-width:700px){.bulk-product-search{grid-template-columns:1fr}}
 
