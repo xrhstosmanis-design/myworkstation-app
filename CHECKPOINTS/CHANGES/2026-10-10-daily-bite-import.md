@@ -1,3 +1,13 @@
+## 10/10/2026 20:25 Athens — DAILY BITE coffee / KAT behavior reuse — ASSIGNED
+
+**Owner:** `codex/daily-bite-coffee-kat-behavior-20261010`, issue #2054. Starts after PR #2149 merged successfully (CI 38070721169 SUCCESS, merge fb4b4e5c3214c86ced3d32cd86ef19bdbf0e1712).
+
+**User requirement:** DAILY BITE keeps MyWorkStation colors and its own products/data. Coffee products must behave like KAT coffee products (same modifier/preparation interaction), but bind only to DAILY BITE product IDs. Where the KAT coffee label is cleaner/correcter, only the DAILY BITE product name/display label may be normalized; SKU, barcodes, sale/purchase prices, VAT, departments, stock, supplier links, store/company identity and KAT records must remain unchanged.
+
+**Safety boundary:** no catalog reimport, no department recreation, no KAT product transfer, no cross-company modifier/ingredient IDs, no fiscal/payment/shift/stock mutation during source work. Existing KAT preparation implementation is a behavior reference, not a data source to clone blindly. Because KAT recipes reference KAT-company ingredient SKUs, DAILY BITE stock/recipe consumption is **NOT** assumed safe until its own company-scoped ingredient availability is measured. Initial implementation must therefore separate (a) UI modifier behavior and exact product-name mapping from (b) optional recipe/stock consumption. Missing/ambiguous coffee matches must be reported and not guessed.
+
+**Current evidence:** source review confirms KAT modifier groups/preparation UI exist in `kat-preparation-defaults.js`, `StorePreparationModal.jsx` and store-preparation routes. DAILY BITE runtime product names/ingredient availability are not yet independently read back in this page, so live data mutation is NOT TESTED and must not be inferred from source.
+
 ## 10/10/2026 19:27 Athens — DAILY BITE POS screenshot mapping / ASSIGNED
 
 **Owner:** `codex/daily-bite-pos-layout-20261010` — explicit user continuation of issue #2054 after definitive catalog import PASS. This is a new bounded POS-layout/data-mapping scope; it does not reopen or repeat the catalog import.
