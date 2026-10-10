@@ -57,6 +57,7 @@ import kioskReportsRoutes from "./routes/kiosk-reports.js";
 import inventoryArchiveImportRoutes from "./routes/inventory-archive-import.js";
 import inventoryArchiveRoutes from "./routes/inventory-archive.js";
 import inventoryProductLedgerRoutes from "./routes/inventory-product-ledger.js";
+import inventoryV2ProductRoutes from "./routes/inventory-v2-products.js";
 import inventoryV2Routes,{inventoryV2PublicRoutes} from "./routes/inventory-v2.js";
 import inventoryV2ImportRoutes from "./routes/inventory-v2-import.js";
 import inventoryV2AuditRoutes from "./routes/inventory-v2-audit.js";
@@ -221,6 +222,7 @@ app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventor
 app.use("/api/inventory-archive",auth,requireCompanyModule("INVENTORY"),inventoryArchiveRoutes);
 app.use("/api/inventory-ledger",auth,requireOwnerProductAccess,inventoryProductLedgerRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2Routes);
+app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ProductRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ImportRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2AuditRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);

@@ -32,3 +32,13 @@
 .inv-link-results button b,.inv-link-results button small{display:block}
 .inv-link-results button small{font-size:14px;margin-top:3px}
 @media(max-width:650px){.inv-unknown-actions{grid-template-columns:1fr}.inv-unknown-barcode header h2{font-size:23px}}
+
+/* N49: stocktake-scoped new-entry form stays on the mobile counting screen. */
+.inv-mobile-new-button{margin:12px;min-height:50px;padding:10px 18px;border:0;border-radius:12px;background:#08766a;color:#fff;font-size:18px;font-weight:900}
+.inv-new-product{position:fixed;inset:0;z-index:12001;display:grid;place-items:center;padding:12px;background:#071a18b8}
+.inv-new-product>section{width:min(540px,100%);max-height:94dvh;overflow:auto;border-radius:18px;background:#fff;box-shadow:0 24px 70px #0004;padding:16px}
+.inv-new-product header{display:flex;align-items:center;justify-content:space-between;gap:12px}.inv-new-product h2{margin:0;font-size:24px}.inv-new-product p{margin:12px 0;line-height:1.5}
+.inv-new-product form,.inv-new-product label{display:grid;gap:8px}.inv-new-product form{gap:12px}.inv-new-product label{font-weight:800}
+.inv-new-product input,.inv-new-product select{width:100%;min-width:0;min-height:50px;border:2px solid #9fbab2;border-radius:10px;background:#fff;padding:10px;font-size:17px}
+.inv-new-product button{min-height:48px;border:0;border-radius:10px;padding:10px 14px;font-size:16px;font-weight:900;background:#e7efed;color:#19443f}.inv-new-product button[type=submit]{background:#08766a;color:#fff}.inv-new-product button:disabled{opacity:.55}.inv-new-product-actions{display:grid;gap:8px;grid-template-columns:1fr}
+.inv2-mobile-preview{width:min(100%,480px);margin:12px auto;container-type:inline-size;border:1px solid #abc7c1;border-radius:14px;overflow:hidden}.inv2-mobile-preview .inventory-mobile{min-height:0}.inv2-mobile-preview .inv-mobile-fast form{grid-template-columns:1fr}.inv2-mobile-preview .inv-mobile-fast label>span{flex-wrap:wrap}.inv2-mobile-preview .inv-mobile-fast label>span button{width:100%}.inv2-mobile-preview .inv-mobile-tools{flex-wrap:wrap}.inv2-mobile-preview .inv-mobile-tools b{width:100%}

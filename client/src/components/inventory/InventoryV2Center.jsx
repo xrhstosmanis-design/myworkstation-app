@@ -10,6 +10,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import "./inventory-v2-center.css";
+import InventoryMobileApp from "./InventoryMobileApp.jsx";
 import InventoryFastCount from "./InventoryFastCount.jsx";
 const num = (v) => Number(v || 0),
   euro = (v) => `${num(v).toFixed(2)} €`;
@@ -35,6 +36,8 @@ export default function InventoryV2Center({
     [finalizeReason, setFinalizeReason] = useState(""),
     [finalizing, setFinalizing] = useState(false);
   const finalizingRef = useRef(false);
+  const [mobileView,setMobileView]=useState(false);
+  useEffect(()=>setMobileView(false),[current?.id,current?.status]);
   useEffect(() => { setFinalizeReason(""); }, [current?.id]);
   const grantUrl = grant ? `${window.location.origin}${grant.accessUrl}` : "";
   useEffect(() => {
@@ -557,6 +560,7 @@ export default function InventoryV2Center({
                   </small>
                 </div>
                 <div className="inv2-actions">
+                  {current.status === "DRAFT" && <button type="button" onClick={()=>setMobileView(v=>!v)}><Smartphone/>{mobileView?"Προβολή υπολογιστή":"Προβολή κινητού / tablet"}</button>}
                   <button onClick={() => open(current.id)}>
                     <RefreshCw />
                     Ανανέωση
@@ -620,7 +624,7 @@ export default function InventoryV2Center({
                   )}
                 </form>
               )}
-              <InventoryFastCount api={api} current={current} reload={open} setError={setError} />
+              {mobileView?<div className="inv2-mobile-preview"><InventoryMobileApp key={current.id} api={api} stocktakeId={current.id}/></div>:<InventoryFastCount api={api} current={current} reload={open} setError={setError} />}
               <footer>
                 <span>
                   <Smartphone />
