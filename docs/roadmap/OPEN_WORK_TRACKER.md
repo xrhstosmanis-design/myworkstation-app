@@ -1,3 +1,19 @@
+## 10/10/2026 — Νο33 συνέχεια: είσοδος POS, εμπόδιο πρόσβασης Backoffice
+
+Owner `codex/operator-checkbox-audit-20261009`, No33/tracker35 OPEN. Main πριν τη συνέχεια `f62558d3d3db7335570281003e658ffc01295a23` / PR2183: προσωπική κάρτα/QR και καταμέτρηση USER PASS, δεν επαναλαμβάνονται.
+
+Νέο browser στη σωστή διεύθυνση `https://myworkstation-app.onrender.com/platform-admin`. Αρχικά Platform Admin συνδεδεμένο· LAB Store Mode ζήτησε είσοδο. Ασφαλής φόρμα PIN ολοκληρώθηκε και νέα AX επιβεβαίωσε LAB POS2 συνδεδεμένο, κατάστημα ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, καλάθι0€/ουρά0, κατάλογο97. Άνοιξαν μόνο οι δύο αναζητήσεις πελάτη χωρίς πληκτρολόγηση, επιλογή πελάτη ή submit· τελικά έκλεισαν. Δεν αποτελεί νέο functional/customer-search PASS.
+
+Backoffice αρχικά εμφάνισε MAIN11/cash4/cardIRIS0/total4/expense0/IN.10OUT.10 και controlLAB-POS-02count2/cash0/cardIRIS0/total0. Δεν επιλέχθηκε νέο control για φρέσκα αναλυτικά expense ούτε μετρήθηκε νέο Audit. Στην εμπορική λειτουργία αποσύρθηκε η προηγούμενη προβολή με «Η σύνδεση άλλαξε». Το εμπορικό overlay έδειξε άλλο default store N40 CONTROL· δεν έγινε καμία επιλογή/μεταβολή εκεί.
+
+Έγινε επιστροφή canonicalPlatformAdmin, ασφαλής σύνδεση email/password/device και 2FA. AX επιβεβαίωσε συνδεδεμένο SuperAdmin. Όμως το άνοιγμα ΠλήρεςBackoffice του σωστού LAB εμφάνισε «Απαιτείται σύνδεση». Μία ανανέωση canonicalURL επέστρεψε στην είσοδο. Αιτία απώλειας συνεδρίας UNKNOWN: δεν χαρακτηρίζεται βλάβη checkbox, bot block ή αποτυχία κωδικού. Δεν παρακάμφθηκε η ασφάλεια και δεν επαναλαμβάνονται κωδικοί σε κύκλο.
+
+Το αρχικό αίτημα ασφαλούς φόρμας απορρίφθηκε αυτόματα επειδή παρέλειπε το υποχρεωτικό όνομα συσκευής. Διορθώθηκε με επαληθευμένο text/required πεδίο και η πλήρης φόρμα/2FA υποβλήθηκαν επιτυχώς· η αρχική απόρριψη δεν παραμένει blocker. Δεν καταγράφηκαν secret values.
+
+Δεν ανοίχτηκε editor χειριστή: αρχικό προφίλ δεν επαληθεύτηκε εκ νέου και δεν έγινε καμία αλλαγή δικαιωμάτων/ρόλου, οικονομική/stock/shift πράξη ή επανάληψη παλιάς συναλλαγής. Τελικό POS cart0/queue0/nooverlay· τελευταίο ήδη επαληθευμένο αρχικό23 EMPLOYEE από PR2125 διατηρείται ως ιστορικό, όχι νέα ανεξάρτητη επιβεβαίωση. Exact deployment revision NOT TESTED αυτή τη συνέχεια. Screenshot `CHECKPOINTS/EVIDENCE/operator-session-resume-20261010/cart0.jpg`.
+
+Επόμενο βήμα: αποκατάσταση σταθερής έγκυρης πρόσβασης στο LAB Backoffice μέσω κανονικής ασφαλούς σύνδεσης, χωρίς παράκαμψη του ορίου συνεδρίας ή αλλαγή credentials, έπειτα read-only επαλήθευση αρχικού προφίλ και φρέσκα baselines πριν από επόμενο ανεξάρτητο checkbox test. Τα προηγούμενα LIVE/USER PASS προστατεύονται. No39/τιμολόγια/scanner/ρέστα/άλλοι owners εκτός scope. Γενική έγκριση αναγκαίων εικονικών δοκιμών και push/PR/merge/CI παραμένει.
+
 ## 10/10/2026 22:49 Athens - VOICE-ASSISTANT-01 / tracker32: normal Owner product/date question LIMITED LIVE PASS
 
 Owner remains `codex/unified-voice-assistant-20261010`; source branch feat/voice-owner-product-sales-20261010 / PR2167 / merge dece8453 / PR/main fullCI38075261178+38075499712 SUCCESS (2216/0/0). Current source health before Ask: actual public browser ok=true/exact `69456df3b48cdad35acee6d4b062f358de5e5156`; its fullmainCI38077455028 SUCCESS (2241/2241/0/0), guarded38077625384 SUCCESS. All13 sales source/test blobs unchanged versus dece8453 in fresh main36a6d3bc. No source/schema/grant/business change in this acceptance.
