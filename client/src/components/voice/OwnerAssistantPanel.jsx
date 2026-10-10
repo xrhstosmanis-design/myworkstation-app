@@ -23,7 +23,10 @@ export default function OwnerAssistantPanel({api,storeId="",storeName=""}){
       }catch(e){if(!closed&&!controller.signal.aborted&&statusId===statusSequence){invalidate();setAccess(null);setError(e.message||"Ο βοηθός δεν είναι διαθέσιμος για το κατάστημα.")}}
       finally{if(statusId===statusSequence)checking=false;if(statusRequest.current===controller)statusRequest.current=null}
     };
-    const modules=()=>{invalidate();setAccess(null);check(true)};
+    // The existing license watcher broadcasts every five seconds even when
+    // nothing changed. Recheck each time; clear only on an actual denial or
+    // context change, never on an unchanged announcement.
+    const modules=()=>check(true);
     check();const timer=window.setInterval(check,15000);
     window.addEventListener("myworkstation:modules-updated",modules);
     return()=>{closed=true;sequence.current++;pending.current?.abort();statusRequest.current?.abort();window.clearInterval(timer);window.removeEventListener("myworkstation:modules-updated",modules)};
