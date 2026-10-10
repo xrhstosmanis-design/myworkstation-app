@@ -205,7 +205,7 @@ export default function PlatformAdminApp(){
   };
   const load=async()=>{
     const sequence=++overviewLoadSequence.current;
-    const context=readBackofficeContext(localStorage).key;
+    const {key:context,token:sentToken}=readBackofficeContext(localStorage);
     const current=()=>sequence===overviewLoadSequence.current&&readBackofficeContext(localStorage).key===context;
     setLoading(true);setError("");
     try{
@@ -215,7 +215,7 @@ export default function PlatformAdminApp(){
     }catch(err){
       if(!current())return;
       setError(err.message);
-      if(/σύνδεση|συνεδρία|Super Admin|2FA/i.test(err.message))clearSession(false);
+      if(/σύνδεση|συνεδρία|Super Admin|2FA/i.test(err.message)&&localStorage.getItem("token")===sentToken)clearSession(false);
     }finally{if(current())setLoading(false)}
   };
   useEffect(()=>{if(user)load();return()=>{overviewLoadSequence.current++}},[user]);
