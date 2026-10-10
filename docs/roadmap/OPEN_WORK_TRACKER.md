@@ -2386,15 +2386,15 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### TODAY-09 — Σελίδα ιδιοκτήτη UI
 
-**Κατάσταση:** OPEN / ASSIGNED — N51 acceptance NOT TESTED
+**Κατάσταση:** PARTIAL LIVE PASS / OPEN — desktop LAB layout/navigation PASS; final USER acceptance pending
 
-**Υπόλοιπο / όρια PASS:** Selected-store landing simplification; shifts andOwner/Managerpayments primary,secondarytools behindcleartiles. Actualread-onlynavigation/layout/store/two-terminalreadback acceptance pending. No replay ofacceptedfinancialactions.
+**Υπόλοιπο / όρια PASS:** Actual1348×870 support-owner landing PASS: shifts/two tills first, readable two primary buttons,10 existing payment tiles, exclusive secondary panels, refresh/reopen/store reset. Remaining final USER visual acceptance and actual maximized/responsive Owner landing; normal Owner/physical mobile NOT TESTED. Business Picture modal maximize is separate. No replay of accepted financial actions.
 
-**Υπεύθυνη σελίδα / branch:** codex/n51-owner-page-acceptance-20261010; explicit transfer51only fromagent/today-ui-verification-20261004.
+**Υπεύθυνη σελίδα / branch:** codex/n51-owner-page-acceptance-20261010 retained; final records codex/n51-owner-page-live-record-20261010. Explicit51-only transfer from agent/today-ui-verification-20261004.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct17:02Athens; CHECKPOINTS/CHANGES/2026-10-10-n51-owner-page-acceptance.md; greenclaimPR/main beforechanges.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10Oct17:02Athens; claimPR2113/CI38058619671SUCCESS/merge1acb954 beforechanges. CHECKPOINTS/CHANGES/2026-10-10-n51-owner-page-acceptance.md.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** PR2118/fullCI2124PASS/mainCI38059119484SUCCESS/healthyde550/Render38059729109 verified17:31. Primary navigation functional, but LIVE visual FAIL from global sidebar nav cascade; scoped CSS correction AWAITING CI/LIVE. No final51PASS, financial controls not replayed. Checkpointupdated17:33; otherownersprotected.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** 10Oct17:57 scopeddesktopLIVEPASS, whole51OPEN. PR2118/fullCI2124pass0fail0skip plus CSSPR2124/fullCI38060344455SUCCESS; exacthealthy818d3f45ad4afd2de5f461701c07b7c94389a34e/mainCI38060563876attempt3SUCCESS/Render38061084383SUCCESS; freshreload/readable515×64buttons. Two tills MAIN11/4/control2/0expense120 and TEST2−2/ledger−2/2moves/diff0/history2 agree. Concurrent No33 MAIN8→11/Audit1204→1213 recorded, not claimed unchanged wholeperiod. Ten form entries open/close without submit, other-store reset and lower realcommerce single window observed. Manualowner-store-page/PASS.md and final shifts/payments JPEGs; PDF/list publication CI recorded by final PR. Next user visual review/actual own viewport, ownerretained, no financial replay.
 
 ### DOC-NUM-01 — Κεντρική αριθμημένη λίστα και κανόνας PASS
 
