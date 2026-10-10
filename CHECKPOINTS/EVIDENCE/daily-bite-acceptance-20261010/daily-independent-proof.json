@@ -1,0 +1,67 @@
+{
+  "product": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"product_digest\":\"9fa4c37c7fc1f4e92db3354fc4cd69a8\",\"products\":8753}]"
+      }
+    ],
+    "isError": false
+  },
+  "stock": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"nonzero_stock\":0,\"sale_price_sum\":33263.2200,\"stock_rows\":8753}]"
+      }
+    ],
+    "isError": false
+  },
+  "barcodes": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"barcode_digest\":\"c0dd05b17ec69cf78b7020726a27e5a3\",\"barcodes\":9306,\"leading_zeros\":164}]"
+      }
+    ],
+    "isError": false
+  },
+  "suppliers": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "[{\"linked_products\":7658,\"supplier_digest\":\"a109a6653226b2a6eb973318335957a0\"}]"
+        }
+      ],
+      "isError": false
+    }
+  },
+  "excluded": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "[{\"held_excluded_present\":0}]"
+        }
+      ],
+      "isError": false
+    }
+  },
+  "transaction": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "[{\"earliest\":\"2026-10-10T15:16:46.106Z\",\"latest\":\"2026-10-10T15:16:46.106Z\"}]"
+        }
+      ],
+      "isError": false
+    }
+  },
+  "verification_sql": "SELECT now() observed,count(*) products,md5(string_agg(concat_ws('|',p.sku,p.name,p.\"salePrice\"::numeric(14,4)::text,p.\"costPrice\"::numeric(16,6)::text,p.\"vatRate\"::numeric(5,2)::text,d.description,d.\"cashRegisterDepartment\"::text,p.unit::text,p.active::text,sp.\"currentStock\"::numeric(14,4)::text,sp.\"salePrice\"::numeric(14,4)::text,coalesce(c.name,''),coalesce(sc.name,'')),E'\\n' ORDER BY p.sku COLLATE \"C\")) product_digest,\ncount(*) FILTER(WHERE sp.\"currentStock\"!=0) nonzero_stock, count(*) FILTER(WHERE p.\"vatDepartmentId\" IS NULL) missing_departments,\n(SELECT count(*) FROM \"ProductBarcode\" b JOIN \"Product\" bp ON bp.id=b.\"productId\" WHERE bp.\"companyId\"='cmv25lf0w000seegf1cn4bbmx') barcodes,\n(SELECT md5(string_agg(bp.sku||'|'||b.barcode,E'\\n' ORDER BY bp.sku COLLATE \"C\",b.barcode COLLATE \"C\")) FROM \"ProductBarcode\" b JOIN \"Product\" bp ON bp.id=b.\"productId\" WHERE bp.\"companyId\"='cmv25lf0w000seegf1cn4bbmx') barcode_digest,\n(SELECT count(*) FROM \"ProductBarcode\" b JOIN \"Product\" bp ON bp.id=b.\"productId\" WHERE bp.\"companyId\"='cmv25lf0w000seegf1cn4bbmx' AND b.barcode LIKE '0%') leading_zero_barcodes\nFROM \"Product\" p JOIN \"StoreProduct\" sp ON sp.\"productId\"=p.id AND sp.\"storeId\"='cmv25lf3h000ueegf0kkii3pb' LEFT JOIN \"ManagementVatDepartment\" d ON d.id=p.\"vatDepartmentId\" LEFT JOIN \"ProductCategory\" c ON c.id=p.\"categoryId\" LEFT JOIN \"ProductSubcategory\" sc ON sc.id=p.\"subcategoryId\" WHERE p.\"companyId\"='cmv25lf0w000seegf1cn4bbmx'",
+  "before_sql": "SELECT now() AS observed,\n(SELECT json_agg(d) FROM (SELECT 'stock' AS kind,count(*) AS count,md5(string_agg(row_to_json(t)::text,'|' ORDER BY t.id)) AS digest FROM \"StoreProduct\" t WHERE \"storeId\"='cmv25lf3h000ueegf0kkii3pb' UNION ALL\nSELECT 'movement',count(*),md5(string_agg(row_to_json(t)::text,'|' ORDER BY t.id)) FROM \"StockMovement\" t WHERE \"storeId\"='cmv25lf3h000ueegf0kkii3pb' UNION ALL\nSELECT 'sale',count(*),md5(string_agg(row_to_json(t)::text,'|' ORDER BY t.id)) FROM \"Sale\" t WHERE \"storeId\"='cmv25lf3h000ueegf0kkii3pb' UNION ALL\nSELECT 'payment',count(*),md5(string_agg(row_to_json(t)::text,'|' ORDER BY t.id)) FROM \"Payment\" t WHERE \"saleId\" IN (SELECT id FROM \"Sale\" WHERE \"storeId\"='cmv25lf3h000ueegf0kkii3pb') UNION ALL\nSELECT 'shift',count(*),md5(string_agg(row_to_json(t)::text,'|' ORDER BY t.id)) FROM \"CashShiftSession\" t WHERE \"storeId\"='cmv25lf3h000ueegf0kkii3pb' UNION ALL\nSELECT 'transaction',count(*),md5(string_agg(row_to_json(t)::text,'|' ORDER BY t.id)) FROM \"StoreTransaction\" t WHERE \"storeId\"='cmv25lf3h000ueegf0kkii3pb' UNION ALL\nSELECT 'control_other_stock',count(*),md5(string_agg(row_to_json(t)::text,'|' ORDER BY t.id)) FROM \"StoreProduct\" t WHERE \"storeId\"!='cmv25lf3h000ueegf0kkii3pb') d) AS controls,\n(SELECT json_agg(d) FROM (SELECT id,\"terminalPos\",status,\"cashSales\",\"cardSales\",\"eftposTotal\",expenses FROM \"CashShiftSession\" WHERE \"storeId\"='cmv25lf3h000ueegf0kkii3pb' AND status='OPEN' ORDER BY id) d) AS shifts,\n(SELECT count(*) FROM \"Product\" WHERE \"companyId\"='cmv25lf0w000seegf1cn4bbmx') AS product_count, (SELECT json_agg(d) FROM (SELECT * FROM \"ManagementVatDepartment\" WHERE \"companyId\"='cmv25lf0w000seegf1cn4bbmx' ORDER BY id) d) AS departments"
+}
