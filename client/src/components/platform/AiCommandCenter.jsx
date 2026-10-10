@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
 import AiCreditAlert from "./AiCreditAlert.jsx";
+import {resolveTwinSelection,twinSelectionFor} from "./ai-command-twin-selection.js";
 import {AlertTriangle,BarChart3,BrainCircuit,Building2,Camera,CheckCircle2,ChevronRight,CreditCard,FileSearch,Landmark,MessageCircle,Monitor,MoonStar,ReceiptText,RefreshCw,ShieldCheck,Store,Sunrise,UsersRound,WalletCards,X} from "lucide-react";
 
 const countStores=companies=>companies.reduce((total,company)=>total+(company.stores?.length||0),0);
@@ -10,11 +11,11 @@ const invoiceNumber=value=>{if(typeof value==="number")return Number.isFinite(va
 const invoiceIdentity=document=>[document.supplierTaxId||String(document.supplierName||"").toUpperCase().trim(),document.invoiceNo||document.invoiceNumber||document.filename||"",document.invoiceDate||""].join("|");
 const invoiceLineNet=line=>{const stored=invoiceNumber(line.netValue??line.netAmount);if(stored!==null)return stored;const quantity=invoiceNumber(line.quantity),price=invoiceNumber(line.unitPrice??line.unitCost);if(!(quantity>0&&price>=0))return 0;return [line.discount1,line.discount2,line.discount3].reduce((value,discount)=>value*(1-(invoiceNumber(discount)||0)/100),quantity*price)};
 
-export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices,onOpenStock,onOpenWorkforce,onOpenVideo}){
+export default function AiCommandCenter({request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices,onOpenStock,onOpenWorkforce,onOpenVideo,initialTwinSelection=null,onTwinSelectionChange}){
   const [problems,setProblems]=useState({loading:true,error:"",cash:null,payments:null,bank:null});
   const [invoiceIntel,setInvoiceIntel]=useState({loading:true,error:"",workspace:null});
   const [twinDevices,setTwinDevices]=useState({loading:true,rows:{}});
-  const [selectedTwinId,setSelectedTwinId]=useState("");
+  const [twinSelection,setTwinSelection]=useState(()=>initialTwinSelection);
   const [question,setQuestion]=useState("");
   const [askState,setAskState]=useState({loading:false,error:"",result:null});
   const loadProblems=async()=>{
@@ -181,7 +182,18 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
       return{id:store.id,companyId:company.id,name:store.name,companyName:company.name,status,devices,activeTerminals:activeTerminals.length,recentTerminals:recentTerminals.length,fiscalDevices:fiscalDevices.length,eftposDevices:eftposDevices.length,stock,workforce,videoLabel};
     }));
   },[companies,onOpenChecks,storeStatuses,twinDevices.rows]);
-  const selectedTwin=useMemo(()=>digitalTwin.find(item=>item.id===selectedTwinId)||digitalTwin[0]||null,[digitalTwin,selectedTwinId]);
+  const selectedTwin=useMemo(()=>resolveTwinSelection(digitalTwin,twinSelection),[digitalTwin,twinSelection]);
+  const selectTwin=twin=>{
+    const selection=twinSelectionFor(twin);
+    setTwinSelection(selection);onTwinSelectionChange?.(selection);
+  };
+  // Remember the initial pair too: refreshing the list must not silently replace it.
+  useEffect(()=>{
+    if(twinSelection===null&&selectedTwin){
+      const selection=twinSelectionFor(selectedTwin);
+      setTwinSelection(selection);onTwinSelectionChange?.(selection);
+    }
+  },[twinSelection,selectedTwin,onTwinSelectionChange]);
   const fullTwinAreas=useMemo(()=>{
     if(!selectedTwin)return[];
     const unavailable=selectedTwin.devices.unavailable,video=selectedTwin.devices.video,stock=selectedTwin.stock,workforce=selectedTwin.workforce;
@@ -290,7 +302,8 @@ export default function AiCommandCenter({request,companies=[],loading=false,onCl
 
       <section className="ai-command-full-twin">
         <div className="ai-command-panel-title"><div><small>FULL DIGITAL TWIN · ΦΑΣΗ 14</small><h2>{selectedTwin?selectedTwin.name:"Δεν υπάρχει διαθέσιμο κατάστημα"}</h2><p>{selectedTwin?`${selectedTwin.companyName} · ${fullTwinTotals.ok} ΟΚ · ${fullTwinTotals.warn} έλεγχος · ${fullTwinTotals.danger} πρόβλημα`:"Η ενιαία εικόνα δημιουργείται από τις υπάρχουσες read-only πηγές."}</p></div><Building2/></div>
-        <div className="ai-full-twin-selector" aria-label="Επιλογή καταστήματος">{digitalTwin.map(item=><button type="button" key={item.id} className={selectedTwin?.id===item.id?"active":""} onClick={()=>setSelectedTwinId(item.id)}><span className={`ai-state-dot ${item.status.state}`}/>{item.name}</button>)}</div>
+        <div className="ai-full-twin-selector" aria-label="Επιλογή καταστήματος">{digitalTwin.map(item=><button type="button" key={item.id} className={selectedTwin?.id===item.id&&selectedTwin?.companyId===item.companyId?"active":""} onClick={()=>selectTwin(item)}><span className={`ai-state-dot ${item.status.state}`}/>{item.name}</button>)}</div>
+        {twinSelection!==null&&!selectedTwin&&<div className="ai-command-problem-error" role="alert" data-ai-twin-selection-unavailable="true"><AlertTriangle/>Το επιλεγμένο κατάστημα δεν είναι πλέον διαθέσιμο. Επίλεξε ξανά κατάστημα.</div>}
         {selectedTwin&&<div className="ai-full-twin-areas">{fullTwinAreas.map(area=>{const Icon=area.icon;return <button type="button" key={area.id} className={area.state} onClick={area.open}><Icon/><span><small>{area.title}</small><b>{area.detail}</b></span><strong>{area.state==="danger"?"ΠΡΟΒΛΗΜΑ":area.state==="warn"?"ΕΛΕΓΧΟΣ":"ΟΚ"}</strong><ChevronRight/></button>})}</div>}
         <small className="ai-daily-source">Ενιαία λειτουργική εικόνα μόνο ανάγνωσης από τα δεδομένα των Φάσεων 12–13. Δεν δημιουργεί δεύτερο score ή dataset και δεν εκτελεί ενέργεια σε συσκευή, βάρδια, πληρωμή, stock, προσωπικό ή NVR.</small>
       </section>
