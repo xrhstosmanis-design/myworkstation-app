@@ -1,3 +1,11 @@
+## 10/10/2026 22:43 Αθήνα — Νο33 προσωπική κάρτα/QR και καταμέτρηση: USER PASS
+
+Owner `codex/operator-checkbox-audit-20261009`, No33/tracker35 **OPEN**. Ο ιδιοκτήτης επιβεβαίωσε: «η προσωπική κάρτα/QR και η καταμέτρηση αυτα τα εχω κανει..ειναι οκ». Καταγράφονται ως **USER PASS** και δεν επαναλαμβάνονται ούτε ζητούνται κωδικοί/QR στη συνομιλία. Η παλαιότερη απαίτηση επανελέγχου αυτών των δύο σκελών έχει υπερκαλυφθεί από αυτή την επιβεβαίωση.
+
+Δεν πρόκειται για νέα παρατήρηση του Codex: χρόνος αρχικής δοκιμής, revision, μετρήσεις και Audit IDs δεν δόθηκαν. Δεν προκύπτει από αυτή τη δήλωση PASS τελικής υποβολής κλεισίματος, νέας βάρδιας ή αρχικού ταμείου. Αυτά και οι υπόλοιπες εκκρεμότητες του Νο33 παραμένουν OPEN. Δεν έγινε νέα συναλλαγή, καταμέτρηση, μεταβολή δικαιωμάτων ή οικονομική/stock/shift υποβολή για τεκμηρίωση. Η υπάρχουσα έγκριση αναγκαίων εικονικών δοκιμών διατηρείται.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-10-10-operator-card-count-user-pass.md`. Επόμενο: ανεξάρτητο εκκρεμές δικαίωμα ή ο μετρημένος τελικός έλεγχος κλεισίματος/αρχικού ταμείου, χωρίς επανάληψη προσωπικής κάρτας/QR και καταμέτρησης. No39/τιμολόγια/scanner/μήνυμα ρέστων και άλλοι owners παραμένουν εκτός scope.
+
 ## 10Oct17:36 — No33 / tracker35 OPEN: mounted CLOSE revoke/restore LIVE PASS
 
 NormalEMPLOYEE alreadyopenCLOSE disappeared afterOFF withoutrefresh, menu disabled; ON restoredoriginal23 and newly mountedblankform, closedwithoutsubmit. MAIN11/4/control2/0 unchanged, Audittwo rights only. Actualclose/initialcash requirevalidpersonalQR+count/device evidence; financialapproval17:17 persists. Checkpoint2026-10-10-operator-close-runtime-live.md.

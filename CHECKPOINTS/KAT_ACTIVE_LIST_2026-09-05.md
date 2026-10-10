@@ -1,3 +1,11 @@
+## 10/10/2026 22:43 Αθήνα — Νο33 προσωπική κάρτα/QR και καταμέτρηση: USER PASS
+
+Owner `codex/operator-checkbox-audit-20261009`, No33/tracker35 **OPEN**. Ο ιδιοκτήτης επιβεβαίωσε: «η προσωπική κάρτα/QR και η καταμέτρηση αυτα τα εχω κανει..ειναι οκ». Καταγράφονται ως **USER PASS** και δεν επαναλαμβάνονται ούτε ζητούνται κωδικοί/QR στη συνομιλία. Η παλαιότερη απαίτηση επανελέγχου αυτών των δύο σκελών έχει υπερκαλυφθεί από αυτή την επιβεβαίωση.
+
+Δεν πρόκειται για νέα παρατήρηση του Codex: χρόνος αρχικής δοκιμής, revision, μετρήσεις και Audit IDs δεν δόθηκαν. Δεν προκύπτει από αυτή τη δήλωση PASS τελικής υποβολής κλεισίματος, νέας βάρδιας ή αρχικού ταμείου. Αυτά και οι υπόλοιπες εκκρεμότητες του Νο33 παραμένουν OPEN. Δεν έγινε νέα συναλλαγή, καταμέτρηση, μεταβολή δικαιωμάτων ή οικονομική/stock/shift υποβολή για τεκμηρίωση. Η υπάρχουσα έγκριση αναγκαίων εικονικών δοκιμών διατηρείται.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-10-10-operator-card-count-user-pass.md`. Επόμενο: ανεξάρτητο εκκρεμές δικαίωμα ή ο μετρημένος τελικός έλεγχος κλεισίματος/αρχικού ταμείου, χωρίς επανάληψη προσωπικής κάρτας/QR και καταμέτρησης. No39/τιμολόγια/scanner/μήνυμα ρέστων και άλλοι owners παραμένουν εκτός scope.
+
 ## 10/10/2026 22:40 Athens — VOICE Owner sales acceptance still BLOCKED after user sign-in
 
 Owner remains `codex/unified-voice-assistant-20261010`; tracker32/printed30/VOICE remain OPEN/ASSIGNED. Source PR2167/dece8453 and full2216/0/0/guarded release protected. Final synchronized blocked handoff PR2178/head d0d19c77/CI38077015331 SUCCESS/merge b8a29cbc already published; no source or grant changes this continuation.
