@@ -1,3 +1,23 @@
+## 2026-10-10 — No33 price permission: bounded LIVE PASS after PR2045
+
+Owner codex/operator-checkbox-audit-20261009. No33/tracker35 remains OPEN. Exact release e687b51a, PR2045 final ad31c0c8/full CI38036860695 SUCCESS; mainCI38037072058 and guardedRender38037273211 SUCCESS, independently observed health ok/exact SHA then fresh LABPOS2 EMPLOYEE POS.
+
+LIVE: only changeRetail OFF persisted, fresh POS disables price button and keyboard Enter cannot open editor. ON restored, mounted cart retained and button re-enabled by runtime poll. One local SKU2270 qty1 price1.00→0.50 with reason Δοκιμή applied only after Audit completed; exactly one corresponding own PRICE_CHANGE at11:25. Catalog price1.00/stock−13/lastsale09:51:19 independently read unchanged after apply. Later OFF at11:33 while editor open automatically closed it; proposed0.45 never applied, cart stayed0.50. Apply attempt found no button, so server403 LIVE is NOT TESTED. Immediately ON restored; all23 original fields/EMPLOYEE confirmed. Removed only identified test row11:34; finalcart0/total0/queue0.
+
+Fresh final MAIN5/cash3.50/cards0/IRIS0/expenses0/total3.50/latest09:51 and control LAB-POS-02 2/cash0/cards+IRIS0/total0/latestnone unchanged. Audit1158→1168 rows including header: own OFF/add/ON/PRICE_CHANGE/OFF/ON/remove plus three external LAB EXCEL TEST2 edits (11:22/11:25/11:26); no own sale, return, payment or shift submission. Final cleanup stock re-read was blocked by automatic approval review as excluded No39; no bypass. Last stock observation after local price apply remains valid, final cleanup stock/full movement ledger NOT TESTED. Evidence operator-price-20261010/{keyboard-fail,disabled-pass,local-pass,empty-pass}.jpg.
+
+This supersedes source AWAITING LAB only for tested keyboard denial, restored local-price/Audit and mounted editor closure. Server negative response, checkout/fiscal/refund, offline/concurrent devices, full stock ledger, physical printing, transfers, initialcash/shift closing and broader roles/companies/stores/modules remain OPEN/NOT TESTED. Next: own/all shift transactions and label printing visibility within existing specific approval; no financial/stock/shift submit or payment replay.
+
+## 2026-10-10 11:25:48 Europe/Athens — before local PRICE_CHANGE apply
+
+LABPOS2EMPLOYEE, currentidentifiedSKU2270qty1/unit1/carttotal1/queue0. changeRetail restoredON and23fields exactoriginal; same mountedcartretained, pricebutton automaticallyre-enabled afternormalpermissionpoll. FreshMAIN5/cash3.50/cards0/IRIS0/expenses0/total3.50/latest09:51; controlLAB-POS-02 2/cash0/cards+IRIS0/total0/latestnone. FreshSKU2270catalogprice1/stock−13/lastsale09:51:19. LateststockmovementID/timeNOTTESTED. SelectedstoreAudit1162rowsinclheader, own11:23rightsOFF/add/ON, externalN44productedit11:22, no ownPRICE_CHANGEyet. Intendedone localprice1→.50 reasonΔοκιμή, no checkout/financial/stock/shift submit.
+
+## 2026-10-10 — price guard release LIVE acceptance before baseline / NOT TESTED
+
+SourcePR2045 finalheadad31c0c8, PRCI38036860695SUCCESS, merged e687b51ab1769ae43d03c9c40745e30c21dc0c18. FullmainCI38037072058SUCCESS and guardedRender38037273211SUCCESS. Browserindependenthealth exacte687b51a/oktrue thenfreshPOSreload LABPOS2EMPLOYEE/catalog11/94/cart0/queue0. BackOffice supportcontext recovered viaalreadyauthenticated canonicalPlatformAdmin, no newcredentialentry; earlier internalrootlogin didnotmeanPlatformAdminexpired.
+
+Before identifiedOFFkeyboard/ONlocalprice test: freshMAIN5transactions/cash3.50/cards0/IRIS0/expenses0/total3.50/latest09:51; controlLAB-POS-02 2transactions/cash0/cards+IRIS0/total0/latestnone. StoreSKU2270 water1.5 qty−13/catalogprice1/lastsale10Oct09:51:19; lateststockmovementID/time notdisplayedNOTTESTED. SelectedstoreAudit1158table rows inclheader, latestexternalproducteditLAB EXCEL TEST2 11:21 notthisowner. Freshordinaryprofile23fields original. No financial/stock/shift submit authorized. Nextlocaltestqty1 only, no checkout. ResultsNOTTESTED beforeexecution.
+
 ## N39 TRANSFER-02 — bounded LIVE PASS / overall OPEN — 10/10/2026 11:15 Athens
 
 Owner codex/n39-inventory-acceptance-20261010 retained. PR2039 selector and PR2043 SQL-managed Product lookup corrections are LIVE verified on bbea3bda7646720abd75d90f9699c1222429daa7, full PR CI38036227841 SUCCESS2027PASS/0FAIL/0SKIP, mainCI38036434279 SUCCESS, guardedRender38036628204 SUCCESS and independent exact health. Fresh baseline recorded before one TRANSFER-02 submit: TEST1 source9 / ledger9/9/diff0/11moves/duplicates0, destination ALL exactSKU absent/0; MAIN5tx cash/total3.50/card0/IRIS0/expense0, controlLAB-POS-02 2tx cash/card/IRIS/total0/expense120; destination no open shift.
