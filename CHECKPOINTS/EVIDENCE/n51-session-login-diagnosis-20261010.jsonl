@@ -1,0 +1,3 @@
+{"kind":"owner-session","entersAuthenticatedView":true,"hasSessionToken":true,"result":"CONTROL_OK"}
+{"kind":"mfa-required","entersAuthenticatedView":true,"hasSessionToken":false,"result":"REPRODUCED_FAILURE: incomplete MFA accepted as session"}
+{"kind":"setup-required","entersAuthenticatedView":true,"hasSessionToken":false,"result":"REPRODUCED_FAILURE: incomplete MFA accepted as session"}
