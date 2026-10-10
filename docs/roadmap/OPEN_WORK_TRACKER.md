@@ -1,3 +1,11 @@
+## 10Oct2026 14:52 Athens — N39 / INVENTORY-ADV — agreed residual LIVE PASS
+
+Same owner codex/n39-inventory-acceptance-20261010 completed the user-authorized final residual on observed production revision5dc10820082a570705616f163e8118c7ae4ba2a9. ClaimPR2079 and beforePR2082 were green/merged before closure; AFTER FINALIZE01 / BEFORE STALE01 PR2083 head122f3b6f CI38049838190 SUCCESS merged3a25529d before late submit. FINALIZE01 at14:49:05: existing N39-LAB-20261010-RECOUNT-REASON-01 FINALIZED expected5/count4/diff-1; source5→4 and exactly one new STOCKTAKE_ADJUSTMENT out1/balance4 with persisted reason. Ledger15→16, current4/recorded4/diff0/duplicates0.
+
+STALE01 at14:51 Athens: prepared old DRAFT pencil4→3 submitted once; visible rejection «Η απογραφή δεν είναι ανοικτή.». Reopening the same record showed FINALIZED/count4/diff-1/persisted exact reason and no count/import/recount/edit/delete/finalize controls for that record. Fresh after ledger still4/4/diff0/16moves/duplicates0/latest14:49:05. Fresh MAIN6tx/cash4/card0/IRIS0/total4/expense0/latest11:59; LAB-POS-022tx/cash0/card0/IRIS0/total0/expense120/latest—; incoming/outgoing owner transfers0both. Both unchanged after closure and rejection. OperatorΧρήστος Μάνης/sourceLAB/TEST1 SKU01/virtual BackOffice; no financial payment method/action. Evidence CHECKPOINTS/EVIDENCE/n39-finalized-proof-20261010.jpg.
+
+This closes the agreed numbered39 residual together with protected earlier stocktake/expired/transfer/SELF/waste-pair/absolute-recount PASS, without replay. Early unresolved-close rejection, exported Full Audit event identities, wider roles/tenant/import races and physical/mobile/new-store acceptance remain NOT TESTED LIVE; native PG CI proofs remain separately attributed. TODAY-07 and other owners are excluded, unchanged. Historical OPEN/browser-blocker entries below are superseded only for this completed residual. Final publication branch docs/n39-final-pass-20261010; checkpoint/manual/tracker/numbered/active/pending and both generated PDFs synchronized in one closing PR. No source or deployment change in this publication.
+
 ## 10/10/2026 14:39 Europe/Athens — N39 named browser continuation / OPEN
 
 ΑΝΑΛΗΨΗ ΑΠΟ `codex/n39-inventory-acceptance-20261010` — ASSIGNED `codex/n39-inventory-acceptance-20261010` (same logical owner, receiving conversation; publication branch `docs/n39-browser-resume-20261010`). Previous conversation stopped with browser blocked; user explicitly approved replacement browser connection for N39 at14:39. Canonical Platform Admin opened and positively showed Χρήστος Μάνης. No authentication bypass, new grants or business mutation. Prior no-new-tab warning describes the former blocked recovery; explicit replacement authorization supersedes it for this continuation only.
@@ -1979,15 +1987,15 @@ Implemented bounded observed causes: runtimeAccess passed into mounted POS behav
 
 ### INVENTORY-ADV — Inventory 2.0 επεκτάσεις
 
-**Κατάσταση:** OPEN / ASSIGNED — bounded LIVE PASS; reasoned final closure pending
+**Κατάσταση:** PASS — agreed numbered39 residual completed10Oct2026 14:52 Athens
 
-**Υπόλοιπο / όρια PASS:** Existing RECOUNT-REASON-01 expected5/count4/report−1 DRAFT. One reasoned closure5→4/unique adjustment/persisted cause, late stale-tab rejection and reopened read-only remain. Native browser confirmation requires manual handoff. Early unresolved rejection LIVE NOT TESTED; native PG reason/recount/draft-lock/scoped-role/replay CI PASS separately. Physical/mobile/new-store/TODAY-07 separate NOT TESTED. No repeat of accepted stock actions.
+**Υπόλοιπο / όρια PASS:** No remaining action in the agreed residual. Physical/mobile/new-store/TODAY-07 and wider LIVE role/tenant/import-race coverage are separate NOT TESTED; early unresolved-close and Full Audit export NOT TESTED LIVE. Native PG CI proofs remain separate. Never replay accepted stock actions.
 
-**Υπεύθυνη σελίδα / branch:** `codex/n39-inventory-acceptance-20261010` retained; TODAY-07 retains previous owner.
+**Υπεύθυνη σελίδα / branch:** `codex/n39-inventory-acceptance-20261010` completed; final publication `docs/n39-final-pass-20261010`; TODAY-07 previous owner unchanged.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** 10/10/2026 01:46 Athens, original N39 assignment unchanged. `CHECKPOINTS/CHANGES/2026-10-10-n39-inventory-acceptance.md`.
+**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Original01:46 assignment retained, named browser continuationPR2079 green/merged before actions.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Bounded partialLIVE/NONE stocktake11→10/report−1; expired10→9; TRANSFER-02source9→8/dest0→1; SELF8→7; WASTE-PAIR7→5, matching unique ledger and controls. CORRECTION01 LIVE PASS13:31:53: absolute pencil8→4/report−1 while stock5/ledger5/diff0/15moves/dup0, MAIN6cash4/control2expense120 unchanged. PR2070 CI38043861185 SUCCESS2062/0/0, merged/exactdeployed a90bfd3ce242b68d130250546bd761c87799f4ee/main38044476432/guard38044664872 SUCCESS. PR2060/2062/2066 native sources green separately. `CHECKPOINTS/CHANGES/2026-10-10-n39-recount-reason-live.md`; `docs/manual/inventory/PASS.md`. Full39 OPEN, not CI-only PASS.
+**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** LIVE FINALIZE01 14:49:05: same RECOUNT-REASON-01 5/4/-1, unique adjustment-1, stock4/ledger4/16moves/duplicates0; reason persisted. STALE01 late count3 rejected, reopen FINALIZED/read-only/count4; both tills unchanged. Earlier stocktake/expired/transfer/SELF/waste pair/absolute correction PASS retained without replay. Deployed5dc10820082a570705616f163e8118c7ae4ba2a9; beforePR2082 CI38049602262 SUCCESS, stale baselinePR2083 CI38049838190 SUCCESS. Closing PR on docs/n39-final-pass-20261010 carries final CI. `CHECKPOINTS/CHANGES/2026-10-10-n39-recount-reason-live.md`; `docs/manual/inventory/PASS.md`.
 
 ### AI-CC-LIMITS — AI Command Center όρια PASS
 
