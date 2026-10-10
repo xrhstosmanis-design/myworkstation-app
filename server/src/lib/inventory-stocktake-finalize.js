@@ -1,3 +1,4 @@
+import {lockDraftInventoryStocktake} from "./inventory-stocktake-draft.js";
 import {randomUUID} from 'node:crypto';
 
 const number=value=>Number(value||0);
@@ -6,8 +7,7 @@ const conflict=message=>Object.assign(new Error(message),{status:409});
 // Call inside a transaction. Stock rows precede line rows, matching ordinary
 // movements (stock update, then the live-stocktake trigger).
 export async function finalizeInventoryStocktake(tx, stocktake, userId) {
-  const parents=await tx.$queryRaw`SELECT "id","status" FROM "Stocktake" WHERE "id"=${stocktake.id} AND "companyId"=${stocktake.companyId} FOR UPDATE`;
-  if(parents[0]?.status!=='DRAFT')throw conflict('Η απογραφή έχει ήδη κλείσει.');
+  await lockDraftInventoryStocktake(tx, stocktake);
   const stocks=await tx.$queryRaw`SELECT sp."productId",sp."currentStock" FROM "StoreProduct" sp WHERE sp."storeId"=${stocktake.storeId} AND sp."productId" IN (SELECT "productId" FROM "StocktakeLine" WHERE "stocktakeId"=${stocktake.id}) ORDER BY sp."productId" FOR UPDATE OF sp`;
   const lines=await tx.$queryRaw`SELECT "productId","expectedQuantity","countedQuantity","unitCost","recountRequired" FROM "StocktakeLine" WHERE "stocktakeId"=${stocktake.id} ORDER BY "productId" FOR UPDATE`;
   const unresolved=lines.filter(line=>line.countedQuantity===null||line.recountRequired).length;

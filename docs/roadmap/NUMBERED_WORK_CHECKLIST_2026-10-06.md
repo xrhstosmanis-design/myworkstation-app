@@ -286,6 +286,8 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 - **Tracker ID:** `INVENTORY-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN / ASSIGNED — updated10/10/2026, codex/n39-inventory-acceptance-20261010
 
+**10/10 νεότερος έλεγχος:** απομονωμένο stale-DRAFT FAIL στις έξι μεταβολές· κοινός transactional parent lock, AWAITING CI/exact deploy/LAB. Αιτιολογία παραμένει χωριστό OPEN. Προστατευμένα LIVE PASS αμετάβλητα, συνολικό39 OPEN. Checkpoint2026-10-10-n39-draft-mutations.md.
+
 ## 40 — AI Command Center — μη ελεγμένες μεταβάσεις
 
 - **Tracker ID:** `AI-CC-LIMITS`
