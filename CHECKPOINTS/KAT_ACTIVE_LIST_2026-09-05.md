@@ -1,3 +1,7 @@
+## 10Oct2026 15:48 Athens — No33 independent shift view LIVE FAIL / source AWAITING LAB
+
+Same owner codex/operator-checkbox-audit-20261009, No33/tracker35 OPEN. New returnItemsOFF + shiftTransactionsON/allON combination failed LIVE: recent-sale GET requires return right, so timeline showed permission error and no-open-shift despite MAIN8/cash4/IN.10OUT.10. Immediate restoreON15:48, alloriginal23/EMPLOYEE persistedverified,cart0; Audit1193→1195 onlytwoownrights. Fresh MAIN andcontrolunchanged (control2/0/expense120/IN0OUT0). Prior boundedPASS incl PR2087 transfers andPR2088crossactor protected, no replay. Checkpoint CHECKPOINTS/CHANGES/2026-10-10-operator-shift-return-independent.md. Bounded source separates explicit read-onlySHIFT permission from return gates, scopesOPENsession/terminal/company/store andimmutableownactor; AWAITING CI/fullmain/guardedRender/exactrelease/LIVE acceptance, notPASS. No39/48/49/invoices/scanner/change scope remains with otherowners; nofinancialapproval remains.
+
 ## 10 Oct 2026 — No40 / AI-CC-LIMITS — read-only authentication evidence; OPEN
 
 Same owner `codex/n40-full-twin-navigation-audit-20261010`. Prior visual phases 1–14, Stock USER evidence comment 6097485640 and five browser round trips recorded by PR #2092 are preserved without replay.
