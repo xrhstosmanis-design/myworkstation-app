@@ -1,3 +1,7 @@
+## 11/10/2026 22:16:15 Athens — CASH-REPORT-ANALYSES-01 / USER PASS εμφάνισης / CLOSED
+
+Ο ιδιοκτήτης επιβεβαίωσε «ειναι οκ» μετά την παράδοση της μαζεμένης αναφοράς ταμείου με κουμπί «Αναλύσεις». USER PASS μόνο αυτής της εμφάνισης, συμπληρωματικά στο πραγματικό LIMITED LIVE UI PASS PR2299/2300. Δεν έγινε νέα δοκιμή/συναλλαγή. Το μήνυμα δεν προσδιορίζει νέα συσκευή/ρόλο/revision ή οικονομικά deltas. Physical print/export/email/mobile/άλλοι ρόλοι παραμένουν NOT TESTED· overall Νο33 OPEN. Scope ήδη κλειστό, δεν επανεισάγεται στο pending. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-cash-report-analyses.md`, manual `docs/manual/reports/PASS.md`.
+
 ## 11/10/2026 21:21 Athens — CASH-REPORT-ANALYSES-01 / LIMITED LIVE UI PASS / CLOSED DISPLAY SCOPE
 
 Owner `codex/operator-checkbox-audit-20261009`. Claim PR2298 / CI38162139847 SUCCESS / merge4d559ffa published before source. Source PR2299 head59e125a74ba781b79422f825018a00e34a2e38a9 / fullCI38162292599 **2377 PASS/0 FAIL/0 SKIP** / merge **8f0affdf070a21c47fc53c2ef4c127ef7c5629d7**. Exact main CI38162636099 attempt2 SUCCESS **2377/0/0**; attempt1 failed an existing unrelated pos-capacity-runner HTTP timing assertion, same source retried without changes or weakened checks. Guarded Render38163114472 actual deploy job114540024829 SUCCESS; earlier failed-CI-triggered deploy38162791294 correctly skipped, not release evidence. Independent browser health ok=true/version0.22.0+kat-test-pos/exact8f0affdf070a21c47fc53c2ef4c127ef7c5629d7 before fresh client reload.
