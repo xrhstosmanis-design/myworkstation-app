@@ -1,0 +1,85 @@
+/* The product dialog has one scroll owner below its fixed header. */
+.pos-line-menu > section {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  min-width: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.pos-line-menu > section > header > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pos-line-menu > section > header > button {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  margin-left: 12px;
+}
+
+.pos-line-menu-body {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 16px;
+  color: #173e34;
+}
+
+.pos-line-menu .pos-product-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.pos-line-menu .pos-product-facts > div {
+  min-width: 0;
+  border: 1px solid #d3dfdc;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+  overflow-wrap: anywhere;
+}
+
+.pos-line-menu .pos-product-facts small {
+  display: block;
+  margin-bottom: 5px;
+  color: #526b63;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pos-line-menu .pos-product-facts b {
+  display: block;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.pos-line-menu .pos-line-actions {
+  padding: 0;
+  overflow: visible;
+}
+
+.pos-line-menu .pos-line-actions button {
+  min-width: 0;
+  padding: 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.pos-line-menu .pos-line-actions svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 620px) {
+  .pos-line-menu .pos-product-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pos-line-menu .pos-line-actions {
+    grid-template-columns: 1fr;
+  }
+}
