@@ -1,0 +1,47 @@
+/* Own active-shift payments only; never depend on BackOffice commerce styles. */
+.shift-close-modal.pos-my-payments-readable {
+  width: min(1440px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.pos-my-payments-readable > header { gap: 16px; padding: 18px 24px; }
+.pos-my-payments-readable > header h2 { font-size: 32px; }
+.pos-my-payments-readable > header small { font-size: 16px; }
+.pos-my-payments-readable > header p { font-size: 20px; margin: 8px 0 0; overflow-wrap: anywhere; }
+.pos-my-payments-readable > header button { width: 56px; height: 56px; flex: 0 0 56px; }
+.pos-my-payments-readable .shift-close-body { min-height: 0; padding: 16px; overflow: auto; }
+.pos-my-payments-readable .my-shift-entries-panel { font-size: 20px; line-height: 1.45; padding: 20px; }
+.pos-my-payments-readable .my-shift-entries-panel .cloud-panel-head { gap: 20px; align-items: flex-start; }
+.pos-my-payments-readable .my-shift-entries-panel .cloud-panel-head > div { min-width: 0; }
+.pos-my-payments-readable .my-shift-entries-panel h3 { font-size: 26px; margin: 0 0 8px; }
+.pos-my-payments-readable .my-shift-entries-panel .cloud-panel-head p { font-size: 18px; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+.pos-my-payments-readable .my-shift-entries-panel .cloud-panel-head > button,
+.pos-my-payments-readable .my-shift-entries-panel .payment-correction-action {
+  min-height: 56px; padding: 12px 20px; font-size: 20px; line-height: 1.3;
+  white-space: normal; border-radius: 10px;
+}
+.pos-my-payments-readable .my-shift-entries-panel .commerce-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.pos-my-payments-readable .my-shift-entries-panel .commerce-card { display: grid; gap: 8px; padding: 18px; border: 1px solid #cbdcd8; border-radius: 12px; background: #eff7f4; }
+.pos-my-payments-readable .my-shift-entries-panel .commerce-card span { font-size: 20px; overflow-wrap: anywhere; }
+.pos-my-payments-readable .my-shift-entries-panel .commerce-card strong { font-size: 32px; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pos-my-payments-readable .my-shift-entries-panel .ledger-list { display: grid; gap: 16px; }
+.pos-my-payments-readable .my-shift-entries-panel .ledger-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 16px 24px; padding: 20px; border: 1px solid #cbdcd8; border-radius: 12px; background: #fff; }
+.pos-my-payments-readable .my-shift-entries-panel .ledger-row > div:first-child { min-width: 0; display: grid; gap: 8px; }
+.pos-my-payments-readable .my-shift-entries-panel .ledger-row b { font-size: 22px; overflow-wrap: anywhere; }
+.pos-my-payments-readable .my-shift-entries-panel .ledger-row span,
+.pos-my-payments-readable .my-shift-entries-panel .ledger-row small { display: block; font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
+.pos-my-payments-readable .my-shift-entries-panel .ledger-row > strong { font-size: 30px; line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pos-my-payments-readable .my-shift-entries-panel .ledger-row > .payment-correction-action { grid-column: 1 / -1; justify-self: start; }
+.pos-my-payments-readable .my-shift-entries-panel .ledger-row.reversed { opacity: .65; }
+@media (max-width: 800px) {
+  .pos-my-payments-readable .my-shift-entries-panel .commerce-cards { grid-template-columns: 1fr; }
+  .pos-my-payments-readable .my-shift-entries-panel .commerce-card { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+}
+@media (max-width: 600px) {
+  .pos-my-payments-readable > header { padding: 14px; }
+  .pos-my-payments-readable .shift-close-body { padding: 8px; }
+  .pos-my-payments-readable .my-shift-entries-panel { padding: 14px; }
+  .pos-my-payments-readable .my-shift-entries-panel .cloud-panel-head { flex-direction: column; }
+  .pos-my-payments-readable .my-shift-entries-panel .ledger-row { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .pos-my-payments-readable .my-shift-entries-panel .commerce-card { grid-template-columns: minmax(0, 1fr); }
+}
