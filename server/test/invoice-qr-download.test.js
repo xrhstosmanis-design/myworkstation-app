@@ -48,3 +48,25 @@ test("QR handler enforces selected store and payment permission without writes",
   const foreign=res();await handler({user:{role:"OWNER",companyId:"foreign"},body:{storeId:"store",url}},foreign,e=>{throw e});assert.equal(foreign.code,404);assert.equal(downloads,0);
   const r=res();await handler({user:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",companyId:"own",storeId:"store",permissions:["SUPPLIER_PAYMENT"]},body:{storeId:"store",url}},r,e=>{throw e});assert.equal(r.code,200);assert.equal(downloads,1);assert.equal(allowed,1);
 });
+
+
+test("Impact view QR resolves original PDF from verified XML for different invoices",async()=>{
+  for(const [issuer,uid,auth,token] of [["123456789","c".repeat(40),"d".repeat(40),"e".repeat(32)],["111222333","1".repeat(40),"2".repeat(40),"3".repeat(32)]]){
+    const view=`https://einvoice.impact.gr/v/EL${issuer}-1422948749-${auth}-${token}`;
+    const source=xml.replace("123456789",issuer).replace("<mark>",`<uid>${uid}</uid><authenticationCode>${auth}</authenticationCode><mark>`);
+    const t=transport(source),r=await downloadInvoiceQr(view,"987654321",{...t,reader:async()=>({text:`12345 ${issuer} 987654321 0012`,pageCount:1})});
+    assert.equal(r.header.supplierTaxId,issuer);
+    assert.deepEqual(t.calls.map(x=>x.u),[view+"/myDATA",`https://einvoice.impact.gr/p/EL${issuer}/${uid}/${token}/pdf`]);
+    for(const bad of [source.replace(auth,"f".repeat(40)),source.replace(`<uid>${uid}</uid>`,""),source.replace("987654321","999999999")]){
+      const rejected=transport(bad);await assert.rejects(downloadInvoiceQr(view,"987654321",{...rejected,reader}));assert.equal(rejected.calls.length,1);
+    }
+  }
+});
+
+test("provider formats remain bounded and canonical S1/Impact URLs still work",async()=>{
+  const view="https://einvoice.impact.gr/v/EL123456789-123-"+"d".repeat(40)+"-"+"e".repeat(32);
+  for(const bad of [view.replace("impact.gr","s1ecos.gr"),view.replace("-123-","-abc-"),view.replace("-123-","-"+"1".repeat(21)+"-"),view+"/pdf",view+"?next=https://localhost",view.replace("https://","https://user@"),view.replace("impact.gr","impact.gr.attacker.test")])assert.throws(()=>invoiceQrUrl(bad));
+  const canonical=url.replace("s1ecos.gr","impact.gr"),t=transport();
+  await downloadInvoiceQr(canonical,"987654321",{...t,reader});assert.equal(t.calls[1].u,canonical+"/pdf");
+  assert.equal(invoiceQrUrl(url.replace("https://","https:/")).href,url);
+});
