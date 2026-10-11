@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {z} from "zod";
 import {aiCommandUsage} from "../src/services/ai-command-usage.js";
-import {runCashAssistant} from "../src/services/assistant-cash-tools.js";
+import {createPlatformAssistantSession} from "../src/services/platform-assistant-products.js";
+import {productAssistantInstructions} from "../src/services/assistant-product-instructions.js";
 
 // Execute the existing route's actual schema/handler with an isolated provider. No external API/database.
 const source = await readFile(new URL("../src/routes/platform-admin.js", import.meta.url), "utf8");
@@ -12,9 +13,9 @@ const handlerSource = source.slice(source.indexOf('router.post("/ai-command-cent
 const snapshot = {generatedAt: "2026-10-10T12:00:00Z", companies: {active: 0, inactive: 0, stores: 0, attention: 0}, problems: {total: 0, cash: 0, payments: 0, paymentDiscrepancies: 0, bank: 0, bankDiscrepancies: 0}, companyStates: []};
 const setup = (env = {OPENAI_API_KEY: "fixture-only", OPENAI_COMMAND_CENTER_MODEL: "fixture-model"}, provider = {}) => {
   const calls = [], logs = [], reads = []; let handler;
-  new Function("z", "router", "process", "fetch", "console", "aiCommandUsage", "AbortSignal", "runCashAssistant", "readCanonicalPlatformCash", schemaSource + handlerSource)(
+  new Function("z", "router", "process", "fetch", "console", "aiCommandUsage", "AbortSignal", "createPlatformAssistantSession", "productAssistantInstructions", schemaSource + handlerSource)(
     z, {post(_path, fn) { handler = fn; }}, {env}, async (url, options) => { calls.push({url, options}); return {ok: true, status: 200, json: async () => ({output_text: JSON.stringify({answer: "Fixture", highlights: [], sources: [], limitations: "Snapshot only"}), usage: {input_tokens: 5, output_tokens: 3, total_tokens: 8}, ...(typeof provider==="function"?provider(calls.length):provider)})}; },
-    {info: (...args) => logs.push(args)}, aiCommandUsage, {timeout: () => "fixture-timeout"}, runCashAssistant, async (_req,date) => {reads.push(date);return {date,rows:[{storeName:"LAB",sessionId:"shift",variance:-12.5}],totals:{}}}
+    {info: (...args) => logs.push(args)}, aiCommandUsage, {timeout: () => new AbortController().signal}, (req,selection,options)=>createPlatformAssistantSession(req,selection,{...options,authorize:async()=>{if(selection&&(selection.companyId!=="c"||selection.storeId!=="s"))throw Object.assign(Error("foreign pair"),{status:404});return selection?{...selection,companyName:"Fixture company",storeName:"LAB"}:null},readCash:async (_req,date) => {reads.push(date);return {date,rows:[{storeName:"LAB",sessionId:"shift",variance:-12.5}],totals:{}}},readSalesReport:async filters=>{reads.push(filters.q);return {companyId:"c",storeId:"s",period:{calendarFrom:"2026-10-10",calendarTo:"2026-10-10",timeZone:"Europe/Athens",from:filters.from.toISOString(),toExclusive:filters.to.toISOString()},count:1,reversalAware:true,items:[{productId:"p",name:"ΝΕΡΟ",sku:"2269",storeId:"s",storeName:"LAB",salesQuantity:4,grossSales:2,netSales:1.77,vatValue:.23,normalSaleCount:1,reversalCount:0,returnGrossValue:0}]}},readStockReport:async filters=>{reads.push(filters.q);return {count:1,items:[{productId:"p",name:"ΝΕΡΟ",sku:"2269",storeId:"s",storeName:"LAB",unit:"PIECE",currentStock:-70}]}}}), productAssistantInstructions
   );
   return {calls, logs, reads, async invoke(body) { let result, status = 200, error; const res = {status(value) { status = value; return this; }, json(value) { result = value; return this; }}; await handler({body,user:{isSuperAdmin:true},headers:{authorization:"Bearer session-fixture"}}, res, value => { error = value; }); return {result, status, error}; }};
 };
@@ -42,4 +43,11 @@ test("invalid channel or missing provider never triggers an AI call", async () =
   const invalid = setup(); assert.ok((await invalid.invoke({question: "Έλεγξε σήμερα", snapshot, inputChannel: "unknown"})).error); assert.equal(invalid.calls.length, 0);
   const absent = setup({}); const response = await absent.invoke({question: "Έλεγξε σήμερα", snapshot, inputChannel: "voice"});
   assert.equal(response.status, 503); assert.equal(response.result.code, "AI_PROVIDER_NOT_CONFIGURED"); assert.equal(absent.calls.length, 0); assert.equal(absent.logs.length, 0);
+});
+
+test("actual Platform Ask accepts an explicit pair and dispatches shared product sources, never cash amounts",async()=>{
+  for(const name of ["sales_by_product","stock_by_product"]){const args=name==="sales_by_product"?{product:"2269",from:"2026-10-10",to:"2026-10-10"}:{product:"2269"};const f=setup(undefined,index=>index===1?{output_text:undefined,output:[{type:"function_call",name,call_id:"product",arguments:JSON.stringify(args)}]}:{});
+    const out=await f.invoke({question:"Πόσα νερά σήμερα;",selection:{companyId:"c",storeId:"s"},snapshot});assert.equal(out.error,undefined);assert.deepEqual(f.reads,["2269"]);assert.equal(out.result.evidence[0].scope,"PLATFORM_SELECTED_STORE");assert.equal(out.result.scope.companyId,"c");assert.equal(out.result.evidence[0].rows[0][name==="sales_by_product"?"salesQuantity":"currentStock"],name==="sales_by_product"?4:-70);assert.equal(out.result.evidence[0].kind,name==="sales_by_product"?"product_sales":"product_stock");
+  }
+  for(const selection of [{companyId:"foreign",storeId:"s"},{companyId:"c",storeId:"s",sql:"SELECT"}]){const f=setup();assert.ok((await f.invoke({question:"Πόσα νερά σήμερα;",selection,snapshot})).error);assert.equal(f.calls.length,0)}
 });

@@ -13,13 +13,11 @@ function requireAccess(req,res,next){
 }
 router.use(requireAccess);
 
-router.get("/stock-analysis",async(req,res,next)=>{
-  try{
-    const companyId=req.user.companyId;
-    const from=dayStart(req.query.from),to=dayEndExclusive(req.query.to);
-    const storeId=String(req.query.storeId||"")||null,q=String(req.query.q||"").trim()||null,text=q?`%${q}%`:null;
-    if(storeId){const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."})}
-    const rows=await prisma.$queryRaw`
+// Keep the canonical SQL and arithmetic shared; callers authorize their own scope.
+export async function readStockAnalysisReport({companyId,from,to,storeId,q},{db=prisma}={}){
+    const text=q?`%${q}%`:null;
+    if(storeId){const store=await db.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true}});if(!store)throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404})}
+    const rows=await db.$queryRaw`
       SELECT p."id" AS "productId",p."sku",p."name",p."vatRate",p."unit",
         c."name" AS "categoryName",mp."subcategoryName",s."id" AS "storeId",s."name" AS "storeName",
         COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",
@@ -54,8 +52,10 @@ router.get("/stock-analysis",async(req,res,next)=>{
       const saleNet=salePrice/(1+vatRate/100),retailValue=currentStock*salePrice,purchaseValue=currentStock*purchasePrice;
       return {...r,currentStock,salePrice,purchasePrice,vatRate,salesQuantity,reversalQuantity,retailValue,purchaseValue,margin:saleNet>0?((saleNet-purchasePrice)/saleNet)*100:0};
     });
-    res.json({items,count:items.length,totalStockQuantity:items.reduce((a,r)=>a+r.currentStock,0),totalRetailValue:items.reduce((a,r)=>a+r.retailValue,0),totalPurchaseValue:items.reduce((a,r)=>a+r.purchaseValue,0),totalSalesQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalReversalQuantity:items.reduce((a,r)=>a+r.reversalQuantity,0),from,to,reversalAware:true});
-  }catch(error){next(error)}
+    return {items,count:items.length,totalStockQuantity:items.reduce((a,r)=>a+r.currentStock,0),totalRetailValue:items.reduce((a,r)=>a+r.retailValue,0),totalPurchaseValue:items.reduce((a,r)=>a+r.purchaseValue,0),totalSalesQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalReversalQuantity:items.reduce((a,r)=>a+r.reversalQuantity,0),from,to,reversalAware:true};
+}
+router.get("/stock-analysis",async(req,res,next)=>{
+  try{res.json(await readStockAnalysisReport({companyId:req.user.companyId,from:dayStart(req.query.from),to:dayEndExclusive(req.query.to),storeId:String(req.query.storeId||"")||null,q:String(req.query.q||"").trim()||null}))}catch(error){next(error)}
 });
 
 router.get("/stock-analysis/:productId/movements",async(req,res,next)=>{

@@ -5,7 +5,7 @@ const readTime=value=>{const date=new Date(value);return Number.isFinite(date.ge
 export default function StockAssistantEvidence({evidence=[]}){
   return evidence.filter(report=>report.kind==="product_stock").map((report,index)=><section className="mws-stock-evidence" key={index} aria-label="Στοιχεία από Ανάλυση αποθήκης">
     <h3>Στοιχεία από Ανάλυση αποθήκης</h3>
-    <p>{report.storeName} · Αναζήτηση: {report.productQuery} · Ανάγνωση: {readTime(report.observedAt)} · ώρα Ελλάδας</p>
+    <p>{report.companyName&&`${report.companyName} · `}{report.storeName} · Αναζήτηση: {report.productQuery} · Ανάγνωση: {readTime(report.observedAt)} · ώρα Ελλάδας</p>
     <p>Τρέχον καταγεγραμμένο απόθεμα στην αποθήκη. Δεν αποτελεί φυσική καταμέτρηση ή ιστορικό απόθεμα.</p>
     {report.result==="matched"&&<div style={{overflowX:"auto"}}><table><thead><tr><th>Είδος</th><th>SKU</th><th>Καταγεγραμμένο απόθεμα</th><th>Μονάδα</th></tr></thead><tbody>{report.rows.map(row=><tr key={row.productId}><td>{row.name}</td><td>{row.sku||"—"}</td><td>{quantity(row.currentStock)}</td><td>{unitLabels[row.unit]||row.unit}</td></tr>)}</tbody></table></div>}
     {report.result==="ambiguous"&&<><p>Βρέθηκαν περισσότερα ή μη μοναδικά είδη. Γράψε το συγκεκριμένο SKU· δεν εμφανίζεται ποσότητα ή άθροισμα.</p><ul>{report.candidates.map((row,i)=><li key={i}>{row.name} · {row.sku||"χωρίς SKU"}</li>)}</ul></>}
