@@ -90,3 +90,62 @@ Required: actual mounted control integration and exact rendered before/after1920
 ## Central menu source ready / AWAITING full CI and USER
 
 Claim PR2273/head51200d615e17314d705556c33a9621c43116bfde/docsCI38150751484 SUCCESS merged162b2c46 before source. Actual StorePosPanel now has one «Λειτουργίες POS» trigger immediately beside store, persistent body-portal dialog with keyboard/Escape/outside close, viewport-bounded layout and child-action dismissal; Refresh/Logout directly visible. Closed menu consumes no header row; same existing authorized launcher handlers, radio/audio and recording remain mounted across menu closure, and open menu blocks scanner focus. Store changes close menu; calculator stays per operator and toggles without business writes. Local Node20 frontend build PASS; actual mounted menu integration1PASS/0FAIL/0SKIP including wireless opening with no order submission, radio/recording continuity and denied module entries. Existing mounted calculator/header2PASS/0FAIL/0SKIP. Initial fixture failure from missing synthetic table orders array corrected, not runtime/product failure. Exact Chromium before/after and popup geometry/screenshots run in mandatory full CI. New physical USER/LAB NOT TESTED; items3–9 queued. Single next action: full source/main CI and ordinary exact guarded healthy release, then user confirms smaller header and central menu on own POS.
+
+
+## 11/10/2026 18:46 Athens — central menu guarded release / SOURCE LIVE / AWAITING USER
+
+Latest authoritative11Oct18:46Athens — CENTRAL MENU SOURCE LIVE / AWAITING USER. Same header owner `codex/pos-header-bright-resize-20261011`, source `codex/pos-header-central-menu-20261011`; claimPR2273/head51200d61/docsCI38150751484 SUCCESS merged162b2c46 before code. SourcePR2275/heade217dc1b/fullCI38151210388 SUCCESS2340PASS/0FAIL/0SKIP merged6cbd72600e95f674170444114246d8696ee1717e. Exact mainCI38151579632 attempt2 SUCCESS2340/0/0; first attempt2339PASS/1FAIL/0SKIP failed the unrelated pos-capacity-runner scheduled-arrival timing assertion offeredLatencyMs>=latencyMs. Failure retained; focused capacity8/8 passed and normal failed-job rerun succeeded, no test/source weakening. Guard38152110281 correctly did not deploy6cbd because newer common CI source required full CI. Combined exact main8a57a18a999d66a180b10265b0a7034bd7980380 CI38152065964 SUCCESS2340/0/0 (native PG, HTTP E2E, Windows/contracts and real Chromium). Ordinary guarded Render38152406282/deployjob114508409614 SUCCESS; exact8a57a18 healthy18:45:23Athens, independent public health plus actual served central-menu JS/CSS verified18:45:58Athens. Prior healthy rollback7b297422b324a8c462d71923cf25e812a6d8a45f retained in guard artifact11706344856. No authenticated session/production DB/business action/manual deploy or guard bypass. Concurrent source/CI and documentation owners preserved.
+
+«Λειτουργίες POS» immediately beside store contains secondary controls, recording/font/calculator/Netlink; Refresh/Logout remain outside. Persistent body-portal dialog, viewport-bounded geometry, keyboard/Escape/outside close/focus return; same authorized launcher/module/store handlers and wireless TABLES entry. Closing retains radio/audio and recording; open menu blocks scanner and store change closes menu. Local actual mounted menu1/1, calculator/header2/2 and scanner/barcode/radio/table-service23/23 PASS; frontend Node20 build PASS. Source browser artifact11707230101 records6before/6closed-after/6menu screenshots plus geometry; visually inspected1920/FONT20 closed and1280/FONT20 menu. Exact rendered before→after header FONT12/FONT20:1920x1080 141→90/223→118px;1366x768 195→144/223→184;1280x600 195→144/289→238. All menu panels fit viewport and add no header height; payment bottoms unchanged. Main rendering also passed. Inherited1280x600/FONT20 cart0 remains outside this task, not an overall POS PASS. Opening/closing/resizing writes0; radio fixture Play alone exercised its expected synthetic state persistence. Initial missing synthetic table orders array was corrected before green tests, not a product failure.
+
+New physical USER/LAB compact-height/menu acceptance NOT TESTED; CI is not acceptance, manual gets no new PASS. Earlier auxiliary placement acceptance is historical and superseded only by user's explicit new central placement requirement; correct wireless target protected. Item1 acceptance separate, items3–9 queued. Single next action: user empty-cart Ctrl+F5, double-click «Ύψος μπάρας» for compact and open «Λειτουργίες POS» beside store; check all requested buttons plus direct Refresh/Logout, then report result before item3. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-pos-header-bright-resize.md`.
+
+Independent release receipt:
+
+```json
+{
+  "status": "VERIFIED",
+  "time": "2026-10-11T18:45:58.600563+03:00",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "8a57a18a999d66a180b10265b0a7034bd7980380"
+  },
+  "assets": [
+    {
+      "path": "/assets/index-BoagfIeY.js",
+      "status": 200,
+      "bytes": 475395,
+      "sha256": "c83883a7e16b79152f6f5d11dbc7c549e306f077d6a17cc48cfb6ff372406037",
+      "preference": false,
+      "toggle": false,
+      "central_menu": false
+    },
+    {
+      "path": "/assets/index-DeeNCK54.css",
+      "status": 200,
+      "bytes": 45943,
+      "sha256": "60d6a7e5f8d37d5a30f5e35c22e355c06be1cf0c33278bea2d5cc1f257aedbc0",
+      "light_header": false,
+      "menu_layout": false
+    },
+    {
+      "path": "/assets/entry-IPG_9fvz.js",
+      "status": 200,
+      "bytes": 2301354,
+      "sha256": "bd0fab38cc38cbf6be6469f2c94357b8519e00062ccf77bb94a83bff78bec2f0",
+      "preference": true,
+      "toggle": true,
+      "central_menu": true
+    },
+    {
+      "path": "/assets/entry-DB6ZShqR.css",
+      "status": 200,
+      "bytes": 615299,
+      "sha256": "1cb4fa274376eb538730e8727e0b6d3fa7fccc52987c8f44159754b339847516",
+      "light_header": true,
+      "menu_layout": true
+    }
+  ]
+}
+```
