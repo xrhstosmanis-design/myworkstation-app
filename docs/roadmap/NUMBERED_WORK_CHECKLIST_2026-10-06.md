@@ -1,3 +1,7 @@
+## 12/10/2026 00:00 Athens - INVOICE-142730 / BOUNDED TRANSFER LIVE PASS
+
+Existing draft142730 now persists12checked rows/quantity136/net-gross678.28 after one explicitly confirmed unit-factor transfer and reopen on production9d69ab09. Catalog mapping remains pending for all12; broader Invoice/Gate3 numbered item and owners unchanged. Full current evidence/manual in canonical tracker/checkpoint; no new payment, finalization or stock action.
+
 ## 11/10/2026 21:23:08 Athens — POS-SUPPLIER-FIVE-PHOTOS-03 / USER PASS συλλογής / CLOSED
 
 Ο Χρήστος Μανής απάντησε «ειναι οκ» μετά την παράδοση του 3ου αιτήματος (έως5 φωτογραφίες από POS κάμερα/αρχεία και κινητό QR) και τις οδηγίες ελέγχου πλήθους, σειράς/αφαίρεσης και «Αποστολή όλων». Καταγράφεται περιορισμένο owner-reported USER PASS για την παραδοθείσα συλλογή φωτογραφιών. Δεν δόθηκαν ξεχωριστά αποτελέσματα ανά φόρμα/συσκευή, χρόνος αρχικής δοκιμής, ακριβές terminal/client revision ή ανεξάρτητες μετρήσεις. Δεν συμπεραίνεται πραγματική καταχώριση πληρωμής, παράδοση στο BackOffice/OCR ή οικονομικό/stock/fiscal PASS. Δεν έγινε νέα δοκιμή ή replay για τεκμηρίωση.
@@ -296,6 +300,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `24`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN / SCOPE REVIEW
+- **Υπόλοιπο / όριο:** Περιορισμένο LIVE PASS 11/10 23:58: ίδιο πρόχειρο142730,12γραμμές/136τεμάχια/678,28€ μετά από μία επιβεβαίωση συντελεστή1 και μία μεταφορά, διατήρηση μετά ξανάνοιγμα, production9d69ab09/PR2324. Αντιστοίχιση όλων12/τελική καταχώριση και συνολικό Νο22 παραμένουν OPEN, υπάρχων owner αμετάβλητος.
 
 ## 23 — Συγκεντρωτικές εκκρεμότητες
 

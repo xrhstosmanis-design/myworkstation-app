@@ -1,0 +1,820 @@
+{
+  "rows": 58,
+  "beforeStock": -19.0,
+  "afterStock": -19.0,
+  "differences": [],
+  "data": {
+    "c2351a6b-68ac-46c5-b7f4-ac7237c3f3f6": {
+      "before": {
+        "sku": "100368",
+        "description": "WINSTON 100s BLUE 26",
+        "stock": -1.0,
+        "lastSale": "11/10/2026, 12:24:54 μ.μ."
+      },
+      "after": {
+        "sku": "100368",
+        "description": "WINSTON 100s BLUE 26",
+        "stock": -1.0,
+        "lastSale": "11/10/2026, 12:24:54 μ.μ."
+      }
+    },
+    "7dcba2fe-0be0-46bf-86e3-debb15d3abcf": {
+      "before": {
+        "sku": "9944",
+        "description": "WINSTON 100s RED 26",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "9944",
+        "description": "WINSTON 100s RED 26",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "0e4baa27-0c13-48b0-9001-7a176c88e4b6": {
+      "before": {
+        "sku": "KM151",
+        "description": "WINSTON BLUE 100s",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM151",
+        "description": "WINSTON BLUE 100s",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "f0940d53-3294-43de-b768-3f80ec4bafc0": {
+      "before": {
+        "sku": "12298",
+        "description": "WINSTON BLUE 26 ΚΟΝΤΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "12298",
+        "description": "WINSTON BLUE 26 ΚΟΝΤΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "b20aeef0-7635-4846-b1c4-7b45be67c5a5": {
+      "before": {
+        "sku": "KM161",
+        "description": "WINSTON BLUE FINE LINE XS",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM161",
+        "description": "WINSTON BLUE FINE LINE XS",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "20b62fb8-c613-4942-b438-0263c6de3e98": {
+      "before": {
+        "sku": "KM143",
+        "description": "WINSTON BLUE SUPER SLIM",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM143",
+        "description": "WINSTON BLUE SUPER SLIM",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "39dcc18f-bce3-498d-b4dc-fc14a8222683": {
+      "before": {
+        "sku": "KM775",
+        "description": "WINSTON BLUE ΣΚΛΗΡΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM775",
+        "description": "WINSTON BLUE ΣΚΛΗΡΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "cc97259d-6785-43c6-9821-c224771f9166": {
+      "before": {
+        "sku": "KM152",
+        "description": "WINSTON CLASSIC 100s",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM152",
+        "description": "WINSTON CLASSIC 100s",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "acea3818-f9a0-4878-a302-4d634ff05765": {
+      "before": {
+        "sku": "KM149",
+        "description": "WINSTON RED 20 ΜΑΛΑΚΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM149",
+        "description": "WINSTON RED 20 ΜΑΛΑΚΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "7377acb7-c107-40a9-bfae-c1b234c62f97": {
+      "before": {
+        "sku": "KM154",
+        "description": "WINSTON RED 22'",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM154",
+        "description": "WINSTON RED 22'",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "8b8c7d2c-1bba-404b-95b7-3cc727f50aa5": {
+      "before": {
+        "sku": "12216",
+        "description": "WINSTON RED 26s",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "12216",
+        "description": "WINSTON RED 26s",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "28c72e90-c749-4750-aed6-003425055c7c": {
+      "before": {
+        "sku": "KM146",
+        "description": "WINSTON RED ΣΚΛΗΡΟ 20",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM146",
+        "description": "WINSTON RED ΣΚΛΗΡΟ 20",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "59115c51-9319-41f4-afb6-8a62862d8591": {
+      "before": {
+        "sku": "KM1014",
+        "description": "WINSTON SILVER 100",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM1014",
+        "description": "WINSTON SILVER 100",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "0f1fe74a-f676-495d-ab5c-2bb0d4ef3ee2": {
+      "before": {
+        "sku": "KM147",
+        "description": "WINSTON SILVER 20s",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM147",
+        "description": "WINSTON SILVER 20s",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "74b85155-4a8a-4b59-86f1-925501afc336": {
+      "before": {
+        "sku": "KM145",
+        "description": "WINSTON SILVER SUPER SLIM",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM145",
+        "description": "WINSTON SILVER SUPER SLIM",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "bda6b73f-42c8-4714-89da-79b29cb50e3c": {
+      "before": {
+        "sku": "KM153",
+        "description": "WINSTON WHITE 100s",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM153",
+        "description": "WINSTON WHITE 100s",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "72db6ed6-4fb3-49e6-bb26-222f932d7c81": {
+      "before": {
+        "sku": "KM148",
+        "description": "WINSTON WHITE 20s",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM148",
+        "description": "WINSTON WHITE 20s",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "31ca4455-689b-4685-b765-ea8b044f175d": {
+      "before": {
+        "sku": "KM6952",
+        "description": "WINSTON WHITE FINE LINE XS",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM6952",
+        "description": "WINSTON WHITE FINE LINE XS",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "2b604ea1-3501-42fd-8992-f3d87cba24ba": {
+      "before": {
+        "sku": "KM144",
+        "description": "WINSTON WHITE SSLIM",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM144",
+        "description": "WINSTON WHITE SSLIM",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "57c36795-9498-48ce-a9ef-3750e011117a": {
+      "before": {
+        "sku": "KM159",
+        "description": "WINSTON XS SILVER",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM159",
+        "description": "WINSTON XS SILVER",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "c264f4f0-869e-4a81-a4d4-9c8762036e9e": {
+      "before": {
+        "sku": "KM150",
+        "description": "WINSTON ΜΠΛΕ ΜΑΛΑΚΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM150",
+        "description": "WINSTON ΜΠΛΕ ΜΑΛΑΚΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "29119035-cbd6-4fae-86c4-c2a2557ef927": {
+      "before": {
+        "sku": "KM206",
+        "description": "KARELIA BLUE 100",
+        "stock": -4.0,
+        "lastSale": "11/10/2026, 3:58:05 μ.μ."
+      },
+      "after": {
+        "sku": "KM206",
+        "description": "KARELIA BLUE 100",
+        "stock": -4.0,
+        "lastSale": "11/10/2026, 3:58:05 μ.μ."
+      }
+    },
+    "82182768-ec28-40f5-a7aa-b17c3635d523": {
+      "before": {
+        "sku": "KM204",
+        "description": "KARELIA BLUE 20",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM204",
+        "description": "KARELIA BLUE 20",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "07adf13f-f37f-4d7c-a26c-e7051464471c": {
+      "before": {
+        "sku": "KM1011",
+        "description": "KARELIA BLUE EXCELLENSE",
+        "stock": -4.0,
+        "lastSale": "11/10/2026, 11:19:15 μ.μ."
+      },
+      "after": {
+        "sku": "KM1011",
+        "description": "KARELIA BLUE EXCELLENSE",
+        "stock": -4.0,
+        "lastSale": "11/10/2026, 11:19:15 μ.μ."
+      }
+    },
+    "31386528-a682-4f1c-9da2-48f5785e272a": {
+      "before": {
+        "sku": "KM3289",
+        "description": "KARELIA MIST MENTHOL 100s",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM3289",
+        "description": "KARELIA MIST MENTHOL 100s",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "c4f5dc7e-67ea-4771-947f-4ab562a5fd63": {
+      "before": {
+        "sku": "KM1365",
+        "description": "KARELIAS BLUE ΜΑΛΑΚΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM1365",
+        "description": "KARELIAS BLUE ΜΑΛΑΚΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "ed5d5d7f-9527-43d8-8aeb-5b5db0195d78": {
+      "before": {
+        "sku": "KM1330",
+        "description": "KARELIAS GEORGE BLUE",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM1330",
+        "description": "KARELIAS GEORGE BLUE",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "bcca63cb-7f33-4e8c-b742-e4c0ad0024f4": {
+      "before": {
+        "sku": "KM6592",
+        "description": "KARELIAS GKS DARK BLUE 30GR.",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM6592",
+        "description": "KARELIAS GKS DARK BLUE 30GR.",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "35a1f091-c6c4-47aa-9f10-c0d1cd23173b": {
+      "before": {
+        "sku": "KM6324",
+        "description": "KARELIAS GKS TOBACCO 30GR.",
+        "stock": -1.0,
+        "lastSale": "11/10/2026, 1:17:28 μ.μ."
+      },
+      "after": {
+        "sku": "KM6324",
+        "description": "KARELIAS GKS TOBACCO 30GR.",
+        "stock": -1.0,
+        "lastSale": "11/10/2026, 1:17:28 μ.μ."
+      }
+    },
+    "773e7244-c1c3-49c4-8abe-f119a847a4a4": {
+      "before": {
+        "sku": "KM6323",
+        "description": "KARELIAS GKS WHITE TOBACCO 30GR.",
+        "stock": -3.0,
+        "lastSale": "11/10/2026, 11:10:18 μ.μ."
+      },
+      "after": {
+        "sku": "KM6323",
+        "description": "KARELIAS GKS WHITE TOBACCO 30GR.",
+        "stock": -3.0,
+        "lastSale": "11/10/2026, 11:10:18 μ.μ."
+      }
+    },
+    "4f1ea000-8e0b-4582-909f-e26249e46b0d": {
+      "before": {
+        "sku": "KM212",
+        "description": "KARELIA SLIMS",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM212",
+        "description": "KARELIA SLIMS",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "0115d7d9-2ff6-4258-b7a9-aef49fd0fdbe": {
+      "before": {
+        "sku": "KM209",
+        "description": "KARELIA SLIMS CREME",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM209",
+        "description": "KARELIA SLIMS CREME",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "bd982821-2ea8-4800-97d0-f61a5a968010": {
+      "before": {
+        "sku": "KM211",
+        "description": "KARELIA SLIMS MENTHOL",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM211",
+        "description": "KARELIA SLIMS MENTHOL",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "32cc5c32-2365-4eb5-a007-2a57817a0e82": {
+      "before": {
+        "sku": "KM208",
+        "description": "KARELIA SLIMS ΜΠΛΕ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM208",
+        "description": "KARELIA SLIMS ΜΠΛΕ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "74f09528-415e-4bee-b16f-5eba42186911": {
+      "before": {
+        "sku": "7635",
+        "description": "KARELIAS ORIENTAL MIST 30GR.",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "7635",
+        "description": "KARELIAS ORIENTAL MIST 30GR.",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "391f9cb4-42ed-4017-8216-b2436bb2dd44": {
+      "before": {
+        "sku": "KM2891",
+        "description": "KARELIAS ΣΚΛΗΡΟ ORANGE",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM2891",
+        "description": "KARELIAS ΣΚΛΗΡΟ ORANGE",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "56777732-3b20-4556-85da-e9eb340e1ddf": {
+      "before": {
+        "sku": "KM205",
+        "description": "KARELIA WHITE 100",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM205",
+        "description": "KARELIA WHITE 100",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "402698e1-500d-411b-b6ee-35f347bff887": {
+      "before": {
+        "sku": "KM207",
+        "description": "KARELIA WHITE 20",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM207",
+        "description": "KARELIA WHITE 20",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "01907085-4feb-4bac-9b47-5cf2c3214e96": {
+      "before": {
+        "sku": "KM3271",
+        "description": "KARELIA ΑΓΡΙΝΙΟΥ ΣΚΕΤΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM3271",
+        "description": "KARELIA ΑΓΡΙΝΙΟΥ ΣΚΕΤΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "526903c1-c1f2-47d6-92e3-9b60973fe8de": {
+      "before": {
+        "sku": "KM216",
+        "description": "KARELIA ΚΑΣΕΤΙΝΑ ΛΕΥΚΗ",
+        "stock": -2.0,
+        "lastSale": "11/10/2026, 11:50:24 μ.μ."
+      },
+      "after": {
+        "sku": "KM216",
+        "description": "KARELIA ΚΑΣΕΤΙΝΑ ΛΕΥΚΗ",
+        "stock": -2.0,
+        "lastSale": "11/10/2026, 11:50:24 μ.μ."
+      }
+    },
+    "32507ba7-0013-4848-abe5-eb68d158f430": {
+      "before": {
+        "sku": "KM1101",
+        "description": "KARELIA ΦΙΛΤΡΟ ΜΑΛΑΚΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM1101",
+        "description": "KARELIA ΦΙΛΤΡΟ ΜΑΛΑΚΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "b60acda2-4a64-46d4-858f-cad95d851ef4": {
+      "before": {
+        "sku": "107",
+        "description": "KARELIA ΧΡΥΣΗ BRIGHT ΚΑΣΕΤΙΝΑ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "107",
+        "description": "KARELIA ΧΡΥΣΗ BRIGHT ΚΑΣΕΤΙΝΑ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "3807b4d2-bc83-479e-9d97-c290178f6377": {
+      "before": {
+        "sku": "12427",
+        "description": "KARELIA ΧΡΥΣΗ ΑΦΙΛΤΡΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "12427",
+        "description": "KARELIA ΧΡΥΣΗ ΑΦΙΛΤΡΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "2f3e3da7-6b77-4e10-a316-9ec9db904a94": {
+      "before": {
+        "sku": "KM217",
+        "description": "KARELIA ΧΡΥΣΗ ΚΑΣΕΤΙΝΑ LIGHT",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM217",
+        "description": "KARELIA ΧΡΥΣΗ ΚΑΣΕΤΙΝΑ LIGHT",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "46927cc2-5647-4f67-8d23-4a684cd9194f": {
+      "before": {
+        "sku": "KM218",
+        "description": "KARELIA ΧΡΥΣΗ ΚΑΣΕΤΙΝΑ SELECTED",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM218",
+        "description": "KARELIA ΧΡΥΣΗ ΚΑΣΕΤΙΝΑ SELECTED",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "eeb34600-6084-40d8-a591-6a7a4593878e": {
+      "before": {
+        "sku": "KM6031",
+        "description": "OLD HOLBORN AROMATIC 30GR",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM6031",
+        "description": "OLD HOLBORN AROMATIC 30GR",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "9dd89ccb-a841-440c-901b-4302b9f897b2": {
+      "before": {
+        "sku": "KM5643",
+        "description": "OLD HOLBORN BLONDE 30GR.",
+        "stock": -2.0,
+        "lastSale": "11/10/2026, 2:00:51 μ.μ."
+      },
+      "after": {
+        "sku": "KM5643",
+        "description": "OLD HOLBORN BLONDE 30GR.",
+        "stock": -2.0,
+        "lastSale": "11/10/2026, 2:00:51 μ.μ."
+      }
+    },
+    "652b9119-2c74-4e6c-ac36-736bbd4b40c1": {
+      "before": {
+        "sku": "KM6179",
+        "description": "OLD HOLBORN BLUE 30GR",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM6179",
+        "description": "OLD HOLBORN BLUE 30GR",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "8236ae0c-f930-4881-b791-c934ebcb6eb7": {
+      "before": {
+        "sku": "KM6358",
+        "description": "OLD HOLBORN GREEN 30GR.",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM6358",
+        "description": "OLD HOLBORN GREEN 30GR.",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "c0fa9dee-80c5-4d57-a0fc-aff3b0cdb822": {
+      "before": {
+        "sku": "10821",
+        "description": "OLD HOLBORN WHITE 40 GR",
+        "stock": -1.0,
+        "lastSale": "11/10/2026, 8:58:27 μ.μ."
+      },
+      "after": {
+        "sku": "10821",
+        "description": "OLD HOLBORN WHITE 40 GR",
+        "stock": -1.0,
+        "lastSale": "11/10/2026, 8:58:27 μ.μ."
+      }
+    },
+    "7593e51c-3cde-49a4-b33b-41140a63a02a": {
+      "before": {
+        "sku": "KM5828",
+        "description": "OLD HOLBORN YELLOW 30GR.",
+        "stock": -1.0,
+        "lastSale": "11/10/2026, 8:28:46 μ.μ."
+      },
+      "after": {
+        "sku": "KM5828",
+        "description": "OLD HOLBORN YELLOW 30GR.",
+        "stock": -1.0,
+        "lastSale": "11/10/2026, 8:28:46 μ.μ."
+      }
+    },
+    "e08f46bf-fcb7-449d-a4de-2814d84c1484": {
+      "before": {
+        "sku": "10822",
+        "description": "OLD HOLBORN YELLOW 40 GR",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "10822",
+        "description": "OLD HOLBORN YELLOW 40 GR",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "b3b98e5b-18df-43ac-be8f-4822a075a3cf": {
+      "before": {
+        "sku": "KM5106",
+        "description": "PRINCE D.F. PLATINUM",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM5106",
+        "description": "PRINCE D.F. PLATINUM",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "f93b8973-3b03-406d-8cd0-bdc006cadd4d": {
+      "before": {
+        "sku": "KM5105",
+        "description": "PRINCE GOLD",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM5105",
+        "description": "PRINCE GOLD",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "e68ca553-9f5c-43b0-8ea2-0999172c67ac": {
+      "before": {
+        "sku": "KM74",
+        "description": "PRINCE MELLOW TASTE SOFT",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM74",
+        "description": "PRINCE MELLOW TASTE SOFT",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "0b07b356-76e8-4e1c-8b58-ef0e55c721e4": {
+      "before": {
+        "sku": "KM5107",
+        "description": "PRINCE NORTH STAR BLUE",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM5107",
+        "description": "PRINCE NORTH STAR BLUE",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "e66b9996-b3c5-4dea-814c-316aaa8fa102": {
+      "before": {
+        "sku": "KM75",
+        "description": "PRINCE RICH ΣΚΛΗΡΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM75",
+        "description": "PRINCE RICH ΣΚΛΗΡΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    },
+    "b6c387bd-4e26-40f1-b605-ee0d0a2c1122": {
+      "before": {
+        "sku": "KM780",
+        "description": "PRINCE ΜΑΛΑΚΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      },
+      "after": {
+        "sku": "KM780",
+        "description": "PRINCE ΜΑΛΑΚΟ",
+        "stock": 0.0,
+        "lastSale": "—"
+      }
+    }
+  }
+}
