@@ -291,7 +291,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
         :isCartRemoval
         ?`ΔΙΑΓΡΑΦΗ ΠΡΟΪΟΝΤΟΣ ΑΠΟ ΚΑΛΑΘΙ · ${details.productName||"Άγνωστο προϊόν"} · ${n(details.quantity)} × ${n(details.unitPrice).toFixed(2)} € · SKU ${details.sku||"—"} · δεν ολοκληρώθηκε πώληση / δεν κινήθηκε stock`
         :isPartialReturn
-        ?`ΜΕΡΙΚΗ ΕΠΙΣΤΡΟΦΗ · αρχική πώληση ${r.relatedSaleId||"—"} · επιστροφή ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`
+        ?`${details.fiscalPending?"ΕΣΩΤΕΡΙΚΗ ΕΠΙΣΤΡΟΦΗ · Εκκρεμεί φορολογική επιστροφή RBS":"ΜΕΡΙΚΗ ΕΠΙΣΤΡΟΦΗ"} · αρχική πώληση ${r.relatedSaleId||"—"} · επιστροφή ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`
         :isReturn
           ?`ΟΛΙΚΗ ΕΠΙΣΤΡΟΦΗ · αρχική πώληση ${r.relatedSaleId||"—"} · επιστροφή ${r.saleId||"—"}${r.reason?` · ${r.reason}`:""}`
           :isSelfConsumption

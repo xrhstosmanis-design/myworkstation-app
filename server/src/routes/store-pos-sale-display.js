@@ -57,9 +57,9 @@ function normalizeSale(row){
     ?`ΜΙΚΤΗ · ${payments.map(payment=>`${methodLabel(payment.method)} ${euroPlain(payment.amount)}`).join(" + ")}`
     :(payments[0]?`${methodLabel(payments[0].method)} ${euroPlain(payments[0].amount)}`:"ΧΩΡΙΣ ΠΛΗΡΩΜΗ");
   const productSummary=lines.length?lines.map(line=>`${Math.abs(Number(line.quantity||0))}× ${line.description}`).join(" · "):"Χωρίς προϊόντα";
-  const movementType=row.source==="POS_REVERSAL"?(row.reversalKind==="RETURN"?"RETURN":"CANCEL"):row.source==="EXCHANGE"?"EXCHANGE":row.source==="WASTE"?"WASTE":"SALE";
+  const movementType=row.source==="POS_REVERSAL"?(row.reversalKind==="CANCEL"?"CANCEL":"RETURN"):row.source==="EXCHANGE"?"EXCHANGE":row.source==="WASTE"?"WASTE":"SALE";
   const audience=row.audience||"NORMAL", audienceText=audienceLabel(audience), paymentSummaryWithAudience=`${audienceText} · ${paymentSummary}`;
-  return {...row,total:money(row.total),subtotal:money(row.subtotal),discount:money(row.discount),payments,lines,paymentSummary:paymentSummaryWithAudience,paymentMethod:`${productSummary} · ${paymentSummaryWithAudience}`,productSummary,audience,audienceLabel:audienceText,movementType};
+  return {...row,total:money(row.total),subtotal:money(row.subtotal),discount:money(row.discount),payments,lines,paymentSummary:row.transactionMode==="INTERNAL_RETURN_PENDING_RBS"?`${paymentSummaryWithAudience} · Εκκρεμεί φορολογική επιστροφή RBS`:paymentSummaryWithAudience,paymentMethod:`${productSummary} · ${paymentSummaryWithAudience}`,productSummary,audience,audienceLabel:audienceText,movementType};
 }
 
 router.get("/stores/:storeId/online-product-options",async(req,res,next)=>{
@@ -126,7 +126,9 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
     }
     const rows=await prisma.$queryRaw`
       SELECT s."id",s."operatorEmployeeId",s."receiptNumber",s."total",s."subtotal",s."discount",s."audience",s."occurredAt",s."createdAt",
-             s."transactionMode",s."delayedReason",s."reversalState",s."reversalKind",s."originalSaleId",s."fiscalStatus",s."source",c."name" AS "customerName",
+             s."transactionMode",s."delayedReason",s."reversalState",s."reversalKind",s."originalSaleId",s."fiscalStatus",s."source",s."operationChannel",c."name" AS "customerName",
+
+             EXISTS(SELECT 1 FROM "Sale" rs WHERE rs."originalSaleId"=s."id" AND rs."companyId"=s."companyId" AND rs."storeId"=s."storeId" AND rs."transactionMode"='INTERNAL_RETURN_PENDING_RBS') AS "internalReturnPending",
              COALESCE((SELECT st."sessionId" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),NULL) AS "sessionId",
              COALESCE((SELECT st."actorName" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),'Πωλητής') AS "actorName",
              COALESCE((SELECT json_agg(json_build_object('method',p."method",'amount',p."amount") ORDER BY p."createdAt",p."id") FROM "Payment" p WHERE p."saleId"=s."id"),'[]'::json) AS "payments",
@@ -144,7 +146,13 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
         ))
         AND s."source" IN ('POS','EXCHANGE','POS_REVERSAL','WASTE') AND s."status"='COMPLETED'
       ORDER BY s."createdAt" DESC LIMIT 50`;
-    res.json({store,rows:rows.map(normalizeSale)});
+    const issuedIds=rows.filter(row=>row.fiscalStatus==="ISSUED"&&row.operationChannel==="COUNTER").map(row=>row.id);
+    let internalIds=new Set();
+    if(issuedIds.length){
+      const exists=await prisma.$queryRaw`SELECT to_regclass('"RbsCapDriverV1Request"') IS NOT NULL AS "exists"`;
+      if(exists[0]?.exists){const requests=await prisma.$queryRaw`SELECT "saleId" FROM "RbsCapDriverV1Request" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='SALE_COMMITTED' AND "saleId"=ANY(${issuedIds}::text[])`;internalIds=new Set(requests.map(row=>row.saleId));}
+    }
+    res.json({store,rows:rows.map(row=>normalizeSale({...row,canInternalReturn:internalIds.has(row.id)}))});
   }catch(error){next(error)}
 });
 

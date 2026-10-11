@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import {recordInternalReturn} from "../lib/pos-internal-return.js";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -168,6 +169,16 @@ router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
     });
     res.status(201).json(result);
   }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Επίλεξε Ακύρωση ή Επιστροφή και συμπλήρωσε αιτιολογία.",details:error.issues});next(error)}
+});
+
+router.post("/stores/:storeId/sales/:saleId/internal-return",async(req,res,next)=>{
+  try{
+    const store=await ownedStore(req,req.params.storeId);
+    if(req.user?.tokenType==="STORE_OPERATOR"&&!req.storeOperatorAccess?.returnItems)return res.status(403).json({error:"Δεν έχεις δικαίωμα επιστροφής από το BackOffice."});
+    const terminalPos=await requestTerminal(req);
+    const result=await recordInternalReturn(prisma,{companyId:req.user.companyId,storeId:store.id,saleId:req.params.saleId,terminalPos,user:req.user},req.body);
+    res.status(201).json(result);
+  }catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Επίλεξε προϊόντα, τρόπο επιστροφής, μία από τις τρεις αιτιολογίες και επιβεβαίωσε την εσωτερική καταχώριση."});next(error)}
 });
 
 export default router;
