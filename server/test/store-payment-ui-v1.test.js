@@ -14,8 +14,9 @@ test("my payments read from the existing transaction overview and filter to paym
   assert.match(panel,/Χωρίς παραστατικό · πλήρες audit/);
 });
 
-test("my payments remain read-only and are mounted in the existing shift modal",()=>{
+test("my payments preserve read-only overview and expose only server-authorized correction in the existing shift modal",()=>{
   assert.doesNotMatch(panel,/method:\s*"POST"/);
   assert.match(modal,/import MyShiftEntriesPanel/);
-  assert.match(modal,/<MyShiftEntriesPanel api=\{api\} store=\{store\} operator=\{operator\}\/>/);
+  assert.match(modal,/<MyShiftEntriesPanel api=\{api\} store=\{store\} operator=\{operator\} refreshKey=\{paymentsVersion\} onChanged=\{paymentChanged\}\/>/);
+  assert.match(panel,/row\.canCorrectAmount&&<PaymentAmountCorrectionAction/);
 });
