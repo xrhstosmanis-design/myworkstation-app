@@ -12,7 +12,7 @@ const auditPath="server/src/routes/kiosk-reports-pos-sale-actions.js";
 const salesPath="server/src/routes/kiosk-reports-sales-v4.js";
 const stockPath="server/src/routes/kiosk-reports-stock-v3.js";
 const clientPath="client/src/components/commerce/installPosSaleAuditReport.js";
-const customer=read(customerPath),audit=read(auditPath),sales=read(salesPath),stock=read(stockPath),client=read(clientPath),entry=read("client/src/entry.jsx"),index=read("server/src/index.js"),css=read("client/src/components/commerce/pos-sale-audit-report.css");
+const customer=read(customerPath)+read("server/src/lib/customer-activity-ledger.js"),audit=read(auditPath),sales=read(salesPath),stock=read(stockPath),client=read(clientPath),entry=read("client/src/entry.jsx"),index=read("server/src/index.js"),css=read("client/src/components/commerce/pos-sale-audit-report.css");
 
 test("reversal-aware BackOffice server and client modules parse",()=>{
   for(const p of [customerPath,auditPath,salesPath,stockPath,clientPath])execFileSync(process.execPath,["--check",path.join(repo,p)]);
