@@ -22,8 +22,13 @@ export async function readCanonicalOwnerStock(req,args,scope,{fetchImpl=fetch,po
   const response=await fetchImpl(`http://127.0.0.1:${validPort}/api/reports/stock-analysis?${query}`,{method:"GET",headers:{Authorization:authorization},redirect:"error",signal});
   if(!response.ok)fail("Δεν διαβάστηκε η κανονική αναφορά αποθήκης. Δεν εμφανίζονται εκτιμήσεις ή μηδενικό απόθεμα.",[401,403,404].includes(response.status)?response.status:502);
   const report=await response.json();
+  return productStockEvidence(report,args,scope);
+}
+
+export function productStockEvidence(report,args,scope){
+  args=stockToolArguments.parse(args);
   if(!Array.isArray(report?.items)||report.count!==report.items.length||report.items.length>10000||report.items.some(row=>!row||row.storeId!==scope.storeId||typeof row.productId!=="string"||!row.productId||typeof row.name!=="string"||!row.name.trim()||!(row.sku===null||typeof row.sku==="string")||!units.has(row.unit)||typeof row.currentStock!=="number"||!Number.isFinite(row.currentStock)))fail("Η αναφορά αποθήκης επέστρεψε μη έγκυρα στοιχεία για το επιλεγμένο κατάστημα.");
-  const base={source:"Στατιστικά / Ανάλυση αποθήκης",kind:"product_stock",scope:"OWNER_SELECTED_STORE",companyId:scope.companyId,storeId:scope.storeId,storeName:scope.storeName,productQuery:args.product,observedAt:new Date().toISOString(),recordedStock:true,physicalCount:false,sourceRows:report.items.length,sourceLimit:10000,rows:[],candidates:[],truncated:false};
+  const base={source:"Στατιστικά / Ανάλυση αποθήκης",kind:"product_stock",scope:"OWNER_SELECTED_STORE",companyId:scope.companyId,companyName:scope.companyName,storeId:scope.storeId,storeName:scope.storeName,productQuery:args.product,observedAt:new Date().toISOString(),recordedStock:true,physicalCount:false,sourceRows:report.items.length,sourceLimit:10000,rows:[],candidates:[],truncated:false};
   if(report.items.length===10000)return {...base,result:"source_limited",truncated:true};
   const q=norm(args.product),exact=report.items.filter(row=>norm(row.sku)===q||norm(row.name)===q),matches=exact.length?exact:report.items.filter(row=>norm(row.sku).includes(q)||norm(row.name).includes(q));
   if(!matches.length)return {...base,result:"no_match"};

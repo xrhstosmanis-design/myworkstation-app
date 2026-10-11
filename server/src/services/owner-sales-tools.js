@@ -12,16 +12,22 @@ const keys=["productId","sku","name","storeId","storeName","salesQuantity","gros
 const project=(row,fields)=>Object.fromEntries(fields.map(key=>[key,row[key]]));
 
 export async function readCanonicalOwnerSales(req,args,scope,{fetchImpl=fetch,port=process.env.PORT||8080,signal}={}){
-  args=salesToolArguments.parse(args);const calendar=salesReportCalendar(args.from,args.to),authorization=req.headers?.authorization,validPort=String(port);
+  args=salesToolArguments.parse(args);const authorization=req.headers?.authorization,validPort=String(port);
   if(typeof authorization!=="string"||!/^Bearer \S+$/.test(authorization))fail("Απαιτείται ενεργή σύνδεση.",401);
   if(!/^\d{1,5}$/.test(validPort)||+validPort<1||+validPort>65535)fail("Η πηγή πωλήσεων δεν είναι διαθέσιμη.",503);
   const query=new URLSearchParams({storeId:scope.storeId,from:args.from,to:args.to,q:args.product,timeZone:"Europe/Athens"});
   const response=await fetchImpl(`http://127.0.0.1:${validPort}/api/reports/sales-analysis?${query}`,{method:"GET",headers:{Authorization:authorization},redirect:"error",signal});
   if(!response.ok)fail("Δεν διαβάστηκε η κανονική αναφορά πωλήσεων. Δεν εμφανίζονται εκτιμήσεις ή παλιά στοιχεία.",[401,403,404].includes(response.status)?response.status:502);
   const report=await response.json();
-  if(report.companyId!==scope.companyId||report.storeId!==scope.storeId||report.period?.calendarFrom!==args.from||report.period?.calendarTo!==args.to||report.period?.timeZone!=="Europe/Athens"||report.period?.from!==calendar.from.toISOString()||report.period?.toExclusive!==calendar.to.toISOString()||report.reversalAware!==true||!Array.isArray(report.items)||report.count!==report.items.length||report.items.length>10000)fail("Η αναφορά πωλήσεων δεν αντιστοιχεί στο επιλεγμένο κατάστημα και διάστημα.");
-  if(report.items.some(row=>row.storeId!==scope.storeId||typeof row.name!=="string"||["salesQuantity","grossSales","netSales","vatValue","normalSaleCount","reversalCount","returnGrossValue"].some(key=>typeof row[key]!=="number"||!Number.isFinite(row[key]))))fail("Η αναφορά πωλήσεων επέστρεψε μη έγκυρα στοιχεία.");
-  const base={source:"Στατιστικά πωλήσεων",kind:"product_sales",scope:"OWNER_SELECTED_STORE",companyId:scope.companyId,storeId:scope.storeId,storeName:scope.storeName,productQuery:args.product,from:args.from,to:args.to,timeZone:"Europe/Athens",fromInstant:calendar.from.toISOString(),toExclusive:calendar.to.toISOString(),reversalAware:true,nonFiscal:true,sourceRows:report.items.length,sourceLimit:10000,rows:[],candidates:[],truncated:false};
+  return productSalesEvidence(report,args,scope);
+}
+
+// Both roles use this same checked projection; no report costs/private data reach AI.
+export function productSalesEvidence(report,args,scope){
+  args=salesToolArguments.parse(args);const calendar=salesReportCalendar(args.from,args.to);
+  if(!report||report.companyId!==scope.companyId||report.storeId!==scope.storeId||report.period?.calendarFrom!==args.from||report.period?.calendarTo!==args.to||report.period?.timeZone!=="Europe/Athens"||report.period?.from!==calendar.from.toISOString()||report.period?.toExclusive!==calendar.to.toISOString()||report.reversalAware!==true||!Array.isArray(report.items)||report.count!==report.items.length||report.items.length>10000)fail("Η αναφορά πωλήσεων δεν αντιστοιχεί στο επιλεγμένο κατάστημα και διάστημα.");
+  if(report.items.some(row=>!row||row.storeId!==scope.storeId||typeof row.name!=="string"||["salesQuantity","grossSales","netSales","vatValue","normalSaleCount","reversalCount","returnGrossValue"].some(key=>typeof row[key]!=="number"||!Number.isFinite(row[key]))))fail("Η αναφορά πωλήσεων επέστρεψε μη έγκυρα στοιχεία.");
+  const base={source:"Στατιστικά πωλήσεων",kind:"product_sales",scope:"OWNER_SELECTED_STORE",companyId:scope.companyId,companyName:scope.companyName,storeId:scope.storeId,storeName:scope.storeName,productQuery:args.product,from:args.from,to:args.to,timeZone:"Europe/Athens",fromInstant:calendar.from.toISOString(),toExclusive:calendar.to.toISOString(),reversalAware:true,nonFiscal:true,sourceRows:report.items.length,sourceLimit:10000,rows:[],candidates:[],truncated:false};
   // A full source cap cannot prove uniqueness or absence; do not infer a total.
   if(report.items.length===10000)return {...base,result:"source_limited",truncated:true};
   const queryText=norm(args.product),exact=report.items.filter(row=>norm(row.sku)===queryText||norm(row.name)===queryText),matches=exact.length?exact:report.items.filter(row=>norm(row.sku).includes(queryText)||norm(row.name).includes(queryText));
@@ -31,7 +37,9 @@ export async function readCanonicalOwnerSales(req,args,scope,{fetchImpl=fetch,po
   return {...base,result:"matched",rows:[project(matches[0],keys)]};
 }
 
-// Owner-only dispatcher; the existing Platform cash loop remains unchanged.
+export const assistantProductTools=[ownerSalesTool,ownerStockTool];
+
+// Shared dispatcher. The old export remains compatible with existing Owner clients.
 export async function runOwnerAssistant({prompt,requestProvider,readCash,readSales,readStock,cashTool,tools=[cashTool,ownerSalesTool]}){
   const input=[{role:"user",content:prompt}],evidence=[];let calls=0;
   for(let round=0;round<3;round++){
@@ -47,3 +55,4 @@ export async function runOwnerAssistant({prompt,requestProvider,readCash,readSal
   }
   fail("Ο βοηθός δεν ολοκλήρωσε την απάντηση.");
 }
+export const runProductAssistant=runOwnerAssistant;
