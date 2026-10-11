@@ -23,3 +23,56 @@ CI38146742662 infrastructure FAIL before checkout/tests: ECR PostgreSQL16 mirror
 Same assigned owner `codex/pos-header-bright-resize-20261011`; bounded follow-up branch `codex/pos-header-bright-resize-compact-20261011`. SourcePR2256/headccc7f474 fullCI38148178128 SUCCESS2332PASS/0FAIL/0SKIP (native PG, real HTTP E2E, exact Chromium geometry/Windows/contracts), mergedaf6c3e45. MainCI38148522988 cancelled when concurrent docsPR2263 merged2f937ea4; newer docs-only CI38148675640 passed but deploy38148718080 correctly skipped. Header NOT LIVE from that attempt; no guard bypass/manual deployment.
 
 Actual geometry at1366x768/1280x600 showed the new22px grip plus original content gaps added10px to the compact header floor. Reduce only header internal padding/gaps7/6/6 to3/3/3, keeping all44px auxiliary buttons,22px grip and handlers. This recovers10px, preserving the previous compact minimum while brightening/resizing it; wide screens gain space. Existing source state/tenant preference/cart bounds/scanner/payment unchanged. Follow-up only CSS, with the same exact browser fixture before/after/full CI and ordinary guarded main release required. Original supplied header screenshot/user requirement expressly includes shrinking; this remains the same assigned scope. USER/LAB NOT TESTED, manual unchanged; item1 separate acceptance/items3–9queued.
+
+
+## 11/10/2026 18:05 Athens — final guarded release / SOURCE LIVE / AWAITING USER
+
+Claim PR2252 CI38146237037 success merged1371933d before source. Source PR2256/headccc7f474 full CI38148178128 SUCCESS2332PASS/0FAIL/0SKIP mergedaf6c3e45; compact follow-up PR2264/head2f8fe003 full CI38148921019 SUCCESS2332/0/0 mergedab7171c2de9f8ba7b1e59374bea193faf08511b2. Exact final main CI38149267494 SUCCESS2332/0/0, including native PG/HTTP E2E/Windows/contracts and exact Chromium geometry. Ordinary guarded Render38149554271/deployjob114499990008 SUCCESS, expected revision healthy11Oct18:04:08Athens; independent public health and actually served JS/CSS verified18:05:33Athens on exactab7171c2de9f8ba7b1e59374bea193faf08511b2. Light header #e7f3ee, full-width22px bottom height grip, natural control minimum, optional0..120px extra space bounded by96px cart reserve, mouse/touch/keyboard/reset and browser-local company/store preference. Compact padding restores previous compact header floor; same existing44px auxiliary controls/handlers. Actual isolated1920x1080/1366x768/1280x600 FONT12/20 before/after controls remain contained and payments retain their existing bottom position; inherited1280x600 FONT20 cart collapse is unchanged and outside this header scope. Resizing probes add zero API writes. New physical USER/LAB brightness/drag/persistence NOT TESTED; CI is not acceptance. Manual unchanged, item1 awaiting separate acceptance, items3–9 queued. Single next action: user empty-cart Ctrl+F5, drag bottom «Ύψος μπάρας» down then up, double-click compact, refresh to check remembered store/browser size. Stop at natural minimum to keep controls readable; wait for user feedback before item3. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-pos-header-bright-resize.md`.
+
+Independent public release receipt (no authenticated session or business action):
+
+```json
+{
+  "status": "VERIFIED",
+  "time": "2026-10-11T18:05:33.357777+03:00",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "ab7171c2de9f8ba7b1e59374bea193faf08511b2"
+  },
+  "assets": [
+    {
+      "path": "/assets/index-D-HrdKMa.js",
+      "status": 200,
+      "bytes": 475387,
+      "sha256": "d5000591cbbb0a5131d1901d2b0005ae593c43c2a71eb31c1b4075ff9d2cf6b4",
+      "preference": false,
+      "toggle": false
+    },
+    {
+      "path": "/assets/index-DeeNCK54.css",
+      "status": 200,
+      "bytes": 45943,
+      "sha256": "60d6a7e5f8d37d5a30f5e35c22e355c06be1cf0c33278bea2d5cc1f257aedbc0",
+      "light_header": false
+    },
+    {
+      "path": "/assets/entry-C_UaijQM.js",
+      "status": 200,
+      "bytes": 2296980,
+      "sha256": "41a99a9f956f390d68213586e17eff5a49ae07798f5bab41d63f772591d881a2",
+      "preference": true,
+      "toggle": true
+    },
+    {
+      "path": "/assets/entry-HzgbzTR4.css",
+      "status": 200,
+      "bytes": 611635,
+      "sha256": "f7ded708c18550c3d79f29b36670711b42025317e89de9aa9d0ef395e8b07b1f",
+      "light_header": true
+    }
+  ]
+}
+```
+
+Exact rendered compact evidence:1920x1080 FONT12 header153→141px/cart502→514px/payment bottom1056px; FONT20 header235→223/cart411→423/payment1047. 1366x768 FONT12 header195/cart192/payment744 unchanged, expansion291/cart96; FONT20 header223/cart134/payment714 unchanged, expansion261/cart96. 1280x600 FONT12 header195/cart24/payment576 unchanged, no extra expansion; FONT20 header289/cart0/payment546 unchanged, no extra expansion. Inherited short-viewport large-font cart0 is not an overall POS PASS. All controls remained within header; minimum protects their natural wrapped height. Browser evidence is isolated synthetic actual StorePosPanel/Chromium, not physical mouse/touch or USER/LAB acceptance. Earlier pre-correction browser metadata/CLI viewport evidence is superseded by exact CDP viewport measurements. Earlier cancelled/docs-only skipped release was not live; final ordinary exact guarded release above is the valid release. Previous healthy rollback revision f45e6c53d63edb2b0b512f3a48d4d84665708713 retained by guard artifact11706681156.
