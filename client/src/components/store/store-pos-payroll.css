@@ -1,0 +1,7 @@
+.pos-payment-form>.pos-payroll-popdown{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px;border:1px solid #9bcbb8;border-radius:12px;background:#effaf5;min-width:0}
+.pos-payroll-popdown>b,.pos-payroll-popdown>small{grid-column:1/-1}
+.pos-payroll-popdown>b{font-size:22px;color:#034532}
+.pos-payroll-popdown>label{display:grid;gap:6px;font-size:18px;font-weight:800;min-width:0}
+.pos-payroll-popdown>label>input,.pos-payroll-popdown>label>select{width:100%;box-sizing:border-box;min-width:0;min-height:56px;font-size:20px;background:#fff}
+.pos-payroll-popdown>small{font-size:15px;line-height:1.4}
+@media(max-width:760px){.pos-payment-form>.pos-payroll-popdown{grid-template-columns:1fr}}
