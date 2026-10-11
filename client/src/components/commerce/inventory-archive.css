@@ -404,3 +404,5 @@
   .ia-toolbar button{min-width:0;width:100%}
   .ia-page-size{justify-content:space-between}
 }
+
+.ia-row .ia-baking-stock{flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;white-space:normal;color:#0f766e}.ia-row .ia-baking-stock small{font-size:13px;line-height:1.25;font-weight:700}
