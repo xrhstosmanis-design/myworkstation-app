@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import {readFile} from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
+import {shiftCollectionTotals} from '../../client/src/components/store/shift-payment-totals.js';
 import {currentShiftCash} from '../../client/src/components/store/current-shift-cash.js';
 
 const summary=(cashSales=0,expensesTotal=0,extra={})=>({cashSales,expensesTotal,transferIn:0,transferOut:0,...extra});
@@ -38,13 +39,13 @@ test('mounted shift center updates current cash and protects complete terminal/s
  const keys=['window','document','navigator','HTMLElement','Event','IS_REACT_ACT_ENVIRONMENT','setInterval','clearInterval'];
  const previous=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[k]});
- let tick,cleared=0,cash=0,expense=0,fail=false,management=false,hold=null,release,calls=[];
+ let tick,cleared=0,cash=0,expense=0,fail=false,management=false,hold=null,release,calls=[],receiptRows=[];
  globalThis.setInterval=fn=>{tick=fn;return 1};globalThis.clearInterval=()=>{cleared++};
  const api=async(path,options={})=>{
   calls.push({path,options});const storeId=path.match(/stores\/([^/]+)/)[1];
   if(path.includes('/transactions/')){
    if(fail)throw Error('offline');
-   const result={store:{id:storeId},access:{canForceClose:management},openSessions:[{id:storeId+'-main',terminalPos:'MAIN',openingOperational:storeId==='A'?100:7},{id:storeId+'-control',terminalPos:'CONTROL',openingOperational:20}],summaryBySession:{[storeId+'-main']:summary(cash,expense,{cardSales:500,irisSales:80}),[storeId+'-control']:summary(2)},recent:[]};
+   const result={store:{id:storeId},access:{canForceClose:management},openSessions:[{id:storeId+'-main',terminalPos:'MAIN',openingOperational:storeId==='A'?100:7},{id:storeId+'-control',terminalPos:'CONTROL',openingOperational:20}],summaryBySession:{[storeId+'-main']:summary(cash,expense,{cardSales:receiptRows.length?0.50:500,irisSales:receiptRows.length?0:80}),[storeId+'-control']:summary(2)},recent:receiptRows};
    if(hold===storeId)return new Promise(r=>{release=()=>r(result)});
    return result;
   }
@@ -68,7 +69,27 @@ test('mounted shift center updates current cash and protects complete terminal/s
   hold='A';await settle(tick);const before=calls.length;await settle(tick);assert.equal(calls.length,before,'polls never overlap');
   await mount('B');assert.equal(amount('.current-shift-cash'),format(47));assert.equal(amount('.current-store-cash'),format(69));
   await settle(release);assert.equal(amount('.current-shift-cash'),format(47),'late store A response cannot overwrite B');
+  cash=0.30;expense=0;receiptRows=[{id:'cash-receipt',sessionId:'B-main',type:'CUSTOMER_RECEIPT_CASH',amount:0.30,description:'named CASH debt receipt',actorName:'LAB POS 2'},{id:'card-receipt',sessionId:'B-main',type:'CUSTOMER_RECEIPT_CARD',amount:0.50,description:'named CARD debt receipt',actorName:'LAB POS 2'},{id:'foreign-receipt',sessionId:'A-main',type:'CUSTOMER_RECEIPT_CARD',amount:999}];
+  await settle(tick);
+  assert.equal(amount('.current-shift-cash'),format(7.30));assert.equal(amount('.current-store-cash'),format(29.30));
+  const mainCard=document.querySelector('.active-shift-card').textContent;
+  assert.ok(mainCard.includes(format(0.50)));assert.ok(mainCard.includes(format(0.80)));
+  const metric=[...document.querySelectorAll('.selected-shift-metrics article')];
+  assert.equal(metric[0].querySelector('span').textContent,'Εισπράξεις μετρητών');assert.equal(metric[0].querySelector('strong').textContent,format(0.30));
+  assert.equal(metric[1].querySelector('strong').textContent,format(0.50));assert.equal(metric[2].querySelector('strong').textContent,format(0));assert.equal(metric[4].querySelector('strong').textContent,format(0.80));
+  const movements=[...document.querySelectorAll('.active-movement-table .row')];assert.equal(movements.length,2);
+  assert.match(movements.map(row=>row.textContent).join(' '),/Είσπραξη οφειλής μετρητών.*Μετρητά.*Είσπραξη οφειλής κάρτας.*Κάρτα/);
+  assert.equal(document.querySelector('.category-actions'),null,'debt receipts are not product sales');
+  assert.equal(document.body.textContent.includes('foreign-receipt'),false);
   assert.ok(calls.every(c=>!c.options.method||c.options.method==='GET'));
   await settle(()=>root.unmount());assert.ok(cleared>=2);
  }finally{if(document.getElementById('root').hasChildNodes())await act(async()=>root.unmount());dom.window.close();for(const [k,d]of previous){if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k]}}
+});
+
+
+test('complete collection totals include customer receipts and separate IRIS once in cents',()=>{
+ assert.deepEqual(shiftCollectionTotals({cashSales:'0.30',cardSales:'0.70',irisSales:'0.20'}),{cash:0.30,card:0.50,iris:0.20,total:1});
+ assert.deepEqual(shiftCollectionTotals({cashSales:0.10,cardSales:0.20,irisSales:0}),{cash:0.10,card:0.20,iris:0,total:0.30});
+ assert.deepEqual(shiftCollectionTotals({cashSales:-1,cardSales:-0.50,irisSales:0}),{cash:-1,card:-0.50,iris:0,total:-1.50});
+ assert.equal(shiftCollectionTotals({cashSales:2}),null);assert.equal(shiftCollectionTotals({cashSales:2,cardSales:null,irisSales:0}),null);assert.equal(shiftCollectionTotals({cashSales:2,cardSales:'bad',irisSales:0}),null);
 });
