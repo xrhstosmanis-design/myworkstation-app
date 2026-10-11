@@ -46,10 +46,35 @@ test("CAP Driver v1 builds a single configured card payment command",()=>{
 test("CAP Driver v1 refuses unconfirmed mappings and unsafe file fields",()=>{
   assert.throws(()=>buildRbsCapDriverV1Command({items:[item],paymentMethod:"CARD",total:0.5}),/explicitly mapped/);
   assert.throws(()=>buildRbsCapDriverV1Command({items:[{...item,fiscalDepartment:""}],paymentMethod:"CASH",paymentCode:"6",total:0.5}),/mapping is missing/);
-  assert.throws(()=>buildRbsCapDriverV1Command({items:[{...item,description:"ITEM/CR/1"}],paymentMethod:"CASH",paymentCode:"6",total:0.5}),/unsupported CAP Driver character/);
+  assert.throws(()=>buildRbsCapDriverV1Command({items:[{...item,description:"ITEM\r\nCR/1"}],paymentMethod:"CASH",paymentCode:"6",total:0.5}),/unsupported CAP Driver character/);
   assert.throws(()=>buildRbsCapDriverV1Command({items:[item],paymentMethod:"IRIS",paymentCode:"6",total:0.5}),/only cash or card/);
   assert.throws(()=>buildRbsCapDriverV1Command({items:[item],paymentMethod:"CASH",paymentCode:"6",total:0.5,codePage:"UTF8"}),/code page 1253/);
   assert.throws(()=>buildRbsCapDriverV1Command({items:[{...item,registerVatRate:24}],paymentMethod:"CASH",paymentCode:"6",total:0.5}),/VAT does not match/);
+});
+
+test("slash-containing catalog descriptions serialize as one safe SL without changing sale data",()=>{
+  const description="ON THE GO BOOST ΑΝΑ/ΣΤΑΦ/ΜΠΑΝ/ΛΕΜΟΝΙ 500ML";
+  const original=Object.freeze({...item,description,barcode:"13051",quantity:2,unitPrice:1.25,fiscalDepartment:"5"});
+  const command=buildRbsCapDriverV1Command({items:[original],paymentMethod:"CASH",paymentCode:"1",total:2.5});
+  assert.equal(command.text,"HL/\r\nSL/ON THE GO BOOST ΑΝΑ ΣΤΑΦ ΜΠΑΝ ΛΕΜΟΝΙ 500ML/13051/2.000/1.25/5/13.0\r\nCR/1/2.50/ΜΕΤΡΗΤΑ");
+  assert.equal(new TextDecoder("windows-1253").decode(command.bytes),command.text+"\r\n");
+  assert.equal(original.description,description);
+  const escaped=buildRbsCapDriverV1Command({items:[{...item,description:"ITEM/CR/1"}],paymentMethod:"CARD",paymentCode:"2",total:0.5});
+  assert.equal(escaped.text.split("\r\n").length,3);
+  assert.equal(escaped.text.split("\r\n")[1].split("/").length,7);
+  assert.equal((escaped.text.match(/\r\nCR\//g)||[]).length,1);
+  assert.match(escaped.text,/SL\/ITEM CR 1\//);
+});
+
+test("description slash normalization preserves unsafe-field, length and encoding rejection",()=>{
+  const build=(description,extra={})=>buildRbsCapDriverV1Command({items:[{...item,description,...extra}],paymentMethod:"CASH",paymentCode:"6",total:0.5});
+  for(const description of ["ITEM/\rCR/1","ITEM/\nCR/1","A".repeat(80)+"/","ITEM/🙂"]){
+    assert.throws(()=>build(description));
+  }
+  assert.throws(()=>build("///"),/line description is required/);
+  assert.doesNotThrow(()=>build("A".repeat(79)+"/"));
+  assert.throws(()=>build("ITEM/NAME",{barcode:"123/CR/1"}),/barcode contains an unsupported/);
+  assert.throws(()=>buildRbsCapDriverV1Command({items:[item],paymentMethod:"CASH",paymentCode:"6",paymentLabel:"CASH/CR/1",total:0.5}),/payment label contains an unsupported/);
 });
 
 test("confirmed Kiosk VAT codes map to the exact register departments and VAT rates",()=>{
