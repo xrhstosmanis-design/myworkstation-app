@@ -79,6 +79,7 @@ import commerceInvoiceDraftApprovalRoutes from "./routes/commerce-invoice-draft-
 import commerceMyDataInboxRoutes,{startMyDataReceivingWorker} from "./routes/commerce-mydata-inbox.js";
 import commerceVatLookupRoutes from "./routes/commerce-vat-lookup.js";
 import commercePosV244Routes,{ensurePosInvoiceBackgroundWorkerSchema,startPosInvoiceBackgroundWorker,allowPosInvoiceDrainRequest} from "./routes/commerce-pos-v244.js";
+import commerceInvoiceQrRoutes from "./routes/commerce-invoice-qr.js";
 import commerceAzureInvoiceReaderRoutes from "./routes/commerce-azure-invoice-reader.js";
 import commercePosAiRecheckRoutes from "./routes/commerce-pos-ai-recheck.js";
 import commercePosInvoiceIntakeRoutes from "./routes/commerce-pos-invoice-intake.js";
@@ -260,6 +261,7 @@ app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductRoutes)
 app.use("/api/commerce/purchase-orders",auth,commerceTenantGuard,purchaseOrderOcrResolutionRoutes);
 app.use("/api/commerce/purchase-orders",auth,commerceTenantGuard,purchaseOrderTotalReconciliationGuardRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosV244Routes);
+app.use("/api/commerce",auth,commerceTenantGuard,commerceInvoiceQrRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commerceAzureInvoiceReaderRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosAiRecheckRoutes);
 app.use("/api/commerce",auth,commerceTenantGuard,commercePosInvoiceIntakeRoutes);

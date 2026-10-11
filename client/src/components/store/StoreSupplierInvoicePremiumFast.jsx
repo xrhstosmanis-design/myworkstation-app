@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import {mergeFastInvoiceHeaders} from "../../lib/invoice-fast-header-merge.js";
 import {knownSupplierFromFastHeaders} from "../../lib/invoice-fast-supplier-match.js";
 import {prepareDocumentFile} from "../../lib/document-image-quality.js";
+import InvoiceQrCamera from "./InvoiceQrCamera.jsx";
 
 const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""))||0;
 const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Δεν διαβάστηκε το παραστατικό."));r.readAsDataURL(file)});
@@ -34,6 +35,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const videoRef=useRef(null),canvasRef=useRef(null);
   useEffect(()=>{if(!cameraOpen||!stream||!videoRef.current)return;const video=videoRef.current;video.srcObject=stream;const play=()=>video.play().catch(()=>{});if(video.readyState>=2)play();else video.addEventListener("loadedmetadata",play,{once:true});return()=>video.removeEventListener("loadedmetadata",play)},[cameraOpen,stream]);
   const [qr,setQr]=useState("");
+  const [invoiceQrOpen,setInvoiceQrOpen]=useState(false);
   const [qrUrl,setQrUrl]=useState("");
   const supplierOptions=useMemo(()=>createdSupplier&&!suppliers.some(x=>String(x.id)===String(createdSupplier.id))?[createdSupplier,...suppliers]:suppliers,[suppliers,createdSupplier]);
   const supplier=useMemo(()=>supplierOptions.find(x=>String(x.id)===String(supplierId))||null,[supplierOptions,supplierId]);
@@ -41,6 +43,14 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const paymentMethodLabel={CASH_SHIFT:"Μετρητά από ενεργή βάρδια",CORPORATE_CARD:"Εταιρική κάρτα",BANK_TRANSFER:"Τραπεζική μεταφορά",EMPLOYEE_REIMBURSEMENT:"Πληρωμή υπαλλήλου προς επιστροφή"}[paymentMethod];
   const file=pages[0]?.originalFile||pages[0]?.file||null,fileDataUrl=pages[0]?.originalDataUrl||pages[0]?.dataUrl||"";
   const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
+  const openInvoiceQr=()=>{stopCamera();setInvoiceQrOpen(true)};
+  const readInvoiceQr=data=>{
+    setInvoiceQrOpen(false);
+    const header=data.header,known=knownSupplierFromFastHeaders([header],supplierOptions),credit=header.documentType==="CREDIT_NOTE";
+    setPages([{file:data.file,dataUrl:data.dataUrl,originalFile:data.file,originalDataUrl:data.dataUrl,fastDocumentType:header.documentType,fastProductLines:[]}]);
+    setSupplierId(known?.id||"");setCreatedSupplier(null);setSupplierCandidate({name:header.supplierName||"",taxId:header.supplierTaxId||""});setAmount(Number(header.totalGross).toFixed(2).replace(".",","));setDocumentNumber(header.documentNumber);setDocumentDate(header.documentDate);setDocumentType(header.documentType);setCreditDetected(credit);setMode("");
+    setStatus(`Πρωτότυπο PDF μέσω QR · ${data.pageCount} φυσικές σελίδες. Έλεγξε κατάστημα, προμηθευτή, αριθμό και ποσό. ${known?"Επίλεξε εσύ πληρωμή ή πίστωση.":"Ο προμηθευτής χρειάζεται έλεγχο με το ΑΦΜ."} Τα προϊόντα θα διαβαστούν στο ίδιο πρόχειρο από τον βοηθό.`);
+  };
   const selectFiles=async selected=>{
     const incoming=Array.from(selected||[]).filter(Boolean);
     if(!incoming.length)return;
@@ -158,7 +168,8 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>Γρήγορη καταχώριση — AI μόνο για τα 4 βασικά στοιχεία. Η πλήρης V2.4.4 ανάγνωση προϊόντων συνεχίζεται μετά στην Κεντρική Διαχείριση.</div>
     <div style={{padding:"9px 11px",borderRadius:9,background:"#fff",fontWeight:800,marginBottom:10}}>{status}</div>
     <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={busy||reading||pages.length>=5}><Camera/> Λήψη σελίδας από κάμερα</button><label><FileUp/> Επιλογή έως 5 σελίδων / PDF<input type="file" multiple accept="image/*,application/pdf" disabled={busy||reading||pages.length>=5} onChange={e=>{const selected=Array.from(e.target.files||[]);e.target.value="";selectFiles(selected)}}/></label><button type="button" onClick={createQr} disabled={busy||reading||pages.length>=5}>QR από κινητό</button><b>{pages.length?`${pages.length}/5 ${pages.length===1?"σελίδα":"σελίδες"}`:"Δεν επιλέχθηκε τιμολόγιο"}</b></div>{pages.length>0&&<div style={{display:"grid",gap:6,margin:"8px 0 10px"}}>{pages.map((page,index)=><div key={`${page.file.name}-${page.file.lastModified}-${index}`} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 9px",border:"1px solid #b7d8cc",borderRadius:8,background:"#f5fbf8"}}><b style={{minWidth:72}}>Σελίδα {index+1}</b><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{page.file.name}</span><button type="button" title="Μετακίνηση πάνω" disabled={busy||reading||index===0} onClick={()=>movePage(index,-1)}>↑</button><button type="button" title="Μετακίνηση κάτω" disabled={busy||reading||index===pages.length-1} onClick={()=>movePage(index,1)}>↓</button><button type="button" title="Αφαίρεση σελίδας" disabled={busy||reading} onClick={()=>removePage(index)}>×</button></div>)}</div>}{qr&&<div style={{textAlign:"center",padding:10}}><img src={qr} alt="QR upload τιμολογίου" style={{width:180}}/><div>Σκάναρε και ανέβασε μία σελίδα. Επανάλαβε μέχρι 5 φορές για το ίδιο τιμολόγιο.</div></div>}
-    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
+    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" disabled={pages.length>0} onClick={openInvoiceQr}>Σάρωση QR τιμολογίου</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
+    {invoiceQrOpen&&<InvoiceQrCamera key={store.id} api={api} store={store} onRead={readInvoiceQr} onClose={()=>setInvoiceQrOpen(false)}/>}
     </div>
     <div className="pos-invoice-fields-area">
     <label>Προμηθευτής<select value={supplierId} disabled={busy||savingSupplier} onChange={e=>setSupplierId(e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{supplierOptions.map(s=><option key={s.id} value={s.id}>{s.name}{s.taxId?` · ${s.taxId}`:""}</option>)}</select></label>
