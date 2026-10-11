@@ -1,0 +1,10 @@
+# POS Payments — separate payroll entry
+
+## 11/10/2026 17:27 Athens — POS-PAYROLL-BUTTON-01 / ASSIGNED / NOT TESTED
+
+Owner `codex/pos-payroll-button-20261011`; independent bounded POS Payments entry, source branch `feat/pos-payroll-button-20261011`. Explicit user request and inspected attachment image(20261011-142543).png: separate «Μισθοδοσία» button, «Εξόφληση ρεπό» with mandatory reason, «Προκαταβολή» with mandatory reason, «Υπερωρία» with mandatory reason and positive hours. Reuse existing selected-store payroll employee list, period, amount, payment evidence/source and OTHER_EXPENSE transaction endpoint. No automatic salary/rate/leave calculation, payroll-period payment/settlement integration or schema change. N10 owner/payroll reconciliation remains locked and untouched; No33 permissions, payment completion/camera/correction and all prior PASS preserved. New source must keep thirdPartyPayment/sameShift guards, stale shift rejection, success-only close and tenant isolation. No real/LAB payment or accepted transaction replay for diagnostics.
+
+Baseline main1ca72fe and current actual existing category-triggered payroll UI inspected; payroll entry requires matching expense category today and offers no advance. Existing payment manual/completion/correction checkpoints and shared assignments reviewed. New requested UI/financial acceptance NOT TESTED, CI never equals LAB PASS. Required mounted actual modal tests: independent entry without categories, mandatory reason/employee/period/hours, each subtype payload, no refund leakage, category path backward compatibility, denied/revoked third-party access and failed/success-only closure. Full Node20 build/source-main CI/native isolated E2E and normal guarded exact release before user retest. No manual PASS until actual acceptance. Single next action: green claim merged on main before source.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-pos-payroll-button.md`. Retain this owner until completion/named handoff; do not take N10 or other assigned scopes.
+
