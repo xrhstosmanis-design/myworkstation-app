@@ -11,8 +11,8 @@ const requestProvider=async(settings,{signal,inputChannel})=>{
   console.info("AI_OWNER_ASSISTANT_USAGE",JSON.stringify({...aiCommandUsage(raw,inputChannel,model),status:response.ok?"response_received":"provider_error"}));
   return {response,raw};
 };
-export function createOwnerAssistantRouter({authenticate=auth,authorize=authorizeOwnerAssistant,provider=requestProvider,providerConfigured=()=>Boolean(process.env.OPENAI_API_KEY),readCash,readSales}={}){
-  const router=Router(),handlers=createOwnerAssistantHandlers({authorize,requestProvider:provider,providerConfigured,...(readCash?{readCash}:{}),...(readSales?{readSales}:{})});
+export function createOwnerAssistantRouter({authenticate=auth,authorize=authorizeOwnerAssistant,provider=requestProvider,providerConfigured=()=>Boolean(process.env.OPENAI_API_KEY),readCash,readSales,readStock}={}){
+  const router=Router(),handlers=createOwnerAssistantHandlers({authorize,requestProvider:provider,providerConfigured,...(readCash?{readCash}:{}),...(readSales?{readSales}:{}),...(readStock?{readStock}:{})});
   router.use(authenticate);
   router.get("/stores/:storeId/status",handlers.status);
   router.post("/stores/:storeId/ask",handlers.ask);
