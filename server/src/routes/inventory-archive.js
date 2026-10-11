@@ -78,7 +78,7 @@ router.get("/",async(req,res,next)=>{
       SELECT p."id" AS "productId",p."sku",p."name",p."description",p."unit",p."vatRate",p."costPrice",p."active" AS "productActive",
         p."createdAt",p."updatedAt",p."eDeliveryEnabled",p."efoodEnabled",p."woltEnabled",p."publishStock",p."publishPrices",p."efoodPrice",p."woltPrice",
         c."name" AS "categoryName",COALESCE(sc."name",mp."subcategoryName") AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "brandName",
-        sp."active" AS "storeActive",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",sp."minStock",
+        sp."active" AS "storeActive",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",sp."minStock",(SELECT bs."bakedQuantity" FROM "StoreBakedBalance" bs WHERE bs."companyId"=p."companyId" AND bs."storeId"=sp."storeId" AND bs."productId"=p."id" AND bs."enabled"=TRUE) AS "bakedStock",
         pb."barcode",lp."unitCost" AS "lastPurchasePrice",lp."documentDate" AS "lastPurchaseAt",COALESCE(lp."supplierName",linkedSupplier."name") AS "supplierName",lp."documentNumber" AS "lastPurchaseDocument",
         ap."averagePurchasePrice",COALESCE(sa."sales15Qty",0) AS "sales15Qty",sa."lastSaleAt"
       FROM "StoreProduct" sp
@@ -139,7 +139,7 @@ router.get("/",async(req,res,next)=>{
       const salePrice=n(row.salePrice),vatRate=n(row.vatRate),currentStock=n(row.currentStock),latest=n(row.lastPurchasePrice||0),average=n(row.averagePurchasePrice||0),stored=n(row.costPrice||0),cost=latest||average||stored||0;
       const saleNet=salePrice/(1+vatRate/100);
       return {...row,
-        salePrice,currentStock,minStock:row.minStock===null?null:n(row.minStock),vatRate,costPrice:n(row.costPrice),
+        salePrice,currentStock,bakedStock:row.bakedStock==null?null:n(row.bakedStock),unbakedStock:row.bakedStock==null?null:currentStock-n(row.bakedStock),minStock:row.minStock===null?null:n(row.minStock),vatRate,costPrice:n(row.costPrice),
         lastPurchasePrice:row.lastPurchasePrice===null?null:n(row.lastPurchasePrice),
         averagePurchasePrice:row.averagePurchasePrice===null?null:n(row.averagePurchasePrice),
         efoodPrice:row.efoodPrice===null?null:n(row.efoodPrice),woltPrice:row.woltPrice===null?null:n(row.woltPrice),sales15Qty:n(row.sales15Qty),
