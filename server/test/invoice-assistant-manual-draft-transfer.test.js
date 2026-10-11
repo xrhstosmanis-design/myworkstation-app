@@ -54,7 +54,7 @@ test('manual draft transfer retains page warnings and requires fresh human confi
   s.q('[data-confirm-one-unit]').click();assert.equal(s.confirms(),0);assert.equal(s.writes.length,0);
   s.select();s.q('[data-confirm-one-unit]').click();assert.equal(s.confirms(),1);assert.equal(s.q('[data-field="stockUnitsPerInvoiceUnit"]').value,'');assert.equal(s.writes.length,0);
   s.confirm();s.q('[data-confirm-one-unit]').click();assert.equal(s.confirms(),2);assert.ok([...document.querySelectorAll('[data-field="stockUnitsPerInvoiceUnit"]')].every(el=>el.value==='1'));assert.ok([...document.querySelectorAll('[data-field="invoiceUnit"]')].every(el=>el.value==='PACKAGE'));assert.equal(s.writes.length,0);
-  s.q('[data-apply]').click();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,12);assert.ok(s.writes.every(w=>w.method==='POST'&&/same-draft\\/lines$/.test(w.path)&&JSON.parse(w.body).stockUnitsPerInvoiceUnit===1));s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,12);
+  s.q('[data-apply]').click();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,12);assert.ok(s.writes.every(w=>w.method==='POST'&&w.path.endsWith('same-draft/lines')&&JSON.parse(w.body).stockUnitsPerInvoiceUnit===1));s.select();s.q('[data-apply]').click();await s.tick();assert.equal(s.writes.length,12);
  });
  await scenario({printedLines:[]},async s=>{assert.equal(s.q('[data-apply]').hidden,true);assert.equal(s.writes.length,0)});
 });
