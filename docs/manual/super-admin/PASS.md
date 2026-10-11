@@ -1,3 +1,9 @@
+## 11/10/2026 - Owner ten-day source/report comparison: LIMITED LIVE PASS with presentation limitation
+
+Same authorized normal Owner and selected own store. Ordinary Στατιστικά πωλήσεων: Από01/10/2026, Έως10/10/2026, SKU2269, explicit «Ώρα Ελλάδας» and Search. Note5units/2.50gross/2.21net/.29VAT. Close, ask the Owner assistant for that exact range/name/SKU. Verify source table and selected store. Reopen ordinary report; recheck Athens because it resets on reopen, Search again. Actual before/after/source values agree. This is one ten-day source reconciliation, not all periods or a financial transaction.
+
+Known current FAIL: provider prose displayed net €2,2123893805309733 and VAT €0,28761061946902655. Read the correctly formatted canonical source table; prose formatting fix remains pending and is not claimed fixed. After ordinary report visit the same answer/question persisted; selecting no store removed completed answer and text and disabled controls. These limited cases passed on healthy ae7c8cc4 at16:15–16:16Athens. In-flight/physical speech/foreign scope/revocation and remaining domains remain open. No business mutation. Checkpoint2026-10-10-unified-voice-assistant.md and actual answer screenshot in voice-owner-context-20261011.
+
 ## 11/10/2026 - Owner store-selection controls: LIMITED LIVE PASS
 
 Authorized ordinary Owner with existing AI_OWNER_ASSISTANT and the selected store's applicable report entitlement. Normal Backoffice sign-in -> own company -> primary LAB -> Εμπορική λειτουργία -> Λοιπές εμπορικές λειτουργίες -> explicitly select the intended store -> Βοηθός Ιδιοκτήτη. Confirm «Μόνο για» names that store before writing.
