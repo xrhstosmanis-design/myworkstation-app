@@ -6,7 +6,10 @@ import vm from "node:vm";
 // Execute the existing component submit handler with its IO replaced, so these
 // tests exercise cancel/confirm and the actual request order without a browser.
 const source=fs.readFileSync(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url),"utf8");
-const handler=source.slice(source.indexOf("  const submit=async()=>{"),source.indexOf("  return <div className=\"pos-payment-form-v3-root\""));
+const handlerStart=source.indexOf("  const submit=async()=>{");
+const handlerEnd=source.indexOf("  return <div className=\"pos-payment-form-v3-root",handlerStart);
+assert.ok(handlerStart>=0&&handlerEnd>handlerStart,"the actual submit handler must end before the JSX form");
+const handler=source.slice(handlerStart,handlerEnd);
 async function submit({confirmed,mode,documentType="INVOICE",creditDetected=false}){
   const requests=[],statuses=[],busy=[],messages=[];let closed=0,prompts=0;
   const context=vm.createContext({ready:true,documentType,creditDetected,mode,amount:"2369.99",documentNumber:"2612188",documentDate:"2026-09-02",store:{id:"store"},supplierId:"supplier",fileDataUrl:"source",pages:[{file:{name:"invoice.jpg",type:"image/jpeg"},dataUrl:"source"}],num:Number,paymentKey:()=>"key",setBusy:value=>busy.push(value),setStatus:value=>statuses.push(value),setMessage:value=>messages.push(value),onChanged:()=>closed++,monitorBackgroundV244:()=>{},window:{confirm:message=>{prompts++;assert.match(message,/Δεν θα καταχωριστεί ξανά πληρωμή ή πίστωση/);return confirmed}},api:async(path,options)=>{requests.push({path,body:JSON.parse(options.body)});if(path.endsWith("fast-duplicate-check"))return {paymentTransactionId:"existing-payment",paymentReused:true};if(path.endsWith("fast-handoff"))return {jobId:"new-job"};throw new Error("Unexpected financial write");}});

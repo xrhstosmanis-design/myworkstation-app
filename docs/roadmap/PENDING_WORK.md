@@ -1,3 +1,11 @@
+## 11/10/2026 — POS-NEW-INVOICE-FIELDS-01 / CI FIXTURE COMPATIBILITY / AWAITING FULL CI
+
+Owner unchanged. Source PR2205 first headc7bca1570a3de6b0ccebd479ad8b2bf416b95f5f / CI38115790579 failed2272PASS/4FAIL/0SKIP of2276 tests. All four failures were the existing paid-reread VM fixture: its submit-handler extraction searched for a closing quote immediately after the original root CSS class, so additive presentation classes caused the fixture to include JSX and throw Illegal return statement. Application build itself passed; no application payment failure or LAB PASS inferred.
+
+Corrected only that fixture's extraction boundary to accept additive classes and added an explicit valid-boundary assertion. All existing cancel/confirm/same-payment/credit-note/no-cash-write expectations remain unchanged. No workflow bypass, skipped test or financial guard change. Additional paid-reread/multipage/quality/archive regressions58/58PASS; together with prior32,90 focused regressions PASS/0fail/skip. Full CI on the new exact head still required.
+
+Cloud Chrome Store Mode opened only the observed existing ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ link and displayed the normal personal PIN login; no credential entry, role/session change, payment or supplier/stock/shift mutation. Actual modal geometry remains NOT TESTED; no request to replay paid invoices or new upload. Retain full-window/no-normal-desktop-scroll acceptance OPEN until exact deployment and one owner photo. No27/No33/Gate3/Gate5 and product-dialog scope stay protected.
+
 ## 11/10/2026 — POS-NEW-INVOICE-FIELDS-01 / SOURCE READY / AWAITING CI + PHYSICAL ACCEPTANCE
 
 Same owner `codex/pos-new-invoice-fields-20261011`. Claim PR2204/head195eb99cf2f165f16548f6942d2938fa0f3f9d25/docsCI38115490314 SUCCESS mergedd67d9058749c15acb6026d386f4b68034823004b before source edits. Owner's no-scroll correction supersedes the earlier scrolling proposal: the New invoice window occupies the available viewport minus8px each side; upload/status is left and invoice fields/payment choices right. Both Basic/Premium use scoped presentation wrappers and reference grid; other payment flows keep their existing layout.
