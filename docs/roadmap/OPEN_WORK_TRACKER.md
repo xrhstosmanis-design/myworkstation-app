@@ -1,3 +1,13 @@
+## 11/10/2026 - POS-KEYPAD-PREFERENCE-01 / SOURCE READY / AWAITING USER
+
+Owner `codex/pos-calculator-operator-20261011`, sequential item1 only. Claim PR2242/head4d546ba/docsCI38140688456 SUCCESS merged2718343197ae02433ed217fdcaf267d212911b13 before source. Existing other-owner records preserved, source baselineaf718caf.
+
+Client-only hook remembers visible/hidden calculator per company/store/employee (stable employee ID, profile ID fallback) in this browser; unidentified scopes never persist a shared preference. Clear `Κομπιουτεράκι` toggle with pressed state and show/hide tooltip; hidden aside removed, explicit desktop two-column rule overrides later viewport-fit geometry so sale list reclaims the column. Choices isolated immediately on person/store/company changes; denied preference reads/writes fall back to usable session state. Default remains visible. No settings schema/API/permission/payment payload/fiscal/backend changes.
+
+Node20.20.2 mounted preference test PASS after correcting fixture expectations for existing offline cache and ordinary startup API requests. It covers show/hide, remount persistence, independent operators, stable employee identity after profile-ID change, store/company isolation, anonymous transient choice and rejected preference storage; every toggle causes zero mutation API calls and no checkout. Existing scanner9 + change notice2 regressions PASS11/0; combined earlier run failed only the then-corrected new fixture. Frontend build PASS38.95s/TABLE_SERVICE; no unrelated generated source changes. Full final-head CI/build/invariants/isolated HTTP E2E still required before merge/deploy. USER/LAB acceptance NOT TESTED; no real transaction or data mutation performed and no manual PASS entry.
+
+Next single action: green full PR/main CI and ordinary guarded exact deployment, then user tests hide/reload/re-login/second-operator/show without a sale. Items2–9 wait for user acceptance of item1. Assignment retained; do not start another item or repeat accepted transactions for evidence. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-pos-calculator-operator.md`.
+
 ## 11/10/2026 15:46 Athens - POS-KEYPAD-PREFERENCE-01 / ASSIGNED / NOT TESTED
 
 Owner `codex/pos-calculator-operator-20261011`. User explicitly requested sequential implementation, testing after each; this claim covers item 1 only: calculator visibility chosen separately by each authenticated operator, remembered on this browser per company/store/operator, visible labelled toggle and reclaimed list space when hidden. Independent display preference only; existing numbered33/tracker35 operator-checkbox audit and camera/payment/category/scan owners remain assigned and unchanged. Items 2–9 are queued, not claimed or implemented here.

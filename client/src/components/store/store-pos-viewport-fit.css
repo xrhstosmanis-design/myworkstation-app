@@ -403,3 +403,10 @@
     grid-column: -2 / -1;
   }
 }
+
+/* A hidden calculator gives its desktop column back to the sale list. */
+@media (min-width: 851px) {
+  .mws-standard-pos .standard-pos-grid.without-keypad {
+    grid-template-columns: minmax(180px, 14%) minmax(0, 1fr);
+  }
+}
