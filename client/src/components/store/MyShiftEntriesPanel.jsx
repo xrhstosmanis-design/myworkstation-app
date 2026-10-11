@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useRef,useState} from "react";
 
 import PaymentAmountCorrectionAction from "./PaymentAmountCorrectionAction.jsx";
+import "./my-shift-entries.css";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const when=value=>value?new Date(value).toLocaleString("el-GR",{dateStyle:"short",timeStyle:"short"}):"—";
@@ -29,7 +30,7 @@ export default function MyShiftEntriesPanel({api,store,operator,refreshKey=0,onC
   };
   useEffect(()=>{setRows([]);load();return()=>{version.current++}},[store.id,operator?.id,refreshKey]);
   const totals=useMemo(()=>rows.filter(row=>!row.reversedAt).reduce((a,row)=>{a.total+=Number(row.amount||0);if(row.type==="SUPPLIER_PAYMENT")a.supplier+=Number(row.amount||0);else a.other+=Number(row.amount||0);return a},{total:0,supplier:0,other:0}),[rows]);
-  return <section className="cloud-panel">
+  return <section className="cloud-panel my-shift-entries-panel">
     <div className="cloud-panel-head"><div><h3>Οι πληρωμές μου</h3><p>Μόνο οι δικές μου πληρωμές προμηθευτών και λοιπά έξοδα της ενεργής βάρδιας. Με το κλείσιμο της βάρδιας η προβολή μηδενίζει οριστικά· το ιστορικό παραμένει μόνο στο BackOffice / Audit.</p></div><button onClick={load} disabled={loading}>Ανανέωση</button></div>
     {error&&<div className="cloud-alert cloud-error">{error}</div>}
     {!loading&&<div className="commerce-cards"><article className="commerce-card"><span>Σύνολο ενεργής βάρδιας</span><strong>{money(totals.total)}</strong></article><article className="commerce-card"><span>Προμηθευτές</span><strong>{money(totals.supplier)}</strong></article><article className="commerce-card"><span>Λοιπά έξοδα</span><strong>{money(totals.other)}</strong></article></div>}
