@@ -1,0 +1,15 @@
+/* Only the POS header changes theme. All existing launchers keep their handlers. */
+.mws-standard-pos .store-pos-top.pos-resizable-header{padding:0;min-height:0;gap:0;background:#e7f3ee;color:#15364f;border-bottom:1px solid #a8cbbd;overflow:visible}
+.pos-resizable-header .pos-header-content{display:flex;flex-direction:column;gap:6px;min-width:0;padding:7px 12px 0}
+.mws-standard-pos .pos-resizable-header small,.mws-standard-pos .pos-resizable-header span{opacity:1}
+.mws-standard-pos .pos-resizable-header button{background:#fff;color:#15364f;border-color:#9bbcad}
+.mws-standard-pos .pos-resizable-header .pos-header-context>button,.mws-standard-pos .pos-resizable-header .pos-header-context>div:not(.store-chat-in-app-alert){border-color:#9bbcad!important}
+.mws-standard-pos .pos-resizable-header .pos-aux-actions{padding-top:6px;border-color:#b8d6c9}
+.mws-standard-pos .pos-resizable-header .pos-aux-actions>.store-chat-top-button{background:#fff;color:#15364f;border-color:#9bbcad}
+.mws-standard-pos .pos-resizable-header button:hover{background:#d6eadd}
+.mws-standard-pos .pos-resizable-header button:focus-visible{outline:3px solid #176b50;outline-offset:2px}
+.mws-standard-pos .pos-resizable-header .store-chat-in-app-alert button{background:#087a52;color:#fff}
+.mws-standard-pos .pos-resizable-header .pos-header-resize-handle{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:22px;min-height:22px;padding:0;border:0;border-radius:0;background:#cee4d9;color:#254e40;cursor:ns-resize;touch-action:none;user-select:none;font:700 11px Arial,sans-serif;letter-spacing:0;flex:0 0 auto}
+.mws-standard-pos .pos-header-resize-handle i{display:block;width:42px;height:4px;border-radius:4px;background:#4e806c}
+.mws-standard-pos .pos-header-resize-handle span{font:inherit;letter-spacing:0}
+.mws-standard-pos .pos-resizable-header.is-resizing .pos-header-resize-handle{background:#b5d6c5}
