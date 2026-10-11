@@ -21,7 +21,7 @@ test('actual customer editor preserves unsaved basic and discount fields across 
   click('other');set('discountAudience','DOCTOR');set('discountPercent','20');set('creditLimit','10');
   click('basic');assert.equal(document.querySelector('[name="name"]').value,'Named LAB account');assert.equal(document.querySelector('[name="phone"]').value,'virtual-phone');
   click('other');assert.equal(document.querySelector('[name="discountPercent"]').value,'20');
-  await submit('[data-customer-other]');assert.equal(calls.length,1);assert.equal(calls[0].method,'POST');assert.equal(calls[0].body.name,'Named LAB account');assert.equal(calls[0].body.discountAudience,'DOCTOR');assert.equal(calls[0].body.discountPercent,20);assert.equal(calls[0].body.creditLimit,10);assert.equal(calls[0].body.phone,'virtual-phone');
+  await submit('[data-customer-other]');assert.equal(calls.length,1);assert.equal(calls[0].method,'POST');assert.equal(calls[0].body.name,'Named LAB account');assert.equal(calls[0].body.discountAudience,'DOCTOR');assert.equal(calls[0].body.discountPercent,20);assert.equal(calls[0].body.creditLimit,10);assert.equal(calls[0].body.phone,'virtual-phone');assert.equal(document.querySelector('[data-customer-modal-tab="addresses"]').disabled,false);
   document.body.innerHTML='';await editor(document.body);click('other');set('discountPercent','15');
   await submit('[data-customer-other]');assert.equal(calls.length,1);assert.match(alerts.at(-1),/επωνυμία/);assert.ok(document.querySelector('[data-customer-basic]'));
   set('name','Second virtual account');await submit('[data-customer-basic]');assert.equal(calls.length,2);assert.equal(calls[1].body.name,'Second virtual account');assert.equal(calls[1].body.discountPercent,15);
