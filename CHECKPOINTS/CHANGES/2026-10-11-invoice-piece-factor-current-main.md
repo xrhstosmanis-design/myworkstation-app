@@ -1,3 +1,18 @@
+## 11/10/2026 23:40 Athens - INVOICE-142730 / REQUIRED RENDER STARTUP COMPATIBILITY / AWAITING CI + RELEASE
+
+During exact-release preparation, authenticated Render failed deployment43594017f780ef35dfe6b748d5643387ad0e1ac6 at23:20:29 with "Global error handler signature changed; diagnostics patch not applied." Previous0a857601 remains live. Current main error handler now includes MWS_BAKED_TOTAL_GUARD before the unchanged generic response. Existing startup diagnostics script matched the entire old handler and aborted; this blocks release of the invoice correction too.
+
+Narrow required compatibility fix: insert existing sanitized reversal diagnostic before the unique unchanged generic error-handler tail, preserve the current baked-stock409 guard and all other prefixes, accept exact already-applied diagnostics idempotently, refuse missing/ambiguous tails without mutation. No diagnostics content, stock behavior, schema, permissions, deployment safety, fiscal or payment change. Extended actual subprocess regression against current handler verifies preserved baked guard409, reversal PAYMENT sanitized500, ordinary generic500, second-run no change, unknown signature refusal. Local2tests PASS/0FAIL/0SKIP. Full CI and live12-row invoice acceptance still pending; no functional PASS or draft/stock/payment write. Other owners retained; only startup blocker required for this authorized deploy handled.
+
+## 11/10/2026 23:25 Athens — INVOICE-142730-UNIT-CONFIRMATION / SOURCE READY / AWAITING CI + SAME-DRAFT ACCEPTANCE
+
+Owner `docs/invoice-142730-work-continuation-20261011`; source branch `fix/invoice-unit-confirmation-20261011`. Claim PR2323 mergeda348a993 after docsCI38171837422 SUCCESS. Live same invoice returned12 PACKAGE rows, all blank factors, quantity136/net678.28/VAT0/gross678.28 agreeing with printed total; prior PIECE-only initial default cannot help PACKAGE rows. Actual unsaved row1 switch PACKAGE→PIECE still left factor blank, reproducing remaining client defect. No transfer/save/finalization/payment/stock action.
+
+Owner explicitly confirmed in this Work conversation that each tobacco packet/pouch represents1 inventory piece. Bounded fix: blank factor defaults to1 on user switch toPIECE as well as initial PIECE load; never overwrite an explicit factor. Separate selected-row action «Επιλεγμένα: 1 πακέτο = 1 τεμάχιο αποθήκης» requires explicit count-specific confirmation and fills1 only on selected working rows, preserving printed PACKAGE units and all economics. No API call or supplier learning from this action. PACKAGE never receives an automatic unconfirmed fallback. Main draft action now exactly «Έγκριση & μεταφορά στα πρόχειρα» and still uses same-draft writes/checks only. Existing complete-pages/quantity/amount/new-draft checks, printed rounding, minimize/replay and all other owners preserved.
+
+Production DOM regression extends existing isolated real client12-row transfer test: no-selection/cancel no change, explicit bulk confirmation no write until apply, factor1/printed unit preservation,12 POSTs to same draft, double-click/repeat no duplicate, blankPIECE and unit-switch correction, explicit-factor preservation; local syntax PASS, fullCI pending. These fixtures are not real OCR or LIVE PASS. Single next: green fullPR/mainCI and guarded exact release, reopen same142730, inspect originals and fresh before baselines, select12/confirm one inventory unit/transfer once; never finalize or move stock. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-invoice-piece-factor-current-main.md`.
+
+
 # POS invoice draft transfer — 2026-10-11
 
 ## 11/10/2026 23:21 Athens — INVOICE-PIECE-FACTOR-CURRENT-MAIN / WORK HANDOFF CLAIM / RELEASE VERIFIED, ACCEPTANCE NOT TESTED
