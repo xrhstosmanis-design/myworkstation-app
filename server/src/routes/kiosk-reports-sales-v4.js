@@ -16,9 +16,10 @@ router.use((req,res,next)=>{
   next();
 });
 
-router.get("/sales-analysis",async(req,res,next)=>{try{
-  const {companyId,from,to,storeId,q,calendar}=filters(req),text=q?`%${q}%`:null;
-  const rows=await prisma.$queryRaw`
+// One calculation serves the normal report and the separately authorized assistants.
+export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calendar},{db=prisma}={}){
+  const text=q?`%${q}%`:null;
+  const rows=await db.$queryRaw`
     WITH base AS (
       SELECT sa."id" AS "saleId",sa."storeId",sa."occurredAt",sa."source",sl."productId",sl."description",sl."quantity",sl."unitPrice",sl."discount",sl."vatRate",sl."lineTotal",
         p."sku",COALESCE(p."name",sl."description") AS "name",c."name" AS "categoryName",mp."subcategoryName",s."name" AS "storeName",
@@ -62,8 +63,9 @@ router.get("/sales-analysis",async(req,res,next)=>{try{
     const grossSales=n(r.grossSales),netSales=n(r.netSales),vatValue=n(r.vatValue),costValue=n(r.costValue),profit=netSales-costValue,salesQuantity=n(r.salesQuantity);
     return {...r,currentStock:n(r.currentStock),salesQuantity,grossSales,netSales,vatValue,costValue,profit,margin:netSales?profit/netSales*100:0,averageGrossPrice:salesQuantity?grossSales/salesQuantity:0,discountValue:n(r.discountValue),normalSaleCount:n(r.normalSaleCount),reversalCount:n(r.reversalCount),returnGrossValue:n(r.returnGrossValue)};
   });
-  res.json({...(calendar?{companyId,storeId,period:{calendarFrom:calendar.calendarFrom,calendarTo:calendar.calendarTo,timeZone:calendar.timeZone,from:from.toISOString(),toExclusive:to.toISOString()}}:{}),items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:items.reduce((a,r)=>a+r.normalSaleCount,0),reversalCount:items.reduce((a,r)=>a+r.reversalCount,0),returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true});
-}catch(error){next(error)}});
+  return {...(calendar?{companyId,storeId,period:{calendarFrom:calendar.calendarFrom,calendarTo:calendar.calendarTo,timeZone:calendar.timeZone,from:from.toISOString(),toExclusive:to.toISOString()}}:{}),items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:items.reduce((a,r)=>a+r.normalSaleCount,0),reversalCount:items.reduce((a,r)=>a+r.reversalCount,0),returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true};
+}
+router.get("/sales-analysis",async(req,res,next)=>{try{res.json(await readSalesAnalysisReport(filters(req)))}catch(error){next(error)}});
 
 router.get("/sales-analysis/:productId",async(req,res,next)=>{try{
   const {companyId,from,to,storeId}=filters(req),productId=String(req.params.productId||"");
