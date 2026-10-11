@@ -71,8 +71,18 @@ function App(){
  const selectOwnerStore=async(companyId,storeId)=>{try{setLoadError("");if(!boundary.check())return;if(companyId===user.company?.id){const target=stores.find(row=>row.id===storeId);setSelectedStore(target||null);setPage("stores");return}const result=await scopedApi("/api/auth/owner-companies/select",{method:"POST",body:JSON.stringify({companyId})});if(!boundary.check())return;localStorage.setItem("token",result.token);localStorage.setItem("user",JSON.stringify(result.user));sessionStorage.setItem("ownerSelectedStoreId",storeId);window.location.assign("/")}catch(error){setLoadError(error.message||"Δεν ήταν δυνατή η επιλογή καταστήματος.")}};
  const load=async()=>{setLoadError("");const [st,emps,strs,lvs,license]=await Promise.all([scopedApi("/api/dashboard"),scopedApi("/api/employees"),scopedApi("/api/stores"),scopedApi("/api/leaves"),scopedApi("/api/license/current")]);if(!boundary.check())return;setStats(st);setEmployees(emps);setStores(strs);setLeaves(lvs);setActiveModules(license.activeModules||[]);if(user?.role==="OWNER"&&!supportContext){const available=await scopedApi("/api/auth/owner-companies");setOwnerCompanies(available.companies||[])}const pendingStoreId=sessionStorage.getItem("ownerSelectedStoreId");if(pendingStoreId){sessionStorage.removeItem("ownerSelectedStoreId");const pending=strs.find(row=>row.id===pendingStoreId);if(pending){setSelectedStore(pending);setPage("stores")}}const target=strs.find(row=>row.id===supportStore);if(target&&supportPage==="stores")setSelectedStore(target);const scheduleStore=target||strs[0];if(scheduleStore){const sc=await scopedApi(`/api/schedules/latest?storeId=${scheduleStore.id}`);setSchedule(sc)}};
  useEffect(()=>{if(user)load().catch(error=>setLoadError(error.message||"Η φόρτωση απέτυχε."))},[user]);
+ const startSession=next=>{
+   // A completed explicit login starts a new workspace. App-owned selections
+   // must not remount an old store with the newly accepted credentials.
+   sessionStorage.removeItem("ownerSelectedStoreId");
+   setSelectedStore(null);setChatStore(null);setWorkforceStoreId("");
+   setPage("dashboard");setStats(null);setEmployees([]);setStores([]);
+   setLeaves([]);setActiveModules([]);setSchedule(null);setWarnings([]);
+   setMetrics(null);setOwnerCompanies([]);setLoadError("");
+   setSessionProblem("");setUser(next);
+ };
  const logout=()=>{localStorage.clear();setSessionProblem("");setUser(null)};
- if(!user)return <Login onLogin={next=>{setSessionProblem("");setUser(next)}}/>;
+ if(!user)return <Login onLogin={startSession}/>;
  if(sessionProblem)return <div className="login-shell"><section className="login-card" role="alert"><h1>Η προβολή Backoffice διακόπηκε</h1><p>{sessionProblem==="unauthorized"?"Η συνεδρία δεν είναι πλέον ενεργή.":"Η σύνδεση άλλαξε. Τα δεδομένα της προηγούμενης προβολής αποσύρθηκαν."}</p><p>Οι αυτόματες ανανεώσεις αυτής της προβολής σταμάτησαν. Άνοιξε ξανά το Backoffice ή συνδέσου με τον λογαριασμό που θέλεις.</p><button type="button" onClick={()=>window.location.assign("/")}>Άνοιγμα Backoffice</button><button type="button" onClick={()=>{setSessionProblem("");setUser(null)}}>Νέα σύνδεση</button></section></div>;
  return <div className="app"><aside><div className="brand"><div className="mark">MW</div><div><b>MyWorkStation</b><small>{companyName}</small></div></div>
  <nav><Nav active={page==="dashboard"} onClick={()=>setPage("dashboard")} icon={<LayoutDashboard/>}>Αρχική</Nav><Nav active={page==="workforce"} onClick={()=>setPage("workforce")} icon={<Users/>}>Προσωπικό & Πρόγραμμα</Nav><Nav active={page==="stores"} onClick={()=>{setSelectedStore(null);setPage("stores")}} icon={<Building2/>}>Καταστήματα</Nav>{activeModules.includes("STORE_CHAT")&&<Nav active={page==="chat"} onClick={()=>setPage("chat")} icon={<MessageCircle/>}>Chat</Nav>}</nav>

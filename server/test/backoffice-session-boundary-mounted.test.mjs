@@ -11,7 +11,8 @@ const jwt=p=>`fixture.${Buffer.from(JSON.stringify(p)).toString("base64url")}.no
 const base={id:"fixture-owner",companyId:"company-A",sessionId:"session-A",sessionVersion:1,role:"OWNER",platformRole:"SUPER_ADMIN",isSuperAdmin:true,tokenType:"BACKOFFICE_USER",supportContext:{companyId:"company-A",storeId:"store-A",destination:"ALL"}};
 const fixtureUser={id:"fixture-owner",role:"OWNER",fullName:"Fixture owner",isSuperAdmin:true,company:{id:"company-A",name:"Fixture company"}};
 
-test("actual Backoffice and StoreCloudPage stop stale polling, retain renewal, and recover through explicit login",async()=>{
+test("actual Backoffice and StoreCloudPage stop stale polling, retain renewal, and recover through explicit login",async t=>{
+ for(const loginCompany of ["company-A","company-B"])await t.test(`fresh workspace after explicit ${loginCompany} login`,async()=>{
   const filename=fileURLToPath(new URL("../../client/src/main.jsx",import.meta.url));
   const source=fs.readFileSync(filename,"utf8").replace('createRoot(document.getElementById("root")).render(<App/>);','export {App};');
   const result=await build({stdin:{contents:source,resolveDir:path.dirname(filename),loader:"jsx"},bundle:true,write:false,platform:"node",format:"cjs",external:["react","react-dom","react-dom/client","react/jsx-runtime"],loader:{".css":"empty"},plugins:[{name:"isolated-child-panels",setup(b){b.onLoad({filter:/\.jsx$/},args=>{
@@ -30,11 +31,12 @@ test("actual Backoffice and StoreCloudPage stop stale polling, retain renewal, a
   const seed=()=>{localStorage.setItem("token",jwt(base));localStorage.setItem("user",JSON.stringify(fixtureUser));localStorage.setItem("supportContext",JSON.stringify(base.supportContext));sessionStorage.setItem("platformToken","fixture-platform")};
   seed();
   globalThis.fetch=async(url,options={})=>{
-    calls.push({url,authorization:options.headers?.Authorization,method:options.method||"GET"});
+    const companyId=JSON.parse(Buffer.from(options.headers.Authorization.split(".")[1],"base64url")).companyId;
+    calls.push({url,authorization:options.headers?.Authorization,method:options.method||"GET",companyId});
     const overview=url.includes("/overview?");
     let status=overview?overviewStatus:url==="/api/auth/login"?loginStatus:200;
-    let data=url==="/api/stores"?[{id:"store-A",name:"Fixture store"}]:url==="/api/employees"||url==="/api/leaves"?[]:url==="/api/license/current"?{activeModules:[]}:url==="/api/auth/owner-companies"?{companies:[]}:overview?{devices:[]}:{};
-    if(url==="/api/auth/login"&&status===200)data={token:jwt({...base,sessionId:"session-new",platformRole:"OWNER",isSuperAdmin:false,supportContext:undefined}),user:{...fixtureUser,isSuperAdmin:false}};
+    let data=url==="/api/stores"?(companyId==="company-B"?[{id:"store-B",name:"New company store"}]:[{id:"store-A",name:"Fixture store"}]):url==="/api/employees"||url==="/api/leaves"?[]:url==="/api/license/current"?{activeModules:[]}:url==="/api/auth/owner-companies"?{companies:[]}:overview?{devices:[]}:{};
+    if(url==="/api/auth/login"&&status===200)data={token:jwt({...base,companyId:loginCompany,sessionId:"session-new",platformRole:"OWNER",isSuperAdmin:false,supportContext:undefined}),user:{...fixtureUser,isSuperAdmin:false,company:{id:loginCompany,name:`Fixture ${loginCompany}`}}};
     if(status!==200)data={error:"Fixture denial"};
     if(url==="/api/auth/login"&&holdLogin)await new Promise(resolve=>{releaseLogin=resolve});
     return {ok:status===200,status,json:async()=>data};
@@ -58,22 +60,35 @@ test("actual Backoffice and StoreCloudPage stop stale polling, retain renewal, a
     const stoppedCount=calls.length;await act(async()=>{for(const t of oldTimers)await t.fn()});assert.equal(calls.length,stoppedCount);assert.equal(localStorage.getItem("token"),preserved);
 
     await click("Νέα σύνδεση");
+    sessionStorage.setItem("ownerSelectedStoreId","store-A");
     assert.ok(document.querySelector("form.login-card"));
     await act(async()=>document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));
     assert.equal(localStorage.getItem("token"),preserved);assert.ok(localStorage.getItem("supportContext"));
+    assert.equal(sessionStorage.getItem("ownerSelectedStoreId"),"store-A");
     loginStatus=200;holdLogin=true;
     await act(async()=>document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));
     const newer=jwt({...base,sessionId:"other-tab-session"});localStorage.setItem("token",newer);
     await act(async()=>releaseLogin());
     assert.equal(localStorage.getItem("token"),newer);assert.ok(localStorage.getItem("supportContext"));assert.match(document.body.textContent,/Η σύνδεση άλλαξε όσο περίμενες/);
+    assert.equal(sessionStorage.getItem("ownerSelectedStoreId"),"store-A");
     holdLogin=false;
+    const recoveryStart=calls.length;
     await act(async()=>document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));
     assert.equal(localStorage.getItem("supportContext"),null);assert.equal(sessionStorage.getItem("platformToken"),null);
+    assert.equal(sessionStorage.getItem("ownerSelectedStoreId"),null);
+    assert.equal(document.querySelector(".store-operations-front"),null);assert.equal(timers.size,0);
+    assert.match(document.body.textContent,new RegExp(`Fixture ${loginCompany}`));
+    assert.deepEqual(calls.slice(recoveryStart).filter(x=>x.url.includes("/overview")),[]);
+    await click("Καταστήματα");await click("Άνοιγμα καταστήματος");
     assert.ok(document.querySelector(".store-operations-front"));assert.equal(timers.size,3);
+    const ownStore=loginCompany==="company-B"?"store-B":"store-A";
+    const reopened=calls.slice(recoveryStart).filter(x=>x.url.includes("/overview"));
+    assert.ok(reopened.length>0);assert.ok(reopened.every(x=>x.companyId===loginCompany&&x.url.includes(`/stores/${ownStore}/`)));
     overviewStatus=401;await tick(2000);
     assert.equal(document.querySelector(".store-operations-front"),null);assert.equal(timers.size,0);assert.match(document.body.textContent,/Η συνεδρία δεν είναι πλέον ενεργή/);
     assert.deepEqual(calls.filter(x=>x.method!=="GET").map(x=>x.url),["/api/auth/login","/api/auth/login","/api/auth/login"]);
   }finally{
     await act(async()=>root.unmount());dom.window.close();for(const k of keys){const desc=previous.get(k);if(desc)Object.defineProperty(globalThis,k,desc);else delete globalThis[k]}
   }
+ });
 });
