@@ -36,7 +36,7 @@ Owner `codex/cap-description-slash-20261011`, source branch `fix/cap-description
 
 Scope: normalize description slash delimiters to spaces for outbound SL field only; retain original catalog/checkout description, strict CR/LF rejection,80-character limit,Windows1253 validation,barcode/payment validation,VAT mappings,writer liveness,one-shot dispatch/idempotency. No production sale/payment/stock/shift/fiscal command, request replay or existing-data correction. Read current active/tracker/pending/checklist/manual and relevant CAP checkpoints/history before change. Existing KAT/Diadoxou profiles and CASH/CARD/Delivery protections preserved. Acceptance: exact observed name serializes as one SL with unchanged numeric fields and one CR; injection/newlines/overlong/encoding fail closed; full Node20 CI/build/isolated E2E/Windows, exact guarded release and physical acceptance still required. CI is not LAB PASS. No manual PASS until real observation.
 
-Claim PR2321 merged green; SOURCE READY/AWAITING CI AND DEVICE. Latest bounded source evidence is the CAP-DESCRIPTION-SLASH-01 entry at the end of this record and `CHECKPOINTS/CHANGES/2026-10-11-cap-description-slash.md`. Owner retained until completion/named handoff.
+Claim PR2321 and source PR2322 merged green; SOURCE LIVE9d69ab09/AWAITING DEVICE. Latest bounded source evidence is the CAP-DESCRIPTION-SLASH-01 entry at the end of this record and `CHECKPOINTS/CHANGES/2026-10-11-cap-description-slash.md`. Owner retained until completion/named handoff.
 
 ## 11/10/2026 23:24 Athens — POS-BRAND-VARIANTS-06 / ASSIGNED / NOT TESTED
 
@@ -3904,7 +3904,15 @@ Application release7b297422 was independently guarded by deploy workflow38151522
 
 Release infrastructure blocker resolved within bounded ownership; payroll UI/financial acceptance stays AWAITING USER with same owner. Single next action Ctrl+F5 → Πληρωμές → Μισθοδοσία → one fields/choices photo; no repeat/payment just for evidence. Other assigned source/protected PASS untouched.
 
-## 11/10/2026 — CAP-DESCRIPTION-SLASH-01 / SOURCE READY / AWAITING CI AND DEVICE
+## Release receipt — 11/10/2026 23:50–23:51 Athens / SOURCE LIVE, AWAITING DEVICE
+
+Source PR2322 finalhead10f10d384700f35c581f94e1264675c934588bb3/fullCI38172413216 SUCCESS2399PASS/0FAIL/0SKIP; merged53781d13483a17f52aa394498b1f1a20808f62c2. Exact mainCI38172781274/job114568785249 SUCCESS2399/0/0. All required native PostgreSQL/security/licensing/build/contracts/invariants/real HTTP E2E/Chromium/Windows checks passed. Earlier source runs38171804373/38172131796 cancelled by shared-record reconciliation after2399/0/0 tests; not complete CI acceptance. Prepared local2369/0/23DBSKIP and focused22/22 remain distinct.
+
+Automatic guarded release53781d was correctly deferred by concurrent sourcePR2326/ad911715 and then invoicePR2324. Final combined main9d69ab09b60f94f7afeafa8b82dc342245bacb6a/fullCI38173420095/job114570727806 SUCCESS2408PASS/0FAIL/0SKIP; independently fetched CAP source equals tested blob2a3f4330913a380c5feac65a1947dffb02485515 byte-for-byte. Actual guarded Render workflow38173742880/deployjob114571644146 SUCCESS: pinned hook23:48:58Athens, healthy exact revision observed23:50:49Athens; rollback artifact11714583720 retains previous healthy0a857601. Earlier deploy wrappers38173094713/38173404392 had skipped hook/wait and are not deployment proof. Independent public GET23:51Athens `/api/health`: ok=true/version0.22.0+kat-test-pos/exact9d69ab09. This proves source availability, not physical receipt or financial acceptance.
+
+No production sale/payment/stock/shift/fiscal command or historical replay by this page. Original catalog/checkout names unchanged; slashes serialize as spaces only in outbound SL. CR/LF/80-character/Windows1253/barcode/payment/VAT/liveness/idempotency guards retained. Actual physical POS/receipt and independent financial/stock/Audit effects remain NOT TESTED; no manual PASS. Generated central PDF remains deferred after auto-review rejection. Owner `codex/cap-description-slash-20261011` retained for device acceptance; broader fiscal/installation owners preserved. Single next action: after fresh baseline and checking existing attempts are not paid/uncertain, one genuinely intended sale using the slash-containing product; confirm receipt and single transaction/payment/stock/Audit. Never repeat an old paid attempt merely for evidence. A screenshot/read-only inspection alone is not payment/stock PASS.
+
+## 11/10/2026 — CAP-DESCRIPTION-SLASH-01 / SOURCE LIVE / AWAITING DEVICE
 
 Owner `codex/cap-description-slash-20261011` retained. Claim PR2321 exact headf1e24063723b495fe53c5f94d67cff6cd96d5ef1/docs CI38171533045 SUCCESS, mergedde24e5ac4be801ba5cefd38a4933ce1030851869 before source edits. Source branch `fix/cap-description-slash-20261011` based on this merged claim, preserving concurrent DAILY integration43594017 and all other owners.
 
