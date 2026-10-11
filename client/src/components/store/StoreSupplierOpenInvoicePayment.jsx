@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {Camera,FileText,Upload,Wallet} from "lucide-react";
+import "./store-pos-open-invoices.css";
 import {prepareDocumentFile} from "../../lib/document-image-quality.js";
 
 const num=value=>Number(String(value??"0").replace(",","."))||0;
@@ -34,7 +35,7 @@ export default function StoreSupplierOpenInvoicePayment({api,store,suppliers=[],
       setItems([]);setAllocations({});setFile(null);setNote("");onChanged?.();
     }catch(error){const failure=`❌ ${error?.message||"Δεν καταχωρίστηκε η πληρωμή."}`;setFeedback({ok:false,text:failure});setMessage?.(failure)}finally{setBusy(false)}
   };
-  return <div className="pos-payment-form-v3-root">
+  return <div className="pos-payment-form-v3-root pos-open-invoice-form">
     <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>Πληρωμή ανοιχτών τιμολογίων — βλέπεις μόνο τις οφειλές του επιλεγμένου προμηθευτή. Η επιβεβαίωση γίνεται στο BackOffice.</div>
     <label>Προμηθευτής<select value={supplierId} disabled={busy} onChange={event=>setSupplierId(event.target.value)}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(row=><option key={row.id} value={row.id}>{row.name}{row.taxId?` · ${row.taxId}`:""}</option>)}</select></label>
     {supplierId&&<div className="supplier-open-invoices">{loading?<div style={{padding:12,fontWeight:800}}>Φόρτωση ανοιχτών τιμολογίων…</div>:items.length?<>{items.map(item=><div key={item.id} className="supplier-open-invoice-row"><div><b>{item.documentNumber||"Χωρίς αριθμό"}</b><small style={{display:"block"}}>{String(item.documentDate||"").slice(0,10)} · {item.storeName} · Υπόλοιπο {euro(item.outstandingAmount)}</small></div><input className="supplier-open-invoice-amount" aria-label={`Ποσό για ${item.documentNumber||item.id}`} inputMode="decimal" value={allocations[item.id]||""} max={item.outstandingAmount} placeholder="0,00" disabled={busy} onChange={event=>setAllocations(current=>({...current,[item.id]:event.target.value}))}/></div>)}<div style={{padding:10,fontWeight:900,textAlign:"right"}}>Σύνολο επιλεγμένης πληρωμής: {euro(total)}</div></>:<div style={{padding:12,fontWeight:800}}>Δεν υπάρχουν απλήρωτα τιμολόγια με πίστωση για αυτόν τον προμηθευτή.</div>}</div>}
