@@ -1,3 +1,13 @@
+## 11/10/2026 — POS-SHIFT-CLOSE-READABILITY-01 / SOURCE READY / AWAITING CI + PHYSICAL ACCEPTANCE
+
+Same owner `codex/pos-shift-close-readability-20261011`. Fresh owner approval09:25:45 explicitly covers all necessary push/merge. Claim PR2206/heada2463238/docsCI38118135685 SUCCESS merged75a2f9a before source changes. Earlier automatic publication rejection is resolved by fresh authorization; ordinary git transport subsequently lacked credentials, so the connected GitHub publication API was used. All published claim blobs matched local git hashes exactly.
+
+Closing-only shell class plus CSS import/stylesheet: instructions/labels18px, amount entry24px with52px fields, checkbox28px with52px declaration target, title28px,52px close/submit/camera/recount controls. Larger dialog uses available viewport and fixes its two-child grid to header + scrollable body. No content/validation hidden; all mandatory labels, errors, card warning, shortage/recount options and close action remain reachable by touch. The existing body-mounted keyboard is styled only while this closing shell exists:24px/56px normal keys,20px special keys, wider900px dialog, responsive narrow keys. Keyboard JS/language/drag/focus/Enter behavior unchanged. Other shift/payment/dialog layouts retain original selectors.
+
+Node20.20.2 frontend build PASS8.11s/TABLE_SERVICE verified; eight existing opener-card/manual-count/QR-camera/mounted-revocation regressions PASS/0FAIL/0SKIP. Initial baseline missing-jsdom startup failures resolved by standard local ignore-scripts dependency installation; no package/lockfile change included. Exact inverse removal of the one import and class restores StoreOperatorApp byte-for-byte, proving all business handlers/permissions unchanged. PostCSS parsing and git diff whitespace PASS. No implementation-mirroring tests introduced. Source build/regressions are not physical USER/LAB PASS; actual visual geometry/device zoom/touch remains NOT TESTED. No sale/payment/QR credential/shift/stock/permission/fiscal mutation or prior closure replay.
+
+Required next: exact full PR/main CI, existing guarded Render release, independently refreshed exact public health/served stylesheet. Then one final photograph of the same Διαδόχου Παύλου closing form after normal refresh, without closing/reopening a shift just for geometry. Prior05Oct QR/recount/shortage,10Oct card/count and mounted permission PASS retained; No33/SHIFT-QR and all other owners/PASS unchanged. Keep assignment until physical acceptance or named handoff. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-pos-shift-close-readability.md`.
+
 # POS closing-form and keyboard readability — 11/10/2026
 
 ## 11/10/2026 09:18 Europe/Athens — POS-SHIFT-CLOSE-READABILITY-01 / ASSIGNED / USER readability FAIL
