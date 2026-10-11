@@ -58,11 +58,13 @@ for(let byte=0;byte<256;byte++){
   }catch{}
 }
 
-function field(value,label,{required=true,maxLength=80}={}){
+function field(value,label,{required=true,maxLength=80,replaceSlashes=false}={}){
   const result=String(value??"").trim();
   if(required&&!result)throw new Error(`${label} is required`);
-  if(result.length>maxLength||/[\/\r\n]/.test(result))throw new Error(`${label} contains an unsupported CAP Driver character`);
-  return result;
+  if(result.length>maxLength||/[\r\n]/.test(result)||(!replaceSlashes&&/\//.test(result)))throw new Error(`${label} contains an unsupported CAP Driver character`);
+  const safe=replaceSlashes?result.replace(/\//g," ").trim():result;
+  if(required&&!safe)throw new Error(`${label} is required`);
+  return safe;
 }
 
 function fixed(value,places,label){
@@ -92,7 +94,9 @@ export function buildRbsCapDriverV1Command({items,paymentMethod,total,paymentCod
   const label=field(paymentLabel||PAYMENT_LABELS[paymentMethod],"payment label",{maxLength:24});
   const lines=["HL/"];
   for(const item of items){
-    const description=field(item.description,"line description");
+    // Slash is the CAP field delimiter. Keep the catalog/checkout name intact,
+    // but serialize its slashes as spaces; every other field guard still applies.
+    const description=field(item.description,"line description",{replaceSlashes:true});
     const barcode=field(item.barcode,"barcode",{required:false,maxLength:32});
     const quantity=fixed(item.quantity,3,"quantity");
     const unitPrice=fixed(item.unitPrice,2,"unit price");
