@@ -1,14 +1,29 @@
 import {useEffect,useRef} from 'react';
+import {productMatchesCodes} from './pos-catalog-resolver.js';
 
-export function exactScanBarcode(products,value){
-  if(!/^\d{6,18}$/.test(value))return null;
+// Automatic scans resolve stored numeric barcode aliases; explicit Enter can resolve a unique SKU.
+const barcodeCodes=value=>String(value??'').split('~').flatMap(part=>{
+  const code=part.replace(/\s/g,'');
+  if(!/^\d{6,18}$/.test(code))return [];
+  return [...new Set([code,code.replace(/^0+(?=\d)/,'')])];
+});
+const barcodeMatches=(stored,value)=>barcodeCodes(stored).some(code=>barcodeCodes(value).includes(code));
+
+export function exactScanBarcode(products,value,{complete=false,manual=false}={}){
+  if(!manual&&!/^\d{6,18}$/.test(value))return null;
+  const wanted=new Set(barcodeCodes(value));
   let unfinished=false;const rows=[];
-  for(const product of products){const codes=[...(product.barcodes||[]),...(product.barcodeOptions||[]).map(row=>row.barcode)].map(String);if(codes.some(code=>code.length>value.length&&code.startsWith(value)))unfinished=true;if(codes.includes(value))rows.push(product)}
-  return !unfinished&&rows.length===1?rows[0]:null;
+  for(const product of products){
+    const codes=[...(product.barcodes||[]),...(product.barcodeOptions||[]).map(row=>row.barcode),product.masterCode,product.sourceCode!==product.sku?product.sourceCode:null].flatMap(barcodeCodes);
+    if(codes.some(code=>code.length>value.length&&code.startsWith(value)))unfinished=true;
+    if(codes.some(code=>wanted.has(code)))rows.push(product);
+  }
+  if(manual&&!rows.length){const matches=products.filter(product=>productMatchesCodes(product,[value]));return matches.length===1?matches[0]:null}
+  return (complete||!unfinished)&&rows.length===1?rows[0]:null;
 }
 
 export function barcodeCartProduct(product,value){
-  const option=(product.barcodeOptions||[]).find(row=>row.barcode===value);
+  const options=product.barcodeOptions||[],option=options.find(row=>row.barcode===value)||options.find(row=>barcodeMatches(row.barcode,value));
   return option?{...product,productId:product.id,cartKey:`${product.id}::${option.barcode}`,scannedBarcode:option.barcode,salePrice:option.salePrice==null?product.salePrice:Number(option.salePrice)}:product;
 }
 
