@@ -38,13 +38,13 @@ test('mounted shift center updates current cash and protects complete terminal/s
  const keys=['window','document','navigator','HTMLElement','Event','IS_REACT_ACT_ENVIRONMENT','setInterval','clearInterval'];
  const previous=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[k]});
- let tick,cleared=0,cash=0,expense=0,fail=false,hold=null,release,calls=[];
+ let tick,cleared=0,cash=0,expense=0,fail=false,management=false,hold=null,release,calls=[];
  globalThis.setInterval=fn=>{tick=fn;return 1};globalThis.clearInterval=()=>{cleared++};
  const api=async(path,options={})=>{
   calls.push({path,options});const storeId=path.match(/stores\/([^/]+)/)[1];
   if(path.includes('/transactions/')){
    if(fail)throw Error('offline');
-   const result={store:{id:storeId},openSessions:[{id:storeId+'-main',terminalPos:'MAIN',openingOperational:storeId==='A'?100:7},{id:storeId+'-control',terminalPos:'CONTROL',openingOperational:20}],summaryBySession:{[storeId+'-main']:summary(cash,expense,{cardSales:500,irisSales:80}),[storeId+'-control']:summary(2)},recent:[]};
+   const result={store:{id:storeId},access:{canForceClose:management},openSessions:[{id:storeId+'-main',terminalPos:'MAIN',openingOperational:storeId==='A'?100:7},{id:storeId+'-control',terminalPos:'CONTROL',openingOperational:20}],summaryBySession:{[storeId+'-main']:summary(cash,expense,{cardSales:500,irisSales:80}),[storeId+'-control']:summary(2)},recent:[]};
    if(hold===storeId)return new Promise(r=>{release=()=>r(result)});
    return result;
   }
@@ -59,8 +59,8 @@ test('mounted shift center updates current cash and protects complete terminal/s
  const amount=selector=>document.querySelector(selector+' strong')?.textContent;
  const format=v=>v.toLocaleString('el-GR',{style:'currency',currency:'EUR'});
  try{
-  await mount('A');assert.equal(amount('.current-shift-cash'),format(100));assert.equal(amount('.current-store-cash'),format(122));
-  cash=50;await settle(tick);assert.equal(amount('.current-shift-cash'),format(150));
+  await mount('A');assert.equal(document.querySelector('.shift-detail-actions button'),null);assert.equal(amount('.current-shift-cash'),format(100));assert.equal(amount('.current-store-cash'),format(122));
+  management=true;cash=50;await settle(tick);assert.equal(document.querySelector('.shift-detail-actions button').textContent,'Κλείσιμο βάρδιας');assert.equal(amount('.current-shift-cash'),format(150));
   expense=10;await settle(()=>window.dispatchEvent(new Event('focus')));assert.equal(amount('.current-shift-cash'),format(140));assert.equal(amount('.current-store-cash'),format(162));
   assert.equal(document.querySelector('.current-shift-cash .cash-balance-breakdown').textContent.includes(format(10)),true);
   const cards=[...document.querySelectorAll('.active-shift-card')];await settle(()=>cards[1].click());assert.equal(amount('.current-shift-cash'),format(22));
