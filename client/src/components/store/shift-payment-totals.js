@@ -9,3 +9,12 @@ export function addSalePaymentTotals(totals, sale) {
   else if (sale.type === "SALE_IRIS") totals.iris += sale.amount;
   else totals.card += sale.amount;
 }
+
+// cardSales already includes IRIS in the complete server ledger. Recent rows
+// describe activity and may be capped; they cannot determine collected totals.
+export function shiftCollectionTotals(summary) {
+  const values = ['cashSales', 'cardSales', 'irisSales'].map(key => summary?.[key]);
+  if (values.some(value => value === null || value === undefined || !Number.isFinite(Number(value)))) return null;
+  const [cash, combinedCard, iris] = values.map(value => Math.round(Number(value) * 100));
+  return { cash: cash / 100, card: (combinedCard - iris) / 100, iris: iris / 100, total: (cash + combinedCard) / 100 };
+}
