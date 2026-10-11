@@ -1,0 +1,82 @@
+{
+  "schema": "rendered-ui-observation/v1",
+  "scope": "LIMITED LIVE PASS: two read-only Owner sales negative examples",
+  "owner": "codex/unified-voice-assistant-20261010",
+  "browser": "Cloud Chrome1/tab2",
+  "identity": "Υπεύθυνος Εργαστηρίου",
+  "company": "MYWORKSTATION LAB",
+  "store": {
+    "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "id": "cmtpopbgo000trhb5ng9ytiru"
+  },
+  "serverRevision": "3e37a194a2df085872d193569e7e8d693c16269e",
+  "client": "Retained existing released assistant; unrelated Audit fresh client not tested",
+  "mainCI": 38144821469,
+  "guardedRender": 38145069708,
+  "period": {
+    "from": "2026-10-01",
+    "to": "2026-10-10",
+    "inclusive": true,
+    "timeZone": "Europe/Athens",
+    "normalReportAthensCheckedBeforeAndAfter": true
+  },
+  "ambiguity": {
+    "query": "LAB",
+    "question": "Πόσα τεμάχια του είδους LAB πουλήθηκαν από 01/10/2026 έως και 10/10/2026; Δείξε τζίρο με ΦΠΑ, καθαρή αξία και ΦΠΑ μόνο για το ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ.",
+    "reportBeforeAt": "2026-10-11T13:55:50.698Z",
+    "askAt": "2026-10-11T13:56:04.824Z",
+    "answerAt": "2026-10-11T13:56:15.905Z",
+    "reportAfterAt": "2026-10-11T13:56:59.314Z",
+    "reportRows": [
+      {
+        "name": "LAB EXCEL TEST 1",
+        "sku": "LAB-EXCEL-20260909-01",
+        "quantity": 3,
+        "gross": 2.4,
+        "net": 2.12,
+        "vat": 0.28
+      },
+      {
+        "name": "LAB EXCEL TEST 2",
+        "sku": "LAB-EXCEL-20260909-02",
+        "quantity": 2,
+        "gross": 0,
+        "net": 0,
+        "vat": 0
+      }
+    ],
+    "beforeAfterEqual": true,
+    "assistant": {
+      "requestedSpecificSKU": true,
+      "candidatesMatchReport": true,
+      "amountsOrAggregateDisplayed": false,
+      "sourceMessage": "Βρέθηκαν περισσότερα ή μη μοναδικά είδη. Γράψε το συγκεκριμένο SKU· δεν εμφανίζεται άθροισμα."
+    },
+    "limits": "Provider suggestion to request multi-SKU combination is not feature acceptance.",
+    "photo": "voice-owner-ambiguity-1791726992372.jpg"
+  },
+  "noMatch": {
+    "query": "VOICE-NOMATCH-20261011",
+    "question": "Πόσα τεμάχια του είδους VOICE-NOMATCH-20261011 πουλήθηκαν από 01/10/2026 έως και 10/10/2026; Δείξε τζίρο με ΦΠΑ, καθαρή αξία και ΦΠΑ μόνο για το ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ.",
+    "reportBeforeAt": "2026-10-11T13:57:09.936Z",
+    "askAt": "2026-10-11T13:57:11.143Z",
+    "answerAt": "2026-10-11T13:57:31.747Z",
+    "reportAfterAt": "2026-10-11T13:58:06.995Z",
+    "rowsBefore": 0,
+    "rowsAfter": 0,
+    "assistant": {
+      "answer": "Δεν βρέθηκαν καταχωρημένες πωλήσεις για το ζητούμενο είδος στην επιλεγμένη περίοδο.",
+      "limitation": "Αυτό δεν αποδεικνύει ότι το είδος δεν υπάρχει ή ότι έχει μηδενικό απόθεμα.",
+      "fabricatedQuantityOrAmount": false,
+      "sourceAgrees": true
+    },
+    "productCreated": false,
+    "photo": "voice-owner-no-match-1791727065790.jpg"
+  },
+  "actualProviderRawInspected": false,
+  "physicalMicrophone": "NOT TESTED",
+  "mutations": "No business/module/license/employee/stock/payment/fiscal/shift changes; two authorized provider questions only",
+  "fullAssistant": "OPEN",
+  "remaining": "Caps/source failures/timeouts/DST/other product-date boundaries, in-flight/recording/role/module/license/revocation/foreign scope, physical microphone, remaining domains/POS/optional speech",
+  "nextAction": "Inspect existing authorized Owner APIs and publish next bounded read-only domain claim before source work"
+}
