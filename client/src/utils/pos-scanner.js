@@ -1,5 +1,6 @@
 import {useEffect,useRef} from 'react';
 import {productMatchesCodes} from './pos-catalog-resolver.js';
+import {normalizeGreekSearch} from './greek-search.js';
 
 // Automatic scans resolve stored numeric barcode aliases; explicit Enter can resolve a unique SKU.
 const barcodeCodes=value=>String(value??'').split(/[~,]/).flatMap(part=>{
@@ -20,6 +21,38 @@ export function exactScanBarcode(products,value,{complete=false,manual=false}={}
   }
   if(manual&&!rows.length){const matches=products.filter(product=>productMatchesCodes(product,[value]));return matches.length===1?matches[0]:null}
   return (complete||!unfinished)&&rows.length===1?rows[0]:null;
+}
+
+// Built once per immutable selected-store catalog, never shared between stores.
+export function createPosScanCatalog(products){
+  const byBarcode=new Map(),longerPrefixes=new Set();
+  const searchText=products.map((product,index)=>{
+    const codes=new Set([...(product.barcodes||[]),...(product.barcodeOptions||[]).map(row=>row.barcode),product.masterCode,product.sourceCode!==product.sku?product.sourceCode:null].flatMap(barcodeCodes));
+    for(const code of codes){
+      if(!byBarcode.has(code))byBarcode.set(code,[]);
+      byBarcode.get(code).push(index);
+      for(let length=6;length<code.length;length++)longerPrefixes.add(code.slice(0,length));
+    }
+    return normalizeGreekSearch([product.name,product.sku,product.sourceCode,product.masterCode,...(product.barcodes||[])].flat(Infinity).join(' '));
+  });
+  return {
+    exact(value,{complete=false,manual=false}={}){
+      if(!manual&&!/^\d{6,18}$/.test(value))return null;
+      const matches=new Set();
+      for(const code of barcodeCodes(value))for(const index of byBarcode.get(code)||[])matches.add(index);
+      if(manual&&!matches.size){const rows=products.filter(product=>productMatchesCodes(product,[value]));return rows.length===1?rows[0]:null}
+      return (complete||!longerPrefixes.has(value))&&matches.size===1?products[matches.values().next().value]:null;
+    },
+    search(value){
+      if(!value.trim())return [];
+      const terms=normalizeGreekSearch(value).split(' ').filter(Boolean),rows=[];
+      for(let index=0;index<products.length;index++){
+        if(terms.every(term=>searchText[index].includes(term)))rows.push(products[index]);
+        if(rows.length===48)break;
+      }
+      return rows;
+    }
+  };
 }
 
 export function barcodeCartProduct(product,value){

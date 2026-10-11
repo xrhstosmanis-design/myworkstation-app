@@ -49,7 +49,7 @@ test('scanner focus respects disabled/detached inputs and visible dialogs, ignor
  input.disabled=true;assert.equal(scannerCanFocus(input),false);input.disabled=false;input.remove();assert.equal(scannerCanFocus(input),false);dom.window.close();
 });
 
-for(const fixture of [{name:'plain',scan:'52101588',stored:['52101588']},{name:'imported alias',scan:'5201222304692',stored:[' 05201222304692~5201222304692 '],option:' 5201222304692 '},{name:'shared prefix',scan:'5201222304692',stored:['5201222304692'],longer:true},{name:'numeric master code',scan:'5201222304692',stored:[],masterCode:'5201222304692',noOptions:true},{name:'actual comma list',scan:'5201222304692',stored:['5201222305620,5201222304692,5201222302988'],noOptions:true,price:4,sku:'12237',productName:'TEREA BRONZE'}]){
+for(const fixture of [{name:'plain',scan:'52101588',stored:['52101588']},{name:'imported alias',scan:'5201222304692',stored:[' 05201222304692~5201222304692 '],option:' 5201222304692 '},{name:'shared prefix',scan:'5201222304692',stored:['5201222304692'],longer:true},{name:'numeric master code',scan:'5201222304692',stored:[],masterCode:'5201222304692',noOptions:true},{name:'actual comma list',scan:'5201222304692',stored:['5201222305620,5201222304692,5201222302988'],noOptions:true,price:4,sku:'12237',productName:'TEREA BRONZE'},{name:'5000-row rapid',scan:'5201222304692',stored:['5201222305620,5201222304692,5201222302988'],large:true}]){
 test(`actual POS ${fixture.name} scans once with/without Enter and retains focus/payment guards`,async()=>{
  const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StorePosPanel.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime','pdfjs-dist/build/pdf.worker.min.mjs?url','pdfjs-dist/build/pdf.mjs'],loader:{'.css':'empty'},logOverride:{'empty-import-meta':'silent'}});
  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid'}),keys=['window','document','navigator','HTMLElement','MutationObserver','localStorage','fetch','IS_REACT_ACT_ENVIRONMENT'];
@@ -58,12 +58,13 @@ test(`actual POS ${fixture.name} scans once with/without Enter and retains focus
  const module={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,root=createRoot(document.getElementById('root'));
  const calls=[],product={id:'example',sku:fixture.sku||'SKU',name:fixture.productName||'Fixture product',currentStock:100,salePrice:fixture.noOptions?(fixture.price||1.2):1,barcodes:fixture.stored,masterCode:fixture.masterCode,sourceCode:fixture.masterCode,barcodeOptions:fixture.noOptions?[]:[{barcode:fixture.option||fixture.scan,salePrice:1.2}]};let checkout,fiscalRequest;
- const catalog=[product,...(fixture.longer?[{id:'longer',sku:'LONG',name:'Longer barcode',salePrice:2,barcodes:[fixture.scan+'99']}]:[])];
- const api=async(path,options={})=>{calls.push({path,options});if(fiscalRequest&&path.endsWith('/rbs-capdriver-v1/pending-scan-test'))return {request:fiscalRequest};if(path.endsWith('/checkout'))return new Promise((resolve,reject)=>{checkout={resolve,reject}});if(path==='/api/store-pos/stores/A')return {products:catalog,layout:{quickKeys:[],categories:[]},access:{}};if(path.endsWith('/table-service')||path==='/api/netlink/status')throw Error('not enabled');return {rows:[],items:[],requests:[],offers:[],stations:[],state:{}}};
+ const catalog=[product,...(fixture.longer?[{id:'longer',sku:'LONG',name:'Longer barcode',salePrice:2,barcodes:[fixture.scan+'99']}]:[]),...(fixture.large?Array.from({length:4999},(_,i)=>({id:'bulk-'+i,name:'ΕΙΔΟΣ '+i,sku:'BULK-'+i,salePrice:2,barcodes:[String(5210000000000+i)]})):[])];
+ const api=async(path,options={})=>{calls.push({path,options});if(fiscalRequest&&path.endsWith('/rbs-capdriver-v1/pending-scan-test'))return {request:fiscalRequest};if(path.endsWith('/checkout'))return new Promise((resolve,reject)=>{checkout={resolve,reject}});if(path==='/api/store-pos/stores/A')return {products:[...catalog],layout:{quickKeys:[],categories:[]},access:{}};if(path.endsWith('/table-service')||path==='/api/netlink/status')throw Error('not enabled');return {rows:[],items:[],requests:[],offers:[],stations:[],state:{}}};
  const input=()=>document.querySelector('[data-pos-scanner]');
  const type=async value=>act(async()=>{input().focus();Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(input(),value);input().dispatchEvent(new dom.window.Event('input',{bubbles:true}))});
  const enter=async()=>act(async()=>input().dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',code:'Enter',bubbles:true})));
  const wait=async()=>act(async()=>new Promise(resolve=>setTimeout(resolve,230)));
+ const reloadCatalog=async()=>{await act(async()=>root.render(React.createElement(module.exports.default,{api,store:{id:'B',name:'Other fixture store'}})));await act(async()=>root.render(React.createElement(module.exports.default,{api,store:{id:'A',name:'Fixture store'}})))};
  const count=()=>calls.filter(c=>c.path.endsWith('/audit')&&JSON.parse(c.options.body).actionType==='CART_ITEM_ADD').length;
  try{
   await act(async()=>root.render(React.createElement(module.exports.default,{api,store:{id:'A',name:'Fixture store'}})));
@@ -94,7 +95,20 @@ test(`actual POS ${fixture.name} scans once with/without Enter and retains focus
   await act(async()=>{modal.remove();await new Promise(resolve=>setTimeout(resolve,20))});
   assert.equal(document.activeElement,input(),'closing external shift modal restores readiness');
   catalog.push({...product,id:'ambiguous',barcodes:[],barcodeOptions:[{barcode:fixture.scan,salePrice:8}]});
+  await reloadCatalog();
   await type(fixture.scan);await act(async()=>new Promise(resolve=>setTimeout(resolve,650)));assert.equal(count(),0,'ambiguous barcode cannot auto-select a product');await enter();assert.equal(count(),0,'Enter cannot select the first ambiguous product');catalog.pop();await type('');
+  await reloadCatalog();
+  if(fixture.large){
+   await type(fixture.scan);
+   await act(async()=>root.render(React.createElement(module.exports.default,{api,store:{id:'B',name:'Other fixture store'}})));
+   await act(async()=>new Promise(resolve=>setTimeout(resolve,120)));assert.equal(count(),0,'switching store cancels the previous pending scan');
+   await type(fixture.scan);await act(async()=>new Promise(resolve=>setTimeout(resolve,120)));assert.equal(count(),0,'the other store cannot resolve a previous catalog barcode');
+   await type('');await act(async()=>root.render(React.createElement(module.exports.default,{api,store:{id:'A',name:'Fixture store'}})));
+   await type(fixture.scan);await act(async()=>new Promise(resolve=>setTimeout(resolve,120)));assert.equal(count(),1,'unique scan is already added before the former180ms interval');
+   await type(fixture.scan);await act(async()=>new Promise(resolve=>setTimeout(resolve,120)));assert.equal(count(),2);assert.equal(document.querySelector('.line-qty b').textContent,'2','successive rapid scans keep both quantities');
+   await enter();await wait();assert.equal(count(),2,'late Enter never duplicates an automatic scan');
+   await act(async()=>document.querySelector('.line-total button').click());calls.splice(0,calls.length);
+  }
   if(fixture.longer){await type(fixture.scan);await wait();assert.equal(count(),0);await type(fixture.scan+'99');await wait();assert.equal(count(),1,'finishing a longer scan adds only the longer product');assert.match(document.querySelector('.standard-line').textContent,/Longer barcode/);await act(async()=>document.querySelector('.line-total button').click());calls.splice(0,calls.length)}
   await type(fixture.scan);await enter();assert.equal(document.querySelectorAll('.standard-line').length,1);assert.equal(count(),1);assert.equal(input().value,'');assert.equal(document.activeElement,input());
   await wait();assert.equal(count(),1);
