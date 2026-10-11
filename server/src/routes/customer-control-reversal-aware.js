@@ -1,5 +1,6 @@
 import {Router} from "express";
 import {prisma} from "../prisma.js";
+import {readCustomerActivityLedger} from "../lib/customer-activity-ledger.js";
 
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -71,26 +72,9 @@ router.get("/turnover",async(req,res,next)=>{try{
 }catch(error){next(error)}});
 
 router.get("/:customerId/ledger",async(req,res,next)=>{try{
-  const companyId=req.user.companyId,c=await owned(companyId,req.params.customerId);if(!c)return res.status(404).json({error:"Δεν βρέθηκε ο πελάτης."});
-  const rows=await prisma.$queryRaw`
-    SELECT * FROM (
-      SELECT s."id",s."occurredAt" AS "at",
-        CASE WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='CANCEL' THEN 'SALE_CANCEL'
-             WHEN s."source"='POS_REVERSAL' AND s."reversalKind"='RETURN' THEN 'SALE_RETURN'
-             WHEN s."transactionMode"='DELAYED' THEN 'SALE_DELAYED' ELSE 'SALE' END AS "type",
-        s."total" AS "amount",COALESCE(s."receiptNumber",s."id") AS "reference",st."name" AS "storeName",
-        CASE WHEN s."source"='POS_REVERSAL' THEN COALESCE(a."reason",'Αντίστροφη εγγραφή POS')
-             WHEN s."transactionMode"='DELAYED' THEN COALESCE(s."delayedReason",'Ετεροχρονισμένη συναλλαγή') ELSE NULL END AS "note",
-        s."originalSaleId" AS "originalSaleId",s."source" AS "saleSource",s."transactionMode",s."reversalKind"
-      FROM "Sale" s JOIN "Store" st ON st."id"=s."storeId"
-      LEFT JOIN LATERAL (SELECT pa."reason" FROM "PosSaleActionAudit" pa WHERE pa."companyId"=s."companyId" AND pa."storeId"=s."storeId" AND pa."saleId"=s."id" ORDER BY pa."createdAt" DESC LIMIT 1) a ON true
-      WHERE s."companyId"=${companyId} AND s."customerId"=${c.id} AND s."status"='COMPLETED'
-      UNION ALL
-      SELECT l."id",l."createdAt" AS "at",l."entryType" AS "type",l."amount",COALESCE(l."referenceId",l."id") AS "reference",st."name" AS "storeName",l."note",
-        NULL::text AS "originalSaleId",NULL::text AS "saleSource",NULL::text AS "transactionMode",NULL::text AS "reversalKind"
-      FROM "CustomerLedger" l LEFT JOIN "Store" st ON st."id"=l."storeId" WHERE l."customerId"=${c.id}
-    ) x ORDER BY x."at" DESC LIMIT 1000`;
-  res.json({customer:{id:c.id,name:c.name,balance:n(c.balance)},rows:rows.map(r=>({...r,amount:n(r.amount)})),reversalAware:true});
+  const result=await readCustomerActivityLedger(prisma,req.user.companyId,req.params.customerId,req.query);
+  if(!result)return res.status(404).json({error:"Δεν βρέθηκε ο πελάτης."});
+  res.json(result);
 }catch(error){next(error)}});
 
 export default router;
