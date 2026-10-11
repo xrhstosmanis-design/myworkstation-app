@@ -5,6 +5,8 @@ import {stockToolArguments,productStockEvidence} from "./owner-stock-tools.js";
 import {salesReportCalendar} from "./sales-report-calendar.js";
 import {readSalesAnalysisReport} from "../routes/kiosk-reports-sales-v4.js";
 import {readStockAnalysisReport} from "../routes/kiosk-reports-stock-v3.js";
+import {salesStoresTool,readAssistantSalesStores} from "./assistant-sales-stores.js";
+import {authorizePlatformSalesStores,salesAccessKey} from "./assistant-sales-access.js";
 
 const fail=(status,message,code)=>{throw Object.assign(new Error(message),{status,code})};
 export async function authorizePlatformAssistant(req,selection,{db=prisma,now=new Date()}={}){
@@ -22,17 +24,21 @@ export async function authorizePlatformAssistant(req,selection,{db=prisma,now=ne
 
 // The model gets no scope argument. Only an explicit UI pair, reauthorized at
 // every boundary, can reach the shared, parameterized canonical calculation.
-export async function createPlatformAssistantSession(req,selection,{authorize=authorizePlatformAssistant,readSalesReport=readSalesAnalysisReport,readStockReport=readStockAnalysisReport,readCash=readCanonicalPlatformCash,signal}={}){
+export async function createPlatformAssistantSession(req,selection,{authorize=authorizePlatformAssistant,readSalesReport=readSalesAnalysisReport,readStockReport=readStockAnalysisReport,readCash=readCanonicalPlatformCash,readSalesCatalog,authorizeSalesStores=authorizePlatformSalesStores,allStores=false,signal}={}){
   const scope=await authorize(req,selection);
+  let salesAccess=null;
   const verify=async()=>{
     signal?.throwIfAborted();
     const current=await authorize(req,selection);
     if((scope===null)!==(current===null)||scope&&(current.companyId!==scope.companyId||current.storeId!==scope.storeId))fail(403,"Η επιλογή εταιρείας ή καταστήματος άλλαξε. Η απάντηση απορρίφθηκε.","PLATFORM_ASSISTANT_CONTEXT_CHANGED");
+    if(salesAccess){const fresh=await authorizeSalesStores(req,selection,allStores,{authorize});if(salesAccessKey(fresh)!==salesAccessKey(salesAccess))fail(403,"Το εύρος καταστημάτων άλλαξε. Ζήτησε νέα αναφορά.","PLATFORM_ASSISTANT_CONTEXT_CHANGED")}
     return current;
   };
   const evidence=report=>({...report,scope:"PLATFORM_SELECTED_STORE"});
-  return {scope,tools:[cashTool,...(scope?assistantProductTools:[])],async run({prompt,requestProvider}){
-    const out=await runProductAssistant({prompt,cashTool,tools:[cashTool,...(scope?assistantProductTools:[])],requestProvider:async settings=>{await verify();return requestProvider(settings)},
+  const tools=[cashTool,...(scope?assistantProductTools:[]),...(scope||allStores?[salesStoresTool]:[])];
+  return {scope,tools,async run({prompt,requestProvider}){
+    const out=await runProductAssistant({prompt,cashTool,tools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
+      readSalesStores:async args=>{salesAccess=await authorizeSalesStores(req,selection,allStores,{authorize});return readAssistantSalesStores(args,salesAccess,{readReport:readSalesReport,...(readSalesCatalog?{readCatalog:readSalesCatalog}:{}),verify,signal})},
       readCash:async date=>{await verify();const report=await readCash(req,date,{signal});await verify();return report},
       readSales:async value=>{
         const args=salesToolArguments.parse(value),calendar=salesReportCalendar(args.from,args.to);await verify();

@@ -17,12 +17,25 @@ router.use((req,res,next)=>{
 });
 
 // One calculation serves the normal report and the separately authorized assistants.
-export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calendar},{db=prisma}={}){
+export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calendar,productIds=null,promotionsOnly=false,observedThrough=null},{db=prisma}={}){
   const text=q?`%${q}%`:null;
+  let unattributedPromotionReversal=false;
+  if(promotionsOnly){
+    const missing=await db.$queryRaw`SELECT COUNT(*)::int AS "missingCount" FROM "Sale" sa JOIN "SaleLine" sl ON sl."saleId"=sa."id"
+      WHERE sa."companyId"=${companyId} AND sa."storeId"=${storeId} AND sa."status"='COMPLETED' AND sa."source"='POS_REVERSAL'
+        AND sa."occurredAt">=${from} AND sa."occurredAt"<${to} AND (${observedThrough}::timestamp IS NULL OR sa."occurredAt"<=${observedThrough})
+        AND sl."promotionId" IS NULL AND EXISTS(SELECT 1 FROM "SaleLine" original WHERE original."saleId"=sa."originalSaleId" AND original."promotionId" IS NOT NULL
+          AND (original."productId"=sl."productId" OR original."productId" IS NULL OR sl."productId" IS NULL))`;
+    if(!Number.isInteger(missing[0]?.missingCount)||missing[0].missingCount<0)throw Object.assign(new Error("Δεν επιβεβαιώθηκε η σύνδεση επιστροφών προσφοράς."),{status:502});
+    unattributedPromotionReversal=missing[0].missingCount>0;
+  }
   const rows=await db.$queryRaw`
     WITH base AS (
       SELECT sa."id" AS "saleId",sa."storeId",sa."occurredAt",sa."source",sl."productId",sl."description",sl."quantity",sl."unitPrice",sl."discount",sl."vatRate",sl."lineTotal",
-        p."sku",COALESCE(p."name",sl."description") AS "name",c."name" AS "categoryName",mp."subcategoryName",s."name" AS "storeName",
+        p."sku",p."unit",COALESCE(p."name",sl."description") AS "name",c."name" AS "categoryName",mp."subcategoryName",s."name" AS "storeName",
+        CASE WHEN ${promotionsOnly} THEN sl."promotionId" END AS "promotionId",
+        CASE WHEN ${promotionsOnly} THEN sl."promotionType" END AS "promotionType",
+        CASE WHEN ${promotionsOnly} THEN to_jsonb(promo)->>'name' END AS "promotionName",
         COALESCE(sp."currentStock",0) AS "currentStock",
         COALESCE(pc."unitCost",p."costPrice",0) AS "unitCost",
         pc."supplierName"
@@ -32,6 +45,7 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
       LEFT JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
+      LEFT JOIN "PriceCatalogPromotion" promo ON ${promotionsOnly} AND promo."id"=sl."promotionId" AND promo."companyId"=sa."companyId"
       LEFT JOIN "StoreProduct" sp ON sp."storeId"=sa."storeId" AND sp."productId"=sl."productId"
       LEFT JOIN LATERAL (
         SELECT CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END AS "unitCost",sup."name" AS "supplierName"
@@ -42,10 +56,13 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
         ORDER BY pd."documentDate" DESC,pd."createdAt" DESC LIMIT 1
       ) pc ON true
       WHERE sa."occurredAt">=${from} AND sa."occurredAt"<${to}
+        AND (${observedThrough}::timestamp IS NULL OR sa."occurredAt"<=${observedThrough})
         AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
+        AND (${productIds}::text[] IS NULL OR sl."productId"=ANY(${productIds}::text[]))
+        AND (${promotionsOnly}=FALSE OR sl."promotionId" IS NOT NULL)
         AND (${text}::text IS NULL OR COALESCE(p."name",sl."description") ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
     )
-    SELECT "productId","sku","name","categoryName","subcategoryName","storeId","storeName",MAX("currentStock") AS "currentStock",
+    SELECT "productId","sku","name","unit","categoryName","subcategoryName","storeId","storeName","promotionId","promotionType","promotionName",MAX("currentStock") AS "currentStock",
       SUM("quantity") AS "salesQuantity",SUM("lineTotal") AS "grossSales",
       SUM(CASE WHEN "vatRate"=0 THEN "lineTotal" ELSE "lineTotal"/(1+"vatRate"/100) END) AS "netSales",
       SUM("lineTotal"-CASE WHEN "vatRate"=0 THEN "lineTotal" ELSE "lineTotal"/(1+"vatRate"/100) END) AS "vatValue",
@@ -57,13 +74,13 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
       ABS(COALESCE(SUM("lineTotal") FILTER (WHERE "source"='POS_REVERSAL'),0)) AS "returnGrossValue",
       (array_agg("supplierName" ORDER BY "occurredAt" DESC) FILTER (WHERE "supplierName" IS NOT NULL))[1] AS "supplierName"
     FROM base
-    GROUP BY "productId","sku","name","categoryName","subcategoryName","storeId","storeName"
+    GROUP BY "productId","sku","name","unit","categoryName","subcategoryName","storeId","storeName","promotionId","promotionType","promotionName"
     ORDER BY SUM("lineTotal") DESC,"name" ASC LIMIT 10000`;
   const items=rows.map(r=>{
     const grossSales=n(r.grossSales),netSales=n(r.netSales),vatValue=n(r.vatValue),costValue=n(r.costValue),profit=netSales-costValue,salesQuantity=n(r.salesQuantity);
     return {...r,currentStock:n(r.currentStock),salesQuantity,grossSales,netSales,vatValue,costValue,profit,margin:netSales?profit/netSales*100:0,averageGrossPrice:salesQuantity?grossSales/salesQuantity:0,discountValue:n(r.discountValue),normalSaleCount:n(r.normalSaleCount),reversalCount:n(r.reversalCount),returnGrossValue:n(r.returnGrossValue)};
   });
-  return {...(calendar?{companyId,storeId,period:{calendarFrom:calendar.calendarFrom,calendarTo:calendar.calendarTo,timeZone:calendar.timeZone,from:from.toISOString(),toExclusive:to.toISOString()}}:{}),items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:items.reduce((a,r)=>a+r.normalSaleCount,0),reversalCount:items.reduce((a,r)=>a+r.reversalCount,0),returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true};
+  return {unattributedPromotionReversal,...(calendar?{companyId,storeId,period:{calendarFrom:calendar.calendarFrom,calendarTo:calendar.calendarTo,timeZone:calendar.timeZone,from:from.toISOString(),toExclusive:to.toISOString()}}:{}),items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:items.reduce((a,r)=>a+r.normalSaleCount,0),reversalCount:items.reduce((a,r)=>a+r.reversalCount,0),returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true};
 }
 router.get("/sales-analysis",async(req,res,next)=>{try{res.json(await readSalesAnalysisReport(filters(req)))}catch(error){next(error)}});
 

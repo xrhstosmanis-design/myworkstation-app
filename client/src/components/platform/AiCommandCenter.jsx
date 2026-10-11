@@ -1,3 +1,5 @@
+import {presentAssistantAnswer} from "../voice/presentAssistantAnswer.js";
+import SalesStoresEvidence from "../voice/SalesStoresEvidence.jsx";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {twinScopeKey} from "./ai-command-twin-navigation.js";
 import AiCreditAlert from "./AiCreditAlert.jsx";
@@ -28,10 +30,12 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
   const [voiceActive,setVoiceActive]=useState(false);
   const [askState,setAskState]=useState({loading:false,error:"",result:null});
   const [assistantStoreKey,setAssistantStoreKey]=useState("");
+  const [allSalesStores,setAllSalesStores]=useState(false);
+  const allSalesScopeKey=JSON.stringify(companies.filter(c=>c.active).flatMap(c=>(c.stores||[]).filter(s=>s.active!==false).map(s=>[c.id,s.id,c.name,s.name])));
   const assistantStores=useMemo(()=>companies.filter(company=>company.active).flatMap(company=>(company.stores||[]).filter(store=>store.active!==false).map(store=>({key:JSON.stringify([company.id,store.id]),companyId:company.id,storeId:store.id,label:`${company.name} · ${store.name}`}))),[companies]);
   const assistantStore=assistantStores.find(store=>store.key===assistantStoreKey)||null;
   const changeAssistantStore=value=>{askSequence.current++;askAbort.current?.abort();setAskState({loading:false,error:"",result:null});setQuestion("");setQuestionInputChannel("text");setAssistantStoreKey(value)};
-  useEffect(()=>{askSequence.current++;askAbort.current?.abort();setAskState({loading:false,error:"",result:null});setQuestion("");setQuestionInputChannel("text");if(!assistantStore)setAssistantStoreKey("")},[assistantStore?.companyId,assistantStore?.storeId]);
+  useEffect(()=>{askSequence.current++;askAbort.current?.abort();setAskState({loading:false,error:"",result:null});setQuestion("");setQuestionInputChannel("text");if(!assistantStore)setAssistantStoreKey("")},[assistantStore?.companyId,assistantStore?.storeId,allSalesStores,allSalesStores?allSalesScopeKey:null]);
   const loadProblems=async()=>{
     setProblems(current=>({...current,loading:true,error:""}));
     try{
@@ -237,7 +241,7 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
     setAskState({loading:true,error:"",result:null});
     try{
       const companyStates=companies.map(company=>({name:company.name,active:Boolean(company.active),stores:company.stores?.length||0}));
-      const result=await request("/api/platform/ai-command-center/ask",{method:"POST",signal:controller.signal,body:JSON.stringify({question:value,inputChannel:questionInputChannel,selection:assistantStore?{companyId:assistantStore.companyId,storeId:assistantStore.storeId}:null,snapshot:{
+      const result=await request("/api/platform/ai-command-center/ask",{method:"POST",signal:controller.signal,body:JSON.stringify({question:value,inputChannel:questionInputChannel,readScope:allSalesStores?"all_stores":"selected_store",selection:assistantStore?{companyId:assistantStore.companyId,storeId:assistantStore.storeId}:null,snapshot:{
         generatedAt:new Date().toISOString(),
         companies:{active:summary.activeCompanies,inactive:summary.inactiveCompanies,stores:summary.stores,attention:summary.attention},
         problems:{total:problemSummary.total,cash:problemSummary.cashIssues,payments:problemSummary.payments,paymentDiscrepancies:problemSummary.paymentDiscrepancies,bank:problemSummary.bank,bankDiscrepancies:problemSummary.bankDiscrepancies},
@@ -247,6 +251,7 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
     }catch(error){if(sequence===askSequence.current)setAskState({loading:false,error:error.message||"Δεν ήταν δυνατή η απάντηση.",result:null})}
   };
 
+  const presented=presentAssistantAnswer(askState.result);
   return <div className="ai-command-page" data-ai-command-center="phase-14">
     <section className="ai-command-shell">
       <header className="ai-command-header">
@@ -364,12 +369,13 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
 
       <section className="ai-command-ask">
         <div className="ai-command-panel-title"><div><small>ΡΩΤΑ ΤΟ MYWORKSTATION · ΦΑΣΗ 3</small><h2>Τι χρειάζεται την προσοχή μου;</h2><p>Για πωλήσεις ανά είδος / ημερομηνία και τρέχον καταγεγραμμένο απόθεμα επίλεξε εταιρεία και κατάστημα. Ο έλεγχος κλεισμένων ταμείων παραμένει κεντρικός, για όλα τα καταστήματα.</p></div><MessageCircle/></div>
+        <label><input type="checkbox" checked={allSalesStores} onChange={e=>{askSequence.current++;askAbort.current?.abort();setAskState({loading:false,error:"",result:null});setQuestion("");setQuestionInputChannel("text");setAllSalesStores(e.target.checked)}}/> Πωλήσεις από όλα τα ενεργά καταστήματα</label>
         <label style={{display:"grid",gap:8,marginTop:12}}>Κατάστημα για πωλήσεις και απόθεμα <select style={{width:"100%",minWidth:0,padding:10,border:"1px solid #cfd9e6",borderRadius:10,background:"#fff",color:"#173550",font:"inherit"}} aria-label="Κατάστημα για πωλήσεις και απόθεμα" value={assistantStore?.key||""} onChange={event=>changeAssistantStore(event.target.value)}><option value="">Επίλεξε εταιρεία / κατάστημα</option>{assistantStores.map(store=><option key={store.key} value={store.key}>{store.label}</option>)}</select></label>
-        <p>{assistantStore?`Επιλεγμένη πηγή προϊόντων: ${assistantStore.label}`:"Για ποσότητες προϊόντων απαιτείται επιλογή καταστήματος."}</p>
-        <form onSubmit={ask}><textarea aria-label="Ερώτηση για το MyWorkStation" value={question} onChange={event=>{setQuestion(event.target.value);if(!event.target.value)setQuestionInputChannel("text")}} disabled={voiceActive} maxLength={600} rows={3} placeholder="π.χ. Πόσα είδη με SKU 2269 πουλήθηκαν σήμερα;"/><button type="submit" disabled={askState.loading||voiceActive}><MessageCircle/>{askState.loading?"Ανάλυση…":"Ρώτα"}</button><VoiceInputControls value={question} onChange={text=>{setQuestion(text);setQuestionInputChannel("voice")}} onActiveChange={setVoiceActive} disabled={askState.loading} contextKey={`${assistantStore?.key||"no-product-selection"}:${selectedTwin?twinScopeKey({companyId:selectedTwin.companyId,storeId:selectedTwin.id}):"no-selection"}`} maxLength={600}/></form>
+        <p>{assistantStore?`${allSalesStores?"Πωλήσεις: όλα τα ενεργά καταστήματα. Απόθεμα: ":"Επιλεγμένη πηγή προϊόντων: "}${assistantStore.label}`:allSalesStores?"Πωλήσεις: όλα τα ενεργά καταστήματα. Για απόθεμα απαιτείται συγκεκριμένο κατάστημα.":"Για ποσότητες προϊόντων απαιτείται επιλογή καταστήματος."}</p>
+        <form onSubmit={ask}><textarea aria-label="Ερώτηση για το MyWorkStation" value={question} onChange={event=>{setQuestion(event.target.value);if(!event.target.value)setQuestionInputChannel("text")}} disabled={voiceActive} maxLength={600} rows={3} placeholder="π.χ. Πόσα νερά πουλήθηκαν χθες ανά κατάστημα;"/><button type="submit" disabled={askState.loading||voiceActive}><MessageCircle/>{askState.loading?"Ανάλυση…":"Ρώτα"}</button><VoiceInputControls value={question} onChange={text=>{setQuestion(text);setQuestionInputChannel("voice")}} onActiveChange={setVoiceActive} disabled={askState.loading} contextKey={`${allSalesStores?allSalesScopeKey:assistantStore?.key||"no-product-selection"}:${selectedTwin?twinScopeKey({companyId:selectedTwin.companyId,storeId:selectedTwin.id}):"no-selection"}`} maxLength={600}/></form>
         <div className="ai-command-prompts"><button type="button" disabled={voiceActive} onClick={()=>{setQuestion("Ποια σημεία χρειάζονται έλεγχο σήμερα;");setQuestionInputChannel("text")}}>Τι χρειάζεται έλεγχο;</button><button type="button" disabled={voiceActive} onClick={()=>{setQuestion("Υπάρχουν ανενεργές εταιρείες ή καταστήματα χωρίς κάλυψη;");setQuestionInputChannel("text")}}>Κατάσταση δικτύου</button><button type="button" disabled={voiceActive} onClick={()=>{setQuestion("Σε ποια κανονική οθόνη πρέπει να πάω πρώτα και γιατί;");setQuestionInputChannel("text")}}>Πού να πάω πρώτα;</button></div>
         {askState.error&&<div className="ai-command-problem-error"><AlertTriangle/>{askState.error}</div>}
-        {askState.result&&<article className="ai-command-answer"><div className="ai-command-answer-head"><BrainCircuit/><b>Απάντηση MyWorkStation</b><span>Μόνο ανάγνωση</span></div><p>{askState.result.answer}</p>{askState.result.highlights?.length>0&&<ul>{askState.result.highlights.map((item,index)=><li key={index}>{item}</li>)}</ul>}<small><b>Πηγές:</b> {askState.result.sources?.join(" · ")||"Τρέχουσα επισκόπηση"}</small>{askState.result.limitations&&<small><b>Όριο:</b> {askState.result.limitations}</small>}<CashAssistantEvidence evidence={(askState.result.evidence||[]).filter(report=>report.kind!=="product_sales"&&report.kind!=="product_stock")}/><SalesAssistantEvidence evidence={askState.result.evidence||[]}/><StockAssistantEvidence evidence={askState.result.evidence||[]}/></article>}
+        {askState.result&&<article className="ai-command-answer"><div className="ai-command-answer-head"><BrainCircuit/><b>Απάντηση MyWorkStation</b><span>Μόνο ανάγνωση</span></div><p style={{whiteSpace:"pre-wrap"}}>{presented.answer}</p>{presented.highlights?.length>0&&<ul>{presented.highlights.map((item,index)=><li key={index}>{item}</li>)}</ul>}<small><b>Πηγές:</b> {askState.result.sources?.join(" · ")||"Τρέχουσα επισκόπηση"}</small>{presented.limitations&&<small><b>Όριο:</b> {presented.limitations}</small>}<CashAssistantEvidence evidence={(askState.result.evidence||[]).filter(report=>report.kind!=="product_sales"&&report.kind!=="product_stock"&&report.kind!=="sales_by_store")}/><SalesAssistantEvidence evidence={askState.result.evidence||[]}/><StockAssistantEvidence evidence={askState.result.evidence||[]}/><SalesStoresEvidence evidence={askState.result.evidence||[]}/></article>}
       </section>
 
       <section className="ai-command-roadmap">
@@ -379,4 +385,3 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
     </section>
   </div>;
 }
-
