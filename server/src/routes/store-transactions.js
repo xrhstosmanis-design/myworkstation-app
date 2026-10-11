@@ -462,7 +462,7 @@ router.post("/stores/:storeId/bank-deposits",route(async(req,res)=>{
 router.get("/stores/:storeId/payroll-employees",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
-  const items=await prisma.$queryRaw`SELECT "id","fullName","position" FROM "Employee" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "active"=true ORDER BY "fullName"`;
+  const items=await prisma.$queryRaw`SELECT e."id",e."fullName",e."position" FROM "Employee" e JOIN "Store" s ON s."id"=e."storeId" WHERE s."companyId"=${req.user.companyId} AND e."storeId"=${store.id} AND e."active"=true ORDER BY e."fullName"`;
   res.json({items});
 }));
 
