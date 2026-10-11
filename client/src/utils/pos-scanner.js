@@ -2,7 +2,7 @@ import {useEffect,useRef} from 'react';
 import {productMatchesCodes} from './pos-catalog-resolver.js';
 
 // Automatic scans resolve stored numeric barcode aliases; explicit Enter can resolve a unique SKU.
-const barcodeCodes=value=>String(value??'').split('~').flatMap(part=>{
+const barcodeCodes=value=>String(value??'').split(/[~,]/).flatMap(part=>{
   const code=part.replace(/\s/g,'');
   if(!/^\d{6,18}$/.test(code))return [];
   return [...new Set([code,code.replace(/^0+(?=\d)/,'')])];
