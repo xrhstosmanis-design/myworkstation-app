@@ -1,3 +1,11 @@
+## 11/10/2026 23:18:30 Athens — Κατηγορίες και μεγαλύτερο παράθυρο προϊόντων: περιορισμένο USER VISUAL PASS
+
+Ποιος/πού: εξουσιοδοτημένος χειριστής στο υπάρχον POS του επιλεγμένου καταστήματος. Με κανονική ανανέωση Ctrl+F5 εμφανίζονται μεγαλύτερες αναγνώσιμες ονομασίες/μετρήσεις στα υπάρχοντα κουμπιά κατηγοριών. Άνοιξε Μπύρες ή Αναψυκτικά: το μεγαλύτερο παράθυρο δείχνει ονομασία, SKU και τιμή, με εσωτερική κύλιση. Κλείσε με Χ· σε υπάρχουσα υποκατηγορία χρησιμοποίησε την επιστροφή προς τη μητρική. Δεν χρειάζεται αγορά ή επεξεργασία κατηγορίας για έλεγχο εμφάνισης.
+
+Ο Χρήστος Μανής απάντησε «ειναι οκ» μετά την παράδοση και αυτές τις οδηγίες. Κριτήριο PASS: περιορισμένη αποδοχή των πιο ευανάγνωστων κουμπιών και του μεγαλύτερου category/subcategory popup. SourcePR2312/CI38169132843 και exact release0571a2f04e8eae691c94e834b7d3a8684a3161f7/mainCI38169465079/actual guard38169779456/public assets22:55:39Athens είχαν επαληθευθεί πριν τη δήλωση· receiptPR2318. Δεν μετρήθηκαν φυσικό client SHA, συσκευή/αφή, όλες οι μεγάλες ονομασίες ή οικονομικά/stock/fiscal. Η ομαδοποίηση παραλλαγών ανά μάρκα είναι χωριστό item6, ακόμη εκκρεμές.
+
+Όρια/αντιμετώπιση: διατηρούνται η επιλογή εταιρείας/καταστήματος, δικαιώματα, δημοσιευμένα IDs/περιεχόμενα/χρώματα/μετρήσεις, υπάρχουσες τιμές και χειρισμοί προσθήκης/αφαίρεσης/επεξεργασίας. Αυτή η αλλαγή εμφάνισης δεν δίνει νέα δικαιώματα. Αν παραμένει η παλιά μικρή εμφάνιση, κάνε Ctrl+F5 στην κανονική συνεδρία του σωστού καταστήματος και κράτησε ώρα/κατηγορία σε νέο σφάλμα. Μην αλλάζεις ανάθεση προϊόντων ή επαναλαμβάνεις πληρωμή για τεκμηρίωση. Checkpoint CHECKPOINTS/CHANGES/2026-10-11-pos-categories-readable.md· συνολικό tracker03 και items1/2 έχουν τα προηγούμενα χωριστά όρια.
+
 ## 11/10/2026 22:19:27 Athens — Larger Barcode dialog: limited USER VISUAL PASS
 
 Who/where: authorized operators use the existing POS of their selected store and the existing barcode-registration permission. Open Λειτουργίες POS → Έλεγχος και καταχώρηση νέου Barcode. The delivered dialog now uses more of the available screen, with a readable header, larger product names/metadata and fields. Use the existing search/list/selection to inspect a product; list/details retain their scrolling and the close button returns to POS. No barcode save, label printing or sale is required to inspect the display.
