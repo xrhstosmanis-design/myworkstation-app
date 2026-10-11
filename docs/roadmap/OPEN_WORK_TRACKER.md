@@ -1,3 +1,7 @@
+## 11 Oct 2026 — final source refinement / AWAITING EXACT CI + LIVE
+
+The same explicit-login reset also removes the per-tab pending `ownerSelectedStoreId`. A newly extended actual mounted regression first reproduced a same-company automatic old-store reopening despite the App-state reset; after clearing that single pending selection only on accepted login, same-company/different-company cases both PASS. Rejected and superseded login retain the pending selection; ordinary owner-company selection/reload and MFA flow remain unchanged. Final focused Node20 suite51/51 PASS/0FAIL/0SKIP, production build PASS, final local server suite2269tests/2253PASS/0FAIL/16isolated-PostgreSQLskips. This supersedes the preliminary source head5e721ff for final exact CI; actual named-session acceptance and post-release traffic cessation remain OPEN, no manual/numbered PASS closure.
+
 ## 11 Oct 2026 — SESSION-RECOVERY-STORE-RESET-01 / source prepared / AWAITING FULL CI + LIVE
 
 Receiving task `codex/server-check-20261011`, branch `fix/backoffice-recovery-store-reset-20261011`, bounded explicit-login reset only. Claim PR2198/head86e4ce031a95b33637265f27e5fe22bc84cfc393/docsCI38108223556 SUCCESS merged9269ce2e714afdd9f7c7a0aa4e9bed5d66a900aa before production source edit. Original central owner retains other BACKOFFICE-SESSION-01 residuals; other owners/PASS preserved.

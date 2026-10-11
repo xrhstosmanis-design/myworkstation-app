@@ -60,18 +60,22 @@ test("actual Backoffice and StoreCloudPage stop stale polling, retain renewal, a
     const stoppedCount=calls.length;await act(async()=>{for(const t of oldTimers)await t.fn()});assert.equal(calls.length,stoppedCount);assert.equal(localStorage.getItem("token"),preserved);
 
     await click("Νέα σύνδεση");
+    sessionStorage.setItem("ownerSelectedStoreId","store-A");
     assert.ok(document.querySelector("form.login-card"));
     await act(async()=>document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));
     assert.equal(localStorage.getItem("token"),preserved);assert.ok(localStorage.getItem("supportContext"));
+    assert.equal(sessionStorage.getItem("ownerSelectedStoreId"),"store-A");
     loginStatus=200;holdLogin=true;
     await act(async()=>document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));
     const newer=jwt({...base,sessionId:"other-tab-session"});localStorage.setItem("token",newer);
     await act(async()=>releaseLogin());
     assert.equal(localStorage.getItem("token"),newer);assert.ok(localStorage.getItem("supportContext"));assert.match(document.body.textContent,/Η σύνδεση άλλαξε όσο περίμενες/);
+    assert.equal(sessionStorage.getItem("ownerSelectedStoreId"),"store-A");
     holdLogin=false;
     const recoveryStart=calls.length;
     await act(async()=>document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));
     assert.equal(localStorage.getItem("supportContext"),null);assert.equal(sessionStorage.getItem("platformToken"),null);
+    assert.equal(sessionStorage.getItem("ownerSelectedStoreId"),null);
     assert.equal(document.querySelector(".store-operations-front"),null);assert.equal(timers.size,0);
     assert.match(document.body.textContent,new RegExp(`Fixture ${loginCompany}`));
     assert.deepEqual(calls.slice(recoveryStart).filter(x=>x.url.includes("/overview")),[]);

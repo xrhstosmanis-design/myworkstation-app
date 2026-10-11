@@ -74,6 +74,7 @@ function App(){
  const startSession=next=>{
    // A completed explicit login starts a new workspace. App-owned selections
    // must not remount an old store with the newly accepted credentials.
+   sessionStorage.removeItem("ownerSelectedStoreId");
    setSelectedStore(null);setChatStore(null);setWorkforceStoreId("");
    setPage("dashboard");setStats(null);setEmployees([]);setStores([]);
    setLeaves([]);setActiveModules([]);setSchedule(null);setWarnings([]);
