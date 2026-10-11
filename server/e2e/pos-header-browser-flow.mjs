@@ -1,0 +1,41 @@
+// Isolated rendered POS only: no signed-in session or production requests.
+import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import {execFileSync,spawn} from 'node:child_process';import {build} from 'esbuild';import assert from 'node:assert/strict';
+const repo=process.cwd(),out=path.join(os.tmpdir(),'mws-pos-header-browser');await fs.mkdir(out,{recursive:true});
+let chrome=process.env.CHROME_BIN;for(const bin of ['/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser']){if(chrome)break;try{await fs.access(bin);chrome=bin}catch{}}
+assert.ok(chrome,'A real Chromium browser is required for this CI rendering check');
+const fixture=await fs.readFile('server/e2e/pos-header-fixture.jsx','utf8'),baseline=execFileSync('git',['show','1371933d33f872cb38f86890a154fb02633ea003:client/src/components/store/StorePosPanel.jsx'],{encoding:'utf8'});
+const browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--no-first-run','--remote-debugging-pipe','--no-startup-window',`--user-data-dir=${path.join(out,'cdp-profile')}`],{stdio:['ignore','ignore','pipe','pipe','pipe']});
+let nextId=0,buffer='',errors='';const pending=new Map();browser.stderr.on('data',b=>{errors=(errors+b).slice(-3000)});
+browser.stdio[4].on('data',chunk=>{buffer+=chunk;let end;while((end=buffer.indexOf('\0'))>=0){const raw=buffer.slice(0,end);buffer=buffer.slice(end+1);if(!raw)continue;const message=JSON.parse(raw),request=pending.get(message.id);if(request){pending.delete(message.id);clearTimeout(request.timeout);if(message.error)request.reject(Error(JSON.stringify(message.error)));else request.resolve(message.result);}}});
+const cdp=(method,params={},sessionId)=>new Promise((resolve,reject)=>{const id=++nextId;const timeout=setTimeout(()=>{pending.delete(id);reject(Error(`${method} timed out: ${errors}`))},20000);pending.set(id,{resolve,reject,timeout});browser.stdio[3].write(JSON.stringify({id,method,params,...(sessionId?{sessionId}:{})})+'\0');});
+const results=[];
+try{
+for(const kind of ['before','after']){
+ const dir=path.join(out,kind);await fs.mkdir(dir,{recursive:true});
+ await build({stdin:{contents:fixture,resolveDir:repo,loader:'jsx'},bundle:true,outfile:path.join(dir,'fixture.js'),platform:'browser',format:'iife',define:{'process.env.NODE_ENV':'"production"'},loader:{'.png':'dataurl','.svg':'dataurl'},plugins:[{name:'isolated',setup(b){if(kind==='before')b.onLoad({filter:/StorePosPanel\.jsx$/},()=>({contents:baseline,loader:'jsx',resolveDir:path.join(repo,'client/src/components/store')}));b.onResolve({filter:/^pdfjs-dist/},a=>({path:a.path,namespace:'pdf-stub'}));b.onLoad({filter:/.*/,namespace:'pdf-stub'},()=>({contents:'export const GlobalWorkerOptions={};export const getDocument=()=>{};export default "";',loader:'js'}));}}],logLevel:'error'});
+ for(const [width,height] of [[1920,1080],[1366,768],[1280,600]])for(const font of ['FONT_12','FONT_20']){
+  const probe=`(async()=>{try{await new Promise(r=>setTimeout(r,300));window.fixtureRender('${font}');await new Promise(r=>setTimeout(r,300));const rect=s=>{const r=document.querySelector(s)?.getBoundingClientRect();return r?{x:r.x,y:r.y,w:r.width,h:r.height,b:r.bottom}:null};const snap=()=>{const h=document.querySelector('.store-pos-top');return{header:rect('.store-pos-top'),cart:rect('.standard-lines'),payment:rect('.standard-action-bar'),background:getComputedStyle(h).backgroundColor,text:getComputedStyle(h).color,buttons:[...h.querySelectorAll('button:not(.pos-header-resize-handle)')].map(b=>({text:b.textContent.trim(),r:{x:b.getBoundingClientRect().x,y:b.getBoundingClientRect().y,b:b.getBoundingClientRect().bottom,right:b.getBoundingClientRect().right,h:b.getBoundingClientRect().height}}))}};const callCount=window.fixtureCalls.length,initial=snap(),handle=document.querySelector('[role=separator]');let expanded=null,compact=null,pointer=null;if(handle){handle.setPointerCapture=()=>{};handle.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));await new Promise(r=>setTimeout(r,100));expanded=snap();handle.dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}));await new Promise(r=>setTimeout(r,100));compact=snap();handle.dispatchEvent(new PointerEvent('pointerdown',{pointerId:7,pointerType:'touch',button:0,clientY:100,bubbles:true}));handle.dispatchEvent(new PointerEvent('pointermove',{pointerId:7,pointerType:'touch',button:0,clientY:1000,bubbles:true}));handle.dispatchEvent(new PointerEvent('pointerup',{pointerId:7,pointerType:'touch',button:0,clientY:1000,bubbles:true}));await new Promise(r=>setTimeout(r,100));pointer=snap();handle.dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}));await new Promise(r=>setTimeout(r,100));}const d={kind:'${kind}',width:${width},height:${height},font:'${font}',innerHeight,initial,expanded,compact,pointer,writes:window.fixtureCalls.slice(callCount).filter(c=>c.options.method&&c.options.method!=='GET')};const p=document.createElement('pre');p.id='pos-browser-result';p.hidden=true;p.textContent=btoa(unescape(encodeURIComponent(JSON.stringify(d))));document.body.append(p)}catch(e){document.body.dataset.probeError=String(e)}})();`;
+  await fs.writeFile(path.join(dir,'index.html'),`<!doctype html><html lang="el"><meta charset="utf-8"><style>*{box-sizing:border-box}html,body,#root{margin:0;width:100%;height:100%}body{font-family:Arial,sans-serif}</style><link rel="stylesheet" href="fixture.css"><div id="root"></div><script>localStorage.clear()</script><script src="fixture.js"></script><script>${probe}</script></html>`);
+  const {targetId}=await cdp('Target.createTarget',{url:'about:blank'});const {sessionId}=await cdp('Target.attachToTarget',{targetId,flatten:true});
+  await cdp('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false},sessionId);
+  await cdp('Page.enable',{},sessionId);await cdp('Page.navigate',{url:'file://'+path.join(dir,'index.html')},sessionId);
+  let result;
+  for(let attempt=0;attempt<100;attempt++){
+   const evaluated=await cdp('Runtime.evaluate',{expression:`document.getElementById('pos-browser-result')?.textContent || null`,returnByValue:true},sessionId);
+   if(evaluated.result.value){result=JSON.parse(Buffer.from(evaluated.result.value,'base64'));break}
+   await new Promise(resolve=>setTimeout(resolve,30));
+  }
+  assert.ok(result,`Rendered fixture did not finish at ${width}/${font}`);assert.equal(result.innerHeight,height,'Real viewport height must match the requested test size');
+  const screenshot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId);await fs.writeFile(path.join(dir,width+'-'+font+'.png'),Buffer.from(screenshot.data,'base64'));
+  await cdp('Target.closeTarget',{targetId});results.push(result);assert.equal(result.writes.length,0);
+  if(kind==='after'){
+   assert.equal(result.initial.background,'rgb(231, 243, 238)');for(const snap of [result.initial,result.expanded,result.compact,result.pointer])for(const b of snap.buttons){assert.ok(b.r.y>=snap.header.y-1&&b.r.b<=snap.header.b+1,`${width}/${font}: header clipped ${b.text}`);assert.ok(b.r.right<=width+1,`${width}/${font}: header overflow ${b.text}`)}
+   assert.ok(result.expanded.header.h>=result.compact.header.h);assert.ok(result.expanded.cart.h>=Math.min(95,result.compact.cart.h),`${width}/${font}: expansion consumed cart reserve`);
+   assert.ok(result.expanded.payment.b<=result.compact.payment.b+1,'resizing moved payments below their initial position');
+   if(font==='FONT_12')assert.ok(result.expanded.payment.b<=result.innerHeight+1,'payment controls below viewport');
+  }
+ }
+}
+await fs.writeFile(path.join(out,'geometry.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results.map(r=>({kind:r.kind,width:r.width,height:r.height,font:r.font,actualHeight:r.innerHeight,header:r.initial.header.h,cart:r.initial.cart.h,paymentBottom:r.initial.payment.b,maxHeader:r.expanded?.header.h,maxCart:r.expanded?.cart.h,background:r.initial.background})),null,2));console.log('POS header real Chromium rendering PASS; synthetic fixture only, not USER/LAB PASS. Evidence: '+out);
+
+}finally{await cdp('Browser.close').catch(()=>{});browser.kill();}
