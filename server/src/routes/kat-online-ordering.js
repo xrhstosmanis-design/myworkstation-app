@@ -121,7 +121,7 @@ async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user})
     if(qty<=0||!ingredient.storeProductId)continue;
     const stockProductId=ingredient.stockProductId||ingredient.ingredientProductId;
     await tx.$executeRaw`UPDATE "Product" SET "trackStock"=TRUE,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${stockProductId} AND "companyId"=${store.companyId}`;
-    const changed=(enforceStock||line.availabilityMode==='BAKED')
+    const changed=(enforceStock||['STOCK','BAKED'].includes(line.availabilityMode))
       ? await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${ingredient.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`
       : await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${ingredient.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE`;
     if(!changed){if(enforceStock){const error=new Error(`Δεν μπόρεσε να ενημερωθεί το stock υλικού: ${ingredient.ingredientName}`);error.status=409;throw error}continue}
@@ -136,7 +136,7 @@ async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user})
     if((!milk||!milk.storeProductId)&&enforceStock){const error=new Error(`Το επιλεγμένο γάλα της συνταγής ${line.productName} δεν υπάρχει στην αποθήκη του καταστήματος.`);error.status=409;throw error}
     if(milk?.storeProductId&&enforceStock&&Number(milk.currentStock||0)<milkQty){const error=new Error(`Δεν υπάρχει αρκετό stock γάλακτος για ${line.productName}.`);error.status=409;throw error}
     if(milk?.storeProductId){
-      const changed=(enforceStock||line.availabilityMode==='BAKED')
+      const changed=(enforceStock||['STOCK','BAKED'].includes(line.availabilityMode))
         ?await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${milkQty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${milk.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE AND COALESCE("currentStock",0)>=${milkQty}`
         :await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${milkQty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${milk.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE`;
       if(!changed&&enforceStock){const error=new Error(`Δεν μπόρεσε να ενημερωθεί το stock γάλακτος: ${milk.name}`);error.status=409;throw error}
@@ -162,7 +162,7 @@ export async function postCommercialSale(tx,{order,store,user,config}){
     const consumedRecipe=await consumePreparationRecipe(tx,{store,line,enforceStock,order,user});
     if(consumedRecipe)continue;
     if(line.trackStock||line.availabilityMode==='BAKED'){
-      const qty=Number(line.quantity||0),changed=(enforceStock||line.availabilityMode==='BAKED')
+      const qty=Number(line.quantity||0),changed=(enforceStock||['STOCK','BAKED'].includes(line.availabilityMode))
         ? await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${line.productId} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`
         : await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${line.productId} AND "active"=TRUE`;
       if(!changed){const error=new Error(enforceStock?`Δεν υπάρχει αρκετό stock για να ολοκληρωθεί: ${line.productName}`:`Δεν μπόρεσε να ενημερωθεί το stock: ${line.productName}`);error.status=409;throw error}
@@ -185,7 +185,7 @@ router.get("/catalog",safe(async(req,res)=>{
   const {store,config}=await onlineContext();
   const rows=await prisma.$queryRaw`SELECT bp."mode" AS "availabilityMode",p."id",p."sku",p."name",p."vatRate",COALESCE(sp."salePrice",p."salePrice",0) AS "storePrice",COALESCE(sp."currentStock",0) AS "currentStock",COALESCE(v."visible",FALSE) AS "onlineVisible" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" LEFT JOIN "StoreBakingPolicy" bp ON bp."storeId"=sp."storeId" AND bp."productId"=p."id" AND bp."companyId"=p."companyId" LEFT JOIN "OnlineProductVisibility" v ON v."storeId"=sp."storeId" AND v."productId"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE AND COALESCE(v."visible",FALSE)=TRUE ORDER BY p."name" ASC`;
   const stockCheckEnabled=Boolean(config.stockCheckEnabled);
-  res.json({store:{id:store.id,name:store.name},module:{key:"ONLINE_ORDERING",active:true},settings:{surchargeType:config.surchargeType,surchargeValue:money(config.surchargeValue),deliveryFee:money(config.deliveryFee),pickupEnabled:Boolean(config.pickupEnabled),deliveryEnabled:Boolean(config.deliveryEnabled),cashEnabled:Boolean(config.cashEnabled),cardOnDeliveryEnabled:Boolean(config.cardOnDeliveryEnabled),stockCheckEnabled,minimumOrderRetail:money(config.minimumOrderRetail),minimumOrderStaff:money(config.minimumOrderStaff),minimumOrderPermanentStaff:money(config.minimumOrderPermanentStaff)},products:rows.map(row=>({id:row.id,sku:row.sku,name:row.name,vatRate:Number(row.vatRate||0),storePrice:money(row.storePrice),onlineSurcharge:onlineSurchargeAmount(row.storePrice,config),onlinePrice:onlineUnitPrice(row.storePrice,config),stock:Number(row.currentStock||0),available:policyAvailable(row)??(stockCheckEnabled?Number(row.currentStock||0)>0:true)}))});
+  res.json({store:{id:store.id,name:store.name},module:{key:"ONLINE_ORDERING",active:true},settings:{surchargeType:config.surchargeType,surchargeValue:money(config.surchargeValue),deliveryFee:money(config.deliveryFee),pickupEnabled:Boolean(config.pickupEnabled),deliveryEnabled:Boolean(config.deliveryEnabled),cashEnabled:Boolean(config.cashEnabled),cardOnDeliveryEnabled:Boolean(config.cardOnDeliveryEnabled),stockCheckEnabled,minimumOrderRetail:money(config.minimumOrderRetail),minimumOrderStaff:money(config.minimumOrderStaff),minimumOrderPermanentStaff:money(config.minimumOrderPermanentStaff)},products:rows.filter(row=>policyAvailable(row)!==false).map(row=>({id:row.id,sku:row.sku,name:row.name,vatRate:Number(row.vatRate||0),storePrice:money(row.storePrice),onlineSurcharge:onlineSurchargeAmount(row.storePrice,config),onlinePrice:onlineUnitPrice(row.storePrice,config),stock:Number(row.currentStock||0),available:policyAvailable(row)??(stockCheckEnabled?Number(row.currentStock||0)>0:true)}))});
 }));
 
 router.post("/orders",async(req,res)=>{
