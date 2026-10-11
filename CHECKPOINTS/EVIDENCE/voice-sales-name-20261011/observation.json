@@ -1,0 +1,130 @@
+{
+  "owner": "codex/unified-voice-assistant-20261010",
+  "status": "SOURCE_RELEASED / AWAITING_NORMAL_CENTRAL_LAB / BROWSER_AUTH_SECURITY_BLOCKED",
+  "sourcePR": 2306,
+  "sourceHead": "4626aa64e514be5c6e08c8cad6413596398128ab",
+  "sourceMerge": "3b4c067c4318a46d932ee282047e3f30ac3b6d31",
+  "sourceCI": 38165831293,
+  "sourceCIResult": {
+    "tests": 2393,
+    "pass": 2393,
+    "fail": 0,
+    "skipped": 0,
+    "nativePostgreSQL": true
+  },
+  "mainCI": 38166369674,
+  "mainCIPending": false,
+  "scope": {
+    "role": "real Super Admin",
+    "actor": "Χρήστος Μάνης",
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "company": "MYWORKSTATION LAB",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ"
+  },
+  "ordinaryBefore": {
+    "surface": "ordinary support-view sales statistics, not normal Owner identity",
+    "from": "2026-10-10",
+    "to": "2026-10-10",
+    "athens": true,
+    "query": "",
+    "rows": [
+      {
+        "category": "ΝΕΡΑ",
+        "name": "ΝΕΡΟ1,5LT",
+        "sku": "2270",
+        "quantity": 3,
+        "gross": 3.0,
+        "net": 2.65,
+        "vat": 0.35
+      },
+      {
+        "category": "ΝΕΡΑ",
+        "name": "ΝΕΡΟ500ML",
+        "sku": "2269",
+        "quantity": 4,
+        "gross": 2.0,
+        "net": 1.77,
+        "vat": 0.23
+      },
+      {
+        "category": "ΔΟΚΙΜΑΣΤΙΚΑ",
+        "name": "LAB EXCEL TEST1",
+        "sku": "LAB-EXCEL-20260909-01",
+        "quantity": 1,
+        "gross": 0.0,
+        "net": 0.0,
+        "vat": 0.0
+      }
+    ],
+    "waterCategoryOnly": {
+      "quantity": 7,
+      "gross": 5.0,
+      "rowRoundedNet": 4.42,
+      "rowRoundedVat": 0.58
+    },
+    "allReportQuantity": 8,
+    "screenshot": "category-before-1791745045193.jpg",
+    "artifactTimestampOnly": true,
+    "backendRevisionNotIndividuallyAttested": true
+  },
+  "limitations": [
+    "Offers live acceptance pending; native PostgreSQL scope is not live business PASS",
+    "Normal Owner global live acceptance pending",
+    "Prior normal Owner stock AFTER remains pending",
+    "Physical microphone not tested",
+    "Full other application domains remain OPEN",
+    "Readable main prose and named/category/multi-store/offer LIVE acceptance still NOT TESTED; actual support denial does not invalidate prior central SKU data PASS"
+  ],
+  "mainCIResult": {
+    "tests": 2393,
+    "pass": 2393,
+    "fail": 0,
+    "skipped": 0,
+    "nativePostgreSQL": true
+  },
+  "guardedReleaseRun": 38166770234,
+  "earlyGuardRun": 38166466400,
+  "earlyGuard": "SUCCESS but deploy withheld because newer source3b4c067 on main; not a deployment",
+  "ordinaryOffersBefore": {
+    "surface": "Super Admin Central Offers & Gifts",
+    "scope": "all companies, all time; NOT same selected store/date report",
+    "salesGross": 0,
+    "discount": 4.8,
+    "returnedGross": 0,
+    "promotionDefinitions": 4,
+    "note": "Includes only sale lines with specific promotionId; source note loaded, not initial defaults. No independent offered quantity per selected day/store shown.",
+    "screenshot": "offers-existing-before-1791745678399.jpg"
+  },
+  "guardedRelease": "SUCCESS actual healthy3b4c067c4318a46d932ee282047e3f30ac3b6d31 at2026-10-11T19:11:13.568Z",
+  "combinedRelease": {
+    "revision": "0a85760101d3d547905a83143590c8e92e508d92",
+    "ownedSourcePathsUnchanged": 21,
+    "mainCI": 38170358122,
+    "tests": 2395,
+    "fail": 0,
+    "skip": 0,
+    "guardedRender": 38170652498,
+    "guardHealthAt": "2026-10-11T20:06:36.284Z",
+    "browserHealthyBeforeAttempt": true
+  },
+  "actualAttempt": {
+    "question": "Πόσα νερά πουλήθηκαν στις 10/10/2026 ανά κατάστημα; Δείξε τη λίστα και τις πηγές.",
+    "date": "2026-10-11",
+    "observationWindow": "approximately23:22-23:26Europe/Athens; exact request timestamp not independently captured",
+    "selectedStore": "MYWORKSTATION LAB · ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "allStoresChecked": false,
+    "centralHeader": "Χρήστος Μάνης",
+    "responseError": "Απαιτείται κεντρική πρόσβαση Super Admin.",
+    "actualRootContext": "ΠΡΟΣΒΑΣΗ SUPER ADMIN · MYWORKSTATION LAB · ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "returnButton": "Επιστροφή στο Super Admin",
+    "afterReturn": "Platform2FA sign-in form",
+    "secureAuthRequest": "auto-review denied, not manual user rejection",
+    "securityReason": "browser_security_restricted / stop",
+    "noWorkaround": true,
+    "contextChangeActorUnknown": true,
+    "numericalAnswer": null,
+    "afterReport": null,
+    "screenshot": null
+  }
+}
