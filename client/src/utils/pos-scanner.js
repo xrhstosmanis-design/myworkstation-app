@@ -14,7 +14,7 @@ export function exactScanBarcode(products,value,{complete=false,manual=false}={}
   const wanted=new Set(barcodeCodes(value));
   let unfinished=false;const rows=[];
   for(const product of products){
-    const codes=[...(product.barcodes||[]),...(product.barcodeOptions||[]).map(row=>row.barcode)].flatMap(barcodeCodes);
+    const codes=[...(product.barcodes||[]),...(product.barcodeOptions||[]).map(row=>row.barcode),product.masterCode,product.sourceCode!==product.sku?product.sourceCode:null].flatMap(barcodeCodes);
     if(codes.some(code=>code.length>value.length&&code.startsWith(value)))unfinished=true;
     if(codes.some(code=>wanted.has(code)))rows.push(product);
   }

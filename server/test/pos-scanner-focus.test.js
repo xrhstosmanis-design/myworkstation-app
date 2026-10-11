@@ -27,6 +27,8 @@ test('completed imported barcode resolves exact unique identity and preserves st
  assert.equal(exactScanBarcode([product,{id:'option-only',barcodeOptions:[{barcode:scan}]}],scan,{complete:true,manual:true}),null,'Enter cannot fall back to first search match for ambiguous barcode');
  assert.equal(exactScanBarcode([product],'12227',{complete:true,manual:true}),product,'explicit SKU Enter remains supported');
  assert.equal(exactScanBarcode([{...product,barcodes:[],barcodeOptions:[],sku:scan}],scan,{complete:true}),null);
+ const master={...product,barcodes:[],barcodeOptions:[],masterCode:scan,sourceCode:scan};assert.equal(exactScanBarcode([master],scan),master,'numeric catalog barcode is recognized even without ProductBarcode rows');
+ assert.equal(exactScanBarcode([{...master,masterCode:null,sourceCode:scan,sku:scan}],scan),null,'sourceCode fallback to SKU is not an automatic barcode');
  assert.equal(barcodeCartProduct({...product,barcodeOptions:[{barcode:'0'+scan,salePrice:5},{barcode:scan,salePrice:4}]},scan).salePrice,4,'exact barcode price takes precedence over normalized alias');
  assert.equal(barcodeCartProduct({...product,barcodeOptions:[{barcode:'ALPHA-1',salePrice:3}]},'ALPHA-1').salePrice,3,'manual alphanumeric barcode retains its price');
  const cart=barcodeCartProduct(product,scan);assert.equal(cart.salePrice,4.2);assert.equal(cart.scannedBarcode,' 5201222304692 ');assert.equal(cart.cartKey,'bronze:: 5201222304692 ');
@@ -42,7 +44,7 @@ test('scanner focus respects disabled/detached inputs and visible dialogs, ignor
  input.disabled=true;assert.equal(scannerCanFocus(input),false);input.disabled=false;input.remove();assert.equal(scannerCanFocus(input),false);dom.window.close();
 });
 
-for(const fixture of [{name:'plain',scan:'52101588',stored:['52101588']},{name:'imported alias',scan:'5201222304692',stored:[' 05201222304692~5201222304692 '],option:' 5201222304692 '},{name:'shared prefix',scan:'5201222304692',stored:['5201222304692'],longer:true}]){
+for(const fixture of [{name:'plain',scan:'52101588',stored:['52101588']},{name:'imported alias',scan:'5201222304692',stored:[' 05201222304692~5201222304692 '],option:' 5201222304692 '},{name:'shared prefix',scan:'5201222304692',stored:['5201222304692'],longer:true},{name:'numeric master code',scan:'5201222304692',stored:[],masterCode:'5201222304692',noOptions:true}]){
 test(`actual POS ${fixture.name} scans once with/without Enter and retains focus/payment guards`,async()=>{
  const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StorePosPanel.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime','pdfjs-dist/build/pdf.worker.min.mjs?url','pdfjs-dist/build/pdf.mjs'],loader:{'.css':'empty'},logOverride:{'empty-import-meta':'silent'}});
  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid'}),keys=['window','document','navigator','HTMLElement','MutationObserver','localStorage','fetch','IS_REACT_ACT_ENVIRONMENT'];
@@ -50,7 +52,7 @@ test(`actual POS ${fixture.name} scans once with/without Enter and retains focus
  for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:key==='fetch'?async()=>({ok:true}):dom.window[key]});
  const module={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,root=createRoot(document.getElementById('root'));
- const calls=[],product={id:'example',sku:'SKU',name:'Fixture product',currentStock:100,salePrice:1,barcodes:fixture.stored,barcodeOptions:[{barcode:fixture.option||fixture.scan,salePrice:1.2}]};let checkout,fiscalRequest;
+ const calls=[],product={id:'example',sku:'SKU',name:'Fixture product',currentStock:100,salePrice:fixture.noOptions?1.2:1,barcodes:fixture.stored,masterCode:fixture.masterCode,sourceCode:fixture.masterCode,barcodeOptions:fixture.noOptions?[]:[{barcode:fixture.option||fixture.scan,salePrice:1.2}]};let checkout,fiscalRequest;
  const catalog=[product,...(fixture.longer?[{id:'longer',sku:'LONG',name:'Longer barcode',salePrice:2,barcodes:[fixture.scan+'99']}]:[])];
  const api=async(path,options={})=>{calls.push({path,options});if(fiscalRequest&&path.endsWith('/rbs-capdriver-v1/pending-scan-test'))return {request:fiscalRequest};if(path.endsWith('/checkout'))return new Promise((resolve,reject)=>{checkout={resolve,reject}});if(path==='/api/store-pos/stores/A')return {products:catalog,layout:{quickKeys:[],categories:[]},access:{}};if(path.endsWith('/table-service')||path==='/api/netlink/status')throw Error('not enabled');return {rows:[],items:[],requests:[],offers:[],stations:[],state:{}}};
  const input=()=>document.querySelector('[data-pos-scanner]');
@@ -99,7 +101,7 @@ test(`actual POS ${fixture.name} scans once with/without Enter and retains focus
   const cash=document.querySelector('button.cash');await act(async()=>{cash.focus();cash.click()});assert.equal(input().disabled,true);assert.equal(calls.filter(c=>c.path.endsWith('/checkout')).length,1);
   await act(async()=>checkout.reject(Error('payment rejected')));assert.equal(document.querySelectorAll('.standard-line').length,1);assert.equal(input().value,'99999999');assert.match(document.querySelector('.store-pos-alert.error').textContent,/payment rejected/);
   await act(async()=>cash.click());await act(async()=>checkout.resolve({total:2.4}));assert.equal(document.querySelectorAll('.standard-line').length,0);assert.equal(input().value,'');assert.equal(document.activeElement,input());
-  const body=JSON.parse(calls.find(c=>c.path.endsWith('/checkout')).options.body);assert.equal(body.items[0].productId,'example');assert.equal(body.items[0].quantity,2);assert.equal(body.items[0].barcode,fixture.option||fixture.scan);
+  const body=JSON.parse(calls.find(c=>c.path.endsWith('/checkout')).options.body);assert.equal(body.items[0].productId,'example');assert.equal(body.items[0].quantity,2);assert.equal(body.items[0].barcode,fixture.noOptions?null:fixture.option||fixture.scan);
   await type(fixture.scan);await enter();assert.equal(count(),3);assert.equal(document.querySelectorAll('.standard-line').length,1);
   await act(async()=>document.querySelector('button.card').click());assert.ok(document.querySelector('.pos-card-terminal-picker'));assert.equal(scannerCanFocus(input()),false);
   await enter();assert.equal(count(),3);
