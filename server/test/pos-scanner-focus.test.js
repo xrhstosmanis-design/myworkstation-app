@@ -20,6 +20,8 @@ test('scanner focus respects disabled/detached inputs and visible dialogs, ignor
  const input=dom.window.document.getElementById('scan'),dialog=dom.window.document.querySelector('[aria-modal]');
  assert.equal(scannerCanFocus(input),false);
  dialog.style.display='none';assert.equal(scannerCanFocus(input),true);
+ dialog.removeAttribute('aria-modal');dialog.className='operator-shift-popover';dialog.style.display='';assert.equal(scannerCanFocus(input),false);
+ dialog.style.display='none';assert.equal(scannerCanFocus(input),true);
  input.disabled=true;assert.equal(scannerCanFocus(input),false);input.disabled=false;input.remove();assert.equal(scannerCanFocus(input),false);dom.window.close();
 });
 
@@ -40,6 +42,31 @@ test('actual POS scans once with/without Enter and returns focus after successfu
  try{
   await act(async()=>root.render(React.createElement(module.exports.default,{api,store:{id:'A',name:'Fixture store'}})));
   assert.equal(document.activeElement,input());
+  const idleButton=document.querySelector('button[title="Πλήρης ανανέωση POS"]');
+  await act(async()=>{idleButton.focus();await new Promise(resolve=>setTimeout(resolve,20))});
+  assert.equal(document.activeElement,idleButton,'keyboard button focus remains usable before activation');
+  await act(async()=>{idleButton.dispatchEvent(new dom.window.Event('pointerup',{bubbles:true}));await new Promise(resolve=>setTimeout(resolve,20))});
+  assert.equal(document.activeElement,input(),'completed POS tap returns to scanner');
+  await act(async()=>{input().blur();document.querySelector('.standard-sale-panel').dispatchEvent(new dom.window.Event('pointerup',{bubbles:true}));await new Promise(resolve=>setTimeout(resolve,20))});
+  assert.equal(document.activeElement,input(),'background tap leaves scanner ready');
+  const editor=document.createElement('textarea');document.querySelector('.mws-standard-pos').appendChild(editor);
+  await act(async()=>{editor.focus();await new Promise(resolve=>setTimeout(resolve,20))});
+  assert.equal(document.activeElement,editor,'editing retains focus');
+  await act(async()=>{editor.blur();await new Promise(resolve=>setTimeout(resolve,20))});
+  assert.equal(document.activeElement,input(),'leaving an editor restores idle readiness');editor.remove();
+  for(const tag of ['input','select','div']){
+   const field=document.createElement(tag);if(tag==='div'){field.contentEditable='true';field.setAttribute('contenteditable','true');field.tabIndex=0}
+   document.querySelector('.mws-standard-pos').appendChild(field);
+   await act(async()=>{field.focus();field.dispatchEvent(new dom.window.Event('pointerup',{bubbles:true}));await new Promise(resolve=>setTimeout(resolve,20))});
+   assert.equal(document.activeElement,field,`${tag} editor retains focus after tap`);
+   await act(async()=>{field.remove();await new Promise(resolve=>setTimeout(resolve,20))});
+   assert.equal(document.activeElement,input(),'removed editor returns focus safely');
+  }
+  const modal=document.createElement('div');modal.className='shift-overlay';modal.innerHTML='<input>';
+  await act(async()=>{document.body.appendChild(modal);modal.querySelector('input').focus();await new Promise(resolve=>setTimeout(resolve,20))});
+  assert.equal(document.activeElement,modal.querySelector('input'));assert.equal(scannerCanFocus(input()),false);
+  await act(async()=>{modal.remove();await new Promise(resolve=>setTimeout(resolve,20))});
+  assert.equal(document.activeElement,input(),'closing external shift modal restores readiness');
   await type('52101588');await enter();assert.equal(document.querySelectorAll('.standard-line').length,1);assert.equal(count(),1);assert.equal(input().value,'');assert.equal(document.activeElement,input());
   await wait();assert.equal(count(),1);
   await type('52101588');await wait();assert.equal(count(),2);assert.equal(document.querySelector('.line-qty b').textContent,'2');await enter();assert.equal(count(),2);
