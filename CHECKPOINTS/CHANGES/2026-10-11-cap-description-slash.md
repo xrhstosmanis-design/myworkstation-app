@@ -6,6 +6,8 @@ Bounded serialization change only: validate original trimmed description length8
 
 Actual production transaction/DB/device state remains NOT TESTED; no sale/payment/stock/shift/fiscal command, historical replay or data correction. Protected KAT/Diadoxou physical USER observations and broader installation/fiscal owners retained. Full source/main CI and ordinary guarded exact healthy deploy before owner acceptance. Do not replay an uncertain paid request. Physical acceptance requires fresh baseline and a genuinely intended separately identified one-shot sale, not repetition for evidence. No manual PASS. Central generated PDF publication deferred following automatic review rejection; Markdown records remain authoritative.
 
+Prepared full local suite now2369PASS/0FAIL/23isolated-DBSKIP after generating Prisma; production preparation invariants PASS. Earlier40environment failures remain recorded above, not product PASS. Concurrent invoice continuationPR2323 is preserved; source blobs unchanged.
+
 Single next action full CI/build/invariants/native isolated E2E/Windows, then guarded release verification and owner acceptance. Owner retained until named handoff/completion.
 
 # CAP Driver description slash correction
