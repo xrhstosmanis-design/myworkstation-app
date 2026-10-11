@@ -1,3 +1,7 @@
+## 11/10/2026 — INVOICE-PIECE-FACTOR-CURRENT-MAIN / AWAITING CI + USER
+
+Replacement for conflicted PR2315. Existing invoice 142730 USER FAIL; blank PIECE factors default to 1 in editable assistant, PACKAGE factors remain verified. No financial or stock changes. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-invoice-piece-factor-current-main.md`. Physical retest pending.
+
 ## 11/10/2026 22:41 Athens — POS-CUSTOMER-ACCOUNT-01 / ASSIGNED / NOT TESTED
 
 Owner `codex/operator-checkbox-audit-20261009`; independent source branch `codex/customer-pos-credit-20261011`. User explicitly requests «φτιαξε οτι χρειαζετε εχεις εγκριση για ολα» after clarifying debt receipts must occur at POS with CASH or CARD. New named-customer account scope: personal member card/QR and individual discount, category association where missing, credit purchases and explicit POS debt settlement. Preserve existing POS-AUDIENCE-CREDIT-01 opt-in/labels/layout owner and its limited OFF/ON/dropdown USER PASS; no takeover of settings/rename residual. No33/tracker35 remains OPEN. No39/Inventory/invoice/scanner/change-message and other owners untouched.
