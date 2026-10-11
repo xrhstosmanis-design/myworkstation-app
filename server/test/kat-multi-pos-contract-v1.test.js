@@ -24,7 +24,7 @@ test("multiple KAT POS terminals share store stock but isolate sale ledgers",()=
   assert.doesNotMatch(pos,/COALESCE\(sp\."currentStock",0\)>=\$\{quantity\}/);
   assert.match(pos,/NOT EXISTS\(SELECT 1 FROM "PreparationRecipeLine"/);
   assert.match(pos,/NEGATIVE_STOCK_RECORDED/);
-  assert.match(pos,/"terminalPos"=\$\{terminalPos\} AND "status"='OPEN'/);
+  assert.match(pos,/UPPER\(TRIM\("terminalPos"\)\)=\$\{onlineRouting\?\.terminalPos\|\|terminalPos\} AND "status"='OPEN'/);
   assert.match(ledger,/"terminalPos"=\$\{terminalPos\} AND "status"='OPEN'/);
   assert.match(ledger,/WHERE "sessionId"=ANY\(\$\{openSessionIds\}::text\[\]\)/);
   assert.match(e2e,/assert\.equal\(Number\(stock\?\.currentStock\),7/);

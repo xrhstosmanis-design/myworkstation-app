@@ -93,6 +93,12 @@ function enforceStorePosPermissions(req,res,permissions){
   if(req.method==="POST"&&(/\/sales\/[^/]+\/(reverse|return-items|internal-return)$/.test(path)||/\/exchange$/.test(path))&&!permissions.includes("RETURN_ITEMS")){
     return deny("Δεν έχεις δικαίωμα «Επιστροφή ειδών» από το BackOffice.");
   }
+  const customerWrite=req.method==="POST"&&(/\/(customer-balance-payment|customer-receipt-recovery|customer-card\/scan|audience-card\/scan)$/.test(path)||Boolean(req.body?.customerId));
+  if(customerWrite&&!permissions.includes("CUSTOMERS_POS"))return deny("Δεν έχεις δικαίωμα «Πελάτες (PoS)» από το BackOffice.");
+  if(req.method==="POST"&&/\/customer-balance-payment$/.test(path)){
+    if(req.body?.method==="CASH"&&!permissions.includes("POS_CASH"))return deny("Δεν έχεις δικαίωμα «Μετρητά» από το BackOffice.");
+    if(req.body?.method==="CARD"&&!permissions.includes("POS_CARDS"))return deny("Δεν έχεις δικαίωμα «Κάρτες» από το BackOffice.");
+  }
   if(req.method==="GET"&&/\/customers(?:\/|$)/.test(path)&&!permissions.includes("CUSTOMERS_POS")){
     return deny("Δεν έχεις δικαίωμα «Πελάτες (PoS)» από το BackOffice.");
   }

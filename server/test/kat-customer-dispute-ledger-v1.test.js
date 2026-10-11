@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
 const customers=await readFile(new URL("../src/routes/customer-control-v2.js",import.meta.url),"utf8");
-const pos=await readFile(new URL("../src/routes/store-pos.js",import.meta.url),"utf8");
+const pos=(await readFile(new URL("../src/routes/store-pos.js",import.meta.url),"utf8"))+"\n"+(await readFile(new URL("../src/lib/pos-customer-receipt.js",import.meta.url),"utf8"));
 const cash=await readFile(new URL("../src/routes/cash-control.js",import.meta.url),"utf8");
 const sales=await readFile(new URL("../src/routes/kiosk-reports-sales-v4.js",import.meta.url),"utf8");
 const ui=await readFile(new URL("../../client/src/components/commerce/installCustomerControlSuiteV2.js",import.meta.url),"utf8");

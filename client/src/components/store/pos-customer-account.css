@@ -1,0 +1,11 @@
+.pos-customer-receipt form{padding:20px;display:grid;gap:14px;color:#102a43;font-size:18px}
+.pos-customer-receipt label{display:grid;gap:7px;font-weight:700}
+.pos-customer-receipt input{min-height:48px;font-size:20px;padding:8px;border:1px solid #b5c6d4;border-radius:9px}
+.pos-receipt-methods{display:flex;gap:12px}
+.pos-receipt-methods button,.pos-customer-account-action{min-height:48px;padding:10px 16px;font-size:16px;font-weight:800;border:1px solid #b5c6d4;border-radius:9px;background:#fff;color:#102a43}
+.pos-receipt-methods button[aria-pressed=true]{background:#087f8c;color:white}
+.pos-customer-receipt .pos-receipt-confirm{display:flex;align-items:center;gap:12px}
+.pos-receipt-confirm input{width:24px;min-height:24px}
+.pos-customer-receipt [role=alert]{color:#a71930}
+.pos-customer-receipt button:disabled{opacity:.5}
+.pos-customer-card-input{max-width:240px;min-height:42px;padding:7px 10px;font-size:16px;border:1px solid #b5c6d4;border-radius:8px}
