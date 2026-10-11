@@ -9,11 +9,13 @@ import { expenseReviewStatus } from "./expense-review-policy.js";
 import { ownerSupplierProofError, readBankDepositProofPdf, readSupplierProofPdf, supplierProofMismatch } from "./supplier-proof-pdf-check.js";
 
 import {recordCashTransfer} from "../lib/store-cash-transfer.js";
+import {canCorrectPayment,correctPaymentAmount,paymentCorrectionContext} from "../lib/payment-amount-correction.js";
 
 const router=Router();
 let tablesPromise;
 
 const tableStatements=[
+  `CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`,
   `CREATE TABLE IF NOT EXISTS "CashShiftSession" (
     "id" TEXT PRIMARY KEY,
     "companyId" TEXT NOT NULL,
@@ -426,6 +428,18 @@ async function reconcileOnlineSalesForOpenSession({store,companyId,openSession})
 }
 
 router.use(auth,requireLedgerAccess);
+
+async function correctionScope(req){
+  assertStoreAccess(req,req.params.storeId);
+  await ownedStore(req.params.storeId,req.user.companyId);
+  return {companyId:req.user.companyId,storeId:req.params.storeId,transactionId:req.params.transactionId,user:req.user,terminalPos:await requestTerminal(req)};
+}
+router.get("/stores/:storeId/payments/:transactionId/correction-context",route(async(req,res)=>{
+  res.json(await paymentCorrectionContext(prisma,await correctionScope(req)));
+}));
+router.post("/stores/:storeId/payments/:transactionId/correct-amount",route(async(req,res)=>{
+  res.json(await correctPaymentAmount(prisma,await correctionScope(req),req.body||{}));
+}));
 
 router.post("/stores/:storeId/bank-deposits",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
@@ -881,7 +895,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
       AND (${canReviewStoreLedger} OR "actorId"=${req.user.id})
     ORDER BY "occurredAt" DESC LIMIT 80
   `;
-  const recent=recentRows.map(normalize);
+  const recent=recentRows.map(row=>({...normalize(row),canCorrectAmount:canCorrectPayment(req.user,row,openRows.find(session=>session.id===row.sessionId)?{...openRows.find(session=>session.id===row.sessionId),status:"OPEN",companyId:req.user.companyId,storeId:store.id}:null,terminalPos)}));
   const suppliers=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
   const purchaseDocuments=await prisma.$queryRaw`
     SELECT p."id",p."supplierId",p."documentNumber",p."documentDate",p."totalGross",p."status",s."name" AS "supplierName"
