@@ -2627,3 +2627,13 @@ Baseline main1ca72fe and current actual existing category-triggered payroll UI i
 
 Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-pos-payroll-button.md`. Retain this owner until completion/named handoff; do not take N10 or other assigned scopes.
 
+
+## 11/10/2026 17:52 Athens — DAILY-MODIFIER-PRICE-01 / owner-authorized handoff / ASSIGNED
+
+ΑΝΑΛΗΨΗ ΑΠΟ `codex/daily-bite-coffee-kat-behavior-20261010` — ASSIGNED `codex/daily-modifier-inventory-price-20261011`, source branch `feat/daily-modifier-inventory-price-20261011`, issue #2054. User explicitly instructed «παρε την αναθεση εσυ» in the receiving Work conversation. Transfer only the residual DAILY coffee modifier management/pricing and cashier UI acceptance; the broader screenshot POS layout owner and other assignments remain unchanged. Old bounded LIVE apply PASS remains protected: 16 products, 6 DAILY groups/26 modifiers/84 links/11 name-only normalizations; 8,753 products/9 departments. No second bootstrap, catalog import, department creation, KAT recipe/ingredient copying, financial/stock/fiscal action or authentication change.
+
+Fresh read-only browser 11Oct17:46–17:49Athens, authenticated Platform Super Admin Χρήστος Μάνης -> DAILY BITE Backoffice: no open shift; archive DB000002 FREDDO ESPRESSO retail2.25EUR and DB000005 FREDDO CAPPUCCINO retail2.45EUR/stock0. FREDDO ESPRESSO card opened and cancelled without save. Store Mode explicitly reports no enabled personal PIN. Management menu Modifiers disabled in this observed view. Source inspection confirms ManagementModifier.price is independent numeric storage; existing bootstrap copied source modifier prices, not a dynamic inventory price link. Earlier conversational promise of automatic inventory-price synchronization is not established PASS.
+
+Scope: preserve existing fixed-price behavior; add explicit same-company/selected-store inventory product association for chargeable modifiers with current inventory sale-price resolution, visible editable management and server-side validation. No guessed barcode/SKU/name match or automatic bulk association. Isolated tests must cover store price override, later price change, foreign/missing/inactive products, legacy free/fixed choices and consistent displayed/server-resolved totals. Live DAILY runtime binding/UI and physical POS acceptance NOT TESTED. PERSONAL PIN setup remains separately required; do not create staff or open real shifts as diagnostics. CI is not LAB PASS. This handoff must merge green before source/state-changing tests; single next action after merge: bounded source design and implementation with regression coverage.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-daily-modifier-inventory-price.md`. Receiving owner retained until completion or named transfer.
