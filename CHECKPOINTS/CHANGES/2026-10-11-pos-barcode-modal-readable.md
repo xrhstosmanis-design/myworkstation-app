@@ -1,3 +1,13 @@
+## 11/10/2026 22:19:27 Athens — POS-BARCODE-MODAL-04 / limited USER VISUAL PASS / CLOSED
+
+Χρήστος Μανής confirms «ειναι οκ» after item4 release and the requested Ctrl+F5 → Λειτουργίες POS → Έλεγχος και καταχώρηση νέου Barcode visual check. Limited owner-reported USER PASS for the delivered larger/readable Barcode dialog only. Referenced attachment image(20261011-191921).png was unavailable at the supplied local path; no independent image, screen geometry, physical terminal/client SHA, touch/mobile gesture, exact search/selection or barcode-save/label/financial outcome is inferred. No new test, transaction or barcode/price write was replayed to obtain evidence.
+
+Prior release evidence: sourcePR2307/head6075f02c04a5d327570f307715ddd36fac515d23/CI38165914115 SUCCESS2377/0/0; integration merge800441c81b0eab129acc239cb3afb09ae4926c1b. Combined exact live revision3b4c067c4318a46d932ee282047e3f30ac3b6d31/mainCI38166369674 SUCCESS2393/0/0, actual pinned Render guard38166770234/deployjob114550867340 healthy19:11:13Z; independent public health/served JS+CSS22:12:26Athens. ReceiptPR2308/headce6882dca68c4155ee1d46b9e2e9cd023aafeb6d/docsCI38167120030 SUCCESS mergeddb1ecf1cb2341138dbd5e7623c48f4a2d147b9e7. This is independently verified release metadata, not proof of the user's physical client SHA at acceptance.
+
+Owner codex/pos-barcode-modal-readable-20261011 completed this bounded display scope. Checkpoint CHECKPOINTS/CHANGES/2026-10-11-pos-barcode-modal-readable.md and POS manual synchronized; completed pending subtask removed. Items1/2 still AWAITING USER, item3 collection CLOSED; item5 claimed next, items6–9 wait. Wider tracker03/installations, scanner/catalog performance, EAN13 label/save permissions, financial/stock/fiscal and other owners retain their exact prior status. No broad LAB or whole-request PASS.
+
+## Historical release evidence (superseded AWAITING USER)
+
 ## 11/10/2026 22:13 Athens — POS-BARCODE-MODAL-04 / SOURCE LIVE / AWAITING USER
 
 Owner/branch `codex/pos-barcode-modal-readable-20261011`; receipt `docs/pos-barcode-readable-release-20261011`. Standing one-at-a-time instruction and limited item3 USER PASS21:23:08 authorize item4: larger, readable existing «Έλεγχος και καταχώρηση νέου Barcode» dialog. Item3 collection is CLOSED USER PASS in its checkpoint/manual/PR2301; items1/2 still AWAITING USER and items5–9 wait. Retain owner until bounded acceptance/named handoff. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-pos-barcode-modal-readable.md`.
