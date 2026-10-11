@@ -1,3 +1,7 @@
+## 11/10/2026 10:26 Athens — POS-SCANNER-IDLE-FOCUS-01 / bounded USER PASS / CLOSED
+
+Χρήστος Μανής reports «Ο κέρσορας διορθηκε» and says it stays there. This is owner-reported physical acceptance of idle scanner readiness only, following sourcePR2212/merge67ac778538234fdc285653a9ddff880f86b7851f, full sourceCI38120172705/mainCI38120469309 SUCCESS2276/0/0, guarded Render38120641320 SUCCESS and independent exact health/served JS verification07:16:56Z. Exact physical client SHA/scanner suffix/terminal ID not independently captured. Owner codex/pos-scanner-idle-focus-20261011 completed; no repeat test/transaction. Manual, active/tracker/pending/checklist/PDF synchronize this limited acceptance. New specific barcode5201222304692/TEREA BRONZE suggestion-only USER FAIL is separately assigned POS-BARCODE-CART-02; no universal barcode/financial/stock/fiscal PASS implied. Older contrary physical-acceptance-OPEN notes are historical for idle focus only.
+
 ## 11/10/2026 — POS-SCANNER-IDLE-FOCUS-01 / SOURCE LIVE / PHYSICAL ACCEPTANCE OPEN
 
 Owner `codex/pos-scanner-idle-focus-20261011` retained. ClaimPR2211/head8b99b828/docsCI38119903844 SUCCESS/merge1336efdd before source; sourcePR2212 exacthead9f7301aebd9dd4d51ea37cece89299367a10a167/fullCI38120172705 SUCCESS2276PASS/0FAIL/0SKIP. Merge67ac778538234fdc285653a9ddff880f86b7851f, exact mainCI38120469309 SUCCESS2276/0/0 with Windows CAPdriver/Hikvision, client build/contracts/invariants, native isolated PostgreSQL and real HTTP E2E. No retries, skipped test bypass or workflow changes.
