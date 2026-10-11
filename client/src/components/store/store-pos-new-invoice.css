@@ -1,0 +1,141 @@
+/* Larger new-invoice workspace; other payment flows retain their layout. */
+.pos-standard-modal.pos-new-invoice-modal { padding:8px; }
+.pos-standard-modal.pos-new-invoice-modal > section {
+  width:calc(100vw - 16px);
+  height:calc(100dvh - 16px);
+  max-height:calc(100dvh - 16px);
+  min-width:0;
+}
+.pos-standard-modal.pos-new-invoice-modal > section > header { padding:8px 16px; }
+.pos-standard-modal.pos-new-invoice-modal > section > main {
+  display:block;
+  padding:10px 16px;
+}
+.pos-standard-modal.pos-new-invoice-modal [data-invoice-v244] > .pos-payment-types {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.pos-standard-modal.pos-new-invoice-modal [data-invoice-v244] > .pos-payment-types button,
+.pos-standard-modal.pos-new-invoice-modal [data-invoice-v244] > div > .pos-payment-types button {
+  min-height:44px;
+  padding:6px 10px;
+  font-size:16px;
+}
+.pos-new-invoice-form {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,2fr);
+  gap:20px;
+  align-items:start;
+  margin-top:10px;
+  color:#143d31;
+}
+.pos-invoice-document-area,.pos-invoice-fields-area { min-width:0; }
+.pos-invoice-fields-area {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:10px 12px;
+  padding:14px;
+  background:#fff;
+  border:1px solid #b7cdc3;
+  border-radius:12px;
+}
+.pos-invoice-fields-area label {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+  font-size:17px;
+  line-height:1.25;
+  font-weight:800;
+}
+.pos-invoice-fields-area label small { font-size:13px; }
+.pos-invoice-fields-area input,.pos-invoice-fields-area select {
+  width:100%;
+  min-width:0;
+  min-height:56px;
+  box-sizing:border-box;
+  border:1px solid #8fab9f;
+  border-radius:9px;
+  padding:8px 12px;
+  background:#fff;
+  color:#123c2e;
+  font-size:20px;
+  line-height:1.25;
+}
+.pos-invoice-fields-area input:focus,.pos-invoice-fields-area select:focus {
+  outline:3px solid #21a87a;
+  outline-offset:1px;
+}
+.pos-invoice-fields-area > label:first-child,
+.pos-invoice-reference-fields,
+.pos-invoice-new-supplier,
+.pos-invoice-fields-area > [role=alert],
+.pos-invoice-fields-area > .pos-expense-payment-sources,
+.pos-invoice-fields-area > .pos-primary-action { grid-column:1/-1; }
+.pos-invoice-reference-fields {
+  display:grid;
+  grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr) minmax(0,1fr);
+  gap:12px;
+}
+.pos-invoice-fields-area > .pos-payment-types {
+  grid-column:auto;
+  align-self:end;
+}
+.pos-invoice-fields-area > .pos-payment-types button,
+.pos-invoice-fields-area > .pos-primary-action {
+  min-height:56px;
+  padding:10px 12px;
+  font-size:18px;
+  line-height:1.25;
+}
+.pos-invoice-fields-area .pos-expense-payment-sources { padding:8px; gap:6px; }
+.pos-invoice-fields-area .pos-expense-payment-sources button {
+  min-height:52px;
+  font-size:16px;
+  line-height:1.2;
+}
+.pos-new-invoice-basic .pos-invoice-fields-area > .pos-payment-types { grid-column:1/-1; }
+.pos-invoice-document-area .pos-photo-actions { grid-template-columns:1fr; }
+.pos-invoice-document-area .pos-photo-actions button,
+.pos-invoice-document-area .pos-photo-actions label {
+  padding:8px;
+  font-size:16px;
+  line-height:1.25;
+}
+.pos-invoice-document-area .pos-photo-actions > b { overflow-wrap:anywhere; }
+@media (max-width:1100px) {
+  .pos-new-invoice-form { grid-template-columns:minmax(0,.8fr) minmax(0,2fr); gap:12px; }
+  .pos-invoice-fields-area { padding:10px; }
+  .pos-invoice-reference-fields { gap:8px; }
+  .pos-invoice-fields-area label { font-size:16px; }
+  .pos-invoice-fields-area input,.pos-invoice-fields-area select { font-size:18px; }
+}
+@media (min-width:900px) and (max-height:700px) {
+  .pos-standard-modal.pos-new-invoice-modal > section > header { padding:6px 12px; }
+  .pos-standard-modal.pos-new-invoice-modal header h2 { font-size:22px; }
+  .pos-standard-modal.pos-new-invoice-modal > section > main { padding:6px 12px; }
+  .pos-standard-modal.pos-new-invoice-modal [data-invoice-v244] > div:has(> small) { display:none; }
+  .pos-standard-modal.pos-new-invoice-modal [data-invoice-v244] > .pos-payment-types button,
+  .pos-standard-modal.pos-new-invoice-modal [data-invoice-v244] > div > .pos-payment-types button {
+    min-height:40px;
+    font-size:15px;
+  }
+  .pos-new-invoice-form { margin-top:6px; }
+  .pos-invoice-fields-area { gap:6px 10px; padding:8px; }
+  .pos-invoice-fields-area label { gap:4px; font-size:16px; }
+  .pos-invoice-fields-area input,.pos-invoice-fields-area select,
+  .pos-invoice-fields-area > .pos-payment-types button,
+  .pos-invoice-fields-area > .pos-primary-action { min-height:52px; }
+  .pos-invoice-fields-area .pos-expense-payment-sources { padding:6px; }
+  .pos-invoice-fields-area .pos-expense-payment-sources button { min-height:50px; font-size:15px; }
+  .pos-new-invoice-form:not(.pos-new-invoice-basic) .pos-invoice-fields-area:not(:has(.pos-invoice-new-supplier)) > label:first-child {
+    grid-column:1;
+    grid-row:1;
+  }
+  .pos-new-invoice-form:not(.pos-new-invoice-basic) .pos-invoice-fields-area:not(:has(.pos-invoice-new-supplier)) > .pos-invoice-document-type {
+    grid-column:2;
+    grid-row:1;
+  }
+  .pos-new-invoice-form:not(.pos-new-invoice-basic) .pos-invoice-fields-area:not(:has(.pos-invoice-new-supplier)) > .pos-payment-types {
+    grid-column:1/-1;
+  }
+}
