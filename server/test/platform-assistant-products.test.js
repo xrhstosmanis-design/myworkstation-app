@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {authorizePlatformAssistant,createPlatformAssistantSession} from "../src/services/platform-assistant-products.js";
 import {assistantProductTools,runProductAssistant,runOwnerAssistant,productSalesEvidence} from "../src/services/owner-sales-tools.js";
 import {productStockEvidence} from "../src/services/owner-stock-tools.js";
@@ -7,7 +8,7 @@ import {readSalesAnalysisReport} from "../src/routes/kiosk-reports-sales-v4.js";
 import {readStockAnalysisReport} from "../src/routes/kiosk-reports-stock-v3.js";
 import {salesReportCalendar} from "../src/services/sales-report-calendar.js";
 
-const req={user:{id:"admin",role:"SUPER_ADMIN",isSuperAdmin:true,sessionId:"session",sessionVersion:3},headers:{authorization:"Bearer fixture"}};
+const req={user:{id:"admin",role:"OWNER",platformRole:"SUPER_ADMIN",isSuperAdmin:true,sessionId:"session",sessionVersion:3},headers:{authorization:"Bearer fixture"}};
 const selection={companyId:"c",storeId:"s"},scope={...selection,companyName:"Company",storeName:"Store"};
 const session=()=>({userId:"admin",expiresAt:new Date("2030-01-01"),revokedAt:null,user:{id:"admin",role:"SUPER_ADMIN",sessionVersion:3,mustChangePassword:false}});
 const row=()=>({productId:"p",sku:"2269",name:"ΝΕΡΟ 500ML",storeId:"s",storeName:"Store",unit:"KG",currentStock:-2.125,salesQuantity:4,grossSales:2,netSales:1.77,vatValue:.23,costValue:99,normalSaleCount:1,reversalCount:0,returnGrossValue:0,supplierName:"PRIVATE SUPPLIER",operatorName:"PRIVATE NAME"});
@@ -27,10 +28,25 @@ test("Platform and Owner share the exact product registry, dispatcher and checke
 test("fresh actual Super Admin session and matching active company/store are required before any report",async()=>{
   const db={userSession:{findUnique:async()=>session()},store:{findFirst:async({where})=>{assert.deepEqual(where,{id:"s",companyId:"c",active:true,company:{active:true}});return {id:"s",companyId:"c",name:"Store",company:{name:"Company"}}}}};
   assert.deepEqual(await authorizePlatformAssistant(req,selection,{db}),scope);assert.equal(await authorizePlatformAssistant(req,null,{db}),null);
-  for(const user of [{...req.user,role:"OWNER"},{...req.user,isSuperAdmin:false},{...req.user,supportContext:selection}])await denial(authorizePlatformAssistant({...req,user},selection,{db}),403);
+  for(const user of [{...req.user,role:"EMPLOYEE"},{...req.user,isSuperAdmin:false,platformRole:"OWNER"},{...req.user,supportContext:selection}])await denial(authorizePlatformAssistant({...req,user},selection,{db}),403);
   await denial(authorizePlatformAssistant({...req,user:{...req.user,sessionId:null}},selection,{db}),401);
   for(const mutate of [s=>s.revokedAt=new Date(),s=>s.expiresAt=new Date(0),s=>s.expiresAt="invalid",s=>s.userId="other",s=>s.user.id="other",s=>s.user.role="OWNER",s=>s.user.sessionVersion=4,s=>s.user.mustChangePassword=true]){const s=session();mutate(s);await denial(authorizePlatformAssistant(req,selection,{db:{...db,userSession:{findUnique:async()=>s}}}),401)}
   await denial(authorizePlatformAssistant(req,{...selection,companyId:"foreign"},{db:{...db,store:{findFirst:async()=>null}}}),404);
+});
+
+test("actual Backoffice session issuer's OWNER/SUPER_ADMIN payload reaches products while a database downgrade still denies it",async()=>{
+  const source=readFileSync(new URL("../src/routes/auth.js",import.meta.url),"utf8");
+  const body=source.slice(source.indexOf("async function issueSession("),source.indexOf("// Renew only an already authenticated"));
+  assert.ok(body.startsWith("async function issueSession("));let payload;
+  const issue=new Function("prisma","jwt","assertCustomerDemoRuntimeClosed","SESSION_HOURS","deviceLabel","ipAddress","publicUser","process",`${body};return issueSession`)(
+    {userSession:{create:async()=>({id:"session",deviceName:"Fixture"})}},
+    {sign:value=>{payload=value;return "test-only"}},()=>{},8,value=>value,()=>null,user=>({id:user.id}),{env:{JWT_SECRET:"test-only"}});
+  await issue({id:"admin",role:"SUPER_ADMIN",companyId:"platform",sessionVersion:3},{headers:{}},"Fixture");
+  assert.equal(payload.role,"OWNER");assert.equal(payload.platformRole,"SUPER_ADMIN");assert.equal(payload.isSuperAdmin,true);
+  const db={userSession:{findUnique:async()=>session()},store:{findFirst:async()=>({id:"s",companyId:"c",name:"Store",company:{name:"Company"}})}};
+  assert.deepEqual(await authorizePlatformAssistant({user:payload},selection,{db}),scope);
+  const downgraded=session();downgraded.user.role="OWNER";
+  await denial(authorizePlatformAssistant({user:payload},selection,{db:{...db,userSession:{findUnique:async()=>downgraded}}}),401);
 });
 
 test("selected sales/stock tools use canonical filters and privacy projection with identical Owner results",async()=>{
