@@ -1,3 +1,13 @@
+## 11/10/2026 17:00 Athens - Owner product ambiguity / no matching sales: LIMITED LIVE PASS
+
+Who: normal authorized Owner, own selected store, existing AI_OWNER_ASSISTANT + INVENTORY report entitlement. Tested MYWORKSTATION LAB / Υπεύθυνος Εργαστηρίου / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ; server3e37a194, exact CI38144821469 and guarded38145069708 SUCCESS; existing assistant client/source retained.
+
+Open own store -> Εμπορική λειτουργία -> Λοιπές εμπορικές λειτουργίες, confirm commercial Κατάστημα explicitly -> Βοηθός Ιδιοκτήτη. Ask for LAB sales01/10/2026 through10/10/2026. In this tested case two products match; assistant requests one specific SKU, lists LAB EXCEL TEST1/LAB-EXCEL-20260909-01 and TEST2/LAB-EXCEL-20260909-02, and gives no amounts or aggregate. Compare Αναφορές -> Στατιστικά πωλήσεων, same store/LAB/from/to and checked Ώρα Ελλάδας; matching two rows were independently observed before/after. Recheck Athens each reopening.
+
+Tested second example VOICE-NOMATCH-20261011 (query only): same-period normal report empty before/after; assistant/source state no corresponding recorded sales for this store and period, explicitly no conclusion about product existence or zero stock. Troubleshooting: confirm description/SKU/dates and selected store; absence of sales is not an inventory result. No product creation or business action follows automatically. Combination of multiple SKUs, all ambiguities/no-match strings and other report domains were not accepted by these examples.
+
+Two read-only cases only, physical microphone and broader lifecycle/tenant/module/date/source-failure acceptance remain OPEN. Existing cash/date/currency/context PASS retained. Evidence negative-sales-observation.json and two actual screenshots under CHECKPOINTS/EVIDENCE/voice-owner-negative-20261011; detailed checkpoint2026-10-10-unified-voice-assistant.md. Full voice assistant remains unfinished.
+
 ## 11/10/2026 16:37 Athens - Owner ten-day answer with readable currency: LIMITED LIVE PASS
 
 Authorized normal Owner with the selected own store's existing AI_OWNER_ASSISTANT and INVENTORY report entitlement. Tested Υπεύθυνος Εργαστηρίου / MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ on exact healthy4e3e1d6d, full2315/0/0, guarded38143504744. Normal entry -> own store -> Εμπορική λειτουργία -> Λοιπές εμπορικές λειτουργίες -> explicitly confirm correct store in commercial selector -> Βοηθός Ιδιοκτήτη.
