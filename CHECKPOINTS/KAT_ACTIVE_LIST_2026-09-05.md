@@ -1,3 +1,7 @@
+## 11/10/2026 — INVOICE-PIECE-FACTOR-01 / PR2310 / AWAITING CI AND USER
+
+Blank factor defaults to 1 only for PIECE rows in the editable POS invoice assistant. PACKAGE requires verified units. Existing 12-line draft USER FAIL remains until physical transfer confirmed. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-invoice-piece-factor-default.md`. No production financial/stock/finalization mutation.
+
 ## 11/10/2026 22:16:15 Athens — CASH-REPORT-ANALYSES-01 / USER PASS εμφάνισης / CLOSED
 
 Ο ιδιοκτήτης επιβεβαίωσε «ειναι οκ» μετά την παράδοση της μαζεμένης αναφοράς ταμείου με κουμπί «Αναλύσεις». USER PASS μόνο αυτής της εμφάνισης, συμπληρωματικά στο πραγματικό LIMITED LIVE UI PASS PR2299/2300. Δεν έγινε νέα δοκιμή/συναλλαγή. Το μήνυμα δεν προσδιορίζει νέα συσκευή/ρόλο/revision ή οικονομικά deltas. Physical print/export/email/mobile/άλλοι ρόλοι παραμένουν NOT TESTED· overall Νο33 OPEN. Scope ήδη κλειστό, δεν επανεισάγεται στο pending. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-cash-report-analyses.md`, manual `docs/manual/reports/PASS.md`.
