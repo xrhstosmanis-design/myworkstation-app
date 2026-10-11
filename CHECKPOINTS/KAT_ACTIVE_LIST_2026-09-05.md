@@ -24,7 +24,7 @@ Owner `codex/cap-description-slash-20261011`, source branch `fix/cap-description
 
 Scope: normalize description slash delimiters to spaces for outbound SL field only; retain original catalog/checkout description, strict CR/LF rejection,80-character limit,Windows1253 validation,barcode/payment validation,VAT mappings,writer liveness,one-shot dispatch/idempotency. No production sale/payment/stock/shift/fiscal command, request replay or existing-data correction. Read current active/tracker/pending/checklist/manual and relevant CAP checkpoints/history before change. Existing KAT/Diadoxou profiles and CASH/CARD/Delivery protections preserved. Acceptance: exact observed name serializes as one SL with unchanged numeric fields and one CR; injection/newlines/overlong/encoding fail closed; full Node20 CI/build/isolated E2E/Windows, exact guarded release and physical acceptance still required. CI is not LAB PASS. No manual PASS until real observation.
 
-Claim must merge green before source edits. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-cap-description-slash.md`. Single next action bounded serialization correction after merged claim. Owner retained until completion/named handoff.
+Claim PR2321 merged green; SOURCE READY/AWAITING CI AND DEVICE. Latest bounded source evidence is the CAP-DESCRIPTION-SLASH-01 entry at the end of this record and `CHECKPOINTS/CHANGES/2026-10-11-cap-description-slash.md`. Owner retained until completion/named handoff.
 
 ## 11/10/2026 23:24 Athens — POS-BRAND-VARIANTS-06 / ASSIGNED / NOT TESTED
 
@@ -6886,3 +6886,18 @@ Exact main8a57a18a999d66a180b10265b0a7034bd7980380 fullCI38152065964 SUCCESS; al
 Application release7b297422 was independently guarded by deploy workflow38151522528/deploy job114505834882 SUCCESS: exact fullCI38150490291 checked, previous healthyab7171c2 captured as rollback artifact11707100667, hook pinned7b297422, health matched exact target15:32:55Z. Public served asset/source verification and AWAITING USER acceptance recorded in payroll checkpoint and receipt PR2278/main51fc40e. No manual deployment, gate bypass or financial action. Workflow main preservation does not remove docs-only skip or any required deployment verification.
 
 Release infrastructure blocker resolved within bounded ownership; payroll UI/financial acceptance stays AWAITING USER with same owner. Single next action Ctrl+F5 → Πληρωμές → Μισθοδοσία → one fields/choices photo; no repeat/payment just for evidence. Other assigned source/protected PASS untouched.
+
+## 11/10/2026 — CAP-DESCRIPTION-SLASH-01 / SOURCE READY / AWAITING CI AND DEVICE
+
+Owner `codex/cap-description-slash-20261011` retained. Claim PR2321 exact headf1e24063723b495fe53c5f94d67cff6cd96d5ef1/docs CI38171533045 SUCCESS, mergedde24e5ac4be801ba5cefd38a4933ce1030851869 before source edits. Source branch `fix/cap-description-slash-20261011` based on this merged claim, preserving concurrent DAILY integration43594017 and all other owners.
+
+Bounded serialization change only: validate original trimmed description length80 and CR/LF, then replace slash with space for outbound SL description. Original catalog/checkout names stay unchanged. Empty slash-only names reject; barcode/payment label remain strict, Windows1253 still rejects unsupported Unicode. No truncation, state-machine/payment/VAT/queue changes or live dispatch. Exact observed ON THE GO BOOST name serializes as one7-field SL with unchanged qty/price/department/VAT and one final CR; injected ITEM/CR/1 becomes inert text, multiline/overlong/emoji/unsafe barcode/label still reject. Local Node20 focused CAP/store-profile/installation22PASS/0FAIL; frontend build21.38s/TABLE_SERVICE and server preparation/Prisma generation PASS. First full local attempt began without generated Prisma client and includes environment failures; fresh prepared rerun/full native CI still required. Tests are simulated command generation, not physical/LAB PASS.
+
+Actual production transaction/DB/device state remains NOT TESTED; no sale/payment/stock/shift/fiscal command, historical replay or data correction. Protected KAT/Diadoxou physical USER observations and broader installation/fiscal owners retained. Full source/main CI and ordinary guarded exact healthy deploy before owner acceptance. Do not replay an uncertain paid request. Physical acceptance requires fresh baseline and a genuinely intended separately identified one-shot sale, not repetition for evidence. No manual PASS. Central generated PDF publication deferred following automatic review rejection; Markdown records remain authoritative.
+
+Prepared full local suite now2369PASS/0FAIL/23isolated-DBSKIP after generating Prisma; production preparation invariants PASS. Earlier40environment failures remain recorded above, not product PASS. Concurrent invoice continuationPR2323 is preserved; source blobs unchanged.
+
+Shared-record source entry moved to end to preserve concurrent prepend claims (including PR2325); own code blobs unchanged. Earlier full PR CI38171804373 was cancelled by reconciliation after2399PASS/0FAIL; subsequent checks remain separate.
+
+Single next action full CI/build/invariants/native isolated E2E/Windows, then guarded release verification and owner acceptance. Owner retained until named handoff/completion.
+
