@@ -1,3 +1,13 @@
+## 11/10/2026 23:18:30 Athens — POS-CATEGORIES-READABLE-05 / limited USER VISUAL PASS / CLOSED
+
+Χρήστος Μανής replies «ειναι οκ» directly after item5's release and requested Ctrl+F5 → inspect category captions → open Μπύρες/Αναψυκτικά → read names/prices/scroll. Limited owner-reported visual acceptance for delivered clearer category buttons and larger category/subcategory product popup. No new attachment or independently measured physical terminal, client SHA, touch geometry, individual product selection, financial/stock/fiscal outcome supplied or inferred. No sale, assignment edit, removal or replay for evidence.
+
+SourcePR2312/finalhead6f7882a1f5671d5e92a5d41a9f1c7e5b98a3aa6c/exactCI38169132843 SUCCESS2395/0/0; merged0571a2f04e8eae691c94e834b7d3a8684a3161f7/mainCI38169465079 SUCCESS2395/0/0. Actual pinned Render guard38169779456/deployjob114559795568 healthy expected revision19:54:06.7840917Z; independent public health/served JS+CSS22:55:39.362925Athens verified. Actual entry-_c4hB0lu.js SHA256edb204dc254d337eba87a55663813934881b569732b6bc69d53a90f5ac343560 and entry-A9a2k0LD.css SHA256ff6bd22154f6bdbc1c7cd637b0ef665c6f9e04add1493b90f92a17598650fb42. ReceiptPR2318/head38eb070430104892b7193f5d9ddb880074aa0aaa/docsCI38170168713 SUCCESS mergedc6b7d363bf1c96c886911e84f8d3f5e3e673326a. This release metadata does not identify the user's physical client SHA. Prior inherited timing failure/retry and source rebase remain in historical evidence below.
+
+Owner codex/pos-categories-readable-20261011 completes this bounded presentation scope. Checkpoint CHECKPOINTS/CHANGES/2026-10-11-pos-categories-readable.md, manual and numbered03 synchronized; completed pending subtask removed. Items3/4/5 CLOSED within their recorded bounds; items1/2 still AWAITING USER. Item6 separately claimed next; items7–9 wait. Wider tracker03, scanner/catalog performance, installation and every other assigned owner retain their prior status. No whole-request or broad LAB PASS.
+
+## Historical release evidence (superseded AWAITING USER)
+
 ## 11/10/2026 22:56 Athens — POS-CATEGORIES-READABLE-05 / SOURCE LIVE / AWAITING USER
 
 Owner/branch codex/pos-categories-readable-20261011; receipt docs/pos-categories-readable-release-20261011. Checkpoint CHECKPOINTS/CHANGES/2026-10-11-pos-categories-readable.md. Standing one-at-a-time scope: item4 limited visual USER PASS22:19:27 CLOSED and item3 collection CLOSED, items1/2 still AWAITING USER; current item5 category legibility/larger category product popup only. Items6 grouping,7 shift transactions,8 card confirmation,9 last-sale amount wait. Retain this owner until bounded user acceptance or named handoff. Existing scanner/idle-focus/category-response PASS and other owners remain protected.
