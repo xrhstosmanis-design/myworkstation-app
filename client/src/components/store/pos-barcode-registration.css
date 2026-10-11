@@ -1,0 +1,99 @@
+.category-product-overlay.pos-barcode-registration{
+  padding:16px;
+  box-sizing:border-box;
+}
+.category-product-overlay.pos-barcode-registration>section{
+  width:min(1440px,calc(100vw - 32px));
+  height:min(900px,calc(100dvh - 32px));
+  max-height:calc(100dvh - 32px);
+  min-width:0;
+  color:#173e34;
+  font-size:18px;
+}
+.pos-barcode-registration>section>header{
+  gap:18px;
+  padding:20px 24px;
+  background:#174b3d;
+  color:#fff;
+}
+.pos-barcode-registration>section>header>div{min-width:0}
+.pos-barcode-registration>section>header small{font-size:13px;opacity:1}
+.pos-barcode-registration>section>header h2{
+  font-size:28px;
+  line-height:1.2;
+  color:#fff;
+  overflow-wrap:anywhere;
+}
+.pos-barcode-registration>section>header p{font-size:17px;opacity:1;margin-top:8px}
+.pos-barcode-registration>section>header>button{
+  width:54px;
+  height:54px;
+  flex:none;
+}
+.pos-barcode-registration .pos-price-body{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  padding:20px;
+  gap:16px;
+  overflow:hidden;
+}
+.pos-barcode-search{display:flex;gap:12px;flex:none;min-width:0}
+.pos-barcode-search>input{flex:1;min-width:0}
+.pos-barcode-registration .pos-price-body input{font-size:20px;width:100%;box-sizing:border-box}
+.pos-barcode-registration .pos-price-body button{
+  font-size:18px;
+  line-height:1.35;
+  min-height:48px;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.pos-barcode-registration .store-pos-alert{flex:none}
+.pos-barcode-workspace{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  flex:1;
+  min-height:0;
+  min-width:0;
+  gap:20px;
+}
+.pos-barcode-results,.pos-barcode-details{
+  min-width:0;
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+  overflow-wrap:anywhere;
+}
+.pos-barcode-results{border:1px solid #c9d8d2;border-radius:12px;background:#fff}
+.pos-barcode-registration .pos-barcode-results>button{
+  display:block;
+  width:100%;
+  padding:16px;
+  text-align:left;
+  border:0;
+  border-bottom:1px solid #d5e2dc;
+  color:#173e34;
+}
+.pos-barcode-results>button>b{font-size:21px;line-height:1.3}
+.pos-barcode-results>button>small{font-size:16px;line-height:1.4;margin-top:6px}
+.pos-barcode-details h3{font-size:24px;line-height:1.3}
+.pos-barcode-details label{font-size:20px}
+.pos-barcode-details small{font-size:16px;line-height:1.45}
+.pos-barcode-registration button:focus-visible{outline:3px solid #168456;outline-offset:-3px}
+@media(max-width:760px){
+  .category-product-overlay.pos-barcode-registration{padding:8px}
+  .category-product-overlay.pos-barcode-registration>section{
+    width:calc(100vw - 16px);
+    height:calc(100dvh - 16px);
+    max-height:calc(100dvh - 16px);
+  }
+  .pos-barcode-registration>section>header{padding:14px;gap:10px}
+  .pos-barcode-registration>section>header h2{font-size:23px}
+  .pos-barcode-registration>section>header p{font-size:15px}
+  .pos-barcode-registration .pos-price-body{padding:12px;overflow:auto}
+  .pos-barcode-search{flex-wrap:wrap}
+  .pos-barcode-search>input{flex-basis:100%}
+  .pos-barcode-workspace{grid-template-columns:1fr;flex:none}
+  .pos-barcode-results{max-height:min(340px,42dvh)}
+  .pos-barcode-details{overflow:visible}
+}
