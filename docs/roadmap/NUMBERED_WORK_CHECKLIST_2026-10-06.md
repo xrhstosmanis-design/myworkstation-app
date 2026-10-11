@@ -1,3 +1,13 @@
+## 11/10/2026 18:35 Athens — OWNER-EXPENSE-READABILITY-01 / LIMITED LIVE VISUAL PASS / CLOSED
+
+Owner `codex/operator-checkbox-audit-20261009`. Ο κάτω πίνακας **Έξοδα & Πληρωμές Ιδιοκτήτη → Κατηγορίες** έχει νέα πρώτη **Αιτιολογία**, γράμματα16px αντί10px και ποσά18px αντί12px. Η πλήρης αρχική Κατηγορία / περιγραφή διατηρείται δίπλα. Κλείνει μόνο η νέα απαίτηση της εικόνας· Νο33/tracker35 και Νο25/tracker27 παραμένουν OPEN με τους υπάρχοντες owners και υπόλοιπα. Το ήδη κλειστό Audit reason PASS PR2255/2263 προστατεύεται και δεν επαναλαμβάνεται.
+
+ClaimPR2269/head9a9b2b57/docsCI38149968645 SUCCESS mergedb3776e8bbf05f6424ae39a4c0b5302481ad11c56 πριν source. SourcePR2272/headab3ed868a391b51d1db80b428e57a3b21237eb71 fullCI38150184586 SUCCESS2339PASS/0FAIL/0SKIP merged `7b297422b324a8c462d71923cf25e812a6d8a45f`. MainCI38150490291 attempts1–3 cancelled από νεότερα documentation-only main pushes· attempt4 SUCCESS2339/0/0,job114505005149. Πραγματικό guarded Render38151522528/deployjob114505834882 SUCCESS· independent public browser health ok:true/exact7b297422 πριν fresh authenticated reload. Τα προηγούμενα skipped/doc-only deploy jobs δεν αποτελούν release proof. Το ανεξάρτητο CI concurrency blocker είναι ανατεθειμένο στην άλλη σελίδα POS-PAYROLL-CI-RELEASE-BLOCKER, δεν τροποποιήθηκε εδώ. Local Node20 actualDOM+existing owner-payment/Audit regressions15/15PASS· frontend11.54s/TABLE_SERVICE PASS. CI δεν αποτελεί LIVE PASS.
+
+Read-only LIVE Chrome1348×936 / SuperAdmin Χρήστος Μάνης / εταιρεία ΠΕΡΙΠΤΕΡΟ ΔΙΑΔΟΧΟΥ ΠΑΥΛΟΥ ΕΕ / Περίπτερο Διαδόχου Παύλου `cmulmjjoc000qqlbf2bn2ifj0`, περίοδος1–11Oct. Οι ίδιες3υφιστάμενες κατηγορίες:300EUR → **τονια τιμολογια**,100EUR → **αντρεας 8 ωρες δευτρα και 8 ωρες νυχτα τριτη**,50EUR → **καμερα**. Counts1/1/1 και66.67/22.22/11.11% διατηρούνται. Πραγματική DOM σύγκριση πριν/μετά όλων των παλιών πεδίων/headerlabels, αφαιρώντας μόνο τη νέα πρώτη στήλη, ήταν true. Computed fonts όλων των reason cells16px και amounts18px. Normal UI search reload (⌕) διατήρησε και τις3αιτιολογίες, οπτικά επιβεβαιωμένες μαζί με τα ποσά και το αρχικό πλήρες κείμενο. Αποδεικτικό `CHECKPOINTS/EVIDENCE/owner-expense-readable-reason-20261011/category-table.jpg`.
+
+Μόνο category renderer+scoped category CSS· reuse του αυστηρού display-only helper με category type/name, χωρίς αλλαγή ομαδοποίησης/αποθήκευσης/API/server/schema/ρόλων/αδειών ή άλλων report tables. HTML escaping παραμένει. Δεν έγινε νέα πληρωμή, replay, οικονομική/stock/shift υποβολή ή αλλαγή δικαιωμάτων. DOM preservation δεν είναι μέτρηση DB/stock/financial deltas. OrdinaryOwner/EMPLOYEE, mobile/touch, ανεξάρτητος νέος CSV reason column και φυσική εκτύπωση NOT TESTED. Η υπάρχουσα CSV πλήρης περιγραφή διατηρείται. Επόμενο Νο33 μόνο με fresh LAB POS2 EMPLOYEE profile/cart baseline· προστατευμένα PASS δεν επαναλαμβάνονται.
+
 ## 11/10/2026 17:45 Athens — AUDIT-EXPENSE-REASON-01 / LIMITED LIVE VISUAL PASS / CLOSED
 
 Owner `codex/operator-checkbox-audit-20261009`. Η νέα ανεξάρτητη απαίτηση κλείνει: ξεχωριστή τέταρτη στήλη **Αιτιολογία**, με το πραγματικό σημείωμα του χειριστή, δίπλα στην πλήρη αρχική **Περιγραφή / Τιμολόγιο**. Το συνολικό Νο33 / tracker35 και το ευρύτερο smart-Audit παραμένουν OPEN. Το προηγούμενο wrapping PASS PR2250/2251 διατηρείται.
@@ -287,7 +297,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `27`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΑ LAB PASS / OPEN
-- **Υπόλοιπο / όριο:** Εκκρεμούν Owner χωρίς SA, mobile/tablet, ιστορικό κόστος, διαφορετικές περίοδοι, πιστωτικά/αντιστροφές και νέες εξαγωγές.
+- **Υπόλοιπο / όριο:** Εκκρεμούν Owner χωρίς SA, mobile/tablet, ιστορικό κόστος, διαφορετικές περίοδοι, πιστωτικά/αντιστροφές και νέες εξαγωγές. Ανεξάρτητο display-only LIMITED LIVE VISUAL PASS11Oct18:35: στον πίνακα Owner Έξοδα → Κατηγορίες,16px κείμενο/18px ποσά και νέα πρώτη Αιτιολογία,300EUR «τονια τιμολογια»/100EUR πραγματικό σημείωμα/50EUR «καμερα», original description/count/amount/percent/order ανέπαφα και μετά αναζήτηση. SourcePR2272/fullsource-main2339/0/0/guard/exacthealthy7b297422· checkpoint2026-10-11-owner-expense-readable-reason.md. Δεν κλείνει Νο25/tracker27 ή Νο33 και δεν αλλάζει owner/οικονομική αποδοχή.
 
 ## 26 — Απώλειες και ύποπτα μοτίβα
 
