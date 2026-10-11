@@ -62,6 +62,7 @@ test('native baking moves stock once, rejects stale mapping, rolls back and shar
  assert.deepEqual(await stock(),{raw:4,baked:0,untracked:0});
  assert.equal(await db.$transaction(tx=>postCommercialSale(tx,{order:{...order,saleId}})),saleId);
  assert.equal(Number((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "StockMovement" WHERE "sourceType"='ONLINE_ORDER_SALE'`)[0].count),1);
- await policy({mode:'STOCK'});await assert.rejects(bake({...body,idempotencyKey:crypto.randomUUID()}),/σύνδεση/);
+ await assert.rejects(policy({mode:'STOCK'}),/συνταγή/);
+ await policy({mode:'ALWAYS'});await assert.rejects(bake({...body,idempotencyKey:crypto.randomUUID()}),/σύνδεση/);
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
