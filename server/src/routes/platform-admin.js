@@ -1,3 +1,4 @@
+import {ensureStoreBakingSchema,saveBakingPolicy} from "../store-baking.js";
 import { normalizeReportRecipients,reportRecipientListSchema } from "../services/report-recipients.js";
 import { Router } from "express";
 import {aiCommandUsage} from "../services/ai-command-usage.js";
@@ -100,6 +101,7 @@ async function installationStore(companyId,storeId){
   return store;
 }
 async function onlineStoreContext(companyId,storeId){
+  await ensureStoreBakingSchema(prisma);
   await ensureKatOnlineOrderingSchema();
   const store=await installationStore(companyId,storeId);
   const module=await prisma.companyModule.findFirst({where:{companyId,moduleKey:"ONLINE_ORDERING",active:true}});
@@ -1098,8 +1100,9 @@ router.get("/companies/:companyId/stores/:storeId/online-store",async(req,res,ne
     const config=configs[0]||{enabled:false,publicSlug:"",surchargeType:"FIXED",surchargeValue:0,stockCheckEnabled:false,pickupEnabled:true,deliveryEnabled:true,deliveryFee:0,minimumOrderRetail:0,doctorDiscountPercent:0,nurseDiscountPercent:0,cashEnabled:true,cardOnDeliveryEnabled:true,timezone:"Europe/Athens",weeklyHours:{},brandName:store.name,brandTagline:"Online Παραγγελίες",brandLogoUrl:"",brandPrimaryColor:"#7b1216",brandSecondaryColor:"#5d0c0f",brandWelcomeMessage:"Γρήγορα, εύκολα, όποτε θέλεις!",estimatedMinutes:25};
     config.brandName=config.brandName||store.name;config.brandTagline=config.brandTagline||"Online Παραγγελίες";config.brandLogoUrl=config.brandLogoUrl||"";config.brandPrimaryColor=config.brandPrimaryColor||"#7b1216";config.brandSecondaryColor=config.brandSecondaryColor||"#5d0c0f";config.brandWelcomeMessage=config.brandWelcomeMessage||"Γρήγορα, εύκολα, όποτε θέλεις!";config.estimatedMinutes=Number(config.estimatedMinutes||25);
     const products=await prisma.$queryRaw`
-      SELECT p."id",p."sku",p."name",c."name" AS "categoryName",COALESCE(sp."salePrice",p."salePrice") AS "storePrice",COALESCE(v."visible",false) AS "visible"
+      SELECT bp."mode" AS "availabilityMode",bp."sourceProductId",p."id",p."sku",p."name",c."name" AS "categoryName",COALESCE(sp."salePrice",p."salePrice") AS "storePrice",COALESCE(v."visible",false) AS "visible"
       FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.params.companyId}
+      LEFT JOIN "StoreBakingPolicy" bp ON bp."storeId"=sp."storeId" AND bp."productId"=p."id" AND bp."companyId"=p."companyId"
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" AND c."companyId"=${req.params.companyId}
       LEFT JOIN "OnlineProductVisibility" v ON v."storeId"=sp."storeId" AND v."productId"=p."id" AND v."companyId"=${req.params.companyId}
       WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true ORDER BY c."name" NULLS LAST,p."name"`;
@@ -1117,6 +1120,12 @@ router.put("/companies/:companyId/stores/:storeId/online-store/settings",async(r
     res.json({ok:true,settings:body});
   }catch(error){next(error)}
 });
+
+router.put("/companies/:companyId/stores/:storeId/online-store/products/:productId/availability",async(req,res,next)=>{try{
+ const store=await onlineStoreContext(req.params.companyId,req.params.storeId);
+ const policy=await prisma.$transaction(tx=>saveBakingPolicy(tx,{companyId:req.params.companyId,storeId:store.id,productId:req.params.productId,actorId:req.user.id,body:req.body}));
+ res.json({ok:true,policy});
+}catch(e){if(e?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τον κανόνα διαθεσιμότητας και το άψητο είδος."});next(e)}});
 
 router.put("/companies/:companyId/stores/:storeId/online-store/products",async(req,res,next)=>{
   try{

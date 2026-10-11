@@ -147,7 +147,7 @@ export async function ensurePreparationBatchTable(){
          FOR recipe_row IN
            SELECT r."ingredientProductId",r."quantity",r."unit",p."sku" AS ingredient_sku
            FROM "PreparationRecipeLine" r JOIN "Product" p ON p."id"=r."ingredientProductId" AND p."companyId"=r."companyId"
-           WHERE r."companyId"=NEW."companyId" AND r."productId"=prep_item->>'productId' AND r."automatic"=TRUE
+           WHERE r."companyId"=NEW."companyId" AND r."productId"=prep_item->>'productId' AND r."automatic"=TRUE AND NOT EXISTS(SELECT 1 FROM "StoreBakingPolicy" bp WHERE bp."companyId"=NEW."companyId" AND bp."storeId"=NEW."storeId" AND bp."productId"=r."productId" AND bp."mode"='BAKED')
          LOOP
            IF milk_modifier_id IS NOT NULL AND recipe_row.ingredient_sku LIKE 'MWS-PREP-MILK%' THEN milk_base_qty:=milk_base_qty+recipe_row."quantity";CONTINUE; END IF;
            IF ice_target_qty IS NOT NULL AND recipe_row.ingredient_sku='MWS-PREP-ICE' THEN ice_base_qty:=ice_base_qty+recipe_row."quantity";ice_target_ingredient_id:=recipe_row."ingredientProductId";CONTINUE; END IF;

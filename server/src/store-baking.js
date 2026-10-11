@@ -1,0 +1,49 @@
+import crypto from 'node:crypto';
+import {z} from 'zod';
+
+export const bakingPolicySchema=z.object({mode:z.enum(['ALWAYS','STOCK','BAKED']),sourceProductId:z.string().trim().min(1).nullable().default(null)}).strict().superRefine((v,c)=>{if((v.mode==='BAKED')!==Boolean(v.sourceProductId))c.addIssue({code:'custom',message:'Το ψημένο είδος απαιτεί σύνδεση με άψητο είδος.'})});
+export const bakingEntrySchema=z.object({productId:z.string().min(1),sourceProductId:z.string().min(1),quantity:z.number().int().positive().max(100000),idempotencyKey:z.string().uuid(),note:z.string().trim().max(500).default('')}).strict();
+const fail=(message,status=409)=>Object.assign(new Error(message),{status});
+export const bakingSchemaStatements=[
+ `CREATE TABLE IF NOT EXISTS "StoreBakingPolicy" ("companyId" TEXT NOT NULL REFERENCES "Company"("id"),"storeId" TEXT NOT NULL REFERENCES "Store"("id"),"productId" TEXT NOT NULL REFERENCES "Product"("id"),"mode" TEXT NOT NULL CHECK ("mode" IN ('ALWAYS','STOCK','BAKED')),"sourceProductId" TEXT REFERENCES "Product"("id"),"updatedBy" TEXT NOT NULL,"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY("storeId","productId"),CHECK (("mode"='BAKED')=("sourceProductId" IS NOT NULL)),CHECK ("sourceProductId" IS NULL OR "sourceProductId"<>"productId"))`,
+ `CREATE TABLE IF NOT EXISTS "StoreBakingEntry" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id"),"storeId" TEXT NOT NULL REFERENCES "Store"("id"),"productId" TEXT NOT NULL REFERENCES "Product"("id"),"sourceProductId" TEXT NOT NULL REFERENCES "Product"("id"),"quantity" INTEGER NOT NULL CHECK ("quantity">0),"idempotencyKey" TEXT NOT NULL,"actorId" TEXT NOT NULL,"actorName" TEXT NOT NULL,"note" TEXT NOT NULL,"sourceBefore" NUMERIC NOT NULL,"sourceAfter" NUMERIC NOT NULL,"finishedBefore" NUMERIC NOT NULL,"finishedAfter" NUMERIC NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE("storeId","idempotencyKey"))`
+];
+export async function ensureStoreBakingSchema(db){for(const sql of bakingSchemaStatements)await db.$executeRawUnsafe(sql)}
+export function policyAvailable(product,quantity=1){return product?.availabilityMode==='ALWAYS'?true:['STOCK','BAKED'].includes(product?.availabilityMode)?Number(product.currentStock||0)>=quantity:null}
+export async function readBakingPolicy(tx,companyId,storeId,productId){
+ await tx.$queryRaw`SELECT CAST(pg_advisory_xact_lock_shared(hashtextextended(${"baking-policy:"+companyId+":"+storeId+":"+productId},0)) AS TEXT)`;
+ return (await tx.$queryRaw`SELECT "mode","sourceProductId" FROM "StoreBakingPolicy" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "productId"=${productId} FOR SHARE`)[0]||null}
+export async function saveBakingPolicy(tx,{companyId,storeId,productId,actorId,body}){
+ const value=bakingPolicySchema.parse(body);
+ const stores=await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "id"=${storeId} AND "companyId"=${companyId} AND "active"=TRUE FOR UPDATE`;
+ if(!stores.length)throw fail("Δεν βρέθηκε ενεργό κατάστημα.",404);
+ if(value.sourceProductId===productId)throw fail('Το άψητο και το ψημένο πρέπει να είναι διαφορετικά είδη.',400);
+ await tx.$queryRaw`SELECT CAST(pg_advisory_xact_lock(hashtextextended(${"baking-policy:"+companyId+":"+storeId+":"+productId},0)) AS TEXT)`;
+ const ids=[productId,...(value.sourceProductId?[value.sourceProductId]:[])];
+ await tx.$queryRaw`SELECT "productId" FROM "StoreBakingPolicy" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "productId"=${productId} FOR UPDATE`;
+ if(value.mode==='BAKED'){const chained=await tx.$queryRaw`SELECT "productId" FROM "StoreBakingPolicy" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "mode"='BAKED' AND ("productId"=${value.sourceProductId} OR "sourceProductId"=${productId})`;if(chained.length)throw fail("Το άψητο είδος δεν μπορεί να είναι άλλο ψημένο είδος.",400)}
+ const rows=await tx.$queryRaw`SELECT p."id",p."trackStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" AND s."companyId"=p."companyId" WHERE p."companyId"=${companyId} AND s."id"=${storeId} AND s."active"=TRUE AND p."active"=TRUE AND sp."active"=TRUE AND p."id"=ANY(${ids}::text[]) ORDER BY p."id" FOR UPDATE OF sp`;
+ if(rows.length!==ids.length)throw fail('Τα είδη πρέπει να είναι ενεργά στο επιλεγμένο κατάστημα.',404);
+ if(value.mode!=='ALWAYS'&&rows.some(r=>!r.trackStock))throw fail('Άψητο και ψημένο είδος πρέπει να παρακολουθούν απόθεμα.',400);
+ await tx.$executeRaw`INSERT INTO "StoreBakingPolicy" ("companyId","storeId","productId","mode","sourceProductId","updatedBy") VALUES (${companyId},${storeId},${productId},${value.mode},${value.sourceProductId},${actorId}) ON CONFLICT ("storeId","productId") DO UPDATE SET "mode"=EXCLUDED."mode","sourceProductId"=EXCLUDED."sourceProductId","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
+ return value;
+}
+export async function recordBaking(tx,{companyId,storeId,actorId,actorName,body}){
+ const value=bakingEntrySchema.parse(body);
+ // Store-scoped serialization makes replay and competing additions deterministic.
+ const stores=await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "id"=${storeId} AND "companyId"=${companyId} AND "active"=TRUE FOR UPDATE`;
+ if(!stores.length)throw fail("Δεν βρέθηκε ενεργό κατάστημα.",404);
+ const prior=(await tx.$queryRaw`SELECT * FROM "StoreBakingEntry" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "idempotencyKey"=${value.idempotencyKey}`)[0];
+ if(prior){if(prior.productId!==value.productId||prior.sourceProductId!==value.sourceProductId||Number(prior.quantity)!==value.quantity||prior.note!==value.note)throw fail('Το αναγνωριστικό χρησιμοποιήθηκε με διαφορετικά στοιχεία.');return {...prior,duplicate:true}}
+ const policy=await readBakingPolicy(tx,companyId,storeId,value.productId);
+ if(policy?.mode!=='BAKED'||policy.sourceProductId!==value.sourceProductId)throw fail('Η σύνδεση ψησίματος άλλαξε. Ανανεώστε τα είδη.');
+ const rows=await tx.$queryRaw`SELECT p."id",p."trackStock",COALESCE(sp."currentStock",0) AS stock FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" WHERE p."companyId"=${companyId} AND sp."storeId"=${storeId} AND p."active"=TRUE AND sp."active"=TRUE AND p."id"=ANY(${[value.productId,value.sourceProductId]}::text[]) ORDER BY p."id" FOR UPDATE OF sp`;
+ if(rows.length!==2||rows.some(r=>!r.trackStock))throw fail('Τα είδη ψησίματος δεν είναι ενεργά με παρακολούθηση αποθέματος.');
+ const sourceBefore=Number(rows.find(r=>r.id===value.sourceProductId).stock),finishedBefore=Number(rows.find(r=>r.id===value.productId).stock),quantity=value.quantity;
+ if(sourceBefore<quantity)throw fail('Δεν υπάρχουν αρκετά άψητα τεμάχια στην αποθήκη.');
+ const id=crypto.randomUUID(),sourceAfter=sourceBefore-quantity,finishedAfter=finishedBefore+quantity;
+ await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)+CASE WHEN "productId"=${value.productId} THEN ${quantity} ELSE ${-quantity} END,"updatedAt"=NOW() WHERE "storeId"=${storeId} AND "productId"=ANY(${[value.productId,value.sourceProductId]}::text[]) AND "active"=TRUE`;
+ await tx.$executeRaw`INSERT INTO "StoreBakingEntry" ("id","companyId","storeId","productId","sourceProductId","quantity","idempotencyKey","actorId","actorName","note","sourceBefore","sourceAfter","finishedBefore","finishedAfter") VALUES (${id},${companyId},${storeId},${value.productId},${value.sourceProductId},${quantity},${value.idempotencyKey},${actorId},${actorName},${value.note},${sourceBefore},${sourceAfter},${finishedBefore},${finishedAfter})`;
+ for(const [productId,delta,kind] of [[value.sourceProductId,-quantity,'BAKING_OUT'],[value.productId,quantity,'BAKING_IN']])await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","sourceType","sourceId","note","createdByUserId","idempotencyKey") VALUES (${crypto.randomUUID()},${storeId},${productId},${kind},${delta},'STORE_BAKING',${id},${`Ψήσιμο · ${actorName} · ${value.note}`},${null},${`baking:${id}:${kind}`})`;
+ return {id,...value,sourceBefore,sourceAfter,finishedBefore,finishedAfter,duplicate:false};
+}

@@ -1,3 +1,4 @@
+import {readBakingPolicy} from "./store-baking.js";
 import crypto from "crypto";
 import {prisma} from "./prisma.js";
 
@@ -9,6 +10,8 @@ const KAT_STORE_NAME="Κυλικείο ΚΑΤ";
 const n=value=>Number(value||0);
 
 async function recipeForLine(tx,{companyId,storeId,line}){
+  const policyTable=await tx.$queryRaw`SELECT CAST(to_regclass('"StoreBakingPolicy"') AS TEXT) AS policy_table`;
+  if(policyTable[0]?.policy_table&&(await readBakingPolicy(tx,companyId,storeId,line.productId))?.mode==='BAKED')return [];
   let rows=await tx.$queryRaw`
     SELECT r."productId" AS "recipeProductId",r."ingredientProductId",r."quantity",p."name" AS "ingredientName",
            sp."id" AS "storeProductId",sp."productId" AS "stockProductId"
