@@ -2,6 +2,7 @@ import StoreBakingModal from "./StoreBakingModal.jsx";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {usePosKeypadPreference} from "../../utils/pos-keypad-preference.js";
 import {usePosChangeNotice} from "../../utils/pos-change-notice.js";
+import {orderPosBeverageDisplay} from "../../utils/pos-beverage-display-order.js";
 import {createPortal} from "react-dom";
 import {Barcode,ContactRound,CreditCard,Globe2,Keyboard,LogOut,MessageCircle,Pencil,Printer,RefreshCw,RotateCcw,Search,ShoppingCart,Store,Tag,Trash2,Type,Wallet,Wifi,WifiOff,X,ArrowLeft} from "lucide-react";
 import PosPurchaseOrdersModal from "./PosPurchaseOrdersModal.jsx";
@@ -156,7 +157,7 @@ export default function StorePosPanel({api,store,operator=null,company=null,onLo
   const catalogResolver=useMemo(()=>createPosCatalogResolver(products,Boolean(layout.catalogCompanyId)),[products,layout]);
   const resolveCategoryProducts=catalogResolver.categoryProducts;
   const categoryChildren=categoryModal?storedChildren(categoryModal):[];
-  const modalProducts=useMemo(()=>categoryModal&&!storedChildren(categoryModal).length?resolveCategoryProducts(categoryModal):[],[catalogResolver,categoryModal]);
+  const modalProducts=useMemo(()=>categoryModal&&!storedChildren(categoryModal).length?orderPosBeverageDisplay(resolveCategoryProducts(categoryModal),categoryModal):[],[catalogResolver,categoryModal]);
   const resolveCategoryCount=catalogResolver.categoryCount;
   const openCategory=button=>setCategoryModal({...button,categoryName:storedCategoryName(button),productCodes:storedCodes(button)});
   const openChildCategory=child=>setCategoryModal({...child,categoryName:storedCategoryName(child),productCodes:storedCodes(child),parentCategory:categoryModal});
