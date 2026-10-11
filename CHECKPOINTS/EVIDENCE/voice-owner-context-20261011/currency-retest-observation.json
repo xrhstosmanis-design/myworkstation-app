@@ -1,0 +1,47 @@
+{
+  "type": "rendered_dom_observation_transcription",
+  "scope": "LIMITED_LIVE_PASS",
+  "timezone": "Europe/Athens",
+  "owner": "codex/unified-voice-assistant-20261010",
+  "account": "Υπεύθυνος Εργαστηρίου",
+  "company": "MYWORKSTATION LAB",
+  "store": {
+    "id": "cmtpopbgo000trhb5ng9ytiru",
+    "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ"
+  },
+  "release": {
+    "revision": "4e3e1d6d0e1bf868f571b04aa21935c97fc8d3f6",
+    "source_pr": 2247,
+    "pr_ci": 38142941873,
+    "main_ci": 38143246743,
+    "tests_pass": 2315,
+    "tests_fail": 0,
+    "tests_skip": 0,
+    "guarded_render": 38143504744,
+    "actual_browser_health_ok": true
+  },
+  "ordinary_report_before_at": "2026-10-11T13:35:20.206Z",
+  "ask_at": "2026-10-11T13:35:32.663Z",
+  "answer_observed_at": "2026-10-11T13:35:58.397Z",
+  "ordinary_report_after_at": "2026-10-11T13:36:40.692Z",
+  "filters": {
+    "sku": "2269",
+    "product": "ΝΕΡΟ 500ML",
+    "from": "2026-10-01",
+    "to": "2026-10-10",
+    "timeZone": "Europe/Athens"
+  },
+  "values": {
+    "quantity": 5,
+    "grossEUR": 2.5,
+    "netEUR": 2.21,
+    "vatEUR": 0.29
+  },
+  "displayed_answer": "SKU 2269 — ΝΕΡΟ 500ML\nΚατάστημα: ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ\nΠερίοδος: 01/10/2026 έως 10/10/2026 (συμπεριλαμβανόμενες ημερομηνίες)\nΠοσότητα: 5 τεμάχια\nΤζίρος με ΦΠΑ: 2,50 €\nΚαθαρή αξία: 2,21 €\nΦΠΑ: 0,29 €\n(Οι τιμές περιλαμβάνουν καταχωρημένες επιστροφές/ακυρώσεις σύμφωνα με την αναφορά.)",
+  "raw_provider_response_inspected": false,
+  "long_fraction_branch_live": "NOT TESTED",
+  "physical_microphone": "NOT TESTED",
+  "business_mutation": false,
+  "limitations": "One displayed answer and source/before-after ordinary report comparison only; broader monetary grammars, dates, in-flight/recording, tenant/role/module revocation and remaining domains are not full live acceptance.",
+  "screenshot": "voice-owner-currency-pass-1791725785711.jpg"
+}
