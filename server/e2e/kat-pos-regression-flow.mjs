@@ -87,7 +87,9 @@ async function main(){
   assert.equal(Number(ledger.payload.summary?.cashSales||0),0,"Cancelled cash sale still affects shift cash total");
   assert.equal(Number(ledger.payload.summary?.cardSales||0),2.5,"Active card sale missing from shift total");
 
-  const today=new Date().toISOString().slice(0,10);
+  // Audit calendar filters follow Greece, independently of the CI runner timezone.
+  const dayParts=Object.fromEntries(new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()).map(part=>[part.type,part.value]));
+  const today=`${dayParts.year}-${dayParts.month}-${dayParts.day}`;
   const audit=await request(`/api/reports/audit-events?from=${today}&to=${today}&storeId=${storeId}`,{token:ownerToken});
   assert.equal(audit.response.status,200,JSON.stringify(audit.payload));
   const cancelAudit=(audit.payload?.items||[]).find(r=>r.eventType==="POS_CANCEL"||(/^POS\s+ΑΚΥΡΩΣΗ\b/i.test(String(r.description||""))&&Number(r.amount)<0));
