@@ -1,0 +1,63 @@
+/* Closing dialog only: large type and touch targets, with reachable overflow. */
+.shift-overlay:has(> .pos-shift-close-readable) { padding: 8px; }
+.shift-close-modal.pos-shift-close-readable {
+  width: min(1440px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.pos-shift-close-readable > header { padding: 12px 18px; gap: 12px; }
+.pos-shift-close-readable > header h2 { font-size: 28px; }
+.pos-shift-close-readable > header small { font-size: 14px; }
+.pos-shift-close-readable > header p { font-size: 18px; margin: 6px 0 0; overflow-wrap: anywhere; }
+.pos-shift-close-readable > header button { width: 52px; height: 52px; flex: 0 0 52px; }
+.pos-shift-close-readable .shift-close-body { min-height: 0; overflow: auto; touch-action: pan-y; padding: 12px; }
+.pos-shift-close-readable .cash-module { margin-top: 0; }
+.pos-shift-close-readable .cash-heading h3 { font-size: 22px; }
+.pos-shift-close-readable .cash-heading p,
+.pos-shift-close-readable .cloud-alert,
+.pos-shift-close-readable .cash-divider { font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
+.pos-shift-close-readable .cash-form { gap: 12px; padding: 14px; }
+.pos-shift-close-readable .cash-form label { min-width: 0; font-size: 18px; line-height: 1.3; font-weight: 700; overflow-wrap: anywhere; }
+.pos-shift-close-readable .cash-form input:not([type="checkbox"]) {
+  min-width: 0; min-height: 52px; padding: 10px 12px;
+  font-size: 24px; line-height: 1.2; color: #173d38;
+}
+.pos-shift-close-readable .cash-form label:has(> input[type="checkbox"]) {
+  flex-direction: row; align-items: center; gap: 12px; min-height: 52px;
+}
+.pos-shift-close-readable .cash-form input[type="checkbox"] {
+  width: 28px; height: 28px; flex: 0 0 28px; margin: 0; accent-color: #12877f;
+}
+.pos-shift-close-readable .cash-form label > span { font-size: 16px; line-height: 1.4; }
+.pos-shift-close-readable .cash-form button,
+.pos-shift-close-readable .shift-shortage-decision button {
+  min-height: 52px; padding: 10px 14px; font-size: 20px; line-height: 1.3;
+  white-space: normal; overflow-wrap: anywhere;
+}
+.pos-shift-close-readable .shift-shortage-decision { font-size: 18px; line-height: 1.4; }
+/* The existing keyboard is attached to body; keep these rules closing-only. */
+body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-dialog {
+  width: min(900px, 96vw) !important; max-width: 900px !important;
+}
+body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-dialog > header h2 { font-size: 24px; }
+body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-dialog > header h2 span { font-size: 18px; }
+body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-dialog main button {
+  min-width: 56px; min-height: 56px; font-size: 24px;
+}
+body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-special { grid-template-columns: 60px 92px 60px minmax(0, 1fr) 60px 60px 72px !important; }
+body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-special button,
+body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-actions button { font-size: 20px; }
+@media (max-width: 800px) {
+  body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-dialog > main { padding: 8px; }
+  body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-dialog main button { min-width: 0; min-height: 52px; font-size: 22px; }
+  body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-row > button { flex: 1; }
+  body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-number-row { grid-template-columns: repeat(11, minmax(0, 1fr)) !important; }
+  body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-special { grid-template-columns: .8fr 1.2fr .8fr 2.2fr .8fr .8fr 1fr !important; }
+  body:has(.pos-shift-close-readable) #mws-touch-keyboard .mws-touch-special button { font-size: 18px; }
+}
+@media (max-width: 600px) {
+  .pos-shift-close-readable > header { padding: 10px; }
+  .pos-shift-close-readable .shift-close-body { padding: 8px; }
+  .pos-shift-close-readable .cash-form { grid-template-columns: 1fr; }
+  .pos-shift-close-readable .cash-submit { justify-self: stretch; }
+}
