@@ -1,0 +1,227 @@
+{
+  "creditBefore": {
+    "at": "2026-10-11T21:13:33.867Z",
+    "test": "LAB-CUSTOMER-CREDIT-20261011-01",
+    "revision": "155de6e1b3b2c194e38f69abdfb2ee8b65d8f46d",
+    "operator": "LAB POS 2 EMPLOYEE",
+    "terminal": "MAIN",
+    "sku": "2270",
+    "quantity": 1,
+    "unitRetail": 1,
+    "personalDiscount": 20,
+    "quoted": 0.8,
+    "balance": 0,
+    "points": 0,
+    "creditLimit": 10,
+    "main": {
+      "cash": 4.1,
+      "card": 0,
+      "iris": 0,
+      "total": 0,
+      "count": 5
+    },
+    "control": {
+      "terminal": "LAB-POS-02",
+      "cash": 96,
+      "card": 0,
+      "iris": 0,
+      "total": 0,
+      "count": 2
+    },
+    "stock": -13,
+    "lastSale": "11Oct20:39:20",
+    "latestMovement": "NOT TESTED"
+  },
+  "creditStockBefore": {
+    "at": "2026-10-11T21:10Z",
+    "store": "cmtpopbgo000trhb5ng9ytiru",
+    "sku": "2270",
+    "productId": "4f126988-a1a8-433c-b469-70203415df5b",
+    "qty": -13,
+    "retail": 1,
+    "lastSale": "2026-10-11 20:39:20 Athens",
+    "latestMovement": "NOT TESTED",
+    "source": "read-only exact LAB Inventory table, no edits"
+  },
+  "creditStockAfter": {
+    "sku": "2270",
+    "quantity": -14,
+    "lastSaleAthens": "2026-10-12 00:13:46",
+    "latestStockMovement": "NOT TESTED"
+  },
+  "ledgerAcceptance": {
+    "revision": "0f120199c28eef19f6ff058dc6a1c94a1149fde7",
+    "creditRows": 1,
+    "reference": "05061018-0b7d-4fcb-8a61-08a5486b9611",
+    "amount": 0.8,
+    "opening": 0,
+    "closing": 0.8,
+    "current": 0.8,
+    "method": "CREDIT",
+    "actor": "LAB POS 2",
+    "filteredOpening": 0.8,
+    "filteredClosing": 0.8,
+    "filteredRows": 0
+  },
+  "cashBefore": {
+    "test": "LAB-CUSTOMER-CASH-20261012-01",
+    "revision": "0f120199c28eef19f6ff058dc6a1c94a1149fde7",
+    "balance": 0.8,
+    "points": 0,
+    "main": {
+      "cash": 4.1,
+      "card": 0,
+      "iris": 0,
+      "total": 0,
+      "count": 5
+    },
+    "control": {
+      "cash": 96,
+      "card": 0,
+      "iris": 0,
+      "total": 0,
+      "count": 2
+    },
+    "stock": -14,
+    "lastSale": "12Oct00:13:46",
+    "latestStockMovement": "NOT TESTED"
+  },
+  "cashAfter": {
+    "balance": 0.5,
+    "points": 0,
+    "mainCash": 4.4,
+    "mainCard": 0,
+    "mainTotal": 0,
+    "mainCount": 6,
+    "controlCash": 96,
+    "controlCount": 2,
+    "stock": -14,
+    "lastSale": "12Oct00:13:46",
+    "receiptId": "0b6303b3fb7234dd1775f5bcd655c549",
+    "timeAthens": "12Oct00:40",
+    "shiftMethodDisplay": "—",
+    "shiftTypeDisplay": "CUSTOMER_RECEIPT_CASH"
+  },
+  "cardBefore": {
+    "balance": 0.5,
+    "points": 0,
+    "mainCash": 4.4,
+    "mainCard": 0,
+    "mainCount": 6,
+    "mainTotal": 0,
+    "controlCash": 96,
+    "controlCount": 2,
+    "stock": -14,
+    "lastSale": "00:13:46",
+    "reference": "LAB-CODEX-CARD-20261012-01"
+  },
+  "cardAfter": {
+    "balance": 0,
+    "points": 0,
+    "mainCash": 4.4,
+    "mainCount": 7,
+    "mainCardDisplay": 0,
+    "mainTotalDisplay": 0,
+    "controlCash": 96,
+    "controlCount": 2,
+    "receiptId": "e6134fde9d3f7a6ee36edf1dd546fbd4",
+    "timeAthens": "12Oct00:42",
+    "shiftType": "CUSTOMER_RECEIPT_CARD",
+    "shiftMethod": "—"
+  },
+  "cardStockAfter": {
+    "quantity": -14,
+    "lastSale": "12Oct00:13:46"
+  },
+  "nurse": {
+    "name": "LAB NURSE QR 20261012 CODEX",
+    "code": "65e87a",
+    "card": "MWS85FC02477D3EB659",
+    "category": "NURSE",
+    "discount": 15,
+    "limit": 0,
+    "balance": 0,
+    "points": 0,
+    "visits": 0
+  },
+  "notes": [
+    "Virtual MYWORKSTATION LAB only; no bank/device acquisition or physical money claim.",
+    "Credit sale submitted once. CASH 0.30 and CARD 0.50 receipts submitted once each; never replay for evidence.",
+    "Independent raw immutable stock movement ID and DB Audit counts NOT TESTED.",
+    "Historical cardAfter cardDisplay0/totalDisplay0 is before read-only shift correction; authoritative shiftLivePass below supersedes display only."
+  ],
+  "shiftLivePass": {
+    "revision": "a0640ecf4102e51f5a636ea111e9d606024336ed",
+    "run": 38178160293,
+    "attempt": 2,
+    "deploy": 38178739985,
+    "deployJob": 114586609270,
+    "main": {
+      "cash": 4.4,
+      "card": 0.5,
+      "iris": 0,
+      "total": 0.8,
+      "count": 7,
+      "receiptCash": 0.3
+    },
+    "control": {
+      "cash": 96,
+      "card": 0,
+      "iris": 0,
+      "total": 0,
+      "count": 2
+    },
+    "sameIds": [
+      "0b6303b3fb7234dd1775f5bcd655c549",
+      "e6134fde9d3f7a6ee36edf1dd546fbd4"
+    ],
+    "methods": [
+      "Μετρητά",
+      "Κάρτα"
+    ],
+    "fixtureShift": "3a186861-5fa0-4d44-a133-d3ea888c6d81"
+  },
+  "auditSourceCI": {
+    "head": "bf185043e31f3938cb6a43ec5b8a2f7aeec0bd68",
+    "run": 38179188740,
+    "tests": 2424,
+    "fail": 0,
+    "skip": 0,
+    "merged": "8b654ab0252a5ec0907b7aa28298372fdaaffc82"
+  },
+  "auditLiveStatus": "LIVE PASS same two IDs / exact8b654ab0 / 12Oct only",
+  "pngDownload": "NOT TESTED: browser download event timed out; no verified file returned",
+  "auditLivePass": {
+    "revision": "8b654ab0252a5ec0907b7aa28298372fdaaffc82",
+    "sourceCI": 38179188740,
+    "mainCI": 38179637528,
+    "deploy": 38179944174,
+    "deployJob": 114590206650,
+    "observedAthens": "2026-10-12T01:24:00+03:00",
+    "from": "2026-10-12",
+    "to": "2026-10-12",
+    "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "count": 2,
+    "receiptIds": [
+      "0b6303b3fb7234dd1775f5bcd655c549",
+      "e6134fde9d3f7a6ee36edf1dd546fbd4"
+    ],
+    "cash": 0.3,
+    "card": 0.5,
+    "actor": "LAB POS 2",
+    "shift": "3a186861-5fa0-4d44-a133-d3ea888c6d81",
+    "methods": [
+      "Μετρητά",
+      "Κάρτα"
+    ],
+    "reason": "— (ordinary receipt has no return/cancellation reason; exact customer description retained)",
+    "noFinancialReplay": true
+  },
+  "finalPOS": {
+    "customer": "retail",
+    "price": "NORMAL",
+    "cart": 0,
+    "queue": 0,
+    "permissions": "original unchanged"
+  }
+}
