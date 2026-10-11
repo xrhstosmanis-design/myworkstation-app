@@ -1,3 +1,7 @@
+## 11/10/2026 — CASH-REPORT-ANALYSES-01 / IMPLEMENTED / AWAITING CI-DEPLOY-LIVE
+
+Claim PR2298 / CI38162139847 SUCCESS merged4d559ffaab1a85f971b60e2e1598a60b2520a44b before source. Same owner retained. Per-store native button «Αναλύσεις» with aria-expanded/controls toggles original complete shift paragraphs; initially hidden, fresh report resets closed. Summary/final amount and original table remain visible. All detail DOM retained; scoped print CSS exposes hidden details while removing toggle. Original clipboard/email/export/GET/calculation/security unchanged. Local build and protected report regression pending; no financial/business action, no manual or LIVE PASS. No33 remains OPEN. Next full exact CI/main/guarded deploy then read-only acceptance. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-cash-report-analyses.md`.
+
 ## 11/10/2026 21:00 Athens — CASH-REPORT-ANALYSES-01 / ASSIGNED / NOT TESTED
 
 Owner `codex/operator-checkbox-audit-20261009`; branch `fix/cash-report-analyses-20261011`. Explicit owner image image(20261011-175908).png and request «εδω θελω να βγαινει μαζεμενο με κουμπι αναλυσεις» target Platform Αυτόματος Έλεγχος Ταμείων → Συνολική αναφορά → Ανάλυση ανά βάρδια. Independent presentation-only scope, not takeover of assistant/N40/current-cash/payments/return/Inventory/fiscal owners. Initial screenshot displays long expanded existing historical findings; no new financial FAIL is inferred.
