@@ -1,0 +1,79 @@
+{
+  "status": "SOURCE_DEPLOYED_LIMITED_BEFORE_QUERY_RECONCILIATION_PASS_AFTER_AWAITING_OWNER",
+  "owner": "codex/unified-voice-assistant-20261010",
+  "sourcePR": 2260,
+  "head": "dbb5da17c3ba1cb1f9d8bfdd26e9569f0bc339dd",
+  "revision": "f45e6c53d63edb2b0b512f3a48d4d84665708713",
+  "prCI": {
+    "run": 38147549835,
+    "pass": 2328,
+    "fail": 0,
+    "skipped": 0
+  },
+  "mainCI": {
+    "run": 38147865426,
+    "pass": 2331,
+    "fail": 0,
+    "skipped": 0
+  },
+  "guardedDeploy": 38148114214,
+  "health": {
+    "ok": true,
+    "revision": "f45e6c53d63edb2b0b512f3a48d4d84665708713",
+    "version": "0.22.0+kat-test-pos",
+    "observedAt": "2026-10-11T14:43:23.375Z"
+  },
+  "client": "/assets/index-BJjdvc36.js",
+  "ordinaryOwner": "Υπεύθυνος Εργαστηρίου",
+  "company": "MYWORKSTATION LAB",
+  "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "sku": "2269",
+  "name": "ΝΕΡΟ 500ML",
+  "before": {
+    "observedAt": "2026-10-11T14:44:34.898Z",
+    "source": "Στατιστικά / Ανάλυση αποθήκης",
+    "from": "2026-10-11",
+    "to": "2026-10-11",
+    "currentStock": -70,
+    "rows": 1
+  },
+  "askAt": "2026-10-11T14:45:01.402Z",
+  "answer": {
+    "observedAfterAskBefore": "2026-10-11T14:46:49.753Z",
+    "readTimeAthens": "2026-10-11 17:45:05",
+    "currentStock": -70,
+    "proseUnit": "PIECE",
+    "evidenceUnit": "τεμάχια",
+    "rawProvider": "NOT INSPECTED"
+  },
+  "after": "NOT TESTED: context changed before after-report refresh",
+  "interruption": {
+    "observedAt": "2026-10-11T14:46:49.753Z",
+    "message": "Η προβολή Backoffice διακόπηκε / Η σύνδεση άλλαξε",
+    "answerWithdrawn": true,
+    "askDisabled": true,
+    "cause": "UNKNOWN"
+  },
+  "reopen": {
+    "observedAt": "2026-10-11T14:47:57.749Z",
+    "action": "visible Άνοιγμα Backoffice",
+    "visible": "ΠΡΟΣΒΑΣΗ SUPER ADMIN · DAILY BITE Ε Ε · DAILY BITE Ε Ε",
+    "furtherQueries": 0
+  },
+  "photo": {
+    "path": "CHECKPOINTS/EVIDENCE/voice-owner-stock-20261011/voice-owner-stock-context-1791730077749.jpg",
+    "bytes": 54092,
+    "proves": "later changed-company context only, not stock answer"
+  },
+  "physicalMicrophone": "NOT TESTED",
+  "businessWrites": 0,
+  "financialAndStockMutationDeltas": "N/A read-only query",
+  "remaining": [
+    "normal Owner after-report comparison",
+    "Greek prose-unit polish",
+    "other units/fractions/stock negative cases live",
+    "physical microphone",
+    "other domains/POS/full assistant"
+  ]
+}
