@@ -1,3 +1,4 @@
+import {maybeChangeSameProductStock} from '../store-baking-same-product.js';
 import { Router } from "express";
 import crypto from "crypto";
 import { z } from "zod";
@@ -56,7 +57,7 @@ router.post("/stores/:storeId/consumption", async (req, res, next) => {
       for (const item of items) {
         const lineValue = countsTurnover ? item.value : 0;
         await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${item.productId},${item.name},${item.quantity},${item.unitPrice},0,${item.vatRate},${lineValue})`;
-        await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${item.quantity} WHERE "storeId"=${store.id} AND "productId"=${item.productId}`;
+        if(!await maybeChangeSameProductStock(tx,{companyId:req.user.companyId,storeId:store.id,productId:item.productId,quantity:item.quantity,kind:Number(item.quantity)<0?'RESTORE':'CONSUME',actorId:req.user.id,actorName:req.user.fullName||'Χειριστής',note:`POS ${saleId}`})) await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${item.quantity} WHERE "storeId"=${store.id} AND "productId"=${item.productId}`;
       }
       if (countsTurnover) {
         await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${crypto.randomUUID()},${saleId},'CASH',${saleValue})`;

@@ -1,3 +1,4 @@
+import {maybeChangeSameProductStock} from '../store-baking-same-product.js';
 import crypto from "crypto";
 import {recordInternalReturn} from "../lib/pos-internal-return.js";
 import {Router} from "express";
@@ -153,7 +154,8 @@ router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
       for(const line of lines){
         await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${reversalId},${line.productId||null},${line.description},${-money(line.quantity)},${money(line.unitPrice)},${-money(line.discount)},${money(line.vatRate)},${-money(line.lineTotal)})`;
         if(line.productId){
-          const restored=await tx.$queryRaw`UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)+${money(line.quantity)} FROM "Product" p WHERE sp."storeId"=${store.id} AND sp."productId"=${line.productId} AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=${req.user.companyId} AND p."trackStock"=TRUE RETURNING sp."productId"`;
+          const restoredSame=await maybeChangeSameProductStock(tx,{companyId:req.user.companyId,storeId:store.id,productId:line.productId,quantity:money(line.quantity),kind:Number(line.quantity)<0?'CONSUME':'RESTORE',actorId:req.user.id,actorName:req.user.fullName||'Χειριστής',note:`Επιστροφή ${reversalId}`});
+          const restored=restoredSame?[{productId:line.productId}]:await tx.$queryRaw`UPDATE "StoreProduct" sp SET "currentStock"=COALESCE(sp."currentStock",0)+${money(line.quantity)} FROM "Product" p WHERE sp."storeId"=${store.id} AND sp."productId"=${line.productId} AND sp."active"=TRUE AND p."id"=sp."productId" AND p."companyId"=${req.user.companyId} AND p."trackStock"=TRUE RETURNING sp."productId"`;
           if(restored[0])restoredProductIds.push(restored[0].productId);
         }
       }
