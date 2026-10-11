@@ -1,3 +1,7 @@
+## 11/10/2026 — POS-NEW-INVOICE-FIELDS-01 / SHORT DESKTOP LAYOUT / AWAITING CI
+
+Same owner. Additional presentation-only adaptation for desktop width>=900px and available height<=700px: compact top navigation/header, remove only the duplicate module banner (left document explanation retained),52px field/paid/credit/submit targets, and display supplier/type side by side when the new-supplier panel is absent. Keeps original DOM order and handlers, all options and existing overflow safety. This addresses reduced desktop space while retaining large lower fields; exact physical no-scroll geometry remains NOT TESTED. Prior90 focused regressions and byte-for-byte handler preservation remain protected; full exact-head CI/deploy and owner photo required. No state-changing LAB or financial action.
+
 ## 11/10/2026 — POS-NEW-INVOICE-FIELDS-01 / CI FIXTURE COMPATIBILITY / AWAITING FULL CI
 
 Owner unchanged. Source PR2205 first headc7bca1570a3de6b0ccebd479ad8b2bf416b95f5f / CI38115790579 failed2272PASS/4FAIL/0SKIP of2276 tests. All four failures were the existing paid-reread VM fixture: its submit-handler extraction searched for a closing quote immediately after the original root CSS class, so additive presentation classes caused the fixture to include JSX and throw Illegal return statement. Application build itself passed; no application payment failure or LAB PASS inferred.
