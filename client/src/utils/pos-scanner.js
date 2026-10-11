@@ -15,18 +15,49 @@ export function barcodeCartProduct(product,value){
 const visible=element=>{for(let node=element;node&&node.nodeType===1;node=node.parentElement){if(node.hidden||node.hasAttribute('inert'))return false;const style=node.ownerDocument.defaultView.getComputedStyle(node);if(style.display==='none'||style.visibility==='hidden')return false}return true};
 export function scannerCanFocus(input){
   if(!input?.isConnected||input.disabled||!visible(input))return false;
-  return ![...input.ownerDocument.querySelectorAll('[aria-modal="true"],.pos-standard-modal,.category-product-overlay,.po-modal-overlay')].some(visible);
+  return ![...input.ownerDocument.querySelectorAll('[aria-modal="true"],.pos-standard-modal,.category-product-overlay,.po-modal-overlay,.shift-overlay,.pos-price-modal,.pos-card-terminal-picker,.operator-camera-overlay,.operator-shift-popover')].some(visible);
 }
 
-// Focus is requested by cart actions, never by every render or periodic polling.
+// Restore idle scanner focus from UI events; active editing and dialogs keep focus.
 export function usePosScannerFocus({inputRef,storeId,ready,blocked,request}){
   const pending=useRef(true);
   useEffect(()=>{pending.current=true},[storeId,request]);
   useEffect(()=>{
-    if(!pending.current||!ready||blocked)return;
-    const focus=()=>{const input=inputRef.current;if(!pending.current||!scannerCanFocus(input))return;input.focus({preventScroll:true});if(input.ownerDocument.activeElement===input)pending.current=false};
-    focus();if(!pending.current)return;
-    const observer=new MutationObserver(focus);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','style','aria-modal']});
-    return()=>observer.disconnect();
+    if(!ready||blocked)return;
+    const input=inputRef.current;if(!input)return;
+    const doc=input.ownerDocument,view=doc.defaultView,root=input.closest('.mws-standard-pos');
+    let timer,idleInteraction=false;
+    const focus=()=>{
+      const interaction=idleInteraction;idleInteraction=false;
+      const current=inputRef.current;if(current!==input||doc.visibilityState==='hidden'||!scannerCanFocus(current))return;
+      const active=doc.activeElement;
+      if(active===current){pending.current=false;return}
+      if(!pending.current){
+        const editor=active?.closest?.('input,textarea,select,[contenteditable],[role="textbox"],[role="combobox"]');
+        if(editor&&(editor.matches('input,textarea,select,[role="textbox"],[role="combobox"]')||editor.getAttribute('contenteditable')!=='false'))return;
+        if(active&&active!==doc.body&&active!==doc.documentElement&&!root?.contains(active))return;
+        if(!interaction&&active?.closest?.('button,a[href],[tabindex]'))return;
+      }
+      current.focus({preventScroll:true});
+      if(doc.activeElement===current)pending.current=false;
+    };
+    const schedule=()=>{view.clearTimeout(timer);timer=view.setTimeout(focus,0)};
+    const interactionFinished=()=>{idleInteraction=true;schedule()};
+    focus();
+    const observer=new view.MutationObserver(schedule);
+    observer.observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','style','class','inert','aria-modal']});
+    doc.addEventListener('focusin',schedule);
+    doc.addEventListener('focusout',schedule);
+    doc.addEventListener('visibilitychange',schedule);
+    root?.addEventListener('pointerup',interactionFinished);
+    root?.addEventListener('click',interactionFinished);
+    view.addEventListener('focus',schedule);
+    return()=>{
+      view.clearTimeout(timer);observer.disconnect();
+      doc.removeEventListener('focusin',schedule);doc.removeEventListener('focusout',schedule);
+      doc.removeEventListener('visibilitychange',schedule);
+      root?.removeEventListener('pointerup',interactionFinished);root?.removeEventListener('click',interactionFinished);
+      view.removeEventListener('focus',schedule);
+    };
   },[inputRef,storeId,ready,blocked,request]);
 }
