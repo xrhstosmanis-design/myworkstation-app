@@ -1,3 +1,7 @@
+## 11/10/2026 22:16:15 Athens — CASH-REPORT-ANALYSES-01 / USER PASS εμφάνισης / CLOSED
+
+Ο ιδιοκτήτης επιβεβαίωσε «ειναι οκ» μετά την παράδοση της μαζεμένης αναφοράς ταμείου με κουμπί «Αναλύσεις». USER PASS μόνο αυτής της εμφάνισης, συμπληρωματικά στο πραγματικό LIMITED LIVE UI PASS PR2299/2300. Δεν έγινε νέα δοκιμή/συναλλαγή. Το μήνυμα δεν προσδιορίζει νέα συσκευή/ρόλο/revision ή οικονομικά deltas. Physical print/export/email/mobile/άλλοι ρόλοι παραμένουν NOT TESTED· overall Νο33 OPEN. Scope ήδη κλειστό, δεν επανεισάγεται στο pending. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-cash-report-analyses.md`, manual `docs/manual/reports/PASS.md`.
+
 ## 11/10/2026 21:44:41 Athens — DAILY-BAKING-02 / owner correction: one product identity / ASSIGNED, NOT TESTED
 
 Owner remains `codex/daily-online-store-20261011`, issue2054; claim/handoff branch `docs/daily-baking-lab-20261011`. User explicitly corrected «θα πρεπει να ειναι το ιδιο ειδος». This supersedes the planned two-product DAILY acceptance: one original product/SKU/name/price/VAT must represent both unbaked and baked quantities; no requirement to create a separate commercial baked product. Existing two-product source is deployed but NOT accepted for this corrected scope. Do not configure self-links against the old schema or relabel its native CI as this feature PASS.
