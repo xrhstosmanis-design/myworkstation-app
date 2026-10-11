@@ -126,7 +126,7 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
     }
     const rows=await prisma.$queryRaw`
       SELECT s."id",s."operatorEmployeeId",s."receiptNumber",s."total",s."subtotal",s."discount",s."audience",s."occurredAt",s."createdAt",
-             s."transactionMode",s."delayedReason",s."reversalState",s."reversalKind",s."originalSaleId",s."fiscalStatus",s."source",s."operationChannel",c."name" AS "customerName",
+             s."transactionMode",s."delayedReason",s."reversalState",s."reversalKind",s."originalSaleId",s."fiscalStatus",s."source",to_jsonb(s)->>'operationChannel' AS "operationChannel",c."name" AS "customerName",
 
              EXISTS(SELECT 1 FROM "Sale" rs WHERE rs."originalSaleId"=s."id" AND rs."companyId"=s."companyId" AND rs."storeId"=s."storeId" AND rs."transactionMode"='INTERNAL_RETURN_PENDING_RBS') AS "internalReturnPending",
              COALESCE((SELECT st."sessionId" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),NULL) AS "sessionId",
