@@ -1,3 +1,11 @@
+## 11/10/2026 - Owner store-selection controls: LIMITED LIVE PASS
+
+Authorized ordinary Owner with existing AI_OWNER_ASSISTANT and the selected store's applicable report entitlement. Normal Backoffice sign-in -> own company -> primary LAB -> Εμπορική λειτουργία -> Λοιπές εμπορικές λειτουργίες -> explicitly select the intended store -> Βοηθός Ιδιοκτήτη. Confirm «Μόνο για» names that store before writing.
+
+Verified without Ask: an unsubmitted question enables Ρώτα; selecting «Επίλεξε κατάστημα» clears the question and disables textbox, voice and Ask. Returning to a permitted store opens an empty input. Changing from ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ to own ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ clears unsubmitted text and updates scope label; returning does not restore old text. Empty input leaves Ask disabled. Screenshot in voice-owner-context-20261011. Exact healthy ae7c8cc4 / mainCI38141355389 / guarded38141610547.
+
+Limits: only unsubmitted text and visible controls were tested; existing answer, active microphone, late provider, foreign store/company and revocation remain NOT TESTED live. No Ask, payment, fiscal, stock or module change. Launcher initially selects N40 CONTROL; explicitly select the correct store. Stop on a session-change or denial, use normal authorized entry, and never bypass server scope. Earlier cash and one-day sales PASS remain intact. Full assistant scope OPEN.
+
 ## 10/10/2026 — Νο33 έξι καταστήματα: Super Admin support entry/return, περιορισμένο LIVE PASS
 
 Ο εξουσιοδοτημένος Platform Super Admin συνδέεται με 2FA στη https://myworkstation-app.onrender.com/platform-admin. Επιλέγει τη συγκεκριμένη εταιρεία → Καταστήματα → Πλήρες Backoffice για το συγκεκριμένο κατάστημα. Περιμένει την ολοκλήρωση φόρτωσης και ελέγχει εταιρεία, όνομα καταστήματος και πραγματικό Κέντρο βαρδιών. Επιστρέφει με «Επιστροφή στο Super Admin», χωρίς logout ή χειροκίνητη αντικατάσταση συνεδρίας. Η επιστροφή στην επώνυμη οθόνη εταιρειών πρέπει να ολοκληρωθεί πριν την επόμενη επιλογή.
