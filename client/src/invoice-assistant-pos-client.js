@@ -161,7 +161,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       else if(!economicsAgree){status.textContent=`Οι γραμμές του πρόχειρου υπολογίζονται σε ${euro(calculatedGross)} € αντί για ${euro(printedTotal)} € του εντύπου. Έλεγξε τις εκπτώσεις και τις αξίες πριν εφαρμόσεις αλλαγές.`;apply.hidden=true}
       activePagesComplete=result.pagesComplete;activePrintedTotal=printedTotal;
       const working=printed.map(line=>({...line,
-        stockUnitsPerInvoiceUnit:line.stockUnitsPerInvoiceUnit
+        stockUnitsPerInvoiceUnit:line.invoiceUnit==="PIECE"&&String(line.stockUnitsPerInvoiceUnit??"").trim()===""?"1":line.stockUnitsPerInvoiceUnit
       }));
       activePrintedRows=working;
       const ruleProduct=overlay.querySelector("[data-rule-product]");
