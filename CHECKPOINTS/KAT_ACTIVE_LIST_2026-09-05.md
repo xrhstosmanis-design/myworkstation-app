@@ -1,3 +1,13 @@
+## 11/10/2026 16:07 Athens - POS-KEYPAD-PREFERENCE-01 / SOURCE LIVE / AWAITING USER
+
+Owner `codex/pos-calculator-operator-20261011` retained; first sequential item only. Source PR2243/head3e1af7fdf8bed1a412c8300347f73faae3d7a5b9/fullCI38141078619 SUCCESS2312PASS/0FAIL/0SKIP, native isolated PostgreSQL/HTTP E2E, build/invariants and Windows. Merged ae7c8cc4e31a0992ba2888956b3a6a1ea9a52b4d; exact mainCI38141355389 SUCCESS2312/0/0. Ordinary guarded Render workflow38141610547 SUCCESS, exact revision healthy at16:04:59 Athens; prior healthyaf718caf rollback checkpoint retained. No manual deploy or guard bypass.
+
+Independent public GET16:06:58.455541 Athens verified /api/health200/oktrue/exactae7c8cc4. Canonical /platform-admin bootstrap loads /assets/entry-DlSBq-IV.js,2290210bytes/SHA2566dbb5d2269225724cd52fe151ad177ed9502abf4fba77791e9f135f1bce564cf, containing per-person preference prefix and labelled calculator toggle; /assets/entry-CKYybkQR.css,609497bytes/SHA256772cda6d7b58009d1795e0ab4e85339a153f8e5df927079f8a22a25398b5d8b4 contains explicit reclaimed desktop column. All nine API-published source/record/PDF blobs matched the local git hashes. Release/asset delivery verified; physical UI, operator/device identity and USER/LAB acceptance NOT TESTED.
+
+Delivered: `Κομπιουτεράκι` header button hides/shows keypad and widens sale list; selection remembered separately per company/store/employee on this browser, restored on reload/re-login, other operator independent. Anonymous selection remains transient. No transaction/payment/stock/shift/fiscal/permission/backend/catalog mutation by this page. Existing scanner/change-notice/current camera/payment/category owners and accepted scopes preserved.
+
+Single next action is user acceptance: empty cart, CtrlF5, hide and verify list expands, reload and verify hidden, ordinary different-operator login and return verify separate choices, show again. No sale is required. Wait for user result before item2; items2–9 remain queued. Keep this owner assigned; no new manual PASS or pending removal until actual confirmation. On USER PASS publish bounded checkpoint/active/tracker/manual/pending/PDF closure with green docs CI/merge. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-pos-calculator-operator.md`.
+
 ## 11/10/2026 - POS-KEYPAD-PREFERENCE-01 / SOURCE READY / AWAITING USER
 
 Owner `codex/pos-calculator-operator-20261011`, sequential item1 only. Claim PR2242/head4d546ba/docsCI38140688456 SUCCESS merged2718343197ae02433ed217fdcaf267d212911b13 before source. Existing other-owner records preserved, source baselineaf718caf.
