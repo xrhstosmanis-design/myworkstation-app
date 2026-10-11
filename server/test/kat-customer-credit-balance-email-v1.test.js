@@ -2,8 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
-const pos=await readFile(new URL("../src/routes/store-pos.js",import.meta.url),"utf8");
+const pos=(await readFile(new URL("../src/routes/store-pos.js",import.meta.url),"utf8"))+"\n"+(await readFile(new URL("../src/lib/pos-customer-receipt.js",import.meta.url),"utf8"));
 const customers=await readFile(new URL("../src/routes/customer-control-v2.js",import.meta.url),"utf8");
+const receiptUi=await readFile(new URL("../../client/src/components/store/PosCustomerReceiptModal.jsx",import.meta.url),"utf8");
 const posUi=await readFile(new URL("../../client/src/components/store/StorePosPanel.jsx",import.meta.url),"utf8");
 const customerUi=await readFile(new URL("../../client/src/components/commerce/installCustomerControlSuiteV2.js",import.meta.url),"utf8");
 const cashControl=await readFile(new URL("../src/routes/cash-control.js",import.meta.url),"utf8");
@@ -42,7 +43,7 @@ test("POS employee sees balance and receives cash or card payments into the acti
   assert.match(pos,/CUSTOMER_RECEIPT_CARD/);
   assert.match(posUi,/ΠΛΗΡΩΜΗ ΥΠΟΛΟΙΠΟΥ/);
   assert.match(posUi,/Υπόλοιπο \$\{euro\(customer\.balance\)\}/);
-  assert.match(posUi,/CARD για κάρτα ή CASH για μετρητά/);
+  assert.match(receiptUi,/Η πληρωμή κάρτας εγκρίθηκε στο τερματικό/);
   assert.match(cashControl,/IN \('SALE_CASH','CUSTOMER_RECEIPT_CASH'\)/);
   assert.match(cashControl,/IN \('SALE_CARD','SALE_IRIS','CUSTOMER_RECEIPT_CARD'\)/);
   assert.match(storeTransactions,/sum\("SALE_CASH"\)\+sum\("CUSTOMER_RECEIPT_CASH"\)/);
