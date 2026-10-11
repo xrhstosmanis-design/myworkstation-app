@@ -1,3 +1,13 @@
+## 11/10/2026 — POS-INVOICE-CAMERA-QR-01 / SOURCE READY / AWAITING CI + LAB
+
+Owner `codex/invoice-camera-qr-20261011` retained, branch `feat/invoice-camera-qr-20261011`. Claim PR2217 CI38123452617 SUCCESS, merged521b81692e4f7797816297b4d8ff2b2093fbb9c0 before source. Source based on main6d772bbc, preserving newer barcode owner changes.
+
+Implemented QR scanning inside existing camera intake in Basic/Premium supplier New invoice forms. Read-only, authenticated selected-store DOCUMENTS endpoint downloads only exact HTTPS einvoice.s1ecos.gr/einvoice.impact.gr provider paths, rejects redirects/arbitrary hosts/foreign issuer or recipient VAT, validates XML metadata and original PDF identity, caps deadline/bytes/pages. Fills original PDF and reviewable supplier/header, clears paid/credit choice, never submits payment/draft/job/stock. Basic credit notes remain BackOffice-only. Premium retains existing single original-PDF handoff and assistant review; existing submit/dedupe/business handlers unchanged. Ordinary photo/PDF fallback preserved; open-invoice payment proof remains separate.
+
+Local Node20: 81 focused invoice/tenant/operator/handoff regressions PASS, frontend build PASS. Final new API/helper + mounted camera/form tests8 PASS/0FAIL/0SKIP: scan once, delayed startup cleanup, close/store-change stale results ignored, camera permission/unsupported fallback, original PDF/header in both forms and no payment API calls. Local read-only replay of owner sample XML/PDF yields A-003649/2026-10-09/488.28/two PDF pages with actual PDF reader; this is sample extraction evidence only. Physical camera/provider integration, LIVE/LAB business acceptance and exact deployed revision NOT TESTED. No real or LAB invoice submission/payment/draft/stock/fiscal/myDATA mutation, no accepted transaction replay. No new manual PASS.
+
+Next: source PR and full green CI, ordinary guarded deployment plus exact public health/assets verification, then owner physical camera scan/review WITHOUT submitting this real invoice in LAB. Payment/handoff acceptance requires separately authorized suitable sample and before/after evidence. Owner remains assigned; #09/Gate3 and presentation/permission scopes remain with their existing owners. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-invoice-camera-qr.md`.
+
 ## 11/10/2026 — POS-BARCODE-CART-02 / exact CSV correction SOURCE READY / AWAITING CI + PHYSICAL ACCEPTANCE
 
 Same owner retained. Evidence/claimPR2218/head1bfe16a3f12f400e103b56c28312a3484dd826eb/docsCI38123741454 SUCCESS/merge8333b84c8db30419ca1f8fd2e25874280ce9f9cf before source. Current USER FAIL11:04 remains authoritative; idle focus USER PASS CLOSED.
