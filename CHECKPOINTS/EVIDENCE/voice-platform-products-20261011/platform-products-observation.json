@@ -1,0 +1,26 @@
+{
+  "scope": "Platform Super Admin selected LAB read-only product source reconciliation",
+  "revision": "aa1f0413509482de23563a34a1230a12871470b2",
+  "question": "Για το SKU 2269, πόσα πουλήθηκαν στις 10/10/2026 και ποιο είναι το τρέχον καταγεγραμμένο απόθεμα; Δείξε τις πηγές.",
+  "askRequestedAt": "2026-10-11T17:28:35.683Z",
+  "stockSourceReadAt": "2026-10-11T17:28:41.547Z",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "companyId": "cmtpopbgk000prhb5qc60zxus",
+  "salesBeforeAskAfter": {
+    "sku": "2269",
+    "from": "2026-10-10",
+    "to": "2026-10-10",
+    "quantity": 4,
+    "gross": 2,
+    "netRounded": 1.77,
+    "vatRounded": 0.23
+  },
+  "stockBeforeAskAfter": -70,
+  "dataResult": "LIMITED LIVE PASS",
+  "presentation": "FAIL raw technical keys and long monetary fractions",
+  "salesAfterPhoto": null,
+  "salesAfterEvidence": "actual ordinary report accessibility observation",
+  "normalOwnerAfter": "NOT TESTED",
+  "fullApplication": "OPEN",
+  "businessWrites": false
+}
