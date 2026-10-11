@@ -3,6 +3,8 @@ import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 
+import {ensureModifierInventoryPrices,resolveModifierInventoryPrices} from "../lib/modifier-inventory-price.js";
+
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 let schemaReady=null;
@@ -91,7 +93,9 @@ router.delete("/groups/:id",async(req,res,next)=>{
 router.get("/groups/:id/modifiers",async(req,res,next)=>{
   try{await ensureSchema();const group=(await prisma.$queryRaw`SELECT "id","description","active" FROM "ManagementModifierGroup" WHERE "id"=${req.params.id} AND "companyId"=${req.user.companyId} LIMIT 1`)[0];if(!group)return res.status(404).json({error:"Δεν βρέθηκε η ομάδα Modifier."});
     const rows=await prisma.$queryRaw`SELECT "id","sequence","description","price","costNet","active" FROM "ManagementModifier" WHERE "groupId"=${group.id} AND "companyId"=${req.user.companyId} ORDER BY "sequence","description"`;
-    res.json({group,items:rows.map(r=>({...r,sequence:Number(r.sequence||0),price:Number(r.price||0),costNet:Number(r.costNet||0)}))});
+    let items=rows;
+    if(req.query.storeId){await selectedStore(req,String(req.query.storeId));items=await resolveModifierInventoryPrices(prisma,req.user.companyId,String(req.query.storeId),rows,{strict:false})}
+    res.json({group,items:items.map(r=>({...r,sequence:Number(r.sequence||0),price:Number(r.price||0),costNet:Number(r.costNet||0)}))});
   }catch(error){next(error)}
 });
 
@@ -113,5 +117,35 @@ router.patch("/modifiers/:id",async(req,res,next)=>{
 router.delete("/modifiers/:id",async(req,res,next)=>{
   try{await ensureSchema();const count=await prisma.$executeRaw`UPDATE "ManagementModifier" SET "active"=false,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${req.params.id} AND "companyId"=${req.user.companyId}`;if(!count)return res.status(404).json({error:"Δεν βρέθηκε το Modifier."});res.json({ok:true,softDeleted:true});}catch(error){next(error)}
 });
+
+async function selectedStore(req,id){
+  if(!id)throw Object.assign(new Error("Επίλεξε κατάστημα."),{status:400});
+  const store=await prisma.store.findFirst({where:{id,companyId:req.user.companyId,active:true},select:{id:true}});
+  if(!store)throw Object.assign(new Error("Δεν βρέθηκε ενεργό κατάστημα στην εταιρεία."),{status:404});
+  return store;
+}
+
+router.get("/inventory-products",async(req,res,next)=>{try{
+  const store=await selectedStore(req,String(req.query.storeId||""));
+  const q=String(req.query.q||"").trim().slice(0,120);if(q.length<2)return res.json({items:[]});
+  const pattern=`%${q}%`;
+  const items=await prisma.$queryRaw`SELECT p."id",p."sku",p."name",COALESCE(sp."salePrice",p."salePrice") AS "price"
+    FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${store.id} AND sp."active"=true
+    WHERE p."companyId"=${req.user.companyId} AND p."active"=true AND (p."name" ILIKE ${pattern} OR p."sku" ILIKE ${pattern}) ORDER BY p."name",p."id" LIMIT 50`;
+  res.json({items:items.map(x=>({...x,price:Number(x.price)}))});
+}catch(e){next(e)}});
+
+router.put("/modifiers/:id/inventory-price",async(req,res,next)=>{try{
+  const body=z.object({storeId:z.string().min(1),productId:z.string().min(1).nullable()}).strict().parse(req.body||{});
+  const store=await selectedStore(req,body.storeId);await ensureSchema();await ensureModifierInventoryPrices(prisma);
+  const modifier=(await prisma.$queryRaw`SELECT "id" FROM "ManagementModifier" WHERE "id"=${req.params.id} AND "companyId"=${req.user.companyId} LIMIT 1`)[0];
+  if(!modifier)return res.status(404).json({error:"Δεν βρέθηκε το Modifier."});
+  if(body.productId){
+    const product=(await prisma.$queryRaw`SELECT p."id" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${store.id} AND sp."active"=true WHERE p."id"=${body.productId} AND p."companyId"=${req.user.companyId} AND p."active"=true LIMIT 1`)[0];
+    if(!product)return res.status(400).json({error:"Το είδος δεν είναι ενεργό στην αποθήκη του επιλεγμένου καταστήματος."});
+    await prisma.$executeRaw`INSERT INTO "ModifierInventoryPrice" ("companyId","storeId","modifierId","productId") VALUES (${req.user.companyId},${store.id},${modifier.id},${product.id}) ON CONFLICT ("companyId","storeId","modifierId") DO UPDATE SET "productId"=EXCLUDED."productId","updatedAt"=NOW()`;
+  }else await prisma.$executeRaw`DELETE FROM "ModifierInventoryPrice" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "modifierId"=${modifier.id}`;
+  res.json({ok:true});
+}catch(e){next(e)}});
 
 export default router;

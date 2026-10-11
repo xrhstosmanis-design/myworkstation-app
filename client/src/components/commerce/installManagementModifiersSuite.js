@@ -13,7 +13,8 @@ export function installManagementModifiersSuite(api){
   const currentHost=suite.querySelector(":scope > .management-modifier-host");
   const clearActive=()=>{suite.classList.remove("management-modifier-active");modifierButton.classList.remove("active")};
   const closeModifiers=()=>{clearActive();categoryButton.classList.add("active")};
-  const render=()=>{if(!root||host!==currentHost){root?.unmount?.();root=createRoot(currentHost);host=currentHost}root.render(React.createElement(ManagementModifiersPanel,{api,onClose:closeModifiers}))};
+  const render=()=>{if(!root||host!==currentHost){root?.unmount?.();root=createRoot(currentHost);host=currentHost}const storeSelect=document.querySelector(".commerce-hub > .panel label select");const storeId=storeSelect?storeSelect.value:(new URLSearchParams(location.search).get("supportStore")||"");root.render(React.createElement(ManagementModifiersPanel,{key:storeId,api,storeId,onClose:closeModifiers}))};
   if(modifierButton.dataset.mmodBound!=="1"){modifierButton.dataset.mmodBound="1";modifierButton.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();suite.classList.remove("management-vat-active","management-expense-active","management-company-active");for(const b of [categoryButton,vatButton,expenseButton,companyButton].filter(Boolean))b.classList.remove("active");suite.classList.add("management-modifier-active");modifierButton.classList.add("active");render()})}
+  const storeSelect=document.querySelector(".commerce-hub > .panel label select");if(storeSelect&&storeSelect.dataset.mmodBound!=="1"){storeSelect.dataset.mmodBound="1";storeSelect.addEventListener("change",()=>{if(suite.classList.contains("management-modifier-active"))render()})}
   for(const button of [categoryButton,vatButton,expenseButton,companyButton].filter(Boolean)){if(button.dataset.mmodBound!=="1"){button.dataset.mmodBound="1";button.addEventListener("click",clearActive)}}
 }

@@ -62,7 +62,6 @@ test("structured allergens remain separate from free notes through the table que
 
 test("POS preparation loads only the selected product modifiers and settings",()=>{
   assert.match(preparationModal,/modifiers\?productId=\$\{encodeURIComponent\(line\.id\)\}/);
-  assert.match(preparationModal,/const loadedGroups=r\.groups\|\|\[\],next=\{\}/);
-  assert.match(preparationModal,/for\(const g of loadedGroups\)/);
+  assert.match(preparationModal,/restorePreparationSelection\(loadedGroups,p\.modifiers\)/);
   assert.match(preparationModal,/setSettings\(r\.settings\|\|null\)/);
 });
