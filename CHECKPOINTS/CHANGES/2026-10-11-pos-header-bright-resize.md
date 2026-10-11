@@ -17,3 +17,9 @@ Owner `codex/pos-header-bright-resize-20261011`; claim PR2252 CI38146237037 succ
 
 
 CI38146742662 infrastructure FAIL before checkout/tests: ECR PostgreSQL16 mirror toomanyrequests Data limit exceeded. CI-only service uses same official PostgreSQL16 from primary Docker Hub registry; no production configuration/DB change. Current shared documentation preserved and source status appended to avoid concurrent top-entry conflicts.
+
+## Item2 compact minimum follow-up / SOURCE READY / AWAITING USER
+
+Same assigned owner `codex/pos-header-bright-resize-20261011`; bounded follow-up branch `codex/pos-header-bright-resize-compact-20261011`. SourcePR2256/headccc7f474 fullCI38148178128 SUCCESS2332PASS/0FAIL/0SKIP (native PG, real HTTP E2E, exact Chromium geometry/Windows/contracts), mergedaf6c3e45. MainCI38148522988 cancelled when concurrent docsPR2263 merged2f937ea4; newer docs-only CI38148675640 passed but deploy38148718080 correctly skipped. Header NOT LIVE from that attempt; no guard bypass/manual deployment.
+
+Actual geometry at1366x768/1280x600 showed the new22px grip plus original content gaps added10px to the compact header floor. Reduce only header internal padding/gaps7/6/6 to3/3/3, keeping all44px auxiliary buttons,22px grip and handlers. This recovers10px, preserving the previous compact minimum while brightening/resizing it; wide screens gain space. Existing source state/tenant preference/cart bounds/scanner/payment unchanged. Follow-up only CSS, with the same exact browser fixture before/after/full CI and ordinary guarded main release required. Original supplied header screenshot/user requirement expressly includes shrinking; this remains the same assigned scope. USER/LAB NOT TESTED, manual unchanged; item1 separate acceptance/items3–9queued.
