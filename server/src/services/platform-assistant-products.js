@@ -9,7 +9,7 @@ import {readStockAnalysisReport} from "../routes/kiosk-reports-stock-v3.js";
 const fail=(status,message,code)=>{throw Object.assign(new Error(message),{status,code})};
 export async function authorizePlatformAssistant(req,selection,{db=prisma,now=new Date()}={}){
   const user=req.user||{};
-  if(user.role!=="SUPER_ADMIN"||!(user.isSuperAdmin===true||user.platformRole==="SUPER_ADMIN")||user.supportContext)fail(403,"Απαιτείται κεντρική πρόσβαση Super Admin.","PLATFORM_ASSISTANT_ROLE_DENIED");
+  if(!["OWNER","SUPER_ADMIN"].includes(user.role)||!(user.isSuperAdmin===true||user.platformRole==="SUPER_ADMIN")||user.supportContext)fail(403,"Απαιτείται κεντρική πρόσβαση Super Admin.","PLATFORM_ASSISTANT_ROLE_DENIED");
   if(!user.id||!user.sessionId)fail(401,"Απαιτείται ενεργή ασφαλής σύνδεση.","PLATFORM_ASSISTANT_SESSION_REQUIRED");
   const session=await db.userSession.findUnique({where:{id:user.sessionId},include:{user:{select:{id:true,role:true,sessionVersion:true,mustChangePassword:true}}}});
   const expires=Number(new Date(session?.expiresAt));
