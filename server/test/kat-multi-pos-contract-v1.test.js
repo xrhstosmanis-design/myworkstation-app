@@ -42,7 +42,7 @@ test("BackOffice keeps every open terminal available but shows one selected shif
   assert.match(ledger,/isBackoffice=req\.user\?\.tokenType!=="STORE_OPERATOR"/);
   assert.match(ledger,/openSessions:openRows/);
   assert.match(ledger,/"sessionId"=ANY\(\$\{openSessionIds\}::text\[\]\)/);
-  assert.match(backoffice,/data\?\.openSessions\?\.length/);
+  assert.match(backoffice,/current\?\.openSessions\?\.length/);
   assert.match(backoffice,/Κέντρο βαρδιών/);
   assert.match(backoffice,/Ενεργά ταμεία/);
   assert.match(backoffice,/selectedSessionId/);

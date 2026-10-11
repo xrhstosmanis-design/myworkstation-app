@@ -18,7 +18,7 @@ test("administrative shift close allows Super Admin and owner, remains atomic an
 
 test("shift center exposes force close only from server-granted management access",()=>{
   assert.match(transactions,/canForceClose:req\.user\?\.tokenType!=="STORE_OPERATOR"&&\["SUPER_ADMIN","OWNER"\]\.includes\(req\.user\?\.role\)/);
-  assert.match(panel,/data\?\.access\?\.canForceClose/);
+  assert.match(panel,/current\?\.access\?\.canForceClose/);
   assert.match(panel,/Κλείσιμο βάρδιας/);
   assert.match(panel,/χωρίς φυσική καταμέτρηση/);
 });
