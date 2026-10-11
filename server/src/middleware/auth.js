@@ -90,7 +90,7 @@ function enforceStorePosPermissions(req,res,permissions){
   if(req.method==="POST"&&/\/sales\/[^/]+\/delayed$/.test(path)&&!permissions.includes("TRANSACTION_REVERSAL")){
     return deny("Η ετεροχρονισμένη διόρθωση απαιτεί «Όλες οι συναλλαγές βάρδιας (PoS)» από το BackOffice.");
   }
-  if(req.method==="POST"&&(/\/sales\/[^/]+\/(reverse|return-items)$/.test(path)||/\/exchange$/.test(path))&&!permissions.includes("RETURN_ITEMS")){
+  if(req.method==="POST"&&(/\/sales\/[^/]+\/(reverse|return-items|internal-return)$/.test(path)||/\/exchange$/.test(path))&&!permissions.includes("RETURN_ITEMS")){
     return deny("Δεν έχεις δικαίωμα «Επιστροφή ειδών» από το BackOffice.");
   }
   if(req.method==="GET"&&/\/customers(?:\/|$)/.test(path)&&!permissions.includes("CUSTOMERS_POS")){
