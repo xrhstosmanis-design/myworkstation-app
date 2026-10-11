@@ -1,3 +1,13 @@
+## 11/10/2026 17:49 Athens - Owner current recorded stock: LIMITED LIVE PASS before-query comparison / after refresh AWAITING OWNER
+
+Tested normal Owner Υπεύθυνος Εργαστηρίου / MYWORKSTATION LAB / explicitly selected ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, existing AI_OWNER_ASSISTANT + INVENTORY. Source2260/exact healthyf45e6c53, full mainCI38147865426 (2331/0/0), guarded38148114214 SUCCESS; new ordinary client index-BJjdvc36.js.
+
+Open own store -> Εμπορική λειτουργία -> Λοιπές εμπορικές λειτουργίες; explicitly confirm commercial Κατάστημα -> Βοηθός Ιδιοκτήτη. Tested question: «Πόσο είναι το τρέχον καταγεγραμμένο απόθεμα του είδους με SKU 2269 στο ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ;». Actual answer/source: ΝΕΡΟ500ML,2269,-70, own selected store, source read11Oct17:45:05Athens. Source table says «τεμάχια»; answer prose says PIECE (Greek unit-wording polish not accepted). Negative value is preserved, not changed to zero. Current recorded stock is not a physical count, available-to-sell or historical quantity; no negative-stock cause inferred.
+
+Independent Αναφορές -> Στατιστικά αποθήκης, same primary store and SKU2269, explicit Search before14:44:34.898UTC showed the same one row/-70. Date filters there affect period sales/movements, not current quantity. LIMITED LIVE PASS only for this query and BEFORE reconciliation; AFTER report NOT TESTED: session boundary withdrew answer and disabled Ask, then ordinary «Άνοιγμα Backoffice» showed SUPER ADMIN/DAILY BITE rather than LAB Owner. Stop further reads in that context. Restore the intended normal Owner account through ordinary login/account selection before resuming acceptance; never bypass the boundary or reuse another company's view. No new business transaction to repair missing evidence.
+
+Detailed checkpoint2026-10-10-unified-voice-assistant.md; stock-observation.json and later context screenshot under CHECKPOINTS/EVIDENCE/voice-owner-stock-20261011. Screenshot proves only the later wrong-company context, not an answer screenshot. Other units/fractions/stock negative cases, stable before/after report comparison, physical speech and whole assistant remain OPEN. Existing tested cash/sales/date/context cases retained.
+
 ## 11/10/2026 17:00 Athens - Owner product ambiguity / no matching sales: LIMITED LIVE PASS
 
 Who: normal authorized Owner, own selected store, existing AI_OWNER_ASSISTANT + INVENTORY report entitlement. Tested MYWORKSTATION LAB / Υπεύθυνος Εργαστηρίου / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ; server3e37a194, exact CI38144821469 and guarded38145069708 SUCCESS; existing assistant client/source retained.
