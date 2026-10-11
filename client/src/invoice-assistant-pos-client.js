@@ -198,7 +198,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
         const edited=[...printedArea.querySelectorAll("[data-edit-select]:checked")].map(node=>working[Number(node.dataset.editSelect)]);
         const rowPatches=new Map();
         for(const row of edited){
-          if(!validPrinted(row,true)){setApplyStatus(`Έλεγξε τα ποσά και τα υποχρεωτικά πεδία της γραμμής ${row.sequence}.`);return}
+          if(!validPrinted(row,true)){const issue=printedReviewIssue({...row,confidence:"certain"});const input=printedArea.querySelector(`[data-row="${working.indexOf(row)}"][data-field="${issue.includes("τεμάχια ανά συσκευασία")?"stockUnitsPerInvoiceUnit":issue.includes("μονάδα")?"invoiceUnit":issue.includes("περιγραφή")?"description":issue.includes("ποσότητα")?"quantity":issue.includes("εκπτώσεις")?"discount1":issue.includes("ΦΠΑ")?"vatRate":"unitCost"}"]`);input?.focus();input?.scrollIntoView?.({block:"nearest",inline:"nearest"});setApplyStatus(`Γραμμή ${row.sequence}: ${issue} Διόρθωσε το επισημασμένο πεδίο και ξαναπάτησε μεταφορά.`);return}
           if(!row.matchingLineId){const previous=additions.findIndex(line=>line.sequence===row.sequence);if(previous>=0)additions[previous]=row;else additions.push(row);continue}
           const before=lineById.get(row.matchingLineId);if(!before){setApplyStatus("Η γραμμή του πρόχειρου άλλαξε. Άνοιξε ξανά τον βοηθό.");return}
           const patch={};for(const field of editableFields){const value=row[field];if(field==="supplierCode"||field==="description"||field==="invoiceUnit"){if(String(value??"")!==String(before[field]??""))patch[field]=value}else if(Math.abs(number(value)-number(before[field]))>0.000001)patch[field]=number(value)}
