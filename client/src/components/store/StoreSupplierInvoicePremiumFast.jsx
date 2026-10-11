@@ -1,3 +1,4 @@
+import DocumentCameraFocus from "./DocumentCameraFocus.jsx";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {Camera,FileUp,Wallet} from "lucide-react";
 import QRCode from "qrcode";
@@ -30,7 +31,7 @@ function monitorBackgroundV244({api,jobId,documentNumber,setMessage,onChanged}){
   setTimeout(poll,2000);
 }
 
-export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,setMessage}){
+export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,onCompleted,setMessage}){
   const [pages,setPages]=useState([]),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(""),[documentType,setDocumentType]=useState(""),[creditDetected,setCreditDetected]=useState(false),[mode,setMode]=useState(""),[paymentMethod,setPaymentMethod]=useState("CASH_SHIFT"),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε έως 5 σελίδες του ίδιου τιμολογίου."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null),[supplierCandidate,setSupplierCandidate]=useState({name:"",taxId:""}),[createdSupplier,setCreatedSupplier]=useState(null),[savingSupplier,setSavingSupplier]=useState(false),[vatLookup,setVatLookup]=useState({busy:false,verified:false,message:""});
   const videoRef=useRef(null),canvasRef=useRef(null);
   useEffect(()=>{if(!cameraOpen||!stream||!videoRef.current)return;const video=videoRef.current;video.srcObject=stream;const play=()=>video.play().catch(()=>{});if(video.readyState>=2)play();else video.addEventListener("loadedmetadata",play,{once:true});return()=>video.removeEventListener("loadedmetadata",play)},[cameraOpen,stream]);
@@ -42,6 +43,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const paymentSource=paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
   const paymentMethodLabel={CASH_SHIFT:"Μετρητά από ενεργή βάρδια",CORPORATE_CARD:"Εταιρική κάρτα",BANK_TRANSFER:"Τραπεζική μεταφορά",EMPLOYEE_REIMBURSEMENT:"Πληρωμή υπαλλήλου προς επιστροφή"}[paymentMethod];
   const file=pages[0]?.originalFile||pages[0]?.file||null,fileDataUrl=pages[0]?.originalDataUrl||pages[0]?.dataUrl||"";
+  useEffect(()=>()=>{stream?.getTracks?.().forEach(track=>track.stop())},[stream]);
   const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
   const openInvoiceQr=()=>{stopCamera();setInvoiceQrOpen(true)};
   const readInvoiceQr=data=>{
@@ -151,11 +153,12 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
       const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate,totalGross,documentType,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
       try{window.dispatchEvent(new CustomEvent("mws:invoice-handoff",{detail:{jobId:handoff?.jobId||null,documentNumber:documentNumber.trim()}}))}catch{}
-      if(handoff?.receiptLinked){setStatus("Συνδέθηκε με την υπάρχουσα αγορά myDATA.");setMessage?.(`✅ Το κανονικό τιμολόγιο ${documentNumber.trim()} συνδέθηκε με την υπάρχουσα αγορά. ${effectiveMode==="PAID"?"Η πληρωμή POS καταγράφηκε μία φορά.":"Η επιλογή πίστωσης αποθηκεύτηκε."} Οι γραμμές και η αποθήκη δεν άλλαξαν.`);onChanged?.();return;}
+      if(handoff?.receiptLinked){setStatus("Συνδέθηκε με την υπάρχουσα αγορά myDATA.");setMessage?.(`✅ Το κανονικό τιμολόγιο ${documentNumber.trim()} συνδέθηκε με την υπάρχουσα αγορά. ${effectiveMode==="PAID"?"Η πληρωμή POS καταγράφηκε μία φορά.":"Η επιλογή πίστωσης αποθηκεύτηκε."} Οι γραμμές και η αποθήκη δεν άλλαξαν.`);onChanged?.();onCompleted?.();return;}
       setStatus(documentType==="CREDIT_NOTE"?"Το πιστωτικό αποθηκεύτηκε ως πρόχειρο. Οι γραμμές ελέγχονται στο BackOffice πριν από κίνηση αποθήκης και συμψηφισμό.":handoff?.myDataMatched?"Το τιμολόγιο συνδέθηκε με υπάρχον παραστατικό myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…":"Το τιμολόγιο αποθηκεύτηκε ως πρόχειρο. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…");
       const accepted=documentType==="CREDIT_NOTE"?`⏳ Το πιστωτικό ${documentNumber.trim()} παραλήφθηκε για έλεγχο στο BackOffice. Δεν έγινε πληρωμή ή αλλαγή αποθήκης.`:duplicateCheck?.paymentReused?`⏳ Η υπάρχουσα πληρωμή διατηρήθηκε. Το τιμολόγιο ${documentNumber.trim()} επανελέγχεται χωρίς νέα χρέωση· αναμονή τελικού αποτελέσματος.`:effectiveMode==="PAID"?`⏳ Η πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Η OCR ανάγνωση συνεχίζεται· δεν έχει δηλωθεί ακόμη επιτυχία.`:`⏳ Το τιμολόγιο ${documentNumber.trim()} παραλήφθηκε μία φορά. Η OCR ανάγνωση συνεχίζεται· δεν έχει δηλωθεί ακόμη επιτυχία.`;
       setMessage?.(accepted);onChanged?.();
       monitorBackgroundV244({api,jobId:handoff.jobId,documentNumber:documentNumber.trim(),setMessage,onChanged});
+      onCompleted?.();
     }catch(error){
       const detail=error?.message||"Η καταχώριση απέτυχε.";
       setStatus(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ: ${stage}. ${detail}`);
@@ -168,7 +171,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>Γρήγορη καταχώριση — AI μόνο για τα 4 βασικά στοιχεία. Η πλήρης V2.4.4 ανάγνωση προϊόντων συνεχίζεται μετά στην Κεντρική Διαχείριση.</div>
     <div style={{padding:"9px 11px",borderRadius:9,background:"#fff",fontWeight:800,marginBottom:10}}>{status}</div>
     <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={busy||reading||pages.length>=5}><Camera/> Λήψη σελίδας από κάμερα</button><label><FileUp/> Επιλογή έως 5 σελίδων / PDF<input type="file" multiple accept="image/*,application/pdf" disabled={busy||reading||pages.length>=5} onChange={e=>{const selected=Array.from(e.target.files||[]);e.target.value="";selectFiles(selected)}}/></label><button type="button" onClick={createQr} disabled={busy||reading||pages.length>=5}>QR από κινητό</button><b>{pages.length?`${pages.length}/5 ${pages.length===1?"σελίδα":"σελίδες"}`:"Δεν επιλέχθηκε τιμολόγιο"}</b></div>{pages.length>0&&<div style={{display:"grid",gap:6,margin:"8px 0 10px"}}>{pages.map((page,index)=><div key={`${page.file.name}-${page.file.lastModified}-${index}`} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 9px",border:"1px solid #b7d8cc",borderRadius:8,background:"#f5fbf8"}}><b style={{minWidth:72}}>Σελίδα {index+1}</b><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{page.file.name}</span><button type="button" title="Μετακίνηση πάνω" disabled={busy||reading||index===0} onClick={()=>movePage(index,-1)}>↑</button><button type="button" title="Μετακίνηση κάτω" disabled={busy||reading||index===pages.length-1} onClick={()=>movePage(index,1)}>↓</button><button type="button" title="Αφαίρεση σελίδας" disabled={busy||reading} onClick={()=>removePage(index)}>×</button></div>)}</div>}{qr&&<div style={{textAlign:"center",padding:10}}><img src={qr} alt="QR upload τιμολογίου" style={{width:180}}/><div>Σκάναρε και ανέβασε μία σελίδα. Επανάλαβε μέχρι 5 φορές για το ίδιο τιμολόγιο.</div></div>}
-    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" disabled={pages.length>0} onClick={openInvoiceQr}>Σάρωση QR τιμολογίου</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
+    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><DocumentCameraFocus track={stream?.getVideoTracks?.()[0]}/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" disabled={pages.length>0} onClick={openInvoiceQr}>Σάρωση QR τιμολογίου</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
     {invoiceQrOpen&&<InvoiceQrCamera key={store.id} api={api} store={store} onRead={readInvoiceQr} onClose={()=>setInvoiceQrOpen(false)}/>}
     </div>
     <div className="pos-invoice-fields-area">
