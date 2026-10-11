@@ -1,0 +1,10 @@
+# POS calculator per operator — item 1
+
+## 11/10/2026 15:46 Athens - POS-KEYPAD-PREFERENCE-01 / ASSIGNED / NOT TESTED
+
+Owner `codex/pos-calculator-operator-20261011`. User explicitly requested sequential implementation, testing after each; this claim covers item 1 only: calculator visibility chosen separately by each authenticated operator, remembered on this browser per company/store/operator, visible labelled toggle and reclaimed list space when hidden. Independent display preference only; existing numbered33/tracker35 operator-checkbox audit and camera/payment/category/scan owners remain assigned and unchanged. Items 2–9 are queued, not claimed or implemented here.
+
+Main baseline8b62a147/sourceaf718caf: keypad starts ON on every mount, existing unlabelled Keyboard button toggles only React state; current without-keypad grid already reclaims space. Latest operator-audit LAB reload evidence restored keypadON, no contradiction with requested new persistence. Current scanner/category/manual USER PASS, selected-store catalogue indexes/80ms unique scanner/600ms prefix, received/change3second notice, fiscal/busy/modal/offline/checkout/permission boundaries protected. No financial/stock/shift/API/production data action required or performed. New preference acceptance NOT TESTED; local/CI are not USER/LAB PASS.
+
+Acceptance: hide/show, same operator reload retains selection, other operator starts independently, return restores previous choice, company/store isolation, no unidentified shared preference, unavailable browser storage safely permits current-session toggle; rendered aside and grid track selection without changing payment values/payload. Require bounded mounted regression tests, Node20 frontend build, full PR/main CI/invariants/isolated E2E, merge and ordinary guarded exact release before user testing. Record source/deploy receipt; manual stays unchanged until real USER PASS. Single next action: publish this claim to main with green docs CI before source. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-pos-calculator-operator.md`.
+
