@@ -1,3 +1,5 @@
+import {auditExpenseReason} from "./auditExpenseReason.mjs";
+
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const number=value=>Number(value||0);
 const pad=value=>String(value).padStart(2,"0");
@@ -89,8 +91,8 @@ function overviewHtml(report){
 function categoriesHtml(report){
   const rows=report?.categories||[],total=number(report?.summary?.totalExpenses);
   return `<section class="owner-payments-panel"><div class="owner-payments-panel-head"><h3>Κατηγορίες / περιγραφές εξόδων</h3><small>Οι «Λοιπές δαπάνες» ομαδοποιούνται από την πραγματική περιγραφή της καταχώρισης.</small></div>
-    <div class="owner-payments-table categories"><div class="row head"><span>Κατηγορία / περιγραφή</span><span>Τύπος</span><span>Κινήσεις</span><span>Ποσό</span><span>% συνόλου</span></div>
-    ${rows.map(row=>`<div class="row"><span><b>${esc(row.name)}</b></span><span>${row.type==="SUPPLIER_PAYMENT"?"Προμηθευτές":"Λοιπά έξοδα"}</span><span>${row.count||0}</span><strong>${money(row.amount)}</strong><b>${total?pct(number(row.amount)/total*100):"—"}</b></div>`).join("")||'<div class="owner-payments-empty">Δεν υπάρχουν κατηγορίες εξόδων.</div>'}</div></section>`;
+    <div class="owner-payments-table categories"><div class="row head"><span>Αιτιολογία</span><span>Κατηγορία / περιγραφή</span><span>Τύπος</span><span>Κινήσεις</span><span>Ποσό</span><span>% συνόλου</span></div>
+    ${rows.map(row=>`<div class="row"><span class="owner-expense-reason"><b>${esc(auditExpenseReason({eventType:row.type,description:row.name})||"—")}</b></span><span><b>${esc(row.name)}</b></span><span>${row.type==="SUPPLIER_PAYMENT"?"Προμηθευτές":"Λοιπά έξοδα"}</span><span>${row.count||0}</span><strong>${money(row.amount)}</strong><b>${total?pct(number(row.amount)/total*100):"—"}</b></div>`).join("")||'<div class="owner-payments-empty">Δεν υπάρχουν κατηγορίες εξόδων.</div>'}</div></section>`;
 }
 function suppliersHtml(report){
   const rows=report?.bySupplier||[];
