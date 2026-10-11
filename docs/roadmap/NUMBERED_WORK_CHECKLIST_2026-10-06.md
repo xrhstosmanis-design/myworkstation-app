@@ -305,7 +305,9 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `27`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΑ LAB PASS / OPEN
-- **Υπόλοιπο / όριο:** Εκκρεμούν Owner χωρίς SA, mobile/tablet, ιστορικό κόστος, διαφορετικές περίοδοι, πιστωτικά/αντιστροφές και νέες εξαγωγές. Ανεξάρτητο display-only LIMITED LIVE VISUAL PASS11Oct18:35: στον πίνακα Owner Έξοδα → Κατηγορίες,16px κείμενο/18px ποσά και νέα πρώτη Αιτιολογία,300EUR «τονια τιμολογια»/100EUR πραγματικό σημείωμα/50EUR «καμερα», original description/count/amount/percent/order ανέπαφα και μετά αναζήτηση. SourcePR2272/fullsource-main2339/0/0/guard/exacthealthy7b297422· checkpoint2026-10-11-owner-expense-readable-reason.md. Δεν κλείνει Νο25/tracker27 ή Νο33 και δεν αλλάζει owner/οικονομική αποδοχή.
+- **Υπόλοιπο / όριο:** Εκκρεμούν Owner χωρίς SA, mobile/tablet, ιστορικό κόστος, διαφορετικές περίοδοι, πιστωτικά/αντιστροφές και νέες εξαγωγές. Ανεξάρτητο display-only LIMITED LIVE VISUAL PASS11Oct18:35: στον πίνακα Owner Έξοδα → Κατηγορίες,16px κείμενο/18px ποσά και νέα πρώτη Αιτιολογία,300EUR «τονια τιμολογια»/100EUR πραγματικό σημείωμα/50EUR «καμερα», original description/count/amount/percent/order ανέπαφα και μετά αναζήτηση. SourcePR2272/fullsource-main2339/0/0/guard/exacthealthy7b297422· checkpoint2026-10-11-owner-expense-readable-reason.md. Δεν κλείνει Νο25/tracker27 ή Νο33 και δεν αλλάζει owner/οικονομική αποδοχή. User11Oct19:06:55 «einai ok»: USER PASS μόνο της ήδη παραδοθείσας εμφάνισης Κατηγοριών/Αιτιολογίας, χωρίς νέα πράξη ή επέκταση αποδοχής.
+
+- **Επιβεβαίωση χρήστη 11/10 19:06:55:** «einai ok» / USER PASS μόνο της ήδη παραδοθείσας εμφάνισης Κατηγοριών και Αιτιολογίας. Δεν πιστοποιεί νέες πράξεις, Owner/mobile/export ή συνολικό Νο25.
 
 ## 26 — Απώλειες και ύποπτα μοτίβα
 
@@ -353,9 +355,10 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 ## 33 — Τελικές δοκιμές χρηστών, ρόλων και modules
 
 - **Tracker ID:** `35`
-- **Κατάσταση στο στιγμιότυπο 06/10/2026:** PARTIAL LIVE PASS / PAYMENT MODAL LIVE UI PASS / PHOTO-CAMERA-EVIDENCE USER PASS / OPEN (ενημέρωση10/10)
-- **Υπόλοιπο / όριο:** 55 αφαιρέσεις/24 επιλογές. Ασφαλής επανείσοδος και ζωντανή άρνηση/επαναφορά Τρίτων, Προμηθευτή και ίδιας βάρδιας στο ανοικτό παράθυρο πληρωμών PASS. Αρχικό προφίλ επαναφέρθηκε· καλάθι0. Επισύναψη φωτογραφίας, κάμερα και εμφάνιση αποδεικτικού USER PASS από ιδιοκτήτη10/10· δεν επαναλαμβάνονται. PDF-specific/quality variants παραμένουν χωριστά ανεπιβεβαίωτα. Εκκρεμούν isolated active, native ακύρωση, λοιπά controls/πραγματικές πράξεις/ρόλοι/εταιρεία/κατάστημα/modules. Owner codex/operator-checkbox-audit-20261009.
-- **Ενημέρωση 10/10/2026:** PR2022, PR/main CI2019/0FAIL/0SKIP, guard38029245686 και exacthealth0ab33f31. Χωρίς οικονομική/product/stock/shift υποβολή. Checkpoint2026-10-09-operator-checkbox-audit.md. Επόμενο: αποκατάσταση υποστηριζόμενης συνεδρίας και υπόλοιποι έλεγχοι. Συνολικό PASS OPEN.
+- **Κατάσταση στο στιγμιότυπο 06/10/2026:** PARTIAL LIVE/USER PASS / INTERNAL RBS RETURN SOURCE DEPLOYED, AWAITING LAB-USER / OPEN (ενημέρωση11/10)
+- **Υπόλοιπο / όριο:** Owner codex/operator-checkbox-audit-20261009. 55 αφαιρέσεις/24 επιλογές. Προστατευμένα PASS: δυναμικά δικαιώματα πληρωμών, photo/camera/evidence, ακύρωση/υποχρεωτική αιτιολογία/Audit, isolated active OFF/ON, αλλαγή τιμής, online visibility, own/all βάρδιας, σύγχρονη μεταφορά, μία NON_FISCAL πώληση/επιστροφή1EUR, προσωπική κάρτα/QR και καταμέτρηση. Αρχικό προφίλ αποκαταστάθηκε και τελευταίο επιβεβαιωμένο καλάθι0· απαιτείται φρέσκο baseline πριν νέα πράξη. Δεν επαναλαμβάνονται υπάρχουσες πληρωμές/επιστροφές. Εκκρεμούν πραγματικό αρχικό ταμείο/κλείσιμο, φυσική εκτύπωση, ευρύτεροι ρόλοι/εταιρείες/καταστήματα/modules και μη επιβεβαιωμένα variants. Ανεξάρτητη εσωτερική επιστροφή RBS: PR2290, exact main a1d67b330355c0c244539f9eff10afb1460d56b9, full PR/main CI2372/0/0, guarded Render38159044341 SUCCESS και browser exacthealthy. Υποχρεωτικό dropdown Λάθος χειριστή / Επιστροφή από πελάτη / Λάθος καταχώρηση, πραγματική μέθοδος επιστροφής, σύνδεση αρχικού παραστατικού και ένδειξη «Εκκρεμεί φορολογική επιστροφή RBS». SOURCE DEPLOYED μόνο· πραγματική επιστροφή, οικονομικά/stock/Audit deltas, operator/mobile και φορολογική RBS συμφωνία AWAITING LAB/USER, όχι LIVE PASS. Checkpoint2026-10-11-pos-internal-return-pending-rbs.md. Overall Νο33 OPEN.
+- **Ιστορική ενημέρωση 10/10/2026:** PR2022 mounted Payments LIVE UI PASS και PR2027 photo/camera/evidence USER PASS προστατεύονται. Παλαιότερα native-cancel/isolated-active pending υπερκαλύπτονται από τις μεταγενέστερες επιβεβαιώσεις στα checkpoints/tracker, όχι από το CI.
+
 
 ## 34 — Πλήρες εγχειρίδιο εργαζομένου, ιδιοκτήτη και Super Admin
 
