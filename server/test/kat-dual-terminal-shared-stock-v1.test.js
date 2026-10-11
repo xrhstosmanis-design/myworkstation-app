@@ -13,6 +13,7 @@ function sharedStockTx(openingStock){
   return{
     get stock(){return stock},
     $queryRaw(strings,...values){
+      if(!strings.join("").includes("WITH target"))return Promise.resolve([]);
       const quantity=Number(values[3]);
       const operation=queue.then(()=>{const previousStock=stock;stock-=quantity;return[{trackStock:true,reserved:true,previousStock,nextStock:stock}]});
       queue=operation.then(()=>undefined,()=>undefined);

@@ -1,3 +1,4 @@
+import {policyAvailable,readBakingPolicy} from "../store-baking.js";
 import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
 import {Router} from "express";
 import crypto from "crypto";
@@ -103,6 +104,7 @@ async function resolveIngredientStockTarget(tx,{store,ingredient}){
 }
 
 async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user}){
+  if((await readBakingPolicy(tx,store.companyId,store.id,line.productId))?.mode==='BAKED')return false;
   const rawRecipe=await resolvePreparationRecipe(tx,{store,line});
   if(!rawRecipe.length)return false;
   const recipe=[];
@@ -119,7 +121,7 @@ async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user})
     if(qty<=0||!ingredient.storeProductId)continue;
     const stockProductId=ingredient.stockProductId||ingredient.ingredientProductId;
     await tx.$executeRaw`UPDATE "Product" SET "trackStock"=TRUE,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${stockProductId} AND "companyId"=${store.companyId}`;
-    const changed=enforceStock
+    const changed=(enforceStock||['STOCK','BAKED'].includes(line.availabilityMode))
       ? await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${ingredient.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`
       : await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${ingredient.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE`;
     if(!changed){if(enforceStock){const error=new Error(`Δεν μπόρεσε να ενημερωθεί το stock υλικού: ${ingredient.ingredientName}`);error.status=409;throw error}continue}
@@ -134,7 +136,7 @@ async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user})
     if((!milk||!milk.storeProductId)&&enforceStock){const error=new Error(`Το επιλεγμένο γάλα της συνταγής ${line.productName} δεν υπάρχει στην αποθήκη του καταστήματος.`);error.status=409;throw error}
     if(milk?.storeProductId&&enforceStock&&Number(milk.currentStock||0)<milkQty){const error=new Error(`Δεν υπάρχει αρκετό stock γάλακτος για ${line.productName}.`);error.status=409;throw error}
     if(milk?.storeProductId){
-      const changed=enforceStock
+      const changed=(enforceStock||['STOCK','BAKED'].includes(line.availabilityMode))
         ?await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${milkQty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${milk.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE AND COALESCE("currentStock",0)>=${milkQty}`
         :await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${milkQty},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${milk.storeProductId} AND "storeId"=${store.id} AND "active"=TRUE`;
       if(!changed&&enforceStock){const error=new Error(`Δεν μπόρεσε να ενημερωθεί το stock γάλακτος: ${milk.name}`);error.status=409;throw error}
@@ -144,22 +146,23 @@ async function consumePreparationRecipe(tx,{store,line,enforceStock,order,user})
   return true;
 }
 
-async function postCommercialSale(tx,{order,store,user,config}){
+export async function postCommercialSale(tx,{order,store,user,config}){
   if(order.saleId||order.commercialPostedAt)return order.saleId||null;
   const open=(await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR KEY SHARE`)[0];
   if(!open){const error=new Error("Δεν υπάρχει ανοιχτή βάρδια. Η online παραγγελία δεν μπορεί να κλείσει ως παραδομένη.");error.status=409;throw error}
-  const lines=await tx.$queryRaw`SELECT l."id" AS "orderLineId",l."productId",l."productName",l."quantity",l."onlineUnitPrice",l."lineTotal",COALESCE(l."modifiersJson",'[]'::jsonb) AS "modifiers",p."sku" AS "productSku",p."vatRate",p."trackStock",COALESCE(sp."currentStock",0) AS "currentStock" FROM "OnlineOrderLine" l JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${store.companyId} JOIN "StoreProduct" sp ON sp."storeId"=${store.id} AND sp."productId"=p."id" AND sp."active"=TRUE WHERE l."orderId"=${order.id} ORDER BY l."createdAt"`;
+  const lines=await tx.$queryRaw`SELECT bp."mode" AS "availabilityMode",l."id" AS "orderLineId",l."productId",l."productName",l."quantity",l."onlineUnitPrice",l."lineTotal",COALESCE(l."modifiersJson",'[]'::jsonb) AS "modifiers",p."sku" AS "productSku",p."vatRate",p."trackStock",COALESCE(sp."currentStock",0) AS "currentStock" FROM "OnlineOrderLine" l JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${store.companyId} JOIN "StoreProduct" sp ON sp."storeId"=${store.id} AND sp."productId"=p."id" AND sp."active"=TRUE LEFT JOIN "StoreBakingPolicy" bp ON bp."storeId"=sp."storeId" AND bp."productId"=p."id" AND bp."companyId"=p."companyId" WHERE l."orderId"=${order.id} ORDER BY l."createdAt"`;
   if(!lines.length){const error=new Error("Η online παραγγελία δεν έχει γραμμές προϊόντων.");error.status=409;throw error}
   const enforceStock=Boolean(config?.stockCheckEnabled);
   const saleId=crypto.randomUUID(),actorId=user.id,actorName=user.fullName||"Πωλητής",employeeId=user.employeeId||null,total=money(order.total),subtotal=money(order.total);
   await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source") VALUES (${saleId},${store.companyId},${store.id},${employeeId},'NON_FISCAL',${subtotal},0,${total},'COMPLETED',${order.channel||"ONLINE"})`;
   for(const line of lines){
+    line.availabilityMode=(await readBakingPolicy(tx,store.companyId,store.id,line.productId))?.mode||null;
     const mods=Array.isArray(line.modifiers)?line.modifiers:[],modifierText=mods.map(m=>m?.description||m?.name).filter(Boolean).join(" · "),description=modifierText?`${line.productName} · ${modifierText}`:line.productName;
     await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal") VALUES (${crypto.randomUUID()},${saleId},${line.productId},${description},${Number(line.quantity||0)},${money(line.onlineUnitPrice)},0,${Number(line.vatRate||0)},${money(line.lineTotal)})`;
     const consumedRecipe=await consumePreparationRecipe(tx,{store,line,enforceStock,order,user});
     if(consumedRecipe)continue;
-    if(line.trackStock){
-      const qty=Number(line.quantity||0),changed=enforceStock
+    if(line.trackStock||line.availabilityMode==='BAKED'){
+      const qty=Number(line.quantity||0),changed=(enforceStock||['STOCK','BAKED'].includes(line.availabilityMode))
         ? await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${line.productId} AND "active"=TRUE AND COALESCE("currentStock",0)>=${qty}`
         : await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=COALESCE("currentStock",0)-${qty},"updatedAt"=CURRENT_TIMESTAMP WHERE "storeId"=${store.id} AND "productId"=${line.productId} AND "active"=TRUE`;
       if(!changed){const error=new Error(enforceStock?`Δεν υπάρχει αρκετό stock για να ολοκληρωθεί: ${line.productName}`:`Δεν μπόρεσε να ενημερωθεί το stock: ${line.productName}`);error.status=409;throw error}
@@ -180,9 +183,9 @@ async function postCommercialSale(tx,{order,store,user,config}){
 
 router.get("/catalog",safe(async(req,res)=>{
   const {store,config}=await onlineContext();
-  const rows=await prisma.$queryRaw`SELECT p."id",p."sku",p."name",p."vatRate",COALESCE(sp."salePrice",p."salePrice",0) AS "storePrice",COALESCE(sp."currentStock",0) AS "currentStock",COALESCE(v."visible",FALSE) AS "onlineVisible" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" LEFT JOIN "OnlineProductVisibility" v ON v."storeId"=sp."storeId" AND v."productId"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE AND COALESCE(v."visible",FALSE)=TRUE ORDER BY p."name" ASC`;
+  const rows=await prisma.$queryRaw`SELECT bp."mode" AS "availabilityMode",p."id",p."sku",p."name",p."vatRate",COALESCE(sp."salePrice",p."salePrice",0) AS "storePrice",COALESCE(sp."currentStock",0) AS "currentStock",COALESCE(v."visible",FALSE) AS "onlineVisible" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" LEFT JOIN "StoreBakingPolicy" bp ON bp."storeId"=sp."storeId" AND bp."productId"=p."id" AND bp."companyId"=p."companyId" LEFT JOIN "OnlineProductVisibility" v ON v."storeId"=sp."storeId" AND v."productId"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE AND COALESCE(v."visible",FALSE)=TRUE ORDER BY p."name" ASC`;
   const stockCheckEnabled=Boolean(config.stockCheckEnabled);
-  res.json({store:{id:store.id,name:store.name},module:{key:"ONLINE_ORDERING",active:true},settings:{surchargeType:config.surchargeType,surchargeValue:money(config.surchargeValue),deliveryFee:money(config.deliveryFee),pickupEnabled:Boolean(config.pickupEnabled),deliveryEnabled:Boolean(config.deliveryEnabled),cashEnabled:Boolean(config.cashEnabled),cardOnDeliveryEnabled:Boolean(config.cardOnDeliveryEnabled),stockCheckEnabled,minimumOrderRetail:money(config.minimumOrderRetail),minimumOrderStaff:money(config.minimumOrderStaff),minimumOrderPermanentStaff:money(config.minimumOrderPermanentStaff)},products:rows.map(row=>({id:row.id,sku:row.sku,name:row.name,vatRate:Number(row.vatRate||0),storePrice:money(row.storePrice),onlineSurcharge:onlineSurchargeAmount(row.storePrice,config),onlinePrice:onlineUnitPrice(row.storePrice,config),stock:Number(row.currentStock||0),available:stockCheckEnabled?Number(row.currentStock||0)>0:true}))});
+  res.json({store:{id:store.id,name:store.name},module:{key:"ONLINE_ORDERING",active:true},settings:{surchargeType:config.surchargeType,surchargeValue:money(config.surchargeValue),deliveryFee:money(config.deliveryFee),pickupEnabled:Boolean(config.pickupEnabled),deliveryEnabled:Boolean(config.deliveryEnabled),cashEnabled:Boolean(config.cashEnabled),cardOnDeliveryEnabled:Boolean(config.cardOnDeliveryEnabled),stockCheckEnabled,minimumOrderRetail:money(config.minimumOrderRetail),minimumOrderStaff:money(config.minimumOrderStaff),minimumOrderPermanentStaff:money(config.minimumOrderPermanentStaff)},products:rows.filter(row=>policyAvailable(row)!==false).map(row=>({id:row.id,sku:row.sku,name:row.name,vatRate:Number(row.vatRate||0),storePrice:money(row.storePrice),onlineSurcharge:onlineSurchargeAmount(row.storePrice,config),onlinePrice:onlineUnitPrice(row.storePrice,config),stock:Number(row.currentStock||0),available:policyAvailable(row)??(stockCheckEnabled?Number(row.currentStock||0)>0:true)}))});
 }));
 
 router.post("/orders",async(req,res)=>{
@@ -198,12 +201,12 @@ router.post("/orders",async(req,res)=>{
     const duplicate=await prisma.$queryRaw`SELECT "id","orderNumber","status","total","createdAt" FROM "OnlineOrder" WHERE "storeId"=${store.id} AND "idempotencyKey"=${body.idempotencyKey} LIMIT 1`;
     if(duplicate[0])return res.status(200).json({ok:true,duplicate:true,order:duplicate[0]});
 
-    const products=await prisma.$queryRaw`SELECT p."id",p."name",COALESCE(sp."salePrice",p."salePrice",0) AS "storePrice",COALESCE(sp."currentStock",0) AS "currentStock",EXISTS(SELECT 1 FROM "PreparationRecipeLine" r WHERE r."companyId"=${store.companyId} AND r."productId"=p."id" AND r."automatic"=TRUE) AS "hasRecipe" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" JOIN "OnlineProductVisibility" v ON v."storeId"=sp."storeId" AND v."productId"=sp."productId" AND v."visible"=TRUE WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE`;
+    const products=await prisma.$queryRaw`SELECT bp."mode" AS "availabilityMode",p."id",p."name",COALESCE(sp."salePrice",p."salePrice",0) AS "storePrice",COALESCE(sp."currentStock",0) AS "currentStock",EXISTS(SELECT 1 FROM "PreparationRecipeLine" r WHERE r."companyId"=${store.companyId} AND r."productId"=p."id" AND r."automatic"=TRUE) AS "hasRecipe" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" LEFT JOIN "StoreBakingPolicy" bp ON bp."storeId"=sp."storeId" AND bp."productId"=p."id" AND bp."companyId"=p."companyId" JOIN "OnlineProductVisibility" v ON v."storeId"=sp."storeId" AND v."productId"=sp."productId" AND v."visible"=TRUE WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE`;
     const byId=new Map(products.map(row=>[row.id,row])),lines=[],enforceStock=Boolean(config.stockCheckEnabled);
     for(const item of body.items){
       const product=byId.get(item.productId);
       if(!product)return res.status(409).json({error:"Ένα προϊόν δεν είναι πλέον διαθέσιμο Online."});
-      if(enforceStock&&!product.hasRecipe&&Number(product.currentStock||0)<item.quantity)return res.status(409).json({error:`Δεν υπάρχει αρκετό απόθεμα για: ${product.name}`});
+      if(policyAvailable(product,body.items.filter(i=>i.productId===item.productId).reduce((n,i)=>n+i.quantity,0))===false||(policyAvailable(product,item.quantity)===null&&enforceStock&&!product.hasRecipe&&Number(product.currentStock||0)<item.quantity))return res.status(409).json({error:`Δεν υπάρχει αρκετό απόθεμα για: ${product.name}`});
       const unit=onlineUnitPrice(product.storePrice,config),surcharge=onlineSurchargeAmount(product.storePrice,config),lineTotal=money(unit*item.quantity);
       lines.push({productId:product.id,productName:product.name,quantity:item.quantity,storeUnitPrice:money(product.storePrice),onlineSurcharge:surcharge,onlineUnitPrice:unit,lineTotal,modifiers:item.modifiers||[]});
     }
