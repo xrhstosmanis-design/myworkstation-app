@@ -1,3 +1,7 @@
+## 11/10/2026 — INVOICE-PIECE-FACTOR-REBASED / AWAITING CI + USER
+
+New branch based on main to resolve PR2310 merge conflict. PIECE blank factor defaults to 1; PACKAGE requires verified factor. USER FAIL existing invoice 142730, 12 lines, 678.28 EUR printed / 678.31 EUR working. No financial or stock changes. Checkpoint `CHECKPOINTS/CHANGES/2026-10-11-invoice-piece-factor-rebased.md`. Physical acceptance pending.
+
 ## 11/10/2026 22:40:13 Athens — DAILY-BAKING-02 / accounting core merged, CI verified / AWAITING INTEGRATION AND LAB
 
 Owner `codex/daily-online-store-20261011` retained, issue2054. Source PR2313 https://github.com/xrhstosmanis-design/myworkstation-app/pull/2313, exact final head05caad68aafccbbc439d641c4fb8582db6931c15, mergedfff517254ea7ca7a3cbe112932dccdee87098fb4. Full CI38168565517/job114556192697 SUCCESS:2395PASS/0FAIL/0SKIP. Independently read completed logs confirm both input-contract and native single-SKU PostgreSQL tests passed unskipped. Existing build, rendered POS, safety invariants and isolated real HTTP E2E all green. Local regression2365PASS/0FAIL/23DBSKIP remains local-only and is superseded for SQL coverage by actual native CI. This closes core CI/merge waiting only; no LAB/LIVE/manual PASS.
