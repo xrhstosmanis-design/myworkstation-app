@@ -17,7 +17,7 @@ test('mounted POS remembers each operator calculator choice without shared tenan
  const render=async({person='A',store='S',company='C',id=person,identified=true}={})=>act(async()=>root.render(React.createElement(module.exports.default,{api,store:{id:store,name:'Fixture store'},company:{id:company},operator:identified?{id,employeeId:person,fullName:'Fixture operator'}:null})));
  const button=()=>document.querySelector('.pos-keypad-toggle');
  const assertVisible=value=>{assert.equal(Boolean(document.querySelector('.standard-keypad')),value);assert.equal(button().getAttribute('aria-pressed'),String(value));assert.equal(document.querySelector('.standard-pos-grid').classList.contains('without-keypad'),!value);assert.match(button().textContent,/Κομπιουτεράκι/)};
- const toggle=async()=>{const before=calls.length;await act(async()=>button().click());assert.equal(calls.slice(before).filter(({options})=>options.method&&options.method!=='GET').length,0,'calculator toggle submits no writes')};
+ const toggle=async()=>{const before=calls.length;if(document.querySelector('.pos-header-menu-layer')?.hidden)await act(async()=>document.querySelector('.pos-header-menu-trigger').click());await act(async()=>button().click());assert.equal(calls.slice(before).filter(({options})=>options.method&&options.method!=='GET').length,0,'calculator toggle submits no writes')};
  const preferenceKeys=()=>Object.keys(dom.window.localStorage).filter(key=>key.startsWith('myworkstation:pos-keypad:'));
  const remount=async()=>{await act(async()=>root.unmount());root=createRoot(document.getElementById('root'));};
  try {

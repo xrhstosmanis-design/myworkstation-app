@@ -1,0 +1,20 @@
+.pos-store-controls{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:nowrap}
+.mws-standard-pos .pos-store-controls>button{border-color:#9bbcad!important}
+.mws-standard-pos .pos-header-menu-trigger{min-height:44px;height:auto;white-space:nowrap}
+.pos-header-menu-layer{position:fixed;inset:0;z-index:4500;background:#07152c55;color:#15364f}
+.pos-header-menu-layer[hidden]{display:none!important}
+.pos-header-menu-panel{position:absolute;width:min(640px,calc(100vw - 24px));max-height:calc(100dvh - 24px);display:grid;grid-template-rows:auto minmax(0,1fr);background:#f4faf7;border:1px solid #9bbcad;border-radius:14px;box-shadow:0 18px 55px #07152c55;overflow:hidden}
+.pos-header-menu-panel>header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:#e7f3ee;border-bottom:1px solid #b8d6c9}
+.pos-header-menu-panel h2{margin:0;font:800 calc(17px * var(--pos-text-scale)) Arial,sans-serif}
+.pos-header-menu-panel button{min-height:48px;height:auto;padding:10px 12px;border:1px solid #9bbcad;border-radius:10px;background:#fff;color:#15364f;display:flex;align-items:center;justify-content:flex-start;gap:8px;cursor:pointer;font:800 calc(12px * var(--pos-text-scale)) Arial,sans-serif;white-space:normal;text-align:left;position:static;box-shadow:none;min-width:0;overflow-wrap:anywhere}
+.pos-header-menu-panel button:hover{background:#d6eadd}
+.pos-header-menu-panel button:focus-visible{outline:3px solid #176b50;outline-offset:-3px}
+.pos-header-menu-panel button svg{width:20px;height:20px;flex:none}
+.pos-header-menu-panel>header>button{width:44px;min-height:44px;padding:8px;justify-content:center;flex:none}
+.pos-header-menu-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px;overflow:auto;min-height:0;align-content:start}
+.pos-header-menu-controls .runtime-top-actions,.pos-header-menu-controls .pos-aux-actions{display:contents}
+.pos-header-menu-controls .mws-screen-recorder>button{width:100%}
+.pos-header-menu-controls [data-invoice-assistant-dock-host]:empty{display:none}
+.pos-header-menu-controls .mws-screen-recorder .recorder-error{color:#a92323;font-size:14px}
+.pos-header-menu-controls .store-chat-top-button{position:static;inset:auto;min-height:48px;width:auto;margin:0;box-shadow:none;background:#fff;color:#15364f}
+@media(max-width:620px){.pos-header-menu-controls{grid-template-columns:1fr}.pos-store-controls{flex-wrap:wrap}}
