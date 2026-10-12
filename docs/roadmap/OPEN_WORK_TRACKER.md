@@ -8,6 +8,13 @@ Read-only publicreload gotcredential-observationrestriction; explicitretainedURL
 
 Read-only actualoperatorPOSqueue1 existingONL-001/LABGATE6/ΝΕΡΟ500ML.50/ΣΤΟDELIVERY/ΣΤΟPOSΠΛΗΡΩΜΗ; untouchedcontrolorder. Single next action afterreceiptmerged: refreshallstock/shifts+queue baseline and oneidentifiedpickup/CASHonlineorder oforiginalfixture, preserving existingONL-001. No realDAILYactivation/config/catalog/physicalinstall; broaderreturn/waste/lastpiece/deviceacceptance OPEN withsameowner, Gate2/Gate6 andotherowners preserved. Normalordering/commercialposting NOT TESTED fromlisting alone.
 
+
+## 12/10/2026 18:50 Athens — POS-SUPPLIER-AMOUNT-REFRESH-01 / ASSIGNED / USER FAIL
+
+Owner `codex/supplier-payment-amount-20261012`, branch `fix/supplier-payment-amount-refresh-20261012`. User explicitly reports amount input repeatedly refreshing and instructs «ΞΕΚΙΝΑ». Screenshot: selected supplier ΜΑΝΤΖΙΛΑΣ ΧΡΗΣΤΟΣ ΚΑΙ ΣΙΑ ΕΕ / invoice14083 / outstanding657.54EUR / allocation0.00. No payment was submitted by this page. Physical terminal/operator/client revision NOT TESTED. Public health observed58f2c969; fresh mainb689bbb1. Existing open-invoice readability, camera/QR/completion and correction-payment owners remain unchanged; this independent claim is only allocation-input reload lifecycle.
+
+Source causal evidence: StoreSupplierOpenInvoicePayment loading effect depends on api and setMessage and clears items/allocations. Modal recreates invoiceMessage on every render. Bounded fix loads on actual selected-store/supplier change using latest callback refs; rejects obsolete responses and clears allocation on scope changes. Preserve comma decimals, live input DOM/focus, amount ceiling, mandatory proof, payment methods, role/store guards, idempotency payload and success completion. No API/server/schema/auth/stock/fiscal or historical payment mutation. Require mounted parent-rerender/focus/decimal and delayed scope-response tests, existing supplier/payment regressions, Node20 build/full CI, exact guarded healthy deploy. CI is not LIVE/LAB PASS; payment submission is not needed to demonstrate input continuity. Claim published on main before source. Checkpoint `CHECKPOINTS/CHANGES/2026-10-12-supplier-payment-amount-refresh.md`.
+
 ## 12/10/2026 18:06 Athens — DAILY-BAKING-SAME-PRODUCT / MEASURED POS SALE1 LAB PASS / ONLINE ACCEPTANCE OPEN
 
 Sameowner codex/daily-online-store-20261011/issue2054 retained. StaffBAKE15PASS centrallypublishedPR2358/head32b055dad803bc4a489fa63c4a6141591c661a67/docsCI38267134002SUCCESS merged5ae14d861ae03ffb2e176f9d6b25338ae685f935 before newtransaction. Sourcehealthy58f2c9698386b1ed280c470b5a2c37520ee7cdcf observed17:55; originalcoreintegration43594017/fullCI2397/0/0 protected, no code/redeploy/databasecommand.
