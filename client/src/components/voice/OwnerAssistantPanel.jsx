@@ -1,3 +1,4 @@
+import AssistantChatPage from "./AssistantChatPage.jsx";
 import ConsumptionAssistantEvidence from "./ConsumptionAssistantEvidence.jsx";
 import React,{useEffect,useRef,useState} from "react";
 import VoiceInputControls from "./VoiceInputControls.jsx";
@@ -9,6 +10,7 @@ import SalesStoresEvidence from "./SalesStoresEvidence.jsx";
 
 export default function OwnerAssistantPanel({api,storeId="",storeName=""}){
   const [access,setAccess]=useState(null),[question,setQuestion]=useState(""),[answer,setAnswer]=useState(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[voiceActive,setVoiceActive]=useState(false),[channel,setChannel]=useState("text"),[generation,setGeneration]=useState(0);
+  const [chatOpen,setChatOpen]=useState(false);
   const sequence=useRef(0),pending=useRef(null),statusRequest=useRef(null);
   const [allSalesStores,setAllSalesStores]=useState(false);
   const presented=presentAssistantAnswer(answer);
@@ -51,8 +53,8 @@ export default function OwnerAssistantPanel({api,storeId="",storeName=""}){
     }catch(e){if(id===sequence.current&&!controller.signal.aborted){setError(e.message||"Δεν παραλήφθηκε απάντηση.");setAnswer(null)}}
     finally{if(id===sequence.current){setBusy(false);pending.current=null}}
   };
-  return <section className="mws-owner-assistant" aria-label="AI Βοηθός Ιδιοκτήτη">
-    <h2>Βοηθός Ιδιοκτήτη</h2>
+  return <><AssistantChatPage open={chatOpen} mode="owner" api={api} ownerStoreId={storeId} ownerStoreName={storeName} ownerAccess={access} contextEpoch={generation} initialAllScope={allSalesStores} onAllScopeChange={setAllSalesStores} onClose={()=>setChatOpen(false)}/><section hidden={chatOpen} className="mws-owner-assistant" aria-label="AI Βοηθός Ιδιοκτήτη">
+    <h2>Βοηθός Ιδιοκτήτη</h2><button type="button" disabled={!access||busy||voiceActive} onClick={()=>{invalidate();setChatOpen(true)}}>Άνοιγμα σελίδας βοηθού</button>
     <p>{storeId?`Μόνο για ${storeName||access?.scope?.storeName||"το επιλεγμένο κατάστημα"}.`:"Επίλεξε κατάστημα από τη λίστα για να ανοίξεις τον βοηθό."} Οι ερωτήσεις απαιτούν ενεργό module και τα δικαιώματά σου.</p>
     <p>Μπορείς να ρωτάς για μετρητά κλεισμένων βαρδιών, πωλήσεις συγκεκριμένου είδους και ημερομηνίας ή το τρέχον καταγεγραμμένο απόθεμα ενός είδους. Απαιτείται η αντίστοιχη ενεργή αναφορά. Για ιδιοκατανάλωση ή καταστροφή προϊόντων ζήτησε τη λίστα με ημερομηνίες από και έως. Οι υπόλοιπες αναφορές προστίθενται σταδιακά.</p>
     {access?.scope.supportPreview&&<p role="status">Προβολή υποστήριξης Super Admin για αυτό το κατάστημα.</p>}
@@ -66,5 +68,5 @@ export default function OwnerAssistantPanel({api,storeId="",storeName=""}){
     {answer&&<article aria-label="Απάντηση βοηθού ιδιοκτήτη"><h3>Απάντηση</h3><p style={{whiteSpace:"pre-wrap"}}>{presented.answer}</p>{presented.highlights?.length>0&&<ul>{presented.highlights.map((text,i)=><li key={i}>{text}</li>)}</ul>}{presented.limitations&&<p>{presented.limitations}</p>}<CashAssistantEvidence evidence={(answer.evidence||[]).filter(report=>!["product_sales","product_stock","sales_by_store","consumption"].includes(report.kind))}/><SalesAssistantEvidence evidence={answer.evidence}/><StockAssistantEvidence evidence={answer.evidence}/><SalesStoresEvidence evidence={answer.evidence}/><ConsumptionAssistantEvidence evidence={answer.evidence}/></article>}
     <small>Μόνο ανάγνωση. Για διόρθωση ή αναλυτική διερεύνηση άνοιξε την αντίστοιχη κανονική αναφορά.</small>
     <style>{`.mws-owner-assistant{padding:20px;border:1px solid #cbd8e5;border-radius:16px;background:#fff}.mws-owner-assistant textarea{display:block;width:100%;min-height:100px;margin:8px 0;box-sizing:border-box}.mws-owner-assistant button{min-height:44px}.mws-owner-assistant [role=alert]{color:#b42318}.mws-owner-assistant article{margin-top:20px}`}</style>
-  </section>;
+  </section></>;
 }

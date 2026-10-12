@@ -20,7 +20,7 @@ const invoiceNumber=value=>{if(typeof value==="number")return Number.isFinite(va
 const invoiceIdentity=document=>[document.supplierTaxId||String(document.supplierName||"").toUpperCase().trim(),document.invoiceNo||document.invoiceNumber||document.filename||"",document.invoiceDate||""].join("|");
 const invoiceLineNet=line=>{const stored=invoiceNumber(line.netValue??line.netAmount);if(stored!==null)return stored;const quantity=invoiceNumber(line.quantity),price=invoiceNumber(line.unitPrice??line.unitCost);if(!(quantity>0&&price>=0))return 0;return [line.discount1,line.discount2,line.discount3].reduce((value,discount)=>value*(1-(invoiceNumber(discount)||0)/100),quantity*price)};
 
-export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=false,navigationError="",request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices,onOpenStock,onOpenWorkforce,onOpenVideo,initialTwinSelection=null,onTwinSelectionChange}){
+export default function AiCommandCenter({onOpenAssistant,onOpenTwinDestination,navigationBusy=false,navigationError="",request,companies=[],loading=false,onClose,onRefresh,onOpenChecks,onOpenCash,onOpenPayments,onOpenBank,onOpenEvents,onOpenInvoices,onOpenStock,onOpenWorkforce,onOpenVideo,initialTwinSelection=null,onTwinSelectionChange}){
   const deviceLoadSequence=useRef(0);
   const askSequence=useRef(0),askAbort=useRef(null);
   const [problems,setProblems]=useState({loading:true,error:"",cash:null,payments:null,bank:null});
@@ -379,7 +379,7 @@ export default function AiCommandCenter({onOpenTwinDestination,navigationBusy=fa
         <small className="ai-daily-source">Μόνο ανάγνωση: δεν δημιουργείται ή αλλάζει βάρδια, παρουσία, άδεια, έγκριση ή μισθοδοσία από εδώ.</small>
       </section>
 
-      <section className="ai-command-ask">
+      <section className="ai-command-ask">{onOpenAssistant&&<button type="button" onClick={()=>onOpenAssistant(assistantStore?{companyId:assistantStore.companyId,storeId:assistantStore.storeId}:null,allSalesStores)}>Άνοιγμα σελίδας βοηθού</button>}
         <div className="ai-command-panel-title"><div><small>ΡΩΤΑ ΤΟ MYWORKSTATION · ΦΑΣΗ 3</small><h2>Τι χρειάζεται την προσοχή μου;</h2><p>Για πωλήσεις ανά είδος / ημερομηνία και τρέχον καταγεγραμμένο απόθεμα επίλεξε εταιρεία και κατάστημα. Η ερώτηση χρησιμοποιεί το ίδιο επιλεγμένο κατάστημα. Για συγκεντρωτική αναφορά επίλεξε ρητά όλα τα καταστήματα.</p></div><MessageCircle/></div>
         <label><input type="checkbox" checked={allSalesStores} onChange={e=>{askSequence.current++;askAbort.current?.abort();setAskState({loading:false,error:"",result:null});setQuestion("");setQuestionInputChannel("text");setAllSalesStores(e.target.checked)}}/> Πωλήσεις και ταμεία από όλα τα καταστήματα</label>
         <label style={{display:"grid",gap:8,marginTop:12}}>Κατάστημα για πωλήσεις και απόθεμα <select style={{width:"100%",minWidth:0,padding:10,border:"1px solid #cfd9e6",borderRadius:10,background:"#fff",color:"#173550",font:"inherit"}} aria-label="Κατάστημα για πωλήσεις και απόθεμα" value={assistantStore?.key||""} onChange={event=>changeAssistantStore(event.target.value)}><option value="">Επίλεξε εταιρεία / κατάστημα</option>{assistantStores.map(store=><option key={store.key} value={store.key}>{store.label}</option>)}</select></label>
