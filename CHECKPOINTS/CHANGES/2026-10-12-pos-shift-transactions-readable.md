@@ -1,3 +1,13 @@
+## 12/10/2026 19:13:30 Athens — POS-SHIFT-TRANSACTIONS-07 / limited USER VISUAL PASS / CLOSED
+
+Scope POS-SHIFT-TRANSACTIONS-07 CLOSED. Χρήστος Μανής confirms «ΕΙΝΑΙ ΟΚ» directly after the released item7 and instructions Ctrl+F5 → operator name → Συναλλαγές βάρδιας. Limited owner-reported visual acceptance of the larger/readable existing shift-transactions popup. No new screenshot, identified physical terminal/store/operator/client SHA, touch measurements, independent scrolling/close outcome or financial/stock/fiscal delta supplied or inferred. No new sale/payment/print/correction/shift action or replay was performed by this page.
+
+SourcePR2350/head0245e9584fadeb9877db139ddcf04c1f0b48f2b4/fullCI38255615904 SUCCESS2443/0/0 plus backup6/0/0; merged/released4bf49c44940dead281abae70abf2bae98f962996/mainCI38256209534 SUCCESS2443/0/0 plus backup6/0/0. Actual protected Render guard38256769409/job114836794230 returned healthy exact revision2026-10-12T13:37:54.2441162Z. Release handoffPR2353/head905fdb05dd40a21f1a65a6fc770e252ee4b8f9a1/docsCI38260548791 SUCCESS mergedb39311e8065f863102165ded40adff5d8808b328. This verifies prior availability, not the user's physical client SHA at acceptance.
+
+Owner codex/pos-shift-transactions-readable-20261012 completes this bounded presentation scope. Checkpoint CHECKPOINTS/CHANGES/2026-10-12-pos-shift-transactions-readable.md; POS manual, numbered03 and generated PDFs synchronized; completed pending item7 removed. Exact session/operator/allowAll/server permissions and earlier financial/manual PASS preserved. Items3/4/5/7 CLOSED within their recorded limits; items1/2/6 remain AWAITING USER. Item8 card confirmation is the next independent claim; item9 waits. Wider tracker03/No33/customer/STAFF-card/scanner/invoice/backup/DAILY/VOICE/fiscal owners and current evidence unchanged. No whole-request or broad LAB PASS.
+
+## Historical source release and claim
+
 ## 12/10/2026 17:05 Athens — POS-SHIFT-TRANSACTIONS-07 / SOURCE LIVE / AWAITING USER
 
 Scope POS-SHIFT-TRANSACTIONS-07 — SOURCE LIVE / AWAITING USER. Owner/branch codex/pos-shift-transactions-readable-20261012 retained; receiptPR2353 docs/pos-shift-transactions-release-20261012 (final docs CI/merge in the PR are authoritative). Checkpoint CHECKPOINTS/CHANGES/2026-10-12-pos-shift-transactions-readable.md. User13:53:22 «Συνέχισε» authorizes item7 presentation, not item6 PASS. Item6 AWAITING USER, items3/4/5 bounded CLOSED, items1/2 AWAITING USER, items8/9 wait. Wider tracker03/No33/customer/STAFF-card/scanner/invoice/backup/DAILY/VOICE/fiscal owners and their exact acceptance status remain unchanged.
