@@ -1,0 +1,45 @@
+TAP version 13
+# Subtest: current mounted POS returns manual Ιατρός to retail after completed sale
+ok 1 - current mounted POS returns manual Ιατρός to retail after completed sale
+  ---
+  duration_ms: 598.323142
+  ...
+# Subtest: current mounted POS returns manual Νοσηλευτής / Νοσοκόμος to retail after completed sale
+ok 2 - current mounted POS returns manual Νοσηλευτής / Νοσοκόμος to retail after completed sale
+  ---
+  duration_ms: 401.982489
+  ...
+# Subtest: current mounted POS returns manual Προσωπικό to retail after completed sale
+ok 3 - current mounted POS returns manual Προσωπικό to retail after completed sale
+  ---
+  duration_ms: 155.64534
+  ...
+# Subtest: current mounted POS clears scanned customer/category after completion .pos-audience-card-row input
+ok 4 - current mounted POS clears scanned customer/category after completion .pos-audience-card-row input
+  ---
+  duration_ms: 209.873611
+  ...
+# Subtest: current mounted POS clears scanned customer/category after completion .pos-customer-card-input
+ok 5 - current mounted POS clears scanned customer/category after completion .pos-customer-card-input
+  ---
+  duration_ms: 398.269007
+  ...
+# Subtest: current mounted POS clears selected credit-list customer after card completion
+ok 6 - current mounted POS clears selected credit-list customer after card completion
+  ---
+  duration_ms: 246.804884
+  ...
+# Subtest: current mounted POS keeps customer/category on rejected or fiscal pending checkout then resets committed sale
+ok 7 - current mounted POS keeps customer/category on rejected or fiscal pending checkout then resets committed sale
+  ---
+  duration_ms: 122.266652
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2785.882036
