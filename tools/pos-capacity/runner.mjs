@@ -62,8 +62,9 @@ export async function runSchedule(events,execute,{maxInFlight=256}={}){
   if(new Set(events.map(e=>e.id)).size!==events.length)throw new Error('Action identities must be unique');
   const start=performance.now(),samples=[],pending=new Set();let peakInFlight=0;
   for(const event of events){
-    const wait=event.atMs-(performance.now()-start);
-    if(wait>0)await delay(wait);
+    let wait;
+    // Timers truncate fractional delays and can wake early: never dispatch before the offered deadline.
+    while((wait=event.atMs-(performance.now()-start))>0)await delay(Math.ceil(wait));
     const began=performance.now(),dispatchLagMs=Math.max(0,began-start-event.atMs);
     if(pending.size>=maxInFlight){samples.push({id:event.id,actorId:event.actor.id,kind:event.kind,ok:false,dropped:true,errorCode:'GENERATOR_LIMIT',dispatchLagMs});continue}
     const promise=(async()=>{
@@ -92,3 +93,4 @@ export async function localJson(base,path,{token,method='GET',body,terminalPos,f
   let value;try{value=await response.json()}catch{return {ok:false,status:response.status,errorCode:'INVALID_JSON'}}
   return {ok:response.ok,status:response.status,errorCode:response.ok?null: value?.code||`HTTP_${response.status}`,value};
 }
+
