@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {createRequire} from "node:module";
 import {fileURLToPath} from "node:url";
 
-test("mounted Platform products require explicit selection, show shared evidence and discard changed/removed/late scope",async()=>{
+test("mounted Platform products inherit visible selected region, show shared evidence and discard changed/removed/late scope",async()=>{
   const {build}=await import("esbuild"),{JSDOM}=await import("jsdom");
   const built=await build({stdin:{contents:'export {default} from "./client/src/components/platform/AiCommandCenter.jsx";',resolveDir:fileURLToPath(new URL("../../",import.meta.url)),loader:"jsx"},bundle:true,write:false,format:"cjs",platform:"node",loader:{".css":"empty"},external:["react","react-dom","react-dom/client","react/jsx-runtime"],plugins:[{name:"unrelated-credit",setup(b){b.onLoad({filter:/AiCreditAlert\.jsx$/},()=>({contents:"export default function Panel(){return null}",loader:"jsx"}))}}]});
   const module={exports:{}};new Function("require","module","exports",built.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);const Center=module.exports.default;
@@ -17,7 +17,7 @@ test("mounted Platform products require explicit selection, show shared evidence
   const speak=async()=>{await click(document.querySelector(".mws-voice-input-actions button"));await act(async()=>{recording.onstart();recording.onresult({results:[Object.assign([{transcript:"Είδος 2269 σήμερα"}],{isFinal:true})]});recording.onend()})};
   const submit=()=>document.querySelector('.ai-command-ask button[type="submit"]');
   try{
-    await act(async()=>root.render(React.createElement(Center,{request,companies})));assert.equal(select().value,"");assert.equal(select().options.length,3);assert.doesNotMatch(select().textContent,/INACTIVE/);
+    await act(async()=>root.render(React.createElement(Center,{request,companies})));assert.equal(select().value,JSON.stringify(["a","sa"]));assert.equal(select().options.length,3);assert.doesNotMatch(select().textContent,/INACTIVE/);
     await change(JSON.stringify(["a","sa"]));await speak();await click(submit());assert.deepEqual(JSON.parse(posts[0].body).selection,{companyId:"a",storeId:"sa"});assert.equal(JSON.parse(posts[0].body).inputChannel,"voice");assert.ok(document.querySelector(".mws-sales-evidence"));assert.equal(document.querySelector(".mws-cash-evidence"),null);assert.equal(document.querySelector(".mws-stock-evidence"),null);assert.equal(document.querySelector(".mws-sales-evidence img"),null);assert.match(document.querySelector(".mws-sales-evidence").textContent,/Company A/);
     await act(async()=>root.render(React.createElement(Center,{request,companies:[...companies]})));assert.match(document.body.textContent,/SALES A/);
     await act(async()=>root.render(React.createElement(Center,{request,companies:companies.map(c=>c.id==="a"?{...c,active:false}:c)})));assert.equal(select().value,"");assert.equal(document.querySelector(".mws-sales-evidence"),null);assert.doesNotMatch(document.body.textContent,/SALES A/);
@@ -25,4 +25,32 @@ test("mounted Platform products require explicit selection, show shared evidence
     defer=false;await speak();await click(submit());assert.deepEqual(JSON.parse(posts[2].body).selection,{companyId:"b",storeId:"sb"});assert.ok(document.querySelector(".mws-stock-evidence"));assert.equal(document.querySelector(".mws-sales-evidence"),null);assert.equal(document.querySelector(".mws-cash-evidence"),null);assert.match(document.querySelector(".mws-stock-evidence").textContent,/-2,125/);assert.match(document.querySelector(".mws-stock-evidence").textContent,/Company B/);
     await change("");assert.equal(document.querySelector(".mws-stock-evidence"),null);assert.doesNotMatch(document.body.textContent,/STOCK B/);assert.equal(document.querySelector("textarea").value,"");assert.equal(posts.length,3);
   }finally{await act(async()=>root.unmount());dom.window.close();for(const [k,value] of previous)value?Object.defineProperty(globalThis,k,value):delete globalThis[k]}
+});
+
+test("mounted central question follows existing region, survives unchanged refresh and withdraws session/scope changes",async()=>{
+ const {build}=await import("esbuild"),{JSDOM}=await import("jsdom");
+ const built=await build({stdin:{contents:'export {default} from "./client/src/components/platform/AiCommandCenter.jsx";',resolveDir:fileURLToPath(new URL("../../",import.meta.url)),loader:"jsx"},bundle:true,write:false,format:"cjs",platform:"node",loader:{".css":"empty"},external:["react","react-dom","react-dom/client","react/jsx-runtime"],plugins:[{name:"credit",setup(b){b.onLoad({filter:/AiCreditAlert\.jsx$/},()=>({contents:"export default function Panel(){return null}",loader:"jsx"}))}}]});
+ const module={exports:{}};new Function("require","module","exports",built.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);const Center=module.exports.default;
+ const dom=new JSDOM('<div id="root"></div>',{url:"https://fixture.invalid"}),keys=["window","document","navigator","HTMLElement","Event","IS_REACT_ACT_ENVIRONMENT"],prior=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
+ for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==="IS_REACT_ACT_ENVIRONMENT"?true:dom.window[k]});
+ let recording,posts=[],late,defer=false,aborted=0;class Recognition{constructor(){recording=this}start(){}abort(){aborted++}stop(){}}window.SpeechRecognition=Recognition;Object.defineProperty(window,"isSecureContext",{configurable:true,value:true});
+ const companies=[{id:"a",name:"A",active:true,stores:[{id:"sa",name:"Store A",active:true}]},{id:"b",name:"B",active:true,stores:[{id:"sb",name:"Store B",active:true}]}],initialTwinSelection={companyId:"b",storeId:"sb"};
+ const request=async(url,options={})=>{if(options.method==="POST"){posts.push(options);if(defer)return new Promise(r=>late=r);return {answer:"ANSWER "+JSON.parse(options.body).selection?.storeId,evidence:[]}}if(url.includes("cash-control"))return {totals:{},stores:[]};if(url.includes("invoice-learning"))return {state:{documents:[],profiles:{}}};return {items:[]}};
+ const React=await import("react"),{createRoot}=await import("react-dom/client"),{act}=React,root=createRoot(document.getElementById("root"));
+ const select=()=>document.querySelector('select[aria-label="Κατάστημα για πωλήσεις και απόθεμα"]'),click=el=>act(async()=>el.dispatchEvent(new window.MouseEvent("click",{bubbles:true})));
+ const ask=async()=>{await click(document.querySelector(".mws-voice-input-actions button"));await act(async()=>{recording.onstart();recording.onresult({results:[Object.assign([{transcript:"νερά χθες"}],{isFinal:true})]});recording.onend()});await click(document.querySelector('.ai-command-ask button[type="submit"]'))};
+ try{
+  await act(async()=>root.render(React.createElement(Center,{request,companies,initialTwinSelection})));assert.equal(select().value,JSON.stringify(["b","sb"]));
+  await ask();assert.deepEqual(JSON.parse(posts[0].body).selection,initialTwinSelection);
+  await act(async()=>root.render(React.createElement(Center,{request,companies:[...companies],initialTwinSelection})));assert.match(document.body.textContent,/ANSWER sb/);assert.equal(select().value,JSON.stringify(["b","sb"]));
+  await click([...document.querySelectorAll("button")].find(b=>b.textContent.trim()==="Store A"));assert.equal(select().value,JSON.stringify(["a","sa"]));assert.doesNotMatch(document.body.textContent,/ANSWER sb/);
+  defer=true;await ask();const payload={tokenType:"BACKOFFICE_USER",id:"other",sessionId:"changed",sessionVersion:1,companyId:"platform",role:"OWNER",platformRole:"SUPER_ADMIN",isSuperAdmin:true,exp:Math.floor(Date.now()/1000)+3600};
+  await act(async()=>{window.localStorage.setItem("token","fixture."+Buffer.from(JSON.stringify(payload)).toString("base64url")+".signature");window.dispatchEvent(new window.Event("storage"))});
+  assert.equal(posts[1].signal.aborted,true);await act(async()=>late({answer:"LATE REGION",evidence:[]}));assert.doesNotMatch(document.body.textContent,/LATE REGION/);assert.equal(document.querySelector("textarea").value,"");
+  defer=false;const all=[...document.querySelectorAll('input[type="checkbox"]')].find(x=>x.parentElement.textContent.includes("όλα τα καταστήματα"));await click(all);await ask();assert.equal(JSON.parse(posts[2].body).readScope,"all_stores");assert.deepEqual(JSON.parse(posts[2].body).selection,{companyId:"a",storeId:"sa"});
+  await click(all);await act(async()=>{select().value="";select().dispatchEvent(new window.Event("change",{bubbles:true}))});assert.equal(select().value,"");assert.doesNotMatch(document.body.textContent,/ANSWER sa/);assert.equal(posts.length,3);
+  await click(document.querySelector(".mws-voice-input-actions button"));const oldVoice=recording,queuedResult=recording.onresult;await act(async()=>oldVoice.onstart());
+  const abortsBefore=aborted;await act(async()=>{window.localStorage.setItem("token","fixture."+Buffer.from(JSON.stringify({...payload,id:"another",sessionId:"another"})).toString("base64url")+".signature");window.dispatchEvent(new window.Event("storage"))});assert.ok(aborted>abortsBefore);
+  await act(async()=>queuedResult({results:[Object.assign([{transcript:"LATE SPEECH"}],{isFinal:true})]}));assert.equal(document.querySelector("textarea").value,"");assert.equal(posts.length,3);
+ }finally{await act(async()=>root.unmount());dom.window.close();for(const [k,v]of prior)v?Object.defineProperty(globalThis,k,v):delete globalThis[k]}
 });

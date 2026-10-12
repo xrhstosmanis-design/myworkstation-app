@@ -26,6 +26,7 @@ export async function authorizePlatformAssistant(req,selection,{db=prisma,now=ne
 // every boundary, can reach the shared, parameterized canonical calculation.
 export async function createPlatformAssistantSession(req,selection,{authorize=authorizePlatformAssistant,readSalesReport=readSalesAnalysisReport,readStockReport=readStockAnalysisReport,readCash=readCanonicalPlatformCash,readSalesCatalog,authorizeSalesStores=authorizePlatformSalesStores,allStores=false,signal}={}){
   const scope=await authorize(req,selection);
+  if(!scope&&!allStores)fail(422,"Επίλεξε κατάστημα ή την κεντρική αναφορά όλων των καταστημάτων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
   let salesAccess=null;
   const verify=async()=>{
     signal?.throwIfAborted();
@@ -35,11 +36,13 @@ export async function createPlatformAssistantSession(req,selection,{authorize=au
     return current;
   };
   const evidence=report=>({...report,scope:"PLATFORM_SELECTED_STORE"});
-  const tools=[cashTool,...(scope?assistantProductTools:[]),...(scope||allStores?[salesStoresTool]:[])];
+  const cashScope=allStores?null:scope;
+  const sessionCashTool=cashScope?{...cashTool,description:"Διαβάζει τον κανονικό έλεγχο κλεισμένων βαρδιών μόνο στο ήδη επιλεγμένο εξουσιοδοτημένο κατάστημα. date: YYYY-MM-DD ή null για σήμερα (ώρα Ελλάδας). Δεν περιλαμβάνει ανοικτές βάρδιες και δεν αλλάζει στοιχεία."}:cashTool;
+  const tools=[sessionCashTool,...(scope?assistantProductTools:[]),...(scope||allStores?[salesStoresTool]:[])];
   return {scope,tools,async run({prompt,requestProvider}){
-    const out=await runProductAssistant({prompt,cashTool,tools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
+    const out=await runProductAssistant({prompt,cashTool:sessionCashTool,tools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
       readSalesStores:async args=>{salesAccess=await authorizeSalesStores(req,selection,allStores,{authorize});return readAssistantSalesStores(args,salesAccess,{readReport:readSalesReport,...(readSalesCatalog?{readCatalog:readSalesCatalog}:{}),verify,signal})},
-      readCash:async date=>{await verify();const report=await readCash(req,date,{signal});await verify();return report},
+      readCash:async date=>{await verify();const report=await readCash(req,date,{signal,scope:cashScope});await verify();return report},
       readSales:async value=>{
         const args=salesToolArguments.parse(value),calendar=salesReportCalendar(args.from,args.to);await verify();
         const report=await readSalesReport({companyId:scope.companyId,storeId:scope.storeId,from:calendar.from,to:calendar.to,q:args.product,calendar});await verify();

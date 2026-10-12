@@ -22,7 +22,7 @@ const setup = (env = {OPENAI_API_KEY: "fixture-only", OPENAI_COMMAND_CENTER_MODE
 
 test("typed clients remain compatible and voice uses the same provider, prompt and read-only response", async () => {
   for (const channel of [undefined, "voice"]) {
-    const f = setup(); const response = await f.invoke({question: "Έλεγξε σήμερα", snapshot, ...(channel ? {inputChannel: channel} : {})});
+    const f = setup(); const response = await f.invoke({question: "Έλεγξε σήμερα", readScope:"all_stores", snapshot, ...(channel ? {inputChannel: channel} : {})});
     assert.equal(response.error, undefined); assert.equal(response.result.readOnly, true); assert.equal(f.calls.length, 1);
     const request = JSON.parse(f.calls[0].options.body); assert.equal(request.model, "fixture-model"); assert.equal(request.tools[0].name, "cash_details"); assert.equal(request.inputChannel, undefined);
     assert.equal(request.store,false);assert.match(request.input[0].content, /BUSINESS_SNAPSHOT=/); assert.equal(f.calls[0].options.headers.Authorization, "Bearer fixture-only");
@@ -33,7 +33,7 @@ test("typed clients remain compatible and voice uses the same provider, prompt a
 
 test("actual Ask handler carries a historical cash read into the provider and returns canonical evidence",async()=>{
   const f=setup(undefined,index=>index===1?{output_text:undefined,output:[{type:"function_call",name:"cash_details",call_id:"cash-fixture",arguments:'{"date":"2026-10-09"}'}]}:{});
-  const response=await f.invoke({question:"Δείξε το πρόβλημα μετρητών στις 9 Οκτωβρίου",snapshot,inputChannel:"voice"});
+  const response=await f.invoke({question:"Δείξε το πρόβλημα μετρητών στις 9 Οκτωβρίου",snapshot,readScope:"all_stores",inputChannel:"voice"});
   assert.equal(response.error,undefined);assert.deepEqual(f.reads,["2026-10-09"]);assert.equal(f.calls.length,2);assert.equal(f.logs.length,2);
   assert.equal(response.result.evidence[0].rows[0].variance,-12.5);assert.equal(response.result.evidence[0].rows[0].sessionId,"shift");
   const continued=JSON.parse(f.calls[1].options.body);assert.equal(continued.input.at(-1).type,"function_call_output");assert.match(continued.input.at(-1).output,/-12.5/);
@@ -41,7 +41,7 @@ test("actual Ask handler carries a historical cash read into the provider and re
 
 test("invalid channel or missing provider never triggers an AI call", async () => {
   const invalid = setup(); assert.ok((await invalid.invoke({question: "Έλεγξε σήμερα", snapshot, inputChannel: "unknown"})).error); assert.equal(invalid.calls.length, 0);
-  const absent = setup({}); const response = await absent.invoke({question: "Έλεγξε σήμερα", snapshot, inputChannel: "voice"});
+  const absent = setup({}); const response = await absent.invoke({question: "Έλεγξε σήμερα", readScope:"all_stores", snapshot, inputChannel: "voice"});
   assert.equal(response.status, 503); assert.equal(response.result.code, "AI_PROVIDER_NOT_CONFIGURED"); assert.equal(absent.calls.length, 0); assert.equal(absent.logs.length, 0);
 });
 
@@ -51,3 +51,5 @@ test("actual Platform Ask accepts an explicit pair and dispatches shared product
   }
   for(const selection of [{companyId:"foreign",storeId:"s"},{companyId:"c",storeId:"s",sql:"SELECT"}]){const f=setup();assert.ok((await f.invoke({question:"Πόσα νερά σήμερα;",selection,snapshot})).error);assert.equal(f.calls.length,0)}
 });
+
+test("actual Ask rejects an empty region before provider and report reads",async()=>{const f=setup();const out=await f.invoke({question:"νερά σήμερα",snapshot});assert.equal(out.error?.code,"PLATFORM_ASSISTANT_SCOPE_REQUIRED");assert.equal(f.calls.length,0);assert.equal(f.reads.length,0)});
