@@ -1,3 +1,26 @@
+## 13/10/2026 — EFOOD-EVENT-PREVIEW-05 / SCOPED READ-ONLY LAB PASS / WHOLE 12 OPEN
+
+Retained owner codex/efood-bearer-20261012. Actual desktop cloud Chrome Platform Super Admin readback13Oct approximately01:14 Europe/Athens, after exact guarded healthy revision7a880fb18bbee2232949f4a964ea459a61094971. Canonical entry https://myworkstation-app.onrender.com/platform-admin; selected MYWORKSTATION LAB companycmtpopbgk000prhb5qc60zxus / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ storecmtpopbgo000trhb5ng9ytiru, SANDBOX/vendor9344842. Receiver observed CONSUMED/locked, external/order/sale/stock/payment/fiscal flags all ΟΧΙ before read.
+
+One GET-only list of already archived events displayed3 entries (one genuine provider event plus two historical mocks). Selected existing genuine event8aecdfb3-c3c2-4531-9ce1-391bc3baee7c/orderc79b178a-34e6-4d11-9eb5-2a7246209c60; one GET-only product preview. Actual displayed vendor9344842, READY_FOR_PICKUP/LAB_WEBHOOK_TEST, product “17 Delicatessen Hot Mustard 250g”, quantity1, SKU SLL45E, barcode05201050130791 preserving initial0, and “Δεν υπάρχει αντιστοίχιση”. UI explicitly says mapping, pricing, payments, availability and Pelican need separate confirmation. PASS is ONLY scoped archived-event read, real decrypt/current normalization and visible UNMATCHED preparation. No new callback, one-shot window, mock, mapping save, product change or business action was performed. This is not a new ingress acceptance PASS or complete efood/Pelican activation.
+
+ClaimPR2410/docsCI38309237239 green/main4ea9dceba59430fb2f9d78a1e6e91bbed316feca preceded source. SourcePR2411/finalheade314bda5cd46eba36df2d7dcf9fffacc95da229d/fullCI38313270078/job115023886861 SUCCESS2536PASS/0FAIL/0SKIP plus6backup/all required jobs. Merge7a880fb18bbee2232949f4a964ea459a61094971 exact mainCI38314162822/job115026837691 SUCCESS2543/0/0 plus6backup/all required jobs (additional concurrent tests preserved). GuardedRender38314603700/job115028157846 SUCCESS: pinned2026-10-12T22:05:53.7596796Z, exact healthy2026-10-12T22:07:45.7341985Z, ok=true/version0.22.0+kat-test-pos/revision7a880fb. All8owned source/test blobs verified identical in released revision. Initial unchanged attempts38310596096/1+2 remain2532/1/0 due completed-tool timing bug; independently corrected under PR2416, no assertion/metric/threshold/workflow weakening.
+
+Local focused26/0/0 includes actual registered HTTP routes with crypto, bounded scoped SQL, errors/privacy/manual mapping, existing parser/Bearer/window guards and mounted native parent+child. Negative roles/foreign tenant/hash/decrypt/malformed/positive+ambiguous mapping/stale store/unmount/redaction tests are ISOLATED CI ONLY; no live negative/positive-mapping/mobile acceptance claimed. New list/preview paths deliberately avoid schema/bootstrap/expiry writes and outbound/replay/window operations. Existing credential forms preserved, preview outside all3forms, buttons GET-only and stale generation/scope/config-version responses ignored; commercialExecutionReady=false, availabilityValidated=false/providerContractPending=true. Scoped store membership does not certify availability.
+
+Independent financial/stock/business/Audit DB counts and after/control measurements were NOT TESTED in this read-only acceptance. Earlier00:26–00:27 UI baseline is contextual only; unrelated pages' transactions are not attributed to this preview and no financial/stock delta is inferred. No claim of overall no-side-effect financial PASS.
+
+Completed preview implementation/readback is removed from active pending. Whole tracker12 remains OPEN and same owner retained until scoped completion/named handoff. Next single action: inspect the selected LAB catalog for an authoritative same-SKU/barcode product and store membership before any explicit manual mapping; do not invent productId or map to TEST1/TEST2 controls. Price/unit/VAT/payment/retry/recovery/reconciliation/full Pelican environment/certification require provider contract. Support follow-up already SENT12Oct23:16:46Athens/message1a131c2b6ac76a6e; no duplicate email this turn. Prior callback22:56 PASS remains protected; no repeat callback merely for paperwork. All other assigned Gates/owners preserved.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-13-efood-event-preview.md; verified usage docs/manual/efood/PASS.md; preparation worksheet docs/integrations/efood/acceptance-preparation.md.
+
+## 13/10/2026 — CI-CAPACITY-DEADLINE-01 / VALIDATED / BOUNDED TOOL FIX CLOSED
+
+Independent owner codex/ci-capacity-deadline-20261013 completed and released for this bounded scheduler correctness fix. ClaimPR2413/docsCI38311728376 SUCCESS/main8275bb603083260c70f60c1cb7a63ddceda3de6b preceded source. SourcePR2416/finalheadf03707abc68b05bb9a6c7ef67763f02a851d423f/fullCI38312482857/job115021512211 SUCCESS2532PASS/0FAIL/0SKIP plus6backup/all required jobs; merged05085cfd336f04fadbbf6bac945b787f7c43588f. Exact mainCI38313091136/job115023330813 SUCCESS2532/0/0 plus6backup/all required jobs. Earlier preliminary run38312028257 canceled only for shared-record reconciliation. Combined efood CI and exact main subsequently green.
+
+Runner now waits ceil-positive remaining time and rechecks monotonic deadline before dispatch. Actual-source deterministic fractional timer case changed scheduled5.5/start5/response1/offered0.5/lag0 FAIL to scheduled5.5/start6/response1/offered1.5/lag0.5 PASS; early-wake recheck also passes. Original8tests/assertions, latency formulas, arrival rates, concurrency/drops, destination/privacy guards and event IDs preserved; focused10/10 including real slowHTTP original assertion. No workflow/threshold/Node/profile/resource/application runtime/DB change or hosted workload. Official timer semantics https://nodejs.org/download/release/v20.20.0/docs/api/timers.html.
+
+This is CI tool VALIDATED, not LAB/business/production capacity PASS; no manual PASS entry for this tool. Historical tracker19 FINAL PASS protected. Production/100-store capacity remains OPEN with retained owner codex/pos-startup-loading-20261008; no takeover or duplicate workload. Remove completed isolated repair from active pending. Checkpoint CHECKPOINTS/CHANGES/2026-10-13-ci-capacity-deadline.md.
+
 ## 13/10/2026 - CI 38314360090 / exact source b9dc71a9 / harness correction
 
 Owner codex/chat-mobile-app-20261013. Node20 full suite reached 2551 tests: 2548 PASS / 3 FAIL / 0 SKIP. New native PostgreSQL recipient/ownership/session/module isolation and Chat staff expiry/revocation/PIN tests PASS; mounted owner chooser PASS. Three failures are the existing push-diagnostic VM harness missing imported registerChatWorker after scope isolation. Update that dependency and expected retry registration count, preserving provider-private-data redaction, subscription options and retry assertions; add actual helper check rejecting accidental root/POS worker reuse. No native/runtime assertion removed or bypassed. Full green CI, guarded deploy and physical acceptance remain PENDING; no live/device PASS claimed. Existing owners and central receipts preserved.
@@ -3434,15 +3457,15 @@ Claim codex/pos-catalog-perf-20261008/08Oct11:23:48Z/PR1876/maince4db388 preserv
 
 ### 12 — efood / Pelican
 
-**Κατάσταση:** Περιορισμένο callback LIVE PASS / SOURCE LIVE · AWAITING LAB / OPEN
+**Κατάσταση:** LIMITED CALLBACK LIVE PASS + ARCHIVED READ-ONLY LAB PASS / WHOLE OPEN
 
-**Υπόλοιπο / όρια PASS:** Actual provider SUCCESS/accepted/CONSUMED12Oct22:56 στην έκδοση6d4c426 παραμένει περιορισμένο callback PASS. Απαιτούμενη client.store_id/partner identity και pricing.quantity/barcode arrays υλοποιήθηκαν, fullCI2513/0/0 και exact healthy93ba32ce23:50:31Athens, αλλά νέα πραγματική αποδοχή LAB NOT TESTED. Πλήρης αντιστοίχιση προϊόντων/μονάδων/τιμών/ΦΠΑ/πληρωμών, συμφιλίωση, πραγματικό Pelican και πιστοποίηση/πραγματικό κατάστημα παραμένουν OPEN.
+**Υπόλοιπο / όρια PASS:** Callback12Oct22:56 retained. Actual readback13Oct~01:14Athens of existing event8aecdfb3 shows9344842/SLL45E/05201050130791/qty1/UNMATCHED on7a880fb. Scoped archived read/current normalization only; no new callback or commercial acceptance. Mapping, availability/units/pricing/VAT/payment/reconciliation/full Pelican/provider certification OPEN. Live negative roles/foreign tenant/crypto/mapping/stale/mobile and financial/stock DB counts NOT TESTED; isolated CI retained.
 
-**Υπεύθυνη σελίδα / branch:** codex/efood-bearer-20261012, retained owner · source fix/efood-store-identity-20261012 + fix/efood-product-references-20261012.
+**Υπεύθυνη σελίδα / branch:** codex/efood-bearer-20261012 retained; feat/efood-event-preview-20261013 complete.
 
-**Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Ρητή συνέχεια12Oct23:13 και επόμενο σκέλος23:26Athens. ClaimsPR2396/2402 green merged πριν edits. CHECKPOINTS/CHANGES/2026-10-12-efood-store-identity.md + CHECKPOINTS/CHANGES/2026-10-12-efood-product-references.md. Καμία δεύτερη σελίδα δεν αναλαμβάνει το ίδιο scope.
+**Ανάληψη:** ClaimPR2410/docsCI38309237239/main4ea9 green before source. Owner13Oct00:07Athens authorized feasible preparation. Checkpoint CHECKPOINTS/CHANGES/2026-10-13-efood-event-preview.md; prior identity/product claims2396/2402 protected.
 
-**Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** SourcePR2397/fullCI38303615996 + main38304143019 2508/0/0, guarded live d0a6712. SourcePR2403/fullCI38305422841 + main38306018837 2513/0/0, guard38306522099/job115001834682 healthy93ba32ce0d027a48f36df5269deeafbabdc008ec23:50:31Athens. Καμία νέα callback/οικονομική/stock δοκιμή ή νέο manual PASS. EmailSENT23:16:46Athens/message1a131c2b6ac76a6e ζητά schema/payment/retry/recovery/Pelican test environment/certification. Επόμενο: scoped provider-supported LAB acceptance με φρέσκο baseline/εγκεκριμένο παράθυρο και επιβεβαιωμένο contract πριν εμπορική ενεργοποίηση. Owner παραμένει έως completion/named handoff.
+**Ολοκλήρωση:** SourcePR2411/e314bda5/fullCI38313270078 SUCCESS2536/0/0+6backup, merge7a880fb18bbee2232949f4a964ea459a61094971; exact mainCI38314162822 SUCCESS2543/0/0+6backup. Guard38314603700/job115028157846 exact healthy13Oct01:07:45.734Athens. Actual native scoped list3/one existing genuine event/one preview verified. Manual docs/manual/efood/PASS.md and worksheet docs/integrations/efood/acceptance-preparation.md updated. Completed preview removed from pending; next read authoritative selected LAB product catalog before explicit mapping, no guessed productId or callback repeat. Provider emailSENT12Oct23:16:46/message1a131c2b6ac76a6e, contract/environment reply pending. Whole12 OPEN and owner retained.
 
 ### 13 — Μεταφορά barcode
 
@@ -3541,6 +3564,8 @@ Claim codex/pos-catalog-perf-20261008/08Oct11:23:48Z/PR1876/maince4db388 preserv
 **Ολοκλήρωση (χρόνος / scope / τεκμήριο / PR / CI / revision):** Βλέπε υπάρχοντα τεκμήρια PASS· κάθε νέο αποτέλεσμα καταγράφεται εδώ.
 
 ### 19 — GitHub / Render build efficiency
+
+13Oct additive isolated CI scheduler correctness repair PR2416/main05085cfd is VALIDATED/CLOSED: sourceCI38312482857 and exact main38313091136 SUCCESS2532/0/0+6backup, unchanged original assertions/metrics. Completed independent owner released; no LAB/capacity PASS or takeover of retained production capacity owner. Checkpoint2026-10-13-ci-capacity-deadline.md. Historical policy FINAL PASS below retained.
 
 **Κατάσταση:** FINAL PASS
 
