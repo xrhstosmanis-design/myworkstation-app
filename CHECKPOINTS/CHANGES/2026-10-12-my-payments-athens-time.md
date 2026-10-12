@@ -1,3 +1,7 @@
+## 12/10/2026 23:29 Athens — Global 24-hour Greece audit / IN PROGRESS
+
+Owner codex/my-payments-athens-time-20261012 retained; user explicitly extends audit to the entire program: always24-hour Greek time in entry, recording interpretation and display. Branch fix/global-athens-24h-20261012. Inventory POS/BackOffice/SuperAdmin/reports/exports/mail/patch-generated code and input parsing; preserve canonical UTC/offset-qualified instant storage, distinguish date-only business fields, DST rules, idempotency/tenant/session boundaries and all other owners. Prior source2383/2395 and exact live2449af9 evidence retained; no entire-program PASS inferred. No historical timestamp rewrite or real transaction. Required fullCI/exact guarded deploy and independent served assets; physical endpoints/cameras unobserved remain NOT TESTED. Checkpoint CHECKPOINTS/CHANGES/2026-10-12-my-payments-athens-time.md.
+
 ## 12/10/2026 — Shift report Athens follow-up / SOURCE LIVE — AWAITING USER
 
 Retained owner codex/my-payments-athens-time-20261012. Source PR #2395 merged2449af9a526f96356d79698422589ca3891ca188. User screenshot showed 02:04μ.μ.–10:00μ.μ. (already14:04–22:00 Athens) and legacy supplier400EUR paidAt03:00. Owner report now uses explicit24h Europe/Athens and Greek calendar defaults; supplier/other expense rows show original payment date and separate createdAt/Καταχώριση. No inferred historical payment time, financial mutation or replay. Original400EUR/80EUR and session isolation preserved.
