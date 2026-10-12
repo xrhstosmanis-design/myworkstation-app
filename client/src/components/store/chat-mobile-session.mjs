@@ -1,6 +1,17 @@
 
 const key="chatAppSession";
-export function chatSession(){try{return JSON.parse(localStorage.getItem(key)||"null")}catch{return null}}
+export function chatSession(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(key)||"null");if(saved)return saved;
+  if(localStorage.getItem("chatAppSignedOut"))return null;
+  const token=localStorage.getItem("token")||sessionStorage.getItem("storeOperatorToken");
+  if(!token)return null;
+  // UI hint only. Every Chat request still validates the existing physical session server-side.
+  const raw=token.split(".")[1],bytes=Uint8Array.from(atob(raw.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)),payload=JSON.parse(new TextDecoder().decode(bytes));
+  if(payload.tokenType!=="STORE_OPERATOR"||!payload.storeId)return null;
+  return {token,user:{chatOperator:true,legacy:true,fullName:payload.fullName,store:{id:payload.storeId},company:{id:payload.companyId}}};
+ }catch{return null}
+}
 export function saveChatSession(data){localStorage.setItem(key,JSON.stringify({token:data.token,user:data.user}));localStorage.removeItem("chatAppSignedOut")}
 export function clearChatSession(){localStorage.removeItem(key);localStorage.setItem("chatAppSignedOut","1")}
 export function chatToken(){return chatSession()?.token||(!localStorage.getItem("chatAppSignedOut")?(localStorage.getItem("token")||sessionStorage.getItem("storeOperatorToken")||""):"")}
