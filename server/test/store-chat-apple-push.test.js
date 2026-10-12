@@ -41,3 +41,17 @@ test("Apple and other providers both show background notifications",async()=>{
   assert.deepEqual(await deliver(true,"hidden"),{notifications:1,posts:0});
   assert.deepEqual(await deliver(false,"hidden"),{notifications:1,posts:0});
 });
+
+test("optional mobile recipient failure keeps existing scoped Push delivery and fails closed for mobile audience",async()=>{
+ const legacy={endpoint:"https://fcm.googleapis.com/virtual",subscriptionJson:{endpoint:"https://fcm.googleapis.com/virtual"}},sent=[];
+ const code=fs.readFileSync(new URL("../src/store-chat-push.js",import.meta.url),"utf8").split("export async function sendStoreChatPush")[1];
+ const fn=vm.runInNewContext("async function sendStoreChatPush"+code+";sendStoreChatPush",{
+  vapidKeys:async()=>{},isApplePushEndpoint,assertCustomerDemoOutboundAllowed,
+  prisma:{$queryRaw:async(strings,...values)=>{assert.deepEqual(values,["company","B","sender"]);return [legacy]}},
+  mobilePushRecipients:async()=>{throw Object.assign(new Error("private query values"),{code:"P2010"})},
+  removeMobilePushEndpoints:async()=>{},console:{error:(...args)=>{assert.ok(!args.join(" ").includes("private"))}},
+  webpush:{sendNotification:async(subscription)=>sent.push(subscription.endpoint)}
+ });
+ const result=await fn({store:{companyId:"company",id:"B",name:"Virtual"},senderId:"sender"});
+ assert.deepEqual(sent,[legacy.endpoint]);assert.equal(result.attempted,1);assert.equal(result.delivered,1);
+});
