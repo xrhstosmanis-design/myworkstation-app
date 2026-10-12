@@ -1,3 +1,11 @@
+## 12/10/2026 13:27 Athens — POS-INVOICE-QR-SCANNER-01 / INPUT SOURCE LIVE / AWAITING USER RETEST
+
+Same owner codex/invoice-qr-scanner-20261012 retained. ClaimPR2342 mergedafd858f2 before source. SourcePR2343/head592901ea6c33431a6617ce52a91d5c43cee54658/fullPRCI38234822456 SUCCESS2443PASS/0FAIL/0SKIP; merge745ec31aa18067317e49ff30e7065ae9e1e20eae. Exact mainCI38235314326 attempt1 FAIL2442/1/0 solely prior capacity-runner scheduled latency assertion test35/line43; source unchanged, relevant local capacity8/8PASS, failed-job rerun attempt2/fulljob114765522620 SUCCESS2443/0/0 including native isolated PostgreSQL/build/invariants/Chromium/realHTTP/Windows. No assertion/threshold/test/workflow weakening or capacity owner takeover.
+
+Ordinary guarded Render38236147436/deployjob114767256939 SUCCESS, exact745ec31a healthy at10:27UTC. Previous failed-main deploy wrapper38235557704 correctly SKIPPED. Rollback artifact retained. Independent public health/assets verification follows in release evidence. No manual deploy bypass, real/LAB financial transaction, invoice/draft/job/stock/fiscal/myDATA mutation or accepted replay.
+
+Delivered input scope only: native text retention, Greek physical key recovery, consumed Enter/Tab, touch-keyboard exclusion, explicit clear and specific numeric/incomplete guidance before request. Camera/provider/server/payment paths unchanged; camera success remains owner-reported. Physical scanner hardware/client/eventstream and numeric6225119 origin not established, missing URL never guessed. Newest scanner USERFAIL remains authoritative until positive fresh retest; source/CI success is not functional PASS and no new manual PASS. Next single action: CtrlF5 POS → same new-invoice scanner → Καθαρισμός / νέα σάρωση → same QR, review full URL and header without payment. If only digits remain, compare the SAME QR in ordinary Windows Notepad and supply scanner model; no new transaction. Other owners untouched, assignment remains OPEN.
+
 ## 12/10/2026 — POS-INVOICE-QR-SCANNER-01 / INPUT CORRECTION IMPLEMENTED / AWAITING CI + USER
 
 Same owner codex/invoice-qr-scanner-20261012, source fix/invoice-scanner-input-20261012. ClaimPR2342/headb0263fa9 docsCI green mergedafd858f2 before source. Only dedicated InvoiceQrScanner + pure input helper and mounted regression changed; camera/provider/server/payment forms untouched.

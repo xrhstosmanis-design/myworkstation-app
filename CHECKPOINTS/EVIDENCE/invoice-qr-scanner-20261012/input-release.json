@@ -1,0 +1,17 @@
+{
+ "revision": "745ec31aa18067317e49ff30e7065ae9e1e20eae",
+ "sourcePr": 2343,
+ "sourceCi": 38234822456,
+ "mainCi": 38235314326,
+ "mainCiAttempt": 2,
+ "initialMainFailure": "pre-existing pos-capacity-runner.test.js:43 latency assertion; 2442 pass, 1 fail",
+ "finalTests": {"pass":2443,"fail":0,"skip":0},
+ "guardedDeploy": 38236147436,
+ "deployJob": 114767256939,
+ "publicHealth": {"ok":true,"revision":"745ec31aa18067317e49ff30e7065ae9e1e20eae"},
+ "servedAsset": "assets/entry-4qfsNwhl.js",
+ "servedAssetSha256": "71847cd554aaf6ab15f7c6805c08a4204419042b279462cdcadc958964ef6d05",
+ "numericGuidanceClearActionTabGuidancePresent": true,
+ "physicalUserRetest": "NOT TESTED",
+ "financialActions": 0
+}
