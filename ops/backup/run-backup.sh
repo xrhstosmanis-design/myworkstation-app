@@ -28,9 +28,29 @@ notify() {
   completed_at=""
   if [ "$status" != "STARTED" ]; then completed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; fi
   body="{\"runId\":\"$run_id\",\"status\":\"$status\",\"startedAt\":\"$started_at\",\"completedAt\":\"$completed_at\",\"checksum\":\"$checksum\",\"sizeBytes\":$size,\"objectKey\":\"$object_key\",\"appRevision\":\"${RENDER_GIT_COMMIT:-UNKNOWN}\",\"dryRunStatus\":\"$([ "$status" = "SUCCEEDED" ] && printf PASSED || printf NOT_RUN)\",\"errorCode\":\"$error_code\"}"
-  timestamp="$(date +%s)"
-  signature="$(printf '%s.%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$BACKUP_MONITOR_SECRET" -hex | awk '{print $2}')"
-  curl --fail --silent --show-error --max-time 20 -H "Content-Type: application/json" -H "X-Backup-Timestamp: $timestamp" -H "X-Backup-Signature: $signature" --data "$body" "$BACKUP_MONITOR_URL" >/dev/null
+  # Keep one event/runId/completion time, but sign each delivery attempt afresh.
+  # The receiver upserts by runId, so a lost response can be retried safely.
+  notify_attempt=1
+  while [ "$notify_attempt" -le 5 ]; do
+    timestamp="$(date +%s)"
+    signature="$(printf '%s.%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$BACKUP_MONITOR_SECRET" -hex | awk '{print $2}')"
+    curl_code=0
+    http_code="$(curl --fail --silent --show-error --connect-timeout 5 --max-time 20 --output /dev/null --write-out '%{http_code}' -H "Content-Type: application/json" -H "X-Backup-Timestamp: $timestamp" -H "X-Backup-Signature: $signature" --data "$body" "$BACKUP_MONITOR_URL" 2>/dev/null)" || curl_code=$?
+    if [ "$curl_code" -eq 0 ]; then
+      case "$http_code" in 2??) return 0 ;; esac
+    fi
+    retryable=0
+    case "$http_code" in 408|429|5??) retryable=1 ;; esac
+    # Retry connection/transport failures, not TLS or configuration errors.
+    case "$curl_code" in 5|6|7|18|28|52|55|56) retryable=1 ;; esac
+    if [ "$retryable" -eq 0 ] || [ "$notify_attempt" -eq 5 ]; then
+      echo "Backup monitor delivery failed: status=$status http=$http_code curl=$curl_code attempts=$notify_attempt" >&2
+      return 1
+    fi
+    echo "Backup monitor delivery retry: status=$status http=$http_code curl=$curl_code attempt=$notify_attempt" >&2
+    sleep $((notify_attempt*2))
+    notify_attempt=$((notify_attempt+1))
+  done
 }
 
 on_exit() {
@@ -42,6 +62,7 @@ on_exit() {
 }
 trap on_exit EXIT INT TERM
 
+failure_stage="MONITOR_START_NOTIFY_FAILED"
 notify STARTED
 
 # The bucket must already exist, remain private, use versioning and have default
