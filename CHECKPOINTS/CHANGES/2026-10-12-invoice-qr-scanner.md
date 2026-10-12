@@ -1,3 +1,9 @@
+## 12/10/2026 12:00 Athens — POS-INVOICE-QR-SCANNER-01 / SOURCE LIVE / AWAITING PHYSICAL USER
+
+Owner `codex/invoice-qr-scanner-20261012` retained. ClaimPR2338/docsCI38225174721 green merged564cdf4e before source. SourcePR2339/head5769a94fa74fd32c55aa75e8b015da8fef3ff111/fullPRCI38225828992 SUCCESS2426PASS/0FAIL/0SKIP; merged02c7cd7cf4961f5d50bcaabaeb1853610c21759f, exact mainCI38226337500/job114734751810 SUCCESS2426PASS/0FAIL/0SKIP including build/invariants/native isolated PostgreSQL/real HTTP E2E/Chromium/Windows. Ordinary guarded Render38226818245/deployjob114736299175 SUCCESS; exacthealthy02c7cd7c at09:00:04UTC, independent public health ok=true/exact02c7cd7c confirmed. No manual deployment or guard bypass.
+
+Delivery does not establish physical scanner/keyboard-layout/provider/camera-focus USER/LAB PASS. No payment/invoice/draft/job/stock/fiscal/myDATA mutation, historical replay or new manual PASS. Protected existing adapters/payment completion and other owners unchanged. Next single action: refresh POS → Πληρωμές → Προμηθευτής → Νέο τιμολόγιο → Σάρωση QR με scanner; scan QR (Enter or explicit Αναγνώριση), review original PDF and supplier/number/date/amount without submitting payment. Real unsupported provider requires exact QR/link for a bounded adapter; current S1 Ecos/Impact support retained, no promise all providers. Owner remains assigned for physical acceptance and provider residual; source stale AWAITING CI superseded only by verified release, not by functional PASS.
+
 ## 12/10/2026 — POS-INVOICE-QR-SCANNER-01 / IMPLEMENTED / LOCAL VERIFIED / AWAITING CI + USER
 
 Owner `codex/invoice-qr-scanner-20261012`, branch `feat/invoice-qr-scanner-20261012`. Owner-authorized camera/provider handoff claimPR2338 head93908cff/docsCI38225174721 SUCCESS (full application job correctly skipped), merged564cdf4e before source.
