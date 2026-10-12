@@ -1,3 +1,4 @@
+import {parseAssistantSourceRead} from "./assistant-source-read.js";
 import {prisma} from "../prisma.js";
 import {cashTool,readCanonicalPlatformCash} from "./assistant-cash-tools.js";
 import {assistantProductTools,runProductAssistant,salesToolArguments,productSalesEvidence} from "./owner-sales-tools.js";
@@ -40,24 +41,29 @@ export async function createPlatformAssistantSession(req,selection,{authorize=au
   const cashScope=allStores?null:scope;
   const sessionCashTool=cashScope?{...cashTool,description:"Διαβάζει τον κανονικό έλεγχο κλεισμένων βαρδιών μόνο στο ήδη επιλεγμένο εξουσιοδοτημένο κατάστημα. date: YYYY-MM-DD ή null για σήμερα (ώρα Ελλάδας). Δεν περιλαμβάνει ανοικτές βάρδιες και δεν αλλάζει στοιχεία."}:cashTool;
   const tools=[sessionCashTool,...(scope?assistantProductTools:[]),...(scope||allStores?[salesStoresTool]:[]),...(scope?[consumptionTool]:[])];
-  return {scope,tools,async run({prompt,question="",requestProvider}){
-    const questionTools=toolsForAssistantQuestion(question,tools);
-    if(!questionTools.length)fail(422,"Επίλεξε συγκεκριμένο κατάστημα για ιδιοκατανάλωση ή καταστροφή προϊόντων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
-    const out=await runProductAssistant({prompt,cashTool:sessionCashTool,tools:questionTools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
-      readConsumption:async args=>{await verify();const report=await readConsumption(args,scope,{signal});await verify();return evidence(report)},
-      readSalesStores:async args=>{salesAccess=await authorizeSalesStores(req,selection,allStores,{authorize});return readAssistantSalesStores(args,salesAccess,{readReport:readSalesReport,...(readSalesCatalog?{readCatalog:readSalesCatalog}:{}),verify,signal})},
-      readCash:async date=>{await verify();const report=await readCash(req,date,{signal,scope:cashScope});await verify();return report},
-      readSales:async value=>{
+  const sourceReaders={
+      consumption_details:async args=>{await verify();const report=await readConsumption(args,scope,{signal});await verify();return evidence(report)},
+      sales_by_store:async args=>{salesAccess=await authorizeSalesStores(req,selection,allStores,{authorize});return readAssistantSalesStores(args,salesAccess,{readReport:readSalesReport,...(readSalesCatalog?{readCatalog:readSalesCatalog}:{}),verify,signal})},
+      cash_details:async ({date})=>{await verify();const report=await readCash(req,date,{signal,scope:cashScope});await verify();return report},
+      sales_by_product:async value=>{
         const args=salesToolArguments.parse(value),calendar=salesReportCalendar(args.from,args.to);await verify();
         const report=await readSalesReport({companyId:scope.companyId,storeId:scope.storeId,from:calendar.from,to:calendar.to,q:args.product,calendar});await verify();
         return evidence(productSalesEvidence(report,args,scope));
       },
-      readStock:async value=>{
+      stock_by_product:async value=>{
         const args=stockToolArguments.parse(value);await verify();
         const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()),calendar=salesReportCalendar(today,today);
         const report=await readStockReport({companyId:scope.companyId,storeId:scope.storeId,from:calendar.from,to:calendar.to,q:args.product});await verify();
         return evidence(productStockEvidence(report,args,scope));
-      }});
+      }
+  };
+  const readSource=async value=>{const read=parseAssistantSourceRead(value);if(!tools.some(t=>t.name===read.name))fail(403,"Η πηγή δεν είναι διαθέσιμη στο επιλεγμένο εύρος.","PLATFORM_ASSISTANT_SOURCE_DENIED");return sourceReaders[read.name](read.args)};
+  return {scope,tools,verify,async replay(reads){if(!Array.isArray(reads)||!reads.length||reads.length>2)fail(422,"Μη έγκυρη αναφορά εξαγωγής.","PLATFORM_ASSISTANT_SOURCE_DENIED");const result=[];for(const read of reads)result.push(await readSource(read));await verify();return result},async run({prompt,question="",requestProvider}){
+    const questionTools=toolsForAssistantQuestion(question,tools);
+    if(!questionTools.length)fail(422,"Επίλεξε συγκεκριμένο κατάστημα για ιδιοκατανάλωση ή καταστροφή προϊόντων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
+    const out=await runProductAssistant({prompt,cashTool:sessionCashTool,tools:questionTools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
+      readConsumption:args=>readSource({name:"consumption_details",args}),readCash:date=>readSource({name:"cash_details",args:{date}}),
+      readSalesStores:args=>readSource({name:"sales_by_store",args}),readSales:args=>readSource({name:"sales_by_product",args}),readStock:args=>readSource({name:"stock_by_product",args})});
     await verify();return {...out,scope};
   }};
 }

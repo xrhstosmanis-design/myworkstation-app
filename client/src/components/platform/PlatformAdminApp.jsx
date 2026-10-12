@@ -1,4 +1,5 @@
-import {requestPlatformAssistant} from "./platform-assistant-context.mjs";
+import AssistantChatPage from "../voice/AssistantChatPage.jsx";
+import {requestPlatformAssistant,requestPlatformAssistantExport,requestPlatformAssistantStatus} from "./platform-assistant-context.mjs";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {readBackofficeContext} from "../../utils/backofficeSessionBoundary.mjs";
 import {n40ReadHeaders,n40PublishRead} from "../../../../shared/n40-read-trace.mjs";
@@ -90,6 +91,8 @@ async function request(path,options={}){
   if(path==="/api/platform/ai-command-center/ask"){
     return requestPlatformAssistant(rawPlatformRequest,path,options,localStorage,sessionStorage);
   }
+  if(path==="/api/platform/ai-command-center/export")return requestPlatformAssistantExport(rawPlatformRequest,path,options,localStorage,sessionStorage);
+  if(path.startsWith("/api/platform/ai-command-center/status"))return requestPlatformAssistantStatus(rawPlatformRequest,path,options,localStorage,sessionStorage);
   return rawPlatformRequest(path,options);
 }
 async function rawPlatformRequest(path,options={}){
@@ -165,6 +168,7 @@ export default function PlatformAdminApp(){
   const [showChatChooser,setShowChatChooser]=useState(false);
   const [showInternetSearch,setShowInternetSearch]=useState(false);
   const [showAiCommandCenter,setShowAiCommandCenter]=useState(Boolean(returnedTwin));
+  const [showAssistantPage,setShowAssistantPage]=useState(false),[assistantAllScope,setAssistantAllScope]=useState(false);
   const [aiTwinSelection,setAiTwinSelection]=useState(returnedTwin);
   const [aiTwinOrigin,setAiTwinOrigin]=useState(null);
   const [aiTwinNavigationError,setAiTwinNavigationError]=useState("");
@@ -205,7 +209,7 @@ export default function PlatformAdminApp(){
   const clearSession=(clearError=true)=>{
     overviewLoadSequence.current++;setLoading(false);
     localStorage.removeItem("token");localStorage.removeItem("platformUser");
-    setUser(null);setData(null);setShowSecurity(false);setAiTwinSelection(null);clearTwinOrigin();clearTwinReturn(sessionStorage);setShowAiCommandCenter(false);setCashReport(null);setAnalyticsResult(null);setShowSupplierSettlementReview(false);setShowBankLedgerReview(false);setVideoConnectionManager(null);setWorkforceTarget(null);if(clearError)setError("");
+    setShowAssistantPage(false);setAssistantAllScope(false);setUser(null);setData(null);setShowSecurity(false);setAiTwinSelection(null);clearTwinOrigin();clearTwinReturn(sessionStorage);setShowAiCommandCenter(false);setCashReport(null);setAnalyticsResult(null);setShowSupplierSettlementReview(false);setShowBankLedgerReview(false);setVideoConnectionManager(null);setWorkforceTarget(null);if(clearError)setError("");
   };
   const logout=async(clearError=true)=>{
     try{if(localStorage.getItem("token"))await request("/api/auth/logout",{method:"POST",body:"{}"})}catch{}
@@ -564,7 +568,7 @@ export default function PlatformAdminApp(){
       <div className="platform-user"><div><small>Ιδιοκτήτης πλατφόρμας</small><b>{user.fullName}</b></div><ScreenRecorderWindowLauncher/><button onClick={()=>setShowSecurity(true)}><ShieldCheck/>Ασφάλεια</button><button onClick={()=>logout()}><LogOut/>Έξοδος</button></div>
     </header>
     <main className="platform-main">
-      <div className="platform-title"><div><span>ΚΕΝΤΡΟ ΕΛΕΓΧΟΥ ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗ</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><div className="platform-action-group"><small>Κεντρικά</small><button className="ai-command-launch" onClick={()=>setShowAiCommandCenter(true)}><BrainCircuit/>AI Command Center</button><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Εγκατάσταση</button><button onClick={()=>{const company=(data?.companies||[]).find(item=>item.active&&item.stores?.length===1);if(company)setWorkforceTarget({company,store:company.stores[0]});else setError("Επίλεξε πρώτα εταιρεία με ένα κατάστημα από τις Εγκαταστάσεις.")}}><UsersRound/>Προσωπικό & Πρόγραμμα</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div><div className="platform-action-group"><small>Έλεγχοι</small><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>Ταμεία</button><button className="secondary" onClick={()=>setShowSupplierSettlementReview(true)}><ShieldCheck/>Πληρωμές</button><button className="secondary" onClick={()=>setShowOtherExpenseReview(true)}><WalletCards/>Έξοδα</button><button className="secondary" onClick={()=>setShowBankLedgerReview(true)}><WalletCards/>Τράπεζα</button><button className="secondary" onClick={()=>setShowChatChooser(true)}><MessageCircle/>Chat</button><button className="secondary" onClick={()=>setShowInternetSearch(true)}><Globe2/>Αναζήτηση Internet</button><button className="secondary" onClick={()=>setShowEventsCenter(true)}><ShieldCheck/>Συμβάντα</button><button className="secondary" onClick={()=>setAnalyticsResult({page:true})}><AlertTriangle/>Κέντρο Ελέγχων</button><button className="secondary" onClick={()=>setShowFiscalDryRun(true)}><ShieldCheck/>Fiscal DRY RUN</button></div><div className="platform-action-group platform-action-utility"><small>Ενέργειες</small><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button></div></div></div>
+      <div className="platform-title"><div><span>ΚΕΝΤΡΟ ΕΛΕΓΧΟΥ ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗ</span><h1>Πελάτες και εγκαταστάσεις</h1><p>Δημιουργία, ενεργοποίηση και εποπτεία όλων των εταιρειών του MyWorkStation.</p></div><div className="platform-title-actions"><div className="platform-action-group"><small>Κεντρικά</small><button onClick={()=>setShowAssistantPage(true)}><MessageCircle/>Βοηθός</button><button className="ai-command-launch" onClick={()=>setShowAiCommandCenter(true)}><BrainCircuit/>AI Command Center</button><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Εγκατάσταση</button><button onClick={()=>{const company=(data?.companies||[]).find(item=>item.active&&item.stores?.length===1);if(company)setWorkforceTarget({company,store:company.stores[0]});else setError("Επίλεξε πρώτα εταιρεία με ένα κατάστημα από τις Εγκαταστάσεις.")}}><UsersRound/>Προσωπικό & Πρόγραμμα</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button onClick={()=>setShowNew(true)}><Plus/>Νέος πελάτης</button></div><div className="platform-action-group"><small>Έλεγχοι</small><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>Ταμεία</button><button className="secondary" onClick={()=>setShowSupplierSettlementReview(true)}><ShieldCheck/>Πληρωμές</button><button className="secondary" onClick={()=>setShowOtherExpenseReview(true)}><WalletCards/>Έξοδα</button><button className="secondary" onClick={()=>setShowBankLedgerReview(true)}><WalletCards/>Τράπεζα</button><button className="secondary" onClick={()=>setShowChatChooser(true)}><MessageCircle/>Chat</button><button className="secondary" onClick={()=>setShowInternetSearch(true)}><Globe2/>Αναζήτηση Internet</button><button className="secondary" onClick={()=>setShowEventsCenter(true)}><ShieldCheck/>Συμβάντα</button><button className="secondary" onClick={()=>setAnalyticsResult({page:true})}><AlertTriangle/>Κέντρο Ελέγχων</button><button className="secondary" onClick={()=>setShowFiscalDryRun(true)}><ShieldCheck/>Fiscal DRY RUN</button></div><div className="platform-action-group platform-action-utility"><small>Ενέργειες</small><button className="secondary" onClick={load} disabled={loading}><RefreshCw/>Ανανέωση</button></div></div></div>
       <a href="/platform-admin/n40-audit" target="_blank" rel="noopener noreferrer" style={{display:"inline-block",marginBottom:12}}>Νο40 · Εικονικός χρήστης Backoffice / έλεγχοι ανάγνωσης</a>
       <AiCreditAlert request={request} onOpenSettings={()=>setShowAiCommandCenter(true)}/>
       {error&&<div className="platform-alert error">{error}</div>}
@@ -664,7 +668,9 @@ export default function PlatformAdminApp(){
     {showChatChooser&&<div className="platform-modal"><section className="platform-security-dialog platform-chat-chooser"><button type="button" className="modal-close" onClick={()=>setShowChatChooser(false)}><X/></button><h2>Chat καταστημάτων</h2><p>Επίλεξε το κατάστημα που θέλεις να ανοίξεις.</p><label>Κατάστημα<select defaultValue="" onChange={event=>{const storeId=event.target.value,target=(data?.companies||[]).flatMap(company=>company.stores||[]).find(store=>store.id===storeId);if(target){setChatStore(target);setShowChatChooser(false)}}}><option value="" disabled>Επίλεξε κατάστημα…</option>{(data?.companies||[]).flatMap(company=>(company.stores||[]).map(store=><option key={store.id} value={store.id}>{company.name} · {store.name}</option>))}</select></label></section></div>}
     {chatStore&&<StoreChatPanel api={request} store={chatStore} onClose={()=>setChatStore(null)}/>}
     {showInternetSearch&&<InternetProductSearchPanel api={request} basePath="/api/platform/internet-product-search" companies={(data?.companies||[]).filter(company=>company.active)} onClose={()=>setShowInternetSearch(false)}/>}
+    <AssistantChatPage open={showAssistantPage} api={request} companies={data?.companies||[]} initialSelection={aiTwinSelection} initialAllScope={assistantAllScope} onSelectionChange={rememberTwinSelection} onAllScopeChange={setAssistantAllScope} onClose={()=>setShowAssistantPage(false)}/>
     {showAiCommandCenter&&<AiCommandCenter
+      onOpenAssistant={(selection,all)=>{rememberTwinSelection(selection);setAssistantAllScope(all);setShowAiCommandCenter(false);setShowAssistantPage(true)}}
       request={request} companies={data?.companies||[]} loading={loading}
       initialTwinSelection={aiTwinSelection} onTwinSelectionChange={rememberTwinSelection}
       onOpenTwinDestination={openTwinDestination} navigationBusy={Boolean(aiTwinOrigin)} navigationError={aiTwinNavigationError}

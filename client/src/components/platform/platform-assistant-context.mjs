@@ -20,6 +20,17 @@ export function readPlatformAssistantContext(storage,sessions,{now=Date.now()}={
 }
 export async function requestPlatformAssistant(request,path,options,storage,sessions){
  if(path!=="/api/platform/ai-command-center/ask")throw denied("Μη επιτρεπόμενη κεντρική αίτηση.","PLATFORM_ASSISTANT_REQUEST_REJECTED");
+ return requestBoundAssistant(request,path,options,storage,sessions);
+}
+export async function requestPlatformAssistantExport(request,path,options,storage,sessions){
+ if(path!=="/api/platform/ai-command-center/export"||options?.method!=="POST")throw denied("Μη επιτρεπόμενη εξαγωγή αναφοράς.","PLATFORM_ASSISTANT_REQUEST_REJECTED");
+ return requestBoundAssistant(request,path,options,storage,sessions);
+}
+export async function requestPlatformAssistantStatus(request,path,options,storage,sessions){
+ if(!/^\/api\/platform\/ai-command-center\/status(?:\?[^#]*)?$/.test(path)||(options?.method||"GET")!=="GET")throw denied("Μη επιτρεπόμενος έλεγχος βοηθού.","PLATFORM_ASSISTANT_REQUEST_REJECTED");
+ return requestBoundAssistant(request,path,options,storage,sessions);
+}
+async function requestBoundAssistant(request,path,options,storage,sessions){
  const before=readPlatformAssistantContext(storage,sessions);
  const assertCurrent=()=>{
   let current;try{current=readPlatformAssistantContext(storage,sessions)}catch{throw denied("Η συνεδρία άλλαξε. Ζήτησε ξανά την αναφορά.","PLATFORM_ASSISTANT_CONTEXT_CHANGED")}

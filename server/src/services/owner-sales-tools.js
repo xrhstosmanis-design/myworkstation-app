@@ -4,6 +4,7 @@ import {cashToolArguments} from "./assistant-cash-tools.js";
 import {stockToolArguments,ownerStockTool} from "./owner-stock-tools.js";
 import {salesStoresArguments,salesStoresTool} from "./assistant-sales-stores.js";
 import {consumptionArguments,consumptionTool} from "./assistant-consumption.js";
+import {ASSISTANT_OUTPUT_TOKENS,ASSISTANT_RECOVERY_TOKENS,mayRetryAssistantResponse} from "./assistant-answer-response.js";
 
 const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const salesToolArguments=z.object({product:z.string().trim().min(1).max(120),from:day,to:day}).strict().superRefine((value,ctx)=>{try{salesReportCalendar(value.from,value.to)}catch(e){ctx.addIssue({code:z.ZodIssueCode.custom,message:e.message})}});
@@ -43,16 +44,18 @@ export const assistantProductTools=[ownerSalesTool,ownerStockTool];
 
 // Shared dispatcher. The old export remains compatible with existing Owner clients.
 export async function runOwnerAssistant({prompt,requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,cashTool,tools=[cashTool,ownerSalesTool]}){
-  const input=[{role:"user",content:prompt}],evidence=[];let calls=0;
+  const input=[{role:"user",content:prompt}],evidence=[],reads=[];let calls=0,retried=false;
   for(let round=0;round<3;round++){
-    const provider=await requestProvider({input,tools,parallel_tool_calls:false,tool_choice:round===2?"none":"auto",store:false});
-    if(!provider.response.ok)return {...provider,evidence};
-    const toolCalls=(provider.raw.output||[]).filter(item=>item.type==="function_call");if(!toolCalls.length)return {...provider,evidence};
+    const settings={input,tools,parallel_tool_calls:false,tool_choice:round===2?"none":"auto",store:false,max_output_tokens:ASSISTANT_OUTPUT_TOKENS};
+    let provider=await requestProvider(settings);
+    if(provider.response.ok&&mayRetryAssistantResponse(provider.raw)&&!retried){retried=true;provider=await requestProvider({...settings,max_output_tokens:ASSISTANT_RECOVERY_TOKENS});}
+    if(!provider.response.ok||["incomplete","failed","cancelled"].includes(provider.raw?.status))return {...provider,evidence,reads};
+    const toolCalls=(provider.raw.output||[]).filter(item=>item.type==="function_call");if(!toolCalls.length)return {...provider,evidence,reads};
     if(round===2||toolCalls.length!==1||calls>=2)fail("Ο βοηθός έφτασε το όριο ανάγνωσης. Ζήτησε ένα συγκεκριμένο είδος και διάστημα.");
     const call=toolCalls[0],sales=call.name===ownerSalesTool.name,stock=call.name===ownerStockTool.name,cash=call.name===cashTool.name,list=call.name===salesStoresTool.name,consumption=call.name===consumptionTool.name;
     if(!(sales||stock||cash||list||consumption)||!tools.some(tool=>tool.name===call.name)||typeof call.call_id!=="string"||!call.call_id||typeof call.arguments!=="string"||call.arguments.length>(list?3000:600))fail("Μη επιτρεπόμενη αναζήτηση από τον βοηθό.");
     let args;try{args=(consumption?consumptionArguments:list?salesStoresArguments:sales?salesToolArguments:stock?stockToolArguments:cashToolArguments).parse(JSON.parse(call.arguments))}catch{fail("Διευκρίνισε την ονομασία και τις έγκυρες ημερομηνίες της αναζήτησης.",422)}
-    calls++;const report=await(consumption?readConsumption(args):list?readSalesStores(args):sales?readSales(args):stock?readStock(args):readCash(args.date));evidence.push(report);
+    calls++;const report=await(consumption?readConsumption(args):list?readSalesStores(args):sales?readSales(args):stock?readStock(args):readCash(args.date));evidence.push(report);reads.push({name:call.name,args});
     const providerReport=list||consumption?{...report,rows:report.rows.slice(0,50),detailRowCount:report.rows.length,detailRowsLimited:report.rows.length>50,detailsShownInReport:true}:report;
     input.push(...provider.raw.output,{type:"function_call_output",call_id:call.call_id,output:JSON.stringify(providerReport)});
   }

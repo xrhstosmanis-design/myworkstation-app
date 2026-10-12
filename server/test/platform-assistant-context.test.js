@@ -1,10 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {readPlatformAssistantContext,requestPlatformAssistant,watchPlatformAssistantContext} from "../../client/src/components/platform/platform-assistant-context.mjs";
+import {readPlatformAssistantContext,requestPlatformAssistant,requestPlatformAssistantExport,requestPlatformAssistantStatus,watchPlatformAssistantContext} from "../../client/src/components/platform/platform-assistant-context.mjs";
 const base=()=>({tokenType:"BACKOFFICE_USER",id:"actor",companyId:"platform",sessionId:"session",sessionVersion:3,role:"OWNER",platformRole:"SUPER_ADMIN",isSuperAdmin:true,exp:Math.floor(Date.now()/1000)+3600});
 const token=p=>"fixture."+Buffer.from(JSON.stringify(p)).toString("base64url")+".signature";
 const storage=values=>{const map=new Map(Object.entries(values));return {getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)}};
 const support=p=>({...p,companyId:"lab",supportContext:{companyId:"lab",storeId:"selected",destination:"STORES"}});
+test("new status/export helpers remain purpose-bound and withhold late files after session changes",async()=>{
+ const p=base(),s=storage({token:token(support(p))}),sessions=storage({platformToken:token(p)}),request=async(path,options)=>{assert.equal(options.headers.Authorization,"Bearer "+token(p));return {ok:true}};
+ assert.equal((await requestPlatformAssistantStatus(request,"/api/platform/ai-command-center/status?storeId=selected",{},s,sessions)).ok,true);
+ assert.equal((await requestPlatformAssistantExport(request,"/api/platform/ai-command-center/export",{method:"POST"},s,sessions)).ok,true);
+ for(const path of ["https://foreign.invalid/api/platform/ai-command-center/export","/api/platform/ai-command-center/ask","/api/platform/ai-command-center/export?x=1"])await assert.rejects(requestPlatformAssistantExport(request,path,{method:"POST"},s,sessions));
+ await assert.rejects(requestPlatformAssistantStatus(request,"/api/platform/ai-command-center/status",{method:"POST"},s,sessions));
+ await assert.rejects(requestPlatformAssistantExport(async()=>{sessions.removeItem("platformToken");return {base64:"PRIVATE"}},"/api/platform/ai-command-center/export",{method:"POST"},s,sessions),e=>e.code==="PLATFORM_ASSISTANT_CONTEXT_CHANGED");
+});
 test("central assistant retains native signed OWNER representation; normal paid Owner never becomes platform authority",()=>{
  const p=base(),s=storage({token:token(p)}),session=storage({});
  assert.equal(readPlatformAssistantContext(s,session).token,s.getItem("token"));
