@@ -37,7 +37,7 @@ export async function saveStoreChatPushSubscription({store,user,subscription}){
   const id=`chat-push-${Date.now()}-${Math.random().toString(36).slice(2)}`,payload={endpoint,expirationTime:subscription.expirationTime||null,keys:{p256dh,auth}};
   await ensureChatMobileSchema();
   await prisma.$transaction(async tx=>{
-  await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))',endpoint);
+  await tx.$queryRawUnsafe('SELECT (pg_advisory_xact_lock(hashtext($1)) IS NULL) AS locked',endpoint);
   await retireMobilePushEndpoint(endpoint,tx);
   await tx.$executeRaw`INSERT INTO "StoreChatPushSubscription" ("id","companyId","storeId","userId","endpoint","subscriptionJson","createdAt","updatedAt","chatSessionId","credentialStamp") VALUES (${id},${store.companyId},${store.id},${user.id},${endpoint},${JSON.stringify(payload)}::jsonb,NOW(),NOW(),${user.chatSessionId||null},${user.chatCredentialStamp||null}) ON CONFLICT ("endpoint") DO UPDATE SET "companyId"=EXCLUDED."companyId","storeId"=EXCLUDED."storeId","userId"=EXCLUDED."userId","subscriptionJson"=EXCLUDED."subscriptionJson","chatSessionId"=EXCLUDED."chatSessionId","credentialStamp"=EXCLUDED."credentialStamp","updatedAt"=NOW()`;
   });

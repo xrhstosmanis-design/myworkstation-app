@@ -44,7 +44,7 @@ export async function saveMobilePush(user,value){
  if(!user.sessionId||!Number.isInteger(user.sessionVersion))throw Object.assign(new Error("Συνδέσου ξανά για ειδοποιήσεις."),{status:401});
  await ensureChatMobileSchema();
  await prisma.$transaction(async tx=>{
-  await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))',subscription.endpoint);
+  await tx.$queryRawUnsafe('SELECT (pg_advisory_xact_lock(hashtext($1)) IS NULL) AS locked',subscription.endpoint);
   await tx.$executeRawUnsafe('DELETE FROM "StoreChatPushSubscription" WHERE "endpoint"=$1',subscription.endpoint);
   await tx.$executeRawUnsafe('INSERT INTO "StoreChatMobilePush" ("endpoint","userId","role","sessionId","sessionVersion","supportCompanyId","storeIds","subscriptionJson") VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb) ON CONFLICT ("endpoint") DO UPDATE SET "userId"=EXCLUDED."userId","role"=EXCLUDED."role","sessionId"=EXCLUDED."sessionId","sessionVersion"=EXCLUDED."sessionVersion","supportCompanyId"=EXCLUDED."supportCompanyId","storeIds"=EXCLUDED."storeIds","subscriptionJson"=EXCLUDED."subscriptionJson","updatedAt"=NOW()',subscription.endpoint,user.id,user.platformRole||user.role,user.sessionId,user.sessionVersion,user.supportContext?user.companyId:null,JSON.stringify(stores.map(s=>s.id)),JSON.stringify(subscription));
  });
