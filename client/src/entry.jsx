@@ -73,7 +73,7 @@ import "./components/commerce/promotion-store-guard.css";
 import "./components/commerce/leaflet-import.css";
 import "./components/commerce/bulk-price-preview.css";
 
-const chatMatch=window.location.pathname.match(/^\/chat\/([^/]+)\/?$/);
+const chatMatch=window.location.pathname.match(/^\/chat(?:\/([^/]+))?\/?$/);
 const n40AuditMatch=window.location.pathname.match(/^\/platform-admin\/n40-audit\/?$/);
 const platformMatch=window.location.pathname.match(/^\/platform-admin\/?$/);
 const katTestMatch=window.location.pathname.match(/^\/platform-admin\/kat-test\/?$/);
@@ -139,7 +139,7 @@ const purchaseOrdersHostObserver=new MutationObserver(()=>{syncKioskReportStore(
 purchaseOrdersHostObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["data-report-store-id"]});
 
 if(n40AuditMatch){document.title="MyWorkStation No40 LAB audit";createRoot(document.getElementById("root")).render(<N40ReadonlyAudit/>)}
-else if(chatMatch){document.title="MyWorkStation Chat";createRoot(document.getElementById("root")).render(<StoreChatNotificationPage storeId={decodeURIComponent(chatMatch[1])}/>)}
+else if(chatMatch){document.title="MyWorkStation Chat";createRoot(document.getElementById("root")).render(<StoreChatNotificationPage storeId={chatMatch[1]?decodeURIComponent(chatMatch[1]):undefined}/>)}
 else if(inspectionMatch){document.title="MyWorkStation POS Inspection";createRoot(document.getElementById("root")).render(<PosInspectionApp storeId={decodeURIComponent(inspectionMatch[1])}/>)}
 else if(remoteAssistMatch){document.title="MyWorkStation REMOTE";createRoot(document.getElementById("root")).render(<RemoteAssistAcceptance jobId={decodeURIComponent(remoteAssistMatch[1])}/>)}
 else if(katTestMatch){document.title="MyWorkStation TEST";createRoot(document.getElementById("root")).render(<KatTestCenter/>)}

@@ -13,7 +13,7 @@ test("actual sender marks each provider separately and preserves tenant/sender b
   const rows=[{endpoint:"https://web.push.apple.com/id",subscriptionJson:{endpoint:"https://web.push.apple.com/id"}},{endpoint:"https://fcm.googleapis.com/id",subscriptionJson:{endpoint:"https://fcm.googleapis.com/id"}}],sent=[];
   const code=fs.readFileSync(new URL("../src/store-chat-push.js",import.meta.url),"utf8").split("export async function sendStoreChatPush")[1];
   const fn=vm.runInNewContext("async function sendStoreChatPush"+code+";sendStoreChatPush",{
-    vapidKeys:async()=>{},isApplePushEndpoint,assertCustomerDemoOutboundAllowed,
+    vapidKeys:async()=>{},mobilePushRecipients:async()=>[],removeMobilePushEndpoints:async()=>{},isApplePushEndpoint,assertCustomerDemoOutboundAllowed,
     prisma:{$queryRaw:async(strings,...values)=>{assert.deepEqual(values,["company","B","sender"]);return rows}},
     webpush:{sendNotification:async(subscription,payload,options)=>sent.push({subscription,data:JSON.parse(payload),options})}
   });

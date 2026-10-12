@@ -1,3 +1,4 @@
+import {authorizeChatOperator} from "../chat-operator-auth.mjs";
 import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -118,6 +119,12 @@ export async function auth(req,res,next){
   try{
     const payload=jwt.verify(token,process.env.JWT_SECRET);
     assertCustomerDemoRuntimeClosed(payload);
+
+    if(payload.tokenType==="STORE_CHAT_OPERATOR"){
+      const user=await authorizeChatOperator(req,payload);
+      if(!user)return res.status(401).json({error:"Η σύνδεση Chat έληξε ή δεν επιτρέπει αυτή τη λειτουργία.",code:"CHAT_OPERATOR_SESSION_REJECTED"});
+      req.user=user;return next();
+    }
 
     if(payload.tokenType==="POS_BACKGROUND"){
       const path=String(req.originalUrl||"").split("?")[0];

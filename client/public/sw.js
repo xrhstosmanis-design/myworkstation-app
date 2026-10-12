@@ -1,5 +1,5 @@
 const CACHE_NAME="myworkstation-shell-v1";
-self.addEventListener("install",event=>{self.skipWaiting()});
+self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.add("/chat-offline.html")));self.skipWaiting()});
 self.addEventListener("activate",event=>{event.waitUntil(self.clients.claim())});
 
 const applicationUrl=value=>{
@@ -9,6 +9,7 @@ const applicationUrl=value=>{
   }catch{}
   return new URL("/",self.location.origin);
 };
+const isChatWorker=()=>self.registration.scope&&new URL(self.registration.scope).pathname==="/chat/";
 const sameStore=(client,storeId)=>{
   if(!storeId)return false;
   try{
@@ -28,7 +29,7 @@ self.addEventListener("push",event=>{
     return self.registration.showNotification(data.title||"MyWorkStation · Chat",{
       body:data.body||"Νέο μήνυμα στο Chat",icon:"/pwa-192.png",badge:"/pwa-192.png",
       tag:`store-chat-${data.storeId||"message"}`,renotify:true,silent:false,vibrate:[200,100,200],
-      data:{url:applicationUrl(data.storeId?`/chat/${encodeURIComponent(String(data.storeId))}`:data.url).href}
+      data:{url:applicationUrl(data.storeId?`/chat/${encodeURIComponent(String(data.storeId))}${isChatWorker()?"/":""}`:data.url).href}
     });
   }));
 });
@@ -38,8 +39,9 @@ self.addEventListener("notificationclick",event=>{
   const legacyStore=original.pathname.match(/^\/store\/([^/]+)\/?$/);
   const target=legacyStore?applicationUrl(`/chat/${legacyStore[1]}`):original;
   event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(windows=>{
+    const chatScope=isChatWorker();
     const existing=windows.find(client=>{
-      try{const url=new URL(client.url);return url.origin===target.origin&&url.pathname.replace(/\/$/,"")===target.pathname.replace(/\/$/,"")}catch{return false}
+      try{const url=new URL(client.url);return url.origin===target.origin&&(url.pathname.replace(/\/$/,"")===target.pathname.replace(/\/$/,"")||(chatScope&&target.pathname.startsWith("/chat/")&&url.pathname.startsWith("/chat/")))}catch{return false}
     });
     if(existing){
       if(target.pathname.startsWith("/chat/"))existing.postMessage({type:"STORE_CHAT_OPEN",storeId:decodeURIComponent(target.pathname.split("/")[2])});
@@ -48,4 +50,4 @@ self.addEventListener("notificationclick",event=>{
     return clients.openWindow(target.href);
   }));
 });
-self.addEventListener("fetch",event=>{if(event.request.method!=="GET"||new URL(event.request.url).origin!==self.location.origin)return;event.respondWith(fetch(event.request).catch(()=>caches.match(event.request))) });
+self.addEventListener("fetch",event=>{if(event.request.method!=="GET"||new URL(event.request.url).origin!==self.location.origin)return;if(event.request.mode==="navigate"&&new URL(event.request.url).pathname.startsWith("/chat/"))event.respondWith(fetch(event.request).catch(()=>caches.match("/chat-offline.html")));});

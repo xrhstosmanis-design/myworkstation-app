@@ -1,0 +1,8 @@
+
+import React,{useEffect,useState} from "react";
+export default function ChatOperatorLogin({storeId,api,onLogin}){
+ const [operators,setOperators]=useState([]),[employeeId,setEmployeeId]=useState(""),[pin,setPin]=useState(""),[error,setError]=useState(""),[busy,setBusy]=useState(false);
+ useEffect(()=>{let active=true;api("/api/operators/stores/"+encodeURIComponent(storeId)+"/directory",{anonymous:true}).then(data=>{if(active)setOperators(data.operators||data.rows||[])}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[storeId]);
+ async function submit(event){event.preventDefault();setBusy(true);setError("");try{const data=await api("/api/operators/login/chat-pin",{anonymous:true,method:"POST",body:JSON.stringify({storeId,employeeId,pin})});setPin("");await onLogin({...data,user:{...data.user,store:data.store,company:data.company,chatOperator:true}})}catch(e){setPin("");setError(e.message)}finally{setBusy(false)}}
+ return <form className="login-card chat-mobile-login" onSubmit={submit}><h2>Προσωπική σύνδεση Chat</h2><p>Μόνο συνομιλία αυτού του καταστήματος.</p><label>Χειριστής<select value={employeeId} onChange={e=>setEmployeeId(e.target.value)} required><option value="">Επίλεξε το όνομά σου</option>{operators.filter(o=>o.hasPin).map(o=><option key={o.employeeId} value={o.employeeId}>{o.displayName}</option>)}</select></label><label>Προσωπικό PIN<input type="password" inputMode="numeric" pattern="[0-9]{4,8}" autoComplete="off" value={pin} onChange={e=>setPin(e.target.value)} required/></label>{error&&<p role="alert">{error}</p>}<button disabled={busy}>{busy?"Σύνδεση…":"Άνοιγμα Chat"}</button></form>
+}

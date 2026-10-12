@@ -1,3 +1,5 @@
+import chatMobileRoutes from "./routes/chat-mobile.js";
+import {registerChatPwa} from "./chat-pwa.mjs";
 import storeBakingRoutes from "./routes/store-baking.js";
 import {ensureStoreBakingSchema} from "./store-baking.js";
 import {blockCustomerDemoRequest} from "./middleware/customer-demo-runtime.js";
@@ -257,6 +259,7 @@ app.use("/api/cash-control",auth,requireCompanyModule("CASH_CONTROL"),cashContro
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerPriceBulkPreviewRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,productAuditCapture);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductSmartEntryRoutes);
+app.use("/api/store-chat/mobile",auth,chatMobileRoutes);
 app.use("/api/store-chat",auth,requireStoreModule("STORE_CHAT"),storeChatRoutes);
 app.use("/api/pending-center",auth,requireCompanyModule("PENDING_CENTER"),pendingCenterRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductCompositionRoutes);
@@ -287,6 +290,7 @@ app.use((err,req,res,next)=>{console.error(err);if(String(err?.meta?.message||er
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
 app.use(express.static(dist));
+registerChatPwa(app,{dist,readFile,path});
 app.get("/store/:storeId/manifest.webmanifest",(req,res)=>{
   if(!validPwaStoreId(req.params.storeId))return res.sendStatus(404);
   res.set("Cache-Control","no-store").type("application/manifest+json").json(storeManifest(req.params.storeId));
