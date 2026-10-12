@@ -12,24 +12,27 @@ const totalKeys=["shifts","cashSales","cardSales","eftposTotal","expenses","vari
 
 // An allowlist projection excludes images, private notes, identities and arbitrary
 // nested report contents. These amounts/rules come from the existing report.
-export function cashEvidence(report){
+export function cashEvidence(report,scope=null){
+  if(scope&&(!Array.isArray(report?.rows)||report.rows.some(row=>row.companyId!==scope.companyId||row.storeId!==scope.storeId)))throw Object.assign(new Error("Ο έλεγχος ταμείων δεν αντιστοιχεί στο επιλεγμένο κατάστημα."),{status:502});
   if(!Array.isArray(report?.rows)||!calendarDate.safeParse(report?.date).success)throw Object.assign(new Error("Ο έλεγχος ταμείων επέστρεψε μη έγκυρα στοιχεία."),{status:502});
   const rows=report.rows.slice(0,100).map(row=>({...pick(row,sessionKeys),auditRule:pick(row.auditRule,["mode","carryOverEnabled","posEftposEnabled"])}));
-  return {source:"Έλεγχος ταμείων",date:report.date,fromTime:report.fromTime,toTime:report.toTime,timeZone:report.timeZone,scope:"PLATFORM_ALL_STORES",closedShiftsOnly:true,totalRows:report.rows.length,truncated:report.rows.length>rows.length,rows,totals:pick(report.totals,totalKeys)};
+  return {source:"Έλεγχος ταμείων",date:report.date,fromTime:report.fromTime,toTime:report.toTime,timeZone:report.timeZone,scope:scope?"PLATFORM_SELECTED_STORE":"PLATFORM_ALL_STORES",...(scope?{companyId:scope.companyId,storeId:scope.storeId,companyName:scope.companyName,storeName:scope.storeName}:{}),closedShiftsOnly:true,totalRows:report.rows.length,truncated:report.rows.length>rows.length,rows,totals:pick(report.totals,totalKeys)};
 }
 
-export async function readCanonicalPlatformCash(req,date,{fetchImpl=fetch,port=process.env.PORT||8080,signal}={}){
+export async function readCanonicalPlatformCash(req,date,{fetchImpl=fetch,port=process.env.PORT||8080,signal,scope=null}={}){
   // Called only behind Platform auth. Never derive a URL, method, scope or
   // authorization from the model, request host, body or a tool argument.
   if(!(req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"))throw Object.assign(new Error("Απαιτείται πρόσβαση Platform Super Admin."),{status:403});
   const authorization=req.headers?.authorization;
   if(typeof authorization!=="string"||!/^Bearer \S+$/.test(authorization))throw Object.assign(new Error("Απαιτείται ενεργή σύνδεση."),{status:401});
   const validPort=String(port);if(!/^\d{1,5}$/.test(validPort)||Number(validPort)<1||Number(validPort)>65535)throw Object.assign(new Error("Η σύνδεση του ελέγχου δεν είναι διαθέσιμη."),{status:503});
+  const selected=scope?{...z.object({companyId:z.string().trim().min(1).max(160),storeId:z.string().trim().min(1).max(160)}).parse({companyId:scope.companyId,storeId:scope.storeId}),companyName:scope.companyName,storeName:scope.storeName}:null;
   const query=new URLSearchParams({fromTime:"00:00",toTime:"23:59"});
+  if(selected)query.set("storeId",selected.storeId);
   if(date!==null)query.set("date",calendarDate.parse(date));
   const response=await fetchImpl(`http://127.0.0.1:${validPort}/api/platform/cash-control/daily?${query}`,{method:"GET",headers:{Authorization:authorization},redirect:"error",signal});
   if(!response.ok)throw Object.assign(new Error("Δεν ήταν δυνατή η ανάγνωση του ελέγχου ταμείων. Δεν εμφανίζονται εκτιμήσεις ή παλαιά στοιχεία."),{status:response.status===401||response.status===403?response.status:502});
-  return cashEvidence(await response.json());
+  return cashEvidence(await response.json(),selected);
 }
 
 export async function runCashAssistant({prompt,requestProvider,readCash,tool=cashTool}){
@@ -53,4 +56,3 @@ export async function runCashAssistant({prompt,requestProvider,readCash,tool=cas
   }
   throw Object.assign(new Error("Ο βοηθός δεν ολοκλήρωσε την απάντηση."),{status:502});
 }
-

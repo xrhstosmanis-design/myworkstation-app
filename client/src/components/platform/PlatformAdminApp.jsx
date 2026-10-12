@@ -1,3 +1,4 @@
+import {requestPlatformAssistant} from "./platform-assistant-context.mjs";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {readBackofficeContext} from "../../utils/backofficeSessionBoundary.mjs";
 import {n40ReadHeaders,n40PublishRead} from "../../../../shared/n40-read-trace.mjs";
@@ -86,6 +87,12 @@ const cashShiftResult=row=>{
 };
 
 async function request(path,options={}){
+  if(path==="/api/platform/ai-command-center/ask"){
+    return requestPlatformAssistant(rawPlatformRequest,path,options,localStorage,sessionStorage);
+  }
+  return rawPlatformRequest(path,options);
+}
+async function rawPlatformRequest(path,options={}){
   const {n40Scope,...fetchOptions}=options;
   const trace=n40ReadHeaders(path,n40Scope,options.method||"GET");
   const token=localStorage.getItem("token");
@@ -689,4 +696,3 @@ export default function PlatformAdminApp(){
     {(deviceOperationsManager||terminalManager)&&<DeviceOperationsCenter manager={deviceOperationsManager||terminalManager} request={request} initialOpen={Boolean(deviceOperationsManager)||openDeviceCenter} onLaunch={()=>{if(terminalManager){setDeviceOperationsManager(terminalManager);setTerminalManager(null)}}}/>}
   </div>;
 }
-

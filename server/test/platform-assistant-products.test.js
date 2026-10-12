@@ -59,7 +59,7 @@ test("selected sales/stock tools use canonical filters and privacy projection wi
 });
 
 test("unselected scope cannot invoke products or accept model company/store injection",async()=>{
-  for(const selectionValue of [null,selection]){let reads=0;const assistant=await createPlatformAssistantSession(req,selectionValue,{authorize:async()=>selectionValue?scope:null,readSalesReport:async()=>{reads++;return sales()}});
+  for(const selectionValue of [null,selection]){let reads=0;const assistant=await createPlatformAssistantSession(req,selectionValue,{allStores:selectionValue===null,authorize:async()=>selectionValue?scope:null,readSalesReport:async()=>{reads++;return sales()}});
     const tool=call("sales_by_product");if(selectionValue)tool.arguments=JSON.stringify({...args,storeId:"foreign"});
     await denial(assistant.run({prompt:"Fixture",requestProvider:async()=>({response:{ok:true},raw:{output:[tool]}})}),selectionValue?422:502);assert.equal(reads,0);
   }
