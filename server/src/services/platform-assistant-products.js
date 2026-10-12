@@ -7,6 +7,7 @@ import {readSalesAnalysisReport} from "../routes/kiosk-reports-sales-v4.js";
 import {readStockAnalysisReport} from "../routes/kiosk-reports-stock-v3.js";
 import {salesStoresTool,readAssistantSalesStores} from "./assistant-sales-stores.js";
 import {authorizePlatformSalesStores,salesAccessKey} from "./assistant-sales-access.js";
+import {consumptionTool,readAssistantConsumption,toolsForAssistantQuestion} from "./assistant-consumption.js";
 
 const fail=(status,message,code)=>{throw Object.assign(new Error(message),{status,code})};
 export async function authorizePlatformAssistant(req,selection,{db=prisma,now=new Date()}={}){
@@ -24,7 +25,7 @@ export async function authorizePlatformAssistant(req,selection,{db=prisma,now=ne
 
 // The model gets no scope argument. Only an explicit UI pair, reauthorized at
 // every boundary, can reach the shared, parameterized canonical calculation.
-export async function createPlatformAssistantSession(req,selection,{authorize=authorizePlatformAssistant,readSalesReport=readSalesAnalysisReport,readStockReport=readStockAnalysisReport,readCash=readCanonicalPlatformCash,readSalesCatalog,authorizeSalesStores=authorizePlatformSalesStores,allStores=false,signal}={}){
+export async function createPlatformAssistantSession(req,selection,{authorize=authorizePlatformAssistant,readSalesReport=readSalesAnalysisReport,readStockReport=readStockAnalysisReport,readCash=readCanonicalPlatformCash,readConsumption=readAssistantConsumption,readSalesCatalog,authorizeSalesStores=authorizePlatformSalesStores,allStores=false,signal}={}){
   const scope=await authorize(req,selection);
   if(!scope&&!allStores)fail(422,"Επίλεξε κατάστημα ή την κεντρική αναφορά όλων των καταστημάτων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
   let salesAccess=null;
@@ -38,9 +39,12 @@ export async function createPlatformAssistantSession(req,selection,{authorize=au
   const evidence=report=>({...report,scope:"PLATFORM_SELECTED_STORE"});
   const cashScope=allStores?null:scope;
   const sessionCashTool=cashScope?{...cashTool,description:"Διαβάζει τον κανονικό έλεγχο κλεισμένων βαρδιών μόνο στο ήδη επιλεγμένο εξουσιοδοτημένο κατάστημα. date: YYYY-MM-DD ή null για σήμερα (ώρα Ελλάδας). Δεν περιλαμβάνει ανοικτές βάρδιες και δεν αλλάζει στοιχεία."}:cashTool;
-  const tools=[sessionCashTool,...(scope?assistantProductTools:[]),...(scope||allStores?[salesStoresTool]:[])];
-  return {scope,tools,async run({prompt,requestProvider}){
-    const out=await runProductAssistant({prompt,cashTool:sessionCashTool,tools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
+  const tools=[sessionCashTool,...(scope?assistantProductTools:[]),...(scope||allStores?[salesStoresTool]:[]),...(scope?[consumptionTool]:[])];
+  return {scope,tools,async run({prompt,question="",requestProvider}){
+    const questionTools=toolsForAssistantQuestion(question,tools);
+    if(!questionTools.length)fail(422,"Επίλεξε συγκεκριμένο κατάστημα για ιδιοκατανάλωση ή καταστροφή προϊόντων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
+    const out=await runProductAssistant({prompt,cashTool:sessionCashTool,tools:questionTools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
+      readConsumption:async args=>{await verify();const report=await readConsumption(args,scope,{signal});await verify();return evidence(report)},
       readSalesStores:async args=>{salesAccess=await authorizeSalesStores(req,selection,allStores,{authorize});return readAssistantSalesStores(args,salesAccess,{readReport:readSalesReport,...(readSalesCatalog?{readCatalog:readSalesCatalog}:{}),verify,signal})},
       readCash:async date=>{await verify();const report=await readCash(req,date,{signal,scope:cashScope});await verify();return report},
       readSales:async value=>{
