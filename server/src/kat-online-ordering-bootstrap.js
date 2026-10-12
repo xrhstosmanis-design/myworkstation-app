@@ -1,4 +1,5 @@
 import {prisma} from "./prisma.js";
+import {ensureOnlineMemberSchema} from "./online-members.js";
 
 const statements=[
 `CREATE TABLE IF NOT EXISTS "ModuleCommercialTerms" (
@@ -299,4 +300,4 @@ async function ensureKatPilotDefaults(){
   await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept","stockCheckEnabled","publicSlug") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE,'kat') ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"publicSlug"=COALESCE("OnlineOrderingConfig"."publicSlug",'kat'),"updatedAt"=CURRENT_TIMESTAMP`;
   await prisma.$executeRaw`INSERT INTO "OnlineProductVisibility" ("id","companyId","storeId","productId","visible") SELECT md5(${store.id} || ':' || sp."productId"),${store.companyId},${store.id},sp."productId",TRUE FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE ON CONFLICT ("storeId","productId") DO NOTHING`;
 }
-export async function ensureKatOnlineOrderingSchema(){for(const statement of statements)await prisma.$executeRawUnsafe(statement);await ensureKatPilotDefaults();await ensureRecipeIngredientsTracked();await ensureOnlineActorProtection();await reconcileDeliveredOnlineSales();console.log("Online ordering schema/config bootstrap completed.")}
+export async function ensureKatOnlineOrderingSchema(){for(const statement of statements)await prisma.$executeRawUnsafe(statement);await ensureOnlineMemberSchema(prisma);await ensureKatPilotDefaults();await ensureRecipeIngredientsTracked();await ensureOnlineActorProtection();await reconcileDeliveredOnlineSales();console.log("Online ordering schema/config bootstrap completed.")}

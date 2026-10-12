@@ -1,4 +1,5 @@
 import {policyAvailable,ensureStoreBakingSchema} from "../store-baking.js";
+import {registerOnlineMember,createRegistrationLimiter,memberDiscountPercent,normalizeMemberPhone} from "../online-members.js";
 import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
 import {Router} from "express";
 import crypto from "crypto";
@@ -22,11 +23,11 @@ const issueMemberToken=payload=>{
   return jwt.sign(payload,secret,{expiresIn:"12h"});
 };
 const phoneNormalized=value=>String(value||"").replace(/\D/g,"");
-const memberDiscount=(config,type)=>money(type==="DOCTOR"?config.doctorDiscountPercent:config.nurseDiscountPercent);
+const memberDiscount=memberDiscountPercent;
 const specialPrice=(price,config,type)=>money(Number(price||0)*(1-memberDiscount(config,type)/100));
 async function verifiedMember(req,store){
   const token=String(req.headers.authorization||"").replace(/^Bearer\s+/i,"");if(!token)return null;
-  try{const payload=jwt.verify(token,memberTokenSecret());if(payload?.storeId!==store.id||!["DOCTOR","NURSE"].includes(payload?.memberType)||!payload?.memberId)return null;const row=(await prisma.$queryRaw`SELECT "id","memberType","active" FROM "OnlineStoreMember" WHERE "id"=${payload.memberId} AND "storeId"=${store.id} LIMIT 1`)[0];return row?.active&&row.memberType===payload.memberType?row:null}catch{return null}
+  try{const payload=jwt.verify(token,memberTokenSecret());if(payload?.storeId!==store.id||!["DOCTOR","NURSE","STAFF","CUSTOMER"].includes(payload?.memberType)||!payload?.memberId)return null;const row=(await prisma.$queryRaw`SELECT "id","memberType","active","approvalStatus" FROM "OnlineStoreMember" WHERE "id"=${payload.memberId} AND "companyId"=${store.companyId} AND "storeId"=${store.id} LIMIT 1`)[0];return row?.active&&row.approvalStatus==='APPROVED'&&row.memberType===payload.memberType?row:null}catch{return null}
 }
 const dayCodes={Mon:"MON",Tue:"TUE",Wed:"WED",Thu:"THU",Fri:"FRI",Sat:"SAT",Sun:"SUN"};
 export function onlineStoreOpen(config,now=new Date()){
@@ -87,8 +88,16 @@ async function modifierCatalog(companyId){
 }
 function groupsForProduct(product,groups){const type=productType(product.name);return groups.filter(g=>groupAllowed(type,g.description)).map(g=>g.id)}
 
+const limitRegistration=createRegistrationLimiter();
+router.post(["/member-registration","/:publicSlug/member-registration"],safe(async(req,res)=>{
+  const {store}=await context(req.params.publicSlug||null);
+  limitRegistration({storeId:store.id,ip:req.ip||'unknown',phone:normalizeMemberPhone(req.body?.phone)});
+  const result=await registerOnlineMember(prisma,store,req.body||{});
+  res.status(result.status).json(result.body);
+}));
+
 router.post(["/member-session","/:publicSlug/member-session"],safe(async(req,res)=>{
-  const {store,config}=await context(req.params.publicSlug||null),body=z.object({phone:z.string().trim().min(6).max(40),pin:z.string().regex(/^\d{6}$/)}).parse(req.body||{}),phone=phoneNormalized(body.phone);const row=(await prisma.$queryRaw`SELECT "id","fullName","memberType","pinHash","active" FROM "OnlineStoreMember" WHERE "storeId"=${store.id} AND "phoneNormalized"=${phone} LIMIT 1`)[0];if(!row?.active||!row.pinHash||!(await bcrypt.compare(body.pin,row.pinHash)))return res.status(401).json({error:"Δεν βρέθηκε ενεργός δικαιούχος με αυτά τα στοιχεία."});const token=issueMemberToken({memberId:row.id,storeId:store.id,memberType:row.memberType});res.json({token,member:{fullName:row.fullName,memberType:row.memberType,discountPercent:memberDiscount(config,row.memberType)}});
+  const {store,config}=await context(req.params.publicSlug||null),body=z.object({phone:z.string().trim().min(6).max(40),pin:z.string().regex(/^\d{6}$/)}).parse(req.body||{}),phone=phoneNormalized(body.phone);const row=(await prisma.$queryRaw`SELECT "id","fullName","memberType","pinHash","active","approvalStatus" FROM "OnlineStoreMember" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "phoneNormalized"=${phone} LIMIT 1`)[0];if(!row?.pinHash||!(await bcrypt.compare(body.pin,row.pinHash)))return res.status(401).json({error:"Δεν βρέθηκε ενεργός δικαιούχος με αυτά τα στοιχεία."});if(row.approvalStatus==='PENDING')return res.status(403).json({error:"Η αίτηση περιμένει έγκριση από το κατάστημα."});if(!row.active||row.approvalStatus!=='APPROVED'||!["DOCTOR","NURSE","STAFF","CUSTOMER"].includes(row.memberType))return res.status(401).json({error:"Δεν βρέθηκε ενεργός δικαιούχος με αυτά τα στοιχεία."});const token=issueMemberToken({memberId:row.id,storeId:store.id,memberType:row.memberType});res.json({token,member:{fullName:row.fullName,memberType:row.memberType,discountPercent:memberDiscount(config,row.memberType)}});
 }));
 
 router.get(["/catalog-modifiers","/:publicSlug/catalog-modifiers"],safe(async(req,res)=>{
@@ -103,6 +112,7 @@ router.get(["/catalog-modifiers","/:publicSlug/catalog-modifiers"],safe(async(re
 const orderSchema=z.object({
   idempotencyKey:z.string().min(8).max(160),fulfillmentType:z.enum(["DELIVERY","PICKUP"]),paymentMethod:z.enum(["CASH","CARD"]),
   customerName:z.string().trim().min(2).max(120),customerPhone:z.string().trim().min(6).max(40),building:z.string().trim().max(120).optional().nullable(),floor:z.string().trim().max(80).optional().nullable(),department:z.string().trim().max(160).optional().nullable(),room:z.string().trim().max(120).optional().nullable(),deliveryNotes:z.string().trim().max(500).optional().nullable(),
+  expectedSubtotal:z.number().nonnegative().optional(),
   items:z.array(z.object({productId:z.string().min(1),quantity:z.coerce.number().int().min(1).max(50),modifierIds:z.array(z.string().min(1)).max(20).default([])})).min(1).max(50)
 });
 
@@ -119,7 +129,7 @@ router.post(["/orders-with-modifiers","/:publicSlug/orders-with-modifiers"],safe
   const byId=new Map(products.map(p=>[p.id,p])),groups=await modifierCatalog(store.companyId),modifierById=new Map();for(const g of groups)for(const m of g.items)modifierById.set(m.id,{...m,groupId:g.id,groupDescription:g.description});
   const lines=[];
   for(const item of body.items){const product=byId.get(item.productId);if(!product)return res.status(409).json({error:"Ένα προϊόν δεν είναι πλέον διαθέσιμο."});if(!onlineProductAvailable(product,config,body.items.filter(i=>i.productId===item.productId).reduce((n,i)=>n+i.quantity,0)))return res.status(409).json({error:`Δεν υπάρχει αρκετό απόθεμα για: ${product.name}`});const allowedGroups=new Set(groupsForProduct(product,groups)),selected=[];for(const id of [...new Set(item.modifierIds)]){const m=modifierById.get(id);if(!m||!allowedGroups.has(m.groupId))return res.status(409).json({error:`Μη έγκυρη επιλογή για: ${product.name}`});selected.push({id:m.id,groupId:m.groupId,group:m.groupDescription,description:m.description,price:money(m.price)})}const modifierTotal=money(selected.reduce((s,m)=>s+m.price,0)),baseOnline=onlineUnitPrice(product.storePrice,config),basePrice=member?specialPrice(baseOnline,config,member.memberType):baseOnline,unit=money(basePrice+modifierTotal),lineTotal=money(unit*item.quantity);lines.push({productId:product.id,productName:product.name,quantity:item.quantity,storeUnitPrice:money(product.storePrice),onlineSurcharge:money(basePrice-money(product.storePrice)),onlineUnitPrice:unit,lineTotal,modifiers:selected})}
-  const subtotal=money(lines.reduce((s,l)=>s+l.lineTotal,0)),minimum=money(config.minimumOrderRetail||0);if(subtotal<minimum)return res.status(409).json({error:`Η ελάχιστη παραγγελία είναι ${minimum.toFixed(2).replace(".",",")} €.`});const deliveryFee=body.fulfillmentType==="DELIVERY"?money(config.deliveryFee):0,total=money(subtotal+deliveryFee),id=crypto.randomUUID();
+  const subtotal=money(lines.reduce((s,l)=>s+l.lineTotal,0));if(body.expectedSubtotal!==undefined&&money(body.expectedSubtotal)!==subtotal)return res.status(409).json({error:"Η τιμή ή η έκπτωση άλλαξε. Ανανεώσαμε το καλάθι· έλεγξε το νέο σύνολο πριν υποβάλεις."});const minimum=money(config.minimumOrderRetail||0);if(subtotal<minimum)return res.status(409).json({error:`Η ελάχιστη παραγγελία είναι ${minimum.toFixed(2).replace(".",",")} €.`});const deliveryFee=body.fulfillmentType==="DELIVERY"?money(config.deliveryFee):0,total=money(subtotal+deliveryFee),id=crypto.randomUUID();
   const prefix=String(store.name||"").toLocaleLowerCase("el-GR").includes("κυλικείο κατ")?"KAT":"ONL";
   let orderNumber;
   let createStage="START";

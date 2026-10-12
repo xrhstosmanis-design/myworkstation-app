@@ -1,0 +1,10 @@
+import React,{useEffect,useState} from 'react';
+import {onlineStoreQR} from '../../utils/online-store-qr.js';
+import {renderOnlineStoreQRPrint} from '../../utils/online-store-qr-print.js';
+export default function OnlineStoreQR({storeId,savedSlug,storeName,enabled}){
+ const [qr,setQR]=useState({url:'',image:''}),[error,setError]=useState('');
+ useEffect(()=>{let alive=true;setQR({url:'',image:''});setError('');onlineStoreQR(window.location.origin,savedSlug).then(value=>{if(alive)setQR(value)}).catch(()=>{if(alive)setError('Δεν δημιουργήθηκε το QR. Δοκίμασε ξανά.')});return()=>{alive=false}},[storeId,savedSlug]);
+ const download=()=>{const a=document.createElement('a');a.href=qr.image;a.download=`online-${savedSlug}-qr.png`;a.click()};
+ const print=(format)=>{const w=window.open('','_blank','width=600,height=800');if(!w){setError('Επίτρεψε το παράθυρο εκτύπωσης και δοκίμασε ξανά.');return}const images=renderOnlineStoreQRPrint(w.document,{format,storeName,url:qr.url,image:qr.image});let printed=false;const finish=()=>{if(printed||!images.every(img=>img.complete&&img.naturalWidth))return;printed=true;w.focus();w.print()};for(const img of images){img.onload=finish;img.onerror=()=>{setError('Δεν φορτώθηκε το QR για εκτύπωση. Δοκίμασε ξανά.');w.close()}}finish()};
+ return <section className="online-store-qr" aria-label="QR online καταστήματος"><div><h3>QR για τους πελάτες</h3><p>Ο πελάτης σκανάρει και ανοίγει το κατάστημα στο κινητό του.</p>{qr.url?<a href={qr.url} target="_blank" rel="noreferrer">{qr.url}</a>:<p>Αποθήκευσε πρώτα το δημόσιο URL του καταστήματος.</p>}{!enabled&&<p>Το κατάστημα παραμένει κλειστό. Το ίδιο QR θα λειτουργεί μετά την ενεργοποίηση.</p>}{error&&<p role="alert">{error}</p>}<div className="online-settings-actions"><button type="button" disabled={!qr.image} onClick={download}>Λήψη QR</button><button type="button" disabled={!qr.image} onClick={()=>print('cards')}>Καρτάκια · A4</button><button type="button" disabled={!qr.image} onClick={()=>print('sign')}>Πινακάκι · A5</button></div></div>{qr.image&&<img src={qr.image} alt={`QR για ${storeName}`}/>}</section>;
+}

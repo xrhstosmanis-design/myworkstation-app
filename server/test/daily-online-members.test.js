@@ -1,0 +1,60 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
+import {onlineRegistrationSchema,memberDiscountPercent,createRegistrationLimiter,ensureOnlineMemberSchema,registerOnlineMember,changeOnlineMember} from '../src/online-members.js';
+const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
+const input=(memberType='STAFF',phone='6900000001')=>({fullName:'Εικονικό Μέλος LAB',phone,memberType,pin:'123456',pinConfirmation:'123456'});
+test('registration rejects invalid and mismatched credentials, strips privilege injection',()=>{
+ for(const value of [{pin:'12345'}, {pinConfirmation:'654321'}, {memberType:'ADMIN'}, {fullName:'A'}])assert.equal(onlineRegistrationSchema.safeParse({...input(),...value}).success,false);
+ const body=onlineRegistrationSchema.parse({...input(),active:true,approvalStatus:'APPROVED',discountPercent:100});
+ assert.equal(body.active,undefined);assert.equal(body.approvalStatus,undefined);assert.equal(body.discountPercent,undefined);
+ const cfg={doctorDiscountPercent:15,nurseDiscountPercent:10,staffDiscountPercent:7.5};
+ assert.deepEqual(['DOCTOR','NURSE','STAFF','CUSTOMER','ADMIN'].map(type=>memberDiscountPercent(cfg,type)),[15,10,7.5,0,0]);
+ assert.equal(memberDiscountPercent({},'STAFF'),0);assert.equal(memberDiscountPercent({staffDiscountPercent:Infinity},'STAFF'),0);
+});
+test('registration limiter permits shared Wi-Fi, bounds one phone, separates stores and expires',()=>{
+ let now=0;const limit=createRegistrationLimiter({now:()=>now});
+ for(let i=0;i<30;i++)limit({storeId:'store',ip:'wifi',phone:`690000${i}`});
+ for(let i=0;i<5;i++)limit({storeId:'store',ip:'wifi',phone:'repeat'});
+ assert.throws(()=>limit({storeId:'store',ip:'different',phone:'repeat'}),e=>e.status===429);
+ limit({storeId:'control',ip:'wifi',phone:'repeat'});
+ now=15*60*1000;limit({storeId:'store',ip:'wifi',phone:'repeat'});
+ const bounded=createRegistrationLimiter({maxKeys:3});bounded({storeId:'s',ip:'i',phone:'p'});
+ assert.throws(()=>bounded({storeId:'s',ip:'new',phone:'new'}),e=>e.status===429);
+ const small=createRegistrationLimiter({maxKeys:2});small({storeId:'s',ip:'i',phone:'p'});
+ assert.throws(()=>small({storeId:'s',ip:'new',phone:'new'}),e=>e.status===429);
+});
+test('native members preserve legacy accounts, duplicate PIN, approval audit and tenant boundaries',{skip:!isolated()},async()=>{
+ const {PrismaClient}=await import('@prisma/client');
+ const admin=new PrismaClient(),schema=`online_members_test_${crypto.randomUUID().replaceAll('-','')}`,url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
+ const db=new PrismaClient({datasourceUrl:url.toString()}),store={companyId:'company',id:'store'},actor={id:null,email:'fictional-admin'};
+ try{
+  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
+  await db.$executeRawUnsafe(`CREATE TABLE "OnlineStoreMember" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"fullName" TEXT NOT NULL,"phoneNormalized" TEXT NOT NULL,"pinHash" TEXT NOT NULL,"memberType" TEXT NOT NULL CONSTRAINT "OnlineStoreMember_member_type_check" CHECK ("memberType" IN ('DOCTOR','NURSE')),"active" BOOLEAN NOT NULL,"createdAt" TIMESTAMPTZ DEFAULT NOW(),"updatedAt" TIMESTAMPTZ DEFAULT NOW(),UNIQUE("storeId","phoneNormalized"))`);
+  await db.$executeRawUnsafe(`CREATE TABLE "AuthAudit" ("id" TEXT PRIMARY KEY,"userId" TEXT,"email" TEXT,"event" TEXT,"success" BOOLEAN,"deviceName" TEXT,"ipAddress" TEXT,"userAgent" TEXT,"createdAt" TIMESTAMPTZ DEFAULT NOW())`);
+  await db.$executeRawUnsafe(`INSERT INTO "OnlineStoreMember" ("id","companyId","storeId","fullName","phoneNormalized","pinHash","memberType","active") VALUES ('legacy','company','store','Legacy','6900000099','legacy-hash','NURSE',TRUE)`);
+  await Promise.all([ensureOnlineMemberSchema(db),ensureOnlineMemberSchema(db)]);
+  const read=async(phone='6900000001',storeId='store')=>(await db.$queryRaw`SELECT * FROM "OnlineStoreMember" WHERE "storeId"=${storeId} AND "phoneNormalized"=${phone}`)[0];
+  const legacy=await read('6900000099');assert.equal(legacy.approvalStatus,'APPROVED');assert.equal(legacy.active,true);assert.equal(legacy.pinHash,'legacy-hash');
+  const results=await Promise.all([registerOnlineMember(db,store,input()),registerOnlineMember(db,store,input())]);
+  assert.equal(results.length,2);const staff=await read();assert.equal(staff.active,false);assert.equal(staff.approvalStatus,'PENDING');assert.equal(await bcrypt.compare('123456',staff.pinHash),true);
+  assert.equal((await db.$queryRaw`SELECT * FROM "AuthAudit"`).length,1);
+  await registerOnlineMember(db,store,{...input(),pin:'654321',pinConfirmation:'654321',memberType:'CUSTOMER'});
+  assert.equal((await read()).pinHash,staff.pinHash);assert.equal((await read()).active,false);
+  await assert.rejects(changeOnlineMember(db,{...store,id:'foreign'},staff.id,{active:true,decision:'APPROVE'},actor),e=>e.status===404);
+  await assert.rejects(changeOnlineMember(db,{...store,companyId:'foreign'},staff.id,{active:true},actor),e=>e.status===404);
+  await changeOnlineMember(db,store,staff.id,{active:true,decision:'APPROVE'},actor);assert.equal((await read()).approvalStatus,'APPROVED');assert.equal((await read()).active,true);
+  await changeOnlineMember(db,store,staff.id,{active:false},actor);assert.equal((await read()).active,false);
+  await registerOnlineMember(db,store,input());assert.equal((await read()).active,false);
+  await registerOnlineMember(db,store,input('DOCTOR','6900000002'));const doctor=await read('6900000002');
+  await changeOnlineMember(db,store,doctor.id,{active:false,decision:'REJECT'},actor);assert.equal((await read('6900000002')).approvalStatus,'REJECTED');
+  await assert.rejects(changeOnlineMember(db,store,doctor.id,{active:false,decision:'REJECT'},actor),e=>e.status===409);
+  assert.equal((await registerOnlineMember(db,store,input('CUSTOMER','6900000003'))).status,201);assert.equal((await read('6900000003')).active,true);
+  await registerOnlineMember(db,{companyId:'other',id:'other-store'},input());assert.equal((await read('6900000001','other-store')).companyId,'other');
+  const audits=await db.$queryRaw`SELECT * FROM "AuthAudit"`;for(const audit of audits)assert.doesNotMatch(JSON.stringify(audit),/123456|654321|690000000/);
+  await db.$executeRawUnsafe(`DROP TABLE "AuthAudit"`);
+  await assert.rejects(registerOnlineMember(db,store,input('STAFF','6900000004')));assert.equal(await read('6900000004'),undefined);
+  await assert.rejects(changeOnlineMember(db,store,staff.id,{active:true},actor));assert.equal((await read()).active,false);
+ }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
+});
