@@ -108,7 +108,7 @@ export async function sendCashShiftClosedEmail({to,storeName,session,companyId,s
   const duplicateReview=Array.isArray(session.duplicateReview)?session.duplicateReview:[];
   const alert=Math.abs(variance)>0.009||Math.abs(cardVariance)>0.009||Math.abs(openingVariance)>0.009||duplicateReview.length>0;
   const closedAt=session.closedAt?new Date(session.closedAt):new Date();
-  const subject=`${alert?"ΠΡΟΣΟΧΗ · ":""}Κλείσιμο ταμείου · ${storeName} · ${closedAt.toLocaleDateString("el-GR")}`;
+  const subject=`${alert?"ΠΡΟΣΟΧΗ · ":""}Κλείσιμο ταμείου · ${storeName} · ${closedAt.toLocaleDateString("el-GR",{timeZone:"Europe/Athens"})}`;
   const rows=[
     ["Κατάστημα",storeName],["Βάρδια",session.shiftLabel],["Υπεύθυνος",session.closedByName||"—"],
     ["Μετρητά πωλήσεων",eur(session.cashSales)],["Κάρτες POS",eur(session.cardSales)],
@@ -120,7 +120,7 @@ export async function sendCashShiftClosedEmail({to,storeName,session,companyId,s
     ["Έναρξη επόμενης",eur(session.nextOpeningTotal)]
   ];
   const duplicateText=duplicateReview.length
-    ?duplicateReview.map(item=>`${new Date(item.firstAt).toLocaleString("el-GR")} → ${new Date(item.secondAt).toLocaleString("el-GR")} · ${eur(item.total)} · ${(item.products||[]).join(", ")}`).join("\n")
+    ?duplicateReview.map(item=>`${new Date(item.firstAt).toLocaleString("el-GR",{timeZone:"Europe/Athens"})} → ${new Date(item.secondAt).toLocaleString("el-GR",{timeZone:"Europe/Athens"})} · ${eur(item.total)} · ${(item.products||[]).join(", ")}`).join("\n")
     :"Δεν βρέθηκαν διαδοχικές ίδιες συναλλαγές.";
   const text=[subject,"",...rows.map(([label,value])=>`${label}: ${value}`),"",`Έλεγχος διπλών συναλλαγών:\n${duplicateText}`,session.closingNote?`\nΣημείωση: ${session.closingNote}`:""].join("\n");
   const htmlRows=rows.map(([label,value])=>`<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escapeHtml(label)}</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:700">${escapeHtml(value)}</td></tr>`).join("");
@@ -144,7 +144,7 @@ export async function sendLedgerAlertEmail({to,kind,storeName,amount,actorName,o
   const isReversal=kind==="REVERSAL";
   const title=isReversal?"Αντιλογισμός συναλλαγής":"Καταχώριση ποσοστών";
   const subject=`ΕΙΔΟΠΟΙΗΣΗ · ${title} · ${storeName}`;
-  const rows=[["Ενέργεια",title],["Κατάστημα",storeName],["Ημερομηνία / ώρα",at.toLocaleString("el-GR")],["Ποσό",eur(amount)],["Χρήστης",actorName||"—"]];
+  const rows=[["Ενέργεια",title],["Κατάστημα",storeName],["Ημερομηνία / ώρα",at.toLocaleString("el-GR",{timeZone:"Europe/Athens"})],["Ποσό",eur(amount)],["Χρήστης",actorName||"—"]];
   if(isReversal&&originalType)rows.push(["Αρχικός τύπος",originalType]);
   if(description)rows.push(["Περιγραφή",description]);
   if(reason)rows.push(["Αιτιολογία αντιλογισμού",reason]);

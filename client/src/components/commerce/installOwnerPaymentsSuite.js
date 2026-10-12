@@ -1,3 +1,4 @@
+import {greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
 import {auditExpenseReason} from "./auditExpenseReason.mjs";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
@@ -7,7 +8,7 @@ const localDateValue=date=>`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pa
 const todayValue=()=>localDateValue(new Date());
 const monthStartValue=()=>{const d=new Date();return localDateValue(new Date(d.getFullYear(),d.getMonth(),1))};
 const yearStartValue=()=>{const d=new Date();return `${d.getFullYear()}-01-01`};
-const fmt=value=>value?new Date(value).toLocaleString("el-GR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—";
+const fmt=value=>value?new Date(value).toLocaleString("el-GR",{...({day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}),timeZone:"Europe/Athens"}):"—";
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const pct=value=>value===null||value===undefined?"—":`${Number(value).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})}%`;
 const displayLedgerText=value=>String(value??"").replaceAll("PREMIUM FAST POS","Γρήγορη καταχώριση POS").replaceAll("FAST POS","Γρήγορη καταχώριση POS").replaceAll("AI Reader","Ανάγνωση παραστατικού").replaceAll("BackOffice","Κεντρική Διαχείριση").replaceAll("Background","Παρασκήνιο");
@@ -23,7 +24,7 @@ async function api(path){
 }
 function queryType(){if(state.supplier&&state.other)return"ALL";if(state.supplier)return"SUPPLIER_PAYMENT";return"OTHER_EXPENSE"}
 function qs(){
-  const q=new URLSearchParams({from:new Date(`${state.from}T00:00:00`).toISOString(),to:new Date(`${state.to}T23:59:59.999`).toISOString(),type:queryType()});
+  const q=new URLSearchParams({from:greeceDateTimeToIso(`${state.from}T00:00:00`),to:greeceDateTimeToIso(`${state.to}T23:59:59.999`),type:queryType()});
   if(state.storeId)q.set("storeId",state.storeId);
   if(state.supplierId)q.set("supplierId",state.supplierId);
   if(state.q.trim())q.set("q",state.q.trim());
@@ -84,7 +85,7 @@ function overviewHtml(report){
       </section>
       <section class="owner-payments-panel">
         <div class="owner-payments-panel-head"><h3>Πορεία εξόδων</h3><small>Ημερήσια εικόνα περιόδου</small></div>
-        <div class="owner-payments-bars">${daily.map(row=>`<div class="bar-row"><span>${esc(new Date(row.day).toLocaleDateString("el-GR",{day:"2-digit",month:"2-digit"}))}</span><div><i style="width:${Math.max(2,number(row.expenses)/max*100)}%"></i></div><b>${money(row.expenses)}</b><small>πωλ. ${money(row.sales)}</small></div>`).join("")||'<div class="owner-payments-empty">Δεν υπάρχουν ημερήσιες κινήσεις.</div>'}</div>
+        <div class="owner-payments-bars">${daily.map(row=>`<div class="bar-row"><span>${esc(new Date(row.day).toLocaleDateString("el-GR",{...({day:"2-digit",month:"2-digit"}),timeZone:"Europe/Athens"}))}</span><div><i style="width:${Math.max(2,number(row.expenses)/max*100)}%"></i></div><b>${money(row.expenses)}</b><small>πωλ. ${money(row.sales)}</small></div>`).join("")||'<div class="owner-payments-empty">Δεν υπάρχουν ημερήσιες κινήσεις.</div>'}</div>
       </section>
     </div>`;
 }

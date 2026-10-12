@@ -2,7 +2,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {BadgeCheck,ContactRound,Copy,ExternalLink,KeyRound,RefreshCw,Save,ScanLine,Search,ShieldCheck} from "lucide-react";
 import "./operator-access.css";
 
-const when=value=>value?new Date(value).toLocaleString("el-GR"):"Ποτέ";
+const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"Ποτέ";
 
 export default function OperatorAccessPanel({api,store}){
   const [data,setData]=useState(null);

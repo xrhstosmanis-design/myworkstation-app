@@ -15,7 +15,7 @@ const eventLabels={
   SESSION_REVOKED:"Ανάκληση συσκευής",
   OTHER_SESSIONS_REVOKED:"Αποσύνδεση άλλων συσκευών"
 };
-const dateTime=value=>value?new Date(value).toLocaleString("el-GR"):"—";
+const dateTime=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
 
 export default function PlatformSecurityPanel({request,onCurrentRevoked}){
   const [data,setData]=useState(null);

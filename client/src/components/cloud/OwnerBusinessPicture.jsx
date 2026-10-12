@@ -7,7 +7,7 @@ import {businessPicturePrintHtml} from "./business-picture-print.js";
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const pct=value=>`${Number(value||0).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})}%`;
 const monthLabel=value=>{const [year,month]=String(value).split("-");return `${year} - ${month}`};
-const dayLabel=value=>new Date(`${value}T00:00:00`).toLocaleDateString("el-GR",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"});
+const dayLabel=value=>new Date(`${value}T00:00:00`).toLocaleDateString("el-GR",{...({weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"}),timeZone:"Europe/Athens"});
 const columns=[
   ["margin","Margin",pct],["salesVat","ΦΠΑ πωλήσεων",money],["salesGross","Πωλήσεις (με ΦΠΑ)",money],["purchaseGross","Αγορές (με ΦΠΑ)",money],
   ["salesNet","Πωλήσεις (χ. ΦΠΑ)",money],["purchaseNet","Αγορές (χ. ΦΠΑ)",money],["grossProfit","Ακαθ. κέρδος",money],["expenseGross","Έξοδα (μικτά)",money],["expenses","Έξοδα (χ. ΦΠΑ)",money],

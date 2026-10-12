@@ -3,7 +3,7 @@ import {Download,LockKeyhole,RefreshCw} from "lucide-react";
 import "./payroll-period.css";
 
 const duration=minutes=>`${Math.floor(Number(minutes||0)/60)}ω ${Number(minutes||0)%60}λ`;
-const date=value=>new Date(value).toLocaleDateString("el-GR");
+const date=value=>new Date(value).toLocaleDateString("el-GR",{timeZone:"Europe/Athens"});
 const inclusiveEnd=value=>date(new Date(value).getTime()-1);
 
 export default function PayrollPeriodPanel({api,storeId,month,range}){

@@ -1,3 +1,4 @@
+import {greeceDateTimeInput,greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   BadgePercent,
@@ -59,11 +60,7 @@ const productQualityIssues = (product) => {
     issues.push("Barcode μέσα στο SKU");
   return issues;
 };
-const localInputDate = (value) => {
-  const d = value ? new Date(value) : new Date();
-  const pad = (x) => String(x).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
+const localInputDate = value=>greeceDateTimeInput(value||new Date());
 
 export default function OwnerProductCenter({
   api,
@@ -634,8 +631,8 @@ export default function OwnerProductCenter({
             type === "BUY_X_GET_Y" ? Number(f.get("buyQuantity")) : 1,
           bonusQuantity:
             type === "BUY_X_GET_Y" ? Number(f.get("freeQuantity")) : 0,
-          validFrom: f.get("startsAt"),
-          validUntil: f.get("endsAt"),
+          validFrom: f.get("startsAt")?greeceDateTimeToIso(f.get("startsAt")):null,
+          validUntil: f.get("endsAt")?greeceDateTimeToIso(f.get("endsAt")):null,
           active: true,
           storeIds,
         }),
@@ -2191,9 +2188,9 @@ export default function OwnerProductCenter({
                             : `Τιμή ${money(p.offerPrice)}`}
                     </small>
                     <small>
-                      {new Date(p.validFrom).toLocaleString("el-GR")} →{" "}
+                      {new Date(p.validFrom).toLocaleString("el-GR",{timeZone:"Europe/Athens"})} →{" "}
                       {p.validUntil
-                        ? new Date(p.validUntil).toLocaleString("el-GR")
+                        ? new Date(p.validUntil).toLocaleString("el-GR",{timeZone:"Europe/Athens"})
                         : "χωρίς λήξη"}
                     </small>
                     <small>
@@ -2234,7 +2231,7 @@ export default function OwnerProductCenter({
                 <input
                   name="name"
                   required
-                  defaultValue={`Απογραφή ${new Date().toLocaleDateString("el-GR")}`}
+                  defaultValue={`Απογραφή ${new Date().toLocaleDateString("el-GR",{timeZone:"Europe/Athens"})}`}
                 />
               </label>
               <button className="primary">
@@ -2254,7 +2251,7 @@ export default function OwnerProductCenter({
                     <b>{st.name}</b>
                     <small>
                       {st.storeName} ·{" "}
-                      {new Date(st.startedAt).toLocaleString("el-GR")}
+                      {new Date(st.startedAt).toLocaleString("el-GR",{timeZone:"Europe/Athens"})}
                     </small>
                   </span>
                   <span>

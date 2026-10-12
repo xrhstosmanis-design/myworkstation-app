@@ -17,7 +17,7 @@ async function request(path,options={}){
 }
 
 const statusLabels={TRIAL:"Δοκιμή",PILOT:"Πιλοτικό",ACTIVE:"Ενεργό",SUSPENDED:"Σε αναστολή",EXPIRED:"Έληξε"};
-const when=value=>value?new Date(value).toLocaleDateString("el-GR"):"Χωρίς λήξη";
+const when=value=>value?new Date(value).toLocaleDateString("el-GR",{timeZone:"Europe/Athens"}):"Χωρίς λήξη";
 
 export default function CommercialLicenseCenter(){
   const [authenticated,setAuthenticated]=useState(()=>Boolean(localStorage.getItem("token")&&localStorage.getItem("platformUser")));

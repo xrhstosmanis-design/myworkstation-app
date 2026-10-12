@@ -1,3 +1,4 @@
+import {greeceDateTimeInput,greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
 import "./price-catalog-controller-v2.css";
 import { openLeafletImport } from "./installLeafletImport.js";
 
@@ -32,11 +33,8 @@ const money = (v) =>
 const pct = (v) =>
   `${num(v).toLocaleString("el-GR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 const pad = (v) => String(v).padStart(2, "0");
-const dtLocal = (v) => {
-  const d = v ? new Date(v) : new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-const fmt = (v) => (v ? new Date(v).toLocaleString("el-GR") : "—");
+const dtLocal = v=>greeceDateTimeInput(v||new Date());
+const fmt = (v) => (v ? new Date(v).toLocaleString("el-GR",{timeZone:"Europe/Athens"}) : "—");
 const state = {
   tab: "prices",
   promotions: [],
@@ -239,8 +237,8 @@ function leafletModal(row = null) {
         saleQuantity: 1,
         bonusQuantity: 0,
         customerPoints: num(f.customerPoints.value),
-        validFrom: f.validFrom.value,
-        validUntil: f.validUntil.value || null,
+        validFrom: f.validFrom.value?greeceDateTimeToIso(f.validFrom.value):null,
+        validUntil: f.validUntil.value?greeceDateTimeToIso(f.validUntil.value):null,
         active: true,
       };
       if (!row) body.productId = selected.id;
@@ -283,8 +281,8 @@ function giftsModal(row = null) {
         saleQuantity: num(f.saleQuantity.value),
         bonusQuantity: num(f.bonusQuantity.value),
         customerPoints: 0,
-        validFrom: f.validFrom.value,
-        validUntil: f.validUntil.value || null,
+        validFrom: f.validFrom.value?greeceDateTimeToIso(f.validFrom.value):null,
+        validUntil: f.validUntil.value?greeceDateTimeToIso(f.validUntil.value):null,
         active: true,
       };
       if (!row) {

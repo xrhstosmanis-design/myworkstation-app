@@ -5,7 +5,7 @@ import MyShiftEntriesPanel from "./MyShiftEntriesPanel.jsx";
 import "./store-shift-menu.css";
 import "./pos-shift-transactions-readable.css";
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const when=value=>value?new Date(value).toLocaleString("el-GR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}):"—";
+const when=value=>value?new Date(value).toLocaleString("el-GR",{...({day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}),timeZone:"Europe/Athens"}):"—";
 const paymentLabel=method=>method==="CASH"?"ΜΕΤΡΗΤΑ":method==="CARD"?"ΚΑΡΤΑ":method==="IRIS"?"IRIS":String(method||"ΠΛΗΡΩΜΗ");
 const isVoid=row=>/^POS\s+ΑΚΥΡΩΣΗ\b/i.test(String(row?.description||""));
 export default function StoreShiftTransactionsModal({api,store,operator,allowAll=false,onClose,onChanged}){

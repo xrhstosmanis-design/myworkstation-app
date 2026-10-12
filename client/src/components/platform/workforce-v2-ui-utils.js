@@ -1,4 +1,5 @@
-export const workforceToday=()=>new Date().toISOString().slice(0,10);
+import {greeceDateInput} from "../../../../shared/greece-time.mjs";
+export const workforceToday=()=>greeceDateInput(new Date());
 export const emptyWorkforceEmployee=storeId=>({
   fullName:"",phone:"",email:"",baseStoreId:storeId||"",paymentType:"HOURLY",hourlyRate:"",dailyRate:"",fixedMonthlyAmount:"",effectiveFrom:workforceToday(),
   maxDaysPerWeek:"5",maxHoursPerWeek:"40",minimumDaysOff:"2",canChangeStore:false,worksMorning:true,worksAfternoon:true,worksNight:false,worksWeekend:true,
@@ -14,6 +15,6 @@ export const emptyWorkforceShiftTemplate=()=>({
 export const workforceMigrationStatusLabel={READY:"Έτοιμο",NEEDS_REVIEW:"Χρειάζεται έλεγχο",ALREADY_LINKED:"Ήδη συνδεδεμένο",BLOCKED:"Μπλοκαρισμένο"};
 export const workforceRuleSeverityLabel={WARNING:"Προειδοποίηση",ERROR:"Σφάλμα",APPROVAL_REQUIRED:"Χρειάζεται έγκριση"};
 export const formatWorkforceMoney=value=>value===null||value===undefined?"—":(Math.abs(Number(value))<0.005?0:Number(value)).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-export const workforceDateInput=value=>value?new Date(value).toISOString().slice(0,10):"";
+export const workforceDateInput=value=>value?greeceDateInput(new Date(value)):"";
 export const workforceDateStartIso=value=>value?`${value}T00:00:00.000Z`:null;
 export const workforceDateEndIso=value=>value?`${value}T23:59:59.999Z`:null;

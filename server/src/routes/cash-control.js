@@ -462,7 +462,7 @@ router.post("/stores/:storeId/sessions/open",route(async(req,res)=>{
         if(recipients.length){
           const now=new Date();
           const subject=`ΠΡΟΣΟΧΗ · Μείωση Χρηματοκιβωτίου · ${store.name}`;
-          const text=[subject,"",`Κατάστημα: ${store.name}`,`Βάρδια: ${body.shiftLabel}`,`Χειριστής: ${actorName}`,`Ημερομηνία / ώρα: ${now.toLocaleString("el-GR")}`,`Προηγούμενο ποσό: ${previousSafe.toFixed(2)} €`,`Νέο ποσό: ${body.safe.toFixed(2)} €`,`Μείωση: ${Math.abs(safeDelta).toFixed(2)} €`,`Αιτιολογία: ${safeReason}`,"","Αυτόματο μήνυμα από το MyWorkStation."].join("\n");
+          const text=[subject,"",`Κατάστημα: ${store.name}`,`Βάρδια: ${body.shiftLabel}`,`Χειριστής: ${actorName}`,`Ημερομηνία / ώρα: ${now.toLocaleString("el-GR",{timeZone:"Europe/Athens"})}`,`Προηγούμενο ποσό: ${previousSafe.toFixed(2)} €`,`Νέο ποσό: ${body.safe.toFixed(2)} €`,`Μείωση: ${Math.abs(safeDelta).toFixed(2)} €`,`Αιτιολογία: ${safeReason}`,"","Αυτόματο μήνυμα από το MyWorkStation."].join("\n");
           await sendEmail({companyId:req.user.companyId,storeId:store.id,to:recipients,subject,text,html:`<div style="font-family:Arial,sans-serif"><h2>${subject}</h2><p><b>Κατάστημα:</b> ${store.name}</p><p><b>Βάρδια:</b> ${body.shiftLabel}</p><p><b>Χειριστής:</b> ${actorName}</p><p><b>Προηγούμενο:</b> ${previousSafe.toFixed(2)} €</p><p><b>Νέο:</b> ${body.safe.toFixed(2)} €</p><p><b>Μείωση:</b> ${Math.abs(safeDelta).toFixed(2)} €</p><p><b>Αιτιολογία:</b> ${safeReason}</p></div>`});
           safeChange.emailAlerted=true;
         }

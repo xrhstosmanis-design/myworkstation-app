@@ -59,7 +59,7 @@ export function installPosCheckoutSafety(){
           const delayedResponse=await nativeFetch(`/api/store-pos/stores/${encodeURIComponent(storeId)}/sales/${encodeURIComponent(sale.saleId)}/delayed`,{method:"POST",headers:{"Content-Type":"application/json",...(init.headers||{})},body:JSON.stringify({occurredAt:delayed.occurredAt,reason:delayed.reason})});
           if(!delayedResponse.ok){const detail=await delayedResponse.json().catch(()=>({}));entry.createdAt=Date.now();return jsonResponse({error:detail.error||"Η πώληση καταχωρήθηκε αλλά δεν ολοκληρώθηκε η ετεροχρονισμένη σήμανση. Πάτησε ξανά πληρωμή για ασφαλές retry.",code:"DELAYED_POSTPROCESS_FAILED",saleId:sale.saleId},409)}
           delete globalThis.__mwsPosDelayedSaleContext;
-          globalThis.dispatchEvent?.(new CustomEvent("mws:pos-delayed-consumed",{detail:{saleId:sale.saleId,message:`Η πώληση καταχωρήθηκε ετεροχρονισμένα (${new Date(delayed.occurredAt).toLocaleString("el-GR")}).`}}));
+          globalThis.dispatchEvent?.(new CustomEvent("mws:pos-delayed-consumed",{detail:{saleId:sale.saleId,message:`Η πώληση καταχωρήθηκε ετεροχρονισμένα (${new Date(delayed.occurredAt).toLocaleString("el-GR",{timeZone:"Europe/Athens"})}).`}}));
         }
       }
       if(response.ok)pending.delete(key);

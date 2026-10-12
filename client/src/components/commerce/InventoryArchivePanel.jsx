@@ -7,7 +7,7 @@ import "./inventory-archive.css";
 const money=value=>value===null||value===undefined?"—":`${Number(value).toFixed(2)} €`;
 const qty=value=>value===null||value===undefined?"—":Number(value).toLocaleString("el-GR",{maximumFractionDigits:3});
 const pct=value=>value===null||value===undefined?"—":`${Number(value).toFixed(2)}%`;
-const when=value=>value?new Date(value).toLocaleString("el-GR"):"—";
+const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
 const priceMetrics=(costValue,saleValue)=>{const cost=Number(costValue||0),sale=Number(saleValue||0);return {margin:sale>0?((sale-cost)/sale)*100:0,markup:cost>0?((sale-cost)/cost)*100:0}};
 const retailFromMargin=(costValue,marginValue)=>{const cost=Number(costValue||0),margin=Number(marginValue||0);return cost>0&&margin<100?cost/(1-margin/100):0};
 const retailFromMarkup=(costValue,markupValue)=>Number(costValue||0)*(1+Number(markupValue||0)/100);

@@ -1,10 +1,11 @@
+import {greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useState} from "react";
 import {AlertTriangle,CheckCircle2,Plus,RefreshCw,ShieldX,Truck} from "lucide-react";
 import "./dispatch-provider.css";
 import "./provider-outbox.css";
 
 const units={PIECE:"Τεμάχια",PACKAGE:"Κιβώτια",KG:"Κιλά",LITER:"Λίτρα"};
-const dateTime=value=>value?new Date(value).toLocaleString("el-GR"):"—";
+const dateTime=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
 const emptyLine=()=>({productId:"",description:"",quantity:1,unit:"PIECE"});
 
 export default function DispatchProviderPanel({api,stores=[],initialStoreId=""}){
@@ -14,7 +15,7 @@ export default function DispatchProviderPanel({api,stores=[],initialStoreId=""})
   useEffect(()=>{load()},[storeId]);
   const chooseProduct=(index,productId)=>{const product=products.find(row=>row.id===productId);setLines(current=>current.map((line,i)=>i===index?{...line,productId,description:product?.name||line.description}:line))};
   const changeLine=(index,key,value)=>setLines(current=>current.map((line,i)=>i===index?{...line,[key]:value}:line));
-  const create=async event=>{event.preventDefault();setBusy(true);setError("");setMessage("");const form=new FormData(event.currentTarget);try{const created=await api("/api/logistics/dispatch-notes",{method:"POST",body:JSON.stringify({storeId,documentNumber:form.get("documentNumber"),direction:form.get("direction"),recipientName:form.get("recipientName"),recipientTaxId:form.get("recipientTaxId")||null,destinationAddress:form.get("destinationAddress"),purpose:form.get("purpose")||null,dispatchedAt:form.get("dispatchedAt")?new Date(form.get("dispatchedAt")).toISOString():null,lines:lines.map(line=>({...line,productId:line.productId||null,quantity:Number(line.quantity)}))})});event.currentTarget.reset();setLines([emptyLine()]);setMessage("Το δελτίο αποθηκεύτηκε ως τοπικό πρόχειρο — δεν στάλθηκε σε πάροχο.");await load();await inspect(created.id)}catch(e){setError(e.message)}finally{setBusy(false)}};
+  const create=async event=>{event.preventDefault();setBusy(true);setError("");setMessage("");const form=new FormData(event.currentTarget);try{const created=await api("/api/logistics/dispatch-notes",{method:"POST",body:JSON.stringify({storeId,documentNumber:form.get("documentNumber"),direction:form.get("direction"),recipientName:form.get("recipientName"),recipientTaxId:form.get("recipientTaxId")||null,destinationAddress:form.get("destinationAddress"),purpose:form.get("purpose")||null,dispatchedAt:form.get("dispatchedAt")?greeceDateTimeToIso(form.get("dispatchedAt")):null,lines:lines.map(line=>({...line,productId:line.productId||null,quantity:Number(line.quantity)}))})});event.currentTarget.reset();setLines([emptyLine()]);setMessage("Το δελτίο αποθηκεύτηκε ως τοπικό πρόχειρο — δεν στάλθηκε σε πάροχο.");await load();await inspect(created.id)}catch(e){setError(e.message)}finally{setBusy(false)}};
   const inspect=async id=>{try{setSelected(await api(`/api/logistics/dispatch-notes/${id}`))}catch(e){setError(e.message)}};
   const finalize=async()=>{if(!window.confirm("Οριστικοποίηση μόνο τοπικά; Δεν θα γίνει αποστολή σε myDATA ή έκδοση φορολογικού PDF."))return;setBusy(true);setError("");try{await api(`/api/logistics/dispatch-notes/${selected.note.id}/finalize-local`,{method:"POST",body:"{}"});setMessage("Οριστικοποιήθηκε τοπικά και μπήκε σε ασφαλή αναμονή μέχρι να συνδεθεί πάροχος.");await load();await inspect(selected.note.id)}catch(e){setError(e.message)}finally{setBusy(false)}};
   const cancel=async()=>{const reason=window.prompt("Λόγος τοπικής ακύρωσης:");if(!reason)return;setBusy(true);try{await api(`/api/logistics/dispatch-notes/${selected.note.id}/cancel-local`,{method:"POST",body:JSON.stringify({reason})});setMessage("Το δελτίο ακυρώθηκε τοπικά με ιστορικό.");setSelected(null);await load()}catch(e){setError(e.message)}finally{setBusy(false)}};

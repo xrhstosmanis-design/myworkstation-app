@@ -733,8 +733,8 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
       AND (${scopeCompanyId}::text IS NULL OR ss."companyId"=${scopeCompanyId})
       AND (${filters.companyId}='' OR ss."companyId"=${filters.companyId})
       AND (${filters.storeId}='' OR ss."storeId"=${filters.storeId})
-      AND (${filters.from||null}::date IS NULL OR ss."paidAt">=${filters.from||null}::date)
-      AND (${filters.to||null}::date IS NULL OR ss."paidAt"<(${filters.to||null}::date+INTERVAL '1 day'))
+      AND (${filters.from||null}::date IS NULL OR ss."paidAt">=(${filters.from||null}::date::timestamp AT TIME ZONE 'Europe/Athens'))
+      AND (${filters.to||null}::date IS NULL OR ss."paidAt"<((${filters.to||null}::date+INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
     GROUP BY ss."id",t."id",s."name",st."name",c."name",owner."fullName" ORDER BY ss."createdAt" ASC LIMIT 500
   `;
   const companies=await prisma.$queryRaw`
@@ -846,8 +846,8 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
       AND (${scopeCompanyId}::text IS NULL OR er."companyId"=${scopeCompanyId})
       AND (${filters.companyId}='' OR er."companyId"=${filters.companyId})
       AND (${filters.storeId}='' OR er."storeId"=${filters.storeId})
-      AND (${filters.from||null}::date IS NULL OR t."occurredAt">=${filters.from||null}::date)
-      AND (${filters.to||null}::date IS NULL OR t."occurredAt"<(${filters.to||null}::date+INTERVAL '1 day'))
+      AND (${filters.from||null}::date IS NULL OR t."occurredAt">=(${filters.from||null}::date::timestamp AT TIME ZONE 'Europe/Athens'))
+      AND (${filters.to||null}::date IS NULL OR t."occurredAt"<((${filters.to||null}::date+INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
     ORDER BY er."createdAt" ASC LIMIT 500
   `;
   const companies=await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE WHERE (${scopeCompanyId}::text IS NULL OR c."id"=${scopeCompanyId}) ORDER BY c."name"`;
@@ -910,7 +910,25 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
       AND (${canReviewStoreLedger} OR "actorId"=${req.user.id})
     ORDER BY "occurredAt" DESC LIMIT 80
   `;
+  // Complete own active-shift payment projection; mixed recent sales remain capped.
+  const myPaymentRows=!openSession?[]:await prisma.$queryRaw`
+    SELECT "id","companyId","storeId","sessionId","type","amount","description","supplierName","subtractFromShift","actorId","actorName","occurredAt","createdAt","reversedAt","reversedBy","reversedByName","reversalReason",
+           ("attachmentData" IS NOT NULL) AS "hasAttachment","attachmentFilename",
+           CASE WHEN "attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN "attachmentFilename" ELSE NULL END AS "purchaseDocumentId",
+           CASE WHEN "attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN 'DOCUMENT'
+                WHEN "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "attachmentData" IS NULL THEN 'NO_DOCUMENT'
+                ELSE 'LEGACY' END AS "evidenceMode",
+           COALESCE(CASE WHEN "paymentMethod" IS NOT NULL THEN "paymentMethod" END,CASE WHEN "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "subtractFromShift"=true THEN 'CASH_SHIFT'
+                WHEN "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') THEN 'EXTERNAL'
+                ELSE NULL END) AS "paymentSource"
+    FROM "StoreTransaction"
+    WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId}
+      AND "sessionId"=${openSession.id} AND "actorId"=${req.user.id}
+      AND "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
+    ORDER BY "occurredAt" DESC,"id" DESC
+  `;
   const recent=recentRows.map(row=>({...normalize(row),canCorrectAmount:canCorrectPayment(req.user,row,openRows.find(session=>session.id===row.sessionId)?{...openRows.find(session=>session.id===row.sessionId),status:"OPEN",companyId:req.user.companyId,storeId:store.id}:null,terminalPos)}));
+  const myPayments=myPaymentRows.map(row=>({...normalize(row),canCorrectAmount:canCorrectPayment(req.user,row,{...openSession,status:"OPEN",companyId:req.user.companyId,storeId:store.id},terminalPos)}));
   const suppliers=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
   const purchaseDocuments=await prisma.$queryRaw`
     SELECT p."id",p."supplierId",p."documentNumber",p."documentDate",p."totalGross",p."status",s."name" AS "supplierName"
@@ -935,6 +953,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     suppliers,
     purchaseDocuments:purchaseDocuments.map(row=>({...row,totalGross:Number(row.totalGross||0)})),
     recent,
+    myPayments,
     access:{canReviewStoreLedger,canReverse,canForceClose:req.user?.tokenType!=="STORE_OPERATOR"&&["SUPER_ADMIN","OWNER"].includes(req.user?.role)}
   });
 }));

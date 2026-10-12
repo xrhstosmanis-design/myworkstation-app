@@ -6,7 +6,7 @@ import {loadPayrollWorkspace} from "./workforce-v2-payroll-load.js";
 const currentMonth=()=>new Date().toISOString().slice(0,7);
 const monthRange=value=>{const [year,month]=value.split("-").map(Number);return {from:new Date(Date.UTC(year,month-1,1)).toISOString(),to:new Date(Date.UTC(year,month,1)).toISOString()}};
 const minutes=value=>`${Math.floor(Number(value||0)/60)}ω ${Number(value||0)%60}λ`;
-const periodLabel=row=>`${row.name} · ${new Date(row.periodStart).toLocaleDateString("el-GR")}–${new Date(new Date(row.periodEnd).getTime()-1).toLocaleDateString("el-GR")}`;
+const periodLabel=row=>`${row.name} · ${new Date(row.periodStart).toLocaleDateString("el-GR",{timeZone:"Europe/Athens"})}–${new Date(new Date(row.periodEnd).getTime()-1).toLocaleDateString("el-GR",{timeZone:"Europe/Athens"})}`;
 
 export default function WorkforceV2PayrollTab({company,store,request}){
   const base=`/api/platform/store-modules/companies/${company.id}/stores/${store.id}/workforce-v2/payroll`;
