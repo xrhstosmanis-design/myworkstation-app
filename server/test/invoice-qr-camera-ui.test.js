@@ -66,3 +66,39 @@ test("Basic/Premium camera intake fills reviewed fields and original PDF without
     });
   }
 });
+
+
+test("scanner in both payment forms reads exact URL once without camera or payment",async()=>{
+  for(const name of ["StoreSupplierInvoiceFast","StoreSupplierInvoicePremiumFast"]){
+    const Form=await component(name);
+    await environment(async({React,root,dom})=>{
+      const calls=[];let resolve;
+      globalThis.__invoiceCameraFixture=()=>assert.fail("scanner must not start camera");
+      const api=async(path,options)=>{calls.push({path,body:JSON.parse(options.body)});assert.equal(path,"/api/commerce/documents/qr-read");return new Promise(done=>resolve=done)};
+      await React.act(async()=>root.render(React.createElement(Form,{api,store:{id:"own",name:"LAB"},suppliers:[{id:"supplier",taxId:"123456789",name:"LAB SUPPLIER"}]})));
+      const button=text=>[...document.querySelectorAll("button")].find(x=>x.textContent.includes(text));
+      await React.act(async()=>button("Σάρωση QR με scanner").click());
+      const input=document.querySelector('[aria-label="QR / σύνδεσμος τιμολογίου"]');assert.equal(document.activeElement,input);
+      const url="https://einvoice.impact.gr/v/EL123456789-document-auth-token";
+      await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,"value").set.call(input,url);input.dispatchEvent(new dom.window.Event("input",{bubbles:true}));});
+      let bubbled=0;const listener=()=>bubbled++;document.addEventListener("keydown",listener);
+      await React.act(async()=>{for(let i=0;i<2;i++){const event=new dom.window.KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true});input.dispatchEvent(event);assert.equal(event.defaultPrevented,true)}});
+      document.removeEventListener("keydown",listener);assert.equal(bubbled,0);assert.equal(calls.length,1);assert.deepEqual(calls[0].body,{storeId:"own",url});
+      await React.act(async()=>resolve(fixture));assert.equal(document.querySelector('[aria-label="QR τιμολογίου με scanner"]'),null);
+      assert.ok(document.body.textContent.includes("virtual-invoice.pdf"));assert.equal(document.querySelector("select").value,"supplier");assert.equal(button("ΠΛΗΡΩΜΕΝΟ").getAttribute("aria-pressed"),"false");assert.equal(document.querySelector(".pos-primary-action").disabled,true);
+    });
+  }
+});
+
+test("scanner rejects unsafe response, retries and discards closed or previous-store results",async()=>{
+ const Scanner=await component("InvoiceQrScanner");
+ await environment(async({React,root,dom})=>{
+   let resolve,calls=0;const reads=[];
+   const api=async()=>{calls++;return new Promise(done=>resolve=done)};
+   const render=id=>React.act(async()=>root.render(React.createElement(Scanner,{api,store:{id,name:"LAB"},onRead:x=>reads.push(x),onClose:()=>root.render(null)})));
+   const scan=async()=>React.act(async()=>{const input=document.querySelector("input");Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,"value").set.call(input,"https://provider");input.dispatchEvent(new dom.window.Event("input",{bubbles:true}));input.dispatchEvent(new dom.window.KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));});
+   await render("own");await scan();await React.act(async()=>resolve({header:{},dataUrl:"data:text/html;base64,AA=="}));assert.match(document.querySelector('[role="alert"]').textContent,/ασφαλές PDF/);assert.equal(reads.length,0);
+   await scan();const old=resolve;await render("other");await React.act(async()=>old(fixture));assert.equal(reads.length,0);assert.equal(document.querySelector("input").value,"");
+   await scan();await React.act(async()=>document.querySelector('[aria-label="Κλείσιμο scanner"]').click());await React.act(async()=>resolve(fixture));assert.equal(reads.length,0);assert.equal(calls,3);
+ });
+});
