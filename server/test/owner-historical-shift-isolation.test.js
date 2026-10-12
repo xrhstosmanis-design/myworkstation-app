@@ -40,6 +40,11 @@ test('native actual historical detail isolates overlapping shifts and counts mix
   assert.equal(result.sales.count,1);assert.equal(result.sales.total,1.4);assert.equal(result.categories.length,1);assert.equal(result.categories[0].quantity,1);assert.equal(result.categories[0].sales,1);assert.equal(result.categories[0].revenue,1.4);
   assert.equal(result.paymentMethods.length,2);assert.equal(result.paymentMethods.reduce((sum,r)=>sum+r.amount,0),1.4);assert.equal(result.transactions.filter(r=>r.description.startsWith('ONLINE ΠΑΡΑΓΓΕΛΙΑ')).length,2);assert.equal(result.difference.deductedOtherExpenses,24);assert.equal(result.difference.cashSales,1.4);assert.equal(result.sourceStatus.vatFiscal,false);
   result=(await read(db,'main')).body;assert.equal(result.sales.count,1);assert.equal(result.sales.total,2.2);assert.equal(result.categories[0].revenue,2.2);
+  // A reversal's original-sale reference is not new session evidence for the
+  // original purchase. The negative sale belongs only to its own ledger.
+  for(const sql of [`INSERT INTO "CashShiftSession"("id","companyId","storeId","openedAt","closedAt","status") VALUES('return-session','C','A','2026-10-12','2026-10-13','CLOSED')`, `INSERT INTO "Sale" VALUES('return-sale','C','A','COMPLETED','POS_REVERSAL',-2.2,'2026-10-12T17:00:00Z')`, `INSERT INTO "SaleLine"("id","saleId","productId","description","quantity","unitPrice","lineTotal") VALUES('return-line','return-sale','pastry','ΤΥΡΟΠΙΤΑ',-1,2.2,-2.2)`, `INSERT INTO "Payment" VALUES('return-payment','return-sale','CASH',-2.2)`, `INSERT INTO "StoreTransaction"("id","companyId","storeId","sessionId","type","amount","description") VALUES('return-ledger','C','A','return-session','SALE_CASH',-2.2,'ΟΛΙΚΗ ΕΠΙΣΤΡΟΦΗ · αρχική main-sale · επιστροφή return-sale')`])await db.$executeRawUnsafe(sql);
+  assert.equal((await read(db,'main')).body.sales.total,2.2);
+  result=(await read(db,'return-session')).body;assert.equal(result.sales.count,1);assert.equal(result.sales.total,-2.2);assert.equal(result.categories[0].quantity,-1);
   // Old normal POS without checkout audit remains linked by exact ledger ID.
   await db.$executeRaw`DELETE FROM "StoreOperatorAudit" WHERE "id"='main'`;
   assert.equal((await read(db,'main')).body.sales.total,2.2);

@@ -125,6 +125,8 @@ router.get("/:sessionId/detail",async(req,res,next)=>{
             JOIN "CashShiftSession" sh ON sh."id"=t."sessionId" AND sh."companyId"=s."companyId" AND sh."storeId"=s."storeId"
             WHERE t."companyId"=s."companyId" AND t."storeId"=s."storeId"
               AND s."id"=ANY(regexp_split_to_array(COALESCE(t."description",''),'[^[:alnum:]_-]+'))
+              AND COALESCE(t."description",'') NOT LIKE ('%αρχική '||s."id"||'%')
+              AND COALESCE(t."description",'') NOT LIKE ('%αρχική πώληση '||s."id"||'%')
             UNION
             SELECT a."details"->>'sessionId' FROM "StoreOperatorAudit" a
             JOIN "CashShiftSession" sh ON sh."id"=a."details"->>'sessionId' AND sh."companyId"=s."companyId" AND sh."storeId"=s."storeId"
