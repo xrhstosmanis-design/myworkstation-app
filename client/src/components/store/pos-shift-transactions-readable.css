@@ -1,0 +1,135 @@
+/* Only the existing active-shift transaction dialog. */
+.shift-overlay.pos-shift-transactions-overlay {
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.shift-timeline-modal.pos-shift-transactions-readable {
+  width: min(1680px, calc(100vw - 24px));
+  height: min(1000px, calc(100vh - 24px));
+  height: min(1000px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 24px);
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  color: #173e32;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.pos-shift-transactions-readable > header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  gap: 18px;
+  padding: 18px 24px;
+  background: #17486d;
+}
+
+.pos-shift-transactions-readable > header > div { min-width: 0; }
+.pos-shift-transactions-readable > header small { font-size: 14px; }
+.pos-shift-transactions-readable > header h2 { font-size: 32px; line-height: 1.2; }
+.pos-shift-transactions-readable > header p { margin: 8px 0 0; font-size: 18px; overflow-wrap: anywhere; }
+.pos-shift-transactions-readable > header button { width: 56px; height: 56px; flex: 0 0 56px; }
+
+.pos-shift-transactions-readable .shift-timeline-tools {
+  padding: 14px 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 18px;
+}
+
+.pos-shift-transactions-readable .shift-timeline-tools > span {
+  flex: 1 1 240px;
+  min-width: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.pos-shift-transactions-readable .shift-timeline-tools button {
+  min-height: 52px;
+  padding: 10px 16px;
+  font-size: 18px;
+  white-space: normal;
+}
+
+.pos-shift-transactions-readable .shift-timeline-list {
+  overflow: visible;
+  padding: 20px;
+  gap: 16px;
+}
+
+.pos-shift-transactions-readable .shift-timeline-list > article {
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 16px;
+  padding: 20px;
+}
+
+.pos-shift-transactions-readable .shift-timeline-icon { width: 52px; height: 52px; }
+.pos-shift-transactions-readable .shift-timeline-icon svg { width: 28px; height: 28px; }
+.pos-shift-transactions-readable .shift-timeline-title { flex-wrap: wrap; align-items: flex-start; }
+.pos-shift-transactions-readable .shift-timeline-title > b { flex: 1 1 240px; min-width: 0; font-size: 22px; overflow-wrap: anywhere; }
+.pos-shift-transactions-readable .shift-timeline-title > strong { font-size: 28px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.pos-shift-transactions-readable .shift-timeline-content > small { display: block; margin-top: 8px; font-size: 16px; color: #3d5b50; overflow-wrap: anywhere; }
+
+.pos-shift-transactions-readable .shift-timeline-products {
+  margin-top: 14px;
+  padding: 12px 14px;
+  gap: 10px;
+  font-size: 19px;
+  line-height: 1.5;
+}
+
+.pos-shift-transactions-readable .shift-timeline-products > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  gap: 20px;
+}
+
+.pos-shift-transactions-readable .shift-timeline-products span { min-width: 0; overflow-wrap: anywhere; }
+.pos-shift-transactions-readable .shift-timeline-products span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+.pos-shift-transactions-readable .shift-timeline-payments {
+  margin-top: 12px;
+  padding: 12px 14px;
+  font-size: 19px;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+
+.pos-shift-transactions-readable .shift-timeline-content > button {
+  margin-top: 12px;
+  min-height: 52px;
+  padding: 10px 16px;
+  font-size: 17px;
+  white-space: normal;
+}
+
+.pos-shift-transactions-readable .shift-timeline-empty,
+.pos-shift-transactions-readable .shift-timeline-error { padding: 20px; font-size: 19px; }
+.pos-shift-transactions-readable > .my-shift-entries-panel { margin: 0 20px 20px; }
+.pos-shift-transactions-readable button:focus-visible { outline: 3px solid #70d2a5; outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  .shift-overlay.pos-shift-transactions-overlay { padding: 6px; }
+  .shift-timeline-modal.pos-shift-transactions-readable {
+    width: calc(100vw - 12px);
+    height: calc(100vh - 12px);
+    height: calc(100dvh - 12px);
+    max-height: calc(100dvh - 12px);
+    border-radius: 12px;
+  }
+  .pos-shift-transactions-readable > header { padding: 14px; gap: 12px; }
+  .pos-shift-transactions-readable > header h2 { font-size: 26px; }
+  .pos-shift-transactions-readable .shift-timeline-tools { padding: 12px; gap: 8px; }
+  .pos-shift-transactions-readable .shift-timeline-tools > span { order: 3; flex-basis: 100%; }
+  .pos-shift-transactions-readable .shift-timeline-list { padding: 10px; gap: 12px; }
+  .pos-shift-transactions-readable .shift-timeline-list > article { grid-template-columns: 32px minmax(0, 1fr); gap: 12px; padding: 16px; }
+  .pos-shift-transactions-readable .shift-timeline-icon { width: 32px; height: 32px; }
+  .pos-shift-transactions-readable .shift-timeline-icon svg { width: 20px; height: 20px; }
+  .pos-shift-transactions-readable .shift-timeline-products { padding: 10px; }
+  .pos-shift-transactions-readable .shift-timeline-products > div { gap: 12px; }
+  .pos-shift-transactions-readable > .my-shift-entries-panel { margin: 0 10px 10px; }
+}
