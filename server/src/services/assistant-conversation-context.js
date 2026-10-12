@@ -1,8 +1,9 @@
 import {z} from "zod";
+import {assistantSalesQuestion} from "./assistant-question-intent.js";
 
 export const assistantHistorySchema=z.array(z.object({role:z.enum(["user","assistant"]),content:z.string().trim().min(1).max(2000)}).strict()).max(10).default([]);
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").trim();
-const domain=q=>/ιδιοκαταναλ|καταστροφ|πωλησ|ταμει|μετρητ|αποθεμ|στοκ|προσφορ|εκπτωσ/.test(norm(q));
+const domain=q=>assistantSalesQuestion(q)||/ιδιοκαταναλ|καταστροφ|πωλησ|ταμει|μετρητ|αποθεμ|στοκ|προσφορ|εκπτωσ/.test(norm(q));
 export function assistantEffectiveQuestion(question,history=[]){
  const checked=assistantHistorySchema.parse(history),q=norm(question);
  if(domain(question)||!(/^(και|το ιδιο|τα ιδια|για χθες|χθες|σημερα|ανα |χωρισ|βγαλτα|σε |εξαγωγη)/.test(q)||/\b(excel|xlsx|csv|pdf|word|docx)\b/.test(q)))return question;

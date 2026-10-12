@@ -15,13 +15,14 @@ export function presentAssistantAnswer(result){
   }
   if(evidence.length===1&&evidence[0].kind==="sales_by_store"){
     const report=evidence[0];
+    fallback.limitations=result.sourceOnly?"Η σύνοψη του AI δεν ολοκληρώθηκε· εμφανίζονται μόνο τα στοιχεία της αναγνωσμένης πηγής.":"";
     if(report.result==="ambiguous")return {...fallback,answer:`Διευκρίνισε την ονομασία ή συσκευασία για «${report.unresolvedName}»: ${(report.candidates||[]).join(" · ")}. Δεν χρειάζεται να γνωρίζεις SKU.`,highlights:[]};
     if(report.result==="no_match")return {...fallback,answer:"Δεν βρέθηκε αντίστοιχη ονομασία ή διαθέσιμο εξουσιοδοτημένο κατάστημα. Έλεγξε την ονομασία. Αυτό δεν αποδεικνύει μηδενικές πωλήσεις.",highlights:[]};
     if(report.result==="source_limited")return {...fallback,answer:report.reason||"Η αναζήτηση έφτασε το όριο ασφαλούς ανάγνωσης. Επίλεξε λιγότερα καταστήματα ή στενότερο φίλτρο· δεν εμφανίζεται πλήρες σύνολο.",highlights:[]};
     if(["matched","no_sales"].includes(report.result)&&Array.isArray(report.stores)&&report.stores.length&&report.stores.every(s=>s.grossSales===null||typeof s.grossSales==="number"&&Number.isFinite(s.grossSales))){
       const period=`${report.from} έως ${report.to}${report.incompletePeriod?` · μη ολοκληρωμένη περίοδος, στοιχεία έως ${report.asOf}`:""}`;
       const summary=report.totals&&typeof report.totals.grossSales==="number"&&Number.isFinite(report.totals.grossSales)?`Συνολικός τζίρος: ${assistantMoney(report.totals.grossSales)}.`:"Υπάρχουν μη διαθέσιμες πηγές· δεν εμφανίζεται πλήρες σύνολο.";
-      return {...fallback,answer:`Πωλήσεις ανά κατάστημα · ${period}.\n${summary} Δες τη λίστα καταστημάτων και ειδών παρακάτω.`,highlights:[],limitations:"Μόνο καταγεγραμμένες ολοκληρωμένες μη πιστωτικές πωλήσεις, με επιστροφές / ακυρώσεις συνυπολογισμένες. Οι ποσότητες διαφορετικών μονάδων εμφανίζονται χωριστά. "+(report.mode==="offers"?"Μόνο πωλήσεις με καταγεγραμμένη εφαρμοσμένη προσφορά· παλιότερες πωλήσεις δεν αποδίδονται αναδρομικά. ":"")+(fallback.limitations||"")};
+      return {...fallback,answer:`Πωλήσεις ανά κατάστημα · ${period}.\n${summary} Δες τη λίστα καταστημάτων και ειδών παρακάτω.`,highlights:[],limitations:"Μόνο καταγεγραμμένες ολοκληρωμένες μη πιστωτικές πωλήσεις, με επιστροφές / ακυρώσεις συνυπολογισμένες. Οι ποσότητες διαφορετικών μονάδων εμφανίζονται χωριστά. "+(report.mode==="offers"?"Μόνο πωλήσεις με καταγεγραμμένη εφαρμοσμένη προσφορά· παλιότερες πωλήσεις δεν αποδίδονται αναδρομικά. ":"")+(report.mode==="family"?"Όλες οι καταγεγραμμένες συσκευασίες που ταιριάζουν στην ονομασία, χωριστά ανά είδος. ":"")+(fallback.limitations||"")};
     }
   }
   // Only complete, single-product canonical sources replace model prose.
