@@ -162,7 +162,7 @@ export default function StoreFiscalIntegrations({manager,request,onClose,onChang
         ?<div className="terminal-explainer"><ShieldCheck/><span>Φόρτωση προετοιμασίας efood…</span></div>
         :!efoodLabAllowed
           ?<div className="terminal-explainer"><ShieldCheck/><span><b>efood / Pelican κλειδωμένο.</b> Η προετοιμασία και όλες οι δοκιμές επιτρέπονται μόνο στο {LAB_COMPANY} · {LAB_STORE}. Δεν έγινε καμία αλλαγή στο επιλεγμένο πραγματικό κατάστημα.</span></div>
-          :<form key={efood?.updatedAt||"efood-new"} onSubmit={submitEfood}>
+          :<><form key={efood?.updatedAt||"efood-new"} onSubmit={submitEfood}>
             <div className="fiscal-integration-heading"><KeyRound/><div><h3>efood / Pelican — Indirect POS</h3><span className={efood?"configured":""}>{efood?`${efood.phase==="AWAITING_TEST_VENDOR"?"ΑΝΑΜΟΝΗ TEST VENDOR":"ΡΥΘΜΙΣΜΕΝΗ — ΠΑΡΑΓΩΓΗ ΚΛΕΙΔΩΜΕΝΗ"}${efood.accountHint?` · ${efood.accountHint}`:""}`:"LAB — ΔΕΝ ΕΧΕΙ ΠΡΟΕΤΟΙΜΑΣΤΕΙ"}</span></div></div>
             <div className="terminal-explainer"><ShieldCheck/><span><b>Αποκλειστικά {LAB_COMPANY} · {LAB_STORE}.</b> Η παραγωγή, η δημιουργία παραγγελίας, το stock, οι πληρωμές και η φορολογική έκδοση παραμένουν κλειδωμένα. Επιτρέπεται μόνο ένα προσωρινό SANDBOX webhook για Trigger Test Order.</span></div>
             <label>Πάροχος / Υπηρεσία<input name="providerName" defaultValue={efood?.providerName||"efood / Delivery Hero"} required/></label>
@@ -191,9 +191,8 @@ export default function StoreFiscalIntegrations({manager,request,onClose,onChang
             {webhookNotice&&<div className="terminal-explainer"><ShieldCheck/><span>{webhookNotice}</span></div>}
             <small>Στο efood Partner χρησιμοποίησε ακριβώς το Callback URL και το Authorization secret. Πάτησε Trigger Test Order μόνο όσο η ένδειξη είναι ΑΝΟΙΧΤΟ. Το πρώτο έγκυρο event αποθηκεύεται κρυπτογραφημένο ως dry-run και κλειδώνει αμέσως το webhook.</small>
 
-            {efood&&<EfoodEventPreview key={efoodUrl} url={efoodUrl} request={request}/>}
             {labResult&&<div className={labResult.passed?"terminal-explainer":"platform-error"}><ShieldCheck/><span><b>{labResult.passed?"LAB MOCK PASS":"LAB MOCK FAIL"}</b><br/>Run: {labResult.runId}<br/>READY_FOR_PICKUP: {labResult.ready.processingStatus} · replay idempotent: {String(labResult.replay.idempotent)} · CANCELLED: {labResult.cancelled.processingStatus}<br/>Catalog/Promo/Orders previews: LOCAL/SANDBOX · Events: {labResult.eventCount}<br/>External call: ΟΧΙ · Order/Sale: ΟΧΙ · Stock: ΟΧΙ · Payment/Fiscal: ΟΧΙ</span></div>}
-          </form>}
+          </form>{efood&&<EfoodEventPreview key={`${efoodUrl}:${efood.updatedAt||""}`} url={efoodUrl} request={request}/>}</>}
     </div>
   </section></div>;
 }
