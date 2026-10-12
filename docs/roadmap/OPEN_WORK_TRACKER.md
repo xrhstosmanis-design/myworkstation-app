@@ -3234,11 +3234,11 @@ Claim codex/pos-catalog-perf-20261008/08Oct11:23:48Z/PR1876/maince4db388 preserv
 
 ### 12 — efood / Pelican
 
-**Κατάσταση:** BLOCKED EXTERNAL
+**Κατάσταση:** AWAITING CALLBACK LAB / συνολικό OPEN
 
-**Υπόλοιπο / όρια PASS:** Αναμονή απάντησης efood. Πραγματικό callback, παραγγελία και παραγωγική πιστοποίηση δεν επιβεβαιώθηκαν.
+**Υπόλοιπο / όρια PASS:** Απάντηση efood διαβάστηκε· σφάλμα Bearer διορθώθηκε στο PR2386. Εκκρεμούν exact deploy και νέα callback δοκιμή. Πραγματικό Pelican/παραγγελία/παραγωγική πιστοποίηση παραμένουν OPEN.
 
-**Υπεύθυνη σελίδα / branch:** agent/efood-partner-lab-20261004
+**Υπεύθυνη σελίδα / branch:** codex/efood-bearer-20261012 — ανάληψη μέσω PR2385
 
 **Ανάληψη (χρόνος / ακριβές scope / checkpoint / PR):** Διατήρηση παλιάς ανάθεσης όπου υπάρχει· νέα καταγραφή εκκρεμεί.
 
@@ -4405,3 +4405,15 @@ One bounded source change: parse a single well-formed case-insensitive Bearer sc
 New real registered callback test through loopback HTTP and actual crypto, isolated in-memory DB adapter: legacy raw, provider Bearer/case/tab, exact encrypted payload/dry-run flags, consumption/next-event denial, same-event replay, wrong/malformed/missing auth, expiry/closed/production/outbound/foreign-company/vendor denials. Local Node24:13tests PASS/0FAIL/0SKIP including all6 existing one-shot source contract regressions. This is simulated database/loopback evidence, not PostgreSQL or actual provider callback PASS. Required full Node20CI/build/native isolated E2E and exact guarded healthy release remain pending.
 
 Receiver is MANUAL/locked. Owner requested another virtual test at22:32:30; only after green CI/merge/exact healthy revision and fresh financial/stock/control baseline. Security-window action confirmation still applies. Overall tracker12/Pelican production remains OPEN; actual client.store_id payload normalization/required store identity and business/Pelican flow are outside this Authorization-only change, not silently accepted as complete. No callback PASS or manual closure; all other owners and prior qualified PASS retained. Claim publication/complete baseline omitted before initial diagnostic test remains explicitly recorded. Checkpoint CHECKPOINTS/CHANGES/2026-10-12-efood-bearer-authorization.md.
+
+## 12/10/2026 22:46 Athens — EFOOD-BEARER-01 / MERGED / SECOND TEST BASELINE PREPARED
+
+SourcePR2386/finalhead544e730fefb156d7fe688f35c7826cbed5aca1a6 fullPRCI38298963209 SUCCESS:2501tests/2501PASS/0FAIL/0SKIP, plus6 backup-fault tests; all required build/contracts/invariants/native PostgreSQL/real HTTP E2E/Chromium/Windows jobs passed. Merge6d4c426df7b16742d9c2481c6f74fef0071cc99c. Initial obsolete-head run38298901125 cancelled during reconciliation; finalhead preserves concurrent POS source and shared records. MainCI38299660209 and exact guarded healthy deployment PENDING. Latest observed livehealth1835a91770cc5abe23794a636576c06bdc4d4b58, so no new trial yet. Local13/13 remains simulated adapter evidence. Owner codex/efood-bearer-20261012 retained; whole12/Pelican production OPEN.
+
+Prepared second virtual event: vendor9344842, oneSLL45E product, quantity1/UNIT/IN_CART, READY_FOR_PICKUP/LOGISTICS_DELIVERY. User22:32:30Athens explicitly requests another test. No extra submission/window/credential change. Receiver MANUAL/locked. Callback delivery is not yet verified; do not infer PASS from sourceCI.
+
+Fresh read-only baseline12Oct22:41–22:43Athens, MYWORKSTATION LAB/ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ/storecmtpopbgo000trhb5ng9ytiru, PlatformSuperAdmin Χρήστος Μάνης/cloudChrome, no physical terminal: activeMAIN opened12Oct19:28byLABPOS2, transaction count0/cash collections0/card0/IRIS0/total0/expenses0, opening/currentdrawer7.20EUR. ClosedMAIN control3.10cash/.50card/.50EFTPOS/difference0/closed19:27:51; closedLAB-POS-02 control1.40cash/0card/0EFTPOS/difference0/closed19:28:00, both Χρήστος Μάνης. Historical offline queue2pending/2synced/0fail/replay0 is observed, not operated on.
+
+Stock UI same selected LAB: TEST1 productb1466a68-c47b-47cc-9139-69e6f9f7f978/SKU LAB-EXCEL-20260909-01 stock4/lastsale10Oct11:47:54; TEST2 caec7ad6-a460-4c71-951f-95a10d943ebf/SKU LAB-EXCEL-20260909-02 stock−2/lastsale01Oct12:51:17. Latest StockMovement DB IDs/times/full closed-control transaction counts not exposed: NOT TESTED. Provider previous webhook rows:05Oct6ac35aacdfda1a2fa9b767df and12Oct6acd35d59a2bb1ecf47efe9d, both FAILURE/EFOOD_TEST_SECRET_INVALID; today's internalorder136fa22a-5fdb-40c3-9747-dcdf4eef11d9/public9344842-nrp1. No new financial/stock transaction or correction.
+
+Before next trial recheck same sources after exact healthy deployment; only one300s LAB window, one event, then actual provider response/eventID/CONSUMED and fresh afterUI/control readback. Do not repeat historical mock/payment/invoice/stock actions to fill measurement gaps. Record acceptance limits honestly; payload client.store_id normalization/required store identity, realPelican/production certification remain separate OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-12-efood-bearer-authorization.md.
