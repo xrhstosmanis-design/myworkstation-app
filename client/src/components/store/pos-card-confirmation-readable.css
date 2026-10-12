@@ -1,0 +1,132 @@
+.category-product-overlay.pos-card-confirmation-readable {
+  padding: 12px;
+}
+
+.pos-price-modal.pos-card-confirmation-readable > section {
+  width: min(1120px, calc(100vw - 24px));
+  min-height: min(420px, calc(100vh - 24px));
+  min-height: min(420px, calc(100dvh - 24px));
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  box-sizing: border-box;
+}
+
+.pos-card-confirmation-readable > section > header {
+  padding: 24px 28px;
+}
+
+.pos-card-confirmation-readable > section > header > div {
+  min-width: 0;
+}
+
+.pos-card-confirmation-readable > section > header small {
+  font-size: 16px;
+  line-height: 1.5;
+  opacity: 1;
+}
+
+.pos-card-confirmation-readable > section > header h2 {
+  font-size: 34px;
+  line-height: 1.2;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+
+.pos-card-confirmation-readable > section > header p {
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  margin: 10px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.pos-card-confirmation-readable .pos-price-body {
+  padding: 26px 28px;
+  gap: 20px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.pos-card-confirmation-readable .pos-price-body > b {
+  font-size: 24px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.pos-card-confirmation-readable .pos-price-body > p {
+  font-size: 20px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.pos-card-confirmation-readable .pos-price-body > div {
+  flex-wrap: wrap;
+}
+
+.pos-card-confirmation-readable .pos-price-body button {
+  min-height: 86px;
+  padding: 18px 20px;
+  border: 2px solid #b8cec5;
+  border-radius: 12px;
+  background: #fff;
+  color: #173e34;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.pos-card-confirmation-readable .pos-price-body > div > button {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.pos-card-confirmation-readable .pos-price-body .pos-primary-inline {
+  background: #087a52;
+  border-color: #087a52;
+  color: #fff;
+}
+
+.pos-card-confirmation-readable .pos-price-body button:focus-visible {
+  outline: 3px solid #125aa6;
+  outline-offset: 3px;
+}
+
+.pos-card-confirmation-readable .pos-price-body button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+@media (max-width: 700px) {
+  .pos-card-confirmation-readable > section > header {
+    padding: 18px;
+  }
+
+  .pos-card-confirmation-readable > section > header h2 {
+    font-size: 28px;
+  }
+
+  .pos-card-confirmation-readable > section > header p {
+    font-size: 24px;
+  }
+
+  .pos-card-confirmation-readable .pos-price-body {
+    padding: 18px;
+  }
+
+  .pos-card-confirmation-readable .pos-price-body > b {
+    font-size: 21px;
+  }
+
+  .pos-card-confirmation-readable .pos-price-body > div > button {
+    flex-basis: 100%;
+  }
+
+  .pos-card-confirmation-readable .pos-price-body button {
+    min-height: 72px;
+    font-size: 20px;
+  }
+}
