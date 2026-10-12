@@ -28,6 +28,18 @@ function text(value){return typeof value==="string"&&value.trim()?value.trim():t
 function firstText(...values){for(const value of values){const parsed=text(value);if(parsed)return parsed}return null}
 function upper(value){return firstText(value)?.toUpperCase().replace(/[\s-]+/g,"_")||null}
 function nested(source,...path){let value=source;for(const key of path){if(!value||typeof value!=="object")return null;value=value[key]}return value}
+function identity(values,label){
+  const ids=[];
+  for(const value of values){
+    if(value==null||typeof value==="string"&&!value.trim())continue;
+    if(typeof value!=="string"&&!(typeof value==="number"&&Number.isSafeInteger(value)&&value>=0))throw Object.assign(new Error(`Μη έγκυρο ${label} στο efood webhook.`),{status:400,code:"INVALID_PROVIDER_IDENTITY",public:true});
+    const id=String(value).trim();
+    if(id.length>300||/[\u0000-\u001f\u007f]/.test(id))throw Object.assign(new Error(`Μη έγκυρο ${label} στο efood webhook.`),{status:400,code:"INVALID_PROVIDER_IDENTITY",public:true});
+    ids.push(id);
+  }
+  if(new Set(ids).size>1)throw Object.assign(new Error(`Αντικρουόμενα ${label} στο efood webhook.`),{status:409,code:"CONFLICTING_PROVIDER_IDENTITY",public:true});
+  return ids[0]||null;
+}
 function productRefs(payload){
   const candidates=[payload?.items,nested(payload,"order","items"),nested(payload,"data","items"),nested(payload,"data","order","items")];
   const items=candidates.find(Array.isArray)||[];
@@ -41,8 +53,8 @@ export function normalizeEfoodWebhook(payload){
   if(!status)throw Object.assign(new Error("Λείπει η κατάσταση παραγγελίας από το efood webhook."),{status:400,code:"MISSING_STATUS"});
   if(!externalOrderId)throw Object.assign(new Error("Λείπει το αναγνωριστικό παραγγελίας από το efood webhook."),{status:400,code:"MISSING_ORDER_ID"});
   const externalEventId=firstText(payload.event_id,payload.eventId,nested(payload,"event","id"),nested(payload,"data","event_id"),nested(payload,"data","eventId"));
-  const providerStoreId=firstText(payload.store_id,payload.storeId,payload.vendor_id,payload.vendorId,nested(payload,"store","id"),nested(payload,"vendor","id"),nested(payload,"order","store_id"),nested(payload,"order","vendor_id"),nested(payload,"data","store_id"),nested(payload,"data","vendor_id"));
-  const externalPartnerConfigId=firstText(payload.external_partner_config_id,payload.externalPartnerConfigId,nested(payload,"order","external_partner_config_id"),nested(payload,"data","external_partner_config_id"));
+  const providerStoreId=identity([nested(payload,"client","store_id"),payload.store_id,payload.storeId,payload.vendor_id,payload.vendorId,nested(payload,"store","id"),nested(payload,"vendor","id"),nested(payload,"order","store_id"),nested(payload,"order","vendor_id"),nested(payload,"data","store_id"),nested(payload,"data","vendor_id")],"Vendor/Store ID");
+  const externalPartnerConfigId=identity([nested(payload,"client","external_partner_config_id"),payload.external_partner_config_id,payload.externalPartnerConfigId,nested(payload,"order","external_partner_config_id"),nested(payload,"data","external_partner_config_id")],"external_partner_config_id");
   const payloadHash=efoodPayloadHash(payload);
   return {status,externalOrderId,externalEventId,providerStoreId,externalPartnerConfigId,supported:EFOOD_SUPPORTED_WEBHOOK_STATUSES.has(status),productRefs:productRefs(payload),payloadHash,idempotencyKey:externalEventId?`event:${externalEventId}`:`order:${externalOrderId}:status:${status}`};
 }
@@ -68,3 +80,4 @@ export function buildEfoodOrderRecoveryPreview(input={}){
   if(to-from>60*24*60*60*1000)throw Object.assign(new Error("Η προεπισκόπηση ανάκτησης δεν επιτρέπει διάστημα μεγαλύτερο από 60 ημέρες."),{status:400});
   const request={vendorId,externalPartnerConfigId:firstText(input.externalPartnerConfigId),from:from.toISOString(),to:to.toISOString()};return {kind:"ORDERS",operation:"ORDER_RECOVERY_GET_PREVIEW",environment:"SANDBOX",request,requestHash:efoodPayloadHash(request),externalCall:false,providerContractPending:true};
 }
+
