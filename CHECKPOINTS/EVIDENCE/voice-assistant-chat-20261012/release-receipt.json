@@ -1,0 +1,57 @@
+{
+  "branch": "feat/assistant-conversation-page-20261012",
+  "claimPR": 2369,
+  "claimMerge": "58d442a19b897c2607ec342707691c62da7adfff",
+  "sourceBaseline": "36627b7807f02264515809249ac9e21c6a134441",
+  "status": "RELEASED_AWAITING_LIVE_LAB",
+  "localTests": {
+    "pass": 2440,
+    "fail": 0,
+    "skip": 28
+  },
+  "browserAuth": "restricted_no_workaround",
+  "workspace": "tea-d9ie26vaqgkc739uudqg",
+  "service": "srv-d9isenfavr4c73bdh52g",
+  "sourcePR": 2375,
+  "sourceHead": "b09f14716c5526b403b53a7874792e2aa183721d",
+  "sourceCI": 38285747874,
+  "uploadedBlobs": 31,
+  "sourceCIResult": "SUCCESS",
+  "sourceCITests": {
+    "pass": 2478,
+    "fail": 0,
+    "skip": 0,
+    "monitorPass": 6
+  },
+  "sourceMerge": "a65c93d0d5f27be663346185729ef291487e4b83",
+  "mainCI": 38286373623,
+  "mergedSourceBlobsVerified": 31,
+  "closureBranch": "docs/assistant-chat-release-20261012",
+  "pdfQA": {
+    "pages": 4,
+    "rows": 60,
+    "repeatedHeaders": 4,
+    "visuallyInspected": [
+      1,
+      4
+    ]
+  },
+  "mainAttempt1": "FAIL: existing unmodified pos-capacity-runner offeredLatency timing assertion; assistant tests pass; guard skipped",
+  "mainRetry": "rerun failed jobs only; local original capacity suite8/0/0; no source/assertion edits",
+  "mainCIResult": "SUCCESS",
+  "mainAttempt": 2,
+  "mainTests": 2478,
+  "mainMonitorTests": 6,
+  "deployGuard": 38287262041,
+  "deployJob": 114938555085,
+  "renderDeployId": "dep-db6htig473hc739qehu0",
+  "deployResult": "ACTUAL_EXACT_HEALTHY",
+  "healthRevision": "a65c93d0d5f27be663346185729ef291487e4b83",
+  "healthyAt": "2026-10-12T17:56:02.4455097Z",
+  "publicHealth": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "a65c93d0d5f27be663346185729ef291487e4b83"
+  },
+  "renderFinishedAt": "2026-10-12T17:55:56.709103Z"
+}
