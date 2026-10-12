@@ -23,7 +23,20 @@ export default function StoreSupplierOpenInvoicePayment({api,store,suppliers=[],
   const stopCamera=()=>{stream?.getTracks?.().forEach(track=>track.stop());setStream(null);setCameraOpen(false)};
   useEffect(()=>()=>stopCamera(),[]);
   useEffect(()=>{if(!allowCash&&paymentMethod==="CASH_SHIFT")setPaymentMethod("CORPORATE_CARD")},[allowCash,paymentMethod]);
-  useEffect(()=>{let cancelled=false;setItems([]);setAllocations({});if(!supplierId)return;setLoading(true);api(`/api/transactions/stores/${encodeURIComponent(store.id)}/supplier-open-invoices?supplierId=${encodeURIComponent(supplierId)}`).then(data=>{if(!cancelled)setItems(data.items||[])}).catch(error=>!cancelled&&setMessage?.(`❌ ${error?.message||"Δεν φορτώθηκαν τα ανοιχτά τιμολόγια."}`)).finally(()=>!cancelled&&setLoading(false));return()=>{cancelled=true}},[api,store.id,supplierId,setMessage]);
+  // Parent refreshes recreate callbacks; they must not erase an in-progress amount.
+  const invoiceCallbacks=useRef({api,setMessage});
+  invoiceCallbacks.current={api,setMessage};
+  useEffect(()=>{
+    let cancelled=false;
+    setItems([]);setAllocations({});setLoading(false);
+    if(!store.id||!supplierId)return;
+    setLoading(true);
+    invoiceCallbacks.current.api(`/api/transactions/stores/${encodeURIComponent(store.id)}/supplier-open-invoices?supplierId=${encodeURIComponent(supplierId)}`)
+      .then(data=>{if(!cancelled)setItems(data.items||[])})
+      .catch(error=>{if(!cancelled)invoiceCallbacks.current.setMessage?.(`❌ ${error?.message||"Δεν φορτώθηκαν τα ανοιχτά τιμολόγια."}`)})
+      .finally(()=>{if(!cancelled)setLoading(false)});
+    return()=>{cancelled=true};
+  },[store.id,supplierId]);
   const choosing=useRef(false),selectionGeneration=useRef(0);
   useEffect(()=>()=>{selectionGeneration.current++},[store.id]);
   const chooseFiles=async selected=>{
