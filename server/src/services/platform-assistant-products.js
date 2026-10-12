@@ -61,7 +61,7 @@ export async function createPlatformAssistantSession(req,selection,{authorize=au
   return {scope,tools,verify,async replay(reads){if(!Array.isArray(reads)||!reads.length||reads.length>2)fail(422,"Μη έγκυρη αναφορά εξαγωγής.","PLATFORM_ASSISTANT_SOURCE_DENIED");const result=[];for(const read of reads)result.push(await readSource(read));await verify();return result},async run({prompt,question="",requestProvider}){
     const questionTools=toolsForAssistantQuestion(question,tools);
     if(!questionTools.length)fail(422,"Επίλεξε συγκεκριμένο κατάστημα για ιδιοκατανάλωση ή καταστροφή προϊόντων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
-    const out=await runProductAssistant({prompt,cashTool:sessionCashTool,tools:questionTools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
+    const out=await runProductAssistant({prompt,question,cashTool:sessionCashTool,tools:questionTools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
       readConsumption:args=>readSource({name:"consumption_details",args}),readCash:date=>readSource({name:"cash_details",args:{date}}),
       readSalesStores:args=>readSource({name:"sales_by_store",args}),readSales:args=>readSource({name:"sales_by_product",args}),readStock:args=>readSource({name:"stock_by_product",args})});
     await verify();return {...out,scope};

@@ -1,4 +1,5 @@
 import {z} from "zod";
+import {assistantSalesPeriodClarification} from "./assistant-conversation-context.js";
 
 export const ASSISTANT_OUTPUT_TOKENS=4096;
 export const ASSISTANT_RECOVERY_TOKENS=6144;
@@ -15,12 +16,12 @@ export function assistantResponseDiagnostics(raw){
  return {responseStatus:status,incompleteReason:reason,hasOutputText:Boolean(assistantResponseText(raw).trim()),toolCallCount:Array.isArray(raw?.output)?raw.output.filter(i=>i.type==="function_call").length:0,reasoningTokens:Number.isSafeInteger(reasoning)&&reasoning>=0?reasoning:null};
 }
 export function mayRetryAssistantResponse(raw){return raw?.status==="incomplete"&&raw.incomplete_details?.reason==="max_output_tokens";}
-export function assistantAnswerFromResponse(raw,evidence=[],{providerOK=true,requireEvidence=false}={}){
+export function assistantAnswerFromResponse(raw,evidence=[],{providerOK=true,requireEvidence=false,question=""}={}){
  const refusal=(Array.isArray(raw?.output)?raw.output:[]).some(item=>(Array.isArray(item?.content)?item.content:[]).some(c=>c?.type==="refusal"));
  if(refusal||raw?.incomplete_details?.reason==="content_filter")fail("Ο βοηθός δεν μπορεί να απαντήσει στο συγκεκριμένο αίτημα. Διατύπωσέ το ως αναζήτηση αναφοράς.","AI_RESPONSE_REFUSED",422);
  const text=assistantResponseText(raw);
  if(providerOK&&(!raw?.status||raw.status==="completed")&&text.length<=65536){
-  try{const parsed=answer.parse(JSON.parse(text));if(requireEvidence&&!evidence.length)return {answer:"Δεν διαβάστηκε αναφορά για αυτή την ερώτηση. Δώσε συγκεκριμένη ονομασία και περίοδο για μία από τις διαθέσιμες αναφορές του βοηθού.",highlights:[],sources:[],limitations:"Μη συνδεδεμένη ή μη αναγνωσμένη πηγή δεν αποδεικνύει ότι δεν υπάρχουν εγγραφές.",sourceUnavailable:true};return {...parsed,...(evidence.length?{sources:[...new Set(evidence.map(r=>r.source).filter(v=>typeof v==="string"))].slice(0,8)}:{})};}catch{}
+  try{const parsed=answer.parse(JSON.parse(text));if(requireEvidence&&!evidence.length)return assistantSalesPeriodClarification(question)||{answer:"Δεν ολοκληρώθηκε η ανάγνωση της αναφοράς. Δοκίμασε ξανά την ίδια αναζήτηση.",highlights:[],sources:[],limitations:"Μη συνδεδεμένη ή μη αναγνωσμένη πηγή δεν αποδεικνύει ότι δεν υπάρχουν εγγραφές.",sourceUnavailable:true};return {...parsed,...(evidence.length?{sources:[...new Set(evidence.map(r=>r.source).filter(v=>typeof v==="string"))].slice(0,8)}:{})};}catch{}
  }
  // The callers have reauthorized and checked the canonical reports before this
  // fallback. No model text, partial JSON or old conversation amounts are used.

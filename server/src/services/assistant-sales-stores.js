@@ -10,7 +10,8 @@ export const salesStoresArguments=z.object({mode:z.enum(["names","family","categ
 });
 export const salesStoresTool={type:"function",name:"sales_by_store",strict:true,description:"Κανονικές πωλήσεις ανά εξουσιοδοτημένο κατάστημα και είδος: πολλές ονομασίες, μία κατηγορία ή πραγματικά εφαρμοσμένες προσφορές. family: όλες οι πραγματικές ονομασίες/συσκευασίες που ταιριάζουν στη μάρκα ή γενική ονομασία, π.χ. κόκα κόλα· επιστρέφονται χωριστές γραμμές ανά είδος. Δεν απαιτεί SKU. Ασαφείς συγκεκριμένες ονομασίες επιστρέφουν ονομαστικές επιλογές. Το εύρος καταστημάτων ορίζεται από τον χρήστη στην οθόνη, ποτέ από το μοντέλο. Μόνο ανάγνωση.",parameters:{type:"object",additionalProperties:false,properties:{mode:{type:"string",enum:["names","family","category","offers"]},names:{type:"array",items:{type:"string"},description:"names: συγκεκριμένες ονομασίες. family: γενικές ονομασίες/μάρκες του χρήστη για όλες τις καταγεγραμμένες συσκευασίες. category: μία ονομασία κατηγορίας. offers: κενή λίστα."},from:{type:"string"},to:{type:"string"}},required:["mode","names","from","to"]}};
 export const salesName=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").replace(/\bfix\b/g,"φιξ").replace(/(\d)([a-zα-ω])/g,"$1 $2").replace(/([a-zα-ω])(\d)/g,"$1 $2").replace(/[^a-zα-ω0-9]+/g," ").trim().replace(/\s+/g," ").replace(/(^| )(?:κοκα ?κολα|coca ?cola)(?= |$)/g,"$1coca cola");
-const nameMatches=(name,query)=>{const tokens=salesName(name).split(" ");return salesName(query).split(" ").every(t=>tokens.includes(t))};
+const categoryName=value=>salesName(value).replace(/(^| )(?:μπυρες|μπιρες|μπυρα|μπιρα)(?= |$)/g,"$1μπυρα");
+const nameMatches=(name,query,normalize=salesName)=>{const tokens=normalize(name).split(" ");return normalize(query).split(" ").every(t=>tokens.includes(t))};
 const fail=message=>{throw Object.assign(new Error(message),{status:502})};
 export async function readSalesNamesCatalog(companyId,{db=prisma}={}){
   return db.$queryRaw`SELECT p."id" AS "productId",p."name",p."unit",c."name" AS "categoryName",mp."subcategoryName"
@@ -35,12 +36,13 @@ export async function readAssistantSalesStores(value,access,{readReport=readSale
       catalogs.set(companyId,rows);ids.set(companyId,new Set());
     }
     for(const query of args.names){
+      const normalize=args.mode==="category"?categoryName:salesName;
       const candidates=[...catalogs.entries()].flatMap(([companyId,rows])=>rows.map(r=>({...r,companyId})));
       const labels=r=>args.mode==="category"?[r.categoryName,r.subcategoryName].filter(Boolean):[r.name];
-      const exact=args.mode==="family"?[]:candidates.filter(r=>labels(r).some(n=>salesName(n)===salesName(query)));
-      const matches=exact.length?exact:candidates.filter(r=>labels(r).some(n=>nameMatches(n,query)));
+      const exact=args.mode==="family"?[]:candidates.filter(r=>labels(r).some(n=>normalize(n)===normalize(query)));
+      const matches=exact.length?exact:candidates.filter(r=>labels(r).some(n=>nameMatches(n,query,normalize)));
       const distinct=new Map();
-      for(const r of matches)for(const label of labels(r))if(salesName(label)===salesName(query)||!exact.length&&nameMatches(label,query))distinct.set(salesName(label),label);
+      for(const r of matches)for(const label of labels(r))if(normalize(label)===normalize(query)||!exact.length&&nameMatches(label,query,normalize))distinct.set(normalize(label),label);
       if(!matches.length)return {...base,result:"no_match",unresolvedName:query};
       if(args.mode!=="family"&&distinct.size!==1)return {...base,result:"ambiguous",unresolvedName:query,candidates:[...distinct.values()].slice(0,20),truncated:distinct.size>20};
       for(const r of matches)ids.get(r.companyId).add(r.productId);

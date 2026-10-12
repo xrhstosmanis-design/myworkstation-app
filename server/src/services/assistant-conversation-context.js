@@ -1,14 +1,42 @@
 import {z} from "zod";
-import {assistantSalesQuestion} from "./assistant-question-intent.js";
+import {assistantSalesQuestion,salesOnlyQuestion} from "./assistant-question-intent.js";
 
 export const assistantHistorySchema=z.array(z.object({role:z.enum(["user","assistant"]),content:z.string().trim().min(1).max(2000)}).strict()).max(10).default([]);
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").trim();
 const domain=q=>assistantSalesQuestion(q)||/ιδιοκαταναλ|καταστροφ|πωλησ|ταμει|μετρητ|αποθεμ|στοκ|προσφορ|εκπτωσ/.test(norm(q));
+// This only detects a supplied period, never invents or validates report dates.
+// The canonical reader still validates the resolved calendar and date limits.
+const numericDatePattern=String.raw`\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}(?:/\d{2,4})?|\d{1,2}\.\d{1,2}\.\d{2,4}`;
+const numericDates=new RegExp(numericDatePattern,"g");
+const relativeDays=/προχθες|χθες|σημερα|\b(?:today|yesterday)\b/g;
+export function assistantQuestionHasPeriod(question){
+ const q=norm(question);
+ return new RegExp(numericDatePattern).test(q)||/προχθες|χθες|σημερα|εβδομαδ|μηνα|μηνο|φετος|περσι|περυσι|ιανουαρ|φεβρουαρ|μαρτι|απριλ|μαιο|μαιου|ιουνι|ιουλι|αυγουστ|σεπτεμβρ|οκτωβρ|νοεμβρ|δεκεμβρ|\b(?:today|yesterday|week|month|year|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q);
+}
+const periodOnly=q=>assistantQuestionHasPeriod(q)&&!norm(q).replace(numericDates," ").replace(relativeDays," ").replace(/(^|\s)(?:απο|εως|μεχρι|για|στις|την|το|και|σε)(?=\s|$)/g," ").replace(/[\s.,;:!?–-]+/g,"").length;
+function lastSalesPeriod(history){
+ const users=history.filter(m=>m.role==="user");
+ for(let i=users.length-1;i>=0;i--){
+  const m=users[i];if(assistantQuestionRequiresReport(m.content)&&!salesOnlyQuestion(m.content))break;
+  const datedFollow=periodOnly(m.content)&&salesOnlyQuestion(users.slice(0,i).reverse().find(p=>assistantQuestionRequiresReport(p.content))?.content);
+  if(datedFollow||salesOnlyQuestion(m.content)&&assistantQuestionHasPeriod(m.content))return m.content;
+ }
+ return null;
+}
 export function assistantEffectiveQuestion(question,history=[]){
  const checked=assistantHistorySchema.parse(history),q=norm(question);
- if(domain(question)||!(/^(και|το ιδιο|τα ιδια|για χθες|χθες|σημερα|ανα |χωρισ|βγαλτα|σε |εξαγωγη)/.test(q)||/\b(excel|xlsx|csv|pdf|word|docx)\b/.test(q)))return question;
- const previous=[...checked].reverse().find(m=>m.role==="user"&&domain(m.content));
- return previous?`${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${previous.content}`:question;
+ if(salesOnlyQuestion(question)&&!assistantQuestionHasPeriod(question)){
+  const period=lastSalesPeriod(checked);
+  if(period)return `${question}\nΠερίοδος της ίδιας αναζήτησης πωλήσεων: ${period}\nΧρησιμοποίησε μόνο την προηγούμενη περίοδο, με το είδος/κατηγορία της νέας ερώτησης και το ήδη εξουσιοδοτημένο εύρος.`;
+ }
+ if(domain(question)||!(/^(και|το ιδιο|τα ιδια|για χθες|χθες|σημερα|ανα |χωρισ|βγαλτα|σε |εξαγωγη)/.test(q)||/\b(excel|xlsx|csv|pdf|word|docx)\b/.test(q)||periodOnly(question)))return question;
+ const previous=[...checked].reverse().find(m=>m.role==="user"&&assistantQuestionRequiresReport(m.content));
+ const period=previous&&salesOnlyQuestion(previous.content)&&!assistantQuestionHasPeriod(question)?lastSalesPeriod(checked):null;
+ return previous?`${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${previous.content}${period?`\nΗ νεότερη περίοδος αυτής της αναζήτησης είναι: ${period}\nΧρησιμοποίησε αυτή την περίοδο αντί οποιασδήποτε παλαιότερης.`:""}`:question;
+}
+export function assistantSalesPeriodClarification(question){
+ if(!assistantQuestionRequiresReport(question)||!salesOnlyQuestion(question)||assistantQuestionHasPeriod(question))return null;
+ return {answer:"Για ποια περίοδο θέλεις τις πωλήσεις; Γράψε ημερομηνίες από–έως ή «σήμερα» / «χθες».",highlights:[],sources:[],limitations:"",clarification:"period"};
 }
 export function assistantConversationInstructions(history=[]){
  const checked=assistantHistorySchema.parse(history);if(!checked.length)return "";

@@ -1,4 +1,5 @@
 import {z} from "zod";
+import {assistantSalesPeriodClarification} from "./assistant-conversation-context.js";
 import {salesReportCalendar} from "./sales-report-calendar.js";
 import {cashToolArguments} from "./assistant-cash-tools.js";
 import {stockToolArguments,ownerStockTool} from "./owner-stock-tools.js";
@@ -43,7 +44,11 @@ export function productSalesEvidence(report,args,scope){
 export const assistantProductTools=[ownerSalesTool,ownerStockTool];
 
 // Shared dispatcher. The old export remains compatible with existing Owner clients.
-export async function runOwnerAssistant({prompt,requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,cashTool,tools=[cashTool,ownerSalesTool]}){
+export async function runOwnerAssistant({prompt,question="",requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,cashTool,tools=[cashTool,ownerSalesTool]}){
+  // A missing sales period is a dialogue step, not permission for the model to
+  // choose today's dates. Callers authorize the current scope before/after it.
+  const clarification=assistantSalesPeriodClarification(question);
+  if(clarification)return {response:{ok:true},raw:{status:"completed",output_text:JSON.stringify({answer:clarification.answer,highlights:[],limitations:""})},evidence:[],reads:[]};
   const input=[{role:"user",content:prompt}],evidence=[],reads=[];let calls=0,retried=false;
   for(let round=0;round<3;round++){
     const settings={input,tools,parallel_tool_calls:false,tool_choice:round===2?"none":"auto",store:false,max_output_tokens:ASSISTANT_OUTPUT_TOKENS};
