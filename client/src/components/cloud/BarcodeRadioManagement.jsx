@@ -1,3 +1,4 @@
+import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useState} from "react";
 import {Barcode,Check,Radio,RefreshCw,X} from "lucide-react";
 
@@ -5,7 +6,7 @@ const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",curr
 const iso=(date,end=false)=>new Date(`${date}T${end?"23:59:59":"00:00:00"}`).toISOString();
 
 export default function BarcodeRadioManagement({api,store}){
-  const today=new Date().toISOString().slice(0,10),monthAgo=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const today=greeceDateInput(new Date()),monthAgo=greeceDateInput(new Date(Date.now()-30*86400000));
   const [radio,setRadio]=useState(null),[allowed,setAllowed]=useState([]),[enabled,setEnabled]=useState(false);
   const [requests,setRequests]=useState([]),[report,setReport]=useState(null),[from,setFrom]=useState(monthAgo),[to,setTo]=useState(today);
   const [busy,setBusy]=useState(""),[error,setError]=useState(""),[message,setMessage]=useState("");

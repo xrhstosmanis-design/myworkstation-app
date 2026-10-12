@@ -1,3 +1,4 @@
+import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {CloudDownload,Eye,Inbox,RefreshCw,RotateCw,Search,Trash2} from "lucide-react";
 import "./invoice-inbox.css";
@@ -5,8 +6,8 @@ import "./invoice-inbox.css";
 
 const labels={RECEIVED:"Αρχειοθετήθηκε",IN_REVIEW:"Σε έλεγχο",PROCESSED:"Ελεγμένο"};
 const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
-const dayKey=value=>{if(!value)return "Χωρίς ημερομηνία";const d=new Date(value);return Number.isNaN(d.getTime())?"Χωρίς ημερομηνία":d.toLocaleDateString("el-GR",{year:"numeric",month:"2-digit",day:"2-digit"})};
-const isoDay=value=>{if(!value)return "";const d=new Date(value);return Number.isNaN(d.getTime())?"":d.toISOString().slice(0,10)};
+const dayKey=value=>{if(!value)return "Χωρίς ημερομηνία";const d=new Date(value);return Number.isNaN(d.getTime())?"Χωρίς ημερομηνία":d.toLocaleDateString("el-GR",{...({year:"numeric",month:"2-digit",day:"2-digit"}),timeZone:"Europe/Athens"})};
+const isoDay=value=>{if(!value)return "";const d=new Date(value);return Number.isNaN(d.getTime())?"":greeceDateInput(d)};
 
 export default function InvoiceInboxPanel({api,stores=[],onOpenAi}){
   const [storeId,setStoreId]=useState(stores[0]?.id||"");

@@ -4,7 +4,7 @@ import BankPaymentImportPanel from "./BankPaymentImportPanel.jsx";
 import "./supplier-management.css";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const date=value=>value?new Date(value).toLocaleDateString("el-GR"):"—";
+const date=value=>value?new Date(value).toLocaleDateString("el-GR",{timeZone:"Europe/Athens"}):"—";
 
 export default function SupplierManagementPanel({api,suppliers=[],onChanged}){
   const [selectedId,setSelectedId]=useState(""),[detail,setDetail]=useState(null),[error,setError]=useState(""),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);

@@ -1,3 +1,4 @@
+import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React,{useMemo,useState} from "react";
 import {CheckCircle2,LockKeyhole,PackageCheck,Printer,Save,XCircle} from "lucide-react";
 import "./commercial-module-pricing.css";
@@ -5,7 +6,7 @@ import "./managed-control.css";
 
 const planLabels={TRIAL:"Δοκιμαστικό",PILOT:"Πιλοτικό",BASIC:"START",PRO:"BUSINESS",ENTERPRISE:"AI COMPLETE"};
 const statusLabels={TRIAL:"Δοκιμή",PILOT:"Πιλοτικό",ACTIVE:"Ενεργό",SUSPENDED:"Σε αναστολή",EXPIRED:"Έληξε"};
-const toInput=value=>value?new Date(value).toISOString().slice(0,10):"";
+const toInput=value=>value?greeceDateInput(new Date(value)):"";
 const controlPlans={NONE:{label:"Χωρίς ανθρώπινο έλεγχο",price:0},BASIC:{label:"Έλεγχος BASIC",price:149},COMPLETE:{label:"Έλεγχος COMPLETE",price:249},PREMIUM:{label:"Έλεγχος PREMIUM",price:349}};
 const softwarePlans={
   BASIC:{label:"START",price:100,keys:["CORE","PERSONNEL","SHIFTS","LEAVES","INVENTORY","POS","STORE_MODE","PILOT_REPORT"]},

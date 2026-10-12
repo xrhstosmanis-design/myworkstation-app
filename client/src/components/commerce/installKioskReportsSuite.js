@@ -2,7 +2,7 @@ import {beginReportLoad} from "./reportStoreContext.js";
 const allowed=()=>{try{return ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(JSON.parse(localStorage.getItem("user")||"{}").role)}catch{return false}};
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const n=v=>Number(v||0),money=v=>n(v).toLocaleString("el-GR",{style:"currency",currency:"EUR",minimumFractionDigits:2}),num=v=>n(v).toLocaleString("el-GR",{minimumFractionDigits:0,maximumFractionDigits:3}),pct=v=>`${n(v).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})}%`;
-const pad=v=>String(v).padStart(2,"0"),dateOnly=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,fmt=v=>v?new Date(v).toLocaleString("el-GR"):"—";
+const pad=v=>String(v).padStart(2,"0"),dateOnly=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,fmt=v=>v?new Date(v).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
 const today=()=>dateOnly(new Date()),monthAgo=()=>{const d=new Date();d.setDate(d.getDate()-30);return dateOnly(d)};
 const movementLabel=value=>({RECIPE_CONSUMPTION:"Ανάλωση συνταγής",MANUAL_ADJUSTMENT:"Χειροκίνητη διόρθωση αποθέματος",PURCHASE:"Αγορά",SALE:"Πώληση",RETURN:"Επιστροφή",WASTE:"Φύρα",STOCKTAKE:"Απογραφή"}[String(value||"").toUpperCase()]||String(value||"—"));
 const documentLabel=value=>({SALE:"Πώληση",NON_FISCAL_SALE:"Μη φορολογική πώληση",PURCHASE:"Αγορά",RETURN:"Επιστροφή"}[String(value||"").toUpperCase()]||String(value||"—"));

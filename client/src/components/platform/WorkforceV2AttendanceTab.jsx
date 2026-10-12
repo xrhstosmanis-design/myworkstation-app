@@ -1,11 +1,12 @@
+import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useMemo,useState} from "react";
 import {CalendarDays,Clock3,LogIn,LogOut,RefreshCw,ShieldCheck,Timer,UsersRound} from "lucide-react";
 
-const today=()=>new Date().toISOString().slice(0,10);
+const today=()=>greeceDateInput(new Date());
 const duration=value=>{const total=Number(value||0),hours=Math.floor(total/60),minutes=total%60;return `${hours}ω ${minutes}λ`};
 const difference=value=>value===null||value===undefined?"—":`${value>0?"+":value<0?"−":""}${duration(Math.abs(value))}`;
 const money=value=>value===null||value===undefined?"—":new Intl.NumberFormat("el-GR",{style:"currency",currency:"EUR"}).format(Number(value));
-const time=value=>value?new Intl.DateTimeFormat("el-GR",{hour:"2-digit",minute:"2-digit"}).format(new Date(value)):"—";
+const time=value=>value?new Intl.DateTimeFormat("el-GR",{...({hour:"2-digit",minute:"2-digit"}),timeZone:"Europe/Athens"}).format(new Date(value)):"—";
 
 export default function WorkforceV2AttendanceTab({company,store,request}){
   const base=`/api/platform/store-modules/companies/${company.id}/stores/${store.id}/workforce-v2`;

@@ -1,3 +1,4 @@
+import {greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
 const money=value=>value===null||value===undefined?"—":Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const num=value=>Number(value||0);
 const pad=value=>String(value).padStart(2,"0");
@@ -6,14 +7,14 @@ const today=()=>localDate(new Date());
 const monthStart=()=>{const d=new Date();return localDate(new Date(d.getFullYear(),d.getMonth(),1))};
 const yearStart=()=>`${new Date().getFullYear()}-01-01`;
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
-const fmt=value=>value?new Date(value).toLocaleString("el-GR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—";
+const fmt=value=>value?new Date(value).toLocaleString("el-GR",{...({day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}),timeZone:"Europe/Athens"}):"—";
 const duration=value=>{if(value===null||value===undefined)return"—";const mins=Math.max(0,Math.round(Number(value)));return `${String(Math.floor(mins/60)).padStart(2,"0")}:${String(mins%60).padStart(2,"0")}`};
 const roleAllowed=()=>{try{return ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(JSON.parse(localStorage.getItem("user")||"{}").role)}catch{return false}};
 const txLabel=type=>({SALE_CASH:"Πώληση μετρητών",SALE_CARD:"Πώληση κάρτας",SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπό έξοδο",PERCENTAGES:"Ποσοστά"}[type]||String(type||"Κίνηση"));
 const state={from:monthStart(),to:today(),storeId:"",status:"ALL",q:"",report:null,loading:false,error:"",detail:null,detailLoading:false,detailTab:"ledger"};
 
 async function api(path){const token=localStorage.getItem("token");const r=await fetch(path,{headers:{...(token?{Authorization:`Bearer ${token}`}:{})}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||`Σφάλμα ${r.status}`);return data}
-function query(){const q=new URLSearchParams({from:new Date(`${state.from}T00:00:00`).toISOString(),to:new Date(`${state.to}T23:59:59.999`).toISOString(),status:state.status});if(state.storeId)q.set("storeId",state.storeId);if(state.q.trim())q.set("q",state.q.trim());return q}
+function query(){const q=new URLSearchParams({from:greeceDateTimeToIso(`${state.from}T00:00:00`),to:greeceDateTimeToIso(`${state.to}T23:59:59.999`),status:state.status});if(state.storeId)q.set("storeId",state.storeId);if(state.q.trim())q.set("q",state.q.trim());return q}
 const varianceClass=value=>Math.abs(num(value))>.009?(num(value)<0?"negative":"positive"):"zero";
 const signedMoney=value=>value===null||value===undefined?"—":`${num(value)>0?"+":""}${money(value)}`;
 

@@ -1,13 +1,14 @@
+import {greeceDateInput,greeceDateTimeInput,greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useMemo,useState} from "react";
 import {AlertTriangle,CheckCircle2,Clock3,FileSpreadsheet,RefreshCw} from "lucide-react";
 import PayrollPeriodPanel from "./PayrollPeriodPanel.jsx";
 import "./attendance-management.css";
 
 const pad=value=>String(value).padStart(2,"0");
-const localInput=date=>`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-const monthRange=value=>{const [year,month]=value.split("-").map(Number);return {from:new Date(year,month-1,1).toISOString(),to:new Date(year,month,1).toISOString()}};
+const localInput=date=>greeceDateTimeInput(date||new Date());
+const monthRange=value=>{const [year,month]=value.split("-").map(Number);const day=m=>greeceDateInput(new Date(Date.UTC(year,m,1)));return {from:greeceDateTimeToIso(`${day(month-1)}T00:00:00`),to:greeceDateTimeToIso(`${day(month)}T00:00:00`)}};
 const duration=minutes=>`${Math.floor(Number(minutes||0)/60)}ω ${Number(minutes||0)%60}λ`;
-const dateTime=value=>value?new Date(value).toLocaleString("el-GR"):"—";
+const dateTime=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
 
 export default function AttendanceManagementPanel({api,stores=[],initialStoreId=""}){
   const now=new Date();
@@ -20,8 +21,8 @@ export default function AttendanceManagementPanel({api,stores=[],initialStoreId=
   const query=()=>`storeId=${encodeURIComponent(storeId)}&from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`;
   const load=async()=>{if(!storeId)return;setError("");try{const [people,eventRows,totals]=await Promise.all([api(`/api/attendance/employees?storeId=${encodeURIComponent(storeId)}`),api(`/api/attendance/events?${query()}`),api(`/api/attendance/summary?${query()}`)]);setEmployees(people);setEvents(eventRows);setSummary(totals)}catch(e){setError(e.message)}};
   useEffect(()=>{load()},[storeId,month]);
-  const submitManual=async event=>{event.preventDefault();setBusy(true);setError("");setMessage("");const form=new FormData(event.currentTarget);try{await api("/api/attendance/events",{method:"POST",body:JSON.stringify({storeId,employeeId:form.get("employeeId"),eventType:form.get("eventType"),occurredAt:new Date(form.get("occurredAt")).toISOString(),note:form.get("note")||null})});event.currentTarget.reset();setMessage("Η χειροκίνητη καταχώριση αποθηκεύτηκε με audit.");await load()}catch(e){setError(e.message)}finally{setBusy(false)}};
-  const correct=async event=>{event.preventDefault();setBusy(true);setError("");setMessage("");const form=new FormData(event.currentTarget);try{await api(`/api/attendance/events/${selectedEvent.id}/correct`,{method:"POST",body:JSON.stringify({eventType:form.get("eventType"),occurredAt:new Date(form.get("occurredAt")).toISOString(),reason:form.get("reason"),note:form.get("note")||null})});setSelectedEvent(null);setMessage("Η διόρθωση καταγράφηκε χωρίς διαγραφή του αρχικού γεγονότος.");await load()}catch(e){setError(e.message)}finally{setBusy(false)}};
+  const submitManual=async event=>{event.preventDefault();setBusy(true);setError("");setMessage("");const form=new FormData(event.currentTarget);try{await api("/api/attendance/events",{method:"POST",body:JSON.stringify({storeId,employeeId:form.get("employeeId"),eventType:form.get("eventType"),occurredAt:greeceDateTimeToIso(form.get("occurredAt")),note:form.get("note")||null})});event.currentTarget.reset();setMessage("Η χειροκίνητη καταχώριση αποθηκεύτηκε με audit.");await load()}catch(e){setError(e.message)}finally{setBusy(false)}};
+  const correct=async event=>{event.preventDefault();setBusy(true);setError("");setMessage("");const form=new FormData(event.currentTarget);try{await api(`/api/attendance/events/${selectedEvent.id}/correct`,{method:"POST",body:JSON.stringify({eventType:form.get("eventType"),occurredAt:greeceDateTimeToIso(form.get("occurredAt")),reason:form.get("reason"),note:form.get("note")||null})});setSelectedEvent(null);setMessage("Η διόρθωση καταγράφηκε χωρίς διαγραφή του αρχικού γεγονότος.");await load()}catch(e){setError(e.message)}finally{setBusy(false)}};
   return <section className="attendance-admin">
     <header><div><span>ΠΑΡΟΥΣΙΕΣ & ΜΙΣΘΟΔΟΣΙΑ</span><h2>Παρουσίες & περίοδοι ωρών</h2><p>Πραγματικές ώρες, ελεγχόμενες διορθώσεις, κλείδωμα περιόδου και Excel.</p></div><button onClick={load}><RefreshCw/>Ανανέωση</button></header>
     <div className="attendance-view-tabs"><button className={view==="attendance"?"active":""} onClick={()=>setView("attendance")}><Clock3/>Παρουσίες</button><button className={view==="payroll"?"active":""} onClick={()=>setView("payroll")}><FileSpreadsheet/>Περίοδοι & Excel</button></div>

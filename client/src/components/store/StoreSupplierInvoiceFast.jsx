@@ -1,3 +1,4 @@
+import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import DocumentPhotoList from "./DocumentPhotoList.jsx";
 import MobileDocumentPhotosQr from "./MobileDocumentPhotosQr.jsx";
 import useMobileDocumentPhotos from "./useMobileDocumentPhotos.js";
@@ -11,7 +12,7 @@ import InvoiceQrCamera from "./InvoiceQrCamera.jsx";
 import InvoiceQrScanner from "./InvoiceQrScanner.jsx";
 import {knownSupplierFromFastHeaders} from "../../lib/invoice-fast-supplier-match.js";
 
-const today=()=>new Date().toISOString().slice(0,10);
+const today=()=>greeceDateInput(new Date());
 const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(",","."))||0;
 const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Δεν διαβάστηκε το παραστατικό."));r.readAsDataURL(file)});
 const paymentKey=()=>`pos-invoice-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;

@@ -1,6 +1,6 @@
 const esc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;","gt;":"&gt;",'"':"&quot;","'":"&#039;"}[char]||({">":"&gt;"})[char]));
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const fmt=value=>value?new Date(value).toLocaleString("el-GR"):"—";
+const fmt=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
 const token=()=>localStorage.getItem("token");
 async function api(path,options={}){const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token()?{Authorization:`Bearer ${token()}`}:{}) ,...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(!response.ok){const error=new Error(data.error||`Σφάλμα ${response.status}`);error.code=data.code;error.data=data;throw error}return data}
 const fileBase64=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error("Δεν διαβάστηκε το αρχείο."));reader.onload=()=>{const value=String(reader.result||"");resolve(value.includes(",")?value.split(",").pop():value)};reader.readAsDataURL(file)});

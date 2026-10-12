@@ -2,7 +2,7 @@ import React,{useEffect,useState} from "react";
 import {Camera,CheckCircle2,ClipboardCheck,Eye,RefreshCw} from "lucide-react";
 import "./store-handover.css";
 
-const when=value=>value?new Date(value).toLocaleString("el-GR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—";
+const when=value=>value?new Date(value).toLocaleString("el-GR",{...({day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}),timeZone:"Europe/Athens"}):"—";
 
 async function prepareImage(file){
   if(!file)return null;

@@ -1,7 +1,7 @@
 const allowed=()=>{try{return ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(JSON.parse(localStorage.getItem("user")||"{}").role)}catch{return false}};
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const money=v=>Number(v||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const num=v=>Number(v||0),fmt=v=>v?new Date(v).toLocaleDateString("el-GR"):"—";
+const num=v=>Number(v||0),fmt=v=>v?new Date(v).toLocaleDateString("el-GR",{timeZone:"Europe/Athens"}):"—";
 let lastSupplierId="",bound=false;
 async function api(path){const token=localStorage.getItem("token");const r=await fetch(path,{headers:{...(token?{Authorization:`Bearer ${token}`}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Σφάλμα ${r.status}`);return d}
 function modal(html){const w=document.createElement("div");w.className="sc-modal-overlay wide spc-overlay";w.innerHTML=`<section class="sc-modal spc-modal">${html}</section>`;document.body.appendChild(w);w.addEventListener("click",e=>{if(e.target===w||e.target.closest("[data-spc-close]"))w.remove()});return w}

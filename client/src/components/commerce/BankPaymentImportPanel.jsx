@@ -3,7 +3,7 @@ import {FileSpreadsheet,Plus,RefreshCw,Search,X} from "lucide-react";
 import "./supplier-management.css";
 
 const money=v=>Number(v||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const date=v=>v?new Date(v).toLocaleDateString("el-GR"):"—";
+const date=v=>v?new Date(v).toLocaleDateString("el-GR",{timeZone:"Europe/Athens"}):"—";
 const readBase64=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||"").split(",").pop()||"");r.onerror=()=>reject(new Error("Δεν διαβάστηκε το αρχείο."));r.readAsDataURL(file)});
 
 export default function BankPaymentImportPanel({api,fixedStore=null}){
