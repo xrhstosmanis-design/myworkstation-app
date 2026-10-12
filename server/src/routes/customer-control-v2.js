@@ -1,3 +1,4 @@
+import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -45,7 +46,7 @@ async function ensureSchema(){
 function requireAccess(req,res,next){if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η πλήρης διαχείριση πελατών είναι διαθέσιμη μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});next()}
 router.use(requireAccess);
 router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
-function range(query={}){const now=new Date(),to=query.to?new Date(String(query.to)):now,from=query.from?new Date(String(query.from)):new Date(to.getFullYear(),to.getMonth(),1);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}return{from,to}}
+function range(query={}){const now=new Date(),to=query.to?greeceRangeDate(query.to,true):now,from=query.from?greeceRangeDate(query.from):greeceMonthStart(to);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}return{from,to}}
 async function owned(companyId,customerId){const rows=await prisma.$queryRaw`SELECT * FROM "Customer" WHERE "id"=${customerId} AND "companyId"=${companyId} LIMIT 1`;return rows[0]||null}
 async function uniqueMemberCard(companyId,requested=""){const normalized=String(requested||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");for(let attempt=0;attempt<10;attempt++){const value=normalized||`MWS${crypto.randomBytes(8).toString("hex").toUpperCase()}`,rows=await prisma.$queryRaw`SELECT "id" FROM "Customer" WHERE "companyId"=${companyId} AND UPPER(REGEXP_REPLACE(COALESCE("memberCard",''),'[^A-Za-z0-9]','','g'))=${value} LIMIT 1`;if(!rows[0])return value;if(normalized){const error=new Error("Η κάρτα μέλους χρησιμοποιείται ήδη από άλλον πελάτη.");error.status=409;throw error}}throw new Error("Δεν δημιουργήθηκε μοναδικός αριθμός κάρτας.")}
 async function validStore(companyId,storeId){if(!storeId)return null;return prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}})}

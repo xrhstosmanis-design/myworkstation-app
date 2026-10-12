@@ -4,7 +4,7 @@ import "./pilot-report.css";
 
 const today=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit"}):"—";
+const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false,hour:"2-digit",minute:"2-digit"}):"—";
 const escapeCsv=value=>`"${String(value??"").replaceAll('"','""')}"`;
 const typeLabels={SALE_CASH:"Πώληση μετρητών",SALE_CARD:"Πώληση με κάρτα",SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Λοιπά έξοδα",PERCENTAGES:"Ποσοστά"};
 

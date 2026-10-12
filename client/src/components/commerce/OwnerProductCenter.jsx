@@ -1071,7 +1071,7 @@ export default function OwnerProductCenter({
                   Από
                   <input
                     name="startsAt"
-                    type="datetime-local"
+                    lang="en-GB" type="datetime-local"
                     defaultValue={localInputDate(new Date())}
                     required
                   />
@@ -1080,7 +1080,7 @@ export default function OwnerProductCenter({
                   Έως
                   <input
                     name="endsAt"
-                    type="datetime-local"
+                    lang="en-GB" type="datetime-local"
                     defaultValue={localInputDate(
                       new Date(Date.now() + 7 * 86400000),
                     )}
@@ -1463,7 +1463,7 @@ export default function OwnerProductCenter({
                 {discountAudit.map((row) => (
                   <li key={row.id}>
                     {new Date(row.createdAt).toLocaleString("el-GR", {
-                      timeZone: "Europe/Athens",
+                      timeZone:"Europe/Athens",hour12:false,
                     })}{" "}
                     · {row.discountPercent}% ·{" "}
                     {Array.isArray(row.productIds) ? row.productIds.length : 0}{" "}
@@ -2133,7 +2133,7 @@ export default function OwnerProductCenter({
                   Από
                   <input
                     name="startsAt"
-                    type="datetime-local"
+                    lang="en-GB" type="datetime-local"
                     defaultValue={localInputDate(new Date())}
                     required
                   />
@@ -2142,7 +2142,7 @@ export default function OwnerProductCenter({
                   Έως
                   <input
                     name="endsAt"
-                    type="datetime-local"
+                    lang="en-GB" type="datetime-local"
                     defaultValue={localInputDate(
                       new Date(Date.now() + 7 * 86400000),
                     )}
@@ -2188,9 +2188,9 @@ export default function OwnerProductCenter({
                             : `Τιμή ${money(p.offerPrice)}`}
                     </small>
                     <small>
-                      {new Date(p.validFrom).toLocaleString("el-GR",{timeZone:"Europe/Athens"})} →{" "}
+                      {new Date(p.validFrom).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})} →{" "}
                       {p.validUntil
-                        ? new Date(p.validUntil).toLocaleString("el-GR",{timeZone:"Europe/Athens"})
+                        ? new Date(p.validUntil).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})
                         : "χωρίς λήξη"}
                     </small>
                     <small>
@@ -2251,7 +2251,7 @@ export default function OwnerProductCenter({
                     <b>{st.name}</b>
                     <small>
                       {st.storeName} ·{" "}
-                      {new Date(st.startedAt).toLocaleString("el-GR",{timeZone:"Europe/Athens"})}
+                      {new Date(st.startedAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}
                     </small>
                   </span>
                   <span>

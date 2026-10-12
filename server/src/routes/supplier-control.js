@@ -1,3 +1,4 @@
+import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -50,7 +51,7 @@ function requireAccess(req,res,next){if(req.user?.tokenType==="STORE_OPERATOR"||
 router.use(requireAccess);
 router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
 async function owned(companyId,supplierId){const rows=await prisma.$queryRaw`SELECT * FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} LIMIT 1`;return rows[0]||null}
-function dates(query={}){const now=new Date(),to=query.to?new Date(String(query.to)):now,from=query.from?new Date(String(query.from)):new Date(to.getFullYear(),to.getMonth(),1);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}return{from,to}}
+function dates(query={}){const now=new Date(),to=query.to?greeceRangeDate(query.to,true):now,from=query.from?greeceRangeDate(query.from):greeceMonthStart(to);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}return{from,to}}
 
 router.get("/report",async(req,res,next)=>{try{
   const companyId=req.user.companyId,q=String(req.query.q||"").trim(),activeOnly=String(req.query.activeOnly||"true")!=="false",text=q?`%${q}%`:null;

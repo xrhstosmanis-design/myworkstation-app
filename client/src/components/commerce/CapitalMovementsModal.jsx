@@ -4,7 +4,7 @@ import {ArrowLeft,FileDown,Search,X} from "lucide-react";
 import "./capital-movements-modal.css";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const fmt=value=>value?new Date(value).toLocaleString("el-GR",{...({day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}),timeZone:"Europe/Athens"}):"—";
+const fmt=value=>value?new Date(value).toLocaleString("el-GR",{...({day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}),timeZone:"Europe/Athens",hour12:false}):"—";
 const dateInput=value=>{const d=value?new Date(value):new Date();return greeceDateInput(d)};
 
 export default function CapitalMovementsModal({cash,ledger,onClose}){

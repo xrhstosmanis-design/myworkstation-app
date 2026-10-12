@@ -1,3 +1,4 @@
+import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -39,9 +40,9 @@ function requireOwnerReport(req){
 }
 function dateRange(query){
   const now=new Date();
-  const fallbackFrom=new Date(now.getFullYear(),now.getMonth(),1,0,0,0,0);
-  const from=query.from?new Date(query.from):fallbackFrom;
-  const to=query.to?new Date(query.to):now;
+  const fallbackFrom=greeceMonthStart(now);
+  const from=query.from?greeceRangeDate(query.from):fallbackFrom;
+  const to=query.to?greeceRangeDate(query.to,true):now;
   if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){
     const error=new Error("Μη έγκυρο διάστημα ημερομηνιών.");error.status=400;throw error;
   }

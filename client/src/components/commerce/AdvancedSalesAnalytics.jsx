@@ -5,7 +5,7 @@ import "./advanced-sales-analytics.css";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const num=value=>Number(value||0);
-const fmt=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—";
+const fmt=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false,day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—";
 const duration=(from,to)=>{if(!from)return"—";const ms=Math.max(0,new Date(to||Date.now())-new Date(from)),mins=Math.floor(ms/60000);return `${String(Math.floor(mins/60)).padStart(2,"0")}:${String(mins%60).padStart(2,"0")}`};
 const txLabel=type=>({SALE_CASH:"Πώληση λιανικής",SALE_CARD:"Πώληση λιανικής",SUPPLIER_PAYMENT:"Πληρωμή προμηθευτή",OTHER_EXPENSE:"Έξοδο",PERCENTAGES:"Ποσοστά"}[type]||String(type||"Συναλλαγή"));
 const palette=["#55b85b","#3b82d0","#f1c232","#e94b4b","#8854b8","#f28c52","#4aa3a1","#9aa4b1"];

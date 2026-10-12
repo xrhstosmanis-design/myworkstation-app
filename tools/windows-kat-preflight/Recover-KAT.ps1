@@ -19,7 +19,7 @@ $recoveryRoot=Join-Path $env:ProgramData "MyWorkStation\RecoveryBackups"
 if(!$DryRun){
   New-Item -ItemType Directory -Path $recoveryRoot -Force|Out-Null
   if(Test-Path -LiteralPath $shortcut){
-    $stamp=Get-Date -Format "yyyyMMdd-HHmmss"
+    $stamp=([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTimeOffset]::UtcNow,"GTB Standard Time")).ToString("yyyyMMdd-HHmmss",[Globalization.CultureInfo]::InvariantCulture)
     Copy-Item -LiteralPath $shortcut -Destination (Join-Path $recoveryRoot ($safeName+"-before-recovery-"+$stamp+".url")) -Force
   }
   $temp=Join-Path $env:TEMP ("mws-kat-recovery-"+[guid]::NewGuid().ToString("N")+".url")
@@ -30,7 +30,7 @@ if(!$DryRun){
 $report=Join-Path ([Environment]::GetFolderPath("Desktop")) "MyWorkStation_KAT_Recovery.txt"
 @(
   "MYWORKSTATION KAT STORE MODE RECOVERY",
-  "Date: "+(Get-Date -Format "yyyy-MM-dd HH:mm:ss"),
+  "Date: "+(([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTimeOffset]::UtcNow,"GTB Standard Time")).ToString("yyyy-MM-dd HH:mm:ss",[Globalization.CultureInfo]::InvariantCulture)),
   "Store Mode: "+$uri.AbsoluteUri,
   "Terminal: "+([string]$state.terminalPos),
   "Installation schema: "+([string]$state.schemaVersion),

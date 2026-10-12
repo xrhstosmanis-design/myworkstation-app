@@ -1,8 +1,8 @@
-import {greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
+import {greeceDateTimeToIso,greeceDateInput} from "../../../../shared/greece-time.mjs";
 const allowed=()=>{try{return ["SUPER_ADMIN","OWNER","ADMIN","MANAGER"].includes(JSON.parse(localStorage.getItem("user")||"{}").role)}catch{return false}};
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const money=v=>Number(v||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const num=v=>Number(v||0),pad=n=>String(n).padStart(2,"0"),dateValue=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,today=()=>dateValue(new Date()),monthStart=()=>{const d=new Date();return dateValue(new Date(d.getFullYear(),d.getMonth(),1))},yearStart=()=>`${new Date().getFullYear()}-01-01`,fmt=v=>v?new Date(v).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
+const num=v=>Number(v||0),pad=n=>String(n).padStart(2,"0"),dateValue=d=>greeceDateInput(d),today=()=>dateValue(new Date()),monthStart=()=>`${greeceDateInput().slice(0,7)}-01`,yearStart=()=>`${greeceDateInput().slice(0,4)}-01-01`,fmt=v=>v?new Date(v).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"—";
 const state={active:false,tab:"catalog",q:"",activeOnly:true,report:null,selectedId:"",from:monthStart(),to:today(),detail:null,rows:[],busy:false};
 async function api(path,options={}){const token=localStorage.getItem("token");const r=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Σφάλμα ${r.status}`);return d}
 function hostModal(html,wide=true){const w=document.createElement("div");w.className=`sc-modal-overlay ${wide?"wide":""}`;w.innerHTML=`<section class="sc-modal">${html}</section>`;document.body.appendChild(w);w.addEventListener("click",e=>{if(e.target===w||e.target.closest("[data-sc-close]"))w.remove()});return w}

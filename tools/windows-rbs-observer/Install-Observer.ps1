@@ -11,7 +11,7 @@ if(!(Test-Path -LiteralPath $preflight)){throw "Preflight-Observer.ps1 is missin
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $preflight -ApiBase $ApiBase -WatchPath $WatchPath -ForInstall
 if($LASTEXITCODE -ne 0){throw "Pre-installation checks failed. Open MyWorkStation_Observer_Precheck.txt on the desktop."}
 $root="C:\ProgramData\MyWorkStation\RbsObserver"
-$backupRoot="C:\MyWorkStation_Backups\KAT_{0}" -f (Get-Date -Format "yyyyMMdd_HHmmss")
+$backupRoot="C:\MyWorkStation_Backups\KAT_{0}" -f (([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTimeOffset]::UtcNow,"GTB Standard Time")).ToString("yyyyMMdd_HHmmss",[Globalization.CultureInfo]::InvariantCulture))
 $protected=@("C:\_km","C:\Kiosk Manager","C:\CapDriverService","C:\capture")
 New-Item -ItemType Directory -Path $backupRoot -Force|Out-Null
 foreach($path in $protected){

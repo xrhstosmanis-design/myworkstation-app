@@ -1,7 +1,7 @@
 import React from "react";
 
 const money=value=>value===null||value===undefined?"—":Number(value).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const at=value=>value?new Intl.DateTimeFormat("el-GR",{dateStyle:"short",timeStyle:"short",timeZone:"Europe/Athens"}).format(new Date(value)):"—";
+const at=value=>value?new Intl.DateTimeFormat("el-GR",{dateStyle:"short",timeStyle:"short",timeZone:"Europe/Athens",hour12:false}).format(new Date(value)):"—";
 const ruleLabel=rule=>rule?.mode==="DIFFERENCE_ONLY"?"Μόνο διαφορά μετρητών":rule?.mode==="POS_EFTPOS_ONLY"?"Μόνο POS–EFTPOS":rule?.mode==="FULL"?"Πλήρης έλεγχος":"Δες τον κανόνα της αναφοράς";
 
 export default function CashAssistantEvidence({evidence=[]}){

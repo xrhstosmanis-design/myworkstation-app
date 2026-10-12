@@ -41,7 +41,7 @@ $shortcut=Join-Path $desktop ($safeName+".url")
 $backupRoot=Join-Path $env:ProgramData "MyWorkStation\InstallerBackups"
 New-Item -ItemType Directory -Path $backupRoot -Force|Out-Null
 if(Test-Path -LiteralPath $shortcut){
-  $stamp=Get-Date -Format "yyyyMMdd-HHmmss"
+  $stamp=([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTimeOffset]::UtcNow,"GTB Standard Time")).ToString("yyyyMMdd-HHmmss",[Globalization.CultureInfo]::InvariantCulture)
   Copy-Item -LiteralPath $shortcut -Destination (Join-Path $backupRoot ($safeName+"-"+$stamp+".url")) -Force
 }
 $temp=Join-Path $env:TEMP ("mws-kat-"+[guid]::NewGuid().ToString("N")+".url")
@@ -65,7 +65,7 @@ Write-Host "3/3 - Recording the installation result..."
 $report=Join-Path ([Environment]::GetFolderPath("Desktop")) "MyWorkStation_KAT_Installation.txt"
 @(
   "MYWORKSTATION KAT STORE MODE INSTALLATION",
-  "Date: "+(Get-Date -Format "yyyy-MM-dd HH:mm:ss"),
+  "Date: "+(([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTimeOffset]::UtcNow,"GTB Standard Time")).ToString("yyyy-MM-dd HH:mm:ss",[Globalization.CultureInfo]::InvariantCulture)),
   "Store Mode: "+$canonicalStoreModeUrl,
   "Terminal: "+$terminalPos,
   "Shortcut: "+$shortcut,

@@ -42,7 +42,7 @@ Add-Check "RBS Observer installed" (Test-Path -LiteralPath (Join-Path $ObserverP
 
 $report=@(
   "MYWORKSTATION KAT PILOT PREFLIGHT",
-  ("Date: "+(Get-Date -Format "yyyy-MM-dd HH:mm:ss")),
+  ("Date: "+(([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTimeOffset]::UtcNow,"GTB Standard Time")).ToString("yyyy-MM-dd HH:mm:ss",[Globalization.CultureInfo]::InvariantCulture))),
   "Mode: READ ONLY / NO INSTALLATION / NO FISCAL COMMANDS",
   ""
 )

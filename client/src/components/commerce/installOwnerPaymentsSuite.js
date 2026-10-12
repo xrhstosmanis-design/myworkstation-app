@@ -1,14 +1,14 @@
-import {greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
+import {greeceDateTimeToIso,greeceDateInput} from "../../../../shared/greece-time.mjs";
 import {auditExpenseReason} from "./auditExpenseReason.mjs";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const number=value=>Number(value||0);
 const pad=value=>String(value).padStart(2,"0");
-const localDateValue=date=>`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+const localDateValue=date=>greeceDateInput(date);
 const todayValue=()=>localDateValue(new Date());
-const monthStartValue=()=>{const d=new Date();return localDateValue(new Date(d.getFullYear(),d.getMonth(),1))};
-const yearStartValue=()=>{const d=new Date();return `${d.getFullYear()}-01-01`};
-const fmt=value=>value?new Date(value).toLocaleString("el-GR",{...({day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}),timeZone:"Europe/Athens"}):"—";
+const monthStartValue=()=>`${greeceDateInput().slice(0,7)}-01`;
+const yearStartValue=()=>`${greeceDateInput().slice(0,4)}-01-01`;
+const fmt=value=>value?new Date(value).toLocaleString("el-GR",{...({day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}),timeZone:"Europe/Athens",hour12:false}):"—";
 const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 const pct=value=>value===null||value===undefined?"—":`${Number(value).toLocaleString("el-GR",{minimumFractionDigits:2,maximumFractionDigits:2})}%`;
 const displayLedgerText=value=>String(value??"").replaceAll("PREMIUM FAST POS","Γρήγορη καταχώριση POS").replaceAll("FAST POS","Γρήγορη καταχώριση POS").replaceAll("AI Reader","Ανάγνωση παραστατικού").replaceAll("BackOffice","Κεντρική Διαχείριση").replaceAll("Background","Παρασκήνιο");

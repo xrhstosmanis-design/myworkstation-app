@@ -10,7 +10,7 @@ $TempPath=Join-Path $Root "temp"
 
 function Write-SafeLog([string]$Message){
   $safe=[string]$Message
-  Add-Content -LiteralPath $LogPath -Value (("{0:u} {1}" -f (Get-Date),$safe).Substring(0,[Math]::Min(900,("{0:u} {1}" -f (Get-Date),$safe).Length))) -Encoding UTF8
+  Add-Content -LiteralPath $LogPath -Value (("{0:yyyy-MM-dd HH:mm:ss} Europe/Athens {1}" -f ([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTimeOffset]::UtcNow,"GTB Standard Time")),$safe).Substring(0,[Math]::Min(900,("{0:yyyy-MM-dd HH:mm:ss} Europe/Athens {1}" -f ([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTimeOffset]::UtcNow,"GTB Standard Time")),$safe).Length))) -Encoding UTF8
   $lines=Get-Content -LiteralPath $LogPath -ErrorAction SilentlyContinue;if($lines.Count -gt 1200){$lines[-600..-1]|Set-Content -LiteralPath $LogPath -Encoding UTF8}
 }
 function Unprotect([string]$Cipher){$bytes=[Convert]::FromBase64String($Cipher);$plain=[Security.Cryptography.ProtectedData]::Unprotect($bytes,$null,[Security.Cryptography.DataProtectionScope]::LocalMachine);return [Text.Encoding]::UTF8.GetString($plain)}

@@ -1,7 +1,7 @@
 import React from "react";
 const quantity=value=>Number(value).toLocaleString("el-GR",{maximumFractionDigits:3});
 const unitLabels={PIECE:"τεμάχια",KG:"κιλά",LITER:"λίτρα",PACKAGE:"συσκευασίες"};
-const readTime=value=>{const date=new Date(value);return Number.isFinite(date.getTime())?date.toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—"};
+const readTime=value=>{const date=new Date(value);return Number.isFinite(date.getTime())?date.toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"—"};
 export default function StockAssistantEvidence({evidence=[]}){
   return evidence.filter(report=>report.kind==="product_stock").map((report,index)=><section className="mws-stock-evidence" key={index} aria-label="Στοιχεία από Ανάλυση αποθήκης">
     <h3>Στοιχεία από Ανάλυση αποθήκης</h3>

@@ -1,9 +1,10 @@
+import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useMemo,useState} from "react";
 import {Banknote,CheckCircle2,LockKeyhole,RefreshCw,WalletCards} from "lucide-react";
 import {formatWorkforceMoney} from "./workforce-v2-ui-utils.js";
 import {loadPayrollWorkspace} from "./workforce-v2-payroll-load.js";
 
-const currentMonth=()=>new Date().toISOString().slice(0,7);
+const currentMonth=()=>greeceDateInput().slice(0,7);
 const monthRange=value=>{const [year,month]=value.split("-").map(Number);return {from:new Date(Date.UTC(year,month-1,1)).toISOString(),to:new Date(Date.UTC(year,month,1)).toISOString()}};
 const minutes=value=>`${Math.floor(Number(value||0)/60)}ω ${Number(value||0)%60}λ`;
 const periodLabel=row=>`${row.name} · ${new Date(row.periodStart).toLocaleDateString("el-GR",{timeZone:"Europe/Athens"})}–${new Date(new Date(row.periodEnd).getTime()-1).toLocaleDateString("el-GR",{timeZone:"Europe/Athens"})}`;

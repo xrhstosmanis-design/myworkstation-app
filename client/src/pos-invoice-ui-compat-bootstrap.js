@@ -1,3 +1,4 @@
+import {greeceDateTimeInput} from "../../shared/greece-time.mjs";
 function setFiles(target,files){
   if(!target||!files?.length)return;
   try{
@@ -126,7 +127,7 @@ function openCamera(target){
     if(!captures.length)return;
     try{
       const pdf=makePdfFromJpegs(captures);
-      const file=new File([pdf],`timologio-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.pdf`,{type:'application/pdf'});
+      const file=new File([pdf],`timologio-${greeceDateTimeInput(new Date(),true).replace(/[:T]/g,'-')}.pdf`,{type:'application/pdf'});
       close();setFiles(target,[file]);
     }catch(error){status.textContent='Απέτυχε η δημιουργία PDF. Δοκίμασε ξανά ή επίλεξε αρχείο.';console.error(error);}
   };

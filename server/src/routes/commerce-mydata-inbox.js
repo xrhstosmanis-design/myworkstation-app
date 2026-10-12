@@ -1,3 +1,4 @@
+import {greeceExportRows} from "../../../shared/greece-time.mjs";
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain} from "../server-shutdown.js";
 import crypto from "crypto";
@@ -52,7 +53,7 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
   if(exporting){
     if(rows.length>20000)return res.status(409).json({error:"Η εξαγωγή ξεπερνά 20.000 εγγραφές. Περιορίστε με ημερομηνία ή προμηθευτή."});
     if(format==="pdf")return res.json({html:archiveReportHtml(rows,store.name),count:rows.length});
-    const workbook=XLSX.utils.book_new(),sheet=XLSX.utils.json_to_sheet(archiveExportRows(rows));
+    const workbook=XLSX.utils.book_new(),sheet=XLSX.utils.json_to_sheet(greeceExportRows(archiveExportRows(rows)));
     sheet["!cols"]=[{wch:14},{wch:25},{wch:42},{wch:15},{wch:14},{wch:18},{wch:22},{wch:16},{wch:12},{wch:16},{wch:12},{wch:34},{wch:25},{wch:60}];
     XLSX.utils.book_append_sheet(workbook,sheet,"Παραστατικά");
     XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([["Κατάστημα",store.name],["Πλήθος",rows.length],["Περιεχόμενο","Στοιχεία θυρίδας/myDATA. Δεν είναι πρωτότυπα PDF ή τελικές καταχωρίσεις."],["Φίλτρα",JSON.stringify({q:filters.q||"",supplier:filters.supplier||"",date:filters.date||"",dateFrom:filters.dateFrom||"",dateTo:filters.dateTo||"",receivedToday:filters.receivedToday})]]),"Πληροφορίες");
