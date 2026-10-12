@@ -67,7 +67,9 @@ test("native PostgreSQL multi-store recipients stop after ownership, role, sessi
    'CREATE TABLE "Company" ("id" TEXT PRIMARY KEY,"active" BOOLEAN)',
    'CREATE TABLE "Store" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"active" BOOLEAN)',
    'CREATE TABLE "OwnerCompanyAccess" ("ownerId" TEXT,"companyId" TEXT)',
-   'CREATE TABLE "StorePaidModule" ("storeId" TEXT,"moduleKey" TEXT,"active" BOOLEAN,"startsAt" TIMESTAMPTZ,"endsAt" TIMESTAMPTZ)'
+   'CREATE TABLE "StorePaidModule" ("storeId" TEXT,"moduleKey" TEXT,"active" BOOLEAN,"startsAt" TIMESTAMPTZ,"endsAt" TIMESTAMPTZ)',
+   'CREATE TABLE "Employee" ("id" TEXT PRIMARY KEY,"active" BOOLEAN)',
+   'CREATE TABLE "StoreOperatorCredential" ("id" TEXT PRIMARY KEY,"employeeId" TEXT,"companyId" TEXT,"storeId" TEXT,"role" TEXT,"displayName" TEXT,"pinHash" TEXT,"cardCodeHash" TEXT,"active" BOOLEAN)'
   ])await db.$executeRawUnsafe(ddl);
   const lib=mobile(db);
   await db.$executeRawUnsafe('INSERT INTO "Company" VALUES ($1,TRUE),($2,TRUE)',"C1","C2");
@@ -77,6 +79,17 @@ test("native PostgreSQL multi-store recipients stop after ownership, role, sessi
   await db.$executeRawUnsafe('INSERT INTO "OwnerCompanyAccess" VALUES ($1,$2)',"owner","C2");
   await lib.mobilePushRecipients({id:"A",companyId:"C1"},"sender"); // runs actual additive schema
   for(const [endpoint,userId,sessionId] of [["https://web.push.apple.com/owner","owner","session"],["https://web.push.apple.com/foreign","foreign","foreignsession"]])await db.$executeRawUnsafe('INSERT INTO "StoreChatMobilePush" ("endpoint","userId","role","sessionId","sessionVersion","storeIds","subscriptionJson") VALUES ($1,$2,$3,$4,1,$5::jsonb,$6::jsonb)',endpoint,userId,"OWNER",sessionId,'["A","B"]',JSON.stringify({endpoint}));
+  const credentials={id:"op",employeeId:"employee",companyId:"C1",storeId:"A",role:"EMPLOYEE",displayName:"Virtual",pinHash:"hash",cardCodeHash:null};
+  await db.$executeRawUnsafe('INSERT INTO "Employee" VALUES ($1,TRUE)',credentials.employeeId);
+  await db.$executeRawUnsafe('INSERT INTO "StoreOperatorCredential" VALUES ($1,$2,$3,$4,$5,$6,$7,NULL,TRUE)',credentials.id,credentials.employeeId,credentials.companyId,credentials.storeId,credentials.role,credentials.displayName,credentials.pinHash);
+  await db.$executeRawUnsafe('INSERT INTO "StoreChatMobileSession" ("id","operatorId","companyId","storeId","expiresAt") VALUES ($1,$2,$3,$4,NOW()+INTERVAL \'12 hours\')',"staffsession","op","C1","A");
+  const auth=operator(db),payload={...credentials,iss:"myworkstation-chat",aud:"store-chat-only",chatSessionId:"staffsession",credentialStamp:auth.chatCredentialStamp(credentials,"secret")};
+  const staff=()=>auth.authorizeChatOperator({originalUrl:"/api/store-chat/stores/A/messages"},payload,{db,secret:"secret"});
+  assert.equal((await staff()).storeId,"A");
+  await db.$executeRawUnsafe('UPDATE "StoreChatMobileSession" SET "expiresAt"=NOW()-INTERVAL \'1 second\'');assert.equal(await staff(),null);
+  await db.$executeRawUnsafe('UPDATE "StoreChatMobileSession" SET "expiresAt"=NOW()+INTERVAL \'12 hours\',"revokedAt"=NOW()');assert.equal(await staff(),null);
+  await db.$executeRawUnsafe('UPDATE "StoreChatMobileSession" SET "revokedAt"=NULL');await db.$executeRawUnsafe('UPDATE "StoreOperatorCredential" SET "pinHash"=$1',"changed");assert.equal(await staff(),null);
+  await db.$executeRawUnsafe('UPDATE "StoreOperatorCredential" SET "pinHash"=$1,"active"=FALSE',"hash");assert.equal(await staff(),null);
   const recipients=async(store="B",sender="sender")=>(await lib.mobilePushRecipients({id:store,companyId:store==="A"?"C1":"C2"},sender)).map(r=>r.endpoint);
   assert.deepEqual(await recipients(),["https://web.push.apple.com/owner"]);assert.deepEqual(await recipients("A"),["https://web.push.apple.com/owner"]);assert.deepEqual(await recipients("A","owner"),[]);
   await db.$executeRawUnsafe('DELETE FROM "OwnerCompanyAccess"');assert.deepEqual(await recipients(),[]);assert.equal((await recipients("A")).length,1);
