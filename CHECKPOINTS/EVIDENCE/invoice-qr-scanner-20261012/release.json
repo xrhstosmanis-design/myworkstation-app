@@ -1,0 +1,15 @@
+{
+  "revision": "02c7cd7cf4961f5d50bcaabaeb1853610c21759f",
+  "sourcePr": 2339,
+  "sourceCi": 38225828992,
+  "mainCi": 38226337500,
+  "tests": {"pass": 2426, "fail": 0, "skip": 0},
+  "guardedDeploy": 38226818245,
+  "deployJob": 114736299175,
+  "publicHealth": {"ok": true, "revision": "02c7cd7cf4961f5d50bcaabaeb1853610c21759f"},
+  "servedAsset": "assets/entry-B3wMdB49.js",
+  "servedAssetSha256": "4a370bb49f79c211f4208d50e21da7ea31c504ad084b37565a7ee4920817d69a",
+  "scannerButtonAndDialogPresent": true,
+  "physicalUserAcceptance": "NOT TESTED",
+  "financialActions": 0
+}
