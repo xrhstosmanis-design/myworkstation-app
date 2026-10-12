@@ -17,7 +17,7 @@ test("COMPLETE controls inspect active payments without mutating them",()=>{
   assert.match(route,/PAYMENT_WITHOUT_EVIDENCE/);
   assert.match(route,/POTENTIAL_DUPLICATE_SUPPLIER_PAYMENT/);
   assert.match(route,/JOIN "CashShiftSession" s ON s\."id"=t\."sessionId"/);
-  assert.match(route,/GROUP BY t\."sessionId",t\."supplierId",t\."amount",DATE\(t\."occurredAt"\),st\."name"/);
+  assert.match(route,/GROUP BY t\."sessionId",t\."supplierId",t\."amount",DATE\(t\."occurredAt" AT TIME ZONE 'Europe\/Athens'\),st\."name"/);
   assert.match(route,/JSON_AGG\(JSON_BUILD_OBJECT\(/);
   assert.match(route,/'transactionId',t\."id",'occurredAt',t\."occurredAt"/);
   assert.match(route,/evidence:\{transactions:/);

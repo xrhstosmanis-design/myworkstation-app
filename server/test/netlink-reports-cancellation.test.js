@@ -1,3 +1,5 @@
+import {z} from "zod";
+import {greeceRangeDate} from "../../shared/greece-time.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
@@ -23,6 +25,14 @@ test("Netlink cancellation requests stay operational and auditable",()=>{
   assert.match(render,/ensure-netlink-reports-compat\.js/);
 });
 
-test("Netlink report end date includes the complete selected day",()=>{
-  assert.match(route,/to\.setHours\(23,59,59,999\)/);
+test("Netlink report end date includes the complete selected Greek day",()=>{
+  const start=route.indexOf("const reportQuery="),definition=route.slice(start+"const reportQuery=".length,route.indexOf("\n",start)).replace(/;$/,"");
+  const schema=new Function("z","greeceRangeDate","return "+definition)(z,greeceRangeDate);
+  const range=schema.parse({from:"2026-10-12",to:"2026-10-12"});
+  assert.equal(range.from.toISOString(),"2026-10-11T21:00:00.000Z");
+  assert.equal(range.to.toISOString(),"2026-10-12T20:59:59.999Z");
+  const spring=schema.parse({from:"2026-03-29",to:"2026-03-29"});
+  assert.equal(spring.to-spring.from+1,23*3600000);
+  const autumn=schema.parse({from:"2026-10-25",to:"2026-10-25"});
+  assert.equal(autumn.to-autumn.from+1,25*3600000);
 });
