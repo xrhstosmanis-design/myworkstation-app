@@ -1,3 +1,11 @@
+## VOICE-ASSISTANT-01 — 12 Oct 2026: session / selected-region correction RELEASED, LIVE AWAITING LAB
+
+Owner: `codex/unified-voice-assistant-20261010`. Source PR #2337 merged as `7d75a9bb003a5ace8038dd661febd845b0f9ab33`; all 15 published blobs verified. Final PR CI 38228157584 and main CI 38228771882 passed 2440 tests, zero failures/skips; all four main jobs passed. Guarded Render run 38229285674 performed deployment and observed exact healthy revision at 2026-10-12T09:22:58.852Z. Independent public health read also returned this revision.
+
+Central Ask uses only the existing native Super Admin credential matching actor/session/version; support credentials and ordinary Owner credentials cannot grant central access. Owner licensing and own-store authorization remain enforced. The assistant inherits the already-selected company/store, including sales and closed-cash reports. All-store sales/cash requires the explicit checkbox; stock remains selected-store. Selection/session changes withdraw stale questions, answers and queued voice callbacks.
+
+LIVE NOT TESTED after this release: browser inventory observation returned `retained_data_restricted` following the previously automatically rejected secure sign-in. No new tab, credential retry, token extraction or alternate authentication path was used. Existing native/postgres/HTTP and mounted UI checks are not physical microphone or live data acceptance. Full module stays OPEN/ASSIGNED to the same owner; pending live category/name/multiple-product/applied-offer comparison and normal Owner stock AFTER remain open. Other application-domain parity and physical device checks are unchanged.
+
 ## 12/10/2026 11:34 Athens - VOICE-ASSISTANT-01 / central session and selected-region SOURCE READY / AWAITING FULL CI AND LAB
 
 Owner codex/unified-voice-assistant-20261010 retained; pre-code claim PR2336/head4a0ebb60/mainb94f0b9f/docsCI38218714169 SUCCESS, all3 entries verified. Source fix/voice-central-session-selected-scope-20261012. No new credential, key, permission, login/2FA/session issuer, license, payment, fiscal, stock or production data change. Existing provider reused. Browser authentication rejection from11Oct is not circumvented.
