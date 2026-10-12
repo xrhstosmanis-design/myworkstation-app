@@ -113,7 +113,29 @@ router.get("/:sessionId/detail",async(req,res,next)=>{
       WHERE s."id"=${req.params.sessionId} AND s."companyId"=${companyId} LIMIT 1
     `;
     const shift=shiftRows[0]?normalizeShift(shiftRows[0]):null;if(!shift)return res.status(404).json({error:"Δεν βρέθηκε η βάρδια."});
-    const until=shift.closedAt||new Date();
+    // A time window can overlap another terminal's shift. Resolve each sale's
+    // original session instead; mixed payment rows must not multiply sales.
+    // Conflicting valid session evidence is excluded rather than guessed.
+    const selectedSales=await prisma.$queryRaw`
+      SELECT s."id" FROM "Sale" s
+      WHERE s."companyId"=${companyId} AND s."storeId"=${shift.storeId} AND s."status"='COMPLETED'
+        AND EXISTS (
+          SELECT 1 FROM (
+            SELECT t."sessionId" FROM "StoreTransaction" t
+            JOIN "CashShiftSession" sh ON sh."id"=t."sessionId" AND sh."companyId"=s."companyId" AND sh."storeId"=s."storeId"
+            WHERE t."companyId"=s."companyId" AND t."storeId"=s."storeId"
+              AND s."id"=ANY(regexp_split_to_array(COALESCE(t."description",''),'[^[:alnum:]_-]+'))
+              AND COALESCE(t."description",'') NOT LIKE ('%αρχική '||s."id"||'%')
+              AND COALESCE(t."description",'') NOT LIKE ('%αρχική πώληση '||s."id"||'%')
+            UNION
+            SELECT a."details"->>'sessionId' FROM "StoreOperatorAudit" a
+            JOIN "CashShiftSession" sh ON sh."id"=a."details"->>'sessionId' AND sh."companyId"=s."companyId" AND sh."storeId"=s."storeId"
+            WHERE a."companyId"=s."companyId" AND a."storeId"=s."storeId" AND a."eventType"='POS_SALE_COMPLETED' AND a."details"->>'saleId'=s."id"
+          ) evidence
+          HAVING COUNT(DISTINCT evidence."sessionId")=1 AND MIN(evidence."sessionId")=${shift.id}
+        )
+    `;
+    const saleIds=selectedSales.map(row=>row.id);
     const [transactionsRaw,categoriesRaw,paymentsRaw,salesRaw]=await Promise.all([
       prisma.$queryRaw`
         SELECT t."id",t."type",t."amount",t."description",t."supplierId",t."supplierName",t."subtractFromShift",t."actorId",t."actorName",t."occurredAt",
@@ -125,19 +147,19 @@ router.get("/:sessionId/detail",async(req,res,next)=>{
       `,
       prisma.$queryRaw`
         SELECT COALESCE(pc."name",'Χωρίς κατηγορία') AS category,COALESCE(SUM(l."quantity"),0) AS quantity,COALESCE(SUM(l."lineTotal"),0) AS revenue,COUNT(DISTINCT s."id")::int AS sales
-        FROM "Sale" s JOIN "SaleLine" l ON l."saleId"=s."id" LEFT JOIN "Product" p ON p."id"=l."productId" LEFT JOIN "ProductCategory" pc ON pc."id"=p."categoryId"
-        WHERE s."companyId"=${companyId} AND s."storeId"=${shift.storeId} AND s."status"='COMPLETED' AND s."occurredAt">=${shift.openedAt} AND s."occurredAt"<=${until}
+        FROM "Sale" s JOIN "SaleLine" l ON l."saleId"=s."id" LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=s."companyId" LEFT JOIN "ProductCategory" pc ON pc."id"=p."categoryId" AND pc."companyId"=s."companyId"
+        WHERE s."companyId"=${companyId} AND s."storeId"=${shift.storeId} AND s."status"='COMPLETED' AND s."id"=ANY(${saleIds}::text[])
         GROUP BY COALESCE(pc."name",'Χωρίς κατηγορία') ORDER BY revenue DESC
       `,
       prisma.$queryRaw`
         SELECT p."method",COALESCE(SUM(p."amount"),0) AS amount,COUNT(*)::int AS count
         FROM "Payment" p JOIN "Sale" s ON s."id"=p."saleId"
-        WHERE s."companyId"=${companyId} AND s."storeId"=${shift.storeId} AND s."status"='COMPLETED' AND s."occurredAt">=${shift.openedAt} AND s."occurredAt"<=${until}
+        WHERE s."companyId"=${companyId} AND s."storeId"=${shift.storeId} AND s."status"='COMPLETED' AND s."id"=ANY(${saleIds}::text[])
         GROUP BY p."method" ORDER BY amount DESC
       `,
       prisma.$queryRaw`
         SELECT COUNT(*)::int AS count,COALESCE(SUM("total"),0) AS total,COALESCE(AVG("total"),0) AS average,MIN("occurredAt") AS "firstAt",MAX("occurredAt") AS "lastAt"
-        FROM "Sale" WHERE "companyId"=${companyId} AND "storeId"=${shift.storeId} AND "status"='COMPLETED' AND "occurredAt">=${shift.openedAt} AND "occurredAt"<=${until}
+        FROM "Sale" WHERE "companyId"=${companyId} AND "storeId"=${shift.storeId} AND "status"='COMPLETED' AND "id"=ANY(${saleIds}::text[])
       `
     ]);
     const transactions=transactionsRaw.map(normalizeTx),active=transactions.filter(row=>!row.reversedAt),sum=(type,onlyDeducted=false)=>active.filter(row=>row.type===type&&(!onlyDeducted||row.subtractFromShift)).reduce((s,row)=>s+n(row.amount),0);
