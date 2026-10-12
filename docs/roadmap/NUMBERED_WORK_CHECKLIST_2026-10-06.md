@@ -269,7 +269,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `12`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** BLOCKED EXTERNAL
-- **Υπόλοιπο / όριο:** Αναμονή απάντησης efood· callback, παραγγελία και παραγωγική πιστοποίηση δεν επιβεβαιώθηκαν.
+- **Υπόλοιπο / όριο:** Στιγμιότυπο 06/10 διατηρείται ιστορικά. Ενημέρωση 12/10: περιορισμένο provider callback/Bearer/CONSUMED PASS· client identity, mapping, πραγματικό Pelican/παραγγελία/παραγωγική πιστοποίηση OPEN. Τρέχουσα ανάθεση και τεκμήρια στον tracker12.
 
 ## 13 — Μεταφορά barcode μεταξύ προϊόντων
 
