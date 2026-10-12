@@ -26,9 +26,9 @@ test('native actual overview includes older-than-80 own payments and excludes ot
   const wrapped=new Proxy(db,{get(target,key){if(key==='store')return {findFirst:async({where})=>where.id==='store'&&where.companyId==='company'?{id:'store',name:'Virtual store',companyId:'company',active:true}:null};if(key==='$queryRawUnsafe')return async()=>[];const value=target[key];return typeof value==='function'?value.bind(target):value;}});
   const {tables,run}=register(wrapped);
   try{
-    for(const sql of tables)await db.$executeRawUnsafe(sql);
     await db.$executeRawUnsafe('CREATE TABLE "Supplier" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"taxId" TEXT,"active" BOOLEAN DEFAULT true)');
     await db.$executeRawUnsafe('CREATE TABLE "PurchaseDocument" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"supplierId" TEXT,"documentNumber" TEXT,"documentDate" TIMESTAMPTZ,"totalGross" NUMERIC(14,2),"status" TEXT)');
+    for(const sql of tables)await db.$executeRawUnsafe(sql);
     await db.$executeRaw`INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","openedBy","status") VALUES ('shift','company','store','MAIN','actor','OPEN'),('control','company','store','CONTROL','actor','OPEN'),('closed','company','store','OLD','actor','CLOSED')`;
     const payment=async(id,amount,type='SUPPLIER_PAYMENT',sessionId='shift',actorId='actor',companyId='company',storeId='store',reversedAt=null)=>db.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","actorId","actorName","subtractFromShift","occurredAt","createdAt","reversedAt") VALUES (${id},${companyId},${storeId},${sessionId},${type},${amount},${actorId},'Virtual actor',true,'2026-10-12T00:00:00Z'::timestamptz,'2026-10-12T17:22:00Z'::timestamptz,${reversedAt})`;
     await payment('supplier',400);await payment('expense',80,'OTHER_EXPENSE');await payment('reversed',99,'OTHER_EXPENSE','shift','actor','company','store',new Date('2026-10-12T18:00:00Z'));

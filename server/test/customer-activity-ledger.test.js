@@ -1,3 +1,4 @@
+import {greeceDateTimeInput,greeceDateTimeToIso} from "../../shared/greece-time.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -82,6 +83,7 @@ test('actual customer ledger modal renders charges, receipts, reasons, methods, 
     {at:'2026-10-11T20:00Z',type:'SALE_CREDIT',transactionMode:'CREDIT',reference:'sale',items:'1 × ΝΕΡΟ @ 1 € · 0.80 €',paymentMethod:'CREDIT',actorId:'LAB POS2',debit:.8,runningBalance:.8},
     {at:'2026-10-11T19:00Z',type:'SALE_RETURN',amount:-1,debit:-1,credit:-1,runningBalance:0,note:'Επιστροφή από πελάτη'}]};
   const api=async path=>{calls.push(path);return data},modal=html=>{const e=document.createElement('section');e.innerHTML=html;document.body.appendChild(e);return e};
-  const open=new Function('api','modal','esc','money','fmt','alert',implementation+';return ledgerModal;')(api,modal,String,v=>Number(v||0).toFixed(2)+' €',String,e=>{throw Error(e)});
+  const open=new Function('api','modal','esc','money','fmt','alert','greeceDateTimeInput','greeceDateTimeToIso',implementation+';return ledgerModal;')(api,modal,String,v=>Number(v||0).toFixed(2)+' €',String,e=>{throw Error(e)},greeceDateTimeInput,greeceDateTimeToIso);
   try{await open('c');const rows=[...document.querySelectorAll('.cc-table.ledger .row')].slice(1).map(r=>r.textContent);assert.equal(rows.length,3);assert.match(rows[0],/Πληρωμή.*CASH.*0.30 €.*0.50 €.*LAB POS2.*Μερική είσπραξη/);assert.match(rows[1],/Πιστωτική πώληση.*ΝΕΡΟ.*CREDIT.*0.80 €.*LAB POS2/);assert.match(rows[2],/Επιστροφή.*-1.00 €.*Επιστροφή από πελάτη/);assert.match(document.querySelector('.cc-ledger-balance').textContent,/Υπόλοιπο έναρξης διαστήματος.*0.00 €.*Υπόλοιπο τέλους διαστήματος.*0.50 €/);assert.match(calls[0],/from=.*to=/);assert.equal(new Date(new URL(calls[0],"https://test.invalid").searchParams.get("to")).getUTCSeconds(),59)}finally{dom.window.close()}
 });
+

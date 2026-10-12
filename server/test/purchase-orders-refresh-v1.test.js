@@ -1,3 +1,4 @@
+import {greeceDateTimeToIso} from "../../shared/greece-time.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
@@ -17,7 +18,7 @@ function fixture(){
   const launch={dataset:{},addEventListener(){}};
   const strip={querySelector:()=>launch,querySelectorAll:()=>[launch]};
   const hub={querySelector:selector=>selector===".commerce-module-strip"?strip:selector===".purchase-orders-suite"?root:null};
-  const context=vm.createContext({URLSearchParams,Date,setTimeout:()=>0,clearTimeout(){},
+  const context=vm.createContext({URLSearchParams,Date,greeceDateTimeToIso,setTimeout:()=>0,clearTimeout(){},
     document:{documentElement:{},addEventListener(name,handler){listeners[name]=handler},querySelectorAll:()=>[hub]},
     MutationObserver:class{constructor(handler){listeners.mutation=handler}observe(){}},
     localStorage:{getItem:key=>key==="user"?'{"role":"OWNER"}':null},
@@ -26,7 +27,7 @@ function fixture(){
     captureNotice:(text,error)=>notices.push({text,error})
   });
   // Execute the shipped event handlers and async request logic; only DOM drawing is replaced.
-  vm.runInContext(source.replace(/^import \{installInvoiceProductMatcher\} from "\.\.\/\.\.\/invoice-product-matcher\.js";\n/,"").replaceAll("export function ","function ")+`
+  vm.runInContext(source.replace(/^import \{greeceDateTimeToIso\} from ["'][^"']*greece-time.mjs["'];\n/,"").replace(/^import \{installInvoiceProductMatcher\} from "\.\.\/\.\.\/invoice-product-matcher\.js";\n/,"").replaceAll("export function ","function ")+`
     render=root=>{captureRender(header()+ordersHtml());bindRoot(root)};
     notify=(root,text,error)=>captureNotice(text,error);
     globalThis.suite={state,loadReport,refreshReport,refreshActiveSuite,bindRoot,installPurchaseOrdersSuite};
@@ -116,3 +117,4 @@ test("a response arriving after unmount cannot update another screen",async()=>{
   assert.equal(f.suite.state.report,null);assert.equal(f.root.renderCount,undefined);
   assert.equal(f.suite.state.loading,false);
 });
+
