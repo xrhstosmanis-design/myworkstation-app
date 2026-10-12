@@ -7,6 +7,12 @@ export function presentAssistantAnswer(result){
   if(!result)return null;
   const fallback={answer:formatAssistantEuroText(result.answer),highlights:(result.highlights||[]).map(formatAssistantEuroText),limitations:formatAssistantEuroText(result.limitations)};
   const evidence=result.evidence||[];
+  if(evidence.length===1&&evidence[0].kind==="consumption"){
+    const r=evidence[0],label=r.consumptionKind==="PRODUCT_DESTRUCTION"?"Καταστροφή προϊόντων":"Ιδιοκατανάλωση",period=`${r.storeName} · ${r.from} έως ${r.to}`;
+    if(r.result==="source_limited")return {...fallback,answer:`${label} · ${period}.\n${r.reason} Δεν εξάγεται πλήρες ή μηδενικό αποτέλεσμα.`,highlights:[],limitations:"Απαιτείται μικρότερη περίοδος ή έλεγχος της κανονικής αναφοράς Συμβάντων."};
+    if(r.result==="no_records")return {...fallback,answer:`${label} · ${period}. Δεν βρέθηκαν καταχωρημένα συμβάντα${r.productQuery?` με φίλτρο «${r.productQuery}»`:""}.`,highlights:[],limitations:"Μόνο το επιλεγμένο κατάστημα και το συγκεκριμένο διάστημα."};
+    if(r.result==="matched"&&Array.isArray(r.rows)&&r.rows.length)return {...fallback,answer:`${label} · ${period}.\nΒρέθηκαν ${r.rows.length} καταχωρημένες γραμμές ειδών. Δες τη λίστα παρακάτω.`,highlights:[],limitations:"Μόνο το επιλεγμένο κατάστημα. Η αξία αναφοράς δεν είναι τζίρος, πληρωμή ή κόστος αγοράς."};
+  }
   if(evidence.length===1&&evidence[0].kind==="sales_by_store"){
     const report=evidence[0];
     if(report.result==="ambiguous")return {...fallback,answer:`Διευκρίνισε την ονομασία ή συσκευασία για «${report.unresolvedName}»: ${(report.candidates||[]).join(" · ")}. Δεν χρειάζεται να γνωρίζεις SKU.`,highlights:[]};
