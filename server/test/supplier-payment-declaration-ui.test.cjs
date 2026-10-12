@@ -1,0 +1,40 @@
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+const {createRequire}=require('node:module');
+const path=require('node:path');
+const repo=path.resolve(__dirname,'../..');
+const dep=createRequire(path.join(repo,'server/package.json'));
+const {build}=dep('esbuild'),{JSDOM}=dep('jsdom');
+async function load(){
+ const source=path.join(repo,'client/src/components/store/StoreSupplierOpenInvoicePayment.jsx');
+ const out=await build({entryPoints:[source],bundle:true,write:false,format:'cjs',platform:'node',packages:'external',loader:{'.css':'empty'},plugins:[{name:'isolated-review',setup(b){
+ b.onResolve({filter:/document-image-quality\.js$/},()=>({path:'quality',namespace:'review'}));b.onLoad({filter:/^quality$/,namespace:'review'},()=>({contents:'export async function prepareDocumentFile(file){return {file}}'}));
+ b.onResolve({filter:/document-photo-pdf\.js$/},()=>({path:'pdf',namespace:'review'}));b.onLoad({filter:/^pdf$/,namespace:'review'},()=>({contents:'export const validatePhotoSelection=()=>{};export async function bundleDocumentPhotos(files){return files[0]}'}));
+ b.onResolve({filter:/^lucide-react$/},()=>({path:'icons',namespace:'review'}));b.onLoad({filter:/^icons$/,namespace:'review'},()=>({contents:'export const Camera=()=>null,FileText=()=>null,Upload=()=>null,Wallet=()=>null;'}));
+ b.onResolve({filter:/useMobileDocumentPhotos\.js$/},()=>({path:'mobile',namespace:'review'}));b.onLoad({filter:/^mobile$/,namespace:'review'},()=>({contents:'export default function(){return {pending:false}}'}));
+ b.onResolve({filter:/DocumentPhotoList\.jsx$|MobileDocumentPhotosQr\.jsx$|DocumentCameraFocus\.jsx$/},()=>({path:'empty',namespace:'review'}));b.onLoad({filter:/^empty$/,namespace:'review'},()=>({contents:'export default ()=>null;'}));
+ }}]});const m={exports:{}};new Function('require','module','exports',out.outputFiles[0].text)(dep,m,m.exports);return m.exports.default;
+}
+async function run(){
+ const dom=new JSDOM('<div class="pos-standard-modal"><div id="root"></div></div>',{url:'http://localhost'}),keys=['window','document','navigator','HTMLElement','File','FileReader','CustomEvent','IS_REACT_ACT_ENVIRONMENT'],saved=keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]);
+ for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[k]});
+ globalThis.FileReader=class{readAsDataURL(){this.result='data:application/pdf;base64,'+Buffer.alloc(120).toString('base64');queueMicrotask(()=>this.onload?.())}};
+ const styles=document.createElement('style');styles.textContent=fs.readFileSync(path.join(repo,'client/src/components/store/store-pos-standard-modals.css'),'utf8')+'\n'+fs.readFileSync(path.join(repo,'client/src/components/store/store-pos-open-invoices.css'),'utf8');document.head.appendChild(styles);
+ const React=dep('react'),{createRoot}=dep('react-dom/client'),root=createRoot(document.getElementById('root')),Component=await load(),calls=[],messages=[];let fail=true,completed=0;
+ const api=async(url,options)=>{if(options?.method==='POST'){calls.push(JSON.parse(options.body));if(fail)throw Error('virtual failed response');return {status:'PENDING_REVIEW'}}return {items:[{id:'doc',documentNumber:'VIRTUAL-001',outstandingAmount:100,storeName:'LAB'}]}};
+ const props={api,store:{id:'store'},suppliers:[{id:'supplier',name:'VIRTUAL SUPPLIER'}],setMessage:x=>messages.push(x),onCompleted:()=>completed++};
+ const change=(el,value)=>React.act(async()=>{Object.getOwnPropertyDescriptor(el.tagName==='SELECT'?dom.window.HTMLSelectElement.prototype:dom.window.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});
+ const toggle=()=>document.querySelector('.pos-supplier-no-document-toggle'),submit=()=>document.querySelector('.pos-primary-action');
+ try{
+ await React.act(async()=>root.render(React.createElement(Component,props)));await change(document.querySelector('select'),'supplier');const amount=document.querySelector('[aria-label="Ποσό για VIRTUAL-001"]');await change(amount,'61,23');assert.ok(parseFloat(dom.window.getComputedStyle(amount).paddingRight)>=38,'the amount text must leave room for the actual 34px keyboard icon plus its 4px inset');assert.equal(submit().disabled,true);assert.equal(toggle().getAttribute('aria-pressed'),'false');
+ await React.act(async()=>toggle().click());assert.equal(submit().disabled,false);assert.match(document.querySelector('.pos-supplier-no-document').textContent,/61,23/);
+ await React.act(async()=>root.render(React.createElement(Component,{...props,api:(...args)=>api(...args),setMessage:x=>messages.push(x)})));assert.equal(toggle().getAttribute('aria-pressed'),'true');assert.equal(amount.value,'61,23');
+ await change(amount,'61,63');assert.equal(toggle().getAttribute('aria-pressed'),'false');assert.equal(submit().disabled,true);
+ await React.act(async()=>toggle().click());await React.act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Τραπεζική μεταφορά').click());assert.equal(toggle().getAttribute('aria-pressed'),'false');
+ await React.act(async()=>toggle().click());await React.act(async()=>{submit().click();submit().click()});assert.equal(calls.length,1);assert.equal(calls[0].attachment,null);assert.equal(calls[0].noDocumentAcknowledged,true);assert.equal(calls[0].evidenceMode,'NO_DOCUMENT');assert.equal(calls[0].paymentMethod,'BANK_TRANSFER');assert.equal(calls[0].allocations[0].amount,61.63);assert.equal(completed,0);assert.equal(toggle().getAttribute('aria-pressed'),'true');
+ fail=false;await React.act(async()=>submit().click());assert.equal(calls.length,2);assert.equal(calls[1].idempotencyKey,calls[0].idempotencyKey);assert.equal(completed,1);
+ await React.act(async()=>root.render(React.createElement(Component,{...props,key:'next'})));await change(document.querySelector('select'),'supplier');await change(document.querySelector('[aria-label="Ποσό για VIRTUAL-001"]'),'10');
+ const fileInput=document.querySelector('input[accept="application/pdf"]');await React.act(async()=>{Object.defineProperty(fileInput,'files',{configurable:true,value:[new File(['virtual proof'],'proof.pdf',{type:'application/pdf'})]});fileInput.dispatchEvent(new dom.window.Event('change',{bubbles:true}))});assert.equal(toggle(),null);assert.equal(submit().disabled,false);await React.act(async()=>submit().click());assert.equal(calls[2].evidenceMode,'DOCUMENT');assert.equal(calls[2].noDocumentAcknowledged,false);assert.ok(calls[2].attachment.dataUrl.startsWith('data:application/pdf;base64,'));assert.equal(completed,2);
+ }finally{await React.act(async()=>root.unmount());dom.window.close();for(const[k,d]of saved){if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k]}}
+}
+require('node:test')('mounted supplier payment needs explicit declaration, resets on edits, preserves retry key, prevents double click and keeps evidence upload',run);
