@@ -22,6 +22,13 @@ const publicError=(status,code,message)=>Object.assign(new Error(message),{statu
 
 async function schemas(){await ensureStoreIntegrationSchema();await ensureEfoodIntegrationSchema()}
 function metadata(row){return row?.metadataJson&&typeof row.metadataJson==="object"?row.metadataJson:{}}
+function requireWebhookIdentity(integration,parsed){
+  const config=metadata(integration);
+  if(!config.vendorId)throw publicError(409,"EFOOD_TEST_VENDOR_REQUIRED","Λείπει το Test Vendor / Store ID της διασύνδεσης efood.");
+  if(!parsed.providerStoreId)throw publicError(400,"MISSING_PROVIDER_STORE_ID","Λείπει το Vendor/Store ID από το efood webhook.");
+  if(String(config.vendorId)!==parsed.providerStoreId)throw publicError(409,"VENDOR_MISMATCH","Το Vendor/Store ID του webhook δεν αντιστοιχεί στο επιλεγμένο LAB.");
+  if(config.externalPartnerConfigId&&String(config.externalPartnerConfigId)!==parsed.externalPartnerConfigId)throw publicError(409,"PARTNER_CONFIG_MISMATCH","Το external_partner_config_id δεν αντιστοιχεί στο επιλεγμένο LAB.");
+}
 async function ensureEfoodLabIntegrationScope(integration,database=prisma){
   const scope=(await database.$queryRaw`SELECT c."name" AS "companyName",s."name" AS "storeName" FROM "Store" s JOIN "Company" c ON c."id"=s."companyId" WHERE s."id"=${integration.storeId} AND s."companyId"=${integration.companyId} LIMIT 1`)[0];
   if(!scope)throw Object.assign(new Error("Δεν βρέθηκε το LAB scope της διασύνδεσης efood."),{status:404,code:"EFOOD_SCOPE_NOT_FOUND"});
@@ -34,13 +41,7 @@ export async function recordEfoodWebhookEvent({integration,payload,mode="LOCAL_M
   if(database===prisma)await schemas();
   await ensureEfoodLabIntegrationScope(integration,database);
   const parsed=normalizeEfoodWebhook(payload);
-  const config=metadata(integration);
-  if(config.vendorId&&parsed.providerStoreId&&String(config.vendorId)!==String(parsed.providerStoreId)){
-    throw Object.assign(new Error("Το Vendor/Store ID του webhook δεν αντιστοιχεί στο επιλεγμένο LAB."),{status:409,code:"VENDOR_MISMATCH"});
-  }
-  if(config.externalPartnerConfigId&&parsed.externalPartnerConfigId&&String(config.externalPartnerConfigId)!==String(parsed.externalPartnerConfigId)){
-    throw Object.assign(new Error("Το external_partner_config_id δεν αντιστοιχεί στο επιλεγμένο LAB."),{status:409,code:"PARTNER_CONFIG_MISMATCH"});
-  }
+  requireWebhookIdentity(integration,parsed);
   const existing=(await database.$queryRaw`SELECT "id","payloadHash","processingStatus" FROM "EfoodWebhookEvent" WHERE "integrationId"=${integration.id} AND "idempotencyKey"=${parsed.idempotencyKey} LIMIT 1`)[0];
   if(existing){
     if(existing.payloadHash===parsed.payloadHash)return {ok:true,id:existing.id,idempotent:true,parsed,processingStatus:existing.processingStatus};
@@ -79,6 +80,7 @@ router.post("/pelican/:webhookKey",async(req,res,next)=>{try{
     if(!integration.webhookSecretHash||!constantTimeSecretEquals(sha256(suppliedAuthorization),integration.webhookSecretHash))return {error:publicError(401,"EFOOD_TEST_SECRET_INVALID","Μη έγκυρο Authorization secret efood webhook.")};
 
     const parsed=normalizeEfoodWebhook(req.body||{});
+    requireWebhookIdentity(integration,parsed);
     const replay=(await tx.$queryRaw`SELECT "id","payloadHash","processingStatus" FROM "EfoodWebhookEvent" WHERE "integrationId"=${integration.id} AND "idempotencyKey"=${parsed.idempotencyKey} LIMIT 1`)[0];
     if(replay){
       if(replay.payloadHash===parsed.payloadHash)return {result:{ok:true,id:replay.id,idempotent:true,parsed,processingStatus:replay.processingStatus},autoLocked:true};
@@ -109,3 +111,4 @@ router.post("/pelican/:webhookKey",async(req,res,next)=>{try{
 }});
 
 export default router;
+
