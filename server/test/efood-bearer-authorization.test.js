@@ -115,6 +115,18 @@ test('efood registered callback accepts provider Bearer and legacy raw secret wi
       assert.equal(h.state.events[0].processingStatus,'VALIDATED_ONLY');assert.equal(h.state.events.length,1);
     }finally{await h.close()}
   });
+  await t.test('provider quantities and barcode errors are validated before event persistence or consumption',async()=>{
+    const h=await harness();try{
+      for(const [items,status,code] of [
+        [[{sku:'BAD',pricing:{quantity:null}}],400,'INVALID_PRODUCT_QUANTITY'],
+        [[{sku:'BAD',quantity:1,pricing:{quantity:2}}],409,'CONFLICTING_PRODUCT_QUANTITY'],
+        [[{sku:'BAD',barcode:[{}],pricing:{quantity:2}}],400,'INVALID_PRODUCT_BARCODE']
+      ]){const r=await h.send('Bearer '+secret,{...payload,items});assert.equal(r.status,status);assert.equal(r.body.code,code);assert.equal(h.state.events.length,0);assert.equal(h.state.integration.enabled,true);assert.equal(h.state.integration.webhookTestConsumedAt,null);}
+      const body={...payload,items:[{sku:'SLL45E',barcode:['05201050130791'],pricing:{quantity:2}}]};
+      const accepted=await h.send('Bearer '+secret,body);assert.equal(accepted.status,202);assert.deepEqual(decryptStoreIntegrationValue(h.state.events[0].payloadEnc),body);
+      const replay=await h.send('Bearer '+secret,body);assert.equal(replay.status,200);assert.equal(replay.body.eventId,accepted.body.eventId);assert.equal(h.state.events.length,1);
+    }finally{await h.close()}
+  });
   await t.test('wrong, malformed, empty and missing authentication cannot consume the window',async()=>{
     const h=await harness();try{
       for(const authorization of [undefined,'','Bearer','Bearer wrong','Basic '+secret,'Bearer '+secret+',other','Bearer Bearer '+secret,secret+',other']){
