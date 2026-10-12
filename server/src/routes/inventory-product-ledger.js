@@ -1,3 +1,4 @@
+import {greeceRangeDate} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {companyModuleState,effectiveModuleEnabled,isPlatformSuperAdmin,requireCompanyModule} from "../middleware/module-access.js";
@@ -21,8 +22,8 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
     const productId=String(req.params.productId||"");
     const storeId=String(req.query.storeId||"");
     if(!companyId||!storeId)return res.status(400).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
-    const from=req.query.from?new Date(`${req.query.from}T00:00:00`):new Date(Date.now()-30*86400000);
-    const to=req.query.to?new Date(`${req.query.to}T23:59:59.999`):new Date();
+    const from=req.query.from?greeceRangeDate(req.query.from):new Date(Date.now()-30*86400000);
+    const to=req.query.to?greeceRangeDate(req.query.to,true):new Date();
     if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
 
     const productRows=await prisma.$queryRaw`

@@ -58,8 +58,8 @@ router.get("/report",async(req,res,next)=>{try{
     ) v ON true
     LEFT JOIN LATERAL (
       SELECT
-        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM s."occurredAt")=EXTRACT(YEAR FROM CURRENT_DATE)) AS "currentYear",
-        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM s."occurredAt")=EXTRACT(YEAR FROM CURRENT_DATE)-1) AS "previousYear"
+        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM (s."occurredAt" AT TIME ZONE 'Europe/Athens'))=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens'))) AS "currentYear",
+        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM (s."occurredAt" AT TIME ZONE 'Europe/Athens'))=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens'))-1) AS "previousYear"
       FROM "Sale" s WHERE s."companyId"=${companyId} AND s."customerId"=c."id" AND s."status"='COMPLETED'
     ) y ON true
     WHERE c."companyId"=${companyId}

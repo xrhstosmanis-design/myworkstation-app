@@ -1,3 +1,4 @@
+import {greeceDateInput,greeceRangeDate} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {athensCalendarStart} from "../lib/athens-calendar-start.js";
 import crypto from "node:crypto";
@@ -88,8 +89,8 @@ const diningAuditDescription=(eventType,details={},areaNames=new Map())=>{
 const router=Router();
 const managementRoles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const n=value=>Number(value||0);
-const dayStart=value=>{const d=value?new Date(`${String(value).slice(0,10)}T00:00:00`):new Date(Date.now()-30*86400000);return Number.isNaN(d.getTime())?new Date(Date.now()-30*86400000):d};
-const dayEndExclusive=value=>{const d=value?new Date(`${String(value).slice(0,10)}T00:00:00`):new Date();if(Number.isNaN(d.getTime()))return new Date(Date.now()+86400000);d.setDate(d.getDate()+1);return d};
+const dayStart=value=>greeceRangeDate(value?String(value).slice(0,10):greeceDateInput(new Date(Date.now()-30*86400000)));
+const dayEndExclusive=value=>new Date(greeceRangeDate(value?String(value).slice(0,10):greeceDateInput(),true).getTime()+1);
 const filters=req=>({companyId:req.user.companyId,from:dayStart(req.query.from),to:dayEndExclusive(req.query.to),storeId:String(req.query.storeId||"")||null,q:String(req.query.q||"").trim()||null,timeFrom:String(req.query.timeFrom||"").match(/^\d{2}:\d{2}$/)?.[0]||null,timeTo:String(req.query.timeTo||"").match(/^\d{2}:\d{2}$/)?.[0]||null,operatorId:String(req.query.operatorId||"").trim()||null,terminalPos:String(req.query.terminalPos||"").trim()||null,eventType:String(req.query.eventType||"").trim()||null,amountMin:req.query.amountMin===""||req.query.amountMin==null?null:n(req.query.amountMin),amountMax:req.query.amountMax===""||req.query.amountMax==null?null:n(req.query.amountMax)});
 const isSuperAdmin=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 const auditFilters=req=>{const superAdmin=isSuperAdmin(req),requestedCompanyId=String(req.query.companyId||"").trim()||null,from=athensCalendarStart(req.query.from),to=athensCalendarStart(req.query.to,1);return {...filters(req),...(from?{from}:{}),...(to?{to}:{}),companyId:superAdmin?requestedCompanyId:req.user.companyId,superAdmin}};

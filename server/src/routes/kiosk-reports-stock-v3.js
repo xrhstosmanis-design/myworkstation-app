@@ -1,11 +1,12 @@
+import {greeceDateInput,greeceRangeDate} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const n=value=>Number(value||0);
-const dayStart=value=>{const d=value?new Date(`${String(value).slice(0,10)}T00:00:00`):new Date(Date.now()-30*86400000);return Number.isNaN(d.getTime())?new Date(Date.now()-30*86400000):d};
-const dayEndExclusive=value=>{const d=value?new Date(`${String(value).slice(0,10)}T00:00:00`):new Date();if(Number.isNaN(d.getTime()))return new Date(Date.now()+86400000);d.setDate(d.getDate()+1);return d};
+const dayStart=value=>greeceRangeDate(value?String(value).slice(0,10):greeceDateInput(new Date(Date.now()-30*86400000)));
+const dayEndExclusive=value=>new Date(greeceRangeDate(value?String(value).slice(0,10):greeceDateInput(),true).getTime()+1);
 
 function requireAccess(req,res,next){
   if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η Ανάλυση αποθήκης είναι διαθέσιμη μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
