@@ -122,5 +122,8 @@ test("app session remains separate from POS and legacy links never silently broa
  const legacy="header."+Buffer.from(JSON.stringify({tokenType:"STORE_OPERATOR",storeId:"A",companyId:"C1",fullName:"Χειριστής"})).toString("base64url")+".signature";
  map.set("token",legacy);assert.equal(helper.chatSession().user.store.id,"A");assert.equal(helper.chatSession().user.legacy,true);assert.equal(helper.chatSession().user.fullName,"Χειριστής");
  helper.saveChatSession({token:"owner-token",user:{id:"owner"}});assert.equal(helper.chatToken(),"owner-token");assert.equal(map.get("token"),legacy);
+ const owner="header."+Buffer.from(JSON.stringify({tokenType:"BACKOFFICE_USER",id:"owner",companyId:"C1",role:"OWNER"})).toString("base64url")+".signature";
+ map.delete("chatAppSession");map.set("token",owner);assert.equal(helper.chatSession().borrowed,true);assert.equal(helper.chatSession().user.company.id,"C1");
+ helper.saveChatSession({token:"selected",user:{id:"owner"},borrowed:true});assert.equal(helper.chatSession().borrowed,true);map.set("token",legacy);
  helper.clearChatSession();assert.equal(helper.chatSession(),null);assert.equal(helper.chatToken(),"");assert.equal(map.get("token"),legacy);
 });
