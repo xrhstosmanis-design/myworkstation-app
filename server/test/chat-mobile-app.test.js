@@ -62,7 +62,8 @@ test("native PostgreSQL multi-store recipients stop after ownership, role, sessi
  await admin.$executeRawUnsafe('CREATE SCHEMA "'+schema+'"');const db=new PrismaClient({datasources:{db:{url:url.toString()}}});
  try{
   for(const ddl of [
-   'CREATE TABLE "User" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"role" TEXT,"sessionVersion" INTEGER)',
+   'CREATE TYPE "UserRole" AS ENUM (\'SUPER_ADMIN\',\'OWNER\',\'ADMIN\',\'MANAGER\',\'EMPLOYEE\')',
+   'CREATE TABLE "User" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"role" "UserRole","sessionVersion" INTEGER)',
    'CREATE TABLE "UserSession" ("id" TEXT PRIMARY KEY,"userId" TEXT,"revokedAt" TIMESTAMPTZ)',
    'CREATE TABLE "Company" ("id" TEXT PRIMARY KEY,"active" BOOLEAN)',
    'CREATE TABLE "Store" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"active" BOOLEAN)',
@@ -74,7 +75,7 @@ test("native PostgreSQL multi-store recipients stop after ownership, role, sessi
   const lib=mobile(db);
   await db.$executeRawUnsafe('INSERT INTO "Company" VALUES ($1,TRUE),($2,TRUE)',"C1","C2");
   await db.$executeRawUnsafe('INSERT INTO "Store" VALUES ($1,$2,TRUE),($3,$4,TRUE)',"A","C1","B","C2");
-  await db.$executeRawUnsafe('INSERT INTO "User" VALUES ($1,$2,$3,1),($4,$5,$3,1)',"owner","C1","OWNER","foreign","OTHER");
+  await db.$executeRawUnsafe('INSERT INTO "User" VALUES ($1,$2,$3::"UserRole",1),($4,$5,$3::"UserRole",1)',"owner","C1","OWNER","foreign","OTHER");
   await db.$executeRawUnsafe('INSERT INTO "UserSession" VALUES ($1,$2,NULL),($3,$4,NULL)',"session","owner","foreignsession","foreign");
   await db.$executeRawUnsafe('INSERT INTO "OwnerCompanyAccess" VALUES ($1,$2)',"owner","C2");
   await lib.mobilePushRecipients({id:"A",companyId:"C1"},"sender"); // runs actual additive schema
@@ -95,8 +96,8 @@ test("native PostgreSQL multi-store recipients stop after ownership, role, sessi
   await db.$executeRawUnsafe('DELETE FROM "OwnerCompanyAccess"');assert.deepEqual(await recipients(),[]);assert.equal((await recipients("A")).length,1);
   await db.$executeRawUnsafe('UPDATE "UserSession" SET "revokedAt"=NOW() WHERE "id"=$1',"session");assert.deepEqual(await recipients("A"),[]);
   await db.$executeRawUnsafe('UPDATE "UserSession" SET "revokedAt"=NULL WHERE "id"=$1',"session");await db.$executeRawUnsafe('UPDATE "User" SET "sessionVersion"=2 WHERE "id"=$1',"owner");assert.deepEqual(await recipients("A"),[]);
-  await db.$executeRawUnsafe('UPDATE "User" SET "sessionVersion"=1,"role"=$1 WHERE "id"=$2',"EMPLOYEE","owner");assert.deepEqual(await recipients("A"),[]);
-  await db.$executeRawUnsafe('UPDATE "User" SET "role"=$1 WHERE "id"=$2',"OWNER","owner");
+  await db.$executeRawUnsafe('UPDATE "User" SET "sessionVersion"=1,"role"=$1::"UserRole" WHERE "id"=$2',"EMPLOYEE","owner");assert.deepEqual(await recipients("A"),[]);
+  await db.$executeRawUnsafe('UPDATE "User" SET "role"=$1::"UserRole" WHERE "id"=$2',"OWNER","owner");
   await db.$executeRawUnsafe('CREATE TABLE "StoreChatPushSubscription" ("endpoint" TEXT PRIMARY KEY)');
   const endpoint="https://web.push.apple.com/transition";
   await db.$executeRawUnsafe('INSERT INTO "StoreChatPushSubscription" VALUES ($1)',endpoint);

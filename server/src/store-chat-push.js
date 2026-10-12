@@ -53,7 +53,7 @@ export async function sendStoreChatPush({store,senderId}){
     const credentials=await prisma.$queryRawUnsafe('SELECT c."id",c."pinHash",c."cardCodeHash",c."role" FROM "StoreChatMobileSession" sm JOIN "StoreOperatorCredential" c ON c."id"=sm."operatorId" AND c."storeId"=sm."storeId" AND c."companyId"=sm."companyId" AND c."active"=TRUE JOIN "Employee" e ON e."id"=c."employeeId" AND e."active"=TRUE JOIN "Store" s ON s."id"=c."storeId" AND s."active"=TRUE JOIN "Company" co ON co."id"=c."companyId" AND co."active"=TRUE WHERE sm."id"=$1 AND sm."storeId"=$2 AND sm."companyId"=$3 AND sm."revokedAt" IS NULL',row.chatSessionId,store.id,store.companyId);
     if(credentials[0]&&chatCredentialStamp(credentials[0])===row.credentialStamp&&await chatEnabled(store))verifiedLegacy.push(row);
   }
-  const mobileRows=await mobilePushRecipients(store,senderId);
+  const mobileRows=await mobilePushRecipients(store,senderId).catch(error=>{console.error("Chat mobile recipient lookup unavailable",error?.code||"unknown");return []});
   const rows=[...new Map([...verifiedLegacy,...mobileRows].map(row=>[row.endpoint,row])).values()];
   const payload={title:"MyWorkStation · Chat",body:`Νέο μήνυμα στο ${store.name}`,url:"/",storeId:store.id};
   const results=await Promise.allSettled(rows.map(row=>webpush.sendNotification(row.subscriptionJson,JSON.stringify({...payload,requiresSystemNotification:isApplePushEndpoint(row.endpoint)}),{TTL:300,urgency:"high"})));
