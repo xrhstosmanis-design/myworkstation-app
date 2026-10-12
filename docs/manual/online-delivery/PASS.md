@@ -3,6 +3,12 @@
 Ημερομηνία τελικής αποδοχής: 27/09/2026
 Κατάσταση: **Gate 6 PASS / ΟΛΟΚΛΗΡΩΜΕΝΟ / ΚΛΕΙΔΩΜΕΝΟ**
 
+## 12/10/2026 — Περιορισμένη νέα αστοχία προβολής βάρδιας στο LAB
+
+Η ONL-003/ένα ίδιο ψημένο1.40EUR ολοκληρώθηκε από V2 «ΣΤΟ POS / ΠΛΗΡΩΜΗ» με normalPOScheckout και complete-from-pos. Ανεξάρτητα stock39→38/ψημένα14→13/raw25unchanged και cashLAB-POS-02+1.40/MAINunchanged παρατηρήθηκαν. Όμως το BackofficecountLAB-POS-02έμεινε2, τελευταία— και κατηγορίεςκενές. Αυτό επανανοίγει μόνο τη συμφωνία της συγκεκριμένης προβολής, δεν μετατρέπει τη νέα δοκιμή σε πλήρες PASS και δεν αναιρεί τα ακριβή τεκμήρια ONL-002 της27/09. Οικονομική/stockδιόρθωση ή επανάληψηδεν έγινε. Η παλιά standalone postCommercialSale δεν ήταν η πραγματική διαδρομή· είναι απενεργοποιημένη στο preparedserver.
+
+Συνεχίστε με read-onlyέλεγχο της ίδιας ONL-003 και ρητή ανάθεση της προβολής πριν sourcefix, διατηρώντας terminalmapping/fiscal/idempotency/otherowners. Checkpoint CHECKPOINTS/CHANGES/2026-10-11-daily-baking-availability.md. Η πραγματική εγκατάσταση DAILY και δημόσιαενεργοποίηση δεν έχουν αποδοχή.
+
 ## Τι καλύπτει
 
 Το παρόν manual αφορά τη γενική λειτουργία Online Ordering/Delivery του MyWorkStation. Δεν αφορά την εξωτερική διασύνδεση efood/Pelican, η οποία έχει δικά της credentials και ξεχωριστό κύκλο εργασιών.
