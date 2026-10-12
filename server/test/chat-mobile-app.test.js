@@ -127,3 +127,11 @@ test("app session remains separate from POS and legacy links never silently broa
  helper.saveChatSession({token:"selected",user:{id:"owner"},borrowed:true});assert.equal(helper.chatSession().borrowed,true);map.set("token",legacy);
  helper.clearChatSession();assert.equal(helper.chatSession(),null);assert.equal(helper.chatToken(),"");assert.equal(map.get("token"),legacy);
 });
+
+test("Chat registration returns its own worker even when a root POS worker is ready",async()=>{
+ const own={active:{state:"activated"},pushManager:{}},calls=[],changes=[];
+ const code=fs.readFileSync(new URL("../../client/src/components/store/chat-mobile-install.mjs",import.meta.url),"utf8").replace(/^export /gm,"");
+ const serviceWorker={register:async(url,options)=>{calls.push({url,scope:options.scope});return own},get ready(){throw new Error("Root worker must not be used")}};
+ const register=vm.runInNewContext(code+";registerChatWorker",{navigator:{serviceWorker},location:{pathname:"/chat/B",search:"",hash:""},history:{replaceState:(_a,_b,path)=>changes.push(path)}});
+ assert.equal(await register("A"),own);assert.deepEqual(calls,[{url:"/chat/sw.js",scope:"/chat/"}]);assert.deepEqual(changes,["/chat/B/"]);
+});
