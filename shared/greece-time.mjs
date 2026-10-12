@@ -31,3 +31,34 @@ export function greeceDateTimeToIso(value) {
   if (candidates.length > 1) throw new Error("Αυτή η ώρα εμφανίζεται δύο φορές στην αλλαγή χειμερινής ώρας. Επίλεξε μια σαφή ώρα.");
   return candidates[0].toISOString();
 }
+
+export function greeceRangeDate(value, endOfDay = false) {
+  if (value instanceof Date) {
+    if (Number.isFinite(value.getTime())) return new Date(value);
+  } else {
+    const text = String(value || "");
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return new Date(greeceDateTimeToIso(text + (endOfDay ? "T23:59:59.999" : "T00:00:00")));
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/.test(text)) return new Date(greeceDateTimeToIso(text));
+      if (/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:?\d{2})$/.test(text)) {
+        const date = new Date(text);
+        if (Number.isFinite(date.getTime())) return date;
+      }
+    } catch (error) { error.status = 400; throw error; }
+  }
+  throw Object.assign(new Error("Μη έγκυρη ημερομηνία και ώρα Ελλάδας."), {status:400});
+}
+export function greeceMonthStart(value = new Date()) {
+  return greeceRangeDate(greeceDateInput(value).slice(0,7) + "-01");
+}
+
+export function greeceExportValue(value) {
+  const isInstant = value instanceof Date || (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/.test(value));
+  if (!isInstant) return value;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return value;
+  return greeceDateTimeInput(date,true).replace("T"," ") + " Europe/Athens";
+}
+export function greeceExportRows(rows) {
+  return rows.map(row => Array.isArray(row) ? row.map(greeceExportValue) : Object.fromEntries(Object.entries(row).map(([key,value]) => [key,greeceExportValue(value)])));
+}

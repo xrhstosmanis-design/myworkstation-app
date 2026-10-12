@@ -1,3 +1,4 @@
+import {greeceDateTimeInput} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useRef,useState} from "react";
 import {CircleStop,Download,MonitorUp,Play,Video,X} from "lucide-react";
 import "./screen-recorder.css";
@@ -5,7 +6,7 @@ import "./screen-recorder.css";
 const pad=value=>String(value).padStart(2,"0");
 const durationLabel=seconds=>`${pad(Math.floor(seconds/60))}:${pad(seconds%60)}`;
 const recordingName=()=>{
-  const now=new Date(),stamp=[now.getFullYear(),pad(now.getMonth()+1),pad(now.getDate()),pad(now.getHours()),pad(now.getMinutes()),pad(now.getSeconds())].join("-");
+  const stamp=greeceDateTimeInput(new Date(),true).replace(/[:T]/g,"-");
   return `myworkstation-screen-${stamp}.webm`;
 };
 const supportedMimeType=()=>["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(type=>window.MediaRecorder?.isTypeSupported?.(type))||"";

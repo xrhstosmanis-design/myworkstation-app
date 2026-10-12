@@ -1,3 +1,4 @@
+import {greeceDateInput,greeceRangeDate} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 
@@ -11,8 +12,8 @@ function requireAccess(req,res,next){
 }
 router.use(requireAccess);
 
-const dayStart=value=>{const d=value?new Date(`${String(value).slice(0,10)}T00:00:00`):new Date(Date.now()-30*86400000);return Number.isNaN(d.getTime())?new Date(Date.now()-30*86400000):d};
-const dayEndExclusive=value=>{const d=value?new Date(`${String(value).slice(0,10)}T00:00:00`):new Date();if(Number.isNaN(d.getTime()))return new Date(Date.now()+86400000);d.setDate(d.getDate()+1);return d};
+const dayStart=value=>greeceRangeDate(value?String(value).slice(0,10):greeceDateInput(new Date(Date.now()-30*86400000)));
+const dayEndExclusive=value=>new Date(greeceRangeDate(value?String(value).slice(0,10):greeceDateInput(),true).getTime()+1);
 const filters=req=>({companyId:req.user.companyId,from:dayStart(req.query.from),to:dayEndExclusive(req.query.to),storeId:String(req.query.storeId||"")||null,q:String(req.query.q||"").trim()||null});
 
 router.get("/lookups",async(req,res,next)=>{try{

@@ -3,7 +3,7 @@ import {ArrowLeft,Check,FileText,Filter,KeyRound,LockKeyhole,MoreHorizontal,Penc
 import "./operator-management.css";
 import {matchesGreekSearch} from "../../utils/greek-search.js";
 
-const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
+const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"—";
 const roleLabel=role=>role==="MANAGER"?"ΔΙΑΧΕΙΡΙΣΤΗΣ (ΥΠΕΥΘΥΝΟΣ)":"ΧΡΗΣΤΗΣ (ΥΠΑΛΛΗΛΟΣ)";
 const boolObject=value=>value&&typeof value==="object"?value:{};
 const POS_PERMISSIONS=[

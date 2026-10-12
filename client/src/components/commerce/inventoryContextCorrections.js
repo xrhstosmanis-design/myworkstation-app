@@ -2,7 +2,7 @@ import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const token=()=>localStorage.getItem('token')||'';
 const num=value=>Number(String(value??'0').replace(',','.'))||0;
-const when=value=>value?new Date(value).toLocaleString('el-GR',{timeZone:"Europe/Athens"}):'—';
+const when=value=>value?new Date(value).toLocaleString('el-GR',{timeZone:"Europe/Athens",hour12:false}):'—';
 const money=value=>`${Number(value||0).toFixed(2)} €`;
 async function api(path,options={}){const r=await fetch(path,{...options,headers:{'Content-Type':'application/json',...(token()?{Authorization:`Bearer ${token()}`}:{}) ,...(options.headers||{})}});const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={error:text||'Μη αναμενόμενη απάντηση'}}if(!r.ok)throw new Error(data.error||`Σφάλμα ${r.status}`);return data}
 function storeId(){const p=new URLSearchParams(location.search);try{return p.get('supportStore')||p.get('storeId')||JSON.parse(localStorage.getItem('supportContext')||'null')?.storeId||null}catch{return p.get('supportStore')||p.get('storeId')||null}}

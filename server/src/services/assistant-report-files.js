@@ -1,13 +1,14 @@
+import {greeceDateTimeInput,greeceExportValue} from "../../../shared/greece-time.mjs";
 import PDFDocument from "pdfkit";
 import {Document,Packer,Paragraph,Table,TableRow,TableCell,WidthType,PageOrientation,TextRun} from "docx";
 import XLSX from "xlsx";
 import {fileURLToPath} from "node:url";
 import {assistantReportTables,spreadsheetSafeText} from "./assistant-report-table.js";
 const formats={xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",csv:"text/csv;charset=utf-8",pdf:"application/pdf",docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"};
-const cell=(value,column)=>value===null||value===undefined?"Μη καταγεγραμμένο":typeof value==="number"?value.toLocaleString("el-GR",column.includes("€")?{minimumFractionDigits:2,maximumFractionDigits:2}:{maximumFractionDigits:20}):String(value);
+const cell=(value,column)=>value===null||value===undefined?"Μη καταγεγραμμένο":typeof value==="number"?value.toLocaleString("el-GR",column.includes("€")?{minimumFractionDigits:2,maximumFractionDigits:2}:{maximumFractionDigits:20}):String(greeceExportValue(value));
 function workbook(tables){
  const book=XLSX.utils.book_new();
- for(const t of tables){const top=[["MyWorkStation"],[t.title],...t.notes.map(n=>[spreadsheetSafeText(n)]),[],t.columns],data=[...top,...t.rows.map(r=>r.map(v=>typeof v==="number"?v:v===null||v===undefined?"Μη καταγεγραμμένο":spreadsheetSafeText(v)))],sheet=XLSX.utils.aoa_to_sheet(data);
+ for(const t of tables){const top=[["MyWorkStation"],[t.title],...t.notes.map(n=>[spreadsheetSafeText(n)]),[],t.columns],data=[...top,...t.rows.map(r=>r.map(v=>typeof v==="number"?v:v===null||v===undefined?"Μη καταγεγραμμένο":spreadsheetSafeText(greeceExportValue(v))))],sheet=XLSX.utils.aoa_to_sheet(data);
   sheet["!cols"]=t.columns.map(c=>({wch:c.includes("Είδος")||c.includes("Κατάστημα")?30:22}));sheet["!merges"]=top.slice(0,-2).map((_,r)=>({s:{r,c:0},e:{r,c:t.columns.length-1}}));
   for(let row=top.length;row<data.length;row++)for(let col=0;col<t.columns.length;col++){const c=sheet[XLSX.utils.encode_cell({r:row,c:col})];if(c?.t==="n")c.z=t.columns[col].includes("€")?"#,##0.00":"0.###############";}
   XLSX.utils.book_append_sheet(book,sheet,t.sheet);
@@ -49,5 +50,5 @@ export async function buildAssistantReportFile(format,evidence,{now=new Date()}=
  if(!Object.hasOwn(formats,format))throw Object.assign(new Error("Επίλεξε Excel, PDF, CSV ή Word."),{status:422});
  const tables=assistantReportTables(evidence,{generatedAt:now}),buffer=await(format==="xlsx"?workbook(tables):format==="csv"?csv(tables):format==="pdf"?pdf(tables):word(tables));
  if(buffer.length>10*1024*1024)throw Object.assign(new Error("Το αρχείο ξεπερνά το όριο ασφαλούς εξαγωγής. Ζήτησε μικρότερη αναφορά."),{status:422});
- return {filename:`myworkstation-report-${now.toISOString().replace(/[^0-9]/g,"").slice(0,14)}.${format}`,mimeType:formats[format],size:buffer.length,base64:buffer.toString("base64"),generatedAt:now.toISOString(),readOnly:true};
+ return {filename:`myworkstation-report-${greeceDateTimeInput(now,true).replace(/[^0-9]/g,"")}.${format}`,mimeType:formats[format],size:buffer.length,base64:buffer.toString("base64"),generatedAt:now.toISOString(),readOnly:true};
 }

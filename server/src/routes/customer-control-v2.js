@@ -1,3 +1,4 @@
+import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -45,7 +46,7 @@ async function ensureSchema(){
 function requireAccess(req,res,next){if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η πλήρης διαχείριση πελατών είναι διαθέσιμη μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});next()}
 router.use(requireAccess);
 router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
-function range(query={}){const now=new Date(),to=query.to?new Date(String(query.to)):now,from=query.from?new Date(String(query.from)):new Date(to.getFullYear(),to.getMonth(),1);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}return{from,to}}
+function range(query={}){const now=new Date(),to=query.to?greeceRangeDate(query.to,true):now,from=query.from?greeceRangeDate(query.from):greeceMonthStart(to);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}return{from,to}}
 async function owned(companyId,customerId){const rows=await prisma.$queryRaw`SELECT * FROM "Customer" WHERE "id"=${customerId} AND "companyId"=${companyId} LIMIT 1`;return rows[0]||null}
 async function uniqueMemberCard(companyId,requested=""){const normalized=String(requested||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");for(let attempt=0;attempt<10;attempt++){const value=normalized||`MWS${crypto.randomBytes(8).toString("hex").toUpperCase()}`,rows=await prisma.$queryRaw`SELECT "id" FROM "Customer" WHERE "companyId"=${companyId} AND UPPER(REGEXP_REPLACE(COALESCE("memberCard",''),'[^A-Za-z0-9]','','g'))=${value} LIMIT 1`;if(!rows[0])return value;if(normalized){const error=new Error("Η κάρτα μέλους χρησιμοποιείται ήδη από άλλον πελάτη.");error.status=409;throw error}}throw new Error("Δεν δημιουργήθηκε μοναδικός αριθμός κάρτας.")}
 async function validStore(companyId,storeId){if(!storeId)return null;return prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}})}
@@ -55,7 +56,7 @@ router.get("/report",async(req,res,next)=>{try{const companyId=req.user.companyI
 SELECT c.*,COALESCE(v."visits",0)::int AS "visits",COALESCE(y."currentYear",0) AS "currentYear",COALESCE(y."previousYear",0) AS "previousYear"
 FROM "Customer" c
 LEFT JOIN LATERAL (SELECT COUNT(DISTINCT s."id")::int AS "visits" FROM "Sale" s WHERE s."companyId"=${companyId} AND s."customerId"=c."id" AND s."status"='COMPLETED') v ON true
-LEFT JOIN LATERAL (SELECT SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM s."occurredAt")=EXTRACT(YEAR FROM CURRENT_DATE)) AS "currentYear",SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM s."occurredAt")=EXTRACT(YEAR FROM CURRENT_DATE)-1) AS "previousYear" FROM "Sale" s WHERE s."companyId"=${companyId} AND s."customerId"=c."id" AND s."status"='COMPLETED' AND COALESCE(s."transactionMode",'NORMAL')<>'CREDIT') y ON true
+LEFT JOIN LATERAL (SELECT SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM (s."occurredAt" AT TIME ZONE 'Europe/Athens'))=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens'))) AS "currentYear",SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM (s."occurredAt" AT TIME ZONE 'Europe/Athens'))=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens'))-1) AS "previousYear" FROM "Sale" s WHERE s."companyId"=${companyId} AND s."customerId"=c."id" AND s."status"='COMPLETED' AND COALESCE(s."transactionMode",'NORMAL')<>'CREDIT') y ON true
 WHERE c."companyId"=${companyId} AND (${activeOnly}=false OR c."active"=true) AND (${nonZeroOnly}=false OR ABS(c."balance")>0.0001) AND (${text}::text IS NULL OR c."name" ILIKE ${text} OR COALESCE(c."taxId",'') ILIKE ${text} OR COALESCE(c."legacyCode",'') ILIKE ${text} OR COALESCE(c."memberCard",'') ILIKE ${text}) ORDER BY c."name" LIMIT 2000`;
 const customers=rows.map(r=>({...r,balance:n(r.balance),discountPercent:n(r.discountPercent),creditLimit:n(r.creditLimit),points:n(r.points),visits:n(r.visits),currentYear:n(r.currentYear),previousYear:n(r.previousYear)}));const summary=customers.reduce((a,r)=>{a.count++;a.balance+=r.balance;a.visits+=r.visits;a.currentYear+=r.currentYear;return a},{count:0,balance:0,visits:0,currentYear:0});res.json({customers,summary})}catch(error){next(error)}});
 

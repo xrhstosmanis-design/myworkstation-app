@@ -2,7 +2,7 @@ import React,{useEffect,useState} from "react";
 import {Check,Download,Edit3,Plus,RefreshCw,Trash2,X} from "lucide-react";
 import "./management-business-units.css";
 
-const fmtDate=v=>v?new Date(v).toLocaleString("el-GR",{...({day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"}),timeZone:"Europe/Athens"}):"—";
+const fmtDate=v=>v?new Date(v).toLocaleString("el-GR",{...({day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"}),timeZone:"Europe/Athens",hour12:false}):"—";
 const esc=v=>`"${String(v??"").replaceAll('"','""')}"`;
 function downloadCsv(name,rows){const blob=new Blob(["\ufeff"+rows.map(r=>r.map(esc).join(";")).join("\n")],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function Modal({title,children,onClose,wide=false}){return <div className="mbu-backdrop"><section className={`mbu-modal${wide?" wide":""}`}><header><b>{title}</b><button onClick={onClose}><X/></button></header>{children}</section></div>}

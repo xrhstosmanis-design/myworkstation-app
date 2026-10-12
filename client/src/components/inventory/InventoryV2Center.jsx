@@ -277,7 +277,7 @@ export default function InventoryV2Center({
           line.events
             .map(
               (event) =>
-                `${event.eventType} ${event.actorName} ${new Date(event.createdAt).toLocaleString("el-GR",{timeZone:"Europe/Athens"})}`,
+                `${event.eventType} ${event.actorName} ${new Date(event.createdAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}`,
             )
             .join(" | "),
         ]),
@@ -399,7 +399,7 @@ export default function InventoryV2Center({
                   <div key={`${row.type}-${row.reference}-${index}`} className={`severity-${row.severity.toLowerCase()}`}>
                     <b>{row.title}</b>
                     <span>{row.details}</span>
-                    <small>{new Date(row.at).toLocaleString("el-GR",{timeZone:"Europe/Athens"})} · {row.actorName} · {row.reference}</small>
+                    <small>{new Date(row.at).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})} · {row.actorName} · {row.reference}</small>
                   </div>
                 )) : <p>Δεν βρέθηκε καταγεγραμμένο στοιχείο που να εξηγεί τη διαφορά.</p>}
               </div>

@@ -1,3 +1,4 @@
+import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {readCustomerActivityLedger} from "../lib/customer-activity-ledger.js";
@@ -15,7 +16,7 @@ async function ensureCompatibility(){
   return ready;
 }
 function access(req,res,next){if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η πλήρης διαχείριση πελατών είναι διαθέσιμη μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});next()}
-function range(query={}){const now=new Date(),to=query.to?new Date(String(query.to)):now,from=query.from?new Date(String(query.from)):new Date(to.getFullYear(),to.getMonth(),1);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}return{from,to}}
+function range(query={}){const now=new Date(),to=query.to?greeceRangeDate(query.to,true):now,from=query.from?greeceRangeDate(query.from):greeceMonthStart(to);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}return{from,to}}
 async function owned(companyId,customerId){const rows=await prisma.$queryRaw`SELECT "id","name","balance" FROM "Customer" WHERE "id"=${customerId} AND "companyId"=${companyId} LIMIT 1`;return rows[0]||null}
 
 router.use(access);
@@ -37,9 +38,9 @@ router.get("/report",async(req,res,next)=>{try{
     ) v ON true
     LEFT JOIN LATERAL (
       SELECT
-        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM s."occurredAt")=EXTRACT(YEAR FROM CURRENT_DATE)) AS "currentYear",
-        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM s."occurredAt")=EXTRACT(YEAR FROM CURRENT_DATE)-1) AS "previousYear",
-        ABS(COALESCE(SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM s."occurredAt")=EXTRACT(YEAR FROM CURRENT_DATE) AND s."source"='POS_REVERSAL'),0)) AS "returnsCurrentYear"
+        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM (s."occurredAt" AT TIME ZONE 'Europe/Athens'))=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens'))) AS "currentYear",
+        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM (s."occurredAt" AT TIME ZONE 'Europe/Athens'))=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens'))-1) AS "previousYear",
+        ABS(COALESCE(SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM (s."occurredAt" AT TIME ZONE 'Europe/Athens'))=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')) AND s."source"='POS_REVERSAL'),0)) AS "returnsCurrentYear"
       FROM "Sale" s
       WHERE s."companyId"=${companyId} AND s."customerId"=c."id" AND s."status"='COMPLETED'
     ) y ON true

@@ -120,7 +120,7 @@ export async function sendCashShiftClosedEmail({to,storeName,session,companyId,s
     ["Έναρξη επόμενης",eur(session.nextOpeningTotal)]
   ];
   const duplicateText=duplicateReview.length
-    ?duplicateReview.map(item=>`${new Date(item.firstAt).toLocaleString("el-GR",{timeZone:"Europe/Athens"})} → ${new Date(item.secondAt).toLocaleString("el-GR",{timeZone:"Europe/Athens"})} · ${eur(item.total)} · ${(item.products||[]).join(", ")}`).join("\n")
+    ?duplicateReview.map(item=>`${new Date(item.firstAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})} → ${new Date(item.secondAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})} · ${eur(item.total)} · ${(item.products||[]).join(", ")}`).join("\n")
     :"Δεν βρέθηκαν διαδοχικές ίδιες συναλλαγές.";
   const text=[subject,"",...rows.map(([label,value])=>`${label}: ${value}`),"",`Έλεγχος διπλών συναλλαγών:\n${duplicateText}`,session.closingNote?`\nΣημείωση: ${session.closingNote}`:""].join("\n");
   const htmlRows=rows.map(([label,value])=>`<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escapeHtml(label)}</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:700">${escapeHtml(value)}</td></tr>`).join("");
@@ -144,7 +144,7 @@ export async function sendLedgerAlertEmail({to,kind,storeName,amount,actorName,o
   const isReversal=kind==="REVERSAL";
   const title=isReversal?"Αντιλογισμός συναλλαγής":"Καταχώριση ποσοστών";
   const subject=`ΕΙΔΟΠΟΙΗΣΗ · ${title} · ${storeName}`;
-  const rows=[["Ενέργεια",title],["Κατάστημα",storeName],["Ημερομηνία / ώρα",at.toLocaleString("el-GR",{timeZone:"Europe/Athens"})],["Ποσό",eur(amount)],["Χρήστης",actorName||"—"]];
+  const rows=[["Ενέργεια",title],["Κατάστημα",storeName],["Ημερομηνία / ώρα",at.toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})],["Ποσό",eur(amount)],["Χρήστης",actorName||"—"]];
   if(isReversal&&originalType)rows.push(["Αρχικός τύπος",originalType]);
   if(description)rows.push(["Περιγραφή",description]);
   if(reason)rows.push(["Αιτιολογία αντιλογισμού",reason]);
