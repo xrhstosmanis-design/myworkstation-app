@@ -99,3 +99,11 @@ test("real Platform aggregate session rejects a changed authorized store set bef
  await assert.rejects(session.run({prompt:"Names",requestProvider:async()=>++providers===1?{response:{ok:true},raw:{output:[{type:"function_call",name:"sales_by_store",call_id:"call",arguments:JSON.stringify(args)}]}}:{response:{ok:true},raw:{output:[]}}}),e=>e.status===403);
  assert.equal(providers,1);
 });
+
+test('Greek beer category singular/plural spelling uses only real catalog IDs and preserves category ambiguity',async()=>{
+ for(const name of ['μπύρες','μπίρες','μπύρα','μπίρα']){
+  const out=await readAssistantSalesStores({...args,names:[name]},access,options);assert.equal(out.result,'matched');assert.equal(out.rows.length,8);assert.ok(out.rows.every(r=>!r.productId.endsWith('p')&&!r.productId.endsWith('kg')));assert.deepEqual(new Set(out.rows.map(r=>r.name)),new Set(['ΑΛΦΑ 330ML','ΑΛΦΑ 500ML ΚΟΥΤΙ','ΑΛΦΑ 500ML ΦΙΑΛΗ','ΦΙΞ ΛΕΜΟΝΙ']));
+ }
+ const ambiguous=await readAssistantSalesStores({...args,names:['μπίρες']},access,{...options,readCatalog:async()=>[{productId:'a',name:'ΑΛΦΑ',categoryName:'ΜΠΥΡΕΣ ΕΛΛΗΝΙΚΕΣ'},{productId:'b',name:'OTHER',categoryName:'ΜΠΙΡΕΣ ΕΙΣΑΓΩΓΗΣ'}],readReport:async()=>{throw Error('ambiguous category must not read sales')}});assert.equal(ambiguous.result,'ambiguous');assert.equal(ambiguous.totals,null);assert.equal(ambiguous.candidates.length,2);
+ const exact=await readAssistantSalesStores({...args,mode:'names',names:['μπίρα']},access,options);assert.equal(exact.result,'no_match');assert.equal(salesName('μπύρα'),'μπυρα');assert.equal(salesName('μπίρα'),'μπιρα');
+});

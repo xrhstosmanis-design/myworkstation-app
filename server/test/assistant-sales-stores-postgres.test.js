@@ -51,5 +51,12 @@ test("native PostgreSQL named category/store report reuses sale sums, excludes f
   assert.equal(selected.rows.length,2);assert.deepEqual(new Set(selected.rows.map(r=>r.productId)),new Set(['coke-can','coke-bottle']));assert.equal(selected.totals.grossSales,7);assert.deepEqual(selected.totals.quantities,[{unit:'PIECE',quantity:6}]);assert.equal(selected.rows.find(r=>r.productId==='coke-can').salesQuantity,4);
   const allFamily=await readAssistantSalesStores(family,access,familyOptions);assert.equal(allFamily.rows.length,3);assert.equal(allFamily.totals.grossSales,10);assert.deepEqual(allFamily.totals.quantities,[{unit:'PIECE',quantity:9}]);assert.doesNotMatch(JSON.stringify(allFamily),/foreign-coke|costPrice/);
   const exactFamily=await readAssistantSalesStores({...family,mode:'names'},access,familyOptions);assert.equal(exactFamily.result,'ambiguous');assert.equal(exactFamily.totals,null);
+  // Category aliases still select actual tenant catalog IDs and canonical rows.
+  await db.$executeRaw`INSERT INTO "ProductCategory" VALUES('beer-cat','c','ΜΠΥΡΕΣ'),('foreign-beer-cat','x','ΜΠΙΡΕΣ')`;
+  await db.$executeRaw`INSERT INTO "Product" VALUES('beer','c','ΑΛΦΑ330','B330','PIECE','beer-cat',NULL,1),('foreign-beer','x','ΑΛΦΑ330','FB','PIECE','foreign-beer-cat',NULL,1)`;
+  for(const [id,sale,product,quantity,total] of [['beer-sale','coke-sale','beer',5,5],['beer-return','coke-return','beer',-1,-1],['beer-control','coke-control','beer',3,3],['beer-foreign','coke-foreign','foreign-beer',99,99],['beer-next','coke-next-day','beer',99,99]])await db.$executeRaw`INSERT INTO "SaleLine" VALUES(${id},${sale},${product},'Beer',${quantity},1,0,13,${total},NULL,NULL)`;
+  for(const name of ['μπύρες','μπίρες','μπύρα','μπίρα']){
+   const beer=await readAssistantSalesStores({...family,mode:'category',names:[name]},access,familyOptions);assert.equal(beer.result,'matched');assert.equal(beer.rows.length,2);assert.ok(beer.rows.every(r=>r.productId==='beer'));assert.equal(beer.totals.grossSales,7);assert.deepEqual(beer.totals.quantities,[{unit:'PIECE',quantity:7}]);assert.equal(beer.rows.find(r=>r.storeId==='s').salesQuantity,4);
+  }
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
