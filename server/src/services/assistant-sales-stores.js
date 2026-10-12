@@ -4,12 +4,12 @@ import {salesReportCalendar} from "./sales-report-calendar.js";
 import {readSalesAnalysisReport} from "../routes/kiosk-reports-sales-v4.js";
 
 const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-export const salesStoresArguments=z.object({mode:z.enum(["names","category","offers"]),names:z.array(z.string().trim().min(1).max(120)).max(20),from:day,to:day}).strict().superRefine((a,c)=>{
-  if(a.mode==="names"&&!a.names.length||a.mode==="category"&&a.names.length!==1||a.mode==="offers"&&a.names.length)c.addIssue({code:z.ZodIssueCode.custom,message:"Δώσε ονομασίες ειδών, μία κατηγορία ή όλες τις εφαρμοσμένες προσφορές."});
+export const salesStoresArguments=z.object({mode:z.enum(["names","family","category","offers"]),names:z.array(z.string().trim().min(1).max(120)).max(20),from:day,to:day}).strict().superRefine((a,c)=>{
+  if(["names","family"].includes(a.mode)&&!a.names.length||a.mode==="category"&&a.names.length!==1||a.mode==="offers"&&a.names.length)c.addIssue({code:z.ZodIssueCode.custom,message:"Δώσε ονομασίες ειδών, μία κατηγορία ή όλες τις εφαρμοσμένες προσφορές."});
   try{salesReportCalendar(a.from,a.to)}catch(e){c.addIssue({code:z.ZodIssueCode.custom,message:e.message})}
 });
-export const salesStoresTool={type:"function",name:"sales_by_store",strict:true,description:"Κανονικές πωλήσεις ανά εξουσιοδοτημένο κατάστημα και είδος: πολλές ονομασίες, μία κατηγορία ή πραγματικά εφαρμοσμένες προσφορές. Δεν απαιτεί SKU. Ασαφείς ονομασίες επιστρέφουν ονομαστικές επιλογές. Το εύρος καταστημάτων ορίζεται από τον χρήστη στην οθόνη, ποτέ από το μοντέλο. Μόνο ανάγνωση.",parameters:{type:"object",additionalProperties:false,properties:{mode:{type:"string",enum:["names","category","offers"]},names:{type:"array",items:{type:"string"},description:"names: ονομασίες που ζήτησε ο χρήστης. category: μία ονομασία κατηγορίας. offers: κενή λίστα."},from:{type:"string"},to:{type:"string"}},required:["mode","names","from","to"]}};
-export const salesName=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").replace(/\bfix\b/g,"φιξ").replace(/(\d)([a-zα-ω])/g,"$1 $2").replace(/([a-zα-ω])(\d)/g,"$1 $2").replace(/[^a-zα-ω0-9]+/g," ").trim().replace(/\s+/g," ");
+export const salesStoresTool={type:"function",name:"sales_by_store",strict:true,description:"Κανονικές πωλήσεις ανά εξουσιοδοτημένο κατάστημα και είδος: πολλές ονομασίες, μία κατηγορία ή πραγματικά εφαρμοσμένες προσφορές. family: όλες οι πραγματικές ονομασίες/συσκευασίες που ταιριάζουν στη μάρκα ή γενική ονομασία, π.χ. κόκα κόλα· επιστρέφονται χωριστές γραμμές ανά είδος. Δεν απαιτεί SKU. Ασαφείς συγκεκριμένες ονομασίες επιστρέφουν ονομαστικές επιλογές. Το εύρος καταστημάτων ορίζεται από τον χρήστη στην οθόνη, ποτέ από το μοντέλο. Μόνο ανάγνωση.",parameters:{type:"object",additionalProperties:false,properties:{mode:{type:"string",enum:["names","family","category","offers"]},names:{type:"array",items:{type:"string"},description:"names: συγκεκριμένες ονομασίες. family: γενικές ονομασίες/μάρκες του χρήστη για όλες τις καταγεγραμμένες συσκευασίες. category: μία ονομασία κατηγορίας. offers: κενή λίστα."},from:{type:"string"},to:{type:"string"}},required:["mode","names","from","to"]}};
+export const salesName=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").replace(/\bfix\b/g,"φιξ").replace(/(\d)([a-zα-ω])/g,"$1 $2").replace(/([a-zα-ω])(\d)/g,"$1 $2").replace(/[^a-zα-ω0-9]+/g," ").trim().replace(/\s+/g," ").replace(/(^| )(?:κοκα ?κολα|coca ?cola)(?= |$)/g,"$1coca cola");
 const nameMatches=(name,query)=>{const tokens=salesName(name).split(" ");return salesName(query).split(" ").every(t=>tokens.includes(t))};
 const fail=message=>{throw Object.assign(new Error(message),{status:502})};
 export async function readSalesNamesCatalog(companyId,{db=prisma}={}){
@@ -37,12 +37,12 @@ export async function readAssistantSalesStores(value,access,{readReport=readSale
     for(const query of args.names){
       const candidates=[...catalogs.entries()].flatMap(([companyId,rows])=>rows.map(r=>({...r,companyId})));
       const labels=r=>args.mode==="category"?[r.categoryName,r.subcategoryName].filter(Boolean):[r.name];
-      const exact=candidates.filter(r=>labels(r).some(n=>salesName(n)===salesName(query)));
+      const exact=args.mode==="family"?[]:candidates.filter(r=>labels(r).some(n=>salesName(n)===salesName(query)));
       const matches=exact.length?exact:candidates.filter(r=>labels(r).some(n=>nameMatches(n,query)));
       const distinct=new Map();
       for(const r of matches)for(const label of labels(r))if(salesName(label)===salesName(query)||!exact.length&&nameMatches(label,query))distinct.set(salesName(label),label);
       if(!matches.length)return {...base,result:"no_match",unresolvedName:query};
-      if(distinct.size!==1)return {...base,result:"ambiguous",unresolvedName:query,candidates:[...distinct.values()].slice(0,20),truncated:distinct.size>20};
+      if(args.mode!=="family"&&distinct.size!==1)return {...base,result:"ambiguous",unresolvedName:query,candidates:[...distinct.values()].slice(0,20),truncated:distinct.size>20};
       for(const r of matches)ids.get(r.companyId).add(r.productId);
     }
   }
