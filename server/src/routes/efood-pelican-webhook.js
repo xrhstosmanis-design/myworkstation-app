@@ -22,7 +22,7 @@ const publicError=(status,code,message)=>Object.assign(new Error(message),{statu
 
 async function schemas(){await ensureStoreIntegrationSchema();await ensureEfoodIntegrationSchema()}
 function metadata(row){return row?.metadataJson&&typeof row.metadataJson==="object"?row.metadataJson:{}}
-function requireWebhookIdentity(integration,parsed){
+export function requireWebhookIdentity(integration,parsed){
   const config=metadata(integration);
   if(!config.vendorId)throw publicError(409,"EFOOD_TEST_VENDOR_REQUIRED","Λείπει το Test Vendor / Store ID της διασύνδεσης efood.");
   if(!parsed.providerStoreId)throw publicError(400,"MISSING_PROVIDER_STORE_ID","Λείπει το Vendor/Store ID από το efood webhook.");
@@ -111,4 +111,5 @@ router.post("/pelican/:webhookKey",async(req,res,next)=>{try{
 }});
 
 export default router;
+
 

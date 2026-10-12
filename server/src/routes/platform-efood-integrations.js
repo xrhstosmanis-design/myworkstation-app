@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -6,8 +7,9 @@ import {auth} from "../middleware/auth.js";
 import {ensureStoreIntegrationSchema} from "../store-integration-bootstrap.js";
 import {ensureEfoodIntegrationSchema} from "../efood-integration-bootstrap.js";
 import {decryptStoreIntegrationValue,encryptStoreIntegrationValue} from "../integrations/store-integration-crypto.js";
-import {assertEfoodLabContext,buildEfoodCatalogPreview,buildEfoodOrderRecoveryPreview,buildEfoodPromoPreview,isEfoodLabContext,EFOOD_LAB_COMPANY_NAME,EFOOD_LAB_STORE_NAME} from "../integrations/efood/foundation.js";
-import {recordEfoodWebhookEvent} from "./efood-pelican-webhook.js";
+import {assertEfoodLabContext,buildEfoodCatalogPreview,buildEfoodOrderRecoveryPreview,buildEfoodPromoPreview,isEfoodLabContext,normalizeEfoodWebhook,EFOOD_LAB_COMPANY_NAME,EFOOD_LAB_STORE_NAME} from "../integrations/efood/foundation.js";
+import {buildEfoodEventList,buildEfoodEventPreview} from "../integrations/efood/event-preview.js";
+import {recordEfoodWebhookEvent,requireWebhookIdentity} from "./efood-pelican-webhook.js";
 
 const router=Router();
 const uid=()=>crypto.randomUUID();
@@ -122,6 +124,34 @@ router.get("/companies/:companyId/stores/:storeId/efood/events",async(req,res,ne
   res.json({events:rows,payloadsEncrypted:true,...scopeResponse(store)});
 }catch(error){next(error)}});
 
+async function efoodPreviewContext(req){
+  const store=requireEfoodLabStore(await context(req.params.companyId,req.params.storeId));
+  // Existing prepared data only: no schema bootstrap, window-expiry maintenance or writes.
+  const integration=(await prisma.$queryRaw`SELECT "id","companyId","storeId","environment","metadataJson","externalCallsEnabled" FROM "StoreIntegrationCredential" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "kind"='EFOOD' LIMIT 1`)[0];
+  if(!integration||integration.companyId!==store.companyId||integration.storeId!==store.id)throw Object.assign(new Error("Δεν βρέθηκε προετοιμασμένη διασύνδεση efood στο επιλεγμένο LAB."),{status:404,code:"EFOOD_PREVIEW_NOT_FOUND"});
+  assertCustomerDemoOutboundAllowed(integration);
+  if(integration.environment!=="SANDBOX"||integration.externalCallsEnabled===true)throw Object.assign(new Error("Η προεπισκόπηση επιτρέπεται μόνο σε κλειδωμένη SANDBOX προετοιμασία."),{status:409,code:"EFOOD_PREVIEW_LAB_ONLY"});
+  return {store,integration};
+}
+
+router.get("/companies/:companyId/stores/:storeId/efood/event-previews",async(req,res,next)=>{try{
+  const {store,integration}=await efoodPreviewContext(req);
+  const rows=await prisma.$queryRaw`SELECT "id","companyId","storeId","integrationId","externalOrderId","externalStatus" FROM "EfoodWebhookEvent" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "integrationId"=${integration.id} ORDER BY "receivedAt" DESC LIMIT 200`;
+  res.json(buildEfoodEventList(rows,{companyId:store.companyId,storeId:store.id,integrationId:integration.id}));
+}catch(error){next(error)}});
+
+router.get("/companies/:companyId/stores/:storeId/efood/events/:eventId/preview",async(req,res,next)=>{try{
+  const {store,integration}=await efoodPreviewContext(req);
+  const event=(await prisma.$queryRaw`SELECT "id","companyId","storeId","integrationId","mode","payloadEnc","payloadHash" FROM "EfoodWebhookEvent" WHERE "id"=${req.params.eventId} AND "companyId"=${store.companyId} AND "storeId"=${store.id} AND "integrationId"=${integration.id} LIMIT 1`)[0];
+  if(!event||event.id!==req.params.eventId||event.companyId!==store.companyId||event.storeId!==store.id||event.integrationId!==integration.id)return res.status(404).json({error:"Δεν βρέθηκε event στο επιλεγμένο κατάστημα.",code:"EFOOD_PREVIEW_NOT_FOUND"});
+  let payload;
+  try{payload=decryptStoreIntegrationValue(event.payloadEnc)}catch{return res.status(503).json({error:"Δεν ήταν δυνατή η ασφαλής ανάγνωση του event.",code:"EFOOD_PREVIEW_UNAVAILABLE"})}
+  const parsed=normalizeEfoodWebhook(payload);requireWebhookIdentity(integration,parsed);
+  if(parsed.payloadHash!==event.payloadHash)return res.status(409).json({error:"Το αποθηκευμένο event δεν συμφωνεί με το αρχικό αποτύπωμα.",code:"EFOOD_PREVIEW_PAYLOAD_CONFLICT"});
+  const mappings=await prisma.$queryRaw`SELECT m."companyId",m."storeId",m."integrationId",m."externalProductId",m."externalSku",m."status",m."productId",p."name" AS "productName",p."sku" AS "productSku",(sp."productId" IS NOT NULL) AS "inSelectedStore" FROM "EfoodProductMapping" m LEFT JOIN "Product" p ON p."id"=m."productId" AND p."companyId"=${store.companyId} LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${store.id} WHERE m."companyId"=${store.companyId} AND m."storeId"=${store.id} AND m."integrationId"=${integration.id}`;
+  res.json(buildEfoodEventPreview({event,parsed,mappings,scope:{companyId:store.companyId,storeId:store.id,integrationId:integration.id}}));
+}catch(error){next(error)}});
+
 router.post("/companies/:companyId/stores/:storeId/efood/mock-webhook",async(req,res,next)=>{try{
   await schemas();const store=requireEfoodLabStore(await context(req.params.companyId,req.params.storeId)),integration=await integrationFor(store),payload=z.record(z.unknown()).parse(req.body?.payload??req.body??{});
   const result=await recordEfoodWebhookEvent({integration,payload,mode:"LOCAL_MOCK",authenticated:false});
@@ -165,3 +195,4 @@ router.get("/companies/:companyId/stores/:storeId/efood/previews",async(req,res,
 }catch(error){next(error)}});
 
 export default router;
+
