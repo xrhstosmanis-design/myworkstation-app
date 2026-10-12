@@ -27,7 +27,7 @@ export function assistantReportTables(evidence,{generatedAt=new Date()}={}){
    title=r.kind==="sales_by_store"?"Πωλήσεις ανά κατάστημα":"Πωλήσεις είδους";
    columns=["Εταιρεία","Κατάστημα","Είδος","Μονάδα","Ποσότητα","Τζίρος (€)","Καθαρή αξία (€)","ΦΠΑ (€)"];
    rows=noAmounts?[]:r.rows.map(x=>[x.companyName||r.companyName,x.storeName||r.storeName,x.name,unit(x.unit),money(x.salesQuantity),money(x.grossSales),money(x.netSales),money(x.vatValue)]);
-   notes.push("Καταχωρημένες πωλήσεις με επιστροφές/ακυρώσεις συνυπολογισμένες. Δεν αθροίζονται διαφορετικές μονάδες.");if(r.mode==="offers")notes.push("Μόνο πωλήσεις με καταγεγραμμένη εφαρμοσμένη προσφορά.");
+   notes.push("Καταχωρημένες πωλήσεις με επιστροφές/ακυρώσεις συνυπολογισμένες. Δεν αθροίζονται διαφορετικές μονάδες.");if(r.mode==="family")notes.push("Όλες οι καταγεγραμμένες συσκευασίες/παραλλαγές που ταιριάζουν στην ονομασία· χωριστή γραμμή ανά είδος.");if(r.mode==="offers")notes.push("Μόνο πωλήσεις με καταγεγραμμένη εφαρμοσμένη προσφορά.");
   }else if(!r.kind&&r.closedShiftsOnly){
    title="Έλεγχος κλεισμένων βαρδιών";columns=["Εταιρεία","Κατάστημα","Βάρδια / POS","Κλείσιμο","Αναμενόμενα (€)","Καταμετρημένα (€)","Διαφορά μετρητών (€)","Διαφορά POS–EFTPOS (€)"];
    rows=r.rows.map(x=>[x.companyName,x.storeName,`${x.shiftLabel||""} / ${x.terminalPos||""}`,at(x.closedAt),money(x.expectedOperational),money(x.actualOperational),x.auditRule?.mode==="POS_EFTPOS_ONLY"?"Δεν ελέγχεται":money(x.variance),x.auditRule?.posEftposEnabled===false?"Δεν ελέγχεται":money(x.cardVariance)]);notes.push("Μόνο κλεισμένες βάρδιες. Οι κανόνες ελέγχου διατηρούνται· απουσία κλεισμένων βαρδιών δεν επιβεβαιώνει συμφωνία στα ανοικτά ταμεία.");

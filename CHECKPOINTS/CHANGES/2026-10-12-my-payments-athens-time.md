@@ -1,6 +1,8 @@
-## 12/10/2026 — Full CI first attempt retained; test harness repair
+## 12/10/2026 — CI fixture correction and concurrent-main reconciliation / AWAITING FULL CI
 
-PR2383/head7b941bab CI38296826307: full suite FAILED9 (customer ledger extracted function missing imported Greece helper; seven classic-VM purchase refresh cases unable to parse the added ESM import; new native fixture ran hot schema before creating referenced PurchaseDocument). These are test integration/fixture setup failures, not acceptance or a production repair. Preserve every existing assertion; import actual shared helper into extracted/VM contexts and create native fixture prerequisites before unchanged hot schema. No source behavior or financial test bypass, no skip of the native test. Local rerun required, then unchanged full CI/native acceptance.
+Second fullCI38297337891/headfb97c599:2485PASS/1FAIL/0SKIP. All prior customer-ledger/VM refresh failures resolved with unchanged assertions and actual Greece helper. Remaining native fixture SALE insert omitted schema-required actorName; populate that fixture column, never relax the constraint or skip native testing. First fullCI38296826307/head7b941bab:2474PASS/9FAIL/0SKIP retained. Runtime source was not deployed and no real payment action occurred.
+
+Reconcile current main1835a917/PR2380 last-completed-amount feature and assistant routing2381 plus historical-shift claim2382. Preserve latest StorePosPanel byte-for-byte except existing Greece display/dispatch datetime additions; preserve last-transaction state/handlers/imports/style. Existing last-transaction tests and frontend build rerun. Merge parent includes exact main so no shared owner source or record is overwritten.
 
 ## 12/10/2026 21:48 Athens — POS-MY-PAYMENTS-COMPLETE-01 + GREECE-TIME-01 / SOURCE READY / AWAITING FULL CI + LIVE ACCEPTANCE
 
