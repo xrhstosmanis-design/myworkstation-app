@@ -1,4 +1,4 @@
-## 12/10/2026 19:50 Athens — VOICE-ASSISTANT-01 / conversation page, reliable answer transport and Super Admin files ASSIGNED / USER FAIL
+## 12/10/2026 19:46 Athens — VOICE-ASSISTANT-01 / conversation page, reliable answer transport and Super Admin files ASSIGNED / USER FAIL
 
 Same owner `codex/unified-voice-assistant-20261010`, branch `feat/assistant-conversation-page-20261012`. User19:33 supplied selected Διαδόχου screenshot with explicit own-consumption dates1/10/26–12/10/26 and «Το AI επέστρεψε μη έγκυρη απάντηση». This is a real USER FAIL of answer delivery, not absent consumption or proven backend truncation. Exact screenshot backend/client revision and raw provider cause are NOT TESTED. Prior2356 source/CI/healthy58f2c969 and existing partial source/business PASS preserved; no whole assistant PASS.
 
