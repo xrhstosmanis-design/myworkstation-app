@@ -138,7 +138,7 @@ router.get("/:sessionId/detail",async(req,res,next)=>{
     const saleIds=selectedSales.map(row=>row.id);
     const [transactionsRaw,categoriesRaw,paymentsRaw,salesRaw]=await Promise.all([
       prisma.$queryRaw`
-        SELECT t."id",t."type",t."amount",t."description",t."supplierId",t."supplierName",t."subtractFromShift",t."actorId",t."actorName",t."occurredAt",
+        SELECT t."id",t."type",t."amount",t."description",t."supplierId",t."supplierName",t."subtractFromShift",t."actorId",t."actorName",t."occurredAt",t."createdAt",
           t."reversedAt",t."reversedBy",t."reversedByName",t."reversalReason",t."sourceType",(t."attachmentData" IS NOT NULL) AS "hasAttachment",t."attachmentFilename",
           COALESCE((SELECT json_agg(json_build_object('id',l."id",'productId',l."productId",'description',l."description",'quantity',l."quantity",'unitPrice',l."unitPrice",'lineTotal',l."lineTotal") ORDER BY l."createdAt",l."id")
             FROM "Sale" sale JOIN "SaleLine" l ON l."saleId"=sale."id"
