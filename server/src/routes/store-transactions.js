@@ -298,9 +298,21 @@ const supplierSettlementSchema=z.object({
   paidAt:z.coerce.date(),
   note:z.string().trim().max(500).optional().nullable(),
   idempotencyKey:z.string().trim().min(8).max(180),
-  attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}),
+  evidenceMode:z.enum(["DOCUMENT","NO_DOCUMENT"]).optional().default("DOCUMENT"),
+  noDocumentAcknowledged:z.boolean().optional().default(false),
+  attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable(),
   allocations:z.array(z.object({purchaseDocumentId:z.string().trim().min(1).max(180),amount:z.coerce.number().positive().max(999999999)})).min(1).max(80)
+}).superRefine((body,ctx)=>{
+  if(body.evidenceMode==="NO_DOCUMENT"){
+    if(body.attachment)ctx.addIssue({code:z.ZodIssueCode.custom,path:["attachment"],message:"Η δήλωση χωρίς αποδεικτικό δεν μπορεί να περιλαμβάνει αποδεικτικό."});
+    if(body.noDocumentAcknowledged!==true)ctx.addIssue({code:z.ZodIssueCode.custom,path:["noDocumentAcknowledged"],message:"Αποδέξου ρητά τη δήλωση ευθύνης για την πληρωμή χωρίς αποδεικτικό."});
+  }else if(!body.attachment)ctx.addIssue({code:z.ZodIssueCode.custom,path:["attachment"],message:"Ανέβασε αποδεικτικό ή αποδέξου τη δήλωση ευθύνης χωρίς αποδεικτικό."});
 });
+
+function supplierSettlementResponsibility(body,supplierName,total){
+  const method={CASH_SHIFT:"μετρητά της ενεργής βάρδιας",CORPORATE_CARD:"εταιρική κάρτα",BANK_TRANSFER:"τραπεζική μεταφορά",EMPLOYEE_REIMBURSEMENT:"πληρωμή υπαλλήλου προς επιστροφή"}[body.paymentMethod];
+  return `Δηλώνω υπεύθυνα ότι πραγματοποίησα την πληρωμή ${total.toFixed(2)} € στον προμηθευτή ${supplierName} με ${method} και αναλαμβάνω την ευθύνη της καταχώρισης χωρίς αποδεικτικό.`;
+}
 
 function parseAttachment(attachment){
   if(!attachment)return null;
@@ -497,12 +509,12 @@ router.get("/stores/:storeId/supplier-open-invoices",route(async(req,res)=>{
 router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId),body=supplierSettlementSchema.parse(req.body||{});
-  const attachment=parseAttachment(body.attachment);
+  const attachment=parseAttachment(body.attachment),noDocument=body.evidenceMode==="NO_DOCUMENT";
   const total=Number(body.allocations.reduce((sum,row)=>sum+Number(row.amount||0),0).toFixed(2));
-  const proof=attachment.mimeType==="application/pdf"
+  const proof=attachment?.mimeType==="application/pdf"
     ?await readSupplierProofPdf(Buffer.from(attachment.dataUrl.split(",")[1],"base64")):null;
   const ownerPayment=req.user.tokenType!=="STORE_OPERATOR"&&(req.user.role==="OWNER"||isSuperAdminReview(req));
-  const ownerProofError=ownerPayment?ownerSupplierProofError({mimeType:attachment.mimeType,proof}):null;
+  const ownerProofError=ownerPayment&&attachment?ownerSupplierProofError({mimeType:attachment.mimeType,proof}):null;
   if(ownerProofError)return res.status(400).json({error:ownerProofError});
   const proofError=supplierProofMismatch(proof,{amount:total,method:body.paymentMethod});
   if(proofError)return res.status(400).json({error:proofError});
@@ -511,9 +523,9 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const paymentSource=body.paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
   const transactionId=paymentId(req.user.companyId,store.id,body.idempotencyKey);
   const settlementId=crypto.randomUUID(),actorName=req.user.fullName||"Χρήστης",terminalPos=await requestTerminal(req);
-  // The company owner confirms their own BackOffice payment at submission.
-  // A store operator's POS payment still waits for the owner's review.
-  const initialStatus=ownerPayment?"CONFIRMED":"PENDING_REVIEW";
+  // Document-backed owner payments keep existing automatic confirmation.
+  // A responsibility statement is not proof and always waits for human review.
+  const initialStatus=ownerPayment&&!noDocument?"CONFIRMED":"PENDING_REVIEW";
   const result=await prisma.$transaction(async tx=>{
     const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!suppliers[0]){const error=new Error("Δεν βρέθηκε ο προμηθευτής.");error.status=404;throw error}
@@ -555,14 +567,17 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
     }
     const existing=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${transactionId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     if(existing[0]){const error=new Error("Η ίδια πληρωμή έχει ήδη καταχωρηθεί.");error.status=409;throw error}
-    const description=`Ετεροχρονισμένη πληρωμή ${suppliers[0].name} · ${body.allocations.length} τιμολόγιο${body.allocations.length===1?"":"α"}`;
+    const declaration=noDocument?supplierSettlementResponsibility(body,suppliers[0].name,total):null;
+    const originalDescription=`Ετεροχρονισμένη πληρωμή ${suppliers[0].name} · ${body.allocations.length} τιμολόγιο${body.allocations.length===1?"":"α"}`;
+    const description=declaration?`ΧΩΡΙΣ ΑΠΟΔΕΙΚΤΙΚΟ — ${declaration} ${originalDescription}`:originalDescription;
+    const settlementNote=declaration?`ΧΩΡΙΣ ΑΠΟΔΕΙΚΤΙΚΟ — ${declaration}${body.note?` Σημείωση: ${body.note}`:""}`:body.note||null;
     const transaction=await tx.$queryRaw`
       INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","subtractFromShift","paymentMethod","actorId","actorName","attachmentData","attachmentMimeType","attachmentFilename","attachmentChecksum","occurredAt")
-      VALUES (${transactionId},${req.user.companyId},${store.id},${sessionId},'SUPPLIER_PAYMENT',${total},${description},${body.supplierId},${suppliers[0].name},${paymentSource==="CASH_SHIFT"},${body.paymentMethod},${req.user.id},${actorName},${attachment.dataUrl},${attachment.mimeType},${attachment.filename},${attachment.checksum},${body.paidAt}) RETURNING *
+      VALUES (${transactionId},${req.user.companyId},${store.id},${sessionId},'SUPPLIER_PAYMENT',${total},${description},${body.supplierId},${suppliers[0].name},${paymentSource==="CASH_SHIFT"},${body.paymentMethod},${req.user.id},${actorName},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${attachment?.checksum||null},${body.paidAt}) RETURNING *
     `;
     await tx.$executeRaw`
       INSERT INTO "SupplierPaymentSettlement" ("id","companyId","storeId","transactionId","supplierId","status","paymentMethod","paidAt","note","createdBy","createdByName")
-      VALUES (${settlementId},${req.user.companyId},${store.id},${transactionId},${body.supplierId},${initialStatus},${body.paymentMethod},${body.paidAt},${body.note||null},${req.user.id},${actorName})
+      VALUES (${settlementId},${req.user.companyId},${store.id},${transactionId},${body.supplierId},${initialStatus},${body.paymentMethod},${body.paidAt},${settlementNote},${req.user.id},${actorName})
     `;
     for(const allocation of body.allocations)await tx.$executeRaw`
       INSERT INTO "SupplierPaymentAllocation" ("id","companyId","settlementId","purchaseDocumentId","amount")
@@ -570,18 +585,18 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
     `;
     if(bankAccount)await tx.$executeRaw`
       INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName")
-      VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${bankAccount.id},${body.paymentMethod},${-total},${initialStatus},${transactionId},${attachment.dataUrl},${attachment.mimeType},${attachment.filename},${body.paidAt},${req.user.id},${actorName})
+      VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${bankAccount.id},${body.paymentMethod},${-total},${initialStatus},${transactionId},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${body.paidAt},${req.user.id},${actorName})
     `;
-    if(ownerPayment){
+    if(ownerPayment||noDocument){
       await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await tx.$executeRaw`
         INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
-        VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},'SUPPLIER_SETTLEMENT_CONFIRMED',${JSON.stringify({settlementId,transactionId,supplierId:body.supplierId,supplierName:suppliers[0].name,amount:total,allocations:body.allocations.map(row=>({...row,documentNumber:documents.find(document=>document.id===row.purchaseDocumentId)?.documentNumber||null})),status:initialStatus,note:"Αυτόματη επιβεβαίωση πληρωμής ιδιοκτήτη."})}::jsonb)
+        VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},${noDocument?"SUPPLIER_SETTLEMENT_NO_DOCUMENT_DECLARED":"SUPPLIER_SETTLEMENT_CONFIRMED"},${JSON.stringify({settlementId,transactionId,supplierId:body.supplierId,supplierName:suppliers[0].name,amount:total,allocations:body.allocations.map(row=>({...row,documentNumber:documents.find(document=>document.id===row.purchaseDocumentId)?.documentNumber||null})),status:initialStatus,evidenceMode:body.evidenceMode,responsibilityDeclaration:declaration,actorName,acceptedAt:noDocument?new Date().toISOString():null,paymentMethod:body.paymentMethod,note:noDocument?"Ρητή δήλωση χωρίς αποδεικτικό — προς έλεγχο.":"Αυτόματη επιβεβαίωση πληρωμής ιδιοκτήτη."})}::jsonb)
       `;
     }
     return {transaction:normalize(transaction[0]),supplier:suppliers[0],settlementId,bankAccount};
   });
-  res.status(201).json({...result,paymentSource,status:initialStatus,total});
+  res.status(201).json({...result,paymentSource,status:initialStatus,total,evidenceMode:body.evidenceMode});
 }));
 
 function isSuperAdminReview(req){

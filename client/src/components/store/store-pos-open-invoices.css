@@ -59,3 +59,34 @@
 @media (max-width:680px) {
   .pos-standard-modal .pos-open-invoice-form { grid-template-columns:minmax(0,1fr); }
 }
+
+
+/* The focused-field keyboard button sits inside the right edge of this input. */
+.pos-standard-modal .pos-open-invoice-form .supplier-open-invoice-amount {
+  padding-right:56px!important;
+}
+.pos-standard-modal .pos-open-invoice-form .pos-supplier-no-document {
+  padding:14px;
+  border:1px solid #d3ad54;
+  border-radius:10px;
+  background:#fff9e8;
+  color:#4f3a10;
+}
+.pos-standard-modal .pos-open-invoice-form .pos-supplier-no-document p { margin:8px 0; }
+.pos-standard-modal .pos-open-invoice-form .pos-supplier-no-document small { display:block; margin-top:8px; }
+.pos-standard-modal .pos-open-invoice-form .pos-supplier-no-document-toggle {
+  width:100%;
+  min-height:56px;
+  padding:12px;
+  border:2px solid #b28a35;
+  border-radius:8px;
+  background:#fff;
+  color:#4f3a10;
+  font-size:18px;
+  font-weight:800;
+}
+.pos-standard-modal .pos-open-invoice-form .pos-supplier-no-document-toggle[aria-pressed="true"] {
+  border-color:#087a52;
+  background:#087a52;
+  color:#fff;
+}
