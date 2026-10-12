@@ -97,6 +97,30 @@ test("native PostgreSQL multi-store recipients stop after ownership, role, sessi
   await db.$executeRawUnsafe('UPDATE "UserSession" SET "revokedAt"=NULL WHERE "id"=$1',"session");await db.$executeRawUnsafe('UPDATE "User" SET "sessionVersion"=2 WHERE "id"=$1',"owner");assert.deepEqual(await recipients("A"),[]);
   await db.$executeRawUnsafe('UPDATE "User" SET "sessionVersion"=1,"role"=$1 WHERE "id"=$2',"EMPLOYEE","owner");assert.deepEqual(await recipients("A"),[]);
   await db.$executeRawUnsafe('UPDATE "User" SET "role"=$1 WHERE "id"=$2',"OWNER","owner");
+  await db.$executeRawUnsafe('CREATE TABLE "StoreChatPushSubscription" ("endpoint" TEXT PRIMARY KEY)');
+  const endpoint="https://web.push.apple.com/transition";
+  await db.$executeRawUnsafe('INSERT INTO "StoreChatPushSubscription" VALUES ($1)',endpoint);
+  const wrapped=new Proxy(db,{get(target,key){
+   if(key==="user")return {findUnique:async()=>({companyId:"C1"})};
+   if(key==="store")return {findMany:async({where})=>(await target.$queryRawUnsafe('SELECT "id","companyId" FROM "Store" WHERE "companyId"=ANY($1::text[])',where.companyId.in)).map(row=>({...row,name:row.id,company:{name:row.companyId}}))};
+   const value=target[key];return typeof value==="function"?value.bind(target):value;
+  }});
+  // Store counts are independent of UI-supplied store IDs; native lock/delete/upsert executes here.
+  await db.$executeRawUnsafe('CREATE TABLE "StoreChatMessage" ("storeId" TEXT,"companyId" TEXT,"id" TEXT,"senderId" TEXT)');
+  await db.$executeRawUnsafe('CREATE TABLE "StoreChatRead" ("messageId" TEXT,"userId" TEXT)');
+  await mobile(wrapped).saveMobilePush({id:"owner",companyId:"C1",role:"OWNER",tokenType:"BACKOFFICE_USER",sessionId:"session",sessionVersion:1},{endpoint,storeIds:["FOREIGN"],keys:{p256dh:"abcdefghijklmnop",auth:"abcdefghijklmnop"}});
+  assert.equal((await db.$queryRawUnsafe('SELECT * FROM "StoreChatPushSubscription" WHERE "endpoint"=$1',endpoint)).length,0);
+  const mapping=(await db.$queryRawUnsafe('SELECT "userId","storeIds" FROM "StoreChatMobilePush" WHERE "endpoint"=$1',endpoint))[0];assert.equal(mapping.userId,"owner");assert.deepEqual(mapping.storeIds,["A"]);
   await db.$executeRawUnsafe('INSERT INTO "StorePaidModule" ("storeId","moduleKey","active") VALUES ($1,$2,FALSE)',"A","STORE_CHAT");assert.deepEqual(await recipients("A"),[]);
  }finally{await db.$disconnect();await admin.$executeRawUnsafe('DROP SCHEMA IF EXISTS "'+schema+'" CASCADE');await admin.$disconnect()}
+});
+
+test("app session remains separate from POS and legacy links never silently broaden stores",()=>{
+ const map=new Map(),localStorage={getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)},sessionStorage={getItem:()=>null};
+ const source=fs.readFileSync(new URL("../../client/src/components/store/chat-mobile-session.mjs",import.meta.url),"utf8").replace(/^export /gm,"");
+ const helper=new Function("localStorage","sessionStorage","atob","TextDecoder",source+";return {chatSession,chatToken,saveChatSession,clearChatSession};")(localStorage,sessionStorage,atob,TextDecoder);
+ const legacy="header."+Buffer.from(JSON.stringify({tokenType:"STORE_OPERATOR",storeId:"A",companyId:"C1",fullName:"Χειριστής"})).toString("base64url")+".signature";
+ map.set("token",legacy);assert.equal(helper.chatSession().user.store.id,"A");assert.equal(helper.chatSession().user.legacy,true);assert.equal(helper.chatSession().user.fullName,"Χειριστής");
+ helper.saveChatSession({token:"owner-token",user:{id:"owner"}});assert.equal(helper.chatToken(),"owner-token");assert.equal(map.get("token"),legacy);
+ helper.clearChatSession();assert.equal(helper.chatSession(),null);assert.equal(helper.chatToken(),"");assert.equal(map.get("token"),legacy);
 });
