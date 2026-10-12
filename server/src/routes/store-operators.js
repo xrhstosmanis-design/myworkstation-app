@@ -1,3 +1,4 @@
+import {issueChatOperatorSession} from "../chat-operator-auth.mjs";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -340,6 +341,18 @@ router.post("/login/pin",route(async(req,res)=>{
     store:{id:operator.storeId,name:operator.storeName,terminalPos:operator.terminalPos},
     company:{id:operator.companyId,name:operator.companyName}
   });
+}));
+
+router.post("/login/chat-pin",route(async(req,res)=>{
+  const body=z.object({storeId:z.string().min(2),employeeId:z.string().min(2),pin:z.string().regex(/^\d{4,8}$/)}).parse(req.body);
+  await activeStore(body.storeId);
+  const subjectKey=loginSubject("MOBILE_PIN",body.employeeId);await assertLoginAllowed(body.storeId,subjectKey);
+  const rows=await prisma.$queryRaw`SELECT c.*,e."active" AS "employeeActive",s."name" AS "storeName",co."name" AS "companyName" FROM "StoreOperatorCredential" c JOIN "Employee" e ON e."id"=c."employeeId" JOIN "Store" s ON s."id"=c."storeId" JOIN "Company" co ON co."id"=c."companyId" WHERE c."storeId"=${body.storeId} AND c."employeeId"=${body.employeeId} AND c."active"=TRUE AND e."active"=TRUE AND s."active"=TRUE AND co."active"=TRUE LIMIT 1`;
+  const operator=rows[0];
+  if(!operator||!operator.pinHash||!(await bcrypt.compare(body.pin,operator.pinHash))){await recordLoginFailure(body.storeId,subjectKey);return res.status(401).json({error:"Λανθασμένο PIN."});}
+  await clearLoginFailures(body.storeId,subjectKey);
+  await audit({companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,actorId:operator.id,eventType:"STORE_CHAT_MOBILE_LOGIN",details:{employeeId:operator.employeeId}});
+  res.json({token:await issueChatOperatorSession(operator,req),user:{id:operator.id,employeeId:operator.employeeId,fullName:operator.displayName,role:operator.role,operator:true,permissions:["STORE_CHAT"]},store:{id:operator.storeId,name:operator.storeName},company:{id:operator.companyId,name:operator.companyName}});
 }));
 
 router.post("/login/mobile-pin",route(async(req,res)=>{

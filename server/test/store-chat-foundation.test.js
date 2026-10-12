@@ -121,7 +121,7 @@ test("store chat foundation has store isolation, categories and server-side stor
   assert.match(panel,/pdfjs-dist\/legacy\/build\/pdf\.mjs/);
   assert.match(panel,/pushManager\.subscribe/);
   assert.match(panel,/Ενεργοποίηση Push/);
-  assert.match(panel,/navigator\.serviceWorker\.ready/);
+  assert.match(panel,/registerChatWorker/);
   assert.match(panel,/registration\.update\(\)/);
   assert.match(panel,/subscription\?"granted":"unknown"/);
   assert.match(panel,/pushSubscriptionFailure\(firstError,retryError\)/);

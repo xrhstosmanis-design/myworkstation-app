@@ -1,29 +1,28 @@
-import React,{useEffect,useState} from "react";
+
+import React,{useEffect,useRef,useState} from "react";
 import StoreChatPanel from "./StoreChatPanel.jsx";
+import ChatMobileLogin from "./ChatMobileLogin.jsx";
+import ChatOperatorLogin from "./ChatOperatorLogin.jsx";
+import ChatInstallControls from "./ChatInstallControls.jsx";
 import {loadNotificationChatStore} from "./store-chat-notification-loader.mjs";
-
-async function chatApi(path,options={}){
-  const token=localStorage.getItem("token")||sessionStorage.getItem("storeOperatorToken")||"";
-  const response=await fetch(path,{...options,cache:"no-store",headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}),...(options.headers||{})}});
-  const data=await response.json();
-  if(!response.ok)throw new Error(data.error||"Δεν είναι διαθέσιμη η συνομιλία με την τρέχουσα σύνδεση.");
-  return data;
-}
-
+import {chatApi,chatSession,chatToken,saveChatSession,clearChatSession} from "./chat-mobile-session.mjs";
+import {mobileChatUrl,registerChatWorker} from "./chat-mobile-install.mjs";
+import "./chat-mobile-app.css";
 export default function StoreChatNotificationPage({storeId}){
-  const [store,setStore]=useState(null),[error,setError]=useState(""),[closed,setClosed]=useState(false);
-  useEffect(()=>{
-    let active=true;
-    setStore(null);setError("");setClosed(false);
-    loadNotificationChatStore(chatApi,storeId).then(value=>{if(active)setStore(value)}).catch(reason=>{if(active)setError(reason.message)});
-    return()=>{active=false};
-  },[storeId]);
-  useEffect(()=>{
-    if(!("serviceWorker" in navigator))return;
-    const reopen=event=>{if(event.data?.type==="STORE_CHAT_OPEN"&&event.data.storeId===storeId)setClosed(false)};
-    navigator.serviceWorker.addEventListener("message",reopen);
-    return()=>navigator.serviceWorker.removeEventListener("message",reopen);
-  },[storeId]);
-  if(store&&!closed)return <StoreChatPanel key={store.id} api={chatApi} store={store} onClose={()=>setClosed(true)}/>;
-  return <main className="login-shell"><section className="login-card"><h1>MyWorkStation · Chat</h1>{error?<><p role="alert">{error}</p><p>Συνδεθείτε από τη συνηθισμένη είσοδό σας και ανοίξτε ξανά την ειδοποίηση. Δεν απαιτείται είσοδος στο POS για λογαριασμό διαχείρισης.</p></>:<p>{closed?"Η συνομιλία έκλεισε.":"Φόρτωση συνομιλίας…"}</p>}{closed&&<button type="button" onClick={()=>setClosed(false)}>Άνοιγμα Chat</button>}</section></main>;
+ const [session,setSession]=useState(chatSession),[loggedIn,setLoggedIn]=useState(()=>!!chatToken()),[stores,setStores]=useState([]),[store,setStore]=useState(null),[target,setTarget]=useState(storeId||""),[error,setError]=useState(""),[busy,setBusy]=useState(false),[operatorLogin,setOperatorLogin]=useState(false),[push,setPush]=useState(""),[canSwitch,setCanSwitch]=useState(false);
+ const sequence=useRef(0),draftDirty=useRef(false);
+ useEffect(()=>{if("serviceWorker" in navigator)registerChatWorker().catch(()=>{})},[]);
+ const api=async(path,options)=>{try{return await chatApi(path,options)}catch(e){if(e.status===401){sequence.current++;clearChatSession();setSession(null);setLoggedIn(false);setStore(null);setStores([])}throw e}};
+ const login=data=>{saveChatSession(data);setSession(chatSession());setLoggedIn(true);setError("")};
+ const change=id=>{if(draftDirty.current&&!window.confirm("Υπάρχει μήνυμα που δεν στάλθηκε. Να αλλάξω κατάστημα;"))return;draftDirty.current=false;setStore(null);setError("");setTarget(id);history.pushState(null,"",mobileChatUrl(id))};
+ useEffect(()=>{const pop=()=>{const match=location.pathname.match(/^\/chat\/([^/]+)\/?$/);setStore(null);setTarget(match?decodeURIComponent(match[1]):"")};window.addEventListener("popstate",pop);const open=e=>{if(e.data?.type==="STORE_CHAT_OPEN"&&typeof e.data.storeId==="string")change(e.data.storeId)};navigator.serviceWorker?.addEventListener("message",open);return()=>{window.removeEventListener("popstate",pop);navigator.serviceWorker?.removeEventListener("message",open)}},[]);
+ useEffect(()=>{if(!loggedIn)return;let active=true;setBusy(true);setError("");(async()=>{try{if(session?.user?.chatOperator){const own=session.user.store;if(target&&target!==own.id)throw new Error("Αυτός ο λογαριασμός αφορά άλλο κατάστημα.");setStores([own]);setCanSwitch(false);if(active&&!target)setTarget(own.id)}else{const data=await api("/api/store-chat/mobile/stores");if(active){setStores(data.stores);setCanSwitch(data.canSwitchCompany)}}}catch(e){if(active)setError(e.message)}finally{if(active)setBusy(false)}})();return()=>{active=false}},[loggedIn,session]);
+ useEffect(()=>{if(!loggedIn||!target||!stores.length)return;let active=true;const seq=++sequence.current;setBusy(true);setError("");(async()=>{try{const selected=stores.find(s=>s.id===target);if(!selected)throw new Error("Δεν έχεις πρόσβαση στο κατάστημα αυτής της ειδοποίησης.");if(canSwitch&&selected.companyId!==(session?.user?.companyId||session?.user?.company?.id)){const result=await api("/api/auth/owner-companies/select",{method:"POST",body:JSON.stringify({companyId:selected.companyId})});if(!active||sequence.current!==seq)return;saveChatSession(result);setSession(chatSession())}const value=await loadNotificationChatStore(api,target);if(active&&sequence.current===seq)setStore(value)}catch(e){if(active&&sequence.current===seq)setError(e.message)}finally{if(active&&sequence.current===seq)setBusy(false)}})();return()=>{active=false}},[target,stores,canSwitch]);
+ const subscribe=async(requestPermission=true)=>{try{if(!("Notification" in window)||!("PushManager" in window))throw new Error("Η συσκευή δεν υποστηρίζει Push. Στο iPhone άνοιξε πρώτα την εγκατεστημένη εφαρμογή.");if(requestPermission&&await Notification.requestPermission()!=="granted")throw new Error("Δώσε άδεια ειδοποιήσεων στις ρυθμίσεις της συσκευής.");if(Notification.permission!=="granted")return;const registration=await registerChatWorker();let subscription=await registration.pushManager.getSubscription();const base=session?.user?.chatOperator?"/api/store-chat/stores/"+encodeURIComponent(session.user.store.id):"/api/store-chat/mobile";if(!subscription){if(!requestPermission)return;const {publicKey}=await api(base+"/push-key");const raw=atob((publicKey+"=".repeat((4-publicKey.length%4)%4)).replace(/-/g,"+").replace(/_/g,"/"));subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:Uint8Array.from(raw,c=>c.charCodeAt(0))})}await api(base+"/push-subscription",{method:"POST",body:JSON.stringify({subscription:subscription.toJSON()})});setPush(session?.user?.chatOperator?"Ειδοποιήσεις καταστήματος ενεργές":"Ειδοποιήσεις όλων των καταστημάτων ενεργές")}catch(e){setPush(e.message)}};
+ useEffect(()=>{if(loggedIn&&stores.length)subscribe(false)},[loggedIn,session,stores]);
+ const logout=async()=>{setError("");try{if(session?.user?.chatOperator)await api("/api/store-chat/stores/"+encodeURIComponent(session.user.store.id)+"/mobile-logout",{method:"POST"});else if(session)await api("/api/auth/logout",{method:"POST"});const registration=await navigator.serviceWorker?.getRegistration("/chat/");const subscription=await registration?.pushManager.getSubscription();if(subscription)await subscription.unsubscribe();clearChatSession();setSession(null);setLoggedIn(false);setStores([]);setStore(null)}catch(e){setError("Δεν ολοκληρώθηκε η αποσύνδεση: "+e.message)}};
+ const controls=<><button type="button" onClick={()=>subscribe()}>Ενεργοποίηση ειδοποιήσεων</button><ChatInstallControls storeId={target||undefined}/></>;
+ if(!loggedIn)return <main className="login-shell chat-mobile-shell">{operatorLogin&&target?<ChatOperatorLogin storeId={target} api={chatApi} onLogin={login}/>:<ChatMobileLogin api={chatApi} onLogin={login}/>}<section className="login-card">{target&&<button type="button" onClick={()=>setOperatorLogin(v=>!v)}>{operatorLogin?"Σύνδεση ιδιοκτήτη":"Σύνδεση χειριστή με PIN"}</button>}<ChatInstallControls/>{error&&<p role="alert">{error}</p>}</section></main>;
+ if(store)return <main className="chat-mobile-app"><StoreChatPanel key={store.id} api={api} store={store} onClose={()=>change("")} installation={<><button type="button" onClick={()=>change("")}>Τα καταστήματά μου</button>{controls}</>} onDraftChange={value=>{draftDirty.current=value}} mobileOwner={!session?.user?.chatOperator}/>{push&&<p className="chat-mobile-status" role="status">{push}</p>}</main>;
+ return <main className="login-shell chat-mobile-shell"><section className="login-card"><h1>Τα καταστήματά μου</h1><p>{session?.user?.fullName||"MyWorkStation Chat"}</p>{busy&&<p>Φόρτωση…</p>}{error&&<p role="alert">{error}</p>}<div className="chat-store-list">{stores.map(s=><button key={s.id} type="button" onClick={()=>change(s.id)}><strong>{s.name}</strong><span>{s.companyName}</span>{s.unread>0&&<b>{s.unread} αδιάβαστα</b>}</button>)}</div>{!busy&&!error&&!stores.length&&<p>Δεν υπάρχουν διαθέσιμα καταστήματα Chat.</p>}{controls}{push&&<p role="status">{push}</p>}<button type="button" onClick={logout}>Αποσύνδεση</button></section></main>;
 }
