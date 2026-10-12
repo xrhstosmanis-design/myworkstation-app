@@ -7,6 +7,13 @@ import {ensureEfoodIntegrationSchema} from "../efood-integration-bootstrap.js";
 import {constantTimeSecretEquals,encryptStoreIntegrationValue} from "../integrations/store-integration-crypto.js";
 import {assertEfoodLabContext,normalizeEfoodWebhook} from "../integrations/efood/foundation.js";
 
+export function efoodAuthorizationSecret(header){
+  if(typeof header!=="string"||!header)return "";
+  const bearer=/^Bearer[ \t]+([A-Za-z0-9._~+\/=-]+)$/i.exec(header);
+  if(bearer)return bearer[1];
+  return /^[A-Za-z0-9._~+\/=-]+$/.test(header)&&!/^Bearer$/i.test(header)?header:"";
+}
+
 const router=Router();
 const uid=()=>crypto.randomUUID();
 const sha256=value=>crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -59,8 +66,9 @@ export async function recordEfoodWebhookEvent({integration,payload,mode="LOCAL_M
 
 router.post("/pelican/:webhookKey",async(req,res,next)=>{try{
   await schemas();
-  const suppliedAuthorization=String(req.get("authorization")||"");
-  if(!suppliedAuthorization)return res.status(401).json({error:"Λείπει το Authorization secret του προσωρινού LAB webhook.",code:"EFOOD_TEST_SECRET_REQUIRED"});
+  const authorizationHeader=String(req.get("authorization")||"");
+  const suppliedAuthorization=efoodAuthorizationSecret(authorizationHeader);
+  if(!authorizationHeader)return res.status(401).json({error:"Λείπει το Authorization secret του προσωρινού LAB webhook.",code:"EFOOD_TEST_SECRET_REQUIRED"});
   const outcome=await prisma.$transaction(async tx=>{
     const integration=(await tx.$queryRaw`SELECT i."id",i."companyId",i."storeId",i."kind",i."environment",i."metadataJson",i."webhookSecretHash",i."enabled",i."externalCallsEnabled",i."sandboxValidatedAt",i."webhookTestOpenedAt",i."webhookTestExpiresAt",i."webhookTestConsumedAt",i."webhookTestClosedReason",i."webhookTestEventId",s."name" AS "storeName",c."name" AS "companyName" FROM "StoreIntegrationCredential" i JOIN "Store" s ON s."id"=i."storeId" AND s."companyId"=i."companyId" JOIN "Company" c ON c."id"=i."companyId" WHERE i."kind"='EFOOD' AND i."webhookKey"=${req.params.webhookKey} LIMIT 1 FOR UPDATE`)[0];
     if(!integration)return {error:publicError(404,"EFOOD_WEBHOOK_NOT_FOUND","Δεν βρέθηκε προσωρινό LAB webhook efood.")};
