@@ -23,3 +23,7 @@ Native isolated PostgreSQL + mounted actual-router HTTP test added for uniquenes
 
 Browser old tab11 no longer exists; new /api/health tab blocked by browser net::ERR_BLOCKED_BY_CLIENT (environment, not MyWorkStation auth/404/401 or bot detection). No credential access/indirect workaround and no new LAB mutation. Latest independently read actual guarded deployment38236147436/job114767256939 SUCCESS/exacthealthy745ec31a; newer backup/docs guards skip app deployment and are not new release proof. Require exact source/main CI and actual guarded healthy new revision before asking for normal device/live acceptance. No previous transaction replay. No33 OPEN/owner retained; single next action: exact source CI including native DB, then guarded release and metadata-only LAB acceptance when authorized browser access is available.
 
+
+### Native PostgreSQL lock result compatibility review
+
+Source review compared existing native-proven advisory locks: Prisma raw-query cannot deserialize PostgreSQL void lock result. The identical scoped transaction lock is now CAST AS TEXT, matching existing baking native pattern; no lock scope, transaction, guard or test assertion removed. Native final-head CI remains required; this inspection is not a LIVE failure/PASS.

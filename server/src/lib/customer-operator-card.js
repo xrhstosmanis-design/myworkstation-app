@@ -15,7 +15,7 @@ export function ensureCustomerOperatorCardSchema(db){
 export async function linkCustomerOperatorCard(db,{companyId,storeId,customerId,actorId,credentialId}){
   await ensureCustomerOperatorCardSchema(db);
   return db.$transaction(async tx=>{
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`customer-operator-card:${companyId}:${storeId}`},0))`;
+    await tx.$queryRaw`SELECT CAST(pg_advisory_xact_lock(hashtextextended(${`customer-operator-card:${companyId}:${storeId}`},0)) AS TEXT)`;
     const customer=(await tx.$queryRaw`SELECT "id","active","discountAudience" FROM "Customer" WHERE "id"=${customerId} AND "companyId"=${companyId} FOR UPDATE`)[0];
     if(!customer)throw fail(404,"Δεν βρέθηκε ο πελάτης.");
     let credential=null;
