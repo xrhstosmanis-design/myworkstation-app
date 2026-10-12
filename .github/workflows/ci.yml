@@ -205,6 +205,8 @@ jobs:
         run: node server/e2e/kat-windows-preflight-source-invariants.mjs
       - name: Verify KAT backup restore safety invariants
         run: node server/e2e/pilot-backup-restore-source-invariants.mjs
+      - name: Verify backup monitor delivery through transient failures
+        run: node --test ops/backup/test/monitor-delivery-retry.test.mjs
       - name: Verify KAT safe vault adjustment invariants
         run: node server/e2e/kat-safe-vault-adjustment-invariants.mjs
       - name: Verify KAT aggregate pre-install readiness
