@@ -37,6 +37,7 @@ test('native shift sale predicate rejects another actor, closed shift, foreign t
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
   await db.$executeRawUnsafe('CREATE TABLE "Sale"("id" text,"companyId" text,"storeId" text,"operatorEmployeeId" text,"source" text,"status" text)');
   await db.$executeRawUnsafe('CREATE TABLE "StoreTransaction"("companyId" text,"storeId" text,"sessionId" text,"description" text)');
+  await db.$executeRawUnsafe('CREATE TABLE "StoreOperatorAudit"("companyId" text,"storeId" text,"eventType" text,"details" jsonb)');
   await db.$executeRawUnsafe('CREATE TABLE "CashShiftSession"("id" text,"companyId" text,"storeId" text,"terminalPos" text,"status" text)');
   await db.$executeRawUnsafe(`INSERT INTO "CashShiftSession" VALUES ('main','C','A','MAIN','OPEN'),('control','C','A','CONTROL','OPEN'),('closed','C','A','MAIN','CLOSED')`);
   const fixtures=[['own','C','A','employee','main'],['other','C','A','otherEmployee','main'],['control','C','A','employee','control'],['closed','C','A','employee','closed'],['foreignCompany','D','A','employee','main'],['foreignStore','C','B','employee','main']];

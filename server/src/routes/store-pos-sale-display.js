@@ -129,8 +129,12 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
              s."transactionMode",s."delayedReason",s."reversalState",s."reversalKind",s."originalSaleId",s."fiscalStatus",s."source",to_jsonb(s)->>'operationChannel' AS "operationChannel",c."name" AS "customerName",
 
              EXISTS(SELECT 1 FROM "Sale" rs WHERE rs."originalSaleId"=s."id" AND rs."companyId"=s."companyId" AND rs."storeId"=s."storeId" AND rs."transactionMode"='INTERNAL_RETURN_PENDING_RBS') AS "internalReturnPending",
-             COALESCE((SELECT st."sessionId" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),NULL) AS "sessionId",
+             COALESCE((SELECT st."sessionId" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),(SELECT a."details"->>'sessionId' FROM "StoreOperatorAudit" a JOIN "CashShiftSession" sh ON sh."id"=a."details"->>'sessionId' AND sh."companyId"=s."companyId" AND sh."storeId"=s."storeId" WHERE s."source"='ONLINE_POS' AND a."companyId"=s."companyId" AND a."storeId"=s."storeId" AND a."eventType"='POS_SALE_COMPLETED' AND a."details"->>'saleId'=s."id" ORDER BY a."createdAt",a."id" LIMIT 1)) AS "sessionId",
              COALESCE((SELECT st."actorName" FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND COALESCE(st."description",'') LIKE ('%'||s."id"||'%') ORDER BY st."occurredAt" ASC LIMIT 1),'Πωλητής') AS "actorName",
+             COALESCE((SELECT json_agg(st."id" ORDER BY st."id") FROM "StoreTransaction" st WHERE st."companyId"=s."companyId" AND st."storeId"=s."storeId" AND st."type" IN ('SALE_CASH','SALE_CARD','SALE_IRIS') AND EXISTS (
+               SELECT 1 FROM "StoreOperatorAudit" a WHERE s."source"='ONLINE_POS' AND a."companyId"=s."companyId" AND a."storeId"=s."storeId" AND a."eventType"='POS_SALE_COMPLETED' AND a."details"->>'saleId'=s."id" AND a."details"->>'sessionId'=st."sessionId"
+                 AND st."description" IN ('ONLINE ΠΑΡΑΓΓΕΛΙΑ '||(a."details"->>'onlineOrderNumber')||' · ΜΕΤΡΗΤΑ','ONLINE ΠΑΡΑΓΓΕΛΙΑ '||(a."details"->>'onlineOrderNumber')||' · ΚΑΡΤΑ','ONLINE ΠΑΡΑΓΓΕΛΙΑ '||(a."details"->>'onlineOrderNumber')||' · IRIS (ΠΙΛΟΤΙΚΟ)')
+             )),'[]'::json) AS "shiftTransactionIds",
              COALESCE((SELECT json_agg(json_build_object('method',p."method",'amount',p."amount") ORDER BY p."createdAt",p."id") FROM "Payment" p WHERE p."saleId"=s."id"),'[]'::json) AS "payments",
              COALESCE((SELECT json_agg(json_build_object('id',l."id",'productId',l."productId",'description',l."description",'quantity',l."quantity",'unitPrice',l."unitPrice",'lineTotal',l."lineTotal",'categoryName',COALESCE(ca."name",'Χωρίς κατηγορία')) ORDER BY l."createdAt",l."id") FROM "SaleLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=s."companyId" LEFT JOIN "ProductCategory" ca ON ca."id"=p."categoryId" WHERE l."saleId"=s."id"),'[]'::json) AS "lines"
       FROM "Sale" s
@@ -142,9 +146,13 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
           WHERE tx."companyId"=s."companyId" AND tx."storeId"=s."storeId"
             AND shift."companyId"=s."companyId" AND shift."storeId"=s."storeId" AND shift."status"='OPEN'
             AND (${!operator} OR shift."terminalPos"=${terminalPos})
-            AND COALESCE(tx."description",'') LIKE ('%'||s."id"||'%')
+            AND (COALESCE(tx."description",'') LIKE ('%'||s."id"||'%') OR (s."source"='ONLINE_POS' AND EXISTS (
+              SELECT 1 FROM "StoreOperatorAudit" a WHERE a."companyId"=s."companyId" AND a."storeId"=s."storeId"
+                AND a."eventType"='POS_SALE_COMPLETED' AND a."details"->>'saleId'=s."id" AND a."details"->>'sessionId'=shift."id"
+                AND tx."description" IN ('ONLINE ΠΑΡΑΓΓΕΛΙΑ '||(a."details"->>'onlineOrderNumber')||' · ΜΕΤΡΗΤΑ','ONLINE ΠΑΡΑΓΓΕΛΙΑ '||(a."details"->>'onlineOrderNumber')||' · ΚΑΡΤΑ','ONLINE ΠΑΡΑΓΓΕΛΙΑ '||(a."details"->>'onlineOrderNumber')||' · IRIS (ΠΙΛΟΤΙΚΟ)')
+            )) )
         ))
-        AND s."source" IN ('POS','EXCHANGE','POS_REVERSAL','WASTE') AND s."status"='COMPLETED'
+        AND (s."source" IN ('POS','EXCHANGE','POS_REVERSAL','WASTE') OR s."source"='ONLINE_POS') AND s."status"='COMPLETED'
       ORDER BY s."createdAt" DESC LIMIT 50`;
     const issuedIds=rows.filter(row=>row.fiscalStatus==="ISSUED"&&row.operationChannel==="COUNTER").map(row=>row.id);
     let internalIds=new Set();
