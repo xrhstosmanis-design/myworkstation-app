@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from "react";
 import {Copy,KeyRound,ShieldCheck,X} from "lucide-react";
+import EfoodEventPreview from "./EfoodEventPreview.jsx";
 
 const definitions=[
   {kind:"MYDATA",title:"myDATA / Ηλεκτρονική τιμολόγηση",account:"User ID / Αναγνωριστικό",secret:"Κωδικός / Subscription key"},
@@ -190,8 +191,10 @@ export default function StoreFiscalIntegrations({manager,request,onClose,onChang
             {webhookNotice&&<div className="terminal-explainer"><ShieldCheck/><span>{webhookNotice}</span></div>}
             <small>Στο efood Partner χρησιμοποίησε ακριβώς το Callback URL και το Authorization secret. Πάτησε Trigger Test Order μόνο όσο η ένδειξη είναι ΑΝΟΙΧΤΟ. Το πρώτο έγκυρο event αποθηκεύεται κρυπτογραφημένο ως dry-run και κλειδώνει αμέσως το webhook.</small>
 
+            {efood&&<EfoodEventPreview key={efoodUrl} url={efoodUrl} request={request}/>}
             {labResult&&<div className={labResult.passed?"terminal-explainer":"platform-error"}><ShieldCheck/><span><b>{labResult.passed?"LAB MOCK PASS":"LAB MOCK FAIL"}</b><br/>Run: {labResult.runId}<br/>READY_FOR_PICKUP: {labResult.ready.processingStatus} · replay idempotent: {String(labResult.replay.idempotent)} · CANCELLED: {labResult.cancelled.processingStatus}<br/>Catalog/Promo/Orders previews: LOCAL/SANDBOX · Events: {labResult.eventCount}<br/>External call: ΟΧΙ · Order/Sale: ΟΧΙ · Stock: ΟΧΙ · Payment/Fiscal: ΟΧΙ</span></div>}
           </form>}
     </div>
   </section></div>;
 }
+
