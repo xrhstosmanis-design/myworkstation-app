@@ -40,10 +40,37 @@ function identity(values,label){
   if(new Set(ids).size>1)throw Object.assign(new Error(`Αντικρουόμενα ${label} στο efood webhook.`),{status:409,code:"CONFLICTING_PROVIDER_IDENTITY",public:true});
   return ids[0]||null;
 }
+function productQuantity(item){
+  const values=[item?.quantity,item?.qty,item?.pricing?.quantity].filter(value=>value!==undefined);
+  if(!values.length){
+    if(item?.pricing!=null)throw Object.assign(new Error("Λείπει η ποσότητα από το pricing προϊόντος efood."),{status:400,code:"INVALID_PRODUCT_QUANTITY",public:true});
+    return 1; // Retain the existing legacy mock-item default only.
+  }
+  const quantities=values.map(value=>{
+    if(typeof value!=="number"&&!(typeof value==="string"&&/^\d+(?:\.\d+)?$/.test(value.trim())))throw Object.assign(new Error("Μη έγκυρη ποσότητα προϊόντος efood."),{status:400,code:"INVALID_PRODUCT_QUANTITY",public:true});
+    const quantity=Number(value);
+    if(!Number.isFinite(quantity)||quantity<0||quantity>Number.MAX_SAFE_INTEGER)throw Object.assign(new Error("Μη έγκυρη ποσότητα προϊόντος efood."),{status:400,code:"INVALID_PRODUCT_QUANTITY",public:true});
+    return quantity;
+  });
+  if(new Set(quantities).size>1)throw Object.assign(new Error("Αντικρουόμενες ποσότητες προϊόντος efood."),{status:409,code:"CONFLICTING_PRODUCT_QUANTITY",public:true});
+  return quantities[0];
+}
+function productBarcodes(item){
+  if(item?.barcode==null)return [];
+  const values=Array.isArray(item.barcode)?item.barcode:[item.barcode];
+  return [...new Set(values.map(value=>{
+    const barcode=typeof value==="string"?value.trim():typeof value==="number"&&Number.isSafeInteger(value)&&value>=0?String(value):"";
+    if(!barcode||barcode.length>300||/[\u0000-\u001f\u007f]/.test(barcode))throw Object.assign(new Error("Μη έγκυρο barcode προϊόντος efood."),{status:400,code:"INVALID_PRODUCT_BARCODE",public:true});
+    return barcode;
+  }))];
+}
 function productRefs(payload){
   const candidates=[payload?.items,nested(payload,"order","items"),nested(payload,"data","items"),nested(payload,"data","order","items")];
   const items=candidates.find(Array.isArray)||[];
-  return items.map(item=>({externalProductId:firstText(item?.id,item?.product_id,item?.productId,item?.sku,item?.external_id,item?.externalId),externalSku:firstText(item?.sku,item?.external_sku,item?.externalSku,item?.barcode),name:firstText(item?.name,item?.title,item?.product_name,item?.productName),quantity:Number(item?.quantity??item?.qty??1)})).filter(item=>item.externalProductId||item.externalSku||item.name);
+  return items.map(item=>{
+    const barcodes=productBarcodes(item);
+    return {externalProductId:firstText(item?.id,item?.product_id,item?.productId,item?.sku,item?.external_id,item?.externalId),externalSku:firstText(item?.sku,item?.external_sku,item?.externalSku,barcodes[0]),name:firstText(item?.name,item?.title,item?.product_name,item?.productName),quantity:productQuantity(item),...(item?.barcode!=null?{barcodes}:{})};
+  }).filter(item=>item.externalProductId||item.externalSku||item.name);
 }
 
 export function normalizeEfoodWebhook(payload){
