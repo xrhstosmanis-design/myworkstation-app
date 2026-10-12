@@ -6,7 +6,7 @@ const unwrap=value=>value?.data?.data||value?.data||value||{};
 const today=()=>greeceDateInput(new Date());
 const weekStart=()=>{const d=new Date();d.setDate(d.getDate()-6);return greeceDateInput(d)};
 const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const displayDate=value=>new Date(value).toLocaleString("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens"});
+const displayDate=value=>new Date(value).toLocaleString("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens",hour12:false});
 const Metric=({label,value})=><div className="netlink-metric"><span>{label}</span><strong>{value}</strong></div>;
 const Empty=()=> <p className="netlink-empty">Δεν βρέθηκαν συναλλαγές για το επιλεγμένο διάστημα.</p>;
 

@@ -1,3 +1,4 @@
+import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -37,7 +38,7 @@ router.use(requireAccess);
 router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
 
 function range(query={}){
-  const now=new Date(),to=query.to?new Date(String(query.to)):now,from=query.from?new Date(String(query.from)):new Date(to.getFullYear(),to.getMonth(),1);
+  const now=new Date(),to=query.to?greeceRangeDate(query.to,true):now,from=query.from?greeceRangeDate(query.from):greeceMonthStart(to);
   if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}
   return{from,to};
 }
@@ -57,8 +58,8 @@ router.get("/report",async(req,res,next)=>{try{
     ) v ON true
     LEFT JOIN LATERAL (
       SELECT
-        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM s."occurredAt")=EXTRACT(YEAR FROM CURRENT_DATE)) AS "currentYear",
-        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM s."occurredAt")=EXTRACT(YEAR FROM CURRENT_DATE)-1) AS "previousYear"
+        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM (s."occurredAt" AT TIME ZONE 'Europe/Athens'))=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens'))) AS "currentYear",
+        SUM(s."total") FILTER (WHERE EXTRACT(YEAR FROM (s."occurredAt" AT TIME ZONE 'Europe/Athens'))=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens'))-1) AS "previousYear"
       FROM "Sale" s WHERE s."companyId"=${companyId} AND s."customerId"=c."id" AND s."status"='COMPLETED'
     ) y ON true
     WHERE c."companyId"=${companyId}

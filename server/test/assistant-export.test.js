@@ -31,7 +31,7 @@ test("export rereads canonical source and verifies again after generation; revok
 });
 test("four actual file formats preserve canonical negative stock and Greek text without private fields or spreadsheet formulas",async()=>{
  const report=source(),now=new Date("2026-10-12T17:00:00Z"),files={};
- for(const format of ["xlsx","csv","pdf","docx"]){const file=await buildAssistantReportFile(format,[report],{now});assert.match(file.filename,new RegExp(`^myworkstation-report-20261012170000\\.${format}$`));files[format]=Buffer.from(file.base64,"base64");assert.equal(files[format].length,file.size)}
+ for(const format of ["xlsx","csv","pdf","docx"]){const file=await buildAssistantReportFile(format,[report],{now});assert.match(file.filename,new RegExp(`^myworkstation-report-20261012200000\\.${format}$`));files[format]=Buffer.from(file.base64,"base64");assert.equal(files[format].length,file.size)}
  const workbook=XLSX.read(files.xlsx,{type:"buffer"}),sheet=workbook.Sheets[workbook.SheetNames[0]],rows=XLSX.utils.sheet_to_json(sheet,{header:1});
  assert.ok(rows.some(r=>r.includes(-70)));assert.ok(rows.some(r=>r.includes("'=HYPERLINK(\"bad\")")));for(const value of Object.values(sheet))assert.equal(value?.f,undefined);
  const csv=files.csv.toString("utf8");assert.equal(csv[0],"\uFEFF");assert.match(csv,/"-70"/);assert.match(csv,/'=HYPERLINK/);assert.doesNotMatch(csv,/PRIVATE|costPrice|999/);

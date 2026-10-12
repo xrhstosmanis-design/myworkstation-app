@@ -5,7 +5,7 @@ import "./ai-credit-alert.css";
 const labels={OK:"Υπόλοιπο AI",WARNING:"Χαμηλό υπόλοιπο AI — προγραμμάτισε ανανέωση",CRITICAL:"Κρίσιμο υπόλοιπο AI — χρειάζεται ανανέωση",EXHAUSTED:"Εκτιμώμενο υπόλοιπο AI εξαντλημένο — χρειάζεται ανανέωση",UNKNOWN:"Υπόλοιπο AI μη διαθέσιμο"};
 const reasons={BILLING_NOT_CONFIGURED:"Η αυτόματη παρακολούθηση κόστους δεν έχει συνδεθεί.",BASELINE_REQUIRED:"Καταχώρισε το τρέχον υπόλοιπο του λογαριασμού χρέωσης.",BASELINE_STALE:"Χρειάζεται νέα επιβεβαίωση υπολοίπου (τουλάχιστον κάθε 7 ημέρες).",BILLING_ACCOUNT_CHANGED:"Άλλαξε η σύνδεση χρέωσης. Επιβεβαίωσε ξανά λογαριασμό και υπόλοιπο.",BILLING_ACCESS_DENIED:"Η σύνδεση κόστους δεν έχει τα απαιτούμενα δικαιώματα.",BILLING_REVISED:"Αναθεωρήθηκαν τα στοιχεία κόστους. Επιβεβαίωσε ξανά το υπόλοιπο.",BILLING_STALE:"Τα στοιχεία κόστους είναι παλιά. Το υπόλοιπο δεν επιβεβαιώνεται."};
 const usd=value=>Number(value).toLocaleString("el-GR",{style:"currency",currency:"USD"});
-const time=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
+const time=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"—";
 
 export default function AiCreditAlert({request,settings=false,onOpenSettings}){
   const [data,setData]=useState(null),[error,setError]=useState(""),[busy,setBusy]=useState(false);

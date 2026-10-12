@@ -1,3 +1,4 @@
+import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -39,9 +40,9 @@ function requireOwnerReport(req){
 }
 function dateRange(query){
   const now=new Date();
-  const fallbackFrom=new Date(now.getFullYear(),now.getMonth(),1,0,0,0,0);
-  const from=query.from?new Date(query.from):fallbackFrom;
-  const to=query.to?new Date(query.to):now;
+  const fallbackFrom=greeceMonthStart(now);
+  const from=query.from?greeceRangeDate(query.from):fallbackFrom;
+  const to=query.to?greeceRangeDate(query.to,true):now;
   if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){
     const error=new Error("Μη έγκυρο διάστημα ημερομηνιών.");error.status=400;throw error;
   }
@@ -307,7 +308,7 @@ router.get("/report",async(req,res,next)=>{
         GROUP BY COALESCE(NULLIF(BTRIM(t."description"),''),'Λοιπά έξοδα') ORDER BY amount DESC
       `,
       prisma.$queryRaw`
-        SELECT DATE(t."occurredAt") AS day,COALESCE(SUM(t."amount") FILTER (WHERE t."reversedAt" IS NULL),0) AS expenses
+        SELECT DATE(t."occurredAt" AT TIME ZONE 'Europe/Athens') AS day,COALESCE(SUM(t."amount") FILTER (WHERE t."reversedAt" IS NULL),0) AS expenses
         FROM "StoreTransaction" t
         JOIN "Store" st ON st."id"=t."storeId"
         LEFT JOIN "Supplier" sp ON sp."id"=t."supplierId"
@@ -317,14 +318,14 @@ router.get("/report",async(req,res,next)=>{
           AND (${supplierId}::text IS NULL OR t."supplierId"=${supplierId})
           AND (${type}::text IS NULL OR t."type"=${type})
           AND (${needle}::text IS NULL OR COALESCE(t."description",'') ILIKE ${needle?`%${needle}%`:null} OR COALESCE(t."supplierName",sp."name",'') ILIKE ${needle?`%${needle}%`:null} OR t."actorName" ILIKE ${needle?`%${needle}%`:null} OR st."name" ILIKE ${needle?`%${needle}%`:null})
-        GROUP BY DATE(t."occurredAt") ORDER BY day
+        GROUP BY DATE(t."occurredAt" AT TIME ZONE 'Europe/Athens') ORDER BY day
       `,
       prisma.$queryRaw`
-        SELECT DATE("occurredAt") AS day,COALESCE(SUM("total"),0) AS sales
+        SELECT DATE("occurredAt" AT TIME ZONE 'Europe/Athens') AS day,COALESCE(SUM("total"),0) AS sales
         FROM "Sale"
         WHERE "companyId"=${companyId} AND "status"='COMPLETED' AND "occurredAt">=${from} AND "occurredAt"<=${to}
           AND (${storeId}::text IS NULL OR "storeId"=${storeId})
-        GROUP BY DATE("occurredAt") ORDER BY day
+        GROUP BY DATE("occurredAt" AT TIME ZONE 'Europe/Athens') ORDER BY day
       `
     ]);
 

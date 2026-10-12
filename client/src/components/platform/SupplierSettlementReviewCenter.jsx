@@ -4,7 +4,7 @@ import {AlertTriangle,CheckCircle2,FileText,RefreshCw,ShieldCheck,X} from "lucid
 import "./supplier-review-summary.css";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const dateTime=value=>value?new Intl.DateTimeFormat("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens"}).format(new Date(value)):"—";
+const dateTime=value=>value?new Intl.DateTimeFormat("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens",hour12:false}).format(new Date(value)):"—";
 const paymentMethod={CASH_SHIFT:"Μετρητά ενεργής βάρδιας",CORPORATE_CARD:"Εταιρική κάρτα",BANK_TRANSFER:"Τραπεζική μεταφορά",EMPLOYEE_REIMBURSEMENT:"Πληρωμή υπαλλήλου προς επιστροφή"};
 
 export default function SupplierSettlementReviewCenter({request:baseRequest,onClose,setMessage,entryScope=null}){

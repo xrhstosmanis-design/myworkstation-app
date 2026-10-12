@@ -156,8 +156,8 @@ async function completePaymentControls(body){
       WHERE t."companyId"=${body.companyId} AND t."storeId"=${body.storeId}
         AND t."reversedAt" IS NULL AND t."type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE')
         AND t."attachmentData" IS NULL AND COALESCE(t."attachmentMimeType",'')<>'application/vnd.myworkstation.purchase-document'
-        AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date)
-        AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+        AND (${body.from||null}::date IS NULL OR s."openedAt">=(${body.from||null}::date AT TIME ZONE 'Europe/Athens'))
+        AND (${body.to||null}::date IS NULL OR s."openedAt"<((${body.to||null}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
       ORDER BY t."occurredAt" DESC,t."id" DESC LIMIT ${findingLimit}`,
     prisma.$queryRaw`
       SELECT MIN(t."occurredAt") AS "occurredAt",t."supplierId",COALESCE(NULLIF(MIN(t."supplierName"),''),MIN(sp."name"),'Χωρίς όνομα προμηθευτή') AS "supplierName",
@@ -173,9 +173,9 @@ async function completePaymentControls(body){
       JOIN "CashShiftSession" s ON s."id"=t."sessionId" AND s."companyId"=t."companyId" AND s."storeId"=t."storeId" AND s."status"='CLOSED'
       WHERE t."companyId"=${body.companyId} AND t."storeId"=${body.storeId}
         AND t."reversedAt" IS NULL AND t."type"='SUPPLIER_PAYMENT' AND t."supplierId" IS NOT NULL
-        AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date)
-        AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
-      GROUP BY t."sessionId",t."supplierId",t."amount",DATE(t."occurredAt"),st."name"
+        AND (${body.from||null}::date IS NULL OR s."openedAt">=(${body.from||null}::date AT TIME ZONE 'Europe/Athens'))
+        AND (${body.to||null}::date IS NULL OR s."openedAt"<((${body.to||null}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
+      GROUP BY t."sessionId",t."supplierId",t."amount",DATE(t."occurredAt" AT TIME ZONE 'Europe/Athens'),st."name"
       HAVING COUNT(*)>1
       ORDER BY MIN(t."occurredAt") DESC LIMIT ${findingLimit}`
   ]);
@@ -205,8 +205,8 @@ async function premiumVarianceControls(body){
       FROM "CashShiftSession" sh
       LEFT JOIN LATERAL (SELECT n."id",n."shiftLabel",n."terminalPos",n."openedByName",n."openedAt",n."openingOperational" FROM "CashShiftSession" n WHERE n."companyId"=sh."companyId" AND n."storeId"=sh."storeId" AND n."terminalPos"=sh."terminalPos" AND n."openedAt">COALESCE(sh."closedAt",sh."openedAt") ORDER BY n."openedAt" LIMIT 1) next ON TRUE
       WHERE sh."companyId"=${body.companyId} AND sh."storeId"=${body.storeId} AND sh."status"='CLOSED'
-        AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date)
-        AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+        AND (${body.from||null}::date IS NULL OR sh."openedAt">=(${body.from||null}::date AT TIME ZONE 'Europe/Athens'))
+        AND (${body.to||null}::date IS NULL OR sh."openedAt"<((${body.to||null}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
       ORDER BY sh."openedAt" DESC LIMIT ${findingLimit}`,
     prisma.$queryRaw`
       SELECT DISTINCT ON (s."id") sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",sh."openedAt",sh."closedAt",
@@ -219,20 +219,20 @@ async function premiumVarianceControls(body){
       LEFT JOIN LATERAL (SELECT string_agg(COALESCE(l."productId",l."description",'—') || ':' || l."quantity"::text || ':' || l."lineTotal"::text,'|' ORDER BY COALESCE(l."productId",l."description",'—'),l."quantity",l."lineTotal") AS "basketSignature",string_agg(COALESCE(l."description",l."productId",'—') || ' × ' || l."quantity"::text || ' = ' || l."lineTotal"::text || ' €',' · ' ORDER BY l."createdAt",l."id") AS "basketLines" FROM "SaleLine" l WHERE l."saleId"=s."id") lines ON TRUE
       LEFT JOIN LATERAL (SELECT string_agg(p."method" || ':' || p."amount"::text,'|' ORDER BY p."method",p."amount") AS "paymentMethods" FROM "Payment" p WHERE p."saleId"=s."id") payments ON TRUE
       WHERE sh."companyId"=${body.companyId} AND sh."storeId"=${body.storeId} AND sh."status"='CLOSED'
-        AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date)
-        AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+        AND (${body.from||null}::date IS NULL OR sh."openedAt">=(${body.from||null}::date AT TIME ZONE 'Europe/Athens'))
+        AND (${body.to||null}::date IS NULL OR sh."openedAt"<((${body.to||null}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
       ORDER BY s."id",t."createdAt" DESC LIMIT ${findingLimit}`,
     hasActionAudit?prisma.$queryRaw`
       SELECT sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",a."id",a."saleId",a."relatedSaleId",a."actionType",a."reason",a."actorName",a."createdAt",a."details"
       FROM "PosSaleActionAudit" a JOIN "CashShiftSession" sh ON sh."companyId"=a."companyId" AND sh."storeId"=a."storeId" AND sh."status"='CLOSED' AND COALESCE(a."details"->>'sessionId','')=sh."id"
       WHERE a."companyId"=${body.companyId} AND a."storeId"=${body.storeId} AND a."actionType" IN ('CANCEL','RETURN','RETURN_ITEMS')
-        AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date) AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+        AND (${body.from||null}::date IS NULL OR sh."openedAt">=(${body.from||null}::date AT TIME ZONE 'Europe/Athens')) AND (${body.to||null}::date IS NULL OR sh."openedAt"<((${body.to||null}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
       ORDER BY a."createdAt" DESC LIMIT ${findingLimit}`:Promise.resolve([]),
     hasSafetyAudit?prisma.$queryRaw`
       SELECT sh."id" AS "sessionId",sh."shiftLabel",sh."terminalPos",a."id",a."saleId",a."relatedSaleId",a."eventType",a."actorName",a."createdAt",a."details"
       FROM "PosSaleSafetyAudit" a JOIN "CashShiftSession" sh ON sh."companyId"=a."companyId" AND sh."storeId"=a."storeId" AND sh."status"='CLOSED' AND EXISTS (SELECT 1 FROM "StoreTransaction" t WHERE t."companyId"=sh."companyId" AND t."storeId"=sh."storeId" AND t."sessionId"=sh."id" AND (COALESCE(t."description",'') LIKE ('%' || COALESCE(a."saleId",'') || '%') OR COALESCE(t."description",'') LIKE ('%' || COALESCE(a."relatedSaleId",'') || '%')))
       WHERE a."companyId"=${body.companyId} AND a."storeId"=${body.storeId} AND a."eventType" IN ('DUPLICATE_CONFIRMED','DUPLICATE_BLOCKED','IDEMPOTENT_REPLAY')
-        AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date) AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+        AND (${body.from||null}::date IS NULL OR sh."openedAt">=(${body.from||null}::date AT TIME ZONE 'Europe/Athens')) AND (${body.to||null}::date IS NULL OR sh."openedAt"<((${body.to||null}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
       ORDER BY a."createdAt" DESC LIMIT ${findingLimit}`:Promise.resolve([]),
     Promise.resolve([{exists:hasOperationalEvents}])
   ]);
@@ -270,7 +270,7 @@ async function premiumVarianceControls(body){
       SELECT e."id",e."sessionId",e."operatorName",e."type",e."itemsJson",e."detailsJson",e."total"::float AS "total",e."createdAt",sh."shiftLabel",sh."terminalPos"
       FROM "PosOperationalEvent" e JOIN "CashShiftSession" sh ON sh."id"=e."sessionId" AND sh."companyId"=e."companyId" AND sh."storeId"=e."storeId" AND sh."status"='CLOSED'
       WHERE e."companyId"=${body.companyId} AND e."storeId"=${body.storeId} AND e."type" ~* '(DELETE|REMOVE|VOID|CANCEL)'
-        AND (${body.from||null}::date IS NULL OR sh."openedAt">=${body.from||null}::date) AND (${body.to||null}::date IS NULL OR sh."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+        AND (${body.from||null}::date IS NULL OR sh."openedAt">=(${body.from||null}::date AT TIME ZONE 'Europe/Athens')) AND (${body.to||null}::date IS NULL OR sh."openedAt"<((${body.to||null}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
       ORDER BY e."createdAt" DESC LIMIT ${findingLimit}`;
     for(const row of operationalEvents)findings.push({id:`operational:${row.id}`,code:"UNMATCHED_POS_OPERATION",title:"Διαγραφή / ακύρωση POS που χρειάζεται αντιπαραβολή",sessionId:row.sessionId,shiftLabel:row.shiftLabel,terminalPos:row.terminalPos,occurredAt:row.createdAt,operatorName:row.operatorName||"—",amount:number(row.total),operational:{eventId:row.id,type:row.type,occurredAt:row.createdAt,operatorName:row.operatorName||"—",total:number(row.total),items:row.itemsJson||[],details:row.detailsJson||{}},possibleExplanation:"Υπάρχει λειτουργικό συμβάν διαγραφής ή ακύρωσης στην ίδια βάρδια. Επιβεβαίωσε αν προηγήθηκε φυσική πληρωμή χωρίς σωστή αντίστροφη εγγραφή πριν το χρησιμοποιήσεις ως εξήγηση πλεονάσματος."});
   }
@@ -293,8 +293,8 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
         WHERE s."status"='CLOSED'
           AND (${body.companyId||null}::text IS NULL OR s."companyId"=${body.companyId||null})
           AND (${body.storeId||null}::text IS NULL OR s."storeId"=${body.storeId||null})
-          AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date)
-          AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+          AND (${body.from||null}::date IS NULL OR s."openedAt">=(${body.from||null}::date AT TIME ZONE 'Europe/Athens'))
+          AND (${body.to||null}::date IS NULL OR s."openedAt"<((${body.to||null}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
         GROUP BY s."storeId",s."companyId"
         ORDER BY s."companyId",s."storeId"`,
       prisma.$queryRaw`
@@ -344,8 +344,8 @@ router.post("/super-admin-analytics/execute",async(req,res,next)=>{
         WHERE s."status"='CLOSED'
           AND (${body.companyId||null}::text IS NULL OR s."companyId"=${body.companyId||null})
           AND (${body.storeId||null}::text IS NULL OR s."storeId"=${body.storeId||null})
-          AND (${body.from||null}::date IS NULL OR s."openedAt">=${body.from||null}::date)
-          AND (${body.to||null}::date IS NULL OR s."openedAt"<(${body.to||null}::date + INTERVAL '1 day'))
+          AND (${body.from||null}::date IS NULL OR s."openedAt">=(${body.from||null}::date AT TIME ZONE 'Europe/Athens'))
+          AND (${body.to||null}::date IS NULL OR s."openedAt"<((${body.to||null}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Athens'))
           AND (ABS(COALESCE(s."variance",0)::float)>${cashTolerance} OR ABS(COALESCE(s."cardVariance",0)::float)>${cardTolerance})
         ORDER BY COALESCE(s."closedAt",s."openedAt") DESC,s."id" DESC
         LIMIT ${findingLimit}`

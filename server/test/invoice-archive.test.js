@@ -1,3 +1,4 @@
+import {greeceExportRows} from "../../shared/greece-time.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import {readFile} from "node:fs/promises";
@@ -19,15 +20,15 @@ test("actual archive handler exports all 5269 results, paginates and denies fore
   const source=await readFile(new URL("../src/routes/commerce-mydata-inbox.js",import.meta.url),"utf8"),routes=new Map();
   const rows=Array.from({length:5269},(_,i)=>({id:`inbox-${i}`,receivedAt:"2026-09-30T18:00:00Z",issueDate:"2026-09-28",mark:String(400000000000000+i),documentNumber:String(i),issuerVat:"099999999",totalGross:"75.14",status:"RECEIVED",hasAttachment:false}));
   const prisma={store:{async findFirst({where}){return where.companyId==="company-one"&&where.id==="store-one"?{id:where.id,name:"Store One"}:null}},async $executeRawUnsafe(){},async $queryRaw(){return [{name:"Supplier One"}]},async $queryRawUnsafe(sql,...values){assert.deepEqual(values.slice(0,2),["company-one","store-one"]);if(sql.includes("COUNT(*)"))return [{count:rows.length}];return rows.slice(values.at(-1),values.at(-1)+values.at(-2))}};
-  globalThis.__archiveTest={prisma,XLSX,archiveQuery,archiveExportRows,archiveReportHtml,Router:()=>({get(path,...handlers){routes.set(path,handlers.at(-1))},post(){}})};
-  const injected=`import crypto from "node:crypto";const {prisma,XLSX,archiveQuery,archiveExportRows,archiveReportHtml,Router}=globalThis.__archiveTest;const requireCompanyModule=()=>()=>{};`;
+  globalThis.__archiveTest={greeceExportRows,prisma,XLSX,archiveQuery,archiveExportRows,archiveReportHtml,Router:()=>({get(path,...handlers){routes.set(path,handlers.at(-1))},post(){}})};
+  const injected=`import crypto from "node:crypto";const {greeceExportRows,prisma,XLSX,archiveQuery,archiveExportRows,archiveReportHtml,Router}=globalThis.__archiveTest;const requireCompanyModule=()=>()=>{};`;
   try{await import(`data:text/javascript;base64,${Buffer.from(injected+source.replace(/^import .*;\r?\n/gm,"")).toString("base64")}`)}finally{delete globalThis.__archiveTest}
   const handler=routes.get("/documents/inbox/archive");
   const run=async(query={},user={companyId:"company-one",role:"OWNER"})=>{let data,status=200,error;await handler({query:{storeId:"store-one",...query},user},{status(n){status=n;return this},json(x){data=x}},e=>{error=e});assert.ifError(error);return {data,status}};
   const page=await run({offset:"300"});assert.equal(page.data.items.length,100);assert.equal(page.data.items[0].id,"inbox-300");assert.equal(page.data.total,5269);
   const excel=await run({format:"xlsx",offset:"300"});assert.equal(excel.data.count,5269);
   const workbook=XLSX.read(Buffer.from(excel.data.dataUrl.split(",")[1],"base64"),{type:"buffer"});
-  const exported=XLSX.utils.sheet_to_json(workbook.Sheets["Παραστατικά"]);assert.equal(exported.length,5269);assert.deepEqual(new Set(exported.map(row=>row.MARK)),new Set(rows.map(row=>row.mark)));assert.equal(exported[0]["Σύνολο"],75.14);
+  const exported=XLSX.utils.sheet_to_json(workbook.Sheets["Παραστατικά"]);assert.equal(exported.length,5269);assert.equal(exported[0]["Ημερομηνία λήψης"],"2026-09-30 21:00:00 Europe/Athens");assert.deepEqual(new Set(exported.map(row=>row.MARK)),new Set(rows.map(row=>row.mark)));assert.equal(exported[0]["Σύνολο"],75.14);
   const pdf=await run({format:"pdf"});assert.equal(pdf.data.count,5269);assert.match(pdf.data.html,/δεν είναι πρωτότυπα PDF/);
   assert.equal((await run({storeId:"foreign-store"})).status,404);
   assert.equal((await run({}, {companyId:"company-one",role:"OWNER",tokenType:"STORE_OPERATOR"})).status,403);

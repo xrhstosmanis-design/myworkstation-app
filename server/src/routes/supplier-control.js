@@ -1,3 +1,4 @@
+import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -50,7 +51,7 @@ function requireAccess(req,res,next){if(req.user?.tokenType==="STORE_OPERATOR"||
 router.use(requireAccess);
 router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
 async function owned(companyId,supplierId){const rows=await prisma.$queryRaw`SELECT * FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${companyId} LIMIT 1`;return rows[0]||null}
-function dates(query={}){const now=new Date(),to=query.to?new Date(String(query.to)):now,from=query.from?new Date(String(query.from)):new Date(to.getFullYear(),to.getMonth(),1);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}return{from,to}}
+function dates(query={}){const now=new Date(),to=query.to?greeceRangeDate(query.to,true):now,from=query.from?greeceRangeDate(query.from):greeceMonthStart(to);if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const e=new Error("Μη έγκυρο διάστημα ημερομηνιών.");e.status=400;throw e}return{from,to}}
 
 router.get("/report",async(req,res,next)=>{try{
   const companyId=req.user.companyId,q=String(req.query.q||"").trim(),activeOnly=String(req.query.activeOnly||"true")!=="false",text=q?`%${q}%`:null;
@@ -60,7 +61,7 @@ router.get("/report",async(req,res,next)=>{try{
     LEFT JOIN LATERAL (SELECT SUM(CASE WHEN d."documentType"='CREDIT_NOTE' THEN -d."totalGross" ELSE d."totalGross" END) AS "allPurchases" FROM "PurchaseDocument" d WHERE d."companyId"=${companyId} AND d."supplierId"=s."id" AND d."status"='APPROVED') pur ON true
     LEFT JOIN LATERAL (SELECT SUM(t."amount") AS "payments" FROM "StoreTransaction" t WHERE t."companyId"=${companyId} AND t."supplierId"=s."id" AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL) pay ON to_regclass('public."StoreTransaction"') IS NOT NULL
     LEFT JOIN LATERAL (SELECT SUM(a."amount") AS "adjustments" FROM "SupplierBalanceAdjustment" a WHERE a."companyId"=${companyId} AND a."supplierId"=s."id") adj ON true
-    LEFT JOIN LATERAL (SELECT SUM(CASE WHEN d."documentType"='CREDIT_NOTE' THEN -d."totalGross" ELSE d."totalGross" END) FILTER (WHERE EXTRACT(YEAR FROM d."documentDate")=EXTRACT(YEAR FROM CURRENT_DATE)) AS "currentYear",SUM(CASE WHEN d."documentType"='CREDIT_NOTE' THEN -d."totalGross" ELSE d."totalGross" END) FILTER (WHERE EXTRACT(YEAR FROM d."documentDate")=EXTRACT(YEAR FROM CURRENT_DATE)-1) AS "previousYear" FROM "PurchaseDocument" d WHERE d."companyId"=${companyId} AND d."supplierId"=s."id" AND d."status"='APPROVED') y ON true
+    LEFT JOIN LATERAL (SELECT SUM(CASE WHEN d."documentType"='CREDIT_NOTE' THEN -d."totalGross" ELSE d."totalGross" END) FILTER (WHERE EXTRACT(YEAR FROM d."documentDate")=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens'))) AS "currentYear",SUM(CASE WHEN d."documentType"='CREDIT_NOTE' THEN -d."totalGross" ELSE d."totalGross" END) FILTER (WHERE EXTRACT(YEAR FROM d."documentDate")=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens'))-1) AS "previousYear" FROM "PurchaseDocument" d WHERE d."companyId"=${companyId} AND d."supplierId"=s."id" AND d."status"='APPROVED') y ON true
     WHERE s."companyId"=${companyId} AND (${activeOnly}=false OR s."active"=true) AND (${text}::text IS NULL OR s."name" ILIKE ${text} OR COALESCE(s."taxId",'') ILIKE ${text} OR COALESCE(s."legacyCode",'') ILIKE ${text})
     ORDER BY s."name" LIMIT 1500`;
   const suppliers=rows.map(r=>({...r,allPurchases:n(r.allPurchases),payments:n(r.payments),adjustments:n(r.adjustments),currentYear:n(r.currentYear),previousYear:n(r.previousYear),balance:n(r.allPurchases)+n(r.adjustments)-n(r.payments)}));

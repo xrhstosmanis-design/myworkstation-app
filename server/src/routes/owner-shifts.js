@@ -1,3 +1,4 @@
+import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import crypto from "crypto";
 import {z} from "zod";
@@ -65,7 +66,7 @@ function requireOwner(req,res,next){
   next();
 }
 function range(query){
-  const now=new Date();const from=query.from?new Date(query.from):new Date(now.getFullYear(),now.getMonth(),1,0,0,0,0);const to=query.to?new Date(query.to):now;
+  const now=new Date();const from=query.from?greeceRangeDate(query.from):greeceMonthStart(now);const to=query.to?greeceRangeDate(query.to,true):now;
   if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to){const error=new Error("Μη έγκυρο διάστημα ημερομηνιών.");error.status=400;throw error}return {from,to};
 }
 async function assertStore(companyId,storeId){if(!storeId)return null;const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,name:true}});if(!store){const error=new Error("Δεν βρέθηκε το κατάστημα.");error.status=404;throw error}return store}

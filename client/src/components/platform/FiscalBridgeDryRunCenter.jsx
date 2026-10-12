@@ -2,7 +2,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {CheckCircle2,RefreshCw,ShieldCheck,X} from "lucide-react";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
+const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"—";
 
 async function api(path,options={}){
   const token=localStorage.getItem("token"),response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})}}),text=await response.text();

@@ -31,7 +31,7 @@ try{
   Add-Check "MyWorkStation API" ($health.ok -eq $true) ("Connected to "+$ApiBase.TrimEnd("/"))
 }catch{Add-Check "MyWorkStation API" $false $_.Exception.Message}
 
-$report=@("MYWORKSTATION OBSERVER PRECHECK",("Date: "+(Get-Date -Format "yyyy-MM-dd HH:mm:ss")),"Mode: READ ONLY / NO FISCAL COMMANDS","")
+$report=@("MYWORKSTATION OBSERVER PRECHECK",("Date: "+(([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTimeOffset]::UtcNow,"GTB Standard Time")).ToString("yyyy-MM-dd HH:mm:ss",[Globalization.CultureInfo]::InvariantCulture))),"Mode: READ ONLY / NO FISCAL COMMANDS","")
 $report+=($results|ForEach-Object {"[{0}] {1} - {2}" -f $_.Status,$_.Check,$_.Detail})
 $failed=@($results|Where-Object {$_.Status -eq "FAIL"})
 $report+=""

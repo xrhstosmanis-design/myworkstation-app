@@ -5,7 +5,7 @@ import {matchesGreekSearch} from "../../utils/greek-search.js";
 
 const TEST_STORE_ID="kat-test-store";
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const stamp=value=>value?new Date(value).toLocaleString("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens"}):"—";
+const stamp=value=>value?new Date(value).toLocaleString("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens",hour12:false}):"—";
 const statusText=status=>({NEW:"ΝΕΑ",ACCEPTED:"ΑΠΟΔΟΧΗ",PREPARING:"ΕΤΟΙΜΑΖΕΤΑΙ",READY:"ΕΤΟΙΜΗ",OUT_FOR_DELIVERY:"ΣΤΟ DELIVERY",DELIVERED:"ΠΑΡΑΔΟΘΗΚΕ",CANCELLED:"ΑΚΥΡΩΘΗΚΕ"})[status]||status;
 
 function LinkSummary({order}){

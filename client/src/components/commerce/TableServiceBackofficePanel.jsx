@@ -5,7 +5,7 @@ import "./table-service-floor-plan.css";
 import {matchesGreekSearch} from "../../utils/greek-search.js";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const stamp=value=>value?new Date(value).toLocaleString("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens"}):"—";
+const stamp=value=>value?new Date(value).toLocaleString("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens",hour12:false}):"—";
 const statusLabel={OPEN:"ΑΝΟΙΚΤΗ",SENT:"ΣΤΑΛΘΗΚΕ",READY:"ΕΤΟΙΜΗ",PAID:"ΠΛΗΡΩΘΗΚΕ",CANCELLED:"ΑΚΥΡΩΘΗΚΕ"};
 const shapeLabel={SQUARE:"Τετράγωνο",ROUND:"Στρογγυλό",RECTANGLE:"Ορθογώνιο"};
 const blankTable=()=>({name:"",areaId:"",capacity:4,shape:"SQUARE"});

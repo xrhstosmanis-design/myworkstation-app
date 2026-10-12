@@ -1,3 +1,4 @@
+import {greeceRangeDate} from "../../../shared/greece-time.mjs";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -151,7 +152,7 @@ router.get("/:productId/movements",requireCompanyModule("INVENTORY"),async(req,r
     const q=z.object({storeId:z.string().min(1),from:z.string().optional(),to:z.string().optional()}).parse(req.query||{});
     const productRows=await prisma.$queryRaw`SELECT p."id",p."name",p."salePrice",p."costPrice",sp."currentStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND sp."storeId"=${q.storeId} LIMIT 1`;
     const product=productRows[0];if(!product)return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
-    const from=q.from?new Date(`${q.from}T00:00:00`):new Date(Date.now()-30*86400000),to=q.to?new Date(`${q.to}T23:59:59.999`):new Date();
+    const from=q.from?greeceRangeDate(q.from):new Date(Date.now()-30*86400000),to=q.to?greeceRangeDate(q.to,true):new Date();
     if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
     const rows=await prisma.$queryRaw`SELECT m."id",m."movementType",m."quantity",m."unitCost",m."sourceType",m."sourceId",m."note",m."createdAt",u."fullName" AS "actorName" FROM "StockMovement" m JOIN "Store" s ON s."id"=m."storeId" LEFT JOIN "User" u ON u."id"=m."createdByUserId" WHERE s."companyId"=${company} AND m."storeId"=${q.storeId} AND m."productId"=${req.params.productId} AND m."createdAt">=${from} AND m."createdAt"<=${to} ORDER BY m."createdAt" DESC LIMIT 1000`;
     let running=Number(product.currentStock||0);const movements=rows.map(row=>{const quantity=Number(row.quantity||0),stockAfter=running;running-=quantity;return {...row,quantity,unitCost:Number(row.unitCost||0),inQty:quantity>0?quantity:0,outQty:quantity<0?Math.abs(quantity):0,stockAfter}});
@@ -164,7 +165,7 @@ router.get("/:productId/purchases",requireCompanyModule("INVENTORY"),async(req,r
     const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
     const q=z.object({storeId:z.string().min(1),from:z.string().optional(),to:z.string().optional()}).parse(req.query||{});
     const exists=await prisma.$queryRaw`SELECT p."id",p."name" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "Store" s ON s."id"=sp."storeId" WHERE p."companyId"=${company} AND s."companyId"=${company} AND p."id"=${req.params.productId} AND sp."storeId"=${q.storeId} LIMIT 1`;if(!exists[0])return res.status(404).json({error:"Δεν βρέθηκε το προϊόν στο συγκεκριμένο κατάστημα."});
-    const from=q.from?new Date(`${q.from}T00:00:00`):new Date(Date.now()-365*86400000),to=q.to?new Date(`${q.to}T23:59:59.999`):new Date();if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
+    const from=q.from?greeceRangeDate(q.from):new Date(Date.now()-365*86400000),to=q.to?greeceRangeDate(q.to,true):new Date();if(!Number.isFinite(from.getTime())||!Number.isFinite(to.getTime())||from>to)return res.status(400).json({error:"Μη έγκυρο διάστημα ημερομηνιών."});
     const rows=await prisma.$queryRaw`SELECT l."id",o."id" AS "orderId",o."status",o."invoiceNumber",o."createdAt",o."invoicedAt",COALESCE(sup."name",'Χωρίς προμηθευτή') AS "supplierName",l."quantity",l."unitCost",l."initialUnitCost",l."discount1",l."discount2",l."discount3",l."exciseTotal",l."vatRate",l."netAmount",l."vatAmount",l."grossAmount" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" LEFT JOIN "Supplier" sup ON sup."id"=o."supplierId" WHERE o."companyId"=${company} AND o."storeId"=${q.storeId} AND l."productId"=${req.params.productId} AND o."createdAt">=${from} AND o."createdAt"<=${to} ORDER BY o."createdAt" DESC LIMIT 1000`;
     res.json({product:exists[0],from,to,purchases:rows.map(r=>({...r,quantity:Number(r.quantity||0),unitCost:Number(r.unitCost||0),initialUnitCost:Number(r.initialUnitCost||0),discount1:Number(r.discount1||0),discount2:Number(r.discount2||0),discount3:Number(r.discount3||0),exciseTotal:Number(r.exciseTotal||0),vatRate:Number(r.vatRate||0),netAmount:Number(r.netAmount||0),vatAmount:Number(r.vatAmount||0),grossAmount:Number(r.grossAmount||0)}))});
   }catch(error){next(error)}

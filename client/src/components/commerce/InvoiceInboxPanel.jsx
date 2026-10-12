@@ -5,7 +5,7 @@ import "./invoice-inbox.css";
 
 
 const labels={RECEIVED:"Αρχειοθετήθηκε",IN_REVIEW:"Σε έλεγχο",PROCESSED:"Ελεγμένο"};
-const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
+const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"—";
 const dayKey=value=>{if(!value)return "Χωρίς ημερομηνία";const d=new Date(value);return Number.isNaN(d.getTime())?"Χωρίς ημερομηνία":d.toLocaleDateString("el-GR",{...({year:"numeric",month:"2-digit",day:"2-digit"}),timeZone:"Europe/Athens"})};
 const isoDay=value=>{if(!value)return "";const d=new Date(value);return Number.isNaN(d.getTime())?"":greeceDateInput(d)};
 

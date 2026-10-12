@@ -2,7 +2,7 @@ import React,{useEffect,useState} from "react";
 import {Clock3,LogIn,LogOut,RefreshCw} from "lucide-react";
 import "./store-attendance.css";
 
-const dateTime=value=>value?new Date(value).toLocaleString("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens"}):"—";
+const dateTime=value=>value?new Date(value).toLocaleString("el-GR",{...({dateStyle:"short",timeStyle:"short"}),timeZone:"Europe/Athens",hour12:false}):"—";
 
 export default function StoreAttendancePanel({api,employee}){
   const [data,setData]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");

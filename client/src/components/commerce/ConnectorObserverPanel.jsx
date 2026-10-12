@@ -2,7 +2,7 @@ import React,{useCallback,useEffect,useState} from "react";
 import {Activity,Eye,KeyRound,RefreshCw,ShieldCheck} from "lucide-react";
 import "./connector-observer.css";
 
-const date=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"}):"—";
+const date=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"—";
 const eventType=event=>event.messageType==="CAPDRIVER_COMMAND_OBSERVED"?"Αρχείο εντολής προς CapDriver":event.messageType==="CP1253_FILE"?"Παλαιό μη ταξινομημένο συμβάν":event.messageType||"—";
 const eventStatus=event=>event.messageType==="CAPDRIVER_COMMAND_OBSERVED"?"ΠΑΡΑΤΗΡΗΘΗΚΕ":event.messageType==="CP1253_FILE"?"ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟ":event.success?"ΤΕΧΝΙΚΑ ΟΚ":event.errorText||"ERROR";
 

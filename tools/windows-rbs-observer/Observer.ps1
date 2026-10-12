@@ -11,7 +11,7 @@ $DuplicateWindowSeconds=5
 $RecentObservations=@{}
 
 function Write-SafeLog([string]$Message){
-  $line="{0:u} {1}" -f (Get-Date),$Message
+  $line="{0:yyyy-MM-dd HH:mm:ss} Europe/Athens {1}" -f ([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTimeOffset]::UtcNow,"GTB Standard Time")),$Message
   Add-Content -LiteralPath $LogPath -Value $line -Encoding UTF8
   $lines=Get-Content -LiteralPath $LogPath -ErrorAction SilentlyContinue
   if($lines.Count -gt 1000){$lines[-500..-1]|Set-Content -LiteralPath $LogPath -Encoding UTF8}

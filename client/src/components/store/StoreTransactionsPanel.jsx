@@ -5,7 +5,7 @@ import {ChevronDown,CreditCard,RefreshCw,ReceiptText,ShoppingCart,Truck,WalletCa
 import "./store-transactions.css";
 
 const money=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
-const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—";
+const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false,day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—";
 const label=type=>type==="CUSTOMER_RECEIPT_CASH"?"Είσπραξη οφειλής μετρητών":type==="CUSTOMER_RECEIPT_CARD"?"Είσπραξη οφειλής κάρτας":type==="SALE_CASH"?"Πώληση μετρητών":type==="SALE_CARD"?"Πώληση κάρτας":type==="SALE_IRIS"?"Πώληση IRIS":type==="SUPPLIER_PAYMENT"?"Πληρωμή προμηθευτή":type==="OTHER_EXPENSE"?"Λοιπό έξοδο":type==="TRANSFER_AMOUNT"?"Μεταφορά προς ταμείο":type==="TRANSFER_OUT"?"Μετρητά προς Ιδιοκτήτη":String(type||"Κίνηση");
 const icon=type=>type==="CUSTOMER_RECEIPT_CARD"?CreditCard:type==="SALE_CASH"?ShoppingCart:type==="SALE_CARD"||type==="SALE_IRIS"?CreditCard:type==="SUPPLIER_PAYMENT"?Truck:ReceiptText;
 const sessionIdOf=row=>row.sessionId||row.cashShiftSessionId||row.shiftSessionId||null;
