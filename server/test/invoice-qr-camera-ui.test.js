@@ -79,7 +79,7 @@ test("scanner in both payment forms reads exact URL once without camera or payme
       const button=text=>[...document.querySelectorAll("button")].find(x=>x.textContent.includes(text));
       await React.act(async()=>button("Σάρωση QR με scanner").click());
       const input=document.querySelector('[aria-label="QR / σύνδεσμος τιμολογίου"]');assert.equal(document.activeElement,input);
-      const url="https://einvoice.impact.gr/v/EL123456789-document-auth-token";
+      const url="https://einvoice.impact.gr/p/EL123456789/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
       await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,"value").set.call(input,url);input.dispatchEvent(new dom.window.Event("input",{bubbles:true}));});
       let bubbled=0;const listener=()=>bubbled++;document.addEventListener("keydown",listener);
       await React.act(async()=>{for(let i=0;i<2;i++){const event=new dom.window.KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true});input.dispatchEvent(event);assert.equal(event.defaultPrevented,true)}});
@@ -96,9 +96,51 @@ test("scanner rejects unsafe response, retries and discards closed or previous-s
    let resolve,calls=0;const reads=[];
    const api=async()=>{calls++;return new Promise(done=>resolve=done)};
    const render=id=>React.act(async()=>root.render(React.createElement(Scanner,{api,store:{id,name:"LAB"},onRead:x=>reads.push(x),onClose:()=>root.render(null)})));
-   const scan=async()=>React.act(async()=>{const input=document.querySelector("input");Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,"value").set.call(input,"https://provider");input.dispatchEvent(new dom.window.Event("input",{bubbles:true}));input.dispatchEvent(new dom.window.KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));});
+   const scan=async()=>React.act(async()=>{const input=document.querySelector("input");Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,"value").set.call(input,"https://einvoice.impact.gr/p/EL123456789/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");input.dispatchEvent(new dom.window.Event("input",{bubbles:true}));input.dispatchEvent(new dom.window.KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));});
    await render("own");await scan();await React.act(async()=>resolve({header:{},dataUrl:"data:text/html;base64,AA=="}));assert.match(document.querySelector('[role="alert"]').textContent,/ασφαλές PDF/);assert.equal(reads.length,0);
    await scan();const old=resolve;await render("other");await React.act(async()=>old(fixture));assert.equal(reads.length,0);assert.equal(document.querySelector("input").value,"");
    await scan();await React.act(async()=>document.querySelector('[aria-label="Κλείσιμο scanner"]').click());await React.act(async()=>resolve(fixture));assert.equal(reads.length,0);assert.equal(calls,3);
  });
+});
+
+
+test("scanner preserves native rapid input through rerenders, Greek keys and Tab suffix",async()=>{
+ const Scanner=await component("InvoiceQrScanner");
+ await environment(async({React,root,dom})=>{
+  const calls=[];const api=async(path,options)=>{calls.push(JSON.parse(options.body));return fixture};
+  const render=()=>React.act(async()=>root.render(React.createElement(Scanner,{api,store:{id:"own",name:"LAB"},onRead:()=>{},onClose:()=>{}})));
+  await render();const input=document.querySelector("input");assert.equal(input.dataset.keyboard,"off");
+  // The browser may deliver native input before a React render observes it.
+  const setter=Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,"value").set;
+  setter.call(input,"https://einvoice.impact.gr/p/EL123456789/");await render();assert.equal(input.value,"https://einvoice.impact.gr/p/EL123456789/");
+  const greek={A:"Α",B:"Β",C:"Ψ",D:"Δ",E:"Ε",F:"Φ"};
+  const token="ABCDEF".repeat(6)+"ABCD";
+  await React.act(async()=>{for(const char of token){const event=new dom.window.KeyboardEvent("keydown",{key:greek[char],code:"Key"+char,bubbles:true,cancelable:true});input.dispatchEvent(event);assert.equal(event.defaultPrevented,true)}});
+  await React.act(async()=>{setter.call(input,input.value+"/"+"B".repeat(32));input.dispatchEvent(new dom.window.Event("input",{bubbles:true}));});
+  await React.act(async()=>{const event=new dom.window.KeyboardEvent("keydown",{key:"Tab",bubbles:true,cancelable:true});input.dispatchEvent(event);assert.equal(event.defaultPrevented,true)});
+  assert.equal(calls.length,1);assert.equal(calls[0].url,"https://einvoice.impact.gr/p/EL123456789/"+token+"/"+"B".repeat(32));
+ });
+});
+
+test("numeric/truncated scanner input makes no request and explicit clear allows exact pasted URL",async()=>{
+ const Scanner=await component("InvoiceQrScanner");
+ await environment(async({React,root,dom})=>{
+  const calls=[];const api=async(path,options)=>{calls.push(JSON.parse(options.body));return fixture};
+  await React.act(async()=>root.render(React.createElement(Scanner,{api,store:{id:"own",name:"LAB"},onRead:()=>{},onClose:()=>{}})));
+  const input=document.querySelector("input"),setter=Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,"value").set;
+  const enter=()=>input.dispatchEvent(new dom.window.KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));
+  for(const value of ["6225119","https://einvoice.impact.gr/p/EL123456789/ABCD"]){await React.act(async()=>{setter.call(input,value);input.dispatchEvent(new dom.window.Event("input",{bubbles:true}));enter()});assert.equal(calls.length,0);assert.ok(document.querySelector('[role="alert"]'));assert.equal(input.value,value);}
+  await React.act(async()=>[...document.querySelectorAll("button")].find(x=>x.textContent.includes("Καθαρισμός")).click());assert.equal(input.value,"");assert.equal(document.activeElement,input);
+  const url="https://einvoice.impact.gr/p/EL123456789/"+"a".repeat(40)+"/"+"B".repeat(32);
+  await React.act(async()=>{setter.call(input,url);input.dispatchEvent(new dom.window.Event("input",{bubbles:true}));enter()});assert.equal(calls.length,1);assert.equal(calls[0].url,url);
+ });
+});
+
+
+test("Greek physical key recovery is scoped and preserves Latin, paste and modifier shortcuts",async()=>{
+ const {invoiceScannerAsciiKey:key,invoiceScannerInputError:error}=await import("../../client/src/lib/invoice-scanner-input.js");
+ assert.equal(key({key:"η",code:"KeyH"}),"h");assert.equal(key({key:"Ψ",code:"KeyC"}),"C");assert.equal(key({key:";",code:"KeyQ"}),"q");assert.equal(key({key:"Dead",code:"Semicolon",shiftKey:true}),":");
+ for(const e of [{key:"C",code:"KeyC"},{key:"/",code:"Slash"},{key:"ψ",code:"KeyC",ctrlKey:true},{key:"ψ",code:"KeyC",isComposing:true},{key:"ψ",code:"Unidentified"}])assert.equal(key(e),null);
+ assert.match(error("6225119"),/μόνο αριθμό/);assert.match(error("https://εινvoice.impact.gr/p/test"),/ελληνικούς/);assert.match(error("https://einvoice.impact.gr/p/EL123456789/"+"A".repeat(40)),/ελλιπής/);
+ assert.equal(error("https://einvoice.s1ecos.gr/p/EL123456789/"+"a".repeat(40)+"/"+"B".repeat(32)),"");assert.equal(error("https://einvoice.impact.gr/v/EL123456789-123-"+"A".repeat(40)+"-"+"B".repeat(32)),"");
 });
