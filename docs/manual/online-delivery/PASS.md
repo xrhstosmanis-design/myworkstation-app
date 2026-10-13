@@ -75,3 +75,7 @@
 - Η LAB λειτουργία είναι NON_FISCAL και δεν εκτελεί πραγματική φορολογική έκδοση ή πραγματική τραπεζική χρέωση.
 - Η σύνδεση efood/Pelican δεν πιστοποιείται από αυτό το Gate.
 - Παλιά ιστορικά FAIL/OPEN παραμένουν στα checkpoints για audit, αλλά έχουν αντικατασταθεί από το τελικό PASS και δεν αποτελούν ενεργή εργασία.
+
+## 13/10/2026 — DAILY five confirmed drinks: limited administrative verification
+
+Verified production revision28050078015cb22679c55ca5ce8537378f1613e1, PR2454, full PR/mainCI and guardeddeploy green. DAILY saved online preview for exact IDs DB0000221.40→1.40, DB0000211.50→1.50, DB0000021.65→1.65, DB0000261.65→1.65, DB0000171.50→1.50 with configured .10 surcharge. Publiconlinefalse and0/8753products online retained. NESCAFE2.25→2.35 control unchanged until dose confirmation. Native store price changes only3 StoreProduct overrides; independent complete seven-row comparison shows no Product/barcode/stock/cost/ID changes, one price-history append each. Open PlatformAdmin→DAILY Καταστήματα→OnlineStore, search exactSKU to inspect; do not enable or submit orders. This is administrative catalogue/price acceptance only; public checkout and room delivery legal fees not newly certified. Whole2054 OPEN for assigned POS layout and remaining exact product mappings. Screenshot CHECKPOINTS/EVIDENCE/daily-regulated-20261013/online-freddo.jpg; checkpoint CHECKPOINTS/CHANGES/2026-10-13-daily-regulated-prices.md. Prior ONL/PASS evidence retained, no replay.
