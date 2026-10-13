@@ -1,3 +1,4 @@
+import {invoiceNumberParts,sameInvoiceNumber,ensureInvoiceCommonDraftSchema,lockInvoiceStore} from "./invoice-common-draft.js";
 import crypto from "node:crypto";
 import {assertReusableInvoicePayment,invoiceToken} from "./invoice-payment-reuse.js";
 const fail=message=>Object.assign(new Error(message),{status:409,code:"MYDATA_POS_IDENTITY_CONFLICT"});
@@ -7,6 +8,7 @@ const day=value=>value?new Date(value).toISOString().slice(0,10):"";
 // This is a narrow exception to duplicate rejection, never a general duplicate bypass.
 export async function findMyDataPurchase(db,{companyId,storeId,supplierId,supplierTaxId,documentNumber,documentDate,totalGross,documentType="INVOICE"}){
   if(documentType!=="INVOICE"||!/^\d{4}-\d{2}-\d{2}$/.test(String(documentDate||""))||!Number.isFinite(Number(totalGross))||!(Number(totalGross)>0))return null;
+  const numberPart=invoiceNumberParts(documentNumber).number;
   const rows=await db.$queryRaw`SELECT m."id" AS "inboundId",m."inboxId",m."mark",m."series",m."documentNumber",m."issueDate",m."totalGross" AS "inboundTotal",m."rawPayload",i."attachmentId",
     d."id" AS "documentId",d."storeId" AS "documentStoreId",d."supplierId",d."documentType",d."documentNumber" AS "purchaseNumber",d."documentDate",d."totalGross",d."status",d."paymentTransactionId",d."settlementMode",d."purchaseOrderId",
     o."id" AS "orderId",o."status" AS "orderStatus",j."id" AS "jobId",j."resultJson"
@@ -15,14 +17,15 @@ export async function findMyDataPurchase(db,{companyId,storeId,supplierId,suppli
     LEFT JOIN "PurchaseDocument" d ON d."id"=COALESCE(m."rawPayload"->>'mydataDraftDocumentId',j."purchaseDocumentId") AND d."companyId"=m."companyId"
     LEFT JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."sourceDocumentId"=d."id" AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
     WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."issuerVat"=${supplierTaxId}
-      AND (regexp_replace(UPPER(m."documentNumber"),'[^A-ZΑ-Ω0-9]','','g')=${normalized(documentNumber)} OR regexp_replace(UPPER(CONCAT_WS(' ',NULLIF(m."series",''),m."documentNumber")),'[^A-ZΑ-Ω0-9]','','g')=${normalized(documentNumber)})
+      AND (${invoiceNumberParts(documentNumber).series}='' OR regexp_replace(UPPER(COALESCE(m."series",'')),'[^A-ZΑ-Ω0-9]','','g')=${invoiceNumberParts(documentNumber).series})
+      AND (regexp_replace(UPPER(m."documentNumber"),'[^A-ZΑ-Ω0-9]','','g')=${normalized(documentNumber)} OR regexp_replace(UPPER(CONCAT_WS(' ',NULLIF(m."series",''),m."documentNumber")),'[^A-ZΑ-Ω0-9]','','g')=${normalized(documentNumber)} OR COALESCE(NULLIF(LTRIM(m."documentNumber",'0'),''),'0')=${numberPart})
       ORDER BY m."fetchedAt" DESC LIMIT 2`;
   if(!rows.length)return null;
   if(rows.length!==1)throw fail("Περισσότερες από μία εγγραφές myDATA ταιριάζουν. Απαιτείται έλεγχος στο BackOffice.");
   const row=rows[0];
+  if(!sameInvoiceNumber(documentNumber,row.series,row.documentNumber))throw fail("Η σειρά του τιμολογίου δεν συμφωνεί με το myDATA. Απαιτείται έλεγχος πρωτοτύπου.");
   if(!row.documentId){if(row.rawPayload?.mydataDraftDocumentId||row.rawPayload?.mydataDraftOrderId)throw fail("Η συνδεδεμένη αγορά myDATA έχει διαγραφεί. Δεν δημιουργείται δεύτερη.");return null}
-  const references=[row.documentNumber,[row.series,row.documentNumber].filter(Boolean).join(" ")].map(normalized);
-  if(row.documentStoreId!==storeId||row.supplierId!==supplierId||row.documentType!=="INVOICE"||!references.includes(normalized(row.purchaseNumber))||day(row.issueDate)!==documentDate||day(row.documentDate)!==documentDate||!Number.isFinite(Number(row.inboundTotal))||!Number.isFinite(Number(row.totalGross))||Math.abs(Number(row.inboundTotal)-Number(totalGross))>.050001||Math.abs(Number(row.totalGross)-Number(totalGross))>.050001||!row.orderId||!row.jobId||!["DRAFT","APPROVED"].includes(row.status)||!["NEW","FINAL","INVOICED"].includes(row.orderStatus))throw fail("Τα στοιχεία της υπάρχουσας αγοράς myDATA δεν συμφωνούν. Ελέγξτε την αγορά πριν από την πληρωμή.");
+  if(row.documentStoreId!==storeId||row.supplierId!==supplierId||row.documentType!=="INVOICE"||!sameInvoiceNumber(row.purchaseNumber,row.series,row.documentNumber)||day(row.issueDate)!==documentDate||day(row.documentDate)!==documentDate||!Number.isFinite(Number(row.inboundTotal))||!Number.isFinite(Number(row.totalGross))||Math.abs(Number(row.inboundTotal)-Number(totalGross))>.050001||Math.abs(Number(row.totalGross)-Number(totalGross))>.050001||!row.orderId||!row.jobId||!["DRAFT","APPROVED"].includes(row.status)||!["NEW","FINAL","INVOICED"].includes(row.orderStatus))throw fail("Τα στοιχεία της υπάρχουσας αγοράς myDATA δεν συμφωνούν. Ελέγξτε την αγορά πριν από την πληρωμή.");
   const allocations=await db.$queryRaw`SELECT a."id" FROM "SupplierPaymentAllocation" a JOIN "SupplierPaymentSettlement" s ON s."id"=a."settlementId" AND s."companyId"=a."companyId" JOIN "StoreTransaction" t ON t."id"=s."transactionId" AND t."companyId"=s."companyId" WHERE a."companyId"=${companyId} AND a."purchaseDocumentId"=${row.documentId} AND s."status"<>'CANCELLED' AND t."reversedAt" IS NULL LIMIT 1`;
   if(allocations.length)throw fail("Υπάρχει ήδη κατανεμημένη πληρωμή για αυτή την αγορά. Χρησιμοποιήστε την υπάρχουσα πληρωμή ανοιχτών τιμολογίων.");
   return row;
@@ -30,7 +33,9 @@ export async function findMyDataPurchase(db,{companyId,storeId,supplierId,suppli
 
 // Payment is made by the existing POS payment route. This helper only links its receipt.
 export async function attachMyDataPosReceipt(prisma,identity,pages,payment,user){
+  await ensureInvoiceCommonDraftSchema(prisma);
   return prisma.$transaction(async tx=>{
+    await lockInvoiceStore(tx,identity.companyId,identity.storeId);
     const match=await findMyDataPurchase(tx,identity);if(!match)throw fail("Η αγορά myDATA άλλαξε πριν από τη σύνδεση. Η υπάρχουσα πληρωμή διατηρείται για έλεγχο.");
     const orders=await tx.$queryRaw`SELECT "status" FROM "PurchaseOrder" WHERE "id"=${match.orderId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId} FOR UPDATE`;
     const documents=await tx.$queryRaw`SELECT "status","paymentTransactionId","settlementMode","totalGross" FROM "PurchaseDocument" WHERE "id"=${match.documentId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId} FOR UPDATE`;

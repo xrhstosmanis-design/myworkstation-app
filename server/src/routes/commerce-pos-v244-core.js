@@ -1,3 +1,4 @@
+import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertNoUnresolvedInbound,reuseInboundDraftForPosJob,sameInvoiceNumber,invoiceNumberParts} from "../lib/invoice-common-draft.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {assertReusableInvoicePayment,findInvoicePayment} from "../lib/invoice-payment-reuse.js";
@@ -246,7 +247,11 @@ router.post("/ai-reader/jobs/:jobId/pos-draft",requireCompanyModule("AI_READER")
   try{
     const body=z.object({documentType:z.enum(["INVOICE","CREDIT_NOTE"]).default("INVOICE"),supplierId:z.string().min(1),documentNumber:z.string().trim().min(1).max(80),documentDate:z.coerce.date(),totalGross:z.coerce.number().positive().max(999999999),settlementMode:z.enum(["PAID","CREDIT"]),paymentTransactionId:z.string().trim().min(1).max(180).optional().nullable(),note:z.string().trim().max(500).optional().nullable()}).parse(req.body||{});
     if(body.documentType==="CREDIT_NOTE"&&(body.settlementMode!=="CREDIT"||body.paymentTransactionId))return res.status(409).json({error:"Πιστωτικό χωρίς κίνηση ταμείου: επιτρέπεται μόνο συμψηφισμός προμηθευτή."});
+    await ensureInvoiceCommonDraftSchema(prisma);
     const result=await prisma.$transaction(async tx=>{
+      const scopeJobs=await tx.$queryRaw`SELECT "storeId" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+      if(!scopeJobs[0])throw Object.assign(new Error("Δεν βρέθηκε η ανάγνωση."),{status:404});
+      await lockInvoiceStore(tx,req.user.companyId,scopeJobs[0].storeId);
       const jobs=await tx.$queryRaw`SELECT "id","storeId","purchaseDocumentId" FROM "AiReaderJob" WHERE "id"=${req.params.jobId} AND "companyId"=${req.user.companyId} LIMIT 1 FOR UPDATE`;
       const job=jobs[0];
       if(!job)throw Object.assign(new Error("Δεν βρέθηκε η ανάγνωση του τιμολογίου."),{status:404});
@@ -254,11 +259,14 @@ router.post("/ai-reader/jobs/:jobId/pos-draft",requireCompanyModule("AI_READER")
       if(job.purchaseDocumentId){const linked=await tx.$queryRaw`SELECT "documentType" FROM "PurchaseDocument" WHERE "id"=${job.purchaseDocumentId} AND "companyId"=${req.user.companyId} LIMIT 1`;if(linked[0]?.documentType!==body.documentType)throw Object.assign(new Error("Το υπάρχον πρόχειρο έχει διαφορετικό τύπο παραστατικού."),{status:409});return {documentId:job.purchaseDocumentId,reused:true};}
       const suppliers=await tx.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
       const supplier=suppliers[0];if(!supplier)throw Object.assign(new Error("Δεν βρέθηκε ο προμηθευτής."),{status:404});
+      await assertNoUnresolvedInbound(tx,{companyId:req.user.companyId,storeId:job.storeId,supplierTaxId:supplier.taxId,documentNumber:body.documentNumber,documentDate:body.documentDate,totalGross:body.totalGross});
       const payment=body.settlementMode==="PAID"?await findInvoicePayment(tx,{companyId:req.user.companyId,supplierId:body.supplierId,supplierTaxId:String(supplier.taxId||"").replace(/\D/g,""),documentNumber:body.documentNumber}):null;
       if(body.settlementMode==="PAID"){
         assertReusableInvoicePayment(payment,{companyId:req.user.companyId,storeId:job.storeId,supplierId:body.supplierId,supplierTaxId:String(supplier.taxId||"").replace(/\D/g,""),documentNumber:body.documentNumber,totalGross:body.totalGross});
         if(body.paymentTransactionId&&body.paymentTransactionId!==payment.id)throw Object.assign(new Error("Η πληρωμή δεν είναι η αρχική πληρωμή του τιμολογίου."),{status:409});
       }
+      const common=await reuseInboundDraftForPosJob(tx,{companyId:req.user.companyId,storeId:job.storeId,supplierId:body.supplierId,supplierTaxId:supplier.taxId,documentNumber:body.documentNumber,documentDate:body.documentDate,totalGross:body.totalGross,documentType:body.documentType},{jobId:job.id,paymentTransactionId:payment?.id||null});
+      if(common)return common;
       const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
       if(duplicate)throw Object.assign(new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`),{status:409});
       const documentId=id(),orderId=id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
@@ -328,12 +336,19 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
     const invoicePaymentKey=`${req.user.companyId}:${invoiceSupplierKey}:${invoiceReference}`;
     const invoicePaymentChecksum=crypto.createHash("sha256").update(`supplier-invoice:${invoicePaymentKey}`).digest("hex");
 
+    await ensureInvoiceCommonDraftSchema(prisma);
     const result=await prisma.$transaction(async tx=>{
+      await lockInvoiceStore(tx,req.user.companyId,job.storeId);
       stage="lock-ai-job";
       const locked=await tx.$queryRaw`SELECT "status","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "id"=${job.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
       const lockedReplacement=body.replaceExistingDraft===true&&locked[0]?.purchaseDocumentId&&locked[0]?.resultJson?.posReprocess?.mode==="RECONCILIATION_REREAD";
       if(!locked[0]||(!lockedReplacement&&(((locked[0].purchaseDocumentId)&&!["POS_DRAFT_READY","POS_PROCESSING","POS_FAILED","AI_COMPLETE"].includes(locked[0].status))||["AWAITING_APPROVAL","CONFIRMED"].includes(locked[0].status)))){const error=new Error("Το τιμολόγιο έχει ήδη σταλεί στις Παραγγελίες & Αγορές.");error.status=409;throw error;}
       const skeletonDocumentId=locked[0].purchaseDocumentId||null;
+      if(locked[0].resultJson?.commonDraft?.completed){
+        const canonical=await tx.$queryRaw`SELECT "documentNumber","documentDate","totalGross","documentType","supplierId","status" FROM "PurchaseDocument" WHERE "id"=${skeletonDocumentId} AND "companyId"=${req.user.companyId} AND "storeId"=${job.storeId} FOR UPDATE`;
+        const d=canonical[0],parts=invoiceNumberParts(d?.documentNumber);
+        if(!d||d.status!=="DRAFT"||d.documentType!==body.documentType||d.supplierId!==body.supplierId||!sameInvoiceNumber(body.documentNumber,parts.series,parts.number)||Math.abs(Number(d.totalGross)-body.totalGross)>.050001||(body.documentDate&&new Date(d.documentDate).toISOString().slice(0,10)!==body.documentDate.toISOString().slice(0,10)))throw Object.assign(new Error("Η παλιά ανάγνωση δεν συμφωνεί με το κοινό πρόχειρο POS/myDATA. Συνέχισε τον έλεγχο στο υπάρχον πρόχειρο χωρίς νέα πληρωμή."),{status:409,code:"INVOICE_COMMON_DRAFT_STALE_SOURCE"});
+      }
       if(body.documentType==="INVOICE")await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
       const pageJobIds=[...new Set(body.additionalPageJobIds)].filter(pageJobId=>pageJobId!==job.id);
       const additionalPageJobs=[];

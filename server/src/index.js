@@ -1,3 +1,5 @@
+import invoiceCommonDraftRoutes from "./routes/invoice-common-draft.js";
+import {invoiceAliasGuard} from "./middleware/invoice-common-draft-alias.js";
 import chatMobileRoutes from "./routes/chat-mobile.js";
 import {registerChatPwa} from "./chat-pwa.mjs";
 import storeBakingRoutes from "./routes/store-baking.js";
@@ -211,8 +213,9 @@ app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPay
 app.use("/api/owner-payments",auth,requireCompanyModule("CASH_CONTROL"),ownerPaymentsRoutes);
 app.use("/api/owner-shifts",auth,requireCompanyModule("CASH_CONTROL"),ownerShiftsRoutes);
 app.use("/api/owner-assistant",ownerAssistantRoutes);
-app.use("/api/purchase-orders",auth,posPurchaseOrderAccess);
-app.use("/api/commerce/purchase-orders",auth,posPurchaseOrderAccess);
+app.use("/api/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
+app.use("/api/commerce/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
+app.use("/api/commerce",auth,invoiceCommonDraftRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderUnresolvedGuardRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderPostingGuardRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderActionRoutes);

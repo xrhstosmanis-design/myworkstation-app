@@ -40,6 +40,9 @@ test("one original, job and editable draft are reused; deletion and tenant misma
   const writes=[];
   const tx={async $queryRaw(strings,...values){
     const sql=strings.join("?");
+    if(sql.includes("pg_advisory_xact_lock"))return [];
+    if(sql.includes('FROM "MyDataInboundDocument"'))return [{...row,companyId:"company",storeId:"store",inboxId:"inbox",attachmentId:attached,mimeType:"application/pdf",jobDocumentId:job?.purchaseDocumentId||null,rawPayload:{}}];
+    if(sql.includes('AS "orderId"'))return order&&job?.purchaseDocumentId?[{orderId:order.id,documentId:job.purchaseDocumentId,status:"NEW",documentStatus:"DRAFT",lineCount:0,documentNumber:"A 42",documentDate:row.issueDate,totalGross:row.totalGross}]:[];
     if(sql.includes('FROM "DocumentInbox"')){assert.deepEqual(values,["inbox","company","store"]);return exists?[{id:"inbox",status:"IN_REVIEW",attachmentId:attached}]:[]}
     if(sql.includes('FROM "AiReaderJob"'))return job?[job]:[];
     if(sql.includes('FROM "Supplier"'))return [{id:"supplier"}];
@@ -53,7 +56,7 @@ test("one original, job and editable draft are reused; deletion and tenant misma
     if(sql.startsWith('UPDATE "AiReaderJob"'))job.purchaseDocumentId=values[0];
     if(sql.startsWith('UPDATE "DocumentInbox"')&&values[0]!=="myDATA • MARK "+row.mark+" • Πρόχειρο στις Παραγγελίες & Αγορές — Ανάγνωση από βοηθό")attached=values[0];
   }};
-  const prisma={async $queryRaw(strings,...values){assert.deepEqual(values,["company","store","inbox"]);return exists?[{...row,attachmentId:attached}]:[]},async $transaction(fn){return fn(tx)}};
+  const prisma={async $executeRawUnsafe(sql){assert.match(sql,/^CREATE /)},async $queryRaw(strings,...values){assert.deepEqual(values,["company","store","inbox"]);return exists?[{...row,attachmentId:attached}]:[]},async $transaction(fn){return fn(tx)}};
   const download=async()=>{downloads++;return {bytes:Buffer.from("%PDF-fixture"),checksum:"checksum",filename:"fixture.pdf",text:"source",pageCount:1}};
   const run=()=>acquireOriginal(prisma,"company","store","inbox","owner",true,download);
   // First lock is for attachment acquisition, then the draft helper reads the updated attachment.
@@ -74,7 +77,7 @@ test("provider timeout is actionable and never starts an attachment transaction"
   const response=async()=>({ok:true,headers:new Headers({"content-type":"application/pdf"}),body:{async *[Symbol.asyncIterator](){timeout()}}});
   await assert.rejects(fetchOriginalPdf(row,response),e=>e.status===504);
   let transactions=0;
-  const prisma={$queryRaw:async()=>[row],$transaction:async()=>{transactions++;throw Error("unexpected write")}};
+  const prisma={$executeRawUnsafe:async sql=>assert.match(sql,/^CREATE /),$queryRaw:async()=>[row],$transaction:async()=>{transactions++;throw Error("unexpected write")}};
   await assert.rejects(acquireOriginal(prisma,"company","store","inbox","owner",true,r=>fetchOriginalPdf(r,timeout)),e=>e.status===504);
   assert.equal(transactions,0);
   const mismatch=Object.assign(new Error("identity mismatch"),{status:409});

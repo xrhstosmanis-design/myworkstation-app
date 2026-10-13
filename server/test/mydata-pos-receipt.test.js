@@ -7,7 +7,8 @@ const page={filename:"photo.jpg",mimeType:"image/jpeg",dataUrl:"data:image/jpeg;
 const payment={id:"payment",companyId:"company",storeId:"store",supplierId:"supplier",supplierTaxId:"099999999",type:"SUPPLIER_PAYMENT",amount:12.4,invoiceDocumentNumber:"A 42",reversedAt:null};
 function fixture(overrides={}){
   const row={...base,...overrides},writes=[],attachments=new Map();let resultJson=structuredClone(row.resultJson);
-  const db={async $queryRaw(strings,...values){const sql=strings.join("?");
+  const db={async $executeRawUnsafe(sql){assert.match(sql,/^CREATE /)},async $queryRaw(strings,...values){const sql=strings.join("?");
+    if(sql.includes("pg_advisory_xact_lock"))return [];
     if(sql.includes('FROM "MyDataInboundDocument"')){assert.equal(values[0],"company");assert.equal(values[1],"store");assert.equal(values[2],"099999999");return [row]}
     if(sql.includes('FROM "SupplierPaymentAllocation"'))return [];
     if(sql.includes('FROM "PurchaseOrder"'))return [{status:row.orderStatus}];
@@ -58,7 +59,7 @@ test("real POS precheck accepts only first myDATA arrival and blocks second befo
   const handlerSource=source.slice(start,end).slice(source.slice(start,end).indexOf('async(req,res,next)=>'),-3).trim();
   let arrivals=false,paymentLookups=0,result,status=200,failure;
   const prisma={store:{findFirst:async()=>({id:"store"})},$queryRaw:async()=>[{id:"supplier",taxId:"099999999"}]};
-  const deps={prisma,findMyDataPurchase:async()=>({...base,resultJson:arrivals?{mydataPosReceipt:{receivedAt:"2026-09-30"}}:{}}),findInvoicePayment:async()=>{paymentLookups++;return null},assertReusableInvoicePayment:()=>{},cleanTaxId:value=>value,normalizeDocumentNumber:value=>String(value),norm:value=>String(value),normalizeIntakeDate:value=>value,intakeNumber:Number,ensureV244IntakeSchema:async()=>{},ensureFastHandoffSchema:async()=>{},crypto:{}};
+  const deps={prisma,ensureInvoiceCommonDraftSchema:async()=>{},assertNoUnresolvedInbound:async()=>{},findMyDataPurchase:async()=>({...base,resultJson:arrivals?{mydataPosReceipt:{receivedAt:"2026-09-30"}}:{}}),findInvoicePayment:async()=>{paymentLookups++;return null},assertReusableInvoicePayment:()=>{},cleanTaxId:value=>value,normalizeDocumentNumber:value=>String(value),norm:value=>String(value),normalizeIntakeDate:value=>value,intakeNumber:Number,ensureV244IntakeSchema:async()=>{},ensureFastHandoffSchema:async()=>{},crypto:{}};
   const handler=new Function(...Object.keys(deps),`return ${handlerSource}`)(...Object.values(deps));
   const req={body:{...identity,dataUrl:""},user:{companyId:"company",role:"OWNER"}},res={json:value=>{result=value;return res},status:value=>{status=value;return res}};
   await handler(req,res,error=>{failure=error});assert.ifError(failure);assert.equal(status,200);assert.equal(result.canonicalDocumentNumber,"A 42");assert.equal(paymentLookups,1);

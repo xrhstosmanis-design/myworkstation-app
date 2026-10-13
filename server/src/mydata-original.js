@@ -1,3 +1,4 @@
+import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,attachInboundToExistingDraft} from "./lib/invoice-common-draft.js";
 import {assertCustomerDemoOutboundAllowed} from "./customer-demo-runtime.js";
 import crypto from "node:crypto";
 
@@ -57,12 +58,14 @@ async function downloadOriginalPdf(row,fetcher,reader,signal){
 // Network work precedes the row lock; competing downloads can only attach once.
 export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,createAiJob,download=fetchOriginalPdf){
   assertCustomerDemoOutboundAllowed({companyId,storeId});
+  await ensureInvoiceCommonDraftSchema(prisma);
   const rows=await prisma.$queryRaw`SELECT m.*,i."attachmentId",i."status" FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId" WHERE m."companyId"=${companyId} AND m."storeId"=${storeId} AND m."inboxId"=${inboxId} LIMIT 1`;
   const row=rows[0];if(!row)throw error("Δεν βρέθηκε το παραστατικό.",404);
   if(row.attachmentId)return prisma.$transaction(tx=>attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,createAiJob));
   if(row.status!=="RECEIVED")throw error("Το παραστατικό έχει ήδη μεταφερθεί για έλεγχο.");
   const pdf=await download(row);
   return prisma.$transaction(async tx=>{
+    await lockInvoiceStore(tx,companyId,storeId);
     const current=await tx.$queryRaw`SELECT "id","attachmentId","status" FROM "DocumentInbox" WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1 FOR UPDATE`;
     if(!current[0])throw error("Δεν βρέθηκε το παραστατικό.",404);
     if(current[0].attachmentId)return attachReviewDraft(tx,{...row,attachmentId:current[0].attachmentId},companyId,storeId,inboxId,userId,createAiJob);
@@ -82,10 +85,13 @@ export async function acquireOriginal(prisma,companyId,storeId,inboxId,userId,cr
 // Only draft shells are created here. Printed rows are proposed and confirmed inside the assistant.
 async function attachReviewDraft(tx,row,companyId,storeId,inboxId,userId,enabled){
   if(!enabled)return {reused:true,downloaded:false};
+  await lockInvoiceStore(tx,companyId,storeId);
   const inbox=await tx.$queryRaw`SELECT "id","attachmentId","status" FROM "DocumentInbox" WHERE "id"=${inboxId} AND "companyId"=${companyId} AND "storeId"=${storeId} LIMIT 1 FOR UPDATE`;
   if(!inbox[0]?.attachmentId)throw error("Δεν βρέθηκε το πρωτότυπο για το πρόχειρο.",404);
   const jobs=await tx.$queryRaw`SELECT "id","purchaseDocumentId","resultJson" FROM "AiReaderJob" WHERE "attachmentId"=${inbox[0].attachmentId} AND "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt","id" LIMIT 1 FOR UPDATE`;
   const job=jobs[0];
+  const common=await attachInboundToExistingDraft(tx,{companyId,storeId,inboxId},userId);
+  if(common)return common;
   if(job?.purchaseDocumentId||row.rawPayload?.mydataDraftOrderId){
     const orders=await tx.$queryRaw`SELECT o."id",o."status" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId" WHERE d."id"=${job?.purchaseDocumentId||row.rawPayload.mydataDraftDocumentId} AND o."companyId"=${companyId} AND o."storeId"=${storeId} LIMIT 1`;
     if(!orders[0])throw error("Το συνδεδεμένο πρόχειρο έχει διαγραφεί. Δεν δημιουργείται δεύτερο.");
