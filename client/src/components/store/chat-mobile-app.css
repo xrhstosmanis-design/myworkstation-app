@@ -22,6 +22,7 @@
 .chat-mobile-app .store-chat-push-help p{margin:8px 0}
 .chat-mobile-app .store-chat-push-help small{display:block;overflow-wrap:anywhere}
 .store-chat-search-toggle{display:none!important}
+.store-chat-search-refresh{display:none}
 .chat-install-success{padding:10px;border-radius:8px;background:#e8f7f4;color:#0f766e}
 @media(max-width:700px){
  .chat-mobile-app .store-chat-toolbar{gap:6px;padding:8px 10px}
@@ -30,6 +31,7 @@
  .chat-mobile-app .store-chat-toolbar>.store-chat-refresh{display:none}
  .chat-mobile-app .store-chat-search{display:none}
  .chat-mobile-app .store-chat-search.is-open{display:grid}
+ .chat-mobile-app .store-chat-search.is-open>.store-chat-search-refresh{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px}
  .chat-mobile-app .store-chat-compose{padding-bottom:max(8px,env(safe-area-inset-bottom));grid-template-columns:minmax(0,1fr) 108px}
  .chat-mobile-app .store-chat-compose>button,.chat-mobile-app .store-chat-compose>input,.chat-mobile-app .store-chat-compose>select{min-height:44px;font-size:16px}
  .chat-mobile-app .store-chat-compose>.store-chat-file{min-width:0;font-size:12px;line-height:1.2}
