@@ -4,7 +4,7 @@ import {salesReportCalendar} from "./sales-report-calendar.js";
 import {cashToolArguments} from "./assistant-cash-tools.js";
 import {stockToolArguments,ownerStockTool} from "./owner-stock-tools.js";
 import {salesStoresArguments,salesStoresTool} from "./assistant-sales-stores.js";
-import {consumptionArguments,consumptionTool} from "./assistant-consumption.js";
+import {consumptionArguments,consumptionTool,dailyConsumptionRequest} from "./assistant-consumption.js";
 import {ASSISTANT_OUTPUT_TOKENS,ASSISTANT_RECOVERY_TOKENS,mayRetryAssistantResponse} from "./assistant-answer-response.js";
 
 const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -44,7 +44,14 @@ export function productSalesEvidence(report,args,scope){
 export const assistantProductTools=[ownerSalesTool,ownerStockTool];
 
 // Shared dispatcher. The old export remains compatible with existing Owner clients.
-export async function runOwnerAssistant({prompt,question="",requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,cashTool,tools=[cashTool,ownerSalesTool]}){
+export async function runOwnerAssistant({prompt,question="",requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,cashTool,tools=[cashTool,ownerSalesTool],now=new Date()}){
+  const daily=tools.some(t=>t?.name===consumptionTool.name)&&dailyConsumptionRequest(question,{now});
+  if(daily){
+    if(daily.clarification)fail(daily.clarification,422);
+    const reads=[{name:consumptionTool.name,args:daily.args}];
+    const evidence=[await readConsumption(daily.args)];
+    return {response:{ok:true},raw:{status:"completed",output_text:JSON.stringify({answer:"Η λίστα ιδιοκατανάλωσης προέρχεται από τα καταχωρημένα συμβάντα του επιλεγμένου καταστήματος.",highlights:[],limitations:""})},evidence,reads};
+  }
   // A missing sales period is a dialogue step, not permission for the model to
   // choose today's dates. Callers authorize the current scope before/after it.
   const clarification=assistantSalesPeriodClarification(question);

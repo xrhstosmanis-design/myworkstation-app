@@ -59,7 +59,7 @@ test("actual Platform Ask accepts an explicit pair and dispatches shared product
 test("actual Ask rejects an empty region before provider and report reads",async()=>{const f=setup();const out=await f.invoke({question:"νερά σήμερα",snapshot});assert.equal(out.error?.code,"PLATFORM_ASSISTANT_SCOPE_REQUIRED");assert.equal(f.calls.length,0);assert.equal(f.reads.length,0)});
 test("actual Platform Ask routes consumption to its selected source and never reports cash-only absence",async()=>{
  const args={kind:"SELF_CONSUMPTION",from:"2026-10-10",to:"2026-10-10",product:null},f=setup(undefined,i=>i===1?{output_text:undefined,output:[{type:"function_call",name:"consumption_details",call_id:"consume",arguments:JSON.stringify(args)}]}:{});
- const out=await f.invoke({question:"Λίστα ιδιοκατανάλωσης στις 10/10/2026",selection:{companyId:"c",storeId:"s"},snapshot});assert.equal(out.error,undefined);assert.deepEqual(f.reads,["SELF_CONSUMPTION"]);assert.equal(out.result.evidence[0].scope,"PLATFORM_SELECTED_STORE");assert.deepEqual(JSON.parse(f.calls[0].options.body).tools.map(t=>t.name),["consumption_details"]);assert.match(out.result.sources[0],/Συμβάντα POS/);
+ const out=await f.invoke({question:"Λίστα ιδιοκατανάλωσης από 10/10/2026 έως 10/10/2026",selection:{companyId:"c",storeId:"s"},snapshot});assert.equal(out.error,undefined);assert.deepEqual(f.reads,["SELF_CONSUMPTION"]);assert.equal(out.result.evidence[0].scope,"PLATFORM_SELECTED_STORE");assert.deepEqual(JSON.parse(f.calls[0].options.body).tools.map(t=>t.name),["consumption_details"]);assert.match(out.result.sources[0],/Συμβάντα POS/);
  const noRead=setup(),pending=await noRead.invoke({question:"βγάλε λίστα ιδιοκατανάλωσης",selection:{companyId:"c",storeId:"s"},snapshot});assert.equal(pending.error,undefined);assert.match(pending.result.answer,/Δεν έγινε ανάγνωση/);assert.deepEqual(pending.result.sources,[]);assert.equal(noRead.reads.length,0);
 });
 
@@ -79,4 +79,13 @@ test('actual Platform date-only category continuation reads selected canonical s
 test('actual dated beer question resolves a model names call through the real selected category reader',async()=>{
  const args={mode:'names',names:['μπύρας'],from:'2026-10-12',to:'2026-10-12'},f=setup(undefined,i=>i===1?{output_text:undefined,output:[{type:'function_call',name:'sales_by_store',call_id:'beer',arguments:JSON.stringify(args)}]}:{});
  const out=await f.invoke({question:'πωλησεις μπυρας 12/10/26',selection:{companyId:'c',storeId:'s'},snapshot:null});assert.equal(out.error,undefined);assert.equal(out.result.evidence[0].mode,'category');assert.equal(out.result.evidence[0].from,'2026-10-12');assert.equal(out.result.evidence[0].rows[0].name,'ΑΛΦΑ330');assert.equal(out.result.evidence[0].rows[0].salesQuantity,4);assert.equal(out.result.evidence[0].stores[0].storeId,'s');assert.deepEqual(f.reads,[null]);assert.deepEqual(JSON.parse(f.calls[0].options.body).tools.map(t=>t.name),['sales_by_product','sales_by_store']);
+});
+
+
+test("actual Platform Ask daily consumption list uses the supplied day without provider calls",async()=>{
+ for(const inputChannel of ["text","voice"]){
+  const f=setup(undefined,{output:[{type:"function_call",name:"consumption_details",call_id:"bad",arguments:"{invalid}"}]}),out=await f.invoke({question:"Βγάλε μου λίστα ιδιοκατανάλωσης ΓΙΑ 13/10",selection:{companyId:"c",storeId:"s"},snapshot:null,inputChannel});
+  assert.equal(out.error,undefined);assert.equal(f.calls.length,0);assert.deepEqual(f.reads,["SELF_CONSUMPTION"]);assert.equal(out.result.evidence[0].scope,"PLATFORM_SELECTED_STORE");assert.equal(out.result.evidence[0].rows[0].referenceValue,.5);assert.match(out.result.sources[0],/Συμβάντα POS/);assert.equal(out.result.readOnly,true);
+ }
+ const f=setup(),out=await f.invoke({question:"λίστα ιδιοκατανάλωσης 31/2",selection:{companyId:"c",storeId:"s"},snapshot:null});assert.equal(out.error.status,422);assert.match(out.error.message,/έγκυρη ημερομηνία/);assert.equal(f.reads.length,0);assert.equal(f.calls.length,0);
 });

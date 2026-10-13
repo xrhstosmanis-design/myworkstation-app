@@ -9,6 +9,20 @@ export const consumptionTool={type:"function",name:"consumption_details",strict:
 export const consumptionInstructions="Για ιδιοκατανάλωση/ίδια ή προσωπική κατανάλωση και καταστροφή προϊόντων χρησιμοποίησε μόνο consumption_details, ποτέ cash_details ή BUSINESS_SNAPSHOT για να συμπεράνεις απουσία εγγραφών. Αν λείπει περίοδος, ζήτησε ημερομηνίες· σήμερα/χθες με ώρα Ελλάδας. Χωρίς έτος χρησιμοποίησε το τρέχον έτος. Μόνο το επιλεγμένο κατάστημα, όχι όλα τα καταστήματα. Η αξία αναφοράς δεν είναι πληρωμή, τζίρος ή κόστος αγοράς. Οι χειριστές δείχνουν καταχώριση, όχι προσωπική ευθύνη ή δικαιούχο κατανάλωσης. no_records σημαίνει μόνο ότι δεν βρέθηκαν καταχωρημένα συμβάντα στο συγκεκριμένο φίλτρο. source_limited σημαίνει ελλιπή/περιορισμένη πηγή, ποτέ μηδέν. Δεν αθροίζεις ποσότητες διαφορετικών ειδών χωρίς κοινή καταγεγραμμένη μονάδα. Για άλλες μη συνδεδεμένες ενότητες πες «Δεν υποστηρίζεται ακόμη αυτή η αναζήτηση από τον βοηθό», όχι «δεν υπάρχουν εγγραφές». ";
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").replace(/\s+/g," ").trim();
 export function consumptionQuestion(question){return /ιδιοκαταναλ|(?:ιδια|ιδιας|προσωπικη|προσωπικης) καταναλ|καταστροφ|self.?consumption/.test(norm(question));}
+// Only a complete, unambiguous daily list request can select all products.
+// Extra product, scope, domain or history text stays in the strict tool flow.
+export function dailyConsumptionRequest(question,{now=new Date()}={}){
+ const match=norm(question).match(/^(?:(?:βγαλε|δωσε|δειξε)(?: μου)? )?(?:(?:τη|την|μια) )?(?:λιστα|αναφορα)(?: της)? ιδιοκαταναλωσης (?:για |στις |την )?(\d{1,2}\/\d{1,2}(?:\/\d{2}|\/\d{4})?|\d{4}-\d{2}-\d{2})[.!;]?$/);
+ if(!match)return null;
+ let date=match[1];
+ if(date.includes("/")){
+  const [d,m,y]=date.split("/");
+  const year=y?(y.length===2?`20${y}`:y):new Intl.DateTimeFormat("en",{timeZone:"Europe/Athens",year:"numeric"}).format(now);
+  date=`${year}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
+ }
+ const parsed=consumptionArguments.safeParse({kind:"SELF_CONSUMPTION",from:date,to:date,product:null});
+ return parsed.success?{args:parsed.data}:{clarification:"Γράψε μια έγκυρη ημερομηνία για τη λίστα ιδιοκατανάλωσης, π.χ. 13/10/2026."};
+}
 export function toolsForAssistantQuestion(question,tools){return consumptionQuestion(question)?tools.filter(t=>t.name===consumptionTool.name):salesOnlyQuestion(question)?tools.filter(t=>["sales_by_product","sales_by_store"].includes(t.name)):tools;}
 export function checkedConsumptionAnswer(question,answer,evidence){
  if(!consumptionQuestion(question))return answer;
