@@ -1,0 +1,8 @@
+## 13/10/2026 — POS-CATALOG-COMPLETE-01 / ASSIGNED / USER FAIL
+
+Owner `codex/pos-catalog-complete-20261013`; branch `fix/pos-catalog-complete-20261013`. User explicitly prioritizes central correction: barcode5201004022158 is found in selected Diadoxou Inventory but POS says absent; online creation rejects existing barcode. Multiple products affected. No sale/payment/product/stock change performed. Current healthy production/main fe196aacb942de03e4e41b54911144049612eddd verified by public GET. Source catalog routes truncate active selected-store products at5000 while scanner searches only the returned catalog. This is a confirmed source defect and a candidate explanation for the pictured failure; exact product rank remains NOT TESTED.
+
+Independent bounded server catalog completeness regression, not takeover of retained wider performance/scanner owners. Preserve active company/store membership, prices/VAT/barcode aliases/master exclusions, published layout order, scanner ambiguity/focus and all fiscal/financial gates. Read current tracker/checklist/pending/active/manual and relevant catalog/CSV/scanner checkpoints. Next: publish this claim green on main before source; implement a scoped complete catalog retrieval with regression beyond5000 products and tenant/inactive exclusions, required full CI/exact guarded deploy, then ordinary barcode recognition acceptance. No real sale or stock mutation for diagnosis. Existing PASS/owners preserved. Central correction applies across stores; no auto-activation or duplicate Product creation. Acceptance OPEN/AWAITING LAB.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-13-pos-catalog-complete.md`.
+
