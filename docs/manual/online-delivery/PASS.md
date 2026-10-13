@@ -75,3 +75,11 @@
 - Η LAB λειτουργία είναι NON_FISCAL και δεν εκτελεί πραγματική φορολογική έκδοση ή πραγματική τραπεζική χρέωση.
 - Η σύνδεση efood/Pelican δεν πιστοποιείται από αυτό το Gate.
 - Παλιά ιστορικά FAIL/OPEN παραμένουν στα checkpoints για audit, αλλά έχουν αντικατασταθεί από το τελικό PASS και δεν αποτελούν ενεργή εργασία.
+
+## 13/10/2026 — DAILY narrow regulated catalogue evidence
+
+21:43 Athens LIVE READ-ONLY ONLINE ACCEPTANCE: guarded deploy38448447575 SUCCESS, Render dep-db77lotg1s2s739daefg LIVE on exact28050078015cb22679c55ca5ce8537378f1613e1; health oktrue exact revision in guard logs. Reloaded browser admin saved catalogue shows DB0000211.50→1.50, DB0000221.40→1.40, DB0000021.65→1.65, DB0000261.65→1.65, DB0000171.50→1.50. Control NESCAFE DB0000182.25→2.35 remains legacy/excluded. Publicenabled checkbox unchecked;0/8753 products online. No settings/products submit, no checkout. Actual final screenshot CHECKPOINTS/EVIDENCE/daily-regulated-20261013/online-freddo.jpg shows1.65→1.65; price screenshot store-freddo.jpg shows VAT13. Whole2054 OPEN. NEXT SINGLE ACTION: obtain named handoff/release of broader DAILY POS layout ownerPR2175 or have its owner publish; then add regulated category in free slot. Other water/toast/instant mapping remains pending. Current regulated owner retained until named handoff. No numbered manual PASS.
+
+Canonical tracker PDF regenerated with repository generator:281 A4 pages /1103836bytes; last page text extraction verified. Included in same receipt PR; previous pending PDF remark superseded for this receipt. Scope remains OPEN with narrow native read-only evidence above.
+
+Only administrative catalogue acceptance; no checkout or whole issue PASS. Prior ONL evidence retained.
