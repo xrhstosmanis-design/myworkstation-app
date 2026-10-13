@@ -1,0 +1,42 @@
+{
+  "claimPR": 2451,
+  "claimHead": "2343412ee735440acf1778bb9e92d9d9281dffd7",
+  "claimMerge": "c0cf79dd6b012626c673056c7a8c21273bdd8aec",
+  "claimCI": 38444804654,
+  "sourcePR": 2453,
+  "sourceHead": "8c09ca8f2ce3c38b19588aaef295b3bb2a76cc59",
+  "sourceCI": 38445625833,
+  "sourceJob": 115463343415,
+  "focused": 30,
+  "local": {
+    "pass": 2543,
+    "fail": 0,
+    "skip": 36
+  },
+  "productionBuild": "PASS",
+  "status": "RELEASED_AWAITING_ACTUAL_SOURCE_RETEST",
+  "auth": "restricted_no_workaround",
+  "sourceMerge": "5279a9238796f5f1ed7aef7811cc68112a82a1db",
+  "sourceCIResult": "SUCCESS",
+  "sourceTests": 2586,
+  "sourceMonitorTests": 6,
+  "verifiedCodeTestBlobs": 4,
+  "ownedActiveSourceReadyVerified": true,
+  "mainCI": 38446403563,
+  "mainJob": 115466273723,
+  "mainCIResult": "SUCCESS",
+  "mainTests": 2588,
+  "mainMonitorTests": 6,
+  "deployGuard": 38447150033,
+  "deployJob": 115468472453,
+  "renderDeployId": "dep-db77h8vavr4c73f93vh0",
+  "renderFinishedAt": "2026-10-13T18:31:45.712518Z",
+  "healthyAt": "2026-10-13T18:31:58.7957811Z",
+  "publicHealth": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "5279a9238796f5f1ed7aef7811cc68112a82a1db"
+  },
+  "closureBase": "5279a9238796f5f1ed7aef7811cc68112a82a1db",
+  "closureClock": "13/10/2026 21:33 Athens"
+}
