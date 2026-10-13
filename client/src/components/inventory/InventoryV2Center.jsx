@@ -20,9 +20,7 @@ export default function InventoryV2Center({
   catalog = [],
   loadCatalog,
 }) {
-  const [scope, setScope] = useState("FULL"),
-    [selected, setSelected] = useState([]),
-    [stocktakes, setStocktakes] = useState([]),
+  const [stocktakes, setStocktakes] = useState([]),
     [current, setCurrent] = useState(null),
     [storeId, setStoreId] = useState(""),
     [zones, setZones] = useState([]),
@@ -38,7 +36,7 @@ export default function InventoryV2Center({
   const finalizingRef = useRef(false);
   const [mobileView,setMobileView]=useState(false);
   useEffect(()=>setMobileView(false),[current?.id,current?.status]);
-  useEffect(() => { setFinalizeReason(""); }, [current?.id]);
+  useEffect(() => { setFinalizeReason(current?.scopeType === "FREE" ? "Καταχώρηση καταμετρημένων ειδών" : ""); }, [current?.id, current?.scopeType]);
   const grantUrl = grant ? `${window.location.origin}${grant.accessUrl}` : "";
   useEffect(() => {
     if (!grantUrl) return setGrantQr("");
@@ -128,10 +126,9 @@ export default function InventoryV2Center({
         body: JSON.stringify({
           storeId,
           name: f.get("name"),
-          scopeType: scope,
-          productIds: scope === "PARTIAL_PRODUCTS" ? selected : [],
+          scopeType: "FREE",
           liveDuringTrading: f.get("live") === "on",
-          recountPolicy: f.get("recountPolicy"),
+          recountPolicy: "NONE",
           zoneIds: selectedZones,
         }),
       });
@@ -142,6 +139,17 @@ export default function InventoryV2Center({
     } finally {
       setBusy(false);
     }
+  };
+  const convertingRef = useRef(false);
+  const convertToFree = async () => {
+    if (convertingRef.current || current?.status !== "DRAFT" || current.scopeType === "FREE") return;
+    if (!confirm("Συνέχεια ως ελεύθερη απογραφή; Οι μετρήσεις διατηρούνται και στην καταχώρηση θα ενημερωθούν μόνο τα καταμετρημένα προϊόντα.")) return;
+    convertingRef.current = true; setBusy(true); setError("");
+    try {
+      await api(`/api/inventory-v2/stocktakes/${current.id}/free`, {method:"POST",body:JSON.stringify({confirmed:true})});
+      await open(current.id); await loadList();
+    } catch (error) { setError(error.message); }
+    finally { convertingRef.current = false; setBusy(false); }
   };
   const deleteStocktake = async (stocktake) => {
     if (stocktake.status !== "DRAFT") return;
@@ -166,7 +174,7 @@ export default function InventoryV2Center({
     }
     if (
       !confirm(
-        `Οριστικοποίηση ${current.scopeType === "FULL" ? "πλήρους" : "μερικής"} απογραφής; Θα ενημερωθούν μόνο τα προϊόντα αυτής της απογραφής.`,
+        current.scopeType === "FREE" ? `Καταχώρηση ${current.lines.filter(line => line.countedQuantity !== null).length} καταμετρημένων προϊόντων; Θα ενημερωθούν μόνο αυτά τα προϊόντα.` : `Οριστικοποίηση ${current.scopeType === "FULL" ? "πλήρους" : "μερικής"} απογραφής; Θα ενημερωθούν μόνο τα προϊόντα αυτής της απογραφής.`,
       )
     )
       return;
@@ -411,26 +419,7 @@ export default function InventoryV2Center({
         <aside className="op-box">
           <h3>Inventory 2.0</h3>
           <div className="inv2-new-buttons">
-            <button
-              type="button"
-              className={scope === "FULL" ? "active" : ""}
-              onClick={() => {
-                setScope("FULL");
-                setSelected([]);
-              }}
-            >
-              Νέα Ολική Απογραφή
-            </button>
-            <button
-              type="button"
-              className={scope === "PARTIAL_PRODUCTS" ? "active" : ""}
-              onClick={() => {
-                setScope("PARTIAL_PRODUCTS");
-                setSelected([]);
-              }}
-            >
-              Νέα Μερική Απογραφή
-            </button>
+            <button type="button" onClick={() => { setCurrent(null); setFinalSummary(null); setError(""); }}>Νέα απογραφή</button>
           </div>
           <form className="op-form" onSubmit={create}>
             <label>
@@ -480,41 +469,7 @@ export default function InventoryV2Center({
                 defaultValue={`Απογραφή ${new Date().toLocaleDateString("el-GR",{timeZone:"Europe/Athens"})}`}
               />
             </label>
-            <div className="op-alert info">
-              Τύπος:{" "}
-              <b>{scope === "FULL" ? "Ολική απογραφή" : "Μερική απογραφή"}</b>
-            </div>
-            {scope === "PARTIAL_PRODUCTS" && (
-              <div className="inv2-products">
-                {catalog.map((p) => (
-                  <label key={p.id}>
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(p.id)}
-                      onChange={(e) =>
-                        setSelected((v) =>
-                          e.target.checked
-                            ? [...v, p.id]
-                            : v.filter((id) => id !== p.id),
-                        )
-                      }
-                    />
-                    <span>
-                      {p.name}
-                      <small>{p.sku || "—"}</small>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-            <label>
-              Επανακαταμέτρηση
-              <select name="recountPolicy" defaultValue="DIFFERENCES">
-                <option value="DIFFERENCES">Μόνο στις διαφορές</option>
-                <option value="ALL">Σε όλα τα είδη</option>
-                <option value="NONE">Χωρίς υποχρεωτική</option>
-              </select>
-            </label>
+            <p>Σκάναρε όσα προϊόντα θέλεις και κάνε καταχώρηση όταν τελειώσεις.</p>
             <label className="check">
               <input name="live" type="checkbox" />
               Ζωντανή απογραφή με ανοικτό κατάστημα
@@ -538,7 +493,7 @@ export default function InventoryV2Center({
               <div key={s.id} className="inv2-history-row">
                 <button className="inv2-history-open" onClick={() => open(s.id)}>
                   <b>{s.name}</b>
-                  <small>{s.scopeType === "FULL" ? "Πλήρης" : "Μερική"} · {s.countedCount}/{s.lineCount}</small>
+                  <small>{s.scopeType === "FREE" ? "Απογραφή" : s.scopeType === "FULL" ? "Πλήρης" : "Μερική"} · {s.scopeType === "FREE" ? `${s.countedCount} είδη` : `${s.countedCount}/${s.lineCount}`}</small>
                 </button>
                 {s.status === "DRAFT" && <button className="inv2-history-delete" title="Διαγραφή μη οριστικοποιημένης απογραφής" onClick={() => deleteStocktake(s)}>×</button>}
               </div>
@@ -553,9 +508,7 @@ export default function InventoryV2Center({
                   <h3>Προσωρινή απογραφή ειδών αποθήκης</h3>
                   <small>
                     {current.storeName} ·{" "}
-                    {current.scopeType === "FULL"
-                      ? "Πλήρης"
-                      : "Μερική απογραφή"}{" "}
+                    {current.scopeType === "FREE" ? "Απογραφή" : current.scopeType === "FULL" ? "Πλήρης" : "Μερική απογραφή"}{" "}
                     · {current.status}
                   </small>
                 </div>
@@ -590,6 +543,7 @@ export default function InventoryV2Center({
                   </button>
                 </div>
               </header>
+              {current.status === "DRAFT" && current.scopeType !== "FREE" && <button type="button" disabled={busy} onClick={convertToFree}>Συνέχεια ως ελεύθερη απογραφή</button>}
               {current.status === "DRAFT" && (
                 <form className="inv2-grant" onSubmit={createGrant}>
                   <b>QR/PIN καταμετρητή</b>
@@ -639,8 +593,8 @@ export default function InventoryV2Center({
                         placeholder="Τεκμηρίωσε τον έλεγχο και τις διαφορές της απογραφής" />
                     </label>
                     <button className="primary" onClick={finalize}
-                      disabled={finalizing || finalizeReason.trim().length < 3}>
-                      {finalizing ? "Οριστικοποίηση…" : "Οριστικοποίηση & αποτέλεσμα απογραφής"}
+                      disabled={finalizing || finalizeReason.trim().length < 3 || (current.scopeType === "FREE" && !current.lines.some(line => line.countedQuantity !== null))}>
+                      {finalizing ? (current.scopeType === "FREE" ? "Καταχώρηση…" : "Οριστικοποίηση…") : current.scopeType === "FREE" ? "Καταχώρηση απογραφής" : "Οριστικοποίηση & αποτέλεσμα απογραφής"}
                     </button>
                   </div>
                 ) : current.snapshotJson?.reason ? (

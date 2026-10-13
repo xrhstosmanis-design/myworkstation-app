@@ -252,7 +252,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
 
       <div className="inv2-list-tools">
         <b>{showAll ? "Όλα τα είδη απογραφής" : "Καταμετρημένα είδη"}</b>
-        <span>{countedLines.length} από {current.lines.length} καταμετρήθηκαν</span>
+        <span>{current.scopeType === "FREE" ? `${countedLines.length} καταμετρημένα είδη` : `${countedLines.length} από ${current.lines.length} καταμετρήθηκαν`}</span>
         <button type="button" onClick={() => setShowAll((value) => !value)}>{showAll ? "Μόνο καταμετρημένα" : "Εμφάνιση όλων"}</button>
       </div>
       {current.status === "DRAFT" && (

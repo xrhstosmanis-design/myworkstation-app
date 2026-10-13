@@ -14,7 +14,7 @@ test('isolated PostgreSQL preserves stocktake differences, committed movements a
   try {
     await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
     const definitions=[
-      'CREATE TABLE "Stocktake"("id" text primary key,"companyId" text,"storeId" text,"status" text,"liveDuringTrading" bool,"finalizedAt" timestamp,"finalizedByUserId" text,"snapshotJson" jsonb,"updatedAt" timestamp)',
+      'CREATE TABLE "Stocktake"("id" text primary key,"companyId" text,"storeId" text,"status" text,"scopeType" text,"scopeJson" jsonb,"liveDuringTrading" bool,"finalizedAt" timestamp,"finalizedByUserId" text,"snapshotJson" jsonb,"updatedAt" timestamp)',
       'CREATE TABLE "StocktakeLine"("id" text primary key,"stocktakeId" text,"productId" text,"expectedQuantity" numeric,"countedQuantity" numeric,"unitCost" numeric,"recountRequired" bool,"updatedAt" timestamp)',
       'CREATE TABLE "StoreProduct"("storeId" text,"productId" text,"currentStock" numeric,"updatedAt" timestamp,primary key("storeId","productId"))',
       'CREATE TABLE "StockMovement"("id" text primary key,"storeId" text,"productId" text,"movementType" text,"quantity" numeric,"unitCost" numeric,"sourceType" text,"sourceId" text,"note" text,"createdByUserId" text)',
@@ -25,7 +25,7 @@ test('isolated PostgreSQL preserves stocktake differences, committed movements a
     for(const match of bootstrap.matchAll(/`(CREATE OR REPLACE FUNCTION "mws_adjust_live_stocktake_expected"[\s\S]*?\$\$ LANGUAGE plpgsql|CREATE TRIGGER "mws_live_stocktake_expected_after_movement"[^`]+)`/g))await db.$executeRawUnsafe(match[1]);
     const reset=async(live=true,counted=8,recount=false)=>{
       await db.$executeRawUnsafe('TRUNCATE "StocktakeMovementAdjustment","StockMovement","StocktakeLine","StoreProduct","Stocktake"');
-      await db.$executeRaw`INSERT INTO "Stocktake"("id","companyId","storeId","status","liveDuringTrading") VALUES('take','company','store','DRAFT',${live})`;
+      await db.$executeRaw`INSERT INTO "Stocktake"("id","companyId","storeId","status","scopeType","liveDuringTrading") VALUES('take','company','store','DRAFT','PARTIAL_PRODUCTS',${live})`;
       await db.$executeRaw`INSERT INTO "StocktakeLine"("id","stocktakeId","productId","expectedQuantity","countedQuantity","unitCost","recountRequired") VALUES('line','take','product',10,${counted},1,${recount})`;
       await db.$executeRaw`INSERT INTO "StoreProduct" VALUES('store','product',10,NULL),('store','unrelated',25,NULL),('control','product',30,NULL)`;
     };
@@ -61,6 +61,20 @@ test('isolated PostgreSQL preserves stocktake differences, committed movements a
       await tx.$executeRaw`INSERT INTO "StockMovement"("id","storeId","productId","movementType","quantity") VALUES('sale','store','product','SALE',-3)`;
     });await finish();result=await read();assert.equal(result.expected,7);assert.equal(result.stock,8);assert.deepEqual(result.movements,[1]);assert.deepEqual(result.adjustments,[-3]);assert.equal(result.snapshot.totalDifference,1);
     await reset(true,10);await finish();result=await read();assert.equal(result.stock,10);assert.equal(result.snapshot.reason,'Isolated counted inventory');assert.equal(result.snapshot.totalDifference,0);assert.deepEqual(result.movements,[]);
+    // FREE includes explicit zero but never posts an uncounted snapshot line.
+    await reset();
+    await db.$executeRaw`UPDATE "Stocktake" SET "scopeType"='FREE' WHERE "id"='take'`;
+    await db.$executeRaw`INSERT INTO "StocktakeLine" VALUES('uncounted','take','unrelated',25,NULL,1,false,NULL),('zero','take','zero-product',6,0,1,false,NULL)`;
+    await db.$executeRaw`INSERT INTO "StoreProduct" VALUES('store','zero-product',6,NULL)`;
+    await finish(); // stale caller scope is PARTIAL_PRODUCTS; locked FREE is authoritative.
+    result=await read();assert.equal(result.stock,8);assert.equal(result.snapshot.scopeType,'FREE');assert.equal(result.snapshot.lineCount,2);assert.equal(result.snapshot.totalDifference,-8);
+    assert.deepEqual([...result.movements].sort((a,b)=>a-b),[-6,-2]);
+    const [zero]=await db.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "productId"='zero-product'`;assert.equal(Number(zero.currentStock),0);
+    await assert.rejects(finish(),{status:409});assert.deepEqual(await read(),result);
+    await reset(true,null);await db.$executeRaw`UPDATE "Stocktake" SET "scopeType"='FREE' WHERE "id"='take'`;
+    await assert.rejects(finish(),{status:409});assert.equal((await read()).status,'DRAFT');
+    await reset(true,8,true);await db.$executeRaw`UPDATE "Stocktake" SET "scopeType"='FREE' WHERE "id"='take'`;
+    await assert.rejects(finish(),{status:409});assert.deepEqual((await read()).movements,[]);
     await reset();await assert.rejects(db.$transaction(async tx=>{await finalizeInventoryStocktake(tx,stocktake,'owner','Isolated counted inventory');throw new Error('forced rollback')}),/forced rollback/);result=await read();assert.equal(result.status,'DRAFT');assert.equal(result.stock,10);assert.deepEqual(result.movements,[]);
   }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
