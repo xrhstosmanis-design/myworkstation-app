@@ -62,7 +62,9 @@ router.get("/stocktakes/:stocktakeId/audit", async (req, res, next) => {
           expectedQuantity: n(e.expectedQuantity),
         });
     }
-    const normalized = lines.map((x) => {
+    const included = st.scopeType === "FREE" && st.status === "FINALIZED"
+      ? lines.filter((line) => line.countedQuantity !== null) : lines;
+    const normalized = included.map((x) => {
       const expected = n(x.expectedQuantity),
         counted = x.countedQuantity === null ? null : n(x.countedQuantity),
         difference = counted === null ? null : counted - expected,

@@ -47,6 +47,10 @@ test('large stocktake creation snapshots selected active membership atomically i
     assert.equal(rows.length,26656);assert.equal(new Set(rows.map(r=>r.productId)).size,26656);
     assert.equal(Number(rows[0].expectedQuantity),0);assert.equal(Number(rows[1].unitCost),0);
     for(let i=0;i<rows.length;i++){assert.equal(rows[i].zoneId,['z1','z2','z3'][i%3]);if(i)assert.equal(Number(rows[i].expectedQuantity),-2.5)}
+    const free=await create({storeId:'store',name:'Free',scopeType:'FREE',recountPolicy:'NONE'});
+    assert.equal(free.error,undefined);assert.equal(free.status,201);assert.equal(free.result.scopeType,'FREE');
+    const [freeCount]=await db.$queryRaw`SELECT COUNT(*)::int AS total FROM "StocktakeLine" WHERE "stocktakeId"=${free.result.id}`;assert.equal(freeCount.total,26656);
+    assert.deepEqual(await db.$queryRawUnsafe('SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"'),before);
     const partial=await create({storeId:'store',name:'Partial',scopeType:'PARTIAL_PRODUCTS',productIds:['p00002','p00002','foreign','controlonly']});
     assert.equal(partial.error,undefined);
     let selected=await db.$queryRaw`SELECT "productId","zoneId" FROM "StocktakeLine" WHERE "stocktakeId"=${partial.result.id}`;

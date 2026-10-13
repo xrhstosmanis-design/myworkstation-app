@@ -13,6 +13,7 @@ const cases=[
   ['delete/stocktakes/:stocktakeId/count/:lineId',{expectedVersion:1,clientEventId:'clear-01'}],
   ['post/stocktakes/:stocktakeId/lines',{productId:'extra'}],
   ['post/stocktakes/:stocktakeId/attach-barcode',{productId:'extra',barcode:'VIRTUAL-01'}],
+  ['post/stocktakes/:stocktakeId/free',{confirmed:true}],
   ['post/stocktakes/:stocktakeId/import-counts',{rows:[{sku:'VIRTUAL',quantity:9}]}],
 ];
 const request=(body,user={})=>({user:{id:'owner',role:'OWNER',companyId:'company',fullName:'Virtual owner',...user},params:{stocktakeId:'take',lineId:'line'},query:{},body});
@@ -123,6 +124,15 @@ test('native PostgreSQL serializes actual draft handlers with finalization and p
     assert.equal((await invoke(cases[0][0],request({...cases[0][1],clientEventId:'scoped-counter',source:'QR_PIN'},counter))).status,200);
     after=await observe();assert.equal(after.stock,10);assert.equal(after.events.length,1);assert.equal(after.events[0].actorId,'grant');assert.equal(after.events[0].source,'QR_PIN');
     await db.$transaction(tx=>finalizeInventoryStocktake(tx,st,'owner','Scoped count verified'));assert.equal((await observe()).stock,9);
+    // Explicit conversion preserves existing count/version/events and adds only missing store lines.
+    await reset();const beforeFree=await observe();
+    assert.equal((await invoke('post/stocktakes/:stocktakeId/free',request({}))).error.name,'ZodError');
+    assert.equal((await invoke('post/stocktakes/:stocktakeId/free',request({confirmed:true},{role:'EMPLOYEE'}))).status,403);
+    assert.equal((await invoke('post/stocktakes/:stocktakeId/free',request({confirmed:true},{storeId:'control'}))).status,404);
+    assert.equal((await invoke('post/stocktakes/:stocktakeId/free',request({confirmed:true}))).result.scopeType,'FREE');
+    const afterFree=await observe();assert.equal(afterFree.stock,10);assert.equal(afterFree.lines.length,2);assert.deepEqual(afterFree.lines.find(x=>x.id==='line'),beforeFree.lines[0]);assert.deepEqual(afterFree.events,beforeFree.events);assert.deepEqual(afterFree.movements,[]);
+    await invoke('post/stocktakes/:stocktakeId/free',request({confirmed:true}));assert.deepEqual(await observe(),afterFree);
+    await db.$transaction(tx=>finalizeInventoryStocktake(tx,st,'owner','Free inventory checked'));assert.equal((await observe()).stock,8);assert.equal((await observe()).movements.length,1);
     // Actual list/zone SQL retains company-wide owner access, but filters a bound store.
     await reset();await db.$executeRaw`INSERT INTO "Store" VALUES('control','Control')`;
     await db.$executeRaw`INSERT INTO "Stocktake"("id","companyId","storeId","name","status","scopeType","liveDuringTrading","recountPolicy") VALUES('control-take','company','control','Control','DRAFT','PARTIAL_PRODUCTS',false,'NONE')`;
