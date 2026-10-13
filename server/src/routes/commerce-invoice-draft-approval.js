@@ -1,3 +1,4 @@
+import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertInvoiceStockAvailable,recordInvoiceStockPosting} from "../lib/invoice-common-draft.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -217,12 +218,17 @@ router.post("/ai-reader/jobs/:jobId/create-product",requireCompanyModule("AI_REA
 router.post("/purchases/:documentId/approve",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     if(!canApprove(req))return res.status(403).json({error:"Μόνο Ιδιοκτήτης ή Διαχειριστής μπορεί να εγκρίνει παραστατικό για την αποθήκη."});
+    await ensureInvoiceCommonDraftSchema(prisma);
     const result=await prisma.$transaction(async tx=>{
+      const scopes=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseDocument" WHERE "id"=${req.params.documentId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+      if(!scopes[0])throw Object.assign(new Error("Δεν βρέθηκε το παραστατικό."),{status:404});
+      await lockInvoiceStore(tx,req.user.companyId,scopes[0].storeId);
       const docs=await tx.$queryRaw`SELECT * FROM "PurchaseDocument" WHERE "id"=${req.params.documentId} AND "companyId"=${req.user.companyId} FOR UPDATE`;
       const doc=docs[0];
       if(!doc){const error=new Error("Δεν βρέθηκε το παραστατικό.");error.status=404;throw error}
       if(doc.status==="APPROVED")return {alreadyApproved:true,id:doc.id};
       if(doc.status!=="DRAFT"){const error=new Error("Το παραστατικό δεν είναι σε κατάσταση πρόχειρου ελέγχου.");error.status=409;throw error}
+      await assertInvoiceStockAvailable(tx,{companyId:req.user.companyId,storeId:doc.storeId,sourceDocumentId:doc.id,orderId:doc.purchaseOrderId||null});
       const creditNote=doc.documentType==="CREDIT_NOTE",stockSign=creditNote?-1:1;
       const lines=await tx.$queryRaw`SELECT l.*,p."trackStock" FROM "PurchaseDocumentLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${req.user.companyId} WHERE l."purchaseDocumentId"=${doc.id} ORDER BY l."id"`;
       if(!lines.length){const error=new Error("Το παραστατικό δεν έχει γραμμές προϊόντων.");error.status=409;throw error}
@@ -257,6 +263,12 @@ router.post("/purchases/:documentId/approve",requireCompanyModule("INVENTORY"),a
       }
       await tx.$executeRaw`UPDATE "PurchaseDocument" SET "status"='APPROVED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${doc.id} AND "companyId"=${req.user.companyId}`;
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='CONFIRMED',"updatedAt"=CURRENT_TIMESTAMP WHERE "purchaseDocumentId"=${doc.id} AND "companyId"=${req.user.companyId}`;
+      await recordInvoiceStockPosting(tx,{companyId:req.user.companyId,storeId:doc.storeId,sourceDocumentId:doc.id,orderId:doc.purchaseOrderId||null,postedDocumentId:doc.id,path:"DOCUMENT_APPROVAL"});
+      if(doc.purchaseOrderId){
+        const fp=doc.supplierId&&doc.documentNumber?crypto.createHash("sha256").update(`${req.user.companyId}|${doc.supplierId}|${normalizeDocumentNumber(doc.documentNumber)}`).digest("hex"):null;
+        await tx.$executeRaw`INSERT INTO "PurchaseOrderPosting"("orderId","companyId","supplierId","documentFingerprint","purchaseDocumentId","postedByUserId","postedByName") VALUES(${doc.purchaseOrderId},${req.user.companyId},${doc.supplierId},${fp},${doc.id},${req.user.id},${req.user.fullName||"BackOffice"})`;
+        await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='FINAL',"finalizedAt"=COALESCE("finalizedAt",NOW()),"updatedAt"=NOW() WHERE "id"=${doc.purchaseOrderId} AND "companyId"=${req.user.companyId} AND "storeId"=${doc.storeId} AND "status"='NEW'`;
+      }
       return {alreadyApproved:false,id:doc.id,documentType:doc.documentType,creditNote,learnedMappings};
     });
     res.json({ok:true,...result,status:"APPROVED",stockUpdated:true});

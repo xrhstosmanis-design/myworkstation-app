@@ -1,3 +1,4 @@
+import {ensureInvoiceCommonDraftSchema,assertNoUnresolvedInbound,lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain,allowActiveInvoiceDrainRequest} from "../server-shutdown.js";
 import crypto from "crypto";
@@ -689,6 +690,8 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
     const supplierTaxId=cleanTaxId(supplierRows[0].taxId);
     await ensureV244IntakeSchema();
     await ensureFastHandoffSchema();
+    await ensureInvoiceCommonDraftSchema(prisma);
+    await assertNoUnresolvedInbound(prisma,{companyId,storeId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross)});
     const myDataPurchase=await findMyDataPurchase(prisma,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross)});
     if(myDataPurchase){
       if(myDataPurchase.resultJson?.mydataPosReceipt?.receivedAt||myDataPurchase.rawPayload?.mydataPosReceipt?.receivedAt)return res.status(409).json({error:"Το κανονικό τιμολόγιο έχει ήδη παραληφθεί από POS. Δεν έγινε νέα πληρωμή ή δεύτερη αγορά. Για εκκρεμή πίστωση χρησιμοποίησε «Πληρωμή ανοιχτών τιμολογίων».",code:"DUPLICATE_INVOICE",existing:{id:myDataPurchase.documentId,status:myDataPurchase.status}});
@@ -777,6 +780,8 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     await ensureV244IntakeSchema();
     await ensureFastHandoffSchema();
     const receiptIdentity={companyId,storeId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber,documentDate,totalGross,documentType};
+    await ensureInvoiceCommonDraftSchema(prisma);
+    await assertNoUnresolvedInbound(prisma,receiptIdentity);
     const myDataPurchase=await findMyDataPurchase(prisma,receiptIdentity);
     const paymentNumber=myDataPurchase?.purchaseNumber||documentNumber;
     const existingPayment=documentType==="INVOICE"?await findInvoicePayment(prisma,{companyId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber:paymentNumber}):null;
@@ -867,6 +872,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
       ORDER BY m."fetchedAt" DESC LIMIT 1`:[];
     const myData=myDataRows[0]||null;
     const result=await prisma.$transaction(async tx=>{
+      await lockInvoiceStore(tx,companyId,storeId);
       const jobs=[];
       for(const [index,page] of normalizedPages.entries()){
         const existingAttachments=await tx.$queryRaw`SELECT "id" FROM "DocumentAttachment" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "checksum"=${page.checksum} LIMIT 1`;

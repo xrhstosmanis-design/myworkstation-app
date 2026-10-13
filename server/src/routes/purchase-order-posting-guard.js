@@ -1,3 +1,4 @@
+import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertInvoiceStockAvailable,recordInvoiceStockPosting} from "../lib/invoice-common-draft.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
@@ -72,7 +73,7 @@ async function duplicateDetails(tx,{companyId,supplierId,documentNumber,orderId=
   return null;
 }
 
-router.use(async(req,res,next)=>{try{await ensureSchema();next()}catch(error){next(error)}});
+router.use(async(req,res,next)=>{try{await ensureSchema();await ensureInvoiceCommonDraftSchema(prisma);next()}catch(error){next(error)}});
 
 router.post("/",async(req,res,next)=>{
   try{
@@ -169,6 +170,9 @@ router.patch("/:orderId",async(req,res,next)=>{
     const companyId=req.user.companyId;
     const actor=req.user.fullName||"Χρήστης";
     const result=await prisma.$transaction(async tx=>{
+      const scopes=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${req.params.orderId} AND "companyId"=${companyId} LIMIT 1`;
+      if(!scopes[0])throw Object.assign(new Error("Δεν βρέθηκε η παραγγελία."),{status:404});
+      await lockInvoiceStore(tx,companyId,scopes[0].storeId);
       const rows=await tx.$queryRaw`
         SELECT o.* FROM "PurchaseOrder" o
         WHERE o."id"=${req.params.orderId} AND o."companyId"=${companyId}
@@ -211,6 +215,8 @@ router.patch("/:orderId",async(req,res,next)=>{
       }
 
       if(requestedStatus==="FINAL"&&!existingPosting){
+        const commonSource=found.sourceDocumentId||found.id;
+        await assertInvoiceStockAvailable(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id});
         const lines=await tx.$queryRaw`
           SELECT l.*,p."trackStock" FROM "PurchaseOrderLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${companyId}
           WHERE l."orderId"=${found.id}
@@ -237,6 +243,7 @@ router.patch("/:orderId",async(req,res,next)=>{
           await tx.$executeRaw`UPDATE "PurchaseDocument" SET "totalNet"=${net},"totalVat"=${vat},"totalGross"=${gross},"status"='APPROVED',"updatedAt"=NOW() WHERE "id"=${credit.id} AND "companyId"=${companyId}`;
           await tx.$executeRaw`INSERT INTO "PurchaseOrderPosting" ("orderId","companyId","supplierId","documentFingerprint","purchaseDocumentId","postedByUserId","postedByName") VALUES (${found.id},${companyId},${effectiveSupplierId},${fp},${credit.id},${req.user.id},${actor})`;
           await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='FINAL',"updatedByName"=${actor},"finalizedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+          await recordInvoiceStockPosting(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id,postedDocumentId:credit.id,path:"PURCHASE_ORDER"});
           return {ok:true,status:"FINAL",documentType:"CREDIT_NOTE",purchaseDocumentId:credit.id,postedProducts:lines.length,supplierBalanceChange:-gross,cashMovement:false};
         }
 
@@ -312,6 +319,7 @@ router.patch("/:orderId",async(req,res,next)=>{
           UPDATE "PurchaseOrder" SET "supplierId"=${effectiveSupplierId},"invoiceNumber"=${effectiveInvoiceNumber},"description"=${effectiveDescription},
             "status"='FINAL',"updatedByName"=${actor},"finalizedAt"=COALESCE("finalizedAt",NOW()),"updatedAt"=NOW()
           WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+        await recordInvoiceStockPosting(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id,postedDocumentId:purchaseDocumentId,path:"PURCHASE_ORDER"});
         return {ok:true,status:"FINAL",purchaseDocumentId,postedProducts:stockByProduct.size};
       }
 
@@ -321,12 +329,12 @@ router.patch("/:orderId",async(req,res,next)=>{
         }
         await tx.$executeRaw`
           UPDATE "PurchaseDocument" SET "supplierId"=${effectiveSupplierId},"documentNumber"=${effectiveInvoiceNumber},"updatedAt"=NOW()
-          WHERE "id"=${found.id} AND "companyId"=${companyId}`;
+          WHERE "id"=${existingPosting?.purchaseDocumentId||found.id} AND "companyId"=${companyId}`;
         await tx.$executeRaw`
           UPDATE "PurchaseOrder" SET "supplierId"=${effectiveSupplierId},"invoiceNumber"=${effectiveInvoiceNumber},"description"=${effectiveDescription},
             "status"='INVOICED',"updatedByName"=${actor},"invoicedAt"=COALESCE("invoicedAt",NOW()),"updatedAt"=NOW()
           WHERE "id"=${found.id} AND "companyId"=${companyId}`;
-        return {ok:true,status:"INVOICED",idempotent:true,purchaseDocumentId:found.id};
+        return {ok:true,status:"INVOICED",idempotent:true,purchaseDocumentId:existingPosting?.purchaseDocumentId||found.id};
       }
 
       return {ok:true};
