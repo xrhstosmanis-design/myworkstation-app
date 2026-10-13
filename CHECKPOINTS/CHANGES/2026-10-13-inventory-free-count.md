@@ -1,3 +1,7 @@
+## 13/10/2026 — First full CI result / test contract correction
+
+PR2442/head279b887c/fullCI38380395565:2572PASS/1FAIL/0SKIP. Native PostgreSQL FREE creation, conversion/closure race and finalization tests passed. The sole FAIL is inventory-v2-foundation's exact old query-string assertion, which excludes the new required counted-only predicate. Update this contract assertion to require the exact FREE predicate and retained stocktake-ID/product-order/FOR UPDATE locks; no runtime change or weakening of functional/native tests. Full CI rerun pending; no real LAB/device or deployment PASS inferred.
+
 ## 13/10/2026 — INVENTORY-FREE-COUNT-01 / SOURCE READY / AWAITING FULL CI AND ACCEPTANCE
 
 Owner codex/inventory-free-count-20261013 retained. Claim PR2441/head0f84685a/docsCI38371415867 SUCCESS merged22c3603501d2c3dc2d9a976a78f0e6d5b7faa07b before source. New UI has one Νέα απογραφή without advance product/type selection. FREE snapshots active selected-store membership using existing set-based insertion, preserves scanner/mobile/count APIs and creates with recountNONE. Existing legacy drafts offer explicit confirmed conversion, preserve every count/version/event and add only missing selected-store active lines. Conversion never posts stock and cannot mutate after finalization. Existing recount requirements are preserved, not waived.
