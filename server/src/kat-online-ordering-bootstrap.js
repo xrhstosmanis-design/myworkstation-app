@@ -1,3 +1,4 @@
+import {applyDailyRegulatedOnlinePrice} from "../../shared/daily-regulated-pricing.mjs";
 import {prisma} from "./prisma.js";
 import {ensureOnlineMemberSchema} from "./online-members.js";
 
@@ -109,8 +110,8 @@ const statements=[
 )`,`CREATE INDEX IF NOT EXISTS "OnlineOrderStatusEvent_order_idx" ON "OnlineOrderStatusEvent"("orderId","createdAt")`
 ];
 
-export const onlineUnitPrice=(storePrice,config={})=>{const base=Number(storePrice||0),type=String(config.surchargeType||"FIXED").toUpperCase(),value=Math.max(0,Number(config.surchargeValue||0));const surcharge=type==="PERCENT"?base*(value/100):value;return Math.round((base+surcharge)*100)/100};
-export const onlineSurchargeAmount=(storePrice,config={})=>Math.round((onlineUnitPrice(storePrice,config)-Number(storePrice||0))*100)/100;
+export const onlineUnitPrice=(storePrice,config={},product=null,scope=config)=>{const base=Number(storePrice||0),type=String(config.surchargeType||"FIXED").toUpperCase(),value=Math.max(0,Number(config.surchargeValue||0));const surcharge=type==="PERCENT"?base*(value/100):value;return applyDailyRegulatedOnlinePrice(storePrice,Math.round((base+surcharge)*100)/100,scope,product)};
+export const onlineSurchargeAmount=(storePrice,config={},product=null,scope=config)=>Math.round((onlineUnitPrice(storePrice,config,product,scope)-Number(storePrice||0))*100)/100;
 export async function getOnlineOrderingConfig(storeId){const rows=await prisma.$queryRaw`SELECT * FROM "OnlineOrderingConfig" WHERE "storeId"=${storeId} LIMIT 1`;return rows[0]||null}
 
 async function ensureRecipeIngredientsTracked(){
@@ -301,3 +302,4 @@ async function ensureKatPilotDefaults(){
   await prisma.$executeRaw`INSERT INTO "OnlineProductVisibility" ("id","companyId","storeId","productId","visible") SELECT md5(${store.id} || ':' || sp."productId"),${store.companyId},${store.id},sp."productId",TRUE FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE ON CONFLICT ("storeId","productId") DO NOTHING`;
 }
 export async function ensureKatOnlineOrderingSchema(){for(const statement of statements)await prisma.$executeRawUnsafe(statement);await ensureOnlineMemberSchema(prisma);await ensureKatPilotDefaults();await ensureRecipeIngredientsTracked();await ensureOnlineActorProtection();await reconcileDeliveredOnlineSales();console.log("Online ordering schema/config bootstrap completed.")}
+

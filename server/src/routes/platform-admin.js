@@ -1113,7 +1113,7 @@ router.get("/companies/:companyId/stores/:storeId/online-store",async(req,res,ne
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" AND c."companyId"=${req.params.companyId}
       LEFT JOIN "OnlineProductVisibility" v ON v."storeId"=sp."storeId" AND v."productId"=p."id" AND v."companyId"=${req.params.companyId}
       WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true ORDER BY c."name" NULLS LAST,p."name"`;
-    res.json({store:{id:store.id,name:store.name},settings:{...config,surchargeValue:Number(config.surchargeValue||0),deliveryFee:Number(config.deliveryFee||0),minimumOrderRetail:Number(config.minimumOrderRetail||0),doctorDiscountPercent:Number(config.doctorDiscountPercent||0),nurseDiscountPercent:Number(config.nurseDiscountPercent||0),staffDiscountPercent:Number(config.staffDiscountPercent||0)},products:products.map(row=>({...row,storePrice:Number(row.storePrice||0),onlinePrice:onlineUnitPrice(row.storePrice,config)}))});
+    res.json({store:{id:store.id,name:store.name},settings:{...config,surchargeValue:Number(config.surchargeValue||0),deliveryFee:Number(config.deliveryFee||0),minimumOrderRetail:Number(config.minimumOrderRetail||0),doctorDiscountPercent:Number(config.doctorDiscountPercent||0),nurseDiscountPercent:Number(config.nurseDiscountPercent||0),staffDiscountPercent:Number(config.staffDiscountPercent||0)},products:products.map(row=>({...row,storePrice:Number(row.storePrice||0),onlinePrice:onlineUnitPrice(row.storePrice,config,row,{companyId:req.params.companyId,storeId:store.id})}))});
   }catch(error){next(error)}
 });
 
@@ -1505,3 +1505,4 @@ router.post("/ai-command-center/ask",async(req,res,next)=>{
 });
 
 export default router;
+
