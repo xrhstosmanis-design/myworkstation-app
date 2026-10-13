@@ -5,6 +5,7 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {destroyInventoryProduct} from "../lib/inventory-product-destruction.js";
+import {createInventoryCard} from "../lib/inventory-new-card.js";
 
 const router=Router();
 const uid=()=>crypto.randomUUID();
@@ -13,6 +14,20 @@ const normalizeAudienceCard=value=>String(value||"").trim().toUpperCase().replac
 const audienceCardHash=value=>crypto.createHash("sha256").update(normalizeAudienceCard(value)).digest("hex");
 let audienceDiscountTablesReady=false;
 async function ensureAudienceDiscountTables(){if(audienceDiscountTablesReady)return;await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreProductAudienceDiscount" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"productId" TEXT NOT NULL,"audience" TEXT NOT NULL,"discountPercent" NUMERIC(6,2) NOT NULL,"active" BOOLEAN NOT NULL DEFAULT TRUE,"createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE("storeId","productId","audience"),CHECK ("audience" IN ('DOCTOR','NURSE','STAFF','CUSTOMER')),CHECK ("discountPercent">=0 AND "discountPercent"<=100))`);await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreProductAudienceDiscount_lookup_idx" ON "StoreProductAudienceDiscount"("companyId","storeId","audience","productId")`);await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreProductAudienceDiscountAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"audience" TEXT NOT NULL,"discountPercent" NUMERIC(6,2) NOT NULL,"productIds" JSONB NOT NULL,"actorId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);audienceDiscountTablesReady=true}
+
+router.get("/new-card/options",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{
+    const company=companyId(req),storeId=String(req.query.storeId||"");
+    if(!company||!storeId||(req.user.storeId&&req.user.storeId!==storeId))return res.status(403).json({error:"Επίλεξε έγκυρο κατάστημα."});
+    if(!await prisma.store.findFirst({where:{id:storeId,companyId:company,active:true},select:{id:true}}))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+    const suppliers=await prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`;
+    const brands=await prisma.$queryRaw`SELECT "id","name" FROM "ManagementProductCompany" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`;
+    res.json({suppliers,brands});
+  }catch(error){next(error)}
+});
+router.post("/new-card",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
+  try{const result=await createInventoryCard(prisma,req.user,req.body);res.status(result.idempotent?200:201).json(result)}catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα στοιχεία της νέας καρτέλας.",details:error.issues});next(error)}
+});
 
 router.post("/new",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{

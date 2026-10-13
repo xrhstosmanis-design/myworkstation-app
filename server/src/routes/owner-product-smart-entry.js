@@ -106,6 +106,8 @@ router.get("/smart-entry/options",requireCompanyModule("INVENTORY"),async(req,re
 router.get("/smart-entry/barcode/:barcode",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const companyId=req.user.companyId,barcode=String(req.params.barcode||"").trim();
+    const selectedStore=String(req.query.storeId||"");
+    if(selectedStore){if(req.user.storeId&&req.user.storeId!==selectedStore)return res.status(403).json({error:"Μη έγκυρο κατάστημα."});if(!await prisma.store.findFirst({where:{id:selectedStore,companyId,active:true},select:{id:true}}))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."})}
     if(!/^\d{6,18}$/.test(barcode))return res.status(400).json({error:"Μη έγκυρο barcode."});
     const local=await prisma.$queryRaw`SELECT p."id",p."sku",p."name",p."vatRate",c."name" AS "categoryName",sc."name" AS "subcategoryName" FROM "Product" p JOIN "ProductBarcode" pb ON pb."productId"=p."id" LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" WHERE p."companyId"=${companyId} AND pb."barcode"=${barcode} LIMIT 1`;
     if(local[0])return res.json({found:true,source:"MYWORKSTATION",product:{...local[0],vatRate:Number(local[0].vatRate||0)}});

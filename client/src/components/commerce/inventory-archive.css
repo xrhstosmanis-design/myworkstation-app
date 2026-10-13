@@ -425,3 +425,5 @@
 .ia-set-search-results>button:hover{background:#edf7f6}.ia-set-search-results>button>div,.ia-set-selected>div{display:grid;gap:4px;min-width:0}.ia-set-search-results b{font-size:17px}.ia-set-search-results strong{white-space:nowrap}.ia-set-selected{background:#edf7f6}
 .ia-set-search-pages{display:flex;justify-content:flex-end;gap:12px;align-items:center}.ia-set-search-pages button:disabled{opacity:.45}
 @media(max-width:800px){.ia-set-composition-form{grid-template-columns:1fr}.ia-modal.set-editor{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px)}.ia-modal.set-editor>.ia-composition{padding:10px}.ia-set-selected{flex-wrap:wrap}.ia-set-search-results{max-height:180px}}
+
+.ia-online-lookup{display:grid;gap:8px;margin-top:8px}.ia-online-lookup button{min-height:44px;padding:8px 14px;border:1px solid #bdd4d0;border-radius:6px;background:#edf7f6;color:#123b5d;font-weight:700}.ia-online-lookup [role=status]{padding:12px;border:1px solid #bdd4d0;border-radius:6px;background:#f4f9fc;overflow-wrap:anywhere}.ia-online-lookup [role=alert]{color:#a61c1c}.ia-online-lookup p{margin:8px 0}
