@@ -1,0 +1,12 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import StoreChatPanel from '../../client/src/components/store/StoreChatPanel.jsx';
+import ChatInstallControls from '../../client/src/components/store/ChatInstallControls.jsx';
+import '../../client/src/styles.css';
+import '../../client/src/components/store/store-shift-menu.css';
+import '../../client/src/components/store/chat-mobile-app.css';
+const store={id:'VIRTUAL_STORE',name:'ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ'};
+const rows=Array.from({length:12},(_,i)=>({id:'virtual-'+i,category:'GENERAL',createdAt:'2026-10-13T03:00:00Z',senderName:'Εικονικός χειριστής',senderId:'virtual',body:'Εικονικό μήνυμα για έλεγχο εμφάνισης. Καμία πραγματική αποστολή.',readByMe:true}));
+const api=async(path)=>{window.fixtureCalls.push(path);if(path.includes('/messages'))return {rows,permissions:{canManageSettings:true},settings:{photosEnabled:true,pdfEnabled:true}};throw Error('Unexpected synthetic request: '+path)};
+window.fixtureCalls=[];
+createRoot(document.getElementById('root')).render(<main className="chat-mobile-app"><StoreChatPanel store={store} api={api} onClose={()=>{}} installation={<><button>Τα καταστήματά μου</button><ChatInstallControls storeId={store.id}/></>} onEnableNotifications={()=>{}} notificationState="error" notificationError="PUSH_SUBSCRIBE / AbortError / AbortError"/></main>);

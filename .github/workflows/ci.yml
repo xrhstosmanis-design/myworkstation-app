@@ -155,6 +155,18 @@ jobs:
         run: npm run build
       - name: Render isolated POS header in Chromium
         run: node server/e2e/pos-header-browser-flow.mjs
+      - name: Render isolated mobile Chat in Chromium
+        run: node server/e2e/chat-mobile-device-browser-flow.mjs
+      - name: Preserve mobile Chat browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-chat-mobile-browser
+          path: |
+            /tmp/mws-chat-mobile-browser/*.png
+            /tmp/mws-chat-mobile-browser/geometry.json
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Preserve POS header browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -288,3 +300,4 @@ jobs:
           path: /tmp/myworkstation-capacity-result/result.json
           if-no-files-found: ignore
           retention-days: 14
+
