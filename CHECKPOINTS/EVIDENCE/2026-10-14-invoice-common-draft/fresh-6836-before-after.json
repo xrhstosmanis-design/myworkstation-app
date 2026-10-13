@@ -1,0 +1,289 @@
+{
+  "before": {
+    "orders": [
+      {
+        "documentDate": "2026-10-12T00:00:00Z",
+        "documentNumber": "21-ΤΔΑ 6836",
+        "id": "b9ba143f-7af5-4488-8cdc-1046111dcd56",
+        "invoiceNumber": "21-ΤΔΑ 6836",
+        "lines": 0,
+        "observed_at": "2026-10-13T21:33:00.302453Z",
+        "paymentTransactionId": null,
+        "posting": 0,
+        "sourceDocumentId": "19d50bc3-287f-4b9b-95c0-94854038dcd7",
+        "status": "NEW",
+        "totalGross": 153.17
+      },
+      {
+        "documentDate": "2023-10-12T00:00:00Z",
+        "documentNumber": "21-1AA 006836",
+        "id": "60bd0608-7875-4c43-b66e-57536d46c251",
+        "invoiceNumber": "21-1AA 006836",
+        "lines": 0,
+        "observed_at": "2026-10-13T21:33:00.302453Z",
+        "paymentTransactionId": "pay_4a1dcf7906ffa6c7a89d59c57aa505a0206f04a374249595b28cee42682b5147",
+        "posting": 0,
+        "sourceDocumentId": "b538b9f2-9f70-4673-a357-aeb6113169f1",
+        "status": "NEW",
+        "totalGross": 155.17
+      }
+    ],
+    "payment": [
+      {
+        "actorName": "ΑΝΤΩΝΗΣ ΠΑΠΑΔΗΜΟΣ",
+        "amount": 155.17,
+        "id": "pay_4a1dcf7906ffa6c7a89d59c57aa505a0206f04a374249595b28cee42682b5147",
+        "invoicePaymentKey": "cmulmjjoa000oqlbfyi0h53ju:VAT:999162880:211AA006836",
+        "observed_at": "2026-10-13T21:33:00.129297Z",
+        "occurredAt": "2026-10-12T04:46:06.320419Z",
+        "reversedAt": null,
+        "row_hash": "33788e8f6a3dbce289e5711ffa1a9051",
+        "sessionId": "844ece89-e314-465f-9e3e-598ef60e920f"
+      }
+    ],
+    "stock": [
+      {
+        "latest_movement": "2026-10-13T21:32:08.223Z",
+        "observed_at": "2026-10-13T21:32:59.532107Z",
+        "products": 6639,
+        "stock_hash": "18680aa7501a9e1aa5d85ffaf03d9050",
+        "target_movements": 0
+      }
+    ],
+    "files": [
+      {
+        "checksum": "421a4aa80eecd7ae64366a3f2e2a5f3572a0aae72b4ecdb106ca5879c4407cb5",
+        "filename": "timologio-selida-1-1791780069296.jpg",
+        "id": "5b9c1b35-eff6-4edb-94a6-7419fb617d00",
+        "job_id": "6811bcf8-dd27-4cf8-806b-033f6ed8791c",
+        "mimeType": "image/jpeg",
+        "observed_at": "2026-10-13T21:32:59.702457Z",
+        "purchaseDocumentId": "b538b9f2-9f70-4673-a357-aeb6113169f1",
+        "stored_length": 173643
+      },
+      {
+        "checksum": "c33e992f210acea63d0faeb490ffff9ac35f1812f49561c5210e74929ddbc738",
+        "filename": "mydata-6836-400015624303633.pdf",
+        "id": "8c140da7-39ac-4468-ad06-9633679f1b8d",
+        "job_id": "6bf7858e-eac2-4d3f-a5bf-762b3b118b32",
+        "mimeType": "application/pdf",
+        "observed_at": "2026-10-13T21:32:59.702457Z",
+        "purchaseDocumentId": "19d50bc3-287f-4b9b-95c0-94854038dcd7",
+        "stored_length": 294216
+      }
+    ],
+    "shift": [
+      {
+        "count": 83,
+        "observed_at": "2026-10-13T21:32:59.930699Z",
+        "sessionId": "844ece89-e314-465f-9e3e-598ef60e920f",
+        "total": 2462.26,
+        "transaction_hash": "8adcf6f0575eed38d711cd701dba61b4"
+      }
+    ]
+  },
+  "after": {
+    "orders": [
+      {
+        "documentDate": "2026-10-12T00:00:00Z",
+        "documentNumber": "21-ΤΔΑ 6836",
+        "id": "60bd0608-7875-4c43-b66e-57536d46c251",
+        "invoiceNumber": "21-ΤΔΑ 6836",
+        "lines": 0,
+        "observed_at": "2026-10-13T21:33:42.302457Z",
+        "paymentTransactionId": "pay_4a1dcf7906ffa6c7a89d59c57aa505a0206f04a374249595b28cee42682b5147",
+        "posting": 0,
+        "sourceDocumentId": "b538b9f2-9f70-4673-a357-aeb6113169f1",
+        "status": "NEW",
+        "totalGross": 153.17
+      },
+      {
+        "documentDate": "2026-10-12T00:00:00Z",
+        "documentNumber": "21-ΤΔΑ 6836",
+        "id": "b9ba143f-7af5-4488-8cdc-1046111dcd56",
+        "invoiceNumber": "21-ΤΔΑ 6836",
+        "lines": 0,
+        "observed_at": "2026-10-13T21:33:42.302457Z",
+        "paymentTransactionId": null,
+        "posting": 0,
+        "sourceDocumentId": "19d50bc3-287f-4b9b-95c0-94854038dcd7",
+        "status": "MERGED",
+        "totalGross": 153.17
+      }
+    ],
+    "payment": [
+      {
+        "actorName": "ΑΝΤΩΝΗΣ ΠΑΠΑΔΗΜΟΣ",
+        "amount": 155.17,
+        "id": "pay_4a1dcf7906ffa6c7a89d59c57aa505a0206f04a374249595b28cee42682b5147",
+        "invoicePaymentKey": "cmulmjjoa000oqlbfyi0h53ju:VAT:999162880:211AA006836",
+        "observed_at": "2026-10-13T21:33:41.130444Z",
+        "occurredAt": "2026-10-12T04:46:06.320419Z",
+        "reversedAt": null,
+        "row_hash": "33788e8f6a3dbce289e5711ffa1a9051",
+        "sessionId": "844ece89-e314-465f-9e3e-598ef60e920f"
+      }
+    ],
+    "stock": [
+      {
+        "latest_movement": "2026-10-13T21:32:08.223Z",
+        "observed_at": "2026-10-13T21:33:42.428424Z",
+        "products": 6639,
+        "stock_hash": "18680aa7501a9e1aa5d85ffaf03d9050",
+        "target_movements": 0
+      }
+    ],
+    "files": [
+      {
+        "checksum": "421a4aa80eecd7ae64366a3f2e2a5f3572a0aae72b4ecdb106ca5879c4407cb5",
+        "filename": "timologio-selida-1-1791780069296.jpg",
+        "id": "5b9c1b35-eff6-4edb-94a6-7419fb617d00",
+        "job_id": "6811bcf8-dd27-4cf8-806b-033f6ed8791c",
+        "mimeType": "image/jpeg",
+        "observed_at": "2026-10-13T21:33:41.733091Z",
+        "purchaseDocumentId": "b538b9f2-9f70-4673-a357-aeb6113169f1",
+        "stored_length": 173643
+      },
+      {
+        "checksum": "c33e992f210acea63d0faeb490ffff9ac35f1812f49561c5210e74929ddbc738",
+        "filename": "mydata-6836-400015624303633.pdf",
+        "id": "8c140da7-39ac-4468-ad06-9633679f1b8d",
+        "job_id": "6bf7858e-eac2-4d3f-a5bf-762b3b118b32",
+        "mimeType": "application/pdf",
+        "observed_at": "2026-10-13T21:33:41.733091Z",
+        "purchaseDocumentId": "b538b9f2-9f70-4673-a357-aeb6113169f1",
+        "stored_length": 294216
+      }
+    ],
+    "shift": [
+      {
+        "count": 83,
+        "observed_at": "2026-10-13T21:33:41.231076Z",
+        "sessionId": "844ece89-e314-465f-9e3e-598ef60e920f",
+        "total": 2462.26,
+        "transaction_hash": "8adcf6f0575eed38d711cd701dba61b4"
+      }
+    ]
+  },
+  "audit": {
+    "alias": [
+      {
+        "actorId": "cms1k1bje001xhn3xulr0rooz",
+        "aliasDocumentId": "19d50bc3-287f-4b9b-95c0-94854038dcd7",
+        "aliasOrderId": "b9ba143f-7af5-4488-8cdc-1046111dcd56",
+        "canonicalDocumentId": "b538b9f2-9f70-4673-a357-aeb6113169f1",
+        "canonicalOrderId": "60bd0608-7875-4c43-b66e-57536d46c251",
+        "companyId": "cmulmjjoa000oqlbfyi0h53ju",
+        "createdAt": "2026-10-13T21:33:28.141846Z",
+        "details": {
+          "actorId": "cms1k1bje001xhn3xulr0rooz",
+          "aliasOrderIds": [
+            "b9ba143f-7af5-4488-8cdc-1046111dcd56"
+          ],
+          "automatic": false,
+          "before": [
+            {
+              "createdAt": "2026-10-12T04:46:07.535Z",
+              "documentDate": "2023-10-12T00:00:00.000Z",
+              "documentId": "b538b9f2-9f70-4673-a357-aeb6113169f1",
+              "documentNumber": "21-1AA 006836",
+              "documentStatus": "DRAFT",
+              "documentType": "INVOICE",
+              "documentUpdatedAt": "2026-10-12T04:46:07.536Z",
+              "exact": false,
+              "invoiceNumber": "21-1AA 006836",
+              "isMyData": false,
+              "lineCount": 0,
+              "lineVersion": "d41d8cd98f00b204e9800998ecf8427e",
+              "orderId": "60bd0608-7875-4c43-b66e-57536d46c251",
+              "paymentAmount": 155.17,
+              "paymentStoreId": "cmulmjjoc000qqlbf2bn2ifj0",
+              "paymentSupplierId": "4504fce9-e2c7-4b40-84e5-e1368d7e7578",
+              "paymentTaxId": "999162880",
+              "paymentTransactionId": "pay_4a1dcf7906ffa6c7a89d59c57aa505a0206f04a374249595b28cee42682b5147",
+              "paymentType": "SUPPLIER_PAYMENT",
+              "reversedAt": null,
+              "status": "NEW",
+              "supplierId": "4504fce9-e2c7-4b40-84e5-e1368d7e7578",
+              "taxId": "999162880",
+              "totalGross": 155.17,
+              "updatedAt": "2026-10-12T04:46:07.535Z"
+            },
+            {
+              "createdAt": "2026-10-12T04:36:07.806Z",
+              "documentDate": "2026-10-12T00:00:00.000Z",
+              "documentId": "19d50bc3-287f-4b9b-95c0-94854038dcd7",
+              "documentNumber": "21-ΤΔΑ 6836",
+              "documentStatus": "DRAFT",
+              "documentType": "INVOICE",
+              "documentUpdatedAt": "2026-10-12T04:36:07.807Z",
+              "exact": true,
+              "invoiceNumber": "21-ΤΔΑ 6836",
+              "isMyData": true,
+              "lineCount": 0,
+              "lineVersion": "d41d8cd98f00b204e9800998ecf8427e",
+              "orderId": "b9ba143f-7af5-4488-8cdc-1046111dcd56",
+              "paymentAmount": null,
+              "paymentStoreId": null,
+              "paymentSupplierId": null,
+              "paymentTaxId": null,
+              "paymentTransactionId": null,
+              "paymentType": null,
+              "reversedAt": null,
+              "status": "NEW",
+              "supplierId": "4504fce9-e2c7-4b40-84e5-e1368d7e7578",
+              "taxId": "999162880",
+              "totalGross": 153.17,
+              "updatedAt": "2026-10-12T04:36:07.806Z"
+            }
+          ],
+          "completed": true,
+          "documentId": "b538b9f2-9f70-4673-a357-aeb6113169f1",
+          "inboxId": "11e36e67-28b0-435f-9ec9-7cffa396e570",
+          "mark": "400015624303633",
+          "orderId": "60bd0608-7875-4c43-b66e-57536d46c251",
+          "paymentChanged": false,
+          "paymentDifference": 2,
+          "paymentTransactionId": "pay_4a1dcf7906ffa6c7a89d59c57aa505a0206f04a374249595b28cee42682b5147",
+          "pdfAttachmentId": "8c140da7-39ac-4468-ad06-9633679f1b8d",
+          "photoAttachmentIds": [
+            "5b9c1b35-eff6-4edb-94a6-7419fb617d00"
+          ],
+          "reason": "Ελέγχθηκαν τα αποθηκευμένα πρωτότυπα φωτογραφίας POS και PDF: FRESH SNACK, 12/10/2026, 21-ΤΔΑ 6836, MARK 400015624303633, 153,17 €. Ίδιο τιμολόγιο· διορθώνονται μόνο τα λάθος στοιχεία προχείρου POS. Η αρχική πληρωμή 155,17 € διατηρείται αμετάβλητη, με διαφορά 2,00 € για χωριστό έλεγχο.",
+          "requiresPaymentReview": true,
+          "stockChanged": false
+        },
+        "inboxId": "11e36e67-28b0-435f-9ec9-7cffa396e570",
+        "mark": "400015624303633",
+        "storeId": "cmulmjjoc000qqlbf2bn2ifj0"
+      }
+    ],
+    "inbound": [
+      {
+        "common_doc": "b538b9f2-9f70-4673-a357-aeb6113169f1",
+        "common_draft": {
+          "aliasOrderIds": [
+            "b9ba143f-7af5-4488-8cdc-1046111dcd56"
+          ],
+          "completed": true,
+          "documentId": "b538b9f2-9f70-4673-a357-aeb6113169f1",
+          "inboxId": "11e36e67-28b0-435f-9ec9-7cffa396e570",
+          "mark": "400015624303633",
+          "orderId": "60bd0608-7875-4c43-b66e-57536d46c251",
+          "paymentDifference": 2,
+          "paymentTransactionId": "pay_4a1dcf7906ffa6c7a89d59c57aa505a0206f04a374249595b28cee42682b5147",
+          "requiresPaymentReview": true
+        },
+        "common_order": "60bd0608-7875-4c43-b66e-57536d46c251",
+        "id": "a60706a8-78e6-4a71-84d9-c1fabaebfebe",
+        "inboxId": "11e36e67-28b0-435f-9ec9-7cffa396e570",
+        "mark": "400015624303633"
+      }
+    ],
+    "stockClaims": [
+      {
+        "claims": 0
+      }
+    ]
+  }
+}
