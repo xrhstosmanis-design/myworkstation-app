@@ -72,7 +72,7 @@ async function actualHandlers(path,db){
  const deps={Router:()=>router,z,crypto,prisma:db,requireCompanyModule:()=>()=>{},...common};
  const src=(await readFile(new URL(path,import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');new Function(...Object.keys(deps),src)(...Object.values(deps));return handlers;
 }
-async function invoke(handler,params,body={}){let result,failure;const req={params,body,user:{companyId:'c',id:'owner',role:'OWNER',fullName:'Fixture owner'}};const res={json:value=>{result=value},status:()=>res};await handler(req,res,e=>failure=e);return {result,failure};}
+async function invoke(handler,params,body={}){let result,failure,status=200;const req={params,body,user:{companyId:'c',id:'owner',role:'OWNER',fullName:'Fixture owner'}};const res={json:value=>{result=value},status:value=>(status=value,res)};await handler(req,res,e=>failure=e);return {result,failure,status};}
 
 test('native actual approval/order-finalization paths serialize to one stock posting and retain the control store', {skip:!isolatedInvoiceDb()},async()=>{
  for(const first of ['order','document','race']){const f=await invoiceDbFixture();try{
@@ -84,7 +84,7 @@ test('native actual approval/order-finalization paths serialize to one stock pos
   else {const result=await(first==='order'?order():document());assert.ifError(result.failure);assert.ok(result.result);const second=await(first==='order'?document():order());if(first==='order')assert.equal(second.failure?.code,'INVOICE_ALREADY_POSTED');else assert.equal(second.result.idempotent,true);}
   const stocks=await f.db.$queryRawUnsafe('SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"');assert.deepEqual(stocks.map(s=>[s.storeId,Number(s.currentStock)]),[['control',20],['s',13]]);
   assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS count FROM "StockMovement"'))[0].count,1);assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS count FROM "InvoiceStockPosting"'))[0].count,1);
-  const alias=await invoke(orders['PATCH /:orderId'],{orderId:'mydata'},{status:'FINAL'});assert.ok(alias.failure);assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS count FROM "StockMovement"'))[0].count,1);
+  const alias=await invoke(orders['PATCH /:orderId'],{orderId:'mydata'},{status:'FINAL'});assert.ok(alias.failure?.status===409||alias.status===409);assert.ok(alias.failure?.message||alias.result?.error);assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS count FROM "StockMovement"'))[0].count,1);
  }finally{await f.close()}}
 });
 
