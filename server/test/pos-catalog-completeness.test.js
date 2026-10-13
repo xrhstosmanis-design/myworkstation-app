@@ -84,7 +84,13 @@ test('actual catalog SQL in isolated PostgreSQL preserves complete membership, a
       assert.equal(new Set(result.products.map(p=>p.id)).size,26656);assert.equal(result.products[0].id,'p00001');assert.equal(result.products.at(-1).id,'p26656');
       const index=createPosScanCatalog(result.products),target=index.exact('5201004022158',{complete:true});assert.equal(target.id,'p26656');assert.equal(target.salePrice,1.25);assert.equal(target.vatRate,24);assert.equal(target.currentStock,-2.5);
       assert.equal(index.exact('5201004022160',{complete:true}).id,'p00001');
-      if(kind!=='older'){assert.equal(index.exact('5201004022159',{complete:true}).id,'p26656');assert.equal(target.sourceCode,'M-CODE')}
+      if(kind!=='older'){
+        assert.equal(target.sourceCode,'M-CODE');assert.ok(target.barcodes.includes('5201004022159'));
+        // Legacy resolution also links p00001 through its claimed master barcode.
+        // Keep the existing ambiguity rejection instead of choosing either item.
+        if(kind.endsWith('/legacy-full'))assert.equal(index.exact('5201004022159',{complete:true}),null);
+        else assert.equal(index.exact('5201004022159',{complete:true}).id,'p26656');
+      }
       else assert.equal(target.barcodeOptions[0].salePrice,1.75);
       const control=await run(kind,{companyId:'company'},'control');assert.deepEqual(control.products.map(p=>p.id),['controlonly']);
       await assert.rejects(run(kind,{companyId:'other'}),e=>e.status===404);
