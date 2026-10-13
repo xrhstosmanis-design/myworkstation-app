@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from "react";
 import "./efood-event-preview.css";
+import EfoodManualMapping from "./EfoodManualMapping.jsx";
 
 const reasons={MAPPING_MISSING:"Δεν υπάρχει αντιστοίχιση",MAPPING_UNCONFIRMED:"Δεν έχει επιβεβαιωθεί προϊόν",AMBIGUOUS_MAPPING:"Αντικρουόμενες αντιστοιχίσεις",PRODUCT_NOT_IN_SELECTED_STORE:"Το προϊόν δεν ανήκει στον επιλεγμένο κατάλογο"};
 
@@ -19,6 +20,7 @@ export default function EfoodEventPreview({url,request}){
   };
   const load=()=>run(async()=>{const result=await request(`${url}/event-previews`);const events=result.events||[];return {events,eventId:events[0]?.id||"",preview:null,loaded:true}});
   const read=()=>state.eventId&&run(async()=>({preview:await request(`${url}/events/${encodeURIComponent(state.eventId)}/preview`)}));
+  const afterMapping=()=>run(async()=>{try{return {preview:await request(`${url}/events/${encodeURIComponent(state.eventId)}/preview`)}}catch{throw new Error("Η αντιστοίχιση αποθηκεύτηκε. Η νέα ανάγνωση απέτυχε· πάτησε «Προεπισκόπηση προϊόντων» χωρίς νέα αποθήκευση.")}});
   return <section className="efood-event-preview" aria-label="Προεπισκόπηση αποθηκευμένης παραγγελίας efood">
     <h3>Έλεγχος προϊόντων efood</h3>
     <p>Διαβάζει ήδη αποθηκευμένο event. Δεν στέλνει νέα δοκιμή και δεν δημιουργεί εμπορική συναλλαγή.</p>
@@ -27,7 +29,7 @@ export default function EfoodEventPreview({url,request}){
     {state.events.length>0&&<><label>Επίλεξε event<select value={state.eventId} disabled={state.busy} onChange={event=>setState(value=>({...value,eventId:event.target.value,preview:null,error:""}))}>{state.events.map(event=><option key={event.id} value={event.id}>{event.externalOrderId||event.id} · {event.externalStatus}</option>)}</select></label><button type="button" onClick={read} disabled={state.busy||!state.eventId}>Προεπισκόπηση προϊόντων</button></>}
     {state.error&&<p role="alert">{state.error}</p>}
     {state.preview&&<div className="efood-event-preview-result"><p><b>Event:</b> {state.preview.eventId}<br/><b>Κατάστημα efood:</b> {state.preview.providerStoreId}<br/><b>Κατάσταση:</b> {state.preview.status} · {state.preview.mode}</p>
-      {state.preview.items.map(item=><article key={item.line}><div><strong>{item.name||item.externalSku||"Προϊόν"}</strong><b>Ποσότητα: {item.quantity}</b></div><p>SKU: {item.externalSku||"—"}<br/>Barcode: {item.barcodes.join(", ")||"—"}</p><p className={item.mappingStatus==="MATCHED"?"matched":"unmatched"}>{item.mappingStatus==="MATCHED"?`Αντιστοίχιση: ${item.product?.name||item.product?.id}`:reasons[item.reason]||"Προς έλεγχο"}</p></article>)}
+      {state.preview.items.map(item=><article key={item.line}><div><strong>{item.name||item.externalSku||"Προϊόν"}</strong><b>Ποσότητα: {item.quantity}</b></div><p>SKU: {item.externalSku||"—"}<br/>Barcode: {item.barcodes.join(", ")||"—"}</p><p className={item.mappingStatus==="MATCHED"?"matched":"unmatched"}>{item.mappingStatus==="MATCHED"?`Αντιστοίχιση: ${item.product?.name||item.product?.id}`:reasons[item.reason]||"Προς έλεγχο"}</p>{state.preview.preparationOnly===true&&state.preview.commercialExecutionReady===false&&state.preview.mode==="LAB_WEBHOOK_TEST"&&item.mappingStatus==="UNMATCHED"&&(item.externalProductId||item.externalSku)&&<EfoodManualMapping key={`${url}:${state.preview.eventId}:${item.line}`} url={url} eventId={state.preview.eventId} item={item} request={request} onSaved={afterMapping}/>}</article>)}
       <p><b>{state.preview.mappingComplete?"Οι αντιστοιχίσεις προϊόντων συμφωνούν.":"Η αντιστοίχιση προϊόντων εκκρεμεί."}</b> Οι τιμές, οι πληρωμές, η διαθεσιμότητα και η ενεργοποίηση Pelican χρειάζονται ξεχωριστή επιβεβαίωση.</p>
     </div>}
   </section>;
