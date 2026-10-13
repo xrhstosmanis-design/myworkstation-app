@@ -31,6 +31,7 @@
  .chat-mobile-app .store-chat-toolbar>.store-chat-refresh{display:none}
  .chat-mobile-app .store-chat-search{display:none}
  .chat-mobile-app .store-chat-search.is-open{display:grid}
+ .chat-mobile-app .store-chat-search.is-open>input:first-of-type{grid-column:1/-1;grid-row:1}
  .chat-mobile-app .store-chat-search.is-open>.store-chat-search-refresh{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px}
  .chat-mobile-app .store-chat-compose{padding-bottom:max(8px,env(safe-area-inset-bottom));grid-template-columns:minmax(0,1fr) 108px}
  .chat-mobile-app .store-chat-compose>button,.chat-mobile-app .store-chat-compose>input,.chat-mobile-app .store-chat-compose>select{min-height:44px;font-size:16px}
