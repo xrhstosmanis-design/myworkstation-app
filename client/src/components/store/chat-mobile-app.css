@@ -1,3 +1,55 @@
 .chat-mobile-actions{display:flex;flex-wrap:wrap;gap:8px}.chat-mobile-actions button{min-height:44px;padding:8px 12px;border:1px solid #bdd3df;background:white;color:#123b5d;border-radius:10px;font:inherit;font-weight:700}.chat-mobile-actions svg{width:18px;vertical-align:middle;margin-right:6px}.chat-install-overlay{position:fixed;inset:0;z-index:30000;background:#123b5dbb;display:grid;place-items:center;padding:16px}.chat-install-overlay section{position:relative;background:white;color:#123b5d;border-radius:18px;padding:24px;max-width:460px;max-height:85dvh;overflow:auto}.chat-install-overlay button,.chat-mobile-login button{min-height:48px;font:inherit;border-radius:10px;padding:10px}.chat-install-overlay input{width:100%;box-sizing:border-box;font:inherit;padding:12px}.chat-install-close{position:absolute;right:8px;top:8px}.chat-mobile-login{max-width:430px}.chat-mobile-login input{font-size:16px}.chat-mobile-entry{min-height:100dvh}.chat-mobile-entry>.chat-mobile-actions{padding:12px}.store-chat-modal header .chat-mobile-actions{margin-left:auto}.chat-mobile-entry .store-chat-modal{height:100dvh;max-height:100dvh;border-radius:0}@media(max-width:640px){.store-chat-modal header{flex-wrap:wrap}.store-chat-modal header .chat-mobile-actions{width:100%}.chat-mobile-actions button{flex:1;font-size:13px}}
 
 .chat-store-list{display:grid;gap:12px;margin:20px 0}.chat-store-list button{display:grid;gap:4px;text-align:left;min-height:70px;padding:14px}.chat-mobile-shell{overflow:auto;padding:20px}.chat-mobile-status{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:8px;font-size:12px;z-index:1100}.chat-mobile-app .store-chat-modal header{flex-wrap:wrap}.chat-mobile-login select{width:100%;padding:12px}
+
+/* The phone app fills its viewport; POS modal rules stay scoped to POS. */
+.chat-mobile-app>.shift-overlay{padding:0;background:#f3f7fb;top:var(--chat-viewport-top,0px);bottom:auto;height:var(--chat-viewport-height,100dvh)}
+.chat-mobile-app .store-chat-modal{width:100%;height:100vh;height:var(--chat-viewport-height,100dvh);max-height:var(--chat-viewport-height,100dvh);border-radius:0;box-shadow:none;min-height:0}
+.chat-mobile-app .store-chat-modal>header{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;padding:12px;background:#123b5d}
+.chat-mobile-app .store-chat-modal>header>div:first-child{min-width:0}
+.chat-mobile-app .store-chat-modal>header h2{font-size:20px;line-height:1.2;margin:0 0 4px}
+.chat-mobile-app .store-chat-modal>header small{display:none}
+.chat-mobile-app .store-chat-modal>header p{font-size:13px;overflow-wrap:anywhere}
+.chat-mobile-app .store-chat-modal>header>button:not(.store-chat-close){grid-column:1/-1;min-height:44px;font-size:14px;padding:8px 12px;text-align:left}
+.chat-mobile-app .store-chat-modal>header>.store-chat-close{grid-column:2;grid-row:1;width:44px;height:44px;padding:10px;display:grid;place-items:center}
+.chat-mobile-app .store-chat-modal>header>.chat-mobile-actions{grid-column:1/-1;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
+.chat-mobile-app .store-chat-modal>header .chat-mobile-actions button{min-width:0;min-height:44px;font-size:13px;line-height:1.2;padding:7px;display:flex;align-items:center;justify-content:center;gap:5px;background:#fff;color:#123b5d}
+.chat-mobile-app .chat-mobile-actions svg{width:17px;height:17px;flex-shrink:0;margin:0}
+.chat-mobile-app .store-chat-messages{flex:1 1 0;min-height:0;overflow:auto;overscroll-behavior:contain}
+.chat-mobile-app .store-chat-error{flex-shrink:0;font-size:13px;line-height:1.4}
+.chat-mobile-app .store-chat-push-help{padding:9px 12px;max-height:25dvh;overflow:auto}
+.chat-mobile-app .store-chat-push-help summary{cursor:pointer;font-weight:700;min-height:24px}
+.chat-mobile-app .store-chat-push-help p{margin:8px 0}
+.chat-mobile-app .store-chat-push-help small{display:block;overflow-wrap:anywhere}
+.store-chat-search-toggle{display:none!important}
+.store-chat-search-refresh{display:none}
+.chat-install-success{padding:10px;border-radius:8px;background:#e8f7f4;color:#0f766e}
+@media(max-width:700px){
+ .chat-mobile-app .store-chat-toolbar{gap:6px;padding:8px 10px}
+ .chat-mobile-app .store-chat-toolbar>button{flex:1 1 calc(50% - 6px);min-height:44px;font-size:13px}
+ .chat-mobile-app .store-chat-toolbar>.store-chat-search-toggle{display:flex!important}
+ .chat-mobile-app .store-chat-toolbar>.store-chat-refresh{display:none}
+ .chat-mobile-app .store-chat-search{display:none}
+ .chat-mobile-app .store-chat-search.is-open{display:grid}
+ .chat-mobile-app .store-chat-search.is-open>input:first-of-type{grid-column:1/-1;grid-row:1}
+ .chat-mobile-app .store-chat-search.is-open>.store-chat-search-refresh{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px}
+ .chat-mobile-app .store-chat-compose{padding-bottom:max(8px,env(safe-area-inset-bottom));grid-template-columns:minmax(0,1fr) 108px}
+ .chat-mobile-app .store-chat-compose>button,.chat-mobile-app .store-chat-compose>input,.chat-mobile-app .store-chat-compose>select{min-height:44px;font-size:16px}
+ .chat-mobile-app .store-chat-compose>.store-chat-file{min-width:0;font-size:12px;line-height:1.2}
+ .chat-mobile-app .store-chat-compose>button svg{width:19px;height:19px}
+ .chat-mobile-app .store-chat-messages article{max-width:100%;overflow-wrap:anywhere}
+ .chat-mobile-app .store-chat-messages article small{font-size:12px}
+}
+@media(max-height:560px) and (max-width:700px){
+ .chat-mobile-app .store-chat-modal>header{padding:6px 10px;gap:4px}
+ .chat-mobile-app .store-chat-modal>header>.chat-mobile-actions,.chat-mobile-app .store-chat-modal>header>button:not(.store-chat-close){display:none}
+ .chat-mobile-app .store-chat-toolbar>b{display:none}
+ .chat-mobile-app .store-chat-toolbar{padding:4px 10px}
+}
+@media(max-width:700px){
+ .chat-compact-viewport .chat-mobile-app .store-chat-modal>header{padding:6px 10px;gap:4px}
+ .chat-compact-viewport .chat-mobile-app .store-chat-modal>header>.chat-mobile-actions,.chat-compact-viewport .chat-mobile-app .store-chat-modal>header>button:not(.store-chat-close){display:none}
+ .chat-compact-viewport .chat-mobile-app .store-chat-toolbar>b{display:none}
+ .chat-compact-viewport .chat-mobile-app .store-chat-toolbar{padding:4px 10px}
+}
+
