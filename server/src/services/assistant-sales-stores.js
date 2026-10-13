@@ -10,11 +10,12 @@ export const salesStoresArguments=z.object({mode:z.enum(["names","family","categ
 });
 export const salesStoresTool={type:"function",name:"sales_by_store",strict:true,description:"Κανονικές πωλήσεις ανά εξουσιοδοτημένο κατάστημα και είδος: πολλές ονομασίες, μία κατηγορία ή πραγματικά εφαρμοσμένες προσφορές. family: όλες οι πραγματικές ονομασίες/συσκευασίες που ταιριάζουν στη μάρκα ή γενική ονομασία, π.χ. κόκα κόλα· επιστρέφονται χωριστές γραμμές ανά είδος. Δεν απαιτεί SKU. Ασαφείς συγκεκριμένες ονομασίες επιστρέφουν ονομαστικές επιλογές. Το εύρος καταστημάτων ορίζεται από τον χρήστη στην οθόνη, ποτέ από το μοντέλο. Μόνο ανάγνωση.",parameters:{type:"object",additionalProperties:false,properties:{mode:{type:"string",enum:["names","family","category","offers"]},names:{type:"array",items:{type:"string"},description:"names: συγκεκριμένες ονομασίες. family: γενικές ονομασίες/μάρκες του χρήστη για όλες τις καταγεγραμμένες συσκευασίες. category: μία ονομασία κατηγορίας. offers: κενή λίστα."},from:{type:"string"},to:{type:"string"}},required:["mode","names","from","to"]}};
 export const salesName=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").replace(/\bfix\b/g,"φιξ").replace(/(\d)([a-zα-ω])/g,"$1 $2").replace(/([a-zα-ω])(\d)/g,"$1 $2").replace(/[^a-zα-ω0-9]+/g," ").trim().replace(/\s+/g," ").replace(/(^| )(?:κοκα ?κολα|coca ?cola)(?= |$)/g,"$1coca cola");
-const categoryName=value=>salesName(value).replace(/(^| )(?:μπυρες|μπιρες|μπυρα|μπιρα)(?= |$)/g,"$1μπυρα");
+const categoryName=value=>salesName(value).replace(/(^| )(?:μπυρες|μπιρες|μπυρα|μπιρα|μπυρας|μπιρας)(?= |$)/g,"$1μπυρα");
+const categoryLabels=r=>[r.categoryName,r.masterCategoryName,r.subcategoryName].filter(v=>typeof v==="string"&&v.trim());
 const nameMatches=(name,query,normalize=salesName)=>{const tokens=normalize(name).split(" ");return normalize(query).split(" ").every(t=>tokens.includes(t))};
 const fail=message=>{throw Object.assign(new Error(message),{status:502})};
 export async function readSalesNamesCatalog(companyId,{db=prisma}={}){
-  return db.$queryRaw`SELECT p."id" AS "productId",p."name",p."unit",c."name" AS "categoryName",mp."subcategoryName"
+  return db.$queryRaw`SELECT p."id" AS "productId",p."name",p."unit",c."name" AS "categoryName",mp."categoryName" AS "masterCategoryName",mp."subcategoryName"
     FROM "Product" p LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" AND c."companyId"=p."companyId"
     LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId" WHERE p."companyId"=${companyId} ORDER BY p."id" LIMIT 30001`;
 }
@@ -25,7 +26,7 @@ export async function readAssistantSalesStores(value,access,{readReport=readSale
   const base={kind:"sales_by_store",source:"Στατιστικά πωλήσεων",scope:access.scope,mode:args.mode,names:args.names,from:args.from,to:args.to,timeZone:"Europe/Athens",observedAt:now.toISOString(),incompletePeriod:args.to>=today,asOf:today,rows:[],stores:[],candidates:[],unavailable:access.excluded||[],totals:null,truncated:false,reversalAware:true,nonFiscal:true};
   const scopes=access.stores||[];
   if(scopes.length>100||access.truncated)return {...base,result:"source_limited",truncated:true};
-  if(!scopes.length)return {...base,result:"no_match"};
+  if(!scopes.length)return {...base,result:"no_match",reason:"no_authorized_stores"};
   const catalogs=new Map(),ids=new Map();
   if(args.mode!=="offers"){
     for(const companyId of new Set(scopes.map(s=>s.companyId))){
@@ -36,15 +37,24 @@ export async function readAssistantSalesStores(value,access,{readReport=readSale
       catalogs.set(companyId,rows);ids.set(companyId,new Set());
     }
     for(const query of args.names){
-      const normalize=args.mode==="category"?categoryName:salesName;
       const candidates=[...catalogs.entries()].flatMap(([companyId,rows])=>rows.map(r=>({...r,companyId})));
-      const labels=r=>args.mode==="category"?[r.categoryName,r.subcategoryName].filter(Boolean):[r.name];
-      const exact=args.mode==="family"?[]:candidates.filter(r=>labels(r).some(n=>normalize(n)===normalize(query)));
-      const matches=exact.length?exact:candidates.filter(r=>labels(r).some(n=>nameMatches(n,query,normalize)));
+      let category=args.mode==="category";
+      let normalize=category?categoryName:salesName,labels=category?categoryLabels:r=>[r.name];
+      let exact=args.mode==="family"?[]:candidates.filter(r=>labels(r).some(n=>normalize(n)===normalize(query)));
+      let matches=exact.length?exact:candidates.filter(r=>labels(r).some(n=>nameMatches(n,query,normalize)));
+      // A model may treat a generic category word as an item. Only after NO
+      // real product match, try actual catalog labels. Never guess beer brands,
+      // widen a packaging match, or reinterpret SKU/multiple-name requests.
+      if(!category&&!matches.length&&args.names.length===1&&!/\d/.test(query)){
+        category=true;normalize=categoryName;labels=categoryLabels;
+        exact=candidates.filter(r=>labels(r).some(n=>normalize(n)===normalize(query)));
+        matches=exact.length?exact:candidates.filter(r=>labels(r).some(n=>nameMatches(n,query,normalize)));
+        if(matches.length)base.mode="category";
+      }
       const distinct=new Map();
       for(const r of matches)for(const label of labels(r))if(normalize(label)===normalize(query)||!exact.length&&nameMatches(label,query,normalize))distinct.set(normalize(label),label);
-      if(!matches.length)return {...base,result:"no_match",unresolvedName:query};
-      if(args.mode!=="family"&&distinct.size!==1)return {...base,result:"ambiguous",unresolvedName:query,candidates:[...distinct.values()].slice(0,20),truncated:distinct.size>20};
+      if(!matches.length){const categories=[...new Set(candidates.flatMap(categoryLabels))];return {...base,result:"no_match",reason:"catalog_name_not_found",unresolvedName:query,categoryCandidates:categories.slice(0,20),categoryCandidatesLimited:categories.length>20};}
+      if((category||args.mode!=="family")&&distinct.size!==1)return {...base,result:"ambiguous",unresolvedName:query,candidates:[...distinct.values()].slice(0,20),truncated:distinct.size>20};
       for(const r of matches)ids.get(r.companyId).add(r.productId);
     }
   }

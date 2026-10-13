@@ -15,6 +15,8 @@ export function assistantReportTables(evidence,{generatedAt=new Date()}={}){
   for(const unavailable of r.unavailable||[])notes.push(`Μη διαθέσιμη πηγή: ${unavailable.storeName||"Κατάστημα"} · ${unavailable.reason||"Δεν επιβεβαιώθηκαν στοιχεία"}`);
   let title,columns,rows;
   const noAmounts=["ambiguous","no_match","source_limited"].includes(r.result);
+  if(r.reason==="catalog_name_not_found")notes.push("Δεν βρέθηκε αντιστοίχιση στον εξουσιοδοτημένο κατάλογο· δεν αποδεικνύονται μηδενικές πωλήσεις.");
+  if(Array.isArray(r.categoryCandidates)&&r.categoryCandidates.length)notes.push(`Καταγεγραμμένες κατηγορίες: ${r.categoryCandidates.slice(0,20).join(" · ")}`);
   if(r.kind==="consumption"){
    title=r.consumptionKind==="PRODUCT_DESTRUCTION"?"Καταστροφή προϊόντων":"Ιδιοκατανάλωση";
    columns=["Ημερομηνία","Είδος","SKU","Ποσότητα","Αξία αναφοράς (€)","Χειριστής καταχώρισης"];
