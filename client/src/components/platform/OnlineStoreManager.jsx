@@ -1,3 +1,4 @@
+import {applyDailyRegulatedOnlinePrice} from "../../../../shared/daily-regulated-pricing.mjs";
 import OnlineStoreQR from "./OnlineStoreQR.jsx";
 import OnlineAvailabilityEditor from "./OnlineAvailabilityEditor.jsx";
 import React,{useEffect,useMemo,useState} from "react";
@@ -19,7 +20,7 @@ export default function OnlineStoreManager({manager,setManager,request,onClose,s
  const settings={pickupEnabled:true,deliveryEnabled:true,deliveryFee:0,minimumOrderRetail:0,doctorDiscountPercent:0,nurseDiscountPercent:0,staffDiscountPercent:0,cashEnabled:true,cardOnDeliveryEnabled:true,timezone:"Europe/Athens",brandName:manager.store.name,brandTagline:"Online Παραγγελίες",brandLogoUrl:"",brandPrimaryColor:"#7b1216",brandSecondaryColor:"#5d0c0f",brandWelcomeMessage:"Γρήγορα, εύκολα, όποτε θέλεις!",estimatedMinutes:25,...manager.settings,weeklyHours:{...defaultHours,...(manager.settings.weeklyHours||{})}};
  const categories=useMemo(()=>[...new Set(manager.products.map(p=>p.categoryName||"Χωρίς κατηγορία"))].sort((a,b)=>a.localeCompare(b,"el")),[manager.products]);
  const filtered=useMemo(()=>manager.products.filter(p=>(category==="ALL"||(p.categoryName||"Χωρίς κατηγορία")===category)&&matchesGreekSearch(search,[p.name,p.sku,p.categoryName,...(p.barcodes||[])])),[manager.products,category,search]);
- const updateSettings=(key,value)=>setManager(current=>{const next={pickupEnabled:true,deliveryEnabled:true,deliveryFee:0,minimumOrderRetail:0,doctorDiscountPercent:0,nurseDiscountPercent:0,staffDiscountPercent:0,cashEnabled:true,cardOnDeliveryEnabled:true,timezone:"Europe/Athens",brandName:current.store.name,brandTagline:"Online Παραγγελίες",brandLogoUrl:"",brandPrimaryColor:"#7b1216",brandSecondaryColor:"#5d0c0f",brandWelcomeMessage:"Γρήγορα, εύκολα, όποτε θέλεις!",estimatedMinutes:25,weeklyHours:defaultHours,...current.settings,[key]:value};return {...current,settings:next,products:key==="surchargeType"||key==="surchargeValue"?current.products.map(p=>({...p,onlinePrice:onlinePrice(p.storePrice,next.surchargeType,next.surchargeValue)})):current.products}});
+ const updateSettings=(key,value)=>setManager(current=>{const next={pickupEnabled:true,deliveryEnabled:true,deliveryFee:0,minimumOrderRetail:0,doctorDiscountPercent:0,nurseDiscountPercent:0,staffDiscountPercent:0,cashEnabled:true,cardOnDeliveryEnabled:true,timezone:"Europe/Athens",brandName:current.store.name,brandTagline:"Online Παραγγελίες",brandLogoUrl:"",brandPrimaryColor:"#7b1216",brandSecondaryColor:"#5d0c0f",brandWelcomeMessage:"Γρήγορα, εύκολα, όποτε θέλεις!",estimatedMinutes:25,weeklyHours:defaultHours,...current.settings,[key]:value};return {...current,settings:next,products:key==="surchargeType"||key==="surchargeValue"?current.products.map(p=>({...p,onlinePrice:applyDailyRegulatedOnlinePrice(p.storePrice,onlinePrice(p.storePrice,next.surchargeType,next.surchargeValue),{companyId:current.company.id,storeId:current.store.id},p)})):current.products}});
  const updateHours=(day,key,value)=>updateSettings("weeklyHours",{...settings.weeklyHours,[day]:{...settings.weeklyHours[day],[key]:value}});
  const toggle=id=>setManager(c=>({...c,products:c.products.map(p=>p.id===id?{...p,visible:!p.visible}:p)}));
  const setFiltered=visible=>{const ids=new Set(filtered.map(p=>p.id));setManager(c=>({...c,products:c.products.map(p=>ids.has(p.id)?{...p,visible}:p)}))};
@@ -68,3 +69,4 @@ export default function OnlineStoreManager({manager,setManager,request,onClose,s
   <footer><span>{manager.products.filter(p=>p.visible).length} από {manager.products.length} προϊόντα online</span><button onClick={saveProducts} disabled={busy==="online-products"}>{busy==="online-products"?"Αποθήκευση…":"Αποθήκευση προϊόντων"}</button></footer>
  </section></div>;
 }
+
