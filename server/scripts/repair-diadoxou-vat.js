@@ -23,7 +23,9 @@ try {
       FROM "Product" p LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       WHERE p."companyId"=${companyId} AND p."vatDepartmentId"=${tobacco.id}`;
     const {total, tobacco:zeroCount, other} = state[0];
-    if (total === 565 && zeroCount === 565 && other === 0 && Number(tobacco.vatRate) === 0 &&
+    // Catalogue membership can grow after the one-time repair. Recognize the
+    // verified mapping and all associated tobacco/zero-rate products, not its old size.
+    if (total === zeroCount && other === 0 && Number(tobacco.vatRate) === 0 &&
         tobacco.cashRegisterDepartment === 1 && tobacco.legacyVatCode === "12") return;
     if (total !== 585 || zeroCount !== 565 || other !== 20 || Number(tobacco.vatRate) !== 24 ||
         tobacco.cashRegisterDepartment !== null || tobacco.legacyVatCode !== null)
