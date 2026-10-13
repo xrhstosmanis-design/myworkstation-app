@@ -11,7 +11,7 @@ test("native PostgreSQL named category/store report reuses sale sums, excludes f
    'CREATE TABLE "Store"("id" text primary key,"companyId" text,"name" text)',
    'CREATE TABLE "Product"("id" text primary key,"companyId" text,"name" text,"sku" text,"unit" text,"categoryId" text,"masterProductId" text,"costPrice" numeric)',
    'CREATE TABLE "ProductCategory"("id" text primary key,"companyId" text,"name" text)',
-   'CREATE TABLE "MasterProduct"("id" text primary key,"subcategoryName" text)',
+   'CREATE TABLE "MasterProduct"("id" text primary key,"subcategoryName" text,"categoryName" text)',
    'CREATE TABLE "StoreProduct"("storeId" text,"productId" text,"currentStock" numeric)',
    'CREATE TABLE "PriceCatalogPromotion"("id" text primary key,"companyId" text,"active" bool)',
    'CREATE TABLE "Sale"("id" text primary key,"companyId" text,"storeId" text,"status" text,"transactionMode" text,"source" text,"occurredAt" timestamp,"originalSaleId" text)',
@@ -57,6 +57,11 @@ test("native PostgreSQL named category/store report reuses sale sums, excludes f
   for(const [id,sale,product,quantity,total] of [['beer-sale','coke-sale','beer',5,5],['beer-return','coke-return','beer',-1,-1],['beer-control','coke-control','beer',3,3],['beer-foreign','coke-foreign','foreign-beer',99,99],['beer-next','coke-next-day','beer',99,99]])await db.$executeRaw`INSERT INTO "SaleLine" VALUES(${id},${sale},${product},'Beer',${quantity},1,0,13,${total},NULL,NULL)`;
   for(const name of ['μπύρες','μπίρες','μπύρα','μπίρα']){
    const beer=await readAssistantSalesStores({...family,mode:'category',names:[name]},access,familyOptions);assert.equal(beer.result,'matched');assert.equal(beer.rows.length,2);assert.ok(beer.rows.every(r=>r.productId==='beer'));assert.equal(beer.totals.grossSales,7);assert.deepEqual(beer.totals.quantities,[{unit:'PIECE',quantity:7}]);assert.equal(beer.rows.find(r=>r.storeId==='s').salesQuantity,4);
+  }
+  await db.$executeRaw`INSERT INTO "MasterProduct" VALUES('beer-master','ΚΟΥΤΙΑ','ΜΠΙΡΕΣ')`;
+  await db.$executeRaw`UPDATE "Product" SET "categoryId"=NULL,"masterProductId"='beer-master' WHERE "id"='beer'`;
+  for(const mode of ['names','family','category']){
+   const beer=await readAssistantSalesStores({...family,mode,names:['μπυρας']},access,familyOptions);assert.equal(beer.result,'matched');assert.equal(beer.mode,'category');assert.equal(beer.rows.length,2);assert.ok(beer.rows.every(r=>r.productId==='beer'));assert.equal(beer.totals.grossSales,7);assert.deepEqual(beer.totals.quantities,[{unit:'PIECE',quantity:7}]);
   }
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

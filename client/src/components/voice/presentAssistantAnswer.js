@@ -17,7 +17,7 @@ export function presentAssistantAnswer(result){
     const report=evidence[0];
     fallback.limitations=result.sourceOnly?"Η σύνοψη του AI δεν ολοκληρώθηκε· εμφανίζονται μόνο τα στοιχεία της αναγνωσμένης πηγής.":"";
     if(report.result==="ambiguous")return {...fallback,answer:`Διευκρίνισε την ονομασία ή συσκευασία για «${report.unresolvedName}»: ${(report.candidates||[]).join(" · ")}. Δεν χρειάζεται να γνωρίζεις SKU.`,highlights:[]};
-    if(report.result==="no_match")return {...fallback,answer:"Δεν βρέθηκε αντίστοιχη ονομασία ή διαθέσιμο εξουσιοδοτημένο κατάστημα. Έλεγξε την ονομασία. Αυτό δεν αποδεικνύει μηδενικές πωλήσεις.",highlights:[]};
+    if(report.result==="no_match")return {...fallback,answer:report.reason==="catalog_name_not_found"?`Δεν βρέθηκε αντιστοίχιση στον κατάλογο των επιλεγμένων καταστημάτων. Αυτό δεν αποδεικνύει μηδενικές πωλήσεις.${report.categoryCandidates?.length?` Καταγεγραμμένες κατηγορίες: ${report.categoryCandidates.join(" · ")}.`:""}`:"Δεν βρέθηκε αντίστοιχη ονομασία ή διαθέσιμο εξουσιοδοτημένο κατάστημα. Έλεγξε την ονομασία. Αυτό δεν αποδεικνύει μηδενικές πωλήσεις.",highlights:[]};
     if(report.result==="source_limited")return {...fallback,answer:report.reason||"Η αναζήτηση έφτασε το όριο ασφαλούς ανάγνωσης. Επίλεξε λιγότερα καταστήματα ή στενότερο φίλτρο· δεν εμφανίζεται πλήρες σύνολο.",highlights:[]};
     if(["matched","no_sales"].includes(report.result)&&Array.isArray(report.stores)&&report.stores.length&&report.stores.every(s=>s.grossSales===null||typeof s.grossSales==="number"&&Number.isFinite(s.grossSales))){
       const period=`${report.from} έως ${report.to}${report.incompletePeriod?` · μη ολοκληρωμένη περίοδος, στοιχεία έως ${report.asOf}`:""}`;
