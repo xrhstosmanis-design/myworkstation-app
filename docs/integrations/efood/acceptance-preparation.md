@@ -7,6 +7,9 @@ Owner: codex/efood-bearer-20261012 (διατηρείται).
 Περιορισμένο πραγματικό callback PASS12Oct22:56, webhook6acd3b53b8395c593d96e2ba, event8aecdfb3-c3c2-4531-9ce1-391bc3baee7c, orderc79b178a-34e6-4d11-9eb5-2a7246209c60. Identity και quantity/barcode parser released93ba32ce, fullCI2513/0/0; actual archived readback vendor9344842/SLL45E/barcode05201050130791/qty1/UNMATCHED PASS13Oct. Νέα ingress acceptance παραμένει NOT TESTED. Δεν επαναλαμβάνεται η δοκιμή μόνο για συμπλήρωση εγγράφων.
 Αναλυτικά checkpoints: 2026-10-12-efood-store-identity.md και 2026-10-12-efood-product-references.md. Manual docs/manual/efood/PASS.md περιλαμβάνει το ήδη επαληθευμένο callback και τον περιορισμένο read-only έλεγχο.
 
+## Έλεγχος καταλόγου13Oct06:19–06:20Athens
+Exact barcode05201050130791/SKUSLL45E/13-digit5201050130791: κανένα UI product card. ΜΟΥΣΤΑΡΔ:7 διαφορετικά MASTER είδη, κανένα τεκμηριωμένο counterpart. Δεν αποτελεί ανεξάρτητη DB απόδειξη απουσίας. Mapping BLOCKED μέχρι έγκυρο dedicated LAB προϊόν και store membership, χωρίς επιλογή TEST1/TEST2 ή άλλης μουστάρδας. Checkpoint2026-10-13-efood-catalog-search.md.
+
 ## Πίνακας αντιστοίχισης προς συμπλήρωση
 Η επιλογή productId γίνεται μόνο από τον κατάλογο του επιλεγμένου LAB και ελέγχεται στον server μέσω Product.companyId και StoreProduct.storeId. Ομοιότητα ονομασίας δεν εγκρίνει αντιστοίχιση. Δεν αντιστοιχίζουμε τη μουστάρδα σε TEST1/TEST2 επειδή αυτά υπάρχουν ως controls.
 
@@ -65,4 +68,4 @@ ClaimPR2410, sourcePR2411/fullCI38313270078 2536/0/0, exact main38314162822 2543
 ## Απαιτήσεις από efood και κλείδωμα παραγωγής
 Στάλθηκαν12Oct23:16:46Athens/message1a131c2b6ac76a6e στην υπάρχουσα τεχνική συνομιλία. Περιμένουμε schemas/units/substitutions/pricing/VAT/discount/fees/rounding/payment states, acknowledgement/timeouts/retries/recovery, πλήρες Pelican test environment/scopes/endpoints και certification/onboarding checklist.
 Η απάντηση24Sep λέει ότι το υφιστάμενο μη δημοσιευμένο test shop επιτρέπει virtual Trigger Test Order, όχι πλήρες Pelican. Δεν επινοούμε endpoint/scopes ή ενεργοποιούμε πραγματικό κατάστημα από callback PASS.
-Ολόκληρο tracker12 παραμένει OPEN. Owner παραμένει ο ίδιος· preview ολοκληρώθηκε. Επόμενο: ανάγνωση έγκυρου αντίστοιχου προϊόντος στον επιλεγμένο LAB κατάλογο πριν ρητή αντιστοίχιση. Κάθε νέο source scope χρειάζεται χωριστό claim.
+Ολόκληρο tracker12 παραμένει OPEN. Owner παραμένει ο ίδιος· preview ολοκληρώθηκε. Επόμενο: εξασφάλιση έγκυρου dedicated LAB counterpart, αφού ο UI έλεγχος δεν βρήκε το προϊόν, πριν ρητή αντιστοίχιση. Κάθε νέο source scope χρειάζεται χωριστό claim.
