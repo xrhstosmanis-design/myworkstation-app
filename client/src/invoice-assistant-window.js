@@ -1,11 +1,12 @@
 // Minimize only hides the retained window. It never starts/cancels an API call.
 const windows=new Map();
-export function restoreInvoiceAssistant(orderId){
+export function restoreInvoiceAssistant(orderId,sourceKey="POS"){
  const window=windows.get(orderId);
  if(!window?.overlay.isConnected)return false;
+ if(window.sourceKey!==sourceKey){window.overlay.remove();return false}
  window.restore();return true;
 }
-export function installInvoiceAssistantWindow(overlay,{orderId,order,scoped,onRemoved}){
+export function installInvoiceAssistantWindow(overlay,{orderId,order,scoped,onRemoved,sourceKey="POS"}){
  let minimized=false,disposed=false;
  const hiddenModals=new Map();
  const dock=document.createElement("button");dock.type="button";
@@ -48,6 +49,6 @@ export function installInvoiceAssistantWindow(overlay,{orderId,order,scoped,onRe
  };
  const removalObserver=new MutationObserver(()=>{if(!overlay.isConnected){dispose();onRemoved?.()}});
  removalObserver.observe(document.body,{childList:true,subtree:true});
- windows.set(orderId,{overlay,restore});
+ windows.set(orderId,{overlay,restore,sourceKey});
  return {dispose,isActive:()=>!disposed&&overlay.isConnected};
 }

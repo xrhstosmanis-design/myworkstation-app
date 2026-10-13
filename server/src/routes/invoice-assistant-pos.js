@@ -1,3 +1,4 @@
+import {loadInvoiceAssistantSource} from "../lib/invoice-assistant-source.js";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
@@ -42,57 +43,33 @@ function manager(req,res,next){
   next();
 }
 
-async function source(companyId,orderId){
-  const docs=await prisma.$queryRaw`
-    SELECT d."id",d."storeId",d."documentNumber",d."totalGross",COALESCE(o."supplierId",d."supplierId") AS "supplierId"
-    FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId"
-    WHERE o."id"=${orderId} AND o."companyId"=${companyId} AND o."status"='NEW'
-      AND o."sourceType"='POS_OCR_DRAFT' AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT' LIMIT 1`;
-  const document=docs[0];if(!document)return null;
-  const jobs=await prisma.$queryRaw`
-    SELECT j."id",j."resultJson" FROM "AiReaderJob" j
-    WHERE j."companyId"=${companyId} AND j."storeId"=${document.storeId}
-      AND j."purchaseDocumentId"=${document.id} ORDER BY j."createdAt",j."id" LIMIT 1`;
-  const job=jobs[0];if(!job)return {document,pages:[]};
-  const receiptIds=job.resultJson?.mydataPosReceipt?.attachmentIds;
-  if(Array.isArray(receiptIds)&&receiptIds.length){
-    const receiptPages=[];
-    for(const attachmentId of [...new Set(receiptIds)].slice(0,5)){
-      const rows=await prisma.$queryRaw`SELECT "filename","mimeType","contentData" FROM "DocumentAttachment" WHERE "id"=${attachmentId} AND "companyId"=${companyId} AND "storeId"=${document.storeId} LIMIT 1`;
-      if(!rows[0]?.contentData)return {document,pages:[]};
-      receiptPages.push(rows[0]);
-    }
-    return {document,pages:receiptPages};
-  }
-  const ids=[job.id,...(Array.isArray(job.resultJson?.posHandoff?.pageJobIds)?job.resultJson.posHandoff.pageJobIds:[]).filter(id=>id!==job.id)].slice(0,5);
-  const pages=[];
-  for(const pageId of ids){
-    const rows=await prisma.$queryRaw`SELECT a."filename",a."mimeType",a."contentData"
-      FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId"
-      WHERE j."id"=${pageId} AND j."companyId"=${companyId} AND j."storeId"=${document.storeId} LIMIT 1`;
-    if(!rows[0]?.contentData)return {document,pages:[]};
-    pages.push(rows[0]);
-  }
-  return {document,pages};
+const source=(companyId,orderId,context)=>loadInvoiceAssistantSource(prisma,companyId,orderId,context);
+const sourceContextSchema=z.object({inboxId:z.string().trim().min(1).max(200),storeId:z.string().trim().min(1).max(200)});
+function assistantSourceContext(req,res,next){
+  const input=req.method==="GET"?req.query:req.body;
+  if(input?.inboxId===undefined){req.invoiceAssistantSource={};return next()}
+  try{req.invoiceAssistantSource=sourceContextSchema.parse(input)}catch(error){return res.status(400).json({error:"Απαιτείται συγκεκριμένη εγγραφή myDATA και επιλεγμένο κατάστημα."})}
+  if(req.posPurchaseOrderAccess||req.user?.tokenType==="STORE_OPERATOR")return res.status(403).json({error:"Ο έλεγχος από myDATA επιτρέπεται μόνο στο BackOffice."});
+  return requireCompanyModule("DOCUMENTS")(req,res,error=>error?next(error):requireCompanyModule("INVENTORY")(req,res,next));
 }
 
-router.get("/purchase-orders/:orderId/invoice-assistant/source",requireCompanyModule("AI_READER"),manager,async(req,res,next)=>{
+router.get("/purchase-orders/:orderId/invoice-assistant/source",requireCompanyModule("AI_READER"),manager,assistantSourceContext,async(req,res,next)=>{
   try{
-    const result=await source(req.user.companyId,req.params.orderId);
+    const result=await source(req.user.companyId,req.params.orderId,req.invoiceAssistantSource);
     if(!result)return res.status(404).json({error:"Δεν υπάρχει ενεργό πρόχειρο POS για αυτό το τιμολόγιο."});
-    if(!result.pages.length)return res.status(409).json({error:"Δεν βρέθηκαν όλες οι φωτογραφίες του τιμολογίου."});
+    if(!result.pages.length)return res.status(409).json({error:req.invoiceAssistantSource.inboxId?"Δεν βρέθηκε το πρωτότυπο PDF της συγκεκριμένης εγγραφής myDATA στο ίδιο πρόχειρο και κατάστημα.":"Δεν βρέθηκαν όλες οι φωτογραφίες του τιμολογίου."});
     const supplier=await prisma.$queryRaw`SELECT "taxId" FROM "Supplier" WHERE "id"=${result.document.supplierId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     res.json({document:{id:result.document.id,documentNumber:result.document.documentNumber,totalGross:Number(result.document.totalGross||0),supplierTaxId:String(supplier[0]?.taxId||"")},pages:result.pages.map((page,index)=>({index:index+1,filename:page.filename,mimeType:page.mimeType,dataUrl:page.contentData}))});
   }catch(error){next(error)}
 });
 
-router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompanyModule("AI_READER"),manager,async(req,res,next)=>{
+router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompanyModule("AI_READER"),manager,assistantSourceContext,async(req,res,next)=>{
   try{
     const {message,history}=z.object({message:z.string().trim().min(1).max(1500),history:z.array(z.object({role:z.enum(["user","assistant"]),text:z.string().max(2000)})).max(12).default([])}).parse(req.body||{});
     if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει ρυθμιστεί το κλειδί AI στον server."});
-    const result=await source(req.user.companyId,req.params.orderId);
+    const result=await source(req.user.companyId,req.params.orderId,req.invoiceAssistantSource);
     if(!result)return res.status(404).json({error:"Δεν υπάρχει ενεργό πρόχειρο POS για αυτό το τιμολόγιο."});
-    if(!result.pages.length)return res.status(409).json({error:"Δεν βρέθηκαν όλες οι φωτογραφίες του τιμολογίου."});
+    if(!result.pages.length)return res.status(409).json({error:req.invoiceAssistantSource.inboxId?"Δεν βρέθηκε το πρωτότυπο PDF της συγκεκριμένης εγγραφής myDATA στο ίδιο πρόχειρο και κατάστημα.":"Δεν βρέθηκαν όλες οι φωτογραφίες του τιμολογίου."});
     const rows=await prisma.$queryRaw`SELECT "id","ocrSequence","supplierCode","description","quantity","unitCost","invoiceUnit","stockUnitsPerInvoiceUnit","discount1","discount2","discount3","exciseTotal","vatRate","netAmount","grossAmount","ocrRawText"
       FROM "PurchaseOrderLine" WHERE "orderId"=${req.params.orderId} ORDER BY COALESCE("ocrSequence",2147483647),"createdAt","id"`;
     const current=rows.map(row=>({...row,quantity:Number(row.quantity||0),unitCost:Number(row.unitCost||0),stockUnitsPerInvoiceUnit:Number(row.stockUnitsPerInvoiceUnit||1),discount1:Number(row.discount1||0),discount2:Number(row.discount2||0),discount3:Number(row.discount3||0),exciseTotal:Number(row.exciseTotal||0),vatRate:Number(row.vatRate||0),netAmount:Number(row.netAmount||0),grossAmount:Number(row.grossAmount||0)}));

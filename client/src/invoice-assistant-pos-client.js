@@ -45,20 +45,24 @@ const defaultApi=async(path,options={})=>{
   return result;
 };
 
-export async function openPosInvoiceAssistant(orderId,order,onComplete,request=null){
-  if(restoreInvoiceAssistant(orderId))return;
+export async function openPosInvoiceAssistant(orderId,order,onComplete,request=null,sourceContext=null){
+  sourceContext=sourceContext?{inboxId:sourceContext.inboxId,storeId:sourceContext.storeId}:null;
+  const sourceKey=sourceContext?JSON.stringify([sourceContext.storeId,sourceContext.inboxId]):"POS";
+  if(sourceContext&&(!sourceContext.inboxId||!sourceContext.storeId))throw new Error("Δεν υπάρχει έγκυρη εγγραφή myDATA και επιλεγμένο κατάστημα.");
+  const sourceQuery=sourceContext?`?${new URLSearchParams({inboxId:sourceContext.inboxId,storeId:sourceContext.storeId})}`:"";
+  if(restoreInvoiceAssistant(orderId,sourceKey))return;
   const api=request||defaultApi;
   const overlay=document.createElement("div");
   if(request)overlay.dataset.posInvoiceModal="1";
   overlay.style.cssText="position:fixed;inset:0;z-index:100100;background:#102c3cbb;padding:0;display:block";
-  overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-label="Βοηθός τιμολογίου POS" style="box-sizing:border-box;width:100%;height:100%;height:100dvh;background:#f7fafc;overflow:hidden;display:flex;flex-direction:column">
-    <header style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#143f61;color:white;padding:13px 18px"><div><b>Βοηθός τιμολογίου POS</b><small style="display:block">Πρόχειρο ${esc(order.invoiceNumber||"")} · ${esc(order.supplierName||"προμηθευτής")}</small></div><div class="invoice-assistant-window-actions"><button data-minimize type="button" aria-label="Ελαχιστοποίηση βοηθού">− Ελαχιστοποίηση</button><button data-close type="button" aria-label="Κλείσιμο" style="font-size:22px">×</button></div></header>
+  overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-label="${sourceContext?"Βοηθός τιμολογίου myDATA":"Βοηθός τιμολογίου POS"}" style="box-sizing:border-box;width:100%;height:100%;height:100dvh;background:#f7fafc;overflow:hidden;display:flex;flex-direction:column">
+    <header style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#143f61;color:white;padding:13px 18px"><div><b>${sourceContext?"Βοηθός τιμολογίου myDATA":"Βοηθός τιμολογίου POS"}</b><small style="display:block">Πρόχειρο ${esc(order.invoiceNumber||"")} · ${esc(order.supplierName||"προμηθευτής")}</small></div><div class="invoice-assistant-window-actions"><button data-minimize type="button" aria-label="Ελαχιστοποίηση βοηθού">− Ελαχιστοποίηση</button><button data-close type="button" aria-label="Κλείσιμο" style="font-size:22px">×</button></div></header>
     <div style="display:grid;grid-template-columns:minmax(280px,35%) minmax(0,1fr);min-height:0;flex:1">
       <div style="min-height:0;overflow:auto;padding:12px;background:#e9f0f5"><div data-pages></div></div>
-      <div style="min-height:0;overflow:auto;padding:16px"><p style="margin:0 0 9px">Δες τις φωτογραφίες, πες τι θέλεις να διορθωθεί και έλεγξε τις προτάσεις πριν τις περάσεις στο πρόχειρο.</p>
+      <div style="min-height:0;overflow:auto;padding:16px"><p style="margin:0 0 9px">${sourceContext?"Δες το πρωτότυπο PDF myDATA":"Δες τις φωτογραφίες"}, πες τι θέλεις να διορθωθεί και έλεγξε τις προτάσεις πριν τις περάσεις στο πρόχειρο.</p>
         <details><summary style="cursor:pointer;font-weight:700">Αρχικό πρόχειρο POS · άνοιγμα για σύγκριση</summary><div data-current style="border:1px solid #d4e1e8;background:white;border-radius:10px;padding:9px;max-height:26vh;overflow:auto"></div></details>
         <label style="display:block;margin-top:12px;font-weight:700">Εντολή προς τον βοηθό<textarea data-message rows="3" style="box-sizing:border-box;width:100%;margin-top:5px;padding:10px;border:1px solid #a7bdc9;border-radius:8px" placeholder="π.χ. Οι γραμμές 1–3 είναι σε γραμμάρια και η 4 είναι 48 πακέτα × 100 τεμάχια"></textarea></label>
-        <button data-ask type="button" style="margin-top:8px;padding:10px 15px;background:#075c8d;color:white;border:0;border-radius:7px;font-weight:800">Έλεγχος φωτογραφιών</button>
+        <button data-ask type="button" style="margin-top:8px;padding:10px 15px;background:#075c8d;color:white;border:0;border-radius:7px;font-weight:800">${sourceContext?"Έλεγχος PDF myDATA":"Έλεγχος φωτογραφιών"}</button>
         <p data-status role="status" style="min-height:24px;color:#284d64"></p><div data-history aria-live="polite"></div><div data-answer></div><div data-printed></div><div data-proposals></div>
         <div style="margin-top:14px;padding:18px;background:linear-gradient(135deg,#f0faf6,#e4f3f0);border:1px solid #b9ded2;border-radius:14px;box-shadow:0 5px 18px #143f6110"><b style="color:#145541;font-size:16px">Εκμάθηση συσκευασίας</b><p style="margin:7px 0 14px;color:#345a50">Προαιρετικά, μόνο όταν το κιβώτιο χρειάζεται μετατροπή για την αποθήκη. Η τυπωμένη ποσότητα και αξία δεν αλλάζουν.</p><div data-rule-identity hidden style="margin-bottom:12px;padding:10px;background:#fff7dc;border-radius:8px"><label>ΑΦΜ εκδότη από τη φωτογραφία <input data-rule-tax inputmode="numeric" maxlength="9" pattern="[0-9]{9}" autocomplete="off" style="width:110px;padding:7px"></label><label style="display:block;margin-top:6px"><input data-rule-confirm type="checkbox"> Επιβεβαίωσα το ΑΦΜ στο έντυπο και θέλω να συμπληρωθεί στην καρτέλα προμηθευτή.</label></div><div style="display:flex;flex-wrap:wrap;align-items:end;gap:12px"><label style="display:grid;gap:6px;font-weight:700;color:#21473e">Προϊόν ή κωδικός<select data-rule-product style="width:min(330px,80vw);padding:9px;border:1px solid #a9c9bf;border-radius:8px;background:white"><option value="">Επίλεξε από το τιμολόγιο</option></select></label><div style="display:grid;gap:6px"><b style="color:#21473e">Τεμάχια σε 1 ΚΒ</b><div role="group" aria-label="Συνηθισμένα τεμάχια ανά κιβώτιο" style="display:flex;flex-wrap:wrap;gap:5px">${[1,6,12,24].map(value=>`<button data-rule-preset="${value}" type="button" aria-pressed="${value===24}" style="padding:9px 12px;border:1px solid #a9c9bf;border-radius:8px;background:${value===24?"#146b50":"white"};color:${value===24?"white":"#21473e"};font-weight:800;cursor:pointer">${value}</button>`).join("")}</div></div><label style="display:grid;gap:6px;font-weight:700;color:#21473e">Άλλος αριθμός<input data-rule-factor type="number" min="1" step="1" value="24" aria-label="Άλλος αριθμός τεμαχίων ανά κιβώτιο" style="width:110px;padding:9px;border:1px solid #a9c9bf;border-radius:8px"></label><button data-save-rule type="button" style="padding:10px 14px;border:0;border-radius:8px;background:#087762;color:white;font-weight:800;cursor:pointer">Αποθήκευση κανόνα</button></div><p data-rule-status role="status"></p><small style="color:#42645b">Ο κανόνας ισχύει για αυτόν τον προμηθευτή και κωδικό σε όλα τα καταστήματα. Η γραμμή ενημερώνεται στο ίδιο πρόχειρο.</small></div>
         <button data-apply type="button" hidden style="margin-top:12px;padding:11px 15px;background:#087762;color:white;border:0;border-radius:8px;font-weight:800">Έγκριση & μεταφορά στα πρόχειρα</button>
@@ -68,9 +72,9 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
   document.body.appendChild(overlay);
   let changed=false;const pdfCleanups=[];let retainedWindow;
   const close=()=>{retainedWindow.dispose();pdfCleanups.forEach(cleanup=>cleanup());overlay.remove();if(changed)Promise.resolve(onComplete?.()).catch(error=>alert(error.message))},status=overlay.querySelector("[data-status]"),pages=overlay.querySelector("[data-pages]"),current=overlay.querySelector("[data-current]"),proposals=overlay.querySelector("[data-proposals]"),apply=overlay.querySelector("[data-apply]");
-  retainedWindow=installInvoiceAssistantWindow(overlay,{orderId,order,scoped:Boolean(request),onRemoved:()=>pdfCleanups.forEach(cleanup=>cleanup())});
+  retainedWindow=installInvoiceAssistantWindow(overlay,{orderId,order,scoped:Boolean(request),sourceKey,onRemoved:()=>pdfCleanups.forEach(cleanup=>cleanup())});
   overlay.querySelector("[data-close]").onclick=close;
-  overlay.querySelector("[data-message]").value="Σύγκρινε όλες τις τυπωμένες γραμμές με το πρόχειρο. Δείξε μόνο συγκεκριμένα λάθη που διακρίνονται καθαρά στη φωτογραφία και πες μου τι χρειάζεται έλεγχο.";
+  overlay.querySelector("[data-message]").value=sourceContext?"Σύγκρινε όλες τις τυπωμένες γραμμές του πρωτότυπου PDF myDATA με το πρόχειρο. Δείξε μόνο συγκεκριμένα λάθη που διακρίνονται καθαρά στο PDF και πες μου τι χρειάζεται έλεγχο.":"Σύγκρινε όλες τις τυπωμένες γραμμές με το πρόχειρο. Δείξε μόνο συγκεκριμένα λάθη που διακρίνονται καθαρά στη φωτογραφία και πες μου τι χρειάζεται έλεγχο.";
   const factorInput=overlay.querySelector("[data-rule-factor]");
   const syncPresets=()=>overlay.querySelectorAll("[data-rule-preset]").forEach(button=>{const selected=button.dataset.rulePreset===factorInput.value;button.setAttribute("aria-pressed",String(selected));button.style.background=selected?"#146b50":"white";button.style.color=selected?"white":"#21473e"});
   overlay.querySelectorAll("[data-rule-preset]").forEach(button=>button.addEventListener("click",()=>{factorInput.value=button.dataset.rulePreset;syncPresets()}));
@@ -113,7 +117,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
   let source;const history=[];let activePrintedRows=[],activePagesComplete=false,activePrintedTotal=null;
   try{
     const [result,detail]=await Promise.all([
-      api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/source`),
+      api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/source${sourceQuery}`),
       api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`)
     ]);
     if(!retainedWindow.isActive())return;
@@ -141,9 +145,9 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
   }catch(error){status.textContent=error.message;overlay.querySelector("[data-ask]").disabled=true;return}
   overlay.querySelector("[data-ask]").onclick=async()=>{
     const message=overlay.querySelector("[data-message]").value.trim();if(!message){status.textContent="Γράψε πρώτα τι θέλεις να ελέγξει.";return}
-    const ask=overlay.querySelector("[data-ask]");ask.disabled=true;apply.hidden=true;proposals.replaceChildren();status.textContent="Ο βοηθός συγκρίνει τις φωτογραφίες με το πρόχειρο…";
+    const ask=overlay.querySelector("[data-ask]");ask.disabled=true;apply.hidden=true;proposals.replaceChildren();status.textContent=sourceContext?"Ο βοηθός συγκρίνει το PDF myDATA με το πρόχειρο…":"Ο βοηθός συγκρίνει τις φωτογραφίες με το πρόχειρο…";
     try{
-      const result=await api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/preview`,{method:"POST",body:JSON.stringify({message,history:history.slice(-12)})});
+      const result=await api(`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/invoice-assistant/preview`,{method:"POST",body:JSON.stringify({message,history:history.slice(-12),...(sourceContext||{})})});
       if(!retainedWindow.isActive())return;
       history.push({role:"user",text:message},{role:"assistant",text:result.assistantMessage||""});
       overlay.querySelector("[data-history]").innerHTML=history.map(entry=>`<p style="margin:4px 0"><b>${entry.role==="user"?"Εσύ":"Βοηθός"}:</b> ${esc(entry.text)}</p>`).join("");
