@@ -1,3 +1,11 @@
+## 13/10/2026 — INVENTORY-RELEASE-VAT-STARTUP-01 / SOURCE READY / AWAITING FULL CI
+
+Same owner codex/inventory-free-count-20261013. ClaimPR2445/head737e72a089500138e9e25537d4fbe6b00b328293 documentation checks SUCCESS merged636122b7b5278870d1a5f3ac9d0c93803cc25079 before source. One bounded predicate correction: already-repaired zero-rate tobacco department/register1/code12 returns without writes when every associated product remains tobacco/VAT0, regardless of historical count565. Exact old585/565/20 guarded repair, standard24verification, SQL writes/expected20rollback and wrong/mixed mapping rejection unchanged. No new schema/start/fiscal/catalog/rate business change.
+
+Node20 actual script execution with isolated transaction adapter4tests PASS/0FAIL: canonical565/567/0/1/1200 no writes, absent company, missing/wrong standard, mixed membership/wrong rate/register/code, exact legacy repair and19instead20 rollback. This is simulated adapter regression, not a production DB repair or fiscal PASS. Owner screenshot remains real failed1e7456e startup evidence. Required fullCI/exact main/guarded deployment/healthy source and free inventory acceptance pending. Render installation now confirmed by plugin status but no callable Render capability exposed in this runtime yet; supplied actual logs are sufficient for this bounded cause. No real payment/stock/fiscal/VAT write by this page.
+
+Single next action: green full CI and ordinary guarded release of this correction; verify exact healthy revision before asking owner to refresh and use existing draft. Other owners and all previous protected PASS unchanged. No new manual PASS.
+
 ## 13/10/2026 18:14 Europe/Athens — INVENTORY-RELEASE-VAT-STARTUP-01 / ASSIGNED / OBSERVED DEPLOY FAIL
 
 Owner codex/inventory-free-count-20261013; independent source branch fix/diadoxou-vat-startup-20261013. Owner supplied Render deploy/log screenshots identify failed1e7456e and runtime repair-diadoxou-vat.js:30 unexpected data567/567/0/no changes made, Node20.20.2,13:51:14Athens. This establishes the bounded startup failure; no provider authentication workaround required. Original free inventory PR2442/mainCI2573PASS stays merged, not live. Claim published green before source.
