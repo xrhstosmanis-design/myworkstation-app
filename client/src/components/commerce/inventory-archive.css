@@ -406,3 +406,22 @@
 }
 
 .ia-row .ia-baking-stock{flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;white-space:normal;color:#0f766e}.ia-row .ia-baking-stock small{font-size:13px;line-height:1.25;font-weight:700}
+
+/* The SET editor keeps search, associations and actions inside the viewport. */
+.ia-modal.set-editor{width:min(1480px,calc(100vw - 32px));height:min(850px,calc(100dvh - 32px));max-height:calc(100dvh - 32px)}
+.ia-modal.set-editor>header,.ia-modal.set-editor>.ia-card-tabs,.ia-modal.set-editor>.ia-modal-actions{flex-shrink:0}
+.ia-modal.set-editor>.ia-composition{flex:1;min-height:0;grid-template-rows:auto minmax(120px,1fr);overflow:auto;padding:18px;gap:16px}
+.ia-modal.set-editor .ia-card-table.composition{overflow:auto;min-height:120px;margin:0}
+.ia-modal.set-editor .ia-card-table.composition>div>*{font-size:17px;padding:13px 12px;white-space:normal}
+.ia-modal.set-editor .ia-card-table.composition>.head{position:sticky;top:0;z-index:1}
+.ia-modal.set-editor .ia-modal-actions button{min-height:48px;font-size:17px}
+.ia-set-composition-form{grid-template-columns:1fr 1fr auto}
+.ia-set-composition-form label{font-size:17px}
+.ia-set-composition-form input,.ia-set-composition-form button{min-height:48px;font-size:17px}
+.ia-set-picker{grid-column:1/-1;display:grid;gap:8px;min-width:0}
+.ia-set-picker>label{font-weight:850}.ia-set-picker small{font-size:14px;color:#405d77}
+.ia-set-search-results{display:grid;gap:6px;max-height:230px;overflow:auto}
+.ia-set-search-results>button,.ia-set-selected{display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;padding:10px 14px;border:1px solid #bdd4d0;border-radius:8px;background:#fff;color:#17324b}
+.ia-set-search-results>button:hover{background:#edf7f6}.ia-set-search-results>button>div,.ia-set-selected>div{display:grid;gap:4px;min-width:0}.ia-set-search-results b{font-size:17px}.ia-set-search-results strong{white-space:nowrap}.ia-set-selected{background:#edf7f6}
+.ia-set-search-pages{display:flex;justify-content:flex-end;gap:12px;align-items:center}.ia-set-search-pages button:disabled{opacity:.45}
+@media(max-width:800px){.ia-set-composition-form{grid-template-columns:1fr}.ia-modal.set-editor{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px)}.ia-modal.set-editor>.ia-composition{padding:10px}.ia-set-selected{flex-wrap:wrap}.ia-set-search-results{max-height:180px}}

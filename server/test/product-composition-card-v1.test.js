@@ -29,7 +29,7 @@ test("recipe card reuses the KAT PreparationRecipeLine source of truth",()=>{
 
 test("checking SET or recipe opens its functional association tab",()=>{
   assert.match(panel,/toggleComposition\(key,e\.target\.checked\)/);
-  for(const text of ["Συσχετιζόμενο είδος","Υλικό συνταγής","Ποσότητα συμμετοχής","Νέα συσχέτιση","Χειριστής"])assert.ok(panel.includes(text),text);
+  for(const text of ["Συσχετιζόμενο είδος","Υλικό συνταγής","Ποσότητα συμμετοχής","Νέα συσχέτιση","Χειριστής"])assert.ok((panel+fs.readFileSync(new URL("../../client/src/components/commerce/InventorySetProductPicker.jsx",import.meta.url),"utf8")).includes(text),text);
 });
 
 test("POS catalog exposes SET rows and cart adds them automatically",()=>{
