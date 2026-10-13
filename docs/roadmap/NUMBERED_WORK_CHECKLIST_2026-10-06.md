@@ -1,3 +1,7 @@
+## 14/10/2026 — Independent εργασία3 MYDATA-COMMON-DRAFT-03
+
+Source live4a2b3f1f; limited LIVE PASS of existing Fresh6836 POS↔myDATA reconciliation: one active draft, both originals, immutable payment/+2.00review and zero stock effect. Native once-only posting proof remains CI, no real posting replay. Broader tracker09 remains OPEN under its existing owner; task2/Inventory/payment correction residuals unchanged. Details in checkpoint2026-10-13-invoice-pos-mydata-common-draft.md and invoice manual.
+
 ## 13/10/2026 23:57 Europe/Athens — INVENTORY-NEW-CARD-ONLINE-01 / SOURCE LIVE / LIMITED UI + LOOKUP PASS / CREATE AWAITING USER
 
 Owner codex/inventory-new-card-online-20261013 retained for actual creation acceptance; no second owner or handoff. SourcePR2463 and CSS-only correctionPR2464 are released together at exactdcb82ef396a38123fb9b1cd92f65aaf4e0fe3e73. Correction head247218f43fe857470c9c7603d0404fa5549d4bbf/fullPRCI38464518237 SUCCESS2609/0/0 plus6backup/all required checks; exactmainCI38465362485 SUCCESS2609/0/0 plus6backup. GuardedRender38466086670/job115533183700 SUCCESS; final health20:53:53.642UTC/23:53:53Athens oktrue/exactdcb82ef/version0.22.0+kat-test-pos. Initial release305e5bb/main38462696819/guard38463257943 and its real grid failure preserved, now superseded only for the measured geometry. No manual deploy, production migration or fiscal change.
