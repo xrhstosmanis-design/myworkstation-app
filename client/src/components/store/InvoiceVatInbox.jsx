@@ -4,6 +4,7 @@ export default function InvoiceVatInbox({api,store,suppliers=[],disabled=false,o
   const [vat,setVat]=useState(""),[number,setNumber]=useState(""),[date,setDate]=useState(""),[items,setItems]=useState([]),[candidate,setCandidate]=useState(null),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
   const generation=useRef(0),pending=useRef(false),callbacks=useRef({api,onSupplier,onRead,suppliers});callbacks.current={api,onSupplier,onRead,suppliers};
   useEffect(()=>{generation.current++;pending.current=false;setVat("");setNumber("");setDate("");setItems([]);setCandidate(null);setBusy(false);setMessage("");return()=>{generation.current++}},[store.id]);
+  useEffect(()=>{if(disabled){generation.current++;pending.current=false;setBusy(false)}},[disabled]);
   const changeVat=value=>{generation.current++;pending.current=false;setBusy(false);setVat(value.replace(/\D/g,"").slice(0,9));setItems([]);setCandidate(null);setMessage("")};
   const search=async(taxId,current)=>{
     const result=await callbacks.current.api("/api/commerce/documents/pos-inbox",{method:"POST",body:JSON.stringify({storeId:store.id,taxId,number,date})});

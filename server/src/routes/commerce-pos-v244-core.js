@@ -1,3 +1,4 @@
+import {assertEmptyInboxRead} from "../lib/pos-inbox-original.js";
 import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertNoUnresolvedInbound,reuseInboundDraftForPosJob,sameInvoiceNumber,invoiceNumberParts} from "../lib/invoice-common-draft.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
@@ -418,10 +419,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       if(skeletonDocumentId&&!skeletonRows[0])throw Object.assign(new Error("Το πρόχειρο BackOffice δεν είναι διαθέσιμο για συμπλήρωση."),{status:409});
       if(skeletonRows[0]&&skeletonRows[0].documentType!==body.documentType)throw Object.assign(new Error("Το πρόχειρο έχει διαφορετικό τύπο παραστατικού. Δεν έγινε μετατροπή αγοράς σε πιστωτικό."),{status:409});
       const documentId=skeletonRows[0]?.id||id(),orderId=skeletonRows[0]?.purchaseOrderId||id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
-      if(locked[0].resultJson?.posHandoff?.inboxInitialRead){
-        const state=await tx.$queryRaw`SELECT o."status",d."supplierId",d."documentNumber",d."documentDate",d."totalGross",(SELECT COUNT(*) FROM "PurchaseOrderLine" l WHERE l."orderId"=o."id")::int AS "orderLines",(SELECT COUNT(*) FROM "PurchaseDocumentLine" l WHERE l."purchaseDocumentId"=${documentId})::int AS "documentLines" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId" WHERE o."id"=${orderId} AND o."companyId"=${req.user.companyId} AND o."storeId"=${job.storeId} FOR UPDATE OF o,d`;
-        if(!state[0]||state[0].status!=="NEW"||state[0].orderLines!==0||state[0].documentLines!==0||state[0].supplierId!==body.supplierId||new Date(state[0].documentDate).toISOString().slice(0,10)!==body.documentDate.toISOString().slice(0,10)||Math.abs(Number(state[0].totalGross)-body.totalGross)>.050001||!sameInvoiceNumber(body.documentNumber,invoiceNumberParts(state[0].documentNumber).series,invoiceNumberParts(state[0].documentNumber).number))throw Object.assign(new Error("Το πρόχειρο έχει ήδη ελεγχθεί ή συμπληρωθεί. Οι υπάρχουσες γραμμές διατηρήθηκαν."),{status:409});
-      }
+      if(locked[0].resultJson?.posHandoff?.inboxInitialRead)await assertEmptyInboxRead(tx,{companyId:req.user.companyId,storeId:job.storeId,...body},documentId,orderId);
       const totalNet=money2(matched.reduce((s,l)=>s+Number(l.netAmount||0)+Number(l.exciseTotal||0),0)),totalVat=money2(Number(body.totalGross)-totalNet);
       stage="create-purchase-document";
       if(skeletonRows[0])await tx.$executeRaw`UPDATE "PurchaseDocument" SET "documentDate"=${body.documentDate||new Date()},"totalNet"=${totalNet},"totalVat"=${totalVat},"totalGross"=${body.totalGross},"settlementMode"=${body.settlementMode} WHERE "id"=${documentId} AND "companyId"=${req.user.companyId}`;

@@ -10,7 +10,7 @@ async function library(){
  const src=(await readFile(new URL('../src/lib/pos-inbox-original.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
  const reader=async()=>({text:'400015624303633 099999999 088888888 6836',pageCount:2});
  const verify=(text,r)=>{for(const s of [r.mark,r.issuerVat,r.counterpartVat,r.documentNumber])assert.ok(text.includes(s))};
- return new Function('crypto','sameInvoiceNumber','invoiceNumberParts','lockInvoiceStore','readOriginalPdf','verifyOriginalText','fetchOriginalPdf','acquireOriginal',src+'\nreturn {inboxHeader,verifiedInboxPdf,selectedInboxRow,prepareSelectedInbox,queueEmptyInboxRead};')(crypto,sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,reader,verify,()=>{throw Error('unexpected network')},()=>{throw Error('unexpected write')});
+ return new Function('crypto','sameInvoiceNumber','invoiceNumberParts','lockInvoiceStore','readOriginalPdf','verifyOriginalText','fetchOriginalPdf','acquireOriginal',src+'\nreturn {inboxHeader,verifiedInboxPdf,selectedInboxRow,prepareSelectedInbox,queueEmptyInboxRead,assertEmptyInboxRead};')(crypto,sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,reader,verify,()=>{throw Error('unexpected network')},()=>{throw Error('unexpected write')});
 }
 async function handler(db,lib,readPdf){
  const src=(await readFile(new URL('../src/routes/commerce-pos-inbox.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
@@ -54,4 +54,17 @@ test('native actual selected-store inbox SQL and concurrent empty draft queue pr
 });
 test('native populated/reviewed/posted inbox jobs cannot queue initial reading',{skip:!isolatedInvoiceDb()},async()=>{
  for(const change of ["UPDATE \"PurchaseOrder\" SET \"status\"='FINAL'", "UPDATE \"PurchaseDocument\" SET \"status\"='APPROVED'", "INSERT INTO \"PurchaseOrderLine\"(\"id\",\"orderId\",\"description\") VALUES('reviewed','mydata','Keep row')", "INSERT INTO \"PurchaseDocumentLine\"(\"id\",\"purchaseDocumentId\",\"description\") VALUES('reviewed','d-mydata','Keep row')"]){const f=await invoiceDbFixture();try{await f.seed({pos:false,mydata:true,payment:false});await f.db.$executeRawUnsafe(change);const lib=await library(),before=await f.snapshot();assert.equal(await lib.queueEmptyInboxRead(f.db,{companyId:'c',storeId:'s'},{jobId:'j-pdf'},null),false);assert.equal(await f.snapshot(),before);assert.equal((await f.db.$queryRawUnsafe(`SELECT "status" FROM "AiReaderJob" WHERE "id"='j-pdf'`))[0].status,'AWAITING_APPROVAL')}finally{await f.close()}}
+});
+test('native final empty-row fence used by real intake refuses concurrent reviewed rows and changed headers without financial effect',{skip:!isolatedInvoiceDb()},async()=>{
+ const f=await invoiceDbFixture();try{
+  await f.seed({pos:false,mydata:true,payment:true});const lib=await library(),identity={companyId:'c',storeId:'s',supplierId:'sup',documentType:'INVOICE',documentNumber:'21-ΤΔΑ 6836',documentDate:new Date('2026-10-12'),totalGross:3.39};
+  await f.db.$transaction(tx=>lib.assertEmptyInboxRead(tx,identity,'d-mydata','mydata'));const before=await f.snapshot();
+  await f.db.$executeRawUnsafe(`INSERT INTO "PurchaseOrderLine"("id","orderId","description","quantity") VALUES('reviewed','mydata','Human-reviewed row',3)`);
+  await assert.rejects(f.db.$transaction(tx=>lib.assertEmptyInboxRead(tx,identity,'d-mydata','mydata')),/γραμμές διατηρήθηκαν/);
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT "description" FROM "PurchaseOrderLine" WHERE "id"='reviewed'`))[0].description,'Human-reviewed row');
+  await f.db.$executeRawUnsafe(`DELETE FROM "PurchaseOrderLine" WHERE "id"='reviewed'`);
+  for(const patch of [{companyId:'foreign'},{storeId:'control'},{documentNumber:'22-ΤΔΑ 6836'},{supplierId:'other'},{totalGross:9},{documentDate:new Date('2026-10-13')}])await assert.rejects(f.db.$transaction(tx=>lib.assertEmptyInboxRead(tx,{...identity,...patch},'d-mydata','mydata')));
+  assert.equal(await f.snapshot(),before);
+  const src=await readFile(new URL('../src/routes/commerce-pos-v244-core.js',import.meta.url),'utf8');assert.ok(src.indexOf('await assertEmptyInboxRead(tx,')<src.indexOf('stage="replace-purchase-lines"'));
+ }finally{await f.close()}
 });

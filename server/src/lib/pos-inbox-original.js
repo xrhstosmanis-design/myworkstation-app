@@ -33,6 +33,8 @@ export async function selectedInboxRow(db,companyId,storeId,inboxId){
 }
 
 export async function prepareSelectedInbox(db,identity,inboxId,dataUrl,user,{attach=false}={}){
+  const employee=user.tokenType==="STORE_OPERATOR"||user.role==="EMPLOYEE";
+  if(employee&&(!user.permissions?.includes("SUPPLIER_PAYMENT")||String(user.storeId||"")!==identity.storeId)||!employee&&!["SUPER_ADMIN","OWNER","ADMIN","MANAGER","BACKOFFICE_USER"].includes(user.role))throw fail("Δεν έχεις πρόσβαση στην επιλογή αυτού του τιμολογίου.",403);
   const row=await selectedInboxRow(db,identity.companyId,identity.storeId,inboxId);
   const company=await db.company.findUnique({where:{id:identity.companyId},select:{taxId:true}});
   const header=inboxHeader(row,String(company?.taxId||"").replace(/^EL/i,"").trim());
@@ -64,4 +66,14 @@ export async function queueEmptyInboxRead(db,identity,match,payment){
     await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='POS_DRAFT_READY',"stage"='POS_DRAFT_READY',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff})}::jsonb,"updatedAt"=NOW() WHERE "id"=${match.jobId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
     return true;
   });
+}
+
+export async function assertEmptyInboxRead(tx,identity,documentId,orderId){
+  const state=await tx.$queryRaw`SELECT o."status",d."status" AS "documentStatus",d."supplierId",d."documentNumber",d."documentDate",d."totalGross",d."documentType",
+    (SELECT COUNT(*) FROM "PurchaseOrderLine" l WHERE l."orderId"=o."id")::int AS "orderLines",
+    (SELECT COUNT(*) FROM "PurchaseDocumentLine" l WHERE l."purchaseDocumentId"=d."id")::int AS "documentLines"
+    FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" AND d."storeId"=o."storeId"
+    WHERE o."id"=${orderId} AND d."id"=${documentId} AND o."companyId"=${identity.companyId} AND o."storeId"=${identity.storeId} FOR UPDATE OF o,d`;
+  const row=state[0],parts=invoiceNumberParts(row?.documentNumber);
+  if(!row||row.status!=="NEW"||row.documentStatus!=="DRAFT"||row.orderLines!==0||row.documentLines!==0||row.supplierId!==identity.supplierId||row.documentType!==identity.documentType||new Date(row.documentDate).toISOString().slice(0,10)!==new Date(identity.documentDate).toISOString().slice(0,10)||Math.abs(Number(row.totalGross)-Number(identity.totalGross))>.050001||!sameInvoiceNumber(identity.documentNumber,parts.series,parts.number))throw fail("Το πρόχειρο έχει ήδη ελεγχθεί, συμπληρωθεί ή αλλάξει. Οι υπάρχουσες γραμμές διατηρήθηκαν.");
 }
