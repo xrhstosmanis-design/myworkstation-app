@@ -38,8 +38,12 @@ test('mounted screen recorder selects real MP4, downloads same blob, rejects uns
   await click('Εγγραφή οθόνης');recorders.at(-1).mimeType='video/webm';await click('Διακοπή');assert.equal(urls.length,2,'WebM must never be relabelled MP4');assert.match(document.body.textContent,/Δεν δημιουργήθηκε βίντεο MP4/);
   await click('Εγγραφή οθόνης');await click('Διακοπή');const last=urls.at(-1).url;await act(async()=>root.unmount());assert.ok(revoked.includes(last),'unmount releases latest preview URL');
   root=createRoot(document.getElementById('root'));await act(async()=>root.render(React.createElement(module.exports.default)));
-  const stopsBeforePending=stops;let resolveCapture;pendingCapture=new Promise(resolve=>{resolveCapture=resolve});
+  await click('Εγγραφή οθόνης');const active=recorders.at(-1),stopsBeforeUnmount=stops,urlsBeforeUnmount=urls.length;
+  await act(async()=>root.unmount());assert.equal(active.state,'inactive');assert.equal(stops,stopsBeforeUnmount+1);assert.equal(urls.length,urlsBeforeUnmount,'unmount cannot create an orphan preview');
+  root=createRoot(document.getElementById('root'));await act(async()=>root.render(React.createElement(module.exports.default)));
+  const stopsBeforePending=stops,capturesBeforePending=captures.length;let resolveCapture;pendingCapture=new Promise(resolve=>{resolveCapture=resolve});
   await click('Εγγραφή οθόνης');await click('Εγγραφή οθόνης');const count=recorders.length,captureCount=captures.length;
+  assert.equal(captureCount,capturesBeforePending+1,'duplicate start opens only one chooser');
   await act(async()=>root.unmount());await act(async()=>resolveCapture(stream));assert.equal(recorders.length,count,'late permission result cannot start after unmount');assert.equal(captures.length,captureCount);assert.equal(stops,stopsBeforePending+1);
  }finally{await act(async()=>root.unmount());URL.createObjectURL=oldCreate;URL.revokeObjectURL=oldRevoke;dom.window.close();for(const [key,d] of previous){if(d)Object.defineProperty(globalThis,key,d);else delete globalThis[key]}}
 });
