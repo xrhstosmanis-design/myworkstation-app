@@ -1,0 +1,46 @@
+{
+  "revision": "892afd4bfe14ec34daab64ead9f80b69fc6da98c",
+  "companyId": "cmulmjjoa000oqlbfyi0h53ju",
+  "storeId": "cmulmjjoc000qqlbf2bn2ifj0",
+  "scope": "Read-only selected-store supplier/inbox/PDF/header UI. No payment, supplier creation, job, draft, credit, merge, stock or finalization submitted.",
+  "before": [
+    {
+      "checksum": "452675b521beb1d82156cde90b8ceb4e487b077bba07bc47fd178a5e9804d0aa",
+      "counterpartVat": "802387132",
+      "currency": "EUR",
+      "documentNumber": "17113",
+      "inbound_hash": "49406d1eb835bfb805fef18aab6577aa",
+      "inboxId": "7923610d-2215-4bc2-82f6-513078d65cd8",
+      "inbox_hash": "c18810b324f666b9cf7b92d798aa5288",
+      "issueDate": "2026-10-14T00:00:00Z",
+      "issuerVat": "094211509",
+      "mark": "400015659382768",
+      "mimeType": "application/pdf",
+      "pdf_length": 344744,
+      "series": "505",
+      "status": "IN_REVIEW",
+      "totalGross": 77.66
+    }
+  ],
+  "after": [
+    {
+      "checksum": "452675b521beb1d82156cde90b8ceb4e487b077bba07bc47fd178a5e9804d0aa",
+      "counterpartVat": "802387132",
+      "currency": "EUR",
+      "documentNumber": "17113",
+      "inbound_hash": "49406d1eb835bfb805fef18aab6577aa",
+      "inboxId": "7923610d-2215-4bc2-82f6-513078d65cd8",
+      "inbox_hash": "c18810b324f666b9cf7b92d798aa5288",
+      "issueDate": "2026-10-14T00:00:00Z",
+      "issuerVat": "094211509",
+      "mark": "400015659382768",
+      "mimeType": "application/pdf",
+      "pdf_length": 344744,
+      "series": "505",
+      "status": "IN_REVIEW",
+      "totalGross": 77.66
+    }
+  ],
+  "unchanged": true,
+  "observedWindowLocal": "15/10/2026 01:57-02:00 Europe/Athens"
+}
