@@ -25,8 +25,9 @@ router.get("/documents/inbox/:inboxId/reconcile-pos/file/:attachmentId",async(re
  if(!files[0]?.contentData||!["application/pdf","image/jpeg","image/png","image/webp"].includes(files[0].mimeType))return res.status(404).json({error:"Δεν βρέθηκε το πρωτότυπο."});res.set("Cache-Control","no-store");res.json({filename:files[0].filename,mimeType:files[0].mimeType,dataUrl:files[0].contentData});
 }catch(e){next(e)}});
 router.post("/documents/inbox/:inboxId/reconcile-pos",async(req,res,next)=>{try{
- const body=z.object({storeId:z.string().min(1),posOrderId:z.string().min(1),expectedVersion:z.string().length(64),confirmSameInvoice:z.literal(true),confirmMark:z.string().min(1),confirmPaymentDiscrepancy:z.boolean().default(false),reason:z.string().trim().min(5).max(500)}).parse(req.body);
+ const body=z.object({storeId:z.string().min(1),posOrderId:z.string().min(1),expectedVersion:z.string().length(64),confirmSameInvoice:z.literal(true),confirmMark:z.string().min(1),confirmPaymentDiscrepancy:z.boolean().default(false),verifiedSupplierId:z.string().min(1).max(200).optional(),confirmSupplierCorrection:z.boolean().optional(),confirmPaymentSupplierCorrection:z.boolean().optional(),selectedRowsOrderId:z.string().min(1).max(200).optional(),reason:z.string().trim().min(5).max(500)}).parse(req.body);
  const scope=await scopeFor(req,body);
  const result=await prisma.$transaction(tx=>reconcileInvoiceDrafts(tx,scope,{...body,actorId:req.user.id}),{timeout:20000});res.json(result);
 }catch(e){next(e)}});
 export default router;
+
