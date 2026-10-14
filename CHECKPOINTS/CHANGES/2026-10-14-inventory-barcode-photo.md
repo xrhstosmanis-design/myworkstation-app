@@ -1,3 +1,16 @@
+## 14/10/2026 12:10–12:12 Europe/Athens — INVENTORY-BARCODE-PHOTO-01 / SOURCE LIVE / LIMITED LIVE PHOTO→LOOKUP PASS
+Owner confirmation14Oct2026 12:13:27Athens: «einai ok» after live photo→lookup demonstration. Scoped USER acceptance of the delivered feature; no specific physical photo/mobile/creation/stock result inferred.
+
+
+
+Independent owner codex/inventory-barcode-photo-20261014 completed implementation and bounded actual browser acceptance of the requested photo input in Νέο είδος · Πλήρης καρτέλα. ClaimPR2468/docsCI38537041094 merged e22d1113 before code. SourcePR2469/head34f8bce6f6a8f1b75b92b5a221ed56ecbaac3d1b/fullPRCI38538328146/job115766759311 SUCCESS2623PASS/0FAIL/0SKIP plus6backup; exact mainfca770d25b2586a914581f59dbebd5d0a5fdf6f9/mainCI38539146361/job115769480910 same2623/0/0 plus6backup/all required native/build/invariants/HTTP/browser/Windows. All6 owned runtime/test blobs verified byte-for-byte on merge. GuardedRender38539660079/job115771056701 SUCCESS; dep-db7kbft9fdbs73eijgigLIVE09:06:56UTC, exacthealthy09:07:15.377UTC/version0.22.0+kat-test-pos. No manual deploy, schema/production migration or fiscal changes.
+
+Ordinary secure email/password+2FA sign-in succeeded as SuperAdmin Χρήστος Μάνης; no credential values read/printed or auth bypass/new role/grant. Explicit MYWORKSTATION LAB → ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ/cmtpopbgo000trhb5ng9ytiru → full Backoffice → Commerce → selected same store → Archive → New item. Baseline barcode/description empty, cost0/sale0/VAT24/openingstock0. One ordinary chooser selection of generated standard EAN13 image barcode-photo-check.png (filename contains no decoded code) was actually decoded from pixels by deployed client and automatically filled5201399030219 and initiated existing read-only lookup. Actual UI showed “Διαβάστηκε barcode:5201399030219” and Sticks Με Γεύση Τρούφα Και Τυρί/3αλφα/Open Food Facts plus explicit Χρήση διαθέσιμων στοιχείων. Name still empty/cost0/sale0/VAT24/stock0. No Apply/product save/payment/stock/provider-AI/fiscal action submitted. Original decoded barcode remains editable.
+
+Fresh BEFORE09:10:32.302UTC recorded in checkpoint before upload and AFTER09:12:24.929UTC independently agree: company99products/fullhash6e4934372679733d609b847c0e325517, store99stockrows/fullhash7b8db4a9f0c5ffb6116a3ce8e109eeac,95stockmovements/latest12Oct20:42:11.404UTC,133transactions/fullhash1a717e87f6e93ed7723070fceb7cbd6a unchanged. N40 control has no stock rows (null aggregate), unchanged. Browser MAIN/LABPOS2 observed3transactions/cash9.40/card0/IRIS0/total2.20; no physical terminal action/quantity/method applied. LIMITED LIVE PASS covers deployed file chooser/pixel reading/automatic selected-store lookup and no business-data effect in this measured window using a generated barcode PNG. It is not a physical camera/user packaging photo/phone/all-role/all-quality PASS. Multiple symbols, unreadable/checksum/leading-zero/native fallback, repeat same code and stale file/barcode/store/unmount passed native-pixel/mounted CI separately, without claiming extra real actions. Existing duplicate-denial/explicit Apply/manual-price/VAT/stock/card/SET/invoice behaviors protected.
+
+Completed independent implementation/photo→lookup residual removed from pending; broader creation acceptance owner codex/inventory-new-card-online-20261013 and physical/mobile coverage, all other Inventory/POS/09/task2/task3/payment owners and PASS retained. Supplier/product online coverage remains limited; unsupported/unreadable photo uses manual barcode and exact lookup result must be checked. No AI charge for barcode image reading; no general availability/price recommendation inferred. Evidence CHECKPOINTS/EVIDENCE/2026-10-14-inventory-barcode-photo/{photo-lookup.jpg,barcode-photo-check.png,before-after.json}; checkpoint CHECKPOINTS/CHANGES/2026-10-14-inventory-barcode-photo.md; verified instructions docs/manual/inventory/PASS.md. Same receipt PR synchronizes active/tracker/pending/manual/numbered snapshot/PDF; green receipt merge required.
+
 ## 14/10/2026 — INVENTORY-BARCODE-PHOTO-01 / SOURCE IMPLEMENTED / AWAITING CI AND LIVE
 
 Same independent owner codex/inventory-barcode-photo-20261014/feat/inventory-barcode-photo-20261014. ClaimPR2468/headba4171c3/full docsCI38537041094 SUCCESS mergede22d1113 before runtime changes. Only existing new-card barcode/photo/read-only lookup scope; original creation acceptance owner and all other owners remain protected. Added photo button/file picker for JPG/PNG/WebP<=20MB, local real ZXing pixels with optional native detector, full rotations/overlapping label crops, supported numeric1Dcodes only, EAN13 leading-zero preservation, no filename/text inference. Recognized code fills the existing barcode and triggers current selected-store lookup after committed parent update; same-code replay unlocks correctly. Multiple found symbols require explicit selection; failed/unreadable photo keeps manual path. File replaced, barcode/store/modal changed or unmount aborts/discards stale reads and searches. Photo is not uploaded to server/AI provider; barcode lookup is the existing GET only. Existing MYWORKSTATION duplicate-denial and explicit product-info Apply unchanged; no automatic price/VAT/stock/new-product/save/payment/fiscal action.
@@ -10,3 +23,23 @@ Independent owner codex/inventory-barcode-photo-20261014, branch feat/inventory-
 
 Plan: add accessible image selection, local pixel decoding with already installed ZXing fallback (no photo sent to an AI provider/server), recognized code fills existing barcode and triggers its existing read-only lookup. Multiple decoded candidates require explicit choice; unreadable/unsupported photo keeps typed/manual path. Reject stale decode/lookup after store/barcode/modal/file changes; retain leading zeros and never infer a code from filename or product name. No automatic product creation, price/VAT/stock change or financial/fiscal action. Required real pixel decode and mounted async/selection/error tests, normal build/full CI/green main/guarded exact release, then ordinary authenticated unsaved form upload/lookup acceptance. No real product save or posting for evidence. Claim must merge before runtime code. Checkpoint CHECKPOINTS/CHANGES/2026-10-14-inventory-barcode-photo.md.
 
+## 14Oct2026 12:09 Athens — unsaved photo UI BEFORE
+
+Exact sourcefca770d25b2586a914581f59dbebd5d0a5fdf6f9; PR2469/CI38538328146 and main38539146361 both full2623/0/0 plus6backup, guard38539660079/job115771056701 SUCCESS/exacthealthy09:07:15.377UTC and Renderdep-db7kbft9fdbs73eijgigLIVE. Ordinary secure email/password+2FA, authenticated SuperAdmin Χρήστος Μάνης. Selected company MYWORKSTATION LAB/cmtpopbgk000prhb5qc60zxus, store ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ/cmtpopbgo000trhb5ng9ytiru, physical terminal/operator none (browser read-only; observed MAIN/LAB POS2 3transactions/cash9.40/card0/IRIS0/total2.20). New full-card unsaved UI barcode/name blank, cost0/sale0/VAT24/openingstock0. Intend one select of generated independent standard EAN13 PNG barcode-photo-check.png (5201399030219) through normal chooser, not a user physical photo. Only fill/read/search; no Apply/save/product/stock/payment/provider-AI/fiscal action. Data baseline before upload:
+
+```json
+[
+  {
+    "control_stock_hash": null,
+    "latest_stock_movement": "2026-10-12T20:42:11.404Z",
+    "observed_at": "2026-10-14T09:10:32.302888Z",
+    "product_hash": "6e4934372679733d609b847c0e325517",
+    "products": 99,
+    "stock_hash": "7b8db4a9f0c5ffb6116a3ce8e109eeac",
+    "stock_movements": 95,
+    "stock_rows": 99,
+    "transaction_hash": "1a717e87f6e93ed7723070fceb7cbd6a",
+    "transactions": 133
+  }
+]
+```
