@@ -1,3 +1,7 @@
+## 14/10/2026 14:12:28 Europe/Athens — SCREEN-RECORDING-MP4-01 / SCOPED USER ACCEPTANCE / CLOSED
+
+Owner replied “ΕΙΝΑΙ ΟΚ” after delivered MP4 download instructions and request to confirm use/playback. Record scoped owner acceptance of the requested MP4 feature; no independently captured file hash, native encoder trace, physical browser/client revision or universal device/player certification inferred. Source PR2473+2474 and exact healthyc99e02ef/full mainCI38548181928/guard38548773309 remain verified; later invoice source leaves this component unchanged. Local-only MP4 capture/preview/download, Greek24hour filename and unsupported-browser message retained. Implementation request closed and owner released; old awaiting entries below are dated history, remove completed scope from active pending. Manual docs/manual/pos/PASS.md updated; no new screen recording, upload or business action repeated.
+
 ## 14/10/2026 — FINAL SOURCE DEPLOYED / USER MP4 PLAYBACK AWAITING
 
 Exact final main c99e02efb2f1749aeec08c51a90c43d1b7b39bf6: full mainCI38548181928 all jobs SUCCESS; guarded Render38548773309 all jobs SUCCESS. Independent /api/health read ok=true/version0.22.0+kat-test-pos/revisionc99e02ef confirmed. Actual served /assets/ScreenRecorderControl-DG1ld4qB.js SHA2565758cea62d3cc6e1fc9e342e729f285e59075bf61291341644283ce272f97efd contains native video/mp4;codecs=avc1 and Αποθήκευση MP4 στο PC; fixed avc1.42001E absent. This is exact deployment/source evidence, not real encoded MP4/player PASS.
