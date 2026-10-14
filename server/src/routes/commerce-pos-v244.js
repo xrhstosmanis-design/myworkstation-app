@@ -3,6 +3,7 @@ import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../custome
 import {backgroundDrain,allowActiveInvoiceDrainRequest} from "../server-shutdown.js";
 import crypto from "crypto";
 import {findMyDataPurchase,attachMyDataPosReceipt} from "../lib/mydata-pos-receipt.js";
+import {prepareSelectedInbox,queueEmptyInboxRead} from "../lib/pos-inbox-original.js";
 import jwt from "jsonwebtoken";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
@@ -692,6 +693,7 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
     await ensureFastHandoffSchema();
     await ensureInvoiceCommonDraftSchema(prisma);
     await assertNoUnresolvedInbound(prisma,{companyId,storeId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross),documentType:req.body.documentType||"INVOICE"});
+    if(req.body?.myDataInboxId)await prepareSelectedInbox(prisma,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross),documentType:"INVOICE"},String(req.body.myDataInboxId),req.body.dataUrl,req.user);
     const myDataPurchase=await findMyDataPurchase(prisma,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross)});
     if(myDataPurchase){
       if(myDataPurchase.resultJson?.mydataPosReceipt?.receivedAt||myDataPurchase.rawPayload?.mydataPosReceipt?.receivedAt)return res.status(409).json({error:"Το κανονικό τιμολόγιο έχει ήδη παραληφθεί από POS. Δεν έγινε νέα πληρωμή ή δεύτερη αγορά. Για εκκρεμή πίστωση χρησιμοποίησε «Πληρωμή ανοιχτών τιμολογίων».",code:"DUPLICATE_INVOICE",existing:{id:myDataPurchase.documentId,status:myDataPurchase.status}});
@@ -780,6 +782,10 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     await ensureV244IntakeSchema();
     await ensureFastHandoffSchema();
     const receiptIdentity={companyId,storeId,supplierId,supplierTaxId:cleanTaxId(supplier.taxId),documentNumber,documentDate,totalGross,documentType};
+    if(req.body?.myDataInboxId){
+      if(pages.length!==1||pages[0]?.mimeType!=="application/pdf")return res.status(400).json({error:"Η επιλογή θυρίδας απαιτεί το συγκεκριμένο πρωτότυπο PDF."});
+      await prepareSelectedInbox(prisma,receiptIdentity,String(req.body.myDataInboxId),pages[0].dataUrl,req.user,{attach:true});
+    }
     await ensureInvoiceCommonDraftSchema(prisma);
     await assertNoUnresolvedInbound(prisma,receiptIdentity);
     const myDataPurchase=await findMyDataPurchase(prisma,receiptIdentity);
@@ -800,7 +806,12 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     });
     if(myDataPurchase){
       const linked=await attachMyDataPosReceipt(prisma,receiptIdentity,normalizedPages,existingPayment,req.user);
-      return res.json({ok:true,accepted:true,draftReady:true,...linked,message:"Η φωτογραφία και η υπάρχουσα πληρωμή POS συνδέθηκαν με την ίδια αγορά myDATA. Οι ελεγμένες γραμμές και η αποθήκη διατηρήθηκαν."});
+      let backgroundQueued=false;
+      if(req.body?.myDataInboxId&&!linked.reused){
+        backgroundQueued=await queueEmptyInboxRead(prisma,receiptIdentity,myDataPurchase,existingPayment);
+        if(backgroundQueued)await enqueueFastBackground({companyId,storeId,jobId:myDataPurchase.jobId,publicOrigin:`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`});
+      }
+      return res.json({ok:true,accepted:true,draftReady:true,...linked,backgroundQueued,message:backgroundQueued?"Η πληρωμή συνδέθηκε με το ίδιο πρόχειρο. Η ανάγνωση του PDF συνεχίζεται στο παρασκήνιο.":"Η φωτογραφία και η υπάρχουσα πληρωμή POS συνδέθηκαν με την ίδια αγορά myDATA. Οι ελεγμένες γραμμές και η αποθήκη διατηρήθηκαν."});
     }
     // The browser can correctly recover the four FAST fields from an older
     // exact-file job while the newest job for that attachment is an empty
@@ -1091,4 +1102,3 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
 
 router.use(coreRouter);
 export default router;
-

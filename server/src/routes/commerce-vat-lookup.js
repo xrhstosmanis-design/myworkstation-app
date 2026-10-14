@@ -25,6 +25,8 @@ export function normalizeAadeResult(xml,taxId){
 
 router.get("/vat-lookup",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
   const storeId=String(req.query.storeId||""),taxId=clean(req.query.taxId),official=req.query.official==="1";
+  const employee=req.user?.tokenType==="STORE_OPERATOR"||req.user?.role==="EMPLOYEE";
+  if(employee&&(!req.user.permissions?.includes("SUPPLIER_PAYMENT")||!storeId||String(req.user.storeId)!==storeId))return res.status(403).json({error:"Δεν έχεις δικαίωμα ελέγχου ΑΦΜ σε αυτό το κατάστημα."});
   if(!/^\d{9}$/.test(taxId))return res.status(400).json({error:"Το ελληνικό ΑΦΜ πρέπει να έχει 9 ψηφία."});
   const store=await prisma.store.findFirst({where:{...(storeId?{id:storeId}:{}),companyId:req.user.companyId},select:{id:true},orderBy:{createdAt:"asc"}});
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});

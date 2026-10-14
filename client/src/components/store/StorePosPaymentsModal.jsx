@@ -58,8 +58,8 @@ export default function StorePosPaymentsModal({api,store,onClose,onChanged,setMe
   :premiumInvoice===null
    ?<div style={{padding:16,fontWeight:800}}>Έλεγχος διαθέσιμου module…</div>
    :premiumInvoice
-    ?<StoreSupplierInvoicePremiumFast api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} onCompleted={paymentCompleted} setMessage={invoiceMessage}/>
-    :<StoreSupplierInvoiceFast api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} onCompleted={paymentCompleted} setMessage={invoiceMessage}/>;
+    ?<StoreSupplierInvoicePremiumFast key={store.id} api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} onCompleted={paymentCompleted} setMessage={invoiceMessage}/>
+    :<StoreSupplierInvoiceFast key={store.id} api={api} store={store} suppliers={suppliers} onChanged={invoiceChanged} onCompleted={paymentCompleted} setMessage={invoiceMessage}/>;
  const supplierSettlement=<StoreSupplierOpenInvoicePayment api={api} store={store} suppliers={suppliers} allowCash={canSameShift&&!staleShift} onChanged={invoiceChanged} onCompleted={paymentCompleted} setMessage={invoiceMessage}/>;
  const blockPaidWithoutPermission=e=>{const button=e.target.closest?.("button");if(!button)return;const text=String(button.textContent||"").toLocaleUpperCase("el-GR");const isCashAction=text.includes("ΠΛΗΡΩΜΕΝΟ")||text.includes("ΠΛΗΡΩΜΗ &");if(!isCashAction)return;if(!canSameShift){e.preventDefault();e.stopPropagation();setPaymentError("Δεν έχεις δικαίωμα «Οι πληρωμές να αφαιρούνται από την ίδια βάρδια» από το BackOffice.");return}if(staleShift){e.preventDefault();e.stopPropagation();setPaymentError(staleShiftMessage)}};
  return createPortal(<div className={`pos-standard-modal${supplierMode&&supplierFlow==="NEW_INVOICE"?" pos-new-invoice-modal":""}`} onMouseDown={e=>e.target===e.currentTarget&&!busy&&onClose()}><section><header><div><small>MYWORKSTATION · ΒΑΣΙΚΟ POS</small><h2>Πληρωμές</h2></div><button onClick={()=>!busy&&onClose()}><X/></button></header><main><div data-invoice-v244="1">

@@ -1,3 +1,4 @@
+import {assertEmptyInboxRead} from "../lib/pos-inbox-original.js";
 import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertNoUnresolvedInbound,reuseInboundDraftForPosJob,sameInvoiceNumber,invoiceNumberParts} from "../lib/invoice-common-draft.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
@@ -418,6 +419,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       if(skeletonDocumentId&&!skeletonRows[0])throw Object.assign(new Error("Το πρόχειρο BackOffice δεν είναι διαθέσιμο για συμπλήρωση."),{status:409});
       if(skeletonRows[0]&&skeletonRows[0].documentType!==body.documentType)throw Object.assign(new Error("Το πρόχειρο έχει διαφορετικό τύπο παραστατικού. Δεν έγινε μετατροπή αγοράς σε πιστωτικό."),{status:409});
       const documentId=skeletonRows[0]?.id||id(),orderId=skeletonRows[0]?.purchaseOrderId||id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
+      if(locked[0].resultJson?.posHandoff?.inboxInitialRead)await assertEmptyInboxRead(tx,{companyId:req.user.companyId,storeId:job.storeId,...body},documentId,orderId);
       const totalNet=money2(matched.reduce((s,l)=>s+Number(l.netAmount||0)+Number(l.exciseTotal||0),0)),totalVat=money2(Number(body.totalGross)-totalNet);
       stage="create-purchase-document";
       if(skeletonRows[0])await tx.$executeRaw`UPDATE "PurchaseDocument" SET "documentDate"=${body.documentDate||new Date()},"totalNet"=${totalNet},"totalVat"=${totalVat},"totalGross"=${body.totalGross},"settlementMode"=${body.settlementMode} WHERE "id"=${documentId} AND "companyId"=${req.user.companyId}`;
@@ -489,4 +491,3 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
 });
 
 export default router;
-

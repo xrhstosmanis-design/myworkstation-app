@@ -10,6 +10,7 @@ import {finalizeV244ProductLines} from "../../lib/invoice-v244.js";
 import {prepareDocumentFile} from "../../lib/document-image-quality.js";
 import InvoiceQrCamera from "./InvoiceQrCamera.jsx";
 import InvoiceQrScanner from "./InvoiceQrScanner.jsx";
+import InvoiceVatInbox from "./InvoiceVatInbox.jsx";
 import {knownSupplierFromFastHeaders} from "../../lib/invoice-fast-supplier-match.js";
 
 const today=()=>greeceDateInput(new Date());
@@ -41,18 +42,21 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
   const [files,setFiles]=useState([]),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(today()),[mode,setMode]=useState(""),[paymentMethod,setPaymentMethod]=useState("CASH_SHIFT"),[busy,setBusy]=useState(false),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);
   const [invoiceQrOpen,setInvoiceQrOpen]=useState(false);
   const [invoiceScannerOpen,setInvoiceScannerOpen]=useState(false);
+  const [selectedInboxId,setSelectedInboxId]=useState(null),[createdSupplier,setCreatedSupplier]=useState(null);
+  const supplierOptions=useMemo(()=>createdSupplier&&!suppliers.some(s=>s.id===createdSupplier.id)?[createdSupplier,...suppliers]:suppliers,[createdSupplier,suppliers]);
   const videoRef=useRef(null),canvasRef=useRef(null);
   const file=files[0]||null;
-  const supplier=useMemo(()=>suppliers.find(x=>String(x.id)===String(supplierId))||null,[suppliers,supplierId]);
+  const supplier=useMemo(()=>supplierOptions.find(x=>String(x.id)===String(supplierId))||null,[supplierOptions,supplierId]);
   const paymentSource=paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
   const paymentMethodLabel={CASH_SHIFT:"Μετρητά από ενεργή βάρδια",CORPORATE_CARD:"Εταιρική κάρτα",BANK_TRANSFER:"Τραπεζική μεταφορά",EMPLOYEE_REIMBURSEMENT:"Πληρωμή υπαλλήλου προς επιστροφή"}[paymentMethod];
   useEffect(()=>()=>{stream?.getTracks?.().forEach(track=>track.stop())},[stream]);
   const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
   const openInvoiceQr=()=>{stopCamera();setInvoiceQrOpen(true)};
   const readInvoiceQr=data=>{
+    setSelectedInboxId(data.inboxId||null);
     setInvoiceQrOpen(false);setInvoiceScannerOpen(false);
     if(data.header.documentType==="CREDIT_NOTE"){setMessage?.("⚠️ Το QR αφορά πιστωτικό. Χρειάζεται καταχώριση πιστωτικού στο BackOffice.");return}
-    const known=knownSupplierFromFastHeaders([data.header],suppliers);
+    const known=knownSupplierFromFastHeaders([data.header],supplierOptions);
     setFiles([data.file]);setSupplierId(known?.id||"");setAmount(Number(data.header.totalGross).toFixed(2).replace(".",","));setDocumentNumber(data.header.documentNumber);setDocumentDate(data.header.documentDate);setMode("");
     setMessage?.(`✅ Παραλήφθηκε το πρωτότυπο PDF μέσω QR (${data.pageCount} σελίδες). Έλεγξε προμηθευτή, κατάστημα, αριθμό και ποσό· επίλεξε εσύ πληρωμή ή πίστωση.${known?"":" Ο προμηθευτής χρειάζεται επιλογή με το ΑΦΜ του τιμολογίου: "+data.header.supplierTaxId}`);
   };
@@ -60,6 +64,7 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
   useEffect(()=>()=>{selectionGeneration.current++},[store.id]);
   const chooseFiles=async selected=>{
     const incoming=Array.from(selected||[]).filter(Boolean);if(!incoming.length||choosing.current)return;
+    setSelectedInboxId(null);
     const generation=selectionGeneration.current;
     try{validatePhotoSelection(files,incoming)}catch(error){setMessage?.(`⚠️ ${error.message}`);return}
     choosing.current=true;setBusy(true);
@@ -79,6 +84,18 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
     setBusy(true);
     try{
       const documentFile=await bundleDocumentPhotos(files),dataUrl=await readFile(documentFile),key=paymentKey();
+      if(selectedInboxId){
+        const check=await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber,documentDate,totalGross:num(amount),dataUrl,myDataInboxId:selectedInboxId})});
+        let paymentTransactionId=check.paymentTransactionId||null;
+        const finalNumber=check.canonicalDocumentNumber||documentNumber;
+        if(mode==="PAID"&&!paymentTransactionId){
+          const payment=await api(`/api/transactions/stores/${encodeURIComponent(store.id)}`,{method:"POST",body:JSON.stringify({type:"SUPPLIER_PAYMENT",amount:num(amount),supplierId,supplierName:supplier?.name||null,invoiceDocumentNumber:finalNumber,description:`Τιμολόγιο ${finalNumber} — γρήγορη καταχώριση POS`,evidenceMode:"NO_DOCUMENT",paymentSource,paymentMethod,idempotencyKey:key,attachment:{dataUrl,filename:documentFile.name}})});
+          paymentTransactionId=payment?.id;if(!paymentTransactionId)throw Error("Δεν επιβεβαιώθηκε η πληρωμή.");
+          if(paymentSource==="CASH_SHIFT")try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_PAYMENT",amount:num(amount),storeId:store.id,transactionId:paymentTransactionId}}))}catch{}
+        }
+        await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:finalNumber,documentDate,totalGross:num(amount),documentType:"INVOICE",myDataInboxId:selectedInboxId,settlementMode:paymentTransactionId?"PAID":"CREDIT",paymentTransactionId,pages:[{filename:documentFile.name,mimeType:"application/pdf",dataUrl}]})});
+        setMessage?.("✅ Καταχωρίστηκε στο ίδιο πρόχειρο myDATA. Επιστροφή στο POS — η αναγνώριση συνεχίζεται στο παρασκήνιο όπου χρειάζεται.");onChanged?.();onCompleted?.();return;
+      }
       const responsibleName="POS";
       const note=`POS FAST • ${mode==="PAID"?"ΠΛΗΡΩΜΕΝΟ":"ΜΕ ΠΙΣΤΩΣΗ"} • Ποσό ${num(amount).toFixed(2)} €${documentNumber?` • Τιμολόγιο ${documentNumber}`:""} • Αναμονή V2.4.4`;
       const inbox=await api("/api/commerce/documents/inbox",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,responsibleName,note,file:{dataUrl,filename:documentFile.name||"timologio.jpg"}})});
@@ -102,6 +119,7 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
   };
   return <div className="pos-payment-form-v3-root pos-new-invoice-form pos-new-invoice-basic">
     <div className="pos-invoice-document-area">
+    <InvoiceVatInbox key={store.id} api={api} store={store} suppliers={supplierOptions} disabled={busy||mobile.pending} onSupplier={next=>{setCreatedSupplier(next);setSupplierId(next.id)}} onRead={readInvoiceQr}/>
     <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>FAST PAYMENT — ο υπάλληλος πληρώνει/παραλαμβάνει και επιστρέφει αμέσως στις πωλήσεις. Ο έλεγχος γίνεται στο BackOffice.</div>
     <div className="pos-photo-actions"><button type="button" disabled={busy||mobile.pending||files.length>0} onClick={()=>{stopCamera();setInvoiceQrOpen(false);setInvoiceScannerOpen(true)}}>Σάρωση QR με scanner</button><button type="button" disabled={busy||mobile.pending||files.length>=5||file?.type==="application/pdf"} onClick={startCamera}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή έως 5 φωτογραφιών / PDF<input type="file" multiple accept="image/*,application/pdf" disabled={busy||mobile.pending||files.length>=5||file?.type==="application/pdf"} onChange={e=>{const selected=Array.from(e.target.files||[]);e.target.value="";chooseFiles(selected)}}/></label><button type="button" disabled={busy||mobile.pending||files.length>=5||file?.type==="application/pdf"} onClick={mobile.createQr}>QR από κινητό</button></div><DocumentPhotoList files={files} onChange={setFiles} disabled={busy||mobile.pending}/><MobileDocumentPhotosQr mobile={mobile}/>
 
@@ -110,7 +128,7 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
     {invoiceQrOpen&&<InvoiceQrCamera key={store.id} api={api} store={store} onRead={readInvoiceQr} onClose={()=>setInvoiceQrOpen(false)}/>}
     </div>
     <div className="pos-invoice-fields-area">
-    <label>Προμηθευτής<select value={supplierId} onChange={e=>setSupplierId(e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{suppliers.map(s=><option key={s.id} value={s.id}>{s.name}{s.taxId?` · ${s.taxId}`:""}</option>)}</select></label>
+    <label>Προμηθευτής<select value={supplierId} onChange={e=>setSupplierId(e.target.value)}><option value="">Επίλεξε προμηθευτή</option>{supplierOptions.map(s=><option key={s.id} value={s.id}>{s.name}{s.taxId?` · ${s.taxId}`:""}</option>)}</select></label>
     <div className="pos-invoice-reference-fields"><label>Ποσό<input inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0,00"/></label><label>Αρ. τιμολογίου <small>(προαιρετικό)</small><input value={documentNumber} onChange={e=>setDocumentNumber(e.target.value)}/></label><label>Ημερομηνία<input type="date" value={documentDate} onChange={e=>setDocumentDate(e.target.value)}/></label></div>
     <div className="pos-payment-types"><button type="button" aria-pressed={mode==="PAID"} className={mode==="PAID"?"active":""} onClick={()=>setMode("PAID")}>ΠΛΗΡΩΜΕΝΟ</button><button type="button" aria-pressed={mode==="CREDIT"} className={mode==="CREDIT"?"active":""} onClick={()=>setMode("CREDIT")}>ΜΕ ΠΙΣΤΩΣΗ</button></div>
     {mode==="PAID"&&<div className="pos-expense-payment-sources"><b>Τρόπος πληρωμής προμηθευτή</b><div>{[["CASH_SHIFT","Μετρητά από ενεργή βάρδια"],["CORPORATE_CARD","Εταιρική κάρτα"],["BANK_TRANSFER","Τραπεζική μεταφορά"],["EMPLOYEE_REIMBURSEMENT","Πληρωμή υπαλλήλου προς επιστροφή"]].map(([value,label])=><button key={value} type="button" className={paymentMethod===value?"active":""} disabled={busy} onClick={()=>setPaymentMethod(value)}>{label}</button>)}</div><small>{paymentSource==="CASH_SHIFT"?"Το ποσό αφαιρείται από το ταμείο της ενεργής βάρδιας.":"Η πληρωμή καταχωρίζεται εξωτερικά και δεν αφαιρείται από τη βάρδια."}</small></div>}
