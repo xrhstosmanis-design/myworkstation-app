@@ -19,7 +19,8 @@ test("archive binds tenant, filters and paging without interpolating user SQL",(
 test("actual archive handler exports all 5269 results, paginates and denies foreign store/operator",async()=>{
   const source=await readFile(new URL("../src/routes/commerce-mydata-inbox.js",import.meta.url),"utf8"),routes=new Map();
   const rows=Array.from({length:5269},(_,i)=>({id:`inbox-${i}`,receivedAt:"2026-09-30T18:00:00Z",issueDate:"2026-09-28",mark:String(400000000000000+i),documentNumber:String(i),issuerVat:"099999999",totalGross:"75.14",status:"RECEIVED",hasAttachment:false}));
-  const prisma={store:{async findFirst({where}){return where.companyId==="company-one"&&where.id==="store-one"?{id:where.id,name:"Store One"}:null}},async $executeRawUnsafe(){},async $queryRaw(){return [{name:"Supplier One"}]},async $queryRawUnsafe(sql,...values){assert.deepEqual(values.slice(0,2),["company-one","store-one"]);if(sql.includes("COUNT(*)"))return [{count:rows.length}];return rows.slice(values.at(-1),values.at(-1)+values.at(-2))}};
+  const issuedQueries=[];
+  const prisma={store:{async findFirst({where}){return where.companyId==="company-one"&&where.id==="store-one"?{id:where.id,name:"Store One"}:null}},async $executeRawUnsafe(){},async $queryRaw(){return [{name:"Supplier One"}]},async $queryRawUnsafe(sql,...values){issuedQueries.push(sql);assert.deepEqual(values.slice(0,2),["company-one","store-one"]);if(sql.includes("COUNT(*)"))return [{count:rows.length}];return rows.slice(values.at(-1),values.at(-1)+values.at(-2))}};
   globalThis.__archiveTest={greeceExportRows,prisma,XLSX,archiveQuery,archiveExportRows,archiveReportHtml,Router:()=>({get(path,...handlers){routes.set(path,handlers.at(-1))},post(){}})};
   const injected=`import crypto from "node:crypto";const {greeceExportRows,prisma,XLSX,archiveQuery,archiveExportRows,archiveReportHtml,Router}=globalThis.__archiveTest;const requireCompanyModule=()=>()=>{};`;
   try{await import(`data:text/javascript;base64,${Buffer.from(injected+source.replace(/^import .*;\r?\n/gm,"")).toString("base64")}`)}finally{delete globalThis.__archiveTest}
@@ -30,6 +31,9 @@ test("actual archive handler exports all 5269 results, paginates and denies fore
   const workbook=XLSX.read(Buffer.from(excel.data.dataUrl.split(",")[1],"base64"),{type:"buffer"});
   const exported=XLSX.utils.sheet_to_json(workbook.Sheets["Παραστατικά"]);assert.equal(exported.length,5269);assert.equal(exported[0]["Ημερομηνία λήψης"],"2026-09-30 21:00:00 Europe/Athens");assert.deepEqual(new Set(exported.map(row=>row.MARK)),new Set(rows.map(row=>row.mark)));assert.equal(exported[0]["Σύνολο"],75.14);
   const pdf=await run({format:"pdf"});assert.equal(pdf.data.count,5269);assert.match(pdf.data.html,/δεν είναι πρωτότυπα PDF/);
+  await run({receivedBeforeToday:'true'});assert.ok(issuedQueries.slice(-3).every(sql=>sql.includes("::date<(CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date")),'list, filtered count and receipt-period total share the server boundary');
+  const oldExcel=await run({format:'xlsx',receivedBeforeToday:'true'});assert.ok(issuedQueries.slice(-3).every(sql=>sql.includes("::date<(CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date")));
+  const oldWorkbook=XLSX.read(Buffer.from(oldExcel.data.dataUrl.split(',')[1],'base64'),{type:'buffer'});assert.match(JSON.stringify(XLSX.utils.sheet_to_json(oldWorkbook.Sheets['Πληροφορίες'],{header:1})),/receivedBeforeToday/);
   assert.equal((await run({storeId:"foreign-store"})).status,404);
   assert.equal((await run({}, {companyId:"company-one",role:"OWNER",tokenType:"STORE_OPERATOR"})).status,403);
 });
@@ -67,3 +71,11 @@ test("exports group suppliers and issue dates while preserving separate receipt 
   assert.equal(result[0]["Ημερομηνία λήψης"],"2026-10-01T01:00:00.000Z");
   assert.match(archiveReportHtml(rows,"Store"),/A — 2026-09-29/);
 });
+
+test("old receipt period is server-filtered before pagination/count/export and cannot be combined with today's period",()=>{
+ const filters={receivedBeforeToday:true,q:'17113',offset:100,dateFrom:'2026-09-01'};
+ for(const count of [false,true]){const q=archiveQuery('c','s',filters,count);assert.match(q.sql,/i\."receivedAt" IS NULL OR .*::date<\(CURRENT_TIMESTAMP AT TIME ZONE 'Europe\/Athens'\)::date/);assert.deepEqual(q.values.slice(0,2),['c','s']);assert.match(q.sql,/m\."issueDate">=\$3::date/);assert.equal(q.sql.includes('LIMIT'),!count);}
+ const exported=archiveQuery('c','s',{...filters,limit:20001,offset:0});assert.deepEqual(exported.values.slice(-2),[20001,0]);
+ assert.throws(()=>archiveQuery('c','s',{receivedBeforeToday:true,receivedToday:true}),e=>e.status===400);
+});
+
