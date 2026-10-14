@@ -34,12 +34,13 @@ for(const selected of ['pos','mydata'])test('native reviewed supplier and row ch
  }finally{await f.close()}
 });
 test('native reviewed resolution refuses missing decisions, foreign/inactive supplier, stale rows/payment, multiple/reversed payments and posted source without writes',{skip:!isolatedInvoiceDb()},async()=>{
- for(const variant of ['supplier','supplierConfirm','paymentConfirm','rows','foreign','inactive','staleRows','stalePayment','reversed','multiple','posted','settlement']){
+ for(const variant of ['supplier','supplierConfirm','paymentConfirm','rows','foreign','inactive','staleRows','stalePayment','staleInbound','reversed','multiple','posted','settlement']){
   const f=await fixture();try{
    const p=await common.previewInvoiceReconciliation(f.db,scope),a=args(p);
    if(variant==='supplier')a.verifiedSupplierId=null;if(variant==='supplierConfirm')a.confirmSupplierCorrection=false;if(variant==='paymentConfirm')a.confirmPaymentSupplierCorrection=false;if(variant==='rows')a.selectedRowsOrderId=null;if(['foreign','inactive'].includes(variant))a.verifiedSupplierId=variant;
    if(variant==='staleRows')await f.db.$executeRawUnsafe(`UPDATE "PurchaseOrderLine" SET "quantity"=4 WHERE "orderId"='mydata'`);
    if(variant==='stalePayment')await f.db.$executeRawUnsafe(`UPDATE "StoreTransaction" SET "description"='Changed after preview' WHERE "id"='payment'`);
+   if(variant==='staleInbound')await f.db.$executeRawUnsafe(`UPDATE "MyDataInboundDocument" SET "totalGross"=3.40 WHERE "id"='m'`);
    if(variant==='reversed')await f.db.$executeRawUnsafe(`UPDATE "StoreTransaction" SET "reversedAt"=NOW() WHERE "id"='payment'`);
    if(variant==='multiple'){await f.db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","type","amount") VALUES('payment2','c','s','sup','SUPPLIER_PAYMENT',3.39)`);await f.db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "paymentTransactionId"='payment2' WHERE "id"='d-mydata'`);}
    if(variant==='posted')await f.db.$executeRawUnsafe(`INSERT INTO "InvoiceStockPosting"("companyId","sourceDocumentId","storeId","postedDocumentId","path") VALUES('c','d-mydata','s','posted','invoice')`);

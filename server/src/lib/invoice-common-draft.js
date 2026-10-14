@@ -93,7 +93,7 @@ async function candidateOrders(db,row){
   exact:Boolean(tax(o.taxId)&&tax(o.taxId)===tax(row.issuerVat)&&o.documentType===inboundType(row)&&sameInvoiceNumber(o.documentNumber,row.series,row.documentNumber)&&day(o.documentDate)===day(row.issueDate)&&Math.abs(amount(o.totalGross)-amount(row.totalGross))<=.050001),
   isMyData:o.orderId===row.rawPayload?.mydataDraftOrderId||o.documentId===row.jobDocumentId}));
 }
-const version=(row,orders)=>crypto.createHash("sha256").update(JSON.stringify({inboxId:row.inboxId,mark:row.mark,attachmentId:row.attachmentId,
+const version=(row,orders)=>crypto.createHash("sha256").update(JSON.stringify({inboxId:row.inboxId,mark:row.mark,attachmentId:row.attachmentId,issuerVat:row.issuerVat,series:row.series,documentNumber:row.documentNumber,issueDate:row.issueDate,totalGross:row.totalGross,invoiceType:row.invoiceType,
  orderId:row.rawPayload?.mydataDraftOrderId,orders:orders.map(o=>[o.orderId,o.documentId,o.status,o.documentStatus,o.updatedAt,o.documentUpdatedAt,o.lineVersion,o.documentLineVersion,o.supplierId,o.documentSupplierId,o.taxId,o.paymentVersion,o.invoiceNumber,o.documentDate,o.totalGross,o.lineCount,o.paymentTransactionId,o.paymentAmount])})).digest("hex");
 export async function previewInvoiceReconciliation(db,scope){
  const row=await inbound(db,scope),orders=await candidateOrders(db,row);
