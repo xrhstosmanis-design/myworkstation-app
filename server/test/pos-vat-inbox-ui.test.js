@@ -44,6 +44,14 @@ test('mounted pending lookup is discarded after VAT edit or store change/unmount
   await change(document.querySelector('input'),supplier.taxId);await click('Εύρεση προμηθευτή');await React.act(async()=>root.render(React.createElement(View,{...props,store:{id:'other'}})));await React.act(async()=>resolve({items:[{inboxId:'inbox',header}],message:'STALE'}));assert.equal(document.querySelector('input').value,'');assert.equal(reads.length,0);assert.ok(!document.body.textContent.includes('STALE'));
  });
 });
+test('mounted Premium keeps an explicitly created official supplier selected after the inbox PDF fills the payment header',async()=>{
+ const View=await component('StoreSupplierInvoicePremiumFast');await environment(async({React,root,click,change})=>{
+  const calls=[],api=async(path,opt)=>{calls.push(path);if(path.includes('vat-lookup'))return {valid:true,taxId:supplier.taxId,name:'Official new supplier'};if(path.endsWith('/suppliers'))return {...supplier,name:'Official new supplier'};if(path.endsWith('/pos-inbox'))return JSON.parse(opt.body).inboxId?pdf:{items:[{inboxId:'inbox',header}],message:'Choose'};throw Error(path)};
+  await React.act(async()=>root.render(React.createElement(View,{api,store:{id:'s'},suppliers:[],setMessage:()=>{}})));
+  await change(document.querySelector('[aria-label="ΑΦΜ προμηθευτή"]'),supplier.taxId);await click('Εύρεση προμηθευτή');await click('Επιβεβαίωση και καταχώριση');await click('Λήψη PDF');
+  const select=document.querySelector('.pos-invoice-fields-area select');assert.equal(select.value,'sup');assert.match(select.selectedOptions[0].textContent,/Official new supplier/);assert.equal(calls.filter(p=>p.endsWith('/suppliers')).length,1);assert.ok(!calls.some(p=>p.includes('/transactions')));
+ });
+});
 for(const mode of ['PAID','CREDIT'])for(const name of ['StoreSupplierInvoicePremiumFast','StoreSupplierInvoiceFast'])test('mounted '+name+' '+mode+' fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering',async()=>{
  const View=await component(name);await environment(async({React,root,click,change})=>{
   const calls=[];let completed=0;const api=async(path,opt)=>{calls.push([path,opt?.body?JSON.parse(opt.body):null]);if(path.endsWith('/pos-inbox'))return JSON.parse(opt.body).inboxId?pdf:{items:[{inboxId:'inbox',header}],message:'Choose'};if(path.endsWith('fast-duplicate-check'))return {ok:true};if(path.startsWith('/api/transactions'))return {id:'pay'};if(path.endsWith('fast-handoff'))return {receiptLinked:true,jobId:'job'};throw Error(path)};
