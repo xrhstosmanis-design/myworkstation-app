@@ -3,6 +3,7 @@ import {prisma} from "../prisma.js";
 import {requireStoreModule} from "../middleware/module-access.js";
 import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import {downloadInvoiceQr} from "../lib/invoice-qr-download.js";
+import {createPosInboxHandler} from "./commerce-pos-inbox.js";
 
 export function createInvoiceQrHandler({database=prisma,download=downloadInvoiceQr,allowOutbound=assertCustomerDemoOutboundAllowed}={}){
   return async(req,res,next)=>{try{
@@ -19,4 +20,5 @@ export function createInvoiceQrHandler({database=prisma,download=downloadInvoice
 }
 const router=Router();
 router.post("/documents/qr-read",requireStoreModule("DOCUMENTS"),createInvoiceQrHandler());
+router.post("/documents/pos-inbox",requireStoreModule("DOCUMENTS"),createPosInboxHandler());
 export default router;

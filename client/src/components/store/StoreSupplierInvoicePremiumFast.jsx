@@ -8,6 +8,7 @@ import {knownSupplierFromFastHeaders} from "../../lib/invoice-fast-supplier-matc
 import {prepareDocumentFile} from "../../lib/document-image-quality.js";
 import InvoiceQrCamera from "./InvoiceQrCamera.jsx";
 import InvoiceQrScanner from "./InvoiceQrScanner.jsx";
+import InvoiceVatInbox from "./InvoiceVatInbox.jsx";
 
 const num=v=>Number(String(v??"0").replace(/\s/g,"").replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",",".").replace(/[^0-9.-]/g,""))||0;
 const readFile=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Δεν διαβάστηκε το παραστατικό."));r.readAsDataURL(file)});
@@ -39,6 +40,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   useEffect(()=>{if(!cameraOpen||!stream||!videoRef.current)return;const video=videoRef.current;video.srcObject=stream;const play=()=>video.play().catch(()=>{});if(video.readyState>=2)play();else video.addEventListener("loadedmetadata",play,{once:true});return()=>video.removeEventListener("loadedmetadata",play)},[cameraOpen,stream]);
   const [invoiceQrOpen,setInvoiceQrOpen]=useState(false);
   const [invoiceScannerOpen,setInvoiceScannerOpen]=useState(false);
+  const [selectedInboxId,setSelectedInboxId]=useState(null);
   const supplierOptions=useMemo(()=>createdSupplier&&!suppliers.some(x=>String(x.id)===String(createdSupplier.id))?[createdSupplier,...suppliers]:suppliers,[suppliers,createdSupplier]);
   const supplier=useMemo(()=>supplierOptions.find(x=>String(x.id)===String(supplierId))||null,[supplierOptions,supplierId]);
   const paymentSource=paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
@@ -48,6 +50,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
   const openInvoiceQr=()=>{stopCamera();setInvoiceQrOpen(true)};
   const readInvoiceQr=data=>{
+    setSelectedInboxId(data.inboxId||null);
     setInvoiceQrOpen(false);setInvoiceScannerOpen(false);
     const header=data.header,known=knownSupplierFromFastHeaders([header],supplierOptions),credit=header.documentType==="CREDIT_NOTE";
     setPages([{file:data.file,dataUrl:data.dataUrl,originalFile:data.file,originalDataUrl:data.dataUrl,fastDocumentType:header.documentType,fastProductLines:[]}]);
@@ -56,6 +59,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   };
   const selectFiles=async selected=>{
     const incoming=Array.from(selected||[]).filter(Boolean);
+    setSelectedInboxId(null);
     if(!incoming.length)return;
     if(incoming.length>5-pages.length){setMessage?.(`⚠️ Μπορείς να ανεβάσεις μέχρι 5 σελίδες για το ίδιο τιμολόγιο. Έχεις ήδη επιλέξει ${pages.length}.`);return}
     const initial=pages.length===0;
@@ -134,7 +138,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     let stage="DUPLICATE CHECK";
     try{
       setStatus("Έλεγχος duplicate τιμολογίου…");
-      const duplicateCheck=documentType==="CREDIT_NOTE"?null:await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross:num(amount),dataUrl:fileDataUrl})});
+      const duplicateCheck=documentType==="CREDIT_NOTE"?null:await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross:num(amount),myDataInboxId:selectedInboxId,dataUrl:fileDataUrl})});
       if(duplicateCheck?.paymentReused&&!window.confirm(`Το τιμολόγιο ${documentNumber.trim()} έχει ήδη πληρωθεί (${num(amount).toFixed(2)} €). Δεν θα καταχωριστεί ξανά πληρωμή ή πίστωση.\n\nΝα συνεχίσουμε μόνο με νέα ανάγνωση και καταχώριση του τιμολογίου στο BackOffice;`)){
         setStatus("Η επανεισαγωγή ακυρώθηκε. Η υπάρχουσα πληρωμή διατηρείται.");setBusy(false);return;
       }
@@ -152,9 +156,9 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       }
       stage="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER";
       setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
-      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate,totalGross,documentType,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
+      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate,totalGross,documentType,myDataInboxId:selectedInboxId,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
       try{window.dispatchEvent(new CustomEvent("mws:invoice-handoff",{detail:{jobId:handoff?.jobId||null,documentNumber:documentNumber.trim()}}))}catch{}
-      if(handoff?.receiptLinked){setStatus("Συνδέθηκε με την υπάρχουσα αγορά myDATA.");setMessage?.(`✅ Το κανονικό τιμολόγιο ${documentNumber.trim()} συνδέθηκε με την υπάρχουσα αγορά. ${effectiveMode==="PAID"?"Η πληρωμή POS καταγράφηκε μία φορά.":"Η επιλογή πίστωσης αποθηκεύτηκε."} Οι γραμμές και η αποθήκη δεν άλλαξαν.`);onChanged?.();onCompleted?.();return;}
+      if(handoff?.receiptLinked&&!handoff?.backgroundQueued){setStatus("Συνδέθηκε με την υπάρχουσα αγορά myDATA.");setMessage?.(`✅ Το κανονικό τιμολόγιο ${documentNumber.trim()} συνδέθηκε με την υπάρχουσα αγορά. ${effectiveMode==="PAID"?"Η πληρωμή POS καταγράφηκε μία φορά.":"Η επιλογή πίστωσης αποθηκεύτηκε."} Οι γραμμές και η αποθήκη δεν άλλαξαν.`);onChanged?.();onCompleted?.();return;}
       setStatus(documentType==="CREDIT_NOTE"?"Το πιστωτικό αποθηκεύτηκε ως πρόχειρο. Οι γραμμές ελέγχονται στο BackOffice πριν από κίνηση αποθήκης και συμψηφισμό.":handoff?.myDataMatched?"Το τιμολόγιο συνδέθηκε με υπάρχον παραστατικό myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…":"Το τιμολόγιο αποθηκεύτηκε ως πρόχειρο. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…");
       const accepted=documentType==="CREDIT_NOTE"?`⏳ Το πιστωτικό ${documentNumber.trim()} παραλήφθηκε για έλεγχο στο BackOffice. Δεν έγινε πληρωμή ή αλλαγή αποθήκης.`:duplicateCheck?.paymentReused?`⏳ Η υπάρχουσα πληρωμή διατηρήθηκε. Το τιμολόγιο ${documentNumber.trim()} επανελέγχεται χωρίς νέα χρέωση· αναμονή τελικού αποτελέσματος.`:effectiveMode==="PAID"?`⏳ Η πληρωμή ${totalGross.toFixed(2)} € με ${paymentMethodLabel} καταχωρίστηκε. Η OCR ανάγνωση συνεχίζεται· δεν έχει δηλωθεί ακόμη επιτυχία.`:`⏳ Το τιμολόγιο ${documentNumber.trim()} παραλήφθηκε μία φορά. Η OCR ανάγνωση συνεχίζεται· δεν έχει δηλωθεί ακόμη επιτυχία.`;
       setMessage?.(accepted);onChanged?.();
@@ -169,6 +173,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   };
   return <div className="pos-payment-form-v3-root pos-new-invoice-form">
     <div className="pos-invoice-document-area">
+    <InvoiceVatInbox key={store.id} api={api} store={store} suppliers={supplierOptions} disabled={busy||reading||savingSupplier||mobile.pending} onSupplier={next=>{setCreatedSupplier(next);setSupplierId(next.id);setSupplierCandidate({name:next.name,taxId:next.taxId||""})}} onRead={readInvoiceQr}/>
     <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>Γρήγορη καταχώριση — AI μόνο για τα 4 βασικά στοιχεία. Η πλήρης V2.4.4 ανάγνωση προϊόντων συνεχίζεται μετά στην Κεντρική Διαχείριση.</div>
     <div style={{padding:"9px 11px",borderRadius:9,background:"#fff",fontWeight:800,marginBottom:10}}>{status}</div>
     <div className="pos-photo-actions"><button type="button" disabled={busy||reading||mobile.pending||pages.length>0} onClick={()=>{stopCamera();setInvoiceQrOpen(false);setInvoiceScannerOpen(true)}}>Σάρωση QR με scanner</button><button type="button" onClick={startCamera} disabled={busy||reading||mobile.pending||pages.length>=5}><Camera/> Λήψη σελίδας από κάμερα</button><label><FileUp/> Επιλογή έως 5 σελίδων / PDF<input type="file" multiple accept="image/*,application/pdf" disabled={busy||reading||mobile.pending||pages.length>=5} onChange={e=>{const selected=Array.from(e.target.files||[]);e.target.value="";selectFiles(selected)}}/></label><button type="button" onClick={mobile.createQr} disabled={busy||reading||mobile.pending||pages.length>=5}>QR από κινητό</button><b>{pages.length?`${pages.length}/5 ${pages.length===1?"σελίδα":"σελίδες"}`:"Δεν επιλέχθηκε τιμολόγιο"}</b></div>{pages.length>0&&<div style={{display:"grid",gap:6,margin:"8px 0 10px"}}>{pages.map((page,index)=><div key={`${page.file.name}-${page.file.lastModified}-${index}`} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 9px",border:"1px solid #b7d8cc",borderRadius:8,background:"#f5fbf8"}}><b style={{minWidth:72}}>Σελίδα {index+1}</b><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{page.file.name}</span><button type="button" title="Μετακίνηση πάνω" disabled={busy||reading||mobile.pending||index===0} onClick={()=>movePage(index,-1)}>↑</button><button type="button" title="Μετακίνηση κάτω" disabled={busy||reading||mobile.pending||index===pages.length-1} onClick={()=>movePage(index,1)}>↓</button><button type="button" title="Αφαίρεση σελίδας" disabled={busy||reading||mobile.pending} onClick={()=>removePage(index)}>×</button></div>)}</div>}<MobileDocumentPhotosQr mobile={mobile}/>
