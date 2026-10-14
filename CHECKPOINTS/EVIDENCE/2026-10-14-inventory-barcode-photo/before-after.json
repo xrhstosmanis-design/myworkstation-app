@@ -1,0 +1,43 @@
+{
+  "before": [
+    {
+      "control_stock_hash": null,
+      "latest_stock_movement": "2026-10-12T20:42:11.404Z",
+      "observed_at": "2026-10-14T09:10:32.302888Z",
+      "product_hash": "6e4934372679733d609b847c0e325517",
+      "products": 99,
+      "stock_hash": "7b8db4a9f0c5ffb6116a3ce8e109eeac",
+      "stock_movements": 95,
+      "stock_rows": 99,
+      "transaction_hash": "1a717e87f6e93ed7723070fceb7cbd6a",
+      "transactions": 133
+    }
+  ],
+  "after": [
+    {
+      "control_stock_hash": null,
+      "latest_stock_movement": "2026-10-12T20:42:11.404Z",
+      "observed_at": "2026-10-14T09:12:24.929974Z",
+      "product_hash": "6e4934372679733d609b847c0e325517",
+      "products": 99,
+      "stock_hash": "7b8db4a9f0c5ffb6116a3ce8e109eeac",
+      "stock_movements": 95,
+      "stock_rows": 99,
+      "transaction_hash": "1a717e87f6e93ed7723070fceb7cbd6a",
+      "transactions": 133
+    }
+  ],
+  "scope": "SuperAdmin support / MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "image": "generated independent standard EAN13 PNG, filename does not include code; not a physical user photo",
+  "decoded": "5201399030219",
+  "visibleResult": "Sticks Με Γεύση Τρούφα Και Τυρί / 3αλφα / Open Food Facts",
+  "unsavedFields": {
+    "barcode": "5201399030219",
+    "description": "",
+    "cost": "0",
+    "sale": "0",
+    "VAT": "24",
+    "stock": "0"
+  },
+  "businessSave": false
+}

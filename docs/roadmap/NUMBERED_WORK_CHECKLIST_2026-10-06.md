@@ -528,7 +528,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 ## 39 — Inventory 2.0 — απογραφή, μεταφορές, φύρα και ιδιοκατανάλωση
 
-- **Υπόλοιπο / όριο:** Agreed residual complete: reasoned finalization5→4/unique-1/persisted cause, stale count3 rejection, reopened FINALIZED/read-only; ledger4/4/diff0/16moves/duplicates0 and two tills unchanged. Earlier accepted actions retained without replay. Physical/mobile/new-store/TODAY-07 and wider LIVE security/race coverage remain separate NOT TESTED; CI proof is distinct.
+- **Υπόλοιπο / όριο:** 14Oct independent INVENTORY-BARCODE-PHOTO-01/sourcefca770d2 LIMITED LIVE φωτογραφία→barcode→αναζήτηση στη νέα πλήρη καρτέλα,99προϊόντα/99stock/133συναλλαγές αμετάβλητα. Παραγόμενο PNG· φυσική κάμερα/mobile/δημιουργία μένουν εκτός αυτού τουPASS και οι παλιοί owners διατηρούνται. Agreed residual complete: reasoned finalization5→4/unique-1/persisted cause, stale count3 rejection, reopened FINALIZED/read-only; ledger4/4/diff0/16moves/duplicates0 and two tills unchanged. Earlier accepted actions retained without replay. Physical/mobile/new-store/TODAY-07 and wider LIVE security/race coverage remain separate NOT TESTED; CI proof is distinct.
 - **Tracker ID:** `INVENTORY-ADV`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** PASS — updated10/10/2026 14:52 Athens, agreed residual, codex/n39-inventory-acceptance-20261010
 
