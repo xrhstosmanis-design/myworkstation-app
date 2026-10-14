@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-14",
+  "companyId": "cmulmjjoa000oqlbfyi0h53ju",
+  "storeId": "cmulmjjoc000qqlbf2bn2ifj0",
+  "invoice": "505/17113",
+  "mark": "400015659382768",
+  "revision": "9355f01d48b429a2cb679754ce61eb26783067ff",
+  "before": [
+    {
+      "documentHash": "a0ed80915aab2714e463041921b09534",
+      "documentStatus": "DRAFT",
+      "lineCount": 23,
+      "lineHash": "236de159fe4b795e9b4b1ab85332e335",
+      "orderHash": "0075d98927e0b0e69d7fd9618ba78514",
+      "orderId": "960a91fe-d4e6-40f1-bf68-01f0b99d8427",
+      "paymentAmount": 77.66,
+      "paymentHash": "534efe4b4bc1a33c0f0af7234d81c46a",
+      "paymentTransactionId": "pay_6ef82833d1526862324224d2f146b6f0ed17a5f52597984d9d4b99cc26a1fe30",
+      "postings": 0,
+      "status": "NEW",
+      "stockPostings": 0,
+      "totalGross": 77.66
+    },
+    {
+      "documentHash": "ac47051af99f482527b14fa8082aa1c4",
+      "documentStatus": "DRAFT",
+      "lineCount": 23,
+      "lineHash": "01826af4c168f1a5d738fb2c83534c88",
+      "orderHash": "9676d70f822206713d9fe1befef9c3f4",
+      "orderId": "9e711592-a99a-4b9b-9921-919794863cb6",
+      "paymentAmount": null,
+      "paymentHash": null,
+      "paymentTransactionId": null,
+      "postings": 0,
+      "status": "NEW",
+      "stockPostings": 0,
+      "totalGross": 77.66
+    }
+  ],
+  "after": [
+    {
+      "documentHash": "a0ed80915aab2714e463041921b09534",
+      "documentStatus": "DRAFT",
+      "lineCount": 23,
+      "lineHash": "236de159fe4b795e9b4b1ab85332e335",
+      "orderHash": "0075d98927e0b0e69d7fd9618ba78514",
+      "orderId": "960a91fe-d4e6-40f1-bf68-01f0b99d8427",
+      "paymentAmount": 77.66,
+      "paymentHash": "534efe4b4bc1a33c0f0af7234d81c46a",
+      "paymentTransactionId": "pay_6ef82833d1526862324224d2f146b6f0ed17a5f52597984d9d4b99cc26a1fe30",
+      "postings": 0,
+      "status": "NEW",
+      "stockPostings": 0,
+      "totalGross": 77.66
+    },
+    {
+      "documentHash": "ac47051af99f482527b14fa8082aa1c4",
+      "documentStatus": "DRAFT",
+      "lineCount": 23,
+      "lineHash": "01826af4c168f1a5d738fb2c83534c88",
+      "orderHash": "9676d70f822206713d9fe1befef9c3f4",
+      "orderId": "9e711592-a99a-4b9b-9921-919794863cb6",
+      "paymentAmount": null,
+      "paymentHash": null,
+      "paymentTransactionId": null,
+      "postings": 0,
+      "status": "NEW",
+      "stockPostings": 0,
+      "totalGross": 77.66
+    }
+  ],
+  "unchanged": true,
+  "action": "GET-only existing invoice reconciliation preview; no submit/merge/approve/finalize",
+  "scope": "Existing pair/order/document/23-row hashes, one original payment and zero posting records; no global financial or stock invariance claim"
+}
+
