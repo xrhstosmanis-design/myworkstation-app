@@ -429,3 +429,5 @@
 .ia-online-lookup{display:grid;gap:8px;margin-top:8px}.ia-online-lookup button{min-height:44px;padding:8px 14px;border:1px solid #bdd4d0;border-radius:6px;background:#edf7f6;color:#123b5d;font-weight:700}.ia-online-lookup [role=status]{padding:12px;border:1px solid #bdd4d0;border-radius:6px;background:#f4f9fc;overflow-wrap:anywhere}.ia-online-lookup [role=alert]{color:#a61c1c}.ia-online-lookup p{margin:8px 0}
 
 .ia-form-grid.edit>div.wide{grid-column:1/-1}
+
+.ia-barcode-actions,.ia-barcode-choices{display:flex;flex-wrap:wrap;gap:8px}.ia-barcode-actions button{flex:1;min-height:48px}.ia-barcode-choices button{min-height:48px;font-size:17px}
