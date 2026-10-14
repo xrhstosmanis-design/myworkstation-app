@@ -1,0 +1,78 @@
+{
+  "scope": "Hosted UI readiness only; temporary local form choices discarded without POST",
+  "revision": "e895972d876724e8a94448af4cc27e74cd735f8e",
+  "pr": 2480,
+  "prCI": 38616808846,
+  "mainCI": 38617620545,
+  "guardedDeploy": 38618473204,
+  "enabledWithoutRows": false,
+  "enabledWithPOS": true,
+  "enabledWithMyData": true,
+  "displayedRows": {
+    "pos": 23,
+    "mydata": 23
+  },
+  "before": [
+    {
+      "documentHash": "a0ed80915aab2714e463041921b09534",
+      "documentStatus": "DRAFT",
+      "id": "960a91fe-d4e6-40f1-bf68-01f0b99d8427",
+      "lineCount": 23,
+      "lineHash": "236de159fe4b795e9b4b1ab85332e335",
+      "orderHash": "0075d98927e0b0e69d7fd9618ba78514",
+      "paymentHash": "534efe4b4bc1a33c0f0af7234d81c46a",
+      "paymentTransactionId": "pay_6ef82833d1526862324224d2f146b6f0ed17a5f52597984d9d4b99cc26a1fe30",
+      "postingCount": 0,
+      "status": "NEW",
+      "stockPostingCount": 0,
+      "supplierId": "4a889362-ca74-4eeb-b47c-894b103de1e1"
+    },
+    {
+      "documentHash": "ac47051af99f482527b14fa8082aa1c4",
+      "documentStatus": "DRAFT",
+      "id": "9e711592-a99a-4b9b-9921-919794863cb6",
+      "lineCount": 23,
+      "lineHash": "01826af4c168f1a5d738fb2c83534c88",
+      "orderHash": "9676d70f822206713d9fe1befef9c3f4",
+      "paymentHash": null,
+      "paymentTransactionId": null,
+      "postingCount": 0,
+      "status": "NEW",
+      "stockPostingCount": 0,
+      "supplierId": "672046a2-dbb7-4208-985f-fd9c3753e395"
+    }
+  ],
+  "after": [
+    {
+      "documentHash": "a0ed80915aab2714e463041921b09534",
+      "documentStatus": "DRAFT",
+      "id": "960a91fe-d4e6-40f1-bf68-01f0b99d8427",
+      "lineCount": 23,
+      "lineHash": "236de159fe4b795e9b4b1ab85332e335",
+      "orderHash": "0075d98927e0b0e69d7fd9618ba78514",
+      "paymentHash": "534efe4b4bc1a33c0f0af7234d81c46a",
+      "paymentTransactionId": "pay_6ef82833d1526862324224d2f146b6f0ed17a5f52597984d9d4b99cc26a1fe30",
+      "postingCount": 0,
+      "status": "NEW",
+      "stockPostingCount": 0,
+      "supplierId": "4a889362-ca74-4eeb-b47c-894b103de1e1"
+    },
+    {
+      "documentHash": "ac47051af99f482527b14fa8082aa1c4",
+      "documentStatus": "DRAFT",
+      "id": "9e711592-a99a-4b9b-9921-919794863cb6",
+      "lineCount": 23,
+      "lineHash": "01826af4c168f1a5d738fb2c83534c88",
+      "orderHash": "9676d70f822206713d9fe1befef9c3f4",
+      "paymentHash": null,
+      "paymentTransactionId": null,
+      "postingCount": 0,
+      "status": "NEW",
+      "stockPostingCount": 0,
+      "supplierId": "672046a2-dbb7-4208-985f-fd9c3753e395"
+    }
+  ],
+  "unchanged": true,
+  "actualMergeSubmitted": false,
+  "remaining": "Owner's original/supplier/correct-table review and actual merge; actual financial/stock acceptance not tested"
+}
