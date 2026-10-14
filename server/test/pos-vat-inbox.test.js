@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
-import {sameInvoiceNumber,lockInvoiceStore} from '../src/lib/invoice-common-draft.js';
+import {sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore} from '../src/lib/invoice-common-draft.js';
 
 const row={inboxId:'inbox',issuerVat:'099999999',counterpartVat:'088888888',mark:'400015624303633',series:'21-ΤΔΑ',documentNumber:'6836',issueDate:new Date('2026-10-12'),currency:'EUR',invoiceType:'1.1',totalGross:3.39,inboxStatus:'IN_REVIEW',mimeType:'application/pdf'};
 async function library(){
  const src=(await readFile(new URL('../src/lib/pos-inbox-original.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
  const reader=async()=>({text:'400015624303633 099999999 088888888 6836',pageCount:2});
  const verify=(text,r)=>{for(const s of [r.mark,r.issuerVat,r.counterpartVat,r.documentNumber])assert.ok(text.includes(s))};
- return new Function('crypto','sameInvoiceNumber','lockInvoiceStore','readOriginalPdf','verifyOriginalText','fetchOriginalPdf','acquireOriginal',src+'\nreturn {inboxHeader,verifiedInboxPdf,selectedInboxRow,prepareSelectedInbox,queueEmptyInboxRead};')(crypto,sameInvoiceNumber,lockInvoiceStore,reader,verify,()=>{throw Error('unexpected network')},()=>{throw Error('unexpected write')});
+ return new Function('crypto','sameInvoiceNumber','invoiceNumberParts','lockInvoiceStore','readOriginalPdf','verifyOriginalText','fetchOriginalPdf','acquireOriginal',src+'\nreturn {inboxHeader,verifiedInboxPdf,selectedInboxRow,prepareSelectedInbox,queueEmptyInboxRead};')(crypto,sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,reader,verify,()=>{throw Error('unexpected network')},()=>{throw Error('unexpected write')});
 }
 async function handler(db,lib,readPdf){
  const src=(await readFile(new URL('../src/routes/commerce-pos-inbox.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
@@ -38,7 +38,7 @@ test('actual POS inbox handler denies unowned/permissionless roles before data a
 });
 test('native actual selected-store inbox SQL and concurrent empty draft queue preserve financial/stock/control rows',{skip:!isolatedInvoiceDb()},async()=>{
  const f=await invoiceDbFixture();try{
-  await f.seed({pos:false,mydata:true,payment:false});
+  await f.seed({pos:false,mydata:true,payment:true});
   await f.db.$executeRawUnsafe(`ALTER TABLE "DocumentInbox" ADD COLUMN "supplierId" text,ADD COLUMN "receivedAt" timestamptz DEFAULT NOW()`);
   await f.db.$executeRawUnsafe(`ALTER TABLE "MyDataInboundDocument" ADD COLUMN "currency" text DEFAULT 'EUR'`);
   const lib=await library(),db={store:{findFirst:async()=>({id:'s',companyId:'c',company:{taxId:'088888888'}})},$queryRaw:f.db.$queryRaw.bind(f.db)},h=await handler(db,lib,async()=>({bytes:Buffer.from('%PDF-'+ 'a'.repeat(110)),filename:'original.pdf',pageCount:1}));
@@ -47,8 +47,8 @@ test('native actual selected-store inbox SQL and concurrent empty draft queue pr
   assert.equal((await invoke(h,{storeId:'s',taxId:'011111111'})).result.items.length,0);
   await assert.rejects(lib.selectedInboxRow(f.db,'foreign','s','inbox'));await assert.rejects(lib.selectedInboxRow(f.db,'c','control','inbox'));
   const identity={companyId:'c',storeId:'s',supplierId:'sup',supplierTaxId:'099999999',documentNumber:'21-ΤΔΑ 6836',documentDate:'2026-10-12',totalGross:3.39,documentType:'INVOICE'},match={jobId:'j-pdf',purchaseNumber:identity.documentNumber};
-  const queued=await Promise.all(Array.from({length:4},()=>lib.queueEmptyInboxRead(f.db,identity,match,null)));assert.equal(queued.filter(Boolean).length,1);
-  const job=(await f.db.$queryRawUnsafe(`SELECT * FROM "AiReaderJob" WHERE "id"='j-pdf'`))[0];assert.equal(job.status,'POS_DRAFT_READY');assert.equal(job.resultJson.posHandoff.inboxInitialRead,true);assert.deepEqual(job.resultJson.posHandoff.pageJobIds,['j-pdf']);
+  const queued=await Promise.all(Array.from({length:4},()=>lib.queueEmptyInboxRead(f.db,identity,match,{id:"payment"})));assert.equal(queued.filter(Boolean).length,1);
+  const job=(await f.db.$queryRawUnsafe(`SELECT * FROM "AiReaderJob" WHERE "id"='j-pdf'`))[0];assert.equal(job.status,'POS_DRAFT_READY');assert.equal(job.resultJson.posHandoff.inboxInitialRead,true);assert.deepEqual(job.resultJson.posHandoff.pageJobIds,['j-pdf']);assert.equal(job.resultJson.posHandoff.paymentTransactionId,'payment');assert.equal(job.resultJson.posHandoff.settlementMode,'PAID');
   assert.equal(await f.snapshot(),before);assert.equal((await f.db.$queryRawUnsafe(`SELECT COUNT(*)::int AS n FROM "PurchaseOrder"`))[0].n,1);
  }finally{await f.close()}
 });

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import {acquireOriginal,fetchOriginalPdf,readOriginalPdf,verifyOriginalText} from "../mydata-original.js";
-import {sameInvoiceNumber,lockInvoiceStore} from "./invoice-common-draft.js";
+import {sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore} from "./invoice-common-draft.js";
 
 const fail=(message,status=409)=>Object.assign(new Error(message),{status});
 export function inboxHeader(row,recipientVat){
@@ -51,7 +51,7 @@ export async function prepareSelectedInbox(db,identity,inboxId,dataUrl,user,{att
 export async function queueEmptyInboxRead(db,identity,match,payment){
   return db.$transaction(async tx=>{
     await lockInvoiceStore(tx,identity.companyId,identity.storeId);
-    const jobs=await tx.$queryRaw`SELECT j."resultJson",j."status",d."status" AS "documentStatus",o."status" AS "orderStatus",
+    const jobs=await tx.$queryRaw`SELECT j."resultJson",j."status",d."status" AS "documentStatus",o."status" AS "orderStatus",d."supplierId",d."documentNumber",d."documentDate",d."totalGross",d."documentType",
       (SELECT COUNT(*) FROM "PurchaseOrderLine" l WHERE l."orderId"=o."id")::int AS "orderLines",
       (SELECT COUNT(*) FROM "PurchaseDocumentLine" l WHERE l."purchaseDocumentId"=d."id")::int AS "documentLines"
       FROM "AiReaderJob" j JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId" AND d."storeId"=j."storeId"
@@ -59,6 +59,7 @@ export async function queueEmptyInboxRead(db,identity,match,payment){
       WHERE j."id"=${match.jobId} AND j."companyId"=${identity.companyId} AND j."storeId"=${identity.storeId} FOR UPDATE OF j,d,o`;
     const job=jobs[0];
     if(!job||job.documentStatus!=="DRAFT"||job.orderStatus!=="NEW"||job.orderLines!==0||job.documentLines!==0||job.resultJson?.posHandoff||!["AWAITING_APPROVAL","LOCAL_COMPLETE"].includes(job.status))return false;
+    if(job.supplierId!==identity.supplierId||job.documentType!==identity.documentType||new Date(job.documentDate).toISOString().slice(0,10)!==identity.documentDate||Math.abs(Number(job.totalGross)-Number(identity.totalGross))>.050001||!sameInvoiceNumber(identity.documentNumber,...[invoiceNumberParts(job.documentNumber).series,invoiceNumberParts(job.documentNumber).number]))return false;
     const handoff={version:"POS_FAST_HANDOFF_V1",fullReader:"ASSISTANT",inboxInitialRead:true,...identity,documentNumber:match.purchaseNumber,settlementMode:payment?"PAID":"CREDIT",paymentTransactionId:payment?.id||null,pageIndex:0,pageCount:1,pageJobIds:[match.jobId],primaryJobId:match.jobId,queuedAt:new Date().toISOString()};
     await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='POS_DRAFT_READY',"stage"='POS_DRAFT_READY',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff})}::jsonb,"updatedAt"=NOW() WHERE "id"=${match.jobId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
     return true;

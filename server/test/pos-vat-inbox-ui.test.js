@@ -44,15 +44,15 @@ test('mounted pending lookup is discarded after VAT edit or store change/unmount
   await change(document.querySelector('input'),supplier.taxId);await click('Εύρεση προμηθευτή');await React.act(async()=>root.render(React.createElement(View,{...props,store:{id:'other'}})));await React.act(async()=>resolve({items:[{inboxId:'inbox',header}],message:'STALE'}));assert.equal(document.querySelector('input').value,'');assert.equal(reads.length,0);assert.ok(!document.body.textContent.includes('STALE'));
  });
 });
-for(const name of ['StoreSupplierInvoicePremiumFast','StoreSupplierInvoiceFast'])test('mounted '+name+' fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering',async()=>{
+for(const mode of ['PAID','CREDIT'])for(const name of ['StoreSupplierInvoicePremiumFast','StoreSupplierInvoiceFast'])test('mounted '+name+' '+mode+' fills amount/number first, preserves explicit paid/credit and payment-before-handoff ordering',async()=>{
  const View=await component(name);await environment(async({React,root,click,change})=>{
   const calls=[];let completed=0;const api=async(path,opt)=>{calls.push([path,opt?.body?JSON.parse(opt.body):null]);if(path.endsWith('/pos-inbox'))return JSON.parse(opt.body).inboxId?pdf:{items:[{inboxId:'inbox',header}],message:'Choose'};if(path.endsWith('fast-duplicate-check'))return {ok:true};if(path.startsWith('/api/transactions'))return {id:'pay'};if(path.endsWith('fast-handoff'))return {receiptLinked:true,jobId:'job'};throw Error(path)};
   await React.act(async()=>root.render(React.createElement(View,{api,store:{id:'s'},suppliers:[supplier],setMessage:()=>{},onCompleted:()=>completed++})));
   await change(document.querySelector('[aria-label="ΑΦΜ προμηθευτή"]'),supplier.taxId);await click('Εύρεση προμηθευτή');await click('Λήψη PDF');
   assert.ok([...document.querySelectorAll('input')].some(x=>x.value==='11,30'));assert.ok([...document.querySelectorAll('input')].some(x=>x.value==='A 12'));assert.equal(calls.length,2);assert.equal(document.querySelector('.pos-primary-action').disabled,true);
-  await click('ΠΛΗΡΩΜΕΝΟ');assert.equal(document.querySelector('.pos-primary-action').disabled,false);await click('ΠΛΗΡΩΜΗ & ΕΠΙΣΤΡΟΦΗ');
+  await click(mode==='PAID'?'ΠΛΗΡΩΜΕΝΟ':'ΜΕ ΠΙΣΤΩΣΗ');assert.equal(document.querySelector('.pos-primary-action').disabled,false);await click(mode==='PAID'?'ΠΛΗΡΩΜΗ & ΕΠΙΣΤΡΟΦΗ':'ΚΑΤΑΧΩΡΙΣΗ ΜΕ ΠΙΣΤΩΣΗ');
   // FileReader delivers Basic's unchanged file asynchronously.
   await React.act(async()=>{await new Promise(done=>setTimeout(done,25))});
-  const mutations=calls.slice(2);assert.deepEqual(mutations.map(x=>x[0]),['/api/commerce/ai-reader/fast-duplicate-check','/api/transactions/stores/s','/api/commerce/ai-reader/fast-handoff']);assert.equal(mutations[1][1].amount,11.3);assert.equal(mutations[1][1].paymentMethod,'CASH_SHIFT');assert.equal(mutations[2][1].paymentTransactionId,'pay');assert.equal(mutations[2][1].myDataInboxId,'inbox');assert.equal(completed,1);
+  const mutations=calls.slice(2);assert.deepEqual(mutations.map(x=>x[0]),mode==='PAID'?['/api/commerce/ai-reader/fast-duplicate-check','/api/transactions/stores/s','/api/commerce/ai-reader/fast-handoff']:['/api/commerce/ai-reader/fast-duplicate-check','/api/commerce/ai-reader/fast-handoff']);if(mode==='PAID'){assert.equal(mutations[1][1].amount,11.3);assert.equal(mutations[1][1].paymentMethod,'CASH_SHIFT')}assert.equal(mutations.at(-1)[1].paymentTransactionId,mode==='PAID'?'pay':null);assert.equal(mutations.at(-1)[1].settlementMode,mode);assert.equal(mutations.at(-1)[1].myDataInboxId,'inbox');assert.equal(completed,1);
  });
 });
