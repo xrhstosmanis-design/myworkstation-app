@@ -15,6 +15,15 @@ export function sameInvoiceNumber(value,series,number){
  const left=invoiceNumberParts(value),right=invoiceNumberParts([series,number].filter(Boolean).join(" "));
  return Boolean(left.number&&left.number===right.number&&(!left.series||left.series===right.series));
 }
+// A warning may cross supplier identities; automatic reuse must never do so.
+// Require the complete series/number, issue day, type and a corroborating total.
+export function sameInvoiceIdentityForReview(left,right){
+ const a=invoiceNumberParts(left.documentNumber),b=invoiceNumberParts(right.documentNumber);
+ const grossA=amount(left.totalGross),grossB=amount(right.totalGross);
+ return Boolean(a.number&&a.number===b.number&&a.series===b.series&&day(left.documentDate)&&day(left.documentDate)===day(right.documentDate)
+  &&left.documentType===right.documentType&&Number.isFinite(grossA)&&Number.isFinite(grossB)&&grossA>0&&grossB>0&&Math.abs(grossA-grossB)<=.050001);
+}
+const inboundType=row=>String(row.invoiceType||"1.1").startsWith("5.")?"CREDIT_NOTE":"INVOICE";
 export async function ensureInvoiceCommonDraftSchema(db){
  if(!schemas.has(db))schemas.set(db,(async()=>{
   await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceDraftAlias" (
@@ -59,7 +68,7 @@ async function inbound(db,{companyId,storeId,inboxId}){
 async function candidateOrders(db,row){
  const numeric=invoiceNumberParts(row.documentNumber).number;
  const rows=await db.$queryRaw`SELECT o."id" AS "orderId",o."status",o."sourceDocumentId" AS "documentId",o."createdAt",o."updatedAt",o."invoiceNumber",
-  o."supplierId",s."taxId",d."updatedAt" AS "documentUpdatedAt",d."documentDate",d."documentNumber",d."documentType",d."totalGross",d."status" AS "documentStatus",d."paymentTransactionId",
+  o."supplierId",s."taxId",s."name" AS "supplierName",d."updatedAt" AS "documentUpdatedAt",d."documentDate",d."documentNumber",d."documentType",d."totalGross",d."status" AS "documentStatus",d."paymentTransactionId",
   t."supplierId" AS "paymentSupplierId",paid."taxId" AS "paymentTaxId",t."amount" AS "paymentAmount",t."reversedAt",t."type" AS "paymentType",t."storeId" AS "paymentStoreId",
   (SELECT COUNT(*)::int FROM "PurchaseOrderLine" l WHERE l."orderId"=o."id") AS "lineCount",
   (SELECT md5(COALESCE(string_agg(row_to_json(l)::text,'|' ORDER BY l."id"),'')) FROM "PurchaseOrderLine" l WHERE l."orderId"=o."id") AS "lineVersion"
@@ -70,12 +79,16 @@ async function candidateOrders(db,row){
   WHERE o."companyId"=${row.companyId} AND o."storeId"=${row.storeId} AND o."sourceType"='POS_OCR_DRAFT'
    AND o."status" IN ('NEW','FINAL','INVOICED') AND d."status" IN ('DRAFT','APPROVED')
    AND (o."id"=${row.rawPayload?.mydataDraftOrderId||""} OR d."id"=${row.jobDocumentId||""}
-    OR (REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${row.issuerVat}
-     AND COALESCE(NULLIF(LTRIM(SUBSTRING(COALESCE(o."invoiceNumber",'') FROM '([0-9]+)[^0-9]*$'),'0'),''),'0')=${numeric}))
+    OR (COALESCE(NULLIF(LTRIM(SUBSTRING(COALESCE(o."invoiceNumber",'') FROM '([0-9]+)[^0-9]*$'),'0'),''),'0')=${numeric}
+     AND (REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${row.issuerVat}
+      OR (d."documentType"=${inboundType(row)} AND (d."documentDate" AT TIME ZONE 'UTC')::date=${day(row.issueDate)}::date
+       AND ABS(d."totalGross"-${amount(row.totalGross)})<=0.050001
+       AND REGEXP_REPLACE(UPPER(REGEXP_REPLACE(COALESCE(d."documentNumber",o."invoiceNumber",''),'[0-9]+[^0-9]*$','')),'[^A-ZΑ-Ω0-9]','','g')=${invoiceNumberParts([row.series,row.documentNumber].filter(Boolean).join(" ")).series}))))
   ORDER BY o."createdAt",o."id" LIMIT 21`;
  if(rows.length>20)throw error("Πολλές πιθανές αντιστοιχίσεις· περιόρισε τον έλεγχο των παραστατικών.");
  return rows.map(o=>({...o,lineCount:Number(o.lineCount),totalGross:amount(o.totalGross),paymentAmount:o.paymentAmount==null?null:amount(o.paymentAmount),
-  exact:sameInvoiceNumber(o.documentNumber,row.series,row.documentNumber)&&day(o.documentDate)===day(row.issueDate)&&Math.abs(amount(o.totalGross)-amount(row.totalGross))<=.050001,
+  supplierReviewRequired:!tax(o.taxId)||tax(o.taxId)!==tax(row.issuerVat),
+  exact:Boolean(tax(o.taxId)&&tax(o.taxId)===tax(row.issuerVat)&&o.documentType===inboundType(row)&&sameInvoiceNumber(o.documentNumber,row.series,row.documentNumber)&&day(o.documentDate)===day(row.issueDate)&&Math.abs(amount(o.totalGross)-amount(row.totalGross))<=.050001),
   isMyData:o.orderId===row.rawPayload?.mydataDraftOrderId||o.documentId===row.jobDocumentId}));
 }
 const version=(row,orders)=>crypto.createHash("sha256").update(JSON.stringify({inboxId:row.inboxId,mark:row.mark,attachmentId:row.attachmentId,
@@ -181,17 +194,27 @@ export async function attachInboundToExistingDraft(tx,scope,actorId){
 async function inboundTableExists(tx){const rows=await tx.$queryRaw`SELECT to_regclass('"MyDataInboundDocument"') IS NOT NULL AS "exists"`;return rows[0]?.exists===true}
 export async function assertNoUnresolvedInbound(tx,identity){
  if(!await inboundTableExists(tx))return;
- const parts=invoiceNumberParts(identity.documentNumber);if(!parts.number||!tax(identity.supplierTaxId))return;
- const rows=await tx.$queryRaw`SELECT "mark","series","documentNumber","issueDate","totalGross","rawPayload" FROM "MyDataInboundDocument"
-  WHERE "companyId"=${identity.companyId} AND "storeId"=${identity.storeId} AND "issuerVat"=${tax(identity.supplierTaxId)}
-   AND COALESCE(NULLIF(LTRIM("documentNumber",'0'),''),'0')=${parts.number} LIMIT 21`;
- const exact=rows.filter(r=>sameInvoiceNumber(identity.documentNumber,r.series,r.documentNumber)&&day(r.issueDate)===day(identity.documentDate)&&Math.abs(amount(r.totalGross)-amount(identity.totalGross))<=.050001);
- if(rows.length&&exact.length!==1)throw error("Υπάρχει πιθανό ίδιο τιμολόγιο στη θυρίδα myDATA με διαφορετικά στοιχεία. Αντιστοίχισε τα πρωτότυπα στο BackOffice πριν από νέα πληρωμή ή πρόχειρο.");
+ const parts=invoiceNumberParts(identity.documentNumber);if(!parts.number)return;
+ const rows=await tx.$queryRaw`SELECT "mark","issuerVat","series","documentNumber","issueDate","invoiceType","totalGross","rawPayload" FROM "MyDataInboundDocument"
+  WHERE "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}
+   AND COALESCE(NULLIF(LTRIM("documentNumber",'0'),''),'0')=${parts.number}
+   AND ("issuerVat"=${tax(identity.supplierTaxId)} OR (
+    REGEXP_REPLACE(UPPER(COALESCE("series",'')),'[^A-ZΑ-Ω0-9]','','g')=${parts.series}
+    AND ("issueDate" AT TIME ZONE 'UTC')::date=${day(identity.documentDate)||null}::date
+    AND ABS("totalGross"-${amount(identity.totalGross)})<=0.050001
+    AND (CASE WHEN "invoiceType" LIKE '5.%' THEN 'CREDIT_NOTE' ELSE 'INVOICE' END)=${identity.documentType||"INVOICE"})) LIMIT 21`;
+ const sameSupplier=rows.filter(r=>tax(identity.supplierTaxId)&&tax(r.issuerVat)===tax(identity.supplierTaxId));
+ const crossSupplier=rows.filter(r=>(!tax(identity.supplierTaxId)||tax(r.issuerVat)!==tax(identity.supplierTaxId))&&sameInvoiceIdentityForReview(
+  {...identity,documentType:identity.documentType||"INVOICE"},{documentNumber:[r.series,r.documentNumber].filter(Boolean).join(" "),documentDate:r.issueDate,documentType:inboundType(r),totalGross:r.totalGross}));
+ if(crossSupplier.length)throw error(`Πιθανό διπλό τιμολόγιο ${identity.documentNumber}: ίδιος αριθμός, ημερομηνία και ποσό στη θυρίδα myDATA, αλλά διαφορετικό ή κενό ΑΦΜ. Έλεγξε τα πρωτότυπα και τον προμηθευτή πριν από νέα πληρωμή ή πρόχειρο.`,"INVOICE_SUPPLIER_IDENTITY_REVIEW");
+ const exact=sameSupplier.filter(r=>sameInvoiceNumber(identity.documentNumber,r.series,r.documentNumber)&&day(r.issueDate)===day(identity.documentDate)&&Math.abs(amount(r.totalGross)-amount(identity.totalGross))<=.050001);
+ if(sameSupplier.length&&exact.length!==1)throw error("Υπάρχει πιθανό ίδιο τιμολόγιο στη θυρίδα myDATA με διαφορετικά στοιχεία. Αντιστοίχισε τα πρωτότυπα στο BackOffice πριν από νέα πληρωμή ή πρόχειρο.");
 }
 // Covers the race where myDATA created its shell after POS's initial precheck.
 // Payment validation has already run in the POS route; this binds stored pages.
 export async function reuseInboundDraftForPosJob(tx,identity,{jobId,paymentTransactionId=null}){
  if(!await inboundTableExists(tx))return null;
+ await assertNoUnresolvedInbound(tx,identity);
  const numeric=invoiceNumberParts(identity.documentNumber).number;
  const rows=await tx.$queryRaw`SELECT m.*,i."attachmentId",j."id" AS "originalJobId",j."resultJson",d."id" AS "documentId",d."paymentTransactionId",d."documentNumber" AS "purchaseNumber",d."documentType",o."id" AS "orderId"
   FROM "MyDataInboundDocument" m JOIN "DocumentInbox" i ON i."id"=m."inboxId" AND i."companyId"=m."companyId" AND i."storeId"=m."storeId"
@@ -231,6 +254,24 @@ export async function assertInvoiceStockAvailable(tx,{companyId,storeId,sourceDo
  const legacy=await tx.$queryRaw`SELECT "id" FROM "PurchaseDocument" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND ("id"=${sourceDocumentId} OR "id"=${orderId}) AND "status"='APPROVED' LIMIT 1`;
  const legacyOrders=await tx.$queryRaw`SELECT p."orderId" FROM "PurchaseOrderPosting" p JOIN "PurchaseOrder" o ON o."id"=p."orderId" AND o."companyId"=p."companyId" WHERE p."companyId"=${companyId} AND o."storeId"=${storeId} AND o."sourceDocumentId"=${sourceDocumentId} LIMIT 1`;
  if(legacy.length||legacyOrders.length)throw error("Το πρωτότυπο έχει ήδη εγκριθεί στην αποθήκη. Δεν έγινε δεύτερη καταχώρηση.","INVOICE_ALREADY_POSTED");
+ // Check both approval entry points, even when no orderId was supplied. The
+ // store lock serializes concurrent postings; aliases retain MERGED status.
+ const current=await tx.$queryRaw`SELECT "id","documentNumber","documentDate","documentType","totalGross" FROM "PurchaseDocument"
+  WHERE "id"=${sourceDocumentId} AND "companyId"=${companyId} AND "storeId"=${storeId} AND "sourceType"='POS_OCR_DRAFT' LIMIT 1`;
+ if(current[0]){
+  const doc=current[0],parts=invoiceNumberParts(doc.documentNumber);
+  if(parts.number){
+   const duplicates=await tx.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",d."documentType",d."totalGross",o."id" AS "orderId"
+    FROM "PurchaseDocument" d JOIN "PurchaseOrder" o ON o."sourceDocumentId"=d."id" AND o."companyId"=d."companyId" AND o."storeId"=d."storeId"
+    WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."id"<>${sourceDocumentId} AND d."sourceType"='POS_OCR_DRAFT'
+     AND d."status" IN ('DRAFT','APPROVED') AND o."status" IN ('NEW','FINAL','INVOICED')
+     AND d."documentType"=${doc.documentType} AND (d."documentDate" AT TIME ZONE 'UTC')::date=${day(doc.documentDate)}::date
+     AND ABS(d."totalGross"-${amount(doc.totalGross)})<=0.050001
+     AND COALESCE(NULLIF(LTRIM(SUBSTRING(d."documentNumber" FROM '([0-9]+)[^0-9]*$'),'0'),''),'0')=${parts.number}
+     AND REGEXP_REPLACE(UPPER(REGEXP_REPLACE(COALESCE(d."documentNumber",''),'[0-9]+[^0-9]*$','')),'[^A-ZΑ-Ω0-9]','','g')=${parts.series} LIMIT 21`;
+   if(duplicates.some(other=>sameInvoiceIdentityForReview(doc,other)))throw error(`Πιθανό διπλό τιμολόγιο ${doc.documentNumber}: υπάρχουν δύο ενεργά πρόχειρα με ίδιο αριθμό, ημερομηνία και ποσό, ακόμη και με διαφορετικό ΑΦΜ. Έλεγξε τα πρωτότυπα και τον προμηθευτή πριν από την καταχώρηση. Δεν έγινε κίνηση αποθήκης.`,"INVOICE_DUPLICATE_REVIEW_REQUIRED");
+  }
+ }
  if(orderId&&await inboundTableExists(tx)){
   const originals=await tx.$queryRaw`SELECT m.* FROM "MyDataInboundDocument" m
    JOIN "Supplier" s ON REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=m."issuerVat" AND s."companyId"=m."companyId"
@@ -244,3 +285,4 @@ export async function assertInvoiceStockAvailable(tx,{companyId,storeId,sourceDo
 export async function recordInvoiceStockPosting(tx,{companyId,storeId,sourceDocumentId,orderId=null,postedDocumentId,path}){
  await tx.$executeRaw`INSERT INTO "InvoiceStockPosting"("companyId","sourceDocumentId","storeId","orderId","postedDocumentId","path") VALUES(${companyId},${sourceDocumentId},${storeId},${orderId},${postedDocumentId},${path})`;
 }
+

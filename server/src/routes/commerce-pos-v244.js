@@ -691,7 +691,7 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
     await ensureV244IntakeSchema();
     await ensureFastHandoffSchema();
     await ensureInvoiceCommonDraftSchema(prisma);
-    await assertNoUnresolvedInbound(prisma,{companyId,storeId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross)});
+    await assertNoUnresolvedInbound(prisma,{companyId,storeId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross),documentType:req.body.documentType||"INVOICE"});
     const myDataPurchase=await findMyDataPurchase(prisma,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross)});
     if(myDataPurchase){
       if(myDataPurchase.resultJson?.mydataPosReceipt?.receivedAt||myDataPurchase.rawPayload?.mydataPosReceipt?.receivedAt)return res.status(409).json({error:"Το κανονικό τιμολόγιο έχει ήδη παραληφθεί από POS. Δεν έγινε νέα πληρωμή ή δεύτερη αγορά. Για εκκρεμή πίστωση χρησιμοποίησε «Πληρωμή ανοιχτών τιμολογίων».",code:"DUPLICATE_INVOICE",existing:{id:myDataPurchase.documentId,status:myDataPurchase.status}});
@@ -873,6 +873,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     const myData=myDataRows[0]||null;
     const result=await prisma.$transaction(async tx=>{
       await lockInvoiceStore(tx,companyId,storeId);
+      await assertNoUnresolvedInbound(tx,receiptIdentity);
       const jobs=[];
       for(const [index,page] of normalizedPages.entries()){
         const existingAttachments=await tx.$queryRaw`SELECT "id" FROM "DocumentAttachment" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "checksum"=${page.checksum} LIMIT 1`;
@@ -1090,3 +1091,4 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",async(req,res,next)=>{
 
 router.use(coreRouter);
 export default router;
+

@@ -259,7 +259,7 @@ router.post("/ai-reader/jobs/:jobId/pos-draft",requireCompanyModule("AI_READER")
       if(job.purchaseDocumentId){const linked=await tx.$queryRaw`SELECT "documentType" FROM "PurchaseDocument" WHERE "id"=${job.purchaseDocumentId} AND "companyId"=${req.user.companyId} LIMIT 1`;if(linked[0]?.documentType!==body.documentType)throw Object.assign(new Error("Το υπάρχον πρόχειρο έχει διαφορετικό τύπο παραστατικού."),{status:409});return {documentId:job.purchaseDocumentId,reused:true};}
       const suppliers=await tx.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
       const supplier=suppliers[0];if(!supplier)throw Object.assign(new Error("Δεν βρέθηκε ο προμηθευτής."),{status:404});
-      await assertNoUnresolvedInbound(tx,{companyId:req.user.companyId,storeId:job.storeId,supplierTaxId:supplier.taxId,documentNumber:body.documentNumber,documentDate:body.documentDate,totalGross:body.totalGross});
+      await assertNoUnresolvedInbound(tx,{companyId:req.user.companyId,storeId:job.storeId,supplierTaxId:supplier.taxId,documentNumber:body.documentNumber,documentDate:body.documentDate,totalGross:body.totalGross,documentType:body.documentType});
       const payment=body.settlementMode==="PAID"?await findInvoicePayment(tx,{companyId:req.user.companyId,supplierId:body.supplierId,supplierTaxId:String(supplier.taxId||"").replace(/\D/g,""),documentNumber:body.documentNumber}):null;
       if(body.settlementMode==="PAID"){
         assertReusableInvoicePayment(payment,{companyId:req.user.companyId,storeId:job.storeId,supplierId:body.supplierId,supplierTaxId:String(supplier.taxId||"").replace(/\D/g,""),documentNumber:body.documentNumber,totalGross:body.totalGross});
@@ -489,3 +489,4 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
 });
 
 export default router;
+
