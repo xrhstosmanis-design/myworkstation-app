@@ -9,7 +9,7 @@ const recordingName=()=>{
   const stamp=greeceDateTimeInput(new Date(),true).replace(/[:T]/g,"-");
   return `myworkstation-screen-${stamp}.mp4`;
 };
-const supportedMimeType=()=>["video/mp4;codecs=avc1.42001E","video/mp4;codecs=avc1","video/mp4"].find(type=>window.MediaRecorder?.isTypeSupported?.(type))||"";
+const supportedMimeType=()=>["video/mp4;codecs=avc1","video/mp4"].find(type=>window.MediaRecorder?.isTypeSupported?.(type))||"";
 
 export default function ScreenRecorderControl({contextLabel="MYWORKSTATION · POS",startLabel="Εγγραφή οθόνης"}){
   const recorderRef=useRef(null),streamRef=useRef(null),chunksRef=useRef([]),timerRef=useRef(null),previewRef=useRef(null),mountedRef=useRef(false),startingRef=useRef(false);
