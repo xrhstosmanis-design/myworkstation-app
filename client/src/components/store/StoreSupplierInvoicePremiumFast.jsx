@@ -55,7 +55,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     const header=data.header,known=knownSupplierFromFastHeaders([header],supplierOptions),credit=header.documentType==="CREDIT_NOTE";
     setPages([{file:data.file,dataUrl:data.dataUrl,originalFile:data.file,originalDataUrl:data.dataUrl,fastDocumentType:header.documentType,fastProductLines:[]}]);
     setSupplierId(known?.id||"");setCreatedSupplier(known&&!suppliers.some(s=>String(s.id)===String(known.id))?known:null);setSupplierCandidate({name:header.supplierName||"",taxId:header.supplierTaxId||""});setAmount(Number(header.totalGross).toFixed(2).replace(".",","));setDocumentNumber(header.documentNumber);setDocumentDate(header.documentDate);setDocumentType(header.documentType);setCreditDetected(credit);setMode("");
-    setStatus(`Πρωτότυπο PDF μέσω QR · ${data.pageCount} φυσικές σελίδες. Έλεγξε κατάστημα, προμηθευτή, αριθμό και ποσό. ${known?"Επίλεξε εσύ πληρωμή ή πίστωση.":"Ο προμηθευτής χρειάζεται έλεγχο με το ΑΦΜ."} Τα προϊόντα θα διαβαστούν στο ίδιο πρόχειρο από τον βοηθό.`);
+    setStatus(`${data.inboxId?"Πρωτότυπο PDF από τη θυρίδα myDATA":"Πρωτότυπο PDF μέσω QR"} · ${data.pageCount} φυσικές σελίδες. Έλεγξε κατάστημα, προμηθευτή, αριθμό και ποσό. ${known?"Επίλεξε εσύ πληρωμή ή πίστωση.":"Ο προμηθευτής χρειάζεται έλεγχο με το ΑΦΜ."} Τα προϊόντα θα διαβαστούν στο ίδιο πρόχειρο από τον βοηθό.`);
   };
   const selectFiles=async selected=>{
     const incoming=Array.from(selected||[]).filter(Boolean);
