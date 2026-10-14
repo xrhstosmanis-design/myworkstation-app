@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import {acquireOriginal,fetchOriginalPdf,readOriginalPdf,verifyOriginalText} from "../mydata-original.js";
-import {sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore} from "./invoice-common-draft.js";
+import {sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,previewInvoiceReconciliation} from "./invoice-common-draft.js";
 
 const fail=(message,status=409)=>Object.assign(new Error(message),{status});
 export function inboxHeader(row,recipientVat){
@@ -39,6 +39,7 @@ export async function prepareSelectedInbox(db,identity,inboxId,dataUrl,user,{att
   const company=await db.company.findUnique({where:{id:identity.companyId},select:{taxId:true}});
   const header=inboxHeader(row,String(company?.taxId||"").replace(/^EL/i,"").trim());
   if(header.supplierTaxId!==identity.supplierTaxId||!sameInvoiceNumber(identity.documentNumber,row.series,row.documentNumber)||header.documentDate!==identity.documentDate||header.documentType!==identity.documentType||Math.abs(header.totalGross-Number(identity.totalGross))>.050001)throw fail("Τα στοιχεία άλλαξαν από το επιλεγμένο myDATA. Έλεγξε αριθμό, ΑΦΜ, ημερομηνία και ποσό πριν από την πληρωμή.");
+  await assertInboxSelectionUnambiguous(db,{companyId:identity.companyId,storeId:identity.storeId,inboxId});
   const pdf=await verifiedInboxPdf(row,dataUrl);
   if(row.attachmentId&&(row.mimeType!=="application/pdf"||row.checksum!==pdf.checksum))throw fail("Το PDF δεν είναι το αποθηκευμένο πρωτότυπο αυτού του τιμολογίου.");
   if(attach){
@@ -46,6 +47,12 @@ export async function prepareSelectedInbox(db,identity,inboxId,dataUrl,user,{att
     if(acquired.reconciliationRequired)throw fail("Υπάρχει πρόχειρο που απαιτεί έλεγχο. Δεν δημιουργείται δεύτερο.");
   }
   return row;
+}
+
+export async function assertInboxSelectionUnambiguous(db,scope){
+  const preview=await previewInvoiceReconciliation(db,scope);
+  if(preview.orders.length>1||preview.orders.some(order=>order.supplierReviewRequired||!order.exact))throw fail("Υπάρχει ήδη πιθανό ίδιο τιμολόγιο από POS ή διαφορετικός προμηθευτής. Απαιτείται αντιστοίχιση στο BackOffice πριν από νέα πληρωμή. Δεν έγινε χρέωση.");
+  return preview;
 }
 
 // Only an untouched, empty myDATA shell may enter the existing durable reader.

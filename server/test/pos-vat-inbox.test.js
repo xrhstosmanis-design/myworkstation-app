@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
-import {sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore} from '../src/lib/invoice-common-draft.js';
+import {sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,previewInvoiceReconciliation} from '../src/lib/invoice-common-draft.js';
 
 const row={inboxId:'inbox',issuerVat:'099999999',counterpartVat:'088888888',mark:'400015624303633',series:'21-ΤΔΑ',documentNumber:'6836',issueDate:new Date('2026-10-12'),currency:'EUR',invoiceType:'1.1',totalGross:3.39,inboxStatus:'IN_REVIEW',mimeType:'application/pdf'};
 async function library(){
  const src=(await readFile(new URL('../src/lib/pos-inbox-original.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
  const reader=async()=>({text:'400015624303633 099999999 088888888 6836',pageCount:2});
  const verify=(text,r)=>{for(const s of [r.mark,r.issuerVat,r.counterpartVat,r.documentNumber])assert.ok(text.includes(s))};
- return new Function('crypto','sameInvoiceNumber','invoiceNumberParts','lockInvoiceStore','readOriginalPdf','verifyOriginalText','fetchOriginalPdf','acquireOriginal',src+'\nreturn {inboxHeader,verifiedInboxPdf,selectedInboxRow,prepareSelectedInbox,queueEmptyInboxRead,assertEmptyInboxRead};')(crypto,sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,reader,verify,()=>{throw Error('unexpected network')},()=>{throw Error('unexpected write')});
+ return new Function('crypto','sameInvoiceNumber','invoiceNumberParts','lockInvoiceStore','previewInvoiceReconciliation','readOriginalPdf','verifyOriginalText','fetchOriginalPdf','acquireOriginal',src+'\nreturn {inboxHeader,verifiedInboxPdf,selectedInboxRow,prepareSelectedInbox,queueEmptyInboxRead,assertEmptyInboxRead,assertInboxSelectionUnambiguous};')(crypto,sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,previewInvoiceReconciliation,reader,verify,()=>{throw Error('unexpected network')},()=>{throw Error('unexpected write')});
 }
 async function handler(db,lib,readPdf){
  const src=(await readFile(new URL('../src/routes/commerce-pos-inbox.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
@@ -67,4 +67,17 @@ test('native final empty-row fence used by real intake refuses concurrent review
   assert.equal(await f.snapshot(),before);
   const src=await readFile(new URL('../src/routes/commerce-pos-v244-core.js',import.meta.url),'utf8');assert.ok(src.indexOf('await assertEmptyInboxRead(tx,')<src.indexOf('stage="replace-purchase-lines"'));
  }finally{await f.close()}
+});
+test('native selected-inbox pre-payment gate blocks an existing duplicate or missing-VAT POS candidate before any second charge',{skip:!isolatedInvoiceDb()},async()=>{
+ for(const kind of ['duplicate','missingVat','mydataOnly']){const f=await invoiceDbFixture();try{
+  await f.seed({pos:kind!=='mydataOnly',mydata:true,payment:true});
+  if(kind==='missingVat'){
+   await f.db.$executeRawUnsafe(`INSERT INTO "Supplier"("id","companyId","taxId","name") VALUES('ocr','c',NULL,'Short OCR supplier')`);
+   await f.db.$executeRawUnsafe(`UPDATE "PurchaseOrder" SET "supplierId"='ocr' WHERE "id"='pos'`);await f.db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "supplierId"='ocr' WHERE "id"='d-pos'`);
+  }
+  const lib=await library(),before=await f.snapshot();
+  if(kind==='mydataOnly')assert.equal((await lib.assertInboxSelectionUnambiguous(f.db,{companyId:'c',storeId:'s',inboxId:'inbox'})).orders.length,1);
+  else await assert.rejects(lib.assertInboxSelectionUnambiguous(f.db,{companyId:'c',storeId:'s',inboxId:'inbox'}),/πριν από νέα πληρωμή/);
+  assert.equal(await f.snapshot(),before);
+ }finally{await f.close()}}
 });
