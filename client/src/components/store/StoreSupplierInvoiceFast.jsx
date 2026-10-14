@@ -58,7 +58,7 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
     if(data.header.documentType==="CREDIT_NOTE"){setMessage?.("⚠️ Το QR αφορά πιστωτικό. Χρειάζεται καταχώριση πιστωτικού στο BackOffice.");return}
     const known=knownSupplierFromFastHeaders([data.header],supplierOptions);
     setFiles([data.file]);setSupplierId(known?.id||"");setAmount(Number(data.header.totalGross).toFixed(2).replace(".",","));setDocumentNumber(data.header.documentNumber);setDocumentDate(data.header.documentDate);setMode("");
-    setMessage?.(`✅ Παραλήφθηκε το πρωτότυπο PDF μέσω QR (${data.pageCount} σελίδες). Έλεγξε προμηθευτή, κατάστημα, αριθμό και ποσό· επίλεξε εσύ πληρωμή ή πίστωση.${known?"":" Ο προμηθευτής χρειάζεται επιλογή με το ΑΦΜ του τιμολογίου: "+data.header.supplierTaxId}`);
+    setMessage?.(`✅ Παραλήφθηκε το πρωτότυπο PDF ${data.inboxId?"από τη θυρίδα myDATA":"μέσω QR"} (${data.pageCount} σελίδες). Έλεγξε προμηθευτή, κατάστημα, αριθμό και ποσό· επίλεξε εσύ πληρωμή ή πίστωση.${known?"":" Ο προμηθευτής χρειάζεται επιλογή με το ΑΦΜ του τιμολογίου: "+data.header.supplierTaxId}`);
   };
   const choosing=useRef(false),selectionGeneration=useRef(0);
   useEffect(()=>()=>{selectionGeneration.current++},[store.id]);
