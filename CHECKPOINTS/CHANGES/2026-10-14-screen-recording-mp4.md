@@ -1,3 +1,7 @@
+## 14/10/2026 — SCREEN-RECORDING-MP4-01 / CODEC COMPATIBILITY REVIEW
+
+Same owner/scope. SourcePR2473 fullCI38545961625 SUCCESS, merged9babc9b7; mainCI38546806691 in progress, no new LIVE PASS. Final review removes the unnecessary fixed H.264 level3.0 candidate: request browser-supported avc1 with browser-selected profile/level, then MP4. Screen capture retains original unconstrained display size/30fps. This avoids imposing a fixed low codec level on high-resolution screens; it is a compatibility precaution, not a claim of observed native encoder failure. Mounted local test remains1/1. All existing format guards/capture cleanup/Greek filename/permissions preserved. Exact final fullCI/main/release and real screen playback remain required; prior WebM not converted. Owner retained.
+
 ## 14/10/2026 — SCREEN-RECORDING-MP4-01 / SOURCE READY / AWAITING CI AND LIVE
 
 Owner `codex/screen-recording-mp4-20261014`, sourcebranch `feat/screen-recording-mp4-20261014`. ClaimPR2472/docsCI all applicable jobs SUCCESS, merged48666a6d before code. Native MP4 negotiation prefers H.264 avc1.42001E/avc1 then browser-supported MP4. Download is .mp4 only after actual recorder MIME confirms MP4, no WebM relabelling. Clear unsupported-browser message before screen chooser; no server upload/transcoding or audio. Both existing POS and detached Admin use same component; permissions/launchers/no-audio/Greek24hour name/disabled upload preserved. Latest preview URL/capture tracks released on close/unmount; late chooser after unmount and duplicate start ignored.
