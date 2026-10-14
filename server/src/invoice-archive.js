@@ -11,7 +11,9 @@ export function archiveQuery(companyId,storeId,filters={},count=false){
   if(filters.date)add('m."issueDate"=?::date',filters.date);
   if(filters.dateFrom)add('m."issueDate">=?::date',filters.dateFrom);
   if(filters.dateTo)add('m."issueDate"<=?::date',filters.dateTo);
+  if(filters.receivedToday&&filters.receivedBeforeToday)throw Object.assign(new Error("Επίλεξε τιμολόγια ημέρας ή παλιά τιμολόγια."),{status:400});
   if(filters.receivedToday)where.push(`(i."receivedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens')::date=(CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date`);
+  if(filters.receivedBeforeToday)where.push(`(i."receivedAt" IS NULL OR (i."receivedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens')::date<(CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Athens')::date)`);
   if(filters.id)add('i."id"=?',String(filters.id));
   const haystack=`translate(lower(concat_ws(' ',s."name",a."filename",i."note",m."mark",m."series",m."documentNumber",m."issuerVat")), 'άέήίόύώϊΐϋΰς', 'αεηιουωιιυυσ')`;
   for(const term of normalize(String(filters.q||"").slice(0,200)).split(/\s+/).filter(Boolean))add(`strpos(${haystack},?)>0`,term);
@@ -27,3 +29,4 @@ export function archiveReportHtml(rows,storeName){
   const exported=archiveExportRows(rows),columns=["Ημερομηνία","Προμηθευτής","ΑΦΜ εκδότη","Σειρά","Αριθμός","MARK","Καθαρή αξία","ΦΠΑ","Σύνολο","Κατάσταση"];
   return `<!doctype html><html lang="el"><meta charset="utf-8"><title>Αναφορά παραστατικών</title><style>@page{size:A4 landscape;margin:12mm}body{font:11px Arial,sans-serif;color:#173d59}h1{font-size:20px}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid #ccd7df;padding:5px;text-align:left;overflow-wrap:normal;word-break:normal}td{white-space:nowrap}td:nth-child(2),td:nth-child(10){white-space:normal;overflow-wrap:break-word}td:nth-child(4),td:nth-child(5),td:nth-child(6){white-space:normal;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}th{background:#e7eef5}.actions{margin:15px 0}@media print{.actions{display:none}}</style><h1>Αναφορά παραστατικών - ${escape(storeName)}</h1><p>${rows.length} παραστατικά. Στοιχεία θυρίδας/myDATA - δεν είναι πρωτότυπα PDF προμηθευτών ή απόδειξη τελικής καταχώρισης.</p><div class="actions"><button onclick="window.print()">Εκτύπωση / Αποθήκευση ως PDF</button></div><table><colgroup>${[8,18,9,9,13,15,7,5,7,9].map(width=>`<col style="width:${width}%">`).join("")}</colgroup><thead><tr>${columns.map(c=>`<th>${escape(c)}</th>`).join("")}</tr></thead><tbody>${exported.map((row,index)=>`${index===0||row["Προμηθευτής"]!==exported[index-1]["Προμηθευτής"]||row["Ημερομηνία"]!==exported[index-1]["Ημερομηνία"]?`<tr><th colspan="${columns.length}">${escape(row["Προμηθευτής"])} — ${escape(row["Ημερομηνία"]||"Χωρίς ημερομηνία έκδοσης")}</th></tr>`:""}<tr>${columns.map(c=>`<td>${escape(row[c])}</td>`).join("")}</tr>`).join("")}</tbody></table></html>`;
 }
+

@@ -47,8 +47,8 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
   const format=req.query.format||"",exporting=["xlsx","pdf"].includes(format);
   if(format&&!exporting)return res.status(400).json({error:"Μη έγκυρη μορφή εξαγωγής."});
   const offset=exporting?0:Math.max(0,Math.floor(Number(req.query.offset)||0));
-  const filters={q:req.query.q,supplier:req.query.supplier,date:req.query.date,dateFrom:req.query.dateFrom,dateTo:req.query.dateTo,receivedToday:req.query.receivedToday==="true",id:req.query.id,limit:exporting?20001:100,offset};
-  const query=archiveQuery(req.user.companyId,store.id,filters),count=archiveQuery(req.user.companyId,store.id,filters,true),all=archiveQuery(req.user.companyId,store.id,{},true);
+  const filters={q:req.query.q,supplier:req.query.supplier,date:req.query.date,dateFrom:req.query.dateFrom,dateTo:req.query.dateTo,receivedToday:req.query.receivedToday==="true",receivedBeforeToday:req.query.receivedBeforeToday==="true",id:req.query.id,limit:exporting?20001:100,offset};
+  const query=archiveQuery(req.user.companyId,store.id,filters),count=archiveQuery(req.user.companyId,store.id,filters,true),all=archiveQuery(req.user.companyId,store.id,{receivedToday:filters.receivedToday,receivedBeforeToday:filters.receivedBeforeToday},true);
   const [rows,counts,totals]=await Promise.all([prisma.$queryRawUnsafe(query.sql,...query.values),prisma.$queryRawUnsafe(count.sql,...count.values),prisma.$queryRawUnsafe(all.sql,...all.values)]);
   if(exporting){
     if(rows.length>20000)return res.status(409).json({error:"Η εξαγωγή ξεπερνά 20.000 εγγραφές. Περιορίστε με ημερομηνία ή προμηθευτή."});
@@ -56,7 +56,7 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
     const workbook=XLSX.utils.book_new(),sheet=XLSX.utils.json_to_sheet(greeceExportRows(archiveExportRows(rows)));
     sheet["!cols"]=[{wch:14},{wch:25},{wch:42},{wch:15},{wch:14},{wch:18},{wch:22},{wch:16},{wch:12},{wch:16},{wch:12},{wch:34},{wch:25},{wch:60}];
     XLSX.utils.book_append_sheet(workbook,sheet,"Παραστατικά");
-    XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([["Κατάστημα",store.name],["Πλήθος",rows.length],["Περιεχόμενο","Στοιχεία θυρίδας/myDATA. Δεν είναι πρωτότυπα PDF ή τελικές καταχωρίσεις."],["Φίλτρα",JSON.stringify({q:filters.q||"",supplier:filters.supplier||"",date:filters.date||"",dateFrom:filters.dateFrom||"",dateTo:filters.dateTo||"",receivedToday:filters.receivedToday})]]),"Πληροφορίες");
+    XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([["Κατάστημα",store.name],["Πλήθος",rows.length],["Περιεχόμενο","Στοιχεία θυρίδας/myDATA. Δεν είναι πρωτότυπα PDF ή τελικές καταχωρίσεις."],["Φίλτρα",JSON.stringify({q:filters.q||"",supplier:filters.supplier||"",date:filters.date||"",dateFrom:filters.dateFrom||"",dateTo:filters.dateTo||"",receivedToday:filters.receivedToday,receivedBeforeToday:filters.receivedBeforeToday})]]),"Πληροφορίες");
     const buffer=XLSX.write(workbook,{type:"buffer",bookType:"xlsx"});
     return res.json({filename:"mydata-invoices.xlsx",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",dataUrl:`data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${buffer.toString("base64")}`,count:rows.length});
   }
@@ -172,3 +172,4 @@ router.get("/documents/mydata/status",requireCompanyModule("DOCUMENTS"),async(re
 }catch(error){next(error)}});
 
 export default router;
+
