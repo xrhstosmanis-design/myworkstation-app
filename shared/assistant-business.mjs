@@ -7,6 +7,14 @@ export const businessMoneyDomains=['TRANSFERS_TO_OWNER','TRANSFERS_FROM_OWNER','
 export const currentBusinessDomains=['SUPPLIERS','STAFF'];
 export const normalizeBusinessText=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('el-GR').replace(/\s+/g,' ').trim();
 export function assistantBusinessDomain(value){
+ const [first,...lines]=String(value??'').split('\n');
+ const current=classifyBusinessDomain(first);
+ if(current)return current;
+ const prefix='Προηγούμενο θέμα της ίδιας συνομιλίας: ';
+ const topic=lines.find(l=>l.startsWith(prefix));
+ return topic?classifyBusinessDomain(topic.slice(prefix.length)):null;
+}
+function classifyBusinessDomain(value){
  const q=normalizeBusinessText(value);
  if(/^(τι ειναι|τι σημαινει|πως |που )/.test(q))return null;
  if(/μεταφορ/.test(q)&&!/προιον|ειδων|τεμαχι|αποθηκ|στοκ/.test(q))return /ιδιοκτητ/.test(q)?/απο (?:τον )?ιδιοκτητ|εισφορ(?:ες|α)? (?:του )?ιδιοκτητ|ιδιοκτητ.*(?:προς|στο) ταμει/.test(q)?'TRANSFERS_FROM_OWNER':'TRANSFERS_TO_OWNER':'TRANSFERS';

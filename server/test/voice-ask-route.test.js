@@ -95,3 +95,13 @@ test("actual Platform Ask uses transfer source and retains initial period on own
  const f=setup();const r=await f.invoke({question:"μεταφορα στον ιδιοκτητη",selection:{companyId:"c",storeId:"s"},history:[{role:"user",content:"ελενξε ποσες μεταφορες ποσου ειχαμε απο 1/10 εως σημερα"}]});
  assert.equal(r.error,undefined);assert.equal(r.result.readOnly,true);assert.deepEqual(f.reads,["TRANSFERS_TO_OWNER"]);assert.equal(f.calls.length,0);assert.match(r.result.answer,/20,10/);assert.doesNotMatch(r.result.answer,/BUSINESS_SNAPSHOT|cash_details/);assert.equal(r.result.evidence[0].from,new Date().getFullYear()+"-10-01");
 });
+
+test('actual Platform business follow-up reads the new day/direction, and relative month uses canonical dates without provider',async()=>{
+ const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const yesterday=new Date(day+'T12:00:00Z');yesterday.setUTCDate(yesterday.getUTCDate()-1);
+ const history=[{role:'user',content:'μεταφορές στον ιδιοκτήτη από 1/10 έως σήμερα'},{role:'user',content:'και χθες;'},{role:'user',content:'μεταφορές από τον ιδιοκτήτη'}];
+ const f=setup(),out=await f.invoke({question:'μεταφορές στον ιδιοκτήτη',history,selection:{companyId:'c',storeId:'s'}});
+ assert.equal(out.error,undefined);assert.deepEqual(f.reads,['TRANSFERS_TO_OWNER']);assert.equal(f.calls.length,0);assert.equal(out.result.evidence[0].from,yesterday.toISOString().slice(0,10));assert.equal(out.result.evidence[0].to,yesterday.toISOString().slice(0,10));
+ const month=setup(),r=await month.invoke({question:'μεταφορές στον ιδιοκτήτη αυτό τον μήνα',selection:{companyId:'c',storeId:'s'}});
+ assert.equal(r.error,undefined);assert.equal(month.calls.length,0);assert.equal(r.result.evidence[0].from,day.slice(0,8)+'01');assert.equal(r.result.evidence[0].to,day);
+});
