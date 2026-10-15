@@ -60,3 +60,19 @@
 .business-picture-dialog .business-picture-table-wrap .business-day small{font-size:13px;line-height:1.4}
 .business-picture-dialog .business-picture-table-wrap tfoot td{font-size:22px;font-weight:800;padding:14px 10px}
 @media(max-width:700px){.business-picture-dialog .business-loaded-period{flex-basis:100%}.business-picture-dialog .business-picture-radio{flex-basis:100%}.business-picture-dialog .business-report-details{margin-left:0}}
+
+/* Size to the available overlay area: viewport units plus overlay padding clipped scrollbars. */
+.business-picture-overlay{box-sizing:border-box;overflow:hidden;min-width:0;min-height:0}
+.business-picture-overlay.business-picture-fullscreen{padding:0}
+.business-picture-overlay .business-picture-dialog{position:relative;box-sizing:border-box;min-width:0;min-height:0;max-width:100%;max-height:100%}
+.business-picture-overlay .business-picture-dialog.maximized{width:100%!important;height:100%!important;max-width:100%;max-height:100%}
+.business-picture-dialog .business-picture-table-wrap{min-height:0;min-width:0;flex:1 1 0;overflow:auto}
+.business-picture-dialog .business-expense-link{color:#155a9a;text-decoration:underline;text-underline-offset:3px;border:1px solid #b9cadc;border-radius:6px;background:#fff;cursor:pointer;padding:6px 9px;font:inherit;white-space:nowrap}
+.business-picture-dialog .business-data-warning.business-expense-link{color:#873f0d;background:#fff4e6;border-color:#f0bd8b;font-size:14px;font-weight:650}
+.business-expense-panel{position:absolute;inset:0;z-index:5;background:#f5f8fc;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.business-expense-panel>header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;background:#123f69;color:#fff;flex-shrink:0}
+.business-expense-panel h3{margin:0;font-size:22px}.business-expense-panel header p{margin:4px 0;font-size:15px;color:#fff}
+.business-expense-panel button{cursor:pointer;border:1px solid #b9cadc;border-radius:7px;background:#fff;color:#155a9a;font-size:16px;font-weight:700;padding:9px 12px}
+.business-expense-content{flex:1;min-height:0;overflow:auto;padding:16px}.business-expense-content>p{margin:0 0 12px;font-size:16px;line-height:1.5;color:#29445c}
+.business-expense-table{overflow:auto;background:#fff}.business-expense-table table{border-collapse:collapse;min-width:1000px;width:100%;font-size:16px}.business-expense-table th{background:#2475bd;color:#fff;text-align:left;padding:12px}.business-expense-table td{border-bottom:1px solid #c6d1dc;vertical-align:top;padding:12px;white-space:normal}.business-expense-table td:nth-child(3){white-space:nowrap;font-size:18px;font-weight:700}.business-expense-table td:nth-child(2){min-width:240px;max-width:450px;overflow-wrap:anywhere}
+.business-expense-entry{background:#fff;border:1px solid #c6d1dc;border-radius:10px;padding:16px;margin-bottom:16px}.business-expense-entry dl{display:grid;grid-template-columns:180px 1fr;gap:12px;font-size:17px}.business-expense-entry dt{font-weight:750}.business-expense-entry dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
