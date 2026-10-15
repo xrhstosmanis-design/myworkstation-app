@@ -6,3 +6,13 @@
 .pos-price-modal .pos-permanent-price p{margin:0;padding:8px;background:#e8f3ef;border-radius:8px;font-size:15px;line-height:1.35}
 .pos-price-modal .pos-permanent-price [role=alert]{color:#9f2020;background:#fff0f0}
 .pos-price-modal .pos-permanent-price button{min-height:46px;font-size:16px}
+@media(min-width:680px){
+ .category-product-overlay.pos-price-modal.pos-retail-price-editor>section{width:min(920px,96vw);max-height:94vh}
+ .pos-retail-price-editor .pos-price-body{display:grid;grid-template-columns:minmax(240px,1fr) minmax(240px,1fr);gap:12px;max-height:calc(94vh - 112px);overflow:auto;align-items:start}
+ .pos-retail-price-editor .pos-price-scope{grid-column:1/-1;grid-row:1}
+ .pos-retail-price-editor .pos-price-keypad{grid-column:1;grid-row:2/6;align-self:stretch}
+ .pos-retail-price-editor .pos-price-body>label:first-of-type{grid-column:2;grid-row:2}
+ .pos-retail-price-editor .pos-price-shortcuts{grid-column:2;grid-row:3}
+ .pos-retail-price-editor .pos-price-body>label:last-of-type{grid-column:2;grid-row:4}
+ .pos-retail-price-editor .pos-permanent-price,.pos-retail-price-editor .pos-price-body>button.pos-primary-inline{grid-column:2;grid-row:5;width:100%}
+}
