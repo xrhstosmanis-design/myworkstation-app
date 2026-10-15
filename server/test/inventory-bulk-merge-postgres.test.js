@@ -57,7 +57,7 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  await db.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=2 WHERE "storeId"='A' AND "productId"='p3'`;
  await assert.rejects(confirmInventoryMerge(db,user,input),/άλλαξαν/);
  input.previewHash=(await previewInventoryMerge(db,user,choice)).previewHash;
- await db.$executeRawUnsafe(`CREATE FUNCTION fail_merge_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."eventType"='INVENTORY_PRODUCT_MERGE' THEN RAISE EXCEPTION 'isolated audit failure'; END IF; RETURN NEW; END $$`);
+ await db.$executeRawUnsafe(`CREATE FUNCTION fail_merge_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."eventType"='INVENTORY_PRODUCT_MERGE' THEN RAISE EXCEPTION 'isolated audit failure'; END IF; RETURN NEW; END; $$`);
  await db.$executeRawUnsafe('CREATE TRIGGER fail_merge BEFORE INSERT ON "StoreOperatorAudit" FOR EACH ROW EXECUTE FUNCTION fail_merge_audit()');
  const before=await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`;
  await assert.rejects(confirmInventoryMerge(db,user,input),/isolated audit failure/);
