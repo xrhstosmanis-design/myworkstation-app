@@ -1,7 +1,7 @@
 import fs from "node:fs";
 
 const routePath=new URL("../src/routes/kiosk-reports-audit.js",import.meta.url);
-const safeActions="'RETURN','CANCEL','RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION','CART_ITEM_ADD','CART_QTY_CHANGE','CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE','AUDIENCE_DISCOUNT_SELECTED','ITEM_CHANGE_REQUEST','ITEM_EXCHANGE_COMPLETED','HOLD_RESTORE','HOLD_SAVE'";
+const safeActions="'RETURN','CANCEL','RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION','CART_ITEM_ADD','CART_QTY_CHANGE','CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE','PERMANENT_PRICE_CHANGE','AUDIENCE_DISCOUNT_SELECTED','ITEM_CHANGE_REQUEST','ITEM_EXCHANGE_COMPLETED','HOLD_RESTORE','HOLD_SAVE'";
 const before=fs.readFileSync(routePath,"utf8");
 const start=before.indexOf('const actionRows=await prisma.$queryRaw`');
 const end=start<0?-1:before.indexOf('ORDER BY a."createdAt" DESC LIMIT 10000`;',start);
