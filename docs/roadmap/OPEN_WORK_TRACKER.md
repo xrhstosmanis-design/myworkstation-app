@@ -1,4 +1,9 @@
 
+## 15/10/2026 — INVENTORY-MERGE-01 / ASSIGNED / NOT TESTED
+
+Owner feat/inventory-bulk-vat-20261015; user expands request to explicit 2–4 selected cards into one survivor. Independent from invoice merge. Preview required; preserve historical IDs, no DELETE of products or invoice/sale history. Restrict first delivery to products exclusive to selected store; reject other-store associations, incompatible units/VAT, composition, open drafts/counts or nonstandard barcode mappings. Move eligible barcodes/supplier links and net stock with paired audited stock movements; archive sources in selected store only, no payment/fiscal posting. Native transactional/retry/conflict tests required. No actual real-store merge until user chooses survivor and confirms preview. Scope remains NOT TESTED.
+
+
 ## 15/10/2026 — INVENTORY-BULK-VAT-01 / ASSIGNED / USER FAIL
 
 Owner feat/inventory-bulk-vat-20261015. Independent new request: Archive horizontal scrollbar above fixed toolbar, explicit VAT-department column, bulk active category/subcategory/VAT department dropdowns and selected-store retail SET/increase/decrease in EUR or percent. Baseline main23c1760f; screenshots show hidden scrollbar and free-text legacy form. NOT TESTED new behavior. Preserve all other owners, full-card and invoice acceptance, stock/fiscal/auth/license gates. Require selected store, company-owned existing taxonomy, real active VAT mapping, atomic audited/idempotent price writes confined to selected store, mounted/server/native regression and full CI/exact guarded release before hosted acceptance. No real product/stock/payment writes for diagnostics. Checkpoint CHECKPOINTS/CHANGES/2026-10-15-inventory-bulk-vat.md. Claim merges before source.
