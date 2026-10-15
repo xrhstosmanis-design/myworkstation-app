@@ -1,3 +1,16 @@
+## 16/10/2026 - Business Picture readability / LIMITED LIVE VISUAL PASS
+
+The existing Owner report is available to its permitted OWNER/ADMIN/MANAGER/SUPER_ADMIN roles within existing company/store/module controls. This acceptance directly observed only authenticated Super Admin support desktop in MYWORKSTATION LAB/ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, exact production bfea6636788b7f193ed8029d801cae47976751d6 after guarded deployment and independent health verification. Ordinary Owner/mobile/physical and whole financial27 remain OPEN with their existing owner.
+
+1. From the intended selected store open Πληρωμές Ιδιοκτήτη / Διαχειριστή, then Εικόνα Επιχειρήσεις. Confirm the store name and displayed loaded period. Date changes apply with Αναζήτηση as before.
+2. Amounts/day rows use20px, totals22px and headers16px. The table begins about370px higher at the verified1363x936 desktop viewport; use its horizontal scrollbar for all21columns. Expand a month for daily rows; maximize/restore remains available.
+3. Short missing-cost and missing-expense-VAT warnings remain immediately visible. Open Πληροφορίες αναφοράς for full loaded-period/Athens/Search instructions, return/cancellation counts, missing-data explanations and calculation notes. Close it to regain table space. Long explanation content scrolls within its disclosure.
+4. VAT visibility filters still hide excluded values as — and ALL restores them. Unknown values remain —; never interpret missing cost or expense VAT as zero. CSV/standalone print calculations and handlers are unchanged.
+
+PASS criteria directly observed01:21-01:24Athens: computed20px body/day,22px totals,16px header; normal tabletop371.75 vs742.15625 before; maximized333.59375 vs704; initial collapsed disclosure and open/close/full explanations, short warnings9/99 and12/20, all21columns/horizontal overflow, month expansion, VAT visibility and maximize/restore. Every monthly/total row and11expanded-day row text exactly equals the old-layout baseline. Fresh MAIN cash9.40/card0/IRIS0/total2.20/count3/latest12Oct23:42 remained observed unchanged; no business writes, financial/stock delta claim or replay.
+
+Troubleshooting: refresh the application if the older four large banners remain. Verify loaded dates before comparing reports; use disclosure for unknown-data reasons. The layout cannot reconstruct missing costs/VAT. No independent new export/native printing, physical device/mobile or wider accounting/financial acceptance is implied. SourcePR2536/full source+main CI2731/0/0+6backup/guard38816047671; checkpoint CHECKPOINTS/CHANGES/2026-10-16-business-picture-readability.md and actual before/after screenshots CHECKPOINTS/EVIDENCE/business-picture-readability-20261016/. Protected financial fixtures must not be repeated.
+
 ## 05/10/2026 - Explicit zero-VAT service / one EXTERNAL payment: LIMITED LAB PASS
 
 Verified in MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ through ordinary Super Admin existing Super Admin account support desktop, healthy runtime669b92e439c1476c40a766fe2ae95b8f15a69293. Role policy permits OWNER/ADMIN/MANAGER/SUPER_ADMIN, but this new acceptance observes only SA support; independent Owner and physicalmobile/tablet remain NOT TESTED. Company/store isolation stays mandatory. Never use LAB balances as real-store acceptance; no real transfer, fiscal issuance or myDATA performed.
