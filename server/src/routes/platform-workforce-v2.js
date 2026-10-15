@@ -21,6 +21,8 @@ import {
   contextFor,employeeInclude,managementGuard,rolesForCompany,serializeEmployee,serializeRole,storePaidModuleStates,storesForContext
 } from "./workforce-v2-access.js";
 
+import {mayInviteToChat} from "../chat-staff-invitation.mjs";
+
 const router=Router({mergeParams:true});
 router.use(managementGuard);
 
@@ -72,7 +74,7 @@ router.get("/bootstrap",async(req,res,next)=>{
       ruleDefinitions:WORKFORCE_RULE_DEFINITIONS,ruleSeverities:WORKFORCE_RULE_SEVERITIES,shiftCategories:WORKFORCE_SHIFT_CATEGORIES,
       moduleStates:moduleStates.states,
       capabilities:{
-        employeeCreate:true,employeeUpdate:true,roleManagement:true,multiStoreAccess:true,
+        chatInvitations:mayInviteToChat(req.user),employeeCreate:true,employeeUpdate:true,roleManagement:true,multiStoreAccess:true,
         rulesManagement,shiftTemplateManagement:true,migrationPreview:true,migrationApply:isSuperAdmin(req.user)
       },
       migration:{mode:"REVIEW_REQUIRED",applyAvailable:isSuperAdmin(req.user),applyEndpoint:isSuperAdmin(req.user)?"./migration/apply":null}
