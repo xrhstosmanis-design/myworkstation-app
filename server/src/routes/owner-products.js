@@ -1,3 +1,4 @@
+import {productCardVatOptions,resolveProductCardVat} from '../lib/product-card-vat.js';
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -113,7 +114,7 @@ router.get("/catalog",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
     const q=String(req.query.q||"").trim();
     const like=`%${q}%`;
     const rows=await prisma.$queryRaw`
-      SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatVerified",p."trackStock",p."active",p."masterProductId",p."categoryId",p."subcategoryId",
+      SELECT p."id",p."sku",p."name",p."description",p."unit",p."salePrice",p."costPrice",p."vatRate",p."vatDepartmentId",p."vatVerified",p."trackStock",p."active",p."masterProductId",p."categoryId",p."subcategoryId",
              p."staffPrice",p."deliveryPrice",p."minOrderQuantity",p."capacity",p."allowDiscount",p."allowPosPriceChange",p."freeSalePrice",p."negativeStockWarning",p."isSet",p."isRecipe",p."discountA",p."discountB",p."discountC",
              c."name" AS "categoryName",sc."name" AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "productCompanyName",lp."supplierName",
              (EXISTS(SELECT 1 FROM "SupplierProductLink" spl WHERE spl."companyId"=${company} AND spl."productId"=p."id" AND spl."active"=true) OR lp."supplierName" IS NOT NULL) AS "hasSupplier",
@@ -201,7 +202,8 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
     const purchaseSummary=purchases.reduce((a,row)=>{a.quantity+=Number(row.quantity||0)*(row.unit==='PACKAGE'?Number(row.unitsPerPackage||1):1);a.net+=Number(row.netAmount||0);a.gross+=Number(row.grossAmount||0);return a},{quantity:0,net:0,gross:0});
     const latestPurchaseWithSupplier=purchases.find(row=>row.supplierId);
     const latestSupplier=latestPurchaseWithSupplier?{supplierId:latestPurchaseWithSupplier.supplierId,supplierName:latestPurchaseWithSupplier.supplierName||""}:null;
-    res.json({supplierCodes,purchases,latestSupplier,suppliers,statistics:{...stats[0],...lastEvents[0],purchaseQuantity:purchaseSummary.quantity,purchasesNet:purchaseSummary.net,purchasesGross:purchaseSummary.gross}});
+    const vatDepartments=await productCardVatOptions(prisma,company);
+    res.json({supplierCodes,purchases,latestSupplier,suppliers,vatDepartments,statistics:{...stats[0],...lastEvents[0],purchaseQuantity:purchaseSummary.quantity,purchasesNet:purchaseSummary.net,purchasesGross:purchaseSummary.gross}});
   }catch(error){next(error)}
 });
 
@@ -215,7 +217,7 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       expectedBarcodeIds:z.array(z.string().min(1)).max(30),
       name:z.string().trim().min(2).max(250),sku:z.string().trim().max(80).optional().or(z.literal("")),description:z.string().trim().max(1000).optional().or(z.literal("")),supplierName:z.string().trim().max(250).optional().or(z.literal("")),
       categoryId:z.string().min(1).nullable().optional(),subcategoryId:z.string().min(1).nullable().optional(),categoryName:z.string().trim().max(160).optional().or(z.literal("")),unit:z.enum(["PIECE","KG","LITER","PACKAGE"]),salePrice:z.coerce.number().min(0),costPrice:z.coerce.number().min(0),
-      vatRate:z.coerce.number().min(0).max(100),vatVerified:z.boolean(),trackStock:z.boolean(),active:z.boolean(),
+      vatRate:z.coerce.number().min(0).max(100),vatDepartmentId:z.string().min(1).optional(),vatVerified:z.boolean(),trackStock:z.boolean(),active:z.boolean(),
       staffPrice:z.coerce.number().min(0).nullable().optional(),deliveryPrice:z.coerce.number().min(0).nullable().optional(),minOrderQuantity:z.coerce.number().min(0).nullable().optional(),capacity:z.coerce.number().min(0).nullable().optional(),
       allowDiscount:z.boolean().default(true),allowPosPriceChange:z.boolean().default(false),freeSalePrice:z.boolean().default(false),negativeStockWarning:z.boolean().default(false),isSet:z.boolean().default(false),isRecipe:z.boolean().default(false),
       discountA:z.coerce.number().min(0).max(100).default(0),discountB:z.coerce.number().min(0).max(100).default(0),discountC:z.coerce.number().min(0).max(100).default(0),
@@ -275,6 +277,7 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
     changed("unit","Μονάδα",product.unit,body.unit);
     changed("costPrice","Τιμή αγοράς",money(product.costPrice),body.costPrice);
     changed("vatRate","ΦΠΑ",money(product.vatRate),body.vatRate);
+    if(body.vatDepartmentId!==undefined)changed("vatDepartmentId","Τμήμα ΦΠΑ",product.vatDepartmentId,body.vatDepartmentId);
     for(const [field,label] of [["vatVerified","ΦΠΑ επιβεβαιωμένος"],["trackStock","Παρακολούθηση stock"],["active","Ενεργό"],["allowDiscount","Επιτρέπεται έκπτωση"],["allowPosPriceChange","Αλλαγή τιμής στο POS"],["freeSalePrice","Ελεύθερη τιμή στο POS"],["negativeStockWarning","Ειδοποίηση αρνητικού stock"],["isSet","SET"],["isRecipe","Συνταγή"]])changed(field,label,Boolean(product[field]),Boolean(body[field]));
     const normalizeRows=(rows,keys)=>rows.map(row=>Object.fromEntries(keys.map(key=>[key,comparable(key==="salePrice"||key==="minStock"||key==="unitMultiplier"?money(row[key]):row[key])]))).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)));
     changed("barcodes","Barcodes",normalizeRows(oldBarcodes,["barcode","unitMultiplier","salePrice","name"]),normalizeRows(body.barcodes,["barcode","unitMultiplier","salePrice","name"]));
@@ -305,6 +308,10 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       if(JSON.stringify(currentBarcodeIds)!==JSON.stringify([...body.expectedBarcodeIds].sort())){
         const error=new Error("Τα barcodes του προϊόντος άλλαξαν μετά το άνοιγμα της καρτέλας. Άνοιξέ την ξανά πριν αποθηκεύσεις.");
         error.status=409;throw error;
+      }
+      if(body.vatDepartmentId!==undefined){
+        const vat=await resolveProductCardVat(tx,company,body.vatDepartmentId,body.vatRate);
+        await tx.$executeRaw`UPDATE "Product" SET "vatDepartmentId"=${vat.id} WHERE "companyId"=${company} AND "id"=${product.id}`;
       }
       let categoryId=selectedCategoryId;
       if(!categoryId&&body.categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}
