@@ -57,7 +57,15 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  await db.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=2 WHERE "storeId"='A' AND "productId"='p3'`;
  await assert.rejects(confirmInventoryMerge(db,user,input),/άλλαξαν/);
  input.previewHash=(await previewInventoryMerge(db,user,choice)).previewHash;
- const results=await Promise.allSettled([confirmInventoryMerge(db,user,input),confirmInventoryMerge(db,user,input)]);assert.ok(results.some(r=>r.status==='fulfilled'&&r.value.ok));for(const r of results)if(r.status==='rejected')assert.equal(r.reason.code,'P2034');
+ await db.$executeRawUnsafe(`CREATE FUNCTION fail_merge_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."eventType"='INVENTORY_PRODUCT_MERGE' THEN RAISE EXCEPTION 'isolated audit failure'; END IF; RETURN NEW; END $$`);
+ await db.$executeRawUnsafe('CREATE TRIGGER fail_merge BEFORE INSERT ON "StoreOperatorAudit" FOR EACH ROW EXECUTE FUNCTION fail_merge_audit()');
+ const before=await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`;
+ await assert.rejects(confirmInventoryMerge(db,user,input),/isolated audit failure/);
+ assert.deepEqual(await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`,before);
+ assert.equal((await db.$queryRaw`SELECT "id" FROM "StockMovement"`).length,0);
+ assert.equal((await db.$queryRaw`SELECT "productId" FROM "ProductBarcode" WHERE "id"='b2'`)[0].productId,'p2');
+ await db.$executeRawUnsafe('DROP TRIGGER fail_merge ON "StoreOperatorAudit"');
+ const results=await Promise.all([confirmInventoryMerge(db,user,input),confirmInventoryMerge(db,user,input)]);assert.ok(results.every(r=>r.ok));assert.equal(results.filter(r=>r.idempotent).length,1);
  assert.equal((await confirmInventoryMerge(db,user,input)).idempotent,true);
  const stocks=await db.$queryRaw`SELECT "productId","currentStock","active" FROM "StoreProduct" WHERE "storeId"='A' AND "productId" IN ('p1','p2','p3','p4') ORDER BY "productId"`;
  assert.deepEqual(stocks.map(r=>Number(r.currentStock)),[4,0,0,0]);assert.deepEqual(stocks.map(r=>r.active),[true,false,false,false]);

@@ -41,10 +41,16 @@ async function preview(tx,user,body){
  return {rows:rows.map(r=>({...r,salePrice:Number(r.salePrice),currentStock:Number(r.currentStock||0),vatRate:Number(r.vatRate)})),barcodes:barcodes.map(b=>({barcode:b.barcode,productId:b.productId,salePrice:b.salePrice==null?null:Number(b.salePrice)})),targetId:target.id,combinedStock:stock,blockers,previewHash:hash(state),state};
 }
 export async function previewInventoryMerge(db,user,input){const body=selection.strict().parse(input);access(user,body);return db.$transaction(async tx=>{const {state,...result}=await preview(tx,user,body);return result})}
+async function serializable(db,operation){
+ for(let attempt=0;;attempt++){
+  try{return await db.$transaction(operation,{isolationLevel:'Serializable'})}
+  catch(error){if(attempt>=2||!(error.code==='P2034'||error.code==='P2010'&&['40001','40P01'].includes(error.meta?.code)))throw error;}
+ }
+}
 export async function confirmInventoryMerge(db,user,input){
  const body=selection.extend({requestId:z.string().uuid(),previewHash:z.string().length(64),confirm:z.literal(true),reason:z.string().trim().min(3).max(300)}).strict().parse(input);access(user,body);
  const fingerprint=hash({...body,productIds:[...body.productIds].sort()});
- return db.$transaction(async tx=>{
+ return serializable(db,async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${user.companyId+':product-sku'}))`;
   const previous=(await tx.$queryRaw`SELECT "details" FROM "StoreOperatorAudit" WHERE "companyId"=${user.companyId} AND "storeId"=${body.storeId} AND "eventType"='INVENTORY_PRODUCT_MERGE' AND "details"->>'requestId'=${body.requestId} LIMIT 1`)[0];
   if(previous){if(previous.details.fingerprint!==fingerprint||previous.details.actorId!==user.id)fail('Το αίτημα συγχώνευσης έχει διαφορετικά στοιχεία.');return {...previous.details.result,idempotent:true};}
@@ -68,5 +74,5 @@ export async function confirmInventoryMerge(db,user,input){
   const result={ok:true,targetId:body.targetId,merged:sourceIds.length,combinedStock:p.combinedStock,mergeId};
   await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${randomUUID()},${user.companyId},${body.storeId},${user.id},${user.id},'INVENTORY_PRODUCT_MERGE',${JSON.stringify({requestId:body.requestId,fingerprint,actorId:user.id,sourceIds,reason:body.reason,before:p.state,result,historyPreserved:true})}::jsonb)`;
   return result;
- },{isolationLevel:'Serializable'});
+ });
 }
