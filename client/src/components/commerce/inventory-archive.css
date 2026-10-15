@@ -431,3 +431,14 @@
 .ia-form-grid.edit>div.wide{grid-column:1/-1}
 
 .ia-barcode-actions,.ia-barcode-choices{display:flex;flex-wrap:wrap;gap:8px}.ia-barcode-actions button{flex:1;min-height:48px}.ia-barcode-choices button{min-height:48px;font-size:17px}
+
+/* Always reachable horizontal navigation above the sticky actions. */
+.ia-toolbar{flex-wrap:wrap}
+.ia-horizontal-control{display:flex;align-items:center;gap:10px;flex:0 0 100%;font-size:14px;font-weight:800;color:#123b5d;min-width:0}
+.ia-horizontal-control input{flex:1;min-width:60px;accent-color:#087f78;cursor:ew-resize;height:24px}
+.ia-horizontal-control svg{flex-shrink:0}
+.ia-bulk-note{margin:14px 16px 0;font-size:14px;line-height:1.5;color:#405d77}
+.ia-table{min-width:5020px}
+.ia-row{grid-template-columns:64px 54px 160px 190px minmax(420px,2fr) 220px 118px 118px 128px 120px 120px 128px 158px 152px 132px 142px 184px 220px 102px 214px 234px 172px 122px 138px 184px 148px 138px 138px 184px 96px 300px}
+
+.ia-merge-body{padding:18px;overflow:auto;display:grid;gap:14px;font-size:16px;line-height:1.5}.ia-merge-body p{margin:0}.ia-merge-body label{display:grid;gap:6px}.ia-merge-body label.check{display:flex;align-items:center}.ia-merge-body select,.ia-merge-body input:not([type=checkbox]),.ia-merge-body>button{min-height:44px;padding:8px;border:1px solid #b9cad9;border-radius:8px;background:#fff;color:#17324b}.ia-merge-body table{width:100%;border-collapse:collapse}.ia-merge-body th,.ia-merge-body td{padding:10px;text-align:left;border-bottom:1px solid #d9e4ec}.ia-merge-body [role=alert]{padding:12px;background:#fff4e5;color:#85500d;border-radius:8px}
