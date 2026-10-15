@@ -1,3 +1,5 @@
+import {auditExtraLabels,auditReadableRecord} from "../../../shared/audit-readable.mjs";
+import {validateAuditTimes,enrichAuditSaleItems} from "../lib/audit-readable-records.js";
 import {greeceDateInput,greeceRangeDate} from "../../../shared/greece-time.mjs";
 import {Router} from "express";
 import {athensCalendarStart} from "../lib/athens-calendar-start.js";
@@ -42,7 +44,7 @@ auditEventLabels.TABLE_ORDER_SENT="Αποστολή παραγγελίας τρ�
 auditEventLabels.TABLE_ORDER_ROUND_SENT="Αποστολή νέου γύρου τραπεζιού";
 auditEventLabels.TABLE_PREPARATION_READY="Ολοκλήρωση παρασκευής τραπεζιού";
 const operatorLifecycleEvents=new Set(["OPERATOR_CREATED","OPERATOR_PROFILE_UPDATED","OPERATOR_PIN_CHANGED","OPERATOR_PIN_RANDOMIZED","OPERATOR_DEACTIVATED","OPERATOR_LOGIN_PIN","OPERATOR_LOGIN_CARD","OPERATOR_LOGOUT"]);
-const greekAuditEventLabel=eventType=>auditEventLabels[eventType]||String(eventType||"—").replaceAll("_"," ");
+const greekAuditEventLabel=eventType=>auditExtraLabels[eventType]||auditEventLabels[eventType]||"Άλλη καταγεγραμμένη κίνηση";
 const audienceLabel=details=>details?.audienceLabel||({NORMAL:"Κανονική τιμή",DOCTOR:"Ιατρός",NURSE:"Νοσηλευτής / Νοσοκόμος",STAFF:"Προσωπικό",CUSTOMER:"Πελάτης"}[details?.audience]||"");
 const invoiceAuditDescription=(eventType,details={})=>{
   const invoiceNumber=details.invoiceNumber||details.after?.invoiceNumber||details.before?.invoiceNumber||details.orderId||"—";
@@ -93,7 +95,7 @@ const dayStart=value=>greeceRangeDate(value?String(value).slice(0,10):greeceDate
 const dayEndExclusive=value=>new Date(greeceRangeDate(value?String(value).slice(0,10):greeceDateInput(),true).getTime()+1);
 const filters=req=>({companyId:req.user.companyId,from:dayStart(req.query.from),to:dayEndExclusive(req.query.to),storeId:String(req.query.storeId||"")||null,q:String(req.query.q||"").trim()||null,timeFrom:String(req.query.timeFrom||"").match(/^\d{2}:\d{2}$/)?.[0]||null,timeTo:String(req.query.timeTo||"").match(/^\d{2}:\d{2}$/)?.[0]||null,operatorId:String(req.query.operatorId||"").trim()||null,terminalPos:String(req.query.terminalPos||"").trim()||null,eventType:String(req.query.eventType||"").trim()||null,amountMin:req.query.amountMin===""||req.query.amountMin==null?null:n(req.query.amountMin),amountMax:req.query.amountMax===""||req.query.amountMax==null?null:n(req.query.amountMax)});
 const isSuperAdmin=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
-const auditFilters=req=>{const superAdmin=isSuperAdmin(req),requestedCompanyId=String(req.query.companyId||"").trim()||null,from=athensCalendarStart(req.query.from),to=athensCalendarStart(req.query.to,1);return {...filters(req),...(from?{from}:{}),...(to?{to}:{}),companyId:superAdmin?requestedCompanyId:req.user.companyId,superAdmin}};
+const auditFilters=req=>{const superAdmin=isSuperAdmin(req),requestedCompanyId=String(req.query.companyId||"").trim()||null,from=athensCalendarStart(req.query.from||greeceDateInput()),to=athensCalendarStart(req.query.to||greeceDateInput(),1);return {...filters(req),...validateAuditTimes(req.query),...(from?{from}:{}),...(to?{to}:{}),companyId:superAdmin?requestedCompanyId:req.user.companyId,superAdmin}};
 
 function requireManagement(req,res,next){
   if(req.user?.tokenType==="STORE_OPERATOR"||!managementRoles.has(req.user?.role))return res.status(403).json({error:"Η αναφορά είναι διαθέσιμη μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
@@ -202,32 +204,38 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
   try{
     const {companyId,superAdmin,from,to,storeId,q,timeFrom,timeTo,operatorId,terminalPos,eventType,amountMin,amountMax}=auditFilters(req),text=q?`%${q}%`:null;
     const transactionRows=await prisma.$queryRaw`
-      SELECT t."id",t."occurredAt" AS "createdAt",t."type" AS "eventType",t."amount",t."description",t."supplierId",t."supplierName",
-        t."sessionId" AS "shiftId",t."actorId",COALESCE(t."actorName",tu."fullName") AS "actorName",t."subtractFromShift",t."reversedAt",t."reversedByName",t."reversalReason",
+      SELECT t."companyId",t."id",t."occurredAt" AS "createdAt",t."type" AS "eventType",t."amount",t."description",t."supplierId",t."supplierName",
+        t."sessionId" AS "shiftId",t."actorId",COALESCE(t."actorName",tu."fullName",transactionOperator."displayName") AS "actorName",t."subtractFromShift",t."reversedAt",t."reversedByName",t."reversalReason",
         s."name" AS "storeName",t."storeId",COALESCE(shift."terminalPos",'BACKOFFICE') AS "terminalPos"
       FROM "StoreTransaction" t
       LEFT JOIN "Store" s ON s."id"=t."storeId" AND s."companyId"=t."companyId"
       LEFT JOIN "User" tu ON tu."id"=t."actorId" AND tu."companyId"=t."companyId"
+      LEFT JOIN "StoreOperatorCredential" transactionOperator ON transactionOperator."id"=t."actorId" AND transactionOperator."companyId"=t."companyId" AND transactionOperator."storeId"=t."storeId"
       LEFT JOIN "CashShiftSession" shift ON shift."id"=t."sessionId" AND shift."companyId"=t."companyId"
       WHERE (${companyId}::text IS NULL OR t."companyId"=${companyId})
         AND t."occurredAt">=${from} AND t."occurredAt"<${to}
+        AND (${timeFrom}::text IS NULL OR to_char((CASE WHEN pg_typeof(t."occurredAt")::text='timestamp without time zone' THEN t."occurredAt"::timestamp AT TIME ZONE 'UTC' ELSE t."occurredAt"::timestamptz END) AT TIME ZONE 'Europe/Athens','HH24:MI')>=${timeFrom}) AND (${timeTo}::text IS NULL OR to_char((CASE WHEN pg_typeof(t."occurredAt")::text='timestamp without time zone' THEN t."occurredAt"::timestamp AT TIME ZONE 'UTC' ELSE t."occurredAt"::timestamptz END) AT TIME ZONE 'Europe/Athens','HH24:MI')<=${timeTo})
         AND (${storeId}::text IS NULL OR t."storeId"=${storeId})
         AND (${text}::text IS NULL
           OR COALESCE(t."description",'') ILIKE ${text}
           OR COALESCE(t."supplierName",'') ILIKE ${text}
           OR COALESCE(t."actorName",'') ILIKE ${text}
           OR COALESCE(t."type",'') ILIKE ${text}
-          OR COALESCE(t."id",'') ILIKE ${text})
+          OR COALESCE(t."id",'') ILIKE ${text}
+          OR COALESCE(tu."fullName",transactionOperator."displayName",'') ILIKE ${text}
+          OR EXISTS (SELECT 1 FROM "Sale" sale JOIN "SaleLine" line ON line."saleId"=sale."id" LEFT JOIN "Product" product ON product."id"=line."productId" AND product."companyId"=sale."companyId" WHERE sale."id"=substring(t."description" from '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}') AND sale."companyId"=t."companyId" AND sale."storeId"=t."storeId" AND (line."description" ILIKE ${text} OR product."sku" ILIKE ${text})))
       ORDER BY t."occurredAt" DESC LIMIT 10000`;
     const actionRows=await prisma.$queryRaw`
-      SELECT a."id",a."createdAt",a."actionType",a."reason",a."actorId",COALESCE(a."actorName",au."fullName") AS "actorName",a."saleId",a."relatedSaleId",a."details",
+      SELECT a."companyId",a."id",a."createdAt",a."actionType",a."reason",a."actorId",COALESCE(a."actorName",au."fullName",actionOperator."displayName") AS "actorName",a."saleId",a."relatedSaleId",a."details",
         s."name" AS "storeName",a."storeId",COALESCE(a."details"->>'terminalPos','MAIN') AS "terminalPos"
       FROM "PosSaleActionAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
       LEFT JOIN "User" au ON au."id"=a."actorId" AND au."companyId"=a."companyId"
+      LEFT JOIN "StoreOperatorCredential" actionOperator ON actionOperator."id"=a."actorId" AND actionOperator."companyId"=a."companyId" AND actionOperator."storeId"=a."storeId"
       WHERE (${companyId}::text IS NULL OR a."companyId"=${companyId})
         AND a."actionType" IN ('RETURN','CANCEL','RETURN_ITEMS','SELF_CONSUMPTION','PRODUCT_DESTRUCTION','CART_ITEM_ADD','CART_QTY_CHANGE','CART_ITEM_REMOVE','CART_CANCEL','PRICE_CHANGE','PERMANENT_PRICE_CHANGE','AUDIENCE_DISCOUNT_SELECTED','ITEM_CHANGE_REQUEST','ITEM_EXCHANGE_COMPLETED','HOLD_RESTORE','HOLD_SAVE')
         AND a."createdAt">=${from} AND a."createdAt"<${to}
+        AND (${timeFrom}::text IS NULL OR to_char((CASE WHEN pg_typeof(a."createdAt")::text='timestamp without time zone' THEN a."createdAt"::timestamp AT TIME ZONE 'UTC' ELSE a."createdAt"::timestamptz END) AT TIME ZONE 'Europe/Athens','HH24:MI')>=${timeFrom}) AND (${timeTo}::text IS NULL OR to_char((CASE WHEN pg_typeof(a."createdAt")::text='timestamp without time zone' THEN a."createdAt"::timestamp AT TIME ZONE 'UTC' ELSE a."createdAt"::timestamptz END) AT TIME ZONE 'Europe/Athens','HH24:MI')<=${timeTo})
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
         AND (${text}::text IS NULL
           OR COALESCE(a."reason",'') ILIKE ${text}
@@ -235,14 +243,16 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           OR COALESCE(a."actionType",'') ILIKE ${text}
           OR COALESCE(a."saleId",'') ILIKE ${text}
           OR COALESCE(a."relatedSaleId",'') ILIKE ${text}
-          OR COALESCE(a."details"::text,'') ILIKE ${text})
+          OR COALESCE(a."details"::text,'') ILIKE ${text}
+          OR COALESCE(au."fullName",actionOperator."displayName",'') ILIKE ${text}
+          OR EXISTS (SELECT 1 FROM "Sale" sale JOIN "SaleLine" line ON line."saleId"=sale."id" LEFT JOIN "Product" product ON product."id"=line."productId" AND product."companyId"=sale."companyId" WHERE sale."id"=a."saleId" AND sale."companyId"=a."companyId" AND sale."storeId"=a."storeId" AND (line."description" ILIKE ${text} OR product."sku" ILIKE ${text})))
       ORDER BY a."createdAt" DESC LIMIT 10000`;
     const operatorRows=await prisma.$queryRaw`
-      SELECT a."id",a."createdAt",a."eventType",a."details",a."actorId",a."operatorId",COALESCE(u."fullName",operator."displayName") AS "actorName",
+      SELECT a."companyId",a."id",a."createdAt",a."eventType",a."details",a."actorId",a."operatorId",COALESCE(u."fullName",operator."displayName") AS "actorName",
         s."name" AS "storeName",a."storeId"
       FROM "StoreOperatorAudit" a
       LEFT JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId"
-      LEFT JOIN "User" u ON u."id"=a."actorId"
+      LEFT JOIN "User" u ON u."id"=a."actorId" AND u."companyId"=a."companyId"
       LEFT JOIN "StoreOperatorCredential" operator ON operator."id"=COALESCE(a."operatorId",a."actorId") AND operator."companyId"=a."companyId" AND operator."storeId"=a."storeId"
       WHERE (${companyId}::text IS NULL OR a."companyId"=${companyId})
         AND a."eventType" IN (
@@ -255,11 +265,13 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           ,'DINING_AREA_CREATED','DINING_TABLE_CREATED','DINING_TABLE_UPDATED','TABLE_ORDER_SENT','TABLE_ORDER_ROUND_SENT','TABLE_PREPARATION_READY'
         )
         AND a."createdAt">=${from} AND a."createdAt"<${to}
+        AND (${timeFrom}::text IS NULL OR to_char((CASE WHEN pg_typeof(a."createdAt")::text='timestamp without time zone' THEN a."createdAt"::timestamp AT TIME ZONE 'UTC' ELSE a."createdAt"::timestamptz END) AT TIME ZONE 'Europe/Athens','HH24:MI')>=${timeFrom}) AND (${timeTo}::text IS NULL OR to_char((CASE WHEN pg_typeof(a."createdAt")::text='timestamp without time zone' THEN a."createdAt"::timestamp AT TIME ZONE 'UTC' ELSE a."createdAt"::timestamptz END) AT TIME ZONE 'Europe/Athens','HH24:MI')<=${timeTo})
         AND (${storeId}::text IS NULL OR a."storeId"=${storeId})
-        AND (${text}::text IS NULL OR COALESCE(a."eventType",'') ILIKE ${text} OR COALESCE(a."details"::text,'') ILIKE ${text})
+        AND (${text}::text IS NULL OR COALESCE(a."eventType",'') ILIKE ${text} OR COALESCE(a."details"::text,'') ILIKE ${text} OR COALESCE(u."fullName",operator."displayName",'') ILIKE ${text}
+          OR EXISTS (SELECT 1 FROM "Sale" sale JOIN "SaleLine" line ON line."saleId"=sale."id" LEFT JOIN "Product" product ON product."id"=line."productId" AND product."companyId"=sale."companyId" WHERE sale."id"=a."details"->>'saleId' AND sale."companyId"=a."companyId" AND sale."storeId"=a."storeId" AND (line."description" ILIKE ${text} OR product."sku" ILIKE ${text})))
       ORDER BY a."createdAt" DESC LIMIT 10000`;
     const stockRows=await prisma.$queryRaw`
-      SELECT m."id",m."createdAt",m."movementType",m."quantity",m."unitCost",m."sourceType",m."sourceId",m."note",m."createdByUserId" AS "actorId",
+      SELECT s."companyId",m."productId",m."id",m."createdAt",m."movementType",m."quantity",m."unitCost",m."sourceType",m."sourceId",m."note",m."createdByUserId" AS "actorId",
         p."name" AS "productName",p."sku",COALESCE(u."fullName",operator."displayName") AS "actorName",s."name" AS "storeName",s."id" AS "storeId"
       FROM "StockMovement" m
       JOIN "Store" s ON s."id"=m."storeId"
@@ -268,6 +280,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
       LEFT JOIN "StoreOperatorCredential" operator ON operator."id"=m."createdByUserId" AND operator."companyId"=s."companyId" AND operator."storeId"=m."storeId"
       WHERE (${companyId}::text IS NULL OR s."companyId"=${companyId})
         AND m."createdAt">=${from} AND m."createdAt"<${to}
+        AND (${timeFrom}::text IS NULL OR to_char((CASE WHEN pg_typeof(m."createdAt")::text='timestamp without time zone' THEN m."createdAt"::timestamp AT TIME ZONE 'UTC' ELSE m."createdAt"::timestamptz END) AT TIME ZONE 'Europe/Athens','HH24:MI')>=${timeFrom}) AND (${timeTo}::text IS NULL OR to_char((CASE WHEN pg_typeof(m."createdAt")::text='timestamp without time zone' THEN m."createdAt"::timestamp AT TIME ZONE 'UTC' ELSE m."createdAt"::timestamptz END) AT TIME ZONE 'Europe/Athens','HH24:MI')<=${timeTo})
         AND (${storeId}::text IS NULL OR m."storeId"=${storeId})
         AND (${text}::text IS NULL OR COALESCE(p."name",'') ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text} OR COALESCE(m."note",'') ILIKE ${text} OR COALESCE(m."movementType",'') ILIKE ${text})
       ORDER BY m."createdAt" DESC LIMIT 10000`;
@@ -308,7 +321,7 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
                 ?`ΕΠΙΛΟΓΗ ΔΙΚΑΙΟΥΧΟΥ ΕΚΠΤΩΣΗΣ · ${audienceLabel(details)||"Κανονική τιμή"}`
               :`${greekAuditEventLabel(r.actionType)}${details.productName?` · ${details.productName}`:""}${details.sku?` · SKU ${details.sku}`:""}${r.reason?` · ${r.reason}`:""}`;
       return {
-        id:r.id,createdAt:r.createdAt,eventType,amount,description,
+        companyId:r.companyId,saleId:r.saleId,id:r.id,createdAt:r.createdAt,eventType,amount,description,
         supplierId:null,supplierName:null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:r.actorName,subtractFromShift:false,
         reversedAt:null,reversedByName:null,reversalReason:r.reason||null,financialDetails:details,storeName:r.storeName,storeId:r.storeId,terminalPos:r.terminalPos,sourceType:"PosSaleActionAudit",paymentSource:"AUDIT_EVENT"
       };
@@ -343,13 +356,14 @@ router.get("/audit-events",requireManagement,async(req,res,next)=>{
           :r.eventType==="POS_SALE_COMPLETED"
             ?`ΟΛΟΚΛΗΡΩΣΗ ΠΩΛΗΣΗΣ · ${audienceLabel(details)||"Κανονική τιμή"} · ${details.paymentMethod||"—"} · ${n(details.total).toFixed(2)} €`
             :`${closed?"ΚΛΕΙΣΙΜΟ ΜΕ ΕΠΙΒΕΒΑΙΩΜΕΝΟ ΕΛΛΕΙΜΜΑ":"ΠΡΟΣΠΑΘΕΙΑ ΚΛΕΙΣΙΜΑΤΟΣ — ΠΡΟΤΑΘΗΚΕ ΕΠΑΝΑΚΑΤΑΜΕΤΡΗΣΗ"} · Αναμενόμενο ${n(details.expectedOperational).toFixed(2)} € · Καταμετρήθηκε ${n(details.declaredOperational).toFixed(2)} € · Συρτάρι ${n(declared.drawer).toFixed(2)} € · Φύλαξη ${n(declared.custody).toFixed(2)} € · Κέρματα ${n(declared.coins).toFixed(2)} €`);
-      return {id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:operatorLifecycle||diningDescription?0:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",financialDetails:safeLifecycleDetails||details,sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
+      return {companyId:r.companyId,id:r.id,createdAt:r.createdAt,eventType:r.eventType,amount:operatorLifecycle||diningDescription?0:eventAmount,description,supplierId:details.supplierId||null,supplierName:details.supplierName||null,shiftId:details.sessionId||null,actorId:r.actorId,actorName:details.actorName||r.actorName||r.actorId,subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:details.terminalPos||"BACKOFFICE",financialDetails:safeLifecycleDetails||details,sourceType:"StoreOperatorAudit",paymentSource:"AUDIT_EVENT"};
     });
-    const stockItems=stockRows.map(r=>{const quantity=n(r.quantity),eventType=r.movementType==="MANUAL_ADJUSTMENT"?"STOCK_MANUAL_ADJUSTMENT":`STOCK_${r.movementType}`;return {id:r.id,createdAt:r.createdAt,eventType,amount:null,description:`${r.note||greekAuditEventLabel(eventType)} · ${r.productName} · SKU ${r.sku||"—"} · ${quantity>=0?"IN":"OUT"} ${Math.abs(quantity)}`,supplierId:null,supplierName:null,shiftId:null,actorId:r.actorId,actorName:r.actorName||r.actorId||"—",subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:"BACKOFFICE",financialDetails:{productName:r.productName,sku:r.sku,quantity,unitCost:n(r.unitCost),movementType:r.movementType,sourceType:r.sourceType,sourceId:r.sourceId},sourceType:"StockMovement",paymentSource:"AUDIT_EVENT"}});
+    const stockItems=stockRows.map(r=>{const quantity=n(r.quantity),eventType=r.movementType==="MANUAL_ADJUSTMENT"?"STOCK_MANUAL_ADJUSTMENT":`STOCK_${r.movementType}`;return {companyId:r.companyId,productId:r.productId,id:r.id,createdAt:r.createdAt,eventType,amount:null,description:`${r.note||greekAuditEventLabel(eventType)} · ${r.productName} · SKU ${r.sku||"—"} · ${quantity>=0?"IN":"OUT"} ${Math.abs(quantity)}`,supplierId:null,supplierName:null,shiftId:null,actorId:r.actorId,actorName:r.actorName||r.actorId||"—",subtractFromShift:false,reversedAt:null,reversedByName:null,reversalReason:null,storeName:r.storeName,storeId:r.storeId,terminalPos:"BACKOFFICE",financialDetails:{productName:r.productName,sku:r.sku,quantity,unitCost:n(r.unitCost),movementType:r.movementType,sourceType:r.sourceType,sourceId:r.sourceId},sourceType:"StockMovement",paymentSource:"AUDIT_EVENT"}});
     const eventTypeQuery=String(eventType||"").toLocaleLowerCase("el-GR"),eventTypeMatches=row=>!eventTypeQuery||(row.eventType===eventType)||row.eventType.toLocaleLowerCase("el-GR").includes(eventTypeQuery)||greekAuditEventLabel(row.eventType).toLocaleLowerCase("el-GR").includes(eventTypeQuery),operatorQuery=String(operatorId||"").toLocaleLowerCase("el-GR"),operatorMatches=row=>!operatorQuery||(row.actorId===operatorId)||String(row.actorId||"").toLocaleLowerCase("el-GR").includes(operatorQuery)||String(row.actorName||"").toLocaleLowerCase("el-GR").includes(operatorQuery),terminalQuery=String(terminalPos||"").toUpperCase(),terminalMatches=row=>!terminalQuery||(row.terminalPos===terminalPos)||String(row.terminalPos||"").toUpperCase().includes(terminalQuery),inTime=row=>{const hhmm=new Date(row.createdAt).toLocaleTimeString("en-GB",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return(!timeFrom||hhmm>=timeFrom)&&(!timeTo||hhmm<=timeTo)},items=[...transactionItems,...actionItems,...operatorItems,...stockItems].filter(row=>inTime(row)&&operatorMatches(row)&&terminalMatches(row)&&eventTypeMatches(row)&&(amountMin===null||row.amount>=amountMin)&&(amountMax===null||row.amount<=amountMax)).map(row=>({...row,eventLabel:greekAuditEventLabel(row.eventType)})).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10000);
     const companies=superAdmin?await prisma.$queryRaw`SELECT c."id",c."name",owner."fullName" AS "ownerName" FROM "Company" c LEFT JOIN LATERAL (SELECT u."fullName" FROM "User" u WHERE u."companyId"=c."id" AND u."role"='OWNER' ORDER BY u."createdAt" ASC LIMIT 1) owner ON TRUE ORDER BY c."name"`:[];
     const stores=superAdmin?await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "active"=true AND (${companyId}::text IS NULL OR "companyId"=${companyId}) ORDER BY "name"`:[];
-    res.json({items,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement",videoAccessAllowed:await hasVideoAccess(req),superAdmin,selectedCompanyId:companyId||"",selectedStoreId:storeId||"",companies,stores});
+    const readableItems=(await enrichAuditSaleItems(prisma,items,{companyId,storeId})).map(auditReadableRecord);
+    res.json({items:readableItems,count:items.length,sourceOfTruth:"StoreTransaction + PosSaleActionAudit + StoreOperatorAudit + StockMovement",videoAccessAllowed:await hasVideoAccess(req),superAdmin,selectedCompanyId:companyId||"",selectedStoreId:storeId||"",companies,stores});
   }catch(error){next(error)}
 });
 
