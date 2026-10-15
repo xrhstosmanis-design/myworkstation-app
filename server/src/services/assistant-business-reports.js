@@ -3,7 +3,7 @@ export {businessQuestionPeriod} from './assistant-business-period.js';
 import {z} from 'zod';
 import {prisma} from '../prisma.js';
 import {salesReportCalendar} from './sales-report-calendar.js';
-import {businessDomains,businessMoneyDomains,currentBusinessDomains,assistantBusinessDomain,normalizeBusinessText} from '../../../shared/assistant-business.mjs';
+import {businessDomains,businessMoneyDomains,currentBusinessDomains,assistantBusinessDomain,normalizeBusinessText,businessQuestionParts} from '../../../shared/assistant-business.mjs';
 import {businessReportAnswer} from '../../../shared/assistant-business-answer.mjs';
 export {assistantBusinessDomain};
 export const businessArguments=z.object({domain:z.enum(Object.keys(businessDomains)),from:z.string().nullable(),to:z.string().nullable(),query:z.string().trim().max(120).nullable(),status:z.string().trim().max(30).nullable()}).strict().superRefine((a,c)=>{
@@ -23,9 +23,10 @@ export function businessQuestionClarification(question,{now=new Date()}={}){
 }
 export function directTransferRequest(question,{now=new Date()}={}){
  const domain=assistantBusinessDomain(question),period=businessQuestionPeriod(question,{now});if(!domain?.startsWith('TRANSFERS')||!period)return null;
- const lines=question.split('\n'),prefix='Προηγούμενο θέμα της ίδιας συνομιλίας: ';
- const topic=lines.find(l=>l.startsWith(prefix));
- const q=normalizeBusinessText(lines[0]+' '+(topic?topic.slice(prefix.length):'')).replace(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|[^α-ωa-z\s]/g,' ');
+ const parts=businessQuestionParts(question);
+ // Check all current/inherited text before taking the unfiltered shortcut.
+ // A later-line actor, status or other filter must remain in tool extraction.
+ const q=normalizeBusinessText([parts.current,parts.topic,parts.period].join(' ')).replace(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|[^α-ωa-z\s]/g,' ');
  const permitted=new Set('ελενξε ελεγξε δειξε δωσε βγαλε μου ποσες ποσους ποσα ποσο μεταφορα μεταφορες ποσου ειχαμε εγιναν εχουν γινει στον στην στο προς απο ιδιοκτητη ιδιοκτητης τον το την οι τις για εως μεχρι και σημερα χθες προχθες συνολο λιστα αναφορα αυτη αυτης αυτον αυτο αυτου τρεχουσα τρεχοντα τρεχοντος προηγουμενη προηγουμενο προηγουμενου προηγουμενης περασμενη περασμενο περασμενου περασμενης εβδομαδα εβδομαδας μηνα μηνας μηνο χρονια χρονο χρονου ετος ετους φετος περσι περυσι τελευταιες τελευταιων ημερες ημερων μερες μερων'.split(' '));
  return q.split(/\s+/).filter(Boolean).every(w=>permitted.has(w))?{domain,...period,query:null,status:null}:null;
 }
