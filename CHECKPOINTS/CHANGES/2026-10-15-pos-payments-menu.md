@@ -10,3 +10,7 @@ Owner `codex/pos-payments-menu-20261015`, branch `feat/pos-payments-menu-2026101
 
 Record before source as required by AGENTS. No live/LAB payment/upload/shift/stock/fiscal/permission action or accepted transaction replay for navigation. Required: initial/reopen menu, all existing destinations, rights/revocation, return and draft handling, busy/success/failure regressions, Node20 build/full PR-main CI/guarded exact healthy deployment. Actual signed-in physical appearance/touch acceptance remains NOT TESTED; source/CI never closes prior payment or device failures. Checkpoint `CHECKPOINTS/CHANGES/2026-10-15-pos-payments-menu.md`. Next: publish this independent claim green/main before source.
 
+
+## Actual parent POS navigation regression reconciliation
+
+First local full suite had one failure: existing operator-pos-live-access test expected old top-level «Πληρωμές προμηθευτών – Ετεροχρονισμένες» and immediate expense keypad. Updated that actual mounted POS test to enter the requested submenus, exercise bank-only navigation while third-party access is revoked, and retain amount7, same mounted modal, same-shift denial/restoration, supplier/payroll visibility and no financial POST assertions. The corrected whole actual-parent case PASS in Node20; no production behavior or permission assertion relaxed. Original 22 targeted cases remain PASS. Full local/native CI rerun pending; no new LAB/manual PASS.
