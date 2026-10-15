@@ -1,4 +1,10 @@
 {
+  "scope": "POS-PERMANENT-PRICE-01 scoped desktop LAB PASS; POS-PRICE-STARTUP-01 limited live startup PASS",
+  "owner": "codex/pos-permanent-price-20261015",
+  "saveRevision": "aafb68079ce5f53ffdd2433c76601d6bfa1c79a1",
+  "eventsRevision": "e203082bed781edcc6b8f1542a9521fabe01dcb8",
+  "eventsProof": "Actual canonical PlatformAdmin refreshed on exacte203082bed781edcc6b8f1542a9521fabe01dcb8; selected LABcompany/store,15Octfrom/to,11rows. At18:36Athens both existing18:11restore and18:09save rows now visibly show Μόνιμη αλλαγή τιμής, ΝΕΡΟ1,5LT/SKU2270, exactold/new, Δοκιμή, store, LABPOS2; financialtext repeats correctproduct/SKU/prices and amount0. No price re-save/replay. Screenshot events.jpg capturedonce/sameJPEG saved. Filter label/nativeinput operations had browser timeouts but reads confirmed selectedvalues and final11rows; no data write.",
+  "release": "ExactmainCI38760137548/build116509161555 SUCCESS2680/0/0+6backup/allrequired; ordinaryguard38760779877/job116511289751 SUCCESS. Renderdep-db8f30c9v7es738kaes0 LIVE18:31:56Athens; guardhealth18:32:11Athens and independent200/oktrue/exacte203082bed781edcc6b8f1542a9521fabe01dcb8.",
   "snapshots": [
     {
       "phase": "before-first-local-add",
@@ -962,5 +968,11 @@
       }
     }
   },
-  "eventsUi": "FAIL: production prepare allow-list removes event; readback pending bounded correction"
+  "screenshots": {
+    "ready": "price-ready.jpg",
+    "events": "events.jpg",
+    "priorLayoutFail": "preview-layout-fail.jpg",
+    "priorEventsFail": "events-build-filter-fail.jpg"
+  },
+  "limits": "Cloud Chrome only, no physical/mobile/offline/all-role acceptance. No sale/payment/stock/fiscal/shift action or replay. No live second-store row for target; base product retained. StoreProduct updatedAt hash changes expected."
 }
