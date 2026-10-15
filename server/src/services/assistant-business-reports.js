@@ -1,3 +1,5 @@
+import {businessQuestionPeriod,businessPeriodResolution} from './assistant-business-period.js';
+export {businessQuestionPeriod} from './assistant-business-period.js';
 import {z} from 'zod';
 import {prisma} from '../prisma.js';
 import {salesReportCalendar} from './sales-report-calendar.js';
@@ -9,21 +11,22 @@ export const businessArguments=z.object({domain:z.enum(Object.keys(businessDomai
  else try{if(typeof a.from!=='string'||typeof a.to!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(a.from)||!/^\d{4}-\d{2}-\d{2}$/.test(a.to))throw Error();salesReportCalendar(a.from,a.to)}catch{c.addIssue({code:'custom',message:'Δώσε έγκυρο διάστημα έως366 ημέρες.'});}
 });
 export const businessTool={type:'function',name:'business_records',strict:true,description:'Διαβάζει πραγματικές εγγραφές ΜΟΝΟ του επιλεγμένου εξουσιοδοτημένου καταστήματος: μεταφορές προς/από ιδιοκτήτη, πληρωμές προμηθευτών, λοιπά έξοδα, παραστατικά αγορών, συνεργαζόμενους προμηθευτές, βάρδιες ταμείων, τρέχον προσωπικό Workforce, συμβάντα POS και καταχωρημένες τραπεζικές κινήσεις. from/to συμπεριλαμβανόμενες ημερομηνίες Ελλάδας, έως366 ημέρες. Μόνο STAFF/SUPPLIERS απαιτούν from/to null (τρέχοντα στοιχεία). query ονομασία/χειριστής/αριθμός όπως ζητήθηκε, αλλιώς null. status ακριβής καταχωρημένη κατάσταση ή null. Δεν διαβάζει κλειδιά, PIN, εικόνες ή μισθούς. Δεν εκτελεί αλλαγές. Τραπεζικές κινήσεις δεν αποδεικνύουν τραπεζικό υπόλοιπο. Παραστατικά DRAFT δεν είναι οριστικοποιημένες αγορές.',parameters:{type:'object',additionalProperties:false,properties:{domain:{type:'string',enum:Object.keys(businessDomains)},from:{type:['string','null']},to:{type:['string','null']},query:{type:['string','null']},status:{type:['string','null']}},required:['domain','from','to','query','status']}};
-export const businessInstructions='Για μεταφορές ιδιοκτήτη, πληρωμές, έξοδα, αγορές/τιμολόγια, προμηθευτές, προσωπικό, βάρδιες ή συμβάντα χρησιμοποίησε business_records· ποτέ κλεισίματα cash_details ή BUSINESS_SNAPSHOT ως υποκατάστατο. Μεταφορά ΣΤΟΝ ιδιοκτήτη είναι TRANSFERS_TO_OWNER (TRANSFER_OUT), ΑΠΟ ιδιοκτήτη είναι TRANSFERS_FROM_OWNER. Χωρίς κατεύθυνση χρησιμοποίησε TRANSFERS και κράτησε εισφορές/αποδόσεις χωριστά. Διατήρησε περίοδο προηγούμενης ερώτησης όταν διευκρινίζεται μόνο το είδος. Έτος που λείπει είναι τρέχον έτος Ελλάδας. Χωρίς διάστημα ζήτησε ημερομηνίες. Τα σύνολα προέρχονται μόνο από την αναγνωσμένη πηγή. Τα παραστατικά διακρίνονται ανά κατάσταση· πρόχειρο δεν σημαίνει εγκεκριμένη αγορά. Βάρδιες εδώ είναι ταμείων, όχι πρόγραμμα προσωπικού. Προσωπικό/προμηθευτές είναι τρέχοντες επιλεγμένου καταστήματος. POS_EVENTS είναι μόνο καταχωρημένες ενέργειες POS, όχι κάθε συμβάν όλων των modules. Μην εμφανίζεις ονόματα εργαλείων, BUSINESS_SNAPSHOT ή τεχνικά πεδία. Για μη συνδεδεμένη πληροφορία εξήγησε ακριβώς τι λείπει, όχι άσχετα ποσά ή επινοημένα στοιχεία. ';
+export const businessInstructions='Για μεταφορές ιδιοκτήτη, πληρωμές, έξοδα, αγορές/τιμολόγια, προμηθευτές, προσωπικό, βάρδιες ή συμβάντα χρησιμοποίησε business_records· ποτέ κλεισίματα cash_details ή BUSINESS_SNAPSHOT ως υποκατάστατο. Μεταφορά ΣΤΟΝ ιδιοκτήτη είναι TRANSFERS_TO_OWNER (TRANSFER_OUT), ΑΠΟ ιδιοκτήτη είναι TRANSFERS_FROM_OWNER. Χωρίς κατεύθυνση χρησιμοποίησε TRANSFERS και κράτησε εισφορές/αποδόσεις χωριστά. Διατήρησε περίοδο προηγούμενης ερώτησης όταν διευκρινίζεται μόνο το είδος. Έτος που λείπει είναι τρέχον έτος Ελλάδας. Εβδομάδα αρχίζει Δευτέρα. Τρέχουσα εβδομάδα/μήνας/έτος και τελευταίες Ν ημέρες είναι έως σήμερα, προηγούμενες περίοδοι πλήρεις. Νεότερη περίοδος αντικαθιστά την παλιά. Ασαφής ή συγκριτική περίοδος ζητά διευκρίνιση, δεν μαντεύεται. Χωρίς διάστημα ζήτησε ημερομηνίες. Τα σύνολα προέρχονται μόνο από την αναγνωσμένη πηγή. Τα παραστατικά διακρίνονται ανά κατάσταση· πρόχειρο δεν σημαίνει εγκεκριμένη αγορά. Βάρδιες εδώ είναι ταμείων, όχι πρόγραμμα προσωπικού. Προσωπικό/προμηθευτές είναι τρέχοντες επιλεγμένου καταστήματος. POS_EVENTS είναι μόνο καταχωρημένες ενέργειες POS, όχι κάθε συμβάν όλων των modules. Μην εμφανίζεις ονόματα εργαλείων, BUSINESS_SNAPSHOT ή τεχνικά πεδία. Για μη συνδεδεμένη πληροφορία εξήγησε ακριβώς τι λείπει, όχι άσχετα ποσά ή επινοημένα στοιχεία. ';
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status})};
 const text=v=>typeof v==='string'?v.slice(0,250):null;
 const numeric=v=>v===null||v===undefined?null:Number.isFinite(Number(v))?Number(v):NaN;
 export const businessModule=domain=>['INVOICES','SUPPLIERS'].includes(domain)?'INVENTORY':domain==='STAFF'?null:'CASH_CONTROL';
 export function businessQuestionClarification(question,{now=new Date()}={}){
  const domain=assistantBusinessDomain(question);if(!domain||currentBusinessDomains.includes(domain))return null;
- const q=normalizeBusinessText(question),explicit=/\d{1,4}[-/]\d{1,2}|σημερα|χθες/.test(q);
- if(businessQuestionPeriod(question,{now})||!explicit&&/εβδομαδ|μην|φετος|περσι|περυσι/.test(q))return null;
+ if(businessPeriodResolution(question,{now}).period)return null;
  return {answer:'Δώσε έγκυρο διάστημα από–έως για αυτή την αναφορά, π.χ. «από 1/10/2026 έως σήμερα».',highlights:[],limitations:'Η αναφορά θα διαβάσει τις πραγματικές εγγραφές του επιλεγμένου καταστήματος.',sources:[]};
 }
 export function directTransferRequest(question,{now=new Date()}={}){
  const domain=assistantBusinessDomain(question),period=businessQuestionPeriod(question,{now});if(!domain?.startsWith('TRANSFERS')||!period)return null;
- const q=normalizeBusinessText(question.split('\n')[0]).replace(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|[^α-ωa-z\s]/g,' ');
- const permitted=new Set('ελενξε ελεγξε δειξε δωσε βγαλε μου ποσες ποσους ποσα ποσο μεταφορα μεταφορες ποσου ειχαμε εγιναν εχουν γινει στον στην στο προς απο ιδιοκτητη ιδιοκτητης τον το την οι τις για εως μεχρι και σημερα χθες προχθες συνολο λιστα αναφορα'.split(' '));
+ const lines=question.split('\n'),prefix='Προηγούμενο θέμα της ίδιας συνομιλίας: ';
+ const topic=lines.find(l=>l.startsWith(prefix));
+ const q=normalizeBusinessText(lines[0]+' '+(topic?topic.slice(prefix.length):'')).replace(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|[^α-ωa-z\s]/g,' ');
+ const permitted=new Set('ελενξε ελεγξε δειξε δωσε βγαλε μου ποσες ποσους ποσα ποσο μεταφορα μεταφορες ποσου ειχαμε εγιναν εχουν γινει στον στην στο προς απο ιδιοκτητη ιδιοκτητης τον το την οι τις για εως μεχρι και σημερα χθες προχθες συνολο λιστα αναφορα αυτη αυτης αυτον αυτο αυτου τρεχουσα τρεχοντα τρεχοντος προηγουμενη προηγουμενο προηγουμενου προηγουμενης περασμενη περασμενο περασμενου περασμενης εβδομαδα εβδομαδας μηνα μηνας μηνο χρονια χρονο χρονου ετος ετους φετος περσι περυσι τελευταιες τελευταιων ημερες ημερων μερες μερων'.split(' '));
  return q.split(/\s+/).filter(Boolean).every(w=>permitted.has(w))?{domain,...period,query:null,status:null}:null;
 }
 export function checkedBusinessAnswer(question,answer,evidence){
@@ -31,15 +34,6 @@ export function checkedBusinessAnswer(question,answer,evidence){
  const report=evidence.find(r=>r.kind==='business_records');
  if(report&&evidence.length===1)return businessReportAnswer(report);
  return report?answer:businessQuestionClarification(question)||{answer:'Δεν διαβάστηκε η σχετική αναφορά. Ζήτησε συγκεκριμένα μεταφορές ιδιοκτήτη, πληρωμές προμηθευτών, έξοδα, παραστατικά, προμηθευτές, προσωπικό Workforce, βάρδιες ταμείων, συμβάντα POS ή τραπεζικές κινήσεις με διάστημα.',highlights:[],sources:[],limitations:'Χωρίς ανάγνωση της σωστής πηγής δεν προκύπτει αποτέλεσμα ή συμπέρασμα ότι δεν υπάρχουν εγγραφές.'};
-}
-
-export function businessQuestionPeriod(question,{now=new Date()}={}){
- const q=normalizeBusinessText(question),today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Athens',year:'numeric',month:'2-digit',day:'2-digit'}).format(now),year=today.slice(0,4);
- const tokens=[...q.matchAll(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|προχθες|χθες|σημερα/g)].map(m=>m[0]);
- if(!tokens.length||tokens.length>2)return null;
- const dates=tokens.map(t=>{if(['σημερα','χθες','προχθες'].includes(t)){const d=new Date(today+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-(['σημερα','χθες','προχθες'].indexOf(t)));return d.toISOString().slice(0,10)}if(t.includes('/')){const[d,m,y]=t.split('/');return `${y?(y.length===2?'20'+y:y):year}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`}return t});
- if(dates.length===1&&/\bfrom\b|(?:^|\s)(?:απο|εως|μεχρι)\s/.test(q))return null;
- try{salesReportCalendar(dates[0],dates.at(-1));return {from:dates[0],to:dates.at(-1)}}catch{return null}
 }
 
 // Fixed parameterized SELECTs only. No bootstrap, mutation or model-controlled SQL.

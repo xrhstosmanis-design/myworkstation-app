@@ -1,4 +1,5 @@
 import {assistantBusinessDomain} from '../../../shared/assistant-business.mjs';
+import {isBusinessPeriodFollowup} from './assistant-business-period.js';
 import {z} from "zod";
 import {assistantSalesQuestion,salesOnlyQuestion} from "./assistant-question-intent.js";
 
@@ -12,7 +13,7 @@ const numericDates=new RegExp(numericDatePattern,"g");
 const relativeDays=/προχθες|χθες|σημερα|\b(?:today|yesterday)\b/g;
 export function assistantQuestionHasPeriod(question){
  const q=norm(question);
- return new RegExp(numericDatePattern).test(q)||/προχθες|χθες|σημερα|εβδομαδ|μηνα|μηνο|φετος|περσι|περυσι|ιανουαρ|φεβρουαρ|μαρτι|απριλ|μαιο|μαιου|ιουνι|ιουλι|αυγουστ|σεπτεμβρ|οκτωβρ|νοεμβρ|δεκεμβρ|\b(?:today|yesterday|week|month|year|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q);
+ return new RegExp(numericDatePattern).test(q)||/προχθες|χθες|σημερα|εβδομαδ|μηνα|μηνο|χρον|ετος|ημερες|ημερων|μερες|μερων|φετος|περσι|περυσι|ιανουαρ|φεβρουαρ|μαρτι|απριλ|μαιο|μαιου|ιουνι|ιουλι|αυγουστ|σεπτεμβρ|οκτωβρ|νοεμβρ|δεκεμβρ|\b(?:today|yesterday|week|month|year|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q);
 }
 const periodOnly=q=>assistantQuestionHasPeriod(q)&&!norm(q).replace(numericDates," ").replace(relativeDays," ").replace(/(^|\s)(?:απο|εως|μεχρι|για|στις|την|το|και|σε)(?=\s|$)/g," ").replace(/[\s.,;:!?–-]+/g,"").length;
 function lastSalesPeriod(history){
@@ -27,8 +28,26 @@ function lastSalesPeriod(history){
 export function assistantEffectiveQuestion(question,history=[]){
  const checked=assistantHistorySchema.parse(history),q=norm(question);
  const business=assistantBusinessDomain(question);
+ // Search user turns chronologically. A bare newer period supersedes the
+ // original topic's dates; unrelated reports end this topic's inheritance.
+ const users=checked.filter(m=>m.role==='user');
+ let topic=null,latestPeriod=null;
+ for(let i=users.length-1;i>=0;i--){
+  const m=users[i],d=assistantBusinessDomain(m.content);
+   if(d){
+    const prior=topic&&assistantBusinessDomain(topic.content);
+    if(prior&&d!==prior&&!(d.startsWith('TRANSFERS')&&prior.startsWith('TRANSFERS')))break;
+    topic??=m;latestPeriod??=assistantQuestionHasPeriod(m.content)?m.content:null;
+    if(latestPeriod)break;
+    continue;
+   }
+  if(isBusinessPeriodFollowup(m.content)){latestPeriod??=m.content;continue;}
+  if(assistantQuestionRequiresReport(m.content))break;
+ }
+ if(!business&&isBusinessPeriodFollowup(question)&&topic)return `${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${topic.content}`;
  if(business&&!assistantQuestionHasPeriod(question)){
   const compatible=d=>d===business||d?.startsWith('TRANSFERS')&&business.startsWith('TRANSFERS');
+  if(topic&&compatible(assistantBusinessDomain(topic.content))&&latestPeriod)return `${question}\nΠερίοδος της ίδιας αναζήτησης: ${latestPeriod}\nΧρησιμοποίησε μόνο την προηγούμενη περίοδο και το είδος της νέας ερώτησης στο ήδη επιλεγμένο κατάστημα.`;
   for(const m of [...checked].reverse().filter(m=>m.role==='user')){
    const prior=assistantBusinessDomain(m.content);
    if(prior&&!compatible(prior)||!prior&&assistantQuestionRequiresReport(m.content))break;
@@ -42,6 +61,7 @@ export function assistantEffectiveQuestion(question,history=[]){
  }
  if(domain(question)||!(/^(και|το ιδιο|τα ιδια|για χθες|χθες|σημερα|ανα |χωρισ|βγαλτα|σε |εξαγωγη)/.test(q)||/\b(excel|xlsx|csv|pdf|word|docx)\b/.test(q)||periodOnly(question)))return question;
  const previous=[...checked].reverse().find(m=>m.role==="user"&&assistantQuestionRequiresReport(m.content));
+ if(previous&&assistantBusinessDomain(previous.content)&&topic&&latestPeriod)return `${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${topic.content}\nΠερίοδος της ίδιας αναζήτησης: ${latestPeriod}`;
  const period=previous&&salesOnlyQuestion(previous.content)&&!assistantQuestionHasPeriod(question)?lastSalesPeriod(checked):null;
  return previous?`${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${previous.content}${period?`\nΗ νεότερη περίοδος αυτής της αναζήτησης είναι: ${period}\nΧρησιμοποίησε αυτή την περίοδο αντί οποιασδήποτε παλαιότερης.`:""}`:question;
 }
