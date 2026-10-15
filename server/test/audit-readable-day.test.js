@@ -49,6 +49,7 @@ test("native actual Events SQL applies Athens hours before cap, rejects foreign 
  const run=(timeFrom,timeTo)=>new Function("prisma","companyId","storeId","from","to","text","timeFrom","timeTo","return "+expression)(db,"c","s",new Date("2026-10-15T21:00Z"),new Date("2026-10-16T21:00Z"),null,timeFrom,timeTo);
  const rows=await run("08:00","08:59");assert.deepEqual(rows.map(x=>x.id),["wanted"]);assert.equal(rows[0].actorName,null);
  await db.$executeRawUnsafe('ALTER TABLE "StoreTransaction" ALTER "occurredAt" TYPE timestamp USING "occurredAt" AT TIME ZONE \'UTC\'');
+ await db.$disconnect(); // Reconnect after DDL changes the prepared SELECT result type.
  assert.deepEqual((await run("08:00","08:59")).map(x=>x.id),["wanted"]);
  const tz=await db.$queryRaw`SELECT to_char('2026-10-25T00:30Z'::timestamptz AT TIME ZONE 'Europe/Athens','HH24:MI') AS first,to_char('2026-10-25T01:30Z'::timestamptz AT TIME ZONE 'Europe/Athens','HH24:MI') AS second`;assert.equal(tz[0].first,"03:30");assert.equal(tz[0].second,"03:30");
  }finally{await f.close()}

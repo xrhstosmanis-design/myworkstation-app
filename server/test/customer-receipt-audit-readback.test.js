@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
+import {validateAuditTimes} from '../src/lib/audit-readable-records.js';
+import {greeceDateInput} from '../../shared/greece-time.mjs';
 import {athensCalendarStart} from '../src/lib/athens-calendar-start.js';
 
 test('Athens audit calendar bounds include post-midnight receipts and DST days',()=>{
@@ -20,12 +22,12 @@ test('actual Audit filters preserve tenant/store boundaries while using Athens d
   const start=s.indexOf('const auditFilters='),end=s.indexOf('\n\nfunction requireManagement',start);
   assert.ok(start>=0&&end>start);
   const fallback={from:new Date(0),to:new Date(1),storeId:'owned-store'};
-  const filters=new Function('athensCalendarStart','filters','isSuperAdmin',s.slice(start,end)+';return auditFilters;')(athensCalendarStart,()=>fallback,req=>req.user.role==='SUPER_ADMIN');
+  const filters=new Function('athensCalendarStart','filters','isSuperAdmin','validateAuditTimes','greeceDateInput',s.slice(start,end)+';return auditFilters;')(athensCalendarStart,()=>fallback,req=>req.user.role==='SUPER_ADMIN',validateAuditTimes,greeceDateInput);
   const user={companyId:'owned-company',role:'OWNER'},query={companyId:'foreign-company',from:'2026-10-12',to:'2026-10-12'};
   const own=filters({user,query});assert.equal(own.companyId,'owned-company');assert.equal(own.storeId,'owned-store');
   assert.equal(own.from.toISOString(),'2026-10-11T21:00:00.000Z');assert.equal(own.to.toISOString(),'2026-10-12T21:00:00.000Z');
   assert.equal(filters({user:{...user,role:'SUPER_ADMIN'},query}).companyId,'foreign-company');
-  assert.equal(filters({user,query:{}}).from,fallback.from);
+  assert.equal(filters({user,query:{}}).from.toISOString(),athensCalendarStart(greeceDateInput()).toISOString());
 });
 
 test('actual Audit receipt rows show CASH/CARD without changing legacy external expense labels',async()=>{

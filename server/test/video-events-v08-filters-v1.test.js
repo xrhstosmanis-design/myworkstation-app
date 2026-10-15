@@ -16,7 +16,7 @@ test("V08 supports date time operator POS event and amount filters",()=>{
 test("V08 exposes all filters in Events Audit including exact hour",()=>{
   assert.match(ui,/Ώρα από/);
   assert.match(ui,/Ώρα έως/);
-  assert.match(ui,/Χειριστής \/ ID/);
+  assert.match(ui,/Όνομα χειριστή/);
   assert.match(ui,/Ποσό από/);
   assert.match(ui,/data-video-filter/);
 });
