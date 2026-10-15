@@ -6,13 +6,25 @@ export const businessDomains={
 export const businessMoneyDomains=['TRANSFERS_TO_OWNER','TRANSFERS_FROM_OWNER','TRANSFERS','PAYMENTS','SUPPLIER_PAYMENTS','EXPENSES','BANK_MOVEMENTS'];
 export const currentBusinessDomains=['SUPPLIERS','STAFF'];
 export const normalizeBusinessText=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('el-GR').replace(/\s+/g,' ').trim();
+const topicPrefix='Προηγούμενο θέμα της ίδιας συνομιλίας: ';
+const periodPrefix='Περίοδος της ίδιας αναζήτησης: ';
+const periodInstruction='Χρησιμοποίησε μόνο την προηγούμενη περίοδο και το είδος της νέας ερώτησης στο ήδη επιλεγμένο κατάστημα.';
+// Keep every line of the current question. Generated history is a separate
+// hint about topic/period, never a source of permissions or financial values.
+export function businessQuestionParts(value){
+ const parts={current:[],topic:[],period:[]};let target='current';
+ for(const line of String(value??'').replace(/\r\n?/g,'\n').split('\n')){
+  if(line.startsWith(topicPrefix)){target='topic';parts.topic.push(line.slice(topicPrefix.length));}
+  else if(line.startsWith(periodPrefix)){target='period';parts.period.push(line.slice(periodPrefix.length));}
+  else if(line!==periodInstruction)parts[target].push(line);
+ }
+ return Object.fromEntries(Object.entries(parts).map(([key,lines])=>[key,lines.join(' ').replace(/\s+/g,' ').trim()]));
+}
 export function assistantBusinessDomain(value){
- const [first,...lines]=String(value??'').split('\n');
- const current=classifyBusinessDomain(first);
+ const parts=businessQuestionParts(value);
+ const current=classifyBusinessDomain(parts.current);
  if(current)return current;
- const prefix='Προηγούμενο θέμα της ίδιας συνομιλίας: ';
- const topic=lines.find(l=>l.startsWith(prefix));
- return topic?classifyBusinessDomain(topic.slice(prefix.length)):null;
+ return parts.topic?classifyBusinessDomain(parts.topic):null;
 }
 function classifyBusinessDomain(value){
  const q=normalizeBusinessText(value);

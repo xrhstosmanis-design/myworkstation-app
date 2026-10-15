@@ -5,6 +5,7 @@ import {assistantSalesQuestion,salesOnlyQuestion} from "./assistant-question-int
 
 export const assistantHistorySchema=z.array(z.object({role:z.enum(["user","assistant"]),content:z.string().trim().min(1).max(2000)}).strict()).max(10).default([]);
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").trim();
+const quoteBusinessContext=value=>String(value).replace(/\s+/g,' ').trim();
 const domain=q=>Boolean(assistantBusinessDomain(q))||assistantSalesQuestion(q)||/ιδιοκαταναλ|καταστροφ|πωλησ|ταμει|μετρητ|αποθεμ|στοκ|προσφορ|εκπτωσ/.test(norm(q));
 // This only detects a supplied period, never invents or validates report dates.
 // The canonical reader still validates the resolved calendar and date limits.
@@ -13,7 +14,7 @@ const numericDates=new RegExp(numericDatePattern,"g");
 const relativeDays=/προχθες|χθες|σημερα|\b(?:today|yesterday)\b/g;
 export function assistantQuestionHasPeriod(question){
  const q=norm(question);
- return new RegExp(numericDatePattern).test(q)||/προχθες|χθες|σημερα|εβδομαδ|μηνα|μηνο|χρον|ετος|ημερες|ημερων|μερες|μερων|φετος|περσι|περυσι|ιανουαρ|φεβρουαρ|μαρτι|απριλ|μαιο|μαιου|ιουνι|ιουλι|αυγουστ|σεπτεμβρ|οκτωβρ|νοεμβρ|δεκεμβρ|\b(?:today|yesterday|week|month|year|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q);
+ return /(?:^|\s)χρον(?:ο|ου|ια|ος)(?=\s|[.,;!?]|$)/.test(q)||new RegExp(numericDatePattern).test(q)||/προχθες|χθες|σημερα|εβδομαδ|μηνα|μηνο|ετος|ημερες|ημερων|μερες|μερων|φετος|περσι|περυσι|ιανουαρ|φεβρουαρ|μαρτι|απριλ|μαιο|μαιου|ιουνι|ιουλι|αυγουστ|σεπτεμβρ|οκτωβρ|νοεμβρ|δεκεμβρ|\b(?:today|yesterday|week|month|year|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q);
 }
 const periodOnly=q=>assistantQuestionHasPeriod(q)&&!norm(q).replace(numericDates," ").replace(relativeDays," ").replace(/(^|\s)(?:απο|εως|μεχρι|για|στις|την|το|και|σε)(?=\s|$)/g," ").replace(/[\s.,;:!?–-]+/g,"").length;
 function lastSalesPeriod(history){
@@ -44,14 +45,14 @@ export function assistantEffectiveQuestion(question,history=[]){
   if(isBusinessPeriodFollowup(m.content)){latestPeriod??=m.content;continue;}
   if(assistantQuestionRequiresReport(m.content))break;
  }
- if(!business&&isBusinessPeriodFollowup(question)&&topic)return `${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${topic.content}`;
+ if(!business&&isBusinessPeriodFollowup(question)&&topic)return `${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${quoteBusinessContext(topic.content)}`;
  if(business&&!assistantQuestionHasPeriod(question)){
   const compatible=d=>d===business||d?.startsWith('TRANSFERS')&&business.startsWith('TRANSFERS');
-  if(topic&&compatible(assistantBusinessDomain(topic.content))&&latestPeriod)return `${question}\nΠερίοδος της ίδιας αναζήτησης: ${latestPeriod}\nΧρησιμοποίησε μόνο την προηγούμενη περίοδο και το είδος της νέας ερώτησης στο ήδη επιλεγμένο κατάστημα.`;
+  if(topic&&compatible(assistantBusinessDomain(topic.content))&&latestPeriod)return `${question}\nΠερίοδος της ίδιας αναζήτησης: ${quoteBusinessContext(latestPeriod)}\nΧρησιμοποίησε μόνο την προηγούμενη περίοδο και το είδος της νέας ερώτησης στο ήδη επιλεγμένο κατάστημα.`;
   for(const m of [...checked].reverse().filter(m=>m.role==='user')){
    const prior=assistantBusinessDomain(m.content);
    if(prior&&!compatible(prior)||!prior&&assistantQuestionRequiresReport(m.content))break;
-   if(prior&&assistantQuestionHasPeriod(m.content))return `${question}\nΠερίοδος της ίδιας αναζήτησης: ${m.content}\nΧρησιμοποίησε μόνο την προηγούμενη περίοδο και το είδος της νέας ερώτησης στο ήδη επιλεγμένο κατάστημα.`;
+   if(prior&&assistantQuestionHasPeriod(m.content))return `${question}\nΠερίοδος της ίδιας αναζήτησης: ${quoteBusinessContext(m.content)}\nΧρησιμοποίησε μόνο την προηγούμενη περίοδο και το είδος της νέας ερώτησης στο ήδη επιλεγμένο κατάστημα.`;
   }
  }
 
@@ -61,7 +62,7 @@ export function assistantEffectiveQuestion(question,history=[]){
  }
  if(domain(question)||!(/^(και|το ιδιο|τα ιδια|για χθες|χθες|σημερα|ανα |χωρισ|βγαλτα|σε |εξαγωγη)/.test(q)||/\b(excel|xlsx|csv|pdf|word|docx)\b/.test(q)||periodOnly(question)))return question;
  const previous=[...checked].reverse().find(m=>m.role==="user"&&assistantQuestionRequiresReport(m.content));
- if(previous&&assistantBusinessDomain(previous.content)&&topic&&latestPeriod)return `${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${topic.content}\nΠερίοδος της ίδιας αναζήτησης: ${latestPeriod}`;
+ if(previous&&assistantBusinessDomain(previous.content)&&topic&&latestPeriod)return `${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${quoteBusinessContext(topic.content)}\nΠερίοδος της ίδιας αναζήτησης: ${quoteBusinessContext(latestPeriod)}`;
  const period=previous&&salesOnlyQuestion(previous.content)&&!assistantQuestionHasPeriod(question)?lastSalesPeriod(checked):null;
  return previous?`${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${previous.content}${period?`\nΗ νεότερη περίοδος αυτής της αναζήτησης είναι: ${period}\nΧρησιμοποίησε αυτή την περίοδο αντί οποιασδήποτε παλαιότερης.`:""}`:question;
 }
