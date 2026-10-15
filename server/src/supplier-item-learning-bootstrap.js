@@ -11,6 +11,7 @@ const statements=[
 `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "detectedBarcode" TEXT`,
 `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "resolutionStatus" TEXT NOT NULL DEFAULT 'MATCHED'`,
 `ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "ocrLineType" TEXT NOT NULL DEFAULT 'PRODUCT'`,
+`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`,
 `CREATE TABLE IF NOT EXISTS "SupplierProductMapping" (
   "id" TEXT NOT NULL,
   "companyId" TEXT NOT NULL,
@@ -82,6 +83,7 @@ const statements=[
    ORDER BY purchases."companyId",purchases."supplierId",purchases."productId",purchases.at DESC
  ) history
  JOIN "Product" p ON p."id"=history."productId" AND p."companyId"=history."companyId"
+  AND NOT EXISTS (SELECT 1 FROM "StoreOperatorAudit" ma WHERE ma."companyId"=p."companyId" AND ma."eventType"='INVENTORY_PRODUCT_MERGE' AND ma."details"->'sourceIds' ? p."id")
  JOIN "Supplier" s ON s."id"=history."supplierId" AND s."companyId"=history."companyId"
  ON CONFLICT ("companyId","supplierId","productId") DO UPDATE SET
    "supplierCode"=COALESCE(NULLIF(EXCLUDED."supplierCode",''),"SupplierProductLink"."supplierCode"),

@@ -1,3 +1,4 @@
+import {productCardVatOptions} from '../lib/product-card-vat.js';
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {z} from "zod";
@@ -75,7 +76,7 @@ router.get("/",async(req,res,next)=>{
     const total=Number(countRows[0]?.count||0);
 
     const rows=await prisma.$queryRaw`
-      SELECT p."id" AS "productId",p."sku",p."name",p."description",p."unit",p."vatRate",p."costPrice",p."active" AS "productActive",
+      SELECT p."id" AS "productId",p."sku",p."name",p."description",p."unit",p."vatRate",p."vatDepartmentId",vd."description" AS "vatDepartmentName",p."costPrice",p."active" AS "productActive",
         p."createdAt",p."updatedAt",p."eDeliveryEnabled",p."efoodEnabled",p."woltEnabled",p."publishStock",p."publishPrices",p."efoodPrice",p."woltPrice",
         c."name" AS "categoryName",COALESCE(sc."name",mp."subcategoryName") AS "subcategoryName",COALESCE(pc."name",mp."brandName") AS "brandName",
         sp."active" AS "storeActive",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",sp."minStock",(SELECT bs."bakedQuantity" FROM "StoreBakedBalance" bs WHERE bs."companyId"=p."companyId" AND bs."storeId"=sp."storeId" AND bs."productId"=p."id" AND bs."enabled"=TRUE) AS "bakedStock",
@@ -86,6 +87,7 @@ router.get("/",async(req,res,next)=>{
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId"
       LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId"
       LEFT JOIN "MasterProduct" mp ON mp."id"=p."masterProductId"
+      LEFT JOIN "ManagementVatDepartment" vd ON vd."id"=p."vatDepartmentId" AND vd."companyId"=${companyId}
       LEFT JOIN "ManagementProductCompany" pc ON pc."id"=p."productCompanyId" AND pc."companyId"=${companyId}
       LEFT JOIN LATERAL (
         SELECT pb0."barcode" FROM "ProductBarcode" pb0 WHERE pb0."productId"=p."id" ORDER BY pb0."createdAt",pb0."barcode" LIMIT 1
@@ -170,6 +172,7 @@ router.get("/",async(req,res,next)=>{
 
     res.json({store,page,pageSize,total,pages:Math.max(1,Math.ceil(total/pageSize)),items,
       categories:categories.map(r=>r.name),subcategories:subcategories.map(r=>r.name),
+      vatDepartments:await productCardVatOptions(prisma,companyId),
       taxonomy:{categories:taxonomyCategories,subcategories:taxonomySubcategories},
       totals:{retailStockValue:items.reduce((a,r)=>a+r.retailStockValue,0),costStockValue:items.reduce((a,r)=>a+r.costStockValue,0),stock:items.reduce((a,r)=>a+r.currentStock,0)}});
   }catch(error){next(error)}

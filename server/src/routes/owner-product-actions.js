@@ -1,3 +1,5 @@
+import {previewInventoryMerge,confirmInventoryMerge} from '../lib/inventory-product-merge.js';
+import {saveInventoryBulkCard} from '../lib/inventory-bulk-card.js';
 import {productCardVatOptions} from '../lib/product-card-vat.js';
 import {greeceRangeDate} from "../../../shared/greece-time.mjs";
 import crypto from "crypto";
@@ -15,6 +17,9 @@ const normalizeAudienceCard=value=>String(value||"").trim().toUpperCase().replac
 const audienceCardHash=value=>crypto.createHash("sha256").update(normalizeAudienceCard(value)).digest("hex");
 let audienceDiscountTablesReady=false;
 async function ensureAudienceDiscountTables(){if(audienceDiscountTablesReady)return;await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreProductAudienceDiscount" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"productId" TEXT NOT NULL,"audience" TEXT NOT NULL,"discountPercent" NUMERIC(6,2) NOT NULL,"active" BOOLEAN NOT NULL DEFAULT TRUE,"createdByUserId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE("storeId","productId","audience"),CHECK ("audience" IN ('DOCTOR','NURSE','STAFF','CUSTOMER')),CHECK ("discountPercent">=0 AND "discountPercent"<=100))`);await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreProductAudienceDiscount_lookup_idx" ON "StoreProductAudienceDiscount"("companyId","storeId","audience","productId")`);await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreProductAudienceDiscountAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"audience" TEXT NOT NULL,"discountPercent" NUMERIC(6,2) NOT NULL,"productIds" JSONB NOT NULL,"actorId" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);audienceDiscountTablesReady=true}
+
+router.post("/merge/preview",requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{res.json(await previewInventoryMerge(prisma,req.user,req.body))}catch(error){next(error)}});
+router.post("/merge/confirm",requireCompanyModule("INVENTORY"),async(req,res,next)=>{try{res.json(await confirmInventoryMerge(prisma,req.user,req.body))}catch(error){next(error)}});
 
 router.get("/new-card/options",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
@@ -51,21 +56,7 @@ router.post("/new",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
 });
 
 router.patch("/bulk-card",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{
-    const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const body=z.object({productIds:z.array(z.string().min(1)).min(1).max(500),categoryName:z.string().trim().max(160).optional(),vatRate:z.coerce.number().min(0).max(100).optional(),salePrice:z.coerce.number().min(0).optional(),active:z.boolean().optional(),trackStock:z.boolean().optional()}).parse(req.body||{});
-    const ids=[...new Set(body.productIds)];const found=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${company} AND "id"=ANY(${ids}::text[])`;if(found.length!==ids.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο προϊόν στην επιλογή."});
-    await prisma.$transaction(async tx=>{
-      let categoryId;if(body.categoryName!==undefined){categoryId=null;if(body.categoryName){const c=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=c[0]?.id||uid();if(!c[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}}
-      for(const id of ids){
-        if(body.categoryName!==undefined)await tx.$executeRaw`UPDATE "Product" SET "categoryId"=${categoryId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${id}`;
-        if(body.vatRate!==undefined)await tx.$executeRaw`UPDATE "Product" SET "vatRate"=${body.vatRate},"vatVerified"=true,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${id}`;
-        if(body.salePrice!==undefined){await tx.$executeRaw`UPDATE "Product" SET "salePrice"=${body.salePrice},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${id}`;await tx.$executeRaw`UPDATE "StoreProduct" SET "salePrice"=${body.salePrice},"updatedAt"=CURRENT_TIMESTAMP WHERE "productId"=${id}`}
-        if(body.active!==undefined)await tx.$executeRaw`UPDATE "Product" SET "active"=${body.active},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${id}`;
-        if(body.trackStock!==undefined)await tx.$executeRaw`UPDATE "Product" SET "trackStock"=${body.trackStock},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${id}`;
-      }
-    });res.json({ok:true,changed:ids.length});
-  }catch(error){next(error)}
+ try{res.json(await saveInventoryBulkCard(prisma,req.user,req.body))}catch(error){next(error)}
 });
 
 router.get("/audience-discount-audit",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
