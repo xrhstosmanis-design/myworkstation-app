@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import {z} from 'zod';
+import {registerPermanentPriceRoutes} from '../src/lib/pos-permanent-price.js';
 import {createPosScanCatalog} from '../../client/src/utils/pos-scanner.js';
 
 // Register the actual catalog handlers and their store/operator middleware.
@@ -10,7 +11,7 @@ function handlers(prisma){
   const routes=new Map(),middleware=[];
   const Router=()=>({get:(path,...fns)=>routes.set(path,fns),post(){},put(){},delete(){},use:(path,fn)=>middleware.push(fn)});
   const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','');
-  new Function('Router','prisma','z','crypto',source)(Router,prisma,z,crypto);
+  new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes);
   const older=fs.readFileSync(new URL('../src/routes/store-pos.js',import.meta.url),'utf8');
   const start=older.indexOf('router.get("/stores/:storeId",');
   const end=older.indexOf('\n',start);
@@ -99,3 +100,4 @@ test('actual catalog SQL in isolated PostgreSQL preserves complete membership, a
     assert.deepEqual(await tx.$queryRawUnsafe('SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"'),before);
   },{timeout:45000})}finally{await db.$disconnect()}
 });
+

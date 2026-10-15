@@ -52,7 +52,7 @@ test('native PG permanent price is atomic, idempotent and store scoped; stale/de
     await db.$executeRaw`INSERT INTO "StoreOperatorProfile" VALUES('company','store','employee','{"changeRetail":true}',true)`;
     await db.$executeRaw`INSERT INTO "StoreOperatorCredential" VALUES('operator','company','store','employee',true)`;
     await db.$executeRaw`INSERT INTO "StockMovement" VALUES('prior',-1)`;await db.$executeRaw`INSERT INTO "StoreTransaction" VALUES('prior',0.5)`;
-    const controls=async()=>JSON.stringify(await Promise.all([db.$queryRaw`SELECT * FROM "StockMovement"`,db.$queryRaw`SELECT * FROM "StoreTransaction"`,db.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"`,db.$queryRaw`SELECT "salePrice" FROM "Product"`,db.$queryRaw`SELECT * FROM "StoreProduct" WHERE "storeId"!='store' ORDER BY "storeId"`]));
+    const controls=async()=>JSON.stringify(await Promise.all([db.$queryRaw`SELECT * FROM "StockMovement"`,db.$queryRaw`SELECT * FROM "StoreTransaction"`,db.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"`,db.$queryRaw`SELECT "id","salePrice" FROM "Product" ORDER BY "id"`,db.$queryRaw`SELECT * FROM "StoreProduct" WHERE "storeId"!='store' ORDER BY "storeId"`]));
     const before=await controls(),options={ensureAudit:async()=>{},terminal:async()=>'MAIN'};
     const call=body=>savePermanentPrice(db,req(body),store,access,options);
     const payload=input(),results=await Promise.all(Array.from({length:4},()=>call(payload)));
