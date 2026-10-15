@@ -18,3 +18,7 @@ First local full suite had one failure: existing operator-pos-live-access test e
 ## Final local navigation/lifecycle evidence
 
 Corrected full Node20 suite2690tests:2625PASS/0FAIL/65isolated-infrastructure SKIP. Navigation review then identified the need to preserve visible live supplier camera state while keeping drafts mounted. Return now asks for camera closure before menu, and late video activation reveals its section. Final actual menu/payroll/parent/QR/completion14PASS/0FAIL/0SKIP includes live and delayed camera navigation guards; no child camera handler, financial block or API changed. Full final native CI/build remains required.
+
+## Combined-source synchronization before merge
+
+PR source567948d0/fullCI38800404527 SUCCESS. Main then received independent Inventory24h source779e397e, causing tracker PDF conflicts. Preserve all Inventory source/manual/checklist evidence, regenerate only shared tracker PDFs from auto-merged canonical Markdown, keep Payments runtime/tests byte-identical and run full combined-source PR CI before merge. No production/LAB transaction or repeated accepted action.

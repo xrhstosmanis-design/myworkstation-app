@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {lockActiveSaleProducts} from '../src/lib/inventory-sale-product-lock.js';
 import {randomUUID} from 'node:crypto';
 import {saveInventoryBulkCard,bulkCardPrice} from '../src/lib/inventory-bulk-card.js';
 import {previewInventoryMerge,confirmInventoryMerge} from '../src/lib/inventory-product-merge.js';
@@ -10,6 +11,7 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  try{
  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
  const tables={
+ StocktakeLine:'"id" text,"stocktakeId" text,"productId" text',OnlineOrderLine:'"id" text,"orderId" text,"productId" text',TableOrderLine:'"id" text,"orderId" text,"productId" text',RbsCapDriverV1Request:'"id" text,"companyId" text,"storeId" text,"status" text,"checkoutJson" jsonb',
  Store:'"id" text primary key,"companyId" text,"active" bool',
  Product:'"id" text primary key,"companyId" text,"name" text,"sku" text,"unit" text default \'PIECE\',"salePrice" numeric default 2,"costPrice" numeric default 1,"categoryId" text,"subcategoryId" text,"vatDepartmentId" text default \'dep\',"vatRate" numeric default 13,"vatVerified" bool default true,"trackStock" bool default true,"active" bool default true,"isSet" bool default false,"isRecipe" bool default false,"eDeliveryEnabled" bool default false,"efoodEnabled" bool default false,"woltEnabled" bool default false,"updatedAt" timestamp default NOW()',
  StoreProduct:'"storeId" text,"productId" text,"salePrice" numeric,"currentStock" numeric default 0,"active" bool default true,"updatedAt" timestamp default NOW(),primary key("storeId","productId")',
@@ -50,10 +52,35 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  const choice={storeId:'A',productIds:['p1','p2','p3','p4'],targetId:'p1'};
  assert.ok((await previewInventoryMerge(db,user,{...choice,productIds:['p1','shared']})).blockers.some(b=>b.includes('άλλο κατάστημα')));
  await db.$executeRaw`INSERT INTO "CashShiftSession" VALUES ('shift','co','A','OPEN')`;
- assert.ok((await previewInventoryMerge(db,user,choice)).blockers.some(b=>b.includes('βάρδιες')));
- await db.$executeRaw`DELETE FROM "CashShiftSession"`;
+ assert.deepEqual((await previewInventoryMerge(db,user,choice)).blockers,[],'an open24h shift must not block merge');
+ // Open unrelated work must not prevent merging selected cards.
+ for(const [parent,line,key] of [['OnlineOrder','OnlineOrderLine','orderId'],['TableOrder','TableOrderLine','orderId'],['Stocktake','StocktakeLine','stocktakeId']]){
+  const status=parent==='Stocktake'?'DRAFT':'OPEN';
+  await db.$executeRawUnsafe(`INSERT INTO "${parent}" VALUES ('unrelated','co','A','${status}')`);
+  await db.$executeRawUnsafe(`INSERT INTO "${line}" VALUES ('unrelated-line','unrelated','control')`);
+  assert.deepEqual((await previewInventoryMerge(db,user,choice)).blockers,[]);
+  await db.$executeRawUnsafe(`UPDATE "${line}" SET "productId"='p2'`);
+  assert.equal((await previewInventoryMerge(db,user,choice)).blockers.length,1);
+  await db.$executeRawUnsafe(`UPDATE "${line}" SET "productId"='control'`);
+ }
+ for(const status of ['PREPARED','CLAIMED','DISPATCHED','OPERATOR_CONFIRMED','REQUIRES_CHECK']){
+  await db.$executeRaw`INSERT INTO "RbsCapDriverV1Request" VALUES ('pending','co','A',${status},${JSON.stringify({items:[{productId:'p2'}]})}::jsonb)`;
+  assert.ok((await previewInventoryMerge(db,user,choice)).blockers.some(b=>b.includes('πληρωμή')));
+  await db.$executeRaw`DELETE FROM "RbsCapDriverV1Request"`;
+ }
+ await db.$executeRaw`INSERT INTO "RbsCapDriverV1Request" VALUES ('done','co','A','SALE_COMMITTED','{"items":[{"productId":"p2"}]}'),('unrelated','co','A','DISPATCHED','{"resolvedItems":[{"productId":"control"}]}')`;
+ await assert.rejects(db.$transaction(tx=>lockActiveSaleProducts(tx,{companyId:'foreign',storeId:'A',productIds:['p2']})),/καρτέλα/);
+
  const p=await previewInventoryMerge(db,user,choice);assert.deepEqual(p.blockers,[]);assert.equal(p.combinedStock,3);assert.equal(p.barcodes.length,3);
  const input={...choice,requestId:randomUUID(),previewHash:p.previewHash,confirm:true,reason:'Same item verified'};
+ let releaseSale,lockedSale;const release=new Promise(r=>releaseSale=r),locked=new Promise(r=>lockedSale=r);
+ const concurrentSale=db.$transaction(async tx=>{await lockActiveSaleProducts(tx,{companyId:'co',storeId:'A',productIds:['p2']});await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"="currentStock"-1,"updatedAt"=NOW() WHERE "storeId"='A' AND "productId"='p2'`;lockedSale();await release;},{timeout:15000});
+ await locked;
+ const duringSale=confirmInventoryMerge(db,user,input);const saleConflict=assert.rejects(duringSale,/άλλαξαν/);
+ releaseSale();await concurrentSale;await saleConflict;
+ assert.equal((await db.$queryRaw`SELECT "active" FROM "Product" WHERE "id"='p2'`)[0].active,true);
+ await db.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=3 WHERE "storeId"='A' AND "productId"='p2'`;
+
  await db.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=2 WHERE "storeId"='A' AND "productId"='p3'`;
  await assert.rejects(confirmInventoryMerge(db,user,input),/άλλαξαν/);
  input.previewHash=(await previewInventoryMerge(db,user,choice)).previewHash;
@@ -67,6 +94,10 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  await db.$executeRawUnsafe('DROP TRIGGER fail_merge ON "StoreOperatorAudit"');
  const results=await Promise.all([confirmInventoryMerge(db,user,input),confirmInventoryMerge(db,user,input)]);assert.ok(results.every(r=>r.ok));assert.equal(results.filter(r=>r.idempotent).length,1);
  assert.equal((await confirmInventoryMerge(db,user,input)).idempotent,true);
+ await assert.rejects(db.$transaction(tx=>lockActiveSaleProducts(tx,{companyId:'co',storeId:'A',productIds:['p2']})),/συγχωνεύτηκε/);
+ await db.$transaction(tx=>lockActiveSaleProducts(tx,{companyId:'co',storeId:'A',productIds:['p1']}));
+ assert.equal((await db.$queryRaw`SELECT "status" FROM "CashShiftSession" WHERE "id"='shift'`)[0].status,'OPEN');
+
  const stocks=await db.$queryRaw`SELECT "productId","currentStock","active" FROM "StoreProduct" WHERE "storeId"='A' AND "productId" IN ('p1','p2','p3','p4') ORDER BY "productId"`;
  assert.deepEqual(stocks.map(r=>Number(r.currentStock)),[4,0,0,0]);assert.deepEqual(stocks.map(r=>r.active),[true,false,false,false]);
  assert.equal((await db.$queryRaw`SELECT "id" FROM "Product"`).length,6);

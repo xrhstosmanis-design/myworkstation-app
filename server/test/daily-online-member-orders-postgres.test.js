@@ -1,3 +1,4 @@
+import {lockActiveSaleProducts} from '../src/lib/inventory-sale-product-lock.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -42,7 +43,7 @@ test('native public handlers enforce pending approval, tenant and current pricin
   await ensureOnlineMemberSchema(db);
   const routes=new Map(),router={post(paths,handler){for(const path of paths)routes.set(`POST ${path}`,handler)},get(paths,handler){for(const path of paths)routes.set(`GET ${path}`,handler)}};
   let source=await readFile(new URL('../src/routes/kat-online-ordering-modifiers.js',import.meta.url),'utf8');source=source.slice(0,source.indexOf('router.get("/backoffice-managed/stores"')).replace(/^import .*;\r?\n/gm,'').replace(/export function /g,'function ');
-  const deps={policyAvailable,ensureStoreBakingSchema:async()=>{},registerOnlineMember,createRegistrationLimiter,memberDiscountPercent,normalizeMemberPhone,assertCustomerDemoRuntimeClosed(){},Router:()=>router,crypto,bcrypt,jwt,z,prisma:db,auth(){},companyModuleState:async()=>({licenseAllowed,activeModules:['ONLINE_ORDERING']}),effectiveModuleEnabled:active=>active,ensureKatOnlineOrderingSchema:async()=>{},getOnlineOrderingConfig:async()=>cfg,onlineSurchargeAmount,onlineUnitPrice};
+  const deps={lockActiveSaleProducts,policyAvailable,ensureStoreBakingSchema:async()=>{},registerOnlineMember,createRegistrationLimiter,memberDiscountPercent,normalizeMemberPhone,assertCustomerDemoRuntimeClosed(){},Router:()=>router,crypto,bcrypt,jwt,z,prisma:db,auth(){},companyModuleState:async()=>({licenseAllowed,activeModules:['ONLINE_ORDERING']}),effectiveModuleEnabled:active=>active,ensureKatOnlineOrderingSchema:async()=>{},getOnlineOrderingConfig:async()=>cfg,onlineSurchargeAmount,onlineUnitPrice};
   new Function(...Object.keys(deps),source)(...Object.values(deps));
   const invoke=async(method,path,body={},token='',slug='daily')=>{const out={status:200};const res={status(v){out.status=v;return this},json(v){out.body=v;return this}};await routes.get(`${method} /:publicSlug/${path}`)({params:{publicSlug:slug},body,headers:token?{authorization:`Bearer ${token}`}:{},ip:'fictional'},res,error=>{out.status=error.status||500;out.error=error});return out};
   const registration={fullName:'Εικονικός Χρήστης',phone:'6900000001',pin:'123456',pinConfirmation:'123456',memberType:'STAFF'};

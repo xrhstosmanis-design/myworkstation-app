@@ -1,3 +1,4 @@
+import {lockActiveSaleProducts} from "../lib/inventory-sale-product-lock.js";
 import {policyAvailable,ensureStoreBakingSchema} from "../store-baking.js";
 import {registerOnlineMember,createRegistrationLimiter,memberDiscountPercent,normalizeMemberPhone} from "../online-members.js";
 import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
@@ -138,10 +139,11 @@ router.post(["/orders-with-modifiers","/:publicSlug/orders-with-modifiers"],safe
     createStage="SERIAL";
     const serialRow=(await tx.$queryRaw`SELECT COALESCE(MAX(CASE WHEN "orderNumber" ~ ${`^${prefix}-[0-9]+$`} THEN split_part("orderNumber",'-',2)::int ELSE 0 END),0)::int AS value FROM "OnlineOrder" WHERE "storeId"=${store.id}`)[0];
     const serial=Number(serialRow?.value||0)+1;orderNumber=`${prefix}-${String(serial).padStart(3,"0")}`;
+await lockActiveSaleProducts(tx,{companyId:store.companyId,storeId:store.id,productIds:lines.map(line=>line.productId)});
     createStage="ORDER";await tx.$executeRaw`INSERT INTO "OnlineOrder" ("id","companyId","storeId","orderNumber","channel","fulfillmentType","status","paymentMethod","customerName","customerPhone","building","floor","department","room","deliveryNotes","subtotal","deliveryFee","total","idempotencyKey") VALUES (${id},${store.companyId},${store.id},${orderNumber},${body.fulfillmentType==="DELIVERY"?"ONLINE_DELIVERY":"ONLINE"},${body.fulfillmentType},'NEW',${body.paymentMethod},${body.customerName},${body.customerPhone},${body.building||null},${body.floor||null},${body.department||null},${body.room||null},${body.deliveryNotes||null},${subtotal},${deliveryFee},${total},${body.idempotencyKey})`;
     createStage="LINES";for(const row of lines)await tx.$executeRaw`INSERT INTO "OnlineOrderLine" ("id","orderId","productId","productName","quantity","storeUnitPrice","onlineSurcharge","onlineUnitPrice","lineTotal","modifiersJson") VALUES (${crypto.randomUUID()},${id},${row.productId},${row.productName},${row.quantity},${row.storeUnitPrice},${row.onlineSurcharge},${row.onlineUnitPrice},${row.lineTotal},${JSON.stringify(row.modifiers)}::jsonb)`;
     createStage="EVENT";await tx.$executeRaw`INSERT INTO "OnlineOrderStatusEvent" ("id","orderId","toStatus","note") VALUES (${crypto.randomUUID()},${id},'NEW','Online order submitted with authoritative modifiers')`;
-  })}catch(error){const safeError=new Error(`Η καταχώριση online παραγγελίας απέτυχε στο στάδιο ${createStage}.`);safeError.status=500;safeError.code=`ONLINE_ORDER_${createStage}`;safeError.cause=error;throw safeError}
+  })}catch(error){if(error.code==='PRODUCT_CARD_CHANGED')throw error;const safeError=new Error(`Η καταχώριση online παραγγελίας απέτυχε στο στάδιο ${createStage}.`);safeError.status=500;safeError.code=`ONLINE_ORDER_${createStage}`;safeError.cause=error;throw safeError}
   res.status(201).json({ok:true,order:{id,orderNumber,status:"NEW",fulfillmentType:body.fulfillmentType,paymentMethod:body.paymentMethod,subtotal,deliveryFee,total}});
 }));
 
