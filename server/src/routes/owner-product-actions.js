@@ -1,3 +1,4 @@
+import {productCardVatOptions} from '../lib/product-card-vat.js';
 import {greeceRangeDate} from "../../../shared/greece-time.mjs";
 import crypto from "crypto";
 import {Router} from "express";
@@ -22,7 +23,8 @@ router.get("/new-card/options",requireCompanyModule("INVENTORY"),async(req,res,n
     if(!await prisma.store.findFirst({where:{id:storeId,companyId:company,active:true},select:{id:true}}))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     const suppliers=await prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`;
     const brands=await prisma.$queryRaw`SELECT "id","name" FROM "ManagementProductCompany" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`;
-    res.json({suppliers,brands});
+    const vatDepartments=await productCardVatOptions(prisma,company);
+    res.json({suppliers,brands,vatDepartments});
   }catch(error){next(error)}
 });
 router.post("/new-card",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
