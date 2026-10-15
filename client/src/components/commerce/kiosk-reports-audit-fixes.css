@@ -4,3 +4,23 @@
 .kr-table.is-dragging{cursor:grabbing;user-select:none}
 /* Show the complete saved description/reason, including its original line breaks. */
 .kr-table.audit-events .kr-row:not(.kr-head)>span:nth-child(4),.kr-table.audit-events .kr-row:not(.kr-head)>span:nth-child(5){white-space:pre-wrap;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.5;user-select:text}
+
+/* Readable Events only: preserve other reports and the saved audit evidence. */
+.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-table.audit-events .kr-row>span{font-size:16px!important;line-height:1.5;white-space:pre-wrap!important;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;user-select:text}
+.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-table.audit-events .kr-row{min-height:76px;align-items:start}
+.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-table.audit-events .kr-head{min-height:48px;align-items:center}
+.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-table.audit-events small{font-size:16px!important;white-space:pre-wrap;line-height:1.5}
+.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-table.audit-events strong{font-size:18px}
+.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-audit-group>summary{min-height:52px;font-size:18px;padding:8px 14px}
+.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-audit-group>summary strong{font-size:21px}
+.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-filter label{font-size:15px!important}
+.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-filter input,.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-filter select,.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-filter button{font-size:16px!important;min-height:46px}
+.kiosk-reports-suite[data-audit-tab="audit-events"] .kr-filter>div{flex-wrap:wrap;row-gap:10px}
+.kr-audit-technical summary{font-size:16px;cursor:pointer;min-height:42px}
+.kr-audit-technical div{font-size:13px;overflow-wrap:anywhere;padding-top:8px}
+.platform-events-dialog .platform-events-table td,.platform-events-dialog .platform-events-table th,.platform-events-dialog .platform-events-table small{font-size:16px!important;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.platform-events-dialog .platform-events-table td{padding:12px}
+.platform-events-dialog .platform-events-table details{margin-top:8px}
+.platform-events-dialog .platform-events-table details p{font-size:13px}
+.platform-events-dialog .sa-filters label{font-size:15px}
+.platform-events-dialog .sa-filters input,.platform-events-dialog .sa-filters select{font-size:16px;min-height:46px}
