@@ -1,0 +1,28 @@
+{
+  "scope": "LIMITED LIVE UI ONLY",
+  "role": "SUPER_ADMIN",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "companyId": "cmtpopbgk000prhb5qc60zxus",
+  "revision": "3b27d4b3a8cc37be828abccf43d357982bae6ccd",
+  "guardRun": 38814594528,
+  "guardJob": 116696089043,
+  "exactHealthAt": "2026-10-15T22:08:16Z",
+  "observedAtAthens": "2026-10-16T01:09",
+  "rowsInitially": 1,
+  "rowsAfterAdds": 5,
+  "invalidEmailValidity": false,
+  "typeMismatch": true,
+  "rowsAfterRemoval": 4,
+  "rowsAfterReadd": 5,
+  "otherStoreRows": 1,
+  "reopenedLabRows": 1,
+  "reopenedValues": [
+    ""
+  ],
+  "saveSubmitted": false,
+  "emailSent": false,
+  "actualNewFormPersistence": "NOT TESTED",
+  "automaticDelivery": "NOT IMPLEMENTED",
+  "financialDeltas": "NOT MEASURED / no business test action",
+  "screenshot": "inspected internally; no contact-containing image published"
+}
