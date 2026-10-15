@@ -1,3 +1,6 @@
+
+Read-only opening follow-up: fullCI38800901848 completed SUCCESS on863810e9d3b87fca87ab032bb885c0f2ad6e1e26. Registered inbox navigation now explicitly skips the editable-only OCR-total repair POST and opens the existing detail GET; ordinary draft opening retains its previous behavior. Actual openOrder API-spy regression and mounted navigation expectation pass locally (7PASS/0FAIL/4nativeSKIP for the selected three files). This final navigation adjustment requires fresh CI before release; no live business operation performed.
+
 ## 2026-10-15 23:12:57 Europe/Athens — INBOX-CONSISTENCY-01 / IMPLEMENTED / AWAITING FULL CI + HOSTED ACCEPTANCE
 
 Owner codex/inbox-consistency-20261015 retained. ClaimPR2518/head0aecf7aeb037e2e3a6b1a0a6df8b5da5f1d289f7/docsCI38797724144 SUCCESS merged31b51fa4 before source. Freshsourcebase8e89931ba3b3f26eee6e458fa17aa0cf4f0d8ad4 preserves concurrent inventory/other owners; touched source blobs unchanged since claim. New user FAIL and precise limits remain authoritative, not a broad invoice/OCR PASS.

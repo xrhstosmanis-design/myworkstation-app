@@ -27,7 +27,7 @@ test('mounted inbox defaults to pending, labels registered truthfully, opens exi
   assert.match(article.textContent,/Τιμολογημένο \/ καταχωρισμένο/);assert.doesNotMatch(article.textContent,/old ΠΡΟΣ ΕΛΕΓΧΟ/);
   assert.equal([...article.querySelectorAll('button')].some(b=>/Διαγραφή|Επανεπεξεργασία|Έλεγχος από βοηθό/.test(b.textContent)),false);
   let opened;document.addEventListener('purchase-orders:open',e=>opened=e.detail,{once:true});
-  await f.click(button('Άνοιγμα καταχωρισμένου τιμολογίου'));assert.deepEqual(opened,{orderId:'existing',storeId:'s'});
+  await f.click(button('Άνοιγμα καταχωρισμένου τιμολογίου'));assert.deepEqual(opened,{orderId:'existing',storeId:'s',readOnly:true});
   assert.equal(calls.some(p=>/reprocess|original|reconcile|sync/.test(p)),false);
  }finally{await f.close()}
 });

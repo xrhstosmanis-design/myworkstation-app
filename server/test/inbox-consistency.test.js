@@ -105,3 +105,15 @@ test('native inbox business status follows exact scoped order despite stale AI/i
   assert.equal(await f.snapshot(),before);
  }finally{await f.close()}
 });
+
+test('registered invoice opening uses only the existing detail GET; ordinary draft opening retains OCR reconciliation',async()=>{
+ const source=await readFile(new URL('../../client/src/components/commerce/installPurchaseOrdersSuite.js',import.meta.url),'utf8');
+ const line=source.split('\n').find(l=>l.startsWith('async function openOrder('));assert.ok(line);
+ const calls=[],shown=[],state={storeId:'s'};
+ const api=async(path,options={})=>{calls.push({path,options});return {order:{id:'registered',status:'INVOICED'}}};
+ const open=new Function('api','state','showOrder','notify',line+';return openOrder')(api,state,(...args)=>shown.push(args),e=>{throw Error(String(e))});
+ await open({isConnected:true},'registered','',null,false,true);
+ assert.equal(calls.length,1);assert.equal(calls[0].path,'/api/purchase-orders/registered/detail');assert.equal(calls[0].options.method,undefined);assert.equal(shown.length,1);
+ calls.length=0;await open({isConnected:true},'draft');
+ assert.equal(calls[0].options.method,'POST');assert.match(calls[0].path,/reconcile-ocr-total$/);assert.match(calls[1].path,/detail$/);
+});
