@@ -1,0 +1,7 @@
+## 15/10/2026 — PRODUCT-CARD-VAT-DEPARTMENT-01 / ASSIGNED / NOT TESTED
+
+Owner `codex/product-vat-department-20261015`. Explicit request: add a real company VAT-department selector to Inventory full new/edit card and persist the chosen fiscal mapping, with department-derived VAT rate. Independent bounded correction; prior full-card owner's remaining physical creation acceptance and all other assignments remain unchanged. Baseline main d073a9b4; actual Diadoxou Lay’s barcode5201024788843 card has VAT13 but no department field, and receipt is blocked per user. Do not claim a sale or completed correction. Existing taxonomy/price/barcode/supplier/stock/idempotency/audit and tenant/store/license/fiscal gates protected. No production data repair or sale for diagnostics. Read AGENTS, current shared records, inventory manual, new-card checkpoint/source/history. Required mounted new/edit selection/loading/stale store/missing mapping tests, authorized server ownership/rate/persistence/rollback tests, full CI/main/ordinary guarded exact release, then UI readback; live sale acceptance remains separate. Claim must merge before source changes.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-15-product-card-vat-department.md`.
+
+Implementation and live acceptance pending. Numeric VAT alone must not stand in for a fiscal department; duplicate rates require an explicit department choice. No automatic bulk remapping.
