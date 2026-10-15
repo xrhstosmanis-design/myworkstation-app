@@ -1,3 +1,8 @@
+
+## 15/10/2026 — INVENTORY-BULK-VAT-01 / ASSIGNED / USER FAIL
+
+Owner feat/inventory-bulk-vat-20261015. Independent new request: Archive horizontal scrollbar above fixed toolbar, explicit VAT-department column, bulk active category/subcategory/VAT department dropdowns and selected-store retail SET/increase/decrease in EUR or percent. Baseline main23c1760f; screenshots show hidden scrollbar and free-text legacy form. NOT TESTED new behavior. Preserve all other owners, full-card and invoice acceptance, stock/fiscal/auth/license gates. Require selected store, company-owned existing taxonomy, real active VAT mapping, atomic audited/idempotent price writes confined to selected store, mounted/server/native regression and full CI/exact guarded release before hosted acceptance. No real product/stock/payment writes for diagnostics. Checkpoint CHECKPOINTS/CHANGES/2026-10-15-inventory-bulk-vat.md. Claim merges before source.
+
 ## 15/10/2026 18:36 Athens — POS-PERMANENT-PRICE-01 / CLOSED SCOPED DESKTOP LAB PASS
 
 Owner codex/pos-permanent-price-20261015. Requested existing POS permanent-price option and product-identifiable Events delivered. Normal EMPLOYEE LAB POS2/MAIN, MYWORKSTATION LAB/ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ(storecmtpopbgo000trhb5ng9ytiru,companycmtpopbgk000prhb5qc60zxus), SKU2270 ΝΕΡΟ1,5LT/product4f126988-a1a8-433c-b469-70203415df5b, localqty1. Existing open shiftc726d8de-2bbd-4b8a-a0d3-4854287c940b. Actual cloudChrome1363×936, physical equipment NOT TESTED.
