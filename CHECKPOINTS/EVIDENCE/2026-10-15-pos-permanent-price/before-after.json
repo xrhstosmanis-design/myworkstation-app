@@ -1,1 +1,966 @@
-{"scope":"Preview only; no permanent save yet","revision":"7bbcff06b37a861d103f6f9cc764d1b71f21519f","snapshots":[{"phase":"before-first-local-add","snapshot":{"athens":"2026-10-15 17:20:52","otherStoreProducts":{"count":0,"hash":"d41d8cd98f00b204e9800998ecf8427e"},"permanentEvents":{"count":0,"last":null},"priceHistory":{"count":0,"last":null},"product":{"allowPosPriceChange":true,"basePrice":1,"hash":"c3c4b496d2220602ff43e1500d2c79a7","id":"4f126988-a1a8-433c-b469-70203415df5b","name":"ΝΕΡΟ 1,5LT","sku":"2270"},"shifts":{"count":40,"hash":"22e9f6e84ac6e582b42db0f66a700b9e"},"stockMoves":{"count":9,"hash":"95de78e4154be68813576b25f7d5d4eb","last":"2026-10-12T20:42:11.404"},"storeProduct":{"hash":"9080de8d719f4c2608bc6936f3a7aaec","stock":-16,"storePrice":1},"terminalTotals":[{"card":0,"cash":0.7,"id":"3d894e2f-c467-4293-9f57-4553c653601d","iris":0,"status":"CLOSED","terminalPos":"LAB-POS-01","total":0.7,"transactions":1},{"card":0,"cash":1.4,"id":"865e6a48-ccbe-4238-8580-6d70682050a5","iris":0,"status":"CLOSED","terminalPos":"LAB-POS-02","total":25.4,"transactions":3},{"card":0,"cash":2.2,"id":"c726d8de-2bbd-4b8a-a0d3-4854287c940b","iris":0,"status":"OPEN","terminalPos":"MAIN","total":2.2,"transactions":3}],"transactions":{"amount":5647.7,"card":2.4,"cash":65.2,"count":133,"hash":"f8b2b83182ffa66ee198af48aff64f91","iris":0.5}}},{"phase":"after-local-add-before-permanent-save","snapshot":{"athens":"2026-10-15 17:22:16","otherStoreProducts":{"count":0,"hash":"d41d8cd98f00b204e9800998ecf8427e"},"permanentEvents":{"count":0,"last":null},"priceHistory":{"count":0,"last":null},"product":{"allowPosPriceChange":true,"basePrice":1,"hash":"c3c4b496d2220602ff43e1500d2c79a7","id":"4f126988-a1a8-433c-b469-70203415df5b","name":"ΝΕΡΟ 1,5LT","sku":"2270"},"shifts":{"count":40,"hash":"22e9f6e84ac6e582b42db0f66a700b9e"},"stockMoves":{"count":9,"hash":"95de78e4154be68813576b25f7d5d4eb","last":"2026-10-12T20:42:11.404"},"storeProduct":{"hash":"9080de8d719f4c2608bc6936f3a7aaec","stock":-16,"storePrice":1},"terminalTotals":[{"card":0,"cash":0.7,"id":"3d894e2f-c467-4293-9f57-4553c653601d","iris":0,"status":"CLOSED","terminalPos":"LAB-POS-01","total":0.7,"transactions":1},{"card":0,"cash":1.4,"id":"865e6a48-ccbe-4238-8580-6d70682050a5","iris":0,"status":"CLOSED","terminalPos":"LAB-POS-02","total":25.4,"transactions":3},{"card":0,"cash":2.2,"id":"c726d8de-2bbd-4b8a-a0d3-4854287c940b","iris":0,"status":"OPEN","terminalPos":"MAIN","total":2.2,"transactions":3}],"transactions":{"amount":5647.7,"card":2.4,"cash":65.2,"count":133,"hash":"f8b2b83182ffa66ee198af48aff64f91","iris":0.5}}},{"phase":"preview-layout-fail-before-local-cleanup-no-save","snapshot":{"athens":"2026-10-15 17:24:41","otherStoreProducts":{"count":0,"hash":"d41d8cd98f00b204e9800998ecf8427e"},"permanentEvents":{"count":0,"last":null},"priceHistory":{"count":0,"last":null},"product":{"allowPosPriceChange":true,"basePrice":1,"hash":"c3c4b496d2220602ff43e1500d2c79a7","id":"4f126988-a1a8-433c-b469-70203415df5b","name":"ΝΕΡΟ 1,5LT","sku":"2270"},"shifts":{"count":40,"hash":"22e9f6e84ac6e582b42db0f66a700b9e"},"stockMoves":{"count":9,"hash":"95de78e4154be68813576b25f7d5d4eb","last":"2026-10-12T20:42:11.404"},"storeProduct":{"hash":"9080de8d719f4c2608bc6936f3a7aaec","stock":-16,"storePrice":1},"terminalTotals":[{"card":0,"cash":0.7,"id":"3d894e2f-c467-4293-9f57-4553c653601d","iris":0,"status":"CLOSED","terminalPos":"LAB-POS-01","total":0.7,"transactions":1},{"card":0,"cash":1.4,"id":"865e6a48-ccbe-4238-8580-6d70682050a5","iris":0,"status":"CLOSED","terminalPos":"LAB-POS-02","total":25.4,"transactions":3},{"card":0,"cash":2.2,"id":"c726d8de-2bbd-4b8a-a0d3-4854287c940b","iris":0,"status":"OPEN","terminalPos":"MAIN","total":2.2,"transactions":3}],"transactions":{"amount":5647.7,"card":2.4,"cash":65.2,"count":133,"hash":"f8b2b83182ffa66ee198af48aff64f91","iris":0.5}}},{"phase":"after-preview-discard-local-cleanup","snapshot":{"athens":"2026-10-15 17:25:51","otherStoreProducts":{"count":0,"hash":"d41d8cd98f00b204e9800998ecf8427e"},"permanentEvents":{"count":0,"last":null},"priceHistory":{"count":0,"last":null},"product":{"allowPosPriceChange":true,"basePrice":1,"hash":"c3c4b496d2220602ff43e1500d2c79a7","id":"4f126988-a1a8-433c-b469-70203415df5b","name":"ΝΕΡΟ 1,5LT","sku":"2270"},"shifts":{"count":40,"hash":"22e9f6e84ac6e582b42db0f66a700b9e"},"stockMoves":{"count":9,"hash":"95de78e4154be68813576b25f7d5d4eb","last":"2026-10-12T20:42:11.404"},"storeProduct":{"hash":"9080de8d719f4c2608bc6936f3a7aaec","stock":-16,"storePrice":1},"terminalTotals":[{"card":0,"cash":0.7,"id":"3d894e2f-c467-4293-9f57-4553c653601d","iris":0,"status":"CLOSED","terminalPos":"LAB-POS-01","total":0.7,"transactions":1},{"card":0,"cash":1.4,"id":"865e6a48-ccbe-4238-8580-6d70682050a5","iris":0,"status":"CLOSED","terminalPos":"LAB-POS-02","total":25.4,"transactions":3},{"card":0,"cash":2.2,"id":"c726d8de-2bbd-4b8a-a0d3-4854287c940b","iris":0,"status":"OPEN","terminalPos":"MAIN","total":2.2,"transactions":3}],"transactions":{"amount":5647.7,"card":2.4,"cash":65.2,"count":133,"hash":"f8b2b83182ffa66ee198af48aff64f91","iris":0.5}}}]}
+{
+  "snapshots": [
+    {
+      "phase": "before-first-local-add",
+      "snapshot": {
+        "athens": "2026-10-15 17:20:52",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 0,
+          "last": null
+        },
+        "priceHistory": {
+          "count": 0,
+          "last": null
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "9080de8d719f4c2608bc6936f3a7aaec",
+          "stock": -16,
+          "storePrice": 1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    },
+    {
+      "phase": "after-local-add-before-permanent-save",
+      "snapshot": {
+        "athens": "2026-10-15 17:22:16",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 0,
+          "last": null
+        },
+        "priceHistory": {
+          "count": 0,
+          "last": null
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "9080de8d719f4c2608bc6936f3a7aaec",
+          "stock": -16,
+          "storePrice": 1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    },
+    {
+      "phase": "preview-layout-fail-before-local-cleanup-no-save",
+      "snapshot": {
+        "athens": "2026-10-15 17:24:41",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 0,
+          "last": null
+        },
+        "priceHistory": {
+          "count": 0,
+          "last": null
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "9080de8d719f4c2608bc6936f3a7aaec",
+          "stock": -16,
+          "storePrice": 1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    },
+    {
+      "phase": "after-preview-discard-local-cleanup",
+      "snapshot": {
+        "athens": "2026-10-15 17:25:51",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 0,
+          "last": null
+        },
+        "priceHistory": {
+          "count": 0,
+          "last": null
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "9080de8d719f4c2608bc6936f3a7aaec",
+          "stock": -16,
+          "storePrice": 1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    },
+    {
+      "phase": "final-release-before-local-add",
+      "revision": "aafb68079ce5f53ffdd2433c76601d6bfa1c79a1",
+      "snapshot": {
+        "athens": "2026-10-15 18:07:11",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 0,
+          "last": null
+        },
+        "priceHistory": {
+          "count": 0,
+          "last": null
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "9080de8d719f4c2608bc6936f3a7aaec",
+          "stock": -16,
+          "storePrice": 1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    },
+    {
+      "phase": "before-first-permanent-save-final",
+      "snapshot": {
+        "athens": "2026-10-15 18:09:01",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 0,
+          "last": null
+        },
+        "priceHistory": {
+          "count": 0,
+          "last": null
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "9080de8d719f4c2608bc6936f3a7aaec",
+          "stock": -16,
+          "storePrice": 1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    },
+    {
+      "phase": "after-first-permanent-save",
+      "snapshot": {
+        "athens": "2026-10-15 18:09:37",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 1,
+          "last": "2026-10-15T15:09:17.420885+00:00"
+        },
+        "priceHistory": {
+          "count": 1,
+          "last": "2026-10-15T15:09:17.421"
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "fba03ec0837067397de4fdbce6f11f70",
+          "stock": -16,
+          "storePrice": 1.1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    },
+    {
+      "phase": "before-reloaded-local-add-for-restoration",
+      "snapshot": {
+        "athens": "2026-10-15 18:10:22",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 1,
+          "last": "2026-10-15T15:09:17.420885+00:00"
+        },
+        "priceHistory": {
+          "count": 1,
+          "last": "2026-10-15T15:09:17.421"
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "fba03ec0837067397de4fdbce6f11f70",
+          "stock": -16,
+          "storePrice": 1.1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    },
+    {
+      "phase": "before-restoration-save",
+      "snapshot": {
+        "athens": "2026-10-15 18:11:03",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 1,
+          "last": "2026-10-15T15:09:17.420885+00:00"
+        },
+        "priceHistory": {
+          "count": 1,
+          "last": "2026-10-15T15:09:17.421"
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "fba03ec0837067397de4fdbce6f11f70",
+          "stock": -16,
+          "storePrice": 1.1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    },
+    {
+      "phase": "after-restoration-before-local-cleanup",
+      "snapshot": {
+        "athens": "2026-10-15 18:11:34",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 2,
+          "last": "2026-10-15T15:11:14.806864+00:00"
+        },
+        "priceHistory": {
+          "count": 2,
+          "last": "2026-10-15T15:11:14.807"
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "f83b0d7bf78b42d1a793cb281498e2f2",
+          "stock": -16,
+          "storePrice": 1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    },
+    {
+      "phase": "after-final-local-cleanup",
+      "snapshot": {
+        "athens": "2026-10-15 18:17:11",
+        "otherStoreProducts": {
+          "count": 0,
+          "hash": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "permanentEvents": {
+          "count": 2,
+          "last": "2026-10-15T15:11:14.806864+00:00"
+        },
+        "priceHistory": {
+          "count": 2,
+          "last": "2026-10-15T15:11:14.807"
+        },
+        "product": {
+          "allowPosPriceChange": true,
+          "basePrice": 1,
+          "hash": "c3c4b496d2220602ff43e1500d2c79a7",
+          "id": "4f126988-a1a8-433c-b469-70203415df5b",
+          "name": "ΝΕΡΟ 1,5LT",
+          "sku": "2270"
+        },
+        "shifts": {
+          "count": 40,
+          "hash": "22e9f6e84ac6e582b42db0f66a700b9e"
+        },
+        "stockMoves": {
+          "count": 9,
+          "hash": "95de78e4154be68813576b25f7d5d4eb",
+          "last": "2026-10-12T20:42:11.404"
+        },
+        "storeProduct": {
+          "hash": "f83b0d7bf78b42d1a793cb281498e2f2",
+          "stock": -16,
+          "storePrice": 1
+        },
+        "terminalTotals": [
+          {
+            "card": 0,
+            "cash": 0.7,
+            "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-01",
+            "total": 0.7,
+            "transactions": 1
+          },
+          {
+            "card": 0,
+            "cash": 1.4,
+            "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+            "iris": 0,
+            "status": "CLOSED",
+            "terminalPos": "LAB-POS-02",
+            "total": 25.4,
+            "transactions": 3
+          },
+          {
+            "card": 0,
+            "cash": 2.2,
+            "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+            "iris": 0,
+            "status": "OPEN",
+            "terminalPos": "MAIN",
+            "total": 2.2,
+            "transactions": 3
+          }
+        ],
+        "transactions": {
+          "amount": 5647.7,
+          "card": 2.4,
+          "cash": 65.2,
+          "count": 133,
+          "hash": "f8b2b83182ffa66ee198af48aff64f91",
+          "iris": 0.5
+        }
+      }
+    }
+  ],
+  "audits": [
+    {
+      "actorId": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+      "actorName": "LAB POS 2",
+      "createdAt": "2026-10-15T15:09:17.420885Z",
+      "details": {
+        "actorName": "LAB POS 2",
+        "barcode": null,
+        "difference": 0.10000000000000009,
+        "financialMovement": false,
+        "historyId": "6d8338e0-8d31-469a-afd5-171f52e1cc53",
+        "newPrice": 1.1,
+        "oldPrice": 1,
+        "productId": "4f126988-a1a8-433c-b469-70203415df5b",
+        "productName": "ΝΕΡΟ 1,5LT",
+        "requestId": "9e389020-6cf3-4ef1-8664-fdcfb6492844",
+        "scope": "STORE_PERMANENT",
+        "sessionId": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+        "sku": "2270",
+        "stockChanged": false,
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "storeName": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+        "terminalPos": "MAIN"
+      },
+      "id": "8653612c-b9ed-4549-bb58-e8b5fe192151",
+      "reason": "Δοκιμή"
+    },
+    {
+      "actorId": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+      "actorName": "LAB POS 2",
+      "createdAt": "2026-10-15T15:11:14.806864Z",
+      "details": {
+        "actorName": "LAB POS 2",
+        "barcode": null,
+        "difference": -0.10000000000000009,
+        "financialMovement": false,
+        "historyId": "b1343d17-f289-42b7-be1a-2c4c0881816e",
+        "newPrice": 1,
+        "oldPrice": 1.1,
+        "productId": "4f126988-a1a8-433c-b469-70203415df5b",
+        "productName": "ΝΕΡΟ 1,5LT",
+        "requestId": "93291ddf-e095-4fc5-b1c4-db89f8c3d939",
+        "scope": "STORE_PERMANENT",
+        "sessionId": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+        "sku": "2270",
+        "stockChanged": false,
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "storeName": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+        "terminalPos": "MAIN"
+      },
+      "id": "a972bcd3-f8ff-4c59-8bea-4454af43dd41",
+      "reason": "Δοκιμή"
+    }
+  ],
+  "startup": {
+    "before": {
+      "athens": "2026-10-15 18:01:11",
+      "link": null,
+      "mappingCount": 2,
+      "mappingHash": "d1faa5f569b91644fb7af33c01773971",
+      "winner": {
+        "code": "TJB-1015584 8713800019307",
+        "id": "602fb81e-4bb8-4778-bad8-d3a5a980794a"
+      }
+    },
+    "after": {
+      "athens": "2026-10-15 18:06:10",
+      "link": {
+        "id": "e480484e446af275ddad4b03edbf8fae",
+        "source": "INVOICE_LEARNING",
+        "supplierCode": "TJB-1015584 8713800019307"
+      },
+      "mappingCount": 2,
+      "mappingHash": "d1faa5f569b91644fb7af33c01773971",
+      "winner": {
+        "code": "TJB-1015584 8713800019307",
+        "id": "602fb81e-4bb8-4778-bad8-d3a5a980794a"
+      }
+    }
+  },
+  "eventsUi": "FAIL: production prepare allow-list removes event; readback pending bounded correction"
+}
