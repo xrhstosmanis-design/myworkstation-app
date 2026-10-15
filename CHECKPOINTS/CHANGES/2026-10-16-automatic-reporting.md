@@ -1,3 +1,17 @@
+## Final local and integrated verification
+
+Focused8PASS/0FAIL/0SKIP, full localNode24:2646PASS/0FAIL/70environment-nativeSKIP, frontend/server builds PASS. PR CI38811906128 SUCCESS on ea10d827; main advanced to7a507c1f with separate assistant source. Preserve all integrated source; full fresh integratedCI required before merge. No runtime reporting code changed in reconciliation. Hosted new form NOT TESTED.
+
+## Broad local verification follow-up
+
+Initial full local Node24 suite:2645PASS/1FAIL/70environment-nativeSKIP. Sole failure was old source-shape expectation /Email υπευθύνου/ in parent after field extraction. Updated the test to follow the actual keyed child and real recipient legend/hidden existing API field; all original server tenant/parser/manual-send assertions retained, plus mounted behavior coverage. No runtime guard or financial behavior changed. Fresh focused8tests and final full suite/remote CI pending at this entry. Earlier failure remains recorded.
+
+## 16/10/2026 — AUTO-REPORTS-20261016 / RECIPIENT FORM SOURCE READY / AWAITING CI AND USER
+
+Retained owner `codex/automatic-reporting-20261016`, issue2527, claimPR2529/headc489380a/docsCI38810917284 SUCCESS merged a2b6468848 before source. Explicit user push/PR/green-merge approval00:31. First bounded slice: existing SuperAdmin Store edit displays one editable input per recipient, add/remove, browser email validation, ten-recipient existing contract, company/store-keyed remount and busy disable. Same Store field, existing authenticated tenant-bound PUT and server normalization/CRLF/maximum validation unchanged. Save does not send email; existing manual report dispatch remains unchanged. No new schema/permission/financial logic.
+
+Local actual mounted React+JSDOM and existing parser5PASS/0FAIL/0SKIP: add3/remove/blank/invalid/native validity/dedupe/server-format/reopen/keyed other-store reset/busy disable/limit/no browser persistence. Frontend production build2370modules/TABLE_SERVICE PASS under localNode24; required Node20 full remoteCI/native/HTTP/browser/Windows/main/exact guarded release and authenticated visual/readback NOT TESTED. All other13 requests and automatic scheduling/delivery remain OPEN; this is form preparation only, no whole-task PASS/manual claim. Existing recipient configuration01Oct and other owners/PASS preserved. No actual store recipient/data/email mutation or test delivery. Checkpoint CHECKPOINTS/CHANGES/2026-10-16-automatic-reporting.md. Next: fullCI/release/read-only UI, then independent report lifecycle slice with explicit third-shift boundaries.
+
 # Automatic reporting — owner requirements16Oct2026
 
 ## 16/10/2026 00:18 Europe/Athens — AUTO-REPORTS-20261016 / ASSIGNED / NOT TESTED

@@ -7,6 +7,7 @@ const bootstrap=fs.readFileSync(new URL("../src/platform-bootstrap.js",import.me
 const platform=fs.readFileSync(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
 const cash=fs.readFileSync(new URL("../src/routes/cash-control.js",import.meta.url),"utf8");
 const ui=fs.readFileSync(new URL("../../client/src/components/platform/PlatformAdminApp.jsx",import.meta.url),"utf8");
+const recipientsUi=fs.readFileSync(new URL("../../client/src/components/platform/ReportRecipientFields.jsx",import.meta.url),"utf8");
 
 test("store responsible email schema is additive",()=>{
   assert.match(schema,/responsibleEmail\s+String\?/);
@@ -17,7 +18,9 @@ test("Super Admin can update only a store owned by the selected company",()=>{
   assert.match(platform,/\/companies\/:companyId\/stores\/:storeId/);
   assert.match(platform,/id:req\.params\.storeId,companyId:req\.params\.companyId/);
   assert.match(platform,/responsibleEmail:reportRecipientListSchema/);
-  assert.match(ui,/Email υπευθύνου/);
+  assert.match(ui,/ReportRecipientFields key=\{`\$\{storeCompany.id\}:\$\{storeEdit.id\}`\}/);
+  assert.match(recipientsUi,/Παραλήπτες αναφορών/);
+  assert.match(recipientsUi,/name="responsibleEmail"/);
   assert.match(ui,/Οι αναφορές στέλνονται μόνο όταν ο Super Admin πατήσει την αποστολή/);
 });
 
