@@ -1,3 +1,4 @@
+import {mountInvoiceProducts} from './invoice-assistant-products.js';
 import {invoicePrintedRounding} from "../../shared/invoice-printed-rounding.mjs";
 import {invoiceQuantityConfirmation} from "../../shared/invoice-quantity-review.mjs";
 import {installInvoiceAssistantWindow,restoreInvoiceAssistant} from "./invoice-assistant-window.js";
@@ -45,7 +46,7 @@ const defaultApi=async(path,options={})=>{
   return result;
 };
 
-export async function openPosInvoiceAssistant(orderId,order,onComplete,request=null,sourceContext=null){
+export async function openPosInvoiceAssistant(orderId,order,onComplete,request=null,sourceContext=null,scopeActive=null){
   sourceContext=sourceContext?{inboxId:sourceContext.inboxId,storeId:sourceContext.storeId}:null;
   const sourceKey=sourceContext?JSON.stringify([sourceContext.storeId,sourceContext.inboxId]):"POS";
   if(sourceContext&&(!sourceContext.inboxId||!sourceContext.storeId))throw new Error("Δεν υπάρχει έγκυρη εγγραφή myDATA και επιλεγμένο κατάστημα.");
@@ -60,7 +61,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
     <div style="display:grid;grid-template-columns:minmax(280px,35%) minmax(0,1fr);min-height:0;flex:1">
       <div style="min-height:0;overflow:auto;padding:12px;background:#e9f0f5"><div data-pages></div></div>
       <div style="min-height:0;overflow:auto;padding:16px"><p style="margin:0 0 9px">${sourceContext?"Δες το πρωτότυπο PDF myDATA":"Δες τις φωτογραφίες"}, πες τι θέλεις να διορθωθεί και έλεγξε τις προτάσεις πριν τις περάσεις στο πρόχειρο.</p>
-        <details><summary style="cursor:pointer;font-weight:700">Αρχικό πρόχειρο POS · άνοιγμα για σύγκριση</summary><div data-current style="border:1px solid #d4e1e8;background:white;border-radius:10px;padding:9px;max-height:26vh;overflow:auto"></div></details>
+        <details><summary style="cursor:pointer;font-weight:700">Αρχικό πρόχειρο POS · άνοιγμα για σύγκριση</summary><div data-current style="border:1px solid #d4e1e8;background:white;border-radius:10px;padding:9px;max-height:26vh;overflow:auto"></div></details><div data-product-preparations></div>
         <label style="display:block;margin-top:12px;font-weight:700">Εντολή προς τον βοηθό<textarea data-message rows="3" style="box-sizing:border-box;width:100%;margin-top:5px;padding:10px;border:1px solid #a7bdc9;border-radius:8px" placeholder="π.χ. Οι γραμμές 1–3 είναι σε γραμμάρια και η 4 είναι 48 πακέτα × 100 τεμάχια"></textarea></label>
         <button data-ask type="button" style="margin-top:8px;padding:10px 15px;background:#075c8d;color:white;border:0;border-radius:7px;font-weight:800">${sourceContext?"Έλεγχος PDF myDATA":"Έλεγχος φωτογραφιών"}</button>
         <p data-status role="status" style="min-height:24px;color:#284d64"></p><div data-history aria-live="polite"></div><div data-answer></div><div data-printed></div><div data-proposals></div>
@@ -106,13 +107,14 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
       const factorInput=overlay.querySelector(`[data-row="${index}"][data-field="stockUnitsPerInvoiceUnit"]`),unitInput=overlay.querySelector(`[data-row="${index}"][data-field="invoiceUnit"]`);
       if(factorInput)factorInput.value=String(factor);if(unitInput)unitInput.value="PACKAGE";
       ruleStatus.textContent=`✓ Αποθηκεύτηκε κανόνας: ${order.supplierName||"προμηθευτής"} · ${row.description} · 1 ΚΒ = ${factor} ΤΜ. ${existing.length>1?"Πολλαπλές γραμμές με τον ίδιο κωδικό στο πρόχειρο· έλεγξέ τες χωριστά.":existing.length===0&&(!activePagesComplete||!rowEconomicsVerified)?"Η οικονομική γραμμή δεν μπήκε στο πρόχειρο επειδή η ανάγνωση ή τα ποσά της δεν έχουν επαληθευτεί· έλεγξέ την και εφάρμοσέ την χωριστά.":`Η γραμμή ${code} ενημερώθηκε στο ίδιο πρόχειρο (${after.lines.length} γραμμές, ${euro(after.totals.gross)} €).`}`;
-      lineById.clear();after.lines.forEach(line=>lineById.set(line.id,line));
+      lineById.clear();after.lines.forEach(line=>lineById.set(line.id,line));productPreparations?.refresh(after);
       const savedLine=after.lines.find(line=>String(line.supplierCode||"").trim().toUpperCase()===code.toUpperCase());
       if(savedLine){selected.matchingLineId=savedLine.id;const box=overlay.querySelector(`[data-edit-select="${index}"]`);if(box){box.checked=false;box.closest("tr").style.background="#fff"}}
       changed=true;
     }
     catch(error){ruleStatus.textContent=error.message}finally{button.disabled=false}
   };
+  let productPreparations;
   const lineById=new Map();
   let source;const history=[];let activePrintedRows=[],activePagesComplete=false,activePrintedTotal=null;
   try{
@@ -124,6 +126,8 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
     source=result;
     overlay.querySelector("[data-rule-tax]").value=String(result.document.supplierTaxId||"");overlay.querySelector("[data-rule-identity]").hidden=/^\d{9}$/.test(String(result.document.supplierTaxId||""));
     detail.lines.forEach(line=>lineById.set(line.id,line));
+    productPreparations=mountInvoiceProducts(overlay.querySelector('[data-product-preparations]'),{api,orderId,storeId:sourceContext?.storeId||detail.order.storeId,isActive:()=>retainedWindow.isActive()&&(!scopeActive||scopeActive()),onSaved:async()=>{changed=true;const latest=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);if(!retainedWindow.isActive())return;lineById.clear();latest.lines.forEach(line=>lineById.set(line.id,line));}});
+    productPreparations.refresh(detail);
     pages.innerHTML=result.pages.map(page=>`<article style="margin-bottom:13px;background:white;padding:10px;border:1px solid #d1e1e8;border-radius:12px;box-shadow:0 3px 12px #143f6110"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Σελίδα ${page.index}: ${esc(page.filename||"φωτογραφία")}</b>${page.mimeType==="application/pdf"?"":`<div style="display:flex;gap:5px"><button type="button" data-rotate="-90" aria-label="Περιστροφή φωτογραφίας αριστερά" style="padding:6px 9px;border:1px solid #bad0dc;border-radius:7px;background:#fff;color:#143f61;cursor:pointer">↶ 90°</button><button type="button" data-rotate="90" aria-label="Περιστροφή φωτογραφίας δεξιά" style="padding:6px 9px;border:1px solid #bad0dc;border-radius:7px;background:#fff;color:#143f61;cursor:pointer">↷ 90°</button></div>`}</div><div style="overflow:auto;max-height:75vh;margin-top:8px;background:#edf2f5;border-radius:8px" data-image-viewport>${page.mimeType==="application/pdf"?`<div data-pdf-viewer data-source="${esc(page.dataUrl)}"></div>`:`<canvas data-zoom-image data-source="${esc(page.dataUrl)}" role="img" aria-label="Σελίδα ${page.index}: ${esc(page.filename||"φωτογραφία")}" style="display:block;width:100%;cursor:grab;touch-action:none"></canvas>`}</div></article>`).join("");
     const pdfHosts=pages.querySelectorAll("[data-pdf-viewer]");
     const mountInvoicePdfViewer=pdfHosts.length?(await import("./invoice-assistant-pdf-viewer.js")).mountInvoicePdfViewer:null;
@@ -236,7 +240,7 @@ export async function openPosInvoiceAssistant(orderId,order,onComplete,request=n
           const after=await api(`/api/purchase-orders/${encodeURIComponent(orderId)}/detail`);
           const difference=Math.abs(Number(after.totals.gross||0)-Number(printedTotal??source.document.totalGross??0));
           setApplyStatus(`Αποθηκεύτηκαν ${done} γραμμές. Σύνολο πρόχειρου ${euro(after.totals.gross)} € · ${printedTotal===null?"προηγούμενη ανάγνωση":"τυπωμένο"} ${euro(printedTotal??source.document.totalGross)} € · διαφορά ${euro(difference)} €.${printedTotal===null?" Επιβεβαίωσε το πληρωτέο στο έντυπο.":difference>0.05?" Χρειάζεται επιπλέον έλεγχος.":" Το πληρωτέο συμφωνεί εντός 0,05 €· έλεγξε και κάθε είδος."}`);
-          lineById.clear();after.lines.forEach(line=>lineById.set(line.id,line));
+          lineById.clear();after.lines.forEach(line=>lineById.set(line.id,line));productPreparations?.refresh(after);
           current.innerHTML=`<b>Τρέχον πρόχειρο · ${after.lines.length} γραμμές · καθαρό ${euro(after.totals.net)} € · ΦΠΑ ${euro(after.totals.vat)} € · πληρωτέο ${euro(after.totals.gross)} €</b><div style="margin-top:7px">${after.lines.map(lineHtml).join("")}</div>`;
           printedArea.querySelectorAll("[data-edit-select]:checked").forEach(box=>box.checked=false);
           working.forEach((row,index)=>{const tr=printedArea.querySelector(`[data-edit-select="${index}"]`)?.closest("tr");if(tr&&row.matchingLineId)tr.style.background="#fff"});
