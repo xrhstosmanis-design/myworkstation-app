@@ -44,22 +44,28 @@ export default function OwnerBusinessPicture({api,store,onClose}){
     <section className={`business-picture-dialog ${maximized?"maximized":""}`}>
       <header><div><small>MYWORKSTATION · ΙΔΙΟΚΤΗΤΗΣ</small><h2>Εικόνα Επιχειρήσεις</h2><p>{store?.name||"Όλα τα καταστήματα"} · πραγματικά δεδομένα εμπορικής λειτουργίας</p></div><div className="business-window-actions"><button onClick={()=>setMaximized(value=>!value)} aria-label={maximized?"Επαναφορά παραθύρου":"Μεγιστοποίηση παραθύρου"}>{maximized?<Minimize2/>:<Maximize2/>}</button><button onClick={onClose} aria-label="Κλείσιμο"><X/></button></div></header>
       <div className="business-picture-criteria">
-        <b>Κριτήρια αναζήτησης (Ημερομηνίες συναλλαγών)</b>
+        <b className="business-criteria-heading">Κριτήρια αναζήτησης (Ημερομηνίες συναλλαγών)</b>
         <label>από:<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>έως:<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label>
         <div className="business-picture-radio"><label><input type="radio" checked={scope==="ALL"} onChange={()=>setScope("ALL")}/> ΟΛΑ</label><label><input type="radio" checked={scope==="WITH_VAT"} onChange={()=>setScope("WITH_VAT")}/> Μόνο με ΦΠΑ</label><label><input type="radio" checked={scope==="WITHOUT_VAT"} onChange={()=>setScope("WITHOUT_VAT")}/> Χωρίς ΦΠΑ</label></div>
-        <span/><button onClick={()=>preset("PREVIOUS_QUARTER")}>Προηγούμενο Τρίμηνο</button><button onClick={()=>preset("CURRENT_MONTH")}>Τρέχων Μήνας</button>
+        <button onClick={()=>preset("PREVIOUS_QUARTER")}>Προηγούμενο Τρίμηνο</button><button onClick={()=>preset("CURRENT_MONTH")}>Τρέχων Μήνας</button>
         <button className="business-search" aria-label="Αναζήτηση περιόδου" onClick={load} disabled={busy}><Search/></button>
       </div>
-      <div className="business-picture-tools"><button onClick={load}><RefreshCw/> Ανανέωση</button><button onClick={exportCsv} disabled={busy||!!error||!data}><Download/> Excel / CSV</button><button onClick={printReport} disabled={busy||!!error||!data}><Printer/> Εκτύπωση</button></div>
-      {data?.calendarFrom&&<p className="business-picture-loading">Εμφανιζόμενη περίοδος: {data.calendarFrom} έως {data.calendarTo} · ώρα Ελλάδας. Οι αλλαγές στα κριτήρια εφαρμόζονται με Αναζήτηση.</p>}
-      {!busy&&data?.totals&&<p className="business-picture-loading">Στην περίοδο: {data.totals.returnTransactions||0} επιστροφές και {data.totals.cancelTransactions||0} ακυρώσεις. {data.calculationNotes?.reversals}</p>}
-      {!busy&&data?.totals?.missingCostLines>0&&<div className="business-picture-error" role="status">Λείπει κόστος σε {data.totals.missingCostLines} από {data.totals.salesLines} γραμμές πώλησης. Κέρδος και Margin εμφανίζονται ως «—» στις επηρεαζόμενες ημέρες, μήνες και στο σύνολο.</div>}
-      {!busy&&data?.totals?.missingExpenseVatPayments>0&&<div className="business-picture-error" role="status">Λείπει τεκμηρίωση ΦΠΑ σε {data.totals.missingExpenseVatPayments} από {data.totals.expensePayments} έξοδα. Τα μικτά ποσά εμφανίζονται· καθαρά έξοδα, ΦΠΑ, καθαρό κέρδος και ποσοστό εξόδων εμφανίζονται ως «—» στις επηρεαζόμενες περιόδους.</div>}
+      <div className="business-picture-tools">{data?.calendarFrom&&<strong className="business-loaded-period">{data.calendarFrom} έως {data.calendarTo}</strong>}<button onClick={load}><RefreshCw/> Ανανέωση</button><button onClick={exportCsv} disabled={busy||!!error||!data}><Download/> Excel / CSV</button><button onClick={printReport} disabled={busy||!!error||!data}><Printer/> Εκτύπωση</button></div>
+      {data&&<div className="business-report-information">
+        {!busy&&data?.totals?.missingCostLines>0&&<span className="business-data-warning" role="status">Ελλιπές κόστος: {data.totals.missingCostLines}/{data.totals.salesLines} γραμμές</span>}
+        {!busy&&data?.totals?.missingExpenseVatPayments>0&&<span className="business-data-warning" role="status">Ελλιπής τεκμηρίωση ΦΠΑ: {data.totals.missingExpenseVatPayments}/{data.totals.expensePayments} έξοδα</span>}
+        <details className="business-report-details"><summary>Πληροφορίες αναφοράς</summary><div className="business-report-explanations">
+      {data?.calendarFrom&&<p >Εμφανιζόμενη περίοδος: {data.calendarFrom} έως {data.calendarTo} · ώρα Ελλάδας. Οι αλλαγές στα κριτήρια εφαρμόζονται με Αναζήτηση.</p>}
+      {!busy&&data?.totals&&<p >Στην περίοδο: {data.totals.returnTransactions||0} επιστροφές και {data.totals.cancelTransactions||0} ακυρώσεις. {data.calculationNotes?.reversals}</p>}
+      {!busy&&data?.totals?.missingCostLines>0&&<div >Λείπει κόστος σε {data.totals.missingCostLines} από {data.totals.salesLines} γραμμές πώλησης. Κέρδος και Margin εμφανίζονται ως «—» στις επηρεαζόμενες ημέρες, μήνες και στο σύνολο.</div>}
+      {!busy&&data?.totals?.missingExpenseVatPayments>0&&<div >Λείπει τεκμηρίωση ΦΠΑ σε {data.totals.missingExpenseVatPayments} από {data.totals.expensePayments} έξοδα. Τα μικτά ποσά εμφανίζονται· καθαρά έξοδα, ΦΠΑ, καθαρό κέρδος και ποσοστό εξόδων εμφανίζονται ως «—» στις επηρεαζόμενες περιόδους.</div>}
+          <p>{data?.calculationNotes?.expenses} {data?.calculationNotes?.costCoverage} <b>Υπολογισμός:</b> {data?.calculationNotes?.grossProfit} {data?.calculationNotes?.netProfit}</p>
+        </div></details>
+      </div>}
       {error&&<div className="business-picture-error">{error}</div>}
       {busy?<div className="business-picture-loading">Φόρτωση οικονομικής εικόνας…</div>:<div className="business-picture-table-wrap"><table><thead><tr><th>Έτος-Μήνας</th>{columns.map(([,label])=><th key={label}>{label}</th>)}</tr></thead><tbody>
         {(data?.monthly||[]).map(row=><React.Fragment key={row.month}><tr className="business-month" onClick={()=>setExpanded(expanded===row.month?"":row.month)}><td><button>{expanded===row.month?<ChevronDown/>:<ChevronRight/>}</button>{monthLabel(row.month)}</td>{rowCells(row)}</tr>{expanded===row.month&&(daysByMonth.get(row.month)||[]).map(day=><tr className="business-day" key={day.day}><td>{dayLabel(day.day)}<small>{day.transactions} συναλλαγές · {day.documents} αγορές</small></td>{rowCells(day)}</tr>)}</React.Fragment>)}
       </tbody>{data?.totals&&<tfoot><tr><td>ΣΥΝΟΛΟ</td>{rowCells(data.totals)}</tr></tfoot>}</table></div>}
-      <footer>{data?.calculationNotes?.expenses} {data?.calculationNotes?.costCoverage} <b>Υπολογισμός:</b> {data?.calculationNotes?.grossProfit} {data?.calculationNotes?.netProfit}</footer>
     </section>
   </div>;
 }
