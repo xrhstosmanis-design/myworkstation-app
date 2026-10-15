@@ -117,3 +117,19 @@ test('registered invoice opening uses only the existing detail GET; ordinary dra
  calls.length=0;await open({isConnected:true},'draft');
  assert.equal(calls[0].options.method,'POST');assert.match(calls[0].path,/reconcile-ocr-total$/);assert.match(calls[1].path,/detail$/);
 });
+
+test('registered inbox activation reads the purchase list without background OCR recovery; ordinary activation retains recovery',async()=>{
+ const source=await readFile(new URL('../../client/src/components/commerce/installPurchaseOrdersSuite.js',import.meta.url),'utf8');
+ const activate=source.split('\n').find(l=>l.startsWith('function activate('));
+ const report=source.slice(source.indexOf('async function loadReport('),source.indexOf('async function loadStock('));
+ const calls=[],state={storeId:'s',tab:'orders'},root={isConnected:true};
+ const api=async(path,options={})=>{calls.push({path,options});return {orders:[]}};
+ const noop=()=>{};
+ const open=new Function('api','state','render','nativeVisibility','updateRefreshControls','qReport','notify',`let reportRequestId=0;let posContext=null;${report}\n${activate};return activate`)(api,state,noop,noop,noop,()=>new URLSearchParams(),e=>{throw Error(String(e))});
+ const hub={querySelector:()=>root},button={classList:{add:noop}};
+ open(hub,button,true);await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(calls.length,1);assert.match(calls[0].path,/purchase-orders\/report/);assert.equal(calls[0].options.method,undefined);
+ calls.length=0;open(hub,button);await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(calls.length,2);assert.equal(calls[1].path,'/api/commerce/ai-reader/fast-recover');assert.equal(calls[1].options.method,'POST');
+ assert.match(source,/activate\(hub,button,event\.detail\.readOnly===true\)/);
+});

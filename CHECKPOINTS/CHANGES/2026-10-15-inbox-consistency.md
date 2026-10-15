@@ -1,4 +1,6 @@
 
+
+Registered read-only activation follow-up: the existing purchase-list background fast-recover POST is also suppressed only when opening a registered invoice from the inbox. Both list GET and existing-detail GET remain available; ordinary draft/list refresh preserves durable recovery. Actual activate→loadReport API-spy regression covers both paths and passes. No production business write. Real pair payment independently read126.26 versus myDATA142.79 (difference16.53); existing explicit discrepancy confirmation remains required, never automatic top-up. Full final source CI and hosted acceptance still required.
 Read-only opening follow-up: fullCI38800901848 completed SUCCESS on863810e9d3b87fca87ab032bb885c0f2ad6e1e26. Registered inbox navigation now explicitly skips the editable-only OCR-total repair POST and opens the existing detail GET; ordinary draft opening retains its previous behavior. Actual openOrder API-spy regression and mounted navigation expectation pass locally (7PASS/0FAIL/4nativeSKIP for the selected three files). This final navigation adjustment requires fresh CI before release; no live business operation performed.
 
 ## 2026-10-15 23:12:57 Europe/Athens — INBOX-CONSISTENCY-01 / IMPLEMENTED / AWAITING FULL CI + HOSTED ACCEPTANCE
