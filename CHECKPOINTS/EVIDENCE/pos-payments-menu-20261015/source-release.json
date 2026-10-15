@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-15T20:39:12.458240+00:00",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "417816922011a9e76b3b8032836cda98e6503ec8"
+  },
+  "entry": "/assets/entry--oBzdUrI.js",
+  "menuMarker": true,
+  "backMarker": true,
+  "supplierLabel": true,
+  "expenseLabel": true,
+  "payrollLabel": true,
+  "integrity": {
+    "financialSubmitSha256": "85823d5a815cf0ca140e67359a3d9b6538c4651818af5295c54f2e30a0d24740",
+    "completionAndSupplierPropsSha256": "ae8f71322d3ae1173bf3c316d491957e5a0fc5a5a6a96f8460c154e7e67d11df",
+    "runtimeBlobs": {
+      "client/src/components/store/StorePosPaymentsModal.jsx": "87861e34ecf534961d3795a5ec7cb1047663dcb1",
+      "client/src/components/store/store-pos-payments-menu.css": "6477b4bbd6355764d9aef703e754e1fb34f40186"
+    }
+  }
+}
