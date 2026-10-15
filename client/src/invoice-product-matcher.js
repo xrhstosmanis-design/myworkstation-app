@@ -5,17 +5,19 @@ export function installInvoiceProductMatcher({modal,orderId,storeId,lineId,descr
  let revision=0,timer,barcodeSelection=null;
  const endpoint=`/api/commerce/purchase-orders/${encodeURIComponent(orderId)}/ocr-lines/${encodeURIComponent(lineId)}/catalog-matches`;
  const lookup=params=>api(`${endpoint}?${new URLSearchParams({storeId,...params})}`);
+ const retail=product=>product.salePrice!=null&&String(product.salePrice).trim()!==''&&Number.isFinite(Number(product.salePrice))&&Number(product.salePrice)>=0?money(Number(product.salePrice)):'Μη διαθέσιμη';
  const clear=()=>{revision++;clearTimeout(timer);barcodeSelection=null;onSelect(null);panel.hidden=false;results.replaceChildren();note.textContent='';};
- function pick(product,{exactBarcode=null}={}){
+ function pick(product,{exactBarcode=null,revalidating=false}={}){
+  const revalidated=revalidating&&barcodeSelection?.barcode===exactBarcode&&barcodeSelection?.id===product.id;
   revision++;clearTimeout(timer);
   if(!exactBarcode){form.querySelector('[name="barcodeMode"][value="NONE"]').checked=true;barcode.value='';barcode.disabled=true;}
-  barcodeSelection=exactBarcode?{barcode:exactBarcode,id:product.id}:null;onSelect(product);panel.hidden=true;
+  barcodeSelection=exactBarcode?{barcode:exactBarcode,id:product.id}:null;onSelect(product,{revalidated});panel.hidden=true;
   // Preserve the supplier's invoice description and every purchase field.
-  results.innerHTML=`<p style="color:#176b32;font-weight:800">✓ ${exactBarcode?'Αντιστοίχιση barcode':'Επιλέχθηκε'}: ${esc(product.name)} · ${esc(product.sku||'')}<br><small>Η περιγραφή του τιμολογίου παραμένει ίδια.</small></p><button type="button" data-clear-product>Αλλαγή αντιστοίχισης</button>`;
+  results.innerHTML=`<p style="color:#176b32;font-weight:800">✓ ${exactBarcode?'Αντιστοίχιση barcode':'Επιλέχθηκε'}: ${esc(product.name)} · ${esc(product.sku||'')}</p><p class="po-match-retail">Λιανική: <strong>${retail(product)}</strong></p><p><small>Η περιγραφή του τιμολογίου παραμένει ίδια.</small></p><button type="button" data-clear-product>Αλλαγή αντιστοίχισης</button>`;
   results.querySelector('[data-clear-product]').onclick=clear;
  }
  function render(data,{exactBarcode=null}={}){
-  results.innerHTML=`<p>${exactBarcode?'Βρέθηκαν περισσότερα είδη με το ίδιο barcode. Επίλεξε το σωστό:':`Πιθανές αντιστοιχίσεις · ${data.total}${data.truncated?'+':''} είδη · ${data.offset+1}–${data.offset+data.rows.length}. Επιβεβαίωσε γεύση και συσκευασία.`}</p>${data.rows.map((p,i)=>`<div style="display:flex;justify-content:space-between;gap:8px;border:1px solid #d8e2e8;border-radius:7px;padding:7px;margin-top:4px"><span><b>${esc(p.name)}</b><small style="display:block">${esc(p.sku||'')} · ${money(p.salePrice)} · ${esc((p.barcodes||[]).join(', '))}</small></span><button type="button" data-product-pick="${i}">Επιλογή</button></div>`).join('')}${!exactBarcode&&data.offset>0?'<button type="button" data-match-previous>Προηγούμενα</button>':''}${data.hasMore?'<button type="button" data-match-next>Επόμενα είδη</button>':''}${data.truncated?'<p>Για περισσότερα είδη, πρόσθεσε γεύση ή βάρος στην αναζήτηση.</p>':''}`;
+  results.innerHTML=`<p>${exactBarcode?'Βρέθηκαν περισσότερα είδη με το ίδιο barcode. Επίλεξε το σωστό:':`Πιθανές αντιστοιχίσεις · ${data.total}${data.truncated?'+':''} είδη · ${data.offset+1}–${data.offset+data.rows.length}. Επιβεβαίωσε γεύση και συσκευασία.`}</p>${data.rows.map((p,i)=>`<div class="po-match-candidate"><span class="po-match-identity"><b>${esc(p.name)}</b><small>${esc(p.sku||'')} · ${esc((p.barcodes||[]).join(', '))}</small></span><span class="po-match-retail">Λιανική: <strong>${retail(p)}</strong></span><button type="button" data-product-pick="${i}">Επιλογή</button></div>`).join('')}${!exactBarcode&&data.offset>0?'<button type="button" data-match-previous>Προηγούμενα</button>':''}${data.hasMore?'<button type="button" data-match-next>Επόμενα είδη</button>':''}${data.truncated?'<p>Για περισσότερα είδη, πρόσθεσε γεύση ή βάρος στην αναζήτηση.</p>':''}`;
   results.querySelectorAll('[data-product-pick]').forEach(button=>button.onclick=()=>pick(data.rows[Number(button.dataset.productPick)],{exactBarcode}));
   results.querySelector('[data-match-next]')?.addEventListener('click',()=>findNames(data.offset+25));results.querySelector('[data-match-previous]')?.addEventListener('click',()=>findNames(data.offset-25));
  }
@@ -32,7 +34,7 @@ export function installInvoiceProductMatcher({modal,orderId,storeId,lineId,descr
   try{
    const data=await lookup({barcode:value});
    if(current!==revision||!modal.isConnected||barcode.value.trim()!==value||form.elements.barcodeMode.value!==mode){if(saving)throw Error('Το barcode άλλαξε. Πάτησε ξανά Καταχώρηση.');return}
-   if(data.rows.length===1){pick(data.rows[0],{exactBarcode:value});note.textContent='Βρέθηκε υπάρχον είδος. Θα αντιστοιχιστεί χωρίς νέα εγγραφή.';return}
+   if(data.rows.length===1){pick(data.rows[0],{exactBarcode:value,revalidating:saving});note.textContent='Βρέθηκε υπάρχον είδος. Θα αντιστοιχιστεί χωρίς νέα εγγραφή.';return}
    if(data.rows.length>1){
     if(saving&&barcodeSelection?.barcode===value&&data.rows.some(p=>p.id===barcodeSelection.id))return;
     onSelect(null);panel.hidden=false;barcodeSelection=null;render(data,{exactBarcode:value});note.textContent='Επίλεξε ένα από τα υπάρχοντα είδη. Δεν θα δημιουργηθεί νέο.';if(saving)throw Error(note.textContent);return;
