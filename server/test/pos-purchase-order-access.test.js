@@ -43,3 +43,9 @@ test('OCR and assistant access remains scoped, extra barcode write requires exis
  assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/other/invoice-assistant/preview',method:'POST'})).res.code,404);
 });
 test('missing tenant/POS access deny; normal administrative paths remain unchanged',async()=>{assert.equal((await fixture().run({companyId:null})).res.code,403);assert.equal((await fixture().run({companyId:'foreign'})).res.code,403);assert.equal((await fixture({posAccess:false}).run()).res.code,403);const f=fixture({orders:false});assert.equal((await f.run({tokenType:undefined})).res.code,403);assert.equal((await f.run({tokenType:'USER'})).next,true);assert.equal(f.calls.length,1)});
+
+test('product preparation uses existing live POS permission/module checks and guards barcode mutation',async()=>{
+ const f=fixture();for(const [tail,method,body] of [['product-proposal','GET',{}],['confirm-product','POST',{barcode:''}]])assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/ocr-lines/line/'+tail,method,body})).next,true);
+ assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/ocr-lines/line/confirm-product',method:'POST',body:{barcode:'5200000000001'}})).res.code,403);
+ f.revoke();assert.equal((await f.run({baseUrl:'/api/commerce/purchase-orders',path:'/one/ocr-lines/line/confirm-product',method:'POST'})).res.code,403);
+});

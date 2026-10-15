@@ -6,3 +6,13 @@ Baseline main e059cf78, prior exact source7c4d3256. Read current AGENTS/active/t
 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-15-invoice-new-item-prepare.md. Claim must merge green before source edits.
 
+
+## Implementation — 15/10/2026 — AWAITING full CI / exact release / LAB
+
+Claim PR #2495 merged green (CI 38741058361) as main 35d65dc30933926621daefa12eb6bde1f61132dc before source edits. Continuation source branch codex/invoice-new-item-implementation-20261015, same owner and bounded assignment.
+
+Added actual assistant saved-row product panel: auto read-only preparation for first unresolved saved row, per-row selection and pagination; same-store ranked candidates (suggestions only), exact company barcode/supplier code/name duplicate identities, active categories/subcategories and real fiscal departments. Equal-rate departments are never silently interchangeable. Retail/category suggestion shows its same-store/same-size reference and requires human review; absent evidence leaves retail blank. No barcode generates only internal SKU, no barcode. Existing-product confirmation retains its card/retail/stock, adds optional reviewed unique barcode using existing barcode permission, and requires its department/rate to agree. Inactive/other-store identity requires explicit inventory review, never duplicate creation.
+
+Separate reviewed POST locks parent then line, serializes company product creation, rejects changed rows/closed drafts/foreign store/revoked profile/unknown fiscal choice; uses existing full-card transaction with openingStock=0 and existing supplier learning; records request fingerprint and result audit for retry. Does not rewrite purchase line economics, finalize, pay, or post stock. Changed selection/detached window rejects late proposals; caller's selected-store context also gates confirm. Existing OCR source/reading/transfers/acceptance checks are retained.
+
+Local verification: client production build PASS (2359 modules); affected assistant/window/quantity plus full-card/fiscal/permission and new mounted tests 58 PASS, 0 FAIL, 5 native-DB SKIP (no local PostgreSQL). New native isolated-schema PostgreSQL tests cover actual registered HTTP read-only proposal, concurrent no-barcode confirm/replay, unchanged economics/control stock, existing-match barcode, stale/closed/foreign/taxonomy/review/supplier failure and late learning rollback. These must run without skip in full CI before merge. No live business write has been made. All hosted/LAB acceptance remains NOT TESTED.

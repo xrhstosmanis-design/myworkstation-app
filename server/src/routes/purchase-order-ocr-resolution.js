@@ -1,3 +1,4 @@
+import {registerInvoiceProductPreparation} from '../lib/invoice-product-preparation.js';
 import {createInvoiceCatalogLookup} from "../lib/invoice-catalog-lookup.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
@@ -87,6 +88,8 @@ async function learnSupplierMapping(tx,{companyId,supplierId,supplierCode,produc
       "confirmedByUserId"=EXCLUDED."confirmedByUserId",
       "confirmedAt"=NOW(),"lastSeenAt"=NOW(),"updatedAt"=NOW()`;
 }
+
+registerInvoiceProductPreparation(router,prisma,learnSupplierMapping);
 
 async function autoResolveExact(companyId,order,userId){
   if(!order||order.status!=="NEW")return 0;
