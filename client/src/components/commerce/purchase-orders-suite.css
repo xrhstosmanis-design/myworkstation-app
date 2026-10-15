@@ -17,3 +17,12 @@
 .po-order-lines .row.po-line-linked:not(.head):not(.totals){background:#e5f5ea;border-left:4px solid #16804d}
 .po-order-lines .row.po-line-linked:not(.head):not(.totals)>*{border-bottom-color:#b8dec6}
 .po-order-lines .po-line-check{color:#087143;font-weight:900}
+
+/* Invoice catalog: keep the current store retail distinct from SKU/barcodes. */
+.po-line-match .po-match-candidate{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid #d8e2e8;border-radius:7px;padding:10px;margin-top:6px}
+.po-line-match .po-match-identity{flex:1 1 240px;min-width:0;overflow-wrap:anywhere}
+.po-line-match .po-match-identity small{display:block;margin-top:4px}
+.po-line-match .po-match-retail{font-size:16px;color:#123c61;white-space:nowrap}
+.po-line-match .po-match-retail strong{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums}
+.po-line-match [data-product-pick]{min-height:44px;padding:8px 14px;font-weight:800}
+.po-line-form [name="proposedSalePrice"]{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
