@@ -1,0 +1,2 @@
+export const inboxBusinessLabels={REGISTERED:"Τιμολογημένο / καταχωρισμένο",DRAFT:"Πρόχειρο για έλεγχο",LINK_REVIEW:"Έλεγχος σύνδεσης",NO_DRAFT:"Χωρίς συνδεδεμένο πρόχειρο"};
+export const inboxBusinessLabel=row=>inboxBusinessLabels[row?.processingStatus]||({RECEIVED:row?.mark?"Εισερχόμενο myDATA · προς έλεγχο":"Αρχειοθετήθηκε",IN_REVIEW:"Σε έλεγχο",PROCESSED:"Ελεγμένο"}[row?.status]||row?.status||"—");

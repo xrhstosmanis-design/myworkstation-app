@@ -9,3 +9,9 @@
 .invoice-common-resolution{margin:16px 0;padding:14px;border:2px solid #95b8bd;border-radius:10px;background:#fff}.invoice-common-resolution legend{font-weight:800;padding:0 8px}.invoice-common-resolution input[type=radio]{width:24px;height:24px;flex-shrink:0}.invoice-common-resolution summary{cursor:pointer;padding:10px;font-weight:700}.invoice-common-lines{overflow:auto;max-height:340px}.invoice-common-lines table{width:100%;border-collapse:collapse;font-size:16px}.invoice-common-lines th,.invoice-common-lines td{padding:9px;text-align:left;border-bottom:1px solid #dce5eb}.invoice-common-lines th{position:sticky;top:0;background:#e3eff7}.invoice-common-lines td:first-child{min-width:200px}
 
 .invoice-view-switch{display:flex;gap:12px;margin:16px 0}.invoice-view-switch button{flex:1;min-height:54px;padding:12px 18px;border:2px solid #9ebcc8;border-radius:12px;background:#fff;color:#153e5a;font:inherit;font-size:19px;font-weight:800;cursor:pointer}.invoice-view-switch button[aria-pressed=true]{background:#087762;border-color:#087762;color:#fff}.invoice-view-switch button:focus-visible{outline:3px solid #e4b545;outline-offset:3px}.invoice-old-view{display:grid;gap:16px}@media(max-width:480px){.invoice-view-switch{gap:8px}.invoice-view-switch button{font-size:17px;padding:10px 8px}}
+
+/* Invoice processing state follows the linked business record. */
+.invoice-actions em.REGISTERED{background:#dcfce7;color:#166534;font-weight:800}
+.invoice-actions em.DRAFT{background:#fef3c7;color:#854d0e}
+.invoice-actions em.LINK_REVIEW{background:#fee2e2;color:#991b1b;font-weight:800}
+.invoice-actions em.NO_DRAFT{background:#e2e8f0;color:#334155}
