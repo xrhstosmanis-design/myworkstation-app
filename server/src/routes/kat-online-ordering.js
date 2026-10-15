@@ -1,3 +1,4 @@
+import {lockActiveSaleProducts} from "../lib/inventory-sale-product-lock.js";
 import {maybeChangeSameProductStock} from '../store-baking-same-product.js';
 import {policyAvailable,readBakingPolicy} from "../store-baking.js";
 import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
@@ -221,6 +222,7 @@ router.post("/orders",async(req,res)=>{
     const orderNumber=`KAT-${String(serial).padStart(3,"0")}`;
 
     await prisma.$transaction(async tx=>{
+await lockActiveSaleProducts(tx,{companyId:store.companyId,storeId:store.id,productIds:lines.map(line=>line.productId)});
       await tx.$executeRaw`INSERT INTO "OnlineOrder" ("id","companyId","storeId","orderNumber","channel","fulfillmentType","status","paymentMethod","customerName","customerPhone","building","floor","department","room","deliveryNotes","subtotal","deliveryFee","total","idempotencyKey") VALUES (${id},${store.companyId},${store.id},${orderNumber},${body.fulfillmentType==="DELIVERY"?"ONLINE_DELIVERY":"ONLINE"},${body.fulfillmentType},'NEW',${body.paymentMethod},${body.customerName},${body.customerPhone},${body.building||null},${body.floor||null},${body.department||null},${body.room||null},${body.deliveryNotes||null},${subtotal},${deliveryFee},${total},${body.idempotencyKey})`;
       for(const row of lines)await tx.$executeRaw`INSERT INTO "OnlineOrderLine" ("id","orderId","productId","productName","quantity","storeUnitPrice","onlineSurcharge","onlineUnitPrice","lineTotal","modifiersJson") VALUES (${crypto.randomUUID()},${id},${row.productId},${row.productName},${row.quantity},${row.storeUnitPrice},${row.onlineSurcharge},${row.onlineUnitPrice},${row.lineTotal},${JSON.stringify(row.modifiers)}::jsonb)`;
       await addOrderEvent(tx,{orderId:id,toStatus:"NEW",note:"ORDER_RECEIVED"});

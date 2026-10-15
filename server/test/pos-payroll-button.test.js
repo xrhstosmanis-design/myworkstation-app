@@ -57,6 +57,7 @@ const posted=f=>f.calls.filter(c=>c.path==="/api/transactions/stores/own"&&c.opt
 const inputFor=text=>[...document.querySelectorAll("label")].find(el=>el.textContent.startsWith(text)).querySelector("input,select");
 async function payrollFilled(env,{kind="REST_DAY",reason="Εικονική αιτιολογία",hours="2.5"}={}){
  const {click,change,React}=env;
+ if(!document.querySelector(".pos-payments-menu"))await click("Όλες οι πληρωμές");
  await click("Μισθοδοσία");await click("1");await click("0");
  await change(inputFor("Εργαζόμενος"),"employee");await change(inputFor("Περίοδος μισθοδοσίας"),"2026-10");
  await change(inputFor("Τύπος πληρωμής"),kind);await change(inputFor("Αιτιολογία"),reason);
@@ -95,7 +96,7 @@ test("payroll blocks missing reason, employee, period, hours and cash authority 
 test("overtime hours are cleared on advance/rest-day; refund does not leak into payroll",async()=>{
  const Modal=await component("StorePosPaymentsModal");await environment(async env=>{
  const {React,root,click,change}=env,f=payrollFixture();await React.act(async()=>root.render(React.createElement(Modal,f.props)));
- await React.act(async()=>document.querySelector('input[type="checkbox"]').click());await payrollFilled(env,{kind:"OVERTIME"});
+ await click("Λοιπά έξοδα");await React.act(async()=>document.querySelector('input[type="checkbox"]').click());await payrollFilled(env,{kind:"OVERTIME"});
  await change(inputFor("Τύπος πληρωμής"),"ADVANCE");assert.equal(document.querySelector('input[type="number"]'),null);await change(inputFor("Τύπος πληρωμής"),"OVERTIME");assert.equal(inputFor("Ώρες υπερωρίας").value,"");await change(inputFor("Τύπος πληρωμής"),"REST_DAY");await click("Καταχώριση μισθοδοσίας");assert.equal(JSON.parse(posted(f)[0].options.body).amount,10);
  });
 });
@@ -111,5 +112,37 @@ test("legacy payroll category remains available with difference option and manda
  const {React,root,change}=env,f=payrollFixture(),api=f.props.api;f.props.api=async(p,o)=>p==="/api/management/expense-categories"?{items:[{id:"payroll",description:"Μισθοδοσία"}]}:api(p,o);
  await React.act(async()=>root.render(React.createElement(Modal,{...f.props,initialPaymentType:"OTHER_EXPENSE"})));
  await change(inputFor("Κατηγορία εξόδου"),"payroll");assert.equal(inputFor("Τύπος πληρωμής").options.length,4);assert.ok(document.body.textContent.includes("Διαφορά μισθοδοσίας"));assert.equal(inputFor("Αιτιολογία").required,true);
+ });
+});
+
+test("Payments opens three ordered submenus on every open and keeps each existing form",async()=>{
+ const Modal=await component("StorePosPaymentsModal");await environment(async env=>{
+  const {React,root,click,change}=env,f=payrollFixture();
+  await React.act(async()=>root.render(React.createElement(Modal,f.props)));
+  const choices=()=>[...document.querySelectorAll('.pos-payments-menu button')].map(x=>x.textContent);
+  assert.deepEqual(choices(),["Πληρωμή προμηθευτή","Λοιπά έξοδα","Μισθοδοσία"]);
+  assert.equal(document.querySelector('.pos-payment-form'),null);
+  await click("Πληρωμή προμηθευτή");assert.ok(document.body.textContent.includes("Πληρωμή ανοιχτών τιμολογίων"));await click("Νέο τιμολόγιο");
+  const supplierInput=document.querySelector('.pos-payments-section input');assert.ok(supplierInput);
+  await click("Όλες οι πληρωμές");await click("Πληρωμή προμηθευτή");assert.equal(document.querySelector('.pos-payments-section input'),supplierInput,"returning to same section keeps supplier draft mounted");
+  const video=document.createElement("video");document.querySelector('.pos-payments-section').append(video);await click("Όλες οι πληρωμές");assert.equal(document.querySelector('.pos-payments-menu'),null,"live camera cannot be hidden by returning to menu");video.remove();
+  await click("Όλες οι πληρωμές");await React.act(async()=>{const late=document.createElement("video");document.querySelector('.pos-payments-section').append(late);await Promise.resolve()});assert.equal(document.querySelector('.pos-payments-menu'),null,"late camera activation reveals its section");document.querySelector('.pos-payments-section video').remove();
+  await click("Όλες οι πληρωμές");await click("Λοιπά έξοδα");assert.ok(document.body.textContent.includes("Επιστροφή χρημάτων / αρνητικό έξοδο"));
+  await click("Κατάθεση Τράπεζας");assert.ok(document.querySelector('.pos-payments-section'));await click("Όλες οι πληρωμές");await click("Λοιπά έξοδα");assert.equal([...document.querySelectorAll('.pos-payment-types button')].find(x=>x.textContent==="Κατάθεση Τράπεζας").getAttribute('aria-pressed'),'true');
+  await click("Όλες οι πληρωμές");await click("Μισθοδοσία");await change(inputFor("Τύπος πληρωμής"),"OVERTIME");await change(inputFor("Ώρες υπερωρίας"),"3");
+  await click("Όλες οι πληρωμές");await click("Μισθοδοσία");assert.equal(inputFor("Τύπος πληρωμής").value,"OVERTIME");assert.equal(inputFor("Ώρες υπερωρίας").value,"3");
+  await React.act(async()=>root.render(null));await React.act(async()=>root.render(React.createElement(Modal,f.props)));assert.deepEqual(choices(),["Πληρωμή προμηθευτή","Λοιπά έξοδα","Μισθοδοσία"]);
+  assert.equal(f.calls.filter(c=>c.options?.method==="POST").length,0,"navigation performs no payment or invoice write");
+ });
+});
+test("submenu visibility preserves current rights and existing bank-deposit access",async()=>{
+ const Modal=await component("StorePosPaymentsModal");
+ for(const [supplierPayment,thirdPartyPayment] of [[false,false],[false,true],[true,false]])await environment(async env=>{
+  const {React,root,click}=env,f=fixture();await React.act(async()=>root.render(React.createElement(Modal,{...f.props,runtimeAccess:{supplierPayment,thirdPartyPayment,sameShiftPayments:false}})));
+  const choices=[...document.querySelectorAll('.pos-payments-menu button')].map(x=>x.textContent);
+  assert.equal(choices.includes("Πληρωμή προμηθευτή"),supplierPayment);assert.equal(choices.includes("Μισθοδοσία"),thirdPartyPayment);
+  if(!supplierPayment&&!thirdPartyPayment){assert.equal(choices.length,0);assert.match(document.body.textContent,/Δεν έχεις ενεργό δικαίωμα/)}
+  if(supplierPayment&&!thirdPartyPayment){await click("Λοιπά έξοδα");assert.ok(document.body.textContent.includes("Κατάθεση Τράπεζας"));assert.equal([...document.querySelectorAll("button")].some(x=>x.textContent==="Καταχώριση εξόδου"),false);assert.equal(document.body.textContent.includes("Επιστροφή χρημάτων / αρνητικό έξοδο"),false)}
+  assert.equal(f.calls.filter(c=>c.options?.method==="POST").length,0);
  });
 });
