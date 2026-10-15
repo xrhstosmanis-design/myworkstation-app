@@ -9,7 +9,12 @@ import {
 import {confirmed,employeeSchema,ensureEmployeeNameAvailable,validateEmployeeReferences} from "./workforce-v2-validation.js";
 import {createLegacyWorkCardCode,createWorkCardCode,workCardHash,workCardLast4} from "../workforce-card-code.js";
 
+import {createChatStaffInvitation} from "../chat-staff-invitation.mjs";
+import {chatEnabled} from "../chat-mobile.mjs";
+import {companyModuleState,effectiveModuleEnabled} from "../middleware/module-access.js";
+
 const router=Router({mergeParams:true});
+router.get("/:employeeId/chat-invitation",createChatStaffInvitation({db:prisma,contextFor,loadEmployee,chatEnabled,companyModuleState,effectiveModuleEnabled}));
 
 async function ensureLegacyEmployee(tx,employee,storeId){
   if(employee.legacyEmployeeId){
