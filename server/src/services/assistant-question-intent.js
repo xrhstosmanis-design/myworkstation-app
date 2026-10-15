@@ -2,5 +2,5 @@ const normalize=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036
 export const assistantSalesQuestion=value=>/πωλ|πουλ|τζιρ|\b(?:sales|sold|selling)\b/.test(normalize(value));
 export function salesOnlyQuestion(value){
  const text=normalize(value);
- return assistantSalesQuestion(text)&&!/ιδιοκαταναλ|καταστροφ|αποθεμ|στοκ|ταμει|μετρητ|ελλειμ|πλεονασ|eftpos|\b(?:stock|cash)\b/.test(text);
+ return assistantSalesQuestion(text)&&!/ιδιοκαταναλ|καταστροφ|μεταφορ|πληρωμ|εξοδ|τιμολογ|προμηθευτ|αποθεμ|στοκ|ταμει|μετρητ|ελλειμ|πλεονασ|eftpos|\b(?:stock|cash)\b/.test(text);
 }

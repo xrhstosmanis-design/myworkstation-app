@@ -1,3 +1,5 @@
+import {businessTool,businessArguments,businessQuestionPeriod,businessQuestionClarification,directTransferRequest,assistantBusinessDomain} from './assistant-business-reports.js';
+import {businessReportAnswer} from '../../../shared/assistant-business-answer.mjs';
 import {z} from "zod";
 import {assistantSalesPeriodClarification} from "./assistant-conversation-context.js";
 import {salesReportCalendar} from "./sales-report-calendar.js";
@@ -44,7 +46,14 @@ export function productSalesEvidence(report,args,scope){
 export const assistantProductTools=[ownerSalesTool,ownerStockTool];
 
 // Shared dispatcher. The old export remains compatible with existing Owner clients.
-export async function runOwnerAssistant({prompt,question="",requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,cashTool,tools=[cashTool,ownerSalesTool],now=new Date()}){
+export async function runOwnerAssistant({prompt,question="",requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,readBusiness,cashTool,tools=[cashTool,ownerSalesTool],now=new Date()}){
+  const expectedDomain=assistantBusinessDomain(question),businessAllowed=tools.some(t=>t.name===businessTool.name);
+  if(expectedDomain&&businessAllowed){
+    const clarification=businessQuestionClarification(question,{now});
+    if(clarification)return {response:{ok:true},raw:{status:'completed',output_text:JSON.stringify(clarification)},evidence:[],reads:[]};
+    const direct=directTransferRequest(question,{now});
+    if(direct){const report=await readBusiness(direct);return {response:{ok:true},raw:{status:'completed',output_text:JSON.stringify(businessReportAnswer(report))},evidence:[report],reads:[{name:businessTool.name,args:direct}]};}
+  }
   const daily=tools.some(t=>t?.name===consumptionTool.name)&&dailyConsumptionRequest(question,{now});
   if(daily){
     if(daily.clarification)fail(daily.clarification,422);
@@ -64,11 +73,12 @@ export async function runOwnerAssistant({prompt,question="",requestProvider,read
     if(!provider.response.ok||["incomplete","failed","cancelled"].includes(provider.raw?.status))return {...provider,evidence,reads};
     const toolCalls=(provider.raw.output||[]).filter(item=>item.type==="function_call");if(!toolCalls.length)return {...provider,evidence,reads};
     if(round===2||toolCalls.length!==1||calls>=2)fail("Ο βοηθός έφτασε το όριο ανάγνωσης. Ζήτησε ένα συγκεκριμένο είδος και διάστημα.");
-    const call=toolCalls[0],sales=call.name===ownerSalesTool.name,stock=call.name===ownerStockTool.name,cash=call.name===cashTool.name,list=call.name===salesStoresTool.name,consumption=call.name===consumptionTool.name;
-    if(!(sales||stock||cash||list||consumption)||!tools.some(tool=>tool.name===call.name)||typeof call.call_id!=="string"||!call.call_id||typeof call.arguments!=="string"||call.arguments.length>(list?3000:600))fail("Μη επιτρεπόμενη αναζήτηση από τον βοηθό.");
-    let args;try{args=(consumption?consumptionArguments:list?salesStoresArguments:sales?salesToolArguments:stock?stockToolArguments:cashToolArguments).parse(JSON.parse(call.arguments))}catch{fail("Διευκρίνισε την ονομασία και τις έγκυρες ημερομηνίες της αναζήτησης.",422)}
-    calls++;const report=await(consumption?readConsumption(args):list?readSalesStores(args):sales?readSales(args):stock?readStock(args):readCash(args.date));evidence.push(report);reads.push({name:call.name,args});
-    const providerReport=list||consumption?{...report,rows:report.rows.slice(0,50),detailRowCount:report.rows.length,detailRowsLimited:report.rows.length>50,detailsShownInReport:true}:report;
+    const call=toolCalls[0],business=call.name===businessTool.name,sales=call.name===ownerSalesTool.name,stock=call.name===ownerStockTool.name,cash=call.name===cashTool.name,list=call.name===salesStoresTool.name,consumption=call.name===consumptionTool.name;
+    if(!(business||sales||stock||cash||list||consumption)||!tools.some(tool=>tool.name===call.name)||typeof call.call_id!=="string"||!call.call_id||typeof call.arguments!=="string"||call.arguments.length>(list||business?3000:600))fail("Μη επιτρεπόμενη αναζήτηση από τον βοηθό.");
+    let args;try{args=(business?businessArguments:consumption?consumptionArguments:list?salesStoresArguments:sales?salesToolArguments:stock?stockToolArguments:cashToolArguments).parse(JSON.parse(call.arguments))}catch{fail("Διευκρίνισε την ονομασία και τις έγκυρες ημερομηνίες της αναζήτησης.",422)}
+    if(business&&expectedDomain){const period=businessQuestionPeriod(question,{now});if(args.domain!==expectedDomain||period&&(args.from!==period.from||args.to!==period.to))fail("Η αναφορά πρέπει να ακολουθεί το ζητούμενο είδος και διάστημα.",422);}
+    calls++;const report=await(business?readBusiness(args):consumption?readConsumption(args):list?readSalesStores(args):sales?readSales(args):stock?readStock(args):readCash(args.date));evidence.push(report);reads.push({name:call.name,args});
+    const providerReport=list||consumption||business?{...report,rows:report.rows.slice(0,50),detailRowCount:report.rows.length,detailRowsLimited:report.rows.length>50,detailsShownInReport:true}:report;
     input.push(...provider.raw.output,{type:"function_call_output",call_id:call.call_id,output:JSON.stringify(providerReport)});
   }
   fail("Ο βοηθός δεν ολοκλήρωσε την απάντηση.");

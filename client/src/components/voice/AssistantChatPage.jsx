@@ -7,7 +7,7 @@ import {watchPlatformAssistantContext} from "../platform/platform-assistant-cont
 import {readBackofficeContext} from "../../utils/backofficeSessionBoundary.mjs";
 import {assistantRequestedFile,downloadAssistantFile} from "./assistant-file-download.js";
 import "./assistant-chat.css";
-const names={cash_details:"Ταμεία",sales_by_product:"Πωλήσεις ειδών",sales_by_store:"Πωλήσεις ανά κατάστημα",stock_by_product:"Απόθεμα",consumption_details:"Ιδιοκατανάλωση / Καταστροφή"};
+const names={business_records:"Μεταφορές · Πληρωμές · Έξοδα · Παραστατικά · Προσωπικό",cash_details:"Ταμεία",sales_by_product:"Πωλήσεις ειδών",sales_by_store:"Πωλήσεις ανά κατάστημα",stock_by_product:"Απόθεμα",consumption_details:"Ιδιοκατανάλωση / Καταστροφή"};
 const key=p=>p?.companyId&&p?.storeId?JSON.stringify([p.companyId,p.storeId]):"";
 const uuid=()=>globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`;
 const newThread=()=>({id:uuid(),title:"Νέα συνομιλία",messages:[]});

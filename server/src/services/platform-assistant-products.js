@@ -1,3 +1,4 @@
+import {businessTool,readAssistantBusiness} from './assistant-business-reports.js';
 import {parseAssistantSourceRead} from "./assistant-source-read.js";
 import {prisma} from "../prisma.js";
 import {cashTool,readCanonicalPlatformCash} from "./assistant-cash-tools.js";
@@ -26,7 +27,7 @@ export async function authorizePlatformAssistant(req,selection,{db=prisma,now=ne
 
 // The model gets no scope argument. Only an explicit UI pair, reauthorized at
 // every boundary, can reach the shared, parameterized canonical calculation.
-export async function createPlatformAssistantSession(req,selection,{authorize=authorizePlatformAssistant,readSalesReport=readSalesAnalysisReport,readStockReport=readStockAnalysisReport,readCash=readCanonicalPlatformCash,readConsumption=readAssistantConsumption,readSalesCatalog,authorizeSalesStores=authorizePlatformSalesStores,allStores=false,signal}={}){
+export async function createPlatformAssistantSession(req,selection,{authorize=authorizePlatformAssistant,readSalesReport=readSalesAnalysisReport,readStockReport=readStockAnalysisReport,readCash=readCanonicalPlatformCash,readConsumption=readAssistantConsumption,readBusiness=readAssistantBusiness,readSalesCatalog,authorizeSalesStores=authorizePlatformSalesStores,allStores=false,signal}={}){
   const scope=await authorize(req,selection);
   if(!scope&&!allStores)fail(422,"Επίλεξε κατάστημα ή την κεντρική αναφορά όλων των καταστημάτων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
   let salesAccess=null;
@@ -40,8 +41,9 @@ export async function createPlatformAssistantSession(req,selection,{authorize=au
   const evidence=report=>({...report,scope:"PLATFORM_SELECTED_STORE"});
   const cashScope=allStores?null:scope;
   const sessionCashTool=cashScope?{...cashTool,description:"Διαβάζει τον κανονικό έλεγχο κλεισμένων βαρδιών μόνο στο ήδη επιλεγμένο εξουσιοδοτημένο κατάστημα. date: YYYY-MM-DD ή null για σήμερα (ώρα Ελλάδας). Δεν περιλαμβάνει ανοικτές βάρδιες και δεν αλλάζει στοιχεία."}:cashTool;
-  const tools=[sessionCashTool,...(scope?assistantProductTools:[]),...(scope||allStores?[salesStoresTool]:[]),...(scope?[consumptionTool]:[])];
+  const tools=[sessionCashTool,...(scope?assistantProductTools:[]),...(scope||allStores?[salesStoresTool]:[]),...(scope?[consumptionTool,businessTool]:[])];
   const sourceReaders={
+      business_records:async args=>{await verify();const report=await readBusiness(args,scope,{signal});await verify();return evidence(report)},
       consumption_details:async args=>{await verify();const report=await readConsumption(args,scope,{signal});await verify();return evidence(report)},
       sales_by_store:async args=>{salesAccess=await authorizeSalesStores(req,selection,allStores,{authorize});return readAssistantSalesStores(args,salesAccess,{readReport:readSalesReport,...(readSalesCatalog?{readCatalog:readSalesCatalog}:{}),verify,signal})},
       cash_details:async ({date})=>{await verify();const report=await readCash(req,date,{signal,scope:cashScope});await verify();return report},
@@ -62,7 +64,7 @@ export async function createPlatformAssistantSession(req,selection,{authorize=au
     const questionTools=toolsForAssistantQuestion(question,tools);
     if(!questionTools.length)fail(422,"Επίλεξε συγκεκριμένο κατάστημα για ιδιοκατανάλωση ή καταστροφή προϊόντων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
     const out=await runProductAssistant({prompt,question,cashTool:sessionCashTool,tools:questionTools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
-      readConsumption:args=>readSource({name:"consumption_details",args}),readCash:date=>readSource({name:"cash_details",args:{date}}),
+      readBusiness:args=>readSource({name:"business_records",args}),readConsumption:args=>readSource({name:"consumption_details",args}),readCash:date=>readSource({name:"cash_details",args:{date}}),
       readSalesStores:args=>readSource({name:"sales_by_store",args}),readSales:args=>readSource({name:"sales_by_product",args}),readStock:args=>readSource({name:"stock_by_product",args})});
     await verify();return {...out,scope};
   }};
