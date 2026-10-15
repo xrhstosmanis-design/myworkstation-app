@@ -1,9 +1,15 @@
+import {inboxBusinessLabel} from "../../shared/invoice-inbox-state.mjs";
+import {inboxProcessingJoin,inboxProcessingState,inboxProcessingFields} from "./lib/inbox-processing-state.js";
 const normalize=value=>String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ς/g,"σ").toLocaleLowerCase("el-GR");
 const escape=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const from=`FROM "DocumentInbox" i LEFT JOIN "Supplier" s ON s."id"=i."supplierId" AND s."companyId"=i."companyId" LEFT JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" AND a."companyId"=i."companyId" LEFT JOIN "MyDataInboundDocument" m ON m."inboxId"=i."id" AND m."companyId"=i."companyId" AND m."storeId"=i."storeId"`;
 export function archiveQuery(companyId,storeId,filters={},count=false){
   const values=[companyId,storeId],where=['i."companyId"=$1','i."storeId"=$2'];
   const add=(sql,value)=>{values.push(value);where.push(sql.replace("?",`$${values.length}`))};
+  const processing=String(filters.processing||"ALL");
+  if(!["ALL","PENDING","REGISTERED","DRAFT","NO_DRAFT","LINK_REVIEW"].includes(processing))throw Object.assign(new Error("Μη έγκυρη κατάσταση θυρίδας."),{status:400});
+  const withProcessing=!count||processing!=="ALL";
+  if(processing!=="ALL")where.push(processing==="PENDING"?`(${inboxProcessingState})<>'REGISTERED'`:`(${inboxProcessingState})='${processing}'`);
   if(filters.supplier)add('s."name"=?',String(filters.supplier).slice(0,180));
   const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
   for(const value of [filters.date,filters.dateFrom,filters.dateTo])if(value&&!validDate(value))throw Object.assign(new Error("Μη έγκυρη ημερομηνία."),{status:400});
@@ -17,13 +23,13 @@ export function archiveQuery(companyId,storeId,filters={},count=false){
   if(filters.id)add('i."id"=?',String(filters.id));
   const haystack=`translate(lower(concat_ws(' ',s."name",a."filename",i."note",m."mark",m."series",m."documentNumber",m."issuerVat")), 'άέήίόύώϊΐϋΰς', 'αεηιουωιιυυσ')`;
   for(const term of normalize(String(filters.q||"").slice(0,200)).split(/\s+/).filter(Boolean))add(`strpos(${haystack},?)>0`,term);
-  const select=count?'COUNT(*)::int AS "count"':`i."id",i."status",i."receivedAt",i."note",i."responsibleName",i."supplierId",s."name" AS "supplierName",a."filename",a."mimeType",(a."contentData" IS NOT NULL) AS "hasAttachment",m."mark",m."issuerVat",m."series",m."documentNumber",m."issueDate",m."currency",m."totalNet",m."totalVat",m."totalGross",(m."rawPayload"->>'xml' LIKE '%downloadingInvoiceUrl%') AS "hasProviderOriginal",m."rawPayload"->>'originalError' AS "originalError",m."rawPayload"->>'originalJobId' AS "originalJobId"`;
-  let sql=`SELECT ${select} ${from} WHERE ${where.join(" AND ")}`;
+  const select=count?'COUNT(*)::int AS "count"':`i."id",i."status",i."receivedAt",i."note",i."responsibleName",i."supplierId",s."name" AS "supplierName",a."filename",a."mimeType",(a."contentData" IS NOT NULL) AS "hasAttachment",m."mark",m."issuerVat",m."series",m."documentNumber",m."issueDate",m."currency",m."totalNet",m."totalVat",m."totalGross",(m."rawPayload"->>'xml' LIKE '%downloadingInvoiceUrl%') AS "hasProviderOriginal",m."rawPayload"->>'originalError' AS "originalError",m."rawPayload"->>'originalJobId' AS "originalJobId",${inboxProcessingFields}`;
+  let sql=`SELECT ${select} ${from} ${withProcessing?inboxProcessingJoin:""} WHERE ${where.join(" AND ")}`;
   if(!count){const requestedLimit=Number(filters.limit),requestedOffset=Number(filters.offset),limit=Number.isFinite(requestedLimit)?Math.min(20001,Math.max(1,Math.floor(requestedLimit)||100)):100,offset=Number.isFinite(requestedOffset)?Math.max(0,Math.floor(requestedOffset)):0;values.push(limit,offset);sql+=` ORDER BY COALESCE(s."name",'Χωρίς αντιστοίχιση') ASC,m."issueDate" DESC NULLS LAST,i."receivedAt" DESC,i."id" DESC LIMIT $${values.length-1} OFFSET $${values.length}`;}
   return {sql,values};
 }
 export const archiveDate=row=>row.issueDate?new Date(row.issueDate).toISOString().slice(0,10):"";
-export const archiveStatus=row=>({RECEIVED:row.mark?"Εισερχόμενο myDATA - προς έλεγχο":"Αρχειοθετήθηκε",IN_REVIEW:"Σε έλεγχο",PROCESSED:"Ελεγμένο"}[row.status]||row.status);
+export const archiveStatus=row=>row.processingStatus?inboxBusinessLabel(row):({RECEIVED:row.mark?"Εισερχόμενο myDATA - προς έλεγχο":"Αρχειοθετήθηκε",IN_REVIEW:"Σε έλεγχο",PROCESSED:"Ελεγμένο"}[row.status]||row.status);
 export function archiveExportRows(rows){return [...rows].sort((a,b)=>String(a.supplierName||"Χωρίς αντιστοίχιση").localeCompare(String(b.supplierName||"Χωρίς αντιστοίχιση"),"el")||archiveDate(b).localeCompare(archiveDate(a))||String(a.documentNumber||"").localeCompare(String(b.documentNumber||""))).map(row=>({"Ημερομηνία":archiveDate(row),"Ημερομηνία λήψης":row.receivedAt?new Date(row.receivedAt).toISOString():"","Προμηθευτής":row.supplierName||"Χωρίς αντιστοίχιση","ΑΦΜ εκδότη":row.issuerVat||"","Σειρά":row.series||"","Αριθμός":row.documentNumber||"","MARK":row.mark||"","Καθαρή αξία":row.totalNet==null?null:Number(row.totalNet),"ΦΠΑ":row.totalVat==null?null:Number(row.totalVat),"Σύνολο":row.totalGross==null?null:Number(row.totalGross),"Νόμισμα":row.currency||"","Κατάσταση":archiveStatus(row),"Πρωτότυπο αρχείο":row.hasAttachment?"Διαθέσιμο":"Δεν έχει επισυναφθεί","Σημείωση":row.note||""}))}
 export function archiveReportHtml(rows,storeName){
   const exported=archiveExportRows(rows),columns=["Ημερομηνία","Προμηθευτής","ΑΦΜ εκδότη","Σειρά","Αριθμός","MARK","Καθαρή αξία","ΦΠΑ","Σύνολο","Κατάσταση"];
