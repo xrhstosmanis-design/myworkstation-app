@@ -32,6 +32,8 @@ test('actual purchase order renderer suppresses obsolete pending OCR diagnostics
 });
 async function seedWrong(f){
  await f.seed({posLines:0,mydataLines:0});
+ await f.db.$executeRawUnsafe(`UPDATE "PurchaseOrder" SET "supplierId"=NULL WHERE "id"='mydata'`);
+ await f.db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "supplierId"=NULL WHERE "id"='d-mydata'`);
  await f.db.$executeRawUnsafe(`UPDATE "PurchaseOrder" SET "invoiceNumber"=CASE WHEN "id"='pos' THEN '146066' ELSE '1ΤΔΑ 846666' END`);
  await f.db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "documentNumber"=CASE WHEN "id"='d-pos' THEN '146066' ELSE '1ΤΔΑ 846666' END,"documentDate"=CASE WHEN "id"='d-pos' THEN '2026-07-14'::timestamptz ELSE '2026-10-14'::timestamptz END,"totalGross"=CASE WHEN "id"='d-pos' THEN 12.34 ELSE 14.69 END`);
  await f.db.$executeRawUnsafe(`UPDATE "MyDataInboundDocument" SET "series"='1ΤΔΑ',"documentNumber"='846666',"issueDate"='2026-10-14',"totalGross"=14.69`);
@@ -55,6 +57,8 @@ for(const selectedRowsOrderId of ['pos','mydata'])test('native wrong-number/date
   assert.ok(results.every(r=>r.orderId===selectedRowsOrderId));
   assert.equal((await db.$queryRaw`SELECT * FROM "PurchaseOrder" WHERE "status"='NEW'`).length,1);
   assert.equal((await db.$queryRaw`SELECT * FROM "InvoiceDraftAlias"`).length,1);
+  assert.equal((await db.$queryRaw`SELECT "supplierId" FROM "PurchaseOrder" WHERE "id"=${selectedRowsOrderId}`)[0].supplierId,'sup');
+  assert.equal((await db.$queryRaw`SELECT "supplierId" FROM "PurchaseDocument" WHERE "id"=${'d-'+selectedRowsOrderId}`)[0].supplierId,'sup');
   assert.equal((await db.$queryRaw`SELECT * FROM "PurchaseOrderLine" WHERE "orderId"=${selectedRowsOrderId}`).length,13);
   assert.equal(await rows(),rowBefore);assert.equal(await f.snapshot(),before);
   assert.equal(JSON.stringify(await db.$queryRaw`SELECT * FROM "DocumentAttachment" ORDER BY "id"`),filesBefore);

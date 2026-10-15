@@ -174,6 +174,12 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
  if(selectedRowsOrderId&&!selectedRows)throw error("Επίλεξε έναν υπάρχοντα πίνακα γραμμών αυτής της αντιστοίχισης.");
  if(populated.length>1&&(automatic||!selectedRows))throw error("Και τα δύο πρόχειρα περιέχουν γραμμές. Επίλεξε τον σωστό πίνακα· ο άλλος διατηρείται στο ιστορικό.","INVOICE_REVIEWED_ROWS_CONFLICT");
  const canonical=selectedRows||pair.find(o=>posted.includes(o.orderId))||payment||pos;
+ let inheritedSupplier=null;
+ if(pos.headerReviewRequired&&!supplierCorrection&&!posted.length&&(!canonical.supplierId||!canonical.documentSupplierId)){
+  if(canonical.supplierId&&canonical.supplierId!==pos.supplierId||canonical.documentSupplierId&&canonical.documentSupplierId!==pos.supplierId)throw error("Ο προμηθευτής του επιλεγμένου πίνακα χρειάζεται χωριστή επιβεβαίωση.");
+  inheritedSupplier=(await tx.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${pos.supplierId} AND "companyId"=${scope.companyId} AND "active"=true AND REGEXP_REPLACE(COALESCE("taxId",''),'[^0-9]','','g')=${tax(row.issuerVat)} FOR SHARE`)[0];
+  if(!inheritedSupplier)throw error("Δεν βρέθηκε ενεργός επιβεβαιωμένος προμηθευτής για το κοινό πρόχειρο.");
+ }
  const aliases=pair.filter(o=>o.orderId!==canonical.orderId);
  for(const alias of aliases)if(alias.documentStatus!=="DRAFT"||alias.status!=="NEW")throw error("Μόνο το μη καταχωρημένο δεύτερο πρόχειρο γίνεται ιστορική αναφορά.");
  if(posted.length&&populated.some(o=>o.orderId!==canonical.orderId))throw error("Η ήδη καταχωρημένη αγορά δεν αντικαθίσταται από άλλο πίνακα γραμμών.");
@@ -197,7 +203,11 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
   if(linked.length)throw error("Η ίδια πληρωμή συνδέεται με άλλο παραστατικό· δεν μεταβλήθηκε.");
  }
  const paymentRows=payment?await tx.$queryRaw`SELECT row_to_json(t) AS "row" FROM "StoreTransaction" t WHERE "id"=${payment.paymentTransactionId} AND "companyId"=${scope.companyId}`:[];
- const details={...common,headerCorrection:Boolean(pos.headerReviewRequired),lineEvidence:pos.lineEvidence||null,reason:automatic?"Exact verified invoice identity":String(reason).trim(),automatic,actorId,before:pair,selectedRowsOrderId:selectedRows?.orderId||null,verifiedSupplier:verifiedSupplier||null,supplierCorrection,paymentSupplierCorrection,paymentBefore:paymentRows[0]?.row||null,photoAttachmentIds:photoIds,pdfAttachmentId:row.attachmentId,stockChanged:false,paymentChanged:false};
+ const details={...common,headerCorrection:Boolean(pos.headerReviewRequired),lineEvidence:pos.lineEvidence||null,inheritedSupplier,reason:automatic?"Exact verified invoice identity":String(reason).trim(),automatic,actorId,before:pair,selectedRowsOrderId:selectedRows?.orderId||null,verifiedSupplier:verifiedSupplier||null,supplierCorrection,paymentSupplierCorrection,paymentBefore:paymentRows[0]?.row||null,photoAttachmentIds:photoIds,pdfAttachmentId:row.attachmentId,stockChanged:false,paymentChanged:false};
+ if(inheritedSupplier){
+  await tx.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"=${inheritedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.orderId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='NEW'`;
+  await tx.$executeRaw`UPDATE "PurchaseDocument" SET "supplierId"=${inheritedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.documentId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='DRAFT'`;
+ }
  if(supplierCorrection){
   await tx.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"=${verifiedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.orderId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='NEW'`;
   await tx.$executeRaw`UPDATE "PurchaseDocument" SET "supplierId"=${verifiedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.documentId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='DRAFT'`;

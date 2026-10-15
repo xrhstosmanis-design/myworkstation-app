@@ -17,5 +17,6 @@ test("purchase order list labels delivered assistant drafts while preserving fai
   assert.match(suite,/Ανάγνωση από βοηθό · πρόχειρο για έλεγχο/);
   assert.match(suite,/OCR job: \$\{esc\(job\.status\|\|"—"\)\} \/ \$\{esc\(job\.stage\|\|"—"\)\}/);
   assert.match(suite,/job\.error\?` · \$\{esc\(job\.error\)\}`/);
-  assert.match(suite,/ocrJobDiagnostic\(o\.ocrJob\)/);
+  assert.match(suite,/if\(!job\|\|status==="INVOICED"\)return ""/);
+  assert.match(suite,/ocrJobDiagnostic\(o\.ocrJob,o\.status\)/);
 });
