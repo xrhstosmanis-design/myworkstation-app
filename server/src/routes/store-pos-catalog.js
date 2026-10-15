@@ -4,6 +4,7 @@ import {prisma} from "../prisma.js";
 import {advancedOnlineProductSearch} from "../advanced-online-product-search.js";
 import {z} from "zod";
 import {getStoreLabelSettings} from "../services/store-label-settings.js";
+import {registerPermanentPriceRoutes} from "../lib/pos-permanent-price.js";
 
 const router=Router();
 const money=value=>Number(value||0);
@@ -92,6 +93,8 @@ router.use("/stores/:storeId",async(req,res,next)=>{
     next();
   }catch(error){next(error)}
 });
+
+registerPermanentPriceRoutes(router,prisma);
 
 router.get("/stores/:storeId/access",async(req,res)=>{
   const rows=await prisma.$queryRaw`SELECT "settings" FROM "ManagementParameters" WHERE "companyId"=${req.user.companyId} LIMIT 1`.catch(()=>[]);
@@ -350,3 +353,4 @@ router.get("/stores/:storeId/legacy-full",async(req,res,next)=>{
       WHERE sp."storeId"=${store.id} AND sp."active"=true AND p."active"=true ORDER BY c."name" NULLS LAST,p."name"`;res.json({store,layout,layoutVersion:Number(layoutRows[0]?.version||0),publishedAt:layoutRows[0]?.publishedAt||null,access,products:products.map(row=>({...row,masterProductId:row.resolvedMasterProductId||row.masterProductId||null,sourceCode:row.masterCode||row.sku||null,masterCode:row.masterCode||null,barcodes:[...new Set([...(row.barcodes||[]),...(row.masterBarcodes||[])])],salePrice:money(row.salePrice),currentStock:money(row.currentStock),vatRate:money(row.vatRate)}))})}catch(error){next(error)}
 });
 export default router;
+

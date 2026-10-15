@@ -1,0 +1,8 @@
+.pos-price-modal .pos-price-scope{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pos-price-modal .pos-price-scope button{min-height:46px;padding:8px;border:1px solid #9cbdb4;border-radius:8px;background:#fff;color:#064c3b;font-size:16px;font-weight:800}
+.pos-price-modal .pos-price-scope button[aria-pressed=true]{background:#087a52;color:#fff;border-color:#087a52}
+.pos-price-modal .pos-price-scope button:disabled{opacity:.55}
+.pos-price-modal .pos-permanent-price{display:grid;gap:8px}
+.pos-price-modal .pos-permanent-price p{margin:0;padding:8px;background:#e8f3ef;border-radius:8px;font-size:15px;line-height:1.35}
+.pos-price-modal .pos-permanent-price [role=alert]{color:#9f2020;background:#fff0f0}
+.pos-price-modal .pos-permanent-price button{min-height:46px;font-size:16px}

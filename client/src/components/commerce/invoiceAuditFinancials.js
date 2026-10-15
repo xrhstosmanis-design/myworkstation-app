@@ -6,6 +6,7 @@ const unit=value=>value==="PACKAGE"?"ΚΒ / συσκευασία":"ΤΜΧ";
 const lineSummary=line=>{if(!line||typeof line!=="object")return"—";const discounts=[line.discount1,line.discount2,line.discount3].map(value=>`${num(value)}%`).join(" / ");return `${line.description||line.supplierCode||"Γραμμή"}${line.supplierCode?` (${line.supplierCode})`:""} · Ποσ.: ${num(line.quantity)} ${unit(line.invoiceUnit)}${line.invoiceUnit==="PACKAGE"?` × ${num(line.stockUnitsPerInvoiceUnit)} ΤΜΧ`:""} · Αρχική: ${money(line.unitCost)} · Εκπτ.1/2/3: ${discounts} · Καθαρή: ${money(line.netAmount)} · ΦΠΑ: ${num(line.vatRate)}% / ${money(line.vatAmount)} · Σύνολο: ${money(line.grossAmount)}`};
 
 export function invoiceAuditFinancialText(event){
+  if(event?.eventType==="PERMANENT_PRICE_CHANGE"){const d=event.financialDetails||{};return `Προϊόν: ${d.productName||"—"} · SKU ${d.sku||"—"} · Παλιά τιμή: ${money(d.oldPrice)} → Νέα τιμή: ${money(d.newPrice)} · Μόνιμη τιμή καταστήματος`;}
   if(!events.has(event?.eventType))return null;
   const details=event.financialDetails&&typeof event.financialDetails==="object"?event.financialDetails:{};
   const stock=details.stockChanged===false?"Stock: αμετάβλητο":"Stock: ελέγξτε την καταγραφή";
@@ -21,3 +22,4 @@ export function invoiceAuditFinancialText(event){
   if(event.eventType==="PURCHASE_ORDER_LINE_DELETED")return `${invoice} · Διαγραφή: ${lineSummary(details.line)} · ${stock}`;
   return `${invoice} · Πριν: ${lineSummary(details.before)} · Μετά: ${lineSummary(details.after)} · Εκμάθηση προμηθευτή: ${details.supplierMappingLearned?"ναι":"όχι"} · ${stock}`;
 }
+

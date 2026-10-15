@@ -67,7 +67,7 @@ function enforceStorePosPermissions(req,res,permissions){
   const path=String(req.originalUrl||"").split("?")[0];
   if(!path.startsWith("/api/store-pos/stores/"))return true;
   const deny=error=>{res.status(403).json({error});return false};
-  if(req.method==="POST"&&/\/audit$/.test(path)&&req.body?.actionType==="PRICE_CHANGE"&&!permissions.includes("CHANGE_RETAIL")){
+  if(req.method==="POST"&&((/\/audit$/.test(path)&&req.body?.actionType==="PRICE_CHANGE")||/\/permanent-price$/.test(path))&&!permissions.includes("CHANGE_RETAIL")){
     return deny("Δεν έχεις δικαίωμα «Αλλαγή τιμής λιανικής» από το BackOffice.");
   }
   const isCheckout=req.method==="POST"&&/\/checkout$/.test(path);
@@ -269,3 +269,4 @@ export async function auth(req,res,next){
     res.status(503).json({error:"Ο έλεγχος συνεδρίας δεν είναι προσωρινά διαθέσιμος. Δοκίμασε ξανά — δεν έγινε αποσύνδεση.",code:"AUTH_VALIDATION_UNAVAILABLE"});
   }
 }
+
