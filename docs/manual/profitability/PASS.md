@@ -1,3 +1,7 @@
+## 16/10/2026 01:47 - Maximized viewport USER FAIL / follow-up ASSIGNED
+
+New user screenshots show missing bottom scrollbar and clipped report-information control in maximized Business Picture. Earlier maximize/restore observation below did not verify containment; maximized scrollbar/disclosure reachability is now OPEN with feat/business-picture-readability-20261016. Normal readability/value/disclosure PASS remains scoped as observed. See CHECKPOINTS/CHANGES/2026-10-16-business-picture-maximized.md. No financial/stock action or repeated fixture is needed for this presentation fix.
+
 ## 16/10/2026 - Business Picture readability / LIMITED LIVE VISUAL PASS
 
 The existing Owner report is available to its permitted OWNER/ADMIN/MANAGER/SUPER_ADMIN roles within existing company/store/module controls. This acceptance directly observed only authenticated Super Admin support desktop in MYWORKSTATION LAB/ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, exact production bfea6636788b7f193ed8029d801cae47976751d6 after guarded deployment and independent health verification. Ordinary Owner/mobile/physical and whole financial27 remain OPEN with their existing owner.
