@@ -1,3 +1,4 @@
+import {businessRecordLabel,businessStatusLabel} from '../../../shared/assistant-business.mjs';
 const money=v=>v===null||v===undefined?null:typeof v==="number"&&Number.isFinite(v)?v:null;
 const at=v=>v&&!Number.isNaN(new Date(v).getTime())?new Date(v).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"Μη καταγεγραμμένη";
 const unit=v=>({PIECE:"τεμάχια",KG:"κιλά",LITER:"λίτρα",PACKAGE:"συσκευασίες"})[v]||"Μη καταγεγραμμένη";
@@ -17,7 +18,13 @@ export function assistantReportTables(evidence,{generatedAt=new Date()}={}){
   const noAmounts=["ambiguous","no_match","source_limited"].includes(r.result);
   if(r.reason==="catalog_name_not_found")notes.push("Δεν βρέθηκε αντιστοίχιση στον εξουσιοδοτημένο κατάλογο· δεν αποδεικνύονται μηδενικές πωλήσεις.");
   if(Array.isArray(r.categoryCandidates)&&r.categoryCandidates.length)notes.push(`Καταγεγραμμένες κατηγορίες: ${r.categoryCandidates.slice(0,20).join(" · ")}`);
-  if(r.kind==="consumption"){
+  if(r.kind==="business_records"){
+   title=r.title;columns=["Ημερομηνία","Είδος εγγραφής","Περιγραφή / Ονομασία","Ποσό (€)","Χειριστής","Αριθμός / Ταμείο","Κατάσταση"];
+   rows=noAmounts?[]:r.rows.map(x=>[at(x.recordedAt),businessRecordLabel(x.recordType),x.label,money(x.amount),x.operatorName||"",x.reference||"",businessStatusLabel(x.status)]);
+   if(r.currentSnapshot)notes.push("Τρέχων κατάλογος, όχι ιστορική εικόνα.");
+   if(r.domain==="INVOICES")notes.push("Παραστατικά χωριστά ανά κατάσταση. Πρόχειρο δεν σημαίνει εγκεκριμένη αγορά· τα πιστωτικά δεν αθροίζονται ως χρέωση.");
+   if(r.domain==="BANK_MOVEMENTS")notes.push("Καταχωρημένες κινήσεις, όχι διαθέσιμο τραπεζικό υπόλοιπο.");
+  }else if(r.kind==="consumption"){
    title=r.consumptionKind==="PRODUCT_DESTRUCTION"?"Καταστροφή προϊόντων":"Ιδιοκατανάλωση";
    columns=["Ημερομηνία","Είδος","SKU","Ποσότητα","Αξία αναφοράς (€)","Χειριστής καταχώρισης"];
    rows=noAmounts?[]:r.rows.map(x=>[at(x.recordedAt),x.name,x.sku||"",money(x.quantity),money(x.referenceValue),x.operatorName||"Μη καταγεγραμμένος"]);

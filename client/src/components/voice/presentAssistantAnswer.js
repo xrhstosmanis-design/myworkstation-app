@@ -1,3 +1,4 @@
+import {businessReportAnswer} from '../../../../shared/assistant-business-answer.mjs';
 import {formatAssistantEuroText} from "./formatAssistantEuroText.js";
 export const assistantMoney=n=>Number(n).toLocaleString("el-GR",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2});
 export const assistantQuantity=n=>Number(n).toLocaleString("el-GR",{maximumFractionDigits:3});
@@ -7,6 +8,7 @@ export function presentAssistantAnswer(result){
   if(!result)return null;
   const fallback={answer:formatAssistantEuroText(result.answer),highlights:(result.highlights||[]).map(formatAssistantEuroText),limitations:formatAssistantEuroText(result.limitations)};
   const evidence=result.evidence||[];
+  if(evidence.length===1&&evidence[0].kind==="business_records")return businessReportAnswer(evidence[0]);
   if(evidence.length===1&&evidence[0].kind==="consumption"){
     const r=evidence[0],label=r.consumptionKind==="PRODUCT_DESTRUCTION"?"Καταστροφή προϊόντων":"Ιδιοκατανάλωση",period=`${r.storeName} · ${r.from} έως ${r.to}`;
     if(r.result==="source_limited")return {...fallback,answer:`${label} · ${period}.\n${r.reason} Δεν εξάγεται πλήρες ή μηδενικό αποτέλεσμα.`,highlights:[],limitations:"Απαιτείται μικρότερη περίοδος ή έλεγχος της κανονικής αναφοράς Συμβάντων."};

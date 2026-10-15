@@ -1,9 +1,10 @@
+import {assistantBusinessDomain} from '../../../shared/assistant-business.mjs';
 import {z} from "zod";
 import {assistantSalesQuestion,salesOnlyQuestion} from "./assistant-question-intent.js";
 
 export const assistantHistorySchema=z.array(z.object({role:z.enum(["user","assistant"]),content:z.string().trim().min(1).max(2000)}).strict()).max(10).default([]);
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").trim();
-const domain=q=>assistantSalesQuestion(q)||/ιδιοκαταναλ|καταστροφ|πωλησ|ταμει|μετρητ|αποθεμ|στοκ|προσφορ|εκπτωσ/.test(norm(q));
+const domain=q=>Boolean(assistantBusinessDomain(q))||assistantSalesQuestion(q)||/ιδιοκαταναλ|καταστροφ|πωλησ|ταμει|μετρητ|αποθεμ|στοκ|προσφορ|εκπτωσ/.test(norm(q));
 // This only detects a supplied period, never invents or validates report dates.
 // The canonical reader still validates the resolved calendar and date limits.
 const numericDatePattern=String.raw`\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}(?:/\d{2,4})?|\d{1,2}\.\d{1,2}\.\d{2,4}`;
@@ -25,6 +26,16 @@ function lastSalesPeriod(history){
 }
 export function assistantEffectiveQuestion(question,history=[]){
  const checked=assistantHistorySchema.parse(history),q=norm(question);
+ const business=assistantBusinessDomain(question);
+ if(business&&!assistantQuestionHasPeriod(question)){
+  const compatible=d=>d===business||d?.startsWith('TRANSFERS')&&business.startsWith('TRANSFERS');
+  for(const m of [...checked].reverse().filter(m=>m.role==='user')){
+   const prior=assistantBusinessDomain(m.content);
+   if(prior&&!compatible(prior)||!prior&&assistantQuestionRequiresReport(m.content))break;
+   if(prior&&assistantQuestionHasPeriod(m.content))return `${question}\nΠερίοδος της ίδιας αναζήτησης: ${m.content}\nΧρησιμοποίησε μόνο την προηγούμενη περίοδο και το είδος της νέας ερώτησης στο ήδη επιλεγμένο κατάστημα.`;
+  }
+ }
+
  if(salesOnlyQuestion(question)&&!assistantQuestionHasPeriod(question)){
   const period=lastSalesPeriod(checked);
   if(period)return `${question}\nΠερίοδος της ίδιας αναζήτησης πωλήσεων: ${period}\nΧρησιμοποίησε μόνο την προηγούμενη περίοδο, με το είδος/κατηγορία της νέας ερώτησης και το ήδη εξουσιοδοτημένο εύρος.`;

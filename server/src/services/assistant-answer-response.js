@@ -25,7 +25,7 @@ export function assistantAnswerFromResponse(raw,evidence=[],{providerOK=true,req
  }
  // The callers have reauthorized and checked the canonical reports before this
  // fallback. No model text, partial JSON or old conversation amounts are used.
- if(evidence.length&&evidence.every(r=>r&&Array.isArray(r.rows)&&[undefined,"product_sales","product_stock","sales_by_store","consumption"].includes(r.kind)))return {
+ if(evidence.length&&evidence.every(r=>r&&Array.isArray(r.rows)&&[undefined,"product_sales","product_stock","sales_by_store","consumption","business_records"].includes(r.kind)))return {
   answer:"Τα πραγματικά στοιχεία της αναφοράς είναι διαθέσιμα στους πίνακες παρακάτω.",highlights:[],sources:[...new Set(evidence.map(r=>r.source).filter(v=>typeof v==="string"))].slice(0,8),
   limitations:"Η σύνοψη του AI δεν ολοκληρώθηκε. Εμφανίζονται μόνο τα στοιχεία και οι περιορισμοί των πραγματικών πηγών, χωρίς εκτιμήσεις ή συμπεράσματα αιτίας.",sourceOnly:true
  };
