@@ -15,7 +15,7 @@ test('mounted actual preparation: auto-read only, stale responses, explicit fisc
  mounted.refresh(detail);assert.equal(saves,0);assert.match(waiting[0].path,/storeId=store/);
  host.querySelector('[data-product-prepare="second"]').click();waiting[0].resolve(proposal('first'));await flush();assert.equal(host.querySelector('form'),null);
  waiting[1].resolve(proposal('second'));await flush();assert.equal(field('vatDepartmentId').value,'');assert.equal(saves,0);
- change('mode','NEW');change('salePrice','2.50');change('vatDepartmentId','second13');assert.equal(field('allowPosPriceChange').checked,true);assert.equal(field('barcode').value,'');assert.equal(field('subcategoryId').value,'sub');
+ change('mode','NEW');assert.equal(dom.window.getComputedStyle(host.querySelector('[data-existing]')).display,'none');change('salePrice','2.50');change('vatDepartmentId','second13');assert.equal(field('allowPosPriceChange').checked,true);assert.equal(field('barcode').value,'');assert.equal(field('subcategoryId').value,'sub');
  const form=host.querySelector('form');form.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));await flush();assert.equal(saves,0,'review confirmation required');
  field('reviewed').checked=true;form.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));form.dispatchEvent(new dom.window.Event('submit',{cancelable:true}));await flush();assert.equal(saves,1);
  const body=JSON.parse(calls.find(x=>x.options).options.body);assert.equal(body.barcode,'');assert.equal(body.mode,'NEW');assert.equal(body.storeId,'store');assert.equal(body.vatDepartmentId,'second13');assert.equal(body.salePrice,2.5);assert.equal(body.allowPosPriceChange,true);assert.equal(body.reviewed,true);assert.equal(body.version,'a'.repeat(64));
