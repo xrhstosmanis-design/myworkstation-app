@@ -70,3 +70,43 @@ test("provider formats remain bounded and canonical S1/Impact URLs still work",a
   await downloadInvoiceQr(canonical,"987654321",{...t,reader});assert.equal(t.calls[1].u,canonical+"/pdf");
   assert.equal(invoiceQrUrl(url.replace("https://","https:/")).href,url);
 });
+
+const epsilonUrl="https://epsilondigital.epsilonnet.gr/DocViewer/12345678-1234-1234-1234-123456789abc";
+const epsilonAuth="acbd".repeat(10);
+const epsilonUid="bcda".repeat(10);
+const epsilonXml=xml.replace("<mark>",`<uid>${epsilonUid}</uid><authenticationCode>${epsilonAuth}</authenticationCode><mark>`);
+// Deliberately no issuer VAT in text: this template's supplier header is an image.
+const epsilonText=`${epsilonAuth.slice(0,33)} ${epsilonUid.slice(0,29)} 12345 987654321 0012`;
+function epsilonTransport(source=epsilonXml,bytes=pdf){
+  const calls=[];
+  return {calls,fetcher:async(u,o)=>{calls.push({u,o});return new Response(new URL(u).searchParams.get("fileType")==="3"?source:bytes)}};
+}
+test("Epsilon DocViewer QR downloads paired myDATA/PDF and verifies image-header identity",async()=>{
+  for(const input of [epsilonUrl,epsilonUrl+"/"]){
+    const t=epsilonTransport();
+    const r=await downloadInvoiceQr(input,"987654321",{...t,reader:async()=>({text:epsilonText,pageCount:1})});
+    assert.deepEqual(t.calls.map(x=>x.u),[3,2].map(type=>`https://epsilondigital.epsilonnet.gr/filedocument/getfile?fileType=${type}&documentId=12345678-1234-1234-1234-123456789abc`));
+    assert.ok(t.calls.every(x=>x.o.redirect==="error"));
+    assert.equal(r.header.supplierTaxId,"123456789");assert.equal(r.header.documentNumber,"A-0012");assert.equal(r.header.totalGross,11.3);
+    assert.equal(r.requiresHumanReview,true);assert.equal(r.header.paymentMethod,undefined);
+  }
+});
+test("Epsilon rejects untrusted paths, malformed IDs, query payloads and credentials before network",async()=>{
+  for(const bad of [epsilonUrl.replace("https:","http:"),epsilonUrl.replace("epsilonnet.gr","epsilonnet.gr.attacker.test"),epsilonUrl.replace("/DocViewer/","/p/"),epsilonUrl.replace(/abc$/,"xyz"),epsilonUrl+"?next=http://localhost",epsilonUrl+"#x",epsilonUrl+"/pdf",epsilonUrl.replace("https://","https://u:p@"),epsilonUrl.replace(".gr/",".gr:444/"),epsilonUrl.replace("epsilondigital.epsilonnet.gr","einvoice.impact.gr")]){
+    const t=epsilonTransport();await assert.rejects(downloadInvoiceQr(bad,"987654321",{...t,reader}));assert.equal(t.calls.length,0);
+  }
+});
+test("Epsilon requires both printed hash prefixes, MARK, recipient and number; does not relax other providers",async()=>{
+  for(const bad of [epsilonText.replace(epsilonAuth.slice(0,33),"c".repeat(33)),epsilonText.replace(epsilonUid.slice(0,29),"d".repeat(29)),epsilonText.replace(epsilonAuth.slice(0,33),epsilonAuth.slice(0,27)),epsilonText.replace("12345 ","54321 "),epsilonText.replace("987654321","111111111"),epsilonText.replace("0012","0013"),"12345 123456789 987654321 0012"]){
+    await assert.rejects(downloadInvoiceQr(epsilonUrl,"987654321",{...epsilonTransport(),reader:async()=>({text:bad,pageCount:1})}),/Epsilon/);
+  }
+  for(const source of [epsilonXml.replace("987654321","111111111"),epsilonXml.replace("<vatNumber>123456789</vatNumber>","<vatNumber>invalid</vatNumber>")]){
+    const t=epsilonTransport(source);await assert.rejects(downloadInvoiceQr(epsilonUrl,"987654321",{...t,reader}));assert.equal(t.calls.length,1);
+  }
+  for(const source of [epsilonXml.replace(`<uid>${epsilonUid}</uid>`,""),epsilonXml.replace(`<authenticationCode>${epsilonAuth}</authenticationCode>`,""),epsilonXml.replace(epsilonUid,epsilonAuth)]){
+    await assert.rejects(downloadInvoiceQr(epsilonUrl,"987654321",{...epsilonTransport(source),reader:async()=>({text:epsilonText,pageCount:1})}),/Epsilon/);
+  }
+  await assert.rejects(downloadInvoiceQr(url,"987654321",{...transport(),reader:async()=>({text:epsilonText,pageCount:1})}),/ΑΦΜ/);
+  await assert.rejects(downloadInvoiceQr(epsilonUrl,"987654321",{...epsilonTransport(epsilonXml,Buffer.from("HTML challenge")),reader}),/PDF/);
+  await assert.rejects(downloadInvoiceQr(epsilonUrl,"987654321",{...epsilonTransport(),reader:async()=>({text:epsilonText,pageCount:6})}),/5 σελίδες/);
+});
