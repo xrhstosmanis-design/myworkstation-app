@@ -1,3 +1,7 @@
+## 15/10/2026 — shared order lock ordering
+
+Keep existing table-order lock before product rows in round creation, matching POS table checkout lock order. Product revalidation remains before line insertion; any earlier order-header change rolls back on conflict. Avoid introducing an order/product deadlock while retaining replay and atomicity. No business/fiscal permission change.
+
 ## 15/10/2026 — first full CI / test harness dependency correction
 
 PR2517/head91c5cb34/CI38797462756/job116637659909: new native four-card24h merge/concurrent sale/selected-pending checks PASS, but one pre-existing native online handler harness returned500 because its import-stripping evaluator did not inject newly imported lockActiveSaleProducts. Corrected harness to inject the actual production helper (not a no-op); no business guard relaxed. Full clean native suite rerun required. No deployment or real business mutation yet.
