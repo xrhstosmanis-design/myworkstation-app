@@ -1,0 +1,187 @@
+{
+  "scope": "LIMITED LIVE read-only status/navigation/candidate/table preview; actual merge NOT TESTED",
+  "companyId": "cmulmjjoa000oqlbfyi0h53ju",
+  "storeId": "cmulmjjoc000qqlbf2bn2ifj0",
+  "timeAthens": "2026-10-16T00:07-00:15",
+  "sourceHead": "7ad8d28862ccf278f7f0648254c00c6e028f1b15",
+  "sourceMerge": "628d3da95192623f46ef38da226b9eafcd95aee5",
+  "sourceCI": {
+    "id": 38803697108,
+    "attempt": 2,
+    "pass": 2708,
+    "fail": 0,
+    "skip": 0
+  },
+  "mainCI": {
+    "id": 38805696740,
+    "pass": 2708,
+    "fail": 0,
+    "skip": 0
+  },
+  "release": "6627739cd49d1cc4b624ed32fe1b595a62124e55",
+  "releaseCI": {
+    "id": 38806024456,
+    "pass": 2721,
+    "fail": 0,
+    "skip": 0
+  },
+  "guard": {
+    "id": 38807011579,
+    "job": 116670412611
+  },
+  "renderDeploy": "dep-db8jvu0m7kps73bakim0",
+  "before": [
+    {
+      "hash": "786db8d48f25bc65662a78f92c9692a0",
+      "id": "05ac7a00-36c3-49c0-bbb3-6b8f22e86bf6",
+      "kind": "order"
+    },
+    {
+      "hash": "4630b629b88e32c758425b412d7b1994",
+      "id": "390c66af-3941-420b-b699-642d29f82d2d",
+      "kind": "order"
+    },
+    {
+      "hash": "0be2f9d1781af803b17d15e5101c38c5",
+      "id": "pay_63b3e9b33b09ea72d8008081beeb56f2dff26bbfbd697b78d9752abd67cb4e4e",
+      "kind": "payment"
+    },
+    {
+      "hash": "2ef01f36b83d571df5a89cf46d5a9da9",
+      "id": "05ac7a00-36c3-49c0-bbb3-6b8f22e86bf6",
+      "kind": "lines"
+    },
+    {
+      "hash": "631733dd0b489f561836bec2f2da2d2b",
+      "id": "390c66af-3941-420b-b699-642d29f82d2d",
+      "kind": "lines"
+    },
+    {
+      "hash": "229f77f05d831a621ee118984a6f8fa9",
+      "id": "63b32642-af2a-44ec-8f78-c2bff7a3601a",
+      "kind": "document"
+    },
+    {
+      "hash": "8286d5f3e1b7e1bd85ed70d9d6add6d6",
+      "id": "ef7b7581-fe39-435b-a032-d660f61ece1f",
+      "kind": "document"
+    },
+    {
+      "hash": "e3b9e46f4409fe67b4cefbcd6fd3bb84",
+      "id": "8afa7479-c91d-40fa-9f4f-89186d0d33d7",
+      "kind": "attachment"
+    },
+    {
+      "hash": "fe3b26e7b4971fe1354196f0cc8bd38c",
+      "id": "83358d58-bdb5-492f-9e54-62e297d78290",
+      "kind": "attachment"
+    }
+  ],
+  "after": [
+    {
+      "hash": "786db8d48f25bc65662a78f92c9692a0",
+      "id": "05ac7a00-36c3-49c0-bbb3-6b8f22e86bf6",
+      "kind": "order"
+    },
+    {
+      "hash": "4630b629b88e32c758425b412d7b1994",
+      "id": "390c66af-3941-420b-b699-642d29f82d2d",
+      "kind": "order"
+    },
+    {
+      "hash": "0be2f9d1781af803b17d15e5101c38c5",
+      "id": "pay_63b3e9b33b09ea72d8008081beeb56f2dff26bbfbd697b78d9752abd67cb4e4e",
+      "kind": "payment"
+    },
+    {
+      "hash": "2ef01f36b83d571df5a89cf46d5a9da9",
+      "id": "05ac7a00-36c3-49c0-bbb3-6b8f22e86bf6",
+      "kind": "lines"
+    },
+    {
+      "hash": "631733dd0b489f561836bec2f2da2d2b",
+      "id": "390c66af-3941-420b-b699-642d29f82d2d",
+      "kind": "lines"
+    },
+    {
+      "hash": "229f77f05d831a621ee118984a6f8fa9",
+      "id": "63b32642-af2a-44ec-8f78-c2bff7a3601a",
+      "kind": "document"
+    },
+    {
+      "hash": "8286d5f3e1b7e1bd85ed70d9d6add6d6",
+      "id": "ef7b7581-fe39-435b-a032-d660f61ece1f",
+      "kind": "document"
+    },
+    {
+      "hash": "e3b9e46f4409fe67b4cefbcd6fd3bb84",
+      "id": "8afa7479-c91d-40fa-9f4f-89186d0d33d7",
+      "kind": "attachment"
+    },
+    {
+      "hash": "fe3b26e7b4971fe1354196f0cc8bd38c",
+      "id": "83358d58-bdb5-492f-9e54-62e297d78290",
+      "kind": "attachment"
+    }
+  ],
+  "unchanged": true,
+  "payment": [
+    {
+      "amount": 126.26,
+      "createdAt": "2026-10-15T05:09:22.891029Z",
+      "id": "pay_63b3e9b33b09ea72d8008081beeb56f2dff26bbfbd697b78d9752abd67cb4e4e",
+      "type": "SUPPLIER_PAYMENT"
+    }
+  ],
+  "registered": [
+    {
+      "currency": "EUR",
+      "documentNumber": "145327",
+      "filename": "mydata-145327-400015680156598.pdf",
+      "hasAttachment": true,
+      "hasProviderOriginal": true,
+      "id": "64c5b938-7608-4195-817f-aec5c9ecf489",
+      "issueDate": "2026-10-15T00:00:00Z",
+      "issuerVat": "099912874",
+      "linkedOrderId": "0a0348af-ed26-46b2-976d-f63b236f1b9f",
+      "mark": "400015680156598",
+      "mimeType": "application/pdf",
+      "note": "myDATA • MARK 400015680156598 • Πρόχειρο στις Παραγγελίες & Αγορές — Ανάγνωση από βοηθό",
+      "originalError": null,
+      "originalJobId": "b26e0095-cba3-4b5d-ba82-b08db4dca578",
+      "paymentAmount": null,
+      "paymentCount": 0,
+      "processingStatus": "REGISTERED",
+      "receivedAt": "2026-10-15T15:46:54.631Z",
+      "responsibleName": "Αυτόματη λήψη myDATA",
+      "series": "ΤΔΠΤΛ",
+      "status": "IN_REVIEW",
+      "supplierId": "f4677f9a-aa2e-4e79-929f-01ab5ecee9e5",
+      "supplierName": "Μ ΛΕΥΚΑΔΙΤΗΣ ΑΝΩΝΥΜΗ ΕΜΠΟΡΙΚΗ ΕΤΑΙΡΕΙΑ ΕΜΠΟΡΙΑΣ ΠΡΟΙΟΝΤΩΝ ΚΑΠΝΟΥ ΚΑΙ ΤΥΠΟΠΟΙΗΜΕΝΩΝ ΕΙΔΩΝ ΜΙΚΡΗΣ ΛΙΑΝΙΚΗΣ",
+      "totalGross": 48.82,
+      "totalNet": 43.2,
+      "totalVat": 5.62
+    }
+  ],
+  "observed": {
+    "pending145327": 0,
+    "registered145327": 1,
+    "registered14525": [
+      "145251",
+      "145253"
+    ],
+    "archiveRegisteredTotal": 6,
+    "archivePendingTotal": 5380,
+    "matchingRows": 10,
+    "eachTableRows": 13,
+    "eachTableGross": 142.78,
+    "headerPos": 126.26,
+    "headerMydata": 142.79,
+    "paymentDiscrepancy": -16.53,
+    "tableSelected": false,
+    "confirmationsChecked": false,
+    "mergeEnabled": false,
+    "mergeSubmitted": false,
+    "originalsIndependentlyCertified": false
+  }
+}
