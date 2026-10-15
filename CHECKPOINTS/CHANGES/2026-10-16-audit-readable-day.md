@@ -1,3 +1,15 @@
+## 16/10/2026 01:57 Europe/Athens - AUDIT-READABLE-DAY-01 / LIMITED LIVE READ-ONLY PASS
+
+Owner codex/audit-readable-day-20261016 completed the requested daily/hour/Greek readable/larger-text projection. SourcePR2539 final62f00cbe merged4464e31eecd0895be271e3889244f3b5ec82b9c0; fullPR CI38816797392 SUCCESS2737/0/0 plus6backup/build/native/HTTP/invariants/Windows. First CI38816233997 caught3 test-harness/expected-label failures; corrected without weakening scope assertions. MainCI38817381597 and ordinary guarded Render38817931405 SUCCESS; independent public health exact4464e31e verified after22:49UTC.
+
+Actual authenticated SuperAdmin Χρήστος Μάνης, desktop1348x926,16Oct01:50-01:56Athens: central Events opens16Oct→16Oct; selected Diadoxou; keyboard hours00:56-00:58 produce17rows and only00:56/57/58. Real source rows show OCB ΜΕΓΑΛΟ ΤΖΙΒΑΝΕΣ, HELL CLASSIC, ΝΕΡΟ500ML, canonical quantities/prices/totals and ΝΤΙΝΟΣ ΠΑΝΑΓΙΩΤ; Greek stock label and explicit missing historical stock baseline. Central cell16px measured and screenshot. Existing central initial200-row cap remains; time search narrows onserver. Automated fill alone does not trigger React controlled-time state in this browser; real keyboard changes did and retained filters.
+
+Actual Backoffice selected Diadoxou→Εμπορική λειτουργία→Λοιπές→Αναφορές→Συμβάντα/Audit resets old month range to16Oct→16Oct. Hours00:56-00:58 return17events/5categories:6cart-add,4stock-sale,3completion,3cash-sale,1qty-change. Refresh retains dates/hours/17rows. Visible OCB qty1→2/value2→4, actorΝΤΙΝΟΣ ΠΑΝΑΓΙΩΤ, full Greek reasons/missing reason, raw IDs collapsed; body16px measured. Screenshots CHECKPOINTS/EVIDENCE/2026-10-16-audit-readable-day/central.jpg and store.jpg. CSV/collapsed detail expansion passed mounted local/nativeCI only; final live export/detail action was blocked by native credential retained_data_restricted and is NOT TESTED live. No global or physical/mobile/maximize/export acceptance claim.
+
+Read-only UI and source diagnostics only: no sale/payment/stock/shift/fiscal/migration/historical audit rewrite. Broader smart-Audit34/No33 and other owners remain OPEN unchanged; existing report/expense/permanent-price/tenant/video/invoice PASS preserved. Missing historic facts remain explicitly unavailable, never fabricated. Manual docs/manual/reports/PASS.md and numbered32/Tracker34 synchronized; own completed pending claim/source entries removed. Checkpoint CHECKPOINTS/CHANGES/2026-10-16-audit-readable-day.md.
+
+## Historical claim and source record
+
 ## 16/10/2026 01:18 Europe/Athens - AUDIT-READABLE-DAY-01 / IMPLEMENTED / AWAITING FULL CI + HOSTED ACCEPTANCE
 
 Retained owner codex/audit-readable-day-20261016. ClaimPR2535/head99fefa57/docsCI38814610900 SUCCESS merged73ff57542986607e1fadb23ba2458f45f1c18fb6 before source. User expanded01:06 with second screenshot: larger clearly readable text, no clipped descriptions. Source baselinebfea6636 preserves concurrent assistant/automatic-reporting changes and all prior report/expense/permanent-price/invoice/tenant/video safeguards.
