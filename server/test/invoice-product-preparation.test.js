@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import express from 'express';
-import {previewInvoiceProduct,confirmInvoiceProduct,registerInvoiceProductPreparation} from '../src/lib/invoice-product-preparation.js';
+import {invoiceProductCost,previewInvoiceProduct,confirmInvoiceProduct,registerInvoiceProductPreparation} from '../src/lib/invoice-product-preparation.js';
 import {fixture,isolated} from './helpers/invoice-product-preparation-fixture.js';
 const user={id:'owner',companyId:'company',role:'OWNER'};
 const payload=p=>({requestId:crypto.randomUUID(),storeId:'store',version:p.version,reviewed:true,mode:'NEW',name:p.proposal.name,barcode:'',categoryId:'cat',subcategoryId:'sub',vatDepartmentId:'vat13',salePrice:2,allowPosPriceChange:true,unit:'PIECE'});
@@ -43,5 +43,21 @@ test('native existing-name/supplier/barcode guards prevent duplicates; reviewed 
  const body={...payload(next),mode:'EXISTING',productId:first.productId,barcode:'5200000000001'};const before=await snapshot(f.db);
  await assert.rejects(()=>confirmInvoiceProduct(f.db,user,'order','line2',payload(next),learning),e=>e.status===409);assert.deepEqual(await snapshot(f.db),before);
  await confirmInvoiceProduct(f.db,user,'order','line2',body,learning);await confirmInvoiceProduct(f.db,user,'order','line2',body,learning);const after=await snapshot(f.db);assert.deepEqual(after.Product,before.Product);assert.deepEqual(after.StoreProduct,before.StoreProduct);assert.equal(after.ProductBarcode.length,1);assert.equal(after.StockMovement.length,0);
+ }finally{await f.close()}
+});
+
+// Regression from actual hosted ΔΕΛΤΑ28897 display: ΤΜΧ is a known piece alias.
+test('explicit printed piece/package aliases compute cost without changing source; unknown units/factors remain review-only',()=>{
+ for(const invoiceUnit of ['PIECE','ΤΜΧ','ΤΜΧ.','ΤΕΜ','ΤΕΜΑΧΙΑ','PCS']){const row={invoiceUnit,stockUnitsPerInvoiceUnit:1,quantity:2,netAmount:3.13,exciseTotal:0},before=structuredClone(row);assert.equal(invoiceProductCost(row),1.565);assert.deepEqual(row,before)}
+ for(const invoiceUnit of ['PACKAGE','ΚΒ','ΚΙΒ','ΠΑΚ.'])assert.equal(invoiceProductCost({invoiceUnit,stockUnitsPerInvoiceUnit:12,quantity:2,netAmount:21.6,exciseTotal:.4}),22/24);
+ for(const row of [{invoiceUnit:'UNKNOWN',stockUnitsPerInvoiceUnit:1},{invoiceUnit:'ΤΜΧ',stockUnitsPerInvoiceUnit:12},{invoiceUnit:'PACKAGE',stockUnitsPerInvoiceUnit:null},{invoiceUnit:'PACKAGE',stockUnitsPerInvoiceUnit:1.5}])assert.equal(invoiceProductCost({...row,quantity:2,netAmount:3.13,exciseTotal:0}),null);
+});
+test('native real printed ΤΜΧ proposal and confirm use piece cost while retaining exact printed units and amounts',{skip:!isolated()},async()=>{
+ const f=await fixture();try{
+ await f.db.$executeRaw`UPDATE "PurchaseOrderLine" SET "invoiceUnit"='ΤΜΧ',"stockUnitsPerInvoiceUnit"=1 WHERE "id"='line'`;
+ const p=await previewInvoiceProduct(f.db,user,'order','line','store');assert.equal(p.proposal.costPrice,11);const before=(await f.db.$queryRaw`SELECT * FROM "PurchaseOrderLine" WHERE "id"='line'`)[0];
+ await confirmInvoiceProduct(f.db,user,'order','line',payload(p),learning);
+ const after=(await f.db.$queryRaw`SELECT * FROM "PurchaseOrderLine" WHERE "id"='line'`)[0];for(const key of ['invoiceUnit','stockUnitsPerInvoiceUnit','quantity','unitCost','netAmount','grossAmount','vatRate','discount1'])assert.equal(String(after[key]),String(before[key]),key);
+ assert.equal(Number((await f.db.$queryRaw`SELECT "costPrice" FROM "Product"`)[0].costPrice),11);assert.equal((await f.db.$queryRaw`SELECT * FROM "StockMovement"`).length,0);
  }finally{await f.close()}
 });

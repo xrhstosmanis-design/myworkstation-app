@@ -6,6 +6,17 @@ import {createInventoryCard} from './inventory-new-card.js';
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status})};
 const digest=value=>crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export const preparationVersion=row=>digest(row);
+// Only explicit invoice-unit aliases are equivalent. Unknown units or an
+// unexplained piece-to-many factor stay unresolved; the source row is untouched.
+export function invoiceProductCost(line){
+ const unit=plain(line.invoiceUnit).trim().replace(/\.+$/,'');
+ const piece=['PIECE','PC','PCS','ΤΜ','ΤΜΧ','ΤΕΜ','ΤΕΜΑΧΙΟ','ΤΕΜΑΧΙΑ','TM','TMX','TEM'].includes(unit);
+ const packaged=['PACKAGE','PACK','BOX','CASE','ΠΑΚ','ΚΙΒ','ΚΒ','ΣΕΤ','SET'].includes(unit);
+ const factor=Number(line.stockUnitsPerInvoiceUnit),quantity=Number(line.quantity),net=Number(line.netAmount),excise=Number(line.exciseTotal||0);
+ if(!piece&&!packaged||!Number.isInteger(factor)||factor<1||piece&&factor!==1||quantity<=0||![quantity,net,excise].every(Number.isFinite)||net<0||excise<0)return null;
+ return (net+excise)/(quantity*factor);
+}
+
 const schema=z.object({requestId:z.string().uuid(),storeId:z.string().min(1),version:z.string().length(64),reviewed:z.literal(true),mode:z.enum(['EXISTING','NEW']),productId:z.string().optional(),name:z.string().trim().min(2).max(250),barcode:z.string().trim().regex(/^(?:\d{6,18})?$/).default(''),categoryId:z.string().nullable().optional(),subcategoryId:z.string().nullable().optional(),vatDepartmentId:z.string().min(1),salePrice:z.coerce.number().min(0),allowPosPriceChange:z.boolean(),unit:z.enum(['PIECE','KG','LITER','PACKAGE'])}).strict();
 async function lineScope(db,user,orderId,lineId,storeId,lock=false){
  if(!user?.companyId||!storeId||user.storeId&&user.storeId!==storeId)fail('Επίλεξε το σωστό κατάστημα.',403);
@@ -34,8 +45,7 @@ export async function previewInvoiceProduct(db,user,orderId,lineId,storeId){
  const evidence=pack(line.description)?ranked.filter(x=>pack(x.name)===pack(line.description)&&x.matchScore>=25&&Number(x.salePrice)>0&&Number(x.vatRate)===Number(line.vatRate)):[];
  const reference=evidence.length&&new Set(evidence.map(x=>String(x.salePrice))).size===1?evidence[0]:null;
  const deps=vatDepartments.filter(x=>Number(x.vatRate)===Number(line.vatRate));
- const factor=Number(line.stockUnitsPerInvoiceUnit),quantity=Number(line.quantity);
- const cost=quantity>0&&factor>=1&&(line.invoiceUnit==='PIECE'||line.invoiceUnit==='PACKAGE')?(Number(line.netAmount)+Number(line.exciseTotal||0))/(quantity*factor):null;
+ const cost=invoiceProductCost(line);
  return {storeId,orderId,lineId,version,line,categories,subcategories,vatDepartments,candidates:ranked,identities,truncated:candidates.length>1000,reference:reference?{id:reference.id,name:reference.name,salePrice:Number(reference.salePrice)}:null,proposal:{name:line.description,barcode:/^\d{6,18}$/.test(line.detectedBarcode||'')?line.detectedBarcode:'',categoryId:reference?.categoryId||null,subcategoryId:reference?.subcategoryId||null,vatDepartmentId:deps.length===1?deps[0].id:'',salePrice:reference?Number(reference.salePrice):null,unit:'PIECE',costPrice:cost,allowPosPriceChange:true},notice:'ΠΡΟΣ ΕΛΕΓΧΟ: σύγκρινε ονομασία, γεύση, μέγεθος και μονάδα με το πρωτότυπο. Οι προτάσεις δεν αποθηκεύουν είδος ή απόθεμα.'};
 }
 export async function confirmInvoiceProduct(db,user,orderId,lineId,input,learnSupplierMapping){
@@ -50,7 +60,8 @@ export async function confirmInvoiceProduct(db,user,orderId,lineId,input,learnSu
   if(order.supplierId&&!(await tx.$queryRaw`SELECT "id" FROM "Supplier" WHERE "id"=${order.supplierId} AND "companyId"=${companyId} AND "active"=true FOR SHARE`)[0])fail('Ο προμηθευτής δεν είναι ενεργός στην εταιρεία.');
   if(version!==body.version)fail('Η γραμμή άλλαξε. Ανανέωσε τις προτάσεις πριν συνεχίσεις.',409);
   const factor=Number(line.stockUnitsPerInvoiceUnit),quantity=Number(line.quantity);
-  if(!['PIECE','PACKAGE'].includes(line.invoiceUnit)||!Number.isInteger(factor)||factor<1||quantity<=0||!Number.isFinite(Number(line.netAmount)))fail('Έλεγξε πρώτα τη μονάδα, τα τεμάχια συσκευασίας και τις αξίες στο πρόχειρο.');
+  const cost=invoiceProductCost(line);
+  if(cost===null)fail('Έλεγξε πρώτα τη μονάδα, τα τεμάχια συσκευασίας και τις αξίες στο πρόχειρο.');
   await resolveProductCardVat(tx,companyId,body.vatDepartmentId,line.vatRate);
   const identities=await exactIdentities(tx,companyId,order.supplierId,line,body.barcode,body.name);
   let productId=body.productId,sku;
@@ -58,7 +69,7 @@ export async function confirmInvoiceProduct(db,user,orderId,lineId,input,learnSu
    if(body.salePrice<=0)fail('Συμπλήρωσε θετική λιανική για το νέο είδος.');
    if(identities.length)fail('Υπάρχει ήδη αντιστοίχιση barcode, κωδικού προμηθευτή ή ίδιας ονομασίας. Επίλεξε το υπάρχον είδος ή έλεγξε την καρτέλα στην αποθήκη.',409);
    if(!body.categoryId)fail('Επίλεξε κατηγορία.');
-   const created=await createInventoryCard({$transaction:fn=>fn(tx)},user,{requestId:body.requestId,storeId:body.storeId,name:body.name,categoryId:body.categoryId,subcategoryId:body.subcategoryId,unit:body.unit,costPrice:(Number(line.netAmount)+Number(line.exciseTotal||0))/(quantity*factor),salePrice:body.salePrice,vatRate:Number(line.vatRate),vatDepartmentId:body.vatDepartmentId,vatVerified:true,openingStock:0,active:true,trackStock:true,allowDiscount:true,allowPosPriceChange:body.allowPosPriceChange,freeSalePrice:false,negativeStockWarning:false,isSet:false,isRecipe:false,discountA:0,discountB:0,discountC:0,barcodes:body.barcode?[{barcode:body.barcode,unitMultiplier:1}]:[],supplierCodes:[]});
+   const created=await createInventoryCard({$transaction:fn=>fn(tx)},user,{requestId:body.requestId,storeId:body.storeId,name:body.name,categoryId:body.categoryId,subcategoryId:body.subcategoryId,unit:body.unit,costPrice:cost,salePrice:body.salePrice,vatRate:Number(line.vatRate),vatDepartmentId:body.vatDepartmentId,vatVerified:true,openingStock:0,active:true,trackStock:true,allowDiscount:true,allowPosPriceChange:body.allowPosPriceChange,freeSalePrice:false,negativeStockWarning:false,isSet:false,isRecipe:false,discountA:0,discountB:0,discountC:0,barcodes:body.barcode?[{barcode:body.barcode,unitMultiplier:1}]:[],supplierCodes:[]});
    productId=created.id;sku=created.sku;
   }else{
    if(!productId)fail('Επίλεξε υπάρχον είδος.');
@@ -72,7 +83,7 @@ export async function confirmInvoiceProduct(db,user,orderId,lineId,input,learnSu
    if(body.barcode){const found=await tx.$queryRaw`SELECT "id" FROM "ProductBarcode" WHERE "productId"=${productId} AND "barcode"=${body.barcode}`;if(!found[0])await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${crypto.randomUUID()},${productId},${body.barcode},1)`;}
   }
   await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "productId"=${productId},"resolutionStatus"='MATCHED',"updatedAt"=NOW() WHERE "id"=${lineId} AND "orderId"=${orderId}`;
-  await learnSupplierMapping(tx,{companyId,supplierId:order.supplierId,supplierCode:line.supplierCode,productId,barcode:body.barcode,description:line.description,userId:user.id,unitCost:(Number(line.netAmount)+Number(line.exciseTotal||0))/(quantity*factor),unitsPerPackage:factor,discount1:line.discount1,discount2:line.discount2,discount3:line.discount3,excisePerInvoiceUnit:Number(line.exciseTotal||0)/quantity});
+  await learnSupplierMapping(tx,{companyId,supplierId:order.supplierId,supplierCode:line.supplierCode,productId,barcode:body.barcode,description:line.description,userId:user.id,unitCost:cost,unitsPerPackage:factor,discount1:line.discount1,discount2:line.discount2,discount3:line.discount3,excisePerInvoiceUnit:Number(line.exciseTotal||0)/quantity});
   const result={productId,sku,orderId,lineId,stockUpdated:false,invoiceEconomicsChanged:false,idempotent:false};
   await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${companyId},${body.storeId},${user.operatorId||user.id},${user.id},'INVOICE_PRODUCT_PREPARED',${JSON.stringify({requestId:body.requestId,fingerprint,result,mode:body.mode,version,reviewed:true})}::jsonb)`;
   return result;
