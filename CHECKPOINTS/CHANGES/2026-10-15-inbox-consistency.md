@@ -1,4 +1,4 @@
-## 15/10/2026 23:00 Europe/Athens — INBOX-CONSISTENCY-01 / ASSIGNED / USER FAIL
+## 15/10/2026 22:54 Europe/Athens — INBOX-CONSISTENCY-01 / ASSIGNED / USER FAIL
 
 Owner codex/inbox-consistency-20261015, independent requested inbox status/assistant identity-review extension. User authorizes implementation after four screenshots: INVOICED orders145251/145253/145327 still show inbox IN_REVIEW; POS146066 and myDATA1ΤΔΑ846666 each13lines/visible142.78 appear as separate drafts. Newer real observation supersedes broad assumptions that all old pairs are resolved. Existing Fresh6836 reconciliation and cross-supplier505/17113 limited detection/readiness PASS protected; that old pair's actual reviewed-action owner codex/invoice-cross-supplier-duplicate-20261014 retained. No takeover of broad09/Gate3/OCR/QR/payment/new-item/retail-matching owners.
 
