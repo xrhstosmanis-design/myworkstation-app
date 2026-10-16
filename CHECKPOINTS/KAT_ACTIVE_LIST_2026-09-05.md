@@ -9293,3 +9293,8 @@ Read-only baseline reproduced date-on-second-line period:null and actor-on-secon
 ## 16/10/2026 — POS-HEADER-COLLAPSE-01 SOURCE CANDIDATE / AWAITING HOSTED USER
 
 Owner fix/pos-header-collapse-20261016; claim PR2592 merged before source. Bounded mounted collapsible header shell; local mounted3/0/0 and frontend/TABLE_SERVICE build PASS, no hosted geometry/USER PASS or business action. Existing header resize/menu owner preserved. Checkpoint `CHECKPOINTS/CHANGES/2026-10-16-pos-header-collapse.md`.
+
+
+## 16/10/2026 - POS-INVOICE-CREATE-PRODUCT-ACTOR-01 / SOURCE IMPLEMENTED / AWAITING FULL CI AND USER
+
+Retained owner fix/pos-invoice-create-product-actor-20261016; claimPR2612 merged74dd437 before code. SourcePR2614 validates shared OCR-resolution User FK and propagates full actor from create/match/autoresolve/preparation; original POS text identity and atomicity remain. Initial native CI38940567658/job117107057325 passed2857/0/0 plus6backup and all required checks. Reconciled candidate38941536684 stopped at mandatory active-list gate before tests because progress was consolidated only in the owned checkpoint; this explicit active progress corrects that administrative omission without source changes. Final full PR/mainCI and ordinary guarded exact release still required. No hosted save/payment/stock/approval/delete/replay performed; actual USER save NOT TESTED. Existing preparation/mapping owners retained. Next: final full CI and exact ordinary release, then same-draft user acceptance. Checkpoint CHECKPOINTS/CHANGES/2026-10-16-pos-invoice-create-product-actor.md.
