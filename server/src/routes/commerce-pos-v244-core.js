@@ -1,3 +1,4 @@
+import {creditCashReadSettlement} from "../lib/supplier-credit-cash.js";
 import {assertEmptyInboxRead} from "../lib/pos-inbox-original.js";
 import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertNoUnresolvedInbound,reuseInboundDraftForPosJob,sameInvoiceNumber,invoiceNumberParts} from "../lib/invoice-common-draft.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
@@ -415,14 +416,15 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       body.reconciliationDifference=body.reconciliationRequired?persistedDifference:0;
       const baseNote=String(body.note||"").split(" • ⚠️ ΕΛΕΓΧΟΣ BACKOFFICE:")[0];
       body.note=body.reconciliationRequired?[baseNote,`⚠️ ΕΛΕΓΧΟΣ BACKOFFICE: σύνολο γραμμών ${persistedGross.toFixed(2)} €, τιμολόγιο ${Number(body.totalGross).toFixed(2)} €, διαφορά ${persistedDifference.toFixed(2)} €. Διόρθωσε τις γραμμές πριν από την έγκριση και την ενημέρωση αποθήκης.`].filter(Boolean).join(" • ").slice(0,500):baseNote||null;
-      const skeletonRows=skeletonDocumentId?await tx.$queryRaw`SELECT "id","purchaseOrderId","documentType" FROM "PurchaseDocument" WHERE "id"=${skeletonDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`:[];
+      const skeletonRows=skeletonDocumentId?await tx.$queryRaw`SELECT * FROM "PurchaseDocument" WHERE "id"=${skeletonDocumentId} AND "companyId"=${req.user.companyId} AND "status"='DRAFT' LIMIT 1 FOR UPDATE`:[];
       if(skeletonDocumentId&&!skeletonRows[0])throw Object.assign(new Error("Το πρόχειρο BackOffice δεν είναι διαθέσιμο για συμπλήρωση."),{status:409});
       if(skeletonRows[0]&&skeletonRows[0].documentType!==body.documentType)throw Object.assign(new Error("Το πρόχειρο έχει διαφορετικό τύπο παραστατικού. Δεν έγινε μετατροπή αγοράς σε πιστωτικό."),{status:409});
       const documentId=skeletonRows[0]?.id||id(),orderId=skeletonRows[0]?.purchaseOrderId||id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
       if(locked[0].resultJson?.posHandoff?.inboxInitialRead)await assertEmptyInboxRead(tx,{companyId:req.user.companyId,storeId:job.storeId,...body},documentId,orderId);
       const totalNet=money2(matched.reduce((s,l)=>s+Number(l.netAmount||0)+Number(l.exciseTotal||0),0)),totalVat=money2(Number(body.totalGross)-totalNet);
+      const readSettlement=skeletonRows[0]?await creditCashReadSettlement(tx,{companyId:req.user.companyId,storeId:job.storeId},skeletonRows[0],body):body.settlementMode;
       stage="create-purchase-document";
-      if(skeletonRows[0])await tx.$executeRaw`UPDATE "PurchaseDocument" SET "documentDate"=${body.documentDate||new Date()},"totalNet"=${totalNet},"totalVat"=${totalVat},"totalGross"=${body.totalGross},"settlementMode"=${body.settlementMode} WHERE "id"=${documentId} AND "companyId"=${req.user.companyId}`;
+      if(skeletonRows[0])await tx.$executeRaw`UPDATE "PurchaseDocument" SET "documentDate"=${body.documentDate||new Date()},"totalNet"=${totalNet},"totalVat"=${totalVat},"totalGross"=${body.totalGross},"settlementMode"=${readSettlement} WHERE "id"=${documentId} AND "companyId"=${req.user.companyId}`;
       else await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},${body.documentType},${body.documentNumber},${body.documentDate||new Date()},${totalNet},${totalVat},${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId})`;
       stage="create-purchase-order";
       if(skeletonRows[0])await tx.$executeRaw`UPDATE "PurchaseOrder" SET "description"=${body.note||`OCR V2.4.4 τιμολόγιο ${body.documentNumber} — έλεγχος πριν την οριστικοποίηση`},"updatedByName"=${actor},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${orderId} AND "companyId"=${req.user.companyId}`;

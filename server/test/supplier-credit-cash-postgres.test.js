@@ -120,3 +120,30 @@ test('native wrong tenant/store/operator/terminal, stale/reversed/foreign/excess
   await assert.rejects(applySupplierCreditCash(f.db,scope,{...input,expectedCreditAmount:8}));assert.deepEqual(await snapshot(f),before);
  }finally{await f.close()}
 });
+
+test('native initial POS-confirmed credit settles before OCR and the reader preserves its signed link without stock',{skip:!isolatedInvoiceDb()},async()=>{
+ const {creditCashReadSettlement}=await import('../src/lib/supplier-credit-cash.js');
+ const f=await fixture();try{
+  const header={version:'POS_FAST_HANDOFF_V1',documentType:'CREDIT_NOTE',supplierId:'sup',documentNumber:'CN 0040',documentDate:'2026-10-12',totalGross:7,settlementMode:'CREDIT',paymentTransactionId:null};
+  await f.db.$executeRaw`UPDATE "AiReaderJob" SET "status"='POS_DRAFT_READY',"resultJson"=${JSON.stringify({posHandoff:header})}::jsonb WHERE "id"='job-credit'`;
+  const context=await supplierCreditCashContext(f.db,scope,'sup');assert.equal(context.credits.length,1);
+  const before=await snapshot(f),input=await body(f),result=await applySupplierCreditCash(f.db,scope,input);
+  assert.equal(result.negativePaymentAmount,-7);assert.equal(result.netCashAmount,43);
+  const doc=(await f.db.$queryRaw`SELECT * FROM "PurchaseDocument" WHERE "id"='credit'`)[0];
+  assert.equal(await creditCashReadSettlement(f.db,scope,doc,header),'PAID');
+  for(const change of [{totalGross:8},{supplierId:'foreign'},{documentNumber:'CN 41'},{documentDate:'2026-10-13'}])await assert.rejects(creditCashReadSettlement(f.db,scope,doc,{...header,...change}),e=>e.status===409);
+  assert.equal((await applySupplierCreditCash(f.db,scope,input)).duplicate,true);
+  const after=await snapshot(f);for(const t of ['StockMovement','StoreProduct','PurchaseOrder','PurchaseOrderLine'])assert.deepEqual(after[t],before[t]);
+  assert.deepEqual(after.StoreTransaction.find(r=>r.row.id==='payment'),before.StoreTransaction.find(r=>r.row.id==='payment'));
+  assert.equal(after.PurchaseDocument.find(r=>r.row.id==='credit').row.status,'DRAFT');
+ }finally{await f.close()}
+});
+test('native unconfirmed or mismatching pending shells cannot apply credit cash',{skip:!isolatedInvoiceDb()},async()=>{
+ for(const change of [{version:'OTHER'},{documentType:'INVOICE'},{supplierId:'foreign'},{documentNumber:'CN 41'},{documentDate:'2026-10-13'},{totalGross:8},{settlementMode:'PAID'},{paymentTransactionId:'unexpected'}]){
+  const f=await fixture();try{
+   const h={version:'POS_FAST_HANDOFF_V1',documentType:'CREDIT_NOTE',supplierId:'sup',documentNumber:'CN 0040',documentDate:'2026-10-12',totalGross:7,settlementMode:'CREDIT',...change};
+   await f.db.$executeRaw`UPDATE "AiReaderJob" SET "status"='POS_PROCESSING',"resultJson"=${JSON.stringify({posHandoff:h})}::jsonb WHERE "id"='job-credit'`;
+   const before=await snapshot(f);assert.equal((await supplierCreditCashContext(f.db,scope,'sup')).credits.length,0);await assert.rejects(applySupplierCreditCash(f.db,scope,await body(f)));assert.deepEqual(await snapshot(f),before);
+  }finally{await f.close()}
+ }
+});

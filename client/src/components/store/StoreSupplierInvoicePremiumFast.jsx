@@ -1,3 +1,5 @@
+import StoreCreditPaymentOptions from "./StoreCreditPaymentOptions.jsx";
+import {settleUploadedCredit} from "../../lib/pos-uploaded-credit-cash.js";
 import DocumentCameraFocus from "./DocumentCameraFocus.jsx";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {Camera,FileUp,Wallet} from "lucide-react";
@@ -36,6 +38,9 @@ function monitorBackgroundV244({api,jobId,documentNumber,setMessage,onChanged}){
 
 export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],onChanged,onCompleted,setMessage}){
   const [pages,setPages]=useState([]),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(""),[documentType,setDocumentType]=useState(""),[creditDetected,setCreditDetected]=useState(false),[mode,setMode]=useState(""),[paymentMethod,setPaymentMethod]=useState("CASH_SHIFT"),[busy,setBusy]=useState(false),[reading,setReading]=useState(false),[status,setStatus]=useState("Επίλεξε ή φωτογράφισε έως 5 σελίδες του ίδιου τιμολογίου."),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null),[supplierCandidate,setSupplierCandidate]=useState({name:"",taxId:""}),[createdSupplier,setCreatedSupplier]=useState(null),[savingSupplier,setSavingSupplier]=useState(false),[vatLookup,setVatLookup]=useState({busy:false,verified:false,message:""});
+  const [creditSelection,setCreditSelection]=useState(null);
+  const creditAttempt=useRef(null),creditSubmitting=useRef(false),creditActive=useRef(true);
+  useEffect(()=>{creditActive.current=true;return()=>{creditActive.current=false}},[]);
   const videoRef=useRef(null),canvasRef=useRef(null);
   useEffect(()=>{if(!cameraOpen||!stream||!videoRef.current)return;const video=videoRef.current;video.srcObject=stream;const play=()=>video.play().catch(()=>{});if(video.readyState>=2)play();else video.addEventListener("loadedmetadata",play,{once:true});return()=>video.removeEventListener("loadedmetadata",play)},[cameraOpen,stream]);
   const [invoiceQrOpen,setInvoiceQrOpen]=useState(false);
@@ -131,12 +136,22 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
   const startCamera=async()=>{try{stopCamera();let s;try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false})}catch{s=await navigator.mediaDevices.getUserMedia({video:true,audio:false})}setStream(s);setCameraOpen(true)}catch{setMessage?.("❌ Δεν μπόρεσε να ανοίξει η κάμερα. Έλεγξε την άδεια κάμερας του Chrome και ξαναδοκίμασε.")}};
   const capture=()=>{const v=videoRef.current,c=canvasRef.current;if(!v||!c||!v.videoWidth||!v.videoHeight){setMessage?.("⚠️ Η προεπισκόπηση κάμερας δεν είναι ακόμη έτοιμη. Περίμενε μια στιγμή και ξαναπάτησε Φωτογράφιση.");return}c.width=v.videoWidth;c.height=v.videoHeight;c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.toBlob(blob=>{stopCamera();if(blob)selectFiles([new File([blob],`timologio-selida-${pages.length+1}-${Date.now()}.jpg`,{type:"image/jpeg"})])},"image/jpeg",.9)};
   const mobile=useMobileDocumentPhotos({api,storeId:store.id,count:pages.length,onFiles:selectFiles,setMessage});
-  const ready=Boolean(pages.length&&pages.every(page=>page.dataUrl)&&supplierId&&documentNumber.trim()&&documentDate&&num(amount)>0&&documentType&&(documentType==="CREDIT_NOTE"||mode)&&!busy&&!reading&&!savingSupplier&&!mobile.pending);
+  const creditOriginal=useMemo(()=>({storeId:store.id,supplierId,documentNumber,documentDate,amount,pages}),[store.id,supplierId,documentNumber,documentDate,amount,pages]);
+  const ready=Boolean(pages.length&&pages.every(page=>page.dataUrl)&&supplierId&&documentNumber.trim()&&documentDate&&num(amount)>0&&documentType&&(documentType==="CREDIT_NOTE"?creditSelection?.valid&&creditSelection.original===creditOriginal:mode)&&!busy&&!reading&&!savingSupplier&&!mobile.pending);
   const submit=async()=>{
     if(!ready)return;
+    if(documentType==="CREDIT_NOTE"&&creditSubmitting.current)return;
+    if(documentType==="CREDIT_NOTE")creditSubmitting.current=true;
     setBusy(true);
     let stage="DUPLICATE CHECK";
     try{
+      const directCredit=documentType==="CREDIT_NOTE"&&creditSelection?.mode!=="BALANCE";
+      let attempt=null;
+      if(directCredit){
+        const identity=JSON.stringify([store.id,supplierId,documentNumber.trim(),documentDate,num(amount),pages.map(p=>p.originalDataUrl||p.dataUrl),creditSelection.mode,creditSelection.payment?.id,creditSelection.reason]);
+        if(creditAttempt.current?.identity!==identity)creditAttempt.current={identity};
+        attempt=creditAttempt.current;
+      }
       setStatus("Έλεγχος duplicate τιμολογίου…");
       let duplicateCheck=documentType==="CREDIT_NOTE"?null:await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross:num(amount),myDataInboxId:selectedInboxId,dataUrl:fileDataUrl})});
       let submittedDocumentDate=documentDate;
@@ -165,7 +180,17 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       }
       stage="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER";
       setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
-      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate:submittedDocumentDate,totalGross,documentType,myDataInboxId:selectedInboxId,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
+      const handoff=attempt?.handoff||await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate:submittedDocumentDate,totalGross,documentType,myDataInboxId:selectedInboxId,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
+      if(directCredit){
+        attempt.handoff=handoff;
+        stage="ΑΡΝΗΤΙΚΗ ΠΛΗΡΩΜΗ ΠΙΣΤΩΤΙΚΟΥ";
+        setStatus("Το ίδιο πρόχειρο αποθηκεύτηκε. Καταχώριση αρνητικής πληρωμής…");
+        const result=await settleUploadedCredit({api,storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate:submittedDocumentDate,totalGross,documentId:handoff.purchaseDocumentId||handoff.documentId,selection:creditSelection,attempt});
+        if(!creditActive.current)return;
+        if(creditSelection.mode==="CASH_RETURN"&&!result.duplicate)try{window.dispatchEvent(new CustomEvent("myworkstation:cash-drawer-request",{detail:{reason:"SUPPLIER_CREDIT_RETURN",amount:result.creditAmount,storeId:store.id,transactionId:result.transactionId}}))}catch{}
+        setMessage?.(`✅ Πιστωτικό ${documentNumber.trim()}: αρνητική πληρωμή ${result.negativePaymentAmount.toFixed(2)} € καταχωρίστηκε μία φορά.${result.netCashAmount!==null?` Καθαρά προς προμηθευτή: ${result.netCashAmount.toFixed(2)} €.`:""} Το ίδιο πρόχειρο διαβάζεται στο BackOffice. Η αποθήκη δεν άλλαξε.`);
+        onChanged?.();onCompleted?.();return;
+      }
       try{window.dispatchEvent(new CustomEvent("mws:invoice-handoff",{detail:{jobId:handoff?.jobId||null,documentNumber:documentNumber.trim()}}))}catch{}
       if(handoff?.receiptLinked&&!handoff?.backgroundQueued){setStatus("Συνδέθηκε με την υπάρχουσα αγορά myDATA.");setMessage?.(`✅ Το κανονικό τιμολόγιο ${documentNumber.trim()} συνδέθηκε με την υπάρχουσα αγορά. ${effectiveMode==="PAID"?"Η πληρωμή POS καταγράφηκε μία φορά.":"Η επιλογή πίστωσης αποθηκεύτηκε."} Οι γραμμές και η αποθήκη δεν άλλαξαν.`);onChanged?.();onCompleted?.();return;}
       setStatus(documentType==="CREDIT_NOTE"?"Το πιστωτικό αποθηκεύτηκε ως πρόχειρο. Οι γραμμές ελέγχονται στο BackOffice πριν από κίνηση αποθήκης και συμψηφισμό.":handoff?.myDataMatched?"Το τιμολόγιο συνδέθηκε με υπάρχον παραστατικό myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…":"Το τιμολόγιο αποθηκεύτηκε ως πρόχειρο. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…");
@@ -178,7 +203,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       setStatus(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ: ${stage}. ${detail}`);
       setMessage?.(`❌ ΑΠΟΤΥΧΙΑ ΣΤΟ ${stage}: ${detail}`);
       setBusy(false);
-    }
+    }finally{if(documentType==="CREDIT_NOTE")creditSubmitting.current=false}
   };
   return <div className="pos-payment-form-v3-root pos-new-invoice-form">
     <div className="pos-invoice-document-area">
@@ -204,10 +229,10 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     </div>}
     <div className="pos-invoice-reference-fields"><label>Συνολικό ποσό<input inputMode="decimal" value={amount} disabled={busy} onChange={e=>setAmount(e.target.value)} placeholder="0,00"/></label><label>Αριθμός τιμολογίου<input value={documentNumber} disabled={busy} onChange={e=>setDocumentNumber(e.target.value)}/></label><label>Ημερομηνία<input type="date" value={documentDate} disabled={busy} onChange={e=>setDocumentDate(e.target.value)}/></label></div>
     <label className="pos-invoice-document-type">Τύπος παραστατικού<select value={documentType} disabled={busy||creditDetected} onChange={e=>setDocumentType(e.target.value)}><option value="">Έλεγξε το έντυπο και επίλεξε</option><option value="INVOICE">Τιμολόγιο αγοράς</option><option value="CREDIT_NOTE">Πιστωτικό / επιστροφή</option></select></label>
-    {documentType==="CREDIT_NOTE"&&<div role="alert" style={{padding:10,border:"1px solid #b45309",background:"#fffbeb",fontWeight:800}}>Πιστωτικό επιστροφής: αποθήκευση ως πρόχειρο για έλεγχο στο BackOffice. Μετά την έγκριση αφαιρείται stock και μειώνεται το υπόλοιπο προμηθευτή. Δεν γίνεται κίνηση ταμείου.</div>}
+    {documentType==="CREDIT_NOTE"&&<StoreCreditPaymentOptions key={`${store.id}:${supplierId}`} api={api} storeId={store.id} supplierId={supplierId} amount={num(amount)} original={creditOriginal} busy={busy||reading||savingSupplier} onChange={setCreditSelection}/>}
     {documentType!=="CREDIT_NOTE"&&<div className="pos-payment-types"><button type="button" aria-pressed={mode==="PAID"} className={mode==="PAID"?"active":""} disabled={busy||reading||savingSupplier} onClick={()=>setMode("PAID")}>ΠΛΗΡΩΜΕΝΟ</button><button type="button" aria-pressed={mode==="CREDIT"} className={mode==="CREDIT"?"active":""} disabled={busy||reading||savingSupplier} onClick={()=>setMode("CREDIT")}>ΜΕ ΠΙΣΤΩΣΗ</button></div>}
     {mode==="PAID"&&documentType!=="CREDIT_NOTE"&&<div className="pos-expense-payment-sources"><b>Τρόπος πληρωμής προμηθευτή</b><div>{[["CASH_SHIFT","Μετρητά από ενεργή βάρδια"],["CORPORATE_CARD","Εταιρική κάρτα"],["BANK_TRANSFER","Τραπεζική μεταφορά"],["EMPLOYEE_REIMBURSEMENT","Πληρωμή υπαλλήλου προς επιστροφή"]].map(([value,label])=><button key={value} type="button" className={paymentMethod===value?"active":""} disabled={busy||reading||savingSupplier} onClick={()=>setPaymentMethod(value)}>{label}</button>)}</div><small>{paymentSource==="CASH_SHIFT"?"Το ποσό αφαιρείται από το ταμείο της ενεργής βάρδιας.":"Η πληρωμή καταχωρίζεται εξωτερικά και δεν αφαιρείται από τη βάρδια."}</small></div>}
-    <button className="pos-primary-action" disabled={!ready} onClick={submit}><Wallet/> {reading?"FAST AI ανάγνωση…":savingSupplier?"Καταχώριση προμηθευτή…":busy?"Καταχώριση…":documentType==="CREDIT_NOTE"?"ΚΑΤΑΧΩΡΙΣΗ ΠΙΣΤΩΤΙΚΟΥ ΓΙΑ ΕΛΕΓΧΟ":mode==="PAID"?"ΠΛΗΡΩΜΗ & ΕΠΙΣΤΡΟΦΗ ΣΤΟ POS":"ΚΑΤΑΧΩΡΙΣΗ ΜΕ ΠΙΣΤΩΣΗ"}</button>
+    <button className="pos-primary-action" disabled={!ready} onClick={submit}><Wallet/> {reading?"FAST AI ανάγνωση…":savingSupplier?"Καταχώριση προμηθευτή…":busy?"Καταχώριση…":documentType==="CREDIT_NOTE"?(creditSelection?.mode==="BALANCE"?"ΠΙΣΤΩΤΙΚΟ ΧΩΡΙΣ ΚΙΝΗΣΗ ΤΑΜΕΙΟΥ":"ΚΑΤΑΧΩΡΙΣΗ ΑΡΝΗΤΙΚΗΣ ΠΛΗΡΩΜΗΣ"):mode==="PAID"?"ΠΛΗΡΩΜΗ & ΕΠΙΣΤΡΟΦΗ ΣΤΟ POS":"ΚΑΤΑΧΩΡΙΣΗ ΜΕ ΠΙΣΤΩΣΗ"}</button>
     </div>
   </div>;
 }
