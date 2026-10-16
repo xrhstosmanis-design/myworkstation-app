@@ -51,9 +51,10 @@ test("daily report filters by store and flags near-offset variances through the 
   assert.match(platformUi,/Κατάστημα<select value=\{cashStoreId\}/);
   assert.match(platformUi,/Καθαρή διαφορά/);
   assert.match(platformApi,/storeId:z\.string\(\)\.trim\(\)\.optional/);
-  assert.match(platformApi,/SHIFT_VARIANCE_OFFSET/);
-  assert.match(platformApi,/ordered\.slice\(index\+1,index\+3\)/);
-  assert.match(platformApi,/if\(ratio<\.8\|\|ratio>1\)continue/);
+  assert.match(platformApi,/readCashReviewEvidence\(prisma,row\)/);
+  assert.match(platformUi,/SHIFT_CHAIN_OFFSET_CANDIDATE/);
+  // Cross-boundary/terminal/offset behavior is executed by cash-review-evidence tests,
+  // rather than requiring the removed same-period-only loop.
   assert.match(platformApi,/suspiciousAction/);
 });
 
