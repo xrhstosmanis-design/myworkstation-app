@@ -1,3 +1,7 @@
+## Local full-suite evidence and launcher assertion update
+
+Initial full Node20 run:2711PASS/1FAIL/96SKIP. The sole failure was workforce launcher source assertion requiring literal `> Barcode</button>`, which excludes the requested count badge despite preserving the same button/label/handler; actual mounted operator regression passed. Narrow assertion now checks retained icon/Barcode label prefix while mounted tests cover count and permissions. This historical failure is retained; full native CI must rerun green before merge. No runtime behavior changed by the assertion update.
+
 ## 16/10/2026 — POS-BARCODE-PENDING-01 / SOURCE READY / AWAITING FULL CI AND HOSTED ACCEPTANCE
 
 Same owner codex/pos-barcode-pending-20261016. ClaimPR2580/heada9cddcd4/CI38907257458 SUCCESS merged0ba097d before code. Added authorized read-only complete active-store missing count, missing-only filter and250-row pagination. Direct nonblank barcodes and explicitly linked master aliases use the existing same-company ownership exclusion; no name-based grouping or automatic transfer/merge. Blank barcode rows remain pending. GET registration projection is separate; existing POST/price/Audit/fiscal/stock logic untouched.
