@@ -1,3 +1,4 @@
+import {resolveCashReportPeriod,mapCashReportRows} from "../services/cash-report-period.js";
 import {businessInstructions,checkedBusinessAnswer} from '../services/assistant-business-reports.js';
 import {changeOnlineMember} from "../online-members.js";
 import {authorizePlatformSalesStores,salesAccessKey} from "../services/assistant-sales-access.js";
@@ -244,7 +245,11 @@ async function platformCashInvestigation(session,tables){
   if(session.auditRule?.posEftposEnabled&&Math.abs(Number(session.cardVariance||0))>.02){findings.push({code:"POS_EFTPOS_DIFFERENCE",amount:Number(session.cardVariance),at:session.closedAt});if(Number(session.cardVariance)>0&&Number(session.variance)>0)findings.push({code:"CARD_RECORDED_CASH_PAID",amount:Number(session.cardVariance),at:session.closedAt});if(Number(session.cardVariance)<0)findings.push({code:"EFTPOS_CONFIRMED_AS_FAILED",amount:Number(session.cardVariance),at:session.closedAt})}
   const variance=Number(session.variance||0);
   const conclusion=variance<-.009?(findings.length?"SHORTAGE_WITH_FINDINGS":"UNEXPLAINED_SHORTAGE"):variance>.009?(findings.length?"SURPLUS_WITH_FINDINGS":"UNEXPLAINED_SURPLUS"):findings.length?"FINDINGS_WITHOUT_CASH_VARIANCE":"AGREEMENT";
-  return{completed:true,checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
+  const missingSources=sources.filter((source,index)=>evidence[index].status!=="fulfilled"||(index===1&&!tables.operator)||(index===2&&!tables.actions)||(index===3&&!tables.safety)||(index===0&&!tables.purchaseDocuments));
+  // Cached close-time duplicate counts and same-period pair hints do not prove
+  // that all sales/items, adjacent shifts and named owner receipts were checked.
+  const pendingChecks=[...missingSources,"SALE_LINE_DUPLICATES","CROSS_PERIOD_SHIFT_CHAIN","OWNER_TRANSFER_RECIPIENT"];
+  return{completed:false,coverageStatus:"PROVISIONAL",pendingChecks,checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
 }
 
 function companyView(company,commercialTerms=[],managedControl=null){
@@ -1281,8 +1286,9 @@ router.get("/cash-control/daily",async(req,res,next)=>{
   try{
     await ensureCashControlSchema();
     const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-    const filters=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(today),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59"),storeId:z.string().trim().optional()}).parse(req.query);
+    const filters=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default(today),fromTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("00:00"),toTime:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("23:59"),storeId:z.string().trim().optional(),operator:z.string().trim().max(180).optional()}).parse(req.query);
     const {date,fromTime,toTime}=filters;
+    const period=resolveCashReportPeriod(req.query,date);
     const rows=await prisma.$queryRaw`
       SELECT c."id" AS "companyId",c."name" AS "companyName",st."id" AS "storeId",st."name" AS "storeName",
         s."id" AS "sessionId",s."terminalPos",s."shiftLabel",s."openedBy",s."closedBy",s."openedByName",s."closedByName",s."openedAt",s."closedAt",
@@ -1294,15 +1300,18 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       JOIN "Store" st ON st."id"=s."storeId"
       JOIN "Company" c ON c."id"=s."companyId" AND c."id"=st."companyId"
       LEFT JOIN "StoreTransaction" t ON t."sessionId"=s."id" AND t."companyId"=s."companyId" AND t."storeId"=s."storeId"
-      WHERE s."status"='CLOSED' AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date
+      WHERE s."status"='CLOSED' AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date BETWEEN ${period.from}::date AND ${period.to}::date
+        AND (${period.sessionId}::text IS NULL OR s."id"=${period.sessionId})
+        AND (${filters.operator||null}::text IS NULL OR COALESCE(s."openedByName",s."closedByName",'') ILIKE ${filters.operator?`%${filters.operator}%`:null})
         AND (${filters.storeId||null}::text IS NULL OR st."id"=${filters.storeId||null})
-        AND ((${fromTime}::time<=${toTime}::time AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::time BETWEEN ${fromTime}::time AND ${toTime}::time)
-          OR (${fromTime}::time>${toTime}::time AND ((s."closedAt" AT TIME ZONE 'Europe/Athens')::time>=${fromTime}::time OR (s."closedAt" AT TIME ZONE 'Europe/Athens')::time<=${toTime}::time)))
+        AND ((${fromTime}::time<=${toTime}::time AND date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time BETWEEN ${fromTime}::time AND ${toTime}::time)
+          OR (${fromTime}::time>${toTime}::time AND (date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time>=${fromTime}::time OR date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time<=${toTime}::time)))
       GROUP BY c."id",c."name",st."id",st."name",s."id"
-      ORDER BY c."name",st."name",s."openedAt"`;
+      ORDER BY c."name",st."name",s."openedAt" LIMIT 501`;
+    if(rows.length>500)return res.status(422).json({error:"Το διάστημα υπερβαίνει τις 500 βάρδιες. Περιόρισε το κατάστημα ή την περίοδο· δεν εμφανίζονται μερικά σύνολα."});
     const normalized=rows.map(row=>{const auditRule=platformCashStoreRule(row.storeName),actualVariance=Number(row.variance||0),actualCardVariance=Number(row.cardVariance||0);return {...row,auditRule,cashSales:Number(row.cashSales||0),cardSales:Number(row.cardSales||0),eftposTotal:Number(row.eftposTotal||0),actualCardVariance,cardVariance:auditRule.posEftposEnabled?actualCardVariance:0,expenses:Number(row.expenses||0),openingOperational:Number(row.openingOperational||0),expectedOpeningOperational:Number(row.expectedOpeningOperational||0),openingVariance:Number(row.openingVariance||0),expectedOperational:Number(row.expectedOperational||0),actualOperational:Number(row.actualOperational||0),actualVariance,variance:auditRule.mode==="POS_EFTPOS_ONLY"?0:actualVariance,duplicateCandidates:Number(row.duplicateCandidates||0),expenseCount:Number(row.expenseCount||0),expensesWithoutDocument:Number(row.expensesWithoutDocument||0)}});
     const auditTableRows=await prisma.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"')::text AS "operator",to_regclass('"PosSaleActionAudit"')::text AS "actions",to_regclass('"PosSaleSafetyAudit"')::text AS "safety",to_regclass('"PurchaseDocument"')::text AS "purchaseDocuments"`;
-    const investigated=await Promise.all(normalized.map(async row=>({...row,investigation:await platformCashInvestigation(row,auditTableRows[0]||{})})));
+    const investigated=await mapCashReportRows(normalized,async row=>({...row,investigation:await platformCashInvestigation(row,auditTableRows[0]||{})}));
     const investigatedByStore=new Map();
     for(const row of investigated){const list=investigatedByStore.get(row.storeId)||[];list.push(row);investigatedByStore.set(row.storeId,list)}
     for(const storeRows of investigatedByStore.values()){
@@ -1311,7 +1320,7 @@ router.get("/cash-control/daily",async(req,res,next)=>{
       for(let index=0;index<ordered.length;index++){
         const previous=ordered[index];if(previous.auditRule.mode!=="FULL"||paired.has(previous.sessionId)||Math.abs(previous.variance)<20)continue;
         for(const current of ordered.slice(index+1,index+3)){
-          if(paired.has(current.sessionId)||previous.variance*current.variance>=0)continue;
+          if(paired.has(current.sessionId)||previous.companyId!==current.companyId||previous.terminalPos!==current.terminalPos||new Date(previous.closedAt)>new Date(current.openedAt)||previous.variance*current.variance>=0)continue;
           const smaller=Math.min(Math.abs(previous.variance),Math.abs(current.variance)),larger=Math.max(Math.abs(previous.variance),Math.abs(current.variance)),ratio=larger?smaller/larger:0;
           if(ratio<.8||ratio>1)continue;
           const netVariance=Number((previous.variance+current.variance).toFixed(2)),finalOperator=netVariance<0?(previous.variance<0?previous.openedByName:current.openedByName):netVariance>0?(previous.variance>0?previous.openedByName:current.openedByName):null;
@@ -1323,7 +1332,7 @@ router.get("/cash-control/daily",async(req,res,next)=>{
     const totals=normalized.reduce((sum,row)=>{sum.shifts++;sum.cashSales+=row.cashSales;sum.cardSales+=row.cardSales;sum.eftposTotal+=row.eftposTotal;sum.expenses+=row.expenses;sum.variance+=row.variance;sum.shortage+=row.variance<0?Math.abs(row.variance):0;sum.surplus+=row.variance>0?row.variance:0;sum.cardVariance+=row.cardVariance;sum.duplicateCandidates+=row.duplicateCandidates;sum.expensesWithoutDocument+=row.expensesWithoutDocument;return sum},{shifts:0,cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,shortage:0,surplus:0,cardVariance:0,duplicateCandidates:0,expensesWithoutDocument:0});
     const byStore=new Map();
     for(const row of normalized){const current=byStore.get(row.storeId)||{companyId:row.companyId,companyName:row.companyName,storeId:row.storeId,storeName:row.storeName,shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0,duplicateCandidates:0};current.shifts++;current.variance+=row.variance;current.shortage+=row.variance<0?Math.abs(row.variance):0;current.surplus+=row.variance>0?row.variance:0;current.cardVariance+=row.cardVariance;current.expensesWithoutDocument+=row.expensesWithoutDocument;current.duplicateCandidates+=row.duplicateCandidates;byStore.set(row.storeId,current)}
-    res.json({date,fromTime,toTime,storeId:filters.storeId||null,timeZone:"Europe/Athens",rows:investigated,stores:[...byStore.values()],totals});
+    res.json({date,...period,fromTime,toTime,storeId:filters.storeId||null,operator:filters.operator||null,timeZone:"Europe/Athens",rows:investigated,stores:[...byStore.values()],totals});
   }catch(error){next(error)}
 });
 
@@ -1336,8 +1345,8 @@ router.get("/cash-control/shortages",async(req,res,next)=>{try{
     FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId" JOIN "Company" c ON c."id"=s."companyId" AND c."id"=st."companyId"
     WHERE s."status"='CLOSED' AND s."variance"<0
       AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date BETWEEN ${range.from}::date AND ${range.to}::date
-      AND ((${range.fromTime}::time<=${range.toTime}::time AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::time BETWEEN ${range.fromTime}::time AND ${range.toTime}::time)
-        OR (${range.fromTime}::time>${range.toTime}::time AND ((s."closedAt" AT TIME ZONE 'Europe/Athens')::time>=${range.fromTime}::time OR (s."closedAt" AT TIME ZONE 'Europe/Athens')::time<=${range.toTime}::time)))
+      AND ((${range.fromTime}::time<=${range.toTime}::time AND date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time BETWEEN ${range.fromTime}::time AND ${range.toTime}::time)
+        OR (${range.fromTime}::time>${range.toTime}::time AND (date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time>=${range.fromTime}::time OR date_trunc('minute',s."closedAt" AT TIME ZONE 'Europe/Athens')::time<=${range.toTime}::time)))
       AND (${range.storeId||null}::text IS NULL OR st."id"=${range.storeId||null})
       AND (${range.operator||null}::text IS NULL OR COALESCE(s."openedByName",s."closedByName",'') ILIKE ${range.operator?`%${range.operator}%`:null})
     ORDER BY "date",c."name",st."name",s."openedAt"`;
