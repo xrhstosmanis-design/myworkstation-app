@@ -22,7 +22,7 @@ test('mounted close form requires deliberate EFTPOS including zero before either
   await input(eft,'abc');assert.equal(submit.disabled,true);
   await input(eft,'0');assert.equal(submit.disabled,false);
   await act(async()=>{form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,10))});assert.equal(writes.length,1);assert.equal(writes[0].eftposTotal,0);
-  const shortage=document.querySelector('.close-shortage');assert.equal(shortage.disabled,true);await input(card,'FIXTURE-CARD');assert.equal(shortage.disabled,false);
+  const shortage=document.querySelector('.close-shortage');assert.equal(shortage.disabled,true);await input(card,'FIXTURE-CARD');assert.equal(shortage.disabled,false);await input(eft,'');assert.equal(shortage.disabled,true);await act(async()=>shortage.click());assert.equal(writes.length,1);await input(eft,'0');assert.equal(shortage.disabled,false);
   await act(async()=>{shortage.click();await new Promise(r=>setTimeout(r,10))});assert.equal(writes.length,2);assert.equal(writes[1].eftposTotal,0);assert.equal(writes[1].forceCloseWithShortage,true);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const[k,d]of previous)d?Object.defineProperty(globalThis,k,d):delete globalThis[k]}
 });
