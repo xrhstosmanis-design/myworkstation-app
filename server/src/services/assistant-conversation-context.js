@@ -6,6 +6,21 @@ import {assistantSalesQuestion,salesOnlyQuestion} from "./assistant-question-int
 export const assistantHistorySchema=z.array(z.object({role:z.enum(["user","assistant"]),content:z.string().trim().min(1).max(2000)}).strict()).max(10).default([]);
 const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").trim();
 const quoteBusinessContext=value=>String(value).replace(/\s+/g,' ').trim();
+// A short direction is meaningful only inside an existing transfer topic.
+// Keep the original topic's actor/status filters when carrying it forward.
+function transferDirectionFragment(question){
+ const q=norm(question),m=q.match(/^(?:και\s+)?(απο\s+(?:τον\s+)?|προς\s+(?:τον\s+)?|στον\s+)ιδιοκτητη(?=\s|[.,;!?]|$)/);
+ if(!m)return null;
+ const rest=q.slice(m[0].length).replace(/^[\s.,;!?]+|[\s.,;!?]+$/g,'');
+ if(rest&&!isBusinessPeriodFollowup(rest))return null;
+ return m[1].startsWith('απο')?'TRANSFERS_FROM_OWNER':'TRANSFERS_TO_OWNER';
+}
+function transferTopicDirection(content,direction){
+ const phrase=direction==='TRANSFERS_FROM_OWNER'?'από τον ιδιοκτήτη':'προς τον ιδιοκτήτη';
+ const changed=content.replace(/(?:απ[οό]\s+(?:τον\s+)?|προς\s+(?:τον\s+)?|στον\s+)ιδιοκτ[ηή]τη(?:ς)?/giu,phrase)
+  .replace(/ιδιοκτ[ηή]τη(?:ς)?\s+(?:προς|στο)\s+ταμε[ιί]ο/giu,phrase);
+ return changed===content?`${content} ${phrase}`:changed;
+}
 const domain=q=>Boolean(assistantBusinessDomain(q))||assistantSalesQuestion(q)||/ιδιοκαταναλ|καταστροφ|πωλησ|ταμει|μετρητ|αποθεμ|στοκ|προσφορ|εκπτωσ/.test(norm(q));
 // This only detects a supplied period, never invents or validates report dates.
 // The canonical reader still validates the resolved calendar and date limits.
@@ -32,19 +47,32 @@ export function assistantEffectiveQuestion(question,history=[]){
  // Search user turns chronologically. A bare newer period supersedes the
  // original topic's dates; unrelated reports end this topic's inheritance.
  const users=checked.filter(m=>m.role==='user');
- let topic=null,latestPeriod=null;
+ let topic=null,latestPeriod=null,latestDirection=null;
  for(let i=users.length-1;i>=0;i--){
   const m=users[i],d=assistantBusinessDomain(m.content);
+  const fragment=transferDirectionFragment(m.content);
+  if(!d&&fragment){
+   if(!topic)latestDirection??=fragment;
+   latestPeriod??=assistantQuestionHasPeriod(m.content)?m.content:null;
+   continue;
+  }
    if(d){
     const prior=topic&&assistantBusinessDomain(topic.content);
     if(prior&&d!==prior&&!(d.startsWith('TRANSFERS')&&prior.startsWith('TRANSFERS')))break;
-    topic??=m;latestPeriod??=assistantQuestionHasPeriod(m.content)?m.content:null;
+    topic??=latestDirection&&d.startsWith('TRANSFERS')?{...m,content:transferTopicDirection(m.content,latestDirection)}:m;
+    latestPeriod??=assistantQuestionHasPeriod(m.content)?m.content:null;
     if(latestPeriod)break;
     continue;
    }
   if(isBusinessPeriodFollowup(m.content)){latestPeriod??=m.content;continue;}
   if(assistantQuestionRequiresReport(m.content))break;
  }
+ const direction=transferDirectionFragment(question);
+ if(direction&&assistantBusinessDomain(topic?.content)?.startsWith('TRANSFERS')){
+  const inherited=quoteBusinessContext(transferTopicDirection(topic.content,direction));
+  return `μεταφορές ${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${inherited}${!assistantQuestionHasPeriod(question)&&latestPeriod?`\nΠερίοδος της ίδιας αναζήτησης: ${quoteBusinessContext(latestPeriod)}`:''}`;
+ }
+ if(direction)return question;
  if(!business&&isBusinessPeriodFollowup(question)&&topic)return `${question}\nΠροηγούμενο θέμα της ίδιας συνομιλίας: ${quoteBusinessContext(topic.content)}`;
  if(business&&!assistantQuestionHasPeriod(question)){
   const compatible=d=>d===business||d?.startsWith('TRANSFERS')&&business.startsWith('TRANSFERS');
