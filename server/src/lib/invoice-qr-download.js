@@ -4,14 +4,28 @@ import {readOriginalPdf,verifyOriginalText} from "../mydata-original.js";
 const fail=(message,status=422)=>Object.assign(new Error(message),{status});
 // Provider formats are independent of supplier identity or invoice number.
 export function invoiceQrSource(value){
-  let url;try{url=new URL(String(value||""))}catch{throw fail("Το QR δεν περιέχει υποστηριζόμενο σύνδεσμο τιμολογίου.")}
+  const input=String(value||"").trim();
+  // Only trim framing whitespace. Never repair embedded controls or a truncated token.
+  if(input.length>4096||/[\u0000-\u0020\u007f]/.test(input)||/\/(?:\.|%2e){1,2}(?:\/|[?#]|$)/i.test(input))throw fail("Ο σύνδεσμος QR είναι ελλιπής ή περιέχει μη έγκυρους χαρακτήρες.");
+  let url;try{url=new URL(input)}catch{throw fail("Το QR δεν περιέχει υποστηριζόμενο σύνδεσμο τιμολογίου.")}
+  if(url.protocol==="https:"&&!url.username&&!url.password&&!url.port&&!url.hash){
+    if(url.hostname==="invoicelink.megasoft.gr"&&url.pathname==="/invoiceinspect/qr"&&/^\?QrCode=[A-Za-z0-9%+\/=]+$/.test(url.search))throw fail("Αναγνωρίστηκε QR Megasoft InvoiceLink. Η αυτόματη λήψη του πρωτότυπου PDF από αυτή τη μορφή δεν υποστηρίζεται ακόμη. Χρησιμοποίησε φωτογραφία ολόκληρου του τιμολογίου ή PDF.");
+    if(url.hostname==="mydatapi.aade.gr"&&url.pathname==="/myDATA/TimologioQR/QRInfo"&&/^\?q=[A-Za-z0-9%+\/=]+$/.test(url.search))throw fail("Αναγνωρίστηκε QR επιβεβαίωσης ΑΑΔΕ. Για την εισαγωγή χρειάζεται το πλήρες τιμολόγιο: φωτογραφία ολόκληρου του παραστατικού ή PDF.");
+  }
+  const epsilonHost=["epsilondigital.epsilonnet.gr","epsilondigital-3rdparte.epsilonnet.gr"].includes(url.hostname);
+  const epsilonShort=epsilonHost&&url.pathname.match(/^\/fd\/([a-f0-9]{32}):(8|169)\/?$/i);
   const epsilon=url.hostname==="epsilondigital.epsilonnet.gr"&&url.pathname.match(/^\/DocViewer\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/?$/i);
-  const knownHost=["einvoice.s1ecos.gr","einvoice.impact.gr"].includes(url.hostname)||Boolean(epsilon);
+  const knownHost=["einvoice.s1ecos.gr","einvoice.impact.gr"].includes(url.hostname)||Boolean(epsilon)||Boolean(epsilonShort);
   const canonical=url.pathname.match(/^\/p\/EL(\d{9})\/([a-f0-9]{40})\/([a-f0-9]{32})\/?$/i);
   const impactView=url.hostname==="einvoice.impact.gr"&&url.pathname.match(/^\/v\/EL(\d{9})-(\d{1,20})-([a-f0-9]{40})-([a-f0-9]{32})\/?$/i);
-  if(url.protocol!=="https:"||!knownHost||url.username||url.password||url.port||url.search||url.hash||(!canonical&&!impactView&&!epsilon))throw fail("Το QR αναγνωρίστηκε, αλλά η μορφή του παρόχου δεν υποστηρίζεται ακόμη. Χρησιμοποίησε φωτογραφία ολόκληρου του τιμολογίου ή PDF.");
+  if(url.protocol!=="https:"||!knownHost||url.username||url.password||url.port||url.search||url.hash||(!canonical&&!impactView&&!epsilon&&!epsilonShort))throw fail("Το QR αναγνωρίστηκε, αλλά η μορφή του παρόχου δεν υποστηρίζεται ακόμη. Χρησιμοποίησε φωτογραφία ολόκληρου του τιμολογίου ή PDF.");
+  if(epsilonShort&&epsilonShort[2]!== (url.hostname==="epsilondigital.epsilonnet.gr"?"8":"169"))throw fail("Η μορφή του συνδέσμου Epsilon δεν υποστηρίζεται ακόμη. Χρησιμοποίησε φωτογραφία ή PDF.");
   url.pathname=url.pathname.replace(/\/$/,"");
-  return {url,issuerVat:(canonical||impactView)?.[1],format:epsilon?"epsilon":impactView?"impact-view":"canonical",documentId:epsilon?.[1],authenticationCode:impactView?.[3],documentToken:impactView?.[4]};
+  // Both observed /fd/ endpoints redirect to this same document UUID. Resolve
+  // locally; do not enable network redirects or accept a provider-supplied host.
+  const key=epsilonShort?.[1];
+  const documentId=epsilon?.[1]||(key?key.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/,"$1-$2-$3-$4-$5"):undefined);
+  return {url,issuerVat:(canonical||impactView)?.[1],format:epsilon||epsilonShort?"epsilon":impactView?"impact-view":"canonical",documentId,authenticationCode:impactView?.[3],documentToken:impactView?.[4]};
 }
 export function invoiceQrUrl(value){return invoiceQrSource(value).url}
 function epsilonFileUrl(source,type){

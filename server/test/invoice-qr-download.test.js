@@ -110,3 +110,58 @@ test("Epsilon requires both printed hash prefixes, MARK, recipient and number; d
   await assert.rejects(downloadInvoiceQr(epsilonUrl,"987654321",{...epsilonTransport(epsilonXml,Buffer.from("HTML challenge")),reader}),/PDF/);
   await assert.rejects(downloadInvoiceQr(epsilonUrl,"987654321",{...epsilonTransport(),reader:async()=>({text:epsilonText,pageCount:6})}),/5 σελίδες/);
 });
+
+const epsilonShortKey="12345678123412341234123456789abc";
+const epsilonShortSources=[
+  ["epsilondigital.epsilonnet.gr","8"],
+  ["epsilondigital-3rdparte.epsilonnet.gr","169"],
+];
+test("Epsilon fd QR resolves only the observed host/token pair to paired files without redirects",async()=>{
+  for(const [host,suffix] of epsilonShortSources){
+    const input=`https://${host}/fd/${epsilonShortKey}:${suffix}`;
+    for(const value of [input," \r\n"+input+"\r\n",input+"/"]){
+      const t=epsilonTransport();
+      const result=await downloadInvoiceQr(value,"987654321",{...t,reader:async()=>({text:epsilonText,pageCount:3})});
+      assert.deepEqual(t.calls.map(x=>x.u),[3,2].map(type=>`https://${host}/filedocument/getfile?fileType=${type}&documentId=12345678-1234-1234-1234-123456789abc`));
+      assert.ok(t.calls.every(x=>x.o.redirect==="error"));
+      assert.equal(result.pageCount,3);assert.equal(result.header.documentNumber,"A-0012");
+      assert.equal(result.requiresHumanReview,true);assert.equal(result.header.paymentMethod,undefined);
+    }
+  }
+});
+test("Epsilon fd rejects malformed tokens, wrong host suffixes and altered URLs before network",async()=>{
+  const valid=`https://epsilondigital.epsilonnet.gr/fd/${epsilonShortKey}:8`;
+  for(const bad of [
+    valid.replace(":8",":169"),valid.replace(":8",":9"),valid.replace(":8",""),
+    valid.replace(epsilonShortKey,epsilonShortKey.slice(1)),valid.replace(epsilonShortKey,"z".repeat(32)),
+    valid.replace("epsilondigital.epsilonnet.gr","epsilondigital-3rdparte.epsilonnet.gr"),
+    valid.replace(".gr/",".gr.attacker.test/"),valid.replace("https://","https://user:secret@"),
+    valid.replace("https:","http:"),valid.replace(".gr/",".gr:444/"),valid+"?next=https://localhost",valid+"#x",
+    valid.replace("/fd/","/fd/../fd/"),valid.replace("1234","12\n34"),valid.replace("1234","12\t34"),valid.replace("1234","12 34"),
+    "x".repeat(4097)
+  ]){
+    const t=epsilonTransport();await assert.rejects(downloadInvoiceQr(bad,"987654321",{...t,reader}));assert.equal(t.calls.length,0);
+  }
+});
+test("Epsilon fd preserves foreign-recipient, PDF identity and missing-original rejection",async()=>{
+  for(const [host,suffix] of epsilonShortSources){
+    const input=`https://${host}/fd/${epsilonShortKey}:${suffix}`;
+    const foreign=epsilonTransport(epsilonXml.replace("987654321","111111111"));
+    await assert.rejects(downloadInvoiceQr(input,"987654321",{...foreign,reader}));assert.equal(foreign.calls.length,1);
+    await assert.rejects(downloadInvoiceQr(input,"987654321",{...epsilonTransport(),reader:async()=>({text:epsilonText.replace("12345","54321"),pageCount:1})}),/Epsilon/);
+    await assert.rejects(downloadInvoiceQr(input,"987654321",{...epsilonTransport(epsilonXml,Buffer.from("Document not found.")),reader}),/PDF/);
+    const missing=epsilonTransport();const fetcher=async(u,o)=>new URL(u).searchParams.get("fileType")==="2"?new Response("Document not found.",{status:404}):missing.fetcher(u,o);
+    await assert.rejects(downloadInvoiceQr(input,"987654321",{fetcher,reader}),/πάροχος/);
+    const r=await downloadInvoiceQr(input,"987654321",{...epsilonTransport(epsilonXml.replace("1.1","5.1")),reader:async()=>({text:epsilonText,pageCount:1})});
+    assert.equal(r.header.documentType,"CREDIT_NOTE");assert.equal(r.header.paymentMethod,undefined);
+  }
+});
+
+test("verification and interactive-provider QR give precise fallback without network or invented PDF",async()=>{
+  for(const [input,provider] of [
+    [" https://invoicelink.megasoft.gr/invoiceinspect/qr?QrCode=QUJDRA%3D%3D\r\n","Megasoft"],
+    ["https://mydatapi.aade.gr/myDATA/TimologioQR/QRInfo?q=QUJDRA%3d%3d","ΑΑΔΕ"]
+  ]){
+    const t=epsilonTransport();await assert.rejects(downloadInvoiceQr(input,"987654321",{...t,reader}),new RegExp(provider));assert.equal(t.calls.length,0);
+  }
+});
