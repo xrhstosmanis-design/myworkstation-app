@@ -1,3 +1,4 @@
+<!-- Release receipt reconciled with concurrent central records; financial acceptance remains OPEN. -->
 ## 16/10/2026 — POS-CREDIT-CASH-01 / DIRECT FORM LIVE / LIMITED READ-ONLY LAB UI PASS / FINANCIAL ACCEPTANCE OPEN
 
 Retained owner `codex/invoice-second-draft-20261016`. Claim PR2571/43f2b49e merged0d489bbc before source. Direct source PR2573/finalheadb4ef2453 merged83a0618cb10a0e29d8c8be6ac2d2c372af34eab6; full native PR38892598357/job116945657805 and main38893953268/job116949997311 SUCCESS2805PASS/0FAIL/0SKIP plus6backup, required Windows/browser/build/native PostgreSQL/invariant/HTTP checks. Ordinary guarded38894609861/job116952025336 SUCCESS and independent health confirmed exact83a0618c. Initial dirty PR had no runnable CI; concurrent main was preserved and normal synchronization then ran full CI. No manual deployment/migration or bypass.
