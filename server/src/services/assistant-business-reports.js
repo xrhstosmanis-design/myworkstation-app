@@ -15,6 +15,11 @@ export const businessInstructions='Για μεταφορές ιδιοκτήτη,
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status})};
 const text=v=>typeof v==='string'?v.slice(0,250):null;
 const numeric=v=>v===null||v===undefined?null:Number.isFinite(Number(v))?Number(v):NaN;
+// Conservative full-name fallback, never a general text stemmer.
+const operatorNameKey=value=>{
+ const tokens=normalizeBusinessText(value).split(' ');
+ return tokens.length>=2&&tokens.every(t=>/^[α-ω]{4,}$/.test(t))?tokens.map(t=>t.replace(/ς$/,'')).join(' '):null;
+};
 export const businessModule=domain=>['INVOICES','SUPPLIERS'].includes(domain)?'INVENTORY':domain==='STAFF'?null:'CASH_CONTROL';
 export function businessQuestionClarification(question,{now=new Date()}={}){
  const domain=assistantBusinessDomain(question);if(!domain||currentBusinessDomains.includes(domain))return null;
@@ -61,15 +66,22 @@ export async function readAssistantBusiness(value,scope,{db=prisma,signal,now=ne
  const base={kind:'business_records',domain:args.domain,title:businessDomains[args.domain],source:businessDomains[args.domain],scope:'OWNER_SELECTED_STORE',companyId:c,companyName:scope.companyName,storeId:s,storeName:scope.storeName,from:args.from,to:args.to,timeZone:'Europe/Athens',asOf:now.toISOString(),incompletePeriod:!current&&calendar.to>now,currentSnapshot:current,query:args.query,statusFilter:args.status,sourceLimit:500,truncated:false,rows:[],totals:null};
  if(!Array.isArray(records))fail(502,'Μη έγκυρη αναφορά πηγής.');
  if(records.length>500)return {...base,result:'source_limited',truncated:true,reason:'Πάνω από500 εγγραφές. Ζήτησε μικρότερο διάστημα· δεν εξάγεται πλήρες σύνολο.'};
- const seen=new Set(),q=normalizeBusinessText(args.query),rows=[];
+ const seen=new Set(),q=normalizeBusinessText(args.query),eligible=[];
  for(const r of records){
   const at=new Date(r.recordedAt);
   if(r.companyId!==c||r.storeId!==s||typeof r.id!=='string'||!r.id||seen.has(r.id)||!Number.isFinite(at.getTime())||!current&&(at<start||at>=end||at>now)||r.reversedAt||moneyTypes[args.domain]&&!moneyTypes[args.domain].includes(r.recordType))fail(502,'Η πηγή δεν αντιστοιχεί στο εξουσιοδοτημένο κατάστημα και διάστημα.');
   seen.add(r.id);
   const row={recordId:r.id,recordedAt:at.toISOString(),recordType:text(r.recordType),label:text(r.label)||text(r.supplierName)||businessDomains[args.domain],amount:numeric(r.amount),operatorName:text(r.operatorName),reference:text(r.reference),status:text(r.status)||(typeof r.active==='boolean'?(r.active?'ACTIVE':'INACTIVE'):null),supplierName:text(r.supplierName),paymentMethod:text(r.paymentMethod),closedAt:r.closedAt?new Date(r.closedAt).toISOString():null};
   if(row.amount!==null&&!Number.isFinite(row.amount))fail(502,'Μη έγκυρο καταχωρημένο ποσό.');
-  if(q&&!normalizeBusinessText([row.label,row.operatorName,row.reference,row.supplierName,row.recordType].join(' ')).includes(q)||args.status&&row.status!==args.status)continue;
-  rows.push(row);
+  if(args.status&&row.status!==args.status)continue;
+  eligible.push(row);
+ }
+ let rows=eligible.filter(row=>!q||normalizeBusinessText([row.label,row.operatorName,row.reference,row.supplierName,row.recordType].join(' ')).includes(q));
+ const nameKey=args.domain.startsWith('TRANSFERS')&&rows.length===0?operatorNameKey(q):null;
+ if(nameKey){
+  const candidates=eligible.filter(row=>operatorNameKey(row.operatorName)===nameKey);
+  if(new Set(candidates.map(row=>normalizeBusinessText(row.operatorName))).size>1)fail(422,'Η ονομασία αντιστοιχεί σε διαφορετικούς καταχωρημένους χειριστές. Γράψε το ακριβές καταχωρημένο ονοματεπώνυμο.');
+  rows=candidates;
  }
  const groups={};for(const r of rows){const k=r.recordType||r.status||'RECORD';const g=groups[k]??={count:0,cents:0,complete:true};g.count++;if(r.amount===null)g.complete=false;else g.cents+=Math.round(r.amount*100);}
  return {...base,result:rows.length?'matched':'no_records',sourceRows:records.length,rows,totals:{count:rows.length,groups:Object.entries(groups).map(([type,g])=>({type,count:g.count,amount:g.complete?g.cents/100:null})),amount:businessMoneyDomains.includes(args.domain)&&args.domain!=='TRANSFERS'&&args.domain!=='BANK_MOVEMENTS'&&rows.every(r=>r.amount!==null)?rows.reduce((a,r)=>a+Math.round(r.amount*100),0)/100:null}};
