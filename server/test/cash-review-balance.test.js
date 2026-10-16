@@ -1,3 +1,4 @@
+import {readCashExpenseEvidence,cashExpenseFindings} from "../src/services/cash-expense-evidence.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -34,7 +35,7 @@ test('read-only shared source binds tenant/store/session, ignores non-explanatio
 test('actual cloud route uses signed balance and stale/excessive recheck while preserving original variance and review rows',async()=>{
  const source=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8'),start=source.indexOf('router.get("/sessions/:sessionId/investigation"'),end=source.indexOf('router.post("/sessions/:sessionId/reviews"',start),route=source.slice(start,end);
  let handler,reviews=[explanation(2)];const db={$queryRaw:async strings=>{const sql=strings.join('');return sql.includes('SELECT s.*')?[session]:sql.includes('FROM "CashControlReview"')?reviews:[];}};
- const deps={router:{get:(_path,fn)=>{handler=fn}},route:fn=>fn,prisma:db,normalize:x=>x,assertStoreAccess:()=>{},ownedStore:async()=>({}),cashControlRule:async()=>({mode:'FULL'}),existingAuditTables:async()=>({}),partitionCashAuditEvents,suspiciousOperatorEvent:()=>true,auditAmount:()=>null,money:v=>Number(v||0),reviewSnapshot:async()=>snapshot,sameSnapshot:sameCashReviewSnapshot,confirmedExplanationBalance};
+ const deps={router:{get:(_path,fn)=>{handler=fn}},route:fn=>fn,prisma:db,normalize:x=>x,assertStoreAccess:()=>{},ownedStore:async()=>({}),cashControlRule:async()=>({mode:'FULL'}),readCashExpenseEvidence,cashExpenseFindings,existingAuditTables:async()=>({}),partitionCashAuditEvents,suspiciousOperatorEvent:()=>true,auditAmount:()=>null,money:v=>Number(v||0),reviewSnapshot:async()=>snapshot,sameSnapshot:sameCashReviewSnapshot,confirmedExplanationBalance};
  new Function(...Object.keys(deps),route)(...Object.values(deps));const invoke=async()=>{let result;await handler({params:{sessionId:'shift'},user:{companyId:'c'}},{json:x=>{result=x}});return result;};
  let out=await invoke();assert.equal(out.initialVariance,-5);assert.equal(out.unexplainedVariance,-3);assert.equal(out.recheckRequired,false);assert.equal(out.reviews[0].amount,2);
  reviews=[explanation(6)];out=await invoke();assert.equal(out.unexplainedVariance,null);assert.equal(out.status,'RECHECK_REQUIRED');assert.equal(out.reviewBalance.reason,'EXPLANATIONS_EXCEED_VARIANCE');
@@ -44,7 +45,7 @@ test('actual cloud route uses signed balance and stale/excessive recheck while p
 test('actual Platform investigation and copied Analyses use the same signed balance and honest unknown label',async()=>{
  const api=readFileSync(new URL('../src/routes/platform-admin.js',import.meta.url),'utf8'),body=api.slice(api.indexOf('function platformCashAuditAmount('),api.indexOf('function companyView('));
  const db={$queryRaw:async strings=>{const sql=strings.join('');return sql.includes('FROM "CashControlReview"')?[explanation(2)]:sql.includes('COUNT(*)::int AS "transactionCount"')?[snapshot]:[];}};
- const investigate=new Function('prisma','partitionCashAuditEvents','readCashReviewState',body+';return platformCashInvestigation;')(db,partitionCashAuditEvents,readCashReviewState);
+ const investigate=new Function('prisma','partitionCashAuditEvents','readCashReviewState','readCashExpenseEvidence','cashExpenseFindings',body+';return platformCashInvestigation;')(db,partitionCashAuditEvents,readCashReviewState,readCashExpenseEvidence,cashExpenseFindings);
  const result=await investigate(session,{operator:true,actions:true,safety:true,purchaseDocuments:true});assert.equal(result.reviewBalance.unexplainedVariance,-3);assert.equal(result.completed,false);
  const ui=readFileSync(new URL('../../client/src/components/platform/PlatformAdminApp.jsx',import.meta.url),'utf8'),labels=ui.slice(ui.indexOf('const cashNumber='),ui.indexOf('const cashWrittenReport=')),label=new Function(labels+';return cashReviewBalanceLabel;')();
  const text=label({...session,investigation:result});assert.match(text,/-5,00/);assert.match(text,/2,00/);assert.match(text,/-3,00/);

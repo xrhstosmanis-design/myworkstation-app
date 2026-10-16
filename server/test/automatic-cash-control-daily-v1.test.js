@@ -1,3 +1,4 @@
+import {expenseDocumentCheck,cashExpenseFindings} from "../src/services/cash-expense-evidence.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -48,10 +49,13 @@ test("super admin exports shortages for a selected date range and optional store
 });
 
 test("daily control reconciles expenses with their evidence and document totals",()=>{
-  assert.match(cash,/NO_DOCUMENT/);
-  assert.match(cash,/AMOUNT_MISMATCH/);
+  assert.match(cash,/expenseChecks=await readCashExpenseEvidence/);
+  const row={type:"OTHER_EXPENSE",amount:31,subtractFromShift:false};
+  assert.equal(expenseDocumentCheck(row,null).status,"NO_DOCUMENT");
+  assert.equal(expenseDocumentCheck({...row,purchaseDocumentId:"doc"},{documentStatus:"APPROVED",documentTotal:30,documentPaymentTotal:31,cashPaymentTotal:0,externalPaymentTotal:31,paymentCount:1,invalidPaymentCount:0}).status,"AMOUNT_MISMATCH");
   assert.match(cash,/application\/vnd\.myworkstation\.purchase-document/);
-  assert.match(cash,/"totalGross" AS "documentTotal"/);
+  const evidence=fs.readFileSync(new URL("../src/services/cash-expense-evidence.js",import.meta.url),"utf8");
+  assert.match(evidence,/"totalGross" AS "documentTotal"/);
 });
 
 test("session investigation exhausts transaction and audit evidence without auto-clearing a shortage",()=>{
@@ -59,7 +63,8 @@ test("session investigation exhausts transaction and audit evidence without auto
   assert.match(cash,/StoreOperatorAudit/);
   assert.match(cash,/PosSaleActionAudit/);
   assert.match(cash,/PosSaleSafetyAudit/);
-  assert.match(cash,/EXPENSE_WITHOUT_DOCUMENT/);
+  assert.match(cash,/findings.push\(\.\.\.cashExpenseFindings\(expenseChecks\)\)/);
+  assert.equal(cashExpenseFindings([expenseDocumentCheck({type:"OTHER_EXPENSE",amount:5},null)])[0].code,"EXPENSE_WITHOUT_DOCUMENT");
   assert.match(cash,/POS_EFTPOS_DIFFERENCE/);
   assert.match(cash,/CASH_SHORTAGE/);
   assert.match(cash,/confirmedExplanations=validReviews\.filter/);
