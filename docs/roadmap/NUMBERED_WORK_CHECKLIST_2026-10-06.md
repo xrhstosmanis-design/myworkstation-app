@@ -614,3 +614,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 - **Tracker ID:** `TODAY-09`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** PARTIAL LIVE PASS / OPEN
 - **Υπόλοιπο / όριο:** 10Oct17:57 desktop LAB layout/navigation PASS, δύο κύριες επιλογές515×64, βάρδιες/πληρωμές/πρόσθετα/επανάνοιγμα σωστούstore. PR2118+2124, greenCI/mainCI38060563876/Render38061084383/exacthealthy818d3f. Whole51 OPEN για τελική USER οπτική αποδοχή και πραγματικό maximized/responsive Owner landing· normalOwner/mobile NOT TESTED. Owner codex/n51-owner-page-acceptance-20261010 retained, manualowner-store-page/PASS.md/checkpoint2026-10-10-n51-owner-page-acceptance.md. Καμία επανάληψη οικονομικής πράξης.
+
+## 16/10/2026 — Ανεξάρτητη παρουσίαση POS: POS-HEADER-COLLAPSE-01
+
+Source PR2593, exact 1afc5fd35f71725821d4e951c4c749a22cd5c026, πλήρες CI/guarded deploy PASS. Συμπτυσσόμενη πάνω μπάρα, πραγματικό Chromium με συνθετικά δεδομένα. Hosted USER/physical touch NOT TESTED, owner fix/pos-header-collapse-20261016 retained. Δεν κλείνει άλλη αριθμημένη εργασία ή το παλιό resize/menu scope.
