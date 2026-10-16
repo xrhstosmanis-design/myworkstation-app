@@ -1,3 +1,4 @@
+import {readCashReviewState} from "../services/cash-review-balance.js";
 import {partitionCashAuditEvents} from "../services/cash-audit-association.js";
 import {readCashReviewEvidence} from "../services/cash-review-evidence.js";
 import {resolveCashReportPeriod,mapCashReportRows} from "../services/cash-report-period.js";
@@ -249,13 +250,16 @@ async function platformCashInvestigation(session,tables){
   if(Number(session.duplicateCandidates||0)>0)findings.push({code:"DUPLICATE_CANDIDATES",count:Number(session.duplicateCandidates)});
   if(session.auditRule?.carryOverEnabled&&Math.abs(Number(session.openingVariance||0))>.02)findings.push({code:"CASH_TRANSFER_DIFFERENCE",amount:Number(session.openingVariance),at:session.openedAt,terminalPos:session.terminalPos,delivery:String(session.terminalPos||"").toUpperCase().includes("DELIVERY")});
   if(session.auditRule?.posEftposEnabled&&Math.abs(Number(session.cardVariance||0))>.02){findings.push({code:"POS_EFTPOS_DIFFERENCE",amount:Number(session.cardVariance),at:session.closedAt});if(Number(session.cardVariance)>0&&Number(session.variance)>0)findings.push({code:"CARD_RECORDED_CASH_PAID",amount:Number(session.cardVariance),at:session.closedAt});if(Number(session.cardVariance)<0)findings.push({code:"EFTPOS_CONFIRMED_AS_FAILED",amount:Number(session.cardVariance),at:session.closedAt})}
+  const reviewState=await readCashReviewState(prisma,session,{enabled:session.auditRule?.mode!=="POS_EFTPOS_ONLY"});
+  if(reviewState.balance.status==="UNAVAILABLE")findings.push({code:"REVIEW_SOURCE_UNAVAILABLE",at:session.closedAt});
+  else if(reviewState.balance.status==="RECHECK_REQUIRED")findings.push({code:"REVIEW_BALANCE_RECHECK",reason:reviewState.balance.reason,at:session.closedAt});
   const variance=Number(session.variance||0);
   const conclusion=variance<-.009?(findings.length?"SHORTAGE_WITH_FINDINGS":"UNEXPLAINED_SHORTAGE"):variance>.009?(findings.length?"SURPLUS_WITH_FINDINGS":"UNEXPLAINED_SURPLUS"):findings.length?"FINDINGS_WITHOUT_CASH_VARIANCE":"AGREEMENT";
   const missingSources=sources.filter((source,index)=>evidence[index].status!=="fulfilled"||(index===1&&!tables.operator)||(index===2&&!tables.actions)||(index===3&&!tables.safety)||(index===0&&!tables.purchaseDocuments));
   // Cached close-time duplicate counts and same-period pair hints do not prove
   // that all sales/items, adjacent shifts and named owner receipts were checked.
-  const pendingChecks=[...missingSources,...(unassignedAuditEvents.length?["EVENT_SESSION_LINK"]:[]),"SALE_LINE_DUPLICATES","CROSS_PERIOD_SHIFT_CHAIN","OWNER_TRANSFER_RECIPIENT"];
-  return{completed:false,coverageStatus:"PROVISIONAL",pendingChecks,unassignedAuditEvents,auditAssociation:{linked:associations.reduce((n,g)=>n+g.linked.length,0),unassigned:unassignedAuditEvents.length,excluded:associations.reduce((n,g)=>n+g.excluded.length,0)},checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
+  const pendingChecks=[...missingSources,...(["UNAVAILABLE","RECHECK_REQUIRED"].includes(reviewState.balance.status)?["REVIEW_BALANCE"]:[]),...(unassignedAuditEvents.length?["EVENT_SESSION_LINK"]:[]),"SALE_LINE_DUPLICATES","CROSS_PERIOD_SHIFT_CHAIN","OWNER_TRANSFER_RECIPIENT"];
+  return{completed:false,coverageStatus:"PROVISIONAL",pendingChecks,reviewBalance:reviewState.balance,confirmedExplanations:reviewState.confirmedExplanations,unassignedAuditEvents,auditAssociation:{linked:associations.reduce((n,g)=>n+g.linked.length,0),unassigned:unassignedAuditEvents.length,excluded:associations.reduce((n,g)=>n+g.excluded.length,0)},checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
 }
 
 function companyView(company,commercialTerms=[],managedControl=null){
