@@ -1,3 +1,13 @@
+## 16/10/2026 17:02–17:05 Athens — Limited LIVE full operator-name terminal-sigma matching PASS
+
+Verified exact production `e8fe52ec401261eef17b8754a7b64c283bca36aa`, source PR2586, final full PRCI38910558770/mainCI38911413288 and ordinary guarded Render38912037409. Supersedes the earlier selected-store Super Admin final-sigma name failure only; whole VOICE remains OPEN.
+
+Who/where: authenticated Super Admin at https://myworkstation-app.onrender.com/platform-admin -> Βοηθός; select one authorized store and keep all-stores unchecked. Ask for owner transfers with explicit direction and dates, adding the full recorded operator name. Exact search stays first. When exact search has no match, at least two full Greek name tokens may match the same stored name with or without terminal «ς». The displayed original operator name remains unchanged. Compare source/store/period/direction and visible rows; a recorded operator does not identify the physical money recipient.
+
+Verified flow: one real full-name query in its stored form, the corresponding natural wording without terminal sigma, and an explicit instruction to retain that inflected filter all returned the same source row. The third visible filter stayed inflected, proving that the application reader handled it. A different synthetic full name returned no records. No business transaction was executed. CSV button on the positive inflected report showed a generated filename; file bytes were not read, so actual CSV content remains unverified.
+
+Limits/troubleshooting: only this full-name pattern/selected-store Super Admin path has actual LIVE acceptance. This is not general Greek stemming, phonetic or typo correction. For unsupported endings use the exact recorded full name; multiple distinct candidate names require clarification rather than aggregation (CI coverage, not hosted ambiguity acceptance). Hosted Owner-role matching, microphone and original short-request CSV file-content comparison remain OPEN. Do not treat an unavailable source or rejected search as zero records; no financial replay is required. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-16-assistant-actor-inflection.md`.
+
 ## 16/10/2026 14:07 Athens — Transfer dialogue regression PASS on b1da09c80; file acceptance blocked
 
 Normal authenticated Super Admin/read-only selected-store dialogue FROM11October -> short TO -> short12October again retained the correct source/direction/latest date on exact live revision `b1da09c80cf9e38511027344f0ee672b319f6426`. Source PR2569, exact full main CI38890603855, guarded Render38891225899. Existing step-by-step usage and authorization boundaries below remain valid in their limited tested scope.
