@@ -22,6 +22,7 @@ test('native cash evidence: same-session sale lines, cross-day next two, foreign
    await db.$executeRaw`INSERT INTO "Payment" VALUES(${id+'pay'},${id},${method},5)`;
    await db.$executeRaw`INSERT INTO "StoreTransaction" VALUES(${id+'tx'},${company},${store},${session},${'SALE_'+method},NULL,${'POS πώληση '+id+' · '+method})`;
   }
+  await db.$executeRawUnsafe('ALTER TABLE "StoreTransaction" ADD COLUMN "amount" numeric DEFAULT 5');
   const current={sessionId:'current',companyId:'c',storeId:'s',terminalPos:'MAIN',openedAt:new Date('2026-10-11T22:00:00Z'),closedAt:new Date('2026-10-12T06:00:00Z'),status:'CLOSED',variance:-27.3};
   const before=await db.$queryRaw`SELECT (SELECT COUNT(*) FROM "Sale")::int AS sales,(SELECT COUNT(*) FROM "StoreTransaction")::int AS transactions,(SELECT SUM("variance") FROM "CashShiftSession") AS variance`;
   const out=await readCashReviewEvidence(db,current);assert.equal(out.salesStatus,'LINKED_POS_SCOPE');assert.equal(out.checkedSales,2);assert.equal(out.chainStatus,'CONTEXT_AVAILABLE');
@@ -29,6 +30,23 @@ test('native cash evidence: same-session sale lines, cross-day next two, foreign
   assert.deepEqual(out.findings.filter(f=>f.code==='SHIFT_CHAIN_OFFSET_CANDIDATE').map(f=>f.netVariance),[2.1]);
   assert.deepEqual(new Set(out.context.map(c=>c.sessionId)),new Set(['prior','current','next','second']));assert.doesNotMatch(JSON.stringify(out),/foreign|control|delivery/);
   const after=await db.$queryRaw`SELECT (SELECT COUNT(*) FROM "Sale")::int AS sales,(SELECT COUNT(*) FROM "StoreTransaction")::int AS transactions,(SELECT SUM("variance") FROM "CashShiftSession") AS variance`;assert.deepEqual(after,before);
+  // Exact existing correction rows enrich evidence without touching any balance.
+  for(const [original,method] of [['a','CASH'],['b','CARD']]){
+   const id=original+'-reverse';
+   await db.$executeRaw`INSERT INTO "Sale" VALUES(${id},'c','s',NULL,'2026-10-12 07:00',-5,'COMPLETED','POS_REVERSAL')`;
+   await db.$executeRaw`INSERT INTO "Payment" VALUES(${id+'pay'},${id},${method},-5)`;
+   await db.$executeRaw`INSERT INTO "StoreTransaction"("id","companyId","storeId","sessionId","type","reversedAt","description","amount") VALUES(${id+'tx'},'c','s','current',${'SALE_'+method},NULL,${'POS ΕΠΙΣΤΡΟΦΗ '+id+' · αρχική '+original+' · '+method},-5)`;
+  }
+  const correctedBefore=await db.$queryRaw`SELECT COUNT(*)::int AS count,SUM("amount") AS amount FROM "StoreTransaction"`;
+  const corrected=(await readCashReviewEvidence(db,current)).findings.find(f=>f.code==='SALE_LINE_DUPLICATE_CANDIDATE');
+  assert.equal(corrected.recordedCorrectionSummary.recordedNet,0);assert(corrected.transactions.every(s=>s.recordedCorrections.status==='FULL_AMOUNT_CORRECTED'));assert.equal(corrected.requiresConfirmation,true);
+  assert.deepEqual(await db.$queryRaw`SELECT COUNT(*)::int AS count,SUM("amount") AS amount FROM "StoreTransaction"`,correctedBefore);
+  // Reversed corrective movement no longer covers the original; wrong session cannot qualify.
+  await db.$executeRaw`UPDATE "StoreTransaction" SET "reversedAt"='2026-10-12 08:00' WHERE "id"='a-reversetx'`;
+  await db.$executeRaw`UPDATE "StoreTransaction" SET "sessionId"='next' WHERE "id"='b-reversetx'`;
+  const excluded=(await readCashReviewEvidence(db,current)).findings.find(f=>f.code==='SALE_LINE_DUPLICATE_CANDIDATE');assert.equal(excluded.recordedCorrectionSummary.recordedNet,10);
+  await db.$executeRaw`INSERT INTO "StoreTransaction"("id","companyId","storeId","sessionId","type","reversedAt","description","amount") VALUES('orphan','c','s','current','SALE_CASH',NULL,'POS ΕΠΙΣΤΡΟΦΗ missing · αρχική a · CASH',-5)`;
+  assert.equal((await readCashReviewEvidence(db,current)).findings.find(f=>f.code==='SALE_LINE_DUPLICATE_CANDIDATE').recordedCorrectionSummary.recordedNet,null);
   // A same-store sale not linked to this shift is a barrier, never silently skipped.
   await db.$executeRaw`INSERT INTO "Sale" VALUES('unlinked','c','s',NULL,'2026-10-12 01:00:10',5,'COMPLETED','POS')`;
   await db.$executeRaw`INSERT INTO "SaleLine" VALUES('unlinked-line','unlinked','p','Water',1,5,0,5)`;

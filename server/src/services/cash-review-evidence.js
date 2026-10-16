@@ -1,4 +1,5 @@
 // Read-only evidence. Candidates never change a ledger, review or employee balance.
+import {readRecordedCorrections} from './cash-correction-links.js';
 const number=value=>Number(value);
 const cents=value=>Math.round(number(value)*100);
 const instant=value=>new Date(value).getTime();
@@ -66,5 +67,6 @@ export async function readCashReviewEvidence(db,session){
   const salesStatus=salesResult.status!=='fulfilled'?'UNAVAILABLE':sales.length>cashEvidenceLimits.sales||sales.some(s=>!Array.isArray(s.lines)||!s.lines.length||s.lines.length>cashEvidenceLimits.linesPerSale)?'LIMITED':'LINKED_POS_SCOPE';
   const chain=shiftChainEvidence(session,chainResult.status==='fulfilled'?chainResult.value:[]);
   const chainStatus=chainResult.status!=='fulfilled'?'UNAVAILABLE':chain.nextClosedCount<2?'AWAITING_NEXT_SHIFTS':'CONTEXT_AVAILABLE';
-  return {salesStatus,chainStatus,checkedSales:salesStatus==='LINKED_POS_SCOPE'?sales.filter(s=>s.linked).length:null,duplicateWindowSeconds:cashEvidenceLimits.duplicateSeconds,context:chain.context,findings:[...(salesStatus==='LINKED_POS_SCOPE'?consecutiveSaleCandidates(sales):[]),...chain.findings],pendingChecks:['SALE_LINE_DUPLICATES','CROSS_PERIOD_SHIFT_CHAIN'],scope:'LINKED_COMPLETED_POS_SALES_IN_SESSION',readOnly:true};
+  const candidates=await readRecordedCorrections(db,session,salesStatus==='LINKED_POS_SCOPE'?consecutiveSaleCandidates(sales):[]);
+  return {salesStatus,chainStatus,checkedSales:salesStatus==='LINKED_POS_SCOPE'?sales.filter(s=>s.linked).length:null,duplicateWindowSeconds:cashEvidenceLimits.duplicateSeconds,context:chain.context,findings:[...candidates,...chain.findings],pendingChecks:['SALE_LINE_DUPLICATES','CROSS_PERIOD_SHIFT_CHAIN'],scope:'LINKED_COMPLETED_POS_SALES_IN_SESSION',readOnly:true};
 }
