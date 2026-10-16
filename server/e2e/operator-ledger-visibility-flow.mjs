@@ -68,10 +68,6 @@ async function main(){
   const tokenA=await pinLogin(employeeA,"3579");
   const tokenB=await pinLogin(employeeB,"4680");
 
-  const opened=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:ownerToken,body:{shiftLabel:"E2E ledger visibility",drawer:25,custody:0,coins:0,safe:0,note:"two operators"}});
-  assert.equal(opened.response.status,201,JSON.stringify(opened.payload));
-  const sessionId=opened.payload.id;
-
   const paymentA=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token:tokenA,body:{type:"OTHER_EXPENSE",amount:2,description:"Operator A external expense",evidenceMode:"NO_DOCUMENT",paymentSource:"EXTERNAL",idempotencyKey:"e2e-ledger-a-001"}});
   assert.equal(paymentA.response.status,201,JSON.stringify(paymentA.payload));
 
@@ -110,6 +106,17 @@ async function main(){
   const rowB=(report.payload.movements||[]).find(row=>row.id===paymentB.payload.id);
   assert.ok(rowA&&rowB,"BackOffice report does not include both operator payments");
   assert.notEqual(rowA.actorId,rowB.actorId,"Payments from two operators lost actor isolation");
+
+  // External payments above are independent of a cash shift. Opening a
+  // different owner's shift must now reject both existing POS sessions.
+  const opened=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:ownerToken,body:{shiftLabel:"E2E ledger visibility",drawer:25,custody:0,coins:0,safe:0,note:"two operators"}});
+  assert.equal(opened.response.status,201,JSON.stringify(opened.payload));
+  const sessionId=opened.payload.id;
+  for(const token of [tokenA,tokenB]){
+    const denied=await request(`/api/transactions/stores/${storeId}/overview`,{token});
+    assert.equal(denied.response.status,401,JSON.stringify(denied.payload));
+    assert.equal(denied.payload.code,"POS_SHIFT_OTHER_OPERATOR");
+  }
 
   const closed=await request(`/api/cash/sessions/${sessionId}/close`,{method:"POST",token:ownerToken,body:{cashSales:0,cardSales:0,eftposTotal:0,expenses:0,drawer:25,custody:0,coins:0,safe:0,note:"external-only operator payments"}});
   assert.equal(closed.response.status,200,JSON.stringify(closed.payload));

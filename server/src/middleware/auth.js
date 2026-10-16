@@ -175,7 +175,11 @@ export async function auth(req,res,next){
                os."revokedAt" AS "operatorSessionRevokedAt",
                COALESCE(p."posAccess",TRUE) AS "posAccess",
                p."terminalPos" AS "terminalPos",
-               COALESCE(p."permissions",'{}'::jsonb) AS "profilePermissions"
+               COALESCE(p."permissions",'{}'::jsonb) AS "profilePermissions",
+               EXISTS (SELECT 1 FROM "CashShiftSession" shift
+                 WHERE shift."companyId"=c."companyId" AND shift."storeId"=c."storeId" AND shift."status"='OPEN'
+                   AND UPPER(COALESCE(NULLIF(TRIM(shift."terminalPos"),''),'MAIN'))=UPPER(COALESCE(NULLIF(TRIM(${payload.terminalPos||payload.terminalpos||null}),''),NULLIF(TRIM(p."terminalPos"),''),'MAIN'))
+                   AND shift."openedBy" IS DISTINCT FROM c."id") AS "shiftOwnedByOther"
         FROM "StoreOperatorCredential" c
         JOIN "Employee" e ON e."id"=c."employeeId"
         JOIN "Store" s ON s."id"=c."storeId"
@@ -225,6 +229,7 @@ export async function auth(req,res,next){
       // A verified device binding in the login token identifies the physical POS.
       // Legacy sessions without one continue to use the operator profile terminal.
       req.user.terminalPos=payload.terminalPos||payload.terminalpos||operator.terminalPos||operator.terminalpos||null;
+      if(operator.shiftOwnedByOther&&String(req.originalUrl||"").split("?")[0]!=="/api/operators/logout")return res.status(401).json({error:"Το ταμείο έχει ανοιχτή βάρδια άλλου χειριστή. Συνδέσου με τον χειριστή της βάρδιας.",code:"POS_SHIFT_OTHER_OPERATOR"});
       return next();
     }
 
@@ -269,4 +274,3 @@ export async function auth(req,res,next){
     res.status(503).json({error:"Ο έλεγχος συνεδρίας δεν είναι προσωρινά διαθέσιμος. Δοκίμασε ξανά — δεν έγινε αποσύνδεση.",code:"AUTH_VALIDATION_UNAVAILABLE"});
   }
 }
-

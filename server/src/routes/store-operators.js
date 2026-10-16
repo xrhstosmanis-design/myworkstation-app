@@ -1,3 +1,4 @@
+import {assertPosShiftOwner} from "../lib/pos-shift-owner.js";
 import {issueChatOperatorSession} from "../chat-operator-auth.mjs";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
@@ -208,6 +209,7 @@ async function createOperatorSession(req,row){
   const sessionId=crypto.randomUUID();
   const expiresAt=new Date(Date.now()+12*60*60*1000);
   await prisma.$transaction(async tx=>{
+    await assertPosShiftOwner(tx,{companyId:row.companyId,storeId:row.storeId,operatorId:row.id,terminalPos:row.terminalPos});
     // Serialize logins for this operator: two concurrent POS requests must not both pass the check.
     await tx.$queryRaw`SELECT "id" FROM "StoreOperatorCredential" WHERE "id"=${row.id} FOR UPDATE`;
     const other=(await tx.$queryRaw`
@@ -231,6 +233,8 @@ async function createOperatorSession(req,row){
   return sessionId;
 }
 async function assertOperatorTerminalAvailable(operator){
+  operator.terminalPos=String(operator.terminalPos||"MAIN").trim().toUpperCase()||"MAIN";
+  await assertPosShiftOwner(prisma,{companyId:operator.companyId,storeId:operator.storeId,operatorId:operator.id,terminalPos:operator.terminalPos});
   const active=(await prisma.$queryRaw`SELECT "terminalPos" FROM "CashShiftSession" WHERE "companyId"=${operator.companyId} AND "storeId"=${operator.storeId} AND "openedBy"=${operator.id} AND "status"='OPEN' AND "terminalPos"<>${operator.terminalPos} ORDER BY "openedAt" DESC LIMIT 1`)[0];
   if(active){const error=new Error(`Ο χειριστής έχει ήδη ενεργή βάρδια στο ${active.terminalPos}. Μόνο Super Admin μπορεί να εγκρίνει αλλαγή POS.`);error.status=409;throw error;}
 }
