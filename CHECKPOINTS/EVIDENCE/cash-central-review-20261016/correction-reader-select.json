@@ -1,0 +1,51 @@
+{
+  "method": "Render read-only SELECT using exact new reader SQL",
+  "scope": "existing LAB MAIN 3a186861 only",
+  "results": [
+    [
+      {
+        "amount": -1,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "correctionSaleId": "aa7ebb62-7890-433a-bcec-fc23a4d6a189",
+        "description": "POS ΕΠΙΣΤΡΟΦΗ aa7ebb62-7890-433a-bcec-fc23a4d6a189 · αρχική 54cfc0ab-49eb-4bc3-90db-e04b1f1bacc5 · ΜΕΤΡΗΤΑ",
+        "occurredAt": "2026-10-11T17:39:20.104Z",
+        "payments": [
+          {
+            "amount": -1,
+            "method": "CASH"
+          }
+        ],
+        "reversedAt": null,
+        "sessionId": "3a186861-5fa0-4d44-a133-d3ea888c6d81",
+        "source": "POS_REVERSAL",
+        "status": "COMPLETED",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "total": -1,
+        "transactionId": "269a7048-0ee5-4b51-8c39-643281e5c005",
+        "type": "SALE_CASH"
+      },
+      {
+        "amount": -1,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "correctionSaleId": "ff12195f-c851-4e1a-9b0a-2fa97f93f228",
+        "description": "POS ΑΚΥΡΩΣΗ ff12195f-c851-4e1a-9b0a-2fa97f93f228 · αρχική 005c2651-006f-481c-9243-0bdc5cb48ace · ΜΕΤΡΗΤΑ",
+        "occurredAt": "2026-10-11T17:37:50.466Z",
+        "payments": [
+          {
+            "amount": -1,
+            "method": "CASH"
+          }
+        ],
+        "reversedAt": null,
+        "sessionId": "3a186861-5fa0-4d44-a133-d3ea888c6d81",
+        "source": "POS_REVERSAL",
+        "status": "COMPLETED",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "total": -1,
+        "transactionId": "b4e13a9e-27d4-4eb2-baeb-3622b1f94921",
+        "type": "SALE_CASH"
+      }
+    ]
+  ],
+  "limits": "SQL/data proof only; not hosted UI acceptance or new business action"
+}
