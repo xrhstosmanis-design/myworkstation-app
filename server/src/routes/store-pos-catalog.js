@@ -7,6 +7,7 @@ import {getStoreLabelSettings} from "../services/store-label-settings.js";
 import {registerPermanentPriceRoutes} from "../lib/pos-permanent-price.js";
 
 const router=Router();
+
 const money=value=>Number(value||0);
 
 router.get("/stores/:storeId/label-settings",async(req,res,next)=>{
@@ -114,15 +115,12 @@ router.get("/stores/:storeId/barcode-registration",async(req,res,next)=>{
   try{
     const store=req.storeOperatorStore,access=req.storeOperatorAccess||adminAccess;
     if(!access.addBarcode)return res.status(403).json({error:"Δεν έχεις δικαίωμα «Προσθήκη barcode είδους» από το BackOffice."});
-    const q=String(req.query.q||"").trim(),like=`%${q}%`;
-    const rows=await prisma.$queryRaw`
-      SELECT p."id",p."sku",p."name",COALESCE(sp."salePrice",p."salePrice") AS "salePrice",COALESCE(sp."currentStock",0) AS "currentStock",
-        COALESCE((SELECT json_agg(json_build_object('id',pb."id",'barcode',pb."barcode",'salePrice',pb."salePrice") ORDER BY pb."createdAt") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes"
-      FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.user.companyId}
-      WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."active"=TRUE
-        AND (${q}='' OR p."name" ILIKE ${like} OR COALESCE(p."sku",'') ILIKE ${like} OR EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id" AND pb."barcode" ILIKE ${like}))
-      ORDER BY CASE WHEN NOT EXISTS(SELECT 1 FROM "ProductBarcode" pb WHERE pb."productId"=p."id") THEN 0 ELSE 1 END,p."name" LIMIT 250`;
-    res.json({rows:rows.map(row=>({...row,salePrice:money(row.salePrice),currentStock:money(row.currentStock),barcodes:(row.barcodes||[]).map(code=>({...code,salePrice:code.salePrice==null?null:money(code.salePrice)}))})),access:{changeRetail:Boolean(access.changeRetail)}});
+    const q=String(req.query.q||"").trim().slice(0,240);
+    const offset=Number(req.query.offset||0);
+    if(!Number.isSafeInteger(offset)||offset<0||offset>1000000)return res.status(400).json({error:"Μη έγκυρη σελίδα barcode."});
+    const {barcodeRegistrationList}=await import("../lib/pos-barcode-pending.js");
+    const result=await barcodeRegistrationList(prisma,{companyId:req.user.companyId,storeId:store.id,q,offset,missingOnly:req.query.missingOnly==="true",countOnly:req.query.countOnly==="true"});
+    res.json({...result,access:{changeRetail:Boolean(access.changeRetail)}});
   }catch(error){next(error)}
 });
 

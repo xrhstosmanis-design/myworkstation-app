@@ -1,3 +1,17 @@
+## Local full-suite evidence and launcher assertion update
+
+Initial full Node20 run:2711PASS/1FAIL/96SKIP. The sole failure was workforce launcher source assertion requiring literal `> Barcode</button>`, which excludes the requested count badge despite preserving the same button/label/handler; actual mounted operator regression passed. Narrow assertion now checks retained icon/Barcode label prefix while mounted tests cover count and permissions. This historical failure is retained; full native CI must rerun green before merge. No runtime behavior changed by the assertion update.
+
+## 16/10/2026 — POS-BARCODE-PENDING-01 / SOURCE READY / AWAITING FULL CI AND HOSTED ACCEPTANCE
+
+Same owner codex/pos-barcode-pending-20261016. ClaimPR2580/heada9cddcd4/CI38907257458 SUCCESS merged0ba097d before code. Added authorized read-only complete active-store missing count, missing-only filter and250-row pagination. Direct nonblank barcodes and explicitly linked master aliases use the existing same-company ownership exclusion; no name-based grouping or automatic transfer/merge. Blank barcode rows remain pending. GET registration projection is separate; existing POST/price/Audit/fiscal/stock logic untouched.
+
+POS Barcode button displays scoped pending count; modal defaults to missing items (explicit item search opens all), exposes full count/zero state and all-product option for extra barcodes. Refresh on reopen, focus/visibility,60-second visible polling and save/conflict; old store/query/page responses discarded, save locked once, duplicate ownership error retained after refresh. Read failure never becomes false zero. No new permissions or data repair.
+
+Node20 focused new/mounted/route/catalog/operator checks7PASS/0FAIL/2nativeSKIP; prior barcode/radio9PASS. Client production build and server preparation/Prisma generation PASS. Full local suite running at preparation. Native isolated PostgreSQL actual route fixture covers303pending across pages, direct/master/claimed/blank aliases, inactive/disabled/foreign/control exclusions, zero-write snapshot and external fixture resolution; local native unavailable, not claimed PASS. Required full native CI/mainCI/ordinary guarded exact release/hosted UI acceptance pending. No real-store/LAB product/barcode/price/stock/payment/fiscal write or accepted transaction replay. No manual or business PASS. Actual Roshen duplicate identities remain a separate data-review item, not auto-repaired.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-10-16-pos-barcode-pending.md. Next: required CI, merge and exact guarded release, then read-only hosted notification/filter inspection. Retained owner; all prior owners/PASS preserved.
+
 # POS barcode pending list and notification
 
 ## 16/10/2026 16:12 Europe/Athens — POS-BARCODE-PENDING-01 / ASSIGNED / NOT TESTED

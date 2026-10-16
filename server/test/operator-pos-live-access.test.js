@@ -22,7 +22,7 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
   if(path==='/api/store-pos/stores/A')return {products:[product],access:{...denied,onlineProductSearch:false},layout:{quickKeys:[{id:'quick',visible:true,label:'CONTROL',productQuery:'CONTROL-SKU'}],categories:[]}};
   if(path.endsWith('/access'))return {access:{thirdPartyPayment:true,supplierPayment:true,sameShiftPayments:true}};
   if(path.endsWith('/overview'))return {openSession:{id:'isolated-shift',openedAt:new Date().toISOString()},suppliers:[]};
-  if(path.includes('/barcode-registration'))return {rows:[{...product,barcodes:[]}]};
+  if(path.includes('/barcode-registration'))return {rows:[{...product,barcodes:[]}],missingCount:5,totalMatches:1};
   if(path.endsWith('/label-settings'))return {settings:{}};
   if(path.endsWith('/table-service')||path==='/api/netlink/status')throw Error('inactive');
   if(path.endsWith('/holds'))return {rows:[]};if(path.endsWith('/audience-discounts'))return {items:[]};
@@ -36,7 +36,7 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
  let confirmations=0,reasons=0,confirmResult=false;
  dom.window.confirm=()=>{confirmations++;return confirmResult;};dom.window.prompt=()=>{reasons++;return null;};
  try{
-  await render(denied);await click(document.querySelector('.standard-quick button:not([disabled])'));
+  await render(denied);assert.match(document.querySelector('.pos-barcode-notice').textContent,/Υπάρχουν 5 είδη χωρίς barcode/);assert.ok(find('Προβολή ειδών'));await click(document.querySelector('.standard-quick button:not([disabled])'));
   const panel=document.querySelector('.store-pos-top'),cart=document.querySelector('.standard-lines').textContent;
   await render({...denied,confirmDeleteSale:true,deleteSaleReason:true});
   await click(find('ΑΚΥΡΩΣΗ'));assert.equal(confirmations,1);assert.equal(reasons,0);assert.equal(document.querySelector('.standard-lines').textContent,cart);

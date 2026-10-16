@@ -18,7 +18,7 @@ test("POS colleague card is store-scoped, hashed and toggles attendance",()=>{
 test("POS exposes a compact card-work launcher without replacing the cashier",()=>{
   assert.ok(panel.includes("PosAttendanceCardModal"));
   assert.ok(panel.includes("Κάρτα εργασίας"));
-  assert.ok(panel.includes("> Barcode</button>"));
+  assert.ok(panel.includes("/> Barcode"));
 });
 
 test("POS colleague can use a protected personal PIN without changing the cashier",()=>{
