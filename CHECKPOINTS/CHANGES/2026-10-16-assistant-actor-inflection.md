@@ -1,3 +1,7 @@
+## 16/10/2026 14:08 Athens — CLAIM MERGED / SOURCE NOT STARTED / PRECEDING FILE ACCEPTANCE BLOCKED
+
+Claim PR2570 mergedff615a3b after documentation/Windows CI38890741766 SUCCESS. Same owner retained, source branch reserved but no operator-name code edited. Preceding export source PR2569 is live exactb1da09c80 after full mainCI38890603855 and ordinary guarded Render38891225899; direction/date regression passed in normal read-only Super Admin. Actual file acceptance is unknown because the secure remote browser refused retained data and could not safely resume after supported recovery. No application/file PASS is inferred. Next action and complete boundary are in `CHECKPOINTS/CHANGES/2026-10-16-assistant-dialogue.md`: verify an actual CSV first, publish receipt, then begin this already claimed name correction. Whole VOICE and known inflection FAIL remain OPEN. No transaction replay, secret inspection or authentication bypass.
+
 ## 16/10/2026 — VOICE-ASSISTANT-01 / OPERATOR NAME INFLECTION / ASSIGNED
 
 Same retained owner `codex/assistant-business-queries-20261015`, next bounded branch `fix/assistant-actor-inflection-20261016`. Published dialogue PASS and export FAIL remain in `CHECKPOINTS/CHANGES/2026-10-16-assistant-dialogue.md`. Export fix PR2569 mergedb1da09c80 after full PRCI38889960617 succeeded2799/0/0 plus6backup; main CI38890603855/release/live file acceptance still pending. Complete that acceptance before beginning this next source change.

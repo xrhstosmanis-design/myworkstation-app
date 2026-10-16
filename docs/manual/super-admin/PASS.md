@@ -1,3 +1,9 @@
+## 16/10/2026 14:07 Athens — Transfer dialogue regression PASS on b1da09c80; file acceptance blocked
+
+Normal authenticated Super Admin/read-only selected-store dialogue FROM11October -> short TO -> short12October again retained the correct source/direction/latest date on exact live revision `b1da09c80cf9e38511027344f0ee672b319f6426`. Source PR2569, exact full main CI38890603855, guarded Render38891225899. Existing step-by-step usage and authorization boundaries below remain valid in their limited tested scope.
+
+The exact format-only export dispatcher correction is live, but actual «Σε CSV» file acceptance remains OPEN: the remote browser blocked access to retained data after native credential delivery and could not safely resume even on supported fresh-document/reset recovery. No completed file response, path or bytes were observed. This does not establish an application failure or export success. The earlier mismatch error describes the prior source; it must not be silently promoted to a new PASS. Use a functional secure browser session for the pending read-only download retest; never bypass authentication or replay a financial operation. Name inflection, physical voice/Owner acceptance and whole VOICE remain OPEN. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-16-assistant-dialogue.md`.
+
 ## 16/10/2026 — Limited live owner-transfer dialogue PASS; export-only continuation remains OPEN
 
 Verified13:44–13:46 Athens on exact production revision `1d8ba8eee8b9ab10f92da26562c9678a649cd3e0`, source PR2565, main CI38888168410, guarded Render38888787486. This supersedes earlier argument-validation/direction failure only for the following tested flow. Whole VOICE-ASSISTANT-01 remains OPEN.
