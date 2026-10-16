@@ -2,9 +2,10 @@ import React,{useId,useState} from 'react';
 import './pos-collapsible-header.css';
 
 // Keep launchers/media mounted while returning their layout space to the cart.
-export default function PosCollapsibleHeader({summary,children}){
+export default function PosCollapsibleHeader({summary,children,flat=false}){
  const [expanded,setExpanded]=useState(false);
  const id=useId();
+ if(flat)return <section className="store-pos-top pos-flat-header">{children}</section>;
  return <section className="pos-collapsible-header">
   <div className="pos-header-summary">
    <div className="pos-header-summary-context">{summary}</div>
