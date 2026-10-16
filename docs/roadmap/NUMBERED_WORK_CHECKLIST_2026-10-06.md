@@ -618,3 +618,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 ## 16/10/2026 — Ανεξάρτητη παρουσίαση POS: POS-HEADER-COLLAPSE-01
 
 Source PR2593, exact 1afc5fd35f71725821d4e951c4c749a22cd5c026, πλήρες CI/guarded deploy PASS. Συμπτυσσόμενη πάνω μπάρα, πραγματικό Chromium με συνθετικά δεδομένα. Hosted USER/physical touch NOT TESTED, owner fix/pos-header-collapse-20261016 retained. Δεν κλείνει άλλη αριθμημένη εργασία ή το παλιό resize/menu scope.
+
+## 16/10/2026 — Εγκεκριμένο σχέδιο πάνω μπάρας POS / POS-HEADER-COLLAPSE-01
+
+Source correction PR2599/exact c1575b1fd2ee28acc76ac87fa568ad122069fd1e live, full native CI and ordinary guarded deploy PASS. One MyWorkStation/top controls/last transaction/current Barcode count. Previous expanded collapse layout USER FAIL superseded by this source; approved design and synthetic Chromium are not physical USER PASS. Awaiting empty-POS visual confirmation, same owner retained; other owners/numbered scopes unchanged.
