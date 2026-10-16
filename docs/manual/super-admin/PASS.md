@@ -1,3 +1,7 @@
+## 16/10/2026 21:41 Athens — Owner original-line comparison recorded separately
+
+The two existing LAB IN/OUT transfer lines returned by the Owner assistant now match the normal historical shift journal at displayed-minute precision, as documented in `docs/manual/owner-assistant/PASS.md`. Earlier source-comparison OPEN statements below are historical only for these two records. No new Super Admin retest, monthly completeness, financial-responsibility or CSV-content PASS is claimed. Whole VOICE stays OPEN.
+
 ## 16/10/2026 20:21 Athens — scoped Owner acceptance recorded separately
 
 Normal Owner quoted full-Greek-name transfer dispatch is now verified in the limited LAB scope documented in `docs/manual/owner-assistant/PASS.md`, sourcePR2610/fdd549ce, fullPR/main2845/0/0, guarded38938483024. Earlier statements below that hosted Owner name matching was untested are historical for that narrow path. This is not a new Super Admin retest or whole voice PASS. CSV bytes, original movement reconciliation and physical microphone remain OPEN; earlier qualified Super Admin behavior is preserved.
