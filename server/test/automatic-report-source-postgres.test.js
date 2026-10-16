@@ -37,6 +37,9 @@ test("native automatic cash reader uses selected scope, overnight opening bounda
   await insert("carried","c","s","MAIN","2026-10-14T23:00:00+03:00",null,null,"OPEN");
   const carried=await readAutomaticDailyCashPreview(db,args);assert.equal(carried.ready,false);assert.ok(carried.holds.some(h=>h.code==="SOURCE_SCOPE_OR_ID_INVALID"));
   await db.$executeRaw`DELETE FROM "CashShiftSession" WHERE "id"='carried'`;
+  await insert("malformed","c","s","MAIN","2026-10-14T23:00:00+03:00",null,0);
+  const malformed=await readAutomaticDailyCashPreview(db,args);assert.equal(malformed.ready,false);assert.equal(malformed.groups,null);
+  await db.$executeRaw`DELETE FROM "CashShiftSession" WHERE "id"='malformed'`;
   await db.$executeRaw`DELETE FROM "CashControlStoreRule" WHERE "storeId"='s'`;
   const missing=await readAutomaticDailyCashPreview(db,args);assert.equal(missing.ready,false);assert.equal(missing.groups,null);assert.ok(missing.holds.some(h=>h.code==="CASH_RULE_NOT_CONFIGURED"));
   assert.deepEqual(await snapshot(),before);

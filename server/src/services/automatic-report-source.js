@@ -29,7 +29,7 @@ export async function readAutomaticDailyCashPreview(db,{actorId,companyId,storeI
         "openedAt","closedAt","variance","updatedAt"
       FROM "CashShiftSession"
       WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "openedAt"<${period.to}
-        AND ("openedAt">=${period.from} OR "closedAt">${period.from} OR "status"<>'CLOSED')
+        AND ("openedAt">=${period.from} OR "closedAt">${period.from} OR "closedAt" IS NULL OR "status"<>'CLOSED')
       ORDER BY "openedAt","id" LIMIT ${sourceLimit+1}`;
     const readiness=dailyCashReportReadiness(rows,settings,now),holds=[...readiness.holds];
     const rule=rules[0]||null;
