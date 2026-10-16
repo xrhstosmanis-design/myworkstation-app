@@ -1,3 +1,9 @@
+## 16/10/2026 — VOICE-ASSISTANT-01 / EXPORT FOLLOW-UP SOURCE READY / AWAITING CI AND LIVE
+
+Same retained owner. Claim/receipt PR2568 merged0de911fb after documentation/Windows CI38889660808 succeeded. Source branch `fix/assistant-transfer-export-20261016`. Exact format-only current turns («Σε CSV», Excel/XLSX/PDF/Word/DOCX) carry no new record filter, so the existing strict unfiltered transfer dispatcher can use the already resolved latest domain/date. Only that current turn is excluded from vocabulary checking; inherited actor/status filters, arbitrary extra text, unsupported domain and invalid periods still prevent the shortcut. No source SQL, schemas, money arithmetic, authorization, provider/model/key, export-ticket/replay or UI change.
+
+Two new synthetic regressions reproduced missing dispatch before correction; all3new tests now pass, including real Owner and Platform scoped dispatch without model extraction. Focused20PASS/0FAIL/0SKIP including source guards, existing dialogue and real four-format generation tests. Full local Node20 suite running; full native PR/main CI and exact guarded release required. New hosted file acceptance NOT TESTED. Previous limited direction LIVE PASS remains protected; short export continuation remains AWAITING LIVE, actor inflection remains next separate task. Whole VOICE OPEN. No production business mutation/replay. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-16-assistant-dialogue.md`.
+
 ## 16/10/2026 13:46 Europe/Athens — VOICE-ASSISTANT-01 / EXPORT FOLLOW-UP FAIL / ASSIGNED
 
 Same retained owner `codex/assistant-business-queries-20261015`, next branch `fix/assistant-transfer-export-20261016`. The completed explicit date/direction subtask is removed from active pending work; its limited live PASS is in `CHECKPOINTS/CHANGES/2026-10-16-assistant-dialogue.md` and the Super Admin manual, exact revision1d8ba8eee, PR2565, full main CI38888168410, guarded Render38888787486.

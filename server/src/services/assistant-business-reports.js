@@ -26,7 +26,10 @@ export function directTransferRequest(question,{now=new Date()}={}){
  const parts=businessQuestionParts(question);
  // Check all current/inherited text before taking the unfiltered shortcut.
  // A later-line actor, status or other filter must remain in tool extraction.
- const q=normalizeBusinessText([parts.current,parts.topic,parts.period].join(' ')).replace(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|[^α-ωa-z\s]/g,' ');
+ // An exact format-only continuation adds no record filter. Strip it only
+ // from the current turn; inherited actor/status text must still be checked.
+ const current=/^(?:σε\s+)?(?:excel|xlsx|csv|pdf|word|docx)[.!;?]*$/i.test(normalizeBusinessText(parts.current).trim())?'':parts.current;
+ const q=normalizeBusinessText([current,parts.topic,parts.period].join(' ')).replace(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|[^α-ωa-z\s]/g,' ');
  const permitted=new Set('ελενξε ελεγξε δειξε δωσε βγαλε μου ποσες ποσους ποσα ποσο μεταφορα μεταφορες ποσου ειχαμε εγιναν εχουν γινει στον στην στο προς απο ιδιοκτητη ιδιοκτητης τον το την οι τις στις σε για εως μεχρι και σημερα χθες προχθες συνολο λιστα αναφορα αυτη αυτης αυτον αυτο αυτου τρεχουσα τρεχοντα τρεχοντος προηγουμενη προηγουμενο προηγουμενου προηγουμενης περασμενη περασμενο περασμενου περασμενης εβδομαδα εβδομαδας μηνα μηνας μηνο χρονια χρονο χρονου ετος ετους φετος περσι περυσι τελευταιες τελευταιων ημερες ημερων μερες μερων'.split(' '));
  return q.split(/\s+/).filter(Boolean).every(w=>permitted.has(w))?{domain,...period,query:null,status:null}:null;
 }
