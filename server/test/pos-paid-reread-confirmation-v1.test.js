@@ -12,7 +12,7 @@ assert.ok(handlerStart>=0&&handlerEnd>handlerStart,"the actual submit handler mu
 const handler=source.slice(handlerStart,handlerEnd);
 async function submit({confirmed,mode,documentType="INVOICE",creditDetected=false}){
   const requests=[],statuses=[],busy=[],messages=[];let closed=0,prompts=0;
-  const context=vm.createContext({ready:true,selectedInboxId:null,documentType,creditDetected,mode,amount:"2369.99",documentNumber:"2612188",documentDate:"2026-09-02",store:{id:"store"},supplierId:"supplier",fileDataUrl:"source",pages:[{file:{name:"invoice.jpg",type:"image/jpeg"},dataUrl:"source"}],num:Number,paymentKey:()=>"key",setBusy:value=>busy.push(value),setStatus:value=>statuses.push(value),setMessage:value=>messages.push(value),onChanged:()=>closed++,monitorBackgroundV244:()=>{},window:{confirm:message=>{prompts++;assert.match(message,/Δεν θα καταχωριστεί ξανά πληρωμή ή πίστωση/);return confirmed}},api:async(path,options)=>{requests.push({path,body:JSON.parse(options.body)});if(path.endsWith("fast-duplicate-check"))return {paymentTransactionId:"existing-payment",paymentReused:true};if(path.endsWith("fast-handoff"))return {jobId:"new-job"};throw new Error("Unexpected financial write");}});
+  const context=vm.createContext({ready:true,creditSelection:{mode:"BALANCE",valid:true},creditSubmitting:{current:false},selectedInboxId:null,documentType,creditDetected,mode,amount:"2369.99",documentNumber:"2612188",documentDate:"2026-09-02",store:{id:"store"},supplierId:"supplier",fileDataUrl:"source",pages:[{file:{name:"invoice.jpg",type:"image/jpeg"},dataUrl:"source"}],num:Number,paymentKey:()=>"key",setBusy:value=>busy.push(value),setStatus:value=>statuses.push(value),setMessage:value=>messages.push(value),onChanged:()=>closed++,monitorBackgroundV244:()=>{},window:{confirm:message=>{prompts++;assert.match(message,/Δεν θα καταχωριστεί ξανά πληρωμή ή πίστωση/);return confirmed}},api:async(path,options)=>{requests.push({path,body:JSON.parse(options.body)});if(path.endsWith("fast-duplicate-check"))return {paymentTransactionId:"existing-payment",paymentReused:true};if(path.endsWith("fast-handoff"))return {jobId:"new-job"};throw new Error("Unexpected financial write");}});
   await vm.runInContext(`${handler}\nsubmit()`,context);
   return {requests,statuses,busy,messages,closed,prompts};
 }
@@ -28,7 +28,7 @@ for(const mode of ["PAID","CREDIT"])test(`confirmed ${mode} reread hands off the
   assert.equal(result.requests[1].body.documentType,"INVOICE");
   assert.ok(result.messages.some(message=>message.includes("χωρίς νέα χρέωση")));
 });
-test("credit note hands off a draft without duplicate payment or cash movement",async()=>{
+test("balance-only credit note hands off a draft without duplicate payment or cash movement",async()=>{
   const result=await submit({confirmed:true,mode:"PAID",documentType:"CREDIT_NOTE",creditDetected:true});
   assert.equal(result.requests.length,1);assert.equal(result.prompts,0);
   assert.match(result.requests[0].path,/fast-handoff$/);

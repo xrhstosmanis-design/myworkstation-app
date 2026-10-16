@@ -30,6 +30,25 @@ async function credit(db,scope,id,lock=false){
   :await db.$queryRaw`SELECT d.*,md5(row_to_json(d)::text) AS version FROM "PurchaseDocument" d WHERE d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId} AND d."id"=${id}`;
  const row=rows[0];if(!row||row.documentType!=='CREDIT_NOTE'||!['DRAFT','APPROVED'].includes(row.status)||!(Number(row.totalGross)>0))fail(409,'Δεν βρέθηκε διαθέσιμο πιστωτικό του καταστήματος.');return row;
 }
+// A POS-confirmed header and saved original can settle cash before line OCR.
+// Background downloads and unconfirmed OCR shells never satisfy this proof.
+export async function hasCreditCashProof(db,scope,doc){
+ const jobs=await db.$queryRaw`SELECT j."status",j."resultJson" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId" AND a."storeId"=j."storeId" WHERE j."companyId"=${scope.companyId} AND j."storeId"=${scope.storeId} AND j."purchaseDocumentId"=${doc.id} AND a."mimeType" IN ('application/pdf','image/jpeg','image/png','image/webp')`;
+ return jobs.some(j=>{
+  if(proofSqlStatus.includes(j.status))return true;
+  const h=j.resultJson?.posHandoff;
+  return ['POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'].includes(j.status)&&doc.sourceType==='POS_OCR_DRAFT'&&h?.version==='POS_FAST_HANDOFF_V1'&&h.documentType==='CREDIT_NOTE'&&h.supplierId===doc.supplierId&&invoiceToken(h.documentNumber)===invoiceToken(doc.documentNumber)&&String(h.documentDate).slice(0,10)===new Date(doc.documentDate).toISOString().slice(0,10)&&cents(h.totalGross)===cents(doc.totalGross)&&h.settlementMode==='CREDIT'&&!h.paymentTransactionId;
+ });
+}
+// Called under the reader's draft lock; a settled header is immutable while
+// product rows may still be completed without changing cash or stock.
+export async function creditCashReadSettlement(db,scope,doc,header){
+ if(doc.documentType!=='CREDIT_NOTE'||!doc.paymentTransactionId)return header.settlementMode;
+ const payments=await db.$queryRaw`SELECT t."amount",t."reversedAt",t."invoiceDocumentNumber",t."supplierId" FROM "StoreTransaction" t JOIN "StoreOperatorAudit" a ON a."details"->>'transactionId'=t."id" AND a."companyId"=t."companyId" AND a."storeId"=t."storeId" AND a."eventType"='SUPPLIER_CREDIT_CASH_APPLIED' AND a."details"->>'creditDocumentId'=${doc.id} WHERE t."id"=${doc.paymentTransactionId} AND t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} AND t."type"='SUPPLIER_PAYMENT' LIMIT 1`;
+ const t=payments[0];
+ if(!header.documentDate||doc.supplierId!==header.supplierId||invoiceToken(doc.documentNumber)!==invoiceToken(header.documentNumber)||cents(doc.totalGross)!==cents(header.totalGross)||!t||t.reversedAt||cents(t.amount)!==-cents(header.totalGross)||t.supplierId!==header.supplierId||invoiceToken(t.invoiceDocumentNumber)!==invoiceToken(header.documentNumber)||new Date(doc.documentDate).toISOString().slice(0,10)!==new Date(header.documentDate||doc.documentDate).toISOString().slice(0,10))fail(409,'Το πιστωτικό έχει κίνηση ταμείου και τα νέα στοιχεία διαφέρουν. Διατηρήθηκε το ίδιο πρόχειρο για έλεγχο.');
+ return 'PAID';
+}
 async function applied(db,scope,paymentId){
  const rows=await db.$queryRaw`SELECT COALESCE(SUM(-t."amount"),0) AS amount FROM "StoreOperatorAudit" a JOIN "StoreTransaction" t ON t."id"=a."details"->>'transactionId' AND t."companyId"=a."companyId" AND t."storeId"=a."storeId" WHERE a."companyId"=${scope.companyId} AND a."storeId"=${scope.storeId} AND a."eventType"='SUPPLIER_CREDIT_CASH_APPLIED' AND a."details"->>'invoicePaymentId'=${paymentId} AND t."amount"<0 AND t."reversedAt" IS NULL`;
  return Number(rows[0]?.amount||0);
@@ -42,13 +61,12 @@ export async function supplierCreditCashContext(db,scope,supplierId){
  access(scope);const shift=await session(db,scope);
  const suppliers=await db.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${supplierId} AND "companyId"=${scope.companyId} AND "active"=true`;
  if(!suppliers[0])fail(404,'Δεν βρέθηκε ο προμηθευτής.');
- const credits=await db.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",d."totalGross",d."updatedAt",d."status",md5(row_to_json(d)::text) AS version FROM "PurchaseDocument" d WHERE d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId} AND d."supplierId"=${supplierId} AND d."documentType"='CREDIT_NOTE' AND d."status" IN ('DRAFT','APPROVED') AND d."totalGross">0 AND d."paymentTransactionId" IS NULL AND COALESCE(d."settlementMode",'')<>'PAID'
-  AND EXISTS(SELECT 1 FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId" AND a."storeId"=j."storeId" WHERE j."companyId"=d."companyId" AND j."storeId"=d."storeId" AND j."purchaseDocumentId"=d."id" AND j."status"=ANY(${proofSqlStatus}::text[]) AND a."mimeType" IN ('application/pdf','image/jpeg','image/png','image/webp')) ORDER BY d."documentDate",d."id" LIMIT 101`;
+ const credits=await db.$queryRaw`SELECT d.*,md5(row_to_json(d)::text) AS version FROM "PurchaseDocument" d WHERE d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId} AND d."supplierId"=${supplierId} AND d."documentType"='CREDIT_NOTE' AND d."status" IN ('DRAFT','APPROVED') AND d."totalGross">0 AND d."paymentTransactionId" IS NULL AND COALESCE(d."settlementMode",'')<>'PAID' ORDER BY d."documentDate",d."id" LIMIT 101`;
  if(credits.length>100)fail(409,'Περιόρισε τον έλεγχο των διαθέσιμων πιστωτικών.');
  const payments=await db.$queryRaw`SELECT DISTINCT ON (t."id") t."id",t."amount",t."invoiceDocumentNumber",d."documentNumber",t."occurredAt" FROM "StoreTransaction" t JOIN "PurchaseDocument" d ON d."paymentTransactionId"=t."id" AND d."companyId"=t."companyId" AND d."storeId"=t."storeId" AND d."supplierId"=t."supplierId" WHERE t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} AND t."sessionId"=${shift.id} AND t."supplierId"=${supplierId} AND t."type"='SUPPLIER_PAYMENT' AND t."amount">0 AND t."subtractFromShift"=true AND t."reversedAt" IS NULL AND d."documentType"='INVOICE' AND d."status" IN ('DRAFT','APPROVED') AND d."totalGross"=t."amount" AND (${scope.user.tokenType!=='STORE_OPERATOR'} OR t."actorId"=${scope.user.id}) ORDER BY t."id",t."occurredAt" DESC,d."id" LIMIT 101`;
  if(payments.length>100)fail(409,'Πολλές διαθέσιμες πληρωμές για συμψηφισμό.');
  const items=[];for(const p of payments){const used=await applied(db,scope,p.id);items.push({...p,amount:Number(p.amount),appliedAmount:used,remainingAmount:(cents(p.amount)-cents(used))/100})}
- return {supplier:suppliers[0],sessionId:shift.id,credits:credits.map(c=>({...c,totalGross:Number(c.totalGross)})),payments:items};
+ return {supplier:suppliers[0],sessionId:shift.id,credits:(await Promise.all(credits.map(async c=>await hasCreditCashProof(db,scope,c)?{id:c.id,documentNumber:c.documentNumber,documentDate:c.documentDate,totalGross:Number(c.totalGross),updatedAt:c.updatedAt,status:c.status,version:c.version}:null))).filter(Boolean),payments:items};
 }
 
 export async function applySupplierCreditCash(db,scope,input){
@@ -68,8 +86,7 @@ export async function applySupplierCreditCash(db,scope,input){
   if(doc.version!==body.expectedCreditVersion||cents(doc.totalGross)!==cents(body.expectedCreditAmount)||new Date(doc.updatedAt).toISOString()!==body.expectedCreditUpdatedAt)fail(409,'Το πιστωτικό άλλαξε. Κάνε ανανέωση πριν από την καταχώριση.');
   const supplier=(await tx.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${scope.companyId} AND "active"=true FOR SHARE`)[0];
   if(!supplier||!invoiceToken(doc.documentNumber))fail(409,'Δεν βρέθηκαν τα επιβεβαιωμένα στοιχεία προμηθευτή/πιστωτικού.');
-  const proof=await tx.$queryRaw`SELECT j."id" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" AND a."companyId"=j."companyId" AND a."storeId"=j."storeId" WHERE j."companyId"=${scope.companyId} AND j."storeId"=${scope.storeId} AND j."purchaseDocumentId"=${doc.id} AND j."status"=ANY(${proofSqlStatus}::text[]) AND a."mimeType" IN ('application/pdf','image/jpeg','image/png','image/webp') LIMIT 1`;
-  if(!proof.length)fail(409,'Η ανάγνωση ή το πρωτότυπο του πιστωτικού χρειάζεται έλεγχο.');
+  if(!await hasCreditCashProof(tx,scope,doc))fail(409,'Η ανάγνωση ή το πρωτότυπο του πιστωτικού χρειάζεται έλεγχο.');
   const allocations=await tx.$queryRaw`SELECT a."id" FROM "SupplierPaymentAllocation" a JOIN "SupplierPaymentSettlement" s ON s."id"=a."settlementId" AND s."companyId"=a."companyId" WHERE a."companyId"=${scope.companyId} AND a."purchaseDocumentId"=${doc.id} AND s."status"<>'CANCELLED' LIMIT 1`;
   if(allocations.length)fail(409,'Το πιστωτικό έχει ήδη κατανομή. Απαιτείται έλεγχος.');
   const tax=String(supplier.taxId||'').replace(/\D/g,''),parts=invoiceNumberParts(doc.documentNumber),invoicePaymentKey=`${scope.companyId}:${tax?`VAT:${tax}`:`ID:${supplier.id}`}:${invoiceToken(doc.documentNumber)}`;
