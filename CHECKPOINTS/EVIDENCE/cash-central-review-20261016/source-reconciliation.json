@@ -1,0 +1,277 @@
+{
+  "date": "2026-10-16",
+  "ownerContinuationAthens": "22:09-22:10",
+  "method": "Render connector read-only transaction, existing LAB rows only",
+  "workspace": "tea-d9ie26vaqgkc739uudqg",
+  "database": "myworkstation-db",
+  "companyId": "cmtpopbgk000prhb5qc60zxus",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "results": {
+    "sourceShiftResult": [
+      [
+        {
+          "closedAt": "2026-10-10T05:13:02.20551Z",
+          "id": "4d853b34-4ce3-4086-970e-14537cf1fd7b",
+          "openedAt": "2026-10-07T08:27:42.445612Z",
+          "openedByName": "LAB POS 2",
+          "status": "CLOSED",
+          "terminalPos": "MAIN",
+          "variance": -5.5
+        },
+        {
+          "closedAt": "2026-10-12T16:28:00.223392Z",
+          "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+          "openedAt": "2026-10-11T08:17:37.113509Z",
+          "openedByName": "Εργαστήριο Χειριστής 1",
+          "status": "CLOSED",
+          "terminalPos": "LAB-POS-02",
+          "variance": 0
+        },
+        {
+          "closedAt": "2026-10-12T16:27:51.51057Z",
+          "id": "3a186861-5fa0-4d44-a133-d3ea888c6d81",
+          "openedAt": "2026-10-11T13:51:54.399238Z",
+          "openedByName": "Εργαστήριο Χειριστής 1",
+          "status": "CLOSED",
+          "terminalPos": "MAIN",
+          "variance": 0
+        }
+      ]
+    ],
+    "sourceSaleResult": [
+      [
+        {
+          "id": "005c2651-006f-481c-9243-0bdc5cb48ace",
+          "ledger": [
+            {
+              "amount": 1,
+              "id": "c86fdd14-a3be-4746-a50a-a555de1e05a2",
+              "reversedAt": null,
+              "sessionId": "3a186861-5fa0-4d44-a133-d3ea888c6d81",
+              "type": "SALE_CASH"
+            }
+          ],
+          "lines": [
+            {
+              "description": "ΝΕΡΟ 1,5LT",
+              "discount": 0,
+              "lineTotal": 1,
+              "productId": "4f126988-a1a8-433c-b469-70203415df5b",
+              "quantity": 1,
+              "unitPrice": 1
+            }
+          ],
+          "occurredAt": "2026-10-11T17:37:36.509Z",
+          "payments": [
+            {
+              "amount": 1,
+              "method": "CASH"
+            }
+          ],
+          "receiptNumber": null,
+          "source": "POS",
+          "status": "COMPLETED",
+          "total": 1
+        },
+        {
+          "id": "54cfc0ab-49eb-4bc3-90db-e04b1f1bacc5",
+          "ledger": [
+            {
+              "amount": 1,
+              "id": "25f70add-8332-47b7-8762-7b2b992c5cbd",
+              "reversedAt": null,
+              "sessionId": "3a186861-5fa0-4d44-a133-d3ea888c6d81",
+              "type": "SALE_CASH"
+            }
+          ],
+          "lines": [
+            {
+              "description": "ΝΕΡΟ 1,5LT",
+              "discount": 0,
+              "lineTotal": 1,
+              "productId": "4f126988-a1a8-433c-b469-70203415df5b",
+              "quantity": 1,
+              "unitPrice": 1
+            }
+          ],
+          "occurredAt": "2026-10-11T17:38:52.738Z",
+          "payments": [
+            {
+              "amount": 1,
+              "method": "CASH"
+            }
+          ],
+          "receiptNumber": null,
+          "source": "POS",
+          "status": "COMPLETED",
+          "total": 1
+        }
+      ]
+    ],
+    "sourceProofCounts": [
+      [
+        {
+          "mainLinkedSaleMovements": 5,
+          "reviewCount": 0,
+          "salesBetweenInclusive": 2
+        }
+      ]
+    ],
+    "sourcePeriodResult": [
+      [
+        {
+          "deficit": 5.5,
+          "net": -5.5,
+          "period": "custom",
+          "shifts": 6,
+          "surplus": 0
+        },
+        {
+          "deficit": 5.5,
+          "net": -5.5,
+          "period": "day",
+          "shifts": 1,
+          "surplus": 0
+        },
+        {
+          "deficit": 8.9,
+          "net": -8.9,
+          "period": "month",
+          "shifts": 11,
+          "surplus": 0
+        },
+        {
+          "deficit": 0,
+          "net": 0,
+          "period": "week",
+          "shifts": 2,
+          "surplus": 0
+        }
+      ]
+    ],
+    "sourceSaleMovementResult": [
+      [
+        {
+          "id": "005c2651-006f-481c-9243-0bdc5cb48ace",
+          "occurredAt": "2026-10-11T17:37:36.509Z",
+          "saleMovementCount": 1,
+          "saleMovementTotal": 1,
+          "total": 1
+        },
+        {
+          "id": "54cfc0ab-49eb-4bc3-90db-e04b1f1bacc5",
+          "occurredAt": "2026-10-11T17:38:52.738Z",
+          "saleMovementCount": 1,
+          "saleMovementTotal": 1,
+          "total": 1
+        },
+        {
+          "id": "1c99bfed-83c5-4c33-bf62-d3a5eb835df1",
+          "occurredAt": "2026-10-12T15:03:50.314Z",
+          "saleMovementCount": 1,
+          "saleMovementTotal": 1.4,
+          "total": 1.4
+        }
+      ]
+    ],
+    "sourceRawMovementResult": [
+      [
+        {
+          "amount": 1,
+          "description": "POS πώληση 005c2651-006f-481c-9243-0bdc5cb48ace · 1× ΝΕΡΟ 1,5LT · ΜΕΤΡΗΤΑ",
+          "id": "c86fdd14-a3be-4746-a50a-a555de1e05a2",
+          "reversedAt": null,
+          "type": "SALE_CASH"
+        },
+        {
+          "amount": -1,
+          "description": "POS ΑΚΥΡΩΣΗ ff12195f-c851-4e1a-9b0a-2fa97f93f228 · αρχική 005c2651-006f-481c-9243-0bdc5cb48ace · ΜΕΤΡΗΤΑ",
+          "id": "b4e13a9e-27d4-4eb2-baeb-3622b1f94921",
+          "reversedAt": null,
+          "type": "SALE_CASH"
+        },
+        {
+          "amount": 1,
+          "description": "POS πώληση 54cfc0ab-49eb-4bc3-90db-e04b1f1bacc5 · 1× ΝΕΡΟ 1,5LT · ΜΕΤΡΗΤΑ",
+          "id": "25f70add-8332-47b7-8762-7b2b992c5cbd",
+          "reversedAt": null,
+          "type": "SALE_CASH"
+        },
+        {
+          "amount": -1,
+          "description": "POS ΕΠΙΣΤΡΟΦΗ aa7ebb62-7890-433a-bcec-fc23a4d6a189 · αρχική 54cfc0ab-49eb-4bc3-90db-e04b1f1bacc5 · ΜΕΤΡΗΤΑ",
+          "id": "269a7048-0ee5-4b51-8c39-643281e5c005",
+          "reversedAt": null,
+          "type": "SALE_CASH"
+        },
+        {
+          "amount": 1.4,
+          "description": "POS πώληση 1c99bfed-83c5-4c33-bf62-d3a5eb835df1 · 1× LAB ΨΗΜΕΝΗ ΤΥΡΟΠΙΤΑ DAILY-BAKING-01 · ΜΕΤΡΗΤΑ",
+          "id": "52851131-8f8b-4d9d-9c82-3faff1032ff6",
+          "reversedAt": null,
+          "type": "SALE_CASH"
+        }
+      ]
+    ],
+    "sourceReturnSaleResult": [
+      [
+        {
+          "id": "ff12195f-c851-4e1a-9b0a-2fa97f93f228",
+          "lines": [
+            {
+              "description": "ΝΕΡΟ 1,5LT",
+              "lineTotal": -1,
+              "quantity": -1
+            }
+          ],
+          "occurredAt": "2026-10-11T17:37:50.466Z",
+          "payments": [
+            {
+              "amount": -1,
+              "method": "CASH"
+            }
+          ],
+          "source": "POS_REVERSAL",
+          "status": "COMPLETED",
+          "total": -1
+        },
+        {
+          "id": "aa7ebb62-7890-433a-bcec-fc23a4d6a189",
+          "lines": [
+            {
+              "description": "ΝΕΡΟ 1,5LT",
+              "lineTotal": -1,
+              "quantity": -1
+            }
+          ],
+          "occurredAt": "2026-10-11T17:39:20.104Z",
+          "payments": [
+            {
+              "amount": -1,
+              "method": "CASH"
+            }
+          ],
+          "source": "POS_REVERSAL",
+          "status": "COMPLETED",
+          "total": -1
+        }
+      ]
+    ],
+    "sourceControlResult": [
+      [
+        {
+          "net": 0,
+          "shifts": 0
+        }
+      ]
+    ]
+  },
+  "limitations": [
+    "No mutation or replay",
+    "Persisted source reconciliation, not physical original receipt/fiscal/device verification",
+    "True mistaken duplicate unproven",
+    "Both candidate sales already have exact -1.00 corrective movements; net four movements=0.00",
+    "UI does not yet explicitly group the candidate with both existing corrections",
+    "Nonzero confirmed review/stale host acceptance, full central engine and delivery remain open"
+  ]
+}
