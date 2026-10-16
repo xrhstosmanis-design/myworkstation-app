@@ -1,3 +1,4 @@
+import {declaredEftpos} from "../../../shared/declared-eftpos.mjs";
 import {confirmedExplanationBalance,readCashReviewSnapshot,sameCashReviewSnapshot} from "../services/cash-review-balance.js";
 import {partitionCashAuditEvents} from "../services/cash-audit-association.js";
 import {resolveCashReportPeriod} from "../services/cash-report-period.js";
@@ -148,7 +149,7 @@ async function requestTerminal(req){
 
 const amount=z.coerce.number().finite().min(0).max(999999999).default(0);
 const openSchema=z.object({shiftLabel:z.string().trim().min(2).max(80).default("Βάρδια"),drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable()});
-const closeSchema=z.object({cardCode:z.string().max(120).optional(),cashSales:amount,cardSales:amount,eftposTotal:amount,expenses:amount,drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable(),forceCloseWithShortage:z.boolean().optional().default(false)});
+const closeSchema=z.object({cardCode:z.string().max(120).optional(),cashSales:amount,cardSales:amount,eftposTotal:z.preprocess(value=>declaredEftpos(value)??NaN,z.number().finite().min(0).max(999999999)),expenses:amount,drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable(),forceCloseWithShortage:z.boolean().optional().default(false)});
 const reportDateSchema=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const reviewSchema=z.object({decision:z.enum(["EXPLANATION","CONFIRMED_SHORTAGE","REVIEWED_NO_CHANGE"]),amount:z.coerce.number().finite().min(0).max(999999999).default(0),note:z.string().trim().min(5).max(1000)}).superRefine((value,ctx)=>{if(value.decision==="EXPLANATION"&&value.amount<=0)ctx.addIssue({code:z.ZodIssueCode.custom,path:["amount"],message:"Η εξήγηση χρειάζεται θετικό ποσό."})});
 
