@@ -1,3 +1,4 @@
+import {partitionCashAuditEvents} from "../src/services/cash-audit-association.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
@@ -32,14 +33,14 @@ test("Athens row dates and DST periods keep local dates rather than fixed UTC da
 test("actual platform investigation remains provisional even when legacy audit reads succeed",async()=>{
   const source=readFileSync(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");
   const body=source.slice(source.indexOf("function platformCashAuditAmount("),source.indexOf("function companyView("));
-  const investigate=new Function("prisma",body+";return platformCashInvestigation;")({$queryRaw:async()=>[]});
+  const investigate=new Function("prisma","partitionCashAuditEvents",body+";return platformCashInvestigation;")({$queryRaw:async()=>[]},partitionCashAuditEvents);
   const row={companyId:"c",storeId:"s",sessionId:"shift",openedAt:new Date("2026-10-15T04:00Z"),closedAt:new Date("2026-10-15T12:00Z"),variance:0};
   const result=await investigate(row,{operator:true,actions:true,safety:true,purchaseDocuments:true});
   assert.equal(result.completed,false);
   assert.deepEqual(result.pendingChecks,["SALE_LINE_DUPLICATES","CROSS_PERIOD_SHIFT_CHAIN","OWNER_TRANSFER_RECIPIENT"]);
   const missing=await investigate(row,{});
   assert(missing.pendingChecks.includes("POS_ACTION_EVENTS"));
-  const unavailable=new Function("prisma",body+";return platformCashInvestigation;")({$queryRaw:async()=>{throw Error("isolated unavailable source")}});
+  const unavailable=new Function("prisma","partitionCashAuditEvents",body+";return platformCashInvestigation;")({$queryRaw:async()=>{throw Error("isolated unavailable source")}},partitionCashAuditEvents);
   const failed=await unavailable(row,{operator:true,actions:true,safety:true,purchaseDocuments:true});
   assert.equal(failed.completed,false);assert.equal(failed.findings.filter(x=>x.code==="AUDIT_SOURCE_UNAVAILABLE").length,4);
 });

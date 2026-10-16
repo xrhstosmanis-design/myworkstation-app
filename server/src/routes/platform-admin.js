@@ -1,3 +1,4 @@
+import {partitionCashAuditEvents} from "../services/cash-audit-association.js";
 import {readCashReviewEvidence} from "../services/cash-review-evidence.js";
 import {resolveCashReportPeriod,mapCashReportRows} from "../services/cash-report-period.js";
 import {businessInstructions,checkedBusinessAnswer} from '../services/assistant-business-reports.js';
@@ -213,14 +214,18 @@ function platformCashStoreRule(storeName){
 async function platformCashInvestigation(session,tables){
   const auditUntil=session.closedAt?new Date(new Date(session.closedAt).getTime()+24*60*60*1000):new Date();
   const evidence=await Promise.allSettled([
-    tables.purchaseDocuments?prisma.$queryRaw`SELECT t."id",t."type",t."amount",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",(t."attachmentData" IS NOT NULL OR t."attachmentMimeType"='application/vnd.myworkstation.purchase-document') AS "hasEvidence",p."totalGross" AS "documentTotal" FROM "StoreTransaction" t LEFT JOIN "PurchaseDocument" p ON p."id"=CASE WHEN t."attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN t."attachmentFilename" ELSE NULL END WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} ORDER BY t."occurredAt"`:prisma.$queryRaw`SELECT t."id",t."type",t."amount",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",(t."attachmentData" IS NOT NULL OR t."attachmentMimeType"='application/vnd.myworkstation.purchase-document') AS "hasEvidence",NULL::numeric AS "documentTotal" FROM "StoreTransaction" t WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} ORDER BY t."occurredAt"`,
+    tables.purchaseDocuments?prisma.$queryRaw`SELECT t."id",t."type",t."amount",t."description",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",(t."attachmentData" IS NOT NULL OR t."attachmentMimeType"='application/vnd.myworkstation.purchase-document') AS "hasEvidence",p."totalGross" AS "documentTotal" FROM "StoreTransaction" t LEFT JOIN "PurchaseDocument" p ON p."id"=CASE WHEN t."attachmentMimeType"='application/vnd.myworkstation.purchase-document' THEN t."attachmentFilename" ELSE NULL END WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} ORDER BY t."occurredAt"`:prisma.$queryRaw`SELECT t."id",t."type",t."amount",t."description",t."actorName",t."occurredAt",t."reversedAt",t."reversedByName",t."reversalReason",(t."attachmentData" IS NOT NULL OR t."attachmentMimeType"='application/vnd.myworkstation.purchase-document') AS "hasEvidence",NULL::numeric AS "documentTotal" FROM "StoreTransaction" t WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} ORDER BY t."occurredAt"`,
     tables.operator?prisma.$queryRaw`SELECT "eventType","actorId","operatorId","details","createdAt" FROM "StoreOperatorAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[],
     tables.actions?prisma.$queryRaw`SELECT "saleId","relatedSaleId","actionType","reason","actorId","actorName","details","createdAt" FROM "PosSaleActionAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[],
     tables.safety?prisma.$queryRaw`SELECT "saleId","relatedSaleId","eventType","actorId","actorName","details","createdAt" FROM "PosSaleSafetyAudit" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "createdAt">=${session.openedAt} AND "createdAt"<=${auditUntil} ORDER BY "createdAt"`:[]
   ]);
   const sources=["TRANSACTIONS_AND_DOCUMENTS","OPERATOR_EVENTS","POS_ACTION_EVENTS","POS_SAFETY_EVENTS"];
-  const [transactions,operatorEvents,actionEvents,safetyEvents]=evidence.map(result=>result.status==="fulfilled"?result.value:[]);
+  const [transactions,rawOperatorEvents,rawActionEvents,rawSafetyEvents]=evidence.map(result=>result.status==="fulfilled"?result.value:[]);
   const findings=evidence.flatMap((result,index)=>result.status==="rejected"?[{code:"AUDIT_SOURCE_UNAVAILABLE",source:sources[index]}]:[]);
+  const associations=[rawOperatorEvents.filter(row=>/CANCEL|RETURN|VOID|REVERSE|DUPLICATE|DELAY|OVERRIDE|CREDENTIAL|PERMISSION|LOGOUT/i.test(String(row.eventType||""))),rawActionEvents,rawSafetyEvents].map(events=>partitionCashAuditEvents(session,transactions,events));
+  const [operatorEvents,actionEvents,safetyEvents]=associations.map(group=>group.linked);
+  const unassignedAuditEvents=associations.flatMap((group,index)=>group.unassigned.map(event=>({...event,source:sources[index+1]})));
+  if(unassignedAuditEvents.length)findings.push({code:"AUDIT_ASSOCIATION_UNRESOLVED",count:unassignedAuditEvents.length,at:session.closedAt});
   for(const row of transactions){
     const amount=Number(row.amount||0),documentTotal=row.documentTotal==null?null:Number(row.documentTotal);
     if(["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(row.type)&&!row.hasEvidence)findings.push({code:"EXPENSE_WITHOUT_DOCUMENT",amount,actorName:row.actorName,at:row.occurredAt});
@@ -249,8 +254,8 @@ async function platformCashInvestigation(session,tables){
   const missingSources=sources.filter((source,index)=>evidence[index].status!=="fulfilled"||(index===1&&!tables.operator)||(index===2&&!tables.actions)||(index===3&&!tables.safety)||(index===0&&!tables.purchaseDocuments));
   // Cached close-time duplicate counts and same-period pair hints do not prove
   // that all sales/items, adjacent shifts and named owner receipts were checked.
-  const pendingChecks=[...missingSources,"SALE_LINE_DUPLICATES","CROSS_PERIOD_SHIFT_CHAIN","OWNER_TRANSFER_RECIPIENT"];
-  return{completed:false,coverageStatus:"PROVISIONAL",pendingChecks,checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
+  const pendingChecks=[...missingSources,...(unassignedAuditEvents.length?["EVENT_SESSION_LINK"]:[]),"SALE_LINE_DUPLICATES","CROSS_PERIOD_SHIFT_CHAIN","OWNER_TRANSFER_RECIPIENT"];
+  return{completed:false,coverageStatus:"PROVISIONAL",pendingChecks,unassignedAuditEvents,auditAssociation:{linked:associations.reduce((n,g)=>n+g.linked.length,0),unassigned:unassignedAuditEvents.length,excluded:associations.reduce((n,g)=>n+g.excluded.length,0)},checkedAt:new Date(),checks:["CASH_TOTALS","POS_EFTPOS","EXPENSE_DOCUMENTS","REVERSALS","RETURNS_CANCELLATIONS","DUPLICATE_TRANSACTIONS","OPERATOR_EVENTS","POST_CLOSE_EVENTS"],findings,conclusion};
 }
 
 function companyView(company,commercialTerms=[],managedControl=null){
