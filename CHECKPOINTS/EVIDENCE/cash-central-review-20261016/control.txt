@@ -1,0 +1,52 @@
+- heading "Αυτόματος Έλεγχος Ταμείων" [level=2]
+- paragraph: Κάθε κατάστημα ξεχωριστά · ανά ημέρα, POS και βάρδια
+- text: Κατάστημα
+- combobox "Κατάστημα":
+  - option "Όλα τα καταστήματα"
+  - option "DAILY BITE Ε Ε"
+  - option "Περίπτερο Διαδόχου Παύλου"
+  - option "N40 CONTROL 20261010" [selected]
+  - option "ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ"
+  - option "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ"
+  - option "Κυλικείο ΚΑΤ"
+- text: Περίοδος
+- combobox "Περίοδος":
+  - option "Ημέρα"
+  - option "Εβδομάδα"
+  - option "Μήνας"
+  - option "Από–Έως" [selected]
+- text: Από
+- textbox "Από": 2026-10-10
+- text: Έως
+- textbox "Έως": 2026-10-12
+- status: 2026-10-10 έως 2026-10-12 · Ημερομηνία κλεισίματος, ώρα Ελλάδας
+- text: Ώρα από
+- textbox "Ώρα από": 00:00
+- text: Ώρα έως
+- textbox "Ώρα έως": 23:59
+- button "Εμφάνιση":
+  - text: Εμφάνιση
+- button "Εκτύπωση αναφοράς":
+  - text: Εκτύπωση αναφοράς
+- text: Βάρδια
+- combobox "Βάρδια":
+  - option "Όλες οι βάρδιες περιόδου" [selected]
+- text: Χειριστής
+- textbox "Χειριστής":
+  - /placeholder: Όλοι οι χειριστές
+- button "Excel ελλειμμάτων όλων":
+  - text: Excel ελλειμμάτων όλων
+- status: "Εμφανιζόμενη περίοδος: 2026-10-10 έως 2026-10-12 · 00:00–23:59. Μετά από αλλαγή φίλτρων πάτησε Εμφάνιση."
+- text: Βάρδιες
+- generic: "0"
+- text: Συνολικό έλλειμμα
+- generic: 0.00 €
+- text: Πλεόνασμα
+- generic: 0.00 €
+- text: Καθαρή διαφορά
+- generic: 0.00 €
+- text: POS–EFTPOS
+- generic: 0.00 €
+- text: Χωρίς παραστατικό
+- generic: "0"
+- button "🧠 Invoice Learning Lab"
