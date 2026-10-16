@@ -1,0 +1,6 @@
+.pos-payment-form.pos-credit-cash-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:4px}
+.pos-credit-cash-form>h3,.pos-credit-cash-form>p,.pos-credit-cash-form>div,.pos-credit-cash-form>.pos-check,.pos-credit-cash-form>.credit-cash-reason,.pos-credit-cash-form>button{grid-column:1/-1;margin:0}
+.pos-credit-cash-form>h3{font-size:24px}.pos-credit-cash-form>p{font-size:17px;line-height:1.4}
+.pos-credit-cash-form label{font-size:18px;font-weight:800;min-width:0}.pos-credit-cash-form select,.pos-credit-cash-form textarea{font-size:18px;min-height:56px;width:100%;box-sizing:border-box}
+.pos-credit-cash-form .pos-check{padding:10px;line-height:1.4}.pos-credit-cash-form .pos-primary-action{min-height:60px;font-size:19px}
+@media(max-width:680px){.pos-payment-form.pos-credit-cash-form{grid-template-columns:minmax(0,1fr)}}

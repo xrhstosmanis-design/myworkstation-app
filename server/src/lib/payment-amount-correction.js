@@ -1,3 +1,4 @@
+import {assertCreditCashUnlinked} from './supplier-credit-cash.js';
 import crypto from 'node:crypto';
 import {z} from 'zod';
 
@@ -58,6 +59,7 @@ export async function correctPaymentAmount(db,scope,input){
    if(previous[0].actorId!==scope.user.id||previous[0].details.requestHash!==requestHash)fail(409,'Το ίδιο αίτημα χρησιμοποιήθηκε με διαφορετικά στοιχεία.');
    return {ok:true,duplicate:true,correctionId:previous[0].id,...previous[0].details.result};
   }
+  await assertCreditCashUnlinked(tx,scope,row.id);
   const latest=await latestCorrection(tx,scope);
   if(cents(row.amount)!==cents(body.expectedAmount)||(latest?.id||null)!==body.expectedCorrectionId)fail(409,'Το ποσό έχει ήδη αλλάξει. Κάνε ανανέωση πριν τη διόρθωση.');
   if(Math.sign(Number(row.amount))!==Math.sign(body.amount))fail(400,'Δεν επιτρέπεται αλλαγή πληρωμής σε επιστροφή.');

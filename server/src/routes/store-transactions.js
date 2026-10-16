@@ -1,3 +1,4 @@
+import {supplierCreditCashContext,applySupplierCreditCash,assertCreditCashUnlinked} from "../lib/supplier-credit-cash.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import { Router } from "express";
 import crypto from "crypto";
@@ -188,8 +189,9 @@ function requireLedgerAccess(req,res,next){
     permissions.includes("TRANSFER_AMOUNT")
   );
   const transferContext=req.method==="GET"&&/\/stores\/[^/]+\/cash-transfer\/context(?:\?|$)/.test(String(req.originalUrl||""))&&permissions.includes("TRANSFER_AMOUNT");
+  const creditContext=req.method==="GET"&&/\/stores\/[^/]+\/supplier-credit-cash(?:\?|$)/.test(String(req.originalUrl||""))&&permissions.includes("SUPPLIER_PAYMENT")&&permissions.includes("SAME_SHIFT_PAYMENTS");
   const operator=req.user?.tokenType==="STORE_OPERATOR"&&(
-    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission||transferContext
+    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission||transferContext||creditContext
   );
   if(!backoffice&&!superAdmin&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
   next();
@@ -476,6 +478,17 @@ router.get("/stores/:storeId/payroll-employees",route(async(req,res)=>{
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const items=await prisma.$queryRaw`SELECT e."id",e."fullName",e."position" FROM "Employee" e JOIN "Store" s ON s."id"=e."storeId" WHERE s."companyId"=${req.user.companyId} AND e."storeId"=${store.id} AND e."active"=true ORDER BY e."fullName"`;
   res.json({items});
+}));
+
+router.get("/stores/:storeId/supplier-credit-cash",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);await ownedStore(req.params.storeId,req.user.companyId);
+  const supplierId=z.string().trim().min(1).max(180).parse(req.query.supplierId);
+  res.json(await supplierCreditCashContext(prisma,{companyId:req.user.companyId,storeId:req.params.storeId,terminalPos:await requestTerminal(req),user:req.user},supplierId));
+}));
+router.post("/stores/:storeId/supplier-credit-cash",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);await ownedStore(req.params.storeId,req.user.companyId);
+  const result=await applySupplierCreditCash(prisma,{companyId:req.user.companyId,storeId:req.params.storeId,terminalPos:await requestTerminal(req),user:req.user},req.body);
+  res.status(result.duplicate?200:201).json(result);
 }));
 
 // The operator sees only the still allocatable balance of credit invoices. Pending
@@ -1141,7 +1154,11 @@ router.post("/:transactionId/reverse",route(async(req,res)=>{
   assertStoreAccess(req,transaction.storeId);
   if(transaction.reversedAt)return res.status(409).json({error:"Η συναλλαγή έχει ήδη ακυρωθεί."});
   const actorName=req.user.fullName||"Χρήστης";
-  const rows=await prisma.$queryRaw`
+  const rows=await prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "id"=${transaction.sessionId} AND "companyId"=${req.user.companyId} AND "storeId"=${transaction.storeId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${transaction.id} AND "companyId"=${req.user.companyId} FOR UPDATE`;
+    await assertCreditCashUnlinked(tx,{companyId:req.user.companyId,storeId:transaction.storeId},transaction.id);
+    return tx.$queryRaw`
     UPDATE "StoreTransaction" transaction
     SET "reversedAt"=NOW(),"reversedBy"=${req.user.id},"reversedByName"=${actorName},"reversalReason"=${body.reason}
     FROM "CashShiftSession" shift
@@ -1154,6 +1171,7 @@ router.post("/:transactionId/reverse",route(async(req,res)=>{
       AND shift."status"='OPEN'
     RETURNING transaction.*
   `;
+  });
   if(!rows[0])return res.status(409).json({error:"Η βάρδια της συναλλαγής έχει κλείσει. Δεν επιτρέπεται μεταγενέστερη αλλαγή στα οριστικοποιημένα στοιχεία."});
   const reversed=normalize(rows[0]);
   if(["SALE_CARD","SALE_IRIS"].includes(reversed.type)||reversed.paymentMethod==="IRIS")await prisma.$executeRaw`
