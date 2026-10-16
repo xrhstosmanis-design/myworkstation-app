@@ -24,6 +24,15 @@ export function sameInvoiceIdentityForReview(left,right){
  return Boolean(a.number&&a.number===b.number&&a.series===b.series&&day(left.documentDate)&&day(left.documentDate)===day(right.documentDate)
   &&left.documentType===right.documentType&&Number.isFinite(grossA)&&Number.isFinite(grossB)&&grossA>0&&grossB>0&&Math.abs(grossA-grossB)<=.050001);
 }
+// Receipt evidence is deliberately weaker than invoice identity. It can only
+// hold creation/posting for original review, never authorize automatic reuse.
+export function sameSupplierReceiptForReview(left,right){
+ const a=amount(left.totalGross),b=amount(right.totalGross);
+ return Boolean(tax(left.supplierTaxId)&&tax(left.supplierTaxId)===tax(right.supplierTaxId)
+  &&day(left.documentDate)&&day(left.documentDate)===day(right.documentDate)
+  &&left.documentType&&left.documentType===right.documentType
+  &&Number.isFinite(a)&&Number.isFinite(b)&&a>0&&b>0&&Math.abs(a-b)<=.050001);
+}
 const inboundType=row=>String(row.invoiceType||"1.1").startsWith("5.")?"CREDIT_NOTE":"INVOICE";
 export async function ensureInvoiceCommonDraftSchema(db){
  if(!schemas.has(db))schemas.set(db,(async()=>{
@@ -83,6 +92,9 @@ async function candidateOrders(db,row){
   WHERE o."companyId"=${row.companyId} AND o."storeId"=${row.storeId} AND o."sourceType"='POS_OCR_DRAFT'
    AND o."status" IN ('NEW','FINAL','INVOICED') AND d."status" IN ('DRAFT','APPROVED')
    AND (o."id"=${row.rawPayload?.mydataDraftOrderId||""} OR d."id"=${row.jobDocumentId||""} OR o."id"=ANY(${lineMatches.map(x=>x.orderId)}::text[])
+    OR (REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${tax(row.issuerVat)} AND ${Boolean(tax(row.issuerVat))}
+     AND d."documentType"=${inboundType(row)} AND (d."documentDate" AT TIME ZONE 'UTC')::date=${day(row.issueDate)}::date
+     AND d."totalGross">0 AND ABS(d."totalGross"-${amount(row.totalGross)})<=0.050001)
     OR (COALESCE(NULLIF(LTRIM(SUBSTRING(COALESCE(o."invoiceNumber",'') FROM '([0-9]+)[^0-9]*$'),'0'),''),'0')=${numeric}
      AND (REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${row.issuerVat}
       OR (d."documentType"=${inboundType(row)} AND (d."documentDate" AT TIME ZONE 'UTC')::date=${day(row.issueDate)}::date
@@ -92,7 +104,8 @@ async function candidateOrders(db,row){
  if(rows.length>20)throw error("Πολλές πιθανές αντιστοιχίσεις· περιόρισε τον έλεγχο των παραστατικών.");
  return rows.map(o=>({...o,lineCount:Number(o.lineCount),totalGross:amount(o.totalGross),paymentAmount:o.paymentAmount==null?null:amount(o.paymentAmount),
   lineEvidence:lineMatchMap.get(o.orderId)||null,
-  headerReviewRequired:Boolean(lineMatchMap.has(o.orderId)&&!sameInvoiceIdentityForReview(o,{documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),documentDate:row.issueDate,documentType:inboundType(row),totalGross:row.totalGross})),
+  headerReviewRequired:Boolean((lineMatchMap.has(o.orderId)&&!sameInvoiceIdentityForReview(o,{documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),documentDate:row.issueDate,documentType:inboundType(row),totalGross:row.totalGross}))
+   ||(sameSupplierReceiptForReview({...o,supplierTaxId:o.taxId},{supplierTaxId:row.issuerVat,documentDate:row.issueDate,documentType:inboundType(row),totalGross:row.totalGross})&&!sameInvoiceNumber(o.documentNumber,row.series,row.documentNumber))),
   supplierReviewRequired:!tax(o.taxId)||tax(o.taxId)!==tax(row.issuerVat),
   exact:Boolean(tax(o.taxId)&&tax(o.taxId)===tax(row.issuerVat)&&o.documentType===inboundType(row)&&sameInvoiceNumber(o.documentNumber,row.series,row.documentNumber)&&day(o.documentDate)===day(row.issueDate)&&Math.abs(amount(o.totalGross)-amount(row.totalGross))<=.050001),
   isMyData:o.orderId===row.rawPayload?.mydataDraftOrderId||o.documentId===row.jobDocumentId}));
@@ -249,12 +262,20 @@ export async function assertNoUnresolvedInbound(tx,identity){
  const parts=invoiceNumberParts(identity.documentNumber);if(!parts.number)return;
  const rows=await tx.$queryRaw`SELECT "mark","issuerVat","series","documentNumber","issueDate","invoiceType","totalGross","rawPayload" FROM "MyDataInboundDocument"
   WHERE "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}
-   AND COALESCE(NULLIF(LTRIM("documentNumber",'0'),''),'0')=${parts.number}
+   AND (("issuerVat"=${tax(identity.supplierTaxId)} AND ${Boolean(tax(identity.supplierTaxId))}
+    AND ("issueDate" AT TIME ZONE 'UTC')::date=${day(identity.documentDate)||null}::date
+    AND "totalGross">0 AND ABS("totalGross"-${amount(identity.totalGross)})<=0.050001
+    AND (CASE WHEN "invoiceType" LIKE '5.%' THEN 'CREDIT_NOTE' ELSE 'INVOICE' END)=${identity.documentType||"INVOICE"})
+   OR (COALESCE(NULLIF(LTRIM("documentNumber",'0'),''),'0')=${parts.number}
    AND ("issuerVat"=${tax(identity.supplierTaxId)} OR (
     REGEXP_REPLACE(UPPER(COALESCE("series",'')),'[^A-ZΑ-Ω0-9]','','g')=${parts.series}
     AND ("issueDate" AT TIME ZONE 'UTC')::date=${day(identity.documentDate)||null}::date
     AND ABS("totalGross"-${amount(identity.totalGross)})<=0.050001
-    AND (CASE WHEN "invoiceType" LIKE '5.%' THEN 'CREDIT_NOTE' ELSE 'INVOICE' END)=${identity.documentType||"INVOICE"})) LIMIT 21`;
+    AND (CASE WHEN "invoiceType" LIKE '5.%' THEN 'CREDIT_NOTE' ELSE 'INVOICE' END)=${identity.documentType||"INVOICE"})))) LIMIT 21`;
+ if(rows.length>20)throw error("Πολλά πιθανά παραστατικά· έλεγξε τη θυρίδα πριν από νέα πληρωμή ή πρόχειρο.");
+ const receiptMatches=rows.filter(r=>sameSupplierReceiptForReview({...identity,documentType:identity.documentType||"INVOICE"},
+  {supplierTaxId:r.issuerVat,documentDate:r.issueDate,documentType:inboundType(r),totalGross:r.totalGross}));
+ if(receiptMatches.some(r=>!sameInvoiceNumber(identity.documentNumber,r.series,r.documentNumber)))throw error("Υπάρχει παραστατικό myDATA με ίδιο προμηθευτή, ημερομηνία, τύπο και κοντινό ποσό, αλλά διαφορετικό αριθμό. Έλεγξε τα δύο πρωτότυπα στο BackOffice πριν από νέα πληρωμή ή πρόχειρο.","INVOICE_HEADER_REVIEW_REQUIRED");
  const sameSupplier=rows.filter(r=>tax(identity.supplierTaxId)&&tax(r.issuerVat)===tax(identity.supplierTaxId));
  const crossSupplier=rows.filter(r=>(!tax(identity.supplierTaxId)||tax(r.issuerVat)!==tax(identity.supplierTaxId))&&sameInvoiceIdentityForReview(
   {...identity,documentType:identity.documentType||"INVOICE"},{documentNumber:[r.series,r.documentNumber].filter(Boolean).join(" "),documentDate:r.issueDate,documentType:inboundType(r),totalGross:r.totalGross}));
@@ -309,20 +330,23 @@ export async function assertInvoiceStockAvailable(tx,{companyId,storeId,sourceDo
  if(await inboundTableExists(tx))await assertNoLineEvidenceDuplicate(tx,{companyId,storeId,sourceDocumentId});
  // Check both approval entry points, even when no orderId was supplied. The
  // store lock serializes concurrent postings; aliases retain MERGED status.
- const current=await tx.$queryRaw`SELECT "id","documentNumber","documentDate","documentType","totalGross" FROM "PurchaseDocument"
-  WHERE "id"=${sourceDocumentId} AND "companyId"=${companyId} AND "storeId"=${storeId} AND "sourceType"='POS_OCR_DRAFT' LIMIT 1`;
+ const current=await tx.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",d."documentType",d."totalGross",s."taxId" AS "supplierTaxId" FROM "PurchaseDocument" d
+  LEFT JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId"
+  WHERE d."id"=${sourceDocumentId} AND d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."sourceType"='POS_OCR_DRAFT' LIMIT 1`;
  if(current[0]){
   const doc=current[0],parts=invoiceNumberParts(doc.documentNumber);
   if(parts.number){
-   const duplicates=await tx.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",d."documentType",d."totalGross",o."id" AS "orderId"
+   const duplicates=await tx.$queryRaw`SELECT d."id",d."documentNumber",d."documentDate",d."documentType",d."totalGross",o."id" AS "orderId",s."taxId" AS "supplierTaxId"
     FROM "PurchaseDocument" d JOIN "PurchaseOrder" o ON o."sourceDocumentId"=d."id" AND o."companyId"=d."companyId" AND o."storeId"=d."storeId"
+    LEFT JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId"
     WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."id"<>${sourceDocumentId} AND d."sourceType"='POS_OCR_DRAFT'
      AND d."status" IN ('DRAFT','APPROVED') AND o."status" IN ('NEW','FINAL','INVOICED')
      AND d."documentType"=${doc.documentType} AND (d."documentDate" AT TIME ZONE 'UTC')::date=${day(doc.documentDate)}::date
      AND ABS(d."totalGross"-${amount(doc.totalGross)})<=0.050001
-     AND COALESCE(NULLIF(LTRIM(SUBSTRING(d."documentNumber" FROM '([0-9]+)[^0-9]*$'),'0'),''),'0')=${parts.number}
-     AND REGEXP_REPLACE(UPPER(REGEXP_REPLACE(COALESCE(d."documentNumber",''),'[0-9]+[^0-9]*$','')),'[^A-ZΑ-Ω0-9]','','g')=${parts.series} LIMIT 21`;
-   if(duplicates.some(other=>sameInvoiceIdentityForReview(doc,other)))throw error(`Πιθανό διπλό τιμολόγιο ${doc.documentNumber}: υπάρχουν δύο ενεργά πρόχειρα με ίδιο αριθμό, ημερομηνία και ποσό, ακόμη και με διαφορετικό ΑΦΜ. Έλεγξε τα πρωτότυπα και τον προμηθευτή πριν από την καταχώρηση. Δεν έγινε κίνηση αποθήκης.`,"INVOICE_DUPLICATE_REVIEW_REQUIRED");
+     AND ((REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${tax(doc.supplierTaxId)} AND ${Boolean(tax(doc.supplierTaxId))})
+     OR (COALESCE(NULLIF(LTRIM(SUBSTRING(d."documentNumber" FROM '([0-9]+)[^0-9]*$'),'0'),''),'0')=${parts.number}
+     AND REGEXP_REPLACE(UPPER(REGEXP_REPLACE(COALESCE(d."documentNumber",''),'[0-9]+[^0-9]*$','')),'[^A-ZΑ-Ω0-9]','','g')=${parts.series})) LIMIT 21`;
+   if(duplicates.length>20||duplicates.some(other=>sameInvoiceIdentityForReview(doc,other)||sameSupplierReceiptForReview(doc,other)))throw error(`Πιθανό διπλό τιμολόγιο ${doc.documentNumber}: υπάρχουν δύο ενεργά πρόχειρα με κοινά στοιχεία προμηθευτή ή αριθμού, ημερομηνία, τύπο και κοντινό ποσό. Έλεγξε τα πρωτότυπα και τον προμηθευτή πριν από την καταχώρηση. Δεν έγινε κίνηση αποθήκης.`,"INVOICE_DUPLICATE_REVIEW_REQUIRED");
   }
  }
  if(orderId&&await inboundTableExists(tx)){
