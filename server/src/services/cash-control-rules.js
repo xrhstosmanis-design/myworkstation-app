@@ -1,0 +1,15 @@
+export function legacyCashControlRule(store){
+  const name=String(store?.name||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+  const differenceOnly=["ΕΣΤΙΑ","ΠΕΤΡΟΥΠΟΛΗ","ΓΑΛΑΤΣΙ"].some(label=>name.includes(label.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase()));
+  return {mode:differenceOnly?"DIFFERENCE_ONLY":"FULL",deliveryTerminalPattern:"DELIVERY",carryOverEnabled:!differenceOnly,posEftposEnabled:!differenceOnly,source:differenceOnly?"LEGACY_PROGRAM_RULE":"DEFAULT"};
+}
+
+export function cashRuleFields(rule){
+  return {mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled};
+}
+export const sameCashRule=(a,b)=>Boolean(a&&b)&&JSON.stringify(cashRuleFields(a))===JSON.stringify(cashRuleFields(b));
+
+export async function readCashControlRule(db,store){
+  const rows=await db.$queryRaw`SELECT "mode","deliveryTerminalPattern","carryOverEnabled","posEftposEnabled","updatedAt" FROM "CashControlStoreRule" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} LIMIT 1`;
+  return rows[0]?{...rows[0],source:"CONFIGURED"}:legacyCashControlRule(store);
+}

@@ -26,6 +26,7 @@ import {videoAdapterDescriptor} from "../services/video-adapters.js";
 import {enqueueVideoCommand,readyVideoArtifact,videoCommandStatus,videoConnectorStatus} from "../services/video-connector-commands.js";
 import { ensureCashControlSchema } from "./cash-control.js";
 import {getStoreLabelSettings,saveStoreLabelSettings} from "../services/store-label-settings.js";
+import {createAutomaticReportSettingsRouter} from "./automatic-report-settings.js";
 import {backupMonitorSummary} from "./backup-monitor.js";
 import {ensureRbsInstallationSettings,readRbsInstallationSettings,rbsInstallationSettingsSchema} from "../services/rbs-installation-settings.js";
 import {companyModuleState} from "../middleware/module-access.js";
@@ -45,6 +46,7 @@ router.use((req,res,next)=>{
 });
 
 router.use("/ai-credits",aiCreditRoutes);
+router.use("/companies/:companyId/stores/:storeId/report-settings",createAutomaticReportSettingsRouter(prisma));
 const n40Fixture=createN40FixtureHandlers({prisma,hash:bcrypt.hash});
 router.get("/n40-backoffice-fixture",n40Fixture.read);
 router.post("/n40-backoffice-fixture",n40Fixture.create);
