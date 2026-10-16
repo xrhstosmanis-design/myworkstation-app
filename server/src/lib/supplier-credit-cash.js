@@ -19,9 +19,9 @@ function access(scope){
 }
 async function session(db,scope,lock=false){
  const rows=lock
-  ?await db.$queryRaw`SELECT "id","terminalPos","status" FROM "CashShiftSession" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1 FOR UPDATE`
-  :await db.$queryRaw`SELECT "id","terminalPos","status" FROM "CashShiftSession" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;
- if(!rows[0])fail(409,'Δεν υπάρχει ενεργή βάρδια σε αυτό το ταμείο.');return rows[0];
+  ?await db.$queryRaw`SELECT "id","terminalPos","status" FROM "CashShiftSession" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} AND "status"='OPEN' AND ("openedAt" AT TIME ZONE 'Europe/Athens')::date=(NOW() AT TIME ZONE 'Europe/Athens')::date ORDER BY "openedAt" DESC LIMIT 1 FOR UPDATE`
+  :await db.$queryRaw`SELECT "id","terminalPos","status" FROM "CashShiftSession" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} AND "status"='OPEN' AND ("openedAt" AT TIME ZONE 'Europe/Athens')::date=(NOW() AT TIME ZONE 'Europe/Athens')::date ORDER BY "openedAt" DESC LIMIT 1`;
+ if(!rows[0])fail(409,'Δεν υπάρχει ενεργή βάρδια της σημερινής ημέρας σε αυτό το ταμείο.');return rows[0];
 }
 const proofSqlStatus=['AWAITING_APPROVAL','AI_COMPLETE','CONFIRMED','LOCAL_COMPLETE'];
 async function credit(db,scope,id,lock=false){
