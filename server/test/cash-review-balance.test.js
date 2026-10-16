@@ -49,4 +49,8 @@ test('actual Platform investigation and copied Analyses use the same signed bala
  const ui=readFileSync(new URL('../../client/src/components/platform/PlatformAdminApp.jsx',import.meta.url),'utf8'),labels=ui.slice(ui.indexOf('const cashNumber='),ui.indexOf('const cashWrittenReport=')),label=new Function(labels+';return cashReviewBalanceLabel;')();
  const text=label({...session,investigation:result});assert.match(text,/-5,00/);assert.match(text,/2,00/);assert.match(text,/-3,00/);
  const unknown=label({...session,investigation:{reviewBalance:{status:'UNAVAILABLE'}}});assert.match(unknown,/δεν μπορεί να υπολογιστεί/);assert.doesNotMatch(unknown,/ανεξήγητο υπόλοιπο 0/);assert.match(ui,/rows\.map\(cashReviewBalanceLabel\)/);
+ const writtenSource=ui.slice(ui.indexOf('const cashNumber='),ui.indexOf('const cashShiftResult=')),written=new Function(writtenSource+';return cashWrittenReport;')();
+ assert.match(written({...session,investigation:result}).paragraphs.join(' '),/3,00/);assert.doesNotMatch(written({...session,investigation:result}).paragraphs.join(' '),/Ανεξήγητο έλλειμμα 5/);
+ const covered=written({...session,investigation:{findings:[],reviewBalance:{status:'VALID',explainedAmount:5,unexplainedVariance:0}}});assert.match(covered.paragraphs.join(' '),/καλύπτουν την αρχική διαφορά/);assert.match(covered.paragraphs.join(' '),/παραμένει προσωρινός/);
+
 });

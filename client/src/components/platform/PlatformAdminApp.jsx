@@ -91,7 +91,9 @@ const cashWrittenReport=row=>{
   const findings=Array.isArray(investigation.findings)?investigation.findings:[];
   const conclusion=investigation.conclusion||(variance<-.009?"UNEXPLAINED_SHORTAGE":variance>.009?"UNEXPLAINED_SURPLUS":"AGREEMENT");
   const result=variance<-.009?`έλλειμμα ${cashMoney(Math.abs(variance))}`:variance>.009?`πλεόνασμα ${cashMoney(variance)}`:"μηδενική διαφορά μετρητών";
-  const paragraphs=findings.length?findings.map(cashFindingLabel):variance<-.009?[`${cashEventTime(row.closedAt)} · Ανεξήγητο έλλειμμα ${cashMoney(Math.abs(variance))}.`]:variance>.009?[`${cashEventTime(row.closedAt)} · Ανεξήγητο πλεόνασμα ${cashMoney(variance)}.`]:["Δεν εντοπίστηκε περίεργο συμβάν."];
+  const remainingVariance=investigation.reviewBalance?.status==="VALID"?cashNumber(investigation.reviewBalance.unexplainedVariance):variance;
+  const fullyExplained=investigation.reviewBalance?.status==="VALID"&&cashNumber(investigation.reviewBalance.explainedAmount)>0&&remainingVariance===0;
+  const paragraphs=findings.length?findings.map(cashFindingLabel):fullyExplained?["Οι επιβεβαιωμένες εξηγήσεις καλύπτουν την αρχική διαφορά. Ο συνολικός έλεγχος παραμένει προσωρινός."]:remainingVariance<-.009?[`${cashEventTime(row.closedAt)} · Ανεξήγητο έλλειμμα ${cashMoney(Math.abs(remainingVariance))}.`]:remainingVariance>.009?[`${cashEventTime(row.closedAt)} · Ανεξήγητο πλεόνασμα ${cashMoney(remainingVariance)}.`]:["Δεν εντοπίστηκε περίεργο συμβάν."];
   return{paragraphs,alert:conclusion!=="AGREEMENT",conclusion:investigation.completed===true?(cashConclusionLabels[conclusion]||cashConclusionLabels.AGREEMENT):"ΠΡΟΣΩΡΙΝΟ — ΕΚΚΡΕΜΕΙ ΟΛΟΚΛΗΡΩΜΕΝΟΣ ΕΛΕΓΧΟΣ"};
 };
 
