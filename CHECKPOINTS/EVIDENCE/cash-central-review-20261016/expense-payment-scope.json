@@ -1,0 +1,190 @@
+{
+  "date": "2026-10-16",
+  "scope": "LAB exact company/store, existing October rows, Render read-only transaction",
+  "companyId": "cmtpopbgk000prhb5qc60zxus",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "results": {
+    "nextExpenseSource": [
+      [
+        {
+          "amount": 1,
+          "attachmentMimeType": null,
+          "documentReference": null,
+          "hasImage": false,
+          "id": "pay_0362084391f2f8dea1effc316996ee4aa99a9ca1288a1853ccef0a037b584f83",
+          "sessionId": "865e6a48-ccbe-4238-8580-6d70682050a5",
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 23,
+          "attachmentMimeType": null,
+          "documentReference": null,
+          "hasImage": false,
+          "id": "pay_98220b039b385b64b66874b632d188d631d31123567e415dbe62c5147279517c",
+          "sessionId": "865e6a48-ccbe-4238-8580-6d70682050a5",
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 3,
+          "attachmentMimeType": null,
+          "documentReference": null,
+          "hasImage": false,
+          "id": "pay_7d8f71760d7571fb1c9f00f8ae88a9547bec264c73357d52a33833c964192012",
+          "sessionId": "88e654a5-9cf6-47da-bcb7-b4e16b1744ca",
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 13.67,
+          "attachmentMimeType": null,
+          "documentReference": null,
+          "hasImage": false,
+          "id": "947ca248-7d8b-45f2-8011-ef1f1595fa3c",
+          "sessionId": null,
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 13.67,
+          "attachmentMimeType": null,
+          "documentReference": null,
+          "hasImage": false,
+          "id": "pay_a99c66852a2bb946bdbdc050c4496cf0e821ecb46e5d4251ff1b45ae700515f3",
+          "sessionId": null,
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 2,
+          "attachmentMimeType": "application/vnd.myworkstation.purchase-document",
+          "documentReference": "expense_212ecec5ba4376aab2e4b3a44280244e3f7a640d947a03d1fd63518750413203",
+          "hasImage": false,
+          "id": "pay_455ca72381eec99b4e063c33f2edf96dac8563f6c45b0bf57b7f857c6ac2d841",
+          "sessionId": null,
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 1.18,
+          "attachmentMimeType": "application/vnd.myworkstation.purchase-document",
+          "documentReference": "expense_70b2dde6b29f75ad7fbdf782f1c26ec970c409886556d4f17c6711ebbf92a167",
+          "hasImage": false,
+          "id": "pay_497cffcfc7eb4ffd8282187430df98651032b016f8f8452f420aedf7aeb11f96",
+          "sessionId": null,
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 0.03,
+          "attachmentMimeType": "application/vnd.myworkstation.purchase-document",
+          "documentReference": "expense_70b2dde6b29f75ad7fbdf782f1c26ec970c409886556d4f17c6711ebbf92a167",
+          "hasImage": false,
+          "id": "pay_86bbe4db2712a3ebfd735ab20bd72816de48c66c98e5d1470978acbed72ee5fa",
+          "sessionId": null,
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 0.03,
+          "attachmentMimeType": "application/vnd.myworkstation.purchase-document",
+          "documentReference": "expense_70b2dde6b29f75ad7fbdf782f1c26ec970c409886556d4f17c6711ebbf92a167",
+          "hasImage": false,
+          "id": "pay_664a7f60094acbd14cda5f4b122659562a9783a846a0df910218ee57c1458d9a",
+          "sessionId": null,
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 62,
+          "attachmentMimeType": "application/vnd.myworkstation.purchase-document",
+          "documentReference": "expense_2ad4fc2f0deeee8ca96f5df67139b3755e207cb2d509c14a5a9493ccf025043a",
+          "hasImage": false,
+          "id": "pay_7932b6b99b2bddeb1257d8ca2396cf1ad99ed2498283ee6e4c32086503e59979",
+          "sessionId": null,
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 31,
+          "attachmentMimeType": "application/vnd.myworkstation.purchase-document",
+          "documentReference": "expense_2ad4fc2f0deeee8ca96f5df67139b3755e207cb2d509c14a5a9493ccf025043a",
+          "hasImage": false,
+          "id": "pay_08b0cc03cd5a90c39d2b703ab6caf05950060d7aa9c6699e76516089dcf34b67",
+          "sessionId": null,
+          "type": "OTHER_EXPENSE"
+        },
+        {
+          "amount": 31,
+          "attachmentMimeType": "application/vnd.myworkstation.purchase-document",
+          "documentReference": "expense_2ad4fc2f0deeee8ca96f5df67139b3755e207cb2d509c14a5a9493ccf025043a",
+          "hasImage": false,
+          "id": "pay_a2603c8210871e6ae9b98633c47663cdf72ff0c02e936b9e326654677d8ef97e",
+          "sessionId": null,
+          "type": "OTHER_EXPENSE"
+        }
+      ]
+    ],
+    "nextExpenseDocuments": [
+      [
+        {
+          "activePaymentCount": 1,
+          "activePayments": 2,
+          "documentType": "INVOICE",
+          "firstPaymentAt": "2026-10-05T20:36:07.917917Z",
+          "id": "expense_212ecec5ba4376aab2e4b3a44280244e3f7a640d947a03d1fd63518750413203",
+          "lastPaymentAt": "2026-10-05T20:36:07.917917Z",
+          "status": "APPROVED",
+          "totalGross": 2,
+          "withoutSession": 1
+        },
+        {
+          "activePaymentCount": 3,
+          "activePayments": 1.24,
+          "documentType": "INVOICE",
+          "firstPaymentAt": "2026-10-05T19:24:44.065879Z",
+          "id": "expense_70b2dde6b29f75ad7fbdf782f1c26ec970c409886556d4f17c6711ebbf92a167",
+          "lastPaymentAt": "2026-10-05T19:26:17.05858Z",
+          "status": "APPROVED",
+          "totalGross": 1.24,
+          "withoutSession": 3
+        },
+        {
+          "activePaymentCount": 3,
+          "activePayments": 124,
+          "documentType": "INVOICE",
+          "firstPaymentAt": "2026-10-05T18:45:40.607938Z",
+          "id": "expense_2ad4fc2f0deeee8ca96f5df67139b3755e207cb2d509c14a5a9493ccf025043a",
+          "lastPaymentAt": "2026-10-05T18:48:21.906252Z",
+          "status": "APPROVED",
+          "totalGross": 124,
+          "withoutSession": 3
+        },
+        {
+          "activePaymentCount": 1,
+          "activePayments": 124,
+          "documentType": "INVOICE",
+          "firstPaymentAt": "2026-10-04T21:22:47.414305Z",
+          "id": "expense_62a3a414f6a262ebe76fb1b83d69ab920584f03ab9be0f0733a649054ebc7ea3",
+          "lastPaymentAt": "2026-10-04T21:22:47.414305Z",
+          "status": "APPROVED",
+          "totalGross": 124,
+          "withoutSession": 1
+        }
+      ]
+    ],
+    "nextExpenseSourceScope": [
+      [
+        {
+          "amount": 278.58,
+          "movements": 10,
+          "subtractFromShift": false,
+          "withoutSession": true
+        },
+        {
+          "amount": 27,
+          "movements": 3,
+          "subtractFromShift": true,
+          "withoutSession": false
+        }
+      ]
+    ]
+  },
+  "limitations": [
+    "EXTERNAL rows correctly have no cash session; do not assign them to a shift",
+    "Protected LAB-EXP-PARTIAL and LAB-EXP-CENT were only read, never replayed",
+    "Existing per-row payment-versus-full-document audit comparison needs separate bounded source claim/regression for cash installments; no actual cash-installment FAIL is asserted",
+    "No new UI, financial, stock, fiscal, email, writer or runtime acceptance"
+  ]
+}
