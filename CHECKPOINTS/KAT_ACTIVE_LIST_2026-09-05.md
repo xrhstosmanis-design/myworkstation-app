@@ -1,3 +1,11 @@
+## 16/10/2026 — VOICE-ASSISTANT-01 / DIALOGUE CORRECTION / ASSIGNED
+
+Same owner `codex/assistant-business-queries-20261015`; source branch `fix/assistant-dialogue-20261016`. User approved continuing assistant corrections. Whole VOICE remains OPEN. Other owners and earlier qualified evidence are preserved.
+
+Bounded source scope: transfer-direction fragments in an existing transfer conversation; latest date follow-ups; preserve inherited filters and refuse unrelated-topic inheritance. Add the date preposition στις to the strict unfiltered vocabulary. Reproduce with synthetic dialogue FROM -> TO clarification -> next-day question; no real business records in fixtures or public evidence. Actor inflection remains a separate next task.
+
+Keep provider/model/key, source SQL, schemas, permissions, licensing, selected-store scope, money arithmetic, 500-row cap, exports and existing sales/stock/cash/consumption behavior unchanged. No production transaction or replay. Require focused regressions, full PR/main CI, ordinary guarded exact release and subsequent read-only acceptance. This claim must merge before source edits. No new whole-assistant PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-10-16-assistant-dialogue.md`.
+
 ## 16/10/2026 — INVOICE-SECOND-DRAFT-01 / POS FIRST PAYMENT SOURCE READY / AWAITING CI AND LAB
 
 Same owner retained. Continuation claim PR2558/0c20af21 mergedafe9ec53 with all applicable documentation/Windows CI success before source. New read-only proposal requires one existing unpaid NEW/DRAFT myDATA original with verified same VAT/day/type/positive near-total, no existing linked/original-number/canonical-number payment, no received/allocated/deleted source and no separate POS candidate. POS displays both numbers, amounts/date/MARK and asks explicit original confirmation before money; cancellation does nothing. Confirmation repeats the existing exact precheck, then uses the established POS-only transaction and same-draft receipt linkage. An exact selected invoice no longer fails solely because another number shares the amount/day/supplier. Strict creation/stock/cross-supplier/date-discrepancy protections remain; no amount-only automatic reuse.
