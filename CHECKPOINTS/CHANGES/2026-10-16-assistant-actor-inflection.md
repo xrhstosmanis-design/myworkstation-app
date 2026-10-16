@@ -1,0 +1,10 @@
+## 16/10/2026 — VOICE-ASSISTANT-01 / OPERATOR NAME INFLECTION / ASSIGNED
+
+Same retained owner `codex/assistant-business-queries-20261015`, next bounded branch `fix/assistant-actor-inflection-20261016`. Published dialogue PASS and export FAIL remain in `CHECKPOINTS/CHANGES/2026-10-16-assistant-dialogue.md`. Export fix PR2569 mergedb1da09c80 after full PRCI38889960617 succeeded2799/0/0 plus6backup; main CI38890603855/release/live file acceptance still pending. Complete that acceptance before beginning this next source change.
+
+Known read-only LIVE FAIL on the earlier assistant source: the Greek accusative full operator name returned no records while the exact stored nominative full name returned its real transfer row. No private names/amounts are published. Existing query normalization removes accents/case but performs raw substring search; it does not handle final-sigma case inflection.
+
+Claimed correction scope: owner-transfer reports only, exact search remains first. Only when exact search has no matches, allow a conservative two-or-more full Greek-name-token operator-only match differing solely by optional final sigma per token. Require an unambiguous stored operator name among validated eligible rows; multiple distinct candidate names request clarification and never sum together. No prefix/fuzzy descriptions, supplier/product matching, AI guesses or broad stemming. Preserve selected-store/company validation, period/status filters, source cap, reversal/duplicate checks, arithmetic, original displayed operator text, read-only SELECTs, export replay and provider/model/key. Verify positive case/accents and negative partial/ambiguous/unrelated-domain/filter/foreign/capped-source cases with synthetic rows. Require full PR/main CI, exact guarded release and actual read-only named-query comparison before claiming a limited LIVE PASS. Whole VOICE OPEN; physical microphone and hosted Owner/advanced domains remain untested. This claim must merge before code. No business transaction or replay.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-10-16-assistant-actor-inflection.md`.
+
