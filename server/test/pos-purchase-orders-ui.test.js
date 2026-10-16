@@ -2,12 +2,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
+import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import {JSDOM} from 'jsdom';
 
 test('permission-gated invoice entry keeps actual POS cart mounted and saves the existing draft',async()=>{
  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid/store/A'});
+ const style=dom.window.document.createElement('style');style.textContent=readFileSync(new URL('../../client/src/components/store/pos-purchase-orders.css',import.meta.url),'utf8');dom.window.document.head.appendChild(style);
  const keys=['window','document','navigator','localStorage','sessionStorage','HTMLElement','Event','MutationObserver','FormData','IS_REACT_ACT_ENVIRONMENT','fetch'];
  const previous=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:key==='fetch'?async()=>({ok:true}):dom.window[key]});
@@ -37,22 +39,35 @@ test('permission-gated invoice entry keeps actual POS cart mounted and saves the
  };
  const props={api,store:{id:'A',name:'Store A'},operator:{id:'op',fullName:'Operator'},company:{name:'Fixture'},canRegisterBarcode:false};
  const render=async right=>act(async()=>{root.render(React.createElement(Panel,{...props,canPurchaseOrders:right}));await new Promise(r=>setTimeout(r,15));});
+ const getComputedStyleSafe=el=>dom.window.getComputedStyle(el).display;
  const click=async el=>{assert.ok(el,'click target exists');await act(async()=>{el.click();await new Promise(r=>setTimeout(r,10))})};
  const find=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
  try{
   await render(false);assert.equal(find('Τιμολόγια / Παραλαβές'),undefined);
   await render(true);await click(document.querySelector('.standard-quick button:not([disabled])'));
   assert.match(document.querySelector('.standard-lines').textContent,/CART CONTROL/);
-  const cartBefore=document.querySelector('.standard-lines').textContent,posBefore=document.querySelector('.store-pos-top');
+  let cartBefore=document.querySelector('.standard-lines').textContent;const posBefore=document.querySelector('.store-pos-top');
   await click(find('Τιμολόγια / Παραλαβές'));
   assert.ok(document.querySelector('.pos-invoice-window'));assert.equal(document.querySelector('.store-pos-top'),posBefore);
   assert.equal(document.querySelector('[data-po-store]').disabled,true);assert.equal(document.querySelector('[data-po-store]').options.length,1);
+  const workspace=document.querySelector('.pos-invoice-window'),reportCalls=calls.filter(c=>c.path.startsWith('/api/purchase-orders/report?')).length;
+  await click(workspace.querySelector('[data-pos-workspace-minimize]'));
+  assert.equal(document.querySelector('.pos-invoice-overlay').style.display,'none');assert.ok(document.querySelector('[data-pos-invoice-resume]'));
+  const scanner=document.querySelector('[data-pos-scanner]');scanner.focus();scanner.value='CONTROL';
+  await act(async()=>{scanner.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));await new Promise(r=>setTimeout(r,10))});
+  assert.equal(document.querySelector('.standard-line .line-qty b').textContent,'2','scanner adds to existing mounted cart while invoice list is hidden');cartBefore=document.querySelector('.standard-lines').textContent;
+  await click(document.querySelector('[data-pos-invoice-resume]'));
+  assert.equal(document.querySelector('.pos-invoice-window'),workspace);assert.equal(document.querySelector('[data-pos-invoice-resume]'),null);assert.equal(calls.filter(c=>c.path.startsWith('/api/purchase-orders/report?')).length,reportCalls);
   await click(document.querySelector('[data-po-new]'));
   const newForm=document.querySelector('[data-new-order]');newForm.elements.invoiceNumber.value='TEST-NEW';
   await act(async()=>{newForm.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,15))});
   const creation=calls.find(c=>c.path==='/api/purchase-orders'&&c.options.method==='POST');assert.equal(JSON.parse(creation.options.body).storeId,'A');
   await click(find('Επιστροφή στο POS'));await click(find('Τιμολόγια / Παραλαβές'));
   await click(document.querySelector('[data-po-open="one"]'));assert.ok(document.querySelector('.pos-po-modal'));assert.equal(document.querySelector('.po-modal'),null);
+  const orderWindow=document.querySelector('.pos-po-modal'),metadata=orderWindow.querySelector('[data-order-invoice]');metadata.value='UNSAVED HEADER';
+  const detailCount=calls.filter(c=>c.path==='/api/purchase-orders/one/detail').length;
+  await click(orderWindow.querySelector('[data-pos-workspace-minimize]'));assert.equal(getComputedStyleSafe(orderWindow.parentElement),'none');
+  await click(document.querySelector('[data-pos-invoice-resume]'));assert.equal(document.querySelector('.pos-po-modal'),orderWindow);assert.equal(metadata.value,'UNSAVED HEADER');assert.equal(calls.filter(c=>c.path==='/api/purchase-orders/one/detail').length,detailCount);
   await click(document.querySelector('[data-invoice-assistant]'));
   const assistant=document.querySelector('[data-minimize]').closest('[data-pos-invoice-modal]'),message=assistant.querySelector('[data-message]');message.value='BACKGROUND READ';
   await click(assistant.querySelector('[data-ask]'));await click(assistant.querySelector('[data-minimize]'));
@@ -64,6 +79,10 @@ test('permission-gated invoice entry keeps actual POS cart mounted and saves the
   await click(assistant.querySelector('[data-close]'));assert.equal(document.querySelector('[data-invoice-assistant-restore]'),null);assert.equal(calls.filter(c=>c.path.endsWith('/invoice-assistant/preview')).length,1);
   await click(document.querySelector('[data-line-edit="line"]'));
   const field=document.querySelector('.pos-po-modal input[name="quantity"]');field.value='4';
+  const dirtyEditor=field.closest('.pos-po-modal'),hiddenParent=[...document.querySelectorAll('.po-modal-overlay')].find(x=>x.style.display==='none');
+  await click(dirtyEditor.querySelector('[data-pos-workspace-minimize]'));assert.equal(getComputedStyleSafe(dirtyEditor.parentElement),'none');assert.equal(field.value,'4');
+  await click(document.querySelector('[data-pos-invoice-resume]'));assert.equal(document.querySelector('.pos-po-modal input[name="quantity"]'),field);assert.equal(field.value,'4');assert.equal(hiddenParent.style.display,'none');
+  assert.equal(calls.filter(c=>c.path==='/api/purchase-orders/one/lines/line'&&c.options.method==='PATCH').length,0);
   const form=field.closest('form'),submit=form.querySelector('button.primary[type="submit"]');
   await act(async()=>{form.dispatchEvent(new dom.window.SubmitEvent('submit',{bubbles:true,cancelable:true,submitter:submit}));await new Promise(r=>setTimeout(r,10))});
   assert.equal(line.quantity,4);assert.equal(calls.filter(c=>c.path==='/api/purchase-orders/one/lines/line'&&c.options.method==='PATCH').length,1);
