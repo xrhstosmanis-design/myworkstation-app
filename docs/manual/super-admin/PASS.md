@@ -1,3 +1,7 @@
+## 16/10/2026 20:21 Athens — scoped Owner acceptance recorded separately
+
+Normal Owner quoted full-Greek-name transfer dispatch is now verified in the limited LAB scope documented in `docs/manual/owner-assistant/PASS.md`, sourcePR2610/fdd549ce, fullPR/main2845/0/0, guarded38938483024. Earlier statements below that hosted Owner name matching was untested are historical for that narrow path. This is not a new Super Admin retest or whole voice PASS. CSV bytes, original movement reconciliation and physical microphone remain OPEN; earlier qualified Super Admin behavior is preserved.
+
 ## 16/10/2026 17:02–17:05 Athens — Limited LIVE full operator-name terminal-sigma matching PASS
 
 Verified exact production `e8fe52ec401261eef17b8754a7b64c283bca36aa`, source PR2586, final full PRCI38910558770/mainCI38911413288 and ordinary guarded Render38912037409. Supersedes the earlier selected-store Super Admin final-sigma name failure only; whole VOICE remains OPEN.
