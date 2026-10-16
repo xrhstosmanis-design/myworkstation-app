@@ -55,6 +55,13 @@ async function main(){
   assert.equal(ledger.payload.summary?.cashSales,20);
   assert.equal(ledger.payload.summary?.cardSales,30);
 
+  const beforeRejected=await prisma.$queryRaw`SELECT row_to_json(s) AS row FROM "CashShiftSession" s WHERE "id"=${sessionId}`;
+  for(const eftposTotal of [undefined,null,"","   ",false,[],"not-an-amount"]){
+    const rejected=await request(`/api/cash/sessions/${sessionId}/close`,{method:"POST",token,
+      body:{eftposTotal,drawer:120,custody:0,coins:0,safe:0}});
+    assert.equal(rejected.response.status,400,"missing/invalid EFTPOS must not close a shift");
+    assert.deepEqual(await prisma.$queryRaw`SELECT row_to_json(s) AS row FROM "CashShiftSession" s WHERE "id"=${sessionId}`,beforeRejected);
+  }
   const closed=await request(`/api/cash/sessions/${sessionId}/close`,{
     method:"POST",token,
     body:{cashSales:999,cardSales:999,eftposTotal:25,expenses:999,drawer:120,custody:0,coins:0,safe:0,note:"E2E EFTPOS settlement differs by 5"}
