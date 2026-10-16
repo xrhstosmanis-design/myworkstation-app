@@ -35,7 +35,7 @@ export default function AutomaticReportSettingsManager({company,store,request,on
     try{const result=await request(path+"/preview",{method:"POST",body:JSON.stringify({day,expectedVersion:data.settings.version})});if(token===sequence.current)setReport(result)}
     catch(e){if(token===sequence.current)setError(e.message)}finally{if(token===sequence.current)setBusy("")}
   };
-  return <div className="platform-modal"><section role="dialog" aria-modal="true" aria-labelledby={id} className="platform-report-settings">
+  return <div className="platform-modal automatic-report-settings-modal"><section role="dialog" aria-modal="true" aria-labelledby={id} className="platform-report-settings">
     <button type="button" className="modal-close" aria-label="Κλείσιμο ρυθμίσεων αναφορών" onClick={onClose}>×</button>
     <h2 id={id}>Ρυθμίσεις αναφορών ταμείων</h2><p>{company.name} · <strong>{store.name}</strong></p>
     <p className="report-settings-note">Η αυτόματη αποστολή δεν έχει ενεργοποιηθεί. Εδώ αποθηκεύονται οι βάρδιες και ελέγχεται η προεπισκόπηση. Δεν αλλάζουν υπόλοιπα ή χρεώσεις υπαλλήλων.</p>
