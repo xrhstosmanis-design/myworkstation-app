@@ -214,6 +214,14 @@ Bounded scope: read-only full active-store missing count, explicit missing-only 
 
 
 
+## 16/10/2026 23:10 Europe/Athens — AUTO-REPORTS-20261016 / INSTALLMENT-AWARE EXPENSE EVIDENCE / ASSIGNED
+
+Retained owner `codex/automatic-reporting-20261016`, branch `fix/cash-expense-evidence-20261016`, issue2527. Main78e1875 includes read-only source classification and repaired exact active history. Protected existing LAB partial31+31+62=124 and cent.03+.03+1.18=1.24 are EXTERNAL, not cash; no payment replay. Prior exact correction links, periods/isolation, signed review balance and other owners/manual PASS retained. Source gap is code inspection, not an asserted hosted cash installment FAIL. New behavior NOT TESTED.
+
+Bounded claim: shared read-only owned PurchaseDocument resolution and active-payment aggregation for Platform/cloud cash expense evidence. Match exact company/store/document, aggregate distinct valid active supplier/expense payments across dates/sessions, separate CASH_SHIFT and EXTERNAL amounts, compare paid total to approved positive document gross in cents. Genuine equal installments remain distinct. Partial payment is partial, not a per-row full-invoice mismatch; missing/foreign/unapproved/invalid/unavailable sources and attachment-only evidence never certify MATCHED. Overpayment stays reviewable. Selected-period cash totals and original ledger/review balances remain unchanged; no cash assignment of EXTERNAL, second deduction, VAT allocation/writer/schema/auth/license/stock/fiscal/settings/email changes. Broader invoice/profitability/POS owners retained.
+
+Required regression: protected equal/cent installments, cross-period mixed sources, reversed/foreign rows, missing references, image-only, partial/overpayment, invalid/unapproved document, zero-write invariants and real isolated PostgreSQL reader. Full exact PR/main CI and ordinary guarded exact release precede hosted read-only acceptance. No manual PASS from CI. Whole central audit/all14 OPEN. Single next action: after this claim is green/merged, implement the shared evidence reader and integrate the existing cash readers only. Checkpoint `CHECKPOINTS/CHANGES/2026-10-16-central-cash-review.md`.
+
 ## 16/10/2026 23:00 Europe/Athens continuation — AUTO-REPORTS-20261016 / READ-ONLY EXPENSE SOURCE SCOPE / OPEN
 
 Retained owner `codex/automatic-reporting-20261016`, issue2527. Current main03fa3d6 and latest central checkpoint/manual/PASS read; prior correction-link LIVE PASS2626/7ab8844 and all other owners protected. Read-only Render queries in already confirmed My Workspace/original myworkstation-db, exact LAB companycmtpopbgk000prhb5qc60zxus/storecmtpopbgo000trhb5ng9ytiru. No runtime/source/writer/settings/review/financial/stock/fiscal/email/infra action or transaction replay.
