@@ -1,4 +1,4 @@
-import {businessTool,businessArguments,businessQuestionPeriod,businessQuestionClarification,directTransferRequest,assistantBusinessDomain} from './assistant-business-reports.js';
+import {businessTool,businessArguments,businessQuestionPeriod,businessQuestionClarification,directTransferRequest,explicitOperatorTransferRequest,assistantBusinessDomain} from './assistant-business-reports.js';
 import {businessReportAnswer} from '../../../shared/assistant-business-answer.mjs';
 import {z} from "zod";
 import {assistantSalesPeriodClarification} from "./assistant-conversation-context.js";
@@ -51,7 +51,7 @@ export async function runOwnerAssistant({prompt,question="",requestProvider,read
   if(expectedDomain&&businessAllowed){
     const clarification=businessQuestionClarification(question,{now});
     if(clarification)return {response:{ok:true},raw:{status:'completed',output_text:JSON.stringify(clarification)},evidence:[],reads:[]};
-    const direct=directTransferRequest(question,{now});
+    const direct=explicitOperatorTransferRequest(question,{now})||directTransferRequest(question,{now});
     if(direct){const report=await readBusiness(direct);return {response:{ok:true},raw:{status:'completed',output_text:JSON.stringify(businessReportAnswer(report))},evidence:[report],reads:[{name:businessTool.name,args:direct}]};}
   }
   const daily=tools.some(t=>t?.name===consumptionTool.name)&&dailyConsumptionRequest(question,{now});

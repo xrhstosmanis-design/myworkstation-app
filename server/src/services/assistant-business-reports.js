@@ -38,6 +38,22 @@ export function directTransferRequest(question,{now=new Date()}={}){
  const permitted=new Set('ελενξε ελεγξε δειξε δωσε βγαλε μου ποσες ποσους ποσα ποσο μεταφορα μεταφορες ποσου ειχαμε εγιναν εχουν γινει στον στην στο προς απο ιδιοκτητη ιδιοκτητης τον το την οι τις στις σε για εως μεχρι και σημερα χθες προχθες συνολο λιστα αναφορα αυτη αυτης αυτον αυτο αυτου τρεχουσα τρεχοντα τρεχοντος προηγουμενη προηγουμενο προηγουμενου προηγουμενης περασμενη περασμενο περασμενου περασμενης εβδομαδα εβδομαδας μηνα μηνας μηνο χρονια χρονο χρονου ετος ετους φετος περσι περυσι τελευταιες τελευταιων ημερες ημερων μερες μερων'.split(' '));
  return q.split(/\s+/).filter(Boolean).every(w=>permitted.has(w))?{domain,...period,query:null,status:null}:null;
 }
+// Only a complete current-turn request with one literal quoted full name.
+// Other filters and inherited context must keep the existing checked path.
+export function explicitOperatorTransferRequest(question,{now=new Date()}={}){
+ const parts=businessQuestionParts(question);
+ if(parts.topic||parts.period)return null;
+ const match=parts.current.match(/^(.*?)\s*Φίλτρο χειριστή ακριβώς\s*«([^«»]+)»(?:\s*[—-]\s*κράτησε αυτό το κείμενο φίλτρου χωρίς αλλαγή)?[.!;?]*$/iu);
+ if(!match)return null;
+ const query=match[2].trim();
+ if(query.length>120||!operatorNameKey(query))return null;
+ const prefix=normalizeBusinessText(match[1]);
+ if((prefix.match(/ιδιοκτητ[α-ω]*/g)||[]).length>1)return null;
+ const base=prefix.replace(/[.;]\s*$/,'').replace(/απο (?:τον )?ιδιοκτητη προς (?:το )?ταμειο/,'απο τον ιδιοκτητη');
+ const direct=directTransferRequest(base,{now}),period=businessQuestionPeriod(question,{now});
+ if(!direct||!period||direct.domain!==assistantBusinessDomain(question)||direct.from!==period.from||direct.to!==period.to)return null;
+ return {...direct,query};
+}
 export function checkedBusinessAnswer(question,answer,evidence){
  if(!assistantBusinessDomain(question))return answer;
  const report=evidence.find(r=>r.kind==='business_records');
