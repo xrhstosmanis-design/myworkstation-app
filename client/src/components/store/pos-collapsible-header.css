@@ -22,3 +22,5 @@
 .mws-standard-pos .pos-flat-header .pos-last-transaction>strong{font-size:calc(18px * var(--pos-text-scale,1));line-height:1.1}
 .pos-flat-header .pos-header-context>span[data-online-orders-host]{flex:none}
 .pos-flat-header button:focus-visible{outline:3px solid #176b50;outline-offset:2px}
+
+.mws-standard-pos .pos-flat-header .pos-flat-barcode-badge{background:#ffebbd;border-color:#efcc85;min-height:36px;padding:5px 9px;white-space:nowrap;font-weight:900}

@@ -1,3 +1,4 @@
+import {readCashReviewEvidence} from "../services/cash-review-evidence.js";
 import {resolveCashReportPeriod,mapCashReportRows} from "../services/cash-report-period.js";
 import {businessInstructions,checkedBusinessAnswer} from '../services/assistant-business-reports.js';
 import {changeOnlineMember} from "../online-members.js";
@@ -1311,24 +1312,14 @@ router.get("/cash-control/daily",async(req,res,next)=>{
     if(rows.length>500)return res.status(422).json({error:"Το διάστημα υπερβαίνει τις 500 βάρδιες. Περιόρισε το κατάστημα ή την περίοδο· δεν εμφανίζονται μερικά σύνολα."});
     const normalized=rows.map(row=>{const auditRule=platformCashStoreRule(row.storeName),actualVariance=Number(row.variance||0),actualCardVariance=Number(row.cardVariance||0);return {...row,auditRule,cashSales:Number(row.cashSales||0),cardSales:Number(row.cardSales||0),eftposTotal:Number(row.eftposTotal||0),actualCardVariance,cardVariance:auditRule.posEftposEnabled?actualCardVariance:0,expenses:Number(row.expenses||0),openingOperational:Number(row.openingOperational||0),expectedOpeningOperational:Number(row.expectedOpeningOperational||0),openingVariance:Number(row.openingVariance||0),expectedOperational:Number(row.expectedOperational||0),actualOperational:Number(row.actualOperational||0),actualVariance,variance:auditRule.mode==="POS_EFTPOS_ONLY"?0:actualVariance,duplicateCandidates:Number(row.duplicateCandidates||0),expenseCount:Number(row.expenseCount||0),expensesWithoutDocument:Number(row.expensesWithoutDocument||0)}});
     const auditTableRows=await prisma.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"')::text AS "operator",to_regclass('"PosSaleActionAudit"')::text AS "actions",to_regclass('"PosSaleSafetyAudit"')::text AS "safety",to_regclass('"PurchaseDocument"')::text AS "purchaseDocuments"`;
-    const investigated=await mapCashReportRows(normalized,async row=>({...row,investigation:await platformCashInvestigation(row,auditTableRows[0]||{})}));
-    const investigatedByStore=new Map();
-    for(const row of investigated){const list=investigatedByStore.get(row.storeId)||[];list.push(row);investigatedByStore.set(row.storeId,list)}
-    for(const storeRows of investigatedByStore.values()){
-      const ordered=[...storeRows].sort((a,b)=>new Date(a.openedAt)-new Date(b.openedAt));
-      const paired=new Set();
-      for(let index=0;index<ordered.length;index++){
-        const previous=ordered[index];if(previous.auditRule.mode!=="FULL"||paired.has(previous.sessionId)||Math.abs(previous.variance)<20)continue;
-        for(const current of ordered.slice(index+1,index+3)){
-          if(paired.has(current.sessionId)||previous.companyId!==current.companyId||previous.terminalPos!==current.terminalPos||new Date(previous.closedAt)>new Date(current.openedAt)||previous.variance*current.variance>=0)continue;
-          const smaller=Math.min(Math.abs(previous.variance),Math.abs(current.variance)),larger=Math.max(Math.abs(previous.variance),Math.abs(current.variance)),ratio=larger?smaller/larger:0;
-          if(ratio<.8||ratio>1)continue;
-          const netVariance=Number((previous.variance+current.variance).toFixed(2)),finalOperator=netVariance<0?(previous.variance<0?previous.openedByName:current.openedByName):netVariance>0?(previous.variance>0?previous.openedByName:current.openedByName):null;
-          current.investigation.findings.push({code:"SHIFT_VARIANCE_OFFSET",at:current.openedAt,previousAt:previous.openedAt,previousVariance:previous.variance,currentVariance:current.variance,previousOperator:previous.openedByName,currentOperator:current.openedByName,netVariance,finalOperator,possibleUncountedCustody:true});
-          current.investigation.conclusion=current.variance<0?"SHORTAGE_WITH_FINDINGS":"SURPLUS_WITH_FINDINGS";paired.add(previous.sessionId);paired.add(current.sessionId);break;
-        }
-      }
-    }
+    const investigated=await mapCashReportRows(normalized,async row=>{
+      const investigation=await platformCashInvestigation(row,auditTableRows[0]||{});
+      const reviewEvidence=await readCashReviewEvidence(prisma,row);
+      investigation.findings.push(...reviewEvidence.findings);
+      investigation.reviewEvidence=reviewEvidence;
+      if(reviewEvidence.findings.length)investigation.conclusion=row.variance<-.009?"SHORTAGE_WITH_FINDINGS":row.variance>.009?"SURPLUS_WITH_FINDINGS":"FINDINGS_WITHOUT_CASH_VARIANCE";
+      return {...row,investigation};
+    });
     const totals=normalized.reduce((sum,row)=>{sum.shifts++;sum.cashSales+=row.cashSales;sum.cardSales+=row.cardSales;sum.eftposTotal+=row.eftposTotal;sum.expenses+=row.expenses;sum.variance+=row.variance;sum.shortage+=row.variance<0?Math.abs(row.variance):0;sum.surplus+=row.variance>0?row.variance:0;sum.cardVariance+=row.cardVariance;sum.duplicateCandidates+=row.duplicateCandidates;sum.expensesWithoutDocument+=row.expensesWithoutDocument;return sum},{shifts:0,cashSales:0,cardSales:0,eftposTotal:0,expenses:0,variance:0,shortage:0,surplus:0,cardVariance:0,duplicateCandidates:0,expensesWithoutDocument:0});
     const byStore=new Map();
     for(const row of normalized){const current=byStore.get(row.storeId)||{companyId:row.companyId,companyName:row.companyName,storeId:row.storeId,storeName:row.storeName,shifts:0,shortage:0,surplus:0,variance:0,cardVariance:0,expensesWithoutDocument:0,duplicateCandidates:0};current.shifts++;current.variance+=row.variance;current.shortage+=row.variance<0?Math.abs(row.variance):0;current.surplus+=row.variance>0?row.variance:0;current.cardVariance+=row.cardVariance;current.expensesWithoutDocument+=row.expensesWithoutDocument;current.duplicateCandidates+=row.duplicateCandidates;byStore.set(row.storeId,current)}
