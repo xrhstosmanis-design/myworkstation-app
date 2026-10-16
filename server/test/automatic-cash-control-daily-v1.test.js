@@ -114,9 +114,11 @@ test("super admin manually previews and emails each store report to its owners",
 
 test("automatic report preserves legacy store and delivery continuity rules",()=>{
   assert.match(cash,/CashControlStoreRule/);
-  assert.match(cash,/ΕΣΤΙΑ/);
-  assert.match(cash,/ΠΕΤΡΟΥΠΟΛΗ/);
-  assert.match(cash,/ΓΑΛΑΤΣΙ/);
+  const sharedRules=fs.readFileSync(new URL("../src/services/cash-control-rules.js",import.meta.url),"utf8");
+  assert.match(cash,/legacyCashControlRule as legacyStoreRule/);
+  assert.match(sharedRules,/ΕΣΤΙΑ/);
+  assert.match(sharedRules,/ΠΕΤΡΟΥΠΟΛΗ/);
+  assert.match(sharedRules,/ΓΑΛΑΤΣΙ/);
   assert.match(cash,/DIFFERENCE_ONLY/);
   assert.match(cash,/deliveryTerminalPattern/);
   assert.match(cash,/OPENING_CONTINUITY/);

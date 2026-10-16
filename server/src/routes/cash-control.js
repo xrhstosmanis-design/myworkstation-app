@@ -9,6 +9,7 @@ import {ensurePosSaleSafetySchema} from "../pos-sale-safety.js";
 import {buildKatShiftReconciliation} from "../kat-shift-reconciliation.js";
 import {verifyShiftCloseCard} from "../services/shift-close-card.js";
 import {normalizeWorkCard} from "../workforce-card-code.js";
+import {legacyCashControlRule as legacyStoreRule} from "../services/cash-control-rules.js";
 
 const router = Router();
 let tablesPromise;
@@ -180,11 +181,6 @@ async function authoritativeShiftTotals(db,companyId,storeId,sessionId){
 async function existingAuditTables(db){
   const rows=await db.$queryRaw`SELECT to_regclass('"StoreOperatorAudit"') AS "operator",to_regclass('"PosSaleActionAudit"') AS "actions",to_regclass('"PosSaleSafetyAudit"') AS "safety"`;
   return rows[0]||{};
-}
-function legacyStoreRule(store){
-  const name=String(store?.name||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
-  const differenceOnly=["ΕΣΤΙΑ","ΠΕΤΡΟΥΠΟΛΗ","ΓΑΛΑΤΣΙ"].some(label=>name.includes(label.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase()));
-  return {mode:differenceOnly?"DIFFERENCE_ONLY":"FULL",deliveryTerminalPattern:"DELIVERY",carryOverEnabled:!differenceOnly,posEftposEnabled:!differenceOnly,source:differenceOnly?"LEGACY_PROGRAM_RULE":"DEFAULT"};
 }
 async function cashControlRule(store,companyId){
   const rows=await prisma.$queryRaw`SELECT "mode","deliveryTerminalPattern","carryOverEnabled","posEftposEnabled" FROM "CashControlStoreRule" WHERE "storeId"=${store.id} AND "companyId"=${companyId} LIMIT 1`;
