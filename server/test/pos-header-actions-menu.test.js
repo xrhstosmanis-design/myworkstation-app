@@ -24,7 +24,7 @@ test('actual POS central menu preserves authorized launchers, scanner focus, med
  const open=async()=>{if(layer().hidden)await click(trigger());assert.equal(layer().hidden,false)};
  const button=(selector,text)=>[...document.querySelectorAll(selector)].find(b=>b.textContent.includes(text));
  try{
-  await render();assert.equal(layer().hidden,true);assert.equal(trigger().previousElementSibling.textContent.includes('Κατάστημα'),true);
+  await render();assert.equal(layer().hidden,true);assert.ok(panel().textContent.includes('Κατάστημα'));assert.equal(document.querySelectorAll('.pos-flat-brand>strong').length,1);assert.equal(document.querySelector('.pos-flat-brand>strong').textContent,'MyWorkStation');assert.equal(document.querySelector('.pos-header-expand-toggle'),null);assert.equal(document.querySelectorAll('[data-pos-last-transaction]').length,1);
   const header=document.querySelector('.store-pos-top');assert.equal(header.querySelector('.pos-aux-actions'),null);assert.equal(header.querySelector('.pos-keypad-toggle'),null);assert.ok(header.querySelector('button[title="Πλήρης ανανέωση POS"]'));assert.ok(button('.runtime-top-actions>button','Έξοδος'));
   const baseline=calls.length;await open();assert.equal(trigger().getAttribute('aria-expanded'),'true');assert.ok(panel().contains(document.activeElement),'scanner must not take focus from open menu');
   const close=panel().querySelector('button[aria-label="Κλείσιμο λειτουργιών POS"]');close.focus();await act(async()=>close.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true})));assert.equal(document.activeElement,panel().querySelector('.pos-aux-actions>button:last-of-type'));

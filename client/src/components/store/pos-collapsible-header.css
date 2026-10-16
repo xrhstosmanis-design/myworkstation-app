@@ -8,3 +8,17 @@
 .pos-header-expand-toggle:focus-visible{outline:3px solid #176b50;outline-offset:1px}
 .pos-header-expanded-content[hidden]{display:none!important}
 @media(max-width:700px){.pos-header-summary-context{gap:6px}.pos-header-summary-context>.pos-header-summary-operator{display:none}.pos-header-summary{gap:6px;padding-inline:6px}}
+
+/* The current POS uses a single always-visible header; legacy shell remains compatible. */
+.mws-standard-pos .store-pos-top.pos-flat-header{padding:5px 10px;min-height:0;gap:0;background:#e7f3ee;color:#15364f;border-bottom:1px solid #a8cbbd}
+.pos-flat-header .pos-header-main{gap:8px}
+.pos-flat-header .pos-flat-brand{display:flex;align-items:center;gap:10px;flex:none}
+.pos-flat-header .pos-flat-brand>strong{font:900 calc(18px * var(--pos-text-scale,1)) Arial,sans-serif;white-space:nowrap}
+.mws-standard-pos .pos-flat-header button{background:#fff;color:#15364f;border-color:#9bbcad;min-height:44px;height:auto}
+.mws-standard-pos .pos-flat-header .pos-header-context{flex:1 1 auto;gap:8px!important;margin:0!important}
+.mws-standard-pos .pos-flat-header .pos-header-context>div{border-color:#9bbcad!important}
+.mws-standard-pos .pos-flat-header button.pos-last-transaction{display:grid;align-content:center;gap:0;min-width:100px;min-height:44px;padding:4px 8px;text-align:left}
+.mws-standard-pos .pos-flat-header .pos-last-transaction>span{font-size:calc(9px * var(--pos-text-scale,1));letter-spacing:0;opacity:1}
+.mws-standard-pos .pos-flat-header .pos-last-transaction>strong{font-size:calc(18px * var(--pos-text-scale,1));line-height:1.1}
+.pos-flat-header .pos-header-context>span[data-online-orders-host]{flex:none}
+.pos-flat-header button:focus-visible{outline:3px solid #176b50;outline-offset:2px}
