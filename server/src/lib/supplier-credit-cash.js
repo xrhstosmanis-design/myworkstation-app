@@ -40,6 +40,8 @@ export async function hasCreditCashProof(db,scope,doc){
   return ['POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'].includes(j.status)&&doc.sourceType==='POS_OCR_DRAFT'&&h?.version==='POS_FAST_HANDOFF_V1'&&h.documentType==='CREDIT_NOTE'&&h.supplierId===doc.supplierId&&invoiceToken(h.documentNumber)===invoiceToken(doc.documentNumber)&&String(h.documentDate).slice(0,10)===new Date(doc.documentDate).toISOString().slice(0,10)&&cents(h.totalGross)===cents(doc.totalGross)&&h.settlementMode==='CREDIT'&&!h.paymentTransactionId;
  });
 }
+// Called under the reader's draft lock; a settled header is immutable while
+// product rows may still be completed without changing cash or stock.
 export async function creditCashReadSettlement(db,scope,doc,header){
  if(doc.documentType!=='CREDIT_NOTE'||!doc.paymentTransactionId)return header.settlementMode;
  const payments=await db.$queryRaw`SELECT t."amount",t."reversedAt",t."invoiceDocumentNumber",t."supplierId" FROM "StoreTransaction" t JOIN "StoreOperatorAudit" a ON a."details"->>'transactionId'=t."id" AND a."companyId"=t."companyId" AND a."storeId"=t."storeId" AND a."eventType"='SUPPLIER_CREDIT_CASH_APPLIED' AND a."details"->>'creditDocumentId'=${doc.id} WHERE t."id"=${doc.paymentTransactionId} AND t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} AND t."type"='SUPPLIER_PAYMENT' LIMIT 1`;
