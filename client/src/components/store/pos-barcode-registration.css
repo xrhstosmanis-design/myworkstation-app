@@ -97,3 +97,10 @@
   .pos-barcode-results{max-height:min(340px,42dvh)}
   .pos-barcode-details{overflow:visible}
 }
+
+.pos-barcode-pending-status{padding:10px 14px;background:#fff5d7;border-radius:8px;flex:none;font-weight:600}
+.pos-barcode-pending-status button{margin-left:10px;min-height:44px}
+.pos-barcode-registration .pos-barcode-filter{display:flex;align-items:center;gap:10px;flex:none}
+.pos-barcode-registration .pos-barcode-filter input{width:24px;height:24px}
+.pos-barcode-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0}
+.pos-barcode-pagination button{min-height:44px}
