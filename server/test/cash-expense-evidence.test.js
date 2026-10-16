@@ -38,13 +38,25 @@ test('reader is bounded/read-only, one owned aggregate across periods, unavailab
 const session={id:'shift',sessionId:'shift',companyId:'c',storeId:'s',openedAt:new Date('2026-10-01T04:00Z'),closedAt:new Date('2026-10-01T12:00Z'),variance:-5};
 const transactions=[{...row,sessionId:'shift',subtractFromShift:true}],paid={...doc,cashPaymentTotal:31,externalPaymentTotal:93};
 const db={$queryRaw:async strings=>{const sql=strings.join('');return sql.includes('FROM "PurchaseDocument" p')?[paid]:sql.includes('SELECT s.*')?[session]:sql.includes('FROM "StoreTransaction"')?transactions:[]}};
-test('actual Platform and cloud investigators share document totals and preserve original variance',async()=>{
+test('actual Platform and cloud investigators share matched, missing, partial and overpaid findings without changing variance',async()=>{
  const api=readFileSync(new URL('../src/routes/platform-admin.js',import.meta.url),'utf8'),body=api.slice(api.indexOf('function platformCashAuditAmount('),api.indexOf('function companyView('));
- const investigate=new Function('prisma','partitionCashAuditEvents','readCashReviewState','readCashExpenseEvidence','cashExpenseFindings',body+';return platformCashInvestigation;')(db,partitionCashAuditEvents,readCashReviewState,readCashExpenseEvidence,cashExpenseFindings);
- const platform=await investigate(session,{purchaseDocuments:true,operator:true,actions:true,safety:true});assert.equal(platform.expenseChecks[0].status,'MATCHED');assert(!platform.findings.some(f=>f.code==='EXPENSE_DOCUMENT_MISMATCH'));assert.equal(platform.completed,false);
- const source=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8'),start=source.indexOf('router.get("/sessions/:sessionId/investigation"'),end=source.indexOf('router.post("/sessions/:sessionId/reviews"',start);let handler;
- const deps={router:{get:(_path,fn)=>{handler=fn}},route:fn=>fn,prisma:db,normalize:x=>x,assertStoreAccess:()=>{},ownedStore:async()=>({}),cashControlRule:async()=>({mode:'FULL'}),existingAuditTables:async()=>({}),partitionCashAuditEvents,readCashExpenseEvidence,cashExpenseFindings,confirmedExplanationBalance,suspiciousOperatorEvent:()=>true,auditAmount:()=>null,money:v=>Number(v||0),reviewSnapshot:async()=>({}),sameSnapshot:()=>true};
- new Function(...Object.keys(deps),source.slice(start,end))(...Object.values(deps));let cloud;await handler({params:{sessionId:'shift'},user:{companyId:'c'}},{json:x=>{cloud=x}});assert.deepEqual(cloud.expenseChecks,platform.expenseChecks);assert.equal(cloud.initialVariance,-5);assert.equal(cloud.unexplainedVariance,-5);assert.equal(cloud.transactions[0].amount,31);assert.equal(cloud.coverageStatus,'PROVISIONAL');
+ const source=readFileSync(new URL('../src/routes/cash-control.js',import.meta.url),'utf8'),start=source.indexOf('router.get("/sessions/:sessionId/investigation"'),end=source.indexOf('router.post("/sessions/:sessionId/reviews"',start);
+ for(const [currentRows,currentDoc,status,code] of [
+  [transactions,paid,'MATCHED',null],
+  [[{...transactions[0],purchaseDocumentId:null}],null,'NO_DOCUMENT','EXPENSE_WITHOUT_DOCUMENT'],
+  [transactions,{...paid,documentPaymentTotal:62,externalPaymentTotal:31,paymentCount:2},'PARTIALLY_PAID','EXPENSE_DOCUMENT_PARTIAL'],
+  [transactions,{...paid,documentPaymentTotal:125,externalPaymentTotal:94},'AMOUNT_MISMATCH','EXPENSE_DOCUMENT_MISMATCH'],
+  [transactions,null,'DOCUMENT_UNRESOLVED','EXPENSE_DOCUMENT_UNVERIFIED']
+ ]){
+  const scopedDb={$queryRaw:async strings=>{const sql=strings.join('');return sql.includes('FROM "PurchaseDocument" p')?(currentDoc?[currentDoc]:[]):sql.includes('SELECT s.*')?[session]:sql.includes('FROM "StoreTransaction"')?currentRows:[]}};
+  const investigate=new Function('prisma','partitionCashAuditEvents','readCashReviewState','readCashExpenseEvidence','cashExpenseFindings',body+';return platformCashInvestigation;')(scopedDb,partitionCashAuditEvents,readCashReviewState,readCashExpenseEvidence,cashExpenseFindings);
+  const platform=await investigate(session,{purchaseDocuments:true,operator:true,actions:true,safety:true});assert.equal(platform.expenseChecks[0].status,status);assert.equal(platform.completed,false);
+  let handler;
+  const deps={router:{get:(_path,fn)=>{handler=fn}},route:fn=>fn,prisma:scopedDb,normalize:x=>x,assertStoreAccess:()=>{},ownedStore:async()=>({}),cashControlRule:async()=>({mode:'FULL'}),existingAuditTables:async()=>({}),partitionCashAuditEvents,readCashExpenseEvidence,cashExpenseFindings,confirmedExplanationBalance,suspiciousOperatorEvent:()=>true,auditAmount:()=>null,money:v=>Number(v||0),reviewSnapshot:async()=>({}),sameSnapshot:()=>true};
+  new Function(...Object.keys(deps),source.slice(start,end))(...Object.values(deps));let cloud;await handler({params:{sessionId:'shift'},user:{companyId:'c'}},{json:x=>{cloud=x}});
+  assert.deepEqual(cloud.expenseChecks,platform.expenseChecks);assert.equal(cloud.initialVariance,-5);assert.equal(cloud.unexplainedVariance,-5);assert.equal(cloud.transactions[0].amount,31);assert.equal(cloud.coverageStatus,'PROVISIONAL');
+  for(const result of [cloud,platform])assert.deepEqual(result.findings.filter(f=>f.code.startsWith('EXPENSE_')).map(f=>f.code),code?[code]:[]);
+ }
 });
 test('actual written finding labels disclose aggregate period/source and cannot imply automatic cash deduction',()=>{
  const ui=readFileSync(new URL('../../client/src/components/platform/PlatformAdminApp.jsx',import.meta.url),'utf8'),label=new Function(ui.slice(ui.indexOf('const cashNumber='),ui.indexOf('const cashWrittenReport='))+';return cashFindingLabel;')();

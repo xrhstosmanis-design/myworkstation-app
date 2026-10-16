@@ -1,3 +1,4 @@
+import {expenseDocumentCheck,cashExpenseFindings} from "../src/services/cash-expense-evidence.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -33,8 +34,11 @@ test("the platform report exhausts transaction, document, operator and POS audit
   assert.match(platformApi,/StoreOperatorAudit/);
   assert.match(platformApi,/PosSaleActionAudit/);
   assert.match(platformApi,/PosSaleSafetyAudit/);
-  assert.match(platformApi,/EXPENSE_DOCUMENT_MISMATCH/);
-  assert.match(platformApi,/documentTotal/);
+  assert.match(platformApi,/expenseChecks=await readCashExpenseEvidence/);
+  assert.match(platformApi,/findings.push\(\.\.\.cashExpenseFindings\(expenseChecks\)\)/);
+  const check=expenseDocumentCheck({type:"OTHER_EXPENSE",amount:31,subtractFromShift:false,purchaseDocumentId:"doc"},{documentStatus:"APPROVED",documentTotal:30,documentPaymentTotal:31,cashPaymentTotal:0,externalPaymentTotal:31,paymentCount:1,invalidPaymentCount:0});
+  const finding=cashExpenseFindings([check])[0];
+  assert.equal(finding.code,"EXPENSE_DOCUMENT_MISMATCH");assert.equal(finding.documentTotal,30);assert.equal(finding.difference,1);
   assert.match(platformApi,/ACTION_AFTER_SHIFT_CLOSE/);
   assert.match(platformApi,/MULTIPLE_ACTIONS_ON_SAME_SALE/);
   assert.match(platformApi,/UNEXPLAINED_SHORTAGE/);
