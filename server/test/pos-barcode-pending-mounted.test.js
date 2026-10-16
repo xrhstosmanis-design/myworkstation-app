@@ -48,3 +48,22 @@ test('mounted POS count hook scopes replies, refreshes on focus, and never conve
   await h.render(Counter,{id:'B',enabled:false});assert.equal(document.body.textContent,'unknown');
  }finally{await h.close()}
 });
+
+test('an old keyed modal cannot notify the next store when its in-flight save finishes',async()=>{
+ const h=await mount('../../client/src/components/store/PosBarcodeRegistrationModal.jsx');
+ try{
+  let completeSave,changed=0;
+  const api=async(path,options={})=>{
+   if(path.endsWith('/label-settings'))return{};
+   if(options.method==='POST')return new Promise(resolve=>{completeSave=resolve});
+   return{rows:[{id:'p',name:'Pending',barcodes:[],salePrice:2}],missingCount:1,totalMatches:1};
+  };
+  const C=h.exports.default,props={api,store:{id:'A'},onClose(){},onChanged(){changed++}};
+  await h.render(C,{...props,key:'A'});await h.wait();await h.click(document.querySelector('.pos-barcode-results>button'));
+  await h.input(document.querySelector('input[placeholder="Σκάναρε ή πληκτρολόγησε"]'),'12345678');
+  await h.click([...document.querySelectorAll('button')].find(b=>b.textContent==='Σύνδεση barcode με το προϊόν'));
+  await h.render(C,{...props,key:'B',store:{id:'B'}});await h.wait();
+  await h.act(async()=>{completeSave({message:'old A completed'});await new Promise(r=>setTimeout(r,10))});
+  assert.equal(changed,0);assert.doesNotMatch(document.body.textContent,/old A completed/);
+ }finally{await h.close()}
+});
