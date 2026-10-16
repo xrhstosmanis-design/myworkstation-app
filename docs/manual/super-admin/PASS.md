@@ -1,3 +1,13 @@
+## 16/10/2026 — Limited live owner-transfer dialogue PASS; export-only continuation remains OPEN
+
+Verified13:44–13:46 Athens on exact production revision `1d8ba8eee8b9ab10f92da26562c9678a649cd3e0`, source PR2565, main CI38888168410, guarded Render38888787486. This supersedes earlier argument-validation/direction failure only for the following tested flow. Whole VOICE-ASSISTANT-01 remains OPEN.
+
+Who/where: authenticated Super Admin at https://myworkstation-app.onrender.com/platform-admin -> Βοηθός, only within one explicitly selected authorized store, all-stores unchecked. The assistant reads the store's real records; it does not execute a transfer.
+
+Verified usage: ask «Μεταφορές από τον ιδιοκτήτη στις 11/10/2026», then «Και προς τον ιδιοκτήτη;», then «Και στις 12/10/2026;». Direction changes to TO and remains TO when only the date changes. A subsequent «Και από τον ιδιοκτήτη;» changes to FROM while retaining the latest date. Displayed populated rows agreed with the original read-only journal observations.31February asks for a valid period; changing the selected store clears the conversation. PASS criteria are source/domain/date agreement and store isolation, not merely a successful response.
+
+Known limit/troubleshooting: «Σε CSV» after this short date/direction sequence failed with «Η αναφορά πρέπει να ακολουθεί το ζητούμενο είδος και διάστημα.»; no file was generated. That continuation is OPEN and being corrected separately; do not treat it as an empty source. Earlier verified direct report export buttons remain historical qualified evidence, not a PASS of this failed continuation. Actor-name inflection, physical microphone and Owner-role hosted acceptance remain OPEN/NOT TESTED. No claim of complete monthly coverage, and no transaction replay for evidence. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-16-assistant-dialogue.md`.
+
 ## 13/10/2026 21:33 Athens — Ημερήσια ιδιοκατανάλωση: πηγή δημοσιευμένη, AWAITING RETEST
 
 Δημοσιεύτηκε η περιορισμένη βελτίωση2453/5279a923 μετά το πλήρες CI και την ακριβή υγιή έκδοση. Η απλή ημερήσια λίστα έχει πηγή τα υπάρχοντα Συμβάντα και τα φίλτρα της εξαγωγής· αυτό είναι καταγραφή δημοσίευσης, όχι επαληθευμένη αριθμητική χρήση. Η νεότερη εικόνα21:07 παραμένει USER FAIL μέχρι αντιπαραβολή της ίδιας ερώτησης «Βγάλε μου λίστα ιδιοκατανάλωσης ΓΙΑ 13/10» στο ήδη επιλεγμένο Διαδόχου, με τα υπάρχοντα Συμβάντα13/10/2026 και το αρχείο ίδιας πηγής/ημέρας. Μόνο ανάγνωση, χωρίς νέα ιδιοκατανάλωση ή άλλη πράξη. Τα προηγούμενα περιορισμένα PASS, οι ρόλοι και άδειες διατηρούνται· ο συνολικός βοηθός μένει OPEN.
