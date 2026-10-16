@@ -5,13 +5,19 @@ const link=description=>String(description||'').match(/^POS (ΑΚΥΡΩΣΗ|ΕΠ
 const method=type=>({SALE_CASH:'CASH',SALE_CARD:'CARD',SALE_IRIS:'IRIS'})[type];
 
 export function linkRecordedCorrections(finding,rows,session,status='AVAILABLE'){
+  const origins=new Map();
+  for(const row of rows){
+    if(row.companyId!==session.companyId||row.storeId!==session.storeId||row.sessionId!==session.sessionId||row.reversedAt!=null)continue;
+    const match=link(row.description);if(!match)continue;
+    const ids=origins.get(match[2])||new Set();ids.add(match[3]);origins.set(match[2],ids);
+  }
   const transactions=(finding.transactions||[]).map(sale=>{
     const original=cent(sale.total),groups=new Map();let invalid=false;
     for(const row of rows){
       if(row.companyId!==session.companyId||row.storeId!==session.storeId||row.sessionId!==session.sessionId||row.reversedAt!=null)continue;
       const match=link(row.description);if(!match||match[3]!==sale.saleId)continue;
       const amount=cent(row.amount),at=new Date(row.occurredAt).getTime(),originalAt=new Date(sale.occurredAt).getTime();
-      if(!row.transactionId||row.correctionSaleId!==match[2]||row.source!=='POS_REVERSAL'||row.status!=='COMPLETED'||!method(row.type)||!validCent(amount)||amount>=0||!Number.isFinite(at)||!Number.isFinite(originalAt)||at<originalAt){invalid=true;continue;}
+      if(origins.get(match[2])?.size!==1||!row.transactionId||row.correctionSaleId!==match[2]||row.source!=='POS_REVERSAL'||row.status!=='COMPLETED'||!method(row.type)||!validCent(amount)||amount>=0||!Number.isFinite(at)||!Number.isFinite(originalAt)||at<originalAt){invalid=true;continue;}
       const group=groups.get(match[2])||{saleId:match[2],kind:match[1],occurredAt:row.occurredAt,total:cent(row.total),payments:row.payments,rows:[]};
       if(group.rows.some(r=>r.transactionId===row.transactionId)||group.total!==cent(row.total)||new Date(group.occurredAt).getTime()!==at||JSON.stringify(group.payments)!==JSON.stringify(row.payments)){invalid=true;continue;}
       group.rows.push(row);groups.set(match[2],group);

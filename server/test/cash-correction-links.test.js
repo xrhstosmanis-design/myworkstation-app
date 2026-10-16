@@ -20,6 +20,7 @@ test('only exact owned same-session correction links qualify; wrong identity, pl
  }
  const over=linkRecordedCorrections(finding,[row('a',{amount:-2,total:-2,payments:[{method:'CASH',amount:-2}]})],session);assert.equal(over.transactions[0].recordedCorrections.recordedNet,null);
  const duplicate=linkRecordedCorrections(finding,[row('a'),row('a')],session);assert.equal(duplicate.recordedCorrectionSummary.recordedNet,null);
+ const ambiguous=linkRecordedCorrections(finding,[row('a'),row('b',{correctionSaleId:'a-reverse',description:'POS ΕΠΙΣΤΡΟΦΗ a-reverse · αρχική b · CASH'})],session);assert.equal(ambiguous.recordedCorrectionSummary.recordedNet,null);assert(ambiguous.transactions.every(t=>t.recordedCorrections.status==='RECHECK_REQUIRED'));
 });
 test('split cash/card corrections require all method amounts and total, including post-close same-session evidence',()=>{
  const payments=[{method:'CASH',amount:-.6},{method:'CARD',amount:-.4}],a=row('a',{amount:-.6,payments,occurredAt:'2026-10-13T01:00:00Z'}),b=row('a',{transactionId:'card-tx',type:'SALE_CARD',amount:-.4,payments,occurredAt:'2026-10-13T01:00:00Z'});
