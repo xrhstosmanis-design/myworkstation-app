@@ -138,7 +138,16 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
     let stage="DUPLICATE CHECK";
     try{
       setStatus("Έλεγχος duplicate τιμολογίου…");
-      const duplicateCheck=documentType==="CREDIT_NOTE"?null:await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross:num(amount),myDataInboxId:selectedInboxId,dataUrl:fileDataUrl})});
+      let duplicateCheck=documentType==="CREDIT_NOTE"?null:await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:documentNumber.trim(),documentDate,totalGross:num(amount),myDataInboxId:selectedInboxId,dataUrl:fileDataUrl})});
+      let submittedDocumentDate=documentDate;
+      if(duplicateCheck?.myDataHeaderReviewRequired){
+        const proposal=duplicateCheck;
+        const confirmed=window.confirm(`Βρέθηκε ΑΠΛΗΡΩΤΟ παραστατικό myDATA. Η λήψη του δεν αποτελεί πληρωμή.\n\nΑριθμός από φωτογραφία: ${documentNumber.trim()}\nΑριθμός myDATA: ${proposal.canonicalDocumentNumber}\nΗμερομηνία: ${proposal.canonicalDocumentDate.split("-").reverse().join("/")}\nΠοσό myDATA: ${num(proposal.myDataTotalGross).toFixed(2)} €\nΠοσό POS: ${num(amount).toFixed(2)} €\nMARK: ${proposal.myDataMark}\n\nΕπιβεβαιώνεις από το πρωτότυπο ότι είναι το ίδιο τιμολόγιο και ότι ο αριθμός myDATA είναι σωστός; Θα συνεχίσει η επιλεγμένη πληρωμή ή πίστωση στο ΙΔΙΟ πρόχειρο. Δεν δημιουργείται δεύτερο.`);
+        if(!confirmed){setStatus("Η πληρωμή δεν ξεκίνησε. Έλεγξε τον αριθμό στο πρωτότυπο ή επίλεξε το σωστό παραστατικό με ΑΦΜ.");return;}
+        submittedDocumentDate=proposal.canonicalDocumentDate;
+        duplicateCheck=await api("/api/commerce/ai-reader/fast-duplicate-check",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:proposal.canonicalDocumentNumber,documentDate:submittedDocumentDate,totalGross:num(amount),dataUrl:fileDataUrl})});
+        if(duplicateCheck?.myDataHeaderReviewRequired||!duplicateCheck?.myDataMatched)throw new Error("Η αντιστοίχιση άλλαξε. Δεν ξεκίνησε νέα πληρωμή· έλεγξε ξανά το πρωτότυπο.");
+      }
       if(duplicateCheck?.paymentReused&&!window.confirm(`Το τιμολόγιο ${documentNumber.trim()} έχει ήδη πληρωθεί (${num(amount).toFixed(2)} €). Δεν θα καταχωριστεί ξανά πληρωμή ή πίστωση.\n\nΝα συνεχίσουμε μόνο με νέα ανάγνωση και καταχώριση του τιμολογίου στο BackOffice;`)){
         setStatus("Η επανεισαγωγή ακυρώθηκε. Η υπάρχουσα πληρωμή διατηρείται.");setBusy(false);return;
       }
@@ -156,7 +165,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       }
       stage="ΑΣΦΑΛΗΣ ΠΑΡΑΛΑΒΗ SERVER";
       setStatus("Ασφαλής αποθήκευση τιμολογίου στον server…");
-      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate,totalGross,documentType,myDataInboxId:selectedInboxId,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
+      const handoff=await api("/api/commerce/ai-reader/fast-handoff",{method:"POST",body:JSON.stringify({storeId:store.id,supplierId,documentNumber:submittedDocumentNumber,documentDate:submittedDocumentDate,totalGross,documentType,myDataInboxId:selectedInboxId,settlementMode:effectiveMode,paymentTransactionId:effectiveMode==="PAID"?paymentTransactionId:null,pages:pages.map(page=>({filename:(page.originalFile||page.file).name||"timologio.jpg",mimeType:(page.originalFile||page.file).type||"image/jpeg",dataUrl:page.originalDataUrl||page.dataUrl,documentType:page.fastDocumentType,productLines:Array.isArray(page.fastProductLines)?page.fastProductLines:[]}))})});
       try{window.dispatchEvent(new CustomEvent("mws:invoice-handoff",{detail:{jobId:handoff?.jobId||null,documentNumber:documentNumber.trim()}}))}catch{}
       if(handoff?.receiptLinked&&!handoff?.backgroundQueued){setStatus("Συνδέθηκε με την υπάρχουσα αγορά myDATA.");setMessage?.(`✅ Το κανονικό τιμολόγιο ${documentNumber.trim()} συνδέθηκε με την υπάρχουσα αγορά. ${effectiveMode==="PAID"?"Η πληρωμή POS καταγράφηκε μία φορά.":"Η επιλογή πίστωσης αποθηκεύτηκε."} Οι γραμμές και η αποθήκη δεν άλλαξαν.`);onChanged?.();onCompleted?.();return;}
       setStatus(documentType==="CREDIT_NOTE"?"Το πιστωτικό αποθηκεύτηκε ως πρόχειρο. Οι γραμμές ελέγχονται στο BackOffice πριν από κίνηση αποθήκης και συμψηφισμό.":handoff?.myDataMatched?"Το τιμολόγιο συνδέθηκε με υπάρχον παραστατικό myDATA. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…":"Το τιμολόγιο αποθηκεύτηκε ως πρόχειρο. Η πλήρης ανάγνωση συνεχίζεται στο BackOffice…");

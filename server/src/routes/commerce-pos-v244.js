@@ -1,3 +1,4 @@
+import {unpaidMyDataHeaderReview} from "../lib/pos-unpaid-mydata-review.js";
 import {ensureInvoiceCommonDraftSchema,assertNoUnresolvedInbound,lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain,allowActiveInvoiceDrainRequest} from "../server-shutdown.js";
@@ -692,7 +693,13 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
     await ensureV244IntakeSchema();
     await ensureFastHandoffSchema();
     await ensureInvoiceCommonDraftSchema(prisma);
-    await assertNoUnresolvedInbound(prisma,{companyId,storeId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross),documentType:req.body.documentType||"INVOICE"});
+    const identity={companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross),documentType:req.body.documentType||"INVOICE"};
+    try{await assertNoUnresolvedInbound(prisma,identity)}catch(error){
+      if(error.code!=="INVOICE_HEADER_REVIEW_REQUIRED"||req.body?.myDataInboxId)throw error;
+      const review=await unpaidMyDataHeaderReview(prisma,identity);
+      if(!review)throw error;
+      return res.json({ok:true,duplicate:false,...review});
+    }
     if(req.body?.myDataInboxId)await prepareSelectedInbox(prisma,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross),documentType:"INVOICE"},String(req.body.myDataInboxId),req.body.dataUrl,req.user);
     const myDataPurchase=await findMyDataPurchase(prisma,{companyId,storeId,supplierId,supplierTaxId,documentNumber:req.body.documentNumber,documentDate:normalizeIntakeDate(req.body.documentDate),totalGross:intakeNumber(req.body.totalGross)});
     if(myDataPurchase){
@@ -807,7 +814,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     if(myDataPurchase){
       const linked=await attachMyDataPosReceipt(prisma,receiptIdentity,normalizedPages,existingPayment,req.user);
       let backgroundQueued=false;
-      if(req.body?.myDataInboxId&&!linked.reused){
+      if(!linked.reused){
         backgroundQueued=await queueEmptyInboxRead(prisma,receiptIdentity,myDataPurchase,existingPayment);
         if(backgroundQueued)await enqueueFastBackground({companyId,storeId,jobId:myDataPurchase.jobId,publicOrigin:`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`});
       }
