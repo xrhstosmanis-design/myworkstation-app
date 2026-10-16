@@ -147,3 +147,19 @@ test('native unconfirmed or mismatching pending shells cannot apply credit cash'
   }finally{await f.close()}
  }
 });
+
+
+test('native stale open till cannot apply credit cash, while historical completed retry stays read-only',{skip:!isolatedInvoiceDb()},async()=>{
+ const f=await fixture();try{
+  const input=await body(f);
+  await f.db.$executeRawUnsafe(`UPDATE "CashShiftSession" SET "openedAt"=NOW()-INTERVAL '2 days' WHERE "id"='shift'`);
+  const before=await snapshot(f);
+  await assert.rejects(supplierCreditCashContext(f.db,scope,'sup'),e=>e.status===409&&e.message.includes('σημερινής'));
+  await assert.rejects(applySupplierCreditCash(f.db,scope,input),e=>e.status===409&&e.message.includes('σημερινής'));
+  assert.deepEqual(await snapshot(f),before);
+  await f.db.$executeRawUnsafe(`UPDATE "CashShiftSession" SET "openedAt"=NOW() WHERE "id"='shift'`);
+  await applySupplierCreditCash(f.db,scope,input);
+  await f.db.$executeRawUnsafe(`UPDATE "CashShiftSession" SET "openedAt"=NOW()-INTERVAL '2 days' WHERE "id"='shift'`);
+  const after=await snapshot(f);assert.equal((await applySupplierCreditCash(f.db,scope,input)).duplicate,true);assert.deepEqual(await snapshot(f),after);
+ }finally{await f.close()}
+});
