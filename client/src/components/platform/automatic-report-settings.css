@@ -1,3 +1,4 @@
+.platform-modal.automatic-report-settings-modal{z-index:1010}
 .platform-modal .platform-report-settings{position:relative;width:min(960px,calc(100vw - 24px));max-height:90dvh;overflow:auto;padding:24px;background:#fff;color:#153953;border-radius:16px;font-size:16px;line-height:1.55;box-sizing:border-box}
 .platform-report-settings fieldset{min-width:0;margin:18px 0;padding:16px;border:1px solid #cbd7e6;border-radius:12px;display:grid;gap:12px}
 .platform-report-settings p{overflow-wrap:anywhere}.platform-report-settings label{display:grid;gap:5px}.platform-report-settings button{min-height:44px;white-space:normal}.platform-report-settings input:not([type=checkbox]){min-height:44px;font-size:16px;width:100%;min-width:0;box-sizing:border-box}
