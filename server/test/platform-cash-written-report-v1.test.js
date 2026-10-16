@@ -7,7 +7,7 @@ const platformApi=fs.readFileSync(new URL("../src/routes/platform-admin.js",impo
 
 test("cash report date formatter cannot be shadowed by the selected date state",()=>{
   assert.match(platformUi,/const cashReportDateLabel=value=>/);
-  assert.match(platformUi,/cashReportDateLabel\(cashReport\.date\)/);
+  assert.match(platformUi,/cashReportDateLabel\(cashReportRowDay\(row\.closedAt\)\)/);
   assert.doesNotMatch(platformUi,/const cashReportDate=value=>/);
 });
 
@@ -38,7 +38,8 @@ test("the platform report exhausts transaction, document, operator and POS audit
   assert.match(platformApi,/ACTION_AFTER_SHIFT_CLOSE/);
   assert.match(platformApi,/MULTIPLE_ACTIONS_ON_SAME_SALE/);
   assert.match(platformApi,/UNEXPLAINED_SHORTAGE/);
-  assert.match(platformApi,/completed:true/);
+  assert.match(platformApi,/completed:false/);
+  assert.match(platformApi,/pendingChecks/);
   assert.match(platformApi,/Promise\.allSettled/);
   assert.match(platformApi,/AUDIT_SOURCE_UNAVAILABLE/);
   assert.match(platformApi,/jsonb_typeof\(s\."duplicateReviewJson"\)='array'/);

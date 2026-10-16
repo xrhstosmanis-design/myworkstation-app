@@ -43,7 +43,7 @@ test("N40: canonical six-tile navigation keeps scope, returns, and rejects late 
   if(p==="/api/platform/invoice-learning/workspace")return reply({state:{documents:[],profiles:{}}});
   if(p==="/api/platform/cash-control/daily"){
    const stores=companies.flatMap(c=>c.stores.map(s=>({...totals,storeId:s.id,storeName:s.name,companyId:c.id,companyName:c.name}))).filter(s=>!u.searchParams.get("storeId")||s.storeId===u.searchParams.get("storeId"));
-   return reply({date:"2026-10-10",totals,stores,rows:[]});
+   return reply({date:u.searchParams.get("date"),from:u.searchParams.get("from"),to:u.searchParams.get("to"),fromTime:u.searchParams.get("fromTime"),toTime:u.searchParams.get("toTime"),storeId:u.searchParams.get("storeId")||null,operator:u.searchParams.get("operator")||null,sessionId:u.searchParams.get("sessionId")||null,totals,stores,rows:[]});
   }
   if(p==="/api/platform/cash-control/shortages")return reply({rows:[],totalShortage:0});
   if(p==="/api/transactions/supplier-settlements/review")return reply({items:payments?[{id:"payment-b",companyId:b.id,storeId:"store-b",companyName:b.name,storeName:"Store B",supplierName:"Fixture supplier",amount:2,status:"PENDING_REVIEW",allocations:[],automaticCheck:{checks:[]}}]:[],companies,stores:companies.flatMap(c=>c.stores.map(s=>({...s,companyId:c.id})))});
