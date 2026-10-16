@@ -1,3 +1,4 @@
+import {confirmedExplanationBalance,readCashReviewSnapshot,sameCashReviewSnapshot} from "../services/cash-review-balance.js";
 import {partitionCashAuditEvents} from "../services/cash-audit-association.js";
 import {resolveCashReportPeriod} from "../services/cash-report-period.js";
 import { Router } from "express";
@@ -188,11 +189,8 @@ async function cashControlRule(store,companyId){
   const rows=await prisma.$queryRaw`SELECT "mode","deliveryTerminalPattern","carryOverEnabled","posEftposEnabled" FROM "CashControlStoreRule" WHERE "storeId"=${store.id} AND "companyId"=${companyId} LIMIT 1`;
   return rows[0]?{...rows[0],source:"CONFIGURED"}:legacyStoreRule(store);
 }
-async function reviewSnapshot(companyId,storeId,sessionId){
-  const rows=await prisma.$queryRaw`SELECT COUNT(*)::int AS "transactionCount",COALESCE(SUM("amount") FILTER (WHERE "reversedAt" IS NULL),0) AS "activeTotal",COALESCE(SUM("amount") FILTER (WHERE "type" IN ('SUPPLIER_PAYMENT','OTHER_EXPENSE') AND "reversedAt" IS NULL),0) AS "expenseTotal",COUNT(*) FILTER (WHERE "reversedAt" IS NOT NULL)::int AS "reversedCount",MAX(GREATEST("createdAt",COALESCE("reversedAt","createdAt"))) AS "lastMovementAt" FROM "StoreTransaction" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "sessionId"=${sessionId}`;
-  const row=rows[0]||{};return {transactionCount:Number(row.transactionCount||0),activeTotal:money(row.activeTotal),expenseTotal:money(row.expenseTotal),reversedCount:Number(row.reversedCount||0),lastMovementAt:row.lastMovementAt?new Date(row.lastMovementAt).toISOString():null};
-}
-function sameSnapshot(left,right){return JSON.stringify(left||{})===JSON.stringify(right||{})}
+async function reviewSnapshot(companyId,storeId,sessionId){return readCashReviewSnapshot(prisma,companyId,storeId,sessionId)}
+function sameSnapshot(left,right){return sameCashReviewSnapshot(left,right)}
 function suspiciousOperatorEvent(eventType){return /CANCEL|RETURN|VOID|REVERSE|DUPLICATE|DELAY|OVERRIDE|CREDENTIAL|PERMISSION|LOGOUT/i.test(String(eventType||""))}
 function auditAmount(details){for(const key of ["reversalTotal","originalTotal","total","amount"]){const value=Number(details?.[key]);if(Number.isFinite(value)&&value!==0)return value}return null}
 function route(handler){return async(req,res)=>{try{await ensureTables();await handler(req,res)}catch(error){console.error("Cash Control:",error);if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα ποσά και τα στοιχεία της φόρμας.",details:error.issues});if(error?.code==="23505"||error?.meta?.code==="23505")return res.status(409).json({error:"Υπάρχει ήδη ανοιχτή βάρδια για το κατάστημα."});return res.status(error?.status||500).json({error:error?.message||"Σφάλμα στον Έλεγχο Ταμείου."})}}}
@@ -410,11 +408,14 @@ router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{
   const amounts=new Map();for(const event of auditEvents){if(event.amount==null)continue;const key=Math.abs(Number(event.amount)).toFixed(2),same=amounts.get(key)||[];same.push(event);amounts.set(key,same)}for(const [amount,events] of amounts)if(events.length>1)findings.push({code:"REPEATED_AUDIT_AMOUNT",severity:"MEDIUM",amount:Number(amount),count:events.length,events});
   if(Math.abs(money(session.cardVariance))>0.009)findings.unshift({code:"POS_EFTPOS_DIFFERENCE",severity:"HIGH",amount:money(session.cardVariance)});
   if(varianceConsidered&&Math.abs(money(session.variance))>0.009)findings.unshift({code:money(session.variance)<0?"CASH_SHORTAGE":"CASH_SURPLUS",severity:"HIGH",amount:money(session.variance)});
-  const currentSnapshot=await reviewSnapshot(req.user.companyId,session.storeId,session.id),reviewRows=await prisma.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "createdAt"`;
-  const reviews=reviewRows.map(row=>({...row,amount:money(row.amount)})),latestReview=reviews[reviews.length-1]||null,recheckRequired=Boolean(latestReview&&!sameSnapshot(latestReview.snapshotJson,currentSnapshot)),validReviews=reviews.filter(row=>sameSnapshot(row.snapshotJson,currentSnapshot)),confirmedExplanations=validReviews.filter(row=>row.decision==="EXPLANATION");
-  const unexplainedVariance=varianceConsidered?money(session.variance)-confirmedExplanations.reduce((sum,row)=>sum+money(row.amount),0):0;
+  const currentSnapshot=await reviewSnapshot(req.user.companyId,session.storeId,session.id),reviewRows=await prisma.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${req.user.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.id} ORDER BY "createdAt","id"`;
+  const reviews=reviewRows.map(row=>({...row,amount:money(row.amount)})),latestReview=reviews[reviews.length-1]||null,snapshotRecheckRequired=Boolean(latestReview&&!sameSnapshot(latestReview.snapshotJson,currentSnapshot)),validReviews=reviews.filter(row=>sameSnapshot(row.snapshotJson,currentSnapshot)),confirmedExplanations=validReviews.filter(row=>row.decision==="EXPLANATION");
+  const explanationBalance=confirmedExplanationBalance(session.variance,confirmedExplanations,{enabled:varianceConsidered});
+  const reviewBalance=snapshotRecheckRequired?{...explanationBalance,status:"RECHECK_REQUIRED",reason:"STALE_REVIEW",unexplainedVariance:null}:explanationBalance;
+  const recheckRequired=snapshotRecheckRequired||reviewBalance.status==="RECHECK_REQUIRED";
+  const unexplainedVariance=reviewBalance.unexplainedVariance;
   const finalizedShortage=validReviews.some(row=>row.decision==="CONFIRMED_SHORTAGE");
-  res.json({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance:money(session.variance),cardVariance:money(session.cardVariance),transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,confirmedExplanations,unexplainedVariance,finalizedShortage,status:recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
+  res.json({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance:money(session.variance),cardVariance:money(session.cardVariance),transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,status:recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
 }));
 
 router.post("/sessions/:sessionId/reviews",route(async(req,res)=>{
