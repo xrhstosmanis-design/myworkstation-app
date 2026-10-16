@@ -1,3 +1,4 @@
+import {mappingConfirmationUserId} from "../src/lib/supplier-mapping-confirmation-actor.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -9,7 +10,7 @@ const user={id:'owner',companyId:'company',role:'OWNER'};
 const payload=p=>({requestId:crypto.randomUUID(),storeId:'store',version:p.version,reviewed:true,mode:'NEW',name:p.proposal.name,barcode:'',categoryId:'cat',subcategoryId:'sub',vatDepartmentId:'vat13',salePrice:2,allowPosPriceChange:true,unit:'PIECE'});
 // Exercise the unchanged production supplier-learning helper, not a mock insert.
 const source=readFileSync(new URL('../src/routes/purchase-order-ocr-resolution.js',import.meta.url),'utf8');
-const learning=new Function('id',source.slice(source.indexOf('async function learnSupplierMapping('),source.indexOf('registerInvoiceProductPreparation(router,'))+';return learnSupplierMapping;')(()=>crypto.randomUUID());
+const learning=new Function('id','mappingConfirmationUserId',source.slice(source.indexOf('async function learnSupplierMapping('),source.indexOf('registerInvoiceProductPreparation(router,'))+';return learnSupplierMapping;')(()=>crypto.randomUUID(),mappingConfirmationUserId);
 const snapshot=async db=>{const result={};for(const table of ['Product','ProductBarcode','StoreProduct','StockMovement','StoreOperatorAudit','PurchaseOrderLine','SupplierProductMapping','SupplierProductLink'])result[table]=await db.$queryRawUnsafe(`SELECT row_to_json(t) AS row FROM "${table}" t ORDER BY row_to_json(t)::text`);return result};
 test('preparation requires an explicit selected store before database access',async()=>{for(const [u,store] of [[user,''],[{...user,storeId:'control'},'store'],[{},'store']]){let reads=0;await assert.rejects(()=>previewInvoiceProduct({$queryRaw:()=>{reads++;throw Error('unexpected')}},u,'order','line',store),e=>e.status===403);assert.equal(reads,0)}});
 test('native actual HTTP preview/read-only and concurrent no-barcode confirmation keep economics, control stock, one product and learning',{skip:!isolated()},async()=>{
