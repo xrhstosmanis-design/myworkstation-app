@@ -33,6 +33,20 @@ export function sameSupplierReceiptForReview(left,right){
   &&left.documentType&&left.documentType===right.documentType
   &&Number.isFinite(a)&&Number.isFinite(b)&&a>0&&b>0&&Math.abs(a-b)<=.050001);
 }
+// Long numeric-only spellings can corroborate an OCR date discrepancy.
+// This key is review-only: numeric series and strict reuse stay unchanged.
+const longNumericReviewKey=value=>{
+ const text=String(value||"").trim();
+ if(!/^[0-9\s]+$/.test(text))return "";
+ const key=text.replace(/\s/g,"").replace(/^0+/,"");
+ return key.length>=8?key:"";
+};
+export function sameGroupedNumberReceiptForReview(left,right){
+ const key=longNumericReviewKey(left.documentNumber);
+ return Boolean(key&&key===longNumericReviewKey(right.documentNumber)
+  &&day(left.documentDate)&&day(right.documentDate)&&day(left.documentDate)!==day(right.documentDate)
+  &&sameSupplierReceiptForReview({...left,documentDate:right.documentDate},right));
+}
 const inboundType=row=>String(row.invoiceType||"1.1").startsWith("5.")?"CREDIT_NOTE":"INVOICE";
 export async function ensureInvoiceCommonDraftSchema(db){
  if(!schemas.has(db))schemas.set(db,(async()=>{
@@ -95,6 +109,12 @@ async function candidateOrders(db,row){
     OR (REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${tax(row.issuerVat)} AND ${Boolean(tax(row.issuerVat))}
      AND d."documentType"=${inboundType(row)} AND (d."documentDate" AT TIME ZONE 'UTC')::date=${day(row.issueDate)}::date
      AND d."totalGross">0 AND ABS(d."totalGross"-${amount(row.totalGross)})<=0.050001)
+    OR (REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${tax(row.issuerVat)} AND ${Boolean(tax(row.issuerVat))}
+     AND d."documentType"=${inboundType(row)} AND d."documentDate" IS NOT NULL
+     AND d."totalGross">0 AND ABS(d."totalGross"-${amount(row.totalGross)})<=0.050001
+     AND COALESCE(d."documentNumber",'') ~ '^[0-9[:space:]]+$'
+     AND LTRIM(REGEXP_REPLACE(d."documentNumber",'[[:space:]]','','g'),'0')=${longNumericReviewKey([row.series,row.documentNumber].filter(Boolean).join(" "))}
+     AND ${Boolean(longNumericReviewKey([row.series,row.documentNumber].filter(Boolean).join(" ")))})
     OR (COALESCE(NULLIF(LTRIM(SUBSTRING(COALESCE(o."invoiceNumber",'') FROM '([0-9]+)[^0-9]*$'),'0'),''),'0')=${numeric}
      AND (REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${row.issuerVat}
       OR (d."documentType"=${inboundType(row)} AND (d."documentDate" AT TIME ZONE 'UTC')::date=${day(row.issueDate)}::date
@@ -105,6 +125,7 @@ async function candidateOrders(db,row){
  return rows.map(o=>({...o,lineCount:Number(o.lineCount),totalGross:amount(o.totalGross),paymentAmount:o.paymentAmount==null?null:amount(o.paymentAmount),
   lineEvidence:lineMatchMap.get(o.orderId)||null,
   headerReviewRequired:Boolean((lineMatchMap.has(o.orderId)&&!sameInvoiceIdentityForReview(o,{documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),documentDate:row.issueDate,documentType:inboundType(row),totalGross:row.totalGross}))
+   ||(sameGroupedNumberReceiptForReview({...o,supplierTaxId:o.taxId},{supplierTaxId:row.issuerVat,documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),documentDate:row.issueDate,documentType:inboundType(row),totalGross:row.totalGross})&&!sameInvoiceIdentityForReview(o,{documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),documentDate:row.issueDate,documentType:inboundType(row),totalGross:row.totalGross}))
    ||(sameSupplierReceiptForReview({...o,supplierTaxId:o.taxId},{supplierTaxId:row.issuerVat,documentDate:row.issueDate,documentType:inboundType(row),totalGross:row.totalGross})&&!sameInvoiceNumber(o.documentNumber,row.series,row.documentNumber))),
   supplierReviewRequired:!tax(o.taxId)||tax(o.taxId)!==tax(row.issuerVat),
   exact:Boolean(tax(o.taxId)&&tax(o.taxId)===tax(row.issuerVat)&&o.documentType===inboundType(row)&&sameInvoiceNumber(o.documentNumber,row.series,row.documentNumber)&&day(o.documentDate)===day(row.issueDate)&&Math.abs(amount(o.totalGross)-amount(row.totalGross))<=.050001),
@@ -266,6 +287,12 @@ export async function assertNoUnresolvedInbound(tx,identity){
     AND ("issueDate" AT TIME ZONE 'UTC')::date=${day(identity.documentDate)||null}::date
     AND "totalGross">0 AND ABS("totalGross"-${amount(identity.totalGross)})<=0.050001
     AND (CASE WHEN "invoiceType" LIKE '5.%' THEN 'CREDIT_NOTE' ELSE 'INVOICE' END)=${identity.documentType||"INVOICE"})
+   OR ("issuerVat"=${tax(identity.supplierTaxId)} AND ${Boolean(tax(identity.supplierTaxId))}
+    AND "issueDate" IS NOT NULL AND "totalGross">0 AND ABS("totalGross"-${amount(identity.totalGross)})<=0.050001
+    AND (CASE WHEN "invoiceType" LIKE '5.%' THEN 'CREDIT_NOTE' ELSE 'INVOICE' END)=${identity.documentType||"INVOICE"}
+    AND CONCAT_WS(' ',"series","documentNumber") ~ '^[0-9[:space:]]+$'
+    AND LTRIM(REGEXP_REPLACE(CONCAT_WS(' ',"series","documentNumber"),'[[:space:]]','','g'),'0')=${longNumericReviewKey(identity.documentNumber)}
+    AND ${Boolean(longNumericReviewKey(identity.documentNumber))})
    OR (COALESCE(NULLIF(LTRIM("documentNumber",'0'),''),'0')=${parts.number}
    AND ("issuerVat"=${tax(identity.supplierTaxId)} OR (
     REGEXP_REPLACE(UPPER(COALESCE("series",'')),'[^A-ZΑ-Ω0-9]','','g')=${parts.series}
@@ -276,6 +303,7 @@ export async function assertNoUnresolvedInbound(tx,identity){
  const receiptMatches=rows.filter(r=>sameSupplierReceiptForReview({...identity,documentType:identity.documentType||"INVOICE"},
   {supplierTaxId:r.issuerVat,documentDate:r.issueDate,documentType:inboundType(r),totalGross:r.totalGross}));
  if(receiptMatches.some(r=>!sameInvoiceNumber(identity.documentNumber,r.series,r.documentNumber)))throw error("Υπάρχει παραστατικό myDATA με ίδιο προμηθευτή, ημερομηνία, τύπο και κοντινό ποσό, αλλά διαφορετικό αριθμό. Έλεγξε τα δύο πρωτότυπα στο BackOffice πριν από νέα πληρωμή ή πρόχειρο.","INVOICE_HEADER_REVIEW_REQUIRED");
+ if(rows.some(r=>sameGroupedNumberReceiptForReview({...identity,documentType:identity.documentType||"INVOICE"},{supplierTaxId:r.issuerVat,documentNumber:[r.series,r.documentNumber].filter(Boolean).join(" "),documentDate:r.issueDate,documentType:inboundType(r),totalGross:r.totalGross})&&!sameInvoiceIdentityForReview({...identity,documentType:identity.documentType||"INVOICE"},{documentNumber:[r.series,r.documentNumber].filter(Boolean).join(" "),documentDate:r.issueDate,documentType:inboundType(r),totalGross:r.totalGross})))throw error("Υπάρχει πιθανό ίδιο παραστατικό myDATA με διαφορετική ημερομηνία ή μορφή αριθμού. Έλεγξε τα δύο πρωτότυπα στο BackOffice πριν από νέα πληρωμή ή πρόχειρο.","INVOICE_HEADER_REVIEW_REQUIRED");
  const sameSupplier=rows.filter(r=>tax(identity.supplierTaxId)&&tax(r.issuerVat)===tax(identity.supplierTaxId));
  const crossSupplier=rows.filter(r=>(!tax(identity.supplierTaxId)||tax(r.issuerVat)!==tax(identity.supplierTaxId))&&sameInvoiceIdentityForReview(
   {...identity,documentType:identity.documentType||"INVOICE"},{documentNumber:[r.series,r.documentNumber].filter(Boolean).join(" "),documentDate:r.issueDate,documentType:inboundType(r),totalGross:r.totalGross}));
@@ -341,12 +369,15 @@ export async function assertInvoiceStockAvailable(tx,{companyId,storeId,sourceDo
     LEFT JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=d."companyId"
     WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."id"<>${sourceDocumentId} AND d."sourceType"='POS_OCR_DRAFT'
      AND d."status" IN ('DRAFT','APPROVED') AND o."status" IN ('NEW','FINAL','INVOICED')
-     AND d."documentType"=${doc.documentType} AND (d."documentDate" AT TIME ZONE 'UTC')::date=${day(doc.documentDate)}::date
+     AND d."documentType"=${doc.documentType} AND ((d."documentDate" AT TIME ZONE 'UTC')::date=${day(doc.documentDate)}::date
+      OR (d."documentDate" IS NOT NULL AND REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${tax(doc.supplierTaxId)} AND ${Boolean(tax(doc.supplierTaxId))}
+       AND d."documentNumber" ~ '^[0-9[:space:]]+$'
+       AND LTRIM(REGEXP_REPLACE(d."documentNumber",'[[:space:]]','','g'),'0')=${longNumericReviewKey(doc.documentNumber)} AND ${Boolean(longNumericReviewKey(doc.documentNumber))}))
      AND ABS(d."totalGross"-${amount(doc.totalGross)})<=0.050001
      AND ((REGEXP_REPLACE(COALESCE(s."taxId",''),'[^0-9]','','g')=${tax(doc.supplierTaxId)} AND ${Boolean(tax(doc.supplierTaxId))})
      OR (COALESCE(NULLIF(LTRIM(SUBSTRING(d."documentNumber" FROM '([0-9]+)[^0-9]*$'),'0'),''),'0')=${parts.number}
      AND REGEXP_REPLACE(UPPER(REGEXP_REPLACE(COALESCE(d."documentNumber",''),'[0-9]+[^0-9]*$','')),'[^A-ZΑ-Ω0-9]','','g')=${parts.series})) LIMIT 21`;
-   if(duplicates.length>20||duplicates.some(other=>sameInvoiceIdentityForReview(doc,other)||sameSupplierReceiptForReview(doc,other)))throw error(`Πιθανό διπλό τιμολόγιο ${doc.documentNumber}: υπάρχουν δύο ενεργά πρόχειρα με κοινά στοιχεία προμηθευτή ή αριθμού, ημερομηνία, τύπο και κοντινό ποσό. Έλεγξε τα πρωτότυπα και τον προμηθευτή πριν από την καταχώρηση. Δεν έγινε κίνηση αποθήκης.`,"INVOICE_DUPLICATE_REVIEW_REQUIRED");
+   if(duplicates.length>20||duplicates.some(other=>sameInvoiceIdentityForReview(doc,other)||sameSupplierReceiptForReview(doc,other)||sameGroupedNumberReceiptForReview(doc,other)))throw error(`Πιθανό διπλό τιμολόγιο ${doc.documentNumber}: υπάρχουν δύο ενεργά πρόχειρα με κοινά στοιχεία προμηθευτή ή αριθμού, ημερομηνία, τύπο και κοντινό ποσό. Έλεγξε τα πρωτότυπα και τον προμηθευτή πριν από την καταχώρηση. Δεν έγινε κίνηση αποθήκης.`,"INVOICE_DUPLICATE_REVIEW_REQUIRED");
   }
  }
  if(orderId&&await inboundTableExists(tx)){
