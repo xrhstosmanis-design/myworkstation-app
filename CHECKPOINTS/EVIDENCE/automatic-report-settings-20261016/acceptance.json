@@ -1,0 +1,88 @@
+{
+  "recordedAt": "2026-10-16T13:30:26.878313+03:00",
+  "scope": "LIMITED LAB configuration/reopen/control isolation/incomplete-source pointer preview",
+  "role": "SUPER_ADMIN",
+  "canonicalUrl": "https://myworkstation-app.onrender.com/platform-admin",
+  "releasedRevision": "17d9599c70297a7f56cff8980c44b14839870e5e",
+  "sourcePr": 2557,
+  "pointerFixPr": 2562,
+  "fullCi": {
+    "run": 38885525993,
+    "job": 116924125748,
+    "passed": 2783,
+    "failed": 0,
+    "skipped": 0,
+    "backupPassed": 6
+  },
+  "guardedDeploy": {
+    "run": 38886688753,
+    "job": 116926080190,
+    "pinnedAtUtc": "2026-10-16T10:22:25Z",
+    "healthyAtUtc": "2026-10-16T10:24:17Z"
+  },
+  "target": {
+    "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "id": "cmtpopbgo000trhb5ng9ytiru",
+    "before": {
+      "terminalRows": 0,
+      "saveFirstMessage": true,
+      "previewEnabled": false
+    },
+    "configurationSaveCount": 1,
+    "afterReopen": {
+      "terminalRows": 1,
+      "terminalPos": "MAIN",
+      "requiredSlots": [
+        1,
+        2,
+        3
+      ],
+      "dayStartHour": 7,
+      "secondShiftStartHour": 15,
+      "thirdShiftStartHour": 23,
+      "displayedCashMode": "FULL",
+      "displayedDeliveryPattern": "DELIVERY",
+      "previewEnabled": true
+    },
+    "pointerPreview": {
+      "day": "2026-10-15",
+      "sourceCount": 1,
+      "settingsVersion": 1,
+      "status": "HOLD",
+      "observedReasons": [
+        "ambiguous or previously unfinished source",
+        "missing MAIN shifts",
+        "missing MAIN slot1",
+        "missing MAIN slot2",
+        "missing MAIN third shift"
+      ],
+      "financialTotalsDisplayed": false,
+      "unrelatedVideoSetupOpened": false
+    }
+  },
+  "control": {
+    "name": "ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ",
+    "id": "cmuk8gxui000ppabfykdxwb1y",
+    "beforeAndAfter": {
+      "terminalRows": 0,
+      "saveFirstMessage": true,
+      "previewEnabled": false,
+      "inheritedMainOrReport": false
+    },
+    "saveCount": 0
+  },
+  "domainActionsPerformed": [],
+  "independentFinancialDeltaPass": false,
+  "screenshots": {
+    "status": "unavailable/inconsistent capture",
+    "published": false
+  },
+  "notTestedLive": [
+    "ready-day numerical totals and employee liability",
+    "other dates/custom schedules",
+    "Owner/other roles/other companies",
+    "physical/mobile/touch",
+    "SMTP receipt and automatic delivery"
+  ],
+  "remaining": "Durable per-recipient outbox, scheduling/enable and current role/license/recipient rechecks; broader fourteen requests remain OPEN"
+}
