@@ -206,9 +206,13 @@ function mobileEmployeeToken(row){
 }
 
 async function createOperatorSession(req,row){
+  row.terminalPos=String(row.terminalPos||"MAIN").trim().toUpperCase()||"MAIN";
   const sessionId=crypto.randomUUID();
   const expiresAt=new Date(Date.now()+12*60*60*1000);
   await prisma.$transaction(async tx=>{
+    // Serialize different operators entering the same terminal, including before shift opening.
+    const terminalLock=JSON.stringify(["POS_OPERATOR",row.companyId,row.storeId,row.terminalPos]);
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${terminalLock},0))::text AS locked`;
     await assertPosShiftOwner(tx,{companyId:row.companyId,storeId:row.storeId,operatorId:row.id,terminalPos:row.terminalPos});
     // Serialize logins for this operator: two concurrent POS requests must not both pass the check.
     await tx.$queryRaw`SELECT "id" FROM "StoreOperatorCredential" WHERE "id"=${row.id} FOR UPDATE`;
@@ -224,6 +228,31 @@ async function createOperatorSession(req,row){
       error.status=409;
       throw error;
     }
+    const occupied=(await tx.$queryRaw`
+      SELECT "id" FROM "StoreOperatorSession"
+      WHERE "companyId"=${row.companyId} AND "storeId"=${row.storeId}
+        AND UPPER(COALESCE(NULLIF(TRIM("terminalPos"),''),'MAIN'))=${row.terminalPos}
+        AND "operatorId"<>${row.id} AND "revokedAt" IS NULL AND "expiresAt">NOW()
+        AND NOT EXISTS (
+          SELECT 1 FROM "CashShiftSession" shift
+          WHERE shift."companyId"=${row.companyId} AND shift."storeId"=${row.storeId}
+            AND shift."status"='OPEN' AND shift."openedBy"=${row.id}
+            AND UPPER(COALESCE(NULLIF(TRIM(shift."terminalPos"),''),'MAIN'))=${row.terminalPos}
+        )
+      LIMIT 1
+    `)[0];
+    if(occupied){
+      const error=new Error("Στο συγκεκριμένο POS είναι ήδη συνδεδεμένος άλλος χειριστής. Πρέπει πρώτα να αποσυνδεθεί με «Αλλαγή χειριστή».");
+      error.status=409;error.code="POS_TERMINAL_OCCUPIED";throw error;
+    }
+    // A successful reauthentication replaces this operator's older sessions here only.
+    // Logout remains exact-session so an old tab cannot disconnect a newer login.
+    await tx.$executeRaw`
+      UPDATE "StoreOperatorSession" SET "revokedAt"=NOW()
+      WHERE "companyId"=${row.companyId} AND "storeId"=${row.storeId} AND "operatorId"=${row.id}
+        AND UPPER(COALESCE(NULLIF(TRIM("terminalPos"),''),'MAIN'))=${row.terminalPos}
+        AND "revokedAt" IS NULL
+    `;
     await tx.$executeRaw`
       INSERT INTO "StoreOperatorSession"
         ("id","operatorId","companyId","storeId","terminalPos","expiresAt","userAgent","ipAddress")

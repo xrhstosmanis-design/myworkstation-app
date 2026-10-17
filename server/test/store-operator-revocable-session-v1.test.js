@@ -19,7 +19,7 @@ test("Store Mode logout revokes the exact server session before clearing only op
   assert.match(route,/"revokedAt"=COALESCE\("revokedAt",NOW\(\)\)/);
   assert.match(route,/eventType:"OPERATOR_LOGOUT"/);
   assert.match(ui,/await api\("\/api\/operators\/logout",\{method:"POST"\}\)/);
-  assert.match(ui,/finally\{[\s\S]*sessionStorage\.removeItem\("storeOperatorToken"\)/);
+  assert.match(ui,/Η αποσύνδεση δεν επιβεβαιώθηκε/);
   assert.match(ui,/sessionStorage\.removeItem\("storeOperatorSession"\)/);
   assert.doesNotMatch(ui,/localStorage\.removeItem\("token"\)/);
 });
