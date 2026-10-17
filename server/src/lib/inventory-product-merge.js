@@ -5,6 +5,28 @@ const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status
 const selection=z.object({storeId:z.string().min(1),productIds:z.array(z.string().min(1)).min(2).max(4),targetId:z.string().min(1)});
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function access(user,body){if(!user?.companyId||user.tokenType==='STORE_OPERATOR'||!['OWNER','SUPER_ADMIN'].includes(user.role)||(user.storeId&&user.storeId!==body.storeId))fail('Δεν επιτρέπεται η συγχώνευση στο κατάστημα.',403);if(new Set(body.productIds).size!==body.productIds.length||!body.productIds.includes(body.targetId))fail('Επίλεξε 2–4 διαφορετικά είδη και ποιο θα κρατηθεί.',400)}
+
+/** A posted POS source remains historical evidence, not unfinished stock work.
+ * Require reciprocal identity and the actual approved posting; status alone
+ * must never turn a genuine draft into an eligible merge.
+ */
+export async function pendingInventoryPurchaseDocuments(tx,companyId,storeId,productIds){
+ return tx.$queryRaw`SELECT l."id" FROM "PurchaseDocumentLine" l
+ JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId"
+ WHERE d."companyId"=${companyId} AND d."storeId"=${storeId}
+  AND d."status"='DRAFT' AND l."productId"=ANY(${productIds}::text[])
+  AND NOT EXISTS (
+   SELECT 1 FROM "PurchaseOrder" o
+   JOIN "PurchaseOrderPosting" posting ON posting."orderId"=o."id" AND posting."companyId"=o."companyId"
+   JOIN "PurchaseDocument" approved ON approved."id"=posting."purchaseDocumentId"
+    AND approved."companyId"=o."companyId" AND approved."storeId"=o."storeId" AND approved."status"='APPROVED'
+   WHERE o."id"=d."purchaseOrderId" AND o."sourceDocumentId"=d."id"
+    AND o."companyId"=d."companyId" AND o."storeId"=d."storeId"
+    AND d."sourceType"='POS_OCR_DRAFT' AND o."sourceType"='POS_OCR_DRAFT'
+    AND o."status" IN ('FINAL','INVOICED')
+  ) LIMIT 1`;
+}
+
 async function preview(tx,user,body){
  const company=user.companyId,ids=[...body.productIds].sort();
  if(!await tx.store.findFirst({where:{id:body.storeId,companyId:company,active:true},select:{id:true}}))fail('Μη έγκυρο κατάστημα.',403);
@@ -21,7 +43,7 @@ async function preview(tx,user,body){
  if(composition.length)blockers.push('Υπάρχει σύνθεση ή συνταγή που χρησιμοποιεί επιλεγμένο είδος.');
  // Open shifts are normal in 24-hour stores; only selected-product work blocks.
  if((await tx.$queryRaw`SELECT l."id" FROM "StocktakeLine" l JOIN "Stocktake" s ON s."id"=l."stocktakeId" WHERE s."companyId"=${company} AND s."storeId"=${body.storeId} AND s."status"='DRAFT' AND l."productId"=ANY(${ids}::text[]) LIMIT 1`).length)blockers.push('Υπάρχει ανοικτή απογραφή με επιλεγμένο είδος.');
- if((await tx.$queryRaw`SELECT l."id" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE d."companyId"=${company} AND d."storeId"=${body.storeId} AND d."status"='DRAFT' AND l."productId"=ANY(${ids}::text[]) LIMIT 1`).length)blockers.push('Υπάρχει πρόχειρο παραστατικό με επιλεγμένο είδος.');
+ if((await pendingInventoryPurchaseDocuments(tx,company,body.storeId,ids)).length)blockers.push('Υπάρχει πρόχειρο παραστατικό με επιλεγμένο είδος.');
  if((await tx.$queryRaw`SELECT l."id" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE o."companyId"=${company} AND o."storeId"=${body.storeId} AND o."status" NOT IN ('FINAL','INVOICED','CANCELLED') AND l."productId"=ANY(${ids}::text[]) LIMIT 1`).length)blockers.push('Υπάρχει ανοικτή παραγγελία με επιλεγμένο είδος.');
  const barcodes=await tx.$queryRaw`SELECT "id","productId","barcode","unitMultiplier","salePrice","updatedAt" FROM "ProductBarcode" WHERE "productId"=ANY(${ids}::text[]) ORDER BY "id" FOR UPDATE`;
  if(barcodes.some(b=>Number(b.unitMultiplier)!==1))blockers.push('Υπάρχει barcode συσκευασίας. Απαιτείται έλεγχος μετατροπής μονάδων.');

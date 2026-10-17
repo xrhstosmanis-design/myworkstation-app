@@ -41,6 +41,14 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  await db.$executeRaw`INSERT INTO "PurchaseDocument" VALUES ('historic','co','A','APPROVED')`;
  await db.$executeRaw`INSERT INTO "PurchaseDocumentLine" VALUES ('hl','historic','p2',7.5)`;
  await db.$executeRaw`INSERT INTO "SaleLine" VALUES ('sale','p2',1,2)`;
+ // A real POS source and its approved posting are separate preserved documents.
+ await db.$executeRawUnsafe('ALTER TABLE "PurchaseDocument" ADD COLUMN "purchaseOrderId" text, ADD COLUMN "sourceType" text');
+ await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrder" ADD COLUMN "sourceDocumentId" text, ADD COLUMN "sourceType" text');
+ await db.$executeRawUnsafe('CREATE TABLE "PurchaseOrderPosting" ("orderId" text,"companyId" text,"purchaseDocumentId" text)');
+ await db.$executeRaw`INSERT INTO "PurchaseDocument"("id","companyId","storeId","status","purchaseOrderId","sourceType") VALUES ('posted-source','co','A','DRAFT','posted-order','POS_OCR_DRAFT')`;
+ await db.$executeRaw`INSERT INTO "PurchaseDocumentLine" VALUES ('posted-source-line','posted-source','p2',7.5)`;
+ await db.$executeRaw`INSERT INTO "PurchaseOrder"("id","companyId","storeId","status","sourceDocumentId","sourceType") VALUES ('posted-order','co','A','INVOICED','posted-source','POS_OCR_DRAFT')`;
+ await db.$executeRaw`INSERT INTO "PurchaseOrderPosting" VALUES ('posted-order','co','historic')`;
  const user={companyId:'co',role:'OWNER',id:'owner'},bulk={storeId:'A',requestId:randomUUID(),productIds:['shared'],priceMode:'INCREASE_PERCENT',priceValue:10,expectedPrices:{shared:2},categoryId:'cat',subcategoryId:'sub',vatDepartmentId:'dep',vatRate:13};
  assert.equal((await saveInventoryBulkCard(db,user,bulk)).changed,1);assert.equal((await saveInventoryBulkCard(db,user,bulk)).idempotent,true);
  assert.equal(Number((await db.$queryRaw`SELECT "salePrice" FROM "StoreProduct" WHERE "storeId"='A' AND "productId"='shared'`)[0].salePrice),2.2);
@@ -73,6 +81,12 @@ test('native bulk and four-card merge preserve control, history, stock and repla
 
  const p=await previewInventoryMerge(db,user,choice);assert.deepEqual(p.blockers,[]);assert.equal(p.combinedStock,3);assert.equal(p.barcodes.length,3);
  const input={...choice,requestId:randomUUID(),previewHash:p.previewHash,confirm:true,reason:'Same item verified'};
+ const beforePendingConflict=await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`;
+ await db.$executeRaw`UPDATE "PurchaseDocument" SET "status"='DRAFT' WHERE "id"='historic'`;
+ await assert.rejects(confirmInventoryMerge(db,user,input),/πρόχειρο παραστατικό/,'confirm must recheck a now-unproven posting');
+ assert.deepEqual(await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`,beforePendingConflict);
+ assert.equal((await db.$queryRaw`SELECT "id" FROM "StockMovement"`).length,0);
+ await db.$executeRaw`UPDATE "PurchaseDocument" SET "status"='APPROVED' WHERE "id"='historic'`;
  let releaseSale,lockedSale;const release=new Promise(r=>releaseSale=r),locked=new Promise(r=>lockedSale=r);
  const concurrentSale=db.$transaction(async tx=>{await lockActiveSaleProducts(tx,{companyId:'co',storeId:'A',productIds:['p2']});await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"="currentStock"-1,"updatedAt"=NOW() WHERE "storeId"='A' AND "productId"='p2'`;lockedSale();await release;},{timeout:15000});
  await locked;
@@ -101,7 +115,10 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  const stocks=await db.$queryRaw`SELECT "productId","currentStock","active" FROM "StoreProduct" WHERE "storeId"='A' AND "productId" IN ('p1','p2','p3','p4') ORDER BY "productId"`;
  assert.deepEqual(stocks.map(r=>Number(r.currentStock)),[4,0,0,0]);assert.deepEqual(stocks.map(r=>r.active),[true,false,false,false]);
  assert.equal((await db.$queryRaw`SELECT "id" FROM "Product"`).length,6);
- assert.equal((await db.$queryRaw`SELECT "productId" FROM "SaleLine"`)[0].productId,'p2');assert.equal((await db.$queryRaw`SELECT "productId" FROM "PurchaseDocumentLine"`)[0].productId,'p2');
+ assert.equal((await db.$queryRaw`SELECT "productId" FROM "SaleLine"`)[0].productId,'p2');assert.equal((await db.$queryRaw`SELECT "productId" FROM "PurchaseDocumentLine" WHERE "id"=\'hl\'`)[0].productId,'p2');
+ assert.equal((await db.$queryRaw`SELECT "status" FROM "PurchaseDocument" WHERE "id"='posted-source'`)[0].status,'DRAFT','merge must not approve or delete original source');
+ assert.equal((await db.$queryRaw`SELECT "productId" FROM "PurchaseDocumentLine" WHERE "id"='posted-source-line'`)[0].productId,'p2','historical source product identity retained');
+ assert.equal((await db.$queryRaw`SELECT * FROM "PurchaseOrderPosting"`).length,1,'no invoice posting replay');
  const movements=await db.$queryRaw`SELECT "quantity" FROM "StockMovement"`;assert.equal(movements.length,4);assert.equal(movements.reduce((n,r)=>n+Number(r.quantity),0),0);
  assert.equal((await db.$queryRaw`SELECT "productId" FROM "ProductBarcode" WHERE "id"='b2'`)[0].productId,'p1');assert.equal(Number((await db.$queryRaw`SELECT "salePrice" FROM "ProductBarcode" WHERE "id"='b2'`)[0].salePrice),1.5);
  assert.equal((await db.$queryRaw`SELECT "productId" FROM "SupplierProductMapping"`)[0].productId,'p1');

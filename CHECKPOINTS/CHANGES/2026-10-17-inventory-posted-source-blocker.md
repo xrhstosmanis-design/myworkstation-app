@@ -1,3 +1,9 @@
+## 17/10/2026 — INVENTORY-POSTED-SOURCE-BLOCKER-01 / IMPLEMENTED / AWAITING NATIVE CI
+
+Owner fix/inventory-posted-source-blocker-20261017. Explicit bounded transfer claimPR2648/head7d442ea8/docsCI39058241666 SUCCESS merged1b72f34585447b52d264ffa3850556c93c4d7d5d before source. Existing merge draft blocker now uses a read-only query excluding only reciprocal POS_OCR_DRAFT originals whose FINAL/INVOICED same-company/store order has a same-company posting to an APPROVED same-store document. No source-status repair, approval, posting, payment, quantity or history rewrite. Genuine/missing/foreign/wrong-store/unapproved links remain blockers; confirmation repeats this check inside existing serializable transaction.
+
+Added native SQL negative matrix and read-only snapshots; extended existing actual preview/four-card confirm/replay/rollback/concurrent-sale test with historical posted source and stale approved-proof rejection. Original stock/history/control assertions retained. Local Node20 syntax/import checks:1PASS/0FAIL/2native infrastructureSKIP, not a new business PASS. Mandatory full native PR/mainCI and ordinary exact guarded release pending. Actual user pair preview/merge remains NOT TESTED; do not confirm production merge for diagnostics. No new manual PASS. Original broad acceptance owner unchanged. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-inventory-posted-source-blocker.md. Next fullCI, exact release, then safe original selection preview.
+
 ## 17/10/2026 21:27 Europe/Athens — INVENTORY-POSTED-SOURCE-BLOCKER-01 / ASSIGNED / USER FAIL
 
 ΑΝΑΛΗΨΗ ΑΠΟ feat/inventory-bulk-vat-20261015 — ASSIGNED fix/inventory-posted-source-blocker-20261017 for this bounded new false-draft blocker only, explicitly authorized by owner in chat at21:27. Original measured bulk-save/product-merge/physical acceptance remains with feat/inventory-bulk-vat-20261015; no broader transfer or duplicate engineering.
