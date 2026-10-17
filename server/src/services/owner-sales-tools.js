@@ -8,20 +8,14 @@ import {stockToolArguments,ownerStockTool} from "./owner-stock-tools.js";
 import {salesStoresArguments,salesStoresTool} from "./assistant-sales-stores.js";
 import {consumptionArguments,consumptionTool,dailyConsumptionRequest} from "./assistant-consumption.js";
 import {ASSISTANT_OUTPUT_TOKENS,ASSISTANT_RECOVERY_TOKENS,mayRetryAssistantResponse} from "./assistant-answer-response.js";
+import {plainTotalSalesRequest} from './assistant-total-sales-request.js';
+export {plainTotalSalesRequest} from './assistant-total-sales-request.js';
 
 const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const salesToolArguments=z.object({product:z.string().trim().min(1).max(120),from:day,to:day}).strict().superRefine((value,ctx)=>{try{salesReportCalendar(value.from,value.to)}catch(e){ctx.addIssue({code:z.ZodIssueCode.custom,message:e.message})}});
 export const ownerSalesTool={type:"function",name:"sales_by_product",strict:true,description:"Διαβάζει την κανονική αναφορά Στατιστικά πωλήσεων μόνο για το επιλεγμένο εξουσιοδοτημένο κατάστημα. product: περιγραφή ή SKU, όχι barcode. from/to: συγκεκριμένες συμπεριλαμβανόμενες ημερομηνίες YYYY-MM-DD, ώρα Ελλάδας, έως366 ημέρες. Ασαφές είδος ζητά διευκρίνιση. Ποσότητα και αξίες συνυπολογίζουν καταχωρημένες επιστροφές/ακυρώσεις, ολοκληρωμένες μη πιστωτικές πωλήσεις. Καμία μεταβολή.",parameters:{type:"object",additionalProperties:false,properties:{product:{type:"string",description:"Μόνο η περιγραφή ή το SKU που ζήτησε ο χρήστης."},from:{type:"string",description:"Πρώτη ημερομηνία YYYY-MM-DD."},to:{type:"string",description:"Τελευταία ημερομηνία YYYY-MM-DD, συμπεριλαμβάνεται."}},required:["product","from","to"]}};
 const fail=(message,status=502)=>{throw Object.assign(new Error(message),{status})};
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").trim().replace(/\s+/g," ");
-// Deliberately narrow: no inherited topic, actor, product or payment filter
-// may become an unfiltered total. These requests need no model extraction.
-export function plainTotalSalesRequest(question,{now=new Date()}={}){
- const text=norm(question).replace(/[.!;?]+$/g,"").trim();
- if(!/^(?:πωλησεις|συνολικες πωλησεις|συνολο πωλησεων|τζιρος) (?:σημερα|χθες)(?: σε (?:csv|excel|xlsx|pdf|word|docx))?$/.test(text))return null;
- const period=businessQuestionPeriod(question,{now});
- return period?{mode:"all",names:[],...period}:null;
-}
 const keys=["productId","sku","name","storeId","storeName","salesQuantity","grossSales","netSales","vatValue","normalSaleCount","reversalCount","returnGrossValue"];
 const project=(row,fields)=>Object.fromEntries(fields.map(key=>[key,row[key]]));
 

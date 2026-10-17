@@ -31,7 +31,7 @@ export function assistantQuestionHasPeriod(question){
  const q=norm(question);
  return /(?:^|\s)χρον(?:ο|ου|ια|ος)(?=\s|[.,;!?]|$)/.test(q)||new RegExp(numericDatePattern).test(q)||/προχθες|χθες|σημερα|εβδομαδ|μηνα|μηνο|ετος|ημερες|ημερων|μερες|μερων|φετος|περσι|περυσι|ιανουαρ|φεβρουαρ|μαρτι|απριλ|μαιο|μαιου|ιουνι|ιουλι|αυγουστ|σεπτεμβρ|οκτωβρ|νοεμβρ|δεκεμβρ|\b(?:today|yesterday|week|month|year|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q);
 }
-const periodOnly=q=>assistantQuestionHasPeriod(q)&&!norm(q).replace(numericDates," ").replace(relativeDays," ").replace(/(^|\s)(?:απο|εως|μεχρι|για|στις|την|το|και|σε)(?=\s|$)/g," ").replace(/[\s.,;:!?–-]+/g,"").length;
+const periodOnly=q=>isBusinessPeriodFollowup(q)||assistantQuestionHasPeriod(q)&&!norm(q).replace(numericDates," ").replace(relativeDays," ").replace(/(^|\s)(?:απο|εως|μεχρι|για|στις|την|το|και|σε)(?=\s|$)/g," ").replace(/[\s.,;:!?–-]+/g,"").length;
 function lastSalesPeriod(history){
  const users=history.filter(m=>m.role==="user");
  for(let i=users.length-1;i>=0;i--){
