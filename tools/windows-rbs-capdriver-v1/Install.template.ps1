@@ -2,7 +2,7 @@ param([ValidateSet('MENU','PREPARE')][string]$Action = 'MENU')
 $ErrorActionPreference = 'Stop'
 $config = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('__CONFIG_BASE64__')) | ConvertFrom-Json
 $payload = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('__FILES_BASE64__')) | ConvertFrom-Json
-$directory = Join-Path $env:LOCALAPPDATA ('MyWorkStation\RbsCapDriverV1\packages\' + $config.storeId)
+$directory = Join-Path $env:LOCALAPPDATA ('MyWorkStation\RbsCapDriverV1\packages\' + $config.storeId + '\' + $config.terminalPos)
 New-Item -ItemType Directory -Path $directory -Force | Out-Null
 foreach ($file in $payload.PSObject.Properties) {
   if ($file.Name -notin @('Pair.ps1','Test-Connection.ps1','Writer.ps1')) { throw 'Unexpected package file.' }
@@ -28,16 +28,16 @@ while ($true) {
       '1' {
         Write-Host ('Target store: ' + $config.storeName + ' [' + $config.storeId + ']')
         if ((Read-Host 'On the final POS Windows user? Type POS to continue') -ne 'POS') { continue }
-        & (Join-Path $directory 'Pair.ps1') -ApiBase $config.apiBase -ExpectedStoreId $config.storeId
+        & (Join-Path $directory 'Pair.ps1') -ApiBase $config.apiBase -ExpectedStoreId $config.storeId -ExpectedTerminalPos $config.terminalPos -ExpectedFiscalDeviceCode $config.fiscalDeviceCode
       }
       '2' {
-        & (Join-Path $directory 'Test-Connection.ps1') -ApiBase $config.apiBase -WorkFolder $config.workFolder -ExpectedStoreId $config.storeId
+        & (Join-Path $directory 'Test-Connection.ps1') -ApiBase $config.apiBase -WorkFolder $config.workFolder -ExpectedStoreId $config.storeId -ExpectedTerminalPos $config.terminalPos -ExpectedFiscalDeviceCode $config.fiscalDeviceCode
       }
       '3' {
-        & (Join-Path $directory 'Test-Connection.ps1') -ApiBase $config.apiBase -WorkFolder $config.workFolder -ExpectedStoreId $config.storeId
+        & (Join-Path $directory 'Test-Connection.ps1') -ApiBase $config.apiBase -WorkFolder $config.workFolder -ExpectedStoreId $config.storeId -ExpectedTerminalPos $config.terminalPos -ExpectedFiscalDeviceCode $config.fiscalDeviceCode
         Write-Host 'Writer may claim pending transactions. Check RBS/EFTPOS and close any other Writer first.'
         if ((Read-Host 'Type START to start Writer') -ne 'START') { continue }
-        & (Join-Path $directory 'Writer.ps1') -ApiBase $config.apiBase -WorkFolder $config.workFolder
+        & (Join-Path $directory 'Writer.ps1') -ApiBase $config.apiBase -WorkFolder $config.workFolder -ExpectedTerminalPos $config.terminalPos
       }
       default { Write-Host 'Choose 0, 1, 2 or 3.' }
     }

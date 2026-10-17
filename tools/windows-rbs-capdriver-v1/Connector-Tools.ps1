@@ -31,7 +31,7 @@ function Invoke-MwsConnectionCheck($Config, [string]$Directory) {
     $stream.Dispose()
   } finally { if (Test-Path -LiteralPath $probe) { Remove-Item -LiteralPath $probe -Force } }
   # Explicitly ignore session env tokens: use the credential of this Windows user.
-  & (Join-Path $Directory 'Test-Connection.ps1') -ApiBase $Config.apiBase -DeviceToken '' -WorkFolder $Config.workFolder -ExpectedStoreId $Config.storeId
+  & (Join-Path $Directory 'Test-Connection.ps1') -ApiBase $Config.apiBase -DeviceToken '' -WorkFolder $Config.workFolder -ExpectedStoreId $Config.storeId -ExpectedTerminalPos $Config.terminalPos -ExpectedFiscalDeviceCode $Config.fiscalDeviceCode
 }
 
 function Get-MwsLaunchArguments([string]$ScriptPath, [string]$ConfigPath, [switch]$Gui) {
@@ -49,7 +49,7 @@ function Invoke-MwsGuidedConnectionOperation($Config, [string]$Directory,
     # check neither claims requests nor writes CAPDriver command files.
     if ($OperationName -eq 'Pair') {
       $mutex = Enter-MwsConnectorLock
-      & (Join-Path $Directory 'Pair.ps1') -ApiBase $Config.apiBase -PairingCode $PairingCode -ExpectedStoreId $Config.storeId
+      & (Join-Path $Directory 'Pair.ps1') -ApiBase $Config.apiBase -PairingCode $PairingCode -ExpectedStoreId $Config.storeId -ExpectedTerminalPos $Config.terminalPos -ExpectedFiscalDeviceCode $Config.fiscalDeviceCode
     }
     Invoke-MwsConnectionCheck $Config $Directory
   } finally { Exit-MwsConnectorLock $mutex }

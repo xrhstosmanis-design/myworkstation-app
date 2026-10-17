@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {TextDecoder} from "node:util";
 import {readFile} from "node:fs/promises";
+import {readFileSync} from "node:fs";
 import {resolveRbsCapDriverV1PaymentCode,buildRbsCapDriverV1Command,claimRbsCapDriverV1Request,isFinalRbsFiscalRequestStatus,mayDispatchRbsFiscalRequest,resolveRbsCapDriverFiscalProfile,RBS_CAP_DRIVER_KIOSK_VAT_PROFILES,rbsCapDriverSaleFiscalStatus,transitionRbsCapDriverV1OperatorOutcome,transitionRbsFiscalRequest} from "../src/rbs-capdriver-v1.js";
 
 const [cloudRoute,posRoute,posUi,cloudUi]=await Promise.all([
@@ -119,7 +120,7 @@ test("only a confirmed CAP receipt is marked fiscally issued",()=>{
 test("writer liveness requires a real recent poll rather than pairing alone",()=>{
   assert.match(cloudRoute,/rbs-capdriver-v1\/status/);
   assert.match(cloudRoute,/rbsCapDriverV1WriterPoll/);
-  assert.match(posRoute,/"lastSeenAt">NOW\(\)-INTERVAL '15 seconds'/);
+  assert.match(posRoute,/getTime\(\)<15000/);
   assert.match(posRoute,/RBS_CAPDRIVER_V1_WRITER_OFFLINE/);
   assert.match(posRoute,/Δεν καταχωρίστηκε πώληση και δεν στάλθηκε εντολή/);
   assert.match(posUi,/RBS WRITER:/);
@@ -129,8 +130,10 @@ test("writer liveness requires a real recent poll rather than pairing alone",()=
 
 test("prepared requests remain claimable until the writer actually claims them",()=>{
   assert.doesNotMatch(cloudRoute,/"status"='PREPARED' AND "createdAt"<NOW\(\)-INTERVAL '60 seconds'/);
-  assert.match(cloudRoute,/AND "status"='PREPARED' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED/);
-  assert.match(cloudRoute,/SET "status"='CLAIMED'/);
+  assert.match(cloudRoute,/claimTerminalRbsRequest/);
+  const binding=readFileSync(new URL("../src/services/rbs-terminal-binding.js",import.meta.url),"utf8");
+  assert.match(binding,/AND "terminalPos"=\$\{terminal.terminalPos\} AND "status"='PREPARED' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED/);
+  assert.match(binding,/SET "status"='CLAIMED'/);
 });
 
 

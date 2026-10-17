@@ -2,7 +2,8 @@ param(
   [string]$ApiBase = $env:MWS_RBS_API_BASE,
   [string]$DeviceToken = $env:MWS_RBS_DEVICE_TOKEN,
   [string]$WorkFolder = $env:MWS_RBS_WORKFOLDER,
-  [string]$LogPath = $env:MWS_RBS_LOG_PATH
+  [string]$LogPath = $env:MWS_RBS_LOG_PATH,
+  [string]$ExpectedTerminalPos
 )
 
 $ErrorActionPreference = 'Stop'
@@ -46,6 +47,10 @@ while ($true) {
     $response = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/cloud/v1/device/rbs-capdriver-v1/next" -Headers $Headers -ContentType 'application/json' -Body '{}'
     $request = $response.request
     if ($null -eq $request) { Start-Sleep -Seconds 2; continue }
+    if ($ExpectedTerminalPos -and [string]$request.terminalPos -ne $ExpectedTerminalPos) {
+      Send-DispatchResult $request.id 'UNCERTAIN'
+      throw 'Unexpected POS request; no CAPDriver file was written. Check the terminal binding.'
+    }
     Write-WriterLog 'REQUEST_CLAIMED' ("requestId={0}" -f $request.id)
 
     $command = [string]$request.commandText + "`r`n"

@@ -39,7 +39,49 @@ try{
   assert.equal((await request(guidedPath,{token,method:"POST",body:{apiBase:"https://unit.test"}})).status,409,"Guided package must reject stale equipment too");
   assert.equal((await request(root+"/rbs-installation",{token,method:"PUT",body:form})).status,200);
   assert.equal((await request(root+"/installation-terminals",{token,method:"POST",body:{terminalPos:"POS-02",displayName:"Second POS"}})).status,201);
-  assert.equal((await request(root+"/rbs-installation/POS-01/package",{token,method:"POST",body:{apiBase:"https://unit.test"}})).status,409,"Store-wide writer queue must not be packaged as safe multi-POS routing");
-  assert.equal((await request(guidedPath,{token,method:"POST",body:{apiBase:"https://unit.test"}})).status,409,"Guided package must keep the same multi-POS block");
-  console.log("RBS installation HTTP E2E PASS: Super Admin isolation, one EFTPOS, durable explicit codes, module gate, stale mapping invalidation, credential-free package and multi-POS block.");
+  assert.equal((await request(root+"/rbs-installation/POS-01/package",{token,method:"POST",body:{apiBase:"https://unit.test"}})).status,200,"Selected confirmed register can be packaged independently of a home/test terminal");
+  assert.equal((await request(guidedPath,{token,method:"POST",body:{apiBase:"https://unit.test"}})).status,200);
+  const twoRouting={fiscalDevices:[routing.fiscalDevices[0],{deviceCode:"RBS-02",displayName:"Second RBS",terminalPos:"POS-02",active:true}],eftposDevices:[changed.eftposDevices[0],{deviceCode:"CARD-02",displayName:"Register2 EFTPOS",fiscalDeviceCode:"RBS-02",role:"STORE",active:true},{deviceCode:"DELIVERY-02",displayName:"Register2 delivery EFTPOS",fiscalDeviceCode:"RBS-02",role:"DELIVERY",active:true}]};
+  assert.equal((await request(root+"/device-routing",{token,method:"PUT",body:twoRouting})).status,200);
+  assert.equal((await request(root+"/rbs-installation",{token,method:"PUT",body:{...form,terminalPos:"POS-02",cashCode:"6",cardCode:"2",deliveryCode:"3"}})).status,200);
+  const secondPackage=await request(root+"/rbs-installation/POS-02/guided-package",{token,method:"POST",body:{apiBase:"https://unit.test"}});
+  assert.equal(secondPackage.status,200,JSON.stringify(secondPackage.body));assert.match(secondPackage.body.fileName,/POS-02/);
+  await db.companyModule.create({data:{companyId:company.id,moduleKey:"CONNECTOR_RBS",active:true}});
+  async function pairWriter(terminalPos,extra={}){
+    const code=await request(`/api/cloud/v1/stores/${store.id}/pairing-code`,{token,method:"POST",body:{}});
+    assert.equal(code.status,201,JSON.stringify(code.body));
+    return request('/api/cloud/v1/pair',{method:"POST",body:{code:code.body.code,deviceName:'Isolated CI Writer',platform:'WINDOWS_RBS_CAPDRIVER_V1',expectedStoreId:store.id,...(terminalPos?{terminalPos}:{}),...extra}});
+  }
+  const one=await pairWriter('POS-01'),two=await pairWriter('POS-02'),legacy=await pairWriter(null);
+  for(const result of [one,two,legacy])assert.equal(result.status,201,JSON.stringify(result.body));
+  const next='/api/cloud/v1/device/rbs-capdriver-v1/next',status='/api/cloud/v1/device/rbs-capdriver-v1/status';
+  assert.equal((await request(status,{token:legacy.body.token,method:'POST',body:{}})).status,409,'Unbound legacy writer cannot choose between two registers');
+  const oneStatus=await request(status,{token:one.body.token,method:'POST',body:{terminalPos:'POS-02'}});
+  assert.equal(oneStatus.body.terminalPos,'POS-01','A request body cannot replace signed terminal authorization');
+  const forged=await request('/api/cloud/v1/device/heartbeat',{token:one.body.token,method:'POST',body:{metadata:{rbsCapDriverBinding:{terminalPos:'POS-02'},rbsCapDriverV1WriterPoll:true}}});assert.equal(forged.status,200);
+  assert.equal((await request(status,{token:one.body.token,method:'POST',body:{}})).body.terminalPos,'POS-01');
+  assert.equal((await request(next,{token:one.body.token,method:'POST',body:{}})).status,200);
+  const ids=['ci-rbs-other-'+company.id,'ci-rbs-own-'+company.id];
+  for(const [i,terminalPos] of ['POS-02','POS-01'].entries())await db.$executeRaw`INSERT INTO "RbsCapDriverV1Request" ("id","companyId","storeId","terminalPos","clientTransactionId","requestHash","paymentMethod","total","commandText","commandHash","createdAt") VALUES (${ids[i]},${company.id},${store.id},${terminalPos},${ids[i]},'ci','CARD',0.01,'CI NEVER DISPATCH','ci',NOW()+(${i}*INTERVAL '1 second'))`;
+  const concurrent=await Promise.all([request(next,{token:one.body.token,method:'POST',body:{}}),request(next,{token:one.body.token,method:'POST',body:{}})]);
+  assert.equal(concurrent.filter(r=>r.body.request).length,1,'Concurrent polling claims an own request once');
+  assert.equal(concurrent.find(r=>r.body.request).body.request.id,ids[1],'Older foreign-terminal request must remain untouched');
+  const untouched=await db.$queryRaw`SELECT "status","claimedByDeviceId" FROM "RbsCapDriverV1Request" WHERE "id"=${ids[0]}`;assert.equal(untouched[0].status,'PREPARED');assert.equal(untouched[0].claimedByDeviceId,null);
+  const ownTwo=await request(next,{token:two.body.token,method:'POST',body:{}});assert.equal(ownTwo.body.request.id,ids[0]);assert.equal(ownTwo.body.request.terminalPos,'POS-02');
+  const foreignAck=await request(`/api/cloud/v1/device/rbs-capdriver-v1/${ids[0]}/dispatch-result`,{token:one.body.token,method:'POST',body:{result:'UNCERTAIN'}});assert.equal(foreignAck.status,404);
+  // No command is dispatched: these are isolated queue records, never a physical receipt.
+  assert.equal((await request(root+'/rbs-installation',{token,method:'PUT',body:{...form,cardCode:'9'}})).status,200);
+  assert.equal((await request(status,{token:one.body.token,method:'POST',body:{}})).status,409,'Changed confirmed settings invalidate the old signed binding');
+  assert.equal((await request(status,{token:two.body.token,method:'POST',body:{}})).status,200,'Sibling register remains usable');
+  assert.equal((await pairWriter('FOREIGN-POS')).status,409);
+  const siblingRoot=`/api/platform/companies/${company.id}/stores/${sibling.id}`;
+  assert.equal((await request(siblingRoot+'/installation-terminals',{token,method:'POST',body:{terminalPos:'SINGLE-01',displayName:'Legacy single-register control'}})).status,201);
+  assert.equal((await request(siblingRoot+'/device-routing',{token,method:'PUT',body:{fiscalDevices:[{deviceCode:'SINGLE-RBS',displayName:'Single control',terminalPos:'SINGLE-01',active:true}],eftposDevices:[{deviceCode:'SINGLE-CARD',displayName:'Single card',fiscalDeviceCode:'SINGLE-RBS',role:'STORE',active:true}]}})).status,200);
+  const legacyCode=await request(`/api/cloud/v1/stores/${sibling.id}/pairing-code`,{token,method:'POST',body:{}});
+  const legacySingle=await request('/api/cloud/v1/pair',{method:'POST',body:{code:legacyCode.body.code,deviceName:'Old Diadochou-style control',platform:'WINDOWS_RBS_CAPDRIVER_V1'}});assert.equal(legacySingle.status,201);
+  const singleStatus=await request(status,{token:legacySingle.body.token,method:'POST',body:{}});assert.equal(singleStatus.status,200);assert.equal(singleStatus.body.terminalPos,'SINGLE-01');
+  const singleNext=await request(next,{token:legacySingle.body.token,method:'POST',body:{}});assert.equal(singleNext.status,200);assert.equal(singleNext.body.request,null);
+  await db.companyModule.updateMany({where:{companyId:company.id,moduleKey:'CONNECTOR_RBS'},data:{active:false}});
+  assert.equal((await request(next,{token:two.body.token,method:'POST',body:{}})).status,403,'Module checks still precede claims');
+  console.log("RBS installation HTTP E2E PASS: per-terminal packages, signed binding, concurrent exact-terminal claims, legacy multi-register denial, heartbeat forgery rejection, stale settings and module isolation.");
 }finally{await db.$disconnect()}

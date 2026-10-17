@@ -16,8 +16,8 @@ function handlers(prisma){
   const start=older.indexOf('router.get("/stores/:storeId",');
   const end=older.indexOf('\n',start);
   const guards=older.split('\n').filter(line=>line.startsWith('function assertStore(')||line.startsWith('async function storeFor(')).join('\n');
-  new Function('router','prisma','hasTableService','capDriverV1WriterState',`const money=value=>Number(value||0);${guards}\n${older.slice(start,end)}`)(
-    {get:(_,fn)=>routes.set('older',[fn])},prisma,async()=>false,async()=>({online:false,configured:false}));
+  new Function('router','prisma','hasTableService','capDriverV1WriterState','requestTerminal',`const money=value=>Number(value||0);${guards}\n${older.slice(start,end)}`)(
+    {get:(_,fn)=>routes.set('older',[fn])},prisma,async()=>false,async()=>({online:false,configured:false}),async()=>"MAIN");
   return async(kind,user={id:'owner',role:'OWNER',companyId:'company'},storeId='store')=>{
     const req={user,params:{storeId},method:'GET',path:'/stores/'+storeId},res={statusCode:200,status(code){this.statusCode=code;return this},json(body){this.body=body;return this}};
     for(const fn of [...(kind==='older'?[]:middleware),...routes.get(kind)]){

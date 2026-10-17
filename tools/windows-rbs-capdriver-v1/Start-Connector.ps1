@@ -9,7 +9,7 @@ try {
   Invoke-MwsConnectionCheck $config $PSScriptRoot
   Write-Host ('Connector: ' + $config.storeName + ' / ' + $config.terminalPos)
   Write-Host 'Κράτησε αυτό το παράθυρο ανοικτό. Το κλείσιμο διακόπτει τη σύνδεση.'
-  & (Join-Path $PSScriptRoot 'Writer.ps1') -ApiBase $config.apiBase -DeviceToken '' -WorkFolder $config.workFolder
+  & (Join-Path $PSScriptRoot 'Writer.ps1') -ApiBase $config.apiBase -DeviceToken '' -WorkFolder $config.workFolder -ExpectedTerminalPos $config.terminalPos
 } catch {
   Write-Host ('STOP: ' + $_.Exception.Message) -ForegroundColor Red
   Read-Host 'Πατήστε Enter για κλείσιμο'
