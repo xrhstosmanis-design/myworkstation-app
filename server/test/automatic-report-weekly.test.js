@@ -1,0 +1,47 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {cashPreviewPeriod,reportDayOffset,reportWallTime} from "../src/services/automatic-report-policy.js";
+import {readAutomaticCashPreview} from "../src/services/automatic-report-source.js";
+
+const configuration={dayStartHour:7,terminals:["MAIN",{terminalPos:"DELIVERY",requiredSlots:[1]}]};
+const args=()=>({actorId:"sa",companyId:"c",storeId:"s",day:"2026-10-18",frequency:"WEEKLY",configuration,now:new Date("2026-10-19T09:00:00+03:00")});
+const week=()=>Array.from({length:7},(_,d)=>{
+ const day=reportDayOffset("2026-10-12",d),next=reportDayOffset(day,1);
+ return [7,15,23].map((h,slot)=>({id:`${d}-${slot}`,companyId:"c",storeId:"s",terminalPos:"MAIN",status:"CLOSED",openedBy:"employee",openedAt:reportWallTime(day,7),closedAt:new Date(`${slot===2?next:day}T${slot===0?"15":slot===1?"23":"07"}:00:00+03:00`),variance:slot===0?(d===0?-10:10):0})).map((r,slot)=>({...r,openedAt:new Date(`${day}T${["07","15","23"][slot]}:00:00+03:00`)})).concat([{id:`${d}-delivery`,companyId:"c",storeId:"s",terminalPos:"DELIVERY",status:"CLOSED",openedAt:reportWallTime(day,7),closedAt:reportWallTime(day,12),variance:20}]);
+}).flat();
+function fixture(rows){
+ const calls=[];
+ const tx={user:{findUnique:async()=>({role:"SUPER_ADMIN"})},store:{findFirst:async()=>({id:"s",companyId:"c",name:"LAB"})},$queryRaw:async(strings,...values)=>{const sql=strings.join("?");calls.push({sql,values});return sql.includes('FROM "CashControlStoreRule"')?[{mode:"FULL",deliveryTerminalPattern:"DELIVERY",carryOverEnabled:true,posEftposEnabled:true}]:rows}};
+ return {calls,db:{$transaction:async(fn,options)=>{assert.equal(options.isolationLevel,"RepeatableRead");return fn(tx)}}};
+}
+test("weekly period anchors Monday through next Monday at each store's 06/07 start, including DST",()=>{
+ for(const hour of [6,7])for(const day of ["2026-10-18","2026-10-12"]){
+  const p=cashPreviewPeriod(day,"WEEKLY",{dayStartHour:hour});assert.equal(p.fromDay,"2026-10-12");assert.equal(p.toDay,"2026-10-18");assert.equal(p.from.getTime(),reportWallTime("2026-10-12",hour).getTime());assert.equal(p.to.getTime(),reportWallTime("2026-10-19",hour).getTime());
+ }
+ const p=cashPreviewPeriod("2026-10-25","WEEKLY");assert.equal((p.to-p.from)/3600000,169);
+ assert.throws(()=>cashPreviewPeriod("2026-10-18","MONTHLY"));assert.throws(()=>cashPreviewPeriod("2026-02-30","WEEKLY"));
+});
+test("one weekly snapshot checks all seven days, preserves day/terminal/delivery amounts and performs no writes",async()=>{
+ const rows=week(),before=JSON.stringify(rows),f=fixture(rows),r=await readAutomaticCashPreview(f.db,args());
+ assert.equal(r.ready,true);assert.equal(r.kind,"WEEKLY_CASH_PREVIEW");assert.equal(r.deliveryStatus,"PREVIEW_ONLY");assert.equal(r.dayReadiness.length,7);assert.equal(r.sourceCount,28);assert.equal(r.groups.length,14);
+ assert.equal(r.groups.find(g=>g.day==="2026-10-12"&&g.cashChain==="STORE").netVariance,-10);
+ assert.equal(r.groups.find(g=>g.day==="2026-10-13"&&g.cashChain==="STORE").offset,0);
+ assert.ok(r.groups.every(g=>g.employeeLiabilityAdjusted===false));assert.equal(JSON.stringify(rows),before);
+ const q=f.calls.find(c=>c.sql.includes('FROM "CashShiftSession"'));assert.deepEqual(q.values.slice(0,2),["c","s"]);assert.equal(q.values[2].toISOString(),"2026-10-19T04:00:00.000Z");assert.equal(q.values[3].toISOString(),"2026-10-12T04:00:00.000Z");
+});
+test("missing midweek shift, Sunday open/late closure, earlier unresolved, duplicates and foreign data hold the whole week",async()=>{
+ for(const mode of ["missing","open","late","old","duplicate","foreign","future","cap"]){
+  let rows=week();
+  if(mode==="missing")rows=rows.filter(r=>r.id!=="2-1");
+  if(mode==="open")Object.assign(rows.find(r=>r.id==="6-2"),{status:"OPEN",closedAt:null});
+  if(mode==="late")rows.find(r=>r.id==="6-2").closedAt=new Date("2026-10-19T10:00:00+03:00");
+  if(mode==="old")rows.push({...rows[0],id:"old",openedAt:reportWallTime("2026-10-11",7),status:"OPEN",closedAt:null});
+  if(mode==="duplicate")rows[4].id=rows[0].id;
+  if(mode==="foreign")rows[0].companyId="foreign";
+  if(mode==="future")rows.push({...rows[0],id:"future",openedAt:reportWallTime("2026-10-19",7)});
+  if(mode==="cap")rows=Array.from({length:1001},(_,i)=>({...rows[0],id:String(i)}));
+  const r=await readAutomaticCashPreview(fixture(rows).db,args());assert.equal(r.ready,false,mode);assert.equal(r.groups,null,mode);
+  if(mode==="missing")assert.ok(r.holds.some(h=>h.day==="2026-10-14"&&h.slot===2));
+ }
+ const r=await readAutomaticCashPreview(fixture(week()).db,{...args(),now:new Date("2026-10-19T06:59:59+03:00")});assert.equal(r.ready,false);assert.ok(r.holds.some(h=>h.day==="2026-10-18"&&h.code==="BUSINESS_DAY_NOT_FINISHED"));
+});

@@ -1,5 +1,5 @@
 import {createHash} from "node:crypto";
-import {dailyCashReportReadiness,reportBusinessPeriod,summarizeCashVariances} from "./automatic-report-policy.js";
+import {dailyCashReportReadiness,reportBusinessPeriod,reportDayOffset,cashPreviewPeriod,summarizeCashVariances} from "./automatic-report-policy.js";
 import {legacyCashControlRule,sameCashRule} from "./cash-control-rules.js";
 
 const error=(status,message)=>Object.assign(new Error(message),{status});
@@ -8,13 +8,16 @@ const sourceLimit=1000;
 // Internal read-only preview. No mail, DDL, financial posting or delivery claim.
 // The caller must authenticate the request; actorId is rechecked against the
 // current database, never accepted as a role assertion from the browser.
-export async function readAutomaticDailyCashPreview(db,{actorId,companyId,storeId,day,configuration,settingsVersion,now=new Date()}){
+export function readAutomaticDailyCashPreview(db,input){
+  return readAutomaticCashPreview(db,{...input,frequency:"DAILY"});
+}
+export async function readAutomaticCashPreview(db,{actorId,companyId,storeId,day,frequency="DAILY",configuration,settingsVersion,now=new Date()}){
   if(![actorId,companyId,storeId].every(v=>typeof v==="string"&&v.trim()))throw error(400,"Απαιτείται χρήστης, εταιρεία και επιλεγμένο κατάστημα.");
   if(!configuration||!Array.isArray(configuration.terminals))throw error(400,"Απαιτείται ρητή ρύθμιση τερματικών και βαρδιών.");
   const settings={...configuration,companyId,storeId,day};
   // Validate all settings even when the source is empty or unavailable.
   dailyCashReportReadiness([],settings,now);
-  const period=reportBusinessPeriod(day,day,settings);
+  const period=cashPreviewPeriod(day,frequency,settings);
   return db.$transaction(async tx=>{
     const actor=await tx.user.findUnique({where:{id:actorId},select:{id:true,role:true}});
     if(actor?.role!=="SUPER_ADMIN")throw error(403,"Η προεπισκόπηση αυτόματων αναφορών απαιτεί Super Admin.");
@@ -32,7 +35,24 @@ export async function readAutomaticDailyCashPreview(db,{actorId,companyId,storeI
       WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "openedAt"<${period.to}
         AND ("openedAt">=${period.from} OR "closedAt">${period.from} OR "closedAt" IS NULL OR "status"<>'CLOSED')
       ORDER BY "openedAt","id" LIMIT ${sourceLimit+1}`;
-    const readiness=dailyCashReportReadiness(rows,settings,now),holds=[...readiness.holds];
+    const dayReadiness=[];
+    for(let offset=0;offset<(frequency==="WEEKLY"?7:1);offset++){
+      const businessDay=reportDayOffset(period.fromDay,offset),bounds=reportBusinessPeriod(businessDay,businessDay,settings);
+      // Preserve the daily reader's carry-in ambiguity guard on every day.
+      const dailyRows=frequency==="DAILY"?rows:rows.filter(row=>{
+        const opened=new Date(row.openedAt),closed=row.closedAt?new Date(row.closedAt):null;
+        return !Number.isFinite(opened.getTime())||(opened<bounds.to&&(opened>=bounds.from||!closed||closed>bounds.from||row.status!=="CLOSED"));
+      });
+      dayReadiness.push({day:businessDay,...dailyCashReportReadiness(dailyRows,{...settings,day:businessDay},now)});
+    }
+    const holds=dayReadiness.flatMap(result=>result.holds.map(hold=>frequency==="WEEKLY"?{...hold,day:result.day}:hold));
+    if(frequency==="WEEKLY"){
+      const ids=new Set();
+      for(const row of rows){
+        if(!row.id||ids.has(row.id)||row.companyId!==companyId||row.storeId!==storeId||new Date(row.openedAt)>=period.to)holds.push({code:"SOURCE_SCOPE_OR_ID_INVALID"});
+        ids.add(row.id);
+      }
+    }
     // Legacy fallback is usable only after explicit confirmation in saved
     // reporting settings. An unconfigured internal caller still holds.
     const rule=rules[0]||(configuration.cashRule?legacyCashControlRule(store):null);
@@ -49,8 +69,8 @@ export async function readAutomaticDailyCashPreview(db,{actorId,companyId,storeI
     // Unknown or partial data is never a zero shortage. Only a complete ready
     // snapshot has totals; original employee amounts always remain unadjusted.
     const groups=ready?summarizeCashVariances(rows.map(row=>({...row,cashChain:row.terminalPos.toUpperCase().includes(rule.deliveryTerminalPattern.toUpperCase())?"DELIVERY":"STORE"})),settings):null;
-    const sourceFingerprint=createHash("sha256").update(JSON.stringify({companyId,storeId,day,configuration,rule,rows})).digest("hex");
-    return {kind:"DAILY_CASH_PREVIEW",store,period,ready,holds,sourceCount:rows.length,
+    const sourceFingerprint=createHash("sha256").update(JSON.stringify({companyId,storeId,day,frequency,period,configuration,rule,rows})).digest("hex");
+    return {kind:frequency==="WEEKLY"?"WEEKLY_CASH_PREVIEW":"DAILY_CASH_PREVIEW",frequency,store,period,ready,holds,dayReadiness,sourceCount:rows.length,
       complete:rows.length<=sourceLimit,groups,sourceFingerprint,generatedAt:new Date(now),
       rule:rule?{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled}:null,
       settingsVersion:settingsVersion??null,employeeLiabilityAdjusted:false,deliveryStatus:"PREVIEW_ONLY"};
