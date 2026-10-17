@@ -1,3 +1,7 @@
+## 17/10/2026 — RBS κεντρικός οδηγός / LIMITED USER PASS σύνδεσης ΚΑΤ
+
+Κεντρική διαδικασία: docs/installation/RBS_STORE_SETUP.md. Σωστή εταιρεία/κατάστημα, ενεργό POS→RBS→EFTPOS mapping, πραγματικοί RBS codes/folder, χωριστό πακέτο και ζεύξη ανά POS στον τελικό Windows χρήστη, έλεγχος, μία εκκίνηση και ONLINE. Ο ιδιοκτήτης επιβεβαίωσε σύνδεση/φάκελο και εκκίνηση KAT-POS-02 (ONLINE10:22:02), έπειτα KAT-POS-01 (φωτογραφία Connector KAT-POS-01/PASS authentication/folder, heartbeat14:02:33, «Είναι οκ»14:06 Athens). LIMITED USER PASS σύνδεσης μόνο, όχι μετρημένα οικονομικά/stock/Audit ή Windows-login startup. Source PR2637/healthy d4e130778d6c7cf6479180285a46678d877013d6, τοπικό hash πακέτου δεν ταυτοποιήθηκε. Owner13:33 «Ειναι οκ» καταγράφει περιορισμένη αποδοχή session logoutPOS02→loginPOS01 PR2640/healthy a1a4a333514a1ae024bbfdc03465124417800fc9. Κλείνει μόνο η αναμονή αυτών των επιβεβαιωμένων σκελών. Δεν επαναλαμβάνονται πληρωμές για καταγραφή. Windows startup/recovery, γενικό Gate4 και EFTPOS-CENTRAL-SETUP-01 modes/ονόματα μένουν ανοικτά στους υπάρχοντες owners. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-eftpos-central-setup.md. Ο οδηγός περιγράφει υπάρχουσα ροή, όχι νέο physical PASS κάθε RBS.
+
 ## 15/10/2026 — Μόνιμη αλλαγή τιμής POS και αναγνωρίσιμο προϊόν στα Συμβάντα — περιορισμένο LAB PASS
 
 Χρήση από εξουσιοδοτημένο χειριστή του επιλεγμένου καταστήματος με δικαίωμα «Αλλαγή τιμής λιανικής» και ενεργό «Επιτρέπεται αλλαγή τιμής POS» στο είδος. Στο κανονικό POS επιλέγει το προϊόν του καλαθιού και ανοίγει «Αλλαγή τιμής».

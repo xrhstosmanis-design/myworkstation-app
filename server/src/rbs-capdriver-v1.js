@@ -1,7 +1,7 @@
 const PAYMENT_LABELS={CASH:"ΜΕΤΡΗΤΑ",CARD:"ΚΑΡΤΑ"};
 export function resolveRbsCapDriverV1PaymentCode({storeId,paymentMethod,operationChannel="COUNTER",settings=null}={}){
   if(settings){
-    const code=paymentMethod==="CASH"&&operationChannel==="COUNTER"?settings.cashCode:paymentMethod==="CARD"?(operationChannel==="COUNTER"?settings.cardCode:operationChannel==="DELIVERY_DELAYED"?settings.deliveryCode:null):null;
+    const code=paymentMethod==="CASH"&&operationChannel==="COUNTER"?settings.cashCode:paymentMethod==="CARD"?(["COUNTER","COUNTER_DELAYED"].includes(operationChannel)?settings.cardCode:["DELIVERY_DELAYED","SECONDARY_IMMEDIATE"].includes(operationChannel)?settings.deliveryCode:null):null;
     if(/^\d{1,2}$/.test(String(code??"")))return String(code);
     throw new Error("Δεν έχει επιβεβαιωθεί ο κωδικός πληρωμής CAP Driver για αυτόν τον τρόπο πληρωμής.");
   }

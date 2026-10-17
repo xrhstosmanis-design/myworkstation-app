@@ -61,7 +61,7 @@ test("untracked POS line does not create a stock movement",async()=>{
 
 test("checkout binds each sale to its own terminal shift and fail-closed device route",()=>{
   assert.match(storePos,/UPPER\(TRIM\("terminalPos"\)\)=\$\{onlineRouting\?\.terminalPos\|\|terminalPos\} AND "status"='OPEN'/);
-  assert.match(storePos,/configuredPaymentRoute\(tx,\{companyId:req\.user\.companyId,storeId:store\.id,terminalPos:routedTerminalPos,channel:paymentChannel\}\)/);
+  assert.match(storePos,/configuredPaymentRoute\(tx,\{companyId:req\.user\.companyId,storeId:store\.id,terminalPos:routedTerminalPos,channel:paymentChannel,operationChannel:onlineOrder\|\|body\.fiscalRequestId\?null:body\.operationChannel\}\)/);
   assert.match(storePos,/sessionId:open\[0\]\.id,terminalPos/);
   assert.match(storePos,/NEGATIVE_STOCK_RECORDED/);
   assert.doesNotMatch(storePos,/COALESCE\(sp\."currentStock",0\)>=\$\{quantity\}/);
