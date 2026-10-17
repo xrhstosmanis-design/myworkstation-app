@@ -1,0 +1,37 @@
+{
+  "source_pr": 2671,
+  "source_head": "340e0dfe76a482a03c32680ec48bea87ee12ebc3",
+  "source_ci": {
+    "run": 39064694086,
+    "job": 117489856112,
+    "pass": 2910,
+    "fail": 0,
+    "skip": 0,
+    "backup_pass": 6
+  },
+  "main_revision": "891262f96cd3270d4fc0e53997851624ea6685d2",
+  "main_ci": {
+    "run": 39065083322,
+    "job": 117491021396,
+    "pass": 2915,
+    "fail": 0,
+    "skip": 0,
+    "backup_pass": 6
+  },
+  "runtime_test_paths_identical": 8,
+  "comparison": "Native git fetch of exact merged revision; git diff --exit-code against source head on all eight changed runtime/test files returned 0.",
+  "guard": {
+    "run": 39065506885,
+    "job": 117492230779,
+    "pinned_request_utc": "2026-10-17T20:10:02Z",
+    "healthy_utc": "2026-10-17T20:13:16Z",
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "891262f96cd3270d4fc0e53997851624ea6685d2"
+    }
+  },
+  "hosted_weekly_acceptance": "NOT TESTED: ordinary sign-in second-step confirmation expired. No credential values captured.",
+  "automatic_delivery": "NOT IMPLEMENTED/NOT ACTIVATED",
+  "business_action": "None; no financial, recipient, stock, fiscal, shift or protected payment replay."
+}
