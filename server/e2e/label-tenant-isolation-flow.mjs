@@ -1,3 +1,5 @@
+import {operatorSessionFixture} from "./helpers/operator-session-fixture.mjs";
+const operatorSessions=operatorSessionFixture();
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
 import {PrismaClient} from "@prisma/client";
@@ -10,6 +12,7 @@ const email="label-isolation-owner@myworkstation.test",password="label-isolation
 async function request(path,{method="GET",token,body}={}){
   const response=await fetch(base+path,{method,headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(body?{"content-type":"application/json"}:{})},body:body?JSON.stringify(body):undefined});
   let payload;try{payload=await response.json()}catch{payload=null}
+  operatorSessions.remember(path,response,payload);
   return {response,payload};
 }
 
@@ -40,4 +43,4 @@ try{
     assert.equal(JSON.stringify(denied.payload).includes("secret"),false,"Foreign label settings leaked");
   }
   console.log("Label isolation HTTP E2E PASS: own 200, same-company sibling 403, foreign company 403");
-}finally{await prisma.$disconnect()}
+}finally{await operatorSessions.logout(typeof baseUrl==="undefined"?base:baseUrl);await prisma.$disconnect()}

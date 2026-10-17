@@ -1,3 +1,5 @@
+import {operatorSessionFixture} from "./helpers/operator-session-fixture.mjs";
+const operatorSessions=operatorSessionFixture();
 import {withShiftCloseCardFixture} from "./helpers/shift-close-card-fixture.mjs";
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
@@ -20,6 +22,7 @@ async function request(path,{method="GET",token,body}={}){
   });
   let payload=null;
   try{payload=await response.json()}catch{}
+  operatorSessions.remember(path,response,payload);
   return {response,payload};
 }
 
@@ -159,4 +162,4 @@ async function main(){
   console.log("E2E live BackOffice operator permissions passed",{employeeId,sessionId,authorizedPayments:payments.length});
 }
 
-try{await main()}finally{await prisma.$disconnect()}
+try{await main()}finally{await operatorSessions.logout(typeof baseUrl==="undefined"?base:baseUrl);await prisma.$disconnect()}
