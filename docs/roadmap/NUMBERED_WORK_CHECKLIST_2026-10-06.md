@@ -295,7 +295,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `02`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN / ΥΠΑΡΧΟΥΣΑ ΑΝΑΘΕΣΗ
-- **Υπόλοιπο / όριο:** Κατάλογος, τιμές, ΦΠΑ, αρχικό απόθεμα, χειριστές και δικαιώματα· η αποδοχή LAB είναι χωριστή.
+- **Υπόλοιπο / όριο:** COMPANY-TAX-EDIT-01 independent source LIVE17Oct: existing company AFM fill on same ID, stale/duplicate guards and Audit; no actual AFM supplied/saved, AWAITING USER. PR2656/exact88579d6326fa444e20abed02231a1069c341f438/full PR+mainCI/guard39061606272. Owner fix/company-tax-terminal-delete-20261017, checkpoint2026-10-17-company-tax-terminal-delete; broader installation owner retained. Κατάλογος, τιμές, ΦΠΑ, αρχικό απόθεμα, χειριστές και δικαιώματα· η αποδοχή LAB είναι χωριστή.
 
 ## 03 — Software preflight και recovery dry-run στο πραγματικό PC
 
@@ -522,7 +522,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `REMOTE-INSTALL-01`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** ΜΕΡΙΚΟ USER PASS / OPEN
-- **Υπόλοιπο / όριο:** 08Oct17:37 CARD έγκριση/απόδειξη/εμφάνιση Συναλλαγών USER PASS μετά νέα πώληση που αναφέρθηκε17:35. Δεν επαναλαμβάνεται. Προηγούμενα CASH/επικοινωνία/save-message17:16/ONLINE17:20 προστατεύονται. Ποσό/SKU/IDs και ακριβής φυσική revision δεν καταγράφηκαν ανεξάρτητα· οικονομικά/stock/Audit/control/μοναδικότητα χρέωσης/receipt-content NOT TESTED. «φύρα χ.απόδειξη» μόνο αναφορά ενέργειας, όχι PASS φύρας/stock. Windows-login startup/recovery, συντομεύσεις readback και5λεπτη εγκατάσταση OPEN. Original remote wizard/fiscal owners και άλλες αναθέσεις διατηρούνται. Checkpoint2026-10-08-diadoxou-fiscal-profile.md.
+- **Υπόλοιπο / όριο:** TERMINAL-DELETE-01 independent admin control SOURCE LIVE17Oct: confirmed archive of inactive registration, preserve history/unique ID, OPEN shift/fiscal mapping refusal; no real terminal removed, AWAITING USER. PR2656/exact88579d6326fa444e20abed02231a1069c341f438/guard39061606272. Owner fix/company-tax-terminal-delete-20261017 only for this control; remote/physical installer owner and PASS remain protected. 08Oct17:37 CARD έγκριση/απόδειξη/εμφάνιση Συναλλαγών USER PASS μετά νέα πώληση που αναφέρθηκε17:35. Δεν επαναλαμβάνεται. Προηγούμενα CASH/επικοινωνία/save-message17:16/ONLINE17:20 προστατεύονται. Ποσό/SKU/IDs και ακριβής φυσική revision δεν καταγράφηκαν ανεξάρτητα· οικονομικά/stock/Audit/control/μοναδικότητα χρέωσης/receipt-content NOT TESTED. «φύρα χ.απόδειξη» μόνο αναφορά ενέργειας, όχι PASS φύρας/stock. Windows-login startup/recovery, συντομεύσεις readback και5λεπτη εγκατάσταση OPEN. Original remote wizard/fiscal owners και άλλες αναθέσεις διατηρούνται. Checkpoint2026-10-08-diadoxou-fiscal-profile.md.
 
 ## 37 — Μικτή πληρωμή RBS / EFTPOS
 
