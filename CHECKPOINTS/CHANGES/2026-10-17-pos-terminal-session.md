@@ -1,0 +1,4 @@
+## 17/10/2026 12:50 Europe/Athens — POS-TERMINAL-SESSION-01 / ASSIGNED / USER FAIL
+
+Owner `fix/pos-terminal-session-20261017`. Explicit owner request after KAT POS2 logout-before-shift still blocks POS1. Bounded new regression: one active operator per company/store/terminal before shift opening; same-operator reauthentication retires older same-terminal sessions; exact-session logout must report failure rather than erase retry credentials. Preserve other-terminal operator lock, OPEN shift owner, tenant/auth/device/fiscal/financial boundaries. Existing Gate4/No33 and POS-SHIFT-OWNER-EFTPOS owners retain their other scopes. User-reported FAIL; database cause and new LAB NOT TESTED. No production session/shift/business mutation. Claim must merge before source changes. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-pos-terminal-session.md.
+
