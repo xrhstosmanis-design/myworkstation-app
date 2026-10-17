@@ -1,3 +1,7 @@
+## 17/10/2026 - Native CI test assertion correction / AWAITING FINAL CI
+
+SourceCI39060435930/job117477214970:2897PASS/1FAIL/0SKIP. All identity/concurrent editor, role/store/actual HTTP, archive guards including blank/null MAIN, token/history/control and audit rollback cases passed. The single assertion expected English phrase unique constraint, while real Prisma reports P2010/meta.code23505 and Key already exists for the protected store/terminalPos uniqueness. Correct assertion to exact Prisma/PostgreSQL codes, retaining the actual attempted duplicate INSERT and all state assertions. No runtime code or guard changed; full final CI required. This is not acceptance of the failed candidate or a hosted business action.
+
 ## 17/10/2026 - COMPANY-TAX-EDIT-01 + TERMINAL-DELETE-01 / IMPLEMENTED / AWAITING FULL CI AND HOSTED ACCEPTANCE
 
 Owner fix/company-tax-terminal-delete-20261017 retained. ClaimPR2652 final62f86a0785c03e1d8f2592dc6b208cb93e7a3729/docsCI39059481935 applicable jobs SUCCESS merged66235c43152c9b649dfbfec65605e58ff8a36afa before source. Existing company identity editor fills missing nine-digit AFM on the same ID, explicit current-value/stale check, same-AFM editor concurrency/duplicate refusal and before/after Audit in one transaction. Existing nonempty AFM cannot silently become another business; name remains editable. Legacy company-creation APIs are unchanged. No business migration or document/credential/license rewrite.

@@ -65,7 +65,7 @@ test('native archive is scoped, idempotent, revokes activation and preserves clo
   for(const table of ['Company','Store','CashShiftSession','HistoricalInvoice','StoreFiscalDevice','StoreEftposDevice'])assert.deepEqual(after[table],before[table],table);assert.deepEqual(after.StoreInstallationTerminal.find(x=>x.row.id==='control'),before.StoreInstallationTerminal.find(x=>x.row.id==='control'));
   assert.equal(after.AuthAudit.length,1);assert.match(after.AuthAudit[0].row.event,/STORE_TERMINAL_DELETED:/);assert.doesNotMatch(after.AuthAudit[0].row.event,/synthetic-secret/);
   assert.equal((await f.db.$queryRaw`SELECT "id" FROM "StoreInstallationTerminal" WHERE "companyId"='c' AND "storeId"='s' AND "deletedAt" IS NULL`).length,0);
-  await assert.rejects(()=>f.db.$executeRawUnsafe(`INSERT INTO "StoreInstallationTerminal"("id","companyId","storeId","terminalPos","displayName","createdBy") VALUES('reuse','c','s','SYNTHETIC-POS','Reuse','sa')`),/unique constraint/);
+  await assert.rejects(()=>f.db.$executeRawUnsafe(`INSERT INTO "StoreInstallationTerminal"("id","companyId","storeId","terminalPos","displayName","createdBy") VALUES('reuse','c','s','SYNTHETIC-POS','Reuse','sa')`),error=>error?.code==='P2010'&&error?.meta?.code==='23505');
  }finally{await f.close()}
 });
 test('native archive refuses active terminal, normalized OPEN shift and fiscal mapping; audit failure rolls tombstone/token state back',{skip:!isolated},async()=>{
