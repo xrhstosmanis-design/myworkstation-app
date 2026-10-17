@@ -1,7 +1,7 @@
 import {z} from "zod";
 import {cashRuleFields,readCashControlRule,sameCashRule} from "./cash-control-rules.js";
 import {completedReportPeriod,dailyCashReportReadiness} from "./automatic-report-policy.js";
-import {readAutomaticDailyCashPreview} from "./automatic-report-source.js";
+import {readAutomaticCashPreview} from "./automatic-report-source.js";
 
 const fail=(status,message,code)=>{throw Object.assign(new Error(message),{status,code})};
 const cashRuleSchema=z.object({mode:z.enum(["FULL","DIFFERENCE_ONLY","POS_EFTPOS_ONLY"]),deliveryTerminalPattern:z.string().min(1).max(120),carryOverEnabled:z.boolean(),posEftposEnabled:z.boolean()}).strict();
@@ -53,10 +53,10 @@ export async function saveAutomaticReportSettings(db,scope,input){
     return {store,settings:await savedSettings(tx,scope.companyId,store.id),dispatchEnabled:false};
   });
 }
-export async function previewSavedAutomaticCashReport(db,scope,{day,expectedVersion},now=new Date()){
+export async function previewSavedAutomaticCashReport(db,scope,{day,expectedVersion,frequency="DAILY"},now=new Date()){
   await automaticReportScope(db,scope);
   const settings=await savedSettings(db,scope.companyId,scope.storeId);
   if(!settings)fail(409,"Αποθήκευσε πρώτα τις βάρδιες και τα ταμεία του καταστήματος.","REPORT_SETTINGS_REQUIRED");
   if(settings.version!==expectedVersion)fail(409,"Οι ρυθμίσεις άλλαξαν. Πάτησε Ανανέωση πριν την προεπισκόπηση.","REPORT_SETTINGS_CHANGED");
-  return readAutomaticDailyCashPreview(db,{...scope,day,configuration:settings.configuration,settingsVersion:settings.version,now});
+  return readAutomaticCashPreview(db,{...scope,day,frequency,configuration:settings.configuration,settingsVersion:settings.version,now});
 }

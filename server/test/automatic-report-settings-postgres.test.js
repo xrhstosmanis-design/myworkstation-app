@@ -17,6 +17,11 @@ test("native settings HTTP persists one optimistic winner, isolates scope and pr
   await db.$executeRaw`INSERT INTO "Store" VALUES('s','c','LAB',true,'existing@example.invalid'),('control','c','ΕΣΤΙΑ',true,NULL),('foreign','x','FOREIGN',true,NULL),('inactive','c','INACTIVE',false,NULL)`;
   await db.$executeRaw`INSERT INTO "CashControlStoreRule"("storeId","companyId","mode","deliveryTerminalPattern","carryOverEnabled","posEftposEnabled") VALUES('s','c','FULL','DELIVERY',true,true)`;
   for(const [id,hour,next,variance] of [["morning","07","2020-01-15T15:00:00+02:00",-10],["afternoon","15","2020-01-15T23:00:00+02:00",8],["night","23","2020-01-16T07:00:00+02:00",0]])await db.$executeRaw`INSERT INTO "CashShiftSession"("id","companyId","storeId","terminalPos","status","openedBy","openedByName","openedAt","closedAt","variance") VALUES(${id},'c','s','MAIN','CLOSED','employee','Employee',${new Date(`2020-01-15T${hour}:00:00+02:00`)},${new Date(next)},${variance})`;
+  // Complete the other six business days of this Monday–Sunday week.
+  for(const day of ["2020-01-13","2020-01-14","2020-01-16","2020-01-17","2020-01-18","2020-01-19"]){
+   const next=new Date(Date.parse(day+"T12:00:00Z")+86400000).toISOString().slice(0,10);
+   for(const [slot,hour,end] of [[0,"07","15"],[1,"15","23"],[2,"23","07"]])await db.$executeRaw`INSERT INTO "CashShiftSession"("id","companyId","storeId","terminalPos","status","openedBy","openedByName","openedAt","closedAt","variance") VALUES(${day+"-"+slot},'c','s','MAIN','CLOSED','employee','Employee',${new Date(day+"T"+hour+":00:00+02:00")},${new Date((slot===2?next:day)+"T"+end+":00:00+02:00")},0)`;
+  }
   const {ensureAutomaticReportSettingsSchema}=await import("../src/services/automatic-report-settings.js");await ensureAutomaticReportSettingsSchema(db);
   const snapshot=async()=>({shifts:await db.$queryRaw`SELECT * FROM "CashShiftSession" ORDER BY "id"`,stores:await db.$queryRaw`SELECT * FROM "Store" ORDER BY "id"`,rules:await db.$queryRaw`SELECT * FROM "CashControlStoreRule" ORDER BY "storeId"`});
   const before=await snapshot(),express=(await import("express")).default,{createAutomaticReportSettingsRouter}=await import("../src/routes/automatic-report-settings.js");
@@ -32,6 +37,14 @@ test("native settings HTTP persists one optimistic winner, isolates scope and pr
   const reopened=await request();assert.equal(reopened.body.settings.version,1);assert.deepEqual(reopened.body.settings.configuration,config);
   previewVersion=1;const preview=await request(base+"/preview","POST",{day:"2020-01-15",expectedVersion:previewVersion});assert.equal(preview.status,200);assert.equal(preview.body.ready,true);assert.equal(preview.body.settingsVersion,1);assert.equal(preview.body.deliveryStatus,"PREVIEW_ONLY");assert.equal(preview.body.groups[0].netVariance,-2);assert.equal(preview.body.groups[0].rows[0].variance,-10);
   assert.equal((await request(base+"/preview","POST",{day:"2020-01-15",expectedVersion:previewVersion,configuration:config})).status,400);
+  const weeklyBody={day:"2020-01-15",expectedVersion:1,frequency:"WEEKLY"};
+  const weekly=await request(base+"/preview","POST",weeklyBody);
+  assert.equal(weekly.status,200);assert.equal(weekly.body.ready,true);assert.equal(weekly.body.kind,"WEEKLY_CASH_PREVIEW");assert.equal(weekly.body.sourceCount,21);assert.equal(weekly.body.dayReadiness.length,7);assert.equal(weekly.body.period.fromDay,"2020-01-13");assert.equal(weekly.body.period.toDay,"2020-01-19");assert.equal(weekly.body.period.to,"2020-01-20T05:00:00.000Z");
+  assert.equal((await request(base+"/preview","POST",{...weeklyBody,frequency:"MONTHLY"})).status,400);
+  assert.equal((await request(base+"/preview","POST",weeklyBody,"owner")).status,403);
+  await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='OPEN',"closedAt"=NULL WHERE "id"='2020-01-19-2'`;
+  const sundayOpen=await request(base+"/preview","POST",weeklyBody);assert.equal(sundayOpen.body.groups,null);assert.ok(sundayOpen.body.holds.some(h=>h.day==="2020-01-19"&&h.code==="THIRD_SHIFT_OPEN"));
+  await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='CLOSED',"closedAt"=${new Date("2020-01-20T07:00:00+02:00")} WHERE "id"='2020-01-19-2'`;
   const updates=await Promise.all([request(base,"PUT",{expectedVersion:1,configuration:config}),request(base,"PUT",{expectedVersion:1,configuration:config})]);assert.deepEqual(updates.map(r=>r.status).sort(),[200,409]);assert.equal((await request()).body.settings.version,2);assert.equal((await request(base+"/preview","POST",{day:"2020-01-15",expectedVersion:1})).body.code,"REPORT_SETTINGS_CHANGED");previewVersion=2;
   for(const actor of ["owner","missing"]){assert.equal((await request(base,"GET",undefined,actor)).status,403);assert.equal((await request(base,"PUT",{expectedVersion:2,configuration:config},actor)).status,403);assert.equal((await request(base+"/preview","POST",{day:"2020-01-15",expectedVersion:previewVersion},actor)).status,403)}
   assert.equal((await request(base,"GET",undefined,null)).status,401);
