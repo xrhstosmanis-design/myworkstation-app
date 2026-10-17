@@ -1,3 +1,7 @@
+## 17/10/2026 21:54 Europe/Athens — INVENTORY-POSTED-SOURCE-BLOCKER-01 / LIMITED USER PASS / CLOSED BOUNDED BLOCKER
+
+Owner explicitly replied «ΝΑΙ ΕΙΝΑΙ ΟΚ» after the refreshed original-pair preview instructions. Record only USER confirmation that an already posted POS source no longer blocks preview. Source4490e075 had independently verified healthy release21:46; user's own client SHA/browser/role was not independently measured at confirmation. No executed final merge or measured stock/payment/control effect is inferred. The later different supplier-link blocker is a separate new case, not a reopening of this accepted historical-source correction. Remove this bounded residual from pending and synchronize tested preview instructions in docs/manual/inventory/PASS.md plus numbered39/PDF. Original feat/inventory-bulk-vat-20261015 actual merge/bulk/physical acceptance remains OPEN. No old transaction or accepted merge is replayed for evidence.
+
 ## 17/10/2026 21:46 Europe/Athens — INVENTORY-POSTED-SOURCE-BLOCKER-01 / SOURCE RELEASED / AWAITING USER PREVIEW
 
 Owner fix/inventory-posted-source-blocker-20261017 retained for this bounded correction. Explicit transfer from feat/inventory-bulk-vat-20261015 authorized17Oct21:27; claimPR2648/head7d442ea8/docsCI39058241666 SUCCESS merged1b72f345 before source. Original measured bulk-save/identical-product merge/physical acceptance remains with feat/inventory-bulk-vat-20261015; no broader takeover.
