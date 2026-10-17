@@ -1,3 +1,4 @@
+import {registerPlatformMaintenanceRoutes} from "../services/platform-company-terminal-maintenance.js";
 import {readCashExpenseEvidence,cashExpenseFindings} from "../services/cash-expense-evidence.js";
 import {readCashReviewState} from "../services/cash-review-balance.js";
 import {partitionCashAuditEvents} from "../services/cash-audit-association.js";
@@ -50,6 +51,7 @@ router.use((req,res,next)=>{
   next();
 });
 
+registerPlatformMaintenanceRoutes(router,prisma,ensureInstallationTables);
 router.use("/ai-credits",aiCreditRoutes);
 router.use("/companies/:companyId/stores/:storeId/report-settings",createAutomaticReportSettingsRouter(prisma));
 const n40Fixture=createN40FixtureHandlers({prisma,hash:bcrypt.hash});
@@ -81,6 +83,7 @@ async function ensureInstallationTables(){
         "activatedAt" TIMESTAMPTZ,"lastSeenAt" TIMESTAMPTZ,"createdBy" TEXT NOT NULL,
         "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE ("storeId","terminalPos"))`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "StoreInstallationTerminal" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMPTZ`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreInstallationTerminal_store_active_idx" ON "StoreInstallationTerminal" ("storeId","active")`);
       await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreFiscalDevice" (
         "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,
@@ -584,7 +587,7 @@ router.get("/companies/:companyId/stores/:storeId/installation-terminals",async(
     await ensureInstallationTables();
     const store=await installationStore(req.params.companyId,req.params.storeId);
     const rows=await prisma.$queryRaw`
-      SELECT * FROM "StoreInstallationTerminal" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id}
+      SELECT * FROM "StoreInstallationTerminal" WHERE "companyId"=${store.companyId} AND "storeId"=${store.id} AND "deletedAt" IS NULL
       ORDER BY "createdAt" ASC
     `;
     res.json({store:{id:store.id,name:store.name},terminals:rows.map(terminalView)});
@@ -618,11 +621,12 @@ router.post("/companies/:companyId/stores/:storeId/installation-terminals/:termi
   try{
     await ensureInstallationTables();
     const store=await installationStore(req.params.companyId,req.params.storeId);
-    const existing=await prisma.$queryRaw`SELECT * FROM "StoreInstallationTerminal" WHERE "id"=${req.params.terminalId} AND "storeId"=${store.id} AND "companyId"=${store.companyId} LIMIT 1`;
+    const existing=await prisma.$queryRaw`SELECT * FROM "StoreInstallationTerminal" WHERE "id"=${req.params.terminalId} AND "storeId"=${store.id} AND "companyId"=${store.companyId} AND "deletedAt" IS NULL LIMIT 1`;
     if(!existing[0])return res.status(404).json({error:"Δεν βρέθηκε το τερματικό."});
     if(!existing[0].active)return res.status(409).json({error:"Ενεργοποιήστε πρώτα το τερματικό."});
     const activation=newActivation(existing[0]);
-    await prisma.$executeRaw`UPDATE "StoreInstallationTerminal" SET "tokenHash"=${activation.tokenHash},"tokenExpiresAt"=${activation.expiresAt},"updatedAt"=NOW() WHERE "id"=${existing[0].id}`;
+    const updated=await prisma.$executeRaw`UPDATE "StoreInstallationTerminal" SET "tokenHash"=${activation.tokenHash},"tokenExpiresAt"=${activation.expiresAt},"updatedAt"=NOW() WHERE "id"=${existing[0].id} AND "active"=TRUE AND "deletedAt" IS NULL`;
+    if(!updated)return res.status(409).json({error:"Το τερματικό άλλαξε ή διαγράφηκε. Ανανέωσε τη λίστα."});
     await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"STORE_TERMINAL_ACTIVATION_ROTATED",success:true,deviceName:`${store.name} · ${existing[0].terminalPos}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
     res.json({...terminalView(existing[0]),activationPending:true,tokenExpiresAt:activation.expiresAt,activationPath:activation.activationPath});
   }catch(error){next(error)}
@@ -635,7 +639,7 @@ router.patch("/companies/:companyId/stores/:storeId/installation-terminals/:term
     const body=z.object({active:z.boolean()}).parse(req.body||{});
     const rows=await prisma.$queryRaw`
       UPDATE "StoreInstallationTerminal" SET "active"=${body.active},"tokenHash"=CASE WHEN ${body.active}=FALSE THEN NULL ELSE "tokenHash" END,"tokenExpiresAt"=CASE WHEN ${body.active}=FALSE THEN NULL ELSE "tokenExpiresAt" END,"updatedAt"=NOW()
-      WHERE "id"=${req.params.terminalId} AND "storeId"=${store.id} AND "companyId"=${store.companyId} RETURNING *
+      WHERE "id"=${req.params.terminalId} AND "storeId"=${store.id} AND "companyId"=${store.companyId} AND "deletedAt" IS NULL RETURNING *
     `;
     if(!rows[0])return res.status(404).json({error:"Δεν βρέθηκε το τερματικό."});
     await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:body.active?"STORE_TERMINAL_ENABLED":"STORE_TERMINAL_DISABLED",success:true,deviceName:`${store.name} · ${rows[0].terminalPos}`,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
