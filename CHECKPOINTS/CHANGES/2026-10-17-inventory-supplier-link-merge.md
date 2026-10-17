@@ -1,6 +1,6 @@
-## 17/10/2026 — INVENTORY-SUPPLIER-LINK-MERGE-01 / INITIAL FULL CI PASS / SYNCHRONIZING MAIN
+## 17/10/2026 — INVENTORY-SUPPLIER-LINK-MERGE-01 / TWO FULL NATIVE CI RUNS PASS / RECORD SYNC
 
-PR2664/head36c408e3/fullCI39062754920/job117484025147 SUCCESS2906PASS/0FAIL/0SKIP plus6backup, all native/build/browser/Windows/invariant/HTTP checks. New actual native merge/link/mapping proof passed; no production action or new LAB/USER PASS. Concurrent main changed shared records before merge. Preserve all current main source and owners, retain exactly the accepted four owned runtime/test blobs, publish combined head and rerun fullCI. Same owner fix/inventory-supplier-link-merge-20261017; no guard weakening. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-inventory-supplier-link-merge.md.
+Retained owner fix/inventory-supplier-link-merge-20261017. Original36c408e3/full39062754920/job117484025147 and combined9d78f745/full39063254311/job117485561246 both SUCCESS2906PASS/0FAIL/0SKIP plus6backup/all required native/Windows/browser/build/invariants/HTTP checks. All four owned runtime/test blobs identical between these accepted runs. A new docs-only Platform layout claim220ad4bb touched the three shared records and conflicted with top-inserted progress. Preserve that claim and position this progress beside this scope's own existing claim instead of the global record boundary, avoiding repeated prefix conflicts. No runtime/test guard change or weakened assertion. New combined head gets required CI before merge; production merge and new USER acceptance remain NOT TESTED.
 
 ## 17/10/2026 — INVENTORY-SUPPLIER-LINK-MERGE-01 / IMPLEMENTED / AWAITING NATIVE CI + RELEASE
 
