@@ -1,8 +1,12 @@
-## New single-POS installation package
+## Terminal-bound installation package — source PR2637
 
-Platform Admin → Installation Center → store → Installation Guide now supports saving confirmed RBS payment codes and the watched folder per physical POS, then downloading a single installer. STORE EFTPOS is sufficient; Delivery is optional. The installer embeds the current three scripts and store identity without credentials. Run its menu on the final Windows user: Pair, safe connection check, then explicit Writer start. `-Action PREPARE` only extracts files and makes no network call. No RBS driver install, hardware reconfiguration, automatic startup or physical acceptance is implied.
+The Platform Admin Installation Guide saves confirmed payment codes, CAPDriver folder and equipment per company/store/POS, then downloads the selected terminal's installer. A register can have STORE and optional DELIVERY EFTPOS. Each PC uses its own selected package and a fresh code from the correct BackOffice on the final Windows user. Never copy a credential from another PC/store.
 
-New stores require explicit payment codes. KAT retains its confirmed 6/2/3 compatibility. Equipment replacement invalidates old settings. Pair and connection checks reject a different store. Runtime license/CONNECTOR_RBS gates remain active. Package generation blocks multiple active POS because the current writer queue is store-wide.
+New Pair asks the server to bind the credential to the exact POS and current confirmed register/settings; the signed token owns that authorization. Status and polling revalidate it. Poll bodies and heartbeat metadata cannot select another terminal. Each request is claimed only once within its company/store/terminal. A changed register, EFTPOS, payment code or folder requires confirmation and a new pairing/package. Old unbound Writers continue only against one explicit mapped register; they refuse ambiguous multi-register stores. The new guided package can be downloaded for a selected confirmed active POS without confusing another home/test terminal with a cash register.
+
+PREPARE and opening the GUI do not pair, start Writer or issue a receipt. The safe check confirms store/POS/register and folder access without claiming a request. Pair on the final PC, then explicit Start and verify WRITER ONLINE before any accepted physical test. Startup is optional for the same Windows login; no CAPDriver/service restart is included. Packages extract into packages/<storeId>/<terminalPos>. The Writer rejects an unexpected terminal before writing a command file. KAT PC2 is accepted first; PC1 later with its own mapping/codes. Existing paid transactions are never replayed for documentation.
+
+Full source CI passed2880/0/0 plus6backup and Windows/native HTTP checks. Production release and physical device acceptance are recorded separately in CHECKPOINTS/CHANGES/2026-10-17-kat-terminal-connector.md. CI is not hardware/LAB PASS. CONNECTOR_RBS/license and current equipment checks remain mandatory. KAT6/2/3 compatibility and mixed-payment blocking remain unchanged.
 
 ## Authoritative installation guide (03 October 2026)
 
