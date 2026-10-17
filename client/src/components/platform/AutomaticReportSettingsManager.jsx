@@ -1,7 +1,7 @@
 import React,{useEffect,useId,useRef,useState} from "react";
 import "./automatic-report-settings.css";
 
-const dateTime=value=>new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens"});
+const dateTime=value=>new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false});
 const money=v=>Number(v).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const modeNames={FULL:"Πλήρης έλεγχος",DIFFERENCE_ONLY:"Μόνο διαφορά",POS_EFTPOS_ONLY:"Μόνο POS / EFTPOS"};
 const holdNames={TERMINALS_NOT_CONFIGURED:"Δεν έχουν δηλωθεί ταμεία.",THIRD_SHIFT_NOT_CONFIGURED:"Δεν έχει δηλωθεί τρίτη βάρδια.",BUSINESS_DAY_NOT_FINISHED:"Δεν έχει ολοκληρωθεί η επιχειρησιακή ημέρα.",SOURCE_SCOPE_OR_ID_INVALID:"Υπάρχει ασαφής, επικαλυπτόμενη ή προηγούμενη ανολοκλήρωτη βάρδια.",UNCONFIGURED_TERMINAL:"Βρέθηκε ταμείο που δεν περιλαμβάνεται στη ρύθμιση.",SHIFT_NOT_CLOSED:"Η βάρδια δεν έχει έγκυρο κλείσιμο.",SHIFT_VARIANCE_UNKNOWN:"Δεν έχει καταγραφεί έγκυρη διαφορά βάρδιας.",MISSING_SHIFTS:"Λείπουν αναμενόμενες βάρδιες.",SHIFT_SLOT_MISSING:"Λείπει αναμενόμενη πρωινή ή απογευματινή βάρδια.",THIRD_SHIFT_MISSING:"Λείπει η τρίτη βάρδια.",THIRD_SHIFT_OPEN:"Η τρίτη βάρδια παραμένει ανοιχτή.",SOURCE_LIMIT_EXCEEDED:"Τα δεδομένα υπερβαίνουν το όριο ανάγνωσης· δεν εμφανίζονται μερικά σύνολα.",CASH_RULE_NOT_CONFIGURED:"Δεν έχει επιβεβαιωθεί ο κανόνας ταμείου.",CASH_MODE_UNSUPPORTED:"Η αναφορά διαφοράς μετρητών δεν υποστηρίζεται στη λειτουργία μόνο POS / EFTPOS.",DELIVERY_PATTERN_NOT_CONFIGURED:"Δεν έχει προσδιοριστεί η αλυσίδα delivery.",CASH_RULE_CHANGED:"Ο κανόνας ταμείου άλλαξε. Ανανέωσε και επιβεβαίωσε ξανά τις ρυθμίσεις.",REPORT_SETTINGS_CHANGED:"Οι ρυθμίσεις άλλαξαν. Πάτησε Ανανέωση."};
