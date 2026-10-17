@@ -9,6 +9,8 @@ import {companyModuleState} from "../middleware/module-access.js";
 import {ensureRbsCapDriverV1RequestSchema,rbsCapDriverV1DispatchTransition} from "../rbs-capdriver-v1-requests.js";
 import {finalizeDispatchedCashRequest} from "../rbs-capdriver-v1-sale-finalize.js";
 
+import {bindRbsPairing,resolveRbsDeviceTerminal,claimTerminalRbsRequest} from "../services/rbs-terminal-binding.js";
+
 const router = Router();
 const DEVICE_TOKEN_TTL = process.env.CLOUD_DEVICE_TOKEN_TTL || "180d";
 let tablesPromise;
@@ -162,13 +164,14 @@ async function change({companyId,storeId,entityType,entityId,action,payload}){
   `;
   return rows[0];
 }
-function deviceToken(device){
+function deviceToken(device,rbsBinding){
   return jwt.sign({
     tokenType:"STORE_DEVICE",
     deviceId:device.id,
     companyId:device.companyId,
     storeId:device.storeId,
-    tokenVersion:device.tokenVersion
+    tokenVersion:device.tokenVersion,
+    ...(rbsBinding?{rbsBinding}:{})
   },deviceSecret(),{expiresIn:DEVICE_TOKEN_TTL});
 }
 async function deviceAuth(req,res,next){
@@ -185,6 +188,7 @@ async function deviceAuth(req,res,next){
     if(!device||device.status!=="ACTIVE"||device.tokenVersion!==payload.tokenVersion) return res.status(401).json({error:"Η συσκευή δεν είναι ενεργή."});
     assertCustomerDemoOutboundAllowed(device);
     req.device=device;
+    req.rbsBinding=payload.rbsBinding||null;
     next();
   }catch(error){
     if(error?.code==="CUSTOMER_DEMO_OUTBOUND_BLOCKED")return res.status(error.status).json({error:error.message,code:error.code});
@@ -213,7 +217,9 @@ router.post("/pair",route(async(req,res)=>{
     deviceName:z.string().min(2).max(120),
     deviceKey:z.string().min(6).max(200).optional(),
     platform:z.string().max(80).optional(),
-    metadata:z.record(z.unknown()).optional()
+    metadata:z.record(z.unknown()).optional(),
+    expectedStoreId:z.string().min(1).max(120).optional(),
+    terminalPos:z.string().regex(/^[A-Z0-9_-]{2,80}$/).optional()
   }).parse(req.body);
   const hash=codeHash(body.code);
   const pairRows=await prisma.$queryRaw`
@@ -227,6 +233,14 @@ router.post("/pair",route(async(req,res)=>{
   if(!pair||!pair.storeActive) fail(400,"Ο κωδικός σύνδεσης δεν είναι έγκυρος ή έχει λήξει.");
 
   assertCustomerDemoOutboundAllowed(pair);
+  if(body.expectedStoreId&&body.expectedStoreId!==pair.storeId)fail(409,"Ο κωδικός ανήκει σε άλλο κατάστημα. Δεν άλλαξε η υπάρχουσα σύνδεση.");
+  let rbsBinding=null;
+  if(body.terminalPos){
+    if(body.platform!=="WINDOWS_RBS_CAPDRIVER_V1")fail(400,"Η αντιστοίχιση POS αφορά μόνο Writer CAPDriver.");
+    rbsBinding=await bindRbsPairing(prisma,pair,body.terminalPos);
+  }
+  const pairMetadata=Object.fromEntries(Object.entries(body.metadata||{}).filter(([key])=>!key.startsWith('rbsCapDriver')));
+  if(rbsBinding)pairMetadata.rbsCapDriverBinding=rbsBinding;
   const deviceKey=body.deviceKey||crypto.randomUUID();
   const existing=await prisma.$queryRaw`
     SELECT * FROM "CloudDevice" WHERE "storeId"=${pair.storeId} AND "deviceKey"=${deviceKey} LIMIT 1
@@ -236,7 +250,7 @@ router.post("/pair",route(async(req,res)=>{
     const updated=await prisma.$queryRaw`
       UPDATE "CloudDevice"
       SET "name"=${body.deviceName},"platform"=${body.platform||null},"status"='ACTIVE',
-          "tokenVersion"="tokenVersion"+1,"metadata"=CAST(${JSON.stringify(body.metadata||{})} AS jsonb),
+          "tokenVersion"="tokenVersion"+1,"metadata"=CAST(${JSON.stringify(pairMetadata)} AS jsonb),
           "pairedAt"=NOW(),"lastSeenAt"=NOW(),"revokedAt"=NULL
       WHERE "id"=${existing[0].id}
       RETURNING *
@@ -245,7 +259,7 @@ router.post("/pair",route(async(req,res)=>{
   }else{
     const inserted=await prisma.$queryRaw`
       INSERT INTO "CloudDevice" ("id","companyId","storeId","deviceKey","name","platform","metadata","lastSeenAt")
-      VALUES (${crypto.randomUUID()},${pair.companyId},${pair.storeId},${deviceKey},${body.deviceName},${body.platform||null},CAST(${JSON.stringify(body.metadata||{})} AS jsonb),NOW())
+      VALUES (${crypto.randomUUID()},${pair.companyId},${pair.storeId},${deviceKey},${body.deviceName},${body.platform||null},CAST(${JSON.stringify(pairMetadata)} AS jsonb),NOW())
       RETURNING *
     `;
     device=inserted[0];
@@ -255,7 +269,7 @@ router.post("/pair",route(async(req,res)=>{
   `;
   if(consumed!==1) fail(409,"Ο κωδικός σύνδεσης χρησιμοποιήθηκε ήδη.");
   await audit({companyId:pair.companyId,storeId:pair.storeId,actorType:"DEVICE",actorId:device.id,eventType:"DEVICE_PAIRED",details:{name:device.name,platform:device.platform}});
-  send(res,{token:deviceToken(device),device:{id:device.id,name:device.name,deviceKey:device.deviceKey,storeId:device.storeId},store:{id:pair.storeId,name:pair.storeName}},201);
+  send(res,{token:deviceToken(device,rbsBinding),device:{id:device.id,name:device.name,deviceKey:device.deviceKey,storeId:device.storeId,terminalPos:rbsBinding?.terminalPos||null,fiscalDeviceCode:rbsBinding?.fiscalDeviceCode||null},store:{id:pair.storeId,name:pair.storeName}},201);
 }));
 
 router.get("/device/bootstrap",deviceAuth,route(async(req,res)=>{
@@ -271,8 +285,11 @@ router.get("/device/bootstrap",deviceAuth,route(async(req,res)=>{
 
 router.post("/device/heartbeat",deviceAuth,route(async(req,res)=>{
   const body=z.object({metadata:z.record(z.unknown()).optional()}).parse(req.body||{});
+  const metadata={...(body.metadata||req.device.metadata||{})};
+  for(const key of Object.keys(metadata))if(key.startsWith('rbsCapDriver'))delete metadata[key];
+  for(const [key,value] of Object.entries(req.device.metadata||{}))if(key.startsWith('rbsCapDriver'))metadata[key]=value;
   await prisma.$executeRaw`
-    UPDATE "CloudDevice" SET "lastSeenAt"=NOW(),"metadata"=CAST(${JSON.stringify(body.metadata||req.device.metadata||{})} AS jsonb)
+    UPDATE "CloudDevice" SET "lastSeenAt"=NOW(),"metadata"=CAST(${JSON.stringify(metadata)} AS jsonb)
     WHERE "id"=${req.device.id}
   `;
   send(res,{ok:true,serverTime:new Date().toISOString()});
@@ -357,24 +374,23 @@ router.post("/device/observer/events",deviceAuth,route(async(req,res)=>{
 function requireCapDriverV1Writer(device){
   if(device.platform!=="WINDOWS_RBS_CAPDRIVER_V1")fail(403,"Η συσκευή δεν έχει εγγραφεί ως CAP Driver v1 writer.");
 }
-async function markCapDriverV1WriterOnline(device){
-  await prisma.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW(),"metadata"=COALESCE("metadata",'{}'::jsonb)||jsonb_build_object('rbsCapDriverV1WriterPoll',TRUE,'rbsCapDriverV1WriterVersion','v1') WHERE "id"=${device.id}`;
+async function markCapDriverV1WriterOnline(db,device,terminal){
+  await db.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW(),"metadata"=COALESCE("metadata",'{}'::jsonb)||jsonb_build_object('rbsCapDriverV1WriterPoll',TRUE,'rbsCapDriverV1WriterVersion','v1','rbsCapDriverV1TerminalPos',${terminal.terminalPos}::text,'rbsCapDriverV1FiscalDeviceCode',${terminal.fiscalDeviceCode}::text,'rbsCapDriverV1PolledAt',NOW()) WHERE "id"=${device.id}`;
 }
 router.post("/device/rbs-capdriver-v1/status",deviceAuth,route(async(req,res)=>{
   requireCapDriverV1Writer(req.device);
   await requireRbsConnectorModule(req.device);
-  send(res,{ok:true,connectionOk:true,storeId:req.device.storeId,writerOnline:false,serverTime:new Date().toISOString(),claimsRequest:false});
+  const terminal=await resolveRbsDeviceTerminal(prisma,req.device,req.rbsBinding);
+  send(res,{ok:true,connectionOk:true,storeId:req.device.storeId,terminalPos:terminal.terminalPos,fiscalDeviceCode:terminal.fiscalDeviceCode,writerOnline:false,serverTime:new Date().toISOString(),claimsRequest:false});
 }));
 router.post("/device/rbs-capdriver-v1/next",deviceAuth,route(async(req,res)=>{
   requireCapDriverV1Writer(req.device);
   await requireRbsConnectorModule(req.device);
   await ensureRbsCapDriverV1RequestSchema(prisma);
-  await markCapDriverV1WriterOnline(req.device);
   const request=await prisma.$transaction(async tx=>{
-    const rows=await tx.$queryRaw`SELECT "id" FROM "RbsCapDriverV1Request" WHERE "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "status"='PREPARED' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED`;
-    if(!rows[0])return null;
-    const claimed=await tx.$queryRaw`UPDATE "RbsCapDriverV1Request" SET "status"='CLAIMED',"claimedByDeviceId"=${req.device.id},"claimedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${rows[0].id} AND "status"='PREPARED' RETURNING "id","terminalPos","paymentMethod","total","commandText","commandHash","claimedAt"`;
-    return claimed[0]||null;
+    const terminal=await resolveRbsDeviceTerminal(tx,req.device,req.rbsBinding);
+    await markCapDriverV1WriterOnline(tx,req.device,terminal);
+    return claimTerminalRbsRequest(tx,req.device,terminal);
   });
   send(res,{request:request?{id:request.id,terminalPos:request.terminalPos,paymentMethod:request.paymentMethod,total:Number(request.total),commandText:request.commandText,commandHash:request.commandHash,claimedAt:request.claimedAt}:null,oneShot:true,outputFolderUsed:false});
 }));
@@ -404,7 +420,7 @@ router.get("/stores/:storeId/overview",auth,requireCloudManager,route(async(req,
     prisma.$queryRaw`SELECT * FROM "CloudAudit" WHERE "storeId"=${store.id} ORDER BY "createdAt" DESC LIMIT 20`
   ]);
   const now=Date.now();
-  const normalized=devices.map(device=>{const isWriter=device.platform==="WINDOWS_RBS_CAPDRIVER_V1",writerPolled=device.metadata?.rbsCapDriverV1WriterPoll===true,writerOnline=isWriter&&writerPolled&&device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.lastSeenAt).getTime()<15000;return {...device,isOnline:isWriter?Boolean(writerOnline):Boolean(device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.lastSeenAt).getTime()<120000),writerOnline:Boolean(writerOnline)}});
+  const normalized=devices.map(device=>{const isWriter=device.platform==="WINDOWS_RBS_CAPDRIVER_V1",writerPolled=device.metadata?.rbsCapDriverV1WriterPoll===true,writerOnline=isWriter&&writerPolled&&device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.metadata?.rbsCapDriverV1PolledAt||device.lastSeenAt).getTime()<15000;return {...device,isOnline:isWriter?Boolean(writerOnline):Boolean(device.status==="ACTIVE"&&device.lastSeenAt&&now-new Date(device.lastSeenAt).getTime()<120000),writerOnline:Boolean(writerOnline)}});
   send(res,{store,devices:normalized,catalog,latestChange:latestChange[0]||null,audit:auditRows});
 }));
 

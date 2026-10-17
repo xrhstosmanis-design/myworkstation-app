@@ -2,7 +2,9 @@ param(
   [string]$ApiBase = $env:MWS_RBS_API_BASE,
   [string]$DeviceToken = $env:MWS_RBS_DEVICE_TOKEN,
   [string]$WorkFolder = $env:MWS_RBS_WORKFOLDER,
-  [string]$ExpectedStoreId
+  [string]$ExpectedStoreId,
+  [string]$ExpectedTerminalPos,
+  [string]$ExpectedFiscalDeviceCode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -28,6 +30,9 @@ $headers = @{ Authorization = "Bearer $DeviceToken" }
 $result = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/cloud/v1/device/rbs-capdriver-v1/status" -Headers $headers -ContentType 'application/json' -Body '{}'
 if (-not $result.connectionOk -or $result.writerOnline -or $result.claimsRequest) { throw 'MyWorkStation did not confirm the safe Writer connection check.' }
 if ($ExpectedStoreId -and [string]$result.storeId -ne $ExpectedStoreId) { throw 'The saved Windows credential belongs to another store. Pair with the correct store before starting Writer.' }
+
+if ($ExpectedTerminalPos -and [string]$result.terminalPos -ne $ExpectedTerminalPos) { throw 'The saved credential does not match this POS. Pair the correct terminal before starting.' }
+if ($ExpectedFiscalDeviceCode -and [string]$result.fiscalDeviceCode -ne $ExpectedFiscalDeviceCode) { throw 'The saved credential does not match this cash register.' }
 
 Write-Host 'PASS: Writer authentication and server connection are valid.'
 Write-Host "PASS: CAP Driver work folder exists: $WorkFolder"

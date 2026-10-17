@@ -11,7 +11,7 @@ try {
   # Legacy preparation is offline and leaves the existing credential untouched.
   $legacyConfigBase64 = [regex]::Match($legacySource, "FromBase64String\('([^']+)'\)").Groups[1].Value
   $config = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($legacyConfigBase64)) | ConvertFrom-Json
-  $directory = Join-Path $env:LOCALAPPDATA ('MyWorkStation\RbsCapDriverV1\packages\' + $config.storeId)
+  $directory = Join-Path $env:LOCALAPPDATA ('MyWorkStation\RbsCapDriverV1\packages\' + $config.storeId + '\' + $config.terminalPos)
   $files = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('__GUIDED_FILES_BASE64__')) | ConvertFrom-Json
   foreach ($file in $files.PSObject.Properties) {
     if ($file.Name -notin @('Guided-Setup.ps1','Connector-Tools.ps1','Start-Connector.ps1')) { throw 'Unexpected guided package file.' }

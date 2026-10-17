@@ -2,7 +2,9 @@ param(
   [string]$ApiBase = $env:MWS_RBS_API_BASE,
   [string]$PairingCode,
   [string]$DeviceName = 'MyWorkStation RBS CAP Driver v1',
-  [string]$ExpectedStoreId
+  [string]$ExpectedStoreId,
+  [string]$ExpectedTerminalPos,
+  [string]$ExpectedFiscalDeviceCode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -19,14 +21,22 @@ if (-not [Uri]::TryCreate($ApiBase.Trim(), [UriKind]::Absolute, [ref]$apiUri) -o
   throw 'MWS_RBS_API_BASE must be an absolute HTTPS URL without embedded credentials.'
 }
 $ApiBase = $apiUri.GetLeftPart([UriPartial]::Path).TrimEnd('/')
-$body = @{
+$pairBody = @{
   code = $PairingCode.Trim()
-  deviceName = $DeviceName
+  deviceName = $(if ($ExpectedTerminalPos) { $DeviceName + " / " + $ExpectedTerminalPos } else { $DeviceName })
   platform = 'WINDOWS_RBS_CAPDRIVER_V1'
-} | ConvertTo-Json -Compress
+  expectedStoreId = $ExpectedStoreId
+  terminalPos = $ExpectedTerminalPos
+}
+if (-not $ExpectedStoreId) { $pairBody.Remove('expectedStoreId') }
+if (-not $ExpectedTerminalPos) { $pairBody.Remove('terminalPos') }
+$body = $pairBody | ConvertTo-Json -Compress
 $response = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/cloud/v1/pair" -ContentType 'application/json' -Body $body
 if ([string]::IsNullOrWhiteSpace([string]$response.token)) { throw 'MyWorkStation did not return a device token.' }
 if ($ExpectedStoreId -and [string]$response.store.id -ne $ExpectedStoreId) { throw 'Pairing code belongs to another store. Existing local token was left unchanged. Get a new code from the correct store.' }
+
+if ($ExpectedTerminalPos -and [string]$response.device.terminalPos -ne $ExpectedTerminalPos) { throw 'Pairing did not confirm the expected POS. Existing local credential unchanged.' }
+if ($ExpectedFiscalDeviceCode -and [string]$response.device.fiscalDeviceCode -ne $ExpectedFiscalDeviceCode) { throw 'Pairing did not confirm the expected cash register. Existing local credential unchanged.' }
 
 $directory = Join-Path $env:LOCALAPPDATA 'MyWorkStation\RbsCapDriverV1'
 New-Item -ItemType Directory -Path $directory -Force | Out-Null

@@ -6,7 +6,7 @@ function Invoke-RestMethod {
   param($Method, $Uri, $Headers, $ContentType, $Body)
   if ($Uri -notmatch '/rbs-capdriver-v1/status$') { throw 'Unexpected network call: guided checks must not claim or dispatch.' }
   $global:MwsGuidedStatusCalls++
-  return [pscustomobject]@{ connectionOk = $true; writerOnline = $false; claimsRequest = $false; storeId = 'guided-store' }
+  return [pscustomobject]@{ connectionOk = $true; writerOnline = $false; claimsRequest = $false; storeId = 'guided-store'; terminalPos = 'POS-01' }
 }
 try {
   New-Item -ItemType Directory -Path $root -Force | Out-Null
@@ -92,7 +92,7 @@ try {
       function Invoke-RestMethod {
         param($Method,$Uri,$Headers,$ContentType,$Body)
         if ($Uri -notmatch '/rbs-capdriver-v1/status$') { throw 'Setup claimed a request or paired during the safe status check.' }
-        return [pscustomobject]@{connectionOk=$true;writerOnline=$false;claimsRequest=$false;storeId='guided-store'}
+        return [pscustomobject]@{connectionOk=$true;writerOnline=$false;claimsRequest=$false;storeId='guided-store';terminalPos='POS-01'}
       }
       $config = Read-MwsConnectorConfig $ConfigFile
       Invoke-MwsGuidedConnectionOperation $config $Directory 'Test' ''
