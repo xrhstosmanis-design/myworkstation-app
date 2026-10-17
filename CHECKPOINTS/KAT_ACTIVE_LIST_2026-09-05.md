@@ -1,3 +1,7 @@
+## 17/10/2026 14:12 Europe/Athens — EFTPOS-CENTRAL-SETUP-01 / ASSIGNED / NOT TESTED
+
+Owner feat/eftpos-central-setup-20261017. Explicit owner request: per-register EFTPOS display names and independent immediate/deferred configuration shown in POS; reusable selected-register installer for all existing/new stores. Preserve tenant/module/terminal/device binding, fiscal codes, idempotency, existing delayed routes until explicitly configured. No production business/schema/settings changes or replay. Other owners retained. Claim before source. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-eftpos-central-setup.md. Native CI, exact guarded release and real acceptance required; not physical PASS.
+
 ## 17/10/2026 13:28 Europe/Athens — POS-TERMINAL-SESSION-01 / SOURCE LIVE / AWAITING KAT USER ACCEPTANCE
 
 Owner fix/pos-terminal-session-20261017 retained. ClaimPR2639/docsCI39022660271 SUCCESS mergedec93f983 before source. Final sourcePR2640/headf9853bc73434ccf0b8651155b6d6ec8a6f20f832/fullCI39024153301/job117371787405 SUCCESS2882PASS0FAIL0SKIP plus6backup, Windows/Chromium/build/invariants/all realHTTP flows. Mergeda1a4a333514a1ae024bbfdc03465124417800fc9 has identical tested tree02fb8d3aaaccba1867136e6cb523a04565011575. ExactmainCI39024492970/job117372759979 SUCCESS2882/0/0 plus6backup and fullHTTP. Ordinary guarded Render39024857476/job117373764599 SUCCESS, exact healthy10:28:21UTC; independent /api/health returned oktrue/version0.22.0+kat-test-pos/exacta1a4a333514a1ae024bbfdc03465124417800fc9. No manual deploy/guard bypass/migration/direct production reset.
