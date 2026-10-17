@@ -74,7 +74,7 @@ async function main(){
   const paymentA=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token:tokenA,body:{type:"OTHER_EXPENSE",amount:2,description:"Operator A external expense",evidenceMode:"NO_DOCUMENT",paymentSource:"EXTERNAL",idempotencyKey:"e2e-ledger-a-001"}});
   assert.equal(paymentA.response.status,201,JSON.stringify(paymentA.payload));
 
-  assert.equal((await request("/api/operators/logout",{method:"POST",token:tokenA})).response.status,200);
+  assert.equal((await request("/api/operators/logout",{method:"POST",token:tokenA,body:{storeId}})).response.status,200);
   tokenB=await pinLogin(employeeB,"4680");
 
   const viewBBeforeOwn=await request(`/api/transactions/stores/${storeId}/overview`,{token:tokenB});

@@ -1,3 +1,7 @@
+## Actual mounted logout root cause — candidate771d2902 / CI39023810562
+
+Again2882/0/0 and backup6 pass. Full HTTP lifecycle now reproduces logout400 «Δεν προσδιορίστηκε κατάστημα.» because outer requireStoreModule runs before route auth and cannot infer the store for /logout. Earlier code-only orphan-session explanation was plausible but not the proven sole cause. Fix actual client logout body to carry its authenticated session.store.id; preserve outer module check and exact-session auth. HTTP cleanup uses the same body, recorded from its actual login response. Add assertion on real logout function's payload. No guard bypass or production reset. Rerun full CI.
+
 ## CI candidate 7bb2fc82 — 39023375573
 
 All2882 native/unit tests PASS0FAIL0SKIP, including new real PostgreSQL concurrency/recovery fixture; Windows/build/backup6 also pass. Subsequent label-isolation HTTP fixture fails409 because preceding fixture leaves another operator signed into shared MAIN. Correct test lifecycle only: all actual operator-login HTTP fixtures explicitly logout their recorded sessions after the flow, with localhost/test-only guard; revoked tokens accepted only by named401 code. Ledger visibility now performs A external payment then explicit A logout before B login, retaining all own/all/grant/reversal/report/amount assertions and asserting old A token revoked plus active B token rejected by foreign OPEN owner. No occupancy guard weakened, production reset or business mutation. Full CI rerun required.
