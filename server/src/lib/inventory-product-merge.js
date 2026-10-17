@@ -1,6 +1,7 @@
 import {randomUUID,createHash} from 'node:crypto';
 import {z} from 'zod';
 import {resolveProductCardVat} from './product-card-vat.js';
+import {inventorySupplierMergePlan,applyInventorySupplierMerge} from './inventory-supplier-merge.js';
 const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status})};
 const selection=z.object({storeId:z.string().min(1),productIds:z.array(z.string().min(1)).min(2).max(4),targetId:z.string().min(1)});
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -51,15 +52,23 @@ async function preview(tx,user,body){
  const foreignBarcodes=barcodes.length?await tx.$queryRaw`SELECT pb."id" FROM "ProductBarcode" pb JOIN "Product" p ON p."id"=pb."productId" WHERE p."companyId"=${company} AND NOT (p."id"=ANY(${ids}::text[])) AND pb."barcode"=ANY(${barcodes.map(b=>b.barcode)}::text[]) LIMIT 1`:[];
  if(foreignBarcodes.length)blockers.push('Barcode χρησιμοποιείται σε τρίτη καρτέλα.');
  const suppliers=await tx.$queryRaw`SELECT "id","productId","supplierId","supplierCode","active","updatedAt" FROM "SupplierProductLink" WHERE "companyId"=${company} AND "productId"=ANY(${ids}::text[]) ORDER BY "id" FOR UPDATE`;
- if(new Set(suppliers.map(s=>s.supplierId)).size!==suppliers.length)blockers.push('Περισσότερες καρτέλες συνδέονται με τον ίδιο προμηθευτή. Απαιτείται έλεγχος κωδικών.');
- const mappings=await tx.$queryRaw`SELECT "id","productId","updatedAt" FROM "SupplierProductMapping" WHERE "companyId"=${company} AND "productId"=ANY(${ids}::text[]) ORDER BY "id" FOR UPDATE`;
+ const supplierPlan=inventorySupplierMergePlan(suppliers,body.targetId);
+ if(supplierPlan.some(group=>group.codes.length>1))blockers.push('Υπάρχουν διαφορετικοί κωδικοί στον ίδιο προμηθευτή. Απαιτείται έλεγχος αντιστοίχισης.');
+ const conflictingSupplierCodes=await tx.$queryRaw`SELECT m."id" FROM "SupplierProductMapping" m
+ JOIN "SupplierProductLink" link ON link."companyId"=m."companyId" AND link."supplierId"=m."supplierId"
+  AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(link."supplierCode",'')),'[[:space:]]+','','g'))=UPPER(REGEXP_REPLACE(TRIM(m."supplierItemCode"),'[[:space:]]+','','g'))
+ WHERE link."companyId"=${company} AND link."productId"=ANY(${ids}::text[])
+  AND NULLIF(TRIM(link."supplierCode"),'') IS NOT NULL AND NOT(m."productId"=ANY(${ids}::text[]))
+ LIMIT 1 FOR UPDATE OF m`;
+ if(conflictingSupplierCodes.length)blockers.push('Κωδικός προμηθευτή αντιστοιχεί σε τρίτη καρτέλα. Απαιτείται έλεγχος αντιστοίχισης.');
+ const mappings=await tx.$queryRaw`SELECT "id","productId","supplierId","supplierItemCode","updatedAt" FROM "SupplierProductMapping" WHERE "companyId"=${company} AND "productId"=ANY(${ids}::text[]) ORDER BY "id" FOR UPDATE`;
  if((await tx.$queryRaw`SELECT l."id" FROM "OnlineOrderLine" l JOIN "OnlineOrder" o ON o."id"=l."orderId" WHERE o."companyId"=${company} AND o."storeId"=${body.storeId} AND o."status" NOT IN ('DELIVERED','CANCELLED') AND l."productId"=ANY(${ids}::text[]) LIMIT 1`).length)blockers.push('Υπάρχει ανοικτή online παραγγελία με επιλεγμένο είδος.');
  if((await tx.$queryRaw`SELECT to_regclass('"TableOrder"')::text AS "tableName"`)[0]?.tableName&&(await tx.$queryRaw`SELECT l."id" FROM "TableOrderLine" l JOIN "TableOrder" o ON o."id"=l."orderId" WHERE o."companyId"=${company} AND o."storeId"=${body.storeId} AND o."status" NOT IN ('PAID','CANCELLED') AND l."productId"=ANY(${ids}::text[]) LIMIT 1`).length)blockers.push('Υπάρχει ανοικτή παραγγελία τραπεζιού με επιλεγμένο είδος.');
  if((await tx.$queryRaw`SELECT "productId" FROM "StoreBakedBalance" WHERE "companyId"=${company} AND "storeId"=${body.storeId} AND "productId"=ANY(${ids}::text[]) AND "enabled"=true LIMIT 1`).length)blockers.push('Υπάρχει ενεργή διαχείριση ψημένων ειδών.');
  if((await tx.$queryRaw`SELECT to_regclass('"RbsCapDriverV1Request"')::text AS "tableName"`)[0]?.tableName&&(await tx.$queryRaw`SELECT r."id" FROM "RbsCapDriverV1Request" r WHERE r."companyId"=${company} AND r."storeId"=${body.storeId} AND r."status" NOT IN ('SALE_COMMITTED','DECLINED') AND EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(r."checkoutJson"->'items')='array' THEN r."checkoutJson"->'items' ELSE '[]'::jsonb END || CASE WHEN jsonb_typeof(r."checkoutJson"->'resolvedItems')='array' THEN r."checkoutJson"->'resolvedItems' ELSE '[]'::jsonb END) item WHERE item->>'productId'=ANY(${ids}::text[])) LIMIT 1`).length)blockers.push('Εκκρεμεί πληρωμή ή έκδοση απόδειξης για επιλεγμένο είδος. Ολοκλήρωσε πρώτα τη συναλλαγή.');
  const stock=rows.reduce((sum,r)=>sum+Number(r.currentStock||0),0);
  if(!Number.isFinite(stock))fail('Μη έγκυρο απόθεμα.');
- const state={storeId:body.storeId,targetId:body.targetId,rows,barcodes,suppliers,mappings,blockers};
+ const state={storeId:body.storeId,targetId:body.targetId,rows,barcodes,suppliers,supplierPlan,mappings,blockers};
  return {rows:rows.map(r=>({...r,salePrice:Number(r.salePrice),currentStock:Number(r.currentStock||0),vatRate:Number(r.vatRate)})),barcodes:barcodes.map(b=>({barcode:b.barcode,productId:b.productId,salePrice:b.salePrice==null?null:Number(b.salePrice)})),targetId:target.id,combinedStock:stock,blockers,previewHash:hash(state),state};
 }
 export async function previewInventoryMerge(db,user,input){const body=selection.strict().parse(input);access(user,body);return db.$transaction(async tx=>{const {state,...result}=await preview(tx,user,body);return result})}
@@ -91,7 +100,7 @@ export async function confirmInventoryMerge(db,user,input){
   }
   await tx.$executeRaw`UPDATE "StoreProduct" SET "currentStock"=${p.combinedStock},"updatedAt"=NOW() WHERE "storeId"=${body.storeId} AND "productId"=${body.targetId}`;
   await tx.$executeRaw`UPDATE "ProductBarcode" SET "productId"=${body.targetId},"updatedAt"=NOW() WHERE "productId"=ANY(${sourceIds}::text[])`;
-  await tx.$executeRaw`UPDATE "SupplierProductLink" SET "productId"=${body.targetId},"updatedAt"=NOW() WHERE "companyId"=${user.companyId} AND "productId"=ANY(${sourceIds}::text[])`;
+  await applyInventorySupplierMerge(tx,user.companyId,body.targetId,p.state.supplierPlan);
   await tx.$executeRaw`UPDATE "SupplierProductMapping" SET "productId"=${body.targetId},"updatedAt"=NOW() WHERE "companyId"=${user.companyId} AND "productId"=ANY(${sourceIds}::text[])`;
   const result={ok:true,targetId:body.targetId,merged:sourceIds.length,combinedStock:p.combinedStock,mergeId};
   await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${randomUUID()},${user.companyId},${body.storeId},${user.id},${user.id},'INVENTORY_PRODUCT_MERGE',${JSON.stringify({requestId:body.requestId,fingerprint,actorId:user.id,sourceIds,reason:body.reason,before:p.state,result,historyPreserved:true})}::jsonb)`;
