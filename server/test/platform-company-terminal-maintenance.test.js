@@ -69,9 +69,13 @@ test('native archive is scoped, idempotent, revokes activation and preserves clo
  }finally{await f.close()}
 });
 test('native archive refuses active terminal, normalized OPEN shift and fiscal mapping; audit failure rolls tombstone/token state back',{skip:!isolated},async()=>{
- for(const variant of ['active','open','mapping','audit']){const f=await fixture();try{
+ for(const variant of ['active','open','blank-main','null-main','mapping','audit']){const f=await fixture();try{
   if(variant==='active')await f.db.$executeRaw`UPDATE "StoreInstallationTerminal" SET "active"=true WHERE "id"='t'`;
   if(variant==='open')await f.db.$executeRaw`UPDATE "CashShiftSession" SET "terminalPos"=' synthetic-pos ',"status"='OPEN' WHERE "id"='old'`;
+  if(variant==='blank-main'||variant==='null-main'){
+   await f.db.$executeRaw`UPDATE "StoreInstallationTerminal" SET "terminalPos"='MAIN' WHERE "id"='t'`;
+   await f.db.$executeRaw`UPDATE "CashShiftSession" SET "terminalPos"=${variant==='blank-main'?'':null},"status"='OPEN' WHERE "id"='old'`;
+  }
   if(variant==='mapping')await f.db.$executeRawUnsafe(`INSERT INTO "StoreFiscalDevice"("id","companyId","storeId","deviceCode","displayName","terminalPos","createdBy") VALUES('f','c','s','FISCAL','Synthetic fiscal','SYNTHETIC-POS','sa')`);
   if(variant==='audit')await f.db.$executeRawUnsafe(`ALTER TABLE "AuthAudit" ADD CONSTRAINT reject_audit CHECK("event" NOT LIKE 'STORE_TERMINAL_DELETED%')`);
   const before=await snapshot(f.db);await assert.rejects(()=>archiveInstallationTerminal(f.db,actor,{companyId:'c',storeId:'s',terminalId:'t'}));assert.deepEqual(await snapshot(f.db),before,variant);

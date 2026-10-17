@@ -34,7 +34,7 @@ export async function archiveInstallationTerminal(db,actor,{companyId,storeId,te
   if(row.active)fail('Απενεργοποίησε πρώτα το τερματικό πριν το διαγράψεις.');
   const tables=(await tx.$queryRaw`SELECT to_regclass('"CashShiftSession"')::text AS shifts`)[0];
   if(tables?.shifts){
-   const shifts=await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND UPPER(TRIM(COALESCE("terminalPos",'MAIN'))) = UPPER(TRIM(${row.terminalPos})) AND "status"='OPEN' LIMIT 1`;
+   const shifts=await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND COALESCE(NULLIF(UPPER(TRIM("terminalPos")),''),'MAIN') = UPPER(TRIM(${row.terminalPos})) AND "status"='OPEN' LIMIT 1`;
    if(shifts[0])fail('Το τερματικό έχει ανοιχτή βάρδια. Δεν διαγράφηκε.');
   }
   const mappings=await tx.$queryRaw`SELECT "id" FROM "StoreFiscalDevice" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND UPPER(TRIM("terminalPos"))=UPPER(TRIM(${row.terminalPos})) AND "active"=true LIMIT 1`;
