@@ -43,6 +43,19 @@ test('product, payment, actor, store, comparisons and invalid dates never become
  const badDate=assistantEffectiveQuestion('στις 31/02/2026',users(['Πωλήσεις σήμερα']));assert.equal(parse(badDate),null,'invalid new date must not fall back to old valid date');
 });
 
+test('numeric product codes, malformed dates and month-like product/person names cannot be discarded as period text',async()=>{
+ const qualifiers=['σήμερα 2269','χθες 999','Μαίρη','Μαρτίνι','Ιουλία','Οκτωβριανό','στις 123/10/2026','στις 2026-10-123','στις 10/10/2026/2269','Σεπτέμβριο 2026 2269'];
+ for(const text of qualifiers){
+  const question=`Πωλήσεις ${text}`;assert.equal(parse(question),null,question);
+  for(const follow of ['Και χθες;','Σε CSV'])assert.equal(parse(assistantEffectiveQuestion(follow,users([question]))),null,`${question} -> ${follow}`);
+  const out=await runProductAssistant({question,prompt:'fixture',now,cashTool:{name:'cash'},tools:[salesStoresTool],readSalesStores:()=>assert.fail('must not read an unfiltered total'),requestProvider:async()=>({response:{ok:true},raw:{output:[{type:'function_call',name:'sales_by_store',call_id:'bad',arguments:JSON.stringify(expected('2026-10-17'))}]}})}).catch(e=>{assert.equal(e.status,422);return null;});
+  // Undated unknown names may ask for a period before any provider call;
+  // dated filtered requests must reject the injected all-mode call instead.
+  if(out){assert.deepEqual(out.evidence,[]);assert.deepEqual(out.reads,[]);assert.match(JSON.parse(out.raw.output_text).answer,/Για ποια περίοδο/);}
+ }
+ for(const month of ['Μάρτιο','Μαρτίου','Ιούλιο','Ιουλίου','Μάιο','Μαΐου','Σεπτέμβριο','Σεπτεμβρίου','Οκτώβρη'])assert.ok(parse(`Πωλήσεις ${month} 2026`),month);
+});
+
 test('natural total dispatch reads a fresh canonical source each time without model extraction',async()=>{
  let reads=0;const scope={companyId:'c',storeId:'s'},access={scope:'PLATFORM_SELECTED_STORE',stores:[scope],excluded:[],truncated:false};
  const question=assistantEffectiveQuestion('Και τον προηγούμενο μήνα;',users(['Πωλήσεις σήμερα']));
