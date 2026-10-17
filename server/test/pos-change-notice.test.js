@@ -25,7 +25,7 @@ test('actual POS change notice expires in three seconds, survives successful car
  const api=async(path,options={})=>{
   calls.push({path,options});
   if(path.endsWith('/rbs-capdriver-v1/change-fixture'))return new Promise(resolve=>pendingPoll.push(resolve));
-  if(path.endsWith('/checkout'))return new Promise((resolve,reject)=>{checkout={resolve,reject}});
+  if(path.endsWith('/payment-terminals'))return {terminalPos:'MAIN',fiscalDisplayName:'Fixture register',choices:[{deviceCode:'A',displayName:'POS ΚΑΤΑΣΤΗΜΑΤΟΣ',operationChannel:'COUNTER',transactionMode:'IMMEDIATE'},{deviceCode:'B',displayName:'DELIVERY',operationChannel:'DELIVERY_DELAYED',transactionMode:'DEFERRED'}]};if(path.endsWith('/checkout'))return new Promise((resolve,reject)=>{checkout={resolve,reject}});
   if(path==='/api/store-pos/stores/A')return {products:[product],layout:{quickKeys:[],categories:[]},access:{}};
   if(path.endsWith('/table-service')||path==='/api/netlink/status')throw Error('not enabled');
   return {rows:[],items:[],requests:[],offers:[],stations:[],state:{}};

@@ -19,7 +19,7 @@ test("standalone delayed CARD enters the same CAP gate before sale while protect
   const cases=[
     [{operationChannel:"COUNTER",paymentMethod:"CARD"},false,true],
     [{operationChannel:"COUNTER",paymentMethod:"CASH"},false,true],
-    [{operationChannel:"DELIVERY_DELAYED",paymentMethod:"CARD"},false,true],
+    ...["DELIVERY_DELAYED","SECONDARY_IMMEDIATE","COUNTER_DELAYED"].map(operationChannel=>[{operationChannel,paymentMethod:"CARD"},false,true]),
     [{operationChannel:"DELIVERY_DELAYED",paymentMethod:"CASH"},false,false],
     [{operationChannel:"COUNTER",paymentMethod:"CASH"},true,false],
     [{operationChannel:"DELIVERY_DELAYED",paymentMethod:"CARD",onlineOrderId:"order"},false,false],

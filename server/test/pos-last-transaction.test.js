@@ -8,7 +8,7 @@ import {completedPosAmount,usePosLastTransaction} from '../../client/src/utils/p
 
 const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StorePosPanel.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime','pdfjs-dist/build/pdf.worker.min.mjs?url','pdfjs-dist/build/pdf.mjs'],loader:{'.css':'empty'},logOverride:{'empty-import-meta':'silent'}});
 
-async function fixture(run){
+async function fixture(run,terminalChoices={terminalPos:'MAIN',fiscalDisplayName:'Fixture register',choices:[{deviceCode:'A',displayName:'POS ΚΑΤΑΣΤΗΜΑΤΟΣ',operationChannel:'COUNTER',transactionMode:'IMMEDIATE'},{deviceCode:'B',displayName:'DELIVERY',operationChannel:'DELIVERY_DELAYED',transactionMode:'DEFERRED'}]}){
  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid'}),keys=['window','document','navigator','HTMLElement','MutationObserver','localStorage','fetch','IS_REACT_ACT_ENVIRONMENT'];
  const previous=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:k==='fetch'?async()=>({ok:true}):dom.window[k]});
@@ -17,7 +17,7 @@ async function fixture(run){
  const calls=[],checkouts=[],polls=[],product={id:'water',sku:'2270',name:'Fixture water',salePrice:1,currentStock:100,barcodes:['52101588']};
  const api=async(path,options={})=>{
   calls.push({path,options});
-  if(path.endsWith('/checkout'))return new Promise((resolve,reject)=>checkouts.push({resolve,reject,body:JSON.parse(options.body)}));
+  if(path.endsWith('/payment-terminals'))return terminalChoices;if(path.endsWith('/checkout'))return new Promise((resolve,reject)=>checkouts.push({resolve,reject,body:JSON.parse(options.body)}));
   if(path.endsWith('/rbs-capdriver-v1/last-fixture'))return new Promise(resolve=>polls.push(resolve));
   if(/^\/api\/store-pos\/stores\/[^/]+$/.test(path))return {products:[product],layout:{quickKeys:[],categories:[]},access:{}};
   if(path.endsWith('/table-service')||path==='/api/netlink/status')throw Error('not enabled');
@@ -87,3 +87,12 @@ test('locally queued offline checkout does not claim a new server completed amou
  assert.equal(document.querySelector('.standard-line'),null);assert.match(document.querySelector('.store-pos-alert.success').textContent,/OFFLINE/);assert.equal(f.amount(),'1,20€');
  const count=f.calls.length;await f.click('[data-pos-last-transaction]');assert.equal(f.amount(),'0,00€');assert.equal(f.calls.length,count);
 }));
+
+test('mounted card picker displays configured fiscal/device names and posts independent immediate second choice once',async()=>fixture(async f=>{
+ await f.scan();await f.click('button.card');
+ const picker=document.querySelector('.pos-card-terminal-picker');
+ assert.ok(picker.textContent.includes('Κεντρική ΚΑΤ'));assert.ok(picker.textContent.includes('Φορητό πάγκου'));assert.ok(!picker.textContent.includes('DELIVERY'));assert.ok(!picker.textContent.includes('Ετεροχρονισμένη'));assert.equal(f.checkouts.length,0);
+ await f.act(async()=>picker.querySelectorAll('.pos-price-body button')[1].click());
+ assert.equal(f.checkouts.length,1);assert.equal(f.checkouts[0].body.operationChannel,'SECONDARY_IMMEDIATE');
+ await f.act(async()=>f.checkouts[0].resolve({total:1,payments:[{method:'CARD',amount:1}]}));
+},{fiscalDisplayName:'Κεντρική ΚΑΤ',choices:[{deviceCode:'ONE',displayName:'Κεντρικό',operationChannel:'COUNTER',transactionMode:'IMMEDIATE'},{deviceCode:'TWO',displayName:'Φορητό πάγκου',operationChannel:'SECONDARY_IMMEDIATE',transactionMode:'IMMEDIATE'}]}));

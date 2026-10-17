@@ -44,6 +44,22 @@ try{
   const twoRouting={fiscalDevices:[routing.fiscalDevices[0],{deviceCode:"RBS-02",displayName:"Second RBS",terminalPos:"POS-02",active:true}],eftposDevices:[changed.eftposDevices[0],{deviceCode:"CARD-02",displayName:"Register2 EFTPOS",fiscalDeviceCode:"RBS-02",role:"STORE",active:true},{deviceCode:"DELIVERY-02",displayName:"Register2 delivery EFTPOS",fiscalDeviceCode:"RBS-02",role:"DELIVERY",active:true}]};
   assert.equal((await request(root+"/device-routing",{token,method:"PUT",body:twoRouting})).status,200);
   assert.equal((await request(root+"/rbs-installation",{token,method:"PUT",body:{...form,terminalPos:"POS-02",cashCode:"6",cardCode:"2",deliveryCode:"3"}})).status,200);
+  // Central names/modes persist independently for both registers; no fiscal command.
+  const custom={...twoRouting,eftposDevices:twoRouting.eftposDevices.map(row=>({...row,displayName:row.role==='DELIVERY'?'Φορητό άμεσο':row.displayName,transactionMode:row.fiscalDeviceCode==='RBS-01'?'DEFERRED':'IMMEDIATE'}))};
+  assert.equal((await request(root+'/device-routing',{token,method:'PUT',body:custom})).status,200);
+  const reread=await request(root+'/device-routing',{token});assert.deepEqual(reread.body.eftposDevices.map(x=>[x.deviceCode,x.transactionMode]).sort(),custom.eftposDevices.map(x=>[x.deviceCode,x.transactionMode]).sort());
+  assert.equal((await request(root+'/device-routing',{token,method:'PUT',body:twoRouting})).status,200,'Legacy mapping caller omits mode');
+  const preservedModes=await request(root+'/device-routing',{token});assert.deepEqual(preservedModes.body.eftposDevices.map(x=>[x.deviceCode,x.transactionMode]).sort(),custom.eftposDevices.map(x=>[x.deviceCode,x.transactionMode]).sort());
+  assert.equal((await request(root+'/device-routing',{token,method:'PUT',body:custom})).status,200);
+  const choicePath=`/api/store-pos/stores/${store.id}/payment-terminals`;
+  const choicesOne=await request(choicePath+'?mwsTerminal=POS-01',{token}),choicesTwo=await request(choicePath+'?mwsTerminal=POS-02',{token});
+  assert.equal(choicesOne.status,200,JSON.stringify(choicesOne.body));assert.equal(choicesTwo.status,200,JSON.stringify(choicesTwo.body));
+  assert.equal(choicesOne.body.fiscalDisplayName,'One RBS');assert.deepEqual(choicesOne.body.choices.map(x=>x.operationChannel),['COUNTER_DELAYED']);
+  assert.equal(choicesTwo.body.choices.find(x=>x.displayName==='Φορητό άμεσο').operationChannel,'SECONDARY_IMMEDIATE');
+  assert.equal(choicesTwo.body.choices.some(x=>x.deviceCode==='CARD-NEW'),false);
+  assert.equal((await request(choicePath+'?mwsTerminal=FOREIGN',{token})).status,409);
+  assert.equal((await request(choicePath)).status,401);
+  assert.equal((await request(root+'/device-routing',{token,method:'PUT',body:{...custom,eftposDevices:custom.eftposDevices.map(x=>({...x,transactionMode:'INVALID'}))}})).status,400);
   const secondPackage=await request(root+"/rbs-installation/POS-02/guided-package",{token,method:"POST",body:{apiBase:"https://unit.test"}});
   assert.equal(secondPackage.status,200,JSON.stringify(secondPackage.body));assert.match(secondPackage.body.fileName,/POS-02/);
   await db.companyModule.create({data:{companyId:company.id,moduleKey:"CONNECTOR_RBS",active:true}});

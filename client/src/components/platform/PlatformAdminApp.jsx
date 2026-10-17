@@ -225,7 +225,7 @@ export default function PlatformAdminApp(){
     setAiTwinNavigationError("Το κατάστημα δεν είναι πλέον διαθέσιμο. Επίλεξε ξανά κατάστημα στο Full Digital Twin.");setShowAiCommandCenter(true);
   },[data,aiTwinOrigin]);
   const routingFormValues=useMemo(()=>deviceRoutingFormValues(terminalManager?.routing,routingTerminalPos),[terminalManager?.routing,routingTerminalPos]);
-  const routingFormKey=[routingFormValues.terminalPos,routingFormValues.fiscalDeviceCode,routingFormValues.fiscalDisplayName,routingFormValues.storeEftposCode,routingFormValues.storeEftposName,routingFormValues.deliveryEftposCode,routingFormValues.deliveryEftposName].join("|");
+  const routingFormKey=[routingFormValues.terminalPos,routingFormValues.fiscalDeviceCode,routingFormValues.fiscalDisplayName,routingFormValues.storeEftposCode,routingFormValues.storeEftposName,routingFormValues.deliveryEftposCode,routingFormValues.deliveryEftposName,routingFormValues.storeTransactionMode,routingFormValues.deliveryTransactionMode].join("|");
 
   useEffect(()=>{
     if(!readiness)return undefined;
@@ -692,7 +692,7 @@ export default function PlatformAdminApp(){
     {readiness&&<button type="button" className="readiness-print-floating" onClick={()=>window.print()}><Printer/>Εκτύπωση ελέγχου</button>}
     {terminalManager&&terminalManager.terminals.length>0&&<div className="readiness-manager-floating terminal-routing-floating"><b>Έλεγχος Super Admin</b><select id="super-admin-inspection-terminal">{terminalManager.terminals.filter(row=>row.active).map(row=><option key={row.id} value={row.id}>{row.terminalPos} · {row.displayName}</option>)}</select><button type="button" onClick={()=>{const id=document.getElementById("super-admin-inspection-terminal")?.value,terminal=terminalManager.terminals.find(row=>row.id===id);if(terminal)inspectTerminal(terminal)}}>Άνοιγμα μόνο για έλεγχο</button><small>Δεν ανοίγει βάρδια και δεν επιτρέπει πωλήσεις.</small></div>}
     {terminalManager&&terminalManager.terminals.length>0&&<form key={routingFormKey} className="readiness-manager-floating terminal-routing-floating" onSubmit={saveTerminalDeviceRouting}>
-      <b>POS → Ταμειακή → EFTPOS</b><small>Ένα EFTPOS: συμπλήρωσε μόνο το μηχάνημα καταστήματος. Delivery μόνο αν υπάρχει δεύτερο.</small>
+      <b>POS → Ταμειακή → EFTPOS</b><small>Ένα EFTPOS: συμπλήρωσε μόνο το μηχάνημα καταστήματος. Δεύτερο μόνο αν υπάρχει. Όρισε δικό σου όνομα και τρόπο συναλλαγής για κάθε EFTPOS.</small>
       <select name="terminalPos" required value={routingTerminalPos} onChange={event=>setRoutingTerminalPos(event.target.value)}>
         <option value="" disabled>Επίλεξε terminal</option>
         {terminalManager.terminals.filter(row=>row.active).map(row=><option key={row.id} value={row.terminalPos}>{row.terminalPos} · {row.displayName}</option>)}
@@ -701,8 +701,11 @@ export default function PlatformAdminApp(){
       <input name="fiscalDisplayName" defaultValue={routingFormValues.fiscalDisplayName} placeholder="π.χ. Ταμειακή 2" required disabled={!routingTerminalPos}/>
       <input name="storeEftposCode" defaultValue={routingFormValues.storeEftposCode} placeholder="π.χ. KAT-EFTPOS-02A" pattern="[A-Za-z0-9_-]+" required disabled={!routingTerminalPos}/>
       <input name="storeEftposName" defaultValue={routingFormValues.storeEftposName} placeholder="EFTPOS καταστήματος" required disabled={!routingTerminalPos}/>
-      <input name="deliveryEftposCode" defaultValue={routingFormValues.deliveryEftposCode} placeholder="Προαιρετικό: κωδικός δεύτερου EFTPOS Delivery" pattern="[A-Za-z0-9_-]+" disabled={!routingTerminalPos}/>
-      <input name="deliveryEftposName" defaultValue={routingFormValues.deliveryEftposName} placeholder="Προαιρετικό: όνομα EFTPOS Delivery / Online" disabled={!routingTerminalPos}/>
+      <input name="deliveryEftposCode" defaultValue={routingFormValues.deliveryEftposCode} placeholder="Προαιρετικό: κωδικός δεύτερου EFTPOS" pattern="[A-Za-z0-9_-]+" disabled={!routingTerminalPos}/>
+      <input name="deliveryEftposName" defaultValue={routingFormValues.deliveryEftposName} placeholder="Προαιρετικό: όνομα δεύτερου EFTPOS" disabled={!routingTerminalPos}/>
+      <label>Συναλλαγή πρώτου EFTPOS<select name="storeTransactionMode" defaultValue={routingFormValues.storeTransactionMode} disabled={!routingTerminalPos}><option value="IMMEDIATE">Άμεση</option><option value="DEFERRED">Ετεροχρονισμένη</option></select></label>
+      <label>Συναλλαγή δεύτερου EFTPOS<select name="deliveryTransactionMode" defaultValue={routingFormValues.deliveryTransactionMode} disabled={!routingTerminalPos}><option value="IMMEDIATE">Άμεση</option><option value="DEFERRED">Ετεροχρονισμένη</option></select></label>
+      <small>Η επιλογή περιγράφει τη ρυθμισμένη λειτουργία της RBS. Επιβεβαίωσε τον αντίστοιχο κωδικό πληρωμής στον οδηγό εγκατάστασης.</small>
       <button disabled={!routingTerminalPos||busy==="device-routing"}>{busy==="device-routing"?"Αποθήκευση…":"Αποθήκευση mapping"}</button>
       <small>{!routingTerminalPos?"Επίλεξε πρώτα terminal.":routingFormValues.complete?`Φορτώθηκε το αποθηκευμένο mapping του ${routingTerminalPos}.`:`Δεν υπάρχει αποθηκευμένο mapping για ${routingTerminalPos}.`}</small>
       <small>Fail-closed: δεν γίνεται αυτόματη επιλογή άλλου EFTPOS.</small>

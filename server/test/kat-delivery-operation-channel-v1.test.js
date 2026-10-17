@@ -6,7 +6,7 @@ const pos=fs.readFileSync(new URL("../src/routes/store-pos.js",import.meta.url),
 const panel=fs.readFileSync(new URL("../../client/src/components/store/StorePosPanel.jsx",import.meta.url),"utf8");
 
 test("RBS issuance includes standalone delayed CARD and retains protected exclusions",()=>{
-  assert.match(pos,/operationChannel:z\.enum\(\["COUNTER","DELIVERY_DELAYED"\]\)/);
+  assert.match(pos,/operationChannel:z\.enum\(\["COUNTER","DELIVERY_DELAYED","COUNTER_DELAYED","SECONDARY_IMMEDIATE"\]\)/);
   assert.match(pos,/"operationChannel" TEXT NOT NULL DEFAULT 'COUNTER'/);
   assert.match(pos,/"transactionMode","operationChannel","audience"\) VALUES/);
   const eligible=new Function("body","offlineOrigin",`return (${pos.match(/const capDriverV1Eligible=([^;]+);/)[1]});`);

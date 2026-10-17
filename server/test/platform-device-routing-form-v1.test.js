@@ -27,6 +27,8 @@ test("routing form loads the saved fiscal and EFTPOS values for the selected ter
     storeEftposName:"EFTPOS καταστήματος",
     deliveryEftposCode:"KAT-EFTPOS-02B",
     deliveryEftposName:"EFTPOS Delivery / Online",
+    storeTransactionMode:"IMMEDIATE",
+    deliveryTransactionMode:"DEFERRED",
     complete:true
   });
 });

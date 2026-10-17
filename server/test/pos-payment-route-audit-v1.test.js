@@ -8,7 +8,7 @@ test("card checkout loads the configured fail-closed route",()=>{
   assert.match(source,/resolvePaymentDeviceRoute/);
   assert.match(source,/cardAmount>0\?await configuredPaymentRoute/);
   assert.match(source,/onlineOrder\.fulfillmentType==="DELIVERY"\?"ONLINE_DELIVERY":"ONLINE_PICKUP"/);
-  assert.match(source,/body\.operationChannel==="DELIVERY_DELAYED"\?"DELIVERY":"IN_STORE"/);
+  assert.match(source,/\["DELIVERY_DELAYED","SECONDARY_IMMEDIATE"\]\.includes\(body\.operationChannel\)\?"DELIVERY":"IN_STORE"/);
 });
 
 test("stores without any fiscal mapping retain the legacy checkout during migration",()=>{
