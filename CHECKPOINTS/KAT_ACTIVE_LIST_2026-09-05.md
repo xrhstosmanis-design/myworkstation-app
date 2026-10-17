@@ -9634,6 +9634,13 @@ Local isolated module harness13PASS/0FAIL: actual helper/XML/original validation
  
 
 
+## 17/10/2026 — POS-UNKNOWN-SCAN-RESET-01 / SOURCE READY / AWAITING FULL CI + USER
+
+Same owner codex/pos-unknown-scan-reset-20261017. ClaimPR2651/head9f785f6d/docsCI39059151861 SUCCESS merged158b865e before source. Only StorePosPanel miss handler and warning visibility changed: submitted unmatched code consumed synchronously from DOM/query before audit await, refocus requested, separate unknown code retained for visible warning/manual online action. Next input dismisses old warning; known add retains original behavior and clears unknown. No barcode matcher/timing/cart/payment/server/API/schema/auth change or automatic online lookup/product creation.
+
+New actual mounted regression reproduces before-source retained unknown code; after-source verifies empty DOM in same event batch, repeated empty Enter emits one miss Audit, manual online uses exact retained code, successive misses never concatenate, next known adds once, late pending audit cannot restore input, no checkout/create. Initial broader test run exposed six intentionally superseded expectations requiring unknown text to survive rejected checkout; replaced with explicit consumed-unknown assertion then a separate manual query before checkout, preserving original rejected-cart/query/fiscal/payment controls. Final14local mounted/helper/index regressions PASS0FAIL0SKIP under Node24; Node20 rerun in progress. Isolated local harness copies shared source snapshot plus exact current main panel/test; full repository Node20CI/build/native HTTP/browser remains required. No physical/LAB/manual PASS or business action. Screenshot is newest USER FAIL until ordinary physical acceptance after exact guarded release. Existing scanner80/600/CSV/ambiguous/name/focus/blocking, other owners and prior PASS preserved. Next full CI/main/normal exact release then owner refresh without losing an active cart. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-pos-unknown-scan-reset.md.
+ 
+
 ## 17/10/2026 — POS-UNKNOWN-SCAN-RESET-01 / ASSIGNED / USER FAIL
 
 Owner `codex/pos-unknown-scan-reset-20261017`; source `fix/pos-unknown-scan-reset-20261017`. Explicit owner report and screenshot image(20261017-183722).png show Diadoxou Store Mode, operator KINIS EMMANOUILA, unknown-product warning and multiple concatenated scanned barcodes retained in the focused search input. Physical terminal/scanner suffix/client revision not independently observed. Current maindcc9480e handler records UNKNOWN_PRODUCT_SCAN but never clears query on a miss. This is a bounded causal follow-up, independent of retained latency/QR/header/catalog/payment owners; no takeover of their residuals.

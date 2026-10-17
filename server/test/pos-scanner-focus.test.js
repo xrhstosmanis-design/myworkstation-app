@@ -116,9 +116,9 @@ test(`actual POS ${fixture.name} scans once with/without Enter and retains focus
   await type(fixture.scan.slice(0,-1));await act(async()=>new Promise(resolve=>setTimeout(resolve,650)));assert.equal(count(),2,'partial input never adds');
   await type(fixture.productName||'Fixture');await wait();assert.equal(count(),2);assert.equal(input().value,fixture.productName||'Fixture');
   const other=document.createElement('input');document.body.appendChild(other);other.focus();await wait();assert.equal(document.activeElement,other);
-  await type('99999999');await enter();assert.match(document.querySelector('.standard-search-results').textContent,/δεν υπάρχει/);assert.equal(count(),2);
+  await type('99999999');await enter();assert.match(document.querySelector('.standard-search-results').textContent,/δεν υπάρχει/);assert.equal(count(),2);assert.equal(input().value,'','unknown code consumed before another action');await type('manual pending search');
   const cash=document.querySelector('button.cash');await act(async()=>{cash.focus();cash.click()});assert.equal(input().disabled,true);assert.equal(calls.filter(c=>c.path.endsWith('/checkout')).length,1);
-  await act(async()=>checkout.reject(Error('payment rejected')));assert.equal(document.querySelectorAll('.standard-line').length,1);assert.equal(input().value,'99999999');assert.match(document.querySelector('.store-pos-alert.error').textContent,/payment rejected/);
+  await act(async()=>checkout.reject(Error('payment rejected')));assert.equal(document.querySelectorAll('.standard-line').length,1);assert.equal(input().value,'manual pending search');assert.match(document.querySelector('.store-pos-alert.error').textContent,/payment rejected/);
   await act(async()=>cash.click());await act(async()=>checkout.resolve({total:2*(fixture.price||1.2)}));assert.equal(document.querySelectorAll('.standard-line').length,0);assert.equal(input().value,'');assert.equal(document.activeElement,input());
   const body=JSON.parse(calls.find(c=>c.path.endsWith('/checkout')).options.body);assert.equal(body.items[0].productId,'example');assert.equal(body.items[0].quantity,2);assert.equal(body.items[0].barcode,fixture.noOptions?null:fixture.option||fixture.scan);
   await type(fixture.scan);await enter();assert.equal(count(),3);assert.equal(document.querySelectorAll('.standard-line').length,1);
@@ -130,3 +130,55 @@ test(`actual POS ${fixture.name} scans once with/without Enter and retains focus
 });
 
 }
+
+test('unknown POS scan is consumed synchronously and the next scan starts empty while audit is pending',async()=>{
+ const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StorePosPanel.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime','pdfjs-dist/build/pdf.worker.min.mjs?url','pdfjs-dist/build/pdf.mjs'],loader:{'.css':'empty'},logOverride:{'empty-import-meta':'silent'}});
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid'}),keys=['window','document','navigator','HTMLElement','MutationObserver','localStorage','fetch','IS_REACT_ACT_ENVIRONMENT'];
+ const previous=new Map(keys.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
+ for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:key==='fetch'?async()=>({ok:true}):dom.window[key]});
+ const module={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
+ const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,root=createRoot(document.getElementById('root'));
+ const known='5201222304692',unknown='5201004000001',second='5201004000002',calls=[];
+ let releaseAudit;const heldAudit=new Promise(resolve=>{releaseAudit=resolve});
+ const api=async(path,options={})=>{calls.push({path,options});
+  if(path.endsWith('/audit')&&JSON.parse(options.body||'{}').actionType==='UNKNOWN_PRODUCT_SCAN')return heldAudit;
+  if(path==='/api/store-pos/stores/A')return {products:[{id:'p',name:'Fixture product',sku:'SKU',salePrice:2,currentStock:100,barcodes:[known]}],layout:{quickKeys:[],categories:[]},access:{onlineProductSearch:true}};
+  if(path.includes('/online-product-search?'))return {rows:[{id:'master',name:'Master result',barcodes:[unknown]}]};
+  if(path.endsWith('/table-service')||path==='/api/netlink/status')throw Error('not enabled');
+  return {rows:[],items:[],requests:[],offers:[],stations:[],state:{}};
+ };
+ const input=()=>document.querySelector('[data-pos-scanner]');
+ const append=value=>{const field=input();field.focus();Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(field,field.value+value);field.dispatchEvent(new dom.window.Event('input',{bubbles:true}))};
+ const enter=()=>input().dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',code:'Enter',bubbles:true}));
+ const audits=action=>calls.filter(c=>c.path.endsWith('/audit')&&JSON.parse(c.options.body).actionType===action);
+ try{
+  await act(async()=>root.render(React.createElement(module.exports.default,{api,store:{id:'A',name:'Fixture store'}})));
+  let afterEnter;
+  await act(async()=>{append(unknown);enter();afterEnter=input().value;enter();enter()});
+  assert.equal(afterEnter,'','consume the submitted miss before React commit or audit completion');
+  assert.equal(input().value,'');assert.equal(document.activeElement,input());
+  assert.equal(audits('UNKNOWN_PRODUCT_SCAN').length,1,'empty Enter cannot repeat the same miss');
+  assert.equal(audits('UNKNOWN_PRODUCT_SCAN')[0].options.body.includes(unknown),true);
+  assert.match(document.querySelector('.standard-search-results').textContent,new RegExp(unknown),'warning keeps separate failed code');
+  const online=[...document.querySelectorAll('button')].find(b=>b.textContent==='Online αναζήτηση');assert.ok(online);
+  await act(async()=>online.click());
+  assert.ok(calls.some(c=>c.path.endsWith('/online-product-search?q='+unknown)));
+  await act(async()=>{append(second);enter()});
+  assert.equal(input().value,'');
+  assert.deepEqual(audits('UNKNOWN_PRODUCT_SCAN').map(c=>JSON.parse(c.options.body).details.query),[unknown,second],'successive misses are distinct codes, never concatenated');
+  assert.match(document.querySelector('.standard-search-results').textContent,new RegExp(second));
+  assert.doesNotMatch(document.querySelector('.standard-search-results').textContent,/Master result/);
+  await act(async()=>{append(known);enter()});
+  await act(async()=>enter());
+  assert.equal(input().value,'');assert.equal(document.activeElement,input());
+  assert.equal(audits('CART_ITEM_ADD').length,1,'next known code adds exactly once');
+  assert.equal(audits('UNKNOWN_PRODUCT_SCAN').length,2);
+  assert.equal(document.querySelector('.standard-search-results'),null,'successful scan dismisses old unknown');
+  await act(async()=>{releaseAudit();await heldAudit});
+  assert.equal(input().value,'');assert.equal(audits('CART_ITEM_ADD').length,1,'late audit cannot restore a consumed code');
+  assert.equal(calls.some(c=>/checkout|product.*create/.test(c.path)),false);
+ }finally{
+  releaseAudit();await act(async()=>root.unmount());dom.window.close();
+  for(const key of keys){const descriptor=previous.get(key);if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key]}
+ }
+});
