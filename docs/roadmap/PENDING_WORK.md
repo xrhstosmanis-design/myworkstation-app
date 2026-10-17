@@ -7538,6 +7538,14 @@ Local isolated module harness13PASS/0FAIL: actual helper/XML/original validation
  
 
 
+## 17/10/2026 — POS-UNKNOWN-SCAN-RESET-01 / ASSIGNED / USER FAIL
+
+Owner `codex/pos-unknown-scan-reset-20261017`; source `fix/pos-unknown-scan-reset-20261017`. Explicit owner report and screenshot image(20261017-183722).png show Diadoxou Store Mode, operator KINIS EMMANOUILA, unknown-product warning and multiple concatenated scanned barcodes retained in the focused search input. Physical terminal/scanner suffix/client revision not independently observed. Current maindcc9480e handler records UNKNOWN_PRODUCT_SCAN but never clears query on a miss. This is a bounded causal follow-up, independent of retained latency/QR/header/catalog/payment owners; no takeover of their residuals.
+
+Read current AGENTS, complete shared active/tracker/pending/numbered, POS manual, main panel history and scan-latency/barcode-cart/idle-focus checkpoints. Preserve accepted CSV exact scan-to-cart and idle focus, known-code80/600ms timing, ambiguity/name suggestions, barcode-specific prices, modal/busy/fiscal/checkout/store guards, cart contents and permissions. Change only submitted miss consumption: clear DOM/query synchronously before any await, retain a separate read-only last unknown code/online action, leave input focused and allow next scan independently. No automatic product creation/online request, sale/payment/stock/fiscal/shift/data action. Meaningful mounted regression: unknown then immediate next known; repeated empty Enter no duplicate audit; unknown then another unknown no concatenation; retained unknown online argument; existing scan/focus/guard regressions. No new physical/LAB/manual PASS. Publish claim green on main before source. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-pos-unknown-scan-reset.md. Next: bounded client fix/tests/fullCI/exact guarded release then ordinary operator acceptance.
+ 
+
+
 ## 17/10/2026 21:42 Europe/Athens - COMPANY-TAX-EDIT-01 + TERMINAL-DELETE-01 / ASSIGNED / NOT TESTED
 
 Owner fix/company-tax-terminal-delete-20261017. Explicit user request: edit missing AFM on an existing company and add terminal deletion in Installation/Terminals. Independent bounded Platform Admin maintenance; other KAT connector/session/EFTPOS/installation, inventory and invoice owners retain their assigned work. Current main dcc9480, AGENTS/current active/tracker/pending/numbered, SuperAdmin manual and multi-company/installation/terminal checkpoints and history reviewed. Screenshot shows missing company AFM and inactive terminal registration; no private business identifiers or screenshot are published here.
