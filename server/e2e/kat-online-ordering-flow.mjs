@@ -1,3 +1,5 @@
+import {operatorSessionFixture} from "./helpers/operator-session-fixture.mjs";
+const operatorSessions=operatorSessionFixture();
 import {withShiftCloseCardFixture} from "./helpers/shift-close-card-fixture.mjs";
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
@@ -20,6 +22,7 @@ async function request(path,{method="GET",token,body}={}){
     body:body===undefined?undefined:JSON.stringify(body)
   });
   let payload=null;try{payload=await response.json()}catch{}
+  operatorSessions.remember(path,response,payload);
   return {response,payload};
 }
 
@@ -183,4 +186,4 @@ async function main(){
   console.log("KAT P0 online ordering flow passed",{orderId,saleId:stored.saleId,stockAfter:9,total:2.6});
 }
 
-try{await main()}finally{await prisma.$disconnect()}
+try{await main()}finally{await operatorSessions.logout(typeof baseUrl==="undefined"?base:baseUrl);await prisma.$disconnect()}

@@ -1,3 +1,5 @@
+import {operatorSessionFixture} from "./helpers/operator-session-fixture.mjs";
+const operatorSessions=operatorSessionFixture();
 import {withShiftCloseCardFixture} from "./helpers/shift-close-card-fixture.mjs";
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
@@ -16,6 +18,7 @@ async function request(path,{method="GET",token,body}={}){
   body=await withShiftCloseCardFixture(prisma,baseUrl,path,token,body);
   const response=await fetch(`${baseUrl}${path}`,{method,headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(body!==undefined?{"content-type":"application/json"}:{})},body:body===undefined?undefined:JSON.stringify(body)});
   let payload=null;try{payload=await response.json()}catch{}
+  operatorSessions.remember(path,response,payload);
   return {response,payload};
 }
 
@@ -94,4 +97,4 @@ async function main(){
   console.log("KAT final 12-sale volume regression passed",{sessionId,sales:12,cancellations:2,stock:20,cashSales:12.5,cardSales:12.5});
 }
 
-try{await main()}finally{await prisma.$disconnect()}
+try{await main()}finally{await operatorSessions.logout(typeof baseUrl==="undefined"?base:baseUrl);await prisma.$disconnect()}

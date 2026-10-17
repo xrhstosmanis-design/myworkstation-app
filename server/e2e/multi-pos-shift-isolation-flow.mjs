@@ -1,3 +1,5 @@
+import {operatorSessionFixture} from "./helpers/operator-session-fixture.mjs";
+const operatorSessions=operatorSessionFixture();
 import {withShiftCloseCardFixture} from "./helpers/shift-close-card-fixture.mjs";
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
@@ -23,6 +25,7 @@ async function request(path,{method="GET",token,terminalPos,body}={}){
     body:effectiveBody===undefined?undefined:JSON.stringify(effectiveBody)
   });
   let payload=null;try{payload=await response.json()}catch{}
+  operatorSessions.remember(path,response,payload);
   return {response,payload};
 }
 
@@ -125,4 +128,4 @@ async function main(){
   console.log("KAT P1 multiple POS shift isolation passed",{stock:7,pos1Cash:2.2,pos2Cash:4.4,crossTerminalClose:"blocked"});
 }
 
-try{await main()}finally{await prisma.$disconnect()}
+try{await main()}finally{await operatorSessions.logout(typeof baseUrl==="undefined"?base:baseUrl);await prisma.$disconnect()}

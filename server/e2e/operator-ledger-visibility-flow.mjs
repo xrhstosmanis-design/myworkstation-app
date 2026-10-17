@@ -1,3 +1,5 @@
+import {operatorSessionFixture} from "./helpers/operator-session-fixture.mjs";
+const operatorSessions=operatorSessionFixture();
 import {withShiftCloseCardFixture} from "./helpers/shift-close-card-fixture.mjs";
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
@@ -19,6 +21,7 @@ async function request(path,{method="GET",token,body}={}){
   });
   let payload=null;
   try{payload=await response.json()}catch{}
+  operatorSessions.remember(path,response,payload);
   return {response,payload};
 }
 
@@ -66,10 +69,13 @@ async function main(){
   await setProfile(ownerToken,employeeB,"E2E Ledger Operator B","e2e.ledger.b",ownOnly);
 
   const tokenA=await pinLogin(employeeA,"3579");
-  const tokenB=await pinLogin(employeeB,"4680");
+  let tokenB;
 
   const paymentA=await request(`/api/transactions/stores/${storeId}`,{method:"POST",token:tokenA,body:{type:"OTHER_EXPENSE",amount:2,description:"Operator A external expense",evidenceMode:"NO_DOCUMENT",paymentSource:"EXTERNAL",idempotencyKey:"e2e-ledger-a-001"}});
   assert.equal(paymentA.response.status,201,JSON.stringify(paymentA.payload));
+
+  assert.equal((await request("/api/operators/logout",{method:"POST",token:tokenA})).response.status,200);
+  tokenB=await pinLogin(employeeB,"4680");
 
   const viewBBeforeOwn=await request(`/api/transactions/stores/${storeId}/overview`,{token:tokenB});
   assert.equal(viewBBeforeOwn.response.status,200,JSON.stringify(viewBBeforeOwn.payload));
@@ -108,14 +114,14 @@ async function main(){
   assert.notEqual(rowA.actorId,rowB.actorId,"Payments from two operators lost actor isolation");
 
   // External payments above are independent of a cash shift. Opening a
-  // different owner's shift must now reject both existing POS sessions.
+  // different owner's shift refuses B; A remains revoked by its explicit handover.
   const opened=await request(`/api/cash/stores/${storeId}/sessions/open`,{method:"POST",token:ownerToken,body:{shiftLabel:"E2E ledger visibility",drawer:25,custody:0,coins:0,safe:0,note:"two operators"}});
   assert.equal(opened.response.status,201,JSON.stringify(opened.payload));
   const sessionId=opened.payload.id;
   for(const token of [tokenA,tokenB]){
     const denied=await request(`/api/transactions/stores/${storeId}/overview`,{token});
     assert.equal(denied.response.status,401,JSON.stringify(denied.payload));
-    assert.equal(denied.payload.code,"POS_SHIFT_OTHER_OPERATOR");
+    assert.equal(denied.payload.code,token===tokenA?"STORE_OPERATOR_SESSION_REVOKED":"POS_SHIFT_OTHER_OPERATOR");
   }
 
   const closed=await request(`/api/cash/sessions/${sessionId}/close`,{method:"POST",token:ownerToken,body:{cashSales:0,cardSales:0,eftposTotal:0,expenses:0,drawer:25,custody:0,coins:0,safe:0,note:"external-only operator payments"}});
@@ -127,4 +133,4 @@ async function main(){
   console.log("E2E operator ledger visibility passed",{employeeA,employeeB,paymentA:paymentA.payload.id,paymentB:paymentB.payload.id});
 }
 
-try{await main()}finally{await prisma.$disconnect()}
+try{await main()}finally{await operatorSessions.logout(typeof baseUrl==="undefined"?base:baseUrl);await prisma.$disconnect()}

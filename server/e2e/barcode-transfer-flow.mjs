@@ -1,3 +1,5 @@
+import {operatorSessionFixture} from "./helpers/operator-session-fixture.mjs";
+const operatorSessions=operatorSessionFixture();
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
@@ -11,6 +13,7 @@ const email="n13-barcode-owner@myworkstation.test",password="ci-n13-barcode-only
 async function request(path,{method="GET",token,body}={}){
   const response=await fetch(base+path,{method,headers:{...(token?{authorization:`Bearer ${token}`}:{}),...(body!==undefined?{"content-type":"application/json"}:{})},body:body===undefined?undefined:JSON.stringify(body)});
   const payload=await response.json().catch(()=>null);
+  operatorSessions.remember(path,response,payload);
   return {status:response.status,payload};
 }
 const transfer=(token,target,source,barcode)=>request(`/api/owner-products/${target}/barcode-transfer`,{method:"POST",token,body:{sourceProductId:source,barcode}});
@@ -96,4 +99,4 @@ try{
   assert.equal(freshSave.status,200,JSON.stringify(freshSave.payload));
   assert.equal((await prisma.$queryRaw`SELECT "productId" FROM "ProductBarcode" WHERE "productId"=${target} AND "barcode"=${barcode}`)[0].productId,target,"Fresh card keeps moved barcode");
   console.log("N13 barcode HTTP E2E PASS: reset/identity/other-code/POS/Audit, invalid/missing/same/stale/duplicate/rollback, employee/anonymous/foreign isolation, concurrent one-winner, stock/price/financial invariants");
-}finally{await prisma.$disconnect()}
+}finally{await operatorSessions.logout(typeof baseUrl==="undefined"?base:baseUrl);await prisma.$disconnect()}
