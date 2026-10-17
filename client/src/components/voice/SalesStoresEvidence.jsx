@@ -3,7 +3,7 @@ import {assistantMoney,assistantQuantity,assistantUnit} from "./presentAssistant
 const amounts=items=>(items||[]).map(q=>q.quantity===null?"Ποσότητα χωρίς καταγεγραμμένη μονάδα":`${assistantQuantity(q.quantity)} ${assistantUnit(q.unit)}`).join(" · ")||"Δεν καταγράφηκαν πωλήσεις";
 export default function SalesStoresEvidence({evidence=[]}){
   return evidence.filter(r=>r.kind==="sales_by_store").map((r,i)=><section key={i} className="mws-sales-stores-evidence" aria-label="Πωλήσεις ανά κατάστημα">
-    <h3>Πωλήσεις ανά κατάστημα</h3><p>{r.from} έως και {r.to} · ώρα Ελλάδας · {r.mode==="offers"?"Εφαρμοσμένες προσφορές":(r.names||[]).join(" · ")}</p>
+    <h3>Πωλήσεις ανά κατάστημα</h3><p>{r.from} έως και {r.to} · ώρα Ελλάδας · {r.mode==="all"?"Όλα τα είδη":r.mode==="offers"?"Εφαρμοσμένες προσφορές":(r.names||[]).join(" · ")}</p>
     {r.incompletePeriod&&<p>Η περίοδος δεν έχει ολοκληρωθεί. Καταχωρημένα στοιχεία έως {r.asOf}.</p>}
     {r.result==="ambiguous"&&<><p>Επίλεξε πλήρη ονομασία ή συσκευασία για «{r.unresolvedName}». Δεν απαιτείται SKU.</p><ul>{(r.candidates||[]).map((name,j)=><li key={j}>{name}</li>)}</ul></>}
     {r.result==="no_match"&&<><p>{r.reason==="catalog_name_not_found"?"Δεν βρέθηκε αντιστοίχιση στον κατάλογο των επιλεγμένων καταστημάτων. Δεν αποδεικνύεται μηδενική πώληση.":"Δεν βρέθηκε αντίστοιχη ονομασία / κατηγορία ή διαθέσιμο εξουσιοδοτημένο κατάστημα. Δεν αποδεικνύεται μηδενική πώληση."}</p>{r.categoryCandidates?.length>0&&<><p>Καταγεγραμμένες κατηγορίες{r.categoryCandidatesLimited?" (πρώτες 20)":""}:</p><ul>{r.categoryCandidates.map((name,j)=><li key={j}>{name}</li>)}</ul></>}</>}

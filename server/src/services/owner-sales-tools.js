@@ -14,6 +14,14 @@ export const salesToolArguments=z.object({product:z.string().trim().min(1).max(1
 export const ownerSalesTool={type:"function",name:"sales_by_product",strict:true,description:"Διαβάζει την κανονική αναφορά Στατιστικά πωλήσεων μόνο για το επιλεγμένο εξουσιοδοτημένο κατάστημα. product: περιγραφή ή SKU, όχι barcode. from/to: συγκεκριμένες συμπεριλαμβανόμενες ημερομηνίες YYYY-MM-DD, ώρα Ελλάδας, έως366 ημέρες. Ασαφές είδος ζητά διευκρίνιση. Ποσότητα και αξίες συνυπολογίζουν καταχωρημένες επιστροφές/ακυρώσεις, ολοκληρωμένες μη πιστωτικές πωλήσεις. Καμία μεταβολή.",parameters:{type:"object",additionalProperties:false,properties:{product:{type:"string",description:"Μόνο η περιγραφή ή το SKU που ζήτησε ο χρήστης."},from:{type:"string",description:"Πρώτη ημερομηνία YYYY-MM-DD."},to:{type:"string",description:"Τελευταία ημερομηνία YYYY-MM-DD, συμπεριλαμβάνεται."}},required:["product","from","to"]}};
 const fail=(message,status=502)=>{throw Object.assign(new Error(message),{status})};
 const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").trim().replace(/\s+/g," ");
+// Deliberately narrow: no inherited topic, actor, product or payment filter
+// may become an unfiltered total. These requests need no model extraction.
+export function plainTotalSalesRequest(question,{now=new Date()}={}){
+ const text=norm(question).replace(/[.!;?]+$/g,"").trim();
+ if(!/^(?:πωλησεις|συνολικες πωλησεις|συνολο πωλησεων|τζιρος) (?:σημερα|χθες)(?: σε (?:csv|excel|xlsx|pdf|word|docx))?$/.test(text))return null;
+ const period=businessQuestionPeriod(question,{now});
+ return period?{mode:"all",names:[],...period}:null;
+}
 const keys=["productId","sku","name","storeId","storeName","salesQuantity","grossSales","netSales","vatValue","normalSaleCount","reversalCount","returnGrossValue"];
 const project=(row,fields)=>Object.fromEntries(fields.map(key=>[key,row[key]]));
 
@@ -47,6 +55,11 @@ export const assistantProductTools=[ownerSalesTool,ownerStockTool];
 
 // Shared dispatcher. The old export remains compatible with existing Owner clients.
 export async function runOwnerAssistant({prompt,question="",requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,readBusiness,cashTool,tools=[cashTool,ownerSalesTool],now=new Date()}){
+  const total=tools.some(t=>t?.name===salesStoresTool.name)&&plainTotalSalesRequest(question,{now});
+  if(total){
+    const report=await readSalesStores(total);
+    return {response:{ok:true},raw:{status:"completed",output_text:JSON.stringify({answer:"Οι συνολικές πωλήσεις διαβάστηκαν από την κανονική αναφορά του εξουσιοδοτημένου εύρους.",highlights:[],limitations:""})},evidence:[report],reads:[{name:salesStoresTool.name,args:total}]};
+  }
   const expectedDomain=assistantBusinessDomain(question),businessAllowed=tools.some(t=>t.name===businessTool.name);
   if(expectedDomain&&businessAllowed){
     const clarification=businessQuestionClarification(question,{now});
@@ -76,6 +89,9 @@ export async function runOwnerAssistant({prompt,question="",requestProvider,read
     const call=toolCalls[0],business=call.name===businessTool.name,sales=call.name===ownerSalesTool.name,stock=call.name===ownerStockTool.name,cash=call.name===cashTool.name,list=call.name===salesStoresTool.name,consumption=call.name===consumptionTool.name;
     if(!(business||sales||stock||cash||list||consumption)||!tools.some(tool=>tool.name===call.name)||typeof call.call_id!=="string"||!call.call_id||typeof call.arguments!=="string"||call.arguments.length>(list||business?3000:600))fail("Μη επιτρεπόμενη αναζήτηση από τον βοηθό.");
     let args;try{args=(business?businessArguments:consumption?consumptionArguments:list?salesStoresArguments:sales?salesToolArguments:stock?stockToolArguments:cashToolArguments).parse(JSON.parse(call.arguments))}catch{fail("Διευκρίνισε την ονομασία και τις έγκυρες ημερομηνίες της αναζήτησης.",422)}
+    // all is internal to the exact deterministic request above. The provider
+    // tool schema intentionally cannot ask for it, nor drop a requested filter.
+    if(list&&args.mode==="all")fail("Η συνολική αναφορά απαιτεί σαφές αίτημα χωρίς πρόσθετα φίλτρα.",422);
     if(business&&expectedDomain){const period=businessQuestionPeriod(question,{now});if(args.domain!==expectedDomain||period&&(args.from!==period.from||args.to!==period.to))fail("Η αναφορά πρέπει να ακολουθεί το ζητούμενο είδος και διάστημα.",422);}
     calls++;const report=await(business?readBusiness(args):consumption?readConsumption(args):list?readSalesStores(args):sales?readSales(args):stock?readStock(args):readCash(args.date));evidence.push(report);reads.push({name:call.name,args});
     const providerReport=list||consumption||business?{...report,rows:report.rows.slice(0,50),detailRowCount:report.rows.length,detailRowsLimited:report.rows.length>50,detailsShownInReport:true}:report;

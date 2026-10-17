@@ -4,8 +4,8 @@ import {salesReportCalendar} from "./sales-report-calendar.js";
 import {readSalesAnalysisReport} from "../routes/kiosk-reports-sales-v4.js";
 
 const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-export const salesStoresArguments=z.object({mode:z.enum(["names","family","category","offers"]),names:z.array(z.string().trim().min(1).max(120)).max(20),from:day,to:day}).strict().superRefine((a,c)=>{
-  if(["names","family"].includes(a.mode)&&!a.names.length||a.mode==="category"&&a.names.length!==1||a.mode==="offers"&&a.names.length)c.addIssue({code:z.ZodIssueCode.custom,message:"Δώσε ονομασίες ειδών, μία κατηγορία ή όλες τις εφαρμοσμένες προσφορές."});
+export const salesStoresArguments=z.object({mode:z.enum(["names","family","category","offers","all"]),names:z.array(z.string().trim().min(1).max(120)).max(20),from:day,to:day}).strict().superRefine((a,c)=>{
+  if(["names","family"].includes(a.mode)&&!a.names.length||a.mode==="category"&&a.names.length!==1||["offers","all"].includes(a.mode)&&a.names.length)c.addIssue({code:z.ZodIssueCode.custom,message:"Δώσε ονομασίες ειδών, μία κατηγορία ή όλες τις εφαρμοσμένες προσφορές."});
   try{salesReportCalendar(a.from,a.to)}catch(e){c.addIssue({code:z.ZodIssueCode.custom,message:e.message})}
 });
 export const salesStoresTool={type:"function",name:"sales_by_store",strict:true,description:"Κανονικές πωλήσεις ανά εξουσιοδοτημένο κατάστημα και είδος: πολλές ονομασίες, μία κατηγορία ή πραγματικά εφαρμοσμένες προσφορές. family: όλες οι πραγματικές ονομασίες/συσκευασίες που ταιριάζουν στη μάρκα ή γενική ονομασία, π.χ. κόκα κόλα· επιστρέφονται χωριστές γραμμές ανά είδος. Δεν απαιτεί SKU. Ασαφείς συγκεκριμένες ονομασίες επιστρέφουν ονομαστικές επιλογές. Το εύρος καταστημάτων ορίζεται από τον χρήστη στην οθόνη, ποτέ από το μοντέλο. Μόνο ανάγνωση.",parameters:{type:"object",additionalProperties:false,properties:{mode:{type:"string",enum:["names","family","category","offers"]},names:{type:"array",items:{type:"string"},description:"names: συγκεκριμένες ονομασίες. family: γενικές ονομασίες/μάρκες του χρήστη για όλες τις καταγεγραμμένες συσκευασίες. category: μία ονομασία κατηγορίας. offers: κενή λίστα."},from:{type:"string"},to:{type:"string"}},required:["mode","names","from","to"]}};
@@ -28,7 +28,7 @@ export async function readAssistantSalesStores(value,access,{readReport=readSale
   if(scopes.length>100||access.truncated)return {...base,result:"source_limited",truncated:true};
   if(!scopes.length)return {...base,result:"no_match",reason:"no_authorized_stores"};
   const catalogs=new Map(),ids=new Map();
-  if(args.mode!=="offers"){
+  if(!["offers","all"].includes(args.mode)){
     for(const companyId of new Set(scopes.map(s=>s.companyId))){
       signal?.throwIfAborted();await verify();
       const rows=await readCatalog(companyId);await verify();
@@ -61,7 +61,7 @@ export async function readAssistantSalesStores(value,access,{readReport=readSale
   const rows=[],stores=[];
   for(const scope of scopes){
     signal?.throwIfAborted();await verify();
-    const productIds=args.mode==="offers"?null:[...(ids.get(scope.companyId)||[])];
+    const productIds=["offers","all"].includes(args.mode)?null:[...(ids.get(scope.companyId)||[])];
     if(productIds?.length===0){stores.push({...scope,result:"no_matching_catalog",grossSales:null,quantities:[]});continue}
     const report=await readReport({companyId:scope.companyId,storeId:scope.storeId,from:calendar.from,to:calendar.to,calendar,q:null,productIds,promotionsOnly:args.mode==="offers",observedThrough:now});await verify();
     if(args.mode==="offers"&&report?.unattributedPromotionReversal)return {...base,result:"source_limited",truncated:true,reason:"Υπάρχουν επιστροφές χωρίς καταγεγραμμένη σύνδεση στην αρχική προσφορά. Δεν επιβεβαιώνεται πλήρες σύνολο."};
