@@ -1,3 +1,9 @@
+## 17/10/2026 22:12 Athens — VOICE-ASSISTANT-01 / TOTAL SALES RELEASED / DIADOXOU USER FAIL AWAITING RETEST
+
+Same owner `codex/assistant-business-queries-20261015`. Claim2655/e200c889 preceded source2657/head8cac59c3 mergedf3245f6f. Full exact PR/mainCI39060263038/39060704633 both2894PASS/0FAIL/0SKIP plus6backup. Ordinary guarded39061125317 SUCCESS and independent health22:12:37 exactf3245f6f. Narrow complete today/yesterday total-sales request now uses existing canonical all-product reader with unchanged scope/source guards; no new manual PASS. Checkpoint `CHECKPOINTS/CHANGES/2026-10-17-assistant-total-sales.md`.
+
+OPEN: actual post-release same-question Diadoxou read-only evidence + same normal-source/time comparison; Owner/all-product exports/mobile separately untested. General names/spelling/ambiguity/wider domains, real microphone unavailable, persistent history, short-follow-up CSV/other formats and chat interaction/mobile acceptance remain open. Preserve direct transfer CSV2631 and original-line reconciliation2617; no transaction replay or duplicate claim. Next: refresh Super Admin, select Diadoxou, «ΠΩΛΗΣΕΙΣ ΣΗΜΕΡΑ», final screenshot. Whole VOICE OPEN/ASSIGNED, other owners preserved.
+
 ## 17/10/2026 21:48 Athens — VOICE-ASSISTANT-01 / PLAIN TOTAL SALES USER FAIL / ASSIGNED
 
 Retained owner `codex/assistant-business-queries-20261015`, source branch `fix/assistant-total-sales-20261017`. User screenshot normal Super Admin selected Diadoxou: «ΠΩΛΗΣΕΙΣ ΣΗΜΕΡΑ» returns sourceUnavailable safe fallback, no source/evidence or zero-sales claim. New actual USER FAIL for plain total-sales question; UI composer/Copy button visibly present, but screenshot alone does not prove Enter or clipboard execution. Exact generating revision not captured. Read-only Render logs for exact18:47–18:49UTC ask window returned no matching app/request records; no claim of observed provider tool-call trace or database error. No production/business/credential change.
