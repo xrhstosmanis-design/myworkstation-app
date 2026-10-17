@@ -1,3 +1,7 @@
+## 17/10/2026 — INVENTORY-SUPPLIER-LINK-MERGE-01 / INITIAL FULL CI PASS / SYNCHRONIZING MAIN
+
+PR2664/head36c408e3/fullCI39062754920/job117484025147 SUCCESS2906PASS/0FAIL/0SKIP plus6backup, all native/build/browser/Windows/invariant/HTTP checks. New actual native merge/link/mapping proof passed; no production action or new LAB/USER PASS. Concurrent main changed shared records before merge. Preserve all current main source and owners, retain exactly the accepted four owned runtime/test blobs, publish combined head and rerun fullCI. Same owner fix/inventory-supplier-link-merge-20261017; no guard weakening. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-inventory-supplier-link-merge.md.
+
 ## 17/10/2026 — INVENTORY-SUPPLIER-LINK-MERGE-01 / IMPLEMENTED / AWAITING NATIVE CI + RELEASE
 
 Owner fix/inventory-supplier-link-merge-20261017. ClaimPR2662/head7c9270a7/docsCI39062553215 SUCCESS merged74ebf744 before source. Plan canonical per-supplier link with survivor preference; identical/blank normalized code coalescence preserves known raw code, leading zero identity and active union. Redundant source rows retained inactive with original IDs/product/code/provenance, not deleted; existing mapping rows move to survivor without altering learning economics/IDs/units/usage. Distinct codes and third-product learning ownership conflicts remain explicit blockers. Selected price/stock/history/posted-source/24h and other existing guards unchanged. Existing serializable/hash/audit/replay transaction covers every link/mapping write.

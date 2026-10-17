@@ -1,8 +1,18 @@
+## 17/10/2026 — INVENTORY-SUPPLIER-LINK-MERGE-01 / INITIAL FULL CI PASS / SYNCHRONIZING MAIN
+
+PR2664/head36c408e3/fullCI39062754920/job117484025147 SUCCESS2906PASS/0FAIL/0SKIP plus6backup, all native/build/browser/Windows/invariant/HTTP checks. New actual native merge/link/mapping proof passed; no production action or new LAB/USER PASS. Concurrent main changed shared records before merge. Preserve all current main source and owners, retain exactly the accepted four owned runtime/test blobs, publish combined head and rerun fullCI. Same owner fix/inventory-supplier-link-merge-20261017; no guard weakening. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-inventory-supplier-link-merge.md.
+
 ## 17/10/2026 — INVENTORY-SUPPLIER-LINK-MERGE-01 / IMPLEMENTED / AWAITING NATIVE CI + RELEASE
 
 Owner fix/inventory-supplier-link-merge-20261017. ClaimPR2662/head7c9270a7/docsCI39062553215 SUCCESS merged74ebf744 before source. Plan canonical per-supplier link with survivor preference; identical/blank normalized code coalescence preserves known raw code, leading zero identity and active union. Redundant source rows retained inactive with original IDs/product/code/provenance, not deleted; existing mapping rows move to survivor without altering learning economics/IDs/units/usage. Distinct codes and third-product learning ownership conflicts remain explicit blockers. Selected price/stock/history/posted-source/24h and other existing guards unchanged. Existing serializable/hash/audit/replay transaction covers every link/mapping write.
 
 Pure Node20 planning4PASS plus existing price1PASS; native1infrastructureSKIP locally. Extended actual native four-card preview/confirm/replay/rollback/concurrent-sale fixture adds repeated supplier links, inactive survivor activation, missing/identical/different codes, third-card ownership refusal, stale link rejection, retained historical rows and learning economics/foreign controls/selected1.50price. Existing financial/stock/history assertions preserved. Mandatory full PR/mainCI and ordinary exact guarded release pending; new actual USER/LAB behavior NOT TESTED. No production merge or data repair. Prior posted-source limited USER confirmation21:54 still requires synchronized final manual/PDF receipt; no inferred successful final merge. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-inventory-supplier-link-merge.md. Next fullCI/exact release then original selected-pair preview only.
+
+## 17/10/2026 22:29 Europe/Athens — COMPANY-TAX-EDIT-01 + TERMINAL-DELETE-01 / LIMITED USER UI CONFIRMATION
+
+The owner replied «ΕΙΝΑΙ ΟΚ» after the company-details and terminal-delete controls were released and their navigation explained. Record this as limited user-reported UI acceptance only. The awaiting-confirmation slice for appearance of these controls is closed; no further UI-appearance retest is required. This does not establish any actual AFM value/save, terminal archive, persistence, financial or stock delta. Those business-write effects remain NOT TESTED; do not replay or delete anything to manufacture evidence.
+
+Retained owner fix/company-tax-terminal-delete-20261017. Source PR2656 / deployed revision88579d6326fa444e20abed02231a1069c341f438, full PR/main2902PASS/0FAIL/0SKIP plus6backup and guarded Render39061606272 remain separate technical evidence. The user's device revision was not independently captured. Wider #02/#36 and installation/KAT/remote owners remain unchanged. Only a separately reported legitimate future save/archive can establish persistence acceptance. Checkpoint: CHECKPOINTS/CHANGES/2026-10-17-company-tax-terminal-delete.md. Earlier AWAITING USER entries are historical for UI appearance only.
 
 ## 17/10/2026 22:25 Europe/Athens — INVENTORY-SUPPLIER-LINK-MERGE-01 / ASSIGNED / USER FAIL
 
