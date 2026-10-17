@@ -21,7 +21,7 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  ProductCategory:'"id" text primary key,"companyId" text,"active" bool',ProductSubcategory:'"id" text primary key,"companyId" text,"categoryId" text,"active" bool',
  ProductBarcode:'"id" text primary key,"productId" text,"barcode" text,"unitMultiplier" numeric default 1,"salePrice" numeric,"updatedAt" timestamp default NOW(),unique("productId","barcode")',
  SupplierProductLink:'"id" text primary key,"companyId" text,"productId" text,"supplierId" text,"supplierCode" text,"active" bool,"updatedAt" timestamp default NOW(),unique("companyId","supplierId","productId")',
- SupplierProductMapping:'"id" text primary key,"companyId" text,"productId" text,"updatedAt" timestamp default NOW()',
+ SupplierProductMapping:'"id" text primary key,"companyId" text,"productId" text,"updatedAt" timestamp default NOW(),"supplierId" text,"supplierItemCode" text,"unitsPerPackage" numeric,"lastUnitCost" numeric,"usageCount" int default 1,unique("companyId","supplierId","supplierItemCode")',
  ProductSetItem:'"id" text,"companyId" text,"productId" text,"relatedProductId" text',PreparationRecipeLine:'"id" text,"companyId" text,"productId" text,"ingredientProductId" text',
  PurchaseDocumentLine:'"id" text,"purchaseDocumentId" text,"productId" text,"netAmount" numeric',PurchaseOrderLine:'"id" text,"orderId" text,"productId" text',
  StoreBakedBalance:'"companyId" text,"storeId" text,"productId" text,"enabled" bool',
@@ -34,10 +34,11 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  await db.$executeRaw`INSERT INTO "ProductCategory" VALUES ('cat','co',true),('foreign','other',true)`;
  await db.$executeRaw`INSERT INTO "ProductSubcategory" VALUES ('sub','co','cat',true),('wrong','co','other',true)`;
  await db.$executeRaw`INSERT INTO "Product"("id","companyId","name","sku") VALUES ('p1','co','ONE','1'),('p2','co','TWO','2'),('p3','co','THREE','3'),('p4','co','FOUR','4'),('control','co','CONTROL','C'),('shared','co','SHARED','S')`;
- await db.$executeRaw`INSERT INTO "StoreProduct"("storeId","productId","salePrice","currentStock") VALUES ('A','p1',2,-1),('A','p2',2,3),('A','p3',2,1),('A','p4',2,0),('B','control',9,20),('A','shared',2,4),('B','shared',5,30)`;
+ await db.$executeRaw`INSERT INTO "StoreProduct"("storeId","productId","salePrice","currentStock") VALUES ('A','p1',1.5,-1),('A','p2',2,3),('A','p3',2,1),('A','p4',2,0),('B','control',9,20),('A','shared',2,4),('B','shared',5,30)`;
  await db.$executeRaw`INSERT INTO "ProductBarcode"("id","productId","barcode","salePrice") VALUES ('b1','p1','111',NULL),('b2','p2','222',1.5),('b3','p3','333',NULL)`;
  await db.$executeRaw`INSERT INTO "SupplierProductLink"("id","companyId","productId","supplierId","supplierCode","active") VALUES ('s2','co','p2','supplier2','CODE2',true)`;
- await db.$executeRaw`INSERT INTO "SupplierProductMapping"("id","companyId","productId") VALUES ('map','co','p2')`;
+ await db.$executeRaw`INSERT INTO "SupplierProductMapping"("id","companyId","productId","supplierId","supplierItemCode","unitsPerPackage","lastUnitCost","usageCount") VALUES ('map','co','p2','supplier2','CODE2',12,1.25,9),('foreign-map','foreign','control','supplier2','CODE2',24,9,4)`;
+ await db.$executeRaw`INSERT INTO "SupplierProductLink"("id","companyId","productId","supplierId","supplierCode","active") VALUES ('s1','co','p1','supplier2','CODE2',false),('s3','co','p3','supplier2','CODE2',true),('s4','co','p4','supplier4','CODE4',false)`;
  await db.$executeRaw`INSERT INTO "PurchaseDocument" VALUES ('historic','co','A','APPROVED')`;
  await db.$executeRaw`INSERT INTO "PurchaseDocumentLine" VALUES ('hl','historic','p2',7.5)`;
  await db.$executeRaw`INSERT INTO "SaleLine" VALUES ('sale','p2',1,2)`;
@@ -79,8 +80,26 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  await db.$executeRaw`INSERT INTO "RbsCapDriverV1Request" VALUES ('done','co','A','SALE_COMMITTED','{"items":[{"productId":"p2"}]}'),('unrelated','co','A','DISPATCHED','{"resolvedItems":[{"productId":"control"}]}')`;
  await assert.rejects(db.$transaction(tx=>lockActiveSaleProducts(tx,{companyId:'foreign',storeId:'A',productIds:['p2']})),/καρτέλα/);
 
+ // Identical supplier codes are safe; inconsistent ownership/codes still block.
+ await db.$executeRaw`UPDATE "SupplierProductLink" SET "supplierCode"='DIFFERENT' WHERE "id"='s3'`;
+ assert.ok((await previewInventoryMerge(db,user,choice)).blockers.some(b=>b.includes('διαφορετικοί κωδικοί')));
+ await db.$executeRaw`UPDATE "SupplierProductLink" SET "supplierCode"=NULL WHERE "id"='s3'`;
+ assert.deepEqual((await previewInventoryMerge(db,user,choice)).blockers,[],'blank duplicate code must not lose the known target code');
+ await db.$executeRaw`UPDATE "SupplierProductLink" SET "supplierCode"='CODE2' WHERE "id"='s3'`;
+ await db.$executeRaw`UPDATE "SupplierProductMapping" SET "productId"='control' WHERE "id"='map'`;
+ const conflict=await previewInventoryMerge(db,user,choice);
+ assert.ok(conflict.blockers.some(b=>b.includes('τρίτη καρτέλα')));
+ const conflictBefore=await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`;
+ await assert.rejects(confirmInventoryMerge(db,user,{...choice,requestId:randomUUID(),previewHash:conflict.previewHash,confirm:true,reason:'Same item verified'}),/τρίτη καρτέλα/);
+ assert.deepEqual(await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`,conflictBefore);
+ await db.$executeRaw`UPDATE "SupplierProductMapping" SET "productId"='p2' WHERE "id"='map'`;
+ const originalMapping=(await db.$queryRaw`SELECT * FROM "SupplierProductMapping" WHERE "id"='map'`)[0];
+ const originalForeignMapping=(await db.$queryRaw`SELECT * FROM "SupplierProductMapping" WHERE "id"='foreign-map'`)[0];
  const p=await previewInventoryMerge(db,user,choice);assert.deepEqual(p.blockers,[]);assert.equal(p.combinedStock,3);assert.equal(p.barcodes.length,3);
  const input={...choice,requestId:randomUUID(),previewHash:p.previewHash,confirm:true,reason:'Same item verified'};
+ await db.$executeRaw`UPDATE "SupplierProductLink" SET "active"=false WHERE "id"='s2'`;
+ await assert.rejects(confirmInventoryMerge(db,user,input),/άλλαξαν/,'link changes invalidate the reviewed preview');
+ await db.$executeRaw`UPDATE "SupplierProductLink" SET "active"=true WHERE "id"='s2'`;
  const beforePendingConflict=await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`;
  await db.$executeRaw`UPDATE "PurchaseDocument" SET "status"='DRAFT' WHERE "id"='historic'`;
  await assert.rejects(confirmInventoryMerge(db,user,input),/πρόχειρο παραστατικό/,'confirm must recheck a now-unproven posting');
@@ -101,10 +120,14 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  await db.$executeRawUnsafe(`CREATE FUNCTION fail_merge_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."eventType"='INVENTORY_PRODUCT_MERGE' THEN RAISE EXCEPTION 'isolated audit failure'; END IF; RETURN NEW; END; $$`);
  await db.$executeRawUnsafe('CREATE TRIGGER fail_merge BEFORE INSERT ON "StoreOperatorAudit" FOR EACH ROW EXECUTE FUNCTION fail_merge_audit()');
  const before=await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`;
+ const linksBeforeFailure=await db.$queryRaw`SELECT * FROM "SupplierProductLink" ORDER BY "id"`;
+ const mapsBeforeFailure=await db.$queryRaw`SELECT * FROM "SupplierProductMapping" ORDER BY "id"`;
  await assert.rejects(confirmInventoryMerge(db,user,input),/isolated audit failure/);
  assert.deepEqual(await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`,before);
  assert.equal((await db.$queryRaw`SELECT "id" FROM "StockMovement"`).length,0);
  assert.equal((await db.$queryRaw`SELECT "productId" FROM "ProductBarcode" WHERE "id"='b2'`)[0].productId,'p2');
+ assert.deepEqual(await db.$queryRaw`SELECT * FROM "SupplierProductLink" ORDER BY "id"`,linksBeforeFailure);
+ assert.deepEqual(await db.$queryRaw`SELECT * FROM "SupplierProductMapping" ORDER BY "id"`,mapsBeforeFailure);
  await db.$executeRawUnsafe('DROP TRIGGER fail_merge ON "StoreOperatorAudit"');
  const results=await Promise.all([confirmInventoryMerge(db,user,input),confirmInventoryMerge(db,user,input)]);assert.ok(results.every(r=>r.ok));assert.equal(results.filter(r=>r.idempotent).length,1);
  assert.equal((await confirmInventoryMerge(db,user,input)).idempotent,true);
@@ -121,7 +144,7 @@ test('native bulk and four-card merge preserve control, history, stock and repla
  assert.equal((await db.$queryRaw`SELECT * FROM "PurchaseOrderPosting"`).length,1,'no invoice posting replay');
  const movements=await db.$queryRaw`SELECT "quantity" FROM "StockMovement"`;assert.equal(movements.length,4);assert.equal(movements.reduce((n,r)=>n+Number(r.quantity),0),0);
  assert.equal((await db.$queryRaw`SELECT "productId" FROM "ProductBarcode" WHERE "id"='b2'`)[0].productId,'p1');assert.equal(Number((await db.$queryRaw`SELECT "salePrice" FROM "ProductBarcode" WHERE "id"='b2'`)[0].salePrice),1.5);
- assert.equal((await db.$queryRaw`SELECT "productId" FROM "SupplierProductMapping"`)[0].productId,'p1');
+ assert.equal((await db.$queryRaw`SELECT "productId" FROM "SupplierProductMapping" WHERE "id"=\'map\'`)[0].productId,'p1');
  assert.equal(Number((await db.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='B' AND "productId"='control'`)[0].currentStock),20);
  assert.equal((await db.$queryRaw`SELECT "id" FROM "StoreOperatorAudit" WHERE "eventType"='INVENTORY_PRODUCT_MERGE'`).length,1);
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
