@@ -6,7 +6,25 @@ const format=/\s*σε (?:csv|excel|xlsx|pdf|word|docx)$/;
 const prefix=/^(?:(?:δειξε|βγαλε|δωσε|φερε|παρουσιασε)(?: μου)?|θελω (?:να δω|να μου δειξεις)|μπορεις να μου δειξεις)\s+/;
 const subject=/^(?:(?:(?:τις|οι|το) )?(?:συνολικες πωλησεις|συνολο (?:των )?πωλησεων|πωλησεις)|(?:(?:τον|ο) )?(?:συνολικο[ς]? )?τζιρο[ς]?|τι τζιρο (?:καναμε|ειχαμε|εχουμε)|ποσο (?:πουλησαμε|ειναι ο τζιρος))(?=\s|$)/;
 const periodText=value=>clean(value).replace(/^του\s+/,'');
-const onlyPeriod=value=>Boolean(periodText(value))&&isBusinessPeriodFollowup(periodText(value));
+const monthWords=new Set([
+ 'ιανουαριος','ιανουαριο','ιανουαριου','φεβρουαριος','φεβρουαριο','φεβρουαριου',
+ 'μαρτιος','μαρτιο','μαρτιου','απριλιος','απριλιο','απριλιου','μαιος','μαιο','μαιου',
+ 'ιουνιος','ιουνιο','ιουνιου','ιουλιος','ιουλιο','ιουλιου','αυγουστος','αυγουστο','αυγουστου',
+ 'σεπτεμβριος','σεπτεμβριο','σεπτεμβριου','σεπτεμβρης','σεπτεμβρη',
+ 'οκτωβριος','οκτωβριο','οκτωβριου','οκτωβρης','οκτωβρη',
+ 'νοεμβριος','νοεμβριο','νοεμβριου','νοεμβρης','νοεμβρη',
+ 'δεκεμβριος','δεκεμβριο','δεκεμβριου','δεκεμβρης','δεκεμβρη'
+]);
+const monthStem=/^(?:ιανουαρ|φεβρουαρ|μαρτι|απριλ|μαι|ιουνι|ιουλι|αυγουστ|σεπτεμβρ|οκτωβρ|νοεμβρ|δεκεμβρ)/;
+const numericPeriodSpans=new RegExp(String.raw`(?<!\d)(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/\.]\d{1,2}(?:[/\.](?:\d{4}|\d{2}))?|(?:\d{1,2}\s+)?(?:${[...monthWords].sort((a,b)=>b.length-a.length).join('|')})(?:\s+\d{4})?|(?:τελευταιες|τελευταιων)\s+\d{1,3}\s+(?:ημερες|ημερων|μερες|μερων))(?![\d/.])`,'g');
+function onlyPeriod(value){
+ const q=periodText(value);if(!q)return false;
+ // The generic follow-up helper ignores digits and matches broad month
+ // stems. Neither is sufficient proof that a total request has no SKU/name.
+ if((q.match(/\p{L}+/gu)||[]).some(word=>monthStem.test(word)&&!monthWords.has(word)))return false;
+ if(/\d/.test(q.replace(numericPeriodSpans,' ')))return false;
+ return isBusinessPeriodFollowup(q);
+}
 
 function totalPhrase(value,{now}){
  const q=clean(value).replace(/\s+παρακαλω$/,'').replace(format,'').replace(prefix,'');
