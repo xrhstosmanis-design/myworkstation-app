@@ -31,3 +31,37 @@ test("mounted chat preserves selected store, bounded follow-up and close/reopen 
   }finally{await act(async()=>root.unmount());dom.window.close();for(const [k,v] of prior)v?Object.defineProperty(globalThis,k,v):delete globalThis[k]}
  }
 });
+test("mounted chat keyboard, mobile conversations, copy and cancellation preserve request boundaries",async()=>{
+ const Chat=await panel(),React=await import("react"),{act}=React,{createRoot}=await import("react-dom/client"),{JSDOM}=await import("jsdom");
+ const dom=new JSDOM('<div id="root"></div>',{url:"https://fixture.invalid"}),keys=["window","document","navigator","HTMLElement","Event","IS_REACT_ACT_ENVIRONMENT"],prior=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
+ for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==="IS_REACT_ACT_ENVIRONMENT"?true:dom.window[k]});
+ // React DOM may have been imported before this isolated DOM existed.
+ window.HTMLElement.prototype.attachEvent=()=>{};window.HTMLElement.prototype.detachEvent=()=>{};
+ let mobile=false;window.matchMedia=()=>({matches:mobile});
+ let recording;class Recognition{constructor(){recording=this}start(){}abort(){}stop(){}}window.SpeechRecognition=Recognition;Object.defineProperty(window,"isSecureContext",{value:true});
+ const scope={companyId:"c",storeId:"s"},access={available:true,scope,supported:["consumption_details"]},calls=[],copies=[];let resolveLate,hold=false;
+ Object.defineProperty(navigator,"clipboard",{configurable:true,value:{writeText:async t=>copies.push(t)}});
+ const api=async(path,opts={})=>{if(opts.method!=="POST")return access;calls.push({path,opts});if(hold)return new Promise(r=>resolveLate=r);return {scope,answer:"Επαληθευμένο κείμενο",evidence:[],exportTicket:null}};
+ const root=createRoot(document.getElementById("root")),props={open:true,mode:"owner",api,ownerStoreId:"s",ownerAccess:access},click=async el=>act(async()=>el.dispatchEvent(new window.MouseEvent("click",{bubbles:true}))),input=async value=>{await click(document.querySelector(".mws-voice-input-actions button"));await act(async()=>{recording.onstart();recording.onresult({results:[Object.assign([{transcript:value}],{isFinal:true})]});recording.onend()})},key=async opts=>{let event;await act(async()=>{document.querySelector("textarea").focus();event=new window.KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true,...opts});document.querySelector("textarea").dispatchEvent(event)});return event},button=label=>[...document.querySelectorAll("button")].find(b=>b.textContent===label);
+ try{
+  await act(async()=>root.render(React.createElement(Chat,props)));
+  // JSDOM lacks browser editing defaults, so assert that newline/IME Enter is
+  // not cancelled and never dispatches the form; plain desktop Enter does.
+  await input("Πρώτη ερώτηση");
+  assert.equal((await key({shiftKey:true})).defaultPrevented,false);assert.equal(calls.length,0);
+  assert.equal((await key({isComposing:true})).defaultPrevented,false);assert.equal(calls.length,0);
+  assert.equal((await key({keyCode:229})).defaultPrevented,false);assert.equal(calls.length,0);
+  mobile=true;assert.equal((await key({})).defaultPrevented,false);assert.equal(calls.length,0);
+  mobile=false;assert.equal((await key({})).defaultPrevented,true);assert.equal(calls.length,1);
+  assert.match(document.body.textContent,/Επαληθευμένο κείμενο/);
+  await click(document.querySelector(".mws-chat-copy"));assert.equal(copies.length,1);assert.match(copies[0],/Επαληθευμένο/);assert.match(document.querySelector(".mws-chat-copy-notice").textContent,/αντιγράφηκε/);
+  navigator.clipboard.writeText=async()=>{throw new Error("denied")};await click(document.querySelector(".mws-chat-copy"));assert.match(document.querySelector(".mws-chat-copy-notice").textContent,/δεν είναι διαθέσιμη/);
+  await input("Δεύτερη ερώτηση");hold=true;await key({});assert.equal(calls.length,2);assert.ok(button("Διακοπή"));
+  await click(button("Διακοπή"));assert.equal(calls[1].opts.signal.aborted,true);assert.equal(document.querySelector("textarea").disabled,false);
+  await act(async()=>resolveLate({scope,answer:"LATE CANCELLED ANSWER",evidence:[]}));assert.doesNotMatch(document.body.textContent,/LATE CANCELLED ANSWER/);
+  mobile=true;await click(document.querySelector(".mws-chat-menu"));assert.equal(document.querySelector(".mws-chat-menu").getAttribute("aria-expanded"),"true");assert.ok(document.querySelector(".mws-chat-sidebar.is-open"));
+  await click(document.querySelector(".mws-chat-new"));assert.equal(document.querySelector(".mws-chat-menu").getAttribute("aria-expanded"),"false");assert.equal(document.querySelectorAll(".mws-chat-message").length,0);
+  await click(document.querySelector(".mws-chat-menu"));await click(document.querySelectorAll(".mws-chat-sidebar nav button")[1]);assert.equal(document.querySelectorAll(".mws-chat-message.user").length,2);assert.equal(document.querySelector(".mws-chat-sidebar.is-open"),null);
+  await click(document.querySelector(".mws-chat-menu"));await act(async()=>document.dispatchEvent(new window.KeyboardEvent("keydown",{key:"Escape",bubbles:true})));assert.equal(document.querySelector(".mws-chat-sidebar.is-open"),null);
+ }finally{await act(async()=>root.unmount());dom.window.close();for(const [k,v] of prior)v?Object.defineProperty(globalThis,k,v):delete globalThis[k]}
+});
