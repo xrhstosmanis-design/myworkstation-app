@@ -1,6 +1,7 @@
 import React,{useEffect,useId,useRef,useState} from "react";
 import "./automatic-report-settings.css";
 
+const dateTime=value=>new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false});
 const money=v=>Number(v).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
 const modeNames={FULL:"Πλήρης έλεγχος",DIFFERENCE_ONLY:"Μόνο διαφορά",POS_EFTPOS_ONLY:"Μόνο POS / EFTPOS"};
 const holdNames={TERMINALS_NOT_CONFIGURED:"Δεν έχουν δηλωθεί ταμεία.",THIRD_SHIFT_NOT_CONFIGURED:"Δεν έχει δηλωθεί τρίτη βάρδια.",BUSINESS_DAY_NOT_FINISHED:"Δεν έχει ολοκληρωθεί η επιχειρησιακή ημέρα.",SOURCE_SCOPE_OR_ID_INVALID:"Υπάρχει ασαφής, επικαλυπτόμενη ή προηγούμενη ανολοκλήρωτη βάρδια.",UNCONFIGURED_TERMINAL:"Βρέθηκε ταμείο που δεν περιλαμβάνεται στη ρύθμιση.",SHIFT_NOT_CLOSED:"Η βάρδια δεν έχει έγκυρο κλείσιμο.",SHIFT_VARIANCE_UNKNOWN:"Δεν έχει καταγραφεί έγκυρη διαφορά βάρδιας.",MISSING_SHIFTS:"Λείπουν αναμενόμενες βάρδιες.",SHIFT_SLOT_MISSING:"Λείπει αναμενόμενη πρωινή ή απογευματινή βάρδια.",THIRD_SHIFT_MISSING:"Λείπει η τρίτη βάρδια.",THIRD_SHIFT_OPEN:"Η τρίτη βάρδια παραμένει ανοιχτή.",SOURCE_LIMIT_EXCEEDED:"Τα δεδομένα υπερβαίνουν το όριο ανάγνωσης· δεν εμφανίζονται μερικά σύνολα.",CASH_RULE_NOT_CONFIGURED:"Δεν έχει επιβεβαιωθεί ο κανόνας ταμείου.",CASH_MODE_UNSUPPORTED:"Η αναφορά διαφοράς μετρητών δεν υποστηρίζεται στη λειτουργία μόνο POS / EFTPOS.",DELIVERY_PATTERN_NOT_CONFIGURED:"Δεν έχει προσδιοριστεί η αλυσίδα delivery.",CASH_RULE_CHANGED:"Ο κανόνας ταμείου άλλαξε. Ανανέωσε και επιβεβαίωσε ξανά τις ρυθμίσεις.",REPORT_SETTINGS_CHANGED:"Οι ρυθμίσεις άλλαξαν. Πάτησε Ανανέωση."};
@@ -8,6 +9,7 @@ const holdNames={TERMINALS_NOT_CONFIGURED:"Δεν έχουν δηλωθεί τα
 export default function AutomaticReportSettingsManager({company,store,request,onClose}){
   const id=useId(),sequence=useRef(0);
   const [data,setData]=useState(null),[draft,setDraft]=useState(null),[day,setDay]=useState("");
+  const [frequency,setFrequency]=useState("DAILY");
   const [busy,setBusy]=useState("load"),[error,setError]=useState(""),[message,setMessage]=useState(""),[confirmed,setConfirmed]=useState(false),[dirty,setDirty]=useState(false),[report,setReport]=useState(null);
   const path=`/api/platform/companies/${encodeURIComponent(company.id)}/stores/${encodeURIComponent(store.id)}/report-settings`;
   const load=async()=>{
@@ -32,7 +34,7 @@ export default function AutomaticReportSettingsManager({company,store,request,on
   const preview=async()=>{
     if(busy||dirty||!data?.settings||!day)return;
     const token=++sequence.current;setBusy("preview");setError("");setReport(null);
-    try{const result=await request(path+"/preview",{method:"POST",body:JSON.stringify({day,expectedVersion:data.settings.version})});if(token===sequence.current)setReport(result)}
+    try{const result=await request(path+"/preview",{method:"POST",body:JSON.stringify({day,expectedVersion:data.settings.version,...(frequency==="WEEKLY"?{frequency}:{})})});if(token===sequence.current)setReport(result)}
     catch(e){if(token===sequence.current)setError(e.message)}finally{if(token===sequence.current)setBusy("")}
   };
   return <div className="platform-modal automatic-report-settings-modal"><section role="dialog" aria-modal="true" aria-labelledby={id} className="platform-report-settings">
@@ -55,9 +57,11 @@ export default function AutomaticReportSettingsManager({company,store,request,on
       <button type="submit" disabled={!confirmed||draft.terminals.length===0}>{busy==="save"?"Αποθήκευση…":"Αποθήκευση ρυθμίσεων αναφορών"}</button>
     </fieldset></form>
     <div className="report-settings-preview"><h3>Προεπισκόπηση αποθηκευμένων ρυθμίσεων</h3>{!data.settings&&<p>Αποθήκευσε πρώτα τις βάρδιες και τα ταμεία.</p>}{dirty&&<p>Υπάρχουν αλλαγές. Αποθήκευσέ τες πριν την προεπισκόπηση ή πάτησε Ανανέωση για απόρριψη.</p>}
+      <label>Περίοδος αναφοράς<select aria-label="Περίοδος αναφοράς" value={frequency} disabled={Boolean(busy)} onChange={e=>{setFrequency(e.target.value);setReport(null)}}><option value="DAILY">Ημερήσια</option><option value="WEEKLY">Εβδομαδιαία · Δευτέρα–Κυριακή</option></select></label>
+      {frequency==="WEEKLY"&&<p>Επίλεξε οποιαδήποτε ημέρα της εβδομάδας. Η αναφορά περιλαμβάνει τη Δευτέρα από την πρώτη πρωινή έως το κλείσιμο της κυριακάτικης τρίτης βάρδιας το επόμενο πρωί. Ελέγχονται και οι επτά ημέρες· ανοιχτή ή ελλιπής βάρδια κρατά ολόκληρη την αναφορά σε αναμονή.</p>}
       <label>Ημέρα αναφοράς<input aria-label="Ημέρα αναφοράς" type="date" value={day} disabled={Boolean(busy)} onChange={e=>{setDay(e.target.value);setReport(null)}}/></label><button type="button" disabled={Boolean(busy)||dirty||!data.settings||!day} onClick={preview}>{busy==="preview"?"Ανάγνωση βαρδιών…":"Προεπισκόπηση αναφοράς"}</button>
-      {report&&<div aria-live="polite"><h3>{report.ready?"Ολοκληρωμένα δεδομένα βαρδιών — προεπισκόπηση":"Αναμονή ολοκλήρωσης / ελέγχου"}</h3><p>{report.sourceCount} καταγεγραμμένες βάρδιες · ρύθμιση {report.settingsVersion}. Πρόκειται για καταγεγραμμένες διαφορές, όχι τελική πιστοποίηση ελεγκτή.</p>
-        {!!report.holds.length&&<ul>{report.holds.map((hold,i)=><li key={i}>{holdNames[hold.code]||"Απαιτείται έλεγχος της πηγής."}{hold.terminalPos?` · ${hold.terminalPos}`:""}{hold.slot?` · ${hold.slot}η βάρδια`:""}{hold.sessionId?` · βάρδια ${hold.sessionId}`:""}</li>)}</ul>}
+      {report&&<div aria-live="polite"><h3>{report.ready?"Ολοκληρωμένα δεδομένα βαρδιών — προεπισκόπηση":"Αναμονή ολοκλήρωσης / ελέγχου"}</h3>{report.period&&<p>Περίοδος: {report.period.fromDay} έως {report.period.toDay} · από {dateTime(report.period.from)} έως {dateTime(report.period.to)} (ώρα Ελλάδας, η επόμενη πρωινή έναρξη δεν περιλαμβάνεται).</p>}<p>{report.sourceCount} καταγεγραμμένες βάρδιες · ρύθμιση {report.settingsVersion}. Πρόκειται για καταγεγραμμένες διαφορές, όχι τελική πιστοποίηση ελεγκτή.</p>
+        {!!report.holds.length&&<ul>{report.holds.map((hold,i)=><li key={i}>{holdNames[hold.code]||"Απαιτείται έλεγχος της πηγής."}{hold.day?` · ημέρα ${hold.day}`:""}{hold.terminalPos?` · ${hold.terminalPos}`:""}{hold.slot?` · ${hold.slot}η βάρδια`:""}{hold.sessionId?` · βάρδια ${hold.sessionId}`:""}</li>)}</ul>}
         {report.groups?.map(group=><section key={group.terminalPos+group.cashChain+group.day}><h4>{group.terminalPos} · {group.cashChain==="DELIVERY"?"Delivery":"Κατάστημα"} · {group.day}</h4><p>Αρχικά ελλείμματα: {money(group.originalShortage)} · πλεονάσματα: {money(group.originalSurplus)} · πιθανός συμψηφισμός: {money(group.offset)} · καθαρή διαφορά: <strong>{money(group.netVariance)}</strong></p><div className="report-settings-table"><table><thead><tr><th>Υπάλληλος</th><th>Αρχική διαφορά</th></tr></thead><tbody>{group.rows.map(row=><tr key={row.sessionId}><td>{row.employeeName||row.employeeId||"Δεν καταγράφηκε όνομα"}</td><td>{money(row.variance)}</td></tr>)}</tbody></table></div></section>)}
       </div>}
     </div></>}

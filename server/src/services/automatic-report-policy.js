@@ -29,6 +29,15 @@ export function reportBusinessPeriod(fromDay,toDay,{dayStartHour=7}={}){
   if(days>366)fail("Επίλεξε διάστημα έως366 ημέρες.");
   return {from:reportWallTime(fromDay,dayStartHour),to:reportWallTime(reportDayOffset(toDay,1),dayStartHour),fromDay,toDay,dayStartHour,timeZone:zone,endExclusive:true};
 }
+// A selected date identifies its whole Monday–Sunday business week.
+export function cashPreviewPeriod(day,frequency="DAILY",configuration={}){
+  businessPictureCalendarRange(day,day);
+  if(!["DAILY","WEEKLY"].includes(frequency))fail("Επίλεξε ημερήσια ή εβδομαδιαία αναφορά.");
+  const dow=(new Date(day+"T12:00:00Z").getUTCDay()+6)%7;
+  const fromDay=frequency==="WEEKLY"?reportDayOffset(day,-dow):day;
+  const toDay=frequency==="WEEKLY"?reportDayOffset(fromDay,6):day;
+  return {frequency,...reportBusinessPeriod(fromDay,toDay,configuration)};
+}
 export function completedReportPeriod(now,frequency,{dayStartHour=7}={}){
   if(!["DAILY","WEEKLY","MONTHLY"].includes(frequency)||!Number.isFinite(new Date(now).getTime()))fail("Μη έγκυρη περίοδος αναφοράς.");
   const p=parts(new Date(now)),calendarDay=`${p.year}-${p.month}-${p.day}`;
