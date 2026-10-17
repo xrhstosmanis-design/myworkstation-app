@@ -37,6 +37,11 @@ test("native PostgreSQL named category/store report reuses sale sums, excludes f
   const options={readReport:f=>readSalesAnalysisReport(f,{db}),readCatalog:c=>readSalesNamesCatalog(c,{db}),now:new Date("2026-10-11T18:00:00Z")};
   const args={mode:"category",names:["νερά"],from:"2026-10-01",to:"2026-10-31"};
   const out=await readAssistantSalesStores(args,access,options);assert.equal(out.result,"matched");assert.equal(out.rows.length,3);assert.equal(out.totals.grossSales,5.25);assert.deepEqual(new Set(out.totals.quantities.map(q=>JSON.stringify(q))),new Set([{unit:"PIECE",quantity:6},{unit:"LITER",quantity:1.5}].map(JSON.stringify)));
+  // Plain totals use the same native SQL across ALL items, without catalog
+  // matching, and retain the selected store's reversal/credit/future controls.
+  const {runProductAssistant}=await import("../src/services/owner-sales-tools.js");
+  const total=await runProductAssistant({question:"ΠΩΛΗΣΕΙΣ ΧΘΕΣ",prompt:"fixture",now:new Date("2026-10-11T12:00:00Z"),cashTool:{name:"cash"},tools:[(await import("../src/services/assistant-sales-stores.js")).salesStoresTool],requestProvider:async()=>{throw Error("plain total must not require model extraction")},readSalesStores:a=>readAssistantSalesStores(a,{...access,scope:"PLATFORM_SELECTED_STORE",stores:[access.stores[0]]},{...options,readCatalog:async()=>{throw Error("all does not read a catalog")}})});
+  assert.equal(total.evidence[0].totals.grossSales,3.75);assert.equal(total.evidence[0].rows.length,2);assert.deepEqual(new Set(total.evidence[0].totals.quantities.map(q=>JSON.stringify(q))),new Set([{unit:"PIECE",quantity:3},{unit:"LITER",quantity:1.5}].map(q=>JSON.stringify(q))));assert.ok(total.evidence[0].rows.every(r=>r.storeId==="s"));
   const offers=await readAssistantSalesStores({...args,mode:"offers",names:[]},access,options);assert.equal(offers.result,"matched");assert.equal(offers.rows.length,1);assert.equal(offers.totals.grossSales,1.5);assert.equal(offers.rows[0].salesQuantity,3);assert.equal(offers.rows[0].promotionId,"promo");
   await db.$executeRaw`INSERT INTO "Sale" VALUES('missing','c','s','COMPLETED','NORMAL','POS_REVERSAL','2026-10-10T13:00:00'::timestamp,'sale')`;
   await db.$executeRaw`INSERT INTO "SaleLine" VALUES('missingline','missing','p','Water',-1,.5,0,13,-.5,NULL,NULL)`;
