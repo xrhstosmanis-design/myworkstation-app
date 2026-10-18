@@ -11,12 +11,14 @@ const manifest={id:'ISOLATED_REVIEWED_FIXTURE_V1',reviewedColumns:['StoreRbsInst
  {name:'Store',owner:{kind:'ROOT'},reset:'KEEP'},
  {name:'Sale',owner:{kind:'DIRECT'},reset:'REMOVE'},
  {name:'SaleLine',owner:{kind:'CHILD',parent:'Sale',columns:[['saleId','id']]},reset:'REMOVE'},
- {name:'StoreRbsInstallationSettings',owner:{kind:'DIRECT'},reset:'KEEP'}
+ {name:'StoreRbsInstallationSettings',owner:{kind:'DIRECT'},reset:'KEEP'},
+ ...['StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice'].map(name=>({name,owner:{kind:'DIRECT'},reset:'KEEP'}))
 ]};
 const ddl=s=>[
  `CREATE TABLE "${s}"."Store"("id" text PRIMARY KEY,"companyId" text NOT NULL,"name" text)`,
  `CREATE TABLE "${s}"."Sale"("id" text PRIMARY KEY,"companyId" text NOT NULL,"storeId" text NOT NULL REFERENCES "${s}"."Store"("id"),"amount" numeric(30,9))`,
  `CREATE TABLE "${s}"."SaleLine"("id" text PRIMARY KEY,"companyId" text NOT NULL,"saleId" text REFERENCES "${s}"."Sale"("id"),"storeId" text REFERENCES "${s}"."Store"("id"),"quantity" bigint)`,
+ ...['StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice'].map(name=>`CREATE TABLE "${s}"."${name}"("id" text PRIMARY KEY,"companyId" text NOT NULL,"storeId" text REFERENCES "${s}"."Store"("id"),"terminalPos" text NOT NULL,"active" boolean NOT NULL,"settings" text NOT NULL)`),
  `CREATE TABLE "${s}"."StoreRbsInstallationSettings"("id" text PRIMARY KEY,"companyId" text NOT NULL,"storeId" text REFERENCES "${s}"."Store"("id"),"config" jsonb)`
 ];
 test('executor requires a server manifest/recovery adapter and rejects unauthorized calls before DB access',async()=>{
@@ -27,6 +29,14 @@ test('executor requires a server manifest/recovery adapter and rejects unauthori
  await assert.rejects(core.prepare(db,actor,scope,'OTHER'),e=>e.status===400);
  await assert.rejects(core.execute(db,actor,{...scope,operationId:'not-a-uuid',snapshotHash:'a'.repeat(64)}),e=>e.status===400);
 });
+test('reset plans cannot remove either register installation, EFTPOS/RBS settings, credentials or licenses',()=>{
+ const protectedNames=['StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice','StoreRbsInstallationSettings','CloudDevice','ConnectorDevice','StoreIntegrationCredential','StorePaidModule'];
+ for(const name of protectedNames){
+  const bad=structuredClone(manifest),existing=bad.tables.find(t=>t.name===name);
+  if(existing)existing.reset='REMOVE';else bad.tables.push({name,owner:{kind:'DIRECT'},reset:'REMOVE'});
+  assert.throws(()=>createLifecycleExecutionCore(bad,{persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)}),new RegExp('must retain installation/configuration: '+name));
+ }
+});
 const isolated=(()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}})();
 async function fixture({proofOverride,afterVerified,extraManifest}={}){
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='lifecycle_exec_'+randomUUID().replaceAll('-','');await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
@@ -36,6 +46,8 @@ async function fixture({proofOverride,afterVerified,extraManifest}={}){
  `INSERT INTO "${schema}"."Sale" VALUES('sale','company','target',9007199254740993.123456789),('control','company','sibling',2),('foreign-sale','other','foreign',3)`,
  `INSERT INTO "${schema}"."SaleLine" VALUES('line','company','sale','target',9007199254740993),('control-line','company','control','sibling',1)`,
  `INSERT INTO "${schema}"."StoreRbsInstallationSettings" VALUES('settings','company','target','{"key":"PRIVATE RETAINED CONFIG"}'),('control-settings','company','sibling','{}')`,
+ ...['StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice'].map(name=>`INSERT INTO "${schema}"."${name}" VALUES('${name}-1','company','target','KAT-POS-01',true,'PRIVATE UNCHANGED 1'),('${name}-2','company','target','KAT-POS-02',true,'PRIVATE UNCHANGED 2'),('${name}-control','company','sibling','SIBLING',true,'CONTROL')`),
+ `INSERT INTO "${schema}"."StoreRbsInstallationSettings" VALUES('settings-2','company','target','{"terminalPos":"KAT-POS-02","key":"PRIVATE RETAINED SECOND CONFIG"}')`,
  `INSERT INTO "${schema}"."Product" VALUES('shared','SHARED CATALOG CONTROL')`
  ])await db.$executeRawUnsafe(sql);
  const selectedManifest=extraManifest||manifest;
@@ -62,7 +74,7 @@ test('native RESET verifies persisted encrypted full fixture restore, deletes on
   await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('blocked','company','target',1)`),matches(/STORE_LIFECYCLE_MAINTENANCE/));
   await f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('other-live','company','sibling',4)`);
   const result=await f.core.execute(f.db,actor,{...scope,...prep});assert.equal(result.maintenance,true);assert.equal(result.reopenRequired,true);assert.deepEqual(result.deleted.map(t=>t.table),['SaleLine','Sale']);
-  const after=await f.snapshot();assert.deepEqual(after.Store,before.Store);assert.deepEqual(after.StoreRbsInstallationSettings,before.StoreRbsInstallationSettings);assert.deepEqual(after.Product,before.Product);assert.equal(after.Sale.length,3);assert.equal(after.SaleLine.length,1);assert.ok(after.Sale.every(r=>!r.row.includes('"id":"sale"')));
+  const after=await f.snapshot();for(const name of ['StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice']){assert.deepEqual(after[name],before[name]);assert.equal(after[name].filter(r=>r.row.includes('"storeId":"target"')).length,2)}assert.deepEqual(after.Store,before.Store);assert.deepEqual(after.StoreRbsInstallationSettings,before.StoreRbsInstallationSettings);assert.deepEqual(after.Product,before.Product);assert.equal(after.Sale.length,3);assert.equal(after.SaleLine.length,1);assert.ok(after.Sale.every(r=>!r.row.includes('"id":"sale"')));
   assert.equal((await f.core.execute(f.db,actor,{...scope,...prep})).idempotentReplay,true);assert.equal(f.proofCalls(),1);
   await assert.rejects(f.core.abort(f.db,actor,{...scope,...prep}),/unexecuted/);
   // Fixture-only reopen models the future authenticated generation adapter; no reopen API exists.

@@ -1,6 +1,7 @@
 // Internal execution core. No production manifest, recovery adapter or HTTP route is registered here.
 import {createHash,randomUUID} from 'node:crypto';
 import {requireLifecycleAdmin} from './store-lifecycle-preview.js';
+import {RESET_KEEP} from './store-lifecycle-policy.js';
 const q=x=>'"'+String(x).replaceAll('"','""')+'"';
 const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status})};
@@ -11,6 +12,9 @@ function planFor(manifest){
  if(!manifest?.id||!Array.isArray(manifest.tables)||manifest.tables.length<1||manifest.tables.length>300)fail('A reviewed server manifest is required.');
  const nodes=new Map();
  for(const row of manifest.tables){if(typeof row.name!=='string'||!row.name||INTERNAL.has(row.name)||nodes.has(row.name)||!['KEEP','REMOVE'].includes(row.reset)||!['ROOT','DIRECT','CHILD'].includes(row.owner?.kind))fail('Invalid reviewed manifest.');nodes.set(row.name,row)}
+ // Installation identities and their credentials are inseparable from both
+ // physical registers. A reviewed plan may not override this RESET boundary.
+ for(const row of nodes.values())if(RESET_KEEP.has(row.name)&&row.reset!=='KEEP')fail('RESET must retain installation/configuration: '+row.name);
  if(nodes.get('Store')?.owner.kind!=='ROOT'||nodes.get('Store')?.reset!=='KEEP'||[...nodes.values()].filter(x=>x.owner.kind==='ROOT').length!==1)fail('Store root must be retained by RESET.');
  const visiting=new Set(),visited=new Set(),ordered=[];
  const visit=name=>{if(visiting.has(name))fail('Cyclic ownership requires a separate reviewed plan.');if(visited.has(name))return;const row=nodes.get(name);if(!row)fail('Missing ownership parent.');visiting.add(name);if(row.owner.kind==='CHILD'){if(!Array.isArray(row.owner.columns)||!row.owner.columns.length||row.owner.columns.some(p=>!Array.isArray(p)||p.length!==2||p.some(v=>typeof v!=='string'||!v)))fail('Invalid ownership columns.');visit(row.owner.parent)}visiting.delete(name);visited.add(name);ordered.push(row)};
