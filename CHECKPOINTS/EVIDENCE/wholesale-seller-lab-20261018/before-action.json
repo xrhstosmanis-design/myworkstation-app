@@ -1,0 +1,14 @@
+{
+  "operator": "existing SuperAdmin support context",
+  "device": "Cloud Chrome desktop",
+  "company": "MYWORKSTATION LAB",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "targetUser": "Υπεύθυνος Εργαστηρίου",
+  "targetCustomer": "B2B-TEST-001 / ΔΟΚΙΜΑΣΤΙΚΟΣ ΠΕΛΑΤΗΣ ΧΟΝΔΡΙΚΗΣ",
+  "initialMembership": "inactive / Χωρίς ενεργή ιδιότητα",
+  "initialAssignmentsForExactStore": "empty visible list after load",
+  "otherUserControl": "N40 Backoffice Εικονικός Έλεγχος 20261010 inactive; not changed",
+  "module": "active after authorized21→22 toggle; all other company fields and module terms equal baseline",
+  "authorizedNext": "activate this membership; assign only exact existing customer/store; restore effective inactive states",
+  "ordersFinancialStockDeltas": "NOT TESTED / no authorized submission"
+}

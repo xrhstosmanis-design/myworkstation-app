@@ -1,0 +1,31 @@
+{
+  "scope": "MYWORKSTATION LAB / existing Υπεύθυνος Εργαστηρίου / existing B2B-TEST-001 / cmtpopbgo000trhb5ng9ytiru",
+  "ownerApproval": "2026-10-18T22:29:38+03:00",
+  "observedHealthRevision": "5c5d1711f8f144d52e1090ac880c8b35ca093a77",
+  "membershipBefore": "inactive",
+  "membershipDuring": "active",
+  "membershipAfter": "inactive; observed refreshed card",
+  "assignmentBefore": "no visible row for exact selected store",
+  "assignmentDuring": "active; revision1",
+  "assignmentAfter": "inactive; revision2; explicit activation button; no row deletion",
+  "controlUser": "N40 remains inactive; no changes",
+  "moduleBefore": "WHOLESALE_B2B inactive;21active modules",
+  "otherModuleAndCompanyFields": "same before and after temporary activation; monthly total104.70 unchanged",
+  "personalSignIn": "positive welcome Υπεύθυνος Εργαστηρίου / MYWORKSTATION LAB; credentials collected through browserAuth only",
+  "sellerRead": "exact assigned store and customer selectable; existing product catalog loaded; no item added; history region opened",
+  "postMembershipRevocation": "seller workspace returned Απαιτείται ενεργή προσωπική σύνδεση; prior product UI absent",
+  "notTested": [
+    "quotes",
+    "order submission/replay",
+    "restricted EMPLOYEE role",
+    "customer portal",
+    "mobile/offline",
+    "financial/stock deltas"
+  ],
+  "remainingAction": "Separate customer portal/order/standalone scope; no remaining grant restoration.",
+  "moduleDuring": "WHOLESALE_B2B active;22modules",
+  "moduleAfter": "WHOLESALE_B2B inactive;21modules; fresh reopened license",
+  "allVisibleLicenseFieldsExactlyRestored": true,
+  "centralAuthentication": "Successful secure PlatformSuperAdmin password and Authenticator2FA after owner-requested retries; no credentials retained.",
+  "restoredLicenseSummary": "Κατάσταση συνδρομής\nΕνεργό\nΠακέτο\nAI COMPLETE\nΕνεργά modules\n21\nΣυμφωνημένο μηνιαίο σύνολο\n104,70 €"
+}
