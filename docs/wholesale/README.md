@@ -1,12 +1,12 @@
 # MyWorkStation Wholesale Suite
 
-## Status: public publication authorized - source work awaits merged claim
+## Status: first source slice prepared - full product OPEN
 
-Owner authorized the full product and three collaborating agents on 17 October 2026. The agents completed separate code audits. Local claim commit ce269224 was NOT published: automatic approval review rejected publishing new project trackers/checkpoints/PDF to this public GitHub repository. Verification confirmed the connected repository identity and write permission, but review again required explicit user authorization for public publication. Do not bypass this using another tool.
+The owner authorized the full wholesale suite, three cooperating workers and public repository publication. The common assignment PR2680 passed documentation CI39070541242 and merged as33ba81e2 before source work. Earlier publication rejections below historical records are resolved by explicit approval18Oct00:18.
+
+Coordinator codex/wholesale-suite-20261017 retains ownership. First source slice now fixes customer/list association readback/unassignment and safely reviews saved quantity tiers. Local Node20 focused tests12PASS/0FAIL/1nativeSKIP and build pass. Full local server suite2922tests/2812PASS/0FAIL/110environmentSKIP; native CI and hosted acceptance are pending. This is not a finished wholesale/B2B/seller product. No production state, financial/stock/fiscal action or standalone activation was performed.
 
 Repository: https://github.com/xrhstosmanis-design/myworkstation-app
-
-Coordinator: codex/wholesale-suite-20261017. Existing source remains unchanged. This document and linked plans are preparation for review, not deployed capabilities. The mandatory ownership claim must be green and merged to main before source changes or state-changing LAB tests. No source code, production state, database or deployment was changed.
 
 ## One product, three client surfaces
 
@@ -50,4 +50,4 @@ Every stage needs actual functionality and tests, not only a screen or documenta
 
 ## Next single action
 
-Owner explicitly authorized publication to this public repository on 18 October 2026 at 00:18 Europe/Athens. Publish this documentation-only claim PR, require green checks, merge, and begin the first bounded source slice. Prior automatic-review rejections are historical and superseded by this explicit authorization. Until the claim merges, source implementation has not started.
+Complete full CI, including the isolated native PostgreSQL router test, and review the first source PR. Keep LAB/hosted/physical acceptance separate from CI. Following master stabilization, implement the authoritative quote/order service before connecting customer B2B and seller channels. No worker is currently claiming a finished site, native app, offline mode or saleable standalone package.
