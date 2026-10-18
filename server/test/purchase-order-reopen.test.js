@@ -40,6 +40,7 @@ async function fixture(){
 
 test('reopen rejects unauthorized actors and malformed requests before database access',async()=>{
  const db=new Proxy({},{get(){throw new Error('Database must not be accessed')}});
+ for(const role of ['SUPER_ADMIN','OWNER','ADMIN','MANAGER'])assert.doesNotThrow(()=>reopen.requireReopenActor({...actor,role},'s'));
  for(const user of [null,{...actor,role:'CASHIER'},{...actor,tokenType:'STORE_OPERATOR'},{...actor,storeId:'other'}])await assert.rejects(reopen.previewPurchaseOrderReopen(db,user,'pos','s'),e=>e.status===403);
  assert.throws(()=>reopen.reopenSchema.parse({...confirmed({version:'a'.repeat(64)}),unexpected:true}));
  assert.throws(()=>reopen.assertReopenedIdentity({reopenVersion:1,supplierId:'a',invoiceNumber:'x'},{supplierId:'b'}));
@@ -56,7 +57,13 @@ test('native full posting, pack inversion, corrected re-post and second reopen r
   const stale=await f.patch({status:'FINAL'});assert.equal(stale.failure?.status,409);
   const docs=await handlers('../src/routes/commerce-invoice-draft-approval.js',f.db);const approval=await invoke(docs['POST /purchases/:documentId/approve'],{documentId:'d-pos'});assert.equal(approval.failure?.status,409);
   await f.db.$executeRawUnsafe(`UPDATE "PurchaseOrderLine" SET "quantity"=2,"netAmount"=2,"vatAmount"=.26,"grossAmount"=2.26,"stockUnitsPerInvoiceUnit"=6 WHERE "orderId"='pos'`);
-  await f.finalize(1);assert.equal(await f.stock(),22);assert.equal(await f.preserved(),keep);
+  assert.ifError((await f.patch({status:'FINAL',expectedReopenVersion:1})).failure);
+  const beforeDelayedPack=await f.snapshot();
+  await assert.rejects(f.pack({orderId:'pos',companyId:'c',userId:'owner',userName:'Old cycle',expectedReopenVersion:0}),e=>e.status===409);
+  assert.equal(await f.snapshot(),beforeDelayedPack,'a delayed old-cycle pack callback cannot mutate the new finalization');
+  await f.pack({orderId:'pos',companyId:'c',userId:'owner',userName:'Current cycle',expectedReopenVersion:1});
+  assert.ifError((await f.patch({status:'INVOICED',expectedReopenVersion:1})).failure);
+  assert.equal(await f.stock(),22);assert.equal(await f.preserved(),keep);
   assert.deepEqual(await f.db.$queryRawUnsafe('SELECT "id","documentDate","createdByUserId" FROM "PurchaseDocument" ORDER BY "id"'),beforeDocs);
   await assert.rejects(reopen.reopenPurchaseOrder(f.db,actor,'pos',confirmed(p)),e=>e.status===409);
   const p2=await reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s');assert.equal(p2.stockChanges[0].delta,-12);await reopen.reopenPurchaseOrder(f.db,actor,'pos',confirmed(p2));assert.equal(await f.stock(),10);
