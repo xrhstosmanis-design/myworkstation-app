@@ -58,3 +58,6 @@ Production and LAB business state unchanged. No payment, fiscal, stock, shift, p
 
 ## Single next action
 Publish this coordination receiver/contract with green docs CI and merge. Then obtain the bounded implementation handoff for the sale-level reader while retaining source ownership on all other paths; in parallel, conduct only authorized read-only acceptance when a supported authenticated canonical tab is available.
+
+## Concurrent publication rule
+This receiving assignment is appended to the three canonical registries to preserve concurrent prepends. The regenerated tracker snapshot is retained as ownership-transfer.pdf in this scope's evidence directory. The shared historical tracker PDF remains with concurrent receipts until the consolidated source integration receipt regenerates it again. Canonical ownership is the Markdown tracker, not a historical PDF snapshot. No PASS closure is claimed.
