@@ -39,7 +39,7 @@ public final class MainActivity extends Activity {
     private static final int PURPLE = 0xff7052c8, INK = 0xff242234, MUTED = 0xff777187, PHOTO = 41, CAMERA = 42;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newFixedThreadPool(2);
-    private final ChatApi api = new ChatApi();
+    private ChatApi api = new ChatApi();
     private final RequestEpoch epoch = new RequestEpoch();
     private TokenVault vault, pendingTwoFactor;
     private String pushStore = "", pushCompany = "";
@@ -105,7 +105,7 @@ public final class MainActivity extends Activity {
         return new JSONObject(new String(Base64.decode(parts[1], Base64.URL_SAFE | Base64.NO_WRAP), StandardCharsets.UTF_8));
     }
     private boolean staff() { return identity.optString("tokenType").equals("STORE_CHAT_OPERATOR"); }
-    private boolean platform() { return identity.optString("role").equals("SUPER_ADMIN") && !identity.optBoolean("supportContext"); }
+    private boolean platform() { return SessionAccess.platform(identity) && !identity.optBoolean("supportContext"); }
     private String id(JSONObject value, String key) { return value == null ? "" : value.optString(key); }
     private String enc(String value) { return Uri.encode(value); }
     private String chatBase() { return "/api/store-chat/stores/" + enc(id(selected, "id")); }
@@ -233,7 +233,7 @@ public final class MainActivity extends Activity {
     private void chooseStore(JSONObject store) {
         if (busy) return;
         navigate();
-        if (identity.optString("role").equals("OWNER") && !identity.optString("companyId").equals(store.optString("companyId"))) {
+        if (SessionAccess.switchOwnerCompany(identity, store.optString("companyId"))) {
             call("/api/auth/owner-companies/select", "POST", object("companyId", store.optString("companyId")), false, result -> {
                 String next = result.getString("token"); JSONObject decoded = claims(next);
                 if (!decoded.optString("companyId").equals(store.optString("companyId"))) throw new IllegalArgumentException();
