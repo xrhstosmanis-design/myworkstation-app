@@ -1,3 +1,7 @@
+## 19/10/2026 02:00 Europe/Athens — SOURCE LIVE / AWAITING LAB
+
+Source#2797 merged 396f72f09a2b1d33885e02e7f78ad542d012eb3c, exact source full CI SUCCESS3251/0/0+6backup. Τα7 reviewed blobs διατηρούνται στην ενεργή κοινή revisionf6df67ad55afe6d749afe3aa983c917a2e0fa3bd, full CI και ordinary guarded release SUCCESS, ανεξάρτητο HTTP200/oktrue/exact health. Δεν είναι νέο LAB PASS. Πλήρης συγκεντρωτική τελική καταγραφή και εκκρεμή acceptance: CHECKPOINTS/CHANGES/2026-10-19-central-hourly-unit.md. Τα ιστορικά CI/RELEASE PENDING παρακάτω αντικαθίστανται μόνο ως προς την τεχνική παράδοση.
+
 ## 19/10/2026 - PHASE4 PRODUCT UNITS / SOURCE PREPARED / AWAITING FULL CI AND LAB
 
 Retained central owner codex/central-four-streams-20261018, worker codex/central-product-unit-20261019. Pre-source claim#2794/headc8195b98b147dc60ce02aff097caf2656d3a076a/docsCI39172436603SUCCESS mergeddd9b357563f705a9d7f6260571a27c78146fa110 before edits. Canonical product unit was omitted by the assistant safe projection although table/CSV already mapped units. Preserve unit when present, explicit null/unknown remain unrecorded, and missing legacy unit keeps the previous object shape. Signed/fractional quantity and money unchanged; no inferred unit, private cost, SQL math, provider/chat/calendar/auth or business writer change.

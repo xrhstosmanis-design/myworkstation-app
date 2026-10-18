@@ -1,0 +1,184 @@
+{
+  "scope": "central four streams phase4: canonical hourly sales and assistant product units",
+  "issues": [
+    2704,
+    2705,
+    2706,
+    2707
+  ],
+  "claim": {
+    "pr": 2794,
+    "revision": "dd9b357563f705a9d7f6260571a27c78146fa110",
+    "ci": 39172436603,
+    "conclusion": "success"
+  },
+  "source": {
+    "pr": 2797,
+    "head": "a93dd7aada7cdf463d50752904795176915a9e47",
+    "includedUnitPr": 2796,
+    "includedUnitHead": "21e1db3b8ef0ed01a01949add7e0eecbb177373e",
+    "merge": "396f72f09a2b1d33885e02e7f78ad542d012eb3c",
+    "prs": [
+      {
+        "pr": 2796,
+        "ci": 39172747029,
+        "job": 117809177401,
+        "pass": 3232,
+        "fail": 0,
+        "skip": 0,
+        "backupPass": 6
+      },
+      {
+        "pr": 2797,
+        "ci": 39173031169,
+        "job": 117810018098,
+        "pass": 3251,
+        "fail": 0,
+        "skip": 0,
+        "backupPass": 6
+      }
+    ],
+    "mainCI": 39173570921,
+    "verifiedBlobs": [
+      {
+        "path": "client/src/components/commerce/installKioskReportsSalesV4.js",
+        "sha": "53afd28b57761a127a3651351763872670e40dd9"
+      },
+      {
+        "path": "server/src/routes/kiosk-reports-sales-v4.js",
+        "sha": "c6efa2b705e803beeba0d3e2a419b9fedd23bc8e"
+      },
+      {
+        "path": "server/src/services/owner-sales-tools.js",
+        "sha": "cb7f66530b35c92849b0b850a036d2c82d1db785"
+      },
+      {
+        "path": "server/test/kiosk-sales-hourly-postgres.test.js",
+        "sha": "83be264a8480297b88c66e9840fec4970ef52a6a"
+      },
+      {
+        "path": "server/test/kiosk-sales-hourly-ui.test.js",
+        "sha": "b18a814a6ba336328734c08d2b7c60f44490504d"
+      },
+      {
+        "path": "server/test/kiosk-sales-hourly.test.js",
+        "sha": "64b19fd0fe230595f8c0249adaaaef4cfa6043fe"
+      },
+      {
+        "path": "server/test/sales-assistant-coverage-contract.test.js",
+        "sha": "5ddc6e97e2cc013882c926afe88c9b50b98b6277"
+      }
+    ],
+    "mainResult": {
+      "conclusion": "success",
+      "job": 117811653292,
+      "pass": 3251,
+      "fail": 0,
+      "skip": 0,
+      "backupPass": 6,
+      "hourlyNativeSqlHttpTest": "ok1157 at2026-10-18T22:47:48UTC"
+    },
+    "deferredOrdinaryGuard": {
+      "workflow": 39173997129,
+      "job": 117812813118,
+      "conclusion": "success",
+      "action": "DEFERRED",
+      "expectedRevision": "396f72f09a2b1d33885e02e7f78ad542d012eb3c",
+      "ci": 39173570921,
+      "reason": "A newer production source revision is on main; await its full CI",
+      "capturedAt": "2026-10-18T22:51:49Z",
+      "deploymentOccurred": false
+    }
+  },
+  "local": {
+    "node": "20.20.2",
+    "focused": {
+      "pass": 43,
+      "fail": 0,
+      "skip": 0
+    },
+    "clientBuild": "PASS",
+    "actualSqlAndMountedHttp": "PASS on isolated PostgreSQL-WASM; final 33-unit refusal included",
+    "nativePrismaWrapper": "local SKIP: no DATABASE_URL; full native PostgreSQL CI required"
+  },
+  "acceptance": {
+    "status": "AWAITING LAB",
+    "newLabPass": false,
+    "browserBlock": "Native credential state cannot be safely resumed; no bypass attempted",
+    "financialStockFiscalSettingsSmtpMutations": false,
+    "original14Closed": false,
+    "nextGroupedReadOnlyCheck": [
+      "Existing LAB store and existing selected period/product in BackOffice reports > sales statistics; explicit Athens then hourly opt-in",
+      "Sum hourly distinct normal/reversal counts against full filtered report counts; preserve signed original unit groups",
+      "Compare the same product period/unit in canonical report, assistant table and actual product CSV; no hourly CSV columns",
+      "Pagination/DST only where suitable existing records exist, otherwise NOT TESTED",
+      "Uncheck Athens and verify hourly clearing, tab/reload stale-result fencing; no Save, upload, payment, shift or replay"
+    ]
+  },
+  "preserved": [
+    "all previous scoped PASS",
+    "daily/weekly provisional HOLD",
+    "other owners and latest native-chat USER PASS #2795",
+    "product CSV schema and monetary calculations",
+    "unknown/null/legacy missing product-unit distinction"
+  ],
+  "remaining": [
+    "read-only selected-store live hourly and product assistant acceptance when secure browser runtime is available",
+    "broader original14 residuals remain governed by canonical tracker"
+  ],
+  "beforeHealth": {
+    "capturedAt": "2026-10-18T22:39:59.792057+00:00",
+    "httpStatus": 200,
+    "ok": true,
+    "revision": "0c03fbaf683735f21e63d051207669bff56773eb",
+    "version": "0.22.0+kat-test-pos",
+    "method": "Python urllib.request HTTPS timestamped no-cache public health, no credentials"
+  },
+  "laterIntegration": {
+    "revision": "f6df67ad55afe6d749afe3aa983c917a2e0fa3bd",
+    "independentPR": 2791,
+    "ourSourceAncestor": true,
+    "ourSevenBlobsUnchanged": true,
+    "ci": 39173668815,
+    "status": "SUCCESS",
+    "ciResult": {
+      "conclusion": "success",
+      "job": 117812889076,
+      "pass": 3257,
+      "fail": 0,
+      "skip": 0,
+      "backupPass": 6,
+      "hourlyNativeSqlHttpTest": "ok1157 at2026-10-18T22:53:50UTC"
+    }
+  },
+  "release": {
+    "revision": "f6df67ad55afe6d749afe3aa983c917a2e0fa3bd",
+    "workflow": 39174462477,
+    "job": 117814201041,
+    "conclusion": "success",
+    "rollbackArtifact": 12153896079,
+    "rollbackArtifactCreatedAt": "2026-10-18T22:58:30Z",
+    "renderStatus": "live",
+    "renderDeploy": "dep-dbaku5om7kps7398rpjg",
+    "renderCreatedAt": "2026-10-18T22:58:31.404556Z",
+    "renderFinishedAt": "2026-10-18T23:00:16.496729Z",
+    "health": {
+      "capturedAt": "2026-10-18T23:00:33.988458+00:00",
+      "httpStatus": 200,
+      "ok": true,
+      "revision": "f6df67ad55afe6d749afe3aa983c917a2e0fa3bd",
+      "version": "0.22.0+kat-test-pos",
+      "method": "Independent Python urllib.request HTTPS timestamped no-cache public health; no credentials/browser; exit0"
+    },
+    "pinAt": "2026-10-18T22:58:31.4602371Z",
+    "guardExactHealthyAt": "2026-10-18T23:00:33.1579224Z",
+    "rollbackCapturedAt": "2026-10-18T22:58:29.611Z",
+    "rollbackRevision": "0c03fbaf683735f21e63d051207669bff56773eb",
+    "rollbackVersion": "0.22.0+kat-test-pos"
+  },
+  "receiptBase": "f6df67ad55afe6d749afe3aa983c917a2e0fa3bd",
+  "receiptArtifacts": {
+    "docs/roadmap/OPEN_WORK_TRACKER.md": "ef431f0f714cb9df7ed09f1f54f2533d9f09cd4f",
+    "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf": "6ce9e3e54251cc8097fa043010f3695f75d61b82"
+  }
+}
