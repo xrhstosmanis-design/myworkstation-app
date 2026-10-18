@@ -1,3 +1,14 @@
+## 18/10/2026 14:49 Europe/Athens - COORD-20261018 / CENTRAL EXECUTION RECEIVER / CLAIM BEFORE SOURCE
+
+Owner direction: central coordination and execution of #2704, #2705, #2706, #2707, with four internal parallel workers and consolidated reporting. Receiver: `codex/central-four-streams-20261018` (this conversation). This is the receiving coordination record; historic domain owners and PASS evidence below remain preserved. No competing source work is authorized by this record.
+
+- #2704 / WS1: ASSIGNED central read-only checkpoint/source/weekly LAB acceptance coordination. AUTO-REPORTS runtime owner `codex/automatic-reporting-20261016` retained. Weekly hosted acceptance NOT TESTED after normal 2FA expiry; scheduler/outbox/automatic SMTP remain disabled/unimplemented.
+- #2705 / WS2: ASSIGNED central supplier integration contract and source-gap audit. Task29/Task30 and INBOX-CONSISTENCY-01 / INVOICE-NEW-ITEM-PREPARE-01 runtime owners retained. No supplier/invoice source takeover.
+- #2706 / WS3: ASSIGNED central bounded proposal for an independent sale-level analytics reader, items13/14. Current AUTO-REPORTS and workforce source owners retained until the specific implementation handoff is accepted and published. No source edit under this coordination-only claim.
+- #2707 / WS4: ASSIGNED central assistant adapter contract and final acceptance coordination. VOICE-ASSISTANT-01 runtime owner `codex/assistant-business-queries-20261015` retained.
+
+No source/config/schema/business changes, deployment, new test or new PASS. Source changes remain gated by a named bounded implementation handoff, green CI and applicable LAB acceptance. Central scope is now explicit so the user need not copy assignments to other pages. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-18-central-four-streams.md`. Existing domain owners must continue using their existing branches and must not overlap another bounded claim.
+
 ## 18/10/2026 14:29 Europe/Athens — WHOLESALE-CUSTOMER-PORTAL-01 / SOURCE PR2701 / ACCOUNT-BINDING REVIEW / AWAITING NATIVE CI
 
 Retained coordinator codex/wholesale-suite-20261017. SourcePR2701 initial e4a5e6dc requires documentation/PDF reconciliation with main77d55e4b/independent Android receiptPR2700; those receipts and all source preserved. Added optional expected-account header from isolated in-memory login/me context; server mismatch401 precedes CSRF/business, while /me can discover a changed cookie identity. The header only rejects mismatch and cannot authenticate or select customer identity. This prevents cross-tab cookie changes from displaying another customer's operational results in an old view. Added fetch and real HTTP guard tests, plus guarded native assertions. No management auth or production action changed.
