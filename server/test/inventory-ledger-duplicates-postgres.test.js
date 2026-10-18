@@ -12,6 +12,7 @@ test('isolated PostgreSQL separates reusable product-card sources from duplicate
   try{
     await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
     for(const sql of ('CREATE TABLE "Store"("id" text primary key,"companyId" text); CREATE TABLE "Product"("id" text primary key,"companyId" text); CREATE TABLE "StockMovement"("id" text primary key,"storeId" text,"productId" text,"sourceType" text,"sourceId" text,"movementType" text,"quantity" numeric)').split('; '))await db.$executeRawUnsafe(sql);
+    await db.$executeRawUnsafe('CREATE TABLE "PurchaseOrder"("id" text,"companyId" text,"storeId" text,"reopenVersion" integer DEFAULT 0)');
     await db.$executeRaw`INSERT INTO "Store" VALUES('store','company'),('control','company'),('foreign','other')`;
     await db.$executeRaw`INSERT INTO "Product" VALUES('product','company'),('unrelated','company'),('foreign','other')`;
     const source=fs.readFileSync(new URL('../src/routes/inventory-product-ledger.js',import.meta.url),'utf8');

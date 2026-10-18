@@ -110,12 +110,13 @@ test('registered invoice opening uses only the existing detail GET; ordinary dra
  const source=await readFile(new URL('../../client/src/components/commerce/installPurchaseOrdersSuite.js',import.meta.url),'utf8');
  const line=source.split('\n').find(l=>l.startsWith('async function openOrder('));assert.ok(line);
  const calls=[],shown=[],state={storeId:'s'};
- const api=async(path,options={})=>{calls.push({path,options});return {order:{id:'registered',status:'INVOICED'}}};
+ const api=async(path,options={})=>{calls.push({path,options});return {order:{id:path.includes('/draft/')?'draft':'registered',status:path.includes('/draft/')?'NEW':'INVOICED'}}};
  const open=new Function('api','state','showOrder','notify',line+';return openOrder')(api,state,(...args)=>shown.push(args),e=>{throw Error(String(e))});
  await open({isConnected:true},'registered','',null,false,true);
  assert.equal(calls.length,1);assert.equal(calls[0].path,'/api/purchase-orders/registered/detail');assert.equal(calls[0].options.method,undefined);assert.equal(shown.length,1);
  calls.length=0;await open({isConnected:true},'draft');
- assert.equal(calls[0].options.method,'POST');assert.match(calls[0].path,/reconcile-ocr-total$/);assert.match(calls[1].path,/detail$/);
+ assert.match(calls[0].path,/detail$/);assert.equal(calls[0].options.method,undefined);assert.equal(calls[1].options.method,'POST');assert.match(calls[1].path,/reconcile-ocr-total$/);assert.match(calls[2].path,/detail$/);
+ calls.length=0;await open({isConnected:true},'registered');assert.equal(calls.length,1);assert.equal(calls[0].options.method,undefined);
 });
 
 test('registered inbox activation reads the purchase list without background OCR recovery; ordinary activation retains recovery',async()=>{
