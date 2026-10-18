@@ -1,4 +1,5 @@
 import "dotenv/config";
+import {runLifecycleDemoSeed} from "../src/services/store-lifecycle-demo-seed.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { PrismaClient, UserRole, EmployeeType } from "@prisma/client";
@@ -20,6 +21,7 @@ const people = [
 ];
 
 async function main() {
+  const seeded=await runLifecycleDemoSeed(prisma,{companyId:"pilot-company",storeId:"kat-store"},async()=>{
   const company = await prisma.company.upsert({
     where: { id: "pilot-company" },
     update: { name:"Κυλικείο ΚΑΤ", active:true, plan:"PILOT" },
@@ -60,6 +62,12 @@ async function main() {
       }).catch(()=>{});
     }
   }
+
+  return {company,store};
+  });
+  const company=seeded.skipped?await prisma.company.findUnique({where:{id:"pilot-company"}}):seeded.value.company;
+  if(!company)throw new Error("Δεν υπάρχει η εταιρεία της προστατευμένης εγκατάστασης ΚΑΤ.");
+  if(seeded.skipped)console.log("KAT startup demo seed skipped: lifecycle maintenance or previous new start.");
 
   const email = process.env.INITIAL_ADMIN_EMAIL;
   const password = process.env.INITIAL_ADMIN_PASSWORD;
