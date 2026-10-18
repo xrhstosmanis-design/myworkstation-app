@@ -10,7 +10,7 @@ import java.util.Set;
 import javax.net.ssl.HttpsURLConnection;
 import org.json.JSONObject;
 
-final class ChatApi {
+class ChatApi {
     static final String ORIGIN = "https://myworkstation-app.onrender.com";
     private final Set<HttpsURLConnection> active = Collections.synchronizedSet(new HashSet<>());
     static final class Failure extends Exception {
