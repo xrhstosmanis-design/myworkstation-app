@@ -1,0 +1,57 @@
+{
+  "format": "MWS_EXISTING_ARCHIVE_RESTORE_EVIDENCE_V1",
+  "status": "EXISTING_ARCHIVE_ISOLATED_RESTORE_PASS",
+  "objectKey": "myworkstation/2026/10/18/backup-20261018T180047Z-4492.dump",
+  "versionId": "4_z217a89158062f23bad000f16_f2487cfe3e75d5880_d20261018_m180132_c003_v0312026_t0006_u01792346492293",
+  "archiveBytes": 230958578,
+  "archiveSha256": "603dab152462bd051b08adddf0b490139616f45ebae8f1654bb06af6357b78a4",
+  "encryption": "AES256",
+  "objectRetentionVerified": false,
+  "restoreStart": "2026-10-18T19:42:18Z",
+  "restoreEnd": "2026-10-18T19:43:25Z",
+  "restoreExit": 0,
+  "copyAudit": {
+    "format": "MWS_COPY_ROUNDTRIP_AUDIT_V1",
+    "copyBytes": 417914887,
+    "dataMatches": true,
+    "executionAuthorized": false,
+    "rowOrder": "UNORDERED_MULTISET",
+    "rows": 181742,
+    "sequences": 1,
+    "sha256": "ce600dd9582f148fdea2ca6df1100fbe10c9613b6a5d23e463457bee06e7794b",
+    "tables": 252
+  },
+  "restoredKatCounts": {
+    "checked_at": "2026-10-18T19:56:09.025095+00:00",
+    "server_version": "18.6",
+    "read_only": "on",
+    "local_socket": true,
+    "listen_addresses": "",
+    "company_matches": true,
+    "cash_shifts": 44,
+    "products": 143,
+    "employees": 23,
+    "sales": 165,
+    "attachments": 273,
+    "attachment_bytes": "161847741",
+    "active_registers": [
+      "KAT-POS-01",
+      "KAT-POS-02"
+    ],
+    "fiscal_settings": 2,
+    "eftpos_settings": 4,
+    "rbs_settings": 2
+  },
+  "temporaryCleanupVerified": true,
+  "cleanupCheckedAt": "2026-10-18T19:58:37.316218+00:00",
+  "executionAuthorized": false,
+  "auditorSource": "a42e2387bbc2814d665c111aa663c1d9aecccc3f",
+  "auditorSha256": "e3f6436c830a5cdeaefe1f0ef9637234ea0e5bab9d44cda27cafeaf05c70c765",
+  "limitations": [
+    "Existing 21:00 Athens full-database archive, not a fresh preview-bound KAT snapshot.",
+    "No per-store selective rollback, production RESET, safe reopen or offline/fiscal fencing acceptance.",
+    "Roles/ACL/tablespaces were intentionally not restored; no application workers connected to the throwaway cluster.",
+    "Object retention was not verified; remote object was not modified/deleted.",
+    "No row bodies, secrets or attachment content retained in this evidence."
+  ]
+}

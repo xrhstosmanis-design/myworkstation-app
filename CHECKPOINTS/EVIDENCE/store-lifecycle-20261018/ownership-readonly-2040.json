@@ -1,0 +1,61 @@
+{
+  "format": "MWS_LIFECYCLE_OWNERSHIP_READ_ONLY_STATUS_V1",
+  "companyId": "pilot-company",
+  "storeId": "kat-store",
+  "checkedAt": "2026-10-18T20:40:20.457032Z",
+  "workforce": {
+    "linked": 3,
+    "baseKat": 3,
+    "katAccess": 3,
+    "explicitOtherAccess": 0,
+    "legacyKat": 0
+  },
+  "providerOutboxDispatchNote": 0,
+  "providerAttempts": 0,
+  "inventoryAccessGrants": 1,
+  "inventoryParticipants": 0,
+  "netlinkStoreConfigs": 1,
+  "executionAuthorizedByEvidence": false,
+  "observations": [
+    "The three Workforce identities are global company rows with raw baseStoreId, not covered by direct storeId ownership. Absence of other explicit access is not sufficient to authorize deletion of global identities or other references.",
+    "NetlinkStoreConfig must be retained with both fiscal installations; the old prospective policy leaves it REVIEW and must not silently remove it.",
+    "Provider aggregates use a typed raw link; current zero matches is not a complete ownership manifest.",
+    "No mutation or deletion performed."
+  ],
+  "crossStoreReferenceCheckedAt": "2026-10-18T20:42:49.554802Z",
+  "workforceCheckedReferences": [
+    {
+      "kind": "attendance",
+      "total": 1,
+      "otherOrUnscoped": 0
+    },
+    {
+      "kind": "clock",
+      "total": 2,
+      "otherOrUnscoped": 0
+    },
+    {
+      "kind": "leave",
+      "total": 1,
+      "otherOrUnscoped": 0
+    },
+    {
+      "kind": "schedule",
+      "total": 2,
+      "otherOrUnscoped": 0
+    }
+  ],
+  "incomingOtherEmployeeRules": 0,
+  "preservationReview": {
+    "NetlinkStoreConfig": "KEEP fiscal configuration; explicit classification still pending",
+    "NetlinkTransaction": "8 rows in dated baseline, store history; explicit ownership review still pending",
+    "ShiftType": "6 dated baseline rows; current RESET_KEEP is broader than latest only-register-settings requirement and is not an approved execution manifest"
+  },
+  "customerDependencyCheckedAt": "2026-10-18T20:50:33.702450Z",
+  "customerDependencies": {
+    "namedCustomerSales": 0,
+    "creditPayments": 0,
+    "customerLedger": 0,
+    "loyaltyLedger": 0
+  }
+}
