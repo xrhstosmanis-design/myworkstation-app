@@ -1,16 +1,12 @@
 import crypto from 'node:crypto';
 import {Prisma} from '@prisma/client';
 import {z} from 'zod';
+import {assertWholesalePrincipal,authorizeWholesalePrincipal,authorizeWholesaleQuoteProducts,wholesaleError} from './wholesale-principal.js';
+export {assertWholesaleManager,wholesaleError} from './wholesale-principal.js';
 
-const MANAGERS=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
 const SCALE4=10000n,RATE_SCALE=100000n,MAX_CENTS=999999999999999999n;
 const MAX_QUANTITY=1000000n*SCALE4,MAX_UNIT=99999999999999n;
 const identifier=z.string().trim().min(1).max(200);
-
-export function wholesaleError(status,code,message){return Object.assign(new Error(message),{status,code})}
-export function assertWholesaleManager(ctx){
-  if(!ctx||!MANAGERS.has(ctx.role)||ctx.tokenType!=='BACKOFFICE_USER'||ctx.channel!=='BACKOFFICE'||!String(ctx.companyId||'').trim()||!String(ctx.actorId||'').trim())throw wholesaleError(403,'WHOLESALE_ACCESS_DENIED','Wholesale management access required.');
-}
 
 function fixed(value,scale,code='INVALID_PRICE'){
   const text=String(value??'');
@@ -30,7 +26,9 @@ export function normalizeQuoteInput(body){const parsed=quoteInputSchema.safePars
 // The caller supplies the transaction. SHARE locks protect the rows checked in
 // that transaction's snapshot; they do not promise serializable tier insertion.
 export async function buildWholesaleQuote(db,ctx,body,{lock=false}={}){
-  assertWholesaleManager(ctx);const input=normalizeQuoteInput(body),share=lock?Prisma.sql`FOR SHARE`:Prisma.empty;
+  assertWholesalePrincipal(ctx);const input=normalizeQuoteInput(body),share=lock?Prisma.sql`FOR SHARE`:Prisma.empty;
+  await authorizeWholesalePrincipal(db,ctx,input,{lock});
+  await authorizeWholesaleQuoteProducts(db,ctx,input,{lock});
   const stores=await db.$queryRaw(Prisma.sql`SELECT s."id",s."name" FROM "Store" s JOIN "Company" c ON c."id"=s."companyId" AND c."active"=true WHERE s."id"=${input.storeId} AND s."companyId"=${ctx.companyId} AND s."active"=true ${share}`);
   if(!stores[0])throw wholesaleError(404,'WHOLESALE_STORE_NOT_FOUND','Active wholesale store not found.');
   const customers=await db.$queryRaw(Prisma.sql`SELECT c."id",c."name" FROM "WholesaleCustomer" c JOIN "Company" co ON co."id"=c."companyId" AND co."active"=true WHERE c."id"=${input.customerId} AND c."companyId"=${ctx.companyId} AND c."active"=true ${share}`);
