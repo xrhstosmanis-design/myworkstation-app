@@ -1,21 +1,38 @@
 """Compare trusted PostgreSQL data-only COPY exports without emitting row contents.
 
 Read-only file auditor, not a SQL executor or a production recovery authorization.
-Requires identical COPY row order and column headers; fails closed on other data
-formats (including large objects/INSERTs), malformed streams and missing tables.
+Compares a multiset of exact COPY rows (including duplicates) and exact column
+headers. SQL row order is unspecified. Fails closed on other data formats
+(including large objects/INSERTs), malformed streams and missing tables.
 """
 import hashlib
 import json
 import re
 import sys
+import sqlite3
+import tempfile
+from contextlib import closing
+from pathlib import Path
 
 MAX_LINE = 64 * 1024 * 1024
 MAX_TABLES = 1000
 
 
 def inventory(filename):
+    # Only row SHA256 values go to this private scratch index, never payloads.
+    # Sorting on disk keeps memory bounded even for a large restored database.
+    with tempfile.TemporaryDirectory(prefix="mws-copy-audit-") as directory:
+        with closing(sqlite3.connect(str(Path(directory) / "digests.sqlite"))) as index:
+            index.execute("PRAGMA cache_size=-1024")
+            index.execute("PRAGMA temp_store=FILE")
+            index.execute("CREATE TABLE digests (value BLOB NOT NULL)")
+            return _inventory(filename, index)
+
+
+def _inventory(filename, index):
     tables, sequences = {}, {}
     current = None
+    total_rows = 0
     with open(filename, "rb") as stream:
         while True:
             line = stream.readline(MAX_LINE + 1)
@@ -25,10 +42,18 @@ def inventory(filename):
                 raise ValueError("Oversized or incomplete SQL line")
             if current is not None:
                 if line == b"\\.\n":
+                    for (value,) in index.execute("SELECT value FROM digests ORDER BY value"):
+                        row_hash.update(value)
                     tables[current]["sha256"] = row_hash.hexdigest()
                     current = None
                 else:
-                    row_hash.update(str(len(line)).encode("ascii") + b":" + line)
+                    total_rows += 1
+                    if total_rows > 1000000:
+                        raise ValueError("COPY row limit exceeded")
+                    digest = hashlib.sha256()
+                    digest.update(str(len(line)).encode("ascii") + b":")
+                    digest.update(line)
+                    index.execute("INSERT INTO digests VALUES (?)", (digest.digest(),))
                     tables[current]["rows"] += 1
                     tables[current]["bytes"] += len(line)
                 continue
@@ -45,6 +70,7 @@ def inventory(filename):
                 if len(sql) > 65536 or sql in tables or len(tables) >= MAX_TABLES:
                     raise ValueError("Duplicate or oversized COPY inventory")
                 current = sql
+                index.execute("DELETE FROM digests")
                 row_hash = hashlib.sha256()
                 tables[current] = {"rows": 0, "bytes": 0}
                 continue
@@ -77,6 +103,7 @@ def compare(expected_file, restored_file):
         "rows": sum(t["rows"] for t in expected.values()),
         "copyBytes": sum(t["bytes"] for t in expected.values()),
         "sequences": len(expected_sequences),
+        "rowOrder": "UNORDERED_MULTISET",
         "sha256": hashlib.sha256(json.dumps(canonical, ensure_ascii=True, separators=(",", ":")).encode()).hexdigest(),
         "executionAuthorized": False,
     }
