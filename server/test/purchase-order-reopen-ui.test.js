@@ -32,3 +32,17 @@ test('actual invoiced and reopened order editors open without mutating OCR recon
  order={...order,status:'NEW',reopenVersion:1};await open(doc.querySelector('#root'),'same');assert.equal(calls.length,2);assert.equal(doc.querySelector('[data-order-supplier]').disabled,true);assert.equal(doc.querySelector('[data-order-invoice]').disabled,true);assert.equal(doc.querySelector('[data-add-line]').disabled,false);assert.equal(doc.querySelector('[data-invoice-assistant]'),null);
  dom.window.close();
 });
+
+test('delayed reopen previews cannot open after changing store or closing the source order',async()=>{
+ const source=(await readFile(new URL('../../client/src/components/commerce/installPurchaseOrdersSuite.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
+ for(const mode of ['store-change','closed-order']){
+  const dom=new JSDOM('<div id="root"></div><div id="parent"></div>',{url:'https://fixture.invalid'}),doc=dom.window.document,calls=[];let finishGet,current=true,refreshes=0;
+  const fetch=async(path,options={})=>{calls.push({path,options});return new Promise(resolve=>finishGet=resolve)};
+  const show=new Function('document','window','localStorage','fetch','greeceDateInput','installInvoiceProductMatcher',source+';return showReopen;')(doc,dom.window,dom.window.localStorage,fetch,()=> '2026-10-18',()=>{});
+  const parent=doc.querySelector('#parent'),pending=show(doc.querySelector('#root'),parent,{id:'same',storeId:'s'},()=>refreshes++,()=>current);
+  if(mode==='store-change')current=false;else parent.remove();
+  finishGet({ok:true,json:async()=>({version:'a'.repeat(64),stockChanges:[],negativeStockCount:0,expenseDelta:0})});await pending;
+  assert.equal(doc.querySelector('[data-reopen-form]'),null);assert.equal(refreshes,0);assert.equal(calls.length,1);assert.equal(calls[0].options.method,undefined);assert.equal(parent.dataset.reopenBusy,undefined);
+  dom.window.close();
+ }
+});

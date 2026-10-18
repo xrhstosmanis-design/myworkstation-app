@@ -10270,3 +10270,8 @@ Owner `feat/purchase-order-reopen-20261018`, integrated branch `feat/purchase-or
 ## 18/10/2026 — PURCHASE-ORDER-REOPEN-01 / SOURCE MERGED, SHARED RELEASE PENDING
 
 Same owner `feat/purchase-order-reopen-20261018`. PR2709/source53f9ec79 and exact main3e600853 full native CI3041PASS/0FAIL/0SKIP plus6backup SUCCESS. Ordinary guard39126699935 correctly held deployment because newer shared source2f2ce031 had cancelled pre-job mainCI39126478154. No manual deploy or gate bypass. Bounded test-only release follow-up verifies stale old-cycle pack callbacks after new FINAL plus existing role matrix on current main, then normal PR/main CI and ordinary guard. No real reopen/stock/payment/finalization action; production delivery and USER/LAB acceptance remain OPEN. Broader09/inventory and other owners retained. Checkpoint `CHECKPOINTS/CHANGES/2026-10-18-purchase-order-reopen.md`; final combined PDFs remain for the verified release receipt.
+
+
+## 18/10/2026 — PURCHASE-ORDER-REOPEN-01 / COMBINED SOURCE GREEN, RELEASE STILL FENCED
+
+Same owner. PR2719 and exactmain4b4fb564 each full3045PASS/0FAIL/0SKIP plus6backup; original runtime3e600853 unchanged. Guard39127921500 held for newer Android-only7851c90a; its fullCI39127634073 failed required checkpoint policy before tests. No deploy or policy bypass. Bounded mounted preview/store-change/closed-order regression is submitted with active/checkpoint evidence on current main through normal PR/main CI. Real reopen, stock/payment/finalization and USER/LAB remain NOT TESTED; shared release and final PDF/manual receipt pending. Existing Android/inventory/broader09 owners retained. Checkpoint `CHECKPOINTS/CHANGES/2026-10-18-purchase-order-reopen.md`.
