@@ -25,6 +25,16 @@ jobs:
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - name: Compile, unit tests and lint
         run: gradle --no-daemon -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Verify 2FA background and activity recreation on Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          disable-animations: true
+          script: gradle --no-daemon -p android :app:connectedDebugAndroidTest
       - uses: actions/upload-artifact@v4
         with:
           name: MyWorkStation-Android-Preview
@@ -32,4 +42,5 @@ jobs:
             android/app/build/outputs/apk/debug/*.apk
             android/app/build/reports/tests/testDebugUnitTest/
             android/app/build/reports/lint-results-debug.html
+            android/app/build/reports/androidTests/
           if-no-files-found: error

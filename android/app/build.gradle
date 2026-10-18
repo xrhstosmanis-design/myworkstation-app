@@ -6,9 +6,9 @@ android {
         applicationId 'gr.myworkstation.chat'
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName '0.1.0-preview'
-        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+        versionCode 2
+        versionName '0.1.1-preview'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     buildTypes {
@@ -18,6 +18,11 @@ android {
     lint { abortOnError true }
 }
 dependencies { testImplementation 'junit:junit:4.13.2'; testImplementation 'org.json:json:20240303' }
+dependencies {
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}
 
 // Messaging only: no Analytics, Firestore, Auth or private-content storage SDK.
 dependencies { implementation platform('com.google.firebase:firebase-bom:35.0.2'); implementation 'com.google.firebase:firebase-messaging' }
