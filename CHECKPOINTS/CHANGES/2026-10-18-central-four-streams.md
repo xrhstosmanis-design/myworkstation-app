@@ -1,3 +1,18 @@
+## 18/10/2026 16:49 Europe/Athens - COORD-20261018 / OWNER-DIRECTED TRANSFER / ASSIGNED BEFORE CODE
+
+At15:17 the owner explicitly confirmed replacing previous assignments for #2704-#2707; at15:18 confirmed full execution approval and requested four internal parallel helpers under this coordinator. The interrupted publication is resumed16:49. This owner-directed transfer supersedes the earlier unknown-activity wait for the bounded paths below; it does not fabricate an independent release by old pages. Central receiver codex/central-four-streams-20261018 integrates all work. Original PASS evidence and unrelated assignments remain protected.
+
+ΑΝΑΛΗΨΗ ΑΠΟ AUTO-REPORTS / Task29-Task30 supplier / VOICE-ASSISTANT-01 for the exact delegated slices - ASSIGNED central coordinator and branches below. Earlier pages must not edit these assigned slices concurrently. Root alone owns registries/PDF/shared checkpoint and reviewed integration.
+
+- WS1 #2704 ASSIGNED codex/ws1-cash-20261018: server/src/services/automatic-report-source.js, client/src/components/platform/AutomaticReportSettingsManager.jsx and focused/mounted/native tests. Explicit source readiness versus PROVISIONAL financial finality; no writer/schema/scheduler/SMTP changes.
+- WS2 #2705 ASSIGNED codex/ws2-supplier-orders-20261018: server/src/routes/order-suggestions.js, new supplier-order-groups helper and focused/native tests. Separate read-only supplier-grouped PROPOSAL endpoint; declared approved-document-frequency PROXY, primarySupplierId null/reviewRequired, ties/no evidence/limited evidence unassigned. No unsupported physical-delivery frequency or persisted supplier change.
+- WS3 #2706 ASSIGNED codex/ws3-sales-counts-20261018: server/src/routes/kiosk-reports-sales-v4.js and new focused/native tests. True overall distinct sale/reversal counts and same-snapshot cap coverage, retaining per-product counts and numeric monetary compatibility.
+- WS4 #2707 ASSIGNED codex/ws4-assistant-coverage-20261018: server/src/services/owner-sales-tools.js, assistant-answer-response.js, assistant-report-table.js; client/src/components/voice/SalesAssistantEvidence.jsx and focused tests. Explicit limited/unknown product source evidence; no broad new capability/auth changes. WS4 alone edits owner-sales-tools.test.js mock fixtures if needed.
+
+Shared producer-consumer contract sourceCoverage={complete,returnedGroupCount,totalGroupCount,limit,totalsScope:COMPLETE_SOURCE|RETURNED_GROUPS}. WS3 owns producer; WS4 consumers. WS1 financial-finality disclosure is separate from source completeness.
+
+New source status ASSIGNED/NOT TESTED. Preserve #2716 eighteen local diagnostics and four distinct count observations; no inferred new CI/LAB/LIVE PASS. Full source CI/native/invariant checks and exact ordinary guarded release precede applicable LAB acceptance. Production remains read-only; no financial/fiscal/stock/shift/payroll/DB/backup/settings/email/order mutation or protected transaction replay. Other original14 residuals stay OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-18-central-four-streams.md.
+
 ## Isolated diagnostic continuation - request18Oct15:03 Athens
 
 The user answered that previous pages' activity is unknown. No ownership transfer was inferred. Four parallel workers executed isolated diagnostics on exact main25ce0fc2f60502b123f25324fef4205463596174 using Node24.19.0. These are synthetic local observations, not source fixes, releaseNode20/native CI/HTTP/hosted/LAB acceptance.
@@ -43,3 +58,6 @@ Production and LAB business state unchanged. No payment, fiscal, stock, shift, p
 
 ## Single next action
 Publish this coordination receiver/contract with green docs CI and merge. Then obtain the bounded implementation handoff for the sale-level reader while retaining source ownership on all other paths; in parallel, conduct only authorized read-only acceptance when a supported authenticated canonical tab is available.
+
+## Concurrent publication rule
+This receiving assignment is appended to the three canonical registries to preserve concurrent prepends. The regenerated tracker snapshot is retained as ownership-transfer.pdf in this scope's evidence directory. The shared historical tracker PDF remains with concurrent receipts until the consolidated source integration receipt regenerates it again. Canonical ownership is the Markdown tracker, not a historical PDF snapshot. No PASS closure is claimed.

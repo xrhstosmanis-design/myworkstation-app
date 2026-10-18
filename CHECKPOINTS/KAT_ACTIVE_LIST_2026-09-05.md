@@ -10323,3 +10323,20 @@ Same owner `feat/purchase-order-reopen-20261018`. PR2709/source53f9ec79 and exac
 ## 18/10/2026 — PURCHASE-ORDER-REOPEN-01 / COMBINED SOURCE GREEN, RELEASE STILL FENCED
 
 Same owner. PR2719 and exactmain4b4fb564 each full3045PASS/0FAIL/0SKIP plus6backup; original runtime3e600853 unchanged. Guard39127921500 held for newer Android-only7851c90a; its fullCI39127634073 failed required checkpoint policy before tests. No deploy or policy bypass. Bounded mounted preview/store-change/closed-order regression is submitted with active/checkpoint evidence on current main through normal PR/main CI. Real reopen, stock/payment/finalization and USER/LAB remain NOT TESTED; shared release and final PDF/manual receipt pending. Existing Android/inventory/broader09 owners retained. Checkpoint `CHECKPOINTS/CHANGES/2026-10-18-purchase-order-reopen.md`.
+
+
+## 18/10/2026 16:49 Europe/Athens - COORD-20261018 / OWNER-DIRECTED TRANSFER / ASSIGNED BEFORE CODE
+
+At15:17 the owner explicitly confirmed replacing previous assignments for #2704-#2707; at15:18 confirmed full execution approval and requested four internal parallel helpers under this coordinator. The interrupted publication is resumed16:49. This owner-directed transfer supersedes the earlier unknown-activity wait for the bounded paths below; it does not fabricate an independent release by old pages. Central receiver codex/central-four-streams-20261018 integrates all work. Original PASS evidence and unrelated assignments remain protected.
+
+ΑΝΑΛΗΨΗ ΑΠΟ AUTO-REPORTS / Task29-Task30 supplier / VOICE-ASSISTANT-01 for the exact delegated slices - ASSIGNED central coordinator and branches below. Earlier pages must not edit these assigned slices concurrently. Root alone owns registries/PDF/shared checkpoint and reviewed integration.
+
+- WS1 #2704 ASSIGNED codex/ws1-cash-20261018: server/src/services/automatic-report-source.js, client/src/components/platform/AutomaticReportSettingsManager.jsx and focused/mounted/native tests. Explicit source readiness versus PROVISIONAL financial finality; no writer/schema/scheduler/SMTP changes.
+- WS2 #2705 ASSIGNED codex/ws2-supplier-orders-20261018: server/src/routes/order-suggestions.js, new supplier-order-groups helper and focused/native tests. Separate read-only supplier-grouped PROPOSAL endpoint; declared approved-document-frequency PROXY, primarySupplierId null/reviewRequired, ties/no evidence/limited evidence unassigned. No unsupported physical-delivery frequency or persisted supplier change.
+- WS3 #2706 ASSIGNED codex/ws3-sales-counts-20261018: server/src/routes/kiosk-reports-sales-v4.js and new focused/native tests. True overall distinct sale/reversal counts and same-snapshot cap coverage, retaining per-product counts and numeric monetary compatibility.
+- WS4 #2707 ASSIGNED codex/ws4-assistant-coverage-20261018: server/src/services/owner-sales-tools.js, assistant-answer-response.js, assistant-report-table.js; client/src/components/voice/SalesAssistantEvidence.jsx and focused tests. Explicit limited/unknown product source evidence; no broad new capability/auth changes. WS4 alone edits owner-sales-tools.test.js mock fixtures if needed.
+
+Shared producer-consumer contract sourceCoverage={complete,returnedGroupCount,totalGroupCount,limit,totalsScope:COMPLETE_SOURCE|RETURNED_GROUPS}. WS3 owns producer; WS4 consumers. WS1 financial-finality disclosure is separate from source completeness.
+
+New source status ASSIGNED/NOT TESTED. Preserve #2716 eighteen local diagnostics and four distinct count observations; no inferred new CI/LAB/LIVE PASS. Full source CI/native/invariant checks and exact ordinary guarded release precede applicable LAB acceptance. Production remains read-only; no financial/fiscal/stock/shift/payroll/DB/backup/settings/email/order mutation or protected transaction replay. Other original14 residuals stay OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-18-central-four-streams.md.
+
