@@ -62,8 +62,8 @@ test('malformed expiry cannot grant delivery',async()=>{
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
-function registryHarness({configured=true,stores=[store]}={}) {
- const calls=[]; const db={
+function registryHarness({configured=true,stores=[store],database}={}) {
+ const calls=[]; const db=database||{
   $executeRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return 1;},
   $queryRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return [];},
   $transaction:async fn=>fn(db),
@@ -89,4 +89,27 @@ test('disabled/no authorized stores/foreign staff registration never writes a na
  const off=registryHarness({configured:false});await assert.rejects(off.registerNativePush({...user,sessionId:'s'},input.token,'bearer'));assert.equal(off.calls.length,0);
  const noStores=registryHarness({stores:[]});await assert.rejects(noStores.registerNativePush({...user,sessionId:'s'},input.token,'bearer'));assert.equal(noStores.calls.length,0);
  const staff=registryHarness();await assert.rejects(staff.registerNativePush({id:'op',tokenType:'STORE_OPERATOR',storeId:'A',companyId:'C',chatSessionId:'s'},input.token,'bearer','B'));assert.equal(staff.calls.length,0);
+});
+
+const isolatedNativeDatabase=()=>{try{const url=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(url.hostname)&&/test/i.test(url.pathname)}catch{return false}};
+test('isolated PostgreSQL native token ownership transition and session-bound revocation',{skip:!isolatedNativeDatabase()},async()=>{
+ const {PrismaClient}=await import('@prisma/client');
+ const admin=new PrismaClient(),schema='native_chat_fcm_'+createHash('sha256').update(String(Date.now())+Math.random()).digest('hex').slice(0,12);
+ const url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
+ await admin.$executeRawUnsafe('CREATE SCHEMA "'+schema+'"');
+ const db=new PrismaClient({datasources:{db:{url:url.toString()}}});
+ try {
+  const h=registryHarness({database:db});
+  const one={...user,id:'owner-one',sessionId:'session-one'},two={...user,id:'owner-two',sessionId:'session-two'};
+  await Promise.all([h.registerNativePush(one,input.token,'bearer-one'),h.registerNativePush(two,input.token,'bearer-two')]);
+  const rows=await db.$queryRawUnsafe('SELECT * FROM "StoreChatNativePush"');
+  assert.equal(rows.length,1);const current=rows[0],identity=current.identityJson;
+  assert.equal(current.userId,identity.id);
+  const winner=current.userId==='owner-one'?one:two,other=current.userId==='owner-one'?two:one;
+  assert.equal(current.sessionId,winner.sessionId);
+  assert.equal(current.binding,createHash('sha256').update(winner.id==='owner-one'?'bearer-one':'bearer-two').digest('hex'));
+  await h.revokeNativePush(other,input.token);assert.equal((await db.$queryRawUnsafe('SELECT * FROM "StoreChatNativePush"')).length,1);
+  await h.revokeNativePush({...winner,sessionId:'foreign-session'},input.token);assert.equal((await db.$queryRawUnsafe('SELECT * FROM "StoreChatNativePush"')).length,1);
+  await h.revokeNativePush(winner,input.token);assert.equal((await db.$queryRawUnsafe('SELECT * FROM "StoreChatNativePush"')).length,0);
+ } finally {await db.$disconnect();await admin.$executeRawUnsafe('DROP SCHEMA "'+schema+'" CASCADE');await admin.$disconnect();}
 });
