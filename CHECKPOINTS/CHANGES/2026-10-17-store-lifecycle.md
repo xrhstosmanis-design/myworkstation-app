@@ -1,3 +1,15 @@
+## 18/10/2026 21:10 Europe/Athens — STORE-LIFECYCLE-01 / APPLICATION LINK COUNTS / AWAITING NATIVE CI
+
+Owner feat/store-shifts-inventory-clear-20261018 retained; bounded source branch feat/store-lifecycle-application-links-20261018 after owner resumed work21:04. Latest authorized scope remains a new KAT start preserving BOTH registers/fiscal/EFTPOS/RBS settings and connections, store identity/licenses, company/shared catalog/other stores. No reset/deletion executed.
+
+Read-only production20:55:11Athens: ZERO OPEN shifts, lifecycle fence absent. Read-only20:55:32Athens explicitly joined application links through their parent and Store company: PurchaseOrderLine57, PackCorrection5, Posting6, TotalOverrideAudit3 KAT rows; ReopenMovement0/EmployeeNaturalRule0/StoreChatRead0. CloudDeviceCursor1 belongs to retained device infrastructure. Other-store controls respectively1016/20/22/0/15/0/134; none removed. Counts are NOT backup, whole graph ownership or deletion authority.
+
+Source adds explicit read-only application-link review to existing scoped RepeatableRead preview and central preparation panel. Nine named links; no inferred name-based selectors. Parent ownership joins Store (Employee lacks companyId); count child/parent company or child store mismatches; fail closed on changed reviewed layout; no row bodies, credentials or other-store counts returned. Fingerprint now binds application-link counts. Every raw link remains REVIEW, never REMOVE; executionAvailable:false. Existing reset executor, retention boundary, fiscal/offline behavior and routes unchanged.
+
+Local Node20 focused4PASS/0FAIL/2native infrastructureSKIP, frontend build PASS. Full local Node20:3140 tests/3003PASS/0FAIL/137 infrastructureSKIP. Native CI pending. Native fixture now contains raw PurchaseOrderLine without FK, exact target/sibling/foreign snapshots, fingerprint change on raw child insert, cross-company mismatch blocker and unchanged real GET-only HTTP checks. No LAB/USER PASS or production release claimed for this source.
+
+Whole task OPEN/ASSIGNED. Production application ownership graph, real durable encrypted export/isolated full restore, active/offline/fiscal fencing, generation-aware reopen and executable central reset UI/API remain unfinished. New Excel NOT RECEIVED. Next action: native/full CI then complete explicit ownership and recovery integration; preserve prior scoped PASS and all unrelated owners. Combined PDF remains final release receipt work, not business closure.
+
 ## 18/10/2026 19:26 Europe/Athens — STORE-LIFECYCLE-01 / TWO TECHNICAL INCREMENTS LIVE / KAT CLEANUP NOT EXECUTED
 
 Authoritative progress receipt, NOT a task closure or business PASS. Owner feat/store-shifts-inventory-clear-20261018 retained after explicit takeoverPR2748/396d5c3 from owner-stopped feat/store-cleanup-20261017. Latest owner18:35 confirmation supersedes limited clearance: new start removes KAT employees/products/stock/shifts/sales/payments/history, preserving BOTH register installations and their fiscal/EFTPOS/RBS settings/connections, store identity/licenses, company/shared catalog and other stores. New KAT Excel NOT RECEIVED; photos/roster pending.
