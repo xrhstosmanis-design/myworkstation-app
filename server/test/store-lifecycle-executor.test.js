@@ -249,3 +249,49 @@ test('native typed raw links preserve other aggregate domains with identical IDs
   assert.equal((await f.db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "StoreLifecycleTombstone"`))[0].count,2);
  }finally{await f.close()}
 });
+
+const referenceManifest={...rawOwnershipManifest,reviewedColumns:[...rawOwnershipManifest.reviewedColumns,'ReferenceHolder.parentId'],tables:[...rawOwnershipManifest.tables,{name:'ReferenceHolder',owner:{kind:'DIRECT'},references:[{parent:'RawParent',columns:[['parentId','id']]}],reset:'REMOVE'}]};
+async function referenceFixture({foreign=false,declared=false}={}){const reviewed=structuredClone(referenceManifest);if(declared)delete reviewed.tables.find(t=>t.name==='ReferenceHolder').references;return fixture({extraManifest:reviewed,extraDdl:s=>[...rawOwnershipDdl(s),`CREATE TABLE "${s}"."ReferenceHolder"("id" text PRIMARY KEY,"companyId" text NOT NULL,"storeId" text NOT NULL REFERENCES "${s}"."Store"("id"),"parentId" text${declared?` REFERENCES "${s}"."RawParent"("id") ON DELETE CASCADE`:""})`],populate:async db=>{
+ await populateRawOwnership(db);await db.$executeRawUnsafe(`INSERT INTO "ReferenceHolder" VALUES('holder-target','company','target','raw-target'),('holder-empty','company','target',NULL),('holder-sibling','company','sibling','raw-sibling')`);
+ if(foreign)await db.$executeRawUnsafe(`INSERT INTO "ReferenceHolder" VALUES('foreign-reference','company','sibling','raw-target')`);
+}})}
+
+test('secondary raw references require an explicit existing parent and validated column/type mappings',()=>{
+ const opts={persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)};
+ for(const references of [null,{},[{parent:'Missing',columns:[['parentId','id']]}],[{parent:'RawParent',columns:[]}],[{parent:'RawParent',columns:[['parentId','id']],match:{kind:1}}]]){
+  const bad=structuredClone(referenceManifest);bad.tables.find(t=>t.name==='ReferenceHolder').references=references;assert.throws(()=>createLifecycleExecutionCore(bad,opts),/Invalid reviewed application references/);
+ }
+});
+
+test('native non-owning raw references fence every touched store and reject parentless replay outside the cleared owner',{skip:!isolated},async()=>{
+ const f=await referenceFixture();try{
+  await f.core.install(f.db,actor,scope);const before=await f.snapshot(),prep=await f.core.prepare(f.db,actor,scope,'RESET');
+  await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "ReferenceHolder" VALUES('blocked-cross','company','sibling','raw-target')`),matches(/STORE_LIFECYCLE_MAINTENANCE/));
+  await f.db.$executeRawUnsafe(`INSERT INTO "ReferenceHolder" VALUES('other-live','company','sibling','raw-sibling')`);
+  const result=await f.core.execute(f.db,actor,{...scope,...prep});const order=result.deleted.map(t=>t.table);assert.ok(order.indexOf('ReferenceHolder')<order.indexOf('RawParent'));
+  const after=await f.snapshot();assert.deepEqual(after.StoreInstallationTerminal,before.StoreInstallationTerminal);assert.deepEqual(after.Product,before.Product);
+  assert.equal(after.ReferenceHolder.length,2);assert.ok(after.ReferenceHolder.every(r=>JSON.parse(r.row).storeId==='sibling'));
+  await f.db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "maintenance"=false WHERE "storeId"='target'`);
+  await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "ReferenceHolder" VALUES('late-cross','company','sibling','raw-target')`),matches(/STORE_LIFECYCLE_RETIRED_REFERENCE/));
+  await f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_generations','{"target":"1"}',true)`);await tx.$executeRawUnsafe(`INSERT INTO "ReferenceHolder" VALUES('fresh-null','company','target',NULL)`)});
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "StoreLifecycleTombstone"`))[0].count,2);
+ }finally{await f.close()}
+});
+
+test('native preexisting other-store references to the selected raw parent block preparation without altering either owner',{skip:!isolated},async()=>{
+ const f=await referenceFixture({foreign:true});try{
+  await f.core.install(f.db,actor,scope);const before=await f.snapshot();await assert.rejects(f.core.prepare(f.db,actor,scope,'RESET'),/Cross-store dependency/);assert.deepEqual(await f.snapshot(),before);assert.equal(f.proofCalls(),0);assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,false);
+ }finally{await f.close()}
+});
+
+// Declared foreign keys affect write protection, never inferred deletion ownership.
+test('native declared secondary FK fences a sibling insert racing the frozen parent before CASCADE can delete another store', {skip:!isolated},async()=>{
+ const f=await referenceFixture({declared:true});try{
+  await f.core.install(f.db,actor,scope);const prep=await f.core.prepare(f.db,actor,scope,'RESET');
+  await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "ReferenceHolder" VALUES('cascade-race','company','sibling','raw-target')`),matches(/STORE_LIFECYCLE_MAINTENANCE/));
+  await f.db.$executeRawUnsafe(`INSERT INTO "ReferenceHolder" VALUES('sibling-live','company','sibling','raw-sibling')`);
+  const before=await f.snapshot();await f.core.execute(f.db,actor,{...scope,...prep});const after=await f.snapshot();
+  assert.deepEqual(after.ReferenceHolder,before.ReferenceHolder.filter(r=>JSON.parse(r.row).storeId==='sibling'));
+  assert.deepEqual(after.StoreInstallationTerminal,before.StoreInstallationTerminal);
+ }finally{await f.close()}
+});
