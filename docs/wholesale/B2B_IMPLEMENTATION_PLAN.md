@@ -130,3 +130,9 @@ All items currently **NOT TESTED for the new B2B slice**. Source/static observat
 - [ ] Domain behavior remains NOT TESTED until verified DNS/TLS/host isolation and sign-in are observed; domain field storage alone is insufficient.
 
 The deliverable for this step is this plan only. No order, site, account, schema, endpoint, domain, deployment or functional PASS is created by writing it.
+
+## Follow-up authentication boundary evidence - 18 October 2026
+
+Read-only inspection of server/src/middleware/auth.js116-269 found explicit STORE_CHAT_OPERATOR, POS_BACKGROUND and STORE_OPERATOR branches, followed by legacy/session handling and a final req.user payload assignment. It does not universally reject every unknown tokenType. Therefore a new B2B JWT signed by the current general JWT_SECRET is not safely isolated merely by naming a different tokenType/audience. This is a design constraint for the new portal, not a newly implemented auth change or a claim of an exploitable issued token.
+
+Prefer a dedicated opaque random portal session, stored hashed and validated only by B2B middleware, with host-scoped HttpOnly/Secure/SameSite cookie and CSRF checks appropriate to the chosen routing. It must never be attached as a BackOffice Bearer token. Alternatively require a separately reviewed cryptographically isolated signing/verifying boundary. Prove portal credentials fail every administrative route and cannot be exchanged for an admin session. Preserve the existing Gate8/auth owner; no general auth source was changed for this investigation.
