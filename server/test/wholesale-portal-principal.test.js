@@ -78,26 +78,34 @@ test('plain portal-shaped identities and foreign bindings cannot enter shared qu
 test('shared schema bootstrap caches per injected database and retries after failed initialization',async()=>{
   const first=[],second=[],db={$executeRawUnsafe:async sql=>{first.push(sql)}},other={$executeRawUnsafe:async sql=>{second.push(sql)}},ensure=bootstrapFor(db);
   await Promise.all([ensure(),ensure(db)]);const count=first.length;await ensure(db);assert.equal(first.length,count);await ensure(other);assert.equal(second.length,count);
-  assert.ok(first.some(sql=>sql.includes('WholesaleOrderRequest_channel_v2_check')&&sql.includes('NOT VALID')));assert.ok(first.at(-1).includes('DROP CONSTRAINT IF EXISTS "WholesaleOrderRequest_channel_check"'));
+  assert.ok(first.some(sql=>sql.includes('WholesaleOrderRequest_channel_v3_check')&&sql.includes('NOT VALID')));assert.ok(first.at(-1).includes('DROP CONSTRAINT IF EXISTS "WholesaleOrderRequest_channel_check"'));
   let attempts=0;const failing={$executeRawUnsafe:async()=>{attempts++;throw Error('DDL unavailable')}};await assert.rejects(ensure(failing),/DDL unavailable/);await assert.rejects(ensure(failing),/DDL unavailable/);assert.equal(attempts,2);
 });
 
 function isolated(){try{const url=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(url.hostname)&&url.pathname==='/myworkstation_test'}catch{return false}}
 
-test('native shared bootstrap upgrades a populated legacy channel constraint atomically and idempotently',{skip:!isolated()},async()=>{
+test('native shared bootstrap upgrades populated legacy and v2 channels atomically and idempotently',{skip:!isolated()},async()=>{
   const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='wholesale_channel_'+crypto.randomBytes(8).toString('hex'),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
   const db=new PrismaClient({datasources:{db:{url:url.toString()}}}),fresh=new PrismaClient({datasources:{db:{url:url.toString()}}}),unexpected=new PrismaClient({datasources:{db:{url:url.toString()}}});
   const ensure=bootstrapFor(db);
   try{
     await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
     await db.$executeRawUnsafe('CREATE TABLE "Company" ("id" TEXT PRIMARY KEY)');await db.$executeRawUnsafe('CREATE TABLE "Store" ("id" TEXT PRIMARY KEY)');await db.$executeRawUnsafe('CREATE TABLE "Product" ("id" TEXT PRIMARY KEY)');await ensure(db);
-    await db.$executeRawUnsafe('ALTER TABLE "WholesaleOrderRequest" DROP CONSTRAINT "WholesaleOrderRequest_channel_v2_check", ADD CONSTRAINT "WholesaleOrderRequest_channel_check" CHECK ("channel"=\'BACKOFFICE\')');
+    await db.$executeRawUnsafe('ALTER TABLE "WholesaleOrderRequest" DROP CONSTRAINT "WholesaleOrderRequest_channel_v3_check", ADD CONSTRAINT "WholesaleOrderRequest_channel_check" CHECK ("channel"=\'BACKOFFICE\')');
     await db.$executeRawUnsafe('INSERT INTO "Company" VALUES (\'company\')');await db.$executeRawUnsafe('INSERT INTO "Store" VALUES (\'store\')');await db.$executeRawUnsafe('INSERT INTO "WholesaleCustomer" ("id","companyId","name") VALUES (\'customer\',\'company\',\'Customer\')');
     const insert=async(id,channel)=>db.$executeRaw`INSERT INTO "WholesaleOrderRequest" ("id","companyId","storeId","customerId","actorId","channel","clientOrderId","requestHash","quoteId","snapshot","netTotal","vatTotal","grossTotal") VALUES (${id},'company','store','customer','actor',${channel},${id},'hash','quote','{}'::jsonb,1,0,1)`;
     await insert('legacy','BACKOFFICE');await ensure(fresh);await ensure(fresh);await insert('portal','B2B_SITE');
-    await assert.rejects(insert('forbidden','FIELD_SALES'));const rows=await db.$queryRaw`SELECT "id","channel" FROM "WholesaleOrderRequest" ORDER BY "id"`;assert.deepEqual(rows,[{id:'legacy',channel:'BACKOFFICE'},{id:'portal',channel:'B2B_SITE'}]);
-    await db.$executeRawUnsafe('ALTER TABLE "WholesaleOrderRequest" ADD CONSTRAINT "WholesaleOrderRequest_channel_check" CHECK ("channel" IN (\'BACKOFFICE\',\'B2B_SITE\'))');
+    await db.$executeRawUnsafe('ALTER TABLE "WholesaleOrderRequest" DROP CONSTRAINT "WholesaleOrderRequest_channel_v3_check", ADD CONSTRAINT "WholesaleOrderRequest_channel_v2_check" CHECK ("channel" IN (\'BACKOFFICE\',\'B2B_SITE\'))');
+    await ensure({$executeRawUnsafe:sql=>db.$executeRawUnsafe(sql)});await ensure({$executeRawUnsafe:sql=>db.$executeRawUnsafe(sql)});
+    await insert('seller','FIELD_SALES');await assert.rejects(insert('forbidden','UNSUPPORTED'));const rows=await db.$queryRaw`SELECT "id","channel" FROM "WholesaleOrderRequest" ORDER BY "id"`;assert.deepEqual(rows,[{id:'legacy',channel:'BACKOFFICE'},{id:'portal',channel:'B2B_SITE'},{id:'seller',channel:'FIELD_SALES'}]);
+    await db.$executeRawUnsafe('ALTER TABLE "WholesaleOrderRequest" ADD CONSTRAINT "WholesaleOrderRequest_channel_check" CHECK ("channel" IN (\'BACKOFFICE\',\'B2B_SITE\',\'FIELD_SALES\'))');
     await assert.rejects(ensure(unexpected),/Unexpected legacy wholesale channel constraint/);
-    const constraints=await db.$queryRaw`SELECT "conname" FROM "pg_constraint" WHERE "conrelid"='"WholesaleOrderRequest"'::regclass AND "conname" IN ('WholesaleOrderRequest_channel_check','WholesaleOrderRequest_channel_v2_check')`;assert.equal(constraints.length,2,'unexpected-definition failure must leave both constraints intact');
+    const constraints=await db.$queryRaw`SELECT "conname" FROM "pg_constraint" WHERE "conrelid"='"WholesaleOrderRequest"'::regclass AND "conname" IN ('WholesaleOrderRequest_channel_check','WholesaleOrderRequest_channel_v3_check')`;assert.equal(constraints.length,2,'unexpected-definition failure must leave both constraints intact');
+    await db.$executeRawUnsafe('ALTER TABLE "WholesaleOrderRequest" DROP CONSTRAINT "WholesaleOrderRequest_channel_check", ADD CONSTRAINT "WholesaleOrderRequest_channel_v2_check" CHECK ("channel" IN (\'BACKOFFICE\',\'B2B_SITE\',\'FIELD_SALES\'))');
+    const tampered={$executeRawUnsafe:sql=>db.$executeRawUnsafe(sql)};
+    await assert.rejects(ensure(tampered),/Unexpected wholesale v2 channel constraint/);
+    await assert.rejects(ensure(tampered),/Unexpected wholesale v2 channel constraint/,'failed initialization must be evicted and checked again');
+    const preserved=await db.$queryRaw`SELECT "conname" FROM "pg_constraint" WHERE "conrelid"='"WholesaleOrderRequest"'::regclass AND "conname" IN ('WholesaleOrderRequest_channel_v2_check','WholesaleOrderRequest_channel_v3_check')`;assert.equal(preserved.length,2,'unexpected v2 must not drop either constraint');
+    assert.deepEqual(await db.$queryRaw`SELECT "id","channel" FROM "WholesaleOrderRequest" ORDER BY "id"`,rows,'failed upgrade must preserve all three channel rows');
   }finally{await db.$disconnect();await fresh.$disconnect();await unexpected.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

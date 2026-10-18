@@ -60,6 +60,8 @@ import customerOperatorCardRoutes from "./routes/customer-operator-cards.js";
 import wholesaleB2BRoutes from "./routes/wholesale-b2b.js";
 import wholesalePortalRoutes from "./routes/wholesale-portal.js";
 import wholesalePortalAdminRoutes from "./routes/wholesale-portal-admin.js";
+import wholesaleSellerAdminRoutes from "./routes/wholesale-seller-admin.js";
+import wholesaleSellerRoutes from "./routes/wholesale-sellers.js";
 import priceCatalogPromotionGuardRoutes from "./routes/price-catalog-promotion-guard.js";
 import priceCatalogImportRoutes from "./routes/price-catalog-import.js";
 import priceCatalogRoutes from "./routes/price-catalog-normalized.js";
@@ -232,6 +234,8 @@ app.use("/api/supplier-control",auth,requireCompanyModule("INVENTORY"),supplierC
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlReversalAwareRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerOperatorCardRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlRoutes);
+app.use("/api/wholesale/seller-admin",auth,requireCompanyModule("CORE"),wholesaleSellerAdminRoutes);
+app.use("/api/wholesale/sellers",auth,requireCompanyModule("CORE"),wholesaleSellerRoutes);
 app.use("/api/wholesale/portal",auth,requireCompanyModule("CORE"),wholesalePortalAdminRoutes);
 app.use("/api/wholesale",auth,requireCompanyModule("CORE"),wholesaleB2BRoutes);
 app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalogPromotionGuardRoutes);
