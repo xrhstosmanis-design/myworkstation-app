@@ -57,7 +57,9 @@ final class NativePush {
                 JSONObject body = new JSONObject(); body.put("token", fcm);
                 JSONObject response = new ChatApi().json(path(token), "POST", body, token);
                 boolean ok = response.optBoolean("ok") && response.optString("binding").equals(binding(token));
-                if (ok && generation == GENERATION.get() && token.equals(new TokenVault(app).load())) app.getSharedPreferences("native-push", Context.MODE_PRIVATE).edit().putBoolean("enabled", true).apply();
+                synchronized (NativePush.class) {
+                    if (ok && generation == GENERATION.get() && token.equals(new TokenVault(app).load())) app.getSharedPreferences("native-push", Context.MODE_PRIVATE).edit().putBoolean("enabled", true).apply();
+                }
                 result.done(ok);
             } catch (Exception ignored) { result.done(false); }
         });
@@ -70,9 +72,11 @@ final class NativePush {
         ((android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).cancelAll();
     }
     static void logout(Context context) {
-        GENERATION.incrementAndGet();
         Context app = context.getApplicationContext();
-        app.getSharedPreferences("native-push", Context.MODE_PRIVATE).edit().putBoolean("enabled", false).apply();
+        synchronized (NativePush.class) {
+            GENERATION.incrementAndGet();
+            app.getSharedPreferences("native-push", Context.MODE_PRIVATE).edit().putBoolean("enabled", false).apply();
+        }
         clearNotifications(app);
         if (!FirebaseApp.getApps(app).isEmpty()) {
             FirebaseMessaging messaging = FirebaseMessaging.getInstance(); messaging.setAutoInitEnabled(false); messaging.deleteToken();
