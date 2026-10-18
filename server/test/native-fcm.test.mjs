@@ -113,3 +113,9 @@ test('isolated PostgreSQL native token ownership transition and session-bound re
   await h.revokeNativePush(winner,input.token);assert.equal((await db.$queryRawUnsafe('SELECT * FROM "StoreChatNativePush"')).length,0);
  } finally {await db.$disconnect();await admin.$executeRawUnsafe('DROP SCHEMA "'+schema+'" CASCADE');await admin.$disconnect();}
 });
+
+test('direct Render secret environment credential does not read a filesystem secret',async()=>{
+ let calls=0;
+ const p=createNativeFcmProvider({env:{NATIVE_CHAT_FCM_ENABLED:'true',NATIVE_CHAT_FCM_SERVICE_ACCOUNT_JSON:JSON.stringify(credential)},read:()=>assert.fail('filesystem read'),fetchImpl:async url=>{calls++;return{ok:true,status:200,text:async()=>JSON.stringify(url.includes('oauth2')?{access_token:'x',expires_in:1000}:{name:'accepted'})}}});
+ assert.equal((await p.send(input)).delivered,true);assert.equal(calls,2);
+});

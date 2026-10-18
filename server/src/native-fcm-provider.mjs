@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import {createSign} from 'node:crypto';
 const PROJECT='myworkstation-chat', TOKEN_URL='https://oauth2.googleapis.com/token';
-export const nativeFcmConfigured=(env=process.env)=>env.NATIVE_CHAT_FCM_ENABLED==='true'&&Boolean(env.NATIVE_CHAT_FCM_CREDENTIALS_FILE);
+export const nativeFcmConfigured=(env=process.env)=>env.NATIVE_CHAT_FCM_ENABLED==='true'&&Boolean(env.NATIVE_CHAT_FCM_SERVICE_ACCOUNT_JSON||env.NATIVE_CHAT_FCM_CREDENTIALS_FILE);
 export function nativeToken(value){
  if(typeof value!=='string'||!/^[A-Za-z0-9_:\-]{20,4096}$/.test(value))throw Object.assign(new Error('Μη έγκυρη εγγραφή ειδοποιήσεων.'),{status:400});
  return value;
@@ -22,7 +22,7 @@ export function createNativeFcmProvider({env=process.env,fetchImpl=globalThis.fe
  }
  async function access(){
   if(cached&&cached.until>now())return cached.token;
-  const bytes=await read(env.NATIVE_CHAT_FCM_CREDENTIALS_FILE);if(bytes.length>32768)throw new Error('Invalid FCM credential');
+  const bytes=env.NATIVE_CHAT_FCM_SERVICE_ACCOUNT_JSON?Buffer.from(env.NATIVE_CHAT_FCM_SERVICE_ACCOUNT_JSON,'utf8'):await read(env.NATIVE_CHAT_FCM_CREDENTIALS_FILE);if(bytes.length>32768)throw new Error('Invalid FCM credential');
   const key=JSON.parse(bytes.toString());
   if(key.type!=='service_account'||key.project_id!==PROJECT||!String(key.client_email||'').endsWith('@myworkstation-chat.iam.gserviceaccount.com')||!String(key.private_key||'').startsWith('-----BEGIN PRIVATE KEY-----'))throw new Error('Invalid FCM credential');
   const seconds=Math.floor(now()/1000),encode=v=>Buffer.from(JSON.stringify(v)).toString('base64url');
