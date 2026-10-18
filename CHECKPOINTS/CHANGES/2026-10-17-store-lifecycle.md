@@ -1,3 +1,7 @@
+## 18/10/2026 — STORE-LIFECYCLE-01 / source audit publication
+
+SOURCE ONLY / feat/store-lifecycle-restore-audit-20261018: exact COPY row-multiset read-only auditor and five CLI tests. Previous exact source CI39164082317 at a0e74f1d543f057dc0aea138ab6016183b34995c SUCCESS (same auditor/test blobs); existing earlier full/native CI39163039664 3198PASS/0FAIL/0SKIP plus6backup and HTTP/Windows. No production app behavior, execution route, enrollment or cleanup. Existing-archive recovery observations will be published in one dedicated documentation receipt containing checkpoint, active list, manual, roadmap and combined PDF. This source change is not a whole-task PASS. The previous authentication blocker is superseded; physical Writer/local spool, fresh selective rollback and complete ownership remain OPEN. Owner feat/store-shifts-inventory-clear-20261018 retained; both registers protected. New Excel NOT RECEIVED.
+
 ## 18/10/2026 21:31 Europe/Athens — STORE-LIFECYCLE-01 / APPLICATION LINKS MERGED / REAL CLEANUP NOT EXECUTED
 
 Owner feat/store-shifts-inventory-clear-20261018 retained, bounded source feat/store-lifecycle-application-links-20261018. Owner resumed21:04 after pause; both registers/fiscal/EFTPOS/RBS settings/connections remain protected. New Excel NOT RECEIVED. No business/LAB PASS and no reset operation.
