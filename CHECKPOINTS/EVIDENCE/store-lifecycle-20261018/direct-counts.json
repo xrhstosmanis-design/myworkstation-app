@@ -1,0 +1,549 @@
+{
+  "format": "MWS_STORE_LIFECYCLE_READONLY_BASELINE_V1",
+  "companyId": "pilot-company",
+  "storeId": "kat-store",
+  "status": "READ_ONLY_COUNTS_NOT_A_BACKUP",
+  "checked_at": "2026-10-18T16:20:36.702585Z",
+  "inventory": [
+    {
+      "count": 8,
+      "table": "AdvancedOnlineSearchUsage"
+    },
+    {
+      "count": 269,
+      "table": "AiReaderJob"
+    },
+    {
+      "count": 0,
+      "table": "AttendanceEvent"
+    },
+    {
+      "count": 0,
+      "table": "AudienceDiscountCard"
+    },
+    {
+      "count": 0,
+      "table": "AutomaticReportSettings"
+    },
+    {
+      "count": 1,
+      "table": "BankAccount"
+    },
+    {
+      "count": 42,
+      "table": "BankLedgerEntry"
+    },
+    {
+      "count": 1,
+      "table": "CashControlReview"
+    },
+    {
+      "count": 0,
+      "table": "CashControlStoreRule"
+    },
+    {
+      "count": 44,
+      "table": "CashShiftSession"
+    },
+    {
+      "count": 30,
+      "table": "CloudAudit"
+    },
+    {
+      "count": 1,
+      "table": "CloudCatalogItem"
+    },
+    {
+      "count": 3,
+      "table": "CloudChange"
+    },
+    {
+      "count": 6,
+      "table": "CloudDevice"
+    },
+    {
+      "count": 0,
+      "table": "CloudInboundEvent"
+    },
+    {
+      "count": 8,
+      "table": "CloudPairingCode"
+    },
+    {
+      "count": 1,
+      "table": "ConnectorDevice"
+    },
+    {
+      "count": 0,
+      "table": "CustomerLedger"
+    },
+    {
+      "count": 0,
+      "table": "CustomerLoyaltyLedger"
+    },
+    {
+      "count": 0,
+      "table": "CustomerOperatorCardLink"
+    },
+    {
+      "count": 3,
+      "table": "DeviceDeploymentJob"
+    },
+    {
+      "count": 0,
+      "table": "DeviceOperationsReport"
+    },
+    {
+      "count": 0,
+      "table": "DiningArea"
+    },
+    {
+      "count": 0,
+      "table": "DiningTable"
+    },
+    {
+      "count": 0,
+      "table": "DispatchNote"
+    },
+    {
+      "count": 273,
+      "table": "DocumentAttachment"
+    },
+    {
+      "count": 22,
+      "table": "DocumentInbox"
+    },
+    {
+      "count": 0,
+      "table": "EfoodIntegrationPreview"
+    },
+    {
+      "count": 0,
+      "table": "EfoodProductMapping"
+    },
+    {
+      "count": 0,
+      "table": "EfoodWebhookEvent"
+    },
+    {
+      "count": 23,
+      "table": "Employee"
+    },
+    {
+      "count": 0,
+      "table": "Expense"
+    },
+    {
+      "count": 0,
+      "table": "FiscalBridgeDryRun"
+    },
+    {
+      "count": 0,
+      "table": "InternetPriceProposal"
+    },
+    {
+      "count": 0,
+      "table": "InternetPriceProposalAudit"
+    },
+    {
+      "count": 0,
+      "table": "InternetProductSearch"
+    },
+    {
+      "count": 2,
+      "table": "InventoryCountEvent"
+    },
+    {
+      "count": 0,
+      "table": "InventoryZone"
+    },
+    {
+      "count": 0,
+      "table": "InvoiceDraftAlias"
+    },
+    {
+      "count": 0,
+      "table": "InvoiceStockPosting"
+    },
+    {
+      "count": 0,
+      "table": "KioskAuditEvent"
+    },
+    {
+      "count": 0,
+      "table": "ModifierInventoryPrice"
+    },
+    {
+      "count": 0,
+      "table": "MyDataInboundDocument"
+    },
+    {
+      "count": 0,
+      "table": "NetlinkCancellationRequest"
+    },
+    {
+      "count": 1,
+      "table": "NetlinkStoreConfig"
+    },
+    {
+      "count": 8,
+      "table": "NetlinkTransaction"
+    },
+    {
+      "count": 0,
+      "table": "OfflineSaleSyncEvidence"
+    },
+    {
+      "count": 14,
+      "table": "OnlineOrder"
+    },
+    {
+      "count": 1,
+      "table": "OnlineOrderingConfig"
+    },
+    {
+      "count": 113,
+      "table": "OnlineProductVisibility"
+    },
+    {
+      "count": 0,
+      "table": "OnlineStoreMember"
+    },
+    {
+      "count": 1,
+      "table": "OtherExpenseReview"
+    },
+    {
+      "count": 4,
+      "table": "PaymentDeviceRouteAttempt"
+    },
+    {
+      "count": 0,
+      "table": "PayrollPeriod"
+    },
+    {
+      "count": 1,
+      "table": "PilotStoreProfile"
+    },
+    {
+      "count": 1,
+      "table": "PosAudienceSelection"
+    },
+    {
+      "count": 8,
+      "table": "PosHeldTransaction"
+    },
+    {
+      "count": 0,
+      "table": "PosInvoiceBackgroundTask"
+    },
+    {
+      "count": 0,
+      "table": "PosOnlineRadioState"
+    },
+    {
+      "count": 61,
+      "table": "PosOperationalEvent"
+    },
+    {
+      "count": 758,
+      "table": "PosSaleActionAudit"
+    },
+    {
+      "count": 1,
+      "table": "PosSaleSafetyAudit"
+    },
+    {
+      "count": 12,
+      "table": "PreparationStockConsumption"
+    },
+    {
+      "count": 0,
+      "table": "PriceCatalogPromotionStore"
+    },
+    {
+      "count": 0,
+      "table": "ProductBarcodePriceRequest"
+    },
+    {
+      "count": 0,
+      "table": "ProductPriceHistory"
+    },
+    {
+      "count": 0,
+      "table": "PromotionStore"
+    },
+    {
+      "count": 30,
+      "table": "PurchaseDocument"
+    },
+    {
+      "count": 11,
+      "table": "PurchaseOrder"
+    },
+    {
+      "count": 0,
+      "table": "PurchaseOrderReopenAudit"
+    },
+    {
+      "count": 17,
+      "table": "RbsCapDriverV1Request"
+    },
+    {
+      "count": 0,
+      "table": "RecoveryWorkflowRun"
+    },
+    {
+      "count": 0,
+      "table": "RemoteSupportSession"
+    },
+    {
+      "count": 165,
+      "table": "Sale"
+    },
+    {
+      "count": 5,
+      "table": "Schedule"
+    },
+    {
+      "count": 2,
+      "table": "ScheduleGenerationBrief"
+    },
+    {
+      "count": 0,
+      "table": "ShiftHandover"
+    },
+    {
+      "count": 6,
+      "table": "ShiftType"
+    },
+    {
+      "count": 174,
+      "table": "StockMovement"
+    },
+    {
+      "count": 5,
+      "table": "Stocktake"
+    },
+    {
+      "count": 0,
+      "table": "StoreBakedBalance"
+    },
+    {
+      "count": 0,
+      "table": "StoreBakedBalanceEvent"
+    },
+    {
+      "count": 0,
+      "table": "StoreBakingEntry"
+    },
+    {
+      "count": 0,
+      "table": "StoreBakingPolicy"
+    },
+    {
+      "count": 0,
+      "table": "StoreChatAcknowledgement"
+    },
+    {
+      "count": 1,
+      "table": "StoreChatMessage"
+    },
+    {
+      "count": 0,
+      "table": "StoreChatMobileSession"
+    },
+    {
+      "count": 0,
+      "table": "StoreChatPushSubscription"
+    },
+    {
+      "count": 0,
+      "table": "StoreChatSettings"
+    },
+    {
+      "count": 0,
+      "table": "StoreChatTask"
+    },
+    {
+      "count": 4,
+      "table": "StoreEftposDevice"
+    },
+    {
+      "count": 2,
+      "table": "StoreFiscalDevice"
+    },
+    {
+      "count": 3,
+      "table": "StoreInstallationTerminal"
+    },
+    {
+      "count": 2,
+      "table": "StoreIntegrationCredential"
+    },
+    {
+      "count": 0,
+      "table": "StoreLabelSettings"
+    },
+    {
+      "count": 0,
+      "table": "StoreOnlineRadioConfig"
+    },
+    {
+      "count": 475,
+      "table": "StoreOperatorAudit"
+    },
+    {
+      "count": 11,
+      "table": "StoreOperatorCredential"
+    },
+    {
+      "count": 2,
+      "table": "StoreOperatorLoginGuard"
+    },
+    {
+      "count": 11,
+      "table": "StoreOperatorProfile"
+    },
+    {
+      "count": 175,
+      "table": "StoreOperatorSession"
+    },
+    {
+      "count": 6,
+      "table": "StorePaidModule"
+    },
+    {
+      "count": 1,
+      "table": "StorePosLayout"
+    },
+    {
+      "count": 5,
+      "table": "StorePreparationBatch"
+    },
+    {
+      "count": 143,
+      "table": "StoreProduct"
+    },
+    {
+      "count": 336,
+      "table": "StoreProductAudienceDiscount"
+    },
+    {
+      "count": 3,
+      "table": "StoreProductAudienceDiscountAudit"
+    },
+    {
+      "count": 2,
+      "table": "StoreRbsInstallationSettings"
+    },
+    {
+      "count": 1,
+      "table": "StoreTableServiceConfig"
+    },
+    {
+      "count": 213,
+      "table": "StoreTransaction"
+    },
+    {
+      "count": 0,
+      "table": "StoreVideoCamera"
+    },
+    {
+      "count": 0,
+      "table": "StoreVideoConnection"
+    },
+    {
+      "count": 3,
+      "table": "SupplierPaymentSettlement"
+    },
+    {
+      "count": 0,
+      "table": "TableOrder"
+    },
+    {
+      "count": 0,
+      "table": "TableOrderRequest"
+    },
+    {
+      "count": 0,
+      "table": "VideoAccessAudit"
+    },
+    {
+      "count": 0,
+      "table": "VideoConnectorCommand"
+    },
+    {
+      "count": 0,
+      "table": "VideoMediaArtifact"
+    },
+    {
+      "count": 0,
+      "table": "VideoOperationalEvent"
+    },
+    {
+      "count": 0,
+      "table": "WholesaleOrderRequest"
+    },
+    {
+      "count": 0,
+      "table": "WholesalePortalAccount"
+    },
+    {
+      "count": 0,
+      "table": "WholesalePortalPublication"
+    },
+    {
+      "count": 0,
+      "table": "WholesaleSellerAssignment"
+    },
+    {
+      "count": 0,
+      "table": "WorkforceAbsence"
+    },
+    {
+      "count": 1,
+      "table": "WorkforceAttendanceSession"
+    },
+    {
+      "count": 23,
+      "table": "WorkforceAuditLog"
+    },
+    {
+      "count": 0,
+      "table": "WorkforceChatCommand"
+    },
+    {
+      "count": 0,
+      "table": "WorkforceEmployeeEvaluation"
+    },
+    {
+      "count": 0,
+      "table": "WorkforceEmployeePayment"
+    },
+    {
+      "count": 3,
+      "table": "WorkforceEmployeeStoreAccess"
+    },
+    {
+      "count": 1,
+      "table": "WorkforceLeaveRequest"
+    },
+    {
+      "count": 0,
+      "table": "WorkforcePayrollPeriod"
+    },
+    {
+      "count": 1,
+      "table": "WorkforceSchedule"
+    },
+    {
+      "count": 4,
+      "table": "WorkforceShiftTemplate"
+    },
+    {
+      "count": 2,
+      "table": "WorkforceTimeClockEntry"
+    }
+  ]
+}
