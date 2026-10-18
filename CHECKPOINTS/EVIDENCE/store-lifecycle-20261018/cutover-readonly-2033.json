@@ -1,0 +1,27 @@
+{
+  "format": "MWS_LIFECYCLE_READ_ONLY_STATUS_V1",
+  "companyId": "pilot-company",
+  "storeId": "kat-store",
+  "checkedAt": "2026-10-18T20:33:07.258530Z",
+  "openShifts": 0,
+  "recentConnectors60s": 1,
+  "storeProducts": 143,
+  "employees": 23,
+  "sales": 165,
+  "fiscalSettings": 2,
+  "eftposSettings": 4,
+  "rbsSettings": 2,
+  "fenceTablePresent": false,
+  "registersCheckedAt": "2026-10-18T20:36:27.929912Z",
+  "activeRegisters": [
+    "KAT-POS-01",
+    "KAT-POS-02"
+  ],
+  "historicalDeletedTerminal": "KAT-HOME-TEST",
+  "resetExecuted": false,
+  "notes": [
+    "Read-only diagnostic, not a preview-bound snapshot or backup.",
+    "Active Writer/local spool not drained or stopped.",
+    "Both active register installations preserved; no configuration or production data changed."
+  ]
+}

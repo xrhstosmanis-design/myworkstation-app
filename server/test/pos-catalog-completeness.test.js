@@ -1,3 +1,4 @@
+import {readLifecycleGeneration} from '../src/services/store-lifecycle-generation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,13 +12,13 @@ function handlers(prisma){
   const routes=new Map(),middleware=[];
   const Router=()=>({get:(path,...fns)=>routes.set(path,fns),post(){},put(){},delete(){},use:(path,fn)=>middleware.push(fn)});
   const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','');
-  new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes);
+  new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes','readLifecycleGeneration',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes,readLifecycleGeneration);
   const older=fs.readFileSync(new URL('../src/routes/store-pos.js',import.meta.url),'utf8');
   const start=older.indexOf('router.get("/stores/:storeId",');
   const end=older.indexOf('\n',start);
   const guards=older.split('\n').filter(line=>line.startsWith('function assertStore(')||line.startsWith('async function storeFor(')).join('\n');
-  new Function('router','prisma','hasTableService','capDriverV1WriterState','requestTerminal',`const money=value=>Number(value||0);${guards}\n${older.slice(start,end)}`)(
-    {get:(_,fn)=>routes.set('older',[fn])},prisma,async()=>false,async()=>({online:false,configured:false}),async()=>"MAIN");
+  new Function('router','prisma','hasTableService','capDriverV1WriterState','requestTerminal','readLifecycleGeneration',`const money=value=>Number(value||0);${guards}\n${older.slice(start,end)}`)(
+    {get:(_,fn)=>routes.set('older',[fn])},prisma,async()=>false,async()=>({online:false,configured:false}),async()=>"MAIN",readLifecycleGeneration);
   return async(kind,user={id:'owner',role:'OWNER',companyId:'company'},storeId='store')=>{
     const req={user,params:{storeId},method:'GET',path:'/stores/'+storeId},res={statusCode:200,status(code){this.statusCode=code;return this},json(body){this.body=body;return this}};
     for(const fn of [...(kind==='older'?[]:middleware),...routes.get(kind)]){
@@ -32,7 +33,7 @@ const fixture=Array.from({length:26656},(_,i)=>({id:'p'+String(i+1).padStart(5,'
 
 for(const kind of kinds)test('actual '+kind+' returns/scans the end of a 26656-product catalog without writes',async()=>{
   const prisma={store:{findFirst:async({where})=>where.id==='store'&&where.companyId==='company'?{id:'store',companyId:'company'}:null},
-    $queryRawUnsafe:async()=>[{layoutJson:layout,version:7}],
+    $queryRawUnsafe:async sql=>sql.includes('current_schema')?[{schema:'fixture',fence:null}]:[{layoutJson:layout,version:7}],
     $queryRaw:async(parts,...values)=>{
       const sql=parts.join('?');if(!sql.includes('FROM "StoreProduct" sp'))return [];
       assert.match(sql,/p\."companyId"=\?/);assert.match(sql,/sp\."storeId"=\?/);assert.match(sql,/sp\."active"=true AND p\."active"=true/);
@@ -42,7 +43,7 @@ for(const kind of kinds)test('actual '+kind+' returns/scans the end of a 26656-p
       return fixture.slice(0,limit?(limit[1]==='?'?values.at(-1):Number(limit[1])):undefined);
     }};
   const run=handlers(prisma),result=await run(kind);
-  assert.equal(result.products.length,26656);assert.deepEqual(result.layout,layout);assert.equal(result.layoutVersion,7);
+  assert.equal(result.products.length,26656);assert.equal(result.lifecycle.generation,"0");assert.deepEqual(result.layout,layout);assert.equal(result.layoutVersion,7);
   const found=createPosScanCatalog(result.products).exact('5201004022158',{complete:true});
   assert.equal(found.id,'p26656');assert.equal(found.salePrice,1.25);assert.equal(found.vatRate,24);assert.equal(found.currentStock,-2.5);
   if(kind==='older')assert.equal(found.barcodeOptions[0].salePrice,1.75);
@@ -81,7 +82,7 @@ test('actual catalog SQL in isolated PostgreSQL preserves complete membership, a
     const prisma={$queryRaw:tx.$queryRaw.bind(tx),$queryRawUnsafe:tx.$queryRawUnsafe.bind(tx),store:{findFirst:async({where})=>where.companyId==='company'&&['store','control'].includes(where.id)?{id:where.id,companyId:'company'}:null}};
     const run=handlers(prisma);
     for(const kind of kinds){
-      const result=await run(kind);assert.equal(result.products.length,26656);assert.deepEqual(result.layout,layout);
+      const result=await run(kind);assert.equal(result.products.length,26656);assert.equal(result.lifecycle.generation,"0");assert.deepEqual(result.layout,layout);
       assert.equal(new Set(result.products.map(p=>p.id)).size,26656);assert.equal(result.products[0].id,'p00001');assert.equal(result.products.at(-1).id,'p26656');
       const index=createPosScanCatalog(result.products),target=index.exact('5201004022158',{complete:true});assert.equal(target.id,'p26656');assert.equal(target.salePrice,1.25);assert.equal(target.vatRate,24);assert.equal(target.currentStock,-2.5);
       assert.equal(index.exact('5201004022160',{complete:true}).id,'p00001');
