@@ -97,7 +97,7 @@ async function order(companyId,orderId){const rows=await prisma.$queryRaw`SELECT
 async function line(companyId,lineId){const rows=await prisma.$queryRaw`SELECT l.*,o."companyId",o."status",o."storeId",o."supplierId" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."id"=${lineId} AND o."companyId"=${companyId} LIMIT 1`;return rows[0]||null}
 function editable(found){if(found?.status==="INVOICED"){const error=new Error("Η τιμολογημένη παραγγελία είναι κλειδωμένη για αλλαγές.");error.status=409;throw error}}
 async function repairPosOcrDisplayEconomics(found){
-  if(found?.sourceType!=="POS_OCR_DRAFT"||found?.status!=="NEW")return 0;
+  if(found?.sourceType!=="POS_OCR_DRAFT"||found?.status!=="NEW"||Number(found.reopenVersion)>0)return 0;
   const rows=await prisma.$queryRaw`SELECT "id","quantity","unitCost","discount1","discount2","discount3","vatRate","netAmount","grossAmount","invoiceUnit","stockUnitsPerInvoiceUnit" FROM "PurchaseOrderLine" WHERE "orderId"=${found.id}`;
   let repaired=0;
   await prisma.$transaction(async tx=>{
