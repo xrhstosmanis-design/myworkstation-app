@@ -45,6 +45,10 @@ test("mounted report dialog saves explicit store slots, previews saved versions 
   await act(async()=>{const select=document.querySelector('[aria-label="Περίοδος αναφοράς"]');select.value="WEEKLY";select.dispatchEvent(new dom.window.Event("change",{bubbles:true}))});
   assert.doesNotMatch(document.body.textContent,/EMPLOYEE FROM A/);assert.match(document.body.textContent,/και οι επτά ημέρες/);
   await act(async()=>button("Προεπισκόπηση αναφοράς").click());assert.deepEqual(JSON.parse(calls.filter(c=>c.method==="POST").at(-1).body),{day:"2020-01-15",expectedVersion:1,frequency:"WEEKLY"});
+  const writesBeforeMonth=calls.filter(c=>c.method==="PUT").length;
+  await act(async()=>{const select=document.querySelector('[aria-label="Περίοδος αναφοράς"]');select.value="MONTHLY";select.dispatchEvent(new dom.window.Event("change",{bubbles:true}))});
+  assert.doesNotMatch(document.body.textContent,/EMPLOYEE FROM A/);assert.match(document.body.textContent,/όλες οι ημέρες του ημερολογιακού μήνα/);assert.match(document.body.textContent,/δεν γίνεται μηνιαία συγκέντρωση/);
+  await act(async()=>button("Προεπισκόπηση αναφοράς").click());assert.deepEqual(JSON.parse(calls.filter(c=>c.method==="POST").at(-1).body),{day:"2020-01-15",expectedVersion:1,frequency:"MONTHLY"});assert.equal(calls.filter(c=>c.method==="PUT").length,writesBeforeMonth);assert.match(document.body.textContent,/Προσωρινή αναφορά ταμείων/);
   // Explicit READY metadata, missing legacy metadata and untrusted finality
   // claims must never hide the independently required financial caveat.
   for(const metadata of [{sourceReadiness:"READY",financialFinality:"PROVISIONAL",financialReconciliationComplete:false,financialLimitations:["DOCUMENT_PAYMENT_RECONCILIATION_NOT_VERIFIED","CASH_REVIEW_EXPLANATIONS_NOT_VERIFIED","PHYSICAL_CASH_AND_CONTROL_BALANCES_NOT_VERIFIED"]}, {financialFinality:"FINAL",financialReconciliationComplete:true,financialLimitations:[]}]){
