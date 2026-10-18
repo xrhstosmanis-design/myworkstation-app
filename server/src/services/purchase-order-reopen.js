@@ -48,7 +48,7 @@ async function load(tx,actor,orderId,storeId){
  const expectedBase=new Map(),postedBase=new Map();
  for(const line of documentLines.filter(l=>l.purchaseDocumentId===order.id&&l.productId))expectedBase.set(line.productId,round((expectedBase.get(line.productId)||0)+n(line.quantity)));
  for(const m of movements.filter(m=>m.movementType==="PURCHASE"))postedBase.set(m.productId,round((postedBase.get(m.productId)||0)+n(m.quantity)));
- if(expectedBase.size!==postedBase.size||[...expectedBase].some(([productId,qty])=>Math.abs(qty-(postedBase.get(productId)??NaN))>0.00001||!postedBase.has(productId)))throw fail("Οι αρχικές κινήσεις δεν συμφωνούν με τις καταχωρημένες γραμμές. Δεν έγινε επαναφορά.");
+ if(expectedBase.size!==postedBase.size||[...expectedBase].some(([productId,qty])=>!Number.isFinite(qty)||Math.abs(qty-(postedBase.get(productId)??NaN))>0.00001||!postedBase.has(productId)))throw fail("Οι αρχικές κινήσεις δεν συμφωνούν με τις καταχωρημένες γραμμές. Δεν έγινε επαναφορά.");
  const quantities=new Map();for(const m of movements)quantities.set(m.productId,round((quantities.get(m.productId)||0)+n(m.quantity)));
  const stocks=await raw(tx,`SELECT sp.*,p."name" AS "productName",p."sku" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=$1 WHERE sp."storeId"=$2 AND sp."productId"=ANY($3::text[]) ORDER BY sp."productId" FOR UPDATE OF sp`,companyId,storeId,[...quantities.keys()]);
  if(stocks.length!==quantities.size||stocks.some(s=>!Number.isFinite(n(s.currentStock))))throw fail("Δεν επιβεβαιώθηκαν όλα τα υπόλοιπα αποθήκης.");

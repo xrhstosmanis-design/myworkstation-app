@@ -19,6 +19,8 @@ async function fixture(){
  const f=await invoiceDbFixture();await f.seed({mydata:false,posLines:1});
  await f.db.$executeRawUnsafe('DELETE FROM "MyDataInboundDocument"');
  await f.db.$executeRawUnsafe('ALTER TABLE "Product" ADD COLUMN "name" text,ADD COLUMN "sku" text');
+ await f.db.$executeRawUnsafe('ALTER TABLE "StoreTransaction" ADD COLUMN "shiftId" text,ADD COLUMN "terminalId" text,ADD COLUMN "operatorId" text');
+ await f.db.$executeRawUnsafe(`UPDATE "StoreTransaction" SET "shiftId"='original-shift',"terminalId"='original-terminal',"operatorId"='original-operator'`);
  await f.db.$executeRawUnsafe('CREATE TABLE "User"("id" text PRIMARY KEY,"companyId" text)');
  await f.db.$executeRawUnsafe(`INSERT INTO "User" VALUES('owner','c')`);
  await reopen.ensurePurchaseOrderReopenSchema(f.db);
