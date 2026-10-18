@@ -8,6 +8,26 @@ New bounded scope: deterministic concise Greek response to exact general help/ca
 
 Status NOT TESTED. Require focused genuine dispatcher/Owner/Platform and negative-routing regressions, full native PR/main CI, ordinary guarded release and exact healthy revision. Actual help and all deferred natural-language/Owner/mobile/file/report acceptance remain AWAITING the final read-only batch, not new manual PASS. No sale/payment/stock/fiscal/shift action or replay. Claim must merge green before source edits. Checkpoint `CHECKPOINTS/CHANGES/2026-10-18-assistant-capability-help.md`.
 
+## 18/10/2026 00:18 Europe/Athens - WHOLESALE-SUITE-01 / PUBLICATION AUTHORIZED / ASSIGNED / NOT TESTED
+
+Owner explicitly answered «Εγκρίνω» to publishing the technical plans, assignment/checkpoint records and generated tracker PDF to the existing PUBLIC repository https://github.com/xrhstosmanis-design/myworkstation-app. This authorization resolves the prior automatic-review publication blocker for this payload. Coordinator codex/wholesale-suite-20261017 and three worker scopes remain as recorded below. Source remains NOT STARTED until this claim passes CI and merges to main; production operations are not part of this publication. Full wholesale/B2B/field-sales suite remains OPEN / NOT TESTED. No existing owner or PASS is changed. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-wholesale-suite-foundation.md. Next action: publish and merge this documentation claim, then the bounded master-data stabilization.
+
+## 17/10/2026 23:58 Europe/Athens - WHOLESALE-SUITE-01 / PROPOSED ASSIGNMENT / LOCAL ONLY / PUBLICATION BLOCKED
+
+Public publication rejected by automatic approval review; claim is not merged and source implementation has NOT started. Explicit authorization for the new payload in the public repository is required before another publication attempt.
+
+Owner/coordinator `codex/wholesale-suite-20261017`; claim branch `docs/wholesale-suite-claim-20261017`, source branch `feat/wholesale-suite-foundation-20261017`. Owner explicitly requested a full wholesale product inside MyWorkStation and independently saleable, plus B2B site and field-sales app, then authorized three cooperating agents and said «Ξεκινά».
+
+ΑΝΑΛΗΨΗ ΑΠΟ `agent/wholesale-b2b-20261001` - ASSIGNED `codex/wholesale-suite-20261017` for this owner-authorized expanded wholesale suite and the bounded master-data stabilization below. Historical phase1 implementation/NOT TESTED evidence is preserved, not promoted to PASS. No separate historical agent is presumed currently running. No unrelated Gate6, Gate8, DAILY online, efood, retail POS/customer pricing, inventory, fiscal, licensing or production assignment is taken over.
+
+Three parallel workers: wholesale_core (existing B2B master readback/unassignment and tests), b2b_site (separate B2B architecture/contracts), field_sales (assignment/mobile/synchronization contracts). Coordinator exclusively owns shared tracker/checkpoint files, integration decisions and review. Source edits begin only after this claim is green and merged to main.
+
+First bounded source scope: read back assigned customer price list; explicitly remove same-company assignment; safely reset successful customer/list forms; review saved list tiers with tenant-scoped bounded API. Architecture documents specify one shared future quote/order service for BACKOFFICE/B2B/FIELD_SALES and standalone licensing. Product identity remains Product/StoreProduct; WholesaleCustomer is not silently merged with retail Customer. No retail checkout, payment, fiscal, stock posting, production schema/config/data or live test action.
+
+Evidence: read-only three-agent audit of main87b286473014c852ed83169fe7cda44ccc4dff32 and original phase1PR1625/commitc322453ea7edd139da71ccfd1ee7cf4d812a8014. No wholesale LAB PASS found. Missing quote/order/portal/seller/standalone lifecycle remains OPEN/NOT TESTED. CI is not LAB acceptance. Acceptance for this first source slice: mounted UI and registered HTTP tenant/role/readback/unassign tests; native isolated PostgreSQL where available, full existing CI and build; LAB remains AWAITING LAB until deployed and observed. No replay of historical transactions.
+
+Checkpoint `CHECKPOINTS/CHANGES/2026-10-17-wholesale-suite-foundation.md`. Next: merge this documentation claim, then implement the bounded foundation and publish source PR. Full product remains OPEN; no claim that three audit agents constitute a finished product.
+
 ## 17/10/2026 23:29 Athens - VOICE-ASSISTANT-01 / NATURAL TOTAL SALES SOURCE LIVE / AWAITING READ-ONLY DIALOGUE ACCEPTANCE
 
 Retained owner `codex/assistant-business-queries-20261015`, source branch `feat/assistant-natural-total-sales-20261017`. Claim/limited original display receiptPR2668 head0e4a69a/docsCI39063918871 SUCCESS merged348e5b8 before source. Natural dialogue sourcePR2670/head8166f32 merged584acdcb; final strict-token correctionPR2674/head`a233c0c56985a998cdf2519939006fa5e75a2723` merged `732fa90c8353c5856cdd733a2861cf198bc3b936`. Final PRCI39065664082/job117492761800 and exact mainCI39066138749/job117494218207 both SUCCESS:2916PASS/0FAIL/0SKIP plus6backup, all four required jobs/native PostgreSQL/security/licensing/Windows/browser/build/invariants/archive/realHTTP.
