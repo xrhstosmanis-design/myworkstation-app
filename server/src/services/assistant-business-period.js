@@ -17,6 +17,9 @@ const numericDatePattern=String.raw`\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/\.]\d{1,2}(?:
 // name/code or taking a valid-looking suffix of a malformed calendar token.
 const tokenStart=String.raw`(?:(?<![\p{L}\p{N}/.])|(?<=(?:^|\s)(?:απο|εως|μεχρι|στις)))`;
 const tokenEnd=String.raw`(?![\p{L}\p{N}/]|[.-]\d)`;
+// Conversation hints must use the same complete month words as the reader.
+// This detects a supplied month, without validating or resolving its dates.
+export const businessQuestionHasNamedMonth=question=>new RegExp(`${tokenStart}(?:${monthPattern})${tokenEnd}`,'u').test(norm(question));
 const datePattern=String.raw`${tokenStart}(?:${numericDatePattern}|(?:\d{1,2}\s+)?(?:${monthPattern})(?:\s+\d{4})?|προχθες|χθες|σημερα)${tokenEnd}`;
 const format=d=>d.toISOString().slice(0,10);
 const shift=(date,n)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return format(d)};

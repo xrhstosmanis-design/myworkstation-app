@@ -1,5 +1,5 @@
 import {assistantBusinessDomain} from '../../../shared/assistant-business.mjs';
-import {isBusinessPeriodFollowup} from './assistant-business-period.js';
+import {isBusinessPeriodFollowup,businessQuestionHasNamedMonth} from './assistant-business-period.js';
 import {z} from "zod";
 import {assistantSalesQuestion,salesOnlyQuestion} from "./assistant-question-intent.js";
 
@@ -29,7 +29,7 @@ const numericDates=new RegExp(numericDatePattern,"g");
 const relativeDays=/προχθες|χθες|σημερα|\b(?:today|yesterday)\b/g;
 export function assistantQuestionHasPeriod(question){
  const q=norm(question);
- return /(?:^|\s)χρον(?:ο|ου|ια|ος)(?=\s|[.,;!?]|$)/.test(q)||new RegExp(numericDatePattern).test(q)||/προχθες|χθες|σημερα|εβδομαδ|μηνα|μηνο|ετος|ημερες|ημερων|μερες|μερων|φετος|περσι|περυσι|ιανουαρ|φεβρουαρ|μαρτι|απριλ|μαιο|μαιου|ιουνι|ιουλι|αυγουστ|σεπτεμβρ|οκτωβρ|νοεμβρ|δεκεμβρ|\b(?:today|yesterday|week|month|year|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q);
+ return /(?:^|\s)χρον(?:ο|ου|ια|ος)(?=\s|[.,;!?]|$)/.test(q)||new RegExp(numericDatePattern).test(q)||businessQuestionHasNamedMonth(q)||/προχθες|χθες|σημερα|εβδομαδ|μηνα|μηνο|ετος|ημερες|ημερων|μερες|μερων|φετος|περσι|περυσι|\b(?:today|yesterday|week|month|year|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(q);
 }
 const periodOnly=q=>isBusinessPeriodFollowup(q)||assistantQuestionHasPeriod(q)&&!norm(q).replace(numericDates," ").replace(relativeDays," ").replace(/(^|\s)(?:απο|εως|μεχρι|για|στις|την|το|και|σε)(?=\s|$)/g," ").replace(/[\s.,;:!?–-]+/g,"").length;
 function lastSalesPeriod(history){
