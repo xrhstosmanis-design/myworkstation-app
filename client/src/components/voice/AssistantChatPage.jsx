@@ -10,7 +10,7 @@ import "./assistant-chat.css";
 const names={business_records:"Μεταφορές · Πληρωμές · Έξοδα · Παραστατικά · Προσωπικό",cash_details:"Ταμεία",sales_by_product:"Πωλήσεις ειδών",sales_by_store:"Πωλήσεις ανά κατάστημα",stock_by_product:"Απόθεμα",consumption_details:"Ιδιοκατανάλωση / Καταστροφή"};
 const key=p=>p?.companyId&&p?.storeId?JSON.stringify([p.companyId,p.storeId]):"";
 const uuid=()=>globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`;
-const newThread=()=>({id:uuid(),title:"Νέα συνομιλία",messages:[]});
+const newThread=()=>({id:uuid(),title:"Νέα συνομιλία",messages:[],files:[]});
 function validEvidence(result,pair,all,platform){
  if(pair&&(result.scope?.companyId!==pair.companyId||result.scope?.storeId!==pair.storeId))return false;
  if(!pair&&!all)return false;
@@ -22,14 +22,14 @@ function validEvidence(result,pair,all,platform){
 }
 export default function AssistantChatPage({open,mode="platform",api,companies=[],initialSelection=null,initialAllScope=false,onSelectionChange,onAllScopeChange,onClose,ownerStoreId="",ownerStoreName="",ownerAccess=null,contextEpoch=0,download=downloadAssistantFile}){
  const platform=mode==="platform",stores=useMemo(()=>companies.filter(c=>c.active).flatMap(c=>(c.stores||[]).filter(s=>s.active!==false).map(s=>({companyId:c.id,companyName:c.name,storeId:s.id,storeName:s.name}))),[companies]);
- const [selected,setSelected]=useState(()=>key(initialSelection)),[all,setAll]=useState(Boolean(initialAllScope)),[threads,setThreads]=useState(()=>[newThread()]),[threadId,setThreadId]=useState(""),[question,setQuestion]=useState(""),[busy,setBusy]=useState(false),[voice,setVoice]=useState(false),[channel,setChannel]=useState("text"),[access,setAccess]=useState(null),[error,setError]=useState(""),[files,setFiles]=useState([]),[sessionEpoch,setSessionEpoch]=useState(0),[sidebarOpen,setSidebarOpen]=useState(false),[copied,setCopied]=useState(""),[copyNotice,setCopyNotice]=useState("");
+ const [selected,setSelected]=useState(()=>key(initialSelection)),[all,setAll]=useState(Boolean(initialAllScope)),[threads,setThreads]=useState(()=>[newThread()]),[threadId,setThreadId]=useState(""),[question,setQuestion]=useState(""),[busy,setBusy]=useState(false),[voice,setVoice]=useState(false),[channel,setChannel]=useState("text"),[access,setAccess]=useState(null),[error,setError]=useState(""),[sessionEpoch,setSessionEpoch]=useState(0),[sidebarOpen,setSidebarOpen]=useState(false),[copied,setCopied]=useState(""),[copyNotice,setCopyNotice]=useState("");
  const pair=platform?stores.find(s=>key(s)===selected)||null:ownerAccess?.scope?{...ownerAccess.scope,storeId:ownerStoreId,storeName:ownerStoreName||ownerAccess.scope.storeName}:null;
  const binding=JSON.stringify([mode,key(pair),all,sessionEpoch,contextEpoch,platform?null:ownerAccess?.supported||null,ownerAccess?.scope?.supportPreview||false]);
  const live=useRef(binding),generation=useRef(0),pending=useRef(null),statusPending=useRef(null),end=useRef(null),dialog=useRef(null),closeRef=useRef(onClose),sidebar=useRef(null),menuButton=useRef(null),input=useRef(null);closeRef.current=onClose;live.current=binding;
- const active=threads.find(t=>t.id===threadId)||threads[0];
+ const active=threads.find(t=>t.id===threadId)||threads[0],files=active?.files||[];
  const activeThread=useRef(active?.id);activeThread.current=active?.id;
  const abort=()=>{generation.current++;pending.current?.abort();pending.current=null;setBusy(false);setVoice(false)};
- const clear=()=>{setSidebarOpen(false);setCopied("");setCopyNotice("");abort();const t=newThread();setThreads([t]);setThreadId(t.id);setQuestion("");setFiles([]);setAccess(null)};
+ const clear=()=>{setSidebarOpen(false);setCopied("");setCopyNotice("");abort();const t=newThread();setThreads([t]);setThreadId(t.id);setQuestion("");setAccess(null)};
  useEffect(()=>{if(platform)setSelected(key(initialSelection));},[platform,initialSelection?.companyId,initialSelection?.storeId]);
  useEffect(()=>{setAll(Boolean(initialAllScope));},[initialAllScope]);
  useEffect(()=>{clear();setError("");return()=>{pending.current?.abort();statusPending.current?.abort()}},[binding]);
@@ -65,9 +65,10 @@ export default function AssistantChatPage({open,mode="platform",api,companies=[]
  const append=(id,message)=>setThreads(old=>old.map(t=>t.id===id?{...t,title:t.messages.length?t.title:message.content.slice(0,55),messages:[...t.messages,message].slice(-40)}:t));
  const exportFile=async(format,result,controller,captured,id)=>{
   if(!platform||!result.exportTicket)throw new Error("Ζήτησε ξανά την αναφορά πριν δημιουργήσεις αρχείο.");
+  const target=activeThread.current;
   const file=await api("/api/platform/ai-command-center/export",{method:"POST",signal:controller.signal,body:JSON.stringify({ticket:result.exportTicket,format})});
-  if(live.current!==captured||id!==generation.current||controller.signal.aborted)return;
-  download(file);setFiles(old=>[...old,{name:file.filename,time:file.generatedAt}].slice(-8));
+  if(live.current!==captured||id!==generation.current||controller.signal.aborted||target!==activeThread.current)return;
+  download(file);setThreads(old=>old.map(t=>t.id===target?{...t,files:[...(t.files||[]),{name:file.filename,time:file.generatedAt}].slice(-8)}:t));
  };
  const ask=async event=>{
   event.preventDefault();const text=question.trim();if(!text||busy||voice||!access||!active)return;
