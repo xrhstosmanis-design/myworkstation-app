@@ -1,0 +1,13 @@
+{
+  "package": "gr.myworkstation.chat.preview",
+  "version": "0.1.3-preview",
+  "versionCode": 4,
+  "minimumAndroid": 8,
+  "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.3-Preview.apk",
+  "sha256": "82c2ed08c381ce23f5169fad8655a64d6ad9d51d4882eed8c15108ffdcb2c25d",
+  "bytes": 3654376,
+  "sourceCommit": "2d99b67ea526375388807d9bf8a603c423073c99",
+  "androidSourceTree": "3f2967bfa463f1463bf62689dd3eab336afb7bf0",
+  "ciRun": 39135675357,
+  "signerCertificateSha256": "e80a2fd8c9a1d995f8bffb09436b489799031f9f2e75b31ca89a2972d8914e46"
+}
