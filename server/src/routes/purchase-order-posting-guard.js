@@ -1,3 +1,4 @@
+import {assertReopenedIdentity,reuseReopenedPurchaseDocument} from "../services/purchase-order-reopen.js";
 import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertInvoiceStockAvailable,recordInvoiceStockPosting} from "../lib/invoice-common-draft.js";
 import crypto from "crypto";
 import {Router} from "express";
@@ -179,6 +180,7 @@ router.patch("/:orderId",async(req,res,next)=>{
         FOR UPDATE`;
       const found=rows[0];
       if(!found){const error=new Error("Δεν βρέθηκε η παραγγελία.");error.status=404;throw error}
+      if(n(found.reopenVersion)>0){if(req.body?.expectedReopenVersion!==n(found.reopenVersion))throw Object.assign(new Error("Η αγορά έχει επαναφερθεί για διόρθωση. Ανανέωσε πριν την οριστικοποίηση."),{status:409});assertReopenedIdentity(found,req.body||{});}
       if(found.status==="INVOICED")return {ok:true,idempotent:true,status:"INVOICED"};
       if(requestedStatus==="INVOICED"&&found.status!=="FINAL"){
         const error=new Error("Η παραγγελία πρέπει πρώτα να οριστικοποιηθεί.");error.status=409;throw error;
@@ -216,7 +218,7 @@ router.patch("/:orderId",async(req,res,next)=>{
 
       if(requestedStatus==="FINAL"&&!existingPosting){
         const commonSource=found.sourceDocumentId||found.id;
-        await assertInvoiceStockAvailable(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id});
+        await assertInvoiceStockAvailable(tx,{companyId,storeId:found.storeId,sourceDocumentId:commonSource,orderId:found.id,allowReopenedOrder:true});
         const lines=await tx.$queryRaw`
           SELECT l.*,p."trackStock" FROM "PurchaseOrderLine" l LEFT JOIN "Product" p ON p."id"=l."productId" AND p."companyId"=${companyId}
           WHERE l."orderId"=${found.id}
@@ -252,7 +254,8 @@ router.patch("/:orderId",async(req,res,next)=>{
         const totalGross=lines.reduce((sum,row)=>sum+n(row.grossAmount),0);
         const purchaseDocumentId=found.id;
 
-        await tx.$executeRaw`
+        if(n(found.reopenVersion)>0)await reuseReopenedPurchaseDocument(tx,found,{supplierId:effectiveSupplierId,invoiceNumber:effectiveInvoiceNumber,totalNet,totalVat,totalGross});
+        else await tx.$executeRaw`
           INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId")
           VALUES (${purchaseDocumentId},${companyId},${found.storeId},${effectiveSupplierId},'INVOICE',${effectiveInvoiceNumber},NOW(),${totalNet},${totalVat},${totalGross},'PURCHASE_ORDER','APPROVED',${req.user.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
 

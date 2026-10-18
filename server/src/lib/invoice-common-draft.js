@@ -50,6 +50,7 @@ export function sameGroupedNumberReceiptForReview(left,right){
 const inboundType=row=>String(row.invoiceType||"1.1").startsWith("5.")?"CREDIT_NOTE":"INVOICE";
 export async function ensureInvoiceCommonDraftSchema(db){
  if(!schemas.has(db))schemas.set(db,(async()=>{
+  await db.$executeRawUnsafe(`ALTER TABLE IF EXISTS "PurchaseOrder" ADD COLUMN IF NOT EXISTS "reopenVersion" INTEGER NOT NULL DEFAULT 0`);
   await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "InvoiceDraftAlias" (
    "aliasOrderId" TEXT PRIMARY KEY,"aliasDocumentId" TEXT NOT NULL UNIQUE,
    "companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"canonicalOrderId" TEXT NOT NULL,"canonicalDocumentId" TEXT NOT NULL,
@@ -349,8 +350,9 @@ export async function reuseInboundDraftForPosJob(tx,identity,{jobId,paymentTrans
  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"||${JSON.stringify({mydataPosReceipt:receipt,mydataDraftOrderId:row.orderId,mydataDraftDocumentId:row.documentId})}::jsonb WHERE "inboxId"=${row.inboxId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
  return {documentId:row.documentId,orderId:row.orderId,reused:true,myDataMatched:true};
 }
-export async function assertInvoiceStockAvailable(tx,{companyId,storeId,sourceDocumentId,orderId=null}){
+export async function assertInvoiceStockAvailable(tx,{companyId,storeId,sourceDocumentId,orderId=null,allowReopenedOrder=false}){
  await lockInvoiceStore(tx,companyId,storeId);
+ if(!allowReopenedOrder){const reopened=await tx.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND ("id"=${orderId} OR "sourceDocumentId"=${sourceDocumentId}) AND "reopenVersion">0 LIMIT 1`;if(reopened.length)throw error("Η αγορά έχει επαναφερθεί. Οριστικοποίησε την ίδια παραγγελία από τις Παραγγελίες και Αγορές.");}
  const alias=await invoiceAlias(tx,companyId,{orderId,documentId:sourceDocumentId});
  if(alias)throw Object.assign(error("Το δεύτερο πρόχειρο έχει ενοποιηθεί. Άνοιξε την κοινή αγορά· δεν έγινε δεύτερη καταχώρηση.","INVOICE_DRAFT_MERGED"),{canonicalOrderId:alias.canonicalOrderId});
  const posted=await tx.$queryRaw`SELECT * FROM "InvoiceStockPosting" WHERE "companyId"=${companyId} AND "sourceDocumentId"=${sourceDocumentId} LIMIT 1`;

@@ -7,7 +7,7 @@ const page={filename:"photo.jpg",mimeType:"image/jpeg",dataUrl:"data:image/jpeg;
 const payment={id:"payment",companyId:"company",storeId:"store",supplierId:"supplier",supplierTaxId:"099999999",type:"SUPPLIER_PAYMENT",amount:12.4,invoiceDocumentNumber:"A 42",reversedAt:null};
 function fixture(overrides={}){
   const row={...base,...overrides},writes=[],attachments=new Map();let resultJson=structuredClone(row.resultJson);
-  const db={async $executeRawUnsafe(sql){assert.match(sql,/^CREATE /)},async $queryRaw(strings,...values){const sql=strings.join("?");
+  const db={async $executeRawUnsafe(sql){assert.match(sql,/^(CREATE |ALTER TABLE IF EXISTS "PurchaseOrder" ADD COLUMN IF NOT EXISTS "reopenVersion" INTEGER NOT NULL DEFAULT 0$)/)},async $queryRaw(strings,...values){const sql=strings.join("?");
     if(sql.includes("pg_advisory_xact_lock"))return [];
     if(sql.includes('FROM "MyDataInboundDocument"')){assert.equal(values[0],"company");assert.equal(values[1],"store");assert.equal(values[2],"099999999");return [row]}
     if(sql.includes('FROM "SupplierPaymentAllocation"'))return [];
