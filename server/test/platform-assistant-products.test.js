@@ -80,7 +80,7 @@ test("empty/ambiguous/capped/negative results obey the shared rules and malforme
 });
 
 test("canonical calculations stay parameterized and return the same ordinary-report quantities and arithmetic",async()=>{
-  const queries=[],db={$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join("?"),values});return [row()]},store:{findFirst:async()=>({id:"s"})}};
+  const queries=[],db={$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join("?"),values});return [{...row(),...(strings.join("?").includes("_overallNormalSaleCount")?{_hasGroup:true,_totalGroupCount:1,_overallNormalSaleCount:1,_overallReversalCount:0}:{})}]},store:{findFirst:async()=>({id:"s"})}};
   const filters={companyId:"c",storeId:"s",from:calendar.from,to:calendar.to,q:"2269",calendar};
   const s=await readSalesAnalysisReport(filters,{db}),st=await readStockAnalysisReport(filters,{db});
   assert.equal(s.items[0].salesQuantity,4);assert.equal(s.items[0].grossSales,2);assert.equal(s.items[0].netSales,1.77);assert.equal(s.items[0].vatValue,.23);assert.equal(st.items[0].currentStock,-2.125);
