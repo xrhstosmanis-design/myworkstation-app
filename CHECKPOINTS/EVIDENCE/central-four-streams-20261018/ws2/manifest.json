@@ -1,0 +1,20 @@
+{
+  "repository": "xrhstosmanis-design/myworkstation-app",
+  "ref": "25ce0fc2f60502b123f25324fef4205463596174",
+  "runtime": "Node v24.19.0",
+  "command": "node --test diagnostic.test.mjs",
+  "result": {"tests":3,"pass":3,"fail":0,"skipped":0},
+  "scope": "Isolated actual-source diagnostics with synthetic rows and read-only SQL capture; not native PostgreSQL, HTTP, CI, hosted or LAB acceptance",
+  "sources": {
+    "server/src/lib/supplier-price-comparison.js": "62ef1bf31689d3f0d338dc4372c9b3e7fecb1005",
+    "server/src/lib/order-suggestions.js": "d273763be8e0c6592107e64d0df1983ed1076629",
+    "server/src/routes/order-suggestions.js": "1f37891ae24922e62ea5e8df6a819a079be9880a"
+  },
+  "findings": [
+    "Supplier helper aggregates multiple physical rows in one document and counts distinct documents per product/supplier, not measured delivery events.",
+    "Supplier helper preserves latest versus historical comparable net costs and explicit package conversion.",
+    "Order-suggestion SQL has no supplier selection; actual DTO drops supplier sentinel fields, so no supplier grouping is provided by this function."
+  ],
+  "history": "First local run: two behavior checks passed and exact-byte hash check failed because patch transport added an extra trailing newline. Removed only transport newline; final exact-source hashes and all three checks pass.",
+  "mutations": "Only scratch diagnostic files; no repository, branch, production, financial, stock, invoice, LAB, email or order mutation. Existing owners unchanged."
+}
