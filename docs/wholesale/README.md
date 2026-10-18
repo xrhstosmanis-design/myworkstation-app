@@ -1,12 +1,12 @@
 # MyWorkStation Wholesale Suite
 
-## Current source: unified paid workspace - 18 October 2026
+## Current release: unified paid workspace - 18 October 2026
 
 Retained coordinator codex/wholesale-suite-20261017. The latest source groups management, customer site and sellers under one top-level **Χονδρική B2B** button. It requires the separately activated company module `WHOLESALE_B2B` and an ACTIVE current commercial license; no default-plan grant or Super Admin operational bypass. Live server capabilities control the entry; all three channels enforce the entitlement directly and on protected retries. Platform commercial activation is the licensing authority, not an assertion of bank payment collection. No real license was activated by this change.
 
 Managers open customers, prices, orders, Site πελατών and Αναθέσεις πωλητών in the same workspace; assigned employees enter their own seller workspace. Existing store selection and role/tenant/session/assignment boundaries remain. Uncertain submissions retain their original identity/key/body across temporary loss of access and require restored same-account access and manual reconciliation. No offline/reload/crash recovery is promised.
 
-ClaimPR2741/docsCI39139383289 merged a6f0ac452 before source. Focused UI31PASS and local full3108/2974PASS/0FAIL/134environmentSKIP are technical evidence; exact native PR/main CI, ordinary release and hosted functional acceptance remain pending. Shared core, customer portal and online seller slices already have prior native CI/release receipts; these are not a completed ERP or functional LAB PASS. Fulfillment/credit/receivables/collections/fiscal, offline, independent packaging/branding/domain and complete acceptance remain OPEN. Authoritative checkpoint: CHECKPOINTS/CHANGES/2026-10-18-wholesale-unified-paid.md.
+ClaimPR2741/docsCI39139383289 merged a6f0ac452 before source. SourcePR2744/heada9b9025d/fullCI39140476609 and exact95a85bcb8/mainCI39141049058 each passed3153/0/0 plus6backup/all checks, including native all-channel paid-module revocation during replay waits. Ordinary guard39141541809 and Renderdep-dbaeh6jncjis73d8ultg released95a85bcb8 at15:44UTC; independent health/exit0 confirms exact revision. Code is live; authenticated UI/functional LAB remains NOT TESTED. Focused UI31PASS and local full3108/2974PASS/0FAIL/134environmentSKIP remain separate technical evidence. Shared core, customer portal and online seller slices already have prior native CI/release receipts; these are not a completed ERP or functional LAB PASS. Fulfillment/credit/receivables/collections/fiscal, offline, independent packaging/branding/domain and complete acceptance remain OPEN. Authoritative checkpoint: CHECKPOINTS/CHANGES/2026-10-18-wholesale-unified-paid.md.
 
 ## Historical implementation receipts
 
