@@ -1,3 +1,16 @@
+## Isolated diagnostic continuation - request18Oct15:03 Athens
+
+The user answered that previous pages' activity is unknown. No ownership transfer was inferred. Four parallel workers executed isolated diagnostics on exact main25ce0fc2f60502b123f25324fef4205463596174 using Node24.19.0. These are synthetic local observations, not source fixes, releaseNode20/native CI/HTTP/hosted/LAB acceptance.
+
+- WS1: existing automatic-report policy and weekly suites10passed/0failed/0skipped with mocked DB. Greek DST/day/week boundaries, whole-week HOLD and group separation verified locally.
+- WS2:3passed/0failed/0skipped. Actual supplier helper normalizes comparable fixture costs1.50/.80/.75 and counts documents, not verified physical deliveries. Actual readOrderSuggestions read query/DTO lacks supplier grouping; sentinel supplier fields are discarded.
+- WS3:4diagnostic observations, not4functional successes. Unmodified exported report function executed with mocked grouped database rows. One two-product normal basket reports normalSaleCount2; one two-product reversal reports reversalCount2. Two normal baskets with one product reports2 control.10000grouped rows return no completeness/cap flag. SQL was inspected but not executed. These totals may describe product appearances but must not supply unique-basket workload.
+- WS4:5passed/0failed/0skipped. Actual capability helper tested across64tool subsets plus phrase/input boundaries; unknown adapters not advertised. Outer source schema assertion is static only; full Zod/domain parsers and auth not executed.
+
+Total18local tests passed plus4separately labelled diagnostic observations. No22functionalPASS or global acceptance claim. Evidence includes commands, captured output, source revision/hashes, runner files and isolated snapshots under CHECKPOINTS/EVIDENCE/central-four-streams-20261018/. These snapshots do not alter runtime paths; execute them only in isolated diagnostic directories. Never configure production credentials or DB for this fixture suite.
+
+Actual integration/source correction remains OPEN: publish named bounded handoff before a unique-sale/completeness reader or supplier/assistant adapter implementation. Retained owners unchanged. No production or LAB writes, mail, settings, payments, shifts, stock or protected invoice replay.
+
 # Central four-stream coordination - 18 October 2026
 
 ## Authorization and scope

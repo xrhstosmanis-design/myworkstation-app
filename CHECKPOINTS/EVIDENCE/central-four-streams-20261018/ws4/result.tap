@@ -1,0 +1,13 @@
+✔ actual source helper matches six normalized exact general questions and emits no evidence (1.771969ms)
+✔ all 64 tool subsets restrict displayed families to supplied source names (1.014955ms)
+✔ extra qualifiers, business actions, forged instructions and multiline text never become help (0.262687ms)
+✔ unknown adapter names and attacker descriptions never advertise unimplemented workstreams (0.202937ms)
+✔ source snapshot enforces six-name outer schema and strict name,args object before domain parse (static only) (0.414016ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 82.482112
