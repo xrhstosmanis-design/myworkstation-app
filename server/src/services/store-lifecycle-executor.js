@@ -9,21 +9,33 @@ const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status})};
 const INTERNAL=new Set(['StoreLifecycleFence','StoreLifecycleExecution','StoreLifecycleTombstone']);
 const childOwner=node=>['CHILD','LINK'].includes(node.owner.kind);
-const ownerMatch=(node,alias)=>Object.entries(node.owner.match||{}).sort(([a],[b])=>a.localeCompare(b)).map(([name,value])=>`COALESCE(${alias}.${q(name)}=${literal(value)},false)`).join(' AND ')||'true';
-const applicationEdges=(plan,schema)=>plan.ordered.filter(n=>['LINK','BASE_STORE'].includes(n.owner.kind)).map(n=>({child:n.name,parent:n.owner.kind==='BASE_STORE'?'Store':n.owner.parent,childSchema:schema,parentSchema:schema,local:n.owner.kind==='BASE_STORE'?['baseStoreId']:n.owner.columns.map(p=>p[0]),remote:n.owner.kind==='BASE_STORE'?['id']:n.owner.columns.map(p=>p[1]),applicationOwnership:true,match:n.owner.match||{}}));
+const validColumns=cols=>Array.isArray(cols)&&cols.length>0&&cols.length<=8&&cols.every(p=>Array.isArray(p)&&p.length===2&&p.every(v=>typeof v==='string'&&v.length>0))&&new Set(cols.map(p=>p[0])).size===cols.length&&new Set(cols.map(p=>p[1])).size===cols.length;
+const validMatch=match=>match===undefined||Boolean(match&&typeof match==='object'&&!Array.isArray(match)&&Object.keys(match).length>0&&Object.keys(match).length<=4&&Object.entries(match).every(([k,v])=>k.length>0&&k.length<=128&&typeof v==='string'&&v.length>0&&v.length<=128));
+const matchExpression=(match,alias)=>Object.entries(match||{}).sort(([a],[b])=>a.localeCompare(b)).map(([name,value])=>`COALESCE(${alias}.${q(name)}=${literal(value)},false)`).join(' AND ')||'true';
+const ownerMatch=(node,alias)=>matchExpression(node.owner.match,alias);
+const nodeReferences=node=>[...(node.owner.kind==='LINK'?[node.owner]:[]),...(node.references||[])];
+const applicationEdges=(plan,schema)=>plan.ordered.flatMap(n=>[
+ ...(n.owner.kind==='BASE_STORE'?[{parent:'Store',columns:[['baseStoreId','id']],owned:true}]:[]),
+ ...(n.owner.kind==='LINK'?[{...n.owner,owned:true}]:[]),
+ ...(n.references||[]).map(r=>({...r,owned:false}))
+].map(r=>({child:n.name,parent:r.parent,childSchema:schema,parentSchema:schema,local:r.columns.map(p=>p[0]),remote:r.columns.map(p=>p[1]),applicationOwnership:r.owned,applicationReference:!r.owned,match:r.match||{}})));
 const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for(const v of Object.values(value))freeze(v)}return value};
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 function planFor(manifest){
  if(!manifest?.id||!Array.isArray(manifest.tables)||manifest.tables.length<1||manifest.tables.length>300)fail('A reviewed server manifest is required.');
  const nodes=new Map();
  for(const row of manifest.tables){if(typeof row.name!=='string'||!row.name||INTERNAL.has(row.name)||nodes.has(row.name)||!['KEEP','REMOVE'].includes(row.reset)||!['ROOT','DIRECT','CHILD','LINK','BASE_STORE'].includes(row.owner?.kind))fail('Invalid reviewed manifest.');nodes.set(row.name,row)}
- for(const row of nodes.values())if(row.owner.match!==undefined&&(row.owner.kind!=='LINK'||!row.owner.match||typeof row.owner.match!=='object'||Array.isArray(row.owner.match)||Object.keys(row.owner.match).length<1||Object.keys(row.owner.match).length>4||Object.entries(row.owner.match).some(([k,v])=>!k||k.length>128||typeof v!=='string'||!v||v.length>128)))fail('Invalid typed application ownership.');
+ for(const row of nodes.values()){
+  if(row.owner.match!==undefined&&(row.owner.kind!=='LINK'||!validMatch(row.owner.match)))fail('Invalid typed application ownership.');
+  if(row.references!==undefined&&(!Array.isArray(row.references)||row.references.length>16))fail('Invalid reviewed application references.');
+  for(const ref of row.references||[])if(!nodes.has(ref?.parent)||!validColumns(ref.columns)||!validMatch(ref.match))fail('Invalid reviewed application references.');
+ }
  // Installation identities and their credentials are inseparable from both
  // physical registers. A reviewed plan may not override this RESET boundary.
  for(const row of nodes.values())if(RESET_KEEP.has(row.name)&&row.reset!=='KEEP')fail('RESET must retain installation/configuration: '+row.name);
  if(nodes.get('Store')?.owner.kind!=='ROOT'||nodes.get('Store')?.reset!=='KEEP'||[...nodes.values()].filter(x=>x.owner.kind==='ROOT').length!==1)fail('Store root must be retained by RESET.');
  const visiting=new Set(),visited=new Set(),ordered=[];
- const visit=name=>{if(visiting.has(name))fail('Cyclic ownership requires a separate reviewed plan.');if(visited.has(name))return;const row=nodes.get(name);if(!row)fail('Missing ownership parent.');visiting.add(name);if(childOwner(row)){if(!Array.isArray(row.owner.columns)||!row.owner.columns.length||row.owner.columns.some(p=>!Array.isArray(p)||p.length!==2||p.some(v=>typeof v!=='string'||!v))||new Set(row.owner.columns.map(p=>p[0])).size!==row.owner.columns.length||new Set(row.owner.columns.map(p=>p[1])).size!==row.owner.columns.length)fail('Invalid ownership columns.');visit(row.owner.parent)}if(row.owner.kind==='BASE_STORE')visit('Store');visiting.delete(name);visited.add(name);ordered.push(row)};
+ const visit=name=>{if(visiting.has(name))fail('Cyclic ownership requires a separate reviewed plan.');if(visited.has(name))return;const row=nodes.get(name);if(!row)fail('Missing ownership parent.');visiting.add(name);if(childOwner(row)){if(!validColumns(row.owner.columns))fail('Invalid ownership columns.');visit(row.owner.parent)}if(row.owner.kind==='BASE_STORE')visit('Store');visiting.delete(name);visited.add(name);ordered.push(row)};
  for(const name of nodes.keys())visit(name);
  if(manifest.streaming!==undefined&&typeof manifest.streaming!=='boolean')fail('Invalid streaming policy.');
  return {id:manifest.id,nodes,ordered,streaming:manifest.streaming===true,planHash:hash(manifest)};
@@ -45,23 +57,25 @@ function storeExpression(plan,schema,node,record,depth=0){
 const truncateBody="BEGIN RAISE EXCEPTION 'STORE_LIFECYCLE_TRUNCATE_FORBIDDEN' USING ERRCODE='55000'; END;";
 const guardName=node=>'mws_lifecycle_'+hash(node.name).slice(0,16);
 function retiredLinkGuard(plan,schema,node){
- if(node.owner.kind!=='LINK')return '';
- const parent=plan.nodes.get(node.owner.parent),remote=node.owner.columns.map(p=>p[1]);
+ return nodeReferences(node).map(ref=>{
+ const parent=plan.nodes.get(ref.parent),remote=ref.columns.map(p=>p[1]);
  return [['NEW',"TG_OP<>'DELETE'"],['OLD',"TG_OP<>'INSERT'"]].map(([record,condition])=>`IF ${condition} THEN
- IF ${ownerMatch(node,record)} THEN
- IF NOT EXISTS (SELECT 1 FROM ${q(schema)}.${q(parent.name)} p WHERE ${node.owner.columns.map(([local,key])=>`${record}.${q(local)}=p.${q(key)}`).join(' AND ')}) AND EXISTS (
+ IF (${matchExpression(ref.match,record)}) AND ${ref.columns.map(([local])=>`${record}.${q(local)} IS NOT NULL`).join(' AND ')} THEN
+ IF NOT EXISTS (SELECT 1 FROM ${q(schema)}.${q(parent.name)} p WHERE ${ref.columns.map(([local,key])=>`${record}.${q(local)}=p.${q(key)}`).join(' AND ')}) AND EXISTS (
  SELECT 1 FROM ${q(schema)}."StoreLifecycleTombstone" t JOIN ${q(schema)}."StoreLifecycleFence" f ON f."storeId"=t."storeId" AND f."companyId"=t."companyId"
- WHERE t."schemaName"=${literal(schema)} AND t."parentTable"=${literal(parent.name)} AND t."refColumns"=${literal(JSON.stringify(remote))}::jsonb AND t."refValues"=jsonb_build_array(${node.owner.columns.map(([local])=>`${record}.${q(local)}::text`).join(',')})
+ WHERE t."schemaName"=${literal(schema)} AND t."parentTable"=${literal(parent.name)} AND t."refColumns"=${literal(JSON.stringify(remote))}::jsonb AND t."refValues"=jsonb_build_array(${ref.columns.map(([local])=>`${record}.${q(local)}::text`).join(',')})
  AND NOT COALESCE(f."maintenance" AND COALESCE(current_setting('mws.lifecycle_operation',true),'')=f."operationId",false)
  ) THEN RAISE EXCEPTION 'STORE_LIFECYCLE_RETIRED_REFERENCE' USING ERRCODE='55000'; END IF;
  END IF;
  END IF;`).join('\n');
+ }).join('\n');
 }
-function guardBody(plan,schema,node){return `DECLARE old_store text; new_store text; sid text; fence record; BEGIN
- IF TG_OP<>'INSERT' THEN old_store := ${storeExpression(plan,schema,node,'OLD')}; END IF;
- IF TG_OP<>'DELETE' THEN new_store := ${storeExpression(plan,schema,node,'NEW')}; END IF;
+const referenceStores=(plan,schema,node,record)=>`ARRAY[${[...(node.references||[]),...(plan.databaseReferences?.get(node.name)||[])].map(ref=>storeExpression(plan,schema,{owner:{...ref,kind:'LINK'}},record)).join(',')}]::text[]`;
+function guardBody(plan,schema,node){return `DECLARE old_store text; new_store text; old_references text[] := ARRAY[]::text[]; new_references text[] := ARRAY[]::text[]; sid text; fence record; BEGIN
+ IF TG_OP<>'INSERT' THEN old_store := ${storeExpression(plan,schema,node,'OLD')}; old_references := ${referenceStores(plan,schema,node,'OLD')}; END IF;
+ IF TG_OP<>'DELETE' THEN new_store := ${storeExpression(plan,schema,node,'NEW')}; new_references := ${referenceStores(plan,schema,node,'NEW')}; END IF;
  ${retiredLinkGuard(plan,schema,node)}
- FOR sid IN SELECT DISTINCT x.s FROM unnest(ARRAY[old_store,new_store]) AS x(s) WHERE x.s IS NOT NULL ORDER BY x.s LOOP
+ FOR sid IN SELECT DISTINCT x.s FROM unnest(ARRAY[old_store,new_store]||old_references||new_references) AS x(s) WHERE x.s IS NOT NULL ORDER BY x.s LOOP
   IF sid IS NULL THEN CONTINUE; END IF;
   SELECT * INTO fence FROM ${q(schema)}."StoreLifecycleFence" WHERE "storeId"=sid;
   IF NOT FOUND THEN CONTINUE; END IF;
@@ -76,6 +90,17 @@ function guardBody(plan,schema,node){return `DECLARE old_store text; new_store t
  IF TG_OP='DELETE' THEN RETURN OLD; END IF; RETURN NEW;
 END;`}
 async function schemaFor(tx){const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS name'))[0]?.name;if(!schema)fail('Schema unavailable.');return schema}
+async function readForeignKeys(tx,schema){ return await tx.$queryRawUnsafe(`SELECT child.relname AS child,parent.relname AS parent,pn.nspname AS "parentSchema",cn.nspname AS "childSchema",ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.n ORDER BY k.p) AS local,ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.confrelid AND a.attnum=k.n ORDER BY k.p) AS remote FROM pg_constraint c JOIN pg_class child ON child.oid=c.conrelid JOIN pg_class parent ON parent.oid=c.confrelid JOIN pg_namespace cn ON cn.oid=child.relnamespace JOIN pg_namespace pn ON pn.oid=parent.relnamespace WHERE c.contype='f' AND (cn.nspname=$1 OR pn.nspname=$1) ORDER BY cn.nspname,child.relname,c.conname`,schema);
+}
+function bindDatabaseReferences(plan,schema,fks){
+ const references=new Map();
+ for(const fk of fks){if(fk.childSchema!==schema||fk.parentSchema!==schema||!plan.nodes.has(fk.child)||!plan.nodes.has(fk.parent))continue;
+ const ref={parent:fk.parent,columns:fk.local.map((name,i)=>[name,fk.remote[i]])};
+ const entries=references.get(fk.child)||[];if(!entries.some(r=>JSON.stringify(r)===JSON.stringify(ref)))entries.push(ref);references.set(fk.child,entries);
+ }
+ for(const entries of references.values())entries.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)));
+ plan.databaseReferences=references;
+}
 async function validateDatabase(tx,plan,schema){
  const relations=await tx.$queryRawUnsafe(`SELECT c.relname AS name,c.relkind::text AS kind,c.relispartition AS partition,c.relrowsecurity AS rls,c.relforcerowsecurity AS forced FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') ORDER BY c.relname`,schema);
  const columns=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull AS "notNull",a.attidentity::text AS identity,a.attgenerated::text AS generated,pg_get_expr(d.adbin,d.adrelid) AS "defaultExpression" FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') AND a.attnum>0 AND NOT a.attisdropped ORDER BY c.relname,a.attnum`,schema);
@@ -83,7 +108,8 @@ async function validateDatabase(tx,plan,schema){
  if(columns.length>20000)fail('Schema review limit exceeded.');
  const byTable=new Map();for(const col of columns){if(!byTable.has(col.table))byTable.set(col.table,new Set());byTable.get(col.table).add(col.name);if(col.name==='storeId'&&!INTERNAL.has(col.table)&&!plan.nodes.has(col.table))fail('Unreviewed store table: '+col.table)}
  for(const node of plan.ordered){const cols=byTable.get(node.name);if(!cols||node.owner.kind==='ROOT'&&!cols.has('id')||node.owner.kind==='DIRECT'&&!cols.has('storeId')||node.owner.kind==='BASE_STORE'&&!cols.has('baseStoreId'))fail('Reviewed table layout changed.');}
- const fks=await tx.$queryRawUnsafe(`SELECT child.relname AS child,parent.relname AS parent,pn.nspname AS "parentSchema",cn.nspname AS "childSchema",ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.n ORDER BY k.p) AS local,ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.confrelid AND a.attnum=k.n ORDER BY k.p) AS remote FROM pg_constraint c JOIN pg_class child ON child.oid=c.conrelid JOIN pg_class parent ON parent.oid=c.confrelid JOIN pg_namespace cn ON cn.oid=child.relnamespace JOIN pg_namespace pn ON pn.oid=parent.relnamespace WHERE c.contype='f' AND (cn.nspname=$1 OR pn.nspname=$1) ORDER BY cn.nspname,child.relname,c.conname`,schema);
+ const fks=await readForeignKeys(tx,schema);
+ bindDatabaseReferences(plan,schema,fks);
  if(fks.length>10000)fail('Dependency review limit exceeded.');
  for(const fk of fks){if(fk.parentSchema===schema&&plan.nodes.has(fk.parent)&&(fk.childSchema!==schema||!plan.nodes.has(fk.child)))fail('Unreviewed incoming dependency: '+fk.child)}
  for(const node of plan.ordered.filter(n=>n.owner.kind==='CHILD'))if(!fks.some(f=>f.childSchema===schema&&f.parentSchema===schema&&f.child===node.name&&f.parent===node.owner.parent&&JSON.stringify(f.local)===JSON.stringify(node.owner.columns.map(p=>p[0]))&&JSON.stringify(f.remote)===JSON.stringify(node.owner.columns.map(p=>p[1]))))fail('Reviewed ownership FK changed.');
@@ -93,10 +119,10 @@ async function validateDatabase(tx,plan,schema){
  for(const link of links){
   const child=plan.nodes.get(link.child),cols=byTable.get(link.child),parentCols=byTable.get(link.parent);
   if(link.local.some(c=>!cols?.has(c))||link.remote.some(c=>!parentCols?.has(c))||!uniqueKeys.some(k=>k.table===link.parent&&JSON.stringify(k.columns)===JSON.stringify(link.remote)))fail('Application ownership requires an exact immediate unique parent key.');
-  if(child.owner.kind==='LINK'&&(cols.has('storeId')||link.local.some(name=>!columns.find(c=>c.table===link.child&&c.name===name)?.notNull)))fail('Raw ownership requires non-null keys and no competing storeId.');
-  if(Object.keys(child.owner.match||{}).some(name=>!columns.some(c=>c.table===link.child&&c.name===name&&c.type==='text')))fail('Typed ownership discriminator schema changed.');
+  if(link.applicationOwnership&&child.owner.kind==='LINK'&&(cols.has('storeId')||link.local.some(name=>!columns.find(c=>c.table===link.child&&c.name===name)?.notNull)))fail('Raw ownership requires non-null keys and no competing storeId.');
+  if(Object.keys(link.match).some(name=>!columns.some(c=>c.table===link.child&&c.name===name&&c.type==='text')))fail('Typed ownership discriminator schema changed.');
   const join=link.local.map((c,i)=>`c.${q(c)}=p.${q(link.remote[i])}`).join(' AND ');
-  const required=child.owner.kind==='BASE_STORE'?'c."baseStoreId" IS NOT NULL':ownerMatch(child,'c');
+  const required=`(${matchExpression(link.match,'c')}) AND ${link.local.map(c=>`c.${q(c)} IS NOT NULL`).join(' AND ')}`;
   if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(link.child)} c WHERE ${required} AND NOT EXISTS (SELECT 1 FROM ${q(schema)}.${q(link.parent)} p WHERE ${join}) LIMIT 1`)).length)fail('Unowned application reference requires explicit review.');
  }
  const triggers=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",t.tgname AS name,t.tgenabled::text AS enabled,t.tgtype::int AS mask,t.tgqual::text AS condition,t.tgattr::text AS attributes,p.prosrc AS body,pn.nspname AS "functionSchema",p.proname AS "functionName",p.prosecdef AS definer,l.lanname AS language FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_proc p ON p.oid=t.tgfoid JOIN pg_namespace pn ON pn.oid=p.pronamespace JOIN pg_language l ON l.oid=p.prolang WHERE n.nspname=$1 AND NOT t.tgisinternal`,schema);
@@ -150,7 +176,7 @@ async function capture(tx,plan,schema,scope,mode){
  }
  // An owned FK must not cross to a different store, nor may deletion touch retained children.
  for(const fk of meta.fks.filter(f=>f.parentSchema===schema&&f.childSchema===schema&&plan.nodes.has(f.parent)&&plan.nodes.has(f.child))){
-  const child=plan.nodes.get(fk.child),parent=plan.nodes.get(fk.parent),join=fk.local.map((c,i)=>`c.${q(c)}=p.${q(fk.remote[i])}`).join(' AND ')+(fk.applicationOwnership?` AND (${ownerMatch(child,'c')})`:'');
+  const child=plan.nodes.get(fk.child),parent=plan.nodes.get(fk.parent),join=fk.local.map((c,i)=>`c.${q(c)}=p.${q(fk.remote[i])}`).join(' AND ')+(fk.applicationOwnership||fk.applicationReference?` AND (${matchExpression(fk.match,'c')})`:'');
   const bad=await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(child.name)} c JOIN ${q(schema)}.${q(parent.name)} p ON ${join} WHERE ((${predicate(plan,schema,child,'c')}) IS DISTINCT FROM (${predicate(plan,schema,parent,'p')})) LIMIT 1`,scope.storeId);if(bad.length)fail('Cross-store dependency blocks execution.');
   const childAction=tables.find(t=>t.name===child.name).action,parentAction=tables.find(t=>t.name===parent.name).action;
   if(childAction==='KEEP'&&parentAction==='REMOVE'){const refs=await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(child.name)} c JOIN ${q(schema)}.${q(parent.name)} p ON ${join} WHERE ${predicate(plan,schema,parent,'p')} LIMIT 1`,scope.storeId);if(refs.length)fail('Deletion would change a retained dependency.');}
@@ -159,7 +185,7 @@ async function capture(tx,plan,schema,scope,mode){
 }
 async function persistOwnershipTombstones(tx,plan,schema,snapshot,operationId,generation){
  const seen=new Set();
- for(const edge of applicationEdges(plan,schema).filter(e=>plan.nodes.get(e.child).owner.kind==='LINK')){
+ for(const edge of applicationEdges(plan,schema).filter(e=>e.applicationReference||plan.nodes.get(e.child).owner.kind==='LINK')){
   const parent=plan.nodes.get(edge.parent),table=snapshot.tables.find(t=>t.name===edge.parent);
   if(table.action!=='REMOVE')continue;
   const key=JSON.stringify([edge.parent,edge.remote]);if(seen.has(key))continue;seen.add(key);
@@ -183,6 +209,7 @@ export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,
    await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS ${q(schema)}."StoreLifecycleTombstone" ("id" text PRIMARY KEY,"companyId" text NOT NULL,"storeId" text NOT NULL,"schemaName" text NOT NULL,"parentTable" text NOT NULL,"refColumns" jsonb NOT NULL,"refValues" jsonb NOT NULL,"generation" bigint NOT NULL,"operationId" text NOT NULL)`);
    await tx.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreLifecycleTombstone_parent_idx" ON ${q(schema)}."StoreLifecycleTombstone" ("schemaName","parentTable")`);
    if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."StoreLifecycleFence" WHERE "maintenance" LIMIT 1`)).length)fail('Cannot change guards during maintenance.');
+   bindDatabaseReferences(plan,schema,await readForeignKeys(tx,schema));
    for(const node of plan.ordered){const name=guardName(node);for(const [fn,body,event,row] of [[name,guardBody(plan,schema,node),'INSERT OR UPDATE OR DELETE','ROW'],[name+'_truncate',truncateBody,'TRUNCATE','STATEMENT']]){await tx.$executeRawUnsafe(`CREATE OR REPLACE FUNCTION ${q(schema)}.${q(fn)}() RETURNS trigger LANGUAGE plpgsql AS $mws$${body}$mws$`);await tx.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${q(fn)} ON ${q(schema)}.${q(node.name)}`);await tx.$executeRawUnsafe(`CREATE TRIGGER ${q(fn)} BEFORE ${event} ON ${q(schema)}.${q(node.name)} FOR EACH ${row} EXECUTE FUNCTION ${q(schema)}.${q(fn)}()`);await tx.$executeRawUnsafe(`ALTER TABLE ${q(schema)}.${q(node.name)} ENABLE ALWAYS TRIGGER ${q(fn)}`)}}
    await validateDatabase(tx,plan,schema);
    await tx.$executeRawUnsafe(`INSERT INTO ${q(schema)}."StoreLifecycleFence" ("storeId","companyId","planHash") VALUES($1,$2,$3) ON CONFLICT("storeId") DO NOTHING`,scope.storeId,scope.companyId,plan.planHash);

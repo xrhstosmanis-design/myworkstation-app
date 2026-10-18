@@ -1,0 +1,28 @@
+{
+  "role": "SuperAdmin support context, not personal Owner",
+  "company": "MYWORKSTATION LAB",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "productStoreOptions": [
+    {
+      "label": "Επιλογή",
+      "selected": true,
+      "value": ""
+    },
+    {
+      "label": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "selected": false,
+      "value": "cmtpopbgo000trhb5ng9ytiru"
+    }
+  ],
+  "operationsStoreOptions": [
+    {
+      "label": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "selected": true,
+      "value": "cmtpopbgo000trhb5ng9ytiru"
+    }
+  ],
+  "initialView": "products",
+  "personalOwner": "NOT TESTED: submitted admin account required Platform2FA; no personal owner login completed",
+  "businessWrites": "none",
+  "grantChanges": "none"
+}

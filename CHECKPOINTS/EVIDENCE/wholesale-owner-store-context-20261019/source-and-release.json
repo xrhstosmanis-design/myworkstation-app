@@ -1,0 +1,53 @@
+{
+  "scope": "WHOLESALE-STORE-CONTEXT-01",
+  "claimPR": 2777,
+  "claimMerge": "56f57084bfcc0104c826dbc834e91aed6fb7673e",
+  "sourcePR": 2778,
+  "sourceHead": "ddfc6fd1ee6eb5e6ff66f790bd1b190a63a8ab8c",
+  "sourceRun": 39164717249,
+  "sourceJob": 117785262601,
+  "sourceTests": {
+    "pass": 3211,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 6
+  },
+  "sourceMerge": "584a97b75eb4c035ed9e356e89fb05b2831137e5",
+  "exactMainRun": 39165236350,
+  "exactMainJob": 117786805379,
+  "exactMainTests": {
+    "pass": 3211,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 6
+  },
+  "liveRevision": "fb802ea9ffcfdecefcf1f6a64ee1f1c00e53ea67",
+  "liveMainRun": 39170130204,
+  "liveMainJob": 117801412340,
+  "liveMainTests": {
+    "pass": 3226,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 6
+  },
+  "ordinaryDeployRun": 39170602568,
+  "ordinaryDeployJob": 117802686908,
+  "guardHealthyAtUtc": "2026-10-18T22:07:08.7901402Z",
+  "independentHealth": "oktrue/version0.22.0+kat-test-pos/same live revision before and after actual UI; curl exit0",
+  "ownedFiles": {
+    "client/src/components/cloud/StoreCloudPage.jsx": "4a5558fa03092c49767598fb09c60946533c29bf",
+    "client/src/components/commerce/CommerceLauncher.jsx": "00848f76b4767a1d6d4e98fb6e88cd059e34a154",
+    "server/test/backoffice-workspace-stability.test.js": "5a44b9f93bdfa80bbdd1c082d2a58cec2759cfef",
+    "server/test/wholesale-suite-access-ui.test.js": "fc064e037f19a15d18704789506399ab061ab53d"
+  },
+  "localTests": {
+    "pass": 29,
+    "fail": 0,
+    "skip": 0
+  },
+  "localBuild": "PASS including TABLE_SERVICE",
+  "liveUI": "LIMITED PASS SuperAdmin support only; product options placeholder+exact LAB store and operations options exactly selected LAB store",
+  "personalOwner": "NOT TESTED: secure attempt used admin account and returned requirement for Platform2FA; no personal Owner login completed",
+  "grantAndBusinessMutations": "NONE in this phase; no account/order/quote/price/stock/payment/fiscal/shift/DB mutation; prior inactive module/member/assignment restoration retained",
+  "observedAtAthens": "19/10/2026 01:23 Europe/Athens"
+}
