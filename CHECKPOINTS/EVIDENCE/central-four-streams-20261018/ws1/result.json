@@ -1,0 +1,49 @@
+{
+  "observedAt": "2026-10-18T12:10:25.650052+00:00",
+  "repository": "xrhstosmanis-design/myworkstation-app",
+  "sourceRevision": "25ce0fc2f60502b123f25324fef4205463596174",
+  "command": [
+    "node",
+    "--test",
+    "server/test/automatic-report-policy.test.js",
+    "server/test/automatic-report-weekly.test.js"
+  ],
+  "nodeVersion": "v24.19.0",
+  "exitCode": 0,
+  "stdout": "✔ business days use Greek wall time through both DST transitions (17.609847ms)\n✔ daily/weekly/monthly periods are fully completed and end exclusive (7.166114ms)\n✔ daily report waits for actual third closure and completed business day (7.215119ms)\n✔ three arbitrary closed rows cannot substitute missing shift/terminal evidence (4.45119ms)\n✔ explicit morning-only delivery cannot replace store third shift and must itself be closed (4.950956ms)\n✔ foreign, duplicate, future, unknown variance and unconfigured terminal all hold dispatch (15.548349ms)\n✔ cash offsets preserve original employee differences and cannot cross day/terminal/delivery (7.972535ms)\n✔ weekly period anchors Monday through next Monday at each store's 06/07 start, including DST (29.309306ms)\n✔ one weekly snapshot checks all seven days, preserves day/terminal/delivery amounts and performs no writes (64.852176ms)\n✔ missing midweek shift, Sunday open/late closure, earlier unresolved, duplicates and foreign data hold the whole week (479.706798ms)\nℹ tests 10\nℹ suites 0\nℹ pass 10\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 673.955332\n",
+  "stderr": "",
+  "files": {
+    "server/src/business-picture-dates.js": {
+      "sha256": "2e2a5e0e61762f9225071e98b9f299ba8f2e2fdac58ec6b1bf7d3709eb29a51d",
+      "git_blob_sha1": "4a8cfb8cc9ec21d2007368fd803a6342acbd8b79"
+    },
+    "server/test/automatic-report-policy.test.js": {
+      "sha256": "0c4b4eb9e2bc9d3acecd9b45391705549a1bf6a624d284311f26465a111ebe98",
+      "git_blob_sha1": "33663aefe02d151d8c330162408e56281607f997"
+    },
+    "server/test/automatic-report-weekly.test.js": {
+      "sha256": "7de21b3be86da6776cafd11f72b93bc338372c89cecb23d824778091c29b1c4b",
+      "git_blob_sha1": "cfc72b737333718036d309ffadb75cc681a95ab5"
+    },
+    "server/src/services/automatic-report-policy.js": {
+      "sha256": "4f03ac7453a0e3974bbb5b97c40bbbfbd87495bfe37204eadff7c07fe8d48238",
+      "git_blob_sha1": "be5ec51d160cdb2bf6d26a36d6babdb7424603a3"
+    },
+    "server/src/services/cash-control-rules.js": {
+      "sha256": "4889c61e1be598fbccd7d38fd190b2d9f32e2272fd6282608395582a474fae4f",
+      "git_blob_sha1": "471f7cec0b60da7f53755902474493f7cbd2ad21"
+    },
+    "server/src/services/automatic-report-source.js": {
+      "sha256": "21e1ac995f8fe073164495b45d2bbf47e0e36237c588579b16fa6e4f6f5587ff",
+      "git_blob_sha1": "fab9ba4cc946e23b834479fe278fa4f53ed66f30"
+    }
+  },
+  "classification": "LOCAL ISOLATED SOURCE DIAGNOSTIC; NOT LAB / NOT native PostgreSQL / NOT hosted acceptance",
+  "limits": [
+    "Current source copied byte-for-byte from pinned GitHub revision; no application code changes.",
+    "Existing tests use synthetic sessions and mocked DB query interface; no real DB or network calls.",
+    "Node24 runtime, not required Node20 CI.",
+    "No scheduler/outbox/SMTP delivery implemented or exercised.",
+    "No protected LAB fixtures or production state accessed."
+  ]
+}

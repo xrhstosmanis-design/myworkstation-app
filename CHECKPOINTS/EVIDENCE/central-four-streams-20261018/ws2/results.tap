@@ -1,0 +1,13 @@
+{"supplierDiagnostic":[{"supplierId":"synthetic-a","purchaseCount":2,"lastCost":1.5,"bestCost":0.8},{"supplierId":"synthetic-b","purchaseCount":1,"lastCost":0.75,"bestCost":0.75}]}
+✔ actual supplier helper counts documents rather than physical rows and normalizes comparable cost (8.538989ms)
+{"readDiagnostic":{"reads":1,"queryContainsSupplier":false,"outputKeys":["productId","name","sku","unitLabel","currentStock","minStock","soldQuantity","returnedQuantity","netQuantity","dailyDemand","targetStock","suggestedQuantity","daysRemaining","reason","warnings"],"suggestedQuantity":3}}
+✔ actual order read function and helper discard supplier fields and issue read-only SQL (5.650842ms)
+✔ snapshots match Git blob hashes fetched from pinned main (2.719512ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 112.638228

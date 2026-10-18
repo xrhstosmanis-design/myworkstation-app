@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {buildSupplierPriceComparison} from './supplier-price-comparison.mjs';
+import {buildOrderSuggestions} from './order-suggestions.mjs';
+
+test('actual supplier helper counts documents rather than physical rows and normalizes comparable cost',()=>{
+  const row={productId:'synthetic-product',productName:'Synthetic',sku:'SYN',productUnit:'PIECE',supplierId:'synthetic-a',supplierName:'A',sourceType:'MANUAL',unit:'PIECE',quantity:10,netAmount:20,documentId:'synthetic-doc-a',documentNumber:'SYN-A',documentDate:'2026-10-01',documentCreatedAt:'2026-10-01'};
+  const result=buildSupplierPriceComparison([row,{...row,quantity:10,netAmount:10},{...row,documentId:'synthetic-doc-old',documentDate:'2026-09-01',netAmount:8},{...row,supplierId:'synthetic-b',supplierName:'B',documentId:'synthetic-doc-b',unit:'PACKAGE',unitsPerPackage:12,quantity:2,netAmount:18}]);
+  const a=result.find(x=>x.supplierId==='synthetic-a'), b=result.find(x=>x.supplierId==='synthetic-b');
+  assert.equal(a.purchaseCount,2);assert.equal(a.lastCost,1.5);assert.equal(a.bestCost,.8);assert.equal(b.lastCost,.75);
+  assert.equal(Object.hasOwn(a,'primarySupplierId'),false);assert.equal(Object.hasOwn(a,'frequencyPeriod'),false);
+  console.log(JSON.stringify({supplierDiagnostic:result.map(({supplierId,purchaseCount,lastCost,bestCost})=>({supplierId,purchaseCount,lastCost,bestCost}))}));
+});
+
+test('actual order read function and helper discard supplier fields and issue read-only SQL',async()=>{
+  const source=await readFile(new URL('./order-suggestions-route.mjs',import.meta.url),'utf8');
+  const functionSource=source.slice(source.indexOf('export async function readOrderSuggestions'),source.indexOf('\nconst router=Router();')).replace('export async function','async function');
+  const read=new Function('buildOrderSuggestions',functionSource+';return readOrderSuggestions;')(buildOrderSuggestions);
+  let sql='',values=[],reads=0;
+  const db={$queryRaw:async(strings,...params)=>{reads++;sql=strings.join('?');values=params;return [{productId:'synthetic-product',name:'Synthetic',sku:'SYN',unit:'PIECE',currentStock:-2,minStock:0,soldQuantity:2,returnedQuantity:0,hasRecipe:false,supplierId:'sentinel-supplier',supplierName:'SENTINEL'}];}};
+  const result=await read(db,{companyId:'synthetic-company',storeId:'synthetic-store',options:{historyDays:30,coverageDays:7,leadDays:3},now:new Date('2026-10-18T12:00:00Z')});
+  assert.equal(reads,1);assert.equal(result.rows[0].suggestedQuantity,3);assert.equal(Object.hasOwn(result.rows[0],'supplierId'),false);assert.equal(Object.hasOwn(result.rows[0],'supplierName'),false);
+  assert.equal(/supplier/i.test(sql),false);assert.ok(values.includes('synthetic-company'));assert.ok(values.includes('synthetic-store'));
+  assert.equal(/\b(INSERT|UPDATE|DELETE)\b/i.test(sql),false);
+  console.log(JSON.stringify({readDiagnostic:{reads,queryContainsSupplier:false,outputKeys:Object.keys(result.rows[0]),suggestedQuantity:result.rows[0].suggestedQuantity}}));
+});
+
+test('snapshots match Git blob hashes fetched from pinned main',async()=>{
+  const hashes={'supplier-price-comparison.mjs':'62ef1bf31689d3f0d338dc4372c9b3e7fecb1005','order-suggestions.mjs':'d273763be8e0c6592107e64d0df1983ed1076629','order-suggestions-route.mjs':'1f37891ae24922e62ea5e8df6a819a079be9880a'};
+  for(const [filename,sha] of Object.entries(hashes)){const bytes=await readFile(new URL(filename,import.meta.url));const actual=createHash('sha1').update(Buffer.from('blob '+bytes.length+'\0')).update(bytes).digest('hex');assert.equal(actual,sha,filename);}
+});
