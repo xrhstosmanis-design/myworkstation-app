@@ -1,0 +1,2029 @@
+{
+  "format": "MWS_STORE_LIFECYCLE_APPLICATION_LINK_REVIEW_V1",
+  "companyId": "pilot-company",
+  "storeId": "kat-store",
+  "source": "Render read-only information_schema and declared FK metadata",
+  "capturedDate": "2026-10-18",
+  "status": "REVIEW_CANDIDATES_ONLY",
+  "limitations": [
+    "This is schema metadata, not row ownership, complete application-link discovery, recovery readiness or a deletion allowlist.",
+    "Raw application links require explicit selectors and cross-store validation before activation."
+  ],
+  "columns": [
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "AdvancedOnlineSearchUsage"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "AdvancedOnlineSearchUsage"
+    },
+    {
+      "column_name": "resultJson",
+      "data_type": "jsonb",
+      "table_name": "AiReaderJob"
+    },
+    {
+      "column_name": "supersedesEventId",
+      "data_type": "text",
+      "table_name": "AttendanceEvent"
+    },
+    {
+      "column_name": "voidedByUserId",
+      "data_type": "text",
+      "table_name": "AttendanceEvent"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "AudienceDiscountCard"
+    },
+    {
+      "column_name": "userId",
+      "data_type": "text",
+      "table_name": "AuthAudit"
+    },
+    {
+      "column_name": "configurationJson",
+      "data_type": "jsonb",
+      "table_name": "AutomaticReportSettings"
+    },
+    {
+      "column_name": "attachmentData",
+      "data_type": "text",
+      "table_name": "BankLedgerEntry"
+    },
+    {
+      "column_name": "sourceTransactionId",
+      "data_type": "text",
+      "table_name": "BankLedgerEntry"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "BulkPriceBatchAudit"
+    },
+    {
+      "column_name": "productIdsJson",
+      "data_type": "jsonb",
+      "table_name": "BulkPriceBatchAudit"
+    },
+    {
+      "column_name": "storeIdsJson",
+      "data_type": "jsonb",
+      "table_name": "BulkPriceBatchAudit"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "CashControlReview"
+    },
+    {
+      "column_name": "sessionId",
+      "data_type": "text",
+      "table_name": "CashControlReview"
+    },
+    {
+      "column_name": "snapshotJson",
+      "data_type": "jsonb",
+      "table_name": "CashControlReview"
+    },
+    {
+      "column_name": "duplicateReviewJson",
+      "data_type": "jsonb",
+      "table_name": "CashShiftSession"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "CloudAudit"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "CloudAudit"
+    },
+    {
+      "column_name": "entityId",
+      "data_type": "text",
+      "table_name": "CloudChange"
+    },
+    {
+      "column_name": "payload",
+      "data_type": "jsonb",
+      "table_name": "CloudChange"
+    },
+    {
+      "column_name": "metadata",
+      "data_type": "jsonb",
+      "table_name": "CloudDevice"
+    },
+    {
+      "column_name": "deviceId",
+      "data_type": "text",
+      "table_name": "CloudDeviceCursor"
+    },
+    {
+      "column_name": "deviceId",
+      "data_type": "text",
+      "table_name": "CloudInboundEvent"
+    },
+    {
+      "column_name": "payload",
+      "data_type": "jsonb",
+      "table_name": "CloudInboundEvent"
+    },
+    {
+      "column_name": "taxId",
+      "data_type": "text",
+      "table_name": "Company"
+    },
+    {
+      "column_name": "cloudDeviceId",
+      "data_type": "text",
+      "table_name": "ConnectorDevice"
+    },
+    {
+      "column_name": "healthJson",
+      "data_type": "jsonb",
+      "table_name": "ConnectorDevice"
+    },
+    {
+      "column_name": "customerCategoryId",
+      "data_type": "text",
+      "table_name": "Customer"
+    },
+    {
+      "column_name": "customerProfessionId",
+      "data_type": "text",
+      "table_name": "Customer"
+    },
+    {
+      "column_name": "taxId",
+      "data_type": "text",
+      "table_name": "Customer"
+    },
+    {
+      "column_name": "customerId",
+      "data_type": "text",
+      "table_name": "CustomerAddress"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "CustomerLedger"
+    },
+    {
+      "column_name": "referenceId",
+      "data_type": "text",
+      "table_name": "CustomerLedger"
+    },
+    {
+      "column_name": "sessionId",
+      "data_type": "text",
+      "table_name": "CustomerLedger"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "CustomerLoyaltyLedger"
+    },
+    {
+      "column_name": "customerId",
+      "data_type": "text",
+      "table_name": "CustomerLoyaltyLedger"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "CustomerLoyaltyLedger"
+    },
+    {
+      "column_name": "sessionId",
+      "data_type": "text",
+      "table_name": "CustomerLoyaltyLedger"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "CustomerWholesalePrice"
+    },
+    {
+      "column_name": "customerId",
+      "data_type": "text",
+      "table_name": "CustomerWholesalePrice"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "CustomerWholesalePrice"
+    },
+    {
+      "column_name": "detailsJson",
+      "data_type": "jsonb",
+      "table_name": "DataPatchMarker"
+    },
+    {
+      "column_name": "payloadJson",
+      "data_type": "jsonb",
+      "table_name": "DeviceDeploymentJob"
+    },
+    {
+      "column_name": "resultJson",
+      "data_type": "jsonb",
+      "table_name": "DeviceDeploymentJob"
+    },
+    {
+      "column_name": "terminalId",
+      "data_type": "text",
+      "table_name": "DeviceDeploymentJob"
+    },
+    {
+      "column_name": "servicesJson",
+      "data_type": "jsonb",
+      "table_name": "DeviceOperationsReport"
+    },
+    {
+      "column_name": "terminalId",
+      "data_type": "text",
+      "table_name": "DeviceOperationsReport"
+    },
+    {
+      "column_name": "warningsJson",
+      "data_type": "jsonb",
+      "table_name": "DeviceOperationsReport"
+    },
+    {
+      "column_name": "areaId",
+      "data_type": "text",
+      "table_name": "DiningTable"
+    },
+    {
+      "column_name": "cancelledByUserId",
+      "data_type": "text",
+      "table_name": "DispatchNote"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "DispatchNote"
+    },
+    {
+      "column_name": "finalizedByUserId",
+      "data_type": "text",
+      "table_name": "DispatchNote"
+    },
+    {
+      "column_name": "recipientTaxId",
+      "data_type": "text",
+      "table_name": "DispatchNote"
+    },
+    {
+      "column_name": "contentData",
+      "data_type": "text",
+      "table_name": "DocumentAttachment"
+    },
+    {
+      "column_name": "storageKey",
+      "data_type": "text",
+      "table_name": "DocumentAttachment"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "DocumentInbox"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "EfoodIntegrationPreview"
+    },
+    {
+      "column_name": "requestJson",
+      "data_type": "jsonb",
+      "table_name": "EfoodIntegrationPreview"
+    },
+    {
+      "column_name": "externalProductId",
+      "data_type": "text",
+      "table_name": "EfoodProductMapping"
+    },
+    {
+      "column_name": "externalEventId",
+      "data_type": "text",
+      "table_name": "EfoodWebhookEvent"
+    },
+    {
+      "column_name": "externalOrderId",
+      "data_type": "text",
+      "table_name": "EfoodWebhookEvent"
+    },
+    {
+      "column_name": "externalPartnerConfigId",
+      "data_type": "text",
+      "table_name": "EfoodWebhookEvent"
+    },
+    {
+      "column_name": "providerStoreId",
+      "data_type": "text",
+      "table_name": "EfoodWebhookEvent"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "EmployeeNaturalRule"
+    },
+    {
+      "column_name": "interpretation",
+      "data_type": "jsonb",
+      "table_name": "EmployeeNaturalRule"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "FiscalBridgeDryRun"
+    },
+    {
+      "column_name": "payloadJson",
+      "data_type": "jsonb",
+      "table_name": "FiscalBridgeDryRun"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "FiscalBridgeDryRun"
+    },
+    {
+      "column_name": "validationJson",
+      "data_type": "jsonb",
+      "table_name": "FiscalBridgeDryRun"
+    },
+    {
+      "column_name": "externalId",
+      "data_type": "text",
+      "table_name": "FiscalDocument"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "InternetPriceProposal"
+    },
+    {
+      "column_name": "searchId",
+      "data_type": "text",
+      "table_name": "InternetPriceProposal"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "InternetPriceProposalAudit"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "InternetPriceProposalAudit"
+    },
+    {
+      "column_name": "proposalId",
+      "data_type": "text",
+      "table_name": "InternetPriceProposalAudit"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "InternetProductSearch"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "InternetProductSearch"
+    },
+    {
+      "column_name": "results",
+      "data_type": "jsonb",
+      "table_name": "InternetProductSearch"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "InventoryAccessGrant"
+    },
+    {
+      "column_name": "zoneId",
+      "data_type": "text",
+      "table_name": "InventoryAccessGrant"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "InventoryCountEvent"
+    },
+    {
+      "column_name": "clientEventId",
+      "data_type": "text",
+      "table_name": "InventoryCountEvent"
+    },
+    {
+      "column_name": "deviceId",
+      "data_type": "text",
+      "table_name": "InventoryCountEvent"
+    },
+    {
+      "column_name": "zoneId",
+      "data_type": "text",
+      "table_name": "InventoryCountEvent"
+    },
+    {
+      "column_name": "userId",
+      "data_type": "text",
+      "table_name": "InventoryParticipant"
+    },
+    {
+      "column_name": "zoneId",
+      "data_type": "text",
+      "table_name": "InventoryParticipant"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "InventoryZone"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "InvoiceDraftAlias"
+    },
+    {
+      "column_name": "aliasDocumentId",
+      "data_type": "text",
+      "table_name": "InvoiceDraftAlias"
+    },
+    {
+      "column_name": "aliasOrderId",
+      "data_type": "text",
+      "table_name": "InvoiceDraftAlias"
+    },
+    {
+      "column_name": "canonicalDocumentId",
+      "data_type": "text",
+      "table_name": "InvoiceDraftAlias"
+    },
+    {
+      "column_name": "canonicalOrderId",
+      "data_type": "text",
+      "table_name": "InvoiceDraftAlias"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "InvoiceDraftAlias"
+    },
+    {
+      "column_name": "inboxId",
+      "data_type": "text",
+      "table_name": "InvoiceDraftAlias"
+    },
+    {
+      "column_name": "knowledge",
+      "data_type": "jsonb",
+      "table_name": "InvoiceLearningProductKnowledge"
+    },
+    {
+      "column_name": "masterProductId",
+      "data_type": "text",
+      "table_name": "InvoiceLearningProductKnowledge"
+    },
+    {
+      "column_name": "supplierTaxId",
+      "data_type": "text",
+      "table_name": "InvoiceLearningProductKnowledge"
+    },
+    {
+      "column_name": "state",
+      "data_type": "jsonb",
+      "table_name": "InvoiceLearningWorkspaceState"
+    },
+    {
+      "column_name": "updatedByUserId",
+      "data_type": "text",
+      "table_name": "InvoiceLearningWorkspaceState"
+    },
+    {
+      "column_name": "orderId",
+      "data_type": "text",
+      "table_name": "InvoiceStockPosting"
+    },
+    {
+      "column_name": "postedDocumentId",
+      "data_type": "text",
+      "table_name": "InvoiceStockPosting"
+    },
+    {
+      "column_name": "sourceDocumentId",
+      "data_type": "text",
+      "table_name": "InvoiceStockPosting"
+    },
+    {
+      "column_name": "profile",
+      "data_type": "jsonb",
+      "table_name": "InvoiceSupplierReadingProfile"
+    },
+    {
+      "column_name": "supplierTaxId",
+      "data_type": "text",
+      "table_name": "InvoiceSupplierReadingProfile"
+    },
+    {
+      "column_name": "updatedByUserId",
+      "data_type": "text",
+      "table_name": "InvoiceSupplierReadingProfile"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "KioskAuditEvent"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "KioskAuditEvent"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "KioskAuditEvent"
+    },
+    {
+      "column_name": "shiftId",
+      "data_type": "text",
+      "table_name": "KioskAuditEvent"
+    },
+    {
+      "column_name": "sourceId",
+      "data_type": "text",
+      "table_name": "KioskAuditEvent"
+    },
+    {
+      "column_name": "legacyId",
+      "data_type": "integer",
+      "table_name": "ManagementModifierGroup"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "ManagementParameterAudit"
+    },
+    {
+      "column_name": "settings",
+      "data_type": "jsonb",
+      "table_name": "ManagementParameters"
+    },
+    {
+      "column_name": "bankId",
+      "data_type": "text",
+      "table_name": "ManagementPosTerminal"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "MasterCatalogMaintenanceAudit"
+    },
+    {
+      "column_name": "productIdsJson",
+      "data_type": "jsonb",
+      "table_name": "MasterCatalogMaintenanceAudit"
+    },
+    {
+      "column_name": "modifierId",
+      "data_type": "text",
+      "table_name": "ModifierInventoryPrice"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "ModifierInventoryPrice"
+    },
+    {
+      "column_name": "inboxId",
+      "data_type": "text",
+      "table_name": "MyDataInboundDocument"
+    },
+    {
+      "column_name": "rawPayload",
+      "data_type": "jsonb",
+      "table_name": "MyDataInboundDocument"
+    },
+    {
+      "column_name": "requestedById",
+      "data_type": "text",
+      "table_name": "NetlinkCancellationRequest"
+    },
+    {
+      "column_name": "transactionId",
+      "data_type": "text",
+      "table_name": "NetlinkCancellationRequest"
+    },
+    {
+      "column_name": "saleProductId",
+      "data_type": "text",
+      "table_name": "NetlinkStoreConfig"
+    },
+    {
+      "column_name": "serviceFeeProductId",
+      "data_type": "text",
+      "table_name": "NetlinkStoreConfig"
+    },
+    {
+      "column_name": "fiscalDocumentId",
+      "data_type": "text",
+      "table_name": "NetlinkTransaction"
+    },
+    {
+      "column_name": "operatorId",
+      "data_type": "text",
+      "table_name": "NetlinkTransaction"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "NetlinkTransaction"
+    },
+    {
+      "column_name": "providerTransactionId",
+      "data_type": "text",
+      "table_name": "NetlinkTransaction"
+    },
+    {
+      "column_name": "requestId",
+      "data_type": "text",
+      "table_name": "NetlinkTransaction"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "NetlinkTransaction"
+    },
+    {
+      "column_name": "clientTransactionId",
+      "data_type": "text",
+      "table_name": "OfflineSaleSyncEvidence"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "OfflineSaleSyncEvidence"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "OnlineOrder"
+    },
+    {
+      "column_name": "modifiersJson",
+      "data_type": "jsonb",
+      "table_name": "OnlineOrderLine"
+    },
+    {
+      "column_name": "weeklyHours",
+      "data_type": "jsonb",
+      "table_name": "OnlineOrderingConfig"
+    },
+    {
+      "column_name": "transactionId",
+      "data_type": "text",
+      "table_name": "OtherExpenseReview"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "PaymentDeviceRouteAttempt"
+    },
+    {
+      "column_name": "sessionId",
+      "data_type": "text",
+      "table_name": "PaymentDeviceRouteAttempt"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "PayrollPeriod"
+    },
+    {
+      "column_name": "lockedByUserId",
+      "data_type": "text",
+      "table_name": "PayrollPeriod"
+    },
+    {
+      "column_name": "settings",
+      "data_type": "jsonb",
+      "table_name": "PlatformAiCreditMonitor"
+    },
+    {
+      "column_name": "actorUserId",
+      "data_type": "text",
+      "table_name": "PlatformAudit"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "PlatformAudit"
+    },
+    {
+      "column_name": "targetId",
+      "data_type": "text",
+      "table_name": "PlatformAudit"
+    },
+    {
+      "column_name": "runId",
+      "data_type": "text",
+      "table_name": "PlatformBackupRun"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "PlatformBulkCatalogAudit"
+    },
+    {
+      "column_name": "productIdsJson",
+      "data_type": "jsonb",
+      "table_name": "PlatformBulkCatalogAudit"
+    },
+    {
+      "column_name": "storeIdsJson",
+      "data_type": "jsonb",
+      "table_name": "PlatformBulkCatalogAudit"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "PlatformBulkPromotionAudit"
+    },
+    {
+      "column_name": "masterProductIdsJson",
+      "data_type": "jsonb",
+      "table_name": "PlatformBulkPromotionAudit"
+    },
+    {
+      "column_name": "storeIdsJson",
+      "data_type": "jsonb",
+      "table_name": "PlatformBulkPromotionAudit"
+    },
+    {
+      "column_name": "layoutJson",
+      "data_type": "jsonb",
+      "table_name": "PlatformPosDraft"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "PosAudienceSelection"
+    },
+    {
+      "column_name": "customerId",
+      "data_type": "text",
+      "table_name": "PosHeldTransaction"
+    },
+    {
+      "column_name": "itemsJson",
+      "data_type": "jsonb",
+      "table_name": "PosHeldTransaction"
+    },
+    {
+      "column_name": "operatorId",
+      "data_type": "text",
+      "table_name": "PosHeldTransaction"
+    },
+    {
+      "column_name": "sessionId",
+      "data_type": "text",
+      "table_name": "PosHeldTransaction"
+    },
+    {
+      "column_name": "stationId",
+      "data_type": "text",
+      "table_name": "PosOnlineRadioState"
+    },
+    {
+      "column_name": "detailsJson",
+      "data_type": "jsonb",
+      "table_name": "PosOperationalEvent"
+    },
+    {
+      "column_name": "itemsJson",
+      "data_type": "jsonb",
+      "table_name": "PosOperationalEvent"
+    },
+    {
+      "column_name": "operatorId",
+      "data_type": "text",
+      "table_name": "PosOperationalEvent"
+    },
+    {
+      "column_name": "sessionId",
+      "data_type": "text",
+      "table_name": "PosOperationalEvent"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "PosSaleActionAudit"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "PosSaleActionAudit"
+    },
+    {
+      "column_name": "relatedSaleId",
+      "data_type": "text",
+      "table_name": "PosSaleActionAudit"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "PosSaleActionAudit"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "PosSaleSafetyAudit"
+    },
+    {
+      "column_name": "clientTransactionId",
+      "data_type": "text",
+      "table_name": "PosSaleSafetyAudit"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "PosSaleSafetyAudit"
+    },
+    {
+      "column_name": "relatedSaleId",
+      "data_type": "text",
+      "table_name": "PosSaleSafetyAudit"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "PosSaleSafetyAudit"
+    },
+    {
+      "column_name": "modifierId",
+      "data_type": "text",
+      "table_name": "PreparationModifierBehavior"
+    },
+    {
+      "column_name": "ingredientProductId",
+      "data_type": "text",
+      "table_name": "PreparationModifierConsumption"
+    },
+    {
+      "column_name": "modifierId",
+      "data_type": "text",
+      "table_name": "PreparationModifierConsumption"
+    },
+    {
+      "column_name": "groupId",
+      "data_type": "text",
+      "table_name": "PreparationProductModifierGroup"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "PreparationProductModifierGroup"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "PreparationProductSettings"
+    },
+    {
+      "column_name": "ingredientProductId",
+      "data_type": "text",
+      "table_name": "PreparationRecipeLine"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "PreparationRecipeLine"
+    },
+    {
+      "column_name": "batchId",
+      "data_type": "text",
+      "table_name": "PreparationStockConsumption"
+    },
+    {
+      "column_name": "ingredientProductId",
+      "data_type": "text",
+      "table_name": "PreparationStockConsumption"
+    },
+    {
+      "column_name": "modifierId",
+      "data_type": "text",
+      "table_name": "PreparationStockConsumption"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "PreparationStockConsumption"
+    },
+    {
+      "column_name": "sourceProductId",
+      "data_type": "text",
+      "table_name": "PreparationStockConsumption"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "PriceCatalogPromotion"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "PriceCatalogPromotion"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "PriceCatalogPromotionGiftProduct"
+    },
+    {
+      "column_name": "promotionId",
+      "data_type": "text",
+      "table_name": "PriceCatalogPromotionGiftProduct"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "PriceCatalogPromotionImportAudit"
+    },
+    {
+      "column_name": "countsJson",
+      "data_type": "jsonb",
+      "table_name": "PriceCatalogPromotionImportAudit"
+    },
+    {
+      "column_name": "storeIdsJson",
+      "data_type": "jsonb",
+      "table_name": "PriceCatalogPromotionImportAudit"
+    },
+    {
+      "column_name": "promotionId",
+      "data_type": "text",
+      "table_name": "PriceCatalogPromotionStore"
+    },
+    {
+      "column_name": "subcategoryId",
+      "data_type": "text",
+      "table_name": "Product"
+    },
+    {
+      "column_name": "vatDepartmentId",
+      "data_type": "text",
+      "table_name": "Product"
+    },
+    {
+      "column_name": "barcodeId",
+      "data_type": "text",
+      "table_name": "ProductBarcodePriceRequest"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "ProductBarcodePriceRequest"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "ProductSetItem"
+    },
+    {
+      "column_name": "relatedProductId",
+      "data_type": "text",
+      "table_name": "ProductSetItem"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "ProviderAttempt"
+    },
+    {
+      "column_name": "responseJson",
+      "data_type": "jsonb",
+      "table_name": "ProviderAttempt"
+    },
+    {
+      "column_name": "aggregateId",
+      "data_type": "text",
+      "table_name": "ProviderOutbox"
+    },
+    {
+      "column_name": "payloadJson",
+      "data_type": "jsonb",
+      "table_name": "ProviderOutbox"
+    },
+    {
+      "column_name": "paymentTransactionId",
+      "data_type": "text",
+      "table_name": "PurchaseDocument"
+    },
+    {
+      "column_name": "purchaseOrderId",
+      "data_type": "text",
+      "table_name": "PurchaseDocument"
+    },
+    {
+      "column_name": "purchaseOrderLineId",
+      "data_type": "text",
+      "table_name": "PurchaseDocumentLine"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "PurchaseOrder"
+    },
+    {
+      "column_name": "sourceDocumentId",
+      "data_type": "text",
+      "table_name": "PurchaseOrder"
+    },
+    {
+      "column_name": "supplierId",
+      "data_type": "text",
+      "table_name": "PurchaseOrder"
+    },
+    {
+      "column_name": "orderId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderLine"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderLine"
+    },
+    {
+      "column_name": "correctedByUserId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderPackCorrection"
+    },
+    {
+      "column_name": "orderId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderPackCorrection"
+    },
+    {
+      "column_name": "orderId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderPosting"
+    },
+    {
+      "column_name": "postedByUserId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderPosting"
+    },
+    {
+      "column_name": "purchaseDocumentId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderPosting"
+    },
+    {
+      "column_name": "supplierId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderPosting"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderReopenAudit"
+    },
+    {
+      "column_name": "orderId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderReopenAudit"
+    },
+    {
+      "column_name": "result",
+      "data_type": "jsonb",
+      "table_name": "PurchaseOrderReopenAudit"
+    },
+    {
+      "column_name": "snapshot",
+      "data_type": "jsonb",
+      "table_name": "PurchaseOrderReopenAudit"
+    },
+    {
+      "column_name": "movementId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderReopenMovement"
+    },
+    {
+      "column_name": "orderId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderReopenMovement"
+    },
+    {
+      "column_name": "reversalMovementId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderReopenMovement"
+    },
+    {
+      "column_name": "actorUserId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderTotalOverrideAudit"
+    },
+    {
+      "column_name": "orderId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderTotalOverrideAudit"
+    },
+    {
+      "column_name": "purchaseDocumentId",
+      "data_type": "text",
+      "table_name": "PurchaseOrderTotalOverrideAudit"
+    },
+    {
+      "column_name": "checkoutJson",
+      "data_type": "jsonb",
+      "table_name": "RbsCapDriverV1Request"
+    },
+    {
+      "column_name": "claimedByDeviceId",
+      "data_type": "text",
+      "table_name": "RbsCapDriverV1Request"
+    },
+    {
+      "column_name": "clientTransactionId",
+      "data_type": "text",
+      "table_name": "RbsCapDriverV1Request"
+    },
+    {
+      "column_name": "operatorId",
+      "data_type": "text",
+      "table_name": "RbsCapDriverV1Request"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "RbsCapDriverV1Request"
+    },
+    {
+      "column_name": "countsJson",
+      "data_type": "jsonb",
+      "table_name": "RecoveryWorkflowRun"
+    },
+    {
+      "column_name": "warningsJson",
+      "data_type": "jsonb",
+      "table_name": "RecoveryWorkflowRun"
+    },
+    {
+      "column_name": "auditJson",
+      "data_type": "jsonb",
+      "table_name": "RemoteSupportSession"
+    },
+    {
+      "column_name": "clientTransactionId",
+      "data_type": "text",
+      "table_name": "Sale"
+    },
+    {
+      "column_name": "originalSaleId",
+      "data_type": "text",
+      "table_name": "Sale"
+    },
+    {
+      "column_name": "promotionId",
+      "data_type": "text",
+      "table_name": "SaleLine"
+    },
+    {
+      "column_name": "shiftOverrides",
+      "data_type": "jsonb",
+      "table_name": "ScheduleGenerationBrief"
+    },
+    {
+      "column_name": "acknowledgedById",
+      "data_type": "text",
+      "table_name": "ShiftHandover"
+    },
+    {
+      "column_name": "attachmentData",
+      "data_type": "text",
+      "table_name": "ShiftHandover"
+    },
+    {
+      "column_name": "sourceId",
+      "data_type": "text",
+      "table_name": "StockMovement"
+    },
+    {
+      "column_name": "scopeJson",
+      "data_type": "jsonb",
+      "table_name": "Stocktake"
+    },
+    {
+      "column_name": "snapshotJson",
+      "data_type": "jsonb",
+      "table_name": "Stocktake"
+    },
+    {
+      "column_name": "zoneId",
+      "data_type": "text",
+      "table_name": "StocktakeLine"
+    },
+    {
+      "column_name": "movementId",
+      "data_type": "text",
+      "table_name": "StocktakeMovementAdjustment"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "StoreBakedBalanceEvent"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "StoreBakingEntry"
+    },
+    {
+      "column_name": "messageId",
+      "data_type": "text",
+      "table_name": "StoreChatAcknowledgement"
+    },
+    {
+      "column_name": "userId",
+      "data_type": "text",
+      "table_name": "StoreChatAcknowledgement"
+    },
+    {
+      "column_name": "aiReaderJobId",
+      "data_type": "text",
+      "table_name": "StoreChatMessage"
+    },
+    {
+      "column_name": "attachmentData",
+      "data_type": "text",
+      "table_name": "StoreChatMessage"
+    },
+    {
+      "column_name": "senderId",
+      "data_type": "text",
+      "table_name": "StoreChatMessage"
+    },
+    {
+      "column_name": "sessionId",
+      "data_type": "text",
+      "table_name": "StoreChatMobilePush"
+    },
+    {
+      "column_name": "storeIds",
+      "data_type": "jsonb",
+      "table_name": "StoreChatMobilePush"
+    },
+    {
+      "column_name": "subscriptionJson",
+      "data_type": "jsonb",
+      "table_name": "StoreChatMobilePush"
+    },
+    {
+      "column_name": "supportCompanyId",
+      "data_type": "text",
+      "table_name": "StoreChatMobilePush"
+    },
+    {
+      "column_name": "userId",
+      "data_type": "text",
+      "table_name": "StoreChatMobilePush"
+    },
+    {
+      "column_name": "operatorId",
+      "data_type": "text",
+      "table_name": "StoreChatMobileSession"
+    },
+    {
+      "column_name": "identityJson",
+      "data_type": "jsonb",
+      "table_name": "StoreChatNativePush"
+    },
+    {
+      "column_name": "sessionId",
+      "data_type": "text",
+      "table_name": "StoreChatNativePush"
+    },
+    {
+      "column_name": "userId",
+      "data_type": "text",
+      "table_name": "StoreChatNativePush"
+    },
+    {
+      "column_name": "chatSessionId",
+      "data_type": "text",
+      "table_name": "StoreChatPushSubscription"
+    },
+    {
+      "column_name": "subscriptionJson",
+      "data_type": "jsonb",
+      "table_name": "StoreChatPushSubscription"
+    },
+    {
+      "column_name": "userId",
+      "data_type": "text",
+      "table_name": "StoreChatPushSubscription"
+    },
+    {
+      "column_name": "messageId",
+      "data_type": "text",
+      "table_name": "StoreChatRead"
+    },
+    {
+      "column_name": "userId",
+      "data_type": "text",
+      "table_name": "StoreChatRead"
+    },
+    {
+      "column_name": "assigneeEmployeeId",
+      "data_type": "text",
+      "table_name": "StoreChatTask"
+    },
+    {
+      "column_name": "messageId",
+      "data_type": "text",
+      "table_name": "StoreChatTask"
+    },
+    {
+      "column_name": "metadataJson",
+      "data_type": "jsonb",
+      "table_name": "StoreIntegrationCredential"
+    },
+    {
+      "column_name": "webhookTestEventId",
+      "data_type": "text",
+      "table_name": "StoreIntegrationCredential"
+    },
+    {
+      "column_name": "allowedStationIds",
+      "data_type": "jsonb",
+      "table_name": "StoreOnlineRadioConfig"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "StoreOperatorAudit"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "StoreOperatorAudit"
+    },
+    {
+      "column_name": "operatorId",
+      "data_type": "text",
+      "table_name": "StoreOperatorAudit"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "StoreOperatorCredential"
+    },
+    {
+      "column_name": "backofficeMenu",
+      "data_type": "jsonb",
+      "table_name": "StoreOperatorProfile"
+    },
+    {
+      "column_name": "backofficeTabs",
+      "data_type": "jsonb",
+      "table_name": "StoreOperatorProfile"
+    },
+    {
+      "column_name": "customerDisplay",
+      "data_type": "jsonb",
+      "table_name": "StoreOperatorProfile"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "StoreOperatorProfile"
+    },
+    {
+      "column_name": "permissions",
+      "data_type": "jsonb",
+      "table_name": "StoreOperatorProfile"
+    },
+    {
+      "column_name": "operatorId",
+      "data_type": "text",
+      "table_name": "StoreOperatorSession"
+    },
+    {
+      "column_name": "layoutJson",
+      "data_type": "jsonb",
+      "table_name": "StorePosLayout"
+    },
+    {
+      "column_name": "itemsJson",
+      "data_type": "jsonb",
+      "table_name": "StorePreparationBatch"
+    },
+    {
+      "column_name": "operatorId",
+      "data_type": "text",
+      "table_name": "StorePreparationBatch"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "StorePreparationBatch"
+    },
+    {
+      "column_name": "tableOrderId",
+      "data_type": "text",
+      "table_name": "StorePreparationBatch"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "StoreProductAudienceDiscount"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "StoreProductAudienceDiscount"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "StoreProductAudienceDiscountAudit"
+    },
+    {
+      "column_name": "productIds",
+      "data_type": "jsonb",
+      "table_name": "StoreProductAudienceDiscountAudit"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "StoreTransaction"
+    },
+    {
+      "column_name": "attachmentData",
+      "data_type": "text",
+      "table_name": "StoreTransaction"
+    },
+    {
+      "column_name": "expenseCategoryId",
+      "data_type": "text",
+      "table_name": "StoreTransaction"
+    },
+    {
+      "column_name": "sessionId",
+      "data_type": "text",
+      "table_name": "StoreTransaction"
+    },
+    {
+      "column_name": "supplierId",
+      "data_type": "text",
+      "table_name": "StoreTransaction"
+    },
+    {
+      "column_name": "taxId",
+      "data_type": "text",
+      "table_name": "Supplier"
+    },
+    {
+      "column_name": "supplierId",
+      "data_type": "text",
+      "table_name": "SupplierAddress"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "SupplierBalanceAdjustment"
+    },
+    {
+      "column_name": "supplierId",
+      "data_type": "text",
+      "table_name": "SupplierBalanceAdjustment"
+    },
+    {
+      "column_name": "supplierId",
+      "data_type": "text",
+      "table_name": "SupplierBusinessUnit"
+    },
+    {
+      "column_name": "supplierId",
+      "data_type": "text",
+      "table_name": "SupplierPaymentSettlement"
+    },
+    {
+      "column_name": "transactionId",
+      "data_type": "text",
+      "table_name": "SupplierPaymentSettlement"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "SupplierProductLink"
+    },
+    {
+      "column_name": "supplierId",
+      "data_type": "text",
+      "table_name": "SupplierProductLink"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "SupplierProductTransfer"
+    },
+    {
+      "column_name": "fromSupplierId",
+      "data_type": "text",
+      "table_name": "SupplierProductTransfer"
+    },
+    {
+      "column_name": "productIdsJson",
+      "data_type": "jsonb",
+      "table_name": "SupplierProductTransfer"
+    },
+    {
+      "column_name": "toSupplierId",
+      "data_type": "text",
+      "table_name": "SupplierProductTransfer"
+    },
+    {
+      "column_name": "operatorId",
+      "data_type": "text",
+      "table_name": "TableOrder"
+    },
+    {
+      "column_name": "saleId",
+      "data_type": "text",
+      "table_name": "TableOrder"
+    },
+    {
+      "column_name": "tableId",
+      "data_type": "text",
+      "table_name": "TableOrder"
+    },
+    {
+      "column_name": "allergensJson",
+      "data_type": "jsonb",
+      "table_name": "TableOrderLine"
+    },
+    {
+      "column_name": "orderId",
+      "data_type": "text",
+      "table_name": "TableOrderLine"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "TableOrderLine"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "TableOrderRequest"
+    },
+    {
+      "column_name": "resultJson",
+      "data_type": "jsonb",
+      "table_name": "TableOrderRequest"
+    },
+    {
+      "column_name": "layoutJson",
+      "data_type": "jsonb",
+      "table_name": "TestStateSnapshot"
+    },
+    {
+      "column_name": "snapshotJson",
+      "data_type": "jsonb",
+      "table_name": "TestStateSnapshot"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "VideoAccessAudit"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "VideoAccessAudit"
+    },
+    {
+      "column_name": "connectorDeviceId",
+      "data_type": "text",
+      "table_name": "VideoConnectorCommand"
+    },
+    {
+      "column_name": "payload",
+      "data_type": "jsonb",
+      "table_name": "VideoConnectorCommand"
+    },
+    {
+      "column_name": "result",
+      "data_type": "jsonb",
+      "table_name": "VideoConnectorCommand"
+    },
+    {
+      "column_name": "videoEventId",
+      "data_type": "text",
+      "table_name": "VideoConnectorCommand"
+    },
+    {
+      "column_name": "videoEventId",
+      "data_type": "text",
+      "table_name": "VideoMediaArtifact"
+    },
+    {
+      "column_name": "bytes",
+      "data_type": "bytea",
+      "table_name": "VideoMediaArtifactChunk"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "VideoOperationalEvent"
+    },
+    {
+      "column_name": "operatorId",
+      "data_type": "text",
+      "table_name": "VideoOperationalEvent"
+    },
+    {
+      "column_name": "sourceId",
+      "data_type": "text",
+      "table_name": "VideoOperationalEvent"
+    },
+    {
+      "column_name": "taxId",
+      "data_type": "text",
+      "table_name": "WholesaleCustomer"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "WholesaleOrderEvent"
+    },
+    {
+      "column_name": "details",
+      "data_type": "jsonb",
+      "table_name": "WholesaleOrderEvent"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "WholesaleOrderRequest"
+    },
+    {
+      "column_name": "clientOrderId",
+      "data_type": "text",
+      "table_name": "WholesaleOrderRequest"
+    },
+    {
+      "column_name": "quoteId",
+      "data_type": "text",
+      "table_name": "WholesaleOrderRequest"
+    },
+    {
+      "column_name": "snapshot",
+      "data_type": "jsonb",
+      "table_name": "WholesaleOrderRequest"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "WholesalePriceAudit"
+    },
+    {
+      "column_name": "newJson",
+      "data_type": "jsonb",
+      "table_name": "WholesalePriceAudit"
+    },
+    {
+      "column_name": "oldJson",
+      "data_type": "jsonb",
+      "table_name": "WholesalePriceAudit"
+    },
+    {
+      "column_name": "priceListId",
+      "data_type": "text",
+      "table_name": "WholesalePriceAudit"
+    },
+    {
+      "column_name": "productId",
+      "data_type": "text",
+      "table_name": "WholesalePriceAudit"
+    },
+    {
+      "column_name": "actorId",
+      "data_type": "text",
+      "table_name": "WholesaleSellerAudit"
+    },
+    {
+      "column_name": "afterJson",
+      "data_type": "jsonb",
+      "table_name": "WholesaleSellerAudit"
+    },
+    {
+      "column_name": "beforeJson",
+      "data_type": "jsonb",
+      "table_name": "WholesaleSellerAudit"
+    },
+    {
+      "column_name": "targetUserId",
+      "data_type": "text",
+      "table_name": "WholesaleSellerAudit"
+    },
+    {
+      "column_name": "approvedByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceAbsence"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "WorkforceAbsence"
+    },
+    {
+      "column_name": "clockInEntryId",
+      "data_type": "text",
+      "table_name": "WorkforceAttendanceSession"
+    },
+    {
+      "column_name": "clockOutEntryId",
+      "data_type": "text",
+      "table_name": "WorkforceAttendanceSession"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "WorkforceAttendanceSession"
+    },
+    {
+      "column_name": "issueJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforceAttendanceSession"
+    },
+    {
+      "column_name": "scheduledAssignmentId",
+      "data_type": "text",
+      "table_name": "WorkforceAttendanceSession"
+    },
+    {
+      "column_name": "actorUserId",
+      "data_type": "text",
+      "table_name": "WorkforceAuditLog"
+    },
+    {
+      "column_name": "afterJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforceAuditLog"
+    },
+    {
+      "column_name": "beforeJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforceAuditLog"
+    },
+    {
+      "column_name": "entityId",
+      "data_type": "text",
+      "table_name": "WorkforceAuditLog"
+    },
+    {
+      "column_name": "actorUserId",
+      "data_type": "text",
+      "table_name": "WorkforceChatCommand"
+    },
+    {
+      "column_name": "approvedByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceChatCommand"
+    },
+    {
+      "column_name": "proposalJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforceChatCommand"
+    },
+    {
+      "column_name": "scheduleId",
+      "data_type": "text",
+      "table_name": "WorkforceChatCommand"
+    },
+    {
+      "column_name": "warningJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforceChatCommand"
+    },
+    {
+      "column_name": "baseStoreId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployee"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployee"
+    },
+    {
+      "column_name": "legacyEmployeeId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployee"
+    },
+    {
+      "column_name": "userId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployee"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployeeEvaluation"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployeeEvaluation"
+    },
+    {
+      "column_name": "approvedByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployeePayment"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployeePayment"
+    },
+    {
+      "column_name": "sourceId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployeePayment"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployeeRole"
+    },
+    {
+      "column_name": "roleId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployeeRole"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployeeRule"
+    },
+    {
+      "column_name": "relatedEmployeeId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployeeRule"
+    },
+    {
+      "column_name": "valueJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforceEmployeeRule"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "WorkforceEmployeeStoreAccess"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceHourlyRate"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "WorkforceHourlyRate"
+    },
+    {
+      "column_name": "approvedByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceLeaveRequest"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "WorkforceLeaveRequest"
+    },
+    {
+      "column_name": "requestedByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceLeaveRequest"
+    },
+    {
+      "column_name": "closedByUserId",
+      "data_type": "text",
+      "table_name": "WorkforcePayrollClosing"
+    },
+    {
+      "column_name": "previewJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforcePayrollClosing"
+    },
+    {
+      "column_name": "reopenedByUserId",
+      "data_type": "text",
+      "table_name": "WorkforcePayrollClosing"
+    },
+    {
+      "column_name": "totalsJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforcePayrollClosing"
+    },
+    {
+      "column_name": "calculationJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforcePayrollLine"
+    },
+    {
+      "column_name": "issueJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforcePayrollLine"
+    },
+    {
+      "column_name": "closedByUserId",
+      "data_type": "text",
+      "table_name": "WorkforcePayrollPeriod"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "WorkforcePayrollPeriod"
+    },
+    {
+      "column_name": "approvedByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceSchedule"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceSchedule"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "WorkforceScheduleAssignment"
+    },
+    {
+      "column_name": "scheduleId",
+      "data_type": "text",
+      "table_name": "WorkforceScheduleAssignment"
+    },
+    {
+      "column_name": "shiftTemplateId",
+      "data_type": "text",
+      "table_name": "WorkforceScheduleAssignment"
+    },
+    {
+      "column_name": "warningJson",
+      "data_type": "jsonb",
+      "table_name": "WorkforceScheduleAssignment"
+    },
+    {
+      "column_name": "requiredRoleId",
+      "data_type": "text",
+      "table_name": "WorkforceShiftTemplate"
+    },
+    {
+      "column_name": "approvedByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceTimeClockEntry"
+    },
+    {
+      "column_name": "correctionOfId",
+      "data_type": "text",
+      "table_name": "WorkforceTimeClockEntry"
+    },
+    {
+      "column_name": "createdByUserId",
+      "data_type": "text",
+      "table_name": "WorkforceTimeClockEntry"
+    },
+    {
+      "column_name": "deviceId",
+      "data_type": "text",
+      "table_name": "WorkforceTimeClockEntry"
+    },
+    {
+      "column_name": "employeeId",
+      "data_type": "text",
+      "table_name": "WorkforceTimeClockEntry"
+    },
+    {
+      "column_name": "sourceShiftId",
+      "data_type": "text",
+      "table_name": "WorkforceTimeClockEntry"
+    }
+  ]
+}
