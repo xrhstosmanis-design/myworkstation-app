@@ -1,0 +1,543 @@
+{
+  "scope": "COORD-20261018 phase2 bounded source delivery",
+  "claim": {
+    "pr": 2745,
+    "head": "fa206af409819b830747bdc409f9db91e0ef3877",
+    "merge": "490c151ad9819f80bd32cfd0e0546580aa7237d1",
+    "ci": 39140711945
+  },
+  "base": "95a85bcb8d4ba1ea46f8cbac6373f0f68c07c9cc",
+  "source": [
+    {
+      "directory": "ws1-monthly",
+      "files": [
+        {
+          "path": "server/src/services/automatic-report-policy.js",
+          "baseBlob": "1c19dd0ecd72924e55d78d27b50a3db2ef0e5617",
+          "blob": "8c7a1229a9dc4c93beeccac7ee80562de0aad7f6",
+          "sha256": "35a4a5362d0dd3354bafbf55ca8e4f95e25cdd1da3fdb01fa7758b2ddb6c3def",
+          "bytes": 9952
+        },
+        {
+          "path": "server/src/services/automatic-report-source.js",
+          "baseBlob": "520bf196b0aa45f4389c4d8ff4d41b5637882b33",
+          "blob": "cb64d30143fb8b4134f65377c5332f0fca4d5503",
+          "sha256": "2dfe4b7aa1104b5669a1329507c985bd8eb9fc63cc3d9c9ca4de2742457ec86c",
+          "bytes": 6722
+        },
+        {
+          "path": "server/src/routes/automatic-report-settings.js",
+          "baseBlob": "621b99a119d45ca5946501f93061627e299bd457",
+          "blob": "24adbc2b2639be3c3efee7de11ea645326d33811",
+          "sha256": "a6d9c0ad3a6f7bd9fe6c3dfd066579e5cdb95c6f6cace8e0c27246424fe96cdc",
+          "bytes": 1463
+        },
+        {
+          "path": "client/src/components/platform/AutomaticReportSettingsManager.jsx",
+          "baseBlob": "93b2452f8595f3db1f76f92b47c6cb58655d881b",
+          "blob": "fe3b243b51394a0ebc509b2fc004b8c957c436ce",
+          "sha256": "d0e9e1c16c867093d6e43369e1a4eda391bf0eea60891adf929ecb77f6ffd314",
+          "bytes": 14707
+        },
+        {
+          "path": "server/test/automatic-report-weekly.test.js",
+          "baseBlob": "d893ed84451b284dcdd38406f4add5a9fef5a0ad",
+          "blob": "9160afb0e15be4d3a859f9f1f6c3ad03ed6aacdd",
+          "sha256": "0a7ffecc75f0d9cc68ff2a964ca898716ad80e0ef22a26c22a731aa9dd973d1b",
+          "bytes": 5407
+        },
+        {
+          "path": "server/test/automatic-report-settings-mounted.test.js",
+          "baseBlob": "342ec16e0d388ecb9f6aff44e27ad0ca7ba27139",
+          "blob": "c0c186031697b4f6ec7da959013244360e56224e",
+          "sha256": "a973b232d93c946ee7ea0e5a12fd8edef72bb12f7a6dbe9272304dc2979c1885",
+          "bytes": 11512
+        },
+        {
+          "path": "server/test/automatic-report-settings-postgres.test.js",
+          "baseBlob": "9979958270f235587d68c2ec997c317b65ae128b",
+          "blob": "e5981170516007511c45c8abd987f5d83ead88cb",
+          "sha256": "2a5c1e38f8ff9b40e1d993d211d20c75607b9f79550d7300d5659ea04432487d",
+          "bytes": 14255
+        },
+        {
+          "path": "server/test/automatic-report-monthly.test.js",
+          "baseBlob": null,
+          "blob": "e781cd8641c2dd18cefb10e41cb75992748a8af7",
+          "sha256": "dc0f290305175156356b697ca50a0fa0c567d2b55f57e5acdd38e4f9be5ca854",
+          "bytes": 5752
+        }
+      ],
+      "individualLocal": {
+        "focused": "27 total / 25 PASS / 0 FAIL / 2 native environment SKIP",
+        "nativeFixture": "existing isolated real Prisma HTTP fixture extended; awaits CI native execution",
+        "pglite": "Actual monthly SQL 93 rows/31 days, boundary/isolation/zero-write/Owner403/whole-month HOLD PASS; not native Prisma HTTP",
+        "build": "frontend and TABLE_SERVICE PASS"
+      }
+    },
+    {
+      "directory": "ws2-ui",
+      "files": [
+        {
+          "path": "client/src/components/commerce/OrderSuggestionsPanel.jsx",
+          "baseBlob": "ac055875cf23325607ca32d8144e31557c41b1a3",
+          "blob": "ab9d7043a338deafcd6c46226d6b89cae6b191fb",
+          "sha256": "1341af37cf60c96b8a8b81cd8ba513f56670b129eea9f37f45c1de0c9b078120",
+          "bytes": 15080
+        },
+        {
+          "path": "client/src/components/commerce/order-suggestions.css",
+          "baseBlob": "cd10975d7c9f07247eef06ac111b15922dd14bc6",
+          "blob": "add9bb7a5017c2df530f1e0287633743ca552b84",
+          "sha256": "fb0f9fb3a3c1ade5ccce1d58024dcb9b193b2dbfa07a28524e0c0a86b4b8f4b3",
+          "bytes": 4738
+        },
+        {
+          "path": "server/test/supplier-order-groups-ui.test.js",
+          "baseBlob": null,
+          "blob": "8f4118359f9b36800c1de790557da80ae8ea7e38",
+          "sha256": "5479da208c470e258ff58ea5f98464bbcaedb98a2525257ac952cb7122cdb4d2",
+          "bytes": 11896
+        }
+      ],
+      "individualLocal": {
+        "tests": 13,
+        "pass": 13,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "directory": "ws3-ui",
+      "files": [
+        {
+          "path": "client/src/components/commerce/installKioskReportsSalesV4.js",
+          "baseBlob": "4f92bbed3bb30b8a97e04ef225c0bc42e4f47fbe",
+          "blob": "9b067d68c7d8c85624577e24d73a6d1358852121",
+          "sha256": "44702c168fb674345f30b2321dce7c665918bd29a683c9a25662c2c812f39dd0",
+          "bytes": 10539
+        },
+        {
+          "path": "server/test/kiosk-sales-coverage-ui.test.js",
+          "baseBlob": null,
+          "blob": "48e4ceef5a6390ed9ab45469ccd109a42120b9a9",
+          "sha256": "e0a4f61a44f37a78de345ed9c816dcac377d7199f9dd16beb216706d4e7094a3",
+          "bytes": 7959
+        }
+      ],
+      "individualLocal": {
+        "node": "20.20.2",
+        "total": 22,
+        "pass": 22,
+        "fail": 0,
+        "skip": 0,
+        "log": "focused.tap"
+      }
+    }
+  ],
+  "combinedLocal": {
+    "node": "20.20.2",
+    "tests": 38,
+    "passed": 37,
+    "failed": 0,
+    "nativeEnvironmentSkipped": 1,
+    "frontendBuild": "PASS",
+    "tableService": "PASS",
+    "baselineNote": "claimed paths combined in local integration; exact current-main full CI required"
+  },
+  "review": {
+    "independent": true,
+    "requestedFixes": [
+      "Supplier envelope canonical20000/safe observed20001/safe candidate counts/cumulative candidate<=observed/typed IDs/ordered dates/parameter bounds",
+      "Report coverage limit<=10000/malformed envelope loses completeness/count certification"
+    ],
+    "result": "No new blocker after verified corrections",
+    "residual": "Inherited report-tab late-response race predates coverage patch; not closed"
+  },
+  "hosted": {
+    "ws1Monthly": "NOT TESTED",
+    "ws2SupplierUI": "NOT TESTED",
+    "ws3CoverageUI": "NOT TESTED",
+    "ws4": "Observed COMPLETE card only; current canonical reconciliation/CSV bytes not tested",
+    "browserBlocker": "Native credential protection blocked download observation, reset runtime; subsequent browser selection reported retained native state cannot safely resume. No workaround or credential extraction."
+  },
+  "safety": {
+    "productionBusinessWrites": false,
+    "settingsSave": false,
+    "emailEnablement": false,
+    "orderTransmission": false,
+    "manualDeploy": false,
+    "protectedReplay": false,
+    "employeeAggregation": false,
+    "financialLiabilityReallocation": false
+  },
+  "failureHistory": [
+    {
+      "stream": "ws2",
+      "run": 39141322463,
+      "job": 117716301817,
+      "tests": 3163,
+      "passed": 3162,
+      "failed": 1,
+      "skipped": 0,
+      "reason": "Existing Greek24h source invariant detected two new toLocaleString calls without explicit hour12:false; production formatting corrected, invariant retained."
+    },
+    {
+      "stream": "ws3 stacked",
+      "run": 39141329580,
+      "job": 117716323089,
+      "tests": 3170,
+      "passed": 3169,
+      "failed": 1,
+      "skipped": 0,
+      "reason": "Identical inherited-in-stack WS2 display omission; same production fix carried into new head, policy unchanged."
+    }
+  ],
+  "fullPR": {
+    "ws1": {
+      "pr": 2749,
+      "head": "a5b3853340ac89cb7c203e2df58cf74715eca3d5",
+      "run": 39141314834,
+      "job": 117716289184,
+      "passed": 3156,
+      "failed": 0,
+      "skipped": 0,
+      "separateBackupTests": 6,
+      "conclusion": "SUCCESS",
+      "merge": "edff09392aece314afbe5426bbb4ba1607c1869e"
+    },
+    "ws2": {
+      "pr": 2750,
+      "head": "90dcbc67b2263eb4a9345b38630a925896a53d6f",
+      "run": 39141772469,
+      "job": 117717604605,
+      "passed": 3163,
+      "failed": 0,
+      "skipped": 0,
+      "separateBackupTests": 6,
+      "conclusion": "SUCCESS",
+      "merge": "35d3ffd78a8d7ad5738408ab86324ae30ed0e5cd"
+    },
+    "ws3": {
+      "pr": 2751,
+      "head": "264cf6dfc01a3d7f7a887d5fda1beccfa3ba5e7e",
+      "run": 39141776928,
+      "job": 117717610685,
+      "passed": 3170,
+      "failed": 0,
+      "skipped": 0,
+      "separateBackupTests": 6,
+      "conclusion": "SUCCESS",
+      "merge": "d9ba358fd23f6ec0a97c94ad4aa291a6d3adf79e"
+    }
+  },
+  "correctionLocal": {
+    "globalGreeceTimePolicy": {
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    "supplierMounted": {
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "files": [
+    {
+      "path": "server/src/services/automatic-report-policy.js",
+      "bytes": 9952,
+      "blob": "8c7a1229a9dc4c93beeccac7ee80562de0aad7f6",
+      "sha256": "35a4a5362d0dd3354bafbf55ca8e4f95e25cdd1da3fdb01fa7758b2ddb6c3def"
+    },
+    {
+      "path": "server/src/services/automatic-report-source.js",
+      "bytes": 6722,
+      "blob": "cb64d30143fb8b4134f65377c5332f0fca4d5503",
+      "sha256": "2dfe4b7aa1104b5669a1329507c985bd8eb9fc63cc3d9c9ca4de2742457ec86c"
+    },
+    {
+      "path": "server/src/routes/automatic-report-settings.js",
+      "bytes": 1463,
+      "blob": "24adbc2b2639be3c3efee7de11ea645326d33811",
+      "sha256": "a6d9c0ad3a6f7bd9fe6c3dfd066579e5cdb95c6f6cace8e0c27246424fe96cdc"
+    },
+    {
+      "path": "client/src/components/platform/AutomaticReportSettingsManager.jsx",
+      "bytes": 14707,
+      "blob": "fe3b243b51394a0ebc509b2fc004b8c957c436ce",
+      "sha256": "d0e9e1c16c867093d6e43369e1a4eda391bf0eea60891adf929ecb77f6ffd314"
+    },
+    {
+      "path": "server/test/automatic-report-weekly.test.js",
+      "bytes": 5407,
+      "blob": "9160afb0e15be4d3a859f9f1f6c3ad03ed6aacdd",
+      "sha256": "0a7ffecc75f0d9cc68ff2a964ca898716ad80e0ef22a26c22a731aa9dd973d1b"
+    },
+    {
+      "path": "server/test/automatic-report-settings-mounted.test.js",
+      "bytes": 11512,
+      "blob": "c0c186031697b4f6ec7da959013244360e56224e",
+      "sha256": "a973b232d93c946ee7ea0e5a12fd8edef72bb12f7a6dbe9272304dc2979c1885"
+    },
+    {
+      "path": "server/test/automatic-report-settings-postgres.test.js",
+      "bytes": 14255,
+      "blob": "e5981170516007511c45c8abd987f5d83ead88cb",
+      "sha256": "2a5c1e38f8ff9b40e1d993d211d20c75607b9f79550d7300d5659ea04432487d"
+    },
+    {
+      "path": "server/test/automatic-report-monthly.test.js",
+      "bytes": 5752,
+      "blob": "e781cd8641c2dd18cefb10e41cb75992748a8af7",
+      "sha256": "dc0f290305175156356b697ca50a0fa0c567d2b55f57e5acdd38e4f9be5ca854"
+    },
+    {
+      "path": "client/src/components/commerce/OrderSuggestionsPanel.jsx",
+      "bytes": 15080,
+      "blob": "ab9d7043a338deafcd6c46226d6b89cae6b191fb",
+      "sha256": "1341af37cf60c96b8a8b81cd8ba513f56670b129eea9f37f45c1de0c9b078120"
+    },
+    {
+      "path": "client/src/components/commerce/order-suggestions.css",
+      "bytes": 4738,
+      "blob": "add9bb7a5017c2df530f1e0287633743ca552b84",
+      "sha256": "fb0f9fb3a3c1ade5ccce1d58024dcb9b193b2dbfa07a28524e0c0a86b4b8f4b3"
+    },
+    {
+      "path": "server/test/supplier-order-groups-ui.test.js",
+      "bytes": 11896,
+      "blob": "8f4118359f9b36800c1de790557da80ae8ea7e38",
+      "sha256": "5479da208c470e258ff58ea5f98464bbcaedb98a2525257ac952cb7122cdb4d2"
+    },
+    {
+      "path": "client/src/components/commerce/installKioskReportsSalesV4.js",
+      "bytes": 10539,
+      "blob": "9b067d68c7d8c85624577e24d73a6d1358852121",
+      "sha256": "44702c168fb674345f30b2321dce7c665918bd29a683c9a25662c2c812f39dd0"
+    },
+    {
+      "path": "server/test/kiosk-sales-coverage-ui.test.js",
+      "bytes": 7959,
+      "blob": "48e4ceef5a6390ed9ab45469ccd109a42120b9a9",
+      "sha256": "e0a4f61a44f37a78de345ed9c816dcac377d7199f9dd16beb216706d4e7094a3"
+    }
+  ],
+  "requirements": [
+    {
+      "number": 1,
+      "requirement": "Invoice assistant corrections",
+      "evidenceAndResidual": "Agreed same-draft Gate3 assistant flow has scoped LAB PASS28Sep and is not reopened. Broader automatic editing across remaining cases and improved first extraction are separate residuals, never a reason to replay accepted invoices.",
+      "ownerBoundary": "Invoice/inbox retained owners",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-09-28-gate3-acceptance-reconciliation.md"
+    },
+    {
+      "number": 2,
+      "requirement": "Complete human-reviewed invoice draft",
+      "evidenceAndResidual": "Agreed reviewable same-draft flow and narrow new-item preparation PASS preserved. Actual new/no-barcode/existing-barcode confirmation and actor-fix user save remain scoped pending; no auto approval.",
+      "ownerBoundary": "Invoice-new-item/inbox owners",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-15-invoice-new-item-prepare.md"
+    },
+    {
+      "number": 3,
+      "requirement": "SuperAdmin/Owner assistant",
+      "evidenceAndResidual": "Coverage validation/UI/export guards delivered; prior narrow queries/transfer CSV PASS preserved. Product COMPLETE card observed only; current independent product/CSV/remaining role/module/store/mobile/broader domain acceptance OPEN.",
+      "ownerBoundary": "Central WS4; independent VOICE parsing owner retained",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-18-ws4-hosted-observation.md"
+    },
+    {
+      "number": 4,
+      "requirement": "Automatic daily cash email after third shift",
+      "evidenceAndResidual": "DAILY readiness/HOLD/provisional preview scoped LAB PASS. READY financial reconciliation, idempotent scheduling/outbox/uncertain SMTP/verified recipients and enabled delivery remain OPEN.",
+      "ownerBoundary": "Central WS1 bounded source; retained automatic orchestration",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-18-central-four-streams.md"
+    },
+    {
+      "number": 5,
+      "requirement": "Weekly cash report",
+      "evidenceAndResidual": "Whole-week readiness and provisional HOLD observed in LAB. Full READY week/numeric financial truth and automatic delivery remain OPEN.",
+      "ownerBoundary": "Central WS1",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-18-central-four-streams.md"
+    },
+    {
+      "number": 6,
+      "requirement": "Automatic monthly cash report per employee",
+      "evidenceAndResidual": "MONTHLY preview source/UI merged #2749; no new employee aggregate/liability allocation. Actual MONTHLY LAB acceptance, employee summary, reconciliation and delivery remain OPEN.",
+      "ownerBoundary": "Central WS1",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-18-phase2-ws1.md"
+    },
+    {
+      "number": 7,
+      "requirement": "Weekly shortage report by supplier",
+      "evidenceAndResidual": "Canonical read-only suggestions and optional supplier PROXY UI delivered; weekly supplier-shortage scheduling/delivery and hosted UI acceptance OPEN.",
+      "ownerBoundary": "Central WS2 bounded paths; retained orchestration",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-18-phase2-ws2.md"
+    },
+    {
+      "number": 8,
+      "requirement": "Weekly unposted-invoice report",
+      "evidenceAndResidual": "Existing registered/draft/no-draft/link-review source/filter/export and narrow LIVE state/navigation PASS retained. Dedicated weekly unposted report/delivery OPEN.",
+      "ownerBoundary": "Retained inbox-consistency owner; orchestration",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-15-inbox-consistency.md"
+    },
+    {
+      "number": 9,
+      "requirement": "Weekly net-margin report and qualified price proposals",
+      "evidenceAndResidual": "Existing correct net metric and narrow SKU example PASS; all-products weekly exclusions/cost-pack uncertainty/legal cap exception/proposal engine and acceptance OPEN.",
+      "ownerBoundary": "Task14 retained; no broad margin source takeover",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-01-task14-internet-search-lab.md"
+    },
+    {
+      "number": 10,
+      "requirement": "Order proposal by supplier",
+      "evidenceAndResidual": "Flat Task30 limited prior quantity PASS retained. Supplier proposal API+optional UI delivered, no transmission/persistence; new hosted UI acceptance OPEN.",
+      "ownerBoundary": "Central WS2 exact paths; broader Task30 retained",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-18-phase2-ws2.md"
+    },
+    {
+      "number": 11,
+      "requirement": "Primary supplier by real delivery frequency and better comparable price notice",
+      "evidenceAndResidual": "Document-frequency proxy and normalized unit-cost foundations only. Actual physical delivery identity/frequency, post-invoice primary recomputation/persistence and verified better-price notice OPEN.",
+      "ownerBoundary": "Central bounded proxy; Task29/invoice owners retained",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-04-task29-supplier-comparison.md"
+    },
+    {
+      "number": 12,
+      "requirement": "Recorded expenses/payroll by day/week/month/employee",
+      "evidenceAndResidual": "Existing payroll/attendance and limited draft/payments/display PASS are not full payroll accuracy. Unified recorded-source report/reconciliation/coverage/delivery/acceptance OPEN.",
+      "ownerBoundary": "Central WS3 analytics; Workforce/payroll writes retained",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-18-workstream-3.md"
+    },
+    {
+      "number": 13,
+      "requirement": "Comparable turnover periods and percentages",
+      "evidenceAndResidual": "Existing previous comparison foundations and new canonical coverage disclosure delivered. Explicit Athens comparable day/week/month/as-of/DST/zero-base/incomplete policy and weekly acceptance OPEN.",
+      "ownerBoundary": "Central WS3 analytics; unclaimed advanced endpoint untouched",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-18-phase2-ws3.md"
+    },
+    {
+      "number": 14,
+      "requirement": "Hourly/day workload and conditional staffing guidance",
+      "evidenceAndResidual": "True overall basket/reversal counts and visible report coverage delivered. Canonical Athens hourly transaction/item volume, staffing/service evidence and qualified recommendations remain OPEN.",
+      "ownerBoundary": "Central WS3 analytics; Workforce scheduling/rules retained",
+      "checkpoint": "CHECKPOINTS/CHANGES/2026-10-18-phase2-ws3.md"
+    }
+  ],
+  "combinedMain": {
+    "sha": "d9ba358fd23f6ec0a97c94ad4aa291a6d3adf79e",
+    "run": 39142289435,
+    "job": 117720534605,
+    "conclusion": "SUCCESS",
+    "passed": 3170,
+    "failed": 0,
+    "skipped": 0,
+    "separateBackupTests": 6,
+    "verifiedFilesMatch": true
+  },
+  "releaseWait": {
+    "guard": 39143214973,
+    "result": "deferred for newer independent shared source0a1b3c2582edb4b69c4d7615d73c85b198fade80 requiring full CI39143178960",
+    "manualBypass": false
+  },
+  "sharedReleaseCI": {
+    "sha": "0a1b3c2582edb4b69c4d7615d73c85b198fade80",
+    "run": 39143178960,
+    "job": 117721831721,
+    "passed": 3176,
+    "failed": 0,
+    "skipped": 0,
+    "separateBackupTests": 6,
+    "all13SourceFilesMatch": true
+  },
+  "requirementsGreek": [
+    [
+      "Διορθώσεις στο ίδιο πρόχειρο τιμολογίου",
+      "Διατηρείται το συμφωνημένο περιορισμένο LAB PASS της ροής βοηθού.",
+      "Ευρύτερη αυτόματη διόρθωση και αρχική ανάγνωση είναι χωριστά υπόλοιπα· δεν επαναλαμβάνονται αποδεκτά τιμολόγια."
+    ],
+    [
+      "Πλήρες πρόχειρο για ανθρώπινο έλεγχο",
+      "Διατηρούνται τα επιμέρους PASS προετοιμασίας και της ίδιας ροής προχείρου.",
+      "Ειδικές πραγματικές επιβεβαιώσεις νέου είδους/barcode και διορθωμένου actor παραμένουν χωριστά εκκρεμείς. Καμία αυτόματη τελική έγκριση."
+    ],
+    [
+      "Βοηθός Super Admin / Owner",
+      "Παραδόθηκαν έλεγχοι πληρότητας, ενδείξεις και προστασία ποσών. Παρατηρήθηκε πραγματική κάρτα COMPLETE στο LAB.",
+      "Νέα διασταύρωση προϊόντος/CSV και οι υπόλοιποι έλεγχοι ρόλων, modules, καταστημάτων, κινητών και ευρύτερων λειτουργιών παραμένουν ανοικτοί."
+    ],
+    [
+      "Αυτόματο ημερήσιο email μετά την τρίτη βάρδια",
+      "Υπάρχει πηγή ημερήσιας προεπισκόπησης και περιορισμένο LAB PASS HOLD/προσωρινού χαρακτήρα.",
+      "Πλήρης οικονομική συμφωνία, ανθεκτική ουρά, παραλήπτες, SMTP, ενεργοποίηση και πραγματική παράδοση παραμένουν ανοικτά."
+    ],
+    [
+      "Εβδομαδιαία αναφορά ταμείων",
+      "Υπάρχει έλεγχος όλων των ημερών και πραγματικό περιορισμένο LAB PASS εβδομαδιαίου HOLD/ορίων Ελλάδας.",
+      "Πλήρης READY εβδομάδα, πηγαία οικονομική συμφωνία και αυτόματη αποστολή παραμένουν ανοικτά."
+    ],
+    [
+      "Μηνιαία αναφορά ανά υπάλληλο",
+      "Το #2749 προσθέτει μηνιαία προεπισκόπηση με έλεγχο κάθε ημέρας, όριο 1.000 και προσωρινά υπάρχοντα groups.",
+      "Δεν προστέθηκε μηνιαία συγκέντρωση ανά υπάλληλο. Πραγματική MONTHLY αποδοχή, συμφωνία και αποστολή παραμένουν ανοικτά."
+    ],
+    [
+      "Εβδομαδιαίες ελλείψεις ανά προμηθευτή",
+      "Υπάρχουν πηγή ποσοτήτων και νέα προαιρετική προβολή υποψηφίων βάσει παραστατικών.",
+      "Η αυτόματη εβδομαδιαία αναφορά ελλείψεων και η πραγματική αποδοχή της νέας οθόνης παραμένουν ανοικτές."
+    ],
+    [
+      "Εβδομαδιαία μη καταχωρημένα τιμολόγια",
+      "Διατηρούνται οι πραγματικές καταστάσεις εισερχομένων και τα περιορισμένα PASS φίλτρων/πλοήγησης.",
+      "Ειδική εβδομαδιαία αναφορά και παράδοση παραμένουν ανοικτές στον διατηρούμενο owner εισερχομένων/οργάνωσης."
+    ],
+    [
+      "Εβδομαδιαίο καθαρό margin και προτεινόμενες τιμές",
+      "Υπάρχει σωστός υπολογισμός καθαρού margin και παλιότερο περιορισμένο παράδειγμα.",
+      "Πλήρης έλεγχος όλων των ειδών, εξαιρέσεις, αβεβαιότητες κόστους/συσκευασίας και όρια διατίμησης/προτάσεις παραμένουν ανοικτά."
+    ],
+    [
+      "Πρόταση παραγγελίας ανά προμηθευτή",
+      "Το #2750 προσθέτει επιλογή ανά προμηθευτή με ίδιες ποσότητες, σαφές PROXY και ανθρώπινο έλεγχο.",
+      "Η νέα οθόνη αναμένει πραγματική αποδοχή. Δεν δημιουργείται ούτε αποστέλλεται πραγματική παραγγελία."
+    ],
+    [
+      "Βασικός προμηθευτής και καλύτερη συγκρίσιμη τιμή",
+      "Υπάρχουν βάσεις συγκρίσιμου κόστους και συχνότητας εγκεκριμένων παραστατικών.",
+      "Οι πραγματικές παραλαβές δεν ταυτίζονται με παραστατικά. Αυτόματος επανυπολογισμός/αποθήκευση βασικού προμηθευτή και ειδοποίηση παραμένουν ανοικτά."
+    ],
+    [
+      "Έξοδα / μισθοδοσία ανά ημέρα, περίοδο και υπάλληλο",
+      "Διατηρούνται επιμέρους πηγές και περιορισμένα παλιότερα PASS, όχι συνολική ακρίβεια μισθοδοσίας.",
+      "Ενιαία αναφορά πραγματικά καταχωρημένων πηγών, συμφωνία, πληρότητα και αποδοχή παραμένουν ανοικτές."
+    ],
+    [
+      "Συγκρίσιμος τζίρος και ποσοστά μεταβολής",
+      "Υπάρχουν βάσεις σύγκρισης και η νέα σαφής πληρότητα των κανονικών πωλήσεων.",
+      "Πολιτική συγκρίσιμων περιόδων Ελλάδας, μηδενικής βάσης, ημιτελών περιόδων και εβδομαδιαία αποδοχή παραμένουν ανοικτές."
+    ],
+    [
+      "Ωριαία κίνηση και τεκμηριωμένη στελέχωση",
+      "Παραδόθηκαν πραγματικά συνολικά πλήθη μοναδικών συναλλαγών και ενδείξεις πληρότητας.",
+      "Ωριαίες συναλλαγές/είδη, δεδομένα εξυπηρέτησης/στελέχωσης και προτάσεις με σαφείς αβεβαιότητες παραμένουν ανοικτά."
+    ]
+  ],
+  "release": {
+    "sha": "0a1b3c2582edb4b69c4d7615d73c85b198fade80",
+    "guard": 39143716020,
+    "guardJob": 117723216510,
+    "rollbackArtifact": 12142836390,
+    "pinnedAt": "2026-10-18T16:10:11Z",
+    "guardHealthyAt": "2026-10-18T16:12:24Z",
+    "deploy": "dep-dbaeuouq1p3s73bdq9lg",
+    "renderStatus": "live",
+    "finishedAt": "2026-10-18T16:12:10Z",
+    "health": {
+      "at": "2026-10-18T16:14:00.447854+00:00",
+      "status": 200,
+      "ok": true,
+      "revision": "0a1b3c2582edb4b69c4d7615d73c85b198fade80",
+      "version": "0.22.0+kat-test-pos"
+    },
+    "all13BlobsMatch": true
+  }
+}

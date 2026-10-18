@@ -1,3 +1,28 @@
+## 18/10/2026 19:15 Europe/Athens - COORD PHASE2 / ΔΕΥΤΕΡΗ ΠΑΡΑΔΟΣΗ ΚΩΔΙΚΑ LIVE / AWAITING LAB
+
+Κεντρικός owner codex/central-four-streams-20261018, με τέσσερις εσωτερικούς agents. Η νέα καταγραφή αντικαθιστά τα προηγούμενα phase2 SOURCE PREPARED / CI PENDING μόνο για τα παρακάτω περιορισμένα scopes. Δεν κλείνει συνολικά τις14 απαιτήσεις και διατηρεί όλα τα παλιότερα περιορισμένα PASS και τις ανεξάρτητες αναθέσεις.
+
+- WS1 #2704 / PR#2749: μηνιαία read-only προεπισκόπηση με όρια ημερολογιακού μήνα στην αποθηκευμένη ώρα Ελλάδας, έλεγχο κάθε ημέρας και συνολικό HOLD όταν λείπει πηγή. Παραμένουν cap1.000, PROVISIONAL, αρχικά ποσά/day/POS/delivery/identity. Δεν προστέθηκε συγκέντρωση ανά υπάλληλο ή αποστολή.
+- WS2 #2705 / PR#2750: προαιρετική προβολή ανά προμηθευτή στο υπάρχον panel, με ίδιες ποσότητες από μία πηγή. Υποψήφιος βάσει εγκεκριμένων παραστατικών(PROXY), όχι πραγματικών παραλαβών· ισοβαθμίες/ελλείψεις/όριο μένουν χωρίς ανάθεση. Κανένας αυτόματος ορισμός βασικού προμηθευτή ή αποστολή παραγγελίας.
+- WS3 #2706 / PR#2751: ορατή πλήρης/μερική/μη επιβεβαιωμένη κάλυψη, σαφής χαρακτηρισμός των έξι συνόλων/footer και μοναδικά πλήθη συναλλαγών από τον canonical producer. Ποσά, γραμμές, CSV schema, ελληνικό ημερολόγιο/defaults και store guards διατηρούνται.
+- WS4 #2707: ανεξάρτητος έλεγχος των παραπάνω και καταγεγραμμένη πραγματική εμφάνιση product_sales COMPLETE κάρτας στο LAB. Νέα διασταύρωση πηγής/CSV δεν ολοκληρώθηκε· κανένα νέο hosted PASS.
+
+Πλήρη PR CI: #2749/39141314834 =3156PASS/0FAIL/0SKIP· #2750/39141772469 =3163/0/0· #2751/39141776928 =3170/0/0. Καθένα επιπλέον6backup και υποχρεωτικούς Windows/build/Chromium/invariants/nativeSQL/HTTP ελέγχους. Exact combined main d9ba358fd23f6ec0a97c94ad4aa291a6d3adf79e / CI39142289435 / job117720534605:3170/0/0 +6backup.
+
+Η συμβατή νεότερη κοινή έκδοση 0a1b3c2582edb4b69c4d7615d73c85b198fade80 πέρασε CI39143178960/job117721831721:3176/0/0 +6backup. Ο ordinary guard39143716020/job117723216510 διατήρησε rollback artifact12142836390, έκανε pin16:10:11UTC και επιβεβαίωσε exacthealth16:12:24UTC. Render dep-dbaeuouq1p3s73bdq9lg LIVE. Ανεξάρτητο health 2026-10-18T16:14:00.447854+00:00:status200/oktrue/exactrevision. Και τα13 παραδοτέα blobs(7runtime/6tests) ταυτίζονται στην ενεργή έκδοση. Καμία χειροκίνητη παράκαμψη deploy/guard.
+
+Αρχικές αποτυχίες διατηρούνται: WS2 run39141322463 3162PASS/1FAIL/0SKIP και stackedWS3 run39141329580 3169/1/0, μόνο επειδή δύο νέες εμφανίσεις ώρας δεν δήλωναν hour12:false. Διορθώθηκαν οι production εμφανίσεις, ο υπάρχων κανόνας δεν άλλαξε· τελικοί πλήρεις έλεγχοι παραπάνω πράσινοι. Independent metadata review επέβαλε canonical caps/safe counts/identity/date/observed-count consistency πριν publication. Το κληρονομημένο report-tab late-response race παραμένει χωριστό υπόλοιπο, όχι νέο PASS.
+
+Τοπικά Node20.20.2:συνδυασμένα38tests/37PASS/0FAIL/1native environmentSKIP, frontend/TABLE_SERVICE buildPASS· ξεχωριστός αμετάβλητος global time policy5/0/0 και supplier mounted13/0/0. Η native μηνιαία93βάρδιες/31ημέρες fixture εκτελέστηκε στο πλήρες CI χωρίς SKIP. Αυτά δεν είναι πραγματική αποδοχή νέων οθονών.
+
+Οι νέες MONTHLY/supplier/reportcoverage οθόνες παραμένουν AWAITING LAB. Το browser native credential protection απέκλεισε λήψη/ανάγνωση CSV και κατόπιν ασφαλή επαναφορά runtime· δεν παρακάμφθηκε, δεν εξήχθησαν credentials και δεν κατασκευάστηκε screenshot/αποδοχή. Τα ήδη καταγεγραμμένα daily/weekly HOLD/provisional PASS#2743 προστατεύονται, χωρίς replay ή νέα Save. Δεν προστίθεται CI-only manual.
+
+Χωρίς παραγωγική οικονομική/fiscal/stock/shift/payroll/settings/recipient/email/order/schema/infra πράξη από τον συντονιστή. Παραμένουν ανοικτά πλήρης οικονομική συμφωνία, μηνιαίο employee aggregate, scheduler/outbox/SMTP/παράδοση, πραγματικές παραλαβές/primary supplier, margin/invoice residuals, συγκρίσιμα periods/ωριαία στελέχωση και ευρύτερες λειτουργίες βοηθού. Ακριβής ελληνική κατάσταση όλων14: CHECKPOINTS/CHANGES/2026-10-18-original14-status.md. Machine evidence: CHECKPOINTS/EVIDENCE/central-four-streams-20261018/phase2-source-release.json. Κοινό PDF αναγεννήθηκε από το συγχρονισμένο tracker.
+
+Επόμενη ενέργεια: υποστηριζόμενο authenticated browser και μία συγκεντρωτική read-only αποδοχή των νέων previews/consumer views, με συγκεκριμένο LAB/store/period/source και πραγματικά exports. Καμία επανάληψη αποδεκτών συναλλαγών ή αποθήκευση υπάρχουσας ρύθμισης. Οι owners/branches παραμένουν κεντρικά ανατεθειμένοι μέχρι ονομαστικό handoff.
+
+## Ιστορική ανάθεση πριν κώδικα
+
 ## 18/10/2026 18:32 Europe/Athens - COORD-20261018 / SECOND BOUNDED DELIVERY ASSIGNED BEFORE CODE
 
 Owner-directed continuation after #2743, same central coordinator codex/central-four-streams-20261018. The owner's explicit approval to replace prior assignments and execute the four issues persists. ΑΝΑΛΗΨΗ ΑΠΟ retained AUTO-REPORTS / Task30 supplier / ordinary reports source owners - ASSIGNED the exact independent paths below to central internal workers. This extends #2725's narrower path scope; old owners must not edit these bounded paths concurrently. Independent VOICE calendar/numeric-filter and invoice/wholesale/native/store-cleanup scopes remain protected. Root alone edits shared registries/checkpoints/PDF/integration.
