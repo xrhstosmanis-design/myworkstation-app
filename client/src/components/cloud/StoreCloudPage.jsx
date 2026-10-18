@@ -131,7 +131,7 @@ function StoreWorkspace({api,store,onBack,onWorkforce}){
       <button className="cloud-back" onClick={onBack}><ArrowLeft/>Πίσω στα καταστήματα</button>
       <div className="cloud-titlebar-actions">
         <button className="cloud-refresh" onClick={refresh}><RefreshCw/>Ανανέωση</button>
-        <button className="cloud-refresh" type="button" onClick={()=>window.dispatchEvent(new Event("mws:commerce-open"))}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
+        <button className="cloud-refresh" type="button" onClick={()=>window.dispatchEvent(new CustomEvent("mws:commerce-open",{detail:{view:"products",storeId:store.id}}))}><BriefcaseBusiness/>Εμπορική λειτουργία</button>
         <ScreenRecorderWindowLauncher/>
       </div>
     </div>

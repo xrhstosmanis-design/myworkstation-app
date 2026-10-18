@@ -41,8 +41,11 @@ const enhanceChildWindows=()=>{
 };
 
 export default function CommerceLauncher(){
-  const supportStoreFromUrl=new URLSearchParams(window.location.search).get("supportStore")||"";
+  const supportParams=new URLSearchParams(window.location.search);
+  const supportStoreFromUrl=(supportParams.get("supportStore")||"").trim();
+  const supportStoreScoped=supportParams.has("supportStore");
   const [supportStoreId,setSupportStoreId]=useState(supportStoreFromUrl);
+  const entryStoreRef=useRef(supportStoreFromUrl);
   const openRequestRef=useRef(0);
   const wholesaleLockRef=useRef(false);
   const [wholesaleSubmissionLocked,setWholesaleSubmissionLocked]=useState(false);
@@ -117,27 +120,31 @@ export default function CommerceLauncher(){
   const open=async(target)=>{
     if(wholesaleLockRef.current)return;
     const operations=target?.view==="operations";
-    const requestedStoreId=typeof target?.storeId==="string"?target.storeId.trim():"";
+    const hasRequestedStore=Object.hasOwn(target||{},"storeId");
+    const requestedStoreId=hasRequestedStore?(typeof target.storeId==="string"?target.storeId.trim():""):supportStoreFromUrl;
+    const scoped=operations||hasRequestedStore||supportStoreScoped;
+    const explicitStoreChange=hasRequestedStore&&requestedStoreId!==entryStoreRef.current;
     // Some shell controls dispatch the opening event more than once.  Never
-    // reset the user's active BackOffice tab while the window is already open.
-    if(visibleRef.current&&!operations)return;
+    // reset the active tab for the same store; an explicit new store replaces it.
+    if(visibleRef.current&&!operations&&!explicitStoreChange)return;
     // Set it synchronously as events can be emitted twice before React commits
     // the visible state. A second open must not reset the workspace.
     visibleRef.current=true;refreshWholesaleAccess();
     const requestId=++openRequestRef.current;
     setMode(operations?"legacy":"products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);
-    setSupportStoreId(operations?requestedStoreId:supportStoreFromUrl);setEntryLoading(operations);setEntryError("");
-    if(operations){setStores([]);setInventoryStoreId("");setInventoryInitialProduct(null);setActiveModules([]);setInternetSearchOpen(false)}
+    entryStoreRef.current=requestedStoreId;
+    setSupportStoreId(requestedStoreId);setEntryLoading(scoped);setEntryError("");
+    if(scoped){setStores([]);setInventoryStoreId("");setInventoryInitialProduct(null);setActiveModules([]);setInternetSearchOpen(false)}
     try{
       const [list,license]=await Promise.all([request("/api/stores"),request("/api/license/current")]);
       if(requestId!==openRequestRef.current||!visibleRef.current)return;
-      const scopedStores=operations?list.filter(store=>store.id===requestedStoreId):list;
-      if(operations&&(!requestedStoreId||!scopedStores.length))throw new Error("Το επιλεγμένο κατάστημα δεν είναι διαθέσιμο. Κλείσε και άνοιξε ξανά τις λειτουργίες από το κατάστημά σου.");
-      setStores(scopedStores);setInventoryStoreId(scopedStores.find(store=>store.id===(operations?requestedStoreId:supportStoreFromUrl))?.id||scopedStores[0]?.id||"");setActiveModules(license.activeModules||[]);
+      const scopedStores=scoped?list.filter(store=>store.id===requestedStoreId&&store.active!==false):list;
+      if(scoped&&(!requestedStoreId||!scopedStores.length))throw new Error("Το επιλεγμένο κατάστημα δεν είναι διαθέσιμο. Κλείσε και άνοιξε ξανά τις λειτουργίες από το κατάστημά σου.");
+      setStores(scopedStores);setInventoryStoreId(scoped?requestedStoreId:scopedStores[0]?.id||"");setActiveModules(license.activeModules||[]);
     }catch(error){
       if(requestId!==openRequestRef.current||!visibleRef.current)return;
       setStores([]);setInventoryStoreId("");setActiveModules([]);
-      if(operations)setEntryError(error.message||"Δεν άνοιξαν οι λειτουργίες του καταστήματος.");
+      if(scoped)setEntryError(error.message||"Δεν άνοιξαν οι λειτουργίες του καταστήματος.");
     }finally{if(requestId===openRequestRef.current&&visibleRef.current)setEntryLoading(false)}
   };
   useEffect(()=>{
