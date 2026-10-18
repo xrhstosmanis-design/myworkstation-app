@@ -1,10 +1,10 @@
 # MyWorkStation Wholesale Suite
 
-## Status: first source slice prepared - full product OPEN
+## Status: first master-data source merged, CI passed - full product OPEN
 
 The owner authorized the full wholesale suite, three cooperating workers and public repository publication. The common assignment PR2680 passed documentation CI39070541242 and merged as33ba81e2 before source work. Earlier publication rejections below historical records are resolved by explicit approval18Oct00:18.
 
-Coordinator codex/wholesale-suite-20261017 retains ownership. First source slice now fixes customer/list association readback/unassignment and safely reviews saved quantity tiers. Local Node20 focused tests12PASS/0FAIL/1nativeSKIP and build pass. Full local server suite2922tests/2812PASS/0FAIL/110environmentSKIP; native CI and hosted acceptance are pending. This is not a finished wholesale/B2B/seller product. No production state, financial/stock/fiscal action or standalone activation was performed.
+Coordinator codex/wholesale-suite-20261017 retains ownership. First source slice now fixes customer/list association readback/unassignment and safely reviews saved quantity tiers. Source PR2685 finalhead0c2a4524 passed full CI39111762123 with2929PASS/0FAIL/0SKIP (including native PostgreSQL), build, Windows, browser and real HTTP checks, then merged main11235c4c. Local tests remain separate evidence. MainCI39112180379 and exact guarded release/hosted acceptance are pending. This is not a finished wholesale/B2B/seller product. No production state, financial/stock/fiscal action or standalone activation was performed.
 
 Repository: https://github.com/xrhstosmanis-design/myworkstation-app
 
@@ -50,4 +50,4 @@ Every stage needs actual functionality and tests, not only a screen or documenta
 
 ## Next single action
 
-Complete full CI, including the isolated native PostgreSQL router test, and review the first source PR. Keep LAB/hosted/physical acceptance separate from CI. Following master stabilization, implement the authoritative quote/order service before connecting customer B2B and seller channels. No worker is currently claiming a finished site, native app, offline mode or saleable standalone package.
+Verify exact mainCI39112180379 and ordinary guarded release of source11235c4c before hosted acceptance. Keep LAB/hosted/physical acceptance separate from CI. Following master stabilization, implement the authoritative quote/order service before connecting customer B2B and seller channels. No worker is currently claiming a finished site, native app, offline mode or saleable standalone package.

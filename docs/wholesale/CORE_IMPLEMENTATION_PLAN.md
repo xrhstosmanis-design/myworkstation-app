@@ -35,6 +35,12 @@ Known source defects: customer listing does not join the saved price-list associ
 - A suspended company, expired license or revoked principal must be rejected server-side. Offline drafts cannot bypass these checks at synchronization.
 - Composite tenant foreign keys or equivalent transactional validation must protect every new cross-reference. No global public identifier lookup should reveal another company's entity.
 
+## Follow-up read-only monetary evidence - 18 October 2026
+
+After the first source slice, read-only investigation confirmed that `server/src/routes/price-catalog.js` derives saleNet from salePrice divided by (1 + VAT rate/100), and derives wholesaleNet from existing CustomerWholesalePrice the same way. `server/src/routes/store-pos.js` multiplies the resolved unit price by quantity and sums payable lines without adding VAT again. Existing retail salePrice and retail customer-specific wholesalePrice therefore carry gross semantics.
+
+The separate WholesalePriceListProduct.unitPrice currently has no pricing consumer beyond bootstrap, upsert and saved-tier listing. Its monetary basis remains unclassified; gross retail semantics cannot be transferred to it by assumption. The next quote slice must add explicit nullable NET/GROSS metadata and preserve legacy numeric values; only explicitly classified selected tiers can be quoted. New writes without a declared basis must not leave a stale classification valid. No classification, migration, tax-policy decision or quotation implementation was performed in this investigation.
+
 ## Commercial and valuation decisions
 
 The following proposed defaults require a recorded decision before the corresponding monetary implementation:
