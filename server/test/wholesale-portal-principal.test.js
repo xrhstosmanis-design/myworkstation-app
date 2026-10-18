@@ -16,6 +16,8 @@ function fixture(){
   const state={calls:[],orders:[],events:[],active:true,published:true,price:'3.2500',auth:[],publication:[]};
   const query=async(strings,...values)=>{
     const sql=Array.isArray(strings)?strings.join('?'):strings.sql||strings.text,v=Array.isArray(strings)?values:strings.values;state.calls.push({sql,values:v});
+    if(sql.includes('JOIN "CompanyModule"'))return [{companyId:v[0]}];
+    if(sql.includes('SELECT clock_timestamp()'))return [{now:new Date()}];
     if(sql.includes('pg_advisory_xact_lock'))return [{locked:''}];
     if(sql.includes('INSERT INTO "WholesaleOrderRequest"')){const [id,companyId,storeId,customerId,actorId,channel,clientOrderId,requestHash,quoteId,snapshot,notes,netTotal,vatTotal,grossTotal]=v;const row={id,companyId,storeId,customerId,actorId,channel,clientOrderId,requestHash,quoteId,snapshot:JSON.parse(snapshot),notes,netTotal,vatTotal,grossTotal,status:'SUBMITTED',createdAt:new Date('2026-10-18T12:00Z')};state.orders.push(row);return [structuredClone(row)]}
     if(sql.includes('INSERT INTO "WholesaleOrderEvent"')){state.events.push(v);return 1}
@@ -50,7 +52,7 @@ test('portal authorization rechecks delegates in the same transaction with locks
 });
 
 test('portal fresh quotes require publication; backoffice quote hashes retain their exact previous shape',async()=>{
-  const {db,state,principal}=fixture(),ctx=principal(),quote=await buildWholesaleQuote(db,ctx,input,{lock:true});assert.equal(quote.totals.gross,'8.06');assert.equal(state.publication.length,1);assert.equal(state.auth.length,1);
+  const {db,state,principal}=fixture(),ctx=principal(),quote=await buildWholesaleQuote(db,ctx,input,{lock:true});assert.equal(quote.totals.gross,'8.06');assert.equal(state.publication.length,1);assert.equal(state.auth.length,2);
   state.published=false;await assert.rejects(buildWholesaleQuote(db,ctx,input),error=>error.code==='WHOLESALE_PORTAL_PRODUCTS_DENIED');
   const backoffice=await buildWholesaleQuote(db,manager,input),{quoteId,...snapshot}=backoffice;
   const oldHash=crypto.createHash('sha256').update(JSON.stringify({companyId:manager.companyId,actorId:manager.actorId,role:manager.role,channel:manager.channel,quote:snapshot})).digest('hex');assert.equal(quoteId,oldHash);assert.equal(state.publication.length,2);

@@ -2,7 +2,7 @@ import React,{useEffect,useRef,useState} from "react";
 import WholesalePortalAdmin from "./WholesalePortalAdmin.jsx";
 import WholesaleSalesAssignments from "./WholesaleSalesAssignments.jsx";
 
-export default function WholesaleB2BPanel({api,stores=[],activeStoreId="",onSubmissionLockChange}){
+export default function WholesaleB2BPanel({api,stores=[],activeStoreId="",onSubmissionLockChange,suspended=false}){
   const [submissionLocked,setSubmissionLocked]=useState(false);
   const [tab,setTab]=useState("customers"),[customers,setCustomers]=useState([]),[lists,setLists]=useState([]),[error,setError]=useState("");
   const [selectedList,setSelectedList]=useState(""),[productQuery,setProductQuery]=useState(""),[products,setProducts]=useState([]);
@@ -34,7 +34,7 @@ export default function WholesaleB2BPanel({api,stores=[],activeStoreId="",onSubm
   const classifyTier=async(tier,priceBasis)=>{if(!priceBasis)return;const listId=selectedList;try{await api("/api/wholesale/price-lists/"+encodeURIComponent(listId)+"/products/"+encodeURIComponent(tier.id)+"/price-basis",{method:"PUT",body:JSON.stringify({priceBasis,expectedVersion:tier.version})});if(mounted.current&&selectedListRef.current===listId)setTierRefresh(value=>value+1)}catch(x){if(mounted.current&&selectedListRef.current===listId){setError(x.status===409?"Η τιμή άλλαξε. Ανανεώθηκε ο τιμοκατάλογος· έλεγξε ξανά πριν ορίσεις ΦΠΑ.":x.message);setTierRefresh(value=>value+1)}}};
   const submissionLock=value=>{setSubmissionLocked(value);onSubmissionLockChange?.(value)};
   return <section className="wholesale-b2b-panel">
-    <div className="wholesale-head"><div><h2>Χονδρική / B2B</h2><p>Πελάτες χονδρικής και ειδικοί τιμοκατάλογοι, χωρίς αλλαγή στις τιμές λιανικής.</p></div></div>
+    {!suspended&&<><div className="wholesale-head"><div><h2>Χονδρική / B2B</h2><p>Πελάτες χονδρικής και ειδικοί τιμοκατάλογοι, χωρίς αλλαγή στις τιμές λιανικής.</p></div></div>
     <div className="wholesale-tabs"><button disabled={submissionLocked} className={tab==="customers"?"active":""} onClick={()=>setTab("customers")}>Πελάτες</button><button disabled={submissionLocked} className={tab==="prices"?"active":""} onClick={()=>setTab("prices")}>Τιμοκατάλογοι</button><button disabled={submissionLocked} className={tab==="orders"?"active":""} onClick={()=>setTab("orders")}>Παραγγελίες</button><button disabled={submissionLocked} className={tab==="portal"?"active":""} onClick={()=>setTab("portal")}>Site πελατών</button><button disabled={submissionLocked} className={tab==="sellers"?"active":""} onClick={()=>setTab("sellers")}>Αναθέσεις πωλητών</button></div>
     {error&&<div className="wholesale-error">{error}</div>}
     {(tab==="customers"||tab==="prices")&&(tab==="customers"?<><form className="wholesale-form" onSubmit={addCustomer}><input name="code" placeholder="Κωδικός πελάτη"/><input name="name" placeholder="Επωνυμία" required/><input name="taxId" placeholder="ΑΦΜ"/><input name="creditLimit" type="number" min="0" step="0.01" placeholder="Πιστωτικό όριο €"/><input name="paymentTermsDays" type="number" min="0" placeholder="Ημέρες πίστωσης"/><button>Νέος πελάτης</button></form><div className="wholesale-table"><div className="wholesale-row wholesale-customer-row wholesale-th"><span>Κωδικός</span><span>Επωνυμία</span><span>ΑΦΜ</span><span>Όριο</span><span>Πίστωση</span><span>Τιμοκατάλογος</span></div>{customers.map(row=><div className="wholesale-row wholesale-customer-row" key={row.id}><span>{row.code||"—"}</span><span><b>{row.name}</b></span><span>{row.taxId||"—"}</span><span>{Number(row.creditLimit||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"})}</span><span>{row.paymentTermsDays||0} ημέρες</span><select disabled={assigningCustomers.includes(row.id)} aria-label={"Τιμοκατάλογος · "+row.name} value={row.priceListId||""} onChange={e=>assignList(row.id,e.target.value)}><option value="">Χωρίς τιμοκατάλογο</option>{lists.map(list=><option key={list.id} value={list.id}>{list.name}</option>)}</select></div>)}</div></>:<><form className="wholesale-form wholesale-list-form" onSubmit={addList}><input name="code" placeholder="Κωδικός π.χ. B2B-A" required/><input name="name" placeholder="Όνομα τιμοκαταλόγου" required/><input name="discountPercent" type="number" min="0" max="100" step="0.01" placeholder="Βασική έκπτωση %"/><button>Νέος τιμοκατάλογος</button></form><div className="wholesale-price-editor"><label>Τιμοκατάλογος<select value={selectedList} onChange={e=>selectList(e.target.value)}><option value="">Επίλεξε</option>{lists.map(list=><option key={list.id} value={list.id}>{list.code} · {list.name}</option>)}</select></label><div className="wholesale-search"><input value={productQuery} onChange={e=>setProductQuery(e.target.value)} placeholder="Αναζήτηση προϊόντος"/><button type="button" onClick={searchProducts}>Αναζήτηση</button></div></div><section className="wholesale-saved-tiers" aria-label="Αποθηκευμένες τιμές" aria-busy={tiersLoading}>
@@ -43,13 +43,14 @@ export default function WholesaleB2BPanel({api,stores=[],activeStoreId="",onSubm
     </section><div className="wholesale-products">{products.map(product=><article key={product.id}><div><b>{product.name}</b><small>{product.sku||"Χωρίς SKU"} · Λιανική {Number(product.salePrice||0).toLocaleString("el-GR",{style:"currency",currency:"EUR"})}</small></div><form onSubmit={e=>{e.preventDefault();saveTier(product.id,e.currentTarget)}}><input name="minimumQuantity" type="number" min="0.0001" step="0.0001" defaultValue="1" title="Από ποσότητα"/><input name="unitPrice" type="number" min="0" step="0.0001" placeholder="Τιμή €/τεμ."/><input name="discountPercent" type="number" min="0" max="100" step="0.001" placeholder="ή Έκπτωση %"/><select name="priceBasis" aria-label="Βάση ΦΠΑ τιμής"><option value="">Επίλεξε βάση ΦΠΑ</option><option value="NET">Χωρίς ΦΠΑ</option><option value="GROSS">Με ΦΠΑ</option></select><button>Αποθήκευση</button></form></article>)}</div><div className="wholesale-table"><div className="wholesale-row wholesale-list-row wholesale-th"><span>Κωδικός</span><span>Τιμοκατάλογος</span><span>Βασική έκπτωση</span></div>{lists.map(row=><div className="wholesale-row wholesale-list-row" key={row.id}><span>{row.code}</span><span><b>{row.name}</b></span><span>{Number(row.discountPercent||0).toLocaleString("el-GR")}%</span></div>)}</div></>)}
     {tab==="sellers"&&<WholesaleSalesAssignments api={api} customers={customers} stores={stores} activeStoreId={activeStoreId}/>}
     {tab==="portal"&&<WholesalePortalAdmin api={api} customers={customers} stores={stores} activeStoreId={activeStoreId}/>}
-    <div hidden={tab!=="orders"}><WholesaleOrders api={api} stores={stores} activeStoreId={activeStoreId} customers={customers} active={tab==="orders"} onLock={submissionLock}/></div>
+    </>}
+    <div hidden={suspended||tab!=="orders"}><WholesaleOrders suspended={suspended} api={api} stores={stores} activeStoreId={activeStoreId} customers={customers} active={tab==="orders"} onLock={submissionLock}/></div>
   </section>;
 }
 
 const decimalQuantity=value=>/^\d{1,10}(?:\.\d{1,4})?$/.test(value)&&Number(value)>0;
 const amount=value=>{const text=String(value??""),match=/^(\d+)(?:\.(\d{1,2}))?$/.exec(text);return match?BigInt(match[1]).toLocaleString("el-GR")+","+(match[2]||"").padEnd(2,"0"):"—"};
-function WholesaleOrders({api,stores,activeStoreId,customers,active,onLock}){
+function WholesaleOrders({api,stores,activeStoreId,customers,active,onLock,suspended=false}){
   const allowed=id=>Boolean(id&&stores.some(store=>store.id===id&&store.active!==false));
   const [storeId,setStoreId]=useState(()=>allowed(activeStoreId)?activeStoreId:""),[customerId,setCustomerId]=useState(""),[query,setQuery]=useState(""),[results,setResults]=useState([]),[cart,setCart]=useState([]),[notes,setNotes]=useState("");
   const [quote,setQuote]=useState(null),[error,setError]=useState(""),[quoting,setQuoting]=useState(false),[searching,setSearching]=useState(false),[phase,setPhase]=useState("idle"),[ack,setAck]=useState(null);
@@ -66,11 +67,11 @@ function WholesaleOrders({api,stores,activeStoreId,customers,active,onLock}){
   useEffect(()=>{
     const serial=++listGeneration.current;let cancelled=false;
     setOrders([]);setTotal(0);setListError("");setLoading(false);
-    if(!active||!validStore)return;
+    if(suspended||!active||!validStore)return;
     setLoading(true);const q=new URLSearchParams({storeId,page:String(page),pageSize:"50"});
     api("/api/wholesale/orders?"+q).then(data=>{if(cancelled||!live.current||serial!==listGeneration.current)return;setOrders(data.items||[]);setTotal(Number(data.total||0));setLoading(false)}).catch(e=>{if(cancelled||!live.current||serial!==listGeneration.current)return;setListError(e.message);setLoading(false)});
     return()=>{cancelled=true};
-  },[api,active,storeId,validStore,page,refresh]);
+  },[api,active,storeId,validStore,page,refresh,suspended]);
   const changeCustomer=value=>{if(frozen.current)return;invalidate();setCustomerId(value)};
   const editCart=next=>{if(frozen.current)return;invalidate();setCart(next)};
   const search=async()=>{if(!validStore||frozen.current)return;const serial=++searchGeneration.current;setSearching(true);setError("");setResults([]);try{const q=new URLSearchParams({q:query,storeId,page:"1",pageSize:"50"}),data=await api("/api/wholesale/products?"+q);if(live.current&&serial===searchGeneration.current){setResults(data.items||[]);setSearching(false)}}catch(e){if(live.current&&serial===searchGeneration.current){setError(e.message);setSearching(false)}}};
@@ -87,6 +88,8 @@ function WholesaleOrders({api,stores,activeStoreId,customers,active,onLock}){
     }finally{busy.current=false}
   };
   const openOrder=async id=>{const serial=++detailGeneration.current,selected=storeId;setDetail(null);setDetailError("");try{const data=await api("/api/wholesale/orders/"+encodeURIComponent(id)+"?"+new URLSearchParams({storeId:selected}));if(live.current&&serial===detailGeneration.current&&scope.current===selected)setDetail(data.order)}catch(e){if(live.current&&serial===detailGeneration.current&&scope.current===selected)setDetailError(e.message)}};
+  // Keep the submission refs mounted while removing private views from the DOM.
+  if(suspended)return null;
   return <section className="wholesale-orders" aria-label="Παραγγελίες χονδρικής">
     <h3>Νέα παραγγελία προς έγκριση</h3><p>Η υποβολή καταχωρίζει αίτημα. Δεν εκδίδεται παραστατικό και δεν μεταβάλλονται απόθεμα ή πληρωμές.</p>
     {locked&&<div role="status" className="wholesale-order-lock">{phase==="pending"?"Αναμονή επιβεβαίωσης παραγγελίας…":"Εκκρεμεί επιβεβαίωση. Η παραγγελία παραμένει κλειδωμένη για ασφαλή επανάληψη του ίδιου αιτήματος."} Δεν υποστηρίζεται ανάκτηση μετά από κλείσιμο ή επαναφόρτωση της σελίδας.</div>}

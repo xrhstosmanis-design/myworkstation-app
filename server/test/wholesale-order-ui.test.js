@@ -65,6 +65,7 @@ test("ambiguous order response freezes body and key, locks edits/navigation, ret
  await mounted(api,async(ctx)=>{
   await prepare(ctx);await ctx.click("Υποβολή προς έγκριση");assert.match(document.body.textContent,/Η έκβαση δεν έχει επιβεβαιωθεί/);assert.equal(document.querySelector('[aria-label="Κατάστημα παραγγελίας"]').closest("fieldset").disabled,true);assert.equal([...document.querySelectorAll(".wholesale-tabs button")].every(button=>button.disabled),true);
   const event=new ctx.dom.window.Event("beforeunload",{cancelable:true});window.dispatchEvent(event);assert.equal(event.defaultPrevented,true);
+  await ctx.rerender({suspended:true});assert.equal(document.querySelector(".wholesale-tabs"),null);assert.equal(document.querySelector(".wholesale-orders"),null);assert.doesNotMatch(document.body.textContent,/Assigned customer|Order product/);assert.equal(locks.at(-1),true);assert.equal(writes.length,1);await ctx.rerender({suspended:false});assert.equal(writes.length,1,"resuming access never posts automatically");
   await ctx.click("Επανάληψη ίδιου αιτήματος");assert.equal(writes.length,2);assert.equal(writes[0],writes[1]);assert.match(JSON.parse(writes[0]).clientOrderId,/^[0-9a-f-]{36}$/);assert.deepEqual(locks,[true,true,false]);assert.match(document.body.textContent,/Επιβεβαιώθηκε η αρχική καταχώρηση/);
  },{onSubmissionLockChange:locked=>locks.push(locked)});
 });

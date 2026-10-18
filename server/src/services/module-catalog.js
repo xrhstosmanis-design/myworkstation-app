@@ -1,4 +1,5 @@
 export const moduleCatalog=[
+  {key:"WHOLESALE_B2B",name:"Χονδρική B2B",description:"Ξεχωριστό εμπορικό module χονδρικής, B2B site και εξωτερικών πωλητών. Απαιτεί ρητή ενεργοποίηση και ενεργή πληρωμένη άδεια εταιρείας.",category:"OPERATIONS",commercialReady:true},
   {key:"CORE",name:"MyWorkStation Core",description:"Βασική πλατφόρμα, χρήστες, καταστήματα και audit.",category:"CORE",commercialReady:true},
   {key:"PERSONNEL",name:"Προσωπικό",description:"Εργαζόμενοι, ρόλοι και κανόνες.",category:"CORE",commercialReady:true},
   {key:"SHIFTS",name:"Βάρδιες",description:"Πρόγραμμα και κατανομή βαρδιών.",category:"CORE",commercialReady:true},
