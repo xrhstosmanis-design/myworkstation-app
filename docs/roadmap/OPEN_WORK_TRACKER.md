@@ -146,7 +146,15 @@ The owner replied «ΕΙΝΑΙ ΟΚ» after the company-details and terminal-del
 
 Retained owner fix/company-tax-terminal-delete-20261017. Source PR2656 / deployed revision88579d6326fa444e20abed02231a1069c341f438, full PR/main2902PASS/0FAIL/0SKIP plus6backup and guarded Render39061606272 remain separate technical evidence. The user's device revision was not independently captured. Wider #02/#36 and installation/KAT/remote owners remain unchanged. Only a separately reported legitimate future save/archive can establish persistence acceptance. Checkpoint: CHECKPOINTS/CHANGES/2026-10-17-company-tax-terminal-delete.md. Earlier AWAITING USER entries are historical for UI appearance only.
 
-## 17/10/2026 23:00 Europe/Athens — INVENTORY-SUPPLIER-LINK-MERGE-01 / SOURCE LIVE / AWAITING USER PREVIEW
+## 18/10/2026 12:38 Europe/Athens — INVENTORY-SUPPLIER-LINK-MERGE-01 / LIMITED USER PASS / CLOSED PREVIEW BLOCKER
+
+Owner fix/inventory-supplier-link-merge-20261017. User replied «ΕΙΝΑΙ ΟΚ» after the delivered same-supplier correction and instruction to refresh the original selected-store preview. Record LIMITED USER PASS only for removal of the false same-supplier/identical-code preview blocker. This supersedes AWAITING USER PREVIEW for this bounded correction; no further repeat preview is requested. User browser, role, terminal and client revision at confirmation were not independently captured. No final production merge, stock delta, payment effect or physical acceptance is inferred.
+
+Delivered source PR2664/merge9c515f0d24b9350f52ebc6ca8242a97de265955b, full PR39063780880 and main39064230665 SUCCESS2906PASS/0FAIL/0SKIP plus6backup; guarded Render39064604619, deployment dep-db9t673rjlhs73834il0 LIVE17Oct19:59:55UTC, independently exact healthy17Oct23:00/23:06Athens. Receipt PR2672 merged d1d77878. These are historical release observations, not an independent measurement of the user's client on18Oct.
+
+Manual docs/manual/inventory/PASS.md records the accepted preview flow and review limits. Different nonblank codes or third-product learning ownership remain review blockers. Selected survivor/retail choice is retained by the delivered source; no new price change or data mutation was performed for this receipt. No invoice/payment/stock transaction is repeated for evidence. Broad measured merge/physical acceptance remains OPEN with feat/inventory-bulk-vat-20261015; overall INVENTORY-ADV/printed39/Gate2 remain unchanged. Checkpoint CHECKPOINTS/CHANGES/2026-10-17-inventory-supplier-link-merge.md.
+
+## 17/10/2026 23:00 Europe/Athens — INVENTORY-SUPPLIER-LINK-MERGE-01 / HISTORICAL SOURCE LIVE / SUPERSEDED BY USER PASS18OCT
 
 Retained owner fix/inventory-supplier-link-merge-20261017. ClaimPR2662/head7c9270a7/docsCI39062553215 SUCCESS merged74ebf744 before source. SourcePR2664/finalhead2d549211d5e53ef5251d2d2bf159f33393447d9d/fullPRCI39063780880/job117487134485 SUCCESS2906PASS/0FAIL/0SKIP plus6backup; merged9c515f0d24b9350f52ebc6ca8242a97de265955b. ExactmainCI39064230665/job117488470557 SUCCESS same2906/0/0+6backup, native PostgreSQL, Windows, browser/build/invariants and real HTTP checks. Earlier36c408e3/39062754920 and9d78f745/39063254311 also passed2906/0/0; only docs-only concurrent confirmation/layout claims caused merge conflicts, resolved without changing any of the four accepted runtime/test blobs or weakening assertions.
 
