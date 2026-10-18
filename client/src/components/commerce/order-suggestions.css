@@ -18,3 +18,6 @@
 .order-suggestions footer{padding-right:64px}
 .order-suggestions footer button{order:-1}
 .order-suggestions footer span{flex:1}
+
+
+.order-suggestions-view{display:flex;gap:12px;padding:6px 16px;flex-wrap:wrap;flex-shrink:0}.order-suggestions-view label{flex:1;min-width:180px}.order-suggestions-view select{min-height:44px;width:100%;font-size:16px;border:1px solid #bbcfdf;border-radius:7px;background:#fff;color:#183b56;padding:6px}.order-suggestions-proxy{margin:0 0 8px;padding:8px;background:#fff4dc;color:#654712;font-size:14px;line-height:1.4}.order-suggestions-supplier{margin-bottom:6px}.order-suggestions-content{overflow-y:auto}
