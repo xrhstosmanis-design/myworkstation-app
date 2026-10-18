@@ -69,6 +69,9 @@ test('expiry retains the frozen child and blocks requests until same-principal p
   await mounted(async({click,calls,setCaps,setOrder,advance,focus,act})=>{
     setCaps(paid('company-a',new Date(Date.now()+1000).toISOString()));await focus();await click('Χονδρική B2B');
     setOrder(async()=>{throw Error('Acknowledgement lost')});await click('Send frozen fixture');const child=document.querySelector('[data-suite-child]'),body=window.__suiteChild.body.current;assert.equal(posts(calls).length,1);
+    const beforeScopeSwitch=calls.length;
+    for(const view of ['products','operations'])await act(async()=>window.dispatchEvent(new window.CustomEvent('mws:commerce-open',{detail:{view,storeId:'store-b'}})));
+    assert.equal(calls.length,beforeScopeSwitch,'uncertain request blocks all new-store opening fetches');assert.equal(document.querySelector('[data-suite-child]'),child);assert.equal(window.__suiteChild.body.current,body);
     await advance(1001);assert.equal(entries().length,0);assert.equal(document.querySelector('[data-suite-child]'),child);assert.ok(child.closest('[hidden]'));assert.equal(window.__suiteUnmounts,0);assert.equal(document.querySelector('[title="Κλείσιμο"]').disabled,true);
     await act(async()=>window.__suiteChild.send());assert.equal(posts(calls).length,1,'forced hidden retry must be blocked before fetch');assert.equal(window.__suiteChild.body.current,body);
     setCaps(paid());setOrder(async()=>({orderId:'original'}));await focus();assert.equal(posts(calls).length,1,'restoring entitlement must not auto-submit');assert.equal(document.querySelector('[data-suite-child]'),child);assert.equal(child.closest('[hidden]'),null);
