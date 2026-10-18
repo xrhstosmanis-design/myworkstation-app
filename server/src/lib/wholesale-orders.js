@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import {z} from "zod";
-import {assertWholesaleManager,buildWholesaleQuote,normalizeQuoteInput,wholesaleError} from "./wholesale-pricing.js";
+import {buildWholesaleQuote,normalizeQuoteInput,wholesaleError} from "./wholesale-pricing.js";
+import {assertWholesalePrincipal,authorizeWholesalePrincipal} from "./wholesale-principal.js";
 
 const orderInput=z.object({
   clientOrderId:z.string().uuid().transform(value=>value.toLowerCase()),
@@ -31,7 +32,7 @@ function accepted(row,replayed){
     channel:row.channel,status:row.status,quoteId:row.quoteId,
     snapshot:typeof row.snapshot==="string"?JSON.parse(row.snapshot):row.snapshot,
     netTotal:amount(row.netTotal),vatTotal:amount(row.vatTotal),grossTotal:amount(row.grossTotal),
-    clientOrderId:row.clientOrderId,createdAt:row.createdAt};
+    clientOrderId:row.clientOrderId,createdAt:row.createdAt,notes:row.notes||""};
   return {orderId:row.id,status:row.status,replayed,order};
 }
 
@@ -50,19 +51,17 @@ function postgresCode(error){return String(error?.meta?.code||error?.code||"")}
 function retryable(error){return error?.wholesaleKeyRace===true||error?.code==="P2034"||["40001","40P01"].includes(postgresCode(error))}
 
 export async function createWholesaleOrder(db,ctx,input){
-  assertWholesaleManager(ctx);
-  // Only the verified backoffice adapter is implemented. Future site/seller
-  // principals must not gain access by selecting their own source in JSON.
-  if(ctx.channel!=="BACKOFFICE")throw wholesaleError(403,"WHOLESALE_CHANNEL_DENIED","Wholesale order source is not supported.");
+  assertWholesalePrincipal(ctx);
   const body=normalizeWholesaleOrderInput(input),requestHash=fingerprint(body,ctx.channel);
   for(let attempt=0;attempt<3;attempt++){
     try{
       return await db.$transaction(async tx=>{
-        assertWholesaleManager(ctx);
+        assertWholesalePrincipal(ctx);
         const lockKey=JSON.stringify(["wholesale-order",ctx.companyId,ctx.actorId,body.clientOrderId]);
         // ReadCommitted gives the lookup below a fresh statement snapshot after
         // this lock resolves, including a predecessor accepted while we waited.
         await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey},0))::text AS "locked"`;
+        await authorizeWholesalePrincipal(tx,ctx,body,{lock:true});
         await authorizeCurrentScope(tx,ctx,body);
         const existing=await tx.$queryRaw`SELECT * FROM "WholesaleOrderRequest" WHERE "companyId"=${ctx.companyId} AND "actorId"=${ctx.actorId} AND "clientOrderId"=${body.clientOrderId} LIMIT 1`;
         if(existing[0]){

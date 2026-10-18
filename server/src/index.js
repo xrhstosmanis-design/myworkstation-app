@@ -58,6 +58,8 @@ import customerControlReversalAwareRoutes from "./routes/customer-control-revers
 import customerControlRoutes from "./routes/customer-control-v2.js";
 import customerOperatorCardRoutes from "./routes/customer-operator-cards.js";
 import wholesaleB2BRoutes from "./routes/wholesale-b2b.js";
+import wholesalePortalRoutes from "./routes/wholesale-portal.js";
+import wholesalePortalAdminRoutes from "./routes/wholesale-portal-admin.js";
 import priceCatalogPromotionGuardRoutes from "./routes/price-catalog-promotion-guard.js";
 import priceCatalogImportRoutes from "./routes/price-catalog-import.js";
 import priceCatalogRoutes from "./routes/price-catalog-normalized.js";
@@ -168,6 +170,7 @@ app.use(createN40ReadTrace());
 app.use(createProductionStoreReadDiagnostic());
 app.use(blockCustomerDemoRequest);
 app.get("/api/health",(_,res)=>res.json({ok:true,version:"0.22.0+kat-test-pos",revision:process.env.RENDER_GIT_COMMIT||process.env.GIT_COMMIT||null}));
+app.use("/api/b2b",wholesalePortalRoutes);
 app.use("/api/public/kat",katOnlineOrderingRoutes);
 app.use("/api/public/kat",katOnlineOrderingModifierRoutes);
 app.use("/api/public/online",katOnlineOrderingModifierRoutes);
@@ -229,6 +232,7 @@ app.use("/api/supplier-control",auth,requireCompanyModule("INVENTORY"),supplierC
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlReversalAwareRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerOperatorCardRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlRoutes);
+app.use("/api/wholesale/portal",auth,requireCompanyModule("CORE"),wholesalePortalAdminRoutes);
 app.use("/api/wholesale",auth,requireCompanyModule("CORE"),wholesaleB2BRoutes);
 app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalogPromotionGuardRoutes);
 app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalogImportRoutes);
@@ -308,6 +312,10 @@ app.get("/store/:storeId",async(req,res,next)=>{
   try{res.set("Cache-Control","no-store").type("html").send(storeHtmlWithManifest(await readFile(path.join(dist,"index.html"),"utf8"),req.params.storeId))}catch(error){next(error)}
 });
 app.get("/online/:publicSlug",(req,res)=>res.sendFile(path.join(dist,"kat/app.html")));
+app.get("/b2b/:publicSlug",(req,res)=>{
+  if(req.params.publicSlug.length<3||req.params.publicSlug.length>63||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(req.params.publicSlug))return res.sendStatus(404);
+  res.set({"Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff"}).sendFile(path.join(dist,"b2b.html"));
+});
 app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.sendFile(path.join(dist,"index.html"))});
 try{await ensurePlatformSchema();await ensureCashControlSchema();await ensureAutomaticReportSettingsSchema(prisma);await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await ensureKatPreparationCleanup();await ensureDailyBiteCoffeeBehavior();await ensureStoreBakingSchema(prisma);await ensureKatOnlineOrderingSchema();await ensureVideoEventsSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 await ensureStorePaidModulesSchema();
