@@ -2,6 +2,7 @@ import {businessTool,businessArguments,businessQuestionPeriod,businessQuestionCl
 import {businessReportAnswer} from '../../../shared/assistant-business-answer.mjs';
 import {z} from "zod";
 import {assistantSalesPeriodClarification} from "./assistant-conversation-context.js";
+import {assistantCapabilityHelp} from "./assistant-capability-help.js";
 import {salesReportCalendar} from "./sales-report-calendar.js";
 import {cashToolArguments} from "./assistant-cash-tools.js";
 import {stockToolArguments,ownerStockTool} from "./owner-stock-tools.js";
@@ -49,6 +50,8 @@ export const assistantProductTools=[ownerSalesTool,ownerStockTool];
 
 // Shared dispatcher. The old export remains compatible with existing Owner clients.
 export async function runOwnerAssistant({prompt,question="",requestProvider,readCash,readSales,readStock,readSalesStores,readConsumption,readBusiness,cashTool,tools=[cashTool,ownerSalesTool],now=new Date()}){
+  const help=assistantCapabilityHelp(question,tools);
+  if(help)return {response:{ok:true},raw:{status:"completed",output_text:JSON.stringify(help)},evidence:[],reads:[]};
   const total=tools.some(t=>t?.name===salesStoresTool.name)&&plainTotalSalesRequest(question,{now});
   if(total){
     const report=await readSalesStores(total);
