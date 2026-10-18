@@ -1,4 +1,4 @@
-## 18/10/2026 23:56 Europe/Athens — STORE-LIFECYCLE-01 / REAL EXISTING-ARCHIVE RESTORE PASS / CLEANUP STILL OPEN
+## 19/10/2026 00:06 Europe/Athens — STORE-LIFECYCLE-01 / REAL EXISTING-ARCHIVE RESTORE PASS / CLEANUP STILL OPEN
 
 Owner feat/store-shifts-inventory-clear-20261018 retained; bounded source feat/store-lifecycle-restore-audit-20261018. User approved Google/Render sign-in22:21 and confirmed device challenge22:32. Fresh Render dashboard positively showed My Workspace tea-d9ie26vaqgkc739uudqg; the earlier authentication access blocker is superseded. No KAT reset/delete, maintenance enrollment, generation bump, Writer stop, credential/configuration change or new product import occurred. BOTH registers remain protected. New Excel NOT RECEIVED.
 
@@ -14,6 +14,8 @@ LIMITS / WHOLE TASK OPEN: this is recovery of the existing21:00Athens whole-data
 
 
 LATEST READ-ONLY OBSERVATIONS:23:33Athens openShifts0/recentConnector60s1/143StoreProduct/23legacyEmployee/165Sale/fiscal2/EFTPOS4/RBS2;23:36 activeKAT-POS-01+KAT-POS-02. No production fence exists. Additional reviewed metadata/counts23:40–23:50:3global Workforce identities baseKAT+KATaccess,0explicitOtherAccess/0legacyLink, checked attendance1/clock2/leave1/schedule2 allKAT and0incomingOtherEmployeeRules;1InventoryAccessGrant;0typed KAT DispatchNote ProviderOutbox/Attempt;1NetlinkStoreConfig that must be retained. No named-customer sales, credit payments, customer ledger or loyalty ledger forKAT. These are read-only dependency observations, not a complete deletion manifest or permission to remove global identities. Exact evidence files accompany this receipt. The old prospective RESET_KEEP remains broader than only-register-settings; do not activate it as the latest policy.
+
+INTEGRATION:exact main13151d60fc797b6d736cbe7eaaa19ce1871cecda full CI39165496777/job117788229507 SUCCESS3220PASS/0FAIL/0SKIP plus6backup. Public health at00:05Athens remained22a4562d73f50d7a2d55a0b9dfce41f44e1f1a44; new source release is not yet claimed LIVE. Deployment39165715593 checked earlier584a97b7 and correctly skipped it for newer production source; that successful guard run is NOT proof of deployment13151d60. No reset or app execution activation.
 
 ## 18/10/2026 — STORE-LIFECYCLE-01 / offline generation checkout guard — AWAITING CI
 
