@@ -1,0 +1,45 @@
+{
+  "observedAtAthens": "2026-10-18T23:23-23:26+03:00",
+  "observationType": "manual transcription of actual cloud browser AX observations",
+  "browser": "cloud Chrome tab8 desktop",
+  "role": "existing authenticated Platform SuperAdmin",
+  "store": "MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "allStores": false,
+  "health": {
+    "checkedAtAthens": "2026-10-18T23:26:13.988220+03:00",
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "755ca8c0855b7c2c261a7281a5d89c89083a38cb"
+  },
+  "limitedLivePass": [
+    "Enter submits bounded capability help",
+    "Shift+Enter inserts newline without submitting",
+    "Copy visible success feedback only",
+    "Πληρωμές Ιουλία asks for valid period",
+    "Μεταφορές χθες 2269 asks for numeric clarification without report",
+    "Πληρωμές Μαρτίνι 123/10/11 asks for valid period",
+    "new empty thread/select old thread/close and reopen retain original same-session messages and LAB"
+  ],
+  "notTested": [
+    "clipboard bytes",
+    "IME",
+    "cancellation/late response",
+    "Owner",
+    "mobile",
+    "nonempty file list",
+    "new export bytes/formats",
+    "numerical reconciliation",
+    "general inherited-name/date filtering",
+    "provider/network counts",
+    "physical microphone",
+    "reload/cross-login persistence"
+  ],
+  "businessMutations": false,
+  "transactionsReplayed": false,
+  "screenshot": {
+    "previewObserved": true,
+    "savedArtifactAvailable": false,
+    "reason": "documented shared file missing after five-second poll; no alternate transfer"
+  },
+  "wholeTask": "OPEN / ASSIGNED"
+}
