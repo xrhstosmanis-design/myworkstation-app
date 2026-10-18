@@ -1,3 +1,15 @@
+## 18/10/2026 16:40 Europe/Athens — NATIVE-CHAT-FCM-01 / retained assignment, bounded role compatibility fix
+
+Retained owner feat/android-chat-native-20261017; bounded source branch fix/native-fcm-platform-role-20261018. User requests continuation through completion. Read-only source confirms native FCM registry stores role:OWNER without platformRole for actual Super Admin, while send policy compares it with current DB role:SUPER_ADMIN; delivery therefore fails closed. Existing web mobile push stores platformRole||role. Next bounded change: preserve effective platform role at registration, compare with current DB role and reconstruct current platform identity only after session/version/password/company checks. Preserve support-company fence, Owner scope, staff authorization, provider default-off and revocation. Add compatibility/admin/support/demotion tests; no real push/message/read or production environment/DB action. Physical notification acceptance remains NOT TESTED. Existing 2FA/store-entry USER PASS protected. Claim must merge before source.
+
+## 18/10/2026 15:42 Europe/Athens — ANDROID-CHAT-NATIVE-01 / store entry USER PASS
+
+Ο ιδιοκτήτης επιβεβαιώνει «Ανοίγουν ολα» μετά την παράδοση preview 0.1.2/code3. USER PASS μόνο για το άνοιγμα όλων των καταστημάτων που εμφανίζονται στον λογαριασμό του. Αντικαθιστά το προηγούμενο other-store USER FAIL/AWAITING RETEST. Διατηρείται το περιορισμένο 2FA USER PASS. Δεν διασταυρώθηκαν ανεξάρτητα IDs καταστημάτων, μοντέλο/OS ή hash εγκατεστημένου APK. Καμία επανάληψη εισόδου/μηνύματος/ανάγνωσης για τεκμηρίωση.
+
+Source PR #2714 merged 7851c90a5f784b98b174597a2606fba4784e6446, exact head 4e92eee07b67e9060196a693c6b94f68ff24cfa4. Android CI 39127168195 SUCCESS (build/lint, 18 unit + 6 API30 instrumentation), full CI 39127168270 SUCCESS. Παραδοθέν APK SHA256 63380888814b141c281c9488d4db8c102e031e247c5579cd8b51456b755e8114. CI δεν ισοδυναμεί με φυσικό PASS.
+
+Retained owner feat/android-chat-native-20261017. Η εκκρεμότητα store-entry retest κλείνει. OPEN παραμένουν μηνύματα/send/read/composer, φωτογραφίες, AI, tablet/keyboard, απομόνωση και έλεγχος τοπικών αρχείων, πραγματική εγγραφή/παράδοση ειδοποιήσεων, POS download/QR, production signing και iOS. Καμία μεταβολή FCM flag/credentials/παραγωγικών δεδομένων. N16/PWA και λοιπές αναθέσεις διατηρούνται.
+
 ## 18/10/2026 15:05 Europe/Athens — ANDROID-CHAT-NATIVE-01 / 2FA limited USER PASS; store entry USER FAIL
 
 18/10/2026 15:05 Europe/Athens update: user now reports KAT opens in the installed preview. Scoped USER PASS for that reported store entry only, superseding the earlier all-stores-fail wording for KAT. Store ID, exact installed hash/device and message/composer/read/Push effects were not independently observed. Other-store entry remains AWAITING RETEST; the verified compatibility-Owner cross-company routing defect remains a bounded fix. No KAT reopening/message/read was repeated for documentation.
