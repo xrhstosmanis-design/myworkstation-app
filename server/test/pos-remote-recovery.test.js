@@ -10,6 +10,7 @@ test('recovery refuses unconfirmed/ambiguous and special settlement paths; previ
  for(const extra of [{customerId:'customer'},{redeemPoints:1},{onlineOrderId:'order'},{operationChannel:'DELIVERY_DELAYED'},{actorId:null}])assert.ok(recoveryBlocker({...r,checkoutJson:{...r.checkoutJson,...extra}}));
  assert.notEqual(recoveryView(r).preview,recoveryView({...r,storeId:'sibling'}).preview);assert.notEqual(recoveryView(r).preview,recoveryView({...r,updatedAt:new Date()}).preview);
  assert.equal('clientTransactionId' in recoveryView(r),false);
+ assert.ok(recoveryBlocker({...r,checkoutJson:{...r.checkoutJson,resolvedItems:[null]}}));assert.deepEqual(recoveryView({...r,checkoutJson:{resolvedItems:'invalid'}}).items,[]);
 });
 const isolated=(()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}})();
 test('native locked recovery: one commit under concurrency, exact replay, rollback on audit failure and zero-write scope/shift/generation refusals',{skip:!isolated},async()=>{
@@ -51,5 +52,6 @@ test('native locked recovery: one commit under concurrency, exact replay, rollba
   await db.$executeRawUnsafe(`UPDATE "CashShiftSession" SET "status"='CLOSED'`);await assert.rejects(run(await stored(card.id)),/βάρδια/);await db.$executeRawUnsafe(`UPDATE "CashShiftSession" SET "status"='OPEN'`);
   await db.$executeRawUnsafe(`UPDATE "CashShiftSession" SET "openedBy"='other'`);await assert.rejects(run(await stored(card.id)),/βάρδια/);await db.$executeRawUnsafe(`UPDATE "CashShiftSession" SET "openedBy"='operator'`);
   const cardResult=await run(await stored(card.id));assert.ok(cardResult.saleId);assert.equal((await db.$queryRawUnsafe(`SELECT * FROM "Payment" WHERE "method"='CARD'`)).length,1);assert.equal((await db.$queryRawUnsafe(`SELECT * FROM "StoreTransaction" WHERE "type"='SALE_CARD'`)).length,1);assert.equal((await db.$queryRawUnsafe(`SELECT "currentStock"::text AS stock FROM "StoreProduct" WHERE "storeId"='target'`))[0].stock,'8');
+  const conflict=fixture();await insert(conflict);await db.$executeRawUnsafe(`INSERT INTO "Sale" ("id","companyId","storeId","clientTransactionId","status","fiscalStatus","total") VALUES($1,'company','target',$2,'COMPLETED','NON_FISCAL',2.7)`,randomUUID(),conflict.clientTransactionId);await assert.rejects(run(await stored(conflict.id)),/διαφορετική/);assert.equal((await stored(conflict.id)).status,'DISPATCHED');
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect()}
 });

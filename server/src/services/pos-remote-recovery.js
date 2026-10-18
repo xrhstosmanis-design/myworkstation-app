@@ -8,8 +8,8 @@ export function recoveryBlocker(r){
  if(!((r.paymentMethod==='CASH'&&r.status==='DISPATCHED')||(r.paymentMethod==='CARD'&&r.status==='OPERATOR_CONFIRMED'&&r.operatorOutcome==='YES')))return 'Απαιτείται έλεγχος της απόδειξης ή της πληρωμής στο κατάστημα.';
  const c=r.checkoutJson||{};
  if(!Array.isArray(c.resolvedItems)||!c.resolvedItems.length)return 'Λείπει το αρχικό καλάθι.';
- const total=Number(r.total),summary=Number(c.baseSummary?.total),sum=c.resolvedItems.reduce((n,x)=>n+Math.round(Number(x.lineTotal)*100),0);
- if(!Number.isFinite(total)||total<=0||!Number.isFinite(summary)||Math.round(total*100)!==Math.round(summary*100)||sum!==Math.round(total*100)||c.resolvedItems.some(x=>!x.productId||!Number.isFinite(Number(x.quantity))||Number(x.quantity)<=0||!Number.isFinite(Number(x.effectiveUnitPrice??x.unitPrice))))return 'Τα αποθηκευμένα είδη και ποσά απαιτούν τεχνικό έλεγχο.';
+ const total=Number(r.total),summary=Number(c.baseSummary?.total),sum=c.resolvedItems.reduce((n,x)=>n+Math.round(Number(x?.lineTotal)*100),0);
+ if(!Number.isFinite(total)||total<=0||!Number.isFinite(summary)||Math.round(total*100)!==Math.round(summary*100)||sum!==Math.round(total*100)||c.resolvedItems.some(x=>!x?.productId||!Number.isFinite(Number(x.quantity))||Number(x.quantity)<=0||!Number.isFinite(Number(x.effectiveUnitPrice??x.unitPrice))))return 'Τα αποθηκευμένα είδη και ποσά απαιτούν τεχνικό έλεγχο.';
  // These flows have separate loyalty/customer/order settlement requirements.
  if(c.customerId||Number(c.redeemPoints||0)||c.tableOrderId||c.onlineOrderId||!['COUNTER',undefined,null].includes(c.operationChannel))return 'Η ειδική συναλλαγή απαιτεί τεχνικό έλεγχο.';
  if(!c.actorId||!c.operatorEmployeeId)return 'Λείπει ο αρχικός χειριστής.';
@@ -45,6 +45,8 @@ export async function recoverPosRequest(db,scope,input,{finalizeCash,finalizeCar
   // Never silently post an old receipt into a replacement shift.
   const shifts=await tx.$queryRaw`SELECT "id","openedAt","openedBy" FROM "CashShiftSession" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND UPPER(TRIM("terminalPos"))=UPPER(TRIM(${r.terminalPos})) AND "status"='OPEN' FOR SHARE`;
   if(shifts.length!==1||new Date(shifts[0].openedAt)>new Date(r.createdAt)||shifts[0].openedBy!==r.checkoutJson.actorId)fail(409,'Η αρχική βάρδια δεν είναι ανοικτή. Απαιτείται τεχνικός έλεγχος.');
+  const prior=(await tx.$queryRaw`SELECT "id","total","status","fiscalStatus" FROM "Sale" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "clientTransactionId"=${r.clientTransactionId} FOR SHARE`)[0];
+  if(prior&&(prior.status!=='COMPLETED'||prior.fiscalStatus!=='ISSUED'||Math.round(Number(prior.total)*100)!==Math.round(Number(r.total)*100)))fail(409,'Υπάρχει διαφορετική καταχώριση με τον ίδιο κωδικό. Απαιτείται τεχνικός έλεγχος.');
   const finalize=r.paymentMethod==='CASH'?finalizeCash:finalizeCard;
   const result=await finalize(r.id,{db:tx,inTransaction:true});
   if(!result?.saleId)fail(409,'Δεν ολοκληρώθηκε η ανάκτηση. Ανανέωσε για έλεγχο.');
