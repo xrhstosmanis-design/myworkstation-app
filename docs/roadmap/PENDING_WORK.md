@@ -1,3 +1,13 @@
+## 18/10/2026 18:30 Europe/Athens — STORE-LIFECYCLE-01 / EXPLICIT OWNER HANDOFF / LIMITED SCOPE
+
+ΑΝΑΛΗΨΗ ΑΠΟ feat/store-cleanup-20261017 — ASSIGNED feat/store-shifts-inventory-clear-20261018. Previous page stopped by explicit owner instruction; this is a replacement owner, not concurrent work. Claim branch docs/store-shifts-inventory-takeover-20261018. Owner authorizes development/tests/push/merge and actual KAT clearance only within the following scope.
+
+Latest requirement supersedes historical RESET/DELETE plans: central selected-store button clears ONLY cash shifts, store-specific old product records, stock balances and warehouse movements. KEEP employees, schedules/leave, configuration/licenses, installations/POS/fiscal/EFTPOS/RBS connections, store/company/shared catalog, sales, payments and all other history. Referenced retained records must block deletion rather than cascade, null links or expand scope. No whole-store deletion authorized. Existing broad RESET must not be activated.
+
+Handoff baseline: PR2722 merged516b6cc706a97c80ae38205d7af060346bb94015; owner reports exact PR/main CI3054PASS/0FAIL/0SKIP. Internal core only, public executionAvailable:false. PR2736 closed unmerged. New limited correction not implemented or tested yet. No KAT deletion performed. Last reported read-only44shifts including OPEN KAT-POS-01 since17Oct13:32Athens,143store products,23employees and recent connector is stale, NOT a refreshed production observation. New KAT Excel NOT RECEIVED; photos/roster pending.
+
+Required before execution: explicit bounded dependency selectors preserving retained history, verified durable encrypted recovery plus actual isolated restore, active/inflight/old-offline write protection, exact preview-bound transactional execution and audit counts. Refresh production baseline; never close shifts, stop connectors or replay fiscal work implicitly. Source/CI/deployment/actual cleanup must be reported separately. Current task OPEN / production execution NOT TESTED. Next: merge this claim before source work, then implement limited policy using the existing core. No new permission request needed for authorized work. Preserve all unrelated owners and previous scoped PASS.
+
 ## 18/10/2026 18:12 Europe/Athens - COORD-20261018 / FOUR SOURCE SLICES RELEASED / SCOPED WS1 LAB PASS / RESIDUALS OPEN
 
 Authoritative central receipt; owner codex/central-four-streams-20261018 retained. Supersedes this scope's earlier source-prepared/CI-pending and untested daily/weekly HOLD-provisional-preview statuses only. Original accepted transactions and unrelated owners/PASS remain protected.
