@@ -118,5 +118,94 @@ test('native PostgreSQL registered wholesale quotes, tier audit and concurrent r
       assert.deepEqual(await db.$queryRaw`SELECT "id","amount"::text AS amount FROM "StoreTransaction"`,[{id:'control-money',amount:'100.25'}]);
       assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "WholesaleOrderRequest"`)[0].n),2);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "WholesaleOrderEvent"`)[0].n),2);
     });
+    await t.test('deterministic advisory waiter reproduces old RR replay conflict and default RC replays the original snapshot',{timeout:45000},async()=>{
+      // Run the same real router, service, SQL and PostgreSQL twice. Only the
+      // negative-control DB adapter restores the previous RR transaction option.
+      // This expected 409 is evidence of the old replay-contract defect, not a
+      // business/LAB failure or permission to weaken the corrected assertion.
+      const deferred=()=>{let resolve;const promise=new Promise(yes=>{resolve=yes});return {promise,resolve}};
+      const bounded=async(promise,label,ms=6000)=>{let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(label)),ms)})])}finally{clearTimeout(timer)}};
+      const bindDb=(transaction)=>new Proxy(db,{get(target,key){if(key==='$transaction')return transaction;const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value}});
+      const sqlText=first=>Array.isArray(first)?first.join(''):String(first?.sql||first?.text||first||'');
+      const runCase=async(label,restoreRepeatableRead)=>{
+        const actorId='advisory-'+label,clientOrderId=crypto.randomUUID(),tierId='inserted-tier-'+label;
+        const reachedInsert=deferred(),releaseInsert=deferred(),seenTier=[],firstOptions=[],secondOptions=[];
+        let firstApi,secondApi,firstRequest,secondRequest,firstPid;
+        const options=original=>restoreRepeatableRead?{...original,isolationLevel:'RepeatableRead'}:original;
+        const firstDb=bindDb((fn,original)=>{
+          firstOptions.push(original?.isolationLevel);
+          return db.$transaction(tx=>fn(new Proxy(tx,{get(target,key){
+            if(key==='$queryRaw')return async(...args)=>{
+              const text=sqlText(args[0]);
+              if(text.includes('INSERT INTO "WholesaleOrderRequest"')){
+                firstPid=(await target.$queryRaw`SELECT pg_backend_pid()::int AS "pid"`)[0].pid;
+                reachedInsert.resolve();
+                await bounded(releaseInsert.promise,'first order INSERT barrier was not released',10000);
+              }
+              const result=await Reflect.apply(target.$queryRaw,target,args);
+              if(text.includes('JOIN LATERAL')&&text.includes('WholesalePriceListProduct')&&text.includes('FOR SHARE'))seenTier.push(...result);
+              return result;
+            };
+            const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;
+          }})),options(original));
+        });
+        const secondDb=bindDb((fn,original)=>{secondOptions.push(original?.isolationLevel);return db.$transaction(fn,options(original))});
+        try{
+          firstApi=await http(firstDb);secondApi=await http(secondDb);
+          const headers={'x-test-actor':actorId};
+          const fresh=await secondApi.request('/quotes','POST',input,headers);
+          assert.equal(fresh.status,200);assert.deepEqual(secondOptions,['RepeatableRead'],'the quote endpoint retains its independent RR snapshot');
+          assert.equal(fresh.data.items[0].minimumQuantity,'1.0000');
+          const submitted={...input,clientOrderId,quoteId:fresh.data.quoteId,notes:label};
+          firstRequest=firstApi.request('/orders','POST',submitted,headers);
+          await bounded(reachedInsert.promise,'first real request did not reach INSERT after pricing and locks');
+          assert.equal(seenTier.length,1,'actual selected tier query executed before the INSERT barrier');
+          assert.equal(String(seenTier[0].minimumQuantity),'1','first transaction locked the existing min1 tier');
+          // A new eligible tier is a phantom: unlike updating the selected row,
+          // this insert is not blocked by T1's existing-row FOR SHARE lock.
+          await db.$executeRaw`INSERT INTO "WholesalePriceListProduct" ("id","companyId","priceListId","productId","minimumQuantity","unitPrice","priceBasis","version") VALUES (${tierId},'company-a','list-a','product-a',1.5,3,'NET',1)`;
+          secondRequest=secondApi.request('/orders','POST',submitted,headers);
+          const lockKey=JSON.stringify(['wholesale-order','company-a',actorId,clientOrderId]);
+          const deadline=Date.now()+4500;let waiter;
+          while(Date.now()<deadline){
+            const rows=await db.$queryRaw`SELECT COUNT(*)::int AS "waiting" FROM pg_locks l JOIN pg_stat_activity a ON a."pid"=l."pid" WHERE a."wait_event_type"='Lock' AND a."wait_event"='advisory' AND ${firstPid}::int=ANY(pg_blocking_pids(l."pid")) AND "locktype"='advisory' AND "mode"='ExclusiveLock' AND "granted"=false AND "database"=(SELECT oid FROM pg_database WHERE datname=current_database()) AND "classid"=((hashtextextended(${lockKey},0)>>32)&4294967295)::oid AND "objid"=(hashtextextended(${lockKey},0)&4294967295)::oid AND "objsubid"=1`;
+            if(rows[0]?.waiting===1){waiter=rows[0];break}
+            await new Promise(resolve=>setTimeout(resolve,10));
+          }
+          assert.equal(waiter?.waiting,1,'second real request must be observed waiting on the exact company/actor/key advisory lock before T1 commits');
+          releaseInsert.resolve();
+          const [first,second]=await bounded(Promise.all([firstRequest,secondRequest]),'real order requests failed to settle');
+          assert.equal(first.status,201);assert.equal(first.data.order.snapshot.quoteId,fresh.data.quoteId);
+          assert.deepEqual(first.data.order.snapshot.totals,fresh.data.totals);
+          assert.equal(first.data.order.snapshot.items[0].minimumQuantity,'1.0000');
+          if(restoreRepeatableRead){
+            assert.equal(second.status,409,'negative control reproduces the old RR stale-snapshot replay defect');
+            assert.equal(second.data.code,'PRICE_CHANGED');
+            assert.equal(second.data.details.quote.items[0].minimumQuantity,'1.5000');
+            assert.notEqual(second.data.details.quote.quoteId,fresh.data.quoteId);
+          }else{
+            assert.equal(second.status,200,'RC must see the accepted request after the advisory wait, before any reprice');
+            assert.equal(second.data.replayed,true);assert.equal(second.data.orderId,first.data.orderId);
+            assert.deepEqual(second.data.order.snapshot,first.data.order.snapshot);
+          }
+          assert.deepEqual(firstOptions,['ReadCommitted'],'the unmodified service requests RC, including when the control adapter restores RR');
+          assert.deepEqual(secondOptions,['RepeatableRead','ReadCommitted']);
+          const saved=await db.$queryRaw`SELECT "id","snapshot" FROM "WholesaleOrderRequest" WHERE "companyId"='company-a' AND "actorId"=${actorId} AND "clientOrderId"=${clientOrderId}`;
+          assert.equal(saved.length,1);assert.equal(saved[0].id,first.data.orderId);assert.deepEqual(saved[0].snapshot,first.data.order.snapshot);
+          assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "WholesaleOrderEvent" WHERE "companyId"='company-a' AND "actorId"=${actorId} AND "orderId"=${first.data.orderId}`)[0].n),1);
+          const current=await secondApi.request('/quotes','POST',input,headers);assert.equal(current.status,200);assert.equal(current.data.items[0].minimumQuantity,'1.5000');assert.notEqual(current.data.quoteId,fresh.data.quoteId);
+        }finally{
+          releaseInsert.resolve();
+          await Promise.allSettled([firstRequest,secondRequest].filter(Boolean));
+          if(firstApi)await firstApi.close();if(secondApi)await secondApi.close();
+          await db.$executeRaw`DELETE FROM "WholesalePriceListProduct" WHERE "id"=${tierId} AND "companyId"='company-a'`;
+        }
+      };
+      await runCase('rr-negative-control',true);
+      await runCase('rc-default-positive',false);
+      assert.deepEqual(await db.$queryRaw`SELECT "id","amount"::text AS amount FROM "Sale"`,[{id:'control-sale',amount:'77.33'}]);
+      assert.deepEqual(await db.$queryRaw`SELECT "id","quantity"::text AS quantity FROM "StockMovement"`,[{id:'control-stock',quantity:'42'}]);
+      assert.deepEqual(await db.$queryRaw`SELECT "id","amount"::text AS amount FROM "StoreTransaction"`,[{id:'control-money',amount:'100.25'}]);
+    });
   }finally{if(api)await api.close();await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

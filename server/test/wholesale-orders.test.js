@@ -8,11 +8,11 @@ const quoteInput={customerId:"customer-a",storeId:"store-a",items:[{productId:"p
 const key="b1bdbb09-1234-4678-9123-123456789abc";
 
 function memoryDb(){
-  const state={companyActive:true,storeActive:true,customerActive:true,price:"3.2500",version:1,orders:[],events:[],calls:[],transactions:0,failEvent:false,failInsert:[],isolation:[],transactionOptions:[]};
+  const state={companyActive:true,storeActive:true,customerActive:true,price:"3.2500",version:1,orders:[],events:[],calls:[],transactions:0,failEvent:false,failInsert:[],isolation:[],transactionOptions:[],advisoryGate:null};
   const parse=(query,values)=>Array.isArray(query)?{sql:query.join("?"),values}:{sql:query.sql||query.text,values:query.values};
   const execute=async(query,...values)=>{
     const call=parse(query,values);state.calls.push(call);const sql=call.sql,v=call.values;
-    if(sql.includes("pg_advisory_xact_lock"))return [{locked:""}];
+    if(sql.includes("pg_advisory_xact_lock")){if(state.advisoryGate)await state.advisoryGate();return [{locked:""}]}
     if(sql.includes('INSERT INTO "WholesaleOrderRequest"')){
       if(state.failInsert.length)throw state.failInsert.shift();
       const [id,companyId,storeId,customerId,actorId,channel,clientOrderId,requestHash,quoteId,snapshot,notes,netTotal,vatTotal,grossTotal]=v;
@@ -34,7 +34,7 @@ function memoryDb(){
     throw Error(`Unexpected wholesale query: ${sql}`);
   };
   // Serialize isolated mock transactions. Native PostgreSQL coverage separately
-  // proves the real advisory-lock/RepeatableRead concurrent unique-key race.
+  // proves statement snapshots and the concurrent tier-insertion/replay race.
   let tail=Promise.resolve();
   const db={$queryRaw:execute,$executeRaw:execute,async $transaction(work,options){
     state.transactions++;state.isolation.push(options?.isolationLevel);state.transactionOptions.push(options);const before=tail;let unlock;tail=new Promise(resolve=>{unlock=resolve});await before;
@@ -57,7 +57,10 @@ test("wholesale submitted order and event persist one authoritative immutable sn
   assert.equal(result.status,"SUBMITTED");assert.equal(result.replayed,false);assert.equal(result.orderId,result.order.id);assert.equal(result.order.channel,"BACKOFFICE");assert.equal(result.order.actorId,ctx.actorId);
   assert.deepEqual([result.order.netTotal,result.order.vatTotal,result.order.grossTotal],["6.50","1.56","8.06"]);assert.equal(result.order.snapshot.creditChecked,false);assert.equal(result.order.snapshot.items[0].quantity,"2.0000");
   assert.equal(state.orders.length,1);assert.equal(state.orders[0].notes,"Delivery instructions");assert.equal(state.events.length,1);assert.equal(state.events[0].orderId,result.orderId);assert.equal(state.events[0].details.quoteId,input.quoteId);assert.equal(state.events[0].eventType,"ORDER_SUBMITTED");
-  assert.deepEqual(state.isolation,["RepeatableRead"]);assert.deepEqual(state.transactionOptions,[{isolationLevel:"RepeatableRead",timeout:15000,maxWait:5000}]);assert.ok(state.calls.some(call=>call.sql.includes("hashtextextended")&&call.sql.includes("::text")));assert.ok(state.calls.some(call=>call.sql.includes("FOR SHARE")));
+  assert.deepEqual(state.isolation,["ReadCommitted"]);assert.deepEqual(state.transactionOptions,[{isolationLevel:"ReadCommitted",timeout:15000,maxWait:5000}]);assert.ok(state.calls.some(call=>call.sql.includes("hashtextextended")&&call.sql.includes("::text")));assert.ok(state.calls.some(call=>call.sql.includes("FOR SHARE")));
+  const insert=state.calls.find(call=>call.sql.includes('INSERT INTO "WholesaleOrderRequest"'));
+  assert.deepEqual(insert.values.slice(-3),["6.50","1.56","8.06"]);assert.ok(insert.values.slice(-3).every(value=>typeof value==="string"));
+  assert.equal((insert.sql.match(/\?::numeric/g)||[]).length,3,"exact monetary strings must be cast by PostgreSQL");
   assert.ok(state.calls.every(call=>!/(?:INSERT INTO|UPDATE|DELETE FROM)\s+"(?:Sale|SaleLine|StockMovement|StoreProduct|StoreTransaction|FinancialLedger|Invoice)"/.test(call.sql)));
 });
 
@@ -69,6 +72,24 @@ test("identical normalized replay returns original snapshot after prices change 
   assert.ok(!state.calls.slice(queriesBefore).some(call=>call.sql.includes("JOIN LATERAL")||call.sql.includes('FROM "Product"')));
   for(const mutation of [{notes:"Changed"},{items:[{productId:"product-a",quantity:"3"}]},{quoteId:"a".repeat(64)}])await assert.rejects(createWholesaleOrder(db,ctx,{...input,...mutation}),error=>error.code==="IDEMPOTENCY_CONFLICT"&&error.status===409);
   assert.equal(state.orders.length,1);assert.equal(state.events.length,1);
+});
+
+test("replay lookup waits for the advisory lock and returns the accepted snapshot without fresh pricing",async()=>{
+  const {db,state,body}=memoryDb(),input=await body(),first=await createWholesaleOrder(db,ctx,input);
+  let reached,release;const lockReached=new Promise(resolve=>{reached=resolve}),lockReleased=new Promise(resolve=>{release=resolve});
+  state.advisoryGate=async()=>{reached();await lockReleased};const start=state.calls.length;
+  const replayPending=createWholesaleOrder(db,ctx,input);
+  await lockReached;
+  try{
+    assert.equal(state.calls.length,start+1,"scope/replay/price reads cannot run before the lock resolves");
+    assert.match(state.calls[start].sql,/pg_advisory_xact_lock/);
+    state.price="99.0000";state.version=2;
+  }finally{release()}
+  const replay=await replayPending;assert.equal(replay.replayed,true);assert.deepEqual(replay.order,first.order);
+  const calls=state.calls.slice(start),lookup=calls.findIndex(call=>call.sql.includes('FROM "WholesaleOrderRequest"'));
+  assert.ok(lookup>0);assert.ok(calls.slice(1,lookup).some(call=>call.sql.includes('FROM "WholesaleCustomer"')&&call.sql.includes("FOR SHARE")),"current scope must still be checked before disclosing replay");
+  assert.ok(!calls.some(call=>call.sql.includes("JOIN LATERAL")||call.sql.includes('FROM "Product"')));
+  assert.deepEqual(state.isolation,["ReadCommitted","ReadCommitted"]);assert.equal(state.orders.length,1);assert.equal(state.events.length,1);
 });
 
 test("stale quote fails before order/event insert and provides current authoritative quote",async()=>{

@@ -60,6 +60,8 @@ export async function createWholesaleOrder(db,ctx,input){
       return await db.$transaction(async tx=>{
         assertWholesaleManager(ctx);
         const lockKey=JSON.stringify(["wholesale-order",ctx.companyId,ctx.actorId,body.clientOrderId]);
+        // ReadCommitted gives the lookup below a fresh statement snapshot after
+        // this lock resolves, including a predecessor accepted while we waited.
         await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey},0))::text AS "locked"`;
         await authorizeCurrentScope(tx,ctx,body);
         const existing=await tx.$queryRaw`SELECT * FROM "WholesaleOrderRequest" WHERE "companyId"=${ctx.companyId} AND "actorId"=${ctx.actorId} AND "clientOrderId"=${body.clientOrderId} LIMIT 1`;
@@ -71,6 +73,9 @@ export async function createWholesaleOrder(db,ctx,input){
           if(existing[0].status!=="SUBMITTED")throw wholesaleError(409,"ORDER_STATE_CONFLICT","The original order requires review.");
           return accepted(existing[0],true);
         }
+        // SHARE locks retain each checked master, assignment, product/membership
+        // and selected tier. Pricing is coherent at the final batched tier read;
+        // a higher tier inserted afterwards does not rewrite this accepted quote.
         const quote=await buildWholesaleQuote(tx,ctx,{customerId:body.customerId,storeId:body.storeId,items:body.items},{lock:true});
         if(quote.quoteId!==body.quoteId){
           const error=wholesaleError(409,"PRICE_CHANGED","Prices changed. Review the refreshed quote before submitting.");
@@ -81,16 +86,15 @@ export async function createWholesaleOrder(db,ctx,input){
         try{
           rows=await tx.$queryRaw`INSERT INTO "WholesaleOrderRequest" ("id","companyId","storeId","customerId","actorId","channel","clientOrderId","requestHash","quoteId","status","revision","snapshot","notes","netTotal","vatTotal","grossTotal") VALUES (${id},${ctx.companyId},${body.storeId},${body.customerId},${ctx.actorId},${ctx.channel},${body.clientOrderId},${requestHash},${body.quoteId},'SUBMITTED',1,${snapshot}::jsonb,${body.notes},${quote.totals.net}::numeric,${quote.totals.vat}::numeric,${quote.totals.gross}::numeric) RETURNING *`;
         }catch(error){
-          // RepeatableRead may establish its snapshot while waiting for the
-          // advisory lock. A concurrent accepted key is then visible only after
-          // restarting the whole transaction. Do not retry arbitrary event errors.
+          // Retain bounded recovery for a request-key unique race or external
+          // writer. Do not retry arbitrary event errors or business rejections.
           if(postgresCode(error)==="23505"||error?.code==="P2002")error.wholesaleKeyRace=true;
           throw error;
         }
         const details=JSON.stringify({status:"SUBMITTED",revision:1,channel:ctx.channel,clientOrderId:body.clientOrderId,quoteId:body.quoteId,customerId:body.customerId,storeId:body.storeId,totals:quote.totals,creditChecked:false});
         await tx.$executeRaw`INSERT INTO "WholesaleOrderEvent" ("id","companyId","orderId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${ctx.companyId},${id},${ctx.actorId},'ORDER_SUBMITTED',${details}::jsonb)`;
         return accepted(rows[0],false);
-      },{isolationLevel:"RepeatableRead",timeout:15000,maxWait:5000});
+      },{isolationLevel:"ReadCommitted",timeout:15000,maxWait:5000});
     }catch(error){if(attempt===2||!retryable(error))throw error}
   }
 }
