@@ -1,3 +1,7 @@
+## Online seller source prepared - 18 October 2026
+
+ClaimPR2727 merged before implementation. Existing user/session assignments, scoped online seller workspace and shared FIELD_SALES quote/order source are prepared; local Node20 full tests and builds pass, actual native CI and functional LAB remain pending. See CHECKPOINTS/CHANGES/2026-10-18-wholesale-field-sales.md. Customer portal technical receiptPR2708 remains valid; full suite and independent commercial packaging remain OPEN.
+
 ## Current continuation - 18 October 2026
 
 Customer portal sourcePR2701 and ordinary guarded release are technically verified in receiptPR2708; functional LAB remains NOT TESTED. Online field-sales assignments/shared orders are now claimed by the retained coordinator, not implemented yet. See CHECKPOINTS/CHANGES/2026-10-18-wholesale-field-sales.md. Older dated next-actions below are historical and do not override this entry. Standalone commercial packaging and full suite acceptance remain OPEN.

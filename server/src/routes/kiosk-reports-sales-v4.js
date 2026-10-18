@@ -62,7 +62,10 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
         AND (${productIds}::text[] IS NULL OR sl."productId"=ANY(${productIds}::text[]))
         AND (${promotionsOnly}=FALSE OR sl."promotionId" IS NOT NULL)
         AND (${text}::text IS NULL OR COALESCE(p."name",sl."description") ILIKE ${text} OR COALESCE(p."sku",'') ILIKE ${text})
-    )
+    ), source_counts AS (
+      SELECT COUNT(DISTINCT "saleId") FILTER (WHERE COALESCE("source",'')<>'POS_REVERSAL')::int AS "_overallNormalSaleCount",
+        COUNT(DISTINCT "saleId") FILTER (WHERE "source"='POS_REVERSAL')::int AS "_overallReversalCount" FROM base
+    ), grouped AS (
     SELECT "productId","sku","name","unit","categoryName","subcategoryName","storeId","storeName","promotionId","promotionType","promotionName",MAX("currentStock") AS "currentStock",
       SUM("quantity") AS "salesQuantity",SUM("lineTotal") AS "grossSales",
       SUM(CASE WHEN "vatRate"=0 THEN "lineTotal" ELSE "lineTotal"/(1+"vatRate"/100) END) AS "netSales",
@@ -76,12 +79,28 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
       (array_agg("supplierName" ORDER BY "occurredAt" DESC) FILTER (WHERE "supplierName" IS NOT NULL))[1] AS "supplierName"
     FROM base
     GROUP BY "productId","sku","name","unit","categoryName","subcategoryName","storeId","storeName","promotionId","promotionType","promotionName"
-    ORDER BY SUM("lineTotal") DESC,"name" ASC LIMIT 10000`;
-  const items=rows.map(r=>{
+    ), limited AS (
+      SELECT *,true AS "_hasGroup" FROM grouped ORDER BY "grossSales" DESC,"name" ASC LIMIT 10000
+    )
+    SELECT limited.*,source_counts.*,group_counts."_totalGroupCount"
+    FROM source_counts CROSS JOIN (SELECT COUNT(*)::int AS "_totalGroupCount" FROM grouped) group_counts
+    LEFT JOIN limited ON true ORDER BY limited."grossSales" DESC,limited."name" ASC`;
+  // Counts and coverage belong to the same filtered SQL snapshot, including
+  // the empty-source sentinel. Never reconstruct unique baskets by summing groups.
+  const metadata=rows[0],integers=["_totalGroupCount","_overallNormalSaleCount","_overallReversalCount"];
+  const invalidSource=()=>Object.assign(new Error("Δεν επιβεβαιώθηκε η πληρότητα της αναφοράς πωλήσεων."),{status:502});
+  if(!metadata||integers.some(key=>!Number.isSafeInteger(metadata[key])||metadata[key]<0))throw invalidSource();
+  if(rows.some(row=>integers.some(key=>row[key]!==metadata[key])))throw invalidSource();
+  const groups=rows.filter(row=>row._hasGroup===true),totalGroupCount=metadata._totalGroupCount,limit=10000;
+  if(groups.length!==Math.min(totalGroupCount,limit)||rows.length!==(groups.length||1)||
+    (totalGroupCount===0&&(metadata._hasGroup!=null||metadata._overallNormalSaleCount!==0||metadata._overallReversalCount!==0)))throw invalidSource();
+  const complete=groups.length===totalGroupCount;
+  const sourceCoverage={complete,returnedGroupCount:groups.length,totalGroupCount,limit,totalsScope:complete?"COMPLETE_SOURCE":"RETURNED_GROUPS"};
+  const items=groups.map(({_hasGroup,_totalGroupCount,_overallNormalSaleCount,_overallReversalCount,...r})=>{
     const grossSales=n(r.grossSales),netSales=n(r.netSales),vatValue=n(r.vatValue),costValue=n(r.costValue),profit=netSales-costValue,salesQuantity=n(r.salesQuantity);
     return {...r,currentStock:n(r.currentStock),salesQuantity,grossSales,netSales,vatValue,costValue,profit,margin:netSales?profit/netSales*100:0,averageGrossPrice:salesQuantity?grossSales/salesQuantity:0,discountValue:n(r.discountValue),normalSaleCount:n(r.normalSaleCount),reversalCount:n(r.reversalCount),returnGrossValue:n(r.returnGrossValue)};
   });
-  return {unattributedPromotionReversal,...(calendar?{companyId,storeId,period:{calendarFrom:calendar.calendarFrom,calendarTo:calendar.calendarTo,timeZone:calendar.timeZone,from:from.toISOString(),toExclusive:to.toISOString()}}:{}),items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:items.reduce((a,r)=>a+r.normalSaleCount,0),reversalCount:items.reduce((a,r)=>a+r.reversalCount,0),returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true};
+  return {unattributedPromotionReversal,sourceCoverage,...(calendar?{companyId,storeId,period:{calendarFrom:calendar.calendarFrom,calendarTo:calendar.calendarTo,timeZone:calendar.timeZone,from:from.toISOString(),toExclusive:to.toISOString()}}:{}),items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:metadata._overallNormalSaleCount,reversalCount:metadata._overallReversalCount,returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true};
 }
 router.get("/sales-analysis",async(req,res,next)=>{try{res.json(await readSalesAnalysisReport(filters(req)))}catch(error){next(error)}});
 

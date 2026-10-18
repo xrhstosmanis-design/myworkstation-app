@@ -9,6 +9,7 @@ import OnlineOrdersBackofficePanel from "./OnlineOrdersBackofficePanel.jsx";
 import TableServiceBackofficePanel from "./TableServiceBackofficePanel.jsx";
 import InternetProductSearchPanel from "./InternetProductSearchPanel.jsx";
 import WholesaleB2BPanel from "./WholesaleB2BPanel.jsx";
+import SellerWorkspace from "../field-sales/SellerWorkspace.jsx";
 import "./wholesale-b2b.css";
 import "./inventory-archive-delivery.css";
 
@@ -133,10 +134,11 @@ export default function CommerceLauncher(){
       {entryLoading?<p role="status">Φόρτωση λειτουργιών καταστήματος…</p>:entryError?<p role="alert">{entryError}</p>:<>
       <div className="commerce-mode-switch">
         <button className={mode==="products"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setMode("products")}}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
+        <button className={mode==="field-sales"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setMode("field-sales")}}>Εξωτερικοί πωλητές</button>
         <button className={mode==="legacy"||mode==="inventory"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(wholesaleLockRef.current)return;setMode("legacy");setLegacyView("operations")}}>Λοιπές εμπορικές λειτουργίες</button>
         {activeModules.includes("ADVANCED_ONLINE_PRODUCT_SEARCH")&&<button onClick={()=>setInternetSearchOpen(true)}><Globe2/>Αναζήτηση προϊόντων στο Internet</button>}
       </div>
-      {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores} activeStoreId={supportStoreId} onOpenFullProduct={product=>{setInventoryInitialProduct(product);setInventoryStoreId(product.storeId||supportStoreId||stores[0]?.id||"");setMode("inventory")}}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} initialProduct={inventoryInitialProduct} onInitialProductHandled={()=>setInventoryInitialProduct(null)} onClose={()=>{setInventoryInitialProduct(null);setMode("products")}}/>:<>
+      {mode==="field-sales"?<SellerWorkspace api={request} activeStoreId={supportStoreId} onSubmissionLockChange={lockWholesaleSubmission}/>:mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores} activeStoreId={supportStoreId} onOpenFullProduct={product=>{setInventoryInitialProduct(product);setInventoryStoreId(product.storeId||supportStoreId||stores[0]?.id||"");setMode("inventory")}}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} initialProduct={inventoryInitialProduct} onInitialProductHandled={()=>setInventoryInitialProduct(null)} onClose={()=>{setInventoryInitialProduct(null);setMode("products")}}/>:<>
         <div className="commerce-mode-switch">
           <button className={legacyView==="operations"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("operations")}}>Εμπορικές λειτουργίες</button>
           <button className={legacyView==="online"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("online")}}><ShoppingBag/>Online Παραγγελίες</button>

@@ -1,5 +1,6 @@
 const MANAGERS=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
 const portalPrincipals=new WeakMap();
+const sellerPrincipals=new WeakMap();
 
 export function wholesaleError(status,code,message){return Object.assign(new Error(message),{status,code})}
 export function assertWholesaleManager(ctx){
@@ -17,7 +18,14 @@ export function createWholesalePortalPrincipal(scope,{authorize,authorizeProduct
 }
 
 export function isWholesalePortalPrincipal(ctx){return Boolean(ctx&&typeof ctx==='object'&&portalPrincipals.has(ctx))}
-export function assertWholesalePrincipal(ctx){if(!isWholesalePortalPrincipal(ctx))assertWholesaleManager(ctx)}
+export function createWholesaleSellerPrincipal(scope,{authorize}={}){
+  const fields=['companyId','userId','sessionId'];
+  if(!scope||fields.some(key=>typeof scope[key]!=='string'||!scope[key]||scope[key]!==scope[key].trim()||scope[key].length>200)||typeof authorize!=='function')throw wholesaleError(403,'WHOLESALE_ACCESS_DENIED','Verified wholesale seller session required.');
+  const ctx=Object.freeze({...Object.fromEntries(fields.map(key=>[key,scope[key]])),actorId:'seller:'+scope.userId,tokenType:'WHOLESALE_SELLER',channel:'FIELD_SALES'});
+  sellerPrincipals.set(ctx,{authorize});return ctx;
+}
+export function isWholesaleSellerPrincipal(ctx){return Boolean(ctx&&typeof ctx==='object'&&sellerPrincipals.has(ctx))}
+export function assertWholesalePrincipal(ctx){if(!isWholesalePortalPrincipal(ctx)&&!isWholesaleSellerPrincipal(ctx))assertWholesaleManager(ctx)}
 
 function portalScope(ctx,input){
   if(input?.customerId!==ctx.customerId||input?.storeId!==ctx.storeId)throw wholesaleError(403,'WHOLESALE_PORTAL_SCOPE_DENIED','This portal session cannot access that customer or store.');
@@ -25,6 +33,12 @@ function portalScope(ctx,input){
 
 export async function authorizeWholesalePrincipal(db,ctx,input,{lock=false}={}){
   assertWholesalePrincipal(ctx);
+  if(isWholesaleSellerPrincipal(ctx)){
+    // Selection is validated against current assignments by the verifier, not by
+    // a client-supplied role or a cached list of customer/store permissions.
+    if(await sellerPrincipals.get(ctx).authorize(db,ctx,input,{lock})!==true)throw wholesaleError(403,'WHOLESALE_SELLER_ACCESS_DENIED','Wholesale seller access is no longer available.');
+    return;
+  }
   if(!isWholesalePortalPrincipal(ctx))return;
   portalScope(ctx,input);
   // Recheck current session/account/site/license/customer/store in the caller's

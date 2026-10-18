@@ -57,7 +57,7 @@ test("strict tool schemas cannot accept company/store IDs or malformed periods a
 });
 test("normal report keeps sums while offer filter, names and future boundary are parameterized on the same SQL",async()=>{
  const calendar=salesReportCalendar(args.from,args.to);let sql,values;
- const db={$queryRaw:async(s,...v)=>{if(s.join("?").includes("missingCount"))return [{missingCount:0}];sql=s.join("?");values=v;return [{...row("a","ap"),netSales:1.77,vatValue:.23,costValue:0,discountValue:0,normalSaleCount:1}]}};
+ const db={$queryRaw:async(s,...v)=>{if(s.join("?").includes("missingCount"))return [{missingCount:0}];sql=s.join("?");values=v;return [{_hasGroup:true,_totalGroupCount:1,_overallNormalSaleCount:1,_overallReversalCount:0,...row("a","ap"),netSales:1.77,vatValue:.23,costValue:0,discountValue:0,normalSaleCount:1}]}};
  const out=await readSalesAnalysisReport({companyId:"a",storeId:"sa",from:calendar.from,to:calendar.to,calendar,q:null,productIds:["ap"],promotionsOnly:true,observedThrough:now},{db});
  assert.equal(out.totalGross,2);assert.match(sql,/sl\."promotionId" IS NOT NULL/);assert.match(sql,/COALESCE\(sa\."transactionMode",'NORMAL'\)<>'CREDIT'/);assert.match(sql,/POS_REVERSAL/);assert.ok(values.some(v=>Array.isArray(v)&&v[0]==="ap"));assert.ok(values.includes(now));assert.ok(values.includes(true));assert.doesNotMatch(sql,/INSERT|UPDATE|DELETE/);
 });
