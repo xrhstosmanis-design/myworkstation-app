@@ -1,3 +1,7 @@
+## Current continuation - 18 October 2026
+
+Customer portal sourcePR2701 and ordinary guarded release are technically verified in receiptPR2708; functional LAB remains NOT TESTED. Online field-sales assignments/shared orders are now claimed by the retained coordinator, not implemented yet. See CHECKPOINTS/CHANGES/2026-10-18-wholesale-field-sales.md. Older dated next-actions below are historical and do not override this entry. Standalone commercial packaging and full suite acceptance remain OPEN.
+
 ## 18/10/2026 14:52 Europe/Athens — WHOLESALE-CUSTOMER-PORTAL-01 / CODE LIVE / NATIVE CI PASS / AWAITING FUNCTIONAL LAB
 
 Retained coordinator codex/wholesale-suite-20261017. Customer portal vertical source is merged and ordinarily released; full wholesale product remains OPEN. ClaimPR2699/docsCI39122312438 merged e4f7390f before code. SourcePR2701 finalhead060aaed876c3fe56356a6187885ff26f508c9c6a/fullCI39123514926/job117663913182 SUCCESS3026PASS/0FAIL/0SKIP plus6isolated backup tests/all required jobs, merged cd8b29608aff7e3b9a71df67835f059fb670c190. Exact combined mainCI39123962369/job117666132928 SUCCESS3029PASS/0FAIL/0SKIP plus6backup/all Windows/build/Chromium/security/licensing/invariant/realHTTP checks. New portal native7child scenarios and populated legacy CHECK migration actually executed PASS in both runs, not skipped. Previous shared backoffice/advisory snapshot controls retained. These are isolated technical results, not a functional hosted/LAB PASS.
