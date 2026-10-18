@@ -9,9 +9,9 @@ export async function nativeRecipientAllowed(row,store,{db,storesFor,enabled,aut
  if(u.tokenType!=='BACKOFFICE_USER')return false;
  const session=await db.userSession.findUnique({where:{id:row.sessionId},include:{user:{include:{company:true}}}});
  const current=session?.user;
- if(!current||current.id!==row.userId||session.revokedAt||(!Number.isFinite(new Date(session.expiresAt).getTime())||new Date(session.expiresAt).getTime()<=now())||current.role!==u.role||current.sessionVersion!==u.sessionVersion||current.mustChangePassword||(!current.company?.active&&current.role!=='SUPER_ADMIN'))return false;
+ if(!current||current.id!==row.userId||session.revokedAt||(!Number.isFinite(new Date(session.expiresAt).getTime())||new Date(session.expiresAt).getTime()<=now())||current.role!==(u.platformRole||u.role)||current.sessionVersion!==u.sessionVersion||current.mustChangePassword||(!current.company?.active&&current.role!=='SUPER_ADMIN'))return false;
  if(u.supportContext&&u.companyId!==store.companyId)return false;
- const resolved={...u,sessionId:row.sessionId,companyId:current.companyId,supportContext:u.supportContext?{native:true}:undefined};
+ const resolved={...u,platformRole:current.role,isSuperAdmin:current.role==='SUPER_ADMIN',sessionId:row.sessionId,companyId:current.companyId,supportContext:u.supportContext?{native:true}:undefined};
  // A support context stays restricted to its originally selected company.
  if(u.supportContext)resolved.companyId=u.companyId;
  return (await storesFor(resolved)).stores.some(s=>s.id===store.id&&s.companyId===store.companyId);
