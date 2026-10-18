@@ -1,6 +1,8 @@
 // Internal execution core. No production manifest, recovery adapter or HTTP route is registered here.
 import {createHash,randomUUID} from 'node:crypto';
 import {requireLifecycleAdmin} from './store-lifecycle-preview.js';
+import {RESET_KEEP} from './store-lifecycle-policy.js';
+import {digestLifecycleRows} from './store-lifecycle-recovery-stream.js';
 const q=x=>'"'+String(x).replaceAll('"','""')+'"';
 const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status})};
@@ -11,11 +13,15 @@ function planFor(manifest){
  if(!manifest?.id||!Array.isArray(manifest.tables)||manifest.tables.length<1||manifest.tables.length>300)fail('A reviewed server manifest is required.');
  const nodes=new Map();
  for(const row of manifest.tables){if(typeof row.name!=='string'||!row.name||INTERNAL.has(row.name)||nodes.has(row.name)||!['KEEP','REMOVE'].includes(row.reset)||!['ROOT','DIRECT','CHILD'].includes(row.owner?.kind))fail('Invalid reviewed manifest.');nodes.set(row.name,row)}
+ // Installation identities and their credentials are inseparable from both
+ // physical registers. A reviewed plan may not override this RESET boundary.
+ for(const row of nodes.values())if(RESET_KEEP.has(row.name)&&row.reset!=='KEEP')fail('RESET must retain installation/configuration: '+row.name);
  if(nodes.get('Store')?.owner.kind!=='ROOT'||nodes.get('Store')?.reset!=='KEEP'||[...nodes.values()].filter(x=>x.owner.kind==='ROOT').length!==1)fail('Store root must be retained by RESET.');
  const visiting=new Set(),visited=new Set(),ordered=[];
  const visit=name=>{if(visiting.has(name))fail('Cyclic ownership requires a separate reviewed plan.');if(visited.has(name))return;const row=nodes.get(name);if(!row)fail('Missing ownership parent.');visiting.add(name);if(row.owner.kind==='CHILD'){if(!Array.isArray(row.owner.columns)||!row.owner.columns.length||row.owner.columns.some(p=>!Array.isArray(p)||p.length!==2||p.some(v=>typeof v!=='string'||!v)))fail('Invalid ownership columns.');visit(row.owner.parent)}visiting.delete(name);visited.add(name);ordered.push(row)};
  for(const name of nodes.keys())visit(name);
- return {id:manifest.id,nodes,ordered,planHash:hash(manifest)};
+ if(manifest.streaming!==undefined&&typeof manifest.streaming!=='boolean')fail('Invalid streaming policy.');
+ return {id:manifest.id,nodes,ordered,streaming:manifest.streaming===true,planHash:hash(manifest)};
 }
 function predicate(plan,schema,node,alias,depth=0){
  if(node.owner.kind==='ROOT')return `${alias}."id"=$1`;
@@ -67,8 +73,22 @@ async function validateDatabase(tx,plan,schema){
  for(const col of columns.filter(c=>!INTERNAL.has(c.table))){
   if((/Id$/.test(col.name)&&!['companyId','storeId'].includes(col.name)&&!fks.some(f=>f.childSchema===schema&&f.child===col.table&&f.local.includes(col.name)))||['json','jsonb','bytea'].includes(col.type)||/storageKey|contentData|attachmentData|dataUrl|filePath|imageUrl|photoUrl/i.test(col.name))if(!reviewed.has(col.table+'.'+col.name))fail('Unreviewed application or attachment field: '+col.table+'.'+col.name);
  }
- return {columns:byTable,fks,signature:hash({relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks})};
+ const primaryKeys=plan.streaming?await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,k.p::int AS position FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN LATERAL unnest(i.indkey) WITH ORDINALITY k(n,p) ON k.p<=i.indnkeyatts JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=k.n WHERE n.nspname=$1 AND i.indisprimary ORDER BY c.relname,k.p`,schema):[];
+ if(plan.streaming)for(const node of plan.ordered)if(!primaryKeys.some(k=>k.table===node.name))fail('Streaming requires a reviewed primary key: '+node.name);
+ return {columns:byTable,fks,primaryKeys,signature:hash({relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,...(plan.streaming?{primaryKeys}: {})})};
 }
+async function* scopedRows(tx,plan,schema,scope,node,meta){
+ const keys=meta.primaryKeys.filter(k=>k.table===node.name);if(!keys.length)fail('Streaming primary key unavailable.');
+ let cursor=null;
+ while(true){
+  const columns=keys.map(k=>'t.'+q(k.name)),after=cursor?` AND (${columns.join(',')})>(${keys.map((k,i)=>'$'+(i+2)+'::'+k.type).join(',')})`:'';
+  const records=await tx.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row,${columns.map((c,i)=>c+'::text AS '+q('key'+i)).join(',')} FROM ${q(schema)}.${q(node.name)} t WHERE (${predicate(plan,schema,node,'t')})${after} ORDER BY ${columns.join(',')} LIMIT 1`,scope.storeId,...(cursor||[]));
+  if(!records.length)return;
+  const record=records[0];if(Buffer.byteLength(record.row)>8*1024*1024)fail('A source row exceeds the bounded streaming limit.');
+  cursor=keys.map((_,i)=>record['key'+i]);yield record.row;
+ }
+}
+const tableCount=table=>Array.isArray(table.rows)?table.rows.length:table.rowCount;
 async function capture(tx,plan,schema,scope,mode){
  const meta=await validateDatabase(tx,plan,schema),tables=[];let sourceBytes=0,totalRows=0;
  for(const [name,condition,required] of [
@@ -81,7 +101,13 @@ async function capture(tx,plan,schema,scope,mode){
   const where=predicate(plan,schema,node,'t');
   if(meta.columns.get(node.name).has('companyId')){const bad=await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(node.name)} t WHERE (${where}) AND t."companyId" IS DISTINCT FROM $2 LIMIT 1`,scope.storeId,scope.companyId);if(bad.length)fail('Inconsistent company/store ownership.');}
   const size=(await tx.$queryRawUnsafe(`SELECT COUNT(*)::int AS count,COALESCE(SUM(octet_length(row_to_json(t)::text)),0)::text AS bytes FROM ${q(schema)}.${q(node.name)} t WHERE ${where}`,scope.storeId))[0];
-  if(size.count>100000||BigInt(size.bytes)>BigInt(16*1024*1024-sourceBytes)||totalRows+size.count>500000)fail('Snapshot size limit exceeded before materialization.');sourceBytes+=Number(size.bytes);totalRows+=size.count;
+  const byteLimit=plan.streaming?1024*1024*1024:16*1024*1024;
+  if(size.count>100000||BigInt(size.bytes)>BigInt(byteLimit-sourceBytes)||totalRows+size.count>500000)fail('Snapshot size limit exceeded before materialization.');sourceBytes+=Number(size.bytes);totalRows+=size.count;
+  if(plan.streaming){
+   const tableDigest=await digestLifecycleRows(scopedRows(tx,plan,schema,scope,node,meta));
+   if(tableDigest.rowCount!==size.count||BigInt(tableDigest.sourceBytes)!==BigInt(size.bytes))fail('Source changed while streaming.');
+   tables.push({name:node.name,action:mode==='DELETE'||node.reset==='REMOVE'?'REMOVE':'KEEP',...tableDigest});continue;
+  }
   const rows=await tx.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM ${q(schema)}.${q(node.name)} t WHERE ${where} ORDER BY row_to_json(t)::text LIMIT 100001`,scope.storeId);
   if(rows.length>100000)fail('Snapshot row limit exceeded.');tables.push({name:node.name,action:mode==='DELETE'||node.reset==='REMOVE'?'REMOVE':'KEEP',rows:rows.map(r=>r.row)});
  }
@@ -118,7 +144,7 @@ export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,
    for(const node of [...plan.ordered].sort((a,b)=>a.name.localeCompare(b.name)))await tx.$executeRawUnsafe(`LOCK TABLE ${q(schema)}.${q(node.name)} IN ROW EXCLUSIVE MODE`);
    const snapshot=await capture(tx,plan,schema,scope,mode);
    await tx.$executeRawUnsafe(`INSERT INTO ${q(schema)}."StoreLifecycleExecution" ("id","companyId","storeId","mode","planHash","snapshotHash","state","expiresAt") VALUES($1,$2,$3,$4,$5,$6,'PREPARED',NOW()+INTERVAL '10 minutes')`,operationId,scope.companyId,scope.storeId,mode,plan.planHash,snapshot.snapshotHash);
-   return {operationId,snapshotHash:snapshot.snapshotHash,mode,counts:snapshot.tables.map(t=>({table:t.name,count:t.rows.length,action:t.action})),maintenance:true};
+   return {operationId,snapshotHash:snapshot.snapshotHash,mode,counts:snapshot.tables.map(t=>({table:t.name,count:tableCount(t),action:t.action})),maintenance:true};
   })},
   async abort(db,actor,{companyId,storeId,operationId}){requireLifecycleAdmin(actor);if(!uuid.test(operationId||''))fail('Exact prepared operation required.',400);return transaction(db,async tx=>{
    const schema=await schemaFor(tx),run=(await tx.$queryRawUnsafe(`SELECT "state" FROM ${q(schema)}."StoreLifecycleExecution" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3 FOR UPDATE`,operationId,companyId,storeId))[0];if(!run||run.state!=='PREPARED')fail('Only an unexecuted preparation can be aborted.');
@@ -130,13 +156,15 @@ export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,
    const fence=(await tx.$queryRawUnsafe(`SELECT * FROM ${q(schema)}."StoreLifecycleFence" WHERE "storeId"=$1 FOR UPDATE`,storeId))[0];if(!fence||!fence.maintenance||fence.operationId!==operationId||fence.companyId!==companyId||fence.planHash!==plan.planHash)fail('Maintenance fence differs.');
    for(const node of [...plan.ordered].sort((a,b)=>a.name.localeCompare(b.name)))await tx.$executeRawUnsafe(`LOCK TABLE ${q(schema)}.${q(node.name)} IN ROW EXCLUSIVE MODE`);
    const snapshot=await capture(tx,plan,schema,{companyId,storeId},run.mode);if(snapshot.snapshotHash!==snapshotHash)fail('Rows changed after preview.');
-   const proof=await persistAndVerifyRecovery(freeze(snapshot));if(proof?.sourceRevision!==sourceRevision||proof?.manifestHash!==plan.planHash||proof?.companyId!==companyId||proof?.storeId!==storeId||proof?.mode!==run.mode||proof?.snapshotHash!==snapshotHash||proof?.restoredSnapshotHash!==snapshotHash||proof?.storageReadbackVerified!==true||!/^[a-f0-9]{64}$/.test(proof?.artifactSha256||''))fail('Durable recovery and complete restore are not verified.');
+   const recoveryMeta=plan.streaming?await validateDatabase(tx,plan,schema):null;
+   const reader=plan.streaming?{readRows:name=>{const node=plan.nodes.get(name);if(!node)fail('Unknown recovery table.');return scopedRows(tx,plan,schema,{companyId,storeId},node,recoveryMeta)}}:undefined;
+   const proof=await persistAndVerifyRecovery(freeze(snapshot),reader);if(proof?.sourceRevision!==sourceRevision||proof?.manifestHash!==plan.planHash||proof?.companyId!==companyId||proof?.storeId!==storeId||proof?.mode!==run.mode||proof?.snapshotHash!==snapshotHash||proof?.restoredSnapshotHash!==snapshotHash||proof?.storageReadbackVerified!==true||!/^[a-f0-9]{64}$/.test(proof?.artifactSha256||''))fail('Durable recovery and complete restore are not verified.');
    await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_operation',$1,true)`,operationId);
    // All declared FK dependencies, not just the ownership edge, determine deletion order.
    const meta=await validateDatabase(tx,plan,schema),pending=new Set(snapshot.tables.filter(t=>t.action==='REMOVE').map(t=>t.name)),order=[];
    while(pending.size){const ready=[...pending].filter(name=>!meta.fks.some(f=>f.childSchema===schema&&f.parentSchema===schema&&f.parent===name&&f.child!==name&&pending.has(f.child)));if(!ready.length)fail('Cyclic deletion dependencies require a reviewed executor.');for(const name of ready.sort()){order.push(name);pending.delete(name)}}
-   const deleted=[];for(const name of order){const node=plan.nodes.get(name),expected=snapshot.tables.find(t=>t.name===name).rows.length;const count=Number(await tx.$executeRawUnsafe(`DELETE FROM ${q(schema)}.${q(name)} t WHERE ${predicate(plan,schema,node,'t')}`,storeId));if(count!==expected)fail('Unexpected delete count.');deleted.push({table:name,count})}
-   for(const t of snapshot.tables.filter(t=>t.action==='KEEP')){const rows=await tx.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM ${q(schema)}.${q(t.name)} t WHERE ${predicate(plan,schema,plan.nodes.get(t.name),'t')} ORDER BY row_to_json(t)::text`,storeId);if(JSON.stringify(rows.map(r=>r.row))!==JSON.stringify(t.rows))fail('Retained records changed.');}
+   const deleted=[];for(const name of order){const node=plan.nodes.get(name),expected=tableCount(snapshot.tables.find(t=>t.name===name));const count=Number(await tx.$executeRawUnsafe(`DELETE FROM ${q(schema)}.${q(name)} t WHERE ${predicate(plan,schema,node,'t')}`,storeId));if(count!==expected)fail('Unexpected delete count.');deleted.push({table:name,count})}
+   for(const t of snapshot.tables.filter(t=>t.action==='KEEP')){if(plan.streaming){const observed=await digestLifecycleRows(scopedRows(tx,plan,schema,{companyId,storeId},plan.nodes.get(t.name),meta));if(observed.rowCount!==t.rowCount||observed.sha256!==t.sha256||observed.sourceBytes!==t.sourceBytes)fail('Retained records changed.');continue;}const rows=await tx.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM ${q(schema)}.${q(t.name)} t WHERE ${predicate(plan,schema,plan.nodes.get(t.name),'t')} ORDER BY row_to_json(t)::text`,storeId);if(JSON.stringify(rows.map(r=>r.row))!==JSON.stringify(t.rows))fail('Retained records changed.');}
    await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleFence" SET "generation"="generation"+1,"retired"=$2 WHERE "storeId"=$1`,storeId,run.mode==='DELETE');
    const result={operationId,companyId,storeId,mode:run.mode,deleted,artifactSha256:proof.artifactSha256,maintenance:true,reopenRequired:true,idempotentReplay:false};await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleExecution" SET "state"='COMPLETED',"result"=$2::jsonb WHERE "id"=$1`,operationId,JSON.stringify(result));return result;
   })}
