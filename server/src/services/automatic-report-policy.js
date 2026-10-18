@@ -116,3 +116,31 @@ export function summarizeCashVariances(rows,{dayStartHour=7}={}){
   }
   return [...groups.values()].map(({ids,originalShortageCents,originalSurplusCents,...group})=>({...group,originalShortage:originalShortageCents/100,originalSurplus:originalSurplusCents/100,offset:Math.min(originalShortageCents,originalSurplusCents)/100,netVariance:(originalSurplusCents-originalShortageCents)/100,employeeLiabilityAdjusted:false}));
 }
+
+// Monthly description of recorded opening users, never Employee/payroll identity
+// or liability. Consume the already validated original groups without changing
+// their per-day/POS offset or attributing it to a person.
+export function summarizeOpeningOperators(groups){
+  const unavailable=()=>({complete:false,reason:"INVALID_OPERATOR_SUMMARY_SOURCE",operators:null});
+  if(!Array.isArray(groups))return unavailable();
+  const summaries=new Map(),seen=new Set();
+  for(const group of groups){
+    if(!group?.companyId||!group.storeId||!group.terminalPos||!/^\d{4}-\d{2}-\d{2}$/.test(group.day)||!["STORE","DELIVERY"].includes(group.cashChain)||!Array.isArray(group.rows))return unavailable();
+    for(const row of group.rows){
+      if(!row?.sessionId||seen.has(row.sessionId)||typeof row.variance!=="number"||!Number.isFinite(row.variance))return unavailable();
+      seen.add(row.sessionId);
+      const cents=Math.round(row.variance*100);
+      if(!Number.isSafeInteger(cents)||Math.abs(row.variance-cents/100)>1e-9)return unavailable();
+      const operatorId=typeof row.employeeId==="string"&&row.employeeId.trim()&&row.employeeId===row.employeeId.trim()?row.employeeId:null;
+      // Missing identities remain individually traceable, never merged by name.
+      const key=JSON.stringify([group.companyId,group.storeId,group.cashChain,operatorId,operatorId?null:row.sessionId]);
+      const item=summaries.get(key)||{companyId:group.companyId,storeId:group.storeId,cashChain:group.cashChain,operatorId,identityStatus:operatorId?"RECORDED_OPENING_USER":"UNATTRIBUTED",recordedNames:[],sessionCount:0,originalShortageCents:0,originalSurplusCents:0,netVarianceCents:0,sessions:[],employeeLiabilityAdjusted:false};
+      const name=typeof row.employeeName==="string"?row.employeeName.trim():"";
+      if(name&&!item.recordedNames.includes(name))item.recordedNames.push(name);
+      item.sessionCount++;item.originalShortageCents+=Math.max(0,-cents);item.originalSurplusCents+=Math.max(0,cents);item.netVarianceCents+=cents;
+      if(![item.originalShortageCents,item.originalSurplusCents,item.netVarianceCents].every(Number.isSafeInteger))return unavailable();
+      item.sessions.push({sessionId:row.sessionId,day:group.day,terminalPos:group.terminalPos,variance:row.variance});summaries.set(key,item);
+    }
+  }
+  return {complete:true,reason:null,operators:[...summaries.values()].map(({originalShortageCents,originalSurplusCents,netVarianceCents,...item})=>({...item,originalShortage:originalShortageCents/100,originalSurplus:originalSurplusCents/100,netVariance:netVarianceCents/100}))};
+}

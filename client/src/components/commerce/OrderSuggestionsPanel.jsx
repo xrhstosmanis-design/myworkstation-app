@@ -1,4 +1,5 @@
 import React,{useEffect,useLayoutEffect,useMemo,useRef,useState} from "react";
+import {buildSupplierProposalCsv} from "./supplier-order-proposal-export.js";
 import "./order-suggestions.css";
 const n=value=>value==null?"—":Number(value).toLocaleString("el-GR",{maximumFractionDigits:3});
 const searchText=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR");
@@ -6,6 +7,7 @@ const supplierReasons={INCOMPLETE_EVIDENCE:"Ελλιπή στοιχεία — χ
 const validIdentity=value=>typeof value==="string"&&value.trim().length>0;
 function validateSupplierProposal(data){
   const evidence=data.supplierEvidence;
+  if(typeof data.generatedAt!=="string"||data.generatedAt!==data.to||!Number.isFinite(Date.parse(data.generatedAt)))throw Error("Μη έγκυρα στοιχεία προμηθευτών.");
   if(data.supplierBasis!=="APPROVED_DOCUMENT_FREQUENCY_PROXY"||data.reviewRequired!==true||data.automaticTransmission!==false||typeof data.complete!=="boolean"||!evidence||evidence.complete!==data.complete||evidence.physicalDeliveryFrequencyVerified!==false||evidence.from!==data.from||evidence.to!==data.to||!Number.isFinite(Date.parse(evidence.from))||!Number.isFinite(Date.parse(evidence.to))||Date.parse(evidence.from)>=Date.parse(evidence.to)||!data.options||!Number.isInteger(data.options.historyDays)||data.options.historyDays<7||data.options.historyDays>90||!Number.isInteger(data.options.coverageDays)||data.options.coverageDays<1||data.options.coverageDays>60||!Number.isInteger(data.options.leadDays)||data.options.leadDays<0||data.options.leadDays>30||evidence.historyDays!==data.options?.historyDays||evidence.limit!==20000||!Number.isSafeInteger(evidence.observedDocumentProductSupplierCount)||evidence.observedDocumentProductSupplierCount<0||evidence.observedDocumentProductSupplierCount>20001||data.complete!==(evidence.observedDocumentProductSupplierCount<=evidence.limit)||!Array.isArray(data.groups)||!Array.isArray(data.unassigned))throw Error("Μη έγκυρα στοιχεία προμηθευτών.");
   const ids=new Map(),membership=new Set();
   let observedCandidateDocuments=0;
@@ -50,6 +52,16 @@ export default function OrderSuggestionsPanel({api,storeId}){
   const applied=result?.storeId===storeId&&result?._view===view?result:null;
   const rows=useMemo(()=>(applied?.rows||[]).filter(row=>(!onlyNeeded||row.suggestedQuantity===null||row.suggestedQuantity>0)&&(view!=="supplier"||supplier==="all"||(supplier==="unassigned"?row.candidateSupplierId===null:row.candidateSupplierId===supplier))&&searchText(`${row.name} ${row.sku}`).includes(searchText(query.trim()))),[applied,query,onlyNeeded,view,supplier]);
   const pages=Math.max(1,Math.ceil(rows.length/pageSize)),currentPage=Math.min(page,pages-1),shown=rows.slice(currentPage*pageSize,currentPage*pageSize+pageSize);
+  const canExport=view==="supplier"&&!!storeId&&!!applied&&!loading&&!error&&rows.length>0;
+  const exportProposal=()=>{
+    if(!canExport)return;
+    try{
+      const csv=buildSupplierProposalCsv({snapshot:applied,rows,filters:{query:query.trim(),supplier,onlyNeeded}});
+      const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+      const link=document.createElement("a");link.href=url;link.download=`supplier-proposal-${String(storeId).replace(/[^a-zA-Z0-9_-]/g,"_")}-${applied.generatedAt.replace(/[^0-9]/g,"")}.csv`;
+      document.body.appendChild(link);try{link.click();}finally{link.remove();setTimeout(()=>URL.revokeObjectURL(url),0);}
+    }catch(e){setError(e.message||"Δεν μπόρεσε να εξαχθεί η πρόταση.");}
+  };
   useLayoutEffect(()=>{
     const content=contentRef.current;
     const fit=()=>{if(pageSize>1&&content?.clientHeight>0&&content.scrollHeight>content.clientHeight+1){setPageSize(1);setPage(0);}};
@@ -66,6 +78,7 @@ export default function OrderSuggestionsPanel({api,storeId}){
     </form>
     <div className="order-suggestions-view"><label>Προβολή<select aria-label="Προβολή προτάσεων" value={view} onChange={e=>{const next=e.target.value;setView(next);load(null,next,appliedOptions.current);}}><option value="flat">Όλα τα είδη</option><option value="supplier">Ανά προμηθευτή (πρόταση)</option></select></label>{view==="supplier"&&applied&&<label>Υποψήφιος προμηθευτής<select aria-label="Φίλτρο προμηθευτή" value={supplier} onChange={e=>{setSupplier(e.target.value);setPage(0);}}><option value="all">Όλοι οι υποψήφιοι / χωρίς ανάθεση</option>{applied.groups.map(group=><option key={group.candidateSupplierId} value={group.candidateSupplierId}>{group.supplierName} ({group.rows.length})</option>)}<option value="unassigned">Χωρίς προμηθευτή ({applied.unassigned.length})</option></select></label>}</div>
     <div className="order-suggestions-filter"><label>Προϊόν ή κωδικός<input placeholder="Αναζήτηση προτάσεων" value={query} onChange={e=>{setQuery(e.target.value);setPage(0);}}/></label><label className="order-suggestions-check"><input type="checkbox" checked={onlyNeeded} onChange={e=>{setOnlyNeeded(e.target.checked);setPage(0);}}/>Μόνο ποσότητες για παραγγελία / έλεγχο</label></div>
+    {view==="supplier"&&<button type="button" disabled={!canExport} onClick={exportProposal}>CSV πρότασης για έλεγχο (όλες οι φιλτραρισμένες σελίδες)</button>}
     <div ref={contentRef} className="order-suggestions-content" aria-busy={loading}>
       {error?<div role="alert">{error} Δοκίμασε ξανά με «Υπολογισμός προτάσεων».</div>:loading?<p role="status">Φόρτωση αποθέματος και πωλήσεων…</p>:!storeId?<p>Επίλεξε κατάστημα.</p>:!applied?null:<>
         <p className="order-suggestions-summary" role="status">{rows.length} είδη · ιστορικό {applied.options.historyDays} ημερών · κάλυψη {applied.options.coverageDays} + παράδοση {applied.options.leadDays} ημερών</p>
