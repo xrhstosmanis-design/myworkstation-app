@@ -30,7 +30,7 @@ public final class ChatMessagingService extends FirebaseMessagingService {
                 .putExtra("pushStore", store).putExtra("pushCompany", company).putExtra("pushBinding", data.get("binding"));
             PendingIntent action = PendingIntent.getActivity(this, 313, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             Notification notification = new Notification.Builder(this, "native-chat").setSmallIcon(R.drawable.ic_chat)
-                .setContentTitle("MyWorkStation Chat").setContentText("Έχεις νέο μήνυμα.")
+                .setContentTitle(PushEnvelope.title(data)).setContentText("Έχεις νέο μήνυμα.")
                 .setVisibility(Notification.VISIBILITY_PRIVATE).setAutoCancel(true).setContentIntent(action).build();
             manager.notify(313, notification);
         } catch (Exception ignored) { /* No payload, token or exception logging. */ }

@@ -22,4 +22,16 @@ public class PushEnvelopeTest {
         m=data(); m.put("url","https://evil.example"); assertFalse(PushEnvelope.allowed(m,binding,false,"",""));
         assertTrue(PushEnvelope.allowed(data(),binding,false,"",""));
     }
+    @Test public void versionedStoreLabelPreservesScopeAndRejectsExtraContent() {
+        Map<String,String> m=data(); m.put("storeName","ΚΑΤ");
+        assertTrue(PushEnvelope.allowed(m,binding,true,"A","C"));
+        assertEquals("ΚΑΤ · MyWorkStation Chat",PushEnvelope.title(m));
+        assertFalse(PushEnvelope.allowed(m,binding,true,"B","C"));
+        assertFalse(PushEnvelope.allowed(m,"b".repeat(64),false,"",""));
+        m.put("body","PRIVATE");assertFalse(PushEnvelope.allowed(m,binding,false,"",""));
+        for(String name : new String[]{"", " ", "x".repeat(81), "A\nB", "A\u202eB"}) {
+            m=data();m.put("storeName",name);assertFalse(PushEnvelope.allowed(m,binding,false,"",""));
+        }
+        assertEquals("MyWorkStation Chat",PushEnvelope.title(data()));
+    }
 }

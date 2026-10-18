@@ -6,10 +6,15 @@ export function nativeToken(value){
  if(typeof value!=='string'||!/^[A-Za-z0-9_:\-]{20,4096}$/.test(value))throw Object.assign(new Error('Μη έγκυρη εγγραφή ειδοποιήσεων.'),{status:400});
  return value;
 }
-export function nativePayload({token,binding,storeId,companyId}){
+export function nativeStoreLabel(value){
+ if(typeof value!=='string')return '';
+ return Array.from(value.replace(/[\p{Cc}\p{Cf}]/gu,' ').replace(/\s+/gu,' ').trim()).slice(0,80).join('');
+}
+export function nativePayload({token,binding,storeId,companyId,storeName}){
  nativeToken(token);
  if(!/^[a-f0-9]{64}$/.test(binding)||![storeId,companyId].every(v=>typeof v==='string'&&v.length>0&&v.length<=200))throw new Error('Invalid native scope');
- return {message:{token,data:{kind:'MWS_CHAT',binding,storeId,companyId},android:{priority:'high',ttl:'300s',collapse_key:'mws-chat'}}};
+ const label=nativeStoreLabel(storeName);
+ return {message:{token,data:{kind:'MWS_CHAT',binding,storeId,companyId,...(label?{storeName:label}:{})},android:{priority:'high',ttl:'300s',collapse_key:'mws-chat'}}};
 }
 export function createNativeFcmProvider({env=process.env,fetchImpl=globalThis.fetch,read=readFile,now=Date.now}={}){
  let cached;
