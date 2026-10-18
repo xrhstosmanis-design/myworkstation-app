@@ -1,3 +1,21 @@
+## 18/10/2026 18:12 Europe/Athens - COORD-20261018 / FOUR SOURCE SLICES RELEASED / SCOPED WS1 LAB PASS / RESIDUALS OPEN
+
+Authoritative central receipt; owner codex/central-four-streams-20261018 retained. Supersedes this scope's earlier source-prepared/CI-pending and untested daily/weekly HOLD-provisional-preview statuses only. Original accepted transactions and unrelated owners/PASS remain protected.
+
+Source PRs #2729 cash, #2730 supplier proposal, #2731 unique baskets/coverage and #2732 assistant coverage all merged after full green CI. Integration PR#2737/head e936f3017b0925c9f10dac03ece7bc9835843ae2 and exact main8baa1f5ff5fcd72774716107f654b668d9f07c3e fullCI39136985554/39137532467 each3116PASS/0FAIL/0SKIP plus6backup; Windows/build/Chromium/invariants/nativeSQL/HTTP checks SUCCESS. The earlier combined-main39136174553 checkpoint-policy failure was preserved and repaired through a meaningful actual producer->JSON->consumer regression plus unique active/checkpoint evidence; no workflow/guard weakening.
+
+Released descendant c68c817a3d69e55c8333cf32af5b362c6005f435 fullCI39137926344/job117706614390:3120PASS/0FAIL/0SKIP plus6backup. Ordinary guard39138489686/job117707869784 pinned that exact revision, preserved rollback artifact12140702729 and confirmed health15:04:34UTC. Render dep-dbaduarbc2fs73b199ng LIVE; independent public health15:07:42UTC status200/oktrue/exact revision. All22 original reviewed source/test blobs plus new integration-contract blob verified identical in released tree. No manual deploy or production business-state change by this coordinator.
+
+Scoped LAB PASS18Oct15:08-15:10UTC: authenticated Platform Super Admin on remote Chrome, MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ (cmtpopbgo000trhb5ng9ytiru), no shift/transaction action. After reloading the client following deployment, daily17Oct07:00->18Oct07:00 showed1source shift/version1; weekly anchor17Oct showed12Oct07:00->19Oct07:00,4source shifts/version1. Both visibly PROVISIONAL with explicit non-certification of reconciliation and HOLD for ambiguous/incomplete/missing MAIN shifts; current Sunday incomplete keeps the whole week HOLD. Automatic delivery remained disabled, confirmation unchecked/Save disabled. No Save/send/financial/stock/shift/payroll/invoice action or replay. First pre-reload client was stale and is not new-client acceptance evidence.
+
+PASS only this daily/weekly HOLD/provisional disclosure and observed Athens period bounds. READY/full reconciled financial day, detailed grouped amounts, physical terminal/mobile, expanded live tenant/role/store transitions, SMTP/outbox/monthly, actual delivery-based supplier choice, supplier UI/sending, staffing/turnover/payroll and broad AI remain NOT TESTED/OPEN as applicable. WS2/WS3/WS4 hosted feature acceptance remains AWAITING LAB; technical release does not close their full requirements. The completed WS1 HOLD/disclosure acceptance is removed from the current residual; no whole14-task PASS.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-10-18-central-four-streams.md; machine receipt CHECKPOINTS/EVIDENCE/central-four-streams-20261018/source-release.json; screenshot weekly-provisional-lab.jpg in the same evidence directory. Scoped usage manual docs/manual/automatic-reports/PASS.md updated in this same receipt; shared tracker PDF regenerated from current Markdown. No other manual claim added.
+
+Single next action: continue retained central coordination with a read-only LAB evidence acceptance of the remaining source consumers after reading this receipt; do not repeat accepted transactions or re-save existing report settings. Source and administrative receipt remain separate from functional completion.
+
+## Historical source preparation and policy follow-up (superseded by current receipt above)
+
 ## 18/10/2026 17:37 Europe/Athens - COORD-20261018 / COMBINED MAIN POLICY FAILURE / BOUNDED INTEGRATION FOLLOW-UP
 
 All four source PRs #2729/#2730/#2731/#2732 merged with full green PR CI. Exact combined main adc59a755924f813a8f5b11bb26629b3767ee3d8 run39136174553 failed BEFORE server tests at checkpoint policy: the shared ACTIVE record was byte-identical across the last WS2 and WS3 merge, so the final push had no ACTIVE diff. This is not a server regression or a combined technical PASS. The ordinary release is held; production remains on3f429e2f6a43aa599952dbe8e7d89d9ca2da7f81.
