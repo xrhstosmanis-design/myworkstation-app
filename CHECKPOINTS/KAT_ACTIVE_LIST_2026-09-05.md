@@ -1,3 +1,9 @@
+## 18/10/2026 13:00 Europe/Athens — WHOLESALE-ORDERS-01 / NATIVE CI FAIL RECORDED / FIX AWAITING RETEST
+
+SourcePR2692 headba481290/fullCI39117252067/job117645531974:2972tests/2969PASS/3FAIL/0SKIP. Both Windows jobs PASS. Native tier audit/classification and exact scoped quote subtests PASS. Actual order INSERT failed PostgreSQL42804 because Prisma bound exact decimal-string totals as TEXT into NUMERIC columns; concurrent-submission and rollback-recovery subtests plus containing native test failed from that one cause. No merge, release or production operation occurred. This is isolated test evidence, not a LAB observation.
+
+Causal correction in wholesale-orders.js: explicit ::numeric casts for net/vat/gross bindings, preserving exact decimal strings with no IEEE754 conversion. Existing real native scenario remains unchanged and must prove the correction; focused Node20 pricing/order18/18PASS. Previous full local and UI/build results retained, full corrected GitHub CI still required before merge. Shared owner remains codex/wholesale-suite-20261017; full suite OPEN/AWAITING LAB. Checkpoint CHECKPOINTS/CHANGES/2026-10-18-wholesale-orders-core.md. Next action run exact corrected full CI/native scenario, no bypass.
+
 ## 18/10/2026 12:53 Europe/Athens — WHOLESALE-ORDERS-01 / SOURCE REVIEW / AWAITING FULL CI AND LAB
 
 Coordinator codex/wholesale-suite-20261017 retained; source feat/wholesale-orders-core-20261018. ClaimPR2691 finalhead70f4cd3a/docsCI39116588681 SUCCESS merged3a2835bd before any source edit. Three authorized workers implemented separate pricing, persistence and mounted UI scopes; coordinator integrated bootstrap/routes/launcher/native HTTP tests and reviewed the shared contract. All other owners and prior PASS remain untouched.

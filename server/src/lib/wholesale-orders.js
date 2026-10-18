@@ -79,7 +79,7 @@ export async function createWholesaleOrder(db,ctx,input){
         const id=crypto.randomUUID(),snapshot=JSON.stringify(quote);
         let rows;
         try{
-          rows=await tx.$queryRaw`INSERT INTO "WholesaleOrderRequest" ("id","companyId","storeId","customerId","actorId","channel","clientOrderId","requestHash","quoteId","status","revision","snapshot","notes","netTotal","vatTotal","grossTotal") VALUES (${id},${ctx.companyId},${body.storeId},${body.customerId},${ctx.actorId},${ctx.channel},${body.clientOrderId},${requestHash},${body.quoteId},'SUBMITTED',1,${snapshot}::jsonb,${body.notes},${quote.totals.net},${quote.totals.vat},${quote.totals.gross}) RETURNING *`;
+          rows=await tx.$queryRaw`INSERT INTO "WholesaleOrderRequest" ("id","companyId","storeId","customerId","actorId","channel","clientOrderId","requestHash","quoteId","status","revision","snapshot","notes","netTotal","vatTotal","grossTotal") VALUES (${id},${ctx.companyId},${body.storeId},${body.customerId},${ctx.actorId},${ctx.channel},${body.clientOrderId},${requestHash},${body.quoteId},'SUBMITTED',1,${snapshot}::jsonb,${body.notes},${quote.totals.net}::numeric,${quote.totals.vat}::numeric,${quote.totals.gross}::numeric) RETURNING *`;
         }catch(error){
           // RepeatableRead may establish its snapshot while waiting for the
           // advisory lock. A concurrent accepted key is then visible only after
