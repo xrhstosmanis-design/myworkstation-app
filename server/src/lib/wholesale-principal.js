@@ -1,3 +1,4 @@
+import {assertWholesaleEntitlement} from "./wholesale-entitlement.js";
 const MANAGERS=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
 const portalPrincipals=new WeakMap();
 const sellerPrincipals=new WeakMap();
@@ -39,7 +40,7 @@ export async function authorizeWholesalePrincipal(db,ctx,input,{lock=false}={}){
     if(await sellerPrincipals.get(ctx).authorize(db,ctx,input,{lock})!==true)throw wholesaleError(403,'WHOLESALE_SELLER_ACCESS_DENIED','Wholesale seller access is no longer available.');
     return;
   }
-  if(!isWholesalePortalPrincipal(ctx))return;
+  if(!isWholesalePortalPrincipal(ctx)){await assertWholesaleEntitlement(db,ctx.companyId,{lock});return;}
   portalScope(ctx,input);
   // Recheck current session/account/site/license/customer/store in the caller's
   // transaction, including accepted retries. Never cache successful validation.

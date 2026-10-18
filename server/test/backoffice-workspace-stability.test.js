@@ -29,7 +29,7 @@ test("store operations entry opens existing functions with the selected store", 
   const {createRequire}=await import("node:module");
   const {fileURLToPath}=await import("node:url");
   const path=await import("node:path");
-  const keep=new Set(["CommerceLauncher.jsx","StoreCloudPage.jsx","CommerceHub.jsx"]);
+  const keep=new Set(["CommerceLauncher.jsx","StoreCloudPage.jsx","CommerceHub.jsx","WholesaleSuiteWorkspace.jsx"]);
   const result=await build({
     stdin:{contents:'import React from "react";import Launcher from "./client/src/components/commerce/CommerceLauncher.jsx";import Store from "./client/src/components/cloud/StoreCloudPage.jsx";export default function Fixture(p){return <><Store {...p}/><Launcher/></>}',resolveDir:fileURLToPath(new URL("../../",import.meta.url)),loader:"jsx"},
     bundle:true,write:false,format:"cjs",platform:"node",

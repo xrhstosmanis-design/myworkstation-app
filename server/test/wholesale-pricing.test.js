@@ -9,7 +9,10 @@ function fixture({products,tiers,store=true,customer=true,list=true}={}){
   tiers??=[{id:'tier-a',productId:'product-a',minimumQuantity:'1',unitPrice:'1.0050',discountPercent:null,priceBasis:'NET',version:1}];
   const reads=[];
   const db={$queryRaw:async sql=>{
+    if(Array.isArray(sql))sql={sql:sql.join('?'),values:[]};
     assert.equal(typeof sql.sql,'string');assert.ok(Array.isArray(sql.values));reads.push(sql);
+    if(sql.sql.includes('JOIN "CompanyModule"'))return [{companyId:sql.values[0]}];
+    if(sql.sql.includes('SELECT clock_timestamp()'))return [{now:new Date()}];
     if(sql.sql.includes('FROM "Store"'))return store?[{id:'store-a',name:'Own store'}]:[];
     if(sql.sql.includes('FROM "WholesaleCustomer"'))return customer?[{id:'customer-a',name:'Own customer'}]:[];
     if(sql.sql.includes('FROM "WholesaleCustomerPriceList"'))return list?[{id:'list-a',name:'Own list',discountPercent:'50'}]:[];
@@ -43,7 +46,7 @@ test('NET and GROSS use exact half-up cent arithmetic with authoritative persist
   assert.deepEqual(quote.totals,{net:'1.82',vat:'0.44',gross:'2.26'});assert.equal(quote.currency,'EUR');assert.equal(quote.creditChecked,false);assert.match(quote.quoteId,/^[a-f0-9]{64}$/);
   assert.deepEqual(quote.items[0],{productId:'product-a',name:'Net',sku:'A',unit:'PIECE',quantity:'1.0000',priceListId:'list-a',tierId:'net',sourceUnitPrice:'1.0050',sourcePriceBasis:'NET',minimumQuantity:'1.0000',priceVersion:2,vatRate:'24.000',netTotal:'1.01',vatTotal:'0.24',grossTotal:'1.25'});
   assert.deepEqual({net:quote.items[1].netTotal,vat:quote.items[1].vatTotal,gross:quote.items[1].grossTotal},{net:'0.81',vat:'0.20',gross:'1.01'});
-  assert.equal(state.reads.length,5,'batch reads do not grow with item count');assert.equal(JSON.stringify(quote).includes('costPrice'),false);
+  assert.equal(state.reads.length,9,'batch reads do not grow with item count');assert.equal(JSON.stringify(quote).includes('costPrice'),false);
 });
 
 test('zero price/VAT and fractional quantities remain exact; fixed tier overrides list default discount',async()=>{
@@ -66,8 +69,9 @@ test('highest eligible tier is selected before validation; unknown or ambiguous 
 test('scope checks fail before price reads, tagged SQL binds hostile IDs and locks checked rows only when requested',async()=>{
   for(const [changes,code] of [[{store:false},'WHOLESALE_STORE_NOT_FOUND'],[{customer:false},'WHOLESALE_CUSTOMER_NOT_FOUND'],[{list:false},'WHOLESALE_PRICE_LIST_REQUIRED'],[{products:[]},'WHOLESALE_PRODUCT_UNAVAILABLE']])await rejectsCode(()=>buildWholesaleQuote(fixture(changes).db,ctx,input()),code);
   const state=fixture(),actor={...ctx,companyId:"company-a' OR true --"};await buildWholesaleQuote(state.db,actor,input(),{lock:true});
-  assert.ok(state.reads.every(sql=>sql.sql.includes('FOR SHARE')));assert.ok(state.reads.every(sql=>!sql.sql.includes(actor.companyId)));assert.ok(state.reads.every(sql=>sql.values.includes(actor.companyId)));
-  assert.ok(state.reads[0].sql.includes('c."active"=true'));assert.ok(state.reads[1].sql.includes('co."active"=true'));assert.ok(state.reads[2].sql.includes('l."companyId"=a."companyId"'));assert.ok(state.reads[3].sql.includes('sp."active"=true'));assert.ok(state.reads[4].sql.includes('ORDER BY t."minimumQuantity" DESC'));
+  const pricingReads=state.reads.filter(sql=>!sql.sql.includes('JOIN "CompanyModule"')&&!sql.sql.includes('SELECT clock_timestamp()'));
+  assert.ok(pricingReads.every(sql=>sql.sql.includes('FOR SHARE')));assert.ok(state.reads.every(sql=>!sql.sql.includes(actor.companyId)));assert.ok(state.reads.filter(sql=>!sql.sql.includes('SELECT clock_timestamp()')).every(sql=>sql.values.includes(actor.companyId)));
+  assert.ok(pricingReads[0].sql.includes('c."active"=true'));assert.ok(pricingReads[1].sql.includes('co."active"=true'));assert.ok(pricingReads[2].sql.includes('l."companyId"=a."companyId"'));assert.ok(pricingReads[3].sql.includes('sp."active"=true'));assert.ok(pricingReads[4].sql.includes('ORDER BY t."minimumQuantity" DESC'));
   const unlocked=fixture();await buildWholesaleQuote(unlocked.db,ctx,input());assert.ok(unlocked.reads.every(sql=>!sql.sql.includes('FOR SHARE')));
 });
 

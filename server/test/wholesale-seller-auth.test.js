@@ -13,7 +13,7 @@ function fixture(){
     if(sql.includes('clock_timestamp() AS "now"'))return [{now:state.now}];
     if(sql.includes('FROM "UserSession"')){
       if(!state.live||(sql.includes('JOIN "WholesaleSellerMembership"')&&!state.enabled))return [];
-      return [{id:'seller-a',userCompanyId:state.userCompanyId,role:state.role,fullName:'Current user',sessionVersion:1,sessionId:'session-a',expiresAt:state.expiresAt,subscriptionEndsAt:state.subscriptionEndsAt,moduleStartsAt:state.moduleStartsAt,moduleEndsAt:state.moduleEndsAt}];
+      return [{id:'seller-a',userCompanyId:state.userCompanyId,role:state.role,fullName:'Current user',sessionVersion:1,sessionId:'session-a',expiresAt:state.expiresAt,subscriptionStartsAt:state.subscriptionStartsAt,subscriptionEndsAt:state.subscriptionEndsAt,moduleStartsAt:state.moduleStartsAt,moduleEndsAt:state.moduleEndsAt}];
     }
     if(sql.includes('pg_advisory_xact_lock'))return [{locked:''}];
     if(sql.includes('FROM "User" WHERE'))return values[0]==='seller-a'&&values[1]==='company-a'?[{id:'seller-a'}]:[];
@@ -38,7 +38,7 @@ test('seller identity uses live personal session and immutable branded channel, 
   assert.equal(ctx.actorId,'seller:seller-a');assert.equal(ctx.channel,'FIELD_SALES');assert.equal(ctx.tokenType,'WHOLESALE_SELLER');assert.throws(()=>assertWholesalePrincipal({...ctx}),error=>error.status===403);
   await authorizeWholesalePrincipal(db,ctx,scope,{lock:true});
   const auth=state.calls.find(call=>call.sql.includes('FROM "UserSession"'));
-  for(const predicate of ['u."id"=s."userId"','s."revokedAt" IS NULL','u."mustChangePassword"=false','u."sessionVersion"=',"cm.\"moduleKey\"='CORE'"] )assert.ok(auth.sql.includes(predicate),predicate);
+  for(const predicate of ['u."id"=s."userId"','s."revokedAt" IS NULL','u."mustChangePassword"=false','u."sessionVersion"=',"cm.\"moduleKey\"='WHOLESALE_B2B'"] )assert.ok(auth.sql.includes(predicate),predicate);assert.ok(auth.sql.includes("co.\"licenseStatus\"='ACTIVE'"));assert.ok(auth.sql.includes('co.\"subscriptionStartsAt\"'));
   assert.equal(auth.sql.includes('s."sessionVersion"'),false,'only User holds a session version');
   assert.equal(auth.sql.includes('u."active"'),false,'User has no active column');
   assert.ok(state.calls.some(call=>call.sql.includes('FROM "WholesaleSellerAssignment"')&&call.sql.includes('FOR SHARE')));
@@ -65,6 +65,20 @@ test('session and license expiry after row locks deny before an operation procee
     const {db,state}=fixture(),ctx=await authenticateWholesaleSeller(db,actor);state[date]=new Date('2026-10-18T11:59:59Z');
     await assert.rejects(()=>authorizeWholesalePrincipal(db,ctx,scope,{lock:true}),error=>error.status===401);
   }
+});
+
+test('subscription or module future start after lock acquisition denies access',async()=>{
+  for(const date of ['subscriptionStartsAt','moduleStartsAt']){
+    const {db,state}=fixture(),ctx=await authenticateWholesaleSeller(db,actor);state[date]=new Date('2026-10-18T12:00:01Z');
+    await assert.rejects(()=>authorizeWholesalePrincipal(db,ctx,scope,{lock:true}),error=>error.status===401);
+  }
+});
+
+test('verified Super Admin identity cannot bypass missing live paid wholesale entitlement',async()=>{
+  const {db,state}=fixture();state.role='SUPER_ADMIN';state.live=false;
+  await assert.rejects(()=>authenticateWholesaleSellerManager(db,{...actor,role:'OWNER',platformRole:'SUPER_ADMIN',isSuperAdmin:true}),error=>error.status===401);
+  const sql=state.calls.find(call=>call.sql.includes('FROM "UserSession"')).sql;
+  assert.ok(sql.includes("cm.\"moduleKey\"='WHOLESALE_B2B'"));assert.ok(sql.includes("co.\"licenseStatus\"='ACTIVE'"));
 });
 
 test('manager access needs actual current manager role, own company or verified real Super Admin',async()=>{

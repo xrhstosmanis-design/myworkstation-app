@@ -1,3 +1,15 @@
+# MyWorkStation Wholesale Suite
+
+## Current source: unified paid workspace - 18 October 2026
+
+Retained coordinator codex/wholesale-suite-20261017. The latest source groups management, customer site and sellers under one top-level **Χονδρική B2B** button. It requires the separately activated company module `WHOLESALE_B2B` and an ACTIVE current commercial license; no default-plan grant or Super Admin operational bypass. Live server capabilities control the entry; all three channels enforce the entitlement directly and on protected retries. Platform commercial activation is the licensing authority, not an assertion of bank payment collection. No real license was activated by this change.
+
+Managers open customers, prices, orders, Site πελατών and Αναθέσεις πωλητών in the same workspace; assigned employees enter their own seller workspace. Existing store selection and role/tenant/session/assignment boundaries remain. Uncertain submissions retain their original identity/key/body across temporary loss of access and require restored same-account access and manual reconciliation. No offline/reload/crash recovery is promised.
+
+ClaimPR2741/docsCI39139383289 merged a6f0ac452 before source. Focused UI31PASS and local full3108/2974PASS/0FAIL/134environmentSKIP are technical evidence; exact native PR/main CI, ordinary release and hosted functional acceptance remain pending. Shared core, customer portal and online seller slices already have prior native CI/release receipts; these are not a completed ERP or functional LAB PASS. Fulfillment/credit/receivables/collections/fiscal, offline, independent packaging/branding/domain and complete acceptance remain OPEN. Authoritative checkpoint: CHECKPOINTS/CHANGES/2026-10-18-wholesale-unified-paid.md.
+
+## Historical implementation receipts
+
 ## Online seller code live - 18 October 2026
 
 SourcePR2733 mergedeb56c519 after final3095/0/0 native CI; combined main6fea2ad1/fullCI39136855548 passes3113/0/0 plus6backup. Ordinary guard39137344362 and Renderdep-dbadmv8m7kps738emdn0 verified exact6fea LIVE/healthy14:48UTC. Seller «Εξωτερικοί πωλητές» and manager «Αναθέσεις πωλητών» use existing individually revocable users, explicit customer/store assignments and the shared FIELD_SALES quote/SUBMITTED order core. Source/CI/release verification only; functional LAB remains NOT TESTED. No production users, grants or orders created by development. Full suite, offline, fulfillment/credit/fiscal and standalone commercial packaging remain OPEN. See CHECKPOINTS/CHANGES/2026-10-18-wholesale-field-sales.md for exact evidence and retained owner. Older dated next-actions below are historical.

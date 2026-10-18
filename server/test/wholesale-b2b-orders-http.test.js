@@ -1,3 +1,4 @@
+import {assertWholesaleEntitlement} from "../src/lib/wholesale-entitlement.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -11,17 +12,17 @@ import {createWholesaleOrder} from '../src/lib/wholesale-orders.js';
 const source=(await readFile(new URL('../src/routes/wholesale-b2b.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/^export default .*;\n/gm,'');
 const bootstrap=(await readFile(new URL('../src/wholesale-b2b-bootstrap.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export async function','async function');
 async function http(db){
-  const router=new Function('crypto','Router','z','prisma','ensureWholesaleSchema','Prisma','assertWholesaleManager','buildWholesaleQuote','wholesaleError','createWholesaleOrder',source+'\nreturn router;')(crypto,Router,z,db,async()=>{},Prisma,assertWholesaleManager,buildWholesaleQuote,wholesaleError,createWholesaleOrder);
+  const router=new Function('crypto','Router','z','prisma','ensureWholesaleSchema','Prisma','assertWholesaleManager','buildWholesaleQuote','wholesaleError','createWholesaleOrder','assertWholesaleEntitlement',source+'\nreturn router;')(crypto,Router,z,db,async()=>{},Prisma,assertWholesaleManager,buildWholesaleQuote,wholesaleError,createWholesaleOrder,assertWholesaleEntitlement);
   const app=express();app.use(express.json());
   app.use((req,res,next)=>{req.user={id:req.headers['x-test-actor']||'owner-a',companyId:req.headers['x-test-company']||'company-a',role:req.headers['x-test-role']||'OWNER',tokenType:req.headers['x-test-token']||'BACKOFFICE_USER'};next()});
-  app.use('/api/wholesale',router);app.use((error,req,res,next)=>res.status(500).json({error:error.message}));
+  app.use('/api/wholesale',router);app.use((error,req,res,next)=>res.status(error.status||500).json({error:error.message,code:error.code}));
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s))}),base=`http://127.0.0.1:${server.address().port}/api/wholesale`;
   return {async request(path,method='GET',body,headers={}){const r=await fetch(base+path,{method,headers:{'content-type':'application/json',...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});return {status:r.status,data:await r.json()}},close:()=>new Promise(resolve=>{server.close(resolve);server.closeIdleConnections()})};
 }
 const input={customerId:'customer-a',storeId:'store-a',items:[{productId:'product-a',quantity:'2'}]};
 
 test('registered wholesale operational HTTP rejects invalid input and unsupported identities before database work',async()=>{
-  let reads=0;const api=await http({$transaction:async fn=>fn({$queryRaw:()=>{reads++;throw Error('must not query')}})});
+  let reads=0;const query=async sql=>{if(sql.sql?.includes('JOIN "CompanyModule"'))return [{companyId:'company-a'}];if((sql.sql||sql.join?.(' '))?.includes('SELECT clock_timestamp()'))return [{now:new Date()}];reads++;throw Error('must not query business rows')};const api=await http({$queryRaw:query,$transaction:async fn=>fn({$queryRaw:query})});
   try{
     for(const path of ['/products','/orders','/orders/missing'])assert.equal((await api.request(path)).status,400);
     for(const q of ['storeId=store-a&page=0','storeId=store-a&pageSize=101','storeId[]=store-a','storeId=store-a&companyId=other'])assert.equal((await api.request('/products?'+q)).status,400);
@@ -42,7 +43,7 @@ test('native PostgreSQL registered wholesale quotes, tier audit and concurrent r
   try{
     await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
     for(const sql of [
-      'CREATE TABLE "Company" ("id" TEXT PRIMARY KEY,"active" BOOLEAN NOT NULL DEFAULT true)',
+      'CREATE TABLE "Company" ("id" TEXT PRIMARY KEY,"active" BOOLEAN NOT NULL DEFAULT true,"licenseStatus" TEXT NOT NULL DEFAULT \'ACTIVE\',"subscriptionStartsAt" TIMESTAMPTZ,"subscriptionEndsAt" TIMESTAMPTZ)',
       'CREATE TABLE "Store" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id"),"name" TEXT NOT NULL,"active" BOOLEAN NOT NULL DEFAULT true)',
       'CREATE TABLE "Product" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id"),"sku" TEXT,"name" TEXT NOT NULL,"unit" TEXT NOT NULL DEFAULT \'PIECE\',"vatRate" NUMERIC(6,3) NOT NULL DEFAULT 24,"active" BOOLEAN NOT NULL DEFAULT true)',
       'CREATE TABLE "StoreProduct" ("id" TEXT PRIMARY KEY,"storeId" TEXT NOT NULL REFERENCES "Store"("id"),"productId" TEXT NOT NULL REFERENCES "Product"("id"),"active" BOOLEAN NOT NULL DEFAULT true,UNIQUE("storeId","productId"))',
@@ -51,6 +52,8 @@ test('native PostgreSQL registered wholesale quotes, tier audit and concurrent r
       'CREATE TABLE "StoreTransaction" ("id" TEXT PRIMARY KEY,"amount" NUMERIC)'
     ])await db.$executeRawUnsafe(sql);
     await db.$executeRaw`INSERT INTO "Company" ("id") VALUES ('company-a'),('company-b')`;
+    await db.$executeRawUnsafe('CREATE TABLE "CompanyModule" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id"),"moduleKey" TEXT NOT NULL,"active" BOOLEAN NOT NULL DEFAULT true,"startsAt" TIMESTAMPTZ,"endsAt" TIMESTAMPTZ,UNIQUE("companyId","moduleKey"))');
+    await db.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey") VALUES ('paid-a','company-a','WHOLESALE_B2B'),('core-a','company-a','CORE'),('paid-b','company-b','WHOLESALE_B2B')`;
     await db.$executeRaw`INSERT INTO "Store" ("id","companyId","name","active") VALUES ('store-a','company-a','A',true),('store-a2','company-a','A2',true),('store-b','company-b','B',true),('store-off','company-a','Off',false)`;
     await db.$executeRaw`INSERT INTO "Product" ("id","companyId","name","sku","vatRate") VALUES ('product-a','company-a','Alpha','A',24),('product-zero','company-a','Zero','Z',0),('product-hidden','company-a','Hidden','H',24),('product-b','company-b','Foreign','SECRET',24)`;
     await db.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","active") VALUES ('spa','store-a','product-a',true),('spz','store-a','product-zero',true),('sph','store-a','product-hidden',false),('spb','store-b','product-b',true),('corrupt','store-a','product-b',true)`;
@@ -101,8 +104,47 @@ test('native PostgreSQL registered wholesale quotes, tier audit and concurrent r
       const replay=await api.request('/orders','POST',body);assert.equal(replay.status,200);assert.equal(replay.data.order.grossTotal,'3.06');
       const stale=await api.request('/orders','POST',{...body,clientOrderId:crypto.randomUUID()});assert.equal(stale.status,409);assert.equal(stale.data.code,'PRICE_CHANGED');assert.deepEqual(stale.data.details.quote.totals,{net:'4.00',vat:'0.96',gross:'4.96'});
       for(const [table,id] of [['Company','company-a'],['Store','store-a'],['WholesaleCustomer','customer-a']]){
-        await db.$executeRawUnsafe(`UPDATE "${table}" SET "active"=false WHERE "id"=$1`,id);assert.equal((await api.request('/orders','POST',body)).status,404);await db.$executeRawUnsafe(`UPDATE "${table}" SET "active"=true WHERE "id"=$1`,id);
+        await db.$executeRawUnsafe(`UPDATE "${table}" SET "active"=false WHERE "id"=$1`,id);assert.equal((await api.request('/orders','POST',body)).status,table==='Company'?403:404);await db.$executeRawUnsafe(`UPDATE "${table}" SET "active"=true WHERE "id"=$1`,id);
       }
+    });
+    await t.test('paid wholesale grant is mandatory for all manager entry points and historical replay',async()=>{
+      const counts=()=>db.$queryRaw`SELECT (SELECT COUNT(*)::int FROM "WholesaleOrderRequest") AS orders,(SELECT COUNT(*)::int FROM "WholesaleOrderEvent") AS events`;
+      const before=await counts();
+      const cases=[
+        [`DELETE FROM "CompanyModule" WHERE "id"='paid-a'`,`INSERT INTO "CompanyModule" ("id","companyId","moduleKey") VALUES ('paid-a','company-a','WHOLESALE_B2B')`],
+        [`UPDATE "CompanyModule" SET "active"=false WHERE "id"='paid-a'`,`UPDATE "CompanyModule" SET "active"=true WHERE "id"='paid-a'`],
+        [`UPDATE "Company" SET "licenseStatus"='TRIAL' WHERE "id"='company-a'`,`UPDATE "Company" SET "licenseStatus"='ACTIVE' WHERE "id"='company-a'`],
+        [`UPDATE "Company" SET "subscriptionStartsAt"=clock_timestamp()+INTERVAL '1 hour' WHERE "id"='company-a'`,`UPDATE "Company" SET "subscriptionStartsAt"=NULL WHERE "id"='company-a'`]
+      ];
+      for(const [deny,restore] of cases){
+        await db.$executeRawUnsafe(deny);
+        try{
+          for(const path of ['/customers','/price-lists','/products?storeId=store-a','/orders?storeId=store-a',`/orders/${acceptedId}?storeId=store-a`])assert.equal((await api.request(path)).status,403,path);
+          for(const [path,payload] of [['/quotes',input],['/orders',body],['/customers',{name:'Must not exist'}],['/price-lists',{code:'DENIED',name:'Denied'}]])assert.equal((await api.request(path,'POST',payload)).status,403,path);
+          assert.equal((await api.request('/customers','GET',undefined,{'x-test-role':'SUPER_ADMIN'})).status,403,'Super Admin cannot bypass company paid entitlement');
+          assert.deepEqual(await counts(),before);
+        }finally{await db.$executeRawUnsafe(restore)}
+      }
+      assert.equal((await api.request('/orders','POST',body)).data.orderId,acceptedId);
+    });
+    await t.test('advisory-waiting backoffice replay denies revoked paid module without disclosing saved snapshot',{timeout:20000},async()=>{
+      const key=JSON.stringify(['wholesale-order','company-a','owner-a',body.clientOrderId]);let pending;
+      const before=await db.$queryRaw`SELECT (SELECT COUNT(*)::int FROM "WholesaleOrderRequest") AS orders,(SELECT COUNT(*)::int FROM "WholesaleOrderEvent") AS events`;
+      try{
+        await db.$transaction(async tx=>{
+          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key},0))::text`;
+          pending=api.request('/orders','POST',body);let observed=false;
+          for(let attempt=0;attempt<100;attempt++){
+            const rows=await tx.$queryRaw`SELECT 1 FROM pg_locks WHERE locktype='advisory' AND mode='ExclusiveLock' AND database=(SELECT oid FROM pg_database WHERE datname=current_database()) AND granted=false AND objsubid=1 AND classid=((hashtextextended(${key},0)>>32)&4294967295)::oid AND objid=(hashtextextended(${key},0)&4294967295)::oid`;
+            if(rows.length){observed=true;break}await new Promise(resolve=>setTimeout(resolve,20));
+          }
+          assert.ok(observed,'exact backoffice order key is waiting before paid-module revocation');
+          await tx.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "id"='paid-a'`;
+        },{timeout:10000,maxWait:5000});
+        const denied=await pending;assert.equal(denied.status,403);assert.equal(denied.data.code,'WHOLESALE_MODULE_DISABLED');assert.equal(denied.data.order,undefined);
+        assert.deepEqual(await db.$queryRaw`SELECT (SELECT COUNT(*)::int FROM "WholesaleOrderRequest") AS orders,(SELECT COUNT(*)::int FROM "WholesaleOrderEvent") AS events`,before);
+      }finally{if(pending)await pending.catch(()=>{});await db.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "id"='paid-a'`}
+      const restored=await api.request('/orders','POST',body);assert.equal(restored.status,200);assert.equal(restored.data.orderId,acceptedId);
     });
     await t.test('event failure rolls back inserted order; same key retry succeeds with untouched financial controls',async()=>{
       await db.$executeRawUnsafe(`CREATE FUNCTION fail_wholesale_event() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."actorId"='fail-actor' THEN RAISE EXCEPTION 'isolated event failure'; END IF; RETURN NEW; END $$`);

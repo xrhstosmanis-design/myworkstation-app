@@ -49,7 +49,7 @@ test('live session authorization rechecks revocation and store/customer binding 
   const {db,state}=fixture(),ctx=await authenticatePortalSession(db,'company-a',token);
   await authorizeWholesalePrincipal(db,ctx,input,{lock:true});assert.ok(state.calls.some(call=>call.sql.includes('JOIN "WholesalePortalAccount"')&&call.sql.includes('FOR SHARE')));
   const scope=state.calls.find(call=>call.sql.includes('JOIN "WholesalePortalAccount"')).sql;
-  for(const predicate of ['s."sessionVersion"=a."sessionVersion"','a."active"=true','site."enabled"=true','cu."active"=true','st."active"=true','co."active"=true',"cm.\"moduleKey\"='CORE'",'s."expiresAt">clock_timestamp()'])assert.ok(scope.includes(predicate),predicate);
+  for(const predicate of ['s."sessionVersion"=a."sessionVersion"','a."active"=true','site."enabled"=true','cu."active"=true','st."active"=true','co."active"=true',"cm.\"moduleKey\"='WHOLESALE_B2B'",'s."expiresAt">clock_timestamp()'])assert.ok(scope.includes(predicate),predicate);assert.ok(scope.includes("co.\"licenseStatus\"='ACTIVE'"));assert.ok(scope.includes('co.\"subscriptionStartsAt\"'));
   await assert.rejects(()=>authorizeWholesalePrincipal(db,ctx,{...input,storeId:'other'}),error=>error.status===403);
   state.active=false;await assert.rejects(()=>authorizeWholesalePrincipal(db,ctx,input),error=>error.status===401);
 });
@@ -57,6 +57,13 @@ test('live session authorization rechecks revocation and store/customer binding 
 test('wall clock expiry after lock wait is checked for session and module/license dates',async()=>{
   for(const field of ['expiresAt','subscriptionEndsAt','moduleEndsAt']){
     const {db,state}=fixture(),ctx=await authenticatePortalSession(db,'company-a',token);state.scope[field]=new Date('2026-10-18T10:00:01Z');state.now=new Date('2026-10-18T10:00:02Z');
+    await assert.rejects(()=>authorizeWholesalePrincipal(db,ctx,input,{lock:true}),error=>error.status===401);
+  }
+});
+
+test('subscription or module future start after lock acquisition denies access',async()=>{
+  for(const date of ['subscriptionStartsAt','moduleStartsAt']){
+    const {db,state}=fixture(),ctx=await authenticatePortalSession(db,'company-a',token);state.scope[date]=new Date('2026-10-18T10:00:03Z');
     await assert.rejects(()=>authorizeWholesalePrincipal(db,ctx,input,{lock:true}),error=>error.status===401);
   }
 });

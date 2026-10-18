@@ -1,8 +1,9 @@
+import {wholesaleEntitlementSql} from './wholesale-entitlement.js';
 import {Prisma} from '@prisma/client';
 import {createWholesaleSellerPrincipal,wholesaleError} from './wholesale-principal.js';
 const managers=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
 const denied=()=>wholesaleError(401,'SELLER_AUTH_REQUIRED','Απαιτείται ενεργή προσωπική σύνδεση.');
-const license=Prisma.sql`co."active"=true AND co."licenseStatus" NOT IN ('EXPIRED','SUSPENDED') AND (co."subscriptionEndsAt" IS NULL OR co."subscriptionEndsAt">=clock_timestamp()) AND cm."moduleKey"='CORE' AND cm."active"=true AND (cm."startsAt" IS NULL OR cm."startsAt"<=clock_timestamp()) AND (cm."endsAt" IS NULL OR cm."endsAt">=clock_timestamp())`;
+const license=wholesaleEntitlementSql;
 function claims(user){
   if(!user||user.tokenType!=='BACKOFFICE_USER'||['id','companyId','sessionId'].some(key=>typeof user[key]!=='string'||!user[key]||user[key]!==user[key].trim()||user[key].length>200)||!Number.isInteger(user.sessionVersion)||user.sessionVersion<0)throw denied();
 }
@@ -14,12 +15,12 @@ async function liveUser(db,user,{lock=false,membership=false,manager=false}={}){
   claims(user);
   const share=lock?Prisma.sql`FOR SHARE`:Prisma.empty;
   const memberJoin=membership?Prisma.sql`JOIN "WholesaleSellerMembership" m ON m."companyId"=u."companyId" AND m."userId"=u."id" AND m."active"=true`:Prisma.empty;
-  const rows=await db.$queryRaw(Prisma.sql`SELECT u."id",u."companyId" AS "userCompanyId",u."role",u."fullName",u."sessionVersion",s."id" AS "sessionId",s."expiresAt",co."subscriptionEndsAt",cm."startsAt" AS "moduleStartsAt",cm."endsAt" AS "moduleEndsAt" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" JOIN "Company" co ON co."id"=${user.companyId} JOIN "CompanyModule" cm ON cm."companyId"=co."id" ${memberJoin} WHERE s."id"=${user.sessionId} AND u."id"=${user.id} AND s."revokedAt" IS NULL AND s."expiresAt">clock_timestamp() AND u."sessionVersion"=${user.sessionVersion} AND u."mustChangePassword"=false AND ${license} ${share}`);
+  const rows=await db.$queryRaw(Prisma.sql`SELECT u."id",u."companyId" AS "userCompanyId",u."role",u."fullName",u."sessionVersion",s."id" AS "sessionId",s."expiresAt",co."subscriptionStartsAt",co."subscriptionEndsAt",cm."startsAt" AS "moduleStartsAt",cm."endsAt" AS "moduleEndsAt" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" JOIN "Company" co ON co."id"=${user.companyId} JOIN "CompanyModule" cm ON cm."companyId"=co."id" ${memberJoin} WHERE s."id"=${user.sessionId} AND u."id"=${user.id} AND s."revokedAt" IS NULL AND s."expiresAt">clock_timestamp() AND u."sessionVersion"=${user.sessionVersion} AND u."mustChangePassword"=false AND ${license} ${share}`);
   const row=rows[0];if(!row||!roleMatches(user,row.role))throw denied();
   if(manager){if(!managers.has(row.role))throw wholesaleError(403,'SELLER_MANAGER_DENIED','Απαιτείται δικαίωμα διαχείρισης πωλητών.');if(row.userCompanyId!==user.companyId&&row.role!=='SUPER_ADMIN')throw denied()}
   else if(row.userCompanyId!==user.companyId||user.supportContext)throw denied();
   const clock=await db.$queryRaw`SELECT clock_timestamp() AS "now"`,now=new Date(clock[0].now).getTime();
-  if(!Number.isFinite(now)||new Date(row.expiresAt).getTime()<=now||(row.subscriptionEndsAt&&new Date(row.subscriptionEndsAt).getTime()<now)||(row.moduleStartsAt&&new Date(row.moduleStartsAt).getTime()>now)||(row.moduleEndsAt&&new Date(row.moduleEndsAt).getTime()<now))throw denied();
+  if(!Number.isFinite(now)||new Date(row.expiresAt).getTime()<=now||(row.subscriptionStartsAt&&new Date(row.subscriptionStartsAt).getTime()>now)||(row.subscriptionEndsAt&&new Date(row.subscriptionEndsAt).getTime()<now)||(row.moduleStartsAt&&new Date(row.moduleStartsAt).getTime()>now)||(row.moduleEndsAt&&new Date(row.moduleEndsAt).getTime()<now))throw denied();
   return row;
 }
 export async function authenticateWholesaleSellerManager(db,user,{lock=false}={}){await liveUser(db,user,{lock,manager:true});return true}

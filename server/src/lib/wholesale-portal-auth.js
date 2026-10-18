@@ -1,3 +1,4 @@
+import {wholesaleEntitlementSql} from './wholesale-entitlement.js';
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import {Prisma} from '@prisma/client';
@@ -42,20 +43,20 @@ export function requirePortalCsrf(req,ctx){
   if(!expected||typeof actual!=='string'||!/^[a-f0-9]{64}$/.test(actual)||!crypto.timingSafeEqual(Buffer.from(expected,'hex'),Buffer.from(actual,'hex')))throw wholesaleError(403,'B2B_CSRF_DENIED','Ανανέωσε τη σύνδεση πριν συνεχίσεις.');
 }
 
-// Includes live CORE entitlement with no management/Super Admin bypass.
-export const portalLicenseSql=Prisma.sql`co."active"=true AND co."licenseStatus" NOT IN ('EXPIRED','SUSPENDED') AND (co."subscriptionEndsAt" IS NULL OR co."subscriptionEndsAt">=clock_timestamp()) AND cm."moduleKey"='CORE' AND cm."active"=true AND (cm."startsAt" IS NULL OR cm."startsAt"<=clock_timestamp()) AND (cm."endsAt" IS NULL OR cm."endsAt">=clock_timestamp())`;
+// Public discovery and sessions require the same explicit paid wholesale grant.
+export const portalLicenseSql=wholesaleEntitlementSql;
 export async function findPortalSite(db,slug){
   const rows=await db.$queryRaw(Prisma.sql`SELECT site."id",site."companyId",site."slug",site."name" FROM "WholesalePortalSite" site JOIN "Company" co ON co."id"=site."companyId" JOIN "CompanyModule" cm ON cm."companyId"=co."id" WHERE site."slug"=${slug} AND site."enabled"=true AND ${portalLicenseSql}`);
   return rows[0]||null;
 }
 async function sessionScope(db,{sessionId,tokenHash,slug},{lock=false}={}){
   const share=lock?Prisma.sql`FOR SHARE`:Prisma.empty;
-  const rows=await db.$queryRaw(Prisma.sql`SELECT a."id" AS "accountId",a."login",a."companyId",a."customerId",a."storeId",site."id" AS "siteId",site."slug",site."name" AS "siteName",cu."name" AS "customerName",st."name" AS "storeName",s."id" AS "sessionId",s."expiresAt",co."subscriptionEndsAt",cm."startsAt" AS "moduleStartsAt",cm."endsAt" AS "moduleEndsAt" FROM "WholesalePortalSession" s JOIN "WholesalePortalAccount" a ON a."id"=s."accountId" AND a."siteId"=s."siteId" AND a."companyId"=s."companyId" JOIN "WholesalePortalSite" site ON site."id"=a."siteId" AND site."companyId"=a."companyId" JOIN "Company" co ON co."id"=a."companyId" JOIN "CompanyModule" cm ON cm."companyId"=co."id" JOIN "WholesaleCustomer" cu ON cu."id"=a."customerId" AND cu."companyId"=a."companyId" JOIN "Store" st ON st."id"=a."storeId" AND st."companyId"=a."companyId" WHERE s."id"=${sessionId} AND s."tokenHash"=${tokenHash} AND s."revokedAt" IS NULL AND s."expiresAt">clock_timestamp() AND s."sessionVersion"=a."sessionVersion" AND a."active"=true AND site."enabled"=true AND site."slug"=${slug} AND cu."active"=true AND st."active"=true AND ${portalLicenseSql} ${share}`);
+  const rows=await db.$queryRaw(Prisma.sql`SELECT a."id" AS "accountId",a."login",a."companyId",a."customerId",a."storeId",site."id" AS "siteId",site."slug",site."name" AS "siteName",cu."name" AS "customerName",st."name" AS "storeName",s."id" AS "sessionId",s."expiresAt",co."subscriptionStartsAt",co."subscriptionEndsAt",cm."startsAt" AS "moduleStartsAt",cm."endsAt" AS "moduleEndsAt" FROM "WholesalePortalSession" s JOIN "WholesalePortalAccount" a ON a."id"=s."accountId" AND a."siteId"=s."siteId" AND a."companyId"=s."companyId" JOIN "WholesalePortalSite" site ON site."id"=a."siteId" AND site."companyId"=a."companyId" JOIN "Company" co ON co."id"=a."companyId" JOIN "CompanyModule" cm ON cm."companyId"=co."id" JOIN "WholesaleCustomer" cu ON cu."id"=a."customerId" AND cu."companyId"=a."companyId" JOIN "Store" st ON st."id"=a."storeId" AND st."companyId"=a."companyId" WHERE s."id"=${sessionId} AND s."tokenHash"=${tokenHash} AND s."revokedAt" IS NULL AND s."expiresAt">clock_timestamp() AND s."sessionVersion"=a."sessionVersion" AND a."active"=true AND site."enabled"=true AND site."slug"=${slug} AND cu."active"=true AND st."active"=true AND ${portalLicenseSql} ${share}`);
   if(!rows[0])throw unauthorized();
   // Predicates may have run before waiting on another transaction's row lock.
   // Recheck wall-clock expiry after all SHARE locks have actually been acquired.
   const clock=await db.$queryRaw`SELECT clock_timestamp() AS "now"`,row=rows[0],now=new Date(clock[0].now).getTime();
-  if(new Date(row.expiresAt).getTime()<=now||(row.subscriptionEndsAt&&new Date(row.subscriptionEndsAt).getTime()<now)||(row.moduleStartsAt&&new Date(row.moduleStartsAt).getTime()>now)||(row.moduleEndsAt&&new Date(row.moduleEndsAt).getTime()<now))throw unauthorized();
+  if(new Date(row.expiresAt).getTime()<=now||(row.subscriptionStartsAt&&new Date(row.subscriptionStartsAt).getTime()>now)||(row.subscriptionEndsAt&&new Date(row.subscriptionEndsAt).getTime()<now)||(row.moduleStartsAt&&new Date(row.moduleStartsAt).getTime()>now)||(row.moduleEndsAt&&new Date(row.moduleEndsAt).getTime()<now))throw unauthorized();
   return row;
 }
 export async function authenticatePortalSession(db,slug,token){
