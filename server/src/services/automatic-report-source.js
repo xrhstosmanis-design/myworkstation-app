@@ -1,5 +1,5 @@
 import {createHash} from "node:crypto";
-import {dailyCashReportReadiness,reportBusinessPeriod,reportDayOffset,cashPreviewPeriod,summarizeCashVariances} from "./automatic-report-policy.js";
+import {dailyCashReportReadiness,reportBusinessPeriod,reportDayOffset,cashPreviewPeriod,summarizeCashVariances,summarizeOpeningOperators} from "./automatic-report-policy.js";
 import {legacyCashControlRule,sameCashRule} from "./cash-control-rules.js";
 
 const error=(status,message)=>Object.assign(new Error(message),{status});
@@ -72,7 +72,7 @@ export async function readAutomaticCashPreview(db,{actorId,companyId,storeId,day
     const groups=ready?summarizeCashVariances(rows.map(row=>({...row,cashChain:row.terminalPos.toUpperCase().includes(rule.deliveryTerminalPattern.toUpperCase())?"DELIVERY":"STORE"})),settings):null;
     const sourceFingerprint=createHash("sha256").update(JSON.stringify({companyId,storeId,day,frequency,period,configuration,rule,rows})).digest("hex");
     return {kind:`${frequency}_CASH_PREVIEW`,frequency,store,period,ready,holds,dayReadiness,sourceCount:rows.length,
-      complete:rows.length<=sourceLimit,groups,sourceFingerprint,generatedAt:new Date(now),
+      complete:rows.length<=sourceLimit,groups,...(frequency==="MONTHLY"?{openingOperatorSummary:ready?summarizeOpeningOperators(groups):null}:{}),sourceFingerprint,generatedAt:new Date(now),
       rule:rule?{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled}:null,
       settingsVersion:settingsVersion??null,employeeLiabilityAdjusted:false,deliveryStatus:"PREVIEW_ONLY",
       // Closure readiness certifies only this shift snapshot, not settlement,

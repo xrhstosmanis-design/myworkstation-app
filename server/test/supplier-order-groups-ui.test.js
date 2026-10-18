@@ -15,7 +15,7 @@ test('supplier proposal production panel consumes actual grouping contract witho
   const React=await import('react'),{act}=React,{createRoot}=await import('react-dom/client'),root=createRoot(document.getElementById('root'));
   const baseRows=Array.from({length:4},(_,i)=>({productId:`p${i}`,name:`Product ${i}`,sku:`SKU${i}`,unitLabel:'τεμ.',currentStock:i,minStock:2,netQuantity:30,dailyDemand:1,soldQuantity:35,returnedQuantity:5,suggestedQuantity:10-i,reason:'Demand.',warnings:[]}));
   const evidence=[['p0','s1','Alpha','d1'],['p0','s1','Alpha','d2'],['p0','s2','Beta','d3'],['p1','s1','Alpha','d1'],['p1','s2','Beta','d3'],['p3','s2','Beta','d4']].map(([productId,supplierId,supplierName,documentId])=>({productId,supplierId,supplierName,documentId}));
-  const flat=(storeId='A',options={historyDays:30,coverageDays:7,leadDays:3})=>({storeId,options,from:'2026-09-18T12:00:00.000Z',to:'2026-10-18T12:00:00.000Z',rows:structuredClone(baseRows)});
+  const flat=(storeId='A',options={historyDays:30,coverageDays:7,leadDays:3})=>({storeId,options,generatedAt:'2026-10-18T12:00:00.000Z',from:'2026-09-18T12:00:00.000Z',to:'2026-10-18T12:00:00.000Z',rows:structuredClone(baseRows)});
   const grouped=(storeId='A',complete=true,options)=>{const source=flat(storeId,options);return {...source,...buildSupplierOrderGroups(source.rows,complete?evidence:[],{complete}),supplierEvidence:{from:source.from,to:source.to,historyDays:source.options.historyDays,limit:20000,complete,observedDocumentProductSupplierCount:complete?evidence.length:20001,physicalDeliveryFrequencyVerified:false}};};
   const render=(api,storeId='A')=>act(async()=>root.render(React.createElement(module.exports.default,{api,storeId})));
   const mount=async(api,storeId='A')=>{await act(async()=>root.render(null));await render(api,storeId);};
@@ -26,6 +26,35 @@ test('supplier proposal production panel consumes actual grouping contract witho
   const type=(input,value)=>act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));});
   const apiFor=(calls,custom)=>async(...args)=>{calls.push(args);const u=new URL(args[0],'https://isolated.invalid');return custom?custom(u):u.pathname.endsWith('/by-supplier')?grouped(u.searchParams.get('storeId')):flat(u.searchParams.get('storeId'));};
   try{
+    await t.test('actual CSV download exports filtered canonical rows across pages with no extra API',async()=>{
+      const originalCreate=URL.createObjectURL,originalRevoke=URL.revokeObjectURL,originalClick=dom.window.HTMLAnchorElement.prototype.click;
+      const downloads=[],revoked=[];let payload;
+      URL.createObjectURL=blob=>{payload=blob;return 'blob:isolated-review';};URL.revokeObjectURL=url=>revoked.push(url);
+      dom.window.HTMLAnchorElement.prototype.click=function(){downloads.push({href:this.href,filename:this.download});};
+      const exportButton=()=>[...document.querySelectorAll('button')].find(b=>b.textContent.startsWith('CSV πρότασης'));
+      try{
+        const calls=[];await mount(apiFor(calls));assert.equal(exportButton(),undefined);
+        await select('Προβολή προτάσεων','supplier');assert.equal(exportButton().disabled,false);assert.equal(rows().length,2);
+        await act(async()=>exportButton().click());assert.equal(calls.length,2);assert.equal(downloads.length,1);assert.match(downloads[0].filename,/supplier-proposal-A-20261018120000000\.csv/);
+        let csv=await payload.text();assert.equal(payload.type,'text/csv;charset=utf-8');for(let i=0;i<4;i++)assert.ok(csv.includes(`"Product ${i}"`));assert.match(csv,/"10"/);assert.match(csv,/APPROVED_DOCUMENT_FREQUENCY_PROXY/);assert.match(csv,/DOCUMENT_FREQUENCY_TIE/);
+        await select('Φίλτρο προμηθευτή','unassigned');await act(async()=>exportButton().click());csv=await payload.text();assert.match(csv,/Product 1/);assert.match(csv,/Product 2/);assert.doesNotMatch(csv,/Product 0|Product 3/);
+        await type(document.querySelector('[placeholder="Αναζήτηση προτάσεων"]'),'SKU2');await act(async()=>exportButton().click());csv=await payload.text();assert.match(csv,/Product 2/);assert.doesNotMatch(csv,/Product 1/);assert.match(csv,/"SKU2","unassigned","YES"/);assert.equal(calls.length,2);
+        await type(document.querySelector('[placeholder="Αναζήτηση προτάσεων"]'),'absent');assert.equal(exportButton().disabled,true);
+        const withZero=grouped();withZero.rows[3].suggestedQuantity=0;await mount(apiFor([],u=>u.pathname.endsWith('/by-supplier')?withZero:flat()));await select('Προβολή προτάσεων','supplier');await act(async()=>exportButton().click());assert.doesNotMatch(await payload.text(),/Product 3/);
+        await act(async()=>document.querySelector('.order-suggestions-check input').click());await act(async()=>exportButton().click());csv=await payload.text();assert.match(csv,/Product 3/);assert.match(csv,/"all","NO","CURRENT_FILTERED_ROWS_ALL_PAGES"/);
+        await render(apiFor(calls),'');assert.equal(exportButton().disabled,true);assert.equal(document.querySelector('a[download]'),null);
+        await new Promise(done=>setTimeout(done,5));assert.equal(revoked.length,downloads.length);
+      }finally{URL.createObjectURL=originalCreate;URL.revokeObjectURL=originalRevoke;dom.window.HTMLAnchorElement.prototype.click=originalClick;}
+    });
+    await t.test('CSV remains disabled while loading, stale store responses, invalid contract and errors',async()=>{
+      const exportButton=()=>[...document.querySelectorAll('button')].find(b=>b.textContent.startsWith('CSV πρότασης'));
+      let resolve;const api=apiFor([],u=>u.pathname.endsWith('/by-supplier')?new Promise(done=>resolve=done):flat(u.searchParams.get('storeId')));
+      await mount(api);await select('Προβολή προτάσεων','supplier');assert.equal(exportButton().disabled,true);
+      const resolveA=resolve;await render(api,'B');assert.equal(exportButton().disabled,true);await act(async()=>resolveA(grouped('A')));assert.equal(exportButton().disabled,true);
+      await act(async()=>resolve(grouped('B')));assert.equal(exportButton().disabled,false);
+      await mount(apiFor([],u=>{if(u.pathname.endsWith('/by-supplier'))throw Error('Unavailable');return flat();}));await select('Προβολή προτάσεων','supplier');assert.equal(exportButton().disabled,true);
+      for(const mutate of [data=>data.reviewRequired=false,data=>data.generatedAt='invalid',data=>data.generatedAt='2026-10-18T11:00:00.000Z']){const invalid=grouped();mutate(invalid);await mount(apiFor([],u=>u.pathname.endsWith('/by-supplier')?invalid:flat()));await select('Προβολή προτάσεων','supplier');assert.equal(exportButton().disabled,true);}
+    });
     await t.test('flat default unchanged, grouped quantities and document proxy, tie/no evidence stay unassigned',async()=>{
       const calls=[];await mount(apiFor(calls));assert.equal(calls.length,1);assert.equal(new URL(calls[0][0],'https://x').pathname,'/api/commerce/order-suggestions');assert.doesNotMatch(text(),/PROXY/);
       await select('Προβολή προτάσεων','supplier');assert.match(calls[1][0],/by-supplier\?storeId=A&historyDays=30&coverageDays=7&leadDays=3/);assert.match(text(),/PROXY/);assert.match(text(),/όχι επιβεβαιωμένες φυσικές παραδόσεις/);assert.match(text(),/Δεν ορίζεται κύριος προμηθευτής/);assert.match(rows()[0].textContent,/Alpha/);assert.equal(rows()[0].querySelector('.order-suggestions-quantity').firstChild.textContent,'10');assert.match(rows()[0].textContent,/Alpha: 2 εγκεκριμένα παραστατικά/);
