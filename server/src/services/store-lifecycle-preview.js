@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {STORE_TABLES,RESET_KEEP} from './store-lifecycle-policy.js';
+import {reviewLifecycleApplicationLinks} from './store-lifecycle-application-links.js';
 import {reviewLifecycleDependencies} from './store-lifecycle-dependencies.js';
 const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status})};
 export function requireLifecycleAdmin(actor){if(!actor?.id||!(actor.isSuperAdmin===true||actor.platformRole==='SUPER_ADMIN'))fail('Απαιτείται πρόσβαση Platform Super Admin.',403)}
@@ -32,9 +33,12 @@ export async function lifecyclePreview(db,actor,{companyId,storeId},mode){
   if(dependencies.length>10000)fail('Οι εξαρτήσεις υπερβαίνουν το διαθέσιμο όριο. Απαιτείται ειδικός έλεγχος.',422);
   const selected=new Set(inventory.filter(row=>row.action==='REMOVE').map(row=>row.table));if(mode==='DELETE')selected.add('Store');
   const indirect=reviewLifecycleDependencies({schema,selected,inventory,dependencies});
+  const applicationLinks=await reviewLifecycleApplicationLinks(tx,{schema,tables,companyId,storeId,inventory});
+  for(const link of applicationLinks)if(link.status==='SCHEMA_CHANGED'||link.inconsistent)blockers.push({code:link.status==='SCHEMA_CHANGED'?'APPLICATION_LINK_SCHEMA_CHANGED':'INCONSISTENT_APPLICATION_LINK',table:link.table,count:link.inconsistent||1});
+  blockers.push({code:'APPLICATION_LINK_REVIEW_REQUIRED',count:applicationLinks.length});
   blockers.push({code:'DEPENDENCY_REVIEW_REQUIRED',count:indirect.length},{code:'RECOVERY_VERIFICATION_REQUIRED',count:1},{code:'OFFLINE_QUEUES_REQUIRE_DEVICE_CHECK',count:1});
-  const fingerprint=createHash('sha256').update(JSON.stringify({version:1,companyId,storeId,mode,inventory,indirect})).digest('hex');
-  return {store,mode,checkedAt:new Date().toISOString(),fingerprint,inventory,indirect,blockers,executionAvailable:false,
+  const fingerprint=createHash('sha256').update(JSON.stringify({version:1,companyId,storeId,mode,inventory,indirect,applicationLinks})).digest('hex');
+  return {store,mode,checkedAt:new Date().toISOString(),fingerprint,inventory,indirect,applicationLinks,blockers,executionAvailable:false,
    preservedShared:['Εταιρεία και άλλα καταστήματα','Κοινός κατάλογος προϊόντων/προμηθευτών','Εταιρικοί λογαριασμοί χρηστών'],
    limitations:['Τα πλήθη αφορούν άμεσες εγγραφές και δηλωμένες εξαρτήσεις, όχι πλήρη απογραφή έμμεσων συνδέσεων ή αντίγραφο ασφαλείας.','Η εκτέλεση εκκαθάρισης/διαγραφής δεν έχει ενεργοποιηθεί.','Οι φυσικές αποδείξεις και οι τραπεζικές χρεώσεις δεν διαγράφονται από την εφαρμογή.']};
  },{isolationLevel:'RepeatableRead',timeout:20000,maxWait:3000});
