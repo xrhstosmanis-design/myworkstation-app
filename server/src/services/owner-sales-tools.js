@@ -37,8 +37,21 @@ export function productSalesEvidence(report,args,scope){
   if(!report||report.companyId!==scope.companyId||report.storeId!==scope.storeId||report.period?.calendarFrom!==args.from||report.period?.calendarTo!==args.to||report.period?.timeZone!=="Europe/Athens"||report.period?.from!==calendar.from.toISOString()||report.period?.toExclusive!==calendar.to.toISOString()||report.reversalAware!==true||!Array.isArray(report.items)||report.count!==report.items.length||report.items.length>10000)fail("Η αναφορά πωλήσεων δεν αντιστοιχεί στο επιλεγμένο κατάστημα και διάστημα.");
   if(report.items.some(row=>!row||row.storeId!==scope.storeId||typeof row.name!=="string"||["salesQuantity","grossSales","netSales","vatValue","normalSaleCount","reversalCount","returnGrossValue"].some(key=>typeof row[key]!=="number"||!Number.isFinite(row[key]))))fail("Η αναφορά πωλήσεων επέστρεψε μη έγκυρα στοιχεία.");
   const base={source:"Στατιστικά πωλήσεων",kind:"product_sales",scope:"OWNER_SELECTED_STORE",companyId:scope.companyId,companyName:scope.companyName,storeId:scope.storeId,storeName:scope.storeName,productQuery:args.product,from:args.from,to:args.to,timeZone:"Europe/Athens",fromInstant:calendar.from.toISOString(),toExclusive:calendar.to.toISOString(),reversalAware:true,nonFiscal:true,sourceRows:report.items.length,sourceLimit:10000,rows:[],candidates:[],truncated:false};
-  // A full source cap cannot prove uniqueness or absence; do not infer a total.
-  if(report.items.length===10000)return {...base,result:"source_limited",truncated:true};
+  // Coverage is certified by the canonical reader, never inferred from a short
+  // returned list. Keep legacy compatibility explicit until every reader has it.
+  const coverage=report.sourceCoverage;
+  if(coverage===undefined){
+    base.sourceCoverageStatus="UNKNOWN";
+    base.coverageWarning="Η πηγή δεν παρέχει επιβεβαίωση πληρότητας. Δεν επιβεβαιώνεται πλήρες σύνολο.";
+  }else{
+    const integer=v=>Number.isSafeInteger(v)&&v>=0;
+    const valid=coverage&&typeof coverage.complete==="boolean"&&integer(coverage.returnedGroupCount)&&integer(coverage.totalGroupCount)&&integer(coverage.limit)&&coverage.limit>0&&coverage.limit<=10000&&coverage.returnedGroupCount===report.items.length&&coverage.returnedGroupCount<=coverage.limit&&coverage.totalGroupCount>=coverage.returnedGroupCount&&coverage.complete===(coverage.totalGroupCount===coverage.returnedGroupCount)&&coverage.totalsScope===(coverage.complete?"COMPLETE_SOURCE":"RETURNED_GROUPS");
+    base.sourceCoverageStatus=valid?(coverage.complete?"COMPLETE":"PARTIAL"):"INVALID";
+    if(valid)base.sourceCoverage=project(coverage,["complete","returnedGroupCount","totalGroupCount","limit","totalsScope"]);
+    if(!valid||!coverage.complete)return {...base,result:"source_limited",truncated:true,reason:valid?"Η κανονική πηγή περιέχει επιπλέον ομάδες πωλήσεων. Δεν επιβεβαιώνεται πλήρες ή μηδενικό αποτέλεσμα.":"Η επιβεβαίωση πληρότητας της πηγής είναι ασυνεπής. Δεν επιβεβαιώνεται πλήρες ή μηδενικό αποτέλεσμα."};
+  }
+  // The legacy cap remains conservative even without coverage metadata.
+  if(!coverage&&report.items.length===10000)return {...base,result:"source_limited",truncated:true,reason:"Η παλιά πηγή έφτασε το όριο εμφάνισης. Δεν επιβεβαιώνεται πλήρες ή μηδενικό αποτέλεσμα."};
   const queryText=norm(args.product),exact=report.items.filter(row=>norm(row.sku)===queryText||norm(row.name)===queryText),matches=exact.length?exact:report.items.filter(row=>norm(row.sku).includes(queryText)||norm(row.name).includes(queryText));
   const distinct=new Map(matches.map(row=>[row.productId||`${row.sku}:${row.name}`,row]));
   if(!matches.length)return {...base,result:"no_match"};
