@@ -1,3 +1,4 @@
+import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -44,8 +45,11 @@ router.get("/",async(req,res,next)=>{try{const rows=await prisma.$queryRaw`SELEC
 
 router.post("/:adjustmentId/approve",async(req,res,next)=>{try{
   const result=await prisma.$transaction(async tx=>{
-    const rows=await tx.$queryRaw`SELECT * FROM "PurchaseDocumentAdjustment" WHERE "id"=${req.params.adjustmentId} AND "companyId"=${req.user.companyId} FOR UPDATE`;const a=rows[0];if(!a)return Object.assign(new Error("Δεν βρέθηκε το παραστατικό προσαρμογής."),{status:404});if(a.status==="APPROVED")return {ok:true,idempotent:true,status:a.status};
-    const base=await tx.$queryRaw`SELECT "id","storeId","totalGross" FROM "PurchaseDocument" WHERE "id"=${a.purchaseDocumentId} AND "companyId"=${req.user.companyId} AND "status"='APPROVED' LIMIT 1`;if(!base[0])return Object.assign(new Error("Δεν βρέθηκε εγκεκριμένο αρχικό τιμολόγιο."),{status:409});
+    const scope=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseDocumentAdjustment" WHERE "id"=${req.params.adjustmentId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    if(!scope[0])throw Object.assign(new Error("Δεν βρέθηκε το παραστατικό προσαρμογής."),{status:404});
+    await lockInvoiceStore(tx,req.user.companyId,scope[0].storeId);
+    const rows=await tx.$queryRaw`SELECT * FROM "PurchaseDocumentAdjustment" WHERE "id"=${req.params.adjustmentId} AND "companyId"=${req.user.companyId} FOR UPDATE`;const a=rows[0];if(!a)throw Object.assign(new Error("Δεν βρέθηκε το παραστατικό προσαρμογής."),{status:404});if(a.status==="APPROVED")return {ok:true,idempotent:true,status:a.status};
+    const base=await tx.$queryRaw`SELECT "id","storeId","totalGross" FROM "PurchaseDocument" WHERE "id"=${a.purchaseDocumentId} AND "companyId"=${req.user.companyId} AND "status"='APPROVED' LIMIT 1 FOR UPDATE`;if(!base[0])throw Object.assign(new Error("Δεν βρέθηκε εγκεκριμένο αρχικό τιμολόγιο."),{status:409});
     const lines=Array.isArray(a.linesJson)?a.linesJson:[];const sign=a.adjustmentType==="DELIVERY_NOTE"?1:-1;for(const line of lines){if(!line.productId)continue;const qty=n(line.quantity)*sign;await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock") VALUES (${id()},${a.storeId},${line.productId},NULL,${qty}) ON CONFLICT ("storeId","productId") DO UPDATE SET "currentStock"="StoreProduct"."currentStock"+EXCLUDED."currentStock","updatedAt"=NOW()`;await tx.$executeRaw`INSERT INTO "StockMovement" ("id","storeId","productId","movementType","quantity","unitCost","sourceType","sourceId","note","createdByUserId","idempotencyKey") VALUES (${id()},${a.storeId},${line.productId},${a.adjustmentType==='DELIVERY_NOTE'?'PURCHASE_RECEIPT':'PURCHASE_RETURN'},${qty},${n(line.unitCost)},'PURCHASE_ADJUSTMENT',${a.id},${a.documentNumber},${req.user.id},${`purchase-adjustment:${a.id}:${line.productId}`}) ON CONFLICT ("storeId","idempotencyKey") DO NOTHING`}
     await tx.$executeRaw`UPDATE "PurchaseDocumentAdjustment" SET "status"='APPROVED',"matchedAmountGross"="amountGross","approvedByUserId"=${req.user.id},"approvedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${a.id}`;return {ok:true,id:a.id,status:"APPROVED",matchedPurchaseDocumentId:base[0].id,stockMovementSign:sign};
   });res.json(result);

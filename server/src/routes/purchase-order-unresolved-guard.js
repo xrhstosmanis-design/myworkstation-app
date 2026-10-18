@@ -1,3 +1,4 @@
+import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
@@ -55,6 +56,10 @@ async function ensureSchema(){
 async function applyPackStockCorrection({orderId,companyId,userId,userName}){
   await ensureSchema();
   return prisma.$transaction(async tx=>{
+    const scope=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} LIMIT 1`;
+    if(!scope[0])throw Object.assign(new Error("Δεν βρέθηκε η αγορά."),{status:404});
+    await lockInvoiceStore(tx,companyId,scope[0].storeId);
+    await tx.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} FOR UPDATE`;
     // Supplier credit notes already post signed return quantities. The
     // purchase pack correction is positive stock and must never run on them.
     const credit=await tx.$queryRaw`SELECT d."id" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" WHERE o."id"=${orderId} AND o."companyId"=${companyId} AND d."documentType"='CREDIT_NOTE' LIMIT 1`;
