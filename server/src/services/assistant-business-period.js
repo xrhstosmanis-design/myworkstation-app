@@ -2,8 +2,22 @@ import {salesReportCalendar} from './sales-report-calendar.js';
 import {normalizeBusinessText as norm,businessQuestionParts} from '../../../shared/assistant-business.mjs';
 
 const months=['ιανουαρ','φεβρουαρ','μαρτι','απριλ','μαι','ιουνι','ιουλι','αυγουστ','σεπτεμβρ','οκτωβρ','νοεμβρ','δεκεμβρ'];
-const monthPattern=months.map(m=>m+'[α-ω]*').join('|');
-const datePattern=String.raw`\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/\.]\d{1,2}(?:[/\.]\d{2,4})?|(?:\d{1,2}\s+)?(?:${monthPattern})(?:\s+\d{4})?|προχθες|χθες|σημερα`;
+const monthWords=[
+ 'ιανουαριος','ιανουαριο','ιανουαριου','ιανουαρης','ιανουαρη','φεβρουαριος','φεβρουαριο','φεβρουαριου','φεβρουαρης','φεβρουαρη',
+ 'μαρτιος','μαρτιο','μαρτιου','απριλιος','απριλιο','απριλιου','απριλης','απριλη','μαιος','μαιο','μαιου',
+ 'ιουνιος','ιουνιο','ιουνιου','ιουλιος','ιουλιο','ιουλιου','αυγουστος','αυγουστο','αυγουστου',
+ 'σεπτεμβριος','σεπτεμβριο','σεπτεμβριου','σεπτεμβρης','σεπτεμβρη',
+ 'οκτωβριος','οκτωβριο','οκτωβριου','οκτωβρης','οκτωβρη',
+ 'νοεμβριος','νοεμβριο','νοεμβριου','νοεμβρης','νοεμβρη',
+ 'δεκεμβριος','δεκεμβριο','δεκεμβριου','δεκεμβρης','δεκεμβρη'
+];
+const monthPattern=[...monthWords].sort((a,b)=>b.length-a.length).join('|');
+const numericDatePattern=String.raw`\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/\.]\d{1,2}(?:[/\.](?:\d{4}|\d{2}))?`;
+// Keep established no-space connectors (από1/10), without matching inside a
+// name/code or taking a valid-looking suffix of a malformed calendar token.
+const tokenStart=String.raw`(?:(?<![\p{L}\p{N}/.])|(?<=(?:^|\s)(?:απο|εως|μεχρι|στις)))`;
+const tokenEnd=String.raw`(?![\p{L}\p{N}/]|[.-]\d)`;
+const datePattern=String.raw`${tokenStart}(?:${numericDatePattern}|(?:\d{1,2}\s+)?(?:${monthPattern})(?:\s+\d{4})?|προχθες|χθες|σημερα)${tokenEnd}`;
 const format=d=>d.toISOString().slice(0,10);
 const shift=(date,n)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return format(d)};
 const validate=(from,to)=>{try{salesReportCalendar(from,to);return {from,to}}catch{return null}};
@@ -23,14 +37,19 @@ export const businessQuestionPeriod=(question,options)=>businessPeriodResolution
 
 function resolve(q,today){
  const year=Number(today.slice(0,4)),month=Number(today.slice(5,7));
- const tokens=[...q.matchAll(new RegExp(datePattern,'g'))].map(m=>m[0]);
+ const tokens=[...q.matchAll(new RegExp(datePattern,'gu'))].map(m=>m[0]);
+ const malformedNumeric=[...q.matchAll(/(?<![\p{L}\p{N}/.-])\d+(?:[-/.]\d+)+(?![\p{L}\p{N}/.-])/gu)]
+  .some(m=>!new RegExp(`^(?:${numericDatePattern})$`).test(m[0]));
+ const malformedNamed=[...q.matchAll(new RegExp(String.raw`(?<![\p{L}\p{N}])(?:(\d+)\s+)?(?:${monthPattern})(?:\s+(\d+))?(?![\p{L}\p{N}])`,'gu'))]
+  .some(m=>m[1]?.length>2||m[2]&&m[2].length!==4);
  const week=/(?:^|\s)εβδομαδ[α-ω]*(?=\s|[.,;!?]|$)/.test(q);
  const monthUnit=/(?:^|\s)(?:μην(?:α|ας|ος|ες|ων)|μηνο)(?=\s|[.,;!?]|$)/.test(q);
  const yearUnit=/(?:^|\s)(?:χρον(?:ο|ου|ια|ος)|ετ(?:ος|ους)|φετος|περσι|περυσι)(?=\s|[.,;!?]|$)/.test(q);
  const calendar=week||monthUnit||yearUnit||/(?:^|\s)(?:ημερ|μερ)(?:ες|ων)(?=\s|[.,;!?]|$)/.test(q);
- const mentioned=Boolean(tokens.length||calendar||/\d{1,4}[-/.]\d{1,2}/.test(q));
+ const mentioned=Boolean(tokens.length||calendar||malformedNumeric||malformedNamed||/\d{1,4}[-/.]\d{1,2}/.test(q));
  const invalid={mentioned,period:null};
  if(!mentioned)return invalid;
+ if(malformedNumeric||malformedNamed)return invalid;
  if(/αυριο|μεθαυριο/.test(q)||/\d{1,2}[/\.]\d{1,2}[/\.](?:\d{1}|\d{3}|\d{5,})(?!\d)/.test(q))return invalid;
  if(/συγκρι|σε σχεση|(?:^|\s)(?:η|αντι)(?:\s|$)/.test(q))return invalid;
  const rolling=q.match(/(?:τελευταιες|τελευταιων)\s+(\d+)\s+(?:ημερες|ημερων|μερες|μερων)/);
@@ -59,7 +78,7 @@ function resolve(q,today){
   return {from,to:m[1]?from:format(new Date(Date.UTC(Number(y),mi+1,0,12)))};
  });
  if(endpoints.some(e=>!e))return invalid;
- const firstTokenIndex=q.search(new RegExp(datePattern));
+ const firstTokenIndex=q.search(new RegExp(datePattern,'u'));
  if(tokens.length===1&&/(?:^|\s)(?:απο|εως|μεχρι)\s*$/.test(q.slice(0,firstTokenIndex)))return invalid;
  if(tokens.length===2&&!/(?:εως|μεχρι|\s[-–]\s)/.test(q))return invalid;
  return {mentioned,period:validate(endpoints[0].from,endpoints.at(-1).to)};
@@ -69,7 +88,9 @@ function resolve(q,today){
 // store. Unknown words keep it outside this deterministic follow-up path.
 export function isBusinessPeriodFollowup(question){
  const q=norm(question);
- const clean=q.replace(new RegExp(datePattern,'g'),' ').replace(/[\d\s.,;:!?/–-]/g,' ').split(/\s+/).filter(Boolean);
+ const clean=q.replace(new RegExp(datePattern,'gu'),' ')
+  .replace(/((?:τελευταιες|τελευταιων) )\d+(?= (?:ημερες|ημερων|μερες|μερων)(?:\s|$))/g,'$1')
+  .replace(/[\s.,;:!?/–-]/g,' ').split(/\s+/).filter(Boolean);
  const words=new Set('και για το την τον τη τις των στις σε απο εως μεχρι αυτη αυτην αυτης αυτον αυτο αυτου αυτες αυτων τρεχουσα τρεχοντα τρεχοντος τρεχων προηγουμενη προηγουμενο προηγουμενου προηγουμενης προηγουμενες περασμενη περασμενο περασμενου περασμενης εβδομαδα εβδομαδας μηνα μηνας μηνος μηνο μηνες χρονια χρονο χρονου ετος ετους φετος περσι περυσι τελευταιες τελευταιων ημερες ημερων μερες μερων'.split(' '));
  return Boolean(businessPeriodResolution(q).mentioned)&&clean.every(w=>words.has(w));
 }
