@@ -79,12 +79,13 @@ test('native stale stock, wrong scope, negative-stock acknowledgment and audit f
 });
 
 test('native approved adjustments, credit documents and corrupt movement ownership cannot be reopened',{skip:!isolatedInvoiceDb()},async()=>{
- for(const kind of ['adjustment','credit','foreign-product']){const f=await fixture();try{
-  await f.finalize();const before=await f.snapshot();
+ for(const kind of ['adjustment','credit','foreign-product','missing-movement']){const f=await fixture();try{
+  await f.finalize();
   if(kind==='adjustment'){await f.db.$executeRawUnsafe('CREATE TABLE "PurchaseDocumentAdjustment"("id" text,"companyId" text,"purchaseDocumentId" text,"status" text)');await f.db.$executeRawUnsafe(`INSERT INTO "PurchaseDocumentAdjustment" VALUES('adjustment','c','pos','APPROVED')`)}
+  if(kind==='missing-movement')await f.db.$executeRawUnsafe(`DELETE FROM "StockMovement" WHERE "sourceId"='pos'`);
   if(kind==='credit')await f.db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "documentType"='CREDIT_NOTE' WHERE "id"='pos'`);
   if(kind==='foreign-product')await f.db.$executeRawUnsafe(`UPDATE "Product" SET "companyId"='foreign' WHERE "id"='p'`);
-  await assert.rejects(reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s'),e=>e.status===409);assert.equal(await f.snapshot(),before);
+  const before=await f.snapshot();await assert.rejects(reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s'),e=>e.status===409);assert.equal(await f.snapshot(),before);
  }finally{await f.close()}}
 });
 
