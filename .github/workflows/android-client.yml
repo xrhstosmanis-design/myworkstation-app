@@ -1,0 +1,35 @@
+name: Android Chat preview
+on:
+  pull_request:
+    paths: ['android/**', '.github/workflows/android-client.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Android build SDK
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Compile, unit tests and lint
+        run: gradle --no-daemon -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyWorkStation-Android-Preview
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/reports/tests/testDebugUnitTest/
+            android/app/build/reports/lint-results-debug.html
+          if-no-files-found: error
