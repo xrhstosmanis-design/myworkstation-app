@@ -38,7 +38,8 @@ export function installPosCheckoutSafety(){
     const match=url.match(/^\/api\/store-pos\/stores\/([^/]+)\/checkout(?:\?|$)/);
     if(method!=="POST"||!match)return nativeFetch(input,init);
     let body;try{body=JSON.parse(String(init.body||"{}"))}catch{return nativeFetch(input,init)}
-    const delayed=delayedContext();cleanExpired();const key=stableKey(body,delayed);let entry=pending.get(key);if(!entry){entry={id:makeUuid(),createdAt:Date.now(),inFlight:0};pending.set(key,entry)}entry.inFlight++;
+    if(body.fiscalRequestId&&!body.clientTransactionId)return jsonResponse({error:"Λείπει ο αρχικός κωδικός της εκκρεμούς απόδειξης. Απαιτείται ανάκτηση από την Κεντρική Διαχείριση."});
+    const delayed=delayedContext();cleanExpired();const key=JSON.stringify([match[1],body.clientTransactionId||null,body.fiscalRequestId||null,body.lifecycleGeneration||null,stableKey(body,delayed)]);let entry=pending.get(key);if(!entry){entry={id:body.clientTransactionId||makeUuid(),createdAt:Date.now(),inFlight:0};pending.set(key,entry)}entry.inFlight++;
     const send=async confirmDuplicate=>{
       const nextBody={...body,clientTransactionId:entry.id,confirmDuplicate:Boolean(confirmDuplicate)};
       return nativeFetch(input,{...init,body:JSON.stringify(nextBody)});
