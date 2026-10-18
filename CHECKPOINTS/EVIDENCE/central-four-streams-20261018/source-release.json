@@ -1,0 +1,348 @@
+{
+  "scope": "COORD-20261018 first bounded source delivery; original14 OPEN",
+  "coordinator": "codex/central-four-streams-20261018",
+  "ownershipTransfer": {
+    "pr": 2725,
+    "commit": "a756f29bcd6051eeef57ae12ded992b68ff4fec9"
+  },
+  "combinedSource": "adc59a755924f813a8f5b11bb26629b3767ee3d8",
+  "files": [
+    {
+      "path": "client/src/components/platform/AutomaticReportSettingsManager.jsx",
+      "blob": "93b2452f8595f3db1f76f92b47c6cb58655d881b",
+      "sha256": "c0a78a1753f1a4d28c1090397036ba5d3e0532c6753aa6bcce710fcf9155c280",
+      "mergedBlob": "93b2452f8595f3db1f76f92b47c6cb58655d881b"
+    },
+    {
+      "path": "client/src/components/voice/SalesAssistantEvidence.jsx",
+      "blob": "ba0fb7094c58e9f512df97aa184e49f4dc61cbec",
+      "sha256": "575c014e189c32dafe2344f08ce795ce14641ada3991ba385f63c6ab93602a6c",
+      "mergedBlob": "ba0fb7094c58e9f512df97aa184e49f4dc61cbec"
+    },
+    {
+      "path": "server/src/lib/supplier-order-groups.js",
+      "blob": "b35fa6a416261d2a453047006de7bacebc50e6e8",
+      "sha256": "bfb941746065e4c4ed0999c16a8760ccbf86b516dbee8eea2b3ff7fc6cb75c4e",
+      "mergedBlob": "b35fa6a416261d2a453047006de7bacebc50e6e8"
+    },
+    {
+      "path": "server/src/routes/kiosk-reports-sales-v4.js",
+      "blob": "b89c7a95257268e15d6370e6e7a08b0e12a5adb4",
+      "sha256": "73eb33e3379240a8513023c60234fd3ad6bd0c71f9d6b3f52d5b62288d1d9faf",
+      "mergedBlob": "b89c7a95257268e15d6370e6e7a08b0e12a5adb4"
+    },
+    {
+      "path": "server/src/routes/order-suggestions.js",
+      "blob": "dab04ef7fbc5587dbf9bd1bde759262ab3a18757",
+      "sha256": "ed672b9be72d68afdba02a889e1e5ac63e32c39b7aeaad282da1d943039435fd",
+      "mergedBlob": "dab04ef7fbc5587dbf9bd1bde759262ab3a18757"
+    },
+    {
+      "path": "server/src/services/assistant-answer-response.js",
+      "blob": "f27072f60fc2c27934df5c3c89e407f71b86c46c",
+      "sha256": "cb493c122a60668a1145f680a5b571345ef96a380c37c285f8d316dc2898d075",
+      "mergedBlob": "f27072f60fc2c27934df5c3c89e407f71b86c46c"
+    },
+    {
+      "path": "server/src/services/assistant-report-table.js",
+      "blob": "6bb1d1a3c02560dd3ffc41173a2062525f6f51af",
+      "sha256": "9cd4326550238458091696b49229974bbe2275bf3a5dc4aa2104768b060d706a",
+      "mergedBlob": "6bb1d1a3c02560dd3ffc41173a2062525f6f51af"
+    },
+    {
+      "path": "server/src/services/automatic-report-source.js",
+      "blob": "520bf196b0aa45f4389c4d8ff4d41b5637882b33",
+      "sha256": "611820b9fcb364a85f36203b83f46496dce819836c296cf9a3eae4f0bd2ffde4",
+      "mergedBlob": "520bf196b0aa45f4389c4d8ff4d41b5637882b33"
+    },
+    {
+      "path": "server/src/services/owner-sales-tools.js",
+      "blob": "d99acc192f553a742ece7fed58c4986f19dce93d",
+      "sha256": "db07cc5682e6e77dbfa8b5c40fe69e3d3333541c163b00a228116ab2bebf6faa",
+      "mergedBlob": "d99acc192f553a742ece7fed58c4986f19dce93d"
+    },
+    {
+      "path": "server/test/assistant-product-coverage.test.js",
+      "blob": "8509c5e98a7866ba22e4bf1df75c6009d43ea103",
+      "sha256": "c30eb620cf1be66b2ea625bfe7e932e33849e55fc33be8b1342d5ab4857da852",
+      "mergedBlob": "8509c5e98a7866ba22e4bf1df75c6009d43ea103"
+    },
+    {
+      "path": "server/test/assistant-sales-stores.test.js",
+      "blob": "cfbdcddb70257eecba35b1f44e921e3f182fa887",
+      "sha256": "4ea9bc6ca7c7208f3c4d22accface3b4b04cd6b6d90adb2063f45e822db00aa1",
+      "mergedBlob": "cfbdcddb70257eecba35b1f44e921e3f182fa887"
+    },
+    {
+      "path": "server/test/automatic-report-settings-mounted.test.js",
+      "blob": "342ec16e0d388ecb9f6aff44e27ad0ca7ba27139",
+      "sha256": "1c6063c8a71eb58eb139f869341f96f93a06321a10789068d16264feb27307a8",
+      "mergedBlob": "342ec16e0d388ecb9f6aff44e27ad0ca7ba27139"
+    },
+    {
+      "path": "server/test/automatic-report-settings-postgres.test.js",
+      "blob": "9979958270f235587d68c2ec997c317b65ae128b",
+      "sha256": "0a6d10fc02b501540305c6b7e867d60e490d0e23969a56845b1bfac5e684e29e",
+      "mergedBlob": "9979958270f235587d68c2ec997c317b65ae128b"
+    },
+    {
+      "path": "server/test/automatic-report-source-postgres.test.js",
+      "blob": "dd9e07a50eb69e20cc55b727d63bb06ecb643428",
+      "sha256": "29506051e8220b2bd77de1a70ff8a0df02c0dea2ca9e411ee1a016ff1298fd78",
+      "mergedBlob": "dd9e07a50eb69e20cc55b727d63bb06ecb643428"
+    },
+    {
+      "path": "server/test/automatic-report-source.test.js",
+      "blob": "b53606b22340ea90189c8a019e9d91e4e549178f",
+      "sha256": "c061d064e3dd2c49f5820e8bb641a4efe169f8149c17878fc348eae1091e8553",
+      "mergedBlob": "b53606b22340ea90189c8a019e9d91e4e549178f"
+    },
+    {
+      "path": "server/test/automatic-report-weekly.test.js",
+      "blob": "d893ed84451b284dcdd38406f4add5a9fef5a0ad",
+      "sha256": "e378be7f879fd79dc439f264f34f55dd8271047b24e69a2d7a1ffc15ba0c45c5",
+      "mergedBlob": "d893ed84451b284dcdd38406f4add5a9fef5a0ad"
+    },
+    {
+      "path": "server/test/kiosk-sales-counts-postgres.test.js",
+      "blob": "27bcbb104a525acf842aa46cd3dabce833e50c06",
+      "sha256": "7d0aaf6f47a2382ab44994e1c7cc9ac28de5d7e12aeb05fb719fe170c184b686",
+      "mergedBlob": "27bcbb104a525acf842aa46cd3dabce833e50c06"
+    },
+    {
+      "path": "server/test/kiosk-sales-counts.test.js",
+      "blob": "c9f2d604563c0f07b88081bcd66dd1f074469895",
+      "sha256": "455e55628af2e37756d9d01030ed3334a30386d3c644649a62dc493f778b4ffc",
+      "mergedBlob": "c9f2d604563c0f07b88081bcd66dd1f074469895"
+    },
+    {
+      "path": "server/test/owner-sales-tools.test.js",
+      "blob": "4f872343c3a08260ce9ed19015db1fa945bab5ff",
+      "sha256": "775c85f63886dc74f2d4e88b19ee9945272165ab183600683a429393f597601d",
+      "mergedBlob": "4f872343c3a08260ce9ed19015db1fa945bab5ff"
+    },
+    {
+      "path": "server/test/platform-assistant-products.test.js",
+      "blob": "6a1e463ca2b27da1ac3d0d419d7d69d32037e705",
+      "sha256": "6dca14e16a50ca11ea51d4ec63c622da1bc16fa7114dadbcbf1f4ac4b68230c4",
+      "mergedBlob": "6a1e463ca2b27da1ac3d0d419d7d69d32037e705"
+    },
+    {
+      "path": "server/test/supplier-order-groups-postgres.test.js",
+      "blob": "ecf4dc7182e3e3e8f50b8db0560292c0d6f8d5e9",
+      "sha256": "b7dbe23def4eb5e46adb4c72d9fed1d0b1dc478bf4f08db179f99ac35de3c8d6",
+      "mergedBlob": "ecf4dc7182e3e3e8f50b8db0560292c0d6f8d5e9"
+    },
+    {
+      "path": "server/test/supplier-order-groups.test.js",
+      "blob": "67fd157feceb463b8e03d7163c38e816d8aaef20",
+      "sha256": "0cc790ad82f6a70be32cf6363fb9b653171685a5fefa934ab39d4d9d13047635",
+      "mergedBlob": "67fd157feceb463b8e03d7163c38e816d8aaef20"
+    }
+  ],
+  "pullRequests": [
+    {
+      "issue": 2704,
+      "pr": 2729,
+      "head": "84236e44ece5e34e1df6043c699940a80e3fe6b0",
+      "ci": 39134928973,
+      "job": 117697522585,
+      "pass": 3049,
+      "conclusion": "SUCCESS",
+      "failed": 0,
+      "skipped": 0,
+      "separateBackupTests": 6
+    },
+    {
+      "issue": 2705,
+      "pr": 2730,
+      "head": "eec590ae38a8b27f02e84a92a67c64a5470ab0c9",
+      "ci": 39135578246,
+      "job": 117699543701,
+      "pass": 3070,
+      "conclusion": "SUCCESS",
+      "failed": 0,
+      "skipped": 0,
+      "separateBackupTests": 6
+    },
+    {
+      "issue": 2706,
+      "pr": 2731,
+      "head": "6183b6dea2f399613f0005dfc71e949a27a27390",
+      "ci": 39135586266,
+      "job": 117699687044,
+      "pass": 3068,
+      "conclusion": "SUCCESS",
+      "failed": 0,
+      "skipped": 0,
+      "separateBackupTests": 6
+    },
+    {
+      "issue": 2707,
+      "pr": 2732,
+      "head": "ed7c0bbc8b32e00843a71cea392d95e02e0f4e05",
+      "ci": 39134954853,
+      "job": 117697594942,
+      "pass": 3053,
+      "conclusion": "SUCCESS",
+      "failed": 0,
+      "skipped": 0,
+      "separateBackupTests": 6
+    }
+  ],
+  "local": {
+    "node": "20.20.2",
+    "server": {
+      "tests": 3045,
+      "pass": 2920,
+      "failed": 0,
+      "environmentSkipped": 125
+    },
+    "focused": {
+      "tests": 61,
+      "pass": 57,
+      "failed": 0,
+      "nativeInfrastructureSkipped": 4
+    },
+    "frontendBuild": "PASS"
+  },
+  "failureHistory": [
+    {
+      "run": 39134938371,
+      "scope": "WS2",
+      "serverPassed": 3056,
+      "serverFailed": 0,
+      "reason": "unchanged Chromium Target.createTarget timeout; failed-job retry requested; final full CI succeeded"
+    },
+    {
+      "run": 39134946342,
+      "scope": "WS3",
+      "passed": 3053,
+      "failed": 1,
+      "reason": "stale shared owner-sales-tools mock; identical WS4 coverage fixture coordinated; final full CI succeeded"
+    }
+  ],
+  "integrationReview": "WS3 producer and WS4 consumer match; no integration blocker. Coverage certifies applied SQL filter only.",
+  "acceptance": {
+    "WS1": "SCOPED LAB PASS daily/weekly HOLD/provisional disclosure and observed Athens period only",
+    "WS2": "AWAITING LAB",
+    "WS3": "AWAITING LAB",
+    "WS4": "AWAITING LAB",
+    "store": {
+      "company": "MYWORKSTATION LAB",
+      "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    "operator": "Platform Super Admin",
+    "terminal": "Remote cloud Chrome; physical terminal NOT TESTED",
+    "observedWindowUTC": "2026-10-18T15:08-15:10Z",
+    "daily": {
+      "anchor": "2026-10-17",
+      "fromAthens": "2026-10-17T07:00",
+      "toAthens": "2026-10-18T07:00",
+      "sourceShifts": 1,
+      "settingsVersion": 1,
+      "status": "HOLD",
+      "financialDisclosure": "PROVISIONAL"
+    },
+    "weekly": {
+      "anchor": "2026-10-17",
+      "fromAthens": "2026-10-12T07:00",
+      "toAthens": "2026-10-19T07:00",
+      "sourceShifts": 4,
+      "settingsVersion": 1,
+      "status": "HOLD",
+      "financialDisclosure": "PROVISIONAL",
+      "currentSundayIncomplete": true
+    },
+    "manualPASS": "SCOPED only; ready financial reconciliation and original14 requirements not closed",
+    "screenshot": "weekly-provisional-lab.jpg",
+    "stalePreReloadClientExcluded": true
+  },
+  "safety": {
+    "productionBusinessWrites": false,
+    "manualDeploy": false,
+    "settingsSave": false,
+    "smtpActivation": false,
+    "protectedTransactionReplay": false
+  },
+  "remaining": [
+    {
+      "issue": 2704,
+      "scope": "READY/full financial reconciliation, detailed grouped amounts, expanded live role/tenant transitions, physical/mobile, SMTP/outbox/monthly; only recorded daily/weekly HOLD disclosure passed."
+    },
+    {
+      "issue": 2705,
+      "scope": "Actual physical-delivery identities/frequency and final primary supplier, frontend grouping, comparable cost/margin/invoice residuals and sending; hosted acceptance pending."
+    },
+    {
+      "issue": 2706,
+      "scope": "Full ordinary report UI coverage, comparable staffing/workload/turnover/payroll and hosted acceptance pending."
+    },
+    {
+      "issue": 2707,
+      "scope": "Hosted evidence/answer/export acceptance and broad AI capability residuals; existing auth/module constraints retained."
+    }
+  ],
+  "combinedMainFailure": {
+    "run": 39136174553,
+    "job": 117702303053,
+    "reason": "checkpoint policy missing ACTIVE delta on final merge; tests did not run; shared identical ACTIVE blob across WS2/WS3 branches",
+    "status": "FAILED"
+  },
+  "integrationFollowup": {
+    "pr": 2737,
+    "head": "e936f3017b0925c9f10dac03ece7bc9835843ae2",
+    "local": {
+      "node": "20.20.2",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "sqlRows": "mocked",
+      "nativeSQL": false
+    },
+    "ci": 39136985554,
+    "status": "PR_CI_SUCCESS_MERGED",
+    "merge": "8baa1f5ff5fcd72774716107f654b668d9f07c3e",
+    "server": {
+      "passed": 3116,
+      "failed": 0,
+      "skipped": 0
+    },
+    "separateBackupTests": 6,
+    "job": 117703535750,
+    "contractBlob": "319bcd981eca3d92a0c9e7d53e0a0f091836f066"
+  },
+  "combinedMain": {
+    "sha": "8baa1f5ff5fcd72774716107f654b668d9f07c3e",
+    "run": 39137532467,
+    "job": 117705133029,
+    "conclusion": "SUCCESS",
+    "passed": 3116,
+    "failed": 0,
+    "skipped": 0,
+    "separateBackupTests": 6
+  },
+  "release": {
+    "sha": "c68c817a3d69e55c8333cf32af5b362c6005f435",
+    "run": 39137926344,
+    "job": 117706614390,
+    "passed": 3120,
+    "failed": 0,
+    "skipped": 0,
+    "separateBackupTests": 6,
+    "guard": 39138489686,
+    "guardJob": 117707869784,
+    "rollbackArtifact": 12140702729,
+    "renderDeploy": "dep-dbaduarbc2fs73b199ng",
+    "renderStatus": "live",
+    "health": {
+      "observedAt": "2026-10-18T15:07:42Z",
+      "status": 200,
+      "ok": true,
+      "revision": "c68c817a3d69e55c8333cf32af5b362c6005f435"
+    },
+    "original22AndContractBlobsMatch": true
+  }
+}
