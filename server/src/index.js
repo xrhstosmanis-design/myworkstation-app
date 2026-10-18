@@ -1,3 +1,4 @@
+import purchaseOrderReopenRoutes from "./routes/purchase-order-reopen.js";
 import nativeChatPushRoutes from './routes/native-chat-push.js';
 import invoiceCommonDraftRoutes from "./routes/invoice-common-draft.js";
 import {invoiceAliasGuard} from "./middleware/invoice-common-draft-alias.js";
@@ -222,6 +223,7 @@ app.use("/api/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule(
 app.use("/api/commerce/purchase-orders",auth,posPurchaseOrderAccess,requireCompanyModule("INVENTORY"),invoiceAliasGuard);
 app.use("/api/commerce",auth,invoiceCommonDraftRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderUnresolvedGuardRoutes);
+app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderReopenRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderPostingGuardRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderActionRoutes);
 app.use("/api/purchase-orders",auth,requireCompanyModule("INVENTORY"),purchaseOrderRoutes);

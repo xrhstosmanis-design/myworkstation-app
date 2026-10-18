@@ -1,3 +1,4 @@
+import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
@@ -52,9 +53,13 @@ async function ensureSchema(){
   schemaReady=true;
 }
 
-async function applyPackStockCorrection({orderId,companyId,userId,userName}){
+async function applyPackStockCorrection({orderId,companyId,userId,userName,expectedReopenVersion=0}){
   await ensureSchema();
   return prisma.$transaction(async tx=>{
+    const scope=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} LIMIT 1`;
+    if(!scope[0])throw Object.assign(new Error("Δεν βρέθηκε η αγορά."),{status:404});
+    await lockInvoiceStore(tx,companyId,scope[0].storeId);
+    await tx.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} FOR UPDATE`;
     // Supplier credit notes already post signed return quantities. The
     // purchase pack correction is positive stock and must never run on them.
     const credit=await tx.$queryRaw`SELECT d."id" FROM "PurchaseOrder" o JOIN "PurchaseDocument" d ON d."id"=o."sourceDocumentId" AND d."companyId"=o."companyId" WHERE o."id"=${orderId} AND o."companyId"=${companyId} AND d."documentType"='CREDIT_NOTE' LIMIT 1`;
@@ -68,11 +73,12 @@ async function applyPackStockCorrection({orderId,companyId,userId,userName}){
     if(!marker[0])return {ok:true,idempotent:true,correctedProducts:0};
 
     const orders=await tx.$queryRaw`
-      SELECT o."id",o."storeId",o."invoiceNumber",o."status"
+      SELECT o."id",o."storeId",o."invoiceNumber",o."status",o."reopenVersion"
       FROM "PurchaseOrder" o
       WHERE o."id"=${orderId} AND o."companyId"=${companyId}
       LIMIT 1`;
     const order=orders[0];
+    if(order&&n(order.reopenVersion)!==n(expectedReopenVersion))throw Object.assign(new Error("Η αγορά έχει επαναφερθεί ξανά. Η παλιά διόρθωση συσκευασίας δεν εφαρμόστηκε."),{status:409});
     if(!order||order.status!=="FINAL"){
       const error=new Error("Η διόρθωση ΚΒ→ΤΜΧ επιτρέπεται μόνο σε Οριστική αγορά.");
       error.status=409;
@@ -188,7 +194,8 @@ router.patch("/:orderId",async(req,res,next)=>{
         orderId:req.params.orderId,
         companyId:req.user.companyId,
         userId:req.user.id,
-        userName:req.user.fullName||"Χρήστης"
+        userName:req.user.fullName||"Χρήστης",
+        expectedReopenVersion:req.body?.expectedReopenVersion??0
       }).then(correction=>originalJson({...body,packStockCorrection:correction}))
         .catch(error=>{
           console.error("Purchase pack stock correction failed",error);
