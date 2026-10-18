@@ -33,3 +33,7 @@ Owner-directed continuation after #2743, same central coordinator codex/central-
 - WS4 #2707 retains sourceCoverage integration review and read-only LAB acceptance planning only, no additional runtime claim. Central owned coverage files remain protected; independent VOICE calendar/numeric parsing owner retained.
 
 New code status ASSIGNED / NOT TESTED; earlier #2743 daily/weekly HOLD/provisional LAB PASS and prior exact correction/installment/transaction evidence preserved, not repeated. Full focused/native/Windows/build/invariant/HTTP CI and ordinary exact guarded release required before new LAB acceptance. Production business state remains read-only. Broader original14 residuals stay OPEN. Final source receipt synchronizes common tracker PDF; this assignment does not claim a PASS or activate delivery.
+
+## Post-merge shared registry/PDF reconciliation
+
+Receipt#2755 mergeddf9b626dc0e20ffbe51f3dbc8081657b344da05c with all13 delivered source blobs preserved. Git correctly merged independent seed-fence source#2754/688d96b records into ACTIVE/tracker/pending; the resulting3 registry blobs differ from the isolated receipt branch without losing this coordinator's complete current note. Shared PDF regenerated again from exact merged canonical tracker blob5843a5ed83d852b4f5aa6be3088c9323ab4dcd60; local git hash agrees. PDF blobe0182b963cc3ea7dd058a867626c5d96513feb04. No source behavior, PASS, ownership transfer, deployment or business-state action in this synchronization.
