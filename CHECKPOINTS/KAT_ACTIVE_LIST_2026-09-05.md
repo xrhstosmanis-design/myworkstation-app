@@ -10426,3 +10426,9 @@ Shared producer-consumer contract sourceCoverage={complete,returnedGroupCount,to
 
 New source status ASSIGNED/NOT TESTED. Preserve #2716 eighteen local diagnostics and four distinct count observations; no inferred new CI/LAB/LIVE PASS. Full source CI/native/invariant checks and exact ordinary guarded release precede applicable LAB acceptance. Production remains read-only; no financial/fiscal/stock/shift/payroll/DB/backup/settings/email/order mutation or protected transaction replay. Other original14 residuals stay OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-18-central-four-streams.md.
 
+
+## 18/10/2026 17:37 Europe/Athens - COORD-20261018 / COMBINED MAIN POLICY FAILURE / BOUNDED INTEGRATION FOLLOW-UP
+
+All four source PRs #2729/#2730/#2731/#2732 merged with full green PR CI. Exact combined main adc59a755924f813a8f5b11bb26629b3767ee3d8 run39136174553 failed BEFORE server tests at checkpoint policy: the shared ACTIVE record was byte-identical across the last WS2 and WS3 merge, so the final push had no ACTIVE diff. This is not a server regression or a combined technical PASS. The ordinary release is held; production remains on3f429e2f6a43aa599952dbe8e7d89d9ca2da7f81.
+
+Retained central owner codex/central-four-streams-20261018 coordinates a bounded actual WS3-reader-to-WS4-consumer contract regression plus this unique current active/checkpoint delta. No checkpoint-policy/workflow/deploy guard is changed or bypassed. Exact full PR/main CI and ordinary pinned release remain required. New LAB/LIVE/USER acceptance NOT TESTED, original14 residuals OPEN. Final tracker/PDF reconciliation follows verified source release; no manual PASS.
