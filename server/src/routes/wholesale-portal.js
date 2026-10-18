@@ -29,6 +29,11 @@ export function createWholesalePortalRouter({db=prisma,ensureSchema=ensureWholes
     await ensureSchema(db);
     if((req.method==='GET'&&req.path==='/config')||(req.method==='POST'&&req.path==='/session'))return next();
     req.b2b=await authenticatePortalSession(db,slug,portalToken(req));
+    // A second tab can replace the shared cookie with another customer's login.
+    // This optional UI expectation only rejects a mismatch; it never selects an
+    // identity or grants authority. /me remains available to discover a change.
+    const expectedAccount=req.headers['x-b2b-account'];
+    if(req.path!=='/me'&&expectedAccount!==undefined&&expectedAccount!==req.b2b.accountId)throw wholesaleError(401,'B2B_ACCOUNT_CHANGED','Η σύνδεση πελάτη άλλαξε. Συνδέσου ξανά.');
     if(!['GET','HEAD'].includes(req.method))requirePortalCsrf(req,req.b2b);
     next();
   }catch(error){next(error)}});

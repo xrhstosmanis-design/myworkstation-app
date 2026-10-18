@@ -17,3 +17,14 @@ test('dedicated B2B HTML/entry omit administrative bootstraps, storage and servi
  const html=await readFile(new URL('../../client/b2b.html',import.meta.url),'utf8'),entry=await readFile(new URL('../../client/src/b2b-entry.jsx',import.meta.url),'utf8'),portal=await readFile(new URL('../../client/src/components/b2b/B2BPortal.jsx',import.meta.url),'utf8'),api=await readFile(new URL('../../client/src/components/b2b/b2b-api.js',import.meta.url),'utf8');
  assert.match(html,/src="\/src\/b2b-entry.jsx"/);assert.equal((html.match(/<script/g)||[]).length,1);assert.doesNotMatch(html+entry+portal+api,/localStorage|sessionStorage|indexedDB|serviceWorker|entry-dispatch|\/src\/entry\.jsx|StoreOperator|PlatformAdmin|Bearer/);
 });
+
+test('operational requests bind the remembered account while login/me discover the actual cookie identity',async()=>{
+ const calls=[];let active='account-a';const api=createB2BApi('own-site',{fetchImpl:async(url,options)=>{calls.push({url,options});return {ok:true,status:200,json:async()=>url.endsWith('/me')||(url.endsWith('/session')&&options.method==='POST')?{account:{id:active},csrfToken:'csrf-'+active}:{ok:true}}}});
+ await api('/session',{method:'POST',body:{login:'a',password:'secret'}});
+ for(const [path,method] of [['/catalog?storeId=own','GET'],['/quotes','POST'],['/orders','POST'],['/orders?storeId=own','GET'],['/orders/order-a?storeId=own','GET'],['/session','DELETE']]){
+  await api(path,{method,...(method==='POST'?{body:{}}:{})});assert.equal(calls.at(-1).options.headers['X-B2B-Account'],'account-a');
+ }
+ active='account-b';await api('/me');assert.equal(calls.at(-1).options.headers['X-B2B-Account'],undefined);await api('/catalog?storeId=own');assert.equal(calls.at(-1).options.headers['X-B2B-Account'],'account-b');
+ await api('/config');assert.equal(calls.at(-1).options.headers['X-B2B-Account'],undefined);await api('/session',{method:'POST',body:{login:'b',password:'secret'}});assert.equal(calls.at(-1).options.headers['X-B2B-Account'],undefined);
+ api.clear();await api('/orders?storeId=own');assert.equal(calls.at(-1).options.headers['X-B2B-Account'],undefined);assert.equal(calls.at(-1).options.headers['X-CSRF-Token'],undefined);
+});

@@ -87,3 +87,16 @@ test('real public router denies management Authorization and wrong Origin before
     const cross=await fetch(base+'/session',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://wrong.invalid'},body:JSON.stringify({login:'alice',password:'a strong password'})});assert.equal(cross.status,403);assert.equal(bootstraps,0);
   }finally{await new Promise(resolve=>{server.close(resolve);server.closeIdleConnections()})}
 });
+
+
+test('expected-account header can only reject a cookie identity mismatch before business reads',async()=>{
+  const {db,state}=fixture(),app=express();app.use(express.json());app.use('/api/b2b',createWholesalePortalRouter({db,ensureSchema:async()=>{}}));
+  const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s))}),base=`http://127.0.0.1:${server.address().port}/api/b2b/company-a`,cookie=`__Secure-mws_b2b=${token}`;
+  try{
+    const changed=await fetch(base+'/catalog?storeId=store-a',{headers:{Cookie:cookie,'X-B2B-Account':'other-account'}});
+    assert.equal(changed.status,401);assert.equal((await changed.json()).code,'B2B_ACCOUNT_CHANGED');
+    assert.equal(state.calls.some(call=>call.sql.includes('FROM "Product"')),false);
+    const me=await fetch(base+'/me',{headers:{Cookie:cookie,'X-B2B-Account':'other-account'}});assert.equal(me.status,200);assert.equal((await me.json()).account.id,'account-a');
+    const missingCookie=await fetch(base+'/catalog?storeId=store-a',{headers:{'X-B2B-Account':'account-a'}});assert.equal(missingCookie.status,401,'an account expectation cannot authenticate a request');
+  }finally{await new Promise(resolve=>{server.close(resolve);server.closeIdleConnections()})}
+});

@@ -66,7 +66,7 @@ test('native PostgreSQL customer portal isolates opaque sessions, grants and sha
     const manager='/api/wholesale/portal',base='/api/b2b/native-a',password='NativePassword_1234';
     let accountId,session,quote,body,orderId;
     const login=()=>api.request(base+'/session','POST',{login:'alice',password});
-    const h=()=>({cookie:session.cookie,'x-csrf-token':session.data.csrfToken});
+    const h=()=>({cookie:session.cookie,'x-csrf-token':session.data.csrfToken,'x-b2b-account':session.data.account.id});
     await t.test('only managers explicitly provision sites, immutable grants and publication',async()=>{
       for(const headers of [{'x-test-role':'EMPLOYEE'},{'x-test-token':'B2B_CUSTOMER'},{'x-test-token':'STORE_OPERATOR'}])assert.equal((await api.request(manager+'/site','GET',undefined,headers)).status,403);
       assert.equal((await api.request(manager+'/site','PUT',{slug:'native-a',name:'Native A',enabled:true})).status,200);
@@ -97,6 +97,8 @@ test('native PostgreSQL customer portal isolates opaque sessions, grants and sha
       assert.equal((await api.request(base+'/quotes','POST',{storeId:'store-a',items:[{productId:'product-a',quantity:'2'}]},{cookie:session.cookie})).status,403);
       assert.equal((await api.request(base+'/quotes','POST',{storeId:'store-a',items:[{productId:'product-a',quantity:'2'}]}, {...h(),origin:'https://foreign.invalid'})).status,403);
       const catalog=await api.request(base+'/catalog?storeId=store-a','GET',undefined,h());assert.equal(catalog.status,200);assert.equal(catalog.data.items.length,2);assert.doesNotMatch(JSON.stringify(catalog.data),/PRIVATE|FOREIGN|cost|passwordHash|tier-a|list-a/);
+      assert.equal((await api.request(base+'/catalog?storeId=store-a','GET',undefined,{...h(),'x-b2b-account':'another-account'})).status,401);
+      assert.equal((await api.request(base+'/me','GET',undefined,{...h(),'x-b2b-account':'another-account'})).status,200);
       for(const patch of [{customerId:'customer-a2'},{companyId:'company-b'},{actorId:'owner-a'},{channel:'BACKOFFICE'},{unitPrice:'0'}])assert.equal((await api.request(base+'/quotes','POST',{storeId:'store-a',items:[{productId:'product-a',quantity:'2'}],...patch},h())).status,400);
     });
     await t.test('published own products share exact quote, atomic concurrent order and immutable replay',async()=>{
