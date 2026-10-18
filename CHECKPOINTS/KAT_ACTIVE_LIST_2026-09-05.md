@@ -10549,3 +10549,7 @@ Owner codex/ws2-supplier-preview-ui-20261018, central receiver codex/central-fou
 13 actual mounted UI tests pass/0fail/0skip, including unchanged existing Task30 UI suite and29 malformed envelope cases. Central combined focused38total/37pass/0fail/1native skip and frontend/TABLE_SERVICE buildPASS on Node20.20.2. These local results do not replace exact full native CI. Independent review cap/count concerns were fixed before publication; no check weakened.
 
 Actual physical deliveries/primary supplier, sending, invoice/margin/cost broader residuals and hosted supplier-view acceptance OPEN. No production financial/fiscal/stock/shift/payroll/settings/recipient/email/order/schema/infrastructure mutation or protected replay. Required green PR/main CI and ordinary exact release before applicable LAB. Checkpoint CHECKPOINTS/CHANGES/2026-10-18-phase2-ws2.md.
+
+## 18Oct - full CI global-time-policy correction
+
+Initial WS2 run39141322463:3162pass/1fail/0skip; stacked WS3 run39141329580:3169pass/1fail/0skip. Both failures are the same existing global Greek24-hour source invariant: two newly added supplier date displays omitted explicit hour12:false. Both production calls corrected; existing invariant unchanged. Local existing global policy5PASS/0FAIL/0SKIP and mounted supplier13PASS/0FAIL/0SKIP. Full exact CI rerun required, no hosted PASS or business action.
