@@ -1,8 +1,8 @@
-## 18/10/2026 22:32 Europe/Athens — ANDROID-CHAT-NATIVE-01 / remaining scope ASSIGNED
+## 18/10/2026 22:57 Europe/Athens — ANDROID-CHAT-NATIVE-01 / remaining scope ASSIGNED
 
-Owner feat/android-chat-native-20261017 retained. Completed limited visible logout/re-login, screenshot-block report, LAB2 personal-PIN login/visible own-store/message-send and staff notification/correct-tap retests removed from current pending; details and exact limitations in checkpoint2026-10-17-android-chat-native.md and docs/manual/native-chat/PASS.md. Earlier notification absence superseded for the observed successful session, not a whole native/N16 closure. Do not repeat completed actions merely for documentation.
+Owner feat/android-chat-native-20261017 retained. Outbound native test-photo visibility and large opening in LAB Admin removed from pending after22:46/22:57 owner confirmation. Prior limited login/store UI/message/push/tap/logout/screenshot successes remain protected; checkpoint2026-10-17-android-chat-native.md and native-chat manual contain exact scope. Do not repeat successes for documentation; no overall native/N16 closure.
 
-Remaining: native photo/camera/preview and broader AI functional acceptance; permission denial, expiry/revocation/server acknowledgement, in-flight push/account switch/foreign-store negative requests; device/SDK/OS forensic storage and phone/tablet variants; stable signing/Play, iOS, separate physical QR scan. A visible own-store list is not crafted cross-store denial proof; visible login gate is not server revocation/forensic deletion proof. All other owners retained. Next: one non-sensitive test photo from current LAB2 native session to LAB, correct Admin readback, no invoice/payment/stock/fiscal side effects.
+Remaining: native camera (photo source mode unrecorded), reverse Admin-to-native image preview, broader AI; permission denial/session expiry/revocation/server acknowledgement, in-flight push/account-switch/foreign-store negative requests; device/SDK/OS forensic storage and phone/tablet variants; stable signing/Play, iOS and separate physical QR scan. Next: one non-sensitive Admin image to LAB and LAB2 native opening, no invoice/payment/stock/fiscal workflow. Other owners retained.
 
 ## 18/10/2026 22:32 Europe/Athens - WHOLESALE-SELLER-LAB-01 / AUTHORIZED TEMPORARY SELLER GRANTS / BEFORE ACTION
 
