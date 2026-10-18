@@ -59,7 +59,10 @@ export function productSalesEvidence(report,args,scope){
   const distinct=new Map(matches.map(row=>[row.productId||`${row.sku}:${row.name}`,row]));
   if(!matches.length)return {...base,result:"no_match"};
   if(distinct.size!==1||matches.length!==1||typeof matches[0].productId!=="string"||!matches[0].productId)return {...base,result:"ambiguous",candidateCount:distinct.size,candidates:[...distinct.values()].slice(0,20).map(row=>project(row,["productId","sku","name"])),truncated:distinct.size>20};
-  return {...base,result:"matched",rows:[project(matches[0],keys)]};
+  // Preserve the canonical quantity's unit, including explicit null/unknown.
+  // Older readers without a unit keep their existing evidence shape.
+  const fields=Object.hasOwn(matches[0],"unit")?[...keys,"unit"]:keys;
+  return {...base,result:"matched",rows:[project(matches[0],fields)]};
 }
 
 export const assistantProductTools=[ownerSalesTool,ownerStockTool];

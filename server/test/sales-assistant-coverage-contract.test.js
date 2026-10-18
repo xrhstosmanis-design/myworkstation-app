@@ -42,12 +42,32 @@ test('actual canonical reader to product adapter certifies short and exact-cap c
  }
 });
 test('actual overflow producer output becomes empty limited evidence and cannot supply model or exported amounts',async()=>{
- const {report,evidence}=await linkedRead(sqlRows(10000,10001));
+ const rows=sqlRows(10000,10001);Object.assign(rows[0],{unit:'KG',salesQuantity:-.25});
+ const {report,evidence}=await linkedRead(rows);
  assert.equal(report.sourceCoverage.complete,false);assert.equal(report.sourceCoverage.totalsScope,'RETURNED_GROUPS');assert.equal(report.normalSaleCount,1);assert.equal(report.totalGross,35000);
  assert.equal(evidence.sourceCoverageStatus,'PARTIAL');assert.equal(evidence.result,'source_limited');assert.deepEqual(evidence.rows,[]);
  const answer=assistantAnswerFromResponse(model,[evidence]);assert.equal(answer.sourceOnly,true);assert.doesNotMatch(JSON.stringify(answer),/MODEL_TRAP|999|35000/);
  const table=assistantReportTables([evidence])[0];assert.deepEqual(table.rows,[]);assert.match(table.notes.join(' '),/Δεν εξάγονται ποσά/);
- const file=await buildAssistantReportFile('csv',[evidence]);const csv=Buffer.from(file.base64,'base64').toString('utf8');assert.match(csv,/Δεν εξάγονται ποσά/);assert.doesNotMatch(csv,/WATER_FIXTURE|PRIVATE_SUPPLIER|35000|MODEL_TRAP/);
+ const file=await buildAssistantReportFile('csv',[evidence]);const csv=Buffer.from(file.base64,'base64').toString('utf8');assert.match(csv,/Δεν εξάγονται ποσά/);assert.doesNotMatch(csv,/WATER_FIXTURE|PRIVATE_SUPPLIER|35000|MODEL_TRAP|κιλά/);
+});
+test('canonical quantity units survive JSON, evidence, table and CSV without guessing or exposing private costs',async()=>{
+ for(const [unit,label,quantity] of [['PIECE','τεμάχια',2],['KG','κιλά',-.25],['LITER','λίτρα',1.5],['PACKAGE','συσκευασίες',-2], [null,'Μη καταγεγραμμένη',.125],['UNRECOGNIZED_UNIT','Μη καταγεγραμμένη',-.5]]){
+  const rows=sqlRows(1);Object.assign(rows[0],{unit,salesQuantity:quantity});
+  const {report,evidence}=await linkedRead(rows);
+  assert.equal(report.items[0].unit,unit);assert.equal(evidence.rows[0].unit,unit);
+  assert.equal(evidence.rows[0].salesQuantity,quantity);assert.equal(evidence.sourceCoverageStatus,'COMPLETE');
+  assert.equal(evidence.rows[0].grossSales,3.5);assert.equal(evidence.rows[0].netSales,3);assert.equal(evidence.rows[0].vatValue,.5);
+  assert.doesNotMatch(JSON.stringify(evidence),/PRIVATE_SUPPLIER|costValue|unitCost/);
+  const table=assistantReportTables([evidence])[0];assert.equal(table.columns[3],'Μονάδα');assert.equal(table.rows[0][3],label);assert.equal(table.rows[0][4],quantity);
+  const file=await buildAssistantReportFile('csv',[evidence]);const csv=Buffer.from(file.base64,'base64').toString('utf8');
+  assert.ok(csv.includes(label));assert.doesNotMatch(csv,/PRIVATE_SUPPLIER|costValue|unitCost|UNRECOGNIZED_UNIT/);
+ }
+});
+test('legacy source without a unit retains its evidence shape and does not infer pieces',async()=>{
+ const rows=sqlRows(1);delete rows[0].unit;
+ const {evidence}=await linkedRead(rows);
+ assert.equal(Object.hasOwn(evidence.rows[0],'unit'),false);
+ assert.equal(assistantReportTables([evidence])[0].rows[0][3],'Μη καταγεγραμμένη');
 });
 test('actual empty-source SQL sentinel survives report serialization as complete empty evidence rather than an invalid or capped source',async()=>{
  const {report,evidence}=await linkedRead(sqlRows(0));
