@@ -1,3 +1,7 @@
+## Online seller code live - 18 October 2026
+
+SourcePR2733 mergedeb56c519 after final3095/0/0 native CI; combined main6fea2ad1/fullCI39136855548 passes3113/0/0 plus6backup. Ordinary guard39137344362 and Renderdep-dbadmv8m7kps738emdn0 verified exact6fea LIVE/healthy14:48UTC. Seller «Εξωτερικοί πωλητές» and manager «Αναθέσεις πωλητών» use existing individually revocable users, explicit customer/store assignments and the shared FIELD_SALES quote/SUBMITTED order core. Source/CI/release verification only; functional LAB remains NOT TESTED. No production users, grants or orders created by development. Full suite, offline, fulfillment/credit/fiscal and standalone commercial packaging remain OPEN. See CHECKPOINTS/CHANGES/2026-10-18-wholesale-field-sales.md for exact evidence and retained owner. Older dated next-actions below are historical.
+
 ## Online seller source prepared - 18 October 2026
 
 ClaimPR2727 merged before implementation. Existing user/session assignments, scoped online seller workspace and shared FIELD_SALES quote/order source are prepared; local Node20 full tests and builds pass, actual native CI and functional LAB remain pending. See CHECKPOINTS/CHANGES/2026-10-18-wholesale-field-sales.md. Customer portal technical receiptPR2708 remains valid; full suite and independent commercial packaging remain OPEN.
