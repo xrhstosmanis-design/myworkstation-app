@@ -10589,3 +10589,11 @@ Actual physical deliveries/primary supplier, sending, invoice/margin/cost broade
 ## 18Oct - full CI global-time-policy correction
 
 Initial WS2 run39141322463:3162pass/1fail/0skip; stacked WS3 run39141329580:3169pass/1fail/0skip. Both failures are the same existing global Greek24-hour source invariant: two newly added supplier date displays omitted explicit hour12:false. Both production calls corrected; existing invariant unchanged. Local existing global policy5PASS/0FAIL/0SKIP and mounted supplier13PASS/0FAIL/0SKIP. Full exact CI rerun required, no hosted PASS or business action.
+
+## 18/10/2026 - COORD phase2 WS3 / SOURCE PREPARED / AWAITING FULL CI AND LAB
+
+Owner codex/ws3-report-coverage-ui-20261018, central receiver codex/central-four-streams-20261018. Claim#2745/490c151 merged before code; #2743 protected scoped PASS retained. Ordinary canonical report now qualifies all six cards/footer for partial/uncertified coverage; displays global unique sales/reversals from producer only. Canonical cap<=10000; rows/amounts/CSV schema/time defaults/calendar/drilldown/store invalidation unchanged.
+
+22 focused local tests pass/0fail/0skip: actual mounted installer, historical report-store guards and existing structural tests. Forged limit10001 rejected. Central combined focused38total/37pass/0fail/1native skip and frontend/TABLE_SERVICE buildPASS on Node20.20.2. These local results do not replace exact full native CI. Independent review cap/count concerns were fixed before publication; no check weakened.
+
+Hosted new disclosure and staffing/workload/turnover/payroll OPEN. Inherited report-tab late-response lifecycle race predates this change and remains separately recorded, no speculative fix. No production financial/fiscal/stock/shift/payroll/settings/recipient/email/order/schema/infrastructure mutation or protected replay. Required green PR/main CI and ordinary exact release before applicable LAB. Checkpoint CHECKPOINTS/CHANGES/2026-10-18-phase2-ws3.md.
