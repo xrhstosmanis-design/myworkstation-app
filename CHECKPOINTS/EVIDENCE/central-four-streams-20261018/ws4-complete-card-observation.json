@@ -1,0 +1,38 @@
+{
+  "observedAt": "2026-10-18T18:30:48+03:00",
+  "site": "https://myworkstation-app.onrender.com/platform-admin",
+  "operator": "Authenticated Platform Super Admin",
+  "company": "MYWORKSTATION LAB",
+  "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "allStores": false,
+  "scope": "Actual product_sales evidence card, not sales_by_store",
+  "query": {
+    "sku": "2269",
+    "from": "2026-10-10",
+    "to": "2026-10-10",
+    "timezone": "Europe/Athens"
+  },
+  "observed": {
+    "name": "ΝΕΡΟ 500ML",
+    "quantity": 4,
+    "gross": 2,
+    "net": 1.77,
+    "vat": 0.23,
+    "reversals": 0,
+    "reversalValue": 0,
+    "coverageText": "Πληρότητα πηγής: επιβεβαιώθηκαν όλες οι ομάδες πωλήσεων για το εφαρμοσμένο φίλτρο.",
+    "generatedFileLabel": "myworkstation-report-20261018183048.csv"
+  },
+  "limitations": {
+    "currentIndependentCanonicalComparison": "NOT TESTED",
+    "CSVBytes": "NOT TESTED",
+    "PARTIAL": "NOT TESTED",
+    "INVALID": "NOT TESTED",
+    "UNKNOWN": "NOT TESTED",
+    "physicalMobileOwner": "NOT TESTED"
+  },
+  "blocker": "Browser native credential protection rejected download waitForEvent before file-byte observation; no inferred CSV acceptance. Kernel reset. No screenshot of this result captured.",
+  "status": "HOSTED OBSERVATION; acceptance incomplete, no new PASS",
+  "businessStateMutations": false
+}
