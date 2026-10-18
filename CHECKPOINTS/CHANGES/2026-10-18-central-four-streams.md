@@ -1,3 +1,37 @@
+## 18/10/2026 17:37 Europe/Athens - COORD-20261018 / COMBINED MAIN POLICY FAILURE / BOUNDED INTEGRATION FOLLOW-UP
+
+All four source PRs #2729/#2730/#2731/#2732 merged with full green PR CI. Exact combined main adc59a755924f813a8f5b11bb26629b3767ee3d8 run39136174553 failed BEFORE server tests at checkpoint policy: the shared ACTIVE record was byte-identical across the last WS2 and WS3 merge, so the final push had no ACTIVE diff. This is not a server regression or a combined technical PASS. The ordinary release is held; production remains on3f429e2f6a43aa599952dbe8e7d89d9ca2da7f81.
+
+Retained central owner codex/central-four-streams-20261018 coordinates a bounded actual WS3-reader-to-WS4-consumer contract regression plus this unique current active/checkpoint delta. No checkpoint-policy/workflow/deploy guard is changed or bypassed. Exact full PR/main CI and ordinary pinned release remain required. New LAB/LIVE/USER acceptance NOT TESTED, original14 residuals OPEN. Final tracker/PDF reconciliation follows verified source release; no manual PASS.
+
+## 18/10/2026 - COORD-20261018 consolidated first source delivery / AWAITING LAB
+
+Central owner remains codex/central-four-streams-20261018 under explicit owner-directed transfer #2725. This dated receipt supersedes ASSIGNED/NOT TESTED for the bounded source slices only. All original14 residuals and actual LAB acceptance remain OPEN; no global PASS or new manual claim.
+
+| Issue | Source PR | Exact source head | Full PR CI | Native server results |
+| --- | --- | --- | --- | --- |
+| #2704 | #2729 | 84236e44ece5e34e1df6043c699940a80e3fe6b0 | 39134928973 SUCCESS | 3049 passed / 0 failed / 0 skipped + 6 backup |
+| #2705 | #2730 | eec590ae38a8b27f02e84a92a67c64a5470ab0c9 | 39135578246 SUCCESS | 3070 passed / 0 failed / 0 skipped + 6 backup |
+| #2706 | #2731 | 6183b6dea2f399613f0005dfc71e949a27a27390 | 39135586266 SUCCESS | 3068 passed / 0 failed / 0 skipped + 6 backup |
+| #2707 | #2732 | ed7c0bbc8b32e00843a71cea392d95e02e0f4e05 | 39134954853 SUCCESS | 3053 passed / 0 failed / 0 skipped + 6 backup |
+
+All four source PRs merged. Combined main adc59a755924f813a8f5b11bb26629b3767ee3d8 contains the exact22 reviewed source/test blobs (9 runtime). These separate CI counts are not additive distinct tests. Full PR workflows also passed Windows checks, frontend/production build contracts, Chromium checks, production invariants, native isolated PostgreSQL and real HTTP E2E.
+
+- WS1: automatic report readiness is separate from PROVISIONAL financial finality; preview cannot certify reconciliation. Original amounts, HOLD/day/week semantics preserved. Scheduler/outbox/SMTP unchanged.
+- WS2: separate read-only supplier grouping proposal, explicit APPROVED_DOCUMENT_FREQUENCY_PROXY. primarySupplierId remains null, reviewRequired true, automaticTransmission false. Ties/no evidence/capped evidence remain unassigned. Actual physical-delivery frequency, supplier choice, frontend integration and sending remain OPEN.
+- WS3: unique overall normal/reversal basket counts and same-snapshot source coverage; product counts remain appearances. At10000group cap monetary totals cover returned groups only. Full ordinary report UI coverage display, staffing/workload/turnover/payroll remain OPEN.
+- WS4: validated product coverage follows evidence into UI, exports and deterministic answers; partial/invalid source suppresses amounts, legacy unknown source visibly warns. Broad AI capability work remains OPEN.
+
+Local combined verification on Node20.20.2: server3045tests /2920passed /0failed /125environment skips; focused61tests /57passed /0failed /4native infrastructure skips; frontend build passed. Native CI above executed without skips; local skips are not hidden.
+
+Failure history preserved: initial WS2 run39134938371 server3056/0/0 then unrelated unchanged Chromium Target.createTarget timeout; failed-job retry requested and final full run39135578246 passed. Initial WS3 run39134946342 had one stale shared owner-sales-tools mock failure (3053pass/1fail); identical WS4 coverage fixture coordinated and final full run39135586266 passed. No check disabled or guard weakened.
+
+Synthetic performance caveat:100k-line PGlite/work_mem4MB medians old inline1560ms, current1954ms, NOT MATERIALIZED2414ms; current temp4386/4390blocks versus old1175/1177. Alternative did not improve and was not applied.10k no spill;100k/work_mem16MB no new-plan spill. This is synthetic evidence, not production capacity certification. No production benchmark/query.
+
+No business-state mutation or protected transaction replay by this work. No new LAB/LIVE/USER PASS. Existing accepted invoices, stock, fiscal, payment, settings, shifts and other owners' scopes remain protected. Owner retained centrally until a named handoff. Single next action after exact guarded release verification: authenticated read-only LAB acceptance of these bounded previews/sources with company/store/period evidence; any state-changing test needs its checkpoint baseline first.
+
+Detailed receipt: CHECKPOINTS/CHANGES/2026-10-18-central-four-streams.md and CHECKPOINTS/EVIDENCE/central-four-streams-20261018/source-release.json.
+
 ## 18/10/2026 16:49 Europe/Athens - COORD-20261018 / OWNER-DIRECTED TRANSFER / ASSIGNED BEFORE CODE
 
 At15:17 the owner explicitly confirmed replacing previous assignments for #2704-#2707; at15:18 confirmed full execution approval and requested four internal parallel helpers under this coordinator. The interrupted publication is resumed16:49. This owner-directed transfer supersedes the earlier unknown-activity wait for the bounded paths below; it does not fabricate an independent release by old pages. Central receiver codex/central-four-streams-20261018 integrates all work. Original PASS evidence and unrelated assignments remain protected.
