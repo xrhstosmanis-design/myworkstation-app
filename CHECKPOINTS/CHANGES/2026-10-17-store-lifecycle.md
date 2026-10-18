@@ -1,3 +1,7 @@
+## 18/10/2026 — STORE-LIFECYCLE-01 / offline generation checkout guard — AWAITING CI
+
+Existing owner feat/store-shifts-inventory-clear-20261018 retained; bounded branch feat/store-lifecycle-offline-generation-20261018. Protect existing non-enrolled store behavior, both registers and fiscal flow. Add original-generation capture for newly queued cash sales and fail-closed authenticated checkout checks before fiscal preparation and inside the write transaction. Untagged old requests remain generation zero; sync never upgrades them. No production enrollment/reset/reopen or deletion. This covers checkout only; other mutation entrypoints, physical Writer/spool, complete ownership and selective rollback remain OPEN. Native race/tenant/maintenance/stale/zero compatibility tests required. Existing recovery PR2775 is separate and not an execution authorization.
+
 ## 18/10/2026 22:59 Europe/Athens — STORE-LIFECYCLE-01 / REAL EXISTING-ARCHIVE RESTORE PASS / CLEANUP STILL OPEN
 
 Owner feat/store-shifts-inventory-clear-20261018 retained; bounded source feat/store-lifecycle-restore-audit-20261018. User approved Google/Render sign-in22:21 and confirmed device challenge22:32. Fresh Render dashboard positively showed My Workspace tea-d9ie26vaqgkc739uudqg; the earlier authentication access blocker is superseded. No KAT reset/delete, maintenance enrollment, generation bump, Writer stop, credential/configuration change or new product import occurred. BOTH registers remain protected. New Excel NOT RECEIVED.
