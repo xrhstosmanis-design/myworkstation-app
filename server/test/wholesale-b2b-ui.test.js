@@ -86,9 +86,9 @@ test("mounted wholesale renders saved tiers and reads persisted tier after savin
   await mounted(api,async({click,submit})=>{
     await click("Τιμοκατάλογοι");assert.match(document.body.textContent,/Existing saved tier/);
     await click("Αναζήτηση");const form=document.querySelector(".wholesale-products form");assert.ok(form);
-    form.elements.namedItem("minimumQuantity").value="6";form.elements.namedItem("unitPrice").value="7";
+    form.elements.namedItem("minimumQuantity").value="6";form.elements.namedItem("unitPrice").value="7";form.elements.namedItem("priceBasis").value="NET";
     await submit(form);assert.match(document.body.textContent,/Persisted saved tier/);assert.doesNotMatch(document.body.textContent,/Existing saved tier/);
-    const write=calls.find(call=>call.options?.method==="PUT");assert.equal(write.path,"/api/wholesale/price-lists/list-a/products");assert.deepEqual(JSON.parse(write.options.body),{productId:"product-a",minimumQuantity:6,unitPrice:7,discountPercent:null});
+    const write=calls.find(call=>call.options?.method==="PUT");assert.equal(write.path,"/api/wholesale/price-lists/list-a/products");assert.deepEqual(JSON.parse(write.options.body),{productId:"product-a",priceBasis:"NET",minimumQuantity:6,unitPrice:7,discountPercent:null});
     assert.ok(calls.filter(call=>pathname(call.path)==="/api/wholesale/price-lists/list-a/products"&&!call.options?.method).length>=2);
   });
 });
@@ -170,4 +170,20 @@ test("mounted wholesale overlapping assignment refreshes cannot restore an older
     await settle(()=>oldRead.resolve({items:rows("Obsolete customer snapshot","list-b")}));
     assert.match(document.body.textContent,/Newest snapshot/);assert.doesNotMatch(document.body.textContent,/Obsolete customer snapshot/);assert.equal(document.querySelectorAll(".wholesale-customer-row select")[0].value,"list-a");assert.equal(writes,2);
   });
+});
+
+test("fixed tier prices require explicit VAT basis and legacy classification sends version and refreshes409",async()=>{
+ const writes=[];let reads=0;
+ const api=async(path,options)=>{
+  if(options?.method==="PUT"){writes.push({path,body:JSON.parse(options.body)});if(path.endsWith("/price-basis"))throw Object.assign(Error("stale"),{status:409});return {ok:true}}
+  if(path.startsWith("/api/price-catalog/products?"))return {items:[{id:"product-a",name:"Search product",salePrice:10}]};
+  if(pathname(path)==="/api/wholesale/price-lists/list-a/products"){reads++;return {items:[{id:"tier-a",name:"Legacy price",productId:"product-a",minimumQuantity:1,unitPrice:8,discountPercent:null,priceBasis:null,version:3}],total:1}}
+  return readApi(path);
+ };
+ await mounted(api,async({click,submit,change})=>{
+  await click("Τιμοκατάλογοι");assert.match(document.querySelector('[aria-label="Αποθηκευμένες τιμές"]').textContent,/Χρειάζεται ορισμός ΦΠΑ/);
+  await change(document.querySelector('[aria-label="Ορισμός ΦΠΑ · Legacy price"]'),"NET");assert.deepEqual(writes[0].body,{priceBasis:"NET",expectedVersion:3});assert.match(document.querySelector(".wholesale-error").textContent,/Η τιμή άλλαξε/);assert.equal(reads,2);
+  await click("Αναζήτηση");const form=document.querySelector(".wholesale-products form");form.elements.namedItem("unitPrice").value="6";await submit(form);assert.equal(writes.length,1);assert.equal(form.elements.namedItem("unitPrice").value,"6");assert.match(document.querySelector(".wholesale-error").textContent,/Επίλεξε αν η τιμή/);
+  form.elements.namedItem("priceBasis").value="GROSS";await submit(form);assert.equal(writes[1].body.priceBasis,"GROSS");assert.equal(reads,3);
+ });
 });
