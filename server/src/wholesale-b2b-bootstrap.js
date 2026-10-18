@@ -17,6 +17,16 @@ export async function ensureWholesaleSchema(){
       `CREATE INDEX IF NOT EXISTS "WholesalePriceListProduct_company_product_idx" ON "WholesalePriceListProduct"("companyId","productId")`,
       `CREATE TABLE IF NOT EXISTS "WholesaleCustomerPriceList" ("customerId" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"priceListId" TEXT NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),CONSTRAINT "WholesaleCustomerPriceList_company_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE,CONSTRAINT "WholesaleCustomerPriceList_customer_fkey" FOREIGN KEY ("customerId") REFERENCES "WholesaleCustomer"("id") ON DELETE CASCADE,CONSTRAINT "WholesaleCustomerPriceList_list_fkey" FOREIGN KEY ("priceListId") REFERENCES "WholesalePriceList"("id") ON DELETE CASCADE)`
     ];
+    statements.push(
+      `ALTER TABLE "WholesalePriceListProduct" ADD COLUMN IF NOT EXISTS "priceBasis" TEXT CHECK ("priceBasis" IN ('NET','GROSS'))`,
+      `ALTER TABLE "WholesalePriceListProduct" ADD COLUMN IF NOT EXISTS "version" INTEGER NOT NULL DEFAULT 1`,
+      `CREATE TABLE IF NOT EXISTS "WholesalePriceAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id") ON DELETE CASCADE,"actorId" TEXT NOT NULL,"priceListId" TEXT NOT NULL,"productId" TEXT NOT NULL,"minimumQuantity" NUMERIC(14,4) NOT NULL,"oldJson" JSONB,"newJson" JSONB NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`,
+      `CREATE INDEX IF NOT EXISTS "WholesalePriceAudit_company_list_idx" ON "WholesalePriceAudit"("companyId","priceListId","createdAt")`,
+      `CREATE TABLE IF NOT EXISTS "WholesaleOrderRequest" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id") ON DELETE CASCADE,"storeId" TEXT NOT NULL REFERENCES "Store"("id"),"customerId" TEXT NOT NULL REFERENCES "WholesaleCustomer"("id"),"actorId" TEXT NOT NULL,"channel" TEXT NOT NULL CHECK ("channel"='BACKOFFICE'),"clientOrderId" TEXT NOT NULL,"requestHash" TEXT NOT NULL,"quoteId" TEXT NOT NULL,"status" TEXT NOT NULL DEFAULT 'SUBMITTED' CHECK ("status"='SUBMITTED'),"revision" INTEGER NOT NULL DEFAULT 1,"snapshot" JSONB NOT NULL,"notes" TEXT,"netTotal" NUMERIC(18,2) NOT NULL,"vatTotal" NUMERIC(18,2) NOT NULL,"grossTotal" NUMERIC(18,2) NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),CONSTRAINT "WholesaleOrderRequest_company_actor_client_key" UNIQUE ("companyId","actorId","clientOrderId"))`,
+      `CREATE INDEX IF NOT EXISTS "WholesaleOrderRequest_company_store_created_idx" ON "WholesaleOrderRequest"("companyId","storeId","createdAt","id")`,
+      `CREATE TABLE IF NOT EXISTS "WholesaleOrderEvent" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id") ON DELETE CASCADE,"orderId" TEXT NOT NULL REFERENCES "WholesaleOrderRequest"("id") ON DELETE CASCADE,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`,
+      `CREATE INDEX IF NOT EXISTS "WholesaleOrderEvent_company_order_idx" ON "WholesaleOrderEvent"("companyId","orderId","createdAt")`
+    );
     for(const sql of statements)await prisma.$executeRawUnsafe(sql);
   })().catch(error=>{schemaReady=undefined;throw error});
   return schemaReady;
