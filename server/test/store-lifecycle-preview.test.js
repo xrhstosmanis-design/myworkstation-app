@@ -21,6 +21,7 @@ async function fixture(){
  'CREATE TABLE "Store"("id" text primary key,"name" text,"companyId" text)',
  'CREATE TABLE "Sale"("id" text primary key,"companyId" text,"storeId" text REFERENCES "Store"("id"),"document" text)',
  'CREATE TABLE "SaleLine"("id" text primary key,"saleId" text REFERENCES "Sale"("id") ON DELETE CASCADE)',
+ 'CREATE TABLE "LifecycleLineAttachment"("id" text primary key,"lineId" text REFERENCES "SaleLine"("id") ON DELETE CASCADE)',
  'CREATE TABLE "CashShiftSession"("id" text primary key,"companyId" text,"storeId" text,"status" text)',
  'CREATE TABLE "StoreOperatorSession"("id" text primary key,"companyId" text,"storeId" text,"expiresAt" timestamptz,"revokedAt" timestamptz,"secret" text)',
  'CREATE TABLE "RbsCapDriverV1Request"("id" text primary key,"companyId" text,"storeId" text,"status" text)',
@@ -31,6 +32,7 @@ async function fixture(){
  `INSERT INTO "Store" VALUES('s','Target','c'),('sibling','Sibling','c'),('foreign','Foreign','other')`,
  `INSERT INTO "Sale" VALUES('sale','c','s','NEVER RETURN DOCUMENT'),('sibling-sale','c','sibling','CONTROL'),('foreign-sale','other','foreign','CONTROL')`,
  `INSERT INTO "SaleLine" VALUES('line','sale'),('control-line','sibling-sale')`,
+ `INSERT INTO "LifecycleLineAttachment" VALUES('attachment','line'),('control-attachment','control-line')`,
  `INSERT INTO "CashShiftSession" VALUES('shift','c','s','OPEN'),('closed','c','s','CLOSED'),('control','c','sibling','OPEN')`,
  `INSERT INTO "StoreOperatorSession" VALUES('active','c','s',NOW()+INTERVAL '1 hour',NULL,'NEVER RETURN TOKEN'),('expired','c','s',NOW()-INTERVAL '1 hour',NULL,'OLD'),('revoked','c','s',NOW()+INTERVAL '1 hour',NOW(),'REVOKED')`,
  `INSERT INTO "RbsCapDriverV1Request" VALUES('pending','c','s','DISPATCHED'),('done','c','s','SALE_COMMITTED'),('declined','c','s','DECLINED')`,
@@ -40,12 +42,12 @@ async function fixture(){
  ])await db.$executeRawUnsafe(sql);
  return {db,close:async()=>{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect()}};
 }
-async function snapshot(db){const out={};for(const t of ['Store','Sale','SaleLine','CashShiftSession','StoreOperatorSession','CloudDevice','RbsCapDriverV1Request','StoreRbsInstallationSettings','Product'])out[t]=await db.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM "${t}" t ORDER BY row_to_json(t)::text`);return out}
+async function snapshot(db){const out={};for(const t of ['Store','Sale','SaleLine','LifecycleLineAttachment','CashShiftSession','StoreOperatorSession','CloudDevice','RbsCapDriverV1Request','StoreRbsInstallationSettings','Product'])out[t]=await db.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM "${t}" t ORDER BY row_to_json(t)::text`);return out}
 test('native preview reads only target counts, hides contents, detects work and dependencies, preserves complete target/sibling/foreign snapshots',{skip:!isolated},async()=>{
  const f=await fixture();try{
  const before=await snapshot(f.db),scope={companyId:'c',storeId:'s'},p=await lifecyclePreview(f.db,actor,scope,'RESET');assert.deepEqual(await snapshot(f.db),before);assert.equal(p.executionAvailable,false);assert.equal(p.inventory.find(x=>x.table==='Sale').count,1);assert.equal(p.inventory.find(x=>x.table==='StoreRbsInstallationSettings').action,'KEEP');
  for(const code of ['OPEN_SHIFT','ACTIVE_OPERATOR','ACTIVE_CONNECTOR','FISCAL_REQUEST'])assert.equal(p.blockers.find(x=>x.code===code).count,1);
- assert.ok(p.blockers.some(x=>x.code==='UNREVIEWED_TABLE'&&x.table==='FutureUnknownStoreTable'));assert.ok(p.indirect.some(x=>x.table==='SaleLine'&&x.parent==='Sale'));assert.doesNotMatch(JSON.stringify(p),/NEVER RETURN|sibling-sale|foreign-sale|Shared catalog/);
+ assert.ok(p.blockers.some(x=>x.code==='UNREVIEWED_TABLE'&&x.table==='FutureUnknownStoreTable'));assert.ok(p.indirect.some(x=>x.table==='SaleLine'&&x.parent==='Sale'));assert.ok(p.indirect.some(x=>x.table==='LifecycleLineAttachment'&&x.parent==='SaleLine'&&x.action==='REVIEW'));assert.doesNotMatch(JSON.stringify(p),/NEVER RETURN|sibling-sale|foreign-sale|Shared catalog/);
  assert.equal((await lifecyclePreview(f.db,actor,scope,'RESET')).fingerprint,p.fingerprint);const d=await lifecyclePreview(f.db,actor,scope,'DELETE');assert.notEqual(d.fingerprint,p.fingerprint);assert.equal(d.inventory.find(x=>x.table==='StoreRbsInstallationSettings').action,'REMOVE');
  for(const bad of [{companyId:'other',storeId:'s'},{companyId:'c',storeId:'foreign'},{companyId:'c',storeId:'missing'}])await assert.rejects(lifecyclePreview(f.db,actor,bad,'RESET'),e=>e.status===404);
  await f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('bad','other','s','NEVER RETURN CROSS SCOPE')`);const bad=await lifecyclePreview(f.db,actor,scope,'RESET');assert.equal(bad.blockers.find(x=>x.code==='INCONSISTENT_SCOPE').count,1);

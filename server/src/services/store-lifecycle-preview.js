@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {STORE_TABLES,RESET_KEEP} from './store-lifecycle-policy.js';
+import {reviewLifecycleDependencies} from './store-lifecycle-dependencies.js';
 const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status})};
 export function requireLifecycleAdmin(actor){if(!actor?.id||!(actor.isSuperAdmin===true||actor.platformRole==='SUPER_ADMIN'))fail('Απαιτείται πρόσβαση Platform Super Admin.',403)}
 const quote=value=>'"'+String(value).replaceAll('"','""')+'"';
@@ -27,9 +28,10 @@ export async function lifecyclePreview(db,actor,{companyId,storeId},mode){
    const condition=name==='CashShiftSession'&&cols.has('status')?'"status"=\'OPEN\'':name==='RbsCapDriverV1Request'&&cols.has('status')?'"status" NOT IN (\'DECLINED\',\'SALE_COMMITTED\')':name==='StoreOperatorSession'&&cols.has('expiresAt')&&cols.has('revokedAt')?'"revokedAt" IS NULL AND "expiresAt">NOW()':name==='CloudDevice'&&cols.has('lastSeenAt')&&cols.has('status')?'"status"=\'ACTIVE\' AND "lastSeenAt">NOW()-INTERVAL \'60 seconds\'':null;
    if(condition){const busy=Number((await tx.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM ${qualified} WHERE "storeId"=$1${cols.has('companyId')?' AND "companyId"=$2':''} AND (${condition})`,...params))[0].count);if(busy)blockers.push({code:{CashShiftSession:'OPEN_SHIFT',RbsCapDriverV1Request:'FISCAL_REQUEST',StoreOperatorSession:'ACTIVE_OPERATOR',CloudDevice:'ACTIVE_CONNECTOR'}[name],table:name,count:busy})}
   }
-  const dependencies=await tx.$queryRawUnsafe(`SELECT child.relname AS child,parent.relname AS parent,c.confdeltype AS deletion FROM pg_constraint c JOIN pg_class child ON child.oid=c.conrelid JOIN pg_namespace ns ON ns.oid=child.relnamespace JOIN pg_class parent ON parent.oid=c.confrelid WHERE c.contype='f' AND ns.nspname=$1 ORDER BY child.relname,parent.relname,c.conname`,schema);
+  const dependencies=await tx.$queryRawUnsafe(`SELECT child.relname AS child,parent.relname AS parent,ns.nspname AS "childSchema",pns.nspname AS "parentSchema",c.conname AS "constraint",c.confdeltype AS deletion FROM pg_constraint c JOIN pg_class child ON child.oid=c.conrelid JOIN pg_namespace ns ON ns.oid=child.relnamespace JOIN pg_class parent ON parent.oid=c.confrelid JOIN pg_namespace pns ON pns.oid=parent.relnamespace WHERE c.contype='f' AND ns.nspname NOT LIKE 'pg_%' AND ns.nspname<>'information_schema' ORDER BY ns.nspname,child.relname,pns.nspname,parent.relname,c.conname LIMIT 10001`);
+  if(dependencies.length>10000)fail('Οι εξαρτήσεις υπερβαίνουν το διαθέσιμο όριο. Απαιτείται ειδικός έλεγχος.',422);
   const selected=new Set(inventory.filter(row=>row.action==='REMOVE').map(row=>row.table));if(mode==='DELETE')selected.add('Store');
-  const indirect=dependencies.filter(row=>selected.has(row.parent)&&!inventory.some(item=>item.table===row.child)&&row.child!=='Store').map(row=>({table:row.child,parent:row.parent,onDelete:row.deletion}));
+  const indirect=reviewLifecycleDependencies({schema,selected,inventory,dependencies});
   blockers.push({code:'DEPENDENCY_REVIEW_REQUIRED',count:indirect.length},{code:'RECOVERY_VERIFICATION_REQUIRED',count:1},{code:'OFFLINE_QUEUES_REQUIRE_DEVICE_CHECK',count:1});
   const fingerprint=createHash('sha256').update(JSON.stringify({version:1,companyId,storeId,mode,inventory,indirect})).digest('hex');
   return {store,mode,checkedAt:new Date().toISOString(),fingerprint,inventory,indirect,blockers,executionAvailable:false,
