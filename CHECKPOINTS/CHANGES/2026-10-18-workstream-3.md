@@ -1,3 +1,6 @@
+## Native CI continuation and central integration
+Initial CI39134946342 had3053passed/1failed/0skipped: only pre-existing owner-sales-tools DB mock shape. Coordinated identical fixture from WS4 added in1ad78e; no runtime guard weakening. Native new SQL regression executed. Current main now includes same fixture and WS4 consumer. Exact final-head CI required. Synthetic100k-line benchmark shows materialization adds work; NOT MATERIALIZED is slower, so no speculative hint. Production256MB capacity remains unproved.
+
 # Workstream 3 / #2706 - bounded source prepared
 
 Owner: central coordinator codex/central-four-streams-20261018; implementation branch codex/ws3-sales-counts-20261018. Owner-directed transfer merged before code in #2725/main a756f29bcd6051eeef57ae12ded992b68ff4fec9, exacthead3bbaf0ac CI39134361558 SUCCESS. Prior diagnostics #2716 and all limited PASS preserved.

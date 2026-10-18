@@ -73,6 +73,10 @@ export async function readAutomaticCashPreview(db,{actorId,companyId,storeId,day
     return {kind:frequency==="WEEKLY"?"WEEKLY_CASH_PREVIEW":"DAILY_CASH_PREVIEW",frequency,store,period,ready,holds,dayReadiness,sourceCount:rows.length,
       complete:rows.length<=sourceLimit,groups,sourceFingerprint,generatedAt:new Date(now),
       rule:rule?{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled}:null,
-      settingsVersion:settingsVersion??null,employeeLiabilityAdjusted:false,deliveryStatus:"PREVIEW_ONLY"};
+      settingsVersion:settingsVersion??null,employeeLiabilityAdjusted:false,deliveryStatus:"PREVIEW_ONLY",
+      // Closure readiness certifies only this shift snapshot, not settlement,
+      // reviewer explanations or physical cash and control balances.
+      sourceReadiness:ready?"READY":"HOLD",financialFinality:"PROVISIONAL",financialReconciliationComplete:false,
+      financialLimitations:["DOCUMENT_PAYMENT_RECONCILIATION_NOT_VERIFIED","CASH_REVIEW_EXPLANATIONS_NOT_VERIFIED","PHYSICAL_CASH_AND_CONTROL_BALANCES_NOT_VERIFIED"]};
   },{isolationLevel:"RepeatableRead",maxWait:5000,timeout:15000});
 }

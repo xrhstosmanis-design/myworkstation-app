@@ -13,7 +13,7 @@ test("mounted report dialog saves explicit store slots, previews saved versions 
  const compiled=await build({entryPoints:[fileURLToPath(new URL("../../client/src/components/platform/AutomaticReportSettingsManager.jsx",import.meta.url))],bundle:true,write:false,format:"cjs",platform:"node",loader:{".css":"empty"},external:["react","react-dom","react-dom/client","react/jsx-runtime"]});
  const module={exports:{}};new Function("require","module","exports",compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
  const root=createRoot(document.getElementById("root")),calls=[],cashRule={mode:"FULL",deliveryTerminalPattern:"DELIVERY",carryOverEnabled:true,posEftposEnabled:true};
- let saved=null,failSave=false,latePreview=null,holdPreview=false,lateLoad=null,holdLoad=false;
+ let saved=null,failSave=false,latePreview=null,holdPreview=false,lateLoad=null,holdLoad=false,previewMetadata={},sourceReady=true;
  const request=async(path,options={})=>{
   calls.push({path,...options});
   if(options.method==="PUT"){
@@ -21,7 +21,7 @@ test("mounted report dialog saves explicit store slots, previews saved versions 
    const body=JSON.parse(options.body);saved={version:1,configuration:body.configuration};return {settings:saved,dispatchEnabled:false};
   }
   if(options.method==="POST"){
-   const result={ready:true,sourceCount:3,settingsVersion:1,holds:[],groups:[{terminalPos:"MAIN",cashChain:"STORE",day:"2020-01-15",originalShortage:10,originalSurplus:8,offset:8,netVariance:-2,rows:[{sessionId:"session",employeeName:"EMPLOYEE FROM A",variance:-10}]}]};
+   const result={...previewMetadata,ready:sourceReady,sourceCount:3,settingsVersion:1,holds:sourceReady?[]:[{code:"THIRD_SHIFT_OPEN",day:"2020-01-19"}],groups:[{terminalPos:"MAIN",cashChain:"STORE",day:"2020-01-15",originalShortage:10,originalSurplus:8,offset:8,netVariance:-2,rows:[{sessionId:"session",employeeName:"EMPLOYEE FROM A",variance:-10}]}]};
    if(holdPreview)return new Promise(resolve=>{latePreview=()=>resolve(result)});return result;
   }
   const result={store:{id:path.includes("/stores/B/")?"B":"A"},settings:path.includes("/stores/B/")?null:saved,cashRule,observedTerminals:["MAIN","DELIVERY"],suggestedDay:"2020-01-15",dispatchEnabled:false};
@@ -41,10 +41,19 @@ test("mounted report dialog saves explicit store slots, previews saved versions 
   await act(async()=>document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));
   const write=calls.find(c=>c.method==="PUT"),body=JSON.parse(write.body);assert.equal(write.path,"/api/platform/companies/c/stores/A/report-settings");assert.equal(body.expectedVersion,0);assert.deepEqual(body.configuration.terminals,[{terminalPos:"MAIN",requiredSlots:[1,2,3]},{terminalPos:"DELIVERY",requiredSlots:[1]}]);assert.deepEqual(body.configuration.cashRule,cashRule);
   assert.match(document.body.textContent,/Δεν στάλθηκε email/);assert.equal(button("Προεπισκόπηση αναφοράς").disabled,false);
-  await act(async()=>button("Προεπισκόπηση αναφοράς").click());assert.match(document.body.textContent,/EMPLOYEE FROM A/);assert.deepEqual(JSON.parse(calls.find(c=>c.method==="POST").body),{day:"2020-01-15",expectedVersion:1});
+  await act(async()=>button("Προεπισκόπηση αναφοράς").click());assert.match(document.body.textContent,/EMPLOYEE FROM A/);assert.match(document.body.textContent,/Προσωρινή αναφορά ταμείων/);assert.match(document.body.textContent,/Η προεπισκόπηση δεν πιστοποιεί ολοκληρωμένη οικονομική συμφωνία/);assert.match(document.body.textContent,/συμφωνία παραστατικών με πληρωμές/);assert.match(document.body.textContent,/οι εξηγήσεις ελεγκτή/);assert.match(document.body.textContent,/τα φυσικά μετρητά με τα υπόλοιπα ελέγχου/);assert.deepEqual(JSON.parse(calls.find(c=>c.method==="POST").body),{day:"2020-01-15",expectedVersion:1});
   await act(async()=>{const select=document.querySelector('[aria-label="Περίοδος αναφοράς"]');select.value="WEEKLY";select.dispatchEvent(new dom.window.Event("change",{bubbles:true}))});
   assert.doesNotMatch(document.body.textContent,/EMPLOYEE FROM A/);assert.match(document.body.textContent,/και οι επτά ημέρες/);
   await act(async()=>button("Προεπισκόπηση αναφοράς").click());assert.deepEqual(JSON.parse(calls.filter(c=>c.method==="POST").at(-1).body),{day:"2020-01-15",expectedVersion:1,frequency:"WEEKLY"});
+  // Explicit READY metadata, missing legacy metadata and untrusted finality
+  // claims must never hide the independently required financial caveat.
+  for(const metadata of [{sourceReadiness:"READY",financialFinality:"PROVISIONAL",financialReconciliationComplete:false,financialLimitations:["DOCUMENT_PAYMENT_RECONCILIATION_NOT_VERIFIED","CASH_REVIEW_EXPLANATIONS_NOT_VERIFIED","PHYSICAL_CASH_AND_CONTROL_BALANCES_NOT_VERIFIED"]}, {financialFinality:"FINAL",financialReconciliationComplete:true,financialLimitations:[]}]){
+   previewMetadata=metadata;await act(async()=>button("Προεπισκόπηση αναφοράς").click());
+   assert.match(document.body.textContent,/Προσωρινή αναφορά ταμείων/);assert.match(document.body.textContent,/Η προεπισκόπηση δεν πιστοποιεί ολοκληρωμένη οικονομική συμφωνία/);assert.match(document.body.textContent,/Ολοκληρωμένα δεδομένα βαρδιών/);
+  }
+  sourceReady=false;previewMetadata={sourceReadiness:"HOLD"};await act(async()=>button("Προεπισκόπηση αναφοράς").click());
+  assert.match(document.body.textContent,/Προσωρινή αναφορά ταμείων/);assert.match(document.body.textContent,/Αναμονή ολοκλήρωσης \/ ελέγχου/);assert.match(document.body.textContent,/Η τρίτη βάρδια παραμένει ανοιχτή/);assert.match(document.body.textContent,/ημέρα 2020-01-19/);assert.match(document.body.textContent,/Η προεπισκόπηση δεν πιστοποιεί ολοκληρωμένη οικονομική συμφωνία/);
+  sourceReady=true;previewMetadata={};
   await change('[aria-label="Έναρξη 2ης βάρδιας"]',"16");assert.equal(button("Προεπισκόπηση αναφοράς").disabled,true);assert.doesNotMatch(document.body.textContent,/EMPLOYEE FROM A/);
   await act(async()=>button("Ανανέωση ρυθμίσεων").click());assert.equal(document.querySelector('[aria-label="Έναρξη 2ης βάρδιας"]').value,"15");
   failSave=true;await act(async()=>document.querySelector(".report-settings-confirm input").click());await act(async()=>document.querySelector("form").dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true})));assert.match(document.querySelector('[role="alert"]').textContent,/άλλο παράθυρο/);failSave=false;

@@ -35,3 +35,7 @@ Current official https://render.com/docs/configure-environment-variables confirm
 ## Platform role compatibility — 18 October 2026
 
 Native bindings preserve the authenticated effective platform role separately from the compatibility `role:OWNER`. Delivery compares it against the current database user role before reconstructing platform flags for authorized-store resolution. Revocation/version/expiry/password and support-company fences still apply. Existing pre-fix Super Admin bindings require re-registration through explicit activation or an already opted-in app resume; they are not silently promoted. This is source regression coverage, not physical notification acceptance. No new APK is needed for this server-only change.
+
+## Observed connector deployment behavior — 18 October 2026
+
+The installed Render connector's `update_environment_variables` operation initiated an API deployment immediately after a merge-only flag update. This differs from the intended Save-only REST workflow. Do not use this connector operation to stage environment values without deploying. Future changes must wait for the exact merged main full CI and be coordinated as configuration deployments, or use a separately verified Save-only surface. Observed deployment dep-dbacvke7bikc73e5aud0 became live on3f429e2; exact health was verified. This is not a native registration/delivery PASS and is not a guarded deploy-hook receipt.
