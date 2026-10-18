@@ -41,7 +41,7 @@ public final class MainActivity extends Activity {
     private final ExecutorService worker = Executors.newFixedThreadPool(2);
     private final ChatApi api = new ChatApi();
     private final RequestEpoch epoch = new RequestEpoch();
-    private TokenVault vault;
+    private TokenVault vault, pendingTwoFactor;
     private String pushStore = "", pushCompany = "";
     private String token = "", challenge = "", view = "login", tab = "chat", photoBinding = "", photoToken = "";
     private JSONObject identity = new JSONObject(), selected;
@@ -69,7 +69,8 @@ public final class MainActivity extends Activity {
         super.onCreate(null); // Deliberately do not restore text fields or private saved view state.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         if (android.os.Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false);
-        vault = new TokenVault(this); token = vault.load();
+        vault = new TokenVault(this); pendingTwoFactor = TokenVault.pendingTwoFactor(this); token = vault.load();
+        if (token.isEmpty()) restoreTwoFactor(); else clearTwoFactor();
         receivePushIntent(getIntent());
         if (!token.isEmpty()) {
             try { identity = claims(token); if (identity.optLong("exp") * 1000L <= System.currentTimeMillis()) clearSession(); }
@@ -79,7 +80,7 @@ public final class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume(); foreground = true;
         if (!token.isEmpty() && NativePush.opted(this)) NativePush.register(this, token, ok -> {});
-        if (token.isEmpty()) loginScreen();
+        if (token.isEmpty()) { restoreTwoFactor(); loginScreen(); }
         else if (!pushStore.isEmpty()) stores();
         else if (selected != null) conversation();
         else stores();
@@ -140,13 +141,23 @@ public final class MainActivity extends Activity {
     private void navigate() { epoch.invalidate(); api.cancel(); busy = false; history = new JSONArray(); clearPhoto(); dismissImage(); hideKeyboard(); }
     private void accept(JSONObject result) throws Exception {
         if (result.optBoolean("setupRequired")) { status("Ολοκλήρωσε πρώτα το 2FA από τη συνήθη είσοδο Super Admin."); return; }
-        if (result.optBoolean("mfaRequired")) { challenge = result.getString("challengeToken"); loginScreen(); return; }
+        if (result.optBoolean("mfaRequired")) {
+            String nextChallenge = result.getString("challengeToken");
+            if (!TwoFactorChallenge.usable(nextChallenge, System.currentTimeMillis())) throw new IllegalArgumentException("Invalid 2FA challenge");
+            pendingTwoFactor.save(nextChallenge); challenge = nextChallenge; loginScreen(); return;
+        }
         JSONObject user = result.optJSONObject("user");
         if (user == null || user.optBoolean("mustChangePassword")) { status("Χρειάζεται αλλαγή προσωρινού κωδικού από το Backoffice."); return; }
         String next = result.getString("token"); JSONObject decoded = claims(next);
         if (!decoded.optString("tokenType").equals("BACKOFFICE_USER") && !decoded.optString("tokenType").equals("STORE_CHAT_OPERATOR")) throw new IllegalArgumentException();
-        NativePush.clearNotifications(this); vault.save(next); navigate(); token = next; identity = decoded; challenge = ""; selected = null; stores();
+        NativePush.clearNotifications(this); vault.save(next); navigate(); token = next; identity = decoded; clearTwoFactor(); selected = null; stores();
     }
+    private void restoreTwoFactor() {
+        String saved = pendingTwoFactor.load();
+        if (TwoFactorChallenge.usable(saved, System.currentTimeMillis())) challenge = saved;
+        else clearTwoFactor();
+    }
+    private void clearTwoFactor() { challenge = ""; pendingTwoFactor.clear(); }
     private void loginScreen() {
         view = "login"; layout("MyWorkStation Chat", "Οι συνομιλίες μένουν στον server");
         TextView heading = text(challenge.isEmpty() ? "Καλώς ήρθες" : "Επιβεβαίωση σύνδεσης", 28, INK); content.addView(heading);
@@ -156,13 +167,16 @@ public final class MainActivity extends Activity {
         if (challenge.isEmpty()) content.addView(email); content.addView(password);
         content.addView(button("Σύνδεση", () -> {
             if (busy) return;
+            if (!challenge.isEmpty() && !TwoFactorChallenge.usable(challenge, System.currentTimeMillis())) {
+                clearTwoFactor(); loginScreen(); status("Η επιβεβαίωση έληξε μετά από 5 λεπτά. Συνδέσου ξανά."); return;
+            }
             String value = password.getText().toString(); password.setText("");
             JSONObject body = challenge.isEmpty() ? object("email", email.getText().toString().trim(), "password", value, "deviceName", "MW Chat Android") : object("challengeToken", challenge, "code", value, "deviceName", "MW Chat Android");
             call(challenge.isEmpty() ? "/api/auth/login" : "/api/auth/2fa/verify", "POST", body, true, this::accept);
         }));
-        content.addView(button("Σύνδεση εργαζομένου με PIN", () -> { navigate(); challenge = ""; operatorEntry(); }));
-        if (!challenge.isEmpty()) content.addView(button("Άλλος λογαριασμός", () -> { challenge = ""; loginScreen(); }));
-        content.addView(text("Χωρίς τοπικό ιστορικό, αποθήκευση φωτογραφιών ή λήψεις. Η εφαρμογή θυμάται μόνο την ασφαλή σύνδεσή σου.", 14, MUTED));
+        content.addView(button("Σύνδεση εργαζομένου με PIN", () -> { navigate(); clearTwoFactor(); operatorEntry(); }));
+        if (!challenge.isEmpty()) content.addView(button("Άλλος λογαριασμός", () -> { navigate(); clearTwoFactor(); loginScreen(); }));
+        content.addView(text("Χωρίς τοπικό ιστορικό, αποθήκευση φωτογραφιών ή λήψεις. Κρατούνται κρυπτογραφημένα η σύνδεση και, προσωρινά, η επιβεβαίωση 2FA. Δεν αποθηκεύονται κωδικοί πρόσβασης ή 2FA.", 14, MUTED));
         content.addView(text("Δοκιμαστική έκδοση · Οι ειδοποιήσεις με κλειστή εφαρμογή δεν έχουν ακόμη συνδεθεί.", 14, MUTED));
     }
     private void operatorEntry() {
@@ -427,7 +441,7 @@ public final class MainActivity extends Activity {
         clearSession(); loginScreen();
         worker.execute(() -> { try { api.json(path, "POST", object(), captured); } catch (Exception ignored) { /* Never retain content or credential to retry later. */ } });
     }
-    private void clearSession() { NativePush.logout(this); pushStore = ""; pushCompany = ""; navigate(); token = ""; identity = new JSONObject(); selected = null; challenge = ""; uncertainStoreId = ""; try { vault.clear(); } catch (Exception ignored) { finishAndRemoveTask(); } }
+    private void clearSession() { NativePush.logout(this); pushStore = ""; pushCompany = ""; navigate(); token = ""; identity = new JSONObject(); selected = null; uncertainStoreId = ""; try { clearTwoFactor(); vault.clear(); } catch (Exception ignored) { finishAndRemoveTask(); } }
     private void enableNativePush() {
         if (busy || token.isEmpty()) return;
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
