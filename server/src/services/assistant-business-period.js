@@ -86,11 +86,13 @@ function resolve(q,today){
 
 // A period-only user turn can inherit a topic, never permissions or another
 // store. Unknown words keep it outside this deterministic follow-up path.
+export function businessPeriodRemainder(question){
+ return norm(question).replace(new RegExp(datePattern,'gu'),' ')
+  .replace(/((?:τελευταιες|τελευταιων) )\d+(?= (?:ημερες|ημερων|μερες|μερων)(?:\s|$))/g,'$1');
+}
 export function isBusinessPeriodFollowup(question){
  const q=norm(question);
- const clean=q.replace(new RegExp(datePattern,'gu'),' ')
-  .replace(/((?:τελευταιες|τελευταιων) )\d+(?= (?:ημερες|ημερων|μερες|μερων)(?:\s|$))/g,'$1')
-  .replace(/[\s.,;:!?/–-]/g,' ').split(/\s+/).filter(Boolean);
+ const clean=businessPeriodRemainder(q).replace(/[\s.,;:!?/–-]/g,' ').split(/\s+/).filter(Boolean);
  const words=new Set('και για το την τον τη τις των στις σε απο εως μεχρι αυτη αυτην αυτης αυτον αυτο αυτου αυτες αυτων τρεχουσα τρεχοντα τρεχοντος τρεχων προηγουμενη προηγουμενο προηγουμενου προηγουμενης προηγουμενες περασμενη περασμενο περασμενου περασμενης εβδομαδα εβδομαδας μηνα μηνας μηνος μηνο μηνες χρονια χρονο χρονου ετος ετους φετος περσι περυσι τελευταιες τελευταιων ημερες ημερων μερες μερων'.split(' '));
  return Boolean(businessPeriodResolution(q).mentioned)&&clean.every(w=>words.has(w));
 }
