@@ -1,4 +1,4 @@
-import {businessQuestionPeriod,businessPeriodResolution} from './assistant-business-period.js';
+import {businessQuestionPeriod,businessPeriodResolution,businessPeriodRemainder} from './assistant-business-period.js';
 export {businessQuestionPeriod} from './assistant-business-period.js';
 import {z} from 'zod';
 import {prisma} from '../prisma.js';
@@ -34,9 +34,15 @@ export function directTransferRequest(question,{now=new Date()}={}){
  // An exact format-only continuation adds no record filter. Strip it only
  // from the current turn; inherited actor/status text must still be checked.
  const current=/^(?:σε\s+)?(?:excel|xlsx|csv|pdf|word|docx)[.!;?]*$/i.test(normalizeBusinessText(parts.current).trim())?'':parts.current;
- const q=normalizeBusinessText([current,parts.topic,parts.period].join(' ')).replace(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|[^α-ωa-z\s]/g,' ');
+ const full=normalizeBusinessText([current,parts.topic,parts.period].join(' '));
+ const q=full.replace(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|[^α-ωa-z\s]/g,' ');
  const permitted=new Set('ελενξε ελεγξε δειξε δωσε βγαλε μου ποσες ποσους ποσα ποσο μεταφορα μεταφορες ποσου ειχαμε εγιναν εχουν γινει στον στην στο προς απο ιδιοκτητη ιδιοκτητης τον το την οι τις στις σε για εως μεχρι και σημερα χθες προχθες συνολο λιστα αναφορα αυτη αυτης αυτον αυτο αυτου τρεχουσα τρεχοντα τρεχοντος προηγουμενη προηγουμενο προηγουμενου προηγουμενης περασμενη περασμενο περασμενου περασμενης εβδομαδα εβδομαδας μηνα μηνας μηνο χρονια χρονο χρονου ετος ετους φετος περσι περυσι τελευταιες τελευταιων ημερες ημερων μερες μερων'.split(' '));
- return q.split(/\s+/).filter(Boolean).every(w=>permitted.has(w))?{domain,...period,query:null,status:null}:null;
+ if(!q.split(/\s+/).filter(Boolean).every(w=>permitted.has(w)))return null;
+ // An otherwise unfiltered request has no safe interpretation for a bare
+ // number outside its dates/day count. Ask instead of erasing that filter or
+ // allowing a model to invent query:null for the ambiguous shorthand.
+ if(/\p{N}/u.test(businessPeriodRemainder(full)))fail(422,'Υπάρχει αριθμός εκτός της περιόδου. Διευκρίνισε αν είναι κωδικός, ποσό ή φίλτρο χειριστή και γράψε την ακριβή περιγραφή.');
+ return {domain,...period,query:null,status:null};
 }
 // Only a complete current-turn request with one literal quoted full name.
 // Other filters and inherited context must keep the existing checked path.
