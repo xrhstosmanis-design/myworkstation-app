@@ -13,20 +13,26 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
-/** Stores only the authenticated encrypted connection token; push SDK technical state is separate. */
+/** Separate encrypted connection and short-lived 2FA challenge records. Never passwords or OTPs. */
 final class TokenVault {
     private static final String ALIAS = "mws-chat-session-v1";
     private final File file;
-    TokenVault(Context context) { file = new File(context.getNoBackupFilesDir(), "connection.enc"); }
+    private final String alias;
+    TokenVault(Context context) { this(context, false); }
+    static TokenVault pendingTwoFactor(Context context) { return new TokenVault(context, true); }
+    private TokenVault(Context context, boolean pending) {
+        file = new File(context.getNoBackupFilesDir(), pending ? "pending-2fa.enc" : "connection.enc");
+        alias = pending ? "mws-chat-pending-2fa-v1" : ALIAS;
+    }
     private SecretKey key() throws Exception {
         KeyStore store = KeyStore.getInstance("AndroidKeyStore"); store.load(null);
-        if (!store.containsAlias(ALIAS)) {
+        if (!store.containsAlias(alias)) {
             KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
-            generator.init(new KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+            generator.init(new KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build());
             generator.generateKey();
         }
-        return (SecretKey) store.getKey(ALIAS, null);
+        return (SecretKey) store.getKey(alias, null);
     }
     void save(String token) throws Exception {
         clear();
