@@ -87,3 +87,16 @@ test('native approved adjustments, credit documents and corrupt movement ownersh
   await assert.rejects(reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s'),e=>e.status===409);assert.equal(await f.snapshot(),before);
  }finally{await f.close()}}
 });
+
+test('native registered HTTP reopen routes enforce actor/scope and perform one confirmed transition',{skip:!isolatedInvoiceDb()},async()=>{
+ const f=await fixture();let server;try{
+  await f.finalize();const {default:express,Router}=await import('express');const src=(await readFile(new URL('../src/routes/purchase-order-reopen.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
+  const router=new Function('Router','prisma','previewPurchaseOrderReopen','reopenPurchaseOrder',src)(Router,f.db,reopen.previewPurchaseOrderReopen,reopen.reopenPurchaseOrder);
+  const app=express();app.use(express.json());app.use((req,res,next)=>{req.user=req.headers['x-fixture-role']==='operator'?{...actor,tokenType:'STORE_OPERATOR'}:actor;next()});app.use('/api/purchase-orders',router);app.use((err,req,res,next)=>res.status(err.status||400).json({error:err.message}));
+  server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const url=`http://127.0.0.1:${server.address().port}/api/purchase-orders/pos`;
+  const denied=await fetch(url+'/reopen-preview?storeId=s',{headers:{'x-fixture-role':'operator'}});assert.equal(denied.status,403);
+  assert.equal((await fetch(url+'/reopen-preview?storeId=control')).status,404);
+  const response=await fetch(url+'/reopen-preview?storeId=s');assert.equal(response.status,200);const p=await response.json();assert.equal(await f.stock(),13);
+  const opened=await fetch(url+'/reopen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(confirmed(p))});assert.equal(opened.status,200);assert.equal((await opened.json()).status,'NEW');assert.equal(await f.stock(),10);
+ }finally{if(server)await new Promise(resolve=>server.close(resolve));await f.close()}
+});
