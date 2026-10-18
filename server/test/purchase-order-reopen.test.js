@@ -27,8 +27,10 @@ async function fixture(){
  const posting=await handlers('../src/routes/purchase-order-posting-guard.js',f.db);
  const packHandlers=await handlers('../src/routes/purchase-order-unresolved-guard.js',f.db);
  // Load the actual pack function from the same runtime route, not a mirrored calculation.
- const packSrc=(await readFile(new URL('../src/routes/purchase-order-unresolved-guard.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return applyPackStockCorrection;');
- const pack=new Function('Router','prisma','crypto','purchaseOrderTotalReconciliationGuard','lockInvoiceStore',packSrc)(()=>({use(){},patch(){}}),f.db,crypto,()=>{},common.lockInvoiceStore);
+ const packSrc=(await readFile(new URL('../src/routes/purchase-order-unresolved-guard.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return {applyPackStockCorrection,ensureSchema};');
+ const packRoute=new Function('Router','prisma','crypto','purchaseOrderTotalReconciliationGuard','lockInvoiceStore',packSrc)(()=>({use(){},patch(){}}),f.db,crypto,()=>{},common.lockInvoiceStore);
+ // Real middleware prepares these columns before posting; avoid altering a prepared SELECT * result between cycles.
+ await packRoute.ensureSchema();const pack=packRoute.applyPackStockCorrection;
  const patch=body=>invoke(posting['PATCH /:orderId'],{orderId:'pos'},body);
  const finalize=async(version=0)=>{const r=await patch({status:'FINAL',expectedReopenVersion:version});assert.ifError(r.failure);await pack({orderId:'pos',companyId:'c',userId:'owner',userName:'Isolated',expectedReopenVersion:version});assert.ifError((await patch({status:'INVOICED',expectedReopenVersion:version})).failure)};
  const stock=async()=>Number((await f.db.$queryRawUnsafe(`SELECT "currentStock" FROM "StoreProduct" WHERE "id"='stock'`))[0].currentStock);
