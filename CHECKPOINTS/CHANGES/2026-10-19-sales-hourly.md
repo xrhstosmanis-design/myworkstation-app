@@ -1,0 +1,6 @@
+## 19/10/2026 — COORD PHASE4 SOURCE PREPARED / AWAITING FULL CI AND LAB
+
+Κεντρικός συντονισμός #2704–#2707, claim #2794 merged dd9b357563f705a9d7f6260571a27c78146fa110 πριν από code. Προαιρετική ωριαία κίνηση canonical SQL με explicit Athens calendar και επιλεγμένο ενεργό κατάστημα, distinct baskets/reversals, signed ποσότητες ανά αρχική μονάδα, DST UTC buckets/offsets, πλήρη counts πριν το product cap, bounded metadata και 100 ώρες ανά UI σελίδα. Διατηρείται η μονάδα canonical product στο assistant matched projection, μαζί με null/unknown/legacy missing semantics. Καμία σύσταση στελέχωσης ή αλλαγή product CSV/money/default report.
+
+Ενιαίος τοπικός έλεγχος: 43 PASS / 0 FAIL / 0 SKIP. Πραγματικό production SQL σε απομονωμένο PostgreSQL-WASM και mounted Express router PASS, περιλαμβάνει 10001 προϊόντα, DST, 33-unit refusal και read-only fixture digests. Ο native Prisma PostgreSQL wrapper τοπικά SKIP λόγω απουσίας DATABASE_URL· υποχρεωτικός full CI πριν merge/release. Browser acceptance παραμένει blocked από ασφαλή αδυναμία επαναφοράς credential state, χωρίς bypass. Κανένα νέο LAB PASS και καμία οικονομική/stock/fiscal/settings/SMTP πράξη. Τα αρχικά14 και προστατευμένα PASS παραμένουν όπως καταγεγραμμένα. Full CI/build/ordinary release και συγκεντρωτικό τελικό receipt ακολουθούν.
+
