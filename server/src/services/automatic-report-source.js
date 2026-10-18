@@ -36,7 +36,8 @@ export async function readAutomaticCashPreview(db,{actorId,companyId,storeId,day
         AND ("openedAt">=${period.from} OR "closedAt">${period.from} OR "closedAt" IS NULL OR "status"<>'CLOSED')
       ORDER BY "openedAt","id" LIMIT ${sourceLimit+1}`;
     const dayReadiness=[];
-    for(let offset=0;offset<(frequency==="WEEKLY"?7:1);offset++){
+    const periodDays=Math.round((Date.parse(period.toDay+"T12:00:00Z")-Date.parse(period.fromDay+"T12:00:00Z"))/86400000)+1;
+    for(let offset=0;offset<periodDays;offset++){
       const businessDay=reportDayOffset(period.fromDay,offset),bounds=reportBusinessPeriod(businessDay,businessDay,settings);
       // Preserve the daily reader's carry-in ambiguity guard on every day.
       const dailyRows=frequency==="DAILY"?rows:rows.filter(row=>{
@@ -45,8 +46,8 @@ export async function readAutomaticCashPreview(db,{actorId,companyId,storeId,day
       });
       dayReadiness.push({day:businessDay,...dailyCashReportReadiness(dailyRows,{...settings,day:businessDay},now)});
     }
-    const holds=dayReadiness.flatMap(result=>result.holds.map(hold=>frequency==="WEEKLY"?{...hold,day:result.day}:hold));
-    if(frequency==="WEEKLY"){
+    const holds=dayReadiness.flatMap(result=>result.holds.map(hold=>frequency!=="DAILY"?{...hold,day:result.day}:hold));
+    if(frequency!=="DAILY"){
       const ids=new Set();
       for(const row of rows){
         if(!row.id||ids.has(row.id)||row.companyId!==companyId||row.storeId!==storeId||new Date(row.openedAt)>=period.to)holds.push({code:"SOURCE_SCOPE_OR_ID_INVALID"});
@@ -70,7 +71,7 @@ export async function readAutomaticCashPreview(db,{actorId,companyId,storeId,day
     // snapshot has totals; original employee amounts always remain unadjusted.
     const groups=ready?summarizeCashVariances(rows.map(row=>({...row,cashChain:row.terminalPos.toUpperCase().includes(rule.deliveryTerminalPattern.toUpperCase())?"DELIVERY":"STORE"})),settings):null;
     const sourceFingerprint=createHash("sha256").update(JSON.stringify({companyId,storeId,day,frequency,period,configuration,rule,rows})).digest("hex");
-    return {kind:frequency==="WEEKLY"?"WEEKLY_CASH_PREVIEW":"DAILY_CASH_PREVIEW",frequency,store,period,ready,holds,dayReadiness,sourceCount:rows.length,
+    return {kind:`${frequency}_CASH_PREVIEW`,frequency,store,period,ready,holds,dayReadiness,sourceCount:rows.length,
       complete:rows.length<=sourceLimit,groups,sourceFingerprint,generatedAt:new Date(now),
       rule:rule?{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled}:null,
       settingsVersion:settingsVersion??null,employeeLiabilityAdjusted:false,deliveryStatus:"PREVIEW_ONLY",

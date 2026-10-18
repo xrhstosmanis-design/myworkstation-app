@@ -19,7 +19,7 @@ test("weekly period anchors Monday through next Monday at each store's 06/07 sta
   const p=cashPreviewPeriod(day,"WEEKLY",{dayStartHour:hour});assert.equal(p.fromDay,"2026-10-12");assert.equal(p.toDay,"2026-10-18");assert.equal(p.from.getTime(),reportWallTime("2026-10-12",hour).getTime());assert.equal(p.to.getTime(),reportWallTime("2026-10-19",hour).getTime());
  }
  const p=cashPreviewPeriod("2026-10-25","WEEKLY");assert.equal((p.to-p.from)/3600000,169);
- assert.throws(()=>cashPreviewPeriod("2026-10-18","MONTHLY"));assert.throws(()=>cashPreviewPeriod("2026-02-30","WEEKLY"));
+ assert.throws(()=>cashPreviewPeriod("2026-10-18","YEARLY"));assert.throws(()=>cashPreviewPeriod("2026-02-30","WEEKLY"));
 });
 test("one weekly snapshot checks all seven days, preserves day/terminal/delivery amounts and performs no writes",async()=>{
  const rows=week(),before=JSON.stringify(rows),f=fixture(rows),r=await readAutomaticCashPreview(f.db,args());
