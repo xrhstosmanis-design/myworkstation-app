@@ -18,7 +18,7 @@ test("catalog refresh keeps the BackOffice workspace mounted", () => {
 
 test("duplicate open events cannot reset an already open BackOffice", () => {
   assert.match(launcher, /if\(visibleRef\.current&&!operations\)return;\s*\/\/ Set it synchronously[\s\S]*?visibleRef\.current=true;/);
-  assert.match(launcher, /onClick=\{\(\)=>\{visibleRef\.current=false;setParametersOpen\(false\);setVisible\(false\)\}\}/);
+  assert.match(launcher, /onClick=\{\(\)=>\{if\(wholesaleLockRef\.current\)return;visibleRef\.current=false;setParametersOpen\(false\);setVisible\(false\)\}\}/);
 });
 
 

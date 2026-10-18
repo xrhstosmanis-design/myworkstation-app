@@ -4,6 +4,9 @@ import crypto from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import express, {Router} from 'express';
 import {z} from 'zod';
+import {Prisma} from '@prisma/client';
+import {assertWholesaleManager,buildWholesaleQuote,wholesaleError} from '../src/lib/wholesale-pricing.js';
+import {createWholesaleOrder} from '../src/lib/wholesale-orders.js';
 
 const source=(await readFile(new URL('../src/routes/wholesale-b2b.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/^export default .*;\n/gm,'');
 const bootstrapSource=(await readFile(new URL('../src/wholesale-b2b-bootstrap.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export async function','async function');
@@ -12,7 +15,7 @@ const owner={id:'owner-a',companyId:'company-a',role:'OWNER'};
 // Execute the complete real router registration with Express. Only the external
 // auth boundary and database/bootstrap dependencies are injected.
 async function httpRouter(db,bootstrap=async()=>{}){
-  const router=new Function('crypto','Router','z','prisma','ensureWholesaleSchema',source+'\nreturn router;')(crypto,Router,z,db,bootstrap);
+  const router=new Function('crypto','Router','z','prisma','ensureWholesaleSchema','Prisma','assertWholesaleManager','buildWholesaleQuote','wholesaleError','createWholesaleOrder',source+'\nreturn router;')(crypto,Router,z,db,bootstrap,Prisma,assertWholesaleManager,buildWholesaleQuote,wholesaleError,createWholesaleOrder);
   const app=express();app.use(express.json());
   app.use((req,res,next)=>{req.user={...owner,role:req.headers['x-test-role']||owner.role,tokenType:req.headers['x-test-token'],companyId:req.headers['x-test-company']||owner.companyId};next()});
   app.use('/api/wholesale',router);
@@ -103,6 +106,7 @@ test('native PostgreSQL registered wholesale router enforces tenant readback, as
   try{
     await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
     await db.$executeRawUnsafe('CREATE TABLE "Company" ("id" TEXT PRIMARY KEY)');
+    await db.$executeRawUnsafe('CREATE TABLE "Store" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id"),"active" BOOLEAN NOT NULL DEFAULT true)');
     await db.$executeRawUnsafe('CREATE TABLE "Product" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id"),"sku" TEXT,"name" TEXT NOT NULL,"active" BOOLEAN NOT NULL DEFAULT true)');
     await db.$executeRawUnsafe('CREATE TABLE "StockMovement" ("id" TEXT PRIMARY KEY,"quantity" NUMERIC)');
     await db.$executeRawUnsafe('CREATE TABLE "StoreTransaction" ("id" TEXT PRIMARY KEY,"amount" NUMERIC)');

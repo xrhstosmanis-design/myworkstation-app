@@ -1,5 +1,9 @@
 # Wholesale core: implementation specification
 
+## Current implementation — 18 October 2026
+
+The shared quote/SUBMITTED-request slice is implemented for internal backoffice review, pending full CI/native PostgreSQL and hosted/LAB acceptance. ClaimPR2691/CI39116588681 merged3a2835bd before source. Authoritative pricing requires explicit NET/GROSS, selected store and active membership; atomic immutable order snapshots support bounded same-key retries without financial/stock/fiscal posting. Mounted UI preserves unresolved body/key and locks its own navigation. No offline/reload/crash recovery is implemented. The B2B customer site, field-sales identity/application and standalone packaging are still OPEN. Historical planning and first-release evidence below are retained as dated context; this entry is current. See CHECKPOINTS/CHANGES/2026-10-18-wholesale-orders-core.md.
+
 Started 2026-10-17 23:58 Europe/Athens. Documentation only; no implementation or operational acceptance is asserted.
 
 ## Status and execution gate

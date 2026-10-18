@@ -1,4 +1,4 @@
-import React,{useEffect,useRef,useState} from "react";
+import React,{useCallback,useEffect,useRef,useState} from "react";
 import {Boxes,Globe2,Maximize2,Minimize2,Settings2,ShoppingBag,Utensils,X} from "lucide-react";
 import CommerceHub from "./CommerceHub.jsx";
 import KioskStyleProductCenterWithStock from "./KioskStyleProductCenterWithStock.jsx";
@@ -16,7 +16,7 @@ async function request(path,options={}){
   const token=localStorage.getItem("token");
   const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.error||`Σφάλμα ${response.status}`);
+  if(!response.ok){const error=new Error(data.error||`Σφάλμα ${response.status}`);error.status=response.status;error.code=data.code;error.details=data.details;throw error;}
   return data;
 }
 const readStored=key=>{try{return JSON.parse(localStorage.getItem(key)||"null")}catch{return null}};
@@ -44,6 +44,9 @@ export default function CommerceLauncher(){
   const supportStoreFromUrl=new URLSearchParams(window.location.search).get("supportStore")||"";
   const [supportStoreId,setSupportStoreId]=useState(supportStoreFromUrl);
   const openRequestRef=useRef(0);
+  const wholesaleLockRef=useRef(false);
+  const [wholesaleSubmissionLocked,setWholesaleSubmissionLocked]=useState(false);
+  const lockWholesaleSubmission=useCallback(locked=>{wholesaleLockRef.current=Boolean(locked);setWholesaleSubmissionLocked(Boolean(locked))},[]);
   const [entryLoading,setEntryLoading]=useState(false);
   const [entryError,setEntryError]=useState("");
   const [visible,setVisible]=useState(false);
@@ -73,6 +76,7 @@ export default function CommerceLauncher(){
   },[visible]);
   useEffect(()=>{visibleRef.current=visible},[visible]);
   const open=async(target)=>{
+    if(wholesaleLockRef.current)return;
     const operations=target?.view==="operations";
     const requestedStoreId=typeof target?.storeId==="string"?target.storeId.trim():"";
     // Some shell controls dispatch the opening event more than once.  Never
@@ -119,25 +123,27 @@ export default function CommerceLauncher(){
     const selector=document.querySelector(".commerce-hub > .panel label select");
     setInventoryStoreId(selector?.value||stores[0]?.id||"");setMode("inventory");
   };
-  if(!authenticated)return null;
+  // Keep an unresolved request mounted if authentication expires mid-flight.
+  // Its original key/body must survive login recovery within this page.
+  if(!authenticated&&!wholesaleSubmissionLocked)return null;
   return <>
     {visible&&<div className={`commerce-overlay ${minimized?"window-minimized":""}`}><section onClickCapture={interceptWarehouse} className={`commerce-shell ${maximized?"window-maximized":""} ${minimized?"window-minimized":""}`}>
-      <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation Κεντρική Διαχείριση</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" onClick={()=>{setMinimized(true);setMaximized(false);setParametersOpen(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" onClick={()=>{visibleRef.current=false;setParametersOpen(false);setVisible(false)}}><X/></button></div></div>
+      <div className="commerce-window-bar" onDoubleClick={toggleMax}><strong>MyWorkStation Κεντρική Διαχείριση</strong><div className="commerce-window-controls"><button title="Ελαχιστοποίηση" disabled={wholesaleSubmissionLocked} onClick={()=>{if(wholesaleLockRef.current)return;setMinimized(true);setMaximized(false);setParametersOpen(false)}}><Minimize2/></button><button title="Πλήρης οθόνη / επαναφορά" onClick={toggleMax}><Maximize2/></button><button title="Κλείσιμο" disabled={wholesaleSubmissionLocked} onClick={()=>{if(wholesaleLockRef.current)return;visibleRef.current=false;setParametersOpen(false);setVisible(false)}}><X/></button></div></div>
       {!minimized&&<>
       {entryLoading?<p role="status">Φόρτωση λειτουργιών καταστήματος…</p>:entryError?<p role="alert">{entryError}</p>:<>
       <div className="commerce-mode-switch">
-        <button className={mode==="products"?"active":""} onClick={()=>setMode("products")}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
-        <button className={mode==="legacy"||mode==="inventory"?"active":""} onClick={()=>{setMode("legacy");setLegacyView("operations")}}>Λοιπές εμπορικές λειτουργίες</button>
+        <button className={mode==="products"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setMode("products")}}><Boxes/>Προϊόντα, Τιμές, Προσφορές & Απογραφή</button>
+        <button className={mode==="legacy"||mode==="inventory"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(wholesaleLockRef.current)return;setMode("legacy");setLegacyView("operations")}}>Λοιπές εμπορικές λειτουργίες</button>
         {activeModules.includes("ADVANCED_ONLINE_PRODUCT_SEARCH")&&<button onClick={()=>setInternetSearchOpen(true)}><Globe2/>Αναζήτηση προϊόντων στο Internet</button>}
       </div>
       {mode==="products"?<KioskStyleProductCenterWithStock api={request} stores={stores} activeStoreId={supportStoreId} onOpenFullProduct={product=>{setInventoryInitialProduct(product);setInventoryStoreId(product.storeId||supportStoreId||stores[0]?.id||"");setMode("inventory")}}/>:mode==="inventory"?<InventoryArchivePanel api={request} stores={stores} storeId={inventoryStoreId||stores[0]?.id||""} initialProduct={inventoryInitialProduct} onInitialProductHandled={()=>setInventoryInitialProduct(null)} onClose={()=>{setInventoryInitialProduct(null);setMode("products")}}/>:<>
         <div className="commerce-mode-switch">
-          <button className={legacyView==="operations"?"active":""} onClick={()=>setLegacyView("operations")}>Εμπορικές λειτουργίες</button>
-          <button className={legacyView==="online"?"active":""} onClick={()=>setLegacyView("online")}><ShoppingBag/>Online Παραγγελίες</button>
-          <button className={legacyView==="wholesale"?"active":""} onClick={()=>setLegacyView("wholesale")}>Χονδρική / B2B</button>
-          {activeModules.includes("TABLE_SERVICE")&&<button className={legacyView==="tables"?"active":""} onClick={()=>setLegacyView("tables")}><Utensils/>Τραπέζια / Σερβιτόροι</button>}
+          <button className={legacyView==="operations"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("operations")}}>Εμπορικές λειτουργίες</button>
+          <button className={legacyView==="online"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("online")}}><ShoppingBag/>Online Παραγγελίες</button>
+          <button className={legacyView==="wholesale"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("wholesale")}}>Χονδρική / B2B</button>
+          {activeModules.includes("TABLE_SERVICE")&&<button className={legacyView==="tables"?"active":""} disabled={wholesaleSubmissionLocked} onClick={()=>{if(!wholesaleLockRef.current)setLegacyView("tables")}}><Utensils/>Τραπέζια / Σερβιτόροι</button>}
         </div>
-        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="wholesale"?<WholesaleB2BPanel api={request}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub key={supportStoreId} api={request} stores={stores} activeStoreId={supportStoreId}/>}
+        {legacyView==="online"?<OnlineOrdersBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:legacyView==="wholesale"?<WholesaleB2BPanel api={request} stores={stores} activeStoreId={supportStoreId} onSubmissionLockChange={lockWholesaleSubmission}/>:legacyView==="tables"&&activeModules.includes("TABLE_SERVICE")?<TableServiceBackofficePanel api={request} stores={stores} activeStoreId={supportStoreId}/>:<CommerceHub key={supportStoreId} api={request} stores={stores} activeStoreId={supportStoreId}/>}
       </>}
       <SmartProductEntryBridge api={request} stores={stores}/>
       {canManageParameters&&<button className="commerce-parameters-gear" title="Παράμετροι" aria-label="Παράμετροι" onClick={()=>setParametersOpen(true)}><Settings2/></button>}
