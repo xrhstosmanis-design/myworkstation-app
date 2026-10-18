@@ -1,3 +1,7 @@
+## Latest limited LIVE UI observation - 18 October 2026 21:23 Athens
+
+Existing SuperAdmin/LAB company license shows Χονδρική B2B inactive. In the actual LAB BackOffice, the unified entry and both obsolete split entries are absent (visible-DOM counts0/0/0). Only this inactive-module UI behavior has limited LIVE PASS; see docs/manual/wholesale/PASS.md. No grant, business data or source was changed. Active-module/Owner/seller/site functional acceptance remains OPEN; temporary LAB grant and restoration require explicit action-time confirmation before that positive test. Earlier native CI/release receipts below retain their separate scope.
+
 # MyWorkStation Wholesale Suite
 
 ## Current release: unified paid workspace - 18 October 2026
