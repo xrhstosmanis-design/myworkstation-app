@@ -27,12 +27,13 @@ test("native automatic cash reader uses selected scope, overnight opening bounda
   const snapshot=()=>db.$queryRaw`SELECT * FROM "CashShiftSession" ORDER BY "id"`;
   const before=await snapshot(),report=await readAutomaticDailyCashPreview(db,args);
   assert.equal(report.ready,true);assert.equal(report.sourceCount,4);
+  assert.equal(report.sourceReadiness,"READY");assert.equal(report.financialFinality,"PROVISIONAL");assert.equal(report.financialReconciliationComplete,false);assert.deepEqual(report.financialLimitations,["DOCUMENT_PAYMENT_RECONCILIATION_NOT_VERIFIED","CASH_REVIEW_EXPLANATIONS_NOT_VERIFIED","PHYSICAL_CASH_AND_CONTROL_BALANCES_NOT_VERIFIED"]);
   const store=report.groups.find(g=>g.cashChain==="STORE"),delivery=report.groups.find(g=>g.cashChain==="DELIVERY");
   assert.deepEqual([store.originalShortage,store.originalSurplus,store.offset,store.netVariance],[10,8,8,-2]);assert.equal(delivery.netVariance,20);
   assert.deepEqual(await snapshot(),before);
   for(const change of [{actorId:"owner"},{companyId:"x"},{storeId:"inactive"},{storeId:"other"}])await assert.rejects(readAutomaticDailyCashPreview(db,{...args,...change}),e=>[403,404].includes(e.status));
   await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='OPEN',"closedAt"=NULL,"variance"=NULL WHERE "id"='night'`;
-  const open=await readAutomaticDailyCashPreview(db,args);assert.equal(open.ready,false);assert.equal(open.groups,null);assert.ok(open.holds.some(h=>h.code==="THIRD_SHIFT_OPEN"));
+  const open=await readAutomaticDailyCashPreview(db,args);assert.equal(open.ready,false);assert.equal(open.groups,null);assert.equal(open.sourceReadiness,"HOLD");assert.equal(open.financialFinality,"PROVISIONAL");assert.equal(open.financialReconciliationComplete,false);assert.deepEqual(open.financialLimitations,report.financialLimitations);assert.ok(open.holds.some(h=>h.code==="THIRD_SHIFT_OPEN"));
   await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='CLOSED',"closedAt"=${new Date("2026-10-16T07:00:00+03:00")},"variance"=0 WHERE "id"='night'`;
   await insert("carried","c","s","MAIN","2026-10-14T23:00:00+03:00",null,null,"OPEN");
   const carried=await readAutomaticDailyCashPreview(db,args);assert.equal(carried.ready,false);assert.ok(carried.holds.some(h=>h.code==="SOURCE_SCOPE_OR_ID_INVALID"));

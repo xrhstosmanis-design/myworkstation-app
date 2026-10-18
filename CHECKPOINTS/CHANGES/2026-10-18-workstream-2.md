@@ -1,3 +1,6 @@
+## Native CI continuation and central integration
+Initial native/full server CI39134938371 passed3056/0/0, then unrelated unchanged POS Chromium Target.createTarget timed out. Failed job retry requested; branch now rebased to preserve current main and WS1/WS4. No weakening of browser checks. Exact final-head CI required.
+
 # Workstream 2 / #2705 - bounded source prepared
 
 Owner: central coordinator codex/central-four-streams-20261018; implementation branch codex/ws2-supplier-orders-20261018. Owner-directed transfer merged before code in #2725/main a756f29bcd6051eeef57ae12ded992b68ff4fec9, exacthead3bbaf0ac CI39134361558 SUCCESS. Prior diagnostics #2716 and all limited PASS preserved.
