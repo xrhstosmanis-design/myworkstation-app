@@ -1,0 +1,252 @@
+{
+  "scope": "central-four-streams-phase3",
+  "issues": [
+    2704,
+    2705,
+    2706,
+    2707
+  ],
+  "dateAthens": "2026-10-18",
+  "coordinator": "codex/central-four-streams-20261018",
+  "claim": {
+    "pr": 2780,
+    "head": "8bc081c15186e870238a3dbbf487b472ee403c0a",
+    "ci": 39163479019,
+    "merge": "98e9c06c2e3f4f27496005699fd18f908490b2f0"
+  },
+  "source": {
+    "integrationPR": 2785,
+    "head": "805fe6cdc2d1484cfab4bf871ef225cdd897b7ca",
+    "merge": "22a4562d73f50d7a2d55a0b9dfce41f44e1f1a44",
+    "strategy": "All four separately scoped commits merged together preserving ancestry; GitHub automatically marked all source PRs merged.",
+    "prs": [
+      {
+        "stream": "WS4",
+        "pr": 2782,
+        "head": "75bd71014deb6e6268f4b5ddd1dc49dbb9649f09",
+        "ci": 39163711966,
+        "job": 117782324236,
+        "pass": 3196,
+        "fail": 0,
+        "skip": 0,
+        "backupPass": 6
+      },
+      {
+        "stream": "WS3",
+        "pr": 2783,
+        "head": "825dac78acf4b897f03819173220a5a0ae2ac486",
+        "ci": 39163744886,
+        "job": 117782414835,
+        "pass": 3201,
+        "fail": 0,
+        "skip": 0,
+        "backupPass": 6
+      },
+      {
+        "stream": "WS2",
+        "pr": 2784,
+        "head": "7d6c3b55a000dd9a7d170100792bce9bf6c66f7e",
+        "ci": 39163834120,
+        "job": 117782648274,
+        "pass": 3206,
+        "fail": 0,
+        "skip": 0,
+        "backupPass": 6
+      },
+      {
+        "stream": "WS1",
+        "pr": 2785,
+        "head": "805fe6cdc2d1484cfab4bf871ef225cdd897b7ca",
+        "ci": 39163863762,
+        "job": 117782736430,
+        "pass": 3209,
+        "fail": 0,
+        "skip": 0,
+        "backupPass": 6
+      }
+    ],
+    "files": [
+      {
+        "path": "server/src/services/automatic-report-policy.js",
+        "sha": "5c629092681a71aa34dc31c74842deca2744456a",
+        "baseSha": "8c7a1229a9dc4c93beeccac7ee80562de0aad7f6",
+        "kind": "runtime",
+        "worker": "ws1-employee"
+      },
+      {
+        "path": "server/src/services/automatic-report-source.js",
+        "sha": "ace4e508cfe8b6f831f9765fbcc4b5695038a6e7",
+        "baseSha": "cb64d30143fb8b4134f65377c5332f0fca4d5503",
+        "kind": "runtime",
+        "worker": "ws1-employee"
+      },
+      {
+        "path": "client/src/components/platform/AutomaticReportSettingsManager.jsx",
+        "sha": "d144eec354ac14440af6a9217dd988cf5f5ea6c1",
+        "baseSha": "fe3b243b51394a0ebc509b2fc004b8c957c436ce",
+        "kind": "runtime",
+        "worker": "ws1-employee"
+      },
+      {
+        "path": "server/test/automatic-report-monthly.test.js",
+        "sha": "10b6f6f04ab9d63da32a7d298343b418a43cb894",
+        "baseSha": "e781cd8641c2dd18cefb10e41cb75992748a8af7",
+        "kind": "test",
+        "worker": "ws1-employee"
+      },
+      {
+        "path": "server/test/automatic-report-settings-postgres.test.js",
+        "sha": "e06810db3f94a0b4e09f1eb4b91a3e2548a48c65",
+        "baseSha": "e5981170516007511c45c8abd987f5d83ead88cb",
+        "kind": "test",
+        "worker": "ws1-employee"
+      },
+      {
+        "path": "server/test/automatic-report-settings-mounted.test.js",
+        "sha": "5dad4c2d972f3f55ac88f27e317e4a03eaead329",
+        "baseSha": "c0c186031697b4f6ec7da959013244360e56224e",
+        "kind": "test",
+        "worker": "ws1-employee"
+      },
+      {
+        "path": "server/test/automatic-report-operator-summary.test.js",
+        "sha": "4e1ac0974af29da2f9217069ec41d112bd094dbb",
+        "baseSha": null,
+        "kind": "test",
+        "worker": "ws1-employee"
+      },
+      {
+        "path": "client/src/components/commerce/OrderSuggestionsPanel.jsx",
+        "sha": "c030361796864017a44d51f7c8457c8e38ffb8f3",
+        "baseSha": "ab9d7043a338deafcd6c46226d6b89cae6b191fb",
+        "kind": "runtime",
+        "worker": "ws2-csv"
+      },
+      {
+        "path": "client/src/components/commerce/supplier-order-proposal-export.js",
+        "sha": "4c1392a64c492227038a896713524317d30f32c2",
+        "baseSha": null,
+        "kind": "runtime",
+        "worker": "ws2-csv"
+      },
+      {
+        "path": "server/test/supplier-order-groups-ui.test.js",
+        "sha": "937568e53efa0be7b19ae3d868acf03d0bdb8b10",
+        "baseSha": "8f4118359f9b36800c1de790557da80ae8ea7e38",
+        "kind": "test",
+        "worker": "ws2-csv"
+      },
+      {
+        "path": "server/test/supplier-order-proposal-export.test.js",
+        "sha": "235640b621d4222c174dc3fe5d77e2d5f9bfeb49",
+        "baseSha": null,
+        "kind": "test",
+        "worker": "ws2-csv"
+      },
+      {
+        "path": "server/test/kiosk-report-navigation-races.test.js",
+        "sha": "ec5e15148906cdc575e5d469a246503143ec9ecf",
+        "baseSha": null,
+        "kind": "test",
+        "worker": "ws3-navigation"
+      },
+      {
+        "path": "server/src/services/owner-sales-tools.js",
+        "sha": "4b72e66d6df9380522f5199a89196cd066020ed0",
+        "baseSha": "d99acc192f553a742ece7fed58c4986f19dce93d",
+        "kind": "runtime",
+        "worker": "ws4-counts"
+      },
+      {
+        "path": "server/test/assistant-product-counts.test.js",
+        "sha": "b3b5225e52e619cd145412d76766c2669322bedb",
+        "baseSha": null,
+        "kind": "test",
+        "worker": "ws4-counts"
+      }
+    ],
+    "combinedMainCI": {
+      "id": 39164397817,
+      "job": 117784333710,
+      "status": "SUCCESS",
+      "pass": 3209,
+      "fail": 0,
+      "skip": 0,
+      "backupPass": 6
+    }
+  },
+  "local": {
+    "node": "20.20.2",
+    "combined": {
+      "total": 65,
+      "pass": 63,
+      "fail": 0,
+      "skip": 2,
+      "skipReason": "native database environment absent locally; required native CI executes these"
+    },
+    "frontendBuild": "PASS",
+    "tableServiceBundle": "PASS",
+    "independentReviews": "WS3 and WS4 reviewed WS1/WS2; no blocker",
+    "initialDiagnostic": "WS1 obsolete copy assertion updated for explicitly expanded monthly-summary scope; no existing financial/identity invariant weakened."
+  },
+  "beforeHealth": {
+    "at": "2026-10-18T20:34:42.849534+00:00",
+    "status": 200,
+    "ok": true,
+    "revision": "755ca8c0855b7c2c261a7281a5d89c89083a38cb",
+    "version": "0.22.0+kat-test-pos"
+  },
+  "limits": {
+    "hostedStatus": "AWAITING LAB",
+    "browser": "This runtime getState returned Browser observation is unavailable because native credential state cannot be safely resumed. No bypass or cookie/token extraction.",
+    "monthlyIdentity": "Recorded opening User only, not certified Employee/payroll/closer/liability",
+    "cash": "Original differences only, checked cents and separate chains; no per-person offset allocation or final financial reconciliation",
+    "supplier": "Approved-document frequency proxy only, current snapshot CSV; no physical-delivery certification/primary supplier persistence/order or email transmission",
+    "sales": "Actual Suite navigation race NOT REPRODUCED; new regression only, production runtime unchanged",
+    "assistant": "Only per-product distinct transaction count validation changed; signed/fractional quantities and monetary values retained",
+    "productionBusinessMutations": false,
+    "protectedTransactionsReplayed": false
+  },
+  "protectedEvidence": [
+    "daily/weekly HOLD and provisional scoped LAB PASS#2743",
+    "independent limited guidance/desktop PASS#2781",
+    "all existing invoice/corrections/payments/manual PASS with retained owners"
+  ],
+  "next": "Supported authenticated normal browser, one grouped read-only acceptance of monthly preview/available existing READY data, supplier screen and actual CSV, normal report/product source reconciliation. No new financial/store fixture or protected replay.",
+  "release": {
+    "revision": "22a4562d73f50d7a2d55a0b9dfce41f44e1f1a44",
+    "guardRun": 39164916610,
+    "guardJob": 117785761835,
+    "guardStatus": "SUCCESS",
+    "rollbackArtifact": 12149668395,
+    "deploy": {
+      "commit": {
+        "createdAt": "2026-10-18T20:40:40Z",
+        "id": "22a4562d73f50d7a2d55a0b9dfce41f44e1f1a44",
+        "message": "Merge pull request #2785 from xrhstosmanis-design/codex/ws1-monthly-operator-summary-20261018\n\nDeliver monthly operator totals, supplier proposal CSV and report evidence guards"
+      },
+      "createdAt": "2026-10-18T20:48:24.828039Z",
+      "finishedAt": "2026-10-18T20:50:08.213845Z",
+      "id": "dep-dbaj162jnfac73ftdt50",
+      "startedAt": "2026-10-18T20:48:24.798411Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-18T20:50:36.632035Z"
+    },
+    "all14FilesMatch": true,
+    "health": {
+      "at": "2026-10-18T20:50:54.882504+00:00",
+      "status": 200,
+      "ok": true,
+      "revision": "22a4562d73f50d7a2d55a0b9dfce41f44e1f1a44",
+      "version": "0.22.0+kat-test-pos"
+    },
+    "pinRequestedAtUTC": "2026-10-18T20:48:24.8946121Z",
+    "guardExactHealthyAtUTC": "2026-10-18T20:50:17.0289160Z"
+  },
+  "receiptReconciliation": {
+    "baseRevision": "e0d12d46bb99e5febcec1afa134bdd009828e60f",
+    "all14SourceBlobsStillMatch": true,
+    "otherIndependentSources": "Retained untouched; their native CI/release evidence belongs to their owners. Receipt publication waits until the currently pending main full CI starts, to avoid replacing its queued run."
+  }
+}
