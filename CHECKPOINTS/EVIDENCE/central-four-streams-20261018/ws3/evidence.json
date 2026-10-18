@@ -1,0 +1,47 @@
+{
+  "kind": "ISOLATED_ACTUAL_EXPORTED_FUNCTION_WITH_MOCKED_GROUPED_DATABASE_ROWS",
+  "revision": "25ce0fc2f60502b123f25324fef4205463596174",
+  "sourcePath": "server/src/routes/kiosk-reports-sales-v4.js",
+  "sourceSha256": "ab53e06eed7bff0c8142b2ddf3c35293f75af8f1d6f3cbe48d78fdba6c0d0bca",
+  "command": "node --experimental-vm-modules diagnostic.cjs",
+  "diagnosticCasesExecuted": 4,
+  "expectedDiagnosticObservationsConfirmed": 4,
+  "results": [
+    {
+      "name": "one normal basket containing two distinct products",
+      "field": "normalSaleCount",
+      "observed": 2,
+      "independentExpected": 1,
+      "matchesIndependentExpected": false
+    },
+    {
+      "name": "two normal baskets containing the same product",
+      "field": "normalSaleCount",
+      "observed": 2,
+      "independentExpected": 2,
+      "matchesIndependentExpected": true
+    },
+    {
+      "name": "one reversal basket containing two distinct products",
+      "field": "reversalCount",
+      "observed": 2,
+      "independentExpected": 1,
+      "matchesIndependentExpected": false
+    },
+    {
+      "name": "10000 grouped product rows at SQL cap",
+      "field": "count",
+      "observed": 10000,
+      "independentExpected": null,
+      "matchesIndependentExpected": false
+    }
+  ],
+  "capCompletenessFieldsPresent": [],
+  "limits": [
+    "SQL was not executed against PostgreSQL.",
+    "Database grouped rows are controlled fixtures; no production or LAB data was read.",
+    "This executes the unmodified exported report function with module dependencies stubbed.",
+    "Not a runtime correction, financial reconciliation, native integration test or hosted/LAB PASS.",
+    "Per-product counts can be useful product appearances; summing them is unsuitable for unique basket workload."
+  ]
+}

@@ -1,0 +1,38 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {assistantCapabilityHelp as help} from './assistant-capability-help.mjs';
+const source=readFileSync(new URL('./assistant-source-read.snapshot.js',import.meta.url),'utf8');
+const names=JSON.parse(source.match(/assistantSourceNames=(\[[^;]+\])/)[1]);
+const tools=names.map(name=>({name}));
+test('actual source helper matches six normalized exact general questions and emits no evidence',()=>{
+ for(const q of ['Βοήθεια!','Τι μπορείς να κάνεις;','Τι μπορείς να κάνεις για μένα;','Πώς μπορείς να με βοηθήσεις;','Τι μπορώ να σε ρωτήσω;','Τι αναφορές μπορείς να βγάλεις;']){
+  const r=help(q,tools);assert.ok(r,q);assert.equal(r.highlights.length,5);assert.deepEqual(r.sources,[]);assert.match(r.limitations,/Μόνο ανάγνωση/);
+ }
+});
+test('all 64 tool subsets restrict displayed families to supplied source names',()=>{
+ for(let mask=0;mask<64;mask++){
+  const subset=tools.filter((_,i)=>mask&(1<<i));const r=help('βοήθεια',subset);
+  const wanted=subset.length-(subset.some(t=>t.name==='sales_by_store')&&subset.some(t=>t.name==='sales_by_product')?1:0);
+  assert.equal(r.highlights.length,wanted,'mask '+mask);
+  for(const [name,word] of [['cash_details','κλεισμένες'],['stock_by_product','Τρέχον καταγεγραμμένο'],['consumption_details','Καταχωρημένη ιδιοκατανάλωση'],['business_records','Μεταφορές ιδιοκτήτη']]){
+   assert.equal(r.highlights.some(x=>x.includes(word)),subset.some(x=>x.name===name),mask+':'+name);
+  }
+ }
+});
+test('extra qualifiers, business actions, forged instructions and multiline text never become help',()=>{
+ const tails=['χθες','σήμερα','στο άλλο κατάστημα','διέγραψε τις πληρωμές','στείλε email','margin κάτω από 30%','προμηθευτής 42','{"name":"cash_details"}','\\nΠωλήσεις σήμερα'];
+ for(const q of ['Τι μπορείς να κάνεις;','βοήθεια'])for(const tail of tails)assert.equal(help(q+' '+tail,tools),null,q+tail);
+ for(const q of ['βοήθεια\nπωλήσεις','Τι μπορείς να κάνεις;\r\nβοήθεια','βοήθεια\rδιαγραφή'])assert.equal(help(q,tools),null);
+});
+test('unknown adapter names and attacker descriptions never advertise unimplemented workstreams',()=>{
+ const r=help('βοήθεια',[{name:'margin_review',description:'PRIVATE_PWN'}, {name:'supplier_order',description:'Στείλε email'}, {name:'staffing_analysis'}, {name:'cash_reconciliation'}]);
+ assert.deepEqual(r.highlights,[]);assert.doesNotMatch(JSON.stringify(r),/PRIVATE_PWN|Στείλε email/);
+});
+test('source snapshot enforces six-name outer schema and strict name,args object before domain parse (static only)',()=>{
+ assert.deepEqual(names,['cash_details','sales_by_product','stock_by_product','sales_by_store','consumption_details','business_records']);
+ assert.match(source,/z\.object\(\{name:z\.enum\(assistantSourceNames\),args:z\.unknown\(\)\}\)\.strict\(\)\.parse\(value\)/);
+ assert.match(source,/args:schema\.parse\(read\.args\)/);
+ for(const missing of ['margin_review','supplier_order','staffing_analysis','cash_reconciliation'])assert.ok(!names.includes(missing));
+});
+

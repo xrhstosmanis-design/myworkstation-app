@@ -1,0 +1,58 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
+
+(async () => {
+  const source = fs.readFileSync(__dirname + '/kiosk-reports-sales-v4.source.txt', 'utf8');
+  const context = vm.createContext({Date, Set, String, Number, Object, Error});
+  const module = new vm.SourceTextModule(source, {context});
+  const stub = (names, values) => new vm.SyntheticModule(names, function () {
+    for (const name of names) this.setExport(name, values[name]);
+  }, {context});
+  await module.link(async name => {
+    if (name === 'express') return stub(['Router'], {Router: () => ({use(){}, get(){}})});
+    if (name.endsWith('/prisma.js')) return stub(['prisma'], {prisma: {}});
+    if (name.endsWith('/sales-report-calendar.js')) return stub(['optionalSalesCalendar'], {optionalSalesCalendar: () => null});
+    if (name.endsWith('/greece-time.mjs')) return stub(['greeceDateInput', 'greeceRangeDate'], {greeceDateInput: () => '2026-10-18', greeceRangeDate: () => new Date('2026-10-17T21:00:00Z')});
+    throw Error('Unexpected import: ' + name);
+  });
+  await module.evaluate();
+  const params = {companyId:'fixture-company', storeId:'fixture-store', from:new Date('2026-10-17T21:00:00Z'), to:new Date('2026-10-18T21:00:00Z')};
+  const results = [];
+  const base = (productId, normalSaleCount=1, reversalCount=0) => ({productId, name:productId, storeId:params.storeId, salesQuantity:1, grossSales:2, netSales:2, vatValue:0, costValue:1, normalSaleCount, reversalCount});
+  async function run(name, groupedRows, expectedActual, independentExpected, field) {
+    let calls = 0;
+    const report = await module.namespace.readSalesAnalysisReport(params, {db: {$queryRaw: async (strings, ...values) => {
+      calls++;
+      assert(values.includes(params.companyId));
+      assert(values.includes(params.storeId));
+      assert(strings.join('?').includes('COUNT(DISTINCT "saleId")'));
+      return groupedRows;
+    }}});
+    assert.equal(calls, 1);
+    assert.equal(report[field], expectedActual);
+    results.push({name, field, observed:report[field], independentExpected, matchesIndependentExpected:report[field]===independentExpected});
+    return report;
+  }
+  await run('one normal basket containing two distinct products', [base('A'),base('B')], 2, 1, 'normalSaleCount');
+  await run('two normal baskets containing the same product', [base('A',2)], 2, 2, 'normalSaleCount');
+  await run('one reversal basket containing two distinct products', [base('A',0,1),base('B',0,1)], 2, 1, 'reversalCount');
+  const capped = await run('10000 grouped product rows at SQL cap', Array.from({length:10000},(_,i)=>base('P'+i)),10000,null,'count');
+  const completenessFields = ['complete','isComplete','truncated','hasMore','sourceLimited','sourceComplete','coverage'];
+  assert(completenessFields.every(key=>!Object.hasOwn(capped,key)));
+  const evidence = {
+    kind:'ISOLATED_ACTUAL_EXPORTED_FUNCTION_WITH_MOCKED_GROUPED_DATABASE_ROWS',
+    revision:'25ce0fc2f60502b123f25324fef4205463596174',
+    sourcePath:'server/src/routes/kiosk-reports-sales-v4.js',
+    sourceSha256:crypto.createHash('sha256').update(source).digest('hex'),
+    command:'node --experimental-vm-modules diagnostic.cjs',
+    diagnosticCasesExecuted:4,
+    expectedDiagnosticObservationsConfirmed:4,
+    results,
+    capCompletenessFieldsPresent:completenessFields.filter(key=>Object.hasOwn(capped,key)),
+    limits:['SQL was not executed against PostgreSQL.','Database grouped rows are controlled fixtures; no production or LAB data was read.','This executes the unmodified exported report function with module dependencies stubbed.','Not a runtime correction, financial reconciliation, native integration test or hosted/LAB PASS.','Per-product counts can be useful product appearances; summing them is unsuitable for unique basket workload.']
+  };
+  fs.writeFileSync(__dirname+'/evidence.json',JSON.stringify(evidence,null,2)+'\n');
+  console.log(JSON.stringify(evidence,null,2));
+})().catch(error=>{console.error(error);process.exitCode=1;});
