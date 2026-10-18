@@ -1,0 +1,42 @@
+{
+  "scope": "MYWORKSTATION LAB only; existing SuperAdmin; desktop Cloud Chrome; read-only screens between two authorized module saves",
+  "observedHealthRevision": "5c5d1711f8f144d52e1090ac880c8b35ca093a77",
+  "initialSummary": "Κατάσταση συνδρομής\nΕνεργό\nΠακέτο\nAI COMPLETE\nΕνεργά modules\n21\nΣυμφωνημένο μηνιαίο σύνολο\n104,70 €",
+  "activeSummary": "Κατάσταση συνδρομής\nΕνεργό\nΠακέτο\nAI COMPLETE\nΕνεργά modules\n22\nΣυμφωνημένο μηνιαίο σύνολο\n104,70 €",
+  "restoredSummary": "Κατάσταση συνδρομής\nΕνεργό\nΠακέτο\nAI COMPLETE\nΕνεργά modules\n21\nΣυμφωνημένο μηνιαίο σύνολο\n104,70 €",
+  "allVisibleLicenseFieldsRestored": true,
+  "otherModuleCardsAndTermsIdenticalWhileActive": true,
+  "otherCompanyLicenseAndControlFieldsIdenticalWhileActive": true,
+  "activeWholesaleCard": {
+    "name": "Χονδρική B2B",
+    "status": "ΕΝΕΡΓΟ",
+    "terms": [
+      {
+        "label": "Μηνιαία τιμή €",
+        "value": "0"
+      },
+      {
+        "label": "Κόστος εγκατάστασης €",
+        "value": "0"
+      },
+      {
+        "label": "Χρέωση\nΜηνιαία\nΕτήσια\nΕφάπαξ",
+        "value": "MONTHLY"
+      },
+      {
+        "label": "Έναρξη",
+        "value": ""
+      },
+      {
+        "label": "Λήξη",
+        "value": ""
+      }
+    ]
+  },
+  "restoredWholesaleCard": {
+    "name": "Χονδρική B2B",
+    "status": "ΑΝΕΝΕΡΓΟ",
+    "terms": []
+  },
+  "businessDeltas": "NOT TESTED; no order/financial/stock action performed"
+}
