@@ -119,3 +119,33 @@ test('direct Render secret environment credential does not read a filesystem sec
  const p=createNativeFcmProvider({env:{NATIVE_CHAT_FCM_ENABLED:'true',NATIVE_CHAT_FCM_SERVICE_ACCOUNT_JSON:JSON.stringify(credential)},read:()=>assert.fail('filesystem read'),fetchImpl:async url=>{calls++;return{ok:true,status:200,text:async()=>JSON.stringify(url.includes('oauth2')?{access_token:'x',expires_in:1000}:{name:'accepted'})}}});
  assert.equal((await p.send(input)).delivered,true);assert.equal(calls,2);
 });
+
+
+test('native registration preserves the authenticated platform role for compatibility Super Admin',async()=>{
+ const h=registryHarness();
+ await h.registerNativePush({...user,sessionId:'s',platformRole:'SUPER_ADMIN',isSuperAdmin:true},input.token,'bearer');
+ const identity=JSON.parse(h.calls.find(x=>x.sql.startsWith('INSERT')).args[5]);
+ assert.equal(identity.role,'OWNER');assert.equal(identity.platformRole,'SUPER_ADMIN');
+});
+
+test('compatibility Super Admin recipient uses current DB role and preserves support-company restriction',async()=>{
+ const identity={...user,platformRole:'SUPER_ADMIN'};
+ const adminRow={...row,identityJson:identity};
+ const adminSession={...session,user:{...session.user,role:'SUPER_ADMIN',company:{active:false}}};
+ let resolved;
+ const d={...deps,db:{userSession:{findUnique:async()=>adminSession}},storesFor:async u=>{resolved=u;return {stores:[store]}}};
+ assert.equal(await nativeRecipientAllowed(adminRow,store,d),true);
+ assert.equal(resolved.platformRole,'SUPER_ADMIN');assert.equal(resolved.isSuperAdmin,true);
+ assert.equal(await nativeRecipientAllowed({...adminRow,identityJson:{...identity,supportContext:true,companyId:'foreign'}},store,d),false);
+ assert.equal(await nativeRecipientAllowed({...adminRow,identityJson:{...identity,supportContext:true}},store,d),true);
+ assert.deepEqual(resolved.supportContext,{native:true});assert.equal(resolved.companyId,store.companyId);
+ for(const patch of [{role:'OWNER'},{role:'EMPLOYEE'},{sessionVersion:4},{mustChangePassword:true}]){
+  assert.equal(await nativeRecipientAllowed(adminRow,store,{...d,db:{userSession:{findUnique:async()=>({...adminSession,user:{...adminSession.user,...patch}})}}}),false);
+ }
+ for(const patch of [{revokedAt:new Date()},{expiresAt:new Date(0)}]){
+  assert.equal(await nativeRecipientAllowed(adminRow,store,{...d,db:{userSession:{findUnique:async()=>({...adminSession,...patch})}}}),false);
+ }
+ assert.equal(await nativeRecipientAllowed(adminRow,store,{...d,storesFor:async()=>({stores:[]})}),false);
+ // A stale pre-fix OWNER binding cannot silently gain platform access. Resume re-registers it.
+ assert.equal(await nativeRecipientAllowed(row,store,d),false);
+});

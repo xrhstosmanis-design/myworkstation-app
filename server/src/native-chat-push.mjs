@@ -26,7 +26,7 @@ export async function registerNativePush(user,token,bearer,storeId){
  nativeToken(token);const stores=await nativeStores(user,storeId);
  if(!stores.length||!(user.chatSessionId||user.sessionId))throw Object.assign(new Error('Συνδέσου ξανά για ειδοποιήσεις.'),{status:403});
  for(const s of stores)assertCustomerDemoOutboundAllowed({companyId:s.companyId,storeId:s.id});
- const identity={id:user.id,employeeId:user.employeeId,companyId:user.companyId,storeId:user.storeId,role:user.role,tokenType:user.tokenType,sessionVersion:user.sessionVersion,chatSessionId:user.chatSessionId,credentialStamp:user.chatCredentialStamp,supportContext:Boolean(user.supportContext)};
+ const identity={id:user.id,employeeId:user.employeeId,companyId:user.companyId,storeId:user.storeId,role:user.role,platformRole:user.platformRole||user.role,tokenType:user.tokenType,sessionVersion:user.sessionVersion,chatSessionId:user.chatSessionId,credentialStamp:user.chatCredentialStamp,supportContext:Boolean(user.supportContext)};
  const hash=nativeBinding(token),binding=nativeBinding(bearer),sessionId=user.chatSessionId||user.sessionId;
  await ensureNativeChatPushSchema();await prisma.$transaction(async tx=>{
   await tx.$queryRawUnsafe('SELECT (pg_advisory_xact_lock(hashtext($1)) IS NULL) AS locked',hash);
