@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "435928621888",
+    "project_id": "myworkstation-chat",
+    "storage_bucket": "myworkstation-chat.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:435928621888:android:3764719d64396c29e410a5",
+        "android_client_info": {
+          "package_name": "gr.myworkstation.chat.preview"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADCQYH3_umkQsJoxoKtAPtA0V_qs8Jan8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
