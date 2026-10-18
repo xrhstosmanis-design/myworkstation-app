@@ -1,3 +1,4 @@
+import nativeChatPushRoutes from './routes/native-chat-push.js';
 import invoiceCommonDraftRoutes from "./routes/invoice-common-draft.js";
 import {invoiceAliasGuard} from "./middleware/invoice-common-draft-alias.js";
 import chatMobileRoutes from "./routes/chat-mobile.js";
@@ -263,6 +264,7 @@ app.use("/api/cash-control",auth,requireCompanyModule("CASH_CONTROL"),cashContro
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerPriceBulkPreviewRoutes);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,productAuditCapture);
 app.use("/api/owner-products",auth,requireOwnerProductAccess,ownerProductSmartEntryRoutes);
+app.use("/api/store-chat",nativeChatPushRoutes);
 app.use("/api/store-chat/mobile",auth,chatMobileRoutes);
 app.use("/api/store-chat",auth,requireStoreModule("STORE_CHAT"),storeChatRoutes);
 app.use("/api/pending-center",auth,requireCompanyModule("PENDING_CENTER"),pendingCenterRoutes);
