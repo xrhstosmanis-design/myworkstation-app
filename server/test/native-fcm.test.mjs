@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {generateKeyPairSync} from 'node:crypto';
-import {nativePayload,nativeToken,createNativeFcmProvider} from '../src/native-fcm-provider.mjs';
+import {nativePayload,nativeToken,nativeStoreLabel,createNativeFcmProvider} from '../src/native-fcm-provider.mjs';
 import {nativeRecipientAllowed} from '../src/native-fcm-policy.mjs';
 const input={token:'valid_token_1234567890:abcdefgh',binding:'a'.repeat(64),storeId:'store-A',companyId:'company-A'};
 test('native payload contains technical routing only and is data-only',()=>{
@@ -62,15 +62,15 @@ test('malformed expiry cannot grant delivery',async()=>{
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
-function registryHarness({configured=true,stores=[store],database}={}) {
+function registryHarness({configured=true,stores=[store],database,recipients=[],send=async()=>({delivered:true}),allowed=nativeRecipientAllowed}={}) {
  const calls=[]; const db=database||{
   $executeRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return 1;},
-  $queryRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return [];},
+  $queryRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return sql.startsWith('SELECT * FROM "StoreChatNativePush"')?recipients:[];},
   $transaction:async fn=>fn(db),
   store:{findUnique:async()=>({...store,active:true,company:{active:true}})}
  };
- const code=fs.readFileSync(new URL('../src/native-chat-push.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/export /g,'')+'\nthis.api={registerNativePush,revokeNativePush};';
- const box={createHash,prisma:db,mobileChatStores:async()=>({stores}),chatEnabled:async()=>true,authorizeChatOperator:async()=>true,nativeRecipientAllowed,assertCustomerDemoOutboundAllowed:()=>{},createNativeFcmProvider:()=>({configured:()=>configured}),nativeToken};
+ const code=fs.readFileSync(new URL('../src/native-chat-push.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/export /g,'')+'\nthis.api={registerNativePush,revokeNativePush,sendNativeChatPush};';
+ const box={createHash,prisma:db,mobileChatStores:async()=>({stores}),chatEnabled:async()=>true,authorizeChatOperator:async()=>true,nativeRecipientAllowed:allowed,assertCustomerDemoOutboundAllowed:()=>{},createNativeFcmProvider:()=>({configured:()=>configured,send}),nativeToken};
  vm.runInNewContext(code,box);return {...box.api,calls};
 }
 test('registry serializes token ownership and binds only authenticated session; revocation cannot delete another session',async()=>{
@@ -148,4 +148,29 @@ test('compatibility Super Admin recipient uses current DB role and preserves sup
  assert.equal(await nativeRecipientAllowed(adminRow,store,{...d,storesFor:async()=>({stores:[]})}),false);
  // A stale pre-fix OWNER binding cannot silently gain platform access. Resume re-registers it.
  assert.equal(await nativeRecipientAllowed(row,store,d),false);
+});
+
+
+test('store labels are bounded, stripped of control/spoofing characters and never include message fields',()=>{
+ assert.equal(nativeStoreLabel('  ΚΑΤ\n\u202e κατάστημα  '),'ΚΑΤ κατάστημα');
+ assert.equal(nativeStoreLabel('x'.repeat(100)),'x'.repeat(80));
+ assert.equal(nativeStoreLabel(null),'');
+ const payload=nativePayload({...input,storeName:'ΚΑΤ',body:'PRIVATE',photo:'PRIVATE'});
+ assert.equal(payload.message.data.storeName,'ΚΑΤ');assert.equal(JSON.stringify(payload).includes('PRIVATE'),false);
+ assert.deepEqual(Object.keys(nativePayload(input).message.data).sort(),['binding','companyId','kind','storeId']);
+});
+
+test('only explicit version 2 registrations receive a server-sourced store label; old clients keep four fields',async()=>{
+ for(const version of [undefined,1,2,'2',3]){
+  const h=registryHarness();await h.registerNativePush({...user,sessionId:'s'},input.token,'bearer',undefined,version);
+  const identity=JSON.parse(h.calls.find(x=>x.sql.startsWith('INSERT')).args[5]);
+  assert.equal(identity.notificationVersion,version===2?2:1);
+ }
+ const payloads=[];
+ const recipients=[{...row,token:input.token,binding:input.binding},{...row,token:input.token,binding:input.binding,identityJson:{...user,notificationVersion:2}}];
+ const h=registryHarness({recipients,allowed:async()=>true,send:async value=>{payloads.push(nativePayload(value));return {delivered:true}}});
+ const result=await h.sendNativeChatPush({store:{...store,name:'ΚΑΤ'},senderId:'sender'});
+ assert.equal(result.delivered,2);
+ assert.equal(Object.keys(payloads[0].message.data).length,4);
+ assert.equal(payloads[1].message.data.storeName,'ΚΑΤ');
 });

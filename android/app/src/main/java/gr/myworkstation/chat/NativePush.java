@@ -54,7 +54,7 @@ final class NativePush {
         WORK.execute(() -> {
             try {
                 if (generation != GENERATION.get() || !valid(token) || !token.equals(new TokenVault(app).load())) { result.done(false); return; }
-                JSONObject body = new JSONObject(); body.put("token", fcm);
+                JSONObject body = new JSONObject(); body.put("token", fcm); body.put("notificationVersion", 2);
                 JSONObject response = new ChatApi().json(path(token), "POST", body, token);
                 boolean ok = response.optBoolean("ok") && response.optString("binding").equals(binding(token));
                 synchronized (NativePush.class) {

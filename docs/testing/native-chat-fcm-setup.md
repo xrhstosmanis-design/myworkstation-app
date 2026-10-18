@@ -39,3 +39,7 @@ Native bindings preserve the authenticated effective platform role separately fr
 ## Observed connector deployment behavior — 18 October 2026
 
 The installed Render connector's `update_environment_variables` operation initiated an API deployment immediately after a merge-only flag update. This differs from the intended Save-only REST workflow. Do not use this connector operation to stage environment values without deploying. Future changes must wait for the exact merged main full CI and be coordinated as configuration deployments, or use a separately verified Save-only surface. Observed deployment dep-dbacvke7bikc73e5aud0 became live on3f429e2; exact health was verified. This is not a native registration/delivery PASS and is not a guarded deploy-hook receipt.
+
+## Store-label capability v2
+
+Preview0.1.3 registers notificationVersion2. Only such bindings receive the authorized DB store name (up to80 Unicode codepoints, control/bidi characters stripped); legacy bindings keep the exact four-field envelope. Store name changes the notification title, never includes message text/photo, and does not replace company/store/session authorization. Existing Android lock-screen privacy settings apply. Install QR is a public link only; the release page enables download only with a valid same-origin versioned APK manifest. No new label or QR device PASS from source tests.
