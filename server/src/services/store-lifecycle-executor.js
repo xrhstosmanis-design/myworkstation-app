@@ -9,13 +9,15 @@ const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status})};
 const INTERNAL=new Set(['StoreLifecycleFence','StoreLifecycleExecution','StoreLifecycleTombstone']);
 const childOwner=node=>['CHILD','LINK'].includes(node.owner.kind);
-const applicationEdges=(plan,schema)=>plan.ordered.filter(n=>['LINK','BASE_STORE'].includes(n.owner.kind)).map(n=>({child:n.name,parent:n.owner.kind==='BASE_STORE'?'Store':n.owner.parent,childSchema:schema,parentSchema:schema,local:n.owner.kind==='BASE_STORE'?['baseStoreId']:n.owner.columns.map(p=>p[0]),remote:n.owner.kind==='BASE_STORE'?['id']:n.owner.columns.map(p=>p[1]),applicationOwnership:true}));
+const ownerMatch=(node,alias)=>Object.entries(node.owner.match||{}).sort(([a],[b])=>a.localeCompare(b)).map(([name,value])=>`COALESCE(${alias}.${q(name)}=${literal(value)},false)`).join(' AND ')||'true';
+const applicationEdges=(plan,schema)=>plan.ordered.filter(n=>['LINK','BASE_STORE'].includes(n.owner.kind)).map(n=>({child:n.name,parent:n.owner.kind==='BASE_STORE'?'Store':n.owner.parent,childSchema:schema,parentSchema:schema,local:n.owner.kind==='BASE_STORE'?['baseStoreId']:n.owner.columns.map(p=>p[0]),remote:n.owner.kind==='BASE_STORE'?['id']:n.owner.columns.map(p=>p[1]),applicationOwnership:true,match:n.owner.match||{}}));
 const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for(const v of Object.values(value))freeze(v)}return value};
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 function planFor(manifest){
  if(!manifest?.id||!Array.isArray(manifest.tables)||manifest.tables.length<1||manifest.tables.length>300)fail('A reviewed server manifest is required.');
  const nodes=new Map();
  for(const row of manifest.tables){if(typeof row.name!=='string'||!row.name||INTERNAL.has(row.name)||nodes.has(row.name)||!['KEEP','REMOVE'].includes(row.reset)||!['ROOT','DIRECT','CHILD','LINK','BASE_STORE'].includes(row.owner?.kind))fail('Invalid reviewed manifest.');nodes.set(row.name,row)}
+ for(const row of nodes.values())if(row.owner.match!==undefined&&(row.owner.kind!=='LINK'||!row.owner.match||typeof row.owner.match!=='object'||Array.isArray(row.owner.match)||Object.keys(row.owner.match).length<1||Object.keys(row.owner.match).length>4||Object.entries(row.owner.match).some(([k,v])=>!k||k.length>128||typeof v!=='string'||!v||v.length>128)))fail('Invalid typed application ownership.');
  // Installation identities and their credentials are inseparable from both
  // physical registers. A reviewed plan may not override this RESET boundary.
  for(const row of nodes.values())if(RESET_KEEP.has(row.name)&&row.reset!=='KEEP')fail('RESET must retain installation/configuration: '+row.name);
@@ -31,14 +33,14 @@ function predicate(plan,schema,node,alias,depth=0){
  if(node.owner.kind==='DIRECT')return `COALESCE(${alias}."storeId"=$1,false)`;
  if(node.owner.kind==='BASE_STORE')return `COALESCE(${alias}."baseStoreId"=$1,false)`;
  const parent=plan.nodes.get(node.owner.parent),p='p'+depth;
- return `EXISTS (SELECT 1 FROM ${q(schema)}.${q(parent.name)} ${p} WHERE ${node.owner.columns.map(([local,remote])=>`${alias}.${q(local)}=${p}.${q(remote)}`).join(' AND ')} AND (${predicate(plan,schema,parent,p,depth+1)}))`;
+ return `((${ownerMatch(node,alias)}) AND EXISTS (SELECT 1 FROM ${q(schema)}.${q(parent.name)} ${p} WHERE ${node.owner.columns.map(([local,remote])=>`${alias}.${q(local)}=${p}.${q(remote)}`).join(' AND ')} AND (${predicate(plan,schema,parent,p,depth+1)})))`;
 }
 function storeExpression(plan,schema,node,record,depth=0){
  if(node.owner.kind==='ROOT')return `${record}."id"`;
  if(node.owner.kind==='DIRECT')return `${record}."storeId"`;
  if(node.owner.kind==='BASE_STORE')return `${record}."baseStoreId"`;
  const parent=plan.nodes.get(node.owner.parent),p='o'+depth;
- return `(SELECT ${storeExpression(plan,schema,parent,p,depth+1)} FROM ${q(schema)}.${q(parent.name)} ${p} WHERE ${node.owner.columns.map(([local,remote])=>`${record}.${q(local)}=${p}.${q(remote)}`).join(' AND ')} LIMIT 1)`;
+ return `(CASE WHEN ${ownerMatch(node,record)} THEN (SELECT ${storeExpression(plan,schema,parent,p,depth+1)} FROM ${q(schema)}.${q(parent.name)} ${p} WHERE ${node.owner.columns.map(([local,remote])=>`${record}.${q(local)}=${p}.${q(remote)}`).join(' AND ')} LIMIT 1) ELSE NULL END)`;
 }
 const truncateBody="BEGIN RAISE EXCEPTION 'STORE_LIFECYCLE_TRUNCATE_FORBIDDEN' USING ERRCODE='55000'; END;";
 const guardName=node=>'mws_lifecycle_'+hash(node.name).slice(0,16);
@@ -46,11 +48,13 @@ function retiredLinkGuard(plan,schema,node){
  if(node.owner.kind!=='LINK')return '';
  const parent=plan.nodes.get(node.owner.parent),remote=node.owner.columns.map(p=>p[1]);
  return [['NEW',"TG_OP<>'DELETE'"],['OLD',"TG_OP<>'INSERT'"]].map(([record,condition])=>`IF ${condition} THEN
+ IF ${ownerMatch(node,record)} THEN
  IF NOT EXISTS (SELECT 1 FROM ${q(schema)}.${q(parent.name)} p WHERE ${node.owner.columns.map(([local,key])=>`${record}.${q(local)}=p.${q(key)}`).join(' AND ')}) AND EXISTS (
  SELECT 1 FROM ${q(schema)}."StoreLifecycleTombstone" t JOIN ${q(schema)}."StoreLifecycleFence" f ON f."storeId"=t."storeId" AND f."companyId"=t."companyId"
  WHERE t."schemaName"=${literal(schema)} AND t."parentTable"=${literal(parent.name)} AND t."refColumns"=${literal(JSON.stringify(remote))}::jsonb AND t."refValues"=jsonb_build_array(${node.owner.columns.map(([local])=>`${record}.${q(local)}::text`).join(',')})
  AND NOT COALESCE(f."maintenance" AND COALESCE(current_setting('mws.lifecycle_operation',true),'')=f."operationId",false)
  ) THEN RAISE EXCEPTION 'STORE_LIFECYCLE_RETIRED_REFERENCE' USING ERRCODE='55000'; END IF;
+ END IF;
  END IF;`).join('\n');
 }
 function guardBody(plan,schema,node){return `DECLARE old_store text; new_store text; sid text; fence record; BEGIN
@@ -90,8 +94,9 @@ async function validateDatabase(tx,plan,schema){
   const child=plan.nodes.get(link.child),cols=byTable.get(link.child),parentCols=byTable.get(link.parent);
   if(link.local.some(c=>!cols?.has(c))||link.remote.some(c=>!parentCols?.has(c))||!uniqueKeys.some(k=>k.table===link.parent&&JSON.stringify(k.columns)===JSON.stringify(link.remote)))fail('Application ownership requires an exact immediate unique parent key.');
   if(child.owner.kind==='LINK'&&(cols.has('storeId')||link.local.some(name=>!columns.find(c=>c.table===link.child&&c.name===name)?.notNull)))fail('Raw ownership requires non-null keys and no competing storeId.');
+  if(Object.keys(child.owner.match||{}).some(name=>!columns.some(c=>c.table===link.child&&c.name===name&&c.type==='text')))fail('Typed ownership discriminator schema changed.');
   const join=link.local.map((c,i)=>`c.${q(c)}=p.${q(link.remote[i])}`).join(' AND ');
-  const required=child.owner.kind==='BASE_STORE'?'c."baseStoreId" IS NOT NULL':'true';
+  const required=child.owner.kind==='BASE_STORE'?'c."baseStoreId" IS NOT NULL':ownerMatch(child,'c');
   if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(link.child)} c WHERE ${required} AND NOT EXISTS (SELECT 1 FROM ${q(schema)}.${q(link.parent)} p WHERE ${join}) LIMIT 1`)).length)fail('Unowned application reference requires explicit review.');
  }
  const triggers=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",t.tgname AS name,t.tgenabled::text AS enabled,t.tgtype::int AS mask,t.tgqual::text AS condition,t.tgattr::text AS attributes,p.prosrc AS body,pn.nspname AS "functionSchema",p.proname AS "functionName",p.prosecdef AS definer,l.lanname AS language FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_proc p ON p.oid=t.tgfoid JOIN pg_namespace pn ON pn.oid=p.pronamespace JOIN pg_language l ON l.oid=p.prolang WHERE n.nspname=$1 AND NOT t.tgisinternal`,schema);
@@ -145,7 +150,7 @@ async function capture(tx,plan,schema,scope,mode){
  }
  // An owned FK must not cross to a different store, nor may deletion touch retained children.
  for(const fk of meta.fks.filter(f=>f.parentSchema===schema&&f.childSchema===schema&&plan.nodes.has(f.parent)&&plan.nodes.has(f.child))){
-  const child=plan.nodes.get(fk.child),parent=plan.nodes.get(fk.parent),join=fk.local.map((c,i)=>`c.${q(c)}=p.${q(fk.remote[i])}`).join(' AND ');
+  const child=plan.nodes.get(fk.child),parent=plan.nodes.get(fk.parent),join=fk.local.map((c,i)=>`c.${q(c)}=p.${q(fk.remote[i])}`).join(' AND ')+(fk.applicationOwnership?` AND (${ownerMatch(child,'c')})`:'');
   const bad=await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(child.name)} c JOIN ${q(schema)}.${q(parent.name)} p ON ${join} WHERE ((${predicate(plan,schema,child,'c')}) IS DISTINCT FROM (${predicate(plan,schema,parent,'p')})) LIMIT 1`,scope.storeId);if(bad.length)fail('Cross-store dependency blocks execution.');
   const childAction=tables.find(t=>t.name===child.name).action,parentAction=tables.find(t=>t.name===parent.name).action;
   if(childAction==='KEEP'&&parentAction==='REMOVE'){const refs=await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(child.name)} c JOIN ${q(schema)}.${q(parent.name)} p ON ${join} WHERE ${predicate(plan,schema,parent,'p')} LIMIT 1`,scope.storeId);if(refs.length)fail('Deletion would change a retained dependency.');}

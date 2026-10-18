@@ -228,3 +228,24 @@ test('native scoped snapshots reject inconsistent company rows and leave mainten
   }finally{await f.close()}
  }
 });
+
+test('typed ownership accepts only reviewed exact text discriminator constants',()=>{
+ const opts={persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)};
+ for(const match of [null,[],{},'DISPATCH_NOTE',{kind:3},{kind:''}]){const bad=structuredClone(rawOwnershipManifest);bad.tables.find(t=>t.name==='RawChild').owner.match=match;assert.throws(()=>createLifecycleExecutionCore(bad,opts),/Invalid typed application ownership/)}
+ const bad=structuredClone(rawOwnershipManifest);bad.tables.find(t=>t.name==='RawParent').owner.match={kind:'DISPATCH_NOTE'};assert.throws(()=>createLifecycleExecutionCore(bad,opts),/Invalid typed application ownership/);
+});
+
+test('native typed raw links preserve other aggregate domains with identical IDs and reject only retired matching references',{skip:!isolated},async()=>{
+ const extraManifest={...rawOwnershipManifest,reviewedColumns:[...rawOwnershipManifest.reviewedColumns,'TypedOutbox.aggregateId'],tables:[...rawOwnershipManifest.tables,{name:'TypedOutbox',owner:{kind:'LINK',parent:'RawParent',columns:[['aggregateId','id']],match:{aggregateType:'DISPATCH_NOTE'}},reset:'REMOVE'}]};
+ const f=await fixture({extraManifest,extraDdl:s=>[...rawOwnershipDdl(s),`CREATE TABLE "${s}"."TypedOutbox"("id" text PRIMARY KEY,"companyId" text NOT NULL,"aggregateType" text NOT NULL,"aggregateId" text NOT NULL)`],populate:async db=>{
+  await populateRawOwnership(db);
+  await db.$executeRawUnsafe(`INSERT INTO "TypedOutbox" VALUES('owned','company','DISPATCH_NOTE','raw-target'),('different-domain','other','OTHER','raw-target'),('unrelated-unbound','other','OTHER','never-a-parent'),('sibling','company','DISPATCH_NOTE','raw-sibling')`);
+ }});
+ try{
+  await f.core.install(f.db,actor,scope);const before=await f.snapshot(),prep=await f.core.prepare(f.db,actor,scope,'RESET');await f.core.execute(f.db,actor,{...scope,...prep});const after=await f.snapshot();assert.deepEqual(after.TypedOutbox,before.TypedOutbox.filter(r=>JSON.parse(r.row).id!=='owned'));
+  await f.db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "maintenance"=false WHERE "storeId"='target'`);
+  await assert.rejects(f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_generations','{"target":"1"}',true)`);await tx.$executeRawUnsafe(`INSERT INTO "TypedOutbox" VALUES('old-matching','company','DISPATCH_NOTE','raw-target')`)}),matches(/STORE_LIFECYCLE_RETIRED_REFERENCE/));
+  await f.db.$executeRawUnsafe(`INSERT INTO "TypedOutbox" VALUES('new-other-domain','other','OTHER','raw-target')`);
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "StoreLifecycleTombstone"`))[0].count,2);
+ }finally{await f.close()}
+});
