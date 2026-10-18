@@ -30,7 +30,7 @@ async function fixture(){
  const packSrc=(await readFile(new URL('../src/routes/purchase-order-unresolved-guard.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return applyPackStockCorrection;');
  const pack=new Function('Router','prisma','crypto','purchaseOrderTotalReconciliationGuard','lockInvoiceStore',packSrc)(()=>({use(){},patch(){}}),f.db,crypto,()=>{},common.lockInvoiceStore);
  const patch=body=>invoke(posting['PATCH /:orderId'],{orderId:'pos'},body);
- const finalize=async(version=0)=>{const r=await patch({status:'FINAL',expectedReopenVersion:version});assert.ifError(r.failure);await pack({orderId:'pos',companyId:'c',userId:'owner',userName:'Isolated'});assert.ifError((await patch({status:'INVOICED',expectedReopenVersion:version})).failure)};
+ const finalize=async(version=0)=>{const r=await patch({status:'FINAL',expectedReopenVersion:version});assert.ifError(r.failure);await pack({orderId:'pos',companyId:'c',userId:'owner',userName:'Isolated',expectedReopenVersion:version});assert.ifError((await patch({status:'INVOICED',expectedReopenVersion:version})).failure)};
  const stock=async()=>Number((await f.db.$queryRawUnsafe(`SELECT "currentStock" FROM "StoreProduct" WHERE "id"='stock'`))[0].currentStock);
  const preserved=async()=>JSON.stringify(await f.db.$queryRawUnsafe(`SELECT jsonb_build_object('payments',(SELECT jsonb_agg(t ORDER BY t."id") FROM "StoreTransaction" t),'files',(SELECT jsonb_agg(t ORDER BY t."id") FROM "DocumentAttachment" t),'jobs',(SELECT jsonb_agg(t ORDER BY t."id") FROM "AiReaderJob" t),'control',(SELECT row_to_json(t) FROM "StoreProduct" t WHERE t."id"='control-stock')) AS value`));
  return {...f,patch,finalize,stock,preserved,pack,packHandlers};
