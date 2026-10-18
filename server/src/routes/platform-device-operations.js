@@ -3,6 +3,8 @@ import crypto from "crypto";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {auth} from "../middleware/auth.js";
+import {listPosRecoveries,recoverPosRequest} from "../services/pos-remote-recovery.js";
+import {finalizeDispatchedCashRequest,finalizeConfirmedCardRequest} from "../rbs-capdriver-v1-sale-finalize.js";
 
 const router=Router(),uid=()=>crypto.randomUUID();
 const hash=value=>crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -24,6 +26,17 @@ const ensure=()=>ready||(ready=(async()=>{
  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DeviceDeploymentJob_store_created_idx" ON "DeviceDeploymentJob" ("storeId","createdAt" DESC)`);
 })().catch(e=>{ready=null;throw e}));
 const ownedStore=async(companyId,storeId)=>{const s=await prisma.store.findFirst({where:{id:storeId,companyId}});if(!s)throw Object.assign(new Error("Δεν βρέθηκε το κατάστημα."),{status:404});return s};
+
+router.get("/companies/:companyId/stores/:storeId/pos-recovery",async(req,res,next)=>{try{
+ const store=await ownedStore(req.params.companyId,req.params.storeId);
+ res.set("Cache-Control","no-store").json(await listPosRecoveries(prisma,{companyId:store.companyId,storeId:store.id}));
+}catch(e){next(e)}});
+router.post("/companies/:companyId/stores/:storeId/pos-recovery/:requestId",async(req,res,next)=>{try{
+ const store=await ownedStore(req.params.companyId,req.params.storeId);
+ const input=z.object({preview:z.string().regex(/^[a-f0-9]{64}$/),receiptPrinted:z.literal(true),reason:z.string().trim().min(5).max(500)}).strict().parse(req.body||{});
+ const result=await recoverPosRequest(prisma,{companyId:store.companyId,storeId:store.id,actorId:req.user.id},{...input,requestId:z.string().uuid().parse(req.params.requestId)},{finalizeCash:finalizeDispatchedCashRequest,finalizeCard:finalizeConfirmedCardRequest});
+ res.json(result);
+}catch(e){next(e)}});
 
 router.get("/companies/:companyId/stores/:storeId/device-health",async(req,res,next)=>{try{await ensure();const store=await ownedStore(req.params.companyId,req.params.storeId);const rows=await prisma.$queryRaw`SELECT t."id",t."terminalPos",t."displayName",t."active",t."activatedAt",t."lastSeenAt",r."appRevision",r."osVersion",r."diskFreeMb",r."memoryFreeMb",r."servicesJson",r."warningsJson",r."reportedAt" FROM "StoreInstallationTerminal" t LEFT JOIN LATERAL (SELECT * FROM "DeviceOperationsReport" x WHERE x."terminalId"=t."id" ORDER BY x."reportedAt" DESC LIMIT 1) r ON TRUE WHERE t."companyId"=${store.companyId} AND t."storeId"=${store.id} ORDER BY t."terminalPos"`;const now=Date.now();res.json({store:{id:store.id,name:store.name},checkedAt:new Date(),devices:rows.map(x=>({...x,online:Boolean(x.lastSeenAt&&now-new Date(x.lastSeenAt).getTime()<120000),health:!x.active?"DISABLED":!x.lastSeenAt||now-new Date(x.lastSeenAt).getTime()>=120000?"OFFLINE":(x.warningsJson||[]).length?"WARNING":"HEALTHY"}))})}catch(e){next(e)}});
 
