@@ -103,3 +103,21 @@ test('native registered HTTP reopen routes enforce actor/scope and perform one c
   const opened=await fetch(url+'/reopen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(confirmed(p))});assert.equal(opened.status,200);assert.equal((await opened.json()).status,'NEW');assert.equal(await f.stock(),10);
  }finally{if(server)await new Promise(resolve=>server.close(resolve));await f.close()}
 });
+
+test('native actual inventory ledger SQL reconciles full reopened history without synthetic double subtraction or false duplicate cycles',{skip:!isolatedInvoiceDb()},async()=>{
+ const f=await fixture();try{
+  await f.db.$executeRawUnsafe('ALTER TABLE "StockMovement" ADD COLUMN "createdAt" timestamptz DEFAULT NOW()');
+  await f.db.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN "fullName" text');
+  for(const [name,columns] of Object.entries({Sale:'"id" text,"companyId" text,"storeId" text,"status" text,"source" text',SaleLine:'"id" text,"saleId" text,"productId" text,"quantity" numeric',OnlineOrder:'"id" text,"companyId" text,"storeId" text,"status" text',OnlineOrderLine:'"id" text,"orderId" text,"productId" text,"quantity" numeric',PreparationRecipeLine:'"companyId" text,"productId" text,"automatic" boolean,"ingredientProductId" text,"quantity" numeric'}))await f.db.$executeRawUnsafe(`CREATE TABLE "${name}"(${columns})`);
+  await f.db.$executeRawUnsafe(`INSERT INTO "StockMovement"("id","storeId","productId","movementType","quantity","sourceType","sourceId") VALUES('opening','s','p','OPENING',10,'INITIAL','initial')`);
+  const source=await readFile(new URL('../src/routes/inventory-product-ledger.js',import.meta.url),'utf8'),queries=[...source.matchAll(/prisma\.\$queryRaw`([\s\S]*?)`/g)].map(m=>m[1]);
+  const sql=fragment=>new Function('prisma','companyId','storeId','productId','from','to','return prisma.$queryRaw`'+fragment+'`;')(f.db,'c','s','p',new Date('2000-01-01'),new Date('2100-01-01'));
+  const verify=async(expected)=>{const totals=await sql(queries.find(q=>q.includes('AS "ledgerStock"')));assert.equal(Number(totals[0].ledgerStock),expected);assert.equal(await f.stock(),expected);
+   const manual=await sql(queries.find(q=>q.includes('FROM "StockMovement" sm LEFT JOIN'))),purchases=await sql(queries.find(q=>q.includes("'PURCHASE'::text")));assert.equal([...manual,...purchases].reduce((sum,m)=>sum+Number(m.quantity),0),expected);
+   assert.deepEqual(await sql(queries.find(q=>q.includes('HAVING COUNT(*)>1'))),[]);
+  };
+  await f.db.$executeRawUnsafe(`UPDATE "PurchaseOrderLine" SET "stockUnitsPerInvoiceUnit"=2 WHERE "orderId"='pos'`);
+  for(let cycle=0;cycle<2;cycle++){await f.finalize(cycle);await verify(16);const preview=await reopen.previewPurchaseOrderReopen(f.db,actor,'pos','s');await reopen.reopenPurchaseOrder(f.db,actor,'pos',confirmed(preview));await verify(10)}
+  assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS n FROM "StockMovement"'))[0].n,9);
+ }finally{await f.close()}
+});
