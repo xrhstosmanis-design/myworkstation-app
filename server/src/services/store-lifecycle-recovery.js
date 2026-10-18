@@ -27,7 +27,7 @@ export function sealLifecycleRecovery(value,{encryptionKey,keyId}){
  const envelope={format:FORMAT,keyId,scope:scope(value.scope)},iv=randomBytes(12);
  try{const cipher=createCipheriv('aes-256-gcm',encryptionKey,iv);cipher.setAAD(aad(envelope));const encrypted=Buffer.concat([cipher.update(plaintext),cipher.final()]);return Buffer.from(JSON.stringify({...envelope,iv:iv.toString('base64'),tag:cipher.getAuthTag().toString('base64'),ciphertext:encrypted.toString('base64')}))}finally{plaintext.fill(0)}
 }
-export function openLifecycleRecovery(bytes,{encryptionKey,keyId,expectedScope}){
+export function openLifecycleRecovery(bytes,{encryptionKey,keyId,expectedScope,expectedManifestHash,expectedSourceRevision}){
  let plaintext;
  try{
   key(encryptionKey);if(!id(keyId)||!Buffer.isBuffer(bytes)||bytes.length>MAX_BYTES*1.4+4096)deny();
@@ -35,7 +35,7 @@ export function openLifecycleRecovery(bytes,{encryptionKey,keyId,expectedScope})
   if(envelope.format!==FORMAT||envelope.keyId!==keyId||JSON.stringify(scope(envelope.scope))!==JSON.stringify(scope(expectedScope)))deny();
   const decipher=createDecipheriv('aes-256-gcm',encryptionKey,decode(envelope.iv,12));decipher.setAAD(aad(envelope));decipher.setAuthTag(decode(envelope.tag,16));
   plaintext=Buffer.concat([decipher.update(decode(envelope.ciphertext)),decipher.final()]);if(plaintext.length>MAX_BYTES)deny();
-  const value=snapshot(JSON.parse(plaintext.toString('utf8')));if(JSON.stringify(scope(value.scope))!==JSON.stringify(scope(expectedScope)))deny();return value;
+  const value=snapshot(JSON.parse(plaintext.toString('utf8')));if(JSON.stringify(scope(value.scope))!==JSON.stringify(scope(expectedScope))||value.manifestHash!==expectedManifestHash||value.sourceRevision!==expectedSourceRevision)deny();return value;
  }catch{deny()}finally{plaintext?.fill(0)}
 }
 export async function persistLifecycleRecovery(value,{directory,encryptionKey,keyId}){
@@ -49,7 +49,7 @@ export async function persistLifecycleRecovery(value,{directory,encryptionKey,ke
   const dir=await open(root,'r');try{await dir.sync()}finally{await dir.close()}
   const saved=await open(artifactPath,'r');let readback;try{readback=await saved.readFile()}finally{await saved.close()}
   if(digest(readback)!==digest(bytes))deny();
-  openLifecycleRecovery(readback,{encryptionKey,keyId,expectedScope:value.scope});
+  openLifecycleRecovery(readback,{encryptionKey,keyId,expectedScope:value.scope,expectedManifestHash:value.manifestHash,expectedSourceRevision:value.sourceRevision});
   return {artifactPath,sha256:digest(bytes),sizeBytes:bytes.length,keyId,storageReadbackVerified:true,restoreVerified:false};
  }catch(error){if(created)await unlink(artifactPath).catch(()=>{});throw error}
 }

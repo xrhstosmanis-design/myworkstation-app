@@ -7,7 +7,7 @@ import path from 'node:path';
 import {STORE_RECOVERY_FORMAT,sealLifecycleRecovery,openLifecycleRecovery,persistLifecycleRecovery} from '../src/services/store-lifecycle-recovery.js';
 const scope={companyId:'company',storeId:'target',mode:'RESET'};
 const value=()=>({format:STORE_RECOVERY_FORMAT,scope,sourceRevision:'1'.repeat(40),createdAt:'2026-10-18T12:00:00Z',manifestHash:'a'.repeat(64),tables:[{name:'Sale',rows:['{"id":"sale","amount":9007199254740993.123456789,"secret":"PRIVATE PIN HASH"}']}]});
-const options=()=>({encryptionKey:randomBytes(32),keyId:'recovery-key-1',expectedScope:scope});
+const options=()=>({encryptionKey:randomBytes(32),keyId:'recovery-key-1',expectedScope:scope,expectedManifestHash:'a'.repeat(64),expectedSourceRevision:'1'.repeat(40)});
 test('authenticated encryption preserves exact SQL row text and reveals no row contents',()=>{
  const opts=options(),source=value(),first=sealLifecycleRecovery(source,opts),second=sealLifecycleRecovery(source,opts);
  assert.notDeepEqual(first,second);assert.doesNotMatch(first.toString(),/PRIVATE PIN HASH|9007199254740993/);
@@ -15,7 +15,7 @@ test('authenticated encryption preserves exact SQL row text and reveals no row c
 });
 test('wrong key, key ID, company, store, mode, tampering and malformed artifacts fail closed',()=>{
  const opts=options(),bytes=sealLifecycleRecovery(value(),opts);
- for(const changed of [{encryptionKey:randomBytes(32)},{keyId:'other-key'},...['companyId','storeId','mode'].map(field=>({expectedScope:{...scope,[field]:field==='mode'?'DELETE':'other'}}))])assert.throws(()=>openLifecycleRecovery(bytes,{...opts,...changed}),/Invalid or unverifiable/);
+ for(const changed of [{encryptionKey:randomBytes(32)},{keyId:'other-key'},{expectedManifestHash:'b'.repeat(64)},{expectedSourceRevision:'2'.repeat(40)},...['companyId','storeId','mode'].map(field=>({expectedScope:{...scope,[field]:field==='mode'?'DELETE':'other'}}))])assert.throws(()=>openLifecycleRecovery(bytes,{...opts,...changed}),/Invalid or unverifiable/);
  for(const field of ['iv','tag','ciphertext']){const envelope=JSON.parse(bytes);const b=Buffer.from(envelope[field],'base64');b[0]^=1;envelope[field]=b.toString('base64');assert.throws(()=>openLifecycleRecovery(Buffer.from(JSON.stringify(envelope)),opts),/Invalid or unverifiable/)}
  for(const input of [Buffer.from('{}'),bytes.subarray(0,30),Buffer.from('not-json')])assert.throws(()=>openLifecycleRecovery(input,opts),/Invalid or unverifiable/);
  assert.throws(()=>sealLifecycleRecovery(value(),{...opts,encryptionKey:Buffer.alloc(31)}));
