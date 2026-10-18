@@ -1,3 +1,9 @@
+## 18/10/2026 22:32 Europe/Athens — ANDROID-CHAT-NATIVE-01 / remaining scope ASSIGNED
+
+Owner feat/android-chat-native-20261017 retained. Completed limited visible logout/re-login, screenshot-block report, LAB2 personal-PIN login/visible own-store/message-send and staff notification/correct-tap retests removed from current pending; details and exact limitations in checkpoint2026-10-17-android-chat-native.md and docs/manual/native-chat/PASS.md. Earlier notification absence superseded for the observed successful session, not a whole native/N16 closure. Do not repeat completed actions merely for documentation.
+
+Remaining: native photo/camera/preview and broader AI functional acceptance; permission denial, expiry/revocation/server acknowledgement, in-flight push/account switch/foreign-store negative requests; device/SDK/OS forensic storage and phone/tablet variants; stable signing/Play, iOS, separate physical QR scan. A visible own-store list is not crafted cross-store denial proof; visible login gate is not server revocation/forensic deletion proof. All other owners retained. Next: one non-sensitive test photo from current LAB2 native session to LAB, correct Admin readback, no invoice/payment/stock/fiscal side effects.
+
 ## 18/10/2026 22:32 Europe/Athens - WHOLESALE-SELLER-LAB-01 / AUTHORIZED TEMPORARY SELLER GRANTS / BEFORE ACTION
 
 Retained owner codex/wholesale-suite-20261017; docs/wholesale-seller-lab-claim-20261018, baseline10d1dc9434512ebfb88789aa4ba27a4f2e64db37. Owner explicitly ΝΑΙ ΕΓΚΡΙΝΩ22:29:38 approved temporary LAB WHOLESALE_B2B activation, seller membership for existing Υπεύθυνος Εργαστηρίου, assignment ONLY existing ΔΟΚΙΜΑΣΤΙΚΟΣ ΠΕΛΑΤΗΣ ΧΟΝΔΡΙΚΗΣ/B2B-TEST-001 to ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ cmtpopbgo000trhb5ng9ytiru, read-only personal seller test and restoration. No new users/passwords/customer/portal/order, role/package/price changes, transactions/stock/fiscal/shift mutations, SQL/seed/migration/deploy. N40 user/control remains untouched. Publish green merged before grant mutations.
@@ -38,12 +44,6 @@ ACCESS LIMIT: Render SQL connector is read-only; local DATABASE_URL/Render/S3 cr
 
 Whole STORE-LIFECYCLE-01 OPEN/ASSIGNED. Remaining complete production ownership including shared Workforce/raw/JSON links, hosted durable encrypted storage/key retention and actual isolated full restore, physical Writer/local spool and original-generation offline/inflight fencing, safe reopen and functional central execute UI/API. Existing Writer source has no lifecycle epoch/maintenance handshake, and remote job planning is not proof of a stopped physical connector. Single next action: restore authenticated execution access for actual recovery integration while completing the explicit ownership plan; never bypass recovery or activate old RESET. Keep both registers and shared/sibling data. Combined current-main PDF regenerated with this receipt; no manual PASS.
 
-
-## 18/10/2026 21:32 Europe/Athens — ANDROID-CHAT-NATIVE-01 / remaining scope ASSIGNED
-
-Owner feat/android-chat-native-20261017 retained. Store-label delivery/correct tap retest removed from current pending scope after owner21:32 confirmation; exact limited evidence is in checkpoint2026-10-17-android-chat-native.md and docs/manual/native-chat/PASS.md. No overall native/N16 closure. Do not repeat that successful test for documentation.
-
-Remaining: negative permission/session expiry/revocation/logout/account-switch/foreign-store acceptance; device storage/SDK/OS forensic acceptance and phone/tablet variants; broader native message/photo/AI functional acceptance; stable signing/Play; iOS. Physical QR-scan acceptance is not separately established. No device/OS/hash/revision-at-test inference. Retain other owners and privacy/access fences. Next: continue untested native device/session/privacy acceptance from the latest checkpoint.
 
 ## 18/10/2026 21:27 Europe/Athens - WHOLESALE-UNIFIED-PAID-01 / LIMITED LIVE UI PASS: INACTIVE MODULE HIDDEN / ACTIVE FLOW STILL OPEN
 
