@@ -1,3 +1,13 @@
+## 18/10/2026 11:20 Athens - VOICE-ASSISTANT-01 / CAPABILITY HELP / ASSIGNED
+
+Retained owner `codex/assistant-business-queries-20261015`; bounded branch `feat/assistant-capability-help-20261018`. Owner asks to continue implementation and perform one general normal-application read-only acceptance at completion, without intermediate user tests. Whole VOICE OPEN; prior natural-sales732fa90c and qualified display/name/source/direct-CSV PASS protected. All other assignments retained.
+
+Reconciled diagnosis: unmerged claimPR2679 was withdrawn before source edits. assistantAnswerFromResponse alone replaces the business clarification, but both normal role handlers subsequently call checkedBusinessAnswer and already restore it. No hosted failure established; do not implement the unnecessary parser change. No source edits were made for that hypothesis.
+
+New bounded scope: deterministic concise Greek response to exact general help/capability questions (e.g. «Τι μπορείς να κάνεις;»), with examples drawn only from the tools exposed to this request. Describe connected report families conditionally on existing module/role permission; a tool being exposed never grants access. No claims of every domain, arbitrary actions, files, persistence or microphone support. No provider call or report read for pure general help. Any additional date/product/store/filter/action or multiline text must retain the ordinary report path, not be swallowed as help. Preserve user history, evidence gate, refusal/source-only/error handling, session/store/tenant/module/role and export boundaries. No provider/model/key, schema/SQL/calculations or business mutations.
+
+Status NOT TESTED. Require focused genuine dispatcher/Owner/Platform and negative-routing regressions, full native PR/main CI, ordinary guarded release and exact healthy revision. Actual help and all deferred natural-language/Owner/mobile/file/report acceptance remain AWAITING the final read-only batch, not new manual PASS. No sale/payment/stock/fiscal/shift action or replay. Claim must merge green before source edits. Checkpoint `CHECKPOINTS/CHANGES/2026-10-18-assistant-capability-help.md`.
+
 ## 17/10/2026 23:29 Athens - VOICE-ASSISTANT-01 / NATURAL TOTAL SALES LIVE / REMAINING ACCEPTANCE
 
 Same owner `codex/assistant-business-queries-20261015` retained. Source2670 plus strict-token2674 now live at732fa90c after final PR/main CI2916/0/0 plus6backup, ordinary guarded39066587659 and independent health23:29:07. Checkpoint `CHECKPOINTS/CHANGES/2026-10-17-assistant-natural-total-sales.md` has exact evidence. Natural wording, validated Athens periods, latest date/format continuation and numeric/month-like filter preservation are implemented. No new language/financial/manual PASS from CI.
