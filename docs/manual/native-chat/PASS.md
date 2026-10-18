@@ -1,3 +1,9 @@
+# 18/10/2026 21:20 — current notification acceptance remains OPEN
+
+Owner reports new preview download and successful activation20:52, normal message/list retrieval20:55 and enabled Android permissions21:04. This is limited USER PASS registration and visibility of those messages, not background delivery/store-label/tap acceptance or full functional message acceptance. Exact APK/model/OS not independently observed. Earlier generic LAB delivery PASS below is historical; user now reports no notification on new preview.
+
+For troubleshooting, distinguish download, activation and delivery. Same-account messages appear in history but intentionally do not trigger native push to that account. Read-only metadata of the three LAB messages20:52/20:53/20:55 identifies the same sender account as the currently registered v2 recipient, despite the owner's different-user description. Confirm the sender identity before attributing these records to APK regression. Do not change settings/uninstall/rollback on this observation alone. A distinct existing authorised sender is required for a meaningful delivery test; no extra message is sent merely to repair documentation. Store-name notification and correct authorised tap still require actual observation. Server session/role/store fences, generic body and private lockscreen policy remain required; no bypass or private credential disclosure.
+
 # 18/10/2026 17:03 — περιορισμένο USER PASS ειδοποίησης LAB και σωστού ανοίγματος
 
 Ο ιδιοκτήτης αναφέρει ότι δοκίμασε στο LAB και επιβεβαιώνει: ειδοποίηση έφτασε ενώ η εφαρμογή ήταν στο παρασκήνιο ή το κινητό κλειδωμένο, εμφανίστηκε μόνο «νέο μήνυμα» και πατώντας την άνοιξε η συνομιλία LAB. Αυτό είναι περιορισμένο USER PASS αυτής της δοκιμής, μαζί με την προηγούμενη εγγραφή συσκευής. Δεν διασταυρώθηκαν ανεξάρτητα μοντέλο/OS/hash, IDs, αποστολέας/παραλήπτης, χρόνος παράδοσης ή χωριστά και οι δύο καταστάσεις παρασκηνίου και κλειδώματος.
