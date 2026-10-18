@@ -159,3 +159,93 @@ test('native active shift guard rolls preparation back; closing the synthetic sh
  const extraManifest={...manifest,tables:[...manifest.tables,{name:'CashShiftSession',owner:{kind:'DIRECT'},reset:'REMOVE'}]},f=await fixture({extraManifest});
  try{await f.db.$executeRawUnsafe(`CREATE TABLE "CashShiftSession"("id" text PRIMARY KEY,"companyId" text,"storeId" text REFERENCES "Store"("id"),"status" text)`);await f.db.$executeRawUnsafe(`INSERT INTO "CashShiftSession" VALUES('shift','company','target','OPEN')`);await f.core.install(f.db,actor,scope);await assert.rejects(f.core.prepare(f.db,actor,scope,'RESET'),/Active shift/);assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,false);await f.db.$executeRawUnsafe(`UPDATE "CashShiftSession" SET "status"='CLOSED' WHERE "id"='shift'`);const prep=await f.core.prepare(f.db,actor,scope,'RESET');await f.core.abort(f.db,actor,{...scope,...prep});assert.equal(f.proofCalls(),0)}finally{await f.close()}
 });
+
+const rawOwnershipManifest={...manifest,id:'ISOLATED_REVIEWED_RAW_LINKS_V1',streaming:true,reviewedColumns:[...manifest.reviewedColumns,'RawChild.parentId','BaseIdentity.baseStoreId','BaseChild.identityId'],tables:[...manifest.tables,
+ {name:'RawChild',owner:{kind:'LINK',parent:'RawParent',columns:[['parentId','id']]},reset:'REMOVE'},
+ {name:'RawParent',owner:{kind:'DIRECT'},reset:'REMOVE'},
+ {name:'BaseChild',owner:{kind:'LINK',parent:'BaseIdentity',columns:[['identityId','id']]},reset:'REMOVE'},
+ {name:'BaseIdentity',owner:{kind:'BASE_STORE'},reset:'REMOVE'}
+]};
+const rawOwnershipDdl=(schema,{unique=true,nullable=false}={})=>[
+ `CREATE TABLE "${schema}"."RawParent"("id" text ${unique?'PRIMARY KEY':'NOT NULL'},"companyId" text NOT NULL,"storeId" text NOT NULL REFERENCES "${schema}"."Store"("id"))`,
+ `CREATE TABLE "${schema}"."RawChild"("id" text PRIMARY KEY,"companyId" text NOT NULL,"parentId" text ${nullable?'':'NOT NULL'},"amount" numeric(30,9))`,
+ `CREATE TABLE "${schema}"."BaseIdentity"("id" text PRIMARY KEY,"companyId" text NOT NULL,"baseStoreId" text)`,
+ `CREATE TABLE "${schema}"."BaseChild"("id" text PRIMARY KEY,"identityId" text NOT NULL,"value" text)`
+];
+async function populateRawOwnership(db){
+ await db.$executeRawUnsafe(`INSERT INTO "RawParent" VALUES('raw-target','company','target'),('raw-sibling','company','sibling'),('raw-foreign','other','foreign')`);
+ await db.$executeRawUnsafe(`INSERT INTO "RawChild" VALUES('child-target','company','raw-target',9007199254740993.123456789),('child-sibling','company','raw-sibling',2),('child-foreign','other','raw-foreign',3)`);
+ await db.$executeRawUnsafe(`INSERT INTO "BaseIdentity" VALUES('identity-target','company','target'),('identity-sibling','company','sibling'),('identity-global','company',NULL)`);
+ await db.$executeRawUnsafe(`INSERT INTO "BaseChild" VALUES('base-child-target','identity-target','TARGET'),('base-child-sibling','identity-sibling','CONTROL'),('base-child-global','identity-global','UNASSIGNED GLOBAL CONTROL')`);
+}
+async function rawFixture(options={}){return fixture({extraManifest:rawOwnershipManifest,extraDdl:s=>rawOwnershipDdl(s,options),populate:async(db,s)=>{await populateRawOwnership(db);if(options.populate)await options.populate(db,s)}})}
+
+test('raw ownership is explicit, acyclic and requires distinct paired column names',()=>{
+ const opts={persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)};
+ for(const columns of [[['parentId','id'],['parentId','other']],[['parentId','id'],['other','id']],[],[['parentId']]]){
+  const bad=structuredClone(rawOwnershipManifest);bad.tables.find(t=>t.name==='RawChild').owner.columns=columns;assert.throws(()=>createLifecycleExecutionCore(bad,opts),/Invalid ownership columns/);
+ }
+ const bad=structuredClone(rawOwnershipManifest);bad.tables.find(t=>t.name==='RawChild').owner.parent='RawChild';assert.throws(()=>createLifecycleExecutionCore(bad,opts),/Cyclic ownership/);
+});
+
+test('native reviewed raw/base ownership restores exact scoped rows, deletes children first and blocks retired raw references without affecting global controls',{skip:!isolated},async()=>{
+ const f=await rawFixture();try{
+  const before=await f.snapshot();await f.core.install(f.db,actor,scope);const prep=await f.core.prepare(f.db,actor,scope,'RESET');
+  await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "RawChild" VALUES('busy','company','raw-target',1)`),matches(/STORE_LIFECYCLE_MAINTENANCE/));
+  const result=await f.core.execute(f.db,actor,{...scope,...prep});assert.equal(f.proofCalls(),1);
+  const order=result.deleted.map(t=>t.table);assert.ok(order.indexOf('RawChild')<order.indexOf('RawParent'));assert.ok(order.indexOf('BaseChild')<order.indexOf('BaseIdentity'));
+  const after=await f.snapshot(),removed=new Set(['raw-target','child-target','identity-target','base-child-target']);
+  for(const name of ['RawParent','RawChild','BaseIdentity','BaseChild'])assert.deepEqual(after[name],before[name].filter(r=>!removed.has(JSON.parse(r.row).id)));
+  for(const name of ['Store','Product','StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice','StoreRbsInstallationSettings'])assert.deepEqual(after[name],before[name]);
+  const retired=await f.db.$queryRawUnsafe(`SELECT "parentTable","refColumns","refValues","generation"::text AS generation FROM "StoreLifecycleTombstone" ORDER BY "parentTable"`);
+  assert.deepEqual(retired,[{parentTable:'BaseIdentity',refColumns:['id'],refValues:['identity-target'],generation:'0'},{parentTable:'RawParent',refColumns:['id'],refValues:['raw-target'],generation:'0'}]);
+  assert.equal((await f.core.execute(f.db,actor,{...scope,...prep})).idempotentReplay,true);assert.equal((await f.db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "StoreLifecycleTombstone"`))[0].count,2);
+  // Fixture-only reopen; the production application has no safe-reopen endpoint.
+  await f.db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "maintenance"=false WHERE "storeId"='target'`);
+  for(const sql of [`INSERT INTO "RawChild" VALUES('old-raw','company','raw-target',1)`,`INSERT INTO "BaseChild" VALUES('old-base','identity-target','OLD')`]){
+   await assert.rejects(f.db.$executeRawUnsafe(sql),matches(/STORE_LIFECYCLE_RETIRED_REFERENCE/));
+   await assert.rejects(f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_generations','{"target":"1"}',true)`);await tx.$executeRawUnsafe(sql)}),matches(/STORE_LIFECYCLE_RETIRED_REFERENCE/));
+  }
+  await f.db.$executeRawUnsafe(`INSERT INTO "RawChild" VALUES('unaffected-sibling','company','raw-sibling',4)`);
+  await f.db.$executeRawUnsafe(`INSERT INTO "BaseChild" VALUES('unaffected-global','identity-global','GLOBAL')`);
+  // Existing behavior for an unbound, unrelated company row is not made a new universal FK.
+  await f.db.$executeRawUnsafe(`INSERT INTO "RawChild" VALUES('unrelated-unbound','other','unknown-parent',5)`);
+ }finally{await f.close()}
+});
+
+test('native raw ownership refuses ambiguous/nullable parents and preexisting unowned links before any cleanup',{skip:!isolated},async()=>{
+ for(const options of [{unique:false},{nullable:true},{populate:db=>db.$executeRawUnsafe(`INSERT INTO "RawChild" VALUES('orphan','other','missing-parent',1)`)}]){
+  const f=await rawFixture(options);try{
+   const before=await f.snapshot();await assert.rejects(f.core.install(f.db,actor,scope),/unique parent key|non-null keys|Unowned application reference/);assert.deepEqual(await f.snapshot(),before);assert.equal(f.proofCalls(),0);
+  }finally{await f.close()}
+ }
+});
+
+test('native scoped snapshots reject inconsistent company rows and leave maintenance, source and recovery untouched',{skip:!isolated},async()=>{
+ for(const table of ['Sale','RawChild','BaseIdentity']){
+  const f=await rawFixture({populate:db=>db.$executeRawUnsafe(`UPDATE "${table}" SET "companyId"='other' WHERE "id"='${table==='Sale'?'sale':table==='RawChild'?'child-target':'identity-target'}'`)});try{
+   await f.core.install(f.db,actor,scope);const before=await f.snapshot();await assert.rejects(f.core.prepare(f.db,actor,scope,'RESET'),/company mismatch/);assert.deepEqual(await f.snapshot(),before);assert.equal(f.proofCalls(),0);assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,false);
+  }finally{await f.close()}
+ }
+});
+
+test('typed ownership accepts only reviewed exact text discriminator constants',()=>{
+ const opts={persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)};
+ for(const match of [null,[],{},'DISPATCH_NOTE',{kind:3},{kind:''}]){const bad=structuredClone(rawOwnershipManifest);bad.tables.find(t=>t.name==='RawChild').owner.match=match;assert.throws(()=>createLifecycleExecutionCore(bad,opts),/Invalid typed application ownership/)}
+ const bad=structuredClone(rawOwnershipManifest);bad.tables.find(t=>t.name==='RawParent').owner.match={kind:'DISPATCH_NOTE'};assert.throws(()=>createLifecycleExecutionCore(bad,opts),/Invalid typed application ownership/);
+});
+
+test('native typed raw links preserve other aggregate domains with identical IDs and reject only retired matching references',{skip:!isolated},async()=>{
+ const extraManifest={...rawOwnershipManifest,reviewedColumns:[...rawOwnershipManifest.reviewedColumns,'TypedOutbox.aggregateId'],tables:[...rawOwnershipManifest.tables,{name:'TypedOutbox',owner:{kind:'LINK',parent:'RawParent',columns:[['aggregateId','id']],match:{aggregateType:'DISPATCH_NOTE'}},reset:'REMOVE'}]};
+ const f=await fixture({extraManifest,extraDdl:s=>[...rawOwnershipDdl(s),`CREATE TABLE "${s}"."TypedOutbox"("id" text PRIMARY KEY,"companyId" text NOT NULL,"aggregateType" text NOT NULL,"aggregateId" text NOT NULL)`],populate:async db=>{
+  await populateRawOwnership(db);
+  await db.$executeRawUnsafe(`INSERT INTO "TypedOutbox" VALUES('owned','company','DISPATCH_NOTE','raw-target'),('different-domain','other','OTHER','raw-target'),('unrelated-unbound','other','OTHER','never-a-parent'),('sibling','company','DISPATCH_NOTE','raw-sibling')`);
+ }});
+ try{
+  await f.core.install(f.db,actor,scope);const before=await f.snapshot(),prep=await f.core.prepare(f.db,actor,scope,'RESET');await f.core.execute(f.db,actor,{...scope,...prep});const after=await f.snapshot();assert.deepEqual(after.TypedOutbox,before.TypedOutbox.filter(r=>JSON.parse(r.row).id!=='owned'));
+  await f.db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "maintenance"=false WHERE "storeId"='target'`);
+  await assert.rejects(f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_generations','{"target":"1"}',true)`);await tx.$executeRawUnsafe(`INSERT INTO "TypedOutbox" VALUES('old-matching','company','DISPATCH_NOTE','raw-target')`)}),matches(/STORE_LIFECYCLE_RETIRED_REFERENCE/));
+  await f.db.$executeRawUnsafe(`INSERT INTO "TypedOutbox" VALUES('new-other-domain','other','OTHER','raw-target')`);
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "StoreLifecycleTombstone"`))[0].count,2);
+ }finally{await f.close()}
+});
