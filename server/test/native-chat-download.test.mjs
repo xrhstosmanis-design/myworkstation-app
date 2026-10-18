@@ -21,7 +21,7 @@ test('mounted Android download dialog exposes a decodable public install QR with
  const root=createRoot(document.getElementById('root'));
  try{
   await act(async()=>root.render(React.createElement(module.exports.default)));
-  await act(async()=>new Promise(r=>setTimeout(r,50)));
+  for(let attempt=0;attempt<100&&!document.querySelector('img');attempt++)await act(async()=>new Promise(r=>setTimeout(r,20)));
   await act(async()=>document.querySelector('button').click());assert.equal(document.querySelector('dialog').open,true);
   const link=document.querySelector('a');assert.equal(link.href,'https://fixture.invalid/downloads/chat-android/');
   const image=document.querySelector('img');assert.ok(image);

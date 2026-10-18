@@ -23,6 +23,7 @@ test("weekly period anchors Monday through next Monday at each store's 06/07 sta
 });
 test("one weekly snapshot checks all seven days, preserves day/terminal/delivery amounts and performs no writes",async()=>{
  const rows=week(),before=JSON.stringify(rows),f=fixture(rows),r=await readAutomaticCashPreview(f.db,args());
+ assert.equal(r.sourceReadiness,"READY");assert.equal(r.financialFinality,"PROVISIONAL");assert.equal(r.financialReconciliationComplete,false);assert.deepEqual(r.financialLimitations,["DOCUMENT_PAYMENT_RECONCILIATION_NOT_VERIFIED","CASH_REVIEW_EXPLANATIONS_NOT_VERIFIED","PHYSICAL_CASH_AND_CONTROL_BALANCES_NOT_VERIFIED"]);
  assert.equal(r.ready,true);assert.equal(r.kind,"WEEKLY_CASH_PREVIEW");assert.equal(r.deliveryStatus,"PREVIEW_ONLY");assert.equal(r.dayReadiness.length,7);assert.equal(r.sourceCount,28);assert.equal(r.groups.length,14);
  assert.equal(r.groups.find(g=>g.day==="2026-10-12"&&g.cashChain==="STORE").netVariance,-10);
  assert.equal(r.groups.find(g=>g.day==="2026-10-13"&&g.cashChain==="STORE").offset,0);
@@ -40,7 +41,7 @@ test("missing midweek shift, Sunday open/late closure, earlier unresolved, dupli
   if(mode==="foreign")rows[0].companyId="foreign";
   if(mode==="future")rows.push({...rows[0],id:"future",openedAt:reportWallTime("2026-10-19",7)});
   if(mode==="cap")rows=Array.from({length:1001},(_,i)=>({...rows[0],id:String(i)}));
-  const r=await readAutomaticCashPreview(fixture(rows).db,args());assert.equal(r.ready,false,mode);assert.equal(r.groups,null,mode);
+  const r=await readAutomaticCashPreview(fixture(rows).db,args());assert.equal(r.ready,false,mode);assert.equal(r.groups,null,mode);assert.equal(r.sourceReadiness,"HOLD",mode);assert.equal(r.financialFinality,"PROVISIONAL");assert.equal(r.financialReconciliationComplete,false);assert.deepEqual(r.financialLimitations,["DOCUMENT_PAYMENT_RECONCILIATION_NOT_VERIFIED","CASH_REVIEW_EXPLANATIONS_NOT_VERIFIED","PHYSICAL_CASH_AND_CONTROL_BALANCES_NOT_VERIFIED"]);
   if(mode==="missing")assert.ok(r.holds.some(h=>h.day==="2026-10-14"&&h.slot===2));
  }
  const r=await readAutomaticCashPreview(fixture(week()).db,{...args(),now:new Date("2026-10-19T06:59:59+03:00")});assert.equal(r.ready,false);assert.ok(r.holds.some(h=>h.day==="2026-10-18"&&h.code==="BUSINESS_DAY_NOT_FINISHED"));

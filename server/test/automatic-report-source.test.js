@@ -57,3 +57,17 @@ test("fresh snapshots change fingerprint on amount, rule or shift update without
  rows[0].variance=-10;rows[0].updatedAt=new Date("2026-10-16T07:10:00+03:00");assert.notEqual(a.sourceFingerprint,(await readAutomaticDailyCashPreview(f.db,input())).sourceFingerprint);
  const changed=await readAutomaticDailyCashPreview(fixture({rules:[{...rule(),carryOverEnabled:false}]}).db,input());assert.notEqual(a.sourceFingerprint,changed.sourceFingerprint);
 });
+
+test("source READY and HOLD both retain provisional financial status without treating limitations as missing shifts",async()=>{
+ const rows=shifts(),before=JSON.stringify(rows),ready=await readAutomaticDailyCashPreview(fixture({rows}).db,input());
+ assert.equal(ready.sourceReadiness,"READY");assert.equal(ready.ready,true);assert.deepEqual(ready.holds,[]);
+ assert.equal(ready.financialFinality,"PROVISIONAL");assert.equal(ready.financialReconciliationComplete,false);
+ assert.deepEqual(ready.financialLimitations,["DOCUMENT_PAYMENT_RECONCILIATION_NOT_VERIFIED","CASH_REVIEW_EXPLANATIONS_NOT_VERIFIED","PHYSICAL_CASH_AND_CONTROL_BALANCES_NOT_VERIFIED"]);
+ assert.deepEqual(ready.groups.map(g=>[g.cashChain,g.originalShortage,g.originalSurplus,g.offset,g.netVariance]),[["STORE",10,8,8,-2],["DELIVERY",0,20,0,20]]);
+ assert.equal(ready.employeeLiabilityAdjusted,false);assert.equal(ready.deliveryStatus,"PREVIEW_ONLY");assert.equal(JSON.stringify(rows),before);
+ const held=await readAutomaticDailyCashPreview(fixture({rows:rows.filter(r=>r.id!=="s2")}).db,input());
+ assert.equal(held.sourceReadiness,"HOLD");assert.equal(held.ready,false);assert.equal(held.groups,null);assert.ok(held.holds.some(h=>h.code==="THIRD_SHIFT_MISSING"));
+ assert.equal(held.financialFinality,"PROVISIONAL");assert.equal(held.financialReconciliationComplete,false);assert.deepEqual(held.financialLimitations,ready.financialLimitations);
+ // A consumer mutating one response must not alter subsequent disclosures.
+ ready.financialLimitations.pop();assert.deepEqual((await readAutomaticDailyCashPreview(fixture().db,input())).financialLimitations,["DOCUMENT_PAYMENT_RECONCILIATION_NOT_VERIFIED","CASH_REVIEW_EXPLANATIONS_NOT_VERIFIED","PHYSICAL_CASH_AND_CONTROL_BALANCES_NOT_VERIFIED"]);
+});
