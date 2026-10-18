@@ -12,6 +12,8 @@ function memoryDb(){
   const parse=(query,values)=>Array.isArray(query)?{sql:query.join("?"),values}:{sql:query.sql||query.text,values:query.values};
   const execute=async(query,...values)=>{
     const call=parse(query,values);state.calls.push(call);const sql=call.sql,v=call.values;
+    if(sql.includes('JOIN "CompanyModule"'))return state.companyActive&&state.moduleActive!==false?[{companyId:v[0]}]:[];
+    if(sql.includes('SELECT clock_timestamp()'))return [{now:new Date()}];
     if(sql.includes("pg_advisory_xact_lock")){if(state.advisoryGate)await state.advisoryGate();return [{locked:""}]}
     if(sql.includes('INSERT INTO "WholesaleOrderRequest"')){
       if(state.failInsert.length)throw state.failInsert.shift();
@@ -100,7 +102,7 @@ test("stale quote fails before order/event insert and provides current authorita
 
 test("current company/store/customer authorization is checked again for accepted replay and foreign scope",async()=>{
   const {db,state,body}=memoryDb(),input=await body();await createWholesaleOrder(db,ctx,input);
-  for(const flag of ["companyActive","storeActive","customerActive"]){state[flag]=false;await assert.rejects(createWholesaleOrder(db,ctx,input),error=>error.status===404);state[flag]=true}
+  for(const flag of ["companyActive","storeActive","customerActive"]){state[flag]=false;await assert.rejects(createWholesaleOrder(db,ctx,input),error=>error.status===(flag==="companyActive"?403:404));state[flag]=true}
   for(const patch of [{storeId:"foreign-store"},{customerId:"foreign-customer"}])await assert.rejects(createWholesaleOrder(db,ctx,{...input,...patch}),error=>error.status===404);
   await assert.rejects(createWholesaleOrder(db,{...ctx,companyId:"company-b"},input),error=>error.status===404);
   for(const principal of [{...ctx,role:"EMPLOYEE"},{...ctx,tokenType:"STORE_OPERATOR"},{...ctx,channel:"FIELD_SALES"},{...ctx,channel:"B2B"},{...ctx,actorId:""}])await assert.rejects(createWholesaleOrder(db,principal,input),error=>error.status===403);

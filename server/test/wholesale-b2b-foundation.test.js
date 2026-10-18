@@ -1,3 +1,4 @@
+import {assertWholesaleEntitlement} from "../src/lib/wholesale-entitlement.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -15,7 +16,7 @@ const owner={id:'owner-a',companyId:'company-a',role:'OWNER'};
 // Execute the complete real router registration with Express. Only the external
 // auth boundary and database/bootstrap dependencies are injected.
 async function httpRouter(db,bootstrap=async()=>{}){
-  const router=new Function('crypto','Router','z','prisma','ensureWholesaleSchema','Prisma','assertWholesaleManager','buildWholesaleQuote','wholesaleError','createWholesaleOrder',source+'\nreturn router;')(crypto,Router,z,db,bootstrap,Prisma,assertWholesaleManager,buildWholesaleQuote,wholesaleError,createWholesaleOrder);
+  const router=new Function('crypto','Router','z','prisma','ensureWholesaleSchema','Prisma','assertWholesaleManager','buildWholesaleQuote','wholesaleError','createWholesaleOrder','assertWholesaleEntitlement',source+'\nreturn router;')(crypto,Router,z,db,bootstrap,Prisma,assertWholesaleManager,buildWholesaleQuote,wholesaleError,createWholesaleOrder,assertWholesaleEntitlement);
   const app=express();app.use(express.json());
   app.use((req,res,next)=>{req.user={...owner,role:req.headers['x-test-role']||owner.role,tokenType:req.headers['x-test-token'],companyId:req.headers['x-test-company']||owner.companyId};next()});
   app.use('/api/wholesale',router);
@@ -35,7 +36,8 @@ function memoryDb(){
   const tiers=[{id:'tier-1',productId:'product-a',sku:'SKU-A',name:'Alpha product',minimumQuantity:'0.1250',unitPrice:'0.0000',discountPercent:null,updatedAt:new Date('2026-10-17T00:00:00Z')}];
   const db={
     async $queryRaw(strings,...values){
-      assert.ok(strings.raw,'all data SQL is parameterized');const sql=strings.join('?');calls.push({kind:'read',sql,values});
+      if(!Array.isArray(strings)){const sql=strings.sql;assert.ok(Array.isArray(strings.values));if(sql.includes('JOIN "CompanyModule"'))return [{companyId:strings.values[0]}];throw Error('Unexpected query '+sql)}
+      assert.ok(strings.raw,'all data SQL is parameterized');const sql=strings.join('?');if(sql.includes('SELECT clock_timestamp()'))return [{now:new Date()}];calls.push({kind:'read',sql,values});
       if(sql.includes('SELECT c.*'))return customers.filter(c=>c.companyId===values[0]).map(c=>{const list=lists.find(l=>l.id===links.get(c.id)&&l.companyId===c.companyId);return {...c,priceListId:list?.id??null,priceListName:list?.name??null,priceListActive:list?.active??null}});
       if(sql.includes('FROM "WholesaleCustomer"'))return customers.filter(c=>c.id===values[0]&&c.companyId===values[1]&&c.active);
       if(sql.includes('FROM "WholesalePriceList"'))return lists.filter(l=>l.id===values[0]&&l.companyId===values[1]&&(!sql.includes('"active"=true')||l.active));
@@ -105,12 +107,14 @@ test('native PostgreSQL registered wholesale router enforces tenant readback, as
   const db=new PrismaClient({datasourceUrl:url.toString()});let api;
   try{
     await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
-    await db.$executeRawUnsafe('CREATE TABLE "Company" ("id" TEXT PRIMARY KEY)');
+    await db.$executeRawUnsafe('CREATE TABLE "Company" ("id" TEXT PRIMARY KEY,"active" BOOLEAN NOT NULL DEFAULT true,"licenseStatus" TEXT NOT NULL DEFAULT \'ACTIVE\',"subscriptionStartsAt" TIMESTAMPTZ,"subscriptionEndsAt" TIMESTAMPTZ)');
     await db.$executeRawUnsafe('CREATE TABLE "Store" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id"),"active" BOOLEAN NOT NULL DEFAULT true)');
     await db.$executeRawUnsafe('CREATE TABLE "Product" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id"),"sku" TEXT,"name" TEXT NOT NULL,"active" BOOLEAN NOT NULL DEFAULT true)');
     await db.$executeRawUnsafe('CREATE TABLE "StockMovement" ("id" TEXT PRIMARY KEY,"quantity" NUMERIC)');
     await db.$executeRawUnsafe('CREATE TABLE "StoreTransaction" ("id" TEXT PRIMARY KEY,"amount" NUMERIC)');
-    await db.$executeRaw`INSERT INTO "Company" VALUES ('company-a'),('company-b')`;
+    await db.$executeRaw`INSERT INTO "Company" ("id") VALUES ('company-a'),('company-b')`;
+    await db.$executeRawUnsafe('CREATE TABLE "CompanyModule" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "Company"("id"),"moduleKey" TEXT NOT NULL,"active" BOOLEAN NOT NULL DEFAULT true,"startsAt" TIMESTAMPTZ,"endsAt" TIMESTAMPTZ,UNIQUE("companyId","moduleKey"))');
+    await db.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey") VALUES ('paid-a','company-a','WHOLESALE_B2B'),('core-a','company-a','CORE'),('paid-b','company-b','WHOLESALE_B2B')`;
     await db.$executeRaw`INSERT INTO "Product" ("id","companyId","sku","name") VALUES ('product-a','company-a','SKU-A','Alpha'),('product-a2','company-a','SKU-A2','Alpha'),('product-b','company-b','SECRET-SKU','Foreign')`;
     await db.$executeRaw`INSERT INTO "StockMovement" VALUES ('control-stock',42)`;
     await db.$executeRaw`INSERT INTO "StoreTransaction" VALUES ('control-money',100.25)`;

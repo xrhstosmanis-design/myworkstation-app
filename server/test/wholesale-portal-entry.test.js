@@ -17,6 +17,6 @@ test('customer portal has a separate entry without administrative or POS bootstr
   const index=await readFile(new URL('../src/index.js',import.meta.url),'utf8');
   assert.ok(index.indexOf('app.use("/api/b2b",wholesalePortalRoutes)')<index.indexOf('app.use("/api",auth,'));
   assert.ok(index.indexOf('app.get("/b2b/:publicSlug"')<index.indexOf('app.get("*"'));
-  assert.match(index,/app\.use\("\/api\/wholesale\/portal",auth,requireCompanyModule\("CORE"\),wholesalePortalAdminRoutes\)/);
+  assert.match(index,/app\.use\("\/api\/wholesale\/portal",auth,createWholesaleEntitlementGuard\(\),wholesalePortalAdminRoutes\)/);
   assert.match(index,/app\.get\("\/online\/:publicSlug"/);
 });

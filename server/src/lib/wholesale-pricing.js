@@ -59,5 +59,7 @@ export async function buildWholesaleQuote(db,ctx,body,{lock=false}={}){
   const quote={currency:'EUR',customerId:input.customerId,customerName:customers[0].name,storeId:input.storeId,items,totals:{net:decimal(net,2),vat:decimal(vat,2),gross:decimal(gross,2)},creditChecked:false};
   // This digest is a revalidation/version checksum, never an authorization token.
   const quoteId=crypto.createHash('sha256').update(JSON.stringify({companyId:ctx.companyId,actorId:ctx.actorId,role:ctx.role,channel:ctx.channel,quote})).digest('hex');
+  // Recheck live access after any checked product/tier lock waits.
+  await authorizeWholesalePrincipal(db,ctx,input,{lock});
   return {quoteId,...quote};
 }

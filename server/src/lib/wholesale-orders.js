@@ -63,6 +63,8 @@ export async function createWholesaleOrder(db,ctx,input){
         await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey},0))::text AS "locked"`;
         await authorizeWholesalePrincipal(tx,ctx,body,{lock:true});
         await authorizeCurrentScope(tx,ctx,body);
+        // Wall-clock expiry can occur while a store/customer lock waits.
+        await authorizeWholesalePrincipal(tx,ctx,body,{lock:true});
         const existing=await tx.$queryRaw`SELECT * FROM "WholesaleOrderRequest" WHERE "companyId"=${ctx.companyId} AND "actorId"=${ctx.actorId} AND "clientOrderId"=${body.clientOrderId} LIMIT 1`;
         if(existing[0]){
           if(existing[0].requestHash!==requestHash)throw wholesaleError(409,"IDEMPOTENCY_CONFLICT","This order key was already used with different details.");
