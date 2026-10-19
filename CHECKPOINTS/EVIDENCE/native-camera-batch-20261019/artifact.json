@@ -60,5 +60,18 @@
     "file_id": "file_00000000a4f88246a73cab0911e19fb2",
     "version": 8,
     "file_name": "MyWorkStation-Chat-Android-0.1.6-Preview.apk"
+  },
+  "user_observation": {
+    "time": "2026-10-19T20:47:16+03:00",
+    "quote": "ειναι οκ..εστειλα 2 μαζεμενεσ",
+    "status": "LIMITED USER PASS",
+    "scope": "Two camera captures sent together in ongoing camera retest",
+    "not_independently_measured": [
+      "Admin visibility",
+      "message IDs",
+      "installed hash",
+      "device/model/OS",
+      "storage forensics"
+    ]
   }
 }
