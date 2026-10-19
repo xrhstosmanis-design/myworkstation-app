@@ -158,6 +158,36 @@ public class MultiPhotoSendTest {
             assertEquals(0, api.posts.size());
         }
     }
+    @Test public void galleryContentProviderSelectionSendsBothImagesAfterResume() throws Exception {
+        FixtureApi api = new FixtureApi();
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            // A stopped gallery round-trip must not depend on injected PhotoBatch bytes.
+            scenario.moveToState(Lifecycle.State.CREATED);
+            scenario.moveToState(Lifecycle.State.STARTED);
+            scenario.onActivity(a -> {
+                try {
+                    set(a, "photoToken", "isolated-fixture-token"); set(a, "photoBinding", "fixture-store");
+                    ClipData clip = ClipData.newRawUri("fixture", Uri.parse("content://" + GalleryFixtureProvider.AUTHORITY + "/1"));
+                    clip.addItem(new ClipData.Item(Uri.parse("content://" + GalleryFixtureProvider.AUTHORITY + "/2")));
+                    Intent picked = new Intent(); picked.setClipData(clip);
+                    a.onActivityResult(41, Activity.RESULT_OK, picked);
+                    assertEquals("", get(a, "photoSelectionNotice"));
+                    assertEquals(2, ((PhotoBatch) get(a, "photos")).size());
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
+            scenario.moveToState(Lifecycle.State.RESUMED); awaitIdle(scenario);
+            scenario.onActivity(a -> {
+                try {
+                    assertTrue(((android.widget.TextView) get(a, "attachmentLabel")).getText().toString().contains("2 φωτογραφίες"));
+                    invoke(a, "send");
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
+            awaitIdle(scenario);
+            assertEquals(2, api.posts.size());
+            assertEquals("data:image/jpeg;base64,AQI=", api.posts.get(0).getJSONObject("attachment").getString("dataUrl"));
+            assertEquals("data:image/jpeg;base64,AwQ=", api.posts.get(1).getJSONObject("attachment").getString("dataUrl"));
+        }
+    }
     @Test public void disabledPhotoSettingPreventsTheFirstPost() throws Exception {
         FixtureApi api = new FixtureApi(); api.enabled = false;
         try (ActivityScenario<MainActivity> scenario = open(api)) {
