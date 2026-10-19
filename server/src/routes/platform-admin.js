@@ -1,3 +1,5 @@
+import {assistantHistoryTurnMetadata} from '../services/assistant-history-turns.js';
+import {createNativeAssistantHistory,createAssistantHistoryHttp} from '../services/assistant-history-http.js';
 import {registerFreshStoreLifecycle} from '../services/store-lifecycle-controller.js';
 import {registerStoreLifecyclePreview} from "../services/store-lifecycle-preview.js";
 import {registerPlatformMaintenanceRoutes} from "../services/platform-company-terminal-maintenance.js";
@@ -71,7 +73,7 @@ const licenseStatuses=["TRIAL","PILOT","ACTIVE","SUSPENDED","EXPIRED"];
 const planSchema=z.enum(plans);
 const licenseStatusSchema=z.enum(licenseStatuses);
 const dateValue=z.string().trim().optional().or(z.literal(""));
-const aiCommandQuestionSchema=z.object({question:z.string().trim().min(3).max(600),inputChannel:z.enum(["text","voice"]).default("text"),readScope:z.enum(["selected_store","all_stores"]).default("selected_store"),selection:z.object({companyId:z.string().trim().min(1).max(160),storeId:z.string().trim().min(1).max(160)}).strict().nullable().optional().default(null),history:assistantHistorySchema,snapshot:z.object({generatedAt:z.string().max(50),companies:z.object({active:z.number().int().nonnegative(),inactive:z.number().int().nonnegative(),stores:z.number().int().nonnegative(),attention:z.number().int().nonnegative()}),problems:z.object({total:z.number().int().nonnegative(),cash:z.number().int().nonnegative(),payments:z.number().int().nonnegative(),paymentDiscrepancies:z.number().int().nonnegative(),bank:z.number().int().nonnegative(),bankDiscrepancies:z.number().int().nonnegative()}),companyStates:z.array(z.object({name:z.string().trim().min(1).max(160),active:z.boolean(),stores:z.number().int().nonnegative()})).max(250)}).nullable().optional().default(null)}).strict();
+const aiCommandQuestionSchema=z.object({question:z.string().trim().min(3).max(600),inputChannel:z.enum(["text","voice"]).default("text"),readScope:z.enum(["selected_store","all_stores"]).default("selected_store"),selection:z.object({companyId:z.string().trim().min(1).max(160),storeId:z.string().trim().min(1).max(160)}).strict().nullable().optional().default(null),history:assistantHistorySchema,conversation:assistantHistoryTurnMetadata.optional(),snapshot:z.object({generatedAt:z.string().max(50),companies:z.object({active:z.number().int().nonnegative(),inactive:z.number().int().nonnegative(),stores:z.number().int().nonnegative(),attention:z.number().int().nonnegative()}),problems:z.object({total:z.number().int().nonnegative(),cash:z.number().int().nonnegative(),payments:z.number().int().nonnegative(),paymentDiscrepancies:z.number().int().nonnegative(),bank:z.number().int().nonnegative(),bankDiscrepancies:z.number().int().nonnegative()}),companyStates:z.array(z.object({name:z.string().trim().min(1).max(160),active:z.boolean(),stores:z.number().int().nonnegative()})).max(250)}).nullable().optional().default(null)}).strict();
 const aiCommandAnswerSchema={type:"object",additionalProperties:false,properties:{answer:{type:"string"},highlights:{type:"array",items:{type:"string"},maxItems:5},sources:{type:"array",items:{type:"string",enum:["Επισκόπηση εταιρειών","Κατάσταση καταστημάτων","Έλεγχος ταμείων","Έλεγχος πληρωμών","Τραπεζικός έλεγχος","Στατιστικά πωλήσεων","Στατιστικά / Ανάλυση αποθήκης"]},maxItems:5},limitations:{type:"string"}},required:["answer","highlights","sources","limitations"]};
 const aiResponseText=value=>typeof value?.output_text==="string"?value.output_text:(value?.output||[]).flatMap(item=>item?.content||[]).find(part=>part?.type==="output_text")?.text||"";
 const videoSecretKey=()=>crypto.createHash("sha256").update(String(process.env.PARAMETERS_ENCRYPTION_KEY||process.env.JWT_SECRET||""),"utf8").digest();
@@ -1499,6 +1501,10 @@ router.post("/super-admin-analytics/sessions/:sessionId/confirmation",async(req,
   }catch(error){next(error)}
 });
 
+const platformHistoryTurns=createNativeAssistantHistory({mode:"platform"});
+const platformHistoryHttp=createAssistantHistoryHttp({turns:platformHistoryTurns,mode:"platform"});
+router.get("/ai-command-center/history",platformHistoryHttp.load);
+router.post("/ai-command-center/history/reset",platformHistoryHttp.reset);
 router.post("/ai-command-center/export",createAssistantExportHandler());
 router.get("/ai-command-center/status",async(req,res,next)=>{try{
   const query=z.object({companyId:z.string().min(1).max(160).optional(),storeId:z.string().min(1).max(160).optional(),readScope:z.enum(["selected_store","all_stores"]).default("selected_store")}).strict().parse(req.query||{});
@@ -1511,6 +1517,7 @@ router.get("/ai-command-center/status",async(req,res,next)=>{try{
 router.post("/ai-command-center/ask",async(req,res,next)=>{
   try{
     const body=aiCommandQuestionSchema.parse(req.body||{});
+    const turn=body.conversation?await platformHistoryTurns.begin(req,body.conversation,body.question):null;if(turn)body.history=turn.history;
     const signal=AbortSignal.timeout(60000),assistant=await createPlatformAssistantSession(req,body.selection,{signal,allStores:body.readScope==="all_stores"});
     if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για το Command Center.",code:"AI_PROVIDER_NOT_CONFIGURED"});
     const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
@@ -1523,7 +1530,9 @@ router.post("/ai-command-center/ask",async(req,res,next)=>{
       return {response,raw};
     }});
     const result=assistantAnswerFromResponse(raw,evidence,{providerOK:response.ok,requireEvidence:assistantQuestionRequiresReport(assistantEffectiveQuestion(body.question,body.history)),question:assistantEffectiveQuestion(body.question,body.history)});
-    res.json({...checkedBusinessAnswer(assistantEffectiveQuestion(body.question,body.history),checkedConsumptionAnswer(assistantEffectiveQuestion(body.question,body.history),result,evidence),evidence),evidence,exportTicket:issueAssistantExportTicket(req,reads,evidence,{selection:body.selection,allStores:body.readScope==="all_stores"}),scope:assistant.scope,readOnly:true,generatedAt:new Date().toISOString(),model:process.env.OPENAI_COMMAND_CENTER_MODEL||"gpt-5-mini"});
+    const checked={...checkedBusinessAnswer(assistantEffectiveQuestion(body.question,body.history),checkedConsumptionAnswer(assistantEffectiveQuestion(body.question,body.history),result,evidence),evidence),evidence,exportTicket:issueAssistantExportTicket(req,reads,evidence,{selection:body.selection,allStores:body.readScope==="all_stores"}),scope:assistant.scope,readOnly:true,generatedAt:new Date().toISOString(),model:process.env.OPENAI_COMMAND_CENTER_MODEL||"gpt-5-mini"};
+    const historyReceipt=turn?await turn.finish(checked,reads):null;if(turn)await assistant.verify();
+    res.json({...checked,...(historyReceipt?{historyReceipt}:{})});
   }catch(error){next(error)}
 });
 

@@ -16,8 +16,8 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
 // There is intentionally no default DB, request-time DDL, route or browser cache.
 export function createAssistantHistoryRepository({db,authorize,now=()=>new Date()}){
  if(typeof db?.$transaction!=='function'||typeof authorize!=='function')throw new TypeError('Explicit history storage and native authorization are required');
- const access=async req=>historyAccessSchema.parse(await authorize(req));
- const recheck=async(req,captured)=>{if(historyAccessKey(await access(req))!==historyAccessKey(captured))throw denied();};
+ const access=async(req,tx)=>historyAccessSchema.parse(await authorize(req,tx));
+ const recheck=async(req,captured,tx)=>{if(historyAccessKey(await access(req,tx))!==historyAccessKey(captured))throw denied();};
  const clock=()=>{const value=new Date(now());if(!Number.isFinite(value.getTime()))throw new TypeError('Invalid history clock');return value;};
  const select=async(tx,key)=>{
   const rows=await tx.$queryRaw`SELECT "revision","payload","requestId","digest","expiresAt" FROM "AssistantHistoryArchive" WHERE "scopeKey"=${key} FOR UPDATE`;
@@ -35,11 +35,11 @@ export function createAssistantHistoryRepository({db,authorize,now=()=>new Date(
    // The shared store fence is held until commit, before waiting for the archive.
    // A fresh status read alone cannot serialize a concurrent store reset.
    await assertLifecycleMutation(tx,{companyId:a.companyId,storeId:a.storeId},a.generation);
-   await recheck(req,a);
+   await recheck(req,a,tx);
    // Serialize absent-row creation and updates for exactly this actor/scope.
    await tx.$queryRaw`SELECT 1 AS "locked" FROM pg_advisory_xact_lock(hashtextextended(${key},0))`;
-   await recheck(req,a);
-   let row=await select(tx,key);await recheck(req,a);
+   await recheck(req,a,tx);
+   let row=await select(tx,key);await recheck(req,a,tx);
    // Remove expired prose on access, retaining revision/request fencing.
    // This is scoped cleanup, not a global retention scheduler.
    const checkedAt=clock();
@@ -48,14 +48,14 @@ export function createAssistantHistoryRepository({db,authorize,now=()=>new Date(
     if(JSON.stringify(row.payload)!==JSON.stringify(empty)){
      const updated=await tx.$queryRaw`UPDATE "AssistantHistoryArchive" SET "payload"=${JSON.stringify(empty)}::jsonb WHERE "scopeKey"=${key} AND "revision"=${row.revision} AND "expiresAt"<=${checkedAt} RETURNING "revision"`;
      if(!changedRows.safeParse(updated).success||changedRows.parse(updated)[0].revision!==row.revision)throw conflict();
-     await recheck(req,a);row={...row,payload:empty};
+     await recheck(req,a,tx);row={...row,payload:empty};
     }
    }
    const result=await fn({tx,a,key,row,time:clock()});
-   await recheck(req,a);
+   await recheck(req,a,tx);
    if(result.expiresAt&&new Date(result.expiresAt)<=clock())throw expired();
    return result;
-  });
+  },{timeout:15000,maxWait:5000});
   // Native transaction commit itself is an await boundary too.
   await recheck(req,a);
   if(result.expiresAt&&new Date(result.expiresAt)<=clock())throw expired();
