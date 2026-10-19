@@ -1,0 +1,43 @@
+{
+  "owner": "codex/assistant-business-queries-20261015",
+  "date": "2026-10-19",
+  "observedWindowAthens": "22:41–22:53",
+  "revision": "a6902d149624d0f687dbe2e906f852eb501c7ee7",
+  "mode": "personal Platform SuperAdmin",
+  "scope": "explicit Diadoxou only; all stores OFF",
+  "privateDataPublished": false,
+  "pass": {
+    "transferOriginalRowsAndTotals": true,
+    "historyAcrossReload": true,
+    "historyExpiryFixed": true,
+    "transferDirectionAndDateFollowups": true,
+    "csvChangedFilterBytes": true,
+    "xlsxNativeNumericCell": true,
+    "docxNativeContentAndRender": true,
+    "pdfNaturalFollowupContentAndRender": true,
+    "emptySelectionWithdrawsPrivateUI": true,
+    "cancelNoLateAnswerObserved": true,
+    "cancelNewThreadNotArchivedAtMeasuredSnapshot": true,
+    "totalSalesAndPerProductSourceMatch": true,
+    "allDisplayedSalesGroupsMatchAfterWhitespaceNormalization": true,
+    "preciseNamedProduct": true
+  },
+  "fail": {
+    "productDateOnlyFollowup": "decorated product filter causes false no_match despite source records"
+  },
+  "notTested": [
+    "ordinary Owner parity/login",
+    "foreign-role server tests in LIVE",
+    "mobile and touch",
+    "physical microphone",
+    "broader domain completeness"
+  ],
+  "wholeVoice": "OPEN",
+  "sourceFix": "NOT IMPLEMENTED",
+  "financialTestTransaction": false,
+  "notes": [
+    "first PDF and sales-rows shared files did not synchronize; no attachment/content claim for those paths",
+    "complete UI/source row digest compared in their existing runtimes, after display whitespace normalization",
+    "export files and real rows/amounts/names not committed"
+  ]
+}
