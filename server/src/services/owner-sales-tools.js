@@ -11,6 +11,7 @@ import {consumptionArguments,consumptionTool,dailyConsumptionRequest} from "./as
 import {ASSISTANT_OUTPUT_TOKENS,ASSISTANT_RECOVERY_TOKENS,mayRetryAssistantResponse} from "./assistant-answer-response.js";
 import {plainTotalSalesRequest} from './assistant-total-sales-request.js';
 import {salesProductReportQuery,matchingSalesProducts} from './assistant-sales-product-query.js';
+import {salesExportReadPeriod} from './assistant-sales-export-read.js';
 export {plainTotalSalesRequest} from './assistant-total-sales-request.js';
 
 const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -94,9 +95,10 @@ export async function runOwnerAssistant({prompt,question="",requestProvider,read
   // choose today's dates. Callers authorize the current scope before/after it.
   const clarification=assistantSalesPeriodClarification(question);
   if(clarification)return {response:{ok:true},raw:{status:"completed",output_text:JSON.stringify({answer:clarification.answer,highlights:[],limitations:""})},evidence:[],reads:[]};
+  const exportPeriod=tools.some(t=>t?.name===ownerSalesTool.name||t?.name===salesStoresTool.name)?salesExportReadPeriod(question,{now}):null;
   const input=[{role:"user",content:prompt}],evidence=[],reads=[];let calls=0,retried=false;
   for(let round=0;round<3;round++){
-    const settings={input,tools,parallel_tool_calls:false,tool_choice:round===2?"none":"auto",store:false,max_output_tokens:ASSISTANT_OUTPUT_TOKENS};
+    const settings={input,tools,parallel_tool_calls:false,tool_choice:round===2?"none":round===0&&exportPeriod?"required":"auto",store:false,max_output_tokens:ASSISTANT_OUTPUT_TOKENS};
     let provider=await requestProvider(settings);
     if(provider.response.ok&&mayRetryAssistantResponse(provider.raw)&&!retried){retried=true;provider=await requestProvider({...settings,max_output_tokens:ASSISTANT_RECOVERY_TOKENS});}
     if(!provider.response.ok||["incomplete","failed","cancelled"].includes(provider.raw?.status))return {...provider,evidence,reads};
@@ -108,6 +110,7 @@ export async function runOwnerAssistant({prompt,question="",requestProvider,read
     // all is internal to the exact deterministic request above. The provider
     // tool schema intentionally cannot ask for it, nor drop a requested filter.
     if(list&&args.mode==="all")fail("Η συνολική αναφορά απαιτεί σαφές αίτημα χωρίς πρόσθετα φίλτρα.",422);
+    if(exportPeriod&&(!(sales||list)||args.from!==exportPeriod.from||args.to!==exportPeriod.to))fail("Η εξαγωγή πρέπει να διαβάσει τις πωλήσεις της ίδιας περιόδου.",422);
     if(business&&expectedDomain){const period=businessQuestionPeriod(question,{now});if(args.domain!==expectedDomain||period&&(args.from!==period.from||args.to!==period.to))fail("Η αναφορά πρέπει να ακολουθεί το ζητούμενο είδος και διάστημα.",422);}
     calls++;const report=await(business?readBusiness(args):consumption?readConsumption(args):list?readSalesStores(args):sales?readSales(args):stock?readStock(args):readCash(args.date));evidence.push(report);reads.push({name:call.name,args});
     const providerReport=list||consumption||business?{...report,rows:report.rows.slice(0,50),detailRowCount:report.rows.length,detailRowsLimited:report.rows.length>50,detailsShownInReport:true}:report;
