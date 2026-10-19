@@ -979,3 +979,8 @@ Owner codex/ai-credit-alerts-20261009. Independent new owner-authorized low-cred
 - Μία παραγγελία Γύρου 1 στο `ΤΡΑΠΕΖΙ LAB 1` διαχωρίστηκε σε `ΚΑΦΕ 1` και `ΚΟΥΖΙΝΑ 1`, ολοκληρώθηκε ανά πόστο και πληρώθηκε μία φορά μετρητά. Πώληση `b408a720-967c-4f72-9862-be56bc2485fd`, 3,00 €. Βάρδια MAIN 0→3,00 € / 0→1 συναλλαγή, LAB-POS-02 αμετάβλητη, τοπική ουρά 0, stock καφέ και τοστ 0→-1.
 - Αναλυτικό checkpoint: `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
 - Modifiers και ελεύθερη σημείωση είδους: **production LAB PASS** μετά τα PR #1428 και #1430· εμφανίστηκαν μαζί στην ουρά `ΚΑΦΕ` και το δελτίο ολοκληρώθηκε. Οικονομικά/stock αμετάβλητα, χωρίς πώληση ή πληρωμή. Αλλεργιογόνα ως first-class πεδίο παραμένουν OPEN.
+
+## 20/10/2026 00:15 Europe/Athens — KAT-BACKGROUND-02 / SOURCE PREPARED / AWAITING CI AND LIVE
+
+Same retained owner fix/kat-background-20261020. Claim PR2907/headbf894d1/CI39325681910 green mergedf00356f before source. Exactly one CSS declaration changed: KAT-only body background #f5f3e9→#cbd3b5. Existing branding, product/card backgrounds and all scripts byte-identical. No new tests for reversible cosmetic change; existing scoped branding/public UI regressions and frontend build required. Full exact PR/main CI and ordinary guarded release then read-only public visual acceptance pending. No transactional/config/data writes; no manual/mobile/checkout PASS inferred.
+
