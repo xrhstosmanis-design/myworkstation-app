@@ -1,3 +1,9 @@
+## 19/10/2026 — PURCHASE-SUPPLIER-CORRECTION-01 / CI FIXTURE CORRECTION / AWAITING FULL CI
+
+Same owner fix/purchase-supplier-correction-20261019, PR2819. First completed full run39226698062/job117975195436 at head5054f5cd3da44cf9c867e3ca5fd88d822ea881af:3335PASS/13FAIL/0SKIP. Seven existing refresh cases could not evaluate a new ESM import because their VM loader removed only two named imports. Six new native cases stopped in fixture setup before supplier correction: shared ensureInvoiceCommonDraftSchema already prepares reopenVersion and PurchaseOrderPosting. Fix the loader to strip all top-level imports while preserving its real shipped handlers and unchanged assertions; use IF NOT EXISTS for existing fixture schema. No runtime relaxation, deleted/skipped assertion or production change. New allocation/credit-offset and old-metadata overwrite protections retained. Local focused after downloading unchanged shared time helper:13PASS/0FAIL/6native infrastructureSKIP. Full native CI must execute all six cases; no source/LAB PASS yet.
+
+Reconcile current mainfab4330e2b0bda43279a89675de76759e81ec12a independent central overlap/UI claim before the exact corrective full run; no takeover or edits to that owner. Original transaction and all production fingerprints still unchanged. Final controlled preview/cancel follows green PR/main and exact ordinary release; actual supplier correction remains a deliberate USER action.
+
 ## Review form layout
 
 Keep the new original/payment confirmation form readable with18px text,48px supplier selection, separate review sections and80px reason input. No business behavior change; prior mounted functional cases remain required on this exact final head.

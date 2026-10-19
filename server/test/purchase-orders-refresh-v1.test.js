@@ -27,7 +27,7 @@ function fixture(){
     captureNotice:(text,error)=>notices.push({text,error})
   });
   // Execute the shipped event handlers and async request logic; only DOM drawing is replaced.
-  vm.runInContext(source.replace(/^import \{[^}]+\} from ["'][^"']*greece-time.mjs["'];\n/,"").replace(/^import \{installInvoiceProductMatcher\} from "\.\.\/\.\.\/invoice-product-matcher\.js";\n/,"").replaceAll("export function ","function ")+`
+  vm.runInContext(source.replace(/^import .*;\n/gm,"").replaceAll("export function ","function ")+`
     render=root=>{captureRender(header()+ordersHtml());bindRoot(root)};
     notify=(root,text,error)=>captureNotice(text,error);
     globalThis.suite={state,loadReport,refreshReport,refreshActiveSuite,bindRoot,installPurchaseOrdersSuite};
@@ -117,4 +117,5 @@ test("a response arriving after unmount cannot update another screen",async()=>{
   assert.equal(f.suite.state.report,null);assert.equal(f.root.renderCount,undefined);
   assert.equal(f.suite.state.loading,false);
 });
+
 

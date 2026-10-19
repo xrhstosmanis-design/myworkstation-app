@@ -16,11 +16,12 @@ async function registered(file,db){
 }
 async function fixture({posted=true,payment=true}={}){
  const f=await invoiceDbFixture();await f.seed({mydata:false,payment,posLines:1});
- await f.db.$executeRawUnsafe('ALTER TABLE "PurchaseOrder" ADD COLUMN "reopenVersion" integer DEFAULT 0');
+ await f.db.$executeRawUnsafe('DELETE FROM "MyDataInboundDocument"');
+ await f.db.$executeRawUnsafe('ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "reopenVersion" integer DEFAULT 0');
  await f.db.$executeRawUnsafe(`INSERT INTO "Supplier"("id","companyId","taxId","name") VALUES('target','c','099939837','Verified target'),('foreign','other','099939837','Foreign')`);
  const posting=await registered('../src/routes/purchase-order-posting-guard.js',f.db);
  // The real posting middleware owns these existing tables in the hosted app.
- await f.db.$executeRawUnsafe(`CREATE TABLE "PurchaseOrderPosting"("orderId" text PRIMARY KEY,"companyId" text,"supplierId" text,"documentFingerprint" text,"purchaseDocumentId" text,"postedAt" timestamptz DEFAULT NOW(),"postedByUserId" text,"postedByName" text,"updatedAt" timestamptz DEFAULT NOW(),UNIQUE("companyId","documentFingerprint"))`);
+ await f.db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "PurchaseOrderPosting"("orderId" text PRIMARY KEY,"companyId" text,"supplierId" text,"documentFingerprint" text,"purchaseDocumentId" text,"postedAt" timestamptz DEFAULT NOW(),"postedByUserId" text,"postedByName" text,"updatedAt" timestamptz DEFAULT NOW(),UNIQUE("companyId","documentFingerprint"))`);
  await f.db.$executeRawUnsafe(`CREATE TABLE "StoreOperatorAudit"("id" text PRIMARY KEY,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb,"createdAt" timestamptz DEFAULT NOW())`);
  if(posted){let error;await posting['PATCH /:orderId']({user:actor,params:{orderId:'pos'},body:{status:'FINAL'}},{json:()=>{},status:()=>({json:()=>{}})},e=>error=e);assert.ifError(error)}
  const snapshot=async()=>{const state={};for(const table of ['PurchaseOrder','PurchaseDocument','PurchaseOrderLine','PurchaseDocumentLine','StoreTransaction','StoreProduct','StockMovement','PurchaseOrderPosting','InvoiceStockPosting','DocumentAttachment','AiReaderJob','Supplier','SupplierProductLink','SupplierProductMapping'])state[table]=await f.db.$queryRawUnsafe(`SELECT row_to_json(t) AS row FROM "${table}" t ORDER BY COALESCE(to_jsonb(t)->>'id',to_jsonb(t)->>'orderId',to_jsonb(t)->>'sourceDocumentId')`);return state};
