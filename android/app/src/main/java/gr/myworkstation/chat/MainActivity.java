@@ -402,12 +402,12 @@ public final class MainActivity extends Activity {
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
         if (request == CAMERA) {
-            byte[] captured = CaptureBuffer.take();
+            PhotoBatch captured = CaptureBuffer.take();
             if (result == RESULT_OK && captured != null && photoToken.equals(token) && photoBinding.equals(id(selected, "id"))) {
-                clearPhoto(); try { photos.add(captured, "image/jpeg"); } catch (IllegalArgumentException ignored) { photoSelectionNotice = "Η φωτογραφία ξεπερνά το όριο επιλογής."; }
+                photos.takeFrom(captured); photoSelectionNotice = "";
             }
-            else if (captured != null) Arrays.fill(captured, (byte) 0);
-            photoBinding = ""; photoToken = ""; return;
+            else if (captured != null) captured.clear();
+            photoBinding = ""; photoToken = ""; updatePhotoLabel(); return;
         }
         if (request != PHOTO || result != RESULT_OK || data == null || !photoToken.equals(token) || !photoBinding.equals(id(selected, "id"))) return;
         PhotoBatch candidate = new PhotoBatch();

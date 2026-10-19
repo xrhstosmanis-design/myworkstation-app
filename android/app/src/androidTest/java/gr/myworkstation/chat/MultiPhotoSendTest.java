@@ -29,7 +29,7 @@ import static org.junit.Assert.*;
 public class MultiPhotoSendTest {
     @Before public void clear() {
         Context context = ApplicationProvider.getApplicationContext();
-        new TokenVault(context).clear(); TokenVault.pendingTwoFactor(context).clear();
+        new TokenVault(context).clear(); TokenVault.pendingTwoFactor(context).clear(); CaptureBuffer.clear();
     }
     @After public void clean() { clear(); }
     private static Object get(MainActivity a, String name) throws Exception {
@@ -229,6 +229,37 @@ public class MultiPhotoSendTest {
             assertEquals("Keep this caption", api.posts.get(0).getString("body"));
             assertEquals("", api.posts.get(1).getString("body"));
         } finally { api.getRelease.countDown(); }
+    }
+    @Test public void cameraBatchResultSendsBothOnlyAfterExplicitSend() throws Exception {
+        FixtureApi api = new FixtureApi();
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            scenario.onActivity(a -> {
+                try {
+                    PhotoBatch batch = new PhotoBatch(); batch.add(new byte[]{1,2}, "image/jpeg"); batch.add(new byte[]{3,4}, "image/jpeg");
+                    CaptureBuffer.put(batch); set(a, "photoToken", "isolated-fixture-token"); set(a, "photoBinding", "fixture-store");
+                    a.onActivityResult(42, Activity.RESULT_OK, null);
+                    assertEquals(2, ((PhotoBatch)get(a,"photos")).size()); assertEquals(0,api.posts.size());
+                    invoke(a,"send");
+                } catch(Exception e) { throw new AssertionError(e); }
+            });
+            awaitIdle(scenario); assertEquals(2,api.posts.size());
+            assertEquals("data:image/jpeg;base64,AQI=",api.posts.get(0).getJSONObject("attachment").getString("dataUrl"));
+            assertEquals("data:image/jpeg;base64,AwQ=",api.posts.get(1).getJSONObject("attachment").getString("dataUrl"));
+        }
+    }
+    @Test public void staleCameraBatchIsWipedWithoutReplacingCurrentSelection() throws Exception {
+        FixtureApi api = new FixtureApi(); byte[] first={1,2},second={3,4},current={7};
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            scenario.onActivity(a -> {
+                try {
+                    ((PhotoBatch)get(a,"photos")).add(current,"image/jpeg");
+                    PhotoBatch batch=new PhotoBatch();batch.add(first,"image/jpeg");batch.add(second,"image/jpeg");CaptureBuffer.put(batch);
+                    set(a,"photoToken","different-old-session");set(a,"photoBinding","fixture-store");a.onActivityResult(42,Activity.RESULT_OK,null);
+                    assertEquals(1,((PhotoBatch)get(a,"photos")).size());assertSame(current,((PhotoBatch)get(a,"photos")).get(0).bytes);
+                }catch(Exception e){throw new AssertionError(e);}
+            });
+            assertArrayEquals(new byte[]{0,0},first);assertArrayEquals(new byte[]{0,0},second);assertEquals(0,api.posts.size());assertNull(CaptureBuffer.take());
+        }
     }
     @Test public void disabledPhotoSettingPreventsTheFirstPost() throws Exception {
         FixtureApi api = new FixtureApi(); api.enabled = false;
