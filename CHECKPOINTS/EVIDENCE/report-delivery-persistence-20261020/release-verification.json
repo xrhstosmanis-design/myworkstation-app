@@ -1,0 +1,54 @@
+{
+  "recordedAt": "2026-10-19T22:06:19Z",
+  "kind": "technical_release_not_feature_acceptance",
+  "sourcePR": 2909,
+  "claimPR": 2903,
+  "sourceMerge": "c5b751db49858e9cf3437e844cce6c5344473056",
+  "deployedRevision": "f2a3b79a145f7f80331280384066ec78c29ec230",
+  "CI": {
+    "pr": 39325922089,
+    "main": 39327214192,
+    "integrated": 39327705958,
+    "deployed": 39328665510,
+    "serverPass": 3594,
+    "serverFail": 0,
+    "serverSkip": 0,
+    "backupPass": 8,
+    "nativeRepositorySubtestsPass": 11,
+    "nativeRepositorySubtestsSkip": 0,
+    "deployedBuildJob": 118323482236
+  },
+  "deployment": {
+    "run": 39330143576,
+    "job": 118326018997,
+    "renderDeploy": "dep-dbb8vvbncjis738veivg",
+    "status": "live",
+    "finishedAt": "2026-10-19T21:50:59.473712Z",
+    "guardHealthyAt": "2026-10-19T21:51:06.3278155Z",
+    "independentHealth": {
+      "requestMinuteUTC": "2026-10-19T22:05Z",
+      "ok": true,
+      "revision": "f2a3b79a145f7f80331280384066ec78c29ec230"
+    },
+    "previousHealthyRevision": "0484d636059eedb936e8bea1159b05c6c00bf0d2"
+  },
+  "blobs": {
+    "repository": "c9ff006bb1f2eefba5fb1f39bc283fae20fc43ac",
+    "nativeTest": "7ef8f7d4e49a59ea4f63aae299a33ae9cd135395",
+    "lifecycle": "463f541d930bbab12c2c027d4f7158256d800c7a",
+    "lifecycleTest": "eb08aa8442db2e0c7f7181e6c97274af0caedb37"
+  },
+  "runtimeWired": false,
+  "productionTableProvisionedByThisIncrement": false,
+  "dispatchEnabledByThisIncrement": false,
+  "newFeatureAcceptance": false,
+  "protectedExistingPASS": true,
+  "scope": "Injected dormant transaction repository and dedicated isolated native PostgreSQL fixture. Client reconnect is not database-server restart or actual delivery.",
+  "remaining": [
+    "production schema/lifecycle/retention/backup authority",
+    "real eligibility/consent/revocation and lock ordering",
+    "payload/scheduler/overlap/reissue/reconciliation",
+    "controlled actual SMTP/inbox acceptance"
+  ],
+  "nativeExcerpt": "# Subtest: native PostgreSQL delivery persistence: independent clients, transactions and client reconnect fences\n2026-10-19T21:42:58.9650170Z     # Subtest: concurrent clients create exactly one logical slot and reject changed immutable snapshot\n2026-10-19T21:42:58.9651084Z     ok 1 - concurrent clients create exactly one logical slot and reject changed immutable snapshot\n2026-10-19T21:42:58.9651633Z       ---\n2026-10-19T21:42:58.9651933Z       duration_ms: 17.079335\n2026-10-19T21:42:58.9652258Z       ...\n2026-10-19T21:42:58.9652772Z     # Subtest: concurrent CAS claims have one winner and stale version cannot overwrite committed state\n2026-10-19T21:42:58.9653518Z     ok 2 - concurrent CAS claims have one winner and stale version cannot overwrite committed state\n2026-10-19T21:42:58.9654047Z       ---\n2026-10-19T21:42:58.9654347Z       duration_ms: 17.030461\n2026-10-19T21:42:58.9654674Z       ...\n2026-10-19T21:42:58.9655159Z     # Subtest: selected scope fences all reads and mutations, including SQL metacharacters\n2026-10-19T21:42:58.9656025Z     ok 3 - selected scope fences all reads and mutations, including SQL metacharacters\n2026-10-19T21:42:58.9656536Z       ---\n2026-10-19T21:42:58.9656840Z       duration_ms: 39.567354\n2026-10-19T21:42:58.9657161Z       ...\n2026-10-19T21:42:58.9657600Z     # Subtest: hostile but valid scope strings are bound as literal values, never SQL\n2026-10-19T21:42:58.9658226Z     ok 4 - hostile but valid scope strings are bound as literal values, never SQL\n2026-10-19T21:42:58.9658680Z       ---\n2026-10-19T21:42:58.9658979Z       duration_ms: 12.44512\n2026-10-19T21:42:58.9659298Z       ...\n2026-10-19T21:42:58.9659835Z     # Subtest: prestart lease recovery persists token history and rejects stale owner and reused token\n2026-10-19T21:42:58.9660730Z     ok 5 - prestart lease recovery persists token history and rejects stale owner and reused token\n2026-10-19T21:42:58.9661238Z       ---\n2026-10-19T21:42:58.9661516Z       duration_ms: 24.078894\n2026-10-19T21:42:58.9661824Z       ...\n2026-10-19T21:42:58.9662349Z     # Subtest: fresh gate executes inside transaction and denied or thrown gate rolls back create/start\n2026-10-19T21:42:58.9663185Z     ok 6 - fresh gate executes inside transaction and denied or thrown gate rolls back create/start\n2026-10-19T21:42:58.9663724Z       ---\n2026-10-19T21:42:58.9664025Z       duration_ms: 16.988426\n2026-10-19T21:42:58.9664347Z       ...\n2026-10-19T21:42:58.9664808Z     # Subtest: failure after SQL and before commit exposes no record or acceptance receipt\n2026-10-19T21:42:58.9665489Z     ok 7 - failure after SQL and before commit exposes no record or acceptance receipt\n2026-10-19T21:42:58.9665982Z       ---\n2026-10-19T21:42:58.9666283Z       duration_ms: 22.936498\n2026-10-19T21:42:58.9666610Z       ...\n2026-10-19T21:42:58.9667191Z     # Subtest: disconnect/reconnect preserves claim and started attempt expires UNKNOWN without resend permission\n2026-10-19T21:42:58.9668071Z     ok 8 - disconnect/reconnect preserves claim and started attempt expires UNKNOWN without resend permission\n2026-10-19T21:42:58.9668666Z       ---\n2026-10-19T21:42:58.9669225Z       duration_ms: 105.371964\n2026-10-19T21:42:58.9669557Z       ...\n2026-10-19T21:42:58.9670120Z     # Subtest: committed ACCEPTED receipt is durable and only identical current acknowledgement is idempotent\n2026-10-19T21:42:58.9671138Z     ok 9 - committed ACCEPTED receipt is durable and only identical current acknowledgement is idempotent\n2026-10-19T21:42:58.9671709Z       ---\n2026-10-19T21:42:58.9672012Z       duration_ms: 57.322826\n2026-10-19T21:42:58.9672340Z       ...\n2026-10-19T21:42:58.9672822Z     # Subtest: SQL projection and JSON corruption fail closed without overwriting evidence\n2026-10-19T21:42:58.9673523Z     ok 10 - SQL projection and JSON corruption fail closed without overwriting evidence\n2026-10-19T21:42:58.9674014Z       ---\n2026-10-19T21:42:58.9674346Z       duration_ms: 61.20363\n2026-10-19T21:42:58.9674673Z       ...\n2026-10-19T21:42:58.9675122Z     # Subtest: independent control tenant row remains byte-for-byte unchanged\n2026-10-19T21:42:58.9675801Z     ok 11 - independent control tenant row remains byte-for-byte unchanged\n2026-10-19T21:42:58.9676278Z       ---\n2026-10-19T21:42:58.9676582Z       duration_ms: 1.223409\n2026-10-19T21:42:58.9676905Z       ...\n2026-10-19T21:42:58.9677187Z     1..11\n2026-10-19T21:42:58.9677814Z ok 309 - native PostgreSQL delivery persistence: independent clients, transactions and client reconnect fences\n2026-10-19T21:42:58.9678419Z   ---\n2026-10-19T21:42:58.9678720Z   duration_ms: 583.305934\n2026-10-19T21:42:58.9679044Z   ...\n2026"
+}
