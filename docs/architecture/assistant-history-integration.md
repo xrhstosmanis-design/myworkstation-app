@@ -1,6 +1,6 @@
 # Assistant history integration readiness
 
-Status: native storage/access source PR2843 is merged with full PR/main3402/0/0; optional API/UI integration is under review under claim PR2840 and exact native dependency amendment PR2846. Activation defaults OFF. No production schema provisioning, background cleanup or lifecycle catalogue rollout has occurred. Retained VOICE owner: `codex/assistant-business-queries-20261015`. Existing foundation: PR2828, checkpoint `CHECKPOINTS/CHANGES/2026-10-19-assistant-history-foundation.md`. Exact generation compatibility correction: PR2836. Whole VOICE remains OPEN.
+Status: API/UI source PR2852 merged c0788ee93e930f715ee22adcd0447803da488327; exact PR/main CI both 3459/0/0 plus6 backup; ordinary guarded deployment39266747789 confirmed exact healthy revision at 2026-10-19T14:16:08Z. Native storage/access PR2843 retained. Activation defaults OFF; no production schema/catalogue/guard/purge rollout. Coordinate compatible enrolled plan/guard upgrade with existing lifecycle owner and resolve inactive physical purge/backup retention before enabling. Retained VOICE owner codex/assistant-business-queries-20261015; whole VOICE remains OPEN. See CHECKPOINTS/CHANGES/2026-10-19-assistant-history-integration.md for exact evidence and remaining scope.
 
 ## Native access and lifecycle boundary
 
