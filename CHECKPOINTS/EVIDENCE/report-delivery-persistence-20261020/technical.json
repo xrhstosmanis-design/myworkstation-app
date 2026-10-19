@@ -1,0 +1,44 @@
+{
+  "compiledAt": "2026-10-19T21:12:54.103Z",
+  "scope": "Dormant transactional persistence only",
+  "claim": {
+    "pr": 2903,
+    "head": "f0c0cf702a2b4136ec5fa67e4c871821ee1325f3",
+    "ci": 39324706458,
+    "merge": "19e7644f046a03dd8e149095e008712982594bad"
+  },
+  "local": {
+    "node": "20.20.2",
+    "pass": 25,
+    "fail": 0,
+    "skipped": 1,
+    "nativeCases": "11 NOT TESTED locally; CI required",
+    "infrastructure": "Root-only UID mapping prevents ordinary nonroot PostgreSQL startup; no workaround or database access"
+  },
+  "files": [
+    {
+      "path": "server/src/services/automatic-report-delivery-repository.js",
+      "bytes": 8862,
+      "sha256": "fb303807ee833e6ab38368b94de0108070f358c88a163eddcd4bac0675cf6c8b",
+      "blob": "c9ff006bb1f2eefba5fb1f39bc283fae20fc43ac"
+    },
+    {
+      "path": "server/test/automatic-report-delivery-repository-postgres.test.js",
+      "bytes": 17915,
+      "sha256": "d069e35ed7a4425cf5c34804390e47918c68af93776550e566ec05f3b9c9cb88",
+      "blob": "7ef8f7d4e49a59ea4f63aae299a33ae9cd135395"
+    },
+    {
+      "path": "CHECKPOINTS/EVIDENCE/report-delivery-persistence-20261020/node20-local.txt",
+      "bytes": 6912,
+      "sha256": "729ab5826b886171d4a7a368cf327f46ecb5623702152d6755e8788566effc16",
+      "blob": "74e6e97b930e0a9830087adfe635c9e34ccdede0"
+    }
+  ],
+  "featureAcceptance": "NOT TESTED; no new LAB/LIVE/USER PASS",
+  "productionDDL": false,
+  "dispatchActivated": false,
+  "productionMigrationLifecycleBackupRetention": "OPEN separately owned",
+  "externalIO": false,
+  "actualDatabaseServerRestartTest": false
+}
