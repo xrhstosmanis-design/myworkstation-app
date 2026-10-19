@@ -55,6 +55,7 @@ public final class MainActivity extends Activity {
     private ScrollView contentScroll;
     private TextView notice, attachmentLabel;
     private EditText composer;
+    private Button chatSendButton;
     private AlertDialog imageDialog;
     private Bitmap preview;
     private final Runnable refresh = new Runnable() {
@@ -95,7 +96,7 @@ public final class MainActivity extends Activity {
             TextView cover = text("MyWorkStation", 24, INK); cover.setGravity(Gravity.CENTER); root.addView(cover);
         }
         messages = null; content = null; contentScroll = null; scroll = null;
-        composer = null; notice = null; attachmentLabel = null;
+        composer = null; notice = null; attachmentLabel = null; chatSendButton = null;
         super.onStop();
     }
     @Override protected void onSaveInstanceState(Bundle state) { /* No private UI state in Android's saved-state storage. */ }
@@ -112,19 +113,21 @@ public final class MainActivity extends Activity {
     private void call(String path, String method, JSONObject body, boolean anonymous, Success success) {
         if (busy) return;
         busy = true; final long generation = epoch.capture(); final String captured = token;
-        status("Σύνδεση…");
+        if (chatSendButton != null) chatSendButton.setEnabled(false);
+        boolean messageRequest = selected != null && (path.equals(chatBase() + "/messages") || path.startsWith(chatBase() + "/messages?"));
+        status(messageRequest && method.equals("GET") ? "Ανανέωση μηνυμάτων…" : messageRequest && method.equals("POST") ? "Αποστολή μηνύματος…" : "Σύνδεση…");
         worker.execute(() -> {
             try {
                 JSONObject result = api.json(path, method, body, anonymous ? "" : captured);
                 ui.post(() -> {
                     if (!foreground || !epoch.current(generation) || !captured.equals(token)) return;
-                    busy = false; status("");
+                    busy = false; if (chatSendButton != null) chatSendButton.setEnabled(true); status("");
                     try { success.run(result); } catch (Exception ignored) { status("Δεν επιβεβαιώθηκαν τα στοιχεία. Ανανέωσε ή συνδέσου ξανά."); }
                 });
             } catch (Exception error) {
                 ui.post(() -> {
                     if (!foreground || !epoch.current(generation) || !captured.equals(token)) return;
-                    busy = false;
+                    busy = false; if (chatSendButton != null) chatSendButton.setEnabled(true);
                     if (!anonymous && error instanceof ChatApi.Failure && ((ChatApi.Failure) error).status == 401) {
                         clearSession(); loginScreen(); status("Η σύνδεση έληξε. Συνδέσου ξανά.");
                     } else status(error instanceof ChatApi.Failure ? error.getMessage() : "Δεν ολοκληρώθηκε η σύνδεση. Ανανέωσε πριν ξαναστείλεις μήνυμα.");
@@ -261,7 +264,9 @@ public final class MainActivity extends Activity {
         if (tab.equals("chat")) bar.addView(button("＋", this::pickPhoto), new LinearLayout.LayoutParams(dp(52), dp(56)));
         composer = input(tab.equals("ai") ? "Ρώτησε τον βοηθό…" : "Γράψε μήνυμα…", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, tab.equals("ai") ? 600 : 5000);
         composer.setMaxLines(4); bar.addView(composer, new LinearLayout.LayoutParams(0, -2, 1));
-        Button send = button("➤", this::send); send.setContentDescription("Αποστολή μηνύματος"); bar.addView(send, new LinearLayout.LayoutParams(dp(56), dp(56))); root.addView(bar);
+        Button send = button("➤", this::send); send.setContentDescription("Αποστολή μηνύματος");
+        if (tab.equals("chat")) { chatSendButton = send; send.setEnabled(!busy); }
+        bar.addView(send, new LinearLayout.LayoutParams(dp(56), dp(56))); root.addView(bar);
         updatePhotoLabel();
         if (tab.equals("chat")) loadMessages(true); else checkAssistant();
     }
@@ -397,12 +402,12 @@ public final class MainActivity extends Activity {
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
         if (request == CAMERA) {
-            byte[] captured = CaptureBuffer.take();
+            PhotoBatch captured = CaptureBuffer.take();
             if (result == RESULT_OK && captured != null && photoToken.equals(token) && photoBinding.equals(id(selected, "id"))) {
-                clearPhoto(); try { photos.add(captured, "image/jpeg"); } catch (IllegalArgumentException ignored) { photoSelectionNotice = "Η φωτογραφία ξεπερνά το όριο επιλογής."; }
+                photos.takeFrom(captured); photoSelectionNotice = "";
             }
-            else if (captured != null) Arrays.fill(captured, (byte) 0);
-            photoBinding = ""; photoToken = ""; return;
+            else if (captured != null) captured.clear();
+            photoBinding = ""; photoToken = ""; updatePhotoLabel(); return;
         }
         if (request != PHOTO || result != RESULT_OK || data == null || !photoToken.equals(token) || !photoBinding.equals(id(selected, "id"))) return;
         PhotoBatch candidate = new PhotoBatch();
@@ -541,7 +546,7 @@ public final class MainActivity extends Activity {
         LinearLayout header = new LinearLayout(this); header.setOrientation(LinearLayout.VERTICAL); header.setBackgroundColor(PURPLE); header.setPadding(dp(20), dp(16), dp(20), dp(14)); header.addView(text(title, 23, Color.WHITE)); header.addView(text(subtitle, 13, 0xffeee6ff)); root.addView(header);
         content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(18), dp(20), dp(18), dp(12)); contentScroll = new ScrollView(this); contentScroll.setFillViewport(true); contentScroll.addView(content); root.addView(contentScroll, new LinearLayout.LayoutParams(-1, 0, 1));
         notice = text("", 14, 0xffa12b49); notice.setPadding(dp(16), dp(4), dp(16), dp(4)); notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); root.addView(notice);
-        composer = null; attachmentLabel = null; setContentView(root); root.requestApplyInsets();
+        composer = null; attachmentLabel = null; chatSendButton = null; setContentView(root); root.requestApplyInsets();
     }
     private TextView text(String value, int size, int color) { TextView v = new TextView(this); v.setText(value); v.setTextSize(size); v.setTextColor(color); v.setTextIsSelectable(false); v.setSaveEnabled(false); v.setPadding(0, dp(4), 0, dp(4)); return v; }
     private Button button(String label, Runnable action) { Button b = new Button(this); b.setText(label); b.setTextColor(PURPLE); b.setAllCaps(false); b.setTextSize(15); b.setMinHeight(dp(52)); b.setMinimumWidth(0); b.setPadding(dp(10), dp(5), dp(10), dp(5)); b.setSaveEnabled(false); b.setOnClickListener(v -> action.run()); return b; }

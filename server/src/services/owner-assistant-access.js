@@ -27,7 +27,7 @@ export async function authorizeOwnerAssistant(req,{db=prisma,getState=companyMod
   }
   const store=await db.store.findFirst({where:{id:storeId,companyId:user.companyId,active:true},select:{id:true,name:true,companyId:true}});
   if(!store)fail(404,"Δεν βρέθηκε ενεργό δικό σου κατάστημα.","OWNER_ASSISTANT_STORE_DENIED");
-  const state=await getState(user.companyId);
+  const state=await getState(user.companyId,{db,now});
   if(!state||(!support&&!state.licenseAllowed))fail(403,"Η άδεια της εταιρείας δεν είναι ενεργή.","LICENSE_INACTIVE");
   if(!Array.isArray(requiredModules)||requiredModules.some(key=>!Object.hasOwn(moduleLabels,key)))fail(500,"Μη έγκυρη δυνατότητα βοηθού.","OWNER_ASSISTANT_CAPABILITY_INVALID");
   if(!support)for(const moduleKey of new Set(["AI_OWNER_ASSISTANT",...requiredModules])){

@@ -1,0 +1,70 @@
+{
+  "apk_sha256": "8a2425e03bad8b9e2e8c203ff0e10d1ec5264155ce0c0209f2386035ea3c84e2",
+  "apk_bytes": 3654372,
+  "signer_sha256": "f7d2fd7dd9a50a1f4e315c7612c8944e3bc7ec615fe6714f0f6c36a858bbb872",
+  "manifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "versionCode": 6,
+    "versionName": "0.1.5-preview"
+  },
+  "apk_v2_rsa_and_full_content_digest": "verified",
+  "test_gallery_provider_in_app_manifest": false,
+  "owner": "feat/android-chat-native-20261017",
+  "status": "TECHNICAL PASS / AWAITING DEVICE",
+  "source_pr": 2850,
+  "source_head": "caf5d9dfab04e40e6e4f93f5e74e9067f28edea5",
+  "merge_commit": "ef40ac972911f11fed17706acc6901befd086d91",
+  "android_tree": "7367c4fe3d97f9f0addb4f7d8853ea251843ae2e",
+  "full_pr_ci": {
+    "run": 39260146010,
+    "job": 118085675266,
+    "status": "SUCCESS",
+    "pass": 3430,
+    "fail": 0,
+    "skip": 0,
+    "backup_pass": 6
+  },
+  "android_ci": {
+    "run": 39260145883,
+    "job": 118085350582,
+    "status": "SUCCESS",
+    "unit_pass": 22,
+    "instrumentation_pass": 14,
+    "fail": 0,
+    "compile_lint": "SUCCESS"
+  },
+  "artifact": {
+    "id": 12190426460,
+    "zip_bytes": 3471721,
+    "zip_sha256": "1fddd3c960dba7f5237c2adbc37e5ecae392484c29d18ea586171597fc04993c"
+  },
+  "main_ci": {
+    "run": 39262041082,
+    "job": 118092261840,
+    "status": "SUCCESS",
+    "pass": 3430,
+    "fail": 0,
+    "skip": 0,
+    "backup_pass": 6
+  },
+  "superseded_before_delivery_apk_sha256": "c2373dd596824d1e579a349002cb1f355fb53c87ee9b1eb15ab3f2cb8d30a66e",
+  "public_distribution": "0.1.3-preview unchanged",
+  "server_deployment_by_this_page": false,
+  "real_message_read_push_business_actions_by_this_page": false,
+  "physical_multi_photo_result": "LIMITED USER PASS reported outbound multi-photo send 2026-10-19 20:02 Europe/Athens; independent Admin receipt and installed binary/device/count/IDs NOT TESTED",
+  "single_next_action": "Verify Admin visibility of the already-sent images without another send; broader distribution and native residual remain OPEN.",
+  "delivery": {
+    "library_file_id": "libfile_a30159b8f9c08191939dd9f9c647a147",
+    "file_id": "file_00000000ffcc8246abe889e639239e57",
+    "version": 7,
+    "file_name": "MyWorkStation-Chat-Android-0.1.5-Preview.apk"
+  },
+  "user_observation": {
+    "at": "2026-10-19T20:02:07+03:00",
+    "text": "ΤΙΣ ΕΣΤΕΙΛΕ",
+    "scope": "reported outbound multiple-photo send only",
+    "repeat_send_required": false,
+    "source": "existing gallery images, explicitly clarified 2026-10-19T20:02:30+03:00"
+  },
+  "camera_result": "USER FAIL 2026-10-19 after20:02 Europe/Athens: attempting two camera captures sends only last; gallery PASS preserved"
+}

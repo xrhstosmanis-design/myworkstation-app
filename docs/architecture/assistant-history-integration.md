@@ -1,6 +1,6 @@
 # Assistant history integration readiness
 
-Status: design for the next separately claimed implementation. No API, UI, schema provisioning, cleanup job or lifecycle manifest change is delivered by this document. Retained VOICE owner: `codex/assistant-business-queries-20261015`. Existing foundation: PR2828, checkpoint `CHECKPOINTS/CHANGES/2026-10-19-assistant-history-foundation.md`. Exact generation compatibility correction: PR2836. Whole VOICE remains OPEN.
+Status: API/UI source PR2852 merged c0788ee93e930f715ee22adcd0447803da488327; exact PR/main CI both 3459/0/0 plus6 backup; ordinary guarded deployment39266747789 confirmed exact healthy revision at 2026-10-19T14:16:08Z. Native storage/access PR2843 retained. Activation defaults OFF; no production schema/catalogue/guard/purge rollout. Coordinate compatible enrolled plan/guard upgrade with existing lifecycle owner and resolve inactive physical purge/backup retention before enabling. Retained VOICE owner codex/assistant-business-queries-20261015; whole VOICE remains OPEN. See CHECKPOINTS/CHANGES/2026-10-19-assistant-history-integration.md for exact evidence and remaining scope.
 
 ## Native access and lifecycle boundary
 
@@ -59,4 +59,8 @@ Proposed logical manifest row for review, not an applied patch:
 
 The proposed physical archive columns are `scopeKey` text primary key; `actorId`, `mode`, `companyId`, `storeId` text; exact `generation` BIGINT; independent `revision` BIGINT; `payload` JSONB; `requestId`/`digest` text; and `expiresAt` timestamptz. Native server-derived scope must bind the physical ownership fields consistently with the scope key. Final foreign keys, safe native lifecycle fencing, index/check definitions, nullability and physical retention/recovery semantics must be verified in an isolated schema and reconciled with the actual catalogue before activation.
 
-This document requests no production cleanup, restore, SQL execution or permission change. No handoff is inferred from the existing broad development approval; the two currently assigned catalogue files remain unchanged until the named transfer is recorded. The receiving page must publish the exact claim and required common records before source changes to those files.
+This document requests no production cleanup, restore, SQL execution or permission change. The owner explicitly accepted the narrow handoff at19Oct2026 15:21:12Athens; PR2840 published and merged the named transfer before source. Those two catalogue files remain unchanged pending coordinated provisioning and guard/plan rollout. All other lifecycle work retains its existing owner.
+
+## Current optional transport boundary
+
+A history load returns the native canonical int64 generation. Conversation/reset metadata must echo that generation; a different current store generation refuses before report/provider work. This is a stale-request fence, never browser authority. All in-transaction native rechecks must use the same Prisma transaction, including the original company-license helper. Historic display is separate from current Athens-day dialogue context. Activation remains off until the table, reviewed catalogue, installed guards/worker/recovery and inactive-archive/backup retention are complete; no manual production SQL or new timer is authorized by this document.

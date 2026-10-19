@@ -29,7 +29,7 @@ import static org.junit.Assert.*;
 public class MultiPhotoSendTest {
     @Before public void clear() {
         Context context = ApplicationProvider.getApplicationContext();
-        new TokenVault(context).clear(); TokenVault.pendingTwoFactor(context).clear();
+        new TokenVault(context).clear(); TokenVault.pendingTwoFactor(context).clear(); CaptureBuffer.clear();
     }
     @After public void clean() { clear(); }
     private static Object get(MainActivity a, String name) throws Exception {
@@ -45,11 +45,16 @@ public class MultiPhotoSendTest {
     private static final class FixtureApi extends ChatApi {
         final List<JSONObject> posts = new CopyOnWriteArrayList<>();
         boolean enabled = true, unknownSecond, hold;
+        volatile boolean holdGet;
+        final CountDownLatch getStarted = new CountDownLatch(1), getRelease = new CountDownLatch(1);
         final CountDownLatch started = new CountDownLatch(1), release = new CountDownLatch(1);
         @Override JSONObject json(String path, String method, JSONObject body, String token) throws Exception {
             assertTrue(path.startsWith("/api/store-chat/stores/fixture-store/messages"));
             assertEquals("isolated-fixture-token", token);
-            if (method.equals("GET")) return new JSONObject().put("store", store()).put("rows", new JSONArray()).put("settings", new JSONObject().put("photosEnabled", enabled));
+            if (method.equals("GET")) {
+                if (holdGet) { getStarted.countDown(); if (!getRelease.await(5, TimeUnit.SECONDS)) throw new AssertionError("GET fixture release timed out"); }
+                return new JSONObject().put("store", store()).put("rows", new JSONArray()).put("settings", new JSONObject().put("photosEnabled", enabled));
+            }
             assertEquals("POST", method); posts.add(new JSONObject(body.toString())); started.countDown();
             if (hold && !release.await(5, TimeUnit.SECONDS)) throw new AssertionError("fixture release timed out");
             if (unknownSecond && posts.size() == 2) return new JSONObject().put("ok", true); // no durable receipt
@@ -186,6 +191,74 @@ public class MultiPhotoSendTest {
             assertEquals(2, api.posts.size());
             assertEquals("data:image/jpeg;base64,AQI=", api.posts.get(0).getJSONObject("attachment").getString("dataUrl"));
             assertEquals("data:image/jpeg;base64,AwQ=", api.posts.get(1).getJSONObject("attachment").getString("dataUrl"));
+        }
+    }
+    @Test public void refreshDisablesSendAndNeverDefersAUserPost() throws Exception {
+        FixtureApi api = new FixtureApi();
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            api.holdGet = true;
+            scenario.onActivity(a -> {
+                try {
+                    PhotoBatch batch = (PhotoBatch) get(a, "photos");
+                    batch.add(new byte[]{1, 2}, "image/jpeg"); batch.add(new byte[]{3, 4}, "image/jpeg");
+                    invoke(a, "conversation");
+                    ((EditText) get(a, "composer")).setText("Keep this caption");
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
+            assertTrue(api.getStarted.await(3, TimeUnit.SECONDS));
+            scenario.onActivity(a -> {
+                try {
+                    assertFalse(((android.widget.Button) get(a, "chatSendButton")).isEnabled());
+                    assertEquals("Ανανέωση μηνυμάτων…", ((android.widget.TextView) get(a, "notice")).getText().toString());
+                    invoke(a, "send"); // busy guard remains even if invoked outside normal disabled touch input
+                    assertEquals(2, ((PhotoBatch) get(a, "photos")).size());
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
+            assertEquals(0, api.posts.size());
+            api.holdGet = false; api.getRelease.countDown(); awaitIdle(scenario);
+            assertEquals("Refresh completion must never auto-send", 0, api.posts.size());
+            scenario.onActivity(a -> {
+                try {
+                    android.widget.Button button = (android.widget.Button) get(a, "chatSendButton");
+                    assertTrue(button.isEnabled());
+                    assertEquals("Keep this caption", ((EditText) get(a, "composer")).getText().toString());
+                    button.performClick();
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
+            awaitIdle(scenario); assertEquals(2, api.posts.size());
+            assertEquals("Keep this caption", api.posts.get(0).getString("body"));
+            assertEquals("", api.posts.get(1).getString("body"));
+        } finally { api.getRelease.countDown(); }
+    }
+    @Test public void cameraBatchResultSendsBothOnlyAfterExplicitSend() throws Exception {
+        FixtureApi api = new FixtureApi();
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            scenario.onActivity(a -> {
+                try {
+                    PhotoBatch batch = new PhotoBatch(); batch.add(new byte[]{1,2}, "image/jpeg"); batch.add(new byte[]{3,4}, "image/jpeg");
+                    CaptureBuffer.put(batch); set(a, "photoToken", "isolated-fixture-token"); set(a, "photoBinding", "fixture-store");
+                    a.onActivityResult(42, Activity.RESULT_OK, null);
+                    assertEquals(2, ((PhotoBatch)get(a,"photos")).size()); assertEquals(0,api.posts.size());
+                    invoke(a,"send");
+                } catch(Exception e) { throw new AssertionError(e); }
+            });
+            awaitIdle(scenario); assertEquals(2,api.posts.size());
+            assertEquals("data:image/jpeg;base64,AQI=",api.posts.get(0).getJSONObject("attachment").getString("dataUrl"));
+            assertEquals("data:image/jpeg;base64,AwQ=",api.posts.get(1).getJSONObject("attachment").getString("dataUrl"));
+        }
+    }
+    @Test public void staleCameraBatchIsWipedWithoutReplacingCurrentSelection() throws Exception {
+        FixtureApi api = new FixtureApi(); byte[] first={1,2},second={3,4},current={7};
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            scenario.onActivity(a -> {
+                try {
+                    ((PhotoBatch)get(a,"photos")).add(current,"image/jpeg");
+                    PhotoBatch batch=new PhotoBatch();batch.add(first,"image/jpeg");batch.add(second,"image/jpeg");CaptureBuffer.put(batch);
+                    set(a,"photoToken","different-old-session");set(a,"photoBinding","fixture-store");a.onActivityResult(42,Activity.RESULT_OK,null);
+                    assertEquals(1,((PhotoBatch)get(a,"photos")).size());assertSame(current,((PhotoBatch)get(a,"photos")).get(0).bytes);
+                }catch(Exception e){throw new AssertionError(e);}
+            });
+            assertArrayEquals(new byte[]{0,0},first);assertArrayEquals(new byte[]{0,0},second);assertEquals(0,api.posts.size());assertNull(CaptureBuffer.take());
         }
     }
     @Test public void disabledPhotoSettingPreventsTheFirstPost() throws Exception {
