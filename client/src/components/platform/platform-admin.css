@@ -130,3 +130,16 @@
 .platform-detail-owner{font-size:15px;color:#60718a;overflow-wrap:anywhere;line-height:1.5}
 @media(min-width:801px){.platform-home-content>div:has(>.platform-workspace){flex-basis:400px}.platform-organized .ai-credit-alert{padding:8px 12px}.platform-organized .ai-credit-summary{padding:0}.platform-organized .ai-credit-summary button{min-height:38px}.platform-workspace-heading{margin:12px 0}.platform-workspace-heading h2{font-size:22px}.platform-workspace-heading p{font-size:14px}.platform-company-detail header{padding-bottom:10px}.platform-company-detail header p{margin:8px 0}.platform-detail-owner{margin:10px 0;font-size:14px}}
 @media(max-width:800px){.platform-sidebar button{min-width:0;white-space:normal;overflow-wrap:anywhere;font-size:15px;padding:12px 8px;gap:8px}.platform-sidebar button svg{width:22px;height:22px}}
+
+/* Owner navigation uses current server identities and preserves company actions. */
+.platform-owner-group{min-width:0;border:1px solid #d5e2f1;border-radius:16px;background:#fff;overflow:hidden}
+.platform-owner-toggle{display:flex!important;align-items:center;gap:14px;width:100%;min-height:86px;text-align:left;padding:16px 20px!important;border:0!important;border-radius:0!important;background:#edf5ff!important;color:#142d50!important}
+.platform-owner-toggle>svg{width:28px;height:28px;flex-shrink:0;color:#1475ed}
+.platform-owner-toggle>span{flex:1;min-width:0;display:grid;gap:5px;overflow-wrap:anywhere}
+.platform-owner-toggle strong{font-size:22px}.platform-owner-toggle small{font-size:15px;color:#526583}
+.platform-owner-toggle[aria-expanded="true"]{box-shadow:inset 4px 0 #1475ed}
+.platform-owner-toggle:focus-visible{outline:3px solid #1475ed;outline-offset:-3px}
+.platform-owner-companies{padding:10px;display:grid;gap:10px}
+.platform-owner-stores{list-style:none;margin:10px 0;padding:0;display:grid;gap:8px;color:#526583;font-size:16px}
+.platform-owner-stores li{display:flex;align-items:center;gap:8px;overflow-wrap:anywhere}
+.platform-owner-stores svg{width:19px;height:19px;flex-shrink:0}

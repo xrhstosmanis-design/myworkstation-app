@@ -52,12 +52,16 @@ test("approved Platform home keeps company selection and routes existing actions
   const root=createRoot(document.getElementById("root"));
   const click=async el=>{assert.ok(el,"Expected mounted control");await act(async()=>el.dispatchEvent(new dom.window.MouseEvent("click",{bubbles:true})));};
   const button=name=>[...document.querySelectorAll("button")].find(el=>el.textContent===name);
-  const select=id=>click(document.querySelector(`[aria-label="Διαχείριση ${id}"]`));
+  const select=async id=>{
+    if(!document.querySelector(`[aria-label="Διαχείριση ${id}"]`))await click(document.querySelector('.platform-owner-toggle'));
+    await click(document.querySelector(`[aria-label="Διαχείριση ${id}"]`));
+  };
   const detail=()=>document.querySelector('.platform-company-detail');
   const search=async value=>{await act(async()=>{const el=document.querySelector('input[type="search"]');Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));})};
   try{
     await act(async()=>root.render(React.createElement(App)));
-    assert.equal(document.querySelectorAll('.platform-company-card').length,2);
+    assert.equal(document.querySelectorAll('.platform-company-card').length,0);
+    assert.equal(document.querySelectorAll('.platform-owner-toggle').length,1);
     assert.match(detail().textContent,/Επιλέξτε εταιρεία/);
     await select('Company B');assert.match(detail().textContent,/Company B/);
     assert.equal([...detail().querySelectorAll('button')].find(el=>el.textContent==='Νέος κωδικός').disabled,true,'linked owner password guard remains');
