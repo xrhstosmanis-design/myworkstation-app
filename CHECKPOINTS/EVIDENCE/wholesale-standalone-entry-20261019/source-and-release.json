@@ -1,0 +1,114 @@
+{
+  "claim": {
+    "pr": 2809,
+    "head": "525d6a47268f06ca06f1db74a3e2667e8357d558",
+    "merge": "8048856a5cf8e828ac17b6691e00533e56fe6b13"
+  },
+  "source": {
+    "pr": 2810,
+    "head": "58ed331a69476f4d2cbeb410f64aa0eb3f5d0f5c",
+    "baseline": "7b9ecfec8531b01a4ffd19b1ebe0d1f9411d9a47",
+    "ci": 39216511031,
+    "job": 117941744373,
+    "passCount": 3319,
+    "fail": 0,
+    "skip": 0,
+    "backup": 6
+  },
+  "local": {
+    "node": "20.20.2",
+    "focused": {
+      "tests": 48,
+      "pass": 47,
+      "fail": 0,
+      "skip": 1
+    },
+    "full": {
+      "tests": 3271,
+      "pass": 3115,
+      "fail": 0,
+      "skip": 156,
+      "durationMs": 81846.583486
+    },
+    "build": "PASS",
+    "nativeDatabase": "NOT AVAILABLE; registered native test locally SKIPPED"
+  },
+  "hostedAcceptance": "NOT TESTED",
+  "businessActions": "NONE",
+  "remaining": [
+    "personal Owner acceptance",
+    "customer B2B portal and order end-to-end",
+    "actual field seller order acceptance",
+    "durable offline",
+    "custom domain/commercial standalone packaging"
+  ],
+  "owner": "codex/wholesale-suite-20261017",
+  "ownedBlobs": {
+    "client/src/components/wholesale/WholesaleApp.jsx": "12918df6b47c42ce9fc84f957ffe44a11ed358c1",
+    "client/src/components/wholesale/wholesale-api.js": "60d5e9d10967114036632e3809432b27350761e5",
+    "client/src/components/wholesale/wholesale-app.css": "ba06386242b70fbda8bb7d721ac20ef1b88bf0db",
+    "client/src/wholesale-entry.jsx": "8a4fe4445e29b5e07d93a00142793fd4a4d1701a",
+    "client/vite.config.js": "3941c6526234491f3198757f10983780ab541307",
+    "client/wholesale.html": "ea15e3bdbd55c2a42de2d248026b763c24b4745e",
+    "server/src/index.js": "19128ee71912919c005c604eb04758c45107193c",
+    "server/src/routes/wholesale-workspace.js": "3ee2fbca24c4a15d0e092da875ae86027ab5b5bb",
+    "server/test/wholesale-standalone-entry.test.js": "7a40898dd12f695759a880a9d29a05d1b066deac",
+    "server/test/wholesale-standalone-http.test.js": "dad9eec7683b003df2c4ddb5d545c76188d23710",
+    "server/test/wholesale-standalone-ui.test.js": "33d6cdb34c15f3cb5df7cf9bc149096f47a9c0b1",
+    "server/test/wholesale-workspace.test.js": "040f7ceedf21fd6a0c0718c0d60683723f6a90f9"
+  },
+  "review": "Original disjoint workers and root reviewed current-session/paid/store locks, minimal DTO, standalone dependency graph, mounted A-B/A-B-A races and frozen-child lifecycle. Manual recheck visibility and stale UI assertions corrected before publication; final focused/build green.",
+  "initialNativeFailure": {
+    "head": "22fdc9efae76222712da3d25d8333fa2d9541c5d",
+    "ci": 39215831006,
+    "job": 117939586760,
+    "pass": 3317,
+    "fail": 2,
+    "skip": 0,
+    "scope": "One Store-wait observation subtest plus parent; other native authorization/scope/clock/DTO and mounted UI cases passed.",
+    "correction": "Observe pg_stat_activity from separate autocommit db query to avoid long holder cached query snapshot; exact holder PID, Store predicate, real expiry and no-private-data denial assertions retained.",
+    "review": "Original field_sales worker reviewed correction read-only: causal fix, no concrete pool or clock blocker; no assertion weakened."
+  },
+  "merge": "c1227da690e35e698d069f081ce8f52dd94c4a8d",
+  "mainCi": 39217334220,
+  "mergeBlobsVerified": true,
+  "mainJob": 117944377632,
+  "mainResult": {
+    "pass": 3319,
+    "fail": 0,
+    "skip": 0,
+    "backup": 6
+  },
+  "releaseCandidate": "c1227da690e35e698d069f081ce8f52dd94c4a8d",
+  "live": {
+    "guardRun": 39218095705,
+    "guardJob": 117946674138,
+    "guardConclusion": "success",
+    "observedAt": "2026-10-19T07:49:47.470335+00:00",
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "c1227da690e35e698d069f081ce8f52dd94c4a8d"
+    },
+    "curlExit": 0,
+    "httpStatus": 200,
+    "guardHealthyAt": "2026-10-19T07:48:53.2737675Z"
+  },
+  "hostedEntry": {
+    "status": "LIMITED LIVE UI PASS",
+    "observedAt": "2026-10-19T07:50:06.656Z",
+    "url": "https://myworkstation-app.onrender.com/wholesale",
+    "browser": "Cloud Chrome",
+    "scope": "Public standalone heading and personal login form visibly render, empty Email/password and connection button; no authentication submitted or private workspace acceptance.",
+    "screenshot": "CHECKPOINTS/EVIDENCE/wholesale-standalone-entry-20261019/public-entry.jpg"
+  },
+  "receiptPreparedAt": "2026-10-19T07:50:22.371709+00:00",
+  "preservedIndependentMain": {
+    "revision": "e800708a6593eb8bcd043dfdcd2c43eb3df830d1",
+    "prs": [
+      2811,
+      2812
+    ],
+    "scope": "Other owner lifecycle canonical profile and empty-scope claim preserved; no takeover, no new wholesale runtime change."
+  }
+}
