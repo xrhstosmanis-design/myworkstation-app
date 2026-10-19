@@ -75,8 +75,8 @@ test('native PostgreSQL customer portal isolates opaque sessions, grants and sha
       for(const customerId of ['customer-b','missing'])assert.ok([400,404].includes((await api.request(manager+'/accounts','POST',{login:'foreign',password,customerId,storeId:'store-a',active:true})).status));
       assert.ok([400,404].includes((await api.request(manager+'/accounts','POST',{login:'foreign-store',password,customerId:'customer-a',storeId:'store-b',active:true})).status));
       assert.equal((await api.request(manager+'/accounts','POST',{login:'alice',password,customerId:'customer-a',storeId:'store-a',active:true})).status,201);
-      const accounts=await api.request(manager+'/accounts');assert.equal(accounts.status,200);accountId=accounts.data.items[0].id;assert.ok(accountId);assert.doesNotMatch(JSON.stringify(accounts.data),/passwordHash|NativePassword/);
-      assert.equal((await api.request(manager+`/accounts/${accountId}`,'PATCH',{customerId:'customer-a2'})).status,400);
+      const accounts=await api.request(manager+'/accounts?storeId=store-a');assert.equal(accounts.status,200);accountId=accounts.data.items[0].id;assert.ok(accountId);assert.doesNotMatch(JSON.stringify(accounts.data),/passwordHash|NativePassword/);
+      assert.equal((await api.request(manager+`/accounts/${accountId}?storeId=store-a`,'PATCH',{customerId:'customer-a2'})).status,400);
       for(const productId of ['product-a','product-zero'])assert.equal((await api.request(manager+'/products/'+productId,'PUT',{storeId:'store-a',published:true})).status,200);
       assert.ok([400,404].includes((await api.request(manager+'/products/product-b','PUT',{storeId:'store-a',published:true})).status));
     });
@@ -155,7 +155,7 @@ test('native PostgreSQL customer portal isolates opaque sessions, grants and sha
       const catalog=await api.request(base+'/catalog?storeId=store-a2','GET',undefined,headers);assert.equal(catalog.status,200);assert.deepEqual(catalog.data.items,[]);
       assert.ok([403,404].includes((await api.request(base+'/quotes','POST',{storeId:'store-a2',items:[{productId:'product-a',quantity:'2'}]},headers)).status));
       const id=second.data.account.id,newPassword='ChangedNativePassword_5678';
-      assert.equal((await api.request(manager+'/accounts/'+id,'PATCH',{password:newPassword})).status,200);
+      assert.equal((await api.request(manager+'/accounts/'+id+'?storeId=store-a2','PATCH',{password:newPassword})).status,200);
       assert.equal((await api.request(base+'/me','GET',undefined,headers)).status,401);
       assert.equal((await api.request(base+'/session','POST',{login:'second-store',password})).status,401);
       const updated=await api.request(base+'/session','POST',{login:'second-store',password:newPassword});assert.equal(updated.status,200);
@@ -163,6 +163,86 @@ test('native PostgreSQL customer portal isolates opaque sessions, grants and sha
       assert.equal((await api.request(base+'/me','GET',undefined,{cookie:updated.cookie})).status,401);
       for(let attempt=0;attempt<5;attempt++)assert.equal((await api.request(base+'/session','POST',{login:'rate-fixture',password:'wrong'})).status,401);
       assert.equal((await api.request(base+'/session','POST',{login:'rate-fixture',password:'wrong'})).status,429);
+    });
+    await t.test('manager account reads and mutations require exact selected store and preserve denied account/session controls',async()=>{
+      const scoped=storeId=>manager+'/accounts?storeId='+encodeURIComponent(storeId);
+      const first=await api.request(scoped('store-a')),second=await api.request(scoped('store-a2'));
+      assert.equal(first.status,200);assert.equal(second.status,200);
+      assert.ok(first.data.items.length>=2);assert.ok(first.data.items.every(row=>row.storeId==='store-a'));
+      assert.equal(second.data.items.length,1);assert.equal(second.data.items[0].login,'second-store');
+      assert.doesNotMatch(JSON.stringify(first.data),/second-store|passwordHash|sessionVersion/);
+      const id=second.data.items[0].id,path=manager+'/accounts/'+id;
+      const central=await api.request(manager+'/accounts?scope=company');assert.equal(central.status,200);
+      assert.equal(central.data.items.length,first.data.items.length+second.data.items.length);
+      assert.ok(central.data.items.every(row=>['store-a','store-a2'].includes(row.storeId)));
+      assert.equal(central.headers.get('cache-control'),'no-store');
+      const customerSession=await api.request(base+'/session','POST',{login:'second-store',password:'ChangedNativePassword_5678'});assert.equal(customerSession.status,200);
+      const digest=async()=>crypto.createHash('sha256').update(JSON.stringify(await db.$queryRaw`SELECT (SELECT jsonb_agg(a ORDER BY a."id") FROM "WholesalePortalAccount" a) AS accounts,(SELECT jsonb_agg(s ORDER BY s."id") FROM "WholesalePortalSession" s) AS sessions`)).digest('hex');
+      const before=await digest();
+      for(const query of ['', '?storeId=', '?storeId=missing', '?storeId=store-b','?storeId=store-a&storeId=store-a2','?scope=invalid','?scope=company&storeId=store-a','?storeId=store-a&extra=1']){
+        const listed=await api.request(manager+'/accounts'+query);assert.ok([400,404].includes(listed.status),query);
+        assert.doesNotMatch(JSON.stringify(listed.data),/alice|second-store|passwordHash/);
+        for(const payload of [{active:false},{password:'DeniedReplacement_1234'}])assert.ok([400,404].includes((await api.request(path+query,'PATCH',payload)).status),query);
+      }
+      for(const storeId of ['store-a','store-b','missing'])for(const payload of [{active:false},{password:'DeniedReplacement_1234'}])assert.equal((await api.request(path+'?storeId='+storeId,'PATCH',payload)).status,404);
+      assert.equal((await api.request(path+'?storeId=store-a2','PATCH',{storeId:'store-a',active:false})).status,400);
+      assert.equal((await api.request(path+'?scope=company','PATCH',{active:false})).status,400);
+      assert.equal((await api.request(path+'?storeId=store-b','PATCH',{active:false},{'x-test-company':'company-b'})).status,404);
+      for(const headers of [{'x-test-role':'EMPLOYEE'},{'x-test-token':'B2B_CUSTOMER'},{'x-test-token':'STORE_OPERATOR'}]){
+        assert.equal((await api.request(scoped('store-a'),'GET',undefined,headers)).status,403);
+        assert.equal((await api.request(path+'?storeId=store-a2','PATCH',{active:false},headers)).status,403);
+      }
+      await db.$executeRaw`UPDATE "Store" SET "active"=false WHERE "id"='store-a2'`;
+      try{
+        assert.equal((await api.request(scoped('store-a2'))).status,404);
+        assert.equal((await api.request(path+'?storeId=store-a2','PATCH',{active:false})).status,404);
+      }finally{await db.$executeRaw`UPDATE "Store" SET "active"=true WHERE "id"='store-a2'`}
+      assert.equal(await digest(),before,'denied list/patch must leave every account and session unchanged');
+      assert.equal((await api.request(base+'/me','GET',undefined,{cookie:customerSession.cookie})).status,200);
+      // Observe the real selected Store row wait before deactivating it. The
+      // queued PATCH must re-evaluate active ownership before touching accounts.
+      let waiting;
+      try{
+        await db.$transaction(async tx=>{
+          const [{pid}]=await tx.$queryRaw`SELECT pg_backend_pid() AS pid`;
+          await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "id"='store-a2' FOR UPDATE`;
+          waiting=api.request(path+'?storeId=store-a2','PATCH',{active:false});let observed=false;
+          for(let attempt=0;attempt<100;attempt++){
+            const rows=await tx.$queryRaw`SELECT pid FROM pg_stat_activity WHERE ${pid} = ANY(pg_blocking_pids(pid))`;
+            if(rows.length){observed=true;break}await new Promise(resolve=>setTimeout(resolve,20));
+          }
+          assert.ok(observed,'PATCH must be waiting on the selected store row');
+          await tx.$executeRaw`UPDATE "Store" SET "active"=false WHERE "id"='store-a2'`;
+        },{timeout:10000,maxWait:5000});
+        assert.equal((await waiting).status,404);assert.equal(await digest(),before);
+      }finally{if(waiting)await waiting.catch(()=>{});await db.$executeRaw`UPDATE "Store" SET "active"=true WHERE "id"='store-a2'`}
+      // Entitlement time can expire while a row lock is held even though its
+      // grant row cannot be edited. Reads must recheck the live clock as well.
+      let pendingRead;
+      await db.$executeRaw`UPDATE "CompanyModule" SET "endsAt"=clock_timestamp()+INTERVAL '3 seconds' WHERE "id"='module-a'`;
+      try{
+        await db.$transaction(async tx=>{
+          const [{pid}]=await tx.$queryRaw`SELECT pg_backend_pid() AS pid`;
+          await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "id"='store-a2' FOR UPDATE`;
+          pendingRead=api.request(scoped('store-a2'));let observed=false,expired=false;
+          for(let attempt=0;attempt<100;attempt++){
+            if((await tx.$queryRaw`SELECT pid FROM pg_stat_activity WHERE ${pid} = ANY(pg_blocking_pids(pid))`).length){observed=true;break}
+            await new Promise(resolve=>setTimeout(resolve,20));
+          }
+          assert.ok(observed,'account GET must be waiting on the selected store after its initial license check');
+          for(let attempt=0;attempt<300;attempt++){
+            const [row]=await tx.$queryRaw`SELECT clock_timestamp()>="endsAt" AS expired FROM "CompanyModule" WHERE "id"='module-a'`;
+            if(row.expired){expired=true;break}await new Promise(resolve=>setTimeout(resolve,20));
+          }
+          assert.ok(expired,'grant must expire before releasing the account read');
+        },{timeout:12000,maxWait:5000});
+        const denied=await pendingRead;assert.equal(denied.status,403);assert.doesNotMatch(JSON.stringify(denied.data),/second-store|customer-a/);assert.equal(await digest(),before);
+      }finally{if(pendingRead)await pendingRead.catch(()=>{});await db.$executeRaw`UPDATE "CompanyModule" SET "endsAt"=NULL WHERE "id"='module-a'`}
+      assert.equal((await api.request(path+'?storeId=store-a2','PATCH',{active:false})).status,200);
+      assert.equal((await api.request(base+'/me','GET',undefined,{cookie:customerSession.cookie})).status,401);
+      assert.equal((await api.request(path+'?storeId=store-a2','PATCH',{active:true})).status,200);
+      assert.equal((await api.request(base+'/me','GET',undefined,{cookie:customerSession.cookie})).status,401,'reenabling cannot revive revoked sessions');
+      assert.equal((await api.request(scoped('store-a'))).data.items.length,first.data.items.length);
     });
     await t.test('explicit paid wholesale grant is required for anonymous branding, login, private reads, management and accepted replay',async()=>{
       const cases=[
@@ -229,7 +309,7 @@ test('native PostgreSQL customer portal isolates opaque sessions, grants and sha
       await api.request(manager+'/site','PUT',{slug:'native-a',name:'Native A',enabled:false});assert.ok([401,403,404].includes((await api.request(base+'/orders','POST',body,h())).status));
       await api.request(manager+'/site','PUT',{slug:'native-a',name:'Native A',enabled:true});
       session=await login();assert.equal(session.status,200);
-      assert.equal((await api.request(manager+`/accounts/${accountId}`,'PATCH',{active:false})).status,200);
+      assert.equal((await api.request(manager+`/accounts/${accountId}?storeId=store-a`,'PATCH',{active:false})).status,200);
       assert.ok([401,403].includes((await api.request(base+'/orders','POST',body,h())).status));
       assert.equal((await login()).status,401);
       const state=await db.$queryRaw`SELECT (SELECT COUNT(*)::int FROM "Sale") AS sales,(SELECT SUM("quantity")::text FROM "StockMovement") AS stock,(SELECT SUM("amount")::text FROM "StoreTransaction") AS money,(SELECT COUNT(*)::int FROM "WholesaleOrderRequest") AS orders,(SELECT COUNT(*)::int FROM "WholesaleOrderEvent") AS events`;
