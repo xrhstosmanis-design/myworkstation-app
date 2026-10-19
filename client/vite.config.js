@@ -7,6 +7,7 @@ export default defineConfig({
   server:{proxy:{"/api":"http://localhost:8080"}},
   build:{rollupOptions:{input:{
     main:fileURLToPath(new URL("./index.html",import.meta.url)),
-    b2b:fileURLToPath(new URL("./b2b.html",import.meta.url))
+    b2b:fileURLToPath(new URL("./b2b.html",import.meta.url)),
+    wholesale:fileURLToPath(new URL("./wholesale.html",import.meta.url))
   }}}
 });

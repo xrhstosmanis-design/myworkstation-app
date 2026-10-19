@@ -61,6 +61,7 @@ import customerControlReversalAwareRoutes from "./routes/customer-control-revers
 import customerControlRoutes from "./routes/customer-control-v2.js";
 import customerOperatorCardRoutes from "./routes/customer-operator-cards.js";
 import wholesaleCapabilitiesRoutes from "./routes/wholesale-capabilities.js";
+import wholesaleWorkspaceRoutes from "./routes/wholesale-workspace.js";
 import {createWholesaleEntitlementGuard} from "./lib/wholesale-entitlement.js";
 import wholesaleB2BRoutes from "./routes/wholesale-b2b.js";
 import wholesalePortalRoutes from "./routes/wholesale-portal.js";
@@ -242,6 +243,7 @@ app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerContro
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerOperatorCardRoutes);
 app.use("/api/customer-control",auth,requireCompanyModule("CORE"),customerControlRoutes);
 app.use("/api/wholesale/capabilities",auth,wholesaleCapabilitiesRoutes);
+app.use("/api/wholesale/workspace",auth,wholesaleWorkspaceRoutes);
 app.use("/api/wholesale/seller-admin",auth,createWholesaleEntitlementGuard(),wholesaleSellerAdminRoutes);
 app.use("/api/wholesale/sellers",auth,createWholesaleEntitlementGuard(),wholesaleSellerRoutes);
 app.use("/api/wholesale/portal",auth,createWholesaleEntitlementGuard(),wholesalePortalAdminRoutes);
@@ -314,6 +316,9 @@ app.use(storeLifecycleErrors);
 app.use((err,req,res,next)=>{console.error(err);if(String(err?.meta?.message||err?.meta?.database_error||'').includes('MWS_BAKED_TOTAL_GUARD'))return res.status(409).json({error:'Το συνολικό απόθεμα δεν μπορεί να γίνει μικρότερο από τα ψημένα. Καταγράψτε πρώτα την πραγματική φύρα ή επιστροφή.'});if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."})});
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");
+app.get(["/wholesale","/wholesale.html"],(req,res)=>{
+  res.set({"Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff"}).sendFile(path.join(dist,"wholesale.html"));
+});
 app.use(express.static(dist));
 registerChatPwa(app,{dist,readFile,path});
 app.get("/store/:storeId/manifest.webmanifest",(req,res)=>{
