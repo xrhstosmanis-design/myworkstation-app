@@ -5,9 +5,9 @@ import {resolvePersonnelPackageStates,PERSONNEL_BASIC} from '../personnel-packag
 import {readLifecycleGeneration} from './store-lifecycle-generation.js';
 import {historyAccessSchema} from './assistant-history-contract.js';
 import {businessDomains} from '../../../shared/assistant-business.mjs';
+import {businessModule} from './assistant-business-reports.js';
 const fail=()=>{throw Object.assign(new Error('Απαιτείται προσωπική πρόσβαση στο επιλεγμένο κατάστημα.'),{status:403,code:'ASSISTANT_HISTORY_ACCESS_DENIED'})};
 const same=(a,b)=>a&&b&&a.companyId===b.companyId&&a.storeId===b.storeId&&!a.supportPreview&&!b.supportPreview;
-const moduleFor=domain=>['INVOICES','SUPPLIERS'].includes(domain)?'INVENTORY':domain==='STAFF'?null:'CASH_CONTROL';
 export function createAssistantHistoryAccess({db,mode,selection,owner=authorizeOwnerAssistant,platform=authorizePlatformAssistant,now=()=>new Date()}){
  if(!db||!['owner','platform'].includes(mode))throw new TypeError('Explicit native history access dependencies required');
  return async req=>{
@@ -26,7 +26,7 @@ export function createAssistantHistoryAccess({db,mode,selection,owner=authorizeO
    for(const module of ['CASH_CONTROL','INVENTORY'])try{if(!same(scope,await owner(req,{db,now:clock(),requiredModules:[module]})))fail();enabled.add(module)}catch(e){if(e.code!=='MODULE_DISABLED')throw e}
    if(enabled.has('CASH_CONTROL'))allowed.add('cash_details');
    if(enabled.has('INVENTORY'))for(const c of ['sales_by_product','sales_by_store','stock_by_product','consumption_details'])allowed.add(c);
-   for(const domain of Object.keys(businessDomains))if(enabled.has(moduleFor(domain)))allowed.add('business_records:'+domain);
+   for(const domain of Object.keys(businessDomains))if(enabled.has(businessModule(domain)))allowed.add('business_records:'+domain);
    // Reuse the native package resolver, with a read-only exact-scope query.
    // The UI helper's schema-creation side effect is deliberately not invoked.
    const rows=await db.$queryRaw`SELECT "moduleKey","active","startsAt","endsAt" FROM "StorePaidModule" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
