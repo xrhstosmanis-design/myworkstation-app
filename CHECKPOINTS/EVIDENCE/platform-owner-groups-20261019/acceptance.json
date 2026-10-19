@@ -1,0 +1,71 @@
+{
+  "scope": "PLATFORM-OWNER-GROUPS-01",
+  "status": "LIMITED LIVE PASS",
+  "observedAthens": "2026-10-19 22:07–22:09",
+  "revision": "3fe46f01e553e0280ac928a17754abc813629922",
+  "deploy": "dep-dbb6i8gn74is73bpscr0",
+  "guardRun": 39307390799,
+  "mainCI": {
+    "run": 39305802059,
+    "job": 118244306478,
+    "pass": 3468,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 8
+  },
+  "sourcePRs": [
+    2863,
+    2873
+  ],
+  "followHead": "e60c33fd2f5a5f8eb1b6a31897d4fd4507f06c5d",
+  "followMerge": "d3b993fa298247b951a071f16e8093a68fea8953",
+  "sourceBlobs": {
+    "workspace": "8f42d4c1890bab88f51e5acf7da0b4fac2eaea98",
+    "css": "24e9e617f4eee327261520eee2253e60193239f5",
+    "mountedTest": "b667414d1387c0759dfad39b3a41e11b62bfa3d5"
+  },
+  "before": {
+    "revision": "f3305f096eb7830f89483dda64f69271c9fb4535",
+    "listHeight": 310,
+    "listScrollHeight": 310,
+    "groupHeight": 172,
+    "groupScrollHeight": 783,
+    "status": "GEOMETRY FAIL"
+  },
+  "after": {
+    "viewport": [
+      1363,
+      936
+    ],
+    "listHeight": 310,
+    "listScrollHeight": 921,
+    "groupHeight": 783,
+    "groupScrollHeight": 783,
+    "wheelDownScrollTop": 611,
+    "wheelUpScrollTop": 0,
+    "lastCompanyButtonY": [
+      700.89,
+      750.89
+    ],
+    "listY": [
+      606,
+      916
+    ],
+    "companyCount": 4,
+    "storeCount": 6,
+    "ownerGroups": 2,
+    "correctKATManagement": true,
+    "LABOwnStoresOnly": true,
+    "accentlessSearch": true,
+    "refresh": true
+  },
+  "businessWritesSubmitted": false,
+  "financialStockDelta": "NOT TESTED / not inferred",
+  "notTested": [
+    "real new-account/company/store creation",
+    "other actors",
+    "mobile",
+    "physical POS",
+    "maximum load"
+  ]
+}

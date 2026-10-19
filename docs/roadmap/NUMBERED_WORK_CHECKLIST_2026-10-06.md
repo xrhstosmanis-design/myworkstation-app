@@ -553,6 +553,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `36`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
+- **Υπόλοιπο / όριο:** 19Oct PLATFORM-OWNER-GROUPS-01: περιορισμένο LIVE PASS πλοήγησης/κύλισης ανά ιδιοκτήτη, source PR2863+2873/revision3fe46f01, manual super-admin/PASS. Η ανεξάρτητη UI εργασία κλείνει· πλήρες εγχειρίδιο και άλλες αναθέσεις παραμένουν OPEN.
 
 ## 35 — Κλείσιμο βάρδιας με QR/κάρτα
 
