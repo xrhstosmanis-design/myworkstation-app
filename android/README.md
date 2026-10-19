@@ -1,3 +1,7 @@
+## Native multi-photo implementation — 19/10/2026, AWAITING CI/DEVICE
+
+Existing gallery selection accepts up to five JPG/PNG/WEBP files, at most7MiB each and14MiB combined, kept in a bounded in-memory queue. Tap the selection label to preview/remove before Send. Images are sequential separate messages through the existing API; caption goes on the first confirmed message only. This is not an atomic album. A missing ok/id receipt or network error stops all further sends without retry; review server history and discard the old draft before composing again. Background/logout/store/tab change clears selected bytes and cancels remaining requests. Only transient content-URI reads; no persisted URI grant, image cache or gallery write. Existing gallery originals remain outside the app's ownership. Replies and voice messages are not implemented in this slice. Source tests do not constitute physical device acceptance or a new distributed APK.
+
 # MyWorkStation Chat Android — development preview
 
 Native Java/Android views in the existing repository, issue #2673. Claim #2677 merged before source work. This is not a WebView or the existing PWA.

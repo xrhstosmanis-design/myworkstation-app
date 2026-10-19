@@ -46,8 +46,8 @@ public final class MainActivity extends Activity {
     private String token = "", challenge = "", view = "login", tab = "chat", photoBinding = "", photoToken = "";
     private JSONObject identity = new JSONObject(), selected;
     private JSONArray history = new JSONArray();
-    private byte[] photo;
-    private String photoMime = "";
+    private final PhotoBatch photos = new PhotoBatch();
+    private String photoSelectionNotice = "";
     private String uncertainStoreId = "";
     private boolean foreground, busy, photosEnabled = true;
     private LinearLayout root, content, messages;
@@ -308,7 +308,7 @@ public final class MainActivity extends Activity {
     private void send() {
         if (busy || composer == null || !composer.isEnabled()) return;
         if (tab.equals("chat") && uncertainStoreId.equals(id(selected, "id"))) { status("Έλεγξε το ιστορικό και απόρριψε το παλιό προσχέδιο πριν από νέα αποστολή."); loadMessages(true); return; }
-        String value = composer.getText().toString().trim(); if (value.isEmpty() && photo == null) return;
+        String value = composer.getText().toString().trim(); if (value.isEmpty() && photos.size() == 0) return;
         if (tab.equals("ai")) {
             if (value.length() < 3) { status("Γράψε τουλάχιστον τρεις χαρακτήρες."); return; }
             JSONArray previous = new JSONArray();
@@ -329,11 +329,27 @@ public final class MainActivity extends Activity {
                 scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
             });
         } else {
-            JSONObject body = object("body", value, "category", "GENERAL");
-            if (photo != null) { if (!photosEnabled) { status("Οι φωτογραφίες είναι ανενεργές για αυτό το κατάστημα."); return; } try { body.put("attachment", object("name", photoMime.equals("image/png") ? "photo.png" : photoMime.equals("image/webp") ? "photo.webp" : "photo.jpg", "mimeType", photoMime, "dataUrl", "data:" + photoMime + ";base64," + Base64.encodeToString(photo, Base64.NO_WRAP))); } catch (Exception ignored) { return; } }
-            uncertainStoreId = id(selected, "id");
-            call(chatBase() + "/messages", "POST", body, false, result -> { uncertainStoreId = ""; composer.setText(""); clearPhoto(); updatePhotoLabel(); loadMessages(true); });
+            sendPhotoMessage(value);
         }
+    }
+    private void sendPhotoMessage(String value) {
+        if (busy || !foreground || selected == null || !tab.equals("chat")) return;
+        JSONObject body = object("body", value, "category", "GENERAL");
+        final PhotoBatch.Photo first = photos.size() == 0 ? null : photos.get(0);
+        if (first != null) {
+            if (!photosEnabled) { status("Οι φωτογραφίες είναι ανενεργές για αυτό το κατάστημα."); return; }
+            try { body.put("attachment", object("name", first.mime.equals("image/png") ? "photo.png" : first.mime.equals("image/webp") ? "photo.webp" : "photo.jpg", "mimeType", first.mime, "dataUrl", "data:" + first.mime + ";base64," + Base64.encodeToString(first.bytes, Base64.NO_WRAP))); }
+            catch (Exception ignored) { return; }
+        }
+        uncertainStoreId = id(selected, "id");
+        call(chatBase() + "/messages", "POST", body, false, result -> {
+            // A 2xx without an explicit receipt is still an unknown outcome. Never advance/replay.
+            if (!result.optBoolean("ok") || result.optString("id").trim().isEmpty()) throw new IllegalArgumentException();
+            uncertainStoreId = ""; composer.setText("");
+            if (first != null) photos.remove(0);
+            updatePhotoLabel();
+            if (photos.size() > 0) sendPhotoMessage(""); else loadMessages(true);
+        });
     }
     private void bubble(String body, boolean own, String meta, JSONObject row) {
         LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(14), dp(10), dp(14), dp(10)); card.setBackground(round(own ? 0xffe8defc : Color.WHITE, 18));
@@ -355,8 +371,8 @@ public final class MainActivity extends Activity {
         } catch (Exception ignored) { status("Δεν είναι διαθέσιμη η προβολή πηγής."); }
     }
     private void pickPhoto() {
-        if (busy || !photosEnabled) { status("Οι φωτογραφίες δεν είναι διαθέσιμες αυτή τη στιγμή."); return; }
-        new AlertDialog.Builder(this).setTitle("Φωτογραφία").setItems(new String[]{"Κάμερα · χωρίς αποθήκευση", "Υπάρχουσα φωτογραφία"}, (dialog, choice) -> {
+        if (busy || !photosEnabled || uncertainStoreId.equals(id(selected, "id"))) { status("Έλεγξε πρώτα τη σύνδεση και τυχόν αβέβαιη αποστολή."); return; }
+        new AlertDialog.Builder(this).setTitle("Φωτογραφία").setItems(new String[]{"Κάμερα · χωρίς αποθήκευση", "Έως 5 υπάρχουσες φωτογραφίες"}, (dialog, choice) -> {
             if (choice == 0) openCamera(); else choosePhoto();
         }).show();
     }
@@ -373,6 +389,7 @@ public final class MainActivity extends Activity {
     private void choosePhoto() {
         photoBinding = id(selected, "id"); photoToken = token;
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT); intent.setType("image/*"); intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/jpeg", "image/png", "image/webp"});
         startActivityForResult(Intent.createChooser(intent, "Επιλογή φωτογραφίας"), PHOTO);
     }
@@ -380,20 +397,66 @@ public final class MainActivity extends Activity {
         super.onActivityResult(request, result, data);
         if (request == CAMERA) {
             byte[] captured = CaptureBuffer.take();
-            if (result == RESULT_OK && photoToken.equals(token) && photoBinding.equals(id(selected, "id"))) { clearPhoto(); photo = captured; photoMime = "image/jpeg"; }
+            if (result == RESULT_OK && captured != null && photoToken.equals(token) && photoBinding.equals(id(selected, "id"))) {
+                clearPhoto(); try { photos.add(captured, "image/jpeg"); } catch (IllegalArgumentException ignored) { photoSelectionNotice = "Η φωτογραφία ξεπερνά το όριο επιλογής."; }
+            }
             else if (captured != null) Arrays.fill(captured, (byte) 0);
             photoBinding = ""; photoToken = ""; return;
         }
-        if (request != PHOTO || result != RESULT_OK || data == null || data.getData() == null || !photoToken.equals(token) || !photoBinding.equals(id(selected, "id"))) return;
-        Uri uri = data.getData(); String mime = getContentResolver().getType(uri);
-        if (!"content".equals(uri.getScheme()) || !("image/jpeg".equals(mime) || "image/png".equals(mime) || "image/webp".equals(mime))) return;
-        // A transient read grant only: no persistable URI, original filename, gallery write or local copy.
-        try (InputStream input = getContentResolver().openInputStream(uri)) { clearPhoto(); photo = ChatApi.bounded(input, 7 * 1024 * 1024); photoMime = mime; }
-        catch (Exception ignored) { clearPhoto(); }
-        photoBinding = ""; photoToken = "";
+        if (request != PHOTO || result != RESULT_OK || data == null || !photoToken.equals(token) || !photoBinding.equals(id(selected, "id"))) return;
+        PhotoBatch candidate = new PhotoBatch();
+        try {
+            int count = data.getClipData() == null ? (data.getData() == null ? 0 : 1) : data.getClipData().getItemCount();
+            if (count < 1 || count > PhotoBatch.MAX_COUNT) throw new IllegalArgumentException();
+            for (int i = 0; i < count; i++) {
+                Uri uri = data.getClipData() == null ? data.getData() : data.getClipData().getItemAt(i).getUri();
+                String mime = uri == null ? null : getContentResolver().getType(uri);
+                if (uri == null || !"content".equals(uri.getScheme()) || !("image/jpeg".equals(mime) || "image/png".equals(mime) || "image/webp".equals(mime))) throw new IllegalArgumentException();
+                // Transient read only: no persistable grant, copied file, filename or gallery write.
+                try (InputStream input = getContentResolver().openInputStream(uri)) {
+                    candidate.add(ChatApi.bounded(input, Math.min(PhotoBatch.MAX_IMAGE_BYTES, PhotoBatch.MAX_TOTAL_BYTES - candidate.bytes())), mime);
+                }
+            }
+            photos.takeFrom(candidate); photoSelectionNotice = "";
+        } catch (Exception ignored) { candidate.clear(); photoSelectionNotice = "Επίλεξε έως 5 JPG/PNG/WEBP, έως 7 MB η καθεμία και 14 MB συνολικά. Η επιλογή δεν ολοκληρώθηκε."; }
+        finally { photoBinding = ""; photoToken = ""; }
     }
     private void updatePhotoLabel() {
-        if (attachmentLabel != null) { attachmentLabel.setText(photo == null ? "" : "▧ Φωτογραφία επιλεγμένη · πάτησε για αφαίρεση"); attachmentLabel.setOnClickListener(v -> { clearPhoto(); updatePhotoLabel(); }); }
+        if (attachmentLabel != null) {
+            attachmentLabel.setText(photos.size() == 0 ? photoSelectionNotice : "▧ " + photos.size() + " φωτογραφίες · έλεγχος / αφαίρεση · χωριστά μηνύματα");
+            attachmentLabel.setOnClickListener(v -> reviewPhotos());
+        }
+    }
+    private void reviewPhotos() {
+        if (busy || photos.size() == 0) return;
+        String[] names = new String[photos.size()]; for (int i = 0; i < names.length; i++) names[i] = "Φωτογραφία " + (i + 1);
+        dismissImage();
+        imageDialog = new AlertDialog.Builder(this).setTitle("Πριν την αποστολή · " + photos.size() + " φωτογραφίες")
+            .setItems(names, (dialog, index) -> photoOptions(index)).setNegativeButton("Κλείσιμο", null).create();
+        imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
+    }
+    private void photoOptions(int index) {
+        if (busy || index < 0 || index >= photos.size()) return;
+        imageDialog = new AlertDialog.Builder(this).setTitle("Φωτογραφία " + (index + 1))
+            .setItems(new String[]{"Προεπισκόπηση", "Αφαίρεση"}, (dialog, choice) -> {
+                if (busy || index >= photos.size()) return;
+                if (choice == 1) { photos.remove(index); updatePhotoLabel(); }
+                else previewSelectedPhoto(index);
+            }).create();
+        imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
+    }
+    private void previewSelectedPhoto(int index) {
+        if (busy || index >= photos.size()) return;
+        PhotoBatch.Photo photo = photos.get(index); dismissImage();
+        BitmapFactory.Options options = new BitmapFactory.Options(); options.inJustDecodeBounds = true;
+        BitmapFactory.decodeByteArray(photo.bytes, 0, photo.bytes.length, options); options.inSampleSize = 1;
+        while (options.outWidth / options.inSampleSize > 1200 || options.outHeight / options.inSampleSize > 1200) options.inSampleSize *= 2;
+        options.inJustDecodeBounds = false; preview = BitmapFactory.decodeByteArray(photo.bytes, 0, photo.bytes.length, options);
+        if (preview == null) { status("Δεν είναι έγκυρη εικόνα για προεπισκόπηση."); return; }
+        ImageView image = new ImageView(this); image.setAdjustViewBounds(true); image.setImageBitmap(preview);
+        imageDialog = new AlertDialog.Builder(this).setTitle("Φωτογραφία " + (index + 1)).setView(image).setPositiveButton("Κλείσιμο", null).create();
+        imageDialog.setOnDismissListener(dialog -> { image.setImageDrawable(null); if (preview != null) { preview.recycle(); preview = null; } });
+        imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
     }
     private void viewPhoto(JSONObject row) {
         if (busy) return; busy = true; long generation = epoch.capture(); String captured = token, path = chatBase() + "/messages/" + enc(row.optString("id")) + "/attachment";
@@ -422,7 +485,7 @@ public final class MainActivity extends Activity {
             }
         });
     }
-    private void clearPhoto() { if (photo != null) Arrays.fill(photo, (byte) 0); photo = null; photoMime = ""; }
+    private void clearPhoto() { photos.clear(); photoSelectionNotice = ""; }
     private void wipeViews(View view) {
         if (view instanceof EditText) ((EditText) view).getText().clear();
         else if (view instanceof TextView) ((TextView) view).setText("");
