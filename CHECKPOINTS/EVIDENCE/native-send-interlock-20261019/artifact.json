@@ -66,5 +66,5 @@
     "repeat_send_required": false,
     "source": "existing gallery images, explicitly clarified 2026-10-19T20:02:30+03:00"
   },
-  "camera_result": "NOT CONFIRMED; no camera PASS or FAIL inferred from clarification"
+  "camera_result": "USER FAIL 2026-10-19 after20:02 Europe/Athens: attempting two camera captures sends only last; gallery PASS preserved"
 }
