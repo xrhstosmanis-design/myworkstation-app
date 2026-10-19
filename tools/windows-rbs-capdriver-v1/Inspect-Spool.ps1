@@ -31,7 +31,8 @@ function Get-SpoolObservation([string]$Folder) {
   $files = @($entries | Where-Object { -not $_.PSIsContainer })
   # All entries participate, including unknown legacy command names. Only the
   # digest leaves this function: filenames and file contents are not exported.
-  $inventory = @($entries | Sort-Object Name | ForEach-Object { @($_.Name, [bool]$_.PSIsContainer, $(if ($_.PSIsContainer) { 0 } else { $_.Length }), $_.LastWriteTimeUtc.Ticks) }) | ConvertTo-Json -Compress -Depth 4
+  $inventoryRows = @($entries | Sort-Object Name | ForEach-Object { [pscustomobject]@{ name = $_.Name; directory = [bool]$_.PSIsContainer; length = $(if ($_.PSIsContainer) { 0 } else { $_.Length }); ticks = $_.LastWriteTimeUtc.Ticks } })
+  $inventory = ConvertTo-Json -InputObject $inventoryRows -Compress -Depth 4
   $sha = [Security.Cryptography.SHA256]::Create()
   try { $digest = [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes([string]$inventory))).Replace('-','').ToLowerInvariant() } finally { $sha.Dispose() }
   return [ordered]@{
