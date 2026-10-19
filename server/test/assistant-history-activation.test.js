@@ -47,7 +47,7 @@ test('native provisioning is idempotent and refuses altered schemas; scheduled c
   const repo=createAssistantHistoryRepository({db,authorize:async()=>a});
   await assert.rejects(repo.save({}, {expectedRevision:0,requestId:tombstone.requestId,archive:emptyHistoryArchive()}),e=>e.code==='ASSISTANT_HISTORY_EXPIRED');
   // Reintroducing an expired row (SQL fixture, not an independent pg_restore proof) cannot bypass cleanup.
-  await db.$executeRaw`UPDATE "AssistantHistoryArchive" SET "payload"='{"schemaVersion":1,"threads":["restored expired prose"]}'::jsonb WHERE "storeId"='target'`;
+  await db.$executeRaw`UPDATE "AssistantHistoryArchive" SET "payload"='{"schemaVersion":1,"threads":["restored expired prose"]}'::jsonb WHERE "scopeKey"=${historyScopeKey(a)}`;
   assert.equal((await cleanup()).erased,1);
   // Real current guards, exact shared fence and unchanged stored generation.
   await db.$executeRawUnsafe('CREATE TABLE "Store"("id" text PRIMARY KEY,"companyId" text NOT NULL)');await db.$executeRaw`INSERT INTO "Store" VALUES ('target','company'),('sibling','company')`;
@@ -55,7 +55,7 @@ test('native provisioning is idempotent and refuses altered schemas; scheduled c
   const core=createLifecycleExecutionCore(manifest,{sourceRevision:'a'.repeat(40),persistAndVerifyRecovery:async()=>assert.fail('cleanup must not execute recovery')});
   await core.install(db,{isSuperAdmin:true,id:'admin'},{companyId:'company',storeId:'target'});
   await assert.rejects(provisionAssistantHistory(db),e=>e.code==='ASSISTANT_HISTORY_PROVISION_UNAVAILABLE');
-  await db.$executeRaw`UPDATE "AssistantHistoryArchive" SET "payload"='{"schemaVersion":1,"threads":["expired guarded prose"]}'::jsonb WHERE "storeId"='target'`;
+  await db.$executeRaw`UPDATE "AssistantHistoryArchive" SET "payload"='{"schemaVersion":1,"threads":["expired guarded prose"]}'::jsonb WHERE "scopeKey"=${historyScopeKey(a)}`;
   let rowRelease,rowLocked;const rowReady=new Promise(r=>rowLocked=r),rowGate=new Promise(r=>rowRelease=r);
   const rowHolder=locker.$transaction(async tx=>{await tx.$queryRaw`SELECT "scopeKey" FROM "AssistantHistoryArchive" WHERE "scopeKey"=${historyScopeKey(a)} FOR UPDATE`;rowLocked();await rowGate},{timeout:10000});await rowReady;
   try{assert.equal((await cleanup()).erased,0)}finally{rowRelease();await rowHolder}
@@ -68,6 +68,7 @@ test('native provisioning is idempotent and refuses altered schemas; scheduled c
   assert.equal((await cleanup()).deferredScopes,1);
   await db.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=false,"generation"=9007199254740993 WHERE "storeId"='target'`;
   assert.equal((await cleanup()).erased,1,'fresh cleanup uses locked current epoch without rewriting original row generation');
-  assert.equal((await db.$queryRaw`SELECT "generation"::text AS generation FROM "AssistantHistoryArchive" WHERE "storeId"='target'`)[0].generation,'0');
+  assert.equal((await db.$queryRaw`SELECT "generation"::text AS generation FROM "AssistantHistoryArchive" WHERE "scopeKey"=${historyScopeKey(a)}`)[0].generation,'0');
+  assert.equal((await db.$queryRaw`SELECT row_to_json(t)::text AS row FROM "AssistantHistoryArchive" t WHERE "storeId"='sibling'`)[0].row,before.find(x=>x.row.includes('sibling')).row);
  }finally{await locker.$disconnect();await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

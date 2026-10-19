@@ -49,6 +49,14 @@ class CleanupContract(unittest.TestCase):
                 module.cleanup(self.env())
             self.assertEqual(run.call_count, 1)
 
+    def test_query_parameter_password_also_stays_out_of_arguments(self):
+        env = self.env();env['DATABASE_URL'] += '&password=separate-private-fixture'
+        with patch.object(module.subprocess, 'run', return_value=types.SimpleNamespace(returncode=0, stdout='{"state":"UNAVAILABLE"}')) as run:
+            module.cleanup(env)
+            self.assertNotIn('separate-private-fixture', ' '.join(run.call_args.args[0]))
+            self.assertNotIn('private-fixture', ' '.join(run.call_args.args[0]))
+            self.assertEqual(run.call_args.kwargs['env']['PGPASSWORD'], 'separate-private-fixture')
+
     def test_invalid_schema_and_receipt_refuse(self):
         env = self.env();env['DATABASE_URL'] = 'postgresql://fixture@localhost/test?schema=bad%3BDROP'
         with patch.object(module.subprocess, 'run') as run:

@@ -28,7 +28,8 @@ def cleanup(env=None):
     url = urllib.parse.urlsplit(env['DATABASE_URL'])
     query = urllib.parse.parse_qsl(url.query, keep_blank_values=True)
     schema = next((v for k, v in query if k == 'schema'), None)
-    query = [(k, v) for k, v in query if k not in ('schema', 'connection_limit', 'pool_timeout', 'pgbouncer')]
+    passwords = [v for k, v in query if k == 'password']
+    query = [(k, v) for k, v in query if k not in ('schema', 'connection_limit', 'pool_timeout', 'pgbouncer', 'password')]
     if schema is not None:
         # Only deployment/native isolated schemas, never shell/SQL interpolation.
         if not schema or len(schema) > 63 or not all(c.isascii() and (c.isalnum() or c == '_') for c in schema):
@@ -41,6 +42,8 @@ def cleanup(env=None):
         env['PGPASSWORD'] = urllib.parse.unquote(url.password)
         userinfo, host = netloc.rsplit('@', 1)
         netloc = userinfo.split(':', 1)[0] + '@' + host
+    if passwords:
+        env['PGPASSWORD'] = passwords[-1]
     connection = urllib.parse.urlunsplit(url._replace(netloc=netloc, query=urllib.parse.urlencode(query)))
     env['PGDATABASE'] = urllib.parse.unquote(url.path.lstrip('/'))
     args = ['psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=sqlstate', '--dbname', connection]
