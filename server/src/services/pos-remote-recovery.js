@@ -20,7 +20,7 @@ export function recoveryView(r){
  return {id:r.id,terminalPos:r.terminalPos,paymentMethod:r.paymentMethod,total:Number(r.total),status:r.status,createdAt:r.createdAt,saleId:r.saleId||null,blocker,preview:fingerprint(r),items:(Array.isArray(c.resolvedItems)?c.resolvedItems:[]).map(x=>({name:x?.name||'',quantity:Number(x?.quantity||1)}))};
 }
 export async function listPosRecoveries(db,{companyId,storeId}){
- const meta=(await db.$queryRaw`SELECT to_regclass('"RbsCapDriverV1Request"') AS relation`)[0];
+ const meta=(await db.$queryRaw`SELECT to_regclass('"RbsCapDriverV1Request"')::text AS relation`)[0];
  if(!meta?.relation)return {companyId,storeId,requests:[],truncated:false};
  const rows=await db.$queryRaw`SELECT * FROM "RbsCapDriverV1Request" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "saleId" IS NULL AND "status" IN ('PREPARED','CLAIMED','DISPATCHED','OPERATOR_CONFIRMED','REQUIRES_CHECK') ORDER BY "createdAt" ASC LIMIT 101`;
  return {companyId,storeId,requests:rows.slice(0,100).map(recoveryView),truncated:rows.length>100};

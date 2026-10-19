@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {recoveryBlocker,recoveryView,recoverPosRequest} from '../src/services/pos-remote-recovery.js';
+import {recoveryBlocker,recoveryView,recoverPosRequest,listPosRecoveries} from '../src/services/pos-remote-recovery.js';
 const scope={companyId:'company',storeId:'target',actorId:'admin'};
 const fixture=()=>({id:randomUUID(),companyId:'company',storeId:'target',terminalPos:'POS1',clientTransactionId:randomUUID(),paymentMethod:'CASH',total:'2.70',status:'DISPATCHED',saleId:null,operatorOutcome:null,createdAt:new Date('2026-10-18T20:00:00Z'),updatedAt:new Date('2026-10-18T20:00:01Z'),checkoutJson:{actorId:'operator',operatorEmployeeId:'employee',operationChannel:'COUNTER',baseSummary:{subtotal:2.7,total:2.7,discount:0},resolvedItems:[{productId:'p',name:'Product',quantity:1,effectiveUnitPrice:2.7,lineTotal:2.7,vatRate:13}]}});
 test('recovery refuses unconfirmed/ambiguous and special settlement paths; preview binds saved scope and checkout',()=>{
@@ -43,6 +43,7 @@ test('native locked recovery: one commit under concurrency, exact replay, rollba
   const deps={finalizeCash:finalizeDispatchedCashRequest,finalizeCard:finalizeConfirmedCardRequest};
   const run=async(r,over={},sc=scope)=>recoverPosRequest(db,sc,{requestId:r.id,preview:recoveryView(r).preview,receiptPrinted:true,reason:'Printed receipt recovery',...over},deps);
   const r=fixture();await insert(r);const original=await stored(r.id);
+  const listed=await listPosRecoveries(db,scope);assert.equal(listed.requests.length,1);assert.equal(listed.requests[0].id,r.id);assert.equal(listed.requests[0].blocker,null);assert.deepEqual((await listPosRecoveries(db,{...scope,storeId:'sibling'})).requests,[]);
   await assert.rejects(run(original,{}, {...scope,storeId:'sibling'}));await assert.rejects(run(original,{}, {...scope,companyId:'foreign'}));await assert.rejects(run(original,{receiptPrinted:false}));await assert.rejects(run(original,{preview:'stale'}));
   await db.$executeRawUnsafe(`UPDATE "CashShiftSession" SET "openedAt"='2026-10-18T21:00:00Z'`);await assert.rejects(run(original),/βάρδια/);await db.$executeRawUnsafe(`UPDATE "CashShiftSession" SET "openedAt"='2026-10-18T19:00:00Z'`);
   await db.$executeRawUnsafe(`CREATE TABLE "StoreLifecycleFence"("storeId" text PRIMARY KEY,"companyId" text,"generation" bigint,"maintenance" boolean,"retired" boolean)`);await db.$executeRawUnsafe(`INSERT INTO "StoreLifecycleFence" VALUES('target','company',1,false,false)`);await assert.rejects(run(original),e=>e.code==='STORE_LIFECYCLE_STALE_GENERATION');await db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "generation"=0`);
