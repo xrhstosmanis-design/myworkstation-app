@@ -43,9 +43,7 @@ services:
       - key: BACKUP_MONITOR_SECRET
         sync: false
       - key: ASSISTANT_HISTORY_ENABLED
-        # Explicit runtime activation after compatible worker/provisioning proof.
-        # Preserve that reviewed setting on later Blueprint syncs.
-        sync: false
+        value: "true"
       - key: STORE_LIFECYCLE_EXECUTION_ENABLED
         value: "true"
   - type: cron
