@@ -1,0 +1,296 @@
+{
+  "scope": "central-four-streams-phase6-ended-athens-sales-comparison",
+  "issues": [
+    2704,
+    2705,
+    2706,
+    2707
+  ],
+  "coordinator": "codex/central-four-streams-20261018",
+  "claim": {
+    "pr": 2841,
+    "head": "84995ce8eb56bc4b991c213836516982ae7ca2bb",
+    "ci": 39252357946,
+    "merge": "74aea6b871f40299731498e17c4093dcb61adfd9"
+  },
+  "beforeHealth": {
+    "capturedAt": "2026-10-19T12:26:52.983836+00:00",
+    "httpStatus": 200,
+    "ok": true,
+    "revision": "3e50b35596848994efa94c9e5d3cedf8dc1af8f6",
+    "version": "0.22.0+kat-test-pos"
+  },
+  "baselineBlobs": {
+    "server/src/routes/kiosk-reports-sales-v4.js": "c6efa2b705e803beeba0d3e2a419b9fedd23bc8e",
+    "client/src/components/commerce/installKioskReportsSalesV4.js": "53afd28b57761a127a3651351763872670e40dd9"
+  },
+  "ownership": {
+    "WS3": [
+      "server/src/routes/kiosk-reports-sales-v4.js",
+      "server/src/services/sales-report-comparison.js",
+      "server/test/sales-report-comparison.test.js"
+    ],
+    "WS1": [
+      "server/test/sales-report-comparison-postgres.test.js"
+    ],
+    "WS4": [
+      "client/src/components/commerce/installKioskReportsSalesV4.js",
+      "server/test/kiosk-sales-comparison-ui.test.js"
+    ],
+    "WS2": "independent read-only review"
+  },
+  "acceptance": {
+    "status": "SOURCE LIVE / AWAITING LAB",
+    "newLabPass": false,
+    "browserBlocked": true,
+    "productionBusinessMutations": false,
+    "original14Closed": false
+  },
+  "preserved": [
+    "Gate7 PASS",
+    "default list response/calculations",
+    "optional hourly source and UI",
+    "product grouping cap and coverage",
+    "unique normal/reversal basket counts",
+    "CSV and drilldown",
+    "company/store/role/license guards",
+    "accepted transactions and native/VOICE/lifecycle/supplier/wholesale owners",
+    "native multi-photo USER FAIL remains with native owner"
+  ],
+  "local": {
+    "node": "20.20.2",
+    "rootServerFocused": {
+      "pass": 33,
+      "fail": 0,
+      "skip": 0
+    },
+    "nativeWrapper": {
+      "pass": 0,
+      "fail": 0,
+      "skip": 1,
+      "reason": "No isolated local PostgreSQL environment; no UID bypass or existing cluster access"
+    },
+    "review": "Independent WS2 review CLEAR after aggregate-noise correction; source6 frozen",
+    "combinedFinal": {
+      "tests": 78,
+      "pass": 77,
+      "fail": 0,
+      "skip": 1,
+      "nativeSkipOnly": true,
+      "log": "/tmp/phase6-root-combined-corrected.log",
+      "passCount": 77
+    },
+    "initialUiInFlightRun": {
+      "pass": 35,
+      "fail": 7,
+      "skip": 0,
+      "cause": "New mock fixtures lacked current canonical reversalAware fields; fake tab button was replaced by actual Suite+Sales navigation test; all strict runtime guards/assertions retained",
+      "log": "/tmp/phase6-root-ui.log"
+    },
+    "frontendBuild": {
+      "status": "PASS",
+      "durationSeconds": 11.67,
+      "tableService": "PASS",
+      "log": "/tmp/phase6-build-final.log"
+    },
+    "correctedFrozenUi": {
+      "pass": 15,
+      "fail": 0,
+      "skip": 0,
+      "sha": "5ec13ae8ffef9a3ef6238aa375ccc0876c67e109"
+    }
+  },
+  "source": {
+    "verifiedBlobs": [
+      {
+        "path": "server/src/routes/kiosk-reports-sales-v4.js",
+        "sha": "82e42113896f20c5161f2b028e606b80c2744a1e"
+      },
+      {
+        "path": "server/src/services/sales-report-comparison.js",
+        "sha": "62eab32dbc85f6e4a5fddb33ab758348c612cc52"
+      },
+      {
+        "path": "server/test/sales-report-comparison.test.js",
+        "sha": "f8eb4cb523f59d3f1796cb8a3a253837f36cf63f"
+      },
+      {
+        "path": "server/test/sales-report-comparison-postgres.test.js",
+        "sha": "12c8067ce40cd425124c9b1eb952e5220b2ad4f1"
+      },
+      {
+        "path": "client/src/components/commerce/installKioskReportsSalesV4.js",
+        "sha": "5dfe7271cb18557bec449dde49557436a8cbfde6"
+      },
+      {
+        "path": "server/test/kiosk-sales-comparison-ui.test.js",
+        "sha": "5ec13ae8ffef9a3ef6238aa375ccc0876c67e109"
+      }
+    ],
+    "pr": 2844,
+    "head": "90d77df4187e77dde746526744a75746f1b0291c",
+    "base": "bab033d5b7148d7c5ad56bfed266a65201cecac2",
+    "initialFailedCI": {
+      "id": 39253919260,
+      "head": "770ac489485eb895caae3563de35eac760fb9d66",
+      "job": 118064629499,
+      "pass": 3423,
+      "fail": 1,
+      "skip": 0,
+      "cause": "New comparison UI CSV fixture leaked delayed URL.revokeObjectURL callback past restored globals; no runtime or native SQL failure",
+      "nativeComparisonFixture": "PASS ok2460 2026-10-19T12:45:29.5065407Z",
+      "merged": false,
+      "deployed": false
+    },
+    "prCI": 39255237253,
+    "prBuildJob": 118069115716,
+    "merge": "bb1ce702553505ac43267c50915020cf43f6948f",
+    "prResult": {
+      "conclusion": "success",
+      "job": 118069115716,
+      "pass": 3430,
+      "fail": 0,
+      "skip": 0,
+      "backupPass": 6,
+      "nativeComparisonFixture": "PASS ok2465 2026-10-19T12:55:36.9410426Z",
+      "windows": "SUCCESS",
+      "chromium": "SUCCESS",
+      "builds": "SUCCESS",
+      "invariants": "SUCCESS",
+      "archive": "SUCCESS",
+      "realHttpE2E": "SUCCESS",
+      "asynchronousAfterTestErrors": false
+    },
+    "mainCI": 39256286873,
+    "mainResult": {
+      "conclusion": "success",
+      "job": 118072597287,
+      "pass": 3430,
+      "fail": 0,
+      "skip": 0,
+      "backupPass": 6,
+      "nativeComparisonFixture": "PASS ok2465 2026-10-19T13:03:32.0906115Z",
+      "windows": "SUCCESS",
+      "chromium": "SUCCESS",
+      "builds": "SUCCESS",
+      "invariants": "SUCCESS",
+      "archive": "SUCCESS",
+      "realHttpE2E": "SUCCESS"
+    }
+  },
+  "compatibleHistoryIntegration": {
+    "revision": "cc3c554d941c23b292949970d42a10e77347bd4f",
+    "pr": 2843,
+    "ci": 39255199719,
+    "conclusion": "success",
+    "scope": "Independent assistant history scoped storage/access; six comparison files disjoint"
+  },
+  "deferredGuard": {
+    "workflow": 39257364974,
+    "job": 118076022532,
+    "conclusion": "success",
+    "expectedRevision": "bb1ce702553505ac43267c50915020cf43f6948f",
+    "ci": 39256286873,
+    "productionTrigger": "SKIPPED",
+    "reason": "A newer production source revision is on main; await its full CI",
+    "observedAt": "2026-10-19T13:07:33.8737785Z"
+  },
+  "compatibleGalleryTests": {
+    "revision": "880c6f428beeb657058b4f94c9600320f41c9641",
+    "pr": 2842,
+    "ci": 39256402531,
+    "scope": "Native real gallery content-stream fixture and tests; comparison source files unchanged",
+    "ourSixBlobsVerified": true,
+    "conclusion": "success",
+    "job": 118076185513,
+    "passCount": 3430,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 6,
+    "nativeComparisonFixture": "PASS ok2465 2026-10-19T13:10:30.8539301Z"
+  },
+  "preservedWholesaleReceipt": {
+    "revision": "99936ecab3fd2fb150a68d2427c43cbe260156a8",
+    "pr": 2847,
+    "scope": "Independent approved retry and verified inactive module restoration; active acceptance remains blocked"
+  },
+  "release": {
+    "revision": "880c6f428beeb657058b4f94c9600320f41c9641",
+    "workflow": 39258239893,
+    "job": 118078948913,
+    "conclusion": "success",
+    "renderStatus": "live",
+    "renderDeploy": "dep-dbb1f67f3r2c73fu1kjg",
+    "fullCombinedCI": 39256402531,
+    "fullCombinedResult": {
+      "revision": "880c6f428beeb657058b4f94c9600320f41c9641",
+      "pr": 2842,
+      "ci": 39256402531,
+      "scope": "Native real gallery content-stream fixture and tests; comparison source files unchanged",
+      "ourSixBlobsVerified": true,
+      "conclusion": "success",
+      "job": 118076185513,
+      "passCount": 3430,
+      "fail": 0,
+      "skip": 0,
+      "backupPass": 6,
+      "nativeComparisonFixture": "PASS ok2465 2026-10-19T13:10:30.8539301Z"
+    },
+    "rollbackArtifact": 12189375876,
+    "rollback": {
+      "capturedAt": "2026-10-19T13:13:59.081Z",
+      "revision": "cc3c554d941c23b292949970d42a10e77347bd4f",
+      "version": "0.22.0+kat-test-pos"
+    },
+    "renderFinishedAt": "2026-10-19T13:18:41.755745Z",
+    "guardPinnedAt": "2026-10-19T13:14:00.8643507Z",
+    "guardHealthyAt": "2026-10-19T13:18:45.4985285Z",
+    "ourBlobsVerified": true,
+    "health": {
+      "capturedAt": "2026-10-19T13:19:32.050995+00:00",
+      "httpStatus": 200,
+      "ok": true,
+      "revision": "880c6f428beeb657058b4f94c9600320f41c9641",
+      "version": "0.22.0+kat-test-pos",
+      "exactMatch": true,
+      "method": "Single independent public HTTPS urllib no-cache unique query; no browser or credentials"
+    }
+  },
+  "policy": {
+    "timeZone": "Europe/Athens",
+    "basis": "EQUAL_ENDED_ATHENS_CALENDAR_DAYS",
+    "explicitPreviousDates": true,
+    "maxInclusiveDaysPerPeriod": 366,
+    "earlierDisjointPrevious": true,
+    "singleServerTimestamp": true,
+    "snapshot": "RepeatableRead",
+    "source": "Two actual canonical readSalesAnalysisReport calls in the same transaction",
+    "completeBothSourcesRequired": true,
+    "limitedSource": "Omit comparison amount/delta/percentage fields",
+    "zeroOrNegativePreviousBasis": "Null percentage with explicit reason",
+    "turnover": "Signed gross cents; authoritative checked complete-row BigInt sum",
+    "maxRowAndAggregateGrossEUR": 1099511627776,
+    "financialFinality": "PROVISIONAL",
+    "financialReconciliationComplete": false,
+    "weekdayOrSeasonalEquivalenceClaimed": false
+  },
+  "receiptBase": {
+    "revision": "70d60c00eb46a78c31edfa31571d1c06906de604",
+    "ourSixBlobsVerified": true,
+    "preserves": "Latest independent native send-interlock claim and assistant auth-transaction claim, wholesale restoration, history/lifecycle/supplier owners"
+  },
+  "artifacts": [
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "bytes": 2185457,
+      "sha256": "84dbd14ddc2ec332c7885540ea93a0377aec2f195c8999d8f3e95585938dad9e",
+      "gitBlob": "6a712c6c973aa07bec698930b3de5d8db990d2dd"
+    },
+    {
+      "path": "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf",
+      "bytes": 1853348,
+      "sha256": "f670287b97875752df752853a564cd51daf7845f7928f3540d824dd55b98de59",
+      "gitBlob": "200c9d1c861c8c9e1cd13caf1497197476d3c70c"
+    }
+  ]
+}
