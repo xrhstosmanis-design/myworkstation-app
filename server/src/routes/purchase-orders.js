@@ -1,3 +1,4 @@
+import {previewPurchaseSupplierCorrection,correctPurchaseSupplier,lockPurchaseSupplierMetadata} from "../services/purchase-supplier-correction.js";
 import {assertReopenedIdentity,lockEditableReopenedOrder} from "../services/purchase-order-reopen.js";
 import {greeceRangeDate,greeceMonthStart} from "../../../shared/greece-time.mjs";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
@@ -195,13 +196,20 @@ router.post("/",async(req,res,next)=>{try{
   await prisma.$transaction(async tx=>{await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","invoiceNumber","description","createdByUserId","createdByName","updatedByName") VALUES (${orderId},${companyId},${body.storeId},${body.supplierId||null},${body.invoiceNumber||null},${body.description||null},${req.user.id},${actor},${actor})`;await writePurchaseAudit(tx,req,{storeId:body.storeId,eventType:"PURCHASE_ORDER_DRAFT_CREATED",details:{orderId,invoiceNumber:body.invoiceNumber||null,supplierId:body.supplierId||null,sourceType:"MANUAL"}})});res.status(201).json({id:orderId,status:"NEW"});
 }catch(error){next(error)}});
 
+router.get("/:orderId/supplier-correction-preview",async(req,res,next)=>{try{
+  res.set("Cache-Control","no-store");res.json(await previewPurchaseSupplierCorrection(prisma,req.user,req.params.orderId,{storeId:String(req.query.storeId||""),supplierId:String(req.query.supplierId||"")}));
+}catch(error){next(error)}});
+router.post("/:orderId/supplier-correction",async(req,res,next)=>{try{
+  res.json(await correctPurchaseSupplier(prisma,req.user,req.params.orderId,req.body));
+}catch(error){next(error)}});
+
 router.patch("/:orderId",async(req,res,next)=>{try{
   const companyId=req.user.companyId,found=await order(companyId,req.params.orderId);if(!found)return res.status(404).json({error:"Δεν βρέθηκε η παραγγελία."});editable(found);
   const body=z.object({supplierId:z.string().optional().nullable(),invoiceNumber:z.string().trim().max(100).optional().nullable(),description:z.string().trim().max(300).optional().nullable(),status:z.enum(["NEW","FINAL","INVOICED"]).optional()}).parse(req.body||{});if(body.supplierId&&!await supplier(companyId,body.supplierId))return res.status(404).json({error:"Δεν βρέθηκε ο προμηθευτής."});
   if(Number(found.reopenVersion)>0)assertReopenedIdentity(found,body);
   if(body.status==="INVOICED"&&found.status!=="FINAL")return res.status(409).json({error:"Η παραγγελία πρέπει πρώτα να οριστικοποιηθεί."});const actor=req.user.fullName||"Χρήστης";
   const after={supplierId:body.supplierId??found.supplierId,invoiceNumber:body.invoiceNumber??found.invoiceNumber,description:body.description??found.description,status:body.status??found.status};
-  await prisma.$transaction(async tx=>{if(Number(found.reopenVersion)>0)await lockEditableReopenedOrder(tx,found);
+  await prisma.$transaction(async tx=>{if(found.sourceType==="POS_OCR_DRAFT")await lockPurchaseSupplierMetadata(tx,found);if(Number(found.reopenVersion)>0)await lockEditableReopenedOrder(tx,found);
     if(found.sourceType==="POS_OCR_DRAFT"&&body.supplierId&&body.supplierId!==found.supplierId){
       const locked=await tx.$queryRaw`SELECT "status","supplierId" FROM "PurchaseOrder" WHERE "id"=${found.id} AND "companyId"=${companyId} FOR UPDATE`;
       if(locked[0]?.status!=="NEW"||locked[0]?.supplierId!==found.supplierId)throw Object.assign(new Error("Το πρόχειρο άλλαξε. Ανανέωσε πριν διορθώσεις τον προμηθευτή."),{status:409});
@@ -271,3 +279,4 @@ router.delete("/products/:productId/barcodes/:barcodeId",async(req,res,next)=>{t
 router.get("/stock-proposal",async(req,res,next)=>{try{const companyId=req.user.companyId,storeId=String(req.query.storeId||"");if(!await store(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const rows=await prisma.$queryRaw`SELECT p."id" AS "productId",p."name",p."sku",sp."currentStock",sp."minStock",GREATEST(COALESCE(sp."minStock",0)-COALESCE(sp."currentStock",0),0) AS "suggestedQuantity",hist."supplierId",hist."supplierName",hist."lastCost" FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${companyId} LEFT JOIN LATERAL (SELECT d."supplierId",s."name" AS "supplierName",l."unitCost" AS "lastCost" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" LEFT JOIN "Supplier" s ON s."id"=d."supplierId" WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND l."productId"=p."id" ORDER BY d."documentDate" DESC LIMIT 1) hist ON true WHERE sp."storeId"=${storeId} AND COALESCE(sp."minStock",0)>0 AND COALESCE(sp."currentStock",0)<COALESCE(sp."minStock",0) ORDER BY (COALESCE(sp."minStock",0)-COALESCE(sp."currentStock",0)) DESC,p."name"`;res.json(rows.map(r=>({...r,currentStock:n(r.currentStock),minStock:n(r.minStock),suggestedQuantity:n(r.suggestedQuantity),lastCost:r.lastCost==null?null:n(r.lastCost)})))}catch(error){next(error)}});
 
 export default router;
+
