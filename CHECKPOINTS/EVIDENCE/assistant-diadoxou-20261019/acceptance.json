@@ -26,7 +26,8 @@
     "dailyConsumptionOriginalSourceAndCsv": true,
     "naturalColaFamilyRowsAndTotals": true,
     "recordedStockBeforeQueryMatchOnly": true,
-    "missingBeerCategoryNoZeroInference": true
+    "missingBeerCategoryNoZeroInference": true,
+    "naturalProductCsvFollowup": true
   },
   "notTested": [
     "ordinary Owner parity/login",
@@ -64,21 +65,46 @@
     "singleRevisionForEntireInterval": false
   },
   "historicalFail": {
-    "productDateOnlyFollowup": "decorated product filter causes false no_match despite source records"
-  },
-  "fail": {
+    "productDateOnlyFollowup": "decorated product filter causes false no_match despite source records",
     "naturalProductCsvFollowup": "No fresh tool/evidence; safe unread-source refusal; no file"
   },
+  "fail": {},
   "limits": [
     "Recorded stock after-state changed during active trading; no global or causal stock invariant",
     "Beer catalog mapping absent; numerical beer acceptance remains OPEN",
-    "Other roles/devices/domains are not inferred from CI",
-    "Typed natural product CSV FAIL remains distinct from successful fresh CSV button"
+    "Other roles/devices/domains are not inferred from CI"
   ],
   "newClaim": {
     "branch": "fix/assistant-sales-export-read-20261020",
     "checkpoint": "CHECKPOINTS/CHANGES/2026-10-20-assistant-sales-export-read.md",
-    "state": "ASSIGNED BEFORE SOURCE",
+    "state": "CORRECTION LIMITED LIVE PASS; whole VOICE OPEN",
     "owner": "codex/assistant-business-queries-20261015"
+  },
+  "naturalSalesCsvRetest": {
+    "livePass": true,
+    "sourceMatch": true,
+    "csvMatch": true,
+    "guardSuccess": true,
+    "mainCiSuccess": true,
+    "timeAthens": "00:54",
+    "mainCiRun": 39328665510,
+    "mainCiCount": 3594,
+    "guardRun": 39330143576,
+    "deployId": "dep-dbb8vvbncjis738veivg",
+    "revision": "f2a3b79a145f7f80331280384066ec78c29ec230",
+    "revisionAfter": "f2a3b79a145f7f80331280384066ec78c29ec230",
+    "csvSha256": "3241adf0ea2fb0d23fe265d1dcefae6dd6a3a59b851aa666a79efd17445a7360",
+    "csvBytes": 1036,
+    "csvRows": 3,
+    "csvColumns": 10,
+    "currentDayContext": true,
+    "crossDayArchivedContext": "00:52 expected clarification; existing day fence preserved",
+    "sourcePr": 2911,
+    "sourceHead": "884a5006843d9b6beb60859b4855f56c541fd100",
+    "sourceCi": 39326635381,
+    "sourceCiCount": 3530,
+    "ownMainCi": 39327705958,
+    "ownMainCiCount": 3545,
+    "csvCreationTimePresentation": "Existing h24 near midnight observed; no general timestamp presentation PASS"
   }
 }

@@ -1,0 +1,16 @@
+{
+  "id": "/wholesale/",
+  "name": "MyWorkStation Χονδρική B2B",
+  "short_name": "MWS Χονδρική",
+  "description": "Χονδρική B2B, πελάτες και παραγγελίες MyWorkStation.",
+  "lang": "el",
+  "start_url": "/wholesale/",
+  "scope": "/wholesale",
+  "display": "standalone",
+  "background_color": "#f4f8fc",
+  "theme_color": "#123b5d",
+  "icons": [
+    {"src": "/pwa-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}

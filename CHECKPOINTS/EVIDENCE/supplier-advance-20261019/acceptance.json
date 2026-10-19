@@ -1,0 +1,119 @@
+{
+  "task": "SUPPLIER-ADVANCE-01",
+  "status": "LIMITED LAB AND REAL REASSOCIATION PASS; HOSTED ADVANCE CONSUMPTION OPEN",
+  "owner": "fix/supplier-advance-20261019",
+  "source": {
+    "pr": 2889,
+    "head": "403b3c03602f2ddd92fff3f0794af197d38d535a",
+    "merge": "1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69",
+    "prCI": 39318646187,
+    "prJob": 118287731141,
+    "mainCI": 39320123491,
+    "mainJob": 118291991398,
+    "tests": {
+      "pass": 3514,
+      "fail": 0,
+      "skip": 0,
+      "backupPass": 8
+    },
+    "guard": 39321219511,
+    "guardJob": 118295562197,
+    "renderDeploy": "dep-dbb80ng473hc73dk7e40",
+    "renderLiveAt": "2026-10-19T20:47:07.182627Z",
+    "healthRevision": "1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69",
+    "blobEquality": [
+      {
+        "path": "server/src/routes/store-transactions.js",
+        "sha": "86ace3a0aa701d9ab73ef6d81aaacd8efa7280a1",
+        "equal": true
+      },
+      {
+        "path": "server/src/lib/supplier-advance.js",
+        "sha": "afc1f4353f8b541b1583efdc3f82701f1a4a13a3",
+        "equal": true
+      },
+      {
+        "path": "client/src/components/store/StoreSupplierOpenInvoicePayment.jsx",
+        "sha": "38b335ecc72e9337a40fd95ec21c98622a0a581f",
+        "equal": true
+      },
+      {
+        "path": "client/src/components/platform/SupplierSettlementReviewCenter.jsx",
+        "sha": "aec6b95534c362425adcbed002c82a6803690464",
+        "equal": true
+      },
+      {
+        "path": "client/src/components/platform/OtherExpenseReviewCenter.jsx",
+        "sha": "2f86bd0d00523903541b4701d19ab29652dfa0c8",
+        "equal": true
+      },
+      {
+        "path": "server/test/supplier-payment-declaration.test.js",
+        "sha": "0f571ea675025edf9e9f3f2e4d15860ac229591a",
+        "equal": true
+      },
+      {
+        "path": "server/test/supplier-payment-declaration-ui.test.cjs",
+        "sha": "71d334abfb9a8d621db0ab5356404d56863bf252",
+        "equal": true
+      },
+      {
+        "path": "server/test/supplier-advance-native.test.js",
+        "sha": "77d6f7b4c8baf6f29662fbed30e61848360f5c2f",
+        "equal": true
+      },
+      {
+        "path": "server/test/supplier-advance-review-ui.test.cjs",
+        "sha": "cfc7dd85d86248e4ec1e68ceda1af767d7786927",
+        "equal": true
+      }
+    ]
+  },
+  "lab": {
+    "before": "lab-before.json",
+    "afterPayment": "lab-after-payment.json",
+    "afterReview": "lab-after-review.json",
+    "settlementId": "77f43282-4377-4782-97d3-bc7e3ab17c6b",
+    "amount": 0.02,
+    "allocatedAmount": 0.01,
+    "remainingAdvance": 0.01,
+    "status": "CONFIRMED",
+    "bankCount": 32,
+    "bankTotal": -515.45,
+    "bankConfirmed": -308.78,
+    "bankPending": -206.67,
+    "controlsAndStockUnchanged": true,
+    "newCashDisbursement": "NOT TESTED in hosted LAB; CI only",
+    "allocationConsumption": "NOT TESTED in hosted LAB; native/mounted CI passed"
+  },
+  "real": {
+    "before": "real-before.json",
+    "after": "real-after.json",
+    "transactionId": "pay_90df5323171a14ebfa07a09df33faa7cee27baf51f841652e8cd6813dc7be907",
+    "supplierId": "7b9b8117-bbc8-4235-accd-e716fd7f977c",
+    "amount": 6.17,
+    "oldType": "OTHER_EXPENSE",
+    "newType": "SUPPLIER_PAYMENT",
+    "settlementStatus": "PENDING_REVIEW",
+    "settlementId": "5a5f365f-b75b-4b17-b942-d3aa0db403ea",
+    "paymentCount": 3,
+    "paymentTotal": 700,
+    "immutableHash": "bae93aba8e9871730c19ef4251558f7e",
+    "protectedPaymentHash": "ca2b7895c68f16fc64c66f5ba1e4962a",
+    "cashDelta": 0,
+    "auditCount": 1,
+    "screenshot": "real-corrected.jpg"
+  },
+  "remaining": {
+    "blockedAction": "Same-user SuperAdmin support-access re-entry to MYWORKSTATION LAB for existing0.01 virtual advance consumption",
+    "reason": "Automatic approval review rejected issuing a new2hour support token/audit without explicit user approval, including after same-user/no-membership-write source inspection",
+    "noWorkaround": true,
+    "next": "Explicit approval, fresh existing receipt/bank/control baseline, one0.01 allocation; no new payment or replay"
+  },
+  "limits": [
+    "No physical POS/mobile/new cash handoff acceptance",
+    "No real bank transfer",
+    "No actual real171.04 or6.17 approval",
+    "No global trading-store financial or stock reconciliation claim"
+  ]
+}

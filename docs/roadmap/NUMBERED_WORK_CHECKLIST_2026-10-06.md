@@ -1,3 +1,11 @@
+## 20/10/2026 00:51 Europe/Athens — KAT-BACKGROUND-02 / LIMITED LIVE DESKTOP VISUAL PASS / COMPLETED
+
+Owner fix/kat-background-20261020. ClaimPR2907/bf894d1/docsCI39325681910 green mergedf00356f BEFORE source. SourcePR2908 initial0674e54/CI39325879053 SUCCESS; shared-record conflict resolved against464178e preserving other owners, source note moved after shared records to avoid prepend conflicts. Finalhead54d74aa64336064257dd5c0ee946efa935494ea2/fullPRCI39327413335 SUCCESS, mergedf2a3b79a145f7f80331280384066ec78c29ec230. Exact mainCI39328665510 SUCCESS all jobs. Ordinary guarded release39330143576/job118326018997 SUCCESS; browser health oktrue exactf2a3b79a145f7f80331280384066ec78c29ec230.
+
+Actual Cloud Chrome desktop /online/kat00:50-00:51: body visibly soft olive#cbd3b5 / computedrgb203,211,181, cream cards#fffdf7 /rgb255,253,247; approved logo uncropped, orange buttons and darkolive navigation retained.7categories/27coffee cards and empty basket0.00. Screenshot CHECKPOINTS/EVIDENCE/kat-background-20261020/online-desktop.jpg. Exactly one CSS declaration changed versus accepted KAT branding; all4script blocks byte-identical. Focused existing tests12PASS/0FAIL/0SKIP and frontend build PASS locally; full required CI as above. No new tests for reversible one-color adjustment. No order/payment/member/settings/catalogue/stock/fiscal or database write.
+
+Completed only requested outer-background visual adjustment. Prior KAT-BRANDING-01 desktop/category/search acceptance retained without replay; new mobile/touch/physical-device, saved-credential autofill, checkout/member/fiscal acceptance NOT TESTED here and other owners unchanged. Public visitors use /online/kat; refresh an older open page to receive new background, then wait for catalogue. No new role/access permission. This is not whole Online Gate PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-20-kat-background.md; manual docs/manual/online-delivery/PASS.md. Canonical tracker and numbered PDFs regenerated in same receipt.
+
 ## 19/10/2026 23:59 Europe/Athens — KAT-BRANDING-01 / LIMITED LIVE DESKTOP PASS / COMPLETED
 
 Owner feat/kat-olive-orange-branding-20261019; source PR#2897/head9a811c57a48c39a7d28d9c3b1d693490ee5d9c0a merged0484d636059eedb936e8bea1159b05c6c00bf0d2. Claim PR#2895 merged before source. Full PR CI39320675559 and exact main CI39321897395 SUCCESS, including build-and-test, Windows and isolated wholesale checks. Ordinary guarded deployment39322990384/job118301603738 SUCCESS; exact health oktrue/revision0484d636059eedb936e8bea1159b05c6c00bf0d2 observed independently in public browser and guard logs at20:59UTC.
@@ -463,7 +471,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 - **Tracker ID:** `21`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** PASS / CLOSED (ενημέρωση 07/10/2026)
 - **Αρχικό στιγμιότυπο:** USER/LAB PASS / ΟΡΙΑ NOT TESTED. Συμφωνημένο υπόλοιπο Νο19 ολοκληρώθηκε07/10.
-- **Υπόλοιπο / όριο:** PDF ημερομηνία1/1–7/10/2026 και2σελίδες USER PASS. SQL30/180 pilot-company και προηγούμενο LAB58/348 PASS. Φυσική εκτύπωση USER PASS με ρητή επιβεβαίωση ιδιοκτήτη21:34. PR1845 CI/merge/exacthealth PASS· άλλο company dataset, όχι διαφορά υπολογισμού. Δεν απαιτείται επανάληψη. Άλλες supplier λειτουργίες/roles/devices εκτός scope.
+- **Υπόλοιπο / όριο:** PDF ημερομηνία1/1–7/10/2026 και2σελίδες USER PASS. SQL30/180 pilot-company και προηγούμενο LAB58/348 PASS. Φυσική εκτύπωση USER PASS με ρητή επιβεβαίωση ιδιοκτήτη21:34. PR1845 CI/merge/exacthealth PASS· άλλο company dataset, όχι διαφορά υπολογισμού. Δεν απαιτείται επανάληψη. Άλλες supplier λειτουργίες/roles/devices εκτός scope. Νέα ανεξάρτητη επέκταση SUPPLIER-ADVANCE-01 (19Oct, χωρίς επανάληψη ή άνοιγμα του ολοκληρωμένου PDF/εκτύπωσης): source/live1cc και3514/0/0+8, περιορισμένη εικονική πληρωμή0,02/έναντι0,01 και επιβεβαίωση ίδιας εγγραφής, πραγματική μεταφορά6,17Μαντζίλα με ίδιες3κινήσεις/700,00. 20Oct00:16 hosted συμψηφισμός του ίδιου0,01 LAB PASS/CLOSED μετά ρητή έγκριση2ωρης πρόσβασης: κατανομή0,01→0,02/έναντι0,00, ίδια πληρωμή/τράπεζα/ταμείο/stock/controls, AuditcashDelta0, revision0484d636 με ίδια9sourceblobs. Owner released για το ανεξάρτητο scope. Νέα μετρητά/physical/άλλοι ρόλοι NOT TESTED. Checkpoint2026-10-19-supplier-advance-acceptance.
 
 ## 20 — Κανάλι και ομαδική τιμολόγηση ανά κατάστημα
 
@@ -530,7 +538,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `32`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
-- **Υπόλοιπο / όριο:** 19Oct23:54-23:56: LIMITED LIVE PASS πραγματικού Diadoxou για ιστορικό/μεταφορές/αρχεία/ακύρωση/συνολικές πωλήσεις και πλέον σύντομη νέα ημέρα συγκεκριμένου προϊόντος, φυσική οικογένεια Coca-Cola και ημερήσια ιδιοκατανάλωση/CSV. SourcePR2887, exact healthy1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69, πλήρες CI και κανονικός guard. Η μπύρα δεν έχει αντίστοιχη καταγεγραμμένη κατηγορία, όχι μηδενική πώληση. Νέο φυσικό «Σε CSV» προϊόντος LIVE FAIL/no-read, ενώ κουμπί CSV PASS· ASSIGNED fix/assistant-sales-export-read-20261020 πριν source. Whole VOICE OPEN για αυτό/Owner/mobile/physical/ευρύτερη κάλυψη, ίδιος owner· καμία αριθμημένη καθολική ολοκλήρωση. Checkpoint2026-10-19-assistant-diadoxou-acceptance.
+- **Υπόλοιπο / όριο:** 20Oct00:54: LIMITED LIVE PASS Διαδόχου για νέο φυσικό «Σε CSV» προϊόντος με σωστή νεότερη17Oct περίοδο, φρέσκια πηγή και πραγματικά bytes. PR2911/full PR+mainCI/ordinary guard/exact healthyf2a3b79a145f7f80331280384066ec78c29ec230. Προστατευμένα ιστορικό/μεταφορές/αρχεία/ακύρωση/σύνολα/προϊόν/ιδιοκατανάλωση/Coca-Cola διατηρούνται. Ολοκληρωμένες δύο διορθώσεις αφαιρέθηκαν από pending. Whole VOICE OPEN για actual Owner/mobile/physical/ευρύτερη κάλυψη και όριο μπύρας χωρίς πραγματική κατηγορία. Ίδιος owner, καμία καθολική αριθμημένη ολοκλήρωση. Checkpoint2026-10-20-assistant-sales-export-read.
 
 ## 31 — Μηνιαία Αναφορά Ιδιοκτήτη
 
