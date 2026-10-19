@@ -22,9 +22,6 @@
     "allDisplayedSalesGroupsMatchAfterWhitespaceNormalization": true,
     "preciseNamedProduct": true
   },
-  "fail": {
-    "productDateOnlyFollowup": "decorated product filter causes false no_match despite source records"
-  },
   "notTested": [
     "ordinary Owner parity/login",
     "foreign-role server tests in LIVE",
@@ -34,7 +31,7 @@
   ],
   "wholeVoice": "OPEN",
   "sourceFix": {
-    "state": "SOURCE MERGED / RELEASE HELD / LIVE RETEST OPEN",
+    "state": "RELEASED / AWAITING NORMAL SUPERADMIN LIVE RETEST",
     "pr": 2887,
     "head": "5db929d133baf960b3d7cff7bb9a934293c627c3",
     "merge": "c17b6605e970dc47478c7314a6ccff3b20d9f562",
@@ -43,12 +40,21 @@
     "tests": 3489,
     "fail": 0,
     "skip": 0,
-    "guard": 39319214921,
-    "guardDeployed": false,
-    "guardReason": "A newer production source revision is on main; await its full CI",
+    "guard": 39321219511,
+    "guardDeployed": true,
+    "guardReason": "Successful exact-CI/freshness/rollback/pinned deployment and health verification",
     "combinedMainCiCancelled": 39318461936,
     "retryResult": "GitHub 403 This workflow run cannot be retried",
-    "latestVerifiedHealth": "e3432c2b3f6c8a890bbe52b61a0270ee06bc9899"
+    "latestVerifiedHealth": "1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69",
+    "combinedRevision": "1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69",
+    "combinedMainCi": 39320123491,
+    "combinedTests": 3514,
+    "renderDeploy": "dep-dbb80ng473hc73dk7e40",
+    "liveFinishedAtUtc": "2026-10-19T20:47:07.182627Z",
+    "actualRetest": "NOT TESTED: after genuine reload, application reports support preview; composer disabled, no question/export sent",
+    "normalReturnControlVisible": false,
+    "sessionChangeCause": "UNKNOWN",
+    "authBypass": false
   },
   "financialTestTransaction": false,
   "notes": [
@@ -67,6 +73,10 @@
   "limits": [
     "Recorded stock later changed during active trading; no causal/global/frozen after-state",
     "Numerical beer acceptance OPEN; no catalog mapping",
-    "Original decorated product follow-up FAIL remains until exact guarded release/retest"
-  ]
+    "Historical decorated product follow-up FAIL remains awaiting normal personal SuperAdmin retest after release"
+  ],
+  "historicalFail": {
+    "productDateOnlyFollowup": "decorated product filter causes false no_match despite source records"
+  },
+  "fail": {}
 }
