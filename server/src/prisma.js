@@ -1,3 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-export const prisma = globalThis.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalThis.prisma = prisma;
+import {withLifecyclePrisma} from "./services/store-lifecycle-context.js";
+const rawPrisma = globalThis.prisma || new PrismaClient();
+export const prisma = withLifecyclePrisma(rawPrisma);
+if (process.env.NODE_ENV !== "production") globalThis.prisma = rawPrisma;

@@ -1,3 +1,4 @@
+import {storeLifecycleRequestContext} from "./middleware/store-lifecycle-context.js";
 import purchaseOrderReopenRoutes from "./routes/purchase-order-reopen.js";
 import nativeChatPushRoutes from './routes/native-chat-push.js';
 import invoiceCommonDraftRoutes from "./routes/invoice-common-draft.js";
@@ -169,6 +170,7 @@ const app=express();
 const shutdown=createServerShutdown({disconnect:()=>prisma.$disconnect(),allowInternal:allowPosInvoiceDrainRequest});
 app.use(cors());
 app.use(shutdown.middleware);
+app.use(storeLifecycleRequestContext);
 app.use(express.json({limit:"12mb"}));
 app.use(createN40ReadTrace());
 app.use(createProductionStoreReadDiagnostic());
