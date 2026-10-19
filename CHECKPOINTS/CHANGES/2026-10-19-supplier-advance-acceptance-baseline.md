@@ -38,3 +38,109 @@ Before values:
 Immediately before the action re-read these targeted values; any changed original hash/amount/store/links/review status is a HOLD and needs a fresh baseline. After action compare immutableHash and protectedPaymentHash, total700 and transaction count3, original identity/time/shift, one supplier settlement pending and one original-preserving audit/cashDelta0. Do not infer global financial/stock invariance from ongoing-store aggregate differences.
 
 Separate virtual LAB new-payment/advance/allocation acceptance requires its own fresh store/terminal/operator/shift, positive payment method, exact invoice reference and control/stock/ledger before snapshot published before action. No LAB write is performed or claimed by this baseline. All other owners preserved. Single next action: merge this documentation green, complete full source CI/guarded exact healthy release, then fresh baseline comparison and bounded measured acceptance.
+
+## Separate virtual LAB baseline — 19Oct23:26 Europe/Athens
+
+Standing repository virtual-LAB authorization only. Store ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ/cmtpopbgo000trhb5ng9ytiru, companycmtpopbgk000prhb5qc60zxus, existing MAIN shift a3494bb3-61cf-447c-9707-27311f35708c opened by LAB POS2; browser actor current authorized SuperAdmin Χρήστος Μάνης, cloud desktop not physical POS hardware. Existing supplier COFFEE UNION ATTICA Ε Ε/90d12463-5425-471e-ae21-7f1f09eeaff1, invoiceΤΔΑ0009683/dbb59d85-ebed-4af9-984b-17055b7cd6e0 is only allocation target; no upload/reapproval/replay of old payment. Unique new note LAB-SUPPLIER-ADVANCE-01-20261019 / VIRTUAL NO REAL MONEY.
+
+After exact source CI/main/ordinary guarded healthy release and fresh identical baseline, perform one new virtual CASH_SHIFT payment0.02 allocating0.01 to the invoice and explicitly declaring0.01 advance, with no-document responsibility. Expected shift count0→1, cash/card/IRIS sales0unchanged, deducted payments0→0.02, drawer9.40→9.38, one pending settlement0.02/one allocation0.01, invoice face/status/stock hashes and both other-store controls unchanged. This is simulated LAB money, never a real bank charge/fiscal/stock operation. Record actual after values and publish before any subsequent confirmation/allocation. Future planned virtual confirmation makes this same receipt CONFIRMED, without second cash; then allocate only the remaining0.01 with no new payment. Each subsequent action requires refreshed before values recorded first. Any unexpected delta is HOLD; do not replay to repair evidence.
+
+```json
+{
+  "capturedAt": "2026-10-19T20:26:14.928412+00:00",
+  "controls": [
+    {
+      "hash": "d41d8cd98f00b204e9800998ecf8427e",
+      "id": "cmuk8gxui000ppabfykdxwb1y",
+      "name": "ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ",
+      "signedamount": 0,
+      "transactions": 0
+    },
+    {
+      "hash": "d41d8cd98f00b204e9800998ecf8427e",
+      "id": "cmv2qanca000psigeizep8o9m",
+      "name": "N40 CONTROL 20261010",
+      "signedamount": 0,
+      "transactions": 0
+    }
+  ],
+  "invoice": {
+    "aiConfidence": null,
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "createdAt": "2026-09-25T13:27:22.208",
+    "createdByUserId": null,
+    "documentDate": "2026-08-13T00:00:00",
+    "documentNumber": "ΤΔΑ0009683",
+    "documentType": "INVOICE",
+    "id": "dbb59d85-ebed-4af9-984b-17055b7cd6e0",
+    "imageRef": null,
+    "paymentTransactionId": null,
+    "purchaseOrderId": "03483d5d-c394-4ddc-a5bf-9aaec78af6b5",
+    "settlementMode": "CREDIT",
+    "sourceType": "POS_OCR_DRAFT",
+    "status": "DRAFT",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "supplierId": "90d12463-5425-471e-ae21-7f1f09eeaff1",
+    "totalGross": 958.76,
+    "totalNet": 832.29,
+    "totalVat": 126.47,
+    "updatedAt": "2026-09-25T13:27:22.208"
+  },
+  "invoiceAllocations": null,
+  "shift": {
+    "actualOperational": null,
+    "cardSales": 0,
+    "cardVariance": 0,
+    "cashSales": 0,
+    "closedAt": null,
+    "closedBy": null,
+    "closedByName": null,
+    "closingCoins": null,
+    "closingCustody": null,
+    "closingDrawer": null,
+    "closingNote": null,
+    "closingSafe": null,
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "duplicateReviewJson": [],
+    "eftposTotal": 0,
+    "expectedOpeningOperational": 9.4,
+    "expectedOperational": null,
+    "expenses": 0,
+    "id": "a3494bb3-61cf-447c-9707-27311f35708c",
+    "nextOpeningTotal": null,
+    "openedAt": "2026-10-16T19:48:24.748905+00:00",
+    "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+    "openedByName": "LAB POS 2",
+    "openingCoins": 0,
+    "openingCustody": 0,
+    "openingDrawer": 9.4,
+    "openingNote": null,
+    "openingOperational": 9.4,
+    "openingSafe": 0,
+    "openingVariance": 0,
+    "shiftLabel": "Βάρδια",
+    "status": "OPEN",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "terminalPos": "MAIN",
+    "updatedAt": "2026-10-16T19:48:24.748905+00:00",
+    "variance": null
+  },
+  "shiftTransactions": {
+    "cardSales": 0,
+    "cashSales": 0,
+    "count": 0,
+    "deductedPayments": 0,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "irisSales": 0
+  },
+  "stockMovements": {
+    "count": 95,
+    "hash": "f69aa9d0bec0bf377f1b9645262e5aba",
+    "latest": "2026-10-12T20:42:11.404"
+  },
+  "stockProducts": {
+    "count": 99,
+    "hash": "f96d09fe90906df3b26776483c8d5d61"
+  }
+}
+```
