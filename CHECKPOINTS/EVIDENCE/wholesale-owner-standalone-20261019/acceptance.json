@@ -1,0 +1,28 @@
+{
+  "observedAt": "2026-10-19T08:50:02.697Z",
+  "url": "https://myworkstation-app.onrender.com/wholesale",
+  "browser": "Cloud Chrome",
+  "liveRevision": "8e6dcafaadb86e933ce0f6b903cd33a85df5b012",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "8e6dcafaadb86e933ce0f6b903cd33a85df5b012",
+    "curlExit": 0
+  },
+  "visible": [
+    "MyWorkStation",
+    "Χονδρική B2B",
+    "Υπεύθυνος Εργαστηρίου",
+    "Αποσύνδεση",
+    "Σύνδεση λογαριασμού",
+    "Το πληρωμένο module Χονδρική B2B δεν είναι ενεργό.",
+    "Επανέλεγχος πρόσβασης"
+  ],
+  "scope": "LIMITED LIVE UI PASS personal login and inactive-module refusal only",
+  "screenshot": "Observed in browser; shared copy unavailable after 5-second sync check, no attachment claimed.",
+  "auth": "First attempt not success; user requested form again; second attempt reached positive named personal identity. No secret values read.",
+  "grants": "NONE; module still inactive",
+  "businessActions": "NONE",
+  "next": "Await action-time confirmation of temporary WHOLESALE_B2B on MYWORKSTATION LAB for read-only standalone Owner acceptance, restore inactive afterwards; fresh platform baseline required before activation.",
+  "owner": "codex/wholesale-suite-20261017"
+}
