@@ -1,0 +1,38 @@
+{
+  "runId": "20261019T185759Z-10226",
+  "startedAt": "2026-10-19T18:57:59Z",
+  "completedAt": "2026-10-19T19:00:12Z",
+  "status": "SUCCEEDED",
+  "sizeBytes": 251288470,
+  "sha256": "457fd2e71f9254fb02cb00c6dcd30b5c71aa736c3c3c910155c937f2e1ee53e9",
+  "appRevision": "d3b993fa298247b951a071f16e8093a68fea8953",
+  "backupScriptBlob": "fc1294d279e7707eefcb14a2769e614570504648",
+  "dryRunStatus": "PASSED",
+  "remoteReadback": {
+    "sha256": "MATCH",
+    "size": "MATCH",
+    "TOC": "READABLE_WITH_TABLE_ENTRIES",
+    "encryption": "AES256",
+    "result": "REMOTE_ARCHIVE_READBACK_PASS"
+  },
+  "execution": "one explicit existing-script run in authenticated Render Web Shell, no second dump",
+  "restoreToDatabase": false,
+  "newScheduleAcceptance": false,
+  "productionFaultInjection": false,
+  "credentialValuesRead": false,
+  "temporaryReadbackFiles": "removed by trap; remote archive retained",
+  "sameSourceMain": {
+    "revision": "f3305f096eb7830f89483dda64f69271c9fb4535",
+    "ci": 39299200148,
+    "serverPass": 3463,
+    "serverFail": 0,
+    "serverSkip": 0,
+    "backupPass": 8
+  },
+  "imageDeploy": {
+    "id": "dep-dbb6cfhjfumc73dcpcrg",
+    "liveAt": "2026-10-19T18:49:56.266889Z",
+    "trigger": "api, independently observed; not triggered by this page"
+  },
+  "typingIncident": "readback command initially timed out before Enter; partial unsubmitted line cleared, full command pasted and submitted once; actual backup was not repeated"
+}

@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-10-19T18:57:54.283713+00:00",
+  "action": "one explicit /backup/run-backup.sh in authenticated existing Render Web Shell",
+  "service": "crn-dau2gdbncjis73agfh30",
+  "image": "d3b993fa298247b951a071f16e8093a68fea8953",
+  "runBackupBlob": "fc1294d279e7707eefcb14a2769e614570504648",
+  "previousRun": "20261019T180020Z-8915",
+  "previousStatus": "SUCCEEDED",
+  "previousSize": 251246812,
+  "businessTerminalOperatorShiftSKUQuantityPayment": "N/A: archive/monitor test only; no business transaction or restore",
+  "sameSourceMainCI": 39299200148,
+  "sameSourceMainCIStatus": "SUCCESS; exact current image full CI pending under another owner, scoped backup script unchanged",
+  "next": "run exactly once, read signed monitor result and logs; do not rerun on uncertainty"
+}
