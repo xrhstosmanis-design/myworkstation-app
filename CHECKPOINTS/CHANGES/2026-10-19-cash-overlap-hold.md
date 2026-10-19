@@ -1,0 +1,6 @@
+## 19/10/2026 - COORD PHASE5 CASH OVERLAP SOURCE PREPARED / AWAITING FULL CI AND LAB
+
+Claim#2821 head7297ea78619f8bda0985c7a74ef83ba2875237a0 / CI39226616765 SUCCESS / mergedfab4330e2b0bda43279a89675de76759e81ec12a BEFORE edits. Read-only readiness now holds strict positive overlap among valid CLOSED intervals on the same terminal; copy-sort/running maximum preserves nested detection, adjacent endpoints, empty intervals, different-terminal concurrency and original input order. Existing SOURCE_SCOPE_OR_ID_INVALID reason/UI is reused. Daily/weekly/monthly source suppresses groups and monthly opening-user summary, without altering PROVISIONAL financial finality or original amounts/records.
+
+Focused Node20:29PASS/0FAIL/0SKIP, independent reviews clear. Native fixture extends actual Prisma reader with four-table before/after controls and restored timestamp/READY control. Local native wrapper1environmentSKIP (non-root PostgreSQL UID unavailable); full native CI must execute it without skips. Not a new hosted failure or LAB PASS. No production business mutation, SMTP, replay, settings/schema or manual deploy. Protected daily/weekly HOLD/provisional manual and all other owners retained. Final consolidated receipt: CHECKPOINTS/CHANGES/2026-10-19-central-overlap-unit-ui.md.
+

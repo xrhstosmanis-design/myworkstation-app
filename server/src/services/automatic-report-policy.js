@@ -87,6 +87,19 @@ export function dailyCashReportReadiness(sessions,{companyId,storeId,day,dayStar
   for(const terminalPos of expected){
     const rows=accepted.filter(row=>row.terminalPos===terminalPos);
     const required=policies.find(p=>p.terminalPos===terminalPos).requiredSlots;
+    // Closed history can overlap even though the live one-OPEN-per-terminal
+    // guard held at opening time. Compare actual positive UTC intervals, not
+    // shift slots or a caller-supplied cash chain. Empty intervals stay empty.
+    const intervals=rows.map(row=>({row,start:new Date(row.openedAt).getTime(),end:row.closedAt?new Date(row.closedAt).getTime():NaN}))
+      .filter(value=>value.row.status==="CLOSED"&&Number.isFinite(value.start)&&Number.isFinite(value.end)&&value.end>value.start&&value.end<=now.getTime())
+      .sort((a,b)=>a.start-b.start||a.end-b.end||(String(a.row.id)<String(b.row.id)?-1:String(a.row.id)>String(b.row.id)?1:0));
+    let furthest=null;
+    for(const interval of intervals){
+      if(furthest&&interval.start<furthest.end)holds.push({code:"SOURCE_SCOPE_OR_ID_INVALID",terminalPos,sessionId:interval.row.id,overlappingSessionId:furthest.row.id});
+      // Keep the longest active predecessor: a nested short interval must not
+      // hide an overlap with the enclosing interval farther along the chain.
+      if(!furthest||interval.end>furthest.end)furthest=interval;
+    }
     if(rows.length<new Set(required).size)holds.push({code:"MISSING_SHIFTS",terminalPos});
     for(const [slot,start,end] of [[1,dayStartHour,secondShiftStartHour],[2,secondShiftStartHour,thirdShiftStartHour]]){
       if(required.includes(slot)&&!rows.some(row=>{const hour=+parts(new Date(row.openedAt)).hour;return hour>=start&&hour<end;}))holds.push({code:"SHIFT_SLOT_MISSING",terminalPos,slot});
