@@ -345,7 +345,8 @@ public final class MainActivity extends Activity {
         call(chatBase() + "/messages", "POST", body, false, result -> {
             // A 2xx without an explicit receipt is still an unknown outcome. Never advance/replay.
             if (!result.optBoolean("ok") || result.optString("id").trim().isEmpty()) throw new IllegalArgumentException();
-            uncertainStoreId = ""; composer.setText("");
+            uncertainStoreId = "";
+            if (composer.getText().toString().trim().equals(value)) composer.setText("");
             if (first != null) photos.remove(0);
             updatePhotoLabel();
             if (photos.size() > 0) sendPhotoMessage(""); else loadMessages(true);
