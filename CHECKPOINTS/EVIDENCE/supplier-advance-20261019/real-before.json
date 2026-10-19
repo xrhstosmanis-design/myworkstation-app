@@ -1,0 +1,15 @@
+{
+  "amount": 6.17,
+  "capturedAt": "2026-10-19T20:56:06.228244Z",
+  "id": "pay_90df5323171a14ebfa07a09df33faa7cee27baf51f841652e8cd6813dc7be907",
+  "immutableHash": "bae93aba8e9871730c19ef4251558f7e",
+  "occurredAt": "2026-10-19T17:23:48.931861Z",
+  "originalHash": "717922fd9e6a34de3a559fd9b625018d",
+  "protectedPaymentHash": "ca2b7895c68f16fc64c66f5ba1e4962a",
+  "reviewId": "ab374dca-3e82-42e5-8243-32f39bbe37b1",
+  "reviewStatus": "PENDING_REVIEW",
+  "sessionId": "248ffdac-2931-4049-8479-2ab37e452da7",
+  "storeId": "cmulmjjoc000qqlbf2bn2ifj0",
+  "supplierId": null,
+  "type": "OTHER_EXPENSE"
+}
