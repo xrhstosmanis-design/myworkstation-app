@@ -2,7 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import {z} from 'zod';
 import {supplierAdvanceContext,associateExpenseAsAdvance,allocateSupplierAdvance} from '../src/lib/supplier-advance.js';
+function registered(db){
+ const handlers=new Map();let ledger;
+ const Router=()=>({use(...args){const fn=args.at(-1);if(fn.name==='requireLedgerAccess')ledger=fn},...Object.fromEntries(['get','post'].map(method=>[method,(path,...args)=>handlers.set(method+path,args)]))});
+ const source=fs.readFileSync(new URL('../src/routes/store-transactions.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export default .*;\n/gm,'');
+ new Function('Router','prisma','crypto','z','auth','executeHotTableBootstrap','supplierAdvanceContext','associateExpenseAsAdvance','allocateSupplierAdvance',source)(Router,db,crypto,z,()=>{},async()=>{},supplierAdvanceContext,associateExpenseAsAdvance,allocateSupplierAdvance);
+ return (method,path,params,body,user)=>new Promise(resolve=>{let status=200;const req={method:method.toUpperCase(),params,body,user,query:{},headers:{},originalUrl:'/api/transactions'+path},res={status(n){status=n;return this},json(data){resolve({status,data})}};const chain=[ledger,...handlers.get(method+path)];let index=0;const next=()=>chain[index++]?.(req,res,next);next()});
+}
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 const user={id:'owner',role:'OWNER',tokenType:'USER',companyId:'company',fullName:'Virtual Owner'};
 const scope={companyId:'company',storeId:'store',transactionId:'expense',user};
@@ -16,6 +24,8 @@ test('native advance: once-only cash-preserving reassociation, review boundary, 
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),name='supplier_advance_'+crypto.randomBytes(6).toString('hex'),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',name);
  await admin.$executeRawUnsafe(`CREATE SCHEMA "${name}"`);const db=new PrismaClient({datasources:{db:{url:url.toString()}}});
  try{
+  await db.$executeRawUnsafe('CREATE TABLE "Store"("id" text primary key,"companyId" text,"active" boolean)');
+  await db.$executeRaw`INSERT INTO "Store" VALUES ('store','company',true)`;
   await db.$executeRawUnsafe('CREATE TABLE "StoreTransaction"("id" text primary key,"companyId" text,"storeId" text,"sessionId" text,"type" text,"amount" numeric(14,2),"description" text,"supplierId" text,"supplierName" text,"invoiceDocumentNumber" text,"invoicePaymentKey" text,"paymentMethod" text,"subtractFromShift" boolean,"reversedAt" timestamptz,"occurredAt" timestamptz,"actorId" text)');
   await db.$executeRawUnsafe('CREATE TABLE "Supplier"("id" text primary key,"companyId" text,"name" text,"taxId" text,"active" boolean)');
   await db.$executeRawUnsafe('CREATE TABLE "OtherExpenseReview"("id" text primary key,"companyId" text,"storeId" text,"transactionId" text UNIQUE,"status" text,"reviewedBy" text,"reviewedAt" timestamptz,"reviewNote" text)');
@@ -31,11 +41,15 @@ test('native advance: once-only cash-preserving reassociation, review boundary, 
   await db.$executeRaw`INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId","status") VALUES ('review','company','store','expense','PENDING_REVIEW')`;
   await db.$executeRaw`INSERT INTO "PurchaseDocument" VALUES ('invoice','company','store','supplier','VIRTUAL-002',20,'DRAFT','CREDIT','INVOICE'),('other-store','company','other-store','supplier','FOREIGN',20,'DRAFT','CREDIT','INVOICE')`;
   const immutable=async()=>JSON.stringify({rows:await db.$queryRaw`SELECT "id","amount","sessionId","occurredAt","actorId","subtractFromShift","paymentMethod","description","reversedAt" FROM "StoreTransaction" ORDER BY "id"`,control:await db.$queryRaw`SELECT * FROM "Control"`,bank:await db.$queryRaw`SELECT * FROM "BankLedgerEntry"`,docs:await db.$queryRaw`SELECT * FROM "PurchaseDocument" ORDER BY "id"`});
-  const before=await immutable(),ctx=await supplierAdvanceContext(db,scope),body={supplierId:'supplier',expectedVersion:ctx.expectedVersion,expectedAmount:6.17,reason:'virtual supplier advance correction',acknowledged:true,idempotencyKey:crypto.randomUUID()};
+  const http=registered(db),path='/other-expenses/:reviewId/supplier-advance';
+  assert.equal((await http('get',path,{reviewId:'review'},null,{...user,companyId:'foreign'})).status,404);
+  assert.equal((await http('get',path,{reviewId:'review'},null,{...user,tokenType:'STORE_OPERATOR',permissions:['STORE_LEDGER']})).status,403);
+  const response=await http('get',path,{reviewId:'review'},null,user);assert.equal(response.status,200);
+  const before=await immutable(),ctx=response.data,body={supplierId:'supplier',expectedVersion:ctx.expectedVersion,expectedAmount:6.17,reason:'virtual supplier advance correction',acknowledged:true,idempotencyKey:crypto.randomUUID()};
   await assert.rejects(associateExpenseAsAdvance(db,scope,{...body,supplierId:'foreign'}),e=>e.status===404);
   await assert.rejects(associateExpenseAsAdvance(db,scope,{...body,expectedVersion:'a'.repeat(64)}),e=>e.status===409);
   assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "SupplierPaymentSettlement"`)[0].n,0);
-  const results=await Promise.all([associateExpenseAsAdvance(db,scope,body),associateExpenseAsAdvance(db,scope,body)]);assert.equal(results.filter(r=>r.duplicate).length,1);const result=results[0];
+  const responses=await Promise.all([http('post',path,{reviewId:'review'},body,user),http('post',path,{reviewId:'review'},body,user)]);assert.deepEqual(responses.map(r=>r.status),[200,200]);const results=responses.map(r=>r.data);assert.equal(results.filter(r=>r.duplicate).length,1);const result=results[0];
   assert.equal(await immutable(),before);assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "StoreTransaction"`)[0].n,2);assert.equal((await db.$queryRaw`SELECT * FROM "StoreTransaction" WHERE "id"='expense'`)[0].type,'SUPPLIER_PAYMENT');assert.equal((await db.$queryRaw`SELECT * FROM "OtherExpenseReview"`)[0].status,'CANCELLED');assert.equal((await db.$queryRaw`SELECT * FROM "SupplierPaymentSettlement"`)[0].status,'PENDING_REVIEW');
   await assert.rejects(associateExpenseAsAdvance(db,scope,{...body,reason:'changed reason'}),e=>e.status===409);
   const allocationScope={companyId:'company',storeId:'store',settlementId:result.settlementId,user};

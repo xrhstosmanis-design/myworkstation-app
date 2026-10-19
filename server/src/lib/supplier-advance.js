@@ -47,7 +47,7 @@ export async function associateExpenseAsAdvance(db,scope,input){
 
 const allocationSchema=z.object({expectedAvailable:money,allocations:z.array(z.object({purchaseDocumentId:z.string().trim().min(1).max(180),amount:money}).strict()).min(1).max(80),idempotencyKey:z.string().min(8).max(180)}).strict();
 export async function allocateSupplierAdvance(db,scope,input){
- const user=scope.user;if(user?.companyId!==scope.companyId||user.tokenType==='STORE_OPERATOR'&&(user.storeId!==scope.storeId||!user.permissions?.includes('SUPPLIER_PAYMENT')))fail(403,'Δεν έχεις πρόσβαση στο έναντι αυτού του καταστήματος.');
+ const user=scope.user;if(!user||user.tokenType!=='STORE_OPERATOR'&&!['OWNER','SUPER_ADMIN','ADMIN','MANAGER'].includes(user.role))fail(403,'Δεν έχεις δικαίωμα συμψηφισμού έναντι.');if(user?.companyId!==scope.companyId||user.tokenType==='STORE_OPERATOR'&&(user.storeId!==scope.storeId||!user.permissions?.includes('SUPPLIER_PAYMENT')))fail(403,'Δεν έχεις πρόσβαση στο έναντι αυτού του καταστήματος.');
  const body=allocationSchema.parse(input),requestHash=digest(body),ids=body.allocations.map(a=>a.purchaseDocumentId).sort();
  if(new Set(ids).size!==ids.length)fail(400,'Κάθε τιμολόγιο επιλέγεται μία φορά.');
  return db.$transaction(async tx=>{

@@ -309,7 +309,7 @@ const supplierSettlementSchema=z.object({
   allocations:z.array(z.object({purchaseDocumentId:z.string().trim().min(1).max(180),amount:z.coerce.number().finite().positive().max(999999999).refine(v=>Math.abs(v*100-Math.round(v*100))<0.00001)})).max(80)
 }).superRefine((body,ctx)=>{
   const allocated=body.allocations.reduce((sum,row)=>sum+Math.round(row.amount*100),0),paid=body.totalAmount===undefined?allocated:Math.round(body.totalAmount*100);
-  if(paid<=0||paid<allocated)ctx.addIssue({code:z.ZodIssueCode.custom,path:["totalAmount"],message:"Το ποσό πληρωμής πρέπει να καλύπτει τις επιλεγμένες κατανομές."});
+  if(paid<=0||paid>99999999900||paid<allocated)ctx.addIssue({code:z.ZodIssueCode.custom,path:["totalAmount"],message:"Το ποσό πληρωμής πρέπει να καλύπτει τις επιλεγμένες κατανομές."});
   if(paid>allocated&&body.advanceAcknowledged!==true)ctx.addIssue({code:z.ZodIssueCode.custom,path:["advanceAcknowledged"],message:"Επιβεβαίωσε ότι η διαφορά μένει ως έναντι στον προμηθευτή."});
   if(body.evidenceMode==="NO_DOCUMENT"){
     if(body.attachment)ctx.addIssue({code:z.ZodIssueCode.custom,path:["attachment"],message:"Η δήλωση χωρίς αποδεικτικό δεν μπορεί να περιλαμβάνει αποδεικτικό."});
