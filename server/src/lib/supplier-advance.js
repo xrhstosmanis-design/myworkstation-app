@@ -12,8 +12,13 @@ async function original(db,scope,lock=false){
  if(!rows[0])fail(404,'Δεν βρέθηκε το έξοδο στο επιλεγμένο κατάστημα.');return rows[0];
 }
 function eligible(row){if(row.type!=='OTHER_EXPENSE'||row.reversedAt||!(Number(row.amount)>0)||row.supplierId||row.invoiceDocumentNumber||row.invoicePaymentKey||row.paymentMethod!=='CASH_SHIFT'||row.subtractFromShift!==true||!row.sessionId)fail(409,'Επιτρέπεται μόνο ενεργό θετικό λοιπό έξοδο μετρητών χωρίς σύνδεση σε τιμολόγιο ή προμηθευτή.');}
+async function assertReclassificationUnlinked(db,scope,row){
+ const payroll=await db.$queryRaw`SELECT "id" FROM "WorkforceEmployeePayment" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sourceId"=${row.id} LIMIT 1`;
+ const documents=await db.$queryRaw`SELECT "id" FROM "PurchaseDocument" WHERE "companyId"=${scope.companyId} AND ("paymentTransactionId"=${row.id} OR "id"=${row.attachmentFilename||null}) LIMIT 1`;
+ if(payroll.length||documents.length)fail(409,'Το έξοδο συνδέεται με μισθοδοσία ή παραστατικό και δεν μπορεί να μεταφερθεί ως έναντι.');
+}
 export async function supplierAdvanceContext(db,scope){
- owner(scope);const row=await original(db,scope);eligible(row);
+ owner(scope);const row=await original(db,scope);eligible(row);await assertReclassificationUnlinked(db,scope,row);
  const suppliers=await db.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${scope.companyId} AND "active"=true ORDER BY "name"`;
  return {transactionId:row.id,storeId:scope.storeId,amount:Number(row.amount),description:row.description,occurredAt:row.occurredAt,expectedVersion:digest(row),suppliers};
 }
@@ -27,6 +32,7 @@ export async function associateExpenseAsAdvance(db,scope,input){
   eligible(row);
   if(digest(row)!==body.expectedVersion||cents(row.amount)!==cents(body.expectedAmount))fail(409,'Το έξοδο άλλαξε. Ανανέωσε πριν τη σύνδεση.');
   await assertCreditCashUnlinked(tx,scope,row.id);
+  await assertReclassificationUnlinked(tx,scope,row);
   const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${scope.companyId} AND "active"=true FOR KEY SHARE`;
   if(!suppliers[0])fail(404,'Δεν βρέθηκε ενεργός προμηθευτής της εταιρείας.');
   const linked=await tx.$queryRaw`SELECT "id" FROM "SupplierPaymentSettlement" WHERE "transactionId"=${row.id} AND "companyId"=${scope.companyId}`;

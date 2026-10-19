@@ -34,12 +34,17 @@ test('native advance: once-only cash-preserving reassociation, review boundary, 
   await db.$executeRawUnsafe('CREATE TABLE "PurchaseDocument"("id" text primary key,"companyId" text,"storeId" text,"supplierId" text,"documentNumber" text,"totalGross" numeric(14,2),"status" text,"settlementMode" text,"documentType" text)');
   await db.$executeRawUnsafe('CREATE TABLE "StoreOperatorAudit"("id" text primary key,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb)');
   await db.$executeRawUnsafe('CREATE TABLE "BankLedgerEntry"("id" text primary key,"companyId" text,"sourceTransactionId" text,"amount" numeric(14,2))');
+  await db.$executeRawUnsafe('CREATE TABLE "WorkforceEmployeePayment"("id" text primary key,"companyId" text,"storeId" text,"sourceId" text)');
   await db.$executeRawUnsafe('CREATE TABLE "Control"("id" text primary key,"cash" numeric(14,2),"stock" int)');
   await db.$executeRaw`INSERT INTO "Control" VALUES ('other-terminal',44.10,100)`;
   await db.$executeRaw`INSERT INTO "Supplier" VALUES ('supplier','company','VIRTUAL SUPPLIER','000',true),('foreign','foreign','FOREIGN','111',true)`;
   await db.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","paymentMethod","subtractFromShift","occurredAt","actorId") VALUES ('expense','company','store','closed-historical-shift','OTHER_EXPENSE',6.17,'virtual supplier difference','CASH_SHIFT',true,'2026-10-19T17:23:48Z','operator'),('control','company','store','other-shift','OTHER_EXPENSE',2,'control','CASH_SHIFT',true,'2026-10-19T17:23:48Z','operator')`;
   await db.$executeRaw`INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId","status") VALUES ('review','company','store','expense','PENDING_REVIEW')`;
   await db.$executeRaw`INSERT INTO "PurchaseDocument" VALUES ('invoice','company','store','supplier','VIRTUAL-002',20,'DRAFT','CREDIT','INVOICE'),('other-store','company','other-store','supplier','FOREIGN',20,'DRAFT','CREDIT','INVOICE')`;
+  await db.$executeRawUnsafe('ALTER TABLE "PurchaseDocument" ADD COLUMN "paymentTransactionId" text');
+  await db.$executeRaw`INSERT INTO "WorkforceEmployeePayment" VALUES ('payroll','company','store','expense')`;
+  await assert.rejects(supplierAdvanceContext(db,scope),e=>e.status===409);await db.$executeRawUnsafe('TRUNCATE "WorkforceEmployeePayment"');
+  await db.$executeRaw`UPDATE "PurchaseDocument" SET "paymentTransactionId"='expense' WHERE "id"='invoice'`;await assert.rejects(supplierAdvanceContext(db,scope),e=>e.status===409);await db.$executeRaw`UPDATE "PurchaseDocument" SET "paymentTransactionId"=NULL`;
   const immutable=async()=>JSON.stringify({rows:await db.$queryRaw`SELECT "id","amount","sessionId","occurredAt","actorId","subtractFromShift","paymentMethod","description","reversedAt" FROM "StoreTransaction" ORDER BY "id"`,control:await db.$queryRaw`SELECT * FROM "Control"`,bank:await db.$queryRaw`SELECT * FROM "BankLedgerEntry"`,docs:await db.$queryRaw`SELECT * FROM "PurchaseDocument" ORDER BY "id"`});
   const http=registered(db),path='/other-expenses/:reviewId/supplier-advance';
   assert.equal((await http('get',path,{reviewId:'review'},null,{...user,companyId:'foreign'})).status,404);
