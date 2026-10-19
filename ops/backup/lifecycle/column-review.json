@@ -18,6 +18,50 @@
       "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
     },
     {
+      "column": "AssistantHistoryArchive.actorId",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AssistantHistoryArchive.companyId",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AssistantHistoryArchive.digest",
+      "classification": "BOUNDED_HISTORY_PAYLOAD_EXPIRY_OR_STALE_RETRY_TOMBSTONE_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "AssistantHistoryArchive.expiresAt",
+      "classification": "BOUNDED_HISTORY_PAYLOAD_EXPIRY_OR_STALE_RETRY_TOMBSTONE_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "AssistantHistoryArchive.generation",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AssistantHistoryArchive.mode",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AssistantHistoryArchive.payload",
+      "classification": "BOUNDED_HISTORY_PAYLOAD_EXPIRY_OR_STALE_RETRY_TOMBSTONE_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "AssistantHistoryArchive.requestId",
+      "classification": "BOUNDED_HISTORY_PAYLOAD_EXPIRY_OR_STALE_RETRY_TOMBSTONE_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "AssistantHistoryArchive.revision",
+      "classification": "BOUNDED_HISTORY_PAYLOAD_EXPIRY_OR_STALE_RETRY_TOMBSTONE_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "AssistantHistoryArchive.scopeKey",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AssistantHistoryArchive.storeId",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
       "column": "AttendanceEvent.voidedByUserId",
       "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
     },
