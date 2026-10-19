@@ -58,7 +58,7 @@ test('native single-connection HTTP history runs actual native license/session/r
   const asked=await ask();assert.equal(asked.status,200);const answer=await asked.json();assert.equal(answer.historyReceipt.saved,true);assert.equal(answer.historyReceipt.revision,1);assert.equal(providers,2);assert.equal(sourceReads,1);
   const restored=await(await get()).json();assert.match(JSON.stringify(restored),/Native checked fixture answer/);assert.doesNotMatch(JSON.stringify(restored),/FORGED CLIENT|exportTicket|evidence|password|Authorization/);assert.equal(restored.archive.threads[0].messages.length,2);
   assert.equal((await ask()).status,409);assert.equal(providers,2);assert.equal(sourceReads,1);
-  const off=await fetch(base+'/platform/history-disabled?companyId=c&storeId=s',{headers:headers(administrator)});assert.equal(off.status,503);assert.doesNotMatch(await off.text(),/Native checked fixture/);
+  const off=await fetch(base+'/platform/history-disabled?companyId=c&storeId=s',{headers:headers(administrator)});assert.equal(off.status,200);const offDto=await off.json();assert.equal(offDto.available,false);assert.equal(offDto.code,'ASSISTANT_HISTORY_DISABLED');
   const central=await fetch(base+'/platform/history?companyId=c&storeId=s',{headers:headers(administrator)});assert.equal(central.status,200);assert.equal((await central.json()).archive.threads.length,0,'A different personal actor/mode cannot read Owner prose');
   await db.$executeRaw`INSERT INTO "StorePaidModule" VALUES('c','s','CASH_CONTROL',false,null,null)`;const denied=await get();assert.equal(denied.status,403);assert.doesNotMatch(await denied.text(),/Native checked fixture/);
   await db.$executeRaw`UPDATE "StorePaidModule" SET "active"=true WHERE "moduleKey"='CASH_CONTROL'`;

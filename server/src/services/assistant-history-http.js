@@ -7,7 +7,7 @@ const pair=z.object({companyId:z.string().min(1).max(160),storeId:z.string().min
 export function createNativeAssistantHistory({db=prisma,mode,enabled=()=>process.env.ASSISTANT_HISTORY_ENABLED==='true'}){
  const authorize=createAssistantHistoryAccess({db,mode,selection:req=>req.body?.selection||(req.query?.companyId&&req.query?.storeId?{companyId:req.query.companyId,storeId:req.query.storeId}:null)});
  const turns=createAssistantHistoryTurns({db,authorize});
- const gate=async req=>{await authorize(req);if(!enabled())throw Object.assign(new Error('Το αποθηκευμένο ιστορικό δεν έχει ενεργοποιηθεί ακόμη.'),{status:503,code:'ASSISTANT_HISTORY_UNAVAILABLE'})};
+ const gate=async req=>{await authorize(req);if(!enabled())throw Object.assign(new Error('Το αποθηκευμένο ιστορικό δεν έχει ενεργοποιηθεί ακόμη.'),{status:503,code:'ASSISTANT_HISTORY_DISABLED'})};
  return {
   async load(req){await gate(req);return turns.load(req)},
   async reset(req,input){await gate(req);return turns.reset(req,input)},
@@ -18,6 +18,7 @@ export function createAssistantHistoryHttp({turns,mode}){
  const loadQuery=mode==='platform'?pair:z.object({}).strict();
  const resetBody=assistantHistoryTurnMetadata.omit({threadId:true}).extend(mode==='platform'?{selection:pair}:{}).strict();
  const unavailable=(error,res,next)=>{
+  if(error.code==='ASSISTANT_HISTORY_DISABLED')return res.json({available:false,code:'ASSISTANT_HISTORY_DISABLED'});
   if(error.status===401||error.status===403||String(error.code||'').startsWith('STORE_LIFECYCLE_')||error instanceof z.ZodError)return next(error);
   return res.status(503).json({available:false,code:'ASSISTANT_HISTORY_UNAVAILABLE',error:'Το αποθηκευμένο ιστορικό δεν είναι διαθέσιμο. Οι νέες ερωτήσεις παραμένουν διαθέσιμες χωρίς αποθήκευση.'});
  };
