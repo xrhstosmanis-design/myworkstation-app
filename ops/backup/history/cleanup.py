@@ -5,8 +5,20 @@ import hashlib
 import hmac
 import os
 import pathlib
+import re
 import subprocess
 import urllib.parse
+
+
+class CleanupUnavailable(ValueError):
+    def __init__(self, code):
+        super().__init__('History cleanup unavailable')
+        self.code = code
+
+
+def sql_failure(stderr):
+    state = re.search(r'ERROR:\s+([0-9A-Z]{5})\b', stderr or '')
+    return CleanupUnavailable('SQL_' + state.group(1) if state else 'DATABASE_UNAVAILABLE')
 
 
 def cleanup(env=None):
@@ -22,12 +34,21 @@ def cleanup(env=None):
         if not schema or len(schema) > 63 or not all(c.isascii() and (c.isalnum() or c == '_') for c in schema):
             raise ValueError('Invalid history cleanup schema')
         query.append(('options', '-csearch_path=' + schema))
-    env['PGDATABASE'] = urllib.parse.urlunsplit(url._replace(query=urllib.parse.urlencode(query)))
+    # libpq does not expand a connection URI supplied only as PGDATABASE.
+    # Pass the URI explicitly, with its password removed from process arguments.
+    netloc = url.netloc
+    if url.password is not None:
+        env['PGPASSWORD'] = urllib.parse.unquote(url.password)
+        userinfo, host = netloc.rsplit('@', 1)
+        netloc = userinfo.split(':', 1)[0] + '@' + host
+    connection = urllib.parse.urlunsplit(url._replace(netloc=netloc, query=urllib.parse.urlencode(query)))
+    env['PGDATABASE'] = urllib.parse.unquote(url.path.lstrip('/'))
+    args = ['psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=sqlstate', '--dbname', connection]
     sql = pathlib.Path(__file__).with_suffix('.sql').read_text()
-    result = subprocess.run(['psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1'], env=env, input=sql,
+    result = subprocess.run(args, env=env, input=sql,
                             text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=20)
     if result.returncode:
-        raise ValueError('History cleanup unavailable')
+        raise sql_failure(result.stderr)
     receipt = json.loads(result.stdout.strip())
     if receipt.get('state') not in ('UNAVAILABLE', 'BUSY', 'COMPLETED') or set(receipt) - {'state', 'erased', 'deferredScopes'}:
         raise ValueError('Invalid history cleanup receipt')
@@ -46,17 +67,17 @@ def cleanup(env=None):
         mac = hmac.new(secret.encode(), (protocol + '\n' + pulse).encode(), hashlib.sha256).hexdigest()
         literal = lambda value: "'" + value.replace("'", "''") + "'"
         query = 'INSERT INTO "StoreLifecycleRuntime"("id","heartbeatJson","mac") VALUES(\'assistant-history-cleanup\',' + literal(pulse) + ',' + literal(mac) + ') ON CONFLICT("id") DO UPDATE SET "heartbeatJson"=EXCLUDED."heartbeatJson","mac"=EXCLUDED."mac";'
-        published = subprocess.run(['psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1'], env=env, input=query,
+        published = subprocess.run(args, env=env, input=query,
                                    text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
         if published.returncode:
-            raise ValueError('History retention readiness unavailable')
+            raise sql_failure(published.stderr)
     return receipt
 
 
 if __name__ == '__main__':
     try:
         print(json.dumps({'event': 'ASSISTANT_HISTORY_CLEANUP', **cleanup()}, separators=(',', ':')))
-    except Exception:
+    except Exception as error:
         # Never print SQL stderr, URLs, payloads, IDs or credentials into cron logs.
-        print('{"event":"ASSISTANT_HISTORY_CLEANUP","state":"FAILED"}')
+        print(json.dumps({'event': 'ASSISTANT_HISTORY_CLEANUP', 'state': 'FAILED', 'code': error.code if isinstance(error, CleanupUnavailable) else 'CLEANUP_UNAVAILABLE'}, separators=(',', ':')))
         raise SystemExit(1)

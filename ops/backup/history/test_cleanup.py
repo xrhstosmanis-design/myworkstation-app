@@ -34,8 +34,11 @@ class CleanupContract(unittest.TestCase):
             self.assertEqual(run.call_count, 2)
             first, second = run.call_args_list
             self.assertNotIn('private-fixture', ' '.join(first.args[0]))
-            self.assertNotIn('connection_limit', first.kwargs['env']['PGDATABASE'])
-            self.assertIn('search_path', first.kwargs['env']['PGDATABASE'])
+            self.assertEqual(first.kwargs['env']['PGDATABASE'], 'test')
+            self.assertEqual(first.kwargs['env']['PGPASSWORD'], 'private-fixture')
+            connection = first.args[0][-1]
+            self.assertNotIn('connection_limit', connection)
+            self.assertIn('search_path', connection)
             self.assertIn('assistant-history-cleanup', second.kwargs['input'])
             self.assertIn('MWS_ASSISTANT_HISTORY_RETENTION_V1', second.kwargs['input'])
             self.assertNotIn(self.env()['BACKUP_MONITOR_SECRET'], second.kwargs['input'])
