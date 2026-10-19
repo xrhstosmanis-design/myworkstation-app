@@ -27,3 +27,10 @@ export async function assertLifecycleMutation(tx,scope,generation,{lock=true}={}
  if(lock&&state.enrolled)await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_generations',$1,true)`,JSON.stringify({[scope.storeId]:supplied??'0'}));
  return state;
 }
+
+// Trusted fresh server work only: derive all subsequent business inputs from
+// current locked rows. Never use this to relabel a browser/device event payload.
+export async function bindFreshLifecycleRead(tx,scope){
+ const observed=await readLifecycleGeneration(tx,scope);
+ return assertLifecycleMutation(tx,scope,observed.generation);
+}
