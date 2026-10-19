@@ -1,3 +1,4 @@
+import {bindFreshLifecycleRead} from "./store-lifecycle-generation.js";
 import {readRbsInstallationSettings} from './rbs-installation-settings.js';
 
 function stop(message){throw Object.assign(new Error(message),{status:409});}
@@ -29,7 +30,8 @@ export async function bindRbsPairing(db,pair,terminalPos){
   return installationBinding(settings);
 }
 export async function claimTerminalRbsRequest(tx,device,terminal){
-  const rows=await tx.$queryRaw`SELECT "id" FROM "RbsCapDriverV1Request" WHERE "companyId"=${device.companyId} AND "storeId"=${device.storeId} AND "terminalPos"=${terminal.terminalPos} AND "status"='PREPARED' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED`;
+  const lifecycle=await bindFreshLifecycleRead(tx,{companyId:device.companyId,storeId:device.storeId});
+  const rows=await tx.$queryRaw`SELECT "id" FROM "RbsCapDriverV1Request" WHERE "companyId"=${device.companyId} AND "storeId"=${device.storeId} AND COALESCE("checkoutJson"->>'lifecycleGeneration','0')=${lifecycle.generation} AND "terminalPos"=${terminal.terminalPos} AND "status"='PREPARED' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED`;
   if(!rows[0])return null;
   const claimed=await tx.$queryRaw`UPDATE "RbsCapDriverV1Request" SET "status"='CLAIMED',"claimedByDeviceId"=${device.id},"claimedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${rows[0].id} AND "companyId"=${device.companyId} AND "storeId"=${device.storeId} AND "terminalPos"=${terminal.terminalPos} AND "status"='PREPARED' RETURNING "id","terminalPos","paymentMethod","total","commandText","commandHash","claimedAt"`;
   return claimed[0]||null;

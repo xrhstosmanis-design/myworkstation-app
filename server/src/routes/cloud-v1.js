@@ -1,3 +1,5 @@
+import {assertLifecycleMutation} from "../services/store-lifecycle-generation.js";
+import {storeLifecycleErrorResponse} from "../middleware/store-lifecycle-errors.js";
 import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import { Router } from "express";
 import crypto from "crypto";
@@ -122,6 +124,7 @@ function route(handler){
       await ensureCloudTables();
       await handler(req,res);
     }catch(error){
+      const lifecycleError=storeLifecycleErrorResponse(error);if(lifecycleError)return res.status(409).json(lifecycleError);
       console.error("Cloud Store Connector:",error);
       if(error?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:error.issues});
       return res.status(error?.status||500).json({error:error?.publicMessage||error?.message||"Σφάλμα Cloud Store Connector."});
@@ -389,8 +392,9 @@ router.post("/device/rbs-capdriver-v1/next",deviceAuth,route(async(req,res)=>{
   await ensureRbsCapDriverV1RequestSchema(prisma);
   const request=await prisma.$transaction(async tx=>{
     const terminal=await resolveRbsDeviceTerminal(tx,req.device,req.rbsBinding);
+    const request=await claimTerminalRbsRequest(tx,req.device,terminal);
     await markCapDriverV1WriterOnline(tx,req.device,terminal);
-    return claimTerminalRbsRequest(tx,req.device,terminal);
+    return request;
   });
   send(res,{request:request?{id:request.id,terminalPos:request.terminalPos,paymentMethod:request.paymentMethod,total:Number(request.total),commandText:request.commandText,commandHash:request.commandHash,claimedAt:request.claimedAt}:null,oneShot:true,outputFolderUsed:false});
 }));
@@ -400,13 +404,17 @@ router.post("/device/rbs-capdriver-v1/:requestId/dispatch-result",deviceAuth,rou
   await requireRbsConnectorModule(req.device);
   await ensureRbsCapDriverV1RequestSchema(prisma);
   const body=z.object({result:z.enum(["WRITTEN","UNCERTAIN"])}).parse(req.body||{});
-  const rows=await prisma.$queryRaw`SELECT "status" FROM "RbsCapDriverV1Request" WHERE "id"=${req.params.requestId} AND "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "claimedByDeviceId"=${req.device.id} LIMIT 1`;
+  const updated=await prisma.$transaction(async tx=>{
+  const rows=await tx.$queryRaw`SELECT "status","checkoutJson" FROM "RbsCapDriverV1Request" WHERE "id"=${req.params.requestId} AND "companyId"=${req.device.companyId} AND "storeId"=${req.device.storeId} AND "claimedByDeviceId"=${req.device.id} LIMIT 1 FOR UPDATE`;
   if(!rows[0])fail(404,"Δεν βρέθηκε η εντολή της συσκευής.");
+  await assertLifecycleMutation(tx,{companyId:req.device.companyId,storeId:req.device.storeId},rows[0].checkoutJson?.lifecycleGeneration);
   let nextStatus;
   try{nextStatus=rbsCapDriverV1DispatchTransition(rows[0].status,body.result)}catch{fail(409,"Η εντολή έχει ήδη προχωρήσει και δεν μπορεί να ξανασταλεί.")}
-  const updated=await prisma.$queryRaw`UPDATE "RbsCapDriverV1Request" SET "status"=${nextStatus},"dispatchedAt"=CASE WHEN ${nextStatus}='DISPATCHED' THEN NOW() ELSE "dispatchedAt" END,"updatedAt"=NOW() WHERE "id"=${req.params.requestId} AND "status"='CLAIMED' AND "claimedByDeviceId"=${req.device.id} RETURNING "id","status","dispatchedAt"`;
+  const updated=await tx.$queryRaw`UPDATE "RbsCapDriverV1Request" SET "status"=${nextStatus},"dispatchedAt"=CASE WHEN ${nextStatus}='DISPATCHED' THEN NOW() ELSE "dispatchedAt" END,"updatedAt"=NOW() WHERE "id"=${req.params.requestId} AND "status"='CLAIMED' AND "claimedByDeviceId"=${req.device.id} RETURNING "id","status","dispatchedAt"`;
   if(!updated[0])fail(409,"Η εντολή έχει ήδη προχωρήσει και δεν μπορεί να ξανασταλεί.");
-  await prisma.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW() WHERE "id"=${req.device.id}`;
+  await tx.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW() WHERE "id"=${req.device.id}`;
+  return updated;
+  });
   if(updated[0].status==="DISPATCHED"){const payment=(await prisma.$queryRaw`SELECT "paymentMethod" FROM "RbsCapDriverV1Request" WHERE "id"=${updated[0].id} LIMIT 1`)[0];if(payment?.paymentMethod==="CASH")await finalizeDispatchedCashRequest(updated[0].id)}
   send(res,{ok:true,request:updated[0],automaticRetry:false});
 }));
