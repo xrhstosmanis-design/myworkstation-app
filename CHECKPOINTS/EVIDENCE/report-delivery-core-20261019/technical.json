@@ -1,0 +1,33 @@
+{
+  "scope": "PURE_UNWIRED_METADATA_MODEL",
+  "claimPr": 2884,
+  "claimMerge": "b7c7243e78234f5daf40315372dd905916119fdc",
+  "localRuntime": "Node20.20.2",
+  "focusedResult": {
+    "pass": 22,
+    "fail": 0,
+    "skip": 0
+  },
+  "files": {
+    "server/src/services/automatic-report-delivery-lifecycle.js": {
+      "sha256": "855cce43ae5f606d82209c43e67243b39fbcfcfd508978c42eb5c65753234c0b",
+      "bytes": 14432
+    },
+    "server/test/automatic-report-delivery-lifecycle.test.js": {
+      "sha256": "d5b4020402535294457c1c8775c76868d50df47e201d2cbd517353af8d5034b1",
+      "bytes": 20725
+    }
+  },
+  "independentReview": "PASS exact hashes; Node20 independently repeated",
+  "notImplemented": [
+    "durable outbox/atomic SQL uniqueness and CAS",
+    "SMTP transport/classification",
+    "scheduler/activation",
+    "fresh authorization integration",
+    "overlapping/redefined period reissue policy"
+  ],
+  "businessWrites": false,
+  "actualDeliveryAcceptance": "NOT TESTED",
+  "labPass": "NO NEW LAB PASS",
+  "sourceBase": "e3432c2b3f6c8a890bbe52b61a0270ee06bc9899"
+}
