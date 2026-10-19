@@ -1,3 +1,24 @@
+## 19Oct23:33 Europe/Athens — LAB method revision BEFORE ANY WRITE
+
+Actual existing Backoffice UI says cash-shift payments are unavailable for this support actor/current LAB context. Do not bypass the permission/stale-shift guard, grant same-shift permission, close/reopen a shift or use a lower-level cash route. The earlier proposed CASH_SHIFT action below is HOLD/NOT TESTED and was NOT submitted.
+
+Use instead one new BANK_TRANSFER0.02 in the existing virtual LAB ledger, invoice allocation0.01 and declared advance0.01, note LAB-SUPPLIER-ADVANCE-01-20261019 / VIRTUAL NO REAL MONEY. There is no connection to an actual bank or money transfer. Expected shift remains0transactions/cash-card-IRIS0/deducted payments0/drawer9.40; external payment has sessionIdNULL/subtractFromShiftFALSE. One new StoreTransaction0.02/settlementPENDING_REVIEW/allocation0.01/virtualBankLedgerEntry-0.02 PENDING_REVIEW; virtual total-515.43→-515.45, pending-206.67→-206.69, confirmed-308.76 unchanged. Document faces/status/stock/control hashes unchanged. Later explicit virtual human confirmation moves this same0.02 from pending to confirmed without cash or new bank/payment record, then allocating remaining0.01 makes total invoice allocations0.02 without another disbursement. Fresh after/before publication is required between actions. This is external virtual-flow acceptance only; cash-disbursement source has native CI proof, not a physical/CASH_SHIFT LAB PASS. Actual6.17 reassociation remains separately bounded as recorded below.
+
+Bank before:
+```json
+[
+  {
+    "confirmed": -308.76,
+    "entries": 31,
+    "hash": "a47fa1ede8dbbc7924a251834b7a7fcd",
+    "id": "765c28e7-bbaa-4d6c-93a5-ab75cb39d5a0",
+    "name": "Ταμείο Τράπεζας",
+    "pending": -206.67,
+    "totalAmount": -515.43
+  }
+]
+```
+
 # SUPPLIER-ADVANCE-01 — PRE-ACTION baseline
 
 Recorded 2026-10-19T20:22:58.561Z UTC; all user-facing action times Europe/Athens24h. Owner fix/supplier-advance-20261019; source PR2889 remains AWAITING full native CI/exact release/measured acceptance. This baseline does not authorize a second700EUR payment, invoice approval or stock/fiscal replay.
