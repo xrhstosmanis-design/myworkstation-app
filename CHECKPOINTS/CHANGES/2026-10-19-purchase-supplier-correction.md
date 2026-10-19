@@ -1,3 +1,7 @@
+## Review form layout
+
+Keep the new original/payment confirmation form readable with18px text,48px supplier selection, separate review sections and80px reason input. No business behavior change; prior mounted functional cases remain required on this exact final head.
+
 ## Additional preservation checks before native CI
 
 Read existing supplier settlement/credit cash sources. Refuse document allocations even when paid by a different transaction, and refuse original payments already used by an active credit offset. Add native negative cases and an old metadata snapshot overwrite test. Final local Node20 focused6PASS/0FAIL/6native infrastructureSKIP; six native cases require CI. No hosted business action. Existing source-prepared note below records the prior five-case baseline.
