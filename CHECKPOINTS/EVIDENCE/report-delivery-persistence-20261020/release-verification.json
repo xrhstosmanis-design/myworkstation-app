@@ -1,0 +1,64 @@
+{
+  "recordedAt": "2026-10-19T21:52:25.916Z",
+  "claim": {
+    "pr": 2903,
+    "merge": "19e7644f046a03dd8e149095e008712982594bad",
+    "ci": 39324706458
+  },
+  "source": {
+    "pr": 2909,
+    "merge": "c5b751db49858e9cf3437e844cce6c5344473056",
+    "prCI": 39325922089,
+    "mainCI": 39327214192,
+    "mainPass": 3531
+  },
+  "deployed": {
+    "revision": "f2a3b79a145f7f80331280384066ec78c29ec230",
+    "ci": 39328665510,
+    "job": 118323482236,
+    "serverPass": 3594,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 8,
+    "guard": 39330143576,
+    "guardJob": 118326018997,
+    "renderDeploy": "dep-dbb8vvbncjis738veivg",
+    "liveFinishedAt": "2026-10-19T21:50:59.473712Z",
+    "guardExactHealthAt": "2026-10-19T21:51:06.3278155Z",
+    "independentHealth": {
+      "ok": true,
+      "revision": "f2a3b79a145f7f80331280384066ec78c29ec230"
+    },
+    "previousHealthyRevision": "0484d636059eedb936e8bea1159b05c6c00bf0d2",
+    "rollbackArtifact": 12224491045
+  },
+  "native": {
+    "pass": 11,
+    "fail": 0,
+    "skip": 0,
+    "lines": [
+      "2026-10-19T21:42:58.9651084Z     ok 1 - concurrent clients create exactly one logical slot and reject changed immutable snapshot",
+      "2026-10-19T21:42:58.9653518Z     ok 2 - concurrent CAS claims have one winner and stale version cannot overwrite committed state",
+      "2026-10-19T21:42:58.9656025Z     ok 3 - selected scope fences all reads and mutations, including SQL metacharacters",
+      "2026-10-19T21:42:58.9658226Z     ok 4 - hostile but valid scope strings are bound as literal values, never SQL",
+      "2026-10-19T21:42:58.9660730Z     ok 5 - prestart lease recovery persists token history and rejects stale owner and reused token",
+      "2026-10-19T21:42:58.9663185Z     ok 6 - fresh gate executes inside transaction and denied or thrown gate rolls back create/start",
+      "2026-10-19T21:42:58.9665489Z     ok 7 - failure after SQL and before commit exposes no record or acceptance receipt",
+      "2026-10-19T21:42:58.9668071Z     ok 8 - disconnect/reconnect preserves claim and started attempt expires UNKNOWN without resend permission",
+      "2026-10-19T21:42:58.9671138Z     ok 9 - committed ACCEPTED receipt is durable and only identical current acknowledgement is idempotent",
+      "2026-10-19T21:42:58.9673523Z     ok 10 - SQL projection and JSON corruption fail closed without overwriting evidence",
+      "2026-10-19T21:42:58.9675801Z     ok 11 - independent control tenant row remains byte-for-byte unchanged"
+    ]
+  },
+  "boundaries": {
+    "dormant": true,
+    "productionTableProvisioned": false,
+    "dispatchActivated": false,
+    "smtpAttempted": false,
+    "realFinancialMutationByCoordinator": false,
+    "labReplay": false,
+    "databaseServerRestartProven": false,
+    "inboxDeliveryProven": false
+  },
+  "next": "Coordinated bounded production-integration claim under retained runtime/schema/lifecycle/backup/mail owners; dispatch remains OFF."
+}
