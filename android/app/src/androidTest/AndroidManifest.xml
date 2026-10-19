@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Test APK only: generated in-memory fixtures, never user photos. -->
+        <provider android:name="gr.myworkstation.chat.GalleryFixtureProvider"
+            android:authorities="gr.myworkstation.chat.preview.test.galleryfixture"
+            android:exported="true" />
+    </application>
+</manifest>
