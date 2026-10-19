@@ -1,0 +1,141 @@
+{
+  "scope": "Limited hosted supplier-correction preview/gating/cancel; no final correction POST",
+  "observedAt": "2026-10-19T10:01:18Z/2026-10-19T10:01:41Z",
+  "timezone": "Europe/Athens",
+  "role": "SUPER_ADMIN support desktop",
+  "store": "Diadoxou selected store",
+  "sourcePr": 2819,
+  "sourceHead": "d22ca08e94451ca856ff709d536b05f5a111af19",
+  "sourceMerge": "8bcf7d4d90933fcf382979da08101ff9e310a668",
+  "sourceCI": {
+    "run": 39228119005,
+    "job": 117979784214,
+    "pass": 3348,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 6
+  },
+  "mainCI": {
+    "run": 39229223693,
+    "job": 117983129955,
+    "pass": 3348,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 6
+  },
+  "release": {
+    "revision": "fb11a314ec1414658d0840a61f812f42058aa5a0",
+    "CI": 39232187262,
+    "job": 117995130777,
+    "pass": 3377,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 6,
+    "workflow": 39233768246,
+    "deploy": "dep-dbauirrrjlhs73aogiig",
+    "liveAt": "2026-10-19T10:00:11.854973Z",
+    "independentHealth": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "fb11a314ec1414658d0840a61f812f42058aa5a0"
+    }
+  },
+  "sourceBlobProof": [
+    {
+      "path": "server/src/services/purchase-supplier-correction.js",
+      "sha": "0206ed003f9001fcdbe61c30470592d2739a4ca6",
+      "releaseSha": "0206ed003f9001fcdbe61c30470592d2739a4ca6"
+    },
+    {
+      "path": "server/src/routes/purchase-orders.js",
+      "sha": "3d217ecc6fca7f501cc1b8acdf9a7ad822a788a1",
+      "releaseSha": "3d217ecc6fca7f501cc1b8acdf9a7ad822a788a1"
+    },
+    {
+      "path": "server/src/routes/purchase-order-posting-guard.js",
+      "sha": "89a663f10331c400c843455aab1e81007617e573",
+      "releaseSha": "89a663f10331c400c843455aab1e81007617e573"
+    },
+    {
+      "path": "client/src/components/commerce/purchaseSupplierCorrection.js",
+      "sha": "ed78eea0bcd53457f5017da215d1e78e96fc53c7",
+      "releaseSha": "ed78eea0bcd53457f5017da215d1e78e96fc53c7"
+    },
+    {
+      "path": "client/src/components/commerce/installPurchaseOrdersSuite.js",
+      "sha": "b64cd707597707fb8044c872b05919ebfc05a378",
+      "releaseSha": "b64cd707597707fb8044c872b05919ebfc05a378"
+    },
+    {
+      "path": "server/test/purchase-supplier-correction.test.js",
+      "sha": "9eafec78c4796017d293da969d606058e6fefa76",
+      "releaseSha": "9eafec78c4796017d293da969d606058e6fefa76"
+    },
+    {
+      "path": "server/test/purchase-supplier-correction-ui.test.js",
+      "sha": "be9d59968b2aebb8991bd78b2ff5f1148fa76233",
+      "releaseSha": "be9d59968b2aebb8991bd78b2ff5f1148fa76233"
+    },
+    {
+      "path": "server/test/purchase-orders-refresh-v1.test.js",
+      "sha": "b831419cbbfc854199f037067ce4e86d45f9020f",
+      "releaseSha": "b831419cbbfc854199f037067ce4e86d45f9020f"
+    }
+  ],
+  "ui": {
+    "existingOrderStatus": "FINAL",
+    "orderLines": 6,
+    "targetVat": "099939837",
+    "invoiceGross": 73.43,
+    "originalPayment": 73.43,
+    "originalSourceReviewRequired": true,
+    "paymentAssociationConfirmationRequired": true,
+    "disabledWithoutPaymentAcknowledgment": true,
+    "enabledWithTemporaryReasonAndBothCheckboxes": true,
+    "finalSubmitClicked": false,
+    "cancelled": true,
+    "originalOrderReturned": true,
+    "recovery": {
+      "scanned": 50,
+      "started": 0,
+      "noHandoff": 19,
+      "nonRetryable": 0
+    }
+  },
+  "beforeAfter": {
+    "unchanged": true,
+    "orderHash": "297a2b7ca6b3ce245c7814d27ad4be41",
+    "documentHashes": [
+      "c0c5f97ceae4d0c3e17d9ab8b766ffb8",
+      "162903c70283c41040be123312828d4b"
+    ],
+    "paymentHash": "9d9b138c56725dce46b632f17fef2fa6",
+    "lineAndPostingHashes": [
+      {
+        "count": 6,
+        "hash": "9991e96571808f15680f05e34bb1989b",
+        "source": "orderLines"
+      },
+      {
+        "count": 12,
+        "hash": "85b199656ad5c3f69735e8357c37183d",
+        "source": "documentLines"
+      },
+      {
+        "count": 1,
+        "hash": "ed684df452140c5d7dcfed032142d717",
+        "source": "posting"
+      },
+      {
+        "count": 1,
+        "hash": "029a75d5daef9148b58da72de525a923",
+        "source": "stockPosting"
+      }
+    ]
+  },
+  "limitations": [
+    "Actual supplier association change not submitted",
+    "Global cash/stock deltas not inferred during real trading",
+    "Separate Owner/Manager sessions, mobile and physical POS not tested"
+  ]
+}
