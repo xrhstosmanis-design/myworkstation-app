@@ -51,12 +51,20 @@
   "public_distribution": "0.1.3-preview unchanged",
   "server_deployment_by_this_page": false,
   "real_message_read_push_business_actions_by_this_page": false,
-  "physical_multi_photo_result": "USER FAIL; selected image count visible, connection notice clears without delivery; new build NOT TESTED",
-  "single_next_action": "Install exact 0.1.5 trial; after refresh ends press enabled send once for two non-sensitive LAB images and verify both at Admin.",
+  "physical_multi_photo_result": "LIMITED USER PASS reported outbound multi-photo send 2026-10-19 20:02 Europe/Athens; independent Admin receipt and installed binary/device/count/IDs NOT TESTED",
+  "single_next_action": "Verify Admin visibility of the already-sent images without another send; broader distribution and native residual remain OPEN.",
   "delivery": {
     "library_file_id": "libfile_a30159b8f9c08191939dd9f9c647a147",
     "file_id": "file_00000000ffcc8246abe889e639239e57",
     "version": 7,
     "file_name": "MyWorkStation-Chat-Android-0.1.5-Preview.apk"
-  }
+  },
+  "user_observation": {
+    "at": "2026-10-19T20:02:07+03:00",
+    "text": "ΤΙΣ ΕΣΤΕΙΛΕ",
+    "scope": "reported outbound multiple-photo send only",
+    "repeat_send_required": false,
+    "source": "existing gallery images, explicitly clarified 2026-10-19T20:02:30+03:00"
+  },
+  "camera_result": "USER FAIL 2026-10-19 after20:02 Europe/Athens: attempting two camera captures sends only last; gallery PASS preserved"
 }
