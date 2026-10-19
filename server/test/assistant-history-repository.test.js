@@ -1,18 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
+import {readFileSync} from 'node:fs';
 import {createAssistantHistoryRepository} from '../src/services/assistant-history-repository.js';
 import {emptyHistoryArchive,HISTORY_TTL_MS} from '../src/services/assistant-history-contract.js';
 const base=()=>({userId:'owner',mode:'owner',companyId:'company',storeId:'store',generation:'2',sessionId:'session',sessionVersion:3,capabilities:['cash_details']});
 const archive=()=>({schemaVersion:1,threads:[{id:randomUUID(),title:'Ταμεία',messages:[{id:randomUUID(),role:'assistant',content:'Ιστορική απάντηση',createdAt:'2026-10-19T09:00:00.000Z',requiredCapabilities:['cash_details']}]}]});
 function fixture(){
  let principal=base(),time=new Date('2026-10-19T09:00:00Z'),tail=Promise.resolve(),hook=null,authHook=null,commitHook=null;const rows=new Map(),calls=[];
- const db={$transaction:async fn=>{const prior=tail;let unlock;tail=new Promise(r=>unlock=r);await prior;const copy=structuredClone(rows);try{const result=await fn({$queryRaw:async(strings,...args)=>{
+ const db={$transaction:async fn=>{const prior=tail;let unlock;tail=new Promise(r=>unlock=r);await prior;const copy=structuredClone(rows);try{const result=await fn({$queryRawUnsafe:async(sql)=>sql.includes('current_schema')?[{schema:'isolated',fence:'f'}]:sql.includes('set_config')?[]:[{companyId:principal.companyId,generation:principal.generation,maintenance:false,retired:false}],$queryRaw:async(strings,...args)=>{
   const sql=strings.join('?');calls.push({sql,args:structuredClone(args)});assert.ok(!/CREATE|ALTER|DROP|DELETE|TRUNCATE/.test(sql));
   let result;
   if(sql.startsWith('SELECT 1'))result=[{locked:1}];
   else if(sql.startsWith('SELECT "revision"'))result=rows.has(args[0])?[structuredClone(rows.get(args[0]))]:[];
   else if(sql.startsWith('INSERT')){const[key,revision,payload,requestId,digest,expiresAt]=args;if(rows.has(key))result=[];else{rows.set(key,{revision,payload:JSON.parse(payload),requestId,digest,expiresAt});result=[{revision}];}}
+  else if(sql.startsWith('UPDATE')&&sql.includes('SET \"payload\"')){const[payload,key,expected,time]=args;const row=rows.get(key);if(!row||row.revision!==expected||row.expiresAt>time)result=[];else{row.payload=JSON.parse(payload);result=[{revision:row.revision}];}}
   else if(sql.startsWith('UPDATE')){const[revision,payload,requestId,digest,expiresAt,key,expected]=args;if(rows.get(key)?.revision!==expected)result=[];else{rows.set(key,{revision,payload:JSON.parse(payload),requestId,digest,expiresAt});result=[{revision}];}}
   else assert.fail('Unexpected SQL');
   if(hook){const h=hook;hook=null;await h(sql);}return result;
@@ -45,7 +47,7 @@ test('concurrent stale writers have exactly one winner, and deleted threads cann
 });
 test('fixed 30-day visibility expires exactly; explicit empty reset advances revision and fences old request retries',async()=>{
  const f=fixture(),m=mutation(),saved=await f.repo.save({},m);f.clock(new Date(new Date(saved.expiresAt).getTime()-1));assert.equal((await f.repo.read({})).archive.threads.length,1);
- f.clock(saved.expiresAt);const old=await f.repo.read({});assert.equal(old.expired,true);assert.deepEqual(old.archive,emptyHistoryArchive());await code(f.repo.save({},m),'ASSISTANT_HISTORY_EXPIRED');
+ f.clock(saved.expiresAt);const old=await f.repo.read({});assert.equal(old.expired,true);assert.deepEqual(old.archive,emptyHistoryArchive());assert.deepEqual([...f.rows.values()][0].payload,emptyHistoryArchive());assert.equal([...f.rows.values()][0].requestId,m.requestId);assert.equal([...f.rows.values()][0].revision,1);await code(f.repo.save({},m),'ASSISTANT_HISTORY_EXPIRED');
  await assert.rejects(f.repo.reset({},mutation(1,archive())));
  const reset=mutation(1,emptyHistoryArchive());const fresh=await f.repo.reset({},reset);assert.equal(fresh.revision,2);assert.equal(fresh.expired,false);assert.deepEqual(await f.repo.reset({},reset),fresh);
  await code(f.repo.save({},m),'ASSISTANT_HISTORY_CONFLICT');assert.deepEqual((await f.repo.read({})).archive,emptyHistoryArchive());
@@ -88,9 +90,9 @@ test('native history repository executes parameterized PostgreSQL with BIGINT re
  const repo=createAssistantHistoryRepository({db,authorize:async()=>structuredClone(principal),now:()=>time});
  try{
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
-  await db.$executeRawUnsafe('CREATE TABLE "AssistantHistoryArchive" ("scopeKey" text PRIMARY KEY,"revision" bigint NOT NULL,"payload" jsonb NOT NULL,"requestId" text NOT NULL,"digest" text NOT NULL,"expiresAt" timestamptz NOT NULL)');
+  await db.$executeRawUnsafe(readFileSync(new URL('../prisma/assistant-history-archive.sql',import.meta.url),'utf8'));
   await db.$executeRawUnsafe('CREATE TABLE "StoreLifecycleFence" ("storeId" text PRIMARY KEY,"companyId" text NOT NULL,"generation" bigint NOT NULL,"maintenance" boolean NOT NULL,"retired" boolean NOT NULL)');
-  await db.$executeRaw`INSERT INTO "StoreLifecycleFence" VALUES ('store','company',9223372036854775807,false,false)`;
+  await db.$executeRaw`INSERT INTO "StoreLifecycleFence" VALUES ('store','company',9223372036854775807,false,false),('foreign','company',9223372036854775807,false,false)`;
   const {readLifecycleGeneration}=await import('../src/services/store-lifecycle-generation.js');
   const observed=await readLifecycleGeneration(db,{companyId:'company',storeId:'store'});
   assert.equal(observed.generation,'9223372036854775807');principal={...base(),generation:observed.generation};
@@ -99,7 +101,7 @@ test('native history repository executes parameterized PostgreSQL with BIGINT re
   const competing=await Promise.allSettled([repo.save({},mutation(1)),repo.save({},mutation(1))]);assert.equal(competing.filter(x=>x.status==='fulfilled').length,1);assert.equal(competing.find(x=>x.status==='rejected').reason.status,409);
   const before=await db.$queryRaw`SELECT "scopeKey","revision","payload","requestId","digest","expiresAt" FROM "AssistantHistoryArchive"`;
   let revoke=false;
-  const gated={$transaction:fn=>db.$transaction(tx=>fn({$queryRaw:async(strings,...args)=>{const rows=await tx.$queryRaw(strings,...args);if(strings[0].startsWith('UPDATE'))revoke=true;return rows;}}))};
+  const gated={$transaction:fn=>db.$transaction(tx=>fn({$queryRawUnsafe:(...args)=>tx.$queryRawUnsafe(...args),$queryRaw:async(strings,...args)=>{const rows=await tx.$queryRaw(strings,...args);if(strings[0].startsWith('UPDATE'))revoke=true;return rows;}}))};
   const guarded=createAssistantHistoryRepository({db:gated,authorize:async()=>({...principal,sessionVersion:revoke?4:3}),now:()=>time});
   await code(guarded.save({},mutation(2)),'ASSISTANT_HISTORY_CONTEXT_CHANGED');
   assert.deepEqual(await db.$queryRaw`SELECT "scopeKey","revision","payload","requestId","digest","expiresAt" FROM "AssistantHistoryArchive"`,before);

@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {z} from 'zod';
+import {assertLifecycleMutation} from './store-lifecycle-generation.js';
 import {HISTORY_TTL_MS,historyAccessSchema,historyMutationSchema,parseHistoryArchive,emptyHistoryArchive,historyScopeKey,historyAccessKey,assertHistoryCapabilities} from './assistant-history-contract.js';
 
 const conflict=()=>Object.assign(new Error('Το ιστορικό άλλαξε. Φόρτωσέ το ξανά πριν αποθηκεύσεις.'),{status:409,code:'ASSISTANT_HISTORY_CONFLICT'});
@@ -31,10 +32,25 @@ export function createAssistantHistoryRepository({db,authorize,now=()=>new Date(
  const transaction=async(req,fn)=>{
   const a=await access(req),key=historyScopeKey(a);
   const result=await db.$transaction(async tx=>{
+   // The shared store fence is held until commit, before waiting for the archive.
+   // A fresh status read alone cannot serialize a concurrent store reset.
+   await assertLifecycleMutation(tx,{companyId:a.companyId,storeId:a.storeId},a.generation);
+   await recheck(req,a);
    // Serialize absent-row creation and updates for exactly this actor/scope.
    await tx.$queryRaw`SELECT 1 AS "locked" FROM pg_advisory_xact_lock(hashtextextended(${key},0))`;
    await recheck(req,a);
-   const row=await select(tx,key);await recheck(req,a);
+   let row=await select(tx,key);await recheck(req,a);
+   // Remove expired prose on access, retaining revision/request fencing.
+   // This is scoped cleanup, not a global retention scheduler.
+   const checkedAt=clock();
+   if(row&&row.expiresAt<=checkedAt){
+    const empty=emptyHistoryArchive();
+    if(JSON.stringify(row.payload)!==JSON.stringify(empty)){
+     const updated=await tx.$queryRaw`UPDATE "AssistantHistoryArchive" SET "payload"=${JSON.stringify(empty)}::jsonb WHERE "scopeKey"=${key} AND "revision"=${row.revision} AND "expiresAt"<=${checkedAt} RETURNING "revision"`;
+     if(!changedRows.safeParse(updated).success||changedRows.parse(updated)[0].revision!==row.revision)throw conflict();
+     await recheck(req,a);row={...row,payload:empty};
+    }
+   }
    const result=await fn({tx,a,key,row,time:clock()});
    await recheck(req,a);
    if(result.expiresAt&&new Date(result.expiresAt)<=clock())throw expired();
@@ -63,7 +79,7 @@ export function createAssistantHistoryRepository({db,authorize,now=()=>new Date(
     const rows=await tx.$queryRaw`UPDATE "AssistantHistoryArchive" SET "revision"=${revision},"payload"=${payload}::jsonb,"requestId"=${checked.requestId},"digest"=${hash},"expiresAt"=${expiresAt} WHERE "scopeKey"=${key} AND "revision"=${row.revision} RETURNING "revision"`;
     if(!changedRows.safeParse(rows).success||changedRows.parse(rows)[0].revision!==revision)throw conflict();
    }else{
-    const rows=await tx.$queryRaw`INSERT INTO "AssistantHistoryArchive" ("scopeKey","revision","payload","requestId","digest","expiresAt") VALUES (${key},${revision},${payload}::jsonb,${checked.requestId},${hash},${expiresAt}) ON CONFLICT ("scopeKey") DO NOTHING RETURNING "revision"`;
+    const rows=await tx.$queryRaw`INSERT INTO "AssistantHistoryArchive" ("scopeKey","revision","payload","requestId","digest","expiresAt","actorId","mode","companyId","storeId","generation") VALUES (${key},${revision},${payload}::jsonb,${checked.requestId},${hash},${expiresAt},${a.userId},${a.mode},${a.companyId},${a.storeId},${a.generation}::bigint) ON CONFLICT ("scopeKey") DO NOTHING RETURNING "revision"`;
     if(!changedRows.safeParse(rows).success||changedRows.parse(rows)[0].revision!==revision)throw conflict();
    }
    return snapshot({revision,payload:archive,requestId:checked.requestId,digest:hash,expiresAt},time,a);
