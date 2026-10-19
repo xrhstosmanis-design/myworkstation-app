@@ -46,6 +46,7 @@ test('explicit fresh-store policy retains every register/configuration boundary 
  const shift={name:'ShiftType',owner:{kind:'DIRECT'},reset:'REMOVE'};
  assert.throws(()=>createLifecycleExecutionCore({...manifest,tables:[...manifest.tables,shift]},options),/must retain/);
  assert.doesNotThrow(()=>createLifecycleExecutionCore({...manifest,resetPolicy:'FRESH_STORE_V1',tables:[...manifest.tables,shift]},options));
+ assert.throws(()=>createLifecycleExecutionCore({...manifest,resetPolicy:'FRESH_STORE_V1',tables:[...manifest.tables,{name:'AiReaderJob',owner:{kind:'DIRECT'},reset:'KEEP'}]},options),/Fresh-store business rows must be removed/);
  const bad=structuredClone(manifest);bad.tables[1].owner.historical=true;assert.throws(()=>createLifecycleExecutionCore(bad,options),/Ownership cannot be historical/);
  bad.tables[1].owner={kind:'DIRECT'};bad.tables[1].references=[{parent:'Store',columns:[['storeId','id']],historical:'yes'}];assert.throws(()=>createLifecycleExecutionCore(bad,options),/Invalid reviewed application references/);
  const credentials={...manifest,resetPolicy:'FRESH_STORE_V1',tables:[...manifest.tables,{name:'StoreIntegrationCredential',owner:{kind:'DIRECT'},reset:'REMOVE'}]};assert.throws(()=>createLifecycleExecutionCore(credentials,options),/exact non-fiscal kind guard/);
@@ -447,4 +448,24 @@ test('native inspection is read-only before enrollment, exposes no execution met
   const name='mws_lifecycle_'+createHash('sha256').update(JSON.stringify('Sale')).digest('hex').slice(0,16);await f.db.$executeRawUnsafe(`DROP TRIGGER "${name}" ON "Sale"`);
   await assert.rejects(inspector.inspect(f.db,actor,scope),/Missing or additional database guards|Partially installed/);assert.equal(f.proofCalls(),0);assert.deepEqual(await f.snapshot(),before);
  }finally{await f.close()}
+});
+test('native drain refuses active durable OCR work but can freeze a queued job without processing it',{skip:!isolated},async()=>{
+ const m={...manifest,tables:[...manifest.tables,{name:'PosInvoiceBackgroundTask',owner:{kind:'DIRECT'},reset:'REMOVE'},{name:'AiReaderJob',owner:{kind:'DIRECT'},reset:'REMOVE'},{name:'NetlinkTransaction',owner:{kind:'DIRECT'},reset:'REMOVE'}]},f=await fixture({extraManifest:m,extraDdl:s=>[`CREATE TABLE "${s}"."PosInvoiceBackgroundTask"("id" text PRIMARY KEY,"companyId" text,"storeId" text,"state" text)`,`CREATE TABLE "${s}"."AiReaderJob"("id" text PRIMARY KEY,"companyId" text,"storeId" text,"status" text)`,`CREATE TABLE "${s}"."NetlinkTransaction"("id" text PRIMARY KEY,"companyId" text,"storeId" text,"status" text)`],populate:async db=>{await db.$executeRawUnsafe(`INSERT INTO "PosInvoiceBackgroundTask" VALUES('active','company','target','RUNNING')`);await db.$executeRawUnsafe(`INSERT INTO "AiReaderJob" VALUES('ai','company','target','AI_COMPLETE')`);await db.$executeRawUnsafe(`INSERT INTO "NetlinkTransaction" VALUES('netlink','company','target','COMPLETED')`)}});
+ try{
+  await f.core.install(f.db,actor,scope);await assert.rejects(f.core.beginDrain(f.db,actor,scope,'RESET'),/Active shift, operator, Writer or fiscal work/);assert.equal(f.proofCalls(),0);
+  await f.db.$executeRawUnsafe(`UPDATE "PosInvoiceBackgroundTask" SET "state"='QUEUED' WHERE "id"='active'`);
+  await f.db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "status"='POS_PROCESSING' WHERE "id"='ai'`);await assert.rejects(f.core.beginDrain(f.db,actor,scope,'RESET'),/Active shift, operator, Writer or fiscal work/);await f.db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "status"='AI_COMPLETE' WHERE "id"='ai'`);
+  await f.db.$executeRawUnsafe(`UPDATE "NetlinkTransaction" SET "status"='EXECUTING' WHERE "id"='netlink'`);await assert.rejects(f.core.beginDrain(f.db,actor,scope,'RESET'),/Active shift, operator, Writer or fiscal work/);await f.db.$executeRawUnsafe(`UPDATE "NetlinkTransaction" SET "status"='FAILED' WHERE "id"='netlink'`);
+  const drain=await f.core.beginDrain(f.db,actor,scope,'RESET');assert.equal(drain.state,'DRAINING');assert.equal((await f.db.$queryRawUnsafe(`SELECT "state" FROM "PosInvoiceBackgroundTask"`))[0].state,'QUEUED');await f.core.abort(f.db,actor,{...scope,operationId:drain.operationId});
+ }finally{await f.close()}
+});
+test('native drain honors an actual myDATA receiving lock acquired before fence enrollment without taking that lock for read-only inspection',{skip:!isolated},async()=>{
+ const m={...manifest,tables:[...manifest.tables,{name:'MyDataInboundDocument',owner:{kind:'DIRECT'},reset:'REMOVE'}]},f=await fixture({extraManifest:m,extraDdl:s=>[`CREATE TABLE "${s}"."MyDataInboundDocument"("id" text PRIMARY KEY,"companyId" text,"storeId" text)`]});
+ let release,entered;const gate=new Promise(resolve=>release=resolve),started=new Promise(resolve=>entered=resolve);let receiving;
+ try{
+  receiving=f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))::text`,'mydata:company:target');entered();await gate},{timeout:20000});await started;
+  const view=await f.core.inspect(f.db,actor,scope);assert.equal(view.backgroundLocksChecked,false);assert.equal(view.executionAvailable,false);
+  await f.core.install(f.db,actor,scope);await assert.rejects(f.core.beginDrain(f.db,actor,scope,'RESET'),/Active shift, operator, Writer or fiscal work/);assert.equal(f.proofCalls(),0);
+  release();await receiving;const drain=await f.core.beginDrain(f.db,actor,scope,'RESET');await f.core.abort(f.db,actor,{...scope,operationId:drain.operationId});
+ }finally{release?.();if(receiving)await receiving.catch(()=>{});await f.close()}
 });

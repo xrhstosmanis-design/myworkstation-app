@@ -1,0 +1,84 @@
+{
+  "format": "READ_ONLY_WORKER_READINESS_NOT_RESET_CLEARANCE",
+  "observations": [
+    {
+      "checkedAt": "2026-10-19T08:08:06.853335Z",
+      "fenceTable": null,
+      "invoiceTasks": 0,
+      "openShifts": 0,
+      "processingAiJobs": 0,
+      "recentConnector": 0,
+      "unresolvedRbs": 0
+    }
+  ],
+  "physicalSpoolReportsReceived": false,
+  "cleanupExecuted": false,
+  "limitations": [
+    "Connector recency zero is not physical spool verification and does not prove a Writer/CAP stop.",
+    "No production lifecycle enrollment, maintenance, generation bump or deletion was performed."
+  ],
+  "additionalReadOnlyChecks": {
+    "observedDateUtc": "2026-10-19",
+    "missingScopedPrimaryKeys": [],
+    "existingBusinessFunctionDigestCheck": {
+      "checkedDateUtc": "2026-10-19",
+      "count": 11,
+      "expectedCount": 11,
+      "mismatches": []
+    },
+    "financialStates": [
+      {
+        "count": 1,
+        "kind": "NetlinkTransaction",
+        "state": "COMPLETED"
+      },
+      {
+        "count": 7,
+        "kind": "NetlinkTransaction",
+        "state": "FAILED"
+      },
+      {
+        "count": 165,
+        "kind": "Sale",
+        "state": "COMPLETED"
+      }
+    ],
+    "routingAndCancellationStates": [
+      {
+        "count": 4,
+        "kind": "PaymentDeviceRouteAttempt",
+        "state": "PLANNED"
+      }
+    ],
+    "netlinkHistoricalFailureClassification": [
+      {
+        "count": 1,
+        "errorCode": "NETLINK_API_ERROR",
+        "flow": "PREPARE",
+        "lastUpdatedAt": "2026-08-27T15:37:21.0455Z",
+        "status": "FAILED"
+      },
+      {
+        "count": 2,
+        "errorCode": "NETLINK_API_ERROR",
+        "flow": "TEST_EXECUTE",
+        "lastUpdatedAt": "2026-08-26T12:12:25.105082Z",
+        "status": "FAILED"
+      },
+      {
+        "count": 1,
+        "errorCode": null,
+        "flow": "TEST_EXECUTE_DIRECT",
+        "lastUpdatedAt": "2026-08-28T13:51:09.30384Z",
+        "status": "COMPLETED"
+      },
+      {
+        "count": 4,
+        "errorCode": "NETLINK_API_ERROR",
+        "flow": "TEST_EXECUTE_DIRECT",
+        "lastUpdatedAt": "2026-08-28T11:50:29.803847Z",
+        "status": "FAILED"
+      }
+    ]
+  }
+}

@@ -1,3 +1,5 @@
+import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../src/services/store-lifecycle-generation.js';
+import {lifecycleContext,withLifecycleContext} from '../src/services/store-lifecycle-context.js';
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from '../src/customer-demo-runtime.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,10 +8,10 @@ import {createBackgroundDrain} from '../src/server-shutdown.js';
 async function fixture({allowed=true,held=false,targetBarrier,targets,lockBarrier}={}){
   let tick,interval,locks=0,owners=0,cleared=0;
   const backgroundDrain=createBackgroundDrain();
-  const prisma={store:{findFirst:async()=>null},$executeRawUnsafe:async()=>{},$queryRaw:async strings=>{if(strings.join("?").includes('FROM "User"')){owners++;return [{id:'linked-owner'}]}if(targetBarrier)await targetBarrier;return targets||[{companyId:'company',storeId:'store'}]},$transaction:async fn=>{locks++;if(lockBarrier)await lockBarrier;return fn({$queryRaw:async()=>[{held}]})},user:{findFirst:async()=>{owners++;return {id:'owner'}}}};
-  globalThis.__scheduled={assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval:()=>cleared++,prisma,Router:()=>({get(){},post(){}}),requireCompanyModule:()=>()=>{},companyModuleState:async()=>({licenseAllowed:allowed,activeModules:['DOCUMENTS']}),ensureStoreIntegrationSchema:async()=>{},setInterval:(fn,ms)=>{tick=fn;interval=ms;return {unref(){}}}};
+  const prisma={store:{findFirst:async()=>null},$executeRawUnsafe:async()=>{},$queryRaw:async strings=>{if(strings.join("?").includes('FROM "User"')){owners++;return [{id:'linked-owner'}]}if(targetBarrier)await targetBarrier;return targets||[{companyId:'company',storeId:'store'}]},$transaction:async fn=>{locks++;if(lockBarrier)await lockBarrier;return fn({$queryRaw:async()=>[{held}],$queryRawUnsafe:async sql=>{assert.match(sql,/current_schema/);return [{schema:'public',fence:null}]}})},user:{findFirst:async()=>{owners++;return {id:'owner'}}}};
+  globalThis.__scheduled={assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval:()=>cleared++,prisma,Router:()=>({get(){},post(){}}),requireCompanyModule:()=>()=>{},companyModuleState:async()=>({licenseAllowed:allowed,activeModules:['DOCUMENTS']}),ensureStoreIntegrationSchema:async()=>{},setInterval:(fn,ms)=>{tick=fn;interval=ms;return {unref(){}}}};
   const source=await readFile(new URL('../src/routes/commerce-mydata-inbox.js',import.meta.url),'utf8');
-  const injected='const {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval,prisma,Router,requireCompanyModule,companyModuleState,ensureStoreIntegrationSchema,setInterval}=globalThis.__scheduled;';
+  const injected='const {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,backgroundDrain,clearInterval,prisma,Router,requireCompanyModule,companyModuleState,ensureStoreIntegrationSchema,setInterval}=globalThis.__scheduled;';
   const mod=await import('data:text/javascript;base64,'+Buffer.from(injected+source.replace(/^import .*;\r?\n/gm,'')+`\n//${Math.random()}`).toString('base64'));
   delete globalThis.__scheduled;
   return {mod,backgroundDrain,get cleared(){return cleared},get tick(){return tick},get interval(){return interval},get locks(){return locks},get owners(){return owners}};
@@ -22,7 +24,7 @@ test('manual and scheduled receiving coalesce; cross-process advisory lock refus
   const a=f.mod.syncMyDataStore(req),b=f.mod.syncMyDataStore(req);assert.equal(a,b);
   await assert.rejects(a,/σε εξέλιξη/);assert.equal(f.locks,1);
   f.mod.startMyDataReceivingWorker();const warn=console.warn;console.warn=()=>{};try{await f.tick()}finally{console.warn=warn}
-  assert.equal(f.owners,1);assert.equal(f.locks,2);
+  assert.equal(f.owners,1);assert.equal(f.locks,3);
 });
 
 test('receiving service rejects foreign or missing store before credentials or network work',async()=>{
