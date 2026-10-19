@@ -45,7 +45,7 @@ export async function exerciseLabLedger({baseUrl,ownerToken,db,origin,ids}){
 
   const paidOrder=await order(),combined=(await issue(paidOrder,'INVOICE_DELIVERY')).document;after=await state();assert.equal(quantity(after,ids.productA),a0-20000n);assert.equal(balance(after),money0+2480n);
   const paymentKey=key(),cash=await payment(combined,'10.00','CASH',paymentKey);assert.equal(cash.payment.amount,'10.00');assert.equal(balance(await state()),money0+1480n);
-  const reordered=await call('/api/lab/payments',{requestId:paymentKey,method:'CASH',amount:'10',invoiceId:combined.id,storeId});assert.equal(reordered.replayed,true);assert.equal(reordered.payment.id,cash.payment.id);
+  const reordered=await call('/api/lab/payments',{requestId:paymentKey,method:'CASH',amount:'10',invoiceId:combined.id,storeId},201);assert.equal(reordered.replayed,true);assert.equal(reordered.payment.id,cash.payment.id);
   await payment(combined,'10.01','CASH',paymentKey,409);await payment(combined,'5.00','BANK');assert.equal(balance(await state()),money0+980n);await payment(combined,'9.80','CARD');assert.equal(balance(await state()),money0);
   const paidCounts=await appendCounts();await payment(combined,'0.01','CARD',key(),409);await cancel(combined,key(),409);await issue(paidOrder,'CREDIT_NOTE',combined.id,key(),409);assert.deepEqual(await appendCounts(),paidCounts);
   for(const amount of ['0','-1','1.001'])await payment(combined,amount,'CASH',key(),400);
