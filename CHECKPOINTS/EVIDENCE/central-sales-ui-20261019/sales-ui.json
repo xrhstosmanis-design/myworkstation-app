@@ -1,0 +1,113 @@
+{
+  "status": "LIMITED_LAB_UI_PASS",
+  "observedDate": "2026-10-19",
+  "observedAthensApproximate": "22:17–22:19",
+  "owner": "codex/central-four-streams-20261018",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "role": "SUPER_ADMIN_SUPPORT",
+  "surface": "desktop browser",
+  "periods": [
+    {
+      "current": "2026-10-17",
+      "previous": "2026-10-16",
+      "hours": [
+        24,
+        24
+      ],
+      "grossEUR": [
+        "0",
+        "0"
+      ],
+      "percentReason": "ZERO_BASE"
+    },
+    {
+      "current": "2026-10-12",
+      "previous": "2026-10-11",
+      "hours": [
+        24,
+        24
+      ],
+      "grossEUR": [
+        "5.00",
+        "0.00"
+      ],
+      "deltaEUR": "5.00",
+      "percentReason": "ZERO_BASE"
+    }
+  ],
+  "currentCanonical": {
+    "groups": 3,
+    "uniqueSales": 5,
+    "reversals": 0
+  },
+  "hourly": {
+    "date": "2026-10-12",
+    "offset": "UTC+03:00",
+    "hours": [
+      18,
+      19,
+      22,
+      23
+    ],
+    "uniqueSales": [
+      1,
+      1,
+      1,
+      2
+    ],
+    "unit": "PIECE",
+    "quantities": [
+      1,
+      1,
+      1,
+      2
+    ],
+    "reversals": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "actualCSV": {
+    "rowCount": 3,
+    "quantity": "5",
+    "grossEUR": "5.0",
+    "units": [
+      "PIECE"
+    ],
+    "storeIds": [
+      "cmtpopbgo000trhb5ng9ytiru"
+    ]
+  },
+  "limits": [
+    "UI/CSV parity only",
+    "No independent SQL reconciliation",
+    "Previous zero source not independently checked",
+    "Nonzero and negative baseline not tested",
+    "DST/cap/other tenant/role/device not tested",
+    "No financial finality or staffing conclusion",
+    "Client revision not independently telemetered for each UI action"
+  ],
+  "businessWrites": false,
+  "replay": false,
+  "laterHealthRevision": "3fe46f01e553e0280ac928a17754abc813629922",
+  "files": {
+    "comparison-zero-dom.txt": {
+      "bytes": 17179,
+      "sha256": "8e7bbc9aeb4565bcd3c168b4d8005dd56b54a2aaa709482f4fdedbb6b8ae8d8c"
+    },
+    "comparison-hourly-dom.txt": {
+      "bytes": 24254,
+      "sha256": "0dea2cc8f63b8aa2fe511c12e75e8e7c88603ec45f4ec5e3989a2bfc80c17104"
+    },
+    "comparison-hourly.jpg": {
+      "bytes": 150350,
+      "sha256": "7a9ac78e2d341c4c9b7f45312e97a1ad44514e18665d92110c28b57a1a85407a"
+    },
+    "sales-products.csv": {
+      "bytes": 1226,
+      "sha256": "88c843e594b38628ed773e8c1d7996fff680cf02d1b528807a26404437fc05f1"
+    }
+  }
+}

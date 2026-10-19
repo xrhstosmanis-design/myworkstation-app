@@ -1,0 +1,70 @@
+{
+  "observedAt": "2026-10-19T18:00-18:01Z",
+  "sourcePR": 2848,
+  "sourceRevision": "19e6adcdf25fce65449b1f82f35c71808b61b3ac",
+  "ci": 39296069087,
+  "mainCI": 39297045446,
+  "guard": 39297996180,
+  "renderDeploy": "dep-dbb5ing473hc73cn7vt0",
+  "liveAt": "2026-10-19T17:59:26.924399Z",
+  "health": {
+    "ok": true,
+    "revision": "19e6adcdf25fce65449b1f82f35c71808b61b3ac"
+  },
+  "scope": "Cloud Chrome desktop; no order or catalogue write",
+  "initialAttributes": {
+    "type": "search",
+    "autocomplete": "off",
+    "readonly": true
+  },
+  "categoryEmailReset": [
+    {
+      "category": "Καφέδες",
+      "count": 27,
+      "query": ""
+    },
+    {
+      "category": "Ροφήματα",
+      "count": 11,
+      "query": ""
+    },
+    {
+      "category": "Νερά",
+      "count": 4,
+      "query": ""
+    },
+    {
+      "category": "Αναψυκτικά",
+      "count": 4,
+      "query": ""
+    },
+    {
+      "category": "Σφολιάτες",
+      "count": 2,
+      "query": ""
+    },
+    {
+      "category": "Γλυκά",
+      "count": 1,
+      "query": ""
+    },
+    {
+      "category": "Άλλα",
+      "count": 64,
+      "query": ""
+    }
+  ],
+  "normalSearch": {
+    "query": "FREDDO",
+    "count": 5
+  },
+  "legacyAlias": {
+    "url": "https://myworkstation-app.onrender.com/kat/",
+    "emailThenWater": 4,
+    "query": ""
+  },
+  "basket": "empty",
+  "mobile": "NOT TESTED; earlier owner-reported category PASS retained",
+  "physicalSavedPasswordAutofill": "NOT TESTED; synthetic email manually entered in real hosted UI",
+  "initialAliasAttempt": "category action before catalogue ready timed out; fresh visible category observation then one explicit action passed"
+}

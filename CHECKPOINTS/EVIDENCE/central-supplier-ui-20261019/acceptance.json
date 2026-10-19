@@ -1,0 +1,63 @@
+{
+  "status": "LIMITED LAB UI/export PASS",
+  "administrativeStatus": "AWAITING docs CI/review/merge",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "snapshot": "2026-10-19T19:20:03.157Z",
+  "from": "2026-09-19T19:20:03.157Z",
+  "options": {
+    "historyDays": 30,
+    "coverageDays": 7,
+    "leadDays": 3
+  },
+  "filters": {
+    "onlyQuantity": true,
+    "search": "",
+    "provider": "all"
+  },
+  "csv": {
+    "bytes": 8608,
+    "sha256": "06d0507c4087d1cb60d42a9f0562f2528db6eafcbd7fc5e2137bdcc5725a0c21",
+    "rows": 11,
+    "uniqueProducts": 11,
+    "storeIds": [
+      "cmtpopbgo000trhb5ng9ytiru"
+    ],
+    "snapshots": [
+      "2026-10-19T19:20:03.157Z"
+    ],
+    "reviewRequiredValues": [
+      "YES"
+    ],
+    "automaticSendValues": [
+      "NO"
+    ],
+    "reasons": [
+      "NO_APPROVED_DOCUMENT_EVIDENCE"
+    ],
+    "scopeValues": [
+      "CURRENT_FILTERED_ROWS_ALL_PAGES"
+    ]
+  },
+  "waterObserved": {
+    "sku": "2269",
+    "stock": -71,
+    "minimum": 0,
+    "sales": 36,
+    "returns": 5,
+    "net": 31,
+    "dailyDisplay": 1.033,
+    "dailyRaw": 1.0333333333333334,
+    "proposal": 82
+  },
+  "businessWrites": false,
+  "sourceChanged": false,
+  "notTested": [
+    "other10 individual screen quantities/independent SQL",
+    "positive supplier/tie/capped evidence",
+    "physical deliveries/primary supplier",
+    "other stores/roles/mobile",
+    "margin/legal caps",
+    "weekly automatic delivery",
+    "real order sending"
+  ]
+}
