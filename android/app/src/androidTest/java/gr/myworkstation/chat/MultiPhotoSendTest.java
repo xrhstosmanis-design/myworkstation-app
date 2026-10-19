@@ -89,6 +89,56 @@ public class MultiPhotoSendTest {
             } catch (Exception e) { throw new AssertionError(e); }
         }); return bytes;
     }
+    @Test public void quickReplyNeedsExplicitDraftChoiceAndExplicitSend() throws Exception {
+        FixtureApi api = new FixtureApi();
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            scenario.onActivity(a -> {
+                try {
+                    EditText target = (EditText) get(a, "composer"); target.setText("Existing draft");
+                    invoke(a, "pickReply"); android.app.AlertDialog picker = (android.app.AlertDialog) get(a, "replyDialog");
+                    picker.getListView().performItemClick(null, 0, 0);
+                    assertEquals("Existing draft", target.getText().toString()); assertEquals(0, api.posts.size());
+                    android.app.AlertDialog confirm = (android.app.AlertDialog) get(a, "replyDialog");
+                    confirm.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+                    assertEquals("Existing draft\n" + QuickReplies.choices()[0], target.getText().toString());
+                    assertEquals(0, api.posts.size()); invoke(a, "send");
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
+            awaitIdle(scenario); assertEquals(1, api.posts.size());
+            assertEquals("Existing draft\n" + QuickReplies.choices()[0], api.posts.get(0).getString("body"));
+            assertFalse(api.posts.get(0).has("attachment"));
+        }
+    }
+    @Test public void quickReplyCancelKeepsDraftAndBackgroundDismissesPicker() throws Exception {
+        FixtureApi api = new FixtureApi();
+        android.app.AlertDialog[] picker = {null}; EditText[] target = {null};
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            scenario.onActivity(a -> {
+                try {
+                    target[0] = (EditText) get(a, "composer"); target[0].setText("Keep draft");
+                    invoke(a, "pickReply");
+                    ((android.app.AlertDialog) get(a, "replyDialog")).getListView().performItemClick(null, 1, 1);
+                    ((android.app.AlertDialog) get(a, "replyDialog")).getButton(android.content.DialogInterface.BUTTON_NEGATIVE).performClick();
+                    assertEquals("Keep draft", target[0].getText().toString());
+                    invoke(a, "pickReply"); picker[0] = (android.app.AlertDialog) get(a, "replyDialog");
+                    assertTrue(picker[0].isShowing());
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
+            scenario.moveToState(Lifecycle.State.CREATED);
+            assertFalse(picker[0].isShowing()); assertEquals("", target[0].getText().toString()); assertEquals(0, api.posts.size());
+        }
+    }
+    @Test public void uncertainSendGatePreventsQuickReplySelection() throws Exception {
+        FixtureApi api = new FixtureApi();
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            scenario.onActivity(a -> {
+                try {
+                    set(a, "uncertainStoreId", "fixture-store"); invoke(a, "pickReply");
+                    assertNull(get(a, "replyDialog")); assertEquals(0, api.posts.size());
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
+        }
+    }
     @Test public void confirmedReceiptsConsumeInOrderAndCaptionIsSentOnce() throws Exception {
         FixtureApi api = new FixtureApi();
         try (ActivityScenario<MainActivity> scenario = open(api)) {
