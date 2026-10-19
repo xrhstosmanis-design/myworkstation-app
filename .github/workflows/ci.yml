@@ -152,6 +152,10 @@ jobs:
         run: node tools/verify-checkpoint-policy.mjs "$BASE_SHA" "$HEAD_SHA"
       - name: Prepare server sources and generate Prisma client
         run: npm run build:server
+      - name: Use matching native PostgreSQL 16 recovery tools
+        run: |
+          test -x /usr/lib/postgresql/16/bin/pg_dump
+          echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
       - name: Run security and licensing tests
         run: npm test -w server
       - name: Build Work-compatible client bundle

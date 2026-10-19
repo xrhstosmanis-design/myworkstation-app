@@ -159,7 +159,8 @@ async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
  }
  const primaryKeys=plan.streaming?await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,k.p::int AS position FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN LATERAL unnest(i.indkey) WITH ORDINALITY k(n,p) ON k.p<=i.indnkeyatts JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=k.n WHERE n.nspname=$1 AND i.indisprimary ORDER BY c.relname,k.p`,schema):[];
  if(plan.streaming)for(const node of plan.ordered)if(!primaryKeys.some(k=>k.table===node.name))fail('Streaming requires a reviewed primary key: '+node.name);
- return {columns:byTable,fks:[...fks,...links],primaryKeys,guardsInstalled:installedCounts.every(n=>n===2),signature:hash({relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,links,uniqueKeys:uniqueKeys.filter(k=>links.some(l=>l.parent===k.table)),...(plan.streaming?{primaryKeys}: {})})};
+ const descriptor={relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,links,uniqueKeys:uniqueKeys.filter(k=>links.some(l=>l.parent===k.table)),...(plan.streaming?{primaryKeys}: {})};
+ return {columns:byTable,fks:[...fks,...links],primaryKeys,descriptor,guardsInstalled:installedCounts.every(n=>n===2),signature:hash(descriptor)};
 }
 async function* scopedRows(tx,plan,schema,scope,node,meta){
  const keys=meta.primaryKeys.filter(k=>k.table===node.name);if(!keys.length)fail('Streaming primary key unavailable.');
@@ -301,6 +302,9 @@ export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,
    const snapshot=await capture(tx,plan,schema,scope,mode);
    if(drainOperationId)await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleExecution" SET "snapshotHash"=$2,"state"='PREPARED',"expiresAt"=NOW()+INTERVAL '10 minutes' WHERE "id"=$1`,operationId,snapshot.snapshotHash);
    else await tx.$executeRawUnsafe(`INSERT INTO ${q(schema)}."StoreLifecycleExecution" ("id","companyId","storeId","mode","planHash","snapshotHash","state","expiresAt") VALUES($1,$2,$3,$4,$5,$6,'PREPARED',NOW()+INTERVAL '10 minutes')`,operationId,scope.companyId,scope.storeId,mode,plan.planHash,snapshot.snapshotHash);
+   // Strings preserve the exact JSON property order used by the snapshot hash
+   // across PostgreSQL jsonb. Only streaming metadata is queued, never row data.
+   if(plan.streaming){const meta=await validateDatabase(tx,plan,schema);const recoveryRequest={protocol:'MWS_STORE_RECOVERY_JOB_V1',operationId,schema,snapshotMetadataJson:JSON.stringify(snapshot),schemaDescriptorJson:JSON.stringify(meta.descriptor)};await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleExecution" SET "result"=$2::jsonb WHERE "id"=$1`,operationId,JSON.stringify({recoveryRequest}));}
    return {operationId,snapshotHash:snapshot.snapshotHash,mode,counts:snapshot.tables.map(t=>({table:t.name,count:tableCount(t),action:t.action})),maintenance:true};
   })},
   async abort(db,actor,{companyId,storeId,operationId}){requireLifecycleAdmin(actor);if(!uuid.test(operationId||''))fail('Exact prepared operation required.',400);return transaction(db,async tx=>{
@@ -315,7 +319,7 @@ export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,
    const snapshot=await capture(tx,plan,schema,{companyId,storeId},run.mode);if(snapshot.snapshotHash!==snapshotHash)fail('Rows changed after preview.');
    const recoveryMeta=plan.streaming?await validateDatabase(tx,plan,schema):null;
    const reader=plan.streaming?{readRows:name=>{const node=plan.nodes.get(name);if(!node)fail('Unknown recovery table.');return scopedRows(tx,plan,schema,{companyId,storeId},node,recoveryMeta)}}:undefined;
-   const proof=await persistAndVerifyRecovery(freeze(snapshot),reader);if(proof?.sourceRevision!==sourceRevision||proof?.manifestHash!==plan.planHash||proof?.companyId!==companyId||proof?.storeId!==storeId||proof?.mode!==run.mode||proof?.snapshotHash!==snapshotHash||proof?.restoredSnapshotHash!==snapshotHash||proof?.storageReadbackVerified!==true||!/^[a-f0-9]{64}$/.test(proof?.artifactSha256||''))fail('Durable recovery and complete restore are not verified.');
+   const proof=await persistAndVerifyRecovery(freeze(snapshot),{...reader,operationId});if(proof?.sourceRevision!==sourceRevision||proof?.manifestHash!==plan.planHash||proof?.companyId!==companyId||proof?.storeId!==storeId||proof?.mode!==run.mode||proof?.snapshotHash!==snapshotHash||proof?.restoredSnapshotHash!==snapshotHash||proof?.storageReadbackVerified!==true||!/^[a-f0-9]{64}$/.test(proof?.artifactSha256||''))fail('Durable recovery and complete restore are not verified.');
    await persistOwnershipTombstones(tx,plan,schema,snapshot,operationId,fence.generation);
    await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_operation',$1,true)`,operationId);
    // All declared FK dependencies, not just the ownership edge, determine deletion order.

@@ -34,3 +34,33 @@ Object Lock enabled with the approved retention period. After deployment,
 trigger one manual cron run, confirm `SUCCEEDED` in Super Admin, then
 independently download the object and run `pg_restore --list backup.dump` before
 claiming LIVE PASS.
+
+## Reviewed store recovery worker (not automatic cleanup)
+
+The existing PG18 image also contains `/backup/lifecycle/worker.py` and the same
+strict COPY auditor used for the verified existing-archive recovery. The normal
+entry point and three-hour backup schedule remain unchanged. No recovery job is
+queued, no maintenance is started and no application data is deleted by deploying
+this image. A trusted operator may run `python3 /backup/lifecycle/worker.py` on the
+existing backup service only after an application-prepared RESET job exists.
+Do not manually trigger a cron while its regular backup is running: Render cancels
+the current invocation when manually retriggered.
+
+The worker leases at most one exact fresh operation, creates a new custom archive,
+uploads with AES256 to the existing private versioned bucket, downloads the exact
+returned version and checks SHA256/size/encryption. It starts a private socket-only
+PG cluster with a clean environment and no application/provider/connector workers,
+performs a real full restore and compares every COPY row/sequence. It then deletes
+only reviewed REMOVE rows in the private database, checks exact DELETE counts,
+restores their complete typed values without rewinding sequences and compares all
+COPY multisets/sequences again. KEEP rows, shared data and other stores are controls.
+Only exact reviewed INSERT hooks are temporarily disabled inside the private undo
+transaction; lifecycle and FK guards remain enabled. This is not live undo or a
+physical fiscal replay. Failure/expiration/abort cannot publish a usable proof.
+
+The signed receipt binds operation, company/store, source, reviewed manifest,
+prepared snapshot, actual restore audits, artifact checksum/key/version and time.
+It is checked before live execution; storage readback alone never qualifies.
+The worker has no live business DELETE/ALTER path. The new web adapter is not yet
+mounted as an executable route, automatic polling is not enabled and physical
+post-drain acceptance is still required. No KAT cleanup is implied by CI tests.

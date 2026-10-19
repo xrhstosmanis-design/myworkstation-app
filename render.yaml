@@ -49,11 +49,12 @@ services:
     plan: standard
     schedule: "0 */3 * * *"
     dockerfilePath: ./ops/backup/Dockerfile
-    dockerContext: ./ops/backup
+    dockerContext: .
     autoDeployTrigger: checksPass
     buildFilter:
       paths:
         - ops/backup/**
+        - server/scripts/store-lifecycle-verify-copy.py
     envVars:
       - key: DATABASE_URL
         fromDatabase:

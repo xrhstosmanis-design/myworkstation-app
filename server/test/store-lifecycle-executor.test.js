@@ -469,3 +469,27 @@ test('native drain honors an actual myDATA receiving lock acquired before fence 
   release();await receiving;const drain=await f.core.beginDrain(f.db,actor,scope,'RESET');await f.core.abort(f.db,actor,{...scope,operationId:drain.operationId});
  }finally{release?.();if(receiving)await receiving.catch(()=>{});await f.close()}
 });
+
+test('native queued recovery metadata drives real full archive and selective restore with exact bigints, retained registers and global/sibling controls',{skip:!isolated},async()=>{
+ const {spawnSync}=await import('node:child_process'),{writeFile,chmod}=await import('node:fs/promises');
+ const selected={...manifest,streaming:true},f=await fixture({extraManifest:selected});
+ const directory=await mkdtemp(path.join(tmpdir(),'mws-private-archive-test-'));
+ try{
+  const before=await f.snapshot();await f.core.install(f.db,actor,scope);const prep=await f.core.prepare(f.db,actor,scope,'RESET');
+  const queued=(await f.db.$queryRawUnsafe(`SELECT "result" FROM "${f.schema}"."StoreLifecycleExecution" WHERE "id"=$1`,prep.operationId))[0].result.recoveryRequest;
+  assert.equal(queued.operationId,prep.operationId);const metadata=JSON.parse(queued.snapshotMetadataJson);assert.equal(metadata.snapshotHash,prep.snapshotHash);assert.ok(metadata.tables.every(t=>!('rows' in t)));
+  assert.equal(lifecycleExecutionSnapshotHash(metadata),prep.snapshotHash);
+  const archive=path.join(directory,'fixture.dump'),jobFile=path.join(directory,'job.json'),manifestFile=path.join(directory,'manifest.json');
+  await writeFile(jobFile,JSON.stringify(queued),{mode:0o600});await writeFile(manifestFile,JSON.stringify(selected),{mode:0o600});
+  const dump=spawnSync('pg_dump',['--format=custom','--no-owner','--no-privileges','--schema='+f.schema,'--file='+archive,process.env.DATABASE_URL],{encoding:'utf8',timeout:60000});
+  assert.equal(dump.status,0,'isolated pg_dump must be available and succeed');await chmod(archive,0o600);
+  const script=`import json,sys;sys.path.insert(0,sys.argv[1]);from verify_restore import verify_archive;print(json.dumps(verify_archive(sys.argv[2],json.load(open(sys.argv[3])),json.load(open(sys.argv[4])),sys.argv[5])))`;
+  const result=spawnSync('python3',['-c',script,path.resolve('../ops/backup/lifecycle'),archive,jobFile,manifestFile,path.resolve('scripts/store-lifecycle-verify-copy.py')],{encoding:'utf8',timeout:120000,maxBuffer:1024*1024,env:{PATH:process.env.PATH,LANG:'C.UTF-8'}});
+  assert.equal(result.status,0,'private PostgreSQL full/selective restoration failed: '+result.stderr.slice(-4000));
+  const proof=JSON.parse(result.stdout);assert.equal(proof.restoredSnapshotHash,prep.snapshotHash);assert.equal(proof.selectiveRestoreVerified,true);assert.equal(proof.controlsUnchanged,true);assert.equal(proof.fullRestoreAudit.dataMatches,true);assert.equal(proof.selectiveRestoreAudit.dataMatches,true);assert.ok(proof.selectiveRestoreAudit.tables>=selected.tables.length+4);
+  assert.deepEqual(await f.snapshot(),before,'private recovery may never change the live fixture');
+  metadata.tables[0].sha256='0'.repeat(64);queued.snapshotMetadataJson=JSON.stringify(metadata);await writeFile(jobFile,JSON.stringify(queued));
+  const invalid=spawnSync('python3',['-c',script,path.resolve('../ops/backup/lifecycle'),archive,jobFile,manifestFile,path.resolve('scripts/store-lifecycle-verify-copy.py')],{encoding:'utf8',timeout:10000,env:{PATH:process.env.PATH,LANG:'C.UTF-8'}});assert.notEqual(invalid.status,0);assert.match(invalid.stderr,/Job metadata binding differs/);
+  await f.core.abort(f.db,actor,{...scope,...prep});
+ }finally{await f.close();await rm(directory,{recursive:true,force:true})}
+});
