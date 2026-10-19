@@ -5,6 +5,7 @@ import {cashTool,readCanonicalPlatformCash} from "./assistant-cash-tools.js";
 import {assistantProductTools,runProductAssistant,salesToolArguments,productSalesEvidence} from "./owner-sales-tools.js";
 import {stockToolArguments,productStockEvidence} from "./owner-stock-tools.js";
 import {salesReportCalendar} from "./sales-report-calendar.js";
+import {salesProductReportQuery} from './assistant-sales-product-query.js';
 import {readSalesAnalysisReport} from "../routes/kiosk-reports-sales-v4.js";
 import {readStockAnalysisReport} from "../routes/kiosk-reports-stock-v3.js";
 import {salesStoresTool,readAssistantSalesStores} from "./assistant-sales-stores.js";
@@ -49,7 +50,7 @@ export async function createPlatformAssistantSession(req,selection,{authorize=au
       cash_details:async ({date})=>{await verify();const report=await readCash(req,date,{signal,scope:cashScope});await verify();return report},
       sales_by_product:async value=>{
         const args=salesToolArguments.parse(value),calendar=salesReportCalendar(args.from,args.to);await verify();
-        const report=await readSalesReport({companyId:scope.companyId,storeId:scope.storeId,from:calendar.from,to:calendar.to,q:args.product,calendar});await verify();
+        const report=await readSalesReport({companyId:scope.companyId,storeId:scope.storeId,from:calendar.from,to:calendar.to,q:salesProductReportQuery(args.product),calendar});await verify();
         return evidence(productSalesEvidence(report,args,scope));
       },
       stock_by_product:async value=>{
