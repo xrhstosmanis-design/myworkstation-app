@@ -10,13 +10,13 @@ import {salesStoresArguments,salesStoresTool} from "./assistant-sales-stores.js"
 import {consumptionArguments,consumptionTool,dailyConsumptionRequest} from "./assistant-consumption.js";
 import {ASSISTANT_OUTPUT_TOKENS,ASSISTANT_RECOVERY_TOKENS,mayRetryAssistantResponse} from "./assistant-answer-response.js";
 import {plainTotalSalesRequest} from './assistant-total-sales-request.js';
+import {salesProductReportQuery,matchingSalesProducts} from './assistant-sales-product-query.js';
 export {plainTotalSalesRequest} from './assistant-total-sales-request.js';
 
 const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const salesToolArguments=z.object({product:z.string().trim().min(1).max(120),from:day,to:day}).strict().superRefine((value,ctx)=>{try{salesReportCalendar(value.from,value.to)}catch(e){ctx.addIssue({code:z.ZodIssueCode.custom,message:e.message})}});
 export const ownerSalesTool={type:"function",name:"sales_by_product",strict:true,description:"Διαβάζει την κανονική αναφορά Στατιστικά πωλήσεων μόνο για το επιλεγμένο εξουσιοδοτημένο κατάστημα. product: περιγραφή ή SKU, όχι barcode. from/to: συγκεκριμένες συμπεριλαμβανόμενες ημερομηνίες YYYY-MM-DD, ώρα Ελλάδας, έως366 ημέρες. Ασαφές είδος ζητά διευκρίνιση. Ποσότητα και αξίες συνυπολογίζουν καταχωρημένες επιστροφές/ακυρώσεις, ολοκληρωμένες μη πιστωτικές πωλήσεις. Καμία μεταβολή.",parameters:{type:"object",additionalProperties:false,properties:{product:{type:"string",description:"Μόνο η περιγραφή ή το SKU που ζήτησε ο χρήστης."},from:{type:"string",description:"Πρώτη ημερομηνία YYYY-MM-DD."},to:{type:"string",description:"Τελευταία ημερομηνία YYYY-MM-DD, συμπεριλαμβάνεται."}},required:["product","from","to"]}};
 const fail=(message,status=502)=>{throw Object.assign(new Error(message),{status})};
-const norm=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("el-GR").trim().replace(/\s+/g," ");
 const keys=["productId","sku","name","storeId","storeName","salesQuantity","grossSales","netSales","vatValue","normalSaleCount","reversalCount","returnGrossValue"];
 const project=(row,fields)=>Object.fromEntries(fields.map(key=>[key,row[key]]));
 
@@ -24,7 +24,7 @@ export async function readCanonicalOwnerSales(req,args,scope,{fetchImpl=fetch,po
   args=salesToolArguments.parse(args);const authorization=req.headers?.authorization,validPort=String(port);
   if(typeof authorization!=="string"||!/^Bearer \S+$/.test(authorization))fail("Απαιτείται ενεργή σύνδεση.",401);
   if(!/^\d{1,5}$/.test(validPort)||+validPort<1||+validPort>65535)fail("Η πηγή πωλήσεων δεν είναι διαθέσιμη.",503);
-  const query=new URLSearchParams({storeId:scope.storeId,from:args.from,to:args.to,q:args.product,timeZone:"Europe/Athens"});
+  const query=new URLSearchParams({storeId:scope.storeId,from:args.from,to:args.to,q:salesProductReportQuery(args.product),timeZone:"Europe/Athens"});
   const response=await fetchImpl(`http://127.0.0.1:${validPort}/api/reports/sales-analysis?${query}`,{method:"GET",headers:{Authorization:authorization},redirect:"error",signal});
   if(!response.ok)fail("Δεν διαβάστηκε η κανονική αναφορά πωλήσεων. Δεν εμφανίζονται εκτιμήσεις ή παλιά στοιχεία.",[401,403,404].includes(response.status)?response.status:502);
   const report=await response.json();
@@ -55,7 +55,7 @@ export function productSalesEvidence(report,args,scope){
   }
   // The legacy cap remains conservative even without coverage metadata.
   if(!coverage&&report.items.length===10000)return {...base,result:"source_limited",truncated:true,reason:"Η παλιά πηγή έφτασε το όριο εμφάνισης. Δεν επιβεβαιώνεται πλήρες ή μηδενικό αποτέλεσμα."};
-  const queryText=norm(args.product),exact=report.items.filter(row=>norm(row.sku)===queryText||norm(row.name)===queryText),matches=exact.length?exact:report.items.filter(row=>norm(row.sku).includes(queryText)||norm(row.name).includes(queryText));
+  const matches=matchingSalesProducts(report.items,args.product);
   const distinct=new Map(matches.map(row=>[row.productId||`${row.sku}:${row.name}`,row]));
   if(!matches.length)return {...base,result:"no_match"};
   if(distinct.size!==1||matches.length!==1||typeof matches[0].productId!=="string"||!matches[0].productId)return {...base,result:"ambiguous",candidateCount:distinct.size,candidates:[...distinct.values()].slice(0,20).map(row=>project(row,["productId","sku","name"])),truncated:distinct.size>20};
