@@ -100,6 +100,13 @@ public class MultiPhotoSendTest {
                     assertEquals("Existing draft", target.getText().toString()); assertEquals(0, api.posts.size());
                     android.app.AlertDialog confirm = (android.app.AlertDialog) get(a, "replyDialog");
                     confirm.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
+            // AlertDialog posts its button listener to the main Handler. Observe after dispatch.
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            scenario.onActivity(a -> {
+                try {
+                    EditText target = (EditText) get(a, "composer");
                     assertEquals("Existing draft\n" + QuickReplies.choices()[0], target.getText().toString());
                     assertEquals(0, api.posts.size()); invoke(a, "send");
                 } catch (Exception e) { throw new AssertionError(e); }
