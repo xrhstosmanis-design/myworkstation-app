@@ -207,6 +207,14 @@ jobs:
         run: npm test -w server
       - name: Build Work-compatible client bundle
         run: npm run build
+      - name: Preserve isolated encrypted wholesale offline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-wholesale-commercial-offline
+          path: /tmp/mws-wholesale-commercial-offline/*
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Render isolated POS header in Chromium
         run: node server/e2e/pos-header-browser-flow.mjs
       - name: Verify report dialog pointer access in Chromium

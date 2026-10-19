@@ -1,6 +1,12 @@
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import WholesaleApp from './components/wholesale/WholesaleApp.jsx';
+import WholesaleInstall from './components/wholesale/WholesaleInstall.jsx';
+import {prepareWholesaleShellInBackground} from './components/wholesale/wholesale-offline-registration.mjs';
+import './components/wholesale/wholesale-install.css';
+import './components/wholesale/wholesale-offline.css';
 import './components/wholesale/wholesale-app.css';
 import './components/commerce/wholesale-b2b.css';
 createRoot(document.getElementById('wholesale-root')).render(<WholesaleApp/>);
+createRoot(document.getElementById('wholesale-install-root')).render(<WholesaleInstall/>);
+prepareWholesaleShellInBackground();
