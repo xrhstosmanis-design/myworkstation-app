@@ -3,6 +3,7 @@ import {Router} from "express";
 import {prisma} from "../prisma.js";
 
 import {optionalSalesCalendar,salesReportCalendar} from "../services/sales-report-calendar.js";
+import {readSalesReportComparison} from "../services/sales-report-comparison.js";
 
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -169,9 +170,13 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
   });
   return {...(includeHourly?{hourlyActivity}:{}),unattributedPromotionReversal,sourceCoverage,...(calendar?{companyId,storeId,period:{calendarFrom:calendar.calendarFrom,calendarTo:calendar.calendarTo,timeZone:calendar.timeZone,from:from.toISOString(),toExclusive:to.toISOString()}}:{}),items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:metadata._overallNormalSaleCount,reversalCount:metadata._overallReversalCount,returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true};
 }
-router.get("/sales-analysis",async(req,res,next)=>{try{res.json(await readSalesAnalysisReport(filters(req)))}catch(error){next(error)}});
+router.get("/sales-analysis",async(req,res,next)=>{try{
+  const selected=filters(req),comparison=req.query.compareFrom!==undefined||req.query.compareTo!==undefined;
+  res.json(comparison?await readSalesReportComparison({...selected,compareFrom:req.query.compareFrom,compareTo:req.query.compareTo},{db:prisma,readReport:readSalesAnalysisReport}):await readSalesAnalysisReport(selected));
+}catch(error){next(error)}});
 
 router.get("/sales-analysis/:productId",async(req,res,next)=>{try{
+  if(req.query.compareFrom!==undefined||req.query.compareTo!==undefined)throw Object.assign(new Error("Η σύγκριση περιόδων διατίθεται μόνο στη συνολική αναφορά πωλήσεων."),{status:400});
   const {companyId,from,to,storeId}=filters(req),productId=String(req.params.productId||"");
   const owned=await prisma.$queryRaw`SELECT "id","name" FROM "Product" WHERE "companyId"=${companyId} AND "id"=${productId} LIMIT 1`;
   if(!owned[0])return res.status(404).json({error:"Δεν βρέθηκε το είδος."});
