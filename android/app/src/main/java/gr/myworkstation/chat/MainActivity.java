@@ -56,7 +56,7 @@ public final class MainActivity extends Activity {
     private TextView notice, attachmentLabel;
     private EditText composer;
     private Button chatSendButton;
-    private AlertDialog imageDialog;
+    private AlertDialog imageDialog, replyDialog;
     private Bitmap preview;
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
@@ -89,7 +89,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onStop() {
         foreground = false; epoch.invalidate(); api.cancel(); busy = false; ui.removeCallbacks(refresh);
-        history = new JSONArray(); clearPhoto(); dismissImage();
+        history = new JSONArray(); clearPhoto(); dismissImage(); dismissReplies();
         if (root != null) {
             wipeViews(root);
             root.removeAllViews();
@@ -100,7 +100,7 @@ public final class MainActivity extends Activity {
         super.onStop();
     }
     @Override protected void onSaveInstanceState(Bundle state) { /* No private UI state in Android's saved-state storage. */ }
-    @Override protected void onDestroy() { epoch.invalidate(); api.cancel(); worker.shutdownNow(); clearPhoto(); dismissImage(); super.onDestroy(); }
+    @Override protected void onDestroy() { epoch.invalidate(); api.cancel(); worker.shutdownNow(); clearPhoto(); dismissImage(); dismissReplies(); super.onDestroy(); }
     private JSONObject claims(String value) throws Exception {
         String[] parts = value.split("\\."); if (parts.length != 3) throw new IllegalArgumentException();
         return new JSONObject(new String(Base64.decode(parts[1], Base64.URL_SAFE | Base64.NO_WRAP), StandardCharsets.UTF_8));
@@ -141,7 +141,7 @@ public final class MainActivity extends Activity {
         catch (Exception impossible) { throw new IllegalArgumentException(); }
         return result;
     }
-    private void navigate() { epoch.invalidate(); api.cancel(); busy = false; history = new JSONArray(); clearPhoto(); dismissImage(); hideKeyboard(); }
+    private void navigate() { epoch.invalidate(); api.cancel(); busy = false; history = new JSONArray(); clearPhoto(); dismissImage(); dismissReplies(); hideKeyboard(); }
     private void accept(JSONObject result) throws Exception {
         if (result.optBoolean("setupRequired")) { status("Ολοκλήρωσε πρώτα το 2FA από τη συνήθη είσοδο Super Admin."); return; }
         if (result.optBoolean("mfaRequired")) {
@@ -260,6 +260,7 @@ public final class MainActivity extends Activity {
             bubble("Ο βοηθός δεν είναι διαθέσιμος με τα δικαιώματα αυτού του λογαριασμού.", false, "", null); return;
         }
         attachmentLabel = text("", 14, MUTED); root.addView(attachmentLabel);
+        if (tab.equals("chat")) root.addView(button("Έτοιμες απαντήσεις", this::pickReply));
         LinearLayout bar = new LinearLayout(this); bar.setGravity(Gravity.BOTTOM); bar.setPadding(dp(6), dp(4), dp(6), dp(4));
         if (tab.equals("chat")) bar.addView(button("＋", this::pickPhoto), new LinearLayout.LayoutParams(dp(52), dp(56)));
         composer = input(tab.equals("ai") ? "Ρώτησε τον βοηθό…" : "Γράψε μήνυμα…", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, tab.equals("ai") ? 600 : 5000);
@@ -375,6 +376,45 @@ public final class MainActivity extends Activity {
             imageDialog = new AlertDialog.Builder(this).setTitle("Στοιχεία πηγής · μόνο προβολή").setView(box).setPositiveButton("Κλείσιμο", null).create();
             imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
         } catch (Exception ignored) { status("Δεν είναι διαθέσιμη η προβολή πηγής."); }
+    }
+    private void dismissReplies() {
+        if (replyDialog != null) { replyDialog.dismiss(); replyDialog = null; }
+    }
+    private boolean replyScope(long generation, String capturedToken, String storeId, EditText target) {
+        return foreground && epoch.current(generation) && capturedToken.equals(token) && !token.isEmpty()
+            && selected != null && storeId.equals(id(selected, "id")) && view.equals("conversation")
+            && tab.equals("chat") && composer == target && target != null && target.isEnabled()
+            && !busy && !uncertainStoreId.equals(storeId);
+    }
+    private void pickReply() {
+        final long generation = epoch.capture(); final String capturedToken = token, storeId = id(selected, "id");
+        final EditText target = composer;
+        if (!replyScope(generation, capturedToken, storeId, target)) {
+            status("Περίμενε την ανανέωση και έλεγξε τυχόν αβέβαιη αποστολή."); return;
+        }
+        dismissReplies();
+        replyDialog = new AlertDialog.Builder(this).setTitle("Έτοιμες απαντήσεις")
+            .setItems(QuickReplies.choices(), (dialog, which) -> {
+                if (!replyScope(generation, capturedToken, storeId, target)) return;
+                final String choice = QuickReplies.choices()[which];
+                if (target.getText().length() == 0) {
+                    applyReply(generation, capturedToken, storeId, target, choice, false); return;
+                }
+                replyDialog = new AlertDialog.Builder(this).setTitle("Υπάρχει ήδη πρόχειρο μήνυμα")
+                    .setMessage("Προσθήκη στο τέλος ή αντικατάσταση του κειμένου; Η επιλογή δεν στέλνει μήνυμα.")
+                    .setPositiveButton("Προσθήκη", (d, w) -> applyReply(generation, capturedToken, storeId, target, choice, true))
+                    .setNeutralButton("Αντικατάσταση", (d, w) -> applyReply(generation, capturedToken, storeId, target, choice, false))
+                    .setNegativeButton("Ακύρωση", null).create();
+                replyDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); replyDialog.show();
+            }).setNegativeButton("Ακύρωση", null).create();
+        replyDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); replyDialog.show();
+    }
+    private void applyReply(long generation, String capturedToken, String storeId, EditText target, String choice, boolean append) {
+        if (!replyScope(generation, capturedToken, storeId, target)) return;
+        try {
+            target.setText(QuickReplies.compose(target.getText().toString(), choice, append));
+            target.setSelection(target.length()); target.requestFocus();
+        } catch (IllegalArgumentException tooLong) { status("Το μήνυμα ξεπερνά τους 5.000 χαρακτήρες. Μίκρυνε πρώτα το πρόχειρο."); }
     }
     private void pickPhoto() {
         if (busy || !photosEnabled || uncertainStoreId.equals(id(selected, "id"))) { status("Έλεγξε πρώτα τη σύνδεση και τυχόν αβέβαιη αποστολή."); return; }

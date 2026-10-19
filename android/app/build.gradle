@@ -1,4 +1,11 @@
 plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
+// Only a dedicated trusted-main build supplies these variables; never store values in Git.
+def previewSigningPath = System.getenv('MW_CHAT_SIGNING_STORE_FILE')
+def previewSigningNames = ['MW_CHAT_SIGNING_STORE_FILE', 'MW_CHAT_STORE_PASSWORD', 'MW_CHAT_KEY_ALIAS', 'MW_CHAT_KEY_PASSWORD']
+def previewSigningRequested = previewSigningNames.any { System.getenv(it) }
+if (previewSigningRequested && !previewSigningNames.every { System.getenv(it) }) {
+    throw new GradleException('Incomplete stable preview signing configuration')
+}
 android {
     namespace 'gr.myworkstation.chat'
     compileSdk 35
@@ -6,13 +13,26 @@ android {
         applicationId 'gr.myworkstation.chat'
         minSdk 26
         targetSdk 35
-        versionCode 7
-        versionName '0.1.6-preview'
+        versionCode 8
+        versionName '0.1.7-preview'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    signingConfigs {
+        if (previewSigningRequested) {
+            stablePreview {
+                storeFile file(previewSigningPath)
+                storePassword System.getenv('MW_CHAT_STORE_PASSWORD')
+                keyAlias System.getenv('MW_CHAT_KEY_ALIAS')
+                keyPassword System.getenv('MW_CHAT_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
-        debug { applicationIdSuffix '.preview' }
+        debug {
+            applicationIdSuffix '.preview'
+            if (previewSigningRequested) signingConfig signingConfigs.stablePreview
+        }
         release { minifyEnabled false }
     }
     lint { abortOnError true }
