@@ -42,7 +42,19 @@ test('seller identity uses live personal session and immutable branded channel, 
   assert.equal(auth.sql.includes('s."sessionVersion"'),false,'only User holds a session version');
   assert.equal(auth.sql.includes('u."active"'),false,'User has no active column');
   assert.ok(state.calls.some(call=>call.sql.includes('FROM "WholesaleSellerAssignment"')&&call.sql.includes('FOR SHARE')));
-  state.enabled=false;await assert.rejects(()=>authorizeWholesalePrincipal(db,ctx,scope,{lock:true}),error=>error.status===401);
+  state.enabled=false;await assert.rejects(()=>authorizeWholesalePrincipal(db,ctx,scope,{lock:true}),error=>error.status===403&&error.code==='SELLER_MEMBERSHIP_REQUIRED');
+});
+
+test('a valid nonmember is forbidden without invalidating personal authentication; invalid sessions still require authentication',async()=>{
+  for(const role of ['EMPLOYEE','OWNER']){
+    const {db,state}=fixture();state.role=role;state.enabled=false;
+    await assert.rejects(()=>authenticateWholesaleSeller(db,{...actor,role}),error=>error.status===403&&error.code==='SELLER_MEMBERSHIP_REQUIRED');
+    assert.equal(state.calls.some(call=>!call.sql.includes('JOIN "WholesaleSellerMembership"')&&call.sql.includes('FROM "UserSession"')),true,'denial classification must independently validate the live personal identity and paid entitlement');
+    for(const invalid of [{live:false},{userCompanyId:'foreign'},{role:'ADMIN'},{expiresAt:new Date('2026-10-18T11:59:59Z')},{moduleEndsAt:new Date('2026-10-18T11:59:59Z')}]){
+      const bad=fixture();Object.assign(bad.state,{role,enabled:false},invalid);
+      await assert.rejects(()=>authenticateWholesaleSeller(bad.db,{...actor,role}),error=>error.status===401&&error.code==='SELLER_AUTH_REQUIRED');
+    }
+  }
 });
 
 test('missing session, wrong token, current role mismatch, support scope and foreign user company fail closed',async()=>{
