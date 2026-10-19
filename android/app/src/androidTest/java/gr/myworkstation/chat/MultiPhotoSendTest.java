@@ -1,6 +1,10 @@
 package gr.myworkstation.chat;
 
 import android.content.Context;
+import android.content.ClipData;
+import android.content.Intent;
+import android.net.Uri;
+import android.app.Activity;
 import android.widget.EditText;
 import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
@@ -113,6 +117,29 @@ public class MultiPhotoSendTest {
             for (byte[] image : bytes) assertArrayEquals(new byte[]{0,0}, image);
             scenario.moveToState(Lifecycle.State.RESUMED); awaitIdle(scenario); assertEquals(1, api.posts.size());
         } finally { api.release.countDown(); }
+    }
+    @Test public void oversizedOrUnsupportedPickerSelectionIsRejectedWithoutPartialReplacement() throws Exception {
+        FixtureApi api = new FixtureApi();
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            scenario.onActivity(a -> {
+                try {
+                    PhotoBatch batch = (PhotoBatch) get(a, "photos"); byte[] original = {7}; batch.add(original, "image/jpeg");
+                    for (boolean tooMany : new boolean[]{true, false}) {
+                        set(a, "photoToken", "isolated-fixture-token"); set(a, "photoBinding", "fixture-store");
+                        Intent picked = new Intent();
+                        if (tooMany) {
+                            ClipData clip = ClipData.newRawUri("fixture", Uri.parse("content://isolated/1"));
+                            for (int i = 1; i < 6; i++) clip.addItem(new ClipData.Item(Uri.parse("content://isolated/" + i)));
+                            picked.setClipData(clip);
+                        } else picked.setData(Uri.parse("file:///must-never-read.jpg"));
+                        a.onActivityResult(41, Activity.RESULT_OK, picked);
+                        assertEquals(1, batch.size()); assertSame(original, batch.get(0).bytes);
+                        assertFalse(((String) get(a, "photoSelectionNotice")).isEmpty());
+                    }
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
+            assertEquals(0, api.posts.size());
+        }
     }
     @Test public void disabledPhotoSettingPreventsTheFirstPost() throws Exception {
         FixtureApi api = new FixtureApi(); api.enabled = false;
