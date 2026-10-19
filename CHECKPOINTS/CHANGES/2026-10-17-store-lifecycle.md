@@ -1,3 +1,7 @@
+## 19/10/2026 — recovery native CI correction / no production action
+
+Initial PR2829/head7a8c9248fbbe790e3ad840376893f82ce1c46fbe CI39231066403/job117989106651 FAILED only the new native archive test: full private pg_restore had already succeeded, but exporting its data-only expected COPY stream lacked explicit --file=-, which pg_restore requires for stdout. Added that explicit output target; no weakened assertion, production action or claimed restore PASS. All other3359 tests passed; zero skips. Exact corrected full CI remains required. Central execution/UI/reopen work is being developed separately and is not included in this correction.
+
 ## 19/10/2026 — STORE-LIFECYCLE-01 / actual selective archive recovery adapter — AWAITING NATIVE CI
 
 Retained owner feat/store-shifts-inventory-clear-20261018; source feat/store-lifecycle-recovery-adapter-20261019 based main8bcf7d4d90933fcf382979da08101ff9e310a668. No other-owner transfer. Prior workerPR2816 headc06206173a89d14003c5717160d8791e9d8441e9 fullCI39224494563/job117967618324 SUCCESS3336PASS/0FAIL/0SKIP plus6backup/all Windows/build/realHTTP; merged1b13cd794faf6629214faf1161cb3fb926e3a479. Exact production release remains a separate observation. Existing empty-storeId LIVE acceptance and central/native/VOICE/wholesale ownership retained; no repeat financial operation.

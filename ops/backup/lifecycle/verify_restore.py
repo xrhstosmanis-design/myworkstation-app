@@ -154,7 +154,7 @@ def verify_archive(archive, job, manifest, audit_module):
             pg.run(['pg_restore', '--exit-on-error', '--no-owner', '--no-privileges', '--dbname=postgres', str(local_archive)], stdout=subprocess.DEVNULL)
             # Redirect through parent-owned file descriptors, so no world access.
             with open(expected, 'wb') as output:
-                pg.run(['pg_restore', '--data-only', '--no-owner', '--no-privileges', str(local_archive)], stdout=output)
+                pg.run(['pg_restore', '--data-only', '--no-owner', '--no-privileges', '--file=-', str(local_archive)], stdout=output)
             with open(before, 'wb') as output:
                 pg.run(['pg_dump', '--data-only', '--no-owner', '--no-privileges', 'postgres'], stdout=output)
             full_audit = auditor.compare(expected, before)
