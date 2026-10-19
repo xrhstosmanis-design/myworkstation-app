@@ -11,7 +11,7 @@ export function normalizeLifecycleContext(input){
  if(typeof input!=='object'||![Object.prototype,null].includes(Object.getPrototypeOf(input))||Array.isArray(input)||Object.keys(input).length>100)throw new TypeError('Invalid lifecycle context');
  const result=Object.create(null);
  for(const [storeId,value] of Object.entries(input)){
-  if(!storeId||storeId.length>200||normalizeLifecycleGeneration(value)===null)throw new TypeError('Invalid lifecycle context');
+  if(!storeId||storeId.includes('\0')||storeId.length>200||normalizeLifecycleGeneration(value)===null)throw new TypeError('Invalid lifecycle context');
   result[storeId]=value;
  }
  return Object.freeze(result);
@@ -19,7 +19,10 @@ export function normalizeLifecycleContext(input){
 export const lifecycleContext=()=>storage.getStore()||empty;
 export const withLifecycleContext=(input,work)=>storage.run(normalizeLifecycleContext(input),work);
 const meaningful=context=>Object.values(context).some(value=>value!=='0');
-const setContext=(client,context)=>client.$queryRawUnsafe("SELECT set_config('mws.lifecycle_generations',$1,true)",JSON.stringify(context));
+// SET LOCAL is a utility statement: unlike SELECT set_config it does not
+// acquire a snapshot before a caller's SET TRANSACTION READ ONLY/ISOLATION.
+// E-string escaping is explicit for both backslashes and single quotes.
+const setContext=(client,context)=>client.$executeRawUnsafe(`SET LOCAL "mws.lifecycle_generations" = E'${JSON.stringify(context).replaceAll('\\','\\\\').replaceAll("'","\\'")}'`);
 
 // Uses public Prisma promises and batch/callback transactions only. No private
 // transaction IDs, extensions or session-level settings cross connection pools.

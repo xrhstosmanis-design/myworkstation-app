@@ -1,3 +1,4 @@
+import {lifecycleDemoSeedDisabled,lifecycleDemoSeedExclusions} from "./services/store-lifecycle-demo-seed.js";
 import {applyDailyRegulatedOnlinePrice} from "../../shared/daily-regulated-pricing.mjs";
 import {prisma} from "./prisma.js";
 import {ensureOnlineMemberSchema} from "./online-members.js";
@@ -170,6 +171,7 @@ async function ensureOnlineActorProtection(){
 async function reconcileDeliveredOnlineSales(){
   try{
     await prisma.$transaction(async tx=>{
+      const excluded=await lifecycleDemoSeedExclusions(tx);
       await tx.$executeRawUnsafe(`
         WITH delivered AS (
           SELECT o."saleId",
@@ -182,21 +184,21 @@ async function reconcileDeliveredOnlineSales(){
             WHERE e."orderId"=o."id" AND e."toStatus"='DELIVERED' AND e."employeeId" IS NOT NULL
             ORDER BY e."createdAt" DESC LIMIT 1
           ) ev ON TRUE
-          WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
+          WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL AND NOT (o."storeId"=ANY($1::text[]))
         )
         UPDATE "Sale" s
         SET "operatorEmployeeId"=COALESCE(d."employeeId",s."operatorEmployeeId"),
             "createdAt"=COALESCE(d."postedAt",s."createdAt")
         FROM delivered d
         WHERE s."id"=d."saleId"
-      `);
+      `,excluded);
 
       await tx.$executeRawUnsafe(`
         WITH delivered AS (
           SELECT o."id" AS "orderId",o."saleId",o."storeId",o."companyId",o."orderNumber",o."paymentMethod",o."total",
                  COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
           FROM "OnlineOrder" o
-          WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
+          WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL AND NOT (o."storeId"=ANY($1::text[]))
         ), resolved AS (
           SELECT d.*,cs."id" AS "sessionId",COALESCE(oa."actorId",cs."openedBy") AS "actorId",COALESCE(cs."openedByName",'Online') AS "actorName"
           FROM delivered d
@@ -230,14 +232,14 @@ async function reconcileDeliveredOnlineSales(){
         WHERE t."companyId"=r."companyId"
           AND t."storeId"=r."storeId"
           AND t."description" ILIKE ('%' || r."orderNumber" || '%')
-      `);
+      `,excluded);
 
       await tx.$executeRawUnsafe(`
         WITH delivered AS (
           SELECT o."id" AS "orderId",o."saleId",o."storeId",o."companyId",o."orderNumber",o."paymentMethod",o."total",
                  COALESCE(o."deliveredAt",o."commercialPostedAt",o."updatedAt",o."createdAt") AS "postedAt"
           FROM "OnlineOrder" o
-          WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL
+          WHERE o."status"='DELIVERED' AND o."saleId" IS NOT NULL AND NOT (o."storeId"=ANY($1::text[]))
         ), resolved AS (
           SELECT d.*,cs."id" AS "sessionId",COALESCE(oa."actorId",cs."openedBy") AS "actorId",COALESCE(cs."openedByName",'Online') AS "actorName"
           FROM delivered d
@@ -272,7 +274,7 @@ async function reconcileDeliveredOnlineSales(){
             AND t."description" ILIKE ('%' || r."orderNumber" || '%')
         )
         ON CONFLICT ("id") DO NOTHING
-      `);
+      `,excluded);
     });
   }catch(error){console.warn("Online ordering active-shift reconcile failed:",error?.message||error)}
 }
@@ -297,6 +299,7 @@ async function ensureKatPilotDefaults(){
       s."createdAt" ASC
     LIMIT 1`;
   const store=stores[0];if(!store){console.warn("KAT online ordering bootstrap: production KAT store not found; module not auto-enabled.");return}
+  if(await lifecycleDemoSeedDisabled(prisma,{companyId:store.companyId,storeId:store.id}))return;
   await prisma.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey","active","notes","createdAt","updatedAt") VALUES (${`online-ordering-${store.companyId}`},${store.companyId},'ONLINE_ORDERING',TRUE,'KAT pilot online ordering',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT ("companyId","moduleKey") DO UPDATE SET "active"=TRUE,"notes"='KAT pilot online ordering',"updatedAt"=CURRENT_TIMESTAMP`;
   await prisma.$executeRaw`INSERT INTO "OnlineOrderingConfig" ("id","companyId","storeId","enabled","surchargeType","surchargeValue","deliveryFee","pickupEnabled","deliveryEnabled","cashEnabled","cardOnDeliveryEnabled","autoPrintOnAccept","stockCheckEnabled","publicSlug") VALUES (${`online-config-${store.id}`},${store.companyId},${store.id},TRUE,'FIXED',0.10,1.00,TRUE,TRUE,TRUE,TRUE,TRUE,FALSE,'kat') ON CONFLICT ("storeId") DO UPDATE SET "enabled"=TRUE,"publicSlug"=COALESCE("OnlineOrderingConfig"."publicSlug",'kat'),"updatedAt"=CURRENT_TIMESTAMP`;
   await prisma.$executeRaw`INSERT INTO "OnlineProductVisibility" ("id","companyId","storeId","productId","visible") SELECT md5(${store.id} || ':' || sp."productId"),${store.companyId},${store.id},sp."productId",TRUE FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" WHERE sp."storeId"=${store.id} AND sp."active"=TRUE AND p."companyId"=${store.companyId} AND p."active"=TRUE ON CONFLICT ("storeId","productId") DO NOTHING`;

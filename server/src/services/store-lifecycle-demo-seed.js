@@ -18,3 +18,11 @@ export async function runLifecycleDemoSeed(db,{companyId,storeId},seed){
  // Database lifecycle guards still arbitrate a maintenance race after this read.
  return {skipped:false,value:await seed()};
 }
+
+export async function lifecycleDemoSeedDisabled(db,scope){return (await runLifecycleDemoSeed(db,scope,()=>null)).skipped}
+export async function lifecycleDemoSeedExclusions(tx){
+ const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS name'))[0]?.name;if(!schema)throw Error('Demo seed lifecycle schema unavailable.');
+ const exists=(await tx.$queryRawUnsafe('SELECT to_regclass($1)::text AS name',q(schema)+'."StoreLifecycleFence"'))[0]?.name;
+ if(!exists)return [];
+ return (await tx.$queryRawUnsafe(`SELECT "storeId" FROM ${q(schema)}."StoreLifecycleFence" WHERE "maintenance" OR "retired" OR "generation">0 ORDER BY "storeId"`)).map(row=>row.storeId);
+}

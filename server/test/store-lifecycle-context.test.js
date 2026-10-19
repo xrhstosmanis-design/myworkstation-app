@@ -7,7 +7,8 @@ function fixture(){
  const lazy=fn=>({then(resolve,reject){return Promise.resolve().then(fn).then(resolve,reject)}});
  const client={
   sale:{findMany:()=>lazy(()=>[]),create:args=>lazy(()=>{events.push({kind:'write',setting:{...setting},args});return args.data}),findUnique:()=>Object.assign(lazy(()=>({id:'sale'})),{lines:()=>lazy(()=>[{id:'line'}])})},
-  $queryRawUnsafe:(sql,value)=>lazy(()=>{if(sql.startsWith('SELECT set_config')){setting=JSON.parse(value);events.push({kind:'set',setting:{...setting}});return [{set_config:value}]}events.push({kind:'raw',setting:{...setting}});return [{ok:true}]}),
+  $executeRawUnsafe:sql=>lazy(()=>{assert.match(sql,/^SET LOCAL "mws\.lifecycle_generations" = E'/);const encoded=sql.slice(sql.indexOf("E'")+2,-1).replace(/\\(['\\])/g,'$1');setting=JSON.parse(encoded);events.push({kind:'set',setting:{...setting}});return 0}),
+  $queryRawUnsafe:sql=>lazy(()=>{events.push({kind:'raw',setting:{...setting}});return [{ok:true}]}),
   async $transaction(work,options){events.push({kind:'begin',options});try{return typeof work==='function'?await work(client):await work.reduce(async(result,query)=>[...await result,await query],Promise.resolve([]))}finally{setting={};events.push({kind:'end'})}},
   $disconnect:()=>Promise.resolve()
  };
@@ -16,7 +17,7 @@ function fixture(){
 
 test('request epochs are validated, immutable and isolated across concurrent async work',async()=>{
  const input={target:'1'};await withLifecycleContext(input,async()=>{input.target='9';assert.equal(lifecycleContext().target,'1');assert.ok(Object.isFrozen(lifecycleContext()));await Promise.all([withLifecycleContext({sibling:'2'},async()=>{await Promise.resolve();assert.equal(lifecycleContext().sibling,'2')}),Promise.resolve().then(()=>assert.equal(lifecycleContext().target,'1'))])});assert.deepEqual(lifecycleContext(),{});
- for(const input of [[],{target:1},{target:'-1'},{target:'9223372036854775808'},{'':'1'},{target:null}])assert.throws(()=>normalizeLifecycleContext(input));
+ for(const input of [[],{target:1},{target:'-1'},{target:'9223372036854775808'},{'':'1'},{target:null},{['bad\0store']:'1'}])assert.throws(()=>normalizeLifecycleContext(input));
 });
 test('root mutations carry their creation epoch transaction-locally and preserve results',async()=>{
  const f=fixture();const old=f.db.sale.create({data:{id:'old'}});const fresh=withLifecycleContext({target:'1'},()=>f.db.sale.create({data:{id:'fresh'}}));
@@ -46,6 +47,8 @@ test('native public Prisma raw, callback and mixed-epoch batches bind the origin
   const first=withLifecycleContext({target:'2'},()=>current(db)),legacy=current(db),last=withLifecycleContext({sibling:'4'},()=>current(db));
   assert.deepEqual((await db.$transaction([first,legacy,last],{isolationLevel:'Serializable'})).map(rows=>rows[0].context),[{target:'2'},{},{sibling:'4'}]);
   await assert.rejects(withLifecycleContext({target:'3'},()=>db.$transaction(async tx=>{assert.deepEqual((await current(tx))[0].context,{target:'3'});throw Error('rollback-context')})),/rollback-context/);
+  const readonly=await withLifecycleContext({target:'5'},()=>db.$transaction(async tx=>{await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');return current(tx)},{isolationLevel:'RepeatableRead'}));assert.deepEqual(readonly[0].context,{target:'5'});
+  const unusual="store'\\\n;--";const escaped=await withLifecycleContext({[unusual]:'7'},()=>current(db));assert.deepEqual(escaped[0].context,{[unusual]:'7'});
   for(let i=0;i<8;i++)assert.deepEqual((await current(raw))[0].context,{});
  }finally{await raw.$disconnect()}
 });

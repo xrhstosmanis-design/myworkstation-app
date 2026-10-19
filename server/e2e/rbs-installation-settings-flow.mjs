@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
 import {PrismaClient} from "@prisma/client";
 const db=new PrismaClient(),base=process.env.E2E_BASE_URL||"http://127.0.0.1:8080";
+const isolated=(()=>{try{const database=new URL(process.env.DATABASE_URL),http=new URL(base);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(database.hostname)&&/test/i.test(database.pathname)&&['localhost','127.0.0.1'].includes(http.hostname)}catch{return false}})();
+if(!isolated)throw new Error('Isolated localhost test database and HTTP server required.');
 async function request(path,{token,method="GET",body}={}){
   const response=await fetch(base+path,{method,headers:{...(token?{authorization:`Bearer ${token}`}:{ }),...(body?{"content-type":"application/json"}:{})},body:body?JSON.stringify(body):undefined});
   return {status:response.status,body:await response.json()};
@@ -97,7 +99,28 @@ try{
   const legacySingle=await request('/api/cloud/v1/pair',{method:'POST',body:{code:legacyCode.body.code,deviceName:'Old Diadochou-style control',platform:'WINDOWS_RBS_CAPDRIVER_V1'}});assert.equal(legacySingle.status,201);
   const singleStatus=await request(status,{token:legacySingle.body.token,method:'POST',body:{}});assert.equal(singleStatus.status,200);assert.equal(singleStatus.body.terminalPos,'SINGLE-01');
   const singleNext=await request(next,{token:legacySingle.body.token,method:'POST',body:{}});assert.equal(singleNext.status,200);assert.equal(singleNext.body.request,null);
+  // A retained legacy Writer has no epoch header: only the server's locked
+  // persisted request can authorize its new generation. No CAP file is written.
+  await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreLifecycleFence" ("storeId" text PRIMARY KEY,"companyId" text NOT NULL,"generation" bigint NOT NULL DEFAULT 0,"maintenance" boolean NOT NULL DEFAULT false,"retired" boolean NOT NULL DEFAULT false,"operationId" text,"planHash" text NOT NULL)`);
+  const oldPrepared='ci-old-epoch-'+company.id,freshPrepared='ci-new-epoch-'+company.id,guard='ci_rbs_epoch_'+company.id;
+  for(const [id,epoch] of [[oldPrepared,'0'],[freshPrepared,'1']])await db.$executeRaw`INSERT INTO "RbsCapDriverV1Request" ("id","companyId","storeId","terminalPos","clientTransactionId","requestHash","checkoutJson","paymentMethod","total","commandText","commandHash") VALUES (${id},${company.id},${store.id},'POS-02',${id},'ci',${JSON.stringify({lifecycleGeneration:epoch})}::jsonb,'CARD',0.01,'CI NEVER DISPATCH','ci')`;
+  await db.$executeRaw`INSERT INTO "StoreLifecycleFence" ("storeId","companyId","generation","planHash") VALUES (${store.id},${company.id},1,${'e'.repeat(64)})`;
+  const q=name=>'"'+String(name).replaceAll('"','""')+'"';
+  try{
+    await db.$executeRawUnsafe(`CREATE FUNCTION ${q(guard)}() RETURNS trigger LANGUAGE plpgsql AS $$ DECLARE expected text; BEGIN SELECT "generation"::text INTO expected FROM "StoreLifecycleFence" WHERE "storeId"=NEW."storeId"; IF expected IS NOT NULL AND COALESCE(NULLIF(current_setting('mws.lifecycle_generations',true),'')::jsonb->>NEW."storeId",'0')<>expected THEN RAISE EXCEPTION 'CI_UNTAGGED_DEVICE_MUTATION' USING ERRCODE='55000'; END IF; RETURN NEW; END $$`);
+    for(const table of ['CloudDevice','RbsCapDriverV1Request'])await db.$executeRawUnsafe(`CREATE TRIGGER ${q(guard)} BEFORE INSERT OR UPDATE ON ${q(table)} FOR EACH ROW EXECUTE FUNCTION ${q(guard)}()`);
+    const freshClaim=await request(next,{token:two.body.token,method:'POST',body:{}});assert.equal(freshClaim.status,200,JSON.stringify(freshClaim.body));assert.equal(freshClaim.body.request.id,freshPrepared);
+    assert.equal((await request(next,{token:two.body.token,method:'POST',body:{}})).body.request,null,'Old prepared commands must not be promoted');
+    const oldAck=await request(`/api/cloud/v1/device/rbs-capdriver-v1/${ids[0]}/dispatch-result`,{token:two.body.token,method:'POST',body:{result:'UNCERTAIN'}});assert.equal(oldAck.status,409);assert.equal(oldAck.body.code,'STORE_LIFECYCLE_STALE_GENERATION');
+    const newAck=await request(`/api/cloud/v1/device/rbs-capdriver-v1/${freshPrepared}/dispatch-result`,{token:two.body.token,method:'POST',body:{result:'UNCERTAIN'}});assert.equal(newAck.status,200,JSON.stringify(newAck.body));assert.equal(newAck.body.request.status,'REQUIRES_CHECK');
+    assert.equal((await db.$queryRaw`SELECT "status" FROM "RbsCapDriverV1Request" WHERE "id"=${oldPrepared}`)[0].status,'PREPARED');
+    assert.equal((await request(next,{token:legacySingle.body.token,method:'POST',body:{}})).status,200,'Sibling legacy generation zero remains usable');
+    await db.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=true WHERE "storeId"=${store.id}`;
+    const paused=await request(next,{token:two.body.token,method:'POST',body:{}});assert.equal(paused.status,409);assert.equal(paused.body.code,'STORE_LIFECYCLE_MAINTENANCE');
+  }finally{
+    for(const table of ['CloudDevice','RbsCapDriverV1Request'])await db.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${q(guard)} ON ${q(table)}`);await db.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${q(guard)}()`);await db.$executeRaw`DELETE FROM "StoreLifecycleFence" WHERE "storeId"=${store.id}`;
+  }
   await db.companyModule.updateMany({where:{companyId:company.id,moduleKey:'CONNECTOR_RBS'},data:{active:false}});
   assert.equal((await request(next,{token:two.body.token,method:'POST',body:{}})).status,403,'Module checks still precede claims');
-  console.log("RBS installation HTTP E2E PASS: per-terminal packages, signed binding, concurrent exact-terminal claims, legacy multi-register denial, heartbeat forgery rejection, stale settings and module isolation.");
+  console.log("RBS installation HTTP E2E PASS: per-terminal packages, signed binding, concurrent exact-terminal claims, legacy multi-register denial, heartbeat forgery rejection, stale settings/module isolation and retained Writer epoch1 claims/acknowledgments with stale0 and maintenance refusal.");
 }finally{await db.$disconnect()}
