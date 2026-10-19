@@ -10,6 +10,8 @@ import {decryptStoreIntegrationCredentials,ensureStoreIntegrationSchema} from ".
 import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../mydata-xml.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
 import {acquireOriginal} from "../mydata-original.js";
+import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
+import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../services/store-lifecycle-generation.js';
 
 const router=Router();
 let schemaPromise;
@@ -65,15 +67,22 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
 }catch(error){next(error)}});
 
 const syncInFlight=new Map(),syncStatus=new Map();
-export function syncMyDataStore(req){
+const syncStatusKey=(companyId,storeId,generation)=>JSON.stringify([companyId,storeId,generation]);
+export function syncMyDataStore(req,{db=prisma}={}){
   assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:req.body.storeId});
-  const key=String(req.user.companyId)+":"+String(req.body.storeId);
+  const scope={companyId:req.user.companyId,storeId:req.body.storeId};
+  if(typeof scope.companyId!=='string'||!scope.companyId||typeof scope.storeId!=='string'||!scope.storeId)throw syncError('Απαιτείται συγκεκριμένη εταιρεία και κατάστημα.',400);
+  const generation=lifecycleContext()[scope.storeId]??'0',key=syncStatusKey(scope.companyId,scope.storeId,generation);
   if(syncInFlight.has(key))return syncInFlight.get(key);
-  const run=prisma.$transaction(async lock=>{
-    const held=await lock.$queryRaw`SELECT pg_try_advisory_xact_lock(hashtextextended(${"mydata:"+key},0)) AS "held"`;
+  let admitted=false;
+  const run=db.$transaction(async lock=>{
+    const held=await lock.$queryRaw`SELECT pg_try_advisory_xact_lock(hashtextextended(${lifecycleMyDataLockKey(scope)},0)) AS "held"`;
     if(!held[0]?.held)throw syncError("Υπάρχει ήδη λήψη myDATA σε εξέλιξη.",409);
+    assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:req.body.storeId});
+    if(req.user.companyId!==scope.companyId||req.body.storeId!==scope.storeId)throw syncError('Η επιλογή καταστήματος άλλαξε πριν από τη λήψη.',409);
+    await assertLifecycleMutation(lock,scope,generation);admitted=true;
     return performSync(req);
-  },{timeout:3600000,maxWait:5000}).then(result=>{syncStatus.set(key,{lastSyncAt:new Date().toISOString(),lastSyncError:null});return result},error=>{syncStatus.set(key,{...syncStatus.get(key),lastSyncError:"Ο τελευταίος έλεγχος δεν ολοκληρώθηκε."});throw error}).finally(()=>syncInFlight.delete(key));
+  },{timeout:3600000,maxWait:5000}).then(result=>{syncStatus.set(key,{lastSyncAt:new Date().toISOString(),lastSyncError:null});return result},error=>{if(admitted)syncStatus.set(key,{...syncStatus.get(key),lastSyncError:"Ο τελευταίος έλεγχος δεν ολοκληρώθηκε."});throw error}).finally(()=>syncInFlight.delete(key));
   syncInFlight.set(key,run);return run;
 }
 async function performSync(req){
@@ -153,7 +162,11 @@ export async function runMyDataReceivingSweep(){
         const owners=await prisma.$queryRaw`SELECT u."id" FROM "User" u WHERE u."role"='OWNER' AND (u."companyId"=${target.companyId} OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=${target.companyId})) ORDER BY u."id" LIMIT 1`;
         const owner=owners[0];
         if(!owner)continue;
-        await syncMyDataStore({user:{id:owner.id,companyId:target.companyId},body:{storeId:target.storeId},license:state});
+        const lifecycle=await prisma.$transaction(tx=>readLifecycleGeneration(tx,target));
+        if(lifecycle.maintenance||lifecycle.retired)continue;
+        // No frozen browser payload is promoted: the service reloads current
+        // credentials/cursor inside its existing locked receiving transaction.
+        await withLifecycleContext({[target.storeId]:lifecycle.generation},()=>syncMyDataStore({user:{id:owner.id,companyId:target.companyId},body:{storeId:target.storeId},license:state}));
       }catch{console.warn("myDATA scheduled receiving failed; review the store integration status.")}}
     }catch{console.warn("myDATA scheduled receiving unavailable.")}finally{workerBusy=false}
 }
@@ -168,7 +181,8 @@ router.get("/documents/mydata/status",requireCompanyModule("DOCUMENTS"),async(re
   const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   const configured=await prisma.$queryRaw`SELECT "environment","enabled" FROM "StoreIntegrationCredential" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "kind"='MYDATA' LIMIT 1`;
   const stats=await prisma.$queryRaw`SELECT COUNT(*)::int AS "documents",MAX("fetchedAt") AS "lastSyncAt" FROM "MyDataInboundDocument" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id}`;
-  const row=configured[0];res.json({configured:Boolean(row),enabled:Boolean(row?.enabled),environment:row?.environment||null,labLocked:!["SANDBOX","PRODUCTION"].includes(row?.environment),documents:stats[0]?.documents||0,lastSyncAt:syncStatus.get(req.user.companyId+":"+store.id)?.lastSyncAt||null,lastReceivedAt:stats[0]?.lastSyncAt||null,lastSyncError:syncStatus.get(req.user.companyId+":"+store.id)?.lastSyncError||null,serverAutomatic:row?.environment==="PRODUCTION",automaticIntervalMinutes:15,stockUpdated:false});
+  const lifecycle=await prisma.$transaction(tx=>readLifecycleGeneration(tx,{companyId:req.user.companyId,storeId:store.id})),status=syncStatus.get(syncStatusKey(req.user.companyId,store.id,lifecycle.generation));
+  const row=configured[0];res.json({configured:Boolean(row),enabled:Boolean(row?.enabled),environment:row?.environment||null,labLocked:!["SANDBOX","PRODUCTION"].includes(row?.environment),documents:stats[0]?.documents||0,lastSyncAt:status?.lastSyncAt||null,lastReceivedAt:stats[0]?.lastSyncAt||null,lastSyncError:status?.lastSyncError||null,serverAutomatic:row?.environment==="PRODUCTION",automaticIntervalMinutes:15,stockUpdated:false});
 }catch(error){next(error)}});
 
 export default router;

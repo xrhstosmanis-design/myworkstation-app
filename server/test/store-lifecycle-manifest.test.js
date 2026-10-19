@@ -12,7 +12,7 @@ test('canonical new-start manifest covers reviewed ownership and retains both in
  for(const col of metadata.columns.filter(c=>c.name==='storeId'))assert.equal(nodes.get(col.table)?.owner.kind,'DIRECT',col.table);
  for(const name of ['Company','CompanyModule','Product','MasterProduct','User','UserSession','Supplier','ProviderConnection','WholesaleCustomer','WorkforceRole','PlatformPosDraft'])assert.equal(nodes.has(name),false,name);
  for(const name of ['StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice','StoreRbsInstallationSettings','CloudDevice','CloudDeviceCursor','ConnectorDevice','StorePaidModule','NetlinkStoreConfig'])assert.equal(nodes.get(name)?.reset,'KEEP',name);
- for(const name of ['Employee','WorkforceEmployee','WorkforceEmployeeStoreAccess','CashShiftSession','Sale','Payment','FiscalDocument','StoreProduct','StockMovement','Stocktake','StoreOperatorCredential','StoreOperatorSession','ShiftType','InventoryZone'])assert.equal(nodes.get(name)?.reset,'REMOVE',name);
+ for(const name of ['Employee','WorkforceEmployee','WorkforceEmployeeStoreAccess','CashShiftSession','Sale','Payment','FiscalDocument','StoreProduct','StockMovement','Stocktake','StoreOperatorCredential','StoreOperatorSession','ShiftType','InventoryZone','AiReaderJob','PosInvoiceBackgroundTask'])assert.equal(nodes.get(name)?.reset,'REMOVE',name);
  assert.deepEqual(nodes.get('ProviderOutbox').owner.match,{aggregateType:'DISPATCH_NOTE'});
  assert.equal(nodes.get('StoreIntegrationCredential').reset,'REMOVE');assert.deepEqual(m.valueGuards,[{table:'StoreIntegrationCredential',column:'kind',allowed:['MYDATA','VAT_LOOKUP']}]);
  assert.equal(nodes.get('WorkforceEmployee').owner.kind,'BASE_STORE');

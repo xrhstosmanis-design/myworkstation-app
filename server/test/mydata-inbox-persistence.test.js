@@ -1,3 +1,5 @@
+import {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey} from '../src/services/store-lifecycle-generation.js';
+import {lifecycleContext,withLifecycleContext} from '../src/services/store-lifecycle-context.js';
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../src/customer-demo-runtime.js";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
@@ -10,6 +12,7 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
   let matchingSupplier=true,alreadyExists=false,pendingOriginals=[];
   const acquired=[];
   const tx={
+    async $queryRawUnsafe(sql){assert.match(sql,/current_schema/);return [{schema:'public',fence:null}]},
     async $queryRaw(strings,...values){
       const sql=strings.join("?");queries.push({sql,values});
       if(sql.includes("pg_try_advisory_xact_lock"))return [{held:true}];
@@ -32,9 +35,9 @@ test("real sync handler uses raw Supplier lookup and writes one draft, including
     async $transaction(callback){return callback(tx)}
   };
   const key="__mydataPersistenceTest";
-  globalThis[key]={assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal:async(...args)=>{acquired.push(args);return {downloaded:true}},Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(){}}),...xmlHelpers};
+  globalThis[key]={assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal:async(...args)=>{acquired.push(args);return {downloaded:true}},Router:()=>({post(path,...handlers){routes.set(path,handlers.at(-1))},get(){}}),...xmlHelpers};
   const injected=`import crypto from "node:crypto";
-    const {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
+    const {assertLifecycleMutation,readLifecycleGeneration,lifecycleMyDataLockKey,lifecycleContext,withLifecycleContext,assertCustomerDemoOutboundAllowed,isCustomerDemoTenant,prisma,acquireOriginal,Router,invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml}=globalThis.${key};
     const requireCompanyModule=()=>()=>{};
     const ensureStoreIntegrationSchema=async()=>{};
     const decryptStoreIntegrationCredentials=()=>({accountId:"fixture",secret:"fixture"});\n`;
