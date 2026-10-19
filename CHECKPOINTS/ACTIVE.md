@@ -8,9 +8,13 @@ Authoritative boundary: technical source/CI acceptance only; actual installed PC
 
 
 
-## 20/10/2026 00:14 Europe/Athens — KAT-BACKGROUND-02 / ASSIGNED BEFORE SOURCE
+## 20/10/2026 00:51 Europe/Athens — KAT-BACKGROUND-02 / LIMITED LIVE DESKTOP VISUAL PASS / COMPLETED
 
-Owner fix/kat-background-20261020. User explicitly requests stronger background, one or two olive tones below existing olive. Independent visual follow-up to completed KAT-BRANDING-01. Bounded change ONLY existing exact-KAT-scoped body background #f5f3e9 to soft olive #cbd3b5; preserve cream product/header cards, orange buttons, logo, navigation, all scripts, categories/search/reset, catalogue/prices/order/auth/member/stock/fiscal and other stores. Previous actual desktop PASS on0484 retained; new shade NOT TESTED. Require full PR/main CI, normal guarded exact release and actual read-only public visual/category/search acceptance. No production config/data/transaction writes or new automated tests for this reversible CSS-only adjustment. Checkpoint CHECKPOINTS/CHANGES/2026-10-20-kat-background.md. Other owners unchanged.
+Owner fix/kat-background-20261020. ClaimPR2907/bf894d1/docsCI39325681910 green mergedf00356f BEFORE source. SourcePR2908 initial0674e54/CI39325879053 SUCCESS; shared-record conflict resolved against464178e preserving other owners, source note moved after shared records to avoid prepend conflicts. Finalhead54d74aa64336064257dd5c0ee946efa935494ea2/fullPRCI39327413335 SUCCESS, mergedf2a3b79a145f7f80331280384066ec78c29ec230. Exact mainCI39328665510 SUCCESS all jobs. Ordinary guarded release39330143576/job118326018997 SUCCESS; browser health oktrue exactf2a3b79a145f7f80331280384066ec78c29ec230.
+
+Actual Cloud Chrome desktop /online/kat00:50-00:51: body visibly soft olive#cbd3b5 / computedrgb203,211,181, cream cards#fffdf7 /rgb255,253,247; approved logo uncropped, orange buttons and darkolive navigation retained.7categories/27coffee cards and empty basket0.00. Screenshot CHECKPOINTS/EVIDENCE/kat-background-20261020/online-desktop.jpg. Exactly one CSS declaration changed versus accepted KAT branding; all4script blocks byte-identical. Focused existing tests12PASS/0FAIL/0SKIP and frontend build PASS locally; full required CI as above. No new tests for reversible one-color adjustment. No order/payment/member/settings/catalogue/stock/fiscal or database write.
+
+Completed only requested outer-background visual adjustment. Prior KAT-BRANDING-01 desktop/category/search acceptance retained without replay; new mobile/touch/physical-device, saved-credential autofill, checkout/member/fiscal acceptance NOT TESTED here and other owners unchanged. Public visitors use /online/kat; refresh an older open page to receive new background, then wait for catalogue. No new role/access permission. This is not whole Online Gate PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-20-kat-background.md; manual docs/manual/online-delivery/PASS.md. Canonical tracker and numbered PDFs regenerated in same receipt.
 
 ## 20/10/2026 00:00 Europe/Athens - WHOLESALE-COMMERCIAL-ONLINE-01 / ASSIGNED BEFORE SOURCE
 
@@ -989,8 +993,4 @@ Owner codex/ai-credit-alerts-20261009. Independent new owner-authorized low-cred
 - Μία παραγγελία Γύρου 1 στο `ΤΡΑΠΕΖΙ LAB 1` διαχωρίστηκε σε `ΚΑΦΕ 1` και `ΚΟΥΖΙΝΑ 1`, ολοκληρώθηκε ανά πόστο και πληρώθηκε μία φορά μετρητά. Πώληση `b408a720-967c-4f72-9862-be56bc2485fd`, 3,00 €. Βάρδια MAIN 0→3,00 € / 0→1 συναλλαγή, LAB-POS-02 αμετάβλητη, τοπική ουρά 0, stock καφέ και τοστ 0→-1.
 - Αναλυτικό checkpoint: `CHECKPOINTS/CHANGES/2026-09-27-table-service-restaurant-takeover.md`.
 - Modifiers και ελεύθερη σημείωση είδους: **production LAB PASS** μετά τα PR #1428 και #1430· εμφανίστηκαν μαζί στην ουρά `ΚΑΦΕ` και το δελτίο ολοκληρώθηκε. Οικονομικά/stock αμετάβλητα, χωρίς πώληση ή πληρωμή. Αλλεργιογόνα ως first-class πεδίο παραμένουν OPEN.
-
-## 20/10/2026 00:15 Europe/Athens — KAT-BACKGROUND-02 / SOURCE PREPARED / AWAITING CI AND LIVE
-
-Same retained owner fix/kat-background-20261020. Claim PR2907/headbf894d1/CI39325681910 green mergedf00356f before source. Exactly one CSS declaration changed: KAT-only body background #f5f3e9→#cbd3b5. Existing branding, product/card backgrounds and all scripts byte-identical. No new tests for reversible cosmetic change; existing scoped branding/public UI regressions and frontend build required. Full exact PR/main CI and ordinary guarded release then read-only public visual acceptance pending. No transactional/config/data writes; no manual/mobile/checkout PASS inferred.
 
