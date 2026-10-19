@@ -1,0 +1,64 @@
+{
+  "apk_sha256": "f77fcdc63fddf6d6814c831a2d85b874c1bab71d57b3cf739e3cdf254957f232",
+  "apk_bytes": 3654376,
+  "signer_sha256": "47ef4893b0e133a1644f48bf7a10106785a54d0a7942d83c168098e2a4a99a88",
+  "manifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "versionCode": 7,
+    "versionName": "0.1.6-preview"
+  },
+  "apk_v2_rsa_and_full_content_digest": "verified",
+  "test_gallery_provider_in_app_manifest": false,
+  "owner": "feat/android-chat-native-20261017",
+  "status": "TECHNICAL PASS / AWAITING CAMERA DEVICE",
+  "claim_pr": 2855,
+  "claim_merge": "a210bc615aabc8d6d036defac5add974bb698bdc",
+  "source_pr": 2857,
+  "source_head": "1d74ca63e62ee1ab1e094a41ae15d598fd6ab508",
+  "merge_commit": "a8ae40b2d913b7e5e68e5f3f1c6ec77b9ef9a0b5",
+  "android_tree": "3b48000897eec4be9e1592fc27fb981621b559ef",
+  "full_pr_ci": {
+    "run": 39292829376,
+    "job": 118197962433,
+    "status": "SUCCESS",
+    "pass": 3459,
+    "fail": 0,
+    "skip": 0,
+    "backup_pass": 6
+  },
+  "android_ci": {
+    "run": 39292829379,
+    "job": 118197607651,
+    "status": "SUCCESS",
+    "unit_pass": 23,
+    "instrumentation_pass": 19,
+    "fail": 0,
+    "compile_lint": "SUCCESS"
+  },
+  "artifact": {
+    "id": 12207650641,
+    "zip_bytes": 3475891,
+    "zip_sha256": "76c75045112b2785f68aff146a6bba3cbfb8e3bb438aa824494ae49fc95b5d4b"
+  },
+  "main_ci": {
+    "run": 39294002130,
+    "job": 118201967531,
+    "status": "SUCCESS",
+    "pass": 3459,
+    "fail": 0,
+    "skip": 0,
+    "backup_pass": 6
+  },
+  "gallery_result": "LIMITED USER PASS 2026-10-19 20:02 Europe/Athens, existing gallery images; no repeat for paperwork",
+  "camera_result": "USER FAIL before this change: two camera attempts send only last. New build hardware/physical acceptance NOT TESTED.",
+  "single_next_action": "Install exact0.1.6; in ONE camera session take first and second photos, tap Use2 photos, then explicit Send once after refresh; verify both at Admin.",
+  "public_distribution": "unchanged by this page; last observed0.1.3-preview",
+  "server_deployment_by_this_page": false,
+  "real_message_read_push_business_actions_by_this_page": false,
+  "delivery": {
+    "library_file_id": "libfile_a30159b8f9c08191939dd9f9c647a147",
+    "file_id": "file_00000000a4f88246a73cab0911e19fb2",
+    "version": 8,
+    "file_name": "MyWorkStation-Chat-Android-0.1.6-Preview.apk"
+  }
+}
