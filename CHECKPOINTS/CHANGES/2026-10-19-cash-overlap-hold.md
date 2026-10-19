@@ -1,3 +1,7 @@
+## 19/10/2026 13:01 Europe/Athens - SOURCE LIVE / AWAITING LAB
+
+Η τεχνική παράδοση ολοκληρώθηκε με full PR/main native CI και ordinary guarded release, exact active revisionfb11a314ec1414658d0840a61f812f42058aa5a0. Δεν είναι νέο LAB PASS. Τα ιστορικά CI/RELEASE PENDING παρακάτω αντικαθίστανται ως προς την τεχνική έκδοση. Συγκεντρωτική τελική καταγραφή/υπόλοιπα: CHECKPOINTS/CHANGES/2026-10-19-central-overlap-unit-ui.md.
+
 ## 19/10/2026 - COORD PHASE5 CASH OVERLAP SOURCE PREPARED / AWAITING FULL CI AND LAB
 
 Claim#2821 head7297ea78619f8bda0985c7a74ef83ba2875237a0 / CI39226616765 SUCCESS / mergedfab4330e2b0bda43279a89675de76759e81ec12a BEFORE edits. Read-only readiness now holds strict positive overlap among valid CLOSED intervals on the same terminal; copy-sort/running maximum preserves nested detection, adjacent endpoints, empty intervals, different-terminal concurrency and original input order. Existing SOURCE_SCOPE_OR_ID_INVALID reason/UI is reused. Daily/weekly/monthly source suppresses groups and monthly opening-user summary, without altering PROVISIONAL financial finality or original amounts/records.
