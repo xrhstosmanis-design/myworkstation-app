@@ -16,6 +16,14 @@ rejection and redirects, fail immediately. Exhausted delivery is still a job
 failure; it does not prove a backup succeeded. A dump failure is not retried,
 to avoid repeating database load during an incident.
 
+The upload command alone uses AWS standard retry mode with at most eight total
+attempts per SDK request, including the first request. Transient multipart
+UploadPart failures can recover within the same upload identity; the entire
+`aws s3 cp` command and database dump are never repeated. Permanent errors still
+fail immediately under the SDK policy; exhausted retries remain UPLOAD_FAILED.
+The setting does not change recovery-worker clients, schedules, credentials,
+bucket security, archive/HeadObject verification or monitoring requirements.
+
 Run the isolated command-fake regression with
 `node --test ops/backup/test/monitor-delivery-retry.test.mjs`. This tests status
 delivery and job control flow; it does not test a real archive, upload or restore.

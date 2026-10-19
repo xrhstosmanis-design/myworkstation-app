@@ -10,7 +10,7 @@ const job=fileURLToPath(new URL("../run-backup.sh",import.meta.url));
 
 // Execute the real shell flow. All network/database/storage commands are fakes;
 // openssl signs real HMACs, checked independently by the fake receiver.
-function runJob({responses={},dumpFails=false}={}) {
+function runJob({responses={},dumpFails=false,uploadFails=false}={}) {
   const dir=mkdtempSync(join(tmpdir(),"backup-retry-test-"));
   try {
     const stub=join(dir,"command.cjs");
@@ -39,7 +39,8 @@ else if(command==='curl') {
   const response=options[count]||{http:'200',code:0};
   process.stdout.write(response.http);process.exit(response.code);
 } else if(command==='aws') {
-  log({command,operation:args.slice(0,2).join(' ')});
+  log({command,operation:args.slice(0,2).join(' '),retryMode:process.env.AWS_RETRY_MODE,maxAttempts:process.env.AWS_MAX_ATTEMPTS});
+  if(args[0]==='s3'&&args[1]==='cp'&&process.env.FAKE_UPLOAD_FAIL==='1') process.exit(17);
   if(args[1]==='get-bucket-versioning') console.log('Enabled');
   if(args[1]==='head-object') console.log(Buffer.byteLength('fake archive\\n'));
 } else if(command==='pg_dump') {
@@ -59,7 +60,8 @@ else if(command==='curl') {
       AWS_REGION:"synthetic",S3_BUCKET_NAME:"synthetic",S3_ENDPOINT_URL:"https://synthetic.invalid",
       BACKUP_MONITOR_URL:"https://synthetic.invalid/private-token",
       BACKUP_MONITOR_SECRET:"synthetic-test-secret-never-production",
-      FAKE_DIR:dir,FAKE_LOG:join(dir,"events.jsonl"),FAKE_RESPONSES:JSON.stringify(responses),FAKE_DUMP_FAIL:dumpFails?"1":"0"
+      AWS_RETRY_MODE:"legacy",AWS_MAX_ATTEMPTS:"1",
+      FAKE_DIR:dir,FAKE_LOG:join(dir,"events.jsonl"),FAKE_RESPONSES:JSON.stringify(responses),FAKE_DUMP_FAIL:dumpFails?"1":"0",FAKE_UPLOAD_FAIL:uploadFails?"1":"0"
     }});
     assert.equal(result.error,undefined);
     const events=readFileSync(join(dir,"events.jsonl"),"utf8").trim().split("\n").map(JSON.parse);
@@ -123,4 +125,27 @@ test("redirect cannot silently acknowledge STARTED or begin an export",()=>{
   assert.equal(r.status,1);assert.equal(deliveries(r,"STARTED").length,1);
   assert.equal(deliveries(r,"FAILED")[0].body.errorCode,"MONITOR_START_NOTIFY_FAILED");
   assert.equal(r.events.filter(e=>e.command==="aws"||e.command==="pg_dump").length,0);
+});
+
+test("upload alone receives bounded SDK retries; inherited settings remain on bucket and verification calls",()=>{
+  const r=runJob();
+  assert.equal(r.status,0);
+  const uploads=r.events.filter(e=>e.operation==="s3 cp");
+  assert.equal(uploads.length,1);
+  assert.equal(uploads[0].retryMode,"standard");assert.equal(uploads[0].maxAttempts,"8");
+  const other=r.events.filter(e=>e.command==="aws"&&e.operation!=="s3 cp");
+  assert.ok(other.some(e=>e.operation==="s3api head-object"));
+  assert.ok(other.every(e=>e.retryMode==="legacy"&&e.maxAttempts==="1"));
+  assert.equal(r.events.filter(e=>e.command==="pg_dump").length,1);
+});
+
+test("exhausted upload reports failure with original exit and no second dump, upload or success",()=>{
+  const r=runJob({uploadFails:true});
+  assert.equal(r.status,17);
+  assert.equal(r.events.filter(e=>e.command==="pg_dump").length,1);
+  assert.equal(r.events.filter(e=>e.operation==="s3 cp").length,1);
+  assert.equal(r.events.filter(e=>e.operation==="s3api head-object").length,0);
+  assert.equal(deliveries(r,"SUCCEEDED").length,0);
+  assert.equal(deliveries(r,"FAILED").length,1);
+  assert.equal(deliveries(r,"FAILED")[0].body.errorCode,"UPLOAD_FAILED");
 });
