@@ -538,7 +538,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `32`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
-- **Υπόλοιπο / όριο:**  19Oct22:53: πραγματικό περιορισμένο LIVE PASS Diadoxou για ιστορικό/reload/μεταφορές/νέα φίλτρα/CSV-XLSX-PDF-DOCX/ακύρωση/total sales και ακριβή ονομασία. LIVE FAIL σύντομης νέας ημέρας προϊόντος λόγω διακοσμημένου NAME(SKU). ASSIGNED fix/assistant-sales-decorated-query-20261019, ίδιος VOICE owner· διόρθωση και επανέλεγχος εκκρεμούν. Whole OPEN, Owner/mobile/λοιπά όρια χωριστά. Checkpoint2026-10-19-assistant-diadoxou-acceptance.
+- **Υπόλοιπο / όριο:** 20Oct00:54: LIMITED LIVE PASS Διαδόχου για νέο φυσικό «Σε CSV» προϊόντος με σωστή νεότερη17Oct περίοδο, φρέσκια πηγή και πραγματικά bytes. PR2911/full PR+mainCI/ordinary guard/exact healthyf2a3b79a145f7f80331280384066ec78c29ec230. Προστατευμένα ιστορικό/μεταφορές/αρχεία/ακύρωση/σύνολα/προϊόν/ιδιοκατανάλωση/Coca-Cola διατηρούνται. Ολοκληρωμένες δύο διορθώσεις αφαιρέθηκαν από pending. Whole VOICE OPEN για actual Owner/mobile/physical/ευρύτερη κάλυψη και όριο μπύρας χωρίς πραγματική κατηγορία. Ίδιος owner, καμία καθολική αριθμημένη ολοκλήρωση. Checkpoint2026-10-20-assistant-sales-export-read.
 
 ## 31 — Μηνιαία Αναφορά Ιδιοκτήτη
 
