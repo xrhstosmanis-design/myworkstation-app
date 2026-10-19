@@ -1,0 +1,58 @@
+{
+  "kind": "CI-only source acceptance; not installed-device LAB/LIVE",
+  "pr": 2912,
+  "head": "18cd03a154c76608884e22067a3cfb26e5c7d557",
+  "merge": "24e138767089672d296189b6073e6601ff520d4e",
+  "runId": 39327561161,
+  "checks": [
+    {
+      "id": 118317692201,
+      "name": "wholesale-isolated-lab",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118317692198,
+      "name": "build-and-test",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118317211804,
+      "name": "rbs-capdriver-windows-script-parse",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118317211396,
+      "name": "classify-changes",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 118317211074,
+      "name": "hikvision-preflight-windows",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "serverTests": {
+    "tests": 3580,
+    "pass": 3580,
+    "fail": 0,
+    "skipped": 0
+  },
+  "backupRecoveryTests": {
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "skipped": 0
+  },
+  "boundaries": {
+    "newHostedBusinessTransactions": 0,
+    "productionConfigurationChanges": 0,
+    "paidResources": 0,
+    "actualInstalledDevice": "NOT TESTED",
+    "fullCommercialFiscalRelease": "OPEN"
+  }
+}
