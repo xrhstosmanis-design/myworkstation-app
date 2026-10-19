@@ -36,3 +36,11 @@ test('actual read log rejects unknown tools, malformed arguments and non-array a
 });
 
 test('old exact lifecycle generation is refused before history storage or a report can start',async()=>{const f=fixture();await assert.rejects(f.service.begin({},{...metadata(),generation:'9007199254740992'},'Πληρωμές'),e=>e.code==='STORE_LIFECYCLE_STALE_GENERATION');assert.equal(f.saves.length,0)});
+
+test('history records the canonical product text actually shown by the UI, never unshown model amounts or highlights',async()=>{
+ const f=fixture();f.principal({capabilities:['stock_by_product']});const turn=await f.service.begin({},metadata(),'Απόθεμα ΝΕΡΟ');
+ await turn.finish({answer:'UNSHOWN MODEL AMOUNT 999',highlights:['UNSHOWN HIGHLIGHT 999'],limitations:'Όριο πηγής',evidence:[{kind:'product_stock',result:'matched',truncated:false,companyId:'company',storeId:'store',companyName:'Company',storeName:'Store',rows:[{productId:'p',name:'ΝΕΡΟ',sku:'2269',currentStock:12.5,unit:'KG'}]}]},[{name:'stock_by_product',args:{product:'ΝΕΡΟ'}}]);
+ const message=f.saves[0].archive.threads[0].messages[1];assert.doesNotMatch(message.content,/UNSHOWN|999/);assert.match(message.content,/12,5 κιλά/);assert.match(message.content,/Όριο πηγής/);assert.deepEqual(message.requiredCapabilities,['stock_by_product']);
+});
+
+test('a canceled or disconnected turn cannot archive a late checked answer',async()=>{for(const field of ['request','response']){const f=fixture(),req={res:{destroyed:false}},turn=await f.service.begin(req,metadata(),'Πληρωμές');if(field==='request')req.aborted=true;else req.res.destroyed=true;await assert.rejects(turn.finish({answer:'LATE CANCELED ANSWER'},[read]),e=>e.code==='ASSISTANT_HISTORY_CANCELLED');assert.equal(f.saves.length,0)}});

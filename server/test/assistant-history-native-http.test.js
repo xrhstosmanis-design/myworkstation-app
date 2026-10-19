@@ -18,7 +18,8 @@ test('native single-connection HTTP history runs actual native license/session/r
  const owner={id:'owner',role:'OWNER',companyId:'c',tokenType:'BACKOFFICE_USER',sessionId:'owner-session',sessionVersion:1};
  const administrator={id:'admin',role:'SUPER_ADMIN',isSuperAdmin:true,platformRole:'SUPER_ADMIN',companyId:'c',tokenType:'BACKOFFICE_USER',sessionId:'admin-session',sessionVersion:2};
  const signed=user=>jwt.sign(user,key,{expiresIn:'1h'}),headers=user=>({Authorization:'Bearer '+signed(user),'Content-Type':'application/json'});
- let server,providers=0,sourceReads=0;
+ let server,providers=0,sourceReads=0,holdRead=null,cancelClose=null,cancelDone=null;
+ const within=(promise,label)=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error(label)),10000);promise.then(v=>{clearTimeout(timer);resolve(v)},e=>{clearTimeout(timer);reject(e)})});
  try{
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
   for(const sql of [
@@ -39,15 +40,15 @@ test('native single-connection HTTP history runs actual native license/session/r
   await db.$executeRaw`INSERT INTO "StoreLifecycleFence" VALUES('s','c',9007199254740993,false,false)`;
   const authorize=(req,opts={})=>authorizeOwnerAssistant(req,{...opts,db:opts.db||db});
   const access=createAssistantHistoryAccess({db,mode:'owner',owner:authorize}),turns=createAssistantHistoryTurns({db,authorize:access});
-  const authenticate=(req,res,next)=>{try{req.user=jwt.verify(String(req.headers.authorization||'').replace(/^Bearer /,''),key);next()}catch{res.status(401).json({error:'Native test login required'})}};
+  const authenticate=(req,res,next)=>{if(cancelClose&&req.method==='POST')res.once('close',cancelClose);try{req.user=jwt.verify(String(req.headers.authorization||'').replace(/^Bearer /,''),key);next()}catch{res.status(401).json({error:'Native test login required'})}};
   const app=express();app.use(express.json());
   app.use('/owner',createOwnerAssistantRouter({authenticate,authorize,historyTurns:turns,providerConfigured:()=>true,provider:async settings=>{
    providers++;assert.doesNotMatch(JSON.stringify(settings),/FORGED CLIENT/);
    return providers%2?{response:{ok:true},raw:{output:[{type:'function_call',name:'cash_details',call_id:'native-read',arguments:'{"date":"2026-10-10"}'}]}}:{response:{ok:true},raw:{output_text:JSON.stringify({answer:'Native checked fixture answer',highlights:[],limitations:''})}};
-  },readCash:async(req,date,scope)=>{sourceReads++;return {...scope,scope:'OWNER_SELECTED_STORE',date,rows:[]}}}));
+  },readCash:async(req,date,scope)=>{sourceReads++;if(holdRead)await holdRead();return {...scope,scope:'OWNER_SELECTED_STORE',date,rows:[]}}}));
   const platform=createAssistantHistoryHttp({mode:'platform',turns:createNativeAssistantHistory({db,mode:'platform',enabled:()=>true})});app.get('/platform/history',authenticate,platform.load);
   const disabled=createAssistantHistoryHttp({mode:'platform',turns:createNativeAssistantHistory({db,mode:'platform',enabled:()=>false})});app.get('/platform/history-disabled',authenticate,disabled.load);
-  app.use((e,req,res,next)=>res.status(e.status||(e.name==='ZodError'?400:500)).json({error:'Rejected',code:e.code||'INVALID'}));
+  app.use((e,req,res,next)=>{if(e.code==='ASSISTANT_HISTORY_CANCELLED'&&res.destroyed){cancelDone?.();return}res.status(e.status||(e.name==='ZodError'?400:500)).json({error:'Rejected',code:e.code||'INVALID'})});
   server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
   const get=()=>fetch(base+'/owner/stores/s/history',{headers:headers(owner)});
   assert.equal((await fetch(base+'/owner/stores/s/history')).status,401);
@@ -57,7 +58,14 @@ test('native single-connection HTTP history runs actual native license/session/r
   const oldEpoch=await fetch(base+'/owner/stores/s/ask',{method:'POST',headers:headers(owner),body:JSON.stringify({...body,conversation:{...body.conversation,generation:'9007199254740992'}})});assert.equal(oldEpoch.status,409);assert.equal(providers,0);assert.equal(sourceReads,0);
   const asked=await ask();assert.equal(asked.status,200);const answer=await asked.json();assert.equal(answer.historyReceipt.saved,true);assert.equal(answer.historyReceipt.revision,1);assert.equal(providers,2);assert.equal(sourceReads,1);
   const restored=await(await get()).json();assert.match(JSON.stringify(restored),/Native checked fixture answer/);assert.doesNotMatch(JSON.stringify(restored),/FORGED CLIENT|exportTicket|evidence|password|Authorization/);assert.equal(restored.archive.threads[0].messages.length,2);
-  assert.equal((await ask()).status,409);assert.equal(providers,2);assert.equal(sourceReads,1);
+  // Abort an actual signed HTTP turn while its controlled read is awaiting.
+  // Existing provider behavior may finish, but the disconnected turn must not save.
+  let releaseRead,readStarted;const readGate=new Promise(r=>releaseRead=r),started=new Promise(r=>readStarted=r),closed=new Promise(r=>cancelClose=r),finished=new Promise(r=>cancelDone=r);
+  holdRead=async()=>{readStarted();await readGate};const controller=new AbortController();
+  const canceled=fetch(base+'/owner/stores/s/ask',{method:'POST',headers:headers(owner),signal:controller.signal,body:JSON.stringify({...body,conversation:{...body.conversation,requestId:randomUUID(),expectedRevision:1}})});const canceledResult=assert.rejects(canceled,e=>e.name==='AbortError');
+  await within(started,'Canceled report did not reach its controlled read');controller.abort();await canceledResult;await within(closed,'Actual HTTP disconnect was not observed');releaseRead();await within(finished,'Canceled turn did not reach its guarded completion');holdRead=null;cancelClose=null;cancelDone=null;
+  assert.equal(Number((await db.$queryRaw`SELECT "revision" FROM "AssistantHistoryArchive"`)[0].revision),1);assert.equal(providers,4);assert.equal(sourceReads,2);
+  assert.equal((await ask()).status,409);assert.equal(providers,4);assert.equal(sourceReads,2);
   const off=await fetch(base+'/platform/history-disabled?companyId=c&storeId=s',{headers:headers(administrator)});assert.equal(off.status,200);const offDto=await off.json();assert.equal(offDto.available,false);assert.equal(offDto.code,'ASSISTANT_HISTORY_DISABLED');
   const central=await fetch(base+'/platform/history?companyId=c&storeId=s',{headers:headers(administrator)});assert.equal(central.status,200);assert.equal((await central.json()).archive.threads.length,0,'A different personal actor/mode cannot read Owner prose');
   await db.$executeRaw`INSERT INTO "StorePaidModule" VALUES('c','s','CASH_CONTROL',false,null,null)`;const denied=await get();assert.equal(denied.status,403);assert.doesNotMatch(await denied.text(),/Native checked fixture/);
@@ -71,6 +79,6 @@ test('native single-connection HTTP history runs actual native license/session/r
    let observed=false;for(let i=0;i<200;i++){const rows=await admin.$queryRaw`SELECT 1 FROM pg_stat_activity WHERE pid=${pid} AND wait_event='advisory'`;if(rows.length){observed=true;break}await new Promise(r=>setTimeout(r,25))}assert.equal(observed,true,'Observe the actual one-connection HTTP transaction waiting on its archive lock');
    await admin.$executeRawUnsafe(`UPDATE "${schema}"."UserSession" SET "revokedAt"=NOW() WHERE "id"='owner-session'`);
   }finally{release();await holder}
-  const late=await pending;assert.equal(late.status,401);assert.doesNotMatch(await late.text(),/Native checked fixture/);assert.equal(providers,2);assert.equal(sourceReads,1);
+  const late=await pending;assert.equal(late.status,401);assert.doesNotMatch(await late.text(),/Native checked fixture/);assert.equal(providers,4);assert.equal(sourceReads,2);
  }finally{if(server){server.closeAllConnections();await new Promise(r=>server.close(r))}await locker.$disconnect();await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

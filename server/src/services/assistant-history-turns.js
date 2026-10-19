@@ -1,5 +1,8 @@
 // Server-only turn capture. No route, provider call or browser-supplied answer.
 import {randomUUID} from 'node:crypto';
+// This existing presenter is pure ESM (no DOM/React); the native Node monorepo
+// includes it. Reuse its canonical evidence text without changing its owners.
+import {presentAssistantAnswer} from '../../../client/src/components/voice/presentAssistantAnswer.js';
 import {z} from 'zod';
 import {createAssistantHistoryRepository} from './assistant-history-repository.js';
 import {emptyHistoryArchive,historyAccessKey,historyAccessSchema,parseHistoryArchive} from './assistant-history-contract.js';
@@ -18,8 +21,9 @@ export function createAssistantHistoryTurns({db,authorize,now=()=>new Date(),rep
  if(typeof authorize!=='function'||typeof repository!=='function')throw new TypeError('Explicit history turn dependencies required');
  const clock=()=>{const t=new Date(now());if(!Number.isFinite(t.getTime()))throw new TypeError('Invalid history turn clock');return t.toISOString()};
  const bound=async req=>{
-  const access=await authorize(req),identity=historyAccessKey(access);
-  const verify=async(_req=req,tx)=>{const current=await authorize(req,tx);if(historyAccessKey(current)!==identity)changed();return current};
+  const connected=()=>{if(req.aborted||req.res?.destroyed||req.socket?.destroyed)throw Object.assign(new Error('Η αίτηση ιστορικού διακόπηκε.'),{status:499,code:'ASSISTANT_HISTORY_CANCELLED'})};
+  connected();const access=await authorize(req),identity=historyAccessKey(access);connected();
+  const verify=async(_req=req,tx)=>{connected();const current=await authorize(req,tx);connected();if(historyAccessKey(current)!==identity)changed();return current};
   const repo=repository({db,authorize:verify,now});return {repo,verify,access};
  };
  return {
@@ -37,7 +41,7 @@ export function createAssistantHistoryTurns({db,authorize,now=()=>new Date(),rep
     history:(thread?.messages||[]).filter(m=>athensDay(m.createdAt)===athensDay(createdAt)).slice(-10).map(m=>({role:m.role,content:m.content})),
     async finish(checkedAnswer,actualReads){
      if(finished)throw new TypeError('A checked turn can only be captured once');finished=true;await verify();
-     const answer=projection.parse(checkedAnswer),content=[answer.answer,...answer.highlights,answer.limitations].filter(Boolean).join('\n').trim();
+     const checked=projection.parse(checkedAnswer),answer=projection.parse(presentAssistantAnswer({...checkedAnswer,...checked})),content=[answer.answer,...answer.highlights,answer.limitations].filter(Boolean).join('\n').trim();
      // Refuse an oversized projection; never silently truncate financial prose.
      if(!content||content.length>2000)return {saved:false,reason:'TEXT_LIMIT'};
      const requiredCapabilities=historyRequirementsFromReads(actualReads),messages=[...(thread?.messages||[]).slice(-38),{id:randomUUID(),role:'user',content:text,createdAt,requiredCapabilities:[]},{id:randomUUID(),role:'assistant',content,createdAt:clock(),requiredCapabilities}];

@@ -26,6 +26,7 @@ export function createAssistantHistoryHttp({turns,mode}){
  const loadQuery=mode==='platform'?pair:z.object({}).strict();
  const resetBody=assistantHistoryTurnMetadata.omit({threadId:true}).extend(mode==='platform'?{selection:pair}:{}).strict();
  const unavailable=(error,res,next)=>{
+  if(error.code==='ASSISTANT_HISTORY_CANCELLED')return;
   if(error.code==='ASSISTANT_HISTORY_DISABLED')return res.json({available:false,code:'ASSISTANT_HISTORY_DISABLED'});
   if(error.status===401||error.status===403||String(error.code||'').startsWith('STORE_LIFECYCLE_')||error instanceof z.ZodError)return next(error);
   return res.status(503).json({available:false,code:'ASSISTANT_HISTORY_UNAVAILABLE',error:'Το αποθηκευμένο ιστορικό δεν είναι διαθέσιμο. Οι νέες ερωτήσεις παραμένουν διαθέσιμες χωρίς αποθήκευση.'});
