@@ -1,3 +1,23 @@
+## Final concurrent integration
+
+Main997fa934 supplier advance claim and main e6cb3abe Diadoxou PASS/FAIL are fully preserved. Original PR CI39315426397 completed SUCCESS:3503 server PASS/0FAIL/0SKIP plus8 backup PASS; all required jobs green. Those results are historical until final integrated head CI succeeds. Source/test blobs unchanged. To avoid repeated unrelated prepend conflicts, update only the unique already-merged core claim location in each canonical registry. Following the existing 2026-10-18-central-four-streams.md Concurrent publication rule, regenerate the tracker as CHECKPOINTS/EVIDENCE/report-delivery-core-20261019/tracker-snapshot.pdf; preserve main shared historical PDF with concurrent receipts until consolidated integration. This is a CI-only technical change, not a LAB/LIVE/USER PASS closure; central-PDF/manual PASS rules remain mandatory for real closure. All retained owners remain assigned. No deployment guard or required checks bypassed.
+
+## Integration reconciliation — concurrent main documentation
+
+Preserved merged #2886 / main e6cb3abe2ed2aee3e403b6cae0978c6f70de06cb assistant Diadoxou acceptance/failure and all four current registry suffixes. Existing source head84e57fdb85e7e62ed9f659e5a2ffcf01d3cde460/run39315426397 was still running when main advanced; it is historical/superseded integration evidence, not final release proof. The reviewed two source/test blobs remain identical. Final integrated head requires its own green full CI; no checks or deployment guard are bypassed.
+
+## 19/10/2026 — CENTRAL-REPORT-DELIVERY-CORE-01 / SOURCE PREPARED / AWAITING FULL CI
+
+Central owner codex/central-four-streams-20261018; bounded implementation codex/report-delivery-core-20261019 (#2704/#2527). Pre-source claim #2884/head900a47c8/docsCI39313886137 SUCCESS mergedb7c7243e78234f5daf40315372dd905916119fdc BEFORE edits. New pure metadata helper and focused test only; no existing route/source/settings/mail/schema/worker changes.
+
+Node20.20.2 final22PASS/0FAIL/0SKIP, independently repeated on identical source/test hashes. Stable exact-UTC-period per-recipient slot excludes mutable snapshot versions/hashes; changed snapshot conflicts rather than implicitly replacing a delivery. Frozen detached records, current explicit consent/activity/authorization/license/module/readiness/policy assertions, native lifecycle generation strings0..int64max, expected-version/fresh-token fences, expired CLAIMED recovery, ATTEMPTING expiry→UNKNOWN, ACCEPTED/UNKNOWN no automatic retry, exact current-version terminal acknowledgment idempotency. ACCEPTED is transport acceptance only, never inbox delivery.
+
+Pure functions do NOT implement durable uniqueness/CAS, prove fresh authorization, persist before I/O, classify SMTP responses or schedule reports. Trusted future adapter must provide all of these; no real recipient/activation/outbox/transport wiring. Key deduplication concerns EXACT UTC intervals only; overlapping or redefined business-day intervals need future explicit scheduler/reissue policy. Full SQL/concurrent-crash/SMTP and actual delivery acceptance NOT TESTED. Whole original14 remains OPEN. Existing limited LAB/CSV PASS from #2883 protected; no accepted transaction replay, production financial/stock/fiscal/shift/payroll/settings/recipient/email or infrastructure write/manual deploy.
+
+Initial local contract/fixture runs14/2,16/3,20/1 and an in-flight consent fixture run4/17 are preserved as local integration failures, not production evidence. Final corrections kept strict runtime gates and negative assertions, including missing consent, positive SMTP receipt, terminal no-op acknowledgment, accessor validation without fixture-side getter execution, email syntax and native generation0/max. No guard weakening.
+
+Independent review final SHA256 module855cce43ae5f606d82209c43e67243b39fbcfcfd508978c42eb5c65753234c0b/testd5b4020402535294457c1c8775c76868d50df47e201d2cbd517353af8d5034b1, Node20 proof under CHECKPOINTS/EVIDENCE/report-delivery-core-20261019/. Full source PR/main native/build/browser/HTTP/invariant/Windows CI required before merge/release; local full server/build NOT RUN in this reduced isolated workspace. No new manual/LAB PASS entry. Other AUTO-REPORTS, VOICE/history, native, supplier and wholesale owners retained. Next: full CI and independent exact-head review; then separately claimed durable-adapter integration with actual crash/retry tests, keeping sending disabled.
+
 # Report delivery lifecycle core — bounded pre-source claim
 
 ## 19/10/2026 — CENTRAL-REPORT-DELIVERY-CORE-01 / ASSIGNED BEFORE SOURCE

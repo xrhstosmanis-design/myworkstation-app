@@ -1,0 +1,122 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+npm warn exec The following package was not found and will be installed: node@20.20.2
+TAP version 13
+# Subtest: stable slot identity excludes all immutable snapshot fences and later source/settings revisions cannot authorize a duplicate
+ok 1 - stable slot identity excludes all immutable snapshot fences and later source/settings revisions cannot authorize a duplicate
+  ---
+  duration_ms: 10.078956
+  ...
+# Subtest: recipient, scope, frequency and exact period are separate slots; ordering of object fields is not identity
+ok 2 - recipient, scope, frequency and exact period are separate slots; ordering of object fields is not identity
+  ---
+  duration_ms: 2.635175
+  ...
+# Subtest: creation and transitions preserve input snapshots and prior records without shared mutable aliases
+ok 3 - creation and transitions preserve input snapshots and prior records without shared mutable aliases
+  ---
+  duration_ms: 2.122015
+  ...
+# Subtest: no implicit activation: each explicit current gate fails closed at creation and again immediately before dispatch
+ok 4 - no implicit activation: each explicit current gate fails closed at creation and again immediately before dispatch
+  ---
+  duration_ms: 10.591315
+  ...
+# Subtest: freshness and every immutable snapshot fence are rechecked before starting, including removal/revocation revisions
+ok 5 - freshness and every immutable snapshot fence are rechecked before starting, including removal/revocation revisions
+  ---
+  duration_ms: 3.696938
+  ...
+# Subtest: missing or nonboolean gate evidence and financial certification cannot pass by truthiness
+ok 6 - missing or nonboolean gate evidence and financial certification cannot pass by truthiness
+  ---
+  duration_ms: 5.146905
+  ...
+# Subtest: OCC and tokens fence stale branches; pure competing proposals still require future durable atomic CAS
+ok 7 - OCC and tokens fence stale branches; pure competing proposals still require future durable atomic CAS
+  ---
+  duration_ms: 1.413572
+  ...
+# Subtest: pre-dispatch expiration recovers safely at exact lease boundary and fences the former token forever
+ok 8 - pre-dispatch expiration recovers safely at exact lease boundary and fences the former token forever
+  ---
+  duration_ms: 2.312431
+  ...
+# Subtest: a lease one millisecond before expiry may start; after-start crash recovers UNKNOWN without transport replay
+ok 9 - a lease one millisecond before expiry may start; after-start crash recovers UNKNOWN without transport replay
+  ---
+  duration_ms: 1.418168
+  ...
+# Subtest: late accepted callback after lease expiry is fenced and needs UNKNOWN reconciliation, never another send
+ok 10 - late accepted callback after lease expiry is fenced and needs UNKNOWN reconciliation, never another send
+  ---
+  duration_ms: 1.297877
+  ...
+# Subtest: transport ACCEPTED and uncertain UNKNOWN are terminal and cannot imply delivered or final financial reconciliation
+ok 11 - transport ACCEPTED and uncertain UNKNOWN are terminal and cannot imply delivered or final financial reconciliation
+  ---
+  duration_ms: 3.786202
+  ...
+# Subtest: no completion before start; unproved rejection/error/retry outcome cannot reopen an attempt
+ok 12 - no completion before start; unproved rejection/error/retry outcome cannot reopen an attempt
+  ---
+  duration_ms: 2.955816
+  ...
+# Subtest: periods and timestamps must be canonical, finite, ended and ordered; offsets/invalid dates are rejected
+ok 13 - periods and timestamps must be canonical, finite, ended and ordered; offsets/invalid dates are rejected
+  ---
+  duration_ms: 1.327593
+  ...
+# Subtest: one mailbox follows existing trim/lower normalization; multi-recipient and header injection fail
+ok 14 - one mailbox follows existing trim/lower normalization; multi-recipient and header injection fail
+  ---
+  duration_ms: 2.845801
+  ...
+# Subtest: strict metadata rejects unsupported scope, unsafe counters, unknown keys and prototype-bearing objects
+ok 15 - strict metadata rejects unsupported scope, unsafe counters, unknown keys and prototype-bearing objects
+  ---
+  duration_ms: 3.135666
+  ...
+# Subtest: lease duration and version inputs reject unsafe values; a live lease cannot be opportunistically recovered
+ok 16 - lease duration and version inputs reject unsafe values; a live lease cannot be opportunistically recovered
+  ---
+  duration_ms: 3.824911
+  ...
+# Subtest: metadata validators do not execute accessors, accept hidden fields, or recurse unbounded through cycles
+ok 17 - metadata validators do not execute accessors, accept hidden fields, or recurse unbounded through cycles
+  ---
+  duration_ms: 0.823175
+  ...
+# Subtest: backwards time, exhausted versions and malformed persisted identity fail without mutating the record
+ok 18 - backwards time, exhausted versions and malformed persisted identity fail without mutating the record
+  ---
+  duration_ms: 1.153051
+  ...
+# Subtest: post-start UNKNOWN recovery is idempotent, preserving the original attempt and not manufacturing another lease
+ok 19 - post-start UNKNOWN recovery is idempotent, preserving the original attempt and not manufacturing another lease
+  ---
+  duration_ms: 1.253792
+  ...
+# Subtest: accepted acknowledgement requires a receipt and conflicting receipt cannot rewrite terminal evidence
+ok 20 - accepted acknowledgement requires a receipt and conflicting receipt cannot rewrite terminal evidence
+  ---
+  duration_ms: 1.626812
+  ...
+# Subtest: persisted attempt cannot claim a start before creation even when other fields look valid
+ok 21 - persisted attempt cannot claim a start before creation even when other fields look valid
+  ---
+  duration_ms: 0.992299
+  ...
+# Subtest: lifecycle generation matches native canonical decimal-string int64 semantics, including zero, without precision coercion
+ok 22 - lifecycle generation matches native canonical decimal-string int64 semantics, including zero, without precision coercion
+  ---
+  duration_ms: 4.56793
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 184.544357
