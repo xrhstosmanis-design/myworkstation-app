@@ -1,5 +1,14 @@
 # Online παραγγελίες και Delivery — Manual PASS
 
+## 19/10/2026 23:59 Europe/Athens — KAT-BRANDING-01 / LIMITED LIVE DESKTOP PASS / COMPLETED
+
+Owner feat/kat-olive-orange-branding-20261019; source PR#2897/head9a811c57a48c39a7d28d9c3b1d693490ee5d9c0a merged0484d636059eedb936e8bea1159b05c6c00bf0d2. Claim PR#2895 merged before source. Full PR CI39320675559 and exact main CI39321897395 SUCCESS, including build-and-test, Windows and isolated wholesale checks. Ordinary guarded deployment39322990384/job118301603738 SUCCESS; exact health oktrue/revision0484d636059eedb936e8bea1159b05c6c00bf0d2 observed independently in public browser and guard logs at20:59UTC.
+
+Actual Cloud Chrome desktop /online/kat: approved rounded Greek ΚΥΛΙΚΕΙΟ ΚΑΤ logo visibly loaded uncropped in orange panel230x100; olive navigation#52613a/darkolive header/orange action buttons/warm background.7categories,27coffees, Νερά4, focused search FREDDO5, category Καφέδες clears search and restores27. Initial fill before focusing readonly search refused as designed; explicit focus then search passed. Empty basket0.00 throughout; current closed-hours state retained. Screenshot CHECKPOINTS/EVIDENCE/kat-branding-20261019/online-desktop.jpg. Original3business scripts byte-unchanged; separate exact-KAT-path class only, embedded approved PNG in local SVG. No catalogue/order/pricing/stock/member/auth/fiscal/settings/database writes. Node24 local20PASS/0FAIL/0SKIP after dependencies and Prisma client generation; frontend build PASS; deployment validated by Node20 CI.
+
+Only agreed public KAT visual desktop scope COMPLETED. Mobile/touch/physical-device, saved-credential autofill, checkout/member/payment/fiscal acceptance NOT TESTED here and not claimed; retained owners and prior qualified evidence unchanged. No whole Online Gate PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-19-kat-olive-orange-branding.md; manual docs/manual/online-delivery/PASS.md. Both canonical roadmap PDFs regenerated in this receipt.
+
+
 ## 19/10/2026 - Δημόσιο Online ΚΑΤ: περιορισμένο LIVE desktop PASS
 
 Για επισκέπτες του δημόσιου καταστήματος ΚΑΤ, χωρίς λογαριασμό διαχειριστή. Ανοίξτε /online/kat (η αρχική /kat/ παραμένει διαθέσιμη), περιμένετε να φορτωθούν οι κατηγορίες και επιλέξτε μία. Η αλλαγή κατηγορίας καθαρίζει την προηγούμενη αναζήτηση και εμφανίζει τα αντίστοιχα προϊόντα. Για αναζήτηση κάντε κλικ στο πεδίο και πληκτρολογήστε όνομα προϊόντος· το FREDDO επέστρεψε5αποτελέσματα. Επιλογή κατηγορίας επιστρέφει στον κατάλογό της χωρίς ανανέωση. Το πεδίο αναζήτησης αρχίζει readonly, ενεργοποιείται με focus και έχει autocompleteoff.
