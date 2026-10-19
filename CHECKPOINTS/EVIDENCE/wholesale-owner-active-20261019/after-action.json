@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-19",
+  "authorization": "Explicit approval 12:04:29 Europe/Athens; ONLY temporary WHOLESALE_B2B MYWORKSTATION LAB and restore",
+  "preChangeClaim": {
+    "pr": 2820,
+    "merge": "cff103c5cbb4da9cc790a2473af8f1240ad796f1"
+  },
+  "terminal": "Cloud Chrome desktop",
+  "company": "MYWORKSTATION LAB",
+  "intendedStore": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ / cmtpopbgo000trhb5ng9ytiru",
+  "platformActor": "Χρήστος Μάνης, positively observed Platform Super Admin after secure 2FA",
+  "baseline": "before-action.json written before save",
+  "activation": {
+    "observedAt": "2026-10-19T09:39:18.048Z",
+    "wholesaleActive": true,
+    "activeModules": 22,
+    "monthlyTotalEUR": "104.70",
+    "wholesaleTerms": {
+      "monthly": "0",
+      "setup": "0",
+      "period": "MONTHLY",
+      "start": "",
+      "end": ""
+    }
+  },
+  "authentication": {
+    "initialPlatformChallenge": "expired; fresh secure sign-in succeeded before activation",
+    "personalOwnerAttempt": "Secure request timed out after approximately3915seconds; submitted status alone did not prove login. Actual page remained login with Super Admin2FA link. No positively identified personal Owner or private workspace.",
+    "secretValuesRead": false,
+    "testDuringWait": false
+  },
+  "beforeRestoration": {
+    "observedAt": "2026-10-19T10:47:12.165Z",
+    "wholesaleActive": true
+  },
+  "restoration": {
+    "observedAt": "2026-10-19T10:47:53.095Z",
+    "wholesaleActive": false,
+    "activeModules": 21,
+    "moduleCards": 37,
+    "monthlyTotalEUR": "104.70",
+    "result": "LIMITED LIVE LICENSE RESTORATION PASS"
+  },
+  "unchangedControls": {
+    "sha256": "3ac7086147cbfd29b7b3271b18a87f882aadacb05979e8fd13018172d672b35c",
+    "scope": "36 other module cards and nine general subscription controls",
+    "sameAt": [
+      "before",
+      "activation draft",
+      "fresh saved active",
+      "pre-restore",
+      "fresh saved inactive"
+    ],
+    "planPriceCards": "not hashed; visually100/220/330 before and after"
+  },
+  "screenshot": {
+    "observedAt": "2026-10-19T10:49:28.364Z",
+    "path": "restored-license.jpg",
+    "scope": "Restored LAB license header21active/104.70EUR; wholesale module card below viewport. Exact inactive card proof is DOM observation, not visible in this screenshot."
+  },
+  "results": {
+    "savedActivation": "PASS license UI only",
+    "savedRestoration": "PASS license UI only",
+    "activePersonalOwnerManagement": "BLOCKED / NOT TESTED: authentication not positively established",
+    "freshInactivePersonalDenialAfterRestore": "NOT TESTED: no personal session",
+    "ordersPortalSellerCustomers": "NOT TESTED"
+  },
+  "exposure": "Module remained active during secure authentication wait, approximately09:39-10:47UTC. No automatic timed revocation was configured; restored manually immediately after unsuccessful authentication observation.",
+  "businessActions": "No membership, assignment, account, customer, site, order, price, stock, payment, fiscal, shift or production SQL/migration/seed action. Normal auth/session/audit only; no business balance delta measured or inferred.",
+  "postHealth": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "fb11a314ec1414658d0840a61f812f42058aa5a0",
+    "curlExit": 0,
+    "scope": "Separate later public no-cache observation; NOT asserted as revision at activation/restoration"
+  },
+  "owner": "codex/wholesale-suite-20261017",
+  "overallStatus": "OPEN / ASSIGNED",
+  "remaining": "Active personal Owner acceptance, portal/site, seller/customer orders, offline and commercial standalone packaging remain open. Prior PR2820 personal inactive refusal PASS preserved.",
+  "nextAction": "Prepare correct existing personal Owner authentication before separately scoped future active acceptance; do not automatically repeat temporary activation."
+}

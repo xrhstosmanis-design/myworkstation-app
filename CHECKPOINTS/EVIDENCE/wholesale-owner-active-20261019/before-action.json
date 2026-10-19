@@ -1,0 +1,28 @@
+{
+  "observedAt": "2026-10-19T09:37:08.162Z",
+  "authorization": "Owner approved at2026-10-19T12:04:29+03:00, temporary WHOLESALE_B2B only MYWORKSTATION LAB; read-only existing personal Owner standalone manager acceptance; restore inactive.",
+  "preChangeClaim": "PR2820 merged cff103c5cbb4da9cc790a2473af8f1240ad796f1",
+  "terminal": "Cloud Chrome desktop",
+  "actor": "Existing Platform Super Admin, positive identity Χρήστος Μάνης after secure 2FA",
+  "company": "MYWORKSTATION LAB",
+  "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ / cmtpopbgo000trhb5ng9ytiru",
+  "activeModules": 21,
+  "wholesaleActive": false,
+  "monthlyTotal": "104,70 EUR",
+  "globalFields": {
+    "plan": "ENTERPRISE",
+    "status": "ACTIVE",
+    "startsAt": "2026-09-06",
+    "endsAt": "",
+    "autoRenew": false,
+    "notes": "",
+    "humanReview": "NONE",
+    "humanReviewMonthly": "0",
+    "humanReviewTerms": ""
+  },
+  "moduleCards": 37,
+  "otherControlsSha256": "3ac7086147cbfd29b7b3271b18a87f882aadacb05979e8fd13018172d672b35c",
+  "unchangedControlScope": "All other36 visible module cards/status/pricing/terms and general subscription fields; DOM-only hash, not business balances",
+  "businessActions": "NONE planned; cash/shift/stock values N/A for license-only test, not measured and no delta inferred",
+  "requiredRestoration": "WHOLESALE_B2B inactive,21 active modules,104.70 EUR, all other controls equal before; preserve audit."
+}
