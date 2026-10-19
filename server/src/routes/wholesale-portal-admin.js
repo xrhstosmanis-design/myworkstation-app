@@ -12,6 +12,8 @@ const id=z.string().trim().min(1).max(200);
 const siteBody=z.object({slug:portalSlug,name:z.string().trim().min(1).max(160),enabled:z.boolean()}).strict();
 const accountBody=z.object({login:portalLogin,password:portalPassword,customerId:id,storeId:id,active:z.boolean().default(true)}).strict();
 const patchBody=z.object({active:z.boolean().optional(),password:portalPassword.optional()}).strict().refine(body=>body.active!==undefined||body.password!==undefined);
+const accountStoreQuery=z.object({storeId:id}).strict();
+const accountListQuery=z.union([accountStoreQuery,z.object({scope:z.literal('company')}).strict()]);
 const productQuery=z.object({storeId:id,q:z.string().trim().max(160).default(''),page:z.string().regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().max(1000000)).default('1'),pageSize:z.string().regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().max(100)).default('50')}).strict();
 const safeAccount=row=>({id:row.id,login:row.login,customerId:row.customerId,storeId:row.storeId,active:row.active,...(row.customerName?{customerName:row.customerName}:{}),...(row.storeName?{storeName:row.storeName}:{})});
 const context=req=>({role:req.user?.role,tokenType:req.user?.tokenType,companyId:req.user?.companyId,actorId:req.user?.id,channel:'BACKOFFICE'});
@@ -42,7 +44,14 @@ export function createWholesalePortalAdminRouter({db=prisma,ensureSchema=ensureW
     });res.json({site});
   }catch(error){next(error)}});
   router.get('/accounts',async(req,res,next)=>{try{
-    const rows=await db.$queryRaw`SELECT a."id",a."login",a."customerId",a."storeId",a."active",c."name" AS "customerName",s."name" AS "storeName" FROM "WholesalePortalAccount" a JOIN "WholesaleCustomer" c ON c."id"=a."customerId" AND c."companyId"=a."companyId" JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId" WHERE a."companyId"=${req.user.companyId} ORDER BY a."login",a."id"`;res.json({items:rows.map(safeAccount)});
+    const scope=accountListQuery.parse(req.query),companyId=req.user.companyId;
+    const rows=await db.$transaction(async tx=>{
+      await assertWholesaleEntitlement(tx,companyId,{lock:true});
+      if(scope.storeId)await ownStore(tx,companyId,scope.storeId,{lock:true});
+      const storeFilter=scope.storeId?Prisma.sql`AND a."storeId"=${scope.storeId}`:Prisma.empty;
+      const items=await tx.$queryRaw(Prisma.sql`SELECT a."id",a."login",a."customerId",a."storeId",a."active",c."name" AS "customerName",s."name" AS "storeName" FROM "WholesalePortalAccount" a JOIN "WholesaleCustomer" c ON c."id"=a."customerId" AND c."companyId"=a."companyId" JOIN "Store" s ON s."id"=a."storeId" AND s."companyId"=a."companyId" WHERE a."companyId"=${companyId} ${storeFilter} ORDER BY a."login",a."id"`);
+      await assertWholesaleEntitlement(tx,companyId,{lock:true});return items;
+    },{isolationLevel:'RepeatableRead'});res.json({items:rows.map(safeAccount)});
   }catch(error){next(error)}});
   router.post('/accounts',async(req,res,next)=>{try{
     const b=accountBody.parse(req.body),companyId=req.user.companyId,passwordHash=await bcrypt.hash(b.password,10);
@@ -55,12 +64,13 @@ export function createWholesalePortalAdminRouter({db=prisma,ensureSchema=ensureW
     });res.status(201).json({account:safeAccount(account)});
   }catch(error){next(error)}});
   router.patch('/accounts/:id',async(req,res,next)=>{try{
-    const b=patchBody.parse(req.body),companyId=req.user.companyId,passwordHash=b.password===undefined?null:await bcrypt.hash(b.password,10);
+    const {storeId}=accountStoreQuery.parse(req.query),b=patchBody.parse(req.body),companyId=req.user.companyId,passwordHash=b.password===undefined?null:await bcrypt.hash(b.password,10);
     const account=await db.$transaction(async tx=>{
       await assertWholesaleEntitlement(tx,companyId,{lock:true});
-      const rows=await tx.$queryRaw`SELECT "id","active" FROM "WholesalePortalAccount" WHERE "id"=${req.params.id} AND "companyId"=${companyId} FOR UPDATE`;
+      await ownStore(tx,companyId,storeId,{lock:true});
+      const rows=await tx.$queryRaw`SELECT "id","active" FROM "WholesalePortalAccount" WHERE "id"=${req.params.id} AND "companyId"=${companyId} AND "storeId"=${storeId} FOR UPDATE`;
       if(!rows[0])throw wholesaleError(404,'B2B_ACCOUNT_NOT_FOUND','Η πρόσβαση δεν βρέθηκε.');
-      const changed=await tx.$queryRaw`UPDATE "WholesalePortalAccount" SET "active"=${b.active??rows[0].active},"passwordHash"=COALESCE(${passwordHash},"passwordHash"),"sessionVersion"="sessionVersion"+1,"updatedAt"=NOW() WHERE "id"=${req.params.id} AND "companyId"=${companyId} RETURNING "id","login","customerId","storeId","active"`;
+      const changed=await tx.$queryRaw`UPDATE "WholesalePortalAccount" SET "active"=${b.active??rows[0].active},"passwordHash"=COALESCE(${passwordHash},"passwordHash"),"sessionVersion"="sessionVersion"+1,"updatedAt"=NOW() WHERE "id"=${req.params.id} AND "companyId"=${companyId} AND "storeId"=${storeId} RETURNING "id","login","customerId","storeId","active"`;
       await tx.$executeRaw`UPDATE "WholesalePortalSession" SET "revokedAt"=NOW() WHERE "accountId"=${req.params.id} AND "companyId"=${companyId} AND "revokedAt" IS NULL`;await assertWholesaleEntitlement(tx,companyId,{lock:true});return changed[0];
     });res.json({account:safeAccount(account)});
   }catch(error){next(error)}});
