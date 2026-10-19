@@ -1,0 +1,68 @@
+import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import WholesaleSuiteWorkspace,{wholesaleIdentityKey,wholesaleAccessEnabled} from '../commerce/WholesaleSuiteWorkspace.jsx';
+import {createBackofficeSessionBoundary,readBackofficeContext,watchBackofficeContext} from '../../utils/backofficeSessionBoundary.mjs';
+import {createWholesaleApi,readPersonalWholesaleSession,personalWholesaleSession,parseWholesaleStore} from './wholesale-api.js';
+const managers=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
+export default function WholesaleApp({request,search=window.location.search}){
+ const [session,setSession]=useState(()=>readPersonalWholesaleSession()),[access,setAccess]=useState(null),[stores,setStores]=useState([]),[selected,setSelected]=useState(''),[suite,setSuite]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(false),[locked,setLocked]=useState(false),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[loginOpen,setLoginOpen]=useState(false),[mfa,setMfa]=useState(false),[stale,setStale]=useState(null),[boundaryVersion,setBoundaryVersion]=useState(0),[companyName,setCompanyName]=useState('');
+ const alive=useRef(false),serial=useRef(0),loginSerial=useRef(0),boundary=useRef(null),boundaryKey=useRef(''),lock=useRef(false),frozenOwner=useRef(''),accessRef=useRef(null),selectedRef=useRef(''),sessionRef=useRef(session),suiteRef=useRef(null),mount=useRef(0),scopeRef=useRef(parseWholesaleStore(search)),lastContext=useRef(readBackofficeContext(localStorage).key);
+ const raw=useMemo(()=>request||createWholesaleApi({onStale:data=>{if(alive.current)setStale(data)}}),[request]);
+ const invalidate=useCallback(message=>{serial.current++;accessRef.current=null;setAccess(null);setStores([]);setCompanyName('');setLoading(false);if(!lock.current){suiteRef.current=null;setSuite(null);selectedRef.current='';setSelected('')}if(message)setError(message)},[]);
+ const installBoundary=useCallback(()=>{const context=readBackofficeContext(localStorage);if(boundary.current&&boundaryKey.current===context.key&&boundary.current.check())return boundary.current;let next;next=createBackofficeSessionBoundary({readContext:()=>readBackofficeContext(localStorage),request:raw,isCurrent:()=>boundary.current===next,onInvalidated:()=>{if(alive.current)invalidate('Η σύνδεση άλλαξε. Επανέλεγξε την πρόσβαση με τον σωστό λογαριασμό.')}});boundary.current=next;boundaryKey.current=context.key;setBoundaryVersion(value=>value+1);return next},[raw,invalidate]);
+ const scopedApi=useCallback(async(path,options)=>{const personal=readPersonalWholesaleSession();if(!personal||(lock.current&&wholesaleIdentityKey(personal.identity)!==frozenOwner.current))throw Object.assign(Error('Απαιτείται ο αρχικός προσωπικός λογαριασμός.'),{status:401});const current=boundary.current;if(!current)throw Object.assign(Error('Απαιτείται ενεργή σύνδεση.'),{status:401});try{return await current.request(path,options)}catch(e){if(e.code==='BACKOFFICE_SESSION_CHANGED')e.status=401;throw e}},[]);
+ const getAccess=useCallback(()=>accessRef.current,[]);
+ const childLock=useCallback(value=>{lock.current=Boolean(value);if(value&&!frozenOwner.current)frozenOwner.current=suiteRef.current?.owner||wholesaleIdentityKey(sessionRef.current?.identity);if(!value)frozenOwner.current='';setLocked(Boolean(value))},[]);
+ const refresh=useCallback(async(explicitStore)=>{
+  const number=++serial.current,personal=readPersonalWholesaleSession(),url=scopeRef.current;
+  sessionRef.current=personal;setSession(personal);setError('');setLoading(true);
+  if(url.error){invalidate(url.error);setLoading(false);return}
+  if(!personal){invalidate('Συνδέσου με προσωπικό λογαριασμό MyWorkStation.');setLoading(false);return}
+  const identityKey=wholesaleIdentityKey(personal.identity);if(lock.current&&url.storeId&&suiteRef.current&&url.storeId!==suiteRef.current.storeId){invalidate('Η εκκρεμής παραγγελία παραμένει στο αρχικό κατάστημα.');setLoading(false);return}
+  if(lock.current&&frozenOwner.current!==identityKey){invalidate('Η εκκρεμής παραγγελία ανήκει στον αρχικό λογαριασμό και εταιρεία.');setLoading(false);return}
+  if(suiteRef.current&&suiteRef.current.owner!==identityKey&&!lock.current){suiteRef.current=null;setSuite(null);selectedRef.current='';setSelected('')}
+  const activeBoundary=installBoundary(),contextKey=readBackofficeContext(localStorage).key;
+  const current=()=>alive.current&&number===serial.current&&contextKey===readBackofficeContext(localStorage).key&&activeBoundary.check();
+  try{
+   const paid=await activeBoundary.request('/api/wholesale/capabilities');if(!current())return;
+   if(!wholesaleAccessEnabled(paid,personal.identity))throw Error('Το πληρωμένο module Χονδρική B2B δεν είναι ενεργό.');
+   const target=typeof explicitStore==='string'?explicitStore:(selectedRef.current||url.storeId);
+   let available,companyName='';
+   if(managers.has(personal.identity.role)){
+    const data=await activeBoundary.request('/api/wholesale/workspace?'+new URLSearchParams(target?{storeId:target}:{scope:'company'}));if(!current())return;
+    if(data.user?.id!==personal.identity.userId||data.user?.role!==personal.identity.role||data.company?.id!==personal.identity.companyId||!wholesaleAccessEnabled(data.access,personal.identity)||!Array.isArray(data.stores)||(target&&data.storeId!==target))throw Error('Δεν επιβεβαιώθηκε το περιβάλλον χονδρικής.');available=data.stores;companyName=data.company.name;if(target&&url.central){const central=await activeBoundary.request('/api/wholesale/workspace?scope=company');if(!current())return;if(central.user?.id!==personal.identity.userId||central.company?.id!==personal.identity.companyId||!wholesaleAccessEnabled(central.access,personal.identity)||!Array.isArray(central.stores))throw Error('Δεν επιβεβαιώθηκαν τα διαθέσιμα καταστήματα.');available=central.stores;}
+   }else{
+    const data=await activeBoundary.request('/api/wholesale/sellers/context');if(!current())return;
+    if(data.user?.id!==personal.identity.userId||data.companyId!==personal.identity.companyId||!Array.isArray(data.stores))throw Error('Δεν επιβεβαιώθηκε η πρόσβαση πωλητή.');available=data.stores;
+   }
+   if(!current())return;if(target&&!available.some(store=>store.id===target))throw Error('Το επιλεγμένο κατάστημα δεν είναι διαθέσιμο.');
+   accessRef.current=paid;setAccess(paid);setCompanyName(companyName||personal.identity.companyId);setStores(available);selectedRef.current=target||'';setSelected(target||'');
+   if(target){if(!suiteRef.current){const value={mount:++mount.current,owner:identityKey,storeId:target,stores:available.filter(store=>store.id===target),companyName};suiteRef.current=value;setSuite(value)}else if(!lock.current&&suiteRef.current.storeId!==target){const value={mount:++mount.current,owner:identityKey,storeId:target,stores:available.filter(store=>store.id===target),companyName};suiteRef.current=value;setSuite(value)}}
+   else if(!lock.current){suiteRef.current=null;setSuite(null)}
+  }catch(e){if(alive.current&&number===serial.current){invalidate(e.message);if(e.status===401){sessionRef.current=null;setSession(null);setLoginOpen(true)}}}finally{if(alive.current&&number===serial.current)setLoading(false)}
+ },[installBoundary,invalidate]);
+ useEffect(()=>{alive.current=true;scopeRef.current=parseWholesaleStore(search);selectedRef.current='';setSelected('');if(!lock.current){suiteRef.current=null;setSuite(null)}refresh();return()=>{alive.current=false;serial.current++;loginSerial.current++}},[search,raw]);
+ useEffect(()=>{if(!boundary.current)return;return watchBackofficeContext(boundary.current,window,document)},[boundaryVersion]);
+ useEffect(()=>{
+  const verify=()=>{if(document.visibilityState!=='hidden')refresh()};const storage=()=>{loginSerial.current++;refresh()};
+  window.addEventListener('focus',verify);document.addEventListener('visibilitychange',verify);window.addEventListener('storage',storage);
+  const timer=setInterval(()=>{const now=readBackofficeContext(localStorage).key;if(now!==lastContext.current){lastContext.current=now;refresh()}},700),periodic=setInterval(verify,30000);
+  return()=>{window.removeEventListener('focus',verify);document.removeEventListener('visibilitychange',verify);window.removeEventListener('storage',storage);clearInterval(timer);clearInterval(periodic)};
+ },[refresh]);
+ useEffect(()=>{const ends=[session?.expiresAt,access?.expiresAt?Date.parse(access.expiresAt):null].filter(Number.isFinite);if(!ends.length)return;const timer=setTimeout(()=>{invalidate('Η ισχύς της πρόσβασης έληξε.');refresh()},Math.max(0,Math.min(2147483647,Math.min(...ends)-Date.now())));return()=>clearTimeout(timer)},[session,access,refresh,invalidate]);
+ const login=async e=>{
+  e.preventDefault();const number=++loginSerial.current,before=readBackofficeContext(localStorage).key;setLoading(true);setError('');setMfa(false);
+  try{
+   const data=await raw('/api/auth/login',{method:'POST',body:JSON.stringify({email,password})});if(!alive.current||number!==loginSerial.current)return;
+   if(before!==readBackofficeContext(localStorage).key)throw Error('Η σύνδεση άλλαξε όσο περίμενες. Δοκίμασε ξανά.');
+   setPassword('');if(data?.mfaRequired||data?.setupRequired){setMfa(true);throw Error('Ολοκλήρωσε το 2FA από την είσοδο Super Admin.')}
+   const personal=personalWholesaleSession(data?.token,data?.user);if(!personal)throw Error('Δεν ολοκληρώθηκε έγκυρη προσωπική σύνδεση. Ολοκλήρωσε τυχόν υποχρεωτική αλλαγή κωδικού στην κύρια εφαρμογή.');
+   if(lock.current&&wholesaleIdentityKey(personal.identity)!==frozenOwner.current)throw Error('Εκκρεμεί παραγγελία. Χρησιμοποίησε τον αρχικό λογαριασμό και εταιρεία.');
+   localStorage.setItem('token',data.token);localStorage.setItem('user',JSON.stringify(data.user));localStorage.removeItem('supportContext');sessionStorage.removeItem('platformToken');
+   boundary.current=null;boundaryKey.current='';lastContext.current=readBackofficeContext(localStorage).key;setLoginOpen(false);await refresh();
+  }catch(x){if(alive.current&&number===loginSerial.current)setError(x.message)}finally{if(alive.current&&number===loginSerial.current)setLoading(false)}
+ };
+ const logout=async()=>{if(lock.current)return;try{await scopedApi('/api/auth/logout',{method:'POST',body:'{}'});if(lock.current)return;localStorage.removeItem('token');localStorage.removeItem('user');boundary.current=null;boundaryKey.current='';sessionRef.current=null;setSession(null);invalidate();setLoginOpen(true)}catch(e){setError(e.message)}};
+ const choose=value=>{if(lock.current)return;serial.current++;if(!value){selectedRef.current='';setSelected('');suiteRef.current=null;setSuite(null);return}if(!stores.some(store=>store.id===value))return;selectedRef.current=value;setSelected(value);suiteRef.current=null;setSuite(null);refresh(value)};
+ const usable=Boolean(session&&wholesaleAccessEnabled(access,session.identity)&&suite&&suite.owner===wholesaleIdentityKey(session.identity));
+ return <main className="wholesale-app"><header><div><small>MyWorkStation</small><h1>Χονδρική B2B</h1>{companyName&&<p>{companyName}</p>}</div>{session&&<div><span>{session.user.fullName||session.user.email}</span><button disabled={locked} onClick={logout}>Αποσύνδεση</button><button disabled={locked} onClick={()=>setLoginOpen(value=>!value)}>Σύνδεση λογαριασμού</button></div>}</header>{error&&<div role="alert">{error}</div>}{loading&&<p role="status">Έλεγχος πρόσβασης…</p>}{stale&&<aside role="alert">Η κατάσταση του καταστήματος άλλαξε. Διατήρησε τις εκκρεμείς κινήσεις για έλεγχο.<button disabled={locked} onClick={()=>{if(!lock.current)window.location.reload()}}>Επαναφόρτωση</button></aside>}{(!session||loginOpen||locked&&!usable)&&<form aria-label="Σύνδεση χονδρικής" onSubmit={login}><h2>Προσωπική σύνδεση</h2><label>Email<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Κωδικός<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={loading}>Σύνδεση</button>{mfa&&<a href="https://myworkstation-app.onrender.com/platform-admin" target="_blank" rel="noreferrer">Είσοδος Super Admin με 2FA</a>}</form>}{locked&&<aside role="status">Εκκρεμεί επιβεβαίωση της αρχικής παραγγελίας. Οι αλλαγές καταστήματος και η αποσύνδεση είναι κλειδωμένες. Μην ανανεώσεις τη σελίδα.</aside>}{session&&<button onClick={()=>refresh()}>Επανέλεγχος πρόσβασης</button>}{scopeRef.current.error&&!locked&&<a href="/wholesale">Άνοιγμα κεντρικής επιλογής καταστήματος</a>}{session&&access&&<section aria-label="Επιλογή καταστήματος χονδρικής"><label>Κατάστημα<select aria-label="Κατάστημα χονδρικής" value={selected} disabled={locked||loading} onChange={e=>choose(e.target.value)}><option value="">Επίλεξε κατάστημα</option>{stores.map(store=><option key={store.id} value={store.id}>{store.name}</option>)}</select></label></section>}{suite&&<div hidden={!usable}><WholesaleSuiteWorkspace key={suite.mount} api={scopedApi} stores={suite.stores} activeStoreId={suite.storeId} identity={session?.identity||{userId:'',companyId:'',role:''}} access={access} getAccess={getAccess} onRefreshAccess={refresh} onSubmissionLockChange={childLock}/></div>}</main>;
+}
