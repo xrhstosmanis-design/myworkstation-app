@@ -1,0 +1,12 @@
+{
+  "kind": "CI actual Chromium / real IndexedDB / static synthetic fixture; not LIVE",
+  "checks": [
+    "actual IndexedDB envelope contains no plaintext customer/catalog/order notes or passphrase",
+    "two independent IndexedDB connections atomically reject competing initial CAS write",
+    "actual Web Locks across two Chromium tabs exclude concurrent callbacks for one persisted immutable request",
+    "actual IndexedDB denial survives locked state, BroadcastChannel invalidates matching tab, renewal preserves unknown original body/key",
+    "browser fully closed/restarted; unavailable server; cached shell and encrypted persisted order reopen only after correct unlock",
+    "private API fetched online is unavailable offline and absent from all shell cache keys; zero business POSTs"
+  ],
+  "pass": true
+}

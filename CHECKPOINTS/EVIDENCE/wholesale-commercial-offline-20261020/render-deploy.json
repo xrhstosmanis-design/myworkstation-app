@@ -1,0 +1,10 @@
+{
+  "serviceId": "srv-d9isenfavr4c73bdh52g",
+  "workspaceId": "tea-d9ie26vaqgkc739uudqg",
+  "deployId": "dep-dbb8vvbncjis738veivg",
+  "revision": "f2a3b79a145f7f80331280384066ec78c29ec230",
+  "status": "live",
+  "finishedAt": "2026-10-19T21:50:59.473712Z",
+  "releaseWorkflowRun": 39330143576,
+  "configurationChanges": 0
+}

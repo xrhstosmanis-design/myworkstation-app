@@ -1,0 +1,57 @@
+{
+  "kind": "Unauthenticated public deployment/static delivery verification; not installed-device LAB",
+  "observedAt": "2026-10-19T21:51:23.469339+00:00",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "f2a3b79a145f7f80331280384066ec78c29ec230"
+  },
+  "responses": {
+    "/api/health": {
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "sha256": "4e489d977caa6aadac247529c0e715318ec10499a01711acfab68b193226168c"
+    },
+    "/wholesale/": {
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8",
+      "sha256": "908c222acd7852793a91c9c39a6b8ccde1dacfc75e2442a5ff07a3b4e858c341"
+    },
+    "/wholesale-app/wholesale.webmanifest": {
+      "status": 200,
+      "contentType": "application/manifest+json",
+      "sha256": "88a644e4120c39d11ad756701e056bcfac44a33e98a273260d8c87b855c7c624"
+    },
+    "/wholesale-sw.js": {
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8",
+      "sha256": "ca50a2220aa5d07bea1a5532e76a512cf191f24cc8c373358c5ced09b9479d3d"
+    }
+  },
+  "manifest": {
+    "id": "/wholesale/",
+    "name": "MyWorkStation \u03a7\u03bf\u03bd\u03b4\u03c1\u03b9\u03ba\u03ae B2B",
+    "short_name": "MWS \u03a7\u03bf\u03bd\u03b4\u03c1\u03b9\u03ba\u03ae",
+    "description": "\u03a7\u03bf\u03bd\u03b4\u03c1\u03b9\u03ba\u03ae B2B, \u03c0\u03b5\u03bb\u03ac\u03c4\u03b5\u03c2 \u03ba\u03b1\u03b9 \u03c0\u03b1\u03c1\u03b1\u03b3\u03b3\u03b5\u03bb\u03af\u03b5\u03c2 MyWorkStation.",
+    "lang": "el",
+    "start_url": "/wholesale/",
+    "scope": "/wholesale",
+    "display": "standalone",
+    "background_color": "#f4f8fc",
+    "theme_color": "#123b5d",
+    "icons": [
+      {
+        "src": "/pwa-192.png",
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "any"
+      },
+      {
+        "src": "/pwa-512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any"
+      }
+    ]
+  }
+}
