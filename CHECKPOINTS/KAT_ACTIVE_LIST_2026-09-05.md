@@ -1,3 +1,13 @@
+## 19/10/2026 — STORE-LIFECYCLE-EMPTY-SCOPE-01 / SOURCE PREPARED / AWAITING FULL CI AND LIVE
+
+Owner fix/lifecycle-empty-scope-20261019, explicit owner transfer19Oct10:43:31Athens; before-source claimPR2812 headb983fed871afce1eded284b9ffe7159ed7aec5aa, all4checks SUCCESS/SKIPPED as applicable, mergedfd5b0d8914371b92741d8b66b76eb1766e6e598e before source/test edits. Broader feat/store-shifts-inventory-clear-20261018 lifecycle assignment and all unrelated owners retained.
+
+Bounded causal source: ignore exactly empty string body.storeId when inferring page epoch scope. Keep the original request/body, immutable valid-store map and explicit persisted headers unchanged. Server validation/tenant/auth/licensing/maintenance/stale guards remain untouched; no epoch upgrade, old offline retry, data repair, stock/payment/fiscal/shift action or reset.
+
+New real loopback HTTP regression runs actual createLifecycleFetch -> header -> storeLifecycleRequestContext -> lifecycleContext: fresh and already-scoped pages, empty recovery POST then shift GET, unchanged payload/idempotency field, no empty onPinned event, and explicit malformed persisted header still400/no handler. Old source failed400 with STORE_LIFECYCLE_GENERATION_INVALID (7existingPASS/1newFAIL); corrected source passes. Final Node20.20.2 focused19tests/17PASS/0FAIL/2nativeSKIP. Initial broader attempt lacked the downloaded unchanged offline-sale-queue dependency; fetched the exact baseline file and reran successfully. Local native PostgreSQL remains unavailable; full native/build/Windows/HTTP CI required. This is not LAB/LIVE PASS.
+
+LIVE FAIL before fix remains documented below: Diadoxou83orders load but recovery and later shifts reject invalid metadata. Corrected hosted flow NOT TESTED / AWAITING LAB. After green PR+mainCI and ordinary guarded exact release, open a fresh support Backoffice, inspect shifts, open purchase list and return to refresh shifts. Do not reopen/upload/pay/finalize old invoices. Existing contaminated tabs need a full page reload after release. No manual PASS until observed.
+
 ## 19/10/2026 10:43 Europe/Athens — STORE-LIFECYCLE-EMPTY-SCOPE-01 / EXPLICIT OWNER TRANSFER / ASSIGNED BEFORE SOURCE
 
 ΑΝΑΛΗΨΗ ΑΠΟ feat/store-shifts-inventory-clear-20261018 — ASSIGNED fix/lifecycle-empty-scope-20261019, limited to the empty-storeId fetch metadata regression. The owner explicitly approved transfer here at10:43:31Athens («να μεταφερθει»). The broader STORE-LIFECYCLE-01 cleanup/restore/spool work and all other owners remain with their existing assignments. Baseline c1227da690e35e698d069f081ce8f52dd94c4a8d; reviewed existing lifecycle checkpoint and common records.

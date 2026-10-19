@@ -20,7 +20,9 @@ export function createLifecycleFetch({fetch:send,origin,onStale=()=>{},onPinned=
   const headers=new Headers(options?.headers??input?.headers),scopes=new Set();
   const match=url.pathname.match(/\/(?:stores|store)\/([^/]+)(?:\/|$)/);if(match)try{scopes.add(decodeURIComponent(match[1]))}catch{}
   if(url.searchParams.get('storeId'))scopes.add(url.searchParams.get('storeId'));
-  if(typeof options?.body==='string')try{const body=JSON.parse(options.body);if(typeof body?.storeId==='string')scopes.add(body.storeId)}catch{}
+  // Empty storeId means an unscoped caller, not a store epoch. Remembering it
+  // would make every later header invalid, including unrelated shift reads.
+  if(typeof options?.body==='string')try{const body=JSON.parse(options.body);if(typeof body?.storeId==='string'&&body.storeId!=='')scopes.add(body.storeId)}catch{}
   const method=String(options?.method??input?.method??'GET').toUpperCase();
   // Only a fresh read may establish a page epoch. A mutation with no prior
   // read is legacy zero; looking up today's epoch here would relabel old data.
@@ -35,3 +37,4 @@ export function createLifecycleFetch({fetch:send,origin,onStale=()=>{},onPinned=
  }
  return {request,snapshot};
 }
+
