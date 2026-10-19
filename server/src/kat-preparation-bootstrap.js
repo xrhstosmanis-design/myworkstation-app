@@ -1,3 +1,4 @@
+import {lifecycleDemoSeedDisabled} from "./services/store-lifecycle-demo-seed.js";
 import {executeHotTableBootstrap} from "./hot-table-schema.js";
 import crypto from "crypto";
 import {prisma} from "./prisma.js";
@@ -106,7 +107,7 @@ async function ensureSubcategory(companyId,categoryId,name){let [sub]=await pris
 export async function ensureKatPreparationSeed(){
  await executeHotTableBootstrap(prisma,`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "subcategoryId" TEXT`);
  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ProductSubcategory" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"categoryId" TEXT NOT NULL,"legacyCode" TEXT,"name" TEXT NOT NULL,"property" TEXT NOT NULL DEFAULT 'STOCK_ITEM',"points" DECIMAL(14,4) NOT NULL DEFAULT 0,"pluGroup" INTEGER NOT NULL DEFAULT 0,"classification" TEXT NOT NULL DEFAULT 'MERCHANDISE',"eshopCode" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
- const [store]=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "active"=true AND (UPPER("name") LIKE '%ΚΑΤ%' OR UPPER("name") LIKE '%KAT%') ORDER BY "createdAt" LIMIT 1`;if(!store)return {ok:false,reason:"KAT_STORE_NOT_FOUND"};const companyId=store.companyId;
+ const [store]=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "active"=true AND (UPPER("name") LIKE '%ΚΑΤ%' OR UPPER("name") LIKE '%KAT%') ORDER BY "createdAt" LIMIT 1`;if(!store)return {ok:false,reason:"KAT_STORE_NOT_FOUND"};if(await lifecycleDemoSeedDisabled(prisma,{companyId:store.companyId,storeId:store.id}))return {ok:true,skipped:true,reason:"STORE_LIFECYCLE_SEED_DISABLED"};const companyId=store.companyId;
  let [main]=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${companyId} AND UPPER("name")=UPPER(${MAIN_CATEGORY}) LIMIT 1`;if(!main){main={id:uid()};await prisma.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name","active") VALUES (${main.id},${companyId},${MAIN_CATEGORY},true)`}else await prisma.$executeRaw`UPDATE "ProductCategory" SET "active"=true WHERE "id"=${main.id}`;
  const subs={};for(const [key,name] of Object.entries(SUBCATEGORIES))subs[key]=await ensureSubcategory(companyId,main.id,name);
 

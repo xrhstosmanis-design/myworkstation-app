@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {randomBytes,randomUUID} from 'node:crypto';
+import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
@@ -328,5 +328,44 @@ test('native an unexecuted drain can be explicitly aborted without deletion or e
   await f.core.abort(f.db,actor,{...scope,operationId:drain.operationId});assert.deepEqual(await f.snapshot(),before);assert.equal(f.proofCalls(),0);
   assert.deepEqual((await f.db.$queryRawUnsafe(`SELECT "generation"::text AS generation,"maintenance","operationId" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0],{generation:'0',maintenance:false,operationId:null});
   await f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('resumed','company','target',1)`);
+ }finally{await f.close()}
+});
+
+test('reviewed existing guards require exact bounded metadata and cannot impersonate lifecycle guards',()=>{
+ const options={persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)},good={name:'old_guard',functionSchema:'public',functionName:'old_guard_fn',enabled:'O',mask:23,attributes:'',condition:null,definer:false,language:'plpgsql',bodySha256:'1'.repeat(64)};
+ for(const existingTriggers of [null,{},[{...good,bodySha256:'bad'}],[{...good,enabled:'D'}],[{...good,definer:true}],[{...good,name:'mws_lifecycle_unsafe'}],[good,good]]){const reviewed=structuredClone(manifest);reviewed.tables.find(t=>t.name==='Sale').existingTriggers=existingTriggers;assert.throws(()=>createLifecycleExecutionCore(reviewed,options),/Invalid reviewed existing triggers/)}
+ assert.throws(()=>createLifecycleExecutionCore({...manifest,knownTables:['Store','Store']},options),/Invalid reviewed database catalogue/);
+});
+test('native exact reviewed business triggers remain active alongside lifecycle guards and drift is refused before maintenance',{skip:!isolated},async()=>{
+ const f=await fixture();try{
+  const body=`BEGIN IF NEW."amount"<0 THEN RAISE EXCEPTION 'EXISTING_AMOUNT_GUARD' USING ERRCODE='55000'; END IF; RETURN NEW; END;`;
+  await f.db.$executeRawUnsafe(`CREATE FUNCTION "${f.schema}".existing_amount_guard() RETURNS trigger LANGUAGE plpgsql AS $body$${body}$body$`);
+  await f.db.$executeRawUnsafe(`CREATE TRIGGER existing_amount BEFORE INSERT OR UPDATE OF "amount" ON "Sale" FOR EACH ROW EXECUTE FUNCTION existing_amount_guard()`);
+  const reviewed=structuredClone(manifest);reviewed.tables.find(t=>t.name==='Sale').existingTriggers=[{name:'existing_amount',functionSchema:f.schema,functionName:'existing_amount_guard',enabled:'O',mask:23,attributeNames:['amount'],condition:null,definer:false,language:'plpgsql',bodySha256:createHash('sha256').update(body).digest('hex')}];
+  const core=createLifecycleExecutionCore(reviewed,{persistAndVerifyRecovery:async()=>assert.fail('unexpected proof'),sourceRevision:'1'.repeat(40)});await core.install(f.db,actor,scope);
+  await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('negative','company','target',-1)`),matches(/EXISTING_AMOUNT_GUARD/));await f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('allowed','company','target',1)`);
+  const prep=await core.prepare(f.db,actor,scope,'RESET');await core.abort(f.db,actor,{...scope,operationId:prep.operationId});
+  const before=await f.snapshot();await f.db.$executeRawUnsafe(`CREATE OR REPLACE FUNCTION "${f.schema}".existing_amount_guard() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END; $$`);
+  await assert.rejects(core.prepare(f.db,actor,scope,'RESET'),/Changed reviewed database guard/);assert.deepEqual(await f.snapshot(),before);assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,false);
+ }finally{await f.close()}
+});
+test('native closed database catalogue rejects unreviewed global relations even without an obvious store key',{skip:!isolated},async()=>{
+ const f=await fixture();try{
+  const reviewed={...manifest,knownTables:[...manifest.tables.map(t=>t.name),'Product']};const core=createLifecycleExecutionCore(reviewed,{persistAndVerifyRecovery:async()=>assert.fail('unexpected proof'),sourceRevision:'1'.repeat(40)});
+  await f.db.$executeRawUnsafe(`CREATE TABLE "UnreviewedGlobal"("value" integer)`);const before=await f.snapshot();await assert.rejects(core.install(f.db,actor,scope),/Unreviewed database relation/);assert.deepEqual(await f.snapshot(),before);
+  await f.db.$executeRawUnsafe(`DROP TABLE "UnreviewedGlobal"`);await core.install(f.db,actor,scope);await f.db.$executeRawUnsafe(`CREATE TABLE "UnreviewedGlobal"("value" integer)`);await assert.rejects(core.prepare(f.db,actor,scope,'RESET'),/Unreviewed database relation/);assert.deepEqual(await f.snapshot(),before);
+ }finally{await f.close()}
+});
+test('native table rewrite rules and inheritance refuse preparation before recovery or deletion',{skip:!isolated},async()=>{
+ for(const ddl of [`CREATE RULE refuse_delete AS ON DELETE TO "Sale" DO INSTEAD NOTHING`,`CREATE TABLE "InheritedSale"() INHERITS ("Sale")`]){
+  const f=await fixture();try{await f.core.install(f.db,actor,scope);const before=await f.snapshot();await f.db.$executeRawUnsafe(ddl);await assert.rejects(f.core.prepare(f.db,actor,scope,'RESET'),/Complex or RLS relation/);assert.deepEqual(await f.snapshot(),before);assert.equal(f.proofCalls(),0);assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,false)}finally{await f.close()}
+ }
+});
+test('native logical snapshot signature does not depend on physical unique index creation order',{skip:!isolated},async()=>{
+ const f=await rawFixture();try{
+  await f.db.$executeRawUnsafe(`CREATE UNIQUE INDEX raw_company_identity ON "RawParent"("companyId","id")`);await f.core.install(f.db,actor,scope);
+  const first=await f.core.prepare(f.db,actor,scope,'RESET');await f.core.abort(f.db,actor,{...scope,operationId:first.operationId});
+  await f.db.$executeRawUnsafe(`ALTER TABLE "RawParent" DROP CONSTRAINT "RawParent_pkey"`);await f.db.$executeRawUnsafe(`ALTER TABLE "RawParent" ADD PRIMARY KEY ("id")`);
+  const second=await f.core.prepare(f.db,actor,scope,'RESET');assert.equal(second.snapshotHash,first.snapshotHash);await f.core.abort(f.db,actor,{...scope,operationId:second.operationId});assert.equal(f.proofCalls(),0);
  }finally{await f.close()}
 });

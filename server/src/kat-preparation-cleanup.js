@@ -1,3 +1,4 @@
+import {lifecycleDemoSeedDisabled} from "./services/store-lifecycle-demo-seed.js";
 import "dotenv/config";
 import crypto from "crypto";
 import {prisma} from "./prisma.js";
@@ -64,6 +65,7 @@ export async function ensureKatPreparationCleanup(){
  const stores=await prisma.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "active"=true AND LOWER(TRIM("name"))=LOWER('Κυλικείο ΚΑΤ') ORDER BY "createdAt" LIMIT 1`;
  const store=stores[0];
  if(!store)return {ok:false,reason:"KIOSK_KAT_STORE_NOT_FOUND"};
+ if(await lifecycleDemoSeedDisabled(prisma,{companyId:store.companyId,storeId:store.id}))return {ok:true,skipped:true,reason:"STORE_LIFECYCLE_SEED_DISABLED"};
  const legacyCategories=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${store.companyId} AND "name"=ANY(${LEGACY_CATEGORIES}::text[])`;
  const legacyIds=legacyCategories.map(row=>row.id);
  const rows=await prisma.$queryRaw`SELECT "id","sku","name","categoryId","active" FROM "Product" WHERE "companyId"=${store.companyId}`;

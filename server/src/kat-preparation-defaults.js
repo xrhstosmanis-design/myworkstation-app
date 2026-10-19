@@ -1,3 +1,4 @@
+import {lifecycleDemoSeedDisabled} from "./services/store-lifecycle-demo-seed.js";
 import crypto from "crypto";
 import {prisma} from "./prisma.js";
 
@@ -119,6 +120,7 @@ export async function ensureKatPreparationDefaults(){
  await tables();
  const [store]=await prisma.$queryRaw`SELECT "id","companyId" FROM "Store" WHERE "active"=true AND (UPPER("name") LIKE '%ΚΑΤ%' OR UPPER("name") LIKE '%KAT%') ORDER BY "createdAt" LIMIT 1`;
  if(!store)return {ok:false};
+ if(await lifecycleDemoSeedDisabled(prisma,{companyId:store.companyId,storeId:store.id}))return {ok:true,skipped:true,reason:"STORE_LIFECYCLE_SEED_DISABLED"};
  const companyId=store.companyId;
  const groups=[];for(const def of GROUPS)groups.push(await ensureGroup(companyId,def));
  const ingredientRows=await prisma.$queryRaw`SELECT "id","sku" FROM "Product" WHERE "companyId"=${companyId} AND "sku" LIKE 'MWS-PREP-%'`;
