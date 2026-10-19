@@ -1,3 +1,7 @@
+## 20/10/2026 00:14 Europe/Athens — KAT-BACKGROUND-02 / ASSIGNED BEFORE SOURCE
+
+Owner fix/kat-background-20261020. User explicitly requests stronger background, one or two olive tones below existing olive. Independent visual follow-up to completed KAT-BRANDING-01. Bounded change ONLY existing exact-KAT-scoped body background #f5f3e9 to soft olive #cbd3b5; preserve cream product/header cards, orange buttons, logo, navigation, all scripts, categories/search/reset, catalogue/prices/order/auth/member/stock/fiscal and other stores. Previous actual desktop PASS on0484 retained; new shade NOT TESTED. Require full PR/main CI, normal guarded exact release and actual read-only public visual/category/search acceptance. No production config/data/transaction writes or new automated tests for this reversible CSS-only adjustment. Checkpoint CHECKPOINTS/CHANGES/2026-10-20-kat-background.md. Other owners unchanged.
+
 ## 19/10/2026 23:59 Europe/Athens — KAT-BRANDING-01 / LIMITED LIVE DESKTOP PASS / COMPLETED
 
 Owner feat/kat-olive-orange-branding-20261019; source PR#2897/head9a811c57a48c39a7d28d9c3b1d693490ee5d9c0a merged0484d636059eedb936e8bea1159b05c6c00bf0d2. Claim PR#2895 merged before source. Full PR CI39320675559 and exact main CI39321897395 SUCCESS, including build-and-test, Windows and isolated wholesale checks. Ordinary guarded deployment39322990384/job118301603738 SUCCESS; exact health oktrue/revision0484d636059eedb936e8bea1159b05c6c00bf0d2 observed independently in public browser and guard logs at20:59UTC.
