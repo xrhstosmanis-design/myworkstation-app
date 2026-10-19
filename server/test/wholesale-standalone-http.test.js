@@ -127,7 +127,10 @@ test('native standalone wholesale metadata requires a live personal paid session
             await holder.$queryRaw`SELECT "id" FROM "Store" WHERE "id"='store-a' FOR UPDATE`;
             waiter=api.get('?storeId=store-a');let observed=false;const deadline=Date.now()+9000;
             while(Date.now()<deadline){
-              const rows=await holder.$queryRaw`SELECT pid FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid() AND ${ownerPid.pid}::int=ANY(pg_blocking_pids(pid)) AND query LIKE '%Store%'`;
+              // Observe from a separate autocommit query: pg_stat_activity's query
+              // text is cached inside the holder transaction and can otherwise
+              // retain the request's earlier auth query before it reaches Store.
+              const rows=await db.$queryRaw`SELECT pid FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid() AND ${ownerPid.pid}::int=ANY(pg_blocking_pids(pid)) AND query LIKE '%Store%'`;
               if(rows.length){observed=true;break}await pause();
             }
             assert.equal(observed,true,'actual HTTP Store SELECT must wait behind this exact holder');
