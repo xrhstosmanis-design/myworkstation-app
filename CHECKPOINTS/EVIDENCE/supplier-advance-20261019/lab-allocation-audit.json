@@ -1,0 +1,33 @@
+[
+  {
+    "to_jsonb": {
+      "actorId": "cms1k1bje001xhn3xulr0rooz",
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-10-19T21:16:29.195258+00:00",
+      "details": {
+        "allocations": [
+          {
+            "amount": 0.01,
+            "purchaseDocumentId": "dbb59d85-ebed-4af9-984b-17055b7cd6e0"
+          }
+        ],
+        "cashDelta": 0,
+        "idempotencyKey": "supplier-settlement-1792444576088-wu6jgtyr",
+        "requestHash": "29c7b48216599d4266e1a51d83482007f40036fbef4056a9b1c506c14ff0e051",
+        "result": {
+          "advanceAmount": 0,
+          "allocatedAmount": 0.01,
+          "cashDelta": 0,
+          "ok": true,
+          "settlementId": "77f43282-4377-4782-97d3-bc7e3ab17c6b"
+        },
+        "settlementId": "77f43282-4377-4782-97d3-bc7e3ab17c6b",
+        "transactionId": "pay_7342736072df83017f190a9382073d154bc4874ea91155ea21c2ec78171b7a55"
+      },
+      "eventType": "SUPPLIER_ADVANCE_ALLOCATED",
+      "id": "ecfd3893-9c83-4a83-af6f-8c92c0078a1d",
+      "operatorId": "cms1k1bje001xhn3xulr0rooz",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    }
+  }
+]
