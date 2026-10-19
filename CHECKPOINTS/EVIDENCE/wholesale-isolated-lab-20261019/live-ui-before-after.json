@@ -1,0 +1,618 @@
+[
+  {
+    "label": "CONTROL_BEFORE",
+    "at": "2026-10-19T20:08:11.960Z",
+    "comparison": [],
+    "documents": [],
+    "events": [
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "ace39a59-88ec-482a-b029-90c9b2c0502d",
+        "{\"storeId\":\"whlab-other-store\",\"quantity\":\"777\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-a\",\"requestId\":\"whlab-initial-whlab-other-store-whlab-product-a\"}"
+      ]
+    ],
+    "identity": "Εικονικός ιδιοκτήτης · Δοκιμαστικός διαχειριστής",
+    "message": "Εμφανίζονται μόνο τα στοιχεία του επιλεγμένου καταστήματος.",
+    "metrics": "Παραγγελίες προς έγκριση\n0\nΕικονικά παραστατικά\n0\nΕικονικές εισπράξεις\n0,00 €\nΕικονικές απαιτήσεις\n0,00 €",
+    "orders": [],
+    "payments": [],
+    "receivables": [],
+    "revision": "Έκδοση e3432c2b3f6c8a890bbe52b61a0270ee06bc9899",
+    "stock": [
+      [
+        "Δοκιμαστικός καφές κιβώτιο",
+        "777.0000"
+      ]
+    ],
+    "storeId": "whlab-other-store",
+    "url": "https://myworkstation-wholesale-lab.onrender.com/lab"
+  },
+  {
+    "label": "OWNER_ORDER_BEFORE",
+    "at": "2026-10-19T20:08:12.565Z",
+    "comparison": [],
+    "documents": [],
+    "events": [
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "ffb7a819-b9c0-46f7-96e2-44954dd4aa2e",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"25\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-private\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-private\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "02c02f93-93c5-4752-8907-166fa9bc7fcc",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"50\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-zero\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-zero\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "2a6b6000-f27e-4a1c-a2bc-6202fc6d0999",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"80\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-b\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-b\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "7868408a-2431-4d96-9a66-608c26904441",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"100\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-a\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-a\"}"
+      ]
+    ],
+    "identity": "Εικονικός ιδιοκτήτης · Δοκιμαστικός διαχειριστής",
+    "message": "Εμφανίζονται μόνο τα στοιχεία του επιλεγμένου καταστήματος.",
+    "metrics": "Παραγγελίες προς έγκριση\n0\nΕικονικά παραστατικά\n0\nΕικονικές εισπράξεις\n0,00 €\nΕικονικές απαιτήσεις\n0,00 €",
+    "orders": [],
+    "payments": [],
+    "receivables": [],
+    "revision": "Έκδοση e3432c2b3f6c8a890bbe52b61a0270ee06bc9899",
+    "stock": [
+      [
+        "Δοκιμαστικός καφές κιβώτιο",
+        "100.0000"
+      ],
+      [
+        "Δοκιμαστικός χυμός",
+        "80.0000"
+      ],
+      [
+        "Μη δημοσιευμένο δοκιμαστικό είδος",
+        "25.0000"
+      ],
+      [
+        "Δοκιμαστικό δείγμα",
+        "50.0000"
+      ]
+    ],
+    "storeId": "whlab-store",
+    "url": "https://myworkstation-wholesale-lab.onrender.com/lab"
+  },
+  {
+    "label": "OWNER_ORDER_AFTER_DOCUMENT_BEFORE",
+    "at": "2026-10-19T20:08:56.575Z",
+    "comparison": [
+      [
+        "Παραγγελίες",
+        "0",
+        "1"
+      ],
+      [
+        "Παραστατικά",
+        "0",
+        "0"
+      ],
+      [
+        "Πληρωμές",
+        "0",
+        "0"
+      ],
+      [
+        "Κινήσεις audit",
+        "4",
+        "4"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικός καφές κιβώτιο",
+        "100.0000",
+        "100.0000"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικός χυμός",
+        "80.0000",
+        "80.0000"
+      ],
+      [
+        "Απόθεμα · Μη δημοσιευμένο δοκιμαστικό είδος",
+        "25.0000",
+        "25.0000"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικό δείγμα",
+        "50.0000",
+        "50.0000"
+      ]
+    ],
+    "documents": [],
+    "events": [
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "ffb7a819-b9c0-46f7-96e2-44954dd4aa2e",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"25\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-private\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-private\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "02c02f93-93c5-4752-8907-166fa9bc7fcc",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"50\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-zero\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-zero\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "2a6b6000-f27e-4a1c-a2bc-6202fc6d0999",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"80\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-b\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-b\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "7868408a-2431-4d96-9a66-608c26904441",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"100\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-a\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-a\"}"
+      ]
+    ],
+    "identity": "Εικονικός ιδιοκτήτης · Δοκιμαστικός διαχειριστής",
+    "message": "Υποβλήθηκε προς έγκριση: b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e",
+    "metrics": "Παραγγελίες προς έγκριση\n1\nΕικονικά παραστατικά\n0\nΕικονικές εισπράξεις\n0,00 €\nΕικονικές απαιτήσεις\n0,00 €",
+    "orders": [
+      [
+        "Εικονικός πελάτης Α",
+        "BACKOFFICE / SUBMITTED",
+        "41,75 €",
+        "19/10/2026, 11:08:50 μ.μ.",
+        "b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e"
+      ]
+    ],
+    "payments": [],
+    "receivables": [],
+    "revision": "Έκδοση e3432c2b3f6c8a890bbe52b61a0270ee06bc9899",
+    "stock": [
+      [
+        "Δοκιμαστικός καφές κιβώτιο",
+        "100.0000"
+      ],
+      [
+        "Δοκιμαστικός χυμός",
+        "80.0000"
+      ],
+      [
+        "Μη δημοσιευμένο δοκιμαστικό είδος",
+        "25.0000"
+      ],
+      [
+        "Δοκιμαστικό δείγμα",
+        "50.0000"
+      ]
+    ],
+    "storeId": "whlab-store",
+    "url": "https://myworkstation-wholesale-lab.onrender.com/lab"
+  },
+  {
+    "label": "DOCUMENT_AFTER_PAYMENT_BEFORE",
+    "at": "2026-10-19T20:09:18.386Z",
+    "comparison": [
+      [
+        "Παραγγελίες",
+        "1",
+        "1"
+      ],
+      [
+        "Παραστατικά",
+        "0",
+        "1"
+      ],
+      [
+        "Πληρωμές",
+        "0",
+        "0"
+      ],
+      [
+        "Κινήσεις audit",
+        "4",
+        "5"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικός καφές κιβώτιο",
+        "100.0000",
+        "98.0000"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικός χυμός",
+        "80.0000",
+        "77.0000"
+      ],
+      [
+        "Απόθεμα · Μη δημοσιευμένο δοκιμαστικό είδος",
+        "25.0000",
+        "25.0000"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικό δείγμα",
+        "50.0000",
+        "50.0000"
+      ],
+      [
+        "Απαίτηση · Εικονικός πελάτης Α",
+        "—",
+        "41.75"
+      ]
+    ],
+    "documents": [
+      [
+        "TEST-INVOICE_DELIVERY-f7bdbea2\nΕικονικό τιμολόγιο – δελτίο",
+        "Εκδόθηκε",
+        "41,75 €",
+        "b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e",
+        "PDF\nΑκύρωση"
+      ]
+    ],
+    "events": [
+      [
+        "19/10/2026, 11:09:17 μ.μ.",
+        "VIRTUAL_DOCUMENT_ISSUED",
+        "e2c54ee8-6cc8-4b93-b4cb-f7b3e3e415ef",
+        "{\"type\":\"INVOICE_DELIVERY\",\"totals\":{\"net\":\"35.00\",\"vat\":\"6.75\",\"gross\":\"41.75\"},\"orderId\":\"b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e\",\"testOnly\":true,\"documentId\":\"f7bdbea2-8ffc-4e66-b426-9d304e0de96f\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "ffb7a819-b9c0-46f7-96e2-44954dd4aa2e",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"25\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-private\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-private\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "02c02f93-93c5-4752-8907-166fa9bc7fcc",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"50\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-zero\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-zero\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "2a6b6000-f27e-4a1c-a2bc-6202fc6d0999",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"80\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-b\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-b\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "7868408a-2431-4d96-9a66-608c26904441",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"100\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-a\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-a\"}"
+      ]
+    ],
+    "identity": "Εικονικός ιδιοκτήτης · Δοκιμαστικός διαχειριστής",
+    "message": "Εκδόθηκε χωρίς φορολογική ισχύ: TEST-INVOICE_DELIVERY-f7bdbea2",
+    "metrics": "Παραγγελίες προς έγκριση\n1\nΕικονικά παραστατικά\n1\nΕικονικές εισπράξεις\n0,00 €\nΕικονικές απαιτήσεις\n41,75 €",
+    "orders": [
+      [
+        "Εικονικός πελάτης Α",
+        "BACKOFFICE / SUBMITTED",
+        "41,75 €",
+        "19/10/2026, 11:08:50 μ.μ.",
+        "b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e"
+      ]
+    ],
+    "payments": [],
+    "receivables": [
+      [
+        "Εικονικός πελάτης Α",
+        "41,75 €"
+      ]
+    ],
+    "revision": "Έκδοση e3432c2b3f6c8a890bbe52b61a0270ee06bc9899",
+    "stock": [
+      [
+        "Δοκιμαστικός καφές κιβώτιο",
+        "98.0000"
+      ],
+      [
+        "Δοκιμαστικός χυμός",
+        "77.0000"
+      ],
+      [
+        "Μη δημοσιευμένο δοκιμαστικό είδος",
+        "25.0000"
+      ],
+      [
+        "Δοκιμαστικό δείγμα",
+        "50.0000"
+      ]
+    ],
+    "storeId": "whlab-store",
+    "url": "https://myworkstation-wholesale-lab.onrender.com/lab"
+  },
+  {
+    "label": "PAYMENT_AFTER_REPLAY_BEFORE",
+    "at": "2026-10-19T20:09:44.942Z",
+    "comparison": [
+      [
+        "Παραγγελίες",
+        "1",
+        "1"
+      ],
+      [
+        "Παραστατικά",
+        "1",
+        "1"
+      ],
+      [
+        "Πληρωμές",
+        "0",
+        "1"
+      ],
+      [
+        "Κινήσεις audit",
+        "5",
+        "6"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικός καφές κιβώτιο",
+        "98.0000",
+        "98.0000"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικός χυμός",
+        "77.0000",
+        "77.0000"
+      ],
+      [
+        "Απόθεμα · Μη δημοσιευμένο δοκιμαστικό είδος",
+        "25.0000",
+        "25.0000"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικό δείγμα",
+        "50.0000",
+        "50.0000"
+      ],
+      [
+        "Απαίτηση · Εικονικός πελάτης Α",
+        "41.75",
+        "31.75"
+      ]
+    ],
+    "documents": [
+      [
+        "TEST-INVOICE_DELIVERY-f7bdbea2\nΕικονικό τιμολόγιο – δελτίο",
+        "Εκδόθηκε",
+        "41,75 €",
+        "b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e",
+        "PDF\nΑκύρωση"
+      ]
+    ],
+    "events": [
+      [
+        "19/10/2026, 11:09:44 μ.μ.",
+        "SIMULATED_PAYMENT",
+        "0b1e976d-88eb-40fb-a07a-70070d2e98b6",
+        "{\"amount\":\"10.00\",\"method\":\"CASH\",\"testOnly\":true,\"invoiceId\":\"f7bdbea2-8ffc-4e66-b426-9d304e0de96f\",\"paymentId\":\"c1a08cbe-90b5-460e-b7b2-7f7c30d03c0c\"}"
+      ],
+      [
+        "19/10/2026, 11:09:17 μ.μ.",
+        "VIRTUAL_DOCUMENT_ISSUED",
+        "e2c54ee8-6cc8-4b93-b4cb-f7b3e3e415ef",
+        "{\"type\":\"INVOICE_DELIVERY\",\"totals\":{\"net\":\"35.00\",\"vat\":\"6.75\",\"gross\":\"41.75\"},\"orderId\":\"b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e\",\"testOnly\":true,\"documentId\":\"f7bdbea2-8ffc-4e66-b426-9d304e0de96f\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "ffb7a819-b9c0-46f7-96e2-44954dd4aa2e",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"25\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-private\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-private\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "02c02f93-93c5-4752-8907-166fa9bc7fcc",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"50\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-zero\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-zero\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "2a6b6000-f27e-4a1c-a2bc-6202fc6d0999",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"80\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-b\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-b\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "7868408a-2431-4d96-9a66-608c26904441",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"100\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-a\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-a\"}"
+      ]
+    ],
+    "identity": "Εικονικός ιδιοκτήτης · Δοκιμαστικός διαχειριστής",
+    "message": "Καταχωρίστηκε εικονική είσπραξη 10,00 €",
+    "metrics": "Παραγγελίες προς έγκριση\n1\nΕικονικά παραστατικά\n1\nΕικονικές εισπράξεις\n10,00 €\nΕικονικές απαιτήσεις\n31,75 €",
+    "orders": [
+      [
+        "Εικονικός πελάτης Α",
+        "BACKOFFICE / SUBMITTED",
+        "41,75 €",
+        "19/10/2026, 11:08:50 μ.μ.",
+        "b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e"
+      ]
+    ],
+    "payments": [
+      [
+        "TEST-INVOICE_DELIVERY-f7bdbea2",
+        "10,00 €",
+        "Εικονικά μετρητά"
+      ]
+    ],
+    "receivables": [
+      [
+        "Εικονικός πελάτης Α",
+        "31,75 €"
+      ]
+    ],
+    "revision": "Έκδοση e3432c2b3f6c8a890bbe52b61a0270ee06bc9899",
+    "stock": [
+      [
+        "Δοκιμαστικός καφές κιβώτιο",
+        "98.0000"
+      ],
+      [
+        "Δοκιμαστικός χυμός",
+        "77.0000"
+      ],
+      [
+        "Μη δημοσιευμένο δοκιμαστικό είδος",
+        "25.0000"
+      ],
+      [
+        "Δοκιμαστικό δείγμα",
+        "50.0000"
+      ]
+    ],
+    "storeId": "whlab-store",
+    "url": "https://myworkstation-wholesale-lab.onrender.com/lab"
+  },
+  {
+    "label": "PAYMENT_REPLAY_AFTER",
+    "at": "2026-10-19T20:10:26.008Z",
+    "comparison": [
+      [
+        "Παραγγελίες",
+        "1",
+        "1"
+      ],
+      [
+        "Παραστατικά",
+        "1",
+        "1"
+      ],
+      [
+        "Πληρωμές",
+        "0",
+        "1"
+      ],
+      [
+        "Κινήσεις audit",
+        "5",
+        "6"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικός καφές κιβώτιο",
+        "98.0000",
+        "98.0000"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικός χυμός",
+        "77.0000",
+        "77.0000"
+      ],
+      [
+        "Απόθεμα · Μη δημοσιευμένο δοκιμαστικό είδος",
+        "25.0000",
+        "25.0000"
+      ],
+      [
+        "Απόθεμα · Δοκιμαστικό δείγμα",
+        "50.0000",
+        "50.0000"
+      ],
+      [
+        "Απαίτηση · Εικονικός πελάτης Α",
+        "41.75",
+        "31.75"
+      ]
+    ],
+    "documents": [
+      [
+        "TEST-INVOICE_DELIVERY-f7bdbea2\nΕικονικό τιμολόγιο – δελτίο",
+        "Εκδόθηκε",
+        "41,75 €",
+        "b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e",
+        "PDF\nΑκύρωση"
+      ]
+    ],
+    "events": [
+      [
+        "19/10/2026, 11:09:44 μ.μ.",
+        "SIMULATED_PAYMENT",
+        "0b1e976d-88eb-40fb-a07a-70070d2e98b6",
+        "{\"amount\":\"10.00\",\"method\":\"CASH\",\"testOnly\":true,\"invoiceId\":\"f7bdbea2-8ffc-4e66-b426-9d304e0de96f\",\"paymentId\":\"c1a08cbe-90b5-460e-b7b2-7f7c30d03c0c\"}"
+      ],
+      [
+        "19/10/2026, 11:09:17 μ.μ.",
+        "VIRTUAL_DOCUMENT_ISSUED",
+        "e2c54ee8-6cc8-4b93-b4cb-f7b3e3e415ef",
+        "{\"type\":\"INVOICE_DELIVERY\",\"totals\":{\"net\":\"35.00\",\"vat\":\"6.75\",\"gross\":\"41.75\"},\"orderId\":\"b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e\",\"testOnly\":true,\"documentId\":\"f7bdbea2-8ffc-4e66-b426-9d304e0de96f\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "ffb7a819-b9c0-46f7-96e2-44954dd4aa2e",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"25\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-private\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-private\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "02c02f93-93c5-4752-8907-166fa9bc7fcc",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"50\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-zero\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-zero\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "2a6b6000-f27e-4a1c-a2bc-6202fc6d0999",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"80\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-b\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-b\"}"
+      ],
+      [
+        "19/10/2026, 11:06:32 μ.μ.",
+        "INITIAL_VIRTUAL_STOCK",
+        "7868408a-2431-4d96-9a66-608c26904441",
+        "{\"storeId\":\"whlab-store\",\"quantity\":\"100\",\"testOnly\":true,\"companyId\":\"whlab-company\",\"productId\":\"whlab-product-a\",\"requestId\":\"whlab-initial-whlab-store-whlab-product-a\"}"
+      ]
+    ],
+    "identity": "Εικονικός ιδιοκτήτης · Δοκιμαστικός διαχειριστής",
+    "message": "Καταχωρίστηκε εικονική είσπραξη 10,00 € · Ίδιο αίτημα: δεν δημιουργήθηκε δεύτερη κίνηση.",
+    "metrics": "Παραγγελίες προς έγκριση\n1\nΕικονικά παραστατικά\n1\nΕικονικές εισπράξεις\n10,00 €\nΕικονικές απαιτήσεις\n31,75 €",
+    "orders": [
+      [
+        "Εικονικός πελάτης Α",
+        "BACKOFFICE / SUBMITTED",
+        "41,75 €",
+        "19/10/2026, 11:08:50 μ.μ.",
+        "b01cb07d-c6e8-4a60-a64d-a3f7dbe7e59e"
+      ]
+    ],
+    "payments": [
+      [
+        "TEST-INVOICE_DELIVERY-f7bdbea2",
+        "10,00 €",
+        "Εικονικά μετρητά"
+      ]
+    ],
+    "receivables": [
+      [
+        "Εικονικός πελάτης Α",
+        "31,75 €"
+      ]
+    ],
+    "revision": "Έκδοση e3432c2b3f6c8a890bbe52b61a0270ee06bc9899",
+    "stock": [
+      [
+        "Δοκιμαστικός καφές κιβώτιο",
+        "98.0000"
+      ],
+      [
+        "Δοκιμαστικός χυμός",
+        "77.0000"
+      ],
+      [
+        "Μη δημοσιευμένο δοκιμαστικό είδος",
+        "25.0000"
+      ],
+      [
+        "Δοκιμαστικό δείγμα",
+        "50.0000"
+      ]
+    ],
+    "storeId": "whlab-store",
+    "url": "https://myworkstation-wholesale-lab.onrender.com/lab"
+  }
+]
