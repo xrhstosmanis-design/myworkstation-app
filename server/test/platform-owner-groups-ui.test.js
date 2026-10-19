@@ -20,6 +20,7 @@ test("owner buttons use IDs, reveal only linked stores and derive new groups fro
   await click(toggles()[0]);assert.equal(toggles()[0].getAttribute("aria-expanded"),"true");assert.equal(document.querySelectorAll(".platform-company-card").length,2);
   assert.match(document.querySelector(".platform-owner-companies").textContent,/Κατάστημα Άλφα/);assert.doesNotMatch(document.querySelector(".platform-owner-companies").textContent,/Άλλο κατάστημα/);
   await click(document.querySelector('[aria-label="Διαχείριση Εταιρεία two"]'));assert.equal(document.querySelector("[data-selected]").dataset.selected,"two");
+  assert.match(toggles()[1].textContent,/1 εταιρεία · 1 κατάστημα/);
   await click(toggles()[1]);assert.equal(document.querySelector("[data-selected]"),null);assert.equal(document.querySelectorAll(".platform-company-card").length,1);assert.match(document.querySelector(".platform-owner-companies").textContent,/Άλλο κατάστημα/);
   await click(toggles()[1]);assert.equal(document.querySelectorAll(".platform-company-card").length,0);
   await search("αλφα");assert.equal(toggles().length,1);await click(toggles()[0]);assert.equal(document.querySelectorAll(".platform-company-card").length,1);

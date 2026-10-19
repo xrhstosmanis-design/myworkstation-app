@@ -143,3 +143,6 @@
 .platform-owner-stores{list-style:none;margin:10px 0;padding:0;display:grid;gap:8px;color:#526583;font-size:16px}
 .platform-owner-stores li{display:flex;align-items:center;gap:8px;overflow-wrap:anywhere}
 .platform-owner-stores svg{width:19px;height:19px;flex-shrink:0}
+
+/* Keep each owner at its intrinsic height; the working list owns scrolling. */
+.platform-company-cards{grid-auto-rows:max-content}
