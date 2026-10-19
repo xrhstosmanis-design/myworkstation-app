@@ -95,6 +95,23 @@ public class MultiPhotoSendTest {
             assertTrue(api.posts.get(2).getJSONObject("attachment").getString("dataUrl").endsWith("BQY="));
         }
     }
+    @Test public void typingTheNextDraftDuringUploadDoesNotSendOrEraseIt() throws Exception {
+        FixtureApi api = new FixtureApi(); api.hold = true;
+        try (ActivityScenario<MainActivity> scenario = open(api)) {
+            prepareAndSend(scenario); assertTrue(api.started.await(5, TimeUnit.SECONDS));
+            scenario.onActivity(a -> {
+                try { ((EditText) get(a, "composer")).setText("Next private draft"); }
+                catch (Exception e) { throw new AssertionError(e); }
+            });
+            api.release.countDown(); awaitIdle(scenario); assertEquals(3, api.posts.size());
+            assertEquals("Caption once", api.posts.get(0).getString("body"));
+            assertEquals("", api.posts.get(1).getString("body")); assertEquals("", api.posts.get(2).getString("body"));
+            scenario.onActivity(a -> {
+                try { assertEquals("Next private draft", ((EditText) get(a, "composer")).getText().toString()); }
+                catch (Exception e) { throw new AssertionError(e); }
+            });
+        } finally { api.release.countDown(); }
+    }
     @Test public void missingSecondReceiptStopsWithoutReplayingOrSendingThird() throws Exception {
         FixtureApi api = new FixtureApi(); api.unknownSecond = true;
         try (ActivityScenario<MainActivity> scenario = open(api)) {
