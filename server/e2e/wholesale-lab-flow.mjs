@@ -21,7 +21,7 @@ const cdp=(method,params={},sessionId)=>new Promise((resolve,reject)=>{const id=
 let sessionId;const results={testOnly:true,kind:'actual Chromium / isolated PostgreSQL HTTP',startedAt:new Date().toISOString(),revision:health.revision,checks:[]};
 const deadline=Date.now()+240000;
 async function evaluate(expression){assert.ok(Date.now()<deadline,'Browser acceptance exceeded its four-minute budget');const data=await cdp('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true},sessionId);if(data.exceptionDetails)throw Error(data.exceptionDetails.exception?.description||data.exceptionDetails.text);return data.result?.value}
-async function wait(expression,label,timeout=15000){const end=Date.now()+timeout;while(Date.now()<end){if(await evaluate(expression))return;await new Promise(resolve=>setTimeout(resolve,80))}throw Error('Timed out waiting for '+label+'; screen: '+await evaluate('document.body.innerText.slice(-2200)'))}
+async function wait(expression,label,timeout=15000){const end=Date.now()+timeout;while(Date.now()<end){if(await evaluate('Boolean('+expression+')'))return;await new Promise(resolve=>setTimeout(resolve,80))}throw Error('Timed out waiting for '+label+'; screen: '+await evaluate('document.body.innerText.slice(-2200)'))}
 const quote=value=>JSON.stringify(value);
 const query=selector=>`document.querySelector(${quote(selector)})`;
 async function click(selector){await evaluate(`(()=>{const n=document.querySelector(${quote(selector)});if(!n||n.disabled)throw Error('Missing or disabled control: '+${quote(selector)});n.click()})()`)}
