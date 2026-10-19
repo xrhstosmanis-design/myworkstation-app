@@ -1,3 +1,9 @@
+## 19/10/2026 - COORD PHASE5 PRODUCT UNIT UI SOURCE PREPARED / AWAITING FULL CI AND LAB
+
+Claim#2821 head7297ea78619f8bda0985c7a74ef83ba2875237a0 / CI39226616765 SUCCESS / mergedfab4330e2b0bda43279a89675de76759e81ec12a BEFORE edits. Actual SalesAssistantEvidence now displays a unit column for matched products; PIECE/KG/LITER/PACKAGE Greek labels use own-property lookup, null/missing are unrecorded, unknown/blank raw units retained and React escaped. Canonical server/CSV, quantity/money formatting, context/coverage messages and suppression unchanged. No VOICE parser/chat/calendar/native/provider/auth changes.
+
+Actual compiled JSX+React SSR/mounted tests through canonical productSalesEvidence cover all known units, null/missing/unknown/blank/prototype-key/HTML values, signed amounts, valid PARTIAL and INVALID source transition removal, and legacy UNKNOWN warnings. Focused15PASS/0FAIL/0SKIP Node20; independent review clear. Includes cash#2823 by ancestry for one final integration only after both full CI heads green. Not a hosted failure or LAB PASS. No production state/settings/email/financial action or replay. Final consolidated checkpoint CHECKPOINTS/CHANGES/2026-10-19-central-overlap-unit-ui.md.
+
 ## 19/10/2026 - COORD PHASE5 CASH OVERLAP SOURCE PREPARED / AWAITING FULL CI AND LAB
 
 Claim#2821 head7297ea78619f8bda0985c7a74ef83ba2875237a0 / CI39226616765 SUCCESS / mergedfab4330e2b0bda43279a89675de76759e81ec12a BEFORE edits. Read-only readiness now holds strict positive overlap among valid CLOSED intervals on the same terminal; copy-sort/running maximum preserves nested detection, adjacent endpoints, empty intervals, different-terminal concurrency and original input order. Existing SOURCE_SCOPE_OR_ID_INVALID reason/UI is reused. Daily/weekly/monthly source suppresses groups and monthly opening-user summary, without altering PROVISIONAL financial finality or original amounts/records.
