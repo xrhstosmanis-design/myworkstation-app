@@ -1,5 +1,16 @@
 # MyWorkStation App v0.11 — Platform Admin & Commercial Pilot
 
+## 20/10/2026 00:51 Europe/Athens - WHOLESALE COMMERCIAL OFFLINE / CI VERIFIED, INSTALLED LAB OPEN
+
+Retained owner codex/wholesale-suite-20261017. Source PR #2912 head 18cd03a154c76608884e22067a3cfb26e5c7d557 green merged 24e138767089672d296189b6073e6601ff520d4e after claim PR #2904. Dedicated install entry, allowlisted public offline shell, encrypted per-user/company/store/role catalogue and editable LOCAL_DRAFT orders implemented. Explicit online current-rights/current-price acceptance precedes immutable persisted body/key and guarded send; unknown results never become a fresh request. Durable observed-denial fences, cross-tab exclusion, storage-failure and capacity checks included. No existing auth/entitlement/pricing/order core, schema, production startup, fiscal/stock/payment operation or pinned lab configuration changed.
+
+CI-only evidence: PR run 39327561161 all 5 jobs SUCCESS, server 3,580 PASS / 0 FAIL / 0 SKIP plus 8 recovery PASS; real isolated Chromium fully closed/restarted with unavailable server, reopened cached shell and encrypted saved order, rejected wrong phrase, verified real IndexedDB CAS, Web Locks, denial persistence/BroadcastChannel and no private API cache or business POST. Local Node20 focused 65 tests / 63 PASS / 0 FAIL / 2 infrastructure SKIP and frontend build passed. Exact source-main run 39328449945 was cancelled while pending after another owner's source merge; never called PASS. Later main revision f2a3b79a145f7f80331280384066ec78c29ec230 run 39328665510 all 5 jobs SUCCESS, server 3,594 PASS / 0 FAIL / 0 SKIP plus 8 recovery PASS, includes unchanged owned wholesale blobs and full acceptance. Normal guarded release workflow 39330143576 succeeded; Render dep-dbb8vvbncjis738veivg LIVE 2026-10-19T21:50:59.473712Z, exact revision verified by unauthenticated /api/health and HTTP 200 wholesale HTML/dedicated manifest/compiled SW at 21:51:23 UTC 19 Oct. Static delivery is not installed-device or business-flow acceptance.
+
+Authoritative boundary: technical source/CI acceptance only; actual installed PC/mobile disconnected full UI use, offline invoice/payment/fiscal/stock execution and full commercial rollout remain OPEN/NOT TESTED. Browser observation remains platform-blocked after native credential-state refusal; no password request, credential workaround or old financial transaction replay. Existing LIVE/API/USER visual receipts PR #2891 / #2899 remain protected. No new manual PASS or whole-item closure. Technical guide docs/wholesale/COMMERCIAL_OFFLINE.md; evidence CHECKPOINTS/EVIDENCE/wholesale-commercial-offline-20261020/; detailed checkpoint CHECKPOINTS/CHANGES/2026-10-20-wholesale-commercial-offline-ci-receipt.md. Same owner retained; next bounded acceptance is a prepared installed device reopening and capturing a new local draft while disconnected when permitted browser observation is available, then one measured explicit online submission with a fresh baseline. No duplicate claim by another page.
+
+
+
+
 ## Κεντρική συνέχεια εργασιών
 
 - Ενεργές εκκρεμότητες, Gate ownership και σειρά: `docs/roadmap/PENDING_WORK.md`

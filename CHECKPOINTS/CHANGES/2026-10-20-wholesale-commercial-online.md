@@ -1,3 +1,7 @@
+## Superseding technical receipt
+
+Source PR2912 and later full main CI verified; installed real-device LAB and full commercial/fiscal release remain OPEN. Authoritative latest evidence: CHECKPOINTS/CHANGES/2026-10-20-wholesale-commercial-offline-ci-receipt.md. Earlier AWAITING FULL CI below is historical pre-merge state.
+
 ## Source delivery - AWAITING FULL CI / INSTALLED OFFLINE LAB
 
 Before-source claim PR2904 final917cf8287911cb6deb5c1fab1af9d966427c2179 green merged a4f98836b2427a04f35158838dd9d318e6b7e080 before any source edit. Additive standalone install manifest/control, strictly allowlisted static wholesale SW/build plugin, AES-GCM/PBKDF2 IndexedDB snapshot/durable local order vault, atomic CAS/Web Locks and actual offline panel now implemented. Actual pricing/order/session/authorization core and production startup/schema unchanged. Explicit online preparation only; max5,000customers/products, <=24h bounded by personal-session/paid expiry; no offline prices, server SUBMITTED, fiscal/payment/stock posting or background send. Unknown results retain immutable original body/key before transport. Observed online denial durably locks matching prepared profiles; scoped BroadcastChannel invalidation clears matching open tabs. Full source acceptance still AWAITING.
