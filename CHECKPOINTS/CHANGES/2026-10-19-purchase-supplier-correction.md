@@ -1,3 +1,7 @@
+## Additional preservation checks before native CI
+
+Read existing supplier settlement/credit cash sources. Refuse document allocations even when paid by a different transaction, and refuse original payments already used by an active credit offset. Add native negative cases and an old metadata snapshot overwrite test. Final local Node20 focused6PASS/0FAIL/6native infrastructureSKIP; six native cases require CI. No hosted business action. Existing source-prepared note below records the prior five-case baseline.
+
 ## 19/10/2026 — PURCHASE-SUPPLIER-CORRECTION-01 / SOURCE PREPARED / AWAITING FULL NATIVE CI AND LIVE
 
 Owner fix/purchase-supplier-correction-20261019. ClaimPR2817/head61f51aae566409a84e16d2b6af6ac6f35432b08c/docsCI39224718486 all applicable checks green, merged50be18816098d6b5c39f46424ee8e5aec56a69a7 before behavior edits. Separate BackOffice supplier-correction action previews old/new legal supplier and VAT, existing payment, unchanged status/stock; requires original review/reason and distinct original-payment association acknowledgment. Current active same-company nine-digit VAT target only. Handles original single POS incoming NEW/FINAL/INVOICED purchases; reopened/credit/adjusted/inconsistent/duplicate/settled/reversed/shared-payment cases refuse. Ordinary POS operator credentials denied; existing permissions/modules/store/alias/lifecycle middleware retained.

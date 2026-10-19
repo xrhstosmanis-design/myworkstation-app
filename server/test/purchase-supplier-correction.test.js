@@ -61,13 +61,15 @@ test('native stale payment, document, line, supplier and posting previews refuse
  const f=await fixture();try{const p=await f.preview();await f.db.$executeRawUnsafe(`ALTER TABLE "StoreOperatorAudit" ADD CONSTRAINT "audit_failure" CHECK("eventType"<>'PURCHASE_SUPPLIER_CORRECTED')`);const before=await f.all();await assert.rejects(correction.correctPurchaseSupplier(f.db,actor,'pos',request(p)));assert.deepEqual(await f.all(),before)}finally{await f.close()}
 });
 test('native wrong company/store/target, settled/reversed/shared/credit/reopened/duplicate purchases cannot change associations',{skip:!isolatedInvoiceDb()},async()=>{
- for(const mode of ['foreign-company','foreign-store','foreign-supplier','inactive','no-vat','settled','reversed','shared','credit','reopened','duplicate','payment-confirmation']){const f=await fixture();try{
+ for(const mode of ['foreign-company','foreign-store','foreign-supplier','inactive','no-vat','settled','allocated','offset','reversed','shared','credit','reopened','duplicate','payment-confirmation']){const f=await fixture();try{
   let who=actor,scope={storeId:'s',supplierId:'target'};
   if(mode==='foreign-company')who={...actor,companyId:'other'};
   if(mode==='foreign-store')scope.storeId='control';if(mode==='foreign-supplier')scope.supplierId='foreign';
   const changes={inactive:`UPDATE "Supplier" SET "active"=false WHERE "id"='target'`,'no-vat':`UPDATE "Supplier" SET "taxId"=NULL WHERE "id"='target'`,reversed:`UPDATE "StoreTransaction" SET "reversedAt"=NOW()`,shared:`INSERT INTO "PurchaseDocument"("id","companyId","storeId","paymentTransactionId") VALUES('other-doc','other','control','payment')`,credit:`UPDATE "PurchaseDocument" SET "documentType"='CREDIT_NOTE' WHERE "id"='pos'`,reopened:`UPDATE "PurchaseOrder" SET "reopenVersion"=1`,duplicate:`INSERT INTO "PurchaseOrder"("id","companyId","storeId","supplierId","invoiceNumber","status") VALUES('duplicate','c','control','target','21-ΤΔΑ 006836','FINAL')`};
   if(changes[mode])await f.db.$executeRawUnsafe(changes[mode]);
   if(mode==='settled'){await f.db.$executeRawUnsafe('CREATE TABLE "SupplierPaymentSettlement"("id" text,"companyId" text,"transactionId" text)');await f.db.$executeRawUnsafe(`INSERT INTO "SupplierPaymentSettlement" VALUES('settled','c','payment')`)}
+  if(mode==='allocated'){await f.db.$executeRawUnsafe('CREATE TABLE "SupplierPaymentAllocation"("id" text,"companyId" text,"purchaseDocumentId" text)');await f.db.$executeRawUnsafe(`INSERT INTO "SupplierPaymentAllocation" VALUES('allocated','c','pos')`)}
+  if(mode==='offset'){await f.db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","type","amount") VALUES('offset','c','s','sup','SUPPLIER_PAYMENT',-1)`);await f.db.$executeRawUnsafe(`INSERT INTO "StoreOperatorAudit"("id","companyId","storeId","eventType","details") VALUES('credit','c','s','SUPPLIER_CREDIT_CASH_APPLIED','{"transactionId":"offset","invoicePaymentId":"payment"}')`)}
   const before=await f.all();if(mode==='payment-confirmation'){const p=await f.preview();await assert.rejects(correction.correctPurchaseSupplier(f.db,actor,'pos',{...request(p),confirmPaymentSupplier:false}),e=>e.status===400)}else await assert.rejects(correction.previewPurchaseSupplierCorrection(f.db,who,'pos',scope));assert.deepEqual(await f.all(),before,mode);
  }finally{await f.close()}}
 });
@@ -81,4 +83,8 @@ test('native real registered supplier endpoints over loopback HTTP deny POS and 
   const send=body=>fetch(base+'/supplier-correction',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   assert.equal((await send({...request(p),confirmPaymentSupplier:false})).status,400);assert.equal((await send(request(p))).status,200);assert.equal((await (await send(request(p))).json()).idempotent,true);
  }finally{if(server)await new Promise(resolve=>server.close(resolve));await f.close()}
+});
+
+test('native old metadata snapshot cannot overwrite the reviewed supplier correction',{skip:!isolatedInvoiceDb()},async()=>{
+ const f=await fixture();try{const [old]=await f.db.$queryRawUnsafe('SELECT * FROM "PurchaseOrder" WHERE "id"=\'pos\'');const p=await f.preview();await correction.correctPurchaseSupplier(f.db,actor,'pos',request(p));const before=await f.all();await assert.rejects(f.db.$transaction(tx=>correction.lockPurchaseSupplierMetadata(tx,old)),e=>e.status===409);assert.deepEqual(await f.all(),before)}finally{await f.close()}
 });

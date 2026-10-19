@@ -33,6 +33,10 @@ async function load(tx,actor,orderId,{storeId,supplierId}){
  const source=documents.find(d=>d.id===order.sourceDocumentId),projection=documents.find(d=>d.id===orderId),posted=order.status!=="NEW";
  if(!source||source.storeId!==storeId||source.purchaseOrderId!==orderId||source.sourceType!=="POS_OCR_DRAFT"||source.status!=="DRAFT"||documents.length!==(posted?2:1)||posted&&(!projection||projection.storeId!==storeId||projection.sourceType!=="PURCHASE_ORDER"||projection.status!=="APPROVED")||documents.some(d=>d.supplierId!==order.supplierId||d.documentType!=="INVOICE"||number(d.documentNumber)!==number(order.invoiceNumber)||!(Number(d.totalGross)>0)))throw fail("Τα συνδεδεμένα παραστατικά δεν συμφωνούν με την ίδια αγορά. Δεν έγινε αλλαγή.");
  const ids=documents.map(d=>d.id);
+ if(await exists(tx,'SupplierPaymentAllocation')){
+  const allocated=await raw(tx,'SELECT "id" FROM "SupplierPaymentAllocation" WHERE "companyId"=$1 AND "purchaseDocumentId"=ANY($2::text[]) LIMIT 1',companyId,ids);
+  if(allocated.length)throw fail("Υπάρχει κατανομή πληρωμής σε αυτό το παραστατικό. Χρειάζεται χωριστός έλεγχος.");
+ }
  const lines=await raw(tx,'SELECT * FROM "PurchaseOrderLine" WHERE "orderId"=$1 ORDER BY "id" FOR UPDATE',orderId);
  const documentLines=await raw(tx,'SELECT * FROM "PurchaseDocumentLine" WHERE "purchaseDocumentId"=ANY($1::text[]) ORDER BY "id" FOR UPDATE',ids);
  if(lines.length>2500||documentLines.length>5000)throw fail("Το μεγάλο παραστατικό χρειάζεται χωριστό έλεγχο.");
@@ -49,6 +53,8 @@ async function load(tx,actor,orderId,{storeId,supplierId}){
  if(paymentIds.length){
   [payment]=await raw(tx,'SELECT * FROM "StoreTransaction" WHERE "id"=$1 AND "companyId"=$2 FOR UPDATE',paymentIds[0],companyId);
   if(!payment||payment.storeId!==storeId||payment.supplierId!==order.supplierId||payment.type!=="SUPPLIER_PAYMENT"||payment.reversedAt||!(Number(payment.amount)>0)||number(payment.invoiceDocumentNumber)!==number(order.invoiceNumber)||Math.abs(Number(payment.amount)-Number(source.totalGross))>.050001)throw fail("Η αρχική πληρωμή χρειάζεται χωριστό έλεγχο. Δεν δημιουργήθηκε νέα χρέωση.");
+  const offsets=await raw(tx,`SELECT a."id" FROM "StoreOperatorAudit" a JOIN "StoreTransaction" t ON t."id"=a."details"->>'transactionId' AND t."companyId"=a."companyId" AND t."storeId"=a."storeId" WHERE a."companyId"=$1 AND a."storeId"=$2 AND a."eventType"='SUPPLIER_CREDIT_CASH_APPLIED' AND a."details"->>'invoicePaymentId'=$3 AND t."reversedAt" IS NULL LIMIT 1`,companyId,storeId,payment.id);
+  if(offsets.length)throw fail("Η αρχική πληρωμή έχει συνδεδεμένο συμψηφισμό πιστωτικού. Χρειάζεται χωριστός έλεγχος.");
   const linked=await raw(tx,'SELECT "id" FROM "PurchaseDocument" WHERE "paymentTransactionId"=$1 AND NOT ("id"=ANY($2::text[])) LIMIT 1',payment.id,ids);
   if(linked.length)throw fail("Η πληρωμή συνδέεται με άλλο παραστατικό. Δεν μεταβλήθηκε.");
   if(await exists(tx,'SupplierPaymentSettlement')){
