@@ -84,6 +84,17 @@ test('native PostgreSQL field sales uses current signed sessions, assignments an
       return manager('/users/'+user+'/assignments','PUT',{customerId,storeId,active,expectedRevision:rows[0]?.revision||0});
     };
     let body,orderId;
+    await t.test('signed nonmember Owner gets403 without losing manager access; revoked session or disabled license still gets401',async()=>{
+      const denied=await api.request(base+'/context','GET',undefined,'owner-a');
+      assert.equal(denied.status,403);assert.equal(denied.data.code,'SELLER_MEMBERSHIP_REQUIRED');
+      assert.equal((await manager('/users')).status,200);
+      assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "WholesaleSellerMembership" WHERE "userId"='owner-a'`)[0].n,0,'no implicit seller enrollment');
+      assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "WholesaleSellerAudit"`)[0].n,0);
+      await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=clock_timestamp() WHERE "id"='session-owner-a'`;
+      try{assert.equal((await api.request(base+'/context','GET',undefined,'owner-a')).status,401)}finally{await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NULL WHERE "id"='session-owner-a'`}
+      await db.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "id"='module-a'`;
+      try{assert.equal((await api.request(base+'/context','GET',undefined,'owner-a')).status,401)}finally{await db.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "id"='module-a'`}
+    });
     await t.test('only current managers provision same-company memberships and explicit assignment tuples',async()=>{
       assert.equal((await api.request(manage+'/users')).status,403);
       const users=await manager('/users');assert.equal(users.status,200);assert.doesNotMatch(JSON.stringify(users.data),/FOREIGN|foreign@|password|sessionVersion/);
@@ -181,7 +192,7 @@ test('native PostgreSQL field sales uses current signed sessions, assignments an
       for(const path of [base+'/orders/'+orderId+'?storeId=store-a&customerId=customer-a',base+'/catalog?storeId=store-a&customerId=customer-a'])assert.ok([403,404].includes((await api.request(path)).status));
       assert.ok([403,404].includes((await api.request(base+'/orders','POST',body)).status));
       assert.equal((await assignment('seller-a','customer-a','store-a',true)).status,200);
-      assert.equal((await membership('seller-a',false)).status,200);assert.ok([401,403].includes((await api.request(base+'/orders','POST',body)).status));assert.equal((await membership('seller-a',true)).status,200);
+      assert.equal((await membership('seller-a',false)).status,200);const inactive=await api.request(base+'/orders','POST',body);assert.equal(inactive.status,403);assert.equal(inactive.data.code,'SELLER_MEMBERSHIP_REQUIRED');assert.equal((await membership('seller-a',true)).status,200);
       for(const [table,id] of [['WholesaleCustomer','customer-a'],['Store','store-a'],['Company','company-a'],['CompanyModule','module-a']]){
         await db.$executeRawUnsafe(`UPDATE "${table}" SET "active"=false WHERE "id"=$1`,id);
         try{assert.ok([401,403,404].includes((await api.request(base+'/orders','POST',body)).status),table)}finally{await db.$executeRawUnsafe(`UPDATE "${table}" SET "active"=true WHERE "id"=$1`,id)}

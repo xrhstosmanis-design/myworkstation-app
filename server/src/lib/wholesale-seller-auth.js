@@ -16,7 +16,15 @@ async function liveUser(db,user,{lock=false,membership=false,manager=false}={}){
   const share=lock?Prisma.sql`FOR SHARE`:Prisma.empty;
   const memberJoin=membership?Prisma.sql`JOIN "WholesaleSellerMembership" m ON m."companyId"=u."companyId" AND m."userId"=u."id" AND m."active"=true`:Prisma.empty;
   const rows=await db.$queryRaw(Prisma.sql`SELECT u."id",u."companyId" AS "userCompanyId",u."role",u."fullName",u."sessionVersion",s."id" AS "sessionId",s."expiresAt",co."subscriptionStartsAt",co."subscriptionEndsAt",cm."startsAt" AS "moduleStartsAt",cm."endsAt" AS "moduleEndsAt" FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" JOIN "Company" co ON co."id"=${user.companyId} JOIN "CompanyModule" cm ON cm."companyId"=co."id" ${memberJoin} WHERE s."id"=${user.sessionId} AND u."id"=${user.id} AND s."revokedAt" IS NULL AND s."expiresAt">clock_timestamp() AND u."sessionVersion"=${user.sessionVersion} AND u."mustChangePassword"=false AND ${license} ${share}`);
-  const row=rows[0];if(!row||!roleMatches(user,row.role))throw denied();
+  const row=rows[0];
+  if(!row&&membership){
+    // A missing membership is authorization denial, not session loss. Validate
+    // the same live identity and paid entitlement independently before403;
+    // this fallback never creates a principal or grants seller access.
+    await liveUser(db,user,{lock});
+    throw wholesaleError(403,'SELLER_MEMBERSHIP_REQUIRED','Απαιτείται ενεργή ιδιότητα πωλητή. Επικοινώνησε με τον διαχειριστή για ανάθεση.');
+  }
+  if(!row||!roleMatches(user,row.role))throw denied();
   if(manager){if(!managers.has(row.role))throw wholesaleError(403,'SELLER_MANAGER_DENIED','Απαιτείται δικαίωμα διαχείρισης πωλητών.');if(row.userCompanyId!==user.companyId&&row.role!=='SUPER_ADMIN')throw denied()}
   else if(row.userCompanyId!==user.companyId||user.supportContext)throw denied();
   const clock=await db.$queryRaw`SELECT clock_timestamp() AS "now"`,now=new Date(clock[0].now).getTime();
