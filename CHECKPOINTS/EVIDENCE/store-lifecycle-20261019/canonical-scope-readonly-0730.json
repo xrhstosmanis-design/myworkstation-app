@@ -1,0 +1,2756 @@
+{
+  "format": "READ_ONLY_CANONICAL_SCOPE_OBSERVATIONS_NOT_A_PREPARED_SNAPSHOT",
+  "profileId": "REVIEWED_STORE_FRESH_START_V1_20261019",
+  "scope": {
+    "companyId": "pilot-company",
+    "storeId": "kat-store"
+  },
+  "executionAvailable": false,
+  "cleanupExecuted": false,
+  "counts": {
+    "checkedAt": "2026-10-19T07:29:55.355213Z",
+    "counts": [
+      {
+        "action": "REMOVE",
+        "count": 8,
+        "table": "AdvancedOnlineSearchUsage"
+      },
+      {
+        "action": "REMOVE",
+        "count": 269,
+        "table": "AiReaderJob"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "AttendanceEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "AudienceDiscountCard"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "AutomaticReportSettings"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "Availability"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "BankAccount"
+      },
+      {
+        "action": "REMOVE",
+        "count": 42,
+        "table": "BankLedgerEntry"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "CashControlReview"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "CashControlStoreRule"
+      },
+      {
+        "action": "REMOVE",
+        "count": 44,
+        "table": "CashShiftSession"
+      },
+      {
+        "action": "REMOVE",
+        "count": 30,
+        "table": "CloudAudit"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "CloudCatalogItem"
+      },
+      {
+        "action": "REMOVE",
+        "count": 3,
+        "table": "CloudChange"
+      },
+      {
+        "action": "KEEP",
+        "count": 6,
+        "table": "CloudDevice"
+      },
+      {
+        "action": "KEEP",
+        "count": 1,
+        "table": "CloudDeviceCursor"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "CloudInboundEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 8,
+        "table": "CloudPairingCode"
+      },
+      {
+        "action": "KEEP",
+        "count": 1,
+        "table": "ConnectorDevice"
+      },
+      {
+        "action": "REMOVE",
+        "count": 7324,
+        "table": "ConnectorEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "CustomerLedger"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "CustomerLoyaltyLedger"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "CustomerOperatorCardLink"
+      },
+      {
+        "action": "REMOVE",
+        "count": 3,
+        "table": "DeviceDeploymentJob"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "DeviceOperationsReport"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "DiningArea"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "DiningTable"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "DispatchNote"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "DispatchNoteLine"
+      },
+      {
+        "action": "REMOVE",
+        "count": 273,
+        "table": "DocumentAttachment"
+      },
+      {
+        "action": "REMOVE",
+        "count": 22,
+        "table": "DocumentInbox"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "EfoodIntegrationPreview"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "EfoodProductMapping"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "EfoodWebhookEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 23,
+        "table": "Employee"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "EmployeeNaturalRule"
+      },
+      {
+        "action": "REMOVE",
+        "count": 10239,
+        "table": "EmployeeRule"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "Expense"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "FiscalBridgeDryRun"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "FiscalDocument"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "InternetPriceProposal"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "InternetPriceProposalAudit"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "InternetProductSearch"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "InventoryAccessGrant"
+      },
+      {
+        "action": "REMOVE",
+        "count": 2,
+        "table": "InventoryCountEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "InventoryParticipant"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "InventoryZone"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "InvoiceDraftAlias"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "InvoiceStockPosting"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "KioskAuditEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 2,
+        "table": "LeaveRequest"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "ModifierInventoryPrice"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "MyDataInboundDocument"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "NetlinkCancellationRequest"
+      },
+      {
+        "action": "KEEP",
+        "count": 1,
+        "table": "NetlinkStoreConfig"
+      },
+      {
+        "action": "REMOVE",
+        "count": 8,
+        "table": "NetlinkTransaction"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "OfflineSaleSyncEvidence"
+      },
+      {
+        "action": "REMOVE",
+        "count": 14,
+        "table": "OnlineOrder"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "OnlineOrderingConfig"
+      },
+      {
+        "action": "REMOVE",
+        "count": 15,
+        "table": "OnlineOrderLine"
+      },
+      {
+        "action": "REMOVE",
+        "count": 99,
+        "table": "OnlineOrderStatusEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 113,
+        "table": "OnlineProductVisibility"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "OnlineStoreMember"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "OtherExpenseReview"
+      },
+      {
+        "action": "REMOVE",
+        "count": 180,
+        "table": "Payment"
+      },
+      {
+        "action": "REMOVE",
+        "count": 4,
+        "table": "PaymentDeviceRouteAttempt"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "PayrollEntry"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "PayrollPeriod"
+      },
+      {
+        "action": "KEEP",
+        "count": 1,
+        "table": "PilotStoreProfile"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "PosAudienceSelection"
+      },
+      {
+        "action": "REMOVE",
+        "count": 8,
+        "table": "PosHeldTransaction"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "PosInvoiceBackgroundTask"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "PosOnlineRadioState"
+      },
+      {
+        "action": "REMOVE",
+        "count": 61,
+        "table": "PosOperationalEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 758,
+        "table": "PosSaleActionAudit"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "PosSaleSafetyAudit"
+      },
+      {
+        "action": "REMOVE",
+        "count": 12,
+        "table": "PreparationStockConsumption"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "PriceCatalogPromotionStore"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "ProductBarcodePriceRequest"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "ProductPriceHistory"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "PromotionStore"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "ProviderAttempt"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "ProviderOutbox"
+      },
+      {
+        "action": "REMOVE",
+        "count": 30,
+        "table": "PurchaseDocument"
+      },
+      {
+        "action": "REMOVE",
+        "count": 208,
+        "table": "PurchaseDocumentLine"
+      },
+      {
+        "action": "REMOVE",
+        "count": 11,
+        "table": "PurchaseOrder"
+      },
+      {
+        "action": "REMOVE",
+        "count": 57,
+        "table": "PurchaseOrderLine"
+      },
+      {
+        "action": "REMOVE",
+        "count": 5,
+        "table": "PurchaseOrderPackCorrection"
+      },
+      {
+        "action": "REMOVE",
+        "count": 6,
+        "table": "PurchaseOrderPosting"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "PurchaseOrderReopenAudit"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "PurchaseOrderReopenMovement"
+      },
+      {
+        "action": "REMOVE",
+        "count": 3,
+        "table": "PurchaseOrderTotalOverrideAudit"
+      },
+      {
+        "action": "REMOVE",
+        "count": 17,
+        "table": "RbsCapDriverV1Request"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "RecoveryWorkflowRun"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "RemoteSupportSession"
+      },
+      {
+        "action": "REMOVE",
+        "count": 165,
+        "table": "Sale"
+      },
+      {
+        "action": "REMOVE",
+        "count": 210,
+        "table": "SaleLine"
+      },
+      {
+        "action": "REMOVE",
+        "count": 5,
+        "table": "Schedule"
+      },
+      {
+        "action": "REMOVE",
+        "count": 318,
+        "table": "ScheduleAssignment"
+      },
+      {
+        "action": "REMOVE",
+        "count": 2,
+        "table": "ScheduleGenerationBrief"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "ShiftHandover"
+      },
+      {
+        "action": "REMOVE",
+        "count": 6,
+        "table": "ShiftType"
+      },
+      {
+        "action": "REMOVE",
+        "count": 174,
+        "table": "StockMovement"
+      },
+      {
+        "action": "REMOVE",
+        "count": 5,
+        "table": "Stocktake"
+      },
+      {
+        "action": "REMOVE",
+        "count": 266,
+        "table": "StocktakeLine"
+      },
+      {
+        "action": "REMOVE",
+        "count": 22,
+        "table": "StocktakeMovementAdjustment"
+      },
+      {
+        "action": "KEEP",
+        "count": 1,
+        "table": "Store"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreBakedBalance"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreBakedBalanceEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreBakingEntry"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreBakingPolicy"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreChatAcknowledgement"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "StoreChatMessage"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreChatMobileSession"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreChatPushSubscription"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreChatRead"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreChatSettings"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreChatTask"
+      },
+      {
+        "action": "KEEP",
+        "count": 4,
+        "table": "StoreEftposDevice"
+      },
+      {
+        "action": "KEEP",
+        "count": 2,
+        "table": "StoreFiscalDevice"
+      },
+      {
+        "action": "KEEP",
+        "count": 3,
+        "table": "StoreInstallationTerminal"
+      },
+      {
+        "action": "REMOVE",
+        "count": 2,
+        "table": "StoreIntegrationCredential"
+      },
+      {
+        "action": "KEEP",
+        "count": 0,
+        "table": "StoreLabelSettings"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreOnlineRadioConfig"
+      },
+      {
+        "action": "REMOVE",
+        "count": 475,
+        "table": "StoreOperatorAudit"
+      },
+      {
+        "action": "REMOVE",
+        "count": 11,
+        "table": "StoreOperatorCredential"
+      },
+      {
+        "action": "REMOVE",
+        "count": 2,
+        "table": "StoreOperatorLoginGuard"
+      },
+      {
+        "action": "REMOVE",
+        "count": 11,
+        "table": "StoreOperatorProfile"
+      },
+      {
+        "action": "REMOVE",
+        "count": 175,
+        "table": "StoreOperatorSession"
+      },
+      {
+        "action": "KEEP",
+        "count": 6,
+        "table": "StorePaidModule"
+      },
+      {
+        "action": "KEEP",
+        "count": 1,
+        "table": "StorePosLayout"
+      },
+      {
+        "action": "REMOVE",
+        "count": 5,
+        "table": "StorePreparationBatch"
+      },
+      {
+        "action": "REMOVE",
+        "count": 143,
+        "table": "StoreProduct"
+      },
+      {
+        "action": "REMOVE",
+        "count": 336,
+        "table": "StoreProductAudienceDiscount"
+      },
+      {
+        "action": "REMOVE",
+        "count": 3,
+        "table": "StoreProductAudienceDiscountAudit"
+      },
+      {
+        "action": "KEEP",
+        "count": 2,
+        "table": "StoreRbsInstallationSettings"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "StoreTableServiceConfig"
+      },
+      {
+        "action": "REMOVE",
+        "count": 213,
+        "table": "StoreTransaction"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreVideoCamera"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "StoreVideoConnection"
+      },
+      {
+        "action": "REMOVE",
+        "count": 3,
+        "table": "SupplierPaymentAllocation"
+      },
+      {
+        "action": "REMOVE",
+        "count": 3,
+        "table": "SupplierPaymentSettlement"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "TableOrder"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "TableOrderLine"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "TableOrderRequest"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "VideoAccessAudit"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "VideoConnectorCommand"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "VideoMediaArtifact"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "VideoMediaArtifactChunk"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "VideoOperationalEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WholesaleOrderEvent"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WholesaleOrderRequest"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WholesalePortalAccount"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WholesalePortalPublication"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WholesalePortalSession"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WholesaleSellerAssignment"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WorkforceAbsence"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "WorkforceAttendanceSession"
+      },
+      {
+        "action": "REMOVE",
+        "count": 23,
+        "table": "WorkforceAuditLog"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WorkforceChatCommand"
+      },
+      {
+        "action": "REMOVE",
+        "count": 3,
+        "table": "WorkforceEmployee"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WorkforceEmployeeEvaluation"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WorkforceEmployeePayment"
+      },
+      {
+        "action": "REMOVE",
+        "count": 3,
+        "table": "WorkforceEmployeeRole"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WorkforceEmployeeRule"
+      },
+      {
+        "action": "REMOVE",
+        "count": 3,
+        "table": "WorkforceEmployeeStoreAccess"
+      },
+      {
+        "action": "REMOVE",
+        "count": 3,
+        "table": "WorkforceHourlyRate"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "WorkforceLeaveRequest"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WorkforcePayrollClosing"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WorkforcePayrollLine"
+      },
+      {
+        "action": "REMOVE",
+        "count": 0,
+        "table": "WorkforcePayrollPeriod"
+      },
+      {
+        "action": "REMOVE",
+        "count": 1,
+        "table": "WorkforceSchedule"
+      },
+      {
+        "action": "REMOVE",
+        "count": 2,
+        "table": "WorkforceScheduleAssignment"
+      },
+      {
+        "action": "REMOVE",
+        "count": 4,
+        "table": "WorkforceShiftTemplate"
+      },
+      {
+        "action": "REMOVE",
+        "count": 2,
+        "table": "WorkforceTimeClockEntry"
+      }
+    ]
+  },
+  "applicationReferences": {
+    "checkedAt": "2026-10-19T07:30:00.158154Z",
+    "checks": [
+      {
+        "child": "CashControlReview",
+        "columns": "sessionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "CashShiftSession",
+        "selectedLinks": 1
+      },
+      {
+        "child": "CloudDeviceCursor",
+        "columns": "deviceId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "CloudDevice",
+        "selectedLinks": 1
+      },
+      {
+        "child": "CloudInboundEvent",
+        "columns": "deviceId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "CloudDevice",
+        "selectedLinks": 0
+      },
+      {
+        "child": "ConnectorDevice",
+        "columns": "cloudDeviceId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "CloudDevice",
+        "selectedLinks": 1
+      },
+      {
+        "child": "CustomerLedger",
+        "columns": "sessionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "CashShiftSession",
+        "selectedLinks": 0
+      },
+      {
+        "child": "CustomerLoyaltyLedger",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 0
+      },
+      {
+        "child": "CustomerLoyaltyLedger",
+        "columns": "sessionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "CashShiftSession",
+        "selectedLinks": 0
+      },
+      {
+        "child": "DiningTable",
+        "columns": "areaId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "DiningArea",
+        "selectedLinks": 0
+      },
+      {
+        "child": "EmployeeNaturalRule",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "Employee",
+        "selectedLinks": 0
+      },
+      {
+        "child": "FiscalBridgeDryRun",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InternetPriceProposal",
+        "columns": "searchId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "InternetProductSearch",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InternetPriceProposalAudit",
+        "columns": "proposalId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "InternetPriceProposal",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InventoryAccessGrant",
+        "columns": "zoneId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "InventoryZone",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InventoryCountEvent",
+        "columns": "zoneId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "InventoryZone",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InventoryParticipant",
+        "columns": "zoneId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "InventoryZone",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InvoiceDraftAlias",
+        "columns": "aliasOrderId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseOrder",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InvoiceDraftAlias",
+        "columns": "canonicalOrderId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseOrder",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InvoiceDraftAlias",
+        "columns": "aliasDocumentId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseDocument",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InvoiceDraftAlias",
+        "columns": "canonicalDocumentId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseDocument",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InvoiceDraftAlias",
+        "columns": "inboxId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "DocumentInbox",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InvoiceStockPosting",
+        "columns": "sourceDocumentId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseDocument",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InvoiceStockPosting",
+        "columns": "orderId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseOrder",
+        "selectedLinks": 0
+      },
+      {
+        "child": "InvoiceStockPosting",
+        "columns": "postedDocumentId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseDocument",
+        "selectedLinks": 0
+      },
+      {
+        "child": "MyDataInboundDocument",
+        "columns": "inboxId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "DocumentInbox",
+        "selectedLinks": 0
+      },
+      {
+        "child": "NetlinkCancellationRequest",
+        "columns": "transactionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "NetlinkTransaction",
+        "selectedLinks": 0
+      },
+      {
+        "child": "NetlinkTransaction",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 2
+      },
+      {
+        "child": "NetlinkTransaction",
+        "columns": "fiscalDocumentId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "FiscalDocument",
+        "selectedLinks": 0
+      },
+      {
+        "child": "OfflineSaleSyncEvidence",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 0
+      },
+      {
+        "child": "OnlineOrder",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 14
+      },
+      {
+        "child": "OtherExpenseReview",
+        "columns": "transactionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StoreTransaction",
+        "selectedLinks": 1
+      },
+      {
+        "child": "PaymentDeviceRouteAttempt",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 4
+      },
+      {
+        "child": "PaymentDeviceRouteAttempt",
+        "columns": "sessionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "CashShiftSession",
+        "selectedLinks": 4
+      },
+      {
+        "child": "PosHeldTransaction",
+        "columns": "sessionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "CashShiftSession",
+        "selectedLinks": 8
+      },
+      {
+        "child": "PosOperationalEvent",
+        "columns": "sessionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "CashShiftSession",
+        "selectedLinks": 61
+      },
+      {
+        "child": "PosSaleActionAudit",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 58
+      },
+      {
+        "child": "PosSaleActionAudit",
+        "columns": "relatedSaleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 16
+      },
+      {
+        "child": "PosSaleSafetyAudit",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 0
+      },
+      {
+        "child": "PosSaleSafetyAudit",
+        "columns": "relatedSaleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 1
+      },
+      {
+        "child": "PreparationStockConsumption",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 12
+      },
+      {
+        "child": "PreparationStockConsumption",
+        "columns": "batchId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StorePreparationBatch",
+        "selectedLinks": 12
+      },
+      {
+        "child": "ProviderOutbox",
+        "columns": "aggregateId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "DispatchNote",
+        "selectedLinks": 0
+      },
+      {
+        "child": "PurchaseDocument",
+        "columns": "paymentTransactionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StoreTransaction",
+        "selectedLinks": 2
+      },
+      {
+        "child": "PurchaseDocument",
+        "columns": "purchaseOrderId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseOrder",
+        "selectedLinks": 9
+      },
+      {
+        "child": "PurchaseDocumentLine",
+        "columns": "purchaseOrderLineId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseOrderLine",
+        "selectedLinks": 55
+      },
+      {
+        "child": "PurchaseOrder",
+        "columns": "sourceDocumentId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseDocument",
+        "selectedLinks": 9
+      },
+      {
+        "child": "PurchaseOrderLine",
+        "columns": "orderId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "PurchaseOrder",
+        "selectedLinks": 57
+      },
+      {
+        "child": "PurchaseOrderPackCorrection",
+        "columns": "orderId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "PurchaseOrder",
+        "selectedLinks": 5
+      },
+      {
+        "child": "PurchaseOrderPosting",
+        "columns": "orderId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "PurchaseOrder",
+        "selectedLinks": 6
+      },
+      {
+        "child": "PurchaseOrderPosting",
+        "columns": "purchaseDocumentId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseDocument",
+        "selectedLinks": 6
+      },
+      {
+        "child": "PurchaseOrderReopenAudit",
+        "columns": "orderId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseOrder",
+        "selectedLinks": 0
+      },
+      {
+        "child": "PurchaseOrderReopenMovement",
+        "columns": "movementId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StockMovement",
+        "selectedLinks": 0
+      },
+      {
+        "child": "PurchaseOrderReopenMovement",
+        "columns": "orderId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseOrder",
+        "selectedLinks": 0
+      },
+      {
+        "child": "PurchaseOrderReopenMovement",
+        "columns": "reversalMovementId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StockMovement",
+        "selectedLinks": 0
+      },
+      {
+        "child": "PurchaseOrderTotalOverrideAudit",
+        "columns": "orderId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "PurchaseOrder",
+        "selectedLinks": 3
+      },
+      {
+        "child": "PurchaseOrderTotalOverrideAudit",
+        "columns": "purchaseDocumentId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "PurchaseDocument",
+        "selectedLinks": 3
+      },
+      {
+        "child": "RbsCapDriverV1Request",
+        "columns": "claimedByDeviceId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "CloudDevice",
+        "selectedLinks": 17
+      },
+      {
+        "child": "RbsCapDriverV1Request",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 9
+      },
+      {
+        "child": "Sale",
+        "columns": "originalSaleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 16
+      },
+      {
+        "child": "StocktakeLine",
+        "columns": "zoneId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "InventoryZone",
+        "selectedLinks": 0
+      },
+      {
+        "child": "StocktakeMovementAdjustment",
+        "columns": "movementId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StockMovement",
+        "selectedLinks": 22
+      },
+      {
+        "child": "StoreChatAcknowledgement",
+        "columns": "messageId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StoreChatMessage",
+        "selectedLinks": 0
+      },
+      {
+        "child": "StoreChatMessage",
+        "columns": "aiReaderJobId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "AiReaderJob",
+        "selectedLinks": 0
+      },
+      {
+        "child": "StoreChatMobileSession",
+        "columns": "operatorId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StoreOperatorCredential",
+        "selectedLinks": 0
+      },
+      {
+        "child": "StoreChatPushSubscription",
+        "columns": "chatSessionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StoreChatMobileSession",
+        "selectedLinks": 0
+      },
+      {
+        "child": "StoreChatRead",
+        "columns": "messageId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "StoreChatMessage",
+        "selectedLinks": 0
+      },
+      {
+        "child": "StoreChatTask",
+        "columns": "messageId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StoreChatMessage",
+        "selectedLinks": 0
+      },
+      {
+        "child": "StoreChatTask",
+        "columns": "assigneeEmployeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Employee",
+        "selectedLinks": 0
+      },
+      {
+        "child": "StoreOperatorCredential",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Employee",
+        "selectedLinks": 11
+      },
+      {
+        "child": "StoreOperatorProfile",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Employee",
+        "selectedLinks": 11
+      },
+      {
+        "child": "StoreOperatorSession",
+        "columns": "operatorId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StoreOperatorCredential",
+        "selectedLinks": 175
+      },
+      {
+        "child": "StorePreparationBatch",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 2
+      },
+      {
+        "child": "StorePreparationBatch",
+        "columns": "tableOrderId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "TableOrder",
+        "selectedLinks": 0
+      },
+      {
+        "child": "StoreTransaction",
+        "columns": "sessionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "CashShiftSession",
+        "selectedLinks": 208
+      },
+      {
+        "child": "SupplierPaymentSettlement",
+        "columns": "transactionId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "StoreTransaction",
+        "selectedLinks": 3
+      },
+      {
+        "child": "TableOrder",
+        "columns": "tableId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "DiningTable",
+        "selectedLinks": 0
+      },
+      {
+        "child": "TableOrder",
+        "columns": "saleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Sale",
+        "selectedLinks": 0
+      },
+      {
+        "child": "TableOrderLine",
+        "columns": "orderId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "TableOrder",
+        "selectedLinks": 0
+      },
+      {
+        "child": "VideoConnectorCommand",
+        "columns": "connectorDeviceId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "ConnectorDevice",
+        "selectedLinks": 0
+      },
+      {
+        "child": "VideoConnectorCommand",
+        "columns": "videoEventId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "VideoOperationalEvent",
+        "selectedLinks": 0
+      },
+      {
+        "child": "VideoMediaArtifact",
+        "columns": "videoEventId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "VideoOperationalEvent",
+        "selectedLinks": 0
+      },
+      {
+        "child": "WorkforceAbsence",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 0
+      },
+      {
+        "child": "WorkforceAttendanceSession",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 1
+      },
+      {
+        "child": "WorkforceAttendanceSession",
+        "columns": "scheduledAssignmentId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceScheduleAssignment",
+        "selectedLinks": 0
+      },
+      {
+        "child": "WorkforceAttendanceSession",
+        "columns": "clockInEntryId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceTimeClockEntry",
+        "selectedLinks": 1
+      },
+      {
+        "child": "WorkforceAttendanceSession",
+        "columns": "clockOutEntryId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceTimeClockEntry",
+        "selectedLinks": 1
+      },
+      {
+        "child": "WorkforceChatCommand",
+        "columns": "scheduleId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceSchedule",
+        "selectedLinks": 0
+      },
+      {
+        "child": "WorkforceEmployee",
+        "columns": "legacyEmployeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "Employee",
+        "selectedLinks": 0
+      },
+      {
+        "child": "WorkforceEmployeeEvaluation",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 0
+      },
+      {
+        "child": "WorkforceEmployeeRole",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 3
+      },
+      {
+        "child": "WorkforceEmployeeRule",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 0
+      },
+      {
+        "child": "WorkforceEmployeeRule",
+        "columns": "relatedEmployeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 0
+      },
+      {
+        "child": "WorkforceEmployeeStoreAccess",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 3
+      },
+      {
+        "child": "WorkforceHourlyRate",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 3
+      },
+      {
+        "child": "WorkforceLeaveRequest",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 1
+      },
+      {
+        "child": "WorkforceScheduleAssignment",
+        "columns": "scheduleId",
+        "crossScope": 0,
+        "ownership": true,
+        "parent": "WorkforceSchedule",
+        "selectedLinks": 2
+      },
+      {
+        "child": "WorkforceScheduleAssignment",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 2
+      },
+      {
+        "child": "WorkforceScheduleAssignment",
+        "columns": "shiftTemplateId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceShiftTemplate",
+        "selectedLinks": 2
+      },
+      {
+        "child": "WorkforceTimeClockEntry",
+        "columns": "employeeId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceEmployee",
+        "selectedLinks": 2
+      },
+      {
+        "child": "WorkforceTimeClockEntry",
+        "columns": "sourceShiftId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceScheduleAssignment",
+        "selectedLinks": 0
+      },
+      {
+        "child": "WorkforceTimeClockEntry",
+        "columns": "correctionOfId",
+        "crossScope": 0,
+        "ownership": false,
+        "parent": "WorkforceTimeClockEntry",
+        "selectedLinks": 0
+      }
+    ]
+  },
+  "declaredForeignKeyChecks": {
+    "observedDateUtc": "2026-10-19",
+    "checks": [
+      {
+        "child": "AiReaderJob",
+        "crossScope": 0,
+        "parent": "DocumentAttachment"
+      },
+      {
+        "child": "AiReaderJob",
+        "crossScope": 0,
+        "parent": "PurchaseDocument"
+      },
+      {
+        "child": "AiReaderJob",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "AttendanceEvent",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "AttendanceEvent",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "Availability",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "BankLedgerEntry",
+        "crossScope": 0,
+        "parent": "BankAccount"
+      },
+      {
+        "child": "ConnectorDevice",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "ConnectorEvent",
+        "crossScope": 0,
+        "parent": "ConnectorDevice"
+      },
+      {
+        "child": "CustomerLedger",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "CustomerOperatorCardLink",
+        "crossScope": 0,
+        "parent": "StoreOperatorCredential"
+      },
+      {
+        "child": "DispatchNote",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "DispatchNoteLine",
+        "crossScope": 0,
+        "parent": "DispatchNote"
+      },
+      {
+        "child": "DocumentAttachment",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "DocumentInbox",
+        "crossScope": 0,
+        "parent": "DocumentAttachment"
+      },
+      {
+        "child": "DocumentInbox",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "EfoodIntegrationPreview",
+        "crossScope": 0,
+        "parent": "StoreIntegrationCredential"
+      },
+      {
+        "child": "EfoodIntegrationPreview",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "EfoodProductMapping",
+        "crossScope": 0,
+        "parent": "StoreIntegrationCredential"
+      },
+      {
+        "child": "EfoodProductMapping",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "EfoodWebhookEvent",
+        "crossScope": 0,
+        "parent": "StoreIntegrationCredential"
+      },
+      {
+        "child": "EfoodWebhookEvent",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "Employee",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "EmployeeRule",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "EmployeeRule",
+        "crossScope": 0,
+        "parent": "ShiftType"
+      },
+      {
+        "child": "Expense",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "FiscalDocument",
+        "crossScope": 0,
+        "parent": "Sale"
+      },
+      {
+        "child": "InventoryAccessGrant",
+        "crossScope": 0,
+        "parent": "Stocktake"
+      },
+      {
+        "child": "InventoryCountEvent",
+        "crossScope": 0,
+        "parent": "StocktakeLine"
+      },
+      {
+        "child": "InventoryCountEvent",
+        "crossScope": 0,
+        "parent": "Stocktake"
+      },
+      {
+        "child": "InventoryParticipant",
+        "crossScope": 0,
+        "parent": "Stocktake"
+      },
+      {
+        "child": "InventoryZone",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "LeaveRequest",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "OnlineOrder",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "OnlineOrder",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "OnlineOrderLine",
+        "crossScope": 0,
+        "parent": "OnlineOrder"
+      },
+      {
+        "child": "OnlineOrderStatusEvent",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "OnlineOrderStatusEvent",
+        "crossScope": 0,
+        "parent": "OnlineOrder"
+      },
+      {
+        "child": "OnlineOrderingConfig",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "OnlineProductVisibility",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "Payment",
+        "crossScope": 0,
+        "parent": "Sale"
+      },
+      {
+        "child": "PayrollEntry",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "PayrollEntry",
+        "crossScope": 0,
+        "parent": "PayrollPeriod"
+      },
+      {
+        "child": "PosInvoiceBackgroundTask",
+        "crossScope": 0,
+        "parent": "AiReaderJob"
+      },
+      {
+        "child": "ProductPriceHistory",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "PromotionStore",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "ProviderAttempt",
+        "crossScope": 0,
+        "parent": "ProviderOutbox"
+      },
+      {
+        "child": "PurchaseDocument",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "PurchaseDocumentLine",
+        "crossScope": 0,
+        "parent": "PurchaseDocument"
+      },
+      {
+        "child": "PurchaseOrderReopenMovement",
+        "crossScope": 0,
+        "parent": "PurchaseOrderReopenAudit"
+      },
+      {
+        "child": "RemoteSupportSession",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "Sale",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "Sale",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "SaleLine",
+        "crossScope": 0,
+        "parent": "Sale"
+      },
+      {
+        "child": "Schedule",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "ScheduleAssignment",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "ScheduleAssignment",
+        "crossScope": 0,
+        "parent": "Schedule"
+      },
+      {
+        "child": "ScheduleAssignment",
+        "crossScope": 0,
+        "parent": "ShiftType"
+      },
+      {
+        "child": "ShiftHandover",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "ShiftHandover",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "ShiftHandover",
+        "crossScope": 0,
+        "parent": "Employee"
+      },
+      {
+        "child": "ShiftType",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "StockMovement",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "Stocktake",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "StocktakeLine",
+        "crossScope": 0,
+        "parent": "Stocktake"
+      },
+      {
+        "child": "StocktakeMovementAdjustment",
+        "crossScope": 0,
+        "parent": "StocktakeLine"
+      },
+      {
+        "child": "StocktakeMovementAdjustment",
+        "crossScope": 0,
+        "parent": "Stocktake"
+      },
+      {
+        "child": "StoreBakedBalance",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "StoreBakedBalanceEvent",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "StoreBakingEntry",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "StoreBakingPolicy",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "StorePaidModule",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "StoreProduct",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "StoreVideoCamera",
+        "crossScope": 0,
+        "parent": "StoreVideoConnection"
+      },
+      {
+        "child": "StoreVideoCamera",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "StoreVideoConnection",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "SupplierPaymentAllocation",
+        "crossScope": 0,
+        "parent": "PurchaseDocument"
+      },
+      {
+        "child": "SupplierPaymentAllocation",
+        "crossScope": 0,
+        "parent": "SupplierPaymentSettlement"
+      },
+      {
+        "child": "VideoConnectorCommand",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "VideoMediaArtifact",
+        "crossScope": 0,
+        "parent": "VideoConnectorCommand"
+      },
+      {
+        "child": "VideoMediaArtifactChunk",
+        "crossScope": 0,
+        "parent": "VideoMediaArtifact"
+      },
+      {
+        "child": "VideoOperationalEvent",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "WholesaleOrderEvent",
+        "crossScope": 0,
+        "parent": "WholesaleOrderRequest"
+      },
+      {
+        "child": "WholesaleOrderRequest",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "WholesalePortalAccount",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "WholesalePortalPublication",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "WholesalePortalSession",
+        "crossScope": 0,
+        "parent": "WholesalePortalAccount"
+      },
+      {
+        "child": "WholesaleSellerAssignment",
+        "crossScope": 0,
+        "parent": "Store"
+      },
+      {
+        "child": "WorkforceEmployeePayment",
+        "crossScope": 0,
+        "parent": "WorkforceEmployee"
+      },
+      {
+        "child": "WorkforceEmployeePayment",
+        "crossScope": 0,
+        "parent": "WorkforcePayrollPeriod"
+      },
+      {
+        "child": "WorkforcePayrollClosing",
+        "crossScope": 0,
+        "parent": "WorkforcePayrollPeriod"
+      },
+      {
+        "child": "WorkforcePayrollLine",
+        "crossScope": 0,
+        "parent": "WorkforceEmployee"
+      },
+      {
+        "child": "WorkforcePayrollLine",
+        "crossScope": 0,
+        "parent": "WorkforcePayrollPeriod"
+      }
+    ]
+  },
+  "ownershipOrphanChecks": {
+    "observedDateUtc": "2026-10-19",
+    "checks": [
+      {
+        "table": "CloudDeviceCursor",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "EmployeeNaturalRule",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "ProviderOutbox",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "PurchaseOrderLine",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "PurchaseOrderPackCorrection",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "PurchaseOrderPosting",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "PurchaseOrderTotalOverrideAudit",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "StoreChatRead",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "TableOrderLine",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "WorkforceEmployeeRole",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "WorkforceEmployeeRule",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "WorkforceHourlyRate",
+        "unownedGlobalLinks": 0
+      },
+      {
+        "table": "WorkforceScheduleAssignment",
+        "unownedGlobalLinks": 0
+      }
+    ]
+  },
+  "historicalNonOwningMissingParents": {
+    "observedDateUtc": "2026-10-19",
+    "checks": [
+      {
+        "columns": "sessionId",
+        "missingHistoricalParent": 0,
+        "parent": "CashShiftSession",
+        "table": "CashControlReview"
+      },
+      {
+        "columns": "deviceId",
+        "missingHistoricalParent": 0,
+        "parent": "CloudDevice",
+        "table": "CloudInboundEvent"
+      },
+      {
+        "columns": "cloudDeviceId",
+        "missingHistoricalParent": 0,
+        "parent": "CloudDevice",
+        "table": "ConnectorDevice"
+      },
+      {
+        "columns": "sessionId",
+        "missingHistoricalParent": 0,
+        "parent": "CashShiftSession",
+        "table": "CustomerLedger"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "CustomerLoyaltyLedger"
+      },
+      {
+        "columns": "sessionId",
+        "missingHistoricalParent": 0,
+        "parent": "CashShiftSession",
+        "table": "CustomerLoyaltyLedger"
+      },
+      {
+        "columns": "areaId",
+        "missingHistoricalParent": 0,
+        "parent": "DiningArea",
+        "table": "DiningTable"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "FiscalBridgeDryRun"
+      },
+      {
+        "columns": "searchId",
+        "missingHistoricalParent": 0,
+        "parent": "InternetProductSearch",
+        "table": "InternetPriceProposal"
+      },
+      {
+        "columns": "proposalId",
+        "missingHistoricalParent": 0,
+        "parent": "InternetPriceProposal",
+        "table": "InternetPriceProposalAudit"
+      },
+      {
+        "columns": "zoneId",
+        "missingHistoricalParent": 0,
+        "parent": "InventoryZone",
+        "table": "InventoryAccessGrant"
+      },
+      {
+        "columns": "zoneId",
+        "missingHistoricalParent": 0,
+        "parent": "InventoryZone",
+        "table": "InventoryCountEvent"
+      },
+      {
+        "columns": "zoneId",
+        "missingHistoricalParent": 0,
+        "parent": "InventoryZone",
+        "table": "InventoryParticipant"
+      },
+      {
+        "columns": "aliasOrderId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseOrder",
+        "table": "InvoiceDraftAlias"
+      },
+      {
+        "columns": "canonicalOrderId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseOrder",
+        "table": "InvoiceDraftAlias"
+      },
+      {
+        "columns": "aliasDocumentId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseDocument",
+        "table": "InvoiceDraftAlias"
+      },
+      {
+        "columns": "canonicalDocumentId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseDocument",
+        "table": "InvoiceDraftAlias"
+      },
+      {
+        "columns": "inboxId",
+        "missingHistoricalParent": 0,
+        "parent": "DocumentInbox",
+        "table": "InvoiceDraftAlias"
+      },
+      {
+        "columns": "sourceDocumentId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseDocument",
+        "table": "InvoiceStockPosting"
+      },
+      {
+        "columns": "orderId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseOrder",
+        "table": "InvoiceStockPosting"
+      },
+      {
+        "columns": "postedDocumentId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseDocument",
+        "table": "InvoiceStockPosting"
+      },
+      {
+        "columns": "inboxId",
+        "missingHistoricalParent": 2,
+        "parent": "DocumentInbox",
+        "table": "MyDataInboundDocument"
+      },
+      {
+        "columns": "transactionId",
+        "missingHistoricalParent": 0,
+        "parent": "NetlinkTransaction",
+        "table": "NetlinkCancellationRequest"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "NetlinkTransaction"
+      },
+      {
+        "columns": "fiscalDocumentId",
+        "missingHistoricalParent": 0,
+        "parent": "FiscalDocument",
+        "table": "NetlinkTransaction"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "OfflineSaleSyncEvidence"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "OnlineOrder"
+      },
+      {
+        "columns": "transactionId",
+        "missingHistoricalParent": 0,
+        "parent": "StoreTransaction",
+        "table": "OtherExpenseReview"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "PaymentDeviceRouteAttempt"
+      },
+      {
+        "columns": "sessionId",
+        "missingHistoricalParent": 0,
+        "parent": "CashShiftSession",
+        "table": "PaymentDeviceRouteAttempt"
+      },
+      {
+        "columns": "sessionId",
+        "missingHistoricalParent": 0,
+        "parent": "CashShiftSession",
+        "table": "PosHeldTransaction"
+      },
+      {
+        "columns": "sessionId",
+        "missingHistoricalParent": 0,
+        "parent": "CashShiftSession",
+        "table": "PosOperationalEvent"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "PosSaleActionAudit"
+      },
+      {
+        "columns": "relatedSaleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "PosSaleActionAudit"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "PosSaleSafetyAudit"
+      },
+      {
+        "columns": "relatedSaleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "PosSaleSafetyAudit"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "PreparationStockConsumption"
+      },
+      {
+        "columns": "batchId",
+        "missingHistoricalParent": 0,
+        "parent": "StorePreparationBatch",
+        "table": "PreparationStockConsumption"
+      },
+      {
+        "columns": "paymentTransactionId",
+        "missingHistoricalParent": 0,
+        "parent": "StoreTransaction",
+        "table": "PurchaseDocument"
+      },
+      {
+        "columns": "purchaseOrderId",
+        "missingHistoricalParent": 16,
+        "parent": "PurchaseOrder",
+        "table": "PurchaseDocument"
+      },
+      {
+        "columns": "purchaseOrderLineId",
+        "missingHistoricalParent": 144,
+        "parent": "PurchaseOrderLine",
+        "table": "PurchaseDocumentLine"
+      },
+      {
+        "columns": "sourceDocumentId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseDocument",
+        "table": "PurchaseOrder"
+      },
+      {
+        "columns": "purchaseDocumentId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseDocument",
+        "table": "PurchaseOrderPosting"
+      },
+      {
+        "columns": "orderId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseOrder",
+        "table": "PurchaseOrderReopenAudit"
+      },
+      {
+        "columns": "movementId",
+        "missingHistoricalParent": 0,
+        "parent": "StockMovement",
+        "table": "PurchaseOrderReopenMovement"
+      },
+      {
+        "columns": "orderId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseOrder",
+        "table": "PurchaseOrderReopenMovement"
+      },
+      {
+        "columns": "reversalMovementId",
+        "missingHistoricalParent": 0,
+        "parent": "StockMovement",
+        "table": "PurchaseOrderReopenMovement"
+      },
+      {
+        "columns": "purchaseDocumentId",
+        "missingHistoricalParent": 0,
+        "parent": "PurchaseDocument",
+        "table": "PurchaseOrderTotalOverrideAudit"
+      },
+      {
+        "columns": "claimedByDeviceId",
+        "missingHistoricalParent": 0,
+        "parent": "CloudDevice",
+        "table": "RbsCapDriverV1Request"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "RbsCapDriverV1Request"
+      },
+      {
+        "columns": "originalSaleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "Sale"
+      },
+      {
+        "columns": "zoneId",
+        "missingHistoricalParent": 0,
+        "parent": "InventoryZone",
+        "table": "StocktakeLine"
+      },
+      {
+        "columns": "movementId",
+        "missingHistoricalParent": 0,
+        "parent": "StockMovement",
+        "table": "StocktakeMovementAdjustment"
+      },
+      {
+        "columns": "messageId",
+        "missingHistoricalParent": 0,
+        "parent": "StoreChatMessage",
+        "table": "StoreChatAcknowledgement"
+      },
+      {
+        "columns": "aiReaderJobId",
+        "missingHistoricalParent": 1,
+        "parent": "AiReaderJob",
+        "table": "StoreChatMessage"
+      },
+      {
+        "columns": "messageId",
+        "missingHistoricalParent": 0,
+        "parent": "StoreChatMessage",
+        "table": "StoreChatTask"
+      },
+      {
+        "columns": "assigneeEmployeeId",
+        "missingHistoricalParent": 0,
+        "parent": "Employee",
+        "table": "StoreChatTask"
+      },
+      {
+        "columns": "employeeId",
+        "missingHistoricalParent": 1,
+        "parent": "Employee",
+        "table": "StoreOperatorCredential"
+      },
+      {
+        "columns": "employeeId",
+        "missingHistoricalParent": 0,
+        "parent": "Employee",
+        "table": "StoreOperatorProfile"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "StorePreparationBatch"
+      },
+      {
+        "columns": "tableOrderId",
+        "missingHistoricalParent": 0,
+        "parent": "TableOrder",
+        "table": "StorePreparationBatch"
+      },
+      {
+        "columns": "sessionId",
+        "missingHistoricalParent": 0,
+        "parent": "CashShiftSession",
+        "table": "StoreTransaction"
+      },
+      {
+        "columns": "transactionId",
+        "missingHistoricalParent": 0,
+        "parent": "StoreTransaction",
+        "table": "SupplierPaymentSettlement"
+      },
+      {
+        "columns": "tableId",
+        "missingHistoricalParent": 0,
+        "parent": "DiningTable",
+        "table": "TableOrder"
+      },
+      {
+        "columns": "saleId",
+        "missingHistoricalParent": 0,
+        "parent": "Sale",
+        "table": "TableOrder"
+      },
+      {
+        "columns": "connectorDeviceId",
+        "missingHistoricalParent": 0,
+        "parent": "ConnectorDevice",
+        "table": "VideoConnectorCommand"
+      },
+      {
+        "columns": "videoEventId",
+        "missingHistoricalParent": 0,
+        "parent": "VideoOperationalEvent",
+        "table": "VideoConnectorCommand"
+      },
+      {
+        "columns": "videoEventId",
+        "missingHistoricalParent": 0,
+        "parent": "VideoOperationalEvent",
+        "table": "VideoMediaArtifact"
+      },
+      {
+        "columns": "employeeId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceEmployee",
+        "table": "WorkforceAbsence"
+      },
+      {
+        "columns": "employeeId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceEmployee",
+        "table": "WorkforceAttendanceSession"
+      },
+      {
+        "columns": "scheduledAssignmentId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceScheduleAssignment",
+        "table": "WorkforceAttendanceSession"
+      },
+      {
+        "columns": "clockInEntryId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceTimeClockEntry",
+        "table": "WorkforceAttendanceSession"
+      },
+      {
+        "columns": "clockOutEntryId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceTimeClockEntry",
+        "table": "WorkforceAttendanceSession"
+      },
+      {
+        "columns": "scheduleId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceSchedule",
+        "table": "WorkforceChatCommand"
+      },
+      {
+        "columns": "legacyEmployeeId",
+        "missingHistoricalParent": 0,
+        "parent": "Employee",
+        "table": "WorkforceEmployee"
+      },
+      {
+        "columns": "employeeId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceEmployee",
+        "table": "WorkforceEmployeeEvaluation"
+      },
+      {
+        "columns": "relatedEmployeeId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceEmployee",
+        "table": "WorkforceEmployeeRule"
+      },
+      {
+        "columns": "employeeId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceEmployee",
+        "table": "WorkforceEmployeeStoreAccess"
+      },
+      {
+        "columns": "employeeId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceEmployee",
+        "table": "WorkforceLeaveRequest"
+      },
+      {
+        "columns": "employeeId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceEmployee",
+        "table": "WorkforceScheduleAssignment"
+      },
+      {
+        "columns": "shiftTemplateId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceShiftTemplate",
+        "table": "WorkforceScheduleAssignment"
+      },
+      {
+        "columns": "employeeId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceEmployee",
+        "table": "WorkforceTimeClockEntry"
+      },
+      {
+        "columns": "sourceShiftId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceScheduleAssignment",
+        "table": "WorkforceTimeClockEntry"
+      },
+      {
+        "columns": "correctionOfId",
+        "missingHistoricalParent": 0,
+        "parent": "WorkforceTimeClockEntry",
+        "table": "WorkforceTimeClockEntry"
+      }
+    ]
+  },
+  "attachments": [
+    {
+      "attachments": 273,
+      "checkedAt": "2026-10-19T07:14:53.876321Z",
+      "inlineBytes": "161847741",
+      "missingInlineContent": 0
+    }
+  ],
+  "columnCatalogue": [
+    {
+      "actualColumns": 2937,
+      "checkedAt": "2026-10-19T07:30:28.05759Z",
+      "materializedViews": 0,
+      "missingOrChangedColumns": 0,
+      "publications": 0,
+      "reviewedColumns": 2937,
+      "unreviewedColumns": 0
+    }
+  ],
+  "limitations": [
+    "These are separate read-only observations, not a single fenced snapshot, verified backup or permission to delete.",
+    "No row contents, file contents, passwords, ciphertext, PINs, tokens or function bodies are included.",
+    "Other-store historical missing non-owning parents are preserved, never used to infer deletion ownership.",
+    "Counts can continue to change while the Writer remains active. Physical folders have not been observed."
+  ]
+}

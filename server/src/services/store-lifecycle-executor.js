@@ -1,7 +1,7 @@
 // Internal execution core. No production manifest, recovery adapter or HTTP route is registered here.
 import {createHash,randomUUID} from 'node:crypto';
 import {requireLifecycleAdmin} from './store-lifecycle-preview.js';
-import {RESET_KEEP} from './store-lifecycle-policy.js';
+import {RESET_KEEP,FRESH_STORE_KEEP} from './store-lifecycle-policy.js';
 import {digestLifecycleRows} from './store-lifecycle-recovery-stream.js';
 const q=x=>'"'+String(x).replaceAll('"','""')+'"';
 const literal=x=>"'"+String(x).replaceAll("'","''")+"'";
@@ -18,13 +18,18 @@ const applicationEdges=(plan,schema)=>plan.ordered.flatMap(n=>[
  ...(n.owner.kind==='BASE_STORE'?[{parent:'Store',columns:[['baseStoreId','id']],owned:true}]:[]),
  ...(n.owner.kind==='LINK'?[{...n.owner,owned:true}]:[]),
  ...(n.references||[]).map(r=>({...r,owned:false}))
-].map(r=>({child:n.name,parent:r.parent,childSchema:schema,parentSchema:schema,local:r.columns.map(p=>p[0]),remote:r.columns.map(p=>p[1]),applicationOwnership:r.owned,applicationReference:!r.owned,match:r.match||{}})));
+].map(r=>({child:n.name,parent:r.parent,childSchema:schema,parentSchema:schema,local:r.columns.map(p=>p[0]),remote:r.columns.map(p=>p[1]),applicationOwnership:r.owned,applicationReference:!r.owned,historical:r.historical===true,match:r.match||{}})));
 const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for(const v of Object.values(value))freeze(v)}return value};
 const drainFingerprint=(plan,scope,mode,operationId)=>hash({phase:'DRAINING',operationId,companyId:scope.companyId,storeId:scope.storeId,mode,planHash:plan.planHash,sourceRevision:plan.sourceRevision});
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 function planFor(manifest){
  if(!manifest?.id||!Array.isArray(manifest.tables)||manifest.tables.length<1||manifest.tables.length>300)fail('A reviewed server manifest is required.');
+ if(manifest.resetPolicy!==undefined&&manifest.resetPolicy!=='FRESH_STORE_V1')fail('Unknown reset policy.');
  if(manifest.knownTables!==undefined&&(!Array.isArray(manifest.knownTables)||manifest.knownTables.length>600||manifest.knownTables.some(n=>typeof n!=='string'||!n)||new Set(manifest.knownTables).size!==manifest.knownTables.length))fail('Invalid reviewed database catalogue.');
+ if(manifest.knownColumns!==undefined){
+  const entries=Object.entries(manifest.knownColumns||{});
+  if(!manifest.knownColumns||typeof manifest.knownColumns!=='object'||Array.isArray(manifest.knownColumns)||!manifest.knownTables||entries.length!==manifest.knownTables.length||entries.some(([name,cols])=>!manifest.knownTables.includes(name)||!Array.isArray(cols)||cols.length<1||cols.length>512||cols.some(c=>!Array.isArray(c)||c.length!==3||typeof c[0]!=='string'||!c[0]||typeof c[1]!=='string'||!c[1]||typeof c[2]!=='boolean')||new Set(cols.map(c=>c[0])).size!==cols.length))fail('Invalid reviewed column catalogue.');
+ }
  const nodes=new Map();
  for(const row of manifest.tables){if(typeof row.name!=='string'||!row.name||INTERNAL.has(row.name)||nodes.has(row.name)||!['KEEP','REMOVE'].includes(row.reset)||!['ROOT','DIRECT','CHILD','LINK','BASE_STORE'].includes(row.owner?.kind))fail('Invalid reviewed manifest.');nodes.set(row.name,row)}
  for(const row of nodes.values()){
@@ -32,17 +37,25 @@ function planFor(manifest){
   if(row.existingTriggers!==undefined&&(!Array.isArray(row.existingTriggers)||row.existingTriggers.length>32||new Set(row.existingTriggers.map(t=>t?.name)).size!==row.existingTriggers.length))fail('Invalid reviewed existing triggers.');
   for(const trigger of row.existingTriggers||[])if(!trigger||['name','functionSchema','functionName','language'].some(k=>typeof trigger[k]!=='string'||!trigger[k]||trigger[k].length>128)||trigger.name.startsWith('mws_lifecycle_')||trigger.functionName.startsWith('mws_lifecycle_')||!['O','A'].includes(trigger.enabled)||!Number.isInteger(trigger.mask)||trigger.mask<1||trigger.mask>127||!((typeof trigger.attributes==='string')||(Array.isArray(trigger.attributeNames)&&trigger.attributeNames.length<=32&&trigger.attributeNames.every(n=>typeof n==='string'&&n.length>0&&n.length<=128)&&new Set(trigger.attributeNames).size===trigger.attributeNames.length))||!(trigger.condition===null||typeof trigger.condition==='string')||trigger.definer!==false||!/^[a-f0-9]{64}$/.test(trigger.bodySha256||''))fail('Invalid reviewed existing triggers.');
   if(row.references!==undefined&&(!Array.isArray(row.references)||row.references.length>16))fail('Invalid reviewed application references.');
-  for(const ref of row.references||[])if(!nodes.has(ref?.parent)||!validColumns(ref.columns)||!validMatch(ref.match))fail('Invalid reviewed application references.');
+  for(const ref of row.references||[])if(!nodes.has(ref?.parent)||!validColumns(ref.columns)||!validMatch(ref.match)||(ref.historical!==undefined&&typeof ref.historical!=='boolean'))fail('Invalid reviewed application references.');
+  if(row.owner.historical!==undefined)fail('Ownership cannot be historical.');
  }
+ if(manifest.valueGuards!==undefined&&(!Array.isArray(manifest.valueGuards)||manifest.valueGuards.length>32))fail('Invalid reviewed value guards.');
+ for(const guard of manifest.valueGuards||[])if(!nodes.has(guard?.table)||typeof guard.column!=='string'||!guard.column||!Array.isArray(guard.allowed)||guard.allowed.length<1||guard.allowed.length>32||guard.allowed.some(v=>typeof v!=='string'||!v||v.length>128)||new Set(guard.allowed).size!==guard.allowed.length)fail('Invalid reviewed value guards.');
  // Installation identities and their credentials are inseparable from both
  // physical registers. A reviewed plan may not override this RESET boundary.
- for(const row of nodes.values())if(RESET_KEEP.has(row.name)&&row.reset!=='KEEP')fail('RESET must retain installation/configuration: '+row.name);
+ const retained=manifest.resetPolicy==='FRESH_STORE_V1'?FRESH_STORE_KEEP:RESET_KEEP;
+ for(const row of nodes.values())if(retained.has(row.name)&&row.reset!=='KEEP')fail('RESET must retain installation/configuration: '+row.name);
+ if(manifest.resetPolicy==='FRESH_STORE_V1'&&nodes.get('StoreIntegrationCredential')?.reset==='REMOVE'){
+  const guard=(manifest.valueGuards||[]).find(g=>g.table==='StoreIntegrationCredential'&&g.column==='kind');
+  if(!guard||JSON.stringify([...guard.allowed].sort())!==JSON.stringify(['MYDATA','VAT_LOOKUP']))fail('Fresh-store business credentials require the exact non-fiscal kind guard.');
+ }
  if(nodes.get('Store')?.owner.kind!=='ROOT'||nodes.get('Store')?.reset!=='KEEP'||[...nodes.values()].filter(x=>x.owner.kind==='ROOT').length!==1)fail('Store root must be retained by RESET.');
  const visiting=new Set(),visited=new Set(),ordered=[];
  const visit=name=>{if(visiting.has(name))fail('Cyclic ownership requires a separate reviewed plan.');if(visited.has(name))return;const row=nodes.get(name);if(!row)fail('Missing ownership parent.');visiting.add(name);if(childOwner(row)){if(!validColumns(row.owner.columns))fail('Invalid ownership columns.');visit(row.owner.parent)}if(row.owner.kind==='BASE_STORE')visit('Store');visiting.delete(name);visited.add(name);ordered.push(row)};
  for(const name of nodes.keys())visit(name);
  if(manifest.streaming!==undefined&&typeof manifest.streaming!=='boolean')fail('Invalid streaming policy.');
- return {id:manifest.id,nodes,ordered,knownTables:manifest.knownTables,streaming:manifest.streaming===true,planHash:hash(manifest)};
+ return {id:manifest.id,nodes,ordered,knownTables:manifest.knownTables,knownColumns:manifest.knownColumns,valueGuards:manifest.valueGuards||[],streaming:manifest.streaming===true,planHash:hash(manifest)};
 }
 function predicate(plan,schema,node,alias,depth=0){
  if(node.owner.kind==='ROOT')return `${alias}."id"=$1`;
@@ -105,14 +118,16 @@ function bindDatabaseReferences(plan,schema,fks){
  for(const entries of references.values())entries.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)));
  plan.databaseReferences=references;
 }
-async function validateDatabase(tx,plan,schema){
+async function validateDatabase(tx,plan,schema,{allowUninstalled=false}={}){
  const relations=await tx.$queryRawUnsafe(`SELECT c.relname AS name,c.relkind::text AS kind,c.relispartition AS partition,c.relrowsecurity AS rls,c.relforcerowsecurity AS forced,EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhparent=c.oid OR i.inhrelid=c.oid) AS inherited,EXISTS(SELECT 1 FROM pg_rewrite w WHERE w.ev_class=c.oid AND w.rulename<>'_RETURN') AS rewritten FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') ORDER BY c.relname`,schema);
  const columns=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull AS "notNull",a.attidentity::text AS identity,a.attgenerated::text AS generated,pg_get_expr(d.adbin,d.adrelid) AS "defaultExpression" FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') AND a.attnum>0 AND NOT a.attisdropped ORDER BY c.relname,a.attnum`,schema);
  if(plan.knownTables){for(const relation of relations)if(!INTERNAL.has(relation.name)&&!plan.knownTables.includes(relation.name))fail('Unreviewed database relation: '+relation.name);for(const name of plan.knownTables)if(!relations.some(r=>r.name===name))fail('Reviewed database relation missing: '+name)}
+ if(plan.knownColumns)for(const [name,expected] of Object.entries(plan.knownColumns))if(JSON.stringify(columns.filter(c=>c.table===name).map(c=>[c.name,c.type,c.notNull]))!==JSON.stringify(expected))fail('Reviewed column catalogue changed: '+name);
  for(const node of plan.ordered){const r=relations.find(r=>r.name===node.name);if(!r||r.kind!=='r'||r.partition||r.rls||r.forced||r.inherited||r.rewritten)fail('Complex or RLS relation requires a separate executor.');}
  if(columns.length>20000)fail('Schema review limit exceeded.');
  const byTable=new Map();for(const col of columns){if(!byTable.has(col.table))byTable.set(col.table,new Set());byTable.get(col.table).add(col.name);if(col.name==='storeId'&&!INTERNAL.has(col.table)&&!plan.nodes.has(col.table))fail('Unreviewed store table: '+col.table)}
  for(const node of plan.ordered){const cols=byTable.get(node.name);if(!cols||node.owner.kind==='ROOT'&&!cols.has('id')||node.owner.kind==='DIRECT'&&!cols.has('storeId')||node.owner.kind==='BASE_STORE'&&!cols.has('baseStoreId'))fail('Reviewed table layout changed.');}
+ for(const guard of plan.valueGuards)if(!columns.some(c=>c.table===guard.table&&c.name===guard.column&&c.type==='text'))fail('Reviewed value guard layout changed.');
  const fks=await readForeignKeys(tx,schema);
  bindDatabaseReferences(plan,schema,fks);
  if(fks.length>10000)fail('Dependency review limit exceeded.');
@@ -128,10 +143,13 @@ async function validateDatabase(tx,plan,schema){
   if(Object.keys(link.match).some(name=>!columns.some(c=>c.table===link.child&&c.name===name&&c.type==='text')))fail('Typed ownership discriminator schema changed.');
   const join=link.local.map((c,i)=>`c.${q(c)}=p.${q(link.remote[i])}`).join(' AND ');
   const required=`(${matchExpression(link.match,'c')}) AND ${link.local.map(c=>`c.${q(c)} IS NOT NULL`).join(' AND ')}`;
-  if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(link.child)} c WHERE ${required} AND NOT EXISTS (SELECT 1 FROM ${q(schema)}.${q(link.parent)} p WHERE ${join}) LIMIT 1`)).length)fail('Unowned application reference requires explicit review.');
+  if(!(link.applicationReference&&link.historical)&&(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(link.child)} c WHERE ${required} AND NOT EXISTS (SELECT 1 FROM ${q(schema)}.${q(link.parent)} p WHERE ${join}) LIMIT 1`)).length)fail('Unowned application reference requires explicit review.');
  }
  const triggers=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",t.tgname AS name,t.tgenabled::text AS enabled,t.tgtype::int AS mask,t.tgqual::text AS condition,t.tgattr::text AS attributes,ARRAY(SELECT a.attname::text FROM unnest(t.tgattr::smallint[]) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=t.tgrelid AND a.attnum=k.n ORDER BY k.p) AS "attributeNames",p.prosrc AS body,pn.nspname AS "functionSchema",p.proname AS "functionName",p.prosecdef AS definer,l.lanname AS language FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_proc p ON p.oid=t.tgfoid JOIN pg_namespace pn ON pn.oid=p.pronamespace JOIN pg_language l ON l.oid=p.prolang WHERE n.nspname=$1 AND NOT t.tgisinternal`,schema);
- for(const node of plan.ordered){const own=triggers.filter(t=>t.table===node.name),name=guardName(node);if(own.length!==2+(node.existingTriggers||[]).length)fail('Missing or additional database guards: '+node.name);for(const reviewed of node.existingTriggers||[]){const existing=own.find(t=>t.name===reviewed.name);if(!existing||Object.entries(reviewed).some(([key,value])=>key==='bodySha256'?createHash('sha256').update(existing.body).digest('hex')!==value:key==='attributeNames'?JSON.stringify(existing.attributeNames)!==JSON.stringify(value):existing[key]!==value))fail('Changed reviewed database guard: '+node.name+'.'+reviewed.name)}for(const [triggerName,mask,body] of [[name,31,guardBody(plan,schema,node)],[name+'_truncate',34,truncateBody]]){const trigger=own.find(t=>t.name===triggerName);if(!trigger||trigger.enabled!=='A'||trigger.mask!==mask||trigger.condition!==null||trigger.attributes!==''||trigger.body!==body||trigger.functionSchema!==schema||trigger.functionName!==triggerName||trigger.definer||trigger.language!=='plpgsql')fail('Changed database guard: '+node.name)}}
+ const installedCounts=plan.ordered.map(node=>triggers.filter(t=>t.table===node.name&&[guardName(node),guardName(node)+'_truncate'].includes(t.name)).length);
+ if(allowUninstalled&&installedCounts.some(n=>n>0)&&installedCounts.some(n=>n===0))fail('Partially installed lifecycle guards.');
+ const requireOwn=!allowUninstalled||installedCounts.some(n=>n>0);
+ for(const node of plan.ordered){const own=triggers.filter(t=>t.table===node.name),name=guardName(node);if(own.length!==(requireOwn?2:0)+(node.existingTriggers||[]).length)fail('Missing or additional database guards: '+node.name);for(const reviewed of node.existingTriggers||[]){const existing=own.find(t=>t.name===reviewed.name);if(!existing||Object.entries(reviewed).some(([key,value])=>key==='bodySha256'?createHash('sha256').update(existing.body).digest('hex')!==value:key==='attributeNames'?JSON.stringify(existing.attributeNames)!==JSON.stringify(value):existing[key]!==value))fail('Changed reviewed database guard: '+node.name+'.'+reviewed.name)}if(requireOwn)for(const [triggerName,mask,body] of [[name,31,guardBody(plan,schema,node)],[name+'_truncate',34,truncateBody]]){const trigger=own.find(t=>t.name===triggerName);if(!trigger||trigger.enabled!=='A'||trigger.mask!==mask||trigger.condition!==null||trigger.attributes!==''||trigger.body!==body||trigger.functionSchema!==schema||trigger.functionName!==triggerName||trigger.definer||trigger.language!=='plpgsql')fail('Changed database guard: '+node.name)}}
  // ID/JSON/attachment semantics must be reviewed in server code; this core cannot infer them.
  const reviewed=new Set((plan.reviewedColumns||[]));
  for(const col of columns.filter(c=>!INTERNAL.has(c.table))){
@@ -139,7 +157,7 @@ async function validateDatabase(tx,plan,schema){
  }
  const primaryKeys=plan.streaming?await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,k.p::int AS position FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN LATERAL unnest(i.indkey) WITH ORDINALITY k(n,p) ON k.p<=i.indnkeyatts JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=k.n WHERE n.nspname=$1 AND i.indisprimary ORDER BY c.relname,k.p`,schema):[];
  if(plan.streaming)for(const node of plan.ordered)if(!primaryKeys.some(k=>k.table===node.name))fail('Streaming requires a reviewed primary key: '+node.name);
- return {columns:byTable,fks:[...fks,...links],primaryKeys,signature:hash({relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,links,uniqueKeys:uniqueKeys.filter(k=>links.some(l=>l.parent===k.table)),...(plan.streaming?{primaryKeys}: {})})};
+ return {columns:byTable,fks:[...fks,...links],primaryKeys,guardsInstalled:installedCounts.every(n=>n===2),signature:hash({relations:relations.filter(r=>plan.nodes.has(r.name)),columns:columns.filter(c=>plan.nodes.has(c.table)),fks,links,uniqueKeys:uniqueKeys.filter(k=>links.some(l=>l.parent===k.table)),...(plan.streaming?{primaryKeys}: {})})};
 }
 async function* scopedRows(tx,plan,schema,scope,node,meta){
  const keys=meta.primaryKeys.filter(k=>k.table===node.name);if(!keys.length)fail('Streaming primary key unavailable.');
@@ -161,16 +179,29 @@ async function assertQuiescent(tx,plan,schema,scope,meta,{connectors=true}={}){
  ['CloudDevice',`"status"='ACTIVE' AND "lastSeenAt">NOW()-INTERVAL '60 seconds'`,['status','lastSeenAt']]
  ])if(plan.nodes.has(name)&&(connectors||name!=='CloudDevice')){if(required.some(c=>!meta.columns.get(name).has(c)))fail('Busy-work guard schema changed.');if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(name)} t WHERE (${predicate(plan,schema,plan.nodes.get(name),'t')}) AND (${condition}) LIMIT 1`,scope.storeId)).length)fail('Active shift, operator, Writer or fiscal work blocks maintenance.');}
 }
-async function capture(tx,plan,schema,scope,mode){
- const meta=await validateDatabase(tx,plan,schema),tables=[];let sourceBytes=0,totalRows=0;
- await assertQuiescent(tx,plan,schema,scope,meta);
+async function assertScopedRelations(tx,plan,schema,scope,meta,mode){
+ for(const guard of plan.valueGuards)if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(guard.table)} t WHERE (${predicate(plan,schema,plan.nodes.get(guard.table),'t')}) AND NOT COALESCE(t.${q(guard.column)}=ANY($2::text[]),false) LIMIT 1`,scope.storeId,guard.allowed)).length)fail('Unreviewed value in selected store: '+guard.table+'.'+guard.column);
  for(const node of plan.ordered){
   const where=predicate(plan,schema,node,'t');
   const cols=meta.columns.get(node.name),scopeChecks=[];
   if(cols.has('companyId'))scopeChecks.push('t."companyId" IS DISTINCT FROM $2');
   if(cols.has('storeId'))scopeChecks.push('t."storeId" IS DISTINCT FROM $1');
   if(scopeChecks.length&&(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(node.name)} t WHERE (${where}) AND (${scopeChecks.join(' OR ')}) LIMIT 1`,scope.storeId,...(cols.has('companyId')?[scope.companyId]:[]))).length)fail('Cross-store dependency or company mismatch blocks execution.');
-  if(meta.columns.get(node.name).has('companyId')){const bad=await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(node.name)} t WHERE (${where}) AND t."companyId" IS DISTINCT FROM $2 LIMIT 1`,scope.storeId,scope.companyId);if(bad.length)fail('Inconsistent company/store ownership.');}
+ }
+ // An owned FK must not cross to a different store, nor may deletion touch retained children.
+ for(const fk of meta.fks.filter(f=>f.parentSchema===schema&&f.childSchema===schema&&plan.nodes.has(f.parent)&&plan.nodes.has(f.child))){
+  const child=plan.nodes.get(fk.child),parent=plan.nodes.get(fk.parent),join=fk.local.map((c,i)=>`c.${q(c)}=p.${q(fk.remote[i])}`).join(' AND ')+(fk.applicationOwnership||fk.applicationReference?` AND (${matchExpression(fk.match,'c')})`:'');
+  const bad=await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(child.name)} c JOIN ${q(schema)}.${q(parent.name)} p ON ${join} WHERE ((${predicate(plan,schema,child,'c')}) IS DISTINCT FROM (${predicate(plan,schema,parent,'p')})) LIMIT 1`,scope.storeId);if(bad.length)fail('Cross-store dependency blocks execution.');
+  const childAction=mode==='DELETE'?'REMOVE':child.reset,parentAction=mode==='DELETE'?'REMOVE':parent.reset;
+  if(childAction==='KEEP'&&parentAction==='REMOVE'){const refs=await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(child.name)} c JOIN ${q(schema)}.${q(parent.name)} p ON ${join} WHERE ${predicate(plan,schema,parent,'p')} LIMIT 1`,scope.storeId);if(refs.length)fail('Deletion would change a retained dependency.');}
+ }
+}
+async function capture(tx,plan,schema,scope,mode){
+ const meta=await validateDatabase(tx,plan,schema),tables=[];let sourceBytes=0,totalRows=0;
+ await assertQuiescent(tx,plan,schema,scope,meta);
+ await assertScopedRelations(tx,plan,schema,scope,meta,mode);
+ for(const node of plan.ordered){
+  const where=predicate(plan,schema,node,'t');
   const size=(await tx.$queryRawUnsafe(`SELECT COUNT(*)::int AS count,COALESCE(SUM(octet_length(row_to_json(t)::text)),0)::text AS bytes FROM ${q(schema)}.${q(node.name)} t WHERE ${where}`,scope.storeId))[0];
   const byteLimit=plan.streaming?1024*1024*1024:16*1024*1024;
   if(size.count>100000||BigInt(size.bytes)>BigInt(byteLimit-sourceBytes)||totalRows+size.count>500000)fail('Snapshot size limit exceeded before materialization.');sourceBytes+=Number(size.bytes);totalRows+=size.count;
@@ -181,13 +212,6 @@ async function capture(tx,plan,schema,scope,mode){
   }
   const rows=await tx.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM ${q(schema)}.${q(node.name)} t WHERE ${where} ORDER BY row_to_json(t)::text LIMIT 100001`,scope.storeId);
   if(rows.length>100000)fail('Snapshot row limit exceeded.');tables.push({name:node.name,action:mode==='DELETE'||node.reset==='REMOVE'?'REMOVE':'KEEP',rows:rows.map(r=>r.row)});
- }
- // An owned FK must not cross to a different store, nor may deletion touch retained children.
- for(const fk of meta.fks.filter(f=>f.parentSchema===schema&&f.childSchema===schema&&plan.nodes.has(f.parent)&&plan.nodes.has(f.child))){
-  const child=plan.nodes.get(fk.child),parent=plan.nodes.get(fk.parent),join=fk.local.map((c,i)=>`c.${q(c)}=p.${q(fk.remote[i])}`).join(' AND ')+(fk.applicationOwnership||fk.applicationReference?` AND (${matchExpression(fk.match,'c')})`:'');
-  const bad=await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(child.name)} c JOIN ${q(schema)}.${q(parent.name)} p ON ${join} WHERE ((${predicate(plan,schema,child,'c')}) IS DISTINCT FROM (${predicate(plan,schema,parent,'p')})) LIMIT 1`,scope.storeId);if(bad.length)fail('Cross-store dependency blocks execution.');
-  const childAction=tables.find(t=>t.name===child.name).action,parentAction=tables.find(t=>t.name===parent.name).action;
-  if(childAction==='KEEP'&&parentAction==='REMOVE'){const refs=await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(child.name)} c JOIN ${q(schema)}.${q(parent.name)} p ON ${join} WHERE ${predicate(plan,schema,parent,'p')} LIMIT 1`,scope.storeId);if(refs.length)fail('Deletion would change a retained dependency.');}
  }
  const snapshot={scope:{...scope,mode},planHash:plan.planHash,sourceRevision:plan.sourceRevision,schemaSignature:meta.signature,tables};const encoded=JSON.stringify(snapshot);if(Buffer.byteLength(encoded)>32*1024*1024)fail('Snapshot byte limit exceeded.');return {...snapshot,snapshotHash:lifecycleExecutionSnapshotHash(snapshot)};
 }
@@ -204,11 +228,36 @@ async function persistOwnershipTombstones(tx,plan,schema,snapshot,operationId,ge
   if(count!==tableCount(table))fail('Application-key retirement count differs.');
  }
 }
+function inspectionFor(plan){return async(db,actor,scope)=>{
+ requireLifecycleAdmin(actor);
+ if(typeof scope?.companyId!=='string'||!scope.companyId||typeof scope?.storeId!=='string'||!scope.storeId)fail('Explicit selected company and store required.',400);
+ return db.$transaction(async tx=>{
+  await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
+  await tx.$executeRawUnsafe("SET LOCAL lock_timeout='3s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");
+  const schema=await schemaFor(tx);
+  if(!(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."Store" WHERE "id"=$1 AND "companyId"=$2`,scope.storeId,scope.companyId)).length)fail('Store not found in selected company.',404);
+  const meta=await validateDatabase(tx,plan,schema,{allowUninstalled:true});
+  await assertScopedRelations(tx,plan,schema,scope,meta,'RESET');
+  let activeWork=false;
+  try{await assertQuiescent(tx,plan,schema,scope,meta)}catch(error){if(error.message==='Active shift, operator, Writer or fiscal work blocks maintenance.')activeWork=true;else throw error}
+  const counts=[];
+  for(const node of plan.ordered){const row=(await tx.$queryRawUnsafe(`SELECT count(*)::int AS count,COALESCE(sum(octet_length(row_to_json(t)::text)),0)::text AS bytes,COALESCE(max(octet_length(row_to_json(t)::text)),0)::int AS "maxRowBytes" FROM ${q(schema)}.${q(node.name)} t WHERE ${predicate(plan,schema,node,'t')}`,scope.storeId))[0];counts.push({table:node.name,action:node.reset,count:row.count,sourceBytes:row.bytes,maxRowBytes:row.maxRowBytes})}
+  const totalRows=counts.reduce((sum,t)=>sum+t.count,0),sourceBytes=counts.reduce((sum,t)=>sum+BigInt(t.sourceBytes),0n),withinSnapshotLimits=totalRows<=500000&&sourceBytes<=BigInt(plan.streaming?1024*1024*1024:16*1024*1024)&&counts.every(t=>t.count<=100000&&t.maxRowBytes<=8*1024*1024);
+  const result={scope:{companyId:scope.companyId,storeId:scope.storeId},mode:'RESET',planHash:plan.planHash,sourceRevision:plan.sourceRevision,schemaSignature:meta.signature,counts,totalRows,sourceBytes:sourceBytes.toString(),withinSnapshotLimits,activeWork,guardsInstalled:meta.guardsInstalled,executionAvailable:false,recoveryVerified:false};
+  return {...result,inspectionFingerprint:hash(result)};
+ },{isolationLevel:'RepeatableRead',timeout:120000,maxWait:5000});
+}}
+export function createLifecycleInspectionCore(manifest,{sourceRevision}={}){
+ const reviewed=structuredClone(manifest),plan=planFor(reviewed);plan.reviewedColumns=reviewed.reviewedColumns||[];plan.sourceRevision=sourceRevision;
+ if(!/^[a-f0-9]{40}$/.test(sourceRevision||''))fail('Exact server source revision is required.');
+ return Object.freeze({inspect:inspectionFor(plan)});
+}
 export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,sourceRevision}={}){
  const reviewed=structuredClone(manifest),plan=planFor(reviewed);plan.reviewedColumns=reviewed.reviewedColumns||[];plan.sourceRevision=sourceRevision;
  if(typeof persistAndVerifyRecovery!=='function')fail('A durable full-restore verification adapter is required.');if(!/^[a-f0-9]{40}$/.test(sourceRevision||''))fail('Exact server source revision is required.');
  const transaction=(db,fn)=>db.$transaction(async tx=>{await tx.$executeRawUnsafe("SET LOCAL lock_timeout='3s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");return fn(tx)},{isolationLevel:'ReadCommitted',timeout:120000,maxWait:5000});
  return {
+  inspect:inspectionFor(plan),
   async install(db,actor,scope){requireLifecycleAdmin(actor);return transaction(db,async tx=>{
    const schema=await schemaFor(tx);
    if(!(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."Store" WHERE "id"=$1 AND "companyId"=$2`,scope?.storeId,scope?.companyId)).length)fail('Store not found in selected company.',404);
@@ -263,7 +312,11 @@ export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,
    await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_operation',$1,true)`,operationId);
    // All declared FK dependencies, not just the ownership edge, determine deletion order.
    const meta=await validateDatabase(tx,plan,schema),pending=new Set(snapshot.tables.filter(t=>t.action==='REMOVE').map(t=>t.name)),order=[];
-   while(pending.size){const ready=[...pending].filter(name=>!meta.fks.some(f=>f.childSchema===schema&&f.parentSchema===schema&&f.parent===name&&f.child!==name&&pending.has(f.child)));if(!ready.length)fail('Cyclic deletion dependencies require a reviewed executor.');for(const name of ready.sort()){order.push(name);pending.delete(name)}}
+   // Non-owning raw references do not constrain DELETE order: they have no FK
+   // cascade and predicates do not depend on them. They still participate in
+   // scope validation, write fencing and pre-delete retired-key capture. Keep
+   // every real FK and ownership join in the dependency order.
+   while(pending.size){const ready=[...pending].filter(name=>!meta.fks.some(f=>!f.applicationReference&&f.childSchema===schema&&f.parentSchema===schema&&f.parent===name&&f.child!==name&&pending.has(f.child)));if(!ready.length)fail('Cyclic deletion dependencies require a reviewed executor.');for(const name of ready.sort()){order.push(name);pending.delete(name)}}
    const deleted=[];for(const name of order){const node=plan.nodes.get(name),expected=tableCount(snapshot.tables.find(t=>t.name===name));const count=Number(await tx.$executeRawUnsafe(`DELETE FROM ${q(schema)}.${q(name)} t WHERE ${predicate(plan,schema,node,'t')}`,storeId));if(count!==expected)fail('Unexpected delete count.');deleted.push({table:name,count})}
    for(const t of snapshot.tables.filter(t=>t.action==='KEEP')){if(plan.streaming){const observed=await digestLifecycleRows(scopedRows(tx,plan,schema,{companyId,storeId},plan.nodes.get(t.name),meta));if(observed.rowCount!==t.rowCount||observed.sha256!==t.sha256||observed.sourceBytes!==t.sourceBytes)fail('Retained records changed.');continue;}const rows=await tx.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM ${q(schema)}.${q(t.name)} t WHERE ${predicate(plan,schema,plan.nodes.get(t.name),'t')} ORDER BY row_to_json(t)::text`,storeId);if(JSON.stringify(rows.map(r=>r.row))!==JSON.stringify(t.rows))fail('Retained records changed.');}
    await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleFence" SET "generation"="generation"+1,"retired"=$2 WHERE "storeId"=$1`,storeId,run.mode==='DELETE');

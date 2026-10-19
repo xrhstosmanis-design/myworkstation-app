@@ -4,9 +4,10 @@ import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
-import {createLifecycleExecutionCore,lifecycleExecutionSnapshotHash} from '../src/services/store-lifecycle-executor.js';
+import {createLifecycleExecutionCore,createLifecycleInspectionCore,lifecycleExecutionSnapshotHash} from '../src/services/store-lifecycle-executor.js';
 import {STORE_RECOVERY_FORMAT,persistLifecycleRecovery,openLifecycleRecovery} from '../src/services/store-lifecycle-recovery.js';
 import {persistLifecycleRecoveryStream,readLifecycleRecoveryStream,verifyLifecycleRecoveryStream,digestLifecycleRows} from '../src/services/store-lifecycle-recovery-stream.js';
+import {FRESH_STORE_KEEP} from '../src/services/store-lifecycle-policy.js';
 const actor={id:'admin',isSuperAdmin:true},scope={companyId:'company',storeId:'target'};
 const manifest={id:'ISOLATED_REVIEWED_FIXTURE_V1',reviewedColumns:['StoreRbsInstallationSettings.config'],tables:[
  {name:'Store',owner:{kind:'ROOT'},reset:'KEEP'},
@@ -26,7 +27,7 @@ test('executor requires a server manifest/recovery adapter and rejects unauthori
  assert.throws(()=>createLifecycleExecutionCore(manifest),/restore verification adapter/);
  assert.throws(()=>createLifecycleExecutionCore({...manifest,tables:[]},{persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)}));
  const core=createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)}),db={$transaction(){throw Error('unexpected database access')}};
- for(const user of [null,{id:'owner',role:'OWNER'},{id:'fake',role:'SUPER_ADMIN'}])for(const method of ['install','prepare','execute','abort','beginDrain'])await assert.rejects(core[method](db,user,scope,'RESET'),e=>e.status===403);
+ for(const user of [null,{id:'owner',role:'OWNER'},{id:'fake',role:'SUPER_ADMIN'}])for(const method of ['inspect','install','prepare','execute','abort','beginDrain'])await assert.rejects(core[method](db,user,scope,'RESET'),e=>e.status===403);
  await assert.rejects(core.prepare(db,actor,scope,'OTHER'),e=>e.status===400);
  await assert.rejects(core.execute(db,actor,{...scope,operationId:'not-a-uuid',snapshotHash:'a'.repeat(64)}),e=>e.status===400);
 });
@@ -37,6 +38,17 @@ test('reset plans cannot remove either register installation, EFTPOS/RBS setting
   if(existing)existing.reset='REMOVE';else bad.tables.push({name,owner:{kind:'DIRECT'},reset:'REMOVE'});
   assert.throws(()=>createLifecycleExecutionCore(bad,{persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)}),new RegExp('must retain installation/configuration: '+name));
  }
+});
+test('explicit fresh-store policy retains every register/configuration boundary and cannot use an unknown policy or historical ownership',()=>{
+ const options={persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)};
+ for(const name of FRESH_STORE_KEEP){const bad=structuredClone(manifest);bad.resetPolicy='FRESH_STORE_V1';const row=bad.tables.find(t=>t.name===name);if(row)row.reset='REMOVE';else bad.tables.push({name,owner:{kind:'DIRECT'},reset:'REMOVE'});assert.throws(()=>createLifecycleExecutionCore(bad,options),/must retain installation\/configuration/)}
+ assert.throws(()=>createLifecycleExecutionCore({...manifest,resetPolicy:'SILENT_BROAD_DELETE'},options),/Unknown reset policy/);
+ const shift={name:'ShiftType',owner:{kind:'DIRECT'},reset:'REMOVE'};
+ assert.throws(()=>createLifecycleExecutionCore({...manifest,tables:[...manifest.tables,shift]},options),/must retain/);
+ assert.doesNotThrow(()=>createLifecycleExecutionCore({...manifest,resetPolicy:'FRESH_STORE_V1',tables:[...manifest.tables,shift]},options));
+ const bad=structuredClone(manifest);bad.tables[1].owner.historical=true;assert.throws(()=>createLifecycleExecutionCore(bad,options),/Ownership cannot be historical/);
+ bad.tables[1].owner={kind:'DIRECT'};bad.tables[1].references=[{parent:'Store',columns:[['storeId','id']],historical:'yes'}];assert.throws(()=>createLifecycleExecutionCore(bad,options),/Invalid reviewed application references/);
+ const credentials={...manifest,resetPolicy:'FRESH_STORE_V1',tables:[...manifest.tables,{name:'StoreIntegrationCredential',owner:{kind:'DIRECT'},reset:'REMOVE'}]};assert.throws(()=>createLifecycleExecutionCore(credentials,options),/exact non-fiscal kind guard/);
 });
 const isolated=(()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}})();
 async function fixture({proofOverride,afterVerified,extraManifest,extraDdl=()=>[],populate}={}){
@@ -367,5 +379,72 @@ test('native logical snapshot signature does not depend on physical unique index
   const first=await f.core.prepare(f.db,actor,scope,'RESET');await f.core.abort(f.db,actor,{...scope,operationId:first.operationId});
   await f.db.$executeRawUnsafe(`ALTER TABLE "RawParent" DROP CONSTRAINT "RawParent_pkey"`);await f.db.$executeRawUnsafe(`ALTER TABLE "RawParent" ADD PRIMARY KEY ("id")`);
   const second=await f.core.prepare(f.db,actor,scope,'RESET');assert.equal(second.snapshotHash,first.snapshotHash);await f.core.abort(f.db,actor,{...scope,operationId:second.operationId});assert.equal(f.proofCalls(),0);
+ }finally{await f.close()}
+});
+
+const historicalPeerManifest={...manifest,streaming:true,resetPolicy:'FRESH_STORE_V1',reviewedColumns:[...manifest.reviewedColumns,'PeerA.peerId','PeerB.peerId'],tables:[...manifest.tables,
+ {name:'PeerA',owner:{kind:'DIRECT'},reset:'REMOVE',references:[{parent:'PeerB',columns:[['peerId','id']],historical:true}]},
+ {name:'PeerB',owner:{kind:'DIRECT'},reset:'REMOVE',references:[{parent:'PeerA',columns:[['peerId','id']],historical:true}]}
+]};
+const historicalPeerDdl=s=>['PeerA','PeerB'].map(name=>`CREATE TABLE "${s}"."${name}"("id" text PRIMARY KEY,"companyId" text NOT NULL,"storeId" text NOT NULL REFERENCES "${s}"."Store"("id"),"peerId" text)`);
+async function historicalPeerFixture(){return fixture({extraManifest:historicalPeerManifest,extraDdl:historicalPeerDdl,populate:async db=>{
+ await db.$executeRawUnsafe(`INSERT INTO "PeerA" VALUES('a','company','target','b'),('a-control','company','sibling','already-absent-history')`);
+ await db.$executeRawUnsafe(`INSERT INTO "PeerB" VALUES('b','company','target','a'),('b-control','company','sibling','a-control')`);
+}})}
+test('native historical non-owning cycles restore and clear scoped rows without weakening retired-key or register controls',{skip:!isolated},async()=>{
+ const f=await historicalPeerFixture();try{
+  const before=await f.snapshot();await f.core.install(f.db,actor,scope);const prep=await f.core.prepare(f.db,actor,scope,'RESET');
+  await f.core.execute(f.db,actor,{...scope,...prep});assert.equal(f.proofCalls(),1);
+  const after=await f.snapshot();for(const name of ['PeerA','PeerB'])assert.deepEqual(after[name],before[name].filter(row=>JSON.parse(row.row).storeId!=='target'));
+  for(const name of ['Store','Product','StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice','StoreRbsInstallationSettings'])assert.deepEqual(after[name],before[name]);
+  await f.db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "maintenance"=false WHERE "storeId"='target'`);
+  await assert.rejects(f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_generations','{"target":"1"}',true)`);await tx.$executeRawUnsafe(`INSERT INTO "PeerA" VALUES('replay','company','target','b')`)}),matches(/STORE_LIFECYCLE_RETIRED_REFERENCE/));
+  await f.db.$executeRawUnsafe(`INSERT INTO "PeerA" VALUES('unrelated-history','company','sibling','other-absent-history')`);
+ }finally{await f.close()}
+});
+test('native historical references still refuse existing cross-store links and maintenance races',{skip:!isolated},async()=>{
+ const f=await historicalPeerFixture();try{
+  await f.db.$executeRawUnsafe(`UPDATE "PeerB" SET "peerId"='a' WHERE "id"='b-control'`);await f.core.install(f.db,actor,scope);
+  await assert.rejects(f.core.prepare(f.db,actor,scope,'RESET'),/Cross-store dependency/);assert.equal(f.proofCalls(),0);
+  await f.db.$executeRawUnsafe(`UPDATE "PeerB" SET "peerId"='a-control' WHERE "id"='b-control'`);
+  const prep=await f.core.prepare(f.db,actor,scope,'RESET');
+  await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "PeerB" VALUES('other-race','company','sibling','a')`),matches(/STORE_LIFECYCLE_MAINTENANCE/));
+  await f.core.abort(f.db,actor,{...scope,operationId:prep.operationId});assert.equal(f.proofCalls(),0);
+ }finally{await f.close()}
+});
+test('reviewed value guards cannot silently accept an unknown rule or empty allowed set',()=>{
+ const options={persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)};
+ for(const valueGuards of [null,{},[{table:'Unknown',column:'kind',allowed:['MYDATA']}],[{table:'Sale',column:'kind',allowed:[]}],[{table:'Sale',column:'kind',allowed:[null]}],[{table:'Sale',column:'kind',allowed:['MYDATA','MYDATA']}]])assert.throws(()=>createLifecycleExecutionCore({...manifest,valueGuards},options),/Invalid reviewed value guards/);
+});
+test('native fresh-profile value guard removes only reviewed business credentials and refuses a future physical kind before recovery',{skip:!isolated},async()=>{
+ const m={...manifest,streaming:true,resetPolicy:'FRESH_STORE_V1',valueGuards:[{table:'StoreIntegrationCredential',column:'kind',allowed:['MYDATA','VAT_LOOKUP']}],tables:[...manifest.tables,{name:'StoreIntegrationCredential',owner:{kind:'DIRECT'},reset:'REMOVE'}]};
+ const f=await fixture({extraManifest:m,extraDdl:s=>[`CREATE TABLE "${s}"."StoreIntegrationCredential"("id" text PRIMARY KEY,"companyId" text NOT NULL,"storeId" text NOT NULL REFERENCES "${s}"."Store"("id"),"kind" text NOT NULL,"secret" text NOT NULL)`],populate:async db=>{await db.$executeRawUnsafe(`INSERT INTO "StoreIntegrationCredential" VALUES('target-credential','company','target','FUTURE_FISCAL','PRIVATE RETAINED UNTIL REVIEW'),('control-credential','company','sibling','FUTURE_FISCAL','UNTOUCHED CONTROL')`)}});
+ try{
+  const before=await f.snapshot();await f.core.install(f.db,actor,scope);await assert.rejects(f.core.prepare(f.db,actor,scope,'RESET'),/Unreviewed value in selected store/);assert.equal(f.proofCalls(),0);assert.deepEqual(await f.snapshot(),before);
+  await f.db.$executeRawUnsafe(`UPDATE "StoreIntegrationCredential" SET "kind"='MYDATA' WHERE "id"='target-credential'`);
+  const prep=await f.core.prepare(f.db,actor,scope,'RESET');await f.core.execute(f.db,actor,{...scope,...prep});assert.equal(f.proofCalls(),1);
+  const after=await f.snapshot();assert.deepEqual(after.StoreIntegrationCredential,before.StoreIntegrationCredential.filter(row=>JSON.parse(row.row).storeId==='sibling'));for(const name of ['StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice','StoreRbsInstallationSettings'])assert.deepEqual(after[name],before[name]);
+ }finally{await f.close()}
+});
+test('native closed column catalogue rejects an unscoped scalar reference even without an Id or JSON name',{skip:!isolated},async()=>{
+ const f=await fixture();try{
+  const columns=await f.db.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull AS "notNull" FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND a.attnum>0 AND NOT a.attisdropped ORDER BY c.relname,a.attnum`,f.schema);
+  const knownTables=[...manifest.tables.map(t=>t.name),'Product'],knownColumns=Object.fromEntries(knownTables.map(name=>[name,columns.filter(c=>c.table===name).map(c=>[c.name,c.type,c.notNull])]));
+  const core=createLifecycleExecutionCore({...manifest,knownTables,knownColumns},{sourceRevision:'1'.repeat(40),persistAndVerifyRecovery:async()=>assert.fail('drift reached recovery')});
+  await core.install(f.db,actor,scope);const before=await f.snapshot();
+  await f.db.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "selectedRecord" text`);
+  await assert.rejects(core.prepare(f.db,actor,scope,'RESET'),/Reviewed column catalogue changed: Product/);
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,false);
+  await f.db.$executeRawUnsafe(`ALTER TABLE "Product" DROP COLUMN "selectedRecord"`);assert.deepEqual(await f.snapshot(),before);
+ }finally{await f.close()}
+});
+test('native inspection is read-only before enrollment, exposes no execution methods or row contents and rejects partial guards',{skip:!isolated},async()=>{
+ const f=await fixture();try{
+  const inspector=createLifecycleInspectionCore(manifest,{sourceRevision:'1'.repeat(40)});assert.deepEqual(Object.keys(inspector),['inspect']);assert.ok(Object.isFrozen(inspector));
+  const before=await f.snapshot();await assert.rejects(inspector.inspect(f.db,actor,{companyId:'other',storeId:'target'}),e=>e.status===404);
+  const view=await inspector.inspect(f.db,actor,scope);assert.equal(view.guardsInstalled,false);assert.equal(view.executionAvailable,false);assert.equal(view.recoveryVerified,false);assert.equal(view.withinSnapshotLimits,true);assert.equal(view.counts.find(t=>t.table==='Sale').count,1);assert.equal(view.counts.find(t=>t.table==='StoreInstallationTerminal').count,2);assert.equal('snapshotHash' in view,false);assert.equal(view.inspectionFingerprint.length,64);assert.ok(!JSON.stringify(view).includes('PRIVATE RETAINED'));assert.equal((await f.db.$queryRawUnsafe(`SELECT to_regclass(format('%I.%I',current_schema(),'StoreLifecycleFence'))::text AS name`))[0].name,null);assert.deepEqual(await f.snapshot(),before);
+  await f.core.install(f.db,actor,scope);assert.equal((await inspector.inspect(f.db,actor,scope)).guardsInstalled,true);
+  const name='mws_lifecycle_'+createHash('sha256').update(JSON.stringify('Sale')).digest('hex').slice(0,16);await f.db.$executeRawUnsafe(`DROP TRIGGER "${name}" ON "Sale"`);
+  await assert.rejects(inspector.inspect(f.db,actor,scope),/Missing or additional database guards|Partially installed/);assert.equal(f.proofCalls(),0);assert.deepEqual(await f.snapshot(),before);
  }finally{await f.close()}
 });
