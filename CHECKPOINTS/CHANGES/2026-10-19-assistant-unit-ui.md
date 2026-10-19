@@ -1,3 +1,7 @@
+## 19/10/2026 13:01 Europe/Athens - SOURCE LIVE / AWAITING LAB
+
+Η τεχνική παράδοση ολοκληρώθηκε με full PR/main native CI και ordinary guarded release, exact active revisionfb11a314ec1414658d0840a61f812f42058aa5a0. Δεν είναι νέο LAB PASS. Τα ιστορικά CI/RELEASE PENDING παρακάτω αντικαθίστανται ως προς την τεχνική έκδοση. Συγκεντρωτική τελική καταγραφή/υπόλοιπα: CHECKPOINTS/CHANGES/2026-10-19-central-overlap-unit-ui.md.
+
 ## 19/10/2026 - COORD PHASE5 PRODUCT UNIT UI SOURCE PREPARED / AWAITING FULL CI AND LAB
 
 Claim#2821 head7297ea78619f8bda0985c7a74ef83ba2875237a0 / CI39226616765 SUCCESS / mergedfab4330e2b0bda43279a89675de76759e81ec12a BEFORE edits. Actual SalesAssistantEvidence now displays a unit column for matched products; PIECE/KG/LITER/PACKAGE Greek labels use own-property lookup, null/missing are unrecorded, unknown/blank raw units retained and React escaped. Canonical server/CSV, quantity/money formatting, context/coverage messages and suppression unchanged. No VOICE parser/chat/calendar/native/provider/auth changes.
