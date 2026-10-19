@@ -42,18 +42,22 @@ services:
         value: nikirazatou@hotmail.gr
       - key: BACKUP_MONITOR_SECRET
         sync: false
+      - key: STORE_LIFECYCLE_EXECUTION_ENABLED
+        value: "true"
   - type: cron
     name: myworkstation-db-backup
     runtime: docker
     region: oregon
     plan: standard
-    schedule: "0 */3 * * *"
+    schedule: "*/5 * * * *"
+    dockerCommand: /backup/run-jobs.sh
     dockerfilePath: ./ops/backup/Dockerfile
-    dockerContext: ./ops/backup
+    dockerContext: .
     autoDeployTrigger: checksPass
     buildFilter:
       paths:
         - ops/backup/**
+        - server/scripts/store-lifecycle-verify-copy.py
     envVars:
       - key: DATABASE_URL
         fromDatabase:

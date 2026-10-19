@@ -4,7 +4,7 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {mkdtemp,readFile,readdir,writeFile,rm,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
-import {persistLifecycleRecoveryStream,readLifecycleRecoveryStream,verifyLifecycleRecoveryStream} from '../src/services/store-lifecycle-recovery-stream.js';
+import {digestLifecycleRows,persistLifecycleRecoveryStream,readLifecycleRecoveryStream,verifyLifecycleRecoveryStream} from '../src/services/store-lifecycle-recovery-stream.js';
 import {openLifecycleRecovery,sealLifecycleRecovery} from '../src/services/store-lifecycle-recovery.js';
 
 const descriptor={scope:{companyId:'company',storeId:'target',mode:'RESET'},manifestHash:'a'.repeat(64),sourceRevision:'b'.repeat(40),schemaSignature:'c'.repeat(64),tables:[{name:'Sale',action:'REMOVE'},{name:'Settings',action:'KEEP'},{name:'Empty',action:'REMOVE'}]};
@@ -69,4 +69,12 @@ test('native streamed recovery restores every exact numeric/timestamp/inline att
   const restored=await db.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM "${restore}"."Document" t ORDER BY "id"`);
   assert.deepEqual(restored,before.filter(r=>!r.row.includes('"id":"sibling"')));assert.deepEqual(await read(),before);
  }finally{for(const schema of [source,restore])await db.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await db.$disconnect();await f.close()}
+});
+
+test('row recovery digest is independent of collation order and preserves duplicate exact Unicode numeric bytes',async()=>{
+ const rows=['{"id":"z","value":9007199254740993.123456789}','{"id":"Ω"}','{"id":"A"}','{"id":"Ω"}'];
+ const digest=values=>digestLifecycleRows((async function*(){yield* values})());
+ assert.deepEqual(await digest(rows),await digest([...rows].reverse()));
+ assert.notEqual((await digest(rows)).sha256,(await digest(rows.slice(0,-1))).sha256);
+ assert.notEqual((await digest(rows)).sha256,(await digest(rows.map(x=>x.replace('123456789','123456788')))).sha256);
 });

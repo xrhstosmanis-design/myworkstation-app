@@ -1,0 +1,14 @@
+**
+!ops/
+!ops/backup/
+!ops/backup/Dockerfile
+!ops/backup/run-backup.sh
+!ops/backup/run-jobs.sh
+!ops/backup/entrypoint.sh
+!ops/backup/lifecycle/
+!ops/backup/lifecycle/manifest.json
+!ops/backup/lifecycle/worker.py
+!ops/backup/lifecycle/verify_restore.py
+!server/
+!server/scripts/
+!server/scripts/store-lifecycle-verify-copy.py

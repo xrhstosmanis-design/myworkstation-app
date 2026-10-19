@@ -1,3 +1,4 @@
+import {registerFreshStoreLifecycle} from '../services/store-lifecycle-controller.js';
 import {registerStoreLifecyclePreview} from "../services/store-lifecycle-preview.js";
 import {registerPlatformMaintenanceRoutes} from "../services/platform-company-terminal-maintenance.js";
 import {readCashExpenseEvidence,cashExpenseFindings} from "../services/cash-expense-evidence.js";
@@ -54,6 +55,7 @@ router.use((req,res,next)=>{
 
 registerPlatformMaintenanceRoutes(router,prisma,ensureInstallationTables);
 registerStoreLifecyclePreview(router,prisma);
+registerFreshStoreLifecycle(router,prisma);
 router.use("/ai-credits",aiCreditRoutes);
 router.use("/companies/:companyId/stores/:storeId/report-settings",createAutomaticReportSettingsRouter(prisma));
 const n40Fixture=createN40FixtureHandlers({prisma,hash:bcrypt.hash});

@@ -97,7 +97,7 @@ async function fixture({proofOverride,afterVerified,extraManifest,extraDdl=()=>[
  };
  const core=createLifecycleExecutionCore(selectedManifest,{persistAndVerifyRecovery,sourceRevision:'1'.repeat(40)});
  const snapshot=async()=>{const result={};for(const table of [...selectedManifest.tables.map(t=>t.name),'Product'])result[table]=await db.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM "${schema}"."${table}" t ORDER BY row_to_json(t)::text`);return result};
- return {db,admin,schema,core,snapshot,proofCalls:()=>proofCalls,close:async()=>{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect();await rm(directory,{recursive:true,force:true})}};
+ return {db,admin,schema,core,recoveryAdapter:persistAndVerifyRecovery,snapshot,proofCalls:()=>proofCalls,close:async()=>{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect();await rm(directory,{recursive:true,force:true})}};
 }
 const matches=pattern=>e=>pattern.test(String(e.message)+' '+JSON.stringify(e.meta||{}));
 test('native RESET verifies persisted encrypted full fixture restore, deletes only scoped rows, retains configuration, blocks old writes and replays once',{skip:!isolated},async()=>{
@@ -468,4 +468,92 @@ test('native drain honors an actual myDATA receiving lock acquired before fence 
   await f.core.install(f.db,actor,scope);await assert.rejects(f.core.beginDrain(f.db,actor,scope,'RESET'),/Active shift, operator, Writer or fiscal work/);assert.equal(f.proofCalls(),0);
   release();await receiving;const drain=await f.core.beginDrain(f.db,actor,scope,'RESET');await f.core.abort(f.db,actor,{...scope,operationId:drain.operationId});
  }finally{release?.();if(receiving)await receiving.catch(()=>{});await f.close()}
+});
+
+test('native queued recovery metadata drives real full archive and selective restore with exact bigints, retained registers and global/sibling controls',{skip:!isolated},async()=>{
+ const {spawnSync}=await import('node:child_process'),{writeFile,chmod}=await import('node:fs/promises');
+ const selected={...manifest,streaming:true},f=await fixture({extraManifest:selected});
+ const directory=await mkdtemp(path.join(tmpdir(),'mws-private-archive-test-'));
+ try{
+  const before=await f.snapshot();await f.core.install(f.db,actor,scope);const prep=await f.core.prepare(f.db,actor,scope,'RESET');
+  const queued=(await f.db.$queryRawUnsafe(`SELECT "result" FROM "${f.schema}"."StoreLifecycleExecution" WHERE "id"=$1`,prep.operationId))[0].result.recoveryRequest;
+  assert.equal(queued.operationId,prep.operationId);const metadata=JSON.parse(queued.snapshotMetadataJson);assert.equal(metadata.snapshotHash,prep.snapshotHash);assert.ok(metadata.tables.every(t=>!('rows' in t)));
+  assert.equal(lifecycleExecutionSnapshotHash(metadata),prep.snapshotHash);
+  const archive=path.join(directory,'fixture.dump'),jobFile=path.join(directory,'job.json'),manifestFile=path.join(directory,'manifest.json');
+  await writeFile(jobFile,JSON.stringify(queued),{mode:0o600});await writeFile(manifestFile,JSON.stringify(selected),{mode:0o600});
+  const dump=spawnSync('pg_dump',['--format=custom','--no-owner','--no-privileges','--schema='+f.schema,'--file='+archive,process.env.DATABASE_URL],{encoding:'utf8',timeout:60000});
+  assert.equal(dump.status,0,'isolated pg_dump must be available and succeed');await chmod(archive,0o600);
+  const script=`import json,sys;sys.path.insert(0,sys.argv[1]);from verify_restore import verify_archive;print(json.dumps(verify_archive(sys.argv[2],json.load(open(sys.argv[3])),json.load(open(sys.argv[4])),sys.argv[5])))`;
+  const result=spawnSync('python3',['-c',script,path.resolve('../ops/backup/lifecycle'),archive,jobFile,manifestFile,path.resolve('scripts/store-lifecycle-verify-copy.py')],{encoding:'utf8',timeout:120000,maxBuffer:1024*1024,env:{PATH:process.env.PATH,LANG:'C.UTF-8'}});
+  assert.equal(result.status,0,'private PostgreSQL full/selective restoration failed: '+result.stderr.slice(-4000));
+  const proof=JSON.parse(result.stdout);assert.equal(proof.restoredSnapshotHash,prep.snapshotHash);assert.equal(proof.selectiveRestoreVerified,true);assert.equal(proof.controlsUnchanged,true);assert.equal(proof.fullRestoreAudit.dataMatches,true);assert.equal(proof.selectiveRestoreAudit.dataMatches,true);assert.ok(proof.selectiveRestoreAudit.tables>=selected.tables.length+4);
+  if(process.env.MWS_LIFECYCLE_RECOVERY_IMAGE){
+   const container=spawnSync('docker',['run','--rm','--network=none','--memory=256m','--pids-limit=80','--mount',`type=bind,source=${directory},target=/fixture,readonly`,'--entrypoint','python3',process.env.MWS_LIFECYCLE_RECOVERY_IMAGE,'-c',script,'/backup/lifecycle','/fixture/fixture.dump','/fixture/job.json','/fixture/manifest.json','/backup/lifecycle/store-lifecycle-verify-copy.py'],{encoding:'utf8',timeout:120000,maxBuffer:1024*1024});
+   assert.equal(container.status,0,'actual PG18 recovery image failed under 256MiB/no network: '+container.stderr.slice(-4000));const observed=JSON.parse(container.stdout);assert.equal(observed.restoredSnapshotHash,prep.snapshotHash);assert.equal(observed.controlsUnchanged,true);assert.equal(observed.fullRestoreAudit.dataMatches,true);assert.equal(observed.selectiveRestoreAudit.dataMatches,true);
+  }
+  assert.deepEqual(await f.snapshot(),before,'private recovery may never change the live fixture');
+  metadata.tables[0].sha256='0'.repeat(64);queued.snapshotMetadataJson=JSON.stringify(metadata);await writeFile(jobFile,JSON.stringify(queued));
+  const invalid=spawnSync('python3',['-c',script,path.resolve('../ops/backup/lifecycle'),archive,jobFile,manifestFile,path.resolve('scripts/store-lifecycle-verify-copy.py')],{encoding:'utf8',timeout:10000,env:{PATH:process.env.PATH,LANG:'C.UTF-8'}});assert.notEqual(invalid.status,0);assert.match(invalid.stderr,/Job metadata binding differs/);
+  await f.core.abort(f.db,actor,{...scope,...prep});
+ }finally{await f.close();await rm(directory,{recursive:true,force:true})}
+});
+
+test('native completed RESET reopens only after exact empty scope and unchanged BOTH installations; old epoch stays rejected and replays once',{skip:!isolated},async()=>{
+ const f=await fixture({extraManifest:{...manifest,streaming:true}});try{
+  await f.core.install(f.db,actor,scope);const prep=await f.core.prepare(f.db,actor,scope,'RESET');const done=await f.core.execute(f.db,actor,{...scope,...prep});assert.equal(done.generation,'1');assert.equal(done.kept.find(t=>t.name==='StoreInstallationTerminal').rowCount,2);
+  const reopened=await f.core.reopen(f.db,actor,{...scope,...prep});assert.equal(reopened.maintenance,false);assert.equal(reopened.reopenRequired,false);
+  assert.equal((await f.core.reopen(f.db,actor,{...scope,...prep})).idempotentReplay,true);assert.equal((await f.core.execute(f.db,actor,{...scope,...prep})).idempotentReplay,true);
+  await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('old-zero','company','target',1)`),matches(/STORE_LIFECYCLE_STALE_GENERATION/));
+  await f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_generations',$1,true)`,JSON.stringify({target:'1'}));await tx.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('new-one','company','target',1)`)});
+  assert.equal(Number((await f.db.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "StoreInstallationTerminal" WHERE "storeId"='target' AND "active"`))[0].n),2);
+ }finally{await f.close()}
+});
+test('native reopen refuses changed retained settings and another operation before lifting maintenance',{skip:!isolated},async()=>{
+ const f=await fixture({extraManifest:{...manifest,streaming:true}});try{
+  await f.core.install(f.db,actor,scope);const prep=await f.core.prepare(f.db,actor,scope,'RESET');await f.core.execute(f.db,actor,{...scope,...prep});
+  await assert.rejects(f.core.reopen(f.db,actor,{...scope,operationId:randomUUID()}),/completed RESET/);
+  await f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_operation',$1,true)`,prep.operationId);await tx.$executeRawUnsafe(`UPDATE "StoreInstallationTerminal" SET "settings"='CHANGED' WHERE "storeId"='target'`)});
+  await assert.rejects(f.core.reopen(f.db,actor,{...scope,...prep}),/Retained installation changed/);
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,true);
+ }finally{await f.close()}
+});
+
+async function publishIsolatedWorkerCapability(f,selected,secret){
+ if(!isolated)throw Error('Isolated fixture required');const {lifecycleWorkerCapabilityMac}=await import('../src/services/store-lifecycle-worker-ready.js');const heartbeatJson=JSON.stringify({protocol:'MWS_STORE_RECOVERY_CAPABILITY_V1',manifestHash:createHash('sha256').update(JSON.stringify(selected)).digest('hex'),workerRevision:'f'.repeat(40),storagePolicyVerified:true,rowDigestFormat:'MWS_ROW_MULTISET_SHA256_V1',checkedAt:new Date().toISOString()});
+ await f.db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "${f.schema}"."StoreLifecycleRuntime"("id" text PRIMARY KEY,"heartbeatJson" text NOT NULL,"mac" text NOT NULL)`);await f.db.$executeRawUnsafe(`INSERT INTO "${f.schema}"."StoreLifecycleRuntime" VALUES('backup-worker',$1,$2) ON CONFLICT("id") DO UPDATE SET "heartbeatJson"=EXCLUDED."heartbeatJson","mac"=EXCLUDED."mac"`,heartbeatJson,lifecycleWorkerCapabilityMac(secret,heartbeatJson));
+}
+test('native central HTTP prepares only the exact selected store with BOTH physical reports and refuses execute without genuine durable recovery',{skip:!isolated},async()=>{
+ const {default:express}=await import('express'),{registerFreshStoreLifecycle}=await import('../src/services/store-lifecycle-controller.js');
+ const selected={...manifest,streaming:true},f=await fixture({extraManifest:selected,extraDdl:s=>[`ALTER TABLE "${s}"."StoreRbsInstallationSettings" ADD COLUMN "terminalPos" text, ADD COLUMN "workFolder" text`],populate:async(db,s)=>{await db.$executeRawUnsafe(`UPDATE "${s}"."StoreRbsInstallationSettings" SET "terminalPos"=CASE "id" WHEN 'settings' THEN 'KAT-POS-01' WHEN 'settings-2' THEN 'KAT-POS-02' ELSE 'SIBLING' END,"workFolder"='C:\\capture'`)}});
+ const app=express();app.use(express.json());app.use((req,_res,next)=>{req.user=req.headers['x-fixture-admin']==='true'?actor:{id:'owner',role:'OWNER'};next()});registerFreshStoreLifecycle(app,f.db,{manifest:selected,sourceRevision:'1'.repeat(40),enabled:()=>true,secret:()=> 'isolated-worker-test-signing-secret'});app.use((err,_req,res,_next)=>res.status(err.status||500).json({error:err.message}));
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base=`http://127.0.0.1:${server.address().port}/companies/company/stores/target/lifecycle/fresh-start`;
+ const send=async(action,body={},admin=true)=>{const r=await fetch(base+'/'+action,{method:'POST',headers:{'content-type':'application/json','x-fixture-admin':String(admin)},body:JSON.stringify(body)});return {status:r.status,body:await r.json()}};
+ try{
+  const before=await f.snapshot();assert.equal((await send('start',{},false)).status,403);assert.equal((await send('start')).status,503);assert.equal((await f.db.$queryRawUnsafe(`SELECT to_regclass($1)::text AS fence`,`${f.schema}."StoreLifecycleFence"`))[0].fence,null);await publishIsolatedWorkerCapability(f,selected,'isolated-worker-test-signing-secret');const start=await send('start');assert.equal(start.status,200);const operationId=start.body.operationId;assert.equal(start.body.terminals.length,2);
+  const at=Date.now()+1000,sample=time=>({checkedAtUtc:new Date(time).toISOString(),workFolder:'C:\\capture',fileCount:0,directoryCount:0,rbsCommandFileCount:0,temporaryFileCount:0,otherFileCount:0,totalFileBytes:0,metadataSha256:'a'.repeat(64)}),reports=['KAT-POS-01','KAT-POS-02'].map(terminalPos=>({format:'MWS_CAP_SPOOL_OBSERVATION_V1',...scope,operationId,terminalPos,observationId:randomUUID(),readyForDeletion:false,unchangedBetweenSamples:true,processObservation:'OBSERVED',matchingWriterProcessCount:0,matchingCapDriverProcessCount:0,samples:[sample(at),sample(at+2000)]}));
+  const attestation={actualCapFoldersVerified:true,allWritersAndCapStopped:true,allOtherOfflineDevicesAccountedFor:true,noPendingPhysicalOrBankWork:true};
+  assert.equal((await send('prepare',{operationId,reports:[reports[0]],attestation})).status,409);
+  const prep=await send('prepare',{operationId,reports,attestation});assert.equal(prep.status,200);assert.match(prep.body.snapshotHash,/^[a-f0-9]{64}$/);
+  const statusResponse=await fetch(base+'/'+operationId,{headers:{'x-fixture-admin':'true'}}),status=await statusResponse.json();assert.equal(status.state,'PREPARED');assert.equal(status.recoveryVerified,false);assert.equal('recoveryProof' in status,false);assert.equal('snapshotMetadataJson' in status,false);
+  assert.equal((await send('execute',{operationId,snapshotHash:prep.body.snapshotHash,confirmation:'Sibling'})).status,400);
+  const blocked=await send('execute',{operationId,snapshotHash:prep.body.snapshotHash,confirmation:'Target'});assert.equal(blocked.status,409);assert.match(blocked.body.error,/αντίγραφο/);assert.deepEqual(await f.snapshot(),before);
+  const audit=(await f.db.$queryRawUnsafe(`SELECT "result" FROM "StoreLifecycleExecution" WHERE "id"=$1`,operationId))[0].result.physicalEvidence;assert.equal(audit.attestedBy,actor.id);assert.equal(audit.observations.length,2);
+  assert.equal((await send('abort',{operationId})).status,200);assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,false);assert.deepEqual(await f.snapshot(),before);
+  // A genuine non-fiscal store does not need a fictional CAP installation.
+  await f.db.$executeRawUnsafe(`UPDATE "StoreFiscalDevice" SET "active"=false WHERE "storeId"='target'`);await f.db.$executeRawUnsafe(`DELETE FROM "StoreRbsInstallationSettings" WHERE "storeId"='target'`);const pureBefore=await f.snapshot();
+  const pure=await send('start');assert.equal(pure.status,200);assert.deepEqual(pure.body.terminals,[]);const pureId=pure.body.operationId;assert.equal((await send('prepare',{operationId:pureId,reports:[],attestation})).status,200);assert.equal((await send('abort',{operationId:pureId})).status,200);assert.deepEqual(await f.snapshot(),pureBefore);
+ }finally{await new Promise(r=>server.close(r));await f.close()}
+});
+
+test('native central execution with a real encrypted fixture restore finishes guarded reopen and remains once-only',{skip:!isolated},async()=>{
+ const {createLifecycleController}=await import('../src/services/store-lifecycle-controller.js'),selected={...manifest,streaming:true},secret='isolated-success-worker-signing-key';
+ const f=await fixture({extraManifest:selected,extraDdl:s=>[`ALTER TABLE "${s}"."StoreRbsInstallationSettings" ADD COLUMN "terminalPos" text, ADD COLUMN "workFolder" text`],populate:async(db,s)=>{await db.$executeRawUnsafe(`UPDATE "${s}"."StoreFiscalDevice" SET "active"=false WHERE "storeId"='target'`);await db.$executeRawUnsafe(`DELETE FROM "${s}"."StoreRbsInstallationSettings" WHERE "storeId"='target'`)}});
+ try{
+  await publishIsolatedWorkerCapability(f,selected,secret);const before=await f.snapshot(),controller=createLifecycleController(f.db,{manifest:selected,sourceRevision:'1'.repeat(40),enabled:()=>true,secret:()=>secret,recoveryAdapter:f.recoveryAdapter});
+  const start=await controller.start(actor,scope);assert.deepEqual(start.terminals,[]);const prep=await controller.prepare(actor,scope,{operationId:start.operationId,reports:[],attestation:{actualCapFoldersVerified:true,allWritersAndCapStopped:true,allOtherOfflineDevicesAccountedFor:true,noPendingPhysicalOrBankWork:true}});
+  const result=await controller.execute(actor,scope,{...prep,confirmation:'Target'});assert.equal(result.maintenance,false);assert.equal(result.reopenRequired,false);assert.equal(result.generation,'1');assert.ok(result.reopenedAt);assert.equal(f.proofCalls(),1);
+  const state=await controller.status(actor,scope,start.operationId);assert.equal(state.state,'REOPENED');assert.equal(state.result.executedBy,actor.id);assert.equal(state.result.physicalEvidence.attestedBy,actor.id);
+  const after=await f.snapshot();for(const name of ['Store','StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice','Product'])assert.deepEqual(after[name],before[name]);for(const name of ['Sale','SaleLine'])assert.deepEqual(after[name],before[name].filter(r=>!r.row.includes('"storeId":"target"')));
+  assert.equal((await controller.execute(actor,scope,{...prep,confirmation:'Target'})).idempotentReplay,true);assert.equal(f.proofCalls(),1);await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('old-stale','company','target',1)`),matches(/STORE_LIFECYCLE_STALE_GENERATION/));
+ }finally{await f.close()}
 });
