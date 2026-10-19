@@ -1,0 +1,823 @@
+{
+  "testOnly": true,
+  "kind": "actual Chromium / isolated PostgreSQL HTTP",
+  "startedAt": "2026-10-19T19:48:59.847Z",
+  "revision": "dbc4d102af8bbf65800d2b62c903e8f2262cddd0",
+  "checks": [
+    "lab console fits390px mobile and1440px desktop viewport",
+    "owner mixed VAT quote net35.00/vat6.75/gross41.75 rendered",
+    "one real SUBMITTED request; no virtual stock or receivable posting on order",
+    "combined document changes only virtual stock -2/-3 and customer receivable +41.75",
+    "partial simulated payment10.00 reduces receivable only; no stock change",
+    "explicit same-key payment replay does not duplicate ledger effects",
+    "actual Authorization-backed PDF download carries TEST ONLY / NO FISCAL VALIDITY",
+    "actual seller UI assigned customer only, quote and real SUBMITTED request",
+    "actual HttpOnly customer session, only three published products, quote and real SUBMITTED request",
+    "actual inactive seller denied with no private catalog"
+  ],
+  "before": {
+    "at": "2026-10-19T19:49:09.855Z",
+    "ledger": {
+      "testOnly": true,
+      "storeId": "whlab-store",
+      "documents": [],
+      "stock": [
+        {
+          "productId": "whlab-product-a",
+          "name": "Δοκιμαστικός καφές κιβώτιο",
+          "quantity": "100.0000"
+        },
+        {
+          "productId": "whlab-product-b",
+          "name": "Δοκιμαστικός χυμός",
+          "quantity": "80.0000"
+        },
+        {
+          "productId": "whlab-product-private",
+          "name": "Μη δημοσιευμένο δοκιμαστικό είδος",
+          "quantity": "25.0000"
+        },
+        {
+          "productId": "whlab-product-zero",
+          "name": "Δοκιμαστικό δείγμα",
+          "quantity": "50.0000"
+        }
+      ],
+      "receivables": [],
+      "payments": [],
+      "events": [
+        {
+          "id": "09c29d3d-aeb3-4b23-ab59-f28dd467bcb3",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "100",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-a",
+            "requestId": "whlab-initial-whlab-store-whlab-product-a"
+          },
+          "createdAt": "2026-10-19T19:48:48.935Z"
+        },
+        {
+          "id": "b1edb077-def5-4b16-98c1-d30ee5de14bc",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "80",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-b",
+            "requestId": "whlab-initial-whlab-store-whlab-product-b"
+          },
+          "createdAt": "2026-10-19T19:48:48.938Z"
+        },
+        {
+          "id": "76792e1a-1084-436c-afb8-9605bf9c3e53",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "50",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-zero",
+            "requestId": "whlab-initial-whlab-store-whlab-product-zero"
+          },
+          "createdAt": "2026-10-19T19:48:48.940Z"
+        },
+        {
+          "id": "b16923c9-8e95-4515-89f3-abdd9feaf4aa",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "25",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-private",
+            "requestId": "whlab-initial-whlab-store-whlab-product-private"
+          },
+          "createdAt": "2026-10-19T19:48:48.943Z"
+        }
+      ]
+    },
+    "orders": []
+  },
+  "controlBefore": {
+    "at": "2026-10-19T19:49:09.869Z",
+    "ledger": {
+      "testOnly": true,
+      "storeId": "whlab-other-store",
+      "documents": [],
+      "stock": [
+        {
+          "productId": "whlab-product-a",
+          "name": "Δοκιμαστικός καφές κιβώτιο",
+          "quantity": "777.0000"
+        }
+      ],
+      "receivables": [],
+      "payments": [],
+      "events": [
+        {
+          "id": "7b36475c-82cc-46da-af0f-b01ae90afa42",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-other-store",
+            "quantity": "777",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-a",
+            "requestId": "whlab-initial-whlab-other-store-whlab-product-a"
+          },
+          "createdAt": "2026-10-19T19:48:48.946Z"
+        }
+      ]
+    },
+    "orders": []
+  },
+  "orderId": "d664dbeb-07d2-4e72-8716-c17cf2d28297",
+  "documentId": "77d9cb06-9c0f-4aec-9469-5170ec96c4ae",
+  "ownerAfter": {
+    "at": "2026-10-19T19:49:11.104Z",
+    "ledger": {
+      "testOnly": true,
+      "storeId": "whlab-store",
+      "documents": [
+        {
+          "id": "77d9cb06-9c0f-4aec-9469-5170ec96c4ae",
+          "type": "INVOICE_DELIVERY",
+          "orderId": "d664dbeb-07d2-4e72-8716-c17cf2d28297",
+          "storeId": "whlab-store",
+          "netTotal": "35.00",
+          "snapshot": {
+            "items": [
+              {
+                "sku": "WHLAB-A",
+                "name": "Δοκιμαστικός καφές κιβώτιο",
+                "unit": "BOX",
+                "tierId": "whlab-customer-whlab-product-a",
+                "vatRate": "24.000",
+                "netTotal": "20.00",
+                "quantity": "2.0000",
+                "vatTotal": "4.80",
+                "productId": "whlab-product-a",
+                "grossTotal": "24.80",
+                "priceListId": "whlab-customer-prices",
+                "priceVersion": 1,
+                "minimumQuantity": "1.0000",
+                "sourceUnitPrice": "10.0000",
+                "sourcePriceBasis": "NET"
+              },
+              {
+                "sku": "WHLAB-B",
+                "name": "Δοκιμαστικός χυμός",
+                "unit": "PIECE",
+                "tierId": "whlab-customer-whlab-product-b",
+                "vatRate": "13.000",
+                "netTotal": "15.00",
+                "quantity": "3.0000",
+                "vatTotal": "1.95",
+                "productId": "whlab-product-b",
+                "grossTotal": "16.95",
+                "priceListId": "whlab-customer-prices",
+                "priceVersion": 1,
+                "minimumQuantity": "1.0000",
+                "sourceUnitPrice": "5.6500",
+                "sourcePriceBasis": "GROSS"
+              }
+            ],
+            "totals": {
+              "net": "35.00",
+              "vat": "6.75",
+              "gross": "41.75"
+            },
+            "quoteId": "cad4f306b679b0af96fc32c5ac50a6b52b1aa3fb4c7bfe62dbd7b24fc742e1eb",
+            "storeId": "whlab-store",
+            "currency": "EUR",
+            "customerId": "whlab-customer",
+            "customerName": "Εικονικός πελάτης Α",
+            "creditChecked": false
+          },
+          "testOnly": true,
+          "vatTotal": "6.75",
+          "customerId": "whlab-customer",
+          "grossTotal": "41.75",
+          "sellerName": "ΕΙΚΟΝΙΚΗ ΧΟΝΔΡΙΚΗ LAB - ΔΟΚΙΜΗ",
+          "referenceId": null,
+          "customerName": "Εικονικός πελάτης Α",
+          "number": "TEST-INVOICE_DELIVERY-77d9cb06",
+          "companyId": "whlab-company",
+          "status": "ISSUED",
+          "createdAt": "2026-10-19T19:49:10.316Z"
+        }
+      ],
+      "stock": [
+        {
+          "productId": "whlab-product-a",
+          "name": "Δοκιμαστικός καφές κιβώτιο",
+          "quantity": "98.0000"
+        },
+        {
+          "productId": "whlab-product-b",
+          "name": "Δοκιμαστικός χυμός",
+          "quantity": "77.0000"
+        },
+        {
+          "productId": "whlab-product-private",
+          "name": "Μη δημοσιευμένο δοκιμαστικό είδος",
+          "quantity": "25.0000"
+        },
+        {
+          "productId": "whlab-product-zero",
+          "name": "Δοκιμαστικό δείγμα",
+          "quantity": "50.0000"
+        }
+      ],
+      "receivables": [
+        {
+          "customerId": "whlab-customer",
+          "name": "Εικονικός πελάτης Α",
+          "balance": "31.75"
+        }
+      ],
+      "payments": [
+        {
+          "id": "321dbc24-98c6-47b0-baad-52957118265c",
+          "invoiceId": "77d9cb06-9c0f-4aec-9469-5170ec96c4ae",
+          "customerId": "whlab-customer",
+          "method": "CASH",
+          "createdAt": "2026-10-19T19:49:10.419Z",
+          "amount": "10.00",
+          "testOnly": true
+        }
+      ],
+      "events": [
+        {
+          "id": "09c29d3d-aeb3-4b23-ab59-f28dd467bcb3",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "100",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-a",
+            "requestId": "whlab-initial-whlab-store-whlab-product-a"
+          },
+          "createdAt": "2026-10-19T19:48:48.935Z"
+        },
+        {
+          "id": "b1edb077-def5-4b16-98c1-d30ee5de14bc",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "80",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-b",
+            "requestId": "whlab-initial-whlab-store-whlab-product-b"
+          },
+          "createdAt": "2026-10-19T19:48:48.938Z"
+        },
+        {
+          "id": "76792e1a-1084-436c-afb8-9605bf9c3e53",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "50",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-zero",
+            "requestId": "whlab-initial-whlab-store-whlab-product-zero"
+          },
+          "createdAt": "2026-10-19T19:48:48.940Z"
+        },
+        {
+          "id": "b16923c9-8e95-4515-89f3-abdd9feaf4aa",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "25",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-private",
+            "requestId": "whlab-initial-whlab-store-whlab-product-private"
+          },
+          "createdAt": "2026-10-19T19:48:48.943Z"
+        },
+        {
+          "id": "1716c3fc-22f9-4646-9ddf-83e8ac555ce1",
+          "actorId": "whlab-owner",
+          "kind": "VIRTUAL_DOCUMENT_ISSUED",
+          "details": {
+            "type": "INVOICE_DELIVERY",
+            "totals": {
+              "net": "35.00",
+              "vat": "6.75",
+              "gross": "41.75"
+            },
+            "orderId": "d664dbeb-07d2-4e72-8716-c17cf2d28297",
+            "testOnly": true,
+            "documentId": "77d9cb06-9c0f-4aec-9469-5170ec96c4ae"
+          },
+          "createdAt": "2026-10-19T19:49:10.319Z"
+        },
+        {
+          "id": "66f40502-a1f8-429d-82be-c898695ed8a7",
+          "actorId": "whlab-owner",
+          "kind": "SIMULATED_PAYMENT",
+          "details": {
+            "amount": "10.00",
+            "method": "CASH",
+            "testOnly": true,
+            "invoiceId": "77d9cb06-9c0f-4aec-9469-5170ec96c4ae",
+            "paymentId": "321dbc24-98c6-47b0-baad-52957118265c"
+          },
+          "createdAt": "2026-10-19T19:49:10.420Z"
+        }
+      ]
+    },
+    "orders": [
+      {
+        "id": "d664dbeb-07d2-4e72-8716-c17cf2d28297",
+        "storeId": "whlab-store",
+        "customerId": "whlab-customer",
+        "actorId": "whlab-owner",
+        "channel": "BACKOFFICE",
+        "status": "SUBMITTED",
+        "revision": 1,
+        "clientOrderId": "c74c2375-59a3-4812-a435-5d7c044ab595",
+        "quoteId": "cad4f306b679b0af96fc32c5ac50a6b52b1aa3fb4c7bfe62dbd7b24fc742e1eb",
+        "snapshot": {
+          "items": [
+            {
+              "sku": "WHLAB-A",
+              "name": "Δοκιμαστικός καφές κιβώτιο",
+              "unit": "BOX",
+              "tierId": "whlab-customer-whlab-product-a",
+              "vatRate": "24.000",
+              "netTotal": "20.00",
+              "quantity": "2.0000",
+              "vatTotal": "4.80",
+              "productId": "whlab-product-a",
+              "grossTotal": "24.80",
+              "priceListId": "whlab-customer-prices",
+              "priceVersion": 1,
+              "minimumQuantity": "1.0000",
+              "sourceUnitPrice": "10.0000",
+              "sourcePriceBasis": "NET"
+            },
+            {
+              "sku": "WHLAB-B",
+              "name": "Δοκιμαστικός χυμός",
+              "unit": "PIECE",
+              "tierId": "whlab-customer-whlab-product-b",
+              "vatRate": "13.000",
+              "netTotal": "15.00",
+              "quantity": "3.0000",
+              "vatTotal": "1.95",
+              "productId": "whlab-product-b",
+              "grossTotal": "16.95",
+              "priceListId": "whlab-customer-prices",
+              "priceVersion": 1,
+              "minimumQuantity": "1.0000",
+              "sourceUnitPrice": "5.6500",
+              "sourcePriceBasis": "GROSS"
+            }
+          ],
+          "totals": {
+            "net": "35.00",
+            "vat": "6.75",
+            "gross": "41.75"
+          },
+          "quoteId": "cad4f306b679b0af96fc32c5ac50a6b52b1aa3fb4c7bfe62dbd7b24fc742e1eb",
+          "storeId": "whlab-store",
+          "currency": "EUR",
+          "customerId": "whlab-customer",
+          "customerName": "Εικονικός πελάτης Α",
+          "creditChecked": false
+        },
+        "notes": "",
+        "netTotal": "35.00",
+        "vatTotal": "6.75",
+        "grossTotal": "41.75",
+        "createdAt": "2026-10-19T19:49:10.218Z"
+      }
+    ]
+  },
+  "controlAfter": {
+    "at": "2026-10-19T19:49:11.094Z",
+    "ledger": {
+      "testOnly": true,
+      "storeId": "whlab-other-store",
+      "documents": [],
+      "stock": [
+        {
+          "productId": "whlab-product-a",
+          "name": "Δοκιμαστικός καφές κιβώτιο",
+          "quantity": "777.0000"
+        }
+      ],
+      "receivables": [],
+      "payments": [],
+      "events": [
+        {
+          "id": "7b36475c-82cc-46da-af0f-b01ae90afa42",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-other-store",
+            "quantity": "777",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-a",
+            "requestId": "whlab-initial-whlab-other-store-whlab-product-a"
+          },
+          "createdAt": "2026-10-19T19:48:48.946Z"
+        }
+      ]
+    },
+    "orders": []
+  },
+  "final": {
+    "at": "2026-10-19T19:49:12.993Z",
+    "ledger": {
+      "testOnly": true,
+      "storeId": "whlab-store",
+      "documents": [
+        {
+          "id": "77d9cb06-9c0f-4aec-9469-5170ec96c4ae",
+          "type": "INVOICE_DELIVERY",
+          "orderId": "d664dbeb-07d2-4e72-8716-c17cf2d28297",
+          "storeId": "whlab-store",
+          "netTotal": "35.00",
+          "snapshot": {
+            "items": [
+              {
+                "sku": "WHLAB-A",
+                "name": "Δοκιμαστικός καφές κιβώτιο",
+                "unit": "BOX",
+                "tierId": "whlab-customer-whlab-product-a",
+                "vatRate": "24.000",
+                "netTotal": "20.00",
+                "quantity": "2.0000",
+                "vatTotal": "4.80",
+                "productId": "whlab-product-a",
+                "grossTotal": "24.80",
+                "priceListId": "whlab-customer-prices",
+                "priceVersion": 1,
+                "minimumQuantity": "1.0000",
+                "sourceUnitPrice": "10.0000",
+                "sourcePriceBasis": "NET"
+              },
+              {
+                "sku": "WHLAB-B",
+                "name": "Δοκιμαστικός χυμός",
+                "unit": "PIECE",
+                "tierId": "whlab-customer-whlab-product-b",
+                "vatRate": "13.000",
+                "netTotal": "15.00",
+                "quantity": "3.0000",
+                "vatTotal": "1.95",
+                "productId": "whlab-product-b",
+                "grossTotal": "16.95",
+                "priceListId": "whlab-customer-prices",
+                "priceVersion": 1,
+                "minimumQuantity": "1.0000",
+                "sourceUnitPrice": "5.6500",
+                "sourcePriceBasis": "GROSS"
+              }
+            ],
+            "totals": {
+              "net": "35.00",
+              "vat": "6.75",
+              "gross": "41.75"
+            },
+            "quoteId": "cad4f306b679b0af96fc32c5ac50a6b52b1aa3fb4c7bfe62dbd7b24fc742e1eb",
+            "storeId": "whlab-store",
+            "currency": "EUR",
+            "customerId": "whlab-customer",
+            "customerName": "Εικονικός πελάτης Α",
+            "creditChecked": false
+          },
+          "testOnly": true,
+          "vatTotal": "6.75",
+          "customerId": "whlab-customer",
+          "grossTotal": "41.75",
+          "sellerName": "ΕΙΚΟΝΙΚΗ ΧΟΝΔΡΙΚΗ LAB - ΔΟΚΙΜΗ",
+          "referenceId": null,
+          "customerName": "Εικονικός πελάτης Α",
+          "number": "TEST-INVOICE_DELIVERY-77d9cb06",
+          "companyId": "whlab-company",
+          "status": "ISSUED",
+          "createdAt": "2026-10-19T19:49:10.316Z"
+        }
+      ],
+      "stock": [
+        {
+          "productId": "whlab-product-a",
+          "name": "Δοκιμαστικός καφές κιβώτιο",
+          "quantity": "98.0000"
+        },
+        {
+          "productId": "whlab-product-b",
+          "name": "Δοκιμαστικός χυμός",
+          "quantity": "77.0000"
+        },
+        {
+          "productId": "whlab-product-private",
+          "name": "Μη δημοσιευμένο δοκιμαστικό είδος",
+          "quantity": "25.0000"
+        },
+        {
+          "productId": "whlab-product-zero",
+          "name": "Δοκιμαστικό δείγμα",
+          "quantity": "50.0000"
+        }
+      ],
+      "receivables": [
+        {
+          "customerId": "whlab-customer",
+          "name": "Εικονικός πελάτης Α",
+          "balance": "31.75"
+        }
+      ],
+      "payments": [
+        {
+          "id": "321dbc24-98c6-47b0-baad-52957118265c",
+          "invoiceId": "77d9cb06-9c0f-4aec-9469-5170ec96c4ae",
+          "customerId": "whlab-customer",
+          "method": "CASH",
+          "createdAt": "2026-10-19T19:49:10.419Z",
+          "amount": "10.00",
+          "testOnly": true
+        }
+      ],
+      "events": [
+        {
+          "id": "09c29d3d-aeb3-4b23-ab59-f28dd467bcb3",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "100",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-a",
+            "requestId": "whlab-initial-whlab-store-whlab-product-a"
+          },
+          "createdAt": "2026-10-19T19:48:48.935Z"
+        },
+        {
+          "id": "b1edb077-def5-4b16-98c1-d30ee5de14bc",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "80",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-b",
+            "requestId": "whlab-initial-whlab-store-whlab-product-b"
+          },
+          "createdAt": "2026-10-19T19:48:48.938Z"
+        },
+        {
+          "id": "76792e1a-1084-436c-afb8-9605bf9c3e53",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "50",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-zero",
+            "requestId": "whlab-initial-whlab-store-whlab-product-zero"
+          },
+          "createdAt": "2026-10-19T19:48:48.940Z"
+        },
+        {
+          "id": "b16923c9-8e95-4515-89f3-abdd9feaf4aa",
+          "actorId": "LAB_FIXTURE",
+          "kind": "INITIAL_VIRTUAL_STOCK",
+          "details": {
+            "storeId": "whlab-store",
+            "quantity": "25",
+            "testOnly": true,
+            "companyId": "whlab-company",
+            "productId": "whlab-product-private",
+            "requestId": "whlab-initial-whlab-store-whlab-product-private"
+          },
+          "createdAt": "2026-10-19T19:48:48.943Z"
+        },
+        {
+          "id": "1716c3fc-22f9-4646-9ddf-83e8ac555ce1",
+          "actorId": "whlab-owner",
+          "kind": "VIRTUAL_DOCUMENT_ISSUED",
+          "details": {
+            "type": "INVOICE_DELIVERY",
+            "totals": {
+              "net": "35.00",
+              "vat": "6.75",
+              "gross": "41.75"
+            },
+            "orderId": "d664dbeb-07d2-4e72-8716-c17cf2d28297",
+            "testOnly": true,
+            "documentId": "77d9cb06-9c0f-4aec-9469-5170ec96c4ae"
+          },
+          "createdAt": "2026-10-19T19:49:10.319Z"
+        },
+        {
+          "id": "66f40502-a1f8-429d-82be-c898695ed8a7",
+          "actorId": "whlab-owner",
+          "kind": "SIMULATED_PAYMENT",
+          "details": {
+            "amount": "10.00",
+            "method": "CASH",
+            "testOnly": true,
+            "invoiceId": "77d9cb06-9c0f-4aec-9469-5170ec96c4ae",
+            "paymentId": "321dbc24-98c6-47b0-baad-52957118265c"
+          },
+          "createdAt": "2026-10-19T19:49:10.420Z"
+        }
+      ]
+    },
+    "orders": [
+      {
+        "id": "1e7eed07-7741-4ac1-8a29-9537a8518190",
+        "storeId": "whlab-store",
+        "customerId": "whlab-customer",
+        "actorId": "b2b:whlab-account",
+        "channel": "B2B_SITE",
+        "status": "SUBMITTED",
+        "revision": 1,
+        "clientOrderId": "a6efd925-6621-43e3-9218-8c062e671a9a",
+        "quoteId": "d364d1c8e70ae4eb6e08e7f9ef5acc7e3b714176cb7970b7e86f4a3ace9e1a77",
+        "snapshot": {
+          "items": [
+            {
+              "sku": "WHLAB-A",
+              "name": "Δοκιμαστικός καφές κιβώτιο",
+              "unit": "BOX",
+              "tierId": "whlab-customer-whlab-product-a",
+              "vatRate": "24.000",
+              "netTotal": "10.00",
+              "quantity": "1.0000",
+              "vatTotal": "2.40",
+              "productId": "whlab-product-a",
+              "grossTotal": "12.40",
+              "priceListId": "whlab-customer-prices",
+              "priceVersion": 1,
+              "minimumQuantity": "1.0000",
+              "sourceUnitPrice": "10.0000",
+              "sourcePriceBasis": "NET"
+            }
+          ],
+          "totals": {
+            "net": "10.00",
+            "vat": "2.40",
+            "gross": "12.40"
+          },
+          "quoteId": "d364d1c8e70ae4eb6e08e7f9ef5acc7e3b714176cb7970b7e86f4a3ace9e1a77",
+          "storeId": "whlab-store",
+          "currency": "EUR",
+          "customerId": "whlab-customer",
+          "customerName": "Εικονικός πελάτης Α",
+          "creditChecked": false
+        },
+        "notes": "",
+        "netTotal": "10.00",
+        "vatTotal": "2.40",
+        "grossTotal": "12.40",
+        "createdAt": "2026-10-19T19:49:12.298Z"
+      },
+      {
+        "id": "9cbd9a64-53f7-4325-ad71-78cb51446a75",
+        "storeId": "whlab-store",
+        "customerId": "whlab-customer",
+        "actorId": "seller:whlab-seller",
+        "channel": "FIELD_SALES",
+        "status": "SUBMITTED",
+        "revision": 1,
+        "clientOrderId": "f050b00b-08b2-4465-9771-1a3418794850",
+        "quoteId": "9950264140f3b601cdc230668f184a991948cef14824410a18a6f74705d91540",
+        "snapshot": {
+          "items": [
+            {
+              "sku": "WHLAB-A",
+              "name": "Δοκιμαστικός καφές κιβώτιο",
+              "unit": "BOX",
+              "tierId": "whlab-customer-whlab-product-a",
+              "vatRate": "24.000",
+              "netTotal": "10.00",
+              "quantity": "1.0000",
+              "vatTotal": "2.40",
+              "productId": "whlab-product-a",
+              "grossTotal": "12.40",
+              "priceListId": "whlab-customer-prices",
+              "priceVersion": 1,
+              "minimumQuantity": "1.0000",
+              "sourceUnitPrice": "10.0000",
+              "sourcePriceBasis": "NET"
+            }
+          ],
+          "totals": {
+            "net": "10.00",
+            "vat": "2.40",
+            "gross": "12.40"
+          },
+          "quoteId": "9950264140f3b601cdc230668f184a991948cef14824410a18a6f74705d91540",
+          "storeId": "whlab-store",
+          "currency": "EUR",
+          "customerId": "whlab-customer",
+          "customerName": "Εικονικός πελάτης Α",
+          "creditChecked": false
+        },
+        "notes": "",
+        "netTotal": "10.00",
+        "vatTotal": "2.40",
+        "grossTotal": "12.40",
+        "createdAt": "2026-10-19T19:49:11.720Z"
+      },
+      {
+        "id": "d664dbeb-07d2-4e72-8716-c17cf2d28297",
+        "storeId": "whlab-store",
+        "customerId": "whlab-customer",
+        "actorId": "whlab-owner",
+        "channel": "BACKOFFICE",
+        "status": "SUBMITTED",
+        "revision": 1,
+        "clientOrderId": "c74c2375-59a3-4812-a435-5d7c044ab595",
+        "quoteId": "cad4f306b679b0af96fc32c5ac50a6b52b1aa3fb4c7bfe62dbd7b24fc742e1eb",
+        "snapshot": {
+          "items": [
+            {
+              "sku": "WHLAB-A",
+              "name": "Δοκιμαστικός καφές κιβώτιο",
+              "unit": "BOX",
+              "tierId": "whlab-customer-whlab-product-a",
+              "vatRate": "24.000",
+              "netTotal": "20.00",
+              "quantity": "2.0000",
+              "vatTotal": "4.80",
+              "productId": "whlab-product-a",
+              "grossTotal": "24.80",
+              "priceListId": "whlab-customer-prices",
+              "priceVersion": 1,
+              "minimumQuantity": "1.0000",
+              "sourceUnitPrice": "10.0000",
+              "sourcePriceBasis": "NET"
+            },
+            {
+              "sku": "WHLAB-B",
+              "name": "Δοκιμαστικός χυμός",
+              "unit": "PIECE",
+              "tierId": "whlab-customer-whlab-product-b",
+              "vatRate": "13.000",
+              "netTotal": "15.00",
+              "quantity": "3.0000",
+              "vatTotal": "1.95",
+              "productId": "whlab-product-b",
+              "grossTotal": "16.95",
+              "priceListId": "whlab-customer-prices",
+              "priceVersion": 1,
+              "minimumQuantity": "1.0000",
+              "sourceUnitPrice": "5.6500",
+              "sourcePriceBasis": "GROSS"
+            }
+          ],
+          "totals": {
+            "net": "35.00",
+            "vat": "6.75",
+            "gross": "41.75"
+          },
+          "quoteId": "cad4f306b679b0af96fc32c5ac50a6b52b1aa3fb4c7bfe62dbd7b24fc742e1eb",
+          "storeId": "whlab-store",
+          "currency": "EUR",
+          "customerId": "whlab-customer",
+          "customerName": "Εικονικός πελάτης Α",
+          "creditChecked": false
+        },
+        "notes": "",
+        "netTotal": "35.00",
+        "vatTotal": "6.75",
+        "grossTotal": "41.75",
+        "createdAt": "2026-10-19T19:49:10.218Z"
+      }
+    ]
+  },
+  "finishedAt": "2026-10-19T19:49:12.997Z",
+  "pass": true,
+  "outboundBlocked": 0,
+  "classification": "CI acceptance only — synthetic container; not LIVE/LAB acceptance",
+  "workflowRun": 39313589730,
+  "artifactId": 12217137942
+}

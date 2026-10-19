@@ -1,0 +1,46 @@
+{
+  "label": "LIVE-API-SELLER-05-REPLAY",
+  "actor": "whlab-seller",
+  "storeId": "whlab-store",
+  "customerId": "whlab-customer",
+  "at": "2026-10-19T20:18:22.495Z",
+  "request": {
+    "path": "/api/wholesale/sellers/orders",
+    "body": {
+      "storeId": "whlab-store",
+      "customerId": "whlab-customer",
+      "items": [
+        {
+          "productId": "whlab-product-a",
+          "quantity": "1"
+        }
+      ],
+      "quoteId": "9950264140f3b601cdc230668f184a991948cef14824410a18a6f74705d91540",
+      "clientOrderId": "0928d5a9-8f06-4761-9a94-19918ebd260b",
+      "notes": "LIVE-LAB-SELLER-05 SYNTHETIC API TEST"
+    }
+  },
+  "before": {
+    "at": "2026-10-19T20:18:10.120Z",
+    "storeId": "whlab-store",
+    "orders": 2,
+    "documents": 1,
+    "payments": 1,
+    "events": 6,
+    "stock": {
+      "whlab-product-a": "98.0000",
+      "whlab-product-b": "77.0000",
+      "whlab-product-private": "25.0000",
+      "whlab-product-zero": "50.0000"
+    },
+    "receivables": [
+      {
+        "customerId": "whlab-customer",
+        "balance": "31.75"
+      }
+    ]
+  },
+  "method": "NO PAYMENT / SUBMITTED REQUEST ONLY",
+  "physicalTerminal": "independent Node20 HTTPS client; not browser",
+  "posShift": "N/A"
+}
