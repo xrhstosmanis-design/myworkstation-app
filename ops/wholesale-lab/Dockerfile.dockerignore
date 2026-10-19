@@ -1,0 +1,14 @@
+# This laboratory image must never inherit a developer's local credentials,
+# dependency trees, generated bundles or repository history.
+.git
+**/.git
+**/.env
+**/.env.*
+**/node_modules
+**/dist
+**/coverage
+**/*.log
+CHECKPOINTS
+docs
+output
+upload
