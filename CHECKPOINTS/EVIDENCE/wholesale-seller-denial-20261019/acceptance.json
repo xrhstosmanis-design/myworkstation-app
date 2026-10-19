@@ -1,0 +1,57 @@
+{
+  "revision": "f3305f096eb7830f89483dda64f69271c9fb4535",
+  "startedAt": "2026-10-19T18:18:07.681Z",
+  "url": "https://myworkstation-app.onrender.com/wholesale",
+  "browser": "Cloud Chrome / browser1 / tab2 / desktop",
+  "operator": "Υπεύθυνος Εργαστηρίου / personal Owner",
+  "company": "MYWORKSTATION LAB",
+  "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "actions": [
+    {
+      "step": "selected manager baseline",
+      "at": "2026-10-19T18:18:07.684Z",
+      "dom": "- main:\n  - text: MyWorkStation\n  - heading \"Χονδρική B2B\" [level=1]\n  - paragraph: MYWORKSTATION LAB\n  - generic: Υπεύθυνος Εργαστηρίου\n  - button \"Αποσύνδεση\"\n  - button \"Σύνδεση λογαριασμού\"\n  - button \"Επανέλεγχος πρόσβασης\"\n  - region \"Επιλογή καταστήματος χονδρικής\":\n    - text: Κατάστημα\n    - combobox \"Κατάστημα χονδρικής\":\n      - option \"Επίλεξε κατάστημα\"\n      - option \"N40 CONTROL 20261010\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ\" [selected]\n  - region \"Χονδρική B2B\":\n    - navigation \"Ενότητες χονδρικής\":\n      - button \"Χονδρική, site & αναθέσεις\"\n      - button \"Εργασία πωλητή\"\n    - heading \"Χονδρική / B2B\" [level=2]\n    - paragraph: Πελάτες χονδρικής και ειδικοί τιμοκατάλογοι, χωρίς αλλαγή στις τιμές λιανικής.\n    - button \"Πελάτες\"\n    - button \"Τιμοκατάλογοι\"\n    - button \"Παραγγελίες\"\n    - button \"Site πελατών\"\n    - button \"Αναθέσεις πωλητών\"\n    - textbox \"Κωδικός πελάτη\"\n    - textbox \"Επωνυμία\"\n    - textbox \"ΑΦΜ\"\n    - spinbutton\n    - spinbutton\n    - button \"Νέος πελάτης\"\n    - generic: Κωδικός\n    - generic: Επωνυμία\n    - generic: ΑΦΜ\n    - generic: Όριο\n    - generic: Πίστωση\n    - generic: Τιμοκατάλογος\n    - generic: B2B-TEST-001\n    - generic: ΔΟΚΙΜΑΣΤΙΚΟΣ ΠΕΛΑΤΗΣ ΧΟΝΔΡΙΚΗΣ\n    - generic: —\n    - generic: 5.000,00 €\n    - generic: 30 ημέρες\n    - combobox \"Τιμοκατάλογος · ΔΟΚΙΜΑΣΤΙΚΟΣ ΠΕΛΑΤΗΣ ΧΟΝΔΡΙΚΗΣ\":\n      - option \"Χωρίς τιμοκατάλογο\" [selected]"
+    },
+    {
+      "step": "existing memberships before transition; read-only",
+      "at": "2026-10-19T18:18:17.562Z",
+      "dom": "- main:\n  - text: MyWorkStation\n  - heading \"Χονδρική B2B\" [level=1]\n  - paragraph: MYWORKSTATION LAB\n  - generic: Υπεύθυνος Εργαστηρίου\n  - button \"Αποσύνδεση\"\n  - button \"Σύνδεση λογαριασμού\"\n  - button \"Επανέλεγχος πρόσβασης\"\n  - region \"Επιλογή καταστήματος χονδρικής\":\n    - text: Κατάστημα\n    - combobox \"Κατάστημα χονδρικής\":\n      - option \"Επίλεξε κατάστημα\"\n      - option \"N40 CONTROL 20261010\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ\" [selected]\n  - region \"Χονδρική B2B\":\n    - navigation \"Ενότητες χονδρικής\":\n      - button \"Χονδρική, site & αναθέσεις\"\n      - button \"Εργασία πωλητή\"\n    - heading \"Χονδρική / B2B\" [level=2]\n    - paragraph: Πελάτες χονδρικής και ειδικοί τιμοκατάλογοι, χωρίς αλλαγή στις τιμές λιανικής.\n    - button \"Πελάτες\"\n    - button \"Τιμοκατάλογοι\"\n    - button \"Παραγγελίες\"\n    - button \"Site πελατών\"\n    - button \"Αναθέσεις πωλητών\" [active]\n    - region \"Διαχείριση πωλητών\":\n      - heading \"Πωλητές και αναθέσεις\" [level=3]\n      - paragraph: Χρησιμοποιούνται οι υπάρχοντες λογαριασμοί MyWorkStation. Η ιδιότητα πωλητή δεν παραχωρεί δικαιώματα διαχείρισης ή POS.\n      - text: Αναζήτηση χρήστη\n      - textbox \"Αναζήτηση χρήστη πωλητή\"\n      - button \"Εύρεση χρηστών\"\n      - article:\n        - generic: N40 Backoffice Εικονικός Έλεγχος 20261010\n        - generic: [email omitted]\n        - generic: Χωρίς ενεργή ιδιότητα\n        - button \"Ενεργοποίηση πωλητή · N40 Backoffice Εικονικός Έλεγχος 20261010\"\n        - button \"Αναθέσεις · N40 Backoffice Εικονικός Έλεγχος 20261010\"\n      - article:\n        - generic: Υπεύθυνος Εργαστηρίου\n        - generic: [email omitted]\n        - generic: Χωρίς ενεργή ιδιότητα\n        - button \"Ενεργοποίηση πωλητή · Υπεύθυνος Εργαστηρίου\"\n        - button \"Αναθέσεις · Υπεύθυνος Εργαστηρίου\""
+    },
+    {
+      "step": "first stable membership refusal",
+      "at": "2026-10-19T18:18:28.536Z",
+      "dom": "- main:\n  - text: MyWorkStation\n  - heading \"Χονδρική B2B\" [level=1]\n  - paragraph: MYWORKSTATION LAB\n  - generic: Υπεύθυνος Εργαστηρίου\n  - button \"Αποσύνδεση\"\n  - button \"Σύνδεση λογαριασμού\"\n  - button \"Επανέλεγχος πρόσβασης\"\n  - region \"Επιλογή καταστήματος χονδρικής\":\n    - text: Κατάστημα\n    - combobox \"Κατάστημα χονδρικής\":\n      - option \"Επίλεξε κατάστημα\"\n      - option \"N40 CONTROL 20261010\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ\" [selected]\n  - region \"Χονδρική B2B\":\n    - navigation \"Ενότητες χονδρικής\":\n      - button \"Χονδρική, site & αναθέσεις\"\n      - button \"Εργασία πωλητή\" [active]\n    - region \"Εργασία πωλητή\":\n      - heading \"Πωλητές · Παραγγελίες\" [level=2]\n      - paragraph: Σύνδεση μέσω του υπάρχοντος λογαριασμού MyWorkStation.\n      - button \"Επανέλεγχος πρόσβασης\"\n      - alert: Απαιτείται ενεργή ιδιότητα πωλητή. Επικοινώνησε με τον διαχειριστή για ανάθεση.",
+      "selected": {
+        "label": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+        "value": "cmtpopbgo000trhb5ng9ytiru"
+      }
+    },
+    {
+      "step": "first return to customer management without reselecting",
+      "at": "2026-10-19T18:18:33.939Z",
+      "dom": "- main:\n  - text: MyWorkStation\n  - heading \"Χονδρική B2B\" [level=1]\n  - paragraph: MYWORKSTATION LAB\n  - generic: Υπεύθυνος Εργαστηρίου\n  - button \"Αποσύνδεση\"\n  - button \"Σύνδεση λογαριασμού\"\n  - button \"Επανέλεγχος πρόσβασης\"\n  - region \"Επιλογή καταστήματος χονδρικής\":\n    - text: Κατάστημα\n    - combobox \"Κατάστημα χονδρικής\":\n      - option \"Επίλεξε κατάστημα\"\n      - option \"N40 CONTROL 20261010\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ\" [selected]\n  - region \"Χονδρική B2B\":\n    - navigation \"Ενότητες χονδρικής\":\n      - button \"Χονδρική, site & αναθέσεις\" [active]\n      - button \"Εργασία πωλητή\"\n    - heading \"Χονδρική / B2B\" [level=2]\n    - paragraph: Πελάτες χονδρικής και ειδικοί τιμοκατάλογοι, χωρίς αλλαγή στις τιμές λιανικής.\n    - button \"Πελάτες\"\n    - button \"Τιμοκατάλογοι\"\n    - button \"Παραγγελίες\"\n    - button \"Site πελατών\"\n    - button \"Αναθέσεις πωλητών\"\n    - textbox \"Κωδικός πελάτη\"\n    - textbox \"Επωνυμία\"\n    - textbox \"ΑΦΜ\"\n    - spinbutton\n    - spinbutton\n    - button \"Νέος πελάτης\"\n    - generic: Κωδικός\n    - generic: Επωνυμία\n    - generic: ΑΦΜ\n    - generic: Όριο\n    - generic: Πίστωση\n    - generic: Τιμοκατάλογος\n    - generic: B2B-TEST-001\n    - generic: ΔΟΚΙΜΑΣΤΙΚΟΣ ΠΕΛΑΤΗΣ ΧΟΝΔΡΙΚΗΣ\n    - generic: —\n    - generic: 5.000,00 €\n    - generic: 30 ημέρες\n    - combobox \"Τιμοκατάλογος · ΔΟΚΙΜΑΣΤΙΚΟΣ ΠΕΛΑΤΗΣ ΧΟΝΔΡΙΚΗΣ\":\n      - option \"Χωρίς τιμοκατάλογο\" [selected]"
+    },
+    {
+      "step": "second stable refusal, selected store retained",
+      "at": "2026-10-19T18:18:40.288Z",
+      "dom": "- main:\n  - text: MyWorkStation\n  - heading \"Χονδρική B2B\" [level=1]\n  - paragraph: MYWORKSTATION LAB\n  - generic: Υπεύθυνος Εργαστηρίου\n  - button \"Αποσύνδεση\"\n  - button \"Σύνδεση λογαριασμού\"\n  - button \"Επανέλεγχος πρόσβασης\"\n  - region \"Επιλογή καταστήματος χονδρικής\":\n    - text: Κατάστημα\n    - combobox \"Κατάστημα χονδρικής\":\n      - option \"Επίλεξε κατάστημα\"\n      - option \"N40 CONTROL 20261010\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ\" [selected]\n  - region \"Χονδρική B2B\":\n    - navigation \"Ενότητες χονδρικής\":\n      - button \"Χονδρική, site & αναθέσεις\"\n      - button \"Εργασία πωλητή\" [active]\n    - region \"Εργασία πωλητή\":\n      - heading \"Πωλητές · Παραγγελίες\" [level=2]\n      - paragraph: Σύνδεση μέσω του υπάρχοντος λογαριασμού MyWorkStation.\n      - button \"Επανέλεγχος πρόσβασης\"\n      - alert: Απαιτείται ενεργή ιδιότητα πωλητή. Επικοινώνησε με τον διαχειριστή για ανάθεση.",
+      "selected": {
+        "label": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+        "value": "cmtpopbgo000trhb5ng9ytiru"
+      }
+    },
+    {
+      "step": "second return to same customer management without reselecting",
+      "at": "2026-10-19T18:18:56.862Z",
+      "dom": "- main:\n  - text: MyWorkStation\n  - heading \"Χονδρική B2B\" [level=1]\n  - paragraph: MYWORKSTATION LAB\n  - generic: Υπεύθυνος Εργαστηρίου\n  - button \"Αποσύνδεση\"\n  - button \"Σύνδεση λογαριασμού\"\n  - button \"Επανέλεγχος πρόσβασης\"\n  - region \"Επιλογή καταστήματος χονδρικής\":\n    - text: Κατάστημα\n    - combobox \"Κατάστημα χονδρικής\":\n      - option \"Επίλεξε κατάστημα\"\n      - option \"N40 CONTROL 20261010\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΑΠΟΜΟΝΩΣΗΣ ΕΤΙΚΕΤΑΣ\"\n      - option \"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ\" [selected]\n  - region \"Χονδρική B2B\":\n    - navigation \"Ενότητες χονδρικής\":\n      - button \"Χονδρική, site & αναθέσεις\" [active]\n      - button \"Εργασία πωλητή\"\n    - heading \"Χονδρική / B2B\" [level=2]\n    - paragraph: Πελάτες χονδρικής και ειδικοί τιμοκατάλογοι, χωρίς αλλαγή στις τιμές λιανικής.\n    - button \"Πελάτες\"\n    - button \"Τιμοκατάλογοι\"\n    - button \"Παραγγελίες\"\n    - button \"Site πελατών\"\n    - button \"Αναθέσεις πωλητών\"\n    - textbox \"Κωδικός πελάτη\"\n    - textbox \"Επωνυμία\"\n    - textbox \"ΑΦΜ\"\n    - spinbutton\n    - spinbutton\n    - button \"Νέος πελάτης\"\n    - generic: Κωδικός\n    - generic: Επωνυμία\n    - generic: ΑΦΜ\n    - generic: Όριο\n    - generic: Πίστωση\n    - generic: Τιμοκατάλογος\n    - generic: B2B-TEST-001\n    - generic: ΔΟΚΙΜΑΣΤΙΚΟΣ ΠΕΛΑΤΗΣ ΧΟΝΔΡΙΚΗΣ\n    - generic: —\n    - generic: 5.000,00 €\n    - generic: 30 ημέρες\n    - combobox \"Τιμοκατάλογος · ΔΟΚΙΜΑΣΤΙΚΟΣ ΠΕΛΑΤΗΣ ΧΟΝΔΡΙΚΗΣ\":\n      - option \"Χωρίς τιμοκατάλογο\" [selected]",
+      "selected": {
+        "label": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+        "value": "cmtpopbgo000trhb5ng9ytiru"
+      }
+    }
+  ],
+  "businessAction": "read-only navigation; no grant or business write; SKU/quantity/payment/shift/financial/stock baseline N/A, no deltas inferred",
+  "finishedAt": "2026-10-19T18:18:56.896Z",
+  "result": "LIMITED LIVE UI PASS: repeated nonmember refusal retains exact store and supports manager return; no positive seller/order/portal/offline/commercial packaging acceptance",
+  "screenshot": "wholesale-seller-denial-1792433920320.jpg"
+}
