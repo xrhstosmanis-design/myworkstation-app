@@ -1,0 +1,101 @@
+{
+  "scope": "Technical release verification; not feature acceptance",
+  "sourceRevision": "1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69",
+  "sourcePr": 2885,
+  "fullMainCI": {
+    "runId": 39320123491,
+    "status": "completed",
+    "conclusion": "success",
+    "server": {
+      "pass": 3514,
+      "fail": 0,
+      "skipped": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skipped": 0
+    },
+    "jobIds": [
+      {
+        "id": 118291696869,
+        "name": "classify-changes",
+        "conclusion": "success"
+      },
+      {
+        "id": 118291697485,
+        "name": "rbs-capdriver-windows-script-parse",
+        "conclusion": "success"
+      },
+      {
+        "id": 118291697902,
+        "name": "hikvision-preflight-windows",
+        "conclusion": "success"
+      },
+      {
+        "id": 118291991205,
+        "name": "wholesale-isolated-lab",
+        "conclusion": "success"
+      },
+      {
+        "id": 118291991398,
+        "name": "build-and-test",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "reviewedBlobs": {
+    "module": "463f541d930bbab12c2c027d4f7158256d800c7a",
+    "test": "eb08aa8442db2e0c7f7181e6c97274af0caedb37"
+  },
+  "deployment": {
+    "id": 39321219511,
+    "status": "completed",
+    "conclusion": "success",
+    "renderDeploy": {
+      "commit": {
+        "createdAt": "2026-10-19T20:32:09Z",
+        "id": "1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69",
+        "message": "Merge pull request #2889 from xrhstosmanis-design/fix/supplier-advance-20261019\n\nRecord actual supplier payments and retain excess as advance"
+      },
+      "createdAt": "2026-10-19T20:41:02.357342Z",
+      "finishedAt": "2026-10-19T20:47:07.182627Z",
+      "id": "dep-dbb80ng473hc73dk7e40",
+      "startedAt": "2026-10-19T20:41:02.321289Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-19T20:47:37.177545Z"
+    }
+  },
+  "health": {
+    "url": "https://myworkstation-app.onrender.com/api/health",
+    "response": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69"
+    },
+    "observedAt": "Independent request after Render live; exact independent request timestamp was not separately recorded."
+  },
+  "previousHealthyRevision": "e3432c2b3f6c8a890bbe52b61a0270ee06bc9899",
+  "automaticDelivery": {
+    "runtimeWiring": false,
+    "dispatchActivated": false,
+    "actualDelivery": "NOT TESTED",
+    "durableSQLandSMTP": "OPEN"
+  },
+  "runtimeLogSample": {
+    "start": "2026-10-19T20:47:07Z",
+    "limit": 5,
+    "hasMore": true,
+    "observation": "Inactive online-order/table module denials also seen before release; no comprehensive error-clearance or causal attribution"
+  },
+  "acceptance": {
+    "newLAB": false,
+    "newLIVEFeaturePASS": false,
+    "newUSERPASS": false,
+    "acceptedTransactionsRepeated": false,
+    "coordinatorFinancialActions": false
+  },
+  "supersedes": "39318461936 cancelled jobless CI blocker and prior manual workflow next action",
+  "compiledAt": "2026-10-19T20:49:40.129Z"
+}
