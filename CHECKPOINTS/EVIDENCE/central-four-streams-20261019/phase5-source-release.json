@@ -1,0 +1,317 @@
+{
+  "scope": "central-four-streams-phase5",
+  "issues": [
+    2704,
+    2705,
+    2706,
+    2707
+  ],
+  "coordinator": "codex/central-four-streams-20261018",
+  "claim": {
+    "pr": 2821,
+    "head": "7297ea78619f8bda0985c7a74ef83ba2875237a0",
+    "ci": 39226616765,
+    "merge": "fab4330e2b0bda43279a89675de76759e81ec12a"
+  },
+  "source": {
+    "prs": [
+      {
+        "pr": 2823,
+        "head": "cbdd17ee45e8b30da3a081083597ea2ea12e9748",
+        "ci": 39228755790,
+        "final": {
+          "conclusion": "success",
+          "job": 117981628743,
+          "pass": 3342,
+          "fail": 0,
+          "skip": 0,
+          "backupPass": 6,
+          "nativeCashFixture": "PASS ok233 2026-10-19T09:18:30.7601759Z",
+          "legacyFixture": "PASS ok232"
+        }
+      },
+      {
+        "pr": 2824,
+        "head": "28c2e1074faa963c23dd890474735dd4ed5b9b7c",
+        "ci": 39228766781,
+        "final": {
+          "conclusion": "success",
+          "job": 117981662750,
+          "pass": 3344,
+          "fail": 0,
+          "skip": 0,
+          "backupPass": 6,
+          "nativeCashFixture": "PASS ok235 2026-10-19T09:18:26.7277802Z",
+          "legacyFixture": "PASS ok234"
+        }
+      }
+    ],
+    "verifiedBlobs": [
+      {
+        "path": "server/src/services/automatic-report-policy.js",
+        "sha": "98bc634b5c87131189869ae791d1f2bba9079c0e"
+      },
+      {
+        "path": "server/test/automatic-report-overlap.test.js",
+        "sha": "00c548331c7873316069256335dc95e78e705914"
+      },
+      {
+        "path": "server/test/automatic-report-source-postgres.test.js",
+        "sha": "74b614088706a6d4cb5cebd4d8e2bdbc542330c5"
+      },
+      {
+        "path": "client/src/components/voice/SalesAssistantEvidence.jsx",
+        "sha": "496e43cea2a2880c503b8ea1168de876e29eb59e"
+      },
+      {
+        "path": "server/test/assistant-product-unit-ui.test.js",
+        "sha": "0f7e4f6b545dc8c63f68f3aa75539ee145fb08cb"
+      },
+      {
+        "path": "server/test/automatic-report-settings.test.js",
+        "sha": "933a5a15f8e08d3f9ef0d96abd4984cbc5e5b55a"
+      }
+    ],
+    "merge": "62cd484ee7cb900ba06df6d9fd3e1a235d23d338",
+    "mainCI": 39230167668,
+    "mainResult": {
+      "conclusion": "success",
+      "job": 117986195647,
+      "pass": 3356,
+      "fail": 0,
+      "skip": 0,
+      "backupPass": 6,
+      "nativeCashFixture": "PASS ok235 2026-10-19T09:30:11.4732423Z",
+      "windows": "SUCCESS",
+      "chromium": "SUCCESS",
+      "builds": "SUCCESS",
+      "invariants": "SUCCESS",
+      "archive": "SUCCESS",
+      "realHttpE2E": "SUCCESS"
+    }
+  },
+  "local": {
+    "node": "20.20.2",
+    "combinedFocused": {
+      "pass": 44,
+      "fail": 0,
+      "skip": 0
+    },
+    "cashFocused": {
+      "pass": 29,
+      "fail": 0,
+      "skip": 0
+    },
+    "unitUiFocused": {
+      "pass": 15,
+      "fail": 0,
+      "skip": 0
+    },
+    "supplierUnchanged": {
+      "pass": 12,
+      "fail": 0,
+      "skip": 0
+    },
+    "clientBuild": "PASS; TABLE_SERVICE verified",
+    "nativePrismaWrapper": "1environmentSKIP; fresh PostgreSQL cannot map non-root UID; no existing cluster changed; full native CI required",
+    "revalidatedCombined": {
+      "pass": 48,
+      "fail": 0,
+      "skip": 0
+    },
+    "allAutomaticReport": {
+      "pass": 35,
+      "fail": 0,
+      "skip": 2,
+      "skipReason": "native PostgreSQL unavailable locally"
+    }
+  },
+  "beforeHealth": {
+    "capturedAt": "2026-10-19T09:00:46.903511+00:00",
+    "httpStatus": 200,
+    "ok": true,
+    "revision": "1b13cd794faf6629214faf1161cb3fb926e3a479",
+    "version": "0.22.0+kat-test-pos"
+  },
+  "acceptance": {
+    "status": "AWAITING LAB",
+    "newLabPass": false,
+    "browserBlock": "native credential state cannot be safely resumed",
+    "productionFinancialStockFiscalShiftSettingsSmtpMutations": false,
+    "original14Closed": false
+  },
+  "preserved": [
+    "daily/weekly HOLD and PROVISIONAL financial limitations",
+    "adjacent endpoints and zero-duration empty intervals",
+    "separate terminal concurrency and original source order/amounts",
+    "phase4 canonical units, hourly counts and product CSV",
+    "latest native sales USER PASS and retained natural-wording owner",
+    "purchase-supplier correction, lifecycle, wholesale and durable assistant history owners"
+  ],
+  "initialFailedCi": [
+    {
+      "pr": 2823,
+      "head": "3469b7ed84f4c4249bb38ce84f08e7b650a7b4c6",
+      "ci": 39227240704,
+      "job": 117976634521,
+      "pass": 3341,
+      "fail": 1,
+      "skip": 0,
+      "nativeCashFixture": "PASS ok233 2026-10-19T09:06:21.8690391Z"
+    },
+    {
+      "pr": 2824,
+      "head": "9e32480d195e834a6ecd6fbaa63289768467d249",
+      "ci": 39227307705,
+      "job": 117976843992,
+      "pass": 3343,
+      "fail": 1,
+      "skip": 0,
+      "nativeCashFixture": "PASS ok235 2026-10-19T09:06:37.5349975Z"
+    }
+  ],
+  "initialFailureCause": "Only old settings fixture closes all MAIN07/15/23 at next07, contradicting complete nonoverlap source intention; runtime guard not weakened",
+  "fixtureAmendment": {
+    "pr": 2827,
+    "head": "e73ae316dc9947fa14791bc40b41b9516427bc11",
+    "ci": 39228303516,
+    "merge": "b25f1f2b3f0f478eb6fbc244170bf5ed872c32f2"
+  },
+  "compatibleSuccessor": {
+    "revision": "c2e83c00def42e4d4c36a0f952c6b71a65abf288",
+    "pr": 2826,
+    "scope": "independent native multi-photo",
+    "ci": 39230283875,
+    "status": "success",
+    "ourSixBlobsVerified": true,
+    "job": 117989370346,
+    "conclusion": "success",
+    "passCount": 3356,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 6,
+    "nativeCashFixture": "PASS ok235 2026-10-19T09:37:18.2263002Z"
+  },
+  "deferredGuard": {
+    "workflow": 39231153483,
+    "job": 117989217140,
+    "conclusion": "success",
+    "expectedRevision": "62cd484ee7cb900ba06df6d9fd3e1a235d23d338",
+    "productionTrigger": "SKIPPED",
+    "reason": "A newer production source revision is on main; await its full CI",
+    "observedAt": "2026-10-19T09:36:10.3826859Z"
+  },
+  "compatibleLatest": {
+    "revision": "2b640fc63ae91281804cfbf7daefe26476f4de3e",
+    "pr": 2828,
+    "scope": "independent assistant scoped history archive foundation; no runtime integration",
+    "ci": 39232012825,
+    "ourSixBlobsVerified": true,
+    "conclusion": "success",
+    "job": 117992251240,
+    "passCount": 3377,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 6,
+    "nativeCashFixture": "PASS ok251 2026-10-19T09:44:25.1866402Z"
+  },
+  "secondDeferredGuard": {
+    "workflow": 39231977319,
+    "job": 117991923182,
+    "conclusion": "success",
+    "expectedRevision": "c2e83c00def42e4d4c36a0f952c6b71a65abf288",
+    "ci": 39230283875,
+    "productionTrigger": "SKIPPED",
+    "reason": "A newer production source revision is on main; await its full CI",
+    "observedAt": "2026-10-19T09:42:47.2715180Z"
+  },
+  "compatibleNativeCaption": {
+    "revision": "fb11a314ec1414658d0840a61f812f42058aa5a0",
+    "pr": 2830,
+    "scope": "independent Android caption draft preservation",
+    "ci": 39232187262,
+    "ourSixBlobsVerified": true,
+    "conclusion": "success",
+    "job": 117995130777,
+    "passCount": 3377,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 6,
+    "nativeCashFixture": "PASS ok251 2026-10-19T09:51:34.9423187Z"
+  },
+  "thirdDeferredGuard": {
+    "workflow": 39232880103,
+    "job": 117994900009,
+    "conclusion": "success",
+    "expectedRevision": "2b640fc63ae91281804cfbf7daefe26476f4de3e",
+    "ci": 39232012825,
+    "productionTrigger": "SKIPPED",
+    "reason": "A newer production source revision is on main; await its full CI",
+    "observedAt": "2026-10-19T09:49:52.7057085Z"
+  },
+  "release": {
+    "revision": "fb11a314ec1414658d0840a61f812f42058aa5a0",
+    "workflow": 39233768246,
+    "job": 117997845160,
+    "conclusion": "success",
+    "renderStatus": "live",
+    "renderDeploy": "dep-dbauirrrjlhs73aogiig",
+    "ourBlobsVerified": true,
+    "rollbackArtifact": 12177308539,
+    "rollback": {
+      "capturedAt": "2026-10-19T09:57:01.804Z",
+      "revision": "1b13cd794faf6629214faf1161cb3fb926e3a479",
+      "version": "0.22.0+kat-test-pos"
+    },
+    "fullCombinedCI": 39232187262,
+    "fullCombinedResult": {
+      "revision": "fb11a314ec1414658d0840a61f812f42058aa5a0",
+      "pr": 2830,
+      "scope": "independent Android caption draft preservation",
+      "ci": 39232187262,
+      "ourSixBlobsVerified": true,
+      "conclusion": "success",
+      "job": 117995130777,
+      "passCount": 3377,
+      "fail": 0,
+      "skip": 0,
+      "backupPass": 6,
+      "nativeCashFixture": "PASS ok251 2026-10-19T09:51:34.9423187Z"
+    },
+    "renderFinishedAt": "2026-10-19T10:00:11.854973Z",
+    "guardPinnedAt": "2026-10-19T09:57:03.2856515Z",
+    "guardHealthyAt": "2026-10-19T10:00:17.3923256Z",
+    "health": {
+      "capturedAt": "2026-10-19T10:01:09.755073+00:00",
+      "httpStatus": 200,
+      "ok": true,
+      "revision": "fb11a314ec1414658d0840a61f812f42058aa5a0",
+      "version": "0.22.0+kat-test-pos",
+      "exactMatch": true,
+      "method": "independent single public HTTPS urllib no-cache query; no browser or credentials"
+    }
+  },
+  "receiptBase": {
+    "revision": "a08bb616a172d25f487b3d61b039dbfc333d7e77",
+    "docsOnlyPR": 2832,
+    "ourSixBlobsVerified": true,
+    "preservedDocsPRs": [
+      2831,
+      2832
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "bytes": 2142607,
+      "sha256": "dd28e34fc3c73eaabc929672ec1467c8f4b649ed477a954dfc319985c93bced4",
+      "gitBlob": "ff60fdcaaff5e2491db90886f3e7b9c2a141a362"
+    },
+    {
+      "path": "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf",
+      "bytes": 1818125,
+      "sha256": "8339d7fe786d67e86b7d3eae4fbb19525dd759a29c7c091df73c64c7052d00c0",
+      "gitBlob": "f1d4ceb20b516e55bd2b43fca58929721fe580b6"
+    }
+  ]
+}
