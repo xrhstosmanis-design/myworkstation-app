@@ -86,7 +86,10 @@ grep -Eq 'TABLE|TABLE DATA' "$toc" || { echo "Backup archive has no table entrie
 checksum="$(sha256sum "$archive" | awk '{print $1}')"
 size_bytes="$(wc -c <"$archive" | tr -d ' ')"
 failure_stage="UPLOAD_FAILED"
-aws s3 cp "$archive" "s3://$S3_BUCKET_NAME/$object_key" --region "$AWS_REGION" --endpoint-url "$S3_ENDPOINT_URL" --only-show-errors --sse AES256 --metadata "sha256=$checksum,run-id=$run_id,dry-run=passed"
+# Retry transient failures inside each SDK request, retaining the multipart upload
+# identity. Do not restart the whole upload or run another database dump. Keep
+# these settings local to this command; recovery-worker clients are unchanged.
+AWS_RETRY_MODE=standard AWS_MAX_ATTEMPTS=8 aws s3 cp "$archive" "s3://$S3_BUCKET_NAME/$object_key" --region "$AWS_REGION" --endpoint-url "$S3_ENDPOINT_URL" --only-show-errors --sse AES256 --metadata "sha256=$checksum,run-id=$run_id,dry-run=passed"
 failure_stage="HEAD_VERIFY_FAILED"
 remote_size=""
 attempt=1
