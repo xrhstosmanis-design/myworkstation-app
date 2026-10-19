@@ -1,0 +1,80 @@
+{
+  "authorization": "User ενεργοποιηση15:46:45Athens; bounded temporary LAB grant/read-only personal Owner/restore, retained published PR2820 scope",
+  "baseline": "before-action.json saved before action12:51:32.046UTC",
+  "activation": {
+    "observedAt": "2026-10-19T12:52:35.424Z",
+    "wholesaleActive": true,
+    "activeModules": 22,
+    "monthlyTotalEUR": "104.70",
+    "terms": [
+      "0monthly",
+      "0setup",
+      "MONTHLY",
+      "no start",
+      "no end"
+    ]
+  },
+  "authentication": {
+    "beforeActivation": "Actual personal Υπεύθυνος Εργαστηρίου login and inactive refusal positively observed in preceding user turn",
+    "platform": "Χρήστος Μάνης positive after secure password+2FA",
+    "afterPlatformAuthentication": "Owner tab required credential-protection navigation; canonical wholesale then showed blank login",
+    "activeOwnerAttempt": "Secure request returned submitted after380seconds; actual page still login with Super Admin2FA link, no positively named personal Owner/private workspace",
+    "secretValuesRead": false,
+    "submittedIsNotSuccess": true
+  },
+  "beforeRestoration": {
+    "observedAt": "2026-10-19T13:00:28.652Z",
+    "wholesaleActive": true
+  },
+  "restoration": {
+    "observedAt": "2026-10-19T13:00:46.421Z",
+    "wholesaleActive": false,
+    "activeModules": 21,
+    "monthlyTotalEUR": "104.70",
+    "result": "LIMITED LIVE LICENSE RESTORATION PASS"
+  },
+  "unchangedControls": {
+    "sha256": "3ac7086147cbfd29b7b3271b18a87f882aadacb05979e8fd13018172d672b35c",
+    "scope": "36other visible module cards and nine general fields; three plan-price cards excluded",
+    "equalAt": [
+      "before",
+      "draft",
+      "saved active",
+      "pre-restore",
+      "saved inactive"
+    ]
+  },
+  "visibleOwnerDirectory": {
+    "name": "Υπεύθυνος Εργαστηρίου",
+    "email": "xrhstosmanis@gmail.com",
+    "source": "Platform Admin → company MYWORKSTATION LAB management, actual visible business directory, no credential values read"
+  },
+  "sourceReview": {
+    "baseline": "bab033d5b",
+    "files": [
+      "client/src/components/wholesale/WholesaleApp.jsx",
+      "client/src/components/wholesale/wholesale-api.js"
+    ],
+    "finding": "Personal wholesale rejects a browser context with platformToken/supportContext; successful personal login replaces ordinary token/user and removes platformToken. Role transitions therefore need deliberate current personal sign-in. Actual selected credential values remain unknown and no authentication bypass/code change proposed."
+  },
+  "exposure": "Approximately12:52-13:00UTC during sign-in wait; no automatic timed revocation; restored after unsuccessful active authentication observation",
+  "screenshot": "restored-license.jpg actual13:01:41UTC LAB header21modules/104.70EUR, wholesale card below viewport; inactive proof from fresh visible DOM",
+  "postHealth": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "3e50b35596848994efa94c9e5d3cedf8dc1af8f6",
+    "curlExit": 0,
+    "scope": "Later separate public no-cache observation, not revision at earlier action"
+  },
+  "results": {
+    "activationAndRestoration": "PASS limited license UI",
+    "activePersonalOwnerManagement": "BLOCKED / NOT TESTED",
+    "freshPersonalInactiveRefusalAfterRestore": "NOT TESTED",
+    "privateTabsPortalSiteSellerOrders": "NOT TESTED"
+  },
+  "businessActions": "No membership/assignment/account/site/customer/order/price/stock/payment/fiscal/shift/SQL/migration/seed change. Financial/stock baselines N/A; no delta inferred. Normal auth/license audit only.",
+  "incidentalDashboard": "Backup badge displayed FAIL/last19Oct12:01:47; not investigated, no global backup diagnosis or scope takeover.",
+  "owner": "codex/wholesale-suite-20261017",
+  "overall": "OPEN / ASSIGNED",
+  "nextAction": "Verify exact existing LAB Owner account selection before any future separately authorized active acceptance; do not repeat grant/auth loop automatically."
+}
