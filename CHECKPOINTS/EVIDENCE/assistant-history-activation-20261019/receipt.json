@@ -1,0 +1,65 @@
+{
+  "status": "CONFIGURATION_LIVE_NORMAL_APP_NOT_TESTED",
+  "owner": "codex/assistant-business-queries-20261015",
+  "source": {
+    "pr": 2872,
+    "head": "3645062a6816480b591916157b6a498fd3c96f97",
+    "merge": "3fe46f01e553e0280ac928a17754abc813629922",
+    "prCI": 39304048090,
+    "prAttempt": 2,
+    "mainCI": 39305802059,
+    "mainJob": 118244306478,
+    "passed": 3468,
+    "failed": 0,
+    "skipped": 0,
+    "backupPassed": 8
+  },
+  "activation": {
+    "at": "2026-10-19T19:22:39.164514Z",
+    "service": "srv-d9isenfavr4c73bdh52g",
+    "operation": "merge",
+    "key": "ASSISTANT_HISTORY_ENABLED",
+    "value": "true",
+    "replace": false,
+    "deploy": "dep-dbb6rvom7kps73catpfg",
+    "state": "live",
+    "finishedAt": "2026-10-19T19:26:05.976249Z",
+    "revision": "a6902d149624d0f687dbe2e906f852eb501c7ee7",
+    "publicHealth": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "a6902d149624d0f687dbe2e906f852eb501c7ee7"
+    }
+  },
+  "provision": {
+    "first": "2026-10-19T19:05:34.408543493Z",
+    "firstCreated": true,
+    "activationStartup": "2026-10-19T19:24:43.00851995Z",
+    "created": false,
+    "available": true,
+    "columns": 11,
+    "indexes": [
+      "AssistantHistoryArchive_pkey",
+      "AssistantHistoryArchive_expiry_idx"
+    ]
+  },
+  "retention": {
+    "protocol": "MWS_ASSISTANT_HISTORY_RETENTION_V1",
+    "manifest": "216e5de83f80ae9f869314501febe7021dce4689e822c60f576736d8a7891aff",
+    "workerRevision": "6490840eeb079539fec1ca78296ac55909a4759f",
+    "observedAt": "2026-10-19T19:26:28.302463Z",
+    "checkedAt": "2026-10-19T19:25:29.518647+00:00",
+    "state": "COMPLETED",
+    "workVerifiedMac": false,
+    "secretsRead": false
+  },
+  "acceptance": {
+    "normalApplication": "NOT_TESTED",
+    "browserInventory": "one about:blank tab; no inherited authenticated tab",
+    "priorProtectionRetained": true,
+    "wholeVoice": "OPEN",
+    "financialReplay": false,
+    "microphoneRequested": false,
+    "priorPassRepeated": false
+  }
+}

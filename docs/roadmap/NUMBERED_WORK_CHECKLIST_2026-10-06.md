@@ -522,7 +522,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `32`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
-- **Υπόλοιπο / όριο:** Σαφές επιτρεπόμενο scope, υλοποίηση και πραγματική αποδοχή.
+- **Υπόλοιπο / όριο:** 19Oct2026: VOICE-ASSISTANT-01 παραμένει OPEN/ASSIGNED στον codex/assistant-business-queries-20261015. Ιστορικό: sourcePR2872/mainCI39305802059 3468/0/0 +8 backup· πίνακας/δείκτες και scheduled cleanup επιβεβαιώθηκαν, εγκεκριμένη ενεργοποίηση LIVE19:26:05UTC, exacta6902d149/healthOK. Τελική κανονική Owner/SuperAdmin αποδοχή ιστορικού, νέα follow-up αρχεία/άλλες μορφές, mobile/cancel/role και λοιπά όρια παραμένουν NOT TESTED. Προηγούμενα directCSV/δύο αρχικές γραμμές/guidance/desktop PASS προστατεύονται χωρίς replay. Δεν ζητείται μικρόφωνο από χρήστη που δεν διαθέτει. Checkpoint2026-10-19-assistant-history-integration.
 
 ## 31 — Μηνιαία Αναφορά Ιδιοκτήτη
 
