@@ -1,0 +1,79 @@
+{
+  "claim": {
+    "pr": 2801,
+    "head": "ed4becd6f93da100c4f5cb94ea6dfcb0903dfd9c",
+    "ci": 39206831924,
+    "merge": "5bae2ece470e3e72e3e4bb9a1b7c289359821386"
+  },
+  "source": {
+    "pr": 2803,
+    "head": "adfa35e074018a69292aff4cfaf8ae5ebb1c694f",
+    "ci": 39207507015,
+    "job": 117913598837,
+    "pass": 3280,
+    "fail": 0,
+    "skip": 0,
+    "backup": 6
+  },
+  "merge": "c0645d5389864d558fe0be9ceb148b26171cb2c8",
+  "mainCi": 39208177280,
+  "local": {
+    "pass": 3090,
+    "fail": 0,
+    "skip": 148
+  },
+  "focused": {
+    "pass": 26,
+    "fail": 0,
+    "skip": 1
+  },
+  "hosted": "NOT TESTED",
+  "review": "Original UI worker: no blocker/8mountedPASS. Original core worker: identified GET expiry-after-store-wait defect; corrected with final live-clock entitlement recheck. Independent follow-up found no blocker in actual PostgreSQL lock/expiry test or fix.",
+  "preservedIndependentSource": {
+    "pr": 2802,
+    "merge": "affc90b91b5c363c293d796ef0c9a903fdbe5712",
+    "ownership": "store-lifecycle worker epochs, not taken over"
+  },
+  "ownedBlobs": {
+    "client/src/components/commerce/WholesalePortalAdmin.jsx": "a281a48793998473fb8d5593e5e470558ea5ee5e",
+    "server/src/routes/wholesale-portal-admin.js": "a92acd4a0ba563d937ddddf3a37986b25b8faee0",
+    "server/test/wholesale-portal-admin-ui.test.js": "747db0812df5d51f5a1a9f75efd053b7f87625f3",
+    "server/test/wholesale-portal-http.test.js": "cfe8070697ce94da6700fec5494d096227a2cd55"
+  },
+  "mainJob": 117917469104,
+  "mainResult": {
+    "pass": 3281,
+    "fail": 0,
+    "skip": 0,
+    "backup": 6
+  },
+  "firstGuard": {
+    "run": 39209436882,
+    "job": 117919358017,
+    "conclusion": "success",
+    "decision": "SKIPPED: newer production source 198dcb058333477206d4428341c3dc554f30823f requires its full CI"
+  },
+  "releaseCandidate": "198dcb058333477206d4428341c3dc554f30823f",
+  "candidateCi": 39209182817,
+  "candidateJob": 117919475415,
+  "candidateResult": {
+    "tests": 3283,
+    "pass": 3283,
+    "fail": 0,
+    "skip": 0,
+    "backup": 6
+  },
+  "live": {
+    "guardRun": 39210029017,
+    "guardJob": 117921166665,
+    "guardConclusion": "success",
+    "guardHealthyAt": "2026-10-19T06:30:41.0135585Z",
+    "observedAt": "2026-10-19T06:32:29Z",
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "198dcb058333477206d4428341c3dc554f30823f"
+    },
+    "curlExit": 0
+  }
+}
