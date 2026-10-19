@@ -463,7 +463,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 - **Tracker ID:** `21`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** PASS / CLOSED (ενημέρωση 07/10/2026)
 - **Αρχικό στιγμιότυπο:** USER/LAB PASS / ΟΡΙΑ NOT TESTED. Συμφωνημένο υπόλοιπο Νο19 ολοκληρώθηκε07/10.
-- **Υπόλοιπο / όριο:** PDF ημερομηνία1/1–7/10/2026 και2σελίδες USER PASS. SQL30/180 pilot-company και προηγούμενο LAB58/348 PASS. Φυσική εκτύπωση USER PASS με ρητή επιβεβαίωση ιδιοκτήτη21:34. PR1845 CI/merge/exacthealth PASS· άλλο company dataset, όχι διαφορά υπολογισμού. Δεν απαιτείται επανάληψη. Άλλες supplier λειτουργίες/roles/devices εκτός scope.
+- **Υπόλοιπο / όριο:** PDF ημερομηνία1/1–7/10/2026 και2σελίδες USER PASS. SQL30/180 pilot-company και προηγούμενο LAB58/348 PASS. Φυσική εκτύπωση USER PASS με ρητή επιβεβαίωση ιδιοκτήτη21:34. PR1845 CI/merge/exacthealth PASS· άλλο company dataset, όχι διαφορά υπολογισμού. Δεν απαιτείται επανάληψη. Άλλες supplier λειτουργίες/roles/devices εκτός scope. Νέα ανεξάρτητη επέκταση SUPPLIER-ADVANCE-01 (19Oct, χωρίς επανάληψη ή άνοιγμα του ολοκληρωμένου PDF/εκτύπωσης): source/live1cc και3514/0/0+8, περιορισμένη εικονική πληρωμή0,02/έναντι0,01 και επιβεβαίωση ίδιας εγγραφής, πραγματική μεταφορά6,17Μαντζίλα με ίδιες3κινήσεις/700,00. Hosted κατανάλωση0,01OPEN/ASSIGNED fix/supplier-advance-20261019 λόγω auto-review νέου2ωρουLABsupporttoken. Νέα μετρητά/physical/άλλοι ρόλοι NOT TESTED. Checkpoint2026-10-19-supplier-advance-acceptance.
 
 ## 20 — Κανάλι και ομαδική τιμολόγηση ανά κατάστημα
 

@@ -1,0 +1,95 @@
+{
+  "amount": 6.17,
+  "audit": [
+    {
+      "actorId": "cms1k1bje001xhn3xulr0rooz",
+      "companyId": "cmulmjjoa000oqlbfyi0h53ju",
+      "createdAt": "2026-10-19T20:57:42.932486+00:00",
+      "details": {
+        "before": {
+          "amount": 6.17,
+          "description": "ΧΩΡΙΣ ΠΑΡΑΣΤΑΤΙΚΟ — Δηλώνω υπεύθυνα ότι ανοίγω το συρτάρι, καταβάλλω το ποσό από τα μετρητά της βάρδιας και αναλαμβάνω την ευθύνη της καταχώρισης. διαφορα απο πληρωμη ματζιλα",
+          "occurredAt": "2026-10-19T17:23:48.931Z",
+          "paymentMethod": "CASH_SHIFT",
+          "review": {
+            "companyId": "cmulmjjoa000oqlbfyi0h53ju",
+            "createdAt": "2026-10-19T17:23:48.936Z",
+            "id": "ab374dca-3e82-42e5-8243-32f39bbe37b1",
+            "reviewNote": null,
+            "reviewedAt": null,
+            "reviewedBy": null,
+            "status": "PENDING_REVIEW",
+            "storeId": "cmulmjjoc000qqlbf2bn2ifj0",
+            "transactionId": "pay_90df5323171a14ebfa07a09df33faa7cee27baf51f841652e8cd6813dc7be907"
+          },
+          "sessionId": "248ffdac-2931-4049-8479-2ab37e452da7",
+          "subtractFromShift": true,
+          "supplierId": null,
+          "supplierName": null,
+          "type": "OTHER_EXPENSE"
+        },
+        "cashDelta": 0,
+        "idempotencyKey": "48e17067-c280-4df6-9c46-1c2d45aca1bf",
+        "reason": "Μεταφορά της διαφοράς από την πληρωμή 700,00 € στον Μαντζίλα σε έναντι, χωρίς νέα εκταμίευση.",
+        "requestHash": "7003c5042491f4e1e7634009877d66425c279c305eb9836819850559e2929acb",
+        "result": {
+          "advanceAmount": 6.17,
+          "amount": 6.17,
+          "ok": true,
+          "settlementId": "5a5f365f-b75b-4b17-b942-d3aa0db403ea",
+          "status": "PENDING_REVIEW",
+          "transactionId": "pay_90df5323171a14ebfa07a09df33faa7cee27baf51f841652e8cd6813dc7be907"
+        },
+        "supplierId": "7b9b8117-bbc8-4235-accd-e716fd7f977c",
+        "supplierName": "ΜΑΝΤΖΙΛΑΣ ΧΡΗΣΤΟΣ ΚΑΙ ΣΙΑ ΕΕ",
+        "transactionId": "pay_90df5323171a14ebfa07a09df33faa7cee27baf51f841652e8cd6813dc7be907"
+      },
+      "eventType": "OTHER_EXPENSE_SUPPLIER_ADVANCE",
+      "id": "62ddf1bd-2bae-4902-b946-c6ab9464c892",
+      "operatorId": "805810c1-8ac7-426c-93c4-c97be465e8bf",
+      "storeId": "cmulmjjoc000qqlbf2bn2ifj0"
+    }
+  ],
+  "capturedAt": "2026-10-19T20:58:05.860695+00:00",
+  "expenseReview": {
+    "companyId": "cmulmjjoa000oqlbfyi0h53ju",
+    "createdAt": "2026-10-19T17:23:48.936292+00:00",
+    "id": "ab374dca-3e82-42e5-8243-32f39bbe37b1",
+    "reviewNote": "Αναταξινόμηση ως έναντι προμηθευτή: Μεταφορά της διαφοράς από την πληρωμή 700,00 € στον Μαντζίλα σε έναντι, χωρίς νέα εκταμίευση.",
+    "reviewedAt": "2026-10-19T20:57:42.932486+00:00",
+    "reviewedBy": "cms1k1bje001xhn3xulr0rooz",
+    "status": "CANCELLED",
+    "storeId": "cmulmjjoc000qqlbf2bn2ifj0",
+    "transactionId": "pay_90df5323171a14ebfa07a09df33faa7cee27baf51f841652e8cd6813dc7be907"
+  },
+  "immutableHash": "bae93aba8e9871730c19ef4251558f7e",
+  "occurredAt": "2026-10-19T17:23:48.931861+00:00",
+  "protectedPaymentHash": "ca2b7895c68f16fc64c66f5ba1e4962a",
+  "sessionId": "248ffdac-2931-4049-8479-2ab37e452da7",
+  "settlements": [
+    {
+      "companyId": "cmulmjjoa000oqlbfyi0h53ju",
+      "createdAt": "2026-10-19T20:57:42.932486+00:00",
+      "createdBy": "cms1k1bje001xhn3xulr0rooz",
+      "createdByName": "Χρήστος Μάνης",
+      "id": "5a5f365f-b75b-4b17-b942-d3aa0db403ea",
+      "note": "Έναντι από υπάρχον λοιπό έξοδο — χωρίς νέα εκταμίευση. Μεταφορά της διαφοράς από την πληρωμή 700,00 € στον Μαντζίλα σε έναντι, χωρίς νέα εκταμίευση.",
+      "paidAt": "2026-10-19T17:23:48.931+00:00",
+      "paymentMethod": "CASH_SHIFT",
+      "reviewNote": null,
+      "reviewedAt": null,
+      "reviewedBy": null,
+      "status": "PENDING_REVIEW",
+      "storeId": "cmulmjjoc000qqlbf2bn2ifj0",
+      "supplierId": "7b9b8117-bbc8-4235-accd-e716fd7f977c",
+      "transactionId": "pay_90df5323171a14ebfa07a09df33faa7cee27baf51f841652e8cd6813dc7be907"
+    }
+  ],
+  "storeId": "cmulmjjoc000qqlbf2bn2ifj0",
+  "supplierId": "7b9b8117-bbc8-4235-accd-e716fd7f977c",
+  "supplierName": "ΜΑΝΤΖΙΛΑΣ ΧΡΗΣΤΟΣ ΚΑΙ ΣΙΑ ΕΕ",
+  "threePaymentCount": 3,
+  "threePaymentTotal": 700,
+  "transactionId": "pay_90df5323171a14ebfa07a09df33faa7cee27baf51f841652e8cd6813dc7be907",
+  "type": "SUPPLIER_PAYMENT"
+}
