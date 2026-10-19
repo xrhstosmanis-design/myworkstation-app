@@ -1,9 +1,56 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {once} from 'node:events';
+import {storeLifecycleRequestContext} from '../src/middleware/store-lifecycle-context.js';
+import {lifecycleContext} from '../src/services/store-lifecycle-context.js';
 import {createLifecycleFetch,lifecycleHeader} from '../../client/src/utils/store-lifecycle-fetch.js';
 const origin='https://mws.test';
 function fixture(){const calls=[],stale=[];let generation='1';const send=async(input,options={})=>{calls.push({input,options});const url=new URL(typeof input==='string'?input:input.url,origin);if(url.pathname.startsWith('/api/lifecycle/'))return Response.json({storeId:decodeURIComponent(url.pathname.split('/').at(-1)),generation});return Response.json({ok:true})};const transport=createLifecycleFetch({fetch:send,origin,onStale:data=>stale.push(data)});return {...transport,calls,stale,setGeneration:value=>generation=value}}
 const auth={Authorization:'Bearer test-only'};
+// Exercise the actual transport -> HTTP header -> server middleware boundary.
+// The old transport contaminates every later request after the empty-scope POST.
+test('empty recovery scope never poisons subsequent shift reads or immutable real-store epochs',async()=>{
+ const requests=[],pinned=[];
+ const server=createServer((req,res)=>{
+  res.status=code=>{res.statusCode=code;return res};
+  res.json=body=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));return res};
+  let body='';req.on('data',chunk=>body+=chunk);req.on('end',()=>{
+   storeLifecycleRequestContext(req,res,()=>{
+    requests.push({url:req.url,method:req.method,body,context:{...lifecycleContext()}});
+    if(req.url==='/api/lifecycle/stores/target')return res.json({storeId:'target',generation:'7'});
+    return res.json({ok:true});
+   });
+  });
+ });
+ server.listen(0,'127.0.0.1');await once(server,'listening');
+ const httpOrigin='http://127.0.0.1:'+server.address().port;
+ try{
+  for(const initiallyScoped of [false,true]){
+   const transport=createLifecycleFetch({fetch,origin:httpOrigin,onPinned:(...args)=>pinned.push(args)});
+   if(initiallyScoped)assert.equal((await transport.request(httpOrigin+'/api/store-pos/stores/target',{headers:auth})).status,200);
+   const before=transport.snapshot(),body='{"storeId":""}';
+   const recovering=await transport.request(httpOrigin+'/api/commerce/ai-reader/fast-recover',{method:'POST',headers:auth,body});
+   assert.equal(recovering.status,200,JSON.stringify(await recovering.json()));
+   assert.deepEqual(transport.snapshot(),before);
+   assert.equal(requests.at(-1).body,body);
+   assert.equal((await transport.request(httpOrigin+'/api/store-pos/stores/target',{headers:auth})).status,200);
+   assert.deepEqual(transport.snapshot(),{target:'7'});
+   assert.deepEqual(requests.at(-1).context,{target:'7'});
+   const original='{"clientTransactionId":"original-id","storeId":""}';
+   assert.equal((await transport.request(httpOrigin+'/api/commerce/ai-reader/fast-recover',{method:'POST',headers:auth,body:original})).status,200);
+   assert.equal(requests.at(-1).body,original);
+   assert.deepEqual(transport.snapshot(),{target:'7'});
+   // Explicit persisted metadata is never silently repaired or relabeled.
+   const count=requests.length;
+   const denied=await transport.request(httpOrigin+'/api/commerce/ai-reader/fast-recover',{method:'POST',headers:{...auth,[lifecycleHeader]:'{"":"0"}'},body});
+   assert.equal(denied.status,400);assert.equal((await denied.json()).code,'STORE_LIFECYCLE_GENERATION_INVALID');
+   assert.equal(requests.length,count);
+   assert.deepEqual(transport.snapshot(),{target:'7'});
+  }
+  assert.ok(pinned.every(([storeId])=>storeId!==''));
+ }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve))}
+});
 test('fresh scoped reads establish an immutable page epoch; an older page is never silently upgraded',async()=>{const f=fixture();await f.request('/api/store-pos/stores/target',{headers:auth});assert.equal(f.snapshot().target,'1');f.setGeneration('2');await f.request('/api/store-pos/stores/target',{headers:auth});await f.request('/api/store-pos/stores/target/checkout',{method:'POST',headers:auth,body:'{"items":[]}'});assert.equal(f.calls.filter(c=>String(c.input).includes('/api/lifecycle/')).length,1);assert.deepEqual(JSON.parse(f.calls.at(-1).options.headers.get(lifecycleHeader)),{target:'1'});assert.equal(f.calls.at(-1).options.body,'{"items":[]}')});
 test('a mutation without an earlier scoped read remains legacy zero and cannot fetch a new epoch',async()=>{const f=fixture();await f.request('/api/store-pos/stores/target/checkout',{method:'POST',headers:auth});assert.equal(f.calls.length,1);assert.deepEqual(JSON.parse(f.calls[0].options.headers.get(lifecycleHeader)),{target:'0'});await f.request('/api/store-pos/stores/target',{headers:auth});assert.equal(f.snapshot().target,'0')});
 test('persisted old receipt headers win over a fresh page and input identities remain byte-for-byte unchanged',async()=>{const f=fixture();await f.request('/api/store-pos/stores/target',{headers:auth});const body='{"idempotencyKey":"same-original-key"}';await f.request('/api/store-pos/stores/target/customer-balance-payment',{method:'POST',headers:{...auth,[lifecycleHeader]:'{"target":"0"}'},body});assert.equal(f.calls.at(-1).options.headers.get(lifecycleHeader),'{"target":"0"}');assert.equal(f.calls.at(-1).options.body,body)});
@@ -22,3 +69,4 @@ test('a write racing the initial read handshake cannot borrow a newer epoch',asy
  await f.request('/api/stores/target/checkout',{method:'POST',headers:auth,body:'{"original":"old"}'});release();await reading;
  assert.equal(f.snapshot().target,'0');assert.ok(calls.every(call=>JSON.parse(call.headers.get(lifecycleHeader)).target==='0'));
 });
+
