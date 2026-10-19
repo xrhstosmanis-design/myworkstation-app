@@ -1,0 +1,80 @@
+{
+  "scope": "COORD-MONTHLY-HOLD-UI",
+  "status": "LIMITED LAB UI PASS",
+  "administrativeStatus": "AWAITING CI REVIEW MERGE",
+  "observedDateAthens": "2026-10-19",
+  "loginApproxAthens": "22:14",
+  "evidenceType": "Actual accessibility/DOM observation",
+  "screenshotCaptured": false,
+  "store": {
+    "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "id": "cmtpopbgo000trhb5ng9ytiru"
+  },
+  "configuration": {
+    "terminal": "MAIN",
+    "slots": [
+      1,
+      2,
+      3
+    ],
+    "hours": [
+      7,
+      15,
+      23
+    ],
+    "groups": [
+      "FULL",
+      "DELIVERY"
+    ],
+    "confirmation": false,
+    "saveDisabled": true
+  },
+  "monthly": {
+    "anchor": "2026-10-18",
+    "from": "2026-10-01T07:00:00+03:00",
+    "toExclusive": "2026-11-01T07:00:00+02:00",
+    "timezone": "Europe/Athens",
+    "sourceShifts": 13,
+    "settingsVersion": 1,
+    "state": "HOLD",
+    "finality": "PROVISIONAL",
+    "tableCount": 0,
+    "operatorTotalsObserved": false,
+    "openShift": "a3494bb3-61cf-447c-9707-27311f35708c",
+    "reasons": [
+      "missing/open/ambiguous/unconfigured LAB-POS-02",
+      "future days unfinished",
+      "16Oct open shift invalid close/variance"
+    ]
+  },
+  "control": {
+    "name": "N40 CONTROL20261010",
+    "configuredTerminals": 0,
+    "saveFirst": true,
+    "previewDisabled": true,
+    "mainOrMonthlyResultLeakObserved": false
+  },
+  "laterHealth": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "3fe46f01e553e0280ac928a17754abc813629922",
+    "perActionTelemetry": false
+  },
+  "businessWrites": false,
+  "replay": false,
+  "notTested": [
+    "READY monthly amounts",
+    "operator/employee aggregates",
+    "financial reconciliation/liability",
+    "source cap",
+    "isolated exact overlap cause",
+    "worker/outbox/SMTP/delivery",
+    "other roles/devices"
+  ],
+  "readonlyActionFields": {
+    "sku": "N/A",
+    "quantity": "N/A",
+    "payment": "N/A",
+    "physicalOperator": "N/A"
+  }
+}
