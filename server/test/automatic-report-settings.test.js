@@ -23,7 +23,7 @@ test("scope rechecks actual role before querying the selected active store",asyn
  await assert.rejects(automaticReportScope(db,{actorId:"u",companyId:"c",storeId:""}),e=>e.status===400);
 });
 test("confirmed effective legacy rule is explicit and changed rules/settings hold even a complete source",async()=>{
- const rows=[7,15,23].map((hour,i)=>({id:String(i),companyId:"c",storeId:"s",terminalPos:"MAIN",status:"CLOSED",openedAt:new Date(`2026-10-15T${String(hour).padStart(2,"0")}:00:00+03:00`),closedAt:new Date("2026-10-16T07:00:00+03:00"),variance:0}));
+ const rows=[7,15,23].map((hour,i)=>({id:String(i),companyId:"c",storeId:"s",terminalPos:"MAIN",status:"CLOSED",openedAt:new Date(`2026-10-15T${String(hour).padStart(2,"0")}:00:00+03:00`),closedAt:new Date(i===2?"2026-10-16T07:00:00+03:00":`2026-10-15T${hour+8}:00:00+03:00`),variance:0}));
  let currentRule=null,version=1;
  const tx={user:{findUnique:async()=>({role:"SUPER_ADMIN"})},store:{findFirst:async()=>({id:"s",companyId:"c",name:"ΕΣΤΙΑ"})},$queryRaw:async strings=>{const sql=strings.join("");return sql.includes('FROM "AutomaticReportSettings"')?[{version}]:sql.includes('FROM "CashControlStoreRule"')?(currentRule?[currentRule]:[]):rows}};
  const db={$transaction:async fn=>fn(tx)},config={...configuration(),terminals:[{terminalPos:"MAIN",requiredSlots:[1,2,3]}],cashRule:cashRuleFields(legacyCashControlRule({name:"ΕΣΤΙΑ"}))},input={actorId:"sa",companyId:"c",storeId:"s",day:"2026-10-15",configuration:config,settingsVersion:1,now:new Date("2026-10-16T08:00:00+03:00")};

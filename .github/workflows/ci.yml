@@ -152,11 +152,15 @@ jobs:
         run: node tools/verify-checkpoint-policy.mjs "$BASE_SHA" "$HEAD_SHA"
       - name: Prepare server sources and generate Prisma client
         run: npm run build:server
+      - name: Build the actual PostgreSQL 18 recovery image
+        run: docker build --file ops/backup/Dockerfile --tag mws-lifecycle-recovery:ci .
       - name: Use matching native PostgreSQL 16 recovery tools
         run: |
           test -x /usr/lib/postgresql/16/bin/pg_dump
           echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
       - name: Run security and licensing tests
+        env:
+          MWS_LIFECYCLE_RECOVERY_IMAGE: mws-lifecycle-recovery:ci
         run: npm test -w server
       - name: Build Work-compatible client bundle
         run: npm run build

@@ -1,3 +1,7 @@
+## 19/10/2026 — recovery exact host-native PASS / current main integration
+
+Corrected PR2829 head2ebc67de3e9bbefdc2434b44ffbeb450db0590bc CI39231862023/job117991731637 SUCCESS3360PASS/0FAIL/0SKIP plus6backup/all Windows/build/realHTTP. New real host-PG16 full archive/selective undo test EXECUTED PASS, preserving both register fixtures and all shared/sibling COPY controls. Concurrent main changed only the common active-list merge location; integrate by preserving the complete current main list and prepending this owner's recovery note. Also run this same real archive test inside the ACTUAL PG18 backup Docker image with network=none/256MiB/pid limit, before release. Docker-build/container acceptance pending exact new CI; previous host PASS is not presented as PG18 or production cleanup. No central UI/reopen source is included in this integration.
+
 ## 19/10/2026 — recovery native CI correction / no production action
 
 Initial PR2829/head7a8c9248fbbe790e3ad840376893f82ce1c46fbe CI39231066403/job117989106651 FAILED only the new native archive test: full private pg_restore had already succeeded, but exporting its data-only expected COPY stream lacked explicit --file=-, which pg_restore requires for stdout. Added that explicit output target; no weakened assertion, production action or claimed restore PASS. All other3359 tests passed; zero skips. Exact corrected full CI remains required. Central execution/UI/reopen work is being developed separately and is not included in this correction.

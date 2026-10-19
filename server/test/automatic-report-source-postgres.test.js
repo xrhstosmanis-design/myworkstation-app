@@ -24,7 +24,15 @@ test("native automatic cash reader uses selected scope, overnight opening bounda
   await insert("control","c","control","MAIN","2026-10-15T07:00:00+03:00",null,null,"OPEN");
   await insert("foreign","x","s","MAIN","2026-10-15T07:00:00+03:00",null,null,"OPEN");
   const args={actorId:"sa",companyId:"c",storeId:"s",day:"2026-10-15",configuration:{terminals:["MAIN",{terminalPos:"DELIVERY",requiredSlots:[1]}]},now:new Date("2026-10-16T08:00:00+03:00")};
+  // Capture all fixture records, including foreign-company/store and separate
+  // terminal controls, so readiness reads cannot silently mutate source state.
   const snapshot=()=>db.$queryRaw`SELECT * FROM "CashShiftSession" ORDER BY "id"`;
+  const fullSnapshot=async()=>({
+   sessions:await snapshot(),
+   users:await db.$queryRaw`SELECT * FROM "User" ORDER BY "id"`,
+   stores:await db.$queryRaw`SELECT * FROM "Store" ORDER BY "id"`,
+   rules:await db.$queryRaw`SELECT * FROM "CashControlStoreRule" ORDER BY "storeId"`
+  });
   const before=await snapshot(),report=await readAutomaticDailyCashPreview(db,args);
   assert.equal(report.ready,true);assert.equal(report.sourceCount,4);
   assert.equal(report.sourceReadiness,"READY");assert.equal(report.financialFinality,"PROVISIONAL");assert.equal(report.financialReconciliationComplete,false);assert.deepEqual(report.financialLimitations,["DOCUMENT_PAYMENT_RECONCILIATION_NOT_VERIFIED","CASH_REVIEW_EXPLANATIONS_NOT_VERIFIED","PHYSICAL_CASH_AND_CONTROL_BALANCES_NOT_VERIFIED"]);
@@ -32,6 +40,28 @@ test("native automatic cash reader uses selected scope, overnight opening bounda
   assert.deepEqual([store.originalShortage,store.originalSurplus,store.offset,store.netVariance],[10,8,8,-2]);assert.equal(delivery.netVariance,20);
   assert.deepEqual(await snapshot(),before);
   for(const change of [{actorId:"owner"},{companyId:"x"},{storeId:"inactive"},{storeId:"other"}])await assert.rejects(readAutomaticDailyCashPreview(db,{...args,...change}),e=>[403,404].includes(e.status));
+  const fullBefore=await fullSnapshot();
+  // Fixture-only change: two CLOSED MAIN sessions now overlap although each
+  // opening slot is present. DELIVERY's legitimate concurrency stays untouched.
+  await db.$executeRaw`UPDATE "CashShiftSession" SET "closedAt"=${new Date("2026-10-15T23:00:00+03:00")} WHERE "id"='morning'`;
+  try{
+   const overlappingBefore=await fullSnapshot(),overlapping=await readAutomaticDailyCashPreview(db,args);
+   assert.equal(overlapping.ready,false);assert.equal(overlapping.groups,null);assert.equal(overlapping.sourceReadiness,"HOLD");
+   assert.equal(overlapping.financialFinality,"PROVISIONAL");assert.equal(overlapping.financialReconciliationComplete,false);
+   assert.equal(overlapping.deliveryStatus,"PREVIEW_ONLY");assert.equal(overlapping.employeeLiabilityAdjusted,false);
+   assert.deepEqual(overlapping.financialLimitations,report.financialLimitations);assert.equal(overlapping.sourceCount,4);
+   const hold=overlapping.holds.find(h=>h.code==="SOURCE_SCOPE_OR_ID_INVALID"&&h.overlappingSessionId);
+   assert.ok(hold,"same-terminal closed overlap must hold the whole daily preview");assert.equal(hold.terminalPos,"MAIN");assert.equal(hold.sessionId,"afternoon");assert.equal(hold.overlappingSessionId,"morning");
+   assert.deepEqual(await fullSnapshot(),overlappingBefore);
+  }finally{
+   await db.$executeRaw`UPDATE "CashShiftSession" SET "closedAt"=${new Date("2026-10-15T15:00:00+03:00")} WHERE "id"='morning'`;
+  }
+  assert.deepEqual(await snapshot(),before);
+  assert.deepEqual(await fullSnapshot(),fullBefore);
+  const restored=await readAutomaticDailyCashPreview(db,args);
+  assert.equal(restored.ready,true);assert.equal(restored.sourceReadiness,"READY");assert.deepEqual(restored.groups,report.groups);
+  assert.deepEqual(await fullSnapshot(),fullBefore);
+  assert.deepEqual(await snapshot(),before);
   await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='OPEN',"closedAt"=NULL,"variance"=NULL WHERE "id"='night'`;
   const open=await readAutomaticDailyCashPreview(db,args);assert.equal(open.ready,false);assert.equal(open.groups,null);assert.equal(open.sourceReadiness,"HOLD");assert.equal(open.financialFinality,"PROVISIONAL");assert.equal(open.financialReconciliationComplete,false);assert.deepEqual(open.financialLimitations,report.financialLimitations);assert.ok(open.holds.some(h=>h.code==="THIRD_SHIFT_OPEN"));
   await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='CLOSED',"closedAt"=${new Date("2026-10-16T07:00:00+03:00")},"variance"=0 WHERE "id"='night'`;
