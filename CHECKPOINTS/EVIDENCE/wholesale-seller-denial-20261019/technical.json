@@ -1,0 +1,129 @@
+{
+  "scope": "wholesale nonmember seller transition; technical evidence only, not LIVE acceptance",
+  "claim": {
+    "pr": 2858,
+    "merge": "67e33c8427d65486395ca6ce283fa68d5e1d3310"
+  },
+  "source": {
+    "pr": 2860,
+    "reviewHead": "aa81233df4cbe8f5ed8a30f5c5fe50f8ff220c77",
+    "merge": "a6fdbe0688631497ead8ce33fa761400f67db543",
+    "file": "server/src/lib/wholesale-seller-auth.js"
+  },
+  "local": {
+    "node": "20.20.2",
+    "before": {
+      "pass": 19,
+      "fail": 3,
+      "skip": 0,
+      "observed": "actual mounted standalone suite/boundary/SellerWorkspace clears selected store-a on nonmember401"
+    },
+    "focusedAfter": {
+      "pass": 37,
+      "fail": 0,
+      "skip": 0
+    },
+    "broaderAfter": {
+      "pass": 131,
+      "fail": 0,
+      "skip": 7,
+      "nativeDatabase": "NOT RUN locally"
+    },
+    "clientBuild": "PASS"
+  },
+  "reviewCI": {
+    "run": 39297164985,
+    "job": 118213239430,
+    "server": {
+      "pass": 3462,
+      "fail": 0,
+      "skip": 0
+    },
+    "backup": {
+      "pass": 6,
+      "fail": 0,
+      "skip": 0
+    },
+    "checks": "all four SUCCESS; native signed HTTP, PostgreSQL, mounted UI, browser, HTTP E2E, build and invariants passed"
+  },
+  "mainCI": {
+    "run": 39298411196,
+    "job": 118217186138,
+    "status": "SUCCESS",
+    "server": {
+      "pass": 3462,
+      "fail": 0,
+      "skip": 0
+    },
+    "backup": {
+      "pass": 6,
+      "fail": 0,
+      "skip": 0
+    },
+    "checks": "all four SUCCESS; native HTTP/PostgreSQL, browser/HTTP E2E, build and invariants passed"
+  },
+  "release": {
+    "status": "SUCCESS",
+    "supersededAttempt": {
+      "run": 39299498271,
+      "job": 118220740626,
+      "target": "a6fdbe0688631497ead8ce33fa761400f67db543",
+      "guardResult": "A newer production source revision is on main; await its full CI",
+      "deploymentTriggered": false
+    },
+    "candidate": "f3305f096eb7830f89483dda64f69271c9fb4535",
+    "candidateCI": 39299200148,
+    "sourceComparison": "git diff a6fdbe068..f3305f096 -- wholesale-seller-auth.js and all three changed test files is empty",
+    "revision": "f3305f096eb7830f89483dda64f69271c9fb4535",
+    "run": 39300393127,
+    "job": 118223830539,
+    "guard": "Exact successful main revision needs deployment",
+    "pinnedRequestedAt": "2026-10-19T18:11:58.1460483Z",
+    "exactHealthyAt": "2026-10-19T18:16:52.9826150Z",
+    "candidateCIResult": {
+      "status": "SUCCESS",
+      "run": 39299200148,
+      "job": 118221022847,
+      "server": {
+        "pass": 3463,
+        "fail": 0,
+        "skip": 0
+      },
+      "backup": {
+        "pass": 8,
+        "fail": 0,
+        "skip": 0
+      }
+    }
+  },
+  "live": {
+    "status": "LIMITED LIVE UI PASS",
+    "acceptance": "acceptance.json",
+    "screenshot": "refusal-store-retained.jpg",
+    "observedAt": "2026-10-19T18:18:07.684Z to 2026-10-19T18:18:56.896Z",
+    "scope": "inactive personal Owner seller membership refusal twice; exact selected LAB store retained; customer management return twice without reselecting",
+    "httpStatus": "not independently traced in LIVE UI;403 proved in native signed HTTP tests"
+  },
+  "healthChecks": [
+    {
+      "phase": "before UI acceptance",
+      "capturedFileAt": "2026-10-19T18:17:20.256437+00:00",
+      "curlExit": 0,
+      "health": {
+        "ok": true,
+        "version": "0.22.0+kat-test-pos",
+        "revision": "f3305f096eb7830f89483dda64f69271c9fb4535"
+      }
+    },
+    {
+      "phase": "after UI acceptance",
+      "capturedFileAt": "2026-10-19T18:19:15.883847+00:00",
+      "curlExit": 0,
+      "health": {
+        "ok": true,
+        "version": "0.22.0+kat-test-pos",
+        "revision": "f3305f096eb7830f89483dda64f69271c9fb4535"
+      }
+    }
+  ]
+}
