@@ -1,3 +1,5 @@
+import {storeLifecycleErrors} from "./middleware/store-lifecycle-errors.js";
+import storeLifecycleStateRoutes from "./routes/store-lifecycle-state.js";
 import {storeLifecycleRequestContext} from "./middleware/store-lifecycle-context.js";
 import purchaseOrderReopenRoutes from "./routes/purchase-order-reopen.js";
 import nativeChatPushRoutes from './routes/native-chat-push.js';
@@ -182,6 +184,7 @@ app.use("/api/public/kat",katOnlineOrderingModifierRoutes);
 app.use("/api/public/online",katOnlineOrderingModifierRoutes);
 app.use("/api/public/efood",efoodPelicanWebhookRoutes);
 app.use("/api/auth",authRoutes);
+app.use("/api/lifecycle",storeLifecycleStateRoutes);
 app.use("/api/public/inventory-v2",inventoryV2PublicRoutes);
 app.use("/api/system/backup-monitor",backupMonitorRoutes);
 app.use("/api/platform",auth,platformAuditCapture);
@@ -307,6 +310,7 @@ app.use("/api/connector-observer",auth,requireCompanyModule("CONNECTOR_RBS"),con
 app.use("/api/connector-observer",auth,requireCompanyModule("CONNECTOR_RBS"),fiscalBridgeDryRunRoutes);
 app.use("/api/netlink",auth,requireCompanyModule("NETLINK_PREPAID"),netlinkRoutes);
 app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
+app.use(storeLifecycleErrors);
 app.use((err,req,res,next)=>{console.error(err);if(String(err?.meta?.message||err?.meta?.database_error||'').includes('MWS_BAKED_TOTAL_GUARD'))return res.status(409).json({error:'Το συνολικό απόθεμα δεν μπορεί να γίνει μικρότερο από τα ψημένα. Καταγράψτε πρώτα την πραγματική φύρα ή επιστροφή.'});if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."})});
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const dist=path.resolve(__dirname,"../../client/dist");

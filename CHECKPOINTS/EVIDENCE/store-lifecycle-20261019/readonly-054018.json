@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-19T05:40:18.927808Z",
+  "companyId": "pilot-company",
+  "storeId": "kat-store",
+  "operation": "READ_ONLY",
+  "openShifts": 0,
+  "unresolvedFiscal": 0,
+  "recentConnectors": 1,
+  "storeProducts": 143,
+  "employees": 23,
+  "sales": 165,
+  "fence": null,
+  "cleanupExecuted": false,
+  "newExcelReceived": false
+}
