@@ -1,0 +1,87 @@
+{
+  "scope": "STORE-LIFECYCLE-EMPTY-SCOPE-01",
+  "status": "LIMITED_LIVE_PASS",
+  "date": "2026-10-19",
+  "timeZone": "Europe/Athens",
+  "revision": "8e6dcafaadb86e933ce0f6b903cd33a85df5b012",
+  "claimPR": 2812,
+  "sourcePR": 2813,
+  "sourceCI": {
+    "run": 39219753165,
+    "passed": 3328,
+    "failed": 0,
+    "skipped": 0
+  },
+  "mainCI": {
+    "run": 39220572604,
+    "job": 117954898735,
+    "passed": 3328,
+    "failed": 0,
+    "skipped": 0
+  },
+  "deployment": {
+    "workflow": 39221446917,
+    "id": "dep-dbat3ibbc2fs73cmp48g",
+    "status": "live",
+    "finishedAt": "2026-10-19T08:17:58.206182Z"
+  },
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "8e6dcafaadb86e933ce0f6b903cd33a85df5b012"
+  },
+  "observed": {
+    "role": "SUPPORT_SUPER_ADMIN",
+    "storeId": "cmulmjjoc000qqlbf2bn2ifj0",
+    "store": "Περίπτερο Διαδόχου Παύλου",
+    "terminal": "DIADOXOU-POS-01",
+    "orders": {
+      "time": "11:18:58",
+      "count": 83,
+      "recovery": {
+        "scanned": 50,
+        "started": 0,
+        "noHandoff": 19,
+        "nonRetryable": 0
+      },
+      "invalidGenerationError": false
+    },
+    "shiftRefreshAfterOrders": {
+      "time": "11:19",
+      "loaded": true,
+      "error": false
+    },
+    "initialAndFinalVisible": {
+      "transactions": 40,
+      "cash": 2557.84,
+      "card": 106.5,
+      "iris": 0,
+      "sales": 192.4,
+      "expenses": 244.55,
+      "ownerIn": 0,
+      "ownerOut": 0
+    }
+  },
+  "actions": [
+    "full page reload after exact health",
+    "open purchase list",
+    "close commerce",
+    "explicit shift refresh"
+  ],
+  "notPerformed": [
+    "sale",
+    "payment",
+    "upload",
+    "invoice approval",
+    "invoice finalization",
+    "shift closing",
+    "stock or fiscal action",
+    "reset"
+  ],
+  "limits": [
+    "support desktop navigation only",
+    "no independent database or stock digest reconciliation",
+    "no personal Owner/operator/mobile/physical/all-store acceptance",
+    "broader store lifecycle remains open"
+  ]
+}
