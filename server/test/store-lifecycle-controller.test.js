@@ -16,7 +16,7 @@ test('both post-drain empty physical observations require separate explicit tech
 test('all central controller actions require a genuine Platform Super Admin before database access; disabled execution does not touch DB',async()=>{
  const db={$queryRawUnsafe(){throw Error('unexpected DB')},$transaction(){throw Error('unexpected DB')}},controller=createLifecycleController(db,{sourceRevision:'1'.repeat(40),enabled:()=>false,secret:()=> 'isolated-secret-at-least-24-characters'});
  for(const method of ['inspect','start','status','prepare','execute','abort','reopen'])for(const user of [null,{id:'owner',role:'OWNER'},{id:'fake',role:'SUPER_ADMIN'}])await assert.rejects(controller[method](user,scope,{}),e=>e.status===403);
- for(const method of ['start','prepare','execute','reopen'])await assert.rejects(controller[method]({id:'sa',isSuperAdmin:true},scope,{}),e=>e.status===503);
+ for(const method of ['start','prepare','execute'])await assert.rejects(controller[method]({id:'sa',isSuperAdmin:true},scope,{}),e=>e.status===503);
  await assert.rejects(controller.start({id:'sa',isSuperAdmin:true},{companyId:'company',storeId:''}),e=>e.status===400);
 });
 

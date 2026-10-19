@@ -20,9 +20,14 @@ function validateTables(tables){
  for(const t of tables){if(!t||typeof t.name!=='string'||!t.name||t.name.length>200||names.has(t.name)||!['KEEP','REMOVE'].includes(t.action))fail();names.add(t.name)}
 }
 
+export const LIFECYCLE_ROW_DIGEST_FORMAT='MWS_ROW_MULTISET_SHA256_V1';
 export async function digestLifecycleRows(rows){
- const hash=hashRows();let rowCount=0,sourceBytes=0;
- for await(const row of rows){if(typeof row!=='string')fail();const size=Buffer.byteLength(row);if(size>MAX_ROW_BYTES||++rowCount>MAX_ROWS)fail();sourceBytes+=size;addRow(hash,row)}
+ // Relational rows are a multiset. Keep efficient native PK keyset paging,
+ // without depending on the restore cluster's locale or physical row order.
+ // Only fixed 32-byte hashes are retained, bounded by MAX_ROWS (never payloads).
+ const hashes=[];let rowCount=0,sourceBytes=0;
+ for await(const row of rows){if(typeof row!=='string')fail();const size=Buffer.byteLength(row);if(size>MAX_ROW_BYTES||++rowCount>MAX_ROWS)fail();sourceBytes+=size;const one=hashRows();addRow(one,row);hashes.push(one.digest())}
+ const hash=hashRows().update(LIFECYCLE_ROW_DIGEST_FORMAT+'\0');for(const bytes of hashes.sort(Buffer.compare))hash.update(bytes);
  return {rowCount,sha256:hash.digest('hex'),sourceBytes};
 }
 

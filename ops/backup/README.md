@@ -68,3 +68,28 @@ flow (disabled by default); actual service configuration/image verification and
 physical post-drain acceptance are still required. Render Trigger Run follows the
 configured scheduler command. For an explicit on-demand full backup run
 `/backup/run-backup.sh` on the existing service; never retrigger an active run. No KAT cleanup is implied by CI tests.
+
+### Worker availability and private KAT operator
+
+Each scheduled worker checks the existing bucket version/encryption policy and
+publishes an HMAC-signed service readiness pulse in internal StoreLifecycleRuntime.
+Only this global metadata is created/updated automatically; it never enrolls or
+freezes a store. The web flag alone cannot start preparation: a current matching
+manifest/revision pulse is required. This is availability, not physical clearance
+or recovery proof. The actual new object/readback/full+selective restore remains
+mandatory before deletion. Pulse/proof use separate HMAC domains and no new key.
+
+The nonsecret enable flag is supplied by the reviewed Blueprint; normal guarded
+release and actual image/configuration/readiness verification remain required.
+After an explicit confirmed clear, the controller attempts guarded reopen. A
+refusal leaves the exact COMPLETED audit in maintenance and supports later
+checked reopen without needing the backup service to still be online.
+
+The reviewed `server/scripts/store-lifecycle-operator.mjs` runs only on the exact
+authorized production web service and only pilot-company/kat-store, with explicit
+STORE-LIFECYCLE-01 approval. It calls the same controller with the genuine default
+recovery adapter; no force option or invented human token. Its audit principal is
+service-operator:render:STORE-LIFECYCLE-01. Work/wrong-service/other-store calls
+refuse before importing Prisma. Prepare requires both actual report files and an
+explicit technician-attestation JSON; never derive those facts from cloud counts.
+All permanent UI/terminal actions still follow their active confirmation policy.

@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 import uuid
-from verify_restore import compact, ident, literal, verify_archive
+from verify_restore import compact, ident, literal, verify_archive, ROW_DIGEST_FORMAT
 
 PROTOCOL = 'MWS_STORE_RECOVERY_PROOF_V1'
 
@@ -38,6 +38,20 @@ def file_sha(filename):
             digest.update(chunk)
     return digest.hexdigest()
 
+def publish_capability(schema, manifest):
+    revision = os.environ.get('RENDER_GIT_COMMIT', '')
+    if len(revision) != 40 or any(c not in '0123456789abcdef' for c in revision):
+        raise ValueError('Verified recovery worker revision unavailable')
+    bucket = os.environ['S3_BUCKET_NAME']
+    if s3('get-bucket-versioning', '--bucket', bucket).get('Status') != 'Enabled':
+        raise ValueError('Versioned recovery storage required')
+    s3('get-bucket-encryption', '--bucket', bucket)
+    heartbeat = compact({'protocol': 'MWS_STORE_RECOVERY_CAPABILITY_V1', 'manifestHash': hashlib.sha256(compact(manifest).encode()).hexdigest(), 'workerRevision': revision, 'storagePolicyVerified': True, 'rowDigestFormat': ROW_DIGEST_FORMAT, 'checkedAt': datetime.datetime.now(datetime.timezone.utc).isoformat()})
+    mac = hmac.new(os.environ['BACKUP_MONITOR_SECRET'].encode(), ('MWS_STORE_RECOVERY_CAPABILITY_V1\n' + heartbeat).encode(), hashlib.sha256).hexdigest()
+    # Global service-readiness metadata only; no store enrollment or business rows.
+    query('CREATE TABLE IF NOT EXISTS ' + ident(schema) + '."StoreLifecycleRuntime" ("id" text PRIMARY KEY,"heartbeatJson" text NOT NULL,"mac" text NOT NULL);')
+    query('INSERT INTO ' + ident(schema) + '."StoreLifecycleRuntime" ("id","heartbeatJson","mac") VALUES(' + literal('backup-worker') + ',' + literal(heartbeat) + ',' + literal(mac) + ') ON CONFLICT("id") DO UPDATE SET "heartbeatJson"=EXCLUDED."heartbeatJson","mac"=EXCLUDED."mac";')
+
 def process_one(manifest_file, audit_module):
     os.umask(0o077)
     for key in ('DATABASE_URL', 'AWS_REGION', 'S3_BUCKET_NAME', 'S3_ENDPOINT_URL', 'BACKUP_MONITOR_SECRET'):
@@ -45,7 +59,9 @@ def process_one(manifest_file, audit_module):
             raise ValueError('Required worker configuration missing')
     if len(os.environ['BACKUP_MONITOR_SECRET']) < 24:
         raise ValueError('Invalid worker signing configuration')
+    manifest = json.loads(pathlib.Path(manifest_file).read_text())
     schema = query('SELECT current_schema();')
+    publish_capability(schema, manifest)
     if query('SELECT to_regclass(' + literal(ident(schema) + '."StoreLifecycleExecution"') + ') IS NOT NULL;') != 't':
         return {'state': 'NOT_ENROLLED'}
     lease = str(uuid.uuid4())
@@ -77,7 +93,7 @@ def process_one(manifest_file, audit_module):
     object_key = 'myworkstation/lifecycle/' + operation + '/' + lease + '.dump'
     with tempfile.TemporaryDirectory(prefix='mws-lifecycle-job-') as directory:
         archive, downloaded = [str(pathlib.Path(directory) / name) for name in ('archive.dump', 'readback.dump')]
-        run(['pg_dump', '--format=custom', '--lock-wait-timeout=10s', '--compress=6', '--no-owner', '--no-privileges', '--file=' + archive, os.environ['DATABASE_URL']], stdout=subprocess.DEVNULL)
+        run(['pg_dump', '--format=custom', '--lock-wait-timeout=10s', '--compress=6', '--no-owner', '--no-privileges', '--file=' + archive, os.environ['DATABASE_URL']], stdout=subprocess.DEVNULL, env={**os.environ, 'PGOPTIONS': '-c TimeZone=UTC -c DateStyle=ISO,YMD -c extra_float_digits=3 -c bytea_output=hex'})
         checksum, size = file_sha(archive), os.path.getsize(archive)
         if not size:
             raise ValueError('Empty recovery archive')
@@ -92,7 +108,7 @@ def process_one(manifest_file, audit_module):
         if os.path.getsize(downloaded) != size or file_sha(downloaded) != checksum:
             raise ValueError('Version-specific recovery readback differs')
         restored = verify_archive(downloaded, job, manifest, audit_module)
-        proof = {'protocol': PROTOCOL, 'operationId': operation, 'sourceRevision': snapshot['sourceRevision'], 'manifestHash': snapshot['planHash'], **snapshot['scope'], 'snapshotHash': snapshot['snapshotHash'], **restored, 'artifactSha256': checksum, 'sizeBytes': size, 'objectKey': object_key, 'objectVersion': version, 'storageReadbackVerified': True, 'verifiedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'workerRevision': os.environ.get('RENDER_GIT_COMMIT', 'UNKNOWN')}
+        proof = {'protocol': PROTOCOL, 'operationId': operation, 'sourceRevision': snapshot['sourceRevision'], 'manifestHash': snapshot['planHash'], **snapshot['scope'], 'snapshotHash': snapshot['snapshotHash'], 'rowDigestFormat': ROW_DIGEST_FORMAT, **restored, 'artifactSha256': checksum, 'sizeBytes': size, 'objectKey': object_key, 'objectVersion': version, 'storageReadbackVerified': True, 'verifiedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'workerRevision': os.environ.get('RENDER_GIT_COMMIT', 'UNKNOWN')}
         proof_json = compact(proof)
         mac = hmac.new(os.environ['BACKUP_MONITOR_SECRET'].encode(), (PROTOCOL + '\n' + proof_json).encode(), hashlib.sha256).hexdigest()
         envelope = compact({'proofJson': proof_json, 'mac': mac})

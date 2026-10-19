@@ -97,7 +97,7 @@ async function fixture({proofOverride,afterVerified,extraManifest,extraDdl=()=>[
  };
  const core=createLifecycleExecutionCore(selectedManifest,{persistAndVerifyRecovery,sourceRevision:'1'.repeat(40)});
  const snapshot=async()=>{const result={};for(const table of [...selectedManifest.tables.map(t=>t.name),'Product'])result[table]=await db.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM "${schema}"."${table}" t ORDER BY row_to_json(t)::text`);return result};
- return {db,admin,schema,core,snapshot,proofCalls:()=>proofCalls,close:async()=>{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect();await rm(directory,{recursive:true,force:true})}};
+ return {db,admin,schema,core,recoveryAdapter:persistAndVerifyRecovery,snapshot,proofCalls:()=>proofCalls,close:async()=>{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect();await rm(directory,{recursive:true,force:true})}};
 }
 const matches=pattern=>e=>pattern.test(String(e.message)+' '+JSON.stringify(e.meta||{}));
 test('native RESET verifies persisted encrypted full fixture restore, deletes only scoped rows, retains configuration, blocks old writes and replays once',{skip:!isolated},async()=>{
@@ -518,6 +518,10 @@ test('native reopen refuses changed retained settings and another operation befo
  }finally{await f.close()}
 });
 
+async function publishIsolatedWorkerCapability(f,selected,secret){
+ if(!isolated)throw Error('Isolated fixture required');const {lifecycleWorkerCapabilityMac}=await import('../src/services/store-lifecycle-worker-ready.js');const heartbeatJson=JSON.stringify({protocol:'MWS_STORE_RECOVERY_CAPABILITY_V1',manifestHash:createHash('sha256').update(JSON.stringify(selected)).digest('hex'),workerRevision:'f'.repeat(40),storagePolicyVerified:true,rowDigestFormat:'MWS_ROW_MULTISET_SHA256_V1',checkedAt:new Date().toISOString()});
+ await f.db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "${f.schema}"."StoreLifecycleRuntime"("id" text PRIMARY KEY,"heartbeatJson" text NOT NULL,"mac" text NOT NULL)`);await f.db.$executeRawUnsafe(`INSERT INTO "${f.schema}"."StoreLifecycleRuntime" VALUES('backup-worker',$1,$2) ON CONFLICT("id") DO UPDATE SET "heartbeatJson"=EXCLUDED."heartbeatJson","mac"=EXCLUDED."mac"`,heartbeatJson,lifecycleWorkerCapabilityMac(secret,heartbeatJson));
+}
 test('native central HTTP prepares only the exact selected store with BOTH physical reports and refuses execute without genuine durable recovery',{skip:!isolated},async()=>{
  const {default:express}=await import('express'),{registerFreshStoreLifecycle}=await import('../src/services/store-lifecycle-controller.js');
  const selected={...manifest,streaming:true},f=await fixture({extraManifest:selected,extraDdl:s=>[`ALTER TABLE "${s}"."StoreRbsInstallationSettings" ADD COLUMN "terminalPos" text, ADD COLUMN "workFolder" text`],populate:async(db,s)=>{await db.$executeRawUnsafe(`UPDATE "${s}"."StoreRbsInstallationSettings" SET "terminalPos"=CASE "id" WHEN 'settings' THEN 'KAT-POS-01' WHEN 'settings-2' THEN 'KAT-POS-02' ELSE 'SIBLING' END,"workFolder"='C:\\capture'`)}});
@@ -525,7 +529,7 @@ test('native central HTTP prepares only the exact selected store with BOTH physi
  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base=`http://127.0.0.1:${server.address().port}/companies/company/stores/target/lifecycle/fresh-start`;
  const send=async(action,body={},admin=true)=>{const r=await fetch(base+'/'+action,{method:'POST',headers:{'content-type':'application/json','x-fixture-admin':String(admin)},body:JSON.stringify(body)});return {status:r.status,body:await r.json()}};
  try{
-  const before=await f.snapshot();assert.equal((await send('start',{},false)).status,403);const start=await send('start');assert.equal(start.status,200);const operationId=start.body.operationId;assert.equal(start.body.terminals.length,2);
+  const before=await f.snapshot();assert.equal((await send('start',{},false)).status,403);assert.equal((await send('start')).status,503);assert.equal((await f.db.$queryRawUnsafe(`SELECT to_regclass($1)::text AS fence`,`${f.schema}."StoreLifecycleFence"`))[0].fence,null);await publishIsolatedWorkerCapability(f,selected,'isolated-worker-test-signing-secret');const start=await send('start');assert.equal(start.status,200);const operationId=start.body.operationId;assert.equal(start.body.terminals.length,2);
   const at=Date.now()+1000,sample=time=>({checkedAtUtc:new Date(time).toISOString(),workFolder:'C:\\capture',fileCount:0,directoryCount:0,rbsCommandFileCount:0,temporaryFileCount:0,otherFileCount:0,totalFileBytes:0,metadataSha256:'a'.repeat(64)}),reports=['KAT-POS-01','KAT-POS-02'].map(terminalPos=>({format:'MWS_CAP_SPOOL_OBSERVATION_V1',...scope,operationId,terminalPos,observationId:randomUUID(),readyForDeletion:false,unchangedBetweenSamples:true,processObservation:'OBSERVED',matchingWriterProcessCount:0,matchingCapDriverProcessCount:0,samples:[sample(at),sample(at+2000)]}));
   const attestation={actualCapFoldersVerified:true,allWritersAndCapStopped:true,allOtherOfflineDevicesAccountedFor:true,noPendingPhysicalOrBankWork:true};
   assert.equal((await send('prepare',{operationId,reports:[reports[0]],attestation})).status,409);
@@ -539,4 +543,17 @@ test('native central HTTP prepares only the exact selected store with BOTH physi
   await f.db.$executeRawUnsafe(`UPDATE "StoreFiscalDevice" SET "active"=false WHERE "storeId"='target'`);await f.db.$executeRawUnsafe(`DELETE FROM "StoreRbsInstallationSettings" WHERE "storeId"='target'`);const pureBefore=await f.snapshot();
   const pure=await send('start');assert.equal(pure.status,200);assert.deepEqual(pure.body.terminals,[]);const pureId=pure.body.operationId;assert.equal((await send('prepare',{operationId:pureId,reports:[],attestation})).status,200);assert.equal((await send('abort',{operationId:pureId})).status,200);assert.deepEqual(await f.snapshot(),pureBefore);
  }finally{await new Promise(r=>server.close(r));await f.close()}
+});
+
+test('native central execution with a real encrypted fixture restore finishes guarded reopen and remains once-only',{skip:!isolated},async()=>{
+ const {createLifecycleController}=await import('../src/services/store-lifecycle-controller.js'),selected={...manifest,streaming:true},secret='isolated-success-worker-signing-key';
+ const f=await fixture({extraManifest:selected,extraDdl:s=>[`ALTER TABLE "${s}"."StoreRbsInstallationSettings" ADD COLUMN "terminalPos" text, ADD COLUMN "workFolder" text`],populate:async(db,s)=>{await db.$executeRawUnsafe(`UPDATE "${s}"."StoreFiscalDevice" SET "active"=false WHERE "storeId"='target'`);await db.$executeRawUnsafe(`DELETE FROM "${s}"."StoreRbsInstallationSettings" WHERE "storeId"='target'`)}});
+ try{
+  await publishIsolatedWorkerCapability(f,selected,secret);const before=await f.snapshot(),controller=createLifecycleController(f.db,{manifest:selected,sourceRevision:'1'.repeat(40),enabled:()=>true,secret:()=>secret,recoveryAdapter:f.recoveryAdapter});
+  const start=await controller.start(actor,scope);assert.deepEqual(start.terminals,[]);const prep=await controller.prepare(actor,scope,{operationId:start.operationId,reports:[],attestation:{actualCapFoldersVerified:true,allWritersAndCapStopped:true,allOtherOfflineDevicesAccountedFor:true,noPendingPhysicalOrBankWork:true}});
+  const result=await controller.execute(actor,scope,{...prep,confirmation:'Target'});assert.equal(result.maintenance,false);assert.equal(result.reopenRequired,false);assert.equal(result.generation,'1');assert.ok(result.reopenedAt);assert.equal(f.proofCalls(),1);
+  const state=await controller.status(actor,scope,start.operationId);assert.equal(state.state,'REOPENED');assert.equal(state.result.executedBy,actor.id);assert.equal(state.result.physicalEvidence.attestedBy,actor.id);
+  const after=await f.snapshot();for(const name of ['Store','StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice','Product'])assert.deepEqual(after[name],before[name]);for(const name of ['Sale','SaleLine'])assert.deepEqual(after[name],before[name].filter(r=>!r.row.includes('"storeId":"target"')));
+  assert.equal((await controller.execute(actor,scope,{...prep,confirmation:'Target'})).idempotentReplay,true);assert.equal(f.proofCalls(),1);await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('old-stale','company','target',1)`),matches(/STORE_LIFECYCLE_STALE_GENERATION/));
+ }finally{await f.close()}
 });

@@ -16,6 +16,7 @@ import uuid
 
 MAX_ROW = 8 * 1024 * 1024
 MAX_ROWS = 500000
+ROW_DIGEST_FORMAT = 'MWS_ROW_MULTISET_SHA256_V1'
 
 def compact(value):
     return json.dumps(value, ensure_ascii=False, separators=(',', ':'))
@@ -73,7 +74,7 @@ class PrivatePostgres:
             self.user = dict(user=account.pw_uid, group=account.pw_gid, extra_groups=[])
             os.chown(self.root, account.pw_uid, account.pw_gid)
             os.chown(self.socket, account.pw_uid, account.pw_gid)
-        self.env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': str(self.root), 'LC_ALL': 'C.UTF-8', 'PGHOST': str(self.socket), 'PGPORT': '55439', 'PGUSER': 'postgres', 'PGDATABASE': 'postgres'}
+        self.env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': str(self.root), 'LC_ALL': 'C.UTF-8', 'PGHOST': str(self.socket), 'PGPORT': '55439', 'PGUSER': 'postgres', 'PGDATABASE': 'postgres', 'PGOPTIONS': '-c TimeZone=UTC -c DateStyle=ISO,YMD -c extra_float_digits=3 -c bytea_output=hex'}
         self.started = False
 
     def run(self, args, **options):
@@ -106,7 +107,7 @@ class PrivatePostgres:
             self.run(['psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1'], input=sql.encode(), stdout=out)
 
 def row_digest(filename):
-    digest, count, size = hashlib.sha256(), 0, 0
+    digest, count, size, hashes = hashlib.sha256((ROW_DIGEST_FORMAT + chr(0)).encode()), 0, 0, []
     with open(filename, 'rb') as stream:
         while True:
             row = stream.readline(MAX_ROW + 2)
@@ -119,7 +120,9 @@ def row_digest(filename):
             if count > MAX_ROWS:
                 raise ValueError('Row limit')
             size += len(row)
-            digest.update(str(len(row)).encode('ascii') + b':' + row)
+            hashes.append(hashlib.sha256(str(len(row)).encode('ascii') + b':' + row).digest())
+    for value in sorted(hashes):
+        digest.update(value)
     return {'rowCount': count, 'sha256': digest.hexdigest(), 'sourceBytes': size}
 
 def verify_archive(archive, job, manifest, audit_module):
@@ -131,7 +134,7 @@ def verify_archive(archive, job, manifest, audit_module):
     snapshot = json.loads(job['snapshotMetadataJson'])
     descriptor = json.loads(job['schemaDescriptorJson'])
     metadata = {k: v for k, v in snapshot.items() if k != 'snapshotHash'}
-    if sha(compact(metadata)) != snapshot['snapshotHash'] or sha(compact(descriptor)) != snapshot['schemaSignature'] or sha(compact(manifest)) != snapshot['planHash'] or snapshot['scope']['mode'] != 'RESET' or not manifest.get('streaming'):
+    if sha(compact(metadata)) != snapshot['snapshotHash'] or sha(compact(descriptor)) != snapshot['schemaSignature'] or sha(compact(manifest)) != snapshot['planHash'] or snapshot['scope']['mode'] != 'RESET' or not manifest.get('streaming') or snapshot.get('rowDigestFormat') != ROW_DIGEST_FORMAT:
         raise ValueError('Job metadata binding differs')
     nodes = {t['name']: t for t in manifest['tables']}
     if len(nodes) != len(snapshot['tables']) or set(nodes) != {t['name'] for t in snapshot['tables']} or any(t['action'] != nodes[t['name']]['reset'] or 'rows' in t for t in snapshot['tables']):
@@ -169,15 +172,23 @@ def verify_archive(archive, job, manifest, audit_module):
                 pg.rows_to_file(sql, filename)
                 if row_digest(filename) != {k: table[k] for k in ('rowCount', 'sha256', 'sourceBytes')}:
                     raise ValueError('Archived selected data differs from preparation')
-                files[name] = (filename, sql)
+                cols = [c['name'] for c in descriptor['columns'] if c['table'] == name and not c['generated']]
+                if not cols:
+                    raise ValueError('Missing restoration columns')
+                copyfile = root / (str(len(files)) + '.copy')
+                copy_sql = 'COPY (SELECT ' + ','.join('t.' + ident(c) for c in cols) + ' FROM ' + ident(schema) + '.' + ident(name) + ' t WHERE ' + selected(nodes, schema, name, store) + ' ORDER BY ' + ','.join('t.' + ident(k) for k in keys) + ') TO STDOUT;'
+                pg.rows_to_file(copy_sql, copyfile)
+                files[name] = (filename, sql, copyfile, cols)
             script = root / 'selective.sql'
-            with open(script, 'w', encoding='utf-8') as out:
+            with open(script, 'wb') as out:
+                def emit(value):
+                    out.write(value.encode('utf-8'))
                 os.chmod(script, 0o600)
-                out.write("BEGIN; SET LOCAL standard_conforming_strings=on; SELECT set_config('mws.lifecycle_operation'," + literal(operation) + ",true);\n")
+                emit("BEGIN; SET LOCAL standard_conforming_strings=on; SELECT set_config('mws.lifecycle_operation'," + literal(operation) + ",true);\n")
                 for name in order:
                     expected_count = next(t['rowCount'] for t in snapshot['tables'] if t['name'] == name)
                     body = 'DECLARE affected bigint; BEGIN DELETE FROM ' + ident(schema) + '.' + ident(name) + ' t WHERE ' + selected(nodes, schema, name, store) + '; GET DIAGNOSTICS affected=ROW_COUNT; IF affected<>' + str(expected_count) + " THEN RAISE EXCEPTION 'Selective delete count differs'; END IF; END;"
-                    out.write('DO ' + literal(body) + ';\n')
+                    emit('DO ' + literal(body) + ';\n')
                 # Disable only the explicitly reviewed INSERT business hooks, in
                 # this private restoration transaction. Lifecycle/FK guards stay.
                 hooks = []
@@ -187,19 +198,16 @@ def verify_archive(archive, job, manifest, audit_module):
                             if trigger['mask'] & 8:
                                 raise ValueError('Mixed DELETE restore trigger requires review')
                             hooks.append((name, trigger))
-                            out.write('ALTER TABLE ' + ident(schema) + '.' + ident(name) + ' DISABLE TRIGGER ' + ident(trigger['name']) + ';\n')
+                            emit('ALTER TABLE ' + ident(schema) + '.' + ident(name) + ' DISABLE TRIGGER ' + ident(trigger['name']) + ';\n')
                 for name in reversed(order):
-                    cols = [c['name'] for c in descriptor['columns'] if c['table'] == name and not c['generated']]
-                    if not cols:
-                        raise ValueError('Missing restoration columns')
-                    columns = ','.join(ident(c) for c in cols)
-                    with open(files[name][0], 'r', encoding='utf-8') as rows:
-                        for line in rows:
-                            row = line[:-1]
-                            out.write('INSERT INTO ' + ident(schema) + '.' + ident(name) + ' (' + columns + ') OVERRIDING SYSTEM VALUE SELECT ' + columns + ' FROM json_populate_record(NULL::' + ident(schema) + '.' + ident(name) + ',' + literal(row) + '::json);\n')
+                    _, _, copyfile, cols = files[name]
+                    emit('COPY ' + ident(schema) + '.' + ident(name) + ' (' + ','.join(ident(c) for c in cols) + ') FROM stdin;\n')
+                    with open(copyfile, 'rb') as rows:
+                        shutil.copyfileobj(rows, out)
+                    emit('\\.\n')
                 for name, trigger in hooks:
-                    out.write('ALTER TABLE ' + ident(schema) + '.' + ident(name) + (' ENABLE ALWAYS TRIGGER ' if trigger['enabled'] == 'A' else ' ENABLE TRIGGER ') + ident(trigger['name']) + ';\n')
-                out.write('COMMIT;\n')
+                    emit('ALTER TABLE ' + ident(schema) + '.' + ident(name) + (' ENABLE ALWAYS TRIGGER ' if trigger['enabled'] == 'A' else ' ENABLE TRIGGER ') + ident(trigger['name']) + ';\n')
+                emit('COMMIT;\n')
             # Verify archived business-hook identity before allowing even a
             # private selective restore to bypass its INSERT side effects.
             for name, trigger in hooks:
@@ -209,7 +217,7 @@ def verify_archive(archive, job, manifest, audit_module):
             pg.script(script)
             restored_tables = []
             for table in snapshot['tables']:
-                filename, sql = files[table['name']]
+                filename, sql, _, _ = files[table['name']]
                 pg.rows_to_file(sql, filename)
                 restored_tables.append({'name': table['name'], 'action': table['action'], **row_digest(filename)})
             restored = {**metadata, 'tables': restored_tables}
