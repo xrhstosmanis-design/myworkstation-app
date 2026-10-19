@@ -1,3 +1,7 @@
+## Concurrent publication
+
+Preserve main67fe7fe0 and its actual KAT branding LIVE PASS/manual/numbered checklist/shared tracker PDF. Following the established 2026-10-18-central-four-streams.md Concurrent publication rule, this nonclosure before-source claim regenerates the current tracker into scoped evidence CHECKPOINTS/EVIDENCE/report-delivery-persistence-20261020/claim-tracker.pdf; the shared central PDF remains with the concurrent real PASS receipt. Canonical Markdown is authoritative for this new independent assignment. No PASS closure or manual update is claimed. Consolidated integration will synchronize the shared PDF again. All unrelated record bytes and ownership remain unchanged.
+
 ## 20/10/2026 - CENTRAL-REPORT-DELIVERY-PERSISTENCE-01 / ASSIGNED BEFORE SOURCE
 
 ASSIGNED - codex/report-delivery-persistence-20261020, retained central coordinator codex/central-four-streams-20261018 under #2704/#2527. Independent new dormant persistence subtask follows released pure lifecycle core #2885/receipt#2898. Exact new files ONLY server/src/services/automatic-report-delivery-repository.js and server/test/automatic-report-delivery-repository-postgres.test.js. Existing AUTO-REPORTS runtime owner codex/automatic-reporting-20261016, settings/source/mail/lifecycle/backup/schema owners and all other assignments retained; no existing source/core/manifest/schema.prisma/bootstrap/workflow edits. This claim must be green merged on main BEFORE either new file is edited.
