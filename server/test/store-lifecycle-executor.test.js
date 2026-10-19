@@ -535,5 +535,8 @@ test('native central HTTP prepares only the exact selected store with BOTH physi
   const blocked=await send('execute',{operationId,snapshotHash:prep.body.snapshotHash,confirmation:'Target'});assert.equal(blocked.status,409);assert.match(blocked.body.error,/αντίγραφο/);assert.deepEqual(await f.snapshot(),before);
   const audit=(await f.db.$queryRawUnsafe(`SELECT "result" FROM "StoreLifecycleExecution" WHERE "id"=$1`,operationId))[0].result.physicalEvidence;assert.equal(audit.attestedBy,actor.id);assert.equal(audit.observations.length,2);
   assert.equal((await send('abort',{operationId})).status,200);assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,false);assert.deepEqual(await f.snapshot(),before);
+  // A genuine non-fiscal store does not need a fictional CAP installation.
+  await f.db.$executeRawUnsafe(`UPDATE "StoreFiscalDevice" SET "active"=false WHERE "storeId"='target'`);await f.db.$executeRawUnsafe(`DELETE FROM "StoreRbsInstallationSettings" WHERE "storeId"='target'`);const pureBefore=await f.snapshot();
+  const pure=await send('start');assert.equal(pure.status,200);assert.deepEqual(pure.body.terminals,[]);const pureId=pure.body.operationId;assert.equal((await send('prepare',{operationId:pureId,reports:[],attestation})).status,200);assert.equal((await send('abort',{operationId:pureId})).status,200);assert.deepEqual(await f.snapshot(),pureBefore);
  }finally{await new Promise(r=>server.close(r));await f.close()}
 });

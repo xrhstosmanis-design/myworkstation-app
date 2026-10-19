@@ -19,3 +19,5 @@ test('all central controller actions require a genuine Platform Super Admin befo
  for(const method of ['start','prepare','execute','reopen'])await assert.rejects(controller[method]({id:'sa',isSuperAdmin:true},scope,{}),e=>e.status===503);
  await assert.rejects(controller.start({id:'sa',isSuperAdmin:true},{companyId:'company',storeId:''}),e=>e.status===400);
 });
+
+test('a store without a fiscal installation requires explicit offline facts but no invented CAP report',()=>{const result=validatePhysicalLifecycleEvidence({reports:[],attestation},{...options,terminals:[]});assert.deepEqual(result.observations,[]);assert.throws(()=>validatePhysicalLifecycleEvidence({reports:[],attestation:{...attestation,allOtherOfflineDevicesAccountedFor:false}},{...options,terminals:[]}));});
