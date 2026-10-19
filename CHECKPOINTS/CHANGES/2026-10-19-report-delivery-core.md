@@ -1,3 +1,7 @@
+## Integration reconciliation — concurrent main documentation
+
+Preserved merged #2886 / main e6cb3abe2ed2aee3e403b6cae0978c6f70de06cb assistant Diadoxou acceptance/failure and all four current registry suffixes. Existing source head84e57fdb85e7e62ed9f659e5a2ffcf01d3cde460/run39315426397 was still running when main advanced; it is historical/superseded integration evidence, not final release proof. The reviewed two source/test blobs remain identical. Final integrated head requires its own green full CI; no checks or deployment guard are bypassed.
+
 ## 19/10/2026 — CENTRAL-REPORT-DELIVERY-CORE-01 / SOURCE PREPARED / AWAITING FULL CI
 
 Central owner codex/central-four-streams-20261018; bounded implementation codex/report-delivery-core-20261019 (#2704/#2527). Pre-source claim #2884/head900a47c8/docsCI39313886137 SUCCESS mergedb7c7243e78234f5daf40315372dd905916119fdc BEFORE edits. New pure metadata helper and focused test only; no existing route/source/settings/mail/schema/worker changes.
