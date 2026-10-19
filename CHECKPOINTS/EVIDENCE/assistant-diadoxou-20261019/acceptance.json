@@ -33,11 +33,40 @@
     "broader domain completeness"
   ],
   "wholeVoice": "OPEN",
-  "sourceFix": "NOT IMPLEMENTED",
+  "sourceFix": {
+    "state": "SOURCE MERGED / RELEASE HELD / LIVE RETEST OPEN",
+    "pr": 2887,
+    "head": "5db929d133baf960b3d7cff7bb9a934293c627c3",
+    "merge": "c17b6605e970dc47478c7314a6ccff3b20d9f562",
+    "fullPrCi": 39316947048,
+    "fullMainCi": 39318164337,
+    "tests": 3489,
+    "fail": 0,
+    "skip": 0,
+    "guard": 39319214921,
+    "guardDeployed": false,
+    "guardReason": "A newer production source revision is on main; await its full CI",
+    "combinedMainCiCancelled": 39318461936,
+    "retryResult": "GitHub 403 This workflow run cannot be retried",
+    "latestVerifiedHealth": "e3432c2b3f6c8a890bbe52b61a0270ee06bc9899"
+  },
   "financialTestTransaction": false,
   "notes": [
     "first PDF and sales-rows shared files did not synchronize; no attachment/content claim for those paths",
     "complete UI/source row digest compared in their existing runtimes, after display whitespace normalization",
     "export files and real rows/amounts/names not committed"
+  ],
+  "additionalPass": {
+    "dailyConsumptionOriginalEventsMatch": true,
+    "dailyConsumptionCsvParsedSourceMatch": true,
+    "naturalColaFamilyRowsAndTotalsMatch": true,
+    "recordedStockBeforeQueryMatchOnly": true,
+    "missingBeerCatalogNoZeroInference": true
+  },
+  "additionalExactRevision": "NOT SAMPLED PER ANSWER; preceding a6902d149, later independent health e3432c2b3",
+  "limits": [
+    "Recorded stock later changed during active trading; no causal/global/frozen after-state",
+    "Numerical beer acceptance OPEN; no catalog mapping",
+    "Original decorated product follow-up FAIL remains until exact guarded release/retest"
   ]
 }
