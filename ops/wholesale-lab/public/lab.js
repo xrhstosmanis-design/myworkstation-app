@@ -153,7 +153,7 @@ function renderSnapshot(snapshot) {
     const title=el('div');title.append(el('strong',doc.number||doc.id),el('div',names[doc.type]||doc.type,'small'));
     const actions=el('div',null,'actions');actions.append(action('PDF',()=>work(()=>downloadPdf(doc)),{testId:'pdf-'+doc.id}));
     if(doc.status!=='CANCELLED')actions.append(action('Ακύρωση',()=>work(()=>mutate('/api/lab/documents/'+encodeURIComponent(doc.id)+'/cancel',{storeId:state.storeId,requestId:uuid()},'Ακύρωση '+(doc.number||doc.id),data=>{if(data.document?.id!==doc.id||data.document?.status!=='CANCELLED')throw Error('Η ακύρωση δεν επιβεβαιώθηκε.');return 'Ακυρώθηκε το εικονικό '+(doc.number||doc.id)})),{danger:true,testId:'cancel-'+doc.id}));
-    return [title,el('span',doc.status==='CANCELLED'?'Ακυρωμένο':doc.status||'Εκδόθηκε','status-tag '+(doc.status==='CANCELLED'?'cancelled':'')),euro(doc.grossTotal??doc.snapshot?.totals?.gross),el('code',doc.orderId),actions];
+    return [title,el('span',doc.status==='CANCELLED'?'Ακυρωμένο':'Εκδόθηκε','status-tag '+(doc.status==='CANCELLED'?'cancelled':'')),euro(doc.grossTotal??doc.snapshot?.totals?.gross),el('code',doc.orderId),actions];
   }));
   table($('payments'),['Παραστατικό','Ποσό','Τρόπος'],payments.map(row=>[docs.find(doc=>doc.id===row.invoiceId)?.number||row.invoiceId,euro(row.amount),names[row.method]||row.method]));
   table($('stock'),['Προϊόν','Εικονική ποσότητα'],(ledger.stock||[]).map(row=>[row.name||productName(row.productId),row.quantity]));
