@@ -1,13 +1,16 @@
 import {z} from 'zod';
 import {businessDomains} from '../../../shared/assistant-business.mjs';
+import {normalizeLifecycleGeneration} from './store-lifecycle-generation.js';
 
 export const HISTORY_TTL_MS=30*24*60*60*1000;
 export const HISTORY_MAX_BYTES=128*1024;
 const id=z.string().min(1).max(160).refine(v=>v.trim()===v,'Noncanonical archive identity');
 const count=z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER-1);
+// Match the existing exact int64 protocol; Number would merge adjacent epochs.
+const generation=z.string().refine(value=>{try{return normalizeLifecycleGeneration(value)!==null}catch{return false}},'Invalid lifecycle generation');
 const capabilityNames=['cash_details','sales_by_product','sales_by_store','stock_by_product','consumption_details',...Object.keys(businessDomains).map(domain=>'business_records:'+domain)];
 const capabilities=z.array(z.enum(capabilityNames)).max(capabilityNames.length).transform(v=>[...new Set(v)].sort());
-export const historyAccessSchema=z.object({userId:id,mode:z.enum(['owner','platform']),companyId:id,storeId:id,generation:count,sessionId:id,sessionVersion:count,capabilities}).strict();
+export const historyAccessSchema=z.object({userId:id,mode:z.enum(['owner','platform']),companyId:id,storeId:id,generation,sessionId:id,sessionVersion:count,capabilities}).strict();
 const message=z.object({id:z.string().uuid(),role:z.enum(['user','assistant']),content:z.string().trim().min(1).max(2000),createdAt:z.string().datetime({offset:true}).transform(v=>new Date(v).toISOString()),requiredCapabilities:capabilities}).strict().superRefine((m,c)=>{
  if(m.role==='user'&&(m.content.length>600||m.requiredCapabilities.length))c.addIssue({code:'custom',message:'Invalid archived question'});
 });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {createAssistantHistoryRepository} from '../src/services/assistant-history-repository.js';
 import {emptyHistoryArchive,HISTORY_TTL_MS} from '../src/services/assistant-history-contract.js';
-const base=()=>({userId:'owner',mode:'owner',companyId:'company',storeId:'store',generation:2,sessionId:'session',sessionVersion:3,capabilities:['cash_details']});
+const base=()=>({userId:'owner',mode:'owner',companyId:'company',storeId:'store',generation:'2',sessionId:'session',sessionVersion:3,capabilities:['cash_details']});
 const archive=()=>({schemaVersion:1,threads:[{id:randomUUID(),title:'Ταμεία',messages:[{id:randomUUID(),role:'assistant',content:'Ιστορική απάντηση',createdAt:'2026-10-19T09:00:00.000Z',requiredCapabilities:['cash_details']}]}]});
 function fixture(){
  let principal=base(),time=new Date('2026-10-19T09:00:00Z'),tail=Promise.resolve(),hook=null,authHook=null,commitHook=null;const rows=new Map(),calls=[];
@@ -32,7 +32,7 @@ test('scoped archive returns historical text, fixed expiry and fresh post-storag
 });
 test('scope isolation covers actor, mode, company, store and lifecycle while same-user new login can read after fresh checks',async()=>{
  const f=fixture(),a=archive();await f.repo.save({},mutation(0,a));
- for(const delta of [{userId:'other'},{mode:'platform'},{companyId:'other'},{storeId:'other'},{generation:3}]){f.principal({...base(),...delta});assert.deepEqual((await f.repo.read({})).archive,emptyHistoryArchive());}
+ for(const delta of [{userId:'other'},{mode:'platform'},{companyId:'other'},{storeId:'other'},{generation:'3'}]){f.principal({...base(),...delta});assert.deepEqual((await f.repo.read({})).archive,emptyHistoryArchive());}
  f.principal({...base(),sessionId:'next',sessionVersion:4});assert.deepEqual((await f.repo.read({})).archive,a);
 });
 test('same request retry is idempotent; changed payload or expected revision with same request identity conflicts',async()=>{
@@ -89,6 +89,11 @@ test('native history repository executes parameterized PostgreSQL with BIGINT re
  try{
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
   await db.$executeRawUnsafe('CREATE TABLE "AssistantHistoryArchive" ("scopeKey" text PRIMARY KEY,"revision" bigint NOT NULL,"payload" jsonb NOT NULL,"requestId" text NOT NULL,"digest" text NOT NULL,"expiresAt" timestamptz NOT NULL)');
+  await db.$executeRawUnsafe('CREATE TABLE "StoreLifecycleFence" ("storeId" text PRIMARY KEY,"companyId" text NOT NULL,"generation" bigint NOT NULL,"maintenance" boolean NOT NULL,"retired" boolean NOT NULL)');
+  await db.$executeRaw`INSERT INTO "StoreLifecycleFence" VALUES ('store','company',9223372036854775807,false,false)`;
+  const {readLifecycleGeneration}=await import('../src/services/store-lifecycle-generation.js');
+  const observed=await readLifecycleGeneration(db,{companyId:'company',storeId:'store'});
+  assert.equal(observed.generation,'9223372036854775807');principal={...base(),generation:observed.generation};
   const m=mutation(),saved=await repo.save({},m);assert.equal(saved.revision,1);assert.deepEqual(await repo.save({},m),saved);
   assert.deepEqual((await repo.read({})).archive,saved.archive);
   const competing=await Promise.allSettled([repo.save({},mutation(1)),repo.save({},mutation(1))]);assert.equal(competing.filter(x=>x.status==='fulfilled').length,1);assert.equal(competing.find(x=>x.status==='rejected').reason.status,409);
@@ -98,8 +103,20 @@ test('native history repository executes parameterized PostgreSQL with BIGINT re
   const guarded=createAssistantHistoryRepository({db:gated,authorize:async()=>({...principal,sessionVersion:revoke?4:3}),now:()=>time});
   await code(guarded.save({},mutation(2)),'ASSISTANT_HISTORY_CONTEXT_CHANGED');
   assert.deepEqual(await db.$queryRaw`SELECT "scopeKey","revision","payload","requestId","digest","expiresAt" FROM "AssistantHistoryArchive"`,before);
-  principal={...base(),storeId:'foreign'};assert.deepEqual((await repo.read({})).archive,emptyHistoryArchive());principal=base();
+  principal={...base(),storeId:'foreign',generation:observed.generation};assert.deepEqual((await repo.read({})).archive,emptyHistoryArchive());principal={...base(),generation:observed.generation};
   time=new Date(saved.expiresAt);assert.equal((await repo.read({})).expired,true);await code(repo.save({},mutation(2)),'ASSISTANT_HISTORY_EXPIRED');
   assert.equal((await repo.reset({},mutation(2,emptyHistoryArchive()))).revision,3);await code(repo.save({},m),'ASSISTANT_HISTORY_CONFLICT');
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();}
+});
+test('adjacent lifecycle int64 scopes beyond JS safe integer never read or overwrite one another',async()=>{
+ const f=fixture(),a=archive(),b=archive();b.threads[0].title='Δεύτερη κατάσταση';
+ f.principal({generation:'9007199254740992'});await f.repo.save({},mutation(0,a));
+ f.principal({generation:'9007199254740993'});assert.deepEqual((await f.repo.read({})).archive,emptyHistoryArchive());await f.repo.save({},mutation(0,b));
+ assert.equal(f.rows.size,2);assert.deepEqual((await f.repo.read({})).archive,b);
+ f.principal({generation:'9007199254740992'});assert.deepEqual((await f.repo.read({})).archive,a);
+});
+test('an exact int64 generation change during storage withdraws historical text',async()=>{
+ const f=fixture();f.principal({generation:'9007199254740992'});await f.repo.save({},mutation());
+ const install=()=>f.afterQuery(async sql=>{if(sql.startsWith('SELECT "revision"'))f.principal({generation:'9007199254740993'});else install();});install();
+ await code(f.repo.read({}),'ASSISTANT_HISTORY_CONTEXT_CHANGED');
 });
