@@ -2,13 +2,14 @@
 import {z} from 'zod';
 import {prisma} from '../prisma.js';
 import {readLifecycleGeneration} from './store-lifecycle-generation.js';
+import {readHistoryRetentionReady} from './assistant-history-readiness.js';
 import {createAssistantHistoryAccess} from './assistant-history-access.js';
 import {createAssistantHistoryTurns,assistantHistoryTurnMetadata} from './assistant-history-turns.js';
 const pair=z.object({companyId:z.string().min(1).max(160),storeId:z.string().min(1).max(160)}).strict();
-export function createNativeAssistantHistory({db=prisma,mode,enabled=()=>process.env.ASSISTANT_HISTORY_ENABLED==='true'}){
+export function createNativeAssistantHistory({db=prisma,mode,enabled=()=>process.env.ASSISTANT_HISTORY_ENABLED==='true',ready=()=>readHistoryRetentionReady(db)}){
  const authorize=createAssistantHistoryAccess({db,mode,selection:req=>req.body?.selection||(req.query?.companyId&&req.query?.storeId?{companyId:req.query.companyId,storeId:req.query.storeId}:null)});
  const turns=createAssistantHistoryTurns({db,authorize});
- const gate=async req=>{await authorize(req);if(!enabled())throw Object.assign(new Error('Το αποθηκευμένο ιστορικό δεν έχει ενεργοποιηθεί ακόμη.'),{status:503,code:'ASSISTANT_HISTORY_DISABLED'})};
+ const gate=async req=>{await authorize(req);if(!enabled())throw Object.assign(new Error('Το αποθηκευμένο ιστορικό δεν έχει ενεργοποιηθεί ακόμη.'),{status:503,code:'ASSISTANT_HISTORY_DISABLED'});if(!await ready())throw Object.assign(new Error('Ο έλεγχος διατήρησης ιστορικού δεν είναι διαθέσιμος.'),{status:503,code:'ASSISTANT_HISTORY_UNAVAILABLE'})};
  return {
   // Caller passes the already natively authorized status scope, never browser IDs.
   async status(req,authorizedScope){

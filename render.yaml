@@ -42,6 +42,10 @@ services:
         value: nikirazatou@hotmail.gr
       - key: BACKUP_MONITOR_SECRET
         sync: false
+      - key: ASSISTANT_HISTORY_ENABLED
+        # Explicit runtime activation after compatible worker/provisioning proof.
+        # Preserve that reviewed setting on later Blueprint syncs.
+        sync: false
       - key: STORE_LIFECYCLE_EXECUTION_ENABLED
         value: "true"
   - type: cron
@@ -59,6 +63,8 @@ services:
         - ops/backup/**
         - server/scripts/store-lifecycle-verify-copy.py
     envVars:
+      - key: ASSISTANT_HISTORY_CLEANUP_ENABLED
+        value: "true"
       - key: DATABASE_URL
         fromDatabase:
           name: myworkstation-db
