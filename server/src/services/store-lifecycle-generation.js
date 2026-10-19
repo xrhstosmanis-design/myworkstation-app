@@ -6,6 +6,8 @@ export function normalizeLifecycleGeneration(value){
  return value;
 }
 const q=value=>'"'+String(value).replaceAll('"','""')+'"';
+// Preserve the existing receiving service's key across rolling releases.
+export const lifecycleMyDataLockKey=({companyId,storeId})=>'mydata:'+companyId+':'+storeId;
 export async function readLifecycleGeneration(tx,{companyId,storeId},{lock=false}={}){
  if(typeof companyId!=='string'||!companyId||typeof storeId!=='string'||!storeId)fail('STORE_LIFECYCLE_SCOPE_INVALID','Απαιτείται συγκεκριμένο κατάστημα και εταιρεία.');
  const meta=(await tx.$queryRawUnsafe(`SELECT current_schema() AS schema, to_regclass(format('%I.%I',current_schema(),'StoreLifecycleFence'))::text AS fence`))[0];

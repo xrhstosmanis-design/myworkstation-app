@@ -3,6 +3,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {requireLifecycleAdmin} from './store-lifecycle-preview.js';
 import {RESET_KEEP,FRESH_STORE_KEEP} from './store-lifecycle-policy.js';
 import {digestLifecycleRows} from './store-lifecycle-recovery-stream.js';
+import {lifecycleMyDataLockKey} from './store-lifecycle-generation.js';
 const q=x=>'"'+String(x).replaceAll('"','""')+'"';
 const literal=x=>"'"+String(x).replaceAll("'","''")+"'";
 const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
@@ -46,6 +47,7 @@ function planFor(manifest){
  // physical registers. A reviewed plan may not override this RESET boundary.
  const retained=manifest.resetPolicy==='FRESH_STORE_V1'?FRESH_STORE_KEEP:RESET_KEEP;
  for(const row of nodes.values())if(retained.has(row.name)&&row.reset!=='KEEP')fail('RESET must retain installation/configuration: '+row.name);
+ if(manifest.resetPolicy==='FRESH_STORE_V1')for(const row of nodes.values())if(!retained.has(row.name)&&row.reset!=='REMOVE')fail('Fresh-store business rows must be removed: '+row.name);
  if(manifest.resetPolicy==='FRESH_STORE_V1'&&nodes.get('StoreIntegrationCredential')?.reset==='REMOVE'){
   const guard=(manifest.valueGuards||[]).find(g=>g.table==='StoreIntegrationCredential'&&g.column==='kind');
   if(!guard||JSON.stringify([...guard.allowed].sort())!==JSON.stringify(['MYDATA','VAT_LOOKUP']))fail('Fresh-store business credentials require the exact non-fiscal kind guard.');
@@ -171,13 +173,19 @@ async function* scopedRows(tx,plan,schema,scope,node,meta){
  }
 }
 const tableCount=table=>Array.isArray(table.rows)?table.rows.length:table.rowCount;
-async function assertQuiescent(tx,plan,schema,scope,meta,{connectors=true}={}){
+async function assertQuiescent(tx,plan,schema,scope,meta,{connectors=true,lockBackground=true}={}){
  for(const [name,condition,required] of [
  ['CashShiftSession',`"status"='OPEN'`,['status']],
  ['StoreOperatorSession',`"revokedAt" IS NULL AND "expiresAt">NOW()`,['revokedAt','expiresAt']],
+ ['PosInvoiceBackgroundTask',`"state"='RUNNING'`,['state']],
+ ['AiReaderJob',`"status" IN ('RUNNING','PROCESSING','LOCAL_PROCESSING','AI_PROCESSING','POS_PROCESSING','POS_REPROCESSING','POS_RECOVERING')`,['status']],
  ['RbsCapDriverV1Request',`"status" NOT IN ('DECLINED','SALE_COMMITTED')`,['status']],
+ ['NetlinkTransaction',`"status" NOT IN ('COMPLETED','FAILED')`,['status']],
  ['CloudDevice',`"status"='ACTIVE' AND "lastSeenAt">NOW()-INTERVAL '60 seconds'`,['status','lastSeenAt']]
  ])if(plan.nodes.has(name)&&(connectors||name!=='CloudDevice')){if(required.some(c=>!meta.columns.get(name).has(c)))fail('Busy-work guard schema changed.');if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(name)} t WHERE (${predicate(plan,schema,plan.nodes.get(name),'t')}) AND (${condition}) LIMIT 1`,scope.storeId)).length)fail('Active shift, operator, Writer or fiscal work blocks maintenance.');}
+ // The existing receiving service already holds this exact transaction lock
+ // across remote fetches, including jobs started before fence enrollment.
+ if(lockBackground&&plan.nodes.has('MyDataInboundDocument')){const held=(await tx.$queryRawUnsafe(`SELECT pg_try_advisory_xact_lock(hashtextextended($1,0)) AS held`,lifecycleMyDataLockKey(scope)))[0]?.held;if(!held)fail('Active shift, operator, Writer or fiscal work blocks maintenance.');}
 }
 async function assertScopedRelations(tx,plan,schema,scope,meta,mode){
  for(const guard of plan.valueGuards)if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(guard.table)} t WHERE (${predicate(plan,schema,plan.nodes.get(guard.table),'t')}) AND NOT COALESCE(t.${q(guard.column)}=ANY($2::text[]),false) LIMIT 1`,scope.storeId,guard.allowed)).length)fail('Unreviewed value in selected store: '+guard.table+'.'+guard.column);
@@ -239,11 +247,11 @@ function inspectionFor(plan){return async(db,actor,scope)=>{
   const meta=await validateDatabase(tx,plan,schema,{allowUninstalled:true});
   await assertScopedRelations(tx,plan,schema,scope,meta,'RESET');
   let activeWork=false;
-  try{await assertQuiescent(tx,plan,schema,scope,meta)}catch(error){if(error.message==='Active shift, operator, Writer or fiscal work blocks maintenance.')activeWork=true;else throw error}
+  try{await assertQuiescent(tx,plan,schema,scope,meta,{lockBackground:false})}catch(error){if(error.message==='Active shift, operator, Writer or fiscal work blocks maintenance.')activeWork=true;else throw error}
   const counts=[];
   for(const node of plan.ordered){const row=(await tx.$queryRawUnsafe(`SELECT count(*)::int AS count,COALESCE(sum(octet_length(row_to_json(t)::text)),0)::text AS bytes,COALESCE(max(octet_length(row_to_json(t)::text)),0)::int AS "maxRowBytes" FROM ${q(schema)}.${q(node.name)} t WHERE ${predicate(plan,schema,node,'t')}`,scope.storeId))[0];counts.push({table:node.name,action:node.reset,count:row.count,sourceBytes:row.bytes,maxRowBytes:row.maxRowBytes})}
   const totalRows=counts.reduce((sum,t)=>sum+t.count,0),sourceBytes=counts.reduce((sum,t)=>sum+BigInt(t.sourceBytes),0n),withinSnapshotLimits=totalRows<=500000&&sourceBytes<=BigInt(plan.streaming?1024*1024*1024:16*1024*1024)&&counts.every(t=>t.count<=100000&&t.maxRowBytes<=8*1024*1024);
-  const result={scope:{companyId:scope.companyId,storeId:scope.storeId},mode:'RESET',planHash:plan.planHash,sourceRevision:plan.sourceRevision,schemaSignature:meta.signature,counts,totalRows,sourceBytes:sourceBytes.toString(),withinSnapshotLimits,activeWork,guardsInstalled:meta.guardsInstalled,executionAvailable:false,recoveryVerified:false};
+  const result={scope:{companyId:scope.companyId,storeId:scope.storeId},mode:'RESET',planHash:plan.planHash,sourceRevision:plan.sourceRevision,schemaSignature:meta.signature,counts,totalRows,sourceBytes:sourceBytes.toString(),withinSnapshotLimits,activeWork,backgroundLocksChecked:false,guardsInstalled:meta.guardsInstalled,executionAvailable:false,recoveryVerified:false};
   return {...result,inspectionFingerprint:hash(result)};
  },{isolationLevel:'RepeatableRead',timeout:120000,maxWait:5000});
 }}
