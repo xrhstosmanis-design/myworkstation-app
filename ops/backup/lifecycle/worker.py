@@ -19,7 +19,7 @@ from verify_restore import compact, ident, literal, verify_archive
 PROTOCOL = 'MWS_STORE_RECOVERY_PROOF_V1'
 
 def run(args, **kwargs):
-    result = subprocess.run(args, stderr=subprocess.PIPE, **kwargs)
+    result = subprocess.run(args, timeout=300, stderr=subprocess.PIPE, **kwargs)
     if result.returncode:
         raise ValueError('Recovery subprocess failed: ' + pathlib.Path(args[0]).name)
     return result
@@ -77,7 +77,7 @@ def process_one(manifest_file, audit_module):
     object_key = 'myworkstation/lifecycle/' + operation + '/' + lease + '.dump'
     with tempfile.TemporaryDirectory(prefix='mws-lifecycle-job-') as directory:
         archive, downloaded = [str(pathlib.Path(directory) / name) for name in ('archive.dump', 'readback.dump')]
-        run(['pg_dump', '--format=custom', '--compress=6', '--no-owner', '--no-privileges', '--file=' + archive, os.environ['DATABASE_URL']], stdout=subprocess.DEVNULL)
+        run(['pg_dump', '--format=custom', '--lock-wait-timeout=10s', '--compress=6', '--no-owner', '--no-privileges', '--file=' + archive, os.environ['DATABASE_URL']], stdout=subprocess.DEVNULL)
         checksum, size = file_sha(archive), os.path.getsize(archive)
         if not size:
             raise ValueError('Empty recovery archive')

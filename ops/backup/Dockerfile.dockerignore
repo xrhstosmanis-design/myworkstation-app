@@ -3,6 +3,8 @@
 !ops/backup/
 !ops/backup/Dockerfile
 !ops/backup/run-backup.sh
+!ops/backup/run-jobs.sh
+!ops/backup/entrypoint.sh
 !ops/backup/lifecycle/
 !ops/backup/lifecycle/manifest.json
 !ops/backup/lifecycle/worker.py

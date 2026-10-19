@@ -497,3 +497,43 @@ test('native queued recovery metadata drives real full archive and selective res
   await f.core.abort(f.db,actor,{...scope,...prep});
  }finally{await f.close();await rm(directory,{recursive:true,force:true})}
 });
+
+test('native completed RESET reopens only after exact empty scope and unchanged BOTH installations; old epoch stays rejected and replays once',{skip:!isolated},async()=>{
+ const f=await fixture({extraManifest:{...manifest,streaming:true}});try{
+  await f.core.install(f.db,actor,scope);const prep=await f.core.prepare(f.db,actor,scope,'RESET');const done=await f.core.execute(f.db,actor,{...scope,...prep});assert.equal(done.generation,'1');assert.equal(done.kept.find(t=>t.name==='StoreInstallationTerminal').rowCount,2);
+  const reopened=await f.core.reopen(f.db,actor,{...scope,...prep});assert.equal(reopened.maintenance,false);assert.equal(reopened.reopenRequired,false);
+  assert.equal((await f.core.reopen(f.db,actor,{...scope,...prep})).idempotentReplay,true);assert.equal((await f.core.execute(f.db,actor,{...scope,...prep})).idempotentReplay,true);
+  await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('old-zero','company','target',1)`),matches(/STORE_LIFECYCLE_STALE_GENERATION/));
+  await f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_generations',$1,true)`,JSON.stringify({target:'1'}));await tx.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('new-one','company','target',1)`)});
+  assert.equal(Number((await f.db.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "StoreInstallationTerminal" WHERE "storeId"='target' AND "active"`))[0].n),2);
+ }finally{await f.close()}
+});
+test('native reopen refuses changed retained settings and another operation before lifting maintenance',{skip:!isolated},async()=>{
+ const f=await fixture({extraManifest:{...manifest,streaming:true}});try{
+  await f.core.install(f.db,actor,scope);const prep=await f.core.prepare(f.db,actor,scope,'RESET');await f.core.execute(f.db,actor,{...scope,...prep});
+  await assert.rejects(f.core.reopen(f.db,actor,{...scope,operationId:randomUUID()}),/completed RESET/);
+  await f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_operation',$1,true)`,prep.operationId);await tx.$executeRawUnsafe(`UPDATE "StoreInstallationTerminal" SET "settings"='CHANGED' WHERE "storeId"='target'`)});
+  await assert.rejects(f.core.reopen(f.db,actor,{...scope,...prep}),/Retained installation changed/);
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,true);
+ }finally{await f.close()}
+});
+
+test('native central HTTP prepares only the exact selected store with BOTH physical reports and refuses execute without genuine durable recovery',{skip:!isolated},async()=>{
+ const {default:express}=await import('express'),{registerFreshStoreLifecycle}=await import('../src/services/store-lifecycle-controller.js');
+ const selected={...manifest,streaming:true},f=await fixture({extraManifest:selected,extraDdl:s=>[`ALTER TABLE "${s}"."StoreRbsInstallationSettings" ADD COLUMN "terminalPos" text, ADD COLUMN "workFolder" text`],populate:async(db,s)=>{await db.$executeRawUnsafe(`UPDATE "${s}"."StoreRbsInstallationSettings" SET "terminalPos"=CASE "id" WHEN 'settings' THEN 'KAT-POS-01' WHEN 'settings-2' THEN 'KAT-POS-02' ELSE 'SIBLING' END,"workFolder"='C:\\capture'`)}});
+ const app=express();app.use(express.json());app.use((req,_res,next)=>{req.user=req.headers['x-fixture-admin']==='true'?actor:{id:'owner',role:'OWNER'};next()});registerFreshStoreLifecycle(app,f.db,{manifest:selected,sourceRevision:'1'.repeat(40),enabled:()=>true,secret:()=> 'isolated-worker-test-signing-secret'});app.use((err,_req,res,_next)=>res.status(err.status||500).json({error:err.message}));
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base=`http://127.0.0.1:${server.address().port}/companies/company/stores/target/lifecycle/fresh-start`;
+ const send=async(action,body={},admin=true)=>{const r=await fetch(base+'/'+action,{method:'POST',headers:{'content-type':'application/json','x-fixture-admin':String(admin)},body:JSON.stringify(body)});return {status:r.status,body:await r.json()}};
+ try{
+  const before=await f.snapshot();assert.equal((await send('start',{},false)).status,403);const start=await send('start');assert.equal(start.status,200);const operationId=start.body.operationId;assert.equal(start.body.terminals.length,2);
+  const at=Date.now()+1000,sample=time=>({checkedAtUtc:new Date(time).toISOString(),workFolder:'C:\\capture',fileCount:0,directoryCount:0,rbsCommandFileCount:0,temporaryFileCount:0,otherFileCount:0,totalFileBytes:0,metadataSha256:'a'.repeat(64)}),reports=['KAT-POS-01','KAT-POS-02'].map(terminalPos=>({format:'MWS_CAP_SPOOL_OBSERVATION_V1',...scope,operationId,terminalPos,observationId:randomUUID(),readyForDeletion:false,unchangedBetweenSamples:true,processObservation:'OBSERVED',matchingWriterProcessCount:0,matchingCapDriverProcessCount:0,samples:[sample(at),sample(at+2000)]}));
+  const attestation={actualCapFoldersVerified:true,allWritersAndCapStopped:true,allOtherOfflineDevicesAccountedFor:true,noPendingPhysicalOrBankWork:true};
+  assert.equal((await send('prepare',{operationId,reports:[reports[0]],attestation})).status,409);
+  const prep=await send('prepare',{operationId,reports,attestation});assert.equal(prep.status,200);assert.match(prep.body.snapshotHash,/^[a-f0-9]{64}$/);
+  const statusResponse=await fetch(base+'/'+operationId,{headers:{'x-fixture-admin':'true'}}),status=await statusResponse.json();assert.equal(status.state,'PREPARED');assert.equal(status.recoveryVerified,false);assert.equal('recoveryProof' in status,false);assert.equal('snapshotMetadataJson' in status,false);
+  assert.equal((await send('execute',{operationId,snapshotHash:prep.body.snapshotHash,confirmation:'Sibling'})).status,400);
+  const blocked=await send('execute',{operationId,snapshotHash:prep.body.snapshotHash,confirmation:'Target'});assert.equal(blocked.status,409);assert.match(blocked.body.error,/αντίγραφο/);assert.deepEqual(await f.snapshot(),before);
+  const audit=(await f.db.$queryRawUnsafe(`SELECT "result" FROM "StoreLifecycleExecution" WHERE "id"=$1`,operationId))[0].result.physicalEvidence;assert.equal(audit.attestedBy,actor.id);assert.equal(audit.observations.length,2);
+  assert.equal((await send('abort',{operationId})).status,200);assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,false);assert.deepEqual(await f.snapshot(),before);
+ }finally{await new Promise(r=>server.close(r));await f.close()}
+});

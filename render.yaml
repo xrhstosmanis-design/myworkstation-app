@@ -47,7 +47,8 @@ services:
     runtime: docker
     region: oregon
     plan: standard
-    schedule: "0 */3 * * *"
+    schedule: "*/5 * * * *"
+    dockerCommand: /backup/run-jobs.sh
     dockerfilePath: ./ops/backup/Dockerfile
     dockerContext: .
     autoDeployTrigger: checksPass

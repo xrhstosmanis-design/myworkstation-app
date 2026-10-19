@@ -4,6 +4,7 @@ param(
   [string]$TerminalPos,
   [string]$WorkFolder = 'C:\capture',
   [string]$ReportPath,
+  [string]$OperationId,
   [switch]$ShowForm
 )
 
@@ -73,6 +74,7 @@ function Save-SpoolInspection([string]$Terminal, [string]$Folder, [string]$Desti
     storeId = $StoreId
     terminalPos = $Terminal
     observationId = [guid]::NewGuid().ToString()
+    operationId = $OperationId
     purpose = 'READ_ONLY_DIAGNOSTIC_NOT_RESET_CLEARANCE'
     readyForDeletion = $false
     cloudDrainVerified = $false
@@ -96,15 +98,15 @@ if ($ShowForm -or [string]::IsNullOrWhiteSpace($TerminalPos) -or [string]::IsNul
   Add-Type -AssemblyName System.Drawing
   $form = New-Object Windows.Forms.Form
   $form.Text = 'MyWorkStation - CAP read-only inspection'
-  $form.ClientSize = New-Object Drawing.Size(620,280)
+  $form.ClientSize = New-Object Drawing.Size(620,330)
   $form.StartPosition = 'CenterScreen'
   $label = New-Object Windows.Forms.Label
   $label.Text = "Store: $CompanyId / $StoreId`r`nSelect this physical register and its actual CAP folder.`r`nThis check changes no settings, credentials or command files.`r`nIt does not stop Writer/CAP and does not authorize deletion."
   $label.SetBounds(16,16,590,86)
   $form.Controls.Add($label)
   $terminal = New-Object Windows.Forms.ComboBox
-  $terminal.DropDownStyle = 'DropDownList'
-  $terminal.Items.AddRange(@('KAT-POS-01','KAT-POS-02'))
+  $terminal.DropDownStyle = 'DropDown'
+  if ([string]::IsNullOrWhiteSpace($TerminalPos)) { $terminal.Items.AddRange(@('KAT-POS-01','KAT-POS-02')) } else { [void]$terminal.Items.Add($TerminalPos); $terminal.Text = $TerminalPos }
   $terminal.SetBounds(16,110,185,28)
   $form.Controls.Add($terminal)
   $folder = New-Object Windows.Forms.TextBox
@@ -116,18 +118,27 @@ if ($ShowForm -or [string]::IsNullOrWhiteSpace($TerminalPos) -or [string]::IsNul
   $browse.SetBounds(494,148,110,30)
   $browse.Add_Click({ $dialog = New-Object Windows.Forms.FolderBrowserDialog; try { if ($dialog.ShowDialog() -eq 'OK') { $folder.Text = $dialog.SelectedPath } } finally { $dialog.Dispose() } })
   $form.Controls.Add($browse)
+  $operationLabel = New-Object Windows.Forms.Label
+  $operationLabel.Text = 'Preparation code (copy from MyWorkStation):'
+  $operationLabel.SetBounds(16,188,590,22)
+  $form.Controls.Add($operationLabel)
+  $operationInput = New-Object Windows.Forms.TextBox
+  $operationInput.Text = $OperationId
+  $operationInput.SetBounds(16,210,590,28)
+  $form.Controls.Add($operationInput)
   $check = New-Object Windows.Forms.Button
   $check.Text = 'Inspect and save report'
-  $check.SetBounds(16,205,255,36)
+  $check.SetBounds(16,265,255,36)
   $check.Add_Click({
-    if ($terminal.SelectedIndex -lt 0) { [Windows.Forms.MessageBox]::Show('Select the physical register first.'); return }
+    if ([string]::IsNullOrWhiteSpace($terminal.Text)) { [Windows.Forms.MessageBox]::Show('Select the physical register first.'); return }
     $dialog = New-Object Windows.Forms.SaveFileDialog
     $dialog.Filter = 'JSON report (*.json)|*.json'
-    $dialog.FileName = 'MWS-spool-' + $terminal.SelectedItem + '-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '.json'
+    $dialog.FileName = 'MWS-spool-' + $terminal.Text + '-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '.json'
     try {
       if ($dialog.ShowDialog() -ne 'OK') { return }
       $check.Enabled = $false
-      $saved = Save-SpoolInspection ([string]$terminal.SelectedItem) $folder.Text $dialog.FileName
+      $script:OperationId = $operationInput.Text.Trim()
+      $saved = Save-SpoolInspection ([string]$terminal.Text) $folder.Text $dialog.FileName
       [Windows.Forms.MessageBox]::Show("Report saved: $saved`r`nThis is an observation, not reset clearance.")
     } catch { [Windows.Forms.MessageBox]::Show($_.Exception.Message,'Inspection could not complete') } finally { $check.Enabled = $true; $dialog.Dispose() }
   })

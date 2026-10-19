@@ -77,7 +77,7 @@ class PrivatePostgres:
         self.started = False
 
     def run(self, args, **options):
-        result = subprocess.run(args, env=self.env, **(self.user or {}), stderr=subprocess.PIPE, **options)
+        result = subprocess.run(args, timeout=300, env=self.env, **(self.user or {}), stderr=subprocess.PIPE, **options)
         if result.returncode:
             # Do not expose row values, SQL, archive paths or credentials.
             raise ValueError('Private PostgreSQL command failed: ' + pathlib.Path(args[0]).name)
@@ -85,7 +85,7 @@ class PrivatePostgres:
 
     def __enter__(self):
         self.run(['initdb', '-D', str(self.data), '-U', 'postgres', '--auth-local=trust', '--auth-host=reject', '--no-locale', '--encoding=UTF8'], stdout=subprocess.DEVNULL)
-        self.run(['pg_ctl', '-D', str(self.data), '-l', str(self.root / 'postgres.log'), '-o', "-F -k " + str(self.socket) + " -h '' -p 55439", '-w', 'start'], stdout=subprocess.DEVNULL)
+        self.run(['pg_ctl', '-D', str(self.data), '-l', str(self.root / 'postgres.log'), '-o', "-F -k " + str(self.socket) + " -h '' -p 55439 -c max_connections=5 -c shared_buffers=16MB -c work_mem=1MB -c maintenance_work_mem=16MB -c max_parallel_workers=0 -c max_worker_processes=0", '-w', 'start'], stdout=subprocess.DEVNULL)
         self.started = True
         return self
 
