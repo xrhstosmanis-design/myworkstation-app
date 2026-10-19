@@ -39,6 +39,7 @@ try{
   const target=await cdp('Target.createTarget',{url:'about:blank'});({sessionId}=await cdp('Target.attachToTarget',{targetId:target.targetId,flatten:true}));
   await cdp('Page.enable',{},sessionId);await cdp('Runtime.enable',{},sessionId);await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false},sessionId);await cdp('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:out});
   await owner();const before=await snapshot(),controlBefore=await snapshot('whlab-other-store');results.before=before;results.controlBefore=controlBefore;await screenshot('01-owner-baseline');
+  await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true},sessionId);assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'),'The lab console must fit a390px mobile viewport');await screenshot('01b-lab-mobile');await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false},sessionId);results.checks.push('lab console fits390px mobile and1440px desktop viewport');
   await select('#customer','whlab-customer');
   for(const [id,quantity] of [['whlab-product-a','2'],['whlab-product-b','3']]){await select('#product',id);await click('#add-product');await fill(`[data-product-id="${id}"]`,quantity)}
   await click('#quote');await wait('!document.querySelector("#quote-result").hidden&&!document.querySelector("[data-testid=submit-order]").disabled','real mixed VAT quote');

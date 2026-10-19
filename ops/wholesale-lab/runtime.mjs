@@ -113,5 +113,5 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   startLabRuntime({initialize:process.argv.includes('--initialize')}).then(runtime=>{
     console.log(JSON.stringify({event:'wholesale-lab-ready',testOnly:true,revision:runtime.revision,bootId:runtime.bootId,port:runtime.server.address().port}));
     let closing=false;for(const signal of ['SIGTERM','SIGINT'])process.on(signal,async()=>{if(closing)return;closing=true;await runtime.close();process.exit(0)});
-  }).catch(error=>{console.error('Wholesale laboratory startup refused:',error.code||error.name,error.message.replace(/postgres(?:ql)?:\/\/[^\s]+/g,'[database]'));process.exitCode=1});
+  }).catch(error=>{console.error('Wholesale laboratory startup refused:',error.code||error.name,error.message.replace(/postgres(?:ql)?:\/\/[^\s]+/g,'[database]'),...(error.safeTrace?[JSON.stringify(error.safeTrace)]:[]));process.exitCode=1});
 }

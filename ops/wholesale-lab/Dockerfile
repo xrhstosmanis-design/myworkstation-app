@@ -7,6 +7,7 @@ RUN npm install --no-audit --no-fund
 COPY client ./client
 COPY server ./server
 COPY tools ./tools
+COPY shared ./shared
 COPY ops/wholesale-lab ./ops/wholesale-lab
 RUN npm run build:client && npm run prisma:generate -w server
 
@@ -15,6 +16,7 @@ COPY --from=build /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/server ./server
+COPY --from=build /app/shared ./shared
 COPY --from=build /app/client/dist ./client/dist
 COPY --from=build /app/ops/wholesale-lab ./ops/wholesale-lab
 COPY --from=build /app/package.json ./package.json

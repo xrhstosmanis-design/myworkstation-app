@@ -2,7 +2,7 @@
 // This console exists only in the isolated runtime. Every business operation
 // still goes through the actual server authorization and explicit store scope.
 const $ = id => document.getElementById(id);
-const names = {INVOICE:'Εικονικό τιμολόγιο',DELIVERY_NOTE:'Εικονικό δελτίο αποστολής',INVOICE_DELIVERY:'Εικονικό τιμολόγιο – δελτίο',CREDIT_NOTE:'Εικονικό πιστωτικό',RETURN_NOTE:'Εικονικό επιστροφή',CASH:'Εικονικά μετρητά',BANK:'Εικονική τράπεζα',CARD:'Εικονική κάρτα'};
+const names = {INVOICE:'Εικονικό τιμολόγιο',DELIVERY_NOTE:'Εικονικό δελτίο αποστολής',INVOICE_DELIVERY:'Εικονικό τιμολόγιο – δελτίο',CREDIT_NOTE:'Εικονικό πιστωτικό',RETURN_NOTE:'Εικονικό δελτίο επιστροφής',CASH:'Εικονικά μετρητά',BANK:'Εικονική τράπεζα',CARD:'Εικονική κάρτα'};
 const state = {meta:null,storeId:'',owner:null,token:null,products:[],customers:[],orders:[],ledger:null,cart:[],quote:null,pending:null,last:null,busy:false,generation:0};
 const euro = value => {const number=Number(value);return Number.isFinite(number)?number.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €':'—'};
 const timestamp = value => {const date=new Date(value);return Number.isNaN(date.valueOf())?'—':date.toLocaleString('el-GR')};

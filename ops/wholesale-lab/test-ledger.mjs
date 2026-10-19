@@ -30,7 +30,10 @@ export async function exerciseLabLedger({baseUrl,ownerToken,db,origin,ids}){
   const dispatch=(await issue(first,'DELIVERY_NOTE')).document;after=await state();assert.equal(quantity(after,ids.productA),a0-20000n);assert.equal(quantity(after,ids.productB),b0-30000n);assert.equal(balance(after),money0+4175n);
   await issue(first,'DELIVERY_NOTE',undefined,key(),409);
   const returned=(await issue(first,'RETURN_NOTE',dispatch.id)).document;after=await state();assert.equal(quantity(after,ids.productA),a0);assert.equal(quantity(after,ids.productB),b0);assert.equal(balance(after),money0+4175n);
-  await issue(first,'RETURN_NOTE',dispatch.id,key(),409);await cancel(dispatch,key(),409);await cancel(returned);after=await state();assert.equal(quantity(after,ids.productA),a0-20000n);
+  await issue(first,'RETURN_NOTE',dispatch.id,key(),409);await cancel(dispatch,key(),409);
+  const exhaust=await order([{productId:ids.productA,quantity:'100'}]),exhaustDelivery=(await issue(exhaust,'DELIVERY_NOTE')).document,exhaustCounts=await appendCounts();
+  await cancel(returned,key(),409);assert.deepEqual(await appendCounts(),exhaustCounts);assert.equal(quantity(await state(),ids.productA),a0-1000000n);await cancel(exhaustDelivery);
+  await cancel(returned);after=await state();assert.equal(quantity(after,ids.productA),a0-20000n);
   const cancelKey=key();assert.equal((await cancel(dispatch,cancelKey)).document.status,'CANCELLED');assert.equal((await cancel(dispatch,cancelKey)).replayed,true);await cancel(dispatch,key(),409);await cancel(inv);
   after=await state();assert.equal(quantity(after,ids.productA),a0);assert.equal(quantity(after,ids.productB),b0);assert.equal(balance(after),money0);
   measured.push('invoice/delivery/return/cancellation/replay/payload-conflict measured before and after');
@@ -49,6 +52,8 @@ export async function exerciseLabLedger({baseUrl,ownerToken,db,origin,ids}){
   measured.push('partial CASH/BANK/CARD exact payments, normalized replay and overpay/paid-reversal refusal');
 
   // Independent orders competing for the same virtual stock must not oversell.
+  const partialFailure=await order([{productId:ids.productA,quantity:'1'},{productId:ids.productB,quantity:'1000'}]),partialCounts=await appendCounts(),partialState=await state();
+  await issue(partialFailure,'INVOICE_DELIVERY',undefined,key(),409);assert.deepEqual(await appendCounts(),partialCounts);assert.equal(quantity(await state(),ids.productA),quantity(partialState,ids.productA));
   const available=quantity(await state(),ids.productA);assert.ok(available>=600000n&&available<1200000n);
   const [oversellA,oversellB]=await Promise.all([order([{productId:ids.productA,quantity:'60'}]),order([{productId:ids.productA,quantity:'60'}])]);
   const races=await Promise.all([oversellA,oversellB].map(async o=>{const response=await fetch(baseUrl+'/api/lab/documents',{method:'POST',headers,body:JSON.stringify({storeId,orderId:o.orderId,type:'DELIVERY_NOTE',requestId:key()})});return {status:response.status,body:await response.json()}}));

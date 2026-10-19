@@ -21,8 +21,9 @@ test('live Node transports cannot dispatch externally; loopback HTTP is still us
   const guard=fileURLToPath(new URL('../../ops/wholesale-lab/guard.mjs',import.meta.url));
   const source=`
     import assert from 'node:assert/strict';import http from 'node:http';import https from 'node:https';import net from 'node:net';import tls from 'node:tls';import dns from 'node:dns';import dgram from 'node:dgram';import {installLabOutboundFence} from ${JSON.stringify('file://'+guard)};
-    const server=http.createServer((req,res)=>{if(req.url==='/redirect'){res.writeHead(302,{location:'https://external.invalid'});res.end()}else res.end('loopback-only')});await new Promise(r=>server.listen(0,'127.0.0.1',r));
     const fence=installLabOutboundFence(),blocked={code:'WHOLESALE_LAB_OUTBOUND_BLOCKED'};
+    const server=http.createServer((req,res)=>{if(req.url==='/redirect'){res.writeHead(302,{location:'https://external.invalid'});res.end()}else res.end('loopback-only')});await new Promise(r=>server.listen(0,'0.0.0.0',r));
+    assert.throws(()=>net.connect(443,'0.0.0.0'),blocked);assert.throws(()=>http.request('http://0.0.0.0'),blocked);
     assert.throws(()=>net.connect(443,'external.invalid'),blocked);assert.throws(()=>http.request('http://external.invalid'),blocked);assert.throws(()=>https.request('https://external.invalid'),blocked);assert.throws(()=>tls.connect(443,'external.invalid'),blocked);assert.throws(()=>dns.lookup('external.invalid',()=>{}),blocked);assert.throws(()=>dgram.createSocket('udp4'),blocked);await assert.rejects(fetch('https://external.invalid'),blocked);
     const url='http://127.0.0.1:'+server.address().port;assert.equal(await (await fetch(url)).text(),'loopback-only');await assert.rejects(fetch(url+'/redirect'));assert.ok(fence.blocked>=7);fence.restore();server.closeAllConnections();await new Promise(r=>server.close(r));
   `;

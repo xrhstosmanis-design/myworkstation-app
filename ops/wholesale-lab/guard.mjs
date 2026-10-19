@@ -44,7 +44,7 @@ const loopback=host=>['127.0.0.1','::1','localhost'].includes(String(host||'loca
 // routes. This fence is installed BEFORE importing even the allowed routers.
 export function installLabOutboundFence(){
   let blocked=0;const originals=[];
-  const deny=()=>{blocked++;throw Object.assign(new Error('External transports are disabled in the wholesale laboratory.'),{code:'WHOLESALE_LAB_OUTBOUND_BLOCKED'})};
+  const deny=()=>{blocked++;const error=Object.assign(new Error('External transports are disabled in the wholesale laboratory.'),{code:'WHOLESALE_LAB_OUTBOUND_BLOCKED'});error.safeTrace=error.stack.split('\n').slice(1,7).map(line=>line.match(/(?:node:[\w/.-]+|[^/\s()]+\.m?js):\d+:\d+/)?.[0]||'internal transport');throw error};
   const replace=(object,key,fn)=>{originals.push([object,key,object[key]]);object[key]=fn};
   const socketConnect=net.Socket.prototype.connect;
   replace(net.Socket.prototype,'connect',function(...args){
@@ -62,7 +62,9 @@ export function installLabOutboundFence(){
   });
   for(const [object,key] of [[tls,'connect'],[https,'request'],[https,'get'],[http2,'connect'],[dgram,'createSocket']])replace(object,key,deny);
   const lookup=dns.lookup;
-  replace(dns,'lookup',function(host,...args){if(!loopback(host))return deny();return lookup.call(this,host,...args)});
+  // Node Server.listen resolves even the numeric wildcard before binding. Its
+  // lookup is local (no DNS dispatch); outbound sockets to it remain forbidden.
+  replace(dns,'lookup',function(host,...args){if(!loopback(host)&&host!=='0.0.0.0')return deny();return lookup.call(this,host,...args)});
   for(const key of Object.keys(dns))if(/^(?:resolve|reverse$|lookupService$)/.test(key)&&typeof dns[key]==='function')replace(dns,key,deny);
   const promiseLookup=dns.promises.lookup;
   replace(dns.promises,'lookup',async function(host,...args){if(!loopback(host))return deny();return promiseLookup.call(this,host,...args)});
