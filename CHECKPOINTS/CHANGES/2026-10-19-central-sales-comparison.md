@@ -1,3 +1,11 @@
+## 19/10/2026 Europe/Athens - PHASE6 / OWN CSV TEST TIMER CLEANUP / FULL CI RERUN REQUIRED
+
+Initial source PR #2844 head770ac489485eb895caae3563de35eac760fb9d66 / full CI39253919260 / job118064629499:3423PASS/1FAIL/0SKIP. Sole failure was asynchronous activity after the new CSV UI test restored its globals: delayed URL.revokeObjectURL executed in another JSDOM realm without that stub. The new actual native canonical comparison SQL/HTTP fixture EXECUTED PASS ok2460 at2026-10-19T12:45:29.5065407UTC, with zero native skips. No failed source was merged or deployed.
+
+Corrected ONLY the already-claimed NEW server/test/kiosk-sales-comparison-ui.test.js. The fixture owns its timers, runs pending CSV revoke exactly once while the URL realm is valid, asserts the real revoke event and empty timer map, then restores timer functions/DOM globals in nested finally. Production route/service/UI and native fixture remain byte-identical. No skipped/removed/weakened test assertion or runtime workaround.
+
+Corrected isolated UI15PASS/0FAIL/0SKIP, five related UI files45PASS/0FAIL/0SKIP and independent cleanup/navigation review20PASS/0FAIL/0SKIP on Node20.20.2. Root corrected combined78tests/77PASS/0FAIL/1local native environment SKIP; actual required native execution remains full CI. Exact new test blob5ec13ae8ffef9a3ef6238aa375ccc0876c67e109, other five reviewed blobs unchanged. Full exact updated PR CI must rerun, then full main CI/ordinary guarded release/independent health. Earlier failure preserved as evidence, never PASS. Same claim #2841 and central owner; AWAITING LAB and original14 OPEN unchanged.
+
 ## 19/10/2026 Europe/Athens - COORD PHASE6 / COMPARISON SOURCE PREPARED / AWAITING FULL CI AND LAB
 
 Claim #2841 / head84995ce8eb56bc4b991c213836516982ae7ca2bb / docs CI39252357946 SUCCESS merged74aea6b871f40299731498e17c4093dcb61adfd9 BEFORE source. Central coordinator retained, four internal workers. Exact six-path implementation only: canonical list opt-in and new policy/coordinator; new pure/native tests; actual sales installer and mounted comparison tests. No change to old advanced analytics, Gate7, Workforce, parser/history/native or supplier runtime. New history/native/lifecycle claims and newer native USER FAIL remain under their owners.

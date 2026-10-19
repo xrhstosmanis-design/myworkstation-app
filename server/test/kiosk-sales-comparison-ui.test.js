@@ -28,9 +28,19 @@ test('mounted actual sales installer makes ended Athens comparison explicit and 
  const dom=new JSDOM('<div class="commerce-hub" data-report-store-id="s"><div class="kiosk-reports-suite" data-report-store-id="s"><div class="kr-filter"><div><input data-kr-from value="2026-10-26"><input data-kr-to value="2026-11-01"><select data-kr-store><option value="s">Store</option><option value="">All</option></select><input data-kr-q value="Water"></div></div><button data-kr-tab="sales-stats">Sales</button><button data-kr-tab="other">Other</button><button data-kr-search>Search</button><div class="kr-toolbar"><button data-kr-refresh>Refresh</button><button data-kr-export>CSV</button></div></div></div>',{url:'https://isolated.invalid/'});
  const names=['window','document','localStorage','fetch','alert','URL'],saved=new Map(names.map(name=>[name,Object.getOwnPropertyDescriptor(globalThis,name)]));
  for(const name of names)Object.defineProperty(globalThis,name,{configurable:true,writable:true,value:dom.window[name]});
- let mutate=x=>x,delay=false,blob,download;const calls=[],pending=[];
+ let mutate=x=>x,delay=false,blob,download;const calls=[],pending=[],revoked=[];
+ // Own every timer scheduled by this fixture. In particular, the real CSV
+ // exporter revokes its object URL later: run that callback while its URL
+ // realm still exists, before restoring globals or starting another fixture.
+ const originalSetTimeout=globalThis.setTimeout,originalClearTimeout=globalThis.clearTimeout,timers=new Map();
+ globalThis.setTimeout=(callback,ms,...args)=>{
+  const handle=originalSetTimeout(()=>{timers.delete(handle);callback.apply(handle,args);},ms);
+  timers.set(handle,{callback,args});return handle;
+ };
+ globalThis.clearTimeout=handle=>{timers.delete(handle);originalClearTimeout(handle);};
+ const drainTimers=()=>{for(const[handle,{callback,args}]of timers){originalClearTimeout(handle);timers.delete(handle);callback.apply(handle,args);}};
  globalThis.fetch=async(path,options)=>{const url=new URL(path,'https://isolated.invalid');calls.push({url,options});const data=mutate(fixture(url));if(delay)await new Promise(resolve=>pending.push(resolve));return{ok:true,json:async()=>data};};
- globalThis.alert=()=>assert.fail('unexpected alert');URL.createObjectURL=value=>{blob=value;return'blob:isolated';};URL.revokeObjectURL=()=>{};dom.window.HTMLAnchorElement.prototype.click=function(){download=this.download;};
+ globalThis.alert=()=>assert.fail('unexpected alert');URL.createObjectURL=value=>{blob=value;return'blob:isolated';};URL.revokeObjectURL=value=>revoked.push(value);dom.window.HTMLAnchorElement.prototype.click=function(){download=this.download;};
  const tick=async()=>{for(let i=0;i<3;i++)await new Promise(resolve=>setTimeout(resolve,0));};
  const click=async selector=>{document.querySelector(selector).click();await tick();};
  const change=async(selector,value)=>{const el=document.querySelector(selector);if(el.type==='checkbox')el.checked=value;else el.value=value;el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));await tick();};
@@ -86,7 +96,13 @@ test('mounted actual sales installer makes ended Athens comparison explicit and 
   await t.test('turning Athens off disables comparison and retains explicit old default',async()=>{
    await click('[data-kr-tab="sales-stats"]');await change('[data-kr-athens]',false);assert.equal(comparison(),null);assert.equal(document.querySelector('[data-kr-compare]').checked,false);assert.equal(document.querySelector('[data-kr-compare]').disabled,true);assert.equal(document.querySelector('[data-kr-compare-from]').disabled,true);assert.equal(calls.at(-1).url.searchParams.has('compareFrom'),false);assert.equal(calls.at(-1).url.searchParams.has('compareTo'),false);assert.equal(calls.at(-1).url.searchParams.has('timeZone'),false);
   });
- }finally{for(const done of pending)done();dom.window.close();for(const[name,descriptor]of saved)descriptor?Object.defineProperty(globalThis,name,descriptor):delete globalThis[name];}
+  await t.test('CSV cleanup callback executes once before URL and timer globals are restored',()=>{
+   drainTimers();assert.deepEqual(revoked,['blob:isolated']);assert.equal(timers.size,0);
+  });
+ }finally{
+  try{for(const done of pending)done();drainTimers();}
+  finally{globalThis.setTimeout=originalSetTimeout;globalThis.clearTimeout=originalClearTimeout;dom.window.close();for(const[name,descriptor]of saved)descriptor?Object.defineProperty(globalThis,name,descriptor):delete globalThis[name];}
+ }
 });
 
 test('actual comparison renderer accepts the canonical 10000-row reduce noise without relaxing one-cent agreement',()=>{
