@@ -26,7 +26,7 @@ test('executor requires a server manifest/recovery adapter and rejects unauthori
  assert.throws(()=>createLifecycleExecutionCore(manifest),/restore verification adapter/);
  assert.throws(()=>createLifecycleExecutionCore({...manifest,tables:[]},{persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)}));
  const core=createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery:async()=>{},sourceRevision:'1'.repeat(40)}),db={$transaction(){throw Error('unexpected database access')}};
- for(const user of [null,{id:'owner',role:'OWNER'},{id:'fake',role:'SUPER_ADMIN'}])for(const method of ['install','prepare','execute','abort'])await assert.rejects(core[method](db,user,scope,'RESET'),e=>e.status===403);
+ for(const user of [null,{id:'owner',role:'OWNER'},{id:'fake',role:'SUPER_ADMIN'}])for(const method of ['install','prepare','execute','abort','beginDrain'])await assert.rejects(core[method](db,user,scope,'RESET'),e=>e.status===403);
  await assert.rejects(core.prepare(db,actor,scope,'OTHER'),e=>e.status===400);
  await assert.rejects(core.execute(db,actor,{...scope,operationId:'not-a-uuid',snapshotHash:'a'.repeat(64)}),e=>e.status===400);
 });
@@ -293,5 +293,40 @@ test('native declared secondary FK fences a sibling insert racing the frozen par
   const before=await f.snapshot();await f.core.execute(f.db,actor,{...scope,...prep});const after=await f.snapshot();
   assert.deepEqual(after.ReferenceHolder,before.ReferenceHolder.filter(r=>JSON.parse(r.row).storeId==='sibling'));
   assert.deepEqual(after.StoreInstallationTerminal,before.StoreInstallationTerminal);
+ }finally{await f.close()}
+});
+
+const drainManifest={...manifest,streaming:true,reviewedColumns:[...manifest.reviewedColumns,'CloudDevice.metadata'],tables:[...manifest.tables,{name:'CloudDevice',owner:{kind:'DIRECT'},reset:'KEEP'}]};
+async function drainFixture(){return fixture({extraManifest:drainManifest,extraDdl:s=>[`CREATE TABLE "${s}"."CloudDevice"("id" text PRIMARY KEY,"companyId" text NOT NULL,"storeId" text NOT NULL REFERENCES "${s}"."Store"("id"),"status" text,"lastSeenAt" timestamptz,"metadata" jsonb)`],populate:db=>db.$executeRawUnsafe(`INSERT INTO "CloudDevice" VALUES('writer','company','target','ACTIVE',NOW(),'{"binding":"PRIVATE PRESERVED"}'),('other-writer','company','sibling','ACTIVE',NOW(),'{}')`)})}
+test('native RESET drain freezes new target work, preserves both registers and waits for connector quiet before preparing or executing',{skip:!isolated},async()=>{
+ const f=await drainFixture();try{
+  await f.core.install(f.db,actor,scope);const before=await f.snapshot(),drain=await f.core.beginDrain(f.db,actor,scope,'RESET');assert.equal(drain.state,'DRAINING');assert.equal(drain.executionAvailable,false);assert.deepEqual(await f.snapshot(),before);assert.equal(f.proofCalls(),0);
+  await assert.rejects(f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('busy','company','target',1)`),matches(/STORE_LIFECYCLE_MAINTENANCE/));
+  await f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('sibling-live','company','sibling',1)`);
+  await assert.rejects(f.core.prepare(f.db,actor,scope,'RESET'),/maintenance/);
+  await assert.rejects(f.core.prepare(f.db,actor,scope,'RESET',{drainOperationId:randomUUID()}),/Drain operation/);
+  await assert.rejects(f.core.prepare(f.db,actor,scope,'RESET',{drainOperationId:drain.operationId}),/Active shift, operator, Writer/);
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT "state" FROM "StoreLifecycleExecution" WHERE "id"=$1`,drain.operationId))[0].state,'DRAINING');assert.equal(f.proofCalls(),0);
+  const draining=(await f.db.$queryRawUnsafe(`SELECT "snapshotHash" FROM "StoreLifecycleExecution" WHERE "id"=$1`,drain.operationId))[0];
+  await assert.rejects(f.core.execute(f.db,actor,{...scope,...drain,snapshotHash:draining.snapshotHash}),/expired or unavailable/);
+  // Fixture-only simulation of passage of time; production must observe real quiet.
+  await f.db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_operation',$1,true)`,drain.operationId);await tx.$executeRawUnsafe(`UPDATE "CloudDevice" SET "lastSeenAt"=NOW()-INTERVAL '2 minutes' WHERE "id"='writer'`)});
+  const prepared=await f.core.prepare(f.db,actor,scope,'RESET',{drainOperationId:drain.operationId});assert.equal(prepared.operationId,drain.operationId);
+  const beforeExecution=await f.snapshot();await f.core.execute(f.db,actor,{...scope,...prepared});const after=await f.snapshot();assert.equal(f.proofCalls(),1);
+  for(const name of ['Store','CloudDevice','StoreInstallationTerminal','StoreFiscalDevice','StoreEftposDevice','StoreRbsInstallationSettings'])assert.deepEqual(after[name],beforeExecution[name]);
+  assert.ok(after.Sale.every(row=>JSON.parse(row.row).storeId!=='target'));assert.ok(after.Sale.some(row=>JSON.parse(row.row).id==='sibling-live'));
+ }finally{await f.close()}
+});
+test('native an unexecuted drain can be explicitly aborted without deletion or epoch upgrade; expired or changed source drains cannot prepare',{skip:!isolated},async()=>{
+ const f=await drainFixture();try{
+  await f.core.install(f.db,actor,scope);const before=await f.snapshot(),drain=await f.core.beginDrain(f.db,actor,scope,'RESET');
+  await assert.rejects(f.core.abort(f.db,actor,{...scope,storeId:'sibling',operationId:drain.operationId}),/unexecuted/);
+  const changed=createLifecycleExecutionCore(drainManifest,{persistAndVerifyRecovery:async()=>assert.fail('unexpected recovery'),sourceRevision:'2'.repeat(40)});
+  await assert.rejects(changed.prepare(f.db,actor,scope,'RESET',{drainOperationId:drain.operationId}),/Drain operation/);
+  await f.db.$executeRawUnsafe(`UPDATE "StoreLifecycleExecution" SET "expiresAt"=NOW()-INTERVAL '1 second' WHERE "id"=$1`,drain.operationId);
+  await assert.rejects(f.core.prepare(f.db,actor,scope,'RESET',{drainOperationId:drain.operationId}),/Drain operation/);
+  await f.core.abort(f.db,actor,{...scope,operationId:drain.operationId});assert.deepEqual(await f.snapshot(),before);assert.equal(f.proofCalls(),0);
+  assert.deepEqual((await f.db.$queryRawUnsafe(`SELECT "generation"::text AS generation,"maintenance","operationId" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0],{generation:'0',maintenance:false,operationId:null});
+  await f.db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('resumed','company','target',1)`);
  }finally{await f.close()}
 });

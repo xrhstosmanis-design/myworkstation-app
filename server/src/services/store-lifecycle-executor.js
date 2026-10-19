@@ -20,6 +20,7 @@ const applicationEdges=(plan,schema)=>plan.ordered.flatMap(n=>[
  ...(n.references||[]).map(r=>({...r,owned:false}))
 ].map(r=>({child:n.name,parent:r.parent,childSchema:schema,parentSchema:schema,local:r.columns.map(p=>p[0]),remote:r.columns.map(p=>p[1]),applicationOwnership:r.owned,applicationReference:!r.owned,match:r.match||{}})));
 const freeze=value=>{if(value&&typeof value==='object'){Object.freeze(value);for(const v of Object.values(value))freeze(v)}return value};
+const drainFingerprint=(plan,scope,mode,operationId)=>hash({phase:'DRAINING',operationId,companyId:scope.companyId,storeId:scope.storeId,mode,planHash:plan.planHash,sourceRevision:plan.sourceRevision});
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 function planFor(manifest){
  if(!manifest?.id||!Array.isArray(manifest.tables)||manifest.tables.length<1||manifest.tables.length>300)fail('A reviewed server manifest is required.');
@@ -148,14 +149,17 @@ async function* scopedRows(tx,plan,schema,scope,node,meta){
  }
 }
 const tableCount=table=>Array.isArray(table.rows)?table.rows.length:table.rowCount;
-async function capture(tx,plan,schema,scope,mode){
- const meta=await validateDatabase(tx,plan,schema),tables=[];let sourceBytes=0,totalRows=0;
+async function assertQuiescent(tx,plan,schema,scope,meta,{connectors=true}={}){
  for(const [name,condition,required] of [
  ['CashShiftSession',`"status"='OPEN'`,['status']],
  ['StoreOperatorSession',`"revokedAt" IS NULL AND "expiresAt">NOW()`,['revokedAt','expiresAt']],
  ['RbsCapDriverV1Request',`"status" NOT IN ('DECLINED','SALE_COMMITTED')`,['status']],
  ['CloudDevice',`"status"='ACTIVE' AND "lastSeenAt">NOW()-INTERVAL '60 seconds'`,['status','lastSeenAt']]
- ])if(plan.nodes.has(name)){if(required.some(c=>!meta.columns.get(name).has(c)))fail('Busy-work guard schema changed.');if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(name)} t WHERE (${predicate(plan,schema,plan.nodes.get(name),'t')}) AND (${condition}) LIMIT 1`,scope.storeId)).length)fail('Active shift, operator, Writer or fiscal work blocks maintenance.');}
+ ])if(plan.nodes.has(name)&&(connectors||name!=='CloudDevice')){if(required.some(c=>!meta.columns.get(name).has(c)))fail('Busy-work guard schema changed.');if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(name)} t WHERE (${predicate(plan,schema,plan.nodes.get(name),'t')}) AND (${condition}) LIMIT 1`,scope.storeId)).length)fail('Active shift, operator, Writer or fiscal work blocks maintenance.');}
+}
+async function capture(tx,plan,schema,scope,mode){
+ const meta=await validateDatabase(tx,plan,schema),tables=[];let sourceBytes=0,totalRows=0;
+ await assertQuiescent(tx,plan,schema,scope,meta);
  for(const node of plan.ordered){
   const where=predicate(plan,schema,node,'t');
   const cols=meta.columns.get(node.name),scopeChecks=[];
@@ -216,17 +220,30 @@ export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,
    const enrolled=(await tx.$queryRawUnsafe(`SELECT "companyId","planHash" FROM ${q(schema)}."StoreLifecycleFence" WHERE "storeId"=$1`,scope.storeId))[0];if(enrolled.companyId!==scope.companyId||enrolled.planHash!==plan.planHash)fail('Guard enrollment differs.');
    return {installed:true,planHash:plan.planHash};
   })},
-  async prepare(db,actor,scope,mode){requireLifecycleAdmin(actor);if(!['RESET','DELETE'].includes(mode))fail('Explicit mode required.',400);return transaction(db,async tx=>{
+  async beginDrain(db,actor,scope,mode){requireLifecycleAdmin(actor);if(mode!=='RESET')fail('Explicit RESET drain required.',400);return transaction(db,async tx=>{
    const schema=await schemaFor(tx);if(!(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."Store" WHERE "id"=$1 AND "companyId"=$2`,scope.storeId,scope.companyId)).length)fail('Store not found in selected company.',404);
    const fence=(await tx.$queryRawUnsafe(`SELECT * FROM ${q(schema)}."StoreLifecycleFence" WHERE "storeId"=$1 FOR UPDATE`,scope.storeId))[0];if(!fence||fence.companyId!==scope.companyId||fence.retired||fence.maintenance||fence.planHash!==plan.planHash)fail('Store maintenance cannot be acquired.');
-   const operationId=randomUUID();await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleFence" SET "maintenance"=true,"operationId"=$2 WHERE "storeId"=$1`,scope.storeId,operationId);
+   const meta=await validateDatabase(tx,plan,schema);await assertQuiescent(tx,plan,schema,scope,meta,{connectors:false});
+   const operationId=randomUUID(),snapshotHash=drainFingerprint(plan,scope,mode,operationId);
+   await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleFence" SET "maintenance"=true,"operationId"=$2 WHERE "storeId"=$1`,scope.storeId,operationId);
+   await tx.$executeRawUnsafe(`INSERT INTO ${q(schema)}."StoreLifecycleExecution" ("id","companyId","storeId","mode","planHash","snapshotHash","state","expiresAt") VALUES($1,$2,$3,$4,$5,$6,'DRAINING',NOW()+INTERVAL '30 minutes')`,operationId,scope.companyId,scope.storeId,mode,plan.planHash,snapshotHash);
+   return {operationId,mode,state:'DRAINING',maintenance:true,executionAvailable:false};
+  })},
+  async prepare(db,actor,scope,mode,{drainOperationId}={}){requireLifecycleAdmin(actor);if(!['RESET','DELETE'].includes(mode))fail('Explicit mode required.',400);if(drainOperationId!==undefined&&!uuid.test(drainOperationId||''))fail('Exact drain operation required.',400);return transaction(db,async tx=>{
+   const schema=await schemaFor(tx);
+   const drain=drainOperationId?(await tx.$queryRawUnsafe(`SELECT *,"expiresAt">NOW() AS fresh FROM ${q(schema)}."StoreLifecycleExecution" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3 FOR UPDATE`,drainOperationId,scope.companyId,scope.storeId))[0]:null;
+   if(drainOperationId&&(!drain||drain.state!=='DRAINING'||!drain.fresh||drain.mode!==mode||drain.planHash!==plan.planHash||drain.snapshotHash!==drainFingerprint(plan,scope,mode,drainOperationId)))fail('Drain operation expired or differs.');
+   if(!(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."Store" WHERE "id"=$1 AND "companyId"=$2`,scope.storeId,scope.companyId)).length)fail('Store not found in selected company.',404);
+   const fence=(await tx.$queryRawUnsafe(`SELECT * FROM ${q(schema)}."StoreLifecycleFence" WHERE "storeId"=$1 FOR UPDATE`,scope.storeId))[0];if(!fence||fence.companyId!==scope.companyId||fence.retired||fence.planHash!==plan.planHash||(drainOperationId?(!fence.maintenance||fence.operationId!==drainOperationId):fence.maintenance))fail('Store maintenance cannot be acquired.');
+   const operationId=drainOperationId||randomUUID();await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleFence" SET "maintenance"=true,"operationId"=$2 WHERE "storeId"=$1`,scope.storeId,operationId);
    for(const node of [...plan.ordered].sort((a,b)=>a.name.localeCompare(b.name)))await tx.$executeRawUnsafe(`LOCK TABLE ${q(schema)}.${q(node.name)} IN ROW EXCLUSIVE MODE`);
    const snapshot=await capture(tx,plan,schema,scope,mode);
-   await tx.$executeRawUnsafe(`INSERT INTO ${q(schema)}."StoreLifecycleExecution" ("id","companyId","storeId","mode","planHash","snapshotHash","state","expiresAt") VALUES($1,$2,$3,$4,$5,$6,'PREPARED',NOW()+INTERVAL '10 minutes')`,operationId,scope.companyId,scope.storeId,mode,plan.planHash,snapshot.snapshotHash);
+   if(drainOperationId)await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleExecution" SET "snapshotHash"=$2,"state"='PREPARED',"expiresAt"=NOW()+INTERVAL '10 minutes' WHERE "id"=$1`,operationId,snapshot.snapshotHash);
+   else await tx.$executeRawUnsafe(`INSERT INTO ${q(schema)}."StoreLifecycleExecution" ("id","companyId","storeId","mode","planHash","snapshotHash","state","expiresAt") VALUES($1,$2,$3,$4,$5,$6,'PREPARED',NOW()+INTERVAL '10 minutes')`,operationId,scope.companyId,scope.storeId,mode,plan.planHash,snapshot.snapshotHash);
    return {operationId,snapshotHash:snapshot.snapshotHash,mode,counts:snapshot.tables.map(t=>({table:t.name,count:tableCount(t),action:t.action})),maintenance:true};
   })},
   async abort(db,actor,{companyId,storeId,operationId}){requireLifecycleAdmin(actor);if(!uuid.test(operationId||''))fail('Exact prepared operation required.',400);return transaction(db,async tx=>{
-   const schema=await schemaFor(tx),run=(await tx.$queryRawUnsafe(`SELECT "state" FROM ${q(schema)}."StoreLifecycleExecution" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3 FOR UPDATE`,operationId,companyId,storeId))[0];if(!run||run.state!=='PREPARED')fail('Only an unexecuted preparation can be aborted.');
+   const schema=await schemaFor(tx),run=(await tx.$queryRawUnsafe(`SELECT "state" FROM ${q(schema)}."StoreLifecycleExecution" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3 FOR UPDATE`,operationId,companyId,storeId))[0];if(!run||!['DRAINING','PREPARED'].includes(run.state))fail('Only an unexecuted preparation can be aborted.');
    const fence=(await tx.$queryRawUnsafe(`SELECT "operationId","companyId" FROM ${q(schema)}."StoreLifecycleFence" WHERE "storeId"=$1 FOR UPDATE`,storeId))[0];if(!fence||fence.companyId!==companyId||fence.operationId!==operationId)fail('Maintenance fence differs.');
    await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleExecution" SET "state"='ABORTED' WHERE "id"=$1`,operationId);await tx.$executeRawUnsafe(`UPDATE ${q(schema)}."StoreLifecycleFence" SET "maintenance"=false,"operationId"=NULL WHERE "storeId"=$1`,storeId);return {aborted:true,operationId};
   })},
