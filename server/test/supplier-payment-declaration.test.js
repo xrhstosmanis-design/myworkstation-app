@@ -15,6 +15,12 @@ test('no-proof supplier settlement requires explicit boolean acknowledgement and
  for(const value of [false,undefined,null,'true',1])assert.equal(schema.safeParse(request({noDocumentAcknowledged:value})).success,false);
  for(const evidenceMode of ['DOCUMENT',undefined,'unknown'])assert.equal(schema.safeParse(request({evidenceMode})).success,false);
  assert.equal(schema.safeParse(request({attachment:image})).success,false);
+ assert.equal(schema.safeParse(request({totalAmount:700,advanceAcknowledged:true})).success,true);
+ assert.equal(schema.safeParse(request({totalAmount:700})).success,false);
+ assert.equal(schema.safeParse(request({totalAmount:5,advanceAcknowledged:true})).success,false);
+ assert.equal(schema.safeParse(request({totalAmount:6.001,advanceAcknowledged:true})).success,false);
+ assert.equal(schema.safeParse(request({allocations:[],totalAmount:7,advanceAcknowledged:true})).success,true);
+ assert.equal(schema.safeParse(request({allocations:[]})).success,false);
  const legacy=request({attachment:image});delete legacy.evidenceMode;delete legacy.noDocumentAcknowledged;
  assert.equal(schema.parse(legacy).evidenceMode,'DOCUMENT');
 });
@@ -48,9 +54,10 @@ test('native supplier declaration atomically persists pending payment, audit and
  try{
   await db.$executeRawUnsafe('CREATE TABLE "Supplier" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"active" BOOLEAN DEFAULT true)');
   await db.$executeRawUnsafe('CREATE TABLE "PurchaseDocument" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"supplierId" TEXT,"documentNumber" TEXT,"totalGross" NUMERIC(14,2),"status" TEXT,"settlementMode" TEXT)');
+  await db.$executeRawUnsafe('ALTER TABLE "PurchaseDocument" ADD COLUMN "storeId" TEXT DEFAULT \'store\'');
   for(const sql of tableStatements)await db.$executeRawUnsafe(sql);
   await db.$executeRaw`INSERT INTO "Supplier" ("id","companyId","name") VALUES ('supplier','company','VIRTUAL SUPPLIER'),('foreign','foreign','FOREIGN')`;
-  await db.$executeRaw`INSERT INTO "PurchaseDocument" VALUES ('doc','company','supplier','VIRTUAL-001',10,'DRAFT','CREDIT'),('foreign','foreign','foreign','FOREIGN',10,'DRAFT','CREDIT')`;
+  await db.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","supplierId","documentNumber","totalGross","status","settlementMode") VALUES ('doc','company','supplier','VIRTUAL-001',10,'DRAFT','CREDIT'),('foreign','foreign','foreign','FOREIGN',10,'DRAFT','CREDIT')`;
   await db.$executeRaw`INSERT INTO "CashShiftSession" ("id","companyId","storeId","openedBy","terminalPos") VALUES ('shift','company','store','actor','MAIN')`;
   const reset=async()=>{auditFail=false;await db.$executeRawUnsafe('TRUNCATE "SupplierPaymentAllocation","SupplierPaymentSettlement","StoreTransaction","StoreOperatorAudit","BankLedgerEntry" CASCADE');await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='OPEN'`;};
   const state=async()=>({payments:await db.$queryRaw`SELECT * FROM "StoreTransaction"`,settlements:await db.$queryRaw`SELECT * FROM "SupplierPaymentSettlement"`,allocations:await db.$queryRaw`SELECT * FROM "SupplierPaymentAllocation"`,events:await db.$queryRaw`SELECT * FROM "StoreOperatorAudit"`,bank:await db.$queryRaw`SELECT * FROM "BankLedgerEntry"`});
@@ -62,6 +69,9 @@ test('native supplier declaration atomically persists pending payment, audit and
   await reset();auditFail=true;assert.equal((await run(request())).status,500);s=await state();assert.equal(s.payments.length+s.settlements.length+s.allocations.length+s.events.length,0);
   await reset();await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='CLOSED'`;assert.equal((await run(request())).status,409);assert.equal((await state()).payments.length,0);
   await reset();assert.equal((await run(request({allocations:[{purchaseDocumentId:'foreign',amount:6}]}))).status,409);assert.equal((await run(request({allocations:[{purchaseDocumentId:'doc',amount:11}]}))).status,409);
+  await reset();const advance=await run(request({totalAmount:700,advanceAcknowledged:true}));assert.equal(advance.status,201);s=await state();assert.equal(Number(s.payments[0].amount),700);assert.equal(Number(s.allocations[0].amount),6);assert.equal(advance.data.advanceAmount,694);assert.equal(s.events[0].details.advanceAmount,694);assert.equal(s.settlements[0].status,'PENDING_REVIEW');
+  await reset();const pure=await run(request({allocations:[],totalAmount:6.17,advanceAcknowledged:true}));assert.equal(pure.status,201);s=await state();assert.equal(s.allocations.length,0);assert.equal(Number(s.payments[0].amount),6.17);
+  await reset();await db.$executeRaw`UPDATE "PurchaseDocument" SET "storeId"='foreign-store' WHERE "id"='doc'`;assert.equal((await run(request())).status,409);assert.equal((await state()).payments.length,0);await db.$executeRaw`UPDATE "PurchaseDocument" SET "storeId"='store' WHERE "id"='doc'`;
   const owner={...user,tokenType:'USER',role:'OWNER'};
   await reset();const bank=await run(request({paymentMethod:'BANK_TRANSFER'}),owner);assert.equal(bank.status,201);s=await state();assert.equal(s.settlements[0].status,'PENDING_REVIEW');assert.equal(s.payments[0].sessionId,null);assert.equal(s.bank[0].status,'PENDING_REVIEW');assert.equal(s.bank[0].attachmentData,null);assert.equal(Number(s.bank[0].amount),-6);
   await reset();const attached=request({evidenceMode:'DOCUMENT',noDocumentAcknowledged:false,attachment:image});assert.equal((await run(attached,owner)).status,201);s=await state();assert.equal(s.settlements[0].status,'CONFIRMED');assert.equal(s.payments[0].attachmentData,image.dataUrl);assert.equal(s.events[0].eventType,'SUPPLIER_SETTLEMENT_CONFIRMED');

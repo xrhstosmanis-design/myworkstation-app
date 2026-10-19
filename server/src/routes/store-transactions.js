@@ -1,3 +1,4 @@
+import {supplierAdvanceContext,associateExpenseAsAdvance,allocateSupplierAdvance} from "../lib/supplier-advance.js";
 import {supplierCreditCashContext,applySupplierCreditCash,assertCreditCashUnlinked} from "../lib/supplier-credit-cash.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import { Router } from "express";
@@ -297,14 +298,19 @@ const transactionSchema=z.object({
 const supplierSettlementSchema=z.object({
   supplierId:z.string().trim().min(1).max(180),
   paymentMethod:z.enum(["CASH_SHIFT","CORPORATE_CARD","BANK_TRANSFER","EMPLOYEE_REIMBURSEMENT"]),
+  totalAmount:z.coerce.number().finite().positive().max(999999999).refine(v=>Math.abs(v*100-Math.round(v*100))<0.00001).optional(),
+  advanceAcknowledged:z.boolean().optional().default(false),
   paidAt:z.coerce.date(),
   note:z.string().trim().max(500).optional().nullable(),
   idempotencyKey:z.string().trim().min(8).max(180),
   evidenceMode:z.enum(["DOCUMENT","NO_DOCUMENT"]).optional().default("DOCUMENT"),
   noDocumentAcknowledged:z.boolean().optional().default(false),
   attachment:z.object({dataUrl:z.string().max(1800000),filename:z.string().trim().min(1).max(180)}).optional().nullable(),
-  allocations:z.array(z.object({purchaseDocumentId:z.string().trim().min(1).max(180),amount:z.coerce.number().positive().max(999999999)})).min(1).max(80)
+  allocations:z.array(z.object({purchaseDocumentId:z.string().trim().min(1).max(180),amount:z.coerce.number().finite().positive().max(999999999).refine(v=>Math.abs(v*100-Math.round(v*100))<0.00001)})).max(80)
 }).superRefine((body,ctx)=>{
+  const allocated=body.allocations.reduce((sum,row)=>sum+Math.round(row.amount*100),0),paid=body.totalAmount===undefined?allocated:Math.round(body.totalAmount*100);
+  if(paid<=0||paid<allocated)ctx.addIssue({code:z.ZodIssueCode.custom,path:["totalAmount"],message:"Το ποσό πληρωμής πρέπει να καλύπτει τις επιλεγμένες κατανομές."});
+  if(paid>allocated&&body.advanceAcknowledged!==true)ctx.addIssue({code:z.ZodIssueCode.custom,path:["advanceAcknowledged"],message:"Επιβεβαίωσε ότι η διαφορά μένει ως έναντι στον προμηθευτή."});
   if(body.evidenceMode==="NO_DOCUMENT"){
     if(body.attachment)ctx.addIssue({code:z.ZodIssueCode.custom,path:["attachment"],message:"Η δήλωση χωρίς αποδεικτικό δεν μπορεί να περιλαμβάνει αποδεικτικό."});
     if(body.noDocumentAcknowledged!==true)ctx.addIssue({code:z.ZodIssueCode.custom,path:["noDocumentAcknowledged"],message:"Αποδέξου ρητά τη δήλωση ευθύνης για την πληρωμή χωρίς αποδεικτικό."});
@@ -507,23 +513,35 @@ router.get("/stores/:storeId/supplier-open-invoices",route(async(req,res)=>{
     LEFT JOIN "SupplierPaymentAllocation" a ON a."purchaseDocumentId"=d."id" AND a."companyId"=d."companyId"
     LEFT JOIN "SupplierPaymentSettlement" ss ON ss."id"=a."settlementId" AND ss."companyId"=d."companyId"
     LEFT JOIN "StoreTransaction" tx ON tx."id"=ss."transactionId" AND tx."companyId"=d."companyId"
-    WHERE d."companyId"=${req.user.companyId} AND d."supplierId"=${supplierId}
+    WHERE d."companyId"=${req.user.companyId} AND d."storeId"=${req.params.storeId} AND d."supplierId"=${supplierId}
       AND d."status" IN ('DRAFT','APPROVED') AND COALESCE(d."settlementMode",'')='CREDIT'
     GROUP BY d."id",d."documentNumber",d."documentDate",d."totalGross",d."status",st."name"
     HAVING d."totalGross">COALESCE(SUM(a."amount") FILTER (WHERE ss."status"<>'CANCELLED' AND tx."reversedAt" IS NULL),0)
     ORDER BY d."documentDate" ASC,d."id" ASC
   `;
-  res.json({supplier:{id:supplier[0].id,name:supplier[0].name},items:rows.map(row=>({
+  const advanceData=await availableSupplierAdvances(req.user.companyId,req.params.storeId,supplierId);
+  res.json({...advanceData,supplier:{id:supplier[0].id,name:supplier[0].name},items:rows.map(row=>({
     ...row,totalGross:Number(row.totalGross||0),reservedAmount:Number(row.reservedAmount||0),
     outstandingAmount:Number((Number(row.totalGross||0)-Number(row.reservedAmount||0)).toFixed(2))
   }))});
+}));
+
+async function availableSupplierAdvances(companyId,storeId,supplierId){
+  const rows=await prisma.$queryRaw`SELECT ss."id",ss."paidAt",t."amount",t."amount"-COALESCE(SUM(a."amount"),0) AS "availableAmount" FROM "SupplierPaymentSettlement" ss JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId" AND t."storeId"=ss."storeId" LEFT JOIN "SupplierPaymentAllocation" a ON a."settlementId"=ss."id" AND a."companyId"=ss."companyId" WHERE ss."companyId"=${companyId} AND ss."storeId"=${storeId} AND ss."supplierId"=${supplierId} AND ss."status"='CONFIRMED' AND t."type"='SUPPLIER_PAYMENT' AND t."supplierId"=ss."supplierId" AND t."reversedAt" IS NULL AND EXISTS (SELECT 1 FROM "StoreOperatorAudit" audit WHERE audit."companyId"=ss."companyId" AND audit."storeId"=ss."storeId" AND audit."details"->>'transactionId'=t."id" AND (audit."eventType"='OTHER_EXPENSE_SUPPLIER_ADVANCE' OR (audit."eventType" IN ('SUPPLIER_SETTLEMENT_NO_DOCUMENT_DECLARED','SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_ADVANCE_DECLARED') AND audit."details"->>'advanceAcknowledged'='true'))) GROUP BY ss."id",t."id" HAVING t."amount">COALESCE(SUM(a."amount"),0) ORDER BY ss."paidAt",ss."id" LIMIT 501`;
+  return {advances:rows.slice(0,500).map(r=>({...r,amount:Number(r.amount),availableAmount:Number(r.availableAmount)})),hasMoreAdvances:rows.length>500};
+}
+
+router.post("/stores/:storeId/supplier-advances/:settlementId/allocate",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);await ownedStore(req.params.storeId,req.user.companyId);
+  res.json(await allocateSupplierAdvance(prisma,{companyId:req.user.companyId,storeId:req.params.storeId,settlementId:req.params.settlementId,user:req.user},req.body));
 }));
 
 router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId),body=supplierSettlementSchema.parse(req.body||{});
   const attachment=parseAttachment(body.attachment),noDocument=body.evidenceMode==="NO_DOCUMENT";
-  const total=Number(body.allocations.reduce((sum,row)=>sum+Number(row.amount||0),0).toFixed(2));
+  const allocatedTotal=body.allocations.reduce((sum,row)=>sum+Math.round(row.amount*100),0)/100;
+  const total=body.totalAmount??allocatedTotal,advanceAmount=Number((total-allocatedTotal).toFixed(2));
   const proof=attachment?.mimeType==="application/pdf"
     ?await readSupplierProofPdf(Buffer.from(attachment.dataUrl.split(",")[1],"base64")):null;
   const ownerPayment=req.user.tokenType!=="STORE_OPERATOR"&&(req.user.role==="OWNER"||isSuperAdminReview(req));
@@ -540,6 +558,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   // A responsibility statement is not proof and always waits for human review.
   const initialStatus=ownerPayment&&!noDocument?"CONFIRMED":"PENDING_REVIEW";
   const result=await prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${transactionId},0))::text AS locked`;
     const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!suppliers[0]){const error=new Error("Δεν βρέθηκε ο προμηθευτής.");error.status=404;throw error}
     const bankAccount=["CORPORATE_CARD","BANK_TRANSFER"].includes(body.paymentMethod)
@@ -548,7 +567,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
     const documentIds=body.allocations.map(row=>row.purchaseDocumentId);
     const documents=await tx.$queryRaw`
       SELECT "id","documentNumber","totalGross" FROM "PurchaseDocument"
-      WHERE "companyId"=${req.user.companyId} AND "supplierId"=${body.supplierId}
+      WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "supplierId"=${body.supplierId}
         AND "id"=ANY(${documentIds}::text[]) AND "status" IN ('DRAFT','APPROVED')
         AND COALESCE("settlementMode",'')='CREDIT'
       FOR UPDATE
@@ -581,7 +600,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
     const existing=await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "id"=${transactionId} AND "companyId"=${req.user.companyId} LIMIT 1`;
     if(existing[0]){const error=new Error("Η ίδια πληρωμή έχει ήδη καταχωρηθεί.");error.status=409;throw error}
     const declaration=noDocument?supplierSettlementResponsibility(body,suppliers[0].name,total):null;
-    const originalDescription=`Ετεροχρονισμένη πληρωμή ${suppliers[0].name} · ${body.allocations.length} τιμολόγιο${body.allocations.length===1?"":"α"}`;
+    const originalDescription=`Ετεροχρονισμένη πληρωμή ${suppliers[0].name} · ${body.allocations.length} τιμολόγιο${body.allocations.length===1?"":"α"}${advanceAmount>0?` · Έναντι ${advanceAmount.toFixed(2)} €`:""}`;
     const description=declaration?`ΧΩΡΙΣ ΑΠΟΔΕΙΚΤΙΚΟ — ${declaration} ${originalDescription}`:originalDescription;
     const settlementNote=declaration?`ΧΩΡΙΣ ΑΠΟΔΕΙΚΤΙΚΟ — ${declaration}${body.note?` Σημείωση: ${body.note}`:""}`:body.note||null;
     const transaction=await tx.$queryRaw`
@@ -600,16 +619,16 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
       INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName")
       VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${bankAccount.id},${body.paymentMethod},${-total},${initialStatus},${transactionId},${attachment?.dataUrl||null},${attachment?.mimeType||null},${attachment?.filename||null},${body.paidAt},${req.user.id},${actorName})
     `;
-    if(ownerPayment||noDocument){
+    if(ownerPayment||noDocument||advanceAmount>0){
       await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await tx.$executeRaw`
         INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
-        VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},${noDocument?"SUPPLIER_SETTLEMENT_NO_DOCUMENT_DECLARED":"SUPPLIER_SETTLEMENT_CONFIRMED"},${JSON.stringify({settlementId,transactionId,supplierId:body.supplierId,supplierName:suppliers[0].name,amount:total,allocations:body.allocations.map(row=>({...row,documentNumber:documents.find(document=>document.id===row.purchaseDocumentId)?.documentNumber||null})),status:initialStatus,evidenceMode:body.evidenceMode,responsibilityDeclaration:declaration,actorName,acceptedAt:noDocument?new Date().toISOString():null,paymentMethod:body.paymentMethod,note:noDocument?"Ρητή δήλωση χωρίς αποδεικτικό — προς έλεγχο.":"Αυτόματη επιβεβαίωση πληρωμής ιδιοκτήτη."})}::jsonb)
+        VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${req.user.operatorId||req.user.id},${req.user.id},${noDocument?"SUPPLIER_SETTLEMENT_NO_DOCUMENT_DECLARED":ownerPayment?"SUPPLIER_SETTLEMENT_CONFIRMED":"SUPPLIER_ADVANCE_DECLARED"},${JSON.stringify({settlementId,transactionId,supplierId:body.supplierId,supplierName:suppliers[0].name,amount:total,allocatedTotal,advanceAmount,advanceAcknowledged:body.advanceAcknowledged,allocations:body.allocations.map(row=>({...row,documentNumber:documents.find(document=>document.id===row.purchaseDocumentId)?.documentNumber||null})),status:initialStatus,evidenceMode:body.evidenceMode,responsibilityDeclaration:declaration,actorName,acceptedAt:noDocument?new Date().toISOString():null,paymentMethod:body.paymentMethod,note:noDocument?"Ρητή δήλωση χωρίς αποδεικτικό — προς έλεγχο.":ownerPayment?"Αυτόματη επιβεβαίωση πληρωμής ιδιοκτήτη.":"Ρητή καταχώριση έναντι — προς έλεγχο."})}::jsonb)
       `;
     }
     return {transaction:normalize(transaction[0]),supplier:suppliers[0],settlementId,bankAccount};
   });
-  res.status(201).json({...result,paymentSource,status:initialStatus,total,evidenceMode:body.evidenceMode});
+  res.status(201).json({...result,paymentSource,status:initialStatus,total,allocatedTotal,advanceAmount,evidenceMode:body.evidenceMode});
 }));
 
 function isSuperAdminReview(req){
@@ -732,7 +751,7 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
   if(filters.from&&filters.to&&filters.from>filters.to)return res.status(400).json({error:"Η ημερομηνία «Από» δεν μπορεί να είναι μετά την «Έως»."});
   const rows=await prisma.$queryRaw`
     SELECT ss."id",ss."status",ss."paymentMethod",ss."paidAt",ss."note",ss."createdAt",ss."createdByName",
-           t."id" AS "transactionId",t."amount",t."attachmentFilename",(t."attachmentData" IS NOT NULL) AS "hasAttachment",t."occurredAt",s."name" AS "supplierName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName",
+           t."id" AS "transactionId",t."amount",EXISTS (SELECT 1 FROM "StoreOperatorAudit" audit WHERE audit."companyId"=ss."companyId" AND audit."storeId"=ss."storeId" AND audit."details"->>'transactionId'=t."id" AND (audit."eventType"='OTHER_EXPENSE_SUPPLIER_ADVANCE' OR (audit."eventType" IN ('SUPPLIER_SETTLEMENT_NO_DOCUMENT_DECLARED','SUPPLIER_SETTLEMENT_CONFIRMED','SUPPLIER_ADVANCE_DECLARED') AND audit."details"->>'advanceAcknowledged'='true'))) AS "advanceDeclared",t."attachmentFilename",(t."attachmentData" IS NOT NULL) AS "hasAttachment",t."occurredAt",s."name" AS "supplierName",st."name" AS "storeName",c."name" AS "companyName",owner."fullName" AS "ownerName",
            COALESCE(json_agg(json_build_object('purchaseDocumentId',a."purchaseDocumentId",'amount',a."amount",'documentNumber',p."documentNumber") ORDER BY p."documentDate") FILTER (WHERE a."id" IS NOT NULL),'[]'::json) AS allocations
     FROM "SupplierPaymentSettlement" ss
     JOIN "StoreTransaction" t ON t."id"=ss."transactionId" AND t."companyId"=ss."companyId"
@@ -764,9 +783,9 @@ router.get("/supplier-settlements/review",requireSuperAdminSettlementReview,rout
     const checks=[];
     if(!row.hasAttachment)checks.push("Δεν υπάρχει αποδεικτικό πληρωμής.");
     else checks.push("Το περιεχόμενο του αποδεικτικού δεν έχει διαβαστεί: ελέγξτε ποσό, τρόπο πληρωμής και τιμολόγια πριν από επιβεβαίωση.");
-    if(!allocations.length)checks.push("Δεν έχει αντιστοιχιστεί τιμολόγιο ή παραστατικό.");
-    if(Math.abs(allocationTotal-amount)>.01)checks.push(`Το άθροισμα τιμολογίων (${allocationTotal.toFixed(2)} €) διαφέρει από την πληρωμή (${amount.toFixed(2)} €).`);
-    return {...row,amount,automaticCheck:{matched:checks.length===0,allocationTotal,checks}};
+    const advanceAmount=Number((amount-allocationTotal).toFixed(2));
+    if(advanceAmount<0||(advanceAmount>0&&!row.advanceDeclared))checks.push(`Το άθροισμα τιμολογίων (${allocationTotal.toFixed(2)} €) διαφέρει από την πληρωμή (${amount.toFixed(2)} €).`);
+    return {...row,amount,advanceAmount:row.advanceDeclared?Math.max(0,advanceAmount):0,automaticCheck:{matched:checks.length===0,allocationTotal,advanceAmount:row.advanceDeclared?Math.max(0,advanceAmount):0,checks}};
   });
   res.json({items,companies,stores});
 }));
@@ -873,6 +892,19 @@ router.get("/other-expenses/review",requireSuperAdminSettlementReview,route(asyn
     return {...item,amount,hasAttachment:Boolean(item.hasAttachment),automaticCheck:{matched:checks.length===0,checks}};
   });
   res.json({items:checkedItems,companies,stores});
+}));
+
+async function expenseAdvanceScope(req){
+  const companyId=reviewScopeCompanyId(req);
+  const rows=await prisma.$queryRaw`SELECT er."companyId",er."storeId",er."transactionId" FROM "OtherExpenseReview" er JOIN "Store" st ON st."id"=er."storeId" AND st."companyId"=er."companyId" WHERE er."id"=${req.params.reviewId} AND (${companyId}::text IS NULL OR er."companyId"=${companyId}) AND st."active"=true LIMIT 1`;
+  if(!rows[0]){const error=new Error("Δεν βρέθηκε το έξοδο στο ενεργό κατάστημα.");error.status=404;throw error}
+  return {...rows[0],user:req.user};
+}
+router.get("/other-expenses/:reviewId/supplier-advance",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const scope=await expenseAdvanceScope(req);res.json({...await supplierAdvanceContext(prisma,scope),companyId:scope.companyId});
+}));
+router.post("/other-expenses/:reviewId/supplier-advance",requireSuperAdminSettlementReview,route(async(req,res)=>{
+  const scope=await expenseAdvanceScope(req);res.json(await associateExpenseAsAdvance(prisma,scope,req.body));
 }));
 
 router.post("/other-expenses/:reviewId/review",requireSuperAdminSettlementReview,route(async(req,res)=>{
@@ -1185,3 +1217,4 @@ router.post("/:transactionId/reverse",route(async(req,res)=>{
 }));
 
 export default router;
+
