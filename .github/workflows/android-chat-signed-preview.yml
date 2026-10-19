@@ -1,0 +1,114 @@
+name: Android Chat stable signed preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: android-chat-stable-preview
+  cancel-in-progress: false
+jobs:
+  signed-preview:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Require successful full CI for this exact main revision
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner, repo, workflow_id: 'ci.yml', head_sha: context.sha, per_page: 100
+            });
+            let verified = false;
+            for (const run of runs.filter(r => r.head_sha === context.sha && r.conclusion === 'success'
+                && ['push', 'workflow_dispatch'].includes(r.event))) {
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                owner, repo, run_id: run.id, filter: 'latest', per_page: 100
+              });
+              if (jobs.some(j => j.name === 'build-and-test' && j.conclusion === 'success')) {
+                verified = true; break;
+              }
+            }
+            if (!verified) core.setFailed('Exact main full build-and-test CI has not succeeded; no key will be loaded.');
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          cache-disabled: true
+      - name: Install Android SDK
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Compile, unit tests and lint before accessing signing material
+        run: gradle --no-daemon -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+      - name: Enable emulator acceleration
+        run: sudo chmod 666 /dev/kvm
+      - name: Verify Android lifecycle and regression tests before signing
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          disable-animations: true
+          script: gradle --no-daemon -p android :app:connectedDebugAndroidTest
+      - name: Build with durable owner key and verify pinned certificate
+        env:
+          MW_CHAT_KEYSTORE_B64: ${{ secrets.MW_CHAT_KEYSTORE_B64 }}
+          MW_CHAT_STORE_PASSWORD: ${{ secrets.MW_CHAT_STORE_PASSWORD }}
+          MW_CHAT_KEY_ALIAS: ${{ secrets.MW_CHAT_KEY_ALIAS }}
+          MW_CHAT_KEY_PASSWORD: ${{ secrets.MW_CHAT_KEY_PASSWORD }}
+          MW_CHAT_CERT_SHA256: ${{ vars.MW_CHAT_CERT_SHA256 }}
+          SOURCE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          for name in MW_CHAT_KEYSTORE_B64 MW_CHAT_STORE_PASSWORD MW_CHAT_KEY_ALIAS MW_CHAT_KEY_PASSWORD MW_CHAT_CERT_SHA256; do
+            if [ -z "${!name:-}" ]; then
+              echo "Required stable signing configuration is missing; no candidate produced."
+              exit 1
+            fi
+          done
+          export MW_CHAT_SIGNING_STORE_FILE="$RUNNER_TEMP/mw-chat-stable-preview.jks"
+          trap 'rm -f "$MW_CHAT_SIGNING_STORE_FILE"' EXIT
+          printf '%s' "$MW_CHAT_KEYSTORE_B64" | base64 --decode > "$MW_CHAT_SIGNING_STORE_FILE"
+          unset MW_CHAT_KEYSTORE_B64
+          gradle --no-daemon -p android :app:clean :app:assembleDebug
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/mw-chat-cert.txt"
+          export APK
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re
+          cert_text = pathlib.Path(os.environ['RUNNER_TEMP'], 'mw-chat-cert.txt').read_text()
+          certs = re.findall(r'^Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]+)$', cert_text, re.M)
+          expected = re.sub(r'[:\s]', '', os.environ['MW_CHAT_CERT_SHA256']).lower()
+          if not re.fullmatch(r'[0-9a-f]{64}', expected) or len(certs) != 1 or certs[0].lower() != expected:
+              raise SystemExit('Signing certificate mismatch; no candidate published.')
+          apk = pathlib.Path(os.environ['APK']); data = apk.read_bytes()
+          target = pathlib.Path('signed-preview'); target.mkdir()
+          (target / 'MyWorkStation-Chat-Android-Stable-Preview.apk').write_bytes(data)
+          (target / 'receipt.json').write_text(json.dumps({
+              'sourceSha': os.environ['SOURCE_SHA'], 'package': 'gr.myworkstation.chat.preview',
+              'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data),
+              'certificateSha256': expected, 'status': 'TECHNICAL CANDIDATE; PHYSICAL ACCEPTANCE PENDING',
+              'publicDistributionChanged': False
+          }, indent=2) + '\n')
+          PY
+      - name: Remove temporary signing material
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/mw-chat-stable-preview.jks" "$RUNNER_TEMP/mw-chat-cert.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyWorkStation-Android-Stable-Preview
+          path: signed-preview/
+          if-no-files-found: error
