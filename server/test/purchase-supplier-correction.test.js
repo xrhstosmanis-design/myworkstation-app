@@ -47,6 +47,7 @@ test('native posted correction updates only associations, retains full history a
   }
   const audit=await f.db.$queryRawUnsafe(`SELECT * FROM "StoreOperatorAudit" WHERE "eventType"='PURCHASE_SUPPLIER_CORRECTED'`);assert.equal(audit.length,1);assert.deepEqual(audit[0].details.before.payment,beforePayment);assert.equal(audit[0].details.reason,request(p).reason);
   const posting=await registered('../src/routes/purchase-order-posting-guard.js',f.db);let error,result;await posting['PATCH /:orderId']({user:actor,params:{orderId:'pos'},body:{status:'FINAL'}},{json:r=>result=r,status:()=>({json:()=>{}})},e=>error=e);assert.ifError(error);assert.equal(result.idempotent,true);assert.deepEqual(await f.all(),after);
+  error=null;await posting['PATCH /:orderId']({user:actor,params:{orderId:'pos'},body:{status:'INVOICED',supplierId:'sup'}},{json:()=>{},status:()=>({json:()=>{}})},e=>error=e);assert.equal(error?.status,409);assert.deepEqual(await f.all(),after,'an old invoice-status request cannot overwrite the reviewed supplier');
  }finally{await f.close()}
 });
 test('native unpaid NEW and paid INVOICED correction retain original status without reopening or payment creation',{skip:!isolatedInvoiceDb()},async()=>{

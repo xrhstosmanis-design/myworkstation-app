@@ -1,3 +1,7 @@
+## Posted status-request supplier fence
+
+Causal compatibility review found that a FINAL-to-INVOICED status request carrying an old explicit supplier could bypass the generic metadata guard and overwrite a reviewed correction. Refuse a different explicit supplier on that existing FINAL transition; require the dedicated reviewed action. Normal status-only invoicing and own FINAL replay stay unchanged. Extend the actual registered posting-route native regression: after correction, an old INVOICED body with original supplier must409 and retain the complete after snapshot. No status/stock/money operation added; wider reopening/finalization ownership unchanged. Exact full CI required again.
+
 ## Shared-record reconciliation before exact corrective CI
 
 Current main a537a64b26ed1e1a0271ad94c149cb9844f431e3 contains independent central/Android claims; all retained. The supplier claim is already on main and included in the latest regenerated canonical tracker/PDF. Keep current shared tracker/pending/numbered/PDF byte-identical to main while this source is AWAITING CI; append this bounded source receipt to the active list and keep its complete checkpoint. This prevents unrelated prepend/PDF conflicts from repeatedly withholding the actual native run. Actual PASS closure will synchronize all five required records/PDFs; no acceptance or pending completion is claimed now.

@@ -192,6 +192,9 @@ router.patch("/:orderId",async(req,res,next)=>{
         if(ownPosting[0])return {ok:true,idempotent:true,status:"FINAL",purchaseDocumentId:ownPosting[0].purchaseDocumentId};
       }
 
+      if(found.status==="FINAL"&&req.body?.supplierId!=null&&req.body.supplierId!==found.supplierId){
+        throw Object.assign(new Error("Για αλλαγή προμηθευτή στην οριστική αγορά χρησιμοποίησε τη Διόρθωση προμηθευτή με έλεγχο της αρχικής πληρωμής."),{status:409});
+      }
       const effectiveSupplierId=req.body?.supplierId??found.supplierId??null;
       const effectiveInvoiceNumber=req.body?.invoiceNumber??found.invoiceNumber??null;
       const effectiveDescription=req.body?.description??found.description??null;
@@ -350,3 +353,4 @@ router.patch("/:orderId",async(req,res,next)=>{
 });
 
 export default router;
+
