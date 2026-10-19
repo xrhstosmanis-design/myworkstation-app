@@ -1,6 +1,7 @@
 // Purpose-bound history transport. No save endpoint accepts browser answers.
 import {z} from 'zod';
 import {prisma} from '../prisma.js';
+import {readLifecycleGeneration} from './store-lifecycle-generation.js';
 import {createAssistantHistoryAccess} from './assistant-history-access.js';
 import {createAssistantHistoryTurns,assistantHistoryTurnMetadata} from './assistant-history-turns.js';
 const pair=z.object({companyId:z.string().min(1).max(160),storeId:z.string().min(1).max(160)}).strict();
@@ -9,6 +10,13 @@ export function createNativeAssistantHistory({db=prisma,mode,enabled=()=>process
  const turns=createAssistantHistoryTurns({db,authorize});
  const gate=async req=>{await authorize(req);if(!enabled())throw Object.assign(new Error('Το αποθηκευμένο ιστορικό δεν έχει ενεργοποιηθεί ακόμη.'),{status:503,code:'ASSISTANT_HISTORY_DISABLED'})};
  return {
+  // Caller passes the already natively authorized status scope, never browser IDs.
+  async status(req,authorizedScope){
+   if(!enabled()||!authorizedScope||req.query?.readScope&&req.query.readScope!=='selected_store')return {};
+   const state=await readLifecycleGeneration(db,authorizedScope);
+   if(state.maintenance||state.retired)throw Object.assign(new Error('Το κατάστημα βρίσκεται σε συντήρηση.'),{status:409,code:'STORE_LIFECYCLE_MAINTENANCE'});
+   return {historyGeneration:state.generation};
+  },
   async load(req){await gate(req);return turns.load(req)},
   async reset(req,input){await gate(req);return turns.reset(req,input)},
   async begin(req,input,question){await gate(req);return turns.begin(req,input,question)}

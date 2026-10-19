@@ -28,12 +28,12 @@ export default function AssistantChatPage({open,mode="platform",api,companies=[]
  const binding=JSON.stringify([mode,key(pair),all,sessionEpoch,contextEpoch,platform?null:ownerAccess?.supported||null,ownerAccess?.scope?.supportPreview||false]);
  const live=useRef(binding),generation=useRef(0),pending=useRef(null),statusPending=useRef(null),end=useRef(null),dialog=useRef(null),closeRef=useRef(onClose),sidebar=useRef(null),menuButton=useRef(null),input=useRef(null);closeRef.current=onClose;live.current=binding;
  const [savedHistory,setSavedHistory]=useState(null);
- const historyBoundary=useRef({binding:null,interaction:0,loaded:false}),historyPending=useRef(null);
+ const historyBoundary=useRef({binding:null,interaction:0,loaded:false,statusGeneration:null}),historyPending=useRef(null);
  const interact=()=>{historyBoundary.current.interaction++};
  const active=threads.find(t=>t.id===threadId)||threads[0],files=active?.files||[];
  const activeThread=useRef(active?.id);activeThread.current=active?.id;
  const abort=()=>{generation.current++;pending.current?.abort();pending.current=null;setBusy(false);setVoice(false)};
- const clear=()=>{historyPending.current?.abort();historyBoundary.current={binding,interaction:0,loaded:false};setSavedHistory(null);setSidebarOpen(false);setCopied("");setCopyNotice("");abort();const t=newThread();setThreads([t]);setThreadId(t.id);setQuestion("");setAccess(null)};
+ const clear=()=>{historyPending.current?.abort();historyBoundary.current={binding,interaction:0,loaded:false,statusGeneration:null};setSavedHistory(null);setSidebarOpen(false);setCopied("");setCopyNotice("");abort();const t=newThread();setThreads([t]);setThreadId(t.id);setQuestion("");setAccess(null)};
  useEffect(()=>{if(platform)setSelected(key(initialSelection));},[platform,initialSelection?.companyId,initialSelection?.storeId]);
  useEffect(()=>{setAll(Boolean(initialAllScope));},[initialAllScope]);
  useEffect(()=>{clear();setError("");return()=>{pending.current?.abort();statusPending.current?.abort()}},[binding]);
@@ -52,8 +52,8 @@ export default function AssistantChatPage({open,mode="platform",api,companies=[]
     const path=platform?`/api/platform/ai-command-center/status?${params}`:`/api/owner-assistant/stores/${encodeURIComponent(ownerStoreId)}/status${all?"?readScope=own_stores":""}`;
     const next=await api(path,{signal:controller.signal,cache:"no-store"});if(closed||live.current!==captured||controller.signal.aborted)return;
     if(!next.available||pair&&(next.scope?.companyId!==pair.companyId||next.scope?.storeId!==pair.storeId)){clear();setError("Δεν υπάρχει διαθέσιμη εξουσιοδοτημένη αναφορά στο επιλεγμένο κατάστημα.");return}
-    const capabilities=JSON.stringify([next.supported,next.salesScopeKey||null]);if(lastSupported!==null&&capabilities!==lastSupported){clear();setError("Οι διαθέσιμες αναφορές άλλαξαν. Ξεκίνα νέα ερώτηση.")}
-    lastSupported=capabilities;setAccess(next);
+    const capabilities=JSON.stringify([next.supported,next.salesScopeKey||null,next.historyGeneration||null]);if(lastSupported!==null&&capabilities!==lastSupported||historyBoundary.current.statusGeneration!==null&&historyBoundary.current.statusGeneration!==(next.historyGeneration??null)){clear();setError("Η κατάσταση καταστήματος ή τα δικαιώματα άλλαξαν. Ξεκίνα νέα ερώτηση.")}
+    lastSupported=capabilities;historyBoundary.current.statusGeneration=next.historyGeneration??null;setAccess(next);
    }catch(e){if(!closed&&live.current===captured&&!controller.signal.aborted){clear();setError(e.message||"Δεν επιβεβαιώθηκε η πρόσβαση του βοηθού.")}}
    finally{checking=false}
   };
@@ -73,7 +73,7 @@ export default function AssistantChatPage({open,mode="platform",api,companies=[]
    setSavedHistory({generation:snapshot.generation,available:!snapshot.expired,expired:snapshot.expired,revision:snapshot.revision,expiresAt:snapshot.expiresAt,notice:snapshot.expired?"Το αποθηκευμένο ιστορικό έληξε. Οι νέες συνομιλίες μένουν σε αυτή τη συνεδρία.":""});
   }).catch(e=>{if(!controller.signal.aborted&&live.current===captured){if(e.code==="ASSISTANT_HISTORY_CLIENT_CONTEXT_CHANGED"){clear();setError(e.message);return}historyBoundary.current.loaded=true;setSavedHistory({available:false,notice:"Το αποθηκευμένο ιστορικό δεν είναι διαθέσιμο. Οι συνομιλίες μένουν μόνο σε αυτή τη συνεδρία."})}});
   return()=>controller.abort();
- },[open,binding,Boolean(access),api]);
+ },[open,binding,Boolean(access),api,savedHistory===null,access?.historyGeneration]);
  useEffect(()=>{if(!open)return;const previous=document.activeElement;dialog.current?.querySelector(".mws-chat-header button[aria-label=\"Νέα συνομιλία\"]")?.focus();return()=>{if(previous?.isConnected)previous.focus()}},[open]);
  useEffect(()=>{if(!open)return;const root=dialog.current;const handle=event=>{if(event.key==="Escape"){event.preventDefault();if(sidebarOpen){setSidebarOpen(false);menuButton.current?.focus()}else closeRef.current?.();return}if(event.key!=="Tab")return;const focusRoot=sidebarOpen?sidebar.current:root;const items=[...focusRoot.querySelectorAll("button:not([disabled]),select:not([disabled]),textarea:not([disabled]),input:not([disabled])")].filter(el=>el.getClientRects().length);if(!items.length)return;const first=items[0],last=items.at(-1);if(event.shiftKey&&(document.activeElement===first||!focusRoot.contains(document.activeElement))){event.preventDefault();last.focus()}else if(!event.shiftKey&&(document.activeElement===last||!focusRoot.contains(document.activeElement))){event.preventDefault();first.focus()}};document.addEventListener("keydown",handle);return()=>document.removeEventListener("keydown",handle)},[open,sidebarOpen]);
  useEffect(()=>{if(sidebarOpen)sidebar.current?.querySelector("button")?.focus()},[sidebarOpen]);

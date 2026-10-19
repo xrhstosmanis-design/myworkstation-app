@@ -1511,7 +1511,7 @@ router.get("/ai-command-center/status",async(req,res,next)=>{try{
   const selection=query.companyId&&query.storeId?{companyId:query.companyId,storeId:query.storeId}:null;
   if(Boolean(query.companyId)!==Boolean(query.storeId))return res.status(422).json({error:"Επίλεξε εταιρεία και κατάστημα."});
   if(!selection&&query.readScope!=="all_stores"){await authorizePlatformAssistant(req,null);return res.json({available:false,scope:null,supported:[],readOnly:true})}
-  const assistant=await createPlatformAssistantSession(req,selection,{allStores:query.readScope==="all_stores"});res.json({available:true,scope:assistant.scope,supported:assistant.tools.map(t=>t.name),salesScopeKey:salesAccessKey(await authorizePlatformSalesStores(req,selection,query.readScope==="all_stores")),readOnly:true});
+  const assistant=await createPlatformAssistantSession(req,selection,{allStores:query.readScope==="all_stores"});res.json({available:true,scope:assistant.scope,supported:assistant.tools.map(t=>t.name),salesScopeKey:salesAccessKey(await authorizePlatformSalesStores(req,selection,query.readScope==="all_stores")),readOnly:true,...await platformHistoryTurns.status(req,assistant.scope)});
 }catch(e){next(e)}});
 
 router.post("/ai-command-center/ask",async(req,res,next)=>{
