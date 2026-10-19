@@ -20,7 +20,13 @@
     "cancelNewThreadNotArchivedAtMeasuredSnapshot": true,
     "totalSalesAndPerProductSourceMatch": true,
     "allDisplayedSalesGroupsMatchAfterWhitespaceNormalization": true,
-    "preciseNamedProduct": true
+    "preciseNamedProduct": true,
+    "productDateOnlyFollowup": true,
+    "freshProductCsvSourceMatch": true,
+    "dailyConsumptionOriginalSourceAndCsv": true,
+    "naturalColaFamilyRowsAndTotals": true,
+    "recordedStockBeforeQueryMatchOnly": true,
+    "missingBeerCategoryNoZeroInference": true
   },
   "notTested": [
     "ordinary Owner parity/login",
@@ -30,53 +36,49 @@
     "broader domain completeness"
   ],
   "wholeVoice": "OPEN",
-  "sourceFix": {
-    "state": "RELEASED / AWAITING NORMAL SUPERADMIN LIVE RETEST",
-    "pr": 2887,
-    "head": "5db929d133baf960b3d7cff7bb9a934293c627c3",
-    "merge": "c17b6605e970dc47478c7314a6ccff3b20d9f562",
-    "fullPrCi": 39316947048,
-    "fullMainCi": 39318164337,
-    "tests": 3489,
-    "fail": 0,
-    "skip": 0,
-    "guard": 39321219511,
-    "guardDeployed": true,
-    "guardReason": "Successful exact-CI/freshness/rollback/pinned deployment and health verification",
-    "combinedMainCiCancelled": 39318461936,
-    "retryResult": "GitHub 403 This workflow run cannot be retried",
-    "latestVerifiedHealth": "1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69",
-    "combinedRevision": "1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69",
-    "combinedMainCi": 39320123491,
-    "combinedTests": 3514,
-    "renderDeploy": "dep-dbb80ng473hc73dk7e40",
-    "liveFinishedAtUtc": "2026-10-19T20:47:07.182627Z",
-    "actualRetest": "NOT TESTED: after genuine reload, application reports support preview; composer disabled, no question/export sent",
-    "normalReturnControlVisible": false,
-    "sessionChangeCause": "UNKNOWN",
-    "authBypass": false
-  },
+  "sourceFix": "PR2887 observed decorated-product correction LIMITED LIVE PASS",
   "financialTestTransaction": false,
   "notes": [
     "first PDF and sales-rows shared files did not synchronize; no attachment/content claim for those paths",
     "complete UI/source row digest compared in their existing runtimes, after display whitespace normalization",
     "export files and real rows/amounts/names not committed"
   ],
-  "additionalPass": {
-    "dailyConsumptionOriginalEventsMatch": true,
-    "dailyConsumptionCsvParsedSourceMatch": true,
-    "naturalColaFamilyRowsAndTotalsMatch": true,
-    "recordedStockBeforeQueryMatchOnly": true,
-    "missingBeerCatalogNoZeroInference": true
+  "followupRetest": {
+    "livePass": true,
+    "mainCiSuccess": true,
+    "guardSuccess": true,
+    "revision": "1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69",
+    "revisionAfter": "0484d636059eedb936e8bea1159b05c6c00bf0d2",
+    "mainCiRun": 39320123491,
+    "mainCiCount": 3514,
+    "guardRun": 39321219511,
+    "timeAthens": "23:54-23:56",
+    "csvButtonOnly": true,
+    "csvSha256": "efe493122c47a9742190bbcc7c28c0a55d9f350c4fb26cd9bc195d7bc65bab0a",
+    "naturalCsvFollowup": "FAIL: provider returned no source read; safety gate refused report",
+    "sourcePr": 2887,
+    "sourceHead": "5db929d133baf960b3d7cff7bb9a934293c627c3",
+    "sourceCi": 39316947048,
+    "sourceCiPassed": 3489,
+    "actualCsvSourceMatch": true,
+    "singleRevisionForEntireInterval": false
   },
-  "additionalExactRevision": "NOT SAMPLED PER ANSWER; preceding a6902d149, later independent health e3432c2b3",
-  "limits": [
-    "Recorded stock later changed during active trading; no causal/global/frozen after-state",
-    "Numerical beer acceptance OPEN; no catalog mapping",
-    "Historical decorated product follow-up FAIL remains awaiting normal personal SuperAdmin retest after release"
-  ],
   "historicalFail": {
     "productDateOnlyFollowup": "decorated product filter causes false no_match despite source records"
   },
-  "fail": {}
+  "fail": {
+    "naturalProductCsvFollowup": "No fresh tool/evidence; safe unread-source refusal; no file"
+  },
+  "limits": [
+    "Recorded stock after-state changed during active trading; no global or causal stock invariant",
+    "Beer catalog mapping absent; numerical beer acceptance remains OPEN",
+    "Other roles/devices/domains are not inferred from CI",
+    "Typed natural product CSV FAIL remains distinct from successful fresh CSV button"
+  ],
+  "newClaim": {
+    "branch": "fix/assistant-sales-export-read-20261020",
+    "checkpoint": "CHECKPOINTS/CHANGES/2026-10-20-assistant-sales-export-read.md",
+    "state": "ASSIGNED BEFORE SOURCE",
+    "owner": "codex/assistant-business-queries-20261015"
+  }
 }

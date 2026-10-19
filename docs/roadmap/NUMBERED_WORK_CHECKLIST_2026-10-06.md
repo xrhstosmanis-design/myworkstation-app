@@ -526,7 +526,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `32`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
-- **Υπόλοιπο / όριο:** 19Oct23:50 LIMITED LIVE PASS Diadoxou ιστορικό/μεταφορές/αρχεία/ακύρωση/πωλήσεις, ιδιοκατανάλωση13Oct/CSV και φυσική οικογένεια Coca-Cola11Oct. SourcePR2887/fullPR+main3489/0/0+8, συνδυασμένο1cccecd1/fullCI3514/0/0+8/κανονικός guard39321219511/ανεξάρτητο health LIVE. Σύντομη νέα ημέρα προϊόντος AWAITING NORMAL SUPERADMIN RETEST: μετά reload η εφαρμογή αρνείται τη συνεδρία υποστήριξης, δεν στάλθηκε ερώτηση. Ιστορικό22:53 FAIL δεν έκλεισε από CI. Μπύρα χωρίς καταγεγραμμένη κατηγορία, όχι μηδενική πώληση. Whole VOICE OPEN/ίδιος owner για retest/Owner/mobile/physical/ευρύτερη κάλυψη. Checkpoint2026-10-19-assistant-diadoxou-acceptance.
+- **Υπόλοιπο / όριο:** 19Oct23:54-23:56: LIMITED LIVE PASS πραγματικού Diadoxou για ιστορικό/μεταφορές/αρχεία/ακύρωση/συνολικές πωλήσεις και πλέον σύντομη νέα ημέρα συγκεκριμένου προϊόντος, φυσική οικογένεια Coca-Cola και ημερήσια ιδιοκατανάλωση/CSV. SourcePR2887, exact healthy1cccecd1a1777a6ac9ff5c5bba42fbfde470fe69, πλήρες CI και κανονικός guard. Η μπύρα δεν έχει αντίστοιχη καταγεγραμμένη κατηγορία, όχι μηδενική πώληση. Νέο φυσικό «Σε CSV» προϊόντος LIVE FAIL/no-read, ενώ κουμπί CSV PASS· ASSIGNED fix/assistant-sales-export-read-20261020 πριν source. Whole VOICE OPEN για αυτό/Owner/mobile/physical/ευρύτερη κάλυψη, ίδιος owner· καμία αριθμημένη καθολική ολοκλήρωση. Checkpoint2026-10-19-assistant-diadoxou-acceptance.
 
 ## 31 — Μηνιαία Αναφορά Ιδιοκτήτη
 
