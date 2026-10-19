@@ -51,8 +51,8 @@ export function moduleKeyForPath(path="/"){
   return "CORE";
 }
 
-export async function companyModuleState(companyId){
-  const company=await prisma.company.findUnique({
+export async function companyModuleState(companyId,{db=prisma,now:checkedAt}={}){
+  const company=await db.company.findUnique({
     where:{id:companyId},
     select:{
       id:true,
@@ -64,7 +64,7 @@ export async function companyModuleState(companyId){
     }
   });
   if(!company)return null;
-  const now=new Date();
+  const now=checkedAt??new Date();
   const licenseExpired=company.licenseStatus==="EXPIRED"||Boolean(company.subscriptionEndsAt&&new Date(company.subscriptionEndsAt)<now);
   const licenseAllowed=company.active&&!licenseExpired&&company.licenseStatus!=="SUSPENDED";
   const activeModules=company.modules.filter(row=>isCurrentlyActive(row,now)).map(row=>row.moduleKey);

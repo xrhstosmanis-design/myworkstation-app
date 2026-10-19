@@ -1,3 +1,4 @@
+import {createNativeAssistantHistory,createAssistantHistoryHttp} from '../services/assistant-history-http.js';
 import {assistantResponseDiagnostics} from "../services/assistant-answer-response.js";
 import {Router} from "express";
 import {auth} from "../middleware/auth.js";
@@ -12,9 +13,12 @@ const requestProvider=async(settings,{signal,inputChannel})=>{
   console.info("AI_OWNER_ASSISTANT_USAGE",JSON.stringify({...aiCommandUsage(raw,inputChannel,model),...assistantResponseDiagnostics(raw),status:response.ok?"response_received":"provider_error"}));
   return {response,raw};
 };
-export function createOwnerAssistantRouter({authenticate=auth,authorize=authorizeOwnerAssistant,provider=requestProvider,providerConfigured=()=>Boolean(process.env.OPENAI_API_KEY),readCash,readSales,readStock,authorizeSalesStores,readSalesStores}={}){
-  const router=Router(),handlers=createOwnerAssistantHandlers({authorize,requestProvider:provider,providerConfigured,...(readCash?{readCash}:{}),...(readSales?{readSales}:{}),...(readStock?{readStock}:{}),...(authorizeSalesStores?{authorizeSalesStores}:{}),...(readSalesStores?{readSalesStores}:{})});
+export function createOwnerAssistantRouter({authenticate=auth,historyTurns=createNativeAssistantHistory({mode:"owner"}),authorize=authorizeOwnerAssistant,provider=requestProvider,providerConfigured=()=>Boolean(process.env.OPENAI_API_KEY),readCash,readSales,readStock,authorizeSalesStores,readSalesStores}={}){
+  const router=Router(),handlers=createOwnerAssistantHandlers({authorize,historyTurns,requestProvider:provider,providerConfigured,...(readCash?{readCash}:{}),...(readSales?{readSales}:{}),...(readStock?{readStock}:{}),...(authorizeSalesStores?{authorizeSalesStores}:{}),...(readSalesStores?{readSalesStores}:{})});
   router.use(authenticate);
+  const history=createAssistantHistoryHttp({turns:historyTurns,mode:"owner"});
+  router.get("/stores/:storeId/history",history.load);
+  router.post("/stores/:storeId/history/reset",history.reset);
   router.get("/stores/:storeId/status",handlers.status);
   router.post("/stores/:storeId/ask",handlers.ask);
   return router;
