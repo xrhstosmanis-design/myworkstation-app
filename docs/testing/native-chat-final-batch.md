@@ -12,7 +12,7 @@ Owner: feat/android-chat-native-20261017. Οδηγία19/10/2026 21:02 Europe/At
 - Έτοιμες απαντήσεις: sourcePR2868, συνδυασμένη προετοιμασίαPR2871· τελική φυσική αποδοχή αναβάλλεται για την ενιαία παρτίδα.
 - Σταθερή υπογραφή: προετοιμασία build μετά το claimPR2870. Κανένα πραγματικό
   owner key/secret δεν δημιουργήθηκε ή διαβάστηκε. Η ρύθμιση των τεσσάρων secrets και του δημόσιου pin επιβεβαιώθηκε20/10/2026 19:19.
-  Η παραγωγή υπογεγραμμένου candidate παραμένει OPEN.
+  Το owner-signed candidate0.1.8/code9 και η δημόσια διανομή επαληθεύτηκαν· η φυσική αποδοχή παραμένει OPEN.
 - Φωνητικά: voice-only source μετά green claimPR2876, **SOURCE CI/RELEASE VERIFIED — FINAL DEVICE ACCEPTANCE OPEN**.
   Ο παλιός image/PDF parser διατηρείται· προστέθηκε χωριστό GENERAL WAV endpoint και audio-only receiver,
   χωρίς takeover των υπαρχόντων PWA/N16 scopes. Contract: native-chat-voice-contract.md.
@@ -20,7 +20,8 @@ Owner: feat/android-chat-native-20261017. Οδηγία19/10/2026 21:02 Europe/At
   codex/assistant-business-queries-20261015, χωρίς δεύτερη ανάληψη parser.
 - Εξαρτήσεις/όρια: issue2869. Δεν υπάρχει συνολικό Android PASS.
 - Υπογεγραμμένο candidate0.1.8/code9 επαληθεύτηκε από run39458772660· SHA256a1c9faf3f84a821d4252e6c79306d29edf69a56cd7027593a78a63e28b5d05ca.
-  Δημόσιο APK/manifest μένουν0.1.3 μέχρι το νέο source CI/guarded release και live-byte verification. Το QR κρατά την ίδια σελίδα λήψης.
+  Δημόσιο APK/manifest0.1.8 LIVE από merge25efb787, exact CI39462597695 και guarded deploy39463450610 SUCCESS. Το δημόσιο APK είναι byte-for-byte ίδιο με το ελεγμένο signed artifact. QR: CHECKPOINTS/EVIDENCE/native-stable-signing-20261020/install-qr.png → https://myworkstation-app.onrender.com/downloads/chat-android/.
+  Πρώτη μετάβαση από παλιά δοκιμαστική υπογραφή: ενδέχεται να χρειαστεί απεγκατάσταση ΜΟΝΟ του MW Chat Preview, νέα σύνδεση/ενεργοποίηση ειδοποιήσεων. Οι επόμενες εκδόσεις κρατούν το ίδιο κλειδί και αυξανόμενο versionCode. Η πραγματική αναβάθμιση ίδιας υπογραφής δεν έχει δοκιμαστεί.
 
 ## Μόνιμη υπογραφή της υπάρχουσας Preview εφαρμογής
 
