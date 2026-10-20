@@ -11,8 +11,8 @@ Owner: feat/android-chat-native-20261017. Οδηγία19/10/2026 21:02 Europe/At
   Ακριβές εγκατεστημένο hash/συσκευή/OS και ανεξάρτητη Admin παραλαβή δεν μετρήθηκαν σε αυτά τα βήματα.
 - Έτοιμες απαντήσεις: sourcePR2868, συνδυασμένη προετοιμασίαPR2871· τελική φυσική αποδοχή αναβάλλεται για την ενιαία παρτίδα.
 - Σταθερή υπογραφή: προετοιμασία build μετά το claimPR2870. Κανένα πραγματικό
-  owner key/secret δεν δημιουργήθηκε ή διαβάστηκε. Η ρύθμιση secrets και η πραγματική
-  παραγωγή υπογεγραμμένου candidate δεν έχουν επιβεβαιωθεί.
+  owner key/secret δεν δημιουργήθηκε ή διαβάστηκε. Η ρύθμιση των τεσσάρων secrets και του δημόσιου pin επιβεβαιώθηκε20/10/2026 19:19.
+  Η παραγωγή υπογεγραμμένου candidate παραμένει OPEN.
 - Φωνητικά: voice-only source μετά green claimPR2876, **SOURCE CI/RELEASE VERIFIED — FINAL DEVICE ACCEPTANCE OPEN**.
   Ο παλιός image/PDF parser διατηρείται· προστέθηκε χωριστό GENERAL WAV endpoint και audio-only receiver,
   χωρίς takeover των υπαρχόντων PWA/N16 scopes. Contract: native-chat-voice-contract.md.
@@ -42,7 +42,7 @@ Owner: feat/android-chat-native-20261017. Οδηγία19/10/2026 21:02 Europe/At
 
 Το Base64 δεν είναι κρυπτογράφηση· αποθηκεύεται μόνο ως προστατευμένο secret.
 Δεν ζητάμε τους κωδικούς στη συνομιλία. Ο τρέχων connector δεν μπορεί να διαχειριστεί
-Actions secrets, συνεπώς η διαθεσιμότητά τους παραμένει άγνωστη.
+Actions secrets. Η ύπαρξη των τεσσάρων ονομάτων και του δημόσιου pin επιβεβαιώθηκε read-only στον authenticated browser20/10/2026 19:19.
 
 Μετά από επιτυχές full CI του ακριβούς main (πραγματικό build-and-test SUCCESS, όχι docs-only SKIPPED· αν χρειάζεται εκτελείται πρώτα manual full CI) εκτελείται χειροκίνητα
 `Android Chat stable signed preview`. Πριν πρόσβαση στο key εκτελούνται compile,
@@ -79,9 +79,9 @@ LAB και εξουσιοδοτημένος Admin/περιορισμένος χ�
 τυφλά επιτυχημένα μηνύματα. Αποτέλεσμα/όρια καταγράφονται αμέσως μαζί σε checkpoint,
 active/manual/pending/tracker/PDF σύμφωνα με AGENTS. Μετά την Android αποδοχή ακολουθεί iOS.
 
-## Owner Windows PC — helper setup (technical CI verified; owner execution NOT TESTED)
+## Owner Windows PC — helper setup (owner execution verified20/10/2026 19:19)
 
-Public helper: `tools/android-chat-signing/Setup-OwnerSigning.ps1`. SourcePR2944 and exact full CI39429851195 plus isolated Windows5.1/7 checks39429851209 succeeded. Actual owner execution remains NOT TESTED. It does not touch POS, messages, backend or public APK. Browser sign-in in ChatGPT is separate from local GitHub CLI sign-in.
+Public helper: `tools/android-chat-signing/Setup-OwnerSigning.ps1`. SourcePR2944 and exact full CI39429851195 plus isolated Windows5.1/7 checks39429851209 succeeded. Actual Prepare/backup confirmation/Publish completed19:19; see owner-signing checkpoint and native manual. Do not repeat setup or generate a new key. It does not touch POS, messages, backend or public APK. Browser sign-in in ChatGPT is separate from local GitHub CLI sign-in.
 
 Prerequisites on the owner PC: Java17 JDK/keytool from https://adoptium.net/ and GitHub CLI from https://cli.github.com/. Open a fresh PowerShell after installation. Complete local GitHub CLI sign-in yourself using `gh auth login --hostname github.com --web`; no password, token or private signing data goes into chat. The helper never changes your login or asks for a token.
 
