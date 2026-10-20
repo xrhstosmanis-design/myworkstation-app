@@ -10,7 +10,6 @@ import android.util.Size;
 import android.util.Range;
 import android.media.MediaRecorder;
 import android.os.*;
-import android.os.storage.StorageManager;
 import android.view.*;
 import android.widget.*;
 import java.io.InputStream;
@@ -23,13 +22,11 @@ public final class VideoActivity extends Activity implements SurfaceHolder.Callb
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final RequestEpoch epoch=new RequestEpoch();
     private final VideoPlayer player=new VideoPlayer();
-    private HandlerThread io;
     private CameraDevice camera;
     private CameraCaptureSession cameraSession;
     private Surface recorderSurface;
     private MediaRecorder recorder;
-    private RamVideoFile ram;
-    private ParcelFileDescriptor fd;
+    private MemoryVideoOutput ram;
     private SurfaceView surface;
     private byte[] draft;
     private boolean active,recording,returning,loading;
@@ -41,11 +38,11 @@ public final class VideoActivity extends Activity implements SurfaceHolder.Callb
     @Override public void onCreate(Bundle state){
         super.onCreate(null);getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         if(Build.VERSION.SDK_INT>=33)setRecentsScreenshotEnabled(false);
-        VideoBuffer.clear();io=new HandlerThread("video-ram-io");io.start();
+        VideoBuffer.clear();
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(16,32,16,16);
-        status=new TextView(this);status.setText("Βίντεο MP4 έως 30 δευτ. / 12 MB · προσωρινά στη μνήμη");box.addView(status);
+        status=new TextView(this);status.setText(Build.VERSION.SDK_INT>=30?"Βίντεο MP4 έως 30 δευτ. / 12 MB · προσωρινά στη μνήμη":"Λήψη στη μνήμη: Android 11+. Μπορείς να επιλέξεις υπάρχον MP4 έως 30 δευτ. / 12 MB.");box.addView(status);
         surface=new SurfaceView(this);surface.getHolder().addCallback(this);box.addView(surface,new LinearLayout.LayoutParams(-1,0,1));
-        capture=button("Λήψη από κάμερα",this::requestCapture);box.addView(capture);
+        capture=button(Build.VERSION.SDK_INT>=30?"Λήψη από κάμερα":"Λήψη κάμερας · Android 11+",this::requestCapture);box.addView(capture);
         stop=button("Διακοπή λήψης",()->stopCapture(true));box.addView(stop);
         gallery=button("Επιλογή υπάρχοντος MP4",this::choose);box.addView(gallery);
         play=button("▶ Προεπισκόπηση",()->{if(!player.play(draft,surface.getHolder().getSurface()))status.setText("Δεν άνοιξε το βίντεο.");});box.addView(play);
@@ -54,9 +51,9 @@ public final class VideoActivity extends Activity implements SurfaceHolder.Callb
     private Button button(String text,Runnable action){Button b=new Button(this);b.setText(text);b.setMinHeight(58);b.setOnClickListener(v->action.run());return b;}
     @Override protected void onResume(){super.onResume();active=true;controls();}
     @Override protected void onStop(){active=false;epoch.invalidate();loading=false;stopCapture(false);player.stop();clearDraft();ui.removeCallbacks(tick);if(!returning)VideoBuffer.clear();status.setText("Βίντεο");super.onStop();}
-    @Override protected void onDestroy(){stopCapture(false);player.stop();clearDraft();if(!returning)VideoBuffer.clear();worker.shutdownNow();io.quitSafely();super.onDestroy();}
+    @Override protected void onDestroy(){stopCapture(false);player.stop();clearDraft();if(!returning)VideoBuffer.clear();worker.shutdownNow();super.onDestroy();}
     @Override protected void onSaveInstanceState(Bundle state){}
-    private void controls(){if(capture==null)return;boolean idle=active&&!loading&&!returning&&!recording;capture.setEnabled(idle);gallery.setEnabled(idle);stop.setEnabled(active&&recording);play.setEnabled(idle&&draft!=null);use.setEnabled(idle&&draft!=null);}
+    private void controls(){if(capture==null)return;boolean idle=active&&!loading&&!returning&&!recording;capture.setEnabled(idle&&Build.VERSION.SDK_INT>=30);gallery.setEnabled(idle);stop.setEnabled(active&&recording);play.setEnabled(idle&&draft!=null);use.setEnabled(idle&&draft!=null);}
     private void requestCapture(){
         if(!active||recording||loading||returning)return;
         if(checkSelfPermission(Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED||checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){permissionEpoch=epoch.capture();requestPermissions(new String[]{Manifest.permission.CAMERA,Manifest.permission.RECORD_AUDIO},61);return;}
@@ -65,6 +62,7 @@ public final class VideoActivity extends Activity implements SurfaceHolder.Callb
     @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] results){super.onRequestPermissionsResult(code,permissions,results);if(code!=61||!active||!epoch.current(permissionEpoch))return;if(results.length==2&&results[0]==PackageManager.PERMISSION_GRANTED&&results[1]==PackageManager.PERMISSION_GRANTED)startCapture();else status.setText("Η κάμερα/το μικρόφωνο δεν επιτράπηκε. Μπορείς να επιλέξεις υπάρχον MP4.");}
     @SuppressWarnings("MissingPermission")
     private void startCapture(){
+        if(Build.VERSION.SDK_INT<30){status.setText("Λήψη βίντεο στη μνήμη απαιτεί Android 11+. Επίλεξε υπάρχον MP4.");return;}
         if(!active||recording||loading||returning||!surface.getHolder().getSurface().isValid())return;
         player.stop();clearDraft();loading=true;controls();final long generation=epoch.capture();
         try{
@@ -82,14 +80,14 @@ public final class VideoActivity extends Activity implements SurfaceHolder.Callb
             if(rate==null)throw new IllegalStateException();final Range<Integer> frameRate=rate;
             Integer sensor=info.get(CameraCharacteristics.SENSOR_ORIENTATION);int rotation=getWindowManager().getDefaultDisplay().getRotation()*90,orientation=((sensor==null?90:sensor)-rotation+360)%360;
             surface.getHolder().setFixedSize(selected.getWidth(),selected.getHeight());
-            capturePhase="ram-descriptor";ram=new RamVideoFile();fd=ram.open(getSystemService(StorageManager.class),new Handler(io.getLooper()));
+            capturePhase="ram-descriptor";ram=new MemoryVideoOutput();
             capturePhase="recorder-config";recorder=new MediaRecorder();recorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
             recorder.setVideoSize(selected.getWidth(),selected.getHeight());recorder.setVideoFrameRate(rate.getUpper());recorder.setVideoEncodingBitRate(900000);recorder.setAudioEncodingBitRate(64000);recorder.setAudioSamplingRate(44100);recorder.setAudioChannels(1);
-            recorder.setOrientationHint(orientation);recorder.setMaxDuration(29000);recorder.setMaxFileSize(VideoData.MAX_BYTES-262144);recorder.setOutputFile(fd.getFileDescriptor());
+            recorder.setOrientationHint(orientation);recorder.setMaxDuration(29000);recorder.setMaxFileSize(VideoData.MAX_BYTES-262144);recorder.setOutputFile(ram.descriptor());
             recorder.setOnInfoListener((r,what,extra)->{if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED||what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED)stopCapture(true);});
             recorder.setOnErrorListener((r,what,extra)->{if(recorder!=r)return;captureFailure="recorder-error-"+what;stopCapture(false);status.setText("Η λήψη δεν ολοκληρώθηκε. Δεν αποθηκεύτηκε τοπικό αρχείο.");});
-            capturePhase="recorder-prepare";recorder.prepare();recorderSurface=recorder.getSurface();capturePhase="camera-open";
+            capturePhase="recorder-prepare";recorder.prepare();capturePhase="ram-capacity-seal";ram.sealForRecording();recorderSurface=recorder.getSurface();capturePhase="camera-open";
             manager.openCamera(chosen,new CameraDevice.StateCallback(){
                 @Override public void onOpened(CameraDevice value){
                     if(!active||!epoch.current(generation)||recorder==null){value.close();return;}camera=value;
@@ -117,8 +115,7 @@ public final class VideoActivity extends Activity implements SurfaceHolder.Callb
         if(recorder!=null){if(wasRecording)try{recorder.stop();success=true;}catch(Exception ignored){}recorder.reset();recorder.release();recorder=null;}
         if(camera!=null){try{camera.close();}catch(Exception ignored){}camera=null;}
         if(recorderSurface!=null){recorderSurface.release();recorderSurface=null;}
-        if(fd!=null){try{fd.close();}catch(Exception ignored){}fd=null;}
-        byte[] bytes=keep&&success&&active&&ram!=null?ram.snapshot():null;if(ram!=null){ram.clear();ram=null;}
+        byte[] bytes=null;if(keep&&success&&active&&ram!=null)try{bytes=ram.snapshot();}catch(Exception ignored){}if(ram!=null){ram.clear();ram=null;}
         if(bytes!=null)validate(bytes);else controls();
     }
     private void choose(){if(!active||recording||loading||returning)return;player.stop();clearDraft();Intent intent=new Intent(Intent.ACTION_GET_CONTENT).setType("video/mp4").addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(Intent.createChooser(intent,"Επιλογή βίντεο MP4"),62);}

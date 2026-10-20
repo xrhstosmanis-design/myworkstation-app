@@ -8,21 +8,21 @@ import org.junit.*;
 import org.junit.runner.RunWith;
 import static org.junit.Assert.*;
 
-/** Real Android metadata, RAM proxy IO and Activity lifecycle; fixture is synthetic, not user media. */
+/** Real Android metadata, anonymous RAM IO and Activity lifecycle; fixture is synthetic, not user media. */
 @RunWith(AndroidJUnit4.class)
 public class VideoActivityTest {
     static byte[] fixture()throws Exception{try(java.io.InputStream in=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("video-one-second.mp4")){return ChatApi.bounded(in,VideoData.MAX_BYTES);}}
     private static Object get(VideoActivity a,String name)throws Exception{Field f=VideoActivity.class.getDeclaredField(name);f.setAccessible(true);return f.get(a);}
     private static void invoke(VideoActivity a,String name)throws Exception{Method m=VideoActivity.class.getDeclaredMethod(name);m.setAccessible(true);m.invoke(a);}
     @After public void cleanup(){VideoBuffer.clear();}
-    @Test public void platformParsesActualH264AacAndProxyReadsWritesOnlyBoundedRam()throws Exception{
-        byte[] bytes=fixture();assertTrue(VideoSource.playable(bytes));RamVideoFile ram=new RamVideoFile();
-        android.os.HandlerThread thread=new android.os.HandlerThread("fixture-video");thread.start();
-        try(android.os.ParcelFileDescriptor fd=ram.open(InstrumentationRegistry.getInstrumentation().getTargetContext().getSystemService(android.os.storage.StorageManager.class),new android.os.Handler(thread.getLooper()))){
-            android.system.Os.pwrite(fd.getFileDescriptor(),bytes,0,bytes.length,0);assertEquals(bytes.length,ram.onGetSize());assertArrayEquals(bytes,ram.snapshot());
-            byte[] read=new byte[bytes.length];assertEquals(bytes.length,android.system.Os.pread(fd.getFileDescriptor(),read,0,read.length,0));assertArrayEquals(bytes,read);
-            try{ram.onWrite(VideoData.MAX_BYTES,1,new byte[1]);fail("bounded");}catch(android.system.ErrnoException expected){}
-        }finally{ram.clear();thread.quitSafely();VideoData.wipe(bytes);}
+    @Test public void platformParsesActualH264AacAndAnonymousRamHasHardCapacity()throws Exception{
+        byte[] bytes=fixture();assertTrue(VideoSource.playable(bytes));MemoryVideoOutput ram=new MemoryVideoOutput();java.io.FileDescriptor duplicate=null;
+        try{
+            ram.sealForRecording();assertEquals(VideoData.MAX_BYTES,android.system.Os.fstat(ram.descriptor()).st_size);
+            try{android.system.Os.pwrite(ram.descriptor(),new byte[1],0,1,VideoData.MAX_BYTES);fail("must not grow");}catch(android.system.ErrnoException expected){}
+            android.system.Os.ftruncate(ram.descriptor(),bytes.length);android.system.Os.pwrite(ram.descriptor(),bytes,0,bytes.length,0);assertArrayEquals(bytes,ram.snapshot());
+            duplicate=android.system.Os.dup(ram.descriptor());ram.clear();assertEquals(0,android.system.Os.fstat(duplicate).st_size);
+        }finally{ram.clear();if(duplicate!=null)android.system.Os.close(duplicate);VideoData.wipe(bytes);}
     }
     @Test public void explicitUseSurvivesDestructionButBackgroundWipesUnsentDraft()throws Exception{
         byte[] bytes=fixture();try(ActivityScenario<VideoActivity> scenario=ActivityScenario.launch(VideoActivity.class)){
