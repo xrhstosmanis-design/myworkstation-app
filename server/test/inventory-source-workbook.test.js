@@ -115,6 +115,8 @@ test('KAT profile distinguishes both register-6 departments and resolves full id
   assert.equal(result.error,undefined);assert.equal(result.body.summary.create,2);assert.equal(result.body.summary.invalid,0);assert.equal(d.writes,0);
   validateSourceDepartments(raw.sourceProfile,katSaved());
   assert.notEqual(raw.sourceProfile.departmentBindings['06.ΕΙΔΗ 24'],raw.sourceProfile.departmentBindings['06.ΠΑΡΟΧΗ ΥΠΗΡΕΣΙΩΝ']);
+  const blank=katFixture();blank.rows[1].BARCODE='00000091';blank.rows[1].Barcode='';blank.barcodes.pop();
+  const normalized=h.normalizeRows(h.readWorkbook(file(blank)));assert.equal(normalized[1].barcode,'');assert.deepEqual(normalized[1].barcodes,[]);
 });
 test('KAT source profile refuses altered identities, shared barcodes, missing snapshot and foreign target',async()=>{
   for(const change of [f=>f.definitions[4]['ΚΩΔ ΦΠΑ Kiosk']='15',f=>f.barcodes[1].Barcode=f.barcodes[0].Barcode,f=>f.rows[0].SKU='WRONG',f=>f.existing.push({SKU:'KAT-1',ProductId:'id',ExistingSku:'OLD',Fingerprint:'bad'})]){

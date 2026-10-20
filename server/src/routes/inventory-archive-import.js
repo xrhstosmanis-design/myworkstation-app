@@ -36,7 +36,7 @@ export function normalizeRows(raw){
   return raw.map((r,index)=>{
     const sku=txt(val(r,["SKU","Κωδικός","ΚΩΔΙΚΟΣ","Εσωτ. κωδικός","Εσωτερικός κωδικός","Code"]));
     const name=txt(val(r,["Περιγραφή είδους","Περιγραφή","ΠΕΡΙΓΡΑΦΗ","Όνομα","ΟΝΟΜΑ","Name","Product"]));
-    const barcode=txt(val(r,["Barcode","BARCODE","barcode","EAN"]));
+    const barcode=raw.sourceProfile?.name==='KAT_CATALOG_V1'?txt(r.Barcode):txt(val(r,["Barcode","BARCODE","barcode","EAN"]));
     const categoryName=txt(val(r,["Κατηγορία","ΚΑΤΗΓΟΡΙΑ","Category"]));
     const salePrice=num(val(r,["Πώληση (με ΦΠΑ)","Λιανική","Τιμή πώλησης","Πώληση","SalePrice","Retail"]));
     const costPrice=num(val(r,["Αγορά (προ ΦΠΑ)","Κόστος","Τιμή αγοράς","Αγορά","CostPrice","Cost"]));
