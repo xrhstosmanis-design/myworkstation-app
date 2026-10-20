@@ -32,9 +32,12 @@ test("checking SET or recipe opens its functional association tab",()=>{
   for(const text of ["Συσχετιζόμενο είδος","Υλικό συνταγής","Ποσότητα συμμετοχής","Νέα συσχέτιση","Χειριστής"])assert.ok((panel+fs.readFileSync(new URL("../../client/src/components/commerce/InventorySetProductPicker.jsx",import.meta.url),"utf8")).includes(text),text);
 });
 
-test("POS catalog exposes SET rows and cart adds them automatically",()=>{
+test("POS catalog exposes SET rows and cart adds them automatically",async()=>{
   assert.match(catalog,/AS "setItems"/);
   assert.match(catalog,/p\."isSet"/);
   assert.match(pos,/product\.isSet\?\(product\.setItems\|\|\[\]\):\[\]/);
-  assert.match(pos,/setParentId:product\.id/);
+  assert.match(pos,/addSetCartProduct/);
+  const {addSetCartProduct}=await import('../../client/src/components/store/pos-set-cart.js');
+  const rows=addSetCartProduct([],{id:'coffee',isSet:true,setItems:[{id:'fee',quantity:1,salePrice:.05}]});
+  assert.equal(rows[1].productId,'fee');assert.equal(rows[1].setParentId,'coffee');assert.equal(rows[1].quantity,1);
 });
