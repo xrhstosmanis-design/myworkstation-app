@@ -1,0 +1,12 @@
+# Authorized KAT all-stock zero operation
+
+## 20/10/2026 19:41 Europe/Athens - KAT STOCK ZERO / REAL OPERATION PASS
+
+Explicit new owner instruction after completed catalogue import: zero ALL KAT stocks, including preserved pre-existing items. Executed through normal Cloud Super Admin Inventory2.0 in pilot-company/kat-store; no direct SQL writes. LIVE d8142d55c376574f6a0b6ab35b611a2dc3bdcc97. Before:1900store rows,23nonzero,quantitysum20; all23nonzero rows active, all34inactive rows already0. Fresh controls saved before draft creation, targeted count and finalization. New single FREE stocktake066a1fa2-ac14-47c6-9b10-f7ab2421e323 named Μηδενισμός όλων των αποθεμάτων ΚΑΤ 20/10/2026, reason explicit owner instruction, no open shift.
+
+Operational PASS: same draft counted exactly23nonzero products at0 through native bulk count, then ONE finalization. Stocktake FINALIZED;23count events and23STOCKTAKE_ADJUSTMENT movements, each exact negative of its product's fresh pre-action stock, aggregate delta-20. Full independent DB readback:1900/1900stocks exactly0, no positive/negative balance, zero mismatches. AllProduct whole rows, allStoreProduct metadata exceptquantity/update time, allother-storeStock, all10department rows,165sales/180payments/44shifts/213transactions and all174previous movements have EXACT unchanged hashes. No price/VAT/category/barcode/active/recipe/online field change and no history deletion. Native audit keeps the reversal quantities and cause. Do not repeat finalization.
+
+Bounded failure retained: initial native bulk count of1866active rows returned internal error, with0persisted counts/events and no stock change. UI rendering of the full list also caused browser timeouts. Independent readback established rollback before selecting only23necessary rows in the SAME draft. The smaller native operation succeeded. Root cause/large-batch implementation fix NOT TESTED and remains a separate OPEN reliability follow-up; this operation PASS does not claim full-list bulk reliability. No completed LAB test replayed or broad source change made.
+
+Evidence CHECKPOINTS/EVIDENCE/kat-catalog-import-20261020/zero-before.json,zero-before-targeted.json,zero-final-before.json,zero-after.json,zero-movements.json,zero-verification.json,zero-stock.jpg. Retained owner ops/kat-catalog-import-20261020. Prior1766catalogue import PASS remains; its stock-preservation observation describes that earlier operation and is superseded only for quantities by this explicit subsequent zero instruction. Later0.50EUR mobile-card service SET remains OPEN.
+
