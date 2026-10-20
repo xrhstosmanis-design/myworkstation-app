@@ -1,3 +1,13 @@
+## 20/10/2026 - Explicit KAT source profile: bounded virtual LAB PASS
+
+Super Admin, Owner or company Admin may open the selected store's Εμπορική λειτουργία → Λοιπές εμπορικές λειτουργίες → Αποθήκη → Εισαγωγή από Excel. Verify the displayed company/store, choose the approved workbook with first sheet ΚΑΤ_IMPORT and company/store-bound KAT_META, and keep Ενημέρωση stock και στα υπάρχοντα είδη unchecked. Run Προεπισκόπηση χωρίς καταχώρηση; all rows must be OK before one Τελική εισαγωγή. Do not click import again to obtain evidence; inspect the existing result and persisted products.
+
+Verified only in virtual MYWORKSTATION LAB/ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ on exact healthy d8142d55c376574f6a0b6ab35b611a2dc3bdcc97: actual3-row preview2CREATE/1UPDATE/0INVALID and one final import; KG and PIECE preserved, six-decimal cost exact, existing product ID/stock retained, four text scan aliases including leading zeros preserved, two distinct register6 identities resolved, 0%card remains vatVerifiedfalse. Full before/after hashes prove original99product/stock rows, all financial/movement records and17departments unchanged. No financial or fiscal transaction. Preparation added only seven missing KAT tuples, retained all10previous departments and all controls.
+
+KAT requires nine exact register+legacycode+rate+commerce identities; preserve existing native display aliases. Do not map by rate/register alone or copy DAILY exemption27. Prepared existing updates require exact ID, old SKU and current full product/barcode fingerprint, same company/store and matching unit. Stale, foreign, busy or ambiguous rows refuse atomically; obtain a fresh preview and investigate business changes before refreshing a fingerprint. Preserve deliberately inactive legacy products and all existing recipes/modifiers. New initial stock0, existing stock preserved. A failed/uncertain UI response requires independent readback before another final action.
+
+Limits: real1766catalogue import and physical fiscal readiness are NOT TESTED by this entry. No old accepted DAILY/Diadochou test is repeated. Real-import owner retained in tracker/pending roadmap. Checkpoint2026-10-20-kat-profile-lab-pass.md and its measured evidence are authoritative.
+
 ## 18/10/2026 12:38 Europe/Athens — Ίδιος προμηθευτής στη συγχώνευση: περιορισμένο USER PASS
 
 Ο ιδιοκτήτης επιβεβαίωσε «ΕΙΝΑΙ ΟΚ» μετά την παράδοση της διόρθωσης και την οδηγία νέας προεπισκόπησης. Το PASS αφορά την άρση του λανθασμένου αποκλεισμού για ίδιο προμηθευτή με ίδιο κωδικό. Η έκδοση9c515f0d είχε επαληθευτεί κεντρικά17Oct23:00/23:06· ο browser, ρόλος και client revision της δήλωσης δεν μετρήθηκαν ανεξάρτητα.
