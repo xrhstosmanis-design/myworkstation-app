@@ -1,3 +1,22 @@
+## Full-CI fixture compatibility follow-up
+
+Full PR CI 39385135116: 3615 PASS / 2 FAIL / 0 SKIP. Both failures were existing operator-shift-return-independent fixtures: extracted WHERE omitted the newly required actual CTE, and mounted responses omitted the actual API store envelope. Preserve assertions and No33 owner/permissions; include the exact source CTE, identify own/all parameter by its actor predicate rather than positional false value, and return store A in both fixtures. Local mounted/permission regression plus new loading UI: 4 PASS / 0 FAIL / 1 native infrastructure SKIP. Full native CI required again; no runtime change, no LAB/manual PASS or business writes.
+
+## Combined-main reconciliation
+
+Preserve new wholesale verified receipt a3b4adf29fc5324e0a080e495089e8e360ed35ac and every other owner. Four shift source/test blobs unchanged; fresh full combined CI required. No deployment/financial replay.
+
+## Final review: read errors remain distinct from printing errors
+
+The existing print-popup failure still shows its own message without hiding loaded transactions or claiming the open shift could not be checked. Actual mounted print-denial regression passes without Audit/print/payment writes. Exact new tagged route SQL read-only plan1570.831ms/planning8.71ms/28rows; initial equivalent candidate2007.732ms versus original42498.408ms. Protected local regression suites add17PASS/0FAIL/1native infrastructureSKIP (22PASS/2nativeSKIP across distinct focused/protected cases). Planning time in prior ready heading is approximate; actual sourcePR creation20Oct10:08:05Athens is authoritative. No hosted PASS.
+
+## 20/10/2026 10:12 Europe/Athens - POS-SHIFT-LOAD-01 / SOURCE READY / AWAITING FULL CI AND HOSTED ACCEPTANCE
+
+Owner fix/pos-shift-load-20261020 retained. ClaimPR2931/headb4aebbbc979eadb6c0e702065454c198030951bb green/merged a547cfb4cf468cf1ea9765b69c2cbd269821e0d5 BEFORE source. Real read-only full existing SHIFT SQL EXPLAIN ANALYZE measured42498.408ms/28rows, planning47.793ms. Bounded equivalent candidate with exact materialized active ledger measured2007.732ms/28rows, planning71.482ms (~21x faster); no schema/index/data writes or financial replay. Counts are observations in a live store, not a frozen identity/delta proof.
+
+Route now materializes selected-company/store OPEN ledger once, terminal-filtered for operator; identical own/all employee rule, substring and audited online-order linkage, original projection/limit/status/refund flags and normal-history branch preserved. No timestamp approximation, new permission, session reassignment, sale/payment/fiscal/stock mutation. UI independently publishes overview while sales waits, distinguishes pending/error/verified-no-open, uses15s bounded reads with explicit retry, rejects stale store/refresh replies and never presents failed loading as empty/closed. Original own/all/current-session filtering and correction/printing/child panels unchanged.
+
+Node20 focused5PASS/0FAIL/1native infrastructureSKIP, including actual mounted slow/fail/retry/stale/timeout/no-open and current-session regressions; frontend/TABLE_SERVICE buildPASS. Native registered actual route fixture tests exact materialized SQL, own/all/other terminal/foreign/closed/online linkage, payment/line projection, unchanged ledger footprint and normal history; actual native execution awaits full CI. No mounted/SQL plan is HOSTED/LAB PASS. Require full PR+exactmain green, normal guarded exact healthy release and nonfinancial signed-in/user visual acceptance. No manual PASS or broader Gate closure. Protect No33/35 and all other owners; separate payment dockPR2924 remains its retained task. Checkpoint CHECKPOINTS/CHANGES/2026-10-20-pos-shift-load.md.
 ## 20/10/2026 10:00 Europe/Athens - POS-SHIFT-LOAD-01 / ASSIGNED BEFORE SOURCE / USER FAIL
 
 Owner fix/pos-shift-load-20261020. User explicitly requests investigation/correction after screenshotimage20261020-064505: Diadoxou shift transactions stays loading, header says no open shift while child My payments shows160.88. Read-only DB confirms open430b8612-eafe-4eae-8148-550ca3bb123f/DIADOXOU-POS-01 opened06:16:47Athens,27sale movements+1supplier payment at09:45 observation. No lost-payment inference. Existing Promise.all gates overview on recent sales and prints no-shift before either response; recent SHIFT SQL correlates historical sales with active transactions. Initial loading screenshot does not establish duration; server query/read plan and controlled tests needed.
