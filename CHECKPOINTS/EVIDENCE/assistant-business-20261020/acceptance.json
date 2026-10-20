@@ -139,5 +139,30 @@
     "businessWrite": false,
     "commercialRowsPublished": false,
     "scope": "USER-SUPPLIED FILE ACCEPTANCE PASS only; whole VOICE OPEN"
+  },
+  "userSuppliedSupplierCsv2106": {
+    "filename": "myworkstation-report-20261020210628.csv",
+    "sha256": "9420b4c3bd8f3b91ed52ef42677bc83268751958d6ed4bb33b0a1d63d8995ab4",
+    "bytes": 6389,
+    "dataRows": 23,
+    "distinctNames": 22,
+    "duplicateMultiplicityPreserved": true,
+    "columns": 9,
+    "bom": true,
+    "delimiter": ";",
+    "allNamesDisplayedUpdatedTimesStatusesMatch": true,
+    "unrecordedAmountsNotInvented": true,
+    "selectedStoreMatch": true,
+    "currentCatalogLimitationRetained": true,
+    "periodLabel": "ACTUAL FAIL: supplier catalog mislabeled current recorded stock",
+    "fileAcceptance": "AWAITING CORRECTION AND ACTUAL RETEST",
+    "ownerRoleConfirmed": false,
+    "sourceTiming": "Independent original SELECT after receiving user upload",
+    "newBeforeAfterInvariant": false,
+    "agentControlledUiReplay": false,
+    "nativeBrowserRestrictionResolved": false,
+    "fileModified": false,
+    "businessWrite": false,
+    "commercialRowsPublished": false
   }
 }
