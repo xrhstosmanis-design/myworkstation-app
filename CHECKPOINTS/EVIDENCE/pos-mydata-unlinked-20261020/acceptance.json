@@ -1,0 +1,25 @@
+{
+  "status": "TECHNICAL_RELEASE_VERIFIED_AWAITING_USER",
+  "source_pr": 2937,
+  "source_head": "ec5c75d6552aee81e34934041b62bcfe16a6bfe9",
+  "revision": "2dc9c8829578d388272f0a2cfd330a32ee4921a0",
+  "pr_ci": 39414585294,
+  "main_ci": 39415424714,
+  "tests": {
+    "pass": 3622,
+    "fail": 0,
+    "skip": 0,
+    "backup_pass": 8
+  },
+  "ordinary_deploy": 39416366291,
+  "deploy_job": 118606322556,
+  "browser_health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "2dc9c8829578d388272f0a2cfd330a32ee4921a0"
+  },
+  "observed_bootstrap": "main-BwCJySKy.js",
+  "financial_action_submitted": false,
+  "stock_action_submitted": false,
+  "real_first_receipt": "NOT_TESTED"
+}
