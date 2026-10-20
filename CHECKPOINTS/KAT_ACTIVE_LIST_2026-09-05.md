@@ -1,3 +1,7 @@
+## 20/10/2026 19:27Z — native video signing preflight correction / owner retained
+
+Owner feat/android-chat-native-20261017. SourcePR2961 merged8eaa3db after Android35 and full3691+8 PASS. Final pre-dispatch review found the stable workflow guard/setup block accidentally replaced; PR2967 restores exact-main CI guard and every pre-key setup/test. No stable dispatch/key access occurred. First correction CI39482930748 stopped only on missing active-list policy update; this entry supplies it, fresh CI required. Checkpoint: CHECKPOINTS/CHANGES/2026-10-20-native-chat-video.md. Video device and same-signer physical update NOT TESTED; existing voice/photo/push PASS protected. Single next action: green correction, exact main CI, stable signed build then verified public0.1.9. iOS LAST.
+
 ## 20/10/2026 - KAT COFFEE ENVIRONMENTAL FEE / ASSIGNED BEFORE SOURCE / NOT TESTED
 
 RetainedKATowner ops/kat-catalog-import-20261020, newindependentbranch fix/kat-coffee-fee-set-20261020. Ownerexplicitlyconfirms everypreparedcoffee adds one separateexisting environmentalfeeSKU at0.05EUR, baseprice unchanged:1.65+0.05=1.70. No inferredlegalrate or blanketpackagedcoffeecharge. Read-onlyKAT currentfee0112e532-4761-44c5-ac51-c16e8cca7cb4/KAT-32944 active0.05, existingfiscalmetadata retained.59products in acceptedpreparedcoffee categories, including7inactive retainedinactive; finalexplicitreviewedIDs beforeapply. Existing preparation fee0.05 on moderncoffees woulddoublecharge ifSETadded withoutclearingembeddedfee. No feeconfigurationchangedyet.
