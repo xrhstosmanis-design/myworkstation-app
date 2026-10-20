@@ -12,6 +12,8 @@ Remaining OPEN: actual installed Windows/Android/iOS offline device use, actual 
 
 # MyWorkStation App v0.11 — Platform Admin & Commercial Pilot
 
+# MyWorkStation App v0.11 — Platform Admin & Commercial Pilot
+
 ## 20/10/2026 00:51 Europe/Athens - WHOLESALE COMMERCIAL OFFLINE / CI VERIFIED, INSTALLED LAB OPEN
 
 Retained owner codex/wholesale-suite-20261017. Source PR #2912 head 18cd03a154c76608884e22067a3cfb26e5c7d557 green merged 24e138767089672d296189b6073e6601ff520d4e after claim PR #2904. Dedicated install entry, allowlisted public offline shell, encrypted per-user/company/store/role catalogue and editable LOCAL_DRAFT orders implemented. Explicit online current-rights/current-price acceptance precedes immutable persisted body/key and guarded send; unknown results never become a fresh request. Durable observed-denial fences, cross-tab exclusion, storage-failure and capacity checks included. No existing auth/entitlement/pricing/order core, schema, production startup, fiscal/stock/payment operation or pinned lab configuration changed.
