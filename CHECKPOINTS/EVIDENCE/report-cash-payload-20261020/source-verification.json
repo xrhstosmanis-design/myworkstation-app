@@ -1,0 +1,49 @@
+{
+  "kind": "source_prepared_not_feature_acceptance",
+  "claimPR": 2919,
+  "claimHead": "64be66d2e6f0d44f8dec197718134a92f7bc8b58",
+  "claimCI": 39378635258,
+  "claimMerged": "d1f2f3b2dac33f76b039e5fba17b06887955f4c4",
+  "local": {
+    "node": "20.20.2",
+    "tests": 34,
+    "pass": 34,
+    "fail": 0,
+    "skip": 0,
+    "newTests": 14,
+    "protectedTests": 20,
+    "nativePostgresClaimed": false
+  },
+  "module": {
+    "sha256": "ab1c3fc128f2f182bcc1bd0eef6b1f019baa5de0452d9426e9f105ab81a7ee7e",
+    "blob": "faa574c1566cbe3f0e493d6bead2a5017f8df2c6"
+  },
+  "test": {
+    "sha256": "016cd65ad9dcba4cf2a9cfbbb1bf8038cf167f4f938103f9e3cdb9165700b855",
+    "blob": "0d7493b771caf2caab9393cb1d5d87224d9c22db"
+  },
+  "reviewFinding": {
+    "status": "fixed_before_publication",
+    "finding": "Aggregate ignored metadata and keys were not byte bounded before serialization.",
+    "limits": {
+      "aggregateUTF8": 4194304,
+      "keyUTF8": 256,
+      "arrayElements": 1000,
+      "objectKeys": 1000,
+      "bodyUTF8": 2097152
+    }
+  },
+  "runtimeWired": false,
+  "dispatchActivated": false,
+  "productionSchemaChanged": false,
+  "financialMutation": false,
+  "LABReplayed": false,
+  "productionIntegrationBlocked": [
+    "authoritative verified recipient/consent/dispatch revisions and revocation",
+    "schema ownership/lifecycle/retention/backup",
+    "lock order",
+    "payload retention/reissue",
+    "transport recipient accepted/rejected evidence"
+  ],
+  "sourceAuthenticityOrAuthorizationProved": false
+}

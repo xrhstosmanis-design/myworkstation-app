@@ -1,0 +1,180 @@
+TAP version 13
+# Subtest: actual producer DAILY/WEEKLY/MONTHLY snapshots survive wire JSON without dropping original differences or chain isolation
+ok 1 - actual producer DAILY/WEEKLY/MONTHLY snapshots survive wire JSON without dropping original differences or chain isolation
+  ---
+  duration_ms: 864.101994
+  ...
+# Subtest: actual producer periods preserve Athens DST hours for daily, weekly and monthly payloads
+ok 2 - actual producer periods preserve Athens DST hours for daily, weekly and monthly payloads
+  ---
+  duration_ms: 1224.322437
+  ...
+# Subtest: determinism survives object order, group/row/day/summary permutations and volatile generation time
+ok 3 - determinism survives object order, group/row/day/summary permutations and volatile generation time
+  ---
+  duration_ms: 556.956735
+  ...
+# Subtest: payload is detached and deeply immutable, and changed real source amounts change its fingerprint
+ok 4 - payload is detached and deeply immutable, and changed real source amounts change its fingerprint
+  ---
+  duration_ms: 41.150984
+  ...
+# Subtest: actual producer HOLD and incomplete source are refused without inventing zero totals
+ok 5 - actual producer HOLD and incomplete source are refused without inventing zero totals
+  ---
+  duration_ms: 31.383254
+  ...
+# Subtest: explicit scope, version, kind and provisional financial disclosures cannot be forged or omitted
+ok 6 - explicit scope, version, kind and provisional financial disclosures cannot be forged or omitted
+  ---
+  duration_ms: 54.669379
+  ...
+# Subtest: malformed groups, rows, cross-store leakage, duplicate identities and cent totals fail closed
+ok 7 - malformed groups, rows, cross-store leakage, duplicate identities and cent totals fail closed
+  ---
+  duration_ms: 53.418283
+  ...
+# Subtest: per-day readiness identity, completeness and actual period bounds are independently checked
+ok 8 - per-day readiness identity, completeness and actual period bounds are independently checked
+  ---
+  duration_ms: 143.326931
+  ...
+# Subtest: monthly opening-user summary must exactly describe original rows and never certify payroll liability
+ok 9 - monthly opening-user summary must exactly describe original rows and never certify payroll liability
+  ---
+  duration_ms: 1170.922441
+  ...
+# Subtest: complete recorded zero differences remain zero rather than unknown or fabricated shortage
+ok 10 - complete recorded zero differences remain zero rather than unknown or fabricated shortage
+  ---
+  duration_ms: 28.275234
+  ...
+# Subtest: getters, hostile prototypes, control text and unsafe metadata are rejected before evaluation
+ok 11 - getters, hostile prototypes, control text and unsafe metadata are rejected before evaluation
+  ---
+  duration_ms: 21.923523
+  ...
+# Subtest: actual producer missing opening identities survive JSON omission as unattributed sessions, never invented payroll users
+ok 12 - actual producer missing opening identities survive JSON omission as unattributed sessions, never invented payroll users
+  ---
+  duration_ms: 937.48258
+  ...
+# Subtest: payload allowlist omits safe private preview extras and preserves explicit Greek provisional disclosures
+ok 13 - payload allowlist omits safe private preview extras and preserves explicit Greek provisional disclosures
+  ---
+  duration_ms: 15.36376
+  ...
+# Subtest: aggregate UTF-8 values and metadata keys are bounded even when omitted from the output allowlist
+ok 14 - aggregate UTF-8 values and metadata keys are bounded even when omitted from the output allowlist
+  ---
+  duration_ms: 78.542865
+  ...
+# Subtest: monthly calendar bounds respect leap years, year rollover and Athens business-day DST
+ok 15 - monthly calendar bounds respect leap years, year rollover and Athens business-day DST
+  ---
+  duration_ms: 71.232662
+  ...
+# Subtest: monthly snapshot checks every day and keeps original employee rows separate per day and cash chain
+ok 16 - monthly snapshot checks every day and keeps original employee rows separate per day and cash chain
+  ---
+  duration_ms: 706.306019
+  ...
+# Subtest: monthly missing, unfinished, carried, invalid or capped source suppresses all totals
+ok 17 - monthly missing, unfinished, carried, invalid or capped source suppresses all totals
+  ---
+  duration_ms: 4533.096851
+  ...
+# Subtest: business days use Greek wall time through both DST transitions
+ok 18 - business days use Greek wall time through both DST transitions
+  ---
+  duration_ms: 28.97942
+  ...
+# Subtest: daily/weekly/monthly periods are fully completed and end exclusive
+ok 19 - daily/weekly/monthly periods are fully completed and end exclusive
+  ---
+  duration_ms: 24.876469
+  ...
+# Subtest: daily report waits for actual third closure and completed business day
+ok 20 - daily report waits for actual third closure and completed business day
+  ---
+  duration_ms: 14.857081
+  ...
+# Subtest: three arbitrary closed rows cannot substitute missing shift/terminal evidence
+ok 21 - three arbitrary closed rows cannot substitute missing shift/terminal evidence
+  ---
+  duration_ms: 12.787218
+  ...
+# Subtest: explicit morning-only delivery cannot replace store third shift and must itself be closed
+ok 22 - explicit morning-only delivery cannot replace store third shift and must itself be closed
+  ---
+  duration_ms: 9.329484
+  ...
+# Subtest: foreign, duplicate, future, unknown variance and unconfigured terminal all hold dispatch
+ok 23 - foreign, duplicate, future, unknown variance and unconfigured terminal all hold dispatch
+  ---
+  duration_ms: 39.620621
+  ...
+# Subtest: cash offsets preserve original employee differences and cannot cross day/terminal/delivery
+ok 24 - cash offsets preserve original employee differences and cannot cross day/terminal/delivery
+  ---
+  duration_ms: 21.405367
+  ...
+# Subtest: selected-store repeatable snapshot preserves employee differences and delivery isolation
+ok 25 - selected-store repeatable snapshot preserves employee differences and delivery isolation
+  ---
+  duration_ms: 38.741473
+  ...
+# Subtest: fresh database role and selected active store are required before reading financial source
+ok 26 - fresh database role and selected active store are required before reading financial source
+  ---
+  duration_ms: 25.189798
+  ...
+# Subtest: missing scope or actual terminal configuration never becomes all-store reporting
+ok 27 - missing scope or actual terminal configuration never becomes all-store reporting
+  ---
+  duration_ms: 11.400841
+  ...
+# Subtest: missing explicit rule, unsupported EFTPOS mode and unknown delivery chain hold instead of inventing zero
+ok 28 - missing explicit rule, unsupported EFTPOS mode and unknown delivery chain hold instead of inventing zero
+  ---
+  duration_ms: 65.85125
+  ...
+# Subtest: open third, earlier unresolved shift, foreign source, unknown variance and truncation never produce partial totals
+ok 29 - open third, earlier unresolved shift, foreign source, unknown variance and truncation never produce partial totals
+  ---
+  duration_ms: 219.989854
+  ...
+# Subtest: fresh snapshots change fingerprint on amount, rule or shift update without writing source
+ok 30 - fresh snapshots change fingerprint on amount, rule or shift update without writing source
+  ---
+  duration_ms: 68.681323
+  ...
+# Subtest: source READY and HOLD both retain provisional financial status without treating limitations as missing shifts
+ok 31 - source READY and HOLD both retain provisional financial status without treating limitations as missing shifts
+  ---
+  duration_ms: 34.294307
+  ...
+# Subtest: weekly period anchors Monday through next Monday at each store's 06/07 start, including DST
+ok 32 - weekly period anchors Monday through next Monday at each store's 06/07 start, including DST
+  ---
+  duration_ms: 69.65307
+  ...
+# Subtest: one weekly snapshot checks all seven days, preserves day/terminal/delivery amounts and performs no writes
+ok 33 - one weekly snapshot checks all seven days, preserves day/terminal/delivery amounts and performs no writes
+  ---
+  duration_ms: 159.242168
+  ...
+# Subtest: missing midweek shift, Sunday open/late closure, earlier unresolved, duplicates and foreign data hold the whole week
+ok 34 - missing midweek shift, Sunday open/late closure, earlier unresolved, duplicates and foreign data hold the whole week
+  ---
+  duration_ms: 850.218157
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 34
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5498.375828
