@@ -1,3 +1,7 @@
+## 20/10/2026 - Real KAT catalogue import accepted
+
+The approved1766-row KAT catalogue was imported once through the selected real store normal Excel UI. Preview1766/1753CREATE/13UPDATE/0INVALID; independent complete source readback PASS:1981aliases,28categories,113subcategory pairs,1765PIECE/1KG, exact original prices/VAT/fiscal identities and source relationships. All13existing IDs and stock retained; all new initial stock0. Four previously inactive legacy coffees stay inactive. Preserve canonical recipes and pre-existing store items. Store total1900 includes preserved pre-existing items. Financial/stock movements and10fiscal departments unchanged. Do not repeat the consumed import or blindly refresh its identity manifest. Later0.50EUR mobile-card service SET remains pending. See2026-10-20-kat-real-import-pass.md and real-verification.json.
+
 ## 20/10/2026 - Explicit KAT source profile: bounded virtual LAB PASS
 
 Super Admin, Owner or company Admin may open the selected store's Εμπορική λειτουργία → Λοιπές εμπορικές λειτουργίες → Αποθήκη → Εισαγωγή από Excel. Verify the displayed company/store, choose the approved workbook with first sheet ΚΑΤ_IMPORT and company/store-bound KAT_META, and keep Ενημέρωση stock και στα υπάρχοντα είδη unchecked. Run Προεπισκόπηση χωρίς καταχώρηση; all rows must be OK before one Τελική εισαγωγή. Do not click import again to obtain evidence; inspect the existing result and persisted products.
