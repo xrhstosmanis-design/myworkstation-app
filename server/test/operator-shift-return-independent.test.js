@@ -45,12 +45,14 @@ test('native shift sale predicate rejects another actor, closed shift, foreign t
   // Execute the exact actual-handler WHERE template, retaining every bound scope parameter.
   const q=queries[0],allSql=q.strings.reduce((s,part,i)=>s+part+(i<q.values.length?`$${i+1}`:''),'');
   const predicate=allSql.slice(allSql.indexOf('WHERE s."companyId"',allSql.indexOf('FROM "Sale" s')),allSql.indexOf('ORDER BY s."createdAt"'));
-  const used=[...new Set([...predicate.matchAll(/\$(\d+)/g)].map(m=>Number(m[1])))];
-  let sql='SELECT s."id" FROM "Sale" s '+predicate;sql=sql.replace(/\$(\d+)/g,(_,n)=>`$${used.indexOf(Number(n))+1}`);
+  const cte=allSql.slice(0,allSql.indexOf('SELECT s."id"'));
+  const scopedSql=cte+'SELECT s."id" FROM "Sale" s '+predicate;
+  const used=[...new Set([...scopedSql.matchAll(/\$(\d+)/g)].map(m=>Number(m[1])))];
+  let sql=scopedSql.replace(/\$(\d+)/g,(_,n)=>`$${used.indexOf(Number(n))+1}`);
   const vals=used.map(n=>q.values[n-1]);
   assert.deepEqual((await db.$queryRawUnsafe(sql,...vals)).map(r=>r.id),['own']);
-  const allValues=[...vals];const ownIndex=q.values.findIndex(v=>v===false); // own-only is the first false binding
-  allValues[used.indexOf(ownIndex+1)]=true;
+  const allValues=[...vals];const ownBinding=Number(predicate.match(/\(\$(\d+) OR s\."operatorEmployeeId"/)[1]);
+  allValues[used.indexOf(ownBinding)]=true;
   assert.deepEqual((await db.$queryRawUnsafe(sql,...allValues)).map(r=>r.id).sort(),['other','own']);
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
@@ -63,7 +65,7 @@ test('actual mounted timeline switches own/all by immutable IDs even with identi
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React;
  const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StoreShiftTransactionsModal.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react/jsx-runtime'],loader:{'.css':'empty'},plugins:[{name:'payments-panel',setup(b){b.onResolve({filter:/MyShiftEntriesPanel/},()=>({path:'panel',namespace:'stub'}));b.onLoad({filter:/.*/,namespace:'stub'},()=>({contents:'export default ()=>null'}));}}]});
  const m={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);
- const paths=[],props={store:{id:'A',name:'A'},operator:{id:'credential',employeeId:'employee',fullName:'SAME'},onClose(){},api:async path=>{paths.push(path);return path.includes('sales/recent')?{rows:[{id:'mine',sessionId:'main',actorName:'SAME',operatorEmployeeId:'employee',total:1,lines:[{description:'OWN SALE'}]},{id:'other',sessionId:'main',actorName:'SAME',operatorEmployeeId:'other',total:2,lines:[{description:'OTHER SALE'}]}]}:{openSession:{id:'main'},recent:[{id:'own-ledger',sessionId:'main',actorId:'credential',actorName:'SAME',type:'TRANSFER_OUT',amount:1,description:'OWN LEDGER'},{id:'other-ledger',sessionId:'main',actorId:'other',actorName:'SAME',type:'TRANSFER_AMOUNT',amount:1,description:'OTHER LEDGER'}]}}};
+ const paths=[],props={store:{id:'A',name:'A'},operator:{id:'credential',employeeId:'employee',fullName:'SAME'},onClose(){},api:async path=>{paths.push(path);return path.includes('sales/recent')?{store:{id:'A'},rows:[{id:'mine',sessionId:'main',actorName:'SAME',operatorEmployeeId:'employee',total:1,lines:[{description:'OWN SALE'}]},{id:'other',sessionId:'main',actorName:'SAME',operatorEmployeeId:'other',total:2,lines:[{description:'OTHER SALE'}]}]}:{store:{id:'A'},openSession:{id:'main'},recent:[{id:'own-ledger',sessionId:'main',actorId:'credential',actorName:'SAME',type:'TRANSFER_OUT',amount:1,description:'OWN LEDGER'},{id:'other-ledger',sessionId:'main',actorId:'other',actorName:'SAME',type:'TRANSFER_AMOUNT',amount:1,description:'OTHER LEDGER'}]}}};
  const root=createRoot(document.getElementById('root'));
  const render=async allowAll=>act(async()=>{root.render(React.createElement(m.exports.default,{...props,allowAll}));await new Promise(r=>setTimeout(r,15))});
  try{

@@ -7,7 +7,7 @@ const source=fs.readFileSync(new URL('../../client/src/components/store/StoreSup
 const start=source.indexOf('  const submit=async()=>{'),end=source.indexOf('  return <div className="pos-payment-form-v3-root',start);
 assert.ok(start>=0&&end>start);
 const handler=source.slice(start,end);
-async function submit({confirmed=true,changed=false,paid=false,mode='PAID'}={}){
+async function submit({confirmed=true,changed=false,paid=false,unlinked=false,changedMark=false,mode='PAID'}={}){
  const calls=[],messages=[],prompts=[];let checks=0,completed=0;
  const context=vm.createContext({ready:true,selectedInboxId:null,documentType:'INVOICE',mode,amount:'3.39',documentNumber:'OCR-X 9042',documentDate:'2026-10-12',store:{id:'s'},supplierId:'sup',supplier:{name:'Synthetic supplier'},file:{name:'photo.jpg'},fileDataUrl:'source',pages:[{file:{name:'photo.jpg',type:'image/jpeg'},dataUrl:'source'}],num:Number,paymentKey:()=> 'key',paymentSource:'CASH_SHIFT',paymentMethod:'CASH',paymentMethodLabel:'μετρητά',setBusy:()=>{},setStatus:()=>{},setMessage:v=>messages.push(v),onChanged:()=>{},onCompleted:()=>completed++,monitorBackgroundV244:()=>{},window:{confirm:v=>{prompts.push(v);return confirmed},dispatchEvent:()=>{}},CustomEvent:class{},api:async(path,opt)=>{
   const body=JSON.parse(opt.body);calls.push({path,body});
@@ -15,7 +15,7 @@ async function submit({confirmed=true,changed=false,paid=false,mode='PAID'}={}){
    if(++checks===1)return {myDataHeaderReviewRequired:true,canonicalDocumentNumber:'21-ΤΔΑ 6836',canonicalDocumentDate:'2026-10-12',myDataTotalGross:3.39,myDataMark:'400001'};
    assert.equal(body.documentNumber,'21-ΤΔΑ 6836');
    if(changed)throw Error('Το παραστατικό άλλαξε');
-   return {myDataMatched:true,canonicalDocumentNumber:'21-ΤΔΑ 6836',...(paid?{paymentReused:true,paymentTransactionId:'already-paid'}:{})};
+   return {...(unlinked?{myDataHeaderMatched:true,myDataMark:changedMark?'changed':'400001'}:{myDataMatched:true}),canonicalDocumentNumber:'21-ΤΔΑ 6836',...(paid?{paymentReused:true,paymentTransactionId:'already-paid'}:{})};
   }
   if(path.startsWith('/api/transactions/'))return {id:'first-payment'};
   if(path.endsWith('fast-handoff'))return {receiptLinked:true,jobId:'same-original'};
@@ -68,4 +68,11 @@ test('actual photographed POS handoff queues the existing empty myDATA reader, p
   const res={json:v=>{result=v;return res},status:()=>res};
   await fn(req,res,e=>failure=e);assert.ifError(failure);assert.equal(result.receiptLinked,true);assert.equal(queues,state==='replay'?0:1);assert.equal(enqueues,state==='empty'?1:0);assert.equal(result.backgroundQueued,state==='empty');
  }
+});
+
+test('actual POS confirms a header without a draft, rechecks it and submits one canonical payment and handoff',async()=>{
+ const r=await submit({unlinked:true});assert.equal(r.calls.length,4);assert.equal(r.calls[2].body.invoiceDocumentNumber,'21-ΤΔΑ 6836');assert.equal(r.calls[3].body.documentNumber,'21-ΤΔΑ 6836');assert.equal(r.completed,1);
+});
+test('actual POS refuses an unlinked header whose MARK changed before payment',async()=>{
+ const r=await submit({unlinked:true,changedMark:true});assert.equal(r.calls.length,2);assert.equal(r.completed,0);
 });

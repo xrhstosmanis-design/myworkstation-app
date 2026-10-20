@@ -1,0 +1,17 @@
+{
+  "task": "POS-SHIFT-LOAD-01",
+  "method": "read-only full tagged SQL EXPLAIN ANALYZE",
+  "beforeMs": 42498.408,
+  "equivalentCandidateMs": 2007.732,
+  "exactNewRouteMs": 1570.831,
+  "rowsObserved": 28,
+  "limitations": "Independent live snapshots; not frozen identity or hosted UI proof",
+  "businessWrites": 0,
+  "local": {
+    "pass": 22,
+    "fail": 0,
+    "nativeInfrastructureSkip": 2,
+    "frontend": "PASS"
+  },
+  "native": "awaiting full isolated CI"
+}

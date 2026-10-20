@@ -29,7 +29,7 @@ import static org.junit.Assert.*;
 public class MultiPhotoSendTest {
     @Before public void clear() {
         Context context = ApplicationProvider.getApplicationContext();
-        new TokenVault(context).clear(); TokenVault.pendingTwoFactor(context).clear(); CaptureBuffer.clear();
+        new TokenVault(context).clear(); TokenVault.pendingTwoFactor(context).clear(); CaptureBuffer.clear(); VoiceBuffer.clear();
     }
     @After public void clean() { clear(); }
     private static Object get(MainActivity a, String name) throws Exception {
@@ -44,19 +44,22 @@ public class MultiPhotoSendTest {
     private static JSONObject store() throws Exception { return new JSONObject().put("id", "fixture-store").put("companyId", "fixture-company").put("name", "Isolated photo store"); }
     private static final class FixtureApi extends ChatApi {
         final List<JSONObject> posts = new CopyOnWriteArrayList<>();
+        final List<String> postPaths = new CopyOnWriteArrayList<>();
+        boolean unknownVoice, voiceSupported = true;
         boolean enabled = true, unknownSecond, hold;
         volatile boolean holdGet;
         final CountDownLatch getStarted = new CountDownLatch(1), getRelease = new CountDownLatch(1);
         final CountDownLatch started = new CountDownLatch(1), release = new CountDownLatch(1);
         @Override JSONObject json(String path, String method, JSONObject body, String token) throws Exception {
-            assertTrue(path.startsWith("/api/store-chat/stores/fixture-store/messages"));
+            assertTrue(path.startsWith("/api/store-chat/stores/fixture-store/messages") || path.equals("/api/store-chat/stores/fixture-store/voice-messages"));
             assertEquals("isolated-fixture-token", token);
             if (method.equals("GET")) {
                 if (holdGet) { getStarted.countDown(); if (!getRelease.await(5, TimeUnit.SECONDS)) throw new AssertionError("GET fixture release timed out"); }
-                return new JSONObject().put("store", store()).put("rows", new JSONArray()).put("settings", new JSONObject().put("photosEnabled", enabled));
+                return new JSONObject().put("store", store()).put("rows", new JSONArray()).put("voiceMessagesAvailable", voiceSupported).put("settings", new JSONObject().put("photosEnabled", enabled));
             }
-            assertEquals("POST", method); posts.add(new JSONObject(body.toString())); started.countDown();
+            assertEquals("POST", method); postPaths.add(path); posts.add(new JSONObject(body.toString())); started.countDown();
             if (hold && !release.await(5, TimeUnit.SECONDS)) throw new AssertionError("fixture release timed out");
+            if (unknownVoice && path.endsWith("/voice-messages")) return new JSONObject().put("ok", true);
             if (unknownSecond && posts.size() == 2) return new JSONObject().put("ok", true); // no durable receipt
             return new JSONObject().put("ok", true).put("id", "fixture-message-" + posts.size());
         }
@@ -88,6 +91,45 @@ public class MultiPhotoSendTest {
                 ((EditText) get(a, "composer")).setText("Caption once"); invoke(a, "send");
             } catch (Exception e) { throw new AssertionError(e); }
         }); return bytes;
+    }
+    private void returnVoice(MainActivity a, byte[] wave, String bindingToken) throws Exception {
+        set(a,"voiceBinding","fixture-store"); set(a,"voiceToken",bindingToken); VoiceBuffer.put(wave);
+        Method result=MainActivity.class.getDeclaredMethod("onActivityResult",int.class,int.class,Intent.class); result.setAccessible(true); result.invoke(a,43,Activity.RESULT_OK,null);
+    }
+    @Test public void voiceHandoffNeedsExplicitSendAndPreservesNextTypedDraft() throws Exception {
+        FixtureApi api=new FixtureApi(); api.hold=true; byte[] wave=VoiceData.fromPcm(new short[]{1,2},2);
+        try(ActivityScenario<MainActivity> scenario=open(api)) {
+            scenario.onActivity(a->{try{
+                returnVoice(a,wave,"isolated-fixture-token"); assertSame(wave,get(a,"voiceDraft")); assertEquals(0,api.posts.size());
+                ((EditText)get(a,"composer")).setText("Voice caption"); invoke(a,"send");
+            }catch(Exception e){throw new AssertionError(e);}});
+            assertTrue(api.started.await(5,TimeUnit.SECONDS));
+            scenario.onActivity(a->{try{((EditText)get(a,"composer")).setText("Next draft");}catch(Exception e){throw new AssertionError(e);}});
+            api.release.countDown(); awaitIdle(scenario); assertEquals(1,api.posts.size());
+            assertEquals("/api/store-chat/stores/fixture-store/voice-messages",api.postPaths.get(0));
+            assertEquals("Voice caption",api.posts.get(0).getString("body")); assertEquals("audio/wav",api.posts.get(0).getJSONObject("attachment").getString("mimeType"));
+            scenario.onActivity(a->{try{assertNull(get(a,"voiceDraft"));assertEquals("Next draft",((EditText)get(a,"composer")).getText().toString());}catch(Exception e){throw new AssertionError(e);}});
+            for(byte b:wave)assertEquals(0,b);
+        }finally{api.release.countDown();}
+    }
+    @Test public void staleVoiceSessionAndUnsupportedServerWipeHandoffWithoutPosting() throws Exception {
+        for(boolean supported:new boolean[]{true,false}) {
+            FixtureApi api=new FixtureApi();api.voiceSupported=supported;byte[] wave=VoiceData.fromPcm(new short[]{3},1);
+            try(ActivityScenario<MainActivity> scenario=open(api)) {
+                scenario.onActivity(a->{try{returnVoice(a,wave,supported?"stale-token":"isolated-fixture-token");assertNull(get(a,"voiceDraft"));}catch(Exception e){throw new AssertionError(e);}});
+                for(byte b:wave)assertEquals(0,b); assertEquals(0,api.posts.size());
+            }
+        }
+    }
+    @Test public void unknownVoiceReceiptStopsWithoutReplayAndBackgroundWipesDraft() throws Exception {
+        FixtureApi api=new FixtureApi();api.unknownVoice=true;byte[] wave=VoiceData.fromPcm(new short[]{4},1);
+        try(ActivityScenario<MainActivity> scenario=open(api)) {
+            scenario.onActivity(a->{try{returnVoice(a,wave,"isolated-fixture-token");invoke(a,"send");}catch(Exception e){throw new AssertionError(e);}});
+            awaitIdle(scenario);assertEquals(1,api.posts.size());
+            scenario.onActivity(a->{try{assertSame(wave,get(a,"voiceDraft"));assertEquals("fixture-store",get(a,"uncertainStoreId"));invoke(a,"send");}catch(Exception e){throw new AssertionError(e);}});
+            awaitIdle(scenario);assertEquals(1,api.posts.size());scenario.moveToState(Lifecycle.State.CREATED);
+            for(byte b:wave)assertEquals(0,b);assertEquals(1,api.posts.size());
+        }
     }
     @Test public void quickReplyNeedsExplicitDraftChoiceAndExplicitSend() throws Exception {
         FixtureApi api = new FixtureApi();

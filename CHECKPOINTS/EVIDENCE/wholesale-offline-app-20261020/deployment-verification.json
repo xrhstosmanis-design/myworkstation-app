@@ -1,0 +1,35 @@
+{
+  "kind": "Unauthenticated exact static delivery verification only; not business/installed-device LIVE acceptance",
+  "observedAt": "2026-10-20T07:03:53.599685+00:00",
+  "revision": "4e732c2d45eeffeb1a81b7099e90447a4ac9bb76",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "4e732c2d45eeffeb1a81b7099e90447a4ac9bb76"
+  },
+  "deploymentId": "dep-dbbh223rjlhs73e8f6hg",
+  "renderLiveAt": "2026-10-20T07:03:09.639653Z",
+  "releaseWorkflow": 39383434126,
+  "routes": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "sha256": "6e9af27d955df2153d04c953d0654148288b2ecdb51237ace98813af39c5bf30"
+    },
+    {
+      "path": "/wholesale/",
+      "status": 200,
+      "sha256": "3b64c6630516909e9930171bb576b05373d7f37b34a6309dd8913a06bb6bf174"
+    },
+    {
+      "path": "/wholesale-app/wholesale.webmanifest",
+      "status": 200,
+      "sha256": "88a644e4120c39d11ad756701e056bcfac44a33e98a273260d8c87b855c7c624"
+    },
+    {
+      "path": "/wholesale-sw.js",
+      "status": 200,
+      "sha256": "91c1bf85318a9aaf4a2800470b97fb3dea92444a2d6d0f6fe28318aecf0d13ca"
+    }
+  ]
+}

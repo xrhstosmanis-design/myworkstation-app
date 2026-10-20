@@ -1,3 +1,4 @@
+import {findUnlinkedMyDataOriginal,bindUnlinkedMyDataOriginal} from '../lib/pos-unlinked-mydata.js';
 import {creditCashReadSettlement} from "../lib/supplier-credit-cash.js";
 import {assertEmptyInboxRead} from "../lib/pos-inbox-original.js";
 import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertNoUnresolvedInbound,reuseInboundDraftForPosJob,sameInvoiceNumber,invoiceNumberParts} from "../lib/invoice-common-draft.js";
@@ -269,6 +270,8 @@ router.post("/ai-reader/jobs/:jobId/pos-draft",requireCompanyModule("AI_READER")
       }
       const common=await reuseInboundDraftForPosJob(tx,{companyId:req.user.companyId,storeId:job.storeId,supplierId:body.supplierId,supplierTaxId:supplier.taxId,documentNumber:body.documentNumber,documentDate:body.documentDate,totalGross:body.totalGross,documentType:body.documentType},{jobId:job.id,paymentTransactionId:payment?.id||null});
       if(common)return common;
+      const originalIdentity={companyId:req.user.companyId,storeId:job.storeId,supplierId:body.supplierId,supplierTaxId:String(supplier.taxId||" ").replace(/\D/g,""),documentNumber:body.documentNumber,documentDate:body.documentDate,documentType:body.documentType,totalGross:body.totalGross};
+      const unlinkedOriginal=await findUnlinkedMyDataOriginal(tx,originalIdentity,{paymentTransactionId:payment?.id||null});
       const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber});
       if(duplicate)throw Object.assign(new Error(`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`),{status:409});
       const documentId=id(),orderId=id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
@@ -276,6 +279,7 @@ router.post("/ai-reader/jobs/:jobId/pos-draft",requireCompanyModule("AI_READER")
       await tx.$executeRaw`INSERT INTO "PurchaseOrder" ("id","companyId","storeId","supplierId","status","invoiceNumber","description","createdByUserId","createdByName","updatedByName","sourceType","sourceDocumentId") VALUES (${orderId},${req.user.companyId},${job.storeId},${body.supplierId},'NEW',${body.documentNumber},${body.note||`POS πρόχειρο ${body.documentNumber} — Ανάγνωση από βοηθό`},${createdByUserId},${actor},${actor},'POS_OCR_DRAFT',${documentId})`;
       if(payment)await tx.$executeRaw`UPDATE "StoreTransaction" SET "attachmentMimeType"='application/vnd.myworkstation.purchase-document',"attachmentFilename"=${documentId},"invoiceDocumentNumber"=${body.documentNumber} WHERE "id"=${payment.id} AND "companyId"=${req.user.companyId}`;
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "stage"='POS_DRAFT_READY',"status"='POS_DRAFT_READY',"purchaseDocumentId"=${documentId},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
+      await bindUnlinkedMyDataOriginal(tx,originalIdentity,unlinkedOriginal,{jobId:job.id,documentId,orderId,paymentTransactionId:payment?.id||null});
       return {documentId,orderId,reused:false};
     });
     res.status(result.reused?200:201).json({ok:true,status:"DRAFT",stockUpdated:false,awaitingApproval:true,...result});
