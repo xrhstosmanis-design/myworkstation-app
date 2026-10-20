@@ -1,5 +1,31 @@
 # Online παραγγελίες και Delivery — Manual PASS
 
+## 20/10/2026 00:51 Europe/Athens — KAT-BACKGROUND-02 / LIMITED LIVE DESKTOP VISUAL PASS / COMPLETED
+
+Owner fix/kat-background-20261020. ClaimPR2907/bf894d1/docsCI39325681910 green mergedf00356f BEFORE source. SourcePR2908 initial0674e54/CI39325879053 SUCCESS; shared-record conflict resolved against464178e preserving other owners, source note moved after shared records to avoid prepend conflicts. Finalhead54d74aa64336064257dd5c0ee946efa935494ea2/fullPRCI39327413335 SUCCESS, mergedf2a3b79a145f7f80331280384066ec78c29ec230. Exact mainCI39328665510 SUCCESS all jobs. Ordinary guarded release39330143576/job118326018997 SUCCESS; browser health oktrue exactf2a3b79a145f7f80331280384066ec78c29ec230.
+
+Actual Cloud Chrome desktop /online/kat00:50-00:51: body visibly soft olive#cbd3b5 / computedrgb203,211,181, cream cards#fffdf7 /rgb255,253,247; approved logo uncropped, orange buttons and darkolive navigation retained.7categories/27coffee cards and empty basket0.00. Screenshot CHECKPOINTS/EVIDENCE/kat-background-20261020/online-desktop.jpg. Exactly one CSS declaration changed versus accepted KAT branding; all4script blocks byte-identical. Focused existing tests12PASS/0FAIL/0SKIP and frontend build PASS locally; full required CI as above. No new tests for reversible one-color adjustment. No order/payment/member/settings/catalogue/stock/fiscal or database write.
+
+Completed only requested outer-background visual adjustment. Prior KAT-BRANDING-01 desktop/category/search acceptance retained without replay; new mobile/touch/physical-device, saved-credential autofill, checkout/member/fiscal acceptance NOT TESTED here and other owners unchanged. Public visitors use /online/kat; refresh an older open page to receive new background, then wait for catalogue. No new role/access permission. This is not whole Online Gate PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-20-kat-background.md; manual docs/manual/online-delivery/PASS.md. Canonical tracker and numbered PDFs regenerated in same receipt.
+
+
+## 19/10/2026 23:59 Europe/Athens — KAT-BRANDING-01 / LIMITED LIVE DESKTOP PASS / COMPLETED
+
+Owner feat/kat-olive-orange-branding-20261019; source PR#2897/head9a811c57a48c39a7d28d9c3b1d693490ee5d9c0a merged0484d636059eedb936e8bea1159b05c6c00bf0d2. Claim PR#2895 merged before source. Full PR CI39320675559 and exact main CI39321897395 SUCCESS, including build-and-test, Windows and isolated wholesale checks. Ordinary guarded deployment39322990384/job118301603738 SUCCESS; exact health oktrue/revision0484d636059eedb936e8bea1159b05c6c00bf0d2 observed independently in public browser and guard logs at20:59UTC.
+
+Actual Cloud Chrome desktop /online/kat: approved rounded Greek ΚΥΛΙΚΕΙΟ ΚΑΤ logo visibly loaded uncropped in orange panel230x100; olive navigation#52613a/darkolive header/orange action buttons/warm background.7categories,27coffees, Νερά4, focused search FREDDO5, category Καφέδες clears search and restores27. Initial fill before focusing readonly search refused as designed; explicit focus then search passed. Empty basket0.00 throughout; current closed-hours state retained. Screenshot CHECKPOINTS/EVIDENCE/kat-branding-20261019/online-desktop.jpg. Original3business scripts byte-unchanged; separate exact-KAT-path class only, embedded approved PNG in local SVG. No catalogue/order/pricing/stock/member/auth/fiscal/settings/database writes. Node24 local20PASS/0FAIL/0SKIP after dependencies and Prisma client generation; frontend build PASS; deployment validated by Node20 CI.
+
+Only agreed public KAT visual desktop scope COMPLETED. Mobile/touch/physical-device, saved-credential autofill, checkout/member/payment/fiscal acceptance NOT TESTED here and not claimed; retained owners and prior qualified evidence unchanged. No whole Online Gate PASS. Checkpoint CHECKPOINTS/CHANGES/2026-10-19-kat-olive-orange-branding.md; manual docs/manual/online-delivery/PASS.md. Both canonical roadmap PDFs regenerated in this receipt.
+
+
+## 19/10/2026 - Δημόσιο Online ΚΑΤ: περιορισμένο LIVE desktop PASS
+
+Για επισκέπτες του δημόσιου καταστήματος ΚΑΤ, χωρίς λογαριασμό διαχειριστή. Ανοίξτε /online/kat (η αρχική /kat/ παραμένει διαθέσιμη), περιμένετε να φορτωθούν οι κατηγορίες και επιλέξτε μία. Η αλλαγή κατηγορίας καθαρίζει την προηγούμενη αναζήτηση και εμφανίζει τα αντίστοιχα προϊόντα. Για αναζήτηση κάντε κλικ στο πεδίο και πληκτρολογήστε όνομα προϊόντος· το FREDDO επέστρεψε5αποτελέσματα. Επιλογή κατηγορίας επιστρέφει στον κατάλογό της χωρίς ανανέωση. Το πεδίο αναζήτησης αρχίζει readonly, ενεργοποιείται με focus και έχει autocompleteoff.
+
+Κριτήριο PASS: σε Cloud Chrome desktop, δοκιμαστικό email πριν από κάθε μία από7κατηγορίες καθαρίστηκε και όλες εμφάνισαν προϊόντα (27/11/4/4/2/1/64). Η αρχική /kat/ πέρασε email→Νερά4. Το καλάθι έμεινε άδειο. Δεν έγινε παραγγελία ή αλλαγή προϊόντων/τιμών/stock/αδειών/πληρωμών. Πρόκειται μόνο για δημόσια προβολή του συγκεκριμένου καταστήματος, χωρίς νέα δικαιώματα ή πρόσβαση σε άλλο κατάστημα.
+
+Αν η σελίδα είχε ανοιχτεί πριν το deployment, ανανεώστε την και περιμένετε να φορτωθούν οι κατηγορίες πριν πατήσετε. Δεν δημιουργείτε προϊόντα ή δοκιμαστικές παραγγελίες για να διορθώσετε κενά αποτελέσματα. Η φυσική συμπεριφορά αποθηκευμένων κωδικών/email και νέος έλεγχος κινητού παραμένουν NOT TESTED, όχι μέρος αυτού του PASS. Προηγούμενη επιβεβαίωση ιδιοκτήτη για κατηγορίες κινητού διατηρείται χωριστά. Ακριβής revision αποδοχής19e6adcdf25fce65449b1f82f35c71808b61b3ac/PR2848,21:00-21:01Athens. Παλαιότερο Gate6 και λοιπά όρια παραμένουν ως έχουν.
+
 Ημερομηνία τελικής αποδοχής: 27/09/2026
 Κατάσταση: **Gate 6 PASS / ΟΛΟΚΛΗΡΩΜΕΝΟ / ΚΛΕΙΔΩΜΕΝΟ**
 

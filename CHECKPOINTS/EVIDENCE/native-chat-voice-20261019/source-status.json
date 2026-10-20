@@ -24,5 +24,14 @@
   ],
   "realProductionActionsByAgent": false,
   "physicalAcceptance": "DEFERRED until consolidated preparation complete",
-  "iosOrder": "LAST"
+  "iosOrder": "LAST",
+  "firstSourceTechnicalCI": {
+    "sha": "1b9111e947fad572c0c976a5fa564ee96cbd8062",
+    "fullRun": 39306125023,
+    "androidRun": 39306125076,
+    "status": "SUCCESS",
+    "serverTestsPassed": 3475,
+    "backupTestsPassed": 8,
+    "physicalStatus": "NOT TESTED"
+  }
 }

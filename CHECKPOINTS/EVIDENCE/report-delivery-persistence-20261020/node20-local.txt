@@ -1,0 +1,140 @@
+TAP version 13
+# Subtest: stable slot identity excludes all immutable snapshot fences and later source/settings revisions cannot authorize a duplicate
+ok 1 - stable slot identity excludes all immutable snapshot fences and later source/settings revisions cannot authorize a duplicate
+  ---
+  duration_ms: 10.946603
+  ...
+# Subtest: recipient, scope, frequency and exact period are separate slots; ordering of object fields is not identity
+ok 2 - recipient, scope, frequency and exact period are separate slots; ordering of object fields is not identity
+  ---
+  duration_ms: 2.999547
+  ...
+# Subtest: creation and transitions preserve input snapshots and prior records without shared mutable aliases
+ok 3 - creation and transitions preserve input snapshots and prior records without shared mutable aliases
+  ---
+  duration_ms: 2.086388
+  ...
+# Subtest: no implicit activation: each explicit current gate fails closed at creation and again immediately before dispatch
+ok 4 - no implicit activation: each explicit current gate fails closed at creation and again immediately before dispatch
+  ---
+  duration_ms: 11.217899
+  ...
+# Subtest: freshness and every immutable snapshot fence are rechecked before starting, including removal/revocation revisions
+ok 5 - freshness and every immutable snapshot fence are rechecked before starting, including removal/revocation revisions
+  ---
+  duration_ms: 3.833037
+  ...
+# Subtest: missing or nonboolean gate evidence and financial certification cannot pass by truthiness
+ok 6 - missing or nonboolean gate evidence and financial certification cannot pass by truthiness
+  ---
+  duration_ms: 3.325206
+  ...
+# Subtest: OCC and tokens fence stale branches; pure competing proposals still require future durable atomic CAS
+ok 7 - OCC and tokens fence stale branches; pure competing proposals still require future durable atomic CAS
+  ---
+  duration_ms: 0.931036
+  ...
+# Subtest: pre-dispatch expiration recovers safely at exact lease boundary and fences the former token forever
+ok 8 - pre-dispatch expiration recovers safely at exact lease boundary and fences the former token forever
+  ---
+  duration_ms: 2.028191
+  ...
+# Subtest: a lease one millisecond before expiry may start; after-start crash recovers UNKNOWN without transport replay
+ok 9 - a lease one millisecond before expiry may start; after-start crash recovers UNKNOWN without transport replay
+  ---
+  duration_ms: 1.487911
+  ...
+# Subtest: late accepted callback after lease expiry is fenced and needs UNKNOWN reconciliation, never another send
+ok 10 - late accepted callback after lease expiry is fenced and needs UNKNOWN reconciliation, never another send
+  ---
+  duration_ms: 0.898818
+  ...
+# Subtest: transport ACCEPTED and uncertain UNKNOWN are terminal and cannot imply delivered or final financial reconciliation
+ok 11 - transport ACCEPTED and uncertain UNKNOWN are terminal and cannot imply delivered or final financial reconciliation
+  ---
+  duration_ms: 2.539217
+  ...
+# Subtest: no completion before start; unproved rejection/error/retry outcome cannot reopen an attempt
+ok 12 - no completion before start; unproved rejection/error/retry outcome cannot reopen an attempt
+  ---
+  duration_ms: 2.931005
+  ...
+# Subtest: periods and timestamps must be canonical, finite, ended and ordered; offsets/invalid dates are rejected
+ok 13 - periods and timestamps must be canonical, finite, ended and ordered; offsets/invalid dates are rejected
+  ---
+  duration_ms: 1.005607
+  ...
+# Subtest: one mailbox follows existing trim/lower normalization; multi-recipient and header injection fail
+ok 14 - one mailbox follows existing trim/lower normalization; multi-recipient and header injection fail
+  ---
+  duration_ms: 2.052417
+  ...
+# Subtest: strict metadata rejects unsupported scope, unsafe counters, unknown keys and prototype-bearing objects
+ok 15 - strict metadata rejects unsupported scope, unsafe counters, unknown keys and prototype-bearing objects
+  ---
+  duration_ms: 2.482351
+  ...
+# Subtest: lease duration and version inputs reject unsafe values; a live lease cannot be opportunistically recovered
+ok 16 - lease duration and version inputs reject unsafe values; a live lease cannot be opportunistically recovered
+  ---
+  duration_ms: 1.843293
+  ...
+# Subtest: metadata validators do not execute accessors, accept hidden fields, or recurse unbounded through cycles
+ok 17 - metadata validators do not execute accessors, accept hidden fields, or recurse unbounded through cycles
+  ---
+  duration_ms: 0.542243
+  ...
+# Subtest: backwards time, exhausted versions and malformed persisted identity fail without mutating the record
+ok 18 - backwards time, exhausted versions and malformed persisted identity fail without mutating the record
+  ---
+  duration_ms: 0.921121
+  ...
+# Subtest: post-start UNKNOWN recovery is idempotent, preserving the original attempt and not manufacturing another lease
+ok 19 - post-start UNKNOWN recovery is idempotent, preserving the original attempt and not manufacturing another lease
+  ---
+  duration_ms: 0.758628
+  ...
+# Subtest: accepted acknowledgement requires a receipt and conflicting receipt cannot rewrite terminal evidence
+ok 20 - accepted acknowledgement requires a receipt and conflicting receipt cannot rewrite terminal evidence
+  ---
+  duration_ms: 1.190305
+  ...
+# Subtest: persisted attempt cannot claim a start before creation even when other fields look valid
+ok 21 - persisted attempt cannot claim a start before creation even when other fields look valid
+  ---
+  duration_ms: 0.645858
+  ...
+# Subtest: lifecycle generation matches native canonical decimal-string int64 semantics, including zero, without precision coercion
+ok 22 - lifecycle generation matches native canonical decimal-string int64 semantics, including zero, without precision coercion
+  ---
+  duration_ms: 2.300169
+  ...
+# Subtest: native fixture boundary refuses production, nonloopback, wrong mode and malformed URLs
+ok 23 - native fixture boundary refuses production, nonloopback, wrong mode and malformed URLs
+  ---
+  duration_ms: 1.710364
+  ...
+# Subtest: repository construction is dormant and validates required capabilities without touching DB
+ok 24 - repository construction is dormant and validates required capabilities without touching DB
+  ---
+  duration_ms: 0.500491
+  ...
+# Subtest: unsafe scope and accessor configuration are refused without queries or getter evaluation
+ok 25 - unsafe scope and accessor configuration are refused without queries or getter evaluation
+  ---
+  duration_ms: 1.901802
+  ...
+# Subtest: native PostgreSQL delivery persistence: independent clients, transactions and client reconnect fences
+ok 26 - native PostgreSQL delivery persistence: independent clients, transactions and client reconnect fences # SKIP
+  ---
+  duration_ms: 0.136285
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 159.941946

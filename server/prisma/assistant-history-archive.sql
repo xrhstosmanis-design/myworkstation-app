@@ -1,4 +1,4 @@
--- Reviewed provisioning candidate. Not executed by startup, routes or Work.
+-- Reviewed additive provisioning, invoked only by the guarded startup helper.
 -- Provision only together with the reviewed lifecycle catalogue/guards.
 -- No parent FKs or cascades: storeId is the sole reviewed DIRECT ownership.
 CREATE TABLE IF NOT EXISTS "AssistantHistoryArchive" (

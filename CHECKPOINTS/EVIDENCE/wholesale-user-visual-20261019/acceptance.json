@@ -1,0 +1,59 @@
+{
+  "scope": "USER screenshots: actual hosted seller/customer navigation/catalog and existing API-order display only",
+  "status": "LIMITED USER VISUAL PASS; not a new transaction or full hosted end-to-end UI PASS",
+  "owner": "codex/wholesale-suite-20261017",
+  "branch": "docs/wholesale-user-visual-20261019",
+  "receivedDate": "2026-10-19",
+  "userTerminal": "Windows desktop; taskbar Edge visible; physical device ID not supplied",
+  "operator": "project owner driving fake seller/customer sessions; no production login",
+  "company": "whlab-company",
+  "store": "whlab-store",
+  "posShift": "N/A",
+  "paymentMethod": "N/A; no new payment",
+  "sourceRevision": "e3432c2b3f6c8a890bbe52b61a0270ee06bc9899",
+  "revisionBasis": "Pinned lab branch and independently observed health earlier20:42UTC; screenshots do not expose per-action revision/boot",
+  "priorReceipt": "PR2891 / ef37b4ee26b0868de4fbfdbbdfd7e19add798cb5",
+  "userStatementAt": "2026-10-19T23:47:53+03:00",
+  "userStatement": "afoy ta ekanew esy einai ok",
+  "interpretation": "Owner accepts existing verified automated/API tests and asks not to repeat them. Does not assert unobserved calculation/submission/PDF or fiscal/stock acceptance.",
+  "photos": [
+    {
+      "file": "seller-entry.png",
+      "sha256": "64ca04195c0aa04c197d9621cfb75b3c0f60e857706e6713de774c86e9749d53",
+      "captureTimeAthensFromFilename": "2026-10-19T23:44:40+03:00",
+      "observation": "Seller identity visible; outer whlab-store selected; inner assigned-store selector not yet selected. No full seller flow acceptance."
+    },
+    {
+      "file": "portal-existing-order.png",
+      "sha256": "1d3abf7bf8e5f5c1409b0ffb591dee7314c64a566508e6dd85c38bbccbd067ca",
+      "captureTimeAthensFromFilename": "2026-10-19T23:45:37+03:00",
+      "observation": "Customer portal with query coca and no matching cards; existing API order64f9c86e-2a21-46c4-aef9-1933a0e2f1d4 gross11.30, juice2, net10/VAT1.30. This is display of previous API request, not a new user order."
+    },
+    {
+      "file": "seller-customer-selected.png",
+      "sha256": "3607f62718ef782e0ca6aabea102f8fe5f29d8d3c6b9c551cd40bd6335300213",
+      "captureTimeAthensFromFilename": "2026-10-19T23:46:21+03:00",
+      "observation": "Seller assigned whlab-store and fakeCustomerA selected; existing API order f4c29f3b-f4e6-4d24-b327-4dc422190493 gross12.40. No new order shown."
+    },
+    {
+      "file": "portal-public-catalog.png",
+      "sha256": "59d7035f00621f72ec02ade8a924ebc6e9619120c8ce7831971ae0aaf86b74a8",
+      "captureTimeAthensFromFilename": "2026-10-19T23:47:03+03:00",
+      "observation": "Customer selected whlab-store; empty search shows exactly WHLAB-ZERO,WHLAB-A,WHLAB-B; no WHLAB-PRIVATE. Cart empty, calculate disabled."
+    },
+    {
+      "file": "seller-assigned-catalog.png",
+      "sha256": "7f0cde5586c416543a36e3dc25fb6435a07a3ea0f7492266ea34c51aae348e56",
+      "captureTimeAthensFromFilename": "2026-10-19T23:47:36+03:00",
+      "observation": "Seller selected whlab-store/fakeCustomerA; empty product query shows WHLAB-ZERO,WHLAB-A,WHLAB-B,WHLAB-PRIVATE. Cart empty, calculate disabled."
+    }
+  ],
+  "notTested": [
+    "new hosted seller/customer UI quote or order submission",
+    "hosted browser PDF download",
+    "independent current source stock/finance database counters",
+    "whole production fulfillment/fiscal flow",
+    "durable offline and commercial standalone installer"
+  ],
+  "actionsByCoordinator": "Read-only image inspection; no business request, financial/stock posting, grant, source or deploy change."
+}

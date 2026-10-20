@@ -63,6 +63,7 @@ export default function SupplierSettlementReviewCenter({request:baseRequest,onCl
     <div className="supplier-review-list">{loading?<div className="platform-empty">Φόρτωση πληρωμών…</div>:items.length===0?<div className="platform-empty"><CheckCircle2/>Δεν υπάρχουν πληρωμές προμηθευτών για έλεγχο.</div>:items.map(item=>{const matched=item.automaticCheck?.matched===true;const discrepancy=item.status==="DISCREPANCY";const checks=item.automaticCheck?.checks||[];return <article key={item.id} className={discrepancy?"discrepancy":""}>
       <header><div><span className={`supplier-review-status ${matched?"confirmed":"discrepancy"}`}>{discrepancy?"ΚΑΤΑΓΕΓΡΑΜΜΕΝΗ ΑΠΟΚΛΙΣΗ":matched?"ΑΥΤΟΜΑΤΗ ΣΥΜΦΩΝΙΑ":"ΑΠΑΙΤΕΙΤΑΙ ΕΛΕΓΧΟΣ ΑΠΟΔΕΙΚΤΙΚΟΥ"}</span><h3>{item.supplierName}</h3><small>{item.ownerName||"Χωρίς ιδιοκτήτη"} · {item.companyName} · {item.storeName}<br/>Καταχώριση {dateTime(item.createdAt)} · πραγματική πληρωμή {dateTime(item.paidAt)} · {item.createdByName||"—"}</small></div><strong>{money(item.amount)}</strong></header>
       <div className="supplier-review-meta"><span><b>Τρόπος:</b> {paymentMethod[item.paymentMethod]||item.paymentMethod}</span><span><b>Αποδεικτικό:</b> {item.attachmentFilename||"Δεν υπάρχει"}</span></div>
+      {item.advanceAmount>0&&<div className="supplier-review-meta"><strong>Έναντι στον προμηθευτή: {money(item.advanceAmount)} — περιλαμβάνεται στην ίδια πληρωμή.</strong></div>}
       <div className="supplier-review-invoices"><b>Τιμολόγια που αντιστοιχίστηκαν</b><div>{(item.allocations||[]).map(allocation=><span key={allocation.purchaseDocumentId}>{allocation.documentNumber||"Χωρίς αριθμό"} · {money(allocation.amount)}</span>)}</div></div>
       <div className="supplier-review-meta"><span><b>Αποτέλεσμα αυτόματου ελέγχου:</b> {matched?`Συμφωνία ποσού ${money(item.automaticCheck?.allocationTotal)} με την πληρωμή.`:checks.join(" ")}</span></div>
       {item.note&&<p className="supplier-review-operator-note"><b>Σημείωση χειριστή:</b> {item.note}</p>}
@@ -71,3 +72,4 @@ export default function SupplierSettlementReviewCenter({request:baseRequest,onCl
     </article>})}</div>
   </section></div>;
 }
+

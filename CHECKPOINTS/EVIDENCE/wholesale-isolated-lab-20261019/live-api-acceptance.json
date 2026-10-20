@@ -1,0 +1,401 @@
+{
+  "kind": "independent HTTPS API acceptance; not LIVE UI",
+  "revision": "e3432c2b3f6c8a890bbe52b61a0270ee06bc9899",
+  "bootId": "0c680151-20df-4d1f-8b52-0f19fe49cebf",
+  "startedAt": "2026-10-19T20:16:34.462Z",
+  "steps": [
+    {
+      "label": "LIVE-API-SELLER-05",
+      "actor": "whlab-seller",
+      "storeId": "whlab-store",
+      "customerId": "whlab-customer",
+      "at": "2026-10-19T20:17:51.588Z",
+      "request": {
+        "path": "/api/wholesale/sellers/orders",
+        "body": {
+          "storeId": "whlab-store",
+          "customerId": "whlab-customer",
+          "items": [
+            {
+              "productId": "whlab-product-a",
+              "quantity": "1"
+            }
+          ],
+          "quoteId": "9950264140f3b601cdc230668f184a991948cef14824410a18a6f74705d91540",
+          "clientOrderId": "0928d5a9-8f06-4761-9a94-19918ebd260b",
+          "notes": "LIVE-LAB-SELLER-05 SYNTHETIC API TEST"
+        }
+      },
+      "before": {
+        "at": "2026-10-19T20:17:38.992Z",
+        "storeId": "whlab-store",
+        "orders": 1,
+        "documents": 1,
+        "payments": 1,
+        "events": 6,
+        "stock": {
+          "whlab-product-a": "98.0000",
+          "whlab-product-b": "77.0000",
+          "whlab-product-private": "25.0000",
+          "whlab-product-zero": "50.0000"
+        },
+        "receivables": [
+          {
+            "customerId": "whlab-customer",
+            "balance": "31.75"
+          }
+        ]
+      },
+      "method": "NO PAYMENT / SUBMITTED REQUEST ONLY",
+      "physicalTerminal": "independent Node20 HTTPS client; not browser",
+      "posShift": "N/A",
+      "after": {
+        "at": "2026-10-19T20:17:57.893Z",
+        "storeId": "whlab-store",
+        "orders": 2,
+        "documents": 1,
+        "payments": 1,
+        "events": 6,
+        "stock": {
+          "whlab-product-a": "98.0000",
+          "whlab-product-b": "77.0000",
+          "whlab-product-private": "25.0000",
+          "whlab-product-zero": "50.0000"
+        },
+        "receivables": [
+          {
+            "customerId": "whlab-customer",
+            "balance": "31.75"
+          }
+        ]
+      },
+      "orderId": "f4c29f3b-f4e6-4d24-b327-4dc422190493",
+      "replayed": false,
+      "finishedAt": "2026-10-19T20:18:10.120Z",
+      "pass": true
+    },
+    {
+      "label": "LIVE-API-SELLER-05-REPLAY",
+      "actor": "whlab-seller",
+      "storeId": "whlab-store",
+      "customerId": "whlab-customer",
+      "at": "2026-10-19T20:18:22.495Z",
+      "request": {
+        "path": "/api/wholesale/sellers/orders",
+        "body": {
+          "storeId": "whlab-store",
+          "customerId": "whlab-customer",
+          "items": [
+            {
+              "productId": "whlab-product-a",
+              "quantity": "1"
+            }
+          ],
+          "quoteId": "9950264140f3b601cdc230668f184a991948cef14824410a18a6f74705d91540",
+          "clientOrderId": "0928d5a9-8f06-4761-9a94-19918ebd260b",
+          "notes": "LIVE-LAB-SELLER-05 SYNTHETIC API TEST"
+        }
+      },
+      "before": {
+        "at": "2026-10-19T20:18:10.120Z",
+        "storeId": "whlab-store",
+        "orders": 2,
+        "documents": 1,
+        "payments": 1,
+        "events": 6,
+        "stock": {
+          "whlab-product-a": "98.0000",
+          "whlab-product-b": "77.0000",
+          "whlab-product-private": "25.0000",
+          "whlab-product-zero": "50.0000"
+        },
+        "receivables": [
+          {
+            "customerId": "whlab-customer",
+            "balance": "31.75"
+          }
+        ]
+      },
+      "method": "NO PAYMENT / SUBMITTED REQUEST ONLY",
+      "physicalTerminal": "independent Node20 HTTPS client; not browser",
+      "posShift": "N/A",
+      "after": {
+        "at": "2026-10-19T20:18:28.792Z",
+        "storeId": "whlab-store",
+        "orders": 2,
+        "documents": 1,
+        "payments": 1,
+        "events": 6,
+        "stock": {
+          "whlab-product-a": "98.0000",
+          "whlab-product-b": "77.0000",
+          "whlab-product-private": "25.0000",
+          "whlab-product-zero": "50.0000"
+        },
+        "receivables": [
+          {
+            "customerId": "whlab-customer",
+            "balance": "31.75"
+          }
+        ]
+      },
+      "orderId": "f4c29f3b-f4e6-4d24-b327-4dc422190493",
+      "replayed": true,
+      "finishedAt": "2026-10-19T20:18:41.179Z",
+      "pass": true
+    },
+    {
+      "label": "LIVE-API-PORTAL-06",
+      "actor": "whlab-account",
+      "storeId": "whlab-store",
+      "customerId": "whlab-customer",
+      "at": "2026-10-19T20:19:23.855Z",
+      "request": {
+        "path": "/api/b2b/wholesale-lab/orders",
+        "body": {
+          "storeId": "whlab-store",
+          "items": [
+            {
+              "productId": "whlab-product-b",
+              "quantity": "2"
+            }
+          ],
+          "quoteId": "dc9368229f3ece87faadf08d798f53c0afae2d2c2dd6d909de9e8ba20b19a64d",
+          "clientOrderId": "c68612d5-3f4c-498c-98b3-fa39d6e20d4a",
+          "notes": "LIVE-LAB-PORTAL-06 SYNTHETIC API TEST"
+        }
+      },
+      "before": {
+        "at": "2026-10-19T20:19:13.242Z",
+        "storeId": "whlab-store",
+        "orders": 2,
+        "documents": 1,
+        "payments": 1,
+        "events": 6,
+        "stock": {
+          "whlab-product-a": "98.0000",
+          "whlab-product-b": "77.0000",
+          "whlab-product-private": "25.0000",
+          "whlab-product-zero": "50.0000"
+        },
+        "receivables": [
+          {
+            "customerId": "whlab-customer",
+            "balance": "31.75"
+          }
+        ]
+      },
+      "method": "NO PAYMENT / SUBMITTED REQUEST ONLY",
+      "physicalTerminal": "independent Node20 HTTPS client; not browser",
+      "posShift": "N/A",
+      "after": {
+        "at": "2026-10-19T20:19:29.032Z",
+        "storeId": "whlab-store",
+        "orders": 3,
+        "documents": 1,
+        "payments": 1,
+        "events": 6,
+        "stock": {
+          "whlab-product-a": "98.0000",
+          "whlab-product-b": "77.0000",
+          "whlab-product-private": "25.0000",
+          "whlab-product-zero": "50.0000"
+        },
+        "receivables": [
+          {
+            "customerId": "whlab-customer",
+            "balance": "31.75"
+          }
+        ]
+      },
+      "orderId": "64f9c86e-2a21-46c4-aef9-1933a0e2f1d4",
+      "replayed": false,
+      "finishedAt": "2026-10-19T20:19:38.195Z",
+      "pass": true
+    },
+    {
+      "label": "LIVE-API-PORTAL-06-REPLAY",
+      "actor": "whlab-account",
+      "storeId": "whlab-store",
+      "customerId": "whlab-customer",
+      "at": "2026-10-19T20:19:47.831Z",
+      "request": {
+        "path": "/api/b2b/wholesale-lab/orders",
+        "body": {
+          "storeId": "whlab-store",
+          "items": [
+            {
+              "productId": "whlab-product-b",
+              "quantity": "2"
+            }
+          ],
+          "quoteId": "dc9368229f3ece87faadf08d798f53c0afae2d2c2dd6d909de9e8ba20b19a64d",
+          "clientOrderId": "c68612d5-3f4c-498c-98b3-fa39d6e20d4a",
+          "notes": "LIVE-LAB-PORTAL-06 SYNTHETIC API TEST"
+        }
+      },
+      "before": {
+        "at": "2026-10-19T20:19:38.196Z",
+        "storeId": "whlab-store",
+        "orders": 3,
+        "documents": 1,
+        "payments": 1,
+        "events": 6,
+        "stock": {
+          "whlab-product-a": "98.0000",
+          "whlab-product-b": "77.0000",
+          "whlab-product-private": "25.0000",
+          "whlab-product-zero": "50.0000"
+        },
+        "receivables": [
+          {
+            "customerId": "whlab-customer",
+            "balance": "31.75"
+          }
+        ]
+      },
+      "method": "NO PAYMENT / SUBMITTED REQUEST ONLY",
+      "physicalTerminal": "independent Node20 HTTPS client; not browser",
+      "posShift": "N/A",
+      "after": {
+        "at": "2026-10-19T20:19:53.831Z",
+        "storeId": "whlab-store",
+        "orders": 3,
+        "documents": 1,
+        "payments": 1,
+        "events": 6,
+        "stock": {
+          "whlab-product-a": "98.0000",
+          "whlab-product-b": "77.0000",
+          "whlab-product-private": "25.0000",
+          "whlab-product-zero": "50.0000"
+        },
+        "receivables": [
+          {
+            "customerId": "whlab-customer",
+            "balance": "31.75"
+          }
+        ]
+      },
+      "orderId": "64f9c86e-2a21-46c4-aef9-1933a0e2f1d4",
+      "replayed": true,
+      "finishedAt": "2026-10-19T20:20:03.202Z",
+      "pass": true
+    }
+  ],
+  "checks": [
+    "seller active identity, assigned store/customer and cross-store denial",
+    "HTTPS portal Secure/HttpOnly/Strict cookie headers, CSRF and publication/cross-store/bearer boundaries",
+    "inactive personal seller stable403 refusal without grants",
+    "deployed authenticated TEST PDF endpoint; browser download not asserted"
+  ],
+  "baseline": {
+    "at": "2026-10-19T20:16:54.990Z",
+    "storeId": "whlab-store",
+    "orders": 1,
+    "documents": 1,
+    "payments": 1,
+    "events": 6,
+    "stock": {
+      "whlab-product-a": "98.0000",
+      "whlab-product-b": "77.0000",
+      "whlab-product-private": "25.0000",
+      "whlab-product-zero": "50.0000"
+    },
+    "receivables": [
+      {
+        "customerId": "whlab-customer",
+        "balance": "31.75"
+      }
+    ]
+  },
+  "controlBefore": {
+    "testOnly": true,
+    "storeId": "whlab-other-store",
+    "documents": [],
+    "stock": [
+      {
+        "productId": "whlab-product-a",
+        "name": "Δοκιμαστικός καφές κιβώτιο",
+        "quantity": "777.0000"
+      }
+    ],
+    "receivables": [],
+    "payments": [],
+    "events": [
+      {
+        "id": "ace39a59-88ec-482a-b029-90c9b2c0502d",
+        "actorId": "LAB_FIXTURE",
+        "kind": "INITIAL_VIRTUAL_STOCK",
+        "details": {
+          "storeId": "whlab-other-store",
+          "quantity": "777",
+          "testOnly": true,
+          "companyId": "whlab-company",
+          "productId": "whlab-product-a",
+          "requestId": "whlab-initial-whlab-other-store-whlab-product-a"
+        },
+        "createdAt": "2026-10-19T20:06:32.428Z"
+      }
+    ]
+  },
+  "final": {
+    "at": "2026-10-19T20:20:19.463Z",
+    "storeId": "whlab-store",
+    "orders": 3,
+    "documents": 1,
+    "payments": 1,
+    "events": 6,
+    "stock": {
+      "whlab-product-a": "98.0000",
+      "whlab-product-b": "77.0000",
+      "whlab-product-private": "25.0000",
+      "whlab-product-zero": "50.0000"
+    },
+    "receivables": [
+      {
+        "customerId": "whlab-customer",
+        "balance": "31.75"
+      }
+    ]
+  },
+  "controlAfter": {
+    "testOnly": true,
+    "storeId": "whlab-other-store",
+    "documents": [],
+    "stock": [
+      {
+        "productId": "whlab-product-a",
+        "name": "Δοκιμαστικός καφές κιβώτιο",
+        "quantity": "777.0000"
+      }
+    ],
+    "receivables": [],
+    "payments": [],
+    "events": [
+      {
+        "id": "ace39a59-88ec-482a-b029-90c9b2c0502d",
+        "actorId": "LAB_FIXTURE",
+        "kind": "INITIAL_VIRTUAL_STOCK",
+        "details": {
+          "storeId": "whlab-other-store",
+          "quantity": "777",
+          "testOnly": true,
+          "companyId": "whlab-company",
+          "productId": "whlab-product-a",
+          "requestId": "whlab-initial-whlab-other-store-whlab-product-a"
+        },
+        "createdAt": "2026-10-19T20:06:32.428Z"
+      }
+    ]
+  },
+  "health": {
+    "ok": true,
+    "testOnly": true,
+    "revision": "e3432c2b3f6c8a890bbe52b61a0270ee06bc9899",
+    "bootId": "0c680151-20df-4d1f-8b52-0f19fe49cebf",
+    "outboundBlocked": 0
+  },
+  "pass": true,
+  "finishedAt": "2026-10-19T20:20:38.138Z"
+}

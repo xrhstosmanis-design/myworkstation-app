@@ -1,3 +1,7 @@
+## 20/10/2026 — Native voice PR2877 technical checks GREEN / combined-main verification pending
+
+Retained owner feat/android-chat-native-20261017. Exact source1b9111e947fad572c0c976a5fa564ee96cbd8062 full CI39306125023/job118243927910 SUCCESS3475PASS/0FAIL plus8backupPASS; Android39306125076/job118243555841 SUCCESS build/unit/lint/emulator. Recovered published source after workspace maintenance; reconciled current main a9d6359911d1378712f67e5f13e99f8b9c9be97f preserving every other owner. Regenerated combined tracker PDF. New reconciled head requires fresh full/Android CI before merge and ordinary guarded release. No new USER/LAB PASS, real message/read/push or business writes. Hardware mic/playback, stable owner signing and consolidated final physical acceptance remain OPEN; iOS LAST. Single next action: fresh exact combined-head CI, merge and verified guarded release.
+
 ## 19/10/2026 — native voice source implemented / AWAITING EXACT CI, RELEASE AND FINAL DEVICE BATCH
 
 Retained native owner, independent voice-only branch feat/native-chat-voice-20261019. Before-source claimPR2876/head5190837cac97439e3207922b3fa7df0e6db2cc76 mergedcb9f44ce251efe1e98b3f1878d716b36563033b6 after green docs/Windows checks BEFORE source. Prior combined quick-reply/signing sourcePR2871/headaf5c65ca merged31521be5 after exact PR full39302681196 and Android39302681233 SUCCESS; exact merged-main39304129153/job118236990210 SUCCESS. These protect earlier slices, not the new voice candidate.

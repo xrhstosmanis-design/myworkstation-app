@@ -46,7 +46,8 @@ test('native single-connection HTTP history runs actual native license/session/r
    providers++;assert.doesNotMatch(JSON.stringify(settings),/FORGED CLIENT/);
    return providers%2?{response:{ok:true},raw:{output:[{type:'function_call',name:'cash_details',call_id:'native-read',arguments:'{"date":"2026-10-10"}'}]}}:{response:{ok:true},raw:{output_text:JSON.stringify({answer:'Native checked fixture answer',highlights:[],limitations:''})}};
   },readCash:async(req,date,scope)=>{sourceReads++;if(holdRead)await holdRead();return {...scope,scope:'OWNER_SELECTED_STORE',date,rows:[]}}}));
-  const platform=createAssistantHistoryHttp({mode:'platform',turns:createNativeAssistantHistory({db,mode:'platform',enabled:()=>true})});app.get('/platform/history',authenticate,platform.load);
+  const platform=createAssistantHistoryHttp({mode:'platform',turns:createNativeAssistantHistory({db,mode:'platform',enabled:()=>true,ready:async()=>true})});app.get('/platform/history',authenticate,platform.load);
+  const unready=createAssistantHistoryHttp({mode:'platform',turns:createNativeAssistantHistory({db,mode:'platform',enabled:()=>true,ready:async()=>false})});app.get('/platform/history-unready',authenticate,unready.load);
   const disabled=createAssistantHistoryHttp({mode:'platform',turns:createNativeAssistantHistory({db,mode:'platform',enabled:()=>false})});app.get('/platform/history-disabled',authenticate,disabled.load);
   app.use((e,req,res,next)=>{if(e.code==='ASSISTANT_HISTORY_CANCELLED'&&res.destroyed){cancelDone?.();return}res.status(e.status||(e.name==='ZodError'?400:500)).json({error:'Rejected',code:e.code||'INVALID'})});
   server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
@@ -66,6 +67,7 @@ test('native single-connection HTTP history runs actual native license/session/r
   await within(started,'Canceled report did not reach its controlled read');controller.abort();await canceledResult;await within(closed,'Actual HTTP disconnect was not observed');releaseRead();await within(finished,'Canceled turn did not reach its guarded completion');holdRead=null;cancelClose=null;cancelDone=null;
   assert.equal(Number((await db.$queryRaw`SELECT "revision" FROM "AssistantHistoryArchive"`)[0].revision),1);assert.equal(providers,4);assert.equal(sourceReads,2);
   assert.equal((await ask()).status,409);assert.equal(providers,4);assert.equal(sourceReads,2);
+  const noCleaner=await fetch(base+'/platform/history-unready?companyId=c&storeId=s',{headers:headers(administrator)});assert.equal(noCleaner.status,503);assert.equal((await noCleaner.json()).code,'ASSISTANT_HISTORY_UNAVAILABLE');
   const off=await fetch(base+'/platform/history-disabled?companyId=c&storeId=s',{headers:headers(administrator)});assert.equal(off.status,200);const offDto=await off.json();assert.equal(offDto.available,false);assert.equal(offDto.code,'ASSISTANT_HISTORY_DISABLED');
   const central=await fetch(base+'/platform/history?companyId=c&storeId=s',{headers:headers(administrator)});assert.equal(central.status,200);assert.equal((await central.json()).archive.threads.length,0,'A different personal actor/mode cannot read Owner prose');
   await db.$executeRaw`INSERT INTO "StorePaidModule" VALUES('c','s','CASH_CONTROL',false,null,null)`;const denied=await get();assert.equal(denied.status,403);assert.doesNotMatch(await denied.text(),/Native checked fixture/);

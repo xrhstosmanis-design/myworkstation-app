@@ -15,6 +15,7 @@
   "knownTables": [
     "AdvancedOnlineSearchUsage",
     "AiReaderJob",
+    "AssistantHistoryArchive",
     "AttendanceEvent",
     "AudienceDiscountCard",
     "AuthAudit",
@@ -393,6 +394,63 @@
       [
         "updatedAt",
         "timestamp(3) without time zone",
+        true
+      ]
+    ],
+    "AssistantHistoryArchive": [
+      [
+        "scopeKey",
+        "text",
+        true
+      ],
+      [
+        "revision",
+        "bigint",
+        true
+      ],
+      [
+        "payload",
+        "jsonb",
+        true
+      ],
+      [
+        "requestId",
+        "text",
+        true
+      ],
+      [
+        "digest",
+        "text",
+        true
+      ],
+      [
+        "expiresAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "actorId",
+        "text",
+        true
+      ],
+      [
+        "mode",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "generation",
+        "bigint",
         true
       ]
     ],
@@ -15461,6 +15519,17 @@
     "AdvancedOnlineSearchUsage.actorId",
     "AdvancedOnlineSearchUsage.details",
     "AiReaderJob.resultJson",
+    "AssistantHistoryArchive.actorId",
+    "AssistantHistoryArchive.companyId",
+    "AssistantHistoryArchive.digest",
+    "AssistantHistoryArchive.expiresAt",
+    "AssistantHistoryArchive.generation",
+    "AssistantHistoryArchive.mode",
+    "AssistantHistoryArchive.payload",
+    "AssistantHistoryArchive.requestId",
+    "AssistantHistoryArchive.revision",
+    "AssistantHistoryArchive.scopeKey",
+    "AssistantHistoryArchive.storeId",
     "AttendanceEvent.supersedesEventId",
     "AttendanceEvent.voidedByUserId",
     "AudienceDiscountCard.createdByUserId",
@@ -15892,6 +15961,13 @@
           ]
         }
       ]
+    },
+    {
+      "name": "AssistantHistoryArchive",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
     },
     {
       "name": "AttendanceEvent",
