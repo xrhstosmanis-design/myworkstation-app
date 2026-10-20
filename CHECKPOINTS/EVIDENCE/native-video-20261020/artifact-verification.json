@@ -1,0 +1,29 @@
+{
+  "sourceSha": "5e16907a0cbc989c3b43a484970c660423774002",
+  "package": "gr.myworkstation.chat.preview",
+  "sha256": "ce5c07cd446f649e33f767b3075f22c2d99bf182ffbf1804c77fdd77874fb7c2",
+  "bytes": 3687252,
+  "certificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "status": "TECHNICAL CANDIDATE; PHYSICAL ACCEPTANCE PENDING",
+  "publicDistributionChanged": false,
+  "manifest": {
+    "versionCode": 10,
+    "versionName": "0.1.9-preview",
+    "compileSdkVersion": 35,
+    "compileSdkVersionCodename": "15",
+    "package": "gr.myworkstation.chat.preview",
+    "platformBuildVersionCode": 35,
+    "platformBuildVersionName": 15
+  },
+  "apkV2RsaSignature": "VERIFIED",
+  "apkV2ContentDigest": "VERIFIED",
+  "certificatePin": "MATCH",
+  "privateSigningMaterialIncluded": false,
+  "signedRun": 39485822858,
+  "signedAttempt": 2,
+  "artifactId": 12294537237,
+  "exactSourceFullCI": 39486049433,
+  "androidSourceTree": "34b56cdadd708ff0bd3dea0007d11175fcee3547",
+  "physicalVideo": "NOT TESTED",
+  "sameSignerPhysicalUpgrade": "NOT TESTED"
+}

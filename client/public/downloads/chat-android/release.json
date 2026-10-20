@@ -1,15 +1,19 @@
 {
   "package": "gr.myworkstation.chat.preview",
-  "version": "0.1.8-preview",
-  "versionCode": 9,
+  "version": "0.1.9-preview",
+  "versionCode": 10,
   "minimumAndroid": 8,
-  "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.8-Preview.apk",
-  "sha256": "a1c9faf3f84a821d4252e6c79306d29edf69a56cd7027593a78a63e28b5d05ca",
-  "bytes": 3670848,
-  "sourceCommit": "d12f69e4ee0b26b5c70ead560593726653893d3d",
-  "androidSourceTree": "de68c96509736c9744674d5c6236e33799fa44e4",
-  "ciRun": 39458772660,
+  "videoCaptureMinimumAndroid": 11,
+  "maximumVideoSeconds": 30,
+  "maximumVideoBytes": 12582912,
+  "videoFormat": "MP4 H264/AAC",
+  "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.9-Preview.apk",
+  "sha256": "ce5c07cd446f649e33f767b3075f22c2d99bf182ffbf1804c77fdd77874fb7c2",
+  "bytes": 3687252,
+  "sourceCommit": "5e16907a0cbc989c3b43a484970c660423774002",
+  "androidSourceTree": "34b56cdadd708ff0bd3dea0007d11175fcee3547",
+  "ciRun": 39485822858,
   "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
   "signing": "stable-owner-key",
-  "acceptance": "FINAL TECHNICAL CANDIDATE; PHYSICAL ACCEPTANCE PENDING"
+  "acceptance": "FINAL TECHNICAL CANDIDATE; PHYSICAL VIDEO ACCEPTANCE PENDING"
 }
