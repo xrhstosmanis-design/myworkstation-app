@@ -78,3 +78,19 @@ LAB και εξουσιοδοτημένος Admin/περιορισμένος χ�
 Αν αποτύχει ένα βήμα, σταματά μόνο το επηρεαζόμενο σκέλος· δεν επαναλαμβάνονται
 τυφλά επιτυχημένα μηνύματα. Αποτέλεσμα/όρια καταγράφονται αμέσως μαζί σε checkpoint,
 active/manual/pending/tracker/PDF σύμφωνα με AGENTS. Μετά την Android αποδοχή ακολουθεί iOS.
+
+## Owner Windows PC — helper setup (source candidate, actual execution NOT TESTED)
+
+Public helper: `tools/android-chat-signing/Setup-OwnerSigning.ps1`. Run only after its source CI and isolated Windows5.1/7 checks succeed. It does not touch POS, messages, backend or public APK. Browser sign-in in ChatGPT is separate from local GitHub CLI sign-in.
+
+Prerequisites on the owner PC: Java17 JDK/keytool from https://adoptium.net/ and GitHub CLI from https://cli.github.com/. Open a fresh PowerShell after installation. Complete local GitHub CLI sign-in yourself using `gh auth login --hostname github.com --web`; no password, token or private signing data goes into chat. The helper never changes your login or asks for a token.
+
+1. Inspect/download the reviewed helper and run it locally with `-Mode Prepare`. It prints a newly created private directory under LOCALAPPDATA/MyWorkStation/AndroidSigning. Existing directory/key is never replaced. No GitHub write occurs.
+2. Keep an owner-controlled encrypted backup of the entire printed directory: it contains both private PKCS12 and its password. Do not commit it, attach it to chat, email or upload it as a workflow artifact. The agent does not have a copy.
+3. Run the same helper with `-Mode Publish -Directory '<exact printed directory>'`. It checks existing setup before any upload, then asks you to type `xrhstosmanis-design/myworkstation-app` and `BACKUP`. This explicitly authorizes only the four MW_CHAT signing secrets and public MW_CHAT_CERT_SHA256 pin in this repository. Other secrets/permissions/visibility remain untouched.
+4. If a tool/network failure leaves a partial result, keep the same backup and rerun Publish explicitly with that directory. Unknown attempted name is retained, existing unrelated setup/different certificate fails closed. Never Prepare a new key as a retry.
+5. After owner publication is verified, run the existing stable signed preview workflow after exact full main CI. Verify resulting package/version/hash/pinned signer and retain one consolidated final physical batch. No physical PASS or public release follows from helper completion alone.
+
+The private directory ACL limits direct access to the current Windows user and SYSTEM; it is not a claim against administrator access, malware or forensic recovery. Managed-language memory cannot promise zero copies. Keep the encrypted backup independently from the PC.
+
+Official command references: https://cli.github.com/manual/gh_secret_set , https://cli.github.com/manual/gh_variable_set , https://docs.oracle.com/en/java/javase/17/docs/specs/man/keytool.html .
