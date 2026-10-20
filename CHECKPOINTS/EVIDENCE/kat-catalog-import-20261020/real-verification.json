@@ -1,0 +1,32 @@
+{
+  "status": "PASS",
+  "rows": 1766,
+  "created": 1753,
+  "updated": 13,
+  "aliases": 1981,
+  "categories": 28,
+  "subcategories": 113,
+  "units": {
+    "PIECE": 1765,
+    "KG": 1
+  },
+  "inactive": [
+    "KAT-21880",
+    "KAT-21881",
+    "KAT-33039",
+    "KAT-38553"
+  ],
+  "zeroVatUnverified": 15,
+  "unaffectedProducts": {
+    "count": 142,
+    "md5": "9e430df98d47d8fbffaf8b362221b550"
+  },
+  "unaffectedStock": {
+    "count": 134,
+    "md5": "5d0ffbbfdbf02980d1c0c1b6ae9436bf"
+  },
+  "productsTotal": 1908,
+  "stockTotal": 1900,
+  "fileSHA256": "a300168a90e60899a290cf4d46720fa73f017107eaa22fd690955d6f0e30d88c",
+  "errors": []
+}

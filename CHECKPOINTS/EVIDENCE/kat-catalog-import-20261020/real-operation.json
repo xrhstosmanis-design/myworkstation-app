@@ -1,0 +1,20 @@
+{
+  "target": {
+    "companyId": "pilot-company",
+    "storeId": "kat-store"
+  },
+  "liveRevision": "d8142d55c376574f6a0b6ab35b611a2dc3bdcc97",
+  "preview": {
+    "total": 1766,
+    "create": 1753,
+    "update": 13,
+    "invalid": 0
+  },
+  "successfulFinalClicks": 1,
+  "stockOverwrite": false,
+  "labReceiptPR": 2950,
+  "labReceiptMerge": "c52fb74ba33320a9a25fe78553d4747ab6346b58",
+  "labReceiptCI": 39454582169,
+  "libraryVersion": 2,
+  "fileSHA256": "a300168a90e60899a290cf4d46720fa73f017107eaa22fd690955d6f0e30d88c"
+}
