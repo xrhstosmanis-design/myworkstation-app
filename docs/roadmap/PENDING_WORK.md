@@ -1,3 +1,7 @@
+## 20/10/2026 09:17:54 Europe/Athens - POS-PAYMENT-MINIMIZE-01 / USER SCOPE CORRECTION
+
+User explicitly clarifies scanner works normally; ONLY restore pill covers checkout/payment controls. Supersedes initial scanner-block hypothesis and all proposed scanner/lifecycle changes below. Bounded fix ONLY restore-button placement in existing POS product-search row, in normal layout flow, away from footer/total. Preserve existing minimization, same mounted state, restore, scanner/modal/checkout locks and all payment payloads unchanged. No StorePosPanel or payment form edits. Test actual bootstrap placement, nonempty cart/footer bounds, restore same unsaved DOM/no writes. Other owners remain protected. Actual hosted fix NOT TESTED. Owner fix/pos-payment-minimize-20261020 retained.
+
 ## 20/10/2026 09:23 Europe/Athens - POS-PAYMENT-MINIMIZE-01 / ASSIGNED BEFORE SOURCE / USER FAIL
 
 Owner fix/pos-payment-minimize-20261020. User screenshot image(20261020-061458).png shows real Diadoxou POS nonempty customer cart, minimized payment pill covering bottom-right checkout; user reports all actions blocked. Independent bounded UI lifecycle regression, not takeover of existing invoice workspace/menu/completion/QR/payroll/advance owners. Inspect current AGENTS/shared registers/manuals/checkpoints/history: legacy global payment minimizer hides DOM but StorePosPanel scannerBlocked still includes activeModal PAYMENTS; floating bottom pill overlaps checkout. Exact current root cause/hit-testing to verify with real mounted/browser tests before claim of PASS.
