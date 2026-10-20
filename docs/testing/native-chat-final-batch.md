@@ -79,9 +79,9 @@ LAB και εξουσιοδοτημένος Admin/περιορισμένος χ�
 τυφλά επιτυχημένα μηνύματα. Αποτέλεσμα/όρια καταγράφονται αμέσως μαζί σε checkpoint,
 active/manual/pending/tracker/PDF σύμφωνα με AGENTS. Μετά την Android αποδοχή ακολουθεί iOS.
 
-## Owner Windows PC — helper setup (source candidate, actual execution NOT TESTED)
+## Owner Windows PC — helper setup (technical CI verified; owner execution NOT TESTED)
 
-Public helper: `tools/android-chat-signing/Setup-OwnerSigning.ps1`. Run only after its source CI and isolated Windows5.1/7 checks succeed. It does not touch POS, messages, backend or public APK. Browser sign-in in ChatGPT is separate from local GitHub CLI sign-in.
+Public helper: `tools/android-chat-signing/Setup-OwnerSigning.ps1`. SourcePR2944 and exact full CI39429851195 plus isolated Windows5.1/7 checks39429851209 succeeded. Actual owner execution remains NOT TESTED. It does not touch POS, messages, backend or public APK. Browser sign-in in ChatGPT is separate from local GitHub CLI sign-in.
 
 Prerequisites on the owner PC: Java17 JDK/keytool from https://adoptium.net/ and GitHub CLI from https://cli.github.com/. Open a fresh PowerShell after installation. Complete local GitHub CLI sign-in yourself using `gh auth login --hostname github.com --web`; no password, token or private signing data goes into chat. The helper never changes your login or asks for a token.
 
