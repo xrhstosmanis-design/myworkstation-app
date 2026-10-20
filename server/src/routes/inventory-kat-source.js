@@ -51,8 +51,13 @@ export function attachKatWorkbook(workbook,raw,XLSX){
     assertTarget(companyId,storeId){if(companyId!==text(meta[0].CompanyId)||storeId!==text(meta[0].StoreId))fail('Το πακέτο ΚΑΤ προορίζεται για διαφορετικό κατάστημα ή εταιρεία.');},
     async lockExisting(db,companyId,storeId){
       const productIds=[...ids].sort();if(!productIds.length)return;
-      await db.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${companyId} AND "id"=ANY(${productIds}::text[]) ORDER BY "id" FOR UPDATE`;
-      await db.$queryRaw`SELECT "id" FROM "StoreProduct" WHERE "storeId"=${storeId} AND "productId"=ANY(${productIds}::text[]) ORDER BY "id" FOR UPDATE`;
+      // The older barcode writers do not share one row/table lock order.
+      // Refuse a busy existing row immediately instead of forming a wait cycle
+      // while the import holds the existing barcode-table collision barrier.
+      try{
+        await db.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${companyId} AND "id"=ANY(${productIds}::text[]) ORDER BY "id" FOR UPDATE NOWAIT`;
+        await db.$queryRaw`SELECT "id" FROM "StoreProduct" WHERE "storeId"=${storeId} AND "productId"=ANY(${productIds}::text[]) ORDER BY "id" FOR UPDATE NOWAIT`;
+      }catch(error){if(error.code==='55P03'||error.meta?.code==='55P03')fail('Ένα υπάρχον είδος ενημερώνεται τώρα. Δεν έγινε εισαγωγή. Κάντε νέα προεπισκόπηση.');throw error;}
     },
     async reconcile(db,companyId,storeId,rows){
       const productIds=[...ids];

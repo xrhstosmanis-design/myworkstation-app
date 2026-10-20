@@ -206,6 +206,11 @@ test("native PostgreSQL actual import is atomic, preserves controls and rejects 
     const kp=await h.call('/import-preview',kb,ku);assert.equal(kp.body.summary.create,1);assert.equal(kp.body.summary.update,1);assert.equal(kp.body.summary.invalid,0);
     const katObserve=()=>db.$queryRaw`SELECT p.*,sp."currentStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" WHERE p."id"='kat-existing'`;
     const katBefore=await katObserve();
+    let acquired,release;const ready=new Promise(r=>{acquired=r}),heldLock=new Promise(r=>{release=r});
+    const blocker=db.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"='kat-existing' FOR UPDATE`;acquired();await heldLock;},{timeout:10000});
+    await ready;let busy;
+    try{busy=await h.call('/import',kb,ku);}finally{release();await blocker;}
+    assert.equal(busy.statusCode,409);assert.match(busy.error.message,/ενημερώνεται τώρα/);assert.deepEqual(await katObserve(),katBefore);
     await db.$executeRawUnsafe('ALTER TABLE "ProductBarcode" ADD CONSTRAINT kat_injected_failure CHECK ("barcode"<>\'00000093\')');
     assert.ok((await h.call('/import',kb,ku)).error);assert.deepEqual(await katObserve(),katBefore);assert.equal((await db.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"='kat-company' AND "sku"='KAT-1'`).length,0);
     await db.$executeRawUnsafe('ALTER TABLE "ProductBarcode" DROP CONSTRAINT kat_injected_failure');
