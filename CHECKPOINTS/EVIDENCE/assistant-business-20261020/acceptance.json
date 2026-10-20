@@ -71,5 +71,25 @@
     "actualPostReleaseFile": "NOT TESTED",
     "authWorkaround": false,
     "repeatedCredentialRequest": false
+  },
+  "postReleaseRetest1832": {
+    "userReportedSignedIn": true,
+    "namedSuperAdminObserved": true,
+    "explicitDiadoxouOnly": true,
+    "allStoresOff": true,
+    "personalHistoryRestored": true,
+    "composerEnabled": true,
+    "supportSessionBlockCleared": true,
+    "originalBankRowsBefore": 68,
+    "publicHealthExact": "d8142d55c376574f6a0b6ab35b611a2dc3bdcc97",
+    "naturalCsvAttempt": "Native retained browser data restriction; kernel reset; same tab cannot safely resume",
+    "messageSubmission": "UNKNOWN",
+    "completedAnswerOrDownloadObserved": false,
+    "actualCsvContents": "NOT TESTED",
+    "sourceAfterComparison": "NOT TESTED",
+    "additionalCredentialRequest": false,
+    "authOrRuntimeWorkaround": false,
+    "businessWrite": false,
+    "newManualPass": false
   }
 }
