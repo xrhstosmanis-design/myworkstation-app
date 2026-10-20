@@ -34,6 +34,8 @@ test("supplier grouped order suggestions HTTP/SQL: quantities, returns, store/li
     await tx.$executeRawUnsafe(`INSERT INTO "StorePaidModule" VALUES ('off','off','ORDER_SUGGESTIONS',false,NULL,NULL)`);
     await tx.$executeRawUnsafe(`INSERT INTO "Product" VALUES ('p','a','Pieces','P','PIECE',true,true),('exchange','a','Exchange','E','PIECE',true,true),('kg','a','Weight','K','KG',true,true),('pack','a','Pack','PACK','PACKAGE',true,true),('recipe','a','Recipe','R','PIECE',true,true),('prepared','a','Prepared','PR','PIECE',true,true),('inactive','a','Inactive','I','PIECE',false,true),('untracked','a','Untracked','U','PIECE',true,false),('foreign','b','Foreign','F','PIECE',true,true)`);
     await tx.$executeRawUnsafe(`INSERT INTO "StoreProduct" VALUES ('p','a1','p',3,5,true),('e','a1','exchange',0,0,true),('k','a1','kg',0,0,true),('pack','a1','pack',0,7,true),('r','a1','recipe',0,2,true),('pr','a1','prepared',0,2,true),('i','a1','inactive',0,5,true),('u','a1','untracked',0,5,true),('bad','a1','foreign',0,5,true),('sibling','a2','p',50,5,true),('f','b1','foreign',1,9,true)`);
+    await tx.$executeRawUnsafe(`INSERT INTO "Product" VALUES ('no-gap','a','No recorded gap','N','PIECE',true,true),('negative','a','Negative recorded stock','NEG','PIECE',true,true),('default-min','a','No configured minimum','DEF','PIECE',true,true),('tiny','a','Tiny recorded gap','TINY','KG',true,true)`);
+    await tx.$executeRawUnsafe(`INSERT INTO "StoreProduct" VALUES ('no-gap','a1','no-gap',5,5,true),('negative','a1','negative',-2,5,true),('default-min','a1','default-min',2,NULL,true),('tiny','a1','tiny',0.9996,1,true)`);
     await tx.$executeRawUnsafe(`INSERT INTO "Recipe" VALUES ('r','a','recipe',true);`);
     await tx.$executeRawUnsafe(`INSERT INTO "PreparationRecipeLine" VALUES ('pr','a','prepared',true);`);
     const now=new Date(),recent=new Date(now.getTime()-86400000),old=new Date(now.getTime()-91*86400000),future=new Date(now.getTime()+86400000);
@@ -56,18 +58,33 @@ test("supplier grouped order suggestions HTTP/SQL: quantities, returns, store/li
     const routeSource=await readFile(new URL("../src/routes/order-suggestions.js",import.meta.url),"utf8");
     const registrations=[];new Function("Router","z","prisma","requireStoreModule","buildOrderSuggestions","buildSupplierOrderGroups","SUPPLIER_EVIDENCE_LIMIT",routeSource.replace(/^import .*;\s*$/gm,"").replace(/export default router;?/,"").replace(/^export /gm,""))(()=>({get:(...args)=>registrations.push(args)}),z,db,guard,buildOrderSuggestions,buildSupplierOrderGroups,SUPPLIER_EVIDENCE_LIMIT);
     const users={owner:{role:"OWNER",companyId:"a"},sa:{role:"SUPER_ADMIN",companyId:"different"},employee:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",storeId:"a1",companyId:"a"},permitted:{role:"EMPLOYEE",tokenType:"STORE_OPERATOR",storeId:"a1",companyId:"a",permissions:["MODULE:ORDER_SUGGESTIONS"]},suspended:{role:"OWNER",companyId:"c"}};
-    const app=express();app.use((req,res,next)=>{req.user=users[req.get("x-fixture-user")];return req.user?next():res.status(401).end();});app.get("/api/commerce/order-suggestions/by-supplier",...registrations[1].slice(1));app.use((err,req,res,next)=>res.status(500).json({error:err.message}));
+    const app=express();app.use((req,res,next)=>{req.user=users[req.get("x-fixture-user")];return req.user?next():res.status(401).end();});app.get("/api/commerce/order-suggestions",...registrations[0].slice(1));app.get("/api/commerce/order-suggestions/by-supplier",...registrations[1].slice(1));app.use((err,req,res,next)=>res.status(500).json({error:err.message}));
     const server=app.listen(0,"127.0.0.1");await once(server,"listening");
     const request=async(store,user="owner",extra="")=>{const res=await fetch(`http://127.0.0.1:${server.address().port}/api/commerce/order-suggestions/by-supplier?${store===undefined?"":`storeId=${store}`}${extra}`,{headers:{"x-fixture-user":user}});return {status:res.status,cache:res.headers.get("cache-control"),body:await res.json()};};
     const snapshot=()=>Promise.all(Object.keys(tables).map(async name=>(await tx.$queryRawUnsafe(`SELECT COUNT(*)::int AS count,md5(string_agg(row_to_json(t)::text,',' ORDER BY "id")) AS digest FROM "${name}" t`))[0]));const before=await snapshot();
     try{
       await t.test("real SQL excludes foreign/draft/future/waste and nets returns/exchanges/channel sales",async()=>{
-        const result=await request("a1");assert.equal(result.status,200,JSON.stringify(result.body));assert.equal(result.cache,"no-store");assert.equal(result.body.rows.length,6);
+        const result=await request("a1");assert.equal(result.status,200,JSON.stringify(result.body));assert.equal(result.cache,"no-store");assert.equal(result.body.rows.length,10);
         const find=id=>result.body.rows.find(r=>r.productId===id);assert.equal(find("p").soldQuantity,60);assert.equal(find("p").returnedQuantity,15);assert.equal(find("p").suggestedQuantity,12);
         assert.equal(find("p").candidateSupplierId,"s1");assert.equal(find("p").primarySupplierId,null);assert.equal(find("p").supplierCandidates[0].documentCount,2);assert.equal(find("p").supplierCandidates[1].documentCount,1);
         assert.equal(find("kg").candidateSupplierId,null);assert.equal(find("kg").supplierReviewReason,"DOCUMENT_FREQUENCY_TIE");assert.equal(find("exchange").supplierReviewReason,"NO_APPROVED_DOCUMENT_EVIDENCE");assert.equal(result.body.complete,true);assert.equal(result.body.supplierEvidence.physicalDeliveryFrequencyVerified,false);assert.equal(result.body.automaticTransmission,false);assert.ok(transactions>0);
         assert.equal(find("exchange").soldQuantity,22);assert.equal(find("exchange").returnedQuantity,7);assert.equal(find("exchange").suggestedQuantity,5);
         assert.equal(find("kg").suggestedQuantity,.334);for(const id of ["pack","recipe","prepared"])assert.equal(find(id).suggestedQuantity,null);
+      });
+      await t.test("real producer/registered HTTP JSON carries current shortfall through grouping without changing flat quantities or source tables",async()=>{
+        const baseline=await snapshot(),result=await request("a1");assert.equal(result.status,200);
+        const row=id=>result.body.rows.find(r=>r.productId===id),shortfall=id=>row(id).currentStockShortfall;
+        assert.deepEqual(shortfall("p"),{status:"BELOW_MINIMUM",quantity:2,basis:"RECORDED_CURRENT_STOCK_MINIMUM",stockVerified:false,reviewReasons:[]});
+        for(const id of ["exchange","kg"]){assert.equal(shortfall(id).status,"DEMAND_REPLENISHMENT");assert.equal(shortfall(id).quantity,0);assert.ok(row(id).suggestedQuantity>0);}
+        for(const id of ["no-gap","default-min"]){assert.equal(shortfall(id).status,"NO_SHORTAGE");assert.equal(shortfall(id).quantity,0);}
+        assert.equal(row("default-min").minStock,0); // Base default only; no minimum-configured assertion.
+        assert.deepEqual(shortfall("negative").reviewReasons,["NEGATIVE_RECORDED_STOCK"]);assert.equal(shortfall("negative").quantity,null);assert.equal(row("negative").suggestedQuantity,7);
+        for(const id of ["pack","recipe","prepared"]){assert.deepEqual(shortfall(id).reviewReasons,["NUMERIC_SUGGESTION_UNAVAILABLE"]);assert.equal(shortfall(id).quantity,null);}
+        assert.equal(shortfall("tiny").quantity,1-.9996);assert.equal(row("tiny").currentStock,.9996);assert.equal(row("tiny").suggestedQuantity,.001);
+        const member=result.body.groups.flatMap(g=>g.rows).concat(result.body.unassigned);assert.equal(member.length,result.body.rows.length);for(const r of result.body.rows)assert.deepEqual(member.find(m=>m.productId===r.productId),r);
+        const response=await fetch(`http://127.0.0.1:${server.address().port}/api/commerce/order-suggestions?storeId=a1`,{headers:{"x-fixture-user":"owner"}});assert.equal(response.status,200);const flat=await response.json();assert.ok(flat.rows.every(r=>!("currentStockShortfall" in r)));
+        for(const original of flat.rows){const grouped=row(original.productId);for(const [key,value] of Object.entries(original))assert.deepEqual(grouped[key],value,`${original.productId}/${key}`);}
+        assert.equal(result.body.generatedAt,result.body.to);assert.equal(result.body.supplierEvidence.to,result.body.to);assert.deepEqual(await snapshot(),baseline);
       });
       await t.test("store entitlement, employee permission and license denials run before proposal SQL",async()=>{
         for(const [store,user,status,code] of [["b1","owner",404,"TENANT_STORE_REJECTED"],["a2","employee",404,"TENANT_STORE_REJECTED"],["a1","employee",403,"ROLE_MODULE_DENIED"],["off","owner",403,"MODULE_DISABLED"],["c1","suspended",403,"LICENSE_INACTIVE"],[undefined,"owner",400,null],["missing","owner",404,null]]){const count=reads,result=await request(store,user);assert.equal(result.status,status,JSON.stringify(result.body));if(code)assert.equal(result.body.code,code);assert.equal(reads,count);}
@@ -75,7 +92,7 @@ test("supplier grouped order suggestions HTTP/SQL: quantities, returns, store/li
       });
       await t.test("parameters validate before SQL; target-company support and sibling store stay isolated",async()=>{
         const count=reads;assert.equal((await request("a1","owner","&historyDays=0")).status,400);assert.equal(reads,count);
-        const own=await request("a1","sa");assert.equal(own.status,200);assert.equal(own.body.rows.length,6);
+        const own=await request("a1","sa");assert.equal(own.status,200);assert.equal(own.body.rows.length,10);
         const sibling=await request("a2");assert.equal(sibling.body.rows.length,1);assert.equal(sibling.body.rows[0].currentStock,50);assert.equal(sibling.body.rows[0].soldQuantity,999);
         const foreign=await request("b1","sa");assert.equal(foreign.body.rows.length,1);assert.equal(foreign.body.rows[0].productId,"foreign");assert.equal(foreign.body.rows[0].suggestedQuantity,8);
         assert.deepEqual(await snapshot(),before);
@@ -86,8 +103,9 @@ test("supplier grouped order suggestions HTTP/SQL: quantities, returns, store/li
       await t.test("actual evidence overflow leaves every proposal unassigned without partial winners",async()=>{
         await tx.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" SELECT 'cap-'||n,'a','a1','s2','APPROVED','INVOICE',CURRENT_TIMESTAMP-INTERVAL '1 day' FROM generate_series(1,20001) n`);
         await tx.$executeRawUnsafe(`INSERT INTO "PurchaseDocumentLine" SELECT 'cap-'||n,'cap-'||n,'p',1 FROM generate_series(1,20001) n`);
-        const cappedBefore=await snapshot(),result=await request("a1");assert.equal(result.status,200,JSON.stringify(result.body));assert.equal(result.body.complete,false);assert.equal(result.body.supplierEvidence.observedDocumentProductSupplierCount,20001);assert.equal(result.body.groups.length,0);assert.equal(result.body.unassigned.length,result.body.rows.length);assert.ok(result.body.rows.every(r=>r.candidateSupplierId===null&&r.primarySupplierId===null&&r.supplierCandidates.length===0&&r.supplierReviewReason==="INCOMPLETE_EVIDENCE"));assert.deepEqual(await snapshot(),cappedBefore);
+        const cappedBefore=await snapshot(),result=await request("a1");assert.equal(result.status,200,JSON.stringify(result.body));assert.equal(result.body.complete,false);assert.equal(result.body.supplierEvidence.observedDocumentProductSupplierCount,20001);assert.equal(result.body.groups.length,0);assert.equal(result.body.unassigned.length,result.body.rows.length);assert.ok(result.body.rows.every(r=>r.candidateSupplierId===null&&r.primarySupplierId===null&&r.supplierCandidates.length===0&&r.supplierReviewReason==="INCOMPLETE_EVIDENCE"));assert.deepEqual(result.body.rows.find(r=>r.productId==="p").currentStockShortfall,{status:"BELOW_MINIMUM",quantity:2,basis:"RECORDED_CURRENT_STOCK_MINIMUM",stockVerified:false,reviewReasons:[]});assert.deepEqual(await snapshot(),cappedBefore);
       });
     }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
   },{timeout:40000});}finally{await prisma.$disconnect();}
 });
+

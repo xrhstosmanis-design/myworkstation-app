@@ -1,0 +1,82 @@
+{
+  "scope": "CENTRAL-SUPPLIER-SHORTFALL-01",
+  "claim": {
+    "pr": 2945,
+    "head": "d2130c9a9db03e5971a36cbc6721cc8ed2e15985",
+    "merge": {
+      "sha": "21b265ae30518b64bd3239c98379b2684e3a8b9b",
+      "merged": true,
+      "message": "Pull Request successfully merged"
+    },
+    "ci": 39429002928
+  },
+  "runtime": "Node20.20.2",
+  "baseline": {
+    "node": "20.20.2",
+    "status": "PASS",
+    "tests": 15,
+    "fail": 0,
+    "skip": 0,
+    "at": "2026-10-20T13:22Z",
+    "scope": "Existing unchanged supplier grouping, mounted UI and CSV baseline; local partial checkout setup corrected, not LAB acceptance"
+  },
+  "integrated": {
+    "pass": 30,
+    "fail": 0,
+    "skip": 1,
+    "nativePostgres": "NOT RUN locally: no PostgreSQL; must execute unskipped in CI"
+  },
+  "history": [
+    {
+      "at": "2026-10-20T13:22Z",
+      "test": "existing supplier baseline before source",
+      "status": "LOCAL SETUP FAIL",
+      "details": "Partial checkout lacked unchanged CSS and zod; 3 CSV tests passed, UI bundle and backend import could not run. Not product/LAB failure; materializing unchanged dependencies and rerunning necessary."
+    },
+    {
+      "status": "LOCAL INFRA/IMPORT FAIL",
+      "detail": "Native PostgreSQL test initially could not import Express in partial checkout. Cached compatible4.22.3 installed, unchanged module-catalog materialized. No local PostgreSQL; native SQL remains NOT RUN locally, fullCI unskipped required."
+    },
+    {
+      "status": "TEST DEVELOPMENT FAIL corrected",
+      "details": "First attempted obsolete Node path missing. Next focused suite had10PASS/2FAIL incl parent because a NO_SHORTAGE fixture mutation retained old DEMAND_REPLENISHMENT metadata. Fixture corrected to coherent producer metadata without weakening assertions. Final owned UI/export suite13PASS/0FAIL/0SKIP."
+    }
+  ],
+  "files": {
+    "server/src/lib/supplier-order-groups.js": {
+      "sha256": "e97202f894fa0c18e535137d5b29bc1086c5629ff8aafdc1024c782a705ad20c",
+      "gitblob": "77562e828ca6ec0376e90d650654946f6d9cbcbe"
+    },
+    "server/test/supplier-order-groups.test.js": {
+      "sha256": "0abf6fc46fd3fd8036ad8b53a4cc34e28c52c12484b06a40d9b14f7eeddcf61f",
+      "gitblob": "3428f0867b8359bafca4e6c958fc70830ad11ffb"
+    },
+    "server/test/supplier-order-groups-postgres.test.js": {
+      "sha256": "14aee046b2077986e6a00b5dff0c37ad62710d9df35cf68b072258fc54e27409",
+      "gitblob": "a35eaccd23ebc0676f467cf374712090d467fe99"
+    },
+    "client/src/components/commerce/OrderSuggestionsPanel.jsx": {
+      "sha256": "79a2f99909e34e2ee7f1b5fed0874ac279b3ae8177a45b4915c673f4e4ca7764",
+      "gitblob": "1f7868f7416acdc373a1ae43e20d63fc343b1d54"
+    },
+    "client/src/components/commerce/supplier-order-proposal-export.js": {
+      "sha256": "036cd7709e3f282e5e6373800d2afa18a80f0d02fbe74ec2db92e911792e847b",
+      "gitblob": "996931d5d6760f7fb4656d3f3b237583cc94deb5"
+    },
+    "server/test/supplier-order-groups-ui.test.js": {
+      "sha256": "7285dc937d0bbab31b0498858a95a19873563cd70692216d889c0bf0c8d645e0",
+      "gitblob": "9a85ceed036e5f4aa79001f0db4046e5c4284713"
+    },
+    "server/test/supplier-order-proposal-export.test.js": {
+      "sha256": "fb9f17bc3359acd14642ed2033f88797ee5c08b18f7fecfc1e4d7bec6ca81bc5",
+      "gitblob": "1816d0da27e9305f9db59456b35c431576c3cf18"
+    },
+    "server/test/supplier-stock-shortfall-contract.test.js": {
+      "sha256": "655deb95dad7d789f2385f459dc96143ffbf40cae5fd2309abfc0926649b9cf1",
+      "gitblob": "312cea47b7b70511ca66989fdf40c954237b1b1d"
+    }
+  },
+  "lab": "AWAITING LAB; existing19/10PASS protected/not repeated",
+  "production": "NOT INSTALLED",
+  "writes": "No business/stock/order/financial/transport/schema action"
+}

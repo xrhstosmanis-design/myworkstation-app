@@ -1,3 +1,18 @@
+# Supplier recorded-stock shortfall — source implementation
+
+## 20/10/2026 - CENTRAL-SUPPLIER-SHORTFALL-01 / SOURCE IMPLEMENTED / AWAITING CI AND LAB
+
+Owner `codex/central-four-streams-20261018`, branch `codex/supplier-stock-shortfall-20261020`, #2705/#2527. Before-source claim #2945 head d2130c9a, independent review PASS and CI39429002928 all5 SUCCESS (3652 server/0FAIL/0SKIP +8 backup), merged21b265ae30518b64bd3239c98379b2684e3a8b9b before edits. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-20-supplier-stock-shortfall.md`.
+
+Exactly8 central-delegated paths: `server/src/lib/supplier-order-groups.js`, `server/test/supplier-order-groups.test.js`, `server/test/supplier-order-groups-postgres.test.js`, `client/src/components/commerce/OrderSuggestionsPanel.jsx`, `client/src/components/commerce/supplier-order-proposal-export.js`, `server/test/supplier-order-groups-ui.test.js`, `server/test/supplier-order-proposal-export.test.js`, `server/test/supplier-stock-shortfall-contract.test.js`. Adds recorded minimum-stock gap classification independently of demand replenishment; supplier-only filter and visible labels, six appended CSV columns after the original32, same applied snapshot/all filtered pages. Missing/invalid/negative stock remains REVIEW_REQUIRED; tiny positive gaps are not displayed as zero. Original quantities, default rows, supplier proxy/cap/ties, flat endpoint and existing columns remain protected. No base producer/route/SQL/CSS/auth/licensing/schema/margin/supplier assignment/stock/financial/order/transport changes; retained owners unchanged.
+
+Technical local evidence Node20.20.2: integrated30PASS/0FAIL/1native PostgreSQL SKIP because no local PostgreSQL; the native case is NOT RUN locally and must execute unskipped in full CI. Actual producer -> grouping -> JSON -> shared UI/filter/CSV and mounted download/reset/stale-response tests are covered. Initial partial-checkout missing CSS/zod/Express and one contradictory test fixture are retained in evidence with corrections; they are not product/LAB FAIL. Existing19/10 actual11row UI/CSV PASS, including stock-71/proposal82, is protected and not repeated.
+
+Status: source implemented locally, not yet merged/installed; full required CI/review/normal guarded release pending. New UI/filter/CSV scope AWAITING LAB; no new real PASS, no manual/numbered closure. Dispatch OFF. Next action: review exact source, require full CI including native PostgreSQL without skip, merge and verify exact ordinary release; then new read-only acceptance only. Scoped regenerated tracker PDF: `CHECKPOINTS/EVIDENCE/supplier-stock-shortfall-20261020/source-tracker.pdf`; common PDF retained under existing concurrent-publication rule.
+
+
+## Historical before-source record
+
 # Supplier recorded-stock shortfall — before-source claim
 
 ## 20/10/2026 - CENTRAL-SUPPLIER-SHORTFALL-01 / ASSIGNED / BEFORE SOURCE
