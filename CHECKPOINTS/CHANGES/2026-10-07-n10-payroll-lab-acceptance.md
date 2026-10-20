@@ -75,3 +75,16 @@ A bounded rule-preview PASS requires visible LAB identity, unique test IDs, corr
 - **Still required for full N10:** exact cash `StoreTransaction` IDs, genuine bank-movement proof, and a supported November preview. The synthetic LAB PDF is not accounting proof.
 
 **Status remains:** ΜΕΡΙΚΟ PASS / OPEN; no overall PASS claimed.
+
+
+## 07/10/2026 22:57 Europe/Athens — handoff / remaining N10 checks
+
+**Status remains ΜΕΡΙΚΟ PASS / OPEN.** The September 2026 payroll period is CLOSED and must remain untouched. No payment replay, recalculation, approval, reopening, period close, or edits to existing records.
+
+**Still required before any N10 PASS claim:**
+- Exact cash `StoreTransaction` IDs for the existing September €20.00 and €100.00 entries. The visible shift rows show amounts but no IDs; independent reconciliation is not yet proven.
+- Genuine bank-movement evidence for the existing pending September entries. The synthetic October PDF is explicitly a test fixture, not accounting proof; it was not uploaded or used to settle anything.
+- A supported November 2026 payroll preview using only uniquely tagged `N10-QA-202611-*` fixtures, with recorded before/after values and exact IDs. The currently observed Workforce UI has no payroll-rate/preview surface; do not substitute the expense-entry form, create a November period, or invent absence/late/leave/overtime policy.
+- Real-store acceptance remains NOT TESTED and requires a separate normal-store verification; no real payment or posting.
+
+**Last known blockers:** the October synthetic attachment did not reach the ledger (the attachment control did not open a file chooser; workspace transfer failed); no exact cash IDs were exposed in the UI; no supported November preview was available. Do not repeat attempts that would turn a fixture into purported bank proof or settle a row. Resume only by locating the documented preview/ID evidence surfaces, recording a fresh baseline before any reversible fixture action, and preserving September unchanged.
