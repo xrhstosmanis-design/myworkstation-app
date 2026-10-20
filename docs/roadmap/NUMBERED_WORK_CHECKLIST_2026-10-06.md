@@ -576,7 +576,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `32`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
-- **Υπόλοιπο / όριο:** 20/10/2026 20:32 Athens: Diadoxou17Oct invoice CSV USER-SUPPLIED FILE PASS, all5 original-source rows match dates/times/types/suppliers/references/statuses and amounts at export2dp precision;3 approved/2 draft distinct.1919-byte actual upload/hash verified. Invoice CSV content acceptance completed; prior bank CSV/midnight PASS retained. Whole OPEN/ASSIGNED codex/assistant-business-queries-20261015 for remaining normal Owner contexts/files, mobile/physical, wider/nonempty-offers and beer only with real mapping. Source read after upload, no new agent UI replay/before-after invariant/browser recovery. No business write/microphone request. Checkpoint2026-10-20-assistant-business-acceptance; manual super-admin/PASS.
+- **Υπόλοιπο / όριο:** 20/10/2026 21:09 Athens: Diadoxou supplier CSV23/23 original-source rows PASS including duplicate-name multiplicity; current-stock period label ACTUAL FAIL. Full file AWAITING CORRECTION/RETEST. Owner role NOT CONFIRMED by user; no Owner parity claim. Same retained owner codex/assistant-business-queries-20261015 claims bounded undated current-catalog label fix before source. Preserve stock/dated/midnight/four-format behavior and prior bank/invoice PASS. Next after green claim: label correction/tests/exact CI/release, actual-file retest. Whole OPEN for Owner/history/files/mobile/physical/wider/nonempty-offers/real beer mapping. Source after-only; browser restriction persists; no business write/microphone/catalog change. Checkpoint2026-10-20-assistant-business-acceptance and manual super-admin/PASS.
 
 ## 31 — Μηνιαία Αναφορά Ιδιοκτήτη
 
