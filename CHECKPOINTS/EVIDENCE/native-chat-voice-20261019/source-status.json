@@ -1,5 +1,5 @@
 {
-  "status": "SOURCE IMPLEMENTED; AWAITING EXACT CI/RELEASE/ARTIFACT/FINAL DEVICE BATCH",
+  "status": "MERGED; EXACT PR CI GREEN; SHARED MAIN WHOLESALE FAILURE BLOCKS RELEASE",
   "owner": "feat/android-chat-native-20261017",
   "beforeSourceClaim": {
     "pr": 2876,
@@ -33,5 +33,45 @@
     "serverTestsPassed": 3475,
     "backupTestsPassed": 8,
     "physicalStatus": "NOT TESTED"
-  }
+  },
+  "sourcePr": 2877,
+  "sourceHead": "a84c9e3e05e29503829fd0e746ed1a2e80b49bdd",
+  "merge": "b255b1cf335734a81d09ad65d5b6ce2dba33733a",
+  "prFullCi": {
+    "run": 39379156890,
+    "job": 118484368074,
+    "passed": 3601,
+    "failed": 0,
+    "backupPassed": 8
+  },
+  "androidCi": {
+    "run": 39379156874,
+    "job": 118484010197,
+    "unitPassed": 29,
+    "instrumentationPassed": 28,
+    "failed": 0
+  },
+  "artifact": {
+    "id": 12244489455,
+    "apk_sha256": "75d8e0be146bfbeb92e2955b18d411b3b490c5952a2fe20951a6d3d57ffd6d4d",
+    "apk_bytes": 3670848,
+    "signer_sha256": "84d4f493432c737ca7d1286579a5a364ecd2be0ef0ae502802ce7eac32a80429",
+    "manifest": {
+      "package": "gr.myworkstation.chat.preview",
+      "versionCode": 9,
+      "versionName": "0.1.8-preview"
+    },
+    "apk_v2_rsa_and_full_content_digest": "verified",
+    "test_gallery_provider_in_app_manifest": false,
+    "durableOwnerSigner": false,
+    "public": false
+  },
+  "mainReleaseBlocker": {
+    "run": 39379947313,
+    "job": 118486896518,
+    "scope": "existing wholesale offline actual-app E2E",
+    "error": "Timed out actual encrypted preparation",
+    "owner": "codex/wholesale-suite-20261017"
+  },
+  "nextAction": "Existing wholesale owner resolves main failure; native owner verifies fresh full CI and guarded live revision before signing/distribution/final physical batch"
 }
