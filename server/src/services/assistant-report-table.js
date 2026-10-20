@@ -1,6 +1,6 @@
 import {businessRecordLabel,businessStatusLabel} from '../../../shared/assistant-business.mjs';
 const money=v=>v===null||v===undefined?null:typeof v==="number"&&Number.isFinite(v)?v:null;
-const at=v=>v&&!Number.isNaN(new Date(v).getTime())?new Date(v).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false}):"Μη καταγεγραμμένη";
+const at=v=>v&&!Number.isNaN(new Date(v).getTime())?new Date(v).toLocaleString("el-GR",{timeZone:"Europe/Athens",hourCycle:"h23"}):"Μη καταγεγραμμένη";
 const unit=v=>({PIECE:"τεμάχια",KG:"κιλά",LITER:"λίτρα",PACKAGE:"συσκευασίες"})[v]||"Μη καταγεγραμμένη";
 export const spreadsheetSafeText=value=>{const s=String(value??"").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"");return /^[\s\uFEFF]*[=+\-@]/.test(s)?"'"+s:s;};
 export function assistantReportTables(evidence,{generatedAt=new Date()}={}){
