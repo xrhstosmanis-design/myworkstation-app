@@ -1,0 +1,17 @@
+{
+  "task": "POS-SHIFT-LOAD-01",
+  "method": "read-only EXPLAIN ANALYZE, full existing SHIFT query versus bounded equivalent candidate, live store",
+  "beforeMs": 42498.408,
+  "afterMs": 2007.732,
+  "beforeRows": 28,
+  "afterRows": 28,
+  "limitations": "Independent live snapshots; not frozen identity/delta proof or hosted UI PASS",
+  "dataWrites": 0,
+  "local": {
+    "pass": 5,
+    "fail": 0,
+    "nativeSkip": 1,
+    "frontendBuild": "PASS"
+  },
+  "native": "awaiting isolated CI"
+}
