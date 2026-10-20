@@ -7,6 +7,7 @@ import {z} from "zod";
 import {attachSourceWorkbook,validateSourceDepartments} from "../src/routes/inventory-source-workbook.js";
 import {assertSourceCostStorage,fitsSourcePrice,ensureProductCostPrecision} from "../src/product-cost-precision.js";
 import {importFullArchive} from "../src/routes/inventory-archive-full-import.js";
+import {KAT_DEPARTMENTS} from "../src/routes/inventory-kat-source.js";
 
 const definitions=[
   [1,"01.ΚΑΦΕΣ","1",13,true],[2,"02.ΕΙΔΗ 6","104",6,true],[3,"03.ΤΡΟΦΙΜΑ","7",13,true],
@@ -25,7 +26,7 @@ function fixture(){
 }
 function file(f=fixture()){
   const w=XLSX.utils.book_new();
-  for(const [name,rows] of [["ΠΡΟΪΟΝΤΑ_IMPORT",f.rows],["ΕΛΕΓΧΟΣ",[{SKU:"DO-NOT-IMPORT"}]],["ΕΚΤΟΣ_ΕΙΣΑΓΩΓΗΣ",[{SKU:"EXCLUDED"}]],["ΤΜΗΜΑΤΑ",f.definitions],["BARCODES_IMPORT",f.barcodes]])XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(rows),name);
+  for(const [name,rows] of [[f.kat?"ΚΑΤ_IMPORT":"ΠΡΟΪΟΝΤΑ_IMPORT",f.rows],["ΕΛΕΓΧΟΣ",[{SKU:"DO-NOT-IMPORT"}]],["ΕΚΤΟΣ_ΕΙΣΑΓΩΓΗΣ",[{SKU:"EXCLUDED"}]],["ΤΜΗΜΑΤΑ",f.definitions],["BARCODES_IMPORT",f.barcodes],...(f.kat?[["KAT_META",f.meta],["EXISTING_IMPORT",f.existing]]:[])])XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(rows),name);
   return "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,"+XLSX.write(w,{type:"buffer",bookType:"xlsx"}).toString("base64");
 }
 function harness(db){
@@ -39,10 +40,10 @@ function harness(db){
     return {...res,error,statusCode:error?.status||res.statusCode};
   }};
 }
-function double({savedDepartments=departments,products=[],barcodeProducts=[],storage={data_type:"numeric",numeric_precision:16,numeric_scale:6}}={}){
+function double({savedDepartments=departments,products=[],barcodeProducts=[],snapshots=[],storage={data_type:"numeric",numeric_precision:16,numeric_scale:6}}={}){
   let writes=0;
   const db={store:{findFirst:async({where})=>where.id==="store"&&where.companyId==="company"?{id:"store",name:"Virtual store"}:null},
-    $queryRaw:async(strings)=>{const q=strings.join("?");if(q.includes("information_schema.columns"))return [storage];if(q.includes('FROM "ManagementVatDepartment"'))return savedDepartments;if(q.includes('FROM "ProductBarcode"'))return barcodeProducts;return products},
+    $queryRaw:async(strings)=>{const q=strings.join("?");if(q.includes("information_schema.columns"))return [storage];if(q.includes('AS fingerprint'))return snapshots;if(q.includes('FROM "ManagementVatDepartment"'))return savedDepartments;if(q.includes('FROM "ProductBarcode"'))return barcodeProducts;return products},
     $executeRaw:async()=>{writes++;return 1},$executeRawUnsafe:async()=>{writes++;return 1},$transaction:async()=>{throw new Error("Unexpected transaction")}};
   return {db,get writes(){return writes}};
 }
@@ -101,6 +102,39 @@ test("legacy Diadochou normalization and single-barcode CSV behavior are retaine
   assert.equal(rows[0].vatRate,24);assert.deepEqual(rows[0].errors,[]);assert.deepEqual(rows[0].barcodes,["00000001"]);
 });
 
+function katFixture(){
+  const f=fixture();f.kat=true;f.meta=[{Profile:'KAT_CATALOG_V1',CompanyId:'company',StoreId:'store'}];f.existing=[];
+  f.definitions=KAT_DEPARTMENTS.map(d=>({'Τμήμα ταμειακής':d.cashRegisterDepartment,'Περιγραφή Kiosk':d.description,'ΚΩΔ ΦΠΑ Kiosk':d.legacyVatCode,ΦΠΑ:d.vatRate,'Εμπορία πηγής':d.commerce?'ΝΑΙ':'ΟΧΙ'}));
+  f.rows=f.rows.map((r,i)=>({...r,SKU:'KAT-'+(i+1),Barcode:'0000009'+(i+1),'Τμήμα ΦΠΑ':i===0?'06.ΕΙΔΗ 24':'06.ΠΑΡΟΧΗ ΥΠΗΡΕΣΙΩΝ','Τμήμα ταμειακής':6,ΦΠΑ:24}));
+  f.barcodes=f.rows.map(r=>({SKU:r.SKU,Barcode:r.Barcode,Ρόλος:'ΚΥΡΙΟ'}));return f;
+}
+const katSaved=()=>KAT_DEPARTMENTS.map((d,i)=>({...d,id:'kat-dept-'+i,active:true,description:'Existing alias '+i,exemptionCode:null}));
+test('KAT profile distinguishes both register-6 departments and resolves full identities despite display aliases',async()=>{
+  const f=katFixture(),d=double({savedDepartments:katSaved()}),h=harness(d.db),raw=h.readWorkbook(file(f));
+  const result=await h.call('/import-preview',{storeId:'store',dataUrl:file(f)});
+  assert.equal(result.error,undefined);assert.equal(result.body.summary.create,2);assert.equal(result.body.summary.invalid,0);assert.equal(d.writes,0);
+  validateSourceDepartments(raw.sourceProfile,katSaved());
+  assert.notEqual(raw.sourceProfile.departmentBindings['06.ΕΙΔΗ 24'],raw.sourceProfile.departmentBindings['06.ΠΑΡΟΧΗ ΥΠΗΡΕΣΙΩΝ']);
+});
+test('KAT source profile refuses altered identities, shared barcodes, missing snapshot and foreign target',async()=>{
+  for(const change of [f=>f.definitions[4]['ΚΩΔ ΦΠΑ Kiosk']='15',f=>f.barcodes[1].Barcode=f.barcodes[0].Barcode,f=>f.rows[0].SKU='WRONG',f=>f.existing.push({SKU:'KAT-1',ProductId:'id',ExistingSku:'OLD',Fingerprint:'bad'})]){
+    const f=katFixture();change(f);assert.throws(()=>harness(double().db).readWorkbook(file(f)));
+  }
+  for(const change of [d=>d.splice(4,1),d=>d.push({...d[3]}),d=>d[4].commerce=true,d=>d[3].vatRate=13,d=>d[3].active=false]){
+    const saved=katSaved();change(saved);const d=double({savedDepartments:saved});assert.equal((await harness(d.db).call('/import-preview',{storeId:'store',dataUrl:file(katFixture())})).statusCode,409);assert.equal(d.writes,0);
+  }
+  const f=katFixture();f.meta[0].StoreId='OTHER';assert.equal((await harness(double({savedDepartments:katSaved()}).db).call('/import-preview',{storeId:'store',dataUrl:file(f)})).statusCode,409);
+});
+test('KAT existing identity permits rename only with exact company snapshot and rejects stale/cross-store/collision/replay',async()=>{
+  const f=katFixture(),fingerprint='a'.repeat(32);f.existing=[{SKU:'KAT-2',ProductId:'existing',ExistingSku:'OLD-2',Fingerprint:fingerprint}];
+  const data={savedDepartments:katSaved(),barcodeProducts:[{id:'existing',sku:'OLD-2',barcode:'00000092'}],snapshots:[{id:'existing',sku:'OLD-2',fingerprint,currentStock:-7,otherStore:false}]};
+  const result=await harness(double(data).db).call('/import-preview',{storeId:'store',dataUrl:file(f)});
+  assert.equal(result.body.summary.create,1);assert.equal(result.body.summary.update,1);assert.equal(result.body.summary.invalid,0);assert.equal(result.body.rows[1].expectedStock,-7);
+  for(const change of [d=>d.snapshots[0].fingerprint='b'.repeat(32),d=>d.snapshots[0].otherStore=true,d=>d.snapshots[0].sku='KAT-2',d=>d.barcodeProducts[0].id='another',d=>d.snapshots=[]]){
+    const copy=structuredClone(data);change(copy);const d=double(copy),h=harness(d.db),body={storeId:'store',dataUrl:file(f)};assert.equal((await h.call('/import-preview',body)).body.summary.invalid,1);assert.equal((await h.call('/import',body)).statusCode,409);assert.equal(d.writes,0);
+  }
+});
+
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==="test"&&["localhost","127.0.0.1","postgres"].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 test("native PostgreSQL actual import is atomic, preserves controls and rejects concurrent replay",{skip:!isolated()},async()=>{
   const {PrismaClient}=await import("@prisma/client"),admin=new PrismaClient(),schema="source_archive_"+crypto.randomUUID().replaceAll("-","");
@@ -154,5 +188,29 @@ test("native PostgreSQL actual import is atomic, preserves controls and rejects 
     assert.equal((await db.$queryRaw`SELECT "id" FROM "Product" WHERE "sku" LIKE 'VIRTUAL-IMPORT-%'`).length,0);
     assert.equal((await db.$queryRaw`SELECT "id" FROM "StoreProduct" WHERE "storeId"='store'`).length,0);
     assert.equal((await db.$queryRaw`SELECT "id" FROM "ProductBarcode"`).length,0);assert.deepEqual(await observe(),before);
+    // New KAT-specific coverage: exact same register/different fiscal identity,
+    // one existing product rename with stock/recipe identity preservation,
+    // an injected mid-transaction failure and a concurrent repeat.
+    await db.$executeRawUnsafe('ALTER TABLE "Product" ADD COLUMN "isRecipe" boolean DEFAULT false');
+    await db.$executeRawUnsafe('ALTER TABLE "Product" ADD COLUMN "eDeliveryEnabled" boolean DEFAULT false');
+    await db.$executeRaw`INSERT INTO "Store" VALUES ('kat-store','kat-company','Virtual KAT',true)`;
+    for(const d of katSaved())await db.$executeRaw`INSERT INTO "ManagementVatDepartment" VALUES (${d.id},'kat-company',${d.description},${d.vatRate},${d.legacyVatCode},${d.cashRegisterDepartment},${d.commerce},true,NULL,NULL)`;
+    await db.$executeRaw`INSERT INTO "Product"("id","companyId","sku","name","salePrice","costPrice","isRecipe","eDeliveryEnabled") VALUES ('kat-existing','kat-company','OLD-2','Existing KAT',10,9,true,true)`;
+    await db.$executeRaw`INSERT INTO "StoreProduct"("id","storeId","productId","salePrice","currentStock") VALUES ('kat-sp','kat-store','kat-existing',10,-7)`;
+    await db.$executeRaw`INSERT INTO "ProductBarcode" VALUES ('kat-barcode','kat-existing','00000092',1)`;
+    const [snapshot]=await db.$queryRaw`SELECT md5(json_build_object('product',row_to_json(p),'barcodes',COALESCE((SELECT json_agg(b."barcode" ORDER BY b."barcode") FROM "ProductBarcode" b WHERE b."productId"=p."id"),'[]'::json))::text) AS fingerprint FROM "Product" p WHERE p."id"='kat-existing'`;
+    const k=katFixture();k.meta[0]={Profile:'KAT_CATALOG_V1',CompanyId:'kat-company',StoreId:'kat-store'};k.existing=[{SKU:'KAT-2',ProductId:'kat-existing',ExistingSku:'OLD-2',Fingerprint:snapshot.fingerprint}];k.barcodes.push({SKU:'KAT-2',Barcode:'00000093',Ρόλος:'ΠΡΟΣΘΕΤΟ'});
+    const kb={storeId:'kat-store',dataUrl:file(k)},ku={role:'OWNER',companyId:'kat-company'};
+    const kp=await h.call('/import-preview',kb,ku);assert.equal(kp.body.summary.create,1);assert.equal(kp.body.summary.update,1);assert.equal(kp.body.summary.invalid,0);
+    const katObserve=()=>db.$queryRaw`SELECT p.*,sp."currentStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" WHERE p."id"='kat-existing'`;
+    const katBefore=await katObserve();
+    await db.$executeRawUnsafe('ALTER TABLE "ProductBarcode" ADD CONSTRAINT kat_injected_failure CHECK ("barcode"<>\'00000093\')');
+    assert.ok((await h.call('/import',kb,ku)).error);assert.deepEqual(await katObserve(),katBefore);assert.equal((await db.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"='kat-company' AND "sku"='KAT-1'`).length,0);
+    await db.$executeRawUnsafe('ALTER TABLE "ProductBarcode" DROP CONSTRAINT kat_injected_failure');
+    const kr=await Promise.all([h.call('/import',kb,ku),h.call('/import',kb,ku)]);assert.deepEqual(kr.map(r=>r.statusCode).sort(),[201,409]);
+    assert.deepEqual(kr.find(r=>r.statusCode===201).body,{ok:true,created:1,updated:1,barcodes:3,verified:true,applyStock:false});
+    const [ka]=await katObserve();assert.equal(ka.sku,'KAT-2');assert.equal(Number(ka.currentStock),-7);assert.equal(ka.isRecipe,true);assert.equal(ka.eDeliveryEnabled,true);assert.equal(ka.vatDepartmentId,'kat-dept-4');
+    const [kn]=await db.$queryRaw`SELECT p."vatDepartmentId",sp."currentStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" WHERE p."companyId"='kat-company' AND p."sku"='KAT-1'`;assert.equal(kn.vatDepartmentId,'kat-dept-3');assert.equal(Number(kn.currentStock),0);
+    assert.deepEqual(await observe(),before);assert.equal((await h.call('/import',kb,ku)).statusCode,409);
   }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
