@@ -12,6 +12,7 @@ test('video rejects invalid headers, codecs, external sources, duration and samp
  for(const name of ['ftyp','moov','mdat','avc1','mp4a','avcC','url ','mdhd','stsc','stsz','stts','stco']){
   const copy=Buffer.from(original),at=name==='avc1'?copy.lastIndexOf(name):copy.indexOf(name);assert.ok(at>0,name);copy[at]^=1;assert.throws(()=>validateVideoMp4(copy),{status:400},name);
  }
+ const highBit=Buffer.from(original);highBit[highBit.indexOf('moov')]^=128;assert.throws(()=>validateVideoMp4(highBit),{status:400});
  for(const name of ['mvhd','mdhd']){const copy=Buffer.from(original),at=name==='avc1'?copy.lastIndexOf(name):copy.indexOf(name);copy.writeUInt32BE(0xffffffff,at+20);assert.throws(()=>validateVideoMp4(copy),{status:400});}
  const offset=Buffer.from(original);offset.writeUInt32BE(0,offset.indexOf('stco')+12);assert.throws(()=>validateVideoMp4(offset),{status:400});
  const source=Buffer.from(original);source.writeUInt32BE(0,source.indexOf('url ')+4);assert.throws(()=>validateVideoMp4(source),{status:400});

@@ -75,7 +75,8 @@ public final class VideoActivity extends Activity implements SurfaceHolder.Callb
             capturePhase="ram-descriptor";ram=new RamVideoFile();fd=ram.open(getSystemService(StorageManager.class),new Handler(io.getLooper()));
             capturePhase="recorder-config";recorder=new MediaRecorder();recorder.setCamera(camera);recorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);recorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-            recorder.setVideoSize(selected.width,selected.height);recorder.setVideoFrameRate(24);recorder.setVideoEncodingBitRate(900000);recorder.setAudioEncodingBitRate(64000);recorder.setAudioSamplingRate(44100);
+            int fps=0;for(Integer value:params.getSupportedPreviewFrameRates())if(value>0&&value<=30&&value>fps)fps=value;if(fps==0)throw new IllegalStateException();
+            recorder.setVideoSize(selected.width,selected.height);recorder.setVideoFrameRate(fps);recorder.setVideoEncodingBitRate(900000);recorder.setAudioEncodingBitRate(64000);recorder.setAudioSamplingRate(44100);
             recorder.setOrientationHint(orientation);recorder.setMaxDuration(29000);recorder.setMaxFileSize(VideoData.MAX_BYTES-262144);recorder.setOutputFile(fd.getFileDescriptor());recorder.setPreviewDisplay(surface.getHolder().getSurface());
             recorder.setOnInfoListener((r,what,extra)->{if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED||what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED)stopCapture(true);});
             recorder.setOnErrorListener((r,what,extra)->{stopCapture(false);status.setText("Η λήψη δεν ολοκληρώθηκε. Δεν αποθηκεύτηκε τοπικό αρχείο.");});

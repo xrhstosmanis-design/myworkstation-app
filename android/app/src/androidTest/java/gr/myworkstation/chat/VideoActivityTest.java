@@ -39,13 +39,16 @@ public class VideoActivityTest {
         }
         try(ActivityScenario<VideoActivity> scenario=ActivityScenario.launch(VideoActivity.class)){
             Thread.sleep(1500);
-            scenario.onActivity(a->{try{invoke(a,"startCapture");assertTrue(TextViewStatus(a), (Boolean)get(a,"recording"));}catch(Exception e){throw new AssertionError(e);}});
+            scenario.onActivity(a->{try{invoke(a,"startCapture");if(!(Boolean)get(a,"recording"))fail(TextViewStatus(a)+"\n"+recorderLog());}catch(Exception e){throw new AssertionError(e);}});
             Thread.sleep(2200);
             scenario.onActivity(a->{try{Method m=VideoActivity.class.getDeclaredMethod("stopCapture",boolean.class);m.setAccessible(true);m.invoke(a,true);}catch(Exception e){throw new AssertionError(e);}});
             boolean[] ready={false};for(int i=0;i<100;i++){scenario.onActivity(a->{try{ready[0]=get(a,"draft")!=null;}catch(Exception e){throw new AssertionError(e);}});if(ready[0])break;Thread.sleep(50);}
             scenario.onActivity(a->{try{assertTrue(TextViewStatus(a),VideoSource.playable((byte[])get(a,"draft")));assertNull(get(a,"ram"));assertNull(get(a,"recorder"));}catch(Exception e){throw new AssertionError(e);}});
         }
         assertNoVideo(context.getFilesDir());assertNoVideo(context.getCacheDir());
+    }
+    private static String recorderLog()throws Exception{
+        try(java.io.InputStream input=new android.os.ParcelFileDescriptor.AutoCloseInputStream(InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("logcat -d -v brief -s MediaRecorder:V MediaRecorderJNI:V MPEG4Writer:V CameraSource:V CameraClient:V"))){byte[] bytes=ChatApi.bounded(input,65536);String log=new String(bytes,java.nio.charset.StandardCharsets.UTF_8);return log.substring(Math.max(0,log.length()-6000));}
     }
     private static String TextViewStatus(VideoActivity a)throws Exception{return ((android.widget.TextView)get(a,"status")).getText().toString()+" phase="+get(a,"capturePhase")+" error="+get(a,"captureFailure");}
     private static void assertNoVideo(java.io.File root){java.io.File[] files=root.listFiles();if(files!=null)for(java.io.File file:files){if(file.isDirectory())assertNoVideo(file);else assertFalse(file.getName(),file.getName().endsWith(".mp4"));}}
