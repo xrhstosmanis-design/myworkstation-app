@@ -63,7 +63,9 @@ export function normalizeRows(raw){
       if(sourceVatCode&&sourceVatCode!==sourceDefinition?.legacyVatCode)errors.push("Ο κωδικός ΦΠΑ διαφωνεί με το τμήμα της πηγής");
       if(explicitVat===null||explicitVat!==vatRate)errors.push("Λείπει ή διαφωνεί το ποσοστό ΦΠΑ της πηγής");
       if(stock!==0)errors.push("Η πρώτη εισαγωγή απαιτεί αρχικό απόθεμα 0");
-      if(txt(r["Μονάδα Kiosk"])!=="TEM")errors.push("Μη υποστηριζόμενη μονάδα πηγής");
+      const sourceUnit=txt(r["Μονάδα Kiosk"]),kat=raw.sourceProfile.name==='KAT_CATALOG_V1';
+      if(!(kat?['TEM','KGR']:['TEM']).includes(sourceUnit))errors.push("Μη υποστηριζόμενη μονάδα πηγής");
+      if(kat&&txt(r.MM)&&txt(r.MM)!==sourceUnit)errors.push("Η μονάδα εισαγωγής διαφωνεί με την αρχική μονάδα MM");
       if(salePrice===null||costPrice===null)errors.push("Λείπει τιμή πώλησης ή αγοράς της πηγής");
       if(!fitsSourcePrice(salePrice,4))errors.push("Η λιανική της πηγής δεν χωρά ακριβώς στη βάση (4 δεκαδικά, 10 ακέραια ψηφία).");
       if(!fitsSourcePrice(costPrice,6))errors.push("Η τιμή αγοράς της πηγής δεν χωρά ακριβώς στη βάση (6 δεκαδικά, 10 ακέραια ψηφία). Δεν επιτρέπεται στρογγυλοποίηση.");
@@ -79,6 +81,7 @@ export function normalizeRows(raw){
     if(!sourceDepartment&&(supplierName||supplierCode||subcategoryName||brandName||staffPrice!==null||minStock!==null||discountA!==null||discountB!==null||discountC!==null))errors.push("Εκκρεμεί πλήρης αντιστοίχιση στοιχείων καρτέλας είδους");
     if(sourceDepartment&&vatRate===null)errors.push("Λείπει αντιστοίχιση τμήματος ΦΠΑ");
     return {row:index+2,sku,name,barcode,barcodes:r.sourceBarcodes||[barcode].filter(Boolean),categoryName,subcategoryName,supplierName,supplierCode,brandName,staffPrice,minStock,discountA,discountB,discountC,salePrice,costPrice,vatRate,sourceVatCode,sourceDepartment,stock,active,errors,
+      unit:raw.sourceProfile?.name==='KAT_CATALOG_V1'&&txt(r['Μονάδα Kiosk'])==='KGR'?'KG':'PIECE',
       sourceExisting:raw.sourceProfile?.name==='KAT_CATALOG_V1'?(raw.sourceProfile.existing.get(sku)||null):null};
   });
 }
