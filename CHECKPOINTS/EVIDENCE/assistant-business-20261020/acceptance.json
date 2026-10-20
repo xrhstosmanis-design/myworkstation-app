@@ -1,0 +1,29 @@
+{
+  "owner": "codex/assistant-business-queries-20261015",
+  "actualAthens": "2026-10-20 08:52-08:59",
+  "scope": "personal SuperAdmin, selected Diadoxou, all stores off, read-only",
+  "adjacentHealthyRevision": "f2a3b79a145f7f80331280384066ec78c29ec230",
+  "bank": {
+    "uiAllRowsMatch": true,
+    "sourceBeforeAfterEqual": true,
+    "csvOtherFieldsMatch": true,
+    "midnightTimestamp": "LIVE FAIL h24 versus h23",
+    "csvSha256": "3560b91c98219729d5afb8195da131d5f92e23fe744602490021d8a25613a145"
+  },
+  "invoices": {
+    "uiAllRowsMatch": true,
+    "sourceBeforeAfterEqual": true,
+    "draftApprovedSeparate": true,
+    "csvDownloadObserved": true,
+    "csvContent": "NOT TESTED"
+  },
+  "offers": {
+    "recordedOnlyEmptyFilterMatch": true,
+    "sourceBeforeAfterEqual": true,
+    "nonemptyNumerical": "NOT TESTED"
+  },
+  "wholeVoice": "OPEN",
+  "businessWrites": false,
+  "commercialRowsPublished": false,
+  "privateEvidenceRetention": "Original files removed by automated workspace maintenance; observations retained in conversation, not reconstructed transactions."
+}
