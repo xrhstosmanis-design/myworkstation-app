@@ -16,7 +16,8 @@
     "sourceBeforeAfterEqual": true,
     "draftApprovedSeparate": true,
     "csvDownloadObserved": true,
-    "csvContent": "NOT TESTED"
+    "csvContent": "USER-SUPPLIED FILE ACCEPTANCE PASS, all5 rows at export precision",
+    "historicalCsvContent": "NOT TESTED"
   },
   "offers": {
     "recordedOnlyEmptyFilterMatch": true,
@@ -114,5 +115,29 @@
     "businessWrite": false,
     "commercialRowsPublished": false,
     "scope": "USER-SUPPLIED FILE ACCEPTANCE PASS only; whole Voice OPEN"
+  },
+  "userSuppliedInvoiceCsv2030": {
+    "filename": "myworkstation-report-20261020203043.csv",
+    "sha256": "2e3055cc2ee7bbc0d104910c78e4c9955ad144ce4dd3dc0994cd1df915e59595",
+    "bytes": 1919,
+    "dataRows": 5,
+    "columns": 9,
+    "bom": true,
+    "delimiter": ";",
+    "allDatesTimesTypesSuppliersReferencesStatusesMatch": true,
+    "amountsMatchAtExportTwoDecimalPrecision": true,
+    "rawStoredDecimalEqualityClaimed": false,
+    "approved": 3,
+    "draft": 2,
+    "selectedStorePeriodMatch": true,
+    "draftCreditLimitationsRetained": true,
+    "sourceTiming": "Independent original SELECT after receiving user upload",
+    "newBeforeAfterInvariant": false,
+    "agentControlledUiReplay": false,
+    "nativeBrowserRestrictionResolved": false,
+    "fileModified": false,
+    "businessWrite": false,
+    "commercialRowsPublished": false,
+    "scope": "USER-SUPPLIED FILE ACCEPTANCE PASS only; whole VOICE OPEN"
   }
 }
