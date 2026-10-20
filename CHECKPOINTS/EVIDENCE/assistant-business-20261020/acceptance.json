@@ -7,8 +7,9 @@
     "uiAllRowsMatch": true,
     "sourceBeforeAfterEqual": true,
     "csvOtherFieldsMatch": true,
-    "midnightTimestamp": "LIVE FAIL h24 versus h23",
-    "csvSha256": "3560b91c98219729d5afb8195da131d5f92e23fe744602490021d8a25613a145"
+    "midnightTimestamp": "USER-SUPPLIED FILE PASS, actual13 midnight rows00:xx",
+    "csvSha256": "3560b91c98219729d5afb8195da131d5f92e23fe744602490021d8a25613a145",
+    "historicalMidnightTimestampFail": "LIVE FAIL h24 versus h23"
   },
   "invoices": {
     "uiAllRowsMatch": true,
@@ -27,7 +28,7 @@
   "commercialRowsPublished": false,
   "privateEvidenceRetention": "Original files removed by automated workspace maintenance; observations retained in conversation, not reconstructed transactions.",
   "sourceFix": {
-    "state": "SOURCE LIVE; ACTUAL FILE RETEST NOT TESTED",
+    "state": "SOURCE LIVE; ACTUAL USER-SUPPLIED BANK CSV CONTENT PASS",
     "claimPr": 2941,
     "claimCi": 39427142860,
     "sourcePr": 2943,
@@ -91,5 +92,27 @@
     "authOrRuntimeWorkaround": false,
     "businessWrite": false,
     "newManualPass": false
+  },
+  "userSuppliedCsv1928": {
+    "filename": "myworkstation-report-20261020192856.csv",
+    "sha256": "d5ab8d59bb101531aeff10eca8ccc7326c917d56651870abb3097f94ce0fa444",
+    "bytes": 12930,
+    "dataRows": 68,
+    "columns": 9,
+    "bom": true,
+    "delimiter": ";",
+    "sourceDatesTimesTypesAmountsStatusesAllMatch": true,
+    "midnightRowsCorrect00": 13,
+    "h24Rows": 0,
+    "selectedStoreAndPeriodMatch": true,
+    "bankBalanceLimitationRetained": true,
+    "sourceTiming": "Independent original ended-period SELECT after uploaded file was received",
+    "newBeforeAfterInvariant": false,
+    "agentControlledUiReplay": false,
+    "nativeBrowserRestrictionResolved": false,
+    "fileModified": false,
+    "businessWrite": false,
+    "commercialRowsPublished": false,
+    "scope": "USER-SUPPLIED FILE ACCEPTANCE PASS only; whole Voice OPEN"
   }
 }
