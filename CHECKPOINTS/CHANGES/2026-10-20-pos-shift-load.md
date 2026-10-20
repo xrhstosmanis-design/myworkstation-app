@@ -1,3 +1,7 @@
+## Final review: read errors remain distinct from printing errors
+
+The existing print-popup failure still shows its own message without hiding loaded transactions or claiming the open shift could not be checked. Actual mounted print-denial regression passes without Audit/print/payment writes. Exact new tagged route SQL read-only plan1570.831ms/planning8.71ms/28rows; initial equivalent candidate2007.732ms versus original42498.408ms. Protected local regression suites add17PASS/0FAIL/1native infrastructureSKIP (22PASS/2nativeSKIP across distinct focused/protected cases). Planning time in prior ready heading is approximate; actual sourcePR creation20Oct10:08:05Athens is authoritative. No hosted PASS.
+
 ## 20/10/2026 10:12 Europe/Athens - POS-SHIFT-LOAD-01 / SOURCE READY / AWAITING FULL CI AND HOSTED ACCEPTANCE
 
 Owner fix/pos-shift-load-20261020 retained. ClaimPR2931/headb4aebbbc979eadb6c0e702065454c198030951bb green/merged a547cfb4cf468cf1ea9765b69c2cbd269821e0d5 BEFORE source. Real read-only full existing SHIFT SQL EXPLAIN ANALYZE measured42498.408ms/28rows, planning47.793ms. Bounded equivalent candidate with exact materialized active ledger measured2007.732ms/28rows, planning71.482ms (~21x faster); no schema/index/data writes or financial replay. Counts are observations in a live store, not a frozen identity/delta proof.
