@@ -50,7 +50,14 @@ test('native missing PDF/draft proposes read-only confirmation, actual draft rou
   const results=await Promise.all([actualDraftRoute(f.db)(),actualDraftRoute(f.db)()]);
   assert.equal(results[0].documentId,results[1].documentId);assert.ok(results.some(r=>r.reused));
   const match=await findMyDataPurchase(f.db,identity);assert.equal(match.documentId,results[0].documentId);assert.equal(match.paymentTransactionId,'payment');
-  const rows=await f.db.$queryRawUnsafe('SELECT "purchaseDocumentId" FROM "AiReaderJob" WHERE "id" IN (\'j-pos\',\'j-second\')');assert.ok(rows.every(r=>r.purchaseDocumentId===match.documentId));
+  const rows=await f.db.$queryRawUnsafe('SELECT "id","storeId","attachmentId","purchaseDocumentId" FROM "AiReaderJob" WHERE "id" IN (\'j-pos\',\'j-second\')');
+  assert.equal(rows.find(r=>r.id==='j-pos').purchaseDocumentId,match.documentId);
+  assert.equal(rows.find(r=>r.id==='j-second').purchaseDocumentId,null,'secondary page must remain eligible for the normal intake');
+  const core=fs.readFileSync(new URL('../src/routes/commerce-pos-v244-core.js',import.meta.url),'utf8');
+  const guardStart=core.indexOf('if(additionalPageJobs.length!==pageJobIds.length'),guardEnd=core.indexOf('){const error=',guardStart);
+  assert.ok(guardStart>=0&&guardEnd>guardStart);
+  const rejectsPages=new Function('pageJobIds','additionalPageJobs','lockedReplacement','skeletonDocumentId','job','return '+core.slice(guardStart+3,guardEnd));
+  assert.equal(rejectsPages(['j-second'],rows.filter(r=>r.id==='j-second'),false,match.documentId,{storeId:'s'}),false,'actual intake guard must accept page 2');
   const raw=(await f.db.$queryRawUnsafe('SELECT "rawPayload" FROM "MyDataInboundDocument"'))[0].rawPayload;assert.deepEqual(new Set(raw.mydataPosReceipt.attachmentIds),new Set(['photo','second']));
   assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS n FROM "PurchaseDocument"'))[0].n,1);assert.equal((await f.db.$queryRawUnsafe('SELECT COUNT(*)::int AS n FROM "PurchaseOrder"'))[0].n,1);
   const after=JSON.parse(await f.snapshot());assert.deepEqual(after.StoreProduct,ledger.StoreProduct);assert.deepEqual(after.StockMovement,ledger.StockMovement);assert.equal(after.StoreTransaction.length,1);assert.equal(after.StoreTransaction[0].row.amount,ledger.StoreTransaction[0].row.amount);assert.equal(after.StoreTransaction[0].row.id,'payment');

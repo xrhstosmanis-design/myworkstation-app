@@ -1,3 +1,7 @@
+## 20/10/2026 — POS-MYDATA-UNLINKED-01 / MULTI-PAGE REVIEW CORRECTION BEFORE MERGE
+
+Before merge, source review found that linking secondary photo jobs during shell creation would conflict with the existing pos-intake guard, which deliberately requires unclaimed additional pages. Corrected binding to link only the primary job (and any retained provider-original jobs). Every photo ID remains durable in the primary handoff and receipt; secondary pages are claimed only by the established full multi-page intake. The new native test executes that actual guard against page 2 after the actual pos-draft route and requires it to accept the page. No intake guard was relaxed. Initial source7f14b8fe was not merged or deployed; its CI evidence is superseded by the corrected head. All original source and financial boundaries remain. Final full native PR/main CI and actual acceptance required; NOT LAB PASS.
+
 ## 20/10/2026 — POS-MYDATA-UNLINKED-01 / SOURCE PREPARED / AWAITING FULL NATIVE CI AND ACCEPTANCE
 
 Explicit limited transfer claim PR2936/head189499103e0587e0d7d734e5f03b8b5eb9ae2b86 had all applicable documentation/Windows checks green and merged8ba74c91312b06a242f9b13395abdc4c15c6d11b before any source/test edits. Retained owner fix/pos-mydata-unlinked-20261020; broader historical pairs/credit/Gate3/09/other owners preserved.

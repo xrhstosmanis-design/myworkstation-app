@@ -55,6 +55,9 @@ export async function bindUnlinkedMyDataOriginal(tx,identity,original,{jobId,doc
    AND NOT(COALESCE("rawPayload",'{}'::jsonb) ?| ARRAY['mydataDraftOrderId','mydataDraftDocumentId','mydataPosReceipt'])`;
  if(updated!==1)throw fail('Το πρωτότυπο συνδέθηκε ενδιάμεσα. Δεν δημιουργήθηκε δεύτερο πρόχειρο.');
  await tx.$executeRaw`UPDATE "DocumentInbox" SET "attachmentId"=COALESCE("attachmentId",${jobs[0].attachmentId}),"status"='IN_REVIEW',"note"=${'Κοινό POS/myDATA • MARK '+original.mark+' • Ανάγνωση από βοηθό'},"updatedAt"=NOW() WHERE "id"=${original.inboxId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
- await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${documentId},"updatedAt"=NOW() WHERE "companyId"=${identity.companyId} AND "storeId"=${identity.storeId} AND ("id"=ANY(${ids}::text[]) OR ("attachmentId"=${original.attachmentId} AND "purchaseDocumentId" IS NULL))`;
+ // Secondary photo jobs remain unclaimed until the normal multi-page intake.
+ // Its existing guard rejects an already claimed additional page; the primary
+ // handoff and receipt retain every page ID without bypassing that guard.
+ await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${documentId},"updatedAt"=NOW() WHERE "companyId"=${identity.companyId} AND "storeId"=${identity.storeId} AND ("id"=${jobId} OR ("attachmentId"=${original.attachmentId} AND "purchaseDocumentId" IS NULL))`;
  await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({mydataPosReceipt:receipt})}::jsonb WHERE "id"=${jobId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
 }
