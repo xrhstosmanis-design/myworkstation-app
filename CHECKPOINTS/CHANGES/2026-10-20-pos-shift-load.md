@@ -1,3 +1,7 @@
+## Combined-main reconciliation
+
+Preserve new wholesale verified receipt a3b4adf29fc5324e0a080e495089e8e360ed35ac and every other owner. Four shift source/test blobs unchanged; fresh full combined CI required. No deployment/financial replay.
+
 ## Final review: read errors remain distinct from printing errors
 
 The existing print-popup failure still shows its own message without hiding loaded transactions or claiming the open shift could not be checked. Actual mounted print-denial regression passes without Audit/print/payment writes. Exact new tagged route SQL read-only plan1570.831ms/planning8.71ms/28rows; initial equivalent candidate2007.732ms versus original42498.408ms. Protected local regression suites add17PASS/0FAIL/1native infrastructureSKIP (22PASS/2nativeSKIP across distinct focused/protected cases). Planning time in prior ready heading is approximate; actual sourcePR creation20Oct10:08:05Athens is authoritative. No hosted PASS.
