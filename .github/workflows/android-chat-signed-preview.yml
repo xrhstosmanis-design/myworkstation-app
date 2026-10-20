@@ -50,6 +50,15 @@ jobs:
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - name: Compile, unit tests and lint before accessing signing material
         run: gradle --no-daemon -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+      - name: Start isolated virtual audio for capture tests
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=ci_video
+          pactl set-default-sink ci_video
+          pactl set-default-source ci_video.monitor
+          echo "QEMU_AUDIO_DRV=pa" >> "$GITHUB_ENV"
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - name: Verify Android lifecycle and regression tests before signing
@@ -59,7 +68,11 @@ jobs:
           arch: x86_64
           target: default
           disable-animations: true
-          script: gradle --no-daemon -p android :app:connectedDebugAndroidTest
+          # The default -noaudio cannot exercise an actual audio/video recorder. No host mic access.
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
+          script: |
+            gradle --no-daemon -p android :app:connectedDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=gr.myworkstation.chat.VideoActivityTest#emulatorCaptureProducesPlayableMp4InRamWithoutLocalVideo'
+            gradle --no-daemon -p android :app:connectedDebugAndroidTest
       - name: Build with durable owner key and verify pinned certificate
         env:
           MW_CHAT_KEYSTORE_B64: ${{ secrets.MW_CHAT_KEYSTORE_B64 }}
