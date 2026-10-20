@@ -1,0 +1,169 @@
+{
+  "result": "LIMITED LAB UI/CSV PASS; positive cases OPEN",
+  "observation": {
+    "at": "2026-10-20T19:32:08Z",
+    "role": "Platform SuperAdmin (positively authenticated)",
+    "company": "MYWORKSTATION LAB",
+    "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "terminal": "Cloud browser tab4 / desktop; no POS action",
+    "shiftContext": {
+      "terminal": "MAIN",
+      "cash": 9.4,
+      "card": 0,
+      "iris": 0,
+      "total": 0,
+      "transactions": 0
+    },
+    "options": {
+      "historyDays": 30,
+      "coverageDays": 7,
+      "leadDays": 3
+    },
+    "defaultFiltered": 11,
+    "page": "1/11",
+    "sample": {
+      "sku": "2269",
+      "name": "ΝΕΡΟ500ML",
+      "recordedStock": -71,
+      "min": 0,
+      "sales": 22,
+      "returns": 4,
+      "net": 18,
+      "daily": 0.6,
+      "proposal": 77,
+      "label": "Χρειάζεται έλεγχος",
+      "reason": "Αρνητικό καταγεγραμμένο απόθεμα"
+    },
+    "scope": "new metadata/filter/CSV only; historical19Octquantity82 not replayed and not expected under changed rolling window"
+  },
+  "adjacentHealth": {
+    "at": "2026-10-20T19:32Z",
+    "ok": true,
+    "revision": "f813ea5edf6621cd0ad0cdd6cb50d2719b03dd24",
+    "runtimeBlobsMatchSource2946": {
+      "backend": "77562e828ca6ec0376e90d650654946f6d9cbcbe",
+      "panel": "765e54cd8cd8bb29b25e9cae2eea80a22d7f346e",
+      "exporter": "996931d5d6760f7fb4656d3f3b237583cc94deb5"
+    }
+  },
+  "reviewCSV": {
+    "bytes": 10118,
+    "sha256": "a3d6fd22ba619928a3baf4e07e896300785c04b6ab97ce27b98cd46330c7d991",
+    "columns": 38,
+    "rows": 11,
+    "uniqueProducts": 11,
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "snapshot": "2026-10-20T19:32:08.012Z",
+    "filter": "REVIEW_REQUIRED",
+    "status": "REVIEW_REQUIRED",
+    "quantity": "",
+    "basis": "RECORDED_CURRENT_STOCK_MINIMUM",
+    "stockVerified": "NO",
+    "reason": "NEGATIVE_RECORDED_STOCK"
+  },
+  "allCSV": {
+    "bytes": 75646,
+    "sha256": "4f0e59d405dec10a39a26a423e50f6dc3966227230eb33ad88ad9e3b863f2b71",
+    "columns": 38,
+    "rows": 101,
+    "uniqueProductIds": 101,
+    "storeIds": [
+      "cmtpopbgo000trhb5ng9ytiru"
+    ],
+    "snapshots": [
+      "2026-10-20T19:32:08.012Z"
+    ],
+    "filters": [
+      "ALL"
+    ],
+    "statusCounts": {
+      "REVIEW_REQUIRED": 11,
+      "NO_SHORTAGE": 90
+    },
+    "reasonCounts": {
+      "NEGATIVE_RECORDED_STOCK": 11,
+      "": 90
+    },
+    "stockVerified": [
+      "NO"
+    ],
+    "noShortageSample": [
+      "cmtpopbgo000trhb5ng9ytiru",
+      "2026-10-20T19:32:08.012Z",
+      "2026-09-20T19:32:08.012Z",
+      "2026-10-20T19:32:08.012Z",
+      "30",
+      "7",
+      "3",
+      "APPROVED_DOCUMENT_FREQUENCY_PROXY",
+      "YES",
+      "YES",
+      "NO",
+      "",
+      "all",
+      "NO",
+      "CURRENT_FILTERED_ROWS_ALL_PAGES",
+      "1dbe0a92-e2ec-4ab3-b348-e281c6e1fe27",
+      "7UP 1.5L",
+      "00580",
+      "τεμ.",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "",
+      "Χωρίς προμηθευτή",
+      "NO_APPROVED_DOCUMENT_EVIDENCE",
+      "",
+      "Δεν υπάρχει θετικό ελάχιστο ή πρόσφατη καθαρή ζήτηση.",
+      "Χωρίς θετική καθαρή κίνηση στο επιλεγμένο ιστορικό.",
+      "ALL",
+      "NO_SHORTAGE",
+      "0",
+      "RECORDED_CURRENT_STOCK_MINIMUM",
+      "NO",
+      ""
+    ]
+  },
+  "emptyFilters": {
+    "BELOW_MINIMUM": {
+      "rows": 0,
+      "exportEnabled": false
+    },
+    "DEMAND_REPLENISHMENT": {
+      "rows": 0,
+      "exportEnabled": false
+    },
+    "scope": "empty cases only; no positive real case accepted"
+  },
+  "noShortageUI": {
+    "sku": "00580",
+    "name": "7UP1.5L",
+    "stock": 0,
+    "min": 0,
+    "net": 0,
+    "daily": 0,
+    "proposal": 0,
+    "status": "NO_SHORTAGE",
+    "label": "Χωρίς καταγεγραμμένο έλλειμμα",
+    "meaning": "recorded-minimum comparison only, not physical availability"
+  },
+  "semanticChecks": {
+    "all101NewMetadataSemanticallyConsistent": true,
+    "review11OriginalProductColumnsMatchAll": true,
+    "allSameStoreSnapshot": true
+  },
+  "limits": [
+    "Positive BELOW_MINIMUM/DEMAND cases absent and NOT TESTED",
+    "Other roles/stores/mobile NOT TESTED",
+    "Physical availability/source correctness/weekly history/actual sends NOT TESTED",
+    "Historical19Oct82 is dated rolling-window evidence, not replayed",
+    "No financial/order/stock action; no full-database deltas certified"
+  ],
+  "rawCSV": "Not committed; hashes, counts and selected synthetic LAB sample retained only",
+  "screenshot": "lab-verified.jpg"
+}

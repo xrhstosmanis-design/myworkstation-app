@@ -1,3 +1,19 @@
+# Supplier stock shortfall - LIMITED LAB UI/CSV PASS; positive cases OPEN
+
+## 20/10/2026 - CENTRAL-SUPPLIER-SHORTFALL-01 / LIMITED LAB UI-CSV PASS / POSITIVE CASES OPEN
+
+Central owner `codex/central-four-streams-20261018` remains. New actual read-only acceptance20Oct22:32-22:36Athens (snapshot2026-10-20T19:32:08.012Z), authenticated Platform SuperAdmin, MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ / storecmtpopbgo000trhb5ng9ytiru, cloud desktop tab4. Canonical normal navigation positively verified the existing signed-in session; no new credentials were requested. This supersedes earlier unknown-login/AWAITING LAB only for the tested cases below, not the entire feature.
+
+LIMITED LAB PASS: new REVIEW_REQUIRED filter shows11negative-recorded-stock rows and actual CSV11unique products across all filtered pages,38columns,10118bytes/SHA256a3d6fd22ba619928a3baf4e07e896300785c04b6ab97ce27b98cd46330c7d991. All11 have null/empty recorded gap, NEGATIVE_RECORDED_STOCK and physicalVerificationNO. WaterSKU2269 stock-71/min0,sales22/returns4/net18/daily0.6/proposal77 displays the new review/negative-stock label; original product fields match between exports. The19Octproposal82 is protected dated evidence under a different rolling window, not repeated or expected to equal77.
+
+ALL with only-neededOFF shows101rows; actual CSV101unique products,75646bytes/SHA2564f0e59d405dec10a39a26a423e50f6dc3966227230eb33ad88ad9e3b863f2b71, same store/snapshot,90NO_SHORTAGE+11REVIEW_REQUIRED, physicalVerificationNO throughout. Product columns15-31 of all11review rows equal their ALL-export counterparts. Actual SKU00580/7UP1.5L stock0/min0/proposal0 shows Χωρίς καταγεγραμμένο έλλειμμα; this certifies the recorded-minimum comparison only, not available physical stock. BELOW_MINIMUM and DEMAND_REPLENISHMENT filters each showed0rows and disabled CSV: EMPTY-CASE PASS ONLY, no positive case inferred.
+
+Adjacent independent health at19:32UTC wasoktrue/f813ea5edf6621cd0ad0cdd6cb50d2719b03dd24; all3runtime supplier blobs exactly match reviewed source#2946. Its verified technical release/full native CI remains as recorded in#2969. No transactional sale/return/payment/order/stock/settings/email action or accepted LAB replay was performed. No claim of independently measured full database/financial deltas. No new FAIL observed. Browser snapshot/JPG and redacted structured evidence: `CHECKPOINTS/EVIDENCE/supplier-stock-shortfall-20261020/lab-acceptance.json`, `lab-verified.jpg`; manual `docs/manual/commerce/PASS.md`; checkpoint `CHECKPOINTS/CHANGES/2026-10-20-supplier-stock-shortfall.md`. Scoped PDF `lab-tracker.pdf` regenerated; concurrent common PDF retained.
+
+Remaining OPEN with central owner: real positive below-minimum and demand-replenishment cases (absent from this LAB snapshot), other roles/stores/mobile, physical inventory/source correctness, genuine deliveries/comparable cost/margin, weekly stock history and any actual order/report delivery. Do not replay the accepted negative/no-recorded-gap/CSV/empty-filter cases merely for paperwork. Next single action: coordinate an independently identified available positive read-only acceptance case; do not mutate shared LAB quantities to manufacture it. Automatic report dispatch staysOFF pending retained-owner production contracts.
+
+## Historical technical receipt and source evidence
+
 # Supplier recorded-stock shortfall - verified technical release; AWAITING LAB
 
 ## 20/10/2026 - CENTRAL-SUPPLIER-SHORTFALL-01 / TECHNICAL RELEASE VERIFIED / AWAITING LAB
