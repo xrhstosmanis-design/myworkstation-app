@@ -1,3 +1,4 @@
+import {findUnlinkedMyDataOriginal} from '../lib/pos-unlinked-mydata.js';
 import {Prisma} from '@prisma/client';
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
 import {assertLifecycleMutation} from '../services/store-lifecycle-generation.js';
@@ -788,7 +789,8 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
         AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${documentNumber}
       ORDER BY o."updatedAt" DESC LIMIT 1`;
     if(orders[0])return res.status(409).json({error:"Το ίδιο τιμολόγιο υπάρχει ήδη και η δεύτερη καταχώριση μπλοκαρίστηκε.",code:"DUPLICATE_INVOICE",existing:orders[0]});
-    res.json({ok:true,duplicate:false,...resume,paymentTransactionId:payment?.id||null,paymentReused:Boolean(payment),
+    const unlinked=await findUnlinkedMyDataOriginal(prisma,identity,{paymentTransactionId:payment?.id||null});
+    res.json({ok:true,duplicate:false,...resume,...(unlinked?{myDataHeaderMatched:true,canonicalDocumentNumber:unlinked.canonicalDocumentNumber,myDataMark:unlinked.mark}:{}),paymentTransactionId:payment?.id||null,paymentReused:Boolean(payment),
       ...(payment?{settlementMode:"PAID",message:"Η υπάρχουσα πληρωμή διατηρείται. Θα γίνει μόνο νέα ανάγνωση του τιμολογίου."}:{})});
   }catch(error){next(error)}
 });
@@ -905,17 +907,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
     }
     const cachedProductLines=hasCompleteCachedProductLines?normalizedPages.flatMap((page,pageIndex)=>finalizeV244ProductLines(page.cachedProductLines).map(line=>({...line,sourceFileIndex:pageIndex}))):[];
     await ensureFastHandoffSchema();
-    const taxId=cleanTaxId(supplier.taxId),normalizedNumber=normalizeDocumentNumber(documentNumber);
-    const myDataRows=taxId?await prisma.$queryRaw`
-      SELECT m."id",m."inboxId",m."mark",m."documentNumber",m."issueDate",m."totalGross"
-      FROM "MyDataInboundDocument" m
-      WHERE m."companyId"=${companyId} AND m."storeId"=${storeId}
-        AND REGEXP_REPLACE(COALESCE(m."issuerVat",''),'\\D','','g')=${taxId}
-        AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(m."documentNumber",'')),'\\s+','','g'))=${normalizedNumber}
-        AND (m."issueDate" IS NULL OR m."issueDate"=${new Date(`${documentDate}T00:00:00Z`)})
-        AND ABS(COALESCE(m."totalGross",0)-${totalGross})<=0.05
-      ORDER BY m."fetchedAt" DESC LIMIT 1`:[];
-    const myData=myDataRows[0]||null;
+    const myData=await findUnlinkedMyDataOriginal(prisma,receiptIdentity,{paymentTransactionId:existingPayment?.id||null});
     const result=await prisma.$transaction(async tx=>{
       await assertLifecycleMutation(tx,{companyId,storeId},lifecycleContext()[storeId]??'0');
       await lockInvoiceStore(tx,companyId,storeId);

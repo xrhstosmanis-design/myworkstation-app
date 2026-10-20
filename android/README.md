@@ -1,3 +1,18 @@
+## Current voice/quick-reply/signing preparation — 19/10/2026
+
+Voice0.1.8/code9 source follows green before-source claimPR2876. Canonical PCM16/16kHz/mono WAV,
+max60seconds/1920044bytes, AudioRecord/AudioTrack RAM only, secure separate screen and explicit
+record/stop/preview/use/send/cancel. No file/MediaStore/cache/export/audio saved state. Background,
+cancel/logout/store/session changes clear buffers; late callbacks are fenced and handoff is single-use30s.
+Older servers do not advertise voiceMessagesAvailable, so microphone remains disabled while text/photos work.
+New GENERAL-only voice endpoint and audio receiver must pass exact full/Android CI and ordinary guarded
+release before final device acceptance. No automatic send/retry or transcription/AI invoice action.
+
+Quick replies/signing build preparation sourcePR2871 is merged technical evidence, not new physical PASS.
+Durable owner key setup and real stable-signed build/update remain unverified. Public QR still serves0.1.3.
+One final Android device batch after all preparation, iOS last: docs/testing/native-chat-final-batch.md.
+Earlier sections below are historical; qualified gallery/two-camera USER PASS remain protected.
+
 ## Native multi-photo implementation — 19/10/2026, AWAITING CI/DEVICE
 
 Existing gallery selection accepts up to five JPG/PNG/WEBP files, at most7MiB each and14MiB combined, kept in a bounded in-memory queue. Tap the selection label to preview/remove before Send. Images are sequential separate messages through the existing API; caption goes on the first confirmed message only. This is not an atomic album. A missing ok/id receipt or network error stops all further sends without retry; review server history and discard the old draft before composing again. Background/logout/store/tab change clears selected bytes and cancels remaining requests. Only transient content-URI reads; no persisted URI grant, image cache or gallery write. Existing gallery originals remain outside the app's ownership. Replies and voice messages are not implemented in this slice. Source tests do not constitute physical device acceptance or a new distributed APK.

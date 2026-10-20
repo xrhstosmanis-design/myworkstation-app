@@ -1,0 +1,72 @@
+{
+  "kind": "technical_release_verification_not_feature_acceptance",
+  "sourcePR": 2922,
+  "claimPR": 2919,
+  "claimMerged": "d1f2f3b2dac33f76b039e5fba17b06887955f4c4",
+  "reviewedHead": "134a2a530b134169ac19d4a0d1238b9b7a6893b3",
+  "sourceMerge": "c417d58d2751792ec3ec491f25c53581330adb61",
+  "CI": {
+    "pr": {
+      "run": 39417260089,
+      "buildJob": 118609437298,
+      "conclusion": "success"
+    },
+    "main": {
+      "run": 39418394373,
+      "buildJob": 118613240288,
+      "conclusion": "success"
+    },
+    "serverPass": 3636,
+    "serverFail": 0,
+    "serverSkip": 0,
+    "backupPass": 8,
+    "newPayloadTestsPass": 14,
+    "existingNativePersistenceSubtestsPass": 11,
+    "allFiveJobsSuccess": true
+  },
+  "deployment": {
+    "guardRun": 39419369668,
+    "deployJob": 118616263103,
+    "conclusion": "success",
+    "renderId": "dep-dbblheon74is73d3h4dg",
+    "status": "live",
+    "revision": "c417d58d2751792ec3ec491f25c53581330adb61",
+    "finishedAt": "2026-10-20T12:07:41.22209Z",
+    "guardExactHealthyAt": "2026-10-20T12:07:45.1489067Z",
+    "independentHealthRequestMinuteUTC": "2026-10-20T12:07Z",
+    "independentHealth": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "c417d58d2751792ec3ec491f25c53581330adb61"
+    },
+    "rollbackRevision": "2dc9c8829578d388272f0a2cfd330a32ee4921a0",
+    "rollbackRenderId": "dep-dbbl5non74is73d2fm3g"
+  },
+  "blobs": {
+    "module": "faa574c1566cbe3f0e493d6bead2a5017f8df2c6",
+    "test": "0d7493b771caf2caab9393cb1d5d87224d9c22db"
+  },
+  "oldFailurePreserved": {
+    "run": 39379328574,
+    "job": 118484757813,
+    "artifact": 12244299880,
+    "fixedByPR": 2927,
+    "verifiedReceiptPR": 2932,
+    "freshPRAndMainOfflineE2E": "pass"
+  },
+  "installedSource": true,
+  "runtimeWired": false,
+  "productionSchemaProvisionedByThisIncrement": false,
+  "dispatchEnabledByThisIncrement": false,
+  "financialMutationByCoordinator": false,
+  "acceptedLABReplayed": false,
+  "newFeatureAcceptance": false,
+  "pendingContracts": [
+    "authoritative verified recipient/consent/dispatch versions and revocation",
+    "production schema/lifecycle/retention/backup",
+    "lock ordering",
+    "payload retention and reissue",
+    "one-recipient transport acceptance and controlled inbox acceptance"
+  ],
+  "ownership": "Retained payload and central owners; existing runtime/schema/mail/lifecycle/backup and other stream owners unchanged."
+}

@@ -1,0 +1,87 @@
+{
+  "status": "TECHNICAL SOURCE RELEASE VERIFIED; STABLE SIGNING AND FINAL DEVICE ACCEPTANCE OPEN",
+  "owner": "feat/android-chat-native-20261017",
+  "beforeSourceClaim": {
+    "pr": 2876,
+    "head": "5190837cac97439e3207922b3fa7df0e6db2cc76",
+    "merge": "cb9f44ce251efe1e98b3f1878d716b36563033b6"
+  },
+  "version": "0.1.8-preview",
+  "versionCode": 9,
+  "localNodeVersion": "20.20.2",
+  "localTests": {
+    "passed": 16,
+    "failed": 0,
+    "scope": "canonical WAV parser, actual registered voice handler with isolated database doubles, prior chat assignment/foundation"
+  },
+  "notLocallyTested": [
+    "Android compilation/unit/instrumentation: JDK compiler unavailable",
+    "mounted receiver: project JS dependencies unavailable",
+    "microphone hardware",
+    "physical playback",
+    "real owner signing key setup",
+    "public distribution"
+  ],
+  "realProductionActionsByAgent": false,
+  "physicalAcceptance": "DEFERRED until consolidated preparation complete",
+  "iosOrder": "LAST",
+  "firstSourceTechnicalCI": {
+    "sha": "1b9111e947fad572c0c976a5fa564ee96cbd8062",
+    "fullRun": 39306125023,
+    "androidRun": 39306125076,
+    "status": "SUCCESS",
+    "serverTestsPassed": 3475,
+    "backupTestsPassed": 8,
+    "physicalStatus": "NOT TESTED"
+  },
+  "sourcePr": 2877,
+  "sourceHead": "a84c9e3e05e29503829fd0e746ed1a2e80b49bdd",
+  "merge": "b255b1cf335734a81d09ad65d5b6ce2dba33733a",
+  "prFullCi": {
+    "run": 39379156890,
+    "job": 118484368074,
+    "passed": 3601,
+    "failed": 0,
+    "backupPassed": 8
+  },
+  "androidCi": {
+    "run": 39379156874,
+    "job": 118484010197,
+    "unitPassed": 29,
+    "instrumentationPassed": 28,
+    "failed": 0
+  },
+  "artifact": {
+    "id": 12244489455,
+    "apk_sha256": "75d8e0be146bfbeb92e2955b18d411b3b490c5952a2fe20951a6d3d57ffd6d4d",
+    "apk_bytes": 3670848,
+    "signer_sha256": "84d4f493432c737ca7d1286579a5a364ecd2be0ef0ae502802ce7eac32a80429",
+    "manifest": {
+      "package": "gr.myworkstation.chat.preview",
+      "versionCode": 9,
+      "versionName": "0.1.8-preview"
+    },
+    "apk_v2_rsa_and_full_content_digest": "verified",
+    "test_gallery_provider_in_app_manifest": false,
+    "durableOwnerSigner": false,
+    "public": false
+  },
+  "mainReleaseBlocker": {
+    "run": 39379947313,
+    "job": 118486896518,
+    "scope": "existing wholesale offline actual-app E2E",
+    "error": "Timed out actual encrypted preparation",
+    "owner": "codex/wholesale-suite-20261017"
+  },
+  "nextAction": "Supported secure GitHub sign-in and stable owner signing configuration, verified signed candidate/distribution, consolidated final device batch; iOS last",
+  "verifiedRelease": {
+    "revision": "d35a772870859bbf5eb6988820d74eaa7c260795",
+    "fullCi": 39387000777,
+    "guardWorkflow": 39387876889,
+    "renderDeploy": "dep-dbbhlfbncjis738pm3a0",
+    "liveAt": "2026-10-20T07:42:46.842298Z",
+    "healthOk": true,
+    "ownedSourceChangesSinceReviewedHead": []
+  },
+  "signingStatus": "Secure GitHub sign-in timed out; explicit origin verification signed out; no key/secret created/read/set"
+}
