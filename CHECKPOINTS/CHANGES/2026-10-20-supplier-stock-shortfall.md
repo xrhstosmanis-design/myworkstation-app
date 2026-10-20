@@ -1,3 +1,19 @@
+# Supplier recorded-stock shortfall - verified technical release; AWAITING LAB
+
+## 20/10/2026 - CENTRAL-SUPPLIER-SHORTFALL-01 / TECHNICAL RELEASE VERIFIED / AWAITING LAB
+
+Retained central owner `codex/central-four-streams-20261018`, source branch `codex/supplier-stock-shortfall-20261020`, #2705/#2527. Claim #2945 was reviewed and green merged before source. Source #2946 exact head0808c71d0d3da04a68cc5e9ceec9973e9f6d580b reviewed, green and merged asd8142d55c376574f6a0b6ab35b611a2dc3bdcc97. This receipt supersedes older NOT MERGED, NOT INSTALLED and AWAITING CI descriptions below for this bounded slice only; historical evidence remains preserved.
+
+Technical PASS: PR CI39431207932/build118656937874 all5jobsSUCCESS,3668serverPASS/0FAIL/0SKIP+8backupPASS. Exact combined main CI39432574573/build118661509900 all5jobsSUCCESS,3669serverPASS/0FAIL/0SKIP+8backupPASS. Real isolated native PostgreSQL supplier HTTP/SQL parent and all5subcases executed, including producer/JSON classification, original flat quantities/source-table fingerprints, tenant/license/role denials and overflow; all11new producer->group->JSON->UI/filter/CSV contract cases executed unskipped. Mounted UI/CSV and ordinary/offline wholesale checks passed. Local30PASS/0FAIL/1native-infrastructureSKIP remains separate historical local evidence, not native/LAB acceptance. Initial setup/fixture failures and pre-merge CSS review correction are retained; historical first-head CI39430718110 was cancelled after head replacement, not a product FAIL.
+
+Actual ordinary release verified20Oct13:52UTC: workflow_run guard39433587658/deploy118664772862SUCCESS, pinned trigger13:49:27.6081997Z and exact healthy revision13:52:42.7190523Z. Renderdeploydep-dbbn2pss728c7390ij50LIVE, finished13:52:34.431512Z, commitd8142d55c376574f6a0b6ab35b611a2dc3bdcc97; independent no-cache /api/health returnedoktrue exactsameSHA. Previous healthy rollbackac39d0fb/dep-dbbmn5rncjis7398fgv0. No manual deployment or guard bypass. This is a dated installation observation, not a claim that production cannot advance subsequently.
+
+Installed behavior: recorded minimum-stock gap versus demand replenishment or review, supplier-only filters, separate metadata inside original stock cell, original5tablecolumns and first32CSVcolumns retained with6appended metadata columns. Original proposals, supplier proxy/ties/cap and flat endpoint unchanged. No base producer/routeSQL/auth/licensing/schema/margin/supplier assignment/stock/financial/order/transport changes. Existing19Oct11row actual UI/CSV PASS, including recordedstock-71/proposal82, remains protected and was not repeated. New classification does not certify physical stock or historical weekly shortage.
+
+Actual new UI/filter/CSV acceptance remains AWAITING LAB. Native secure sign-in request was interrupted; no successful login or new LAB observation is inferred. No new manual/numbered-list closure. Owner remains central. Next single action: establish a verified normal authenticated session and perform only the added read-only LAB classification/filter/CSV acceptance, without replaying accepted financial/stock actions. Automatic report dispatch remains OFF pending retained-owner production consent/lifecycle/schema/transport contracts. Scoped tracker PDF: `CHECKPOINTS/EVIDENCE/supplier-stock-shortfall-20261020/release-tracker.pdf`; common PDF retained under the recorded concurrent-publication rule. Checkpoint: `CHECKPOINTS/CHANGES/2026-10-20-supplier-stock-shortfall.md`.
+
+## Historical source implementation and claim
+
 # Supplier recorded-stock shortfall — source implementation
 
 ## 20/10/2026 - CENTRAL-SUPPLIER-SHORTFALL-01 / SOURCE IMPLEMENTED / AWAITING CI AND LAB
