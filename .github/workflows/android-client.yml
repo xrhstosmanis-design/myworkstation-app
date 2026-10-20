@@ -47,12 +47,7 @@ jobs:
           disable-animations: true
           # The default -noaudio cannot exercise an actual audio/video recorder. No host mic access.
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
-          script: |
-            if ! gradle --no-daemon -p android :app:connectedDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=gr.myworkstation.chat.VideoActivityTest#emulatorCaptureProducesPlayableMp4InRamWithoutLocalVideo'; then
-              adb logcat -b main -b system -d -v brief -s MediaRecorder:V MediaRecorderJNI:V MediaRecorderClient:V StagefrightRecorder:V MPEG4Writer:V ACodec:V CCodec:V Codec2Client:V AudioRecord:V AudioSource:V Camera3-Device:V FuseAppLoop:V AppFuseBridge:V
-              exit 1
-            fi
-            gradle --no-daemon -p android :app:connectedDebugAndroidTest
+          script: bash android/verify-video-capture.sh
       - uses: actions/upload-artifact@v4
         with:
           name: MyWorkStation-Android-Preview

@@ -1,3 +1,7 @@
+## 20/10/2026 — probe wrapper syntax FAIL corrected before feature retest
+
+Run39479327129/job118823452003 did NOT execute the capture test: emulator-runner executes each script line separately, so the multiline shell if wrapper failed with unexpected EOF. This is test-harness FAIL, not another observed app outcome. Moved the balanced focused-probe/native-tag-diagnostics/full-suite sequence into android/verify-video-capture.sh; both owned Android workflows invoke that one script. bash -n PASS. Failure still exits nonzero, full suite still required after actual capture. No application/runtime, storage fallback, private signing, authorization or real user data change. Previous _prepare feature failure remains OPEN until a fresh measured run.
+
 ## 20/10/2026 — exact _prepare failure measured / isolated native log diagnostics
 
 Run39478393658/job118820247000 on136c6c318 confirms IllegalStateException@_prepare, not output-descriptor setter. Explicit PulseAudio socket did not resolve capture; no success or sole-audio-cause claim. JUnit short exception rendering hid multiline native diagnostics, so the failure probe now preserves its nonzero exit and prints only named native recorder/codec/audio/FUSE log tags from the isolated synthetic emulator via host adb; no user media, production request, auth logs or signing material. Test assertion joins its bounded native-tag text into one line. Product source remains Camera2/RAM-only; no disk fallback or weakening/skipping test. Fresh measured diagnosis required before another causal feature change, iOS LAST.
