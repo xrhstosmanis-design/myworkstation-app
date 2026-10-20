@@ -1,0 +1,64 @@
+{
+  "scope": "CENTRAL-SUPPLIER-SHORTFALL-01",
+  "sourcePR": 2946,
+  "head": "0808c71d0d3da04a68cc5e9ceec9973e9f6d580b",
+  "merge": "d8142d55c376574f6a0b6ab35b611a2dc3bdcc97",
+  "mainCI": {
+    "run": 39432574573,
+    "buildJob": 118661509900,
+    "serverPass": 3669,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 8,
+    "jobs": [
+      {
+        "id": 118661123802,
+        "name": "classify-changes",
+        "conclusion": "success"
+      },
+      {
+        "id": 118661124277,
+        "name": "rbs-capdriver-windows-script-parse",
+        "conclusion": "success"
+      },
+      {
+        "id": 118661124515,
+        "name": "hikvision-preflight-windows",
+        "conclusion": "success"
+      },
+      {
+        "id": 118661509761,
+        "name": "wholesale-isolated-lab",
+        "conclusion": "success"
+      },
+      {
+        "id": 118661509900,
+        "name": "build-and-test",
+        "conclusion": "success"
+      }
+    ],
+    "nativeSuccessLines": [
+      "    ok 1 - real SQL excludes foreign/draft/future/waste and nets returns/exchanges/channel sales",
+      "    ok 2 - real producer/registered HTTP JSON carries current shortfall through grouping without changing flat quantities or source tables",
+      "    ok 3 - store entitlement, employee permission and license denials run before proposal SQL",
+      "    ok 4 - parameters validate before SQL; target-company support and sibling store stay isolated",
+      "    ok 5 - actual evidence overflow leaves every proposal unassigned without partial winners",
+      "ok 3002 - supplier grouped order suggestions HTTP/SQL: quantities, returns, store/license/role boundaries and no writes"
+    ]
+  },
+  "release": {
+    "workflow": 39433587658,
+    "event": "workflow_run",
+    "deployJob": 118664772862,
+    "pinnedTriggerAt": "2026-10-20T13:49:27.6081997Z",
+    "exactHealthyAt": "2026-10-20T13:52:42.7190523Z",
+    "renderDeploy": "dep-dbbn2pss728c7390ij50",
+    "renderFinishedAt": "2026-10-20T13:52:34.431512Z",
+    "revision": "d8142d55c376574f6a0b6ab35b611a2dc3bdcc97",
+    "manualDeploy": false,
+    "guardBypass": false
+  },
+  "acceptance": "AWAITING LAB. Secure auth request interrupted; no successful login/new actual observation inferred. Existing19OctPASS not repeated.",
+  "dispatch": "OFF",
+  "publicationBaseline": "8eaa3db46da84c5b88b4d1c1aa5aede6a5955d71"
+}
