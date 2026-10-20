@@ -58,6 +58,8 @@ jobs:
           pactl load-module module-null-sink sink_name=ci_video
           pactl set-default-sink ci_video
           pactl set-default-source ci_video.monitor
+          pactl load-module module-native-protocol-unix socket="$RUNNER_TEMP/native-video-pulse.sock"
+          echo "PULSE_SERVER=unix:$RUNNER_TEMP/native-video-pulse.sock" >> "$GITHUB_ENV"
           echo "QEMU_AUDIO_DRV=pa" >> "$GITHUB_ENV"
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm

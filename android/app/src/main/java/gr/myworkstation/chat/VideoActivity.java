@@ -110,7 +110,7 @@ public final class VideoActivity extends Activity implements SurfaceHolder.Callb
             },ui);
         }catch(Exception error){captureFailed(error);}
     }
-    private void captureFailed(Exception error){captureFailure=error.getClass().getSimpleName();stopCapture(false);status.setText("Δεν ξεκίνησε η λήψη στη μνήμη. Έλεγξε κάμερα/μικρόφωνο ή επίλεξε MP4.");}
+    private void captureFailed(Exception error){captureFailure=error.getClass().getSimpleName()+"@"+(error.getStackTrace().length==0?"unknown":error.getStackTrace()[0].getMethodName());stopCapture(false);status.setText("Δεν ξεκίνησε η λήψη στη μνήμη. Έλεγξε κάμερα/μικρόφωνο ή επίλεξε MP4.");}
     private void stopCapture(boolean keep){
         epoch.invalidate();boolean wasRecording=recording;recording=false;loading=false;ui.removeCallbacks(tick);boolean success=false;
         if(cameraSession!=null){try{cameraSession.stopRepeating();}catch(Exception ignored){}cameraSession.close();cameraSession=null;}
