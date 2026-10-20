@@ -1,0 +1,105 @@
+{
+  "kind": "CI technical evidence only; not LAB/LIVE installed-device acceptance",
+  "source": {
+    "pr": 2920,
+    "head": "bdbda9fb1b3aed9720d265268b79c7b47bee4f24",
+    "merge": {
+      "sha": "1498b279b05505c67b36478eafd05d1e7b69182d",
+      "merged": true,
+      "message": "Pull Request successfully merged"
+    },
+    "ci": 39378621474,
+    "exactMainCI": 39379250757,
+    "serverPass": 3604,
+    "fail": 0,
+    "skip": 0,
+    "recoveryPass": 8
+  },
+  "readinessFirst": {
+    "pr": 2927,
+    "head": "5239ae9f7e8ab064be7161f6e8a7d3674834e1bb",
+    "ci": 39380958944,
+    "jobs": [
+      {
+        "id": 118489720565,
+        "name": "rbs-capdriver-windows-script-parse",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 118489720754,
+        "name": "classify-changes",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 118489721095,
+        "name": "hikvision-preflight-windows",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 118489892871,
+        "name": "wholesale-isolated-lab",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 118489892885,
+        "name": "build-and-test",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "serverPass": 3611,
+    "recoveryPass": 8,
+    "artifact": 12245243558
+  },
+  "readinessFinal": {
+    "pr": 2927,
+    "head": "1e7934236a5e42ae710986830ef522c8f1875a22",
+    "ci": 39381968343,
+    "jobs": [
+      {
+        "id": 118492888248,
+        "name": "hikvision-preflight-windows",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 118492888460,
+        "name": "classify-changes",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 118492888532,
+        "name": "rbs-capdriver-windows-script-parse",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 118493104350,
+        "name": "wholesale-isolated-lab",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 118493104497,
+        "name": "build-and-test",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "serverPass": 3614,
+    "recoveryPass": 8,
+    "artifact": 12246070957,
+    "merge": "4e732c2d45eeffeb1a81b7099e90447a4ac9bb76"
+  },
+  "newerFailure": {
+    "revision": "b255b1cf335734a81d09ad65d5b6ce2dba33733a",
+    "ci": 39379947313,
+    "job": 118486896518,
+    "cause": "Test driver checked own disabled property and clicked during inherited fieldset disabling; no preparation happened. Corrected only test actionability, preserving assertions."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "kind": "local DOM causal reproduction, not browser or business acceptance",
+  "before": {
+    "ownDisabled": false,
+    "effectiveDisabled": true,
+    "clicks": 0
+  },
+  "after": {
+    "effectiveDisabled": false,
+    "clicks": 1
+  },
+  "pass": true
+}

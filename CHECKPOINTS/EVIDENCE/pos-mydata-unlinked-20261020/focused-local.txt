@@ -1,0 +1,38 @@
+✔ actual POS cancel of unpaid-header proposal never calls payment or handoff (3.606832ms)
+✔ actual POS confirmed original rechecks exact header before one payment and same-draft handoff (2.198799ms)
+✔ actual POS stale recheck stops before money or receipt writes (1.088554ms)
+✔ actual POS payment discovered during recheck is reused without another transaction (0.978158ms)
+✔ actual POS credit confirmation links original without payment (1.1396ms)
+✔ actual precheck returns an unpaid proposal before any financial or handoff path; paid/ambiguous errors remain errors (2.163486ms)
+✔ actual photographed POS handoff queues the existing empty myDATA reader, preserves populated rows and skips receipt replays (6.948017ms)
+✔ actual POS confirms a header without a draft, rechecks it and submits one canonical payment and handoff (1.496246ms)
+✔ actual POS refuses an unlinked header whose MARK changed before payment (1.025259ms)
+✔ POS persists every invoice page before starting full recognition (1.65279ms)
+✔ POS closes the invoice modal immediately and only monitors server status (0.312389ms)
+✔ POS reports success only after non-empty reconciled background completion (0.622675ms)
+✔ server startup reclaims persisted queued or expired-lease work without POS polling (0.355624ms)
+✔ a live POS worker heartbeats a short lease and an orphan is reclaimed (0.282053ms)
+✔ startup reconciles an eligible job whose durable task is terminal or mis-scoped (0.225559ms)
+✔ worker watchdog requeues a stale recovering job without browser polling (0.242263ms)
+✔ startup rereads one recent unapproved mismatched MANTZILAS draft without browser refresh (0.33962ms)
+✔ handoff distinguishes existing myDATA and not-yet-arrived documents (0.278007ms)
+✔ LAB handoff records paid or credit intent without posting stock (0.531467ms)
+✔ a stalled internal background request times out and becomes retryable (0.217496ms)
+✔ multi-page header reading continues when one page has no usable header (0.223906ms)
+✔ FAST header retries empty or malformed structured AI responses safely (0.237126ms)
+✔ FAST header safely reuses the exact durable POS file before provider calls (0.255443ms)
+﹣ native missing PDF/draft proposes read-only confirmation, actual draft route binds both photos once and preserves cash/stock on retry (0.869946ms) # SKIP
+﹣ native unlinked header rejects paid, tombstoned, wrong recipient/currency/type, processed and competing drafts without writes (0.182273ms) # SKIP
+﹣ native failed original binding rolls back the entire new draft while retaining the existing payment (0.109515ms) # SKIP
+﹣ native unpaid original proposes POS confirmation without payment or second draft; confirmed exact flow links one payment once (1.003255ms) # SKIP
+﹣ native unique exact original remains payable when another number has coincident supplier/day/amount (0.13976ms) # SKIP
+﹣ native paid, received, deleted and pre-existing POS candidates cannot become first-payment proposals (0.118949ms) # SKIP
+﹣ native wrong scope, VAT, date, type and amount cannot propose an original (0.102043ms) # SKIP
+ℹ tests 30
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 7
+ℹ todo 0
+ℹ duration_ms 129.439248

@@ -125,6 +125,13 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
       }
     }
     const rows=await prisma.$queryRaw`
+      WITH active_shift_ledger AS MATERIALIZED (
+        SELECT tx."companyId",tx."storeId",tx."sessionId",tx."description"
+        FROM "CashShiftSession" sh JOIN "StoreTransaction" tx
+          ON tx."sessionId"=sh."id" AND tx."companyId"=sh."companyId" AND tx."storeId"=sh."storeId"
+        WHERE ${shiftView} AND sh."companyId"=${req.user.companyId} AND sh."storeId"=${store.id}
+          AND sh."status"='OPEN' AND (${!operator} OR sh."terminalPos"=${terminalPos})
+      )
       SELECT s."id",s."operatorEmployeeId",s."receiptNumber",s."total",s."subtotal",s."discount",s."audience",s."occurredAt",s."createdAt",
              s."transactionMode",s."delayedReason",s."reversalState",s."reversalKind",s."originalSaleId",s."fiscalStatus",s."source",to_jsonb(s)->>'operationChannel' AS "operationChannel",c."name" AS "customerName",
 
@@ -142,13 +149,11 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
       WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id}
         AND (${!ownShift} OR s."operatorEmployeeId"=${req.user.employeeId||null})
         AND (${!shiftView} OR EXISTS (
-          SELECT 1 FROM "StoreTransaction" tx JOIN "CashShiftSession" shift ON shift."id"=tx."sessionId"
+          SELECT 1 FROM active_shift_ledger tx
           WHERE tx."companyId"=s."companyId" AND tx."storeId"=s."storeId"
-            AND shift."companyId"=s."companyId" AND shift."storeId"=s."storeId" AND shift."status"='OPEN'
-            AND (${!operator} OR shift."terminalPos"=${terminalPos})
             AND (COALESCE(tx."description",'') LIKE ('%'||s."id"||'%') OR (s."source"='ONLINE_POS' AND EXISTS (
               SELECT 1 FROM "StoreOperatorAudit" a WHERE a."companyId"=s."companyId" AND a."storeId"=s."storeId"
-                AND a."eventType"='POS_SALE_COMPLETED' AND a."details"->>'saleId'=s."id" AND a."details"->>'sessionId'=shift."id"
+                AND a."eventType"='POS_SALE_COMPLETED' AND a."details"->>'saleId'=s."id" AND a."details"->>'sessionId'=tx."sessionId"
                 AND tx."description" IN ('ONLINE ΠΑΡΑΓΓΕΛΙΑ '||(a."details"->>'onlineOrderNumber')||' · ΜΕΤΡΗΤΑ','ONLINE ΠΑΡΑΓΓΕΛΙΑ '||(a."details"->>'onlineOrderNumber')||' · ΚΑΡΤΑ','ONLINE ΠΑΡΑΓΓΕΛΙΑ '||(a."details"->>'onlineOrderNumber')||' · IRIS (ΠΙΛΟΤΙΚΟ)')
             )) )
         ))
@@ -196,3 +201,4 @@ router.get("/sales/journal",async(req,res,next)=>{
 });
 
 export default router;
+

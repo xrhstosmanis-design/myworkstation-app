@@ -13,7 +13,7 @@ Owner: feat/android-chat-native-20261017. Οδηγία19/10/2026 21:02 Europe/At
 - Σταθερή υπογραφή: προετοιμασία build μετά το claimPR2870. Κανένα πραγματικό
   owner key/secret δεν δημιουργήθηκε ή διαβάστηκε. Η ρύθμιση secrets και η πραγματική
   παραγωγή υπογεγραμμένου candidate δεν έχουν επιβεβαιωθεί.
-- Φωνητικά: voice-only source μετά green claimPR2876, **AWAITING CI/RELEASE/DEVICE**.
+- Φωνητικά: voice-only source μετά green claimPR2876, **SOURCE CI/RELEASE VERIFIED — FINAL DEVICE ACCEPTANCE OPEN**.
   Ο παλιός image/PDF parser διατηρείται· προστέθηκε χωριστό GENERAL WAV endpoint και audio-only receiver,
   χωρίς takeover των υπαρχόντων PWA/N16 scopes. Contract: native-chat-voice-contract.md.
 - AI: ακριβής φυσική φράση «τι πωλήσεις είχα σήμερα» στον υπάρχοντα owner

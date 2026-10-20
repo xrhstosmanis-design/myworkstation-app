@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import test from "node:test";
 
+const fsUnlinkedSource=await readFile(new URL("../src/lib/pos-unlinked-mydata.js",import.meta.url),"utf8");
 const route=await readFile(new URL("../src/routes/commerce-pos-v244.js",import.meta.url),"utf8");
 const server=await readFile(new URL("../src/index.js",import.meta.url),"utf8");
 const client=await readFile(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url),"utf8");
@@ -102,8 +103,10 @@ test("startup rereads one recent unapproved mismatched MANTZILAS draft without b
 });
 
 test("handoff distinguishes existing myDATA and not-yet-arrived documents",()=>{
-  assert.match(route,/FROM "MyDataInboundDocument" m/);
-  assert.match(route,/ABS\(COALESCE\(m\."totalGross",0\)-\$\{totalGross\}\)<=0\.05/);
+  const original=fsUnlinkedSource;
+  assert.match(original,/FROM "MyDataInboundDocument" m/);
+  assert.match(original,/Math\.abs\(header\.totalGross-Number\(identity\.totalGross\)\)>\.050001/);
+  assert.match(route,/findUnlinkedMyDataOriginal\(prisma,receiptIdentity,\{paymentTransactionId:existingPayment\?\.id\|\|null\}\)/);
   assert.match(route,/myDataMatched:Boolean\(myData\)/);
   assert.match(route,/συνδέθηκε με το υπάρχον myDATA/);
   assert.match(route,/Θα συνδεθεί αυτόματα όταν εμφανιστεί στο myDATA/);

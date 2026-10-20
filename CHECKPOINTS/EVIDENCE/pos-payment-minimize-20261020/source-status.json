@@ -1,0 +1,34 @@
+{
+  "task": "POS-PAYMENT-MINIMIZE-01",
+  "owner": "fix/pos-payment-minimize-20261020",
+  "sourcePR": 2924,
+  "sourceHead": "ea6d5d4505d1d97763cd224ec4a89b68c9465a61",
+  "claimPR": 2923,
+  "claimMerge": "86c627cd728a823c75bcdf9bde7549da98d92198",
+  "core": {
+    "run": 39379993266,
+    "job": 118486861010,
+    "pass": 3614,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 8,
+    "placementTests": 3,
+    "chromiumHitTargets": "cash/card/total exposed, restore inside search, same draft/late result"
+  },
+  "wholeWorkflow": "FAILED",
+  "failedJobs": [
+    118486861031,
+    118489201045
+  ],
+  "failure": "Timed out actual encrypted preparation, wholesale-offline-app-flow.mjs:66",
+  "sharedMain": {
+    "sha": "b255b1cf335734a81d09ad65d5b6ce2dba33733a",
+    "run": 39379947313,
+    "job": 118486896518
+  },
+  "merge": null,
+  "deploy": null,
+  "hostedAcceptance": "NOT TESTED: normal sign-in wall; no support-access or credentials entered",
+  "businessWrites": 0,
+  "next": "Resolve owned shared wholesale gate, then fresh full greenPR/exactmain/ordinary release and nonfinancial POS visual acceptance"
+}

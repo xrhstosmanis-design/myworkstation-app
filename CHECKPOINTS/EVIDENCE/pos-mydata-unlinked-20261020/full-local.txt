@@ -1,0 +1,14 @@
+✔ new Workforce server modules pass Node syntax check (499.956566ms)
+✔ Workforce v2 schedule routes keep the protected lifecycle and assignment checks (1.50601ms)
+✔ Workforce v2 schedule UI exposes all requested operational views (0.542293ms)
+✔ Workforce audit route exposes the required recorded fields (0.653591ms)
+✔ Workforce v2 attendance keeps card entries isolated, audited and protected (0.411307ms)
+✔ Workforce schedule server route passes Node syntax check (77.297672ms)
+ℹ tests 3557
+ℹ suites 0
+ℹ pass 3364
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 193
+ℹ todo 0
+ℹ duration_ms 62197.41753

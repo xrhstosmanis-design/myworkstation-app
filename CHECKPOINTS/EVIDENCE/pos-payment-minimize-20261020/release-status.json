@@ -1,0 +1,48 @@
+{
+  "task": "POS-PAYMENT-MINIMIZE-01",
+  "owner": "fix/pos-payment-minimize-20261020",
+  "status": "SOURCE_LIVE_AWAITING_USER_VISUAL_ACCEPTANCE",
+  "sourcePR": 2924,
+  "head": "d6348cd14d5b2479020780701ffdaf45e59b1c36",
+  "merge": "5a540e36ffbd497c2cf33acdc7f53a8e866ee355",
+  "prCI": 39421139311,
+  "prCore": 118622303202,
+  "mainCI": 39421981924,
+  "mainCore": 118625239219,
+  "tests": {
+    "pass": 3639,
+    "fail": 0,
+    "skip": 0,
+    "additionalPass": 8,
+    "placementTestsUnskipped": 3
+  },
+  "guardRun": 39423044698,
+  "guardJob": 118628641755,
+  "render": {
+    "deploy": "dep-dbblv4ou01pc73e80geg",
+    "status": "live",
+    "finishedAt": "2026-10-20T12:36:41.776342Z"
+  },
+  "served": {
+    "observedAt": "2026-10-20T12:37:17.919375+00:00",
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "5a540e36ffbd497c2cf33acdc7f53a8e866ee355"
+    },
+    "restoreBundles": [
+      {
+        "asset": "/assets/main-BDGPnuLl.js",
+        "searchHost": true,
+        "staticPlacement": true,
+        "topFallback": true,
+        "oldBottom": false,
+        "snippet": "height<190)return n;n=n.parentElement}return t.parentElement||e}function xr(){var n;if((n=M.pill)!=null&&n.isConnected)return M.pill;const e=document.createElement(\"button\");e.type=\"button\",e.dataset.mwsPaymentRestore=\"1\",e.setAttribute(\"aria-label\",\"Συνέχεια πληρωμής\"),e.title=\"Συνέχεια της ίδιας πληρωμής\";const t=document.querySelector(\".mws-standard-pos .standard-sale-panel .standard-search\");return e.style.cssText=t?\"position:static;flex:0 1 300px;min-width:0;max-width:45%;height:36px;border:0;border-radius:8px;padding:0 10px;background:#0b5d46;color:#fff;font-weight:900;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;display:none\":\"position:fixed;right:20px;top:20px;z-index:2147483647;border:0;border-radius:999px;padding:13px 18px;background:#0b5d46;color:#fff;font-weight:900;font-size:16px;box-shadow:0 10px 30px rgba(0,0,0,.28);cursor:pointer;display:none\",e.textContent=M.lastStatus,e.addEventListener(\"click\",Er),(t||document.body).appendChild(e),M.pill=e,e}function Sr(){var s,i,c;const e=(s=M.overlay)!=null&&s.isConnected?M.overlay:xt();if(!e)return M.lastStatus||\"💳 Πληρωμή σε εξέλιξη\";const t=e.querySelector(\".pos-invoice-scan-v2\");if(!t)return\"💳 Πληρωμή σε εξέλιξη\";const n=t.querySelector(\".mws-submit-invoice\"),a=String(((i=t.querySelector(\".mws-invoice-status\"))==null?void 0:i.textContent)||\"\"),o=t.querySelector(\".mws-invoice-file\");return/2\\/2|Αυτόματος επανέλεγχος|επανέλεγχος με AI|Διαβάζω|επεξεργασία|αναλύ|OCR.*(?:<|κάτω)/i.test(a)?\"⏳ Τιμολόγιο σε επεξεργασία\":n&&!n.disabled?\"✅ Η πληρωμή είναι έτοιμη\":(c=o==null?void 0:o.files)!=null&&c.length||a.trim()?\"💳 Πληρωμή σε αναμονή\":\"💳 Πληρωμή σε εξέλιξη\"}function Zt(){M.lastS"
+      }
+    ]
+  },
+  "businessWrites": 0,
+  "hostedVisualAcceptance": "NOT_TESTED",
+  "manualPass": false,
+  "next": "User finishes or saves existing work then CtrlF5; inspect normal minimize/restore without diagnostic payment or replay. Owner retained."
+}
