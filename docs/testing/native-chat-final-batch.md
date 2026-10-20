@@ -7,7 +7,7 @@ Owner: feat/android-chat-native-20261017. Οδηγία19/10/2026 21:02 Europe/At
 
 ## Νεότερη επιβεβαίωση20/10/2026 20:51
 
-Ο ιδιοκτήτης επιβεβαίωσε αποστολή φωνητικού Android και σωστή ακρόαση στο PC. Αυτό το περιορισμένο USER PASS δεν επαναλαμβάνεται. Βίντεο ζητήθηκε20:52 και ανατέθηκε πριν source στον ίδιο native owner, ακόμη NOT IMPLEMENTED/NOT TESTED. Τα υπόλοιπα μη μετρημένα σκέλη παραμένουν ανοικτά.
+Ο ιδιοκτήτης επιβεβαίωσε αποστολή φωνητικού Android και σωστή ακρόαση στο PC. Αυτό το περιορισμένο USER PASS δεν επαναλαμβάνεται. Βίντεο ζητήθηκε20:52 και ανατέθηκε πριν source στον ίδιο native owner, source candidate0.1.9/code10, AWAITING CI/RELEASE/DEVICE. Τα υπόλοιπα μη μετρημένα σκέλη παραμένουν ανοικτά.
 
 ## Κατάσταση και εξαρτήσεις
 
@@ -99,3 +99,9 @@ Prerequisites on the owner PC: Java17 JDK/keytool from https://adoptium.net/ and
 The private directory ACL limits direct access to the current Windows user and SYSTEM; it is not a claim against administrator access, malware or forensic recovery. Managed-language memory cannot promise zero copies. Keep the encrypted backup independently from the PC.
 
 Official command references: https://cli.github.com/manual/gh_secret_set , https://cli.github.com/manual/gh_variable_set , https://docs.oracle.com/en/java/javase/17/docs/specs/man/keytool.html .
+
+## Νέα τελική αποδοχή βίντεο (χωρίς επανάληψη φωνητικών/φωτογραφιών)
+
+Μόνο μετά επαληθευμένη νέα υπογεγραμμένη έκδοση και backend: ρητή λήψη σύντομου βίντεο, προεπισκόπηση/χρήση/αποστολή και ακρόαση/προβολή του ίδιου στο PC. Χωριστά επιλογή ήδη υπάρχοντος MP4 H264/AAC έως30s/12MiB. Καταγραφή συσκευής/OS/έκδοσης/καταστήματος/ακριβούς αποτελέσματος. Κάμερα δεν γράφει αρχείο από την εφαρμογή· η ήδη υπάρχουσα συλλογή/πηγή δεν διαγράφεται. Cancel/background σταματούν capture/playback και καθαρίζουν το πρόχειρο. Όρια/μη υποστηριζόμενο αρχείο δίνουν απόρριψη χωρίς αποστολή. Άγνωστο αποτέλεσμα ελέγχεται στο ιστορικό, χωρίς τυφλή επανάληψη. Η φυσική μηδενική αποθήκευση OS/SDK δεν πιστοποιείται από CI.
+
+Λήψη νέου βίντεο στη μνήμη χρησιμοποιεί δημόσιο Android memfd API και απαιτεί Android11+· σε Android8–10 παραμένει επιλογή υπάρχοντος MP4 και όλες οι προηγούμενες λειτουργίες, χωρίς fallback σε τοπικό αρχείο. Αυτό είναι τεχνικό όριο της νέας υποψήφιας υλοποίησης, όχι φυσικό PASS.

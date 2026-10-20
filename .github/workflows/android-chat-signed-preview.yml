@@ -19,47 +19,7 @@ jobs:
       - name: Require successful full CI for this exact main revision
         uses: actions/github-script@v7
         with:
-          script: |
-            const {owner, repo} = context.repo;
-            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
-              owner, repo, workflow_id: 'ci.yml', head_sha: context.sha, per_page: 100
-            });
-            let verified = false;
-            for (const run of runs.filter(r => r.head_sha === context.sha && r.conclusion === 'success'
-                && ['push', 'workflow_dispatch'].includes(r.event))) {
-              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
-                owner, repo, run_id: run.id, filter: 'latest', per_page: 100
-              });
-              if (jobs.some(j => j.name === 'build-and-test' && j.conclusion === 'success')) {
-                verified = true; break;
-              }
-            }
-            if (!verified) core.setFailed('Exact main full build-and-test CI has not succeeded; no key will be loaded.');
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-          cache-disabled: true
-      - name: Install Android SDK
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
-      - name: Compile, unit tests and lint before accessing signing material
-        run: gradle --no-daemon -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-      - name: Enable emulator acceleration
-        run: sudo chmod 666 /dev/kvm
-      - name: Verify Android lifecycle and regression tests before signing
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 30
-          arch: x86_64
-          target: default
-          disable-animations: true
-          script: gradle --no-daemon -p android :app:connectedDebugAndroidTest
+          script: bash android/verify-video-capture.sh
       - name: Build with durable owner key and verify pinned certificate
         env:
           MW_CHAT_KEYSTORE_B64: ${{ secrets.MW_CHAT_KEYSTORE_B64 }}

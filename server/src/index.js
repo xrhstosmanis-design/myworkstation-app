@@ -174,6 +174,8 @@ const shutdown=createServerShutdown({disconnect:()=>prisma.$disconnect(),allowIn
 app.use(cors());
 app.use(shutdown.middleware);
 app.use(storeLifecycleRequestContext);
+// Only the bounded video endpoint needs base64 overhead above the existing global limit.
+app.use("/api/store-chat/stores/:storeId/video-messages",express.json({limit:"17mb"}));
 app.use(express.json({limit:"12mb"}));
 app.use(createN40ReadTrace());
 app.use(createProductionStoreReadDiagnostic());
