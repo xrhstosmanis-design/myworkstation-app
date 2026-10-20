@@ -19,8 +19,8 @@ Owner: feat/android-chat-native-20261017. Οδηγία19/10/2026 21:02 Europe/At
 - AI: ακριβής φυσική φράση «τι πωλήσεις είχα σήμερα» στον υπάρχοντα owner
   codex/assistant-business-queries-20261015, χωρίς δεύτερη ανάληψη parser.
 - Εξαρτήσεις/όρια: issue2869. Δεν υπάρχει συνολικό Android PASS.
-- Δημόσιο APK/manifest/QR: παραμένουν0.1.3 ώσπου να υπάρχει συγκεντρωτικός verified candidate
-  και συνηθισμένο guarded deployment. Μην εκλαμβάνετε το QR ως0.1.7.
+- Υπογεγραμμένο candidate0.1.8/code9 επαληθεύτηκε από run39458772660· SHA256a1c9faf3f84a821d4252e6c79306d29edf69a56cd7027593a78a63e28b5d05ca.
+  Δημόσιο APK/manifest μένουν0.1.3 μέχρι το νέο source CI/guarded release και live-byte verification. Το QR κρατά την ίδια σελίδα λήψης.
 
 ## Μόνιμη υπογραφή της υπάρχουσας Preview εφαρμογής
 

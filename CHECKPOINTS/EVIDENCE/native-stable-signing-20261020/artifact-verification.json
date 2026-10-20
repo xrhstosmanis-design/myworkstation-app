@@ -1,0 +1,22 @@
+{
+  "sourceSha": "d12f69e4ee0b26b5c70ead560593726653893d3d",
+  "package": "gr.myworkstation.chat.preview",
+  "sha256": "a1c9faf3f84a821d4252e6c79306d29edf69a56cd7027593a78a63e28b5d05ca",
+  "bytes": 3670848,
+  "certificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "status": "TECHNICAL CANDIDATE; PHYSICAL ACCEPTANCE PENDING",
+  "publicDistributionChanged": false,
+  "manifest": {
+    "versionCode": 9,
+    "versionName": "0.1.8-preview",
+    "compileSdkVersion": 35,
+    "compileSdkVersionCodename": "15",
+    "package": "gr.myworkstation.chat.preview",
+    "platformBuildVersionCode": 35,
+    "platformBuildVersionName": 15
+  },
+  "apkV2RsaSignature": "VERIFIED",
+  "apkV2ContentDigest": "VERIFIED",
+  "certificatePin": "MATCH",
+  "privateSigningMaterialIncluded": false
+}
