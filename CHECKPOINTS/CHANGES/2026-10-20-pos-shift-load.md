@@ -1,3 +1,7 @@
+## Full-CI fixture compatibility follow-up
+
+Full PR CI 39385135116: 3615 PASS / 2 FAIL / 0 SKIP. Both failures were existing operator-shift-return-independent fixtures: extracted WHERE omitted the newly required actual CTE, and mounted responses omitted the actual API store envelope. Preserve assertions and No33 owner/permissions; include the exact source CTE, identify own/all parameter by its actor predicate rather than positional false value, and return store A in both fixtures. Local mounted/permission regression plus new loading UI: 4 PASS / 0 FAIL / 1 native infrastructure SKIP. Full native CI required again; no runtime change, no LAB/manual PASS or business writes.
+
 ## Combined-main reconciliation
 
 Preserve new wholesale verified receipt a3b4adf29fc5324e0a080e495089e8e360ed35ac and every other owner. Four shift source/test blobs unchanged; fresh full combined CI required. No deployment/financial replay.
