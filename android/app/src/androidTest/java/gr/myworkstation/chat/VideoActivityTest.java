@@ -47,7 +47,7 @@ public class VideoActivityTest {
         }
         assertNoVideo(context.getFilesDir());assertNoVideo(context.getCacheDir());
     }
-    private static String TextViewStatus(VideoActivity a)throws Exception{return ((android.widget.TextView)get(a,"status")).getText().toString();}
+    private static String TextViewStatus(VideoActivity a)throws Exception{return ((android.widget.TextView)get(a,"status")).getText().toString()+" phase="+get(a,"capturePhase")+" error="+get(a,"captureFailure");}
     private static void assertNoVideo(java.io.File root){java.io.File[] files=root.listFiles();if(files!=null)for(java.io.File file:files){if(file.isDirectory())assertNoVideo(file);else assertFalse(file.getName(),file.getName().endsWith(".mp4"));}}
     @Test public void deniedPermissionNeverStartsCameraOrMicrophone()throws Exception{
         try(ActivityScenario<VideoActivity> scenario=ActivityScenario.launch(VideoActivity.class)){

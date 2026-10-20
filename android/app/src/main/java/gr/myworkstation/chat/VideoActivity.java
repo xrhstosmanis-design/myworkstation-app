@@ -28,6 +28,7 @@ public final class VideoActivity extends Activity implements SurfaceHolder.Callb
     private SurfaceView surface;
     private byte[] draft;
     private boolean active,recording,returning,loading;
+    private String capturePhase="idle", captureFailure="";
     private long started,permissionEpoch;
     private TextView status;
     private Button capture,stop,gallery,play,use;
@@ -62,24 +63,24 @@ public final class VideoActivity extends Activity implements SurfaceHolder.Callb
         if(!active||recording||loading||returning||!surface.getHolder().getSurface().isValid())return;
         player.stop();clearDraft();
         try{
-            int cameraId=-1;Camera.CameraInfo info=new Camera.CameraInfo();
+            capturePhase="camera-open";captureFailure="";int cameraId=-1;Camera.CameraInfo info=new Camera.CameraInfo();
             for(int i=0;i<Camera.getNumberOfCameras();i++){Camera.getCameraInfo(i,info);if(info.facing==Camera.CameraInfo.CAMERA_FACING_BACK){cameraId=i;break;}}
             if(cameraId<0)throw new IllegalStateException();camera=Camera.open(cameraId);Camera.Parameters params=camera.getParameters();
             java.util.List<Camera.Size> sizes=params.getSupportedVideoSizes();if(sizes==null)sizes=params.getSupportedPreviewSizes();
             Camera.Size selected=null;for(Camera.Size s:sizes)if(s.width<=640&&s.height<=480&&(selected==null||s.width*s.height>selected.width*selected.height))selected=s;
             if(selected==null)throw new IllegalStateException();
-            params.setPreviewSize(selected.width,selected.height);camera.setParameters(params);
+            capturePhase="camera-preview";params.setPreviewSize(selected.width,selected.height);camera.setParameters(params);
             int rotation=getWindowManager().getDefaultDisplay().getRotation()*90;int orientation=(info.orientation-rotation+360)%360;
             camera.setDisplayOrientation(orientation);camera.setPreviewDisplay(surface.getHolder());camera.startPreview();camera.unlock();
-            ram=new RamVideoFile();fd=ram.open(getSystemService(StorageManager.class),new Handler(io.getLooper()));
-            recorder=new MediaRecorder();recorder.setCamera(camera);recorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);recorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+            capturePhase="ram-descriptor";ram=new RamVideoFile();fd=ram.open(getSystemService(StorageManager.class),new Handler(io.getLooper()));
+            capturePhase="recorder-config";recorder=new MediaRecorder();recorder.setCamera(camera);recorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);recorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
             recorder.setVideoSize(selected.width,selected.height);recorder.setVideoFrameRate(24);recorder.setVideoEncodingBitRate(900000);recorder.setAudioEncodingBitRate(64000);recorder.setAudioSamplingRate(44100);
             recorder.setOrientationHint(orientation);recorder.setMaxDuration(29000);recorder.setMaxFileSize(VideoData.MAX_BYTES-262144);recorder.setOutputFile(fd.getFileDescriptor());recorder.setPreviewDisplay(surface.getHolder().getSurface());
             recorder.setOnInfoListener((r,what,extra)->{if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED||what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED)stopCapture(true);});
             recorder.setOnErrorListener((r,what,extra)->{stopCapture(false);status.setText("Η λήψη δεν ολοκληρώθηκε. Δεν αποθηκεύτηκε τοπικό αρχείο.");});
-            recorder.prepare();recorder.start();recording=true;started=SystemClock.elapsedRealtime();controls();ui.post(tick);
-        }catch(Exception ignored){stopCapture(false);status.setText("Δεν ξεκίνησε η λήψη στη μνήμη. Έλεγξε κάμερα/μικρόφωνο ή επίλεξε MP4.");}
+            capturePhase="recorder-prepare";recorder.prepare();capturePhase="recorder-start";recorder.start();capturePhase="recording";recording=true;started=SystemClock.elapsedRealtime();controls();ui.post(tick);
+        }catch(Exception error){captureFailure=error.getClass().getSimpleName();stopCapture(false);status.setText("Δεν ξεκίνησε η λήψη στη μνήμη. Έλεγξε κάμερα/μικρόφωνο ή επίλεξε MP4.");}
     }
     private void stopCapture(boolean keep){
         boolean wasRecording=recording;recording=false;ui.removeCallbacks(tick);boolean success=false;
