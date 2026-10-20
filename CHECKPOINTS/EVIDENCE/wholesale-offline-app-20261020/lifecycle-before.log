@@ -1,0 +1,175 @@
+TAP version 13
+# Subtest: actual encrypted UNKNOWN retry after page restart preserves epoch 0 when current handshake advances to 1
+not ok 1 - actual encrypted UNKNOWN retry after page restart preserves epoch 0 when current handshake advances to 1
+  ---
+  duration_ms: 177.765293
+  location: '/workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:59:50'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    '1' !== '0'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '0'
+  actual: '1'
+  operator: 'strictEqual'
+  stack: |-
+    file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:63:420
+    async withSyntheticCredential (file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:54:6)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: actual encrypted UNKNOWN retry after page restart preserves epoch 7 when current handshake advances to 8
+not ok 2 - actual encrypted UNKNOWN retry after page restart preserves epoch 7 when current handshake advances to 8
+  ---
+  duration_ms: 141.788034
+  location: '/workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:59:50'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    '8' !== '7'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '7'
+  actual: '8'
+  operator: 'strictEqual'
+  stack: |-
+    file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:63:420
+    async withSyntheticCredential (file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:54:6)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: explicit old epoch reaches actual transport unchanged and server stale409 cannot be accepted
+not ok 3 - explicit old epoch reaches actual transport unchanged and server stale409 cannot be accepted
+  ---
+  duration_ms: 2.892071
+  location: '/workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:66:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:68:2
+    async withSyntheticCredential (file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:54:6)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: snapshot captures the actual selected-store read epoch
+not ok 4 - snapshot captures the actual selected-store read epoch
+  ---
+  duration_ms: 2.576637
+  location: '/workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:71:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== '4'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '4'
+  operator: 'strictEqual'
+  stack: |-
+    file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:72:110
+    async withSyntheticCredential (file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:54:6)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: manager canonical quote keeps original draft epoch and seller principal headers
+not ok 5 - manager canonical quote keeps original draft epoch and seller principal headers
+  ---
+  duration_ms: 2.115756
+  location: '/workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:75:34'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    '9' !== '8'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '8'
+  actual: '9'
+  operator: 'strictEqual'
+  stack: |-
+    file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:76:164
+    async withSyntheticCredential (file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:54:6)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: seller canonical quote keeps original draft epoch and seller principal headers
+not ok 6 - seller canonical quote keeps original draft epoch and seller principal headers
+  ---
+  duration_ms: 1.15928
+  location: '/workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:75:34'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    '0' !== '8'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '8'
+  actual: '0'
+  operator: 'strictEqual'
+  stack: |-
+    file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:76:164
+    async withSyntheticCredential (file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:54:6)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: encrypted per-draft capture epoch survives edit and authorized snapshot renewal while new drafts capture the new epoch
+not ok 7 - encrypted per-draft capture epoch survives edit and authorized snapshot renewal while new drafts capture the new epoch
+  ---
+  duration_ms: 65.145038
+  location: '/workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:79:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== '7'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '7'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:80:159)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: legacy missing snapshot or draft origin uses zero rather than repinning the current page epoch
+not ok 8 - legacy missing snapshot or draft origin uses zero rather than repinning the current page epoch
+  ---
+  duration_ms: 65.943978
+  location: '/workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:83:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== '0'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '0'
+  operator: 'strictEqual'
+  stack: |-
+    file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:85:102
+    async withSyntheticCredential (file:///workspace/scratch/f75213c5e376/myworkstation-app/server/test/wholesale-commercial-offline-lifecycle.test.js:54:6)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 0
+# fail 8
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 550.601741

@@ -89,6 +89,15 @@ export async function startLabRuntime({initialize=false,port=Number(process.env.
     app.get('/lab',(req,res)=>res.sendFile(path.join(root,'ops/wholesale-lab/public/index.html')));
     app.use('/lab',express.static(path.join(root,'ops/wholesale-lab/public'),{index:false,dotfiles:'deny',redirect:false}));
     app.use('/assets',express.static(path.join(root,'client/dist/assets'),{index:false,dotfiles:'deny',immutable:true,maxAge:'1h'}));
+    // Public application shell only. Keep every API/auth response outside the
+    // worker cache and never expose the whole production dist directory here.
+    const wholesalePublicFiles=new Map([
+      ['/wholesale-sw.js','wholesale-sw.js'],
+      ['/wholesale-app/wholesale.webmanifest','wholesale-app/wholesale.webmanifest'],
+      ['/pwa-192.png','pwa-192.png'],
+      ['/pwa-512.png','pwa-512.png']
+    ]);
+    for(const [route,file] of wholesalePublicFiles)app.get(route,(req,res)=>res.sendFile(path.join(root,'client/dist',file)));
     const actualPage=file=>async(req,res,next)=>{try{
       const html=await readFile(path.join(root,'client/dist',file),'utf8');
       const banner='<div style="position:sticky;top:0;z-index:99999;background:#fef3c7;color:#713f12;padding:12px;text-align:center;font:700 15px system-ui"><a href="/lab" style="color:inherit">← Εργαστήριο</a> · ΜΟΝΟ ΔΟΚΙΜΕΣ — ΚΑΜΙΑ ΦΟΡΟΛΟΓΙΚΗ ΙΣΧΥΣ · Συνθετικά δεδομένα · Διαγράφονται στην επανεκκίνηση</div>';

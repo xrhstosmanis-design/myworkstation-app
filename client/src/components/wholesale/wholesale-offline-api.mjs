@@ -1,9 +1,15 @@
 // Online verification only. Nothing here caches responses or manufactures prices.
+import {capturedLifecycleGeneration,originalLifecycleHeaders} from '../../utils/store-lifecycle-origin.js';
 const managers=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
 const validId=value=>typeof value==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test(value);
 export const offlineScopeKey=scope=>JSON.stringify([scope?.userId,scope?.companyId,scope?.role,scope?.storeId]);
 export const offlineIdentityKey=identity=>JSON.stringify([identity?.userId,identity?.companyId,identity?.role]);
 const fail=message=>{throw Error(message)};
+function originalHeaders(storeId,metadata){
+ const generation=metadata?.originGeneration ?? '0';
+ if(typeof generation!=='string'||!/^(0|[1-9][0-9]{0,18})$/.test(generation))fail('Δεν επιβεβαιώθηκε η αρχική έκδοση του καταστήματος. Διατήρησε το αίτημα για έλεγχο.');
+ return originalLifecycleHeaders(storeId,generation);
+}
 export async function verifyOfflineScope(api,session,storeId,{now=Date.now}={}){
  const identity=session?.identity;
  if(!identity||![identity.userId,identity.companyId,storeId].every(validId)||!['SUPER_ADMIN','OWNER','ADMIN','MANAGER','EMPLOYEE'].includes(identity.role)||!Number.isFinite(session.expiresAt)||session.expiresAt<=now())fail('Απαιτείται η τρέχουσα προσωπική σύνδεση και συγκεκριμένο κατάστημα.');
@@ -43,23 +49,24 @@ export async function fetchOfflineSnapshot(api,session,storeId,options){
  // Recheck after a multi-page download; a revoked grant must not create a lease.
  const final=await verifyOfflineScope(api,session,storeId,options);
  if(offlineScopeKey(verified.scope)!==offlineScopeKey(final.scope)||verified.seller!==final.seller)fail('Η σύνδεση, ο ρόλος ή το κατάστημα άλλαξε κατά την προετοιμασία.');
- return {identity:final.identity,store:final.store,customers,products,paidExpiresAt:Math.min(verified.paidExpiresAt,final.paidExpiresAt)};
+ return {identity:final.identity,store:final.store,customers,products,paidExpiresAt:Math.min(verified.paidExpiresAt,final.paidExpiresAt),originGeneration:capturedLifecycleGeneration(storeId)};
 }
 export async function reviewOfflineDraft(api,session,scope,draft,options){
  if(offlineIdentityKey(session?.identity)!==offlineIdentityKey(scope))fail('Συνδέσου με τον αρχικό προσωπικό λογαριασμό και εταιρεία.');
  const verified=await verifyOfflineScope(api,session,scope.storeId,options);
+ const headers={...verified.headers,...originalHeaders(scope.storeId,draft)};
  const body={customerId:draft.customerId,storeId:scope.storeId,items:draft.items.map(({productId,quantity})=>({productId,quantity}))};
- const quote=await api(verified.seller?'/api/wholesale/sellers/quotes':'/api/wholesale/quotes',{method:'POST',headers:verified.headers,body:JSON.stringify(body)});
+ const quote=await api(verified.seller?'/api/wholesale/sellers/quotes':'/api/wholesale/quotes',{method:'POST',headers,body:JSON.stringify(body)});
  if(quote?.storeId!==scope.storeId||quote.customerId!==draft.customerId||!/^[a-f0-9]{64}$/.test(quote.quoteId)||quote.currency!=='EUR'||!Array.isArray(quote.items)||quote.items.length!==draft.items.length||!quote.totals||!['net','vat','gross'].every(key=>/^\d+\.\d{2}$/.test(String(quote.totals[key]))))fail('Οι τρέχουσες τιμές δεν επιβεβαιώθηκαν.');
  const expected=new Map(draft.items.map(row=>[row.productId,Number(row.quantity)]));
  if(quote.items.some(row=>!expected.has(row.productId)||Number(row.quantity)!==expected.get(row.productId))||new Set(quote.items.map(row=>row.productId)).size!==expected.size)fail('Τα είδη της προσφοράς δεν συμφωνούν με το τοπικό πρόχειρο.');
- return {quote,headers:verified.headers,endpoint:verified.seller?'/api/wholesale/sellers/orders':'/api/wholesale/orders'};
+ return {quote,headers,endpoint:verified.seller?'/api/wholesale/sellers/orders':'/api/wholesale/orders'};
 }
-export async function sendOfflineFrozen(api,session,scope,bodyString){
+export async function sendOfflineFrozen(api,session,scope,bodyString,metadata){
  if(offlineIdentityKey(session?.identity)!==offlineIdentityKey(scope))fail('Απαιτείται ο αρχικός λογαριασμός.');
  const verified=await verifyOfflineScope(api,session,scope.storeId),expected=JSON.parse(bodyString);
  if(expected.storeId!==scope.storeId)fail('Το αρχικό κατάστημα δεν συμφωνεί.');
- const response=await api(verified.seller?'/api/wholesale/sellers/orders':'/api/wholesale/orders',{method:'POST',headers:verified.headers,body:bodyString});
+ const response=await api(verified.seller?'/api/wholesale/sellers/orders':'/api/wholesale/orders',{method:'POST',headers:{...verified.headers,...originalHeaders(scope.storeId,metadata)},body:bodyString});
  // The seller router deliberately projects scope inside sellerQuoteView(snapshot).
  // Manager orders use the direct persisted order scope instead.
  const acceptedScope=verified.seller?response?.order?.snapshot:response?.order;

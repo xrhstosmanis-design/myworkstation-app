@@ -134,6 +134,18 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install --yes --no-install-recommends poppler-utils
           node server/e2e/wholesale-lab-flow.mjs
+      - name: Exercise actual wholesale application offline and recover one original order
+        env:
+          LAB_E2E_URL: http://127.0.0.1:18081
+        run: node server/e2e/wholesale-offline-app-flow.mjs
+      - name: Preserve actual wholesale offline application evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-wholesale-offline-application
+          path: /tmp/mws-wholesale-offline-application/*
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Preserve isolated wholesale browser evidence
         if: always()
         uses: actions/upload-artifact@v4

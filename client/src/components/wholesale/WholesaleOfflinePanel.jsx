@@ -90,9 +90,9 @@ export default function WholesaleOfflinePanel({session,storeId='',access,api,loc
    if(!valid(number))return;await read(number);if(!valid(number))return;setReview(null);
   }
   let denial=null;
-  await instance().sendFrozen(draft.id,async bodyString=>{
+  await instance().sendFrozen(draft.id,async(bodyString,frozen)=>{
    if(!valid(number)||offlineIdentityKey(sessionRef.current?.identity)!==offlineIdentityKey(originalScope))throw Error('Η σύνδεση άλλαξε.');
-   try{return await sendOfflineFrozen(operationApi,sessionRef.current,originalScope,bodyString)}catch(e){if([401,403,404].includes(e.status))denial=e;return {status:[400,409,422].includes(e.status)?'REJECTED':'UNKNOWN',message:[400,409,422].includes(e.status)?'Ο server απέρριψε το αρχικό αίτημα. Απαιτείται έλεγχος.':'Δεν επιβεβαιώθηκε το αποτέλεσμα. Διατηρείται το ίδιο αρχικό αίτημα.'}}
+   try{return await sendOfflineFrozen(operationApi,sessionRef.current,originalScope,bodyString,{originGeneration:frozen.originGeneration ?? '0'})}catch(e){if([401,403,404].includes(e.status))denial=e;return {status:[400,409,422].includes(e.status)?'REJECTED':'UNKNOWN',message:[400,409,422].includes(e.status)?'Ο server απέρριψε το αρχικό αίτημα. Απαιτείται έλεγχος.':'Δεν επιβεβαιώθηκε το αποτέλεσμα. Διατηρείται το ίδιο αρχικό αίτημα.'}}
   });
   if(!valid(number))return;await read(number);if(denial)throw denial;
  });
