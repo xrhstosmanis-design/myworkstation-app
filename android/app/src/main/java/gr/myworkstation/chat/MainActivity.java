@@ -36,7 +36,7 @@ import org.json.JSONObject;
 
 /** Native Android views. No WebView, message database, image cache, download or clipboard pathway. */
 public final class MainActivity extends Activity {
-    private static final int PURPLE = 0xff7052c8, INK = 0xff242234, MUTED = 0xff777187, PHOTO = 41, CAMERA = 42, VOICE = 43;
+    private static final int PURPLE = 0xff7052c8, INK = 0xff242234, MUTED = 0xff777187, PHOTO = 41, CAMERA = 42, VOICE = 43, VIDEO = 44;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newFixedThreadPool(2);
     private ChatApi api = new ChatApi();
@@ -63,6 +63,12 @@ public final class MainActivity extends Activity {
     private boolean voiceAvailable;
     private Button voiceButton;
     private TextView voiceLabel;
+    private byte[] videoDraft, playingVideo;
+    private String videoBinding = "", videoToken = "";
+    private boolean videoAvailable;
+    private Button videoButton;
+    private TextView videoLabel;
+    private final VideoPlayer videoPlayer = new VideoPlayer();
     private Bitmap preview;
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
@@ -95,18 +101,18 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onStop() {
         foreground = false; epoch.invalidate(); api.cancel(); busy = false; ui.removeCallbacks(refresh);
-        history = new JSONArray(); clearPhoto(); clearVoice(); dismissImage(); dismissReplies();
+        history = new JSONArray(); clearPhoto(); clearVoice(); clearVideo(); dismissImage(); dismissReplies();
         if (root != null) {
             wipeViews(root);
             root.removeAllViews();
             TextView cover = text("MyWorkStation", 24, INK); cover.setGravity(Gravity.CENTER); root.addView(cover);
         }
         messages = null; content = null; contentScroll = null; scroll = null;
-        composer = null; notice = null; attachmentLabel = null; chatSendButton = null; voiceButton = null; voiceLabel = null;
+        composer = null; notice = null; attachmentLabel = null; chatSendButton = null; voiceButton = null; voiceLabel = null; videoButton = null; videoLabel = null;
         super.onStop();
     }
     @Override protected void onSaveInstanceState(Bundle state) { /* No private UI state in Android's saved-state storage. */ }
-    @Override protected void onDestroy() { epoch.invalidate(); api.cancel(); worker.shutdownNow(); clearPhoto(); clearVoice(); dismissImage(); dismissReplies(); super.onDestroy(); }
+    @Override protected void onDestroy() { epoch.invalidate(); api.cancel(); worker.shutdownNow(); clearPhoto(); clearVoice(); clearVideo(); dismissImage(); dismissReplies(); super.onDestroy(); }
     private JSONObject claims(String value) throws Exception {
         String[] parts = value.split("\\."); if (parts.length != 3) throw new IllegalArgumentException();
         return new JSONObject(new String(Base64.decode(parts[1], Base64.URL_SAFE | Base64.NO_WRAP), StandardCharsets.UTF_8));
@@ -120,7 +126,7 @@ public final class MainActivity extends Activity {
         if (busy) return;
         busy = true; final long generation = epoch.capture(); final String captured = token;
         if (chatSendButton != null) chatSendButton.setEnabled(false);
-        boolean messageRequest = selected != null && (path.equals(chatBase() + "/messages") || path.startsWith(chatBase() + "/messages?") || path.equals(chatBase() + "/voice-messages"));
+        boolean messageRequest = selected != null && (path.equals(chatBase() + "/messages") || path.startsWith(chatBase() + "/messages?") || path.equals(chatBase() + "/voice-messages") || path.equals(chatBase() + "/video-messages"));
         status(messageRequest && method.equals("GET") ? "Ανανέωση μηνυμάτων…" : messageRequest && method.equals("POST") ? "Αποστολή μηνύματος…" : "Σύνδεση…");
         worker.execute(() -> {
             try {
@@ -147,7 +153,7 @@ public final class MainActivity extends Activity {
         catch (Exception impossible) { throw new IllegalArgumentException(); }
         return result;
     }
-    private void navigate() { epoch.invalidate(); api.cancel(); busy = false; history = new JSONArray(); clearPhoto(); clearVoice(); dismissImage(); dismissReplies(); hideKeyboard(); }
+    private void navigate() { epoch.invalidate(); api.cancel(); busy = false; history = new JSONArray(); clearPhoto(); clearVoice(); clearVideo(); dismissImage(); dismissReplies(); hideKeyboard(); }
     private void accept(JSONObject result) throws Exception {
         if (result.optBoolean("setupRequired")) { status("Ολοκλήρωσε πρώτα το 2FA από τη συνήθη είσοδο Super Admin."); return; }
         if (result.optBoolean("mfaRequired")) {
@@ -272,6 +278,8 @@ public final class MainActivity extends Activity {
             voiceButton = button("Μικρόφωνο", this::recordVoice); voiceButton.setEnabled(false);
             extras.addView(voiceButton, new LinearLayout.LayoutParams(0, dp(54), 1)); root.addView(extras);
             voiceLabel = text("", 14, MUTED); voiceLabel.setOnClickListener(v -> reviewVoice()); root.addView(voiceLabel);
+            videoButton = button("Βίντεο · κάμερα / συλλογή", this::recordVideo); videoButton.setEnabled(false); root.addView(videoButton);
+            videoLabel = text("", 14, MUTED); videoLabel.setOnClickListener(v -> reviewVideo()); root.addView(videoLabel);
         }
         LinearLayout bar = new LinearLayout(this); bar.setGravity(Gravity.BOTTOM); bar.setPadding(dp(6), dp(4), dp(6), dp(4));
         if (tab.equals("chat")) bar.addView(button("＋", this::pickPhoto), new LinearLayout.LayoutParams(dp(52), dp(56)));
@@ -281,7 +289,7 @@ public final class MainActivity extends Activity {
         if (tab.equals("chat")) { chatSendButton = send; send.setEnabled(!busy); }
         bar.addView(send, new LinearLayout.LayoutParams(dp(56), dp(56))); root.addView(bar);
         updatePhotoLabel();
-        updateVoiceLabel();
+        updateVoiceLabel(); updateVideoLabel();
         if (tab.equals("chat")) loadMessages(true); else checkAssistant();
     }
     private void loadMessages(boolean initial) {
@@ -290,6 +298,8 @@ public final class MainActivity extends Activity {
             JSONObject store = data.getJSONObject("store");
             if (!id(store, "id").equals(id(selected, "id")) || !id(store, "companyId").equals(id(selected, "companyId"))) throw new IllegalArgumentException();
             photosEnabled = data.optJSONObject("settings") == null || data.getJSONObject("settings").optBoolean("photosEnabled", true);
+            videoAvailable = data.optBoolean("videoMessagesAvailable", false);
+            if (videoButton != null) videoButton.setEnabled(videoAvailable);
             voiceAvailable = data.optBoolean("voiceMessagesAvailable", false);
             if (voiceButton != null) voiceButton.setEnabled(voiceAvailable);
             JSONArray rows = data.getJSONArray("rows"); ArrayList<JSONObject> sorted = new ArrayList<>();
@@ -308,7 +318,7 @@ public final class MainActivity extends Activity {
             if (uncertainStoreId.equals(id(selected, "id"))) {
                 bubble("Η τελευταία αποστολή μπορεί να έχει ολοκληρωθεί. Έλεγξε τα μηνύματα πριν συντάξεις νέα αποστολή.", false, "Έλεγχος αποστολής", null);
                 messages.addView(button("Απόρριψη παλιού προσχεδίου · νέα σύνταξη", () -> {
-                    uncertainStoreId = ""; composer.setText(""); clearPhoto(); clearVoice(); updatePhotoLabel(); updateVoiceLabel(); loadMessages(false);
+                    uncertainStoreId = ""; composer.setText(""); clearPhoto(); clearVoice(); clearVideo(); updatePhotoLabel(); updateVoiceLabel(); updateVideoLabel(); loadMessages(false);
                 }));
             }
             scroll.post(() -> { if (initial || atBottom) scroll.fullScroll(View.FOCUS_DOWN); else scroll.scrollTo(0, oldY); });
@@ -329,7 +339,7 @@ public final class MainActivity extends Activity {
     private void send() {
         if (busy || composer == null || !composer.isEnabled()) return;
         if (tab.equals("chat") && uncertainStoreId.equals(id(selected, "id"))) { status("Έλεγξε το ιστορικό και απόρριψε το παλιό προσχέδιο πριν από νέα αποστολή."); loadMessages(true); return; }
-        String value = composer.getText().toString().trim(); if (value.isEmpty() && photos.size() == 0 && voiceDraft == null) return;
+        String value = composer.getText().toString().trim(); if (value.isEmpty() && photos.size() == 0 && voiceDraft == null && videoDraft == null) return;
         if (tab.equals("ai")) {
             if (value.length() < 3) { status("Γράψε τουλάχιστον τρεις χαρακτήρες."); return; }
             JSONArray previous = new JSONArray();
@@ -350,7 +360,7 @@ public final class MainActivity extends Activity {
                 scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
             });
         } else {
-            if (voiceDraft != null) sendVoiceMessage(value); else sendPhotoMessage(value);
+            if (videoDraft != null) sendVideoMessage(value); else if (voiceDraft != null) sendVoiceMessage(value); else sendPhotoMessage(value);
         }
     }
     private void sendPhotoMessage(String value) {
@@ -379,6 +389,7 @@ public final class MainActivity extends Activity {
         if (!body.isEmpty()) card.addView(text(body, 17, INK));
         if (row != null && row.optBoolean("hasAttachment")) {
             if (row.optString("attachmentMimeType").startsWith("image/")) card.addView(button("▧ Φωτογραφία · προβολή", () -> viewPhoto(row)));
+            else if (row.optString("attachmentMimeType").equals("video/mp4")) card.addView(button("▶ Βίντεο · αναπαραγωγή", () -> viewVideo(row)));
             else if (row.optString("attachmentMimeType").equals("audio/wav")) card.addView(button("▶ Φωνητικό · αναπαραγωγή", () -> viewVoice(row)));
             else card.addView(text("Συνημμένο · Η λήψη αρχείων είναι απενεργοποιημένη σε αυτή την εφαρμογή.", 14, MUTED));
         }
@@ -434,11 +445,11 @@ public final class MainActivity extends Activity {
     }
     private void pickPhoto() {
         if (busy || !photosEnabled || uncertainStoreId.equals(id(selected, "id"))) { status("Έλεγξε πρώτα τη σύνδεση και τυχόν αβέβαιη αποστολή."); return; }
-        if (voiceDraft != null && !busy) {
+        if ((voiceDraft != null || videoDraft != null) && !busy) {
             final long generation = epoch.capture(); final String captured = token, store = id(selected, "id");
             imageDialog = new AlertDialog.Builder(this).setTitle("Αλλαγή συνημμένου")
-                .setMessage("Το πρόχειρο φωνητικό θα καθαριστεί πριν επιλέξεις φωτογραφίες.")
-                .setPositiveButton("Συνέχεια", (d, w) -> { if (!foreground || busy || !epoch.current(generation) || !captured.equals(token) || !store.equals(id(selected, "id"))) return; clearVoice(); updateVoiceLabel(); pickPhoto(); })
+                .setMessage("Το πρόχειρο φωνητικό / βίντεο θα καθαριστεί πριν επιλέξεις φωτογραφίες.")
+                .setPositiveButton("Συνέχεια", (d, w) -> { if (!foreground || busy || !epoch.current(generation) || !captured.equals(token) || !store.equals(id(selected, "id"))) return; clearVoice(); clearVideo(); updateVoiceLabel(); updateVideoLabel(); pickPhoto(); })
                 .setNegativeButton("Ακύρωση", null).create();
             imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show(); return;
         }
@@ -466,11 +477,19 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if (request == VIDEO) {
+            byte[] captured = VideoBuffer.take();
+            if (result == RESULT_OK && VideoData.valid(captured) && videoToken.equals(token) && !token.isEmpty()
+                && videoBinding.equals(id(selected, "id")) && videoAvailable && tab.equals("chat") && view.equals("conversation")) {
+                clearVideo(); clearVoice(); clearPhoto(); videoDraft = captured;
+            } else VideoData.wipe(captured);
+            videoBinding = ""; videoToken = ""; updateVideoLabel(); updateVoiceLabel(); updatePhotoLabel(); return;
+        }
         if (request == VOICE) {
             byte[] captured = VoiceBuffer.take();
             if (result == RESULT_OK && VoiceData.valid(captured) && voiceToken.equals(token) && !token.isEmpty()
                 && voiceBinding.equals(id(selected, "id")) && voiceAvailable && tab.equals("chat") && view.equals("conversation")) {
-                clearVoice(); clearPhoto(); voiceDraft = captured;
+                clearVideo(); clearVoice(); clearPhoto(); voiceDraft = captured;
             } else VoiceData.wipe(captured);
             voiceBinding = ""; voiceToken = ""; updateVoiceLabel(); updatePhotoLabel(); return;
         }
@@ -564,6 +583,38 @@ public final class MainActivity extends Activity {
             }
         });
     }
+    private void recordVideo() {
+        if (!foreground || busy || selected == null || token.isEmpty() || !videoAvailable || uncertainStoreId.equals(id(selected,"id"))) { status("Περίμενε την ανανέωση και έλεγξε τη διαθεσιμότητα βίντεο."); return; }
+        final long generation=epoch.capture(); final String captured=token, store=id(selected,"id");
+        Runnable open=()->{if(!foreground||busy||!epoch.current(generation)||!captured.equals(token)||!store.equals(id(selected,"id"))||!videoAvailable)return;videoBinding=store;videoToken=token;startActivityForResult(new Intent(this,VideoActivity.class),VIDEO);};
+        if(photos.size()==0&&voiceDraft==null&&videoDraft==null&&(composer==null||composer.length()==0)){open.run();return;}
+        dismissImage();imageDialog=new AlertDialog.Builder(this).setTitle("Άνοιγμα βίντεο").setMessage("Η ξεχωριστή οθόνη καθαρίζει το πρόχειρο κείμενο και τα συνημμένα. Συνέχεια;").setPositiveButton("Συνέχεια",(d,w)->open.run()).setNegativeButton("Ακύρωση",null).create();imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);imageDialog.show();
+    }
+    private void updateVideoLabel(){if(videoLabel!=null)videoLabel.setText(videoDraft==null?"":"▶ Βίντεο · έλεγχος / αφαίρεση");}
+    private void reviewVideo(){
+        if(busy||videoDraft==null)return;dismissImage();imageDialog=new AlertDialog.Builder(this).setTitle("Πρόχειρο βίντεο").setItems(new String[]{"Προεπισκόπηση","Αφαίρεση"},(d,which)->{if(busy||videoDraft==null)return;if(which==0)showVideo(videoDraft,false);else{clearVideo();updateVideoLabel();}}).setNegativeButton("Κλείσιμο",null).create();imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);imageDialog.show();
+    }
+    private void showVideo(byte[] bytes,boolean owned){
+        dismissImage();if(!VideoData.valid(bytes)){if(owned)VideoData.wipe(bytes);status("Δεν άνοιξε το βίντεο.");return;}if(owned)playingVideo=bytes;
+        LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);
+        android.view.SurfaceView surface=new android.view.SurfaceView(this);box.addView(surface,new LinearLayout.LayoutParams(-1,dp(260)));
+        surface.getHolder().addCallback(new android.view.SurfaceHolder.Callback(){public void surfaceCreated(android.view.SurfaceHolder h){}public void surfaceChanged(android.view.SurfaceHolder h,int f,int w,int height){}public void surfaceDestroyed(android.view.SurfaceHolder h){videoPlayer.stop();}});
+        box.addView(button("▶ Αναπαραγωγή / από την αρχή",()->{if(!videoPlayer.play(bytes,surface.getHolder().getSurface()))status("Δεν ξεκίνησε η αναπαραγωγή.");}));box.addView(button("Διακοπή",videoPlayer::stop));
+        final AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Βίντεο · προσωρινή προβολή").setView(box).setNegativeButton("Κλείσιμο",null).create();imageDialog=dialog;
+        dialog.setOnDismissListener(d->{if(imageDialog==dialog){videoPlayer.stop();VideoData.wipe(playingVideo);playingVideo=null;imageDialog=null;}});dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);dialog.show();
+    }
+    private void viewVideo(JSONObject row){
+        if(busy||!foreground||selected==null)return;dismissImage();busy=true;if(chatSendButton!=null)chatSendButton.setEnabled(false);
+        final long generation=epoch.capture();final String captured=token,store=id(selected,"id"),path=chatBase()+"/messages/"+enc(row.optString("id"))+"/attachment";status("Φόρτωση βίντεο…");
+        worker.execute(()->{try{final byte[] bytes=api.video(path,captured);ui.post(()->{if(!foreground||!epoch.current(generation)||!captured.equals(token)||!store.equals(id(selected,"id"))){VideoData.wipe(bytes);return;}busy=false;if(chatSendButton!=null)chatSendButton.setEnabled(true);status("");showVideo(bytes,true);});}catch(Exception error){ui.post(()->{if(!foreground||!epoch.current(generation)||!captured.equals(token))return;busy=false;if(chatSendButton!=null)chatSendButton.setEnabled(true);if(error instanceof ChatApi.Failure&&((ChatApi.Failure)error).status==401){clearSession();loginScreen();}else status("Δεν φορτώθηκε το βίντεο. Έλεγξε σύνδεση και δικαιώματα.");});}});
+    }
+    private void sendVideoMessage(String value){
+        if(busy||!foreground||selected==null||!tab.equals("chat")||!videoAvailable||!VideoData.valid(videoDraft)||voiceDraft!=null||photos.size()!=0){status("Το βίντεο δεν μπορεί να σταλεί τώρα.");return;}
+        dismissImage();final byte[] first=videoDraft;
+        JSONObject body=object("body",value,"category","GENERAL","attachment",object("name","video.mp4","mimeType","video/mp4","dataUrl","data:video/mp4;base64,"+Base64.encodeToString(first,Base64.NO_WRAP)));
+        uncertainStoreId=id(selected,"id");call(chatBase()+"/video-messages","POST",body,false,result->{if(!result.optBoolean("ok")||result.optString("id").trim().isEmpty())throw new IllegalArgumentException();uncertainStoreId="";if(composer.getText().toString().trim().equals(value))composer.setText("");VideoData.wipe(first);if(videoDraft==first)videoDraft=null;updateVideoLabel();loadMessages(true);});
+    }
+    private void clearVideo(){videoPlayer.stop();VideoData.wipe(videoDraft);videoDraft=null;VideoData.wipe(playingVideo);playingVideo=null;}
     private void recordVoice() {
         if (!foreground || busy || selected == null || token.isEmpty() || !voiceAvailable || uncertainStoreId.equals(id(selected, "id"))) {
             status("Περίμενε την ανανέωση και έλεγξε τη διαθεσιμότητα ή τυχόν αβέβαιη αποστολή."); return;
@@ -573,7 +624,7 @@ public final class MainActivity extends Activity {
             if (!foreground || busy || !epoch.current(generation) || !captured.equals(token) || !store.equals(id(selected, "id")) || !voiceAvailable) return;
             voiceBinding = store; voiceToken = token; startActivityForResult(new Intent(this, VoiceActivity.class), VOICE);
         };
-        if (photos.size() == 0 && voiceDraft == null && (composer == null || composer.length() == 0)) { open.run(); return; }
+        if (photos.size() == 0 && voiceDraft == null && videoDraft == null && (composer == null || composer.length() == 0)) { open.run(); return; }
         dismissImage();
         imageDialog = new AlertDialog.Builder(this).setTitle("Άνοιγμα εγγραφής")
             .setMessage("Η ξεχωριστή οθόνη εγγραφής καθαρίζει το πρόχειρο κείμενο και τα συνημμένα της συνομιλίας. Συνέχεια;")
@@ -653,7 +704,7 @@ public final class MainActivity extends Activity {
             for (int i = 0; i < group.getChildCount(); i++) wipeViews(group.getChildAt(i));
         }
     }
-    private void dismissImage() { voicePlayer.stop(); VoiceData.wipe(playingVoice); playingVoice = null; if (imageDialog != null) { imageDialog.dismiss(); imageDialog = null; } if (preview != null) { preview.recycle(); preview = null; } }
+    private void dismissImage() { videoPlayer.stop(); VideoData.wipe(playingVideo); playingVideo = null; voicePlayer.stop(); VoiceData.wipe(playingVoice); playingVoice = null; if (imageDialog != null) { imageDialog.dismiss(); imageDialog = null; } if (preview != null) { preview.recycle(); preview = null; } }
     private void logout() {
         if (busy) return;
         String path = staff() ? "/api/store-chat/stores/" + enc(identity.optString("storeId")) + "/mobile-logout" : "/api/auth/logout";
@@ -698,7 +749,7 @@ public final class MainActivity extends Activity {
         LinearLayout header = new LinearLayout(this); header.setOrientation(LinearLayout.VERTICAL); header.setBackgroundColor(PURPLE); header.setPadding(dp(20), dp(16), dp(20), dp(14)); header.addView(text(title, 23, Color.WHITE)); header.addView(text(subtitle, 13, 0xffeee6ff)); root.addView(header);
         content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(18), dp(20), dp(18), dp(12)); contentScroll = new ScrollView(this); contentScroll.setFillViewport(true); contentScroll.addView(content); root.addView(contentScroll, new LinearLayout.LayoutParams(-1, 0, 1));
         notice = text("", 14, 0xffa12b49); notice.setPadding(dp(16), dp(4), dp(16), dp(4)); notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); root.addView(notice);
-        composer = null; attachmentLabel = null; chatSendButton = null; voiceButton = null; voiceLabel = null; setContentView(root); root.requestApplyInsets();
+        composer = null; attachmentLabel = null; chatSendButton = null; voiceButton = null; voiceLabel = null; videoButton = null; videoLabel = null; setContentView(root); root.requestApplyInsets();
     }
     private TextView text(String value, int size, int color) { TextView v = new TextView(this); v.setText(value); v.setTextSize(size); v.setTextColor(color); v.setTextIsSelectable(false); v.setSaveEnabled(false); v.setPadding(0, dp(4), 0, dp(4)); return v; }
     private Button button(String label, Runnable action) { Button b = new Button(this); b.setText(label); b.setTextColor(PURPLE); b.setAllCaps(false); b.setTextSize(15); b.setMinHeight(dp(52)); b.setMinimumWidth(0); b.setPadding(dp(10), dp(5), dp(10), dp(5)); b.setSaveEnabled(false); b.setOnClickListener(v -> action.run()); return b; }

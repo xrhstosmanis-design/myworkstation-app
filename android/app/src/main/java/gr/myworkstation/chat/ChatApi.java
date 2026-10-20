@@ -23,6 +23,7 @@ class ChatApi {
     }
     byte[] image(String path, String token) throws Exception { return request(path, "GET", null, token, 7 * 1024 * 1024); }
     byte[] voice(String path, String token) throws Exception { return request(path, "GET", null, token, VoiceData.MAX_BYTES); }
+    byte[] video(String path, String token) throws Exception { return request(path, "GET", null, token, VideoData.MAX_BYTES); }
     private byte[] request(String path, String method, byte[] body, String token, int max) throws Exception {
         if (!path.startsWith("/api/") || path.contains("\\") || path.contains("\r") || path.contains("\n")) throw new Failure(0, "Μη έγκυρο αίτημα.");
         HttpsURLConnection connection = (HttpsURLConnection) new URL(ORIGIN + path).openConnection();

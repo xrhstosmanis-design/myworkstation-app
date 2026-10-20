@@ -1,5 +1,6 @@
 import {sendNativeChatPush,nativePushStatus} from '../native-chat-push.mjs';
 import {parseVoiceAttachment} from '../chat-voice.mjs';
+import {parseVideoAttachment} from '../chat-video.mjs';
 import crypto from "node:crypto";
 import express from "express";
 import {prisma} from "../prisma.js";
@@ -93,7 +94,7 @@ router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
   res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");
   const settings=await chatSettings(store);
   const assignees=canPin(req.user)?await prisma.employee.findMany({where:{storeId:store.id,active:true},select:{id:true,fullName:true},orderBy:[{fullName:"asc"},{id:"asc"}]}):[];
-  res.json({store,rows:fetched.slice(0,limit),settings,voiceMessagesAvailable:true,assignees,permissions:{canPin:canPin(req.user),canDownload:canDownload(req.user,settings),canComplete:canPin(req.user),canCreateTask:canCreateTask(req.user,settings),canManageTask:canPin(req.user),canManageSettings:canPin(req.user)}});
+  res.json({store,rows:fetched.slice(0,limit),settings,voiceMessagesAvailable:true,videoMessagesAvailable:settings.photosEnabled,assignees,permissions:{canPin:canPin(req.user),canDownload:canDownload(req.user,settings),canComplete:canPin(req.user),canCreateTask:canCreateTask(req.user,settings),canManageTask:canPin(req.user),canManageSettings:canPin(req.user)}});
 }catch(e){next(e)}});
 
 // Independent GENERAL-only voice endpoint: old image/PDF parsing and invoice handling stay unchanged.
@@ -102,6 +103,22 @@ router.post('/stores/:storeId/voice-messages',async(req,res,next)=>{try{
   const text=req.body?.body??'';
   if(typeof text!=='string'||text.trim().length>5000||(req.body?.category!==undefined&&req.body.category!=='GENERAL'))return res.status(400).json({error:'Μη έγκυρο φωνητικό μήνυμα.'});
   const attachment=parseVoiceAttachment(req.body?.attachment),body=text.trim(),id=crypto.randomUUID();
+  await prisma.$transaction(async tx=>{
+    await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},'GENERAL',${body},${attachment.name},${attachment.mimeType},${attachment.size},${attachment.checksum},${attachment.data},NOW(),NOW())`;
+    await audit(req,store,'STORE_CHAT_MESSAGE_SENT',{messageId:id,category:'GENERAL',hasAttachment:true,attachmentName:attachment.name,attachmentMimeType:attachment.mimeType,attachmentSize:attachment.size,attachmentChecksum:attachment.checksum,durationMs:attachment.durationMs},tx);
+  });
+  const push=await sendStoreChatPush({store,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));
+  if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store,senderId:req.user.id}).catch(()=>{});});
+  res.setHeader('Cache-Control','no-store, private');res.status(201).json({ok:true,id,push});
+}catch(e){next(e)}});
+
+// Independent GENERAL-only video endpoint: old image/PDF parsing and invoice handling stay unchanged.
+router.post('/stores/:storeId/video-messages',async(req,res,next)=>{try{
+  const store=await storeFor(req,res);if(!store)return;
+  const settings=await chatSettings(store);if(!settings.photosEnabled)return res.status(403).json({error:'Τα βίντεο είναι ανενεργά για το Chat αυτού του καταστήματος.',code:'STORE_CHAT_PHOTOS_DISABLED'});
+  const text=req.body?.body??'';
+  if(typeof text!=='string'||text.trim().length>5000||(req.body?.category!==undefined&&req.body.category!=='GENERAL'))return res.status(400).json({error:'Μη έγκυρο βίντεο μήνυμα.'});
+  const attachment=parseVideoAttachment(req.body?.attachment),body=text.trim(),id=crypto.randomUUID();
   await prisma.$transaction(async tx=>{
     await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},'GENERAL',${body},${attachment.name},${attachment.mimeType},${attachment.size},${attachment.checksum},${attachment.data},NOW(),NOW())`;
     await audit(req,store,'STORE_CHAT_MESSAGE_SENT',{messageId:id,category:'GENERAL',hasAttachment:true,attachmentName:attachment.name,attachmentMimeType:attachment.mimeType,attachmentSize:attachment.size,attachmentChecksum:attachment.checksum,durationMs:attachment.durationMs},tx);
