@@ -1,3 +1,19 @@
+## Source progress - causal correction prepared, full actual-app CI pending
+
+Claim PR2917 headf16fcfcc53e38c2b33b50c5b492a0420ee9840c7 green merged a9d6359911d1378712f67e5f13e99f8b9c9be97f before source edits. Review found and reproduced original lifecycle header repinning after UNKNOWN/restart: 8/8 failures before production adapter changes. Per-draft immutable originGeneration correction now passes10/10 actual-adapter/real-crypto regressions. Existing mounted actual panel UNKNOWN/remount scenario now seeds origin7 and requires7 on canonical quote and both sends; seller bindings retained. Combined Node20 focused78tests/76PASS/0FAIL/2infrastructureSKIP; frontend build PASS. Initial Prisma-uninitialized local imports were setup failures, resolved by generation only (no database mutation).
+
+New actual built-app isolated Chromium flow and four exact static lab assets implemented, execution AWAITING FULL CI. It checks authorized online preparation, offline create/edit, full browser restart/unlock, explicit current quote, lost accepted-order response, byte-identical original retry and one SQL order with unchanged virtual ledger/other-store control. Existing isolated E2E assertions remain unchanged. Native browser observation remains blocked; no current hosted/installed-device PASS. Technical guide updated; full commercial/fiscal/real-device work OPEN, same owner. Evidence CHECKPOINTS/EVIDENCE/wholesale-offline-app-20261020/.
+
+## Reproduction BEFORE bounded adapter correction
+
+20Oct Node20.20.2 focused actual-adapter/WebCrypto tests: 8 total / 0 PASS / 8 FAIL / 0 SKIP, exit1. Expected original0 observed restarted1; nonzero7 observed restarted8; explicit stale8 was accepted by isolated fake current9 transport; snapshot/captured draft generations missing. No actual network, reset or SQL recreation performed. The fake stale409 check models the unchanged server boundary rather than proving a real reset transaction. Full before log retained for final technical evidence. Production adapter/core edits start only after this recorded reproducible failure.
+
+## Causal review finding before production adapter edits
+
+Actual Node20 createWholesaleApi + sendOfflineFrozen with isolated fake HTTP transport (zero network) reproduced first POST lifecycle header0, lost acknowledgement, then a fresh transport instance pins1 and retries the identical body with header1. This is a proven original-header mismatch, not measured SQL order recreation. Lifecycle reset manifest removes WholesaleOrderRequest/events and store memberships; a later authorized catalogue restoration can make the unchanged quote checksum valid again because quote checksum has no generation. Full backend recreation remains NOT TESTED.
+
+Bounded correction under this claim's demonstrated-regression exception: persist immutable originGeneration per captured draft, derive initial snapshot epoch only from existing lifecycle helper, pass original epoch on quote/order, preserve per-draft metadata through edit and snapshot renewal, legacy missing metadata uses0. No shared lifecycle middleware/reset/auth/quote/order core changes. A new actual-adapter regression is being run before runtime edits; require failure evidence then targeted core/API/panel correction and full native/isolated CI.
+
 ## 20/10/2026 08:52 Europe/Athens - WHOLESALE-OFFLINE-APP-E2E-01 / ASSIGNED BEFORE SOURCE
 
 Retained owner codex/wholesale-suite-20261017; claim docs/wholesale-offline-app-e2e-claim-20261020, planned source test/wholesale-offline-app-e2e-20261020. Baseline c3756ba0132c3f8589d92c6dd897e60ee858d55c. User requested continue20Oct08:48Athens. Prior source PR2912/full CI/exact hosted delivery and receipt PR2914 remain protected; no repetition of accepted hosted financial transactions. Current supported browser entry once again returned native credential-state observation unavailable; no reset loop, new password, alternate credential/session workaround or LIVE claim.

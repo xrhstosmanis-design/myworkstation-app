@@ -1,0 +1,31 @@
+{
+  "kind": "Local technical causal regression, not actual SQL reset or LIVE acceptance",
+  "runtime": "Node20.20.2",
+  "before": {
+    "tests": 8,
+    "pass": 0,
+    "fail": 8,
+    "skipped": 0
+  },
+  "afterLifecycle": {
+    "tests": 10,
+    "pass": 10,
+    "fail": 0,
+    "skipped": 0
+  },
+  "combinedFocused": {
+    "tests": 78,
+    "pass": 76,
+    "fail": 0,
+    "skipped": 2
+  },
+  "skipped": [
+    "actual Chromium unavailable locally",
+    "native database unavailable locally"
+  ],
+  "frontendBuild": "PASS",
+  "transport": "Actual createWholesaleApi / offline adapters / WebCrypto with injected fake HTTP responses; zero actual network",
+  "sqlOrderRecreation": "NOT TESTED",
+  "sourceChanges": "Immutable per-draft originGeneration, explicit original lifecycle headers for quote and frozen send; legacy0; unchanged body/key and auth/order/lifecycle backend",
+  "beforeLogSha256": "14752f86f64d8279c6d31ce28428552db8fd486c8a039096e8dab6df5e4096a3"
+}

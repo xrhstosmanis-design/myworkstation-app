@@ -45,6 +45,8 @@ function safeItems(items) {
 }
 function safeSnapshot(scope, snapshot, time) {
   if (!snapshot || snapshot.store?.id !== scope.storeId || !Number.isFinite(snapshot.paidExpiresAt) || snapshot.paidExpiresAt <= time) fail('INVALID_SNAPSHOT');
+  const originGeneration=snapshot.originGeneration ?? '0';
+  if (typeof originGeneration !== 'string' || !/^(0|[1-9][0-9]{0,18})$/.test(originGeneration)) fail('INVALID_SNAPSHOT');
   if (snapshot.identity && ['userId','companyId','role'].some(key => snapshot.identity[key] !== scope[key])) fail('INVALID_SNAPSHOT');
   const expiresAt = Math.min(time + DAY, snapshot.paidExpiresAt, Number.isFinite(snapshot.expiresAt) ? snapshot.expiresAt : Infinity);
   if (expiresAt <= time) fail('EXPIRED');
@@ -59,7 +61,7 @@ function safeSnapshot(scope, snapshot, time) {
   };
   return {identity: {userId: scope.userId, companyId: scope.companyId, role: scope.role},
     store: {id: scope.storeId, name: text(snapshot.store.name)}, customers: select(snapshot.customers, false), products: select(snapshot.products, true),
-    preparedAt: time, expiresAt, paidExpiresAt: snapshot.paidExpiresAt};
+    preparedAt: time, expiresAt, paidExpiresAt: snapshot.paidExpiresAt, originGeneration};
 }
 
 // Caller prepares only from current authenticated, licensed server responses. A local
@@ -231,7 +233,9 @@ export function createWholesaleOfflineVault({storage = createWholesaleOfflineSto
     async read() { const ctx = context(), {state} = await load(ctx); return clone({snapshot:state.snapshot,drafts:state.drafts}); },
     async addDraft(input) {
       return mutate(state => { const capture = validateCapture(state, {...input,notes:input.notes ?? ''}), draftId = crypto.randomUUID();
-        const draft = {...capture,id:draftId,clientOrderId:draftId,status:'LOCAL_DRAFT',createdAt:now(),updatedAt:now()};
+        // A renewed catalogue may belong to a later store lifecycle. Every
+        // existing draft keeps its own origin; legacy records remain epoch zero.
+        const draft = {...capture,id:draftId,clientOrderId:draftId,originGeneration:state.snapshot.originGeneration ?? '0',status:'LOCAL_DRAFT',createdAt:now(),updatedAt:now()};
         state.drafts.push(draft); return draft; });
     },
     async editDraft(draftId, patch) {
