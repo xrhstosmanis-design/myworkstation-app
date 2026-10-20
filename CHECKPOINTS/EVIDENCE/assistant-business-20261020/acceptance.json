@@ -25,5 +25,51 @@
   "wholeVoice": "OPEN",
   "businessWrites": false,
   "commercialRowsPublished": false,
-  "privateEvidenceRetention": "Original files removed by automated workspace maintenance; observations retained in conversation, not reconstructed transactions."
+  "privateEvidenceRetention": "Original files removed by automated workspace maintenance; observations retained in conversation, not reconstructed transactions.",
+  "sourceFix": {
+    "state": "SOURCE LIVE; ACTUAL FILE RETEST NOT TESTED",
+    "claimPr": 2941,
+    "claimCi": 39427142860,
+    "sourcePr": 2943,
+    "sourceHead": "30bb150e43c1742c59324d5845b5f6c9cd0d4093",
+    "sourceMerge": "ac39d0fb9c8bed4aed5c181099ccab95df68df04",
+    "sourceCi": 39427930901,
+    "mainCi": 39428879857,
+    "ciPass": 3652,
+    "ciFail": 0,
+    "ciSkip": 0,
+    "backupPass": 8,
+    "guard": 39430009768,
+    "deploy": "dep-dbbmn5rncjis7398fgv0",
+    "liveFinishedUtc": "2026-10-20T13:29:43.772245Z",
+    "currentRevision": "d8142d55c376574f6a0b6ab35b611a2dc3bdcc97",
+    "currentCi": 39432574573,
+    "currentCiPass": 3669,
+    "currentGuard": 39433587658,
+    "currentDeploy": "dep-dbbn2pss728c7390ij50",
+    "currentLiveFinishedUtc": "2026-10-20T13:52:34.431512Z",
+    "publicHealthExact": true,
+    "ownedBlobsMatchCurrent": true,
+    "formatterBlob": "7a579071dde7946c8e9ad31914dd18a3bfcb431a",
+    "testBlob": "c2f7afd27123be36e48fc8779f92411b437fbb19",
+    "localFocused": {
+      "pass": 21,
+      "fail": 0,
+      "skip": 0
+    },
+    "localServer": {
+      "pass": 3393,
+      "fail": 0,
+      "skip": 194
+    },
+    "frontendBuild": true
+  },
+  "postReleaseAccess": {
+    "state": "Assistant refuses support context; composer disabled",
+    "secureForm": "Tool timeout; credential entry/submission UNKNOWN",
+    "canonicalRecoveryObserved": true,
+    "actualPostReleaseFile": "NOT TESTED",
+    "authWorkaround": false,
+    "repeatedCredentialRequest": false
+  }
 }
