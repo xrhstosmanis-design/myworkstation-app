@@ -1,5 +1,5 @@
 {
-  "status": "MERGED; EXACT PR CI GREEN; SHARED MAIN WHOLESALE FAILURE BLOCKS RELEASE",
+  "status": "TECHNICAL SOURCE RELEASE VERIFIED; STABLE SIGNING AND FINAL DEVICE ACCEPTANCE OPEN",
   "owner": "feat/android-chat-native-20261017",
   "beforeSourceClaim": {
     "pr": 2876,
@@ -73,5 +73,15 @@
     "error": "Timed out actual encrypted preparation",
     "owner": "codex/wholesale-suite-20261017"
   },
-  "nextAction": "Existing wholesale owner resolves main failure; native owner verifies fresh full CI and guarded live revision before signing/distribution/final physical batch"
+  "nextAction": "Supported secure GitHub sign-in and stable owner signing configuration, verified signed candidate/distribution, consolidated final device batch; iOS last",
+  "verifiedRelease": {
+    "revision": "d35a772870859bbf5eb6988820d74eaa7c260795",
+    "fullCi": 39387000777,
+    "guardWorkflow": 39387876889,
+    "renderDeploy": "dep-dbbhlfbncjis738pm3a0",
+    "liveAt": "2026-10-20T07:42:46.842298Z",
+    "healthOk": true,
+    "ownedSourceChangesSinceReviewedHead": []
+  },
+  "signingStatus": "Secure GitHub sign-in timed out; explicit origin verification signed out; no key/secret created/read/set"
 }
