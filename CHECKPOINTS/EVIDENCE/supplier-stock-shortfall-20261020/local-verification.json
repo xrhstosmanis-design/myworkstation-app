@@ -56,16 +56,16 @@
       "gitblob": "a35eaccd23ebc0676f467cf374712090d467fe99"
     },
     "client/src/components/commerce/OrderSuggestionsPanel.jsx": {
-      "sha256": "79a2f99909e34e2ee7f1b5fed0874ac279b3ae8177a45b4915c673f4e4ca7764",
-      "gitblob": "1f7868f7416acdc373a1ae43e20d63fc343b1d54"
+      "sha256": "403333026f4b42a36c847141996be0d983a956a00110cf36ffc8e558b1884def",
+      "gitblob": "765e54cd8cd8bb29b25e9cae2eea80a22d7f346e"
     },
     "client/src/components/commerce/supplier-order-proposal-export.js": {
       "sha256": "036cd7709e3f282e5e6373800d2afa18a80f0d02fbe74ec2db92e911792e847b",
       "gitblob": "996931d5d6760f7fb4656d3f3b237583cc94deb5"
     },
     "server/test/supplier-order-groups-ui.test.js": {
-      "sha256": "7285dc937d0bbab31b0498858a95a19873563cd70692216d889c0bf0c8d645e0",
-      "gitblob": "9a85ceed036e5f4aa79001f0db4046e5c4284713"
+      "sha256": "9b55a2fb8a384289989d77abe40ca5d6375aa4324effc57f4be55668a2501c15",
+      "gitblob": "72dec8c2baa9c0f29b75d70e898366c053b8e114"
     },
     "server/test/supplier-order-proposal-export.test.js": {
       "sha256": "fb9f17bc3359acd14642ed2033f88797ee5c08b18f7fecfc1e4d7bec6ca81bc5",
@@ -78,5 +78,13 @@
   },
   "lab": "AWAITING LAB; existing19/10PASS protected/not repeated",
   "production": "NOT INSTALLED",
-  "writes": "No business/stock/order/financial/transport/schema action"
+  "writes": "No business/stock/order/financial/transport/schema action",
+  "preMergeReviewFollowup": {
+    "finding": "Existing CSS td:nth-child(5) reason width would shift with a new sixth column; new filter was outside existing styled wrapper",
+    "classification": "INTEGRATION REVIEW FINDING, not observed LAB failure",
+    "fix": "Keep original five columns; show separate shortfall in original stock cell; filter in existing view wrapper. Explicit recorded-stock NO_SHORTAGE label.",
+    "previousHead": "bdb923d526243212105805e369c2874d3cb588bb",
+    "validation": "Owned13PASS and independent full nonnative30PASS/0FAIL/0SKIP; regression asserts five headers/cells and unchanged original column positions",
+    "fullCI": "New head must pass required full CI; prior head run is historical only"
+  }
 }

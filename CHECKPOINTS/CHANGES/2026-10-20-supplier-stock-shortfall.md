@@ -39,3 +39,7 @@ UI only in supplier mode, all rows default, explicit filters; reset on reload/st
 ## Required acceptance / handoff
 
 Full required CI and isolated native PostgreSQL tests must pass; peer review verifies unchanged original quantities/assignments and malformed-data rejection. Exact deployed revision must be verified through ordinary CI/Render guard. New read-only UI/filter/CSV acceptance is still required; CI alone is AWAITING LAB. Owner remains central until explicit merged handoff. No source changes have started at this claim.
+
+## Pre-merge integration review follow-up
+
+Root review found that a sixth table column would shift the existing CSS fifth-column reason width. Before merge, the panel was corrected to preserve all five original columns, placing separate shortfall labels in the existing stock cell, and putting the stock filter inside the existing styled view wrapper. No CSS edit. NO_SHORTAGE explicitly says recorded shortfall. Mounted regression asserts five headers/cells, stock2/proposal4/reason5 and filter wrapper. Updated nonnative Node20 tests30PASS/0FAIL/0SKIP; native remains not run locally. This is a static integration review finding and correction, not a new actual LAB FAIL/PASS. Prior unmerged head bdb923d526243212105805e369c2874d3cb588bb CI39430718110 is historical after the new head; full CI and review must run against the updated head. Same eight claimed paths and AWAITING LAB remain unchanged.
