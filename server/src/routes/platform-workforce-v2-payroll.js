@@ -4,6 +4,7 @@ import {prisma} from "../prisma.js";
 import {PERSONNEL_PAYROLL,requirePersonnelPackage} from "../store-paid-modules.js";
 import {overlapDays,paymentBalance,payrollClosingSummary,payrollGross,payrollableAttendanceWhere,payrollWorkDate,reconcilePayrollDraft,shiftDurationMinutes} from "../workforce-v2-payroll.js";
 import {audit,contextFor} from "./workforce-v2-access.js";
+import {assertNoPendingRemuneration} from "../workforce-pending-pay.js";
 
 const router=Router({mergeParams:true});
 const dateValue=value=>{const date=new Date(value);return Number.isNaN(date.getTime())?null:date;};
@@ -38,6 +39,7 @@ async function calculatedLines(context,from,to,db=prisma){
   const [sessions,employees]=await Promise.all([db.workforceAttendanceSession.findMany({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:from,lt:to},status:payrollableAttendanceWhere()},include:{employee:{include:{hourlyRates:{where:{validFrom:{lte:to},OR:[{validTo:null},{validTo:{gt:from}}]},orderBy:{validFrom:"desc"},take:1}}}}}),payrollEmployees(context,from,to,db)]);
   const rows=seedPayrollRows(employees);
   for(const session of sessions){const e=session.employee,rate=e.hourlyRates[0]?.hourlyRate??null,row=rows.get(e.id)||{employeeId:e.id,paymentType:e.paymentType,actualMinutes:0,overtimeMinutes:0,hourlyRate:rate==null?null:Number(rate),dailyRate:e.paymentType==="DAILY"?Number(e.dailyRate||0):null,fixedAmount:e.paymentType==="FIXED_MONTHLY"?Number(e.fixedMonthlyAmount||0):null,workDates:new Set()};row.actualMinutes+=session.workedMinutes;row.overtimeMinutes+=session.overtimeMinutes;row.workDates.add(payrollWorkDate(session.startedAt));rows.set(e.id,row)}
+  assertNoPendingRemuneration([...rows.values()]);
   await addPayrollEvidence(context,from,to,rows,db);
   return [...rows.values()].map(row=>{const workDays=row.workDates.size,grossAmount=Number(payrollGross({...row,workDays})||0);return {employeeId:row.employeeId,plannedMinutes:row.plannedMinutes,actualMinutes:row.actualMinutes,overtimeMinutes:row.overtimeMinutes,absenceMinutes:row.absenceMinutes,hourlyRate:row.hourlyRate,dailyRate:row.dailyRate,fixedAmount:row.fixedAmount,grossAmount,calculationJson:{source:"WORKFORCE_ATTENDANCE",paymentType:row.paymentType,workDays,approvedLeaveDays:row.approvedLeaveDays,approvedLeaveTypes:row.approvedLeaveTypes}}});
 }
@@ -51,7 +53,8 @@ router.get("/preview",async(req,res,next)=>{
     for(const session of sessions){const employee=session.employee,rate=employee.hourlyRates[0]?.hourlyRate??null,item=rows.get(employee.id)||{employeeId:employee.id,employeeName:employee.fullName,paymentType:employee.paymentType,actualMinutes:0,overtimeMinutes:0,hourlyRate:rate?Number(rate):null,dailyRate:employee.paymentType==="DAILY"?Number(employee.dailyRate||0):null,fixedAmount:employee.paymentType==="FIXED_MONTHLY"?Number(employee.fixedMonthlyAmount||0):null,workDates:new Set()};item.actualMinutes+=session.workedMinutes;item.overtimeMinutes+=session.overtimeMinutes;item.workDates.add(payrollWorkDate(session.startedAt));rows.set(employee.id,item);}
     await addPayrollEvidence(context,from,to,rows);
     const entries=[...rows.values()].map(({workDates,...item})=>({...item,workDays:workDates.size,grossAmount:payrollGross({...item,workDays:workDates.size})}));
-    res.json({from,to,entries,totalAmount:Number(entries.reduce((sum,item)=>sum+(item.grossAmount||0),0).toFixed(2)),note:"Προεπισκόπηση από ολοκληρωμένες πραγματικές ώρες. Η τελική μισθοδοσία απαιτεί έλεγχο και κλείδωμα."});
+    const pendingRemunerationCount=entries.filter(item=>item.paymentType==="UNSET").length;
+    res.json({from,to,entries,pendingRemunerationCount,totalAmount:pendingRemunerationCount?null:Number(entries.reduce((sum,item)=>sum+(item.grossAmount||0),0).toFixed(2)),note:pendingRemunerationCount?"Εκκρεμούν αμοιβές εργαζομένων. Δεν μπορεί να δημιουργηθεί περίοδος μισθοδοσίας.":"Προεπισκόπηση από ολοκληρωμένες πραγματικές ώρες. Η τελική μισθοδοσία απαιτεί έλεγχο και κλείδωμα."});
   }catch(error){next(error)}
 });
 
@@ -109,8 +112,9 @@ router.post("/periods/:id/payments",async(req,res,next)=>{try{
     if(changedAttendance)throw Object.assign(new Error("Οι παρουσίες άλλαξαν. Επανυπολόγισε την περίοδο πριν από νέα πληρωμή."),{status:409});
     const line=await tx.workforcePayrollLine.findUnique({where:{payrollPeriodId_employeeId:{payrollPeriodId:period.id,employeeId}}});
     if(!line)throw Object.assign(new Error("Ο εργαζόμενος δεν ανήκει σε αυτή την περίοδο μισθοδοσίας."),{status:404});
-    const employee=await tx.workforceEmployee.findFirst({where:{id:employeeId,companyId:context.company.id},select:{fullName:true}});
+    const employee=await tx.workforceEmployee.findFirst({where:{id:employeeId,companyId:context.company.id},select:{fullName:true,paymentType:true}});
     if(!employee)throw Object.assign(new Error("Δεν βρέθηκε ο εργαζόμενος."),{status:404});
+    assertNoPendingRemuneration([employee]);
     const totals=await tx.workforceEmployeePayment.aggregate({where:{payrollPeriodId:period.id,employeeId},_sum:{amount:true}});
     const check=paymentBalance({grossAmount:line.grossAmount,paidAmount:totals._sum.amount||0,newAmount:amount});
     if(!check.valid)throw Object.assign(new Error(check.reason==="OVERPAYMENT"?`Το ποσό υπερβαίνει το διαθέσιμο υπόλοιπο ${check.balance.toFixed(2)} €.`:"Μη έγκυρο ποσό πληρωμής."),{status:409});
@@ -143,6 +147,8 @@ router.post("/periods/:id/close",async(req,res,next)=>{try{
     const period=await tx.workforcePayrollPeriod.findFirst({where:{id:req.params.id,companyId:context.company.id,storeId:context.store.id},include:{lines:true,payments:true,closing:true}});
     if(!period)throw Object.assign(new Error("Δεν βρέθηκε η περίοδος."),{status:404});
     if(period.status!=="DRAFT"||period.closing)throw Object.assign(new Error("Η περίοδος έχει ήδη οριστικοποιηθεί."),{status:409});
+    const periodEmployees=await tx.workforceEmployee.findMany({where:{companyId:context.company.id,id:{in:period.lines.map(line=>line.employeeId)}},select:{paymentType:true}});
+    assertNoPendingRemuneration(periodEmployees);
     const unresolvedAttendance=await tx.workforceAttendanceSession.count({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:period.periodStart,lt:period.periodEnd},status:{in:["OPEN","NEEDS_REVIEW","NEEDS_APPROVAL"]}}});
     if(unresolvedAttendance)throw Object.assign(new Error(`Υπάρχουν ${unresolvedAttendance} παρουσίες που χρειάζονται κλείσιμο ή έγκριση.`),{status:409});
     const changedAttendance=await tx.workforceAttendanceSession.count({where:{companyId:context.company.id,storeId:context.store.id,startedAt:{gte:period.periodStart,lt:period.periodEnd},updatedAt:{gt:period.updatedAt}}});

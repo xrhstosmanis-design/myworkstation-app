@@ -12,6 +12,7 @@ import {createLegacyWorkCardCode,createWorkCardCode,workCardHash,workCardLast4} 
 import {createChatStaffInvitation} from "../chat-staff-invitation.mjs";
 import {chatEnabled} from "../chat-mobile.mjs";
 import {companyModuleState,effectiveModuleEnabled} from "../middleware/module-access.js";
+import {assertRemunerationCanBeDeferred} from "../workforce-pending-pay.js";
 
 const router=Router({mergeParams:true});
 router.get("/:employeeId/chat-invitation",createChatStaffInvitation({db:prisma,contextFor,loadEmployee,chatEnabled,companyModuleState,effectiveModuleEnabled}));
@@ -129,10 +130,11 @@ router.put("/:employeeId",async(req,res,next)=>{
     await ensureEmployeeNameAvailable(context.company.id,body.baseStoreId,body.fullName,existing.id);
     const updated=await prisma.$transaction(async tx=>{
       const currentRate=await tx.workforceHourlyRate.findFirst({where:{employeeId:existing.id,validTo:null},orderBy:{validFrom:"desc"}});
+      if(body.paymentType==="UNSET")assertRemunerationCanBeDeferred(existing);
       if(currentRate&&body.effectiveFrom<=currentRate.validFrom&&(body.paymentType!=="HOURLY"||Number(currentRate.hourlyRate)!==Number(body.hourlyRate))){
         throw Object.assign(new Error("Η νέα ημερομηνία ισχύος πρέπει να είναι μετά από το ενεργό ωρομίσθιο."),{status:400});
       }
-      await tx.workforceEmployee.update({where:{id:existing.id},data:{
+      await tx.workforceEmployee.update({where:{id:existing.id,...(body.paymentType==="UNSET"?{paymentType:"UNSET"}:{})},data:{
         baseStoreId:body.baseStoreId,fullName:body.fullName,phone:cleanText(body.phone),email:cleanText(body.email)?.toLowerCase()||null,
         ...(body.pin?{pinHash:await bcrypt.hash(body.pin,12)}:{}),
         paymentType:body.paymentType,dailyRate:body.paymentType==="DAILY"?body.dailyRate:null,fixedMonthlyAmount:body.paymentType==="FIXED_MONTHLY"?body.fixedMonthlyAmount:null,

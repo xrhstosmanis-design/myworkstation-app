@@ -1,3 +1,7 @@
+## 20/10/2026 - KAT zero restored after a later historical recipe movement
+
+After the earlier zero, startup recorded a missing-18recipe consumption for an August20order against KAT-44334. Preserve the original movement/order; the owner-authorized zero was restored through one separate single-line FREE stocktake, producing one+18audited adjustment. Stocktake1d984157-4249-42e0-81be-048dd61274c4 is FINALIZED;1900/1900stocks are0. KAT product/financial/prior-movement controls match; another store had three independent sales during the control window, so global isolation is not claimed. Historical backfill cutoff/rebinding remainsOPEN. Do not repeat this finalized action. Checkpoint2026-10-20-kat-stock-historical-repair.md and stock-repair-verification.json record exact limits.
+
 ## 20/10/2026 - Real KAT stock zero operation
 
 After explicit owner instruction all1900KAT store-product stocks are0, confirmed by independent DB readback. Native Inventory2.0 FREE stocktake066a1fa2-ac14-47c6-9b10-f7ab2421e323 finalized once: only23previously nonzero active items counted0, generating23audited adjustments with exact inverse quantities. Allother stocks already0, includinginactive products. Product prices/VAT/metadata, other stores and prior financial/movement history unchanged. The prior full1866-row bulk count returned internal error and persistednothing; large-list reliability remainsOPEN, do not claim it passed. Use measured before/after, preserve audit and inspect persisted state before retries. See2026-10-20-kat-stock-zero.md and zero-verification.json.
