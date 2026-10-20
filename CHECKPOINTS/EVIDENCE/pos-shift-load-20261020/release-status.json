@@ -1,0 +1,38 @@
+{
+  "task": "POS-SHIFT-LOAD-01",
+  "owner": "fix/pos-shift-load-20261020",
+  "status": "SOURCE_LIVE_AWAITING_HOSTED_USER_ACCEPTANCE",
+  "sourcePR": 2933,
+  "head": "576368e2310a45d252263bfff572865be774671b",
+  "merge": "d35a772870859bbf5eb6988820d74eaa7c260795",
+  "prCI": 39386081747,
+  "mainCI": 39387000777,
+  "tests": {
+    "pass": 3617,
+    "fail": 0,
+    "skip": 0,
+    "additionalPass": 8
+  },
+  "guardRun": 39387876889,
+  "guardJob": 118512074799,
+  "renderDeploy": "dep-dbbhlfbncjis738pm3a0",
+  "renderStatus": "live",
+  "renderFinishedAt": "2026-10-20T07:42:46.842298Z",
+  "health": {
+    "ok": true,
+    "revision": "d35a772870859bbf5eb6988820d74eaa7c260795",
+    "observedAt": "2026-10-20T07:42Z",
+    "version": "0.22.0+kat-test-pos"
+  },
+  "queryPlans": {
+    "oldMs": 42498.408,
+    "candidateMs": 2007.732,
+    "exactFinalMs": 1570.831,
+    "rowsEachAtObservation": 28,
+    "limit": "Independent live read-only snapshots; not hosted end-to-end timing or frozen identity/financial delta proof"
+  },
+  "businessWrites": 0,
+  "hostedOperatorAcceptance": "NOT_TESTED",
+  "manualPass": false,
+  "next": "User refresh after unsaved work completed, inspect existing open shift and rows without transaction replay"
+}
