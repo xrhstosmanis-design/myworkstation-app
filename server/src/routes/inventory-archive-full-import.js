@@ -18,6 +18,7 @@ export async function importFullArchive(tx,companyId,storeId,rows,{sourceProfile
   ]);
   validateSourceDepartments(sourceProfile,departments);
   const kat=sourceProfile?.name==='KAT_CATALOG_V1';
+  if(kat&&rows.some(row=>!['PIECE','KG'].includes(row.unit)))throw new Error('Μη υποστηριζόμενη μονάδα ΚΑΤ. Δεν έγινε εισαγωγή.');
   if(sourceProfile&&rows.some(row=>(row.action!=="CREATE"&&!(kat&&row.action==='UPDATE'&&row.sourceExisting&&Number.isFinite(row.expectedStock)))||row.stock!==0))throw new Error("Η εισαγωγή απαιτεί νέα είδη ή επιβεβαιωμένες αντιστοιχίσεις ΚΑΤ, χωρίς μεταβολή αποθέματος.");
   for(const c of categories)categoryMap.set(c.name,c.id);
   for(const s of subcategories)subcategoryMap.set(`${s.categoryName}\0${s.name}`,s.id);
@@ -63,14 +64,14 @@ export async function importFullArchive(tx,companyId,storeId,rows,{sourceProfile
       brandId:brandMap.get(sourceName(row.brandName))||null,departmentId:department.id,
       salePrice:row.salePrice,costPrice:row.costPrice,staffPrice:row.staffPrice,minStock:row.minStock,
       discountA:row.discountA??0,discountB:row.discountB??0,discountC:row.discountC??0,
-      vatRate:row.vatRate,active:row.active,renameSku:kat&&row.action==='UPDATE',expectedStock:row.expectedStock??0};
+      vatRate:row.vatRate,active:row.active,unit:kat?row.unit:'PIECE',renameSku:kat&&row.action==='UPDATE',expectedStock:row.expectedStock??0};
   });
-  const record=`(id text,action text,sku text,name text,barcode text,barcodes jsonb,"categoryId" text,"subcategoryId" text,"supplierId" text,"supplierCode" text,"brandId" text,"departmentId" text,"salePrice" numeric,"costPrice" numeric,"staffPrice" numeric,"minStock" numeric,"discountA" numeric,"discountB" numeric,"discountC" numeric,"vatRate" numeric,active boolean,"renameSku" boolean,"expectedStock" numeric)`;
+  const record=`(id text,action text,sku text,name text,barcode text,barcodes jsonb,"categoryId" text,"subcategoryId" text,"supplierId" text,"supplierCode" text,"brandId" text,"departmentId" text,"salePrice" numeric,"costPrice" numeric,"staffPrice" numeric,"minStock" numeric,"discountA" numeric,"discountB" numeric,"discountC" numeric,"vatRate" numeric,active boolean,unit text,"renameSku" boolean,"expectedStock" numeric)`;
   for(const batch of chunks(prepared)){
     const json=JSON.stringify(batch);
     await tx.$executeRawUnsafe(`WITH r AS (SELECT * FROM jsonb_to_recordset($1::jsonb) AS x${record})
       INSERT INTO "Product" ("id","companyId","categoryId","subcategoryId","productCompanyId","vatDepartmentId","sku","name","unit","vatRate","vatVerified","salePrice","costPrice","staffPrice","discountA","discountB","discountC","trackStock","active")
-      SELECT id,$2,"categoryId","subcategoryId","brandId","departmentId",sku,name,'PIECE',"vatRate",("vatRate">0),COALESCE("salePrice",0),COALESCE("costPrice",0),"staffPrice","discountA","discountB","discountC",true,active FROM r WHERE action='CREATE'`,json,companyId);
+      SELECT id,$2,"categoryId","subcategoryId","brandId","departmentId",sku,name,unit,"vatRate",("vatRate">0),COALESCE("salePrice",0),COALESCE("costPrice",0),"staffPrice","discountA","discountB","discountC",true,active FROM r WHERE action='CREATE'`,json,companyId);
     await tx.$executeRawUnsafe(`WITH r AS (SELECT * FROM jsonb_to_recordset($1::jsonb) AS x${record})
       UPDATE "Product" p SET "sku"=CASE WHEN r."renameSku" THEN r.sku ELSE COALESCE(p."sku",r.sku) END,"name"=r.name,"categoryId"=r."categoryId","subcategoryId"=r."subcategoryId","productCompanyId"=r."brandId","vatDepartmentId"=r."departmentId","vatRate"=r."vatRate","vatVerified"=(r."vatRate">0),
       "salePrice"=COALESCE(r."salePrice",p."salePrice"),"costPrice"=COALESCE(r."costPrice",p."costPrice"),"staffPrice"=COALESCE(r."staffPrice",p."staffPrice"),
@@ -91,7 +92,7 @@ export async function importFullArchive(tx,companyId,storeId,rows,{sourceProfile
   }
   if(sourceProfile){
     const ids=prepared.map(row=>row.id);
-    const saved=await tx.$queryRaw`SELECT p."id",p."sku",p."name",p."vatRate",p."salePrice",p."costPrice",p."vatDepartmentId",p."active",sp."currentStock",sp."salePrice" AS "storeSalePrice",
+    const saved=await tx.$queryRaw`SELECT p."id",p."sku",p."name",p."unit",p."vatRate",p."salePrice",p."costPrice",p."vatDepartmentId",p."active",sp."currentStock",sp."salePrice" AS "storeSalePrice",
       COALESCE(array_agg(b."barcode" ORDER BY b."barcode") FILTER (WHERE b."id" IS NOT NULL),ARRAY[]::text[]) AS barcodes
       FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId}
       LEFT JOIN "ProductBarcode" b ON b."productId"=p."id"
@@ -99,7 +100,7 @@ export async function importFullArchive(tx,companyId,storeId,rows,{sourceProfile
     const byId=new Map(saved.map(row=>[row.id,row]));
     for(const expected of prepared){
       const actual=byId.get(expected.id);
-      if(!actual||actual.sku!==expected.sku||actual.name!==expected.name||actual.vatDepartmentId!==expected.departmentId||Number(actual.vatRate)!==expected.vatRate||Number(actual.salePrice)!==expected.salePrice||Number(actual.storeSalePrice)!==expected.salePrice||Number(actual.costPrice)!==expected.costPrice||Number(actual.currentStock)!==expected.expectedStock||actual.active!==expected.active||JSON.stringify(actual.barcodes)!==JSON.stringify([...expected.barcodes].sort()))throw new Error(`Η επαλήθευση αποθήκευσης απέτυχε για ${expected.sku}. Δεν εισήχθη κανένα είδος.`);
+      if(!actual||actual.sku!==expected.sku||actual.name!==expected.name||actual.unit!==expected.unit||actual.vatDepartmentId!==expected.departmentId||Number(actual.vatRate)!==expected.vatRate||Number(actual.salePrice)!==expected.salePrice||Number(actual.storeSalePrice)!==expected.salePrice||Number(actual.costPrice)!==expected.costPrice||Number(actual.currentStock)!==expected.expectedStock||actual.active!==expected.active||JSON.stringify(actual.barcodes)!==JSON.stringify([...expected.barcodes].sort()))throw new Error(`Η επαλήθευση αποθήκευσης απέτυχε για ${expected.sku}. Δεν εισήχθη κανένα είδος.`);
     }
     return {created:prepared.filter(r=>r.action==='CREATE').length,updated:prepared.filter(r=>r.action==='UPDATE').length,barcodes:prepared.reduce((n,row)=>n+row.barcodes.length,0),verified:true};
   }

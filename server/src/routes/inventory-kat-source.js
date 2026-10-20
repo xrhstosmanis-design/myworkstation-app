@@ -61,14 +61,14 @@ export function attachKatWorkbook(workbook,raw,XLSX){
     },
     async reconcile(db,companyId,storeId,rows){
       const productIds=[...ids];
-      const current=productIds.length?await db.$queryRaw`SELECT p."id",p."sku",sp."currentStock",
+      const current=productIds.length?await db.$queryRaw`SELECT p."id",p."sku",p."unit",sp."currentStock",
         md5(json_build_object('product',row_to_json(p),'barcodes',COALESCE((SELECT json_agg(b."barcode" ORDER BY b."barcode") FROM "ProductBarcode" b WHERE b."productId"=p."id"),'[]'::json))::text) AS fingerprint,
         EXISTS(SELECT 1 FROM "StoreProduct" other WHERE other."productId"=p."id" AND other."storeId"<>${storeId}) AS "otherStore"
         FROM "Product" p LEFT JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId}
         WHERE p."companyId"=${companyId} AND p."id"=ANY(${productIds}::text[])`:[];
       const byId=new Map(current.map(r=>[r.id,r]));
       for(const row of rows){const expected=existing.get(row.sku);if(!expected)continue;const saved=byId.get(expected.id);
-        if(row.action!=='UPDATE'||row.productId!==expected.id||!saved||saved.sku!==expected.oldSku||saved.fingerprint!==expected.fingerprint||saved.otherStore){row.errors.push('Άλλαξε ή δεν συμφωνεί η επιβεβαιωμένη καρτέλα υπάρχοντος είδους. Χρειάζεται νέα προεπισκόπηση.');row.action='INVALID';}
+        if(row.action!=='UPDATE'||row.productId!==expected.id||!saved||saved.sku!==expected.oldSku||saved.unit!==row.unit||saved.fingerprint!==expected.fingerprint||saved.otherStore){row.errors.push('Άλλαξε ή δεν συμφωνεί η επιβεβαιωμένη καρτέλα υπάρχοντος είδους. Χρειάζεται νέα προεπισκόπηση.');row.action='INVALID';}
         else row.expectedStock=Number(saved.currentStock??0);
       }
     }
