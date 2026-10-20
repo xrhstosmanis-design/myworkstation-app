@@ -163,6 +163,34 @@
     "nativeBrowserRestrictionResolved": false,
     "fileModified": false,
     "businessWrite": false,
-    "commercialRowsPublished": false
+    "commercialRowsPublished": false,
+    "roleConfirmedByUser": "SUPER ADMIN,20Oct21:16"
+  },
+  "catalogPeriodCorrection": {
+    "state": "SOURCE IMPLEMENTED; AWAITING EXACT CI / GUARDED RELEASE / ACTUAL FILE RETEST",
+    "claimPr": 2963,
+    "claimHead": "929727737a2abe1d5a9650f324a54b51e62e40db",
+    "claimCi": 39472825782,
+    "claimMerge": "bce7c128a8b3870c9e5b4640d7395c596c7ea380",
+    "focusedBefore": {
+      "pass": 1,
+      "fail": 6
+    },
+    "focusedAfterWithMidnight": {
+      "pass": 20,
+      "fail": 0,
+      "skip": 0
+    },
+    "runtimeScope": "undated business_records currentSnapshot period fallback only",
+    "actualRetest": "NOT TESTED",
+    "wholeVoice": "OPEN",
+    "businessWrite": false,
+    "localFull": {
+      "node": "20",
+      "pass": 3423,
+      "fail": 0,
+      "skip": 194,
+      "scope": "local environment; exact native CI mandatory"
+    }
   }
 }

@@ -7,7 +7,7 @@ export function assistantReportTables(evidence,{generatedAt=new Date()}={}){
  if(!Array.isArray(evidence)||!evidence.length||evidence.length>2)throw Object.assign(new Error("Δεν υπάρχει αναγνωσμένη αναφορά για εξαγωγή."),{status:422});
  return evidence.flatMap((r,index)=>{
   if(!r||!Array.isArray(r.rows)||r.rows.length>2000)throw Object.assign(new Error("Η αναφορά ξεπερνά το όριο εξαγωγής."),{status:422});
-  const notes=[`Ώρα δημιουργίας: ${at(generatedAt)}`,`Πηγή: ${r.source||"Κανονική αναφορά MyWorkStation"}`,`Εύρος: ${r.storeName||(["PLATFORM_ALL_STORES","PLATFORM_AUTHORIZED_STORES"].includes(r.scope)?"Ρητά όλα τα εξουσιοδοτημένα καταστήματα":"Επιλεγμένο κατάστημα")}`,`Περίοδος: ${r.from||r.date||"Τρέχον καταγεγραμμένο απόθεμα"}${r.to?` έως ${r.to}`:""} · ώρα Ελλάδας`];
+  const notes=[`Ώρα δημιουργίας: ${at(generatedAt)}`,`Πηγή: ${r.source||"Κανονική αναφορά MyWorkStation"}`,`Εύρος: ${r.storeName||(["PLATFORM_ALL_STORES","PLATFORM_AUTHORIZED_STORES"].includes(r.scope)?"Ρητά όλα τα εξουσιοδοτημένα καταστήματα":"Επιλεγμένο κατάστημα")}`,`Περίοδος: ${r.from||r.date||(r.kind==="business_records"&&r.currentSnapshot?"Τρέχων κατάλογος":"Τρέχον καταγεγραμμένο απόθεμα")}${r.to?` έως ${r.to}`:""} · ώρα Ελλάδας`];
   if(r.kind==="product_sales"){
    if(r.sourceCoverageStatus==="UNKNOWN")notes.push("Η πηγή δεν παρέχει επιβεβαίωση πληρότητας. Δεν επιβεβαιώνεται πλήρες σύνολο.");
    if(r.sourceCoverageStatus==="COMPLETE")notes.push("Πληρότητα πηγής: επιβεβαιώθηκαν όλες οι ομάδες πωλήσεων για το εφαρμοσμένο φίλτρο.");
