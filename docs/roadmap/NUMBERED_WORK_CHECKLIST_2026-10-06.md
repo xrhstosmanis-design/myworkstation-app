@@ -576,7 +576,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `32`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
-- **Υπόλοιπο / όριο:** 20/10/2026 19:32Athens: Diadoxou13Oct BANK CSV USER-SUPPLIED FILE PASS, all68 original-source date/time/type/amount/status rows match; all13 midnight rows00:xx, no24:xx. Actual user-uploaded bytes/hash verified, not a source-rebuilt file or new agent UI replay. PR2943 midnight content acceptance CLOSED; completed correction removed from pending. Earlier scoped PASS retained. Whole OPEN/ASSIGNED codex/assistant-business-queries-20261015 for invoice17Oct CSV, remaining normal Owner contexts, mobile/physical, wider/nonempty-offers and beer only with real mapping. Native browser restriction not claimed cleared; no microphone request/business write. Checkpoint2026-10-20-assistant-business-acceptance and manual super-admin/PASS.
+- **Υπόλοιπο / όριο:** 20/10/2026 20:32 Athens: Diadoxou17Oct invoice CSV USER-SUPPLIED FILE PASS, all5 original-source rows match dates/times/types/suppliers/references/statuses and amounts at export2dp precision;3 approved/2 draft distinct.1919-byte actual upload/hash verified. Invoice CSV content acceptance completed; prior bank CSV/midnight PASS retained. Whole OPEN/ASSIGNED codex/assistant-business-queries-20261015 for remaining normal Owner contexts/files, mobile/physical, wider/nonempty-offers and beer only with real mapping. Source read after upload, no new agent UI replay/before-after invariant/browser recovery. No business write/microphone request. Checkpoint2026-10-20-assistant-business-acceptance; manual super-admin/PASS.
 
 ## 31 — Μηνιαία Αναφορά Ιδιοκτήτη
 
