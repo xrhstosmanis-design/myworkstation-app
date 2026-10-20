@@ -1,8 +1,8 @@
-# Chat voice — proposed integration contract, NOT IMPLEMENTED
+# Chat voice — implemented candidate contract, AWAITING CI/RELEASE/DEVICE
 
-Owner of native integration: feat/android-chat-native-20261017. Server/receiver implementation
-requires a published independent claim or named handoff from the existing Chat/PWA/N16 owners.
-Issue2869 records this dependency. This proposal is preparation, not a shipped API or USER PASS.
+Owner of native integration: feat/android-chat-native-20261017. Independent NEW voice-only server/receiver scope claimed in green mergedPR2876 before source;
+existing PWA packaging/responsive/photo6432 and N16 physical acceptance owners remain unchanged.
+Issue2869 records this dependency. This is implemented candidate source, not a verified shipped API or USER PASS.
 Owner instruction19Oct21:02 Athens: prepare Android together, final physical tests afterward,
 iOS LAST. Do not repeat gallery/camera messages accepted20:02/20:47 for documentation.
 
@@ -15,10 +15,9 @@ iOS LAST. Do not repeat gallery/camera messages accepted20:02/20:47 for document
   whole attachment at most1920044bytes. Server validates RIFF/WAVE/fmt/data layout,
   declared sizes, PCM encoding/channels/rate/blockAlign/byteRate/sample alignment and actual bytes.
   Merely trusting MIME/extension/base64 or accepting arbitrary RIFF is insufficient.
-- Existing image/PDF parser and accepted photo flow remain unchanged. Proposed separate
+- Existing image/PDF parser and accepted photo flow remain unchanged. Separate
   POST /api/store-chat/stores/:storeId/voice-messages accepts one GENERAL voice message,
-  optional editable text at most5000 characters and one bounded audio attachment. Exact endpoint
-  and rollout policy must be accepted by server owner before native wiring. It does not yet exist.
+  optional editable text at most5000 characters and one bounded audio attachment. Endpoint follows claimPR2876 and is wired in candidate source; it is unavailable until ordinary guarded release.
 - Server uses existing company/store/session/module authorization before any insert; no fallback
   to company-wide scope, no cross-store lookup, no new operator role or permission expansion.
   Availability must be explicit for the current authorized store and off until supported/configured;
@@ -62,5 +61,5 @@ separately measured device test. Preserve gallery originals outside this app's o
 - Exact full PR/main and Android CI, verified candidate hash/certificate and ordinary guarded server
   release/health before asking for one final physical voice send/playback/denial scenario.
 
-Until these dependencies are satisfied: voice NOT IMPLEMENTED, no new native microphone permission
-or user-facing promise. Final readiness is tracked in native-chat-final-batch.md, never inferred from this proposal.
+Until exact CI/release/artifact/device checks pass: voice is an UNVERIFIED CANDIDATE.
+New microphone permission is requested only by explicit start; older servers do not advertise support. Final readiness is tracked in native-chat-final-batch.md, never inferred from this proposal.

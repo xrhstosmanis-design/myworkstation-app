@@ -1,0 +1,37 @@
+{
+  "status": "SOURCE IMPLEMENTED; AWAITING EXACT CI/RELEASE/ARTIFACT/FINAL DEVICE BATCH",
+  "owner": "feat/android-chat-native-20261017",
+  "beforeSourceClaim": {
+    "pr": 2876,
+    "head": "5190837cac97439e3207922b3fa7df0e6db2cc76",
+    "merge": "cb9f44ce251efe1e98b3f1878d716b36563033b6"
+  },
+  "version": "0.1.8-preview",
+  "versionCode": 9,
+  "localNodeVersion": "20.20.2",
+  "localTests": {
+    "passed": 16,
+    "failed": 0,
+    "scope": "canonical WAV parser, actual registered voice handler with isolated database doubles, prior chat assignment/foundation"
+  },
+  "notLocallyTested": [
+    "Android compilation/unit/instrumentation: JDK compiler unavailable",
+    "mounted receiver: project JS dependencies unavailable",
+    "microphone hardware",
+    "physical playback",
+    "real owner signing key setup",
+    "public distribution"
+  ],
+  "realProductionActionsByAgent": false,
+  "physicalAcceptance": "DEFERRED until consolidated preparation complete",
+  "iosOrder": "LAST",
+  "firstSourceTechnicalCI": {
+    "sha": "1b9111e947fad572c0c976a5fa564ee96cbd8062",
+    "fullRun": 39306125023,
+    "androidRun": 39306125076,
+    "status": "SUCCESS",
+    "serverTestsPassed": 3475,
+    "backupTestsPassed": 8,
+    "physicalStatus": "NOT TESTED"
+  }
+}

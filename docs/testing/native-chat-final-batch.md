@@ -13,8 +13,9 @@ Owner: feat/android-chat-native-20261017. Οδηγία19/10/2026 21:02 Europe/At
 - Σταθερή υπογραφή: προετοιμασία build μετά το claimPR2870. Κανένα πραγματικό
   owner key/secret δεν δημιουργήθηκε ή διαβάστηκε. Η ρύθμιση secrets και η πραγματική
   παραγωγή υπογεγραμμένου candidate δεν έχουν επιβεβαιωθεί.
-- Φωνητικά: τεχνική πρόταση στο native-chat-voice-contract.md, **NOT IMPLEMENTED**, απαιτείται πρώτα συμβατό server/receiver contract
-  με υπάρχοντες Chat/PWA/N16 owners. Τώρα ο parser δέχεται μόνο εικόνες/PDF.
+- Φωνητικά: voice-only source μετά green claimPR2876, **AWAITING CI/RELEASE/DEVICE**.
+  Ο παλιός image/PDF parser διατηρείται· προστέθηκε χωριστό GENERAL WAV endpoint και audio-only receiver,
+  χωρίς takeover των υπαρχόντων PWA/N16 scopes. Contract: native-chat-voice-contract.md.
 - AI: ακριβής φυσική φράση «τι πωλήσεις είχα σήμερα» στον υπάρχοντα owner
   codex/assistant-business-queries-20261015, χωρίς δεύτερη ανάληψη parser.
 - Εξαρτήσεις/όρια: issue2869. Δεν υπάρχει συνολικό Android PASS.
