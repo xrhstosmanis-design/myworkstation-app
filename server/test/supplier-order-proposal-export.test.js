@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {buildSupplierProposalCsv} from '../../client/src/components/commerce/supplier-order-proposal-export.js';
 
 const fixture=()=>{
-  const row={productId:'p1',name:'Νερό, "κρύο"\n500ml',sku:'00123',unitLabel:'τεμ.',currentStock:-1.125,minStock:2,soldQuantity:10.5,returnedQuantity:.25,netQuantity:10.25,dailyDemand:10.25/30,suggestedQuantity:5.125,candidateSupplierId:null,supplierReviewReason:'NO_APPROVED_DOCUMENT_EVIDENCE',supplierCandidates:[],reason:'Έλεγχος',warnings:['Αρνητικό απόθεμα']};
+  const row={productId:'p1',name:'Νερό, "κρύο"\n500ml',sku:'00123',unitLabel:'τεμ.',currentStock:-1.125,minStock:2,targetStock:4,soldQuantity:10.5,returnedQuantity:.25,netQuantity:10.25,dailyDemand:10.25/30,suggestedQuantity:5.125,currentStockShortfall:{status:'REVIEW_REQUIRED',quantity:null,basis:'RECORDED_CURRENT_STOCK_MINIMUM',stockVerified:false,reviewReasons:['NEGATIVE_RECORDED_STOCK']},candidateSupplierId:null,supplierReviewReason:'NO_APPROVED_DOCUMENT_EVIDENCE',supplierCandidates:[],reason:'Έλεγχος',warnings:['Αρνητικό απόθεμα']};
   return {storeId:'LAB',generatedAt:'2026-10-18T20:30:00.000Z',from:'2026-09-18T20:30:00.000Z',to:'2026-10-18T20:30:00.000Z',options:{historyDays:30,coverageDays:7,leadDays:3},supplierBasis:'APPROVED_DOCUMENT_FREQUENCY_PROXY',reviewRequired:true,automaticTransmission:false,complete:true,groups:[],rows:[row]};
 };
 const filters={query:'',supplier:'all',onlyNeeded:true};
@@ -30,3 +30,4 @@ test('supplier CSV uses only passed canonical filtered rows, preserves incomplet
   assert.throws(()=>buildSupplierProposalCsv({snapshot:{...snapshot,generatedAt:'invalid'},rows:snapshot.rows,filters}));
   snapshot.rows[0].suggestedQuantity=Infinity;assert.throws(()=>buildSupplierProposalCsv({snapshot,rows:snapshot.rows,filters}),/ποσότητα/);
 });
+
