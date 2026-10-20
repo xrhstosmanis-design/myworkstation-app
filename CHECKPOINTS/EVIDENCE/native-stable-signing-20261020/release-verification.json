@@ -1,0 +1,32 @@
+{
+  "distributionPr": 2954,
+  "distributionHead": "a806708fe7ec4bb044b1d6eaa3ce9e0052335dd2",
+  "distributionMerge": "25efb7871b485f5c680ecd8cc3d7323b45719a37",
+  "beforeSourceClaimPr": 2953,
+  "signedBuildRun": 39458772660,
+  "artifactId": 12281364272,
+  "mainCiRun": 39462597695,
+  "mainCiJob": 118765979610,
+  "tests": {
+    "pass": 3669,
+    "fail": 0,
+    "backupPass": 8
+  },
+  "guardedDeployRun": 39463450610,
+  "guardedDeployConclusion": "success",
+  "renderDeployment": "dep-dbbq0h8n3acc73c7jo20",
+  "renderLiveAt": "2026-10-20T17:12:48.612098Z",
+  "publicHealthRevision": "25efb7871b485f5c680ecd8cc3d7323b45719a37",
+  "installUrl": "https://myworkstation-app.onrender.com/downloads/chat-android/",
+  "qrDecodedUrl": "https://myworkstation-app.onrender.com/downloads/chat-android/",
+  "version": "0.1.8-preview",
+  "versionCode": 9,
+  "package": "gr.myworkstation.chat.preview",
+  "apkBytes": 3670848,
+  "apkSha256": "a1c9faf3f84a821d4252e6c79306d29edf69a56cd7027593a78a63e28b5d05ca",
+  "certificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "publicApkBytesMatchSignedArtifact": true,
+  "physicalAcceptance": "NOT TESTED; consolidated final batch pending",
+  "sameSignerPhysicalUpgrade": "NOT TESTED",
+  "ios": "LAST"
+}
