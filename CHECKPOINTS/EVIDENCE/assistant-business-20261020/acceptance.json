@@ -155,7 +155,7 @@
     "selectedStoreMatch": true,
     "currentCatalogLimitationRetained": true,
     "periodLabel": "ACTUAL FAIL: supplier catalog mislabeled current recorded stock",
-    "fileAcceptance": "AWAITING CORRECTION AND ACTUAL RETEST",
+    "fileAcceptance": "HISTORICAL period-label failure, closed by21Oct21:36 real file",
     "ownerRoleConfirmed": false,
     "sourceTiming": "Independent original SELECT after receiving user upload",
     "newBeforeAfterInvariant": false,
@@ -167,7 +167,7 @@
     "roleConfirmedByUser": "SUPER ADMIN,20Oct21:16"
   },
   "catalogPeriodCorrection": {
-    "state": "SOURCE LIVE; AWAITING ACTUAL USER FILE RETEST",
+    "state": "ACTUAL USER-SUPPLIED SUPPLIER FILE ACCEPTANCE PASS",
     "claimPr": 2963,
     "claimHead": "929727737a2abe1d5a9650f324a54b51e62e40db",
     "claimCi": 39472825782,
@@ -182,7 +182,7 @@
       "skip": 0
     },
     "runtimeScope": "undated business_records currentSnapshot period fallback only",
-    "actualRetest": "NOT TESTED",
+    "actualRetest": "PASS,21Oct21:36 user file24rows and corrected period",
     "wholeVoice": "OPEN",
     "businessWrite": false,
     "localFull": {
@@ -211,5 +211,31 @@
     "independentExactHealth": true,
     "formatterBlob": "14f12d902d9c82174e0a33589eae99fc9beb633b",
     "testBlob": "a26b4b9a82e9f21223d571f93889e39d13d04dec"
+  },
+  "userSuppliedSupplierCsv2136": {
+    "filename": "myworkstation-report-20261021213615.csv",
+    "sha256": "e3af310a6cd6dc7645a3e06bc448f103bbbc39408c54a16322d8fad85adf4616",
+    "bytes": 6584,
+    "dataRows": 24,
+    "distinctNames": 23,
+    "duplicateMultiplicityPreserved": true,
+    "columns": 9,
+    "bom": true,
+    "delimiter": ";",
+    "allNamesDisplayedUpdatedTimesStatusesMatch": true,
+    "correctCatalogPeriodNote": true,
+    "oldStockPeriodNoteAbsent": true,
+    "unrecordedAmountsNotInvented": true,
+    "selectedStoreMatch": true,
+    "currentCatalogLimitationRetained": true,
+    "sourceTiming": "Independent current original SELECT after receiving user upload",
+    "newBeforeAfterInvariant": false,
+    "agentControlledUiReplay": false,
+    "newIndependentSessionAttestation": false,
+    "nativeBrowserRestrictionResolved": false,
+    "fileModified": false,
+    "businessWrite": false,
+    "commercialRowsPublished": false,
+    "scope": "USER-SUPPLIED FILE ACCEPTANCE PASS only; whole VOICE OPEN"
   }
 }
