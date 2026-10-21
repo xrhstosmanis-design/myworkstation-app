@@ -1,5 +1,40 @@
 # Recorded expenses / linked payroll UI and CSV
 
+## 21/10/2026 23:26 Europe/Athens — CENTRAL-RECORDED-PAYROLL-UI-01 / TECHNICAL RELEASE VERIFIED / AWAITING FINAL USER TEST
+
+Retained central owner codex/central-four-streams-20261018, #2706/#2527. Source#2985/head c1daf3c5c26c125308400ef9ce314e01740ac2d2 independently reviewed and green merged028b1d59b2af0ff943d18d961e8a179f18c1594d after before-source claim#2984/CI39665200495/merge0376c250. Sourcehead→merge files[]; all six reviewed source/test blobs unchanged, three runtime blobs match actual synthetic Chromium evidence. Supersedes older NOT MERGED/NOT INSTALLED/AWAITING CI/UI-implementation residuals for this bounded increment only; historical FAIL/PASS and all owners retained.
+
+ExactPRCI39667004265/build119454875705 and exactsource-mainCI39668300521/build119459505476 both all5SUCCESS:3750serverPASS/0FAIL/0SKIP plus8backupPASS/0FAIL/0SKIP. Native producer->JSON->consumer->CSV parent+all4subcases actuallyPASS in BOTH (107rows/allpageCSV, signed/private/formula provenance, tamper/stale scope rejection,23/25hDST/empty,10001source->10000CSV/nulltotals). Local60/0/0/build and synthetic realChromium desktop/mobile remain separate technical evidence; initial isolatedFAILs/fixes preserved, no bypass/replay.
+
+Ordinary workflow_run guard39669509416/deploy119463441952 SUCCESS, actual pinned request028b1d59 at20:21:56.9888546UTC and exacthealthy20:25:19.8395781UTC. Renderdep-dbchtp0473hc73e9tr6g LIVE finished20:25:18.748516UTC. Independent no-cache publichealth20:26:18.978997UTC returned200/oktrue/exact028b1d59. Canonical/platform-admin200 serves/assets/main-C0MBgqKA.js,327767bytes/SHA256fd42a18fa592fca53355b1a9df1135fbf7ffcb61a00150b6278bdeba2577a7b3, new report endpoint/dialog/launch/CSV markers present. This verifies installed code, not actual feature acceptance. Prior healthyc444cba8/Renderdep-dbcdhtdg1s2s739s1b0g and rollbackartifact12378019276 retained; no manual deploy/guard override, new schema/migration/manualSQL or business action.
+
+Normal selected-store sales toolbar now opens recorded-expense/linked-payroll dialog with ended Athens dates, explicit Search, bounded transaction/employee pages and all-applied-rows CSV. Strict frozen DTO/reconciled cents/coverage plus root/store/token/visibility/draft/native-dialog fences. Recorded ledger is NOT settlement/all wages/accrual; LINKED_ONLY, unattributed may contain payroll, signed refunds retained, standalone Workforce excluded, incomplete cap suppresses complete totals. Existing INVENTORY/server roles/packages gates unchanged; no source writer change.
+
+NO new LAB/LIVE/USER feature PASS/manual entry/fullTask12 or staffing closure. Remaining central scope: actual normal selected-LAB source/role/tenant/module/empty/nonempty/CSV/mobile acceptance, only already-existing data, no accepted transaction replay. One final Greek read-only guide: docs/testing/recorded-payroll-expense-final-user-test.md. Missing actual positive linked-source samples stay NOT TESTED; do not manufacture payments. Single next action: user final test and coordinator evidence reconciliation/required same-PR manual closure for actual PASS only.
+
+Bounded rollout observation20:21:56–20:26:30UTC:30returnedapp-errorrecords/hasMoretrue,28Online-orders-module-disabled and2table-ordering-module-disabled on prior/newinstances. Known disabled-module refusals, no root report request/related source or module activation, no examined causal link to this UI release and no zero-production-error claim. Classifications retained in release-verification.json; no workaround.
+
+Four-stream continuity: #2704 dispatchOFF, concrete production contract6318978275 awaits retained AUTO-REPORTS/mail/schema/lifecycle/backup agreement; cannot infer handoff. #2705 supplier#2971 limitedactualPASS protected; positivecases/margin/physical comparability OPEN. #2706 sales/hourly#2883 protected; N10/writers/accrual/staffing retained and OPEN. #2707 retained-owner#2980 actualsupplier24-rowperiod-labelPASS and priorbank/invoicePASS protected;#2981 finalOwner/device/domainbatchPREPARED/PENDING, no replay/takeover. KATPOS#2983/native/invoice and all other owners remain unchanged. No new general user decision/approval is required for this completed technical release.
+
+Checkpoint2026-10-21-recorded-payroll-ui.md,4registries, release-verification.json and scoped regenerated release-tracker.pdf synchronized. Only completed implementation removed from pending; actual acceptance remains assigned to central owner through completion or named handoff.
+
+## Τελική δοκιμή: καταγεγραμμένα έξοδα και συνδεδεμένη μισθοδοσία
+
+Κατάσταση: AWAITING USER — δεν υπάρχει ακόμη πραγματικό USER/LAB PASS για αυτή τη νέα οθόνη. Οι συνθετικές δοκιμές και το CI είναι χωριστά τεκμήρια.
+
+1. Ανοίξτε https://myworkstation-app.onrender.com/platform-admin με τη συνηθισμένη σύνδεση. Επιλέξτε το υπάρχον MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ. Ανοίξτε Εμπορικό → Αναφορές → Στατιστικά πωλήσεων → «Καταγεγραμμένα έξοδα / μισθοδοσία».
+2. Επιβεβαιώστε ότι εμφανίζεται το επιλεγμένο LAB. Επιλέξτε ολοκληρωμένο διάστημα στην ώρα Ελλάδας με ήδη γνωστές καταγεγραμμένες κινήσεις και πατήστε «Αναζήτηση». Δεν χρειάζεται νέα πληρωμή, πώληση, αλλαγή βάρδιας ή δημιουργία δοκιμαστικών εγγραφών.
+3. Ελέγξτε τις υπάρχουσες κινήσεις/ποσά με την κανονική πηγή τους. Η αναφορά εμφανίζει μη αντιλογισμένα καταγεγραμμένα έξοδα και αποδίδει μισθοδοσία μόνο όταν υπάρχει μία έγκυρη ρητή σύνδεση με εργαζόμενο. Το όνομα χειριστή δεν αποδεικνύει δικαιούχο. Αρνητικά ποσά διατηρούνται. Μη αποδιδόμενα έξοδα μπορεί να περιλαμβάνουν μισθοδοσία. Δεν πιστοποιείται τραπεζική εξόφληση, όλη η πληρωμένη μισθοδοσία ή δεδουλευμένα.
+4. Πατήστε «CSV εφαρμοσμένου αποτελέσματος». Συγκρίνετε εταιρεία/κατάστημα, ημερομηνίες, ώρα στιγμιοτύπου, κάλυψη, ποσά και ταυτότητες κινήσεων με την οθόνη. Το CSV περιλαμβάνει όλες τις επιστρεφόμενες γραμμές, όχι μόνο την ορατή σελίδα. Αν η πηγή υπερβαίνει τις10.000 γραμμές, πρέπει να γράφει ελλιπή κάλυψη και να μην εμφανίζει πλήρη συνολικά ποσά. Δεν απαιτείται να κατασκευαστεί τέτοιο δείγμα αν δεν υπάρχει.
+5. Αλλάξτε μία ημερομηνία: το παλιό αποτέλεσμα/CSV πρέπει να ακυρωθούν μέχρι νέα αναζήτηση. Κλείστε και αλλάξτε κατάστημα με την κανονική επιλογή: δεν πρέπει να παραμείνουν ποσά του προηγούμενου καταστήματος. Ελέγξτε ανάγνωση/κύλιση/κουμπιά και στο κινητό, χωρίς νέα οικονομική πράξη.
+
+Δικαιώματα: OWNER/SUPER_ADMIN, ενεργό επιλεγμένο κατάστημα της εταιρείας, υπάρχουσα άδεια INVENTORY. Για OWNER απαιτούνται και τα υπάρχοντα δικαιώματα προσωπικού BASIC και PAYROLL, με τις ήδη ισχύουσες κληρονομήσεις πακέτων. Ο server ελέγχει τα δικαιώματα. Αν εμφανιστεί έλλειψη δικαιωμάτων/πηγής, καταγράψτε το μήνυμα· μην αλλάξετε άδειες ή δεδομένα μόνο για τη δοκιμή.
+
+Καταγράψτε χρόνο Europe/Athens, ρόλο, κατάστημα, συσκευή, εφαρμοσμένο διάστημα και πραγματική παρατήρηση. Κρατήστε το CSV/εικόνα χωρίς κωδικούς ή ξένα προσωπικά δεδομένα. Αν δεν υπάρχουν ήδη κατάλληλες συνδεδεμένες πληρωμές, το συγκεκριμένο σκέλος παραμένει NOT TESTED· το κενό αποτέλεσμα δεν αποδεικνύει πλήρη απόδοση μισθοδοσίας.
+
+Δεν επαναλαμβάνονται τα ήδη αποδεκτά sales/hourly/supplier LAB tests. Οι αυτόματες αποστολές παραμένουν ανενεργές και οι υπόλοιπες αναθέσεις διατηρούν τους υπάρχοντες υπευθύνους. Κάθε πραγματικό νέο PASS/FAIL θα καταγραφεί στο κοινό checkpoint και στα αντίστοιχα μητρώα/manual σύμφωνα με το AGENTS.md.
+
+
 ## 21/10/2026 — CENTRAL-RECORDED-PAYROLL-UI-01 / SOURCE IMPLEMENTED / AWAITING FULL NATIVE CI AND USER
 
 Retained central owner codex/central-four-streams-20261018, branch codex/recorded-payroll-ui-20261021, #2706/#2527. Before-source claim#2984/head aeb716073ea60c9c38acac1f8ab1b2d104ecac2f, independentreviewPASS/CI39665200495SUCCESS, merged0376c2505e7b95f4d649bdba3f26f0981da21d98 BEFORE edits. Exactly six claimed source/test paths implemented; no backend/schema/auth/module/financial/POS source edits.
