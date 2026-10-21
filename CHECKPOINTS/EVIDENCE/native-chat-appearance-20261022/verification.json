@@ -1,0 +1,39 @@
+{
+  "sourcePr": 2989,
+  "sourceHead": "8372559067e80c301606c52912449b371ff33d05",
+  "sourceMerged": false,
+  "androidRun": 39681632487,
+  "androidResult": "SUCCESS",
+  "instrumentation": {
+    "pass": 36,
+    "fail": 0,
+    "skip": 0
+  },
+  "actualCameraProbe": "PASS",
+  "fullCiRun": 39681632347,
+  "fullCiResult": "SUCCESS",
+  "serverTests": {
+    "pass": 3774,
+    "fail": 0,
+    "skip": 0
+  },
+  "backupTests": {
+    "pass": 8,
+    "fail": 0
+  },
+  "artifactId": 12385605225,
+  "artifactZipSha256": "4c32209fbbcc55724e45485e663056862a6a2cf1e1daf7f81b9ebdfd369174f3",
+  "syntheticVisualReview": "normal and font1.3 native View renders inspected; whole captions, compact toolbar and composer",
+  "proofType": "actual synthetic native View draw; secure window unchanged; no production content",
+  "images": {
+    "conversation-large-font.png": "058b5a32116cd97deec9172c281abebdb8518c440338ba8bff77bca06a1607f1",
+    "conversation-normal.png": "8afcf5094463f7b751dd4db443c905adbed731c9b8f7ac1dc098eb4e5270b1c6"
+  },
+  "release": "BLOCKED pending retained wholesale causal fix and fresh combined checks",
+  "knownRequiredFailure": 39679682971,
+  "publicVersionUnchanged": "0.1.9-preview",
+  "signedCandidateProduced": false,
+  "physicalAppearanceAcceptance": "NOT TESTED",
+  "owner": "feat/android-chat-native-20261017",
+  "ios": "LAST"
+}

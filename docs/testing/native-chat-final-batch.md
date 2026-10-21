@@ -1,3 +1,7 @@
+## 22/10/2026 - Appearance candidate prepared, not yet installable
+
+Source PR #2989 / head 8372559067e80c301606c52912449b371ff33d05 passes Android 39681632487 and full CI 39681632347. Final synthetic normal/large-font native renderings inspected, not a physical PASS. Shared known wholesale readiness cause keeps merge/sign/public release on hold pending its retained owner fix and fresh combined checks. Public version stays 0.1.9. After verified 0.1.10 publication, inspect conversation spacing, whole labels and composer on the phone; do not replay accepted camera/voice/photo/push samples only for documentation. iOS last. Native owner retained.
+
 ## 22/10/2026 - camera video send and PC view USER PASS; remaining scope only
 
 Η επιβεβαιωμένη λήψη/αποστολή/προβολή στο PC δεν επαναλαμβάνεται. Ήχος δεν δηλώθηκε. Gallery/ready replies/μη μετρημένα session/privacy/device/update residuals μένουν ανοικτά. Owner retained, iOS LAST.
