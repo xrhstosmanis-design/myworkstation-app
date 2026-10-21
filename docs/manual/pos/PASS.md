@@ -1,3 +1,9 @@
+## 21/10/2026 — Real KAT coffee fee configuration / LIMITED LIVE PASS
+
+Authorized owner/SuperAdmin uses the explicitly selected Κυλικείο ΚΑΤ Inventory bulk SET workflow documented below. It is already applied:57 prepared-coffee identities now associate existing KAT-32944 qty1/0.05;36 identical embedded preparation fees cleared. Preserve7inactive, two excluded raw capsules, base prices/VAT/departments and all stocks. Do not run the configuration/import again. Cashier refreshes POS catalog before use; coffee adds its separate0.05 line automatically and parent qty/removal controls its quantity, as measured in the prior LAB acceptance (1.65+0.05=1.70).
+
+Native real configuration and complete independent readback21Oct15:17–15:20UTC PASS with0protected-field mismatches; no KAT sale/payment/order/stock movement or shift opened. Reopened FREDDO ESPRESSO SET card independently displays saved1/0.05. Physical fiscal checkout/mobile/wider readiness remain NOT TESTED. If missing, refresh catalog and inspect selected store/product/link; preserve saved configuration and inspect state before any retry. Never change base prices or VAT to compensate. Checkpoint2026-10-20-kat-coffee-environmental-fee.md, evidence09–13 and kat-freddo-saved-fee.jpg authoritative; LIVEa436c9981e1ffa72f9006b5964ab6a7dd2b8536e.
+
 ## 21/10/2026 — SET environmental fee / LIMITED LAB PASS
 
 Authorized owner/SuperAdmin opens the explicitly selected store's Εμπορική λειτουργία → Λοιπές εμπορικές λειτουργίες → Αποθήκη. Select exact reviewed parent products; Ομαδική διόρθωση → enable SET → choose existing same-store fee, quantity1 and current0.05 price. Keep other fields Χωρίς αλλαγή. If replacing the same embedded preparation fee, select its explicit removal option, review identities and confirm once. Verify saved links and unchanged price/VAT/activation/stock before continuing. Never apply by a coffee-name substring or transfer LAB fixtures to a real store.
