@@ -1,0 +1,67 @@
+{
+  "kind": "ISOLATED_TECHNICAL_NOT_LAB_NOT_USER",
+  "claim": {
+    "pr": 2984,
+    "head": "aeb716073ea60c9c38acac1f8ab1b2d104ecac2f",
+    "ci": 39665200495,
+    "merge": "0376c2505e7b95f4d649bdba3f26f0981da21d98",
+    "beforeSource": true
+  },
+  "runtime": "Node20.20.2",
+  "localBaseline": "b71ca104f92f0b658a68f0a0ee13ce307abef852",
+  "runtimeCompareVerifiedTo": "a70ea46be258feb8a584e59c8a139c9c4f63477b",
+  "baselineDifferences": "Only4installedbackendfiles copied; no dependency/lock changes published",
+  "focused": {
+    "pass": 60,
+    "fail": 0,
+    "skip": 0,
+    "command": "node --test server/test/recorded-payroll-expense-consumer.test.js server/test/recorded-payroll-expense-ui.test.js server/test/recorded-payroll-expense-report.test.js server/test/kiosk-sales-comparison-ui.test.js server/test/kiosk-sales-hourly-ui.test.js server/test/kiosk-sales-coverage-ui.test.js"
+  },
+  "build": {
+    "command": "npm run build",
+    "status": "PASS",
+    "seconds": 9.46,
+    "tableServiceInvariant": "PASS",
+    "existingChunkSizeWarning": true
+  },
+  "native": {
+    "status": "NOT_RUN_LOCALLY",
+    "reason": "No isolated localPostgreSQL",
+    "required": "FullCI parent+4newcases actuallyexecuted,no skip"
+  },
+  "failuresRetained": [
+    {
+      "kind": "IN_FLIGHT_DRAFT_REGRESSION",
+      "fail": 13,
+      "cause": "GlobalElement missing in protectedJSDOMfixture",
+      "resolution": "Realm-independent DOMchecks; oldtests unchanged",
+      "final": "60PASS/0FAIL/0SKIP"
+    },
+    {
+      "kind": "NEW_UI_TEST_ASSERTIONS",
+      "pass": 41,
+      "fail": 2,
+      "cause": "Count included employee summary rows; disabledbutton click expected an event",
+      "resolution": "Scope transaction table and use enabledclose to prove token fence; guards preserved",
+      "final": "43PASS/0FAIL/0SKIP"
+    },
+    {
+      "kind": "ISOLATED_BROWSER_LAYOUT",
+      "before": {
+        "buttonHeight": 25,
+        "dialogClientWidth": 356,
+        "dialogScrollWidth": 677
+      },
+      "after": {
+        "buttonHeight": 44,
+        "dialogClientWidth": 356,
+        "dialogScrollWidth": 356
+      },
+      "status": "PASS_SYNTHETIC_ONLY"
+    }
+  ],
+  "sourceReview": "Independent cash_contract_audit no runtime blocker; final exactremote review required",
+  "productionActions": [],
+  "businessReplay": false,
+  "cashDispatchEnabled": false
+}
