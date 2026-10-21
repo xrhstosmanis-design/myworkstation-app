@@ -1,3 +1,19 @@
+## 21/10/2026 15:05 UTC — KAT coffee fee / LIMITED LAB PASS / REAL KAT CONFIGURATION OPEN
+
+Retained owner `ops/kat-catalog-import-20261020`, source `fix/kat-coffee-fee-set-20261020`. This is the authoritative coffee status; older source/LAB sign-in entries below are historical. Source PR2970 and guarded LIVE `a436c9981e1ffa72f9006b5964ab6a7dd2b8536e` unchanged; completed full CI39485499295/exact-main39486804524 are not repeated. Main since handoff contains only the independent recorded-payroll-expenses claim PR2975, preserved.
+
+Actual Cloud Chrome LAB acceptance completed 21Oct14:54–15:05UTC using native SuperAdmin Inventory and LAB POS2 / MAIN shift a3494bb3-61cf-447c-9707-27311f35708c. Three synthetic zero-stock fixtures only: A666247ef-233c-4e72-8a25-7938a3783082 at1.65, B18bd6052-38e8-44e6-8152-74e7567afa89 at2.00, feeab5404f8-d481-426f-aaf6-974634e49066 at0.05. One confirmed native bulk transaction attached both parents qty1/price0.05 and cleared A's matching embedded preparation fee0.05→0; prep enabled/station LAB COFFEE/autoPrintfalse retained. Base prices, VAT/departments, activation and stock unchanged.
+
+LIMITED LAB PASS: actual cart A1+fee1=1.70; A2+fee2=3.40; A2+B1+sharedfee3=5.45; removing A leaves B1+fee1=2.05; removing B empties cart0.00. Child quantity controls disabled. No checkout, preparation submission, payment, sale, stock posting or shift action. Financial/stock/control readbacks unchanged: LAB95movements/90sales/90payments/134transactions, MAIN cash/card/IRIS/total0 and drawer9.40. Existing LAB catalog hash90ba4be5db0402961e18b28541cf965e unchanged. KAT1900/199/165/180/213 and control store unchanged. Measurements bracket the cart sequence and the later individual actions; no separate DB sample exists between first add and qty increment, so per-action financial attribution for those two steps is NOT TESTED. No replay to fill that gap.
+
+Evidence `CHECKPOINTS/EVIDENCE/kat-coffee-fee-20261021/01-before.json` through `08-pos-acceptance.json`, bulk success and empty-cart screenshots. Inventory/POS manuals updated only for this measured scope. Mobile/physical fiscal checkout remain NOT TESTED; no overall POS readiness claim.
+
+Remaining ASSIGNED: after this documentation PR green CI and merge, refresh exact real KAT candidate identities/controls, configure57 prepared coffees in normal selected-store bulk UI using existing KAT-32944 qty1/0.05, clear only matching embedded preparation fee, preserve7 inactive and exclude raw capsules KAT-54013/54014. Then independent full protected-field readback and real configuration receipt. Separate0.50 mobile top-up service remains OPEN; accepted import/stock/staff work is not repeated.
+
+## 21/10/2026 — Fresh LAB pre-action baseline
+
+Create synthetic coffee A only; no sale/payment/stock finalization. Measured baseline in kat-coffee-fee-20261021/01-before.json. MAIN opening drawer9.40/cash0/card0; other terminal/store controls recorded. NOT TESTED before action.
+
 ## 20/10/2026 21:29 UTC — KAT coffee fee / CODE LIVE / BLOCKED ON LAB POS SIGN-IN
 
 Retained owner `ops/kat-catalog-import-20261020`, source branch `fix/kat-coffee-fee-set-20261020`. No receiving page is assigned and this scope is not released. Resume this work, without repeating completed CI, import, stocktake or staff onboarding.

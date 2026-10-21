@@ -1,0 +1,64 @@
+{
+  "beforePreparationSave": [
+    {
+      "catalogCount": 105,
+      "lastMovementAt": "2026-10-12T20:42:11.404Z",
+      "movementCount": 95,
+      "observedAt": "2026-10-21T14:58:07.629145Z",
+      "oldCatalogHash": "90ba4be5db0402961e18b28541cf965e",
+      "openShifts": [
+        {
+          "card": 0,
+          "cash": 0,
+          "expenses": 0,
+          "id": "a3494bb3-61cf-447c-9707-27311f35708c",
+          "openingDrawer": 9.4,
+          "status": "OPEN",
+          "terminal": "MAIN"
+        }
+      ],
+      "paymentCount": 90,
+      "saleCount": 90,
+      "saleTotal": 68.9,
+      "shiftHash": "098bdefec12ac188d1f4ba42a99c0e8b",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "storeProductsHash": "7bdaddd3925c4064bd45e66278d3d7aa",
+      "transactionCount": 134,
+      "transactionTotal": 5647.72
+    },
+    {
+      "catalogCount": 0,
+      "lastMovementAt": null,
+      "movementCount": 0,
+      "observedAt": "2026-10-21T14:58:07.629145Z",
+      "oldCatalogHash": "d41d8cd98f00b204e9800998ecf8427e",
+      "openShifts": null,
+      "paymentCount": 0,
+      "saleCount": 0,
+      "saleTotal": 0,
+      "shiftHash": "d41d8cd98f00b204e9800998ecf8427e",
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "storeProductsHash": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactionCount": 0,
+      "transactionTotal": 0
+    },
+    {
+      "catalogCount": 1900,
+      "lastMovementAt": "2026-10-20T17:24:26.149Z",
+      "movementCount": 199,
+      "observedAt": "2026-10-21T14:58:07.629145Z",
+      "oldCatalogHash": "5b6abe1377450a6d3fff540aa257ab5f",
+      "openShifts": null,
+      "paymentCount": 180,
+      "saleCount": 165,
+      "saleTotal": 363.34,
+      "shiftHash": "1c5be98dd701111a23549691064bd2de",
+      "storeId": "kat-store",
+      "storeProductsHash": "b6858229d77e14ac4690bdacfd29fbe6",
+      "transactionCount": 213,
+      "transactionTotal": 1188.88
+    }
+  ],
+  "action": "Synthetic A only: preparationEnabled=true, fee0.05, station LAB COFFEE, autoPrint=false",
+  "payment": "NONE"
+}
