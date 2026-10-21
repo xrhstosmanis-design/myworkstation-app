@@ -11,7 +11,6 @@ import android.widget.TextView;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-import androidx.test.platform.app.InstrumentationRegistry;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.lang.reflect.Field;
@@ -49,6 +48,7 @@ public class ConversationAppearanceTest {
                         set(a,"api",new Api());set(a,"token","appearance-fixture-token");set(a,"selected",store());set(a,"identity",new JSONObject().put("id","fixture-owner").put("role","OWNER").put("tokenType","BACKOFFICE_USER"));call(a,"conversation");
                     }catch(Exception e){throw new AssertionError(e);}});
                     boolean ready=false;for(int n=0;n<100;n++){boolean[] idle={false};scenario.onActivity(a->{try{idle[0]=!(Boolean)get(a,"busy");}catch(Exception e){throw new AssertionError(e);}});if(idle[0]){ready=true;break;}Thread.sleep(50);}assertTrue(ready);
+                    Bitmap[] proof={null};
                     scenario.onActivity(a->{try{
                         View root=(View)get(a,"root");float density=a.getResources().getDisplayMetrics().density;
                         for(int width:new int[]{320,360}){
@@ -60,10 +60,11 @@ public class ConversationAppearanceTest {
                         }
                         Method status=MainActivity.class.getDeclaredMethod("status",String.class);status.setAccessible(true);status.invoke(a,"Δοκιμαστική ενημέρωση");assertEquals(View.VISIBLE,((TextView)get(a,"notice")).getVisibility());status.invoke(a,"");assertEquals(View.GONE,((View)get(a,"notice")).getVisibility());
                         set(a,"voiceDraft",VoiceData.fromPcm(new short[]{1,2},2));call(a,"updateVoiceLabel");assertEquals(View.VISIBLE,((View)get(a,"voiceLabel")).getVisibility());call(a,"clearVoice");call(a,"updateVoiceLabel");assertEquals(View.GONE,((View)get(a,"voiceLabel")).getVisibility());
-                        root.requestLayout();
+                        int w=Math.round(360*density),h=Math.round(720*density);root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);
+                        // Paint the actual synthetic View tree, keeping FLAG_SECURE unchanged.
+                        proof[0]=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);root.draw(new android.graphics.Canvas(proof[0]));
                     }catch(Exception e){throw new AssertionError(e);}});
-                    InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-                    Bitmap bitmap=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();assertNotNull(bitmap);
+                    Bitmap bitmap=proof[0];assertNotNull(bitmap);
                     File dir=new File(context.getExternalFilesDir(null),"ui-proof");assertTrue(dir.isDirectory()||dir.mkdirs());try(FileOutputStream out=new FileOutputStream(new File(dir,scale==1f?"conversation-normal.png":"conversation-large-font.png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}finally{bitmap.recycle();}
                 }
             }

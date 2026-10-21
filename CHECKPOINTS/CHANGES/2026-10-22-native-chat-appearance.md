@@ -1,3 +1,6 @@
+## Synthetic proof capture detail
+The fixture paints the actual measured native View tree into a test-only bitmap. FLAG_SECURE remains enabled: no OS screenshot bypass, no privacy flag change, no production/private content capture. Screenshots are isolated fixture renderings, not physical-user acceptance.
+
 ## 22/10/2026 - COMPACT MODERN UI0.1.10 CANDIDATE / AWAITING CI AND VISUAL REVIEW
 
 Before-source claimPR2988/head139b501c full applicable docsCI39676803661 green mergedfef10df. Same native owner/branch. Source changes presentation only: conversation header/tabs spacing, single equal-width adaptive toolbar (Απαντήσεις/Φωνητικό/Βίντεο), rounded stateful buttons and composer, quieter attachment actions, hide empty draft/status rows and restore nonempty labels. >=48dp tap targets and wrap-content two-line action captions. Global login/store-list controls and sender metadata/data unchanged; nonempty error/status live region remains. Same action callbacks/media/session/store/transport/privacy code preserved. Build0.1.10/code11, stable signer unchanged in future build; public0.1.9 remains unchanged until separately verified publication.
