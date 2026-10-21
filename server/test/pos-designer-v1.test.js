@@ -36,8 +36,8 @@ test("the Super Admin designer controls the approved operator POS surface",()=>{
   assert.match(platform,/theme:z\.object/);
   assert.match(designer,/Ζωντανή προεπισκόπηση — πραγματική διάταξη καταστήματος/);
   assert.match(designer,/Γρήγορα \(20\)/);
-  assert.match(designer,/Κατηγορίες \(14\)/);
-  assert.match(designer,/ΒΑΣΙΚΗ ΔΟΜΗ: 20 Γρήγορες θέσεις \+ 14 Κατηγορίες/);
+  assert.match(designer,/Κατηγορίες \(\{layout\.categories\.length\}\)/);
+  assert.match(designer,/ΒΑΣΙΚΗ ΔΟΜΗ: 20 Γρήγορες θέσεις \+ έως 20 Κατηγορίες/);
   assert.match(pos,/store-operator-pos/);
   assert.match(pos,/addQuickProduct/);
   assert.match(pos,/setPosCategory/);
