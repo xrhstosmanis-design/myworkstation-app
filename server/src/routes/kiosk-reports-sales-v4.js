@@ -4,6 +4,7 @@ import {prisma} from "../prisma.js";
 
 import {optionalSalesCalendar,salesReportCalendar} from "../services/sales-report-calendar.js";
 import {readSalesReportComparison} from "../services/sales-report-comparison.js";
+import {readRecordedPayrollExpenseReport} from "../services/recorded-payroll-expense-report.js";
 
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
@@ -170,6 +171,14 @@ export async function readSalesAnalysisReport({companyId,from,to,storeId,q,calen
   });
   return {...(includeHourly?{hourlyActivity}:{}),unattributedPromotionReversal,sourceCoverage,...(calendar?{companyId,storeId,period:{calendarFrom:calendar.calendarFrom,calendarTo:calendar.calendarTo,timeZone:calendar.timeZone,from:from.toISOString(),toExclusive:to.toISOString()}}:{}),items,count:items.length,totalQuantity:items.reduce((a,r)=>a+r.salesQuantity,0),totalGross:items.reduce((a,r)=>a+r.grossSales,0),totalNet:items.reduce((a,r)=>a+r.netSales,0),totalVat:items.reduce((a,r)=>a+r.vatValue,0),totalCost:items.reduce((a,r)=>a+r.costValue,0),totalProfit:items.reduce((a,r)=>a+r.profit,0),normalSaleCount:metadata._overallNormalSaleCount,reversalCount:metadata._overallReversalCount,returnGrossValue:items.reduce((a,r)=>a+r.returnGrossValue,0),reversalAware:true};
 }
+// The existing inventory mount still applies. Payroll adds a narrower role and
+// personnel-package boundary inside its read-only snapshot; no writer is used.
+router.get("/recorded-payroll-expenses",async(req,res,next)=>{try{
+  res.set("Cache-Control","no-store");
+  if(Object.keys(req.query).some(key=>!["storeId","from","to","timeZone"].includes(key)))throw Object.assign(new Error("Μη έγκυρα φίλτρα αναφοράς εξόδων."),{status:400});
+  res.json(await readRecordedPayrollExpenseReport({user:req.user,storeId:req.query.storeId,from:req.query.from,to:req.query.to,timeZone:req.query.timeZone},{db:prisma}));
+}catch(error){next(error)}});
+
 router.get("/sales-analysis",async(req,res,next)=>{try{
   const selected=filters(req),comparison=req.query.compareFrom!==undefined||req.query.compareTo!==undefined;
   res.json(comparison?await readSalesReportComparison({...selected,compareFrom:req.query.compareFrom,compareTo:req.query.compareTo},{db:prisma,readReport:readSalesAnalysisReport}):await readSalesAnalysisReport(selected));
@@ -207,3 +216,4 @@ router.get("/sales-analysis/:productId",async(req,res,next)=>{try{
 }catch(error){next(error)}});
 
 export default router;
+
