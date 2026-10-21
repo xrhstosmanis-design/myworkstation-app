@@ -1,3 +1,6 @@
+## UI proof transport correction / no production change
+Run39678517977: compile/unit/lint, actual camera probe and all36 instrumentation tests PASS; job failed only because AGP uninstalls the fixture app before the later adb pull. Use the standard additionalTestOutputDir collector with test-only external media PNG output, copied by Gradle before uninstall, then require both host images. No storage permission, FLAG_SECURE change, production media persistence or weakened test. FullCI39678518057 tracked separately; latest exact head must rerun checks.
+
 ## Synthetic proof capture detail
 The fixture paints the actual measured native View tree into a test-only bitmap. FLAG_SECURE remains enabled: no OS screenshot bypass, no privacy flag change, no production/private content capture. Screenshots are isolated fixture renderings, not physical-user acceptance.
 

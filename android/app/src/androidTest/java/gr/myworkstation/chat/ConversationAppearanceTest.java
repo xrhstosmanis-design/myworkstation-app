@@ -65,7 +65,7 @@ public class ConversationAppearanceTest {
                         proof[0]=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);root.draw(new android.graphics.Canvas(proof[0]));
                     }catch(Exception e){throw new AssertionError(e);}});
                     Bitmap bitmap=proof[0];assertNotNull(bitmap);
-                    File dir=new File(context.getExternalFilesDir(null),"ui-proof");assertTrue(dir.isDirectory()||dir.mkdirs());try(FileOutputStream out=new FileOutputStream(new File(dir,scale==1f?"conversation-normal.png":"conversation-large-font.png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}finally{bitmap.recycle();}
+                    File dir=new File(context.getExternalMediaDirs()[0],"ui-proof");assertTrue(dir.isDirectory()||dir.mkdirs());try(FileOutputStream out=new FileOutputStream(new File(dir,scale==1f?"conversation-normal.png":"conversation-large-font.png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}finally{bitmap.recycle();}
                 }
             }
         }finally{context.getResources().updateConfiguration(original,originalMetrics);new TokenVault(context).clear();TokenVault.pendingTwoFactor(context).clear();VoiceBuffer.clear();VideoBuffer.clear();}
