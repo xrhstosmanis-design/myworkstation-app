@@ -1,0 +1,112 @@
+{
+  "kind": "ISOLATED_SYNTHETIC_REAL_CHROMIUM_NOT_LAB",
+  "chromium": "153.0.0",
+  "runtime": "Node20.20.2",
+  "sourceGitBlobs": {
+    "client/src/components/commerce/installKioskReportsSalesV4.js": "01da0c5be0d219169ce51dc16e10925d6c91551c",
+    "client/src/components/commerce/recordedPayrollExpenseDialog.js": "492a391f40437810fcfbdcfa815487f798464652",
+    "client/src/components/commerce/recordedPayrollExpenseView.js": "e9f71c63fefcff0fefc952e4353c69ae2ee7a442"
+  },
+  "results": [
+    {
+      "width": 1348,
+      "height": 936,
+      "launch": {
+        "x": 1150.9453125,
+        "y": 693.09375,
+        "width": 356.109375,
+        "height": 36,
+        "hit": true
+      },
+      "search": {
+        "x": 556.6640625,
+        "y": 495.5,
+        "width": 115.328125,
+        "height": 44,
+        "hit": true
+      },
+      "csv": {
+        "x": 781.9921875,
+        "y": 232,
+        "width": 311.328125,
+        "height": 44,
+        "hit": true
+      },
+      "close": {
+        "x": 1165.2265625,
+        "y": 359.5,
+        "width": 95.546875,
+        "height": 44,
+        "hit": true
+      },
+      "dialog": {
+        "x": 114,
+        "y": 16,
+        "width": 1120,
+        "height": 904,
+        "scrollWidth": 1103,
+        "clientWidth": 1103
+      },
+      "visibleTransactionRows": 100,
+      "allDisplayedRows": 101,
+      "focusInside": true,
+      "backgroundFetches": 2,
+      "csvAll101Rows": true,
+      "pagination": true,
+      "draftInvalidates": true,
+      "escapeRestoresFocus": true,
+      "programmaticHiddenCloses": true,
+      "horizontalTableScroll": false
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "launch": {
+        "x": 194.7890625,
+        "y": 810.09375,
+        "width": 356.109375,
+        "height": 36,
+        "hit": true
+      },
+      "search": {
+        "x": 276.6640625,
+        "y": 482.5,
+        "width": 115.328125,
+        "height": 44,
+        "hit": true
+      },
+      "csv": {
+        "x": 192.6640625,
+        "y": 422,
+        "width": 311.328125,
+        "height": 44,
+        "hit": true
+      },
+      "close": {
+        "x": 84.7734375,
+        "y": 209.5,
+        "width": 95.546875,
+        "height": 44,
+        "hit": true
+      },
+      "dialog": {
+        "x": 16,
+        "y": 16,
+        "width": 358,
+        "height": 812,
+        "scrollWidth": 356,
+        "clientWidth": 356
+      },
+      "visibleTransactionRows": 100,
+      "allDisplayedRows": 101,
+      "focusInside": true,
+      "backgroundFetches": 2,
+      "csvAll101Rows": true,
+      "pagination": true,
+      "draftInvalidates": true,
+      "escapeRestoresFocus": true,
+      "programmaticHiddenCloses": true,
+      "horizontalTableScroll": true
+    }
+  ]
+}
