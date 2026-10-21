@@ -1,0 +1,51 @@
+{
+  "kind": "SYNTHETIC causal diagnosis / actual Chromium / controlled local HTTP only",
+  "at": "2026-10-21T21:39:32.722Z",
+  "sourceRevision": "8b8b8ca518b6bba042758e16893c61ad8e05b97c",
+  "sourceBlobs": {
+    "index.html": "d82df7685dfbbb8a0169de6f4d626193258d4677",
+    "lab.js": "08f89c1f55d48e45ec21e39b7917a4c3a76f58b9",
+    "lab.css": "f05655149d4bd3fd6283aa3330ef3247586efc62"
+  },
+  "early": {
+    "singleClick": true,
+    "beforeClick": {
+      "readyState": "complete",
+      "ownerPresent": true,
+      "buttonEnabled": true,
+      "consoleHidden": true,
+      "identity": "Χωρίς σύνδεση δοκιμής",
+      "runtimeStatus": "Έλεγχος περιβάλλοντος…",
+      "revision": ""
+    },
+    "afterRelease": {
+      "readyState": "complete",
+      "ownerPresent": true,
+      "buttonEnabled": true,
+      "consoleHidden": true,
+      "identity": "Χωρίς σύνδεση δοκιμής",
+      "runtimeStatus": "Ενεργό · μόνο εικονικά δεδομένα",
+      "revision": "Έκδοση SYNTHETIC delayed-meta diagnostic — NOT production/LAB acceptance"
+    },
+    "sessionPosts": 0
+  },
+  "separateFreshPage": {
+    "singleClick": true,
+    "lateBeforeClick": {
+      "readyState": "complete",
+      "ownerPresent": true,
+      "buttonEnabled": true,
+      "consoleHidden": true,
+      "identity": "Χωρίς σύνδεση δοκιμής",
+      "runtimeStatus": "Ενεργό · μόνο εικονικά δεδομένα",
+      "revision": "Έκδοση SYNTHETIC delayed-meta diagnostic — NOT production/LAB acceptance"
+    },
+    "sessionPosts": 1,
+    "controlledResponseStatus": 403
+  },
+  "businessDatabase": false,
+  "actualLabAcceptance": false,
+  "productionRequests": false,
+  "actualFailedRunMetaTiming": "NOT CAPTURED; this proves the harness race, not exact request timing of run39679682971",
+  "pass": true
+}

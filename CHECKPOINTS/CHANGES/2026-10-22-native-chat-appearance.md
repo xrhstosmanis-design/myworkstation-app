@@ -1,3 +1,6 @@
+## Shared release hold / preserve other owner causal blocker
+Latest main5d7ec5d records required wholesale role-readiness race in CHECKPOINTS/CHANGES/2026-10-22-central-auto-dispatch-integration.md, exact-main39679682971 FAIL. Prior green native/full runs do not clear that known causal blocker. Retained wholesale owner owns correction; native scope will not edit their files, retry an unchanged failed run, bypass guarded deployment or publish an alternate install route. Final native source/visual review can proceed, but merge/release/sign/public installation waits for their bounded fix and fresh combined green checks. Existing public0.1.9 remains current.
+
 ## Actual synthetic visual review refinement
 Head7c1deb960ade71dc80f3c176697c4f256c028660 Android39680073593 SUCCESS with compile/unit/lint, actual camera probe,36instrumentation PASS and both PNGs collected in artifact12385085203. Native synthetic View render review: normal clear; large-font ready-reply caption breaks the final letter onto another line. Shorten visible caption to Έτοιμες, keep complete Έτοιμες απαντήσεις accessibility label and original action, and require its single-line rendering at both phone widths/font scales. Remaining hosted checks and final screenshot review still required. No USER appearance PASS.
 

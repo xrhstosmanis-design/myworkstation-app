@@ -1,0 +1,69 @@
+{
+  "kind": "Technical source delivery / RELEASE BLOCKED / not LAB feature acceptance",
+  "sourcePR": 2991,
+  "sourceHead": "37812e30ae7f144a0a4d6dd7fec2a976c5c4164e",
+  "merge": "8b8b8ca518b6bba042758e16893c61ad8e05b97c",
+  "claim": {
+    "pr": 2990,
+    "ci": 39677533447,
+    "merge": "8fcc4564ebc7338cbe1139dea62cc2aa20a10cc2"
+  },
+  "local": {
+    "node": "20.20.2",
+    "pass": 37,
+    "fail": 0,
+    "skip": 0,
+    "initialOwnTestFailure": "Nonexistent hash field assertion; corrected to actual payloadFingerprint, then37/0/0"
+  },
+  "prCI": {
+    "id": 39678593064,
+    "buildJob": 119495639014,
+    "allFiveJobs": "SUCCESS",
+    "server": {
+      "pass": 3774,
+      "fail": 0,
+      "skip": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "nativeParentAndFiveSubcases": "ACTUALLY PASS UNSKIPPED"
+  },
+  "mainCI": {
+    "id": 39679682971,
+    "wholesaleJob": 119498983549,
+    "wholesale": "FAIL",
+    "failedAt": "2026-10-21T21:35:58Z",
+    "failure": "Final owner reentry flow.mjs66: Timed out waiting for owner console",
+    "priorSyntheticChecks": 10,
+    "artifactId": 12383496880,
+    "artifactZipSHA256": "3e08614a2ca7826b8d4c31ce725fa76ccf4f11a87bcd3f8e99592cf4800fef42",
+    "mainBuildJob": 119498983983,
+    "mainBuildLastObserved": "in_progress",
+    "mainBuildLastObservedStep": "Run real HTTP E2E flows",
+    "mainBuildCannotClearWholeCIFailure": true
+  },
+  "diagnostic": {
+    "kind": "Actual Chromium, controlled local HTTP, no business DB or production requests",
+    "result": "Reproduced real initialization listener-binding race; exact failed-run meta timing not captured",
+    "json": "delayed-meta-reproduction.json",
+    "script": "delayed-meta-repro.mjs",
+    "actualFailureScreenshot": "main-wholesale-FAIL.png",
+    "diagnosticScreenshot": "delayed-meta-lost-click.png"
+  },
+  "boundaries": {
+    "dispatchEnabled": false,
+    "installed": false,
+    "newLABFeaturePass": false,
+    "productionBusinessMutation": false,
+    "wholesaleSourceEdited": false,
+    "rerunUnchangedCI": false,
+    "timeoutIncreased": false,
+    "guardBypass": false
+  },
+  "retainedOwner": "codex/wholesale-suite-20261017",
+  "handoffComment": 6327136574,
+  "next": "Retained wholesale readiness fix / exact named handoff; require fresh full green combined CI before guarded release"
+}
