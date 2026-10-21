@@ -576,7 +576,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `32`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
-- **Υπόλοιπο / όριο:** 20/10/2026 22:22 Athens: catalog period sourcePR2965 LIVEf813ea5edf6621cd0ad0cdd6cb50d2719b03dd24, exactPR/main fullCI3683/0/0+8, ordinaryguard39481744166, actualRenderdep-dbbrrl8ae00c739vrq4g LIVE/healthy. Supplier23-row PASS retained; corrected period note AWAITING actual user-file retest. SuperAdmin confirmed; Owner not covered. Next only fresh selected-Diadoxou supplier CSV comparison, no accepted bank/invoice replay. Whole OPEN/ASSIGNED codex/assistant-business-queries-20261015 for Owner/history/files/mobile/physical/wider/nonempty-offers/real beer mapping. Browser restriction persists; no business/catalog/auth mutation or microphone request. Checkpoint2026-10-20-assistant-business-acceptance.
+- **Υπόλοιπο / όριο:** 21/10/2026 21:39 Athens: Diadoxou supplier actual user CSV PASS, corrected current-catalog period note and24/24 original-source rows match (23 names; duplicate-record multiplicity retained).6584-byte actual upload/hash verified; PR2965 period correction and retest CLOSED, prior bank/invoice PASS retained. Source read after upload, no new agent UI replay/before-after invariant/session attestation/browser recovery. Whole OPEN/ASSIGNED codex/assistant-business-queries-20261015 for remaining normal Owner/history/files/roles, mobile/physical, wider/nonempty-offers/real beer mapping. Next remaining Owner context/file parity when permitted browser control is available; no credential/native-browser bypass, microphone/catalog/business mutation. Checkpoint2026-10-20-assistant-business-acceptance; manual super-admin/PASS.
 
 ## 31 — Μηνιαία Αναφορά Ιδιοκτήτη
 
