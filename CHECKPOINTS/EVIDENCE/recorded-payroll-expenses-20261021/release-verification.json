@@ -1,0 +1,148 @@
+{
+  "scope": "CENTRAL-RECORDED-PAYROLL-EXPENSES-01",
+  "claim": {
+    "pr": 2975,
+    "head": "220d0bef1800680b709fb7186ef4c167facf4c19",
+    "ci": 39620870173,
+    "merge": "d6802a07a5db7f7527e90139b70309d81543402d"
+  },
+  "source": {
+    "pr": 2976,
+    "head": "794e78937c0ee712d694c4a583ea9c4bd75fc588",
+    "merge": "c444cba8a6e87cf4f3a0fc9ae82b251338a51b54",
+    "ci": 39622401968,
+    "buildJob": 119299349221,
+    "node": "20.20.2",
+    "server": {
+      "pass": 3732,
+      "fail": 0,
+      "skip": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "allFiveJobs": "SUCCESS",
+    "nativeParentAndSevenSubcases": "ACTUALLY EXECUTED AND PASS",
+    "nativeLogEvidence": [
+      "2026-10-21T15:09:14.2302973Z     ok 1 - one signed ledger count, explicit beneficiary links, private foreign ambiguity and no settlement claim",
+      "2026-10-21T15:09:14.2303294Z       duration_ms: 46.116122",
+      "2026-10-21T15:09:14.2304493Z     ok 2 - actual RepeatableRead/read-only transaction and independent-client snapshot",
+      "2026-10-21T15:09:14.2304804Z       duration_ms: 108.59506",
+      "2026-10-21T15:09:14.2306074Z     ok 3 - Athens DST half-open timestamp boundaries, unrelated paymentDate and empty scope",
+      "2026-10-21T15:09:14.2306379Z       duration_ms: 50.586127",
+      "2026-10-21T15:09:14.2308195Z     ok 4 - same-company active store, BASIC/PAYROLL snapshot gates, duplicate/foreign modules and role denials",
+      "2026-10-21T15:09:14.2308515Z       duration_ms: 117.083946",
+      "2026-10-21T15:09:14.2309869Z     ok 5 - actual production HTTP router rejects role/query/store escapes without financial writes",
+      "2026-10-21T15:09:14.2310185Z       duration_ms: 148.530284",
+      "2026-10-21T15:09:14.2311318Z     ok 6 - exact 10000-row completeness and 10001-row overflow suppress full totals",
+      "2026-10-21T15:09:14.2311675Z       duration_ms: 1065.164141",
+      "2026-10-21T15:09:14.2313007Z     ok 7 - missing required tables fail 503 without bootstrap, preserving every fixture/control row",
+      "2026-10-21T15:09:14.2313308Z       duration_ms: 302.242288",
+      "2026-10-21T15:09:14.2314827Z ok 2588 - native recorded expense/payroll: read-only snapshot, tenant/role/module boundaries, exact links, signed ledger, DST and cap",
+      "2026-10-21T15:09:14.2315322Z   duration_ms: 2068.44342",
+      "2026-10-21T15:09:14.2317711Z   duration_ms: 27.144507"
+    ],
+    "independentReviewComment": 6319284436,
+    "mergeIdenticalToReviewedTree": true,
+    "blobs": {
+      "server/src/routes/kiosk-reports-sales-v4.js": "dffb96f041091ca300f7095edd03353c4974e67a",
+      "server/src/services/recorded-payroll-expense-report.js": "8dc7c454869b3ac142bb26ac618a5f0bb88010a0",
+      "server/test/recorded-payroll-expense-report.test.js": "baf37d4f9171cce32608b8129e54c1e5122df2ac",
+      "server/test/recorded-payroll-expense-report-postgres.test.js": "3e3bb7b0a22d7183455eecb1343784dd36d89c05"
+    }
+  },
+  "local": {
+    "node": "20.20.2",
+    "pass": 48,
+    "fail": 0,
+    "skip": 0,
+    "nativePostgres": "NOT EXECUTED LOCALLY"
+  },
+  "rollback": {
+    "revision": "a436c9981e1ffa72f9006b5964ab6a7dd2b8536e",
+    "deployId": "dep-dbbsrho473hc73cduhd0"
+  },
+  "realAcceptance": "NOT TESTED",
+  "ui": "NOT IMPLEMENTED IN THIS INCREMENT",
+  "settlementVerified": false,
+  "financialActions": "NONE",
+  "acceptedLabReplay": "NONE",
+  "cashDispatch": "OFF",
+  "owners": "N10/payroll writers/schema/UI/auth and other retained owners unchanged",
+  "main": {
+    "revision": "c444cba8a6e87cf4f3a0fc9ae82b251338a51b54",
+    "ci": 39623576730,
+    "buildJob": 119303387627,
+    "allFiveJobs": "SUCCESS",
+    "server": {
+      "pass": 3732,
+      "fail": 0,
+      "skip": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "nativeParentAndSevenSubcases": "ACTUALLY EXECUTED AND PASS",
+    "nativeLogEvidence": [
+      "2026-10-21T15:17:52.1292076Z     ok 1 - one signed ledger count, explicit beneficiary links, private foreign ambiguity and no settlement claim",
+      "2026-10-21T15:17:52.1293881Z     ok 2 - actual RepeatableRead/read-only transaction and independent-client snapshot",
+      "2026-10-21T15:17:52.1295283Z     ok 3 - Athens DST half-open timestamp boundaries, unrelated paymentDate and empty scope",
+      "2026-10-21T15:17:52.1296938Z     ok 4 - same-company active store, BASIC/PAYROLL snapshot gates, duplicate/foreign modules and role denials",
+      "2026-10-21T15:17:52.1298437Z     ok 5 - actual production HTTP router rejects role/query/store escapes without financial writes",
+      "2026-10-21T15:17:52.1299707Z     ok 6 - exact 10000-row completeness and 10001-row overflow suppress full totals",
+      "2026-10-21T15:17:52.1301204Z     ok 7 - missing required tables fail 503 without bootstrap, preserving every fixture/control row",
+      "2026-10-21T15:17:52.1303003Z ok 2588 - native recorded expense/payroll: read-only snapshot, tenant/role/module boundaries, exact links, signed ledger, DST and cap"
+    ]
+  },
+  "deployment": {
+    "workflow": 39624802820,
+    "job": 119307311882,
+    "event": "workflow_run",
+    "guardHead": "e985173ffc1ed7d1b276fad7e4d740ccb0a44c9b",
+    "pinnedRevision": "c444cba8a6e87cf4f3a0fc9ae82b251338a51b54",
+    "guardConclusion": "SUCCESS",
+    "triggeredAt": "2026-10-21T15:23:33.1982941Z",
+    "exactHealthyAt": "2026-10-21T15:28:49.4029688Z",
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-21T15:12:36Z",
+        "id": "c444cba8a6e87cf4f3a0fc9ae82b251338a51b54",
+        "message": "Merge pull request #2976 from xrhstosmanis-design/codex/recorded-payroll-expenses-20261021\n\nfeat(reports): read-only recorded expenses and linked payroll"
+      },
+      "createdAt": "2026-10-21T15:23:33.097906Z",
+      "finishedAt": "2026-10-21T15:28:49.460595Z",
+      "id": "dep-dbcdhtdg1s2s739s1b0g",
+      "startedAt": "2026-10-21T15:23:33.066032Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-21T15:29:13.742878Z"
+    },
+    "health": {
+      "observedAt": "2026-10-21T15:29:47.591937+00:00",
+      "status": 200,
+      "health": {
+        "ok": true,
+        "version": "0.22.0+kat-test-pos",
+        "revision": "c444cba8a6e87cf4f3a0fc9ae82b251338a51b54"
+      }
+    }
+  },
+  "coordinatorActionBoundary": "No coordinator financial, stock, payroll, shift, fiscal, recipient or SMTP business action; no introduced schema/migration/manual SQL. Existing ordinary service startup preserved.",
+  "operationalObservation": {
+    "window": "2026-10-21T15:26:56Z/15:27:59Z",
+    "count": 10,
+    "instance": "srv-d9isenfavr4c73bdh52g-lpmfg",
+    "message": "Οι Online Παραγγελίες δεν είναι ενεργές για το κατάστημα.",
+    "classification": "Observed module-denial log messages on prior serving instance during rollout; not a recorded-payroll request or a new payroll test FAIL. No zero-error production claim. No module activation/bypass performed; root cause not investigated in this scope."
+  },
+  "receiptBaseline": "73dd25192695efc4931ae6c4963b4b066e906e77",
+  "concurrentDocumentationPRs": [
+    2977,
+    2978
+  ],
+  "commonPdfAndOtherManualsPreserved": true
+}
