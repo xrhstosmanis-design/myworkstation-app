@@ -1,0 +1,174 @@
+{
+  "kind": "TECHNICAL_RELEASE_VERIFIED_AWAITING_USER_NOT_FEATURE_PASS",
+  "owner": "codex/central-four-streams-20261018",
+  "issues": [
+    2527,
+    2706
+  ],
+  "claim": {
+    "pr": 2984,
+    "head": "aeb716073ea60c9c38acac1f8ab1b2d104ecac2f",
+    "ci": 39665200495,
+    "merge": "0376c2505e7b95f4d649bdba3f26f0981da21d98",
+    "beforeSource": true
+  },
+  "source": {
+    "pr": 2985,
+    "head": "c1daf3c5c26c125308400ef9ce314e01740ac2d2",
+    "merge": "028b1d59b2af0ff943d18d961e8a179f18c1594d",
+    "headToMergeFiles": [],
+    "review": "Independent exactremote PASS",
+    "blobs": {
+      "client/src/components/commerce/installKioskReportsSalesV4.js": "01da0c5be0d219169ce51dc16e10925d6c91551c",
+      "client/src/components/commerce/recordedPayrollExpenseView.js": "e9f71c63fefcff0fefc952e4353c69ae2ee7a442",
+      "client/src/components/commerce/recordedPayrollExpenseDialog.js": "492a391f40437810fcfbdcfa815487f798464652",
+      "server/test/recorded-payroll-expense-ui.test.js": "8eb55fa0bb481f8dfb1e36a5845aaa590f3d7c8a",
+      "server/test/recorded-payroll-expense-consumer.test.js": "d4821b9092e92517c4feb21eef366ae90ad81220",
+      "server/test/recorded-payroll-expense-consumer-postgres.test.js": "1f5cfd777cc4cac7e8271c5735b607802c1e650a"
+    }
+  },
+  "ci": [
+    {
+      "kind": "EXACT_PR",
+      "run": 39667004265,
+      "build": 119454875705,
+      "conclusion": "SUCCESS",
+      "allJobs": 5,
+      "server": {
+        "pass": 3750,
+        "fail": 0,
+        "skip": 0
+      },
+      "backup": {
+        "pass": 8,
+        "fail": 0,
+        "skip": 0
+      },
+      "newNativeParent": "PASS_ACTUALLY_EXECUTED",
+      "newNativeCases": [
+        "107-row real producer/JSON/consumer/all-pages CSV, signed/refund/private/formula provenance",
+        "Tampered DTO, stale scope/period, redaction refusals",
+        "23/25h Athens DST, midnight and empty complete ledger",
+        "10001 actual source rows ->10000 CSV rows, partial coverage and no complete totals"
+      ]
+    },
+    {
+      "kind": "EXACT_SOURCE_MAIN",
+      "run": 39668300521,
+      "build": 119459505476,
+      "conclusion": "SUCCESS",
+      "allJobs": 5,
+      "server": {
+        "pass": 3750,
+        "fail": 0,
+        "skip": 0
+      },
+      "backup": {
+        "pass": 8,
+        "fail": 0,
+        "skip": 0
+      },
+      "newNativeParent": "PASS_ACTUALLY_EXECUTED",
+      "newNativeCases": [
+        "107-row real producer/JSON/consumer/all-pages CSV, signed/refund/private/formula provenance",
+        "Tampered DTO, stale scope/period, redaction refusals",
+        "23/25h Athens DST, midnight and empty complete ledger",
+        "10001 actual source rows ->10000 CSV rows, partial coverage and no complete totals"
+      ]
+    }
+  ],
+  "guard": {
+    "run": 39669509416,
+    "job": 119463441952,
+    "event": "workflow_run",
+    "conclusion": "SUCCESS",
+    "actualPin": "028b1d59b2af0ff943d18d961e8a179f18c1594d",
+    "requestedAt": "2026-10-21T20:21:56.9888546Z",
+    "exactHealthyAt": "2026-10-21T20:25:19.8395781Z",
+    "skipOnly": false,
+    "manualOverride": false
+  },
+  "render": {
+    "commit": {
+      "createdAt": "2026-10-21T20:12:32Z",
+      "id": "028b1d59b2af0ff943d18d961e8a179f18c1594d",
+      "message": "Merge pull request #2985 from xrhstosmanis-design/codex/recorded-payroll-ui-20261021\n\nfeat(reports): recorded expenses and linked payroll UI / applied CSV"
+    },
+    "createdAt": "2026-10-21T20:21:56.824248Z",
+    "finishedAt": "2026-10-21T20:25:18.748516Z",
+    "id": "dep-dbchtp0473hc73e9tr6g",
+    "startedAt": "2026-10-21T20:21:56.795877Z",
+    "status": "live",
+    "trigger": "deploy_hook",
+    "updatedAt": "2026-10-21T20:25:50.834035Z"
+  },
+  "publicProof": {
+    "kind": "PUBLIC_HEALTH_AND_SERVED_CLIENT_CODE_NOT_FEATURE_ACCEPTANCE",
+    "observedAt": "2026-10-21T20:26:18.978997+00:00",
+    "expectedRevision": "028b1d59b2af0ff943d18d961e8a179f18c1594d",
+    "healthStatus": 200,
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "028b1d59b2af0ff943d18d961e8a179f18c1594d"
+    },
+    "documentStatus": 200,
+    "assets": [
+      {
+        "script": "/assets/main-C0MBgqKA.js",
+        "status": 200,
+        "bytes": 327767,
+        "sha256": "fd42a18fa592fca53355b1a9df1135fbf7ffcb61a00150b6278bdeba2577a7b3",
+        "markers": {
+          "reportEndpoint": true,
+          "dialog": true,
+          "launchLabel": true,
+          "csvLabel": true
+        }
+      }
+    ]
+  },
+  "rollback": {
+    "previousHealthy": "c444cba8a6e87cf4f3a0fc9ae82b251338a51b54",
+    "renderDeploy": "dep-dbcdhtdg1s2s739s1b0g",
+    "guardArtifact": 12378019276
+  },
+  "localEvidence": "local-verification.json",
+  "syntheticBrowser": "browser-verification.json",
+  "rolloutObservation": {
+    "kind": "BOUNDED_ROLLOUT_APP_ERROR_OBSERVATION_NOT_ROOT_CAUSE",
+    "window": {
+      "from": "2026-10-21T20:21:56Z",
+      "to": "2026-10-21T20:26:30Z"
+    },
+    "returnedRecords": 30,
+    "hasMore": true,
+    "knownOnlineModuleDisabledRecords": 28,
+    "otherRecordCount": 2,
+    "instances": [
+      "srv-d9isenfavr4c73bdh52g-njqk9",
+      "srv-d9isenfavr4c73bdh52g-qkz5v"
+    ],
+    "first": "2026-10-21T20:23:02.02779401Z",
+    "last": "2026-10-21T20:26:10.907947688Z",
+    "interpretation": "Bounded30 returnedrecords/hasMoretrue:28 Online-orders-module-disabled and2 table-ordering-module-disabled refusals on prior/newservinginstances. No report request, online/table source change, module activation or business action by coordinator; causation/root cause not investigated. Not zero-production-error proof and not a new payroll feature FAIL.",
+    "tableOrderingModuleDisabledRecords": 2,
+    "otherUnclassifiedRecords": 0
+  },
+  "productionBusinessActions": [],
+  "coordinatorReportRequests": 0,
+  "coordinatorManualSQL": false,
+  "newSchemaOrMigration": false,
+  "existingRenderStartupUnchanged": true,
+  "cashDispatchEnabled": false,
+  "featureAcceptance": "AWAITING_USER",
+  "manualPassAdded": false,
+  "finalUserGuide": "docs/testing/recorded-payroll-expense-final-user-test.md",
+  "retainedOwnerActualAiReceipts": [
+    2980,
+    2981
+  ],
+  "cashContractAwaiting": "issue2704comment6318978275",
+  "wholeFourStreamsComplete": false,
+  "newGeneralUserApprovalRequired": false
+}
