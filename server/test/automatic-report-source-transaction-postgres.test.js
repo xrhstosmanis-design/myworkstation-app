@@ -118,6 +118,18 @@ export async function runAutomaticReportSourceTransactionRegression(db,other,{su
   assert.deepEqual(await snapshot(),before);
  });
 
+ await subtest('transaction-aware source sees its caller own writes without changing transaction mode and rollback leaves no effects',async()=>{
+  const before=await snapshot(),rollback=new Error('identified fixture rollback'),caller=instrument(db,{requireReadOnly:false});
+  await assert.rejects(db.$transaction(async tx=>{
+   await tx.$executeRaw`UPDATE "CashShiftSession" SET "variance"=9 WHERE "companyId"='c' AND "storeId"='s' AND "id"='morning'`;
+   const preview=await readAutomaticCashPreviewInTransaction(caller.wrap(tx),{...scope,day,frequency:'DAILY',configuration:newConfig,settingsVersion:2,now});
+   coherent(preview,2,'ALT',{morning:9,afternoon:3,night:0});
+   assert.equal(caller.trace.transactions,0);assert.deepEqual(caller.trace.commands,[]);assert.ok(caller.trace.observations.every(row=>row.readonly==='off'));
+   throw rollback;
+  },{isolationLevel:'RepeatableRead',maxWait:5000,timeout:15000}),error=>error===rollback);
+  assert.deepEqual(await snapshot(),before);
+ });
+
  await subtest('actor/store rejection and missing settings source remain read-only, without bootstrap or scope leakage',async()=>{
   const before=await snapshot();
   for(const change of [{actorId:'owner'},{actorId:'missing'},{companyId:'x'},{storeId:'foreign'},{storeId:'inactive'}])await assert.rejects(previewSavedAutomaticCashReport(instrument(db).db,{...scope,...change},{day,expectedVersion:2},now),error=>[403,404].includes(error.status));
