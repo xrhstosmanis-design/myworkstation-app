@@ -237,5 +237,37 @@
     "businessWrite": false,
     "commercialRowsPublished": false,
     "scope": "USER-SUPPLIED FILE ACCEPTANCE PASS only; whole VOICE OPEN"
+  },
+  "finalBatchPreparation20261021": {
+    "ownerInstruction": "Autonomous work now; all personal-access-dependent tests together at end; preserve completed PASS",
+    "plan": "docs/testing/voice-final-acceptance-batch.md",
+    "state": "BOUNDED PREPARATION COMPLETE; ALL NEW ACTUAL CASES PENDING",
+    "reviewedMain": "ce150873c414e952196fac78acb44a73449ecfbe",
+    "reviewedPaths": [
+      "server/src/routes/owner-assistant.js",
+      "server/src/services/owner-assistant-access.js",
+      "server/test/assistant-sales-export-read-roles.test.js",
+      "server/test/assistant-history-access-native.test.js",
+      "server/test/assistant-business-reports.test.js"
+    ],
+    "sourceDateAthens": "2026-10-20",
+    "sourceCountsOnly": {
+      "supplierPayments": 3,
+      "expenses": 1,
+      "openedShifts": 3,
+      "documents": 9,
+      "bank": 0,
+      "posAudits": 931,
+      "currentWorkforce": 5
+    },
+    "posAllDays11Through20OctOver500": true,
+    "sourceInventoryIsAppPass": false,
+    "newRuntimeChange": false,
+    "newActualUiPass": false,
+    "nativeBrowserRestrictionResolved": false,
+    "businessWrite": false,
+    "credentialsRequested": false,
+    "microphoneRequested": false,
+    "completedSamplesReplayed": false
   }
 }
