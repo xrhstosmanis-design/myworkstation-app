@@ -1,0 +1,29 @@
+{
+  "sourceMerge": "8b8b8ca518b6bba042758e16893c61ad8e05b97c",
+  "workflow": 39679682971,
+  "status": "completed",
+  "conclusion": "failure",
+  "build": {
+    "job": 119498983983,
+    "conclusion": "success",
+    "server": {
+      "pass": 3774,
+      "fail": 0,
+      "skip": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "nativeParentAndFiveSubcases": "ACTUALLY PASS UNSKIPPED"
+  },
+  "requiredWholesale": {
+    "job": 119498983549,
+    "conclusion": "failure",
+    "artifactId": 12383496880
+  },
+  "installed": false,
+  "dispatchEnabled": false,
+  "statement": "Build success does not clear required whole-workflow failure. Supersedes prior in_progress build snapshot in blocked-verification.json only; wholesale failure persists."
+}
