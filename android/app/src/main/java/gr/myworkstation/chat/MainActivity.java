@@ -258,11 +258,14 @@ public final class MainActivity extends Activity {
     }
     private void conversation() {
         view = "conversation"; layout(selected.optString("name"), tab.equals("ai") ? "Βοηθός AI · επιλεγμένο κατάστημα" : "Μηνύματα καταστήματος");
-        LinearLayout tabs = new LinearLayout(this);
-        tabs.addView(button("‹ Συνομιλίες", () -> { navigate(); selected = null; stores(); }), new LinearLayout.LayoutParams(0, dp(54), 1));
-        tabs.addView(button(tab.equals("ai") ? "Μηνύματα" : "Βοηθός AI", () -> {
+        LinearLayout header = (LinearLayout) root.getChildAt(0);
+        header.setPadding(dp(16), dp(12), dp(16), dp(10));
+        ((TextView) header.getChildAt(0)).setTextSize(20);
+        LinearLayout tabs = new LinearLayout(this); tabs.setPadding(dp(8), dp(4), dp(8), dp(4));
+        tabs.addView(chatButton("‹ Συνομιλίες", () -> { navigate(); selected = null; stores(); }, false), toolParams());
+        tabs.addView(chatButton(tab.equals("ai") ? "Μηνύματα" : "Βοηθός AI", () -> {
             if (busy) return; navigate(); tab = tab.equals("ai") ? "chat" : "ai"; conversation();
-        }), new LinearLayout.LayoutParams(0, dp(54), 1));
+        }, false), toolParams());
         root.addView(tabs, 1);
         root.removeView(contentScroll); scroll = new ScrollView(this); scroll.setFillViewport(false); scroll.setBackgroundColor(0xfff4f1f8);
         messages = new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL); messages.setPadding(dp(12), dp(8), dp(12), dp(8)); scroll.addView(messages);
@@ -271,23 +274,22 @@ public final class MainActivity extends Activity {
         if (tab.equals("ai") && (staff() || (!platform() && !identity.optString("role").equals("OWNER")))) {
             bubble("Ο βοηθός δεν είναι διαθέσιμος με τα δικαιώματα αυτού του λογαριασμού.", false, "", null); return;
         }
-        attachmentLabel = text("", 14, MUTED); root.addView(attachmentLabel);
+        attachmentLabel = text("", 14, MUTED); attachmentLabel.setVisibility(View.GONE); root.addView(attachmentLabel);
         if (tab.equals("chat")) {
-            LinearLayout extras = new LinearLayout(this);
-            extras.addView(button("Έτοιμες απαντήσεις", this::pickReply), new LinearLayout.LayoutParams(0, dp(54), 1));
-            voiceButton = button("Μικρόφωνο", this::recordVoice); voiceButton.setEnabled(false);
-            extras.addView(voiceButton, new LinearLayout.LayoutParams(0, dp(54), 1)); root.addView(extras);
-            voiceLabel = text("", 14, MUTED); voiceLabel.setOnClickListener(v -> reviewVoice()); root.addView(voiceLabel);
-            videoButton = button("Βίντεο · κάμερα / συλλογή", this::recordVideo); videoButton.setEnabled(false); root.addView(videoButton);
-            videoLabel = text("", 14, MUTED); videoLabel.setOnClickListener(v -> reviewVideo()); root.addView(videoLabel);
+            LinearLayout extras = new LinearLayout(this); extras.setTag("chat-tools"); extras.setPadding(dp(8), dp(6), dp(8), 0);
+            Button replies = chatButton("Απαντήσεις", this::pickReply, false); replies.setContentDescription("Έτοιμες απαντήσεις"); extras.addView(replies, toolParams());
+            voiceButton = chatButton("Φωνητικό", this::recordVoice, false); voiceButton.setContentDescription("Μικρόφωνο · εγγραφή φωνητικού"); voiceButton.setEnabled(false); extras.addView(voiceButton, toolParams());
+            videoButton = chatButton("Βίντεο", this::recordVideo, false); videoButton.setContentDescription("Βίντεο · κάμερα / συλλογή"); videoButton.setEnabled(false); extras.addView(videoButton, toolParams()); root.addView(extras);
+            voiceLabel = text("", 14, MUTED); voiceLabel.setVisibility(View.GONE); voiceLabel.setOnClickListener(v -> reviewVoice()); root.addView(voiceLabel);
+            videoLabel = text("", 14, MUTED); videoLabel.setVisibility(View.GONE); videoLabel.setOnClickListener(v -> reviewVideo()); root.addView(videoLabel);
         }
-        LinearLayout bar = new LinearLayout(this); bar.setGravity(Gravity.BOTTOM); bar.setPadding(dp(6), dp(4), dp(6), dp(4));
-        if (tab.equals("chat")) bar.addView(button("＋", this::pickPhoto), new LinearLayout.LayoutParams(dp(52), dp(56)));
+        LinearLayout bar = new LinearLayout(this); bar.setTag("chat-composer"); bar.setGravity(Gravity.CENTER_VERTICAL); bar.setPadding(dp(10), dp(8), dp(10), dp(8));
+        if (tab.equals("chat")) { Button add = chatButton("＋", this::pickPhoto, false); add.setContentDescription("Προσθήκη φωτογραφίας"); bar.addView(add, new LinearLayout.LayoutParams(dp(48), dp(48))); }
         composer = input(tab.equals("ai") ? "Ρώτησε τον βοηθό…" : "Γράψε μήνυμα…", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, tab.equals("ai") ? 600 : 5000);
-        composer.setMaxLines(4); bar.addView(composer, new LinearLayout.LayoutParams(0, -2, 1));
-        Button send = button("➤", this::send); send.setContentDescription("Αποστολή μηνύματος");
+        composer.setMaxLines(4); composer.setMinHeight(dp(48)); composer.setBackground(round(0xfff4f1f8, 24)); composer.setPadding(dp(14), dp(10), dp(14), dp(10)); LinearLayout.LayoutParams field = new LinearLayout.LayoutParams(0, -2, 1); field.setMargins(dp(6), 0, dp(6), 0); bar.addView(composer, field);
+        Button send = chatButton("➤", this::send, true); send.setContentDescription("Αποστολή μηνύματος");
         if (tab.equals("chat")) { chatSendButton = send; send.setEnabled(!busy); }
-        bar.addView(send, new LinearLayout.LayoutParams(dp(56), dp(56))); root.addView(bar);
+        bar.addView(send, new LinearLayout.LayoutParams(dp(48), dp(48))); root.addView(bar);
         updatePhotoLabel();
         updateVoiceLabel(); updateVideoLabel();
         if (tab.equals("chat")) loadMessages(true); else checkAssistant();
@@ -388,9 +390,9 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2); lp.gravity = own ? Gravity.END : Gravity.START; lp.setMargins(own ? dp(28) : 0, dp(5), own ? 0 : dp(28), dp(5));
         if (!body.isEmpty()) card.addView(text(body, 17, INK));
         if (row != null && row.optBoolean("hasAttachment")) {
-            if (row.optString("attachmentMimeType").startsWith("image/")) card.addView(button("▧ Φωτογραφία · προβολή", () -> viewPhoto(row)));
-            else if (row.optString("attachmentMimeType").equals("video/mp4")) card.addView(button("▶ Βίντεο · αναπαραγωγή", () -> viewVideo(row)));
-            else if (row.optString("attachmentMimeType").equals("audio/wav")) card.addView(button("▶ Φωνητικό · αναπαραγωγή", () -> viewVoice(row)));
+            if (row.optString("attachmentMimeType").startsWith("image/")) card.addView(chatButton("▧ Φωτογραφία · προβολή", () -> viewPhoto(row), false));
+            else if (row.optString("attachmentMimeType").equals("video/mp4")) card.addView(chatButton("▶ Βίντεο · αναπαραγωγή", () -> viewVideo(row), false));
+            else if (row.optString("attachmentMimeType").equals("audio/wav")) card.addView(chatButton("▶ Φωνητικό · αναπαραγωγή", () -> viewVoice(row), false));
             else card.addView(text("Συνημμένο · Η λήψη αρχείων είναι απενεργοποιημένη σε αυτή την εφαρμογή.", 14, MUTED));
         }
         if (!meta.isEmpty()) card.addView(text(meta, 12, MUTED));
@@ -521,7 +523,7 @@ public final class MainActivity extends Activity {
     }
     private void updatePhotoLabel() {
         if (attachmentLabel != null) {
-            attachmentLabel.setText(photos.size() == 0 ? photoSelectionNotice : "▧ " + photos.size() + " φωτογραφίες · έλεγχος / αφαίρεση · χωριστά μηνύματα");
+            setChatLabel(attachmentLabel, photos.size() == 0 ? photoSelectionNotice : "▧ " + photos.size() + " φωτογραφίες · έλεγχος / αφαίρεση · χωριστά μηνύματα");
             attachmentLabel.setOnClickListener(v -> reviewPhotos());
         }
     }
@@ -590,7 +592,7 @@ public final class MainActivity extends Activity {
         if(photos.size()==0&&voiceDraft==null&&videoDraft==null&&(composer==null||composer.length()==0)){open.run();return;}
         dismissImage();imageDialog=new AlertDialog.Builder(this).setTitle("Άνοιγμα βίντεο").setMessage("Η ξεχωριστή οθόνη καθαρίζει το πρόχειρο κείμενο και τα συνημμένα. Συνέχεια;").setPositiveButton("Συνέχεια",(d,w)->open.run()).setNegativeButton("Ακύρωση",null).create();imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);imageDialog.show();
     }
-    private void updateVideoLabel(){if(videoLabel!=null)videoLabel.setText(videoDraft==null?"":"▶ Βίντεο · έλεγχος / αφαίρεση");}
+    private void updateVideoLabel(){setChatLabel(videoLabel,videoDraft==null?"":"▶ Βίντεο · έλεγχος / αφαίρεση");}
     private void reviewVideo(){
         if(busy||videoDraft==null)return;dismissImage();imageDialog=new AlertDialog.Builder(this).setTitle("Πρόχειρο βίντεο").setItems(new String[]{"Προεπισκόπηση","Αφαίρεση"},(d,which)->{if(busy||videoDraft==null)return;if(which==0)showVideo(videoDraft,false);else{clearVideo();updateVideoLabel();}}).setNegativeButton("Κλείσιμο",null).create();imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);imageDialog.show();
     }
@@ -632,7 +634,7 @@ public final class MainActivity extends Activity {
         imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
     }
     private void updateVoiceLabel() {
-        if (voiceLabel != null) voiceLabel.setText(voiceDraft == null ? "" : "▶ Φωνητικό · " + VoiceData.seconds(voiceDraft) + " δευτ. · έλεγχος / αφαίρεση");
+        setChatLabel(voiceLabel, voiceDraft == null ? "" : "▶ Φωνητικό · " + VoiceData.seconds(voiceDraft) + " δευτ. · έλεγχος / αφαίρεση");
     }
     private void reviewVoice() {
         if (busy || voiceDraft == null) return;
@@ -748,17 +750,28 @@ public final class MainActivity extends Activity {
         });
         LinearLayout header = new LinearLayout(this); header.setOrientation(LinearLayout.VERTICAL); header.setBackgroundColor(PURPLE); header.setPadding(dp(20), dp(16), dp(20), dp(14)); header.addView(text(title, 23, Color.WHITE)); header.addView(text(subtitle, 13, 0xffeee6ff)); root.addView(header);
         content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(18), dp(20), dp(18), dp(12)); contentScroll = new ScrollView(this); contentScroll.setFillViewport(true); contentScroll.addView(content); root.addView(contentScroll, new LinearLayout.LayoutParams(-1, 0, 1));
-        notice = text("", 14, 0xffa12b49); notice.setPadding(dp(16), dp(4), dp(16), dp(4)); notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); root.addView(notice);
+        notice = text("", 14, 0xffa12b49); notice.setPadding(dp(16), dp(4), dp(16), dp(4)); notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); notice.setVisibility(View.GONE); root.addView(notice);
         composer = null; attachmentLabel = null; chatSendButton = null; voiceButton = null; voiceLabel = null; videoButton = null; videoLabel = null; setContentView(root); root.requestApplyInsets();
     }
     private TextView text(String value, int size, int color) { TextView v = new TextView(this); v.setText(value); v.setTextSize(size); v.setTextColor(color); v.setTextIsSelectable(false); v.setSaveEnabled(false); v.setPadding(0, dp(4), 0, dp(4)); return v; }
     private Button button(String label, Runnable action) { Button b = new Button(this); b.setText(label); b.setTextColor(PURPLE); b.setAllCaps(false); b.setTextSize(15); b.setMinHeight(dp(52)); b.setMinimumWidth(0); b.setPadding(dp(10), dp(5), dp(10), dp(5)); b.setSaveEnabled(false); b.setOnClickListener(v -> action.run()); return b; }
+    private LinearLayout.LayoutParams toolParams() { LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, -2, 1); p.setMargins(dp(3), 0, dp(3), 0); return p; }
+    private Button chatButton(String label, Runnable action, boolean primary) {
+        Button b = button(label, action); b.setTextSize(14); b.setMinHeight(dp(48)); b.setMinimumHeight(dp(48)); b.setMaxLines(2); b.setGravity(Gravity.CENTER); b.setPadding(dp(8), dp(8), dp(8), dp(8));
+        int[][] states = new int[][] { new int[] {-android.R.attr.state_enabled}, new int[] {} };
+        b.setTextColor(new android.content.res.ColorStateList(states, new int[] {0xff938b9c, primary ? Color.WHITE : PURPLE}));
+        android.graphics.drawable.StateListDrawable fill = new android.graphics.drawable.StateListDrawable();
+        fill.addState(states[0], round(0xffeeebf2, 22)); fill.addState(states[1], round(primary ? PURPLE : 0xfff0e9fc, 22));
+        b.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x226d28d9), fill, round(Color.WHITE, 22)));
+        return b;
+    }
+    private void setChatLabel(TextView label, String value) { if (label != null) { label.setText(value); label.setVisibility(value == null || value.isEmpty() ? View.GONE : View.VISIBLE); } }
     private EditText input(String hint, int type, int limit) {
         EditText input = new PrivateEditText(this); input.setHint(hint); input.setTextSize(17); input.setInputType(type); input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(limit)}); input.setMinHeight(dp(56)); input.setSaveEnabled(false); input.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS); input.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING); input.setPadding(dp(10), dp(8), dp(10), dp(8)); return input;
     }
     private GradientDrawable round(int color, int radius) { GradientDrawable d = new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(radius)); return d; }
     private int dp(int n) { return Math.round(n * getResources().getDisplayMetrics().density); }
-    private void status(String value) { if (notice != null) notice.setText(value); }
+    private void status(String value) { setChatLabel(notice, value); }
     private void hideKeyboard() { View focus = getCurrentFocus(); if (focus != null) ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(focus.getWindowToken(), 0); }
     private String time(String date) { try { return DateTimeFormatter.ofPattern("dd/MM HH:mm", Locale.forLanguageTag("el-GR")).withZone(ZoneId.of("Europe/Athens")).format(Instant.parse(date)); } catch (Exception ignored) { return ""; } }
 }

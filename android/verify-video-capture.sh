@@ -7,3 +7,7 @@ if ! gradle --no-daemon -p android :app:connectedDebugAndroidTest '-Pandroid.tes
 fi
 # Preserve the complete suite after the focused probe, including real capture again.
 gradle --no-daemon -p android :app:connectedDebugAndroidTest
+
+# Synthetic UI proof only, produced by ConversationAppearanceTest in the disposable emulator.
+mkdir -p android/app/build/reports/androidTests/ui-proof
+adb pull /sdcard/Android/data/gr.myworkstation.chat.preview/files/ui-proof/. android/app/build/reports/androidTests/ui-proof/
