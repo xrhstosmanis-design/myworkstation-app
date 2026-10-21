@@ -1,0 +1,25 @@
+{
+  "claimPr": 2975,
+  "claimHead": "220d0bef1800680b709fb7186ef4c167facf4c19",
+  "claimCI": 39620870173,
+  "claimMerge": "d6802a07a5db7f7527e90139b70309d81543402d",
+  "node": "20.20.2",
+  "local": {
+    "command": "node --test server/test/recorded-payroll-expense-report.test.js server/test/sales-report-comparison.test.js server/test/kiosk-reports-sales-v4.test.js server/test/kiosk-sales-counts.test.js server/test/kiosk-sales-hourly.test.js",
+    "tests": 48,
+    "pass": 48,
+    "fail": 0,
+    "skip": 0,
+    "newUnitTests": 16,
+    "actualNativePostgres": "NOT EXECUTED LOCALLY",
+    "actualHostedAcceptance": "NOT TESTED"
+  },
+  "scope": "Integrated read-only backend endpoint; not settlement or complete payroll proof",
+  "installed": false,
+  "sourcePaths": [
+    "server/src/routes/kiosk-reports-sales-v4.js",
+    "server/src/services/recorded-payroll-expense-report.js",
+    "server/test/recorded-payroll-expense-report.test.js",
+    "server/test/recorded-payroll-expense-report-postgres.test.js"
+  ]
+}
