@@ -277,7 +277,7 @@ public final class MainActivity extends Activity {
         attachmentLabel = text("", 14, MUTED); attachmentLabel.setVisibility(View.GONE); root.addView(attachmentLabel);
         if (tab.equals("chat")) {
             LinearLayout extras = new LinearLayout(this); extras.setTag("chat-tools"); extras.setPadding(dp(8), dp(6), dp(8), 0);
-            Button replies = chatButton("Απαντήσεις", this::pickReply, false); replies.setContentDescription("Έτοιμες απαντήσεις"); extras.addView(replies, toolParams());
+            Button replies = chatButton("Έτοιμες", this::pickReply, false); replies.setContentDescription("Έτοιμες απαντήσεις"); extras.addView(replies, toolParams());
             voiceButton = chatButton("Φωνητικό", this::recordVoice, false); voiceButton.setContentDescription("Μικρόφωνο · εγγραφή φωνητικού"); voiceButton.setEnabled(false); extras.addView(voiceButton, toolParams());
             videoButton = chatButton("Βίντεο", this::recordVideo, false); videoButton.setContentDescription("Βίντεο · κάμερα / συλλογή"); videoButton.setEnabled(false); extras.addView(videoButton, toolParams()); root.addView(extras);
             voiceLabel = text("", 14, MUTED); voiceLabel.setVisibility(View.GONE); voiceLabel.setOnClickListener(v -> reviewVoice()); root.addView(voiceLabel);

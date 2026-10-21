@@ -54,7 +54,7 @@ public class ConversationAppearanceTest {
                         for(int width:new int[]{320,360}){
                             int w=Math.round(width*density),h=Math.round(720*density);root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);
                             LinearLayout tools=root.findViewWithTag("chat-tools");assertEquals(3,tools.getChildCount());assertTrue(tools.getHeight()<=Math.round(100*density));
-                            for(int i=0;i<3;i++){Button b=(Button)tools.getChildAt(i);assertTrue(b.getWidth()>=Math.round(48*density));assertTrue(b.getHeight()>=Math.round(48*density));assertNotNull(b.getLayout());assertTrue("Clipped action caption",b.getLayout().getHeight()<=b.getHeight()-b.getCompoundPaddingTop()-b.getCompoundPaddingBottom());}
+                            for(int i=0;i<3;i++){Button b=(Button)tools.getChildAt(i);assertTrue(b.getWidth()>=Math.round(48*density));assertTrue(b.getHeight()>=Math.round(48*density));assertNotNull(b.getLayout());if(i==0)assertEquals("Ready-reply label should stay whole",1,b.getLineCount());assertTrue("Clipped action caption",b.getLayout().getHeight()<=b.getHeight()-b.getCompoundPaddingTop()-b.getCompoundPaddingBottom());}
                             assertTrue("Messages lose too much phone height",((View)get(a,"scroll")).getHeight()>=Math.round(280*density));
                             for(String label:new String[]{"attachmentLabel","voiceLabel","videoLabel","notice"})assertEquals(label,View.GONE,((View)get(a,label)).getVisibility());
                         }

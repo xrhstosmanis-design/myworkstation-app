@@ -1,3 +1,6 @@
+## Actual synthetic visual review refinement
+Head7c1deb960ade71dc80f3c176697c4f256c028660 Android39680073593 SUCCESS with compile/unit/lint, actual camera probe,36instrumentation PASS and both PNGs collected in artifact12385085203. Native synthetic View render review: normal clear; large-font ready-reply caption breaks the final letter onto another line. Shorten visible caption to Έτοιμες, keep complete Έτοιμες απαντήσεις accessibility label and original action, and require its single-line rendering at both phone widths/font scales. Remaining hosted checks and final screenshot review still required. No USER appearance PASS.
+
 ## UI proof transport correction / no production change
 Run39678517977: compile/unit/lint, actual camera probe and all36 instrumentation tests PASS; job failed only because AGP uninstalls the fixture app before the later adb pull. Use the standard additionalTestOutputDir collector with test-only external media PNG output, copied by Gradle before uninstall, then require both host images. No storage permission, FLAG_SECURE change, production media persistence or weakened test. FullCI39678518057 tracked separately; latest exact head must rerun checks.
 
