@@ -11,14 +11,25 @@ const sourceLimit=1000;
 export function readAutomaticDailyCashPreview(db,input){
   return readAutomaticCashPreview(db,{...input,frequency:"DAILY"});
 }
-export async function readAutomaticCashPreview(db,{actorId,companyId,storeId,day,frequency="DAILY",configuration,settingsVersion,now=new Date()}){
+function previewContext({actorId,companyId,storeId,day,frequency="DAILY",configuration,now=new Date()}){
   if(![actorId,companyId,storeId].every(v=>typeof v==="string"&&v.trim()))throw error(400,"Απαιτείται χρήστης, εταιρεία και επιλεγμένο κατάστημα.");
   if(!configuration||!Array.isArray(configuration.terminals))throw error(400,"Απαιτείται ρητή ρύθμιση τερματικών και βαρδιών.");
   const settings={...configuration,companyId,storeId,day};
   // Validate all settings even when the source is empty or unavailable.
   dailyCashReportReadiness([],settings,now);
   const period=cashPreviewPeriod(day,frequency,settings);
-  return db.$transaction(async tx=>{
+  return {settings,period};
+}
+export async function readAutomaticCashPreview(db,input){
+  // Preserve validation before opening a transaction and capture one clock value.
+  const args={...input,now:input?.now===undefined?new Date():input.now};
+  previewContext(args);
+  return db.$transaction(tx=>readAutomaticCashPreviewInTransaction(tx,args),{isolationLevel:"RepeatableRead",maxWait:5000,timeout:15000});
+}
+// Internal caller owns the transaction, isolation and read-only mode. This is
+// still a Super Admin preview reader, never a service-principal authorization.
+export async function readAutomaticCashPreviewInTransaction(tx,{actorId,companyId,storeId,day,frequency="DAILY",configuration,settingsVersion,now=new Date()}){
+  const {settings,period}=previewContext({actorId,companyId,storeId,day,frequency,configuration,now});
     const actor=await tx.user.findUnique({where:{id:actorId},select:{id:true,role:true}});
     if(actor?.role!=="SUPER_ADMIN")throw error(403,"Η προεπισκόπηση αυτόματων αναφορών απαιτεί Super Admin.");
     const store=await tx.store.findFirst({where:{id:storeId,companyId,active:true},select:{id:true,companyId:true,name:true}});
@@ -79,5 +90,4 @@ export async function readAutomaticCashPreview(db,{actorId,companyId,storeId,day
       // reviewer explanations or physical cash and control balances.
       sourceReadiness:ready?"READY":"HOLD",financialFinality:"PROVISIONAL",financialReconciliationComplete:false,
       financialLimitations:["DOCUMENT_PAYMENT_RECONCILIATION_NOT_VERIFIED","CASH_REVIEW_EXPLANATIONS_NOT_VERIFIED","PHYSICAL_CASH_AND_CONTROL_BALANCES_NOT_VERIFIED"]};
-  },{isolationLevel:"RepeatableRead",maxWait:5000,timeout:15000});
 }
