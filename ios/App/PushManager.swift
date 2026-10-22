@@ -10,13 +10,16 @@ import MWSChatCore
     private let vault = TokenVault()
     private var generation: UInt64 = 0
     private var enabled = false
+    private var deleting = false
+    private let api = ChatHTTP()
     override init() { super.init() }
     static func binding(_ token: String) -> String { SHA256.hash(data: Data(token.utf8)).map { String(format: "%02x", $0) }.joined() }
     private func path(_ m: ChatModel) -> String { m.staff ? "/api/store-chat/stores/" + ChatPolicy.component(m.identity["storeId"] as? String ?? "") + "/native-push" : "/api/store-chat/mobile/native-push" }
     func activate() async {
         guard let m = model, !m.token.isEmpty, !m.busy else { return }
+        guard !deleting else { m.status = "Ολοκληρώνεται η προηγούμενη αποσύνδεση. Δοκίμασε ξανά σε λίγο."; return }
         let token = m.token, epoch = generation
-        guard let check = await m.call(path(m)), check["configured"] as? Bool == true, check["iosAvailable"] as? Bool == true else { m.status = "Ο server δεν έχει ενεργή σύνδεση ειδοποιήσεων iOS."; return }
+        guard let check = try? await api.json(path(m), token: token), epoch == generation, token == m.token, check["configured"] as? Bool == true, check["iosAvailable"] as? Bool == true else { if epoch == generation, token == m.token { m.status = "Ο server δεν έχει ενεργή σύνδεση ειδοποιήσεων iOS." }; return }
         guard let file = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"), let options = FirebaseOptions(contentsOfFile: file), options.projectID == "myworkstation-chat", options.bundleID == Bundle.main.bundleIdentifier else { m.status = "Απαιτείται η ρύθμιση Apple/APNs και της εφαρμογής iOS στο Firebase."; return }
         do {
             let allowed = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
@@ -33,15 +36,16 @@ import MWSChatCore
     private func register(_ fcm: String) async {
         guard enabled, let m = model, TokenClaims.usable(m.token), Messaging.messaging().apnsToken != nil else { return }
         let captured = m.token, epoch = generation
-        guard let j = await m.call(path(m), method: "POST", body: ["token": fcm, "notificationVersion": 2, "platform": "ios"]), epoch == generation, captured == m.token, j["ok"] as? Bool == true, j["binding"] as? String == Self.binding(captured) else { return }
+        guard let j = try? await api.json(path(m), method: "POST", body: ["token": fcm, "notificationVersion": 2, "platform": "ios"], token: captured), epoch == generation, captured == m.token, j["ok"] as? Bool == true, j["binding"] as? String == Self.binding(captured) else { return }
         do { try vault.save("true", key: "push-opt-in") } catch { clear(); return }; m.status = "Η συσκευή καταχωρίστηκε για ειδοποιήσεις."
     }
     func resume() { guard vault.read("push-opt-in") == "true" else { return }; Task { await activate() } }
     func clearDelivered() { UNUserNotificationCenter.current().removeAllDeliveredNotifications(); UNUserNotificationCenter.current().removeAllPendingNotificationRequests() }
     func clear() {
         generation &+= 1; enabled = false; vault.remove("push-opt-in"); clearDelivered()
+        api.cancel()
         UIApplication.shared.unregisterForRemoteNotifications()
-        if FirebaseApp.app() != nil { Messaging.messaging().isAutoInitEnabled = false; Messaging.messaging().deleteToken { _ in } }
+        if FirebaseApp.app() != nil { Messaging.messaging().isAutoInitEnabled = false; deleting = true; Messaging.messaging().deleteToken { [weak self] _ in Task { @MainActor in self?.deleting = false } } }
     }
     private func valid(_ info: [AnyHashable: Any], model: ChatModel) -> Bool {
         guard TokenClaims.usable(model.token), info["kind"] as? String == "MWS_CHAT", info["binding"] as? String == Self.binding(model.token), let store = info["storeId"] as? String, let company = info["companyId"] as? String, !store.isEmpty, !company.isEmpty else { return false }

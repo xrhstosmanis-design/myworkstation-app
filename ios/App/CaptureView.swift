@@ -113,6 +113,7 @@ final class AudioPCMStore: @unchecked Sendable {
         recording = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in Task { @MainActor in guard let self else { return }; self.seconds += 1; if self.seconds >= (mode == "voice" ? 59 : 29) { self.finish(mode) } } }
     }
+    func takePhoto() { guard !recording, error.isEmpty else { return }; recording = true; camera.photo() }
     func finish(_ mode: String) {
         guard recording else { return }; recording = false; timer?.invalidate(); timer = nil
         if mode == "voice" {
@@ -138,7 +139,7 @@ struct CaptureView: View {
     var body: some View {
         NavigationStack { VStack(spacing: 20) {
             if let draft = state.draft { if draft.mime.hasPrefix("image/"), let image = UIImage(data: draft.bytes) { Image(uiImage: image).resizable().scaledToFit() } else if let player = playback.player { VideoPlayer(player: player) } else { Image(systemName: "waveform").font(.system(size: 60)) }; if !draft.mime.hasPrefix("image/") { Button("▶ Προεπισκόπηση") { playback.play() }; Button("Διακοπή αναπαραγωγής") { playback.pause() } }; Button("Χρήση · προσθήκη στο πρόχειρο") { playback.stop(); done(draft, nil) }.buttonStyle(.borderedProminent) }
-            else { if mode != "voice" { CameraPreview(session: state.camera.session).clipShape(RoundedRectangle(cornerRadius: 20)) } else { Image(systemName: "mic.fill").font(.system(size: 70)).frame(maxHeight: .infinity) }; Text("\(state.seconds) δευτερόλεπτα"); if mode == "photo" { Button("Λήψη φωτογραφίας") { state.camera.photo() }.buttonStyle(.borderedProminent) } else { Button(state.recording ? "Διακοπή εγγραφής" : "Έναρξη εγγραφής") { if state.recording { state.finish(mode) } else { state.start(mode) } }.buttonStyle(.borderedProminent) } }
+            else { if mode != "voice" { CameraPreview(session: state.camera.session).clipShape(RoundedRectangle(cornerRadius: 20)) } else { Image(systemName: "mic.fill").font(.system(size: 70)).frame(maxHeight: .infinity) }; Text("\(state.seconds) δευτερόλεπτα"); if mode == "photo" { Button("Λήψη φωτογραφίας") { state.takePhoto() }.buttonStyle(.borderedProminent).disabled(state.recording) } else { Button(state.recording ? "Διακοπή εγγραφής" : "Έναρξη εγγραφής") { if state.recording { state.finish(mode) } else { state.start(mode) } }.buttonStyle(.borderedProminent) } }
             if !state.error.isEmpty { Text(state.error).foregroundStyle(.red) }
             Text("Προσωρινή λήψη στη μνήμη. Δεν αποστέλλεται αυτόματα.").font(.footnote)
         }.padding().navigationTitle(mode == "photo" ? "Κάμερα" : mode == "voice" ? "Φωνητικό" : "Βίντεο έως30δ.").toolbar { Button("Ακύρωση") { playback.stop(); state.cleanup(); done(nil, nil) } } }

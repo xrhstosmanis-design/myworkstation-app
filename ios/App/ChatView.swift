@@ -42,7 +42,7 @@ struct RootView: View {
             if next == .background { picker = nil; camera = nil; replySheet = false; evidenceSheet = false; model.background() }
             if next == .active && !captured { Task { await model.foreground() } }
         }
-        .task { PushManager.shared.model = model; await model.foreground() }
+        .task { PushManager.shared.model = model; await model.foreground(); PushManager.shared.resume() }
         .sheet(item: Binding(get: { picker.map(PickerItem.init) }, set: { picker = $0?.id })) { item in
             MediaPicker(video: item.id == "video") { media, error in picker = nil; if let error { model.status = error }; model.addMedia(media, epoch: importEpoch, scope: importScope) }.ignoresSafeArea()
         }

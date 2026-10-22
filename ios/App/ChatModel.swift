@@ -104,7 +104,7 @@ struct DraftMedia: Identifiable {
             guard let j = await call("/api/auth/owner-companies/select", method: "POST", body: ["companyId": store.companyId]), let t = j["token"] as? String, TokenClaims.usable(t), let claims = TokenClaims.decode(t), claims["companyId"] as? String == store.companyId else { return }
             do { try vault.save(t, key: "token") } catch { status = ChatError.unavailable.localizedDescription; return }; token = t; identity = claims; PushManager.shared.clearDelivered()
         }
-        selected = store; ai = false; aiReady = false; screen = .conversation; await reload()
+        selected = store; ai = false; aiReady = false; screen = .conversation; await reload(); PushManager.shared.resume()
     }
     func back() async { guard !busy else { return }; clearContent(); selected = nil; ai = false; screen = .stores; await loadStores() }
     func toggleAI() async { guard !busy, selected != nil else { return }; clearContent(); ai.toggle(); aiReady = false; await reload() }
@@ -161,7 +161,7 @@ struct DraftMedia: Identifiable {
         do {
             let data = try await api.request(base + "/messages/" + ChatPolicy.component(message.id) + "/attachment", method: "GET", body: nil, token: captured, max: max)
             guard fence.accepts(generation, capturedScope: scope, currentScope: selected?.scope, capturedToken: captured, currentToken: token, active: active) else { return }; busy = false; preview = DraftMedia(bytes: data, mime: message.mime, name: "Συνημμένο")
-        } catch { guard fence.epoch == generation else { return }; busy = false; status = error.localizedDescription }
+        } catch { guard fence.epoch == generation else { return }; busy = false; if case ChatError.expired = error { clearSession() }; status = error.localizedDescription }
     }
     func addMedia(_ next: [DraftMedia], epoch: UInt64, scope: Scope?) {
         guard active, !busy, fence.epoch == epoch, selected?.scope == scope, scope?.valid == true, !ai, uncertainStore != scope?.store else { return }

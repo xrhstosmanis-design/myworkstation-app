@@ -15,7 +15,7 @@ final class ChatPolicyTests: XCTestCase {
     func testStoreLinkAndFixedOrigin() throws {
         XCTAssertEqual(try ChatPolicy.storeLink("https://myworkstation-app.onrender.com/chat/store-1"), "store-1")
         for link in ["https://evil.example/chat/store", "http://myworkstation-app.onrender.com/chat/store", "https://myworkstation-app.onrender.com:443/chat/store", "https://user@myworkstation-app.onrender.com/chat/store", "https://myworkstation-app.onrender.com/chat/store?q=1", "https://myworkstation-app.onrender.com/chat/store#x", "https://myworkstation-app.onrender.com/chat/a/b", "https://myworkstation-app.onrender.com/chat/"] { XCTAssertThrowsError(try ChatPolicy.storeLink(link)) }
-        for path in ["https://evil.example/api/x", "//evil.example/api/x", "/api/x\r\nX: y", "/api/x\\x", "/api/x#f"] { XCTAssertThrowsError(try ChatPolicy.url(path)) }
+        for path in ["https://evil.example/api/x", "//evil.example/api/x", "/api/x\r\nX: y", "/api/x\r", "/api/x\n", "/api/x\u{0}", "/api/x\u{2028}", "/api/x\\x", "/api/x#f"] { XCTAssertThrowsError(try ChatPolicy.url(path), path.debugDescription) }
         XCTAssertEqual(try ChatPolicy.url("/api/store-chat/mobile/stores").host, "myworkstation-app.onrender.com")
         XCTAssertEqual(ChatPolicy.component("a/b?c"), "a%2Fb%3Fc")
     }

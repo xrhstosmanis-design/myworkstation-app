@@ -55,7 +55,9 @@ public enum ChatPolicy {
     public static let replies = ["Το έλαβα, ευχαριστώ.", "Το ελέγχω και θα απαντήσω.", "Ολοκληρώθηκε.", "Χρειάζομαι περισσότερες πληροφορίες.", "Παρακαλώ στείλε μία φωτογραφία."]
     public static func component(_ s: String) -> String { s.addingPercentEncoding(withAllowedCharacters: CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))) ?? "" }
     public static func url(_ path: String) throws -> URL {
-        guard path.hasPrefix("/api/"), !path.contains("\\"), !path.contains("\r"), !path.contains("\n"), !path.contains("#"), let u = URL(string: origin.absoluteString + path), u.scheme == "https", u.host == origin.host, u.port == nil, u.user == nil, u.password == nil else { throw ChatError.invalid }
+        // CRLF is a single Swift Character; reject scalars rather than searching for an isolated CR/LF grapheme.
+        let forbidden = path.unicodeScalars.contains { CharacterSet.controlCharacters.contains($0) || CharacterSet.newlines.contains($0) || $0.value == 92 || $0.value == 35 }
+        guard path.hasPrefix("/api/"), !forbidden, let u = URL(string: origin.absoluteString + path), u.scheme == "https", u.host == origin.host, u.port == nil, u.user == nil, u.password == nil else { throw ChatError.invalid }
         return u
     }
     public static func storeLink(_ value: String) throws -> String {
