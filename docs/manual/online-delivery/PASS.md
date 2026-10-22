@@ -1,5 +1,15 @@
 # Online παραγγελίες και Delivery — Manual PASS
 
+## 22/10/2026 — Αυτόματος κατάλογος από στοκ: περιορισμένο LAB PASS και DAILY ρυθμίσεις LIVE PASS
+
+Για Platform SuperAdmin: ανοίξτε https://myworkstation-app.onrender.com/platform-admin, επιλέξτε την ακριβή εταιρεία και Καταστήματα → Online Store. Ενεργοποιήστε «Αυτόματος κατάλογος από διαθέσιμο στοκ» και αποθηκεύστε τις ρυθμίσεις. Ο έλεγχος stock γίνεται υποχρεωτικός. Η χειροκίνητη επιλογή/αποθήκευση προϊόντων κρύβεται και δεν χρειάζεται: ο κατάλογος διαβάζει τα ενεργά προϊόντα του ίδιου καταστήματος με θετικό διαθέσιμο απόθεμα, με προτεραιότητα στο ενεργό υπόλοιπο ψημένων του ίδιου είδους. Ανανέωση καταλόγου διαβάζει τις νέες ποσότητες. Η επιλογή είναι ξεχωριστή ανά κατάστημα και αρχικά ανενεργή· δικαιώματα, άδειες και δημόσια ενεργοποίηση συνεχίζουν να ισχύουν.
+
+Πραγματικός έλεγχος22/10: στο εικονικό LAB η επιλογή έδωσε51 προϊόντα, όλα τα IDs/stock συμφώνησαν ανεξάρτητα με τη βάση. Επαναφέρθηκαν η αρχική χειροκίνητη επιλογή, stockCheck=false και ο αρχικός κατάλογος2. Στο DAILY αποθηκεύτηκαν auto=true/stockCheck=true, το αυθεντικό λογότυπο και τα κείμενα, με public=false· νέο άνοιγμα επιβεβαίωσε τις αποθηκευμένες τιμές και διαθέσιμα0. Κανένα stock/order/payment δεν υποβλήθηκε. Revision659aea0217d62c6beec5f0ea51455a8c68884a4b, sourcePR3056, mainCI39829453096 attempt2, release39831769237. Checkpoint CHECKPOINTS/CHANGES/2026-10-22-daily-stock-catalog.md και αποδεικτικό CHECKPOINTS/EVIDENCE/daily-online-20261022/settings.jpg.
+
+Αν ο κατάλογος είναι κενός, ελέγξτε το πραγματικό απόθεμα του επιλεγμένου καταστήματος και τυχόν υπόλοιπο ψημένων· μην επινοείτε ποσότητες και μην αντιγράφετε stock άλλου καταστήματος. Το DAILY έχει8753 ενεργά/0 θετικό απόθεμα και παραμένει κλειστό. Η εμφάνιση olive/orange εφαρμόζεται από το ακριβές θέμα της διαδρομής, όπως στο ΚΑΤ· οι παλιές τιμές των color preference fields διατηρήθηκαν. Η κλειστή δημόσια σελίδα εξακολουθεί να έχει το αρχικό OPEN badge/default copy παρότι το API λέει κλειστό και το checkout είναι disabled· δεν αποτελεί αποδοχή δημόσιου ανοίγματος. Αρχική απογραφή, ενεργή δημόσια παρουσίαση και ευρύτερο checkout/mobile/physical/fiscal παραμένουν OPEN/NOT TESTED σε αυτή την εργασία. Δεν προστέθηκε νέα πιστοποίηση οικονομικής ή stock οριστικοποίησης.
+
+
+
 ## 20/10/2026 00:51 Europe/Athens — KAT-BACKGROUND-02 / LIMITED LIVE DESKTOP VISUAL PASS / COMPLETED
 
 Owner fix/kat-background-20261020. ClaimPR2907/bf894d1/docsCI39325681910 green mergedf00356f BEFORE source. SourcePR2908 initial0674e54/CI39325879053 SUCCESS; shared-record conflict resolved against464178e preserving other owners, source note moved after shared records to avoid prepend conflicts. Finalhead54d74aa64336064257dd5c0ee946efa935494ea2/fullPRCI39327413335 SUCCESS, mergedf2a3b79a145f7f80331280384066ec78c29ec230. Exact mainCI39328665510 SUCCESS all jobs. Ordinary guarded release39330143576/job118326018997 SUCCESS; browser health oktrue exactf2a3b79a145f7f80331280384066ec78c29ec230.

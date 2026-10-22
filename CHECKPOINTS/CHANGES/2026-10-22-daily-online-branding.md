@@ -1,3 +1,13 @@
+## 22/10/2026 — DAILY-STOCK-CATALOG-03 / LIMITED LAB CATALOGUE PASS + DAILY SETTINGS LIVE PASS / LAUNCH OPEN
+
+Owner codex/daily-online-store-20261011 retained / issue2054. SourcePR3056/d7372b8/fullCI39828149315 green, merged659aea0217d62c6beec5f0ea51455a8c68884a4b. MainCI39829453096 attempt2 all5green/3978PASS0FAIL0SKIP; guarded release39831769237 and Renderdep-dbd5c9gae00c73cofpig LIVE, independent exact health. Attempt1 browser ECONNRESET qualified in checkpoint.
+
+Actual21:37–21:46Athens LAB normal UI auto on -> catalogue51 exact own-store SQL identity/stock match; restored original auto=false/stockCheck=false and original2 products. DAILY normal UI saved supplied logo/name/tagline/welcome and auto=true/stockCheck=true/publicfalse; reopened readback count0.8753active/0positive stock. All LAB/DAILY/KAT stock/baked/visibility fingerprints and orders3/0/14 unchanged; control business config restored/unchanged. No stock/order/payment/fiscal submission, no prior fixture replay. Manual products list was not saved.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-10-22-daily-stock-catalog.md; manual docs/manual/online-delivery/PASS.md; evidence CHECKPOINTS/EVIDENCE/daily-online-20261022/. Only catalogue/settings and qualified disabled-shell theme PASS. Public launch, initial inventory, active customer presentation, checkout/mobile/physical/fiscal remain OPEN; disabled shell legacy OPEN badge/default copy is residual. No whole numbered/Gate closure, owner retained. PDFs regenerated with this receipt.
+
+Visual source PR3048 is included in exact deployed659aea. Saved original logo URL and texts read back. Actual disabled-shell theme/logo/background accepted only; active public text/catalogue and disabled OPEN badge remain pending. Color fields retain legacy values, theme applies approved olive/orange. No KAT business-script changes.
+
 ## 22/10/2026 — Source prepared / AWAITING CI AND RELEASE
 
 Claim PR3047/c01513d docsCI39821631495 SUCCESS, merged6aa9f22 before source. Separate exact /online/daily-bite class reproduces accepted KAT layout with original logo extracted from user PDF (uncropped orange mark/black lettering, original olive surround). All existing script blocks and KAT CSS are byte-identical; new independent visual scope script only. No catalogue/order/payment/stock/member/fiscal behavior change.
