@@ -1,0 +1,92 @@
+TAP version 13
+# Subtest: all role buttons are disabled in the delivered HTML before JavaScript can initialize
+not ok 1 - all role buttons are disabled in the delivered HTML before JavaScript can initialize
+  ---
+  duration_ms: 108.778196
+  location: '/workspace/scratch/0544dd6493a7/myworkstation-app/server/test/wholesale-lab-role-readiness.test.js:17:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(roles.every(b=>b.matches(':disabled')))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/0544dd6493a7/myworkstation-app/server/test/wholesale-lab-role-readiness.test.js:18:137)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:796:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+    node:internal/test_runner/harness:255:12
+    node:internal/process/task_queues:140:7
+    AsyncResource.runInAsyncScope (node:async_hooks:206:9)
+    AsyncResource.runMicrotask (node:internal/process/task_queues:137:8)
+  ...
+# Subtest: delayed metadata refuses early click; one click after readiness makes exactly one session request
+not ok 2 - delayed metadata refuses early click; one click after readiness makes exactly one session request
+  ---
+  duration_ms: 31.503457
+  location: '/workspace/scratch/0544dd6493a7/myworkstation-app/server/test/wholesale-lab-role-readiness.test.js:20:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(f.roles().every(b=>b.matches(':disabled')))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/0544dd6493a7/myworkstation-app/server/test/wholesale-lab-role-readiness.test.js:22:10)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:796:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+    Test.postRun (node:internal/test_runner/test:889:19)
+    Test.run (node:internal/test_runner/test:835:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: restored-owner lookup cannot prematurely unlock roles while initialization is pending
+not ok 3 - restored-owner lookup cannot prematurely unlock roles while initialization is pending
+  ---
+  duration_ms: 29.526924
+  location: '/workspace/scratch/0544dd6493a7/myworkstation-app/server/test/wholesale-lab-role-readiness.test.js:29:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(f.roles().every(b=>b.matches(':disabled')))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/0544dd6493a7/myworkstation-app/server/test/wholesale-lab-role-readiness.test.js:32:10)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: invalid isolation metadata keeps every role unavailable
+ok 4 - invalid isolation metadata keeps every role unavailable
+  ---
+  duration_ms: 25.450123
+  ...
+# Subtest: metadata HTTP failure keeps every role unavailable
+ok 5 - metadata HTTP failure keeps every role unavailable
+  ---
+  duration_ms: 23.321827
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 2
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 603.103281
