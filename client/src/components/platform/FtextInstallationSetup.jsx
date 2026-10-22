@@ -20,9 +20,9 @@ export default function FtextInstallationSetup({company,store,terminals,request}
  {state&&!state.connectorAllowed&&<p role="alert">Χρειάζεται ενεργή άδεια και τεχνική ενεργοποίηση του Connector ftext για τον πελάτη.</p>}
  {state?.settingsCurrent===false&&<p role="alert">Η αντιστοίχιση ή η άδεια άλλαξε. Επιβεβαίωσε ξανά τις ρυθμίσεις πριν από νέα ζεύξη.</p>}
  <div style={{display:'flex',gap:10,flexWrap:'wrap',marginTop:12}}><button disabled={busy||!saved||!state?.settingsCurrent} onClick={download}>Λήψη πακέτου ftext για αυτό το POS</button><button disabled={busy||!saved||!state?.settingsCurrent||!state?.connectorAllowed} onClick={createPair}>Νέος κωδικός ζεύξης ftext</button><button disabled={busy||!terminalPos} onClick={refresh}>Ανανέωση σύνδεσης ftext</button></div>
- {pair&&<p>Κωδικός: <strong>{pair.code}</strong> · λήγει {new Date(pair.expiresAt).toLocaleTimeString('el-GR',{hour12:false})}. Χρησιμοποίησέ τον στον οδηγό του επιλεγμένου POS.</p>}
+ {pair&&<p>Κωδικός: <strong>{pair.code}</strong> · λήγει {new Date(pair.expiresAt).toLocaleTimeString('el-GR',{timeZone:'Europe/Athens',hour12:false})}. Χρησιμοποίησέ τον στον οδηγό του επιλεγμένου POS.</p>}
  {state&&<p>Connector: <b>{state.online?'Συνδεδεμένος':state.paired?'Ζευγμένος · εκτός σύνδεσης':'Χωρίς ενεργή ζεύξη'}</b></p>}
- {state?.lastStatus&&<p>Τελευταίος έλεγχος ταμειακής: {state.lastStatus.ok?'Επιτυχής':'Σφάλμα'} · {new Date(state.lastStatus.receivedAt).toLocaleString('el-GR',{hour12:false})} · κωδικός {state.lastStatus.code}</p>}
+ {state?.lastStatus&&<p>Τελευταίος έλεγχος ταμειακής: {state.lastStatus.ok?'Επιτυχής':'Σφάλμα'} · {new Date(state.lastStatus.receivedAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false})} · κωδικός {state.lastStatus.code}</p>}
  <ol><li>Αντιστοίχισε το ενεργό POS στη σωστή ταμειακή και αποθήκευσε τις επιβεβαιωμένες ρυθμίσεις.</li><li>Άνοιξε το πακέτο στον τελικό Windows χρήστη και επίλεξε 1 για ζεύξη με τον νέο κωδικό.</li><li>Με ελεύθερη ταμειακή και ανοικτό ftext, επίλεξε 2 για STATUS και αποστολή αποτελέσματος.</li><li>Επίλεξε 3 για τη σύνδεση με το MyWorkStation και έλεγξε εδώ την ένδειξη. Κάθε άλλο POS χρειάζεται δικό του πακέτο.</li></ol>
  {error&&<p role="alert">{error}</p>}
  </details>;
