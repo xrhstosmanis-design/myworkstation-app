@@ -1,3 +1,9 @@
+## 22/10/2026 — FTEXT-CONNECTOR-01 / DIAGNOSTIC SOURCE PREPARED / AWAITING WINDOWS CI
+
+Retained owner codex/rizareio-ftext-bridge-20261022. ClaimPR3013/head78c21c6a full applicable checks39795433016 SUCCESS mergedc16afd8b BEFORE source. Added only new tools/windows-ftext and isolated Windows test workflow. Generic explicit company/store/terminal/serial/folder config, Windows1253 STATUS only, first-line request-specific RESULT_FILENAME, folder-wide mutex, durable CreateNew intent before atomic input publication, no overwrite/resend, same-request late-result recovery, matching serial and redacted durable evidence. A status result never confirms receipt/card. Other pending txt inputs refuse; malformed/foreign/timeout remains unresolved. No arbitrary command or receipt/payment/driver programming path exposed. Independent RBS tools/routes/gates unchanged.
+
+Local diff whitespace check PASS; Windows5.1 runtime, actual full source CI, hosted/device/LAB execution NOT TESTED at preparation. New isolated Windows cases exercise vendor success/error, incomplete/foreign response, real temporary-folder single input, timeout/no resend, late response, durable evidence, foreign scope and separate-process folder lock. The tests use only synthetic temporary files, never the store folder. No physical command, cloud pairing, hosted configuration/schema/financial/stock action by this page. Cloud/POS binding/settings/package UI and checkout/finalization are NOT IMPLEMENTED; this is not a complete installed connector. Whole FTEXT-CONNECTOR-01 remains OPEN/ASSIGNED. Next: exact green Windows/full CI and source publication, then cloud/terminal installation slice and controlled final-PC STATUS; no receipt without consultation. Checkpoint CHECKPOINTS/CHANGES/2026-10-22-ftext-connector.md.
+
 # Generic ftext connector
 
 ## 22/10/2026 — FTEXT-CONNECTOR-01 / ASSIGNED BEFORE SOURCE / NOT TESTED
