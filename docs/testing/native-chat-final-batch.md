@@ -1,4 +1,12 @@
-## 22/10/2026 - ANDROID CHAT0.1.10 PUBLIC TECHNICAL DELIVERY COMPLETE / AWAITING OWNER APPEARANCE
+## 22/10/2026 - NATIVE CHAT APPEARANCE / LIMITED USER PASS / RESIDUAL OWNER RETAINED
+
+Ο ιδιοκτήτης Χρήστος Μάνης απάντησε «ειναι οκ» αμέσως μετά την παράδοση της0.1.10 και την οδηγία να ανοίξει συνομιλία για τον τελικό έλεγχο εμφάνισης. Καταγράφεται περιορισμένο USER PASS της νέας εμφάνισης συνομιλίας. Δεν συνάγεται ανεξάρτητη ταυτοποίηση μοντέλου/OS, καταστήματος/ρόλου, εγκατεστημένου hash ή βήματος αναβάθμισης χωρίς απεγκατάσταση. Καμία νέα αποστολή, εγγραφή, οικονομική/stock πράξη ή επανάληψη αποδεκτού δείγματος.
+
+Τεχνική βάση παράδοσης: sourcePR2989/2e7b084, Android39747236750 με36instrumentationPASS, signed39749830993/artifact12413756302, distributionPR3002/1b98d90, fullPR39751843837/main39753045418 με3782server+8backup/0FAIL/0SKIP, ordinaryguard39754062331SUCCESS/Renderdep-dbct8v4s728c73865s40LIVE και ανεξάρτητο δημόσιο APK byte equality. Έκδοση0.1.10/code11, SHA2565c617d59d2a0a0adc356419a40b55f3bd1ba1449810e31b03ea6e33a7c4b8060, ίδιος σταθερός signer. ReceiptPR3003/db3b2ddc. Αυτή είναι η επαληθευμένη τεχνική διανομή, όχι ανεξάρτητη μέτρηση της φυσικής συσκευής κατά την επιβεβαίωση.
+
+Κλείνει μόνο η εκκρεμότητα εμφάνισης· δεν ζητείται επανάληψή της. Τα camera-video-send-PC-view, φωνητικά, φωτογραφίες, auth/push scoped PASS διατηρούνται. Native owner feat/android-chat-native-20261017 παραμένει για τα μη μετρημένα gallery/audio/ready-reply/session/privacy/device/update residuals και τη συμφωνημένη τελική συγκεντρωτική παρτίδα. Δεν κλείνει ολόκληρο Android/N16/PWA/AI ή άλλη ανάθεση. iOS LAST. Συγχρονισμένα checkpoint/active/tracker/manual/pending/PDF στο ίδιο PR. Manual docs/manual/native-chat/PASS.md, evidence CHECKPOINTS/EVIDENCE/native-chat-appearance-20261022/user-acceptance.json. Επόμενο: μόνο τα ήδη συμφωνημένα μη ελεγμένα σκέλη, χωρίς replay ολοκληρωμένων δοκιμών.
+
+## Ιστορική τεχνική παράδοση22/10/2026 - αποδοχή εμφάνισης καταγράφηκε παραπάνω
 
 Retained owner feat/android-chat-native-20261017. Compact modern native conversation presentation published as0.1.10-preview/code11: rounded adaptive actions/composer, complete labels and more conversation space. Same callbacks, auth/store/session/push/privacy/media behavior and stable owner signer. SourcePR2989/head578aff9c merged2e7b084; fresh full39747236825/Android39747236750 and exact-main39748776462 SUCCESS, actual camera plus36instrumentation/0FAIL/0SKIP. Actual synthetic normal/large-font renderings visually inspected; this is not physical-user acceptance.
 

@@ -1,0 +1,16 @@
+{
+  "dateEuropeAthens": "2026-10-22",
+  "owner": "feat/android-chat-native-20261017",
+  "userStatement": "ειναι οκ",
+  "context": "Immediately following delivery0.1.10 and request to inspect conversation appearance",
+  "status": "LIMITED USER PASS",
+  "scope": "New Android conversation appearance only",
+  "independentPhysicalDeviceHashVerified": false,
+  "physicalSameSignerUpdateVerified": false,
+  "newBusinessOrMediaTest": false,
+  "repeatAcceptedTests": false,
+  "ios": "LAST",
+  "previousTechnicalReceiptPr": 3003,
+  "sourcePr": 2989,
+  "distributionPr": 3002
+}
