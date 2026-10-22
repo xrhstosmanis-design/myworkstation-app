@@ -1,3 +1,4 @@
+import {saveStoreMetadata} from '../services/store-metadata-mutation.js';
 import {assistantHistoryTurnMetadata} from '../services/assistant-history-turns.js';
 import {createNativeAssistantHistory,createAssistantHistoryHttp} from '../services/assistant-history-http.js';
 import {registerFreshStoreLifecycle} from '../services/store-lifecycle-controller.js';
@@ -570,12 +571,7 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
       responsibleEmail:reportRecipientListSchema.optional(),
       cashCloseEmailEnabled:z.boolean().default(true)
     }).parse(req.body||{});
-    const store=await prisma.store.findFirst({where:{id:req.params.storeId,companyId:req.params.companyId}});
-    if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα στον συγκεκριμένο πελάτη."});
-    const updated=await prisma.store.update({
-      where:{id:store.id},
-      data:{name:body.name,city:body.city||null,...(body.address!==undefined?{address:body.address||null}:{}),...(body.responsibleEmail!==undefined?{responsibleEmail:body.responsibleEmail||null}:{}),cashCloseEmailEnabled:body.cashCloseEmailEnabled}
-    });
+    const updated=await saveStoreMetadata(prisma,{companyId:req.params.companyId,storeId:req.params.storeId,actorId:req.user.id},body);
     res.json({id:updated.id,name:updated.name,city:updated.city,address:updated.address,responsibleEmail:updated.responsibleEmail,cashCloseEmailEnabled:updated.cashCloseEmailEnabled,companyId:updated.companyId});
   }catch(error){next(error)}
 });
@@ -1539,4 +1535,3 @@ router.post("/ai-command-center/ask",async(req,res,next)=>{
 });
 
 export default router;
-

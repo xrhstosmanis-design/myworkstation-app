@@ -131,6 +131,11 @@ import platformAdvancedOnlineSearchRoutes from "./routes/platform-advanced-onlin
 import commerceAdvancedOnlineSearchRoutes from "./routes/commerce-advanced-online-search.js";
 import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoice-learning-product-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
+import {createAutomaticReportDispatchRouter} from './routes/automatic-report-dispatch.js';
+import {readActivation} from './services/automatic-report-activation.js';
+import {createAutomaticReportDispatcher} from './services/automatic-report-dispatch.js';
+import {createAutomaticReportScheduler} from './services/automatic-report-scheduler.js';
+import {backgroundDrain} from './server-shutdown.js';
 import backupMonitorRoutes from "./routes/backup-monitor.js";
 import platformSuperAdminAnalyticsDetailsRoutes from "./routes/platform-super-admin-analytics-details.js";
 import platformDeviceOperationsRoutes from "./routes/platform-device-operations.js";
@@ -207,6 +212,7 @@ app.use("/api/platform/kat-test",katTestRoutes);
 app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformSuperAdminAnalyticsDetailsRoutes);
 app.use("/api/platform/store-modules",platformStoreModulesRoutes);
+app.use('/api/platform/companies/:companyId/stores/:storeId/report-dispatch',auth,createAutomaticReportDispatchRouter(prisma));
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform",platformStoreIntegrationsRoutes);
 app.use("/api/platform",platformEfoodIntegrationRoutes);
@@ -349,12 +355,14 @@ await ensureStorePaidModulesSchema();
 await ensureStoreChatSchema();
 await ensurePosInvoiceBackgroundWorkerSchema();
 await clearKatStuckRbsRequest();
+const automaticReportActivationProvider=()=>readActivation(process.env);
+const automaticReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider});
+const automaticReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:automaticReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain});
 const server=app.listen(process.env.PORT||8080,()=>{
   console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`);
   startPosInvoiceBackgroundWorker();
   startMyDataReceivingWorker();
   startWorkforceAutoOutWorker();
+  automaticReportScheduler.start();
 });
 shutdown.install(server);
-
-
