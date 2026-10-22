@@ -21,7 +21,9 @@ test('native full catalog oracle, collisions, mismatch rollback and operator iso
   await assertDispatchStorageAbsent(a,schema);
   if(process.env.MWS_REQUIRE_PROVISION_PG18==='true')assert.equal(oracle.serverMajor,18,'dedicated workflow must execute PG18');
   if(oracle.serverMajor===18){
-   console.log('MWS_PG18_CATALOG_BASE64='+Buffer.from(JSON.stringify(oracle)).toString('base64'));
+   const encoded=Buffer.from(JSON.stringify(oracle)).toString('base64');
+   for(let offset=0;offset<encoded.length;offset+=12000)console.log('MWS_PG18_CATALOG_PART_'+(offset/12000)+'='+encoded.slice(offset,offset+12000));
+   console.log('MWS_PG18_CATALOG_LENGTH='+encoded.length);
    try{const fixture=JSON.parse(await readFile(new URL('./fixtures/automatic-report-provision-catalog-pg18.json',import.meta.url),'utf8'));assertDispatchCatalog(oracle,fixture);}catch(e){if(e.code!=='ENOENT')throw e;}
   }
   await t.test('full catalog oracle rejects changed defaults/checks/indexes/rows/RLS/types',()=>{

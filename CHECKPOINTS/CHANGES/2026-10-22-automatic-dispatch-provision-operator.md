@@ -27,15 +27,4 @@ Initialsource63215d82/fullCI39851820446 FAILED beforetests: requiredactive-list/
 
 PG18workflow initialaba79fcd runs39852295239/39852286822 FAILED beforetest atsetup-node cache: repository has no committed dependencylockfile. Removed only optionalnpmcache; normalrootnpm install retained. No testcheck weakened, no nativePASS inferred. New exacthead must execute actualPG18 cases.
 
-ActualPG18 evidence: sourcehead df07dd217e6d89b2f01ab5f243630320df90799c, dedicatedPRrun39852594562/job120082420664 SUCCESS12PASS/0FAIL/0SKIP; actualPostgreSQL18.6 officialcontainer. Real maintenance contention, fullcatalog drift rollback, exact6emptyprovision+repeatrefusal all executed. Fixturecaptured solely from exact installedDDL in disposableisolatedschema then capturetransaction rolledback, noproductioncopy/data. Fixturemetadata Traceback (most recent call last):
-  File "<stdin>", line 3, in <module>
-  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py", line 338, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py", line 354, in raw_decode
-    obj, end = self.scan_once(s, idx)
-               ^^^^^^^^^^^^^^^^^^^^^^
-json.decoder.JSONDecodeError: Unterminated string starting at: line 1 column 49131 (char 49130). Matching fixture is now included; independent fixture review and finalhead fullPR/mainCI remain mandatory. This is technical isolated proof, NOT LAB/USER/email/fullproductionrecoveryPASS.
+ActualPG18 evidence df07dd217e6d89b2f01ab5f243630320df90799c / PRrun39852594562/job120082420664 SUCCESS12PASS/0FAIL/0SKIP actualPostgreSQL18.6. All operator cases executed. Fixturepublicationattempt56b8b818 INVALID: GitHub singlelogline truncated base64 at~64KiB; localJSONdecode failed. Root failed to gate subsequentpublish on commandexitstatus, so draftfixtureblob was invalid (no production use/merge). Removedinvalidblob, corrected thisreceipt and changed test-only catalogoutput to bounded12kchunks with exactlength sentinel; fixture remainsNOTCAPTURED until verified complete capture. Existing12PASS remains isolatedtechnicalproof only, not finalfixture/fullCI/production/LAB acceptance.
