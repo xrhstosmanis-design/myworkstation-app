@@ -32,6 +32,7 @@ import "./store-pos-aux-actions.css";
 import "./pos-categories-readable.css";
 import "./pos-card-confirmation-readable.css";
 import "./pos-last-transaction.css";
+import "./pos-ui-v2.css";
 import PosCollapsibleHeader from "./PosCollapsibleHeader.jsx";
 import PosHeaderActionsMenu from "./PosHeaderActionsMenu.jsx";
 import {queueOfflineCashSale,readOfflineSaleQueue,syncOfflineSales} from "../../offline-sale-queue.js";

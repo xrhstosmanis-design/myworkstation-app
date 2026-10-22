@@ -1,0 +1,36 @@
+# POS UI V2 appearance — issue #3012 — AWAITING LAB
+
+Owner: `feat/pos-ui-v2-appearance-3012`, coordinated by POS UI V2. Work starts from the named source `feat/pos-ui-v2-safe-minimize-3012` / `9d168106`; the independent appearance delta is rebased onto current main before PR publication. The owner's explicit 22 October instruction authorizes development, commits and PRs, while requiring final approval before any merge/deploy; therefore no main claim merge or production change is performed.
+
+## Native CI correction and expanded viewport checks — 22 October 2026
+
+The first native CI for PR3019 failed four basket-geometry assertions at the original CLI window sizes1024×768 and1366×768 (both calculator variants). The previous local8-case result is retained below as historical limited evidence, not native CI PASS. CLI outer window size did not assert the actual CSS viewport; the direct-CDP repro at1024×681 measured only19px of basket height. At zoom-equivalent1092×614 and910×512 it was0px. No production revision was changed.
+
+The test now controls the **actual CSS content viewport** through dependency-free Chrome DevTools Protocol pipes and asserts exact innerWidth/innerHeight/devicePixelRatio in both local and native CI. It uses the same renderer and protocol directly, without a CLI/Puppeteer adapter or new npm dependency. No lowered basket or hit-test criterion. Extra681px/625px content heights remain explicit regression cases, so correcting the harness does not erase short-height coverage.
+
+Presentation changes: short desktop working panels scroll within their allotted region, retaining a useful basket and all quick/category controls while the payment footer stays outside the scroller. At600–850px, actions use two rows and the payment group spans them; this reserves useful working height at150% zoom. Narrow quick panels receive an explicit150px height so their contents cannot collapse. Success messages move from fixed top100px into normal layout flow; errors, success feedback and chat notices remain visible, with dismiss/open buttons hit-tested. A narrow-screen chat notice also remains in header flow. No handlers, totals, transaction state or financial requests change.
+
+**Final local rendered result:36 PASS,0 FAIL,0 SKIP**, actual Chromium153 with direct CDP. Exact viewports1024×768,1280×800,1366×768,1920×1080,1024×681,1366×681,1366×625; plus125%/150% equivalents for1366px and1024px monitors:1092×614/DPR1.25,910×512/DPR1.5,819×614/DPR1.25,682×512/DPR1.5. Calculator shown/hidden everywhere; error+success+chat-notice combinations at1366px and all zoom equivalents. Every footer control remains in viewport and hit-testable; basket has at least90px reachable inside the visible working viewport, scanner width remains useful, category and quick-key complete rectangles/text fit and are reachable by internal scrolling, notice controls hit-test, page does not overflow. On very small zoom-equivalent views, scrolling the working area is necessary to switch between basket/categories/quick keys; the footer stays visible. No feature or status row is hidden to make tests pass.
+
+Final Node20 frontend build after the latest source corrections:PASS,2427modules,18.13seconds,TABLE_SERVICE bundle verified, standard large-chunk warning only. Checkpoint policy and diff whitespace check PASS. Refreshed fixture previews and36-case test log/results are in the existing evidence folder; the682×512/DPR1.5 image intentionally shows synthetic success/error/chat messages together. These are isolated fixtures, not authenticated stores or an exact reproduction of the unseen chosen reference. New exact native CI remains pending after publication; the failed old CI is not relabelled PASS.
+
+## Delivered source
+
+- `client/src/components/store/pos-ui-v2.css` adds scoped presentation overrides to the real POS.
+- `StorePosPanel.jsx` imports the stylesheet only. Existing elements, event handlers, conditional permissions and state remain unchanged.
+- Neutral green surfaces, clear numeric typography, readable table headers, larger quick-product names, consistent keypad/actions and focus indicators.
+- Existing 20 quick keys remain. The protected 68px minimum and full product-name wrapping are retained. On shorter screens, the quick panel scrolls internally; showing all 20 at once would require more than 725px before the POS header/footer. Cart and page do not move with that scrolling.
+- Existing categories remain. At widths 851–1450 they reflow into five columns; their height allows 20 captions/counts, including two-line captions at 1024px. Wider screens retain configured column count. Actions reflow into two rows at 851–1250; IRIS/cash/total stay grouped and visible.
+- Calculator shown/hidden variants retain useful basket width. No payment, tax, pricing, fiscal, stock, scanner, tenant, QR, card, discount or finalization handler changes.
+
+## Evidence and limits
+
+Node 20 frontend `npm run build`: PASS (standard bundle-size warning). `git diff --check`: PASS.
+
+`server/test/pos-ui-v2-layout.test.js`: **8 PASS, 0 FAIL, 0 SKIP**, actual Chromium 153 rendered with a Puppeteer CDP pipe adapter because this sandbox's headless-shell CLI dump-dom hangs. Four viewports (1024×768, 1280×800, 1366×768, 1920×1080), each with keypad shown/hidden. Tests verify all footer control bounds and center hit tests, usable basket/scanner, all 20 category captions/counts within their buttons and category center hit tests, all 20 quick keys fully reachable by internal scrolling with their names visible, and no page overflow. Initial tests identified inherited important minimum-height and clipped category counts; source geometry was corrected while preserving the quick-name invariant. Final exact stylesheet evidence is in `CHECKPOINTS/EVIDENCE/pos-ui-v2-appearance-3012/`.
+
+PNG previews are **isolated fixtures using production CSS and representative actual POS markup**, with synthetic names/amounts. They are not hosted-store screenshots or proof of the unseen selected reference's exact appearance. The fixture now includes actual customer-toolbar styles. No network or business operation runs in these tests.
+
+Authenticated POS, actual store-specific configuration, optional audience/delivery rows, search-results expansion, actual browser zoom controls and mobile devices (only equivalent CSS viewport/DPR geometries were rendered above), all dialog flows, scanner hardware, EFTPOS, fiscal receipt, multiple customers and stock/financial effects: **NOT TESTED**. This change does not claim these flows safe merely because it leaves their handlers unchanged. Broader overlay and safety streams are independent. No manual PASS entry or overall Gate closure; no merge/deploy. Full native CI and a safe authenticated nonfinancial visual review are required before the owner receives an installation recommendation. Financial LAB actions require separately recorded before/after baselines and no replay of existing payments.
+
+Final Node20 frontend build after all CSS corrections PASS:2427modules,18.28seconds,TABLE_SERVICE bundle verified. Standard large-chunk warning only. Local source tree29f9676 is uploaded unchanged as remote9ed15618. Draft PR3019; no merge/deploy.

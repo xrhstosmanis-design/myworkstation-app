@@ -1,0 +1,312 @@
+/* POS UI V2 — presentation only. Keep the original controls, state and handlers.
+   Overrides are scoped to the real Store POS, never its dialogs or BackOffice. */
+.mws-standard-pos.store-pos-card {
+  --pos-v2-border: #d4dfdd;
+  --pos-v2-ink: #203f38;
+  --pos-v2-muted: #587068;
+  background: #edf2f1;
+  color: var(--pos-v2-ink);
+  font-family: Arial, sans-serif;
+}
+
+.mws-standard-pos .store-pos-top.pos-flat-header {
+  padding: 6px 10px;
+  background: #f5f9f7;
+  border-bottom: 1px solid var(--pos-v2-border);
+}
+.mws-standard-pos .pos-flat-header .pos-flat-brand { gap: 8px; }
+.mws-standard-pos .pos-flat-header .pos-flat-brand > strong { font-size: calc(17px * var(--pos-text-scale)); }
+.mws-standard-pos .pos-flat-header button { border-radius: 8px; }
+
+.mws-standard-pos .standard-pos-grid button,
+.mws-standard-pos .standard-action-bar button { font-family: inherit; }
+
+.mws-standard-pos .standard-pos-grid {
+  gap: 8px;
+  padding: 8px;
+  background: #edf2f1;
+}
+.mws-standard-pos .standard-quick,
+.mws-standard-pos .standard-sale-panel,
+.mws-standard-pos .standard-keypad {
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px #193f3508;
+}
+.mws-standard-pos .standard-quick {
+  display: grid;
+  grid-template-rows: 28px minmax(0, 1fr);
+  padding: 6px;
+  min-height: 0;
+}
+.mws-standard-pos .standard-quick > header {
+  height: auto;
+  color: var(--pos-v2-muted);
+  font-size: calc(12px * var(--pos-text-scale));
+  letter-spacing: .02em;
+}
+.mws-standard-pos .standard-quick > div {
+  min-height: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(10, minmax(68px, auto));
+  gap: 5px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.mws-standard-pos .standard-quick > div > button {
+  min-height: 68px;
+  height: auto;
+  padding: 5px 7px;
+  border-radius: 7px;
+  line-height: 1.15;
+  box-shadow: inset 0 0 0 1px #0000000a;
+}
+.mws-standard-pos .standard-quick > div > button span {
+  font-size: calc(12px * var(--pos-button-font) * var(--pos-text-scale));
+}
+.mws-standard-pos .standard-quick .quick-product-name {
+  font-size: calc(12px * var(--pos-button-font) * var(--pos-text-scale)) !important;
+  line-height: 1.15;
+}
+.mws-standard-pos .standard-quick > div > button small { margin-top: 3px; }
+
+.mws-standard-pos .standard-sale-panel {
+  grid-template-rows: 58px auto 34px minmax(0, 1fr) 164px;
+}
+.mws-standard-pos .standard-search {
+  height: 44px;
+  margin: 6px;
+  border: 1px solid #b9cdc5;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px #173e3508;
+}
+.mws-standard-pos .standard-search:focus-within {
+  border-color: var(--pos-accent);
+  box-shadow: 0 0 0 2px #087a521a;
+}
+.mws-standard-pos .standard-search input { background: transparent; }
+.mws-standard-pos .standard-search-results { max-height: min(180px, 25dvh); }
+.mws-standard-pos .standard-table-head {
+  padding-inline: 10px;
+  background: #e8efec;
+  color: #36544a;
+  font-size: calc(12px * var(--pos-text-scale));
+  letter-spacing: .02em;
+}
+.mws-standard-pos .standard-line {
+  min-height: 58px;
+  border-bottom: 1px solid #e4ebe7;
+  font-variant-numeric: tabular-nums;
+}
+.mws-standard-pos .standard-line:nth-child(even) { background: #f7faf8; }
+.mws-standard-pos .line-qty button,
+.mws-standard-pos .line-total button { width: 34px; height: 36px; }
+.mws-standard-pos .line-total > b { font-size: calc(16px * var(--pos-text-scale)); }
+.mws-standard-pos .standard-empty { gap: 10px; }
+.mws-standard-pos .standard-empty b { font-size: calc(22px * var(--pos-text-scale)); }
+.mws-standard-pos .standard-sale-panel .standard-category-strip {
+  background: #f5f8f6;
+  padding: 6px;
+}
+.mws-standard-pos .standard-sale-panel .standard-category-strip > div { gap: 5px; }
+.mws-standard-pos .standard-sale-panel .standard-category-strip > div > button {
+  border-radius: 7px;
+  padding: 4px;
+  font-size: clamp(13px, calc(14px * var(--pos-button-font) * var(--pos-text-scale)), 20px) !important;
+}
+.mws-standard-pos .standard-sale-panel .standard-category-strip .category-count {
+  white-space: normal;
+  font-size: calc(11px * var(--pos-text-scale));
+}
+.mws-standard-pos .standard-sale-panel .standard-category-strip > div > button > span {
+  background: #ffffffed;
+  border-radius: 4px;
+  padding: 3px;
+}
+.mws-standard-pos .standard-keypad {
+  padding: 6px;
+  gap: 6px;
+  background: #f9fbfa;
+}
+.mws-standard-pos .standard-keypad > .customer-button { min-height: 44px; }
+.mws-standard-pos .standard-keypad > .money-cards { min-height: 62px; }
+.mws-standard-pos .money-cards { gap: 5px; }
+.mws-standard-pos .money-cards span {
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 7px;
+  background: #fff;
+  font-size: calc(11px * var(--pos-text-scale));
+}
+.mws-standard-pos .money-cards span + span { border-left: 1px solid var(--pos-v2-border); }
+.mws-standard-pos .number-grid { gap: 5px; }
+.mws-standard-pos .number-grid button {
+  border-radius: 7px;
+  border: 1px solid var(--pos-v2-border);
+  font-size: calc(24px * var(--pos-text-scale));
+}
+.mws-standard-pos .standard-action-bar {
+  gap: 5px;
+  padding: 6px 8px 8px;
+  background: #fff;
+  border-top: 1px solid var(--pos-v2-border);
+}
+.mws-standard-pos .standard-action-bar > button,
+.mws-standard-pos .standard-payment-end > button {
+  min-height: 52px;
+  height: auto;
+  border-radius: 8px;
+  font-size: calc(12px * var(--pos-text-scale));
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.mws-standard-pos .standard-action-bar > button { flex-direction: column; gap: 3px; }
+.mws-standard-pos .standard-payment-end { gap: 5px; }
+.mws-standard-pos .standard-payment-end > button { flex-direction: column; gap: 3px; }
+.mws-standard-pos .standard-payment-end > strong {
+  background: #153f35;
+  border-radius: 8px;
+  font-size: clamp(20px, 1.8vw, 30px);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.mws-standard-pos .standard-payment-end > strong small { font-size: calc(11px * var(--pos-text-scale)); }
+.mws-standard-pos .standard-payment-end > .iris { background: #0f766e; }
+.mws-standard-pos .standard-payment-end > .cash { background: #087a52; }
+.mws-standard-pos .standard-action-bar > button.credit { background: #e8e6f6; color: #4c367f; }
+.mws-standard-pos .standard-pos-grid button:focus-visible,
+.mws-standard-pos .standard-action-bar button:focus-visible {
+  outline: 3px solid #235fa4;
+  outline-offset: -3px;
+}
+
+@media (min-width: 851px) {
+  .mws-standard-pos .standard-pos-grid { grid-template-columns: minmax(180px, 17%) minmax(0, 1fr) minmax(210px, 20%); }
+  .mws-standard-pos .standard-pos-grid.without-keypad { grid-template-columns: minmax(180px, 17%) minmax(0, 1fr); }
+  .mws-standard-pos .standard-action-bar { grid-template-columns: repeat(10, minmax(0, 1fr)) minmax(250px, 3fr); }
+  .mws-standard-pos .standard-payment-end { grid-template-columns: minmax(0, .85fr) minmax(0, 1fr) minmax(0, 1.3fr); }
+  .mws-standard-pos .standard-table-head,
+  .mws-standard-pos .standard-line { grid-template-columns: 105px minmax(0, 1fr) 54px 76px 100px; gap: 5px; }
+}
+/* Reflow all configured category keys so their names and counts fit. */
+@media (min-width: 851px) and (max-width: 1450px) {
+  .mws-standard-pos .standard-sale-panel { grid-template-rows: 58px auto 34px minmax(0, 1fr) 232px; }
+  .mws-standard-pos .standard-sale-panel .standard-category-strip > div { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: 1fr; }
+}
+@media (min-width: 851px) and (max-width: 1150px) {
+  .mws-standard-pos .standard-sale-panel { grid-template-rows: 58px auto 34px minmax(0, 1fr) 288px; }
+}
+/* Reflow secondary actions instead of shrinking Greek labels below legibility. */
+@media (min-width: 851px) and (max-width: 1250px) {
+  .mws-standard-pos .standard-action-bar { grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(250px, 3fr); }
+  .mws-standard-pos .standard-payment-end { grid-column: 6; grid-row: 1 / span 2; }
+  .mws-standard-pos .standard-table-head,
+  .mws-standard-pos .standard-line { grid-template-columns: 94px minmax(0, 1fr) 42px 66px 85px; gap: 4px; padding-inline: 6px; }
+  .mws-standard-pos .line-qty { gap: 3px; }
+  .mws-standard-pos .line-qty button { width: 30px; }
+}
+@media (min-width: 1451px) and (max-height: 760px) {
+  .mws-standard-pos .standard-pos-grid { gap: 6px; padding: 6px; }
+  .mws-standard-pos .standard-sale-panel { grid-template-rows: 54px auto 32px minmax(0, 1fr) 144px; }
+  .mws-standard-pos .standard-search { height: 40px; }
+  .mws-standard-pos .standard-quick > div { grid-template-rows: repeat(10, minmax(68px, auto)); gap: 4px; }
+  .mws-standard-pos .standard-quick > div > button { min-height: 68px; }
+  .mws-standard-pos .standard-action-bar > button,
+  .mws-standard-pos .standard-payment-end > button { min-height: 46px; }
+}
+/* Smaller screens keep every feature reachable with internal panel scrolling. */
+@media (max-width: 850px) {
+  .mws-standard-pos .standard-pos-grid,
+  .mws-standard-pos .standard-pos-grid.without-keypad {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(250px, 1fr) auto;
+    overflow: auto;
+  }
+  .mws-standard-pos .standard-quick { max-height: 150px; }
+  .mws-standard-pos .standard-quick > div { grid-template-columns: repeat(5, minmax(90px, 1fr)); grid-template-rows: repeat(4, minmax(42px, 1fr)); }
+  .mws-standard-pos .standard-sale-panel { min-height: 350px; grid-template-rows: 58px auto 34px minmax(100px, 1fr) 150px; }
+  .mws-standard-pos .standard-keypad { height: auto; min-height: 280px; }
+  .mws-standard-pos .standard-table-head,
+  .mws-standard-pos .standard-line { grid-template-columns: 94px minmax(120px, 1fr) 42px 66px 85px; gap: 4px; min-width: 450px; }
+  .mws-standard-pos .standard-action-bar { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .mws-standard-pos .standard-payment-end { grid-column: 1 / -1; grid-template-columns: 1fr 1fr 1.4fr; }
+}
+@media (max-width: 500px) {
+  .mws-standard-pos .standard-action-bar { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 4px; gap: 4px; }
+  .mws-standard-pos .standard-action-bar > button { font-size: calc(10px * var(--pos-text-scale)); min-height: 48px; }
+  .mws-standard-pos .standard-search { padding-inline: 7px; gap: 5px; }
+  .mws-standard-pos .standard-search input { font-size: calc(14px * var(--pos-text-scale)); }
+  .mws-standard-pos .standard-search-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Status feedback occupies its own row instead of covering scanner/cart keys. */
+.mws-standard-pos .store-pos-top.pos-flat-header,
+.mws-standard-pos .pos-customer-toolbar,
+.mws-standard-pos .store-pos-alert { flex: 0 0 auto; }
+.mws-standard-pos .store-pos-alert {
+  margin: 4px 8px 0;
+  padding: 6px 8px;
+  font-size: 13px;
+  line-height: 1.25;
+}
+.mws-standard-pos .store-pos-alert.store-pos-toast {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin: 4px 8px 0;
+  box-shadow: none;
+}
+
+/* Preserve a usable basket when browser chrome, zoom or feedback consumes
+   height. Only the working panels scroll; payment controls stay outside them. */
+@media (min-width: 851px) and (max-height: 760px) {
+  .mws-standard-pos .standard-pos-grid {
+    overflow: auto;
+    scroll-padding: 8px;
+    align-items: start;
+    grid-template-rows: minmax(480px, 1fr);
+    overscroll-behavior: contain;
+  }
+  .mws-standard-pos .standard-sale-panel,
+  .mws-standard-pos .standard-quick,
+  .mws-standard-pos .standard-keypad { height: 100%; min-height: 480px; }
+}
+@media (max-width: 850px) {
+  .mws-standard-pos .standard-quick > div {
+    grid-template-columns: repeat(4, minmax(100px, 1fr));
+    grid-template-rows: repeat(5, minmax(68px, auto));
+  }
+  .mws-standard-pos .standard-sale-panel .standard-category-strip > div {
+    grid-template-columns: repeat(4, minmax(100px, 1fr));
+    grid-template-rows: none;
+    grid-auto-rows: minmax(68px, auto);
+    overflow: auto;
+  }
+}
+@media (max-width: 850px) {
+  .mws-standard-pos .standard-pos-grid,
+  .mws-standard-pos .standard-pos-grid.without-keypad {
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+    align-content: start;
+    scroll-padding: 8px;
+  }
+  .mws-standard-pos .store-pos-top .store-chat-in-app-alert {
+    position: static;
+    inset: auto;
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 850px) {
+  .mws-standard-pos .standard-quick { height: 150px; min-height: 150px; }
+}
+@media (min-width: 600px) and (max-width: 850px) {
+  .mws-standard-pos .standard-action-bar {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(210px, 2.5fr);
+  }
+  .mws-standard-pos .standard-payment-end {
+    grid-column: 6;
+    grid-row: 1 / span 2;
+    grid-template-columns: minmax(0, .85fr) minmax(0, 1fr) minmax(0, 1.3fr);
+  }
+}
