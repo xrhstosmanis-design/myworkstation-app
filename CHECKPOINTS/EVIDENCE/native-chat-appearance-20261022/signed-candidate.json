@@ -1,0 +1,18 @@
+{
+  "apkV2Signature": "PASS",
+  "apkContentDigest": "PASS",
+  "pinnedCertificate": "PASS",
+  "package": "gr.myworkstation.chat.preview",
+  "version": "0.1.10-preview",
+  "versionCode": 11,
+  "sha256": "5c617d59d2a0a0adc356419a40b55f3bd1ba1449810e31b03ea6e33a7c4b8060",
+  "bytes": 3687252,
+  "sourceSha": "2e7b084ecd4e1d42ab97c28b1cbf2832ba6990b3",
+  "artifactId": 12413756302,
+  "signedRun": 39749830993,
+  "zipSha256": "da8f1c810363a813480e93247e7f17bd216cc3f8cc3bf0525abd1cec83c5b7b7",
+  "androidSourceTree": "93ad2fdf5e3dd93a0c427d4a84a543ed835a9189",
+  "modernDexMarkers": "PASS",
+  "publicDistribution": "NOT YET PUBLISHED",
+  "physicalAppearance": "NOT TESTED"
+}

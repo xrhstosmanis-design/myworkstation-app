@@ -1,0 +1,11 @@
+{
+  "apkV2Signature": "PASS",
+  "apkContentDigest": "PASS",
+  "pinnedCertificate": "PASS",
+  "package": "gr.myworkstation.chat.preview",
+  "version": "0.1.10-preview",
+  "versionCode": 11,
+  "sha256": "5c617d59d2a0a0adc356419a40b55f3bd1ba1449810e31b03ea6e33a7c4b8060",
+  "bytes": 3687252,
+  "sourceSha": "2e7b084ecd4e1d42ab97c28b1cbf2832ba6990b3"
+}
