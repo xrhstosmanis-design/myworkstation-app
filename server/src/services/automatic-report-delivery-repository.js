@@ -84,14 +84,21 @@ export function createAutomaticReportDeliveryRepository({db,readEligibility}){
     // Callers cannot provide replacement records or eligibility assertions.
     if(start)shape(config,["expectedVersion","token","now"]);
     return await db.$transaction(async tx=>{
-      const before=await load(tx,s,true);
-      if(!before)fail("DELIVERY_NOT_FOUND","No delivery in selected scope.");
+      // Match create's dependency order: eligibility locks before slot locks.
+      // The scoped canonical probe supplies immutable input, never permission.
+      const probe=start?await load(tx,s):null;
+      if(start&&!probe)fail("DELIVERY_NOT_FOUND","No delivery in selected scope.");
       let options=config;
       if(start){
         instant(config.now);
-        const current=await readEligibility({tx,companyId:s.companyId,storeId:s.storeId,input:before.input,now:config.now});
+        const current=await readEligibility({tx,companyId:s.companyId,storeId:s.storeId,input:probe.input,now:config.now});
         options={...config,current};
       }
+      const before=await load(tx,s,true);
+      if(!before)fail("DELIVERY_NOT_FOUND","No delivery in selected scope.");
+      // A probe can race a recovery/replacement. Only the locked current row
+      // may transition; it must still describe exactly the authorized input.
+      if(start)reconcileDeliverySlot(before,probe.input);
       const after=transition(before,options);
       return await persist(tx,s,before,after);
     });
