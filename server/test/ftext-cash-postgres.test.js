@@ -64,5 +64,12 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    assert.equal((await a.$queryRaw`SELECT "operatorId" FROM "StoreOperatorAudit"`)[0].operatorId,'cashier-a');assert.equal((await a.$queryRaw`SELECT "fiscalStatus" FROM "Sale"`)[0].fiscalStatus,'ISSUED');assert.equal((await a.$queryRaw`SELECT "type","amount" FROM "StoreTransaction"`)[0].type,'SALE_CASH');
    assert.equal((await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,receipt))).status,'SALE_COMMITTED');
   });
+  await t.test('an old final receipt cannot be assigned to a second checkout',async()=>{
+   const second=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'checkout-second'}));
+   await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+   await assert.rejects(a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{...receipt,requestId:second.id,dayId:'017',dayCounter:'042'})),e=>e.code==='FTEXT_CASH_RECEIPT_REUSED');
+   assert.equal((await a.$queryRaw`SELECT * FROM "Sale"`).length,1);assert.equal((await a.$queryRaw`SELECT "status" FROM "FtextCashRequest" WHERE "id"=${second.id}`)[0].status,'DISPATCHED');
+  });
+
  }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);try{if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`)}finally{await admin.$disconnect()}}
 });

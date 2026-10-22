@@ -1,3 +1,7 @@
+### Final source review — receipt and physical-register uniqueness
+
+Pending uniqueness and advisory serialization now bind the confirmed physical serial, preventing an alternate logical fiscal code from bypassing the one-pending-register boundary. Added canonical numeric day/counter normalization and a dedicated unique final-receipt index/refusal; a previous receipt cannot finalize a second checkout, including zero-padded aliases. Native regression requires second request to remain DISPATCHED and total sale count1 on reused receipt. Original duplicate-confirmation metadata/Audit path is retained when the existing POS duplicate guard was explicitly confirmed. No production table/index/config or physical execution; final native/full CI still required.
+
 ### PR3067 source review and native Windows rerun
 
 Source c40fd460 / Windows39839487703/job120036419594 completed SUCCESS: actual Windows PowerShell5.1 STATUS29 plus cloud scope/DPAPI checks and32 new cash command/result/timeout/restart/tombstone/native temporary-folder exchange boundaries. This is synthetic CI, not physical fiscal PASS. Full source CI39839487807 still pending. Review also preserves original cashier operatorId, atomic audit-table availability and negative-stock warnings in committed request evidence/POS completion; native fixture now starts stock0 and requires exactly-1 plus one movement, preserved warning on replay and untouched foreign stock20. Local related7PASS/1nativeSKIP after review. No production/fiscal action; exact final CI/release still required.

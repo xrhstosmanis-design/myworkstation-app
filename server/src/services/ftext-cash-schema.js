@@ -13,6 +13,7 @@ export async function ensureFtextCashSchema(db){
  "result" JSONB,"resultHash" TEXT,"saleId" TEXT,
  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  UNIQUE("companyId","storeId","clientTransactionId"))`);
- await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "FtextCashRequest_register_pending_idx" ON "FtextCashRequest" ("companyId","storeId","fiscalDeviceCode") WHERE "status" <> 'SALE_COMMITTED'`);
+ await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "FtextCashRequest_register_pending_idx" ON "FtextCashRequest" ("companyId","storeId","serialNumber") WHERE "status" <> 'SALE_COMMITTED'`);
+ await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "FtextCashRequest_receipt_idx" ON "FtextCashRequest" ("companyId","storeId","serialNumber",("result"->>'dayId'),("result"->>'dayCounter')) WHERE "status" IN ('CONFIRMED','SALE_COMMITTED')`);
 }
 export async function ftextCashTableExists(db){return Boolean((await db.$queryRaw`SELECT to_regclass(format('%I.%I',current_schema(),'FtextCashRequest'))::text AS name`)[0]?.name);}

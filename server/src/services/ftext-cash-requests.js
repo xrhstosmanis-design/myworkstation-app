@@ -15,10 +15,10 @@ export async function prepareFtextCashRequest(tx,{settings,scope,sessionId,clien
  items:items.map((i,index)=>({...scope,lineId:'line-'+index,productId:i.productId,description:i.name,quantity:i.quantity,unitPrice:i.effectiveUnitPrice,discount:i.discount||0,lineTotal:i.lineTotal,department:i.fiscalDepartment,vatRate:i.vatRate,vatCode:i.fiscalVatCode})),
  payments:[{method:'CASH',amount:summary.total}],paymentProfiles:[{...scope,method:'CASH',code:1,confirmed:true}],departmentProfiles:settings.cashDepartments.map(p=>({...scope,...p,confirmed:true}))});
  const settingsHash=ftextSettingsHash(settings);
- await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${['ftext-cash',scope.companyId,scope.storeId,scope.fiscalDeviceCode].join(':')},0))`;
+ await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${['ftext-cash',scope.companyId,scope.storeId,settings.serialNumber].join(':')},0))`;
  const old=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "clientTransactionId"=${clientTransactionId} FOR UPDATE`)[0];
  if(old){if(old.requestHash!==requestHash||old.plan.planHash!==plan.planHash||old.settingsHash!==settingsHash||old.sessionId!==sessionId)fail('FTEXT_CASH_KEY_CHANGED','Η ίδια συναλλαγή έχει διαφορετικά στοιχεία. Η προηγούμενη εντολή διατηρήθηκε.');return old;}
- if((await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "fiscalDeviceCode"=${scope.fiscalDeviceCode} AND "status"<>'SALE_COMMITTED' LIMIT 1`).length)fail('FTEXT_CASH_PENDING','Υπάρχει εκκρεμής εντολή σε αυτή την ταμειακή. Δεν στάλθηκε νέα.');
+ if((await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "serialNumber"=${settings.serialNumber} AND "status"<>'SALE_COMMITTED' LIMIT 1`).length)fail('FTEXT_CASH_PENDING','Υπάρχει εκκρεμής εντολή σε αυτή την ταμειακή. Δεν στάλθηκε νέα.');
  return (await tx.$queryRaw`INSERT INTO "FtextCashRequest" ("id","companyId","storeId","terminalPos","fiscalDeviceCode","serialNumber","clientTransactionId","requestHash","settingsHash","lifecycleGeneration","sessionId","plan","checkoutJson","total") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${scope.terminalPos},${scope.fiscalDeviceCode},${settings.serialNumber},${clientTransactionId},${requestHash},${settingsHash},${settings.lifecycleGeneration},${sessionId},${JSON.stringify(plan)}::jsonb,${JSON.stringify({...checkout,resolvedItems:items,baseSummary:summary})}::jsonb,${summary.total}) RETURNING *`)[0];
 }
 export async function claimFtextCashRequest(tx,device,settings){
@@ -37,6 +37,7 @@ export function validateFtextCashResult(input,row){
  if(r.outcome==='CONFIRMED'){
   let url;try{url=new URL(r.qr)}catch{}
   if(r.code!==0||r.serialNumber!==row.serialNumber||!r.dayId||!r.dayCounter||BigInt(r.dayCounter)<=0n||!r.deviceTime||!r.rawResultHash||!url||url.protocol!=='https:'||url.username||url.password||!(url.hostname==='aade.gr'||url.hostname.endsWith('.aade.gr')))fail('FTEXT_CASH_RECEIPT_UNVERIFIED','Δεν επιβεβαιώθηκε τελική φορολογική απόδειξη.');
+  r.dayId=BigInt(r.dayId).toString();r.dayCounter=BigInt(r.dayCounter).toString();
  }
  return r;
 }
@@ -45,6 +46,10 @@ export async function recordFtextCashResult(tx,device,settings,input){
  if(!row||row.claimedByDeviceId!==device.id||row.claimedTokenVersion!==device.tokenVersion||row.settingsHash!==ftextSettingsHash(settings))fail('FTEXT_CASH_RESULT_SCOPE','Η εντολή δεν αντιστοιχεί στη συγκεκριμένη ενεργή συσκευή.');
  const result=validateFtextCashResult(input,row),resultHash=hash(JSON.stringify(result));
  if(row.resultHash){if(row.resultHash!==resultHash)fail('FTEXT_CASH_RESULT_CHANGED','Το ίδιο αποτέλεσμα άλλαξε. Απαιτείται έλεγχος.');return row;}
+ if(result.outcome==='CONFIRMED'){
+  const reused=(await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${settings.companyId} AND "storeId"=${settings.storeId} AND "serialNumber"=${settings.serialNumber} AND "id"<>${row.id} AND "status" IN ('CONFIRMED','SALE_COMMITTED') AND "result"->>'dayId'=${result.dayId} AND "result"->>'dayCounter'=${result.dayCounter} LIMIT 1`)[0];
+  if(reused)fail('FTEXT_CASH_RECEIPT_REUSED','Η ίδια φορολογική απόδειξη έχει ήδη συνδεθεί με άλλη συναλλαγή. Δεν έγινε δεύτερη καταχώριση.');
+ }
  if(row.status!=='DISPATCHED')fail('FTEXT_CASH_RESULT_STATE','Η εντολή δεν βρίσκεται σε κατάσταση αποστολής.');
  return (await tx.$queryRaw`UPDATE "FtextCashRequest" SET "result"=${JSON.stringify(result)}::jsonb,"resultHash"=${resultHash},"status"=${result.outcome},"updatedAt"=NOW() WHERE "id"=${row.id} RETURNING *`)[0];
 }
