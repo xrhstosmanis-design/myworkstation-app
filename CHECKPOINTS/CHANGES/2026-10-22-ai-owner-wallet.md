@@ -1,3 +1,7 @@
+## Reconciliation with current main92699f2
+
+Preserve all ftext status/recovery, report delivery start-order, iOS claims and other intervening source/records. Only three prepended registry conflicts; preserve entire latest files plus this source scope, no owner/status deletion. Initial native failure and enum fixture correction remain recorded. Source includes explicit snapshot allow-list regression. Full fresh PR CI must run at the reconciled head, not the original failed revision. Local wallet-focused10PASS/0FAIL; prior full local3528PASS/0FAIL/203infrastructureSKIP and client/TABLE_SERVICE build PASS. No production changes or LAB claims.
+
 ## Explicit priced snapshot identity
 
 Source review found that a requested provider alias can return a pinned snapshot id. Add an optional explicit responseModels allow-list to the versioned tariff, with exact-match tests and no guessed prefix pricing. This avoids changing another owner's existing global assistant model just to activate billing. Unapproved snapshots still hold for review; no real rate/provider request was added. Full new-head CI required.

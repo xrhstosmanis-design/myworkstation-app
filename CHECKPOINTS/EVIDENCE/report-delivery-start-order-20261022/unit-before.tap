@@ -1,0 +1,241 @@
+TAP version 13
+# Subtest: start probes canonical stored input before eligibility and takes slot lock only after eligibility, then commits before return
+not ok 1 - start probes canonical stored input before eligibility and takes slot lock only after eligibility, then commits before return
+  ---
+  duration_ms: 11.682534
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:41:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'begin',
+    +   'slot-lock',
+    -   'probe',
+        'eligibility',
+    -   'slot-lock',
+        'persist',
+        'commit',
+        'resolved'
+      ]
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'begin'
+    1: 'probe'
+    2: 'eligibility'
+    3: 'slot-lock'
+    4: 'persist'
+    5: 'commit'
+    6: 'resolved'
+  actual:
+    0: 'begin'
+    1: 'slot-lock'
+    2: 'eligibility'
+    3: 'persist'
+    4: 'commit'
+    5: 'resolved'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:43:9)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: absent, foreign or corrupt probe never invokes eligibility or persistence
+not ok 2 - absent, foreign or corrupt probe never invokes eligibility or persistence
+  ---
+  duration_ms: 1.185892
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:45:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:50:68)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: trusted eligibility failure stops before taking the slot lock and never retries
+not ok 3 - trusted eligibility failure stops before taking the slot lock and never retries
+  ---
+  duration_ms: 1.560684
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:53:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'begin',
+    +   'slot-lock',
+    -   'probe',
+        'eligibility',
+        'rollback'
+      ]
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'begin'
+    1: 'probe'
+    2: 'eligibility'
+    3: 'rollback'
+  actual:
+    0: 'begin'
+    1: 'slot-lock'
+    2: 'eligibility'
+    3: 'rollback'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:55:82)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: revoked eligibility cannot persist ATTEMPTING
+ok 4 - revoked eligibility cannot persist ATTEMPTING
+  ---
+  duration_ms: 1.269908
+  ...
+# Subtest: a recovery/reclaim committed between probe and lock preserves the winner and rejects the stale start
+not ok 5 - a recovery/reclaim committed between probe and lock preserves the winner and rejects the stale start
+  ---
+  duration_ms: 2.465014
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:60:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      Comparison {
+    +   code: 'DELIVERY_CONFLICT'
+    -   code: 'STALE_VERSION'
+      }
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    code: 'STALE_VERSION'
+  actual:
+  error: 'Lease expired.'
+  stack: |-
+    fail (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-lifecycle.js:14:49)
+    activeToken (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-lifecycle.js:113:172)
+    startDelivery (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-lifecycle.js:134:80)
+    file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-repository.js:95:19
+    async Object.$transaction (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:29:99)
+    async mutate (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-repository.js:86:12)
+    async waitForActual (node:assert:533:5)
+    async Function.rejects (node:assert:654:25)
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:62:2)
+    async Test.run (node:internal/test_runner/test:797:9)
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:62:2)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: a canonical replacement snapshot with the same slot/version/token fails immutable recheck before any update
+not ok 6 - a canonical replacement snapshot with the same slot/version/token fails immutable recheck before any update
+  ---
+  duration_ms: 3.349093
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:64:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      Comparison {
+    +   code: 'ERR_ASSERTION'
+    -   code: 'DELIVERY_CONFLICT'
+      }
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    code: 'DELIVERY_CONFLICT'
+  actual:
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected ... Lines skipped
+    
+      {
+        attemptStartedAt: null,
+    ...
+            financialReconciliationComplete: false,
+            lifecycleGeneration: '4',
+    +       payloadFingerprint: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    -       payloadFingerprint: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+            policyFingerprint: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+    ...
+        ],
+        version: 2
+      }
+  stack: |-
+    Object.$queryRaw (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:24:130)
+    persist (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-repository.js:71:32)
+    file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-repository.js:96:20
+    async Object.$transaction (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:29:99)
+    async mutate (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-repository.js:86:12)
+    async waitForActual (node:assert:533:5)
+    async Function.rejects (node:assert:654:25)
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:66:2)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:66:2)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: a row removed after the probe cannot supply a successful start receipt
+not ok 7 - a row removed after the probe cannot supply a successful start receipt
+  ---
+  duration_ms: 2.238808
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:68:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + Comparison {}
+    - Comparison {
+    -   code: 'DELIVERY_NOT_FOUND'
+    - }
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    code: 'DELIVERY_NOT_FOUND'
+  actual:
+  error: "Cannot read properties of null (reading 'version')"
+  name: 'TypeError'
+  stack: |-
+    Object.$queryRaw (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:24:40)
+    persist (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-repository.js:71:32)
+    file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-repository.js:96:20
+    async Object.$transaction (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:29:99)
+    async mutate (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/src/services/automatic-report-delivery-repository.js:86:12)
+    async waitForActual (node:assert:533:5)
+    async Function.rejects (node:assert:654:25)
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:69:55)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-delivery-start-order.test.js:69:55)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 1
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 138.312837

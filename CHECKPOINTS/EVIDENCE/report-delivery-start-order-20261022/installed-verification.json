@@ -1,0 +1,79 @@
+{
+  "scope": "CENTRAL-AUTO-DELIVERY-START-ORDER-01",
+  "claim": {
+    "pr": 3011,
+    "head": "c612c4513791ace1a6f704abb8702efea7773ce8",
+    "run": 39793452195,
+    "merge": "82673d503b1d48689f5be14333c7fdf8ac1a6d87"
+  },
+  "source": {
+    "pr": 3014,
+    "head": "9e9862c330a85a9c214e9e8e0eed22769ca17b25",
+    "merge": "a57998d33e05241ffd66f6ffec8498280c651e33",
+    "review": "NO BLOCKERS"
+  },
+  "local": {
+    "before": {
+      "pass": 1,
+      "fail": 6,
+      "skip": 0
+    },
+    "after": {
+      "pass": 53,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "ci": {
+    "pr": {
+      "run": 39795960511,
+      "job": 119883506117
+    },
+    "main": {
+      "run": 39798109764,
+      "job": 119891281369
+    },
+    "each": {
+      "jobsSuccess": 5,
+      "serverPass": 3815,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "newNativeParentPlusFourSubcases": "PASS"
+    }
+  },
+  "release": {
+    "guardRun": 39800051934,
+    "deployJob": 119897971269,
+    "conclusion": "success",
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-22T14:42:57Z",
+        "id": "a57998d33e05241ffd66f6ffec8498280c651e33",
+        "message": "Merge pull request #3014 from xrhstosmanis-design/codex/report-delivery-start-order-20261022\n\nfix(reports): align delivery start eligibility and slot lock order"
+      },
+      "createdAt": "2026-10-22T14:56:50.488044Z",
+      "finishedAt": "2026-10-22T15:02:29.812668Z",
+      "id": "dep-dbd28cgm7kps73db2u70",
+      "startedAt": "2026-10-22T14:56:50.460778Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-22T15:03:04.787995Z"
+    },
+    "publicHealth": {
+      "at": "2026-10-22T15:13:16.088112+00:00",
+      "status": 200,
+      "ok": true,
+      "revision": "a57998d33e05241ffd66f6ffec8498280c651e33"
+    }
+  },
+  "dispatch": "OFF",
+  "featureAcceptance": "NOT TESTED; no new LAB/USER/manual PASS",
+  "unresolved": [
+    "verified recipient/consent/policy enrollment",
+    "actual writer and absent-row insertion protocols",
+    "production immutable slot/payload schema and lifecycle/manifest/retention/reset/restore suppression",
+    "trusted driver/transport/scheduler integration",
+    "controlled consenting-recipient final acceptance"
+  ]
+}
