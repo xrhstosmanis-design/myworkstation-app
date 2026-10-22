@@ -21,9 +21,9 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
     {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
     {data?.companyId===companyId&&(data?.runtimeEnabled===false?<p>Η υπηρεσία προπληρωμένης χρέωσης δεν έχει ενεργοποιηθεί στον server.</p>:<>
       <h2>Διαθέσιμο {walletMoney(data.availableMicros)} · Δεσμευμένο {walletMoney(data.reservedMicros)}</h2>
-      <p>Πρώτη σύνδεση: Βοηθός Ιδιοκτήτη. Τιμολόγια/OCR και άλλες λειτουργίες AI δεν χρεώνονται ακόμη από αυτό το υπόλοιπο.</p>
+      <p>{data.meteredFeatures?.includes('INVOICE_OPENAI')?'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη και τις αναγνώσεις τιμολογίων με AI.':'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη. Οι αναγνώσεις τιμολογίων δεν έχουν ενεργοποιηθεί για χρέωση.'}</p>
       <form onSubmit={e=>{e.preventDefault();execute(()=>api(path,{method:'PUT',body:JSON.stringify({version:data.version,enabled,emailEnabled,notificationOwnerId:ownerId})}),'Οι ρυθμίσεις αποθηκεύτηκαν.')}}>
-        <label><input type="checkbox" checked={enabled} disabled={busy} onChange={e=>setEnabled(e.target.checked)}/> Ενεργή προπληρωμένη χρήση στον Βοηθό Ιδιοκτήτη</label><br/>
+        <label><input type="checkbox" checked={enabled} disabled={busy} onChange={e=>setEnabled(e.target.checked)}/> Ενεργή προπληρωμένη χρήση AI</label><br/>
         <label><input type="checkbox" checked={emailEnabled} disabled={busy} onChange={e=>setEmailEnabled(e.target.checked)}/> Ειδοποιήσεις email στον ιδιοκτήτη</label>
         <select aria-label="Ιδιοκτήτης για ειδοποιήσεις" value={ownerId} disabled={busy} onChange={e=>setOwnerId(e.target.value)}><option value="">Επίλεξε ιδιοκτήτη</option>{(data.owners||[]).map(o=><option key={o.id} value={o.id}>{o.fullName} · {o.email}</option>)}</select>
         <button disabled={busy||emailEnabled&&!ownerId}>Αποθήκευση ρυθμίσεων</button>

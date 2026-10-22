@@ -1,3 +1,4 @@
+import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import {prisma} from "../prisma.js";
 import {assessInvoicePages,normalizedAssistantPages} from "../routes/invoice-assistant-review.js";
@@ -54,6 +55,7 @@ export function assistantRowsToProductLines(reading,{pageCount,totalGross}){
 
 export async function readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross}){
   assertCustomerDemoOutboundAllowed({companyId,storeId});
+  return await withInvoiceWalletScope({companyId,storeId},async()=>{
   if(!process.env.OPENAI_API_KEY)throw new Error("Δεν έχει ρυθμιστεί ο βοηθός τιμολογίου στον server.");
   if(!Array.isArray(pageJobIds)||pageJobIds.length<1||pageJobIds.length>5||new Set(pageJobIds).size!==pageJobIds.length)throw new Error("Λείπει η πλήρης λίστα σελίδων του τιμολογίου.");
   const pages=[];
@@ -67,4 +69,5 @@ export async function readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,
   const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(120000),body:JSON.stringify({model:process.env.OPENAI_INVOICE_ASSISTANT_MODEL||"gpt-5.6-sol",reasoning:{effort:"medium"},max_output_tokens:30000,input:[{role:"user",content}],text:{format:{type:"json_schema",name:"pos_invoice_assistant_reading",strict:true,schema}}})});
   if(!response.ok){const failure=await invoiceAssistantProviderError(response);throw new Error(failure.message)}
   return assistantRowsToProductLines(JSON.parse(responseText(await response.json())),{pageCount:pages.length,totalGross});
+  });
 }

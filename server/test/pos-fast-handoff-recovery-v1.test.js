@@ -52,7 +52,7 @@ test("a useful Azure header with an incomplete table continues through FAST Open
   assert.match(body,/if\(azureHasUsefulHeader&&azureProductLines\.length\)return res\.json\(azureHeader\)/);
   assert.match(body,/if\(azureHasUsefulHeader\)azureHeaderFallback=azureHeader/);
   assert.ok(body.indexOf("azureHeaderFallback=azureHeader")<body.indexOf("callFastOpenAiHeader({prompt,filePart})"));
-  assert.match(body,/catch\(error\)\{if\(azureHeaderFallback\)return res\.json\(azureHeaderFallback\);throw error\}/);
+  assert.match(body,/catch\(error\)\{throwIfWalletError\(error\);if\(azureHeaderFallback\)return res\.json\(azureHeaderFallback\);throw error\}/);
 });
 
 test("fast handoff hydrates an empty newest job from the matching exact-file durable table",()=>{

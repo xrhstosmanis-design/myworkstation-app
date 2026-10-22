@@ -1,3 +1,4 @@
+import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import {loadInvoiceAssistantSource} from "../lib/invoice-assistant-source.js";
 import {Router} from "express";
 import {z} from "zod";
@@ -70,6 +71,7 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     const result=await source(req.user.companyId,req.params.orderId,req.invoiceAssistantSource);
     if(!result)return res.status(404).json({error:"Δεν υπάρχει ενεργό πρόχειρο POS για αυτό το τιμολόγιο."});
     if(!result.pages.length)return res.status(409).json({error:req.invoiceAssistantSource.inboxId?"Δεν βρέθηκε το πρωτότυπο PDF της συγκεκριμένης εγγραφής myDATA στο ίδιο πρόχειρο και κατάστημα.":"Δεν βρέθηκαν όλες οι φωτογραφίες του τιμολογίου."});
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:result.document.storeId},async()=>{
     const rows=await prisma.$queryRaw`SELECT "id","ocrSequence","supplierCode","description","quantity","unitCost","invoiceUnit","stockUnitsPerInvoiceUnit","discount1","discount2","discount3","exciseTotal","vatRate","netAmount","grossAmount","ocrRawText"
       FROM "PurchaseOrderLine" WHERE "orderId"=${req.params.orderId} ORDER BY COALESCE("ocrSequence",2147483647),"createdAt","id"`;
     const current=rows.map(row=>({...row,quantity:Number(row.quantity||0),unitCost:Number(row.unitCost||0),stockUnitsPerInvoiceUnit:Number(row.stockUnitsPerInvoiceUnit||1),discount1:Number(row.discount1||0),discount2:Number(row.discount2||0),discount3:Number(row.discount3||0),exciseTotal:Number(row.exciseTotal||0),vatRate:Number(row.vatRate||0),netAmount:Number(row.netAmount||0),grossAmount:Number(row.grossAmount||0)}));
@@ -90,7 +92,7 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
           const verification=await readUnnumberedPageEvidence(files,result.document.documentNumber,sourcePageCount);
           if(missingEvidence||missingTotals)parsed.unnumberedPageEvidence=verification.unnumberedPageEvidence;
           for(const field of ["printedTotal","printedQuantityTotal","printedNetTotal"])if(!String(parsed[field]??"").trim())parsed[field]=verification[field];
-        }catch(error){pageVerificationIssue=`Ανεξάρτητος έλεγχος σελίδων: ${String(error.message||error).slice(0,180)}.`;}
+        }catch(error){throwIfWalletError(error);pageVerificationIssue=`Ανεξάρτητος έλεγχος σελίδων: ${String(error.message||error).slice(0,180)}.`;}
       }
     }
     const ids=new Set(current.map(row=>row.id));
@@ -120,6 +122,7 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     const {checks,reviewReady,quantityReviewRequired}=invoiceHumanQuantityReview({...normalizedAssistantPages({...parsed,sourcePageCount}),sourcePageCount,printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal,unnumberedPageEvidence:parsed.unnumberedPageEvidence,documentNumber:result.document.documentNumber});
     const issues=[pageVerificationIssue||null,!checks.pagesComplete?`Σελίδες: το μοντέλο δήλωσε ${parsed.expectedPageCount} / ${JSON.stringify(parsed.visiblePageNumbers)}, φυσικές σελίδες ${sourcePageCount}, τεκμήρια ${JSON.stringify(parsed.unnumberedPageEvidence||[]).slice(0,500)}, πλήρες μονόφυλλο ${parsed.singlePageComplete}.`:null,!checks.grossAgrees?`Πληρωτέο γραμμών ${Number(checks.grossSum).toFixed(2)} € αντί τυπωμένου ${printedTotal??"άγνωστο"} €.`:null,!checks.quantityAgrees?`Ποσότητα γραμμών ${checks.quantitySum} αντί τυπωμένης ${parsed.printedQuantityTotal||"άγνωστης"}.`:null,!checks.netAgrees?`Καθαρό γραμμών ${Number(checks.netSum).toFixed(2)} € αντί τυπωμένου ${parsed.printedNetTotal||"άγνωστου"} €.`:null].filter(Boolean);
     res.json({assistantMessage:String(parsed.assistantMessage||"").slice(0,5000),corrections:reviewReady?safeCorrections.filter(change=>matchedIds.has(change.lineId)):[],printedLines,printedTotal,printedQuantityTotal:parsed.printedQuantityTotal,printedNetTotal:parsed.printedNetTotal,quantityReviewRequired,reviewOnly:true,pagesComplete:reviewReady,pageWarning:reviewReady?"":`${issues.join(" ")} Οι προτάσεις δεν εφαρμόζονται.`});
+  });
   }catch(error){next(error)}
 });
 
