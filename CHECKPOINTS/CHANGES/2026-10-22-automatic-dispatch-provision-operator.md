@@ -7,3 +7,13 @@ Exact new source scope AFTER this claim green mergedmain: server/src/services/au
 No existing runtime/lifecycle/manifest/DAILY/mail/UI/workflow edits. No production invocation until runner/test/oracle independently reviewed, requiredfullCI/main and ordinary guarded installation verified. Claim is source preparation only, NOT new approval for ON. DefaultOFF and every existing LAB/USERPASS preserved; no duplicate business tests. Actual6tableOFFsetup, fullschema recoveryproof, DAILY reconciliation, canonicalpromotion, install-only enrollment(noRESET), freshOFFepoch/mailbox/consent/grant/policy/finalSMTP remain separate OPEN gates. Checkpoint CHECKPOINTS/CHANGES/2026-10-22-automatic-dispatch-provision-operator.md. Other owners retained.
 
 No source authored yet. Exact five new paths are bounded to the missing safe operator verification from3075/comment6350644306. Production remains untouched; no application startup import or automatic DDL. Full native checks must execute unskipped in existing PG18 CI. Read-only review and isolated tool installation may proceed while claimCI runs; source edits wait for green merge.
+
+
+## 22/10/2026 20:48 UTC - AUTOMATIC-DISPATCH-PROVISION-OPERATOR-01 / ISOLATED PG18 CI AMENDMENT BEFORE WORKFLOW SOURCE
+
+Same central owner codex/central-auto-dispatch-20261022. Exact five-pathsourceclaim3078/CI39850615750SUCCESS mergeda16417c9 before operator source. First4Node20 unitchecksPASS locally; nativeoracle NOTCAPTURED, production untouched/OFF. Correction: EXISTING generic CI service is PostgreSQL16, not18. Its prior executed native evidence remains valid within its actual scope; it does not supply a PG18catalog oracle.
+
+Additional exact NEW path .github/workflows/automatic-report-provision-pg18.yml claimed BEFORE edit. Bounded PR/push paths-triggered Node20/officialpostgres18 disposableCIservice job; no production secrets/env/deploy permission, read-only repository token, npmrootinstall+Prismagenerate, only new operator unit/native tests and redacted deterministic PG18catalog output for review. No existing workflow changed or required checks bypassed. Local PG18initdb cannot run under workspace's root-onlyUIDmapping; no root-check bypass. IsolatedCI18 closes actual fixture/rollback gap. Workflow source starts only after this amendmentgreenmergedmain.
+
+No productionDDL/config/SMTP/enrollment/RESET/restore/businessaction, no existing LAB replay. Final acceptance remainsOPEN; next runPG18native/fullPRmainCI/independentreview then ordinaryguardedinstallation. All retainedowners/otherstreams unchanged. Checkpoint CHECKPOINTS/CHANGES/2026-10-22-automatic-dispatch-provision-operator.md.
+
