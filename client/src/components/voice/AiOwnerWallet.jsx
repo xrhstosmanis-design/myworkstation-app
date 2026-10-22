@@ -25,7 +25,7 @@ export default function AiOwnerWallet({api,storeId='',enabled=false}){
       <button type="button" onClick={()=>setRenew(v=>!v)}>Ανανέωση υπολοίπου AI</button>{renew&&<p style={{whiteSpace:'pre-wrap'}}>{data.paymentInstructions}</p>}
       <button type="button" onClick={()=>setDetails(v=>!v)} aria-expanded={details}>Πληρωμές και κατανάλωση</button>
       {details&&<>
-        <p>Κατανάλωση επιλεγμένου καταστήματος: {walletMoney(data.usage?.[0]?.chargedMicros||'0')} συνολικά. Η χρέωση AI λειτουργεί προς το παρόν στον Βοηθό Ιδιοκτήτη.</p>
+        <p>Κατανάλωση επιλεγμένου καταστήματος: {walletMoney(data.usage?.[0]?.chargedMicros||'0')} συνολικά. {data.meteredFeatures?.includes('INVOICE_OPENAI')?'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη και τις αναγνώσεις τιμολογίων με AI.':'Η χρέωση καλύπτει προς το παρόν τον Βοηθό Ιδιοκτήτη.'}</p>
         <ul>{(data.entries||[]).map(e=><li key={e.id}>{new Date(e.createdAt).toLocaleString('el-GR',{hour12:false})} · {e.kind==='CREDIT'?`Πίστωση ${walletMoney(e.creditedMicros)}`:e.status==='SETTLED'?`Χρήση AI ${walletMoney(e.chargedMicros)}`:e.status==='REVIEW'?'Κλήση AI υπό έλεγχο':'Κλήση AI σε εξέλιξη'}</li>)}</ul>
         <h4>Ειδοποιήσεις εταιρείας</h4><ul>{(data.notices||[]).map(n=><li key={n.id}>{noticeLabels[n.kind]} · {new Date(n.createdAt).toLocaleString('el-GR',{hour12:false})} · Υπόλοιπο τότε {walletMoney(n.balanceMicros)}</li>)}</ul>
       </>}

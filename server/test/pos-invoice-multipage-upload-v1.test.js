@@ -319,7 +319,7 @@ test("failed unified AI recovers every page through Azure without adding carry-f
   assert.match(aiRecheck,/timeout=isProviderTimeout\(failure\)/);
   assert.match(aiRecheck,/AZURE_TIMEOUT\|TimeoutError\|aborted due to timeout/);
   assert.match(aiRecheck,/if\(!earlyCompleteTableRecovered&&!mantzilasSingleVerifierPath&&!parsed\.azureUnifiedFallback&&needsAzureFields/);
-  assert.match(aiRecheck,/catch\{discountDiagnostics\.providerFailures=/);
+  assert.match(aiRecheck,/catch\(error\)\{throwIfWalletError\(error\);discountDiagnostics\.providerFailures=/);
 });
 
 test("multipage invoice recovery also uses Azure to fill missing VAT",()=>{
