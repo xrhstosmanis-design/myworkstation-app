@@ -1,3 +1,4 @@
+import ftextRoutes from './routes/ftext-v1.js';
 import {storeLifecycleErrors} from "./middleware/store-lifecycle-errors.js";
 import storeLifecycleStateRoutes from "./routes/store-lifecycle-state.js";
 import {storeLifecycleRequestContext} from "./middleware/store-lifecycle-context.js";
@@ -284,6 +285,7 @@ app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosPilotAc
 app.use("/api/pilot",auth,requireCompanyModule("PILOT_REPORT"),pilotReportRoutes);
 app.use("/api/cloud/v1/device/video",videoConnectorDeviceRoutes);
 app.use("/api/cloud/v1",cloudV1Routes);
+app.use("/api/ftext/v1",ftextRoutes);
 app.use("/mobile-invoice-upload",mobileInvoiceUploadRoutes);
 app.use("/api/cash",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);
 app.use("/api/cash-control",auth,requireCompanyModule("CASH_CONTROL"),cashControlRoutes);

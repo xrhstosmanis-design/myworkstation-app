@@ -1,0 +1,28 @@
+import React,{useEffect,useRef,useState} from 'react';
+export default function FtextInstallationSetup({company,store,terminals,request}){
+ const [terminalPos,setTerminalPos]=useState(terminals[0]?.terminalPos||''),[state,setState]=useState(null),[form,setForm]=useState({serialNumber:'',workFolder:'C:\\FText',confirmed:false}),[busy,setBusy]=useState(false),[error,setError]=useState(''),[pair,setPair]=useState(null),[saved,setSaved]=useState(false);
+ const epoch=useRef(0),scope=`${company.id}/${store.id}/${terminalPos}`,scopeRef=useRef(scope);scopeRef.current=scope;
+ const base=`/api/ftext/v1/companies/${encodeURIComponent(company.id)}/stores/${encodeURIComponent(store.id)}/installation`;
+ useEffect(()=>{const current=++epoch.current;setState(null);setPair(null);setSaved(false);setBusy(false);setError('');setForm({serialNumber:'',workFolder:'C:\\FText',confirmed:false});if(!terminalPos)return;
+ request(`${base}/${encodeURIComponent(terminalPos)}`).then(data=>{if(current!==epoch.current)return;setState(data);if(data.settings){setForm({...data.settings,confirmed:false});setSaved(true)}}).catch(e=>{if(current===epoch.current)setError(e.message)});return()=>{epoch.current++};
+ },[company.id,store.id,terminalPos,request]);
+ const act=async fn=>{const selected=scopeRef.current,selectedEpoch=epoch.current;setBusy(true);setError('');try{await fn(()=>scopeRef.current===selected&&epoch.current===selectedEpoch)}catch(e){if(scopeRef.current===selected&&epoch.current===selectedEpoch)setError(e.message)}finally{if(scopeRef.current===selected&&epoch.current===selectedEpoch)setBusy(false)}};
+ const refresh=()=>act(async current=>{const data=await request(`${base}/${encodeURIComponent(terminalPos)}`);if(current())setState(data)});
+ const save=e=>{e.preventDefault();act(async current=>{await request(base,{method:'PUT',body:JSON.stringify({terminalPos,serialNumber:form.serialNumber,workFolder:form.workFolder,confirmed:form.confirmed})});if(!current())return;const data=await request(`${base}/${encodeURIComponent(terminalPos)}`);if(current()){setState(data);setSaved(true);setPair(null)}})};
+ const createPair=()=>act(async current=>{const data=await request(`${base}/${encodeURIComponent(terminalPos)}/pairing`,{method:'POST',body:'{}'});if(current())setPair(data)});
+ const download=()=>act(async current=>{const data=await request(`${base}/${encodeURIComponent(terminalPos)}/package`,{method:'POST',body:'{}'});if(!current())return;const url=URL.createObjectURL(new Blob([data.script],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=data.fileName;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+ const change=(key,value)=>{setForm(f=>({...f,[key]:value}));setSaved(false);setPair(null)};
+ return <details style={{background:'white',padding:16,marginTop:14,borderRadius:10}}><summary><b>Σύνδεση ftext · έλεγχος επικοινωνίας</b></summary>
+ <p>Χρησιμοποιεί το ήδη εγκατεστημένο FTEXT+. Η φορολογική πώληση από το POS παραμένει σε προετοιμασία.</p>
+ <label>POS <select aria-label="POS ftext" value={terminalPos} disabled={busy} onChange={e=>{setTerminalPos(e.target.value);setBusy(false)}}>{terminals.map(t=><option key={t.terminalPos} value={t.terminalPos}>{t.displayName||t.terminalPos} · {t.terminalPos}</option>)}</select></label>
+ <form onSubmit={save} style={{display:'grid',gap:10,marginTop:12}}><label>Σειριακό ταμειακής <input value={form.serialNumber} disabled={busy} onChange={e=>change('serialNumber',e.target.value)} required/></label><label>Φάκελος εισόδου ftext <input value={form.workFolder} disabled={busy} onChange={e=>change('workFolder',e.target.value)} required/></label><label><input type="checkbox" checked={form.confirmed} disabled={busy} onChange={e=>change('confirmed',e.target.checked)} required/> Επιβεβαίωσα τη συγκεκριμένη ταμειακή, το POS και τον φάκελο ftext.</label><button disabled={busy||!terminalPos}>Αποθήκευση ρυθμίσεων ftext</button></form>
+ {state&&!state.connectorAllowed&&<p role="alert">Χρειάζεται ενεργή άδεια και τεχνική ενεργοποίηση του Connector ftext για τον πελάτη.</p>}
+ {state?.settingsCurrent===false&&<p role="alert">Η αντιστοίχιση ή η άδεια άλλαξε. Επιβεβαίωσε ξανά τις ρυθμίσεις πριν από νέα ζεύξη.</p>}
+ <div style={{display:'flex',gap:10,flexWrap:'wrap',marginTop:12}}><button disabled={busy||!saved||!state?.settingsCurrent} onClick={download}>Λήψη πακέτου ftext για αυτό το POS</button><button disabled={busy||!saved||!state?.settingsCurrent||!state?.connectorAllowed} onClick={createPair}>Νέος κωδικός ζεύξης ftext</button><button disabled={busy||!terminalPos} onClick={refresh}>Ανανέωση σύνδεσης ftext</button></div>
+ {pair&&<p>Κωδικός: <strong>{pair.code}</strong> · λήγει {new Date(pair.expiresAt).toLocaleTimeString('el-GR',{hour12:false})}. Χρησιμοποίησέ τον στον οδηγό του επιλεγμένου POS.</p>}
+ {state&&<p>Connector: <b>{state.online?'Συνδεδεμένος':state.paired?'Ζευγμένος · εκτός σύνδεσης':'Χωρίς ενεργή ζεύξη'}</b></p>}
+ {state?.lastStatus&&<p>Τελευταίος έλεγχος ταμειακής: {state.lastStatus.ok?'Επιτυχής':'Σφάλμα'} · {new Date(state.lastStatus.receivedAt).toLocaleString('el-GR',{hour12:false})} · κωδικός {state.lastStatus.code}</p>}
+ <ol><li>Αντιστοίχισε το ενεργό POS στη σωστή ταμειακή και αποθήκευσε τις επιβεβαιωμένες ρυθμίσεις.</li><li>Άνοιξε το πακέτο στον τελικό Windows χρήστη και επίλεξε 1 για ζεύξη με τον νέο κωδικό.</li><li>Με ελεύθερη ταμειακή και ανοικτό ftext, επίλεξε 2 για STATUS και αποστολή αποτελέσματος.</li><li>Επίλεξε 3 για τη σύνδεση με το MyWorkStation και έλεγξε εδώ την ένδειξη. Κάθε άλλο POS χρειάζεται δικό του πακέτο.</li></ol>
+ {error&&<p role="alert">{error}</p>}
+ </details>;
+}

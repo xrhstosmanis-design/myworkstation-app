@@ -1,3 +1,4 @@
+import {rejectReservedFtextPairing,FTEXT_PLATFORM} from '../services/ftext-installation.js';
 import {assertLifecycleMutation} from "../services/store-lifecycle-generation.js";
 import {storeLifecycleErrorResponse} from "../middleware/store-lifecycle-errors.js";
 import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
@@ -103,7 +104,7 @@ const tableStatements = [
   `CREATE INDEX IF NOT EXISTS "CloudAudit_company_created_idx" ON "CloudAudit" ("companyId", "createdAt")`
 ];
 
-async function ensureCloudTables(){
+export async function ensureCloudTables(){
   if(!tablesPromise){
     tablesPromise=(async()=>{
       for(const sql of tableStatements) await prisma.$executeRawUnsafe(sql);
@@ -189,6 +190,7 @@ async function deviceAuth(req,res,next){
     `;
     const device=rows[0];
     if(!device||device.status!=="ACTIVE"||device.tokenVersion!==payload.tokenVersion) return res.status(401).json({error:"Η συσκευή δεν είναι ενεργή."});
+    if(device.platform===FTEXT_PLATFORM)return res.status(403).json({error:'Χρησιμοποίησε τη σύνδεση ftext.'});
     assertCustomerDemoOutboundAllowed(device);
     req.device=device;
     req.rbsBinding=payload.rbsBinding||null;
@@ -224,6 +226,7 @@ router.post("/pair",route(async(req,res)=>{
     expectedStoreId:z.string().min(1).max(120).optional(),
     terminalPos:z.string().regex(/^[A-Z0-9_-]{2,80}$/).optional()
   }).parse(req.body);
+  rejectReservedFtextPairing(body);
   const hash=codeHash(body.code);
   const pairRows=await prisma.$queryRaw`
     SELECT p.*,s."name" AS "storeName",s."active" AS "storeActive"
@@ -248,6 +251,7 @@ router.post("/pair",route(async(req,res)=>{
   const existing=await prisma.$queryRaw`
     SELECT * FROM "CloudDevice" WHERE "storeId"=${pair.storeId} AND "deviceKey"=${deviceKey} LIMIT 1
   `;
+  rejectReservedFtextPairing(body,existing[0]);
   let device;
   if(existing[0]){
     const updated=await prisma.$queryRaw`
