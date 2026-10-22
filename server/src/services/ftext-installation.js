@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import jwt from 'jsonwebtoken';
 import {z} from 'zod';
-import {ensureFtextCashSchema,ftextCashTableExists} from './ftext-cash-schema.js';
+import {ensureFtextCashSchema,ftextCashTableExists,assertFtextCashLifecycleApproved} from './ftext-cash-schema.js';
 import {assertCustomerDemoOutboundAllowed} from '../customer-demo-runtime.js';
 import {assertLifecycleMutation,bindFreshLifecycleRead} from './store-lifecycle-generation.js';
 
@@ -30,9 +30,10 @@ export function validateFtextReport(input,settings,now=new Date()){
  if(!r.ok&&r.code===0)fail(409,'Ασυνεπής απάντηση ftext.');
  return r;
 }
-export function createFtextInstallationService({db,moduleState,secret,clock=()=>new Date()}){
+export function createFtextInstallationService({db,moduleState,secret,clock=()=>new Date(),cashSchemaInstaller=ensureFtextCashSchema}){
  const scopeOf=s=>({companyId:identifier.parse(s.companyId),storeId:identifier.parse(s.storeId),terminalPos:terminal.parse(s.terminalPos)});
  const key=s=>'ftext:'+s.terminalPos;
+ const cashActivationReady=()=>{try{assertFtextCashLifecycleApproved();return true}catch{return false}};
  const tx=fn=>db.$transaction(fn,{maxWait:5000,timeout:15000});
  async function licensed(t,s){const m=await moduleState(s.companyId,t);if(!m?.licenseAllowed||!m.activeModules.includes('CONNECTOR_FTEXT'))fail(403,'Απαιτείται ενεργή άδεια και τεχνική ενεργοποίηση CONNECTOR_FTEXT.');}
  async function store(t,s){assertCustomerDemoOutboundAllowed(s);const row=await t.store.findFirst({where:{id:s.storeId,companyId:s.companyId,active:true},select:{id:true,companyId:true,name:true}});if(!row)fail(404,'Δεν βρέθηκε ενεργό κατάστημα στην εταιρεία.');return row;}
@@ -58,7 +59,7 @@ export function createFtextInstallationService({db,moduleState,secret,clock=()=>
  return {
   authenticated,
   async cashContext(t,scope,{requireOnline=true}={}){const s=scopeOf(scope),d=await device(t,s,true),c=config(d,s);await current(t,d,s,c.lifecycleGeneration);if(d.status!=='ACTIVE'||c.cashEnabled!==true)fail(409,'Η έκδοση μετρητών ftext δεν έχει ενεργοποιηθεί/ζευγοποιηθεί.');if(requireOnline&&(!d.lastSeenAt||clock()-new Date(d.lastSeenAt)>=15000))fail(409,'Ο connector ftext είναι εκτός σύνδεσης.');if(!d.metadata?.ftextLastStatus?.ok||d.metadata.ftextLastStatus.serialNumber!==c.serialNumber)fail(409,'Χρειάζεται επιτυχής έλεγχος STATUS με τις τρέχουσες ρυθμίσεις.');return {device:d,settings:c,scope:{...s,fiscalDeviceCode:c.fiscalDeviceCode}};},
-  async view(scope){const s=scopeOf(scope);await store(db,s);const d=await device(db,s);const m=await moduleState(s.companyId,db);if(!d)return {settings:null,paired:false,online:false,connectorAllowed:Boolean(m?.licenseAllowed&&m.activeModules.includes('CONNECTOR_FTEXT')),fiscalCheckoutEnabled:false};const c=config(d,s);let valid=true;try{await tx(t=>current(t,d,s,c.lifecycleGeneration))}catch(e){if(![403,404,409].includes(e.status))throw e;valid=false}const last=d.metadata?.ftextLastStatus||null;return {settings:c,settingsHash:ftextSettingsHash(c),paired:d.status==='ACTIVE'&&valid,online:Boolean(valid&&d.status==='ACTIVE'&&d.lastSeenAt&&clock()-new Date(d.lastSeenAt)<15000),lastSeenAt:d.lastSeenAt,lastStatus:last,connectorAllowed:Boolean(m?.licenseAllowed&&m.activeModules.includes('CONNECTOR_FTEXT')),settingsCurrent:valid,fiscalCheckoutEnabled:false};},
+  async view(scope){const s=scopeOf(scope);await store(db,s);const d=await device(db,s);const m=await moduleState(s.companyId,db);if(!d)return {cashActivationReady:cashActivationReady(),settings:null,paired:false,online:false,connectorAllowed:Boolean(m?.licenseAllowed&&m.activeModules.includes('CONNECTOR_FTEXT')),fiscalCheckoutEnabled:false};const c=config(d,s);let valid=true;try{await tx(t=>current(t,d,s,c.lifecycleGeneration))}catch(e){if(![403,404,409].includes(e.status))throw e;valid=false}const last=d.metadata?.ftextLastStatus||null;return {cashActivationReady:cashActivationReady(),settings:c,settingsHash:ftextSettingsHash(c),paired:d.status==='ACTIVE'&&valid,online:Boolean(valid&&d.status==='ACTIVE'&&d.lastSeenAt&&clock()-new Date(d.lastSeenAt)<15000),lastSeenAt:d.lastSeenAt,lastStatus:last,connectorAllowed:Boolean(m?.licenseAllowed&&m.activeModules.includes('CONNECTOR_FTEXT')),settingsCurrent:valid,fiscalCheckoutEnabled:false};},
   async configure(scope,input,actorId){const b=ftextSettingsInput.parse(input),s=scopeOf({...scope,terminalPos:b.terminalPos});return tx(async t=>{
    await t.$queryRaw`SELECT 1 AS "locked" FROM pg_advisory_xact_lock(hashtextextended(${['ftext-config',s.companyId,s.storeId,s.terminalPos].join(':')},0))`;
    await store(t,s);const lifecycle=await bindFreshLifecycleRead(t,s),fiscalDeviceCode=await route(t,s);
@@ -69,7 +70,7 @@ export function createFtextInstallationService({db,moduleState,secret,clock=()=>
    const cashFields=b.cashEnabled===undefined?{}:{cashEnabled:b.cashEnabled,...(b.cashDepartments?{cashDepartments:b.cashDepartments}:{})};
    const common={...s,...cashFields,fiscalDeviceCode,serialNumber:b.serialNumber,workFolder:b.workFolder,protocol:'SOLIDUS(II)T',lifecycleGeneration:lifecycle.generation};
    if(old){const previous=config(old,s);if(ftextSettingsHash({...common,configurationId:previous.configurationId})===ftextSettingsHash(previous))return {settings:previous,settingsHash:ftextSettingsHash(previous),unchanged:true,fiscalCheckoutEnabled:false};}
-   if(b.cashEnabled===true)await ensureFtextCashSchema(t);
+   if(b.cashEnabled===true)await cashSchemaInstaller(t);
    const c=settingsSchema.parse({...common,configurationId:crypto.randomUUID()}),metadata={ftextSettings:c};
    await t.$executeRaw`INSERT INTO "CloudDevice" ("id","companyId","storeId","deviceKey","name","platform","status","metadata") VALUES (${crypto.randomUUID()},${s.companyId},${s.storeId},${key(s)},${'ftext · '+s.terminalPos},${FTEXT_PLATFORM},'CONFIGURED',${JSON.stringify(metadata)}::jsonb) ON CONFLICT ("storeId","deviceKey") DO UPDATE SET "platform"=EXCLUDED."platform","status"='CONFIGURED',"tokenVersion"="CloudDevice"."tokenVersion"+1,"metadata"=EXCLUDED."metadata","lastSeenAt"=NULL,"revokedAt"=NOW()`;
    await audit(t,s,{type:'USER',id:actorId},'FTEXT_CONFIGURED',{terminalPos:s.terminalPos,settingsHash:ftextSettingsHash(c)});return {settings:c,settingsHash:ftextSettingsHash(c),unchanged:false,fiscalCheckoutEnabled:false};

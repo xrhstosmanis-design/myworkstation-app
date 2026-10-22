@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {createFtextInstallationService} from '../src/services/ftext-installation.js';
+import {ensureFtextCashSchema,ftextCashLifecycleReviewProposal} from '../src/services/ftext-cash-schema.js';
 import {prepareFtextCashRequest,claimFtextCashRequest} from '../src/services/ftext-cash-requests.js';
 import {companyModuleState} from '../src/middleware/module-access.js';
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(decodeURIComponent(u.pathname))}catch{return false}}
@@ -24,7 +25,7 @@ export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
  await a.$executeRaw`INSERT INTO "StoreFiscalDevice" VALUES ('company-A','store-A','POS-01','FISCAL-A',true),('company-B','store-B','POS-01','FISCAL-B',true)`;
  await a.$executeRaw`INSERT INTO "StoreLifecycleFence" VALUES ('store-A','company-A',0,false,false),('store-B','company-B',0,false,false)`;
  let now=new Date();const secret=()=> 'isolated-fixture-secret-123456789';
- const make=(db=a,key=secret)=>createFtextInstallationService({db,moduleState:(id,t)=>companyModuleState(id,{db:t}),secret:key,clock:()=>now});
+ const make=(db=a,key=secret)=>createFtextInstallationService({db,moduleState:(id,t)=>companyModuleState(id,{db:t}),secret:key,clock:()=>now,cashSchemaInstaller:t=>ensureFtextCashSchema(t,{manifest:ftextCashLifecycleReviewProposal()})});
  const service=make(),other=make(b),scope={companyId:'company-A',storeId:'store-A',terminalPos:'POS-01'},control={companyId:'company-B',storeId:'store-B',terminalPos:'POS-01'};
  const input={terminalPos:'POS-01',serialNumber:'TEST12345',workFolder:'C:\\FText',confirmed:true};
  const configured=await service.configure(scope,input,'fixture-admin');await service.configure(control,{...input,serialNumber:'CONTROL123'},'fixture-admin');

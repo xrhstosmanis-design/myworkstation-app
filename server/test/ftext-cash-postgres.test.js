@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
-import {ensureFtextCashSchema} from '../src/services/ftext-cash-schema.js';
+import {ensureFtextCashSchema,ftextCashLifecycleReviewProposal} from '../src/services/ftext-cash-schema.js';
 import {prepareFtextCashRequest,claimFtextCashRequest,recordFtextCashResult} from '../src/services/ftext-cash-requests.js';
 import {finalizeFtextCashRequest} from '../src/services/ftext-cash-finalize.js';
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&!u.search&&!u.hash&&/^\/[^/]*test[^/]*$/i.test(decodeURIComponent(u.pathname))}catch{return false}}
@@ -11,7 +11,9 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
  const input={settings,scope,sessionId:'shift-a',clientTransactionId:'checkout-a',requestHash:'fixture-hash',checkout:{paymentMethod:'CASH',actorId:'operator-a',actorName:'Synthetic operator',operatorId:'cashier-a'},items:[{productId:'product-a',name:'SYNTHETIC',quantity:1,effectiveUnitPrice:1.25,discount:0,lineTotal:1.25,fiscalDepartment:4,vatRate:13,fiscalVatCode:'004'}],summary:{subtotal:1.25,discount:0,total:1.25}};
  const context=async()=>({settings});const opts={context};let request,receipt;
  try{
-  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);created=true;await ensureFtextCashSchema(a);
+  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);created=true;await ensureFtextCashSchema(a,{manifest:ftextCashLifecycleReviewProposal()});
+  const actualColumns=await a.$queryRaw`SELECT a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull AS required FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=current_schema() AND c.relname='FtextCashRequest' AND a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum`;
+  assert.deepEqual(actualColumns.map(c=>[c.name,c.type,c.required]),ftextCashLifecycleReviewProposal().knownColumns.FtextCashRequest);
   for(const sql of [
    'CREATE TABLE "Product" ("id" TEXT PRIMARY KEY,"companyId" TEXT,"active" BOOLEAN,"trackStock" BOOLEAN)',
    'CREATE TABLE "StoreProduct" ("storeId" TEXT,"productId" TEXT,"active" BOOLEAN,"currentStock" NUMERIC,"updatedAt" TIMESTAMPTZ,PRIMARY KEY("storeId","productId"))',
