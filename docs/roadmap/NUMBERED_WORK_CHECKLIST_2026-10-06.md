@@ -1,5 +1,15 @@
 ## 20/10/2026 14:44 Europe/Athens — POS-MYDATA-UNLINKED-01 / TECHNICAL RELEASE VERIFIED / USER FIRST RECEIPT OPEN
 
+## 22/10/2026 — DAILY-STOCK-CATALOG-03 / LIMITED LAB CATALOGUE PASS + DAILY SETTINGS LIVE PASS / LAUNCH OPEN
+
+Owner codex/daily-online-store-20261011 retained / issue2054. SourcePR3056/d7372b8/fullCI39828149315 green, merged659aea0217d62c6beec5f0ea51455a8c68884a4b. MainCI39829453096 attempt2 all5green/3978PASS0FAIL0SKIP; guarded release39831769237 and Renderdep-dbd5c9gae00c73cofpig LIVE, independent exact health. Attempt1 browser ECONNRESET qualified in checkpoint.
+
+Actual21:37–21:46Athens LAB normal UI auto on -> catalogue51 exact own-store SQL identity/stock match; restored original auto=false/stockCheck=false and original2 products. DAILY normal UI saved supplied logo/name/tagline/welcome and auto=true/stockCheck=true/publicfalse; reopened readback count0.8753active/0positive stock. All LAB/DAILY/KAT stock/baked/visibility fingerprints and orders3/0/14 unchanged; control business config restored/unchanged. No stock/order/payment/fiscal submission, no prior fixture replay. Manual products list was not saved.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-10-22-daily-stock-catalog.md; manual docs/manual/online-delivery/PASS.md; evidence CHECKPOINTS/EVIDENCE/daily-online-20261022/. Only catalogue/settings and qualified disabled-shell theme PASS. Public launch, initial inventory, active customer presentation, checkout/mobile/physical/fiscal remain OPEN; disabled shell legacy OPEN badge/default copy is residual. No whole numbered/Gate closure, owner retained. PDFs regenerated with this receipt.
+
+
+
 Retained owner fix/pos-mydata-unlinked-20261020 after the explicit limited transfer from codex/invoice-second-draft-20261016. Engineering implementation/release is complete. Historical pairs, credits, broader09/Gate3 and all other owners remain unchanged. ClaimPR2936/head18949910 merged8ba74c91 with applicable green CI before source.
 
 Final source PR2937/head ec5c75d6552aee81e34934041b62bcfe16a6bfe9 merged2dc9c8829578d388272f0a2cfd330a32ee4921a0. Exact PR39414585294/job118600770787 and exact main39415424714/job118603418604 SUCCESS: each3622PASS/0FAIL/0SKIP plus8PASS/0FAIL/0SKIP, all five jobs including native PostgreSQL, Windows, actual browser/build/invariants and isolated real HTTP/wholesale. Main tree5f972c12571a7148bac06326d17c41efd32b6256 is identical to the reviewed final source tree. Initial source7f14b8fe/CI39413918330 was superseded/cancelled during pre-merge multi-page review; no failed guard was weakened or deployed. Final local3364PASS/0FAIL/193infrastructureSKIP, focused23/0/7 and frontend build; native cases actually ran unskipped in both final full CIs.
