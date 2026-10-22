@@ -4,7 +4,7 @@ import {prisma} from './prisma.js';
 import {mobileChatStores,chatEnabled} from './chat-mobile.mjs';
 import {authorizeChatOperator} from './chat-operator-auth.mjs';
 import {assertCustomerDemoOutboundAllowed} from './customer-demo-runtime.js';
-import {createNativeFcmProvider,nativeToken} from './native-fcm-provider.mjs';
+import {createNativeFcmProvider,nativeToken,nativePlatform,nativeIosConfigured} from './native-fcm-provider.mjs';
 const provider=createNativeFcmProvider();
 export const nativeBinding=token=>createHash('sha256').update(token).digest('hex');
 let schema;
@@ -21,12 +21,14 @@ export async function nativeStores(user,storeId){
  }
  return (await mobileChatStores(user)).stores;
 }
-export async function registerNativePush(user,token,bearer,storeId,notificationVersion){
+export async function registerNativePush(user,token,bearer,storeId,notificationVersion,platform){
+ const target=nativePlatform(platform);
+ if(target==='ios'&&!nativeIosConfigured())throw Object.assign(new Error('Οι ειδοποιήσεις iOS χρειάζονται ρύθμιση Apple/APNs.'),{status:503,code:'NATIVE_IOS_NOT_CONFIGURED'});
  if(!provider.configured())throw Object.assign(new Error('Οι ειδοποιήσεις εφαρμογής δεν έχουν ρυθμιστεί ακόμη.'),{status:503,code:'NATIVE_PUSH_NOT_CONFIGURED'});
  nativeToken(token);const stores=await nativeStores(user,storeId);
  if(!stores.length||!(user.chatSessionId||user.sessionId))throw Object.assign(new Error('Συνδέσου ξανά για ειδοποιήσεις.'),{status:403});
  for(const s of stores)assertCustomerDemoOutboundAllowed({companyId:s.companyId,storeId:s.id});
- const identity={notificationVersion:notificationVersion===2?2:1,id:user.id,employeeId:user.employeeId,companyId:user.companyId,storeId:user.storeId,role:user.role,platformRole:user.platformRole||user.role,tokenType:user.tokenType,sessionVersion:user.sessionVersion,chatSessionId:user.chatSessionId,credentialStamp:user.chatCredentialStamp,supportContext:Boolean(user.supportContext)};
+ const identity={platform:target,notificationVersion:notificationVersion===2?2:1,id:user.id,employeeId:user.employeeId,companyId:user.companyId,storeId:user.storeId,role:user.role,platformRole:user.platformRole||user.role,tokenType:user.tokenType,sessionVersion:user.sessionVersion,chatSessionId:user.chatSessionId,credentialStamp:user.chatCredentialStamp,supportContext:Boolean(user.supportContext)};
  const hash=nativeBinding(token),binding=nativeBinding(bearer),sessionId=user.chatSessionId||user.sessionId;
  await ensureNativeChatPushSchema();await prisma.$transaction(async tx=>{
   await tx.$queryRawUnsafe('SELECT (pg_advisory_xact_lock(hashtext($1)) IS NULL) AS locked',hash);
@@ -46,11 +48,13 @@ export async function sendNativeChatPush({store,senderId}){
  let attempted=0,delivered=0;
  // Revalidate immediately before each send; never trust stored store lists or role claims.
  for(const row of rows){try{
+  const platform=nativePlatform(row.identityJson?.platform);
+  if(platform==='ios'&&!nativeIosConfigured())continue;
   if(!await nativeRecipientAllowed(row,store,{db:prisma,storesFor:mobileChatStores,enabled:chatEnabled,authorize:authorizeChatOperator}))continue;
-  attempted++;const result=await provider.send({token:row.token,binding:row.binding,storeId:store.id,companyId:store.companyId,...(row.identityJson?.notificationVersion===2?{storeName:store.name}:{})});
+  attempted++;const result=await provider.send({token:row.token,binding:row.binding,storeId:store.id,companyId:store.companyId,...(platform==='ios'?{platform}:{}),...(row.identityJson?.notificationVersion===2?{storeName:store.name}:{})});
   if(result.delivered)delivered++;
   if(result.unregistered)await prisma.$executeRawUnsafe('DELETE FROM "StoreChatNativePush" WHERE "tokenHash"=$1 AND "binding"=$2',row.tokenHash,row.binding);
  }catch{/* Fail closed without logging credentials, recipients or private data. */}}
  return {attempted,delivered};
 }
-export function nativePushStatus(){return {configured:provider.configured()};}
+export function nativePushStatus(){return {configured:provider.configured(),iosAvailable:nativeIosConfigured()};}

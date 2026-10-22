@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {generateKeyPairSync} from 'node:crypto';
-import {nativePayload,nativeToken,nativeStoreLabel,createNativeFcmProvider} from '../src/native-fcm-provider.mjs';
+import {nativePayload,nativeToken,nativeStoreLabel,nativePlatform,createNativeFcmProvider} from '../src/native-fcm-provider.mjs';
 import {nativeRecipientAllowed} from '../src/native-fcm-policy.mjs';
 const input={token:'valid_token_1234567890:abcdefgh',binding:'a'.repeat(64),storeId:'store-A',companyId:'company-A'};
 test('native payload contains technical routing only and is data-only',()=>{
@@ -62,7 +62,7 @@ test('malformed expiry cannot grant delivery',async()=>{
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
-function registryHarness({configured=true,stores=[store],database,recipients=[],send=async()=>({delivered:true}),allowed=nativeRecipientAllowed}={}) {
+function registryHarness({configured=true,iosEnabled=false,stores=[store],database,recipients=[],send=async()=>({delivered:true}),allowed=nativeRecipientAllowed}={}) {
  const calls=[]; const db=database||{
   $executeRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return 1;},
   $queryRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return sql.startsWith('SELECT * FROM "StoreChatNativePush"')?recipients:[];},
@@ -70,9 +70,22 @@ function registryHarness({configured=true,stores=[store],database,recipients=[],
   store:{findUnique:async()=>({...store,active:true,company:{active:true}})}
  };
  const code=fs.readFileSync(new URL('../src/native-chat-push.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/export /g,'')+'\nthis.api={registerNativePush,revokeNativePush,sendNativeChatPush};';
- const box={createHash,prisma:db,mobileChatStores:async()=>({stores}),chatEnabled:async()=>true,authorizeChatOperator:async()=>true,nativeRecipientAllowed:allowed,assertCustomerDemoOutboundAllowed:()=>{},createNativeFcmProvider:()=>({configured:()=>configured,send}),nativeToken};
+ const box={createHash,prisma:db,mobileChatStores:async()=>({stores}),chatEnabled:async()=>true,authorizeChatOperator:async()=>true,nativeRecipientAllowed:allowed,assertCustomerDemoOutboundAllowed:()=>{},createNativeFcmProvider:()=>({configured:()=>configured,send}),nativeToken,nativePlatform,nativeIosConfigured:()=>configured&&iosEnabled};
  vm.runInNewContext(code,box);return {...box.api,calls};
 }
+test('iOS platform registration is explicitly gated and preserves authenticated session ownership',async()=>{
+ const u={...user,sessionId:'ios-session'};
+ const off=registryHarness();await assert.rejects(off.registerNativePush(u,input.token,'bearer',undefined,2,'ios'),e=>e.status===503);assert.equal(off.calls.length,0);
+ const h=registryHarness({iosEnabled:true});await h.registerNativePush(u,input.token,'bearer',undefined,2,'ios');
+ const write=h.calls.find(x=>x.sql.startsWith('INSERT'));const identity=JSON.parse(write.args[5]);assert.equal(identity.platform,'ios');assert.equal(identity.id,u.id);assert.equal(write.args[3],'ios-session');assert.equal(identity.notificationVersion,2);
+ await assert.rejects(h.registerNativePush(u,input.token,'bearer',undefined,2,'web'),e=>e.status===400);
+});
+test('iOS delivery stays off without its flag and revalidates current authorization before APNs',async()=>{
+ const r={...row,token:input.token,binding:input.binding,identityJson:{...user,platform:'ios',notificationVersion:2}},sent=[];
+ const h=registryHarness({recipients:[r],send:async p=>{sent.push(p);return {delivered:true}},allowed:async()=>true});await h.sendNativeChatPush({store:{...store,name:'LAB'},senderId:'someone'});assert.equal(sent.length,0);
+ const on=registryHarness({iosEnabled:true,recipients:[r],send:async p=>{sent.push(p);return {delivered:true}},allowed:async()=>true});await on.sendNativeChatPush({store:{...store,name:'LAB'},senderId:'someone'});assert.equal(sent.length,1);assert.equal(sent[0].platform,'ios');assert.equal(sent[0].storeName,'LAB');
+ const denied=registryHarness({iosEnabled:true,recipients:[r],send:()=>assert.fail('denied delivery'),allowed:async()=>false});await denied.sendNativeChatPush({store,senderId:'someone'});
+});
 test('registry serializes token ownership and binds only authenticated session; revocation cannot delete another session',async()=>{
  const h=registryHarness();const u={...user,sessionId:'s'};
  const r=await h.registerNativePush(u,input.token,'authenticated-bearer');
