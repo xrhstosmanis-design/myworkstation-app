@@ -25,3 +25,4 @@ jobs:
             if ($errors.Count -gt 0) { throw ($errors | Out-String) }
           }
           ./tools/windows-ftext/Test-Smoke.ps1
+          ./tools/windows-ftext/Test-Cloud-Smoke.ps1
