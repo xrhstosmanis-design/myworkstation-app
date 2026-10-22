@@ -6,28 +6,42 @@ import {writeFile} from 'node:fs/promises';
 export async function renderPosFixture({chrome,file,width,height,scale=1,profile,screenshot}) {
   const child=spawn(chrome,[
     '--headless=new','--no-sandbox',
-    '--disable-dev-shm-usage','--disable-background-networking','--no-first-run',
+    '--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--no-first-run',
     // Packed serverless Chromium needs these only in the restricted local
     // sandbox. Normal Chrome/CI must retain its multi-process startup.
     ...(process.env.POS_UI_CHROMIUM_PACKED==='1'?[
       '--no-zygote','--single-process','--use-gl=angle',
       '--use-angle=swiftshader','--enable-unsafe-swiftshader',
     ]:[]),
-    '--remote-debugging-pipe','--user-data-dir='+profile,
-  ],{stdio:['ignore','pipe','pipe','pipe','pipe']});
+    '--remote-debugging-pipe','--no-startup-window','--user-data-dir='+profile,
+  ],{stdio:['ignore','ignore','pipe','pipe','pipe'],detached:process.platform!=='win32'});
   let sequence=0,buffer='',errors='';
   const requests=new Map(),events=new Map();
-  let timedOut=false;
-  const timer=setTimeout(()=>{timedOut=true;child.kill('SIGKILL');},25000);
+  let timedOut=false,exited=false,markExited;
+  const exit=new Promise(resolve=>{markExited=()=>{exited=true;resolve();};});
+  const signalBrowser=signal=>{
+    if(!child.pid)return;
+    // Each fixture owns this process group, including renderer/GPU children.
+    // Escalation must never leave children writing into a deleted profile.
+    try{process.platform==='win32'?child.kill(signal):process.kill(-child.pid,signal);}
+    catch(error){if(error.code!=='ESRCH')throw error;}
+  };
+  const waitForExit=ms=>exited?Promise.resolve(true):new Promise(resolve=>{
+    const timeout=setTimeout(()=>resolve(false),ms);
+    exit.then(()=>{clearTimeout(timeout);resolve(true);});
+  });
+  const timer=setTimeout(()=>{timedOut=true;signalBrowser('SIGKILL');},25000);
   const fail=error=>{
     for(const entry of requests.values())entry.reject(error);
     requests.clear();
     for(const entry of events.values())entry.reject(error);
     events.clear();
   };
-  child.on('error',fail);
-  child.on('exit',(code,signal)=>fail(new Error(`Chrome exited code=${code??'null'} signal=${signal??'none'}${timedOut?' (CDP startup/render timeout after 25000ms)':''}: ${errors.slice(-1500)}`)));
-  child.stderr.on('data',value=>{errors+=value;});
+  child.on('error',error=>{markExited();fail(error);});
+  child.on('exit',(code,signal)=>{markExited();fail(new Error(`Chrome exited code=${code??'null'} signal=${signal??'none'}${timedOut?' (CDP startup/render timeout after 25000ms)':''}: ${errors.slice(-1500)}`));});
+  child.stderr.on('data',value=>{errors=(errors+value).slice(-1500);});
+  child.stdio[3].on('error',fail);
+  child.stdio[4].on('error',fail);
   child.stdio[4].on('data',chunk=>{
     buffer+=chunk;
     let boundary;
@@ -78,6 +92,19 @@ export async function renderPosFixture({chrome,file,width,height,scale=1,profile
     return result.value;
   }finally{
     clearTimeout(timer);
-    child.kill('SIGKILL');
+    // Graceful Chrome shutdown closes renderer/GPU children and flushes the
+    // profile before the caller removes it. SIGKILL alone raced fs.rm in CI.
+    if(!exited){
+      void send('Browser.close').catch(()=>{});
+      if(!await waitForExit(3000)){
+        signalBrowser('SIGTERM');
+        if(!await waitForExit(1000)){
+          signalBrowser('SIGKILL');
+          if(!await waitForExit(1000))throw new Error('Chrome did not exit after bounded shutdown');
+        }
+      }
+    }
+    // If Chrome crashed before cleanup, remove any remaining owned children.
+    signalBrowser('SIGTERM');
   }
 }

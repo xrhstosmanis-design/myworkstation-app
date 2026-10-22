@@ -35,5 +35,5 @@ for(const {width,height,scale} of cases)for(const keypad of [true,false])for(con
     const result=await renderPosFixture({chrome,file,width,height,scale,profile:path.join(temp,'profile'),screenshot:shots&&path.join(shots,name+'.png')});
     assert.deepEqual(result.viewport,{width,height,scale},'actual CSS viewport and zoom-equivalent DPR');
     assert.equal(result.result,'PASS',result.result);
-  }finally{await rm(temp,{recursive:true,force:true});}
+  }finally{await rm(temp,{recursive:true,force:true,maxRetries:5,retryDelay:100});}
 });
