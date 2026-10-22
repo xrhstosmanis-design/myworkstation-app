@@ -12,6 +12,7 @@ import MWSChatCore
     private var enabled = false
     private var deleting = false
     private let api = ChatHTTP()
+    private var pending: [AnyHashable: Any]?
     override init() { super.init() }
     static func binding(_ token: String) -> String { SHA256.hash(data: Data(token.utf8)).map { String(format: "%02x", $0) }.joined() }
     private func path(_ m: ChatModel) -> String { m.staff ? "/api/store-chat/stores/" + ChatPolicy.component(m.identity["storeId"] as? String ?? "") + "/native-push" : "/api/store-chat/mobile/native-push" }
@@ -43,6 +44,7 @@ import MWSChatCore
     func clearDelivered() { UNUserNotificationCenter.current().removeAllDeliveredNotifications(); UNUserNotificationCenter.current().removeAllPendingNotificationRequests() }
     func clear() {
         generation &+= 1; enabled = false; vault.remove("push-opt-in"); clearDelivered()
+        pending = nil
         api.cancel()
         UIApplication.shared.unregisterForRemoteNotifications()
         if FirebaseApp.app() != nil { Messaging.messaging().isAutoInitEnabled = false; deleting = true; Messaging.messaging().deleteToken { [weak self] _ in Task { @MainActor in self?.deleting = false } } }
@@ -52,21 +54,27 @@ import MWSChatCore
         return !model.staff || (model.identity["storeId"] as? String == store && model.identity["companyId"] as? String == company)
     }
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        Task { @MainActor in guard let m = self.model, self.valid(notification.request.content.userInfo, model: m) else { completionHandler([]); return }; completionHandler([.banner, .sound]) }
+        Task { @MainActor in guard let m = self.model, m.active, !UIScreen.main.isCaptured, self.valid(notification.request.content.userInfo, model: m) else { completionHandler([]); return }; completionHandler([.banner, .sound]) }
     }
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let info = response.notification.request.content.userInfo
         Task { @MainActor in
-            defer { completionHandler() }
-            guard let m = self.model, self.valid(info, model: m) else { return }
-            m.active = true; m.clearContent(); m.selected = nil; m.screen = .stores; await m.loadStores()
-            guard self.valid(info, model: m), let s = m.stores.first(where: { $0.id == info["storeId"] as? String && $0.companyId == info["companyId"] as? String }) else { m.status = "Δεν υπάρχει πλέον πρόσβαση στη συνομιλία."; return }
-            await m.choose(s)
+            if info["kind"] as? String == "MWS_CHAT" { self.pending = info }
+            completionHandler() // Acknowledge the OS before any bounded network fetch.
+            await self.openPending()
         }
+    }
+    func openPending() async {
+        guard let info = pending, let m = model, m.active, !m.busy, UIApplication.shared.applicationState == .active, !UIScreen.main.isCaptured else { return }
+        pending = nil
+        guard valid(info, model: m) else { return }
+        m.clearContent(); m.selected = nil; m.screen = .stores; await m.loadStores()
+        guard valid(info, model: m), let s = m.stores.first(where: { $0.id == info["storeId"] as? String && $0.companyId == info["companyId"] as? String }) else { m.status = "Δεν υπάρχει πλέον πρόσβαση στη συνομιλία."; return }
+        await m.choose(s)
     }
 }
 final class AppDelegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool { PrivacyShield.shared.start(); return true }
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool { PrivacyShield.shared.start(); UNUserNotificationCenter.current().delegate = PushManager.shared; return true }
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) { Task { @MainActor in PushManager.shared.apns(deviceToken) } }
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) { Task { @MainActor in PushManager.shared.model?.status = "Δεν ολοκληρώθηκε η εγγραφή APNs." } }
 }

@@ -5,6 +5,7 @@ import ImageIO
 import MWSChatCore
 struct MediaPicker: UIViewControllerRepresentable {
     let video: Bool
+    let lease: MediaLease
     let done: ([DraftMedia], String?) -> Void
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIViewController(context: Context) -> PHPickerViewController {
@@ -23,14 +24,18 @@ struct MediaPicker: UIViewControllerRepresentable {
                 do {
                     var media: [DraftMedia] = []
                     for result in results {
+                        guard !parent.lease.isCancelled else { throw CancellationError() }
                         let type = parent.video ? UTType.mpeg4Movie.identifier : UTType.image.identifier
                         guard result.itemProvider.hasItemConformingToTypeIdentifier(type) else { throw ChatError.invalid }
                         // The system picker owns this transient representation; never persist its URL or write a copy.
                         let bytes: Data = try await withCheckedThrowingContinuation { continuation in
-                            result.itemProvider.loadFileRepresentation(forTypeIdentifier: type) { url, error in
-                                guard let url, error == nil else { continuation.resume(throwing: ChatError.invalid); return }
-                                do { let handle = try FileHandle(forReadingFrom: url); defer { try? handle.close() }; let maximum = parent.video ? MediaPolicy.videoMax : MediaPolicy.imageMax; let data = try handle.read(upToCount: maximum + 1) ?? Data(); guard !data.isEmpty, data.count <= maximum else { throw ChatError.tooLarge }; continuation.resume(returning: data) } catch { continuation.resume(throwing: error) }
+                            let gate = MediaReadGate(continuation); parent.lease.onCancel { gate.finish(.failure(CancellationError())) }
+                            let progress = result.itemProvider.loadFileRepresentation(forTypeIdentifier: type) { url, error in
+                                guard !parent.lease.isCancelled else { gate.finish(.failure(CancellationError())); return }
+                                guard let url, url.isFileURL, error == nil else { gate.finish(.failure(ChatError.invalid)); return }
+                                do { let handle = try FileHandle(forReadingFrom: url); defer { try? handle.close() }; let maximum = parent.video ? MediaPolicy.videoMax : MediaPolicy.imageMax; let data = try handle.read(upToCount: maximum + 1) ?? Data(); guard !parent.lease.isCancelled else { throw CancellationError() }; guard !data.isEmpty, data.count <= maximum else { throw ChatError.tooLarge }; gate.finish(.success(data)) } catch { gate.finish(.failure(error)) }
                             }
+                            parent.lease.attach(progress)
                         }
                         if parent.video {
                             guard MP4.selfContained(bytes) else { throw ChatError.invalid }
@@ -41,8 +46,8 @@ struct MediaPicker: UIViewControllerRepresentable {
                         } else { media.append(try Self.photo(bytes)) }
                     }
                     if !parent.video && !MediaPolicy.photoBatch(media.map(\.bytes)) { throw ChatError.tooLarge }
-                    await MainActor.run { parent.done(media, nil) }
-                } catch { await MainActor.run { parent.done([], parent.video ? "Επίλεξε MP4 H264/AAC έως30δευτ./12MB. Δεν μετατρέπεται ή αποθηκεύεται νέο αρχείο." : "Επίλεξε έως5 φωτογραφίες, έως7MB καθεμία και14MB συνολικά.") } }
+                    await MainActor.run { if !parent.lease.isCancelled { parent.done(media, nil) } }
+                } catch { await MainActor.run { if !parent.lease.isCancelled { parent.done([], parent.video ? "Επίλεξε MP4 H264/AAC έως30δευτ./12MB. Δεν μετατρέπεται ή αποθηκεύεται νέο αρχείο." : "Επίλεξε έως5 φωτογραφίες, έως7MB καθεμία και14MB συνολικά.") } } }
             }
         }
         static func photo(_ data: Data) throws -> DraftMedia {

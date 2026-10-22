@@ -1,3 +1,9 @@
+## Native app library/lifecycle completion after actual compile feedback
+
+Run39807520317/job119924604954 b162580b: actual10coretestsPASS; Apple app compilation reached CaptureView and failed on missing AVKit import for VideoPlayer. Added import and removed nonthrowing AVAssetWriter initializer try warnings. Kept current FCM token/deleteToken compatibility API for the existing HTTPv1 token contract; SDK13 deprecation is not a migration/physical push PASS.
+
+Completed initial client lifecycle gaps while preserving server contracts: foreground-only GET refresh without blocking composer or stale-history overwrite after POST; immutable cancellable media import lease and once-only provider continuation prevent a late old picker callback from reading a newer mutable scope stamp or clearing another import. Background/store/logout cancel provider progress and pending imports; send waits for preparation. Tests cover late provider/current import, permission resume, cancellation, real photo conversion, private composer, closed capture and old refresh after send. Notification tap is buffered until the restored authorized foreground model is ready, with early OS completion and capture-state guard; permissions cannot restart a dismissed camera. Device-local message time and validated store name are displayed. Fresh actual build/simulator/media/archive/full checks remain REQUIRED; no iPhone/Apple/APNs account setup or physical PASS.
+
 ## Playback observation dependency review
 
 While6cddeef7 was queued for macOS, review found Playback uses Combine ObservableObject/Published without importing Combine; added the explicit import. PushManager has no observed properties and is a delegate singleton, so removed its unnecessary ObservableObject conformance. No runtime/protocol test weakened, fresh source checks required; no iPhone PASS.

@@ -1,16 +1,18 @@
 import XCTest
+import UIKit
 import MWSChatCore
 @testable import MWChat
 final class ControlledTransport: ChatTransport {
     var paths: [(String, String)] = []
     var response: [String: Any] = [:]
     var fail = false, delay = false, cancelled = 0
+    var responder: ((String, String) -> [String: Any])?
     var continuation: CheckedContinuation<Data, Error>?
     func cancel() { cancelled += 1 }
     func request(_ path: String, method: String, body: [String: Any]?, token: String, max: Int) async throws -> Data {
         paths.append((path, method)); if fail { throw ChatError.unavailable }
         if delay { return try await withCheckedThrowingContinuation { continuation = $0 } }
-        return try JSONSerialization.data(withJSONObject: response)
+        return try JSONSerialization.data(withJSONObject: responder?(path, method) ?? response)
     }
 }
 @MainActor final class ChatModelTests: XCTestCase {
@@ -50,5 +52,56 @@ final class ControlledTransport: ChatTransport {
         let api = ControlledTransport(), m = model(api); m.identity = ["tokenType": "STORE_CHAT_OPERATOR", "storeId": "s", "companyId": "c"]; m.ai = true
         await m.reload(); XCTAssertTrue(api.paths.isEmpty); XCTAssertFalse(m.canAI)
         await m.choose(Store(["id": "other", "companyId": "foreign"])); XCTAssertEqual(m.selected?.id, "s")
+    }
+    func testForegroundRefreshPreservesDraftAndNeverBlocksComposer() async {
+        let api = ControlledTransport(), m = model(api); m.draft = "keep draft"; api.response = ["store": ["id": "s", "companyId": "c", "name": "Authorized store name"], "rows": [["id": "new", "body": "new message"]]]
+        await m.poll(); XCTAssertFalse(m.busy); XCTAssertEqual(m.draft, "keep draft"); XCTAssertEqual(m.messages.first?.id, "new"); XCTAssertEqual(m.selected?.name, "Authorized store name"); XCTAssertEqual(api.paths.filter { $0.1 == "POST" }.count, 0)
+    }
+    func testOldForegroundRefreshCannotOverwriteHistoryAfterSend() async throws {
+        let api = ControlledTransport(), m = model(api); api.delay = true; let old = Task { await m.poll() }
+        while api.continuation == nil { await Task.yield() }
+        api.delay = false; api.responder = { _, method in method == "POST" ? ["ok": true, "id": "sent"] : ["store": ["id": "s", "companyId": "c"], "rows": [["id": "current", "body": "new snapshot"]]] }; m.draft = "synthetic"; await m.send(); XCTAssertEqual(m.messages.first?.id, "current")
+        let stale: [String: Any] = ["store": ["id": "s", "companyId": "c"], "rows": [["id": "stale", "body": "old snapshot"]]]
+        api.continuation?.resume(returning: try JSONSerialization.data(withJSONObject: stale)); await old.value
+        XCTAssertEqual(m.messages.first?.id, "current"); XCTAssertFalse(m.messages.contains { $0.id == "stale" }); XCTAssertEqual(api.paths.filter { $0.1 == "POST" }.count, 1)
+    }
+    func testClosedCaptureCannotRestartAfterPermissionOrViewCancellation() async {
+        let state = CaptureState(); state.cleanup(); await state.prepare("video"); state.start("voice"); state.takePhoto()
+        XCTAssertFalse(state.recording); XCTAssertNil(state.draft); XCTAssertFalse(state.camera.session.isRunning)
+    }
+    func testPrivateComposerDoesNotRetainUndoOrOfferCopyCutExport() {
+        let view = PrivateComposer.Field(); view.text = "synthetic private draft"
+        XCTAssertNil(view.undoManager)
+        XCTAssertFalse(view.canPerformAction(#selector(UIResponderStandardEditActions.copy(_:)), withSender: nil))
+        XCTAssertFalse(view.canPerformAction(#selector(UIResponderStandardEditActions.cut(_:)), withSender: nil))
+    }
+    func testPhotoConversionProducesBoundedInMemoryJPEG() throws {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 64, height: 96))
+        let image = renderer.image { context in UIColor.purple.setFill(); context.fill(CGRect(x: 0, y: 0, width: 64, height: 96)) }
+        let bytes = try XCTUnwrap(image.jpegData(compressionQuality: 0.9)); let result = try MediaPicker.Coordinator.photo(bytes)
+        XCTAssertEqual(result.mime, "image/jpeg"); XCTAssertLessThan(result.bytes.count, MediaPolicy.imageMax); XCTAssertNotNil(UIImage(data: result.bytes))
+        XCTAssertThrowsError(try MediaPicker.Coordinator.photo(Data([1,2,3])))
+    }
+    func testOldPickerCannotReplaceNewImportOrCrossSelectedStore() throws {
+        let api = ControlledTransport(), m = model(api); m.photosEnabled = true
+        let old = try XCTUnwrap(m.beginImport()); m.background(); m.active = true; m.selected = Store(["id": "new-store", "companyId": "c"])
+        let current = try XCTUnwrap(m.beginImport()); XCTAssertTrue(old.isCancelled)
+        m.finishImport(old, media: [DraftMedia(bytes: Data([1]), mime: "image/jpeg", name: "stale.jpg")], error: nil)
+        XCTAssertTrue(m.importing); XCTAssertTrue(m.mediaLease === current); XCTAssertTrue(m.media.isEmpty)
+        m.finishImport(current, media: [DraftMedia(bytes: Data([2]), mime: "image/jpeg", name: "current.jpg")], error: nil)
+        XCTAssertFalse(m.importing); XCTAssertEqual(m.media.first?.name, "current.jpg")
+    }
+    func testPermissionForegroundDoesNotInvalidateImportAndSendWaitsForIt() async throws {
+        let api = ControlledTransport(), m = model(api); let lease = try XCTUnwrap(m.beginImport()); m.draft = "pending photo"
+        await m.foreground(); await m.send(); XCTAssertTrue(api.paths.isEmpty); XCTAssertTrue(m.mediaLease === lease)
+        m.background(); XCTAssertTrue(lease.isCancelled); XCTAssertFalse(m.importing)
+    }
+    func testCancelledProviderContinuationResumesOnlyOnce() async throws {
+        let lease = MediaLease(epoch: 1, scope: Scope(company: "c", store: "s")); var gate: MediaReadGate?
+        let task = Task<Data, Error> { try await withCheckedThrowingContinuation { continuation in let g = MediaReadGate(continuation); gate = g; lease.onCancel { g.finish(.failure(CancellationError())) } } }
+        while gate == nil { await Task.yield() }
+        let progress = Progress(totalUnitCount: 1); lease.attach(progress); lease.cancel(); XCTAssertTrue(progress.isCancelled)
+        do { _ = try await task.value; XCTFail("cancel expected") } catch is CancellationError {} catch { XCTFail("unexpected failure") }
+        gate?.finish(.success(Data([1,2,3]))) // Late provider completion cannot resume twice.
     }
 }

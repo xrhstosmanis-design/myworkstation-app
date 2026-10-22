@@ -40,10 +40,14 @@ struct DraftMedia: Identifiable {
     @Published var operatorStore = ""
     @Published var uncertainStore = ""
     @Published var preview: DraftMedia?
+    @Published var importing = false
+    private(set) var mediaLease: MediaLease?
     var token = "", identity: [String: Any] = [:], history: [[String: String]] = []
     let api: ChatTransport
     private let vault = TokenVault()
     private var fence = RequestFence()
+    private var readVersion: UInt64 = 0
+    private var pollID: UUID?
     var onClear: (() -> Void)?
     var platform: Bool { TokenClaims.platform(identity) }
     var staff: Bool { identity["tokenType"] as? String == "STORE_CHAT_OPERATOR" }
@@ -60,14 +64,15 @@ struct DraftMedia: Identifiable {
         }
     }
     func clearContent() {
-        fence.invalidate(); api.cancel(); busy = false; draft = ""; media.removeAll(); messages.removeAll(); aiRows.removeAll(); history.removeAll(); preview = nil; evidence = ""; status = ""; onClear?()
+        fence.invalidate(); readVersion &+= 1; pollID = nil; mediaLease?.cancel(); mediaLease = nil; importing = false; api.cancel(); busy = false; draft = ""; media.removeAll(); messages.removeAll(); aiRows.removeAll(); history.removeAll(); preview = nil; evidence = ""; status = ""; onClear?()
     }
     func background() { active = false; clearContent() }
-    func foreground() async { active = true; if !challenge.isEmpty && !TokenClaims.usable(challenge, challenge: true) { clearChallenge() }; if !token.isEmpty && !TokenClaims.usable(token) { clearSession(); status = ChatError.expired.localizedDescription }; if !token.isEmpty { if selected != nil { await reload() } else { await loadStores() } } }
+    func foreground() async { let resumed = !active; active = true; if !challenge.isEmpty && !TokenClaims.usable(challenge, challenge: true) { clearChallenge() }; if !token.isEmpty && !TokenClaims.usable(token) { clearSession(); status = ChatError.expired.localizedDescription }; if !token.isEmpty { if selected != nil { if resumed || (messages.isEmpty && !importing) { await reload() } } else if resumed || stores.isEmpty { await loadStores() } } }
     func clearChallenge() { challenge = ""; vault.remove("challenge") }
     func clearSession() { clearContent(); token = ""; identity = [:]; selected = nil; stores = []; operators = []; operatorStore = ""; uncertainStore = ""; clearChallenge(); vault.remove("token"); screen = .login; PushManager.shared.clear() }
     @discardableResult func call(_ path: String, method: String = "GET", body: [String: Any]? = nil, anonymous: Bool = false) async -> [String: Any]? {
         guard !busy, active else { return nil }; busy = true; status = method == "GET" ? "Ανανέωση…" : "Παρακαλώ περίμενε…"
+        if method != "GET" { fence.invalidate(); readVersion &+= 1; pollID = nil; api.cancel() }
         let epoch = fence.epoch, captured = token, scope = selected?.scope
         do {
             let j = try await api.json(path, method: method, body: body, token: anonymous ? "" : captured)
@@ -124,18 +129,32 @@ struct DraftMedia: Identifiable {
     func toggleAI() async { guard !busy, selected != nil else { return }; clearContent(); ai.toggle(); aiReady = false; await reload() }
     func reload() async {
         guard let scope = selected?.scope, scope.valid else { return }
+        readVersion &+= 1; let version = readVersion
         if ai {
             guard canAI else { status = ChatError.denied.localizedDescription; return }
             let query = "?readScope=selected_store" + (platform ? "&companyId=" + ChatPolicy.component(scope.company) + "&storeId=" + ChatPolicy.component(scope.store) : "")
             if let j = await call(assistant + "/status" + query) { aiReady = j["available"] as? Bool == true && scope.matches(j["scope"] as? [String: Any]); if !aiReady { status = "Ο βοηθός δεν είναι διαθέσιμος για αυτό το κατάστημα." } }
         } else if let j = await call(base + "/messages?limit=100") {
-            guard let s = j["store"] as? [String: Any], s["id"] as? String == scope.store, s["companyId"] as? String == scope.company, let rows = j["rows"] as? [[String: Any]] else { status = ChatError.invalid.localizedDescription; return }
-            messages = rows.map(Message.init).filter { !$0.id.isEmpty }.sorted { $0.createdAt < $1.createdAt }
-            photosEnabled = (j["settings"] as? [String: Any])?["photosEnabled"] as? Bool ?? true; voiceAvailable = j["voiceMessagesAvailable"] as? Bool ?? false; videoAvailable = j["videoMessagesAvailable"] as? Bool ?? false
+            guard readVersion == version else { return }; applyMessages(j, scope: scope)
         }
     }
+    private func applyMessages(_ j: [String: Any], scope: Scope) {
+        guard let s = j["store"] as? [String: Any], s["id"] as? String == scope.store, s["companyId"] as? String == scope.company, let rows = j["rows"] as? [[String: Any]] else { status = ChatError.invalid.localizedDescription; return }
+        if let name = s["name"] as? String, !name.isEmpty, name != selected?.name { selected = Store(["id": scope.store, "companyId": scope.company, "name": name, "companyName": selected?.companyName ?? ""]) }
+        messages = rows.map(Message.init).filter { !$0.id.isEmpty }.sorted { $0.createdAt < $1.createdAt }
+        photosEnabled = (j["settings"] as? [String: Any])?["photosEnabled"] as? Bool ?? true; voiceAvailable = j["voiceMessagesAvailable"] as? Bool ?? false; videoAvailable = j["videoMessagesAvailable"] as? Bool ?? false
+    }
+    func poll() async {
+        guard active, !busy, !importing, pollID == nil, screen == .conversation, !ai, let scope = selected?.scope, scope.valid else { return }
+        let id = UUID(), generation = fence.epoch, captured = token; pollID = id; readVersion &+= 1; let version = readVersion
+        defer { if pollID == id { pollID = nil } }
+        do {
+            let j = try await api.json(base + "/messages?limit=100", token: captured)
+            guard !Task.isCancelled, readVersion == version, fence.accepts(generation, capturedScope: scope, currentScope: selected?.scope, capturedToken: captured, currentToken: token, active: active) else { return }; applyMessages(j, scope: scope)
+        } catch { guard !Task.isCancelled, readVersion == version, fence.epoch == generation, captured == token, active else { return }; if case ChatError.expired = error { clearSession(); status = ChatError.expired.localizedDescription } }
+    }
     func send() async {
-        guard !busy, let scope = selected?.scope, active else { return }
+        guard !busy, !importing, let scope = selected?.scope, active else { return }
         let value = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         if ai { await ask(value); return }
         guard uncertainStore != scope.store else { status = ChatError.uncertain.localizedDescription; return }
@@ -166,9 +185,9 @@ struct DraftMedia: Identifiable {
         history.append(["role": "user", "content": question]); history.append(["role": "assistant", "content": String(answer.prefix(2000))]); history = Array(history.suffix(10))
         if let rows = j["evidence"], let data = try? JSONSerialization.data(withJSONObject: rows, options: [.prettyPrinted, .sortedKeys]) { evidence = String(data: data, encoding: .utf8) ?? "" }
     }
-    func markRead(_ message: Message) async { if await call(base + "/messages/" + ChatPolicy.component(message.id) + "/read", method: "POST", body: [:]) != nil { await reload() } }
+    func markRead(_ message: Message) async { guard !importing else { return }; if await call(base + "/messages/" + ChatPolicy.component(message.id) + "/read", method: "POST", body: [:]) != nil { await reload() } }
     func attachment(_ message: Message) async {
-        guard !busy, let scope = selected?.scope, message.attachment, messages.contains(where: { $0.id == message.id }) else { return }
+        guard !busy, !importing, let scope = selected?.scope, message.attachment, messages.contains(where: { $0.id == message.id }) else { return }
         let max = message.mime == "video/mp4" ? MediaPolicy.videoMax : message.mime == "audio/wav" ? MediaPolicy.voiceMax : MediaPolicy.imageMax
         guard ["image/jpeg", "image/png", "image/webp", "video/mp4", "audio/wav"].contains(message.mime) else { status = "Η λήψη αρχείων δεν υποστηρίζεται."; return }
         let generation = fence.epoch, captured = token; busy = true
@@ -184,6 +203,15 @@ struct DraftMedia: Identifiable {
         else { guard media.isEmpty, next.count == 1, let first = next.first, first.mime == "video/mp4" && videoAvailable && first.bytes.count <= MediaPolicy.videoMax || first.mime == "audio/wav" && voiceAvailable && first.bytes.count <= MediaPolicy.voiceMax else { status = "Αφαίρεσε πρώτα τα παλιά συνημμένα."; return }; media = next }
     }
     var generation: UInt64 { fence.epoch }
+    func beginImport() -> MediaLease? {
+        guard active, !busy, !importing, selected?.scope.valid == true, !ai, uncertainStore != selected?.id else { return nil }
+        mediaLease?.cancel(); let lease = MediaLease(epoch: generation, scope: selected?.scope); mediaLease = lease; importing = true; return lease
+    }
+    func finishImport(_ lease: MediaLease, media: [DraftMedia], error: String?) {
+        guard mediaLease === lease, !lease.isCancelled, active, generation == lease.epoch, selected?.scope == lease.scope else { return }
+        mediaLease = nil; importing = false; lease.cancel()
+        if let error { status = error } else if !media.isEmpty { addMedia(media, epoch: lease.epoch, scope: lease.scope) }
+    }
     func logout() async {
         let old = token, path = staff ? baseForStaffLogout() : "/api/auth/logout"
         clearSession(); do { _ = try await api.json(path, method: "POST", body: [:], token: old) } catch { /* Local clearing never depends on network or retries. */ }

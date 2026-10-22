@@ -42,19 +42,24 @@ struct RootView: View {
             }.background(Color(red: 0.96, green: 0.95, blue: 0.98)).tint(purple)
             if phase != .active || captured { Color(red: 0.16, green: 0.10, blue: 0.25).ignoresSafeArea().overlay { VStack { Image(systemName: "lock.fill").font(.largeTitle); Text("MyWorkStation Chat"); Text("Το περιεχόμενο προστατεύεται.").font(.subheadline) }.foregroundStyle(.white) }.accessibilityIdentifier("privacy-cover") }
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in captured = UIScreen.main.isCaptured; if captured { password = ""; picker = nil; camera = nil; replySheet = false; evidenceSheet = false; model.background() } else { Task { await model.foreground() } } }
+        .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in captured = UIScreen.main.isCaptured; if captured { password = ""; picker = nil; camera = nil; replySheet = false; evidenceSheet = false; model.background() } else { Task { await model.foreground(); await PushManager.shared.openPending() } } }
         .onChange(of: phase) { _, next in
             if next != .active { password = "" }
             if next == .background { picker = nil; camera = nil; replySheet = false; evidenceSheet = false; model.background() }
-            if next == .active && !captured { Task { await model.foreground() } }
+            if next == .active && !captured { Task { await model.foreground(); PushManager.shared.resume(); await PushManager.shared.openPending() } }
         }
-        .task { PushManager.shared.model = model; await model.foreground(); PushManager.shared.resume() }
+        .task { PushManager.shared.model = model; if !captured && phase == .active { await model.foreground(); PushManager.shared.resume(); await PushManager.shared.openPending() } else { model.background() } }
+        .onChange(of: model.busy) { _, value in if !value { Task { await PushManager.shared.openPending() } } }
+        .task(id: pollKey) {
+            guard !pollKey.isEmpty else { return }
+            while !Task.isCancelled { do { try await Task.sleep(nanoseconds: 8_000_000_000) } catch { return }; guard !Task.isCancelled else { return }; await model.poll() }
+        }
         .onChange(of: model.token) { _, value in if value.isEmpty { email = ""; password = ""; link = ""; employee = ""; picker = nil; camera = nil; replySheet = false; evidenceSheet = false } }
         .sheet(item: Binding(get: { picker.map(PickerItem.init) }, set: { picker = $0?.id })) { item in
-            MediaPicker(video: item.id == "video") { media, error in picker = nil; if let error { model.status = error }; model.addMedia(media, epoch: importEpoch, scope: importScope) }.ignoresSafeArea()
+            if let lease = model.mediaLease { MediaPicker(video: item.id == "video", lease: lease) { media, error in guard model.mediaLease === lease else { return }; picker = nil; model.finishImport(lease, media: media, error: error) }.ignoresSafeArea().interactiveDismissDisabled() }
         }
         .fullScreenCover(item: Binding(get: { camera.map(PickerItem.init) }, set: { camera = $0?.id })) { item in
-            CaptureView(mode: item.id) { media, error in camera = nil; if let error { model.status = error }; if let media { model.addMedia([media], epoch: importEpoch, scope: importScope) } }.tint(purple)
+            if let lease = model.mediaLease { CaptureView(mode: item.id) { media, error in guard model.mediaLease === lease else { return }; camera = nil; model.finishImport(lease, media: media.map { [$0] } ?? [], error: error) }.tint(purple) }
         }
         .sheet(item: $model.preview) { item in PreviewView(media: item) { model.preview = nil } }
         .sheet(isPresented: $replySheet) {
@@ -63,6 +68,7 @@ struct RootView: View {
         .sheet(isPresented: $evidenceSheet) { NavigationStack { ScrollView { Text(model.evidence).font(.system(.footnote, design: .monospaced)).padding() }.navigationTitle("Στοιχεία πηγής").toolbar { Button("Κλείσιμο") { evidenceSheet = false } } } }
     }
     private struct PickerItem: Identifiable { let id: String; init(_ id: String) { self.id = id } }
+    private var pollKey: String { model.active && model.screen == .conversation && !model.ai && !model.importing && picker == nil && camera == nil && !replySheet && !evidenceSheet && model.preview == nil ? (model.selected?.companyId ?? "") + ":" + (model.selected?.id ?? "") : "" }
     private var header: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(model.selected?.name ?? "MyWorkStation Chat").font(.title2.bold()).accessibilityIdentifier("title")
@@ -93,29 +99,32 @@ struct RootView: View {
     }
     private var conversation: some View {
         VStack(spacing: 0) {
-            HStack { Button("‹ Συνομιλίες") { Task { await model.back() } }; Spacer(); if model.canAI { Button(model.ai ? "Μηνύματα" : "Βοηθός AI") { Task { await model.toggleAI() } } }; Button { Task { await model.reload() } } label: { Image(systemName: "arrow.clockwise") }.accessibilityLabel("Ανανέωση") }.padding(12).disabled(model.busy)
+            HStack { Button("‹ Συνομιλίες") { Task { await model.back() } }; Spacer(); if model.canAI { Button(model.ai ? "Μηνύματα" : "Βοηθός AI") { Task { await model.toggleAI() } } }; Button { Task { await model.reload() } } label: { Image(systemName: "arrow.clockwise") }.accessibilityLabel("Ανανέωση").disabled(model.importing) }.padding(12).disabled(model.busy)
             ScrollViewReader { proxy in ScrollView { LazyVStack(alignment: .leading, spacing: 12) {
                 if model.ai { ForEach(Array(model.aiRows.enumerated()), id: \.offset) { _, row in bubble(row.0, own: row.1, meta: "", message: nil) }; if !model.evidence.isEmpty { Button("Προβολή αναγνωσμένων στοιχείων") { evidenceSheet = true } } }
-                else { ForEach(model.messages) { m in bubble(m.body, own: m.senderId == model.identity["id"] as? String, meta: m.senderName + " · " + String(m.createdAt.prefix(16)).replacingOccurrences(of: "T", with: " "), message: m) } }
+                else { ForEach(model.messages) { m in bubble(m.body, own: m.senderId == model.identity["id"] as? String, meta: m.senderName + " · " + ChatPolicy.displayTime(m.createdAt), message: m) } }
                 Color.clear.frame(height: 1).id("bottom")
             }.padding(12) }.onChange(of: model.messages.count) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) } }
             if model.uncertainStore == model.selected?.id { Text(ChatError.uncertain.localizedDescription).font(.footnote).padding(8); Button("Απόρριψη παλιού προσχεδίου · νέα σύνταξη") { Task { await model.discardUncertain() } }.disabled(model.busy) }
+            if model.importing { HStack { ProgressView(); Text("Προετοιμασία συνημμένου…").font(.footnote) }.padding(8) }
             if !model.media.isEmpty { ScrollView(.horizontal) { HStack { ForEach(model.media) { item in HStack { Button(item.name) { model.preview = item }; Button { model.media.removeAll { $0.id == item.id } } label: { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Αφαίρεση " + item.name) }.padding(10).background(.white).clipShape(Capsule()) } } }.padding(.horizontal).disabled(model.busy) }
             if !model.ai {
                 HStack(spacing: 8) {
                     tool("Έτοιμες", icon: "text.bubble") { stamp(); replySheet = true }
-                    tool("Φωνητικό", icon: "mic") { stamp(); camera = "voice" }.disabled(!model.voiceAvailable)
-                    Menu { Button("Λήψη από κάμερα") { stamp(); camera = "video" }; Button("Επιλογή από συλλογή") { stamp(); picker = "video" } } label: { toolLabel("Βίντεο", icon: "video") }.disabled(!model.videoAvailable || !model.media.isEmpty)
-                }.padding(8).disabled(model.busy || model.uncertainStore == model.selected?.id)
+                    tool("Φωνητικό", icon: "mic") { openCapture("voice") }.disabled(!model.voiceAvailable || !model.media.isEmpty)
+                    Menu { Button("Λήψη από κάμερα") { openCapture("video") }; Button("Επιλογή από συλλογή") { openPicker("video") } } label: { toolLabel("Βίντεο", icon: "video") }.disabled(!model.videoAvailable || !model.media.isEmpty)
+                }.padding(8).disabled(model.busy || model.importing || model.uncertainStore == model.selected?.id)
             }
             HStack(spacing: 8) {
-                if !model.ai { Menu { Button("Λήψη φωτογραφίας") { stamp(); camera = "photo" }; Button("Επιλογή φωτογραφιών") { stamp(); picker = "photos" } } label: { Image(systemName: "plus").frame(width: 48, height: 48).background(purple.opacity(0.12)).clipShape(Circle()) }.disabled(!model.photosEnabled || model.busy) }
+                if !model.ai { Menu { Button("Λήψη φωτογραφίας") { openCapture("photo") }; Button("Επιλογή φωτογραφιών") { openPicker("photos") } } label: { Image(systemName: "plus").frame(width: 48, height: 48).background(purple.opacity(0.12)).clipShape(Circle()) }.disabled(!model.photosEnabled || model.busy || model.importing || model.media.contains { !$0.mime.hasPrefix("image/") }) }
                 ZStack(alignment: .leading) { if model.draft.isEmpty { Text(model.ai ? "Ρώτησε τον βοηθό…" : "Γράψε μήνυμα…").foregroundStyle(.secondary).padding(.horizontal, 14).allowsHitTesting(false) }; PrivateComposer(text: $model.draft, placeholder: model.ai ? "Ρώτησε τον βοηθό…" : "Γράψε μήνυμα…", maximum: model.ai ? 600 : 5000) }.background(.white).clipShape(RoundedRectangle(cornerRadius: 24))
-                Button { Task { await model.send() } } label: { Image(systemName: "paperplane.fill").frame(width: 48, height: 48).background(purple).foregroundStyle(.white).clipShape(Circle()) }.accessibilityLabel("Αποστολή μηνύματος").accessibilityIdentifier("send")
+                Button { Task { await model.send() } } label: { Image(systemName: "paperplane.fill").frame(width: 48, height: 48).background(purple).foregroundStyle(.white).clipShape(Circle()) }.accessibilityLabel("Αποστολή μηνύματος").accessibilityIdentifier("send").disabled(model.importing)
             }.padding(10).disabled(model.busy || (model.ai && !model.aiReady) || model.uncertainStore == model.selected?.id)
         }
     }
     private func stamp() { importEpoch = model.generation; importScope = model.selected?.scope }
+    private func openPicker(_ kind: String) { guard model.beginImport() != nil else { return }; picker = kind }
+    private func openCapture(_ kind: String) { guard model.beginImport() != nil else { return }; camera = kind }
     private func tool(_ text: String, icon: String, action: @escaping () -> Void) -> some View { Button(action: action) { toolLabel(text, icon: icon) } }
     private func toolLabel(_ text: String, icon: String) -> some View { Label(text, systemImage: icon).labelStyle(.titleOnly).font(.subheadline).lineLimit(2).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, minHeight: 48).padding(.horizontal, 4).background(purple.opacity(0.10)).clipShape(RoundedRectangle(cornerRadius: 20)) }
     private func bubble(_ body: String, own: Bool, meta: String, message: Message?) -> some View {

@@ -66,6 +66,11 @@ public enum ChatPolicy {
         guard p.count == 3, p[0].isEmpty, p[1] == "chat", !p[2].isEmpty, p[2].count <= 200 else { throw ChatError.invalid }
         return String(p[2])
     }
+    public static func displayTime(_ value: String, zone: TimeZone = .current) -> String {
+        let parser = ISO8601DateFormatter(); parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = parser.date(from: value); if date == nil { parser.formatOptions = [.withInternetDateTime]; date = parser.date(from: value) }
+        guard let date else { return "" }; let f = DateFormatter(); f.locale = Locale(identifier: "el_GR"); f.timeZone = zone; f.dateFormat = "dd/MM HH:mm"; return f.string(from: date)
+    }
     public static func reply(_ reply: String, draft: String, append: Bool) throws -> String {
         guard replies.contains(reply) else { throw ChatError.invalid }
         let next = append && !draft.isEmpty ? draft + "\n" + reply : reply

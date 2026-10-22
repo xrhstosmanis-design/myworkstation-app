@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import AVKit
 import UniformTypeIdentifiers
 import MWSChatCore
 final class CameraPipeline: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureAudioDataOutputSampleBufferDelegate, AVAssetWriterDelegate, @unchecked Sendable {
@@ -14,6 +15,7 @@ final class CameraPipeline: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureVi
     var result: ((DraftMedia?, String?) -> Void)?
     func configure(video mode: Bool) {
         queue.async {
+            guard !self.cancelled else { return }
             do {
                 self.session.beginConfiguration(); self.session.sessionPreset = .vga640x480
                 guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else { throw ChatError.unavailable }
@@ -31,8 +33,8 @@ final class CameraPipeline: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureVi
     private func deliver(_ media: DraftMedia?, _ error: String?) { DispatchQueue.main.async { self.result?(media, error) } }
     func photo() { queue.async { guard !self.cancelled else { return }; self.output.capturePhoto(with: AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg]), delegate: self) } }
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard !cancelled, error == nil, let data = photo.fileDataRepresentation() else { deliver(nil, "Δεν ολοκληρώθηκε η λήψη."); return }
-        do { deliver(try MediaPicker.Coordinator.photo(data), nil) } catch { deliver(nil, "Η φωτογραφία δεν είναι εντός ορίων.") }
+        guard error == nil, let data = photo.fileDataRepresentation() else { deliver(nil, "Δεν ολοκληρώθηκε η λήψη."); return }
+        queue.async { guard !self.cancelled else { return }; do { self.deliver(try MediaPicker.Coordinator.photo(data), nil) } catch { self.deliver(nil, "Η φωτογραφία δεν είναι εντός ορίων.") } }
     }
     func beginVideo() { queue.async { guard !self.cancelled, !self.recording else { return }; self.recording = true } }
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
@@ -40,7 +42,7 @@ final class CameraPipeline: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureVi
         do {
             if writer == nil {
                 guard output === video, let pixel = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-                let w = try AVAssetWriter(contentType: .mpeg4Movie); w.outputFileTypeProfile = .mpeg4AppleHLS; w.preferredOutputSegmentInterval = CMTime(seconds: 1, preferredTimescale: 600); w.initialSegmentStartTime = .zero; w.delegate = self
+                let w = AVAssetWriter(contentType: .mpeg4Movie); w.outputFileTypeProfile = .mpeg4AppleHLS; w.preferredOutputSegmentInterval = CMTime(seconds: 1, preferredTimescale: 600); w.initialSegmentStartTime = .zero; w.delegate = self
                 let v = AVAssetWriterInput(mediaType: .video, outputSettings: [AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: CVPixelBufferGetWidth(pixel), AVVideoHeightKey: CVPixelBufferGetHeight(pixel), AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 600000, AVVideoMaxKeyFrameIntervalKey: 30, AVVideoAllowFrameReorderingKey: false]])
                 let a = AVAssetWriterInput(mediaType: .audio, outputSettings: [AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: 44100, AVNumberOfChannelsKey: 1, AVEncoderBitRateKey: 64000])
                 v.expectsMediaDataInRealTime = true; a.expectsMediaDataInRealTime = true
@@ -87,15 +89,19 @@ final class AudioPCMStore: @unchecked Sendable {
     let camera = CameraPipeline()
     private var engine: AVAudioEngine?, converter: AVAudioConverter?, timer: Timer?
     private let pcm = AudioPCMStore()
+    private var alive = true
     func prepare(_ mode: String) async {
+        guard alive, !Task.isCancelled else { return }
         let microphone = mode == "voice" || mode == "video"
         if mode != "voice", !(await AVCaptureDevice.requestAccess(for: .video)) { error = "Χρειάζεται άδεια κάμερας από τις Ρυθμίσεις."; return }
+        guard alive, !Task.isCancelled else { return }
         if microphone, !(await AVCaptureDevice.requestAccess(for: .audio)) { error = "Χρειάζεται άδεια μικροφώνου από τις Ρυθμίσεις."; return }
+        guard alive, !Task.isCancelled else { return }
         camera.result = { [weak self] media, error in Task { @MainActor in guard let self else { return }; self.recording = false; self.timer?.invalidate(); self.draft = media; self.error = error ?? "" } }
         if mode != "voice" { camera.configure(video: mode == "video") }
     }
     func start(_ mode: String) {
-        guard !recording, error.isEmpty else { return }; draft = nil; seconds = 0
+        guard alive, !recording, error.isEmpty else { return }; draft = nil; seconds = 0
         if mode == "voice" {
             do {
                 try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker]); try AVAudioSession.sharedInstance().setActive(true)
@@ -116,7 +122,7 @@ final class AudioPCMStore: @unchecked Sendable {
         recording = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in Task { @MainActor in guard let self else { return }; self.seconds += 1; if self.seconds >= (mode == "voice" ? 59 : 29) { self.finish(mode) } } }
     }
-    func takePhoto() { guard !recording, error.isEmpty else { return }; recording = true; camera.photo() }
+    func takePhoto() { guard alive, !recording, error.isEmpty else { return }; recording = true; camera.photo() }
     func finish(_ mode: String) {
         guard recording else { return }; recording = false; timer?.invalidate(); timer = nil
         if mode == "voice" {
@@ -126,7 +132,7 @@ final class AudioPCMStore: @unchecked Sendable {
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         } else { camera.finishVideo() }
     }
-    func cleanup() { timer?.invalidate(); timer = nil; if let engine { engine.inputNode.removeTap(onBus: 0); engine.stop() }; engine = nil; converter = nil; camera.stop(); draft = nil; recording = false; pcm.reset(); try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation) }
+    func cleanup() { alive = false; timer?.invalidate(); timer = nil; if let engine { engine.inputNode.removeTap(onBus: 0); engine.stop() }; engine = nil; converter = nil; camera.stop(); draft = nil; recording = false; pcm.reset(); try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation) }
 }
 struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession

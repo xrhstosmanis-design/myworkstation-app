@@ -17,7 +17,7 @@ final class MemoryVideoTests: XCTestCase {
         try await encodeMemoryVideo(audio: true)
     }
     private func encodeMemoryVideo(audio: Bool) async throws {
-        let writer = try AVAssetWriter(contentType: .mpeg4Movie), collector = SegmentCollector()
+        let writer = AVAssetWriter(contentType: .mpeg4Movie), collector = SegmentCollector()
         writer.delegate = collector; writer.outputFileTypeProfile = .mpeg4AppleHLS; writer.preferredOutputSegmentInterval = CMTime(seconds: 0.5, preferredTimescale: 600); writer.initialSegmentStartTime = .zero
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: [AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 64, AVVideoHeightKey: 64, AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 100000, AVVideoAllowFrameReorderingKey: false, AVVideoMaxKeyFrameIntervalKey: 15]])
         input.expectsMediaDataInRealTime = false
@@ -44,6 +44,9 @@ final class MemoryVideoTests: XCTestCase {
         XCTAssertEqual(writer.status, .completed, writer.error?.localizedDescription ?? "")
         let source = collector.bytes(); XCTAssertFalse(source.isEmpty)
         let flat = try MP4.flatten(source); XCTAssertTrue(MP4.validEnvelope(flat)); XCTAssertTrue(MP4.selfContained(flat))
+        let ownReference = Data([0,0,0,12]) + Data("url ".utf8) + Data([0,0,0,1])
+        let reference = try XCTUnwrap(flat.range(of: ownReference)); var external = flat; external[reference.upperBound-1] = 0
+        XCTAssertFalse(MP4.selfContained(external)); XCTAssertTrue(MemoryAsset(external, mime: "video/mp4").data.isEmpty, "External media references must not reach the platform loader")
         let resource = MemoryAsset(flat, mime: "video/mp4")
         let duration = try await resource.asset.load(.duration); XCTAssertGreaterThan(duration.seconds, 0.5); XCTAssertLessThanOrEqual(duration.seconds, 1.1)
         let tracks = try await resource.asset.loadTracks(withMediaType: .video); XCTAssertEqual(tracks.count, 1)

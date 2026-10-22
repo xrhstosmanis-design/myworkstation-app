@@ -43,6 +43,12 @@ final class ChatPolicyTests: XCTestCase {
         XCTAssertThrowsError(try ChatPolicy.reply("arbitrary", draft: "", append: false))
         XCTAssertThrowsError(try ChatPolicy.reply(ChatPolicy.replies[0], draft: String(repeating: "x", count: 5000), append: true))
     }
+    func testMessageTimeUsesDeviceZoneWithoutChangingSourceTimestamp() {
+        let zone = TimeZone(secondsFromGMT: 10800)!
+        XCTAssertEqual(ChatPolicy.displayTime("2026-10-22T12:00:00.000Z", zone: zone), "22/10 15:00")
+        XCTAssertEqual(ChatPolicy.displayTime("2026-10-22T12:00:00Z", zone: zone), "22/10 15:00")
+        XCTAssertEqual(ChatPolicy.displayTime("invalid", zone: zone), "")
+    }
     func testMediaLimitsAndCanonicalWav() throws {
         XCTAssertTrue(MediaPolicy.photoBatch([Data([1]), Data([2])]))
         XCTAssertFalse(MediaPolicy.photoBatch(Array(repeating: Data([1]), count: 6)))
