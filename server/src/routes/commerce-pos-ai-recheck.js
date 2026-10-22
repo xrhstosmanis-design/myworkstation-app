@@ -1,3 +1,4 @@
+import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -262,6 +263,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   const jobs=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."purchaseDocumentId",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
   const job=jobs[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
   if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:job.storeId},async()=>{
   if(Number(job.localConfidence||0)>=THRESHOLD&&!body.force&&!body.additionalPageJobIds.length)return res.json({id:job.id,status:job.status,aiCalled:false,reason:"OCR_CONFIDENCE_OK",confidence:Number(job.localConfidence||0),result:job.resultJson});
   if(!job.contentData)return res.status(409).json({error:"Δεν βρέθηκε το αρχικό αρχείο του τιμολογίου για επανέλεγχο AI."});
 
@@ -337,14 +339,14 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       parsed.documentDate=String(posHandoff.documentDate||parsed.documentDate||"");
       if(preferCentralStefanidis)parsed.stefanidisCentralFastPath=true;
       if(preferCentralMantzilas)parsed.mantzilasCentralFastPath=true;
-    }catch(error){centralAzureFailure=error;unifiedAiFailure=error}
+    }catch(error){throwIfWalletError(error);centralAzureFailure=error;unifiedAiFailure=error}
   }
   if(!parsed)try{
     const apiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(FULL_OCR_PROVIDER_TIMEOUT_MS),body:JSON.stringify({model:FULL_OCR_MODEL,reasoning:{effort:"minimal"},input:[{role:"user",content:[{type:"input_text",text:prompt},...fileParts]}],text:{format:{type:"json_schema",name:"invoice_extract",strict:true,schema:invoiceSchema}}})});
     const payload=await apiResponse.json().catch(()=>({}));
     if(!apiResponse.ok){const error=new Error(payload?.error?.message||`Ο AI επανέλεγχος απέτυχε (${apiResponse.status}).`);error.status=502;throw error}
     try{parsed=JSON.parse(outputText(payload))}catch{const error=new Error("Ο AI επανέλεγχος δεν επέστρεψε έγκυρα δομημένα στοιχεία.");error.status=502;throw error}
-  }catch(error){unifiedAiFailure=error}
+  }catch(error){throwIfWalletError(error);unifiedAiFailure=error}
 
   // A transient/invalid unified OpenAI response must not discard a payment or
   // silently process only page 1. Recover every ordered page through Azure,
@@ -364,9 +366,10 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     // consumed one complete provider timeout per page and then leaked a plain
     // 500, so the durable POS worker could neither retry nor explain the wait.
     const azureAttempts=await Promise.allSettled(pageJobs.map(page=>callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS}).then(normalizeAzure)));
+    for(const attempt of azureAttempts)if(attempt.status==="rejected")throwIfWalletError(attempt.reason);
     const failedPageIndex=azureAttempts.findIndex(result=>result.status==="rejected");
     if(failedPageIndex>=0){
-      const failure=azureAttempts[failedPageIndex].reason,timeout=isProviderTimeout(failure);
+      const failure=azureAttempts[failedPageIndex].reason;throwIfWalletError(failure);const timeout=isProviderTimeout(failure);
       const wrapped=new Error(`${timeout?"AZURE_TIMEOUT":"FULL_OCR_PROVIDER_FAILURE"}: OPENAI=${providerErrorText(unifiedAiFailure)}; AZURE_PAGE_${failedPageIndex+1}=${providerErrorText(failure)}`);
       wrapped.status=timeout?503:502;throw wrapped;
     }
@@ -453,7 +456,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
         parsed.earlyCompletePrintedTableRecovered=true;
         earlyCompleteTableRecovered=true;
       }
-    }catch{parsed.earlyCompletePrintedTableError="PROVIDER_FAILURE"}
+    }catch(error){throwIfWalletError(error);parsed.earlyCompletePrintedTableError="PROVIDER_FAILURE"}
   }
   const allNumericMissing=parsed.productLines.length>0&&parsed.productLines.every(line=>Number(line.quantity||0)<=0&&Number(line.unitCost||0)<=0&&Number(line.netAmount||0)<=0);
   const partialNumericMissing=parsed.productLines.some(line=>Number(line.quantity||0)<=0||Number(line.unitCost||0)<=0||Number(line.netAmount||0)<=0);
@@ -486,7 +489,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
         parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=recovered.length;
       }catch{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0}}
       else{parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0;parsed.tableRecheckError=`HTTP_${tableResponse.status}`}
-    }catch(error){
+    }catch(error){throwIfWalletError(error);
       // The table pass is supplemental. Keep the initial extraction and allow
       // the Azure field-recovery path below to finish the same durable job.
       parsed.tableRecheckCalled=true;parsed.tableRecheckRecovered=0;
@@ -505,7 +508,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       try{
         const azure=normalizeAzure(await callAzure({contentData:page.contentData,mimeType:page.mimeType,timeoutMs:FULL_OCR_PROVIDER_TIMEOUT_MS}));
         azureRecovered.push(...(Array.isArray(azure?.productLines)?azure.productLines:[]).map(line=>normalizeProductLine({...line,sourceFileIndex:pageIndex})));
-      }catch{}
+      }catch(error){throwIfWalletError(error)}
     }
     parsed.productLines=mergeRecoveredLines(parsed.productLines,azureRecovered);
     parsed.azurePageRecoveryCalled=true;
@@ -627,7 +630,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
       discountDiagnostics.accepted+=Number(diagnostics.accepted||0);
       discountDiagnostics.rejectedMath+=Number(diagnostics.rejectedMath||0);
       if(Array.isArray(diagnostics.vatSummary)&&diagnostics.vatSummary.length)printedDocumentText=[printedDocumentText,vatSummaryText(diagnostics.vatSummary)].filter(Boolean).join("\n");
-    }catch{discountDiagnostics.providerFailures=Number(discountDiagnostics.providerFailures||0)+1}
+    }catch(error){throwIfWalletError(error);discountDiagnostics.providerFailures=Number(discountDiagnostics.providerFailures||0)+1}
   }
   parsed.discountMathVerification=discountDiagnostics;
   if(mantzilasInvoice)parsed.productLines=parsed.productLines.map(line=>["AI_PRINTED_ROW_FULL_MATH_VERIFIED","SIBLING_PRICE_DISCOUNT_SCALE_VERIFIED","MANTZILAS_CODE_00009_PACK24_SCALE_VERIFIED"].includes(line.quantitySource)?line:recoverMantzilasEconomics(line)).map(applyMantzilasPackaging);
@@ -678,7 +681,8 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   failureStage="save-ai-result";
   await prisma.$executeRaw`UPDATE "AiReaderJob" SET "stage"='AI',"status"='AI_COMPLETE',"aiConfidence"=${aiConfidence},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify(parsed)}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${job.id} AND "companyId"=${req.user.companyId}`;
   res.json({id:job.id,status:"AI_COMPLETE",aiCalled:true,confidence:aiConfidence,result:parsed,supplierMatch:match||null,supplierCandidate:parsed.supplier||null,model:FULL_OCR_MODEL});
-}catch(error){
+});
+  }catch(error){
   console.error("POS AI recheck failed",{jobId:req.params.jobId,stage:failureStage,message:providerErrorText(error),code:error?.code||null});
   if(!error?.status){const safe=new Error(`AI_RECHECK_INTERNAL [${failureStage}]`);safe.status=502;safe.code="AI_RECHECK_INTERNAL";return next(safe)}
   next(error)

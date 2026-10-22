@@ -8,3 +8,17 @@ Read current AGENTS/registers/checklist, invoice/pos manual and relevant source/
 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-22-ai-wallet-invoice-metering.md. Next: green claim then additive adapters and causal tests. Same retained owner through completion or named handoff.
 
+
+## Source implementation22Oct2026 — AWAITING full CI / LAB
+
+Claim PR3036, head5c77f7724a30dc3c49da8050bc3d1cacd809190d, CI39811498714 SUCCESS, merged6087b1cb349dab2e12a4bcd0cb2d0b51291050f3 before source. Implementation branch feat/ai-wallet-invoice-adapters-20261022, retained owner unchanged.
+
+Added AsyncLocalStorage invoice provider composition after existing route/job company/store authorization; OpenAI Responses reserve/exact usage and Azure physical-page reserve/exact operation settlement. Full disabled path preserves original provider options and initializes no billing tables. Billing errors stop fallbacks and ordinary503 worker retry; unknown responses retain durable REVIEW holds. Safe common wallet HTTP errors, coverage labels gated by AI_OWNER_WALLET_INVOICES_ENABLED. Existing prompts, algorithms, matching, settlement/draft/job identity and stock/fiscal paths are unchanged.
+
+Local engineering results: adapter8/8, legacy invoice+wallet focused59/59, affected preview/FAST33/33, real Nodemailer to localhost synthetic SMTP1/1; frontend build PASS. Initial full local run3564PASS/2FAIL/206SKIP: preview source-evaluation harness omitted newly imported real wallet bindings; source assertion expected the previous fallback catch without the required wallet fail-stop. Corrected dependency injection to the actual adapter and required the fail-stop in the existing fallback assertion; original access/provider/file checks retained. Native PostgreSQL is unavailable locally; full native CI is mandatory. Local SMTP is not real inbox delivery, customer notification or LAB PASS. Full final local rerun in progress at this receipt.
+
+No production flags, tariffs, schema, data, funding, real SMTP or invoice/payment/re-upload/approval actions. Scheduler/platform-internal AI and organization monitor outside slice remain OPEN. Next action: publish source for full native/HTTP/browser/invariant CI, resolve failures, merge only green, verify ordinary exact deployment, then record precise handoff/acceptance remainder.
+
+### Pre-merge causal review follow-up
+
+Full local rerun3567PASS/0FAIL/206infrastructureSKIP. Found and corrected internalCommerceRequest using the provider fetch alias: internal business HTTP now explicitly uses globalThis.fetch and is outside metering. Added executed real internal function regression proving no paid-adapter entry. Two outer supplemental discount catches now propagate wallet errors before recording ordinary provider failure. Updated the legacy diagnostic-catch assertion to require the billing guard while retaining ordinary failure accounting. No invoice algorithms changed. Full CI must be rerun for this exact revision.

@@ -48,7 +48,7 @@ import ownerPaymentsImportRoutes from "./routes/owner-payments-import.js";
 import ownerPaymentsImportPreviewRoutes from "./routes/owner-payments-import-preview.js";
 import ownerShiftsRoutes from "./routes/owner-shifts.js";
 import ownerAssistantRoutes from "./routes/owner-assistant.js";
-import aiOwnerWalletRoutes from './routes/ai-owner-wallet.js';
+import aiOwnerWalletRoutes,{walletHttpError} from './routes/ai-owner-wallet.js';
 import {startAiOwnerWalletNotices} from './workers/ai-owner-wallet-notices.js';
 import {posPurchaseOrderAccess} from "./middleware/pos-purchase-order-access.js";
 import purchaseOrderActionRoutes from "./routes/purchase-order-actions.js";
@@ -318,6 +318,7 @@ app.use("/api/connector-observer",auth,requireCompanyModule("CONNECTOR_RBS"),con
 app.use("/api/connector-observer",auth,requireCompanyModule("CONNECTOR_RBS"),fiscalBridgeDryRunRoutes);
 app.use("/api/netlink",auth,requireCompanyModule("NETLINK_PREPAID"),netlinkRoutes);
 app.use("/api",auth,requireOperationalModuleByPath,apiRoutes);
+app.use((error,_req,res,next)=>String(error?.code||"").startsWith("AI_WALLET_")?walletHttpError(error,res):next(error));
 app.use(storeLifecycleErrors);
 app.use((err,req,res,next)=>{console.error(err);if(String(err?.meta?.message||err?.meta?.database_error||'').includes('MWS_BAKED_TOTAL_GUARD'))return res.status(409).json({error:'Το συνολικό απόθεμα δεν μπορεί να γίνει μικρότερο από τα ψημένα. Καταγράψτε πρώτα την πραγματική φύρα ή επιστροφή.'});if(err?.name==="ZodError") return res.status(400).json({error:"Ελέγξτε τα στοιχεία της φόρμας.",details:err.issues});if(err?.type==="entity.too.large")return res.status(413).json({error:"Το αρχείο είναι πολύ μεγάλο για εισαγωγή."});res.status(err?.status||500).json({error:err?.status?err.message:"Παρουσιάστηκε εσωτερικό σφάλμα."})});
 const __dirname=path.dirname(fileURLToPath(import.meta.url));

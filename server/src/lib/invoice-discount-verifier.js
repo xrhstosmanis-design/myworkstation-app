@@ -1,3 +1,4 @@
+import {throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 const money4=value=>Math.round((Number(value||0)+Number.EPSILON)*10000)/10000;
 
 function outputText(response){
@@ -420,6 +421,6 @@ ${guide}`;
       diagnostics.accepted=0;diagnostics.aiAccepted=0;diagnostics.vatSummary=[];diagnostics.status='FAILED';diagnostics.reason=incompletePrintedRows?'PRINTED_ROWS_INCOMPLETE':'PRINTED_ROWS_TOTAL_MISMATCH';return stamp(productLines,diagnostics);
     }
     diagnostics.status='OK';diagnostics.reason=diagnostics.accepted>0?'DISCOUNT_PAIRS_VERIFIED':'NO_CONFIDENT_DISCOUNT_PAIRS';
-  }catch(error){diagnostics.status='FAILED';diagnostics.reason=error?.message||'UNKNOWN_ERROR';console.warn('Discount verifier error:',error?.message||error)}
+  }catch(error){throwIfWalletError(error);diagnostics.status='FAILED';diagnostics.reason=error?.message||'UNKNOWN_ERROR';console.warn('Discount verifier error:',error?.message||error)}
   return stamp(productLines,diagnostics);
 }

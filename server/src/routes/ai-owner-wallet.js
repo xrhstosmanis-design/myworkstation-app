@@ -1,3 +1,4 @@
+import {invoiceWalletFeatures} from "../services/ai-wallet-invoice-metering.js";
 import {Router} from 'express';
 import {z} from 'zod';
 import {prisma} from '../prisma.js';
@@ -28,13 +29,13 @@ export function createAiOwnerWalletRoutes({db=prisma,repository=aiOwnerWalletRep
   router.get('/stores/:storeId',run('owner',async(req,res,scope)=>{
     // Company-wide balance is explicitly labelled; usage remains selected-store.
     const result=await repository.read(scope.companyId,scope.storeId);await access.owner(req);
-    res.json({...result,runtimeEnabled:true,balanceScope:'COMPANY',paymentInstructions:process.env.AI_OWNER_WALLET_PAYMENT_INSTRUCTIONS||'Η ανανέωση υπολοίπου AI πληρώνεται στο MyWorkStation. Επικοινώνησε μαζί μας για τα στοιχεία πληρωμής. Η πίστωση γίνεται μετά την επιβεβαίωση της είσπραξης.',meteredFeatures:['OWNER_ASSISTANT']});
+    res.json({...result,runtimeEnabled:true,balanceScope:'COMPANY',paymentInstructions:process.env.AI_OWNER_WALLET_PAYMENT_INSTRUCTIONS||'Η ανανέωση υπολοίπου AI πληρώνεται στο MyWorkStation. Επικοινώνησε μαζί μας για τα στοιχεία πληρωμής. Η πίστωση γίνεται μετά την επιβεβαίωση της είσπραξης.',meteredFeatures:invoiceWalletFeatures()});
   }));
   const prefix='/platform/companies/:companyId';
   router.get(prefix,run('platform',async(req,res,scope)=>{
     const result=await repository.read(scope.companyId);
     const owners=await db.user.findMany({where:{companyId:scope.companyId,role:'OWNER',mustChangePassword:false},select:{id:true,email:true,fullName:true}});
-    await access.platform(req);res.json({...result,owners,runtimeEnabled:true,meteredFeatures:['OWNER_ASSISTANT']});
+    await access.platform(req);res.json({...result,owners,runtimeEnabled:true,meteredFeatures:invoiceWalletFeatures()});
   }));
   router.put(prefix,run('platform',async(req,res,scope)=>{const input=configureSchema.parse(req.body);await access.platform(req);res.json(await repository.configure(scope.companyId,input,scope.actorId))}));
   router.post(prefix+'/credits',run('platform',async(req,res,scope)=>{const input=creditSchema.parse(req.body);await access.platform(req);res.json(await repository.credit(scope.companyId,input,scope.actorId))}));

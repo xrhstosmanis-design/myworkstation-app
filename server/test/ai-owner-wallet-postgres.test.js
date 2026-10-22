@@ -54,6 +54,30 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     await repository.credit('c',{amountMicros:'1000000',receiptReference:'synthetic-receipt-2'},'admin');
     const uncertain=createWalletNotificationDispatcher({repository,enabled:()=>true,send:async()=>{throw Error('synthetic timeout')}});await uncertain();assert.equal((await repository.read('c')).notices.filter(n=>n.emailStatus==='UNKNOWN').length,1);await drain();assert.equal(sent.length,3);
     await repository.credit('c',{amountMicros:'100000',receiptReference:'synthetic-receipt-3'},'admin');await db.$executeRaw`UPDATE "User" SET "email"='changed@example.invalid' WHERE "id"='owner'`;await drain();assert.equal(sent.length,3);assert.ok((await repository.read('c')).notices.some(n=>n.emailStatus==='REVOKED'));
+    // Invoice adapters use this same actual PostgreSQL ledger and independent
+    // AsyncLocalStorage scopes. No real provider or SMTP request is performed.
+    const {createInvoiceWalletMeter}=await import('../src/services/ai-wallet-invoice-metering.js');
+    const pricing={model:'native-invoice',inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:0,outputMicrosPerMillion:1000000,contextTokens:100,maxOutputTokens:20};
+    let invoicePaidCalls=0;
+    const invoice=createInvoiceWalletMeter({repository,env:{AI_OWNER_WALLET_ENABLED:'true',AI_OWNER_WALLET_INVOICES_ENABLED:'true',AI_OWNER_WALLET_TARIFFS:JSON.stringify([pricing]),AI_OWNER_WALLET_AZURE_TARIFFS:JSON.stringify([{model:'prebuilt-invoice',apiVersion:'2024-11-30',unitMicros:40,maxPages:5}])},countPages:async()=>2,transport:async()=>{invoicePaidCalls++;return new Response(JSON.stringify({id:'native-invoice-provider-response',model:pricing.model,usage:{input_tokens:5,output_tokens:3,input_tokens_details:{cached_tokens:0}}}))}});
+    const tokenCall=()=>invoice.responsesFetch('https://api.openai.com/v1/responses',{method:'POST',body:JSON.stringify({model:pricing.model,input:'synthetic invoice source'})});
+    const sourceBalance=BigInt((await repository.read('c')).balanceMicros);
+    await Promise.all([
+      invoice.run({companyId:'c',storeId:'s'},tokenCall),
+      invoice.run({companyId:'c',storeId:'s2'},()=>invoice.azure({model:'prebuilt-invoice',apiVersion:'2024-11-30'},async mark=>{mark('https://synthetic.invalid/operation/native-invoice');return {status:'succeeded',analyzeResult:{modelId:'prebuilt-invoice',apiVersion:'2024-11-30',pages:[{pageNumber:1},{pageNumber:2}]}}}))
+    ]);
+    assert.equal(BigInt((await repository.read('c')).balanceMicros),sourceBalance-88n);
+    const invoiceRows=await db.$queryRaw`SELECT "storeId","feature","chargedMicros","status" FROM "AiOwnerWalletEntry" WHERE "feature" IN ('INVOICE_OPENAI','INVOICE_AZURE') ORDER BY "storeId"`;
+    assert.deepEqual(invoiceRows.map(r=>[r.storeId,r.feature,String(r.chargedMicros),r.status]),[['s','INVOICE_OPENAI','8','SETTLED'],['s2','INVOICE_AZURE','80','SETTLED']]);
+    // Reusing the same provider response cannot debit a second time; the
+    // distinct uncertain attempt keeps its reservation for explicit review.
+    await assert.rejects(invoice.run({companyId:'c',storeId:'s'},tokenCall),e=>e.code==='AI_WALLET_USAGE_REVIEW'&&e.status===409);
+    assert.equal(BigInt((await repository.read('c')).balanceMicros),sourceBalance-88n);
+    assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry" WHERE "usage"->>'providerResponseId'='native-invoice-provider-response'`)[0].count,1);
+    assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry" WHERE "feature"='INVOICE_OPENAI' AND "status"='REVIEW'`)[0].count,1);
+    await assert.rejects(invoice.run({companyId:'c',storeId:'foreign'},tokenCall),e=>e.status===403);assert.equal(invoicePaidCalls,2);
+    await repository.configure('x',{version:0,enabled:true,emailEnabled:false,notificationOwnerId:''},'admin');
+    await assert.rejects(invoice.run({companyId:'x',storeId:'foreign'},tokenCall),e=>e.status===402);assert.equal(invoicePaidCalls,2);
     // Actual SQL rollback after an injected failure in a wallet transaction.
     const wrapped=new Proxy(db,{get(target,key){if(key==='$transaction')return (fn,...options)=>target.$transaction(async tx=>fn(new Proxy(tx,{get(t,k){if(k==='$executeRaw')return async(strings,...values)=>{if(strings.join('').includes('UPDATE "AiOwnerWallet" SET "balanceMicros"="balanceMicros"+'))throw Error('synthetic rollback');return t.$executeRaw(strings,...values)};const v=t[k];return typeof v==='function'?v.bind(t):v}})),...options);const v=target[key];return typeof v==='function'?v.bind(target):v}});
     const failed=createAiOwnerWalletRepository(wrapped);await failed.ensure();const countBefore=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry"`;await assert.rejects(failed.credit('c',{amountMicros:'100000',receiptReference:'must-rollback'},'admin'));assert.deepEqual(await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry"`,countBefore);
