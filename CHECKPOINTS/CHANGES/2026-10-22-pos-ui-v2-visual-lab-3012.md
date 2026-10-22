@@ -58,3 +58,17 @@ Offline CASH click with navigator.onLine=false left queue=null/history=null,
 retained1cartline and showed the original local-storage failure; trace proves
 LOCAL_STORAGE denied. Prior full visual/minimize/same-draft checks also PASS
 on this rerun. Updated browser-proof.json records exact synthetic evidence.
+
+Hosted visual verification22Oct2026: Render isolated free service
+srv-dbd3sf3l550s73al1ct0 / myworkstation-pos-ui-v2-lab, no inherited env groups,
+auto-deploy OFF. Deploy dep-dbd3sfjl550s73al1dug LIVE16:49:30Z on exact644f4aeee.
+Public health independently returned testOnly=true,mode=visual-only,
+sourceRevision253792db,revision644f4aeee,database/transactions/providers=false.
+Scoped exact-head workflows39816934792 and39816979906 SUCCESS:6tests/build green.
+CloudChrome tab4 at https://myworkstation-pos-ui-v2-lab.onrender.com/ visibly
+mounted20quick/20categories, empty0.00cart initially, then one synthetic coffee
+line0.50. Opening Payments and minimizing exposed restore in scanner row with
+total/footer uncovered and queue0. No checkout, financial/stock/backend action.
+Screenshot hosted-minimized-1792687854235.jpg under the same evidence directory.
+PR3040 is a draft stacked on candidate3016; no main merge or production deploy.
+This is hosted synthetic visual verification only, not full store/device LAB PASS.
