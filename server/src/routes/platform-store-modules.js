@@ -18,6 +18,8 @@ import {
   storePaidModuleCatalogStates
 } from "../store-paid-modules.js";
 
+import {withStoreModuleMutation} from "../services/store-module-mutation.js";
+
 const router=Router();
 router.use(auth);
 
@@ -90,7 +92,7 @@ router.get("/companies/:companyId/stores/:storeId/access-matrix",async(req,res,n
 router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
   try{
     await ensureStorePaidModulesSchema();
-    const store=await ownedStore(req.params.companyId,req.params.storeId);
+    await ownedStore(req.params.companyId,req.params.storeId);
     const body=z.object({
       moduleKey:z.enum([...new Set([...PERSONNEL_WRITABLE_MODULE_KEYS,...moduleKeys])]).optional().default(AI_STAFF_SCHEDULER),
       active:z.boolean(),
@@ -103,14 +105,17 @@ router.put("/companies/:companyId/stores/:storeId",async(req,res,next)=>{
     }).parse(req.body||{});
 
     if(body.moduleKey==="CORE"&&!body.active)return res.status(400).json({error:"Το MyWorkStation Core δεν μπορεί να απενεργοποιηθεί για κατάστημα."});
-    const catalogModule=moduleCatalog.find(module=>module.key===body.moduleKey);
-    if(body.active&&catalogModule&&!catalogModule.commercialReady){
-      const companyModule=await prisma.companyModule.findUnique({where:{companyId_moduleKey:{companyId:store.companyId,moduleKey:body.moduleKey}},select:{active:true}});
-      if(!companyModule?.active)return res.status(400).json({error:`Το module «${catalogModule.name}» δεν είναι ακόμη διαθέσιμο για εμπορική ενεργοποίηση.`});
-    }
+    const store=await withStoreModuleMutation(prisma,{companyId:req.params.companyId,storeId:req.params.storeId},async({tx,store})=>{
+      const catalogModule=moduleCatalog.find(module=>module.key===body.moduleKey);
+      if(body.active&&catalogModule&&!catalogModule.commercialReady){
+        const companyModule=await tx.companyModule.findUnique({where:{companyId_moduleKey:{companyId:store.companyId,moduleKey:body.moduleKey}},select:{active:true}});
+        if(!companyModule?.active)throw Object.assign(new Error(`Το module «${catalogModule.name}» δεν είναι ακόμη διαθέσιμο για εμπορική ενεργοποίηση.`),{status:400});
+      }
 
-    await prisma.$executeRaw`INSERT INTO "StorePaidModule" ("id","companyId","storeId","moduleKey","active","monthlyPrice","startsAt","endsAt","notes","updatedBy") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${body.moduleKey},${body.active},${body.monthlyPrice},${body.startsAt?new Date(body.startsAt):null},${body.endsAt?new Date(body.endsAt):null},${body.notes||null},${req.user.id}) ON CONFLICT ("storeId","moduleKey") DO UPDATE SET "active"=EXCLUDED."active","monthlyPrice"=EXCLUDED."monthlyPrice","startsAt"=EXCLUDED."startsAt","endsAt"=EXCLUDED."endsAt","notes"=EXCLUDED."notes","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
+      await tx.$executeRaw`INSERT INTO "StorePaidModule" ("id","companyId","storeId","moduleKey","active","monthlyPrice","startsAt","endsAt","notes","updatedBy") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${body.moduleKey},${body.active},${body.monthlyPrice},${body.startsAt?new Date(body.startsAt):null},${body.endsAt?new Date(body.endsAt):null},${body.notes||null},${req.user.id}) ON CONFLICT ("storeId","moduleKey") DO UPDATE SET "active"=EXCLUDED."active","monthlyPrice"=EXCLUDED."monthlyPrice","startsAt"=EXCLUDED."startsAt","endsAt"=EXCLUDED."endsAt","notes"=EXCLUDED."notes","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
 
+      return store;
+    });
     await prisma.authAudit.create({data:{
       userId:req.user.id,
       email:req.user.email||"super-admin",
@@ -195,11 +200,14 @@ router.get("/companies/:companyId/stores/:storeId/check-packages",async(req,res,
 router.put("/companies/:companyId/stores/:storeId/check-packages/:moduleKey",async(req,res,next)=>{
   try{
     await ensureStorePaidModulesSchema();
-    const store=await ownedStore(req.params.companyId,req.params.storeId);
+    await ownedStore(req.params.companyId,req.params.storeId);
     const moduleKey=z.enum(CHECK_PACKAGE_KEYS).parse(req.params.moduleKey);
     const body=z.object({active:z.boolean(),monthlyPrice:z.coerce.number().min(0).max(100000).default(0),startsAt:z.string().datetime().nullable().optional(),endsAt:z.string().datetime().nullable().optional(),notes:z.string().trim().max(500).optional().default("")}).parse(req.body||{});
     if(body.startsAt&&body.endsAt&&new Date(body.endsAt)<new Date(body.startsAt))return res.status(400).json({error:"Η λήξη δεν μπορεί να είναι πριν από την έναρξη."});
-    await prisma.$executeRaw`INSERT INTO "StorePaidModule" ("id","companyId","storeId","moduleKey","active","monthlyPrice","startsAt","endsAt","notes","updatedBy") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${moduleKey},${body.active},${body.monthlyPrice},${body.startsAt?new Date(body.startsAt):null},${body.endsAt?new Date(body.endsAt):null},${body.notes||null},${req.user.id}) ON CONFLICT ("storeId","moduleKey") DO UPDATE SET "active"=EXCLUDED."active","monthlyPrice"=EXCLUDED."monthlyPrice","startsAt"=EXCLUDED."startsAt","endsAt"=EXCLUDED."endsAt","notes"=EXCLUDED."notes","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
+    const store=await withStoreModuleMutation(prisma,{companyId:req.params.companyId,storeId:req.params.storeId},async({tx,store})=>{
+      await tx.$executeRaw`INSERT INTO "StorePaidModule" ("id","companyId","storeId","moduleKey","active","monthlyPrice","startsAt","endsAt","notes","updatedBy") VALUES (${crypto.randomUUID()},${store.companyId},${store.id},${moduleKey},${body.active},${body.monthlyPrice},${body.startsAt?new Date(body.startsAt):null},${body.endsAt?new Date(body.endsAt):null},${body.notes||null},${req.user.id}) ON CONFLICT ("storeId","moduleKey") DO UPDATE SET "active"=EXCLUDED."active","monthlyPrice"=EXCLUDED."monthlyPrice","startsAt"=EXCLUDED."startsAt","endsAt"=EXCLUDED."endsAt","notes"=EXCLUDED."notes","updatedBy"=EXCLUDED."updatedBy","updatedAt"=NOW()`;
+      return store;
+    });
     await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:`STORE_CHECK_PACKAGE_${moduleKey}_${body.active?"ENABLED":"DISABLED"}`,success:true,deviceName:store.name,userAgent:req.headers["user-agent"]||null,ipAddress:req.ip||null}});
     const rows=await prisma.$queryRaw`SELECT "moduleKey","active","monthlyPrice","startsAt","endsAt","notes" FROM "StorePaidModule" WHERE "storeId"=${store.id} AND "moduleKey"=ANY(${CHECK_PACKAGE_KEYS}::text[])`;
     res.json({store,packages:checkPackageStates(rows)});
