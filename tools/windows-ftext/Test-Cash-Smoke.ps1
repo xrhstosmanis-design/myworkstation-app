@@ -3,7 +3,7 @@ Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot 'Cash.psm1') -Force
 $passed=0
 function Assert([bool]$Value,[string]$Message) {if(-not $Value){throw $Message};$script:passed++}
-function MustThrow([scriptblock]$Action) {$rejected=$false;try{& $Action | Out-Null}catch{$rejected=$true};Assert $rejected 'Unsafe action was accepted.'}
+function MustThrow([scriptblock]$Action) {$site=(Get-PSCallStack)[1].ScriptLineNumber;$rejected=$false;try{& $Action | Out-Null}catch{$rejected=$true};Assert $rejected ('Unsafe action was accepted at test line '+$site)}
 $root=Join-Path ([IO.Path]::GetTempPath()) ('ftext-cash-fixture-'+[Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root | Out-Null
 try {
@@ -18,7 +18,7 @@ try {
  foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode')) {
   $wrong=$r | ConvertTo-Json -Depth 10 | ConvertFrom-Json;$wrong.scope.$key='foreign';MustThrow {New-FtextCashCommand $c $wrong $resultPath}
  }
- foreach($name in @('X|PAY','X{h}',"X`nPAY",[char]0+'X',[char]0xD83D+[string][char]0xDE00)) {
+ foreach($name in @('X|PAY','X{h}',"X`nPAY",([string][char]0+'X'),([string][char]0xD83D+[string][char]0xDE00))) {
   $wrong=$r | ConvertTo-Json -Depth 10 | ConvertFrom-Json;$wrong.plan.lines[0].description=$name;MustThrow {New-FtextCashCommand $c $wrong $resultPath}
  }
  foreach($change in @('CARD','DEPT','TOTAL','QUANTITY','DISCOUNT')) {
@@ -50,5 +50,19 @@ try {
  [IO.File]::WriteAllBytes((Join-Path $root ('mws-cash-'+$next.id+'.res')),$enc.GetBytes($valid))
  MustThrow {Invoke-FtextCashRequest -ConfigPath $configPath -Request $next -TimeoutSeconds 1}
  Assert (@(Get-ChildItem -LiteralPath $root -Filter '*.txt').Count -eq 0) 'A rejected request emitted input.'
+ # Fresh isolated success consumes one command and returns its exact final document.
+ $fresh=$r | ConvertTo-Json -Depth 10 | ConvertFrom-Json;$fresh.id=[Guid]::NewGuid().ToString()
+ $job=Start-Job -ArgumentList $root,$fresh.id,$valid -ScriptBlock {
+  param($folder,$id,$text)
+  $target=Join-Path $folder ('mws-cash-'+$id+'.txt')
+  for($i=0;$i -lt 100;$i++) {if(Test-Path -LiteralPath $target) {Remove-Item -LiteralPath $target;[IO.File]::WriteAllBytes((Join-Path $folder ('mws-cash-'+$id+'.res')),[Text.Encoding]::GetEncoding(1253).GetBytes($text));return};Start-Sleep -Milliseconds 100}
+  throw 'Synthetic driver saw no command.'
+ }
+ try {
+  $success=Invoke-FtextCashRequest -ConfigPath $configPath -Request $fresh -TimeoutSeconds 15
+  Assert ($success.outcome -ceq 'CONFIRMED' -and $success.dayCounter -ceq '42') 'Native result exchange did not confirm the exact receipt.'
+  Wait-Job $job | Out-Null;Receive-Job $job | Out-Null
+  Complete-FtextCashReport $c $fresh.id
+ } finally {Remove-Job $job -Force}
  Write-Host ('PASS: '+$passed+' cash command/result/scope/timeout/restart/tombstone boundaries; synthetic folder only.')
 } finally {Remove-Item -LiteralPath $root -Recurse -Force}
