@@ -13,9 +13,10 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
   try{
     await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
     for(const sql of [
+      `CREATE TYPE "UserRole" AS ENUM ('SUPER_ADMIN','OWNER','ADMIN','MANAGER','EMPLOYEE')`,
       'CREATE TABLE "Company"("id" text PRIMARY KEY,"name" text,"active" boolean)',
       'CREATE TABLE "Store"("id" text PRIMARY KEY,"name" text,"companyId" text,"active" boolean)',
-      'CREATE TABLE "User"("id" text PRIMARY KEY,"email" text,"fullName" text,"role" text,"companyId" text,"sessionVersion" integer,"mustChangePassword" boolean)',
+      'CREATE TABLE "User"("id" text PRIMARY KEY,"email" text,"fullName" text,"role" "UserRole","companyId" text,"sessionVersion" integer,"mustChangePassword" boolean)',
       'CREATE TABLE "UserSession"("id" text PRIMARY KEY,"userId" text,"deviceName" text,"userAgent" text,"ipAddress" text,"createdAt" timestamp,"lastSeenAt" timestamp,"expiresAt" timestamp,"revokedAt" timestamp)',
       'CREATE TABLE "OwnerCompanyAccess"("ownerId" text,"companyId" text)',
       'CREATE TABLE "BusinessControl"("id" text PRIMARY KEY,"sales" integer,"cash" numeric,"stock" integer)'
@@ -62,7 +63,11 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/wallet`;
     const request=async(path,actor='owner',method='GET',body)=>{const r=await fetch(base+path,{method,headers:{...(actor?{'x-test-actor':actor}:{}),'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:r.status===401?null:await r.json()}};
     assert.equal((await request('/stores/s')).status,200);assert.equal((await request('/stores/s',null)).status,401);assert.equal((await request('/stores/s','employee')).status,403);assert.equal((await request('/stores/foreign')).status,404);
-    assert.equal((await request('/platform/companies/c')).status,403);assert.equal((await request('/platform/companies/c','admin')).status,200);
+    assert.equal((await request('/platform/companies/c')).status,403);
+    // Prisma enum filters cast to this isolated schema's native UserRole type,
+    // exactly as in production. A text-only fixture cannot exercise this read.
+    assert.equal((await db.user.findMany({where:{companyId:'c',role:'OWNER',mustChangePassword:false},select:{id:true}})).length,1);
+    const adminRead=await request('/platform/companies/c','admin');assert.equal(adminRead.status,200,JSON.stringify(adminRead.body));
     assert.equal((await request('/platform/companies/c/credits','owner','POST',{amountMicros:'10000',receiptReference:'forbidden',receiptConfirmed:true})).status,403);
     assert.equal((await request('/platform/companies/c/credits','admin','POST',{amountMicros:'10000',receiptReference:'unconfirmed',receiptConfirmed:false})).status,400);
     await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NOW() WHERE "id"='owner-session'`;assert.equal((await request('/stores/s')).status,401);

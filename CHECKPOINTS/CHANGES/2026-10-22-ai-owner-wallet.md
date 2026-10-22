@@ -1,3 +1,7 @@
+## Native CI39787732084 — fixture correction, no runtime weakening
+
+Initial source PR3009/d141a9c8 ran3814 actual server checks:3813PASS/1FAIL/0SKIP. The single new native wallet flow passed funding/replay/cross-company refusal, concurrent holds/settlement/threshold dedup, rollback, SMTP concurrency/uncertainty/address revocation and Owner HTTP access. It then failed at authorized Platform owner-list read503 instead of200. Scoped fixture had User.role TEXT while Prisma enum filters require schema-local UserRole; use the exact native UserRole enum and add a direct enum-filter assertion. Runtime access and existing assertions remain unchanged. This is a new causal fixture correction, not retry of the unchanged failed head. Full fresh CI and hosted acceptance remain required; billing/mail still OFF.
+
 ## AI-OWNER-WALLET-01 — SOURCE CANDIDATE / AWAITING FULL NATIVE CI AND LAB
 
 Retained owner feat/ai-owner-wallet-20261022; source feat/ai-owner-wallet-implementation-20261022. Before-source claim PR3008/head065080ff/full applicable docs CI39784780158 SUCCESS merged91af91c634429a7634e4bc747b8cbfba22d52d6b BEFORE source. Owner explicitly approved publication to the existing public repository. No credentials, bank accounts or real customer balances committed.
