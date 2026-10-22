@@ -1,0 +1,428 @@
+{
+  "companyId": "pilot-company",
+  "quickKeys": [
+    {
+      "productId": "250fcd01-2905-4db6-9dc0-74b9276cc551"
+    },
+    {
+      "productId": "93e510f4-f793-4018-8e2c-4548fd579a1c"
+    },
+    {
+      "productId": "68306f13-ae95-46ea-a46c-47e906470a01"
+    },
+    {
+      "productId": "8c824951-8d0d-4fc9-ad8b-40451d78cd28"
+    },
+    {
+      "productId": "8b4b908c-9a0d-4dcf-b607-b71b8bc35a69"
+    },
+    {
+      "productId": "9e6d640e-df9c-490a-a155-454470771b66"
+    },
+    {
+      "productId": "d8971609-c413-4a3b-a778-37afbd8fc755"
+    },
+    {
+      "productId": "200f277b-fbe2-4f56-9fdd-78a2420211dd"
+    },
+    {
+      "productId": "d37574a5-102b-4a55-b2b1-7e03a7741d09"
+    },
+    {
+      "productId": "8c1dbb3d-3f84-414b-ae93-f5c155af7b60"
+    },
+    {
+      "productId": "d9755c1f-2ae1-4be6-b3e0-de156b151bd6"
+    },
+    {
+      "productId": "769bbae0-ae97-44a0-8f15-9ed800eedf5f"
+    },
+    {
+      "productId": "6881e073-2fcd-4fc0-8e22-c2a242288fb6"
+    },
+    {
+      "productId": "49f78e38-2d1e-4c0e-820e-194e9ea2a48d"
+    },
+    {
+      "productId": "95647add-57a0-479b-bf14-778454372894"
+    },
+    {
+      "productId": null
+    },
+    {
+      "productId": null
+    },
+    {
+      "productId": null
+    },
+    {
+      "productId": null
+    },
+    {
+      "productId": null
+    }
+  ],
+  "categories": [
+    {
+      "label": "ΚΑΦΕΣ",
+      "productIds": [],
+      "children": [
+        {
+          "label": "ΚΡΥΟΙ ΚΑΦΕΔΕΣ",
+          "productIds": [
+            "b49d2513-31b4-4bcc-a4e0-209f3a8e623a",
+            "1e3255fc-4f40-43ee-a17a-aefacbe8169c",
+            "024071e9-9e04-4ada-b2ff-cc9a87ec75a8",
+            "fd4bd32c-43b5-4af5-aa25-7eb89bcee628",
+            "3e3ca7ef-feab-4db7-b55f-0d8959720665",
+            "cdf88cf7-6fc9-40db-8475-0bb65cfcdd73",
+            "908bfe2d-4992-4c04-a475-963fbec4e56c",
+            "45b2e6ea-9b65-49b5-9f94-cca46e518853",
+            "d7037f0a-2e41-401e-b726-ef71dc5c4d2b",
+            "a7154847-df27-4e2d-a93f-0f1e6fc4d359",
+            "51f79f4f-7f0b-4bcb-8d97-534dbdb8a818"
+          ]
+        },
+        {
+          "label": "ΖΕΣΤΟΙ ΚΑΦΕΔΕΣ",
+          "productIds": [
+            "a6680444-ec7d-4362-ba68-6f6609456819",
+            "79c24050-7518-4dcd-b536-56a2d5dad9ea",
+            "a79dba1d-a001-4401-9d5b-8971a5624fc1",
+            "26c52354-785b-4949-bb17-69772eac633e",
+            "fbb7e7e1-0dd5-43fb-a420-2bcfc05af230",
+            "148df962-814c-4eef-b36b-1786705d39fc",
+            "d735c8b8-66ba-4f29-ad76-3d485cf0a650",
+            "4aa8670c-13cf-4624-9df7-5fb64edf5fa3",
+            "237276f5-98e2-49f1-b47d-0f4017faf330",
+            "8e2182a2-b0d0-4c38-a96f-fd1007b59f57",
+            "6fac5cef-796f-4858-8ae6-c9e7bcda1759",
+            "fc100dc2-8202-46f9-bec6-7768c5adfd2a",
+            "a3caf6ae-437d-4c1d-a52b-773b0e2f615c",
+            "74329b9a-a511-46ee-92a2-77af65c0bb5b",
+            "7d62e208-0557-47ca-bbda-071006e4aec7",
+            "57925db7-f8bc-4a97-9bd8-4c9d2b8c7824",
+            "a4b51be9-75a0-478c-aef5-fb1f98dfdb0a",
+            "34036f5a-1232-4a05-a50a-1b55f8d5d5df",
+            "1cd41eab-144c-4836-ba4d-dfac53f9ca35",
+            "6447bda8-a1fb-49da-8fc6-6da47ff91ff6",
+            "3acb7e74-ae58-46f7-8bbf-cfb8d8ce26bb",
+            "8153d9b4-9ea3-4475-9929-0620a8487c1e",
+            "b1dcd670-3faa-4458-a1d5-edf28c00a040",
+            "d1ca7f51-d187-465b-9bc0-25d75e54266c",
+            "bb499d98-bab7-4eba-b1b9-29dc17ccea77",
+            "3ba62b94-713b-4f72-9cf5-2eae3a21956a",
+            "ad4f9c48-6340-4003-b9c2-6fb8ccbb813c",
+            "5afc8061-9e03-47bc-b617-97083c666948"
+          ]
+        },
+        {
+          "label": "ΓΑΛΑ",
+          "productIds": [
+            "56d6e85d-d5a3-4b8b-9d4e-dc120fb78f93"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ΣΟΚΟΛΑΤΑ",
+      "productIds": [],
+      "children": [
+        {
+          "label": "ΚΡΥΑ ΣΟΚΟΛΑΤΑ",
+          "productIds": [
+            "add65223-74a9-4cce-9b7c-9a2111590160",
+            "48228b56-74ad-4795-80bb-5ed4be3cf99d",
+            "3add5e53-a057-4268-83ac-99dfd377d5a3",
+            "66758025-b275-45c0-aaf7-5c1343958910"
+          ]
+        },
+        {
+          "label": "ΖΕΣΤΗ ΣΟΚΟΛΑΤΑ",
+          "productIds": [
+            "bdb97733-e762-4c65-8589-b70c70e7f0cd",
+            "405807aa-9993-4c4f-a138-4613e0ce42d0",
+            "c0549dc3-edf2-43c2-8e93-423512b7ceb0",
+            "945a53b0-c0cc-495f-a14b-1b7912303933"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ΤΣΑΙ",
+      "productIds": [],
+      "children": [
+        {
+          "label": "ΚΡΥΟ ΤΣΑΙ",
+          "productIds": [
+            "49d81c78-62ce-47ab-9a3b-1d2933f93a1e",
+            "522bb86a-3084-4494-9d20-f2ceb9072afc"
+          ]
+        },
+        {
+          "label": "ΖΕΣΤΟ ΤΣΑΙ",
+          "productIds": [
+            "4e73a552-1142-47f2-8d00-97718aeb948c",
+            "778de69e-5247-4d6f-ad9c-1b8c19385dcb",
+            "d0c4963a-775d-40c6-a92f-45815df483a1",
+            "bf623bd6-4687-4e06-ad93-a6de8c44a568",
+            "94dd6496-9854-4238-9ceb-1377087fb456"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "ΚΟΥΚΟΥΤΑΡΗΣ",
+      "productIds": [
+        "611366b8-b916-4254-abed-9644a645e6b9",
+        "b752c7c2-2ec4-46ad-aa28-c130ee3c306c",
+        "7f502acf-987f-42b8-bb3c-d5bda2143cd1",
+        "49d683b2-4a7a-4bd7-8d08-0f8bb6b14479",
+        "0ba94b0c-fa39-48a3-84be-a3d3cbe366d9",
+        "bb741a6d-300c-42c8-a5fc-bc2ea407772f",
+        "f7844db2-c555-44d0-b0b2-c08dc2a16586",
+        "1ad157b5-7a50-4b13-bc51-06eeed5ed7ed",
+        "9e822145-c339-43f0-a40d-79995691657f",
+        "e7458c4c-02e1-4dbf-9bf9-a6553c6763c7",
+        "b3a53dbe-a7a5-4507-abb4-1434b0f33a64",
+        "d414d9a3-768b-4538-a215-2c54e8548023",
+        "8f2c958a-3e63-426d-a919-a7f9c47bc46a"
+      ]
+    },
+    {
+      "label": "ΑΡΤΙΖΑΝ – ΠΕΡΕΚ",
+      "productIds": [
+        "672ef89f-cd38-486e-9202-2e3c708348c5",
+        "7aa9e0e3-a88b-4ca2-b1f2-487619a0f9c5",
+        "080e65d9-ba98-4a40-8222-7e9dc1932ff5",
+        "9e0b75fc-dc75-478f-a940-7bc7ed6cee80",
+        "7218f526-be3f-4ef3-8677-3da32d3522fe"
+      ]
+    },
+    {
+      "label": "ΕΙΔΗ ΧΩΡΙΣ BARCODE",
+      "productIds": [
+        "0cc4331c-79f8-4fc6-b14f-98bd946b19b6",
+        "9be3a27a-52e5-4724-9793-e4067acefd8a",
+        "68069ba3-4354-4691-b47b-ca28a10f4006",
+        "b5266922-c331-4db9-a9b8-3ee065a289ab",
+        "649b3751-bcf9-4f20-8ef7-cb0245de727d",
+        "03ae2dd8-9561-48c0-a2ef-334b5d7b9da2",
+        "4332e173-a866-49f1-86d1-3b3fb807c823",
+        "5ceb124f-3c91-4759-96cc-63e5d240e1e7",
+        "3091f642-8def-409d-8448-b954cad5ae71",
+        "5fbbba06-3702-46fa-87c9-3c54599e0716",
+        "730dd1bc-cabe-4179-aedb-f765548edf58",
+        "008cef6c-72fd-499a-a673-af09bdb8b53e",
+        "4320328a-3203-4859-8617-6dd4ed04b487",
+        "fa6c9de8-acd0-4b3b-ac9d-5ac5508d9086",
+        "c66c538d-e56e-400c-8dfd-2893eeff03fe",
+        "3d5ee701-a56d-49d6-92a3-2a7cf03fad7e",
+        "356db5bf-59e9-4a81-a54b-72ac5d2a73e9",
+        "e129eb3c-9fe6-4e24-a506-78f1ccfc40eb",
+        "8f154905-8471-437b-a405-f585c80164ca",
+        "04782fa1-92a9-456a-9525-867f11cdff7b",
+        "45b54877-367c-41ec-8fa9-042b8992aabf",
+        "817dd384-a67a-435d-a617-399572f4da3c",
+        "88fb23a8-18c8-47ac-beaf-5eb980151672",
+        "80cdd0d2-04d5-403b-918f-92916b1eec13",
+        "72a98b4a-235a-4854-b2ee-c576cf276c59",
+        "d5a83c48-f2d1-4556-966e-ad3c16484d2b",
+        "41d62035-8346-44c8-b0d2-fb29cb4de2ab",
+        "ee8edef6-86b8-44f7-b7e4-3c02d3d9a6d8"
+      ]
+    },
+    {
+      "label": "ALFA TASTY",
+      "productIds": [
+        "e97656d2-b928-431b-8dd6-7231e11f36f9",
+        "9c02aa39-3c43-4d93-9e56-0966718aaaea"
+      ]
+    },
+    {
+      "label": "ΜΑΓΑΚΗΣ",
+      "productIds": [
+        "41dabcd4-cc60-47c8-bae4-32e469a573e0",
+        "a6cf1b52-5cc8-4cd1-aac1-3697be33a728",
+        "e9d94116-5bd9-408a-9c48-793b625813c3",
+        "fe1ee675-3e25-4491-943d-f7a800e68d10",
+        "e850890a-9cc4-4eb7-b0bc-494ca2e32016",
+        "25ada9c3-d882-42ee-bbcb-2f5d92363b4e",
+        "d2a79937-6db3-4877-88f0-ca972edc6a08",
+        "04974330-5ed6-4863-a99c-dc3472dbbfc8",
+        "62bb6b30-440b-4f7c-a942-5d141eb2ee43",
+        "efd49ebb-5656-4633-be09-7003a54213de",
+        "b111c9de-8e3f-4eb2-a911-4f946eed649d",
+        "b6b24e81-06fd-47e2-8cc9-e11ef82e787a",
+        "737c13e2-4b0a-4b55-8e65-7fb909fddee1",
+        "577298c8-acf8-4cde-8537-cfe303d31375",
+        "9577b3ae-76cc-4c2d-a794-cfe8da2173fe",
+        "30d710bb-e1bc-40fa-90b7-d37a6af4856f",
+        "30baca1f-35fe-406b-861d-01f5d16c01c5",
+        "2abf235a-9441-49bc-987b-078c192483b1",
+        "0fb2fdb6-68b1-454c-9c2a-d189ce1eef19",
+        "50d3bd25-7b4f-4031-8bdf-b92a285519d3",
+        "789686fe-6fa1-4be3-994e-8ab3d1f40520",
+        "2c96ec7c-334f-4833-a743-d197c8bc38d2",
+        "ca63c7b1-f25c-41b3-b946-b4012d87aa42",
+        "41654637-9704-4ad0-bb0f-1f3ce8ce7cfd"
+      ]
+    },
+    {
+      "label": "ΧΩΡΙΑΤΙΚΗ ΖΥΜΗ",
+      "productIds": [
+        "679f5569-ddc4-4255-a507-acdb2d60b9ec",
+        "f6c1b09c-6448-44c7-84a7-91fb4ba03ce0",
+        "43ffb5c4-7921-48ea-a713-77b8b23a28ab",
+        "4d7be996-fa27-4ef7-b463-8f6a5babc68a",
+        "552fcda7-c72e-47a9-8f73-582e96fa74dc",
+        "37f3d7cb-4af8-4ca8-bed2-bcdbe0895658",
+        "7934d1bf-bcdb-4227-a972-059cd5e95fd8",
+        "885008fb-926a-49f1-95ce-56fa67a52421",
+        "e7f5c582-4b6f-4f0f-b4f6-7397446962dc",
+        "ac5f5071-6eaf-4eb9-b5d0-ab2829123cb6",
+        "c4d2e2be-8850-4fc7-954e-2928c2722e55",
+        "a16aef65-a703-4be9-90f4-da15b58378a2"
+      ]
+    },
+    {
+      "label": "FLAVOR MUFFIN – COOKIES",
+      "productIds": [
+        "230646a6-2a8f-4915-b45a-18c3546e4872",
+        "ae84b500-0175-4916-a718-9be2ffd05db7",
+        "36361dce-dee2-40aa-ac5b-36bd1ab448bd",
+        "b9b6f936-9583-4ad1-bc07-89b557c4baf9",
+        "c2391b37-f0e0-497f-9d3a-6736066c141f",
+        "16819706-38b2-495a-8038-c58f38394273",
+        "671cbd81-4065-4cc7-b411-d391edad17e5"
+      ]
+    },
+    {
+      "label": "ΔΙΑ ΧΕΙΡΟΣ",
+      "productIds": [
+        "469df1fc-543c-4b11-99f7-65cd457b6271",
+        "e2f6d486-5a62-47d4-a285-cc42a8b8e775",
+        "38015306-2755-4dfb-aa76-2cc8af3cdba6",
+        "e704caa2-6c7b-4a51-a724-3bb90ae94273",
+        "932e1f0a-c23c-4ba1-8dd2-64e39e762262",
+        "dcd83f01-df34-4225-b6c3-3118d448aca8",
+        "13d1e47c-900d-49fd-8649-973864e490e2",
+        "0cb8fb22-6c58-497f-aa92-0f37969fc0ae"
+      ]
+    },
+    {
+      "label": "PREMIUM BAKERY",
+      "productIds": [
+        "a0ca72e3-53b3-4a54-b37a-ba2bc5c7e994",
+        "294c9f8a-753d-4838-a07b-f3bba0f20698",
+        "6f56bf33-4aac-4dae-b01a-9ec8e0fdf6c3",
+        "850bf692-dc24-4735-b5c2-07fe952b1cd9",
+        "6cad6c60-9cd4-4c2e-af0d-5f5952543b14",
+        "3549610e-dde5-4b47-bba8-b867282fb2fe",
+        "e24b9498-0e28-4273-b7a8-a2ad0747a254",
+        "505467c2-2029-4438-8d03-7cf18d994324",
+        "088ff2f2-c892-46cc-9379-00ad8326cc83",
+        "50c3836f-5d46-4d55-884e-30e39cf7fd27",
+        "d9e98e01-2035-46b4-a204-7f732a3af666",
+        "86c3145f-3145-4d81-8226-78d771e251dd",
+        "deffae49-f6f9-4ed2-92ea-6d435949d3d3",
+        "d70278a1-f86f-4fdb-8d6b-6e19f1c4c388",
+        "7d67e7dc-b660-4db3-ba20-7e76f2f6487f",
+        "60512cdf-5eb0-415d-9022-7a0cc145bd23",
+        "8d9c2d24-f590-40d6-a6d4-1ea12ac92882",
+        "5407193a-6b10-48fc-b6f8-86efc5109012",
+        "03265aa3-d856-4988-b11b-fe9b358f594d",
+        "ba37c57a-cdbe-4709-8718-57a0893b469d",
+        "39d50a3d-ff84-44fb-bd93-a410155d740d"
+      ]
+    },
+    {
+      "label": "ΓΛΥΚΑ ΤΣΟΥΡΕΚΙΑ – ΚΕΙΚ",
+      "productIds": [
+        "54a67ac1-b7fd-4c17-86d3-b2ab25e36f77",
+        "67fec8ea-0dae-423e-a68f-5bdf090705f0",
+        "ef06e9dc-ef4f-483d-8a8b-202cfb1f548c",
+        "a4f5ff9a-3a92-4fe7-b7d5-f4342e652c1c",
+        "a837ae80-53f5-44e0-9ba9-2a779083a941",
+        "e6adc588-aa11-41e7-93bd-bdc60bc89bf3",
+        "5eae8c28-0199-4421-a841-daece2c3c7cc",
+        "ea74d722-3913-4c27-be9c-60b59b80f864",
+        "b12d3955-f740-4cb9-888d-b8c34752398d",
+        "1dc33a21-b857-44a9-ae29-361e6eebfb95",
+        "07eaca88-0ad9-4184-9409-03d48205ed4e",
+        "601fc52a-2f92-4f6f-a207-92c8ce502650",
+        "d1709da3-a023-4676-ab83-f9ab9a27db00",
+        "22c0585d-9dfb-4512-aefa-69ade6b168d1",
+        "92d6ec48-42eb-40bf-b36a-cf7a40c45c85",
+        "ef50a8a9-122f-413f-b07a-f91323110d6c",
+        "e91cb66b-c22f-4353-820d-33b982498b4c",
+        "8c68ab69-c869-4927-8ed3-ef872313987c",
+        "97d42170-062d-4826-8e52-7ce41a93cbbf",
+        "b64f3ce5-6519-4b80-86d2-abf1544dea20",
+        "6b08c253-3bc8-450d-abc0-62f9a94c28cd"
+      ]
+    },
+    {
+      "label": "ΦΕΛΛΑΧΙΔΗΣ",
+      "productIds": [
+        "55a4e197-e4cd-488d-9e44-a677caf54b61",
+        "25fdc5f5-bf24-4285-ad23-cfaeb30aaeb2",
+        "ca3111de-dd38-42e8-ab88-f25981c752f1",
+        "c0657835-944c-4a98-ab6a-1132b647ab01",
+        "15a2196e-f2f6-4bde-b210-c91c32be2245",
+        "a2e851ad-c3f7-467f-9793-f11cd5734344",
+        "369171aa-c288-4db9-85a1-5a91d8f948a4",
+        "47188c78-a6fc-4fe8-b18f-c5ef3d627b21",
+        "6cba6b98-4f68-4290-9004-07935a7c59e8",
+        "5490e1a4-a688-4867-b64e-04d250c120be",
+        "fe26b9a0-4dc8-4ee1-a9f4-b44fff54f240",
+        "00e842e9-4cf9-4c89-bc9e-08adc6a74dbb",
+        "5e343b20-0a9c-4a56-9e0b-35dfb3b0c036",
+        "bb3692b0-65a8-45e5-ac39-8b809550897a"
+      ]
+    },
+    {
+      "label": "ΓΙΑΓΙΑΚΑ ΠΙΤΕΣ – ΣΦΟΛΙΑΤΕΣ",
+      "productIds": [
+        "63fc3293-a411-4efa-b934-63610749a7df",
+        "51894121-fd86-49f8-9893-e251c529741a",
+        "a95122e4-e13f-49ec-af3f-6521f93bf983",
+        "50f260d1-56fe-4661-a6aa-1d504f548566",
+        "96f9a709-bdbb-4d30-9b94-cb575a73f368",
+        "ec3d5eeb-1f00-4d85-b569-567f50d0c817",
+        "ce35dbba-1235-4639-b89a-a7cb8153453c",
+        "796ad0b6-a52b-4f0e-b659-e9faefd23f7a"
+      ]
+    },
+    {
+      "label": "ΔΟΥΚΑΤΑ",
+      "productIds": [
+        "71b88cfc-78a5-4ea5-ade3-f6afac9fd48f",
+        "5b6be9a6-b9bb-4043-9576-0d6bd98cfe97",
+        "5402a2cd-2d2f-4495-99b8-f3f557e771bb",
+        "1daa8cd2-ce1d-48c1-bd77-3c016da1d93f",
+        "fb92f08b-4265-4eb3-8b82-ba7ff4098747",
+        "fef88e2c-443a-4335-a5e0-92ac5b5b3ada",
+        "59811c29-0b40-4988-980e-54842f02ca46",
+        "e3c343ba-625c-40f4-ba22-9af380274756",
+        "8b1e5bb2-71fb-4fd0-afac-d62d80bfbfad"
+      ]
+    },
+    {
+      "label": "ΚΕΝΗ ΘΕΣΗ 17",
+      "productIds": []
+    },
+    {
+      "label": "ΚΕΝΗ ΘΕΣΗ 18",
+      "productIds": []
+    },
+    {
+      "label": "ΚΕΝΗ ΘΕΣΗ 19",
+      "productIds": []
+    },
+    {
+      "label": "ΚΕΝΗ ΘΕΣΗ 20",
+      "productIds": []
+    }
+  ]
+}
