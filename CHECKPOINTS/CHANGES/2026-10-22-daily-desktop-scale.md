@@ -1,3 +1,7 @@
+## 22/10/2026 — DAILY-DESKTOP-SCALE-01 / SOURCE PREPARED / AWAITING FULL CI + LIVE
+
+Source prepared after claimPR3077/15f76bf1b0681921258a40289c2ae53a560e3fea, docsCI39850476883 SUCCESS, mergedd1d065df167c4d0fee7f630cc6f20bcd3aad4dd8 before source. Exact DAILY desktop-only CSS: shell1800/base18/logo280x122/title30/checkout50. Five actual isolated Chromium viewport tests PASS at1920/1440/1024/768/390;20before/after DAILY/KAT renders prove no horizontal overflow, larger readable desktop and unchanged narrow/KAT geometry. Existing metadata/branding/public-url10PASS; frontend build PASS. Initial local browser binary was empty; replaced only isolated scratch tool with official packed Chromium, no application workaround. Every original script/markup/other CSS byte preserved. AWAITING full exact PR/main CI, guarded release and actual hosted visual acceptance. No new LIVE PASS or business write.
+
 ## 22/10/2026 23:38 Europe/Athens — DAILY-DESKTOP-SCALE-01 / ASSIGNED BEFORE SOURCE / USER SIZE FAIL
 
 Retained owner codex/daily-online-store-20261011 / issue2054; independent branch fix/daily-desktop-scale-20261022. User supplied image(20261022-203257).png and reports «ΒΓΑΝΕΙ ΜΙΚΡΟ ΣΤΗΝ ΟΘΟΝΗ», then «ΣΥΝΕΧΙΣΕ». Screenshot geometry is consistent with approximately80percent browser zoom (1440CSS shell maps to1152physical pixels); this is inference, not observed browser setting. Browser Ctrl0 advice was given, but the user requests continuation and wider desktop readability is the bounded improvement. No new functional or launch PASS.

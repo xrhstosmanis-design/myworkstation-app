@@ -55,6 +55,21 @@ html.daily-olive-orange{--wine:#52613a!important;--wine2:#354024!important;--cre
 .daily-olive-orange .modifier-option.sel{background:#fff0d7;color:#354024;border-color:#52613a}
 .daily-olive-orange button:focus-visible,.daily-olive-orange input:focus-visible{outline:3px solid #354024;outline-offset:3px}
 @media(max-width:600px){.daily-olive-orange .head{padding:14px}.daily-olive-orange .logo{width:220px;height:96px}.daily-olive-orange .top{flex-wrap:wrap}.daily-olive-orange .cats{padding:10px}}
+/* DAILY-DESKTOP-SCALE-01: use wide screens without changing mobile or KAT. */
+@media(min-width:1001px){
+  .daily-olive-orange body{font-size:18px;line-height:1.45}
+  .daily-olive-orange .shell{max-width:1800px;width:100%;padding:24px}
+  .daily-olive-orange .head{grid-template-columns:340px minmax(180px,1fr) auto;gap:20px;padding:24px}
+  .daily-olive-orange .logo{width:280px;height:122px}
+  .daily-olive-orange .brand h1{font-size:30px}
+  .daily-olive-orange .brand p{font-size:16px}
+  .daily-olive-orange .layout{grid-template-columns:minmax(0,1fr) 360px;gap:24px}
+  .daily-olive-orange .product h3{font-size:18px}
+  .daily-olive-orange .price{font-size:24px}
+  .daily-olive-orange .base,.daily-olive-orange .stock{font-size:14px}
+  .daily-olive-orange .note{font-size:14px}
+  .daily-olive-orange .product button,.daily-olive-orange .checkout{min-height:50px}
+}
 </style>
 <script id="kat-branding-scope">if (/^\/(?:online\/kat\/?|kat(?:\/index\.html|\/app\.html)?\/?)$/.test(location.pathname)) document.documentElement.classList.add('kat-olive-orange');</script>
 <script id="daily-branding-scope">if (/^\/online\/daily-bite\/?$/.test(location.pathname)) document.documentElement.classList.add('daily-olive-orange');</script>
