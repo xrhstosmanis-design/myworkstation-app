@@ -6,6 +6,7 @@ export const MAX_WALLET_MICROS=1000000000000n;
 const integer=z.number().int().nonnegative().max(1000000000);
 export const tariffSchema=z.object({
   model:z.string().trim().min(1).max(160),
+  responseModels:z.array(z.string().trim().min(1).max(160)).min(1).max(20).optional(),
   inputMicrosPerMillion:integer,cachedInputMicrosPerMillion:integer,outputMicrosPerMillion:integer,
   contextTokens:z.number().int().positive().max(10000000),
   maxOutputTokens:z.number().int().positive().max(1000000)
@@ -25,7 +26,7 @@ export function reserveAmount(tariff){
 }
 export function meteredUsage(raw,tariff){
   const u=raw?.usage,input=u?.input_tokens,output=u?.output_tokens,cached=u?.input_tokens_details?.cached_tokens??0;
-  if(![input,output,cached].every(n=>Number.isSafeInteger(n)&&n>=0)||cached>input||input>tariff.contextTokens||output>tariff.maxOutputTokens||typeof raw?.id!=='string'||!raw.id||raw.id.length>200||raw.model!==tariff.model)throw walletError('AI_WALLET_USAGE_REVIEW',503);
+  if(![input,output,cached].every(n=>Number.isSafeInteger(n)&&n>=0)||cached>input||input>tariff.contextTokens||output>tariff.maxOutputTokens||typeof raw?.id!=='string'||!raw.id||raw.id.length>200||!(tariff.responseModels||[tariff.model]).includes(raw.model))throw walletError('AI_WALLET_USAGE_REVIEW',503);
   const amount=ceilMillion(BigInt(input-cached)*BigInt(tariff.inputMicrosPerMillion)+BigInt(cached)*BigInt(tariff.cachedInputMicrosPerMillion)+BigInt(output)*BigInt(tariff.outputMicrosPerMillion));
   return {amount,usage:{providerResponseId:raw.id,model:raw.model,inputTokens:input,cachedInputTokens:cached,outputTokens:output}};
 }

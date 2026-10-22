@@ -21,6 +21,12 @@ test('wallet tariff uses integer EUR micro-units, exact cached/output usage and 
 test('wallet refuses invented usage, wrong model and tokens beyond the reserved model limits',()=>{
   for(const value of [{}, {...raw,model:'other'}, {...raw,id:''}, {...raw,usage:{input_tokens:2,output_tokens:1,input_tokens_details:{cached_tokens:3}}}, {...raw,usage:{input_tokens:101,output_tokens:0}}, {...raw,usage:{input_tokens:1,output_tokens:21}}, {...raw,usage:{input_tokens:1.5,output_tokens:1}}])assert.throws(()=>meteredUsage(value,tariff));
 });
+test('model aliases require an explicitly approved response snapshot; no prefix match guesses a tariff',()=>{
+  const price=tariffFor(tariff.model,JSON.stringify([{...tariff,responseModels:['synthetic-pinned-2026-10-22']}]));
+  assert.equal(meteredUsage({...raw,model:'synthetic-pinned-2026-10-22'},price).amount,25n);
+  assert.throws(()=>meteredUsage({...raw,model:'synthetic-pinned-unknown'},price));
+  assert.throws(()=>meteredUsage(raw,price));
+});
 test('funding parsing never uses floating-point rounding and rejects negatives, exponents, zero and over-limit amounts',()=>{
   assert.equal(walletMicrosFromEuros('12,34'),'12340000');assert.equal(walletMicrosFromEuros('0.01'),'10000');assert.equal(walletMicrosFromEuros('1000000'),'1000000000000');
   for(const value of ['0','-1','1e3','NaN','0.001','1000001','1,2,3'])assert.throws(()=>walletMicrosFromEuros(value));

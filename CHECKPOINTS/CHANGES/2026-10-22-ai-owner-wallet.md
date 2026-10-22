@@ -1,3 +1,7 @@
+## Explicit priced snapshot identity
+
+Source review found that a requested provider alias can return a pinned snapshot id. Add an optional explicit responseModels allow-list to the versioned tariff, with exact-match tests and no guessed prefix pricing. This avoids changing another owner's existing global assistant model just to activate billing. Unapproved snapshots still hold for review; no real rate/provider request was added. Full new-head CI required.
+
 ## Native CI39787732084 — fixture correction, no runtime weakening
 
 Initial source PR3009/d141a9c8 ran3814 actual server checks:3813PASS/1FAIL/0SKIP. The single new native wallet flow passed funding/replay/cross-company refusal, concurrent holds/settlement/threshold dedup, rollback, SMTP concurrency/uncertainty/address revocation and Owner HTTP access. It then failed at authorized Platform owner-list read503 instead of200. Scoped fixture had User.role TEXT while Prisma enum filters require schema-local UserRole; use the exact native UserRole enum and add a direct enum-filter assertion. Runtime access and existing assertions remain unchanged. This is a new causal fixture correction, not retry of the unchanged failed head. Full fresh CI and hosted acceptance remain required; billing/mail still OFF.
