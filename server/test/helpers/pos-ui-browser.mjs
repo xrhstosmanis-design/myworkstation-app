@@ -5,14 +5,20 @@ import {writeFile} from 'node:fs/promises';
 // include browser chrome; it is not a reliable declaration of CSS innerHeight.
 export async function renderPosFixture({chrome,file,width,height,scale=1,profile,screenshot}) {
   const child=spawn(chrome,[
-    '--headless=new','--no-sandbox','--no-zygote','--single-process',
+    '--headless=new','--no-sandbox',
     '--disable-dev-shm-usage','--disable-background-networking','--no-first-run',
-    '--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader',
+    // Packed serverless Chromium needs these only in the restricted local
+    // sandbox. Normal Chrome/CI must retain its multi-process startup.
+    ...(process.env.POS_UI_CHROMIUM_PACKED==='1'?[
+      '--no-zygote','--single-process','--use-gl=angle',
+      '--use-angle=swiftshader','--enable-unsafe-swiftshader',
+    ]:[]),
     '--remote-debugging-pipe','--user-data-dir='+profile,
   ],{stdio:['ignore','pipe','pipe','pipe','pipe']});
   let sequence=0,buffer='',errors='';
   const requests=new Map(),events=new Map();
-  const timer=setTimeout(()=>child.kill('SIGKILL'),25000);
+  let timedOut=false;
+  const timer=setTimeout(()=>{timedOut=true;child.kill('SIGKILL');},25000);
   const fail=error=>{
     for(const entry of requests.values())entry.reject(error);
     requests.clear();
@@ -20,7 +26,7 @@ export async function renderPosFixture({chrome,file,width,height,scale=1,profile
     events.clear();
   };
   child.on('error',fail);
-  child.on('exit',code=>fail(new Error(`Chrome exited ${code}: ${errors.slice(-1000)}`)));
+  child.on('exit',(code,signal)=>fail(new Error(`Chrome exited code=${code??'null'} signal=${signal??'none'}${timedOut?' (CDP startup/render timeout after 25000ms)':''}: ${errors.slice(-1500)}`)));
   child.stderr.on('data',value=>{errors+=value;});
   child.stdio[4].on('data',chunk=>{
     buffer+=chunk;
