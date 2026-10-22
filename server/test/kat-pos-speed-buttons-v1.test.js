@@ -15,10 +15,12 @@ test("Store Mode uses a lightweight access endpoint instead of reloading the ful
   assert.match(operator,/30000/);
 });
 
-test("cash and total stay together at the right edge",async()=>{
+test("cash and total remain grouped in the right checkout panel",async()=>{
   const panel=await read("../../client/src/components/store/StorePosPanel.jsx");
   const css=await read("../../client/src/components/store/store-pos-viewport-fit.css");
-  assert.match(panel,/standard-payment-end/);
+  assert.match(panel,/pos-modern-checkout/);
+  assert.match(panel,/pos-modern-total/);
+  assert.match(panel,/pos-modern-primary-payments/);
   assert.match(css,/grid-column:\s*-2 \/ -1/);
   assert.match(css,/width:\s*100%/);
   assert.match(css,/min-height:\s*100dvh/);

@@ -1,0 +1,75 @@
+TAP version 13
+# Subtest: Store Mode uses a lightweight access endpoint instead of reloading the full catalog
+ok 1 - Store Mode uses a lightweight access endpoint instead of reloading the full catalog
+  ---
+  duration_ms: 9.830276
+  ...
+# Subtest: cash and total remain grouped in the right checkout panel
+ok 2 - cash and total remain grouped in the right checkout panel
+  ---
+  duration_ms: 7.403542
+  ...
+# Subtest: authorized operators can edit quick keys and hierarchical bottom categories
+ok 3 - authorized operators can edit quick keys and hierarchical bottom categories
+  ---
+  duration_ms: 3.627175
+  ...
+# Subtest: POS exposes a touch text-size control with three choices
+ok 4 - POS exposes a touch text-size control with three choices
+  ---
+  duration_ms: 4.964781
+  ...
+# Subtest: text-size preference is saved per store terminal
+ok 5 - text-size preference is saved per store terminal
+  ---
+  duration_ms: 0.489221
+  ...
+# Subtest: font scaling does not change fixed POS geometry
+ok 6 - font scaling does not change fixed POS geometry
+  ---
+  duration_ms: 0.726359
+  ...
+# Subtest: Store Mode is locked to the viewport while inner product lists may scroll
+ok 7 - Store Mode is locked to the viewport while inner product lists may scroll
+  ---
+  duration_ms: 1.159524
+  ...
+# Subtest: TABLE_SERVICE is a separately licensed commercial module
+ok 8 - TABLE_SERVICE is a separately licensed commercial module
+  ---
+  duration_ms: 6.104167
+  ...
+# Subtest: Super Admin can enable the module per store with audit
+ok 9 - Super Admin can enable the module per store with audit
+  ---
+  duration_ms: 0.381045
+  ...
+# Subtest: inactive table service is hidden and checkout is blocked
+ok 10 - inactive table service is hidden and checkout is blocked
+  ---
+  duration_ms: 0.663722
+  ...
+# Subtest: BackOffice includes complete searchable table history
+ok 11 - BackOffice includes complete searchable table history
+  ---
+  duration_ms: 1.197399
+  ...
+# Subtest: Owner and Super Admin configure dining areas and tables from the shared BackOffice
+ok 12 - Owner and Super Admin configure dining areas and tables from the shared BackOffice
+  ---
+  duration_ms: 0.863768
+  ...
+# Subtest: actual modern POS keeps all20 quicks, inline nested catalog, original cart/scanner and store reset
+ok 13 - actual modern POS keeps all20 quicks, inline nested catalog, original cart/scanner and store reset
+  ---
+  duration_ms: 3275.589066
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5860.705137

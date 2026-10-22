@@ -1,0 +1,147 @@
+[
+  {
+    "kind": "before",
+    "width": 1920,
+    "height": 1080,
+    "font": "FONT_12",
+    "actualHeight": 1080,
+    "header": 141,
+    "cart": 513,
+    "paymentBottom": 1055,
+    "maxHeader": 261,
+    "maxCart": 393,
+    "background": "rgb(231, 243, 238)"
+  },
+  {
+    "kind": "before",
+    "width": 1920,
+    "height": 1080,
+    "font": "FONT_20",
+    "actualHeight": 1080,
+    "header": 225,
+    "cart": 422,
+    "paymentBottom": 1048,
+    "maxHeader": 345,
+    "maxCart": 302,
+    "background": "rgb(231, 243, 238)"
+  },
+  {
+    "kind": "before",
+    "width": 1366,
+    "height": 768,
+    "font": "FONT_12",
+    "actualHeight": 768,
+    "header": 195,
+    "cart": 191,
+    "paymentBottom": 743,
+    "maxHeader": 290,
+    "maxCart": 96,
+    "background": "rgb(231, 243, 238)"
+  },
+  {
+    "kind": "before",
+    "width": 1366,
+    "height": 768,
+    "font": "FONT_20",
+    "actualHeight": 768,
+    "header": 292,
+    "cart": 67,
+    "paymentBottom": 716,
+    "maxHeader": 292,
+    "maxCart": 67,
+    "background": "rgb(231, 243, 238)"
+  },
+  {
+    "kind": "before",
+    "width": 1280,
+    "height": 600,
+    "font": "FONT_12",
+    "actualHeight": 600,
+    "header": 195,
+    "cart": 23,
+    "paymentBottom": 575,
+    "maxHeader": 195,
+    "maxCart": 23,
+    "background": "rgb(231, 243, 238)"
+  },
+  {
+    "kind": "before",
+    "width": 1280,
+    "height": 600,
+    "font": "FONT_20",
+    "actualHeight": 600,
+    "header": 292,
+    "cart": 0,
+    "paymentBottom": 548,
+    "maxHeader": 292,
+    "maxCart": 0,
+    "background": "rgb(231, 243, 238)"
+  },
+  {
+    "kind": "after",
+    "width": 1920,
+    "height": 1080,
+    "font": "FONT_12",
+    "actualHeight": 1080,
+    "header": 75,
+    "cart": 649.3125,
+    "paymentBottom": 1060.3125,
+    "background": "rgb(23, 43, 75)"
+  },
+  {
+    "kind": "after",
+    "width": 1920,
+    "height": 1080,
+    "font": "FONT_20",
+    "actualHeight": 1080,
+    "header": 84,
+    "cart": 640.3125,
+    "paymentBottom": 1060.3125,
+    "background": "rgb(23, 43, 75)"
+  },
+  {
+    "kind": "after",
+    "width": 1366,
+    "height": 768,
+    "font": "FONT_12",
+    "actualHeight": 768,
+    "header": 75,
+    "cart": 337.3125,
+    "paymentBottom": 748.3125,
+    "background": "rgb(23, 43, 75)"
+  },
+  {
+    "kind": "after",
+    "width": 1366,
+    "height": 768,
+    "font": "FONT_20",
+    "actualHeight": 768,
+    "header": 136,
+    "cart": 276.3125,
+    "paymentBottom": 748.3125,
+    "background": "rgb(23, 43, 75)"
+  },
+  {
+    "kind": "after",
+    "width": 1280,
+    "height": 600,
+    "font": "FONT_12",
+    "actualHeight": 600,
+    "header": 105,
+    "cart": 191.3125,
+    "paymentBottom": 580.3125,
+    "background": "rgb(23, 43, 75)"
+  },
+  {
+    "kind": "after",
+    "width": 1280,
+    "height": 600,
+    "font": "FONT_20",
+    "actualHeight": 600,
+    "header": 105,
+    "cart": 191.3125,
+    "paymentBottom": 580.3125,
+    "background": "rgb(23, 43, 75)"
+  }
+]
+POS header real Chromium rendering PASS; synthetic fixture only, not USER/LAB PASS. Evidence: /tmp/mws-pos-header-browser

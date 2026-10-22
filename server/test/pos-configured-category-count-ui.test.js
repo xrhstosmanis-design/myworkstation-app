@@ -16,8 +16,8 @@ test('actual mounted POS keeps fourteen defaults and exposes configured sixteent
   const root=createRoot(document.getElementById('root'));
   try{
    await act(async()=>{root.render(React.createElement(m.exports.default,{api,store:{id:'A',name:'Synthetic Store'},operator:{id:'op'},runtimeAccess:{confirmDeleteSale:false,deleteSaleReason:false}}));await pause()});await act(async()=>{await pause()});
-   const grid=document.querySelector('.standard-category-strip > div');assert.ok(grid);const buttons=[...grid.querySelectorAll(':scope > button')];assert.equal(buttons.length,count);assert.equal(grid.style.getPropertyValue('--pos-category-columns'),String(Math.max(7,Math.ceil(count/2))));
-   await act(async()=>{buttons.at(-1).click();await pause()});assert.equal(document.getElementById('pos-category-products-title').textContent,`Group ${count}`);assert.ok(document.querySelector('.category-product-grid').textContent.includes('SYNTHETIC PRODUCT'));assert.equal(document.querySelectorAll('.standard-line').length,0);assert.equal(calls.some(c=>/checkout|preparation-batches/.test(c.path)),false);
+   const grid=document.querySelector('.standard-category-strip > div');assert.ok(grid);const buttons=[...grid.querySelectorAll(':scope > button')];assert.equal(buttons.length,count);assert.equal(document.querySelector('.pos-modern-quick-tab').getAttribute('aria-pressed'),'true');
+   await act(async()=>{buttons.at(-1).click();await pause()});assert.equal(buttons.at(-1).getAttribute('aria-pressed'),'true');assert.match(document.querySelector('.pos-modern-catalog-title').textContent,new RegExp(`Group ${count}`));assert.ok(document.querySelector('.pos-modern-product-grid').textContent.includes('SYNTHETIC PRODUCT'));assert.equal(document.querySelector('.pos-category-products-modal'),null);assert.equal(document.querySelectorAll('.standard-line').length,0);assert.equal(calls.some(c=>/checkout|preparation-batches/.test(c.path)),false);
   }finally{await act(async()=>root.unmount());dom.window.close();for(const [k,descriptor]of previous)if(descriptor)Object.defineProperty(globalThis,k,descriptor);else delete globalThis[k]}
  }
 });
