@@ -1,5 +1,6 @@
 import React,{useEffect,useId,useRef,useState} from "react";
 import "./automatic-report-settings.css";
+import AutomaticReportDispatchManager from './AutomaticReportDispatchManager.jsx';
 
 const dateTime=value=>new Date(value).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false});
 const money=v=>Number(v).toLocaleString("el-GR",{style:"currency",currency:"EUR"});
@@ -67,5 +68,6 @@ export default function AutomaticReportSettingsManager({company,store,request,on
         {report.groups?.map(group=><section key={group.terminalPos+group.cashChain+group.day}><h4>{group.terminalPos} · {group.cashChain==="DELIVERY"?"Delivery":"Κατάστημα"} · {group.day}</h4><p>Αρχικά ελλείμματα: {money(group.originalShortage)} · πλεονάσματα: {money(group.originalSurplus)} · πιθανός συμψηφισμός: {money(group.offset)} · καθαρή διαφορά: <strong>{money(group.netVariance)}</strong></p><div className="report-settings-table"><table><thead><tr><th>Υπάλληλος</th><th>Αρχική διαφορά</th></tr></thead><tbody>{group.rows.map(row=><tr key={row.sessionId}><td>{row.employeeName||row.employeeId||"Δεν καταγράφηκε όνομα"}</td><td>{money(row.variance)}</td></tr>)}</tbody></table></div></section>)}
       </div>}
     </div></>}
+    <AutomaticReportDispatchManager key={`${company.id}:${store.id}`} company={company} store={store} request={request}/>
   </section></div>;
 }
