@@ -1,0 +1,24 @@
+name: POS visual LAB boundary and build
+on:
+  push:
+    branches: [lab/pos-ui-v2-preview-3012]
+  pull_request:
+    branches: [feat/pos-ui-v2-coordination-3012]
+    paths:
+      - ops/pos-ui-lab/**
+      - server/test/pos-ui-v2-visual-lab.test.js
+      - .github/workflows/pos-ui-visual-lab.yml
+permissions:
+  contents: read
+jobs:
+  visual-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --ignore-scripts --include=dev --no-audit --no-fund
+      - run: node --test server/test/pos-ui-v2-visual-lab.test.js
+      - run: node ops/pos-ui-lab/build.mjs

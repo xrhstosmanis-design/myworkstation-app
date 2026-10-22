@@ -13220,3 +13220,8 @@ Issue https://github.com/xrhstosmanis-design/myworkstation-app/issues/3012 remai
 Preserve every existing POS action, barcode/QR focus, quick products, discounts, customer cards, store/tenant/role boundaries, receipts, idempotency, financial/VAT/stock calculations and device gates. Local simulation/CI is not LAB PASS. No financial, stock, receipt or invoice replay is authorized by this record. Source/CI/build/browser results and remaining physical EFTPOS/fiscal/store acceptance must be recorded before requesting final approval. No manual PASS change until real scoped acceptance.
 
 Checkpoint: `CHECKPOINTS/CHANGES/2026-10-22-pos-ui-v2-3012.md`.
+
+
+## 22/10/2026 — POS-UI-V2-3012 / VISUAL LAB PREPARATION / AWAITING HOSTED TEST
+
+Existing coordinated POS UI V2 owner retains scope. Independent stacked branch `lab/pos-ui-v2-preview-3012` uses candidate253792db and adds only a visual-only actual-component preview with synthetic browser fixtures, no database/auth/provider/backend imports, denied writes and explicit acceptance limits. Production9a67265 does not contain this candidate. No production transaction/main merge/deploy or takeover. Runtime boundary/credential tests2PASS locally; build/browser/hosted acceptance pending. Full backend and physical LAB remain NOT TESTED. Checkpoint `CHECKPOINTS/CHANGES/2026-10-22-pos-ui-v2-visual-lab-3012.md`. Latest user instruction prohibits main merge/production deploy without final approval and supersedes claim-main rule.
