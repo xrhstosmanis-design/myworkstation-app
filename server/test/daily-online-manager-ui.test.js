@@ -12,7 +12,7 @@ test('mounted manager preserves saved QR through draft and failed save, exposes 
  const m={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);
  const calls=[];let fail=true,members=[{id:'pending',fullName:'Εικονικό Μέλος',phoneNormalized:'6900000000',memberType:'STAFF',approvalStatus:'PENDING',active:false}],error;
  const request=async(path,opts)=>{calls.push({path,opts});assert.match(path,/companies\/company\/stores\/store\/online-store/);if(opts?.method==='PUT'){if(fail)throw Error('Save failed');return{settings:{...JSON.parse(opts.body),publicSlug:'canonical'}}}if(opts?.method==='PATCH'){members=[];return{ok:true}}return{members}};
- function Host(){const [manager,setManager]=React.useState({company:{id:'company'},store:{id:'store',name:'DAILY'},settings:{enabled:false,publicSlug:'saved',doctorDiscountPercent:15,nurseDiscountPercent:10,staffDiscountPercent:0},products:[]}),[busy,setBusy]=React.useState('');return React.createElement(m.exports.default,{manager,setManager,request,busy,setBusy,setError(v){error=v},setMessage(){},onClose(){}})}
+ function Host(){const [manager,setManager]=React.useState({company:{id:'company'},store:{id:'store',name:'DAILY'},settings:{enabled:false,publicSlug:'saved',doctorDiscountPercent:15,nurseDiscountPercent:10,staffDiscountPercent:0},products:[{id:"in",name:"In stock",currentStock:2,storePrice:1,onlinePrice:1,visible:false},{id:"out",name:"Empty",currentStock:0,storePrice:1,onlinePrice:1,visible:false}]}),[busy,setBusy]=React.useState('');return React.createElement(m.exports.default,{manager,setManager,request,busy,setBusy,setError(v){error=v},setMessage(){},onClose(){}})}
  const root=createRoot(document.getElementById('root')),button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent===text),qrLink=()=>document.querySelector('.online-store-qr a').href;
  const change=async(input,value)=>act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new window.Event('input',{bubbles:true}))});
  try{
@@ -22,6 +22,17 @@ test('mounted manager preserves saved QR through draft and failed save, exposes 
   await act(async()=>button('Αποθήκευση ρυθμίσεων').click());assert.equal(error,'Save failed');assert.equal(qrLink(),'https://isolated.invalid/online/saved');
   fail=false;await act(async()=>button('Αποθήκευση ρυθμίσεων').click());await act(async()=>{await new Promise(r=>setTimeout(r,100))});assert.equal(qrLink(),'https://isolated.invalid/online/canonical');
   const settings=JSON.parse(calls.filter(c=>c.opts?.method==='PUT').at(-1).opts.body);assert.equal(Number(settings.staffDiscountPercent),7.5);assert.equal(settings.nurseDiscountPercent,10);assert.equal(settings.enabled,false);
+  assert.ok(button('Αποθήκευση προϊόντων'));
+  const toggle=[...document.querySelectorAll('label')].find(l=>l.textContent==='Αυτόματος κατάλογος από διαθέσιμο στοκ').querySelector('input');
+  await act(async()=>toggle.click());
+  assert.equal(button('Αποθήκευση προϊόντων'),undefined);
+  assert.match(document.querySelector('[role="status"]').textContent,/Διαθέσιμα τώρα: 1/);
+  const stock=[...document.querySelectorAll('label')].find(l=>l.textContent==='Έλεγχος διαθέσιμου stock').querySelector('input');
+  assert.equal(stock.checked,true);assert.equal(stock.disabled,true);
+  await act(async()=>button('Αποθήκευση ρυθμίσεων').click());
+  const automatic=JSON.parse(calls.filter(c=>c.opts?.method==='PUT').at(-1).opts.body);
+  assert.equal(automatic.autoStockCatalogEnabled,true);assert.equal(automatic.stockCheckEnabled,true);assert.equal(automatic.enabled,false);
+  assert.equal(calls.some(c=>c.path.endsWith('/products')),false);
   await act(async()=>button('Έγκριση').click());assert.deepEqual(JSON.parse(calls.find(c=>c.opts?.method==='PATCH').opts.body),{active:true,decision:'APPROVE'});
  }finally{await act(async()=>root.unmount());dom.window.close();for(const k of keys){const d=old.get(k);if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k]}}
 });
