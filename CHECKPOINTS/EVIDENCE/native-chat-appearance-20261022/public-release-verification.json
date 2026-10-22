@@ -1,0 +1,83 @@
+{
+  "kind": "Verified technical publication; physical appearance acceptance pending",
+  "date": "2026-10-22",
+  "owner": "feat/android-chat-native-20261017",
+  "source": {
+    "pr": 2989,
+    "head": "578aff9c8f698fda6a8c1858bef798ebbed3c111",
+    "merge": "2e7b084ecd4e1d42ab97c28b1cbf2832ba6990b3",
+    "fullPrCi": 39747236825,
+    "androidCi": 39747236750,
+    "mainCi": 39748776462,
+    "instrumentation": {
+      "pass": 36,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "signing": {
+    "run": 39749830993,
+    "artifact": 12413756302,
+    "zipSha256": "da8f1c810363a813480e93247e7f17bd216cc3f8cc3bf0525abd1cec83c5b7b7",
+    "apkSha256": "5c617d59d2a0a0adc356419a40b55f3bd1ba1449810e31b03ea6e33a7c4b8060",
+    "bytes": 3687252,
+    "certificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+    "independentApkV2SignatureAndContentDigest": true,
+    "actualManifestVerified": true,
+    "version": "0.1.10-preview",
+    "versionCode": 11,
+    "package": "gr.myworkstation.chat.preview"
+  },
+  "distribution": {
+    "pr": 3002,
+    "head": "6a812027e4232684738192535b91d7b4cf5f0532",
+    "merge": "1b98d90f64d3d8b88d4d3e1667c62c72edab0284",
+    "prCi": 39751843837,
+    "mainCi": 39753045418,
+    "requiredJobCount": 5,
+    "serverPass": 3782,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "privacy": {
+    "productionBusinessMutation": false,
+    "privateMediaReplay": false,
+    "signingKeyRead": false,
+    "newSigningKey": false
+  },
+  "acceptance": {
+    "syntheticVisualProofReviewed": true,
+    "physicalAppearance": "NOT TESTED",
+    "physicalSameSignerUpdate": "NOT TESTED",
+    "priorMediaAuthPushPass": "Retained within recorded scope, no replay",
+    "ios": "LAST"
+  },
+  "deploy": {
+    "commit": {
+      "createdAt": "2026-10-22T09:07:57Z",
+      "id": "1b98d90f64d3d8b88d4d3e1667c62c72edab0284",
+      "message": "Merge pull request #3002 from xrhstosmanis-design/release/native-chat-modern-0-1-10-20261022\n\nPublish signed Android 0.1.10 with modern conversation appearance"
+    },
+    "createdAt": "2026-10-22T09:16:44.506412Z",
+    "finishedAt": "2026-10-22T09:20:19.187957Z",
+    "id": "dep-dbct8v4s728c73865s40",
+    "startedAt": "2026-10-22T09:16:44.476112Z",
+    "status": "live",
+    "trigger": "deploy_hook",
+    "updatedAt": "2026-10-22T09:20:19.188146Z",
+    "workflowRun": 39754062331,
+    "workflowConclusion": "success"
+  },
+  "public": {
+    "verifiedAt": "2026-10-22T09:21:18.749440+00:00",
+    "healthRevision": "1b98d90f64d3d8b88d4d3e1667c62c72edab0284",
+    "healthOk": true,
+    "manifestExactEquality": true,
+    "byteIdenticalToSignedArtifact": true,
+    "sha256": "5c617d59d2a0a0adc356419a40b55f3bd1ba1449810e31b03ea6e33a7c4b8060",
+    "bytes": 3687252,
+    "landingUrl": "https://myworkstation-app.onrender.com/downloads/chat-android/",
+    "browserVersionAndButtonVerified": true
+  }
+}
