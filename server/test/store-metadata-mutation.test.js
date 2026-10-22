@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import express from 'express';
+import {z} from 'zod';
+import {reportRecipientListSchema} from '../src/services/report-recipients.js';
+import {saveStoreMetadata} from '../src/services/store-metadata-mutation.js';
+import {withLifecycleContext} from '../src/services/store-lifecycle-context.js';
+const names=['AutomaticReportDispatchPolicy','AutomaticReportAutomationGrant','AutomaticReportRecipient','AutomaticReportRecipientConsent','AutomaticReportPayload','AutomaticReportDeliverySlot'];
+function harness(o={}){
+ const events=[],writes=[],store={id:'s',companyId:'c',name:'Old',responsibleEmail:'old@example.com'};
+ const tx={
+  $queryRawUnsafe:async(sql,...v)=>{if(sql.includes('current_schema'))return[{schema:'isolated',fence:o.epoch?'fence':null}];if(sql.includes('set_config'))return[];events.push('lifecycle');return[{companyId:'c',generation:o.epoch||'0',maintenance:!!o.maintenance,retired:false}]},
+  $queryRaw:async(strings,...v)=>{const sql=strings.join('?');if(sql.includes('FOR NO KEY UPDATE')){events.push('store');assert.deepEqual(v,['s','c']);assert.doesNotMatch(sql,/active/);if(o.busy)throw o.busy;return o.missing?[]:[store]}if(sql.includes('unnest')){events.push('catalog');return names.map((name,i)=>({name,relation:i<(o.tables||0)?name:null}))}throw Error('unexpected SQL '+sql)},
+  $executeRaw:async(strings,...values)=>{events.push('invalidate');assert.ok(values.includes('c'));assert.ok(values.includes('s'));if(o.invalidationError)throw o.invalidationError;return 1},
+  store:{update:async args=>{events.push('write');writes.push(args);return{...store,...args.data}}}
+ };
+ const db={$transaction:async fn=>{events.push('begin');try{const result=await fn(tx);if(o.commitError)throw o.commitError;events.push('commit');return result}catch(e){events.push('rollback');throw e}}};
+ return{db,tx,events,writes};
+}
+const scope={companyId:'c',storeId:'s',actorId:'a'},body={name:' New ',responsibleEmail:' NEW@example.com '};
+test('legacy Store metadata uses one transaction, canonical email and scoped inactive-compatible lock',async()=>{const h=harness(),result=await saveStoreMetadata(h.db,scope,body);assert.equal(result.name,'New');assert.equal(result.responsibleEmail,'new@example.com');assert.equal(result.cashCloseEmailEnabled,true);assert.deepEqual(h.events,['begin','store','catalog','write','commit']);assert.deepEqual(h.writes[0].where,{id:'s'})});
+test('omitted optional address/email preserve values; explicit empty clears',async()=>{for(const b of [{name:'New'},{name:'New',address:'',responsibleEmail:''}]){const h=harness();await saveStoreMetadata(h.db,scope,b);const data=h.writes[0].data;assert.equal(Object.hasOwn(data,'responsibleEmail'),Object.hasOwn(b,'responsibleEmail'));assert.equal(Object.hasOwn(data,'address'),Object.hasOwn(b,'address'));if(b.address==='')assert.equal(data.address,null)}});
+test('partial storage always fails before metadata write, including unchanged email',async()=>{for(let tables=1;tables<6;tables++){const h=harness({tables});await assert.rejects(saveStoreMetadata(h.db,scope,{name:'New'}),e=>e.code==='REPORT_RECIPIENT_STORAGE_UNAVAILABLE'&&e.status===409);assert.equal(h.writes.length,0)}});
+test('all storage present unchanged canonical email does not mutate authorization',async()=>{const h=harness({tables:6});await saveStoreMetadata(h.db,scope,{name:'New',responsibleEmail:'OLD@example.com; old@example.com'});assert.equal(h.writes.length,1)});
+test('busy/missing/lifecycle refusals cannot write and never retry',async()=>{for(const [o,code] of [[{busy:{code:'55P03'}},'STORE_METADATA_BUSY'],[{busy:{meta:{code:'55P03'}}},'STORE_METADATA_BUSY'],[{missing:true},'STORE_METADATA_STORE_NOT_FOUND'],[{epoch:'9007199254740993'},'STORE_LIFECYCLE_STALE_GENERATION'],[{epoch:'1',maintenance:true},'STORE_LIFECYCLE_MAINTENANCE']]){const h=harness(o);await assert.rejects(saveStoreMetadata(h.db,scope,body),e=>e.code===code);assert.equal(h.writes.length,0);assert.equal(h.events.filter(x=>x==='begin').length,1)}});
+test('original scope/body/epoch detached before transaction checkout',async()=>{const h=harness({epoch:'9007199254740993'}),s={...scope},b={...body};let callback;h.db.$transaction=fn=>{callback=fn;return Promise.resolve('queued')};await withLifecycleContext({s:'9007199254740993'},()=>saveStoreMetadata(h.db,s,b));s.storeId='foreign';b.name='Changed';const result=await withLifecycleContext({s:'8'},()=>callback(h.tx));assert.equal(result.name,'New')});
+const source=fs.readFileSync(new URL('../src/routes/platform-admin.js',import.meta.url),'utf8');
+const route=source.slice(source.indexOf('router.put("/companies/:companyId/stores/:storeId",'),source.indexOf('const labelSettingsSchema='));
+async function request(h,input,{admin=true}={}){
+ const app=express();app.use(express.json());app.use((req,res,next)=>{req.user={id:'a',isSuperAdmin:admin};next()});
+ const gate=source.slice(source.indexOf('router.use((req,res,next)=>{'),source.indexOf('registerPlatformMaintenanceRoutes(router'));new Function('router',gate)(app);
+ new Function('router','prisma','saveStoreMetadata','z','reportRecipientListSchema',route)(app,h.db,saveStoreMetadata,z,reportRecipientListSchema);app.use((e,req,res,next)=>res.status(e.status||400).json({code:e.code,error:e.message}));
+ const server=app.listen(0,'127.0.0.1');try{await new Promise(resolve=>server.on('listening',resolve));const r=await fetch(`http://127.0.0.1:${server.address().port}/companies/c/stores/s`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)});return{status:r.status,body:await r.json()}}finally{await new Promise(resolve=>server.close(resolve))}
+}
+test('actual mounted PUT returns preserved response and blocks invalid/foreign/busy/partial cases',async()=>{const h=harness(),r=await request(h,body);assert.equal(r.status,200);assert.deepEqual(Object.keys(r.body).sort(),['cashCloseEmailEnabled','city','companyId','id','name','responsibleEmail'].sort());assert.equal(r.body.companyId,'c');for(const [o,b] of [[{missing:true},body],[{busy:{code:'55P03'}},body],[{tables:1},body],[{}, {...body,responsibleEmail:'x\r\nBcc:a@x.com'}]]){const denied=harness(o),result=await request(denied,b);assert.ok(result.status>=400);assert.equal(denied.writes.length,0)}});
+test('actual mounted PUT refuses unauthorized invocation before transaction',async()=>{const h=harness();assert.equal((await request(h,body,{admin:false})).status,403);assert.equal(h.events.length,0)});
+test('scope and body accessors never execute before validation',()=>{let reads=0;const h=harness();for(const [s,b] of [[{...scope,get companyId(){reads++;return'c'}},body],[scope,{...body,get name(){reads++;return'Bad'}}]])assert.throws(()=>saveStoreMetadata(h.db,s,b),TypeError);assert.equal(reads,0);assert.equal(h.events.length,0)});
+test('malformed catalog and commit failure refuse without retry',async()=>{const h=harness();h.tx.$queryRaw=async strings=>strings.join('').includes('FOR NO KEY UPDATE')?[{id:'s',companyId:'c',responsibleEmail:null}]:[];await assert.rejects(saveStoreMetadata(h.db,scope,body),e=>e.code==='REPORT_RECIPIENT_STORAGE_UNAVAILABLE');assert.equal(h.writes.length,0);const error=Error('commit uncertain'),f=harness({commitError:error});await assert.rejects(saveStoreMetadata(f.db,scope,body),e=>e===error);assert.equal(f.events.filter(x=>x==='begin').length,1)});
+
+test('all-present changed email uses real invalidator inside locked transaction before Store write, even dispatch OFF',async()=>{const h=harness({tables:6});await saveStoreMetadata(h.db,scope,body);assert.deepEqual(h.events,['begin','store','catalog','invalidate','invalidate','invalidate','invalidate','write','commit']);const error=Error('missing required recipient column'),f=harness({tables:6,invalidationError:error});await assert.rejects(saveStoreMetadata(f.db,scope,body),e=>e===error);assert.equal(f.writes.length,0);assert.equal(f.events.at(-1),'rollback')});

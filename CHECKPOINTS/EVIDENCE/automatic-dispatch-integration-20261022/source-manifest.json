@@ -1,0 +1,205 @@
+{
+  "scope": "AUTOMATIC-DISPATCH-PERSISTENCE-RESTORE-01",
+  "stage": "SOURCE MERGED ALL MAIN JOBS PASS AGGREGATE RELEASE PENDING",
+  "claims": {
+    "transfer": 3059,
+    "integration": 3062,
+    "prospectiveAmendment": 3063,
+    "lifecycleNative": 3066
+  },
+  "base": "82537a62e21977897f8f92fb8ef91c5cff0360bd",
+  "dispatch": "OFF",
+  "local": {
+    "pass": 78,
+    "fail": 0,
+    "skip": 4,
+    "reason": "PostgreSQL unavailable locally"
+  },
+  "priorCI": {
+    "run": 39836428113,
+    "job": 120026253209,
+    "pass": 4080,
+    "fail": 8,
+    "skip": 0,
+    "causes": [
+      "UI hour12 missing: fixed",
+      "Native Store fixture updatedAt missing: fixture fixed",
+      "Synchronous strict Zod throw asserted as promise: test fixed"
+    ]
+  },
+  "functionalAcceptance": "NOT TESTED",
+  "productionPreflight": {
+    "checkedAt": "2026-10-22T19:04:48.160Z",
+    "expectedTables": 259,
+    "actualTables": 254,
+    "missing": [
+      "AutomaticReportAutomationGrant",
+      "AutomaticReportDeliverySlot",
+      "AutomaticReportDispatchPolicy",
+      "AutomaticReportPayload",
+      "AutomaticReportRecipient",
+      "AutomaticReportRecipientConsent"
+    ],
+    "unreviewed": [
+      "StoreLifecycleRuntime"
+    ],
+    "latestAbsenceRecheckAt": "2026-10-22T19:35:37.258035Z"
+  },
+  "entries": [
+    {
+      "path": "server/src/services/mail.js",
+      "gitBlob": "281b42279616672f763cd5dfaad1d8de15420d14"
+    },
+    {
+      "path": "server/test/automatic-report-smtp-transport.test.js",
+      "gitBlob": "21334c27c09a2e9611f4ac94e446f770f542609e"
+    },
+    {
+      "path": "server/src/services/automatic-report-dispatch-schema.js",
+      "gitBlob": "82feafdb04a63a2800c5cfe089e822e7539e31f0"
+    },
+    {
+      "path": "server/src/services/automatic-report-recipients.js",
+      "gitBlob": "e1a7a1cbcff3fde851dce431b30ec12d43c9a9a8"
+    },
+    {
+      "path": "server/src/services/automatic-report-dispatch-policy.js",
+      "gitBlob": "c80ea10d8dbccb2ecbf8c3ddc1c2da698c0cfa42"
+    },
+    {
+      "path": "server/test/automatic-report-dispatch-schema.test.js",
+      "gitBlob": "a406491cbeb289e53323e370fb958b2f5b64a54a"
+    },
+    {
+      "path": "server/test/automatic-report-recipients.test.js",
+      "gitBlob": "087275d260ef1154a22f0a634b356feda47c464c"
+    },
+    {
+      "path": "server/src/routes/platform-admin.js",
+      "gitBlob": "1ee9d1767806c17f38bc9ce7da4d2657c07a2b67"
+    },
+    {
+      "path": "server/src/services/store-metadata-mutation.js",
+      "gitBlob": "1da18cf09cde16cb68f893ed9bca860c6a51e478"
+    },
+    {
+      "path": "server/test/store-metadata-mutation.test.js",
+      "gitBlob": "bf7eecaf95875866781115fd59c36a4f2146c802"
+    },
+    {
+      "path": "server/src/services/automatic-report-eligibility.js",
+      "gitBlob": "0b4150285eeeb4714b4b94996c68420d6f92430a"
+    },
+    {
+      "path": "server/src/services/automatic-report-dispatch.js",
+      "gitBlob": "60125c5333af1626763b3365218e6271a0433ff5"
+    },
+    {
+      "path": "server/src/services/automatic-report-scheduler.js",
+      "gitBlob": "2c08771f110a16e109c65030db3b473a7e78e970"
+    },
+    {
+      "path": "server/test/automatic-report-eligibility.test.js",
+      "gitBlob": "f582f5fb5f845e3737fd4f740de94a79e3e5d2fe"
+    },
+    {
+      "path": "server/test/automatic-report-dispatch.test.js",
+      "gitBlob": "f21cee7896b01e69cd8f5370a9735f93a349ea26"
+    },
+    {
+      "path": "server/test/automatic-report-scheduler.test.js",
+      "gitBlob": "7f40bd326f487efeee61efa133e95936ce9c681f"
+    },
+    {
+      "path": "server/test/automatic-report-dispatch-postgres.test.js",
+      "gitBlob": "adcdea520bdaea0309b06c61dbd65c9c7b2efcee"
+    },
+    {
+      "path": "server/src/services/automatic-report-activation.js",
+      "gitBlob": "fdd87b15cbf836e97d4c6779120a205761618139"
+    },
+    {
+      "path": "ops/backup/restore-controlled.mjs",
+      "gitBlob": "53cbe84768e579d70e349af98db07831013fb443"
+    },
+    {
+      "path": "ops/backup/CONTROLLED_RESTORE.md",
+      "gitBlob": "e9c45223d905e724c42b8ef21fb7fb6e50a6cdac"
+    },
+    {
+      "path": "server/test/automatic-report-activation.test.js",
+      "gitBlob": "263b448bd0a1c62ccfc1365688a36a4f39ed8242"
+    },
+    {
+      "path": "server/test/automatic-report-controlled-restore.test.js",
+      "gitBlob": "61c47480f372a2dd9bbc3311478ae9f8da0c0398"
+    },
+    {
+      "path": "server/src/index.js",
+      "gitBlob": "f47f98ffb715c86d978d58e114a1ad0611e191b9"
+    },
+    {
+      "path": "client/src/components/platform/AutomaticReportSettingsManager.jsx",
+      "gitBlob": "045f6f8cc9cee99f40de1fcff43440298bb4bd23"
+    },
+    {
+      "path": "server/test/automatic-report-dispatch-routes.test.js",
+      "gitBlob": "e0b0339b56c6882ca52196d1967a78994e1869ea"
+    },
+    {
+      "path": "server/test/automatic-report-dispatch-ui.test.js",
+      "gitBlob": "d3068503040092c17aa745df89694d5965b320fb"
+    },
+    {
+      "path": "ops/backup/lifecycle/automatic-report-manifest.proposed.json",
+      "gitBlob": "e0bfaded7aa03c6b14a89c2fb360f69ccbfcd9d0"
+    },
+    {
+      "path": "ops/backup/lifecycle/automatic-report-column-review.proposed.json",
+      "gitBlob": "29cff2177f5cbd89fd6cbda1c7ee5ae7810794f1"
+    },
+    {
+      "path": "server/src/routes/automatic-report-dispatch.js",
+      "gitBlob": "1a4edf1f4d21fe6973d69a1d468c479b8fd93639"
+    },
+    {
+      "path": "client/src/components/platform/AutomaticReportDispatchManager.jsx",
+      "gitBlob": "1bd4b31a046ba658d746effab2ac1aacb15fd7ae"
+    },
+    {
+      "path": "server/test/automatic-report-persistence-postgres.test.js",
+      "gitBlob": "f5ed762a3f6c0e96dde6c6aeb5d740ce71a31342"
+    },
+    {
+      "path": "server/test/store-metadata-mutation-postgres.test.js",
+      "gitBlob": "404a3d79dcb8dadaa05f1df0c3426fafd7ce2bd1"
+    },
+    {
+      "path": "server/test/automatic-report-lifecycle-postgres.test.js",
+      "gitBlob": "cc46b44232f80c4d63ba3d9bbf7190c895d5262d"
+    }
+  ],
+  "sourcePR": {
+    "number": 3065,
+    "head": "3b00726802ad08622cbdcdfdf2c1c32f7aed38d8",
+    "ciRun": 39838748112,
+    "ciJob": 120034381296,
+    "conclusion": "success",
+    "serverPass": 4094,
+    "serverFail": 0,
+    "serverSkip": 0,
+    "backupPass": 8,
+    "merged": "365a4799fea5704a44c4e14bf1ff642a25117ca8"
+  },
+  "mainCI": {
+    "run": 39841152468,
+    "job": 120042615262,
+    "allFiveJobs": "success",
+    "aggregate": "in_progress",
+    "serverPass": 4094,
+    "serverFail": 0,
+    "serverSkip": 0,
+    "backupPass": 8
+  },
+  "release": "NOT VERIFIED"
+}
