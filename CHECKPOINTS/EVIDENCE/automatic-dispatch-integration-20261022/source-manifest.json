@@ -1,6 +1,6 @@
 {
   "scope": "AUTOMATIC-DISPATCH-PERSISTENCE-RESTORE-01",
-  "stage": "SOURCE MERGED ALL MAIN JOBS PASS AGGREGATE RELEASE PENDING",
+  "stage": "SOURCE INSTALLED OFF FINAL FUNCTIONAL ACCEPTANCE OPEN",
   "claims": {
     "transfer": 3059,
     "integration": 3062,
@@ -195,11 +195,29 @@
     "run": 39841152468,
     "job": 120042615262,
     "allFiveJobs": "success",
-    "aggregate": "in_progress",
+    "aggregate": "success",
     "serverPass": 4094,
     "serverFail": 0,
     "serverSkip": 0,
     "backupPass": 8
   },
-  "release": "NOT VERIFIED"
+  "release": {
+    "workflow": 39843694215,
+    "job": 120051318388,
+    "conclusion": "success",
+    "verifyFullCI": "success",
+    "triggerRender": "success",
+    "waitExactRevision": "success",
+    "renderDeploy": "dep-dbd6ir59fdbs73ajuc10",
+    "renderStatus": "live",
+    "renderFinishedAt": "2026-10-22T19:56:32.879884Z",
+    "targetRevision": "365a4799fea5704a44c4e14bf1ff642a25117ca8",
+    "independentHealth": {
+      "checkedAt": "2026-10-22T19:57:42.795020+00:00",
+      "status": 200,
+      "ok": true,
+      "revision": "365a4799fea5704a44c4e14bf1ff642a25117ca8",
+      "version": "0.22.0+kat-test-pos"
+    }
+  }
 }
