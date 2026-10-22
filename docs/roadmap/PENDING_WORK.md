@@ -1,3 +1,7 @@
+## 22/10/2026 - AUTOMATIC-DISPATCH-LEGACY-BOUNDARY-01 / TEST-FIXTURE AMENDMENT BEFORE EDIT
+
+Samecentralowner, greenclaim3081/CI39851283667/merge7ec41aba16e6e2d9f56db6b6c20a5c253587890b. Add ONLY existing server/test/automatic-report-eligibility.test.js and server/test/automatic-report-dispatch.test.js to root-owned fixtureadaptation scope: newsharedhelperissues realLOCK through $executeRawUnsafe; oldsynthetictxmustexposecorrectinterface and retainmeaningfullockorder/revocation/sourceassertions. These2fileedits begin ONLYafterthisamendmentgreenmerged. No runtimecontractexpansion, no bypass/no weaken nativeexecution; other3081sourcecancontinuewithinitsgreenclaim. dispatchOFF, actualDDL/SMTP/config/enrollment/restore notperformed. Checkpoint CHECKPOINTS/CHANGES/2026-10-22-automatic-dispatch-legacy-boundary.md.
+
 ## 22/10/2026 - AUTOMATIC-DISPATCH-LEGACY-BOUNDARY-01 / ASSIGNED BEFORE SOURCE
 
 Same approved central owner codex/central-auto-dispatch-20261022; user explicitly continued through the real email test. Existing source3065/exactLIVE365a4799 and technicalreceipt3072 remain protected; same-owner six-empty-table OFF operationalclaim3075 is separate and must not be duplicated. Newbounded source amendment begins ONLY after this claim green mergedmain.
