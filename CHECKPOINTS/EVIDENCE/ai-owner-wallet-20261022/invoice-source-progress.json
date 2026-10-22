@@ -1,5 +1,5 @@
 {
-  "status": "SOURCE_FULL_CI_SUCCESS_MERGED_AWAITING_MAIN_CI_AND_RELEASE",
+  "status": "INVOICE_AND_REVIEW_GUARD_SOURCE_GREEN_MERGED_AWAITING_MAIN_RELEASE",
   "owner": "feat/ai-owner-wallet-20261022",
   "pr": 3037,
   "sourceHead": "606bcdebbbc81d0486f5b1f9fbe1880b7e766245",
@@ -59,6 +59,45 @@
     "status": "Actions and Pull Requests degraded",
     "updated": "2026-10-22T16:35:07Z"
   },
-  "nextAction": "Exact-main full CI success and normal guarded release, then measured acceptance without replay",
-  "sourceMerge": "073fd234b5a7ef60062ccf408bee8b4cb3923cf0"
+  "nextAction": "Verify current full main CI containing7f5afd3 and normal guarded deployed source blobs, then measured acceptance before approved-price activation",
+  "sourceMerge": "073fd234b5a7ef60062ccf408bee8b4cb3923cf0",
+  "reviewFollowup": {
+    "pr": 3041,
+    "head": "a8c6d3d57aca2745b66f6718e2fb4229649e8d47",
+    "tree": "85740d9b0fe0db23ffa271911d3abad2516d5873",
+    "ci": 39818057549,
+    "job": 119962653340,
+    "conclusion": "SUCCESS",
+    "server": {
+      "pass": 3877,
+      "fail": 0,
+      "skipped": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skipped": 0
+    },
+    "focused": {
+      "pass": 21,
+      "fail": 0
+    },
+    "merge": "7f5afd3c41153b6cdc4315a165880e71db533dd0"
+  },
+  "originalMainCI": {
+    "id": 39816599054,
+    "conclusion": "SUCCESS",
+    "isolatedWholesaleBrowserRetry": true
+  },
+  "latestMainCI": {
+    "id": 39819683069,
+    "head": "7f5afd3c41153b6cdc4315a165880e71db533dd0",
+    "statusAtReceipt": "PENDING",
+    "conclusion": null
+  },
+  "lastObservedHealth": {
+    "ok": true,
+    "revision": "9a67265aaa916058621b5291c96268b6f0093bb9",
+    "invoiceExtensionVerified": false
+  }
 }
