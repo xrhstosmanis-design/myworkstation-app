@@ -1,3 +1,7 @@
+## 22/10/2026 — DAILY-LINK-PREVIEW-01 / IMPLEMENTED / AWAITING CI + LIVE
+
+Claim PR3069 merged 6a4056fe509dc44f3adecb331218a28ef9a2fac8 after CI39841883025 SUCCESS. Same retained owner and bounded scope. Shared template now transforms only exact daily-bite initial document: DAILY BITE title/description/canonical/Open Graph/Twitter and original 825x774 PNG logo. KAT, unknown slugs and every original style/script/body byte preserved. Actual Express crawler GET/HEAD tests plus public-url/branding tests: 10 PASS/0 FAIL. Production raw HTML acceptance NOT TESTED until full exact PR/main CI and guarded release. WhatsApp cached old cards may persist. No settings, inventory, catalogue, public activation, checkout or financial writes. Whole launch remains OPEN.
+
 ## 22/10/2026 — DAILY-LINK-PREVIEW-01 / ASSIGNED BEFORE SOURCE / USER FAIL
 
 Retained DAILY owner codex/daily-online-store-20261011 / issue2054; bounded branch fix/daily-link-preview-20261022. User screenshot image(20261022-193445).png shows WhatsApp preview «Κυλικείο ΚΑΤ - Online Παραγγελίες» for /online/daily-bite, then explicitly requests «φτιαχτο». This is a new preview FAIL, not a reversal of accepted stock/settings or qualified closed-shell theme in PR3068/a698c486. Raw shared app.html still has KAT title; JavaScript changes document.title only after load, so crawler initial HTML has wrong identity and no store-specific Open Graph tags.
