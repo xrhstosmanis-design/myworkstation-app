@@ -1,3 +1,11 @@
+## 22/10/2026 — DAILY-LINK-PREVIEW-01 / ASSIGNED BEFORE SOURCE / USER FAIL
+
+Retained DAILY owner codex/daily-online-store-20261011 / issue2054; bounded branch fix/daily-link-preview-20261022. User screenshot image(20261022-193445).png shows WhatsApp preview «Κυλικείο ΚΑΤ - Online Παραγγελίες» for /online/daily-bite, then explicitly requests «φτιαχτο». This is a new preview FAIL, not a reversal of accepted stock/settings or qualified closed-shell theme in PR3068/a698c486. Raw shared app.html still has KAT title; JavaScript changes document.title only after load, so crawler initial HTML has wrong identity and no store-specific Open Graph tags.
+
+Bounded fix: exact DAILY initial HTTP document title, description, canonical/Open Graph/Twitter metadata and original PNG logo suitable for preview crawlers. Serve transformed existing single template at exact daily-bite route; preserve every original business script/style/body and all other routes, KAT/unknown slug behavior, licence/auth, public=false, stock/catalogue/orders/payments/fiscal. No production settings/data writes. No public activation, test order or financial fixture replay. No claim about WhatsApp invalidating already cached message cards.
+
+Tests: actual Express HTTP GET/HEAD with crawler User-Agent before any JavaScript; correct unique metadata/logo MIME and canonical; query/trailing slash; unchanged KAT/control initial HTML and all original script/style/body bytes. Full exact CI/main/ordinary guarded release then independent raw production page-source readback and public browser identity. No checkout acceptance. Manual/PDF receipt only after actual bounded LIVE verification. Checkpoint CHECKPOINTS/CHANGES/2026-10-22-daily-link-preview.md. Publish green claim on main before source. Retain owner and broader launch OPEN, including disabled OPEN badge/default-copy and inventory residual.
+
 ## 22/10/2026 — DAILY-STOCK-CATALOG-03 / VERIFIED PREPARATION / REMAINING LAUNCH ASSIGNED
 
 Owner codex/daily-online-store-20261011 retained / issue2054. SourcePR3056/d7372b8/fullCI39828149315 green, merged659aea0217d62c6beec5f0ea51455a8c68884a4b. MainCI39829453096 attempt2 all5green/3978PASS0FAIL0SKIP; guarded release39831769237 and Renderdep-dbd5c9gae00c73cofpig LIVE, independent exact health. Attempt1 browser ECONNRESET qualified in checkpoint.
