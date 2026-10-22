@@ -8,12 +8,12 @@ import {assertLifecycleMutation,bindFreshLifecycleRead} from './store-lifecycle-
 export const FTEXT_PLATFORM='WINDOWS_FTEXT_V1';
 const issuer='myworkstation-ftext',audience='ftext-device-v1';
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status})};
-const identifier=z.string().trim().min(2).max(120).regex(/^[A-Za-z0-9_-]+$/);
+const identifier=z.string().trim().min(2).max(80).regex(/^[A-Za-z0-9_-]+$/);
 const terminal=identifier.transform(s=>s.toUpperCase());
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
 const codeHash=code=>hash(String(code).replace(/[^A-Z0-9]/gi,'').toUpperCase());
-const cp1253=new Set(Array.from({length:256},(_,i)=>new TextDecoder('windows-1253').decode(Uint8Array.of(i))));
-const folder=z.string().trim().min(4).max(180).regex(/^[A-Za-z]:\\[^:"<>|?*\x00-\x1f]+$/).refine(s=>!s.split('\\').some(v=>v==='.'||v==='..')&&[...s].every(c=>cp1253.has(c)),'Ο φάκελος πρέπει να υποστηρίζει Windows-1253.').transform(s=>path.win32.normalize(s).replace(/\\+$/,''));
+const cp1253=new Set(Array.from({length:256},(_,i)=>new TextDecoder('windows-1253').decode(Uint8Array.of(i))).filter(c=>c!=='\uFFFD'));
+const folder=z.string().trim().min(4).max(180).regex(/^[A-Za-z]:\\[^:"<>|?*\x00-\x1f]+$/).refine(s=>!s.includes('..')&&[...s].every(c=>cp1253.has(c)),'Ο φάκελος πρέπει να υποστηρίζει Windows-1253.').transform(s=>path.win32.normalize(s).replace(/\\+$/,''));
 export const ftextSettingsInput=z.object({terminalPos:terminal,serialNumber:identifier,workFolder:folder,confirmed:z.literal(true)}).strict();
 const settingsSchema=z.object({companyId:identifier,storeId:identifier,terminalPos:terminal,fiscalDeviceCode:terminal,serialNumber:identifier,workFolder:folder,protocol:z.literal('SOLIDUS(II)T'),configurationId:z.string().uuid(),lifecycleGeneration:z.string().regex(/^(0|[1-9]\d{0,18})$/)}).strict();
 const reportSchema=z.object({requestId:z.string().regex(/^[a-f0-9]{32}$/),checkedAt:z.string().datetime({offset:true}),ok:z.boolean(),code:z.number().int().min(0).max(999),serialNumber:identifier.optional(),deviceTime:z.string().trim().min(1).max(80).optional(),description:z.string().trim().max(300).optional(),fiscalExecution:z.literal(false)}).strict();

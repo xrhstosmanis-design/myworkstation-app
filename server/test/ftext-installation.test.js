@@ -8,7 +8,7 @@ const form={terminalPos:'POS-01',serialNumber:'TEST12345',workFolder:'C:\\FText'
 const config={companyId:'test-company',storeId:'test-store',terminalPos:form.terminalPos,fiscalDeviceCode:'TEST-FISCAL',serialNumber:form.serialNumber,workFolder:form.workFolder,protocol:'SOLIDUS(II)T',configurationId:crypto.randomUUID(),lifecycleGeneration:'0'};
 test('ftext accepts explicit Windows settings and rejects path/control/protocol injection',()=>{
  assert.deepEqual(ftextSettingsInput.parse(form),form);
- for(const patch of [{confirmed:false},{workFolder:'C:\\'},{workFolder:'C:\\FText\\..\\other'},{workFolder:'\\\\server\\share'},{workFolder:'relative'},{workFolder:'C:\\x|STATUS'},{workFolder:'C:\\x\nS'},{workFolder:'C:\\😀'},{serialNumber:'a|S'},{terminalPos:'wrong pos'},{unexpected:'value'}])assert.equal(ftextSettingsInput.safeParse({...form,...patch}).success,false,JSON.stringify(patch));
+ for(const patch of [{confirmed:false},{workFolder:'C:\\'},{workFolder:'C:\\FText\\..\\other'},{workFolder:'\\\\server\\share'},{workFolder:'relative'},{workFolder:'C:\\x|STATUS'},{workFolder:'C:\\x\nS'},{workFolder:'C:\\😀'},{workFolder:'C:\\�'},{workFolder:'C:\\folder..name'},{serialNumber:'a'.repeat(81)},{serialNumber:'a|S'},{terminalPos:'wrong pos'},{unexpected:'value'}])assert.equal(ftextSettingsInput.safeParse({...form,...patch}).success,false,JSON.stringify(patch));
 });
 test('signed settings hash is canonical, scoped and excludes unsupported arbitrary keys',()=>{
  assert.equal(ftextSettingsHash(config),ftextSettingsHash(Object.fromEntries(Object.entries(config).reverse())));
