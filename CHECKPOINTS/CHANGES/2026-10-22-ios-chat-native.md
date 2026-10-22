@@ -1,3 +1,7 @@
+## Playback observation dependency review
+
+While6cddeef7 was queued for macOS, review found Playback uses Combine ObservableObject/Published without importing Combine; added the explicit import. PushManager has no observed properties and is a delegate singleton, so removed its unnecessary ObservableObject conformance. No runtime/protocol test weakened, fresh source checks required; no iPhone PASS.
+
 ## Transport initialization compile correction
 
 Run39806233769/job119920077670 fa902d50 failed core compilation at ChatHTTP.swift:34: assigning the initialized IUO session to a local inferred an Optional URLSession. Request now uses an explicit guarded nonoptional session. A separate no-redirect delegate also avoids the URLSession→delegate→transport ownership cycle, with a meaningful weak-reference regression; cache/credential/redirect and POST no-replay tests retained. No unchanged rerun or weakened test. Actual fresh compilation/tests required.

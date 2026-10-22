@@ -1,4 +1,5 @@
 import AVFoundation
+import Combine
 import UniformTypeIdentifiers
 import MWSChatCore
 // AVFoundation reads an in-memory custom resource. No file URL, export or cache.

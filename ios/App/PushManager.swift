@@ -4,7 +4,7 @@ import CryptoKit
 import FirebaseCore
 import FirebaseMessaging
 import MWSChatCore
-@MainActor final class PushManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate, MessagingDelegate {
+@MainActor final class PushManager: NSObject, UNUserNotificationCenterDelegate, MessagingDelegate {
     static let shared = PushManager()
     weak var model: ChatModel?
     private let vault = TokenVault()
