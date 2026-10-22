@@ -73,3 +73,17 @@ test('actual internal commerce HTTP transport bypasses the invoice provider mete
   assert.deepEqual(await request('/synthetic',{authorization:'synthetic-internal'}),{ok:true});assert.equal(calls,1);
  }finally{globalThis.fetch=previous}
 });
+
+test('failed review persistence still stops paid fallbacks and retains the original uncertain hold',async()=>{
+ for(const provider of ['OPENAI','AZURE']){
+  let paid=0,fallback=0;
+  const f=fixture({repository:{review:async()=>{throw Error('synthetic database unavailable SECRET')}},transport:async()=>{paid++;throw Error('synthetic provider timeout')}});
+  await assert.rejects(f.meter.run(scope,async()=>{
+   try{
+    if(provider==='OPENAI')return await f.meter.responsesFetch(url,options);
+    return await f.meter.azure({...page},async mark=>{paid++;mark('operation');throw Error('synthetic Azure timeout')});
+   }catch(error){throwIfWalletError(error);fallback++;throw error}
+  }),e=>e.code==='AI_WALLET_USAGE_REVIEW'&&e.status===409&&!e.message.includes('SECRET'));
+  assert.equal(paid,1);assert.equal(fallback,0);assert.equal(f.events.filter(e=>e.kind==='reserve').length,1);assert.equal(f.events.filter(e=>e.kind==='settle').length,0);
+ }
+});

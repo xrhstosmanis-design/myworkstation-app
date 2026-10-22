@@ -1,3 +1,4 @@
+import FtextInstallationSetup from './FtextInstallationSetup.jsx';
 import React,{useEffect,useState} from "react";
 import {RefreshCw,MonitorUp} from "lucide-react";
 import RbsInstallationSetup from "./RbsInstallationSetup.jsx";
@@ -28,6 +29,7 @@ export default function StoreInstallationGuide({company,store,request,onOpenTerm
     <button onClick={refresh} disabled={busy}><RefreshCw/> {busy?"Έλεγχος…":"Επανέλεγχος εγκατάστασης"}</button>
     {error&&<p role="alert">Δεν ολοκληρώθηκε ο έλεγχος: {error}. Οι ελλείπουσες πηγές δεν θεωρούνται έτοιμες.</p>}
     {result&&rows.map(([title,ok,detail,next])=><article key={title} style={{background:"white",padding:14,marginTop:10,borderRadius:10,borderLeft:`4px solid ${ok?"#087a52":"#d98b21"}`}}><b>{title}</b><p>{ok?"Ρύθμιση υπάρχει":"Χρειάζεται έλεγχος / ενέργεια"} · {detail}</p><p>{next}</p></article>)}
+    {result&&<FtextInstallationSetup key={'ftext-'+store.id} company={company} store={store} terminals={terminals} request={request}/>}
     {result&&<RbsInstallationSetup key={store.id} company={company} store={store} terminals={terminals} request={request}/>}
     <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}><button onClick={()=>onOpenTerminals(company,store,false)}><MonitorUp/> Τερματικά / Αντιστοίχιση εξοπλισμού</button><a href="https://github.com/xrhstosmanis-design/myworkstation-app/blob/main/docs/installation/RBS_STORE_SETUP.md" target="_blank" rel="noreferrer">Κεντρικός οδηγός RBS</a><a href="https://github.com/xrhstosmanis-design/myworkstation-app/tree/main/tools/windows-rbs-capdriver-v1" target="_blank" rel="noreferrer">Αρχεία σύνδεσης Windows</a></div>
     <p><small>Οι αποθηκευμένες ρυθμίσεις διατηρούνται στον server. Δεν στέλνεται φορολογική εντολή από αυτόν τον έλεγχο. Εκκρεμεί η φυσική δοκιμή. Ο CAPDriver της RBS και ο εξοπλισμός πρέπει να έχουν εγκατασταθεί και ρυθμιστεί στον τελικό υπολογιστή.</small></p>
