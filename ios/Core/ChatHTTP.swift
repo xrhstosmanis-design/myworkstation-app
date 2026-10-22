@@ -9,10 +9,14 @@ public extension ChatTransport {
         guard let j = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw ChatError.invalid }; return j
     }
 }
-public final class ChatHTTP: NSObject, ChatTransport, URLSessionTaskDelegate, @unchecked Sendable {
+private final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
+}
+public final class ChatHTTP: NSObject, ChatTransport, @unchecked Sendable {
     private let lock = NSLock()
     private var tasks: [UUID: Task<Data, Error>] = [:]
-    private var session: URLSession!
+    private var session: URLSession?
+    private let redirects = NoRedirectDelegate()
     public init(protocolClasses: [AnyClass]? = nil) {
         super.init()
         let c = URLSessionConfiguration.ephemeral
@@ -20,16 +24,16 @@ public final class ChatHTTP: NSObject, ChatTransport, URLSessionTaskDelegate, @u
         c.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         c.httpShouldSetCookies = false; c.timeoutIntervalForRequest = 20; c.timeoutIntervalForResource = 80
         if let protocolClasses { c.protocolClasses = protocolClasses }
-        session = URLSession(configuration: c, delegate: self, delegateQueue: nil)
+        session = URLSession(configuration: c, delegate: redirects, delegateQueue: nil)
     }
-    public func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
     public func request(_ path: String, method: String, body: [String: Any]?, token: String, max: Int) async throws -> Data {
         guard ["GET", "POST", "DELETE"].contains(method), max > 0, max <= 17 * 1024 * 1024 else { throw ChatError.invalid }
         var r = URLRequest(url: try ChatPolicy.url(path)); r.httpMethod = method
         r.setValue("no-store", forHTTPHeaderField: "Cache-Control"); r.setValue("no-cache", forHTTPHeaderField: "Pragma"); r.setValue("application/json", forHTTPHeaderField: "Accept")
         if !token.isEmpty { r.setValue("Bearer " + token, forHTTPHeaderField: "Authorization") }
         if let body { let b = try JSONSerialization.data(withJSONObject: body); guard b.count <= 17 * 1024 * 1024 else { throw ChatError.tooLarge }; r.httpBody = b; r.setValue("application/json", forHTTPHeaderField: "Content-Type") }
-        let id = UUID(), request = r, session = self.session
+        guard let session else { throw ChatError.unavailable }
+        let id = UUID(), request = r
         let task = Task<Data, Error> {
             let (stream, response) = try await session.bytes(for: request)
             guard let h = response as? HTTPURLResponse else { throw ChatError.unavailable }
@@ -45,5 +49,5 @@ public final class ChatHTTP: NSObject, ChatTransport, URLSessionTaskDelegate, @u
     private func track(_ id: UUID, _ task: Task<Data, Error>) { lock.lock(); tasks[id] = task; lock.unlock() }
     private func untrack(_ id: UUID) { lock.lock(); tasks.removeValue(forKey: id); lock.unlock() }
     public func cancel() { lock.lock(); let running = Array(tasks.values); tasks.removeAll(); lock.unlock(); running.forEach { $0.cancel() } }
-    deinit { session.invalidateAndCancel() }
+    deinit { session?.invalidateAndCancel() }
 }

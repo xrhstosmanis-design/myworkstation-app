@@ -1,3 +1,7 @@
+## Transport initialization compile correction
+
+Run39806233769/job119920077670 fa902d50 failed core compilation at ChatHTTP.swift:34: assigning the initialized IUO session to a local inferred an Optional URLSession. Request now uses an explicit guarded nonoptional session. A separate no-redirect delegate also avoids the URLSession→delegate→transport ownership cycle, with a meaningful weak-reference regression; cache/credential/redirect and POST no-replay tests retained. No unchanged rerun or weakened test. Actual fresh compilation/tests required.
+
 ## Actual app compilation correction / observed SwiftUI declarations
 
 Second run39804690008 ated68bb2f: all9 core testsPASS on Xcode26.3/Swift6.2.4; package resolution and simulator bootSUCCESS. Actual app compilation failed because @Published/@State declarations combined multiple bindings, unsupported by Swift property wrappers. Split each observed binding into its own declaration; no test/assertion removed. Simulator tests/media/archive had not run. This correction also completes a non-exporting/no-undo native composer, whole logout field clearing, bounded self-contained MP4 references before AVFoundation, explicit H264/AAC synthetic coverage, app icon/privacy manifest and public SDK-only CI download caching. Fresh exact compile/all tests still REQUIRED; not a physical or release PASS.

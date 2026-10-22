@@ -11,6 +11,11 @@ final class StubURLProtocol: URLProtocol {
 }
 final class ChatHTTPTests: XCTestCase {
     override func tearDown() { StubURLProtocol.handler = nil }
+    func testTransportDoesNotRetainItselfThroughSessionDelegate() {
+        weak var reference: ChatHTTP?
+        do { let api = ChatHTTP(protocolClasses: [StubURLProtocol.self]); reference = api; XCTAssertNotNil(reference) }
+        XCTAssertNil(reference)
+    }
     func testBoundedFixedOriginAuthAndNoAutomaticPostReplay() async throws {
         var count = 0
         StubURLProtocol.handler = { r in count += 1; XCTAssertEqual(r.url?.host, "myworkstation-app.onrender.com"); XCTAssertEqual(r.httpMethod, "POST"); XCTAssertEqual(r.value(forHTTPHeaderField: "Authorization"), "Bearer fixture"); XCTAssertEqual(r.value(forHTTPHeaderField: "Cache-Control"), "no-store"); return (503, Data("{}".utf8)) }
