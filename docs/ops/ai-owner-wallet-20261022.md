@@ -53,3 +53,7 @@ The original reservation is committed before provider I/O. If a provider/settlem
 ## Current technical source receipt22Oct2026
 
 Foundation independently verified in live9a67265. Invoice3037 full3869server+8backup SUCCESS; review-fail-stop3041 full3877server+8backup SUCCESS, zero failures/skips, merged7f5afd3. The original073 push-main full CI ultimately passed after isolated browser-startup retry. Main CI39819683069 and ordinary exact release of the final review guard remain pending at this receipt. Runtime/invoice/mail flags and approved tariffs were not changed, real inbox and hosted LAB acceptance NOT TESTED.
+
+## Latest release gate22Oct17:21UTC
+
+Exact final wallet source7f5afd3 main CI39819683069 SUCCESS3892server+8backup, zero failures/skips. Normal release39821474323 was explicitly WITHHELD for newer paid-module source5c8ccf5/full CI39821105794; workflow SUCCESS is not installation. Public health remains9a67265, invoice extension not yet independently verified deployed. Retained owner must verify the later normal combined release and source blobs; no guard bypass, live billing activation or hosted/email PASS.

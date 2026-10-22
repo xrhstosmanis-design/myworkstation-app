@@ -1,5 +1,5 @@
 {
-  "status": "ENGINEERING_MAIN_CI_VERIFIED_RELEASE_PENDING",
+  "status": "ENGINEERING_COMPLETE_AWAITING_OWNER_APPLE_SETUP",
   "owner": "feat/ios-chat-native-20261022",
   "claimPr": 3020,
   "sourcePr": 3025,
@@ -89,7 +89,6 @@
   "productionChatAiPushBusinessTest": false,
   "androidChanged": false,
   "remaining": [
-    "ordinary guarded latest combined server release and healthy revision verification",
     "owner Apple membership/App Store Connect/Firebase iOS/APNs/signing and real TestFlight delivery",
     "one final consolidated physical iPhone batch"
   ],
@@ -116,7 +115,7 @@
   "combinedBackupTests": 8,
   "ownedSourceBlobCount": 35,
   "ownedSourceMismatches": 0,
-  "releaseStatus": "awaiting latest StorePaidModule writer source5c8ccf5e fullCI39821105794; normal guard retained",
+  "releaseStatus": "ordinary guarded release SUCCESS; Render LIVE and independent exact public healthy revision verified",
   "newerMainFullCi": 39819683069,
   "newerMain": "7f5afd3c41153b6cdc4315a165880e71db533dd0",
   "newerServerTests": 3892,
@@ -128,5 +127,26 @@
     "reason": "Exact main revision has no successful full CI build-and-test job",
     "unchangedRetry": false,
     "bypass": false
-  }
+  },
+  "latestCombinedMainFullCi": 39821105794,
+  "latestCombinedMain": "5c8ccf5ef1c3aea57a9c7d11d5cc1550d9052774",
+  "latestServerTests": 3916,
+  "latestBackupTests": 8,
+  "releaseWorkflow": 39822773699,
+  "releaseJob": 119978211519,
+  "release": {
+    "observedAt": "2026-10-22T17:34:02.453041+00:00",
+    "url": "https://myworkstation-app.onrender.com/api/health",
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "5c8ccf5ef1c3aea57a9c7d11d5cc1550d9052774"
+    },
+    "deploy": "dep-dbd4faff3r2c739b9rpg",
+    "renderStatus": "live",
+    "verificationScope": "exact healthy server revision only; no physical iPhone, Apple signing, APNs delivery or business test"
+  },
+  "releaseOwnedSourceBlobs": 35,
+  "releaseOwnedSourceMismatches": 0,
+  "documentationPr": 3046
 }
