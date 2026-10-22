@@ -1,0 +1,117 @@
+name: iOS Chat Preview
+on:
+  pull_request:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios-chat-preview.yml', 'server/src/native-chat-push.mjs', 'server/src/native-fcm-provider.mjs', 'server/src/routes/native-chat-push.js', 'server/test/native-ios-push.test.mjs', 'server/test/native-fcm.test.mjs']
+  push:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios-chat-preview.yml', 'server/src/native-chat-push.mjs', 'server/src/native-fcm-provider.mjs', 'server/src/routes/native-chat-push.js', 'server/test/native-ios-push.test.mjs', 'server/test/native-fcm.test.mjs']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-chat-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  build-test-ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record Apple toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEVELOPER_DIR="$(find /Applications -maxdepth 1 -name 'Xcode*.app' -print | sort -V | tail -n 1)/Contents/Developer"
+          test -d "$DEVELOPER_DIR"
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> "$GITHUB_ENV"
+          export DEVELOPER_DIR
+          xcodebuild -version
+          xcrun swift --version
+          mkdir -p ios-evidence
+      - name: Install project generator
+        run: brew install xcodegen
+      - name: Core boundary and ephemeral HTTP tests
+        run: swift test --package-path ios 2>&1 | tee ios-evidence/core-tests.log
+      - name: Generate native project
+        working-directory: ios
+        run: xcodegen generate
+      - name: Restore public pinned SDK dependencies only
+        id: sdk-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ios-packages
+          key: ${{ runner.os }}-${{ runner.arch }}-ios-public-sdk-${{ hashFiles('ios/project.yml') }}
+      - name: Resolve pinned Messaging dependency
+        id: resolve-sdk
+        run: xcodebuild -resolvePackageDependencies -project ios/MWChat.xcodeproj -scheme MWChat -clonedSourcePackagesDirPath ios-packages
+      - name: Preserve public SDK download after successful resolution
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ios-packages
+          key: ${{ steps.sdk-cache.outputs.cache-primary-key }}
+      - name: Select real available iPhone simulator
+        run: |
+          set -euo pipefail
+          xcrun simctl list devices available -j > ios-evidence/simulators.json
+          DEVICE_ID=$(python3 - <<'PY'
+          import json
+          d=json.load(open('ios-evidence/simulators.json'))
+          candidates=[x for runtime,rows in d['devices'].items() if 'iOS' in runtime for x in rows if x.get('isAvailable') and x['name'].startswith('iPhone')]
+          if not candidates: raise SystemExit('No available iPhone simulator')
+          print(candidates[0]['udid'])
+          PY
+          )
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$DEVICE_ID" || xcrun simctl list devices booted | grep -F "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+      - name: Actual app unit, H264 memory media and native UI lifecycle tests
+        run: |
+          set -euo pipefail
+          xcodebuild test -project ios/MWChat.xcodeproj -scheme MWChat -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE_ID" -parallel-testing-enabled NO -clonedSourcePackagesDirPath ios-packages -derivedDataPath ios-build-test -resultBundlePath ios-evidence/Simulator.xcresult CODE_SIGNING_ALLOWED=NO 2>&1 | tee ios-evidence/simulator-tests.log
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cross-check actual Apple-produced memory MP4 against unmodified server validator
+        run: |
+          set -euo pipefail
+          CONTAINER=$(xcrun simctl get_app_container "$DEVICE_ID" gr.myworkstation.chat.ios.preview data)
+          test -s "$CONTAINER/tmp/mws-synthetic-memory-video.mp4"
+          test -s "$CONTAINER/tmp/mws-synthetic-memory-video-aac.mp4"
+          cp "$CONTAINER/tmp/mws-synthetic-memory-video.mp4" ios-evidence/synthetic-memory-video.mp4
+          cp "$CONTAINER/tmp/mws-synthetic-memory-video-aac.mp4" ios-evidence/synthetic-memory-video-aac.mp4
+          node --input-type=module -e 'import {readFileSync,writeFileSync} from "node:fs";import {validateVideoMp4} from "./server/src/chat-video.mjs";const proofs=["synthetic-memory-video.mp4","synthetic-memory-video-aac.mp4"].map(file=>({file,...validateVideoMp4(readFileSync("ios-evidence/"+file))}));if(!proofs.every(p=>p.durationMs>0&&p.durationMs<=30000))throw Error("Invalid duration");writeFileSync("ios-evidence/server-media-proof.json",JSON.stringify({kind:"Actual AVAssetWriter H264 and H264/AAC memory segments remuxed in iOS simulator; unchanged server validator",proofs,physicalAcceptance:false},null,2));console.log(proofs);'
+      - name: Export synthetic native UI proof
+        run: |
+          xcrun xcresulttool export attachments --path ios-evidence/Simulator.xcresult --output-path ios-evidence/attachments
+          find ios-evidence/attachments -type f -name '*.png' | grep .
+      - name: Unsigned iPhone Release archive; not an installable IPA
+        run: |
+          set -euo pipefail
+          xcodebuild archive -project ios/MWChat.xcodeproj -scheme MWChat -configuration Release -destination 'generic/platform=iOS' -archivePath ios-evidence/MWChat-Unsigned.xcarchive -clonedSourcePackagesDirPath ios-packages -derivedDataPath ios-build-release CODE_SIGNING_ALLOWED=NO 2>&1 | tee ios-evidence/release-build.log
+          test -s ios-evidence/MWChat-Unsigned.xcarchive/Products/Applications/MWChat.app/MWChat
+          if strings ios-evidence/MWChat-Unsigned.xcarchive/Products/Applications/MWChat.app/MWChat | grep -F 'fixture-store'; then echo 'Debug fixture leaked into Release'; exit 1; fi
+          ditto -c -k --sequesterRsrc --keepParent ios-evidence/MWChat-Unsigned.xcarchive ios-evidence/MWChat-Unsigned.xcarchive.zip
+          rm -r ios-evidence/MWChat-Unsigned.xcarchive
+          python3 - <<'PY'
+          import hashlib,json,os,subprocess,zipfile,plistlib
+          from pathlib import Path
+          p=Path('ios-evidence/MWChat-Unsigned.xcarchive.zip')
+          with zipfile.ZipFile(p) as archive:
+              info=plistlib.loads(archive.read('MWChat-Unsigned.xcarchive/Products/Applications/MWChat.app/Info.plist'))
+          if (info.get('CFBundleIdentifier'),info.get('CFBundleShortVersionString'),info.get('CFBundleVersion')) != ('gr.myworkstation.chat.ios.preview','0.1.0','1'): raise SystemExit('Actual archive identity/version does not match intended preview')
+          receipt={'sourceSha':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'runId':os.environ['GITHUB_RUN_ID'],'package':info['CFBundleIdentifier'],'version':info['CFBundleShortVersionString'],'build':int(info['CFBundleVersion']),'artifact':'Unsigned device archive only; not installable; no TestFlight upload','bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'signing':False,'physicalAcceptance':False,'productionRequests':False}
+          Path('ios-evidence/receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - name: Preserve actual build/test receipts and synthetic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyWorkStation-iOS-Preview-Evidence
+          path: ios-evidence/
+          if-no-files-found: error
+          retention-days: 14
