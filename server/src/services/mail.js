@@ -1,8 +1,87 @@
 import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
-import { normalizeReportRecipients } from "./report-recipients.js";
+import { normalizeReportRecipients, reportRecipientListSchema } from "./report-recipients.js";
 import nodemailer from "nodemailer";
 
 const DEFAULT_PORT=465;
+
+// Additive transport boundary only. Verification, consent and committed start
+// remain the driver's responsibility; construction never creates an SMTP client.
+export function createAutomaticReportSmtpTransport(options){
+  const invalid=()=>{throw Object.assign(new Error("Invalid automatic report transport input."),{code:"INVALID_REPORT_TRANSPORT"})};
+  const data=(value,keys,required=keys)=>{
+    if(!value||typeof value!=="object"||Array.isArray(value)||![Object.prototype,null].includes(Object.getPrototypeOf(value)))invalid();
+    const result=Object.create(null);
+    for(const key of Reflect.ownKeys(value)){
+      const d=Object.getOwnPropertyDescriptor(value,key);
+      if(typeof key!=="string"||!keys.includes(key)||!d.enumerable||!Object.hasOwn(d,"value"))invalid();
+      result[key]=d.value;
+    }
+    if(required.some(key=>!Object.hasOwn(result,key)))invalid();
+    return result;
+  };
+  const text=(value,max)=>typeof value==="string"&&value.length>0&&value===value.trim()&&value.length<=max&&!/[\u0000-\u001f\u007f]/.test(value);
+  const email=value=>text(value,254)&&value===value.toLowerCase()&&!/[,;]/.test(value)&&reportRecipientListSchema.safeParse(value).success;
+  const args=data(options,["companyId","storeId","env","createTransport"],["companyId","storeId"]);
+  if(!text(args.companyId,200)||!text(args.storeId,200))invalid();
+  const scope=Object.freeze({companyId:args.companyId,storeId:args.storeId});
+  assertCustomerDemoOutboundAllowed(scope);
+  const factory=args.createTransport===undefined?nodemailer.createTransport:args.createTransport;
+  if(typeof factory!=="function")invalid();
+  const environment=args.env===undefined?process.env:args.env,environmentCopy=Object.create(null);
+  if(!environment||typeof environment!=="object"||Array.isArray(environment))invalid();
+  for(const key of ["SMTP_HOST","SMTP_PORT","SMTP_SECURE","SMTP_USER","SMTP_PASSWORD","MAIL_FROM"]){
+    const d=Object.getOwnPropertyDescriptor(environment,key);
+    if(!d)continue;
+    if(!d.enumerable||!Object.hasOwn(d,"value")||typeof d.value!=="string")invalid();
+    environmentCopy[key]=d.value;
+  }
+  const config=Object.freeze(getMailConfig(environmentCopy));
+  // MAIL_TEST_RECIPIENT belongs to the legacy test-email API, not this sender.
+  if(!config.host||!config.user||!config.password||!email(config.from.toLowerCase())||/[\r\n]/.test(config.from)||config.port>65535)
+    throw Object.assign(new Error("Automatic report SMTP is not configured."),{status:503,code:"REPORT_SMTP_NOT_CONFIGURED"});
+  const own=(value,key)=>{
+    const d=Object.getOwnPropertyDescriptor(value,key);
+    if(!d)return {present:false};
+    if(!d.enumerable||!Object.hasOwn(d,"value"))invalid();
+    return {present:true,value:d.value};
+  };
+  const list=value=>{
+    if(!Array.isArray(value)||Object.getPrototypeOf(value)!==Array.prototype||value.length>1000||Reflect.ownKeys(value).length!==value.length+1)invalid();
+    const result=[];
+    for(let i=0;i<value.length;i++){const entry=own(value,String(i));if(!entry.present||!text(entry.value,254))invalid();result.push(entry.value)}
+    return Object.freeze(result);
+  };
+  const receipt=result=>{
+    if(!result||typeof result!=="object"||Array.isArray(result)||![Object.prototype,null].includes(Object.getPrototypeOf(result)))invalid();
+    // Nodemailer rejection details are not part of the minimal receipt, but
+    // contradictory or opaque rejection evidence must never disappear when
+    // projecting an otherwise successful-looking result.
+    const rejectedErrors=own(result,"rejectedErrors");
+    if(rejectedErrors.present&&list(rejectedErrors.value).length)invalid();
+    const output={};
+    for(const key of ["accepted","rejected","pending","messageId","response","envelope"]){
+      const item=own(result,key);if(!item.present)continue;
+      if(["accepted","rejected","pending"].includes(key))output[key]=list(item.value);
+      else if(key==="envelope"){
+        const e=data(item.value,["from","to"],["to"]);
+        if(Object.hasOwn(e,"from")&&!text(e.from,254))invalid();
+        output.envelope=Object.freeze({...e,to:list(e.to)});
+      }else{if(!text(item.value,key==="response"?2000:500))invalid();output[key]=item.value}
+    }
+    // Missing evidence remains missing. In particular never substitute intended
+    // recipients or an empty rejection list for the provider's actual receipt.
+    return Object.freeze(output);
+  };
+  return Object.freeze({async sendMail(raw){
+    assertCustomerDemoOutboundAllowed(scope);
+    const message=data(raw,["to","subject","text"]);
+    if(!email(message.to)||!text(message.subject,1000)||typeof message.text!=="string"||!message.text.length||Buffer.byteLength(message.text,"utf8")>2*1024*1024)invalid();
+    const transport=factory({host:config.host,port:config.port,secure:config.secure,auth:{user:config.user,pass:config.password},connectionTimeout:15000,greetingTimeout:15000,socketTimeout:20000});
+    if(!transport||typeof transport.sendMail!=="function")invalid();
+    const result=await transport.sendMail({from:`MyWorkStation <${config.from}>`,to:message.to,envelope:{from:config.from,to:[message.to]},subject:message.subject,text:message.text});
+    return receipt(result);
+  }});
+}
 
 export function getMailConfig(env=process.env){
   const port=Number(env.SMTP_PORT||DEFAULT_PORT);
