@@ -1,3 +1,7 @@
+## 22/10/2026 - AUTOMATIC-DISPATCH-LEGACY-BOUNDARY-01 / TEST-FIXTURE AMENDMENT BEFORE EDIT
+
+Samecentralowner, greenclaim3081/CI39851283667/merge7ec41aba16e6e2d9f56db6b6c20a5c253587890b. Add ONLY existing server/test/automatic-report-eligibility.test.js and server/test/automatic-report-dispatch.test.js to root-owned fixtureadaptation scope: newsharedhelperissues realLOCK through $executeRawUnsafe; oldsynthetictxmustexposecorrectinterface and retainmeaningfullockorder/revocation/sourceassertions. These2fileedits begin ONLYafterthisamendmentgreenmerged. No runtimecontractexpansion, no bypass/no weaken nativeexecution; other3081sourcecancontinuewithinitsgreenclaim. dispatchOFF, actualDDL/SMTP/config/enrollment/restore notperformed. Checkpoint CHECKPOINTS/CHANGES/2026-10-22-automatic-dispatch-legacy-boundary.md.
+
 ## 22/10/2026 23:37 Europe/Athens — KAT38 OLD-CARD RETIREMENT / COMPLETE / LIMITED LIVE CONFIGURATION PASS
 
 Retained KAT owner ops/kat-retire38-20261022. Explicit owner “ναι σβηστα” refers ONLY to38reviewed old/test cards in OWNER_REVIEW_38.md, not57corrected cards or original imported catalog. Reversible store-only inactive status applied through native selected Κυλικείο ΚΑΤ Inventory; no permanent deletion or history removal. Claim PR3074 final5dd4f65b300a75c9029e4e6cb89a5e3f0e80cb39/docsCI39849726053SUCCESS merged5c0c45b547dba7e70ae9892536917b3f06aa5cf4 BEFORE real save, preserving concurrent main updates.
