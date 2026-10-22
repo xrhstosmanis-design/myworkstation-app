@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {readLifecycleGeneration,assertLifecycleMutation} from './store-lifecycle-generation.js';
+import {lockAutomaticReportBoundary} from './automatic-report-lock-boundary.js';
 import {automaticReportConfigurationSchema} from './automatic-report-settings.js';
 import {completedReportPeriod} from './automatic-report-policy.js';
 import {readAutomaticCashPreviewInTransaction} from './automatic-report-source.js';
@@ -24,8 +24,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
  async function context(tx,raw,now){
   const scope=automaticReportScopeInput(raw);now=iso(now);
   const control=activationProvider();if(!control?.valid||!control.enabled)hold();
-  const lifecycle=await readLifecycleGeneration(tx,scope);if(!lifecycle.enrolled)hold();
-  await assertLifecycleMutation(tx,scope,lifecycle.generation,{lock:true});
+  const lifecycle=await lockAutomaticReportBoundary(tx,scope);
   const [company]=await tx.$queryRaw`SELECT "id","active","licenseStatus","subscriptionEndsAt" FROM "Company" WHERE "id"=${scope.companyId} FOR SHARE NOWAIT`;
   const [store]=await tx.$queryRaw`SELECT "id","companyId","name","active" FROM "Store" WHERE "id"=${scope.storeId} AND "companyId"=${scope.companyId} FOR SHARE NOWAIT`;
   if(!company?.active||!store?.active||['EXPIRED','SUSPENDED'].includes(company.licenseStatus)||company.subscriptionEndsAt&&iso(company.subscriptionEndsAt)<now)hold();
