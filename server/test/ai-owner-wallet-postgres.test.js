@@ -102,7 +102,7 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     await assert.rejects(invoice.run({companyId:'c',storeId:'s'},tokenCall),e=>e.code==='AI_WALLET_USAGE_REVIEW'&&e.status===409);
     assert.equal(BigInt((await repository.read('c')).balanceMicros),sourceBalance-88n);
     assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry" WHERE "usage"->>'providerResponseId'='native-invoice-provider-response'`)[0].count,1);
-    assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry" WHERE "feature"='INVOICE_OPENAI' AND "status"='REVIEW'`)[0].count,1);
+    assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry" WHERE "companyId"='c' AND "feature"='INVOICE_OPENAI' AND "status"='REVIEW'`)[0].count,1);
     await assert.rejects(invoice.run({companyId:'c',storeId:'foreign'},tokenCall),e=>e.status===403);assert.equal(invoicePaidCalls,2);
     await repository.configure('x',{version:0,enabled:true,emailEnabled:false,notificationOwnerId:''},'admin');
     await assert.rejects(invoice.run({companyId:'x',storeId:'foreign'},tokenCall),e=>e.status===402);assert.equal(invoicePaidCalls,2);
