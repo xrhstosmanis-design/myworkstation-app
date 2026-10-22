@@ -25,7 +25,10 @@ export function createWalletProvider({repository,enabled=()=>process.env.AI_OWNE
     }catch(error){
       // A lost provider reply may still have incurred cost. Retain the hold
       // durably for an explicit reviewed resolution, never silently refund.
-      await repository.review(scope.companyId,reservation.id);
+      try{await repository.review(scope.companyId,reservation.id)}catch{
+        // The original RESERVED hold is already durable. If marking REVIEW
+        // also fails, preserve the billing error so callers cannot pay again.
+      }
       if(error?.code?.startsWith('AI_WALLET_'))throw error;
       throw walletError('AI_WALLET_USAGE_REVIEW',503);
     }

@@ -61,3 +61,9 @@ test('mail acceptance requires one exact positive recipient and rejects partial/
 test('notification dispatcher cannot initialize schema or send mail with the runtime gate off',async()=>{
   const drain=createWalletNotificationDispatcher({enabled:()=>false,repository:{ensure(){throw Error('schema effect')}},send(){throw Error('outbound effect')}});assert.deepEqual(await drain(),{attempted:0});
 });
+
+test('review database failure preserves a safe wallet error and never releases the original hold',async()=>{
+ const f=fixture({review:async()=>{throw Error('SECRET review database failure')}});
+ await assert.rejects(f.provider(scope,{model:tariff.model},async()=>{throw Error('provider timeout')}),e=>e.code==='AI_WALLET_USAGE_REVIEW'&&e.status===503&&!e.message.includes('SECRET'));
+ assert.equal(f.calls.filter(c=>c[0]==='reserve').length,1);assert.equal(f.calls.filter(c=>c[0]==='settle').length,0);
+});
