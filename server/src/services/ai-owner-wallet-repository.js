@@ -1,5 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {MAX_WALLET_MICROS,positiveMicros,walletError,walletView} from './ai-owner-wallet-contract.js';
+import {readWalletUsageSummary} from './ai-owner-wallet-usage.js';
 
 // Dedicated tables only. No initialization at import/startup; the runtime gate
 // must be explicitly enabled before routes/provider adapters use this repository.
@@ -56,7 +57,8 @@ export function createAiOwnerWalletRepository(db){
     const notices=await db.$queryRaw`SELECT "id","kind","balanceMicros","amountMicros","emailStatus","createdAt" FROM "AiOwnerWalletNotice" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 30`;
     const usage=storeId?await db.$queryRaw`SELECT "storeId",SUM("chargedMicros")::text AS "chargedMicros",COUNT(*)::int AS "requests" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "status"='SETTLED' GROUP BY "storeId"`:await db.$queryRaw`SELECT "storeId",SUM("chargedMicros")::text AS "chargedMicros",COUNT(*)::int AS "requests" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "status"='SETTLED' GROUP BY "storeId"`;
     const json=value=>JSON.parse(JSON.stringify(value,(_,v)=>typeof v==='bigint'?v.toString():v));
-    return {...wallet,entries:json(entries),notices:json(notices),usage,usageScope:storeId?'SELECTED_STORE':'COMPANY',storeId};
+    const usageSummary=await readWalletUsageSummary(db,companyId,storeId);
+    return {...wallet,entries:json(entries),notices:json(notices),usage,usageSummary:json(usageSummary),usageScope:storeId?'SELECTED_STORE':'COMPANY',storeId};
   }
   async function configure(companyId,input,actorId){
     await ensure();return db.$transaction(async tx=>{
