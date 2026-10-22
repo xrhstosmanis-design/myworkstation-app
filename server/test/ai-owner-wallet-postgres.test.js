@@ -6,6 +6,7 @@ import {createWalletNotificationDispatcher} from '../src/services/ai-owner-walle
 import {createWalletAccess} from '../src/services/ai-owner-wallet-access.js';
 import {createAiOwnerWalletRoutes} from '../src/routes/ai-owner-wallet.js';
 import {createWalletProvider} from '../src/services/ai-owner-wallet-provider.js';
+import {readWalletUsageSummary} from '../src/services/ai-owner-wallet-usage.js';
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 
 test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access, notifications and unchanged business controls',{skip:!isolated()},async()=>{
@@ -28,6 +29,33 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     await db.$executeRaw`INSERT INTO "BusinessControl" VALUES('control',12,123.45,25)`;
     const before=await db.$queryRaw`SELECT * FROM "BusinessControl"`;
     const repository=createAiOwnerWalletRepository(db);await repository.ensure();
+    // More than the recent100 rows; Athens midnight/month boundaries, both
+    // invoice providers, foreign scopes, future rows and unsettled holds.
+    await db.$executeRaw`INSERT INTO "AiOwnerWallet" ("companyId","cycleId") VALUES ('report-company','report-cycle'),('report-foreign','foreign-cycle')`;
+    await db.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","storeId","kind","reference","status","reservedMicros","chargedMicros","feature","createdAt","settledAt")
+      SELECT 'report-question-'||n,'report-company','report-store','USAGE','report-question-'||n,'SETTLED',1,1,'OWNER_ASSISTANT','2026-10-21T21:10:00Z'::timestamptz,'2026-10-21T21:10:00Z'::timestamptz FROM generate_series(1,125) n`;
+    const reportRows=[
+      ['openai','report-company','report-store','SETTLED','INVOICE_OPENAI',70,'2026-10-21T21:15:00Z'],
+      ['azure','report-company','report-store','SETTLED','INVOICE_AZURE',30,'2026-10-21T20:59:59Z'],
+      ['other','report-company','report-store','SETTLED','FUTURE_AI',25,'2026-09-30T21:00:00Z'],
+      ['old','report-company','report-store','SETTLED','INVOICE_OPENAI',1000,'2026-09-30T20:59:59Z'],
+      ['store-control','report-company','other-store','SETTLED','OWNER_ASSISTANT',9000,'2026-10-21T21:15:00Z'],
+      ['company-control','report-foreign','report-store','SETTLED','OWNER_ASSISTANT',90000,'2026-10-21T21:15:00Z'],
+      ['future','report-company','report-store','SETTLED','INVOICE_OPENAI',700,'2026-10-21T22:00:00Z'],
+      ['review','report-company','report-store','REVIEW','INVOICE_OPENAI',0,null],
+      ['reserved','report-company','report-store','RESERVED','OWNER_ASSISTANT',0,null]
+    ];
+    for(const [id,company,store,status,feature,charged,settled] of reportRows)await db.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","storeId","kind","reference","status","reservedMicros","chargedMicros","feature","settledAt") VALUES (${id},${company},${store},'USAGE',${id},${status},${charged+10},${charged},${feature},${settled}::timestamptz)`;
+    await db.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","kind","reference","status","creditedMicros") VALUES ('report-credit','report-company','CREDIT','report-credit','CREDITED',5000)`;
+    const summary=await readWalletUsageSummary(db,'report-company','report-store',new Date('2026-10-21T21:30:00Z'));
+    assert.equal(summary.localDate,'2026-10-22');assert.equal(summary.monthStartDate,'2026-10-01');
+    assert.equal(summary.allTimeMicros,'1250');assert.equal(summary.monthMicros,'250');assert.equal(summary.todayMicros,'195');
+    assert.deepEqual(summary.categories,[{category:'INVOICES',allTimeMicros:'1100',monthMicros:'100',todayMicros:'70'},{category:'OTHER',allTimeMicros:'25',monthMicros:'25',todayMicros:'0'},{category:'QUESTIONS',allTimeMicros:'125',monthMicros:'125',todayMicros:'125'}]);
+    assert.ok(summary.daily.some(r=>r.date==='2026-10-21'&&r.category==='INVOICES'&&r.chargedMicros==='30'));
+    assert.equal(summary.daily.reduce((n,r)=>n+BigInt(r.chargedMicros),0n),250n);
+    assert.equal((await readWalletUsageSummary(db,'report-company',null,new Date('2026-10-21T21:30:00Z'))).allTimeMicros,'10250');
+    const emptySummary=await readWalletUsageSummary(db,'report-company','empty-store',new Date('2026-10-21T21:30:00Z'));assert.equal(emptySummary.allTimeMicros,'0');assert.deepEqual(emptySummary.categories,[]);assert.deepEqual(emptySummary.daily,[]);
+    assert.equal((await repository.read('report-company','report-store')).entries.length,100);
     await repository.configure('c',{version:0,enabled:true,emailEnabled:true,notificationOwnerId:'owner'},'admin');
     const funding={amountMicros:'1000000',receiptReference:'synthetic-receipt-1'};
     const credit=await Promise.all([repository.credit('c',funding,'admin'),repository.credit('c',funding,'admin')]);assert.equal(credit[0].id,credit[1].id);assert.equal((await repository.read('c')).balanceMicros,'1000000');
@@ -86,7 +114,7 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     app.use('/wallet',createAiOwnerWalletRoutes({db,repository,authenticate,access:createWalletAccess(db),enabled:()=>true}));
     server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/wallet`;
     const request=async(path,actor='owner',method='GET',body)=>{const r=await fetch(base+path,{method,headers:{...(actor?{'x-test-actor':actor}:{}),'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:r.status===401?null:await r.json()}};
-    assert.equal((await request('/stores/s')).status,200);assert.equal((await request('/stores/s',null)).status,401);assert.equal((await request('/stores/s','employee')).status,403);assert.equal((await request('/stores/foreign')).status,404);
+    const ownerRead=await request('/stores/s');assert.equal(ownerRead.status,200);assert.equal(ownerRead.body.usageSummary.timeZone,'Europe/Athens');assert.ok(ownerRead.body.usageSummary.categories.every(r=>['INVOICES','OTHER'].includes(r.category)));assert.equal((await request('/stores/s',null)).status,401);assert.equal((await request('/stores/s','employee')).status,403);assert.equal((await request('/stores/foreign')).status,404);
     assert.equal((await request('/platform/companies/c')).status,403);
     // Prisma enum filters cast to this isolated schema's native UserRole type,
     // exactly as in production. A text-only fixture cannot exercise this read.

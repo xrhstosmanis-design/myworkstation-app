@@ -68,3 +68,10 @@ Pricing limitation before activation: the current three-rate contract does not d
 Assigned owner visibility extension: selected-store settled usage through today, month/day totals and daily breakdown in Europe/Athens from the full ledger, with server as-of timestamp. Display customer charge and keep reservations separate. NOT YET IMPLEMENTED; protected company/store authorization and stale-store UI guards remain required.
 
 Owner additionally requires separate invoice/question/other-AI cost categories and dated detailed entries. Aggregate both invoice providers as invoices, Owner assistant as questions, and preserve unknown future categories visibly. Do not infer invoice identities or question texts from provider calls; current historical entries contain feature only and cannot honestly establish cost per individual invoice/question.
+
+
+## Owner customer-cost breakdown — source awaiting full CI/LAB
+
+Owner wallet displays selected-store settled customer debits: today, current month and all history through a server timestamp, with Europe/Athens date boundaries. Invoice OpenAI/Azure charges are grouped as invoices, Owner assistant calls as questions, other features as other AI. Daily categories cover the current month; recent movements retain the100-entry limit and label each feature. Aggregates use the complete ledger and exclude credits, unsettled holds and future settlement times. Shared company balance is still separately labelled.
+
+These are final configured customer charges, not wholesale provider costs.50percent markup is owner-approved but tariff activation remains pending. One invoice/question can generate multiple provider calls; historical feature-only entries cannot establish unique invoice/question counts or individual invoice totals. No prompt, source document, question text or inferred invoice identity is added. New source is AWAITING full native CI, normal release and hosted acceptance, no customer funding or price change.
