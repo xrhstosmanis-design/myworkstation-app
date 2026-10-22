@@ -1,5 +1,5 @@
 {
-  "status": "INVOICE_AND_REVIEW_GUARD_SOURCE_GREEN_MERGED_AWAITING_MAIN_RELEASE",
+  "status": "OWN_SOURCE_AND_MAIN_CI_SUCCESS_NORMAL_RELEASE_HELD_FOR_NEWER_SOURCE",
   "owner": "feat/ai-owner-wallet-20261022",
   "pr": 3037,
   "sourceHead": "606bcdebbbc81d0486f5b1f9fbe1880b7e766245",
@@ -59,7 +59,7 @@
     "status": "Actions and Pull Requests degraded",
     "updated": "2026-10-22T16:35:07Z"
   },
-  "nextAction": "Verify current full main CI containing7f5afd3 and normal guarded deployed source blobs, then measured acceptance before approved-price activation",
+  "nextAction": "Await newer-source full main CI, inspect normal guarded release, independently verify health and deployed wallet source blobs against7f5afd3; no bypass or transaction replay",
   "sourceMerge": "073fd234b5a7ef60062ccf408bee8b4cb3923cf0",
   "reviewFollowup": {
     "pr": 3041,
@@ -92,12 +92,44 @@
   "latestMainCI": {
     "id": 39819683069,
     "head": "7f5afd3c41153b6cdc4315a165880e71db533dd0",
-    "statusAtReceipt": "PENDING",
-    "conclusion": null
+    "conclusion": "SUCCESS",
+    "server": {
+      "pass": 3892,
+      "fail": 0,
+      "skipped": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skipped": 0
+    },
+    "job": 119970778384
   },
   "lastObservedHealth": {
     "ok": true,
     "revision": "9a67265aaa916058621b5291c96268b6f0093bb9",
     "invoiceExtensionVerified": false
+  },
+  "latestReceipt": {
+    "pr": 3045,
+    "ci": 39820044137,
+    "merge": "b93a4c324c7db5217682d010f0aff7941f86e1de"
+  },
+  "release": {
+    "workflow": 39821474323,
+    "job": 119973691747,
+    "workflowConclusion": "SUCCESS",
+    "installation": "WITHHELD_NOT_INSTALLED",
+    "proof": "2026-10-22T17:19:26Z A newer production source revision is on main; await its full CI",
+    "newerSource": "5c8ccf5ef1c3aea57a9c7d11d5cc1550d9052774",
+    "newerSourcePR": 3044,
+    "newerSourceFullCI": 39821105794,
+    "newerSourceCIStatusAtReceipt": "IN_PROGRESS",
+    "earlierSafeFreshnessFailure": {
+      "run": 39820564262,
+      "job": 119970527806,
+      "expected": "65b773bfe4b81942a0bde5a02486451175865960",
+      "reason": "Exact main revision has no successful full CI build-and-test job"
+    }
   }
 }
