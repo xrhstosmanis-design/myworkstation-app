@@ -63,7 +63,13 @@ export function createInvoiceWalletMeter({repository=aiOwnerWalletRepository,env
       const usage={providerResponseId:'AZURE:'+createHash('sha256').update(operation).digest('hex'),model,apiVersion,pages};
       await repository.settle(scope.companyId,reservation.id,{amountMicros:amount,usage});
       return payload;
-    }catch(error){await repository.review(scope.companyId,reservation.id);throw walletError('AI_WALLET_USAGE_REVIEW',409)}
+    }catch(error){
+      try{await repository.review(scope.companyId,reservation.id)}catch{
+        // Keep the durable RESERVED hold and the fail-stop even if DB review
+        // persistence is unavailable; abandoned holds remain admin-reviewable.
+      }
+      throw walletError('AI_WALLET_USAGE_REVIEW',409);
+    }
   }
   return {run,responsesFetch,azure};
 }
