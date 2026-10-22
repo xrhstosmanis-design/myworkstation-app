@@ -1,6 +1,6 @@
 {
   "scope": "AUTOMATIC-DISPATCH-LEGACY-BOUNDARY-01",
-  "stage": "SOURCE INTEGRATED AWAITING FULL NATIVE CI",
+  "stage": "COORDINATED OPERATOR HANDOFF AWAITING NEW FULL CI",
   "claims": [
     {
       "pr": 3081,
@@ -74,11 +74,6 @@
       "gitBlob": "e75d9f686a8e89ab3dd8fe2ab1ab22d611173d41"
     },
     {
-      "path": "ops/backup/provision-automatic-reports.mjs",
-      "sha256": "c2fe7b2968b0c4941ac30b6499bb9bf3050f34f905bd3be3f7f6e543f6e29e16",
-      "gitBlob": "7588764f71cb76250b4521ab7232c17cacbce10b"
-    },
-    {
       "path": "server/src/services/automatic-report-lock-boundary.js",
       "sha256": "e64991e924784ea8e887b95cf05605cce9b88af93b85b4b71aeffa526edf0a90",
       "gitBlob": "71554258138b5d4b367e59fce92c96385ed83f23"
@@ -87,11 +82,22 @@
       "path": "server/test/automatic-report-legacy-lifecycle-postgres.test.js",
       "sha256": "967378f4dacce4f629ccbfc0d8563b6ec1170e907569c7598fc33e89f8580a27",
       "gitBlob": "e12aa57c30041bd1930dd5b09b26db8a4291daa2"
-    },
-    {
-      "path": "server/test/automatic-report-provision-operator.test.js",
-      "sha256": "bb676318df0ee6decfc48f5a5500219629d957d9a95f1804d6bfa22cd12f6a29",
-      "gitBlob": "4f6e2fba5193c36904225108053980524cf236a9"
     }
-  ]
+  ],
+  "priorFullCI": {
+    "head": "e4218b49b24a48b4997245d9b689e478bb2598aa",
+    "run": 39853104901,
+    "job": 120084570119,
+    "serverPass": 4133,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 8,
+    "aggregate": "success"
+  },
+  "operatorHandoff": {
+    "pr": 3084,
+    "merged": "a4b04d55f47752cca0e14acd47b28e4be47ab1d8",
+    "entrypoint": "server/scripts/automatic-report-provision.mjs",
+    "duplicateOperatorRemoved": true
+  }
 }
