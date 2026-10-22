@@ -1,3 +1,9 @@
+## 22/10/2026 - AUTOMATIC-DISPATCH-PERSISTENCE-RESTORE-01 / SAFE TWO-PHASE MANIFEST AMENDMENT BEFORE SOURCE
+
+Same owner/greenclaim3062/CI39832842921/merge145a9896b29a797b8c5dccf12957f3a9881d5599. Root review found canonicalmanifest promotion before explicit6table provisioning would break existing lifecycle inspect (reviewed relation missing) even while dispatchOFF. Therefore runtime OFF source must preserve existing canonicalmanifest/columnreview bytes and lifecycleplanHash. Infrastructure additionally claims exactly NEW ops/backup/lifecycle/automatic-report-manifest.proposed.json and automatic-report-column-review.proposed.json, full prospective reviewed snapshots only, not default loader input. Newartifact writes start only after this amendmentgreenmerged. Restore only this page's unpublishedcanonical additions; preserve unrelatedowners.
+
+After explicit reviewed provisioning, native exactschema+restoreproof, noactive lifecyclejobs and synchronizedapp/backuprollout, finalpromotion can install proposedcanonicalmanifest atomically under separate exactclaim. No optional-table/executor relaxation or missingtablebypass. All6tablesDIRECT/resetREMOVE; fullprospectivereview includes challengeLifecycleGeneration and all finalcolumns. This source trancheremains defaultOFF/noactualDDL/config/SMTP/restore, no finalready/PASS claim. Other3062sourcepaths unchanged. Source may deployOFF without breaking currentlifecycle; activation/provisioning gate stays concrete. Checkpoint CHECKPOINTS/CHANGES/2026-10-22-automatic-dispatch-persistence-restore.md.
+
 ## 22/10/2026 - AUTOMATIC-DISPATCH-PERSISTENCE-RESTORE-01 / ASSIGNED BEFORE SOURCE
 
 Owner codex/central-auto-dispatch-20261022 under explicit owner approval and green transfer3059/39831061467/220315e. This is exact next integration source claim; source begins only AFTER applicable claimCI green mergedmain. SMTP tranche3061 separately reviewed/frozen and awaits fullCI; no overlapping edits to mail.js.
