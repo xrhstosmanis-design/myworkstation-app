@@ -1,3 +1,9 @@
+## 22/10/2026 — Missing VAT department: LIMITED LAB SAVE PASS
+
+Authorized SuperAdmin/Owner opens explicitly selected company/store → Εμπορική λειτουργία → Λοιπές εμπορικές λειτουργίες → Αποθήκη. Search reviewed exact identities, verify selected-row count, choose Ομαδική διόρθωση and one existing active company Τμήμα ΦΠΑ with the SAME current rate. Keep category/subcategory/retail/activation unchanged and SET unchecked. Review register/code/semantic source mapping, save once, then verify saved department and unchanged prices/stocks. Do not map only by percentage or automatically verify0% exemption.
+
+Observed22Oct20:30Athens in synthetic LAB: one existing LAB-CAFE-20260927 null→01.ΚΑΦΕΣ/register1/code1/13%; vatVerified true, rate13/retail1/stock-2/all other product/store fields unchanged. KAT1900 rows and LAB/N40/KAT finance, shifts, movement and layout controls unchanged. No sale or fiscal transaction. This PASS does not cover price/merge/0% exemption/physical receipt or real KAT configuration. On timeout inspect persisted state before retry. Checkpoint2026-10-22-kat-missing-fiscal-mappings.md and measured lab.json authoritative.
+
 ## 21/10/2026 — Real KAT coffee fee configuration / LIMITED LIVE PASS
 
 Authorized owner/SuperAdmin uses the explicitly selected Κυλικείο ΚΑΤ Inventory bulk SET workflow documented below. It is already applied:57 prepared-coffee identities now associate existing KAT-32944 qty1/0.05;36 identical embedded preparation fees cleared. Preserve7inactive, two excluded raw capsules, base prices/VAT/departments and all stocks. Do not run the configuration/import again. Cashier refreshes POS catalog before use; coffee adds its separate0.05 line automatically and parent qty/removal controls its quantity, as measured in the prior LAB acceptance (1.65+0.05=1.70).
