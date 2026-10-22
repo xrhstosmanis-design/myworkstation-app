@@ -7,7 +7,7 @@ final class MemoryAsset: NSObject, AVAssetResourceLoaderDelegate {
     let asset: AVURLAsset
     private let queue = DispatchQueue(label: "mws.memory.playback")
     init(_ data: Data, mime: String) {
-        self.data = data; self.mime = mime
+        self.data = mime == "video/mp4" && !MP4.selfContained(data) ? Data() : data; self.mime = mime
         asset = AVURLAsset(url: URL(string: "mws-memory://media/" + UUID().uuidString + ".mp4")!, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
         super.init(); asset.resourceLoader.setDelegate(self, queue: queue)
     }
@@ -28,7 +28,7 @@ final class MemoryAsset: NSObject, AVAssetResourceLoaderDelegate {
     func prepare(_ media: DraftMedia) {
         stop()
         if media.mime == "audio/wav" { do { audio = try AVAudioPlayer(data: media.bytes); audio?.prepareToPlay() } catch {} }
-        if media.mime == "video/mp4" { let r = MemoryAsset(media.bytes, mime: media.mime); resource = r; player = AVPlayer(playerItem: AVPlayerItem(asset: r.asset)) }
+        if media.mime == "video/mp4" { let r = MemoryAsset(media.bytes, mime: media.mime); resource = r; let p = AVPlayer(playerItem: AVPlayerItem(asset: r.asset)); p.allowsExternalPlayback = false; player = p }
     }
     func play() { audio?.currentTime = 0; audio?.play(); player?.seek(to: .zero); player?.play() }
     func pause() { audio?.stop(); player?.pause() }

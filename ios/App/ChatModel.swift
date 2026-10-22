@@ -20,12 +20,26 @@ struct DraftMedia: Identifiable {
 @MainActor final class ChatModel: ObservableObject {
     enum Screen { case login, operatorLink, operatorPin, stores, conversation }
     @Published var screen: Screen = .login
-    @Published var stores: [Store] = [], selected: Store?, messages: [Message] = []
-    @Published var challenge = "", status = "", busy = false, active = true
-    @Published var draft = "", media: [DraftMedia] = [], ai = false, aiReady = false
-    @Published var photosEnabled = false, voiceAvailable = false, videoAvailable = false
-    @Published var aiRows: [(String, Bool)] = [], evidence = "", operators: [(String, String)] = []
-    @Published var operatorStore = "", uncertainStore = "", preview: DraftMedia?
+    @Published var stores: [Store] = []
+    @Published var selected: Store?
+    @Published var messages: [Message] = []
+    @Published var challenge = ""
+    @Published var status = ""
+    @Published var busy = false
+    @Published var active = true
+    @Published var draft = ""
+    @Published var media: [DraftMedia] = []
+    @Published var ai = false
+    @Published var aiReady = false
+    @Published var photosEnabled = false
+    @Published var voiceAvailable = false
+    @Published var videoAvailable = false
+    @Published var aiRows: [(String, Bool)] = []
+    @Published var evidence = ""
+    @Published var operators: [(String, String)] = []
+    @Published var operatorStore = ""
+    @Published var uncertainStore = ""
+    @Published var preview: DraftMedia?
     var token = "", identity: [String: Any] = [:], history: [[String: String]] = []
     let api: ChatTransport
     private let vault = TokenVault()
@@ -51,7 +65,7 @@ struct DraftMedia: Identifiable {
     func background() { active = false; clearContent() }
     func foreground() async { active = true; if !challenge.isEmpty && !TokenClaims.usable(challenge, challenge: true) { clearChallenge() }; if !token.isEmpty && !TokenClaims.usable(token) { clearSession(); status = ChatError.expired.localizedDescription }; if !token.isEmpty { if selected != nil { await reload() } else { await loadStores() } } }
     func clearChallenge() { challenge = ""; vault.remove("challenge") }
-    func clearSession() { clearContent(); token = ""; identity = [:]; selected = nil; stores = []; uncertainStore = ""; clearChallenge(); vault.remove("token"); screen = .login; PushManager.shared.clear() }
+    func clearSession() { clearContent(); token = ""; identity = [:]; selected = nil; stores = []; operators = []; operatorStore = ""; uncertainStore = ""; clearChallenge(); vault.remove("token"); screen = .login; PushManager.shared.clear() }
     @discardableResult func call(_ path: String, method: String = "GET", body: [String: Any]? = nil, anonymous: Bool = false) async -> [String: Any]? {
         guard !busy, active else { return nil }; busy = true; status = method == "GET" ? "Ανανέωση…" : "Παρακαλώ περίμενε…"
         let epoch = fence.epoch, captured = token, scope = selected?.scope

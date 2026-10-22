@@ -65,5 +65,6 @@ final class ChatPolicyTests: XCTestCase {
         let moof = fragment(UInt32(fragment(0).count+8)), bytes = initial + moof + MP4.atom("mdat", Data([1,2,3,4]))
         let flat = try MP4.flatten(bytes); XCTAssertTrue(MP4.validEnvelope(flat)); XCTAssertFalse(try MP4.boxes(flat).contains { $0.kind == "moof" }); XCTAssertEqual(try MP4.boxes(flat).map(\.kind), ["ftyp", "mdat", "moov"])
         XCTAssertThrowsError(try MP4.flatten(initial + fragment(0) + MP4.atom("mdat", Data([1,2,3,4]))))
+        XCTAssertFalse(MP4.selfContained(flat), "An envelope without an explicit self-contained track data reference cannot reach AVFoundation")
     }
 }

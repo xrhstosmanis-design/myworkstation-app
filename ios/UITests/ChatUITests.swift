@@ -7,7 +7,7 @@ final class ChatUITests: XCTestCase {
         app.buttons["Έτοιμες"].tap(); let reply = app.buttons["Το ελέγχω και θα απαντήσω."]; XCTAssertTrue(reply.waitForExistence(timeout: 5)); reply.tap()
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "composer").firstMatch.value as? String, "Το ελέγχω και θα απαντήσω.")
         let proof = XCTAttachment(screenshot: app.screenshot()); proof.name = "native-conversation-normal"; proof.lifetime = .keepAlways; add(proof)
-        app.buttons["Αποστολή μηνύματος"].tap(); XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "composer").firstMatch.waitForExistence(timeout: 5)); XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "composer").firstMatch.value as? String, "Γράψε μήνυμα…")
+        app.buttons["Αποστολή μηνύματος"].tap(); XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "composer").firstMatch.waitForExistence(timeout: 5)); XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "composer").firstMatch.value as? String, "")
     }
     func testBackgroundClearsDraftOnRealApplicationLifecycle() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-fixture"]; app.launch(); let store = app.buttons["store-fixture-store"]; XCTAssertTrue(store.waitForExistence(timeout: 15)); store.tap()

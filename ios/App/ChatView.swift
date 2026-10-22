@@ -16,8 +16,14 @@ struct RootView: View {
     @ObservedObject var model: ChatModel
     @Environment(\.scenePhase) private var phase
     @State private var captured = UIScreen.main.isCaptured
-    @State private var email = "", password = "", link = "", employee = ""
-    @State private var picker: String?, camera: String?, replySheet = false, evidenceSheet = false
+    @State private var email = ""
+    @State private var password = ""
+    @State private var link = ""
+    @State private var employee = ""
+    @State private var picker: String?
+    @State private var camera: String?
+    @State private var replySheet = false
+    @State private var evidenceSheet = false
     @State private var importEpoch: UInt64 = 0
     @State private var importScope: Scope?
     private let purple = Color(red: 0.44, green: 0.28, blue: 0.76)
@@ -43,6 +49,7 @@ struct RootView: View {
             if next == .active && !captured { Task { await model.foreground() } }
         }
         .task { PushManager.shared.model = model; await model.foreground(); PushManager.shared.resume() }
+        .onChange(of: model.token) { _, value in if value.isEmpty { email = ""; password = ""; link = ""; employee = ""; picker = nil; camera = nil; replySheet = false; evidenceSheet = false } }
         .sheet(item: Binding(get: { picker.map(PickerItem.init) }, set: { picker = $0?.id })) { item in
             MediaPicker(video: item.id == "video") { media, error in picker = nil; if let error { model.status = error }; model.addMedia(media, epoch: importEpoch, scope: importScope) }.ignoresSafeArea()
         }
@@ -103,14 +110,14 @@ struct RootView: View {
             }
             HStack(spacing: 8) {
                 if !model.ai { Menu { Button("Λήψη φωτογραφίας") { stamp(); camera = "photo" }; Button("Επιλογή φωτογραφιών") { stamp(); picker = "photos" } } label: { Image(systemName: "plus").frame(width: 48, height: 48).background(purple.opacity(0.12)).clipShape(Circle()) }.disabled(!model.photosEnabled || model.busy) }
-                TextField(model.ai ? "Ρώτησε τον βοηθό…" : "Γράψε μήνυμα…", text: $model.draft, axis: .vertical).lineLimit(1...4).autocorrectionDisabled().textInputAutocapitalization(.sentences).padding(12).background(.white).clipShape(RoundedRectangle(cornerRadius: 24)).accessibilityIdentifier("composer")
+                ZStack(alignment: .leading) { if model.draft.isEmpty { Text(model.ai ? "Ρώτησε τον βοηθό…" : "Γράψε μήνυμα…").foregroundStyle(.secondary).padding(.horizontal, 14).allowsHitTesting(false) }; PrivateComposer(text: $model.draft, placeholder: model.ai ? "Ρώτησε τον βοηθό…" : "Γράψε μήνυμα…", maximum: model.ai ? 600 : 5000) }.background(.white).clipShape(RoundedRectangle(cornerRadius: 24))
                 Button { Task { await model.send() } } label: { Image(systemName: "paperplane.fill").frame(width: 48, height: 48).background(purple).foregroundStyle(.white).clipShape(Circle()) }.accessibilityLabel("Αποστολή μηνύματος").accessibilityIdentifier("send")
             }.padding(10).disabled(model.busy || (model.ai && !model.aiReady) || model.uncertainStore == model.selected?.id)
         }
     }
     private func stamp() { importEpoch = model.generation; importScope = model.selected?.scope }
     private func tool(_ text: String, icon: String, action: @escaping () -> Void) -> some View { Button(action: action) { toolLabel(text, icon: icon) } }
-    private func toolLabel(_ text: String, icon: String) -> some View { Label(text, systemImage: icon).font(.subheadline).lineLimit(2).frame(maxWidth: .infinity, minHeight: 48).padding(.horizontal, 4).background(purple.opacity(0.10)).clipShape(RoundedRectangle(cornerRadius: 20)) }
+    private func toolLabel(_ text: String, icon: String) -> some View { Label(text, systemImage: icon).labelStyle(.titleOnly).font(.subheadline).lineLimit(2).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, minHeight: 48).padding(.horizontal, 4).background(purple.opacity(0.10)).clipShape(RoundedRectangle(cornerRadius: 20)) }
     private func bubble(_ body: String, own: Bool, meta: String, message: Message?) -> some View {
         HStack { if own { Spacer(minLength: 30) }; VStack(alignment: .leading, spacing: 8) { if !body.isEmpty { Text(body).font(.body) }; if let message { if message.attachment { Button(message.mime == "video/mp4" ? "▶ Βίντεο" : message.mime == "audio/wav" ? "▶ Φωνητικό" : "Φωτογραφία · προβολή") { Task { await model.attachment(message) } }.frame(minHeight: 44).disabled(model.busy) }; if !message.read { Button("Σημείωση ως διαβασμένο") { Task { await model.markRead(message) } }.font(.footnote).disabled(model.busy) } }; if !meta.isEmpty { Text(meta).font(.caption).foregroundStyle(.secondary) } }.padding(14).background(own ? purple.opacity(0.13) : .white).clipShape(RoundedRectangle(cornerRadius: 20)); if !own { Spacer(minLength: 30) } }
     }

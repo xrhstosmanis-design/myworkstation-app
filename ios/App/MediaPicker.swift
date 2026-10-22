@@ -33,7 +33,7 @@ struct MediaPicker: UIViewControllerRepresentable {
                             }
                         }
                         if parent.video {
-                            guard MP4.validEnvelope(bytes) else { throw ChatError.invalid }
+                            guard MP4.selfContained(bytes) else { throw ChatError.invalid }
                             let resource = MemoryAsset(bytes, mime: "video/mp4")
                             let seconds = try await resource.asset.load(.duration).seconds
                             guard seconds.isFinite, seconds > 0, seconds <= 30 else { throw ChatError.invalid }

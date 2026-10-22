@@ -80,7 +80,10 @@ final class AudioPCMStore: @unchecked Sendable {
     func take() -> (Data, Bool) { lock.lock(); defer { lock.unlock() }; let result = (bytes, overflow); bytes.removeAll(); return result }
 }
 @MainActor final class CaptureState: ObservableObject {
-    @Published var draft: DraftMedia?, error = "", recording = false, seconds = 0
+    @Published var draft: DraftMedia?
+    @Published var error = ""
+    @Published var recording = false
+    @Published var seconds = 0
     let camera = CameraPipeline()
     private var engine: AVAudioEngine?, converter: AVAudioConverter?, timer: Timer?
     private let pcm = AudioPCMStore()

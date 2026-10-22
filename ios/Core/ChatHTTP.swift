@@ -10,18 +10,18 @@ public extension ChatTransport {
     }
 }
 public final class ChatHTTP: NSObject, ChatTransport, URLSessionTaskDelegate, @unchecked Sendable {
-    private let protocolClasses: [AnyClass]?
-    public init(protocolClasses: [AnyClass]? = nil) { self.protocolClasses = protocolClasses; super.init() }
     private let lock = NSLock()
     private var tasks: [UUID: Task<Data, Error>] = [:]
-    private lazy var session: URLSession = {
+    private var session: URLSession!
+    public init(protocolClasses: [AnyClass]? = nil) {
+        super.init()
         let c = URLSessionConfiguration.ephemeral
         c.urlCache = nil; c.httpCookieStorage = nil; c.urlCredentialStorage = nil
         c.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         c.httpShouldSetCookies = false; c.timeoutIntervalForRequest = 20; c.timeoutIntervalForResource = 80
-        if let protocolClasses = self.protocolClasses { c.protocolClasses = protocolClasses }
-        return URLSession(configuration: c, delegate: self, delegateQueue: nil)
-    }()
+        if let protocolClasses { c.protocolClasses = protocolClasses }
+        session = URLSession(configuration: c, delegate: self, delegateQueue: nil)
+    }
     public func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
     public func request(_ path: String, method: String, body: [String: Any]?, token: String, max: Int) async throws -> Data {
         guard ["GET", "POST", "DELETE"].contains(method), max > 0, max <= 17 * 1024 * 1024 else { throw ChatError.invalid }

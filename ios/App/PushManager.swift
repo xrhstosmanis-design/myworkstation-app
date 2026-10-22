@@ -16,14 +16,14 @@ import MWSChatCore
     static func binding(_ token: String) -> String { SHA256.hash(data: Data(token.utf8)).map { String(format: "%02x", $0) }.joined() }
     private func path(_ m: ChatModel) -> String { m.staff ? "/api/store-chat/stores/" + ChatPolicy.component(m.identity["storeId"] as? String ?? "") + "/native-push" : "/api/store-chat/mobile/native-push" }
     func activate() async {
-        guard let m = model, !m.token.isEmpty, !m.busy else { return }
+        guard let m = model, m.active, !m.token.isEmpty else { return }
         guard !deleting else { m.status = "Ολοκληρώνεται η προηγούμενη αποσύνδεση. Δοκίμασε ξανά σε λίγο."; return }
         let token = m.token, epoch = generation
         guard let check = try? await api.json(path(m), token: token), epoch == generation, token == m.token, check["configured"] as? Bool == true, check["iosAvailable"] as? Bool == true else { if epoch == generation, token == m.token { m.status = "Ο server δεν έχει ενεργή σύνδεση ειδοποιήσεων iOS." }; return }
         guard let file = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"), let options = FirebaseOptions(contentsOfFile: file), options.projectID == "myworkstation-chat", options.bundleID == Bundle.main.bundleIdentifier else { m.status = "Απαιτείται η ρύθμιση Apple/APNs και της εφαρμογής iOS στο Firebase."; return }
         do {
             let allowed = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
-            guard allowed, epoch == generation, token == m.token else { return }
+            guard allowed, m.active, epoch == generation, token == m.token else { return }
             if FirebaseApp.app() == nil { FirebaseApp.configure(options: options) }
             Messaging.messaging().delegate = self; Messaging.messaging().isAutoInitEnabled = true
             UNUserNotificationCenter.current().delegate = self; enabled = true

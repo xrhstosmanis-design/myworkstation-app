@@ -26,6 +26,30 @@ public enum MP4 {
     public static func validEnvelope(_ data: Data) -> Bool {
         guard data.count >= 32, data.count <= MediaPolicy.videoMax, let top = try? boxes(data), top.first?.kind == "ftyp", top.filter({ $0.kind == "ftyp" }).count == 1, top.filter({ $0.kind == "moov" }).count == 1, top.contains(where: { $0.kind == "mdat" && $0.end > $0.payload }), top.allSatisfy({ ["ftyp", "moov", "mdat", "free", "skip", "wide"].contains($0.kind) }) else { return false }; return true
     }
+    public static func selfContained(_ data: Data) -> Bool {
+        guard validEnvelope(data) else { return false }
+        do {
+            let moov = try one(boxes(data), "moov"), tracks = try boxes(data, from: moov.payload, to: moov.end).filter { $0.kind == "trak" }
+            guard (1...2).contains(tracks.count) else { return false }; var video = 0, audio = 0
+            for track in tracks {
+                let mdia = try one(boxes(data, from: track.payload, to: track.end), "mdia"), parts = try boxes(data, from: mdia.payload, to: mdia.end), hdlr = try one(parts, "hdlr")
+                guard hdlr.end-hdlr.payload >= 12 else { return false }; let kind = String(data: data[(hdlr.payload+8)..<(hdlr.payload+12)], encoding: .ascii)
+                if kind == "vide" { video += 1 } else if kind == "soun" { audio += 1 } else { return false }
+                let minf = try one(parts, "minf"), children = try boxes(data, from: minf.payload, to: minf.end), dinf = try one(children, "dinf"), dref = try one(boxes(data, from: dinf.payload, to: dinf.end), "dref")
+                guard dref.end-dref.payload >= 8, try u32(data, dref.payload+4) == 1 else { return false }
+                let refs = try boxes(data, from: dref.payload+8, to: dref.end)
+                guard refs.count == 1, refs[0].kind == "url ", refs[0].end-refs[0].payload == 4, try u32(data, refs[0].payload) == 1 else { return false }
+                let stbl = try one(children, "stbl"), stsd = try one(boxes(data, from: stbl.payload, to: stbl.end), "stsd")
+                guard stsd.end-stsd.payload >= 8, try u32(data, stsd.payload+4) == 1 else { return false }
+                let entries = try boxes(data, from: stsd.payload+8, to: stsd.end)
+                guard entries.count == 1 else { return false }; let entry = entries[0], offset = kind == "vide" ? 78 : 28
+                guard entry.kind == (kind == "vide" ? "avc1" : "mp4a"), entry.end-entry.payload >= offset, data[entry.payload+6] == 0, data[entry.payload+7] == 1 else { return false }
+                let codec = try boxes(data, from: entry.payload+offset, to: entry.end)
+                guard codec.contains(where: { $0.kind == (kind == "vide" ? "avcC" : "esds") }) else { return false }
+            }
+            return video == 1 && audio <= 1
+        } catch { return false }
+    }
     struct Sample { let bytes: Data; let duration: UInt32; let flags: UInt32; let composition: Int32 }
     struct Track { let id: UInt32; let scale: UInt32; let box: Box; var samples: [Sample] = []; var defaultDuration: UInt32 = 0; var defaultSize: UInt32 = 0; var defaultFlags: UInt32 = 0 }
     public static func flatten(_ data: Data) throws -> Data {
