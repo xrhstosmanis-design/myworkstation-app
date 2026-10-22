@@ -1,4 +1,5 @@
 import {attachKatWorkbook,validateKatDepartments} from './inventory-kat-source.js';
+import {attachRizareioWorkbook,validateRizareioDepartments} from './inventory-rizareio-source.js';
 const text=value=>String(value??"").trim();
 const fail=message=>{const error=new Error(message);error.status=400;throw error};
 const requiredDepartments=[
@@ -12,6 +13,7 @@ const requiredDepartments=[
 // This explicit source profile does not broaden the legacy Diadochou mappings.
 // Only the import sheet participates; review/excluded/reference sheets never do.
 export function attachSourceWorkbook(workbook,raw,XLSX){
+  if(workbook.SheetNames[0]==='RIZAREIO_IMPORT')return attachRizareioWorkbook(workbook,raw,XLSX);
   if(workbook.SheetNames[0]==='ΚΑΤ_IMPORT')return attachKatWorkbook(workbook,raw,XLSX);
   if(workbook.SheetNames[0]!=="ΠΡΟΪΟΝΤΑ_IMPORT")return raw;
   if(!workbook.Sheets["ΤΜΗΜΑΤΑ"]||!workbook.Sheets.BARCODES_IMPORT)fail("Λείπουν ΤΜΗΜΑΤΑ ή BARCODES_IMPORT από το πακέτο εισαγωγής.");
@@ -53,6 +55,7 @@ export function attachSourceWorkbook(workbook,raw,XLSX){
 
 export function validateSourceDepartments(profile,departments){
   if(!profile)return;
+  if(profile.name==='RIZAREIO_CATALOG_V1')return validateRizareioDepartments(profile,departments);
   if(profile.name==='KAT_CATALOG_V1')return validateKatDepartments(profile,departments);
   for(const expected of profile.departments){
     const matches=departments.filter(d=>d.description===expected.description);
