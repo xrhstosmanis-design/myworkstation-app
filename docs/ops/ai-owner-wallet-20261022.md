@@ -57,3 +57,14 @@ Foundation independently verified in live9a67265. Invoice3037 full3869server+8ba
 ## Latest release gate22Oct17:21UTC
 
 Exact final wallet source7f5afd3 main CI39819683069 SUCCESS3892server+8backup, zero failures/skips. Normal release39821474323 was explicitly WITHHELD for newer paid-module source5c8ccf5/full CI39821105794; workflow SUCCESS is not installation. Public health remains9a67265, invoice extension not yet independently verified deployed. Retained owner must verify the later normal combined release and source blobs; no guard bypass, live billing activation or hosted/email PASS.
+
+
+## Installed source and pricing preparation22Oct20:48Athens
+
+Actual ordinary release39822773699/job119978211519 installed combined5c8ccf5 after full main CI39821105794 SUCCESS3916server+8backup,0failures/skips. Independent health and24/24 runtime blob comparison confirm technical installation. This supersedes earlier pending/held installation statements, not hosted acceptance. Native Platform Admin read-only selection confirms runtime billing remains disabled.
+
+Pricing limitation before activation: the current three-rate contract does not distinguish newer-model cache-write lifetimes or long-context premiums. Official OpenAI prompt-caching and model documentation must govern an additive tariff extension before any exact-provider-cost claim. Preserve existing models/prompts and disabled compatibility. Actual deployed model configuration, approved EUR customer schedule, separately identified funding/grant budget, isolated/LAB acceptance and real inbox delivery remain unverified/unapproved.Owner explicitly selects50percent markup on verified provider AI cost converted to EUR:10EUR cost means15EUR customer charge. Markup approved, NOT yet applied.20EUR trial budget remains a proposal; no configuration or money changed.
+
+Assigned owner visibility extension: selected-store settled usage through today, month/day totals and daily breakdown in Europe/Athens from the full ledger, with server as-of timestamp. Display customer charge and keep reservations separate. NOT YET IMPLEMENTED; protected company/store authorization and stale-store UI guards remain required.
+
+Owner additionally requires separate invoice/question/other-AI cost categories and dated detailed entries. Aggregate both invoice providers as invoices, Owner assistant as questions, and preserve unknown future categories visibly. Do not infer invoice identities or question texts from provider calls; current historical entries contain feature only and cannot honestly establish cost per individual invoice/question.
