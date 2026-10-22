@@ -1,0 +1,165 @@
+TAP version 13
+# Subtest: actual settings writer locks original lifecycle epoch before parent Store, rule and first INSERT, then commits
+ok 1 - actual settings writer locks original lifecycle epoch before parent Store, rule and first INSERT, then commits
+  ---
+  duration_ms: 42.774369
+  ...
+# Subtest: enrolled missing/stale request generations refuse before Store lock or settings write
+ok 2 - enrolled missing/stale request generations refuse before Store lock or settings write
+  ---
+  duration_ms: 13.474985
+  ...
+# Subtest: busy, maintenance, retired and foreign lifecycle fences refuse the actual settings writer
+ok 3 - busy, maintenance, retired and foreign lifecycle fences refuse the actual settings writer
+  ---
+  duration_ms: 14.862685
+  ...
+# Subtest: Store NOWAIT conflict becomes explicit409 once, with no rule/readback/write; unrelated DB errors propagate
+ok 4 - Store NOWAIT conflict becomes explicit409 once, with no rule/readback/write; unrelated DB errors propagate
+  ---
+  duration_ms: 9.243157
+  ...
+# Subtest: fresh locked Store name governs the legacy cash rule instead of the preliminary scope read
+ok 5 - fresh locked Store name governs the legacy cash rule instead of the preliminary scope read
+  ---
+  duration_ms: 14.514469
+  ...
+# Subtest: scope and locked-row absence stop before rule/settings work
+ok 6 - scope and locked-row absence stop before rule/settings work
+  ---
+  duration_ms: 13.696559
+  ...
+# Subtest: parent locking preserves first-insert/version CAS conflicts and existing settings
+ok 7 - parent locking preserves first-insert/version CAS conflicts and existing settings
+  ---
+  duration_ms: 15.03217
+  ...
+# Subtest: absent lifecycle fence retains legacy generation zero without enrollment or DDL
+ok 8 - absent lifecycle fence retains legacy generation zero without enrollment or DDL
+  ---
+  duration_ms: 6.67668
+  ...
+# Subtest: mounted report dialog saves explicit store slots, previews saved versions and discards late results after store switch
+ok 9 - mounted report dialog saves explicit store slots, previews saved versions and discards late results after store switch
+  ---
+  duration_ms: 389.644939
+  ...
+# Subtest: platform mounts keyed per-store report settings without changing recipient saving or manual-send guards
+ok 10 - platform mounts keyed per-store report settings without changing recipient saving or manual-send guards
+  ---
+  duration_ms: 4.897391
+  ...
+# Subtest: explicit settings validate slots, terminal identity, ordering, mode and optimistic version without enabling dispatch
+ok 11 - explicit settings validate slots, terminal identity, ordering, mode and optimistic version without enabling dispatch
+  ---
+  duration_ms: 48.418625
+  ...
+# Subtest: shared legacy fallback preserves all three difference-only stores and normal delivery rules
+ok 12 - shared legacy fallback preserves all three difference-only stores and normal delivery rules
+  ---
+  duration_ms: 0.270255
+  ...
+# Subtest: scope rechecks actual role before querying the selected active store
+ok 13 - scope rechecks actual role before querying the selected active store
+  ---
+  duration_ms: 0.8695
+  ...
+# Subtest: confirmed effective legacy rule is explicit and changed rules/settings hold even a complete source
+ok 14 - confirmed effective legacy rule is explicit and changed rules/settings hold even a complete source
+  ---
+  duration_ms: 38.287671
+  ...
+# Subtest: existing public source and caller-owned source have exact daily/week/month parity without nested transactions
+ok 15 - existing public source and caller-owned source have exact daily/week/month parity without nested transactions
+  ---
+  duration_ms: 579.501269
+  ...
+# Subtest: public invalid inputs still fail before transaction and internal invalid inputs fail before any query
+ok 16 - public invalid inputs still fail before transaction and internal invalid inputs fail before any query
+  ---
+  duration_ms: 11.266755
+  ...
+# Subtest: saved preview performs all authority/settings/source reads in one read-only repeatable snapshot
+ok 17 - saved preview performs all authority/settings/source reads in one read-only repeatable snapshot
+  ---
+  duration_ms: 20.972647
+  ...
+# Subtest: same-snapshot integration preserves scope/settings refusal before any financial source read
+ok 18 - same-snapshot integration preserves scope/settings refusal before any financial source read
+  ---
+  duration_ms: 3.683378
+  ...
+# Subtest: integrated preview retains actual rule/open-source HOLD and payload refusal
+ok 19 - integrated preview retains actual rule/open-source HOLD and payload refusal
+  ---
+  duration_ms: 28.659165
+  ...
+# Subtest: source failure propagates through owned transaction without fallback or repair
+ok 20 - source failure propagates through owned transaction without fallback or repair
+  ---
+  duration_ms: 7.009991
+  ...
+# Subtest: request epochs are validated, immutable and isolated across concurrent async work
+ok 21 - request epochs are validated, immutable and isolated across concurrent async work
+  ---
+  duration_ms: 3.542566
+  ...
+# Subtest: root mutations carry their creation epoch transaction-locally and preserve results
+ok 22 - root mutations carry their creation epoch transaction-locally and preserve results
+  ---
+  duration_ms: 2.473139
+  ...
+# Subtest: batch transactions retain each original epoch, options, ordering and untagged legacy zero
+ok 23 - batch transactions retain each original epoch, options, ordering and untagged legacy zero
+  ---
+  duration_ms: 0.902081
+  ...
+# Subtest: callback transactions tag once, preserve options, roll back failures and do not leak context
+ok 24 - callback transactions tag once, preserve options, roll back failures and do not leak context
+  ---
+  duration_ms: 0.964427
+  ...
+# Subtest: fluent relations and raw tagged queries remain awaitable, without duplicate execution
+ok 25 - fluent relations and raw tagged queries remain awaitable, without duplicate execution
+  ---
+  duration_ms: 0.846323
+  ...
+# Subtest: native public Prisma raw, callback and mixed-epoch batches bind the original context and clear pooled connections after rollback
+ok 26 - native public Prisma raw, callback and mixed-epoch batches bind the original context and clear pooled connections after rollback # SKIP
+  ---
+  duration_ms: 0.296924
+  ...
+# Subtest: HTTP epoch metadata validates before handlers and never advances a missing legacy context
+ok 27 - HTTP epoch metadata validates before handlers and never advances a missing legacy context
+  ---
+  duration_ms: 15.262502
+  ...
+# Subtest: legacy missing enrollment stays zero, malformed and cross-company state fail closed
+ok 28 - legacy missing enrollment stays zero, malformed and cross-company state fail closed
+  ---
+  duration_ms: 2.384546
+  ...
+# Subtest: old and untagged requests cannot be upgraded; maintenance and retirement reject even current generation
+ok 29 - old and untagged requests cannot be upgraded; maintenance and retirement reject even current generation
+  ---
+  duration_ms: 1.382556
+  ...
+# Subtest: offline replay preserves original generations and stale payloads without tagging legacy requests
+ok 30 - offline replay preserves original generations and stale payloads without tagging legacy requests
+  ---
+  duration_ms: 1.956799
+  ...
+# Subtest: native generation lock serializes cutover, stale requests write nothing and transaction setting never leaks
+ok 31 - native generation lock serializes cutover, stale requests write nothing and transaction setting never leaks # SKIP
+  ---
+  duration_ms: 1.027043
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 29
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 0
+# duration_ms 848.970237
