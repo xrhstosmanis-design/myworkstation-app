@@ -116,5 +116,17 @@
   "combinedBackupTests": 8,
   "ownedSourceBlobCount": 35,
   "ownedSourceMismatches": 0,
-  "releaseStatus": "awaiting current independently owned ftext/wallet source CI; normal guard retained"
+  "releaseStatus": "awaiting latest StorePaidModule writer source5c8ccf5e fullCI39821105794; normal guard retained",
+  "newerMainFullCi": 39819683069,
+  "newerMain": "7f5afd3c41153b6cdc4315a165880e71db533dd0",
+  "newerServerTests": 3892,
+  "newerBackupTests": 8,
+  "refusedOldGuard": {
+    "run": 39820564262,
+    "job": 119970527806,
+    "revision": "65b773bfe4b81942a0bde5a02486451175865960",
+    "reason": "Exact main revision has no successful full CI build-and-test job",
+    "unchangedRetry": false,
+    "bypass": false
+  }
 }
