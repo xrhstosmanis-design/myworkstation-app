@@ -1,0 +1,40 @@
+{
+  "scope": "KAT native configuration readback; physical terminals NOT TESTED",
+  "version": 3702,
+  "publishedAt": "2026-10-22T10:07:35.196225+00:00",
+  "diffs": [],
+  "uniqueProductIds": 242,
+  "totalAssignments": 242,
+  "quickSlots": 20,
+  "quickAssigned": 15,
+  "rootSlots": 20,
+  "namedRoots": 16,
+  "children": 7,
+  "quickColorsPreserved": true,
+  "existingRootColorsPreserved": true,
+  "audiencePreserved": true,
+  "globalAndProtected": [
+    {
+      "store": "cmtpopbgo000trhb5ng9ytiru",
+      "version": 12,
+      "at": "2026-10-22T10:07:49.673197Z",
+      "differences": [],
+      "layoutChanged": false
+    },
+    {
+      "store": "cmv2qanca000psigeizep8o9m",
+      "at": "2026-10-22T10:07:49.673197Z",
+      "differences": [],
+      "layoutChanged": false
+    },
+    {
+      "store": "kat-store",
+      "version": 3702,
+      "at": "2026-10-22T10:07:49.673197Z",
+      "differences": [],
+      "layoutChanged": true
+    }
+  ],
+  "otherLayoutsUnchanged": true,
+  "audienceNote": "Previously absent audienceSettings normalizes to {}, per existing coalesce; no audience setting changed."
+}
