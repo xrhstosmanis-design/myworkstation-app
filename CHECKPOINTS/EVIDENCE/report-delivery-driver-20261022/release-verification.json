@@ -1,0 +1,89 @@
+{
+  "scope": "CENTRAL-AUTO-DELIVERY-DRIVER-01",
+  "kind": "technical-source-delivery-not-functional-acceptance",
+  "claim": {
+    "pr": 3024,
+    "head": "230921eecea686943650ae7770cf707cbda05810",
+    "ci": 39803847035,
+    "merge": "9b3acc495aeb07d85e676fe8a5513287245da754"
+  },
+  "source": {
+    "pr": 3027,
+    "head": "f17589cdffe7e0e62028374e36fd99a8c1a79016",
+    "merge": "07f42d06bbaf817e9ebb13fd324873584523e7f1",
+    "ci": 39805146136,
+    "serverPass": 3832,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "driverSha256": "5bbe0219999cece3c3ed9fc6100119349afb497e2d04f780e7bbd513aef562bc",
+    "testSha256": "e4acc30847bc9a00c71fec4b4b8d313ad35bd5173b2f49c0218b1410e69e1f2b"
+  },
+  "main": {
+    "revision": "9a67265aaa916058621b5291c96268b6f0093bb9",
+    "ci": 39807166764,
+    "buildJob": 119924210949,
+    "serverPass": 3859,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "driverNativeProof": [
+      "2026-10-22T15:44:59.3427057Z # Subtest: native PostgreSQL driver proves cross-client committed start, terminal persistence and concurrent no-resend",
+      "2026-10-22T15:44:59.3428596Z     # Subtest: independent client sees committed ATTEMPTING during transport and durable ACCEPTED after return",
+      "2026-10-22T15:44:59.3430126Z     ok 1 - independent client sees committed ATTEMPTING during transport and durable ACCEPTED after return",
+      "2026-10-22T15:44:59.3432439Z     # Subtest: transport exception persists UNKNOWN without retry",
+      "2026-10-22T15:44:59.3433195Z     ok 2 - transport exception persists UNKNOWN without retry",
+      "2026-10-22T15:44:59.3436161Z     # Subtest: two real clients racing one claimed record invoke transport only once",
+      "2026-10-22T15:44:59.3437464Z     ok 3 - two real clients racing one claimed record invoke transport only once",
+      "2026-10-22T15:44:59.3440026Z ok 343 - native PostgreSQL driver proves cross-client committed start, terminal persistence and concurrent no-resend",
+      "2026-10-22T15:48:14.7771696Z # tests 3859",
+      "2026-10-22T15:48:14.7772064Z # pass 3859",
+      "2026-10-22T15:48:14.7772248Z # fail 0",
+      "2026-10-22T15:48:14.7772619Z # skipped 0",
+      "2026-10-22T15:48:59.8283678Z # tests 8",
+      "2026-10-22T15:48:59.8285567Z # pass 8",
+      "2026-10-22T15:48:59.8286096Z # fail 0",
+      "2026-10-22T15:48:59.8287741Z # skipped 0"
+    ]
+  },
+  "release": {
+    "guard": 39808542280,
+    "job": 119928332990,
+    "deploy": "dep-dbd31teq1p3s73dp7m40",
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-22T15:41:14Z",
+        "id": "9a67265aaa916058621b5291c96268b6f0093bb9",
+        "message": "Merge pull request #3028 from xrhstosmanis-design/codex/report-settings-writer-lock-20261022\n\nfix(reports): fence actual settings saves with lifecycle and Store locks"
+      },
+      "createdAt": "2026-10-22T15:51:17.916547Z",
+      "finishedAt": "2026-10-22T15:56:27.889459Z",
+      "id": "dep-dbd31teq1p3s73dp7m40",
+      "startedAt": "2026-10-22T15:51:17.887789Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-22T15:56:27.889825Z"
+    },
+    "publicHealth": {
+      "status": 200,
+      "checkedAt": "2026-10-22T15:57:08.232194+00:00",
+      "health": {
+        "ok": true,
+        "revision": "9a67265aaa916058621b5291c96268b6f0093bb9",
+        "version": "0.22.0+kat-test-pos"
+      }
+    }
+  },
+  "dispatchEnabled": false,
+  "driverMounted": false,
+  "realEmailSent": false,
+  "stagingRestoreExecuted": false,
+  "newLabOrUserPass": false,
+  "nextOwner": "codex/central-auto-dispatch-20261022",
+  "remaining": [
+    "Authoritative verified recipient, consent, writer locks and absent-row safety",
+    "Retained lifecycle/backup review of physical schema, retention, reset and restore suppression",
+    "Production durable payload/enrollment and real transport/scheduler",
+    "Controlled consenting-recipient final acceptance"
+  ]
+}
