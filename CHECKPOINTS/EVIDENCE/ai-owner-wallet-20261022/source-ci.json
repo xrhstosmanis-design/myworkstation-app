@@ -1,0 +1,83 @@
+{
+  "scope": "AI-OWNER-WALLET-01",
+  "sourcePr": 3009,
+  "sourceHead": "a7adf6caad79c73d746bedb5a1ed9dc695addc72",
+  "sourceMerge": "cd633e9c6edfe3fad9658f496dff0926bb988fbd",
+  "prCi": {
+    "id": 39804554047,
+    "conclusion": "SUCCESS",
+    "server": {
+      "pass": 3827,
+      "fail": 0,
+      "skip": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "nativeWalletExecuted": true,
+    "nativeWalletDurationMs": 886.25281
+  },
+  "mainCi": {
+    "id": 39806020956,
+    "status": "SUCCESS",
+    "server": {
+      "pass": 3827,
+      "fail": 0,
+      "skip": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "nativeWalletExecuted": true
+  },
+  "release": {
+    "status": "HELD_BY_NORMAL_FRESHNESS_GUARD",
+    "workflow": 39807310528,
+    "job": 119923978373,
+    "validatedSource": "cd633e9c6edfe3fad9658f496dff0926bb988fbd",
+    "newerMain": "9a67265aaa916058621b5291c96268b6f0093bb9",
+    "awaitingMainCi": 39807166764,
+    "reason": "A newer production source revision is on main; await its full CI",
+    "observedHealthyRevision": "201eb5e01e6a9972b57ed12ea9bfccabe3600b83",
+    "walletInstalled": false
+  },
+  "hostedAcceptance": "NOT_TESTED",
+  "realEmail": "NOT_TESTED",
+  "runtimeEnabled": false,
+  "emailEnabled": false,
+  "meteredFeatures": [
+    "OWNER_ASSISTANT"
+  ],
+  "remaining": [
+    "Invoice/OCR/Azure and other provider adapters",
+    "Global notification placement",
+    "Approved EUR tariff setup",
+    "Scoped synthetic LAB/UI/email acceptance"
+  ],
+  "sourceBlobs": {
+    "client/src/components/platform/AiOwnerWalletAdmin.jsx": "70ed3f9684e6c7d612d86583bf449772a076e5ef",
+    "client/src/components/platform/PlatformAdminApp.jsx": "901afbf95765608507b518643986b7d88007de1d",
+    "client/src/components/voice/AiOwnerWallet.jsx": "6b1c52f3bbc7791592bfd32ae0ee8afa3f9969d1",
+    "client/src/components/voice/AssistantChatPage.jsx": "1ddc6b8bca96b310fdb7a2edeb52d142e1423388",
+    "client/src/components/voice/OwnerAssistantPanel.jsx": "efb21da968592a39fa185afca84bcbb35d089091",
+    "client/src/components/voice/ai-wallet-money.mjs": "3b8bcfa8cedd6f9d33be8ad34041b07abe816258",
+    "server/src/index.js": "2b4cc4b2584e52a222d8393e6e39339070efc852",
+    "server/src/routes/ai-owner-wallet.js": "7e95d6bc1a66260516ecc236ca8fbd90153b70da",
+    "server/src/routes/owner-assistant.js": "b31f8ba562984d87539a3a6840fb13c4a8c5fdd0",
+    "server/src/services/ai-owner-wallet-access.js": "84cfccb940cdc85aa1ad36eb0f3e0b69de1b068b",
+    "server/src/services/ai-owner-wallet-contract.js": "9f4fad7b0c655a236429cec80e5b7596ceea2cf2",
+    "server/src/services/ai-owner-wallet-notifications.js": "f332ed36aeb1a4ab2feb4962ac83c3e16576f584",
+    "server/src/services/ai-owner-wallet-provider.js": "b75f80de27cb3ab736a8a4724131ab1cd36a93b1",
+    "server/src/services/ai-owner-wallet-repository.js": "e4a4b2a9d8ae631d726bf5986912d3409d3bb7cd",
+    "server/src/services/ai-owner-wallet-runtime.js": "7dc9250dd3472c5b9b77b8f1ad412135a920518b",
+    "server/src/services/owner-assistant-handlers.js": "989f2b30591a00cbba9646b5bf4b97c0b2dc59b1",
+    "server/src/workers/ai-owner-wallet-notices.js": "50caad40135c214b6f50b780255edfb7f454c715",
+    "server/test/ai-owner-wallet-postgres.test.js": "ed69e5be38fb116a1aca5f20712c53258512c004",
+    "server/test/ai-owner-wallet-ui.test.js": "6028a7b1646c8c82c8439a58b561c8f64fbbd362",
+    "server/test/ai-owner-wallet.test.js": "212484aaf7d388978e17fe1e33269841f3d2f549"
+  }
+}

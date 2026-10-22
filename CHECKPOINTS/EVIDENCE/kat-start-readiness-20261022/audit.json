@@ -1,0 +1,731 @@
+[
+  {
+    "backups": [
+      {
+        "completedAt": "2026-10-22T15:01:10+00:00",
+        "restoreCheck": "PASSED",
+        "status": "SUCCEEDED"
+      },
+      {
+        "completedAt": "2026-10-22T12:02:10+00:00",
+        "restoreCheck": "PASSED",
+        "status": "SUCCEEDED"
+      },
+      {
+        "completedAt": "2026-10-22T09:01:32+00:00",
+        "restoreCheck": "PASSED",
+        "status": "SUCCEEDED"
+      }
+    ],
+    "catalog": {
+      "activeProducts": 1863,
+      "missingVatDepartment": 95,
+      "nonpositivePrice": 15
+    },
+    "coffeeFee": {
+      "badFee": 0,
+      "embeddedFeeNonzero": 0,
+      "parents": 57
+    },
+    "layout": {
+      "categorySlots": 20,
+      "mappedProducts": 242,
+      "publishedAt": "2026-10-22T10:07:35.196225+00:00",
+      "quickSlots": 20,
+      "version": 3702
+    },
+    "missingDepartmentProducts": [
+      {
+        "id": "38d881bb-2960-422b-9bd7-6ef45dee7322",
+        "mappedToButton": false,
+        "name": "Netlink Cosmote 15€",
+        "sku": "NETLINK-COSMOTE-15-TEST",
+        "vatRate": 24
+      },
+      {
+        "id": "5b4bb880-ec80-4aba-a2d5-015ba07991c0",
+        "mappedToButton": false,
+        "name": "Παροχή υπηρεσίας Netlink",
+        "sku": "NETLINK-SERVICE-FEE-TEST",
+        "vatRate": 24
+      },
+      {
+        "id": "ff643ed1-2adb-4419-b396-564e57beb951",
+        "mappedToButton": false,
+        "name": "KAISER 500ML KOYTL'6*(3+1)",
+        "sku": "5201263890711",
+        "vatRate": 24
+      },
+      {
+        "id": "574f8d52-5402-44ab-beb9-d5ff0e35c2f2",
+        "mappedToButton": false,
+        "name": "ΤΑΧΙ ΣΠΑΝΑΚΟΠΙΤΑ 7 ΤΕΜ",
+        "sku": "100029551",
+        "vatRate": 13
+      },
+      {
+        "id": "d817fa8b-ef4e-40ec-88fd-7c7bf39ef7ef",
+        "mappedToButton": false,
+        "name": "ΤΑΧΙ ΚΙΜΑΔΟΠΙΤΑ 7 ΤΕΜ",
+        "sku": "100029552",
+        "vatRate": 24
+      },
+      {
+        "id": "ac91bf04-32bb-40b1-bc30-57208f125f3d",
+        "mappedToButton": false,
+        "name": "CARLSBERG 200/500ML O/W",
+        "sku": "5201263890712",
+        "vatRate": 24
+      },
+      {
+        "id": "3d0c4cc5-a8eb-4f93-9d2b-9b5aa2995cac",
+        "mappedToButton": false,
+        "name": "ΝΕΡΟ ΖΑΓΟΡΙ ΠΙΠΙΛΑ 12x 0.75LT",
+        "sku": "100029548",
+        "vatRate": 13
+      },
+      {
+        "id": "7ca087cc-4e48-429a-81f5-23c80c7bb021",
+        "mappedToButton": false,
+        "name": "ΝΕΡΟ ΘΕΩΝΗ 1.5L 6PACK",
+        "sku": "100029547",
+        "vatRate": 13
+      },
+      {
+        "id": "3aabf51c-97e0-4f58-b609-01c678800e94",
+        "mappedToButton": false,
+        "name": "TEST SUPER ADMIN",
+        "sku": "999001",
+        "vatRate": 13
+      },
+      {
+        "id": "52001ae4-3fe4-4e61-be36-4ae76d0d7d29",
+        "mappedToButton": false,
+        "name": "CAMEL 20s ORIGINAL LEGEND BOX",
+        "sku": "100029554",
+        "vatRate": 0
+      },
+      {
+        "id": "2b9c69e0-3f6c-4d4a-bf50-26bb7ab6995f",
+        "mappedToButton": false,
+        "name": "FLAPJACK Strawberry 90gr",
+        "sku": "5201263890703",
+        "vatRate": 13
+      },
+      {
+        "id": "a9ffe392-c9ee-46e8-b272-951388037431",
+        "mappedToButton": false,
+        "name": "ΤΑΧΙ ΤΥΡΟΠΙΤΑ 7 ΤΕΜ",
+        "sku": "100029550",
+        "vatRate": 13
+      },
+      {
+        "id": "c5817a2d-949e-4789-9516-66b0b70ab367",
+        "mappedToButton": false,
+        "name": "ΚΑΘΗΜΕΡΙΝΑ ΦΡΕΣΚΟ ΓΑΛΑ ΠΛΗΡΕΣ 1ΛΤ",
+        "sku": "5201263890714",
+        "vatRate": 13
+      },
+      {
+        "id": "0e58a130-6bed-4fe1-b45c-8e2d178097fb",
+        "mappedToButton": false,
+        "name": "MMMILK ΟΙΚΟΓΕΝΕΙΑΚΟ ΠΛ 1L EU",
+        "sku": "5201263890715",
+        "vatRate": 13
+      },
+      {
+        "id": "dede16c7-45f5-453c-8683-0f1f3cdcf3d9",
+        "mappedToButton": false,
+        "name": "COOKIE PROT.29% SOFT CHOCOLATE 70g",
+        "sku": "5201263890702",
+        "vatRate": 13
+      },
+      {
+        "id": "bd07f8b0-f6f0-4a62-a54a-3ba99aaf4c29",
+        "mappedToButton": false,
+        "name": "MMMILK ΟΙΚΟΓΕΝΕΙΑΚΟ ΠΛ 1,5L EU",
+        "sku": "5201263890716",
+        "vatRate": 13
+      },
+      {
+        "id": "a6680444-ec7d-4362-ba68-6f6609456819",
+        "mappedToButton": true,
+        "name": "ESPRESSO ΜΟΝΟΣ",
+        "sku": "MWS-KAT-BEV-ESP-SINGLE",
+        "vatRate": 13
+      },
+      {
+        "id": "cca194e2-fb44-444f-a7d1-ddf70758900f",
+        "mappedToButton": false,
+        "name": "ΚΟΚΑ ΚΟΛΑ 1.5LT (1X6PACK)",
+        "sku": "100029543",
+        "vatRate": 13
+      },
+      {
+        "id": "f11811c1-5c91-4b30-8fe9-9e2a628f0aae",
+        "mappedToButton": false,
+        "name": "SPRITE 1.5LT",
+        "sku": "100029545",
+        "vatRate": 24
+      },
+      {
+        "id": "f939b15a-c1f7-4075-a1a2-51aa4d97b0c1",
+        "mappedToButton": false,
+        "name": "MARLBORO GOLD 3.5 KS SOF 20 STD",
+        "sku": "5201263890704",
+        "vatRate": 0
+      },
+      {
+        "id": "6634e227-bacf-4655-aaae-c7625c68ce83",
+        "mappedToButton": false,
+        "name": "ΚΟΥΛΟΥΡΙ ΘΕΣΣΑΛΟΝΙΚΗΣ",
+        "sku": "100029549",
+        "vatRate": 13
+      },
+      {
+        "id": "46d91306-2be3-4d91-a761-328097f98aea",
+        "mappedToButton": false,
+        "name": "Panini",
+        "sku": "5201263890699",
+        "vatRate": 24
+      },
+      {
+        "id": "cdc09417-5226-45a7-888c-a8a0e039a326",
+        "mappedToButton": false,
+        "name": "LA CHOUFFE",
+        "sku": "100029542",
+        "vatRate": 24
+      },
+      {
+        "id": "935526b3-f310-438b-94d1-41677930f56e",
+        "mappedToButton": false,
+        "name": "VITALINE PUDDING LOKOMATA 200MP",
+        "sku": "5201263890727",
+        "vatRate": 13
+      },
+      {
+        "id": "94410ff6-0545-4c6e-8e38-7f2385c4473e",
+        "mappedToButton": false,
+        "name": "ΒΛΑΧΑΣ ΕΒΑΠΟΡΕ ΠΛΗΡΕΣ 7,5% 410ΓΡ",
+        "sku": "5201263890729",
+        "vatRate": 13
+      },
+      {
+        "id": "707c0291-2dc2-4d38-967a-0b77034aebae",
+        "mappedToButton": false,
+        "name": "KAISER 200/500ML R",
+        "sku": "5201263890713",
+        "vatRate": 24
+      },
+      {
+        "id": "0ca6a935-39d9-406b-a073-a1b1648ccd1a",
+        "mappedToButton": false,
+        "name": "NO SUGAR PRO PLUS BANANA 80g",
+        "sku": "5201263890700",
+        "vatRate": 13
+      },
+      {
+        "id": "56633e20-3e31-4019-adea-a67202f61536",
+        "mappedToButton": false,
+        "name": "FLAPJACK Banana 90gr",
+        "sku": "5201263890701",
+        "vatRate": 13
+      },
+      {
+        "id": "29ff15fe-0972-428a-97ca-cd2d82500357",
+        "mappedToButton": false,
+        "name": "ΤΟΥ ΤΟΠΟΥ ΜΑΣ ΠΛ 500ML EL-21. 1251",
+        "sku": "5201263890717",
+        "vatRate": 13
+      },
+      {
+        "id": "38c46167-00d9-4f3b-a3ea-d293d674716c",
+        "mappedToButton": false,
+        "name": "ΔΕΛΤΑ ΤΟΥ ΤΟΠΟΥ ΜΑΣ ΠΛΗΡΕΣ 1ΛΤ EL21. 1251",
+        "sku": "5201263890719",
+        "vatRate": 13
+      },
+      {
+        "id": "a52be6c3-bef4-4c9d-9713-6bde6e00d08f",
+        "mappedToButton": false,
+        "name": "ΤΟΥ ΤΟΠΟΥ ΜΑΣ ΕΛ 500ML EL-21. 1252",
+        "sku": "5201263890718",
+        "vatRate": 13
+      },
+      {
+        "id": "8a8d6982-ef8a-4957-a1d2-7af581c7418a",
+        "mappedToButton": false,
+        "name": "ΤΟΥ ΤΟΠΟΥ ΜΑΣ ΕΛΑΦΡΥ (3X200ΓΡ)",
+        "sku": "5201263890726",
+        "vatRate": 13
+      },
+      {
+        "id": "ade966ad-74e6-400d-92d3-2116d1d6734e",
+        "mappedToButton": false,
+        "name": "TEREA TEAK S50 PRI 20's SLI",
+        "sku": "5201263890705",
+        "vatRate": 0
+      },
+      {
+        "id": "3fec3acb-2d80-4ccd-ab6d-a53eed1a01da",
+        "mappedToButton": false,
+        "name": "TEREA YELLOW S50 PRI 20 SLI",
+        "sku": "5201263890706",
+        "vatRate": 0
+      },
+      {
+        "id": "814554ee-a6e1-40ee-8a56-8f125d53789f",
+        "mappedToButton": false,
+        "name": "ΔΕΛΤΑΤΟΥΤΟΠΟΥ ΜΑΣ ΕΛ 1ΛΤ EL-21. 1252",
+        "sku": "5201263890720",
+        "vatRate": 13
+      },
+      {
+        "id": "bb5bb293-9c1f-4cac-8ec6-ac28ea319f5f",
+        "mappedToButton": false,
+        "name": "LIFE ΚΡΑΝΜΠ-ΡΑΣΜΠ-ΜΠΛΟΥΜΠΕΡΙ ΜΠΟΥΚ. 400ML",
+        "sku": "5201263890723",
+        "vatRate": 13
+      },
+      {
+        "id": "eaf43e35-f89f-4343-906d-e6b38eb62310",
+        "mappedToButton": false,
+        "name": "LIFE ΦΡΑΟΥΛΑ ΜΠΑΝΑΝΑ ΜΠΟΥΚΑΛΙ 400ML",
+        "sku": "5201263890724",
+        "vatRate": 13
+      },
+      {
+        "id": "17aef911-5dc9-400c-986d-a6f95d6eb647",
+        "mappedToButton": false,
+        "name": "LIFE ΜΗΛΟ ΠΟΡΤΟΚΑΛΙ ΚΑΡΟΤΟ ΜΠΟΥΚΑΛΙ400ML",
+        "sku": "5201263890721",
+        "vatRate": 13
+      },
+      {
+        "id": "f6a62aca-3f01-4e22-bfe6-8dfcf0182a96",
+        "mappedToButton": false,
+        "name": "TEREA SIENNA S50 PRI 20 SLI",
+        "sku": "5201263890707",
+        "vatRate": 0
+      },
+      {
+        "id": "78fa8ea4-b19f-474f-9bdd-b5d34b92b839",
+        "mappedToButton": false,
+        "name": "TEREA TURQUOISE S50 PRI 20's SLI",
+        "sku": "5201263890708",
+        "vatRate": 0
+      },
+      {
+        "id": "13807a91-cfc9-47f0-96dc-122036650d8e",
+        "mappedToButton": false,
+        "name": "LIFE ΣΤΑΦΥΛΙ ΠΟΡΤΟΚΑΛΙ ΡΟΔΙ 400ML",
+        "sku": "5201263890722",
+        "vatRate": 13
+      },
+      {
+        "id": "261d24f5-e059-485a-9a70-f01d9ab0409d",
+        "mappedToButton": false,
+        "name": "LE COQ RID MARGARITA 0.33L",
+        "sku": "5201263890709",
+        "vatRate": 24
+      },
+      {
+        "id": "8a8c5b44-791c-462a-97d5-6b8996b021e9",
+        "mappedToButton": false,
+        "name": "LIFE TSAI PAOYAA 500ML",
+        "sku": "5201263890725",
+        "vatRate": 13
+      },
+      {
+        "id": "a043a43d-4947-48bd-b5e4-d0b9605c01e5",
+        "mappedToButton": false,
+        "name": "ΔΕΛΤΑ ΒΙΓΛΑ ΚΕΦΑΛΟΤΥΡΙ ΤΡΙΜΜ. 150ΓΡ",
+        "sku": "5201263890728",
+        "vatRate": 13
+      },
+      {
+        "id": "478979d2-74f6-493b-a44c-861d8fd31ace",
+        "mappedToButton": false,
+        "name": "HBH GO RED 250CC 3-9PACK",
+        "sku": "5201263890710",
+        "vatRate": 13
+      },
+      {
+        "id": "26c52354-785b-4949-bb17-69772eac633e",
+        "mappedToButton": true,
+        "name": "ESPRESSO LUNGO ΜΟΝΟΣ",
+        "sku": "MWS-KAT-BEV-LUNGO",
+        "vatRate": 13
+      },
+      {
+        "id": "b1dcd670-3faa-4458-a1d5-edf28c00a040",
+        "mappedToButton": true,
+        "name": "ESPRESSO DECAF",
+        "sku": "MWS-KAT-BEV-DECAF-ESP",
+        "vatRate": 13
+      },
+      {
+        "id": "57925db7-f8bc-4a97-9bd8-4c9d2b8c7824",
+        "mappedToButton": true,
+        "name": "CORTADO",
+        "sku": "MWS-KAT-BEV-CORTADO",
+        "vatRate": 13
+      },
+      {
+        "id": "1e3255fc-4f40-43ee-a17a-aefacbe8169c",
+        "mappedToButton": true,
+        "name": "FREDDO CAPPUCCINO",
+        "sku": "MWS-KAT-BEV-FREDDO-CAP",
+        "vatRate": 13
+      },
+      {
+        "id": "fd4bd32c-43b5-4af5-aa25-7eb89bcee628",
+        "mappedToButton": true,
+        "name": "ICED AMERICANO",
+        "sku": "MWS-KAT-BEV-ICED-AMER",
+        "vatRate": 13
+      },
+      {
+        "id": "3e3ca7ef-feab-4db7-b55f-0d8959720665",
+        "mappedToButton": true,
+        "name": "ICED LATTE",
+        "sku": "MWS-KAT-BEV-ICED-LATTE",
+        "vatRate": 13
+      },
+      {
+        "id": "45b2e6ea-9b65-49b5-9f94-cca46e518853",
+        "mappedToButton": true,
+        "name": "NESCAFE ΚΡΥΟΣ",
+        "sku": "MWS-KAT-BEV-NES-COLD",
+        "vatRate": 13
+      },
+      {
+        "id": "48228b56-74ad-4795-80bb-5ed4be3cf99d",
+        "mappedToButton": true,
+        "name": "ΛΕΥΚΗ ΚΡΥΑ ΣΟΚΟΛΑΤΑ",
+        "sku": "MWS-KAT-BEV-CHOC-WHITE-COLD",
+        "vatRate": 13
+      },
+      {
+        "id": "c0549dc3-edf2-43c2-8e93-423512b7ceb0",
+        "mappedToButton": true,
+        "name": "ΣΟΚΟΛΑΤΑ ΦΟΥΝΤΟΥΚΙ ΖΕΣΤΗ",
+        "sku": "MWS-KAT-BEV-CHOC-HAZ-HOT",
+        "vatRate": 13
+      },
+      {
+        "id": "3add5e53-a057-4268-83ac-99dfd377d5a3",
+        "mappedToButton": true,
+        "name": "ΣΟΚΟΛΑΤΑ ΦΟΥΝΤΟΥΚΙ ΚΡΥΑ",
+        "sku": "MWS-KAT-BEV-CHOC-HAZ-COLD",
+        "vatRate": 13
+      },
+      {
+        "id": "945a53b0-c0cc-495f-a14b-1b7912303933",
+        "mappedToButton": true,
+        "name": "ΣΟΚΟΛΑΤΑ ΚΑΡΑΜΕΛΑ ΖΕΣΤΗ",
+        "sku": "MWS-KAT-BEV-CHOC-CARAMEL-HOT",
+        "vatRate": 13
+      },
+      {
+        "id": "4e73a552-1142-47f2-8d00-97718aeb948c",
+        "mappedToButton": true,
+        "name": "ΤΣΑΙ ΜΑΥΡΟ",
+        "sku": "MWS-KAT-BEV-TEA-BLACK",
+        "vatRate": 13
+      },
+      {
+        "id": "522bb86a-3084-4494-9d20-f2ceb9072afc",
+        "mappedToButton": true,
+        "name": "MATCHA LATTE ΚΡΥΟ",
+        "sku": "MWS-KAT-BEV-MATCHA-COLD",
+        "vatRate": 13
+      },
+      {
+        "id": "bf623bd6-4687-4e06-ad93-a6de8c44a568",
+        "mappedToButton": true,
+        "name": "ΤΣΑΙ ΒΟΥΝΟΥ",
+        "sku": "MWS-KAT-BEV-MOUNTAIN-TEA",
+        "vatRate": 13
+      },
+      {
+        "id": "1cd41eab-144c-4836-ba4d-dfac53f9ca35",
+        "mappedToButton": true,
+        "name": "ΕΛΛΗΝΙΚΟΣ ΔΙΠΛΟΣ",
+        "sku": "MWS-KAT-BEV-GREEK-DOUBLE",
+        "vatRate": 13
+      },
+      {
+        "id": "405807aa-9993-4c4f-a138-4613e0ce42d0",
+        "mappedToButton": true,
+        "name": "ΛΕΥΚΗ ΖΕΣΤΗ ΣΟΚΟΛΑΤΑ",
+        "sku": "MWS-KAT-BEV-CHOC-WHITE-HOT",
+        "vatRate": 13
+      },
+      {
+        "id": "237276f5-98e2-49f1-b47d-0f4017faf330",
+        "mappedToButton": true,
+        "name": "AMERICANO ΔΙΠΛΟΣ",
+        "sku": "MWS-KAT-BEV-AMERICANO-DOUBLE",
+        "vatRate": 13
+      },
+      {
+        "id": "34036f5a-1232-4a05-a50a-1b55f8d5d5df",
+        "mappedToButton": true,
+        "name": "ΕΛΛΗΝΙΚΟΣ ΜΟΝΟΣ",
+        "sku": "MWS-KAT-BEV-GREEK-SINGLE",
+        "vatRate": 13
+      },
+      {
+        "id": "a79dba1d-a001-4401-9d5b-8971a5624fc1",
+        "mappedToButton": true,
+        "name": "RISTRETTO",
+        "sku": "MWS-KAT-BEV-RISTRETTO",
+        "vatRate": 13
+      },
+      {
+        "id": "8e2182a2-b0d0-4c38-a96f-fd1007b59f57",
+        "mappedToButton": true,
+        "name": "CAPPUCCINO ΜΟΝΟΣ",
+        "sku": "MWS-KAT-BEV-CAP-SINGLE",
+        "vatRate": 13
+      },
+      {
+        "id": "fc100dc2-8202-46f9-bec6-7768c5adfd2a",
+        "mappedToButton": true,
+        "name": "CAPPUCCINO LATTE ΜΟΝΟΣ",
+        "sku": "MWS-KAT-BEV-CAP-LATTE-SINGLE",
+        "vatRate": 13
+      },
+      {
+        "id": "74329b9a-a511-46ee-92a2-77af65c0bb5b",
+        "mappedToButton": true,
+        "name": "CAFFE LATTE",
+        "sku": "MWS-KAT-BEV-LATTE-HOT",
+        "vatRate": 13
+      },
+      {
+        "id": "8153d9b4-9ea3-4475-9929-0620a8487c1e",
+        "mappedToButton": true,
+        "name": "NESCAFE ΖΕΣΤΟΣ",
+        "sku": "MWS-KAT-BEV-NES-HOT",
+        "vatRate": 13
+      },
+      {
+        "id": "b49d2513-31b4-4bcc-a4e0-209f3a8e623a",
+        "mappedToButton": true,
+        "name": "FREDDO ESPRESSO",
+        "sku": "MWS-KAT-BEV-FREDDO-ESP",
+        "vatRate": 13
+      },
+      {
+        "id": "024071e9-9e04-4ada-b2ff-cc9a87ec75a8",
+        "mappedToButton": true,
+        "name": "FREDDO CAPPUCCINO LATTE",
+        "sku": "MWS-KAT-BEV-FREDDO-CAP-LATTE",
+        "vatRate": 13
+      },
+      {
+        "id": "49d81c78-62ce-47ab-9a3b-1d2933f93a1e",
+        "mappedToButton": true,
+        "name": "ICED TEA ΠΑΡΑΣΚΕΥΗΣ",
+        "sku": "MWS-KAT-BEV-ICED-TEA",
+        "vatRate": 13
+      },
+      {
+        "id": "cdf88cf7-6fc9-40db-8475-0bb65cfcdd73",
+        "mappedToButton": true,
+        "name": "ΦΡΑΠΕ",
+        "sku": "MWS-KAT-BEV-FRAPPE",
+        "vatRate": 13
+      },
+      {
+        "id": "a7154847-df27-4e2d-a93f-0f1e6fc4d359",
+        "mappedToButton": true,
+        "name": "FREDDO CAPPUCCINO DECAF",
+        "sku": "MWS-KAT-BEV-DECAF-FREDDO-CAP",
+        "vatRate": 13
+      },
+      {
+        "id": "51f79f4f-7f0b-4bcb-8d97-534dbdb8a818",
+        "mappedToButton": true,
+        "name": "MOCHA ΚΡΥΟ",
+        "sku": "MWS-KAT-BEV-MOCHA-COLD",
+        "vatRate": 13
+      },
+      {
+        "id": "66758025-b275-45c0-aaf7-5c1343958910",
+        "mappedToButton": true,
+        "name": "ΣΟΚΟΛΑΤΑ ΚΑΡΑΜΕΛΑ ΚΡΥΑ",
+        "sku": "MWS-KAT-BEV-CHOC-CARAMEL-COLD",
+        "vatRate": 13
+      },
+      {
+        "id": "778de69e-5247-4d6f-ad9c-1b8c19385dcb",
+        "mappedToButton": true,
+        "name": "ΤΣΑΙ ΠΡΑΣΙΝΟ",
+        "sku": "MWS-KAT-BEV-TEA-GREEN",
+        "vatRate": 13
+      },
+      {
+        "id": "d0c4963a-775d-40c6-a92f-45815df483a1",
+        "mappedToButton": true,
+        "name": "ΧΑΜΟΜΗΛΙ",
+        "sku": "MWS-KAT-BEV-CHAMOMILE",
+        "vatRate": 13
+      },
+      {
+        "id": "4aa8670c-13cf-4624-9df7-5fb64edf5fa3",
+        "mappedToButton": true,
+        "name": "AMERICANO ΜΟΝΟΣ",
+        "sku": "MWS-KAT-BEV-AMERICANO",
+        "vatRate": 13
+      },
+      {
+        "id": "7d62e208-0557-47ca-bbda-071006e4aec7",
+        "mappedToButton": true,
+        "name": "FLAT WHITE",
+        "sku": "MWS-KAT-BEV-FLAT-WHITE",
+        "vatRate": 13
+      },
+      {
+        "id": "a4b51be9-75a0-478c-aef5-fb1f98dfdb0a",
+        "mappedToButton": true,
+        "name": "MOCHA ΖΕΣΤΟ",
+        "sku": "MWS-KAT-BEV-MOCHA-HOT",
+        "vatRate": 13
+      },
+      {
+        "id": "add65223-74a9-4cce-9b7c-9a2111590160",
+        "mappedToButton": true,
+        "name": "ΚΡΥΑ ΣΟΚΟΛΑΤΑ",
+        "sku": "MWS-KAT-BEV-CHOC-COLD",
+        "vatRate": 13
+      },
+      {
+        "id": "bdb97733-e762-4c65-8589-b70c70e7f0cd",
+        "mappedToButton": true,
+        "name": "ΖΕΣΤΗ ΣΟΚΟΛΑΤΑ",
+        "sku": "MWS-KAT-BEV-CHOC-HOT",
+        "vatRate": 13
+      },
+      {
+        "id": "94dd6496-9854-4238-9ceb-1377087fb456",
+        "mappedToButton": true,
+        "name": "MATCHA LATTE ΖΕΣΤΟ",
+        "sku": "MWS-KAT-BEV-MATCHA-HOT",
+        "vatRate": 13
+      },
+      {
+        "id": "148df962-814c-4eef-b36b-1786705d39fc",
+        "mappedToButton": true,
+        "name": "ESPRESSO MACCHIATO ΜΟΝΟΣ",
+        "sku": "MWS-KAT-BEV-MACCHIATO",
+        "vatRate": 13
+      },
+      {
+        "id": "a3caf6ae-437d-4c1d-a52b-773b0e2f615c",
+        "mappedToButton": true,
+        "name": "CAPPUCCINO LATTE ΔΙΠΛΟΣ",
+        "sku": "MWS-KAT-BEV-CAP-LATTE-DOUBLE",
+        "vatRate": 13
+      },
+      {
+        "id": "d1ca7f51-d187-465b-9bc0-25d75e54266c",
+        "mappedToButton": true,
+        "name": "CAPPUCCINO DECAF",
+        "sku": "MWS-KAT-BEV-DECAF-CAP",
+        "vatRate": 13
+      },
+      {
+        "id": "bb499d98-bab7-4eba-b1b9-29dc17ccea77",
+        "mappedToButton": true,
+        "name": "LATTE DECAF",
+        "sku": "MWS-KAT-BEV-DECAF-LATTE",
+        "vatRate": 13
+      },
+      {
+        "id": "3acb7e74-ae58-46f7-8bbf-cfb8d8ce26bb",
+        "mappedToButton": true,
+        "name": "ΚΑΦΕΣ ΦΙΛΤΡΟΥ ΜΕΓΑΛΟΣ",
+        "sku": "MWS-KAT-BEV-FILTER-LARGE",
+        "vatRate": 13
+      },
+      {
+        "id": "6447bda8-a1fb-49da-8fc6-6da47ff91ff6",
+        "mappedToButton": true,
+        "name": "ΚΑΦΕΣ ΦΙΛΤΡΟΥ ΜΙΚΡΟΣ",
+        "sku": "MWS-KAT-BEV-FILTER",
+        "vatRate": 13
+      },
+      {
+        "id": "6fac5cef-796f-4858-8ae6-c9e7bcda1759",
+        "mappedToButton": true,
+        "name": "CAPPUCCINO ΔΙΠΛΟΣ",
+        "sku": "MWS-KAT-BEV-CAP-DOUBLE",
+        "vatRate": 13
+      },
+      {
+        "id": "908bfe2d-4992-4c04-a475-963fbec4e56c",
+        "mappedToButton": true,
+        "name": "ΦΡΑΠΕ ΜΕ ΓΑΛΑ",
+        "sku": "MWS-KAT-BEV-FRAPPE-MILK",
+        "vatRate": 13
+      },
+      {
+        "id": "d7037f0a-2e41-401e-b726-ef71dc5c4d2b",
+        "mappedToButton": true,
+        "name": "FREDDO ESPRESSO DECAF",
+        "sku": "MWS-KAT-BEV-DECAF-FREDDO",
+        "vatRate": 13
+      },
+      {
+        "id": "d735c8b8-66ba-4f29-ad76-3d485cf0a650",
+        "mappedToButton": true,
+        "name": "ESPRESSO MACCHIATO ΔΙΠΛΟΣ",
+        "sku": "MWS-KAT-BEV-MACCHIATO-DOUBLE",
+        "vatRate": 13
+      },
+      {
+        "id": "fbb7e7e1-0dd5-43fb-a420-2bcfc05af230",
+        "mappedToButton": true,
+        "name": "ESPRESSO LUNGO ΔΙΠΛΟΣ",
+        "sku": "MWS-KAT-BEV-LUNGO-DOUBLE",
+        "vatRate": 13
+      },
+      {
+        "id": "79c24050-7518-4dcd-b536-56a2d5dad9ea",
+        "mappedToButton": true,
+        "name": "ESPRESSO ΔΙΠΛΟΣ",
+        "sku": "MWS-KAT-BEV-ESP-DOUBLE",
+        "vatRate": 13
+      }
+    ],
+    "observedAt": "2026-10-22T15:59:10.26993Z",
+    "openShifts": [
+      {
+        "card": 0,
+        "cash": 0,
+        "status": "OPEN",
+        "terminal": "KAT-POS-02"
+      }
+    ],
+    "unresolvedFiscalRequests": 0,
+    "writers": [
+      {
+        "fiscalDevice": "KAT-FISCAL-01",
+        "lastSeenAt": "2026-10-22T15:59:09.396022+00:00",
+        "status": "ACTIVE",
+        "terminal": "KAT-POS-01",
+        "writerPoll": "true"
+      },
+      {
+        "fiscalDevice": "KAT-FISCAL-02",
+        "lastSeenAt": "2026-10-22T15:59:09.948008+00:00",
+        "status": "ACTIVE",
+        "terminal": "KAT-POS-02",
+        "writerPoll": "true"
+      }
+    ]
+  }
+]

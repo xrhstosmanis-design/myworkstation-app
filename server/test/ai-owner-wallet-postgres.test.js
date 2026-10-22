@@ -1,0 +1,77 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {createAiOwnerWalletRepository} from '../src/services/ai-owner-wallet-repository.js';
+import {createWalletNotificationDispatcher} from '../src/services/ai-owner-wallet-notifications.js';
+import {createWalletAccess} from '../src/services/ai-owner-wallet-access.js';
+import {createAiOwnerWalletRoutes} from '../src/routes/ai-owner-wallet.js';
+import {createWalletProvider} from '../src/services/ai-owner-wallet-provider.js';
+const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
+
+test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access, notifications and unchanged business controls',{skip:!isolated()},async()=>{
+  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='ai_wallet_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const db=new PrismaClient({datasourceUrl:url.toString()});let server;
+  try{
+    await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
+    for(const sql of [
+      `CREATE TYPE "UserRole" AS ENUM ('SUPER_ADMIN','OWNER','ADMIN','MANAGER','EMPLOYEE')`,
+      'CREATE TABLE "Company"("id" text PRIMARY KEY,"name" text,"active" boolean)',
+      'CREATE TABLE "Store"("id" text PRIMARY KEY,"name" text,"companyId" text,"active" boolean)',
+      'CREATE TABLE "User"("id" text PRIMARY KEY,"email" text,"fullName" text,"role" "UserRole","companyId" text,"sessionVersion" integer,"mustChangePassword" boolean)',
+      'CREATE TABLE "UserSession"("id" text PRIMARY KEY,"userId" text,"deviceName" text,"userAgent" text,"ipAddress" text,"createdAt" timestamp,"lastSeenAt" timestamp,"expiresAt" timestamp,"revokedAt" timestamp)',
+      'CREATE TABLE "OwnerCompanyAccess"("ownerId" text,"companyId" text)',
+      'CREATE TABLE "BusinessControl"("id" text PRIMARY KEY,"sales" integer,"cash" numeric,"stock" integer)'
+    ])await db.$executeRawUnsafe(sql);
+    await db.$executeRaw`INSERT INTO "Company" VALUES('c','Synthetic wallet company',true),('x','Foreign',true)`;
+    await db.$executeRaw`INSERT INTO "Store" VALUES('s','Store 1','c',true),('s2','Store 2','c',true),('foreign','Foreign','x',true),('inactive','Inactive','c',false)`;
+    await db.$executeRaw`INSERT INTO "User" VALUES('owner','owner@example.invalid','Owner','OWNER','c',1,false),('admin','admin@example.invalid','Admin','SUPER_ADMIN','c',1,false),('employee','employee@example.invalid','Employee','EMPLOYEE','c',1,false)`;
+    for(const id of ['owner','admin','employee'])await db.$executeRaw`INSERT INTO "UserSession" VALUES(${id+'-session'},${id},null,null,null,NOW(),NOW(),NOW()+INTERVAL '1 day',null)`;
+    await db.$executeRaw`INSERT INTO "BusinessControl" VALUES('control',12,123.45,25)`;
+    const before=await db.$queryRaw`SELECT * FROM "BusinessControl"`;
+    const repository=createAiOwnerWalletRepository(db);await repository.ensure();
+    await repository.configure('c',{version:0,enabled:true,emailEnabled:true,notificationOwnerId:'owner'},'admin');
+    const funding={amountMicros:'1000000',receiptReference:'synthetic-receipt-1'};
+    const credit=await Promise.all([repository.credit('c',funding,'admin'),repository.credit('c',funding,'admin')]);assert.equal(credit[0].id,credit[1].id);assert.equal((await repository.read('c')).balanceMicros,'1000000');
+    await assert.rejects(repository.credit('c',{...funding,amountMicros:'2000000'},'admin'),e=>e.code==='AI_WALLET_RECEIPT_CONFLICT');
+    await assert.rejects(repository.credit('x',funding,'admin'),e=>e.code==='AI_WALLET_RECEIPT_CONFLICT');
+    const reservation=(storeId,amountMicros,reference)=>repository.reserve({companyId:'c',storeId,amountMicros,reference,feature:'SYNTHETIC',tariff:{model:'synthetic'}});
+    await assert.rejects(reservation('foreign','100000','foreign-attempt'),e=>e.status===403);
+    await assert.rejects(reservation('inactive','100000','inactive-attempt'),e=>e.status===403);
+    const races=await Promise.allSettled([reservation('s','600000','request-1'),reservation('s2','600000','request-2')]);assert.equal(races.filter(r=>r.status==='fulfilled').length,1);assert.equal(races.find(r=>r.status==='rejected').reason.status,402);
+    const held=races.find(r=>r.status==='fulfilled').value;
+    const usage={inputTokens:1,outputTokens:1};await repository.settle('c',held.id,{amountMicros:'580000',usage});
+    assert.equal((await repository.settle('c',held.id,{amountMicros:'580000',usage:{outputTokens:1,inputTokens:1}})).replayed,true);
+    await assert.rejects(repository.settle('c',held.id,{amountMicros:'579999',usage}),e=>e.code==='AI_WALLET_SETTLEMENT_CONFLICT');
+    const r2=await reservation('s2','420000','request-3');await repository.settle('c',r2.id,{amountMicros:'220000'});
+    assert.equal((await repository.read('c')).state,'LOW');
+    const r3=await reservation('s','200000','request-4');await repository.settle('c',r3.id,{amountMicros:'100000'});
+    const r4=await reservation('s','100000','request-5');await repository.settle('c',r4.id,{amountMicros:'100000'});
+    let state=await repository.read('c');assert.equal(state.balanceMicros,'0');assert.equal(state.reservedMicros,'0');assert.equal(state.notices.filter(n=>n.kind==='LOW').length,1);assert.equal(state.notices.filter(n=>n.kind==='EMPTY').length,1);assert.equal(state.notices.filter(n=>n.kind==='CREDIT').length,1);
+    assert.equal((await repository.read('c','s')).entries.some(e=>e.storeId==='s2'),false);
+    let invoked=0;const provider=createWalletProvider({repository,enabled:()=>true,tariffs:()=>JSON.stringify([{model:'synthetic',inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:0,outputMicrosPerMillion:1000000,contextTokens:10,maxOutputTokens:10}])});
+    await assert.rejects(provider({companyId:'c',storeId:'s',feature:'SYNTHETIC'},{model:'synthetic'},async()=>{invoked++}),e=>e.status===402);assert.equal(invoked,0);
+    const sent=[];const drain=createWalletNotificationDispatcher({repository,enabled:()=>true,send:async message=>{assert.equal((await db.$queryRaw`SELECT "emailStatus" FROM "AiOwnerWalletNotice" WHERE "emailStatus"='ATTEMPTING'`).length>=1,true);sent.push(message);return {messageId:'synthetic-'+sent.length,accepted:[message.to],rejected:[]}}});
+    await Promise.all([drain(),drain()]);assert.equal(sent.length,3);await drain();assert.equal(sent.length,3);
+    await repository.credit('c',{amountMicros:'1000000',receiptReference:'synthetic-receipt-2'},'admin');
+    const uncertain=createWalletNotificationDispatcher({repository,enabled:()=>true,send:async()=>{throw Error('synthetic timeout')}});await uncertain();assert.equal((await repository.read('c')).notices.filter(n=>n.emailStatus==='UNKNOWN').length,1);await drain();assert.equal(sent.length,3);
+    await repository.credit('c',{amountMicros:'100000',receiptReference:'synthetic-receipt-3'},'admin');await db.$executeRaw`UPDATE "User" SET "email"='changed@example.invalid' WHERE "id"='owner'`;await drain();assert.equal(sent.length,3);assert.ok((await repository.read('c')).notices.some(n=>n.emailStatus==='REVOKED'));
+    // Actual SQL rollback after an injected failure in a wallet transaction.
+    const wrapped=new Proxy(db,{get(target,key){if(key==='$transaction')return (fn,...options)=>target.$transaction(async tx=>fn(new Proxy(tx,{get(t,k){if(k==='$executeRaw')return async(strings,...values)=>{if(strings.join('').includes('UPDATE "AiOwnerWallet" SET "balanceMicros"="balanceMicros"+'))throw Error('synthetic rollback');return t.$executeRaw(strings,...values)};const v=t[k];return typeof v==='function'?v.bind(t):v}})),...options);const v=target[key];return typeof v==='function'?v.bind(target):v}});
+    const failed=createAiOwnerWalletRepository(wrapped);await failed.ensure();const countBefore=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry"`;await assert.rejects(failed.credit('c',{amountMicros:'100000',receiptReference:'must-rollback'},'admin'));assert.deepEqual(await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry"`,countBefore);
+    const express=(await import('express')).default,app=express();app.use(express.json());
+    const authenticate=(req,res,next)=>{const id=req.headers['x-test-actor'];if(!id)return res.sendStatus(401);req.user={id,sessionId:id+'-session',sessionVersion:1,companyId:'c',tokenType:'BACKOFFICE_USER',role:id==='employee'?'EMPLOYEE':'OWNER',...(id==='admin'?{isSuperAdmin:true,platformRole:'SUPER_ADMIN'}:{})};next()};
+    app.use('/wallet',createAiOwnerWalletRoutes({db,repository,authenticate,access:createWalletAccess(db),enabled:()=>true}));
+    server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/wallet`;
+    const request=async(path,actor='owner',method='GET',body)=>{const r=await fetch(base+path,{method,headers:{...(actor?{'x-test-actor':actor}:{}),'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:r.status===401?null:await r.json()}};
+    assert.equal((await request('/stores/s')).status,200);assert.equal((await request('/stores/s',null)).status,401);assert.equal((await request('/stores/s','employee')).status,403);assert.equal((await request('/stores/foreign')).status,404);
+    assert.equal((await request('/platform/companies/c')).status,403);
+    // Prisma enum filters cast to this isolated schema's native UserRole type,
+    // exactly as in production. A text-only fixture cannot exercise this read.
+    assert.equal((await db.user.findMany({where:{companyId:'c',role:'OWNER',mustChangePassword:false},select:{id:true}})).length,1);
+    const adminRead=await request('/platform/companies/c','admin');assert.equal(adminRead.status,200,JSON.stringify(adminRead.body));
+    assert.equal((await request('/platform/companies/c/credits','owner','POST',{amountMicros:'10000',receiptReference:'forbidden',receiptConfirmed:true})).status,403);
+    assert.equal((await request('/platform/companies/c/credits','admin','POST',{amountMicros:'10000',receiptReference:'unconfirmed',receiptConfirmed:false})).status,400);
+    await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NOW() WHERE "id"='owner-session'`;assert.equal((await request('/stores/s')).status,401);
+    await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NULL WHERE "id"='owner-session'`;await db.$executeRaw`UPDATE "User" SET "role"='EMPLOYEE' WHERE "id"='owner'`;assert.equal((await request('/stores/s')).status,403);
+    assert.deepEqual(await db.$queryRaw`SELECT * FROM "BusinessControl"`,before);
+  }finally{if(server)await new Promise(resolve=>server.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
+});

@@ -1,0 +1,275 @@
+TAP version 13
+# Subtest: actual producer DAILY/WEEKLY/MONTHLY snapshots survive wire JSON without dropping original differences or chain isolation
+ok 1 - actual producer DAILY/WEEKLY/MONTHLY snapshots survive wire JSON without dropping original differences or chain isolation
+  ---
+  duration_ms: 583.975691
+  ...
+# Subtest: actual producer periods preserve Athens DST hours for daily, weekly and monthly payloads
+ok 2 - actual producer periods preserve Athens DST hours for daily, weekly and monthly payloads
+  ---
+  duration_ms: 878.091702
+  ...
+# Subtest: determinism survives object order, group/row/day/summary permutations and volatile generation time
+ok 3 - determinism survives object order, group/row/day/summary permutations and volatile generation time
+  ---
+  duration_ms: 414.197503
+  ...
+# Subtest: payload is detached and deeply immutable, and changed real source amounts change its fingerprint
+ok 4 - payload is detached and deeply immutable, and changed real source amounts change its fingerprint
+  ---
+  duration_ms: 38.996999
+  ...
+# Subtest: actual producer HOLD and incomplete source are refused without inventing zero totals
+ok 5 - actual producer HOLD and incomplete source are refused without inventing zero totals
+  ---
+  duration_ms: 53.080735
+  ...
+# Subtest: explicit scope, version, kind and provisional financial disclosures cannot be forged or omitted
+ok 6 - explicit scope, version, kind and provisional financial disclosures cannot be forged or omitted
+  ---
+  duration_ms: 17.248142
+  ...
+# Subtest: malformed groups, rows, cross-store leakage, duplicate identities and cent totals fail closed
+ok 7 - malformed groups, rows, cross-store leakage, duplicate identities and cent totals fail closed
+  ---
+  duration_ms: 46.492644
+  ...
+# Subtest: per-day readiness identity, completeness and actual period bounds are independently checked
+ok 8 - per-day readiness identity, completeness and actual period bounds are independently checked
+  ---
+  duration_ms: 118.260996
+  ...
+# Subtest: monthly opening-user summary must exactly describe original rows and never certify payroll liability
+ok 9 - monthly opening-user summary must exactly describe original rows and never certify payroll liability
+  ---
+  duration_ms: 739.339689
+  ...
+# Subtest: complete recorded zero differences remain zero rather than unknown or fabricated shortage
+ok 10 - complete recorded zero differences remain zero rather than unknown or fabricated shortage
+  ---
+  duration_ms: 20.763282
+  ...
+# Subtest: getters, hostile prototypes, control text and unsafe metadata are rejected before evaluation
+ok 11 - getters, hostile prototypes, control text and unsafe metadata are rejected before evaluation
+  ---
+  duration_ms: 32.590468
+  ...
+# Subtest: actual producer missing opening identities survive JSON omission as unattributed sessions, never invented payroll users
+ok 12 - actual producer missing opening identities survive JSON omission as unattributed sessions, never invented payroll users
+  ---
+  duration_ms: 408.842072
+  ...
+# Subtest: payload allowlist omits safe private preview extras and preserves explicit Greek provisional disclosures
+ok 13 - payload allowlist omits safe private preview extras and preserves explicit Greek provisional disclosures
+  ---
+  duration_ms: 23.201641
+  ...
+# Subtest: aggregate UTF-8 values and metadata keys are bounded even when omitted from the output allowlist
+ok 14 - aggregate UTF-8 values and metadata keys are bounded even when omitted from the output allowlist
+  ---
+  duration_ms: 69.92252
+  ...
+# Subtest: stable slot identity excludes all immutable snapshot fences and later source/settings revisions cannot authorize a duplicate
+ok 15 - stable slot identity excludes all immutable snapshot fences and later source/settings revisions cannot authorize a duplicate
+  ---
+  duration_ms: 10.025805
+  ...
+# Subtest: recipient, scope, frequency and exact period are separate slots; ordering of object fields is not identity
+ok 16 - recipient, scope, frequency and exact period are separate slots; ordering of object fields is not identity
+  ---
+  duration_ms: 3.088329
+  ...
+# Subtest: creation and transitions preserve input snapshots and prior records without shared mutable aliases
+ok 17 - creation and transitions preserve input snapshots and prior records without shared mutable aliases
+  ---
+  duration_ms: 2.136437
+  ...
+# Subtest: no implicit activation: each explicit current gate fails closed at creation and again immediately before dispatch
+ok 18 - no implicit activation: each explicit current gate fails closed at creation and again immediately before dispatch
+  ---
+  duration_ms: 11.803721
+  ...
+# Subtest: freshness and every immutable snapshot fence are rechecked before starting, including removal/revocation revisions
+ok 19 - freshness and every immutable snapshot fence are rechecked before starting, including removal/revocation revisions
+  ---
+  duration_ms: 3.444246
+  ...
+# Subtest: missing or nonboolean gate evidence and financial certification cannot pass by truthiness
+ok 20 - missing or nonboolean gate evidence and financial certification cannot pass by truthiness
+  ---
+  duration_ms: 4.957765
+  ...
+# Subtest: OCC and tokens fence stale branches; pure competing proposals still require future durable atomic CAS
+ok 21 - OCC and tokens fence stale branches; pure competing proposals still require future durable atomic CAS
+  ---
+  duration_ms: 1.108751
+  ...
+# Subtest: pre-dispatch expiration recovers safely at exact lease boundary and fences the former token forever
+ok 22 - pre-dispatch expiration recovers safely at exact lease boundary and fences the former token forever
+  ---
+  duration_ms: 3.887591
+  ...
+# Subtest: a lease one millisecond before expiry may start; after-start crash recovers UNKNOWN without transport replay
+ok 23 - a lease one millisecond before expiry may start; after-start crash recovers UNKNOWN without transport replay
+  ---
+  duration_ms: 1.884904
+  ...
+# Subtest: late accepted callback after lease expiry is fenced and needs UNKNOWN reconciliation, never another send
+ok 24 - late accepted callback after lease expiry is fenced and needs UNKNOWN reconciliation, never another send
+  ---
+  duration_ms: 1.119787
+  ...
+# Subtest: transport ACCEPTED and uncertain UNKNOWN are terminal and cannot imply delivered or final financial reconciliation
+ok 25 - transport ACCEPTED and uncertain UNKNOWN are terminal and cannot imply delivered or final financial reconciliation
+  ---
+  duration_ms: 3.207438
+  ...
+# Subtest: no completion before start; unproved rejection/error/retry outcome cannot reopen an attempt
+ok 26 - no completion before start; unproved rejection/error/retry outcome cannot reopen an attempt
+  ---
+  duration_ms: 1.804623
+  ...
+# Subtest: periods and timestamps must be canonical, finite, ended and ordered; offsets/invalid dates are rejected
+ok 27 - periods and timestamps must be canonical, finite, ended and ordered; offsets/invalid dates are rejected
+  ---
+  duration_ms: 1.653379
+  ...
+# Subtest: one mailbox follows existing trim/lower normalization; multi-recipient and header injection fail
+ok 28 - one mailbox follows existing trim/lower normalization; multi-recipient and header injection fail
+  ---
+  duration_ms: 2.198152
+  ...
+# Subtest: strict metadata rejects unsupported scope, unsafe counters, unknown keys and prototype-bearing objects
+ok 29 - strict metadata rejects unsupported scope, unsafe counters, unknown keys and prototype-bearing objects
+  ---
+  duration_ms: 2.415511
+  ...
+# Subtest: lease duration and version inputs reject unsafe values; a live lease cannot be opportunistically recovered
+ok 30 - lease duration and version inputs reject unsafe values; a live lease cannot be opportunistically recovered
+  ---
+  duration_ms: 2.631515
+  ...
+# Subtest: metadata validators do not execute accessors, accept hidden fields, or recurse unbounded through cycles
+ok 31 - metadata validators do not execute accessors, accept hidden fields, or recurse unbounded through cycles
+  ---
+  duration_ms: 0.909385
+  ...
+# Subtest: backwards time, exhausted versions and malformed persisted identity fail without mutating the record
+ok 32 - backwards time, exhausted versions and malformed persisted identity fail without mutating the record
+  ---
+  duration_ms: 0.898606
+  ...
+# Subtest: post-start UNKNOWN recovery is idempotent, preserving the original attempt and not manufacturing another lease
+ok 33 - post-start UNKNOWN recovery is idempotent, preserving the original attempt and not manufacturing another lease
+  ---
+  duration_ms: 1.092803
+  ...
+# Subtest: accepted acknowledgement requires a receipt and conflicting receipt cannot rewrite terminal evidence
+ok 34 - accepted acknowledgement requires a receipt and conflicting receipt cannot rewrite terminal evidence
+  ---
+  duration_ms: 1.37682
+  ...
+# Subtest: persisted attempt cannot claim a start before creation even when other fields look valid
+ok 35 - persisted attempt cannot claim a start before creation even when other fields look valid
+  ---
+  duration_ms: 0.956549
+  ...
+# Subtest: lifecycle generation matches native canonical decimal-string int64 semantics, including zero, without precision coercion
+ok 36 - lifecycle generation matches native canonical decimal-string int64 semantics, including zero, without precision coercion
+  ---
+  duration_ms: 3.959187
+  ...
+# Subtest: start probes canonical stored input before eligibility and takes slot lock only after eligibility, then commits before return
+ok 37 - start probes canonical stored input before eligibility and takes slot lock only after eligibility, then commits before return
+  ---
+  duration_ms: 13.134971
+  ...
+# Subtest: absent, foreign or corrupt probe never invokes eligibility or persistence
+ok 38 - absent, foreign or corrupt probe never invokes eligibility or persistence
+  ---
+  duration_ms: 2.318791
+  ...
+# Subtest: trusted eligibility failure stops before taking the slot lock and never retries
+ok 39 - trusted eligibility failure stops before taking the slot lock and never retries
+  ---
+  duration_ms: 1.958686
+  ...
+# Subtest: revoked eligibility cannot persist ATTEMPTING
+ok 40 - revoked eligibility cannot persist ATTEMPTING
+  ---
+  duration_ms: 3.29971
+  ...
+# Subtest: a recovery/reclaim committed between probe and lock preserves the winner and rejects the stale start
+ok 41 - a recovery/reclaim committed between probe and lock preserves the winner and rejects the stale start
+  ---
+  duration_ms: 3.272438
+  ...
+# Subtest: a canonical replacement snapshot with the same slot/version/token fails immutable recheck before any update
+ok 42 - a canonical replacement snapshot with the same slot/version/token fails immutable recheck before any update
+  ---
+  duration_ms: 2.840457
+  ...
+# Subtest: a row removed after the probe cannot supply a successful start receipt
+ok 43 - a row removed after the probe cannot supply a successful start receipt
+  ---
+  duration_ms: 2.001035
+  ...
+# Subtest: actual DAILY/WEEKLY/MONTHLY producer payload and committed core start bind one recipient and immutable exact body
+ok 44 - actual DAILY/WEEKLY/MONTHLY producer payload and committed core start bind one recipient and immutable exact body
+  ---
+  duration_ms: 429.817025
+  ...
+# Subtest: transport cannot run until trusted start resolves its post-commit receipt
+ok 45 - transport cannot run until trusted start resolves its post-commit receipt
+  ---
+  duration_ms: 18.121083
+  ...
+# Subtest: refused or failed start has zero transport calls, no retry and no error detail exposure through a fabricated receipt
+ok 46 - refused or failed start has zero transport calls, no retry and no error detail exposure through a fabricated receipt
+  ---
+  duration_ms: 26.740742
+  ...
+# Subtest: malformed scope/body/hash/period/finality inputs reject before start and send
+ok 47 - malformed scope/body/hash/period/finality inputs reject before start and send
+  ---
+  duration_ms: 21.968715
+  ...
+# Subtest: detaches request before awaiting start and never lets a late caller change redirect the send
+ok 48 - detaches request before awaiting start and never lets a late caller change redirect the send
+  ---
+  duration_ms: 18.355881
+  ...
+# Subtest: accessors/hidden metadata reject before start without invoking getters
+ok 49 - accessors/hidden metadata reject before start without invoking getters
+  ---
+  duration_ms: 21.197748
+  ...
+# Subtest: missing/mixed/foreign acceptance and messageId-only evidence always become terminal UNKNOWN
+ok 50 - missing/mixed/foreign acceptance and messageId-only evidence always become terminal UNKNOWN
+  ---
+  duration_ms: 26.036838
+  ...
+# Subtest: transport throws, timeouts and invalid provider getters expose no private detail and never retry
+ok 51 - transport throws, timeouts and invalid provider getters expose no private detail and never retry
+  ---
+  duration_ms: 18.996832
+  ...
+# Subtest: optional transport evidence cannot hide contradictory pending, envelope or SMTP status
+ok 52 - optional transport evidence cannot hide contradictory pending, envelope or SMTP status
+  ---
+  duration_ms: 25.020741
+  ...
+# Subtest: duplicate invocation is stopped by trusted repository start transition, never by process-local invented exactly-once state
+ok 53 - duplicate invocation is stopped by trusted repository start transition, never by process-local invented exactly-once state
+  ---
+  duration_ms: 18.318912
+  ...
+1..53
+# tests 53
+# suites 0
+# pass 53
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3600.13929

@@ -2,6 +2,8 @@ import {z} from "zod";
 import {cashRuleFields,readCashControlRule,sameCashRule} from "./cash-control-rules.js";
 import {completedReportPeriod,dailyCashReportReadiness} from "./automatic-report-policy.js";
 import {readAutomaticCashPreviewInTransaction} from "./automatic-report-source.js";
+import {assertLifecycleMutation} from "./store-lifecycle-generation.js";
+import {lifecycleContext} from "./store-lifecycle-context.js";
 
 const fail=(status,message,code)=>{throw Object.assign(new Error(message),{status,code})};
 const cashRuleSchema=z.object({mode:z.enum(["FULL","DIFFERENCE_ONLY","POS_EFTPOS_ONLY"]),deliveryTerminalPattern:z.string().min(1).max(120),carryOverEnabled:z.boolean(),posEftposEnabled:z.boolean()}).strict();
@@ -40,8 +42,23 @@ export async function getAutomaticReportSettings(db,scope){
 }
 export async function saveAutomaticReportSettings(db,scope,input){
   const body=automaticReportSettingsUpdateSchema.parse(input);
+  // Keep the originating request epoch; never upgrade an old Save to a fresh one.
+  const generation=lifecycleContext()[scope.storeId];
   return db.$transaction(async tx=>{
-    const store=await automaticReportScope(tx,scope),rule=await readCashControlRule(tx,store);
+    await automaticReportScope(tx,scope);
+    await assertLifecycleMutation(tx,scope,generation,{lock:true});
+    // Fence even the first settings INSERT. NO KEY UPDATE remains compatible
+    // with unrelated FK KEY SHARE traffic, while conflicting with reader SHARE.
+    let store;
+    try{
+      [store]=await tx.$queryRaw`SELECT "id","companyId","name" FROM "Store"
+        WHERE "id"=${scope.storeId} AND "companyId"=${scope.companyId} AND "active"=true FOR NO KEY UPDATE NOWAIT`;
+    }catch(error){
+      if(error?.code==="55P03"||error?.meta?.code==="55P03")fail(409,"Οι ρυθμίσεις χρησιμοποιούνται από άλλη εργασία. Δοκίμασε ξανά αφού ολοκληρωθεί.","REPORT_SETTINGS_BUSY");
+      throw error;
+    }
+    if(!store)fail(404,"Δεν βρέθηκε ενεργό κατάστημα στην επιλεγμένη εταιρεία.");
+    const rule=await readCashControlRule(tx,store);
     if(!sameCashRule(body.configuration.cashRule,rule))fail(409,"Ο κανόνας ελέγχου ταμείου άλλαξε. Ανανέωσε τις ρυθμίσεις πριν αποθηκεύσεις.","CASH_RULE_CHANGED");
     const json=JSON.stringify(body.configuration);
     const changed=body.expectedVersion===0?await tx.$queryRaw`
