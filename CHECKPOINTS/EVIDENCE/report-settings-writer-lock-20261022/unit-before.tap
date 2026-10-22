@@ -1,0 +1,157 @@
+TAP version 13
+# Subtest: actual settings writer locks original lifecycle epoch before parent Store, rule and first INSERT, then commits
+not ok 1 - actual settings writer locks original lifecycle epoch before parent Store, rule and first INSERT, then commits
+  ---
+  duration_ms: 28.563796
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:48:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected ... Lines skipped
+    
+      [
+        'begin',
+        'role',
+        'scope',
+    -   'fence-meta',
+    -   'fence-lock',
+    -   'epoch',
+    -   'store-lock',
+        'rule',
+    ...
+        'readback',
+        'commit'
+      ]
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'begin'
+    1: 'role'
+    2: 'scope'
+    3: 'fence-meta'
+    4: 'fence-lock'
+    5: 'epoch'
+    6: 'store-lock'
+    7: 'rule'
+    8: 'insert'
+    9: 'readback'
+    10: 'commit'
+  actual:
+    0: 'begin'
+    1: 'role'
+    2: 'scope'
+    3: 'rule'
+    4: 'insert'
+    5: 'readback'
+    6: 'commit'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:50:9)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: enrolled missing/stale request generations refuse before Store lock or settings write
+not ok 2 - enrolled missing/stale request generations refuse before Store lock or settings write
+  ---
+  duration_ms: 4.84888
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:52:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:53:78)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: busy, maintenance, retired and foreign lifecycle fences refuse the actual settings writer
+not ok 3 - busy, maintenance, retired and foreign lifecycle fences refuse the actual settings writer
+  ---
+  duration_ms: 4.388967
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:55:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:56:127)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: Store NOWAIT conflict becomes explicit409 once, with no rule/readback/write; unrelated DB errors propagate
+not ok 4 - Store NOWAIT conflict becomes explicit409 once, with no rule/readback/write; unrelated DB errors propagate
+  ---
+  duration_ms: 5.109968
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:58:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:60:2)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: fresh locked Store name governs the legacy cash rule instead of the preliminary scope read
+not ok 5 - fresh locked Store name governs the legacy cash rule instead of the preliminary scope read
+  ---
+  duration_ms: 4.669576
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:63:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:64:40)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: scope and locked-row absence stop before rule/settings work
+not ok 6 - scope and locked-row absence stop before rule/settings work
+  ---
+  duration_ms: 10.639476
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:67:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:68:107)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: parent locking preserves first-insert/version CAS conflicts and existing settings
+ok 7 - parent locking preserves first-insert/version CAS conflicts and existing settings
+  ---
+  duration_ms: 9.872771
+  ...
+# Subtest: absent lifecycle fence retains legacy generation zero without enrollment or DDL
+not ok 8 - absent lifecycle fence retains legacy generation zero without enrollment or DDL
+  ---
+  duration_ms: 17.836314
+  location: '/workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:75:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(f.log.includes("store-lock"))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/fb406246538e/delivery-lock-order/server/test/automatic-report-settings-lock-order.test.js:76:152)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 1
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 209.588513
