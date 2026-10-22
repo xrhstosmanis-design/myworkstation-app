@@ -1,0 +1,75 @@
+{
+  "status": "TECHNICALLY_INSTALLED_OFF_AWAITING_LAB",
+  "retainedOwner": "feat/ai-owner-wallet-20261022",
+  "sourcePR": 3057,
+  "sourceHead": "e8976ef7f852e304361612b337f9ddab562af7fe",
+  "mergeRevision": "f12c816aecab60e60adb811ea523f7ac5523e54f",
+  "sourceCI": {
+    "run": 39837109580,
+    "attempt": 2,
+    "buildJob": 120061377604,
+    "conclusion": "success",
+    "allJobsSuccess": 5,
+    "serverTests": 4008,
+    "backupTests": 8,
+    "failures": 0,
+    "skips": 0
+  },
+  "mainCI": {
+    "run": 39847981978,
+    "buildJob": 120066616325,
+    "revision": "f12c816aecab60e60adb811ea523f7ac5523e54f",
+    "conclusion": "success",
+    "allJobsSuccess": 5,
+    "serverTests": 4103,
+    "backupTests": 8,
+    "failures": 0,
+    "skips": 0
+  },
+  "deployment": {
+    "run": 39849306527,
+    "job": 120070993257,
+    "expectedRevision": "f12c816aecab60e60adb811ea523f7ac5523e54f",
+    "status": "SUCCESS",
+    "priorHealthRevision": "723c8184f39d87e262d7d1c59c1941e4cadee55b",
+    "independentHealth": {
+      "observedAt": "2026-10-22T20:33:58.306128+00:00",
+      "httpStatus": 200,
+      "healthUrl": "https://myworkstation-app.onrender.com/api/health",
+      "health": {
+        "ok": true,
+        "version": "0.22.0+kat-test-pos",
+        "revision": "f12c816aecab60e60adb811ea523f7ac5523e54f"
+      }
+    }
+  },
+  "approvedMarkupPercent": 50,
+  "productionTariffsApplied": false,
+  "productionFundingApplied": false,
+  "customerPaymentReceiptInvented": false,
+  "productionSchemaChanged": false,
+  "productionBillingActivated": false,
+  "realEmailSent": false,
+  "hostedOwnerAcceptance": "NOT_TESTED",
+  "labAcceptance": "NOT_TESTED",
+  "knownLimits": [
+    "Owner assistant and canonical invoice providers covered; broader platform/scheduler remains OPEN",
+    "Category and provider-call history are not individual invoice/question identity grouping",
+    "Actual verified provider tariffs and concrete trial funding/budget still required",
+    "50 percent markup means provider reference cost10EUR becomes customer debit15EUR"
+  ],
+  "flakyUnrelatedTest": {
+    "file": "server/test/wholesale-commercial-offline-ui.test.js",
+    "failureRun": 39837109580,
+    "failureJob": 120028665178,
+    "cause": "Whole serialized snapshot assertion searches substring999; dynamic paidExpiresAt timestamp can contain999 although explicit customer/product projections and privacy stripping pass. Reproduced with process-local Date.now fixed to2026-10-22T19:12:51.999Z. No source or assertion altered; unchanged targeted test passed at current clock, full rerun passed4008/0/0.",
+    "followupOwner": "Existing wholesale owner; no parallel claim"
+  },
+  "runtimeBlobs": {
+    "client/src/components/voice/AiOwnerWallet.jsx": "075ebec21ff0b84382b919666604291c89ccc816",
+    "server/src/services/ai-owner-wallet-contract.js": "90de1d73af6d87cb9b15065ab11b9c9a0bcbcab6",
+    "server/src/services/ai-owner-wallet-repository.js": "ec785e7cde8b06f9331374183863eddcfe567b45",
+    "server/src/services/ai-owner-wallet-usage.js": "57b4b934192abf79bae76cbaa8de36d8cc570820"
+  },
+  "runtimeBlobsMatchSourceAtLiveRevision": true
+}
