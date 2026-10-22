@@ -81,3 +81,26 @@ Additional source compatibility audit84PASS/0FAIL/0SKIP and adapted checkout/
 table-service/text-size13PASS (groups overlap, do not sum as distinct tests).
 Final remote CI and final hosted revision receipt follow separately; earlier
 runtime source remains historical until replaced. Final approval still required.
+
+
+## Final exact source verification and user visual acceptance
+
+Source550df503156860ed54cd361230061ce94ee57ed0: full CI39823637765 SUCCESS,
+all5jobs green;3975 server tests PASS/0FAIL/0SKIP,8 backup monitor tests PASS,
+30 isolated real HTTP E2E flows completed. Scoped visual LAB CI39823629368
+SUCCESS6tests+build. Final production client build PASS23.68s.
+
+Isolated Render deploydep-dbd4hffavr4c73ccat20 LIVE exact550df503, health revision
+and sourceRevision match, no database/transactions/providers. Actual hosted UI
+20quick/20category keys; second cart line1.35EUR; original payment draft retained
+through minimize/add/restore, restore inside scanner, contrast corrected.
+Screenshot and machine-readable receipt in same modern evidence directory.
+
+User22Oct message “ειναι οκ” accepted the displayed modern appearance. This is
+visual acceptance only, not authorization to merge main or deploy production.
+PR3050 remains DRAFT at exact tested550df503. Existing main remains untouched
+by this owner. Real store/backend/device acceptance and product photographs
+remain residual; production installation not yet certified.
+
+This receipt is evidence-only on the isolated LAB branch; autoDeploy remains off
+and the live runtime stays pinned to tested550df503.
