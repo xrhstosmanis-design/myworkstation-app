@@ -27,6 +27,7 @@ const server=http.createServer((req,res)=>{
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin='http://127.0.0.1:'+server.address().port;
 const browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--no-first-run','--remote-debugging-pipe','--no-startup-window',`--user-data-dir=${profile}`],{stdio:['ignore','ignore','pipe','pipe','pipe']});
+const browserStopped=new Promise(resolve=>browser.once('exit',resolve));
 let serial=0,buffer='',errors='';const pending=new Map();
 browser.stderr.on('data',bytes=>errors=(errors+bytes).slice(-4000));
 browser.stdio[4].on('data',bytes=>{buffer+=bytes;let end;while((end=buffer.indexOf('\0'))>=0){const raw=buffer.slice(0,end);buffer=buffer.slice(end+1);if(!raw)continue;const result=JSON.parse(raw),request=pending.get(result.id);if(request){pending.delete(result.id);clearTimeout(request.timer);result.error?request.reject(Error(JSON.stringify(result.error))):request.resolve(result.result);}}});
@@ -64,5 +65,5 @@ try{
   await fs.writeFile(out+'/role-readiness.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));
 }finally{
   for(const response of held)response.destroy();
-  await cdp('Browser.close').catch(()=>{});browser.kill();for(const request of pending.values()){clearTimeout(request.timer);request.reject(Error('Diagnostic closed'));}server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await fs.rm(profile,{recursive:true,force:true});
+  await cdp('Browser.close').catch(()=>{});browser.kill();for(const request of pending.values()){clearTimeout(request.timer);request.reject(Error('Diagnostic closed'));}server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await browserStopped;await fs.rm(profile,{recursive:true,force:true,maxRetries:3,retryDelay:50});
 }

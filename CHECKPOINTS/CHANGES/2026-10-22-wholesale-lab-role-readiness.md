@@ -1,3 +1,7 @@
+## Hosted diagnostic passed; browser-profile cleanup correction
+
+First source CI39744989902/wholesale119711409497 actually passed all four new real Chromium readiness scenarios, then failed only deleting its temporary profile with ENOTEMPTY while Chromium was still exiting. Wait for the spawned browser process to exit before deleting only that generated profile; bounded fs.rm cleanup retries handle remaining child file handles. No application/session/action retry or assertion/timeout change. New exact-head full CI still required; the failed run remains recorded, not retried unchanged.
+
 ## 22/10/2026 - CAUSAL CORRECTION PREPARED / AWAITING FULL CI
 
 Receiving claim #2999 head4c4b94b42000200e0bf6bf854f8208c9974292e5 CI39744109193 SUCCESS merged8253b206 before source. Exact bounded source now initially disables all four roles in delivered HTML and gates work/locks with readiness until validated metadata, bound listeners and any restored owner lookup finish. Failure keeps roles unavailable. Existing busy/pending locks and backend scope/session/role checks retained; no retries, changed E2E timeouts or existing assertion removal.
