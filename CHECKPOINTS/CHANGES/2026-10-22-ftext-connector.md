@@ -1,3 +1,7 @@
+### PR3067 source review and native Windows rerun
+
+Source c40fd460 / Windows39839487703/job120036419594 completed SUCCESS: actual Windows PowerShell5.1 STATUS29 plus cloud scope/DPAPI checks and32 new cash command/result/timeout/restart/tombstone/native temporary-folder exchange boundaries. This is synthetic CI, not physical fiscal PASS. Full source CI39839487807 still pending. Review also preserves original cashier operatorId, atomic audit-table availability and negative-stock warnings in committed request evidence/POS completion; native fixture now starts stock0 and requires exactly-1 plus one movement, preserved warning on replay and untouched foreign stock20. Local related7PASS/1nativeSKIP after review. No production/fiscal action; exact final CI/release still required.
+
 ### PR3067 native Windows first run — engineering FAIL, not physical acceptance
 
 Initial source f1fe053b / Windows39839095662/job120035080065: protected STATUS29 and cloud DPAPI/config cases PASS; new cash smoke rejected at its generic negative assertion without identifying the input. Corrected explicit grouping of NUL/surrogate test values and added caller-line diagnostic; expanded native temp-folder success round-trip, retained timeout/no-resend assertions, and blocked a new cloud STATUS while local cash is unresolved. Setup menu now labels cash capability accurately. Actual rerun required; no Windows cash PASS or physical receipt claimed.
