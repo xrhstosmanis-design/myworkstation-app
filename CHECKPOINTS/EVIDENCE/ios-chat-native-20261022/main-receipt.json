@@ -1,0 +1,13 @@
+{
+  "sourceSha": "48a2618d39016fa2eb2555330c3e0ff515ea4448",
+  "runId": "39817491709",
+  "package": "gr.myworkstation.chat.ios.preview",
+  "version": "0.1.0",
+  "build": 1,
+  "artifact": "Unsigned device archive only; not installable; no TestFlight upload",
+  "bytes": 5183465,
+  "sha256": "eff9c5c9201bb8ffe132808d7e74664486c50f0e639852f67ab8a14e4abca4df",
+  "signing": false,
+  "physicalAcceptance": false,
+  "productionRequests": false
+}

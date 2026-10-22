@@ -1,0 +1,90 @@
+TAP version 13
+# Subtest: dialog keyboard boundary preserves busy guards, minimization and topmost dialog ownership
+ok 1 - dialog keyboard boundary preserves busy guards, minimization and topmost dialog ownership
+  ---
+  duration_ms: 655.966277
+  ...
+# Subtest: actual CUSTOMER modal reachable at compact and zoom-equivalent viewports
+ok 2 - actual CUSTOMER modal reachable at compact and zoom-equivalent viewports
+  ---
+  duration_ms: 10729.592614
+  ...
+# Subtest: actual HOLDS modal reachable at compact and zoom-equivalent viewports
+ok 3 - actual HOLDS modal reachable at compact and zoom-equivalent viewports
+  ---
+  duration_ms: 6018.467945
+  ...
+# Subtest: actual MIXED modal reachable at compact and zoom-equivalent viewports
+ok 4 - actual MIXED modal reachable at compact and zoom-equivalent viewports
+  ---
+  duration_ms: 8364.620829
+  ...
+# Subtest: actual RETURN modal reachable at compact and zoom-equivalent viewports
+ok 5 - actual RETURN modal reachable at compact and zoom-equivalent viewports
+  ---
+  duration_ms: 10417.415664
+  ...
+# Subtest: actual SUPPLIER modal reachable at compact and zoom-equivalent viewports
+ok 6 - actual SUPPLIER modal reachable at compact and zoom-equivalent viewports
+  ---
+  duration_ms: 5837.375683
+  ...
+# Subtest: repeated minimize/restore retains original payment fields, uploaded file and late result without submitting
+ok 7 - repeated minimize/restore retains original payment fields, uploaded file and late result without submitting
+  ---
+  duration_ms: 341.912464
+  ...
+# Subtest: minimized draft permits second customer input while another visible modal keeps scanner protection
+ok 8 - minimized draft permits second customer input while another visible modal keeps scanner protection
+  ---
+  duration_ms: 210.301383
+  ...
+# Subtest: removing a minimized payment removes stale restore affordance without resurrecting or submitting it
+ok 9 - removing a minimized payment removes stale restore affordance without resurrecting or submitting it
+  ---
+  duration_ms: 75.560868
+  ...
+# Subtest: old restore cannot switch its ownership to a replacement payment before observer cleanup
+ok 10 - old restore cannot switch its ownership to a replacement payment before observer cleanup
+  ---
+  duration_ms: 56.830828
+  ...
+# Subtest: visual LAB exposes only exact assets and health; every write and business route is denied
+ok 11 - visual LAB exposes only exact assets and health; every write and business route is denied
+  ---
+  duration_ms: 251.703919
+  ...
+# Subtest: inherited credentials refuse startup before opening files or listening, without printing values
+ok 12 - inherited credentials refuse startup before opening files or listening, without printing values
+  ---
+  duration_ms: 3.989919
+  ...
+# Subtest: visual LAB clears only its own synthetic financial queue/history
+ok 13 - visual LAB clears only its own synthetic financial queue/history
+  ---
+  duration_ms: 0.793852
+  ...
+# Subtest: every financial queue/history prefix is denied without overwriting any stored record
+ok 14 - every financial queue/history prefix is denied without overwriting any stored record
+  ---
+  duration_ms: 1.215963
+  ...
+# Subtest: visual display preferences/catalog still use ordinary Storage semantics
+ok 15 - visual display preferences/catalog still use ordinary Storage semantics
+  ---
+  duration_ms: 0.273452
+  ...
+# Subtest: feedback failure cannot permit a queued sale
+ok 16 - feedback failure cannot permit a queued sale
+  ---
+  duration_ms: 0.21166
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 43292.105128

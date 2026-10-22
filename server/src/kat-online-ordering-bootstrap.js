@@ -27,6 +27,7 @@ const statements=[
   "cardOnDeliveryEnabled" BOOLEAN NOT NULL DEFAULT true,
   "autoPrintOnAccept" BOOLEAN NOT NULL DEFAULT true,
   "stockCheckEnabled" BOOLEAN NOT NULL DEFAULT false,
+  "autoStockCatalogEnabled" BOOLEAN NOT NULL DEFAULT false,
   "minimumOrderRetail" DECIMAL(14,4) NOT NULL DEFAULT 0,
   "minimumOrderStaff" DECIMAL(14,4) NOT NULL DEFAULT 0,
   "minimumOrderPermanentStaff" DECIMAL(14,4) NOT NULL DEFAULT 0,
@@ -50,6 +51,7 @@ const statements=[
   CONSTRAINT "OnlineOrderingConfig_store_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE
 )`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "stockCheckEnabled" BOOLEAN NOT NULL DEFAULT false`,
+`ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "autoStockCatalogEnabled" BOOLEAN NOT NULL DEFAULT false`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderRetail" DECIMAL(14,4) NOT NULL DEFAULT 0`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderStaff" DECIMAL(14,4) NOT NULL DEFAULT 0`,
 `ALTER TABLE "OnlineOrderingConfig" ADD COLUMN IF NOT EXISTS "minimumOrderPermanentStaff" DECIMAL(14,4) NOT NULL DEFAULT 0`,

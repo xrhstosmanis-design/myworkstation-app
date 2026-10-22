@@ -1,3 +1,4 @@
+import {enoughOnlineStock,readAutomaticStockCatalog} from "../src/online-stock-catalog.js";
 import {lockActiveSaleProducts} from '../src/lib/inventory-sale-product-lock.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -43,7 +44,7 @@ test('native public handlers enforce pending approval, tenant and current pricin
   await ensureOnlineMemberSchema(db);
   const routes=new Map(),router={post(paths,handler){for(const path of paths)routes.set(`POST ${path}`,handler)},get(paths,handler){for(const path of paths)routes.set(`GET ${path}`,handler)}};
   let source=await readFile(new URL('../src/routes/kat-online-ordering-modifiers.js',import.meta.url),'utf8');source=source.slice(0,source.indexOf('router.get("/backoffice-managed/stores"')).replace(/^import .*;\r?\n/gm,'').replace(/export function /g,'function ');
-  const deps={lockActiveSaleProducts,policyAvailable,ensureStoreBakingSchema:async()=>{},registerOnlineMember,createRegistrationLimiter,memberDiscountPercent,normalizeMemberPhone,assertCustomerDemoRuntimeClosed(){},Router:()=>router,crypto,bcrypt,jwt,z,prisma:db,auth(){},companyModuleState:async()=>({licenseAllowed,activeModules:['ONLINE_ORDERING']}),effectiveModuleEnabled:active=>active,ensureKatOnlineOrderingSchema:async()=>{},getOnlineOrderingConfig:async()=>cfg,onlineSurchargeAmount,onlineUnitPrice};
+  const deps={enoughOnlineStock,readAutomaticStockCatalog,lockActiveSaleProducts,policyAvailable,ensureStoreBakingSchema:async()=>{},registerOnlineMember,createRegistrationLimiter,memberDiscountPercent,normalizeMemberPhone,assertCustomerDemoRuntimeClosed(){},Router:()=>router,crypto,bcrypt,jwt,z,prisma:db,auth(){},companyModuleState:async()=>({licenseAllowed,activeModules:['ONLINE_ORDERING']}),effectiveModuleEnabled:active=>active,ensureKatOnlineOrderingSchema:async()=>{},getOnlineOrderingConfig:async()=>cfg,onlineSurchargeAmount,onlineUnitPrice};
   new Function(...Object.keys(deps),source)(...Object.values(deps));
   const invoke=async(method,path,body={},token='',slug='daily')=>{const out={status:200};const res={status(v){out.status=v;return this},json(v){out.body=v;return this}};await routes.get(`${method} /:publicSlug/${path}`)({params:{publicSlug:slug},body,headers:token?{authorization:`Bearer ${token}`}:{},ip:'fictional'},res,error=>{out.status=error.status||500;out.error=error});return out};
   const registration={fullName:'Εικονικός Χρήστης',phone:'6900000001',pin:'123456',pinConfirmation:'123456',memberType:'STAFF'};
@@ -68,6 +69,50 @@ test('native public handlers enforce pending approval, tenant and current pricin
   const wrongStore=jwt.sign({memberId:member.id,storeId:'foreign',memberType:'STAFF'},process.env.JWT_SECRET);assert.equal((await invoke('GET','catalog-modifiers',{},wrongStore)).body.member,null);
   licenseAllowed=false;assert.equal((await invoke('POST','member-registration',registration)).status,403);licenseAllowed=true;
   cfg.enabled=false;assert.equal((await invoke('POST','member-registration',registration)).status,503);cfg.enabled=true;
+
+  // Automatic mode has no visibility whitelist and never inherits coffee/ALWAYS bypasses.
+  cfg.autoStockCatalogEnabled=true;cfg.stockCheckEnabled=false;
+  assert.deepEqual((await catalog()).body.products,[]);
+  await db.$executeRawUnsafe(`INSERT INTO "Product" VALUES
+    ('positive','company','Retail','P',13,TRUE,TRUE,2),
+    ('negative','company','Negative','N',13,TRUE,TRUE,2),
+    ('inactive','company','Inactive','I',13,FALSE,TRUE,2),
+    ('foreign-product','other','Foreign','P',13,TRUE,TRUE,2),
+    ('baked-zero','company','Baked zero','BZ',13,TRUE,TRUE,2),
+    ('baked-positive','company','Baked positive','BP',13,TRUE,TRUE,2)`);
+  await db.$executeRawUnsafe(`INSERT INTO "StoreProduct" VALUES
+    ('store','positive',TRUE,2,1),('foreign','positive',TRUE,2,100),
+    ('store','negative',TRUE,2,-1),('store','inactive',TRUE,2,10),
+    ('store','foreign-product',TRUE,2,10),('store','baked-zero',TRUE,2,10),
+    ('store','baked-positive',TRUE,2,0)`);
+  await db.$executeRawUnsafe(`INSERT INTO "StoreBakedBalance" VALUES
+    ('company','store','baked-zero',TRUE,0),('company','store','baked-positive',TRUE,2),
+    ('other','foreign','coffee',TRUE,100)`);
+  await db.$executeRawUnsafe(`INSERT INTO "StoreBakingPolicy" VALUES('company','store','coffee','ALWAYS')`);
+  assert.deepEqual((await catalog()).body.products.map(p=>p.id).sort(),['baked-positive','positive']);
+  const stockOrder=items=>({...order(999),fulfillmentType:'PICKUP',items});
+  let denied=await invoke('POST','orders-with-modifiers',stockOrder([{productId:'positive',quantity:2}]));
+  assert.equal(denied.status,409);assert.match(denied.body.error,/απόθεμα/);
+  denied=await invoke('POST','orders-with-modifiers',stockOrder([{productId:'positive',quantity:1},{productId:'positive',quantity:1}]));
+  assert.equal(denied.status,409);assert.match(denied.body.error,/απόθεμα/);
+  for(const id of ['coffee','negative','inactive','foreign-product','baked-zero']){
+    const r=await invoke('POST','orders-with-modifiers',stockOrder([{productId:id,quantity:1}]));
+    assert.equal(r.status,409);assert.match(r.body.error,/διαθέσιμο/);
+  }
+  // A valid quantity reaches authoritative price validation without creating a test order.
+  const priceChanged=await invoke('POST','orders-with-modifiers',stockOrder([{productId:'positive',quantity:1}]));
+  assert.equal(priceChanged.status,409);assert.match(priceChanged.body.error,/τιμή/);
+  await db.$executeRawUnsafe(`UPDATE "StoreProduct" SET "currentStock"=0 WHERE "storeId"='store' AND "productId"='positive'`);
+  assert.deepEqual((await catalog()).body.products.map(p=>p.id),['baked-positive']);
+  assert.equal((await invoke('POST','orders-with-modifiers',stockOrder([{productId:'positive',quantity:1}]))).status,409);
+  await db.$executeRawUnsafe(`UPDATE "StoreProduct" SET "currentStock"=3 WHERE "storeId"='store' AND "productId"='positive'`);
+  assert.equal((await catalog()).body.products.length,2);
+  await db.$executeRawUnsafe(`INSERT INTO "Product" SELECT 'bulk-'||i,'company','Bulk '||i,'B'||i,13,TRUE,TRUE,1 FROM generate_series(1,5001) i`);
+  await db.$executeRawUnsafe(`INSERT INTO "StoreProduct" SELECT 'store','bulk-'||i,TRUE,1,1 FROM generate_series(1,5001) i`);
+  assert.equal((await catalog()).body.products.length,5003);
+  cfg.autoStockCatalogEnabled=false;
+  assert.deepEqual((await catalog()).body.products.map(p=>p.id),['coffee']);
+
   assert.equal((await db.$queryRaw`SELECT * FROM "OnlineOrder"`).length,3);
  }finally{if(previousSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=previousSecret;await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

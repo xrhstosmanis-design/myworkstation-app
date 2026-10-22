@@ -1,0 +1,52 @@
+{
+  "scope": "CENTRAL-STORE-MODULE-WRITER-LOCK-01",
+  "sourcePR": 3044,
+  "sourceHead": "aa0d8321a2287e29d5dd6e6c2ecb4a4c8f5ebca0",
+  "main": "5c8ccf5ef1c3aea57a9c7d11d5cc1550d9052774",
+  "sourceCI": 39819376016,
+  "mainCI": 39821105794,
+  "mainBuild": 119973999992,
+  "mainTests": {
+    "serverPass": 3916,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "nativeCases": 6
+  },
+  "guard": 39822773699,
+  "deployJob": 119978211519,
+  "trigger": "success",
+  "wait": "success",
+  "render": {
+    "id": "dep-dbd4faff3r2c739b9rpg",
+    "status": "live",
+    "finishedAt": "2026-10-22T17:33:32.817973Z"
+  },
+  "health": {
+    "status": 200,
+    "ok": true,
+    "revision": "5c8ccf5ef1c3aea57a9c7d11d5cc1550d9052774",
+    "checkedAt": "2026-10-22T17:45:48.501386Z"
+  },
+  "dispatch": "OFF",
+  "finalEmailTest": "BLOCKED",
+  "functionalAcceptance": "NOT TESTED",
+  "proof": [
+    "2026-10-22T17:21:36.5358202Z     ok 3 - original missing/stale epochs, maintenance, retirement and an exclusively busy lifecycle fence refuse before Store lock or settings SQL",
+    "2026-10-22T17:24:35.7660324Z     ok 1 - SHARE refuses first absent override and updates; compatible FK KEY SHARE permits both module families",
+    "2026-10-22T17:24:35.7664081Z     ok 2 - writer lifecycle then Store NO KEY UPDATE blocks a reverse SHARE reader until its one commit",
+    "2026-10-22T17:24:35.7669433Z     ok 3 - original missing/stale full-int64 epochs, maintenance, retired and foreign lifecycle refuse before callback",
+    "2026-10-22T17:24:35.7674386Z     ok 4 - missing or foreign Store is not a module target, while inactive setup and legacy zero remain supported",
+    "2026-10-22T17:24:35.7703470Z     ok 5 - epoch is captured before awaiting transaction creation and cannot be upgraded by a newer callback context",
+    "2026-10-22T17:24:35.7707533Z     ok 6 - callback failure rolls back the actual module UPSERT and preserves financial/control rows",
+    "2026-10-22T17:24:35.7710589Z ok 2993 - native StorePaidModule mutation: lifecycle-first locks fence absent overrides, permit key-share, preserve original epochs and controls",
+    "2026-10-22T17:24:58.8455498Z # tests 3916",
+    "2026-10-22T17:24:58.8456105Z # pass 3916",
+    "2026-10-22T17:24:58.8456321Z # fail 0",
+    "2026-10-22T17:24:58.8456694Z # skipped 0",
+    "2026-10-22T17:25:44.6448807Z # tests 8",
+    "2026-10-22T17:25:44.6449910Z # pass 8",
+    "2026-10-22T17:25:44.6450461Z # fail 0",
+    "2026-10-22T17:25:44.6451844Z # skipped 0"
+  ]
+}

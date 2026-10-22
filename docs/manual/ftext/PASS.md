@@ -13,6 +13,16 @@ Company/store/terminal are local configuration boundaries in this diagnostic pac
 
 ## Limits and troubleshooting
 
-No fiscal sale, card charge, stock or shift reconciliation was tested. No independent before/after business baseline exists for this STATUS run. POS checkout, central settings/pairing, online heartbeat, Windows-login startup and another model/device are OPEN. A successful STATUS must not label a POS sale issued or paid. No fiscal test receipt without owner consultation.
+No fiscal sale, card charge, stock or shift reconciliation was tested. No independent before/after business baseline exists for this STATUS run. POS checkout, Windows-login startup and another model/device remain OPEN. Central settings/pairing and heartbeat have the later limited acceptance below. A successful STATUS must not label a POS sale issued or paid. No fiscal test receipt without owner consultation.
 
 On timeout, foreign serial or malformed reply, leave the unresolved marker and files intact; reopening reads the same reply without resending. Pending foreign txt input is left untouched and blocks the check. A technician inspects the selected folder/device before recovery. Do not reprogram FTEXT+, clear input folders, change licence or restart unrelated RBS connections as a diagnostic step.
+
+## 22 October 2026 — selected-PC cloud communication USER PASS
+
+Authorized Platform Super Admin opens the selected store Installation guide → ftext communication. Confirm exact POS, register serial and existing input folder; save its configuration and download that POS package. Existing trial and vendor driver settings are preserved. Do not use the RBS controls for ftext.
+
+On the final Windows user: extract package, open Install.cmd. Generate a new ftext pairing code in the selected POS admin section; choose1 in the Windows menu and enter the code locally. Owner observed Paired. With existing FTEXT+ open/register idle, choose2 once: owner observed STATUS result delivered. Choose3: owner observed repeated connected heartbeats. Keep the connection window and FTEXT+ open; minimizing is allowed. In admin choose Refresh ftext connection: owner observed Connected and successful register check/code0 at21:05:59Athens. This is verified for the selected Rizareio POS only, not universal hardware certification.
+
+Codes expire after15minutes and are single use; never share codes/packages between terminals. Credential binding is per Windows user and exact saved configuration. No need to regenerate codes or repeat STATUS after successful acceptance merely to document it. An offline indication requires checking the existing connector window, FTEXT+ and network first. Changed settings require a matching package/new pairing.
+
+This accepted flow communicates only. Fiscal sales, payments/refunds, shift or stock effects, unattended login startup and restart recovery are not accepted. No receipt/card charge was triggered; independent before/after business deltas were not measured. The code0 STATUS is not proof that a sale was issued.
