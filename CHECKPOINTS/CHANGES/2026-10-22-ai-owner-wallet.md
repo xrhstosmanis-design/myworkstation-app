@@ -1,3 +1,25 @@
+## Reconciliation with current main92699f2
+
+Preserve all ftext status/recovery, report delivery start-order, iOS claims and other intervening source/records. Only three prepended registry conflicts; preserve entire latest files plus this source scope, no owner/status deletion. Initial native failure and enum fixture correction remain recorded. Source includes explicit snapshot allow-list regression. Full fresh PR CI must run at the reconciled head, not the original failed revision. Local wallet-focused10PASS/0FAIL; prior full local3528PASS/0FAIL/203infrastructureSKIP and client/TABLE_SERVICE build PASS. No production changes or LAB claims.
+
+## Explicit priced snapshot identity
+
+Source review found that a requested provider alias can return a pinned snapshot id. Add an optional explicit responseModels allow-list to the versioned tariff, with exact-match tests and no guessed prefix pricing. This avoids changing another owner's existing global assistant model just to activate billing. Unapproved snapshots still hold for review; no real rate/provider request was added. Full new-head CI required.
+
+## Native CI39787732084 — fixture correction, no runtime weakening
+
+Initial source PR3009/d141a9c8 ran3814 actual server checks:3813PASS/1FAIL/0SKIP. The single new native wallet flow passed funding/replay/cross-company refusal, concurrent holds/settlement/threshold dedup, rollback, SMTP concurrency/uncertainty/address revocation and Owner HTTP access. It then failed at authorized Platform owner-list read503 instead of200. Scoped fixture had User.role TEXT while Prisma enum filters require schema-local UserRole; use the exact native UserRole enum and add a direct enum-filter assertion. Runtime access and existing assertions remain unchanged. This is a new causal fixture correction, not retry of the unchanged failed head. Full fresh CI and hosted acceptance remain required; billing/mail still OFF.
+
+## AI-OWNER-WALLET-01 — SOURCE CANDIDATE / AWAITING FULL NATIVE CI AND LAB
+
+Retained owner feat/ai-owner-wallet-20261022; source feat/ai-owner-wallet-implementation-20261022. Before-source claim PR3008/head065080ff/full applicable docs CI39784780158 SUCCESS merged91af91c634429a7634e4bc747b8cbfba22d52d6b BEFORE source. Owner explicitly approved publication to the existing public repository. No credentials, bank accounts or real customer balances committed.
+
+Bounded first integration: dedicated EUR micro-unit wallet ledger, atomic company-wide reservations and per-store usage, receipt idempotency including cross-wallet denial, exact usage-based settlement and preserved uncertain holds, SuperAdmin confirmed-receipt funding/configuration, owner selected-store reads with explicit shared-company balance. In-app CREDIT/LOW20%/EMPTY notices; durable one-attempt SMTP outbox with fresh owner/address/settings validation and no blind uncertain-send retry. Existing central organization monitor and other owners remain untouched. Runtime and email gates default OFF. No production schema/config/balance/email action.
+
+Actual metered adapter is OWNER_ASSISTANT only; invoice/OCR/Azure and other provider integrations remain OPEN and explicitly unmetered in both UIs. This is not all-AI billing completion. No rate, markup or customer funding was invented. A validated per-model EUR tariff and explicit activation are required. Model response identity/usage must match the configured rate; missing usage, transport uncertainty or settlement failure retains REVIEW hold. Manual reconciliation requires provider-cost confirmation and an evidence reference; abandoned holds may be reconciled only after15minutes. Normal sales/payment/stock/fiscal handlers are not gated by the wallet.
+
+Local Node20 focused wallet/owner regressions underway; initial newly added extra status request broke the old owner UI request-count regression and was corrected by default-OFF status-discovery gating, preserving existing assertions. Full server/build plus actual isolated PostgreSQL HTTP/concurrency/rollback/notification tests required. Local PostgreSQL unavailable; native test not represented as executed. Current status NOT TESTED in hosted LAB/LIVE/email. No manual PASS or whole-numbered task closure. Ops docs/ops/ai-owner-wallet-20261022.md. Next: finish exact source tests/full CI, merge only if green, verify ordinary release, then remaining provider adapters and measured acceptance under retained owner.
+
 # AI owner prepaid wallet — implementation checkpoint
 
 ## AI-OWNER-WALLET-01 — ASSIGNED BEFORE SOURCE / NOT TESTED

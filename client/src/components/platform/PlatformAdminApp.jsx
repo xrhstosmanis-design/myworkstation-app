@@ -1,3 +1,4 @@
+import AiOwnerWalletAdmin from "./AiOwnerWalletAdmin.jsx";
 import StoreLifecyclePanel from "./StoreLifecyclePanel.jsx";
 import PlatformCompanyWorkspace from "./PlatformCompanyWorkspace.jsx";
 import CompanyIdentityEditor from "./CompanyIdentityEditor.jsx";
@@ -203,6 +204,7 @@ export default function PlatformAdminApp(){
   const [showChatChooser,setShowChatChooser]=useState(false);
   const [showInternetSearch,setShowInternetSearch]=useState(false);
   const [showAiCommandCenter,setShowAiCommandCenter]=useState(Boolean(returnedTwin));
+  const [showAiOwnerWallet,setShowAiOwnerWallet]=useState(false);
   const [showAssistantPage,setShowAssistantPage]=useState(false),[assistantAllScope,setAssistantAllScope]=useState(false);
   const [aiTwinSelection,setAiTwinSelection]=useState(returnedTwin);
   const [aiTwinOrigin,setAiTwinOrigin]=useState(null);
@@ -631,6 +633,7 @@ export default function PlatformAdminApp(){
       <section className="platform-home-launchers" hidden={homeSection!=="tools"} aria-label="Εργαλεία"><h2>Εργαλεία</h2><div className="platform-action-group"><button onClick={()=>setShowAssistantPage(true)}><MessageCircle/>Βοηθός</button><button className="ai-command-launch" onClick={()=>setShowAiCommandCenter(true)}><BrainCircuit/>AI Command Center</button><button onClick={()=>setShowInstallationCenter(true)}><Monitor/>Εγκατάσταση</button><button onClick={()=>{const company=(data?.companies||[]).find(item=>item.active&&item.stores?.length===1);if(company)setWorkforceTarget({company,store:company.stores[0]});else setError("Επίλεξε πρώτα εταιρεία με ένα κατάστημα από τις Εγκαταστάσεις.")}}><UsersRound/>Προσωπικό & Πρόγραμμα</button><button onClick={()=>setShowPosDesigner(true)}><LayoutTemplate/>Σχεδιαστής POS</button><button type="button" onClick={()=>setShowOnlineRadioCenter(true)}>📻 Online Ράδιο · Διαχείριση</button><button type="button" onClick={()=>setShowCustomerDemos(true)}>Demo πελατών · Προετοιμασία</button><a href="/platform-admin/n40-audit" target="_blank" rel="noopener noreferrer">Νο40 · Εικονικός χρήστης Backoffice / έλεγχοι ανάγνωσης</a></div></section>
       <section className="platform-home-launchers" hidden={homeSection!=="finance"} aria-label="Οικονομικά και έλεγχοι"><h2>Οικονομικά & Έλεγχοι</h2><div className="platform-action-group"><button className="secondary" onClick={()=>loadCashReport()} disabled={busy==="cash-report"}><WalletCards/>Ταμεία</button><button className="secondary" onClick={()=>setShowSupplierSettlementReview(true)}><ShieldCheck/>Πληρωμές</button><button className="secondary" onClick={()=>setShowOtherExpenseReview(true)}><WalletCards/>Έξοδα</button><button className="secondary" onClick={()=>setShowBankLedgerReview(true)}><WalletCards/>Τράπεζα</button><button className="secondary" onClick={()=>setShowChatChooser(true)}><MessageCircle/>Chat</button><button className="secondary" onClick={()=>setShowInternetSearch(true)}><Globe2/>Αναζήτηση Internet</button><button className="secondary" onClick={()=>setShowEventsCenter(true)}><ShieldCheck/>Συμβάντα</button><button className="secondary" onClick={()=>setAnalyticsResult({page:true})}><AlertTriangle/>Κέντρο Ελέγχων</button><button className="secondary" onClick={()=>setShowFiscalDryRun(true)}><ShieldCheck/>Fiscal DRY RUN</button></div></section>
       <AiCreditAlert request={request} onOpenSettings={()=>setShowAiCommandCenter(true)}/>
+      <button type="button" onClick={()=>setShowAiOwnerWallet(true)}>Υπόλοιπα AI πελατών</button>
       {error&&<div className="platform-alert error">{error}</div>}
       {message&&<div className="platform-alert success">{message}</div>}
       {terminalActivationNotice&&<div className="terminal-created-notice"><button type="button" className="terminal-created-close" onClick={()=>setTerminalActivationNotice(null)}><X/></button><b>Το {terminalActivationNotice.terminalPos} δημιουργήθηκε</b><span>Το παράθυρο δημιουργίας έκλεισε. Το link ισχύει 24 ώρες και χρησιμοποιείται μία φορά.</span><input value={terminalActivationNotice.activationUrl} readOnly/><button type="button" onClick={copyActivationNotice}><Copy/> Αντιγραφή link εγκατάστασης</button><button type="button" onClick={()=>openActivationOnThisPc(terminalActivationNotice.activationUrl)}><ExternalLink/> Άνοιγμα σε αυτό το PC</button></div>}
@@ -727,6 +730,7 @@ export default function PlatformAdminApp(){
     {chatStore&&<StoreChatPanel api={request} store={chatStore} onClose={()=>setChatStore(null)}/>}
     {showInternetSearch&&<InternetProductSearchPanel api={request} basePath="/api/platform/internet-product-search" companies={(data?.companies||[]).filter(company=>company.active)} onClose={()=>setShowInternetSearch(false)}/>}
     <AssistantChatPage open={showAssistantPage} api={request} companies={data?.companies||[]} initialSelection={aiTwinSelection} initialAllScope={assistantAllScope} onSelectionChange={rememberTwinSelection} onAllScopeChange={setAssistantAllScope} onClose={()=>setShowAssistantPage(false)}/>
+    {showAiOwnerWallet&&<AiOwnerWalletAdmin api={request} companies={data?.companies||[]} onClose={()=>setShowAiOwnerWallet(false)}/>}
     {showAiCommandCenter&&<AiCommandCenter
       onOpenAssistant={(selection,all)=>{rememberTwinSelection(selection);setAssistantAllScope(all);setShowAiCommandCenter(false);setShowAssistantPage(true)}}
       request={request} companies={data?.companies||[]} loading={loading}
