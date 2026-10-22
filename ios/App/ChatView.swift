@@ -55,6 +55,7 @@ struct RootView: View {
             while !Task.isCancelled { do { try await Task.sleep(nanoseconds: 8_000_000_000) } catch { return }; guard !Task.isCancelled else { return }; await model.poll() }
         }
         .onChange(of: model.token) { _, value in if value.isEmpty { email = ""; password = ""; link = ""; employee = ""; picker = nil; camera = nil; replySheet = false; evidenceSheet = false } }
+        .onChange(of: model.selected?.scope) { _, _ in picker = nil; camera = nil; replySheet = false; evidenceSheet = false }
         .sheet(item: Binding(get: { picker.map(PickerItem.init) }, set: { picker = $0?.id })) { item in
             if let lease = model.mediaLease { MediaPicker(video: item.id == "video", lease: lease) { media, error in guard model.mediaLease === lease else { return }; picker = nil; model.finishImport(lease, media: media, error: error) }.ignoresSafeArea().interactiveDismissDisabled() }
         }
@@ -93,7 +94,7 @@ struct RootView: View {
         ScrollView { VStack(spacing: 14) {
             HStack { Button("Ανανέωση") { Task { await model.loadStores() } }; Spacer(); Button("Αποσύνδεση") { Task { await model.logout() } }.accessibilityIdentifier("logout") }.disabled(model.busy)
             action("Ενεργοποίηση ειδοποιήσεων") { Task { await PushManager.shared.activate() } }
-            Text("Οι ειδοποιήσεις δείχνουν μόνο ότι υπάρχει νέο μήνυμα. Χρειάζεται ρύθμιση Apple/APNs και Firebase iOS.").font(.footnote).foregroundStyle(.secondary)
+            Text("Οι ειδοποιήσεις δείχνουν μόνο ότι υπάρχει νέο μήνυμα. Αν δεν ενεργοποιούνται, επικοινώνησε με τον υπεύθυνο.").font(.footnote).foregroundStyle(.secondary)
             ForEach(model.stores) { store in Button { Task { await model.choose(store) } } label: { HStack { Image(systemName: "bubble.left.and.bubble.right.fill").font(.title2); VStack(alignment: .leading) { Text(store.name).font(.headline); Text(store.companyName).font(.subheadline) }; Spacer(); if store.unread > 0 { Text("\(store.unread)").padding(8).background(purple.opacity(0.12)).clipShape(Circle()) }; Image(systemName: "chevron.right") }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(.white).clipShape(RoundedRectangle(cornerRadius: 20)) }.buttonStyle(.plain).disabled(model.busy).accessibilityIdentifier("store-" + store.id) }
         }.padding() }
     }

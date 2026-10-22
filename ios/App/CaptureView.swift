@@ -154,7 +154,7 @@ struct CaptureView: View {
         }.padding().navigationTitle(mode == "photo" ? "Κάμερα" : mode == "voice" ? "Φωνητικό" : "Βίντεο έως30δ.").toolbar { Button("Ακύρωση") { playback.stop(); state.cleanup(); done(nil, nil) } } }
         .task { await state.prepare(mode) }
         .onChange(of: state.draft?.id) { _, _ in if let draft = state.draft { playback.prepare(draft) } }
-        .onDisappear { playback.stop(); state.cleanup() }
+        .onDisappear { playback.stop(); state.cleanup(); done(nil, nil) }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in playback.stop(); state.cleanup(); done(nil, nil) }
     }
 }

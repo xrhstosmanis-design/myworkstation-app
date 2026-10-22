@@ -92,9 +92,15 @@ final class ControlledTransport: ChatTransport {
         XCTAssertFalse(m.importing); XCTAssertEqual(m.media.first?.name, "current.jpg")
     }
     func testPermissionForegroundDoesNotInvalidateImportAndSendWaitsForIt() async throws {
-        let api = ControlledTransport(), m = model(api); let lease = try XCTUnwrap(m.beginImport()); m.draft = "pending photo"
+        let api = ControlledTransport(), m = model(api); let claims = try JSONSerialization.data(withJSONObject: ["tokenType": "BACKOFFICE_USER", "exp": Date().addingTimeInterval(600).timeIntervalSince1970])
+        m.token = "fixture." + claims.base64EncodedString().replacingOccurrences(of: "=", with: "").replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_") + ".synthetic"
+        let lease = try XCTUnwrap(m.beginImport()); m.draft = "pending photo"
         await m.foreground(); await m.send(); XCTAssertTrue(api.paths.isEmpty); XCTAssertTrue(m.mediaLease === lease)
         m.background(); XCTAssertTrue(lease.isCancelled); XCTAssertFalse(m.importing)
+    }
+    func testExpiredForegroundCancelsImportAndClearsSession() async throws {
+        let api = ControlledTransport(), m = model(api); let lease = try XCTUnwrap(m.beginImport())
+        await m.foreground(); XCTAssertTrue(lease.isCancelled); XCTAssertTrue(m.token.isEmpty); XCTAssertNil(m.selected); XCTAssertFalse(m.importing); XCTAssertTrue(api.paths.isEmpty)
     }
     func testCancelledProviderContinuationResumesOnlyOnce() async throws {
         let lease = MediaLease(epoch: 1, scope: Scope(company: "c", store: "s")); var gate: MediaReadGate?

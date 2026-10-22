@@ -20,8 +20,8 @@ import MWSChatCore
         guard let m = model, m.active, !m.token.isEmpty else { return }
         guard !deleting else { m.status = "Ολοκληρώνεται η προηγούμενη αποσύνδεση. Δοκίμασε ξανά σε λίγο."; return }
         let token = m.token, epoch = generation
-        guard let check = try? await api.json(path(m), token: token), epoch == generation, token == m.token, check["configured"] as? Bool == true, check["iosAvailable"] as? Bool == true else { if epoch == generation, token == m.token { m.status = "Ο server δεν έχει ενεργή σύνδεση ειδοποιήσεων iOS." }; return }
-        guard let file = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"), let options = FirebaseOptions(contentsOfFile: file), options.projectID == "myworkstation-chat", options.bundleID == Bundle.main.bundleIdentifier else { m.status = "Απαιτείται η ρύθμιση Apple/APNs και της εφαρμογής iOS στο Firebase."; return }
+        guard let check = try? await api.json(path(m), token: token), epoch == generation, token == m.token, check["configured"] as? Bool == true, check["iosAvailable"] as? Bool == true else { if epoch == generation, token == m.token { m.status = "Οι ειδοποιήσεις iPhone δεν είναι ακόμη διαθέσιμες." }; return }
+        guard let file = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"), let options = FirebaseOptions(contentsOfFile: file), options.projectID == "myworkstation-chat", options.bundleID == Bundle.main.bundleIdentifier else { m.status = "Δεν έχουν ολοκληρωθεί οι ρυθμίσεις ειδοποιήσεων iPhone. Επικοινώνησε με τον υπεύθυνο."; return }
         do {
             let allowed = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
             guard allowed, m.active, epoch == generation, token == m.token else { return }
