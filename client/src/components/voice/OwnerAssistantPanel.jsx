@@ -1,3 +1,4 @@
+import AiOwnerWallet from "./AiOwnerWallet.jsx";
 import BusinessAssistantEvidence from "./BusinessAssistantEvidence.jsx";
 import AssistantChatPage from "./AssistantChatPage.jsx";
 import ConsumptionAssistantEvidence from "./ConsumptionAssistantEvidence.jsx";
@@ -55,7 +56,7 @@ export default function OwnerAssistantPanel({api,storeId="",storeName=""}){
     finally{if(id===sequence.current){setBusy(false);pending.current=null}}
   };
   return <><AssistantChatPage open={chatOpen} mode="owner" api={api} ownerStoreId={storeId} ownerStoreName={storeName} ownerAccess={access} contextEpoch={generation} initialAllScope={allSalesStores} onAllScopeChange={setAllSalesStores} onClose={()=>setChatOpen(false)}/><section hidden={chatOpen} className="mws-owner-assistant" aria-label="AI Βοηθός Ιδιοκτήτη">
-    <h2>Βοηθός Ιδιοκτήτη</h2><button type="button" disabled={!access||busy||voiceActive} onClick={()=>{invalidate();setChatOpen(true)}}>Άνοιγμα σελίδας βοηθού</button>
+    <AiOwnerWallet api={api} enabled={access?.walletRuntimeEnabled===true} storeId={access?.scope?.supportPreview?"":storeId}/><h2>Βοηθός Ιδιοκτήτη</h2><button type="button" disabled={!access||busy||voiceActive} onClick={()=>{invalidate();setChatOpen(true)}}>Άνοιγμα σελίδας βοηθού</button>
     <p>{storeId?`Μόνο για ${storeName||access?.scope?.storeName||"το επιλεγμένο κατάστημα"}.`:"Επίλεξε κατάστημα από τη λίστα για να ανοίξεις τον βοηθό."} Οι ερωτήσεις απαιτούν ενεργό module και τα δικαιώματά σου.</p>
     <p>Μπορείς να ρωτάς για μετρητά κλεισμένων βαρδιών, πωλήσεις συγκεκριμένου είδους και ημερομηνίας ή το τρέχον καταγεγραμμένο απόθεμα ενός είδους. Απαιτείται η αντίστοιχη ενεργή αναφορά. Για ιδιοκατανάλωση ή καταστροφή προϊόντων ζήτησε τη λίστα με ημερομηνίες από και έως. Οι υπόλοιπες αναφορές προστίθενται σταδιακά.</p>
     {access?.scope.supportPreview&&<p role="status">Προβολή υποστήριξης Super Admin για αυτό το κατάστημα.</p>}
