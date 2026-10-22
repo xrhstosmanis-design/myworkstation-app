@@ -1,6 +1,7 @@
 # Generic ftext connector — diagnostic foundation
 
-Source only; no physical PASS, no cloud/POS integration yet. This module is reusable
+The STATUS foundation has one recorded physical USER PASS (see docs/manual/ftext/PASS.md).
+The new cloud installation source remains AWAITING hosted/device acceptance; fiscal POS checkout is not implemented. This module is reusable
 for explicitly configured company/store/POS/serial/ftext input folder. It does not
 install or reprogram FTEXT+, alter its license/LAN settings or execute sales/cards.
 The RBS connector is unchanged. Vendor reference: FTEXT+25.02, Developer Manual,
@@ -27,8 +28,14 @@ marker or input to retry blindly; a technician must inspect the pending request,
 FTEXT+ and folder. Other pending txt inputs are left untouched. No existing vendor
 result file, unrelated command or configuration is overwritten or removed.
 
-Remaining whole-connector scope: authenticated terminal binding/pairing, cloud
-settings/installation UI and packages, licensed/lifecycle-aware request transport,
+Cloud source adds central per-POS settings/package, one-use scoped pairing, per-user
+DPAPI credentials and heartbeat/STATUS result upload. These expanded features need
+controlled hosted/Windows acceptance. Pair first (Setup option1), then explicitly
+run STATUS/upload (option2), and start heartbeat only (option3). The package never
+auto-starts, installs the vendor driver or enables fiscal checkout. Pending uploads
+retain their settings hash and exact body; a changed binding stops for review.
+
+Remaining whole-connector scope:
 POS sale serialization/finalization, durable idempotency and uncertain-result
 reconciliation, controlled Windows/device acceptance. Do not advertise the
 foundation as an installed POS connector. No fiscal test without owner agreement.

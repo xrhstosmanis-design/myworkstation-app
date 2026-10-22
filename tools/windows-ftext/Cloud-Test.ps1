@@ -4,7 +4,9 @@ Import-Module (Join-Path $PSScriptRoot 'Cloud-Tools.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'Ftext.psm1') -Force
 $c=Get-FtextCloudConfig $ConfigPath
 # Serialize the entire check and delivery, including recovery after an unknown HTTP outcome.
-$mutexName='Global\MWS.Ftext.CloudTest.'+($c.companyId+'.'+$c.storeId+'.'+$c.terminalPos)
+$sha=[Security.Cryptography.SHA256]::Create()
+try { $scopeHash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($c.companyId+'|'+$c.storeId+'|'+$c.terminalPos))).Replace('-','') } finally { $sha.Dispose() }
+$mutexName='Global\MWS.Ftext.CloudTest.'+$scopeHash
 $mutex=New-Object Threading.Mutex($false,$mutexName)
 $held=$false
 try {
