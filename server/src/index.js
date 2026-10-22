@@ -15,6 +15,7 @@ import {createN40ReadTrace} from "./n40-read-trace.js";
 import {createProductionStoreReadDiagnostic} from "./production-store-read-diagnostic.js";
 import "dotenv/config";
 import express from "express";
+import {onlineStoreDocumentHandler} from "./online-store-document.js";
 import {createServerShutdown} from "./server-shutdown.js";
 import {prisma} from "./prisma.js";
 import cors from "cors";
@@ -344,7 +345,7 @@ app.get("/store/:storeId",async(req,res,next)=>{
   if(!validPwaStoreId(req.params.storeId))return res.sendStatus(404);
   try{res.set("Cache-Control","no-store").type("html").send(storeHtmlWithManifest(await readFile(path.join(dist,"index.html"),"utf8"),req.params.storeId))}catch(error){next(error)}
 });
-app.get("/online/:publicSlug",(req,res)=>res.sendFile(path.join(dist,"kat/app.html")));
+app.get("/online/:publicSlug",onlineStoreDocumentHandler(dist));
 app.get("/b2b/:publicSlug",(req,res)=>{
   if(req.params.publicSlug.length<3||req.params.publicSlug.length>63||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(req.params.publicSlug))return res.sendStatus(404);
   res.set({"Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff"}).sendFile(path.join(dist,"b2b.html"));
