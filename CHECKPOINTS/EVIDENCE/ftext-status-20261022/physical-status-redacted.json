@@ -1,0 +1,14 @@
+{
+  "evidenceType": "OWNER_SCREENSHOT_VISUALLY_INSPECTED",
+  "timeAthens": "2026-10-22T18:29:06+03:00",
+  "sourceRevision": "201eb5e01e6a9972b57ed12ea9bfccabe3600b83",
+  "sourcePr": 3021,
+  "terminalMatchesConfigured": true,
+  "serialMatchesConfigured": true,
+  "ok": true,
+  "code": 0,
+  "fiscalExecutionReported": false,
+  "businessBeforeAfter": "NOT TESTED",
+  "cloudPosIntegration": "OPEN",
+  "screenshotSha256": "6c877069519cca052c91a032608f4d58bfab918df7858adfd27030bd1a76e2e5"
+}
