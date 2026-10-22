@@ -1,0 +1,60 @@
+TAP version 13
+# Subtest: actual inventory bulk SET requires reviewed selection and explicit confirmation; store change clears draft
+ok 1 - actual inventory bulk SET requires reviewed selection and explicit confirmation; store change clears draft
+  ---
+  duration_ms: 3638.33033
+  ...
+# Subtest: actual mounted POS adds separate fee, scales quantity, protects child and removes only its parent fees
+ok 2 - actual mounted POS adds separate fee, scales quantity, protects child and removes only its parent fees
+  ---
+  duration_ms: 5848.671552
+  ...
+# Subtest: mobile waiter keeps SET coffee with cleared embedded fee in the POS-only flow
+ok 3 - mobile waiter keeps SET coffee with cleared embedded fee in the POS-only flow
+  ---
+  duration_ms: 1060.365047
+  ...
+# ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+#     client/src/components/store/StoreChatPanel.jsx:17:179:
+#       17 │ ...build/pdf.worker.min.mjs",import.meta.url).toString();const pdf...
+#          ╵                              ~~~~~~~~~~~
+#   You need to set the output format to "esm" for "import.meta" to work correctly.
+# Subtest: actual mounted POS applies live cart guards and opens the existing barcode flow
+ok 4 - actual mounted POS applies live cart guards and opens the existing barcode flow
+  ---
+  duration_ms: 14182.722755
+  ...
+# Subtest: actual mounted POS keeps fourteen defaults and exposes configured sixteenth/twentieth category without checkout
+ok 5 - actual mounted POS keeps fourteen defaults and exposes configured sixteenth/twentieth category without checkout
+  ---
+  duration_ms: 8954.539951
+  ...
+# Subtest: actual designer import keeps the selected template palette while replacing company product assignments
+ok 6 - actual designer import keeps the selected template palette while replacing company product assignments
+  ---
+  duration_ms: 1698.616289
+  ...
+# Subtest: actual button editor recognizes legacy aliases and saves canonical company product IDs for child groups
+ok 7 - actual button editor recognizes legacy aliases and saves canonical company product IDs for child groups
+  ---
+  duration_ms: 830.176403
+  ...
+# Subtest: mounted POS remembers each operator calculator choice without shared tenant/store preferences or payment writes
+ok 8 - mounted POS remembers each operator calculator choice without shared tenant/store preferences or payment writes
+  ---
+  duration_ms: 10830.758421
+  ...
+# Subtest: actual modern POS keeps all20 quicks, inline nested catalog, original cart/scanner and store reset
+ok 9 - actual modern POS keeps all20 quicks, inline nested catalog, original cart/scanner and store reset
+  ---
+  duration_ms: 2491.475487
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15485.064349
