@@ -1,0 +1,23 @@
+{
+  "dateEuropeAthens": "2026-10-22",
+  "owner": "feat/android-chat-native-20261017",
+  "status": "FOUR SCOPED USER PASS",
+  "statements": [
+    "Έτοιμες απαντήσεις και βίντεο από τη συλλογή: τελική επιβεβαίωση στο κινητό. ειναι οκ",
+    "Ενημέρωση εφαρμογής: επιβεβαίωση αναβάθμισης χωρίς απεγκατάσταση ειναι οκ",
+    "Σύνδεση και ιδιωτικότητα: συγκεντρωτικός έλεγχος αποσύνδεσης, αλλαγής καταστήματος και προσωρινών δεδομένων. ειναι οκ"
+  ],
+  "scopes": [
+    "ready replies",
+    "gallery video",
+    "update without uninstall",
+    "functional logout/store switch/temporary data handling"
+  ],
+  "independentDeviceHashOrVersionPairVerified": false,
+  "forensicZeroOsSdkBackupTracesCertified": false,
+  "agentPerformedNewSendOrTest": false,
+  "repeatAcceptedTests": false,
+  "priorAppearanceAcceptancePr": 3010,
+  "technicalDistributionPr": 3002,
+  "ios": "LAST; no implementation or release claimed"
+}
