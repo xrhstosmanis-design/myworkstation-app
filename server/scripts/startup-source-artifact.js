@@ -11,6 +11,10 @@ export const patchFiles = [
   'src/patch-invoice-learning-ifantis-price-scale-v2.js',
   'src/patch-commerce-azure-supplier-profile-runtime.js',
 ];
+// Render runs this existing file-only prerequisite before the workspace start.
+// Prepare its identical output before sealing the artifact; Render can retain
+// its command as an idempotent no-op without invalidating the receipt.
+export const preparationFiles = ['scripts/patch-pos-return-diagnostics.js', ...patchFiles];
 export const targetFiles = [
   'src/index.js',
   'src/routes/platform-invoice-learning-ai.js',
@@ -18,7 +22,7 @@ export const targetFiles = [
 ];
 const artifactFiles = [
   'scripts/startup-source-artifact.js', 'scripts/prepare-startup-source.js',
-  'scripts/verify-startup-source.js', ...patchFiles, ...targetFiles,
+  'scripts/verify-startup-source.js', ...preparationFiles, ...targetFiles,
 ];
 const receiptPath = '.startup-source-artifact.json';
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -51,7 +55,7 @@ async function snapshot(root) {
 export async function prepareStartupSource(root) {
   // Never retain a previous success receipt when a new preparation fails.
   await rm(new URL(receiptPath, root), {force: true});
-  for (const path of patchFiles) {
+  for (const path of preparationFiles) {
     execFileSync(process.execPath, [fileURLToPath(new URL(path, root))], {
       cwd: root, stdio: 'pipe', timeout: 30000,
     });

@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join, dirname} from 'node:path';
 import {pathToFileURL, fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
-import {patchFiles, targetFiles, prepareStartupSource, verifyStartupSource} from '../scripts/startup-source-artifact.js';
+import {patchFiles, preparationFiles, targetFiles, prepareStartupSource, verifyStartupSource} from '../scripts/startup-source-artifact.js';
 
 const server = new URL('../', import.meta.url);
 const receipt = '.startup-source-artifact.json';
@@ -13,7 +13,7 @@ async function fixture(t) {
   const directory = await mkdtemp(join(tmpdir(), 'mws prepared source '));
   t.after(() => rm(directory, {recursive: true, force: true}));
   const root = pathToFileURL(directory + '/');
-  const files = [...patchFiles, ...targetFiles, 'scripts/startup-source-artifact.js',
+  const files = [...preparationFiles, ...targetFiles, 'scripts/startup-source-artifact.js',
     'scripts/prepare-startup-source.js', 'scripts/verify-startup-source.js',
     'src/patch-online-pos-handoff-route.js', 'src/routes/kat-online-ordering.js'];
   for (const file of files) {
@@ -27,13 +27,15 @@ async function fixture(t) {
 test('prepared artifact preserves the actual six-patch output and verifies without file writes', async t => {
   const root = await fixture(t);
   // Baseline uses the original commands, not a reimplementation of their logic.
-  for (const file of patchFiles) execFileSync(process.execPath, [fileURLToPath(new URL(file, root))], {cwd: root});
+  for (const file of preparationFiles) execFileSync(process.execPath, [fileURLToPath(new URL(file, root))], {cwd: root});
   const before = await Promise.all(targetFiles.map(file => readFile(new URL(file, root))));
   await prepareStartupSource(root);
   for (let i = 0; i < targetFiles.length; i++) assert.deepEqual(await readFile(new URL(targetFiles[i], root)), before[i]);
   const receiptBefore = await readFile(new URL(receipt, root));
   await verifyStartupSource(root);
   await verifyStartupSource(root);
+  execFileSync(process.execPath, [fileURLToPath(new URL('scripts/patch-pos-return-diagnostics.js', root))], {cwd: root});
+  await verifyStartupSource(root); // actual retained Render prerequisite
   assert.deepEqual(await readFile(new URL(receipt, root)), receiptBefore);
   execFileSync(process.execPath, [fileURLToPath(new URL('src/patch-online-pos-handoff-route.js', root))], {cwd: root});
   await verifyStartupSource(root); // retained later patch remains restart-compatible
