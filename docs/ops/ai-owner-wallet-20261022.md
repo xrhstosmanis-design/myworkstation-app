@@ -33,3 +33,7 @@ One queue attempt per event, up to10per60seconds per process, SKIP LOCKED across
 ## Required acceptance
 
 Green complete PR and exact-main CI, native PostgreSQL tests unskipped, client build and existing invariants. Then exact ordinary guarded deployment. Isolated synthetic funding/concurrent requests/rollback/foreign/revoked-session tests and mounted stale-store UI tests are engineering checks, not real LAB/customer/email PASS. Actual UI/LAB/email test must use separately identified authorized synthetic company and SMTP recipient with before/after ledger and untouched business/control evidence. Do not replay accepted invoice/payment/upload/stock operations. Broader metering and global notification placement remain OPEN.
+
+## Engineering receipt22Oct2026
+
+Source3009/a7adf6ca mergedcd633e9. Full PR39804554047 and exact-main39806020956 both SUCCESS3827server+8backup/zero failures/skips. All20 source blobs preserved in main9a67265. Ordinary release39807310528 was correctly held for newer report source; latest source CI39807166764/release pending at this receipt. Health201eb5e did not include the wallet. Runtime/mail OFF, hosted LAB/UI/email NOT TESTED. Full evidence in CHECKPOINTS/EVIDENCE/ai-owner-wallet-20261022/source-ci.json. Retained owner must verify the later normal combined release before acceptance.
