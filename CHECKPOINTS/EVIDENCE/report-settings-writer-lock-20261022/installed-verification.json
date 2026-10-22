@@ -1,0 +1,94 @@
+{
+  "scope": "CENTRAL-AUTO-SETTINGS-WRITER-LOCK-01",
+  "owner": "codex/report-settings-writer-lock-20261022",
+  "claim": {
+    "pr": 3026,
+    "head": "94684b4a2ce3207bb4038a2aaca1ed524bb75471",
+    "run": 39804597224,
+    "merge": "2d0110d1696ff0e7a94c4935e444b8521121d4fd"
+  },
+  "source": {
+    "pr": 3028,
+    "head": "ad87ec72615a92a833bec711cc73308d4ff32b67",
+    "merge": "9a67265aaa916058621b5291c96268b6f0093bb9",
+    "review": "NO BLOCKERS",
+    "blobs": {
+      "runtime": "2af22c9634be8c3686da5463cfac8f2dd8a52d19",
+      "unit": "f76eaa72305ba77c12da5754cb512a27caf05762",
+      "native": "6c39bde577db8cd96d9d5a9e227311b2832073be"
+    }
+  },
+  "local": {
+    "original": {
+      "pass": 1,
+      "fail": 7,
+      "skip": 0
+    },
+    "corrected": {
+      "pass": 29,
+      "fail": 0,
+      "skip": 2
+    },
+    "sparseInfrastructure": {
+      "pass": 10,
+      "fail": 2,
+      "cause": "Missing existing tracked client files in sparse checkout",
+      "resolution": "Restored tracked client tree; old mounted tests then passed; no tests weakened"
+    }
+  },
+  "ci": {
+    "pr": {
+      "run": 39805951972,
+      "job": 119919480780,
+      "serverPass": 3830,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "main": {
+      "run": 39807166764,
+      "job": 119924210949,
+      "serverPass": 3859,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "eachJobsSuccess": 5,
+    "newNativeParentAndSixSubcases": "PASS unskipped in both"
+  },
+  "release": {
+    "guardRun": 39808542280,
+    "deployJob": 119928332990,
+    "conclusion": "success",
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-22T15:41:14Z",
+        "id": "9a67265aaa916058621b5291c96268b6f0093bb9",
+        "message": "Merge pull request #3028 from xrhstosmanis-design/codex/report-settings-writer-lock-20261022\n\nfix(reports): fence actual settings saves with lifecycle and Store locks"
+      },
+      "createdAt": "2026-10-22T15:51:17.916547Z",
+      "finishedAt": "2026-10-22T15:56:27.889459Z",
+      "id": "dep-dbd31teq1p3s73dp7m40",
+      "startedAt": "2026-10-22T15:51:17.887789Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-22T15:56:53.93124Z"
+    },
+    "health": {
+      "at": "2026-10-22T15:57:57.967553+00:00",
+      "status": 200,
+      "ok": true,
+      "revision": "9a67265aaa916058621b5291c96268b6f0093bb9"
+    }
+  },
+  "dispatch": "OFF",
+  "featureAcceptance": "No new LAB/USER/manual PASS",
+  "remaining": [
+    "actual module/rule/consent/policy/lifecycle enrollment and absent-row writer protocols",
+    "authoritative verified recipient/consent enrollment",
+    "physical delivery/payload schema/lifecycle/manifest/retention/reset/restore suppression contract",
+    "trusted production transport/scheduler wiring",
+    "controlled final acceptance"
+  ],
+  "next": "Separate bounded before-source claim for the actual module writer; no source edits to that route yet"
+}
