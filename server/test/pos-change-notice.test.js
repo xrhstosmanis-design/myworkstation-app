@@ -23,7 +23,7 @@ test('actual POS change notice expires in three seconds, survives successful car
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,root=createRoot(document.getElementById('root'));
  const calls=[],product={id:'water',sku:'2270',name:'Fixture water',currentStock:100,salePrice:1,barcodes:['52101588']};let checkout,pendingRequest,pendingPoll=[];
  const api=async(path,options={})=>{
-  calls.push({path,options});
+  calls.push({path,options});if(path.endsWith('/ftext-cash/capability'))return {storeId:path.split('/')[4],configured:false};
   if(path.endsWith('/rbs-capdriver-v1/change-fixture'))return new Promise(resolve=>pendingPoll.push(resolve));
   if(path.endsWith('/payment-terminals'))return {terminalPos:'MAIN',fiscalDisplayName:'Fixture register',choices:[{deviceCode:'A',displayName:'POS ΚΑΤΑΣΤΗΜΑΤΟΣ',operationChannel:'COUNTER',transactionMode:'IMMEDIATE'},{deviceCode:'B',displayName:'DELIVERY',operationChannel:'DELIVERY_DELAYED',transactionMode:'DEFERRED'}]};if(path.endsWith('/checkout'))return new Promise((resolve,reject)=>{checkout={resolve,reject}});
   if(path==='/api/store-pos/stores/A')return {products:[product],layout:{quickKeys:[],categories:[]},access:{}};

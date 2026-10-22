@@ -32,3 +32,21 @@ test('actual cash HTTP requires purpose-separated device authentication before q
  const app=express();app.use(express.json());app.use('/api/ftext/v1',createFtextRouter({service,db:{},ensure:async()=>{}}));app.use((e,_req,res,_next)=>res.status(e.status||500).json({error:e.message}));const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
  try{for(const action of ['cash-poll','cash-result'])for(const token of ['', 'wrong-purpose-or-expired']){const response=await fetch('http://127.0.0.1:'+server.address().port+'/api/ftext/v1/device/'+action,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:'{}'});assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'no-store')}assert.equal(touched,0)}finally{await new Promise(r=>server.close(r))}
 });
+test('actual separate POS capability route binds company/store/terminal and cannot fall through the catalog mount',async()=>{
+ const {readFile}=await import('node:fs/promises'),source=await readFile(new URL('../src/routes/store-pos.js',import.meta.url),'utf8');
+ const selected=source.split('\n').filter(line=>line.startsWith('async function ftextConfigured(')||line.startsWith('function assertStore(')||line.startsWith('async function storeFor(')||line.startsWith("router.get('/stores/:storeId/ftext-cash/capability'"));assert.equal(selected.length,4);
+ const reads=[],db={store:{findFirst:async({where})=>where.id==='A'&&where.companyId==='company-A'?{id:'A',companyId:'company-A'}:null},$queryRaw:async(parts,...values)=>{reads.push(values);return parts.join('').includes('to_regclass')?[{name:'fixture.CloudDevice'}]:values[0]==='company-A'&&values[1]==='A'&&values[2]==='ftext:POS-A'?[{configured:1}]:[]},$executeRaw:()=>assert.fail('capability wrote data')};
+ const router=express.Router();new Function('router','prisma','requestTerminal',selected.join('\n'))(router,db,async req=>req.headers['x-terminal']||'POS-A');
+ const app=express();app.use((req,res,next)=>{if(!req.headers['x-company'])return res.sendStatus(401);req.user={tokenType:'STORE_OPERATOR',storeId:'A',companyId:req.headers['x-company']};next()});
+ // The real catalog is mounted first but has no matching capability route.
+ app.use('/api/store-pos',express.Router().get('/stores/:storeId',(_req,res)=>res.json({catalog:true})));app.use('/api/store-pos',router);app.use((e,_req,res,_next)=>res.status(e.status||500).json({error:e.message}));
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port+'/api/store-pos/stores/';
+ try{
+  assert.equal((await fetch(base+'A/ftext-cash/capability')).status,401);
+  const get=(store,headers={})=>fetch(base+store+'/ftext-cash/capability',{headers:{'x-company':'company-A',...headers}});
+  assert.deepEqual(await(await get('A')).json(),{storeId:'A',configured:true});
+  assert.deepEqual(await(await get('A',{'x-terminal':'POS-B'})).json(),{storeId:'A',configured:false});
+  assert.equal((await get('B')).status,403);assert.equal((await get('A',{'x-company':'company-B'})).status,404);
+  assert.ok(reads.some(values=>values.join('|')==='company-A|A|ftext:POS-A'));
+ }finally{await new Promise(r=>server.close(r))}
+});

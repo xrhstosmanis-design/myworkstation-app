@@ -12,7 +12,7 @@ test('actual POS reload continues saved issued CASH with original identifiers an
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,root=createRoot(document.getElementById('root')),calls=[];
  const r={id:'00000000-0000-4000-8000-000000000001',clientTransactionId:'00000000-0000-4000-8000-000000000002',paymentMethod:'CASH',status:'DISPATCHED',total:2.7,checkout:{paymentMethod:'CASH',payments:null,items:[{productId:'water',quantity:1}]}},product={id:'water',name:'Water',sku:'WATER',salePrice:2.7,currentStock:10,barcodes:[]};let completed=false;
  const api=async(path,options={})=>{
-  calls.push({path,options});if(path.endsWith('/checkout')){completed=true;return {saleId:'sale',total:2.7,payments:[{method:'CASH',amount:2.7}]}};
+  calls.push({path,options});if(path.endsWith('/ftext-cash/capability'))return {storeId:path.split('/')[4],configured:false};if(path.endsWith('/checkout')){completed=true;return {saleId:'sale',total:2.7,payments:[{method:'CASH',amount:2.7}]}};
   if(path.endsWith('/rbs-capdriver-v1/pending'))return {requests:completed?[]:[r]};if(path.endsWith('/rbs-capdriver-v1/'+r.id))return {request:completed?{...r,status:'SALE_COMMITTED',saleId:'sale'}:r};
   if(path==='/api/store-pos/stores/A')return {products:[product],layout:{quickKeys:[],categories:[]},access:{}};if(path.endsWith('/table-service')||path==='/api/netlink/status')throw Error('not enabled');return {rows:[],items:[],requests:[],offers:[],stations:[],state:{}};
  };
