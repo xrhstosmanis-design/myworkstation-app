@@ -42,3 +42,10 @@ Required sequence: claim green/main BEFORE code; implement bounded app and addit
 ## Actual simulator result / expired synthetic fixture correction
 
 40af936 iOS39809771696/job119932561474 compiled actual app and executed 11 core PASS, 14 model tests13PASS/1FAIL, both real Apple H264 and H264/AAC in-memory remux/playback tests PASS, all3 native UI tests PASS. The permission-resume test used deliberately invalid token `fixture`, so foreground correctly expired/cleared session instead of retaining its import. Corrected only that test to a short-lived synthetic routing JWT on mocked transport; added separate invalid-token foreground regression preserving fail-closed cancellation. No production expiry check weakened. Also finalize context-change modal dismissal, implicit capture-dismiss lease cleanup and employee-facing notification copy without infrastructure internals. Fresh complete checks, existing server MP4 validator proof and unsigned Release archive remain required; no iPhone/notification/physical PASS.
+
+
+## Actual successful candidate and observed screenshot layout correction
+
+f62d666 PR iOS39811955951/job119942033133 SUCCESS:11core+15model+2actual Apple media+3UI=31PASS/0FAIL; real video1000ms and video/AAC1092ms accepted by unchanged server validator, unsigned Release archive built. Artifact12441042101 ZIP digest9752f631e150e4a8b9edc7672af59512cac3e50ad3c627b38fe145b5962a3da8; actual tested checkout is GitHub PR merge050aa90001f85000354f5ca3d021c55d020cd593, not branch head (receipt honest). Full39811955893 all5jobsSUCCESS3865server+8backup/0FAIL/0SKIP.
+
+Visual review of exported normal/large-font synthetic iPhone16Pro PNGs found ready-reply draft screenshot pushes header above viewport while empty large-font layout is visible. Bound root content to actual GeometryReader viewport and assert header/composer remain inside phone after ready-reply selection; preserve all existing tests and require fresh actual screenshot/build review. Prior green candidate is NOT final delivery until this layout correction passes. No physical iPhone acceptance, Apple account/signing/APNs or installable distribution.

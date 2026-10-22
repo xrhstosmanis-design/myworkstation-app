@@ -28,7 +28,7 @@ struct RootView: View {
     @State private var importScope: Scope?
     private let purple = Color(red: 0.44, green: 0.28, blue: 0.76)
     var body: some View {
-        ZStack {
+        GeometryReader { viewport in ZStack {
             VStack(spacing: 0) {
                 header
                 if !model.status.isEmpty { Text(model.status).font(.subheadline).padding(10).accessibilityIdentifier("status").accessibilityAddTraits(.updatesFrequently) }
@@ -41,7 +41,7 @@ struct RootView: View {
                 }
             }.background(Color(red: 0.96, green: 0.95, blue: 0.98)).tint(purple)
             if phase != .active || captured { Color(red: 0.16, green: 0.10, blue: 0.25).ignoresSafeArea().overlay { VStack { Image(systemName: "lock.fill").font(.largeTitle); Text("MyWorkStation Chat"); Text("Το περιεχόμενο προστατεύεται.").font(.subheadline) }.foregroundStyle(.white) }.accessibilityIdentifier("privacy-cover") }
-        }
+        }.frame(width: viewport.size.width, height: viewport.size.height, alignment: .top) }
         .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in captured = UIScreen.main.isCaptured; if captured { password = ""; picker = nil; camera = nil; replySheet = false; evidenceSheet = false; model.background() } else { Task { await model.foreground(); await PushManager.shared.openPending() } } }
         .onChange(of: phase) { _, next in
             if next != .active { password = "" }

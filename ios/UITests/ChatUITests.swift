@@ -6,6 +6,9 @@ final class ChatUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "composer").firstMatch.waitForExistence(timeout: 15)); XCTAssertTrue(app.staticTexts["Δοκιμή εμφάνισης συνομιλίας"].exists)
         app.buttons["Έτοιμες"].tap(); let reply = app.buttons["Το ελέγχω και θα απαντήσω."]; XCTAssertTrue(reply.waitForExistence(timeout: 5)); reply.tap()
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "composer").firstMatch.value as? String, "Το ελέγχω και θα απαντήσω.")
+        let header = app.staticTexts["title"]
+        XCTAssertGreaterThanOrEqual(header.frame.minY, app.frame.minY, "Ready-reply draft must not push the header outside the phone")
+        XCTAssertLessThanOrEqual(app.descendants(matching: .any).matching(identifier: "composer").firstMatch.frame.maxY, app.frame.maxY)
         let proof = XCTAttachment(screenshot: app.screenshot()); proof.name = "native-conversation-normal"; proof.lifetime = .keepAlways; add(proof)
         app.buttons["Αποστολή μηνύματος"].tap(); XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "composer").firstMatch.waitForExistence(timeout: 5)); XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "composer").firstMatch.value as? String, "")
     }
