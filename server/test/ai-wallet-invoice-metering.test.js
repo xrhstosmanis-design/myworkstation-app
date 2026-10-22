@@ -61,3 +61,15 @@ test('Azure missing price, excessive physical pages and low balance fail before 
  }
  assert.equal(paid,0);
 });
+
+test('actual internal commerce HTTP transport bypasses the invoice provider meter',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const source=await readFile(new URL('../src/routes/commerce-pos-v244.js',import.meta.url),'utf8');
+ const body=source.slice(source.indexOf('async function internalCommerceRequest('),source.indexOf('async function rebuildLostFastHandoff('));
+ let calls=0;const previous=globalThis.fetch;
+ globalThis.fetch=async(url,options)=>{calls++;assert.match(url,/^http:\/\/127\.0\.0\.1:\d+\/api\/commerce\/synthetic$/);assert.equal(options.headers.Authorization,'synthetic-internal');return new Response(JSON.stringify({ok:true}))};
+ try{
+  const request=new Function('assertCustomerDemoOutboundAllowed','lifecycleContext','INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS','fetch',body+';return internalCommerceRequest;')(()=>{},()=>({}),1000,()=>{throw Error('internal request must not enter paid provider adapter')});
+  assert.deepEqual(await request('/synthetic',{authorization:'synthetic-internal'}),{ok:true});assert.equal(calls,1);
+ }finally{globalThis.fetch=previous}
+});

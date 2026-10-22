@@ -151,7 +151,7 @@ async function internalCommerceRequest(path,{authorization,backgroundScope,metho
   const requestAuthorization=backgroundScope?posBackgroundAuthorization({...backgroundScope,path,method,body}):authorization;
   let lastError;
   for(const [originIndex,origin] of origins.entries())try{
-    const response=await fetch(`${origin}/api/commerce${path}`,{method,headers:{Authorization:requestAuthorization,"Content-Type":"application/json","x-mws-store-generations":JSON.stringify(lifecycleContext())},signal:AbortSignal.timeout(INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS),...(body===undefined?{}:{body:JSON.stringify(body)})});
+    const response=await globalThis.fetch(`${origin}/api/commerce${path}`,{method,headers:{Authorization:requestAuthorization,"Content-Type":"application/json","x-mws-store-generations":JSON.stringify(lifecycleContext())},signal:AbortSignal.timeout(INTERNAL_COMMERCE_REQUEST_TIMEOUT_MS),...(body===undefined?{}:{body:JSON.stringify(body)})});
     const text=await response.text();
     let payload={};
     if(text)try{payload=JSON.parse(text)}catch{payload={error:`Μη αναμενόμενη απάντηση server (${response.status}).`}};
