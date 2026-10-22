@@ -6,4 +6,4 @@ Causal boundary: move those same ordered file-only patches into the existing pro
 
 Single next action after claim merge: implement and compare identical prepared source in isolated temporary trees, then full regression CI. Broader startup data-work removal remains OPEN and requires individual causal review.
 
-Claim PR3038 original6c93a9c3 passed applicable CI; conflicts from concurrent shared records resolved by preserving complete current main and prepending only this limited transfer. No source edits.
+Claim PR3038 original6c93a9c3 and reconciledafb24a23 passed applicable checks. Preserve latest main in full; append this authorized limited transfer rather than prepend to reduce shared-record conflicts. No source edits. Existing six-patch baseline executed twice in temporary files: byte-identical3targets; no DB; Node24 local only, not production timing.
