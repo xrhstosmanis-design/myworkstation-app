@@ -1,0 +1,5 @@
+/* Keep recent-sale selection usable above details in a stacked return dialog. */
+@media (max-width:760px) {
+  .pos-standard-modal .pos-return-flow { grid-template-rows: minmax(150px,220px) auto; align-content:start; }
+  .pos-standard-modal .pos-return-sales { min-height:150px; }
+}

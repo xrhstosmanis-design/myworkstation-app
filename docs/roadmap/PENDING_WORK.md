@@ -9558,3 +9558,13 @@ New code status ASSIGNED / NOT TESTED; earlier #2743 daily/weekly HOLD/provision
 ## KAT online search remaining acceptance - ASSIGNED fix/kat-online-search-autofill-20261019
 
 Remaining only: real mobile recheck and physical Chrome/password-manager autofill variant. Hosted desktop category/email-reset/search passed19Oct21:01Athens at19e6adcdf25fce65449b1f82f35c71808b61b3ac and is removed from pending. Previous owner mobile-category PASS retained. Do not repeat successful checks or financial transactions for documentation. Checkpoint2026-10-19-kat-online-search-autofill.md/manualonline-delivery/EVIDENCEkat-online-autofill-20261019.
+
+## POS-UI-V2-3012 — ASSIGNED / DEVELOPMENT / AWAITING LAB
+
+22/10/2026 Europe/Athens. Owner: coordinated Work POS UI V2, branch `feat/pos-ui-v2-coordination-3012`; source baseline `feat/pos-ui-v2-safe-minimize-3012` at `9d168106430d10b399ff2baa4fb03e940b7eec25`. Explicit current user authorization covers independent branches, commits, PRs and safe isolated tests; merge/main and production deploy require final approval. This newer instruction overrides the repository requirement to merge a claim before source. No main publication, hosted state change or deployment is performed here.
+
+Issue https://github.com/xrhstosmanis-design/myworkstation-app/issues/3012 remains the single central task. Three bounded independent workstreams: appearance (CSS and import only), overlays (minimized restore placement/lifecycle, no payment submission changes), safety (isolated regression tests and audit). Coordination owns shared records. Existing POS-PAYMENT-MINIMIZE-01 owner `fix/pos-payment-minimize-20261020` and its pending physical acceptance are retained; V2 work is an explicit extension, not takeover or closure. All other Gate/module owners retained.
+
+Preserve every existing POS action, barcode/QR focus, quick products, discounts, customer cards, store/tenant/role boundaries, receipts, idempotency, financial/VAT/stock calculations and device gates. Local simulation/CI is not LAB PASS. No financial, stock, receipt or invoice replay is authorized by this record. Source/CI/build/browser results and remaining physical EFTPOS/fiscal/store acceptance must be recorded before requesting final approval. No manual PASS change until real scoped acceptance.
+
+Checkpoint: `CHECKPOINTS/CHANGES/2026-10-22-pos-ui-v2-3012.md`.
