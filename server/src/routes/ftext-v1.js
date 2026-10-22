@@ -1,4 +1,7 @@
 import {Router} from 'express';
+import {claimFtextCashRequest,recordFtextCashResult,ftextCashRequestView} from '../services/ftext-cash-requests.js';
+import {finalizeFtextCashRequest} from '../services/ftext-cash-finalize.js';
+import {ftextCashTableExists} from '../services/ftext-cash-schema.js';
 import {prisma} from '../prisma.js';
 import {auth} from '../middleware/auth.js';
 import {companyModuleState,isPlatformSuperAdmin} from '../middleware/module-access.js';
@@ -20,6 +23,12 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
  },wrap(async(req,res)=>res.status(201).json(await service.pair(req.body))));
  router.post('/device/ping',wrap(async(req,res)=>res.json(await service.ping(token(req)))));
  router.post('/device/status-result',wrap(async(req,res)=>res.json(await service.report(token(req),req.body))));
+ router.post('/device/cash-poll',wrap(async(req,res)=>res.json(await service.authenticated(token(req),async(t,d,c)=>({request:c.cashEnabled===true&&await ftextCashTableExists(t)?await claimFtextCashRequest(t,d,c):null})))));
+ router.post('/device/cash-result',wrap(async(req,res)=>{
+  const row=await service.authenticated(token(req),async(t,d,c)=>recordFtextCashResult(t,d,c,req.body));
+  let committed=null;if(row.status==='CONFIRMED')try{committed=await finalizeFtextCashRequest(db,row.id,row,{context:service.cashContext})}catch{}
+  res.json({ok:true,status:committed?'SALE_COMMITTED':row.status,saleId:committed?.saleId||row.saleId||null,finalizationPending:row.status==='CONFIRMED'&&!committed});
+ }));
  const prefix='/companies/:companyId/stores/:storeId';
  router.get(prefix+'/installation/:terminalPos',userAuth,manager,wrap(async(req,res)=>res.json(await service.view(scoped(req)))));
  router.put(prefix+'/installation',userAuth,manager,wrap(async(req,res)=>res.json(await service.configure(scoped(req),req.body,req.user.id))));

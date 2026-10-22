@@ -16,7 +16,7 @@ function handlers(prisma){
   const older=fs.readFileSync(new URL('../src/routes/store-pos.js',import.meta.url),'utf8');
   const start=older.indexOf('router.get("/stores/:storeId",');
   const end=older.indexOf('\n',start);
-  const guards=older.split('\n').filter(line=>line.startsWith('function assertStore(')||line.startsWith('async function storeFor(')).join('\n');
+  const guards=older.split('\n').filter(line=>line.startsWith('function assertStore(')||line.startsWith('async function storeFor(')||line.startsWith('async function ftextConfigured(')).join('\n');
   new Function('router','prisma','hasTableService','capDriverV1WriterState','requestTerminal','readLifecycleGeneration',`const money=value=>Number(value||0);${guards}\n${older.slice(start,end)}`)(
     {get:(_,fn)=>routes.set('older',[fn])},prisma,async()=>false,async()=>({online:false,configured:false}),async()=>"MAIN",readLifecycleGeneration);
   return async(kind,user={id:'owner',role:'OWNER',companyId:'company'},storeId='store')=>{

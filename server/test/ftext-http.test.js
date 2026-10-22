@@ -26,3 +26,9 @@ test('actual public HTTP pairing is bounded and passes no arbitrary manager scop
  for(let i=0;i<10;i++)assert.equal((await request('/pair',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code:'FT-12345678'})})).status,201);
  assert.equal((await request('/pair',{method:'POST'})).status,429);assert.equal(calls.length,10);assert.deepEqual(calls[0],['pair',{code:'FT-12345678'}]);
 }));
+test('actual cash HTTP requires purpose-separated device authentication before queue access',async()=>{
+ const {createFtextInstallationService}=await import('../src/services/ftext-installation.js');let touched=0;
+ const service=createFtextInstallationService({db:{$transaction:()=>{touched++;throw Error('unauthenticated DB access')}},secret:()=> 'fixture-secret-with-sufficient-length',moduleState:()=>assert.fail('unauthenticated module read')});
+ const app=express();app.use(express.json());app.use('/api/ftext/v1',createFtextRouter({service,db:{},ensure:async()=>{}}));app.use((e,_req,res,_next)=>res.status(e.status||500).json({error:e.message}));const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
+ try{for(const action of ['cash-poll','cash-result'])for(const token of ['', 'wrong-purpose-or-expired']){const response=await fetch('http://127.0.0.1:'+server.address().port+'/api/ftext/v1/device/'+action,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:'{}'});assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'no-store')}assert.equal(touched,0)}finally{await new Promise(r=>server.close(r))}
+});
