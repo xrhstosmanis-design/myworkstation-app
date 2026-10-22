@@ -1,0 +1,409 @@
+{
+  "mode": "actual StorePosPanel mounted over isolated HTTP runtime; synthetic visual only",
+  "requests": [
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:43549/"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:43549/lab.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:43549/lab.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:43549/api/health?posProbe=1792687551996"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:43549/"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:43549/lab.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:43549/lab.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:43549/api/health?posProbe=1792687562028"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:43549/api/health?posProbe=1792687562037"
+    }
+  ],
+  "errors": [],
+  "mounted": {
+    "quick": 20,
+    "categories": 20,
+    "banner": "MYWORKSTATION LAB · ΜΟΝΟ ΟΠΤΙΚΟΣ ΕΛΕΓΧΟΣ",
+    "initial": {
+      "blockedWrites": 2,
+      "blockedReads": 2,
+      "last": {
+        "kind": "fixture-read",
+        "method": "GET",
+        "path": "/api/store-pos/stores/pos-ui-lab-only/rbs-capdriver-v1/pending",
+        "time": "2026-10-22T16:45:52.181Z"
+      },
+      "events": [
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/online-radio",
+          "time": "2026-10-22T16:45:51.990Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/barcode-registration",
+          "time": "2026-10-22T16:45:51.991Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only",
+          "time": "2026-10-22T16:45:52.033Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/holds",
+          "time": "2026-10-22T16:45:52.033Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/audience-discounts",
+          "time": "2026-10-22T16:45:52.034Z"
+        },
+        {
+          "kind": "read-blocked",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/table-service",
+          "time": "2026-10-22T16:45:52.034Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "LOCAL_STORAGE",
+          "path": "myworkstation:offline-pos-sales:pos-ui-lab-only",
+          "time": "2026-10-22T16:45:52.044Z"
+        },
+        {
+          "kind": "read-blocked",
+          "method": "GET",
+          "path": "/api/netlink/status",
+          "time": "2026-10-22T16:45:52.045Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "POST",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/audience-selection",
+          "time": "2026-10-22T16:45:52.060Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/rbs-capdriver-v1/pending",
+          "time": "2026-10-22T16:45:52.181Z"
+        }
+      ]
+    }
+  },
+  "cartLines": 1,
+  "denials": [
+    {
+      "method": "POST",
+      "rejected": true,
+      "code": "POS_UI_LAB_BLOCKED"
+    },
+    {
+      "method": "GET",
+      "rejected": true,
+      "code": "POS_UI_LAB_BLOCKED"
+    },
+    {
+      "method": "GET",
+      "rejected": true,
+      "code": "POS_UI_LAB_BLOCKED"
+    }
+  ],
+  "minButton": {
+    "rect": {
+      "x": 1197,
+      "y": 104,
+      "width": 50,
+      "height": 50,
+      "top": 104,
+      "right": 1247,
+      "bottom": 154,
+      "left": 1197
+    },
+    "hit": "<button type=\"button\" data-mws-payment-minimize-button=\"1\" title=\"Ελαχιστοποίηση πληρωμής\" aria-label=\"Ελαχιστοποίηση πληρωμής\" style=\"min-width: 50px; width: 50px; height: 50px; border: 0px; border-radius: 12px; background: rgba(255, 255, 255, 0.16)"
+  },
+  "minimized": {
+    "visible": true,
+    "insideSearch": true,
+    "draft": "ΜΟΝΟ ΟΠΤΙΚΟ LAB",
+    "footer": true
+  },
+  "restored": {
+    "draft": "ΜΟΝΟ ΟΠΤΙΚΟ LAB",
+    "cartLines": 2,
+    "snapshot": {
+      "blockedWrites": 5,
+      "blockedReads": 5,
+      "last": {
+        "kind": "write-blocked",
+        "method": "POST",
+        "path": "/api/store-pos/stores/pos-ui-lab-only/audit",
+        "time": "2026-10-22T16:45:57.365Z"
+      },
+      "events": [
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/online-radio",
+          "time": "2026-10-22T16:45:51.990Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/barcode-registration",
+          "time": "2026-10-22T16:45:51.991Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only",
+          "time": "2026-10-22T16:45:52.033Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/holds",
+          "time": "2026-10-22T16:45:52.033Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/audience-discounts",
+          "time": "2026-10-22T16:45:52.034Z"
+        },
+        {
+          "kind": "read-blocked",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/table-service",
+          "time": "2026-10-22T16:45:52.034Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "LOCAL_STORAGE",
+          "path": "myworkstation:offline-pos-sales:pos-ui-lab-only",
+          "time": "2026-10-22T16:45:52.044Z"
+        },
+        {
+          "kind": "read-blocked",
+          "method": "GET",
+          "path": "/api/netlink/status",
+          "time": "2026-10-22T16:45:52.045Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "POST",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/audience-selection",
+          "time": "2026-10-22T16:45:52.060Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/rbs-capdriver-v1/pending",
+          "time": "2026-10-22T16:45:52.181Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/gift-offers",
+          "time": "2026-10-22T16:45:53.573Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "POST",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/audit",
+          "time": "2026-10-22T16:45:53.575Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "POST",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/checkout",
+          "time": "2026-10-22T16:45:57.006Z"
+        },
+        {
+          "kind": "read-blocked",
+          "method": "GET",
+          "path": "/api/unknown-read",
+          "time": "2026-10-22T16:45:57.006Z"
+        },
+        {
+          "kind": "read-blocked",
+          "method": "GET",
+          "path": "/api/health",
+          "time": "2026-10-22T16:45:57.006Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/transactions/stores/pos-ui-lab-only/overview",
+          "time": "2026-10-22T16:45:57.051Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/access",
+          "time": "2026-10-22T16:45:57.051Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/management/expense-categories",
+          "time": "2026-10-22T16:45:57.051Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/transactions/stores/pos-ui-lab-only/payroll-employees",
+          "time": "2026-10-22T16:45:57.051Z"
+        },
+        {
+          "kind": "read-blocked",
+          "method": "GET",
+          "path": "/api/commerce/ai-reader/capability",
+          "time": "2026-10-22T16:45:57.052Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/gift-offers",
+          "time": "2026-10-22T16:45:57.365Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "POST",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/audit",
+          "time": "2026-10-22T16:45:57.365Z"
+        }
+      ]
+    }
+  },
+  "smallFooter": true,
+  "offline": {
+    "online": false,
+    "queue": null,
+    "history": null,
+    "cartLines": 1,
+    "error": "Δεν ήταν δυνατή η ασφαλής τοπική αποθήκευση της offline πώλησης.",
+    "snapshot": {
+      "blockedWrites": 5,
+      "blockedReads": 2,
+      "last": {
+        "kind": "write-blocked",
+        "method": "LOCAL_STORAGE",
+        "path": "myworkstation:offline-pos-sales:pos-ui-lab-only",
+        "time": "2026-10-22T16:46:02.472Z"
+      },
+      "events": [
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/online-radio",
+          "time": "2026-10-22T16:46:02.028Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/barcode-registration",
+          "time": "2026-10-22T16:46:02.028Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only",
+          "time": "2026-10-22T16:46:02.029Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/holds",
+          "time": "2026-10-22T16:46:02.030Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/audience-discounts",
+          "time": "2026-10-22T16:46:02.030Z"
+        },
+        {
+          "kind": "read-blocked",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/table-service",
+          "time": "2026-10-22T16:46:02.030Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "LOCAL_STORAGE",
+          "path": "myworkstation:offline-pos-sales:pos-ui-lab-only",
+          "time": "2026-10-22T16:46:02.031Z"
+        },
+        {
+          "kind": "read-blocked",
+          "method": "GET",
+          "path": "/api/netlink/status",
+          "time": "2026-10-22T16:46:02.032Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "POST",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/audience-selection",
+          "time": "2026-10-22T16:46:02.032Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/rbs-capdriver-v1/pending",
+          "time": "2026-10-22T16:46:02.073Z"
+        },
+        {
+          "kind": "fixture-read",
+          "method": "GET",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/gift-offers",
+          "time": "2026-10-22T16:46:02.242Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "POST",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/audit",
+          "time": "2026-10-22T16:46:02.243Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "POST",
+          "path": "/api/store-pos/stores/pos-ui-lab-only/checkout",
+          "time": "2026-10-22T16:46:02.466Z"
+        },
+        {
+          "kind": "write-blocked",
+          "method": "LOCAL_STORAGE",
+          "path": "myworkstation:offline-pos-sales:pos-ui-lab-only",
+          "time": "2026-10-22T16:46:02.472Z"
+        }
+      ]
+    }
+  },
+  "pass": true
+}

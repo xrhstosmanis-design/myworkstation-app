@@ -1,0 +1,49 @@
+{
+  "issue": 3012,
+  "scope": "isolated production-CSS rendered fixture, not authenticated POS or LAB",
+  "runtime": "Node 20.20.2",
+  "browser": "Chromium 153.0.8010.0 via direct dependency-free CDP pipe control",
+  "viewports": [
+    "1024x768",
+    "1280x800",
+    "1366x768",
+    "1920x1080",
+    "1024x681",
+    "1366x681",
+    "1366x625",
+    "1092x614/DPR1.25",
+    "910x512/DPR1.5",
+    "819x614/DPR1.25",
+    "682x512/DPR1.5"
+  ],
+  "variants": [
+    "keypad shown",
+    "keypad hidden"
+  ],
+  "renderedTests": {
+    "pass": 36,
+    "fail": 0,
+    "skip": 0
+  },
+  "assertions": [
+    "no page overflow",
+    "all footer controls hit-testable in viewport",
+    "useful basket",
+    "usable scanner",
+    "all category captions and counts fit",
+    "all category centers hit-testable",
+    "20 quick keys retained and fully reachable by internal scrolling",
+    "quick names fully visible",
+    "actual viewport/DPR exactly asserted",
+    "basket at least90px reachable inside visible working viewport",
+    "notice open/dismiss control hit tests",
+    "short-height working-panel scroll never covers payment footer"
+  ],
+  "build": "PASS after final source: Node20,2427modules,18.13s; standard large-bundle warning",
+  "lab": "NOT TESTED",
+  "physicalEftposFiscal": "NOT TESTED",
+  "mergeDeploy": "not authorized without final owner approval",
+  "priorNativeCi": "FAIL: four basket geometry assertions; new exact native CI pending",
+  "optionalRows": "synthetic success+error+chat-notice controls tested at1366px and all zoom equivalents",
+  "zoom": "equivalent CSS viewport/DPR tested; actual user browser zoom interaction NOT TESTED"
+}

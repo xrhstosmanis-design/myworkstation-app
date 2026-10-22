@@ -1,0 +1,430 @@
+TAP version 13
+# Subtest: POS applies configured audience discounts server-side
+ok 1 - POS applies configured audience discounts server-side
+  ---
+  duration_ms: 3.703977
+  ...
+# Subtest: audience selection is scoped to company store and signed-in actor
+ok 2 - audience selection is scoped to company store and signed-in actor
+  ---
+  duration_ms: 0.920038
+  ...
+# Subtest: POS has explicit choices and resets after every completed or cleared cart
+ok 3 - POS has explicit choices and resets after every completed or cleared cart
+  ---
+  duration_ms: 1.04548
+  ...
+# Subtest: discount cards are hashed, tenant scoped and never returned as clear card values
+ok 4 - discount cards are hashed, tenant scoped and never returned as clear card values
+  ---
+  duration_ms: 5.058385
+  ...
+# Subtest: POS preview uses checkout line rounding for multiple quantities and preserves ordinary prices
+ok 5 - POS preview uses checkout line rounding for multiple quantities and preserves ordinary prices
+  ---
+  duration_ms: 0.992583
+  ...
+# Subtest: POS credit requires a named customer and enforces the stored credit limit under lock
+ok 6 - POS credit requires a named customer and enforces the stored credit limit under lock
+  ---
+  duration_ms: 4.768342
+  ...
+# Subtest: credit sale updates customer balance and writes an immutable ledger entry
+ok 7 - credit sale updates customer balance and writes an immutable ledger entry
+  ---
+  duration_ms: 0.672346
+  ...
+# Subtest: partial receipt reduces balance and reports customer email outcome after commit
+ok 8 - partial receipt reduces balance and reports customer email outcome after commit
+  ---
+  duration_ms: 0.957572
+  ...
+# Subtest: POS employee sees balance and receives cash or card payments into the active shift
+ok 9 - POS employee sees balance and receives cash or card payments into the active shift
+  ---
+  duration_ms: 1.135393
+  ...
+# Subtest: loyalty earns one point per collected euro and defers credit-sale points until payment
+ok 10 - loyalty earns one point per collected euro and defers credit-sale points until payment
+  ---
+  duration_ms: 4.787835
+  ...
+# Subtest: redemption is limited to blocks of 100 points and twenty percent of the sale
+ok 11 - redemption is limited to blocks of 100 points and twenty percent of the sale
+  ---
+  duration_ms: 0.593432
+  ...
+# Subtest: customer card scan and backoffice detail expose points and audited loyalty history
+ok 12 - customer card scan and backoffice detail expose points and audited loyalty history
+  ---
+  duration_ms: 0.324676
+  ...
+# Subtest: RBS issuance includes standalone delayed CARD and retains protected exclusions
+ok 13 - RBS issuance includes standalone delayed CARD and retains protected exclusions
+  ---
+  duration_ms: 1.833045
+  ...
+# Subtest: POS exposes an explicit, safely reset delivery-delayed choice
+ok 14 - POS exposes an explicit, safely reset delivery-delayed choice
+  ---
+  duration_ms: 0.239833
+  ...
+# Subtest: offline catalog and runtime permissions are persisted per store
+ok 15 - offline catalog and runtime permissions are persisted per store
+  ---
+  duration_ms: 1.823586
+  ...
+# Subtest: offline queue accepts cash only and never claims a card or return sale
+ok 16 - offline queue accepts cash only and never claims a card or return sale
+  ---
+  duration_ms: 0.262571
+  ...
+# Subtest: offline cash replay keeps one stable idempotency key and cannot overlap
+ok 17 - offline cash replay keeps one stable idempotency key and cannot overlap
+  ---
+  duration_ms: 0.220664
+  ...
+# Subtest: cart clears only after durable local queue write
+ok 18 - cart clears only after durable local queue write
+  ---
+  duration_ms: 0.285788
+  ...
+# Subtest: locked offline prices do not grant arbitrary retail-price changes
+ok 19 - locked offline prices do not grant arbitrary retail-price changes
+  ---
+  duration_ms: 0.21947
+  ...
+# Subtest: offline replay remains explicitly non fiscal
+ok 20 - offline replay remains explicitly non fiscal
+  ---
+  duration_ms: 0.20655
+  ...
+# Subtest: POS catalog exposes the functional product flags
+ok 21 - POS catalog exposes the functional product flags
+  ---
+  duration_ms: 10.404303
+  ...
+# Subtest: free sale price opens price entry and negative stock warns immediately
+ok 22 - free sale price opens price entry and negative stock warns immediately
+  ---
+  duration_ms: 3.084634
+  ...
+# Subtest: POS exposes a touch text-size control with three choices
+ok 23 - POS exposes a touch text-size control with three choices
+  ---
+  duration_ms: 7.834387
+  ...
+# Subtest: text-size preference is saved per store terminal
+ok 24 - text-size preference is saved per store terminal
+  ---
+  duration_ms: 0.302655
+  ...
+# Subtest: font scaling does not change fixed POS geometry
+ok 25 - font scaling does not change fixed POS geometry
+  ---
+  duration_ms: 0.699297
+  ...
+# Subtest: Store Mode is locked to the viewport while inner product lists may scroll
+ok 26 - Store Mode is locked to the viewport while inner product lists may scroll
+  ---
+  duration_ms: 1.142427
+  ...
+# Subtest: TABLE_SERVICE is a separately licensed commercial module
+ok 27 - TABLE_SERVICE is a separately licensed commercial module
+  ---
+  duration_ms: 4.213414
+  ...
+# Subtest: Super Admin can enable the module per store with audit
+ok 28 - Super Admin can enable the module per store with audit
+  ---
+  duration_ms: 0.696852
+  ...
+# Subtest: inactive table service is hidden and checkout is blocked
+ok 29 - inactive table service is hidden and checkout is blocked
+  ---
+  duration_ms: 1.032906
+  ...
+# Subtest: BackOffice includes complete searchable table history
+ok 30 - BackOffice includes complete searchable table history
+  ---
+  duration_ms: 0.543488
+  ...
+# Subtest: Owner and Super Admin configure dining areas and tables from the shared BackOffice
+ok 31 - Owner and Super Admin configure dining areas and tables from the shared BackOffice
+  ---
+  duration_ms: 0.630301
+  ...
+# Subtest: wireless table orders are tenant and store scoped
+ok 32 - wireless table orders are tenant and store scoped
+  ---
+  duration_ms: 8.207118
+  ...
+# Subtest: sending an order snapshots products without reducing stock
+ok 33 - sending an order snapshots products without reducing stock
+  ---
+  duration_ms: 0.500005
+  ...
+# Subtest: one open table account accepts auditable new rounds without resending old lines
+ok 34 - one open table account accepts auditable new rounds without resending old lines
+  ---
+  duration_ms: 0.615614
+  ...
+# Subtest: POS checkout locks and closes the exact table order once
+ok 35 - POS checkout locks and closes the exact table order once
+  ---
+  duration_ms: 0.539099
+  ...
+# Subtest: responsive POS UI can send, monitor and load table orders
+ok 36 - responsive POS UI can send, monitor and load table orders
+  ---
+  duration_ms: 0.365242
+  ...
+# Subtest: restaurant floor plan supports store-scoped areas and table metadata
+ok 37 - restaurant floor plan supports store-scoped areas and table metadata
+  ---
+  duration_ms: 0.341091
+  ...
+# Subtest: only managers and owners receive restaurant configuration controls
+ok 38 - only managers and owners receive restaurant configuration controls
+  ---
+  duration_ms: 0.356958
+  ...
+# Subtest: table waste uses the normal turnover flow without issuing a receipt
+ok 39 - table waste uses the normal turnover flow without issuing a receipt
+  ---
+  duration_ms: 0.51127
+  ...
+# Subtest: table waste and cancellation require an auditable reason and actor
+ok 40 - table waste and cancellation require an auditable reason and actor
+  ---
+  duration_ms: 0.39144
+  ...
+# Subtest: waste always closes the whole remaining table and cannot be partial
+ok 41 - waste always closes the whole remaining table and cannot be partial
+  ---
+  duration_ms: 0.612752
+  ...
+# Subtest: manual supplier return creates a tenant scoped dispatch draft without stock mutation
+ok 42 - manual supplier return creates a tenant scoped dispatch draft without stock mutation
+  ---
+  duration_ms: 1.573273
+  ...
+# Subtest: inventory card collects supplier quantity and reason
+ok 43 - inventory card collects supplier quantity and reason
+  ---
+  duration_ms: 0.257932
+  ...
+# Subtest: POS can prepare the same return dispatch note without changing stock
+ok 44 - POS can prepare the same return dispatch note without changing stock
+  ---
+  duration_ms: 1.84296
+  ...
+# Subtest: POS exposes a dedicated Netlink catalogue
+ok 45 - POS exposes a dedicated Netlink catalogue
+  ---
+  duration_ms: 2.393421
+  ...
+# Subtest: POS preview does not execute or weaken Netlink gates
+ok 46 - POS preview does not execute or weaken Netlink gates
+  ---
+  duration_ms: 5.042207
+  ...
+# Subtest: Netlink transaction history and cancellation request stay inside the POS panel
+ok 47 - Netlink transaction history and cancellation request stay inside the POS panel
+  ---
+  duration_ms: 0.26633
+  ...
+# Subtest: permanent company deletion stays behind the platform super-admin router guard
+ok 48 - permanent company deletion stays behind the platform super-admin router guard
+  ---
+  duration_ms: 8.678014
+  ...
+# Subtest: only the exact KAT TEST company is allowlisted
+ok 49 - only the exact KAT TEST company is allowlisted
+  ---
+  duration_ms: 0.412675
+  ...
+# Subtest: server requires both exact confirmations and records an audit
+ok 50 - server requires both exact confirmations and records an audit
+  ---
+  duration_ms: 0.286359
+  ...
+# Subtest: platform UI exposes destructive flow only for KAT TEST
+ok 51 - platform UI exposes destructive flow only for KAT TEST
+  ---
+  duration_ms: 0.314013
+  ...
+# Subtest: deleted KAT TEST is not exposed by the production platform or POS chrome
+ok 52 - deleted KAT TEST is not exposed by the production platform or POS chrome
+  ---
+  duration_ms: 0.264836
+  ...
+# Subtest: pilot IRIS is an explicit online POS checkout route
+ok 53 - pilot IRIS is an explicit online POS checkout route
+  ---
+  duration_ms: 2.483587
+  ...
+# Subtest: pilot IRIS keeps a separate ledger type while retaining electronic shift totals
+ok 54 - pilot IRIS keeps a separate ledger type while retaining electronic shift totals
+  ---
+  duration_ms: 0.563406
+  ...
+# Subtest: active shift displays card, IRIS and their combined total separately
+ok 55 - active shift displays card, IRIS and their combined total separately
+  ---
+  duration_ms: 0.255409
+  ...
+# Subtest: POS operator can finalize only a dispatch note from the same store
+ok 56 - POS operator can finalize only a dispatch note from the same store
+  ---
+  duration_ms: 2.985331
+  ...
+# Subtest: POS finalization is idempotent and queues myDATA without premature stock mutation
+ok 57 - POS finalization is idempotent and queues myDATA without premature stock mutation
+  ---
+  duration_ms: 0.643164
+  ...
+# Subtest: POS exposes draft and finalization actions with an honest provider warning
+ok 58 - POS exposes draft and finalization actions with an honest provider warning
+  ---
+  duration_ms: 0.971176
+  ...
+# Subtest: dispatch number is generated automatically and overwritten by the server
+ok 59 - dispatch number is generated automatically and overwritten by the server
+  ---
+  duration_ms: 0.328525
+  ...
+# Subtest: successful POS finalization clears the sale screen and confirms the server number
+ok 60 - successful POS finalization clears the sale screen and confirms the server number
+  ---
+  duration_ms: 0.552077
+  ...
+# Subtest: composition route parses and is mounted before generic owner product routes
+ok 61 - composition route parses and is mounted before generic owner product routes
+  ---
+  duration_ms: 175.152769
+  ...
+# Subtest: SET associations are tenant scoped, editable and audited
+ok 62 - SET associations are tenant scoped, editable and audited
+  ---
+  duration_ms: 0.510327
+  ...
+# Subtest: recipe card reuses the KAT PreparationRecipeLine source of truth
+ok 63 - recipe card reuses the KAT PreparationRecipeLine source of truth
+  ---
+  duration_ms: 0.614848
+  ...
+# Subtest: checking SET or recipe opens its functional association tab
+ok 64 - checking SET or recipe opens its functional association tab
+  ---
+  duration_ms: 6.881568
+  ...
+# Subtest: POS catalog exposes SET rows and cart adds them automatically
+ok 65 - POS catalog exposes SET rows and cart adds them automatically
+  ---
+  duration_ms: 11.535311
+  ...
+# Subtest: standalone delayed CARD enters the same CAP gate before sale while protected exclusions stay intact
+ok 66 - standalone delayed CARD enters the same CAP gate before sale while protected exclusions stay intact
+  ---
+  duration_ms: 3.909726
+  ...
+# Subtest: CAP Driver v1 builds one CR cash command in the configured Windows-1253 encoding
+ok 67 - CAP Driver v1 builds one CR cash command in the configured Windows-1253 encoding
+  ---
+  duration_ms: 0.869814
+  ...
+# Subtest: CAP Driver v1 builds a single configured card payment command
+ok 68 - CAP Driver v1 builds a single configured card payment command
+  ---
+  duration_ms: 0.408122
+  ...
+# Subtest: CAP Driver v1 refuses unconfirmed mappings and unsafe file fields
+ok 69 - CAP Driver v1 refuses unconfirmed mappings and unsafe file fields
+  ---
+  duration_ms: 8.14323
+  ...
+# Subtest: slash-containing catalog descriptions serialize as one safe SL without changing sale data
+ok 70 - slash-containing catalog descriptions serialize as one safe SL without changing sale data
+  ---
+  duration_ms: 0.74638
+  ...
+# Subtest: description slash normalization preserves unsafe-field, length and encoding rejection
+ok 71 - description slash normalization preserves unsafe-field, length and encoding rejection
+  ---
+  duration_ms: 1.060471
+  ...
+# Subtest: confirmed Kiosk VAT codes map to the exact register departments and VAT rates
+ok 72 - confirmed Kiosk VAT codes map to the exact register departments and VAT rates
+  ---
+  duration_ms: 0.946334
+  ...
+# Subtest: fiscal request cannot dispatch twice and operator outcomes are terminal
+ok 73 - fiscal request cannot dispatch twice and operator outcomes are terminal
+  ---
+  duration_ms: 0.630923
+  ...
+# Subtest: one-shot dispatch can be claimed only once and card Yes/No is separate from cash
+ok 74 - one-shot dispatch can be claimed only once and card Yes/No is separate from cash
+  ---
+  duration_ms: 0.589046
+  ...
+# Subtest: only a confirmed CAP receipt is marked fiscally issued
+ok 75 - only a confirmed CAP receipt is marked fiscally issued
+  ---
+  duration_ms: 1.240233
+  ...
+# Subtest: writer liveness requires a real recent poll rather than pairing alone
+ok 76 - writer liveness requires a real recent poll rather than pairing alone
+  ---
+  duration_ms: 1.71205
+  ...
+# Subtest: prepared requests remain claimable until the writer actually claims them
+ok 77 - prepared requests remain claimable until the writer actually claims them
+  ---
+  duration_ms: 0.548718
+  ...
+# Subtest: KAT delivery uses confirmed payment code3 while counter CARD2 and CASH6 stay unchanged
+ok 78 - KAT delivery uses confirmed payment code3 while counter CARD2 and CASH6 stay unchanged
+  ---
+  duration_ms: 0.743746
+  ...
+# Subtest: configured CAP writer blocks mixed checkout before any transaction even with a supplied fiscal id
+ok 79 - configured CAP writer blocks mixed checkout before any transaction even with a supplied fiscal id
+  ---
+  duration_ms: 3.535247
+  ...
+# Subtest: store chat foundation has store isolation, categories and server-side storage
+ok 80 - store chat foundation has store isolation, categories and server-side storage
+  ---
+  duration_ms: 15.53743
+  ...
+# Subtest: POS colleague card is store-scoped, hashed and toggles attendance
+ok 81 - POS colleague card is store-scoped, hashed and toggles attendance
+  ---
+  duration_ms: 5.764601
+  ...
+# Subtest: POS exposes a compact card-work launcher without replacing the cashier
+ok 82 - POS exposes a compact card-work launcher without replacing the cashier
+  ---
+  duration_ms: 0.581731
+  ...
+# Subtest: POS colleague can use a protected personal PIN without changing the cashier
+ok 83 - POS colleague can use a protected personal PIN without changing the cashier
+  ---
+  duration_ms: 0.706767
+  ...
+# Subtest: raw query failures are not mislabeled as an existing cash shift
+ok 84 - raw query failures are not mislabeled as an existing cash shift
+  ---
+  duration_ms: 0.420633
+  ...
+1..84
+# tests 84
+# suites 0
+# pass 84
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1150.347979
