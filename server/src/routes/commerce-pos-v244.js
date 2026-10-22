@@ -1,3 +1,4 @@
+import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import {findUnlinkedMyDataOriginal} from '../lib/pos-unlinked-mydata.js';
 import {Prisma} from '@prisma/client';
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
@@ -538,7 +539,7 @@ async function callFastOpenAiHeader({prompt,filePart}){
       const parsed=JSON.parse(raw);
       if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw new Error("invalid structured response");
       return parsed;
-    }catch(error){
+    }catch(error){throwIfWalletError(error);
       lastError=error;
       console.warn("FAST OpenAI header attempt failed",{attempt,message:String(error?.message||error)});
     }
@@ -597,6 +598,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId},async()=>{
     const isPdf=mimeType==="application/pdf";
     if(!isPdf&&!/^data:image\/(jpeg|png|webp);base64,/i.test(dataUrl))return res.status(400).json({error:"Το PREMIUM FAST υποστηρίζει εικόνα ή PDF."});
     if(isPdf&&!/^data:application\/pdf;base64,/i.test(dataUrl))return res.status(400).json({error:"Μη έγκυρο PDF."});
@@ -638,7 +640,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
         if(azureHasUsefulHeader)azureHeaderFallback=azureHeader;
         console.warn("FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
         if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback)return res.json(azureHeaderFallback);const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
-      }catch(error){
+      }catch(error){throwIfWalletError(error);
         if(String(error?.message||"").includes("δεν επέστρεψε ασφαλή βασικά στοιχεία"))throw error;
         console.error("FAST Azure header failed; trying configured fallback",{message:String(error?.message||error)});
         if(!process.env.OPENAI_API_KEY){const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν είναι προσωρινά διαθέσιμη. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
@@ -661,7 +663,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 Αν ένα βασικό στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα για το αποτέλεσμα.`;
     let parsed;
     try{parsed=await callFastOpenAiHeader({prompt,filePart})}
-    catch(error){if(azureHeaderFallback)return res.json(azureHeaderFallback);throw error}
+    catch(error){throwIfWalletError(error);if(azureHeaderFallback)return res.json(azureHeaderFallback);throw error}
     const supplierName=String(parsed.supplierName||azureHeaderFallback?.supplierName||"");
     const supplierTaxId=String(parsed.supplierTaxId||azureHeaderFallback?.supplierTaxId||"");
     const supplier=await matchSupplier(req.user.companyId,{name:supplierName,taxId:supplierTaxId});
@@ -700,6 +702,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       totalGross:totalGross>0?totalGross:0,
       productLines
     });
+  });
   }catch(error){next(error)}
 });
 

@@ -8,6 +8,7 @@ import * as pageCount from "../src/lib/invoice-assistant-page-count.js";
 import {invoiceAssistantImageViews} from "../src/lib/invoice-assistant-image-views.js";
 import {invoiceAssistantProviderError} from "../src/lib/invoice-assistant-provider-error.js";
 import {invoiceAssistantDiscounts} from "../src/lib/invoice-assistant-discounts.js";
+import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../src/services/ai-wallet-invoice-metering.js";
 import {verifiedSetUnit} from "../src/lib/invoice-assistant-set-units.js";
 
 test("actual source and preview handlers use identical inbox PDF, enforce context/module/role, and send no POS image to provider",async()=>{
@@ -23,7 +24,7 @@ test("actual source and preview handlers use identical inbox PDF, enforce contex
  }};
  const routes=[];const router={get:(path,...handlers)=>routes.push({method:"GET",handlers}),post:(path,...handlers)=>routes.push({method:"POST",handlers})};
  const modules=[];let denied="";
- const deps={Router:()=>router,z,prisma:db,loadInvoiceAssistantSource,requireCompanyModule:name=>(req,res,next)=>{modules.push(name);if(name===denied)return res.status(403).json({error:"module denied"});next()},...review,...pageCount,invoiceAssistantImageViews,invoiceAssistantProviderError,invoiceAssistantDiscounts,verifiedSetUnit};
+ const deps={withInvoiceWalletScope,throwIfWalletError,fetch,Router:()=>router,z,prisma:db,loadInvoiceAssistantSource,requireCompanyModule:name=>(req,res,next)=>{modules.push(name);if(name===denied)return res.status(403).json({error:"module denied"});next()},...review,...pageCount,invoiceAssistantImageViews,invoiceAssistantProviderError,invoiceAssistantDiscounts,verifiedSetUnit};
  const source=(await readFile(new URL("../src/routes/invoice-assistant-pos.js",import.meta.url),"utf8")).replace(/^import .*;\n/gm,"").replace("export default router;","return router;");
  new Function(...Object.keys(deps),source)(...Object.values(deps));
  const call=async(method,input,overrides={})=>{let status=200,body,error;const req={method,user:{companyId:"c",role:"OWNER"},params:{orderId:"o"},query:method==="GET"?input:{},body:method==="POST"?input:{},...overrides};const res={status:n=>(status=n,res),json:x=>(body=x,res)};const handlers=routes.find(r=>r.method===method).handlers;
