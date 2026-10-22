@@ -12,7 +12,10 @@ export async function prepareFtextCashRequest(tx,{settings,scope,sessionId,clien
  assertFtextSimpleCash(checkout,items);
  if(settings.cashEnabled!==true||!settings.cashDepartments?.length)fail('FTEXT_CASH_DISABLED','Δεν έχει ενεργοποιηθεί και επιβεβαιωθεί η έκδοση μετρητών ftext για αυτό το POS.');
  const plan=prepareFtextSalePlan({scope,settings,clientTransactionId,total:summary.total,
- items:items.map((i,index)=>({...scope,lineId:'line-'+index,productId:i.productId,description:i.name,quantity:i.quantity,unitPrice:i.effectiveUnitPrice,discount:i.discount||0,lineTotal:i.lineTotal,department:i.fiscalDepartment,vatRate:i.vatRate,vatCode:i.fiscalVatCode})),
+ // ManagementVatDepartment.legacyVatCode can be a legacy department label
+ // (e.g. 004), not the DATECS VAT-group number. Only the technician-confirmed
+ // installation profile supplies that number; the plan still reconciles VAT.
+ items:items.map((i,index)=>({...scope,lineId:'line-'+index,productId:i.productId,description:i.name,quantity:i.quantity,unitPrice:i.effectiveUnitPrice,discount:i.discount||0,lineTotal:i.lineTotal,department:i.fiscalDepartment,vatRate:i.vatRate,vatCode:settings.cashDepartments.find(p=>String(p.department)===String(Number(i.fiscalDepartment)))?.vatCode})),
  payments:[{method:'CASH',amount:summary.total}],paymentProfiles:[{...scope,method:'CASH',code:1,confirmed:true}],departmentProfiles:settings.cashDepartments.map(p=>({...scope,...p,confirmed:true}))});
  const settingsHash=ftextSettingsHash(settings);
  await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${['ftext-cash',scope.companyId,scope.storeId,settings.serialNumber].join(':')},0))`;
