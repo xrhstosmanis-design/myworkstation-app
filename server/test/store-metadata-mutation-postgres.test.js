@@ -26,7 +26,7 @@ test('native metadata writer fences legacy and partial storage, rollback and ori
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='metadata_'+randomBytes(12).toString('hex');let created=false,a,b;
  try{
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);created=true;const u=new URL(process.env.DATABASE_URL);u.searchParams.set('schema',schema);a=new PrismaClient({datasourceUrl:u.href});b=new PrismaClient({datasourceUrl:u.href});
-  await a.$executeRawUnsafe('CREATE TABLE "Store"("id" text PRIMARY KEY,"companyId" text NOT NULL,"name" text NOT NULL,"city" text,"address" text,"responsibleEmail" text,"cashCloseEmailEnabled" boolean NOT NULL DEFAULT true,"active" boolean NOT NULL DEFAULT true)');
+  await a.$executeRawUnsafe('CREATE TABLE "Store"("id" text PRIMARY KEY,"companyId" text NOT NULL,"name" text NOT NULL,"city" text,"address" text,"responsibleEmail" text,"cashCloseEmailEnabled" boolean NOT NULL DEFAULT true,"active" boolean NOT NULL DEFAULT true,"updatedAt" timestamptz NOT NULL DEFAULT NOW())');
   await a.$executeRawUnsafe('CREATE TABLE "StoreLifecycleFence"("storeId" text PRIMARY KEY,"companyId" text,"generation" bigint,"maintenance" boolean,"retired" boolean)');
   await a.$executeRawUnsafe('CREATE TABLE "CashShiftSession"("id" text PRIMARY KEY,"variance" numeric)');
   await a.$executeRaw`INSERT INTO "Store"("id","companyId","name","responsibleEmail","active") VALUES('s','c','Selected','old@example.com',false),('other','foreign','Control','control@example.com',true)`;

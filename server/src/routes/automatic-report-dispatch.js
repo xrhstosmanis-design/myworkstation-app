@@ -3,6 +3,19 @@ import {createAutomaticReportManagement} from '../services/automatic-report-disp
 import {readActivation} from '../services/automatic-report-activation.js';
 import {createAutomaticReportSmtpTransport} from '../services/mail.js';
 
+const explanations={
+ REPORT_REVISION_CHANGED:'Η ρύθμιση άλλαξε σε άλλο παράθυρο. Πάτησε Ανανέωση.',
+ REPORT_LIFECYCLE_ENROLLMENT_REQUIRED:'Δεν έχει ολοκληρωθεί ακόμη η ασφαλής προετοιμασία αυτού του καταστήματος για αυτόματες αποστολές.',
+ REPORT_DISPATCH_SCHEMA_REQUIRED:'Η προετοιμασία αυτόματων αποστολών δεν έχει ολοκληρωθεί.',
+ REPORT_ACTIVATION_REQUIRED:'Απαιτείται πρώτα η τελική προετοιμασία ενεργοποίησης.',
+ REPORT_CHALLENGE_COOLDOWN:'Περίμενε 60 δευτερόλεπτα πριν ζητήσεις νέο κωδικό.',
+ REPORT_CHALLENGE_INVALID:'Ο κωδικός δεν ισχύει, έχει λήξει ή έχει ήδη χρησιμοποιηθεί.',
+ REPORT_RECIPIENT_LIMIT:'Επιτρέπονται έως πέντε ενεργοί παραλήπτες ανά κατάστημα.',
+ REPORT_RECIPIENT_UNVERIFIED:'Επιβεβαίωσε πρώτα τη διεύθυνση email του παραλήπτη.',
+ REPORT_POLICY_PREREQUISITES:'Χρειάζονται εξουσιοδότηση και ενεργή συγκατάθεση παραλήπτη για τις επιλεγμένες περιόδους.',
+ REPORT_DISPATCH_BUSY:'Οι ρυθμίσεις χρησιμοποιούνται από άλλη εργασία. Ανανέωσε σε λίγο.'
+};
+
 // Authentication is mounted by index; the actual current database role is also
 // required here and again by the mutation services. Browser flags are not grants.
 export function createAutomaticReportDispatchRouter(db,{env=process.env,management}={}){
@@ -23,7 +36,7 @@ export function createAutomaticReportDispatchRouter(db,{env=process.env,manageme
   try{res.json(await fn(req))}
   catch(error){
    if(error?.name==='ZodError')return res.status(400).json({error:'Έλεγξε τα στοιχεία της φόρμας.'});
-   if(Number.isInteger(error?.status)&&error.status>=400&&error.status<500)return res.status(error.status).json({error:error.message,code:error.code});
+   if(Number.isInteger(error?.status)&&error.status>=400&&error.status<500)return res.status(error.status).json({error:explanations[error.code]||error.message,code:error.code});
    // SMTP/database errors may contain addresses, credentials or challenge data.
    // Never forward arbitrary causes to the global error logger or browser.
    res.status(503).json({error:'Η ενέργεια δεν επιβεβαιώθηκε. Ανανέωσε την κατάσταση πριν από νέα προσπάθεια.',code:'AUTOMATIC_REPORT_ACTION_UNCONFIRMED'});

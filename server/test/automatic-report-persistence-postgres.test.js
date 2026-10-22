@@ -61,7 +61,7 @@ test('native six-table provisioning, mailbox verification/consent, concurrency, 
    now=new Date(now.getTime()+61000);await run(()=>service.issueRecipientConsent(scope,{recipientId,expectedVersion:1,expectedRevision:1,allowedFrequencies:['DAILY']}));
    await assert.rejects(run(()=>service.confirmRecipientConsent(scope,{recipientId,expectedVersion:1,expectedRevision:1,token:'0'.repeat(32),explicitConsent:true})),{code:'REPORT_CHALLENGE_INVALID'});const [r]=await b.$queryRaw`SELECT "challengeAttempts" FROM "AutomaticReportRecipient" WHERE "recipientId"=${recipientId}`;assert.equal(r.challengeAttempts,1);
    await assert.rejects(run(()=>service.saveDispatchPolicy(scope,{expectedRevision:0,dispatchEnabled:false,allowsProvisional:true,allowedFrequencies:['DAILY']})),{code:'REPORT_REVISION_CHANGED'});
-   await assert.rejects(run(()=>service.saveRecipient(scope,{email:'bad@example.invalid',expectedVersion:0,actorId:'employee'})));
+   assert.throws(()=>run(()=>service.saveRecipient(scope,{email:'bad@example.invalid',expectedVersion:0,actorId:'employee'})));
    await assert.rejects(withLifecycleContext({s:'3'},()=>service.saveRecipient({...scope,actorId:'employee'},{email:'bad@example.invalid',expectedVersion:0})),{code:'REPORT_SUPER_ADMIN_REQUIRED'});
   });
   await t.test('native reader SHARE blocks first recipient insertion with explicit busy/no retry',async()=>{

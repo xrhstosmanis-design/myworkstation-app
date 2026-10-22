@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 
 const frequencies=[['DAILY','Ημερήσια'],['WEEKLY','Εβδομαδιαία'],['MONTHLY','Μηνιαία']];
-const stamp=value=>value?new Date(value).toLocaleString('el-GR',{timeZone:'Europe/Athens'}):'—';
+const stamp=value=>value?new Date(value).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false}):'—';
 
 export default function AutomaticReportDispatchManager({company,store,request}){
  const scope=`${company.id}:${store.id}`,current=useRef(scope),sequence=useRef(0);

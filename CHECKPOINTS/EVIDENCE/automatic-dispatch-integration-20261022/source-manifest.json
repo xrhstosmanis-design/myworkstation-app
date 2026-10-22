@@ -1,20 +1,49 @@
 {
   "scope": "AUTOMATIC-DISPATCH-PERSISTENCE-RESTORE-01",
-  "stage": "SOURCE INTEGRATED AWAITING FULL NATIVE CI",
+  "stage": "FIRST FULL CI FAIL CORRECTED AWAITING NEW FULL CI",
   "claims": {
     "transfer": 3059,
     "integration": 3062,
-    "prospectiveAmendment": 3063
+    "prospectiveAmendment": 3063,
+    "lifecycleNative": 3066
   },
-  "base": "228a689f22c4067c9ffe8bc34e737b3e95d8d4ec",
+  "base": "82537a62e21977897f8f92fb8ef91c5cff0360bd",
   "dispatch": "OFF",
   "local": {
-    "pass": 72,
+    "pass": 78,
     "fail": 0,
-    "skip": 3,
+    "skip": 4,
     "reason": "PostgreSQL unavailable locally"
   },
+  "priorCI": {
+    "run": 39836428113,
+    "job": 120026253209,
+    "pass": 4080,
+    "fail": 8,
+    "skip": 0,
+    "causes": [
+      "UI hour12 missing: fixed",
+      "Native Store fixture updatedAt missing: fixture fixed",
+      "Synchronous strict Zod throw asserted as promise: test fixed"
+    ]
+  },
   "functionalAcceptance": "NOT TESTED",
+  "productionPreflight": {
+    "checkedAt": "2026-10-22T19:04:48.160Z",
+    "expectedTables": 259,
+    "actualTables": 254,
+    "missing": [
+      "AutomaticReportAutomationGrant",
+      "AutomaticReportDeliverySlot",
+      "AutomaticReportDispatchPolicy",
+      "AutomaticReportPayload",
+      "AutomaticReportRecipient",
+      "AutomaticReportRecipientConsent"
+    ],
+    "unreviewed": [
+      "StoreLifecycleRuntime"
+    ]
+  },
   "entries": [
     {
       "path": "server/src/services/mail.js",
@@ -45,10 +74,6 @@
       "gitBlob": "087275d260ef1154a22f0a634b356feda47c464c"
     },
     {
-      "path": "server/test/automatic-report-persistence-postgres.test.js",
-      "gitBlob": "e98256c949d1e19ed36d5f9cc2ff15c6769bec65"
-    },
-    {
       "path": "server/src/routes/platform-admin.js",
       "gitBlob": "1ee9d1767806c17f38bc9ce7da4d2657c07a2b67"
     },
@@ -59,10 +84,6 @@
     {
       "path": "server/test/store-metadata-mutation.test.js",
       "gitBlob": "bf7eecaf95875866781115fd59c36a4f2146c802"
-    },
-    {
-      "path": "server/test/store-metadata-mutation-postgres.test.js",
-      "gitBlob": "9c62851cc3d2d903392fdcaf1ed52fa9f3bace1e"
     },
     {
       "path": "server/src/services/automatic-report-eligibility.js",
@@ -117,14 +138,6 @@
       "gitBlob": "f47f98ffb715c86d978d58e114a1ad0611e191b9"
     },
     {
-      "path": "server/src/routes/automatic-report-dispatch.js",
-      "gitBlob": "7f65f7ec55886fb59ff5d5af33d4cd52648ddad8"
-    },
-    {
-      "path": "client/src/components/platform/AutomaticReportDispatchManager.jsx",
-      "gitBlob": "ebd94a8bb753439cc03ed0dd7d8306efb6a85a3a"
-    },
-    {
       "path": "client/src/components/platform/AutomaticReportSettingsManager.jsx",
       "gitBlob": "045f6f8cc9cee99f40de1fcff43440298bb4bd23"
     },
@@ -143,6 +156,26 @@
     {
       "path": "ops/backup/lifecycle/automatic-report-column-review.proposed.json",
       "gitBlob": "29cff2177f5cbd89fd6cbda1c7ee5ae7810794f1"
+    },
+    {
+      "path": "server/src/routes/automatic-report-dispatch.js",
+      "gitBlob": "1a4edf1f4d21fe6973d69a1d468c479b8fd93639"
+    },
+    {
+      "path": "client/src/components/platform/AutomaticReportDispatchManager.jsx",
+      "gitBlob": "1bd4b31a046ba658d746effab2ac1aacb15fd7ae"
+    },
+    {
+      "path": "server/test/automatic-report-persistence-postgres.test.js",
+      "gitBlob": "f5ed762a3f6c0e96dde6c6aeb5d740ce71a31342"
+    },
+    {
+      "path": "server/test/store-metadata-mutation-postgres.test.js",
+      "gitBlob": "404a3d79dcb8dadaa05f1df0c3426fafd7ce2bd1"
+    },
+    {
+      "path": "server/test/automatic-report-lifecycle-postgres.test.js",
+      "gitBlob": "cc46b44232f80c4d63ba3d9bbf7190c895d5262d"
     }
   ]
 }
