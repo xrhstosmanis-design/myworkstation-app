@@ -1,0 +1,51 @@
+name: Automatic report provisioning PG18
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/automatic-report-provision-pg18.yml'
+      - 'server/scripts/automatic-report-provision.mjs'
+      - 'server/src/services/automatic-report-provision-catalog.js'
+      - 'server/src/services/automatic-report-dispatch-schema.js'
+      - 'server/test/automatic-report-provision*.test.js'
+      - 'server/test/fixtures/automatic-report-provision-catalog-pg18.json'
+  push:
+    branches: [main, codex/dispatch-provision-operator-20261022]
+    paths:
+      - '.github/workflows/automatic-report-provision-pg18.yml'
+      - 'server/scripts/automatic-report-provision.mjs'
+      - 'server/src/services/automatic-report-provision-catalog.js'
+      - 'server/src/services/automatic-report-dispatch-schema.js'
+      - 'server/test/automatic-report-provision*.test.js'
+      - 'server/test/fixtures/automatic-report-provision-catalog-pg18.json'
+permissions:
+  contents: read
+jobs:
+  isolated-pg18-provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: myworkstation_operator_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d myworkstation_operator_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      NODE_ENV: test
+      CI: 'true'
+      MWS_REQUIRE_PROVISION_PG18: 'true'
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myworkstation_operator_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm install
+      - run: npx prisma generate --schema server/prisma/schema.prisma
+      - name: Execute isolated PG18 catalog and atomic operator tests
+        run: node --test server/test/automatic-report-provision.test.js server/test/automatic-report-provision-postgres.test.js

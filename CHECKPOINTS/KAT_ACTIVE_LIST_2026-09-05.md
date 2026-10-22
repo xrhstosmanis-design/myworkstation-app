@@ -13663,3 +13663,10 @@ Additional exact NEW path .github/workflows/automatic-report-provision-pg18.yml 
 
 No productionDDL/config/SMTP/enrollment/RESET/restore/businessaction, no existing LAB replay. Final acceptance remainsOPEN; next runPG18native/fullPRmainCI/independentreview then ordinaryguardedinstallation. All retainedowners/otherstreams unchanged. Checkpoint CHECKPOINTS/CHANGES/2026-10-22-automatic-dispatch-provision-operator.md.
 
+
+
+## 22/10/2026 - AUTOMATIC-DISPATCH-PROVISION-OPERATOR-01 / SOURCE PREPARED / AWAITING PG18 AND FULL CI
+
+Same approved centralowner. Claims3078/CI39850615750/mergea16417c9 and PG18amendment3082/CI39852048299/mergef6bd578f greenBEFORE source. Draftsource3084 implements defaultreadonly strictservice/revision/host+port+DB/schema/hash/missingcontrolOFF gate, boundedatomictransaction+advisorylock, relation/typecollisionrefusal, fullcatalogcomparison andnative rollbacktests. Independent review correctedsearchpath/temppath shadowing, actualTCPport, eventtriggerrefusal anddroppedattribute visibility; corrected5fileheadaba79fcd reviewedCLEAR pendingrealPG18fixture+fullCI. NativePG18workflow officialpostgres18, syntheticDB/readonlyrepositorytoken/no secrets or deployment.
+
+Initialsource63215d82/fullCI39851820446 FAILED beforetests: requiredactive-list/newcheckpoint absentfromsourcePRdiff. This receipt correctsdocumentationgate, doesnotweakenCI. LocalNode20 5PASS/0FAIL/1explicitnativeSKIP(no localPG). Root-onlysandbox refusesnativePG18initdb; no safeguard bypass. PG18oracle NOTCAPTURED yet; CLI--execute failclosedmissingfixture. No productionDDL/config/SMTP/enrollment/RESET/restore/businessaction; everyexistingLAB/USERPASS preserved. OverallfinalacceptanceOPEN. Next exactPG18fixture/nativeoperatorproof, independentfixture+source review, finalfullPR/mainCI/ordinaryguardedinstallation beforeboundedOFFsetup. Retainedowner codex/central-auto-dispatch-20261022; unrelatedowners unchanged.
