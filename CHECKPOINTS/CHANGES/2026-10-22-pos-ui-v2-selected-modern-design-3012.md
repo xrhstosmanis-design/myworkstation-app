@@ -68,3 +68,16 @@ short625/681 heights and125%/150% zoom-equivalent CSS viewport/DPR. Assertions k
 all20 configured quick/category keys and primary/secondary actions hit-testable,
 scanner>=150px, cart>=240px wide and >=90px visibly intersecting workspace.
 Final source production build passed29.19s. No assertion threshold reductions.
+
+Hosted verification on0d99ea9 then9463295: isolated Render service LIVE, health
+sourceRevision/revision exactly match commit, database/transactions/providers all
+false. Actual browser category navigation/add/Quick returned expected cart/total.
+Visual inspection caught last-sale amount white-on-white; scoped contrast fixed.
+Further preservation check found literal modern font sizes ignored persisted text
+size; all literal modern font sizes now follow original --pos-text-scale. Actual
+FONT9/12/20 across1024/1366/682 viewports checks ten computed ratios, all20quick
+names/targets/scanner/visiblebasket. Combined font+layout39PASS/0FAIL/0SKIP.
+Additional source compatibility audit84PASS/0FAIL/0SKIP and adapted checkout/
+table-service/text-size13PASS (groups overlap, do not sum as distinct tests).
+Final remote CI and final hosted revision receipt follow separately; earlier
+runtime source remains historical until replaced. Final approval still required.

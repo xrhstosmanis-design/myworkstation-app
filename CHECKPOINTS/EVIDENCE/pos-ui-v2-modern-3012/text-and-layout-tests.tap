@@ -1,0 +1,205 @@
+TAP version 13
+# Subtest: actual POS FONT9/12/20 scales all text and retains reachable controls at 1024x768
+ok 1 - actual POS FONT9/12/20 scales all text and retains reachable controls at 1024x768
+  ---
+  duration_ms: 18724.499121
+  ...
+# Subtest: actual POS FONT9/12/20 scales all text and retains reachable controls at 1366x768
+ok 2 - actual POS FONT9/12/20 scales all text and retains reachable controls at 1366x768
+  ---
+  duration_ms: 2197.786916
+  ...
+# Subtest: actual POS FONT9/12/20 scales all text and retains reachable controls at 682x512
+ok 3 - actual POS FONT9/12/20 scales all text and retains reachable controls at 682x512
+  ---
+  duration_ms: 1345.42006
+  ...
+# Subtest: rendered POS viewport 1024x768, scale 1, keypad shown, notices false
+ok 4 - rendered POS viewport 1024x768, scale 1, keypad shown, notices false
+  ---
+  duration_ms: 3941.975751
+  ...
+# Subtest: rendered POS viewport 1024x768, scale 1, keypad hidden, notices false
+ok 5 - rendered POS viewport 1024x768, scale 1, keypad hidden, notices false
+  ---
+  duration_ms: 9395.074839
+  ...
+# Subtest: rendered POS viewport 1280x800, scale 1, keypad shown, notices false
+ok 6 - rendered POS viewport 1280x800, scale 1, keypad shown, notices false
+  ---
+  duration_ms: 524.768084
+  ...
+# Subtest: rendered POS viewport 1280x800, scale 1, keypad hidden, notices false
+ok 7 - rendered POS viewport 1280x800, scale 1, keypad hidden, notices false
+  ---
+  duration_ms: 600.972578
+  ...
+# Subtest: rendered POS viewport 1366x768, scale 1, keypad shown, notices false
+ok 8 - rendered POS viewport 1366x768, scale 1, keypad shown, notices false
+  ---
+  duration_ms: 498.210656
+  ...
+# Subtest: rendered POS viewport 1366x768, scale 1, keypad shown, notices true
+ok 9 - rendered POS viewport 1366x768, scale 1, keypad shown, notices true
+  ---
+  duration_ms: 3674.803447
+  ...
+# Subtest: rendered POS viewport 1366x768, scale 1, keypad hidden, notices false
+ok 10 - rendered POS viewport 1366x768, scale 1, keypad hidden, notices false
+  ---
+  duration_ms: 457.073618
+  ...
+# Subtest: rendered POS viewport 1366x768, scale 1, keypad hidden, notices true
+ok 11 - rendered POS viewport 1366x768, scale 1, keypad hidden, notices true
+  ---
+  duration_ms: 1767.515393
+  ...
+# Subtest: rendered POS viewport 1920x1080, scale 1, keypad shown, notices false
+ok 12 - rendered POS viewport 1920x1080, scale 1, keypad shown, notices false
+  ---
+  duration_ms: 358.001136
+  ...
+# Subtest: rendered POS viewport 1920x1080, scale 1, keypad hidden, notices false
+ok 13 - rendered POS viewport 1920x1080, scale 1, keypad hidden, notices false
+  ---
+  duration_ms: 399.71537
+  ...
+# Subtest: rendered POS viewport 1024x681, scale 1, keypad shown, notices false
+ok 14 - rendered POS viewport 1024x681, scale 1, keypad shown, notices false
+  ---
+  duration_ms: 391.027595
+  ...
+# Subtest: rendered POS viewport 1024x681, scale 1, keypad hidden, notices false
+ok 15 - rendered POS viewport 1024x681, scale 1, keypad hidden, notices false
+  ---
+  duration_ms: 600.673672
+  ...
+# Subtest: rendered POS viewport 1366x681, scale 1, keypad shown, notices false
+ok 16 - rendered POS viewport 1366x681, scale 1, keypad shown, notices false
+  ---
+  duration_ms: 334.591403
+  ...
+# Subtest: rendered POS viewport 1366x681, scale 1, keypad shown, notices true
+ok 17 - rendered POS viewport 1366x681, scale 1, keypad shown, notices true
+  ---
+  duration_ms: 371.675146
+  ...
+# Subtest: rendered POS viewport 1366x681, scale 1, keypad hidden, notices false
+ok 18 - rendered POS viewport 1366x681, scale 1, keypad hidden, notices false
+  ---
+  duration_ms: 330.986088
+  ...
+# Subtest: rendered POS viewport 1366x681, scale 1, keypad hidden, notices true
+ok 19 - rendered POS viewport 1366x681, scale 1, keypad hidden, notices true
+  ---
+  duration_ms: 345.860715
+  ...
+# Subtest: rendered POS viewport 1366x625, scale 1, keypad shown, notices false
+ok 20 - rendered POS viewport 1366x625, scale 1, keypad shown, notices false
+  ---
+  duration_ms: 356.793563
+  ...
+# Subtest: rendered POS viewport 1366x625, scale 1, keypad shown, notices true
+ok 21 - rendered POS viewport 1366x625, scale 1, keypad shown, notices true
+  ---
+  duration_ms: 377.16138
+  ...
+# Subtest: rendered POS viewport 1366x625, scale 1, keypad hidden, notices false
+ok 22 - rendered POS viewport 1366x625, scale 1, keypad hidden, notices false
+  ---
+  duration_ms: 368.035748
+  ...
+# Subtest: rendered POS viewport 1366x625, scale 1, keypad hidden, notices true
+ok 23 - rendered POS viewport 1366x625, scale 1, keypad hidden, notices true
+  ---
+  duration_ms: 329.562995
+  ...
+# Subtest: rendered POS viewport 1092x614, scale 1.25, keypad shown, notices false
+ok 24 - rendered POS viewport 1092x614, scale 1.25, keypad shown, notices false
+  ---
+  duration_ms: 345.813571
+  ...
+# Subtest: rendered POS viewport 1092x614, scale 1.25, keypad shown, notices true
+ok 25 - rendered POS viewport 1092x614, scale 1.25, keypad shown, notices true
+  ---
+  duration_ms: 427.072338
+  ...
+# Subtest: rendered POS viewport 1092x614, scale 1.25, keypad hidden, notices false
+ok 26 - rendered POS viewport 1092x614, scale 1.25, keypad hidden, notices false
+  ---
+  duration_ms: 389.800128
+  ...
+# Subtest: rendered POS viewport 1092x614, scale 1.25, keypad hidden, notices true
+ok 27 - rendered POS viewport 1092x614, scale 1.25, keypad hidden, notices true
+  ---
+  duration_ms: 539.073156
+  ...
+# Subtest: rendered POS viewport 910x512, scale 1.5, keypad shown, notices false
+ok 28 - rendered POS viewport 910x512, scale 1.5, keypad shown, notices false
+  ---
+  duration_ms: 476.875931
+  ...
+# Subtest: rendered POS viewport 910x512, scale 1.5, keypad shown, notices true
+ok 29 - rendered POS viewport 910x512, scale 1.5, keypad shown, notices true
+  ---
+  duration_ms: 758.605907
+  ...
+# Subtest: rendered POS viewport 910x512, scale 1.5, keypad hidden, notices false
+ok 30 - rendered POS viewport 910x512, scale 1.5, keypad hidden, notices false
+  ---
+  duration_ms: 445.713236
+  ...
+# Subtest: rendered POS viewport 910x512, scale 1.5, keypad hidden, notices true
+ok 31 - rendered POS viewport 910x512, scale 1.5, keypad hidden, notices true
+  ---
+  duration_ms: 549.924083
+  ...
+# Subtest: rendered POS viewport 819x614, scale 1.25, keypad shown, notices false
+ok 32 - rendered POS viewport 819x614, scale 1.25, keypad shown, notices false
+  ---
+  duration_ms: 867.025006
+  ...
+# Subtest: rendered POS viewport 819x614, scale 1.25, keypad shown, notices true
+ok 33 - rendered POS viewport 819x614, scale 1.25, keypad shown, notices true
+  ---
+  duration_ms: 485.790049
+  ...
+# Subtest: rendered POS viewport 819x614, scale 1.25, keypad hidden, notices false
+ok 34 - rendered POS viewport 819x614, scale 1.25, keypad hidden, notices false
+  ---
+  duration_ms: 409.002127
+  ...
+# Subtest: rendered POS viewport 819x614, scale 1.25, keypad hidden, notices true
+ok 35 - rendered POS viewport 819x614, scale 1.25, keypad hidden, notices true
+  ---
+  duration_ms: 440.364873
+  ...
+# Subtest: rendered POS viewport 682x512, scale 1.5, keypad shown, notices false
+ok 36 - rendered POS viewport 682x512, scale 1.5, keypad shown, notices false
+  ---
+  duration_ms: 563.636608
+  ...
+# Subtest: rendered POS viewport 682x512, scale 1.5, keypad shown, notices true
+ok 37 - rendered POS viewport 682x512, scale 1.5, keypad shown, notices true
+  ---
+  duration_ms: 574.912263
+  ...
+# Subtest: rendered POS viewport 682x512, scale 1.5, keypad hidden, notices false
+ok 38 - rendered POS viewport 682x512, scale 1.5, keypad hidden, notices false
+  ---
+  duration_ms: 764.626914
+  ...
+# Subtest: rendered POS viewport 682x512, scale 1.5, keypad hidden, notices true
+ok 39 - rendered POS viewport 682x512, scale 1.5, keypad hidden, notices true
+  ---
+  duration_ms: 530.709912
+  ...
+1..39
+# tests 39
+# suites 0
+# pass 39
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 38940.160173

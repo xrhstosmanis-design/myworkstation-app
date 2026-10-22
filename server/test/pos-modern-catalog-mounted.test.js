@@ -4,7 +4,7 @@ import {withMountedPos} from './helpers/pos-modern-fixture.mjs';
 
 test('actual modern POS keeps all20 quicks, inline nested catalog, original cart/scanner and store reset',async()=>{
  await withMountedPos({nested:true,run:async({dom,act,click,calls,render})=>{
-  assert.ok(document.querySelector('.pos-modern .pos-modern-catalog'));assert.ok(document.querySelector('.pos-modern-cart .standard-lines'));assert.ok(document.querySelector('.standard-sale-panel .standard-search [data-pos-scanner]'));
+  assert.ok(document.querySelector('.pos-modern .pos-modern-catalog'));assert.ok(document.querySelector('.pos-modern-cart .standard-lines'));const checkout=document.querySelector('.pos-modern-checkout');assert.ok(checkout.contains(document.querySelector('.pos-modern-total')));assert.ok(checkout.contains(document.querySelector('.pos-modern-primary-payments .cash')));assert.ok(document.querySelector('.standard-sale-panel .standard-search [data-pos-scanner]'));
   const quicks=[...document.querySelectorAll('.standard-quick>div>button')];assert.equal(quicks.length,20);assert.equal(quicks.filter(b=>!b.disabled).length,20);
   await click(quicks.at(-1));assert.equal(document.querySelectorAll('.standard-line').length,1);assert.match(document.querySelector('.standard-line').textContent,/ΠΡΟΪΟΝ 20/);
   const categories=[...document.querySelectorAll('.standard-category-strip>div>button')];assert.equal(categories.length,20);
