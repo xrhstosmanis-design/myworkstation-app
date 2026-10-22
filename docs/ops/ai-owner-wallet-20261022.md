@@ -49,3 +49,7 @@ Engineering SMTP test uses actual Nodemailer against localhost with one syntheti
 ## Database failure during uncertainty recording
 
 The original reservation is committed before provider I/O. If a provider/settlement error is followed by a database failure while marking REVIEW, callers still receive the safe wallet usage-review error and must not start another paid fallback. The durable entry can remain RESERVED; no automatic refund/release occurs. The existing explicit SuperAdmin abandoned-RESERVED resolution after15minutes, with independently confirmed provider cost, remains required. The invoice boundary returns409; normal owner provider uncertainty retains its existing503 wallet code.
+
+## Current technical source receipt22Oct2026
+
+Foundation independently verified in live9a67265. Invoice3037 full3869server+8backup SUCCESS; review-fail-stop3041 full3877server+8backup SUCCESS, zero failures/skips, merged7f5afd3. The original073 push-main full CI ultimately passed after isolated browser-startup retry. Main CI39819683069 and ordinary exact release of the final review guard remain pending at this receipt. Runtime/invoice/mail flags and approved tariffs were not changed, real inbox and hosted LAB acceptance NOT TESTED.
