@@ -98,10 +98,13 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent ios-evidence/MWChat-Unsigned.xcarchive ios-evidence/MWChat-Unsigned.xcarchive.zip
           rm -r ios-evidence/MWChat-Unsigned.xcarchive
           python3 - <<'PY'
-          import hashlib,json,os,subprocess
+          import hashlib,json,os,subprocess,zipfile,plistlib
           from pathlib import Path
           p=Path('ios-evidence/MWChat-Unsigned.xcarchive.zip')
-          receipt={'sourceSha':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'runId':os.environ['GITHUB_RUN_ID'],'package':'gr.myworkstation.chat.ios.preview','version':'0.1.0','build':1,'artifact':'Unsigned device archive only; not installable; no TestFlight upload','bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'signing':False,'physicalAcceptance':False,'productionRequests':False}
+          with zipfile.ZipFile(p) as archive:
+              info=plistlib.loads(archive.read('MWChat-Unsigned.xcarchive/Products/Applications/MWChat.app/Info.plist'))
+          if (info.get('CFBundleIdentifier'),info.get('CFBundleShortVersionString'),info.get('CFBundleVersion')) != ('gr.myworkstation.chat.ios.preview','0.1.0','1'): raise SystemExit('Actual archive identity/version does not match intended preview')
+          receipt={'sourceSha':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'runId':os.environ['GITHUB_RUN_ID'],'package':info['CFBundleIdentifier'],'version':info['CFBundleShortVersionString'],'build':int(info['CFBundleVersion']),'artifact':'Unsigned device archive only; not installable; no TestFlight upload','bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'signing':False,'physicalAcceptance':False,'productionRequests':False}
           Path('ios-evidence/receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
           PY
       - name: Preserve actual build/test receipts and synthetic evidence

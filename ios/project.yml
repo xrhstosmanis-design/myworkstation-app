@@ -44,6 +44,8 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: MW Chat · Preview
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSCameraUsageDescription: Λήψη φωτογραφίας ή βίντεο μόνο για το πρόχειρο της συνομιλίας.
         NSMicrophoneUsageDescription: Ρητή εγγραφή φωνητικού ή ήχου βίντεο της συνομιλίας.
         UILaunchScreen: {}
