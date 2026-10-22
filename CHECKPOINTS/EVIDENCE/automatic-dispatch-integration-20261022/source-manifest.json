@@ -1,6 +1,6 @@
 {
   "scope": "AUTOMATIC-DISPATCH-PERSISTENCE-RESTORE-01",
-  "stage": "FIRST FULL CI FAIL CORRECTED AWAITING NEW FULL CI",
+  "stage": "SOURCE MERGED ALL MAIN JOBS PASS AGGREGATE RELEASE PENDING",
   "claims": {
     "transfer": 3059,
     "integration": 3062,
@@ -42,7 +42,8 @@
     ],
     "unreviewed": [
       "StoreLifecycleRuntime"
-    ]
+    ],
+    "latestAbsenceRecheckAt": "2026-10-22T19:35:37.258035Z"
   },
   "entries": [
     {
@@ -177,5 +178,28 @@
       "path": "server/test/automatic-report-lifecycle-postgres.test.js",
       "gitBlob": "cc46b44232f80c4d63ba3d9bbf7190c895d5262d"
     }
-  ]
+  ],
+  "sourcePR": {
+    "number": 3065,
+    "head": "3b00726802ad08622cbdcdfdf2c1c32f7aed38d8",
+    "ciRun": 39838748112,
+    "ciJob": 120034381296,
+    "conclusion": "success",
+    "serverPass": 4094,
+    "serverFail": 0,
+    "serverSkip": 0,
+    "backupPass": 8,
+    "merged": "365a4799fea5704a44c4e14bf1ff642a25117ca8"
+  },
+  "mainCI": {
+    "run": 39841152468,
+    "job": 120042615262,
+    "allFiveJobs": "success",
+    "aggregate": "in_progress",
+    "serverPass": 4094,
+    "serverFail": 0,
+    "serverSkip": 0,
+    "backupPass": 8
+  },
+  "release": "NOT VERIFIED"
 }
