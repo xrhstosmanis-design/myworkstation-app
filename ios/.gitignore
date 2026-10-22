@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+*.xcodeproj/
+build/
+GoogleService-Info.plist
+*.p12
+*.p8
+*.mobileprovision
+*.ipa
+*.xcarchive/
+*.xcresult/
