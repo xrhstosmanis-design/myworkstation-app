@@ -21,9 +21,30 @@
   },
   "mainCi": {
     "id": 39806020956,
-    "status": "PENDING_AT_RECEIPT"
+    "status": "SUCCESS",
+    "server": {
+      "pass": 3827,
+      "fail": 0,
+      "skip": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "nativeWalletExecuted": true
   },
-  "release": "NOT_YET_VERIFIED",
+  "release": {
+    "status": "HELD_BY_NORMAL_FRESHNESS_GUARD",
+    "workflow": 39807310528,
+    "job": 119923978373,
+    "validatedSource": "cd633e9c6edfe3fad9658f496dff0926bb988fbd",
+    "newerMain": "9a67265aaa916058621b5291c96268b6f0093bb9",
+    "awaitingMainCi": 39807166764,
+    "reason": "A newer production source revision is on main; await its full CI",
+    "observedHealthyRevision": "201eb5e01e6a9972b57ed12ea9bfccabe3600b83",
+    "walletInstalled": false
+  },
   "hostedAcceptance": "NOT_TESTED",
   "realEmail": "NOT_TESTED",
   "runtimeEnabled": false,
