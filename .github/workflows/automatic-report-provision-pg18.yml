@@ -44,7 +44,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: npm
       - run: npm install
       - run: npx prisma generate --schema server/prisma/schema.prisma
       - name: Execute isolated PG18 catalog and atomic operator tests
