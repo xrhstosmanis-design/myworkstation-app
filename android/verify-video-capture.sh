@@ -6,4 +6,10 @@ if ! gradle --no-daemon -p android :app:connectedDebugAndroidTest '-Pandroid.tes
   exit 1
 fi
 # Preserve the complete suite after the focused probe, including real capture again.
-gradle --no-daemon -p android :app:connectedDebugAndroidTest
+gradle --no-daemon -p android :app:connectedDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.additionalTestOutputDir=/sdcard/Android/media/gr.myworkstation.chat.preview/ui-proof'
+
+# Synthetic UI proof only, produced by ConversationAppearanceTest in the disposable emulator.
+mkdir -p android/app/build/reports/androidTests/ui-proof
+find android/app/build/outputs/connected_android_test_additional_output -type f -name 'conversation-*.png' -exec cp {} android/app/build/reports/androidTests/ui-proof/ \;
+test -s android/app/build/reports/androidTests/ui-proof/conversation-normal.png
+test -s android/app/build/reports/androidTests/ui-proof/conversation-large-font.png

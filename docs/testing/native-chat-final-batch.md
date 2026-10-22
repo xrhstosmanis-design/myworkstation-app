@@ -1,3 +1,13 @@
+## 22/10/2026 - ANDROID CHAT0.1.10 PUBLIC TECHNICAL DELIVERY COMPLETE / AWAITING OWNER APPEARANCE
+
+Retained owner feat/android-chat-native-20261017. Compact modern native conversation presentation published as0.1.10-preview/code11: rounded adaptive actions/composer, complete labels and more conversation space. Same callbacks, auth/store/session/push/privacy/media behavior and stable owner signer. SourcePR2989/head578aff9c merged2e7b084; fresh full39747236825/Android39747236750 and exact-main39748776462 SUCCESS, actual camera plus36instrumentation/0FAIL/0SKIP. Actual synthetic normal/large-font renderings visually inspected; this is not physical-user acceptance.
+
+Signed trusted-main run39749830993/artifact12413756302 verified independently: actual manifest packagegr.myworkstation.chat.preview/version0.1.10-preview/code11, RSA APKv2 signature and complete chunked content digest, stable certificate17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97. APK3687252bytes/SHA2565c617d59d2a0a0adc356419a40b55f3bd1ba1449810e31b03ea6e33a7c4b8060. No secret/key read or rotation.
+
+DistributionPR3002/head6a812027 merged1b98d90f64d3d8b88d4d3e1667c62c72edab0284; full PR39751843837 and exact-main39753045418 all5jobsSUCCESS, actual3782server+8backupPASS/0FAIL/0SKIP. Ordinary guarded deploy39754062331; Render dep-dbct8v4s728c73865s40 LIVE2026-10-22T09:20:19.187957Z exact1b98d90f64d3d8b88d4d3e1667c62c72edab0284. Fresh unauthenticated public health ok:true/exact revision, release.json metadata equality and downloaded public APK byte-for-byte equality with signed artifact independently verified at2026-10-22T09:21:18.749440+00:00. Landing page in actual browser displays0.1.10 and correct download. Same URL/QR: https://myworkstation-app.onrender.com/downloads/chat-android/. Prior APKs retained. Technical publication complete; physical phone same-signer update and appearance acceptance NOT TESTED. No new manual PASS.
+
+The explicitly transferred wholesale role-readiness cause was corrected byPR3000/aa42e23 and verified inPR3001, preserving broader wholesale owner codex/wholesale-suite-20261017. Historical appearance release holds and0.1.9-current statements below are superseded for this delivered candidate only. No whole Android/N16/PWA/AI/wholesale PASS. Already accepted camera-send-PC-view, voice, photos, auth/push observations remain protected and are not replayed. Gallery/audio/ready-reply/session/privacy/device residuals retain their recorded NOT TESTED scope; iOS LAST. Native owner remains assigned until acceptance or named handoff. Single next action: install0.1.10 as an update over stable0.1.9 and inspect conversation appearance/labels/composer, without replaying accepted media. Evidence CHECKPOINTS/EVIDENCE/native-chat-appearance-20261022/public-release-verification.json and public-download.jpg; checkpoint CHECKPOINTS/CHANGES/2026-10-22-native-chat-appearance.md.
+
 ## 22/10/2026 - camera video send and PC view USER PASS; remaining scope only
 
 Η επιβεβαιωμένη λήψη/αποστολή/προβολή στο PC δεν επαναλαμβάνεται. Ήχος δεν δηλώθηκε. Gallery/ready replies/μη μετρημένα session/privacy/device/update residuals μένουν ανοικτά. Owner retained, iOS LAST.
@@ -9,9 +19,9 @@ Owner: feat/android-chat-native-20261017. Οδηγία19/10/2026 21:02 Europe/At
 Δεν επαναλαμβάνονται αποδεκτά μηνύματα/φωτογραφίες μόνο για τεκμηρίωση.
 Αυτό είναι σχέδιο ελέγχου και setup, όχι manual πραγματικού PASS.
 
-## Τρέχουσα τεχνική διανομή20/10/2026
+## Ιστορική τεχνική διανομή0.1.9 — αντικαταστάθηκε από0.1.10
 
-Διαθέσιμη0.1.9-preview/code10, ίδιο σταθερό cert με0.1.8, SHA256ce5c07cd446f649e33f767b3075f22c2d99bf182ffbf1804c77fdd77874fb7c2,3687252bytes. Public APK byte-for-byte signed artifact. URL/QR αμετάβλητα. Κάμερα Android11+, συλλογή Android8+, MP4 H264/AAC έως30δευτ./12MiB. Camera capture/send/PC view: USER PASS22/10. Gallery/ήχος/λοιπά αρνητικά και πραγματικό same-signer phone update NOT TESTED. Τα παρακάτω0.1.8 τεχνικά στοιχεία διατηρούνται ως ιστορικά, η τρέχουσα λήψη είναι0.1.9.
+Διαθέσιμη0.1.9-preview/code10, ίδιο σταθερό cert με0.1.8, SHA256ce5c07cd446f649e33f767b3075f22c2d99bf182ffbf1804c77fdd77874fb7c2,3687252bytes. Public APK byte-for-byte signed artifact. URL/QR αμετάβλητα. Κάμερα Android11+, συλλογή Android8+, MP4 H264/AAC έως30δευτ./12MiB. Camera capture/send/PC view: USER PASS22/10. Gallery/ήχος/λοιπά αρνητικά και πραγματικό same-signer phone update NOT TESTED. Τα παρακάτω0.1.8 τεχνικά στοιχεία διατηρούνται ως ιστορικά, η τότε λήψη ήταν0.1.9· η τρέχουσα λήψη είναι0.1.10.
 
 ## Νεότερη επιβεβαίωση20/10/2026 20:51
 

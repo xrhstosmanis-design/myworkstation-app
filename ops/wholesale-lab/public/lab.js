@@ -3,7 +3,7 @@
 // still goes through the actual server authorization and explicit store scope.
 const $ = id => document.getElementById(id);
 const names = {INVOICE:'Εικονικό τιμολόγιο',DELIVERY_NOTE:'Εικονικό δελτίο αποστολής',INVOICE_DELIVERY:'Εικονικό τιμολόγιο – δελτίο',CREDIT_NOTE:'Εικονικό πιστωτικό',RETURN_NOTE:'Εικονικό δελτίο επιστροφής',CASH:'Εικονικά μετρητά',BANK:'Εικονική τράπεζα',CARD:'Εικονική κάρτα'};
-const state = {meta:null,storeId:'',owner:null,token:null,products:[],customers:[],orders:[],ledger:null,cart:[],quote:null,pending:null,last:null,busy:false,generation:0};
+const state = {ready:false,meta:null,storeId:'',owner:null,token:null,products:[],customers:[],orders:[],ledger:null,cart:[],quote:null,pending:null,last:null,busy:false,generation:0};
 const euro = value => {const number=Number(value);return Number.isFinite(number)?number.toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €':'—'};
 const timestamp = value => {const date=new Date(value);return Number.isNaN(date.valueOf())?'—':date.toLocaleString('el-GR')};
 const el = (tag,text,className) => {const node=document.createElement(tag);if(text!=null)node.textContent=String(text);if(className)node.className=className;return node};
@@ -43,9 +43,9 @@ function action(label,callback,{danger=false,testId}={}) {
   button.addEventListener('click',()=>Promise.resolve().then(callback).catch(tell));return button;
 }
 function applyLocks() {
-  const locked=state.busy||Boolean(state.pending);
+  const locked=!state.ready||state.busy||Boolean(state.pending);
   document.querySelectorAll('button,input,select,textarea').forEach(node=>{node.disabled=locked});
-  $('retry').disabled=state.busy||!state.pending||currentToken()!==state.pending.token;
+  $('retry').disabled=!state.ready||state.busy||!state.pending||currentToken()!==state.pending.token;
   $('pending').hidden=!state.pending;
   $('pending-key').textContent=state.pending?'Κλειδί αιτήματος: '+state.pending.key:'';
   $('quote').disabled=locked||!state.cart.length||!$('customer').value;
@@ -56,7 +56,7 @@ function applyLocks() {
   for(const id of ['owner-app','actual-app'])$(id).setAttribute('aria-disabled',String(locked));
 }
 async function work(callback) {
-  if(state.busy||state.pending)return;
+  if(!state.ready||state.busy||state.pending)return;
   state.busy=true;applyLocks();
   try{return await callback()}catch(error){tell(error)}finally{state.busy=false;applyLocks()}
 }
@@ -196,6 +196,7 @@ async function enter(role) {
   });
 }
 async function initialize() {
+  applyLocks();
   try{
     const meta=await request('/api/lab/meta',{auth:false});
     if(meta.lab!==true||meta.testOnly!==true||meta.virtualOnly!==true||!Array.isArray(meta.stores)||!meta.companyId)throw Error('Δεν επιβεβαιώθηκε απομονωμένο δοκιμαστικό περιβάλλον.');
@@ -209,7 +210,7 @@ async function initialize() {
       state.token=token;state.owner=user;
       try{await refresh();$('identity').textContent=user.fullName+' · Δοκιμαστικός διαχειριστής';$('console').hidden=false;$('owner-app').hidden=false}catch{resetOwner();message('Η προηγούμενη σύνδεση δεν είναι ενεργή. Επίλεξε έναν δοκιμαστικό ρόλο.')}
     }
-    applyLocks();
+    state.ready=true;applyLocks();
   }catch(error){$('runtime-status').textContent='Το εργαστήριο δεν είναι διαθέσιμο';tell(error);document.querySelectorAll('button,input,select,textarea').forEach(node=>{node.disabled=true})}
 }
 $('add-product').addEventListener('click',()=>{const product=state.products.find(row=>row.id===$('product').value);if(!product||state.pending||state.busy)return;if(state.cart.some(item=>item.productId===product.id)){message('Το είδος είναι ήδη στο καλάθι. Άλλαξε την ποσότητα στη γραμμή του.');return}state.cart.push({productId:product.id,name:product.name,unit:product.unit,quantity:'1'});clearQuote();renderCart()});

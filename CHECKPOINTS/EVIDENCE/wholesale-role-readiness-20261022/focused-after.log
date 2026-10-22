@@ -1,0 +1,75 @@
+TAP version 13
+# Subtest: virtual document quantities/money retain exact arbitrary precision and never accept float/exponent/signed inputs
+ok 1 - virtual document quantities/money retain exact arbitrary precision and never accept float/exponent/signed inputs
+  ---
+  duration_ms: 2.784701
+  ...
+# Subtest: frozen accepted order snapshot is authoritative and rejects mismatched scope, repeated items, damaged line/totals and zero quantity
+ok 2 - frozen accepted order snapshot is authoritative and rejects mismatched scope, repeated items, damaged line/totals and zero quantity
+  ---
+  duration_ms: 1.414483
+  ...
+# Subtest: sandbox initialization/engine fail closed before touching an unverified database
+ok 3 - sandbox initialization/engine fail closed before touching an unverified database
+  ---
+  duration_ms: 1.499041
+  ...
+# Subtest: virtual PDFs require a TEST document and embed a valid PDF with Greek-capable fonts
+ok 4 - virtual PDFs require a TEST document and embed a valid PDF with Greek-capable fonts
+  ---
+  duration_ms: 109.981383
+  ...
+# Subtest: dedicated disposable PostgreSQL runtime serves actual wholesale identities, portal and restricted seller flows
+ok 5 - dedicated disposable PostgreSQL runtime serves actual wholesale identities, portal and restricted seller flows # SKIP
+  ---
+  duration_ms: 1.624716
+  ...
+# Subtest: all role buttons are disabled in the delivered HTML before JavaScript can initialize
+ok 6 - all role buttons are disabled in the delivered HTML before JavaScript can initialize
+  ---
+  duration_ms: 96.867384
+  ...
+# Subtest: delayed metadata refuses early click; one click after readiness makes exactly one session request
+ok 7 - delayed metadata refuses early click; one click after readiness makes exactly one session request
+  ---
+  duration_ms: 67.963698
+  ...
+# Subtest: restored-owner lookup cannot prematurely unlock roles while initialization is pending
+ok 8 - restored-owner lookup cannot prematurely unlock roles while initialization is pending
+  ---
+  duration_ms: 35.576858
+  ...
+# Subtest: invalid isolation metadata keeps every role unavailable
+ok 9 - invalid isolation metadata keeps every role unavailable
+  ---
+  duration_ms: 28.000515
+  ...
+# Subtest: metadata HTTP failure keeps every role unavailable
+ok 10 - metadata HTTP failure keeps every role unavailable
+  ---
+  duration_ms: 27.366499
+  ...
+# Subtest: disposable runtime refuses production/external database credentials before a connection can be opened
+ok 11 - disposable runtime refuses production/external database credentials before a connection can be opened
+  ---
+  duration_ms: 5.543087
+  ...
+# Subtest: freshness and per-transaction boot marker both fail closed without resetting existing data
+ok 12 - freshness and per-transaction boot marker both fail closed without resetting existing data
+  ---
+  duration_ms: 0.992504
+  ...
+# Subtest: live Node transports cannot dispatch externally; loopback HTTP is still usable and redirects cannot escape
+ok 13 - live Node transports cannot dispatch externally; loopback HTTP is still usable and redirects cannot escape
+  ---
+  duration_ms: 269.958498
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 749.659664

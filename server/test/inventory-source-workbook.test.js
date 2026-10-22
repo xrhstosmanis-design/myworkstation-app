@@ -8,6 +8,7 @@ import {attachSourceWorkbook,validateSourceDepartments} from "../src/routes/inve
 import {assertSourceCostStorage,fitsSourcePrice,ensureProductCostPrecision} from "../src/product-cost-precision.js";
 import {importFullArchive} from "../src/routes/inventory-archive-full-import.js";
 import {KAT_DEPARTMENTS} from "../src/routes/inventory-kat-source.js";
+import {RIZAREIO_DEPARTMENTS} from "../src/routes/inventory-rizareio-source.js";
 
 const definitions=[
   [1,"01.ΚΑΦΕΣ","1",13,true],[2,"02.ΕΙΔΗ 6","104",6,true],[3,"03.ΤΡΟΦΙΜΑ","7",13,true],
@@ -26,7 +27,7 @@ function fixture(){
 }
 function file(f=fixture()){
   const w=XLSX.utils.book_new();
-  for(const [name,rows] of [[f.kat?"ΚΑΤ_IMPORT":"ΠΡΟΪΟΝΤΑ_IMPORT",f.rows],["ΕΛΕΓΧΟΣ",[{SKU:"DO-NOT-IMPORT"}]],["ΕΚΤΟΣ_ΕΙΣΑΓΩΓΗΣ",[{SKU:"EXCLUDED"}]],["ΤΜΗΜΑΤΑ",f.definitions],["BARCODES_IMPORT",f.barcodes],...(f.kat?[["KAT_META",f.meta],["EXISTING_IMPORT",f.existing]]:[])])XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(rows),name);
+  for(const [name,rows] of [[f.riz?"RIZAREIO_IMPORT":f.kat?"ΚΑΤ_IMPORT":"ΠΡΟΪΟΝΤΑ_IMPORT",f.rows],["ΕΛΕΓΧΟΣ",[{SKU:"DO-NOT-IMPORT"}]],["ΕΚΤΟΣ_ΕΙΣΑΓΩΓΗΣ",[{SKU:"EXCLUDED"}]],["ΤΜΗΜΑΤΑ",f.definitions],["BARCODES_IMPORT",f.barcodes],...(f.kat?[["KAT_META",f.meta],["EXISTING_IMPORT",f.existing]]:[]),...(f.riz?[["RIZAREIO_META",f.meta]]:[])])XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(rows),name);
   return "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,"+XLSX.write(w,{type:"buffer",bookType:"xlsx"}).toString("base64");
 }
 function harness(db){
@@ -100,6 +101,38 @@ test("operator and foreign-store requests fail without reads or writes",async()=
 test("legacy Diadochou normalization and single-barcode CSV behavior are retained",()=>{
   const h=harness(double().db),rows=h.normalizeRows([{SKU:"LEGACY",Περιγραφή:"Legacy",Barcode:"00000001","Τμήμα ΦΠΑ":"ΕΙΔΗ 24","ΚΩΔ. ΦΠΑ":"15",ΦΠΑ:24}]);
   assert.equal(rows[0].vatRate,24);assert.deepEqual(rows[0].errors,[]);assert.deepEqual(rows[0].barcodes,["00000001"]);
+});
+
+const rizSaved=()=>RIZAREIO_DEPARTMENTS.map((d,i)=>({...d,id:'riz-dept-'+i,active:true,exemptionCode:null,exemptionDescription:null}));
+function rizFixture(companyId='company',storeId='store'){
+  const f=fixture();f.riz=true;f.meta=[{Profile:'RIZAREIO_CATALOG_V1',CompanyId:companyId,StoreId:storeId}];
+  f.definitions=rizSaved().map(d=>({'Τμήμα ταμειακής':d.cashRegisterDepartment,'Περιγραφή Kiosk':d.description,'ΚΩΔ ΦΠΑ Kiosk':d.legacyVatCode,ΦΠΑ:d.vatRate,'Εμπορία πηγής':d.commerce?'ΝΑΙ':'ΟΧΙ','Κωδικός ΦΠΑ ταμειακής':d.fiscalVatCode,DepartmentId:d.id,ExemptionCode:'',ExemptionDescription:''}));
+  f.rows=RIZAREIO_DEPARTMENTS.map((d,i)=>({SKU:'RIZ-'+i,Περιγραφή:'Synthetic item '+i,Barcode:i===4?'MWRZ-RIZ-4':'0000770'+i,Λιανική:2.25,Αγορά:0.719037,ΦΠΑ:d.vatRate,Απόθεμα:0,'Τμήμα ΦΠΑ':d.description,'Τμήμα ταμειακής':d.cashRegisterDepartment,'ΚΩΔ. ΦΠΑ':d.legacyVatCode,'Κωδικός ΦΠΑ ταμειακής':d.fiscalVatCode,'Μονάδα Kiosk':'TEM',Κατηγορία:'Synthetic',Υποκατηγορία:'Scoped'}));
+  f.barcodes=f.rows.map(r=>({SKU:r.SKU,Barcode:r.Barcode,Ρόλος:'ΚΥΡΙΟ'}));
+  f.barcodes.push({SKU:'RIZ-0',Barcode:'0000007700',Ρόλος:'ΠΡΟΣΘΕΤΟ'});return f;
+}
+test('Rizareio actual preview resolves all five saved identities, zero tobacco/cards VAT and all text aliases without writes',async()=>{
+  const d=double({savedDepartments:rizSaved()}),h=harness(d.db),f=rizFixture(),r=await h.call('/import-preview',{storeId:'store',dataUrl:file(f)});
+  assert.equal(r.error,undefined);assert.deepEqual(r.body.summary,{total:5,create:5,update:0,invalid:0,barcodes:6,sourceProfile:'RIZAREIO_CATALOG_V1'});
+  assert.deepEqual(r.body.rows.map(r=>r.vatRate),[0,0,13,24,24]);assert.deepEqual(r.body.rows[0].barcodes,['00007700','0000007700']);assert.equal(r.body.rows[4].barcode,'MWRZ-RIZ-4');assert.equal(d.writes,0);
+});
+test('Rizareio malformed manifest, departments, barcode ownership and nontext identities refuse before writes',async()=>{
+  for(const change of [f=>f.meta=[],f=>f.meta[0].StoreId='other',f=>f.meta[0].CompanyId='other',f=>f.definitions.pop(),f=>f.definitions[0].DepartmentId='',f=>f.definitions[1].DepartmentId=f.definitions[0].DepartmentId,f=>f.definitions[0].ΦΠΑ=5,f=>f.definitions[0]['Κωδικός ΦΠΑ ταμειακής']=0,f=>f.rows[0]['Κωδικός ΦΠΑ ταμειακής']=5.1,f=>f.rows[0].SKU=12,f=>f.barcodes[0].Barcode=7700,f=>f.barcodes[1].Barcode='00007700',f=>f.barcodes[0].SKU='EXCLUDED',f=>f.barcodes[0].Barcode='MWRZ-OTHER',f=>f.rows[0].Barcode='different']){
+    const f=rizFixture();change(f);const d=double({savedDepartments:rizSaved()}),h=harness(d.db),body={storeId:'store',dataUrl:file(f)};
+    assert.equal((await h.call('/import-preview',body)).statusCode,400);assert.equal((await h.call('/import',body)).statusCode,400);assert.equal(d.writes,0);
+  }
+});
+test('Rizareio stale department IDs/rates/exemptions and source stock/price conflicts cannot import',async()=>{
+  for(const change of [d=>d.pop(),d=>d.push({...d[0]}),d=>d[0].id='replaced',d=>d[0].vatRate=5,d=>d[1].exemptionCode='27',d=>d[4].commerce=true,d=>d[0].active=false]){
+    const saved=rizSaved();change(saved);const d=double({savedDepartments:saved});assert.equal((await harness(d.db).call('/import-preview',{storeId:'store',dataUrl:file(rizFixture())})).statusCode,400);assert.equal(d.writes,0);
+  }
+  for(const [key,value] of [['Απόθεμα',1],['ΦΠΑ',5],['Τμήμα ταμειακής',11],['Αγορά',0.7190371],['Μονάδα Kiosk','KGR']]){
+    const f=rizFixture();f.rows[0][key]=value;const d=double({savedDepartments:rizSaved()}),h=harness(d.db),body={storeId:'store',dataUrl:file(f)};
+    assert.equal((await h.call('/import-preview',body)).body.summary.invalid,1,key);assert.equal((await h.call('/import',body)).statusCode,409);assert.equal(d.writes,0);
+  }
+  const d=double({savedDepartments:rizSaved(),barcodeProducts:[{id:'existing',sku:'OTHER',barcode:'0000007700'}]}),h=harness(d.db),body={storeId:'store',dataUrl:file(rizFixture())};
+  assert.equal((await h.call('/import-preview',body)).body.summary.invalid,1);assert.equal((await h.call('/import',body)).statusCode,409);assert.equal(d.writes,0);
+  const empty=double({savedDepartments:rizSaved()});assert.equal((await harness(empty.db).call('/import',{...body,applyStock:true})).statusCode,400);assert.equal(empty.writes,0);
 });
 
 function katFixture(){
@@ -227,5 +260,29 @@ test("native PostgreSQL actual import is atomic, preserves controls and rejects 
     const [ka]=await katObserve();assert.equal(ka.sku,'KAT-2');assert.equal(Number(ka.currentStock),-7);assert.equal(ka.isRecipe,true);assert.equal(ka.eDeliveryEnabled,true);assert.equal(ka.vatDepartmentId,'kat-dept-4');
     const [kn]=await db.$queryRaw`SELECT p."vatDepartmentId",p."unit",sp."currentStock" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" WHERE p."companyId"='kat-company' AND p."sku"='KAT-1'`;assert.equal(kn.vatDepartmentId,'kat-dept-3');assert.equal(kn.unit,'KG');assert.equal(Number(kn.currentStock),0);
     assert.deepEqual(await observe(),before);assert.equal((await h.call('/import',kb,ku)).statusCode,409);
+    // New first-catalogue profile: all five exact existing departments, all
+    // aliases including internal labels, atomic failure and concurrent replay.
+    await db.$executeRaw`INSERT INTO "Store" VALUES ('riz-store','riz-company','Virtual Rizareio',true)`;
+    for(const d of rizSaved())await db.$executeRaw`INSERT INTO "ManagementVatDepartment" VALUES (${d.id},'riz-company',${d.description},${d.vatRate},${d.legacyVatCode},${d.cashRegisterDepartment},${d.commerce},true,NULL,NULL)`;
+    const rizDepartments=()=>db.$queryRaw`SELECT * FROM "ManagementVatDepartment" WHERE "companyId"='riz-company' ORDER BY "id"`;
+    const departmentsBefore=await rizDepartments(),rf=rizFixture('riz-company','riz-store'),rb={storeId:'riz-store',dataUrl:file(rf)},ru={role:'OWNER',companyId:'riz-company'};
+    assert.equal((await h.call('/import-preview',rb,ru)).body.summary.invalid,0);
+    await db.$executeRawUnsafe('ALTER TABLE "ProductBarcode" ADD CONSTRAINT riz_injected_failure CHECK ("barcode"<>\'MWRZ-RIZ-4\')');
+    assert.ok((await h.call('/import',rb,ru)).error);
+    assert.equal((await db.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"='riz-company'`).length,0);
+    assert.equal((await db.$queryRaw`SELECT "id" FROM "StoreProduct" WHERE "storeId"='riz-store'`).length,0);
+    assert.equal((await db.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"='riz-company'`).length,0);
+    assert.deepEqual(await rizDepartments(),departmentsBefore);assert.deepEqual(await observe(),before);
+    await db.$executeRawUnsafe('ALTER TABLE "ProductBarcode" DROP CONSTRAINT riz_injected_failure');
+    const rr=await Promise.all([h.call('/import',rb,ru),h.call('/import',rb,ru)]);
+    assert.deepEqual(rr.map(r=>r.statusCode).sort(),[201,409]);
+    assert.deepEqual(rr.find(r=>r.statusCode===201).body,{ok:true,created:5,updated:0,barcodes:6,verified:true,applyStock:false});
+    const rizItems=await db.$queryRaw`SELECT p."sku",p."vatDepartmentId",p."vatRate",p."vatVerified",p."costPrice",sp."currentStock",c."name" AS category,sc."name" AS subcategory FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" JOIN "ProductCategory" c ON c."id"=p."categoryId" JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" WHERE p."companyId"='riz-company' AND sp."storeId"='riz-store' ORDER BY p."sku"`;
+    assert.equal(rizItems.length,5);
+    rizItems.forEach((r,i)=>{assert.equal(r.sku,'RIZ-'+i);assert.equal(r.vatDepartmentId,'riz-dept-'+i);assert.equal(Number(r.vatRate),[0,0,13,24,24][i]);assert.equal(r.vatVerified,i>=2);assert.equal(Number(r.costPrice),0.719037);assert.equal(Number(r.currentStock),0);assert.equal(r.category,'Synthetic');assert.equal(r.subcategory,'Scoped');});
+    assert.deepEqual((await db.$queryRaw`SELECT b."barcode" FROM "ProductBarcode" b JOIN "Product" p ON p."id"=b."productId" WHERE p."companyId"='riz-company' ORDER BY b."barcode"`).map(r=>r.barcode),rf.barcodes.map(r=>r.Barcode).sort());
+    assert.deepEqual(await rizDepartments(),departmentsBefore);assert.deepEqual(await observe(),before);
+    assert.equal((await h.call('/import',rb,ru)).statusCode,409);
+    assert.equal((await h.call('/import-preview',{...rb,storeId:'store'},ru)).statusCode,404);
   }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

@@ -1,0 +1,41 @@
+{
+  "recordedAt": "2026-10-22T08:30:49.748101+00:00",
+  "scope": "Narrow role initialization CI cause and ordinary source delivery; no whole wholesale/physical PASS",
+  "receivingClaimPr": 2999,
+  "sourcePr": 3000,
+  "sourceHead": "ecc56cef54ecf512500592f77ee862368bddb72a",
+  "merge": "aa42e23cb83b48ce1c1f803d1016801415f50456",
+  "prCi": 39745507227,
+  "mainCi": 39746665536,
+  "serverTests": {
+    "pass": 3782,
+    "fail": 0,
+    "skip": 0
+  },
+  "backupTests": {
+    "pass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "actualChromiumRegression": "PASS initial/re-entry delayed metadata and invalid/503 refusal",
+  "protectedIsolatedLabChecks": 10,
+  "protectedActualOfflineAppChecks": 4,
+  "guardRun": 39747481734,
+  "guardConclusion": "success",
+  "renderDeploy": "dep-dbcsgrrrjlhs73eij6kg",
+  "renderStatus": "live",
+  "finishedAt": "2026-10-22T08:28:34.363164Z",
+  "publicHealth": {
+    "ok": true,
+    "revision": "aa42e23cb83b48ce1c1f803d1016801415f50456"
+  },
+  "hostedPinnedWholesaleLabUpdated": false,
+  "newPhysicalOrUserAcceptance": false,
+  "newNativeApkPublished": false,
+  "nativeSourcePr": 2989,
+  "nativeSourceHead": "578aff9c8f698fda6a8c1858bef798ebbed3c111",
+  "ios": "LAST",
+  "nativeFullCi": 39747236825,
+  "nativeAndroidCi": 39747236750,
+  "nativeSourceChecks": "SUCCESS; source still unmerged and unsigned"
+}
