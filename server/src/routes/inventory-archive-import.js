@@ -115,7 +115,7 @@ export async function classify(companyId,rows,db=prisma){
 }
 
 export async function prepareArchiveRows(db,companyId,raw,storeId){
-  if(raw.sourceProfile?.name==='KAT_CATALOG_V1')raw.sourceProfile.assertTarget(companyId,storeId);
+  if(['KAT_CATALOG_V1','RIZAREIO_CATALOG_V1'].includes(raw.sourceProfile?.name))raw.sourceProfile.assertTarget(companyId,storeId);
   if(raw.sourceProfile){
     await assertSourceCostStorage(db);
     const departments=await db.$queryRaw`SELECT "id","description","vatRate","legacyVatCode","cashRegisterDepartment","commerce","active","exemptionCode","exemptionDescription" FROM "ManagementVatDepartment" WHERE "companyId"=${companyId}`;
