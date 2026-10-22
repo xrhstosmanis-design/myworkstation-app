@@ -108,7 +108,8 @@ test("the public webhook route is mounted before authenticated platform routes",
   assert.match(patchScript,/platformEfoodIntegrationRoutes/);
   assert.match(patchScript,/efoodPelicanWebhookRoutes/);
   assert.match(rootPackage.scripts["prepare:server"],/patch-efood-pelican-routes/);
-  assert.match(serverPackage.scripts.start,/patch-efood-pelican-routes/);
+  assert.match(rootPackage.scripts["prepare:server"],/prepare-startup-source/);
+  assert.match(serverPackage.scripts.start,/^node scripts\/verify-startup-source\.js && /);
 });
 
 test("Super Admin UI exposes one full local LAB validation flow and blocks every other store",()=>{
