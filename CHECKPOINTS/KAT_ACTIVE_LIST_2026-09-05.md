@@ -1,3 +1,7 @@
+## 22/10/2026 — POS UI V2 #3012 / overlays extension / AWAITING LAB
+
+Coordinated branch `feat/pos-ui-v2-overlays-3012`; retained `fix/pos-payment-minimize-20261020` owner and prior visual acceptance remain unchanged. User-authorized V2 extension fixes fallback regression and stale restore cleanup only; no financial/scanner handler changes. Node20 placement 2 PASS/0 FAIL/1 missing-Chromium SKIP; full CI/physical LAB NOT TESTED. No merge/deploy without final user approval. Checkpoint `CHECKPOINTS/CHANGES/2026-10-22-pos-ui-v2-overlays.md`.
+
 ## AI-OWNER-WALLET-01 — ASSIGNED BEFORE SOURCE / NOT TESTED
 
 Owner feat/ai-owner-wallet-20261022. Explicit instructions: implement prepaid AI paid to MyWorkStation, manual authorized credit after receipt, company wallet shared by stores with store usage breakdown, low20%/empty/credit notifications in app and email. No direct provider payment by owner. Independent billing extension; AI-CREDITS-01 central organization monitor, invoice reading/settlement/learning, VOICE assistant capabilities and automatic-report-mail owners retained. No takeover or repeated financial/stock acceptance.
