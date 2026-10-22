@@ -1,4 +1,4 @@
-## 22/10/2026 - ANDROID CHAT0.1.10 PUBLIC TECHNICAL DELIVERY COMPLETE / AWAITING OWNER APPEARANCE
+undefined## 22/10/2026 - ANDROID CHAT0.1.10 PUBLIC TECHNICAL DELIVERY COMPLETE / AWAITING OWNER APPEARANCE
 
 Retained owner feat/android-chat-native-20261017. Compact modern native conversation presentation published as0.1.10-preview/code11: rounded adaptive actions/composer, complete labels and more conversation space. Same callbacks, auth/store/session/push/privacy/media behavior and stable owner signer. SourcePR2989/head578aff9c merged2e7b084; fresh full39747236825/Android39747236750 and exact-main39748776462 SUCCESS, actual camera plus36instrumentation/0FAIL/0SKIP. Actual synthetic normal/large-font renderings visually inspected; this is not physical-user acceptance.
 
