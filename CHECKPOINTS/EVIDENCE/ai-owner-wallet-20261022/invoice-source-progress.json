@@ -1,0 +1,64 @@
+{
+  "status": "SOURCE_FULL_CI_SUCCESS_MERGED_AWAITING_MAIN_CI_AND_RELEASE",
+  "owner": "feat/ai-owner-wallet-20261022",
+  "pr": 3037,
+  "sourceHead": "606bcdebbbc81d0486f5b1f9fbe1880b7e766245",
+  "claim": {
+    "pr": 3036,
+    "run": 39811498714,
+    "conclusion": "success",
+    "merge": "6087b1cb349dab2e12a4bcd0cb2d0b51291050f3"
+  },
+  "local": {
+    "exactServer": {
+      "pass": 3568,
+      "fail": 0,
+      "skipped": 206
+    },
+    "affected": {
+      "pass": 89,
+      "fail": 0
+    },
+    "clientBuild": "PASS",
+    "smtp": "PASS localhost synthetic recipient only"
+  },
+  "priorNative": {
+    "run": 39814009157,
+    "job": 119947838249,
+    "sourceHead": "4644d930040842c096092210cd678243038680c0",
+    "test": "native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access, notifications and unchanged business controls",
+    "result": "PASS executed",
+    "wholeRun": "NOT PASS: cancelled; wholesale Chromium startup timeout"
+  },
+  "exactCI": {
+    "run": 39814421377,
+    "job": 119949568725,
+    "statusAtReceipt": "COMPLETED",
+    "conclusion": "SUCCESS",
+    "server": {
+      "pass": 3869,
+      "fail": 0,
+      "skipped": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skipped": 0
+    },
+    "all36JobSteps": "SUCCESS",
+    "nativeWallet": "PASS executed1256.644179ms",
+    "otherFourChecks": "SUCCESS",
+    "smtp": "PASS actual localhost synthetic SMTP only"
+  },
+  "productionInvoiceExtension": "NOT YET VERIFIED DEPLOYED",
+  "hostedAcceptance": "NOT TESTED",
+  "productionWrites": false,
+  "externalIncident": {
+    "url": "https://www.githubstatus.com/api/v2/summary.json",
+    "id": "wq8305lppdc2",
+    "status": "Actions and Pull Requests degraded",
+    "updated": "2026-10-22T16:35:07Z"
+  },
+  "nextAction": "Exact-main full CI success and normal guarded release, then measured acceptance without replay",
+  "sourceMerge": "073fd234b5a7ef60062ccf408bee8b4cb3923cf0"
+}
