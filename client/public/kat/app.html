@@ -32,8 +32,32 @@ html.kat-olive-orange{--wine:#52613a!important;--wine2:#354024!important;--cream
 .kat-olive-orange .modifier-option.sel{background:#fff0d7;color:#354024;border-color:#52613a}
 .kat-olive-orange button:focus-visible,.kat-olive-orange input:focus-visible{outline:3px solid #354024;outline-offset:3px}
 @media(max-width:600px){.kat-olive-orange .head{padding:14px}.kat-olive-orange .logo{width:220px;height:96px}.kat-olive-orange .top{flex-wrap:wrap}.kat-olive-orange .cats{padding:10px}}
+/* DAILY-ONLINE-BRANDING-02: same accepted layout, exact DAILY route only. */
+html.daily-olive-orange{--wine:#52613a!important;--wine2:#354024!important;--cream:#f5f3e9;--ink:#283020;--muted:#59604d;--line:#dce1d0;--daily-orange:#ffb744}
+.daily-olive-orange body{background:#cbd3b5}
+.daily-olive-orange .shell{max-width:1440px}
+.daily-olive-orange .top{background:#354024;border-bottom:4px solid var(--daily-orange)}
+.daily-olive-orange .head{background:#fffaf0;border:1px solid var(--line);border-radius:18px;padding:18px}
+.daily-olive-orange .brand{display:grid;gap:8px}
+.daily-olive-orange .logo{width:230px;max-width:100%;height:100px;border-radius:14px;background:#8b9272 url('/kat/brand-daily-bite.svg') center/contain no-repeat;font-size:0}
+.daily-olive-orange .logo img{display:none}
+.daily-olive-orange .brand h1{font-size:22px}
+.daily-olive-orange .brand p{font-size:14px}
+.daily-olive-orange .cats{background:#52613a;border-bottom:4px solid var(--daily-orange)}
+.daily-olive-orange .cat.active{background:var(--daily-orange);color:#283020}
+.daily-olive-orange .product,.daily-olive-orange .cart{background:#fffdf7;border-color:#d8decb;box-shadow:0 4px 14px #3540240a}
+.daily-olive-orange .pic{background:linear-gradient(145deg,#e9eddf,#fff8e9)}
+.daily-olive-orange .price{color:#354024}
+.daily-olive-orange .product button,.daily-olive-orange .checkout,.daily-olive-orange .actions .primary{background:var(--daily-orange);color:#283020;border-color:#d77c00;min-height:44px}
+.daily-olive-orange .product button:disabled{background:#d6d8cf;color:#656a5d}
+.daily-olive-orange .cart h2{background:#e8ecdf;color:#354024}
+.daily-olive-orange .footer{background:#e8ecdf;border-top:4px solid var(--daily-orange)}
+.daily-olive-orange .modifier-option.sel{background:#fff0d7;color:#354024;border-color:#52613a}
+.daily-olive-orange button:focus-visible,.daily-olive-orange input:focus-visible{outline:3px solid #354024;outline-offset:3px}
+@media(max-width:600px){.daily-olive-orange .head{padding:14px}.daily-olive-orange .logo{width:220px;height:96px}.daily-olive-orange .top{flex-wrap:wrap}.daily-olive-orange .cats{padding:10px}}
 </style>
 <script id="kat-branding-scope">if (/^\/(?:online\/kat\/?|kat(?:\/index\.html|\/app\.html)?\/?)$/.test(location.pathname)) document.documentElement.classList.add('kat-olive-orange');</script>
+<script id="daily-branding-scope">if (/^\/online\/daily-bite\/?$/.test(location.pathname)) document.documentElement.classList.add('daily-olive-orange');</script>
 </head>
 <body>
 <div class="top"><span id="deliveryHeadline">🚚 Delivery / Pickup · Πληρωμή: Μετρητά ή Κάρτα σε ασύρματο POS</span><button type="button" id="memberRegister">Εγγραφή</button><button id="memberLogin" type="button" style="border:0;border-radius:8px;padding:6px 10px;font-weight:800">Ειδική τιμή προσωπικού</button></div>
