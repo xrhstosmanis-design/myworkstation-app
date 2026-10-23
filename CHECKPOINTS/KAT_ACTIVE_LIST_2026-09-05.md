@@ -1,3 +1,7 @@
+## 23/10/2026 — KAT thermal continuation — same ASSIGNED owner
+
+Owner codex/kat-thermal-production-20261023 / PR3093 remains DRAFT, NOT INSTALLED. Prior exact f338c38 full CI39937838514 all five jobs SUCCESS. Current continuation guards already sent rows against re-scan/quantity/removal and linked SET mutation; Node20 focused19PASS/0FAIL/0SKIP plus frontend/TABLE_SERVICE buildPASS. New head CI pending. Incremental sent-row additions are not implemented; operator must complete existing transaction. Central four-table backup/lifecycle integration and whole-tab recovery remain blockers before activation; physical Windows/Greek/cut/both-POS NOT TESTED. No manual PASS or production business action. Checkpoint CHECKPOINTS/CHANGES/2026-10-23-kat-thermal-production.md.
+
 ## 23/10/2026 — KAT-THERMAL-PRODUCTION-01 — graphical pairing prepared / NOT INSTALLED
 
 Same owner. Physical test deferred by owner (no keyboard). Added Paste/Connect graphical pairing and POS Copy/Refresh; mounted mouse-only settings test PASS, no business submission. Prior source8211f38 CI4143server+8recovery/WindowsPASS, wholeCI39915558365 FAIL in wholesale role-readiness count assertion. No bypass/rerun or other-owner source edit. PR3093 remains DRAFT; full-green, four-table catalogue integration, actual Windows/device and KAT acceptance OPEN. Checkpoint2026-10-23-kat-thermal-production.

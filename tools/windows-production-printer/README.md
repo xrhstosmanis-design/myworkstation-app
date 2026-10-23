@@ -11,3 +11,5 @@ A claimed job is STARTED permanently until acknowledged; response loss does not 
 Network mode sends ESC/POS with Windows1253 encoding and configurable Greek code-page number. Other encodings/proprietary protocols are not certified. Windows mode uses the installed driver with Unicode text; cutter behavior follows the driver. Physical Greek/font/paper/cut and Windows runtime are NOT TESTED. Arbitrary printer compatibility is not guaranteed.
 
 No fiscal commands, drawer opening, receipt issuance, payment, stock posting or online/table-order dispatch are implemented by this connector. No real order has been submitted for testing. This file is a technical setup guide, not a LAB PASS manual.
+
+Sent coffee quantities are fixed in the current candidate: repeat scan, quantity change and removal are refused with an operator message until the current transaction is completed. Unsent prepared rows and other retail items remain editable. Incremental additions to an already dispatched row and production cancellation are not implemented; do not treat this guard as that workflow. Whole-tab recovery is also outstanding.
