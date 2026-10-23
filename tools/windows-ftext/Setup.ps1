@@ -6,7 +6,7 @@ while($true) {
     Write-Host ('MyWorkStation ftext / '+$c.storeName+' / '+$c.terminalPos+' / '+$c.serialNumber)
     Write-Host '1. Pair this Windows user'
     Write-Host '2. Check register STATUS and send result'
-    Write-Host '3. Start cloud connection (communication only)'
+    if($c.PSObject.Properties['cashEnabled'] -and $c.cashEnabled -eq $true) {Write-Host '3. Start connector (cash requests for this POS)'} else {Write-Host '3. Start cloud connection (communication only)'}
     Write-Host '4. Close setup'
     $choice=Read-Host 'Select 1-4'
     try {

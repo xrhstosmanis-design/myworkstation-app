@@ -16,7 +16,7 @@ async function fixture(run,terminalChoices={terminalPos:'MAIN',fiscalDisplayName
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React,root=createRoot(document.getElementById('root'));
  const calls=[],checkouts=[],polls=[],product={id:'water',sku:'2270',name:'Fixture water',salePrice:1,currentStock:100,barcodes:['52101588']};
  const api=async(path,options={})=>{
-  calls.push({path,options});
+  calls.push({path,options});if(path.endsWith('/ftext-cash/capability'))return {storeId:path.split('/')[4],configured:false};
   if(path.endsWith('/payment-terminals'))return terminalChoices;if(path.endsWith('/checkout'))return new Promise((resolve,reject)=>checkouts.push({resolve,reject,body:JSON.parse(options.body)}));
   if(path.endsWith('/rbs-capdriver-v1/last-fixture'))return new Promise(resolve=>polls.push(resolve));
   if(/^\/api\/store-pos\/stores\/[^/]+$/.test(path))return {products:[product],layout:{quickKeys:[],categories:[]},access:{}};
