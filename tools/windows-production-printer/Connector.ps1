@@ -1,4 +1,4 @@
-param([switch]$Pair,[switch]$Once)
+﻿param([switch]$Pair,[switch]$Once)
 $ErrorActionPreference='Stop'
 $Base='https://myworkstation-app.onrender.com'
 $Root=Join-Path $env:LOCALAPPDATA 'MyWorkStation-ProductionPrinter'
@@ -9,13 +9,43 @@ $rule=New-Object System.Security.AccessControl.FileSystemAccessRule([System.Secu
 $acl.AddAccessRule($rule);Set-Acl $Root $acl
 [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
 $Credential=Join-Path $Root 'device.xml'
-if($Pair){
- $code=Read-Host 'Pairing code (valid for 10 minutes)'
- $response=Invoke-RestMethod -Uri "$Base/api/production-printers/pair" -Method Post -ContentType 'application/json' -Body (@{code=$code}|ConvertTo-Json)
- $secret=ConvertTo-SecureString $response.token -AsPlainText -Force
- $secret | Export-Clixml $Credential
- Write-Host 'Paired. Start this script without -Pair. Run ONE connector for the shared printer.'
- exit
+if($Pair -or !(Test-Path $Credential)){
+ Add-Type -AssemblyName System.Windows.Forms
+ Add-Type -AssemblyName System.Drawing
+ $form=New-Object Windows.Forms.Form
+ $form.Text='MyWorkStation - Σύνδεση εκτυπωτή'
+ $form.ClientSize=New-Object Drawing.Size(610,260)
+ $form.StartPosition='CenterScreen'
+ $label=New-Object Windows.Forms.Label
+ $label.Text='Αντέγραψε τον κωδικό ζεύξης από το POS και πάτησε Επικόλληση.'
+ $label.SetBounds(20,20,570,45)
+ $input=New-Object Windows.Forms.TextBox
+ $input.SetBounds(20,80,550,35)
+ $input.UseSystemPasswordChar=$true
+ $paste=New-Object Windows.Forms.Button
+ $paste.Text='Επικόλληση';$paste.SetBounds(20,130,170,45)
+ $paste.Add_Click({try{$input.Text=[Windows.Forms.Clipboard]::GetText()}catch{[Windows.Forms.MessageBox]::Show('Δεν ήταν δυνατή η επικόλληση.')}})
+ $connect=New-Object Windows.Forms.Button
+ $connect.Text='Σύνδεση';$connect.SetBounds(210,130,170,45)
+ $status=New-Object Windows.Forms.Label
+ $status.SetBounds(20,195,550,50)
+ $state=@{Paired=$false}
+ $connect.Add_Click({
+  $connect.Enabled=$false
+  try{
+   $code=$input.Text.Trim()
+   if($code -notmatch '^[a-f0-9]{48}$'){throw 'Invalid pairing code'}
+   $response=Invoke-RestMethod -Uri "$Base/api/production-printers/pair" -Method Post -ContentType 'application/json' -Body (@{code=$code}|ConvertTo-Json) -TimeoutSec 20
+   $secret=ConvertTo-SecureString $response.token -AsPlainText -Force
+   $secret | Export-Clixml $Credential
+   $input.Clear();$state.Paired=$true;$form.Close()
+  }catch{$status.Text='Η σύνδεση δεν ολοκληρώθηκε. Έλεγξε τον κωδικό ή δημιούργησε νέο από το POS.'}
+  finally{$connect.Enabled=$true}
+ })
+ $form.Controls.AddRange(@($label,$input,$paste,$connect,$status))
+ $null=$form.ShowDialog();$form.Dispose()
+ if(!$state.Paired){exit}
+ Write-Host 'Paired. This one connector serves both POS. Keep this window running.'
 }
 $mutex=New-Object Threading.Mutex($false,'Local\MyWorkStation-ProductionPrinter')
 if(!$mutex.WaitOne(0)){throw 'A production printer connector is already running.'}

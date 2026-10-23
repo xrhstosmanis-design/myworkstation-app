@@ -1,3 +1,7 @@
+## 23/10/2026 — KAT-THERMAL-PRODUCTION-01 — graphical pairing prepared / NOT INSTALLED
+
+Same owner. Physical test deferred by owner (no keyboard). Added Paste/Connect graphical pairing and POS Copy/Refresh; mounted mouse-only settings test PASS, no business submission. Prior source8211f38 CI4143server+8recovery/WindowsPASS, wholeCI39915558365 FAIL in wholesale role-readiness count assertion. No bypass/rerun or other-owner source edit. PR3093 remains DRAFT; full-green, four-table catalogue integration, actual Windows/device and KAT acceptance OPEN. Checkpoint2026-10-23-kat-thermal-production.
+
 ## 23/10/2026 — KAT-THERMAL-PRODUCTION-01 — SOURCE CANDIDATE / AWAITING CI AND LAB
 
 Owner codex/kat-thermal-production-20261023; bounded transfer claim PR3092, CI39901172772 SUCCESS, merged d9864606 before runtime edits. Configurable single shared printer per store, explicit product allowlist, network ESC/POS CP1253 or Windows driver, one-use pairing/DPAPI local connector, atomic batch/request/job and no automatic uncertain replay. Existing preparation/checkout/stock triggers and broader TABLE_SERVICE ownership preserved. Local Node20 focused25PASS/0FAIL/1native environmentSKIP; frontend/TABLE_SERVICE buildPASS. New mounted route authorization test also PASS. PostgreSQL concurrency/lifecycle/device and Windows parser require actual CI; physical Greek/cutter/two-POS/KAT installation NOT TESTED. No production settings/stock/payment/fiscal/order/printing action. No new manual PASS.
