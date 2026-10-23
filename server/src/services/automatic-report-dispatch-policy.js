@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {createHash} from 'node:crypto';
 import {lifecycleContext} from './store-lifecycle-context.js';
-import {assertLifecycleMutation} from './store-lifecycle-generation.js';
+import {lockAutomaticReportBoundary} from './automatic-report-lock-boundary.js';
 import {createRecipientManagement,snapshotDispatchInput} from './automatic-report-recipients.js';
 const fail=(status,code,message='Η ενέργεια αναφοράς δεν ολοκληρώθηκε.')=>{throw Object.assign(new Error(message),{status,code})};
 const canonical=v=>JSON.stringify(v,(_k,x)=>x&&typeof x==='object'&&!Array.isArray(x)&&!(x instanceof Date)?Object.fromEntries(Object.keys(x).sort().map(k=>[k,x[k]])):typeof x==='bigint'?x.toString():x);
@@ -10,7 +10,7 @@ const freq=v=>{if(!Array.isArray(v)||v.length>3||new Set(v).size!==v.length||v.s
 const expected=(actual,value)=>{if(!Number.isSafeInteger(value)||value<0||String(actual||0)!==String(value))fail(409,'REPORT_REVISION_CHANGED')};
 const next=v=>{const n=BigInt(v||0)+1n;if(n>9007199254740991n)fail(409,'REPORT_REVISION_EXHAUSTED');return n};
 const tables=['AutomaticReportDispatchPolicy','AutomaticReportAutomationGrant','AutomaticReportRecipient','AutomaticReportRecipientConsent','AutomaticReportPayload','AutomaticReportDeliverySlot'];
-export async function dispatchSchemaReady(tx){const rows=await tx.$queryRawUnsafe(`SELECT ${tables.map((name,i)=>`to_regclass(format('%I.%I',current_schema(),'${name}'))::text AS t${i}`).join(',')}`);return rows[0]&&tables.every((_x,i)=>!!rows[0]['t'+i])}
+export async function dispatchSchemaReady(tx){const rows=await tx.$queryRawUnsafe(`SELECT ${tables.map((name,i)=>`to_regclass(format('%I.%I',current_schema(),'${name}'))::text AS t${i}`).join(',')}`);const count=rows[0]?tables.filter((_x,i)=>!!rows[0]['t'+i]).length:0;if(count!==0&&count!==6)fail(409,'REPORT_DISPATCH_SCHEMA_REQUIRED');return count===6}
 const columns={policy:'*,"revision"::text AS "revision","lifecycleGeneration"::text AS "lifecycleGeneration"',grant:'*,"revision"::text AS "revision","lifecycleGeneration"::text AS "lifecycleGeneration"'};
 export async function readLockedDispatchAuthorization(tx,{companyId,storeId}){
  const policy=(await tx.$queryRawUnsafe(`SELECT ${columns.policy} FROM "AutomaticReportDispatchPolicy" WHERE "companyId"=$1 AND "storeId"=$2 AND "reportType"='CASH' FOR SHARE NOWAIT`,companyId,storeId))[0]||null;
@@ -49,13 +49,13 @@ export function createAutomaticReportManagement({db,activationProvider,sendVerif
   const generation=lifecycleContext()[s.storeId],now=new Date(clock());if(!Number.isFinite(now.getTime()))fail(400,'REPORT_CLOCK_INVALID');
   return db.$transaction(async tx=>{
    const actor=await tx.user.findUnique({where:{id:s.actorId},select:{id:true,role:true,sessionVersion:true}});if(actor?.role!=='SUPER_ADMIN')fail(403,'REPORT_SUPER_ADMIN_REQUIRED');
-   const state=await assertLifecycleMutation(tx,s,generation,{lock:true});
+   const ready=await dispatchSchemaReady(tx);
+   const state=ready?await lockAutomaticReportBoundary(tx,{companyId:s.companyId,storeId:s.storeId,expectedGeneration:generation}):null;
    const rows=write?await tx.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "id"=${s.storeId} AND "companyId"=${s.companyId} AND "active"=true FOR NO KEY UPDATE NOWAIT`:await tx.$queryRaw`SELECT "id","companyId","name" FROM "Store" WHERE "id"=${s.storeId} AND "companyId"=${s.companyId} AND "active"=true FOR SHARE NOWAIT`;
    if(!rows.length)fail(404,'REPORT_STORE_NOT_FOUND');
    const [lockedActor]=await tx.$queryRaw`SELECT "id","role","sessionVersion" FROM "User" WHERE "id"=${s.actorId} FOR SHARE NOWAIT`;
    if(!lockedActor||lockedActor.role!=='SUPER_ADMIN'||lockedActor.sessionVersion!==actor.sessionVersion)fail(403,'REPORT_SUPER_ADMIN_REQUIRED');
-   const ready=await dispatchSchemaReady(tx);if(!ready){if(write)fail(409,'REPORT_DISPATCH_SCHEMA_REQUIRED');const a=activationProvider();return {schemaReady:false,policy:null,grant:null,recipients:[],activation:{valid:a?.valid===true,enabled:a?.enabled===true,notBefore:a?.notBefore||null,epoch:a?.epoch||null}}}
-   if(write&&!state.enrolled)fail(409,'REPORT_LIFECYCLE_ENROLLMENT_REQUIRED');
+   if(!ready){if(write)fail(409,'REPORT_DISPATCH_SCHEMA_REQUIRED');const a=activationProvider();return {schemaReady:false,policy:null,grant:null,recipients:[],activation:{valid:a?.valid===true,enabled:a?.enabled===true,notBefore:a?.notBefore||null,epoch:a?.epoch||null}}}
    // Parent Store lock protects absent rows; all authorization mutations follow
    // the same policy -> grant -> recipients -> consents order.
    const records=await readLockedDispatchAuthorization(tx,s);

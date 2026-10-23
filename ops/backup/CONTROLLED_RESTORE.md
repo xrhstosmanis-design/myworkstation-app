@@ -95,16 +95,38 @@ lifecycle worker**. The existing canonical manifest and column review remain
 unchanged: adding expected tables before provisioning would break existing
 lifecycle inspection even while dispatch is OFF.
 
-Promotion is a separate explicit schema/lifecycle activation gate: review and
-provision the six exact tables, verify actual PostgreSQL columns and constraints,
-complete fresh schema/recovery proof and controlled reset acceptance, confirm
-there are no in-flight lifecycle jobs tied to the old plan hash, and coordinate
-the application and backup worker revisions before promoting both prospective
-files to the canonical paths. No optional-table bypass is introduced. Until that
-gate is completed, do not enable dispatch or treat reset of the six tables as
-available. After reviewed promotion, reset/delete removes recipients, consent,
-policy, grants, payload and slots; lifecycle generation and fresh enrollment
-with a new grant cutoff prevent old work from resuming.
+Promotion is a separate explicit schema classification gate: review and
+provision the six exact tables while dispatch is OFF, verify actual PostgreSQL
+columns, constraints, indexes and empty initial state, confirm there are no
+in-flight lifecycle jobs tied to the old plan hash, and coordinate application
+and backup worker revisions before promoting both prospective files. Existing
+catalogue drift must receive an explicit review; it must not be silently copied
+into a new plan. Until this gate is completed, do not enable dispatch or treat
+reset of the six tables as available. After reviewed promotion, reset/delete
+classifies recipients, consent, policy, grants, payload and slots as REMOVE.
+No optional-table or executor-validation bypass is introduced.
+
+Automatic email may use a genuinely unenrolled lifecycle generation zero.
+It does not create a fence, install triggers or start RESET. Before authoritative
+reads or writes, its shared boundary acquires Store table SHARE NOWAIT, optional
+existing Fence table SHARE NOWAIT, then all six report tables ROW EXCLUSIVE
+NOWAIT. It freshly asserts lifecycle state under these locks; management retains
+the original request generation. Existing enrolled generations, maintenance,
+retirement and stale-request rejection remain enforced. Report-table locks also
+reject a partially progressed installer before a circular wait can form. The
+supported installer creates its fence, Store trigger and enrollment atomically;
+independent privileged creation outside that protocol is unsupported. Store
+SHARE can briefly block Store mutations globally; contention is an explicit
+refusal, never an automatic retry. Locks are released before SMTP.
+
+Global lifecycle activation, full production-schema private recovery proof and
+physical reset/clearance acceptance remain separate work. The bounded seven-table
+CI fixture does not establish full production restore acceptance. Do not invoke
+the lifecycle controller's start action to prepare email: it starts RESET drain.
+If a supported future enrollment/reset advances the generation, previously
+authorized report work fails its next fresh generation check; new authority is
+required. The external restore OFF/stop/epoch/cutoff protocol below remains
+mandatory for both enrolled and unenrolled stores.
 This does not retain a same-database SMTP suppression ledger across full restore;
 the enforced external OFF/stop/rotate/cutoff workflow provides that boundary.
 No payload, consent or backup retention duration is selected here.

@@ -60,5 +60,37 @@ test('native metadata writer fences legacy and partial storage, rollback and ori
    await save(a,{name:'Atomic',responsibleEmail:'replacement@example.com'});const after=await auth();assert.equal(after.grant[0].active,false);assert.equal(after.consent[0].active,false);assert.ok(BigInt(after.consent[0].revision)>BigInt(before.consent[0].revision));const changed=after.recipient.find(r=>r.recipientId==='recipient');assert.equal(changed.verifiedAt,null);assert.equal(changed.challengeHash,null);assert.equal(changed.challengeNonce,null);assert.ok(BigInt(changed.version)>1n);assert.deepEqual(after.recipient.find(r=>r.recipientId==='control'),before.recipient.find(r=>r.recipientId==='control'));assert.deepEqual(after.slots,before.slots);assert.deepEqual((await snapshot()).cash,beforeStore.cash);
    const unchanged=await auth();await save(a,{name:'Only metadata',responsibleEmail:'REPLACEMENT@example.com; replacement@example.com'});assert.deepEqual(await auth(),unchanged);
   });
+
+  await t.test('partial installer DDL before Store is NOWAIT refused without metadata/authorization mutation',async()=>{
+   const before=await snapshot(),authBefore=await b.$queryRaw`SELECT "recipientId","version"::text AS version,"verifiedAt" FROM "AutomaticReportRecipient" ORDER BY "recipientId"`;let rowReads=0;
+   const observed={$transaction:fn=>a.$transaction(tx=>fn(new Proxy(tx,{get(target,key){if(key==='$queryRaw')return async(...args)=>{if(args[0].join('').includes('FOR NO KEY UPDATE'))rowReads++;return target.$queryRaw(...args)};const v=target[key];return typeof v==='function'?v.bind(target):v}})),{timeout:15000})};
+   await b.$transaction(async tx=>{await tx.$executeRawUnsafe('LOCK TABLE "AutomaticReportRecipient" IN ACCESS EXCLUSIVE MODE');await assert.rejects(save(observed,{name:'Must not write',responsibleEmail:'forbidden@example.com'}),e=>e.status===409&&e.code==='REPORT_DISPATCH_BUSY');assert.equal(rowReads,0)},{timeout:15000});
+   assert.deepEqual(await snapshot(),before);assert.deepEqual(await b.$queryRaw`SELECT "recipientId","version"::text AS version,"verifiedAt" FROM "AutomaticReportRecipient" ORDER BY "recipientId"`,authBefore);
+  });
+  await t.test('metadata boundary excludes reverse Store/report DDL with explicit barrier and zero deadlock retries',async()=>{
+   const locked=deferred(),release=deferred();let transactions=0;
+   const observed={$transaction:fn=>{transactions++;return a.$transaction(tx=>fn(new Proxy(tx,{get(target,key){if(key==='$queryRaw')return async(...args)=>{const result=await target.$queryRaw(...args);if(args[0].join('').includes('FOR NO KEY UPDATE')){locked.resolve();await bounded(release.promise)}return result};const v=target[key];return typeof v==='function'?v.bind(target):v}})),{timeout:15000})}};
+   const work=save(observed,{name:'Boundary held'});try{await bounded(locked.promise);for(const table of ['Store','AutomaticReportRecipient'])await assert.rejects(b.$transaction(tx=>tx.$executeRawUnsafe(`LOCK TABLE "${table}" IN ACCESS EXCLUSIVE MODE NOWAIT`)),e=>e.code==='55P03'||e.meta?.code==='55P03')}finally{release.resolve();await bounded(work)}assert.equal(transactions,1);
+  });
+  await t.test('two different Store writers refuse table-lock upgrade NOWAIT without deadlock or implicit late write',async()=>{
+   await a.$executeRaw`INSERT INTO "Store"("id","companyId","name","responsibleEmail","active") VALUES('s2','c','Second store','second@example.com',false)`;
+   const before=await snapshot(),authBefore=await a.$queryRaw`SELECT "recipientId","version"::text AS version,"verifiedAt" FROM "AutomaticReportRecipient" ORDER BY "recipientId"`;
+   const held=deferred(),release=deferred();let arrivals=0;const writes={s:0,s2:0};
+   const observed=(client,id)=>({$transaction:fn=>client.$transaction(async tx=>{let schemaReads=0,writeIntent=false;const wrapped=new Proxy(tx,{get(target,key){
+    if(key==='$queryRawUnsafe')return async(...args)=>{const result=await target.$queryRawUnsafe(...args);if(args[0]==='SELECT current_schema() AS schema'&&++schemaReads===2){if(++arrivals===2)held.resolve();await bounded(release.promise)}return result};
+    if(key==='$executeRawUnsafe')return async(...args)=>{const result=await target.$executeRawUnsafe(...args);if(args[0].includes('"Store" IN ROW EXCLUSIVE MODE NOWAIT'))writeIntent=true;return result};
+    if(key==='store')return {update:async args=>{assert.equal(writeIntent,true,'real Prisma UPDATE requires acquired write intent');writes[id]++;return target.store.update(args)}};
+    const value=target[key];return typeof value==='function'?value.bind(target):value;
+   }});return fn(wrapped)},{timeout:15000})});
+   const tasks=withLifecycleContext({s:'9007199254740993',s2:'0'},()=>[saveStoreMetadata(observed(a,'s'),scope,{name:'Concurrent first'}),saveStoreMetadata(observed(b,'s2'),{...scope,storeId:'s2'},{name:'Concurrent second'})]);for(const task of tasks)task.catch(()=>{});let results;
+   try{await bounded(held.promise);assert.deepEqual(writes,{s:0,s2:0});release.resolve();results=await bounded(Promise.allSettled(tasks))}finally{release.resolve();await bounded(Promise.allSettled(tasks))}
+   const failed=results.filter(r=>r.status==='rejected');assert.ok(failed.length>=1);for(const result of failed){assert.equal(result.reason.status,409);assert.equal(result.reason.code,'STORE_METADATA_BUSY')}
+   assert.ok(results.filter(r=>r.status==='fulfilled').length<=1);const after=await snapshot();for(const [i,id,name]of [[0,'s','Concurrent first'],[1,'s2','Concurrent second']]){assert.equal(writes[id],results[i].status==='fulfilled'?1:0);assert.equal(after.stores.find(r=>r.id===id).name,results[i].status==='fulfilled'?name:before.stores.find(r=>r.id===id).name)}
+   assert.deepEqual(after.stores.find(r=>r.id==='other'),before.stores.find(r=>r.id==='other'));assert.deepEqual(after.cash,before.cash);assert.deepEqual(await a.$queryRaw`SELECT "recipientId","version"::text AS version,"verifiedAt" FROM "AutomaticReportRecipient" ORDER BY "recipientId"`,authBefore);
+  });
+  await t.test('all-present report tables work at legacy zero without Fence enrollment; original nonzero refuses',async()=>{
+   await a.$executeRawUnsafe('DROP TABLE "StoreLifecycleFence"');const before=await snapshot();await assert.rejects(save(a,{name:'Old epoch'}),e=>e.code==='STORE_LIFECYCLE_STALE_GENERATION');assert.deepEqual(await snapshot(),before);
+   await saveStoreMetadata(a,scope,{name:'Legacy zero allowed'});const [state]=await b.$queryRaw`SELECT to_regclass(format('%I.%I',current_schema(),'StoreLifecycleFence'))::text AS fence`;assert.equal(state.fence,null);const after=await snapshot();assert.equal(after.stores.find(r=>r.id==='s').name,'Legacy zero allowed');assert.deepEqual(after.stores.find(r=>r.id==='other'),before.stores.find(r=>r.id==='other'));assert.deepEqual(after.cash,before.cash);
+  });
  }finally{await a?.$disconnect();await b?.$disconnect();if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect()}
 });

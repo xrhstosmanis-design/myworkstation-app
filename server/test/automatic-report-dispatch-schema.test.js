@@ -27,11 +27,24 @@ test('actual management rejects unknown scope/input and explicit grant is mandat
  let transactions=0,locked=0,writes=0,session=2;
  const tx={user:{findUnique:async()=>({id:'admin',role:'SUPER_ADMIN',sessionVersion:2})},$queryRawUnsafe:async sql=>{
   if(sql.includes('AS t0'))return [Object.fromEntries(Array.from({length:6},(_,i)=>['t'+i,'table']))];
+  if(sql.includes('to_regclass')&&!sql.includes('AS schema'))return [{fence:'fence'}];
   if(sql.includes('current_schema'))return [{schema:'test',fence:'fence'}];
   if(sql.includes('StoreLifecycleFence'))return [{companyId:'c',generation:'3',maintenance:false,retired:false}];return [];
- },$queryRaw:async strings=>{const sql=strings.join('');if(sql.includes('FROM "Store"'))return [{id:'s',companyId:'c',name:'Fixture'}];if(sql.includes('FROM "User"')){locked++;return [{id:'admin',role:'SUPER_ADMIN',sessionVersion:session}]}return []},$executeRaw:async()=>{writes++;return 1}};
+ },$executeRawUnsafe:async sql=>{assert.match(sql,/^LOCK TABLE/);return 0},$queryRaw:async strings=>{const sql=strings.join('');if(sql.includes('FROM "Store"'))return [{id:'s',companyId:'c',name:'Fixture'}];if(sql.includes('FROM "User"')){locked++;return [{id:'admin',role:'SUPER_ADMIN',sessionVersion:session}]}return []},$executeRaw:async()=>{writes++;return 1}};
  const db={$transaction:async fn=>{transactions++;return fn(tx)}},service=createAutomaticReportManagement({db,activationProvider:()=>({valid:true,issuedAt:'2026-10-22T00:00:00.000Z',notBefore:'2026-10-23T00:00:00.000Z'}),sendVerification:async()=>({}),clock:()=>new Date('2026-10-22T12:00:00.000Z')}),scope={actorId:'admin',companyId:'c',storeId:'s'};
  assert.throws(()=>service.saveDispatchPolicy(scope,{expectedRevision:0,dispatchEnabled:false,allowsProvisional:false,allowedFrequencies:[],actorId:'other'}));assert.throws(()=>service.getDispatchManagement({...scope,role:'SUPER_ADMIN'}));assert.equal(transactions,0);
  await assert.rejects(withLifecycleContext({s:'3'},()=>service.saveAutomationGrant(scope,{expectedRevision:0,active:true,allowedFrequencies:['DAILY']})),{code:'REPORT_EXPLICIT_AUTHORIZATION_REQUIRED'});assert.equal(locked,1);assert.equal(writes,0);
  session=3;await assert.rejects(withLifecycleContext({s:'3'},()=>service.saveAutomationGrant(scope,{expectedRevision:0,active:true,allowedFrequencies:['DAILY'],explicitAuthorization:true})),{code:'REPORT_SUPER_ADMIN_REQUIRED'});assert.equal(writes,0);
+});
+
+test('management keeps all-absent readiness, rejects partial schema and uses genuine zero boundary without enrollment DDL',async()=>{
+ const {createAutomaticReportManagement}=await import('../src/services/automatic-report-dispatch-policy.js');
+ let count=0;const events=[];
+ const tx={user:{findUnique:async()=>({id:'admin',role:'SUPER_ADMIN',sessionVersion:2})},$executeRawUnsafe:async sql=>{assert.match(sql,/^LOCK TABLE/);events.push(sql);return 0},$queryRawUnsafe:async sql=>{
+ if(sql.includes('AS t0'))return [Object.fromEntries(Array.from({length:6},(_,i)=>['t'+i,i<count?'present':null]))];if(sql.includes('SELECT current_schema() AS schema'))return [{schema:'test',fence:null}];if(sql.includes('to_regclass'))return [{fence:null}];return [];
+ },$queryRaw:async strings=>{const sql=strings.join('');if(sql.includes('FROM "Store"'))return [{id:'s',companyId:'c',name:'Legacy'}];if(sql.includes('FROM "User"'))return [{id:'admin',role:'SUPER_ADMIN',sessionVersion:2}];return []},$executeRaw:async(strings,...values)=>{events.push('grant-write');assert.equal(values[6],0n);return 1}};
+ const service=createAutomaticReportManagement({db:{$transaction:fn=>fn(tx)},clock:()=>new Date('2026-10-22T12:00:00.000Z'),activationProvider:()=>({valid:true,epoch:'epoch',activationFingerprint:'a'.repeat(64),issuedAt:'2026-10-22T00:00:00.000Z',notBefore:'2026-10-23T00:00:00.000Z'}),sendVerification:async()=>assert.fail('no mail')}),scope={actorId:'admin',companyId:'c',storeId:'s'};
+ assert.equal((await service.getDispatchManagement(scope)).schemaReady,false);assert.equal(events.length,0);
+ count=1;await assert.rejects(service.getDispatchManagement(scope),{code:'REPORT_DISPATCH_SCHEMA_REQUIRED'});assert.equal(events.length,0);
+ count=6;await service.saveAutomationGrant(scope,{expectedRevision:0,active:true,allowedFrequencies:['DAILY'],explicitAuthorization:true});assert.match(events[0],/"Store" IN SHARE MODE NOWAIT/);assert.ok(events[1].includes('IN ROW EXCLUSIVE MODE NOWAIT'));assert.equal(events.at(-1),'grant-write');assert.ok(!events.some(x=>/CREATE|ALTER|DROP/.test(x)));
 });

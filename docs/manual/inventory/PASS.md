@@ -1,3 +1,9 @@
+## 22/10/2026 — KAT 38 old-card retirement / LIMITED LIVE CONFIGURATION PASS
+
+Completed owner-authorized removal of exact38old/test cards from active KAT catalog. Authorized SuperAdmin selected Κυλικείο ΚΑΤ → Εμπορική λειτουργία → Λοιπές εμπορικές λειτουργίες → Αποθήκη, searched exact reviewed identities, selected only26/9/3manifest rows → Ομαδική διόρθωση → Κατάσταση καταστήματος=Ανενεργά; all other fields Χωρίς αλλαγή, SETunchecked → Καταχώρηση once/group. Native active lists remove them; independent readback/audit confirms all38StoreProduct.active=false while Product/history/stock/prices/VAT/departments remain. No permanent deletion, stock movement or financial action.
+
+Active KAT rows1825, zero missing joined fiscal departments;242button identities/layoutv3702 and57coffee fee links retained.38residual is closed; do not repeat retirement or map old cards. Inactive-only archive filter did not expose these store-inactive/Product-active TEST cards in this observation; restoration through that filter is NOT verified. Keep historical records and inspect full-list/card/store state if restoration is later requested. Physical fiscal first receipt is still outside this configuration PASS. Checkpoint2026-10-22-kat-missing-fiscal-mappings.md and measured kat-retire38-20261022 evidence authoritative.
+
 ## 22/10/2026 — Real KAT blank fiscal mapping repair / LIMITED LIVE CONFIGURATION PASS
 
 Already applied to57reviewed existing KAT cards:51modern beverages plus6old exact source counterparts. Owner/SuperAdmin used selected Κυλικείο ΚΑΤ Inventory → exact SKU/row selection → Ομαδική διόρθωση → existing source-confirmed department with unchanged13% → allother fields Χωρίς αλλαγή, SETunchecked → one Καταχώρηση per identified group. Native saved display and independent protected-field readback agree. Do not repeat this configuration.

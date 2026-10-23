@@ -17,6 +17,7 @@ function fixture(){
   user:{findUnique:async()=>principal},store:{findFirst:async()=>store},
   $queryRawUnsafe:async(sql,...values)=>{events.push(sql.includes('current_schema')?'metadata':'lifecycle');if(sql.includes('current_schema'))return[{schema:'test',fence:'test.StoreLifecycleFence'}];if(sql.includes('set_config'))return[];return[{companyId:'c',generation:'1',maintenance:false,retired:false}]},
   $executeRaw:async strings=>{events.push(strings.join('?'));return 0},
+  $executeRawUnsafe:async sql=>{events.push(sql);return 0},
   $queryRaw:async(strings,...values)=>{
    const sql=strings.join('?');events.push(sql);
    if(sql.includes('AutomaticReportDeliverySlot')){

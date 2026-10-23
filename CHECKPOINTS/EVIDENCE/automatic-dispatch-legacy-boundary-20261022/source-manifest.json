@@ -1,0 +1,103 @@
+{
+  "scope": "AUTOMATIC-DISPATCH-LEGACY-BOUNDARY-01",
+  "stage": "COORDINATED OPERATOR HANDOFF AWAITING NEW FULL CI",
+  "claims": [
+    {
+      "pr": 3081,
+      "ci": 39851283667,
+      "merged": "7ec41aba16e6e2d9f56db6b6c20a5c253587890b"
+    },
+    {
+      "pr": 3083,
+      "ci": 39852161391,
+      "merged": "ca423a69271b672a0592b24ef65861cfa4428947"
+    }
+  ],
+  "local": {
+    "tests": 207,
+    "pass": 194,
+    "fail": 0,
+    "skip": 13,
+    "nativePostgres": "NOT RUN LOCALLY; REQUIRED IN CI"
+  },
+  "dispatch": "OFF",
+  "functionalAcceptance": "OPEN NOT TESTED",
+  "files": [
+    {
+      "path": "ops/backup/CONTROLLED_RESTORE.md",
+      "sha256": "91e689ac1b539a5d3bd24e71e73c62f70c97653b8a8c976a0fdd5d5c0e723ed0",
+      "gitBlob": "02b73196c3569e4e0acfa73e3ed910fe9d7431fd"
+    },
+    {
+      "path": "server/src/services/automatic-report-dispatch-policy.js",
+      "sha256": "6af65e8ca73a694d961a83e1d2e5b67076b705b33a7e0a52dd2c0df022c72f2b",
+      "gitBlob": "1d17138d188af4483d643f8bd827cbec3aeebf1d"
+    },
+    {
+      "path": "server/src/services/automatic-report-eligibility.js",
+      "sha256": "32495b17ce8e874bc4fc45ba9157fecfcb0796764e4b08295c4600bd4eecd309",
+      "gitBlob": "ddc8c1a92dc77fb18a1ba3441764d71676bff407"
+    },
+    {
+      "path": "server/src/services/store-metadata-mutation.js",
+      "sha256": "20dcda0faf55adf4045347efc956c45ab993019bec7eb78f6469745d781e83c0",
+      "gitBlob": "f0f6ba9eb4940dcf8bbf4befa2fd3ff6ecbf003c"
+    },
+    {
+      "path": "server/test/automatic-report-dispatch-schema.test.js",
+      "sha256": "3ebb5b7458e33b7f8b84da43b57656804eeb4274e5d0a2d497ea2c930e279763",
+      "gitBlob": "a6f94636b3fbcfdaf4547389769d50fdab4075b4"
+    },
+    {
+      "path": "server/test/automatic-report-dispatch.test.js",
+      "sha256": "8f5e6f7c01379396fb0694257f9b2eb0aff6722695dff09668956f5b4c5b3c44",
+      "gitBlob": "fcd7dc3a2e69c1e69f589c9194377607675809b2"
+    },
+    {
+      "path": "server/test/automatic-report-eligibility.test.js",
+      "sha256": "75dcea82fe2a1a31214c0a0d2cc4e9841e9ced78f115a884396ece7d97a6016f",
+      "gitBlob": "a980188ad691cf9e2c5ad99c731c0f416fc2aaf8"
+    },
+    {
+      "path": "server/test/automatic-report-persistence-postgres.test.js",
+      "sha256": "a728aa5ce550236e06a3ddac01a0638a2327c44a79bbe257aa5b3159702b8189",
+      "gitBlob": "8cd73de00349521ec6ecef8053773044ca62137f"
+    },
+    {
+      "path": "server/test/store-metadata-mutation-postgres.test.js",
+      "sha256": "c9c8521f53fd88ac37af3b699073291ca02f4f982e20849fe9b1a09d15f5eaf9",
+      "gitBlob": "811a2e996858d626f9fd9e3984ecf79c4d2f2b98"
+    },
+    {
+      "path": "server/test/store-metadata-mutation.test.js",
+      "sha256": "8a7d804c84dc0a1b53abe582d1a5637eda694b032db0dfee5fc711b2754fda3e",
+      "gitBlob": "e75d9f686a8e89ab3dd8fe2ab1ab22d611173d41"
+    },
+    {
+      "path": "server/src/services/automatic-report-lock-boundary.js",
+      "sha256": "e64991e924784ea8e887b95cf05605cce9b88af93b85b4b71aeffa526edf0a90",
+      "gitBlob": "71554258138b5d4b367e59fce92c96385ed83f23"
+    },
+    {
+      "path": "server/test/automatic-report-legacy-lifecycle-postgres.test.js",
+      "sha256": "967378f4dacce4f629ccbfc0d8563b6ec1170e907569c7598fc33e89f8580a27",
+      "gitBlob": "e12aa57c30041bd1930dd5b09b26db8a4291daa2"
+    }
+  ],
+  "priorFullCI": {
+    "head": "e4218b49b24a48b4997245d9b689e478bb2598aa",
+    "run": 39853104901,
+    "job": 120084570119,
+    "serverPass": 4133,
+    "fail": 0,
+    "skip": 0,
+    "backupPass": 8,
+    "aggregate": "success"
+  },
+  "operatorHandoff": {
+    "pr": 3084,
+    "merged": "a4b04d55f47752cca0e14acd47b28e4be47ab1d8",
+    "entrypoint": "server/scripts/automatic-report-provision.mjs",
+    "duplicateOperatorRemoved": true
+  }
+}
