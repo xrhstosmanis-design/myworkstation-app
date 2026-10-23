@@ -13,10 +13,14 @@ test('automatic stock is opt-in and rejects nonfinite, empty and insufficient qu
  for(const q of [0,-1,Infinity,NaN])assert.equal(enoughOnlineStock({currentStock:2},q),false);
 });
 
-test('automatic mode overrides prepared, untracked and ALWAYS stock bypasses without changing manual mode',()=>{
- const coffee={name:'FREDDO ESPRESSO',trackStock:false,availabilityMode:'ALWAYS',currentStock:0};
+test('automatic mode honors explicit ALWAYS and HIDE, never product name or stock tracking shortcuts',()=>{
+ const coffee={name:'FREDDO ESPRESSO',trackStock:false,currentStock:0};
  assert.equal(onlineProductAvailable(coffee,{stockCheckEnabled:true}),true);
- assert.equal(onlineProductAvailable(coffee,{autoStockCatalogEnabled:true,stockCheckEnabled:false}),false);
+ assert.equal(onlineProductAvailable(coffee,{autoStockCatalogEnabled:true}),false);
+ assert.equal(onlineProductAvailable({...coffee,availabilityMode:'ALWAYS'},{autoStockCatalogEnabled:true},100),true);
+ assert.equal(onlineProductAvailable({...coffee,availabilityMode:'ALWAYS',visibilityOverride:false},{autoStockCatalogEnabled:true}),false);
+ assert.equal(onlineProductAvailable({...coffee,availabilityMode:'BAKED_SAME',visibilityOverride:true},{autoStockCatalogEnabled:true}),false);
  assert.equal(onlineProductAvailable({...coffee,currentStock:2},{autoStockCatalogEnabled:true},2),true);
  assert.equal(onlineProductAvailable({...coffee,currentStock:1},{autoStockCatalogEnabled:true},2),false);
+ for(const q of [0,-1,Infinity,NaN])assert.equal(onlineProductAvailable({...coffee,availabilityMode:'ALWAYS'},{autoStockCatalogEnabled:true},q),false);
 });
