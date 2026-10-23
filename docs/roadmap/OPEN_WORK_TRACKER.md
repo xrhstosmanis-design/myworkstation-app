@@ -1,3 +1,15 @@
+## 23/10/2026 17:01 Europe/Athens — LAB MAILBOX VERIFICATION ALREADY PENDING / READ-ONLY RECONCILIATION
+
+Retained central owner codex/central-auto-dispatch-20261022, existing approved integration. User explicitly identified the intended LAB recipient and requested continuation; address remains private and is not reproduced in public evidence. Original recipient pre-action draft3098 was overtaken by a concurrent observed operation BEFORE greenmerge; no action was taken under that unmerged draft. This receipt supersedes its proposed save/send steps and authorizes no duplicate writer or resend.
+
+Fresh read-only baseline2026-10-23T13:58:28.102892Z observed all dispatch table rowcounts0. Subsequent actual existing UI refresh and scoped read-only DB14:00 revealed ONE already-created unverified intended recipient, version1, created13:59:43.820Z, VERIFY challenge issued14:00:19.720Z/expires14:10:19.720Z, verifiedAtNULL/revokedAtNULL. This root turn performed only reads/refresh and no recipient save, SMTP send, challenge issuance or confirmation. Provenance of the concurrent operation is not inferred from the record; do not fabricate its SMTP outcome. A stored challenge alone is NOT inbox or provider-acceptance proof. Existing accepted technical source remains protected.
+
+Fresh14:01:26.833990Z global counts recipient1/consent0/grant0/policy0/slot0. Actual installed runtime14:01:16.588Z revision83db47fc8cc9bb4a0941d5d3421e0cf821baa4a2/readActivationvalidtrue/enabledfalse/issuedAt01:34:00.191Z/notBefore04:00Z. UI shows the same LAB recipient unverified, no active consent, separate verification/consent controls. Existing zero financial/stock action boundary and no accepted test replay retained. No other configuration, DDL, enrollment, RESET or restore performed.
+
+Current functional result NOT TESTED: mailbox receipt, direct user code confirmation, separate consent, current SA grant/policy and genuine wholepostcutoff report acceptance remain OPEN. Single next action: user checks intended mailbox and directly enters the current verification code into the existing LAB application's email-code field; never share token in chat/public evidence and do not auto-resend or bypass. If the current challenge expires, first recheck current actual state before a separately concrete resend. Same central owner retains remainder; other owners and source paths unchanged. No manual/global/numbered PASS closure.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-10-22-automatic-dispatch-off-provision.md.
+
 ## 23/10/2026 — ONLINE-CATALOG-CONTROL-01 / ASSIGNED BEFORE SOURCE / NOT TESTED
 
 Retained owner codex/daily-online-store-20261011 / issue2054; implementation branch feat/online-catalog-control-20261023. Owner explicitly expands the stock-only requirement: coffees and accompaniments always online without stock, and owner-controlled inclusion/exclusion for every online store. This prospectively supersedes only the earlier strict automatic-stock/no-ALWAYS rule; historical limited PASS remains historical. No second owner or wider launch claim.
