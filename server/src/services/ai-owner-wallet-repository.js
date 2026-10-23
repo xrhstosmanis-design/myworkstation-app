@@ -78,6 +78,7 @@ export function createAiOwnerWalletRepository(db){
   }
   async function credit(companyId,{amountMicros,receiptReference},actorId){
     receiptReference=receiptReference.trim().normalize('NFC').toUpperCase();
+    if(receiptReference.startsWith('TRIAL/'))throw walletError('AI_WALLET_RESERVED_REFERENCE',400);
     const amount=positiveMicros(amountMicros);await ensure();
     return db.$transaction(async tx=>{
       const row=await lock(tx,companyId);
@@ -90,6 +91,26 @@ export function createAiOwnerWalletRepository(db){
       await notice(tx,{...row,balanceMicros:BigInt(row.balanceMicros)+amount,cycleId},'CREDIT',amount);
       return {id,replayed:false};
     }).catch(e=>{if(e.code==='P2002'||e.meta?.code==='23505')throw walletError('AI_WALLET_RECEIPT_CONFLICT');throw e});
+  }
+  async function grantTrial(companyId,{amountMicros,grantReference,reason},actorId){
+    const reference='TRIAL/'+grantReference.trim().normalize('NFC').toUpperCase();
+    reason=reason.trim().normalize('NFC');
+    const amount=positiveMicros(amountMicros);await ensure();
+    return db.$transaction(async tx=>{
+      const row=await lock(tx,companyId);
+      const existing=(await tx.$queryRaw`SELECT * FROM "AiOwnerWalletEntry" WHERE "kind"='CREDIT' AND "reference"=${reference}`)[0];
+      if(existing){
+        if(existing.companyId!==companyId||existing.feature!=='TRIAL_GRANT'||BigInt(existing.creditedMicros)!==amount||existing.usage?.reason!==reason)throw walletError('AI_WALLET_TRIAL_CONFLICT');
+        return {id:existing.id,replayed:true};
+      }
+      if(BigInt(row.balanceMicros)+amount>MAX_WALLET_MICROS)throw walletError('AI_WALLET_LIMIT',400);
+      const id=randomUUID(),cycleId=randomUUID(),detail={fundingType:'TRIAL_GRANT',reason,grantReference:reference,amountMicros:String(amount)};
+      await tx.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","kind","reference","status","creditedMicros","feature","usage","actorId") VALUES (${id},${companyId},'CREDIT',${reference},'CREDITED',${amount},'TRIAL_GRANT',${JSON.stringify(detail)}::jsonb,${actorId})`;
+      await tx.$executeRaw`UPDATE "AiOwnerWallet" SET "balanceMicros"="balanceMicros"+${amount},"lastCreditMicros"=${amount},"cycleId"=${cycleId},"version"="version"+1,"updatedAt"=NOW() WHERE "companyId"=${companyId}`;
+      await tx.$executeRaw`INSERT INTO "AiOwnerWalletAudit" ("id","companyId","actorId","event","detail") VALUES (${randomUUID()},${companyId},${actorId},'TRIAL_GRANTED',${JSON.stringify({id,...detail})}::jsonb)`;
+      await notice(tx,{...row,balanceMicros:BigInt(row.balanceMicros)+amount,cycleId},'CREDIT',amount);
+      return {id,replayed:false};
+    }).catch(e=>{if(e.code==='P2002'||e.meta?.code==='23505')throw walletError('AI_WALLET_TRIAL_CONFLICT');throw e});
   }
   async function reserve({companyId,storeId,feature,tariff,amountMicros,reference}){
     const amount=positiveMicros(String(amountMicros));await ensure();
@@ -131,5 +152,5 @@ export function createAiOwnerWalletRepository(db){
   }
   async function review(companyId,id){await ensure();await db.$executeRaw`UPDATE "AiOwnerWalletEntry" SET "status"='REVIEW' WHERE "id"=${id} AND "companyId"=${companyId} AND "status"='RESERVED'`}
   async function enabledFor(companyId){await ensure();return (await db.$queryRaw`SELECT "enabled" FROM "AiOwnerWallet" WHERE "companyId"=${companyId}`)[0]?.enabled===true}
-  return {ensure,read,configure,credit,reserve,settle,review,enabledFor,db};
+  return {ensure,read,configure,credit,grantTrial,reserve,settle,review,enabledFor,db};
 }
