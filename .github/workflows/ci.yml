@@ -49,6 +49,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Parse production printer connector with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/windows-production-printer/Connector.ps1'),[ref]$tokens,[ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
       - name: Parse CAP Driver scripts with Windows PowerShell 5.1
         shell: powershell
         run: |

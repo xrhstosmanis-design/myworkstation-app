@@ -1,0 +1,13 @@
+# Production printer connector — source candidate, not installed
+
+This is one local consumer for one shared printer per store. Both POS enqueue via the authenticated existing preparation flow. Select only the coffee products in the store's explicit printer allowlist. Retail items and returns do not enter tickets.
+
+After required green CI, central catalogue/backup integration and normal release, a Platform Super Admin opens POS Preparation -> Production printer, configures the exact LAN endpoint (KAT evidence 192.168.1.87:9100, CP1253 page17, cut) or exact installed Windows printer name, and obtains a ten-minute pairing code. Download Connector.ps1 from that authenticated panel. On ONE Windows PC in the same LAN, under the final user, run `powershell -File .\Connector.ps1 -Pair`, enter the code, then run `powershell -File .\Connector.ps1`. Do not change execution policy automatically or expose LAN printing to the internet. The connector requires that PC/session to remain running; automatic startup is not included.
+
+The device token is a random scoped secret, hashed centrally and protected by user DPAPI in LOCALAPPDATA. Do not copy its credential file between PCs/users. Reconfiguration requires no pending/uncertain jobs, revokes the old token, then requires a new pairing. Four new tables must be reconciled into the centrally owned lifecycle/backup catalogue before activation.
+
+A claimed job is STARTED permanently until acknowledged; response loss does not requeue it. Journal writing precedes any printer I/O. A crash or print error becomes UNKNOWN, and the next run reports that journal without printing again. WRITTEN means socket data sent or Windows spool accepted, not confirmed paper. If acknowledgement itself is lost, only the same result is retried. If the claim reply is lost, inspect the STARTED job in the panel; do not blindly replay. A manager can record physical verification or cancellation with a reason. There is deliberately no automatic uncertain reprint.
+
+Network mode sends ESC/POS with Windows1253 encoding and configurable Greek code-page number. Other encodings/proprietary protocols are not certified. Windows mode uses the installed driver with Unicode text; cutter behavior follows the driver. Physical Greek/font/paper/cut and Windows runtime are NOT TESTED. Arbitrary printer compatibility is not guaranteed.
+
+No fiscal commands, drawer opening, receipt issuance, payment, stock posting or online/table-order dispatch are implemented by this connector. No real order has been submitted for testing. This file is a technical setup guide, not a LAB PASS manual.

@@ -94,6 +94,7 @@ import storePosRoutes from "./routes/store-pos.js";
 import paymentDeviceAttemptRoutes from "./routes/payment-device-attempts.js";
 import storeTableOrdersRoutes from "./routes/store-table-orders.js";
 import storePreparationRoutes from "./routes/store-preparation.js";
+import productionPrinterRoutes from "./routes/production-printers.js";
 import storePosPilotActionsRoutes from "./routes/store-pos-pilot-actions.js";
 import storePosConsumptionRoutes from "./routes/store-pos-consumption.js";
 import storePosExchangeRoutes from "./routes/store-pos-exchange.js";
@@ -280,6 +281,7 @@ app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2Im
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2AuditRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storeBakingRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);
+app.use("/api/production-printers",productionPrinterRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosCatalogRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePosSaleDisplayRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),posSaleActionsRoutes);
