@@ -64,5 +64,39 @@ try {
   Wait-Job $job | Out-Null;Receive-Job $job | Out-Null
   Complete-FtextCashReport $c $fresh.id
  } finally {Remove-Job $job -Force}
+
+ # CARD uses the same durable one-shot exchange; only a matching line8 can confirm it.
+ $c | Add-Member -NotePropertyName cardEnabled -NotePropertyValue $true
+ $c | Add-Member -NotePropertyName cardPayment -NotePropertyValue ([pscustomobject]@{code=2;posTerminalId=1;transactionType=6;resultFormat='POS_LINE8_OS7';confirmed=$true})
+ $c | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $configPath -Encoding UTF8
+ $card=$r | ConvertTo-Json -Depth 10 | ConvertFrom-Json;$card.id=[Guid]::NewGuid().ToString();$card.plan.payment.method='CARD';$card.plan.payment.code=2
+ $cardPath=Join-Path $root ('mws-cash-'+$card.id+'.res')
+ $cardCommand=$enc.GetString((New-FtextCashCommand $c $card $cardPath))
+ Assert ($cardCommand.EndsWith("PAY||2`r`n")) 'Confirmed card payment ID was not serialized.'
+ $cardResult=$valid+"#Visa Debit;1.25;416598******5605`r`n"
+ $parsed=Read-FtextCashResult $enc.GetBytes($cardResult) $c $card
+ Assert ($parsed.outcome -ceq 'CONFIRMED' -and $parsed.posPayments.Count -eq 1 -and $parsed.posPayments[0].amount -ceq '1.25') 'Exact masked card result was not confirmed.'
+ foreach($bad in @($valid,$cardResult.Replace('1.25','1.24'),$cardResult.Replace('Visa Debit','IRIS'),$cardResult.Replace('416598******5605','4165981234565605'),$cardResult.Replace('#Visa Debit;1.25;416598******5605','#Visa Debit;1.25;416598******5605#Visa Debit;1.25;416598******5605'),"48`r`nEFT-POS ERROR`r`nPAY`r`n")) {
+  Assert ((Read-FtextCashResult $enc.GetBytes($bad) $c $card).outcome -ceq 'REQUIRES_CHECK') 'Invalid card evidence confirmed a payment.'
+ }
+ foreach($change in @('DISABLED','CODE','MODE','FORMAT','UNCONFIRMED')) {
+  $wrong=$c | ConvertTo-Json -Depth 10 | ConvertFrom-Json
+  switch($change){'DISABLED'{$wrong.cardEnabled=$false} 'CODE'{$wrong.cardPayment.code=3} 'MODE'{$wrong.cardPayment.transactionType=7} 'FORMAT'{$wrong.cardPayment.resultFormat='UNKNOWN'} 'UNCONFIRMED'{$wrong.cardPayment.confirmed=$false}}
+  MustThrow {New-FtextCashCommand $wrong $card $cardPath}
+ }
+ $cardJob=Start-Job -ArgumentList $root,$card.id,$cardResult -ScriptBlock {
+  param($folder,$id,$text)
+  $target=Join-Path $folder ('mws-cash-'+$id+'.txt')
+  for($i=0;$i -lt 100;$i++) {if(Test-Path -LiteralPath $target) {Remove-Item -LiteralPath $target;[IO.File]::WriteAllBytes((Join-Path $folder ('mws-cash-'+$id+'.res')),[Text.Encoding]::GetEncoding(1253).GetBytes($text));return};Start-Sleep -Milliseconds 100}
+  throw 'Synthetic card driver saw no command.'
+ }
+ try {
+  $success=Invoke-FtextCashRequest -ConfigPath $configPath -Request $card -TimeoutSeconds 15
+  Assert ($success.outcome -ceq 'CONFIRMED' -and $success.posPayments[0].cardNumberMasked -ceq '416598******5605') 'Native card result exchange failed.'
+  Wait-Job $cardJob | Out-Null;Receive-Job $cardJob | Out-Null
+  Complete-FtextCashReport $c $card.id
+  MustThrow {Invoke-FtextCashRequest -ConfigPath $configPath -Request $card -TimeoutSeconds 1}
+  Assert (-not (Test-Path -LiteralPath (Join-Path $root ('mws-cash-'+$card.id+'.txt')))) 'Acknowledged card was resent.'
+ } finally {Remove-Job $cardJob -Force}
  Write-Host ('PASS: '+$passed+' cash command/result/scope/timeout/restart/tombstone boundaries; synthetic folder only.')
 } finally {Remove-Item -LiteralPath $root -Recurse -Force}

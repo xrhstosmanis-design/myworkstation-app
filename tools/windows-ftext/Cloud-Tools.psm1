@@ -29,6 +29,11 @@ function Confirm-FtextCloudIdentity($Config,$Response) {
     $localCash=$Config.PSObject.Properties['cashEnabled'] -and $Config.cashEnabled -eq $true
     $cloudCash=$Response.settings.PSObject.Properties['cashEnabled'] -and $Response.settings.cashEnabled -eq $true
     if([bool]$localCash -ne [bool]$cloudCash) { throw 'Cash capability changed. Download and pair the current package.' }
+    $localCard=$Config.PSObject.Properties['cardEnabled'] -and $Config.cardEnabled -eq $true
+    $cloudCard=$Response.settings.PSObject.Properties['cardEnabled'] -and $Response.settings.cardEnabled -eq $true
+    if([bool]$localCard -ne [bool]$cloudCard) {throw 'Card capability changed. Download and pair the current package.'}
+    if($localCard) {foreach($field in @('code','posTerminalId','transactionType','resultFormat','confirmed')) {if([string]$Config.cardPayment.$field -cne [string]$Response.settings.cardPayment.$field) {throw 'Card profile changed. Download and pair the current package.'}}}
+
 }
 function Invoke-FtextCloudPing($Config) {
     $token=Read-FtextDeviceToken $Config

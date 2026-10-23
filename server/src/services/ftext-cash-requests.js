@@ -1,22 +1,25 @@
+import {validateFtextCardPayment} from './ftext-card-payment.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {prepareFtextSalePlan} from './ftext-sale-plan.js';
 import {ftextSettingsHash} from './ftext-installation.js';
 const fail=(code,message)=>{throw Object.assign(new Error(message),{status:409,code})};
 const hash=s=>createHash('sha256').update(s).digest('hex');
-export function ftextCashRequestView(row){return row?{id:row.id,kind:'FTEXT_CASH',storeId:row.storeId,terminalPos:row.terminalPos,clientTransactionId:row.clientTransactionId,paymentMethod:'CASH',total:Number(row.total),status:row.status,saleId:row.saleId||null,checkout:row.checkoutJson,createdAt:row.createdAt}:null;}
+export function ftextCashRequestView(row){return row?{id:row.id,kind:'FTEXT_CASH',storeId:row.storeId,terminalPos:row.terminalPos,clientTransactionId:row.clientTransactionId,paymentMethod:row.checkoutJson?.paymentMethod||'CASH',total:Number(row.total),status:row.status,saleId:row.saleId||null,checkout:row.checkoutJson,createdAt:row.createdAt}:null;}
 export function assertFtextSimpleCash(checkout,items){
  if(checkout.paymentMethod!=='CASH'||checkout.customerId||checkout.onlineOrderId||checkout.tableOrderId||Number(checkout.redeemPoints||0)!==0||checkout.payments?.length||!['COUNTER',undefined].includes(checkout.operationChannel)||!['NORMAL',undefined].includes(checkout.audience)||items.some(i=>Number(i.discount||0)!==0||i.promotionId||i.promotionType||!Number.isSafeInteger(Number(i.quantity))||Number(i.quantity)<=0))fail('FTEXT_CASH_UNSUPPORTED','Η πρώτη έκδοση ftext υποστηρίζει απλή πώληση μετρητών στο κατάστημα, χωρίς πελάτη, προσφορά ή έκπτωση.');
 }
 export async function prepareFtextCashRequest(tx,{settings,scope,sessionId,clientTransactionId,requestHash,checkout,items,summary}){
- assertFtextSimpleCash(checkout,items);
+ if(!['CASH','CARD'].includes(checkout.paymentMethod))fail('FTEXT_CASH_UNSUPPORTED','Μη υποστηριζόμενος τρόπος πληρωμής ftext.');
+ assertFtextSimpleCash({...checkout,paymentMethod:'CASH'},items);
+ if(checkout.paymentMethod==='CARD'&&(settings.cardEnabled!==true||settings.cardPayment?.confirmed!==true||settings.cardPayment.resultFormat!=='POS_LINE8_OS7'))fail('FTEXT_CARD_DISABLED','Η κάρτα ftext απαιτεί επιβεβαιωμένο τρόπο πληρωμής και υποστήριξη αποτελέσματος POS.');
  if(settings.cashEnabled!==true||!settings.cashDepartments?.length)fail('FTEXT_CASH_DISABLED','Δεν έχει ενεργοποιηθεί και επιβεβαιωθεί η έκδοση μετρητών ftext για αυτό το POS.');
  const plan=prepareFtextSalePlan({scope,settings,clientTransactionId,total:summary.total,
  // ManagementVatDepartment.legacyVatCode can be a legacy department label
  // (e.g. 004), not the DATECS VAT-group number. Only the technician-confirmed
  // installation profile supplies that number; the plan still reconciles VAT.
  items:items.map((i,index)=>({...scope,lineId:'line-'+index,productId:i.productId,description:i.name,quantity:i.quantity,unitPrice:i.effectiveUnitPrice,discount:i.discount||0,lineTotal:i.lineTotal,department:i.fiscalDepartment,vatRate:i.vatRate,vatCode:settings.cashDepartments.find(p=>String(p.department)===String(Number(i.fiscalDepartment)))?.vatCode})),
- payments:[{method:'CASH',amount:summary.total}],paymentProfiles:[{...scope,method:'CASH',code:1,confirmed:true}],departmentProfiles:settings.cashDepartments.map(p=>({...scope,...p,confirmed:true}))});
+ payments:[{method:checkout.paymentMethod,amount:summary.total}],paymentProfiles:[{...scope,method:checkout.paymentMethod,code:checkout.paymentMethod==='CASH'?1:settings.cardPayment.code,confirmed:true}],departmentProfiles:settings.cashDepartments.map(p=>({...scope,...p,confirmed:true}))});
  const settingsHash=ftextSettingsHash(settings);
  await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${['ftext-cash',scope.companyId,scope.storeId,settings.serialNumber].join(':')},0))`;
  const old=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "clientTransactionId"=${clientTransactionId} FOR UPDATE`)[0];
@@ -33,13 +36,16 @@ export async function claimFtextCashRequest(tx,device,settings){
  // This committed transition is a one-shot dispatch, not a renewable lease.
  return updated?{id:updated.id,settingsHash:updated.settingsHash,scope:updated.plan.scope,serialNumber:updated.serialNumber,plan:updated.plan}:null;
 }
-const resultSchema=z.object({requestId:z.string().uuid(),settingsHash:z.string().regex(/^[a-f0-9]{64}$/),outcome:z.enum(['CONFIRMED','REQUIRES_CHECK']),code:z.number().int().min(0).max(999).optional(),serialNumber:z.string().max(80).optional(),dayId:z.string().regex(/^\d{1,20}$/).optional(),dayCounter:z.string().regex(/^\d{1,20}$/).optional(),deviceTime:z.string().min(1).max(80).optional(),qr:z.string().max(2000).optional(),rawResultHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),description:z.string().max(300).optional()}).strict();
+const resultSchema=z.object({requestId:z.string().uuid(),settingsHash:z.string().regex(/^[a-f0-9]{64}$/),outcome:z.enum(['CONFIRMED','REQUIRES_CHECK']),code:z.number().int().min(0).max(999).optional(),serialNumber:z.string().max(80).optional(),dayId:z.string().regex(/^\d{1,20}$/).optional(),dayCounter:z.string().regex(/^\d{1,20}$/).optional(),deviceTime:z.string().min(1).max(80).optional(),qr:z.string().max(2000).optional(),rawResultHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),description:z.string().max(300).optional(),posPayments:z.array(z.object({cardType:z.string().max(60),amount:z.string().max(12),cardNumberMasked:z.string().max(19)}).strict()).max(1).optional()}).strict();
 export function validateFtextCashResult(input,row){
  const r=resultSchema.parse(input);
  if(r.requestId!==row.id||r.settingsHash!==row.settingsHash)fail('FTEXT_CASH_RESULT_SCOPE','Το αποτέλεσμα ανήκει σε άλλη εντολή.');
+ if(r.outcome!=='CONFIRMED'&&r.posPayments)fail('FTEXT_CARD_PAYMENT_UNVERIFIED','Δεν επιτρέπονται στοιχεία κάρτας σε ανεπιβεβαίωτο αποτέλεσμα.');
  if(r.outcome==='CONFIRMED'){
   let url;try{url=new URL(r.qr)}catch{}
   if(r.code!==0||r.serialNumber!==row.serialNumber||!r.dayId||!r.dayCounter||BigInt(r.dayCounter)<=0n||!r.deviceTime||!r.rawResultHash||!url||url.protocol!=='https:'||url.username||url.password||!(url.hostname==='aade.gr'||url.hostname.endsWith('.aade.gr')))fail('FTEXT_CASH_RECEIPT_UNVERIFIED','Δεν επιβεβαιώθηκε τελική φορολογική απόδειξη.');
+  if(row.plan?.payment?.method==='CARD'){if(row.checkoutJson?.paymentMethod!=='CARD'||Number(row.total)!==Number(row.plan.payment.amount))fail('FTEXT_CARD_PAYMENT_UNVERIFIED','Ο τρόπος πληρωμής άλλαξε.');validateFtextCardPayment(r.posPayments,row.plan.payment.amount);}
+  else if(r.posPayments?.length)fail('FTEXT_CARD_PAYMENT_UNVERIFIED','Το αποτέλεσμα κάρτας δεν αντιστοιχεί σε πώληση μετρητών.');
   r.dayId=BigInt(r.dayId).toString();r.dayCounter=BigInt(r.dayCounter).toString();
  }
  return r;
