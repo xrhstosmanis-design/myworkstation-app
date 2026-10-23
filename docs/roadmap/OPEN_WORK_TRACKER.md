@@ -9837,3 +9837,15 @@ No reportsend, policy/grant activation, externalON/controlchange, existingreport
 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-23-automatic-dispatch-lab-recipient.md. Single nextaction greenclaim thenonescopedrecipient+verification challenge andsecureUIhandoff foruserproof. Samecentralowner retained, no parallel secondmail/recipientwriter.
 
+
+
+## 23/10/2026 17:00 Europe/Athens - AUTOMATIC-DISPATCH-LAB-RECIPIENT-01 / ONE VERIFICATION REQUEST ISSUED / USER PROOF PENDING
+
+Same retained centralowner. Exactbefore-action claim3097/head892954d500ae685c60d090e3b6a5bcf62da66d32 independentlyreviewedCLEAR, docsCI39965614032SUCCESS and merged d56a9c4930d3d191b17cae786845046d15e2669a BEFORE UIwrites. User explicitly named the mailbox; rawaddress notpublished here. Actualauthenticated PlatformSuperAdmin desktop cloud UI, canonicalplatform-admin, MYWORKSTATIONLAB/companycmtpopbgk000prhb5qc60zxus -> ΕΡΓΑΣΤΗΡΙΟΔΟΚΙΜΩΝ/storecmtpopbgo000trhb5ng9ytiru. Priorinstalled83db47fc/paired/OFF evidence retained.
+
+Measured freshbefore: all6dispatchtables0rows; UIemptyrecipients/OFF/ackunchecked/DAILYonly; existingbusinesssettings7/15/23 MAINall3 unchanged. Performed exactlyONE normalUI Addrecipient. Actualreadback company/store/canonicalmailboxMatches alltrue, version1, unverified/notrevoked/nochallenge. NormalUI observed recipientaddedwithoutverification. Then exactlyONE Sendemailcode action; no blindretry. Normalroute/UIreturnedsuccess: request sent,10minvalidity. ActualDB challengeIssuedAt2026-10-23T14:00:19.720Z, expires14:10:19.720Z(17:10:19Athens), purposeVERIFY, attempts0, nonnullchallengehashWITHOUT reading/publishinghash/token. Oneunverifiedrecipient remains; consent/grant/policy/payload/slot each0. Nootherrecipientrows orscopechanges. NoGmailread orcodeinspection.
+
+This is OBSERVEDrecipientsave/challengerequest state only, NOT verifiedmailbox/inboxdelivery/consent/reportacceptancePASS. User must enter receivedcode directly inexistingUI and clickEmailverification. No token requested inchat. Separateconsentchallenge/proof remainsnextafterverifiedmailbox. Grant/policy/externalactivation remainOFF/unmodified; noreportsend/schema/enrollment/RESET/restore/payment/stock/fiscalaction. Financial/stockdeltas nottested/claimed; no suchactionissued. Existingreportsettings notsaved, acceptedtestsnotreplayed.
+
+SecureUIhandoff leavesexactemptyEmailcode fieldready. Single nextaction userproof beforeexpiry; ifexpired/uncertain, inspectstate and obtainactualneed before newchallenge, neverautomaticretry. Samecentralowner retained. Overallfunctionalemail/inboxacceptanceOPEN. No functionalmanual/numbered/globalPASSclosure. Checkpoint CHECKPOINTS/CHANGES/2026-10-23-automatic-dispatch-lab-recipient.md.
+
