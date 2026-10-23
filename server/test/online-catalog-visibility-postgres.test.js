@@ -12,6 +12,7 @@ test('actual visibility handler persists audited own-store choices without a bul
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
   for(const sql of [
    `CREATE TABLE "Store"("id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"active" BOOLEAN)`,
+   `CREATE TABLE "OnlineOrderingConfig"("companyId" TEXT,"storeId" TEXT,"autoStockCatalogEnabled" BOOLEAN)`,
    `CREATE TABLE "Product"("id" TEXT PRIMARY KEY,"companyId" TEXT,"name" TEXT,"sku" TEXT,"vatRate" NUMERIC,"active" BOOLEAN,"trackStock" BOOLEAN,"salePrice" NUMERIC)`,
    `CREATE TABLE "StoreProduct"("storeId" TEXT,"productId" TEXT,"active" BOOLEAN,"salePrice" NUMERIC,"currentStock" NUMERIC,PRIMARY KEY("storeId","productId"))`,
    `CREATE TABLE "OnlineProductVisibility"("id" TEXT PRIMARY KEY,"companyId" TEXT,"storeId" TEXT,"productId" TEXT,"visible" BOOLEAN,"updatedAt" TIMESTAMPTZ DEFAULT NOW(),UNIQUE("storeId","productId"))`,
@@ -19,6 +20,7 @@ test('actual visibility handler persists audited own-store choices without a bul
    `CREATE TABLE "StoreBakingPolicy"("companyId" TEXT,"storeId" TEXT,"productId" TEXT,"mode" TEXT)`,
    `CREATE TABLE "AuthAudit"("id" TEXT PRIMARY KEY,"userId" TEXT,"email" TEXT,"event" TEXT,"success" BOOLEAN,"deviceName" TEXT,"ipAddress" TEXT,"userAgent" TEXT,"createdAt" TIMESTAMPTZ DEFAULT NOW())`,
    `INSERT INTO "Store" VALUES('store','company','Store',TRUE),('control','company','Control',TRUE),('foreign','other','Foreign',TRUE),('closed','company','Closed',FALSE)`,
+   `INSERT INTO "OnlineOrderingConfig" VALUES('company','store',TRUE)`,
    `INSERT INTO "Product" SELECT 'p'||i,'company','Product '||i,'SKU'||i,13,TRUE,TRUE,1 FROM generate_series(1,5001) i`,
    `INSERT INTO "Product" VALUES('foreign','other','Foreign','F',13,TRUE,TRUE,1),('inactive','company','Inactive','I',13,FALSE,TRUE,1),('not-in-store','company','Absent','A',13,TRUE,TRUE,1)`,
    `INSERT INTO "StoreProduct" SELECT 'store',"id",TRUE,1,0 FROM "Product" WHERE "id"<>'not-in-store'`,
@@ -34,6 +36,18 @@ test('actual visibility handler persists audited own-store choices without a bul
   assert.equal((await readAutomaticStockCatalog(db,{companyId:'company',id:'store'})).length,5000);
   result=await invoke('AUTO');assert.equal(result.body.product.visibilityOverride,null);
   assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "OnlineProductVisibility" WHERE "storeId"='store'`)[0].n,5000);
+  // Execute the actual pilot-default INSERT: automatic reset must survive normal bootstrap.
+  const bootstrap=await readFile(new URL('../src/kat-online-ordering-bootstrap.js',import.meta.url),'utf8');
+  const seedLine=bootstrap.split('\n').find(line=>line.includes('SELECT md5(${store.id}')&&line.includes('OnlineProductVisibility'));
+  assert.ok(seedLine);
+  const seed=new Function('prisma','store',`return (async()=>{${seedLine}})()`);
+  await seed(db,{id:'store',companyId:'company'});
+  assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "OnlineProductVisibility" WHERE "storeId"='store' AND "productId"='p1'`)[0].n,0);
+  await db.$executeRawUnsafe(`UPDATE "OnlineOrderingConfig" SET "autoStockCatalogEnabled"=FALSE WHERE "storeId"='store'`);
+  await seed(db,{id:'store',companyId:'company'});
+  assert.equal((await db.$queryRaw`SELECT "visible" FROM "OnlineProductVisibility" WHERE "storeId"='store' AND "productId"='p1'`)[0].visible,true);
+  await db.$executeRawUnsafe(`UPDATE "OnlineOrderingConfig" SET "autoStockCatalogEnabled"=TRUE WHERE "storeId"='store'`);
+  result=await invoke('AUTO');assert.equal(result.body.product.visibilityOverride,null);
   result=await invoke('SHOW');assert.equal(result.body.product.visibilityOverride,true);
   const shown=(await readAutomaticStockCatalog(db,{companyId:'company',id:'store'},['p1']))[0];assert.ok(shown);assert.equal(automaticOnlineAvailable(shown),false);
   await db.$executeRawUnsafe(`INSERT INTO "StoreBakingPolicy" VALUES('company','store','p1','ALWAYS')`);
@@ -48,7 +62,7 @@ test('actual visibility handler persists audited own-store choices without a bul
   assert.equal((await invoke('HIDE','p2')).status,409);assert.equal((await invoke('AUTO','p2')).status,409);
   assert.equal((await db.$queryRaw`SELECT "visible" FROM "OnlineProductVisibility" WHERE "storeId"='store' AND "productId"='p2'`)[0].visible,true);
   assert.equal((await db.$queryRaw`SELECT "visible" FROM "OnlineProductVisibility" WHERE "storeId"='control'`)[0].visible,true);
-  assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "AuthAudit"`)[0].n,3);
+  assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "AuthAudit"`)[0].n,4);
   assert.equal((await db.$queryRaw`SELECT SUM("currentStock") AS n FROM "StoreProduct" WHERE "storeId"='store'`)[0].n.toNumber(),0);
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
