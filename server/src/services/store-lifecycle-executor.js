@@ -181,6 +181,7 @@ async function assertQuiescent(tx,plan,schema,scope,meta,{connectors=true,lockBa
  ['PosInvoiceBackgroundTask',`"state"='RUNNING'`,['state']],
  ['AiReaderJob',`"status" IN ('RUNNING','PROCESSING','LOCAL_PROCESSING','AI_PROCESSING','POS_PROCESSING','POS_REPROCESSING','POS_RECOVERING')`,['status']],
  ['RbsCapDriverV1Request',`"status" NOT IN ('DECLINED','SALE_COMMITTED')`,['status']],
+ ['FtextCashRequest',`"status" <> 'SALE_COMMITTED'`,['status']],
  ['NetlinkTransaction',`"status" NOT IN ('COMPLETED','FAILED')`,['status']],
  ['CloudDevice',`"status"='ACTIVE' AND "lastSeenAt">NOW()-INTERVAL '60 seconds'`,['status','lastSeenAt']]
  ])if(plan.nodes.has(name)&&(connectors||name!=='CloudDevice')){if(required.some(c=>!meta.columns.get(name).has(c)))fail('Busy-work guard schema changed.');if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(name)} t WHERE (${predicate(plan,schema,plan.nodes.get(name),'t')}) AND (${condition}) LIMIT 1`,scope.storeId)).length)fail('Active shift, operator, Writer or fiscal work blocks maintenance.');}

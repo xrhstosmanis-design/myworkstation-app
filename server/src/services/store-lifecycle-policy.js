@@ -33,6 +33,7 @@ export const STORE_TABLES=new Set([
   "Employee",
   "Expense",
   "FiscalBridgeDryRun",
+  "FtextCashRequest",
   "InternetPriceProposal",
   "InternetPriceProposalAudit",
   "InternetProductSearch",

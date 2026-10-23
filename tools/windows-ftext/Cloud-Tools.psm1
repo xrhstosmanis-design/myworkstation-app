@@ -25,7 +25,10 @@ function Read-FtextDeviceToken($Config) {
 function Confirm-FtextCloudIdentity($Config,$Response) {
     foreach($key in @('companyId','storeId','terminalPos','settingsHash')) { if([string]$Response.$key -cne [string]$Config.$key) { throw 'Cloud identity does not match this installation.' } }
     foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode','serialNumber','workFolder','protocol','configurationId','lifecycleGeneration')) { if([string]$Response.settings.$key -cne [string]$Config.$key) { throw 'Local settings do not match the signed cloud installation.' } }
-    if($Response.fiscalCheckoutEnabled -ne $false) { throw 'This package supports communication checks only.' }
+    if($Response.fiscalCheckoutEnabled -ne $false) { throw 'Unsupported fiscal protocol capability.' }
+    $localCash=$Config.PSObject.Properties['cashEnabled'] -and $Config.cashEnabled -eq $true
+    $cloudCash=$Response.settings.PSObject.Properties['cashEnabled'] -and $Response.settings.cashEnabled -eq $true
+    if([bool]$localCash -ne [bool]$cloudCash) { throw 'Cash capability changed. Download and pair the current package.' }
 }
 function Invoke-FtextCloudPing($Config) {
     $token=Read-FtextDeviceToken $Config
@@ -33,4 +36,9 @@ function Invoke-FtextCloudPing($Config) {
     Confirm-FtextCloudIdentity $Config $response
     return $response
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing
+function Invoke-FtextCashApi($Config,[string]$Action,$Body) {
+    if($Action -notin @('cash-poll','cash-result')) {throw 'Unsupported cash API action.'}
+    $token=Read-FtextDeviceToken $Config
+    return Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/'+$Action) -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -TimeoutSec 30
+}
+Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCashApi
