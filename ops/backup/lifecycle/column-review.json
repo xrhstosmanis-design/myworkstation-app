@@ -1660,6 +1660,78 @@
     {
       "column": "WorkforceTimeClockEntry.createdByUserId",
       "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportAutomationGrant.grantedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportAutomationGrant.principalId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportAutomationGrant.revokedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportAutomationGrant.updatedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportDeliverySlot.record",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportDeliverySlot.slotId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportDispatchPolicy.updatedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportPayload.bytes",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportPayload.payloadId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipient.createdBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipient.recipientId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipient.revokedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipient.updatedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipient.verifiedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipientConsent.consentedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipientConsent.recipientId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipientConsent.revokedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipientConsent.updatedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
     }
   ]
 }
