@@ -1,6 +1,9 @@
 // Pure validation only. The authenticated transport owns receipt/request binding.
 const fail=()=>{throw Object.assign(new Error('Δεν επιβεβαιώθηκε μία πλήρης πληρωμή κάρτας από την ταμειακή.'),{status:409,code:'FTEXT_CARD_PAYMENT_UNVERIFIED'})};
 const cents=value=>{if(typeof value!=='string'||!/^(0|[1-9]\d{0,8})\.\d{2}$/.test(value))fail();return BigInt(value.replace('.',''))};
+export function assertFtextCardRoute(route,scope){
+ if(!route||route.terminalPos!==scope.terminalPos||route.fiscalDeviceCode!==scope.fiscalDeviceCode||route.channel!=='IN_STORE'||route.role!=='STORE'||route.fallback!==false||typeof route.eftposDeviceCode!=='string'||!route.eftposDeviceCode||route.eftposDeviceCode==='NOT_APPLICABLE')throw Object.assign(new Error('Απαιτείται ενεργή αντιστοίχιση του EFTPOS με τη συγκεκριμένη ταμειακή και το POS.'),{status:409,code:'FTEXT_CARD_ROUTE_UNCONFIRMED'});
+}
 export function validateFtextCardPayment(payments,total){
  if(!Array.isArray(payments)||payments.length!==1)fail();
  const p=payments[0];

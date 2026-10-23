@@ -1,10 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateFtextCardPayment} from '../src/services/ftext-card-payment.js';
+import {validateFtextCardPayment,assertFtextCardRoute} from '../src/services/ftext-card-payment.js';
+import {resolvePaymentDeviceRoute} from '../src/payment-device-routing.js';
 import {validateFtextCashResult,prepareFtextCashRequest,ftextCashRequestView} from '../src/services/ftext-cash-requests.js';
 import {ftextSettingsInput,ftextSettingsHash} from '../src/services/ftext-installation.js';
 const good={cardType:'Visa Debit',amount:'1.25',cardNumberMasked:'416598******5605'};
 const profile={code:2,posTerminalId:1,transactionType:6,resultFormat:'POS_LINE8_OS7',confirmed:true};
+test('card requires the actual active selected-terminal STORE EFTPOS route, no fallback or unrelated fiscal device',()=>{
+ const scope={terminalPos:'POS-01',fiscalDeviceCode:'FISCAL-01'};
+ const route=resolvePaymentDeviceRoute({terminalPos:scope.terminalPos,channel:'IN_STORE',fiscalDevices:[{deviceCode:scope.fiscalDeviceCode,terminalPos:scope.terminalPos,active:true}],eftposDevices:[{deviceCode:'EFT-01',fiscalDeviceCode:scope.fiscalDeviceCode,role:'STORE',active:true}]});
+ assert.doesNotThrow(()=>assertFtextCardRoute(route,scope));
+ for(const wrong of [null,...[{terminalPos:'POS-02'},{fiscalDeviceCode:'FISCAL-02'},{role:'DELIVERY'},{fallback:true},{eftposDeviceCode:'NOT_APPLICABLE'},{eftposDeviceCode:''}].map(p=>({...route,...p}))])assert.throws(()=>assertFtextCardRoute(wrong,scope));
+});
 test('one exact full-amount masked-card evidence; no mixed, IRIS, PAN, malformed amount or extra data',()=>{
  assert.deepEqual(validateFtextCardPayment([good],'1.25'),good);
  for(const rows of [undefined,[],[good,good],...[{amount:'1.24'},{amount:'1.250'},{amount:'1e0'},{amount:'-1.25'},{cardType:'IRIS'},{cardType:'4165981234565605'},{cardType:'Visa;foo'},{cardType:' Visa'},{cardNumberMasked:'4165981234565605'},{cardNumberMasked:'****************'},{secret:'ignored'}].map(p=>[{...good,...p}])])assert.throws(()=>validateFtextCardPayment(rows,'1.25'));

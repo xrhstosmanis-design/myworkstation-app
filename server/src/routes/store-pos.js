@@ -1,6 +1,7 @@
 import {createFtextInstallationService} from '../services/ftext-installation.js';
 import {companyModuleState as ftextModuleState} from '../middleware/module-access.js';
 import {prepareFtextCashRequest,ftextCashRequestView} from '../services/ftext-cash-requests.js';
+import {assertFtextCardRoute} from '../services/ftext-card-payment.js';
 import {finalizeFtextCashRequest} from '../services/ftext-cash-finalize.js';
 import {ftextCashTableExists} from '../services/ftext-cash-schema.js';
 import {assertLifecycleMutation,readLifecycleGeneration} from '../services/store-lifecycle-generation.js';
@@ -310,6 +311,7 @@ const open=await tx.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "company
       if(onlineOrder&&!paymentRoute){const error=new Error(cardAmount>0?"Δεν έχει οριστεί ενεργό EFTPOS Delivery για το ετεροχρονισμένο POS/Ταμείο 2.":"Δεν έχει οριστεί ενεργή ταμειακή για το ετεροχρονισμένο POS/Ταμείο 2.");error.status=409;error.code=cardAmount>0?"KAT_DELIVERY_EFTPOS_NOT_CONFIGURED":"KAT_DELIVERY_FISCAL_NOT_CONFIGURED";throw error}
       if(customer&&(creditAmount>0||redeemedPoints>0||earnedPoints>0)){const lockedCustomer=(await tx.$queryRaw`SELECT "balance","creditLimit","points" FROM "Customer" WHERE "id"=${customer.id} AND "companyId"=${req.user.companyId} AND "active"=true FOR UPDATE`)[0];if(!lockedCustomer){const error=new Error("Ο πελάτης δεν είναι διαθέσιμος.");error.status=409;throw error}if(redeemedPoints>money(lockedCustomer.points)){const error=new Error("Οι διαθέσιμοι πόντοι άλλαξαν. Επανάλαβε την εξαργύρωση.");error.status=409;throw error}if(creditAmount>0){const nextBalance=round2(money(lockedCustomer.balance)+creditAmount),limit=money(lockedCustomer.creditLimit);if(limit<=0||nextBalance-limit>.009){const error=new Error(`Η πίστωση υπερβαίνει το διαθέσιμο όριο. Υπόλοιπο ${money(lockedCustomer.balance).toFixed(2)} €, όριο ${limit.toFixed(2)} €.`);error.status=409;throw error}}}
       if(ftextContext){
+        if(body.paymentMethod==='CARD')assertFtextCardRoute(paymentRoute,ftextContext.scope);
         if(capDriverV1State?.configured||offlineOrigin||body.fiscalRequestId)throw Object.assign(new Error('Η σύνδεση ftext απαιτεί νέα online απλή συναλλαγή και δική της επιβεβαιωμένη απόδειξη.'),{status:409,code:'FTEXT_CASH_UNSUPPORTED'});
         const pending=await prepareFtextCashRequest(tx,{...ftextContext,sessionId:open[0].id,clientTransactionId,requestHash:fingerprint,checkout:{...body,actorId,actorName,operatorId:req.user.operatorId||req.user.id,operatorEmployeeId:employeeId,duplicateConfirmed:Boolean(recent&&body.confirmDuplicate),relatedSaleId:recent?.id||null},items,summary});
         return {kind:'FISCAL_PENDING',request:pending,ftext:true};
