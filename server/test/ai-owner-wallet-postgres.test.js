@@ -6,6 +6,7 @@ import {createWalletNotificationDispatcher} from '../src/services/ai-owner-walle
 import {createWalletAccess} from '../src/services/ai-owner-wallet-access.js';
 import {createAiOwnerWalletRoutes} from '../src/routes/ai-owner-wallet.js';
 import {createWalletProvider} from '../src/services/ai-owner-wallet-provider.js';
+import {readWalletUsageSummary} from '../src/services/ai-owner-wallet-usage.js';
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 
 test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access, notifications and unchanged business controls',{skip:!isolated()},async()=>{
@@ -28,6 +29,33 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     await db.$executeRaw`INSERT INTO "BusinessControl" VALUES('control',12,123.45,25)`;
     const before=await db.$queryRaw`SELECT * FROM "BusinessControl"`;
     const repository=createAiOwnerWalletRepository(db);await repository.ensure();
+    // More than the recent100 rows; Athens midnight/month boundaries, both
+    // invoice providers, foreign scopes, future rows and unsettled holds.
+    await db.$executeRaw`INSERT INTO "AiOwnerWallet" ("companyId","cycleId") VALUES ('report-company','report-cycle'),('report-foreign','foreign-cycle')`;
+    await db.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","storeId","kind","reference","status","reservedMicros","chargedMicros","feature","createdAt","settledAt")
+      SELECT 'report-question-'||n,'report-company','report-store','USAGE','report-question-'||n,'SETTLED',1,1,'OWNER_ASSISTANT','2026-10-21T21:10:00Z'::timestamptz,'2026-10-21T21:10:00Z'::timestamptz FROM generate_series(1,125) n`;
+    const reportRows=[
+      ['openai','report-company','report-store','SETTLED','INVOICE_OPENAI',70,'2026-10-21T21:15:00Z'],
+      ['azure','report-company','report-store','SETTLED','INVOICE_AZURE',30,'2026-10-21T20:59:59Z'],
+      ['other','report-company','report-store','SETTLED','FUTURE_AI',25,'2026-09-30T21:00:00Z'],
+      ['old','report-company','report-store','SETTLED','INVOICE_OPENAI',1000,'2026-09-30T20:59:59Z'],
+      ['store-control','report-company','other-store','SETTLED','OWNER_ASSISTANT',9000,'2026-10-21T21:15:00Z'],
+      ['company-control','report-foreign','report-store','SETTLED','OWNER_ASSISTANT',90000,'2026-10-21T21:15:00Z'],
+      ['future','report-company','report-store','SETTLED','INVOICE_OPENAI',700,'2026-10-21T22:00:00Z'],
+      ['review','report-company','report-store','REVIEW','INVOICE_OPENAI',0,null],
+      ['reserved','report-company','report-store','RESERVED','OWNER_ASSISTANT',0,null]
+    ];
+    for(const [id,company,store,status,feature,charged,settled] of reportRows)await db.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","storeId","kind","reference","status","reservedMicros","chargedMicros","feature","settledAt") VALUES (${id},${company},${store},'USAGE',${id},${status},${charged+10},${charged},${feature},${settled}::timestamptz)`;
+    await db.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","kind","reference","status","creditedMicros") VALUES ('report-credit','report-company','CREDIT','report-credit','CREDITED',5000)`;
+    const summary=await readWalletUsageSummary(db,'report-company','report-store',new Date('2026-10-21T21:30:00Z'));
+    assert.equal(summary.localDate,'2026-10-22');assert.equal(summary.monthStartDate,'2026-10-01');
+    assert.equal(summary.allTimeMicros,'1250');assert.equal(summary.monthMicros,'250');assert.equal(summary.todayMicros,'195');
+    assert.deepEqual(summary.categories,[{category:'INVOICES',allTimeMicros:'1100',monthMicros:'100',todayMicros:'70'},{category:'OTHER',allTimeMicros:'25',monthMicros:'25',todayMicros:'0'},{category:'QUESTIONS',allTimeMicros:'125',monthMicros:'125',todayMicros:'125'}]);
+    assert.ok(summary.daily.some(r=>r.date==='2026-10-21'&&r.category==='INVOICES'&&r.chargedMicros==='30'));
+    assert.equal(summary.daily.reduce((n,r)=>n+BigInt(r.chargedMicros),0n),250n);
+    assert.equal((await readWalletUsageSummary(db,'report-company',null,new Date('2026-10-21T21:30:00Z'))).allTimeMicros,'10250');
+    const emptySummary=await readWalletUsageSummary(db,'report-company','empty-store',new Date('2026-10-21T21:30:00Z'));assert.equal(emptySummary.allTimeMicros,'0');assert.deepEqual(emptySummary.categories,[]);assert.deepEqual(emptySummary.daily,[]);
+    assert.equal((await repository.read('report-company','report-store')).entries.length,100);
     await repository.configure('c',{version:0,enabled:true,emailEnabled:true,notificationOwnerId:'owner'},'admin');
     const funding={amountMicros:'1000000',receiptReference:'synthetic-receipt-1'};
     const credit=await Promise.all([repository.credit('c',funding,'admin'),repository.credit('c',funding,'admin')]);assert.equal(credit[0].id,credit[1].id);assert.equal((await repository.read('c')).balanceMicros,'1000000');
@@ -67,17 +95,22 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
       invoice.run({companyId:'c',storeId:'s2'},()=>invoice.azure({model:'prebuilt-invoice',apiVersion:'2024-11-30'},async mark=>{mark('https://synthetic.invalid/operation/native-invoice');return {status:'succeeded',analyzeResult:{modelId:'prebuilt-invoice',apiVersion:'2024-11-30',pages:[{pageNumber:1},{pageNumber:2}]}}}))
     ]);
     assert.equal(BigInt((await repository.read('c')).balanceMicros),sourceBalance-88n);
-    const invoiceRows=await db.$queryRaw`SELECT "storeId","feature","chargedMicros","status" FROM "AiOwnerWalletEntry" WHERE "feature" IN ('INVOICE_OPENAI','INVOICE_AZURE') ORDER BY "storeId"`;
+    const invoiceRows=await db.$queryRaw`SELECT "storeId","feature","chargedMicros","status" FROM "AiOwnerWalletEntry" WHERE "companyId"='c' AND "feature" IN ('INVOICE_OPENAI','INVOICE_AZURE') ORDER BY "storeId"`;
     assert.deepEqual(invoiceRows.map(r=>[r.storeId,r.feature,String(r.chargedMicros),r.status]),[['s','INVOICE_OPENAI','8','SETTLED'],['s2','INVOICE_AZURE','80','SETTLED']]);
     // Reusing the same provider response cannot debit a second time; the
     // distinct uncertain attempt keeps its reservation for explicit review.
     await assert.rejects(invoice.run({companyId:'c',storeId:'s'},tokenCall),e=>e.code==='AI_WALLET_USAGE_REVIEW'&&e.status===409);
     assert.equal(BigInt((await repository.read('c')).balanceMicros),sourceBalance-88n);
     assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry" WHERE "usage"->>'providerResponseId'='native-invoice-provider-response'`)[0].count,1);
-    assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry" WHERE "feature"='INVOICE_OPENAI' AND "status"='REVIEW'`)[0].count,1);
+    assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry" WHERE "companyId"='c' AND "feature"='INVOICE_OPENAI' AND "status"='REVIEW'`)[0].count,1);
     await assert.rejects(invoice.run({companyId:'c',storeId:'foreign'},tokenCall),e=>e.status===403);assert.equal(invoicePaidCalls,2);
     await repository.configure('x',{version:0,enabled:true,emailEnabled:false,notificationOwnerId:''},'admin');
     await assert.rejects(invoice.run({companyId:'x',storeId:'foreign'},tokenCall),e=>e.status===402);assert.equal(invoicePaidCalls,2);
+    const cachePricing={model:'native-cache-model',inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:100000,outputMicrosPerMillion:2000000,cacheWriteMicrosPerMillion:{ttl30m:1250000,ttl12h:2500000},contextTokens:20000,maxOutputTokens:5000,longContext:{thresholdTokens:10000,inputMicrosPerMillion:2000000,cachedInputMicrosPerMillion:200000,outputMicrosPerMillion:3000000,cacheWriteMicrosPerMillion:{ttl30m:2500000,ttl12h:5000000}}};
+    const cacheProvider=createWalletProvider({repository,enabled:()=>true,tariffs:()=>JSON.stringify([cachePricing])}),beforeCache=BigInt((await repository.read('c')).balanceMicros);
+    await cacheProvider({companyId:'c',storeId:'s',feature:'OWNER_ASSISTANT'},{model:cachePricing.model},async()=>({response:{ok:true},raw:{id:'native-cache-response',model:cachePricing.model,usage:{input_tokens:12000,output_tokens:2000,input_tokens_details:{cached_tokens:4000,cache_write_tokens:7000,cache_write_tokens_details:{ttl_30m_tokens:3000,ttl_12h_tokens:4000}}}}}));
+    const cacheEntry=(await db.$queryRaw`SELECT "reservedMicros","chargedMicros","usage","tariff" FROM "AiOwnerWalletEntry" WHERE "usage"->>'providerResponseId'='native-cache-response'`)[0];
+    assert.equal(String(cacheEntry.reservedMicros),'115000');assert.equal(String(cacheEntry.chargedMicros),'36300');assert.equal(cacheEntry.usage.cacheWrite30mTokens,3000);assert.equal(cacheEntry.usage.cacheWrite12hTokens,4000);assert.equal(cacheEntry.usage.pricingTier,'LONG_CONTEXT');assert.equal(cacheEntry.tariff.longContext.thresholdTokens,10000);assert.equal(BigInt((await repository.read('c')).balanceMicros),beforeCache-36300n);
     // Actual SQL rollback after an injected failure in a wallet transaction.
     const wrapped=new Proxy(db,{get(target,key){if(key==='$transaction')return (fn,...options)=>target.$transaction(async tx=>fn(new Proxy(tx,{get(t,k){if(k==='$executeRaw')return async(strings,...values)=>{if(strings.join('').includes('UPDATE "AiOwnerWallet" SET "balanceMicros"="balanceMicros"+'))throw Error('synthetic rollback');return t.$executeRaw(strings,...values)};const v=t[k];return typeof v==='function'?v.bind(t):v}})),...options);const v=target[key];return typeof v==='function'?v.bind(target):v}});
     const failed=createAiOwnerWalletRepository(wrapped);await failed.ensure();const countBefore=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry"`;await assert.rejects(failed.credit('c',{amountMicros:'100000',receiptReference:'must-rollback'},'admin'));assert.deepEqual(await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry"`,countBefore);
@@ -86,7 +119,7 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     app.use('/wallet',createAiOwnerWalletRoutes({db,repository,authenticate,access:createWalletAccess(db),enabled:()=>true}));
     server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/wallet`;
     const request=async(path,actor='owner',method='GET',body)=>{const r=await fetch(base+path,{method,headers:{...(actor?{'x-test-actor':actor}:{}),'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:r.status===401?null:await r.json()}};
-    assert.equal((await request('/stores/s')).status,200);assert.equal((await request('/stores/s',null)).status,401);assert.equal((await request('/stores/s','employee')).status,403);assert.equal((await request('/stores/foreign')).status,404);
+    const ownerRead=await request('/stores/s');assert.equal(ownerRead.status,200);assert.equal(ownerRead.body.usageSummary.timeZone,'Europe/Athens');assert.ok(ownerRead.body.usageSummary.categories.every(r=>['INVOICES','OTHER','QUESTIONS'].includes(r.category)));assert.ok(ownerRead.body.usageSummary.categories.some(r=>r.category==='QUESTIONS'&&r.allTimeMicros==='36300'));assert.equal((await request('/stores/s',null)).status,401);assert.equal((await request('/stores/s','employee')).status,403);assert.equal((await request('/stores/foreign')).status,404);
     assert.equal((await request('/platform/companies/c')).status,403);
     // Prisma enum filters cast to this isolated schema's native UserRole type,
     // exactly as in production. A text-only fixture cannot exercise this read.

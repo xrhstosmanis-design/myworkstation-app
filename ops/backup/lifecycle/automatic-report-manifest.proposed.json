@@ -5789,6 +5789,11 @@
         "nurseDiscountPercent",
         "numeric(8,4)",
         true
+      ],
+      [
+        "autoStockCatalogEnabled",
+        "boolean",
+        true
       ]
     ],
     "OnlineProductVisibility": [
@@ -16465,48 +16470,6 @@
       "reset": "REMOVE"
     },
     {
-      "name": "AutomaticReportAutomationGrant",
-      "owner": {
-        "kind": "DIRECT"
-      },
-      "reset": "REMOVE"
-    },
-    {
-      "name": "AutomaticReportDeliverySlot",
-      "owner": {
-        "kind": "DIRECT"
-      },
-      "reset": "REMOVE"
-    },
-    {
-      "name": "AutomaticReportDispatchPolicy",
-      "owner": {
-        "kind": "DIRECT"
-      },
-      "reset": "REMOVE"
-    },
-    {
-      "name": "AutomaticReportPayload",
-      "owner": {
-        "kind": "DIRECT"
-      },
-      "reset": "REMOVE"
-    },
-    {
-      "name": "AutomaticReportRecipient",
-      "owner": {
-        "kind": "DIRECT"
-      },
-      "reset": "REMOVE"
-    },
-    {
-      "name": "AutomaticReportRecipientConsent",
-      "owner": {
-        "kind": "DIRECT"
-      },
-      "reset": "REMOVE"
-    },
-    {
       "name": "AutomaticReportSettings",
       "owner": {
         "kind": "DIRECT"
@@ -17279,13 +17242,6 @@
       ]
     },
     {
-      "name": "OnlineOrderingConfig",
-      "owner": {
-        "kind": "DIRECT"
-      },
-      "reset": "REMOVE"
-    },
-    {
       "name": "OnlineOrderLine",
       "owner": {
         "kind": "CHILD",
@@ -17310,6 +17266,13 @@
             "id"
           ]
         ]
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "OnlineOrderingConfig",
+      "owner": {
+        "kind": "DIRECT"
       },
       "reset": "REMOVE"
     },
@@ -19113,6 +19076,48 @@
           "historical": true
         }
       ]
+    },
+    {
+      "name": "AutomaticReportAutomationGrant",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "AutomaticReportDeliverySlot",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "AutomaticReportDispatchPolicy",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "AutomaticReportPayload",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "AutomaticReportRecipient",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "AutomaticReportRecipientConsent",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
     }
   ]
 }

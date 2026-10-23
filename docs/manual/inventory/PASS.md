@@ -1,3 +1,15 @@
+## 22/10/2026 — KAT 38 old-card retirement / LIMITED LIVE CONFIGURATION PASS
+
+Completed owner-authorized removal of exact38old/test cards from active KAT catalog. Authorized SuperAdmin selected Κυλικείο ΚΑΤ → Εμπορική λειτουργία → Λοιπές εμπορικές λειτουργίες → Αποθήκη, searched exact reviewed identities, selected only26/9/3manifest rows → Ομαδική διόρθωση → Κατάσταση καταστήματος=Ανενεργά; all other fields Χωρίς αλλαγή, SETunchecked → Καταχώρηση once/group. Native active lists remove them; independent readback/audit confirms all38StoreProduct.active=false while Product/history/stock/prices/VAT/departments remain. No permanent deletion, stock movement or financial action.
+
+Active KAT rows1825, zero missing joined fiscal departments;242button identities/layoutv3702 and57coffee fee links retained.38residual is closed; do not repeat retirement or map old cards. Inactive-only archive filter did not expose these store-inactive/Product-active TEST cards in this observation; restoration through that filter is NOT verified. Keep historical records and inspect full-list/card/store state if restoration is later requested. Physical fiscal first receipt is still outside this configuration PASS. Checkpoint2026-10-22-kat-missing-fiscal-mappings.md and measured kat-retire38-20261022 evidence authoritative.
+
+## 22/10/2026 — Real KAT blank fiscal mapping repair / LIMITED LIVE CONFIGURATION PASS
+
+Already applied to57reviewed existing KAT cards:51modern beverages plus6old exact source counterparts. Owner/SuperAdmin used selected Κυλικείο ΚΑΤ Inventory → exact SKU/row selection → Ομαδική διόρθωση → existing source-confirmed department with unchanged13% → allother fields Χωρίς αλλαγή, SETunchecked → one Καταχώρηση per identified group. Native saved display and independent protected-field readback agree. Do not repeat this configuration.
+
+All242published POS-button identities now have a joined fiscal department;57coffee fee links and layoutv3702 retained. Refresh each physical POS catalog before legitimate use. This entry does not certify physical cash/card/receipt or all-store operation.38old/test active cards still lack reviewed mapping; avoid selling those until exact original department/exemption resolves. Never infer mapping only from VAT percentage, change old24%to13%, verify0%exemption blindly, or reset stock. Exact residuals and timestamps in2026-10-22-kat-missing-fiscal-mappings.md/evidence final-summary.json. If native response is uncertain, inspect saved state before any retry.
+
 ## 22/10/2026 — Missing VAT department: LIMITED LAB SAVE PASS
 
 Authorized SuperAdmin/Owner opens explicitly selected company/store → Εμπορική λειτουργία → Λοιπές εμπορικές λειτουργίες → Αποθήκη. Search reviewed exact identities, verify selected-row count, choose Ομαδική διόρθωση and one existing active company Τμήμα ΦΠΑ with the SAME current rate. Keep category/subcategory/retail/activation unchanged and SET unchecked. Review register/code/semantic source mapping, save once, then verify saved department and unchanged prices/stocks. Do not map only by percentage or automatically verify0% exemption.

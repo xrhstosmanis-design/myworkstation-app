@@ -17,6 +17,7 @@ function fixture(){
   user:{findUnique:async()=>principal},store:{findFirst:async()=>store},
   $queryRawUnsafe:async(sql,...values)=>{events.push(sql.includes('current_schema')?'metadata':'lifecycle');if(sql.includes('current_schema'))return[{schema:'test',fence:'test.StoreLifecycleFence'}];if(sql.includes('set_config'))return[];return[{companyId:'c',generation:'1',maintenance:false,retired:false}]},
   $executeRaw:async strings=>{events.push(strings.join('?'));return 0},
+  $executeRawUnsafe:async sql=>{events.push(sql);return 0},
   $queryRaw:async(strings,...values)=>{
    const sql=strings.join('?');events.push(sql);
    if(sql.includes('AutomaticReportDeliverySlot')){
@@ -44,7 +45,13 @@ function fixture(){
 test('actual source/payload preparation fences configuration and binds real principal, consent and period',async()=>{
  const h=fixture(),read=createAutomaticReportEligibilityReader(h),c=await read.readContext(h.tx,scope,NOW);
  assert.equal(c.inputs.length,1);assert.equal(c.inputs[0].recipient,'recipient@example.invalid');assert.equal(c.inputs[0].periodFrom,'2026-10-21T04:00:00.000Z');
- const lock=h.events.findIndex(s=>s.startsWith('LOCK TABLE'));assert.ok(lock>h.events.findIndex(s=>s.includes('FROM "User"')));assert.ok(lock<h.events.findIndex(s=>s.includes('FROM "CompanyModule"')));assert.ok(h.events.findIndex(s=>s.includes('FROM "CashShiftSession"'))>lock);
+ const storeLock=h.events.findIndex(s=>s.startsWith('LOCK TABLE')&&s.includes('"test"."Store"'));
+ const fenceLock=h.events.findIndex(s=>s.startsWith('LOCK TABLE')&&s.includes('"StoreLifecycleFence"'));
+ const reportLock=h.events.findIndex(s=>s.startsWith('LOCK TABLE')&&s.includes('"AutomaticReportDeliverySlot"'));
+ const lock=h.events.findIndex(s=>s.startsWith('LOCK TABLE "CompanyModule"'));
+ assert.ok(storeLock>=0&&storeLock<fenceLock&&fenceLock<reportLock);
+ assert.ok(reportLock<h.events.findIndex(s=>s.includes('FROM "Company"')));
+ assert.ok(lock>h.events.findIndex(s=>s.includes('FROM "User"')));assert.ok(lock<h.events.findIndex(s=>s.includes('FROM "CompanyModule"')));assert.ok(h.events.findIndex(s=>s.includes('FROM "CashShiftSession"'))>lock);
  await h.persistence.putImmutablePayload(h.tx,{payload:c.payload});assert.equal((await read({tx:h.tx,companyId:'c',storeId:'s',input:c.inputs[0],now:NOW})).consentActive,true);
 });
 test('authoritative revocation/role/session/license/settings and activation changes cannot authorize',async()=>{
@@ -60,6 +67,12 @@ test('start compares immutable input and exact stored bytes to freshly rebuilt s
 });
 test('configuration first-insert lock busy fails before source and no fallback/retry',async()=>{
  const h=fixture();h.tx.$executeRaw=async()=>{throw Object.assign(new Error('busy'),{code:'55P03'})};await assert.rejects(createAutomaticReportEligibilityReader(h).readContext(h.tx,scope,NOW));assert.equal(h.events.some(s=>s.includes('FROM "CashShiftSession"')),false);
+});
+test('partial installer report-table contention refuses before authorization or financial source',async()=>{
+ const h=fixture(),execute=h.tx.$executeRawUnsafe;
+ h.tx.$executeRawUnsafe=async sql=>{if(sql.includes('"AutomaticReportDeliverySlot"'))throw Object.assign(new Error('busy'),{code:'55P03'});return execute(sql)};
+ await assert.rejects(createAutomaticReportEligibilityReader(h).readContext(h.tx,scope,NOW),e=>e.code==='REPORT_DISPATCH_BUSY');
+ assert.equal(h.events.includes('authorization'),false);assert.equal(h.events.some(s=>s.includes('FROM "Company"')||s.includes('FROM "CashShiftSession"')),false);
 });
 test('scope own-data validation never invokes getters or falls back to company',()=>{
  let reads=0;for(const raw of [null,{},Object.create(scope),{...scope,storeId:''},{...scope,frequency:'YEARLY'},{...scope,extra:true},{...scope,get storeId(){reads++;return 's'}}])assert.throws(()=>automaticReportScopeInput(raw));assert.equal(reads,0);

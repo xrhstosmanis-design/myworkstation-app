@@ -19,6 +19,12 @@
     "AttendanceEvent",
     "AudienceDiscountCard",
     "AuthAudit",
+    "AutomaticReportAutomationGrant",
+    "AutomaticReportDeliverySlot",
+    "AutomaticReportDispatchPolicy",
+    "AutomaticReportPayload",
+    "AutomaticReportRecipient",
+    "AutomaticReportRecipientConsent",
     "AutomaticReportSettings",
     "Availability",
     "BankAccount",
@@ -5782,6 +5788,11 @@
       [
         "nurseDiscountPercent",
         "numeric(8,4)",
+        true
+      ],
+      [
+        "autoStockCatalogEnabled",
+        "boolean",
         true
       ]
     ],
@@ -15513,6 +15524,463 @@
         "integer",
         true
       ]
+    ],
+    "AutomaticReportAutomationGrant": [
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "reportType",
+        "text",
+        true
+      ],
+      [
+        "revision",
+        "bigint",
+        true
+      ],
+      [
+        "active",
+        "boolean",
+        true
+      ],
+      [
+        "principalId",
+        "text",
+        true
+      ],
+      [
+        "principalSessionVersion",
+        "integer",
+        true
+      ],
+      [
+        "allowedFrequencies",
+        "text[]",
+        true
+      ],
+      [
+        "lifecycleGeneration",
+        "bigint",
+        true
+      ],
+      [
+        "activationEpoch",
+        "text",
+        true
+      ],
+      [
+        "activationFingerprint",
+        "text",
+        true
+      ],
+      [
+        "notBefore",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "grantedBy",
+        "text",
+        true
+      ],
+      [
+        "grantedAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "revokedBy",
+        "text",
+        false
+      ],
+      [
+        "revokedAt",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "updatedBy",
+        "text",
+        true
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
+      ]
+    ],
+    "AutomaticReportDeliverySlot": [
+      [
+        "slotId",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "version",
+        "bigint",
+        true
+      ],
+      [
+        "status",
+        "text",
+        true
+      ],
+      [
+        "token",
+        "text",
+        false
+      ],
+      [
+        "record",
+        "jsonb",
+        true
+      ]
+    ],
+    "AutomaticReportDispatchPolicy": [
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "reportType",
+        "text",
+        true
+      ],
+      [
+        "revision",
+        "bigint",
+        true
+      ],
+      [
+        "dispatchEnabled",
+        "boolean",
+        true
+      ],
+      [
+        "allowsProvisional",
+        "boolean",
+        true
+      ],
+      [
+        "allowedFrequencies",
+        "text[]",
+        true
+      ],
+      [
+        "lifecycleGeneration",
+        "bigint",
+        true
+      ],
+      [
+        "updatedBy",
+        "text",
+        true
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
+      ]
+    ],
+    "AutomaticReportPayload": [
+      [
+        "payloadId",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "frequency",
+        "text",
+        true
+      ],
+      [
+        "periodFrom",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "periodTo",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "settingsVersion",
+        "bigint",
+        true
+      ],
+      [
+        "lifecycleGeneration",
+        "bigint",
+        true
+      ],
+      [
+        "sourceFingerprint",
+        "text",
+        true
+      ],
+      [
+        "payloadFingerprint",
+        "text",
+        true
+      ],
+      [
+        "contentType",
+        "text",
+        true
+      ],
+      [
+        "bytes",
+        "bytea",
+        true
+      ],
+      [
+        "byteLength",
+        "integer",
+        true
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "expiresAt",
+        "timestamp with time zone",
+        false
+      ]
+    ],
+    "AutomaticReportRecipient": [
+      [
+        "recipientId",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "email",
+        "text",
+        true
+      ],
+      [
+        "version",
+        "bigint",
+        true
+      ],
+      [
+        "verifiedAt",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "verifiedBy",
+        "text",
+        false
+      ],
+      [
+        "revokedAt",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "revokedBy",
+        "text",
+        false
+      ],
+      [
+        "challengeHash",
+        "text",
+        false
+      ],
+      [
+        "challengeNonce",
+        "text",
+        false
+      ],
+      [
+        "challengeRecipientVersion",
+        "bigint",
+        false
+      ],
+      [
+        "challengeLifecycleGeneration",
+        "bigint",
+        false
+      ],
+      [
+        "challengeExpiresAt",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "challengeAttempts",
+        "integer",
+        true
+      ],
+      [
+        "challengeIssuedAt",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "challengePurpose",
+        "text",
+        false
+      ],
+      [
+        "challengeFrequencies",
+        "text[]",
+        true
+      ],
+      [
+        "challengeConsentRevision",
+        "bigint",
+        false
+      ],
+      [
+        "createdBy",
+        "text",
+        true
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "updatedBy",
+        "text",
+        true
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
+      ]
+    ],
+    "AutomaticReportRecipientConsent": [
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "recipientId",
+        "text",
+        true
+      ],
+      [
+        "revision",
+        "bigint",
+        true
+      ],
+      [
+        "recipientVersion",
+        "bigint",
+        true
+      ],
+      [
+        "active",
+        "boolean",
+        true
+      ],
+      [
+        "allowedFrequencies",
+        "text[]",
+        true
+      ],
+      [
+        "lifecycleGeneration",
+        "bigint",
+        true
+      ],
+      [
+        "consentedBy",
+        "text",
+        false
+      ],
+      [
+        "consentedAt",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "proofHash",
+        "text",
+        false
+      ],
+      [
+        "revokedBy",
+        "text",
+        false
+      ],
+      [
+        "revokedAt",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "updatedBy",
+        "text",
+        true
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
+      ]
     ]
   },
   "reviewedColumns": [
@@ -15534,6 +16002,24 @@
     "AttendanceEvent.voidedByUserId",
     "AudienceDiscountCard.createdByUserId",
     "AuthAudit.userId",
+    "AutomaticReportAutomationGrant.grantedBy",
+    "AutomaticReportAutomationGrant.principalId",
+    "AutomaticReportAutomationGrant.revokedBy",
+    "AutomaticReportAutomationGrant.updatedBy",
+    "AutomaticReportDeliverySlot.record",
+    "AutomaticReportDeliverySlot.slotId",
+    "AutomaticReportDispatchPolicy.updatedBy",
+    "AutomaticReportPayload.bytes",
+    "AutomaticReportPayload.payloadId",
+    "AutomaticReportRecipient.createdBy",
+    "AutomaticReportRecipient.recipientId",
+    "AutomaticReportRecipient.revokedBy",
+    "AutomaticReportRecipient.updatedBy",
+    "AutomaticReportRecipient.verifiedBy",
+    "AutomaticReportRecipientConsent.consentedBy",
+    "AutomaticReportRecipientConsent.recipientId",
+    "AutomaticReportRecipientConsent.revokedBy",
+    "AutomaticReportRecipientConsent.updatedBy",
     "AutomaticReportSettings.configurationJson",
     "BankLedgerEntry.attachmentData",
     "BankLedgerEntry.sourceTransactionId",
@@ -18590,6 +19076,48 @@
           "historical": true
         }
       ]
+    },
+    {
+      "name": "AutomaticReportAutomationGrant",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "AutomaticReportDeliverySlot",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "AutomaticReportDispatchPolicy",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "AutomaticReportPayload",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "AutomaticReportRecipient",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "AutomaticReportRecipientConsent",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
     }
   ]
 }

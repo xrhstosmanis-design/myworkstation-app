@@ -75,6 +75,21 @@ test('native six-table provisioning, mailbox verification/consent, concurrency, 
    await a.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "id"='s' FOR NO KEY UPDATE`;await change(tx)});
    const [r]=await b.$queryRaw`SELECT "verifiedAt","challengeHash","version"::text AS version FROM "AutomaticReportRecipient" WHERE "recipientId"=${recipientId}`;assert.equal(r.verifiedAt,null);assert.equal(r.challengeHash,null);assert.equal(r.version,'2');const [p]=await b.$queryRaw`SELECT "dispatchEnabled" FROM "AutomaticReportDispatchPolicy"`;assert.equal(p.dispatchEnabled,false);const [g]=await b.$queryRaw`SELECT "active" FROM "AutomaticReportAutomationGrant"`;assert.equal(g.active,false);const [c]=await b.$queryRaw`SELECT "active","proofHash" FROM "AutomaticReportRecipientConsent"`;assert.equal(c.active,false);assert.equal(c.proofHash,null);assert.equal((await b.$queryRaw`SELECT "status" FROM "AutomaticReportDeliverySlot"`)[0].status,'ACCEPTED');
   });
+  await t.test('genuine unenrolled zero supports real grant and separate consent without lifecycle DDL or implicit upgrade',async()=>{
+   await a.$executeRawUnsafe('DROP TABLE "StoreLifecycleFence"');
+   const legacyScope={actorId:'admin',companyId:'c',storeId:'control'},legacy=management(a),legacyRun=fn=>withLifecycleContext({},fn);
+   const r=await legacyRun(()=>legacy.saveRecipient(legacyScope,{email:'legacy@example.invalid',expectedVersion:0}));
+   await legacyRun(()=>legacy.issueRecipientVerification(legacyScope,{recipientId:r.recipientId,expectedVersion:1}));await legacyRun(()=>legacy.confirmRecipientVerification(legacyScope,{recipientId:r.recipientId,expectedVersion:1,token:token()}));
+   now=new Date(now.getTime()+61000);await legacyRun(()=>legacy.issueRecipientConsent(legacyScope,{recipientId:r.recipientId,expectedVersion:1,expectedRevision:0,allowedFrequencies:['DAILY']}));await legacyRun(()=>legacy.confirmRecipientConsent(legacyScope,{recipientId:r.recipientId,expectedVersion:1,expectedRevision:0,token:token(),explicitConsent:true}));
+   await legacyRun(()=>legacy.saveAutomationGrant(legacyScope,{expectedRevision:0,active:true,allowedFrequencies:['DAILY'],explicitAuthorization:true}));
+   const [grant]=await b.$queryRaw`SELECT "lifecycleGeneration"::text AS generation FROM "AutomaticReportAutomationGrant" WHERE "storeId"='control'`;assert.equal(grant.generation,'0');const [consent]=await b.$queryRaw`SELECT "lifecycleGeneration"::text AS generation FROM "AutomaticReportRecipientConsent" WHERE "storeId"='control'`;assert.equal(consent.generation,'0');
+   const [absent]=await b.$queryRaw`SELECT to_regclass(format('%I.%I',current_schema(),'StoreLifecycleFence'))::text AS fence`;assert.equal(absent.fence,null,'management must never create or enroll a lifecycle fence');
+   let checkout;const delayed=management({$transaction:fn=>{checkout=fn;return Promise.resolve('captured')}});
+   assert.equal(await legacyRun(()=>delayed.saveAutomationGrant(legacyScope,{expectedRevision:1,active:true,allowedFrequencies:['DAILY'],explicitAuthorization:true})),'captured');
+   await a.$executeRawUnsafe('CREATE TABLE "StoreLifecycleFence" ("storeId" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"generation" BIGINT NOT NULL,"maintenance" BOOLEAN NOT NULL,"retired" BOOLEAN NOT NULL)');await a.$executeRaw`INSERT INTO "StoreLifecycleFence" VALUES ('control','c',1,false,false)`;
+   await assert.rejects(b.$transaction(tx=>withLifecycleContext({control:'1'},()=>checkout(tx))),{code:'STORE_LIFECYCLE_STALE_GENERATION'});
+   assert.equal((await a.$queryRaw`SELECT "revision"::text AS revision FROM "AutomaticReportAutomationGrant" WHERE "storeId"='control'`)[0].revision,'1');
+  });
   await t.test('native constraints reject invalid frequencies and oversized projection without weakening slot contract',async()=>{await assert.rejects(a.$executeRaw`UPDATE "AutomaticReportDispatchPolicy" SET "allowedFrequencies"=ARRAY['HOURLY']::text[]`);await assert.rejects(a.$executeRaw`UPDATE "AutomaticReportDeliverySlot" SET "version"=0`);assert.equal(automaticReportDispatchDDL.length,6)});
  }finally{try{await Promise.all([a.$disconnect(),b.$disconnect()])}finally{try{if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`)}finally{await admin.$disconnect()}}}
 });
