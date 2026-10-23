@@ -73,5 +73,27 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    assert.equal((await a.$queryRaw`SELECT * FROM "Sale"`).length,1);assert.equal((await a.$queryRaw`SELECT "status" FROM "FtextCashRequest" WHERE "id"=${second.id}`)[0].status,'DISPATCHED');
   });
 
+  await t.test('confirmed CARD result commits exactly once without a second cash posting; invalid evidence and stock failure commit nothing',async()=>{
+   // Remove only this synthetic fixture's intentionally unresolved reused-receipt request.
+   await a.$executeRaw`DELETE FROM "FtextCashRequest" WHERE "clientTransactionId"='checkout-second'`;
+   Object.assign(settings,{cardEnabled:true,cardPayment:{code:2,posTerminalId:1,transactionType:6,resultFormat:'POS_LINE8_OS7',confirmed:true}});
+   const card=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'checkout-card',checkout:{...input.checkout,paymentMethod:'CARD'}}));
+   assert.equal(card.plan.payment.method,'CARD');assert.equal(card.plan.payment.code,2);
+   const claims=await Promise.all([a.$transaction(tx=>claimFtextCashRequest(tx,device,settings)),b.$transaction(tx=>claimFtextCashRequest(tx,device,settings))]);assert.equal(claims.filter(Boolean).length,1);
+   const result={...receipt,requestId:card.id,settingsHash:card.settingsHash,dayCounter:'43',posPayments:[{cardType:'Visa Debit',amount:'1.25',cardNumberMasked:'416598******5605'}]};
+   for(const patch of [{posPayments:undefined},{posPayments:[]},{posPayments:[{...result.posPayments[0],amount:'1.24'}]},{posPayments:[{...result.posPayments[0],cardType:'IRIS'}]},{posPayments:[{...result.posPayments[0],cardNumberMasked:'4165981234565605'}]}])await assert.rejects(a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{...result,...patch})));
+   assert.equal((await a.$queryRaw`SELECT "status" FROM "FtextCashRequest" WHERE "id"=${card.id}`)[0].status,'DISPATCHED');
+   assert.equal((await a.$queryRaw`SELECT * FROM "Sale"`).length,1);
+   await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,result));
+   await assert.rejects(finalizeFtextCashRequest(a,card.id,scope,{context,reserveStock:async()=>{throw Error('injected card stock failure')}}));
+   assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,1);
+   const commits=await Promise.all([finalizeFtextCashRequest(a,card.id,scope,opts),finalizeFtextCashRequest(b,card.id,scope,opts)]);assert.equal(commits[0].saleId,commits[1].saleId);assert.equal(commits.filter(c=>c.replay).length,1);
+   const payments=await a.$queryRaw`SELECT "method","amount" FROM "Payment" ORDER BY "method"`;assert.deepEqual(payments.map(p=>[p.method,Number(p.amount)]),[['CARD',1.25],['CASH',1.25]]);
+   const txs=await a.$queryRaw`SELECT "type","amount" FROM "StoreTransaction" ORDER BY "type"`;assert.deepEqual(txs.map(p=>[p.type,Number(p.amount)]),[['SALE_CARD',1.25],['SALE_CASH',1.25]]);
+   const stock=await a.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct"`;assert.equal(Number(stock.find(s=>s.storeId==='store-a').currentStock),-2);assert.equal(Number(stock.find(s=>s.storeId==='store-control').currentStock),20);
+   assert.equal((await a.$queryRaw`SELECT * FROM "StockMovement"`).length,2);
+   assert.equal(await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings)),null);
+  });
+
  }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);try{if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`)}finally{await admin.$disconnect()}}
 });
