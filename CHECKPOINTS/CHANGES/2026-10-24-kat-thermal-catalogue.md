@@ -4,3 +4,8 @@
 
 
 Preserve tenant/store predicates, exact schema fail-closed validation, FRESH_STORE recovery-before-clearance, external-secret/payload review and all installed tables. Existing connector tokens are hashed; print tickets/request responses are owned opaque payload, never selectors. Runtime/device-secret revalidation after restore must be reviewed, not inferred. No deployment until source CI and full joint catalogue checks are green.
+
+## Source preparation after merged claim
+
+Claim3107 exacta3473533e6da889bd442635071d7e8318eb22cab fullCI40064648077 SUCCESS, mergedcbc457d027c367b1c2515f7938d247f38e9755a7 before catalogue edits. Four DIRECT/REMOVE nodes, exact column catalogue and explicit opaque-payload/hash/actor classifications added to canonical and proposed pairs. Historical batch/job references remain non-owning and fenced; never JSON selectors. All unrelated manifest/review values independently compared to main and identical. Printer schema ensure now runs during normal application bootstrap before listen; creates empty tables only, no device config/token/job/order. Native isolated two-client test compares actual SQL column order/types/nullability to canonical catalogue after repeat ensure. Local pure manifest/scoped route/printing/sent-cart9PASS; existing executor/recovery regression result recorded after run. Exact joint native CI, app/worker paired revision/hash and physical printing remain NOT TESTED. No activation or production DDL was manually run. Whole-tab recovery/incremental additions/installation residuals remain open. No manual PASS.
+

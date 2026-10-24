@@ -1732,6 +1732,54 @@
     {
       "column": "AutomaticReportRecipientConsent.updatedBy",
       "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrinter.settings",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrinter.tokenHash",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrinter.pairHash",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintRequest.requestId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintRequest.batchId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "ProductionPrintRequest.response",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintJob.batchId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "ProductionPrintJob.ticket",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintJob.claimId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintJob.claimedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintResolution.jobId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "ProductionPrintResolution.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
     }
   ]
 }

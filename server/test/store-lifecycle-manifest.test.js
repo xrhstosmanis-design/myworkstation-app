@@ -42,6 +42,17 @@ test('canonical new-start manifest covers reviewed ownership and retains both in
   assert.deepEqual(m.knownColumns[name],native.columns.map(c=>[c.name,sqlType[c.type],c.not_null]),name);
  }
  assert.equal(m.knownColumns.AutomaticReportDeliverySlot.length,7);
+ const printing=['ProductionPrinter','ProductionPrintRequest','ProductionPrintJob','ProductionPrintResolution'];
+ for(const name of printing){
+  assert.equal(m.knownTables.filter(n=>n===name).length,1,name);
+  assert.deepEqual(nodes.get(name).owner,{kind:'DIRECT'},name);
+  assert.equal(nodes.get(name).reset,'REMOVE',name);
+  assert.ok(m.knownColumns[name].some(c=>c[0]==='companyId'&&c[1]==='text'&&c[2]),name);
+  assert.ok(m.knownColumns[name].some(c=>c[0]==='storeId'&&c[1]==='text'&&c[2]),name);
+ }
+ for(const name of ['ProductionPrintRequest','ProductionPrintJob'])assert.deepEqual(nodes.get(name).references,[{parent:'StorePreparationBatch',columns:[['batchId','id']],historical:true}]);
+ assert.deepEqual(nodes.get('ProductionPrintResolution').references,[{parent:'ProductionPrintJob',columns:[['jobId','id']],historical:true}]);
+ for(const col of ['ProductionPrinter.settings','ProductionPrinter.tokenHash','ProductionPrinter.pairHash','ProductionPrintRequest.requestId','ProductionPrintRequest.response','ProductionPrintJob.ticket','ProductionPrintJob.claimId','ProductionPrintJob.claimedBy','ProductionPrintResolution.actorId'])assert.ok(review.columns.some(c=>c.column===col&&c.classification==='OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION'),col);
  assert.equal(nodes.get('OnlineOrderingConfig').reset,'REMOVE');assert.deepEqual(nodes.get('OnlineOrderingConfig').owner,{kind:'DIRECT'});
  const copy=reviewedFreshStoreManifest();copy.tables.length=0;assert.ok(reviewedFreshStoreManifest().tables.length>100,'Caller mutated canonical selection.');
 });
