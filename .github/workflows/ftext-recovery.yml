@@ -1,0 +1,53 @@
+name: Ftext recovery contract
+on:
+  pull_request:
+    paths:
+      - 'server/src/services/ftext-cash-schema.js'
+      - 'server/scripts/ensure-ftext-recovery-schema.js'
+      - 'server/test/ftext*'
+      - 'server/test/fixtures/ftext*'
+      - 'ops/backup/lifecycle/manifest.json'
+      - 'ops/backup/lifecycle/column-review.json'
+      - '.github/workflows/ftext-recovery.yml'
+  workflow_dispatch:
+concurrency:
+  group: ftext-recovery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-full-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ftext_recovery_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ftext_recovery_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ftext_recovery_test
+      MWS_LIFECYCLE_RECOVERY_IMAGE: mws-ftext-recovery:ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npx prisma generate --schema server/prisma/schema.prisma
+      - name: Build actual PG18 recovery image
+        run: docker build --file ops/backup/Dockerfile --tag mws-ftext-recovery:ci .
+      - name: Use matching PG16 dump and private restore tools
+        run: |
+          test -x /usr/lib/postgresql/16/bin/pg_dump
+          echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
+      - name: Verify actual schema, archive/COPY, pending and stale controls
+        working-directory: server
+        run: node --test test/ftext-recovery-schema.test.js test/ftext-full-recovery-postgres.test.js test/ftext-cash.test.js test/ftext-cash-postgres.test.js test/store-lifecycle-manifest.test.js
