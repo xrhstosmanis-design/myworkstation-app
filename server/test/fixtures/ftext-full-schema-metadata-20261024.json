@@ -48070,7 +48070,11 @@
     "CREATE UNIQUE INDEX \"WorkforceShiftTemplate_storeId_code_key\" ON public.\"WorkforceShiftTemplate\" USING btree (\"storeId\", code)",
     "CREATE INDEX \"WorkforceShiftTemplate_companyId_storeId_active_idx\" ON public.\"WorkforceShiftTemplate\" USING btree (\"companyId\", \"storeId\", active)",
     "CREATE INDEX \"WorkforceTimeClockEntry_employeeId_occurredAt_idx\" ON public.\"WorkforceTimeClockEntry\" USING btree (\"employeeId\", \"occurredAt\")",
-    "CREATE INDEX \"WorkforceTimeClockEntry_companyId_storeId_occurredAt_idx\" ON public.\"WorkforceTimeClockEntry\" USING btree (\"companyId\", \"storeId\", \"occurredAt\")"
+    "CREATE INDEX \"WorkforceTimeClockEntry_companyId_storeId_occurredAt_idx\" ON public.\"WorkforceTimeClockEntry\" USING btree (\"companyId\", \"storeId\", \"occurredAt\")",
+    "CREATE UNIQUE INDEX \"WholesaleCustomer_id_company_portal_key\" ON public.\"WholesaleCustomer\" USING btree (id, \"companyId\")",
+    "CREATE UNIQUE INDEX \"Store_id_company_portal_key\" ON public.\"Store\" USING btree (id, \"companyId\")",
+    "CREATE UNIQUE INDEX \"Product_id_company_portal_key\" ON public.\"Product\" USING btree (id, \"companyId\")",
+    "CREATE UNIQUE INDEX \"User_id_company_seller_key\" ON public.\"User\" USING btree (id, \"companyId\")"
   ],
   "observedAt": "2026-10-24T08:06:00.044351+00:00",
   "serverVersion": "180004",

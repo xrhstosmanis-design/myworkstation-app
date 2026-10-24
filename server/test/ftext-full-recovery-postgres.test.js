@@ -36,8 +36,9 @@ test('full reviewed native schema plus ftext verifies PG18 archive/COPY recovery
   for(const c of metadata.columns.filter(c=>c.default!==null))await db.$executeRawUnsafe(`ALTER TABLE ${q(c.table)} ALTER COLUMN ${q(c.name)} SET DEFAULT ${c.default}`);
   // PG18 catalogues expose NOT NULL as separate constraints; required column
   // declarations above preserve the same reviewed type/nullability on PG16.
-  for(const kind of ['p','u','c','f'])for(const c of metadata.constraints.filter(c=>c.kind===kind))await db.$executeRawUnsafe(`ALTER TABLE ${q(c.table)} ADD CONSTRAINT ${q(c.name)} ${c.definition}`);
+  for(const kind of ['p','u','c'])for(const c of metadata.constraints.filter(c=>c.kind===kind))await db.$executeRawUnsafe(`ALTER TABLE ${q(c.table)} ADD CONSTRAINT ${q(c.name)} ${c.definition}`);
   for(const index of metadata.indexes)await db.$executeRawUnsafe(index);
+  for(const c of metadata.constraints.filter(c=>c.kind==='f'))await db.$executeRawUnsafe(`ALTER TABLE ${q(c.table)} ADD CONSTRAINT ${q(c.name)} ${c.definition}`);
   for(const trigger of metadata.triggers){await db.$executeRawUnsafe(trigger.definition);await db.$executeRawUnsafe(`ALTER TABLE ${q(trigger.table)} ${trigger.enabled==='A'?'ENABLE ALWAYS':trigger.enabled==='D'?'DISABLE':'ENABLE'} TRIGGER ${q(trigger.name)}`);}
   await provisionFtextRecoverySchema(db);
   assert.throws(()=>assertFtextCashLifecycleApproved(manifest),e=>e.code==='FTEXT_CASH_RECOVERY_REVIEW_REQUIRED');
