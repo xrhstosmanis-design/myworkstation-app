@@ -75,7 +75,9 @@ function Print-Network($ticket,$lines){
  $data=New-Object 'Collections.Generic.List[byte]'
  $data.AddRange([byte[]]@(27,64,27,116,[int]$settings.codePage))
  $data.AddRange([byte[]]$encoding.GetBytes(($lines -join "`n")+"`n`n`n"))
- if($settings.cut){$data.AddRange([byte[]]@(29,86,0))}
+ # GS V 65 0 advances the final printed line to the cutter before cutting.
+ # GS V 0 cuts in place; three line feeds do not cover every head/cutter gap.
+ if($settings.cut){$data.AddRange([byte[]]@(29,86,65,0))}
  $client=New-Object Net.Sockets.TcpClient
  try{
   $wait=$client.BeginConnect([string]$settings.host,[int]$settings.port,$null,$null)

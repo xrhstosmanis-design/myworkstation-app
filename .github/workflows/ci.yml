@@ -56,6 +56,9 @@ jobs:
           $errors = $null
           [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/windows-production-printer/Connector.ps1'),[ref]$tokens,[ref]$errors) | Out-Null
           if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
+      - name: Test actual production ticket bytes and feed/cut on Windows PowerShell 5.1
+        shell: powershell
+        run: ./tools/windows-production-printer/Test-NetworkTicket.ps1
       - name: Parse CAP Driver scripts with Windows PowerShell 5.1
         shell: powershell
         run: |
