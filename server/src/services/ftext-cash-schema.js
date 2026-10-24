@@ -28,7 +28,7 @@ export async function ensureFtextCashSchema(db,{manifest}={}){
 export async function provisionFtextRecoverySchema(db,{manifest=reviewedFreshStoreManifest()}={}){
  assertFtextCashLifecycleCatalogueReviewed(manifest);
  return db.$transaction(async tx=>{
-  await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended('mws:ftext-recovery-schema-v1',0))");
+  await tx.$queryRawUnsafe("SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended('mws:ftext-recovery-schema-v1',0))");
   const state=(await tx.$queryRawUnsafe(`SELECT to_regclass(format('%I.%I',current_schema(),'StoreLifecycleFence'))::text AS name`))[0];
   if(state?.name&&(await tx.$queryRawUnsafe(`SELECT 1 FROM "StoreLifecycleFence" WHERE "maintenance" LIMIT 1`)).length)throw Object.assign(new Error('Cannot provision ftext during lifecycle maintenance.'),{code:'FTEXT_RECOVERY_MAINTENANCE'});
   await createReviewedFtextCashSchema(tx);
