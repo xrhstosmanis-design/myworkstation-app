@@ -9,13 +9,14 @@ import {randomBytes} from 'node:crypto';
 import {assertFtextCashLifecycleApproved,assertFtextCashLifecycleCatalogueReviewed,ftextCashLifecycleReviewProposal,provisionFtextRecoverySchema} from '../src/services/ftext-cash-schema.js';
 import {reviewedFreshStoreManifest} from '../src/services/store-lifecycle-manifest.js';
 
-test('canonical ftext catalogue covers exact ownership/types/references while actual recovery acceptance remains OFF',()=>{
+test('canonical ftext catalogue covers exact ownership/types/references while actual native recovery acceptance has exact evidence',()=>{
  const canonical=reviewedFreshStoreManifest(),proposal=ftextCashLifecycleReviewProposal();
  assert.doesNotThrow(()=>assertFtextCashLifecycleCatalogueReviewed(canonical));
- assert.throws(()=>assertFtextCashLifecycleApproved(canonical),e=>e.code==='FTEXT_CASH_RECOVERY_REVIEW_REQUIRED');
+ assert.doesNotThrow(()=>assertFtextCashLifecycleApproved(canonical));
+ const unaccepted=structuredClone(canonical);unaccepted.ftextRecoveryAcceptance.approved=false;assert.throws(()=>assertFtextCashLifecycleApproved(unaccepted),e=>e.code==='FTEXT_CASH_RECOVERY_REVIEW_REQUIRED');
  assert.deepEqual(canonical.knownColumns.FtextCashRequest,proposal.knownColumns.FtextCashRequest);
  assert.deepEqual(canonical.tables.find(t=>t.name==='FtextCashRequest'),proposal.tables[0]);
- assert.equal(canonical.ftextRecoveryAcceptance.approved,false);
+ assert.equal(canonical.ftextRecoveryAcceptance.approved,true);assert.equal(canonical.ftextRecoveryAcceptance.physicalCheckoutAccepted,false);assert.equal(canonical.ftextRecoveryAcceptance.evidence.workflowRun,40077343040);
  const review=JSON.parse(readFileSync(new URL('../../ops/backup/lifecycle/column-review.json',import.meta.url)));
  for(const name of proposal.reviewedColumns)assert.equal(review.columns.filter(c=>c.column===name).length,1,name);
  for(const name of ['sessionId','claimedByDeviceId','saleId'])assert.match(review.columns.find(c=>c.column==='FtextCashRequest.'+name).classification,/HISTORICAL_NON_OWNING/);
@@ -40,9 +41,9 @@ test('native empty/installed/drifted queue provisioning preserves immutable cash
   for(const [id,store,status,method] of [['sent','target','DISPATCHED','CASH'],['done','sibling','SALE_COMMITTED','CARD']])await a.$executeRawUnsafe(`INSERT INTO "FtextCashRequest" ("id","companyId","storeId","terminalPos","fiscalDeviceCode","serialNumber","clientTransactionId","requestHash","settingsHash","lifecycleGeneration","sessionId","plan","checkoutJson","total","status","claimedByDeviceId","claimedTokenVersion","dispatchedAt","result","resultHash","saleId") VALUES($1,'fixture-company',$2,'POS-01','FISCAL-01',$2,$1,'request-hash','settings-hash','0','historical-shift',$3::jsonb,$4::jsonb,1.25,$5,'old-device',3,'2026-10-23T12:00:00.123456Z',$6::jsonb,'immutable-result',$7)`,id,store,JSON.stringify({payment:{method},scope:{storeId:store}}),JSON.stringify({paymentMethod:method,productId:'foreign-id-not-ownership'}),status,JSON.stringify({outcome:status==='DISPATCHED'?'REQUIRES_CHECK':'CONFIRMED',dayId:'17',dayCounter:'42',cardNumberMasked:method==='CARD'?'416598******5605':null}),status==='SALE_COMMITTED'?'historical-sale':null);
   const rows=()=>a.$queryRaw`SELECT row_to_json(t)::text AS row FROM "FtextCashRequest" t ORDER BY "id"`,before=await rows();
   await provisionFtextRecoverySchema(a);assert.deepEqual(await rows(),before,'startup cannot reset DISPATCHED or clear a pending fiscal request');
-  assert.throws(()=>assertFtextCashLifecycleApproved(),e=>e.code==='FTEXT_CASH_RECOVERY_REVIEW_REQUIRED');
+  assert.doesNotThrow(()=>assertFtextCashLifecycleApproved());
   // Exact one-table native encrypted copy proof, deliberately NOT full-schema
-  // recovery acceptance. The canonical activation flag remains false.
+  // recovery acceptance. Full-schema recovery acceptance is tested separately; this never activates a device.
   directory=await mkdtemp(path.join(tmpdir(),'ftext-recovery-'));
   const descriptor={scope:{companyId:'fixture-company',storeId:'target',mode:'RESET'},manifestHash:'a'.repeat(64),sourceRevision:'b'.repeat(40),schemaSignature:'c'.repeat(64),tables:[{name:'FtextCashRequest',action:'REMOVE'}]};
   const options={directory,encryptionKey:randomBytes(32),keyId:'isolated-ftext-key',expectedScope:descriptor.scope,expectedManifestHash:descriptor.manifestHash,expectedSourceRevision:descriptor.sourceRevision,expectedSchemaSignature:descriptor.schemaSignature};

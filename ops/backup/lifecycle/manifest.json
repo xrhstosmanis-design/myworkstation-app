@@ -19534,7 +19534,16 @@
   ],
   "ftextRecoveryAcceptance": {
     "format": "FTEXT_RECOVERY_ACCEPTANCE_V1",
-    "approved": false,
-    "reason": "Full-schema archive restore, control and stale-claim acceptance remains required. No physical checkout acceptance."
+    "approved": true,
+    "scope": "REVIEWED_FULL_SCHEMA_FRESH_STORE_RESET_RECOVERY",
+    "evidence": {
+      "sourceRevision": "ad13db3da07db5210a0615a8a967c61e4846812b",
+      "workflowRun": 40077343040,
+      "workflowJob": 120823446075,
+      "nativeTests": 19,
+      "failures": 0,
+      "skipped": 0
+    },
+    "physicalCheckoutAccepted": false
   }
 }

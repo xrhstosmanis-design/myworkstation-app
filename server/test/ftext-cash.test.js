@@ -26,8 +26,9 @@ test('cash settings are explicitly confirmed; optional extension preserves legac
 
 test('cash runtime cannot create an unreviewed relation or weaken the canonical recovery manifest',async()=>{
  const {assertFtextCashLifecycleApproved,ensureFtextCashSchema,ftextCashLifecycleReviewProposal}=await import('../src/services/ftext-cash-schema.js');
- assert.throws(()=>assertFtextCashLifecycleApproved(),e=>e.code==='FTEXT_CASH_RECOVERY_REVIEW_REQUIRED');
- let writes=0;await assert.rejects(ensureFtextCashSchema({$executeRawUnsafe:async()=>{writes++}}),e=>e.code==='FTEXT_CASH_RECOVERY_REVIEW_REQUIRED');assert.equal(writes,0);
+ const {reviewedFreshStoreManifest}=await import('../src/services/store-lifecycle-manifest.js');
+ assert.doesNotThrow(()=>assertFtextCashLifecycleApproved());const unaccepted=reviewedFreshStoreManifest();unaccepted.ftextRecoveryAcceptance.approved=false;
+ let writes=0;await assert.rejects(ensureFtextCashSchema({$executeRawUnsafe:async()=>{writes++}},{manifest:unaccepted}),e=>e.code==='FTEXT_CASH_RECOVERY_REVIEW_REQUIRED');assert.equal(writes,0);
  const proposal=ftextCashLifecycleReviewProposal();assert.doesNotThrow(()=>assertFtextCashLifecycleApproved(proposal));
  for(const mutate of [m=>m.knownTables=[],m=>m.knownColumns.FtextCashRequest[0][1]='uuid',m=>m.tables[0].reset='KEEP',m=>m.reviewedColumns=[]]){const changed=structuredClone(proposal);mutate(changed);assert.throws(()=>assertFtextCashLifecycleApproved(changed));}
 });
