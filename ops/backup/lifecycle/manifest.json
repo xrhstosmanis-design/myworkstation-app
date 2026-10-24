@@ -275,7 +275,8 @@
     "WorkforceScheduleAssignment",
     "WorkforceShiftTemplate",
     "WorkforceTimeClockEntry",
-    "_prisma_migrations"
+    "_prisma_migrations",
+    "FtextCashRequest"
   ],
   "knownColumns": {
     "AdvancedOnlineSearchUsage": [
@@ -16153,6 +16154,123 @@
         "timestamp with time zone",
         true
       ]
+    ],
+    "FtextCashRequest": [
+      [
+        "id",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "terminalPos",
+        "text",
+        true
+      ],
+      [
+        "fiscalDeviceCode",
+        "text",
+        true
+      ],
+      [
+        "serialNumber",
+        "text",
+        true
+      ],
+      [
+        "clientTransactionId",
+        "text",
+        true
+      ],
+      [
+        "requestHash",
+        "text",
+        true
+      ],
+      [
+        "settingsHash",
+        "text",
+        true
+      ],
+      [
+        "lifecycleGeneration",
+        "text",
+        true
+      ],
+      [
+        "sessionId",
+        "text",
+        true
+      ],
+      [
+        "plan",
+        "jsonb",
+        true
+      ],
+      [
+        "checkoutJson",
+        "jsonb",
+        true
+      ],
+      [
+        "total",
+        "numeric(14,2)",
+        true
+      ],
+      [
+        "status",
+        "text",
+        true
+      ],
+      [
+        "claimedByDeviceId",
+        "text",
+        false
+      ],
+      [
+        "claimedTokenVersion",
+        "integer",
+        false
+      ],
+      [
+        "dispatchedAt",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "result",
+        "jsonb",
+        false
+      ],
+      [
+        "resultHash",
+        "text",
+        false
+      ],
+      [
+        "saleId",
+        "text",
+        false
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
+      ]
     ]
   },
   "reviewedColumns": [
@@ -16256,6 +16374,13 @@
     "FiscalBridgeDryRun.saleId",
     "FiscalBridgeDryRun.validationJson",
     "FiscalDocument.externalId",
+    "FtextCashRequest.checkoutJson",
+    "FtextCashRequest.claimedByDeviceId",
+    "FtextCashRequest.clientTransactionId",
+    "FtextCashRequest.plan",
+    "FtextCashRequest.result",
+    "FtextCashRequest.saleId",
+    "FtextCashRequest.sessionId",
     "InternetPriceProposal.productId",
     "InternetPriceProposal.searchId",
     "InternetPriceProposalAudit.actorId",
@@ -19366,6 +19491,50 @@
           "historical": true
         }
       ]
+    },
+    {
+      "name": "FtextCashRequest",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE",
+      "references": [
+        {
+          "parent": "CloudDevice",
+          "columns": [
+            [
+              "claimedByDeviceId",
+              "id"
+            ]
+          ],
+          "historical": true
+        },
+        {
+          "parent": "Sale",
+          "columns": [
+            [
+              "saleId",
+              "id"
+            ]
+          ],
+          "historical": true
+        },
+        {
+          "parent": "CashShiftSession",
+          "columns": [
+            [
+              "sessionId",
+              "id"
+            ]
+          ],
+          "historical": true
+        }
+      ]
     }
-  ]
+  ],
+  "ftextRecoveryAcceptance": {
+    "format": "FTEXT_RECOVERY_ACCEPTANCE_V1",
+    "approved": false,
+    "reason": "Full-schema archive restore, control and stale-claim acceptance remains required. No physical checkout acceptance."
+  }
 }

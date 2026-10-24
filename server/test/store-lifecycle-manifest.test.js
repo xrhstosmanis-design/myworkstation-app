@@ -29,7 +29,13 @@ test('canonical new-start manifest covers reviewed ownership and retains both in
  for(const node of nodes.values())if(node.owner.kind==='CHILD')assert.ok(metadata.foreignKeys.some(f=>f.child===node.name&&f.parent===node.owner.parent&&JSON.stringify(f.local)===JSON.stringify(node.owner.columns.map(p=>p[0]))&&JSON.stringify(f.remote)===JSON.stringify(node.owner.columns.map(p=>p[1]))),node.name);
  const review=read('../../ops/backup/lifecycle/column-review.json');assert.equal(review.executionEnabled,false);assert.deepEqual([...new Set(review.columns.map(c=>c.column))].sort(),m.reviewedColumns);
  const proposed=read('../../ops/backup/lifecycle/automatic-report-manifest.proposed.json');
- assert.deepEqual(m,proposed);assert.deepEqual(review,read('../../ops/backup/lifecycle/automatic-report-column-review.proposed.json'));
+ // The retained automatic-report proposal is an immutable prior catalogue;
+ // only the independently reviewed ftext extension differs.
+ const withoutFtext=structuredClone(m);delete withoutFtext.ftextRecoveryAcceptance;
+ withoutFtext.knownTables=withoutFtext.knownTables.filter(n=>n!=='FtextCashRequest');delete withoutFtext.knownColumns.FtextCashRequest;
+ withoutFtext.reviewedColumns=withoutFtext.reviewedColumns.filter(n=>!n.startsWith('FtextCashRequest.'));withoutFtext.tables=withoutFtext.tables.filter(n=>n.name!=='FtextCashRequest');
+ assert.deepEqual(withoutFtext,proposed);
+ assert.deepEqual({...review,columns:review.columns.filter(c=>!c.column.startsWith('FtextCashRequest.'))},read('../../ops/backup/lifecycle/automatic-report-column-review.proposed.json'));
  const dispatch=['AutomaticReportDispatchPolicy','AutomaticReportAutomationGrant','AutomaticReportRecipient','AutomaticReportRecipientConsent','AutomaticReportPayload','AutomaticReportDeliverySlot'];
  const oracle=read('./fixtures/automatic-report-provision-catalog-pg18.json');assert.equal(oracle.serverMajor,18);
  assert.deepEqual(oracle.tables.map(t=>t.name).sort(),[...dispatch].sort());
