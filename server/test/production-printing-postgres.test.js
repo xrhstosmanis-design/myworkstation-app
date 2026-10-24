@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {createProductionPrinting} from '../src/services/production-printing.js';
+import {reviewedFreshStoreManifest} from '../src/services/store-lifecycle-manifest.js';
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(decodeURIComponent(u.pathname))}catch{return false}}
 test('native production printing: two POS concurrent replay, rollback, one consumer, foreign scope, lost replies and no physical replay',{skip:!isolated(),timeout:90000},async()=>{
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='production_print_'+randomBytes(10).toString('hex'),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const a=new PrismaClient({datasourceUrl:url.toString()}),b=new PrismaClient({datasourceUrl:url.toString()});let created=false,licensed=true;
@@ -19,6 +20,11 @@ test('native production printing: two POS concurrent replay, rollback, one consu
   await a.$executeRaw`INSERT INTO "StoreProduct" VALUES ('coffee','kat',true),('water','kat',true),('foreign','control',true)`;
   await a.$executeRaw`INSERT INTO "PreparationProductSettings" VALUES ('c','coffee',true),('c','water',true),('other','foreign',true)`;
   const make=db=>createProductionPrinting({db,moduleState:async()=>({licenseAllowed:licensed,activeModules:['STORE_MODE']})});const first=make(a),second=make(b);await first.ensure();await second.ensure();
+  // Compare the actual idempotent bootstrap output to the backup catalogue,
+  // including physical column order, SQL types and nullability.
+  const manifest=reviewedFreshStoreManifest();
+  const native=await a.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull AS "notNull" FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND a.attnum>0 AND NOT a.attisdropped ORDER BY c.relname,a.attnum`,schema);
+  for(const name of ['ProductionPrinter','ProductionPrintRequest','ProductionPrintJob','ProductionPrintResolution'])assert.deepEqual(native.filter(c=>c.table===name).map(c=>[c.name,c.type,c.notNull]),manifest.knownColumns[name],name);
   const settings={enabled:true,name:'Coffee',transport:'NETWORK',host:'192.168.1.87',productIds:['coffee']};
   await assert.rejects(first.configure('c','control',settings),e=>e.status===404);
   await assert.rejects(first.configure('c','kat',{...settings,productIds:['foreign']}),e=>e.status===400);

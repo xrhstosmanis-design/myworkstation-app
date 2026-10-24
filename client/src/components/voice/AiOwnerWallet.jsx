@@ -21,7 +21,8 @@ export default function AiOwnerWallet({api,storeId='',enabled=false}){
     <style>{`section[aria-label="Υπόλοιπο AI"] table{border-collapse:collapse;min-width:460px;width:100%;margin:12px 0}section[aria-label="Υπόλοιπο AI"] th,section[aria-label="Υπόλοιπο AI"] td{padding:10px;text-align:left;border-bottom:1px solid #cbd5e1}section[aria-label="Υπόλοιπο AI"] caption{text-align:left;font-weight:bold;padding:8px 0}`}</style>
     <h3 style={{marginTop:0}}>Υπόλοιπο AI εταιρείας</h3>
     {error?<p role="alert">{error}</p>:!data?<p>Ανάγνωση υπολοίπου…</p>:<>
-      {!data.enabled?<p>Η προπληρωμένη χρήση AI δεν έχει ενεργοποιηθεί για την εταιρεία.</p>:<>
+      {!data.enabled&&<p><strong>Διαθέσιμο: {walletMoney(data.availableMicros)}</strong>{data.reservedMicros!=='0'&&<> · Δεσμευμένο: {walletMoney(data.reservedMicros)}</>}</p>}
+      {!data.enabled?<p>Η χρέωση AI είναι ανενεργή για την εταιρεία. Η χρήση συνεχίζεται με κόστος του MyWorkStation. Το υπόλοιπο και το ιστορικό σου διατηρούνται.</p>:<>
         <p role={data.state==='OK'?'status':'alert'}><strong>Διαθέσιμο: {walletMoney(data.availableMicros)}</strong>{data.state==='LOW'?' · Χρειάζεται ανανέωση.':data.state==='EMPTY'?' · Το υπόλοιπο εξαντλήθηκε.':''}</p>
         <p>Κοινό υπόλοιπο για τα καταστήματα της εταιρείας. Οι πωλήσεις και το υπόλοιπο πρόγραμμα συνεχίζουν κανονικά.</p>
         {data.reservedMicros!=='0'&&<p>Δεσμευμένο για κλήσεις AI σε εξέλιξη ή υπό έλεγχο: {walletMoney(data.reservedMicros)}.</p>}
@@ -49,7 +50,7 @@ export default function AiOwnerWallet({api,storeId='',enabled=false}){
         </table></div>}
         <p>Κατανάλωση επιλεγμένου καταστήματος: {walletMoney(data.usageSummary?.allTimeMicros??data.usage?.[0]?.chargedMicros??'0')} συνολικά. {data.meteredFeatures?.includes('INVOICE_OPENAI')?'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη και τις αναγνώσεις τιμολογίων με AI.':'Η χρέωση καλύπτει προς το παρόν τον Βοηθό Ιδιοκτήτη.'}</p>
         <h4>Πρόσφατες κινήσεις · έως 100</h4>
-        <ul>{(data.entries||[]).map(e=><li key={e.id}>{new Date(e.status==='SETTLED'?e.settledAt||e.createdAt:e.createdAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hourCycle:'h23'})} · {e.kind==='CREDIT'?`Πίστωση ${walletMoney(e.creditedMicros)}`:`${featureLabel(e.feature)} · ${e.status==='SETTLED'?`Χρήση AI ${walletMoney(e.chargedMicros)}`:e.status==='REVIEW'?'Κλήση AI υπό έλεγχο':'Κλήση AI σε εξέλιξη'}`}</li>)}</ul>
+        <ul>{(data.entries||[]).map(e=><li key={e.id}>{new Date(e.status==='SETTLED'?e.settledAt||e.createdAt:e.createdAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hourCycle:'h23'})} · {e.kind==='CREDIT'?`${e.feature==='TRIAL_GRANT'?'Δοκιμαστική πίστωση από MyWorkStation':'Πίστωση'} ${walletMoney(e.creditedMicros)}`:`${featureLabel(e.feature)} · ${e.status==='SETTLED'?`Χρήση AI ${walletMoney(e.chargedMicros)}`:e.status==='REVIEW'?'Κλήση AI υπό έλεγχο':'Κλήση AI σε εξέλιξη'}`}</li>)}</ul>
         <h4>Ειδοποιήσεις εταιρείας</h4><ul>{(data.notices||[]).map(n=><li key={n.id}>{noticeLabels[n.kind]} · {new Date(n.createdAt).toLocaleString('el-GR',{hour12:false})} · Υπόλοιπο τότε {walletMoney(n.balanceMicros)}</li>)}</ul>
       </>}
     </>}

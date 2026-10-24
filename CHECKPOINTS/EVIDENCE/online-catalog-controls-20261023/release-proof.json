@@ -1,0 +1,90 @@
+{
+  "observedAt": "2026-10-23T14:39:26.389795+00:00",
+  "responses": {
+    "/api/health": {
+      "status": 200,
+      "sha256": "65ac0712f4c17143dcc772b3bc663f625425541cfd982d32083b2b1400beb618",
+      "json": {
+        "ok": true,
+        "version": "0.22.0+kat-test-pos",
+        "revision": "c03afa2621694d648f2a84b2e7fa7621e3915c80"
+      }
+    },
+    "/online/daily-bite?preview=daily-bite-v2": {
+      "status": 200,
+      "sha256": "d55dfc0c584b5fb9c88cb2abbe576ae55eba2bf66c923a90c970780ee6bd0b12",
+      "dailyTitle": true
+    },
+    "/api/public/online/daily-bite/catalog-modifiers": {
+      "status": 503,
+      "json": {
+        "error": "Το Online κατάστημα είναι προσωρινά κλειστό."
+      }
+    }
+  },
+  "predeployControls": [
+    {
+      "baked_hash": "b38c67e38fbfcb53ded096d48082f910",
+      "config_hash": "e4a19652457f8288122f885fd4645e15",
+      "observed_at": "2026-10-23T14:26:53.833815Z",
+      "orders": 3,
+      "policy_hash": "4b5c8a8c8edc6b24f84721c4c2f0e1df",
+      "stock_price_hash": "1366eeea32d6ac502d00f53de7fb4d82",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "visibility_hash": "e9dfd7d86f0f430834a93943c5fc528b"
+    },
+    {
+      "baked_hash": "d751713988987e9331980363e24189ce",
+      "config_hash": "18e29a762ca1c3ea4fe44c2ce297709f",
+      "observed_at": "2026-10-23T14:26:53.833815Z",
+      "orders": 0,
+      "policy_hash": "d751713988987e9331980363e24189ce",
+      "stock_price_hash": "66eb86d88f787806a7e77f685da5c571",
+      "storeId": "cmv25lf3h000ueegf0kkii3pb",
+      "visibility_hash": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "baked_hash": "d751713988987e9331980363e24189ce",
+      "config_hash": "1b5510c5b6d2c6d86c92b70de296e5c8",
+      "observed_at": "2026-10-23T14:26:53.833815Z",
+      "orders": 14,
+      "policy_hash": "d751713988987e9331980363e24189ce",
+      "stock_price_hash": "c90aa5ff1f5f3b300746b1972eee9fee",
+      "storeId": "kat-store",
+      "visibility_hash": "8c39eac4d75be88b539cbcaf4e2e3440"
+    }
+  ],
+  "postdeployControls": [
+    {
+      "baked_hash": "b38c67e38fbfcb53ded096d48082f910",
+      "config_hash": "e4a19652457f8288122f885fd4645e15",
+      "observed_at": "2026-10-23T14:39:28.102466Z",
+      "orders": 3,
+      "policy_hash": "4b5c8a8c8edc6b24f84721c4c2f0e1df",
+      "stock_price_hash": "1366eeea32d6ac502d00f53de7fb4d82",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "visibility_hash": "e9dfd7d86f0f430834a93943c5fc528b"
+    },
+    {
+      "baked_hash": "d751713988987e9331980363e24189ce",
+      "config_hash": "18e29a762ca1c3ea4fe44c2ce297709f",
+      "observed_at": "2026-10-23T14:39:28.102466Z",
+      "orders": 0,
+      "policy_hash": "d751713988987e9331980363e24189ce",
+      "stock_price_hash": "66eb86d88f787806a7e77f685da5c571",
+      "storeId": "cmv25lf3h000ueegf0kkii3pb",
+      "visibility_hash": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "baked_hash": "d751713988987e9331980363e24189ce",
+      "config_hash": "5a47804118a0656c789be94ff3af3b58",
+      "observed_at": "2026-10-23T14:39:28.102466Z",
+      "orders": 14,
+      "policy_hash": "d751713988987e9331980363e24189ce",
+      "stock_price_hash": "e0964d78867f646cea9a35d83c619fbe",
+      "storeId": "kat-store",
+      "visibility_hash": "8c39eac4d75be88b539cbcaf4e2e3440"
+    }
+  ],
+  "qualification": "Technical release only, no authenticated UI/LAB acceptance. DAILY/LAB full hashes unchanged; KAT metadata-inclusive stock/config hashes differ and their business deltas are not inferred."
+}

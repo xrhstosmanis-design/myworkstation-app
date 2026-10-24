@@ -1,0 +1,116 @@
+{
+  "format": "MWS_AI_WALLET_LIFECYCLE_REVIEW_V1",
+  "status": "SOURCE_TECHNICALLY_INSTALLED_OFF_ACTIVATION_REVIEW_REQUIRED",
+  "sourcePR": 3100,
+  "sourceMerge": "06034c95cfaaa96fc22c461870e555acec279871",
+  "sourceCI": {
+    "run": 39966455737,
+    "buildJob": 120457817039,
+    "serverPass": 4138,
+    "backupPass": 8,
+    "failures": 0,
+    "skips": 0
+  },
+  "observations": {
+    "productionReadOnlyAt": "2026-10-23T14:06:03.638059Z",
+    "walletTablesPresent": false,
+    "fenceAndExecutionPresentAt141918UTC": false,
+    "runtimeAdminView": "DISABLED",
+    "mainSourceCICancelledRun": 39968018220,
+    "manualFullMainCI": 39968459198,
+    "mainRevision": "abe5cc030d6fb5fbfc3f9c731a17492ed6f13464",
+    "allFourTablesRecheckedAbsentAt": "2026-10-23T14:28:08.636308Z",
+    "postInstallationAllFourAbsentAt": "2026-10-23T14:40:07.430866Z"
+  },
+  "tables": [
+    {
+      "name": "AiOwnerWallet",
+      "currentKnownTable": false,
+      "ddl": "CREATE TABLE IF NOT EXISTS \"AiOwnerWallet\" (\n        \"companyId\" TEXT PRIMARY KEY,\"enabled\" BOOLEAN NOT NULL DEFAULT FALSE,\n        \"emailEnabled\" BOOLEAN NOT NULL DEFAULT FALSE,\"notificationOwnerId\" TEXT,\n        \"balanceMicros\" BIGINT NOT NULL DEFAULT 0 CHECK (\"balanceMicros\">=0 AND \"balanceMicros\"<=1000000000000),\n        \"reservedMicros\" BIGINT NOT NULL DEFAULT 0 CHECK (\"reservedMicros\">=0 AND \"reservedMicros\"<=\"balanceMicros\"),\n        \"lastCreditMicros\" BIGINT NOT NULL DEFAULT 0,\"cycleId\" TEXT NOT NULL,\n        \"version\" INTEGER NOT NULL DEFAULT 0,\"updatedAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW())",
+      "ddlSha256": "d6db3556fe0e12f31a4856ad59ae62621de105ed52938afaac255c649ecb0a71"
+    },
+    {
+      "name": "AiOwnerWalletEntry",
+      "currentKnownTable": false,
+      "ddl": "CREATE TABLE IF NOT EXISTS \"AiOwnerWalletEntry\" (\n        \"id\" TEXT PRIMARY KEY,\"companyId\" TEXT NOT NULL REFERENCES \"AiOwnerWallet\"(\"companyId\"),\"storeId\" TEXT,\n        \"kind\" TEXT NOT NULL CHECK (\"kind\" IN ('CREDIT','USAGE')),\"reference\" TEXT NOT NULL,\n        \"status\" TEXT NOT NULL CHECK (\"status\" IN ('CREDITED','RESERVED','SETTLED','REVIEW')),\n        \"creditedMicros\" BIGINT NOT NULL DEFAULT 0,\"reservedMicros\" BIGINT NOT NULL DEFAULT 0,\"chargedMicros\" BIGINT NOT NULL DEFAULT 0,\n        \"feature\" TEXT,\"tariff\" JSONB,\"usage\" JSONB,\"actorId\" TEXT,\"resolutionReference\" TEXT,\n        \"createdAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW(),\"settledAt\" TIMESTAMPTZ,\n        UNIQUE(\"kind\",\"reference\"),CHECK (\"creditedMicros\">=0 AND \"reservedMicros\">=0 AND \"chargedMicros\">=0 AND \"chargedMicros\"<=\"reservedMicros\"))",
+      "ddlSha256": "849afcaf81b194dda6609429790a9059c5f78cd83f8ef398af8fae262d8d579c"
+    },
+    {
+      "name": "AiOwnerWalletNotice",
+      "currentKnownTable": false,
+      "ddl": "CREATE TABLE IF NOT EXISTS \"AiOwnerWalletNotice\" (\n        \"id\" TEXT PRIMARY KEY,\"companyId\" TEXT NOT NULL REFERENCES \"AiOwnerWallet\"(\"companyId\"),\n        \"kind\" TEXT NOT NULL CHECK (\"kind\" IN ('CREDIT','LOW','EMPTY')),\"cycleId\" TEXT NOT NULL,\n        \"balanceMicros\" BIGINT NOT NULL,\"amountMicros\" BIGINT NOT NULL DEFAULT 0,\n        \"ownerId\" TEXT,\"email\" TEXT,\"emailStatus\" TEXT NOT NULL DEFAULT 'DISABLED',\n        \"createdAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW(),\"attemptedAt\" TIMESTAMPTZ,\"messageId\" TEXT,\n        UNIQUE(\"companyId\",\"kind\",\"cycleId\"))",
+      "ddlSha256": "559f7cfce9993244c6c15a5b88e5841654bb9437c8e2e596dfb20573ab77c243"
+    },
+    {
+      "name": "AiOwnerWalletAudit",
+      "currentKnownTable": false,
+      "ddl": "CREATE TABLE IF NOT EXISTS \"AiOwnerWalletAudit\" (\n        \"id\" TEXT PRIMARY KEY,\"companyId\" TEXT NOT NULL,\"actorId\" TEXT NOT NULL,\"event\" TEXT NOT NULL,\"detail\" JSONB NOT NULL,\"createdAt\" TIMESTAMPTZ NOT NULL DEFAULT NOW())",
+      "ddlSha256": "d6576b73257f5487de3ed568df7247312fae4fe41069bb57da1f3ba6ae1899de"
+    }
+  ],
+  "ownershipRequirements": [
+    "Company balance, credited funds, audit and notification history must survive store reset; no financial history deletion or inferred ownership from JSON/references",
+    "AiOwnerWalletEntry has nullable storeId for usage attribution; current executor requires explicit review of every storeId-bearing relation",
+    "Global company CREDIT entries have null storeId and must not be lost or copied into another company during archive/restore",
+    "Keep all existing manifest nodes, ownership selectors, FRESH_STORE protections, six automatic-report descriptors and existing accepted behaviors unchanged"
+  ],
+  "activationGate": [
+    "Retained canonical integration owner must review bounded wallet catalogue/schema/ownership and hazardous reference columns",
+    "Native complete catalogue, store/reset KEEP semantics, company isolation and exact copy/restore proof before promotion",
+    "Actual four-table schema/index/constraint oracle, no lifecycle job/lease/pending reopen, paired app/backup image/hash/pulse verification",
+    "No production wallet schema/configuration/funding/provider/email action by this review artifact; never bypass catalogue guards"
+  ],
+  "runtimeBlobs": {
+    "client/src/components/platform/AiOwnerWalletAdmin.jsx": "6160fce3c3ad4cba969eaba5ea89ebc0a1c846c9",
+    "client/src/components/voice/AiOwnerWallet.jsx": "33ddf03ca0f92c25061988d7bcc888ba882a0d1a",
+    "server/src/routes/ai-owner-wallet.js": "fae5a6d197a83f7b6f8f5c6d8470798f0e1c867e",
+    "server/src/services/ai-owner-wallet-repository.js": "2817b5b335a158eed64629193f0cb2c6a365f0ae"
+  },
+  "mainBuild": {
+    "run": 39968459198,
+    "buildJob": 120464914860,
+    "serverPass": 4154,
+    "backupPass": 8,
+    "failures": 0,
+    "skips": 0
+  },
+  "mainWholesaleFirstAttempt": {
+    "job": 120464915023,
+    "failure": "Chromium Target.createTarget startup timeout before application assertions",
+    "retryRequested": true,
+    "retryJob": 120473180557,
+    "retryConclusion": "SUCCESS",
+    "actualRoleBrowserOfflineAssertionsPassed": true
+  },
+  "combinedMainCI": {
+    "run": 39968969170,
+    "buildJob": 120468677166,
+    "revision": "c03afa2621694d648f2a84b2e7fa7621e3915c80",
+    "allJobsSuccess": 5,
+    "serverPass": 4156,
+    "backupPass": 8,
+    "failures": 0,
+    "skips": 0
+  },
+  "deployment": {
+    "run": 39970967266,
+    "job": 120473321060,
+    "expectedRevision": "c03afa2621694d648f2a84b2e7fa7621e3915c80",
+    "status": "SUCCESS",
+    "triggeredAtUTC": "2026-10-23T14:36:54Z",
+    "healthyExpectedAtUTC": "2026-10-23T14:38:56Z",
+    "independentHealth": {
+      "checkedAt": "2026-10-23T14:38:52.917381+00:00",
+      "httpStatus": 200,
+      "health": {
+        "ok": true,
+        "revision": "c03afa2621694d648f2a84b2e7fa7621e3915c80",
+        "version": "0.22.0+kat-test-pos"
+      }
+    }
+  },
+  "runtimeBlobsAtLiveRevisionEqualSource": true,
+  "actualTrialCreditApplied": false,
+  "productionWalletDDLApplied": false,
+  "productionWalletRuntimeEnabled": false
+}

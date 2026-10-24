@@ -150,6 +150,10 @@
     "ProductPriceHistory",
     "ProductSetItem",
     "ProductSubcategory",
+    "ProductionPrintJob",
+    "ProductionPrintRequest",
+    "ProductionPrintResolution",
+    "ProductionPrinter",
     "Promotion",
     "PromotionStore",
     "ProviderAttempt",
@@ -15981,6 +15985,174 @@
         "timestamp with time zone",
         true
       ]
+    ],
+    "ProductionPrinter": [
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "settings",
+        "jsonb",
+        true
+      ],
+      [
+        "tokenHash",
+        "text",
+        false
+      ],
+      [
+        "pairHash",
+        "text",
+        false
+      ],
+      [
+        "pairUntil",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "lifecycleGeneration",
+        "text",
+        true
+      ]
+    ],
+    "ProductionPrintRequest": [
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "requestId",
+        "text",
+        true
+      ],
+      [
+        "fingerprint",
+        "text",
+        true
+      ],
+      [
+        "batchId",
+        "text",
+        true
+      ],
+      [
+        "response",
+        "jsonb",
+        true
+      ]
+    ],
+    "ProductionPrintJob": [
+      [
+        "id",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "batchId",
+        "text",
+        true
+      ],
+      [
+        "ticket",
+        "jsonb",
+        true
+      ],
+      [
+        "status",
+        "text",
+        true
+      ],
+      [
+        "claimId",
+        "text",
+        false
+      ],
+      [
+        "claimedBy",
+        "text",
+        false
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "claimedAt",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "finishedAt",
+        "timestamp with time zone",
+        false
+      ]
+    ],
+    "ProductionPrintResolution": [
+      [
+        "jobId",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "actorId",
+        "text",
+        true
+      ],
+      [
+        "reason",
+        "text",
+        true
+      ],
+      [
+        "status",
+        "text",
+        true
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ]
     ]
   },
   "reviewedColumns": [
@@ -16212,6 +16384,18 @@
     "ProductBarcodePriceRequest.productId",
     "ProductSetItem.productId",
     "ProductSetItem.relatedProductId",
+    "ProductionPrintJob.batchId",
+    "ProductionPrintJob.claimId",
+    "ProductionPrintJob.claimedBy",
+    "ProductionPrintJob.ticket",
+    "ProductionPrintRequest.batchId",
+    "ProductionPrintRequest.requestId",
+    "ProductionPrintRequest.response",
+    "ProductionPrintResolution.actorId",
+    "ProductionPrintResolution.jobId",
+    "ProductionPrinter.pairHash",
+    "ProductionPrinter.settings",
+    "ProductionPrinter.tokenHash",
     "ProviderAttempt.createdByUserId",
     "ProviderAttempt.responseJson",
     "ProviderOutbox.aggregateId",
@@ -19118,6 +19302,70 @@
         "kind": "DIRECT"
       },
       "reset": "REMOVE"
+    },
+    {
+      "name": "ProductionPrinter",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE"
+    },
+    {
+      "name": "ProductionPrintRequest",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE",
+      "references": [
+        {
+          "parent": "StorePreparationBatch",
+          "columns": [
+            [
+              "batchId",
+              "id"
+            ]
+          ],
+          "historical": true
+        }
+      ]
+    },
+    {
+      "name": "ProductionPrintJob",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE",
+      "references": [
+        {
+          "parent": "StorePreparationBatch",
+          "columns": [
+            [
+              "batchId",
+              "id"
+            ]
+          ],
+          "historical": true
+        }
+      ]
+    },
+    {
+      "name": "ProductionPrintResolution",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE",
+      "references": [
+        {
+          "parent": "ProductionPrintJob",
+          "columns": [
+            [
+              "jobId",
+              "id"
+            ]
+          ],
+          "historical": true
+        }
+      ]
     }
   ]
 }

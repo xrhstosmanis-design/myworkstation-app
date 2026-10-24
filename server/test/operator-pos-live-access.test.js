@@ -16,7 +16,7 @@ test('actual mounted POS applies live cart guards and opens the existing barcode
  const product={id:'p',name:'CONTROL',sku:'CONTROL-SKU',salePrice:2,currentStock:20,barcodes:[]};
  const calls=[],denied={confirmDeleteSale:false,deleteSaleReason:false,customerCardOnly:false,onlineBarcode:false,editPosButtons:false};
  let rejectCancel=false,pendingCancel=null,rejectPrice=false,pendingPrice=null;
- const api=async(path,options={})=>{calls.push({path,options});
+ const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/ftext-cash/capability'))return {storeId:path.split('/')[4],configured:false};
   if(path.endsWith("/audit")&&JSON.parse(options.body||"{}").actionType==="PRICE_CHANGE"){if(rejectPrice)throw Error("PRICE_PERMISSION_REVOKED");if(pendingPrice)await pendingPrice;}
   if(path.endsWith("/audit")&&JSON.parse(options.body||"{}").actionType==="CART_CANCEL"){if(rejectCancel)throw Error("AUDIT_REJECTED");if(pendingCancel)await pendingCancel;}
   if(path==='/api/store-pos/stores/A')return {products:[product],access:{...denied,onlineProductSearch:false},layout:{quickKeys:[{id:'quick',visible:true,label:'CONTROL',productQuery:'CONTROL-SKU'}],categories:[]}};

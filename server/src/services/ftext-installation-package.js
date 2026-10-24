@@ -5,7 +5,7 @@ export async function buildFtextInstallationPackage({store,settings,apiBase,revi
  if(url.protocol!=='https:'||url.username||url.password||url.pathname!=='/'||url.search||url.hash)throw new Error('Απαιτείται η επίσημη HTTPS διεύθυνση εφαρμογής.');
  if(!settings||settings.companyId!==store.companyId||settings.storeId!==store.id)throw new Error('Οι ρυθμίσεις δεν αντιστοιχούν στο επιλεγμένο κατάστημα.');
  const settingsHash=ftextSettingsHash(settings),root=new URL('../../../tools/windows-ftext/',import.meta.url);
- const names=['Ftext.psm1','Cloud-Tools.psm1','Pair.ps1','Cloud-Test.ps1','Cloud-Connector.ps1','Setup.ps1'];
+ const names=['Ftext.psm1','Cloud-Tools.psm1','Pair.ps1','Cloud-Test.ps1','Cloud-Connector.ps1','Setup.ps1','Cash.psm1'];
  const files=Object.fromEntries(await Promise.all(names.map(async name=>[name,(await readFile(new URL(name,root))).toString('base64')])));
  const config={...settings,settingsHash,apiBase:url.origin,storeName:store.name,revision};
  const template=await readFile(new URL('Install.template.cmd',root),'utf8');

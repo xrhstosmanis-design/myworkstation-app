@@ -125,6 +125,39 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     // exactly as in production. A text-only fixture cannot exercise this read.
     assert.equal((await db.user.findMany({where:{companyId:'c',role:'OWNER',mustChangePassword:false},select:{id:true}})).length,1);
     const adminRead=await request('/platform/companies/c','admin');assert.equal(adminRead.status,200,JSON.stringify(adminRead.body));
+    // Internal trial funding never claims a customer receipt. Separate company
+    // controls protect all existing fixture counts and real business rows.
+    await db.$executeRaw`INSERT INTO "Company" VALUES('trial','Synthetic internal trial',true)`;
+    await db.$executeRaw`INSERT INTO "Store" VALUES('trial-store','Synthetic trial store','trial',true)`;
+    const grant={amountMicros:'5000000',grantReference:'synthetic-trial-grant',reason:'Synthetic approved internal trial'};
+    const granted=await Promise.all([repository.grantTrial('trial',grant,'admin'),repository.grantTrial('trial',grant,'admin')]);
+    assert.equal(granted[0].id,granted[1].id);assert.equal(granted.filter(r=>r.replayed).length,1);
+    const trialBefore=await repository.read('trial','trial-store');assert.equal(trialBefore.balanceMicros,'5000000');assert.equal(trialBefore.enabled,false);assert.equal(trialBefore.entries.length,1);assert.equal(trialBefore.entries[0].feature,'TRIAL_GRANT');assert.equal(trialBefore.notices.length,1);assert.equal(trialBefore.usageSummary.allTimeMicros,'0');
+    const audit=(await db.$queryRaw`SELECT * FROM "AiOwnerWalletAudit" WHERE "companyId"='trial' AND "event"='TRIAL_GRANTED'`);assert.equal(audit.length,1);assert.equal(audit[0].actorId,'admin');assert.equal(audit[0].detail.amountMicros,'5000000');assert.equal(audit[0].detail.fundingType,'TRIAL_GRANT');assert.equal(audit[0].detail.receiptConfirmed,undefined);
+    for(const input of [{...grant,amountMicros:'4000000'},{...grant,reason:'Different approved internal reason'}])await assert.rejects(repository.grantTrial('trial',input,'admin'),e=>e.code==='AI_WALLET_TRIAL_CONFLICT');
+    await assert.rejects(repository.grantTrial('x',grant,'admin'),e=>e.code==='AI_WALLET_TRIAL_CONFLICT');
+    await assert.rejects(repository.credit('trial',{amountMicros:'5000000',receiptReference:'TRIAL/SYNTHETIC-TRIAL-GRANT'},'admin'),e=>e.code==='AI_WALLET_RESERVED_REFERENCE');
+    await assert.rejects(repository.grantTrial('trial',{...grant,grantReference:'invalid-zero',amountMicros:'0'},'admin'));
+    // Inject at the last notice write: entry, balance and audit must all roll back.
+    const noticeFailDb=new Proxy(db,{get(t,k){if(k==='$transaction')return fn=>t.$transaction(tx=>fn(new Proxy(tx,{get(a,b){if(b==='$executeRaw')return (ss,...v)=>{if(ss.join('').includes('INSERT INTO "AiOwnerWalletNotice"'))throw Error('synthetic notice rollback');return a.$executeRaw(ss,...v)};const x=a[b];return typeof x==='function'?x.bind(a):x}})));const x=t[k];return typeof x==='function'?x.bind(t):x}});
+    await assert.rejects(createAiOwnerWalletRepository(noticeFailDb).grantTrial('trial',{...grant,grantReference:'rollback-trial'},'admin'),/synthetic notice rollback/);
+    const trialAfterRollback=await repository.read('trial');assert.equal(trialAfterRollback.balanceMicros,trialBefore.balanceMicros);assert.equal(trialAfterRollback.version,trialBefore.version);assert.equal(trialAfterRollback.entries.length,1);assert.equal(trialAfterRollback.notices.length,1);assert.equal((await db.$queryRaw`SELECT "id" FROM "AiOwnerWalletAudit" WHERE "companyId"='trial'`).length,1);
+    await repository.configure('trial',{version:trialAfterRollback.version,enabled:true,emailEnabled:false,notificationOwnerId:''},'admin');
+    const pendingTrial=await repository.reserve({companyId:'trial',storeId:'trial-store',feature:'OWNER_ASSISTANT',amountMicros:'10',reference:'trial-pre-disable',tariff:{model:'synthetic'}});
+    const activeTrial=await repository.read('trial');await repository.configure('trial',{version:activeTrial.version,enabled:false,emailEnabled:false,notificationOwnerId:''},'admin');
+    let platformCalls=0;const offProvider=createWalletProvider({repository,enabled:()=>true,tariffs:()=>{throw Error('OFF must not need tariffs')}}),offSettings={model:'unchanged-platform-model',input:'not retained'};
+    assert.equal(await offProvider({companyId:'trial',storeId:'trial-store'},offSettings,async settings=>{assert.equal(settings,offSettings);platformCalls++;return 'original-result'}),'original-result');assert.equal(platformCalls,1);
+    const offTrial=await repository.read('trial');assert.equal(offTrial.balanceMicros,'5000000');assert.equal(offTrial.reservedMicros,'10');assert.equal(offTrial.entries.length,2);
+    await repository.settle('trial',pendingTrial.id,{amountMicros:'8',usage:{synthetic:true}});assert.equal((await repository.read('trial')).balanceMicros,'4999992');assert.equal((await repository.read('trial')).reservedMicros,'0');
+    await assert.rejects(repository.configure('trial',{version:activeTrial.version,enabled:true,emailEnabled:false,notificationOwnerId:''},'admin'),e=>e.code==='AI_WALLET_CHANGED');
+    const trialRequest={...grant,grantReference:'synthetic-http-trial',trialConfirmed:true};
+    for(const actor of ['owner','employee'])assert.equal((await request('/platform/companies/trial/trial-grants',actor,'POST',trialRequest)).status,403);
+    assert.equal((await request('/platform/companies/trial/trial-grants','admin','POST',{...trialRequest,trialConfirmed:false})).status,400);
+    assert.equal((await request('/platform/companies/trial/trial-grants','admin','POST',{...trialRequest,receiptConfirmed:true})).status,400);
+    assert.equal((await request('/platform/companies/missing/trial-grants','admin','POST',trialRequest)).status,404);
+    const httpGrant=await request('/platform/companies/trial/trial-grants','admin','POST',trialRequest);assert.equal(httpGrant.status,200,JSON.stringify(httpGrant.body));
+    assert.equal((await request('/platform/companies/trial/trial-grants','admin','POST',trialRequest)).body.id,httpGrant.body.id);
+    await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NOW() WHERE "id"='admin-session'`;assert.equal((await request('/platform/companies/trial/trial-grants','admin','POST',{...trialRequest,grantReference:'revoked-trial'})).status,401);await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NULL WHERE "id"='admin-session'`;
     assert.equal((await request('/platform/companies/c/credits','owner','POST',{amountMicros:'10000',receiptReference:'forbidden',receiptConfirmed:true})).status,403);
     assert.equal((await request('/platform/companies/c/credits','admin','POST',{amountMicros:'10000',receiptReference:'unconfirmed',receiptConfirmed:false})).status,400);
     await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NOW() WHERE "id"='owner-session'`;assert.equal((await request('/stores/s')).status,401);

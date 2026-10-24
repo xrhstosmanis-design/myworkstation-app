@@ -1,3 +1,4 @@
+import {saveOnlineVisibility} from "../online-catalog-visibility.js";
 import {saveStoreMetadata} from '../services/store-metadata-mutation.js';
 import {assistantHistoryTurnMetadata} from '../services/assistant-history-turns.js';
 import {createNativeAssistantHistory,createAssistantHistoryHttp} from '../services/assistant-history-http.js';
@@ -1134,7 +1135,7 @@ router.get("/companies/:companyId/stores/:storeId/online-store",async(req,res,ne
     const config=configs[0]||{enabled:false,publicSlug:"",surchargeType:"FIXED",surchargeValue:0,stockCheckEnabled:false,autoStockCatalogEnabled:false,pickupEnabled:true,deliveryEnabled:true,deliveryFee:0,minimumOrderRetail:0,doctorDiscountPercent:0,nurseDiscountPercent:0,staffDiscountPercent:0,cashEnabled:true,cardOnDeliveryEnabled:true,timezone:"Europe/Athens",weeklyHours:{},brandName:store.name,brandTagline:"Online Παραγγελίες",brandLogoUrl:"",brandPrimaryColor:"#7b1216",brandSecondaryColor:"#5d0c0f",brandWelcomeMessage:"Γρήγορα, εύκολα, όποτε θέλεις!",estimatedMinutes:25};
     config.brandName=config.brandName||store.name;config.brandTagline=config.brandTagline||"Online Παραγγελίες";config.brandLogoUrl=config.brandLogoUrl||"";config.brandPrimaryColor=config.brandPrimaryColor||"#7b1216";config.brandSecondaryColor=config.brandSecondaryColor||"#5d0c0f";config.brandWelcomeMessage=config.brandWelcomeMessage||"Γρήγορα, εύκολα, όποτε θέλεις!";config.estimatedMinutes=Number(config.estimatedMinutes||25);
     const products=await prisma.$queryRaw`
-      SELECT CASE WHEN EXISTS(SELECT 1 FROM "StoreBakedBalance" bs WHERE bs."companyId"=p."companyId" AND bs."storeId"=sp."storeId" AND bs."productId"=p."id" AND bs."enabled"=TRUE) THEN 'BAKED_SAME' ELSE bp."mode" END AS "availabilityMode",bp."sourceProductId",p."id",p."sku",p."name",c."name" AS "categoryName",COALESCE(sp."salePrice",p."salePrice") AS "storePrice",COALESCE(v."visible",false) AS "visible",COALESCE((SELECT bs."bakedQuantity" FROM "StoreBakedBalance" bs WHERE bs."companyId"=p."companyId" AND bs."storeId"=sp."storeId" AND bs."productId"=p."id" AND bs."enabled"=TRUE),sp."currentStock",0) AS "currentStock"
+      SELECT CASE WHEN EXISTS(SELECT 1 FROM "StoreBakedBalance" bs WHERE bs."companyId"=p."companyId" AND bs."storeId"=sp."storeId" AND bs."productId"=p."id" AND bs."enabled"=TRUE) THEN 'BAKED_SAME' ELSE bp."mode" END AS "availabilityMode",bp."sourceProductId",p."id",p."sku",p."name",c."name" AS "categoryName",COALESCE(sp."salePrice",p."salePrice") AS "storePrice",COALESCE(v."visible",false) AS "visible",v."visible" AS "visibilityOverride",COALESCE((SELECT bs."bakedQuantity" FROM "StoreBakedBalance" bs WHERE bs."companyId"=p."companyId" AND bs."storeId"=sp."storeId" AND bs."productId"=p."id" AND bs."enabled"=TRUE),sp."currentStock",0) AS "currentStock"
       FROM "StoreProduct" sp JOIN "Product" p ON p."id"=sp."productId" AND p."companyId"=${req.params.companyId}
       LEFT JOIN "StoreBakingPolicy" bp ON bp."storeId"=sp."storeId" AND bp."productId"=p."id" AND bp."companyId"=p."companyId"
       LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" AND c."companyId"=${req.params.companyId}
@@ -1165,6 +1166,12 @@ router.put("/companies/:companyId/stores/:storeId/online-store/products/:product
  const policy=await prisma.$transaction(tx=>saveBakingPolicy(tx,{companyId:req.params.companyId,storeId:store.id,productId:req.params.productId,actorId:req.user.id,body:req.body}));
  res.json({ok:true,policy});
 }catch(e){if(e?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τον κανόνα διαθεσιμότητας και το άψητο είδος."});next(e)}});
+
+router.put("/companies/:companyId/stores/:storeId/online-store/products/:productId/visibility",async(req,res,next)=>{try{
+ const store=await onlineStoreContext(req.params.companyId,req.params.storeId);
+ const product=await prisma.$transaction(tx=>saveOnlineVisibility(tx,{companyId:req.params.companyId,storeId:store.id,productId:req.params.productId,body:req.body,actor:req.user,storeName:store.name,userAgent:req.headers["user-agent"],ipAddress:req.ip}));
+ res.json({ok:true,product});
+}catch(e){if(e?.name==="ZodError")return res.status(400).json({error:"Επιλέξτε αυτόματα, εμφάνιση ή απόκρυψη."});next(e)}});
 
 router.put("/companies/:companyId/stores/:storeId/online-store/products",async(req,res,next)=>{
   try{
