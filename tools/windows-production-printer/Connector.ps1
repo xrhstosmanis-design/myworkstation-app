@@ -19,12 +19,12 @@ if($Pair -or !(Test-Path $Credential)){
  $label=New-Object Windows.Forms.Label
  $label.Text='Αντέγραψε τον κωδικό ζεύξης από το POS και πάτησε Επικόλληση.'
  $label.SetBounds(20,20,570,45)
- $input=New-Object Windows.Forms.TextBox
- $input.SetBounds(20,80,550,35)
- $input.UseSystemPasswordChar=$true
+ $pairingTextBox=New-Object Windows.Forms.TextBox
+ $pairingTextBox.SetBounds(20,80,550,35)
+ $pairingTextBox.UseSystemPasswordChar=$true
  $paste=New-Object Windows.Forms.Button
  $paste.Text='Επικόλληση';$paste.SetBounds(20,130,170,45)
- $paste.Add_Click({try{$input.Text=[Windows.Forms.Clipboard]::GetText()}catch{[Windows.Forms.MessageBox]::Show('Δεν ήταν δυνατή η επικόλληση.')}})
+ $paste.Add_Click({try{$pairingTextBox.Text=[Windows.Forms.Clipboard]::GetText()}catch{[Windows.Forms.MessageBox]::Show('Δεν ήταν δυνατή η επικόλληση.')}})
  $connect=New-Object Windows.Forms.Button
  $connect.Text='Σύνδεση';$connect.SetBounds(210,130,170,45)
  $status=New-Object Windows.Forms.Label
@@ -33,16 +33,16 @@ if($Pair -or !(Test-Path $Credential)){
  $connect.Add_Click({
   $connect.Enabled=$false
   try{
-   $code=$input.Text.Trim()
+   $code=$pairingTextBox.Text.Trim()
    if($code -notmatch '^[a-f0-9]{48}$'){throw 'Invalid pairing code'}
    $response=Invoke-RestMethod -Uri "$Base/api/production-printers/pair" -Method Post -ContentType 'application/json' -Body (@{code=$code}|ConvertTo-Json) -TimeoutSec 20
    $secret=ConvertTo-SecureString $response.token -AsPlainText -Force
    $secret | Export-Clixml $Credential
-   $input.Clear();$state.Paired=$true;$form.Close()
+   $pairingTextBox.Clear();$state.Paired=$true;$form.Close()
   }catch{$status.Text='Η σύνδεση δεν ολοκληρώθηκε. Έλεγξε τον κωδικό ή δημιούργησε νέο από το POS.'}
   finally{$connect.Enabled=$true}
  })
- $form.Controls.AddRange(@($label,$input,$paste,$connect,$status))
+ $form.Controls.AddRange(@($label,$pairingTextBox,$paste,$connect,$status))
  $null=$form.ShowDialog();$form.Dispose()
  if(!$state.Paired){exit}
  Write-Host 'Paired. This one connector serves both POS. Keep this window running.'
