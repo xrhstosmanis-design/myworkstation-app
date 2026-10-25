@@ -13,7 +13,7 @@ try {
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     $files=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('__FILES_BASE64__')) | ConvertFrom-Json
     foreach($file in $files.PSObject.Properties) {
-        if($file.Name -notin @('Ftext.psm1','Cloud-Tools.psm1','Pair.ps1','Cloud-Test.ps1','Cloud-Connector.ps1','Setup.ps1')) { throw 'Unexpected package file.' }
+        if($file.Name -notin @('Ftext.psm1','Cloud-Tools.psm1','Pair.ps1','Cloud-Test.ps1','Cloud-Connector.ps1','Setup.ps1','Cash.psm1')) { throw 'Unexpected package file.' }
         [IO.File]::WriteAllBytes((Join-Path $directory $file.Name),[Convert]::FromBase64String([string]$file.Value))
     }
     [IO.File]::WriteAllText((Join-Path $directory 'config.json'),$configJson,(New-Object Text.UTF8Encoding($false)))

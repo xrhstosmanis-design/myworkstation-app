@@ -32,6 +32,8 @@ test('ftext package round-trips names as data, pins selected scope and contains 
  const blocks=[...p.script.matchAll(/FromBase64String\('([^']+)'\)/g)].map(m=>JSON.parse(Buffer.from(m[1],'base64').toString('utf8')));
  assert.equal(blocks[0].storeName,store.name);assert.equal(blocks[0].settingsHash,ftextSettingsHash(config));assert.equal(blocks[0].terminalPos,'POS-01');assert.equal(blocks[0].apiBase,'https://unit.test');assert.equal(p.containsCredentials,false);assert.equal(p.startsConnectorAutomatically,false);assert.equal(p.fiscalCheckoutEnabled,false);assert.ok(!p.script.includes(store.name));
  assert.deepEqual(Object.keys(blocks[1]).sort(),['Ftext.psm1','Cloud-Tools.psm1','Pair.ps1','Cloud-Test.ps1','Cloud-Connector.ps1','Setup.ps1','Cash.psm1'].sort());
+ const guard=p.script.match(/if\(\$file\.Name -notin @\(([^)]*)\)\)/);assert.ok(guard,'installer must retain a file allowlist');
+ const accepted=[...guard[1].matchAll(/'([^']+)'/g)].map(m=>m[1]);assert.deepEqual(accepted.sort(),Object.keys(blocks[1]).sort(),'every bundled module must pass the extraction guard');
  const status=Buffer.from(blocks[1]['Ftext.psm1'],'base64').toString('utf8');assert.match(status,/STATUS/);assert.doesNotMatch(status,/PAY\||PRG_SET|VOID_DOCUMENT/);
  for(const apiBase of ['http://unit.test','https://user:pass@unit.test','https://unit.test/path','https://unit.test/?query=1'])await assert.rejects(buildFtextInstallationPackage({store,settings:config,apiBase}));
  await assert.rejects(buildFtextInstallationPackage({store:{...store,id:'foreign'},settings:config,apiBase:'https://unit.test'}));
