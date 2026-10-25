@@ -1,3 +1,4 @@
+import {ftextVoidConfirmed} from './ftext-void.js';
 import {validateFtextCardPayment} from './ftext-card-payment.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -5,7 +6,7 @@ import {prepareFtextSalePlan} from './ftext-sale-plan.js';
 import {ftextSettingsHash} from './ftext-installation.js';
 const fail=(code,message)=>{throw Object.assign(new Error(message),{status:409,code})};
 const hash=s=>createHash('sha256').update(s).digest('hex');
-export function ftextCashRequestView(row){return row?{id:row.id,kind:'FTEXT_CASH',storeId:row.storeId,terminalPos:row.terminalPos,clientTransactionId:row.clientTransactionId,paymentMethod:row.checkoutJson?.paymentMethod||'CASH',total:Number(row.total),status:row.status,saleId:row.saleId||null,checkout:row.checkoutJson,createdAt:row.createdAt}:null;}
+export function ftextCashRequestView(row){return row?{id:row.id,kind:'FTEXT_CASH',storeId:row.storeId,terminalPos:row.terminalPos,clientTransactionId:row.clientTransactionId,paymentMethod:row.checkoutJson?.paymentMethod||'CASH',total:Number(row.total),status:ftextVoidConfirmed(row)?'CANCELLED':row.status,voidStatus:row.checkoutJson?.ftextVoid?.status||null,saleId:row.saleId||null,checkout:row.checkoutJson,createdAt:row.createdAt}:null;}
 export function assertFtextSimpleCash(checkout,items){
  if(checkout.paymentMethod!=='CASH'||checkout.customerId||checkout.onlineOrderId||checkout.tableOrderId||Number(checkout.redeemPoints||0)!==0||checkout.payments?.length||!['COUNTER',undefined].includes(checkout.operationChannel)||!['NORMAL',undefined].includes(checkout.audience)||items.some(i=>Number(i.discount||0)!==0||i.promotionId||i.promotionType||!Number.isSafeInteger(Number(i.quantity))||Number(i.quantity)<=0))fail('FTEXT_CASH_UNSUPPORTED','Η πρώτη έκδοση ftext υποστηρίζει απλή πώληση μετρητών στο κατάστημα, χωρίς πελάτη, προσφορά ή έκπτωση.');
 }
@@ -24,7 +25,7 @@ export async function prepareFtextCashRequest(tx,{settings,scope,sessionId,clien
  await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${['ftext-cash',scope.companyId,scope.storeId,settings.serialNumber].join(':')},0))`;
  const old=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "clientTransactionId"=${clientTransactionId} FOR UPDATE`)[0];
  if(old){if(old.requestHash!==requestHash||old.plan.planHash!==plan.planHash||old.settingsHash!==settingsHash||old.sessionId!==sessionId)fail('FTEXT_CASH_KEY_CHANGED','Η ίδια συναλλαγή έχει διαφορετικά στοιχεία. Η προηγούμενη εντολή διατηρήθηκε.');return old;}
- if((await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "serialNumber"=${settings.serialNumber} AND "status"<>'SALE_COMMITTED' LIMIT 1`).length)fail('FTEXT_CASH_PENDING','Υπάρχει εκκρεμής εντολή σε αυτή την ταμειακή. Δεν στάλθηκε νέα.');
+ if((await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "serialNumber"=${settings.serialNumber} AND "status"<>'SALE_COMMITTED' AND COALESCE("checkoutJson"->'ftextVoid'->>'status','')<>'CONFIRMED' LIMIT 1`).length)fail('FTEXT_CASH_PENDING','Υπάρχει εκκρεμής εντολή σε αυτή την ταμειακή. Δεν στάλθηκε νέα.');
  return (await tx.$queryRaw`INSERT INTO "FtextCashRequest" ("id","companyId","storeId","terminalPos","fiscalDeviceCode","serialNumber","clientTransactionId","requestHash","settingsHash","lifecycleGeneration","sessionId","plan","checkoutJson","total") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${scope.terminalPos},${scope.fiscalDeviceCode},${settings.serialNumber},${clientTransactionId},${requestHash},${settingsHash},${settings.lifecycleGeneration},${sessionId},${JSON.stringify(plan)}::jsonb,${JSON.stringify({...checkout,resolvedItems:items,baseSummary:summary})}::jsonb,${summary.total}) RETURNING *`)[0];
 }
 export async function claimFtextCashRequest(tx,device,settings){
@@ -36,7 +37,7 @@ export async function claimFtextCashRequest(tx,device,settings){
  // This committed transition is a one-shot dispatch, not a renewable lease.
  return updated?{id:updated.id,settingsHash:updated.settingsHash,scope:updated.plan.scope,serialNumber:updated.serialNumber,plan:updated.plan}:null;
 }
-const resultSchema=z.object({requestId:z.string().uuid(),settingsHash:z.string().regex(/^[a-f0-9]{64}$/),outcome:z.enum(['CONFIRMED','REQUIRES_CHECK']),code:z.number().int().min(0).max(999).optional(),serialNumber:z.string().max(80).optional(),dayId:z.string().regex(/^\d{1,20}$/).optional(),dayCounter:z.string().regex(/^\d{1,20}$/).optional(),deviceTime:z.string().min(1).max(80).optional(),qr:z.string().max(2000).optional(),rawResultHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),description:z.string().max(300).optional(),posPayments:z.array(z.object({cardType:z.string().max(60),amount:z.string().max(12),cardNumberMasked:z.string().max(19)}).strict()).max(1).optional()}).strict();
+const resultSchema=z.object({requestId:z.string().uuid(),settingsHash:z.string().regex(/^[a-f0-9]{64}$/),outcome:z.enum(['CONFIRMED','REQUIRES_CHECK']),code:z.number().int().min(0).max(999).optional(),serialNumber:z.string().max(80).optional(),dayId:z.string().regex(/^\d{1,20}$/).optional(),dayCounter:z.string().regex(/^\d{1,20}$/).optional(),deviceTime:z.string().min(1).max(80).optional(),qr:z.string().max(2000).optional(),rawResultHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),description:z.string().max(300).optional(),failedCommand:z.string().regex(/^PAY\|(?:[0-9]{1,9}\.[0-9]{2})?\|(?:[2-9]|[12][0-9]|30)$/).optional(),posPayments:z.array(z.object({cardType:z.string().max(60),amount:z.string().max(12),cardNumberMasked:z.string().max(19)}).strict()).max(1).optional()}).strict();
 export function validateFtextCashResult(input,row){
  const r=resultSchema.parse(input);
  if(r.requestId!==row.id||r.settingsHash!==row.settingsHash)fail('FTEXT_CASH_RESULT_SCOPE','Το αποτέλεσμα ανήκει σε άλλη εντολή.');

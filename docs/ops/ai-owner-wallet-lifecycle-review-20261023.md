@@ -1,6 +1,6 @@
 # AI wallet activation — bounded lifecycle catalogue review
 
-Status: REVIEW REQUIRED / NOT ACTIVATED. Retained wallet owner feat/ai-owner-wallet-20261022; existing central lifecycle integration owner and six automatic-dispatch table scope remain untouched. This document is a review packet, not an executable manifest, DDL command or authority to delete financial records.
+Historical review packet23Oct2026. SUPERSEDED25Oct2026: bounded catalogue/retention integration is green merged and technically installed; charging/trial remain OFF/NOT APPLIED. Current evidence: CHECKPOINTS/EVIDENCE/ai-owner-wallet-20261022/recovery-technical-receipt.json and CHECKPOINTS/CHANGES/2026-10-24-ai-wallet-recovery.md. The observed missing-catalogue prerequisite below describes the original23Oct state, not the current installed schema. Retained wallet owner feat/ai-owner-wallet-20261022; existing central lifecycle integration owner and six automatic-dispatch table scope remain untouched. This document is a review packet, not an executable manifest, DDL command or authority to delete financial records.
 
 ## Observed prerequisite
 

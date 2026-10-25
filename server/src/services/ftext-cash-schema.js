@@ -36,8 +36,8 @@ export async function provisionFtextRecoverySchema(db,{manifest=reviewedFreshSto
   if(JSON.stringify(actual.map(c=>[c.name,c.type,c.required]))!==JSON.stringify(columns))throw Object.assign(new Error('Ftext recovery schema differs from reviewed catalogue.'),{code:'FTEXT_RECOVERY_SCHEMA_CHANGED'});
   const indexes=await tx.$queryRawUnsafe(`SELECT i.indisunique AS "unique",i.indisvalid AS "valid",i.indisready AS "ready",i.indimmediate AS "immediate",i.indisprimary AS "primary",ARRAY(SELECT a.attname::text FROM unnest(i.indkey) WITH ORDINALITY k(n,p) LEFT JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.n ORDER BY k.p) AS "columns",pg_get_expr(i.indpred,i.indrelid) AS "predicate",pg_get_expr(i.indexprs,i.indrelid) AS "expressions" FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=current_schema() AND c.relname='FtextCashRequest'`);
   const normalized=value=>String(value||'').replace(/[\s()"]/g,'');
-  const has=(names,predicate='',expressions='',primary=false)=>indexes.some(i=>i.unique&&i.valid&&i.ready&&i.immediate&&(!primary||i.primary)&&JSON.stringify(i.columns)===JSON.stringify(names)&&normalized(i.predicate)===predicate&&normalized(i.expressions)===expressions);
-  if(!has(['id'],'','',true)||!has(['companyId','storeId','clientTransactionId'])||!has(['companyId','storeId','serialNumber'],"status<>'SALE_COMMITTED'::text")||!has(['companyId','storeId','serialNumber',null,null],"status=ANYARRAY['CONFIRMED'::text,'SALE_COMMITTED'::text]","result->>'dayId'::text,result->>'dayCounter'::text"))throw Object.assign(new Error('Ftext immutable identity/index contract differs.'),{code:'FTEXT_RECOVERY_SCHEMA_CHANGED'});
+  const has=(names,predicate='',expressions='',primary=false)=>indexes.some(i=>i.unique&&i.valid&&i.ready&&i.immediate&&(!primary||i.primary)&&JSON.stringify(i.columns)===JSON.stringify(names)&&normalized(i.predicate)===normalized(predicate)&&normalized(i.expressions)===normalized(expressions));
+  if(!has(['id'],'','',true)||!has(['companyId','storeId','clientTransactionId'])||!has(['companyId','storeId','serialNumber'],"status<>'SALE_COMMITTED'::textANDCOALESCE(checkoutJson->'ftextVoid'::text->>'status'::text,''::text)<>'CONFIRMED'::text")||!has(['companyId','storeId','serialNumber',null,null],"status=ANYARRAY['CONFIRMED'::text,'SALE_COMMITTED'::text]","result->>'dayId'::text,result->>'dayCounter'::text"))throw Object.assign(new Error('Ftext immutable identity/index contract differs.'),{code:'FTEXT_RECOVERY_SCHEMA_CHANGED'});
   return {available:true,checkoutEnabled:false};
  },{maxWait:5000,timeout:30000});
 }
@@ -53,7 +53,15 @@ async function createReviewedFtextCashSchema(db){
  "result" JSONB,"resultHash" TEXT,"saleId" TEXT,
  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  UNIQUE("companyId","storeId","clientTransactionId"))`);
- await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "FtextCashRequest_register_pending_idx" ON "FtextCashRequest" ("companyId","storeId","serialNumber") WHERE "status" <> 'SALE_COMMITTED'`);
+ // Upgrade only the exact known v1 pending index, under the same startup/setup transaction.
+ await db.$queryRawUnsafe("SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended('mws:ftext-pending-index-v2',0))");
+ const old=(await db.$queryRawUnsafe(`SELECT i.indisunique AS "unique",i.indisvalid AS "valid",i.indisready AS "ready",pg_get_expr(i.indpred,i.indrelid) AS predicate,ARRAY(SELECT a.attname::text FROM unnest(i.indkey) WITH ORDINALITY k(n,p) LEFT JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.n ORDER BY k.p) AS "columns" FROM pg_index i JOIN pg_class ix ON ix.oid=i.indexrelid JOIN pg_namespace n ON n.oid=ix.relnamespace WHERE n.nspname=current_schema() AND ix.relname='FtextCashRequest_register_pending_idx'`))[0];
+ const normalize=x=>String(x||'').replace(/[\s()"]/g,'');
+ if(old?.unique&&old.valid&&old.ready&&JSON.stringify(old.columns)===JSON.stringify(['companyId','storeId','serialNumber'])&&normalize(old.predicate)==="status<>'SALE_COMMITTED'::text"){
+  await db.$executeRawUnsafe(`LOCK TABLE "FtextCashRequest" IN SHARE ROW EXCLUSIVE MODE`);
+  await db.$executeRawUnsafe(`DROP INDEX "FtextCashRequest_register_pending_idx"`);
+ }
+ await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "FtextCashRequest_register_pending_idx" ON "FtextCashRequest" ("companyId","storeId","serialNumber") WHERE "status" <> 'SALE_COMMITTED' AND COALESCE("checkoutJson"->'ftextVoid'->>'status','') <> 'CONFIRMED'`);
  await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "FtextCashRequest_receipt_idx" ON "FtextCashRequest" ("companyId","storeId","serialNumber",("result"->>'dayId'),("result"->>'dayCounter')) WHERE "status" IN ('CONFIRMED','SALE_COMMITTED')`);
 }
 export async function ftextCashTableExists(db){return Boolean((await db.$queryRaw`SELECT to_regclass(format('%I.%I',current_schema(),'FtextCashRequest'))::text AS name`)[0]?.name);}

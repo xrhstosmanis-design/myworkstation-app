@@ -17,10 +17,11 @@ try {
         if($cashEnabled) {
             # Recover durable local result first. Neither a network retry nor restart republishes a fiscal file.
             $pending=Get-FtextCashPending $c
-            $request=if($pending) {$pending.request} else {(Invoke-FtextCashApi $c 'cash-poll' @{}).request}
+            $request=if($pending) {$pending.request} else {$voidRequest=(Invoke-FtextCashApi $c 'void-poll' @{}).request;if($voidRequest){$voidRequest}else{(Invoke-FtextCashApi $c 'cash-poll' @{}).request}}
             if($request) {
                 $report=Invoke-FtextCashRequest -ConfigPath $ConfigPath -Request $request
-                $ack=Invoke-FtextCashApi $c 'cash-result' $report
+                $endpoint=if($request.PSObject.Properties['kind'] -and [string]$request.kind -ceq 'FTEXT_VOID') {'void-result'} else {'cash-result'}
+                $ack=Invoke-FtextCashApi $c $endpoint $report
                 if($ack.ok -ne $true -or $ack.status -notin @('CONFIRMED','REQUIRES_CHECK','SALE_COMMITTED')) {throw 'Cash result was not acknowledged. The local evidence was retained.'}
                 Complete-FtextCashReport $c ([string]$request.id)
                 Write-Host ('Cash request '+$request.id+': '+$ack.status)
