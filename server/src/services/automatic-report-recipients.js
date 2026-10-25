@@ -27,7 +27,7 @@ async function locked(tx,scope,id){
 }
 async function consent(tx,s,id){return (await tx.$queryRaw`SELECT *,"revision"::text AS "revision","recipientVersion"::text AS "recipientVersion","lifecycleGeneration"::text AS "lifecycleGeneration" FROM "AutomaticReportRecipientConsent" WHERE "companyId"=${s.companyId} AND "storeId"=${s.storeId} AND "recipientId"=${id} FOR UPDATE`)[0]||null}
 function expected(actual,value){if(!Number.isSafeInteger(value)||value<0||String(actual||0)!==String(value))fail(409,'REPORT_REVISION_CHANGED')}
-function positiveReceipt(r,to){
+export function positiveReceipt(r,to){
  if(!r||typeof r!=='object')return false;
  const descriptors=Object.getOwnPropertyDescriptors(r),allowed=['accepted','rejected','pending','messageId','response','envelope'];
  for(const key of Reflect.ownKeys(descriptors)){if(typeof key!=='string'||!allowed.includes(key)||!descriptors[key].enumerable||!Object.hasOwn(descriptors[key],'value'))return false}

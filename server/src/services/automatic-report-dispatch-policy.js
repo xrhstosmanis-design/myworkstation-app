@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto';
 import {lifecycleContext} from './store-lifecycle-context.js';
 import {lockAutomaticReportBoundary} from './automatic-report-lock-boundary.js';
 import {createRecipientManagement,snapshotDispatchInput} from './automatic-report-recipients.js';
+import {createAutomaticReportInvitations} from './automatic-report-invitations.js';
 const fail=(status,code,message='Η ενέργεια αναφοράς δεν ολοκληρώθηκε.')=>{throw Object.assign(new Error(message),{status,code})};
 const canonical=v=>JSON.stringify(v,(_k,x)=>x&&typeof x==='object'&&!Array.isArray(x)&&!(x instanceof Date)?Object.fromEntries(Object.keys(x).sort().map(k=>[k,x[k]])):typeof x==='bigint'?x.toString():x);
 const hash=v=>createHash('sha256').update(typeof v==='string'?v:canonical(v)).digest('hex');
@@ -63,7 +64,8 @@ export function createAutomaticReportManagement({db,activationProvider,sendVerif
   },{isolationLevel:'ReadCommitted',maxWait:5000,timeout:15000}).catch(error=>{if(error?.code==='55P03'||error?.meta?.code==='55P03')fail(409,'REPORT_DISPATCH_BUSY');throw error});
  }
  const recipientApi=createRecipientManagement({mutate:transaction,sendVerification});
- const api={...recipientApi,
+ const invitations=createAutomaticReportInvitations({db,mutate:transaction,readAuthorization:readLockedDispatchAuthorization,schemaReady:dispatchSchemaReady,sendInvitation:sendVerification,clock});
+ const api={...recipientApi,issueRecipientInvitation:invitations.issue,
   getDispatchManagement:scope=>transaction(scope,async({records,activation})=>({schemaReady:true,policy:publicRecord(records.policy),grant:publicRecord(records.grant),recipients:records.recipients.map(({recipient,consent})=>({recipient:publicRecord(recipient),consent:publicRecord(consent)})),activation:{valid:activation?.valid===true,enabled:activation?.enabled===true,notBefore:activation?.notBefore||null,epoch:activation?.epoch||null}}),false),
   saveDispatchPolicy:(scope,input)=>transaction(scope,async({tx,scope:s,now,generation,records})=>{
    expected(records.policy?.revision,input.expectedRevision);if(typeof input.dispatchEnabled!=='boolean'||typeof input.allowsProvisional!=='boolean')fail(400,'REPORT_POLICY_INVALID');const allowed=freq(input.allowedFrequencies);
