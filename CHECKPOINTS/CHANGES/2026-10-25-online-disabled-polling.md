@@ -1,10 +1,8 @@
-# Online ordering disabled-module polling — 2026-10-25
+## 25/10/2026 — DAILY-CHECK-ONLINE-POLLING-01 / SOURCE CANDIDATE / AWAITING EXACT CI AND HOSTED LAB
 
-- Branch: `fix/online-disabled-polling-20261025`; PR #3127.
-- Scope: `client/src/components/store/StoreOnlineOrders.jsx` only.
-- Existing candidate suspends automatic 7-second polling after the explicit disabled ONLINE_ORDERING 403, with launcher retry and store-change reset. Server authorization retained; no financial/order/stock mutation.
-- User authorized continued daily-check work in this conversation. Reconciliation preserves latest main source and all shared records/owners; existing runtime blob unchanged.
-- Previous head `1d57879ea103ba8d94eb9cdce0e320f3ed61e8f1`: CI 40200907030 all five jobs SUCCESS. This is CI evidence, not online-polling LAB PASS.
-- Current status: OPEN / AWAITING LAB, not merged or deployed. Fresh combined-head CI required after reconciliation.
-- Required acceptance: actual mounted disabled-store polling stops; enabled stores still refresh; explicit retry, store switch, delayed old-store replies and unmount remain correct. Hosted acceptance NOT TESTED.
-- Next: publish bounded ownership/acceptance record before further source changes; inspect candidate against mounted acceptance. No payment, receipt, inventory, order-status, configuration or production action during diagnosis.
+User-authorized handoff PR3142/headf32ab893 CI40202624137 SUCCESS merged07008841 BEFORE new source. PR3127 prior conflict resolved021c11617; old candidate late-store suppression defect is superseded by this source, not a production fix claim. Per-store request scope rejects old-store success/error/suppression, clears rows on switch, prevents overlapping GETs, preserves generic-error retry and explicit launcher/refresh retry. Mounted lifetime reinitializes correctly under React StrictMode. Backend authorization unchanged; status/print/payment/stock/fiscal/configuration paths unchanged.
+
+Actual React component compiled with esbuild and mounted in JSDOM26.1.0/React19: Node20.20.2 seven tests PASS/0FAIL/0SKIP (six scenarios plus parent). Disabled403 suppression, launcher and explicit Refresh, late old-store403, late old-store rows, generic403/network retry, overlap, switch-back, unmount and StrictMode covered. Earlier Node24 also7/0/0. Initial local Node20 attempt failed before tests because scratch used latest incompatible JSDOM; rerun with repository26.1.0 passed without assertion changes. Synthetic APIs enforce GET-only; no real data or business transaction. Hook-only earlier failure remains historical evidence, not mounted/LAB PASS.
+
+Full exact source/main CI and ordinary guarded revision verification still REQUIRED. Hosted read-only LAB acceptance NOT TESTED. No production deployment/settings/payment/order-status/stock/fiscal action, no manual or numbered PASS closure. Same retained bounded owner and other owners preserved. Next: exact source CI, review and green/main; normal guarded release only, then actual disabled/enabled hosted read-only acceptance. Checkpoint CHECKPOINTS/CHANGES/2026-10-25-online-disabled-polling.md.
+
