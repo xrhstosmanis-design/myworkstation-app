@@ -32,9 +32,14 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
     {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
     {data?.companyId===companyId&&(data?.runtimeEnabled===false?<p>Η υπηρεσία προπληρωμένης χρέωσης δεν έχει ενεργοποιηθεί στον server.</p>:<>
       <h2>Διαθέσιμο {walletMoney(data.availableMicros)} · Δεσμευμένο {walletMoney(data.reservedMicros)}</h2>
+      {data.activationReadiness&&<section aria-label="Ετοιμότητα χρέωσης AI">
+        <p>Βοηθός Ιδιοκτήτη · Μοντέλο: {data.activationReadiness.model}</p>
+        <p>{data.activationReadiness.ready?'Ο τιμοκατάλογος είναι διαθέσιμος για ενεργοποίηση.':data.activationReadiness.providerConfigured?'Απαιτείται έγκυρος τιμοκατάλογος πριν ενεργοποιηθεί η χρέωση.':'Απαιτείται ενεργή σύνδεση AI πριν ενεργοποιηθεί η χρέωση.'}</p>
+        {data.activationReadiness.maxReservationMicros&&<p>Μέγιστη προσωρινή δέσμευση ανά κλήση: {walletMoney(data.activationReadiness.maxReservationMicros)}. Η τελική χρέωση υπολογίζεται από την πραγματική χρήση.{!data.activationReadiness.availableEnough&&' Το τρέχον υπόλοιπο δεν επαρκεί για τη δέσμευση.'}</p>}
+      </section>}
       <p>{data.meteredFeatures?.includes('INVOICE_OPENAI')?'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη και τις αναγνώσεις τιμολογίων με AI.':'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη. Οι αναγνώσεις τιμολογίων δεν έχουν ενεργοποιηθεί για χρέωση.'}</p>
       <form onSubmit={e=>{e.preventDefault();execute(()=>api(path,{method:'PUT',body:JSON.stringify({version:data.version,enabled,emailEnabled,notificationOwnerId:ownerId})}),'Οι ρυθμίσεις αποθηκεύτηκαν.')}}>
-        <label><input type="checkbox" checked={enabled} disabled={busy} onChange={e=>setEnabled(e.target.checked)}/> Χρέωση AI στον πελάτη</label><br/>
+        <label><input type="checkbox" checked={enabled} disabled={busy||!enabled&&data.activationReadiness?.ready===false} onChange={e=>setEnabled(e.target.checked)}/> Χρέωση AI στον πελάτη</label><br/>
         <p>Ρύθμιση για αυτή την εταιρεία, σύμφωνα με τη συμφωνία της. Όταν είναι ανενεργή, η χρήση AI συνεχίζεται με κόστος του MyWorkStation. Το υπάρχον υπόλοιπο και το ιστορικό διατηρούνται. Κλήσεις που έχουν ήδη δεσμευτεί ολοκληρώνουν τη χρέωσή τους.</p>
         <label><input type="checkbox" checked={emailEnabled} disabled={busy} onChange={e=>setEmailEnabled(e.target.checked)}/> Ειδοποιήσεις email στον ιδιοκτήτη</label>
         <select aria-label="Ιδιοκτήτης για ειδοποιήσεις" value={ownerId} disabled={busy} onChange={e=>setOwnerId(e.target.value)}><option value="">Επίλεξε ιδιοκτήτη</option>{(data.owners||[]).map(o=><option key={o.id} value={o.id}>{o.fullName} · {o.email}</option>)}</select>
