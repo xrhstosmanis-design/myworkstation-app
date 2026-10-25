@@ -40,3 +40,11 @@ Open “Συνδρομές & Modules”, choose the correct company, inspect exi
 Next open “Υπόλοιπα AI πελατών”, explicitly choose the same company, confirm valid model tariff and available hold coverage, check “Χρέωση AI στον πελάτη” and save once. Refresh/read-only reopen to verify the checked state, exact preserved balance/reserved/history and expected single configuration audit/version change. The accepted target remained funded from its original internal trial; no extra credit or payment was made. Email stayedOFF.
 
 For a different customer agreement, uncheck and save the same flag with fresh before/after evidence. The measured LAB OFF flow retained funds/history and settled usage. Invoice billing, actual Owner-session detail display, low/empty thresholds and delivered email remain outside the current hosted PASS.
+
+## Email configuration ON/OFF — scoped LAB PASS25October2026
+
+Authenticated existing SuperAdmin may open canonical Platform Admin, “Υπόλοιπα AI πελατών”, and explicitly select the company. In “Σύνδεση τιμολογίων και email”, confirm emailactive on server and SMTP settings present. This indicates configuration, not delivery. Never enter credentials in the wallet form.
+
+For the tested LAB flow, leave customer chargingOFF, select the existing LAB OWNER in “Ιδιοκτήτης για ειδοποιήσεις”, check “Ειδοποιήσεις email στον ιδιοκτήτη” and save once. Confirm success, reload/readback and exact preserved balance/history/notices with only version/audit+1. To restore the original opt-out, uncheck email, choose the empty owner option and save once using freshly recorded before values. LAB version5→6→7 and balance4.995848EUR/zeroreserve persisted; foreign/business/module controls unchanged. No funding/provider/SMTP event was created and old disabled notices were not revived.
+
+The native shared-owner listing is available through existing OwnerCompanyAccess; production role/password/company and original-recipient checks remain mandatory. The test above covers direct LAB owner configuration, not hosted shared-owner opt-in or delivered mail. If an owner is unavailable, inspect current role/password/company membership rather than creating a user or changing permissions. Pending or uncertain old messages must not be retargeted or blindly resent. Invoice charging remainsOFF pending its separate prices/acceptance.
