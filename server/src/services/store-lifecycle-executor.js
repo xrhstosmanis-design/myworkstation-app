@@ -181,6 +181,7 @@ async function assertQuiescent(tx,plan,schema,scope,meta,{connectors=true,lockBa
  ['PosInvoiceBackgroundTask',`"state"='RUNNING'`,['state']],
  ['AiReaderJob',`"status" IN ('RUNNING','PROCESSING','LOCAL_PROCESSING','AI_PROCESSING','POS_PROCESSING','POS_REPROCESSING','POS_RECOVERING')`,['status']],
  ['RbsCapDriverV1Request',`"status" NOT IN ('DECLINED','SALE_COMMITTED')`,['status']],
+ ['AiOwnerWalletEntry',`"status" IN ('RESERVED','REVIEW')`,['status']],
  ['FtextCashRequest',`"status" <> 'SALE_COMMITTED'`,['status']],
  ['NetlinkTransaction',`"status" NOT IN ('COMPLETED','FAILED')`,['status']],
  ['CloudDevice',`"status"='ACTIVE' AND "lastSeenAt">NOW()-INTERVAL '60 seconds'`,['status','lastSeenAt']]
@@ -190,6 +191,10 @@ async function assertQuiescent(tx,plan,schema,scope,meta,{connectors=true,lockBa
  if(lockBackground&&plan.nodes.has('MyDataInboundDocument')){const held=(await tx.$queryRawUnsafe(`SELECT pg_try_advisory_xact_lock(hashtextextended($1,0)) AS held`,lifecycleMyDataLockKey(scope)))[0]?.held;if(!held)fail('Active shift, operator, Writer or fiscal work blocks maintenance.');}
 }
 async function assertScopedRelations(tx,plan,schema,scope,meta,mode){
+ // Company financial history must never be removed by deleting a store.
+ // RESET keeps its attributed rows; DELETE refuses until a separate reviewed
+ // financial retention workflow exists. No generic KEEP/DELETE rule changes.
+ if(mode==='DELETE'&&plan.nodes.has('AiOwnerWalletEntry')&&(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."AiOwnerWalletEntry" WHERE "storeId"=$1 LIMIT 1`,scope.storeId)).length)fail('AI wallet financial history blocks store deletion.');
  for(const guard of plan.valueGuards)if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}.${q(guard.table)} t WHERE (${predicate(plan,schema,plan.nodes.get(guard.table),'t')}) AND NOT COALESCE(t.${q(guard.column)}=ANY($2::text[]),false) LIMIT 1`,scope.storeId,guard.allowed)).length)fail('Unreviewed value in selected store: '+guard.table+'.'+guard.column);
  for(const node of plan.ordered){
   const where=predicate(plan,schema,node,'t');
