@@ -6,7 +6,7 @@ import {auth} from '../middleware/auth.js';
 import {aiOwnerWalletRepository} from '../services/ai-owner-wallet-runtime.js';
 import {createWalletAccess} from '../services/ai-owner-wallet-access.js';
 import {walletError} from '../services/ai-owner-wallet-contract.js';
-import {ownerWalletReadiness,requireOwnerWalletReady} from '../services/ai-owner-wallet-readiness.js';
+import {ownerWalletReadiness,requireOwnerWalletReady,walletServiceConfiguration} from '../services/ai-owner-wallet-readiness.js';
 
 const messages={AI_WALLET_INSUFFICIENT:'Δεν επαρκεί το διαθέσιμο υπόλοιπο AI. Χρειάζεται ανανέωση. Οι πωλήσεις και το υπόλοιπο πρόγραμμα συνεχίζουν κανονικά.',AI_WALLET_CHANGED:'Το υπόλοιπο ή οι ρυθμίσεις άλλαξαν. Ανανέωσε πριν αποθηκεύσεις.',AI_WALLET_RECEIPT_CONFLICT:'Η αναφορά είσπραξης έχει ήδη χρησιμοποιηθεί. Δεν έγινε δεύτερη πίστωση.',AI_WALLET_USAGE_REVIEW:'Η κατανάλωση της κλήσης AI χρειάζεται έλεγχο. Το δεσμευμένο ποσό διατηρήθηκε.',AI_WALLET_TARIFF_REQUIRED:'Δεν έχει οριστεί έγκυρος τιμοκατάλογος για αυτή τη λειτουργία AI.',AI_WALLET_DISABLED:'Η προπληρωμένη χρέωση AI δεν έχει ενεργοποιηθεί.',AI_WALLET_OWNER_REQUIRED:'Επίλεξε υπάρχοντα Ιδιοκτήτη της εταιρείας για τις ειδοποιήσεις email.'};
 export function walletHttpError(e,res){
@@ -37,8 +37,8 @@ export function createAiOwnerWalletRoutes({db=prisma,repository=aiOwnerWalletRep
   const prefix='/platform/companies/:companyId';
   router.get(prefix,run('platform',async(req,res,scope)=>{
     const result=await repository.read(scope.companyId);
-    const owners=await db.user.findMany({where:{companyId:scope.companyId,role:'OWNER',mustChangePassword:false},select:{id:true,email:true,fullName:true}});
-    await access.platform(req);res.json({...result,owners,runtimeEnabled:true,meteredFeatures:invoiceWalletFeatures(),activationReadiness:ownerWalletReadiness(env,result.availableMicros)});
+    const owners=await db.$queryRaw`SELECT u."id",u."email",u."fullName" FROM "User" u JOIN "Company" c ON c."id"=${scope.companyId} AND c."active"=TRUE WHERE u."role"::text='OWNER' AND u."mustChangePassword"=FALSE AND (u."companyId"=c."id" OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=c."id")) ORDER BY u."fullName",u."id"`;
+    await access.platform(req);res.json({...result,owners,runtimeEnabled:true,meteredFeatures:invoiceWalletFeatures(),activationReadiness:ownerWalletReadiness(env,result.availableMicros),serviceConfiguration:walletServiceConfiguration(env)});
   }));
   router.put(prefix,run('platform',async(req,res,scope)=>{const input=configureSchema.parse(req.body);await access.platform(req);if(input.enabled)requireOwnerWalletReady(env);res.json(await repository.configure(scope.companyId,input,scope.actorId))}));
   router.post(prefix+'/credits',run('platform',async(req,res,scope)=>{const input=creditSchema.parse(req.body);await access.platform(req);res.json(await repository.credit(scope.companyId,input,scope.actorId))}));

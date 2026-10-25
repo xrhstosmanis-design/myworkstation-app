@@ -31,7 +31,7 @@ export function createWalletNotificationDispatcher({repository,send=sendWalletNo
       const notice=await db.$transaction(async tx=>{
         const rows=await tx.$queryRaw`SELECT n.* FROM "AiOwnerWalletNotice" n WHERE n."emailStatus"='PENDING' ORDER BY n."createdAt",n."id" FOR UPDATE SKIP LOCKED LIMIT 1`;
         const item=rows[0];if(!item)return null;
-        const valid=await tx.$queryRaw`SELECT u."id" FROM "AiOwnerWallet" w JOIN "Company" c ON c."id"=w."companyId" JOIN "User" u ON u."id"=w."notificationOwnerId" AND u."companyId"=w."companyId" WHERE w."companyId"=${item.companyId} AND c."active"=TRUE AND w."emailEnabled"=TRUE AND u."role"::text='OWNER' AND u."mustChangePassword"=FALSE AND u."id"=${item.ownerId} AND u."email"=${item.email}`;
+        const valid=await tx.$queryRaw`SELECT u."id" FROM "AiOwnerWallet" w JOIN "Company" c ON c."id"=w."companyId" JOIN "User" u ON u."id"=w."notificationOwnerId" WHERE w."companyId"=${item.companyId} AND c."active"=TRUE AND (u."companyId"=w."companyId" OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=w."companyId")) AND w."emailEnabled"=TRUE AND u."role"::text='OWNER' AND u."mustChangePassword"=FALSE AND u."id"=${item.ownerId} AND u."email"=${item.email}`;
         if(!valid.length){await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='REVOKED' WHERE "id"=${item.id}`;return {revoked:true}}
         await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='ATTEMPTING',"attemptedAt"=NOW(),"messageId"=${'attempt-'+randomUUID()} WHERE "id"=${item.id}`;
         return item;
