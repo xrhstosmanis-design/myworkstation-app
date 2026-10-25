@@ -25,7 +25,7 @@ test('canonical ftext catalogue covers exact ownership/types/references while ac
 test('unreviewed provisioning refuses before transaction or DDL; ordinary startup preserves the entire prior command',async()=>{
  let calls=0;await assert.rejects(provisionFtextRecoverySchema({$transaction(){calls++;}},{manifest:{}}));assert.equal(calls,0);
  const pkg=JSON.parse(readFileSync(new URL('../../package.json',import.meta.url)));
- assert.match(pkg.scripts.start,/^node server\/scripts\/ensure-assistant-history.js && node server\/scripts\/ensure-ftext-recovery-schema.js && npm run prisma:generate/);
+ assert.match(pkg.scripts.start,/^node server\/scripts\/ensure-assistant-history.js && node server\/scripts\/ensure-ftext-recovery-schema.js && node server\/scripts\/ensure-ai-wallet-recovery-schema.js && npm run prisma:generate/);
  const script=readFileSync(new URL('../scripts/ensure-ftext-recovery-schema.js',import.meta.url),'utf8');
  assert.match(script,/process.env.NODE_ENV==='production'/);assert.match(script,/process.exitCode=1/);
  for(const forbidden of ['createPairing','claimFtextCashRequest','recordFtextCashResult','finalizeFtextCashRequest'])assert.equal(script.includes(forbidden),false);

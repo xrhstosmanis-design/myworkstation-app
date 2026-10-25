@@ -1,0 +1,56 @@
+name: AI wallet recovery contract
+on:
+  pull_request:
+    paths:
+      - 'server/src/services/ai-owner-wallet*.js'
+      - 'server/src/services/store-lifecycle-policy.js'
+      - 'server/src/services/store-lifecycle-executor.js'
+      - 'server/scripts/ensure-ai-wallet-recovery-schema.js'
+      - 'server/test/ai-wallet-recovery*'
+      - 'server/test/ai-owner-wallet*'
+      - 'server/test/fixtures/ftext-full-schema*'
+      - 'ops/backup/lifecycle/manifest.json'
+      - 'ops/backup/lifecycle/column-review.json'
+      - '.github/workflows/ai-wallet-recovery.yml'
+  workflow_dispatch:
+concurrency:
+  group: ai-wallet-recovery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-full-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wallet_recovery_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d wallet_recovery_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/wallet_recovery_test
+      MWS_LIFECYCLE_RECOVERY_IMAGE: mws-wallet-recovery:ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npx prisma generate --schema server/prisma/schema.prisma
+      - name: Build actual PG18 recovery image
+        run: docker build --file ops/backup/Dockerfile --tag mws-wallet-recovery:ci .
+      - name: Use matching PG16 dump and private restore tools
+        run: |
+          test -x /usr/lib/postgresql/16/bin/pg_dump
+          echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
+      - name: Verify actual schema, archive/COPY, pending and stale controls
+        working-directory: server
+        run: node --test test/ai-wallet-recovery-schema.test.js test/ftext-full-recovery-postgres.test.js test/ftext-cash.test.js test/ftext-cash-postgres.test.js test/store-lifecycle-manifest.test.js

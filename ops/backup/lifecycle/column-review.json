@@ -1808,6 +1808,54 @@
     {
       "column": "FtextCashRequest.sessionId",
       "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "AiOwnerWallet.cycleId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWallet.notificationOwnerId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletAudit.actorId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletAudit.detail",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletEntry.actorId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletEntry.reference",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletEntry.resolutionReference",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletEntry.tariff",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletEntry.usage",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletNotice.cycleId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletNotice.messageId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletNotice.ownerId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
     }
   ]
 }

@@ -275,7 +275,11 @@
     "WorkforceScheduleAssignment",
     "WorkforceShiftTemplate",
     "WorkforceTimeClockEntry",
-    "_prisma_migrations"
+    "_prisma_migrations",
+    "AiOwnerWallet",
+    "AiOwnerWalletAudit",
+    "AiOwnerWalletEntry",
+    "AiOwnerWalletNotice"
   ],
   "knownColumns": {
     "AdvancedOnlineSearchUsage": [
@@ -16153,11 +16157,251 @@
         "timestamp with time zone",
         true
       ]
+    ],
+    "AiOwnerWallet": [
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "enabled",
+        "boolean",
+        true
+      ],
+      [
+        "emailEnabled",
+        "boolean",
+        true
+      ],
+      [
+        "notificationOwnerId",
+        "text",
+        false
+      ],
+      [
+        "balanceMicros",
+        "bigint",
+        true
+      ],
+      [
+        "reservedMicros",
+        "bigint",
+        true
+      ],
+      [
+        "lastCreditMicros",
+        "bigint",
+        true
+      ],
+      [
+        "cycleId",
+        "text",
+        true
+      ],
+      [
+        "version",
+        "integer",
+        true
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
+      ]
+    ],
+    "AiOwnerWalletAudit": [
+      [
+        "id",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "actorId",
+        "text",
+        true
+      ],
+      [
+        "event",
+        "text",
+        true
+      ],
+      [
+        "detail",
+        "jsonb",
+        true
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ]
+    ],
+    "AiOwnerWalletEntry": [
+      [
+        "id",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        false
+      ],
+      [
+        "kind",
+        "text",
+        true
+      ],
+      [
+        "reference",
+        "text",
+        true
+      ],
+      [
+        "status",
+        "text",
+        true
+      ],
+      [
+        "creditedMicros",
+        "bigint",
+        true
+      ],
+      [
+        "reservedMicros",
+        "bigint",
+        true
+      ],
+      [
+        "chargedMicros",
+        "bigint",
+        true
+      ],
+      [
+        "feature",
+        "text",
+        false
+      ],
+      [
+        "tariff",
+        "jsonb",
+        false
+      ],
+      [
+        "usage",
+        "jsonb",
+        false
+      ],
+      [
+        "actorId",
+        "text",
+        false
+      ],
+      [
+        "resolutionReference",
+        "text",
+        false
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "settledAt",
+        "timestamp with time zone",
+        false
+      ]
+    ],
+    "AiOwnerWalletNotice": [
+      [
+        "id",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "kind",
+        "text",
+        true
+      ],
+      [
+        "cycleId",
+        "text",
+        true
+      ],
+      [
+        "balanceMicros",
+        "bigint",
+        true
+      ],
+      [
+        "amountMicros",
+        "bigint",
+        true
+      ],
+      [
+        "ownerId",
+        "text",
+        false
+      ],
+      [
+        "email",
+        "text",
+        false
+      ],
+      [
+        "emailStatus",
+        "text",
+        true
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "attemptedAt",
+        "timestamp with time zone",
+        false
+      ],
+      [
+        "messageId",
+        "text",
+        false
+      ]
     ]
   },
   "reviewedColumns": [
     "AdvancedOnlineSearchUsage.actorId",
     "AdvancedOnlineSearchUsage.details",
+    "AiOwnerWallet.cycleId",
+    "AiOwnerWallet.notificationOwnerId",
+    "AiOwnerWalletAudit.actorId",
+    "AiOwnerWalletAudit.detail",
+    "AiOwnerWalletEntry.actorId",
+    "AiOwnerWalletEntry.reference",
+    "AiOwnerWalletEntry.resolutionReference",
+    "AiOwnerWalletEntry.tariff",
+    "AiOwnerWalletEntry.usage",
+    "AiOwnerWalletNotice.cycleId",
+    "AiOwnerWalletNotice.messageId",
+    "AiOwnerWalletNotice.ownerId",
     "AiReaderJob.resultJson",
     "AssistantHistoryArchive.actorId",
     "AssistantHistoryArchive.companyId",
@@ -19366,6 +19610,13 @@
           "historical": true
         }
       ]
+    },
+    {
+      "name": "AiOwnerWalletEntry",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "KEEP"
     }
   ]
 }

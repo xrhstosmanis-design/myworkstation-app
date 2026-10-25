@@ -1,3 +1,5 @@
+import {assertAiWalletCatalogue,createAiWalletSchema,validateAiWalletSchema} from './ai-owner-wallet-schema.js';
+import {bindFreshLifecycleRead} from './store-lifecycle-generation.js';
 import {randomUUID} from 'node:crypto';
 import {MAX_WALLET_MICROS,positiveMicros,walletError,walletView} from './ai-owner-wallet-contract.js';
 import {readWalletUsageSummary} from './ai-owner-wallet-usage.js';
@@ -9,33 +11,9 @@ export function createAiOwnerWalletRepository(db){
   async function ensure(){
     if(!ready)ready=db.$transaction(async tx=>{
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('AI_OWNER_WALLET_SCHEMA_V1'))`;
-      await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "AiOwnerWallet" (
-        "companyId" TEXT PRIMARY KEY,"enabled" BOOLEAN NOT NULL DEFAULT FALSE,
-        "emailEnabled" BOOLEAN NOT NULL DEFAULT FALSE,"notificationOwnerId" TEXT,
-        "balanceMicros" BIGINT NOT NULL DEFAULT 0 CHECK ("balanceMicros">=0 AND "balanceMicros"<=1000000000000),
-        "reservedMicros" BIGINT NOT NULL DEFAULT 0 CHECK ("reservedMicros">=0 AND "reservedMicros"<="balanceMicros"),
-        "lastCreditMicros" BIGINT NOT NULL DEFAULT 0,"cycleId" TEXT NOT NULL,
-        "version" INTEGER NOT NULL DEFAULT 0,"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-      await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "AiOwnerWalletEntry" (
-        "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "AiOwnerWallet"("companyId"),"storeId" TEXT,
-        "kind" TEXT NOT NULL CHECK ("kind" IN ('CREDIT','USAGE')),"reference" TEXT NOT NULL,
-        "status" TEXT NOT NULL CHECK ("status" IN ('CREDITED','RESERVED','SETTLED','REVIEW')),
-        "creditedMicros" BIGINT NOT NULL DEFAULT 0,"reservedMicros" BIGINT NOT NULL DEFAULT 0,"chargedMicros" BIGINT NOT NULL DEFAULT 0,
-        "feature" TEXT,"tariff" JSONB,"usage" JSONB,"actorId" TEXT,"resolutionReference" TEXT,
-        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"settledAt" TIMESTAMPTZ,
-        UNIQUE("kind","reference"),CHECK ("creditedMicros">=0 AND "reservedMicros">=0 AND "chargedMicros">=0 AND "chargedMicros"<="reservedMicros"))`);
-      await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "AiOwnerWalletNotice" (
-        "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL REFERENCES "AiOwnerWallet"("companyId"),
-        "kind" TEXT NOT NULL CHECK ("kind" IN ('CREDIT','LOW','EMPTY')),"cycleId" TEXT NOT NULL,
-        "balanceMicros" BIGINT NOT NULL,"amountMicros" BIGINT NOT NULL DEFAULT 0,
-        "ownerId" TEXT,"email" TEXT,"emailStatus" TEXT NOT NULL DEFAULT 'DISABLED',
-        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),"attemptedAt" TIMESTAMPTZ,"messageId" TEXT,
-        UNIQUE("companyId","kind","cycleId"))`);
-      await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "AiOwnerWalletAudit" (
-        "id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"actorId" TEXT NOT NULL,"event" TEXT NOT NULL,"detail" JSONB NOT NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-      await tx.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "AiOwnerWalletEntry_company_created" ON "AiOwnerWalletEntry"("companyId","createdAt")');
-      await tx.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "AiOwnerWalletEntry_provider_response" ON "AiOwnerWalletEntry" (("usage"->>'providerResponseId')) WHERE "status"='SETTLED' AND "usage" ? 'providerResponseId'`);
-      await tx.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "AiOwnerWalletNotice_pending" ON "AiOwnerWalletNotice"("emailStatus","createdAt")');
+      assertAiWalletCatalogue();
+      await createAiWalletSchema(tx);
+      await validateAiWalletSchema(tx);
     }).catch(e=>{ready=null;throw e});
     await ready;
   }
@@ -117,6 +95,7 @@ export function createAiOwnerWalletRepository(db){
     return db.$transaction(async tx=>{
       const row=await lock(tx,companyId);
       if(!row.enabled)return null;
+      await bindFreshLifecycleRead(tx,{companyId,storeId});
       const store=await tx.$queryRaw`SELECT s."id" FROM "Store" s JOIN "Company" c ON c."id"=s."companyId" WHERE s."id"=${storeId} AND s."companyId"=${companyId} AND s."active"=TRUE AND c."active"=TRUE`;
       if(!store.length)throw walletError('AI_WALLET_SCOPE_DENIED',403);
       if((await tx.$queryRaw`SELECT "id" FROM "AiOwnerWalletEntry" WHERE "kind"='USAGE' AND "reference"=${reference}`).length)throw walletError('AI_WALLET_REQUEST_REPLAY');
@@ -137,6 +116,7 @@ export function createAiOwnerWalletRepository(db){
         if(BigInt(entry.chargedMicros)!==amount||stable(entry.usage)!==stable(usage))throw walletError('AI_WALLET_SETTLEMENT_CONFLICT');
         return {id,replayed:true};
       }
+      await bindFreshLifecycleRead(tx,{companyId,storeId:entry.storeId});
       if(entry.status==='REVIEW'&&!actorId)throw walletError('AI_WALLET_USAGE_REVIEW',503);
       if(amount>BigInt(entry.reservedMicros))throw walletError('AI_WALLET_USAGE_REVIEW',503);
       const abandoned=entry.status==='RESERVED'&&Date.now()-new Date(entry.createdAt).getTime()>=15*60*1000;
@@ -150,7 +130,13 @@ export function createAiOwnerWalletRepository(db){
       return {id,replayed:false};
     });
   }
-  async function review(companyId,id){await ensure();await db.$executeRaw`UPDATE "AiOwnerWalletEntry" SET "status"='REVIEW' WHERE "id"=${id} AND "companyId"=${companyId} AND "status"='RESERVED'`}
+  async function review(companyId,id){await ensure();return db.$transaction(async tx=>{
+    await lock(tx,companyId);
+    const entry=(await tx.$queryRaw`SELECT "storeId" FROM "AiOwnerWalletEntry" WHERE "id"=${id} AND "companyId"=${companyId} AND "status"='RESERVED' FOR UPDATE`)[0];
+    if(!entry)return;
+    await bindFreshLifecycleRead(tx,{companyId,storeId:entry.storeId});
+    await tx.$executeRaw`UPDATE "AiOwnerWalletEntry" SET "status"='REVIEW' WHERE "id"=${id} AND "companyId"=${companyId} AND "status"='RESERVED'`;
+  })}
   async function enabledFor(companyId){await ensure();return (await db.$queryRaw`SELECT "enabled" FROM "AiOwnerWallet" WHERE "companyId"=${companyId}`)[0]?.enabled===true}
   return {ensure,read,configure,credit,grantTrial,reserve,settle,review,enabledFor,db};
 }
