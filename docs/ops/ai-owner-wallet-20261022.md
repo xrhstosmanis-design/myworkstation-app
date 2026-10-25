@@ -1,3 +1,7 @@
+## 25October2026 current email configuration receipt
+
+Sourcef5da1510f full main4209server+8backup/0/0 and ordinary guarded release verified. Same-source scoped Render EMAIL=true API configuration deployed/live and read back natively; existing SMTPconfigured. Shared OWNER selection recognizes existing OwnerCompanyAccess at list/configure/enqueue/freshdispatch, retaining exact recipient and at-most-once guarantees. Hosted direct LAB emailON/OFF config verified, restoredOFF/recipientNULL, funds/history/business controls unchanged. Pilot opt-in pending receiptgreen/main. No actual SMTP/inbox delivery, new notice or funding; old DISABLED notices remain unchanged. InvoicegateOFF; no guessed Azure account rate. Checkpoint CHECKPOINTS/CHANGES/2026-10-25-ai-wallet-email-invoice.md and manual are authoritative current scope.
+
 ## Current activation status — 25 October 2026
 
 Authoritative CHECKPOINTS/CHANGES/2026-10-25-ai-wallet-activation.md supersedes historical target-activation-pending entries below. Real metered LAB flow published3144/greenCI40204698736/main1b459f5 before separate target changes. Private pilot Owner AI module and customer prepaid charging nowON; fixed GPT-5-mini EUR schedule contains approved50percent markup. Original trial funding retained. Synthetic LAB remainsOFF after exact4152microEUR measured charge; no extra trial/provider request in target. Global invoice/email gatesOFF.
