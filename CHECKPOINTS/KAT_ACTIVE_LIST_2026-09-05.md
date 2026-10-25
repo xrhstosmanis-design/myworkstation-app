@@ -365,6 +365,8 @@ Explicit user START after communication success authorizes continued engineering
 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-22-ftext-connector.md; verified manual docs/manual/ftext/PASS.md. Other owners and RBS/physical accepted transactions remain unchanged.
 
+25Oct exact sourcef121ca3: existing Ftext native full-schema workflow40176081984/job121116943122 SUCCESS. New wallet workflow40176081870/job121116942727 FAILED before tests because its command referenced a nonexistent filename after workflow renaming. Corrected only the command to the actual wallet/native/ledger/manifest tests; no assertion or runtime safeguard relaxed. Fresh exact-head full and native CI required. This is not a native wallet acceptance result.
+
 ## 25Oct2026 — BOUNDED WALLET RECOVERY SOURCE CANDIDATE / AWAITING NATIVE CI
 
 Same wallet owner after explicit limited transfer; before-source claim3120/a49e6db/CI40105519094 SUCCESS mergedb3f4ecc86b95db4b5d93e542ded021c2212e8f0f before all implementation. Four exact typed wallet relations and hazardous fields added; every unrelated value in both canonical/prospective manifest/review pairs remains equal to accepted main. Only AiOwnerWalletEntry has DIRECT store attribution and KEEP for RESET; company balance/credit/notice/audit are never store-owned. Explicit DELETE refusal protects an attributed financial ledger; no broad DELETE rule change. RESERVED/REVIEW blocks target maintenance; sibling pending holds do not. Fresh generation binding covers wallet reserve/settle/review after RESET; no prompt/provider/price/funding behavior change.
