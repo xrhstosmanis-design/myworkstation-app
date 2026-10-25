@@ -1,0 +1,30 @@
+{
+  "scope": "Authorized pilot shared-owner email configuration and read-only persistence only",
+  "date": "2026-10-25",
+  "source": "f5da1510fda6ad657fa54fc70ebf761a6dc1b7be",
+  "sourcePR": 3149,
+  "labReceiptPR": 3150,
+  "labReceiptMerge": "dbc057941a0cc3bd8af2075923bbf49f7e5978ab",
+  "labReceiptCI": 40224579964,
+  "before": "2026-10-25T19:11:08.702894Z",
+  "after": "2026-10-25T19:11:59.531703Z",
+  "readOnlyReload": "2026-10-25T19:12:20.738043Z",
+  "pilotVersions": [
+    2,
+    3
+  ],
+  "emailEnabled": true,
+  "existingSharedOwnerSelected": true,
+  "customerChargingPreserved": true,
+  "exactMoneyAndHistoryPreserved": true,
+  "foreignWalletAndBusinessModuleControlsPreserved": true,
+  "newConfigurationAudits": 1,
+  "newMailEvents": 0,
+  "newFunding": 0,
+  "newProviderCalls": 0,
+  "invoiceGate": false,
+  "smtpAndInboxDelivery": "NOT TESTED",
+  "privateEvidenceSha256": "01bba94a3df1273d77b187da708032747fa089c77eaa6ef2b0ce489a29410c1b",
+  "personalAndCustomerFinancialData": "Excluded; held only in private evidence",
+  "screenshot": "email-enabled-controls-20261025.jpg"
+}
