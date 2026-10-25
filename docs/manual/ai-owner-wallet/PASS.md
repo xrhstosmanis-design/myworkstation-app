@@ -12,3 +12,7 @@ Only authenticated Platform Super Admin may use it. Open https://myworkstation-a
 Hosted LAB granted5EUR once: customer chargingOFF/emailOFF, business controls unchanged, ledger/notice/audit independently matched. Trial funding does not activate customer charging. No customer payment or provider call occurred.
 
 If a result is uncertain, reconcile that same reference and balance first; do not invent another reference or repeat a credit to repair missing evidence. A usage reservation may exceed the trial balance. Paid funding, actual customer usage, pricing, detailed Owner reports, invoice charging and email delivery are outside this PASS.
+
+## Separate private pilot acceptance
+
+25October2026 the same internal trial workflow was verified once in the independently selected private pilot company, after the hosted LAB PASS merged. Private before/after/reload evidence retains the exact approved values and stable entry identity; public SHA256 cbd8f372173b3460b6bcd146d6f1f323f29fa10bb13a637fc2dd4e01be9e060e. Customer charging and email stayedOFF; the synthetic LAB wallet remained unchanged. The live store was trading, so business-counter changes are not an isolated acceptance test. No broader usage billing or pricing PASS is implied.
