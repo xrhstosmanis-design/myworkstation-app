@@ -208,6 +208,7 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "AiOwnerWalletNotice" WHERE "companyId"='shared' AND "emailStatus"='DISABLED'`)[0].n,1);
     await db.$executeRaw`INSERT INTO "OwnerCompanyAccess" VALUES('shared-owner','shared')`;
     await sharedDrain();assert.equal(sharedMessages.length,1); // never revive old notices
+    sharedWallet=(await sharedRead()).body; // credits advanced the optimistic version
     for(const sql of [
       `UPDATE "User" SET "mustChangePassword"=TRUE WHERE "id"='shared-owner'`,
       `UPDATE "User" SET "mustChangePassword"=FALSE,"role"='EMPLOYEE' WHERE "id"='shared-owner'`
