@@ -427,9 +427,9 @@ Explicit user START after communication success authorizes continued engineering
 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-22-ftext-connector.md; verified manual docs/manual/ftext/PASS.md. Other owners and RBS/physical accepted transactions remain unchanged.
 
-## AI-OWNER-WALLET-01 — ASSIGNED / REMAINING AFTER HOSTED INTERNAL TRIAL PASS
+## AI-OWNER-WALLET-01 — ASSIGNED / PRICING AND USAGE ACCEPTANCE REMAIN
 
-Owner feat/ai-owner-wallet-20261022 retained. Hosted internal trial administration complete; CHECKPOINTS/CHANGES/2026-10-25-ai-wallet-runtime-trial.md and docs/manual/ai-owner-wallet/PASS.md contain evidence. Do not repeat that credit. Runtime administrationON/customer chargingOFF/invoice and email gatesOFF. Remaining: separately measured private pilot internal trial; verified tariffs and approved50percent markup; actual Owner/invoice charging and detailed Owner report acceptance; notice delivery and low/empty behavior. No overall closure. Next after scoped PASS merges green: fresh private target before/after/control then one authorized internal trial without customer charging activation. Other owners unchanged.
+Same owner feat/ai-owner-wallet-20261022 retained. Hosted synthetic and separate private internal trial administration are complete: CHECKPOINTS/CHANGES/2026-10-25-ai-wallet-runtime-trial.md; docs/manual/ai-owner-wallet/PASS.md. Do not repeat either credit. Runtime administrationON; all company chargingOFF; global invoice/emailOFF. Remaining: verify real provider SKU/region/tariffs; apply approved50percent markup; measured usage reservation/debit/low-empty acceptance; detailed Owner reports; invoice charging and email delivery acceptance. Single next action: verify actual provider pricing before enabling any customer charge. Full wallet remainsOPEN. Other owners unchanged.
 
 ## AI-OWNER-WALLET-01 — RECOVERY INTEGRATION INSTALLED / CHARGING OFF / HOSTED TRIAL OPEN
 
