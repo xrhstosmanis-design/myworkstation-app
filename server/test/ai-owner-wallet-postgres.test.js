@@ -116,7 +116,8 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     const failed=createAiOwnerWalletRepository(wrapped);await failed.ensure();const countBefore=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry"`;await assert.rejects(failed.credit('c',{amountMicros:'100000',receiptReference:'must-rollback'},'admin'));assert.deepEqual(await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AiOwnerWalletEntry"`,countBefore);
     const express=(await import('express')).default,app=express();app.use(express.json());
     const authenticate=(req,res,next)=>{const id=req.headers['x-test-actor'];if(!id)return res.sendStatus(401);req.user={id,sessionId:id+'-session',sessionVersion:1,companyId:'c',tokenType:'BACKOFFICE_USER',role:id==='employee'?'EMPLOYEE':'OWNER',...(id==='admin'?{isSuperAdmin:true,platformRole:'SUPER_ADMIN'}:{})};next()};
-    app.use('/wallet',createAiOwnerWalletRoutes({db,repository,authenticate,access:createWalletAccess(db),enabled:()=>true}));
+    const activationEnv={OPENAI_COMMAND_CENTER_MODEL:'synthetic-activation-model'};
+    app.use('/wallet',createAiOwnerWalletRoutes({db,repository,authenticate,access:createWalletAccess(db),enabled:()=>true,env:activationEnv}));
     server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/wallet`;
     const request=async(path,actor='owner',method='GET',body)=>{const r=await fetch(base+path,{method,headers:{...(actor?{'x-test-actor':actor}:{}),'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:r.status===401?null:await r.json()}};
     const ownerRead=await request('/stores/s');assert.equal(ownerRead.status,200);assert.equal(ownerRead.body.usageSummary.timeZone,'Europe/Athens');assert.ok(ownerRead.body.usageSummary.categories.every(r=>['INVOICES','OTHER','QUESTIONS'].includes(r.category)));assert.ok(ownerRead.body.usageSummary.categories.some(r=>r.category==='QUESTIONS'&&r.allTimeMicros==='36300'));assert.equal((await request('/stores/s',null)).status,401);assert.equal((await request('/stores/s','employee')).status,403);assert.equal((await request('/stores/foreign')).status,404);
@@ -125,6 +126,23 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     // exactly as in production. A text-only fixture cannot exercise this read.
     assert.equal((await db.user.findMany({where:{companyId:'c',role:'OWNER',mustChangePassword:false},select:{id:true}})).length,1);
     const adminRead=await request('/platform/companies/c','admin');assert.equal(adminRead.status,200,JSON.stringify(adminRead.body));
+    // Real HTTP + native SQL: unsafe activation must have no wallet/audit delta;
+    // disabling stays available even when provider configuration is unavailable.
+    assert.equal(adminRead.body.activationReadiness.model,activationEnv.OPENAI_COMMAND_CENTER_MODEL);
+    assert.equal(adminRead.body.activationReadiness.ready,false);
+    const offConfig=await request('/platform/companies/c','admin','PUT',{version:adminRead.body.version,enabled:false,emailEnabled:false,notificationOwnerId:''});
+    assert.equal(offConfig.status,200);assert.equal((await repository.read('c')).enabled,false);
+    const beforeActivation=await repository.read('c'),walletBeforeActivation=await db.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"='c'`,auditBeforeActivation=await db.$queryRaw`SELECT * FROM "AiOwnerWalletAudit" WHERE "companyId"='c' ORDER BY "id"`;
+    const enableConfig={version:beforeActivation.version,enabled:true,emailEnabled:false,notificationOwnerId:''};
+    assert.equal((await request('/platform/companies/c','admin','PUT',enableConfig)).body.code,'AI_WALLET_PROVIDER_REQUIRED');
+    activationEnv.OPENAI_API_KEY='synthetic-private-provider-key';activationEnv.AI_OWNER_WALLET_TARIFFS='invalid';
+    const missingPrice=await request('/platform/companies/c','admin','PUT',enableConfig);assert.equal(missingPrice.status,503);assert.equal(missingPrice.body.code,'AI_WALLET_TARIFF_REQUIRED');
+    assert.deepEqual(await db.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"='c'`,walletBeforeActivation);
+    assert.deepEqual(await db.$queryRaw`SELECT * FROM "AiOwnerWalletAudit" WHERE "companyId"='c' ORDER BY "id"`,auditBeforeActivation);
+    activationEnv.AI_OWNER_WALLET_TARIFFS=JSON.stringify([{model:activationEnv.OPENAI_COMMAND_CENTER_MODEL,inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:100000,outputMicrosPerMillion:2000000,contextTokens:20000,maxOutputTokens:8192}]);
+    const readyRead=await request('/platform/companies/c','admin');assert.equal(readyRead.body.activationReadiness.ready,true);assert.doesNotMatch(JSON.stringify(readyRead.body),/synthetic-private-provider-key/);
+    assert.equal((await request('/platform/companies/c','owner','PUT',enableConfig)).status,403);
+    const enabledConfig=await request('/platform/companies/c','admin','PUT',enableConfig);assert.equal(enabledConfig.status,200);assert.equal((await repository.read('c')).enabled,true);
     // Internal trial funding never claims a customer receipt. Separate company
     // controls protect all existing fixture counts and real business rows.
     await db.$executeRaw`INSERT INTO "Company" VALUES('trial','Synthetic internal trial',true)`;
