@@ -33,6 +33,17 @@ try {
     $changed=$c | ConvertTo-Json | ConvertFrom-Json;$changed.settingsHash='b'*64
     $rejected=$false;try { Read-FtextDeviceToken $changed | Out-Null } catch { $rejected=$true }
     if(-not $rejected) { throw 'Changed settings used the previous credential.' }
+    & (Get-Module 'Cloud-Tools') {
+        param($config)
+        function script:Invoke-RestMethod {param($Method,$Uri,$Headers,$ContentType,$Body,$TimeoutSec);if($Headers.Authorization -cne 'Bearer fixture-only-device-token'){throw 'Wrong scoped device credential'};return [pscustomobject]@{uri=$Uri;body=$Body}}
+        try {
+            foreach($action in @('cash-poll','cash-result','void-poll','void-result')) {
+                $reply=Invoke-FtextCashApi $config $action @{requestId='fixture'}
+                if($reply.uri -cne ($config.apiBase+'/api/ftext/v1/device/'+$action) -or ($reply.body | ConvertFrom-Json).requestId -cne 'fixture'){throw 'Wrong authenticated ftext action'}
+            }
+            $rejected=$false;try{Invoke-FtextCashApi $config 'execute' @{} | Out-Null}catch{$rejected=$true};if(-not $rejected){throw 'Arbitrary execution API was allowed'}
+        }finally{Remove-Item Function:script:Invoke-RestMethod -ErrorAction SilentlyContinue}
+    } $c
     # No credential means no network call and no physical STATUS input.
     Remove-Item -LiteralPath $credentialPath
     New-Item -ItemType Directory -Path $c.workFolder | Out-Null
