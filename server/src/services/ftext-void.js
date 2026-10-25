@@ -5,7 +5,7 @@ const fail=()=>{throw Object.assign(new Error('Δεν επιτρέπεται α�
 const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 export const ftextVoidConfirmed=row=>row?.status==='REQUIRES_CHECK'&&row.checkoutJson?.ftextVoid?.status==='CONFIRMED';
 export function assertFtextVoidEligible(row){
- if(!row||row.status!=='REQUIRES_CHECK'||row.saleId||row.plan?.payment?.method!=='CARD'||row.checkoutJson?.paymentMethod!=='CARD'||row.result?.outcome!=='REQUIRES_CHECK'||![44,48].includes(row.result?.code)||!/^PAY(?:\||$)/.test(row.result?.failedCommand||'')||!row.resultHash||!row.result?.rawResultHash)fail();
+ if(!row||row.status!=='REQUIRES_CHECK'||row.saleId||row.plan?.payment?.method!=='CARD'||row.checkoutJson?.paymentMethod!=='CARD'||row.result?.outcome!=='REQUIRES_CHECK'||![44,48].includes(row.result?.code)||row.result?.failedCommand!==('PAY||'+row.plan?.payment?.code)||!row.resultHash||!row.result?.rawResultHash)fail();
 }
 async function locked(tx,scope,id){return (await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} FOR UPDATE`)[0]}
 async function save(tx,row,job){return (await tx.$queryRaw`UPDATE "FtextCashRequest" SET "checkoutJson"=${JSON.stringify({...row.checkoutJson,ftextVoid:job})}::jsonb,"updatedAt"=NOW() WHERE "id"=${row.id} RETURNING *`)[0]}
