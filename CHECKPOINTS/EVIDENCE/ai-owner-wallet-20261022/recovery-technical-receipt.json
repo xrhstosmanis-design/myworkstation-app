@@ -1,0 +1,155 @@
+{
+  "format": "MWS_AI_WALLET_RECOVERY_TECHNICAL_RECEIPT_V1",
+  "status": "TECHNICALLY_INSTALLED_CHARGING_OFF_HOSTED_ACCEPTANCE_OPEN",
+  "claim": {
+    "pr": 3120,
+    "head": "a49e6db23990f91f03c68076234048c3e3d33a41",
+    "ci": 40105519094,
+    "merge": "b3f4ecc86b95db4b5d93e542ded021c2212e8f0f"
+  },
+  "source": {
+    "pr": 3123,
+    "head": "1da9d7f49bc7fe3c447fa9276ebdbc536ac15e2f",
+    "merge": "00a285056e3d0e7bf41ead89df2036266694545a",
+    "ci": 40176259940,
+    "buildJob": 121117979925,
+    "serverPass": 4186,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allFiveJobs": "SUCCESS"
+  },
+  "nativeWallet": {
+    "workflow": 40176259930,
+    "job": 121117481397,
+    "pass": 7,
+    "fail": 0,
+    "skip": 0,
+    "actualPg18RecoveryImage": true,
+    "fullSchemaArchiveAndSelectiveCopy": true,
+    "companyFundsAndHistoryRetained": true,
+    "targetPendingAndDeleteRefused": true,
+    "siblingForeignAndSourceControlsUnchanged": true,
+    "freshPostResetUsage": true,
+    "concurrentBootstrapAndDriftRefusal": true
+  },
+  "protectedFtext": {
+    "workflow": 40176259928,
+    "job": 121117481435,
+    "pass": 19,
+    "fail": 0,
+    "skip": 0
+  },
+  "manifestHash": "ee0d830d5a4e190da7c86cf7d87b592707a229b670e894dd72320a1317fa3af4",
+  "runtimeBlobs": {
+    "server/src/services/ai-owner-wallet-repository.js": "054da703be4d8df7f91b4cc4e6afc1b87a9922f9",
+    "server/src/services/ai-owner-wallet-schema.js": "e7bdb9bc1aa898200824b8b013deef542eb958c6",
+    "server/src/services/store-lifecycle-executor.js": "46556da305b81e649b6e00ae7227249914199abe",
+    "server/src/services/store-lifecycle-policy.js": "c5c39209ed5ddf8742eba93f4a86c2654759ae2a",
+    "server/scripts/ensure-ai-wallet-recovery-schema.js": "640f5fd3445c062c1cb335ae2a0f9e120bb381b2",
+    "ops/backup/lifecycle/manifest.json": "fadac8dd3edcac8d31325fe5ab639573ba973417"
+  },
+  "productionBefore": {
+    "observedAt": "2026-10-25T08:18:51.336661Z",
+    "pgVersion": "180004",
+    "walletRelationsAbsent": true,
+    "fenceAndExecutionAbsent": true,
+    "wholeCatalogueUnknown": [],
+    "wholeCatalogueDrift": []
+  },
+  "actualTrialCreditApplied": false,
+  "hostedLabAcceptance": "NOT TESTED",
+  "ownerChargingAndInboxAcceptance": "NOT TESTED",
+  "scopeOwner": "feat/ai-owner-wallet-20261022",
+  "nextAction": "Exact combined main CI and ordinary guarded app/backup installation; authentication then separately measured LAB and authorized target trial. Actual pricing remains unconfigured.",
+  "ownMain": {
+    "revision": "00a285056e3d0e7bf41ead89df2036266694545a",
+    "run": 40186768179,
+    "buildJob": 121149266012,
+    "serverPass": 4186,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allFiveJobs": "SUCCESS"
+  },
+  "combinedMain": {
+    "revision": "803028cffeb3e2f487ed1b03efb70b783d111f01",
+    "run": 40186803190,
+    "buildJob": 121151227238,
+    "serverPass": 4188,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allFiveJobs": "SUCCESS"
+  },
+  "rollout": {
+    "workflow": 40188097798,
+    "job": 121153122621,
+    "appDeploy": "dep-dbeua2nb9u1s73avsnc0",
+    "status": "LIVE_VERIFIED",
+    "healthObservedAt": "2026-10-25T11:18:45.990797+00:00",
+    "health": {
+      "observedAt": "2026-10-25T11:18:45.990797+00:00",
+      "status": 200,
+      "health": {
+        "ok": true,
+        "version": "0.22.0+kat-test-pos",
+        "revision": "803028cffeb3e2f487ed1b03efb70b783d111f01"
+      }
+    },
+    "appDeployVerification": {
+      "id": "dep-dbeua2nb9u1s73avsnc0",
+      "revision": "803028cffeb3e2f487ed1b03efb70b783d111f01",
+      "liveAt": "2026-10-25T11:18:06.829488Z"
+    }
+  },
+  "runtimeActivationPerformedByThisOwner": false,
+  "currentAuthenticatedAdminReadback": "NOT OBSERVED: 2FA verification expired; no failed authentication treated as success",
+  "schemaProvisionLog": {
+    "timestamp": "2026-10-25T11:17:41.413697619Z",
+    "available": true,
+    "provisionerEnablesCharging": false
+  },
+  "engineeringOnly": true,
+  "productionAfter": {
+    "observedAt": "2026-10-25T11:18:28.830203Z",
+    "actualTables": 269,
+    "expectedTables": 268,
+    "missing": [],
+    "unknown": [],
+    "drift": [],
+    "rowCounts": {
+      "audits": 0,
+      "entries": 0,
+      "notices": 0,
+      "observed_at": "2026-10-25T11:18:28.934048Z",
+      "wallets": 0
+    }
+  },
+  "productionBeforeRollout": {
+    "observedAt": "2026-10-25T11:09:48.435152Z",
+    "actualTables": 265,
+    "expectedTables": 268,
+    "missing": [
+      "AiOwnerWallet",
+      "AiOwnerWalletAudit",
+      "AiOwnerWalletEntry",
+      "AiOwnerWalletNotice"
+    ],
+    "unknown": [],
+    "drift": []
+  },
+  "backupWorker": {
+    "deploy": "dep-dbeu4ts9v7es73crl530",
+    "revision": "803028cffeb3e2f487ed1b03efb70b783d111f01",
+    "liveAt": "2026-10-25T11:05:54.17662Z",
+    "checkedAt": "2026-10-25T11:15:44.419210+00:00",
+    "observedAt": "2026-10-25T11:17:15.135272Z",
+    "manifestHash": "ee0d830d5a4e190da7c86cf7d87b592707a229b670e894dd72320a1317fa3af4",
+    "storagePolicyVerified": true,
+    "macIndependentlyValidated": false
+  },
+  "productionWalletDDLAppliedByOrdinaryStartup": true,
+  "pulseObservationIsNotIndependentHmacOrFullProductionRestoreProof": true,
+  "proofImage": "CHECKPOINTS/EVIDENCE/ai-owner-wallet-20261022/recovery-ci.jpg"
+}
