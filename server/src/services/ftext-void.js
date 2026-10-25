@@ -14,7 +14,7 @@ export async function requestFtextVoid(tx,scope,id,actorId,input,{device,setting
  z.object({noCardPresented:z.literal(true),eftposStopped:z.literal(true),exclusiveRegister:z.literal(true)}).strict().parse(input);
  const row=await locked(tx,scope,id);binding(row,device,settings);assertFtextVoidEligible(row);
  if(row.checkoutJson.ftextVoid)return row; // immutable single attempt, never re-arm
- const job={id:randomUUID(),status:'PREPARED',requestedBy:actorId,requestedAt:new Date().toISOString(),originalResultHash:row.resultHash};
+ const job={id:randomUUID(),status:'PREPARED',requestedBy:actorId,requestedAt:new Date().toISOString(),originalResultHash:row.resultHash,attestation:{noCardPresented:true,eftposStopped:true,exclusiveRegister:true}};
  return save(tx,row,job);
 }
 export async function claimFtextVoid(tx,device,settings){

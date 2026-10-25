@@ -30,6 +30,15 @@ test('native VOID single dispatch, immutable result, scoped refusal, pending rel
   await assert.rejects(a.$transaction(tx=>recordFtextVoidResult(tx,device,settings,{...proof,rawResultHash:'e'.repeat(64)})));
   const next=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'next'}));assert.notEqual(next.id,first.id);
   const replay=await a.$transaction(tx=>prepareFtextCashRequest(tx,input));assert.equal(ftextCashRequestView(replay).status,'CANCELLED');
+  await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+  await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{...original,requestId:next.id}));
+  const unknownJob=await a.$transaction(tx=>requestFtextVoid(tx,scope,next.id,'admin',ack,context));assert.deepEqual(unknownJob.checkoutJson.ftextVoid.attestation,ack);
+  const unknownClaim=await a.$transaction(tx=>claimFtextVoid(tx,device,settings));
+  const unknown={requestId:unknownClaim.id,originalRequestId:next.id,settingsHash:next.settingsHash,outcome:'REQUIRES_CHECK',code:101,rawResultHash:'e'.repeat(64)};
+  await a.$transaction(tx=>recordFtextVoidResult(tx,device,settings,unknown));
+  assert.equal((await a.$transaction(tx=>requestFtextVoid(tx,scope,next.id,'other-admin',ack,context))).checkoutJson.ftextVoid.status,'REQUIRES_CHECK');
+  assert.equal(await a.$transaction(tx=>claimFtextVoid(tx,device,settings)),null);
+  await assert.rejects(a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'still-blocked'})));
   // No financial tables exist: any sale/payment/stock write would have failed this native flow.
   const saved=await a.$queryRaw`SELECT "result","resultHash","checkoutJson" FROM "FtextCashRequest" WHERE "id"=${first.id}`;await provisionFtextRecoverySchema(a);assert.deepEqual(await a.$queryRaw`SELECT "result","resultHash","checkoutJson" FROM "FtextCashRequest" WHERE "id"=${first.id}`,saved);
  }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);try{await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`)}finally{await admin.$disconnect()}}
