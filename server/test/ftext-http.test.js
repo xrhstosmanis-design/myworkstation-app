@@ -13,7 +13,7 @@ async function fixture(fn){
  try{await fn({calls,request:(path,options={})=>fetch(base+path,options)})}finally{await new Promise(r=>server.close(r))}
 }
 test('actual HTTP rejects employee installation access before service or package action',()=>fixture(async({calls,request})=>{
- for(const [path,method] of [['/companies/company/stores/store/installation/POS-01','GET'],['/companies/company/stores/store/installation','PUT'],['/companies/company/stores/store/installation/POS-01/pairing','POST'],['/companies/company/stores/store/installation/POS-01/package','POST']]){const r=await request(path,{method});assert.equal(r.status,403);assert.equal(r.headers.get('cache-control'),'no-store')}
+ for(const [path,method] of [['/companies/company/stores/store/installation/POS-01','GET'],['/companies/company/stores/store/installation','PUT'],['/companies/company/stores/store/installation/POS-01/pairing','POST'],['/companies/company/stores/store/installation/POS-01/package','POST'],['/companies/company/stores/store/installation/POS-01/unresolved','GET'],['/companies/company/stores/store/installation/POS-01/requests/request/void','POST']]){const r=await request(path,{method});assert.equal(r.status,403);assert.equal(r.headers.get('cache-control'),'no-store')}
  assert.deepEqual(calls,[]);
 }));
 test('actual HTTP binds manager requests to selected path and routes device credentials separately',()=>fixture(async({calls,request})=>{
@@ -30,7 +30,7 @@ test('actual cash HTTP requires purpose-separated device authentication before q
  const {createFtextInstallationService}=await import('../src/services/ftext-installation.js');let touched=0;
  const service=createFtextInstallationService({db:{$transaction:()=>{touched++;throw Error('unauthenticated DB access')}},secret:()=> 'fixture-secret-with-sufficient-length',moduleState:()=>assert.fail('unauthenticated module read')});
  const app=express();app.use(express.json());app.use('/api/ftext/v1',createFtextRouter({service,db:{},ensure:async()=>{}}));app.use((e,_req,res,_next)=>res.status(e.status||500).json({error:e.message}));const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
- try{for(const action of ['cash-poll','cash-result'])for(const token of ['', 'wrong-purpose-or-expired']){const response=await fetch('http://127.0.0.1:'+server.address().port+'/api/ftext/v1/device/'+action,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:'{}'});assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'no-store')}assert.equal(touched,0)}finally{await new Promise(r=>server.close(r))}
+ try{for(const action of ['cash-poll','cash-result','void-poll','void-result'])for(const token of ['', 'wrong-purpose-or-expired']){const response=await fetch('http://127.0.0.1:'+server.address().port+'/api/ftext/v1/device/'+action,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:'{}'});assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'no-store')}assert.equal(touched,0)}finally{await new Promise(r=>server.close(r))}
 });
 test('actual separate POS capability route binds company/store/terminal and cannot fall through the catalog mount',async()=>{
  const {readFile}=await import('node:fs/promises'),source=await readFile(new URL('../src/routes/store-pos.js',import.meta.url),'utf8');

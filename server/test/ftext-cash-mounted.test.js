@@ -22,3 +22,13 @@ for(const method of ['CASH','CARD'])test(`mounted ftext ${method} finalizes only
   const before=calls.length;await render({value:{request:{id:'rbs',kind:'RBS'}}});assert.equal(calls.length,before);
  }finally{await act(async()=>root.unmount());globalThis.setInterval=oldInterval;globalThis.clearInterval=oldClear;dom.window.close();for(const[key,descriptor]of previous)descriptor?Object.defineProperty(globalThis,key,descriptor):delete globalThis[key]}
 });
+
+test('mounted confirmed cancellation closes only its own request once and never finalizes/resends',async()=>{
+ const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/useFtextCashCheckout.js',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react']});const module={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
+ const dom=new JSDOM('<div id="root"></div>'),keys=['window','document','navigator','HTMLElement','IS_REACT_ACT_ENVIRONMENT'],previous=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[key]});
+ const React=await import('react'),{createRoot}=await import('react-dom/client'),root=createRoot(document.getElementById('root')),{act}=React;let tick,status='REQUIRES_CHECK',cancelled=0;
+ const oldInterval=globalThis.setInterval,oldClear=globalThis.clearInterval;globalThis.setInterval=fn=>(tick=fn,1);globalThis.clearInterval=()=>{};
+ const calls=[],api=async(url,options={})=>{calls.push({url,options});return {request:{id:'original',storeId:'store-a',kind:'FTEXT_CASH',status}}};
+ function Harness(){module.exports.default({api,storeId:'store-a',pending:{request:{id:'original',kind:'FTEXT_CASH'}},onRequest:()=>{},onCancelled:()=>cancelled++,onCommitted:()=>assert.fail('cancellation committed sale'),onError:message=>assert.fail(message)});return null}
+ try{await act(async()=>root.render(React.createElement(Harness)));assert.equal(cancelled,0);status='CANCELLED';await act(async()=>tick());await act(async()=>tick());assert.equal(cancelled,1);assert.equal(calls.filter(c=>c.options.method==='POST').length,0)}finally{await act(async()=>root.unmount());globalThis.setInterval=oldInterval;globalThis.clearInterval=oldClear;dom.window.close();for(const[key,d]of previous)d?Object.defineProperty(globalThis,key,d):delete globalThis[key]}
+});

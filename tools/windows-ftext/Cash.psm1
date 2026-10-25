@@ -16,6 +16,12 @@ function New-FtextCashCommand($Config,$Request,[string]$ResultPath) {
  $p=$Request.plan
  foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode')) {if([string]$Request.scope.$key -cne [string]$Config.$key -or [string]$p.scope.$key -cne [string]$Config.$key) {throw 'Cash request scope mismatch.'}}
  if([string]$Request.serialNumber -cne [string]$Config.serialNumber -or [string]$p.settingsHash -cne [string]$Config.settingsHash -or [string]$p.configurationId -cne [string]$Config.configurationId -or $p.schemaVersion -cne 'MWS_FTEXT_SALE_PLAN_V1') {throw 'Unconfirmed cash installation or payment.'}
+ $isVoid=$Request.PSObject.Properties['kind'] -and [string]$Request.kind -ceq 'FTEXT_VOID'
+ if($isVoid) {
+  if([string]$Request.originalRequestId -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -or [string]$Request.originalRequestId -ceq [string]$Request.id -or [string]$Request.originalRawResultHash -notmatch '^[a-f0-9]{64}$' -or [string]$p.payment.method -cne 'CARD') {throw 'Invalid original card request for VOID.'}
+  if($ResultPath -match '[|\r\n]' -or [IO.Path]::GetDirectoryName($ResultPath) -cne [string]$Config.workFolder) {throw 'Invalid VOID result path.'}
+  return ,[Text.Encoding]::GetEncoding(1253).GetBytes(('RESULT_FILENAME|'+$ResultPath+"`r`nVOID_DOCUMENT`r`n"))
+ }
  $isCard=[string]$p.payment.method -ceq 'CARD'
  if($isCard) {
   if(-not $Config.PSObject.Properties['cardEnabled'] -or $Config.cardEnabled -ne $true -or -not $Config.PSObject.Properties['cardPayment']) {throw 'Card execution is not enabled.'}
@@ -45,10 +51,23 @@ function New-FtextCashCommand($Config,$Request,[string]$ResultPath) {
  return ,$encoding.GetBytes(($commands -join "`r`n")+"`r`n")
 }
 function Read-FtextCashResult([byte[]]$Bytes,$Config,$Request) {
+ if($Request.PSObject.Properties['kind'] -and [string]$Request.kind -ceq 'FTEXT_VOID') {
+  $void=[ordered]@{requestId=[string]$Request.id;originalRequestId=[string]$Request.originalRequestId;settingsHash=[string]$Config.settingsHash;outcome='REQUIRES_CHECK';description='VOID was not verified. Do not resend.'}
+  try {
+   $status=Read-FtextStatusResult $Bytes ([string]$Config.serialNumber)
+   $void.rawResultHash=Get-FtextCashHash $Bytes;$void.code=$status.code
+   $lines=@([Text.Encoding]::GetEncoding(1253).GetString($Bytes) -split '\r?\n')
+   if($status.ok -and ($lines.Count -le 6 -or [string]::IsNullOrWhiteSpace([string]$lines[6])) -and ($lines.Count -le 7 -or [string]::IsNullOrWhiteSpace([string]$lines[7]))) {
+    $void.outcome='VOID_CONFIRMED';$void.serialNumber=$status.serialNumber;$void.dayId=$status.dayId;$void.dayCounter=$status.dayCounter;$void.deviceTime=$status.deviceTime;$void.Remove('description')
+   }
+  } catch {}
+  return [pscustomobject]$void
+ }
  $report=[ordered]@{requestId=[string]$Request.id;settingsHash=[string]$Config.settingsHash;outcome='REQUIRES_CHECK';description='The physical receipt could not be verified. Do not resend.'}
  try {
   $status=Read-FtextStatusResult $Bytes ([string]$Config.serialNumber)
   $report.rawResultHash=Get-FtextCashHash $Bytes;$report.code=$status.code
+  if(-not $status.ok -and [string]$status.failedCommand -match '^PAY\|(?:[0-9]+\.[0-9]{2})?\|(?:[2-9]|[12][0-9]|30)$') {$report.failedCommand=[string]$status.failedCommand}
   if($status.ok) {
    $text=[Text.Encoding]::GetEncoding(1253).GetString($Bytes);$lines=@($text -split '\r?\n');$uri=$null
    if($lines.Count -lt 8 -or [decimal]$status.dayCounter -le 0 -or -not [Uri]::TryCreate($lines[6],[UriKind]::Absolute,[ref]$uri) -or $uri.Scheme -cne 'https' -or $uri.UserInfo -or -not ($uri.Host -eq 'aade.gr' -or $uri.Host.EndsWith('.aade.gr'))) {throw 'No final AADE receipt URL.'}
@@ -96,6 +115,10 @@ function Invoke-FtextCashRequest {
    if(-not $pending) {throw 'This cash request was already acknowledged. No resend is permitted.'}
   } else {
    if($pending -or (Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-status.json')) -or @(Get-ChildItem -LiteralPath $folder -Filter '*.txt' -File).Count -gt 0 -or (Test-Path -LiteralPath $resultPath) -or (Test-Path -LiteralPath $reportPath)) {throw 'Pending or pre-existing ftext files. No command was written.'}
+   if($Request.PSObject.Properties['kind'] -and [string]$Request.kind -ceq 'FTEXT_VOID') {
+    $originalPath=Join-Path $folder ('mws-cash-'+[string]$Request.originalRequestId+'.res')
+    if(-not (Test-Path -LiteralPath $originalPath -PathType Leaf) -or (Get-FtextCashHash ([IO.File]::ReadAllBytes($originalPath))) -cne [string]$Request.originalRawResultHash) {throw 'Original payment result changed or missing. No VOID was written.'}
+   }
    $intent=[ordered]@{commandHash=$digest;settingsHash=$c.settingsHash;requestId=$Request.id}
    # Write the irreversible intent first. A crash at any later point MUST NOT republish.
    Write-FtextCashDurable $intentPath $intent
