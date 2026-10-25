@@ -30,3 +30,13 @@ Verified25October2026 on30fe4c1088b83a67a8d59760b4387de3374c3046. Evidence CHECK
 The tested price schedule uses the official GPT-5-mini standard token rates, approved50percent markup and dated ECB23October2026 EUR conversion. It is a fixed, versioned schedule, not live FX. Do not alter model/context limits or invent Azure rates to fit a balance. Existing readiness/insufficient-funds/review errors require checking the exact reference/hold rather than blind refunds or retries.
 
 This PASS covers real metering/settlement and configurationON/OFF in scoped support preview. Actual Owner-session detailed UI, invoice/Azure charging, threshold notices and SMTP delivery remain outside it. No business/fiscal operation or customer receipt was performed.
+
+## Pilot activation — scoped LIVE PASS
+
+25October2026 native Super Admin enabled the existing pilot Owner AI entitlement and then customer prepaid charging, with separately fresh private before/after controls. The live release was eba062f7d32e6bb51e112d25ae254067d698ef9a, with wallet code unchanged from the paid LAB acceptance release. Private evidence digest caaad6b68abf4b0a8287734e3cceb835f2c753dc81ec61a9c0920d286b853da9. This verifies administration/configuration, not an actual OWNER-session dashboard or new customer provider call.
+
+Open “Συνδρομές & Modules”, choose the correct company, inspect existing prices/terms, select only “AI Βοηθός Ιδιοκτήτη” and save once while preserving its agreed plan/prices/dates. The accepted pilot had zero additional module monthly/setup fee. Native bulk save stamps metadata timestamps and materialized two missing inactive, zero-cost catalogue defaults; no connector or wholesale feature was enabled. Existing effective entitlements and commercial values were reconciled independently. This is a scoped pilot license save, not a blanket acceptance of every license-editor configuration.
+
+Next open “Υπόλοιπα AI πελατών”, explicitly choose the same company, confirm valid model tariff and available hold coverage, check “Χρέωση AI στον πελάτη” and save once. Refresh/read-only reopen to verify the checked state, exact preserved balance/reserved/history and expected single configuration audit/version change. The accepted target remained funded from its original internal trial; no extra credit or payment was made. Email stayedOFF.
+
+For a different customer agreement, uncheck and save the same flag with fresh before/after evidence. The measured LAB OFF flow retained funds/history and settled usage. Invoice billing, actual Owner-session detail display, low/empty thresholds and delivered email remain outside the current hosted PASS.

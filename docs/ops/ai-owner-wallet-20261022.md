@@ -1,3 +1,13 @@
+## Current activation status — 25 October 2026
+
+Authoritative CHECKPOINTS/CHANGES/2026-10-25-ai-wallet-activation.md supersedes historical target-activation-pending entries below. Real metered LAB flow published3144/greenCI40204698736/main1b459f5 before separate target changes. Private pilot Owner AI module and customer prepaid charging nowON; fixed GPT-5-mini EUR schedule contains approved50percent markup. Original trial funding retained. Synthetic LAB remainsOFF after exact4152microEUR measured charge; no extra trial/provider request in target. Global invoice/email gatesOFF.
+
+Native subscription save preserved all existing commercial/access values apart from the requested Owner AI flag. It also stamped updatedAt and materialized missing inactive, zero-cost CONNECTOR_FTEXT/WHOLESALE_B2B catalogue defaults. Physical rowcount equality was not claimed; private raw before/after and semantic reconciliation retained. Wallet enable changed only flag/version/one CONFIGURED audit; reload retained it and unchanged LAB control. Private evidence digest caaad6b68abf4b0a8287734e3cceb835f2c753dc81ec61a9c0920d286b853da9.
+
+Current runtime eba062f7d32e6bb51e112d25ae254067d698ef9a/full MAIN CI40203753323SUCCESS is an unrelated online-polling release with identical wallet production blobs. Paid acceptance remains on exact30fe, not replayed for evidence. Verified manual docs/manual/ai-owner-wallet/PASS.md. Remaining same owner: Azure/invoice rates/billing, actual OWNER-session detailed UI, hosted low/empty thresholds and email delivery. No whole-wallet closure or lifecycle action.
+
+---
+
 ## Latest metering acceptance — 25 October 2026
 
 Authoritative CHECKPOINTS/CHANGES/2026-10-25-ai-wallet-activation.md supersedes prior pricing/usage-pending notes for GPT-5-mini Owner usage only. Source3139/full CI/native verification and normal guarded source installation passed. The exact installed30fe release has full MAIN CI40202120937:4194server+8backup/0fail/0skip. The pricing environment tool returned actual API deployment dep-dbf11g0ae00c73edhbk0; readback/health verified active rates. Guard40203174287 independently verified full CI/freshness and skipped duplicate installation; do not describe that SKIP as installing prices.

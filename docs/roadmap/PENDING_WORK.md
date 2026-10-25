@@ -443,9 +443,9 @@ Explicit user START after communication success authorizes continued engineering
 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-22-ftext-connector.md; verified manual docs/manual/ftext/PASS.md. Other owners and RBS/physical accepted transactions remain unchanged.
 
-## AI-OWNER-WALLET-01 — ASSIGNED / TARGET ACTIVATION AND UNTESTED INVOICE/OWNER/EMAIL SCOPE
+## AI-OWNER-WALLET-01 — ASSIGNED / INVOICE PRICING, OWNER-SESSION REPORTS AND EMAIL REMAIN
 
-Same owner feat/ai-owner-wallet-20261022 retained. Real hosted LAB usage/settlement and agreement ON/OFF accepted in CHECKPOINTS/CHANGES/2026-10-25-ai-wallet-activation.md; docs/manual/ai-owner-wallet/PASS.md. Do not repeat the settled call or either trial credit. Fixed EUR tariff with approved50percent markup active; synthetic LAB restoredOFF. Remaining immediate target: after this scoped PASS merges green, preserve all commercial terms while enabling its existing zero-price AI_OWNER_ASSISTANT module, then separately measured target wallet enabled:true without new credit/provider request. Before-action claim3141 applies; private before/after/control evidence required. Broader remaining: verify Azure/invoice pricing and billing; actual OWNER-session detailed report UI; threshold low/empty and delivered email. Invoice/email gatesOFF. No overall wallet closure or duplicate ownership; other owners unchanged.
+Same owner feat/ai-owner-wallet-20261022 retained. Current pilot Owner AI module and customer usage charging are enabled and verified after real metered LAB acceptance; checkpoint CHECKPOINTS/CHANGES/2026-10-25-ai-wallet-activation.md and docs/manual/ai-owner-wallet/PASS.md. Do not repeat either trial credit, the settled LAB call or the completed activation saves. Existing trial funds retained; fixed dated EUR tariff includes approved50percent markup. LAB restoredOFF; invoice/email gatesOFF. Remaining: actual Azure SKU/region/rate verification and invoice billing; actual OWNER-session detailed report UI acceptance; hosted low/empty threshold behavior; email delivery. Single next action verify actual Azure provider pricing before invoice charging. No overall wallet closure or reassignment; all other owners unchanged.
 
 ## 22/10/2026 - IOS-CHAT-NATIVE-01 / ENGINEERING COMPLETE / OWNER APPLE SETUP AND IPHONE ACCEPTANCE OPEN
 
