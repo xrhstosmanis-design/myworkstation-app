@@ -1,0 +1,46 @@
+{
+  "sourcePR": 3145,
+  "sourceHead": "0205abbd67b209ec31a915cbc12186e221c24b93",
+  "mergedRevision": "601b4fe11143573ca52789cf7644d71c73fb2ebb",
+  "sourceCI": 40205412412,
+  "mainCI": 40206297778,
+  "serverTests": {
+    "pass": 4208,
+    "fail": 0,
+    "skip": 0
+  },
+  "backupTests": {
+    "pass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "mountedPollingTests": {
+    "pass": 14,
+    "fail": 0,
+    "skip": 0
+  },
+  "guardedDeployRun": 40207076296,
+  "renderDeployId": "dep-dbf20ie7bikc73bt4bcg",
+  "liveAtUTC": "2026-10-25T15:33:18.195371Z",
+  "publicProbe": {
+    "observedAtUTC": "2026-10-25T15:34:38.467483+00:00",
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "601b4fe11143573ca52789cf7644d71c73fb2ebb"
+    },
+    "mainAsset": "/assets/main-kcrtAs1f.js",
+    "mainSha256": "dfee36dd3effca40408083bd1d5b54df74c5dad1ea6bcc9022edd1e69e36d90b",
+    "activeStoreAsset": "/assets/entry-1HtDrzKK.js",
+    "activeStoreSha256": "ef1e15d588164a9b9775f7251f6dc6ee8ad4c590569474c82e220ef1b36ebee7",
+    "activeOnlineOrdersChecks": {
+      "refreshLabel": true,
+      "disabled403Guard": true,
+      "inFlightGuard": true,
+      "scopeIdentityGuard": true
+    },
+    "scope": "public served-asset/revision engineering proof only; authenticated physical POS acceptance NOT TESTED"
+  },
+  "physicalPOSAcceptance": "NOT TESTED",
+  "nextAction": "Refresh intended physical POS once without pending cart/payment; read-only observation only; do not create business transactions."
+}
