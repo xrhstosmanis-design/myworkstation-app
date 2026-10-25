@@ -6,6 +6,8 @@ Only own known v1 pending index is upgraded transactionally under advisory/table
 
 Local Node20 focused26tests:25PASS/0FAIL/1native-infrastructureSKIP, actual frontend build PASS, diff check PASS. Added actual native PostgreSQL race/legacy-index-upgrade/foreign/stale/immutable-result/new-pending and zero-financial-write test; mandatory dedicated recovery workflow includes it alongside native full-schema PG18 archive/COPY. Added Windows5.1 actual synthetic filesystem VOID round-trip, timeout/restart/no-resend, changed-original/foreign/QR refusal and retained CASH/STATUS/install cases. Exact CI required before merge/release; whole connector and physical VOID OPEN/AWAITING USER. A current downloaded connector is required for new void-poll; old connectors cannot execute a VOID merely from an admin click.
 
+Exact source102c35e6 dedicated native40191987531/job121164961956 SUCCESS22PASS/0FAIL/0SKIP, Windows40191987523/job121164729027 SUCCESS including17 actual VOID cases. FullCI40191987536 refused before application tests because this source PR omitted a fresh active-list update; add the same candidate record without weakening the policy. Source/physical acceptance still OPEN.
+
 ## 25/10/2026 - FTEXT OPEN-DOCUMENT VOID / OWNER-AUTHORIZED BOUNDED FOLLOW-UP / ASSIGNED BEFORE SOURCE
 
 Retained owner codex/rizareio-ftext-bridge-20261022, branch feat/ftext-confirmed-void-20261025. User explicitly requests implementation after discussing no-card-present CARD test and confirmed cancellation. No physical card test yet, cardEnabled remains absent/OFF. Preserve reconciled single CASH USER PASS (requeste4241ef7/sale98bee70a,0.50,stock0->-1) and exact live803028cf. No repeated cash receipt for documentation.
