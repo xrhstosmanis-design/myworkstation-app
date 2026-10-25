@@ -1,0 +1,57 @@
+{
+  "scope": "technical installation only; no recipient email, consent, dispatch activation or business action",
+  "source": {
+    "pr": 3153,
+    "head": "01a57582065f207d4c9ef3e5f868207668767647",
+    "tree": "f999b8d1512ea110ecb7537c43b8c92c2fa9a290",
+    "main": "2c1007e8156d1ca7748551c85e917a35b739af32",
+    "independentReview": "root NO BLOCKERS; exact remote tree equals reviewed local6314ee7"
+  },
+  "ci": {
+    "pr": {
+      "run": 40229748284,
+      "job": 121278911983
+    },
+    "main": {
+      "run": 40232554657,
+      "job": 121287430491
+    },
+    "each": {
+      "node": "20.20.2",
+      "serverPass": 4228,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "allJobs": "5 SUCCESS",
+      "nativeInvitationParent": "PASS unskipped",
+      "nativeInvitationSubcases": 8
+    }
+  },
+  "deployment": {
+    "guardRun": 40233351096,
+    "job": 121289662282,
+    "verify": "SUCCESS",
+    "trigger": "SUCCESS",
+    "wait": "SUCCESS",
+    "rollbackArtifact": 12613669782,
+    "previousHealthyRevision": "f5da1510fda6ad657fa54fc70ebf761a6dc1b7be",
+    "workspace": "tea-d9ie26vaqgkc739uudqg",
+    "service": "srv-d9isenfavr4c73bdh52g",
+    "id": "dep-dbf6rug473hc73c2ek50",
+    "commit": "2c1007e8156d1ca7748551c85e917a35b739af32",
+    "triggerType": "deploy_hook",
+    "status": "live",
+    "finishedAt": "2026-10-25T21:02:51.079608Z"
+  },
+  "remaining": [
+    "Authenticated email/save normal-app acceptance",
+    "Intended recipient inbox and explicit confirmation",
+    "Automatic-report delivery activation and final acceptance",
+    "No prior accepted recipient proofs or transactions repeated"
+  ],
+  "rootBrowser": {
+    "route": "https://myworkstation-app.onrender.com/api/report-invitations",
+    "observation": "Greek heading and no-token full-link prompt",
+    "scope": "generic read-only GET; no fragment/token/auth/inspect/consent/email action; not full functional acceptance"
+  }
+}

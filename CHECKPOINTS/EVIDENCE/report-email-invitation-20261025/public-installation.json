@@ -1,0 +1,30 @@
+{
+  "observedAt": "2026-10-25T21:03:07.056745+00:00",
+  "health": {
+    "status": 200,
+    "sha256": "e55e1f96413be45dd4eead3121991c7ac494a4a5e43bd07efaba179a1222f62a",
+    "headers": {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": null,
+      "Referrer-Policy": null,
+      "Content-Security-Policy": null
+    },
+    "body": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "2c1007e8156d1ca7748551c85e917a35b739af32"
+    }
+  },
+  "landing": {
+    "status": 200,
+    "sha256": "d3c4210196a08c2573b011a434266c9063f211ee22c10289f7e18c30d087e080",
+    "headers": {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+      "Content-Security-Policy": "default-src 'none'; script-src 'sha256-VfhjKYTk3CwFxzwaPGJ3pP/5if8Q29SAK+rlSUJN+fs='; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
+    },
+    "greekTitle": true,
+    "noTokenPrompt": true
+  }
+}
