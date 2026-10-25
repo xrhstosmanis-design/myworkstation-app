@@ -1,0 +1,77 @@
+{
+  "scope": "RIZAREIO-CATALOG-IMPORT-01",
+  "kind": "READ_ONLY_EXISTING_CATALOGUE_RECONCILIATION",
+  "baselineMain": "2c1007e",
+  "observedAt": "2026-10-25T20:50:12.204606Z",
+  "retainedOwner": "fix/rizareio-catalog-import-20261022",
+  "companyId": "cmvgtyt64000vh7gt7vfad3h5",
+  "storeId": "cmvgtyt6d000zh7gtbsp1en3p",
+  "productCount": 3375,
+  "storeProductCount": 3375,
+  "storeProductCountObservedAt": "2026-10-25T20:49:43.436668Z",
+  "barcodePairCount": 4395,
+  "distinctBarcodeCount": 4395,
+  "internalLabelCount": 59,
+  "firstProductCreatedAt": "2026-10-22T10:04:17.902Z",
+  "lastProductCreatedAt": "2026-10-22T10:04:17.902Z",
+  "missingJoinedDepartmentCount": 0,
+  "departmentCounts": {
+    "tobacco": 318,
+    "cards": 21,
+    "goods13": 2297,
+    "goods24": 738,
+    "service": 1
+  },
+  "zeroStockCount": 3374,
+  "nonzeroStockCount": 1,
+  "nonzeroStock": {"sku": "490", "quantity": "-1.0000", "observedAt": "2026-10-25T20:50:35.372128Z"},
+  "existingBusinessCounts": {
+    "sales": 1,
+    "stockMovements": 1,
+    "countsObservedAt": "2026-10-25T20:49:43.436668Z",
+    "ftextSaleCommittedRequests": 1,
+    "ftextRequestsWithSale": 1,
+    "ftextVoidMetadataCount": 0,
+    "ftextCountsObservedAt": "2026-10-25T20:50:49.76942Z"
+  },
+  "ftextDevice": {
+    "observedAt": "2026-10-25T20:50:12.903383Z",
+    "terminal": "RIZAREIO-POS-01",
+    "status": "ACTIVE",
+    "tokenVersion": 4,
+    "configurationId": "eb2b065b-ff03-4ee8-a957-e25bd79b827c",
+    "cashEnabled": true,
+    "cardEnabled": null,
+    "pairedAt": "2026-10-25T10:26:14.551023Z",
+    "lastSeenAt": "2026-10-25T18:47:18.520652Z",
+    "lastStatusOk": true,
+    "lastStatusAt": "2026-10-25T10:27:16.211Z",
+    "onlineWithin15SecondsAtObservation": false,
+    "physicalRunningPackageVersion": "NOT_VERIFIED"
+  },
+  "windowsSourceCompatibility": {
+    "referenceReleasedRevision": "bc6bb37974b1f2f4707278c48e4898b6c0e6c8b5",
+    "currentMainMatchesReference": true,
+    "gitBlobs": {
+      "Ftext.psm1": "3f217453946a57ac74240d8a252759a5f0688d1f",
+      "Cloud-Tools.psm1": "f2fbd9aeb21354b1b7a52f8ba5b0731aacff1f0f",
+      "Pair.ps1": "ddf9b93c899dfc958023e390ff5912b6f44841b7",
+      "Cloud-Test.ps1": "4106c73fa86a179509983b636ad42bc0cf6c46e4",
+      "Cloud-Connector.ps1": "6e4cdfefce63f75a0710fcf6b153c08f2f385268",
+      "Setup.ps1": "5c5fb3fc076555be6c65707352ab0d0667567919",
+      "Cash.psm1": "6a813081b72a52a4254e6632266a8ae19ef302aa",
+      "Install.template.cmd": "7f3099e2d34d769d757d838589f890a0db47bf9e"
+    }
+  },
+  "classification": "EXISTING_ROWS_COUNTS_AND_DEPARTMENT_DISTRIBUTION_CONFIRMED_NOT_WHOLE_PASS",
+  "notProven": [
+    "original workbook full row identity and price/cost digest",
+    "original import UI before/after baseline and importer LAB acceptance",
+    "current physical Windows package version",
+    "physical VOID and CARD acceptance",
+    "whole-store readiness"
+  ],
+  "mutationsPerformed": false,
+  "repeatImportPermitted": false,
+  "evidenceMethod": "Render query_render_postgres read-only SELECT aggregates; GitHub fetch_file source blob identity comparison; no raw configuration, token, credential or customer payload retrieved"
+}
