@@ -180,6 +180,42 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     assert.equal((await request('/platform/companies/c/credits','admin','POST',{amountMicros:'10000',receiptReference:'unconfirmed',receiptConfirmed:false})).status,400);
     await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NOW() WHERE "id"='owner-session'`;assert.equal((await request('/stores/s')).status,401);
     await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NULL WHERE "id"='owner-session'`;await db.$executeRaw`UPDATE "User" SET "role"='EMPLOYEE' WHERE "id"='owner'`;assert.equal((await request('/stores/s')).status,403);
+    // A shared owner belongs directly to x but has explicit access to shared.
+    // Exercise actual HTTP listing/configuration and SQL enqueue/dispatch,
+    // including revocation at BOTH boundaries. No real SMTP/provider I/O.
+    await db.$executeRaw`INSERT INTO "Company" VALUES('shared','Shared ownership',true)`;
+    await db.$executeRaw`INSERT INTO "User" VALUES('shared-owner','shared@example.invalid','Shared owner','OWNER','x',1,false),('foreign-owner','foreign@example.invalid','Foreign owner','OWNER','x',1,false)`;
+    await db.$executeRaw`INSERT INTO "OwnerCompanyAccess" VALUES('shared-owner','shared')`;
+    const sharedRead=()=>request('/platform/companies/shared','admin');
+    assert.deepEqual((await sharedRead()).body.owners.map(o=>o.id),['shared-owner']);
+    let sharedWallet=(await sharedRead()).body;
+    const sharedConfig={version:sharedWallet.version,enabled:false,emailEnabled:true,notificationOwnerId:'shared-owner'};
+    assert.equal((await request('/platform/companies/shared','admin','PUT',{...sharedConfig,notificationOwnerId:'foreign-owner'})).body.code,'AI_WALLET_OWNER_REQUIRED');
+    assert.equal((await request('/platform/companies/shared','admin','PUT',sharedConfig)).status,200);
+    const sharedMessages=[];
+    const sharedDrain=createWalletNotificationDispatcher({repository,enabled:()=>true,send:async message=>{if(message.companyId==='shared')sharedMessages.push(message);return {messageId:'synthetic-shared-'+randomUUID(),accepted:[message.to],rejected:[]}}});
+    await repository.credit('shared',{amountMicros:'10000',receiptReference:'shared-synthetic-1'},'admin');
+    assert.equal((await db.$queryRaw`SELECT "emailStatus" FROM "AiOwnerWalletNotice" WHERE "companyId"='shared'`)[0].emailStatus,'PENDING');
+    await sharedDrain();await sharedDrain();assert.equal(sharedMessages.length,1);assert.equal(sharedMessages[0].to,'shared@example.invalid');
+    await repository.credit('shared',{amountMicros:'10000',receiptReference:'shared-synthetic-2'},'admin');
+    await db.$executeRaw`DELETE FROM "OwnerCompanyAccess" WHERE "ownerId"='shared-owner' AND "companyId"='shared'`;
+    await sharedDrain();assert.equal(sharedMessages.length,1);
+    assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "AiOwnerWalletNotice" WHERE "companyId"='shared' AND "emailStatus"='REVOKED'`)[0].n,1);
+    assert.deepEqual((await sharedRead()).body.owners,[]);
+    sharedWallet=(await sharedRead()).body;
+    assert.equal((await request('/platform/companies/shared','admin','PUT',{...sharedConfig,version:sharedWallet.version})).body.code,'AI_WALLET_OWNER_REQUIRED');
+    await repository.credit('shared',{amountMicros:'10000',receiptReference:'shared-synthetic-3'},'admin');
+    assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "AiOwnerWalletNotice" WHERE "companyId"='shared' AND "emailStatus"='DISABLED'`)[0].n,1);
+    await db.$executeRaw`INSERT INTO "OwnerCompanyAccess" VALUES('shared-owner','shared')`;
+    await sharedDrain();assert.equal(sharedMessages.length,1); // never revive old notices
+    sharedWallet=(await sharedRead()).body; // credits advanced the optimistic version
+    for(const sql of [
+      `UPDATE "User" SET "mustChangePassword"=TRUE WHERE "id"='shared-owner'`,
+      `UPDATE "User" SET "mustChangePassword"=FALSE,"role"='EMPLOYEE' WHERE "id"='shared-owner'`
+    ]){
+      await db.$executeRawUnsafe(sql);assert.deepEqual((await sharedRead()).body.owners,[]);
+      assert.equal((await request('/platform/companies/shared','admin','PUT',{...sharedConfig,version:sharedWallet.version})).body.code,'AI_WALLET_OWNER_REQUIRED');
+    }
     assert.deepEqual(await db.$queryRaw`SELECT * FROM "BusinessControl"`,before);
   }finally{if(server)await new Promise(resolve=>server.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

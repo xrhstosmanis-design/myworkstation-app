@@ -24,7 +24,7 @@ export function createAiOwnerWalletRepository(db){
     return (await tx.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"=${companyId} FOR UPDATE`)[0];
   }
   async function notice(tx,row,kind,amount=0n){
-    const owner=row.emailEnabled&&row.notificationOwnerId?(await tx.$queryRaw`SELECT "id","email" FROM "User" WHERE "id"=${row.notificationOwnerId} AND "companyId"=${row.companyId} AND "role"::text='OWNER' AND "mustChangePassword"=FALSE`)[0]:null;
+    const owner=row.emailEnabled&&row.notificationOwnerId?(await tx.$queryRaw`SELECT u."id",u."email" FROM "User" u JOIN "Company" c ON c."id"=${row.companyId} AND c."active"=TRUE WHERE u."id"=${row.notificationOwnerId} AND (u."companyId"=c."id" OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=c."id")) AND u."role"::text='OWNER' AND u."mustChangePassword"=FALSE`)[0]:null;
     await tx.$executeRaw`INSERT INTO "AiOwnerWalletNotice" ("id","companyId","kind","cycleId","balanceMicros","amountMicros","ownerId","email","emailStatus") VALUES (${randomUUID()},${row.companyId},${kind},${row.cycleId},${row.balanceMicros},${amount},${owner?.id||null},${owner?.email||null},${owner?.email?'PENDING':'DISABLED'}) ON CONFLICT ("companyId","kind","cycleId") DO NOTHING`;
   }
   async function read(companyId,storeId=null){
@@ -43,7 +43,7 @@ export function createAiOwnerWalletRepository(db){
       const row=await lock(tx,companyId);
       if(row.version!==input.version)throw walletError('AI_WALLET_CHANGED');
       if(input.emailEnabled){
-        const owner=await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id"=${input.notificationOwnerId} AND "companyId"=${companyId} AND "role"::text='OWNER' AND "mustChangePassword"=FALSE`;
+        const owner=await tx.$queryRaw`SELECT u."id" FROM "User" u JOIN "Company" c ON c."id"=${companyId} AND c."active"=TRUE WHERE u."id"=${input.notificationOwnerId} AND (u."companyId"=c."id" OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=c."id")) AND u."role"::text='OWNER' AND u."mustChangePassword"=FALSE`;
         if(!owner.length)throw walletError('AI_WALLET_OWNER_REQUIRED',400);
       }
       await tx.$executeRaw`UPDATE "AiOwnerWallet" SET "enabled"=${input.enabled},"emailEnabled"=${input.emailEnabled},"notificationOwnerId"=${input.notificationOwnerId||null},"version"="version"+1,"updatedAt"=NOW() WHERE "companyId"=${companyId}`;

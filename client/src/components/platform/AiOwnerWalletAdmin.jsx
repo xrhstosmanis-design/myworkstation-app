@@ -38,6 +38,11 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
         {data.activationReadiness.maxReservationMicros&&<p>Μέγιστη προσωρινή δέσμευση ανά κλήση: {walletMoney(data.activationReadiness.maxReservationMicros)}. Η τελική χρέωση υπολογίζεται από την πραγματική χρήση.{!data.activationReadiness.availableEnough&&' Το τρέχον υπόλοιπο δεν επαρκεί για τη δέσμευση.'}</p>}
       </section>}
       <p>{data.meteredFeatures?.includes('INVOICE_OPENAI')?'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη και τις αναγνώσεις τιμολογίων με AI.':'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη. Οι αναγνώσεις τιμολογίων δεν έχουν ενεργοποιηθεί για χρέωση.'}</p>
+      {data.serviceConfiguration&&<section aria-label="Σύνδεση τιμολογίων και email">
+        <p>Email: {data.serviceConfiguration.email.enabled?'ενεργά στον server':'ανενεργά στον server'} · {data.serviceConfiguration.email.configured?'υπάρχουν ρυθμίσεις SMTP':'λείπουν ρυθμίσεις SMTP'}. Η παράδοση ελέγχεται χωριστά.</p>
+        <p>Τιμολόγια: OpenAI {data.serviceConfiguration.invoices.openaiConfigured?'ρυθμισμένο':'χωρίς σύνδεση'} · Azure {data.serviceConfiguration.invoices.azureConfigured?'ρυθμισμένο':'χωρίς σύνδεση'} · {data.serviceConfiguration.invoices.azureModel} / {data.serviceConfiguration.invoices.azureApiVersion}</p>
+        <ul>{data.serviceConfiguration.invoices.modelOverrides.map(row=><li key={row.key}>{row.key}: {row.model||'προεπιλογή εφαρμογής'}</li>)}</ul>
+      </section>}
       <form onSubmit={e=>{e.preventDefault();execute(()=>api(path,{method:'PUT',body:JSON.stringify({version:data.version,enabled,emailEnabled,notificationOwnerId:ownerId})}),'Οι ρυθμίσεις αποθηκεύτηκαν.')}}>
         <label><input type="checkbox" checked={enabled} disabled={busy||!enabled&&data.activationReadiness?.ready===false} onChange={e=>setEnabled(e.target.checked)}/> Χρέωση AI στον πελάτη</label><br/>
         <p>Ρύθμιση για αυτή την εταιρεία, σύμφωνα με τη συμφωνία της. Όταν είναι ανενεργή, η χρήση AI συνεχίζεται με κόστος του MyWorkStation. Το υπάρχον υπόλοιπο και το ιστορικό διατηρούνται. Κλήσεις που έχουν ήδη δεσμευτεί ολοκληρώνουν τη χρέωσή τους.</p>
