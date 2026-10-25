@@ -134,6 +134,7 @@ import commerceAdvancedOnlineSearchRoutes from "./routes/commerce-advanced-onlin
 import platformInvoiceLearningProductSearchRoutes from "./routes/platform-invoice-learning-product-search.js";
 import platformAdminRoutes from "./routes/platform-admin.js";
 import {createAutomaticReportDispatchRouter} from './routes/automatic-report-dispatch.js';
+import {createAutomaticReportInvitationRouter} from './routes/automatic-report-invitations.js';
 import {readActivation} from './services/automatic-report-activation.js';
 import {createAutomaticReportDispatcher} from './services/automatic-report-dispatch.js';
 import {createAutomaticReportScheduler} from './services/automatic-report-scheduler.js';
@@ -214,6 +215,7 @@ app.use("/api/platform/kat-test",katTestRoutes);
 app.use("/api/platform",platformOwnerSecurityRoutes);
 app.use("/api/platform",platformSuperAdminAnalyticsDetailsRoutes);
 app.use("/api/platform/store-modules",platformStoreModulesRoutes);
+app.use('/api/report-invitations',createAutomaticReportInvitationRouter(prisma));
 app.use('/api/platform/companies/:companyId/stores/:storeId/report-dispatch',auth,createAutomaticReportDispatchRouter(prisma));
 app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform",platformStoreIntegrationsRoutes);

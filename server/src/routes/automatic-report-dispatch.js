@@ -14,6 +14,7 @@ const explanations={
  REPORT_RECIPIENT_UNVERIFIED:'Επιβεβαίωσε πρώτα τη διεύθυνση email του παραλήπτη.',
  REPORT_POLICY_PREREQUISITES:'Χρειάζονται εξουσιοδότηση και ενεργή συγκατάθεση παραλήπτη για τις επιλεγμένες περιόδους.',
  REPORT_DISPATCH_BUSY:'Οι ρυθμίσεις χρησιμοποιούνται από άλλη εργασία. Ανανέωσε σε λίγο.'
+ ,REPORT_RECIPIENT_REVOKED:'Ο παραλήπτης έχει ανακληθεί. Χρειάζεται ρητή επαναπροσθήκη πριν από νέα πρόσκληση.'
 };
 
 // Authentication is mounted by index; the actual current database role is also
@@ -46,6 +47,7 @@ export function createAutomaticReportDispatchRouter(db,{env=process.env,manageme
  router.put('/policy',handle(req=>service.saveDispatchPolicy(scope(req),req.body)));
  router.put('/grant',handle(req=>service.saveAutomationGrant(scope(req),req.body)));
  router.put('/recipients',handle(req=>service.saveRecipient(scope(req),req.body)));
+ router.post('/invitations',handle(req=>service.issueRecipientInvitation(scope(req),req.body)));
  const recipient=req=>({...req.body,recipientId:req.params.recipientId});
  router.delete('/recipients/:recipientId',handle(req=>service.revokeRecipient(scope(req),recipient(req))));
  router.post('/recipients/:recipientId/verification',handle(req=>service.issueRecipientVerification(scope(req),recipient(req))));

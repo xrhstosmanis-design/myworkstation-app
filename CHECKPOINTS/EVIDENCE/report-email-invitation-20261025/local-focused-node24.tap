@@ -1,0 +1,28 @@
+✔ actual mounted dispatch routes recheck database role, bind URL scope and redact uncertain failures (109.692526ms)
+✔ mounted dispatch controls separate mailbox verification, consent and grants and discard old-store responses (241.814667ms)
+✔ mounted email/save sends one invitation action, reuses confirmed state and discards late old-store success (52.629905ms)
+✔ invitation native fixture refuses remote/production/URL override targets (6.861523ms)
+﹣ native invitation proof, public authority, stale links, rollback and two-client confirmation (0.412153ms) # SKIP
+✔ invitation links carry purpose-bound proof in a fragment, never a request query (5.560657ms)
+✔ invitation hash separates legacy proof and binds frequencies and consent revision (0.832018ms)
+✔ one committed invitation replaces two code emails, hash only and no proof in response (5.921312ms)
+✔ already verified current consent is reused with zero writes, zero mail and zero invalidation (0.443391ms)
+✔ uncertain SMTP is one attempt after commit, never a retry or proof disclosure (0.715702ms)
+✔ strict invitation input refuses actor injection and stale versions before issuing mail (0.524713ms)
+✔ actual global JSON parser order sanitizes malformed proof and oversized/non-JSON requests (67.166597ms)
+✔ actual landing script inspects but never auto-consents, strips fragment and requires explicit user action (77.041456ms)
+✔ verification commits before email, no token in response, verification alone never creates consent (34.560345ms)
+✔ separate mailbox consent binds frequencies/version/revision and requires explicit action (12.800172ms)
+✔ cooldown, expiry and five failures are durable and never trigger automatic sending retries (1.991291ms)
+✔ invalid/ambiguous SMTP receipt is generic failure after one committed challenge (0.95875ms)
+✔ input snapshots reject getters without execution; invalidation skips equal sets and updates in lock order (0.37721ms)
+✔ revoked email reuses immutable recipient identity with version advance and no inherited authority (1.443603ms)
+✔ strict recipient input rejects actor injection and snapshots fields before checkout (1.498706ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 728.730989

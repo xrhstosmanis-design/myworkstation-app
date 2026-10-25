@@ -18,7 +18,7 @@ export default function AutomaticReportDispatchManager({company,store,request}){
  useEffect(()=>{setData(null);setEmail('');setTokens({});setAck(false);setMessage('');setSelected(['DAILY']);load();return()=>{sequence.current++}},[scope]);
  const mutate=async(suffix,body,success,method='POST')=>{
   const captured=scope,id=++sequence.current;setBusy(true);setError('');setMessage('');
-  try{await request(path+suffix,{method,body:JSON.stringify(body)});if(id!==sequence.current||captured!==current.current)return;setTokens({});setMessage(success);await load()}
+  try{const result=await request(path+suffix,{method,body:JSON.stringify(body)});if(id!==sequence.current||captured!==current.current)return;setTokens({});setMessage(typeof success==='function'?success(result):success);await load()}
   catch(e){if(id===sequence.current&&captured===current.current)setError(e.message)}
   finally{if(captured===current.current)setBusy(false)}
  };
@@ -44,12 +44,17 @@ export default function AutomaticReportDispatchManager({company,store,request}){
    </fieldset>
    <fieldset disabled={busy} style={{marginTop:16}}>
     <legend>Παραλήπτες και συγκατάθεση</legend>
-    <p>Η επιβεβαίωση διεύθυνσης και η συγκατάθεση είναι δύο χωριστά βήματα. Ο παραλήπτης λαμβάνει διαφορετικό κωδικό για καθένα.</p>
+    <p>Συμπλήρωσε το email και πάτησε Αποθήκευση. Ο παραλήπτης λαμβάνει μία πρόσκληση και επιβεβαιώνει από τον σύνδεσμο, χωρίς αντιγραφή κωδικών. Ήδη επιβεβαιωμένο email με ενεργή συγκατάθεση διατηρείται.</p>
     <label>Νέο email<input aria-label="Νέο email αυτόματων αναφορών" type="email" maxLength={254} value={email} onChange={e=>setEmail(e.target.value)}/></label>
+    <button type="button" disabled={!email||!selected.length} onClick={()=>{const existing=data.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase())?.recipient;mutate('/invitations',{email,expectedVersion:existing?.version||0,...(existing?{recipientId:existing.recipientId}:{}),allowedFrequencies:selected},r=>r.alreadyConfirmed?'Το email και η ενεργή συγκατάθεση διατηρήθηκαν. Δεν στάλθηκε νέα πρόσκληση.':'Η πρόσκληση στάλθηκε. Ο παραλήπτης επιβεβαιώνει από το email του.')}}>Αποθήκευση email</button>
+    <details><summary>Παλαιά επιβεβαίωση με κωδικό</summary>
     <button type="button" disabled={!email||data.recipients?.filter(x=>!x.recipient.revokedAt).length>=5} onClick={()=>mutate('/recipients',{email,expectedVersion:0},'Ο παραλήπτης προστέθηκε χωρίς επιβεβαίωση.','PUT')}>Προσθήκη παραλήπτη</button>
+    </details>
     {(data.recipients||[]).map(({recipient:r,consent})=><div key={r.recipientId} style={{padding:'14px 0',borderTop:'1px solid #e2e8f0'}}>
      <strong>{r.email}</strong> · {r.revokedAt?'Ανακλημένος':r.verifiedAt?'Επιβεβαιωμένο email':'Μη επιβεβαιωμένο email'} · {consent?.active?'Ενεργή συγκατάθεση':'Χωρίς ενεργή συγκατάθεση'}
      {!r.revokedAt&&<>
+      {(!r.verifiedAt||!consent?.active||selected.some(f=>!consent.allowedFrequencies?.includes(f)))&&<button type="button" disabled={!selected.length} onClick={()=>mutate('/invitations',{email:r.email,recipientId:r.recipientId,expectedVersion:r.version,allowedFrequencies:selected},'Η πρόσκληση στάλθηκε. Επιβεβαίωσε από τον σύνδεσμο του email.')}>Αποστολή πρόσκλησης</button>}
+      <details><summary>Παλαιά επιβεβαίωση με κωδικό</summary>
       <div><button type="button" onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/verification`,{expectedVersion:r.version},'Στάλθηκε αίτημα επιβεβαίωσης. Ο κωδικός ισχύει για 10 λεπτά.')}>Αποστολή κωδικού email</button>{' '}
        <label>Κωδικός email<input aria-label={`Κωδικός email ${r.email}`} autoComplete="off" maxLength={32} value={token(r.recipientId,'verify')} onChange={e=>setToken(r.recipientId,'verify',e.target.value)}/></label>{' '}
        <button type="button" disabled={!/^[a-f0-9]{32}$/.test(token(r.recipientId,'verify'))} onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/verification/confirm`,{expectedVersion:r.version,token:token(r.recipientId,'verify')},'Η διεύθυνση επιβεβαιώθηκε. Δεν έχει δοθεί ακόμη συγκατάθεση.')}>Επιβεβαίωση email</button>
@@ -58,6 +63,7 @@ export default function AutomaticReportDispatchManager({company,store,request}){
        <label>Κωδικός συγκατάθεσης<input aria-label={`Κωδικός συγκατάθεσης ${r.email}`} autoComplete="off" maxLength={32} value={token(r.recipientId,'consent')} onChange={e=>setToken(r.recipientId,'consent',e.target.value)}/></label>{' '}
        <button type="button" disabled={!r.verifiedAt||!ack||!/^[a-f0-9]{32}$/.test(token(r.recipientId,'consent'))} onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/consent/confirm`,{expectedVersion:r.version,expectedRevision:consent?.revision||0,token:token(r.recipientId,'consent'),explicitConsent:true},'Η συγκατάθεση καταγράφηκε για τις περιόδους που ενέκρινε ο παραλήπτης.')}>Καταγραφή συγκατάθεσης με κωδικό</button>
       </div>
+      </details>
       <button type="button" onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/consent`,{expectedRecipientVersion:r.version,expectedRevision:consent?.revision||0,active:false,allowedFrequencies:[],explicitConsent:false},'Η συγκατάθεση ανακλήθηκε.','PUT')}>Ανάκληση συγκατάθεσης</button>{' '}
       <button type="button" onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}`,{expectedVersion:r.version},'Ο παραλήπτης ανακλήθηκε.','DELETE')}>Ανάκληση παραλήπτη</button>
      </>}
