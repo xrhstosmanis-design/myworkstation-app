@@ -1,3 +1,13 @@
+## Latest metering acceptance — 25 October 2026
+
+Authoritative CHECKPOINTS/CHANGES/2026-10-25-ai-wallet-activation.md supersedes prior pricing/usage-pending notes for GPT-5-mini Owner usage only. Source3139/full CI/native verification and normal guarded source installation passed. The exact installed30fe release has full MAIN CI40202120937:4194server+8backup/0fail/0skip. The pricing environment tool returned actual API deployment dep-dbf11g0ae00c73edhbk0; readback/health verified active rates. Guard40203174287 independently verified full CI/freshness and skipped duplicate installation; do not describe that SKIP as installing prices.
+
+Native scoped LAB Owner-assistant support question completed once:4032input/0cached/1045output, one settled charge4152microEUR, exact remaining balance4995848 and zero hold. Enable/disable changed only configuration/audit/version; LAB restoredOFF with history retained. Provider log and independent integer charge agree. Evidence metered-lab-20261025.json and verified manual docs/manual/ai-owner-wallet/PASS.md. Foreign wallet and LAB business counters unchanged.
+
+Target company AI module and customer-wallet activation remain pending their separately measured native actions; no new credit or provider call is planned. Invoice/Azure rates/billing, actual Owner-session detailed UI, low/empty thresholds and email delivery remainOPEN. Global invoice/email gatesOFF; same owner retained. No whole-task closure.
+
+---
+
 ## Current operational status — 25 October 2026
 
 Authoritative checkpoint: CHECKPOINTS/CHANGES/2026-10-25-ai-wallet-runtime-trial.md. This supersedes historical expired-login, runtime-OFF, empty-table and trial-NOT-APPLIED notes below. Secure native Super Admin authentication succeeded. Guarded release6fdadef6f1ff04b8c71e516fc7144a417920905c/full MAIN CI40195316878/deploy40197399927 actual Verify/Trigger/WaitSUCCESS;4192server+8backup/0fail/0skip. Runtime wallet administration is ON; customer charging remains OFF for both tested companies; invoice/email gates OFF.

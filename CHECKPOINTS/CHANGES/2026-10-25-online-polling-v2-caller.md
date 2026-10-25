@@ -8,6 +8,9 @@ Node20.20.2 actual esbuild/JSDOM26.1.0/React19 mounted tests cover BOTH legacy a
 
 Required: full exact source/mainCI, ordinary guarded release, independent healthy revision AND served active V2 bundle proof. Personal-PIN Store Mode remains unauthenticated; no operator PIN/session/shift/payment/stock/print/order-status action. Hosted/physical acceptance and global old-client traffic cessation remain OPEN/NOT TESTED; existing open physical tabs need new asset. No functional/manual/numbered closure. Next: exact CI/review/merge/release, then record technical receipt and user-read-only POS acceptance separately. Checkpoint CHECKPOINTS/CHANGES/2026-10-25-online-polling-v2-caller.md.
 
+
+Documentation-only reconciliation with main1b459f54 (wallet acceptance records and PDF only). Preserve every other-owner record and artifact. Active V2 runtime/test contents remain unchanged; fresh combined exact-head CI required. Insert this receipt beside its own existing claim below other-owner top entries to avoid unrelated prepend conflicts.
+
 ## 25/10/2026 — DAILY-CHECK-ONLINE-POLLING-01 / ACTUAL POS V2 CALLER FOUND / BOUNDED CLAIM AMENDMENT BEFORE SOURCE
 
 Same user-authorized receiving owner/branch retained. IMPORTANT correction to PR3127 scope: production30fe4c10 public runtime assets main-CCe-cUU6.js -> entry-Calmu9BG.js (SHA2564222e0b75ed0ee17c0853cbfd8552e3bf625ef87e931c4b29cfd640f47313258) contain one online-orders GET implementation, with PAY/cancel/checkout and unguarded7000ms polling. Source StoreOperatorWithOnlineOrders.jsx imports StoreOnlineOrdersV2.jsx, not StoreOnlineOrders.jsx. Thus merged3127/eba062f7 fixes only the legacy component; it DOES NOT establish a fix for the active operator POS. Prior sourceCI4201+8/all5SUCCESS proves its bounded tested scope only. No active-POS functional PASS or global403 cessation claim.
