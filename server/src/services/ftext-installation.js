@@ -67,7 +67,7 @@ export function createFtextInstallationService({db,moduleState,secret,clock=()=>
    const table=(await t.$queryRaw`SELECT to_regclass(format('%I.%I',current_schema(),'StoreRbsInstallationSettings'))::text AS name`)[0];
    if(table?.name&&(await t.$queryRaw`SELECT 1 FROM "StoreRbsInstallationSettings" WHERE "companyId"=${s.companyId} AND "storeId"=${s.storeId} AND "terminalPos"=${s.terminalPos}`).length)fail(409,'Υπάρχουν ρυθμίσεις RBS στο POS. Απαιτείται ελεγχόμενη αλλαγή τύπου σύνδεσης.');
    const old=await device(t,s,true);if(old&&old.platform!==FTEXT_PLATFORM)fail(409,'Η ταυτότητα συσκευής χρησιμοποιείται από άλλη σύνδεση.');
-   if(await ftextCashTableExists(t)&&(await t.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${s.companyId} AND "storeId"=${s.storeId} AND "terminalPos"=${s.terminalPos} AND "status"<>'SALE_COMMITTED' LIMIT 1`).length)fail(409,'Υπάρχει εκκρεμής εντολή ftext. Οι ρυθμίσεις δεν άλλαξαν.');
+   if(await ftextCashTableExists(t)&&(await t.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${s.companyId} AND "storeId"=${s.storeId} AND "terminalPos"=${s.terminalPos} AND "status"<>'SALE_COMMITTED' AND COALESCE("checkoutJson"->'ftextVoid'->>'status','')<>'CONFIRMED' LIMIT 1`).length)fail(409,'Υπάρχει εκκρεμής εντολή ftext. Οι ρυθμίσεις δεν άλλαξαν.');
    const cashFields=b.cashEnabled===undefined?{}:{cashEnabled:b.cashEnabled,...(b.cashDepartments?{cashDepartments:b.cashDepartments}:{})};
    const cardFields=b.cardEnabled===undefined?{}:{cardEnabled:b.cardEnabled,...(b.cardPayment?{cardPayment:b.cardPayment}:{})};
    const common={...s,...cashFields,...cardFields,fiscalDeviceCode,serialNumber:b.serialNumber,workFolder:b.workFolder,protocol:'SOLIDUS(II)T',lifecycleGeneration:lifecycle.generation};

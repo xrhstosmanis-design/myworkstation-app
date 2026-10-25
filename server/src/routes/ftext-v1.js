@@ -1,3 +1,4 @@
+import {claimFtextVoid,requestFtextVoid,recordFtextVoidResult} from '../services/ftext-void.js';
 import {Router} from 'express';
 import {claimFtextCashRequest,recordFtextCashResult,ftextCashRequestView} from '../services/ftext-cash-requests.js';
 import {finalizeFtextCashRequest} from '../services/ftext-cash-finalize.js';
@@ -23,6 +24,8 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
  },wrap(async(req,res)=>res.status(201).json(await service.pair(req.body))));
  router.post('/device/ping',wrap(async(req,res)=>res.json(await service.ping(token(req)))));
  router.post('/device/status-result',wrap(async(req,res)=>res.json(await service.report(token(req),req.body))));
+ router.post('/device/void-poll',wrap(async(req,res)=>res.json(await service.authenticated(token(req),async(t,d,c)=>({request:c.cashEnabled===true&&await ftextCashTableExists(t)?await claimFtextVoid(t,d,c):null})))));
+ router.post('/device/void-result',wrap(async(req,res)=>{const row=await service.authenticated(token(req),async(t,d,c)=>recordFtextVoidResult(t,d,c,req.body));res.json({ok:true,status:row.checkoutJson.ftextVoid.status})}));
  router.post('/device/cash-poll',wrap(async(req,res)=>res.json(await service.authenticated(token(req),async(t,d,c)=>({request:c.cashEnabled===true&&await ftextCashTableExists(t)?await claimFtextCashRequest(t,d,c):null})))));
  router.post('/device/cash-result',wrap(async(req,res)=>{
   const row=await service.authenticated(token(req),async(t,d,c)=>recordFtextCashResult(t,d,c,req.body));
@@ -30,6 +33,13 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
   res.json({ok:true,status:committed?'SALE_COMMITTED':row.status,saleId:committed?.saleId||row.saleId||null,finalizationPending:row.status==='CONFIRMED'&&!committed});
  }));
  const prefix='/companies/:companyId/stores/:storeId';
+ router.get(prefix+'/installation/:terminalPos/unresolved',userAuth,manager,wrap(async(req,res)=>{
+  const scope=scoped(req),rows=await db.$transaction(async tx=>{await service.cashContext(tx,scope,{requireOnline:false});if(!await ftextCashTableExists(tx))return [];return tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} AND "status"<>'SALE_COMMITTED' AND COALESCE("checkoutJson"->'ftextVoid'->>'status','')<>'CONFIRMED' ORDER BY "createdAt" LIMIT 1`});
+  res.json({request:rows[0]?{...ftextCashRequestView(rows[0]),resultCode:rows[0].result?.code,failedCommand:rows[0].result?.failedCommand}:null});
+ }));
+ router.post(prefix+'/installation/:terminalPos/requests/:requestId/void',userAuth,manager,wrap(async(req,res)=>{
+  const scope=scoped(req),row=await db.$transaction(async tx=>requestFtextVoid(tx,scope,req.params.requestId,req.user.id,req.body,await service.cashContext(tx,scope)));res.json({request:ftextCashRequestView(row)});
+ }));
  router.get(prefix+'/installation/:terminalPos',userAuth,manager,wrap(async(req,res)=>res.json(await service.view(scoped(req)))));
  router.put(prefix+'/installation',userAuth,manager,wrap(async(req,res)=>res.json(await service.configure(scoped(req),req.body,req.user.id))));
  router.post(prefix+'/installation/:terminalPos/pairing',userAuth,manager,wrap(async(req,res)=>res.status(201).json(await service.createPairing(scoped(req),req.user.id))));
