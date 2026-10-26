@@ -1,3 +1,8 @@
+## 26/10/2026 - POS product causal test amendment:18paths BEFORE SOURCE
+Central next_commerce/retainedowner; add ONLY operator-checkbox-acceptance.test.js, pos-barcode-pending.test.js and pos-catalog-completeness.test.js to original15path claim. Runtime15unchanged; preserve all old assertions/newrealroute nativecoverage; constructor DI only for legacyfixtures and explicit24checkbox/newProductdefaultfalse/toggle persistence.
+Actual3181 CI40380860057:4302PASS/7fixture-compatFAIL/0SKIP, newPGparent+4PASS; no fullCI/install/LABPASS. Worker waits this amendment green/main before3test edits, then exactreview/fullCI required.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-new-product-full-card.md; cash/PIN/invoice owners and all historical passes preserved. No production fallback, assertionweakening, newskip or business replay.
+
 ## 26/10/2026 - Deferred invoice: reviewed13path patch, awaiting exact CI/install
 DEFERRED_INVOICE_PUBLICATION_STAGE: REVIEWED_PATCH_AWAITING_FRESH_RUNTIME_RECONCILIATION.
 Owner central-four-streams/next_reports; shared close sole writer shift_pin. Plain original capture default, scoped SUPPLIER_PAYMENT without AI; explicit licensed AI separate. One original payment, durable pending and locked pre-close ACK; no document from payment proof alone.
