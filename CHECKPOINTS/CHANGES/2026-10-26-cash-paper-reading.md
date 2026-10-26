@@ -24,3 +24,9 @@ First discovery3163 technical receipt: exact main9ecbb3e CI40365265503/all5jobs 
 
 Required next: finish exact reading CI/release evidence, then separate before-source claim for reviewed evidence association, once-only adjacent cash offsets/recalculation history, per-date/store/operator results and persistent store checkpoint/common report consumers. Cash and POS–EFTPOS remain separate; matching amount alone never proves a handoff error. No emails. Checkpoint CHECKPOINTS/CHANGES/2026-10-26-cash-paper-reading.md. Single next action: publish this bounded source for exact full native CI.
 
+## 26/10/2026 — CASH-PAPER-READING-02 / EXACT SOURCE CI PASS / SHARED DOCUMENT RECONCILIATION
+
+Same owner codex/cash-chat-reconciliation-20261026, source3170 head10e491eba742c3fece204a94f5fcf5cf3861de04/treefe1ce028c6c80cd1a14de5a39c74e24963a09ba2. Exact CI40370223929/all5jobs SUCCESS; build121739189023 actual4276server+8backupPASS/0FAIL/0SKIP. New native two-client durable intent, once-only dispatch, original/financial/control preservation and stale-generation refusal executed unskipped, as did mounted UI old-store/double-click/uncertain-reply tests. No real provider or LAB call. This is engineering evidence only, NOT LAB PASS.
+
+Freshmain2c20d2cf advances only other-owner myDATA verification3171. Three registry texts merge without conflict; canonical generated PDF overlaps, so it is regenerated from the combined current Markdown rather than choosing either owner's version. All eighteen runtime/test blobs remain exactly the green source bytes. Combined exact full CI is required before merge. No production installation or manual/whole-workflow PASS claimed. Reading source stays AWAITING LAB; same owner and downstream residual retained.
+
