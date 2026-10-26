@@ -1,3 +1,4 @@
+import {recordFtextOperatorDecision} from '../services/ftext-operator-card.js';
 import {createFtextInstallationService} from '../services/ftext-installation.js';
 import {companyModuleState as ftextModuleState} from '../middleware/module-access.js';
 import {prepareFtextCashRequest,ftextCashRequestView} from '../services/ftext-cash-requests.js';
@@ -39,6 +40,14 @@ router.use(auth);
 router.get('/stores/:storeId/ftext-cash/capability',async(req,res,next)=>{try{assertStore(req,req.params.storeId);await storeFor(req,req.params.storeId);const terminalPos=await requestTerminal(req);res.json({storeId:req.params.storeId,configured:await ftextConfigured(prisma,req.user.companyId,req.params.storeId,terminalPos)})}catch(e){next(e)}});
 router.get('/stores/:storeId/ftext-cash/pending',async(req,res,next)=>{try{assertStore(req,req.params.storeId);const terminalPos=await requestTerminal(req);if(!await ftextCashTableExists(prisma))return res.json({requests:[]});const rows=await prisma.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${req.user.companyId} AND "storeId"=${req.params.storeId} AND "terminalPos"=${terminalPos} AND "status"<>'SALE_COMMITTED' AND COALESCE("checkoutJson"->'ftextVoid'->>'status','')<>'CONFIRMED' ORDER BY "createdAt"`;res.json({requests:rows.map(ftextCashRequestView)})}catch(e){next(e)}});
 router.get('/stores/:storeId/ftext-cash/:requestId',async(req,res,next)=>{try{assertStore(req,req.params.storeId);const terminalPos=await requestTerminal(req);if(!await ftextCashTableExists(prisma))return res.status(404).json({error:'Δεν βρέθηκε εντολή ftext.'});const row=(await prisma.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${req.params.requestId} AND "companyId"=${req.user.companyId} AND "storeId"=${req.params.storeId} AND "terminalPos"=${terminalPos}`)[0];if(!row)return res.status(404).json({error:'Δεν βρέθηκε εντολή ftext.'});res.json({request:ftextCashRequestView(row)})}catch(e){next(e)}});
+router.post('/stores/:storeId/ftext-cash/:requestId/outcome',async(req,res,next)=>{try{
+ assertStore(req,req.params.storeId);await storeFor(req,req.params.storeId);
+ const terminalPos=await requestTerminal(req),scope={companyId:req.user.companyId,storeId:req.params.storeId,terminalPos};
+ const row=await prisma.$transaction(async tx=>recordFtextOperatorDecision(tx,req.params.requestId,scope,req.user.id,req.body,{context:ftextCashService.cashContext}));
+ // Acknowledgement never emits another fiscal command. Finalization is atomic and replay-safe.
+ let committed=null;if(row.checkoutJson.ftextCardDecision.outcome==='YES')committed=await finalizeFtextCashRequest(prisma,row.id,scope,{context:ftextCashService.cashContext});
+ res.json({request:ftextCashRequestView(committed?{...row,status:'SALE_COMMITTED',saleId:committed.saleId}:row),allowResend:false});
+}catch(e){if(e.name==='ZodError')return res.status(400).json({error:'Επίλεξε Ναι, Όχι ή Αβέβαιο.'});next(e)}});
 router.post('/stores/:storeId/ftext-cash/:requestId/finalize',async(req,res,next)=>{try{assertStore(req,req.params.storeId);const terminalPos=await requestTerminal(req),scope={companyId:req.user.companyId,storeId:req.params.storeId,terminalPos};res.json(await finalizeFtextCashRequest(prisma,req.params.requestId,scope,{context:ftextCashService.cashContext}))}catch(e){next(e)}});
 
 let holdTablesReady=false;

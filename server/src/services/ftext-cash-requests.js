@@ -1,3 +1,4 @@
+import {ftextOperatorCardMode,ftextOperatorDecisionRequired} from './ftext-operator-card.js';
 import {ftextVoidConfirmed} from './ftext-void.js';
 import {validateFtextCardPayment} from './ftext-card-payment.js';
 import {createHash,randomUUID} from 'node:crypto';
@@ -6,14 +7,14 @@ import {prepareFtextSalePlan} from './ftext-sale-plan.js';
 import {ftextSettingsHash} from './ftext-installation.js';
 const fail=(code,message)=>{throw Object.assign(new Error(message),{status:409,code})};
 const hash=s=>createHash('sha256').update(s).digest('hex');
-export function ftextCashRequestView(row){return row?{id:row.id,kind:'FTEXT_CASH',storeId:row.storeId,terminalPos:row.terminalPos,clientTransactionId:row.clientTransactionId,paymentMethod:row.checkoutJson?.paymentMethod||'CASH',total:Number(row.total),status:ftextVoidConfirmed(row)?'CANCELLED':row.status,voidStatus:row.checkoutJson?.ftextVoid?.status||null,saleId:row.saleId||null,checkout:row.checkoutJson,createdAt:row.createdAt}:null;}
+export function ftextCashRequestView(row){return row?{id:row.id,kind:'FTEXT_CASH',storeId:row.storeId,terminalPos:row.terminalPos,clientTransactionId:row.clientTransactionId,paymentMethod:row.checkoutJson?.paymentMethod||'CASH',total:Number(row.total),status:ftextVoidConfirmed(row)?'CANCELLED':row.status,voidStatus:row.checkoutJson?.ftextVoid?.status||null,saleId:row.saleId||null,operatorConfirmationRequired:ftextOperatorDecisionRequired(row),operatorOutcome:row.checkoutJson?.ftextCardDecision?.outcome||null,checkout:row.checkoutJson,createdAt:row.createdAt}:null;}
 export function assertFtextSimpleCash(checkout,items){
  if(checkout.paymentMethod!=='CASH'||checkout.customerId||checkout.onlineOrderId||checkout.tableOrderId||Number(checkout.redeemPoints||0)!==0||checkout.payments?.length||!['COUNTER',undefined].includes(checkout.operationChannel)||!['NORMAL',undefined].includes(checkout.audience)||items.some(i=>Number(i.discount||0)!==0||i.promotionId||i.promotionType||!Number.isSafeInteger(Number(i.quantity))||Number(i.quantity)<=0))fail('FTEXT_CASH_UNSUPPORTED','Η πρώτη έκδοση ftext υποστηρίζει απλή πώληση μετρητών στο κατάστημα, χωρίς πελάτη, προσφορά ή έκπτωση.');
 }
 export async function prepareFtextCashRequest(tx,{settings,scope,sessionId,clientTransactionId,requestHash,checkout,items,summary}){
  if(!['CASH','CARD'].includes(checkout.paymentMethod))fail('FTEXT_CASH_UNSUPPORTED','Μη υποστηριζόμενος τρόπος πληρωμής ftext.');
  assertFtextSimpleCash({...checkout,paymentMethod:'CASH'},items);
- if(checkout.paymentMethod==='CARD'&&(settings.cardEnabled!==true||settings.cardPayment?.confirmed!==true||settings.cardPayment.resultFormat!=='POS_LINE8_OS7'))fail('FTEXT_CARD_DISABLED','Η κάρτα ftext απαιτεί επιβεβαιωμένο τρόπο πληρωμής και υποστήριξη αποτελέσματος POS.');
+ if(checkout.paymentMethod==='CARD'&&(settings.cardEnabled!==true||settings.cardPayment?.confirmed!==true||!['POS_LINE8_OS7','OPERATOR_CONFIRMATION'].includes(settings.cardPayment.resultFormat)))fail('FTEXT_CARD_DISABLED','Η κάρτα ftext απαιτεί επιβεβαιωμένο τρόπο πληρωμής και υποστήριξη αποτελέσματος POS.');
  if(settings.cashEnabled!==true||!settings.cashDepartments?.length)fail('FTEXT_CASH_DISABLED','Δεν έχει ενεργοποιηθεί και επιβεβαιωθεί η έκδοση μετρητών ftext για αυτό το POS.');
  const plan=prepareFtextSalePlan({scope,settings,clientTransactionId,total:summary.total,
  // ManagementVatDepartment.legacyVatCode can be a legacy department label
@@ -26,7 +27,7 @@ export async function prepareFtextCashRequest(tx,{settings,scope,sessionId,clien
  const old=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "clientTransactionId"=${clientTransactionId} FOR UPDATE`)[0];
  if(old){if(old.requestHash!==requestHash||old.plan.planHash!==plan.planHash||old.settingsHash!==settingsHash||old.sessionId!==sessionId)fail('FTEXT_CASH_KEY_CHANGED','Η ίδια συναλλαγή έχει διαφορετικά στοιχεία. Η προηγούμενη εντολή διατηρήθηκε.');return old;}
  if((await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "serialNumber"=${settings.serialNumber} AND "status"<>'SALE_COMMITTED' AND COALESCE("checkoutJson"->'ftextVoid'->>'status','')<>'CONFIRMED' LIMIT 1`).length)fail('FTEXT_CASH_PENDING','Υπάρχει εκκρεμής εντολή σε αυτή την ταμειακή. Δεν στάλθηκε νέα.');
- return (await tx.$queryRaw`INSERT INTO "FtextCashRequest" ("id","companyId","storeId","terminalPos","fiscalDeviceCode","serialNumber","clientTransactionId","requestHash","settingsHash","lifecycleGeneration","sessionId","plan","checkoutJson","total") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${scope.terminalPos},${scope.fiscalDeviceCode},${settings.serialNumber},${clientTransactionId},${requestHash},${settingsHash},${settings.lifecycleGeneration},${sessionId},${JSON.stringify(plan)}::jsonb,${JSON.stringify({...checkout,resolvedItems:items,baseSummary:summary})}::jsonb,${summary.total}) RETURNING *`)[0];
+ return (await tx.$queryRaw`INSERT INTO "FtextCashRequest" ("id","companyId","storeId","terminalPos","fiscalDeviceCode","serialNumber","clientTransactionId","requestHash","settingsHash","lifecycleGeneration","sessionId","plan","checkoutJson","total") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${scope.terminalPos},${scope.fiscalDeviceCode},${settings.serialNumber},${clientTransactionId},${requestHash},${settingsHash},${settings.lifecycleGeneration},${sessionId},${JSON.stringify(plan)}::jsonb,${JSON.stringify({...checkout,resolvedItems:items,baseSummary:summary,ftextCardMode:checkout.paymentMethod==='CARD'?settings.cardPayment.resultFormat:null,ftextCardDecision:null,ftextCardDecisionHistory:[]})}::jsonb,${summary.total}) RETURNING *`)[0];
 }
 export async function claimFtextCashRequest(tx,device,settings){
  if(settings.cashEnabled!==true)return null;
@@ -45,7 +46,7 @@ export function validateFtextCashResult(input,row){
  if(r.outcome==='CONFIRMED'){
   let url;try{url=new URL(r.qr)}catch{}
   if(r.code!==0||r.serialNumber!==row.serialNumber||!r.dayId||!r.dayCounter||BigInt(r.dayCounter)<=0n||!r.deviceTime||!r.rawResultHash||!url||url.protocol!=='https:'||url.username||url.password||!(url.hostname==='aade.gr'||url.hostname.endsWith('.aade.gr')))fail('FTEXT_CASH_RECEIPT_UNVERIFIED','Δεν επιβεβαιώθηκε τελική φορολογική απόδειξη.');
-  if(row.plan?.payment?.method==='CARD'){if(row.checkoutJson?.paymentMethod!=='CARD'||Number(row.total)!==Number(row.plan.payment.amount))fail('FTEXT_CARD_PAYMENT_UNVERIFIED','Ο τρόπος πληρωμής άλλαξε.');validateFtextCardPayment(r.posPayments,row.plan.payment.amount);}
+  if(row.plan?.payment?.method==='CARD'){if(row.checkoutJson?.paymentMethod!=='CARD'||Number(row.total)!==Number(row.plan.payment.amount))fail('FTEXT_CARD_PAYMENT_UNVERIFIED','Ο τρόπος πληρωμής άλλαξε.');if(!ftextOperatorCardMode(row)||r.posPayments!==undefined)validateFtextCardPayment(r.posPayments,row.plan.payment.amount);}
   else if(r.posPayments?.length)fail('FTEXT_CARD_PAYMENT_UNVERIFIED','Το αποτέλεσμα κάρτας δεν αντιστοιχεί σε πώληση μετρητών.');
   r.dayId=BigInt(r.dayId).toString();r.dayCounter=BigInt(r.dayCounter).toString();
  }
