@@ -116,9 +116,25 @@ router.get("/products",async(req,res,next)=>{try{
   res.json({rows:rows.map(row=>({...row,barcode:row.barcodes?.[0]||"",costPrice:Number(row.costPrice||0),salePrice:Number(row.salePrice||0),currentStock:Number(row.currentStock||0)}))});
 }catch(error){next(error)}});
 
-router.get("/history",async(req,res,next)=>{try{const companyId=await companyFor(req,res);if(!companyId)return;await ensureMarketSchema();const rows=await prisma.$queryRaw`SELECT "id","storeId","query","queryType","productId","resultCount","createdAt" FROM "InternetProductSearch" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC LIMIT 50`;res.json({rows})}catch(error){next(error)}});
+router.get("/history",async(req,res,next)=>{try{
+  const companyId=await companyFor(req,res);if(!companyId)return;
+  const storeId=typeof req.query.storeId==="string"?req.query.storeId.trim():"";
+  if(!storeId||storeId.length>200||/[\u0000-\u001f\u007f]/.test(storeId))return res.status(400).json({error:"Επίλεξε συγκεκριμένο κατάστημα."});
+  if(!await validStore(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
+  await ensureMarketSchema();
+  const rows=await prisma.$queryRaw`SELECT "id","storeId","query","queryType","productId","resultCount","createdAt" FROM "InternetProductSearch" WHERE "companyId"=${companyId} AND "storeId"=${storeId} ORDER BY "createdAt" DESC LIMIT 50`;
+  res.json({rows})
+}catch(error){next(error)}});
 
-router.get("/price-proposals",async(req,res,next)=>{try{const companyId=await companyFor(req,res);if(!companyId)return;await ensureMarketSchema();const rows=await prisma.$queryRaw`SELECT pp.*,p."name" AS "productName",p."sku",s."name" AS "storeName" FROM "InternetPriceProposal" pp JOIN "Product" p ON p."id"=pp."productId" AND p."companyId"=pp."companyId" JOIN "Store" s ON s."id"=pp."storeId" AND s."companyId"=pp."companyId" WHERE pp."companyId"=${companyId} ORDER BY (pp."status"='PENDING') DESC,pp."createdAt" DESC LIMIT 100`;res.json({rows:rows.map(row=>({...row,currentPrice:Number(row.currentPrice),proposedPrice:Number(row.proposedPrice)}))})}catch(error){next(error)}});
+router.get("/price-proposals",async(req,res,next)=>{try{
+  const companyId=await companyFor(req,res);if(!companyId)return;
+  const storeId=typeof req.query.storeId==="string"?req.query.storeId.trim():"";
+  if(!storeId||storeId.length>200||/[\u0000-\u001f\u007f]/.test(storeId))return res.status(400).json({error:"Επίλεξε συγκεκριμένο κατάστημα."});
+  if(!await validStore(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});
+  await ensureMarketSchema();
+  const rows=await prisma.$queryRaw`SELECT pp.*,p."name" AS "productName",p."sku",s."name" AS "storeName" FROM "InternetPriceProposal" pp JOIN "Product" p ON p."id"=pp."productId" AND p."companyId"=pp."companyId" JOIN "Store" s ON s."id"=pp."storeId" AND s."companyId"=pp."companyId" WHERE pp."companyId"=${companyId} AND pp."storeId"=${storeId} ORDER BY (pp."status"='PENDING') DESC,pp."createdAt" DESC LIMIT 100`;
+  res.json({rows:rows.map(row=>({...row,currentPrice:Number(row.currentPrice),proposedPrice:Number(row.proposedPrice)}))})
+}catch(error){next(error)}});
 
 router.post("/price-proposals",async(req,res,next)=>{try{const companyId=await companyFor(req,res);if(!companyId)return;await ensureMarketSchema();const {storeId,productId,searchId}=req.body||{},proposedPrice=Number(req.body?.proposedPrice),reason=String(req.body?.reason||"").trim().slice(0,500)||null;if(!storeId||!productId||!Number.isFinite(proposedPrice)||proposedPrice<0)return res.status(400).json({error:"Επίλεξε προϊόν, κατάστημα και έγκυρη προτεινόμενη τιμή."});if(!await validStore(companyId,storeId))return res.status(404).json({error:"Δεν βρέθηκε ενεργό κατάστημα."});const product=(await prisma.$queryRaw`SELECT p."id",COALESCE(sp."salePrice",p."salePrice") AS "salePrice" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${storeId} WHERE p."id"=${productId} AND p."companyId"=${companyId} AND p."active"=true AND sp."active"=true LIMIT 1`)[0];if(!product)return res.status(404).json({error:"Το προϊόν δεν είναι ενεργό στο κατάστημα."});const id=uid(),currentPrice=Number(product.salePrice||0);await prisma.$transaction(async tx=>{await tx.$executeRaw`INSERT INTO "InternetPriceProposal" ("id","companyId","storeId","productId","searchId","currentPrice","proposedPrice","reason","createdBy") VALUES (${id},${companyId},${storeId},${productId},${searchId||null},${currentPrice},${proposedPrice},${reason},${req.user.id||null})`;await tx.$executeRaw`INSERT INTO "InternetPriceProposalAudit" ("id","proposalId","companyId","storeId","productId","action","oldPrice","newPrice","actorId") VALUES (${uid()},${id},${companyId},${storeId},${productId},'PROPOSED',${currentPrice},${proposedPrice},${req.user.id||null})`});res.status(201).json({ok:true,id,status:"PENDING"})}catch(error){next(error)}});
 
