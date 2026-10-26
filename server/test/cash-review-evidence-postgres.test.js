@@ -23,9 +23,11 @@ test('native cash evidence: same-session sale lines, cross-day next two, foreign
    await db.$executeRaw`INSERT INTO "StoreTransaction" VALUES(${id+'tx'},${company},${store},${session},${'SALE_'+method},NULL,${'POS πώληση '+id+' · '+method})`;
   }
   await db.$executeRawUnsafe('ALTER TABLE "StoreTransaction" ADD COLUMN "amount" numeric DEFAULT 5');
-  const current={sessionId:'current',companyId:'c',storeId:'s',terminalPos:'MAIN',openedAt:new Date('2026-10-11T22:00:00Z'),closedAt:new Date('2026-10-12T06:00:00Z'),status:'CLOSED',variance:-27.3};
+  await db.$executeRawUnsafe('ALTER TABLE "CashShiftSession" ADD COLUMN "openingOperational" numeric DEFAULT 100, ADD COLUMN "actualOperational" numeric DEFAULT 100');
+  const current={sessionId:'current',companyId:'c',storeId:'s',terminalPos:'MAIN',openedAt:new Date('2026-10-11T22:00:00Z'),closedAt:new Date('2026-10-12T06:00:00Z'),status:'CLOSED',variance:-27.3,openingOperational:100,actualOperational:100};
   const before=await db.$queryRaw`SELECT (SELECT COUNT(*) FROM "Sale")::int AS sales,(SELECT COUNT(*) FROM "StoreTransaction")::int AS transactions,(SELECT SUM("variance") FROM "CashShiftSession") AS variance`;
   const out=await readCashReviewEvidence(db,current);assert.equal(out.salesStatus,'LINKED_POS_SCOPE');assert.equal(out.checkedSales,2);assert.equal(out.chainStatus,'CONTEXT_AVAILABLE');
+  assert.deepEqual(out.handoffs.rows.map(row=>[row.status,row.difference]),[['MATCHED',0],['MATCHED',0]]);assert.equal(out.chatEvidence.status,'UNAVAILABLE');
   assert.deepEqual(out.findings.filter(f=>f.code==='SALE_LINE_DUPLICATE_CANDIDATE').map(f=>f.transactions.map(t=>t.saleId)),[['a','b']]);
   assert.deepEqual(out.findings.filter(f=>f.code==='SHIFT_CHAIN_OFFSET_CANDIDATE').map(f=>f.netVariance),[2.1]);
   assert.deepEqual(new Set(out.context.map(c=>c.sessionId)),new Set(['prior','current','next','second']));assert.doesNotMatch(JSON.stringify(out),/foreign|control|delivery/);
