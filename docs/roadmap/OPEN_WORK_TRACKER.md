@@ -1,3 +1,8 @@
+## 26/10/2026 - Deferred invoice technically installed49fab86 / AWAITING MEASURED LAB
+Retained next_reports/shift_pin owners;3184 finalPR40395626991 and exactmain40397804518 ALL5SUCCESS4382server+8backupPASS/0FAIL/0SKIP each, nativeparent+20unskipped and positiveplainstartup/originalHTTP PASS. Main1005history ordinary1633.315ms/EXPLAIN2701.280ms, notproductioncapacity/SLA PASS.
+Ordinaryguard40399401024 SUCCESS; Renderdep-dbfrrcmc6qcc73d2gs00 LIVEexact49 finished20:57:10.451669UTC; publisher20:58:00.897083/root20:58:07.895009UTC HTTP200/oktrue/exact49. No manualdeploy.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md. Oneoriginalpayment/plaincapturewithoutAI/durablepending/precloseACK/closedshiftcapture technicallyinstalled; measuredrealpayment/upload/close acceptanceOPEN. OUTSQLstand-in/BOunmountedclose qualified; no USER/LAB/manualPASS or acceptedreplay. POS/PIN/cash/scanner owners/history retained.
+
 ## 26/10/2026 — CASH-REVIEWED-03 / EXACT TECHNICAL RELEASE + LIMITED READ-ONLY LAB PASS / WHOLE WORKFLOW OPEN
 
 Same owner codex/cash-chat-reconciliation-20261026 retained. Source3180 head79831aa0 CI40385981317/all5jobs SUCCESS; mergedaf9517ee1c0893d665962de788e54cd556c3fa2d exact-mainCI40387741454/all5jobs SUCCESS, build121800950054 actual4326server+8backupPASS/0FAIL/0SKIP, native reviewed proof unskipped. Ordinary guarded deploy40389371409/job121806139646 completedSUCCESS and public health19:50:04UTC returned EXACTaf9517ee. Later shared docs3187/3188 preserved; no bypass or manual service deployment.
