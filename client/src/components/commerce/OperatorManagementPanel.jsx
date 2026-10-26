@@ -7,6 +7,7 @@ const when=value=>value?new Date(value).toLocaleString("el-GR",{timeZone:"Europe
 const roleLabel=role=>role==="MANAGER"?"ΔΙΑΧΕΙΡΙΣΤΗΣ (ΥΠΕΥΘΥΝΟΣ)":"ΧΡΗΣΤΗΣ (ΥΠΑΛΛΗΛΟΣ)";
 const boolObject=value=>value&&typeof value==="object"?value:{};
 const POS_PERMISSIONS=[
+  ["newProduct","Νέο είδος · Πλήρης καρτέλα (PoS)"],
   ["stockPos","στήλη Stock (PoS)"],
   ["confirmDeleteSale","Επιβεβαίωση διαγραφής λίστας πώλησης (PoS)"],
   ["editPosButtons","Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών (PoS)"],

@@ -1,4 +1,5 @@
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
+import {lookupInventoryProductBarcode} from '../lib/inventory-product-barcode-lookup.js';
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -108,17 +109,7 @@ router.get("/smart-entry/barcode/:barcode",requireCompanyModule("INVENTORY"),asy
     const companyId=req.user.companyId,barcode=String(req.params.barcode||"").trim();
     const selectedStore=String(req.query.storeId||"");
     if(selectedStore){if(req.user.storeId&&req.user.storeId!==selectedStore)return res.status(403).json({error:"Μη έγκυρο κατάστημα."});if(!await prisma.store.findFirst({where:{id:selectedStore,companyId,active:true},select:{id:true}}))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."})}
-    if(!/^\d{6,18}$/.test(barcode))return res.status(400).json({error:"Μη έγκυρο barcode."});
-    const local=await prisma.$queryRaw`SELECT p."id",p."sku",p."name",p."vatRate",c."name" AS "categoryName",sc."name" AS "subcategoryName" FROM "Product" p JOIN "ProductBarcode" pb ON pb."productId"=p."id" LEFT JOIN "ProductCategory" c ON c."id"=p."categoryId" LEFT JOIN "ProductSubcategory" sc ON sc."id"=p."subcategoryId" WHERE p."companyId"=${companyId} AND pb."barcode"=${barcode} LIMIT 1`;
-    if(local[0])return res.json({found:true,source:"MYWORKSTATION",product:{...local[0],vatRate:Number(local[0].vatRate||0)}});
-    const master=await prisma.$queryRaw`SELECT mp."sourceCode" AS "sku",mp."name",mp."categoryName",mp."subcategoryName",mp."vatRate" FROM "MasterProduct" mp JOIN "MasterProductBarcode" mb ON mb."masterProductId"=mp."id" WHERE mb."barcode"=${barcode} AND mp."active"=true LIMIT 1`;
-    if(master[0])return res.json({found:true,source:"MASTER_CATALOG",product:{...master[0],vatRate:Number(master[0].vatRate||0)}});
-    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),4500);
-    try{
-      const response=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}?fields=code,product_name,product_name_el,brands,categories,categories_tags`,{headers:{"User-Agent":"MyWorkStation/1.0 (https://myworkstation.gr)"},signal:controller.signal});
-      if(response.ok){const data=await response.json();const p=data?.product;if(p&&data?.status!==0){return res.json({found:true,source:"OPEN_FOOD_FACTS",product:{name:p.product_name_el||p.product_name||"",brandName:p.brands||"",categoryName:Array.isArray(p.categories_tags)&&p.categories_tags.length?String(p.categories_tags[0]).replace(/^..:/,""):p.categories||"",subcategoryName:"",vatRate:null}})}}
-    }catch{}finally{clearTimeout(timer)}
-    res.json({found:false,source:null,product:null});
+    res.json(await lookupInventoryProductBarcode(prisma,companyId,barcode));
   }catch(error){next(error)}
 });
 

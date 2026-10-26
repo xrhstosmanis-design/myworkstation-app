@@ -9,6 +9,7 @@ import {prisma} from "../prisma.js";
 import {requireCompanyModule} from "../middleware/module-access.js";
 import {destroyInventoryProduct} from "../lib/inventory-product-destruction.js";
 import {createInventoryCard} from "../lib/inventory-new-card.js";
+import {readInventoryNewCardOptions} from "../lib/inventory-new-card-options.js";
 
 const router=Router();
 const uid=()=>crypto.randomUUID();
@@ -23,13 +24,7 @@ router.post("/merge/confirm",requireCompanyModule("INVENTORY"),async(req,res,nex
 
 router.get("/new-card/options",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
-    const company=companyId(req),storeId=String(req.query.storeId||"");
-    if(!company||!storeId||(req.user.storeId&&req.user.storeId!==storeId))return res.status(403).json({error:"Επίλεξε έγκυρο κατάστημα."});
-    if(!await prisma.store.findFirst({where:{id:storeId,companyId:company,active:true},select:{id:true}}))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
-    const suppliers=await prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`;
-    const brands=await prisma.$queryRaw`SELECT "id","name" FROM "ManagementProductCompany" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`;
-    const vatDepartments=await productCardVatOptions(prisma,company);
-    res.json({suppliers,brands,vatDepartments});
+    res.json(await readInventoryNewCardOptions(prisma,req.user,String(req.query.storeId||"")));
   }catch(error){next(error)}
 });
 router.post("/new-card",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
