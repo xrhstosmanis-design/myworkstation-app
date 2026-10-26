@@ -30,6 +30,14 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='pending_invoice_test_'+crypto.randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const db=new PrismaClient({datasourceUrl:url.toString()});let created=false,server;
  const scope={companyId:'c',storeId:'s',terminalPos:'P1',user:{id:'u',companyId:'c',storeId:'s',terminalPos:'P1',tokenType:'STORE_OPERATOR',permissions:['SUPPLIER_PAYMENT','SAME_SHIFT_PAYMENTS'],fullName:'Synthetic Operator'}};
  const base={type:'SUPPLIER_PAYMENT',supplierId:'sup',invoiceDocumentNumber:'A-100',amount:2.5,evidenceMode:'NO_DOCUMENT',paymentSource:'CASH_SHIFT',paymentMethod:'CASH_SHIFT',idempotencyKey:'stable-invoice-payment-key',deferredInvoice:{documentDate:'2026-10-26',sessionId:'shift'}};
+ const explainPending=async label=>{
+  let captured;
+  await readPendingInvoices({$queryRaw:async(strings,...values)=>{captured={sql:strings.reduce((sql,part,i)=>sql+(i?'$'+i:'')+part,''),values};return [{count:0,digest:'diagnostic',rows:[]}]}},{...scope,sessionId:'shift',sessionAll:true});
+  const started=performance.now(),rows=await db.$queryRawUnsafe('EXPLAIN (ANALYZE, BUFFERS, SETTINGS, FORMAT JSON) '+captured.sql,...captured.values),raw=rows[0]['QUERY PLAN'],plan=Array.isArray(raw)?raw[0]:raw;
+  const nodes=[];const visit=node=>{nodes.push({node:node['Node Type'],relation:node['Relation Name'],rows:node['Actual Rows'],loops:node['Actual Loops'],totalMs:node['Actual Total Time'],sharedHits:node['Shared Hit Blocks'],sharedReads:node['Shared Read Blocks']});for(const child of node.Plans||[])visit(child)};visit(plan.Plan);
+  t.diagnostic(JSON.stringify({diagnostic:'pending-original-session-query',label,elapsedMs:performance.now()-started,planningMs:plan['Planning Time'],executionMs:plan['Execution Time'],settings:plan.Settings,jit:plan.JIT||null,nodes}));
+ };
+
  try{
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);created=true;
   for(const sql of [
@@ -137,6 +145,13 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
    assert.equal((await readPendingInvoices(db,scope)).rows.find(r=>r.id===original.transaction.id)?.status,'REVIEW_REQUIRED');assert.equal((await post('/fast-handoff',upload)).status,409);
    await db.$executeRaw`DELETE FROM "AiReaderJob" WHERE "id"='duplicate-primary'`;assert.ok(!(await readPendingInvoices(db,scope)).rows.some(r=>r.id===original.transaction.id));
   });
+  await t.test('primary summary deduplicates a job shared by both bindings and preserves distinct payment bindings',async()=>{
+   const created=await createPendingInvoicePayment(db,scope,{...base,invoiceDocumentNumber:'DUAL-701',idempotencyKey:'dual-source-binding-key'}),p=page();p.dataUrl='data:application/pdf;base64,'+Buffer.from('%PDF-1.4\n'+'DUAL-701 original '.repeat(20)+'%%EOF').toString('base64');const request={...upload,documentNumber:'DUAL-701',paymentTransactionId:created.transaction.id,expectedPendingInvoice:{id:created.transaction.id,fingerprint:created.fingerprint},pages:[p]};assert.equal((await post('/fast-handoff',request)).status,202);
+   const originalJob=(await db.$queryRaw`SELECT "id","resultJson" FROM "AiReaderJob" WHERE "resultJson"->'posHandoff'->>'paymentTransactionId'=${original.transaction.id} AND "resultJson"->'posHandoff'->>'pageIndex'='0'`)[0];
+   await db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify({...originalJob.resultJson,mydataPosReceipt:{paymentTransactionId:original.transaction.id}})}::jsonb WHERE "id"=${originalJob.id}`;assert.ok(!(await readPendingInvoices(db,scope)).rows.some(r=>r.id===original.transaction.id));assert.equal((await post('/fast-handoff',upload)).status,200);
+   await db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify({...originalJob.resultJson,mydataPosReceipt:{paymentTransactionId:created.transaction.id}})}::jsonb WHERE "id"=${originalJob.id}`;assert.equal((await readPendingInvoices(db,scope)).rows.find(r=>r.id===created.transaction.id)?.status,'REVIEW_REQUIRED');assert.equal((await post('/fast-handoff',request)).status,409);
+   await db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify(originalJob.resultJson)}::jsonb WHERE "id"=${originalJob.id}`;assert.ok(!(await readPendingInvoices(db,scope)).rows.some(r=>r.id===created.transaction.id));
+  });
   await t.test('changed canonical supplier/type and missing declared secondary page never resolve',async()=>{
    for(const update of ["UPDATE \"PurchaseDocument\" SET \"documentType\"='CREDIT'", "UPDATE \"PurchaseDocument\" SET \"supplierId\"='alias'"]){
     await db.$executeRawUnsafe(update+` WHERE "paymentTransactionId"='${original.transaction.id}'`);assert.equal((await readPendingInvoices(db,scope)).rows.find(r=>r.id===original.transaction.id)?.status,'REVIEW_REQUIRED');assert.equal((await post('/fast-handoff',upload)).status,409);
@@ -156,6 +171,7 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
    assert.equal((await post('/fast-handoff',request)).status,200);assert.equal(queueCalls,queues);assert.equal((await db.$queryRaw`SELECT "state" FROM "PosInvoiceBackgroundTask" WHERE "jobId"=${jobs[0].id}`)[0].state,'COMPLETED');assert.equal(schemaRecoveryCalls,0);
   });
   await t.test('1005 resolved historical intents do not cap or blob-scan current obligations; changed payment stays pending review',async()=>{
+   await explainPending('before-1005-resolved-history');
    const before=(await readPendingInvoices(db,scope)).count,p=page(),manifest=invoicePageManifest([p]);await db.$executeRaw`INSERT INTO "DocumentAttachment"("id","companyId","storeId","mimeType","checksum","contentData") VALUES('history-source','c','s','application/pdf',${manifest[0].checksum},${p.dataUrl})`;
    await db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","type","amount","supplierId","invoiceDocumentNumber","actorId") SELECT 'hist-'||i,'c','s','SUPPLIER_PAYMENT',2.5,'sup','HIST-'||i,'u' FROM generate_series(1,1005) i`);
    await db.$executeRawUnsafe(`INSERT INTO "StoreOperatorAudit"("id","companyId","storeId","actorId","eventType","details") SELECT 'hist-marker-'||i,'c','s','u','POS_INVOICE_PENDING_CREATED',jsonb_build_object('version','POS_DEFERRED_INVOICE_V1','transactionId','hist-'||i,'supplierId','sup','documentNumber','HIST-'||i,'documentDate','2026-10-26','amountCents',250,'terminalPos','P1','contextSessionId','shift','fingerprint','hist-'||i) FROM generate_series(1,1005) i`);
@@ -166,6 +182,7 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
    await db.$executeRawUnsafe(`INSERT INTO "PurchaseOrder"("id","companyId","storeId","supplierId","status","sourceDocumentId") SELECT 'hist-order-'||i,'c','s','sup','NEW','hist-doc-'||i FROM generate_series(1,1005) i`);
    await db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "purchaseDocumentId"='hist-doc-'||substring("id" from 10),"status"='AWAITING_APPROVAL' WHERE "id" LIKE 'hist-job-%'`);
    await db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "resultJson"=jsonb_set("resultJson",'{posHandoff}',("resultJson"->'posHandoff')||jsonb_build_object('pageCount',1,'pageJobIds',jsonb_build_array("id"))) WHERE "id" LIKE 'hist-job-%'`);
+   await explainPending('after-1005-resolved-history');
    assert.equal((await readPendingInvoices(db,scope)).count,before);await db.$executeRaw`UPDATE "StoreTransaction" SET "amount"=9 WHERE "id"=${original.transaction.id}`;const held=await readPendingInvoices(db,scope);assert.equal(held.rows.find(r=>r.id===original.transaction.id).status,'REVIEW_REQUIRED');await db.$executeRaw`UPDATE "StoreTransaction" SET "amount"=2.5 WHERE "id"=${original.transaction.id}`;
   });
   await t.test('payment proof alone is not invoice content and mismatching myDATA receipt headers remain outstanding',async()=>{

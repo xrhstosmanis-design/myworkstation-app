@@ -60,13 +60,15 @@ test('actual operator editor toggles every retained checkbox and preserves remov
  try{
   await act(async()=>{root.render(React.createElement(m.exports.default,{api,store:{id:'A'},onClose(){}}));await new Promise(r=>setTimeout(r,10))});
   await click(document.querySelector('[title="Διόρθωση"]'));
-  const boxes=[...document.querySelectorAll('.om-modal input[type="checkbox"]')];assert.equal(boxes.length,23);
+  const boxes=[...document.querySelectorAll('.om-modal input[type="checkbox"]')];assert.equal(boxes.length,24);
+  const newProductBox=boxes.find(b=>b.closest("label")?.textContent.includes("Νέο είδος"));assert.ok(newProductBox);assert.equal(newProductBox.checked,false);
   for(const b of boxes.slice(2))await click(b);
   await click(find('Δικαιώματα πρόσβασης'));assert.equal(document.querySelectorAll('.om-modal input[type="checkbox"]').length,1);
   await click(document.querySelector('.om-modal input[type="checkbox"]'));
   await click(find('Λοιπά'));assert.equal(document.querySelectorAll('.om-modal input[type="checkbox"]').length,0);
   await click(find('Καταχώρηση'));assert.equal(saves.length,1);
-  assert.equal(Object.entries(saves[0].permissions).filter(([k,v])=>v&& !['stockBackoffice','mixedPaymentChange','centralCashPos','editDescription'].includes(k)).length,21);
+  assert.equal(Object.entries(saves[0].permissions).filter(([k,v])=>v&& !['stockBackoffice','mixedPaymentChange','centralCashPos','editDescription'].includes(k)).length,22);
+  assert.equal(saves[0].permissions.newProduct,true);
   assert.equal(saves[0].permissions.centralCashPos,true);assert.equal(saves[0].permissions.editDescription,true);assert.equal(saves[0].backofficeMenu.orders,true);assert.equal(saves[0].backofficeMenu.reports,true);
   assert.equal(saves[0].backofficeTabs.events,true);assert.equal(saves[0].customerDisplay.doubleScreen,true);
   assert.equal(saves[0].backofficeAccess,true);assert.equal(saves[0].powerUser,true);

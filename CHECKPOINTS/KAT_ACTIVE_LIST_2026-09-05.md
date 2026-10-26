@@ -1,10 +1,21 @@
+## 26/10/2026 - Invoice causal follow-up:14paths BEFORE SOURCE
+Retained next_reports/shift_pin ownership; add ONLY server/test/cash-period-ui-mounted.test.js to13path claim. ExactA/B pending-list GET mocks/allowances, retainedweek/month/stale-store/noPOST/provider/payment/shiftwrite checks; no broadprefix/weakening.
+Actual3184 CI40383511857:4328PASS/3FAIL/0SKIP (legacyAPIassumption +native17 default5s expiry/parent); actualregisteredclose18PASS. Diagnose query/workload versus lockwait before bounded existingservice/native correction; no blindtimeout/skip/retry.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md. Waitgreenmain beforeedits; exactreview/newfullnativeCI required. NOTINSTALLED/AWAITINGLAB, no newruntimepath/DDL or businessPASS/replay; existingowners/PINtechnicalreceipt preserved.
+
+## 26/10/2026 - Personal PIN technically installed7d61 / AWAITING LAB
+Central shift_pin/retainedowners:3173 exactPRCI40377962012 ALL5SUCCESS4281+8PASS/0FAIL/0SKIP; mergedmain7d61 CI40380504828 ALL5SUCCESS4294+8PASS/0FAIL/0SKIP, actualnativeparent+3andstartup unskipped.
+Ordinaryguard40382042659 SUCCESS; Renderdep-dbfq4pnlk1mc73asa2bg LIVE7d61 at19:01:07.282847UTC; independentroot and publisherHTTP200/oktrue/exactrevision (publisher19:05:19UTC). No manualdeploy.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-shift-close-personal-pin.md. Technicalinstallation ONLY: WorkforceOUTSQLstand-in qualified; realPIN/close/devicehandover acceptance OPEN, no functional/USER/LAB/manualPASS or historicalclose replay. POS/invoice releases separatelypending, existingcard/Gates retained.
+
 ## 26/10/2026 - POS product causal test amendment:18paths BEFORE SOURCE
 Central next_commerce/retainedowner; add ONLY operator-checkbox-acceptance.test.js, pos-barcode-pending.test.js and pos-catalog-completeness.test.js to original15path claim. Runtime15unchanged; preserve all old assertions/newrealroute nativecoverage; constructor DI only for legacyfixtures and explicit24checkbox/newProductdefaultfalse/toggle persistence.
 Actual3181 CI40380860057:4302PASS/7fixture-compatFAIL/0SKIP, newPGparent+4PASS; no fullCI/install/LABPASS. Worker waits this amendment green/main before3test edits, then exactreview/fullCI required.
 Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-new-product-full-card.md; cash/PIN/invoice owners and all historical passes preserved. No production fallback, assertionweakening, newskip or business replay.
 
 ## 26/10/2026 - Deferred invoice: reviewed13path patch, awaiting exact CI/install
-DEFERRED_INVOICE_PUBLICATION_STAGE: PATCH_RECONCILED_AWAITING_EXACT_FULL_CI_POS_FIRST_MERGE.
+DEFERRED_INVOICE_PUBLICATION_STAGE: PATCH_AND_CAUSAL_FOLLOWUP_ASSEMBLED_AWAITING_EXACT_FULL_CI.
+Scoped implementation: claim3186 green/mainf706663 preceded reviewed follow-upaf0838d2. Normal3way13reviewedinvoicepatch paths plus14thcashperiodfixture preserve currentPOS/PIN/cash-paper ownerbytes. ExactA/BpendingGETfixture/allGET-no-body checks retained; materializedUNION(job,payment) summary preserves alloriginalscope/cardinality/header/page/chain/proof/tombstone predicates. Default5s, no timeout/DDL/index change. LocalNode20 19PASS/0FAIL/1explicitPGenvSKIP; actualnewquery EXPLAIN/history/native/performance evidence remains UNEXECUTED locally and mustpass exactCI. Firstfull3184 CI40383511857:4328PASS/3FAIL/0SKIP (legacyAPIassumption +native17 expiry/parent), registeredclose18PASS; failedheadwasnotmerged and is notfullPASS/install/LABacceptance.
 Owner central-four-streams/next_reports; shared close sole writer shift_pin. Plain original capture default, scoped SUPPLIER_PAYMENT without AI; explicit licensed AI separate. One original payment, durable pending and locked pre-close ACK; no document from payment proof alone.
 Reviewed212d0f3 patch versus afed562; local77PASS/0FAIL/1explicitPGenvSKIP, build10.40s. Native registered close/PIN/ACK/concurrency PREPARED not locally executed. Fresh3way source reconciliation must preserve current cash-paper mount and all other owner bytes.
 Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md; qualified raw evidence CHECKPOINTS/EVIDENCE/pos-deferred-invoice-20261026/. NOT INSTALLED/AWAITING LAB; no USER/LAB PASS or accepted action replay.
@@ -13,7 +24,8 @@ Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md; quali
 
 Central next_commerce/ownercodex/central-four-streams-20261018; claim3169greenmain771b546 before15frozendae2ece paths/rootUI+backendnativeCLEAR. Samecompletecreator/defaultfalsePOSpermission/activeownstore/STORE_MODE+INVENTORY/onlineBarcodeguard; UserFKNULLforPOSoriginalauditretained, BackOfficeunchanged.
 ActualNode20 focused49PASS0FAIL2explicitPGenvSKIP (51total); retainedcallbacknegativecontrol0PASS1FAIL5filteredSKIP; build10.07s/TABLE_SERVICE. Rawqualifiedevidence+15SHA256 CHECKPOINTS/EVIDENCE/pos-new-product-full-card-20261026/. Newnativeparent+4/legacyBackOfficePGrequireactualunskippedfullCI; nolocalnativeclaim.
-POS_NEW_PRODUCT_PUBLICATION_STAGE: FROZEN_SOURCE_REVIEWED_AWAITING_RUNTIME_ASSEMBLY.
+POS_NEW_PRODUCT_PUBLICATION_STAGE: FROZEN_SOURCE_AND_THREE_CAUSAL_FIXTURES_AWAITING_EXACT_FULL_CI.
+Scoped implementation: claim3183 green/main96bc3c5 preceded reviewed3test commit7936a6f. Runtime15bytes unchangeddae2ece; legacy constructor fixtures inject REAL posNewProductAllowed plus no-op registrar, retained checkbox/legacy assertions unchanged with explicit newProduct defaultfalse/persistedtrue. Node20 targeted9:7PASS/0FAIL/2explicit localPGenvSKIP. Prior full3181 CI40380860057:4302PASS/7fixturecompatFAIL/0SKIP, actualnewPGparent+4PASS; priorfailedhead not fullCI/install/LABPASS. New exact fullCI/native unskipped required.
 DOCSONLYevidence-first; aftergreenandPINmerge runtime15frozen+minimum2scopedcheckpoint/activerecords, no policybypass/globalPDFchurn. NewexactfullCI/mainCI/ordinaryLIVE+realproductsaveacceptancepending. Originalinventoryowner/PASS andPIN/invoice/scanner/cashownersprotected; nocart/business/provider/licenceaction/newUSER-LABmanualPASS.
 Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-new-product-full-card.md. All originalregistrybytespreservedexactafterprefix/canonicalPDFsynchronized; no runtimechangeinthisrecord.
 
