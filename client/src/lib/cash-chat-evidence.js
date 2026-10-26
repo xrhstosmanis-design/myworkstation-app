@@ -7,7 +7,7 @@ export function cashChatEvidenceLines(evidence){
   if(chat && chat.status!=='NOT_AUTHORIZED'){
     if(chat.status==='UNAVAILABLE')lines.push('Τσατ καταστήματος: μη διαθέσιμη πηγή χειρόγραφων — εκκρεμεί έλεγχος.');
     else{
-      lines.push(`Τσατ καταστήματος: ${chat.sources?.length||0} διαφορετικά συνημμένα στην πρόσφατη αναζήτηση${chat.status==='LIMITED'?' (περιορισμένη κάλυψη)':''}. Εκκρεμούν ανάγνωση και αντιστοίχιση ημερομηνίας/βάρδιας. Η ώρα ανεβάσματος δεν είναι ημερομηνία παραστατικού.`);
+      lines.push(`Τσατ καταστήματος: ${chat.sources?.length||0} διαφορετικά συνημμένα στην πρόσφατη αναζήτηση${chat.status==='LIMITED'?' (περιορισμένη κάλυψη)':''}. Η ανάγνωση και η αντιστοίχιση εμφανίζονται στην ενότητα «Χειρόγραφα καταστήματος». Η ώρα ανεβάσματος δεν είναι ημερομηνία παραστατικού.`);
       for(const source of chat.sources||[])for(const ref of source.references||[])lines.push(`Συνημμένο προς έλεγχο: ${ref.filename||'χωρίς όνομα'} · μήνυμα ${ref.messageId}.`);
     }
   }
