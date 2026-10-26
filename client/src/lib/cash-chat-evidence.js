@@ -3,6 +3,7 @@ const when=value=>value&&Number.isFinite(new Date(value).getTime())?new Date(val
 export function cashChatEvidenceLines(evidence){
   if(!evidence)return [];
   const chat=evidence.chatEvidence,lines=[];
+  if(chat?.status==='NOT_AUTHORIZED')lines.push('Δεν υπάρχει πρόσβαση στα χειρόγραφα του τσατ για αυτόν τον έλεγχο.');
   if(chat && chat.status!=='NOT_AUTHORIZED'){
     if(chat.status==='UNAVAILABLE')lines.push('Τσατ καταστήματος: μη διαθέσιμη πηγή χειρόγραφων — εκκρεμεί έλεγχος.');
     else{
