@@ -1,0 +1,149 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+TAP version 13
+# Subtest: camera acquires full document detail with capability fallback, never retries permission denial
+ok 1 - camera acquires full document detail with capability fallback, never retries permission denial
+  ---
+  duration_ms: 8.524125
+  ...
+# Subtest: cancel, superseding open and unmount stop streams arriving after browser permission
+ok 2 - cancel, superseding open and unmount stop streams arriving after browser permission
+  ---
+  duration_ms: 0.665177
+  ...
+# Subtest: capture refuses an unready camera rather than inventing a black 1280x720 frame
+ok 3 - capture refuses an unready camera rather than inventing a black 1280x720 frame
+  ---
+  duration_ms: 1.246544
+  ...
+# Subtest: pairing is explicit, validates tokens and never invokes scan or a business endpoint
+ok 4 - pairing is explicit, validates tokens and never invokes scan or a business endpoint
+  ---
+  duration_ms: 6.108553
+  ...
+# Subtest: scan requires pairing and rejects malformed or oversized device pages
+ok 5 - scan requires pairing and rejects malformed or oversized device pages
+  ---
+  duration_ms: 4.733703
+  ...
+# Subtest: one explicit scan at a time; a cancelled late response cannot supply files; no retry
+ok 6 - one explicit scan at a time; a cancelled late response cannot supply files; no retry
+  ---
+  duration_ms: 8.621119
+  ...
+# Subtest: portrait and landscape documents keep all source edges; every decoded image is closed
+ok 7 - portrait and landscape documents keep all source edges; every decoded image is closed
+  ---
+  duration_ms: 123.948191
+  ...
+# Subtest: mounted scanner pairs without scanning, delivers once, and discards cross-store/closed results
+ok 8 - mounted scanner pairs without scanning, delivers once, and discards cross-store/closed results
+  ---
+  duration_ms: 765.405509
+  ...
+# Subtest: Invoice Learning Lab exposes camera and mobile QR intake
+ok 9 - Invoice Learning Lab exposes camera and mobile QR intake
+  ---
+  duration_ms: 7.591835
+  ...
+# Subtest: camera and QR files use the same Azure and AI reader path
+ok 10 - camera and QR files use the same Azure and AI reader path
+  ---
+  duration_ms: 0.634826
+  ...
+# Subtest: mobile QR upload is short-lived and scoped to the signed-in Platform Super Admin
+ok 11 - mobile QR upload is short-lived and scoped to the signed-in Platform Super Admin
+  ---
+  duration_ms: 1.072974
+  ...
+# Subtest: QR camera reads once and ignores late download after close/store change
+ok 12 - QR camera reads once and ignores late download after close/store change
+  ---
+  duration_ms: 1092.836888
+  ...
+# Subtest: QR camera preserves fallback on unsupported QR and permission failure
+ok 13 - QR camera preserves fallback on unsupported QR and permission failure
+  ---
+  duration_ms: 166.975202
+  ...
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Subtest: Basic/Premium camera intake fills reviewed fields and original PDF without any payment
+ok 14 - Basic/Premium camera intake fills reviewed fields and original PDF without any payment
+  ---
+  duration_ms: 714.585325
+  ...
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Subtest: scanner in both payment forms reads exact URL once without camera or payment
+ok 15 - scanner in both payment forms reads exact URL once without camera or payment
+  ---
+  duration_ms: 591.444454
+  ...
+# Subtest: scanner rejects unsafe response, retries and discards closed or previous-store results
+ok 16 - scanner rejects unsafe response, retries and discards closed or previous-store results
+  ---
+  duration_ms: 158.967224
+  ...
+# Subtest: scanner preserves native rapid input through rerenders, Greek keys and Tab suffix
+ok 17 - scanner preserves native rapid input through rerenders, Greek keys and Tab suffix
+  ---
+  duration_ms: 134.632502
+  ...
+# Subtest: numeric/truncated scanner input makes no request and explicit clear allows exact pasted URL
+ok 18 - numeric/truncated scanner input makes no request and explicit clear allows exact pasted URL
+  ---
+  duration_ms: 233.798768
+  ...
+# Subtest: Greek physical key recovery is scoped and preserves Latin, paste and modifier shortcuts
+ok 19 - Greek physical key recovery is scoped and preserves Latin, paste and modifier shortcuts
+  ---
+  duration_ms: 27.102666
+  ...
+# Subtest: mobile invoice upload page preserves OCR quality and reports errors
+ok 20 - mobile invoice upload page preserves OCR quality and reports errors
+  ---
+  duration_ms: 2.714376
+  ...
+# Subtest: camera focus uses only supported modes/ranges and handles rejected or ended tracks
+ok 21 - camera focus uses only supported modes/ranges and handles rejected or ended tracks
+  ---
+  duration_ms: 2.546208
+  ...
+# Subtest: mounted focus controls provide refocus/manual adjustment, fixed-focus guidance and stale cleanup
+ok 22 - mounted focus controls provide refocus/manual adjustment, fixed-focus guidance and stale cleanup
+  ---
+  duration_ms: 459.787378
+  ...
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Subtest: actual Basic/Premium QR review stays open, durable payment closes before background OCR
+ok 23 - actual Basic/Premium QR review stays open, durable payment closes before background OCR
+  ---
+  duration_ms: 1188.133978
+  ...
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Encountered two children with the same key, `own`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+# Subtest: Premium duplicate cancellation and failed durable handoff never signal completion
+ok 24 - Premium duplicate cancellation and failed durable handoff never signal completion
+  ---
+  duration_ms: 728.555266
+  ...
+# Subtest: open invoice payment and bank deposit close only after POST, not photo-quality success
+ok 25 - open invoice payment and bank deposit close only after POST, not photo-quality success
+  ---
+  duration_ms: 1240.613308
+  ...
+# Subtest: expense POST waits for acceptance and stale selected-store result cannot close another store
+ok 26 - expense POST waits for acceptance and stale selected-store result cannot close another store
+  ---
+  duration_ms: 704.884112
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5196.693725

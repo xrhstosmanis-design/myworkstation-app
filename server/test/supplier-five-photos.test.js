@@ -1,3 +1,4 @@
+import {createCanvas,Image as CanvasImage} from "@napi-rs/canvas";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {build} from "esbuild";
@@ -14,6 +15,7 @@ const invoke=(method,body={},token="token")=>{
   return {status,result};
 };
 const newSession=(maxFiles=5)=>mobileUploads.set("session",{companyId:"fixture",storeId:"own",token:"token",expires:Date.now()+600000,maxFiles});
+const validJpeg=(i=0,width=1000,height=700)=>{const canvas=createCanvas(width,height),ctx=canvas.getContext("2d");ctx.fillStyle=`rgb(${50+i*20},100,150)`;ctx.fillRect(0,0,width,height);return canvas.toBuffer("image/jpeg")};
 const photo=i=>({dataUrl:`data:image/jpeg;base64,${Buffer.from("synthetic photo "+i).toString("base64")}`,filename:`page-${i}.jpg`,mimeType:"image/jpeg"});
 
 test("mobile five-photo publication is ordered, atomic and safe on identical retry",()=>{
@@ -43,8 +45,8 @@ test("mobile legacy single-file clients and one-file remaining capacity keep wor
 });
 test("actual mobile page collects camera/gallery photos, reorders/removes and sends all once",async()=>{
   newSession();const html=invoke("get").result,dom=new JSDOM(html,{url:"https://fixture.test/mobile-invoice-upload/session/token",runScripts:"dangerously"});
-  const win=dom.window,calls=[];win.fetch=async(_url,options)=>{const payload=JSON.parse(options.body);calls.push(payload);const r=invoke("post",payload);return {ok:r.status===200,status:r.status,json:async()=>r.result}};
-  const add=(id,numbers)=>{const input=win.document.getElementById(id);Object.defineProperty(input,"files",{configurable:true,value:numbers.map(i=>new win.File([`fixture ${i}`],`page-${i}.jpg`,{type:"image/jpeg"}))});input.dispatchEvent(new win.Event("change"))};
+  const win=dom.window,calls=[];win.Image=CanvasImage;win.fetch=async(_url,options)=>{const payload=JSON.parse(options.body);calls.push(payload);const r=invoke("post",payload);return {ok:r.status===200,status:r.status,json:async()=>r.result}};
+  const add=(id,numbers)=>{const input=win.document.getElementById(id);Object.defineProperty(input,"files",{configurable:true,value:numbers.map(i=>new win.File([validJpeg(i)],`page-${i}.jpg`,{type:"image/jpeg"}))});input.dispatchEvent(new win.Event("change"))};
   try{
     add("f",[0]);add("f",[1]);add("gallery",[2,3,4]);assert.match(win.document.getElementById("pages").textContent,/5\/5/);
     add("gallery",[5]);assert.match(win.document.getElementById("s").textContent,/μέχρι 5/);assert.equal(win.document.querySelectorAll("#pages div").length,5);
@@ -56,10 +58,15 @@ test("actual mobile page collects camera/gallery photos, reorders/removes and se
   }finally{dom.window.close()}
 });
 test("actual mobile page retains photos and reuses the same batch after a dropped response",async()=>{
-  newSession();const dom=new JSDOM(invoke("get").result,{url:"https://fixture.test/mobile-invoice-upload/session/token",runScripts:"dangerously"}),win=dom.window,calls=[];let drop=true;
+  newSession();const dom=new JSDOM(invoke("get").result,{url:"https://fixture.test/mobile-invoice-upload/session/token",runScripts:"dangerously"}),win=dom.window,calls=[];win.Image=CanvasImage;let drop=true;
   win.fetch=async(_url,options)=>{const payload=JSON.parse(options.body);calls.push(payload);const r=invoke("post",payload);if(payload.index===1&&drop){drop=false;throw Error("connection dropped")}return {ok:r.status===200,status:r.status,json:async()=>r.result}};
-  try{const input=win.document.getElementById("gallery");Object.defineProperty(input,"files",{value:[0,1,2].map(i=>new win.File([`fixture ${i}`],`p${i}.jpg`,{type:"image/jpeg"}))});input.dispatchEvent(new win.Event("change"));await win.go();assert.equal(mobileUploads.get("session").files,undefined);assert.equal(win.document.querySelectorAll("#pages div").length,3);assert.equal(win.document.getElementById("send").disabled,false);await win.go();assert.equal(mobileUploads.get("session").files.length,3);assert.equal(new Set(calls.map(row=>row.batchId)).size,1)}finally{dom.window.close()}
+  try{const input=win.document.getElementById("gallery");Object.defineProperty(input,"files",{value:[0,1,2].map(i=>new win.File([validJpeg(i)],`p${i}.jpg`,{type:"image/jpeg"}))});input.dispatchEvent(new win.Event("change"));await win.go();assert.equal(mobileUploads.get("session").files,undefined);assert.equal(win.document.querySelectorAll("#pages div").length,3);assert.equal(win.document.getElementById("send").disabled,false);await win.go();assert.equal(mobileUploads.get("session").files.length,3);assert.equal(new Set(calls.map(row=>row.batchId)).size,1)}finally{dom.window.close()}
 });
+test("actual mobile page rejects low decoded resolution without an upload",async()=>{
+  newSession();const dom=new JSDOM(invoke("get").result,{url:"https://fixture.test/mobile-invoice-upload/session/token",runScripts:"dangerously"}),win=dom.window;win.Image=CanvasImage;let uploads=0;win.fetch=async()=>{uploads++;throw Error("must not upload")};
+  try{const input=win.document.getElementById("f");Object.defineProperty(input,"files",{value:[new win.File([validJpeg(0,320,240)],"small.jpg",{type:"image/jpeg"})]});input.dispatchEvent(new win.Event("change"));await win.go();assert.equal(uploads,0);assert.match(win.document.getElementById("s").textContent,/χαμηλή ανάλυση/);assert.equal(win.document.querySelectorAll("#pages div").length,1)}finally{dom.window.close()}
+});
+
 test("bundled PDF parses as five ordered image pages and rejects invalid selection/oversize before submission",async()=>{
   const {createCanvas}=await import("@napi-rs/canvas");
   const pages=[0,1,2,3,4].map(index=>{const width=40+index,height=60+index,canvas=createCanvas(width,height),ctx=canvas.getContext("2d");ctx.fillStyle=["red","blue","green","yellow","purple"][index];ctx.fillRect(0,0,width,height);return {bytes:new Uint8Array(canvas.toBuffer("image/jpeg")),width,height}});

@@ -1,0 +1,32 @@
+{
+  "run": 40378479917,
+  "job": 121769066237,
+  "head": "f15294677cbad5242e8e79271df93a458e154e9b",
+  "tests": 4272,
+  "pass": 4264,
+  "fail": 2,
+  "cancelled": {
+    "file": "server/test/supplier-five-photos.test.js",
+    "cause": "Old symbolic JPEG-string fixtures could not complete newly required Image decoding; replaced with real JPEG bytes and actual native Image decode; added low-resolution no-upload case."
+  },
+  "skipped": 0,
+  "failures": [
+    {
+      "file": "server/test/inventory-v2-foundation.test.js",
+      "cause": "Direct getUserMedia/rear-camera source strings moved into tested common camera acquisition helper."
+    },
+    {
+      "file": "server/test/pos-invoice-multipage-upload-v1.test.js",
+      "cause": "Rear-camera/readiness source assertions need to inspect the shared helper while retaining preview attach/play assertions."
+    }
+  ],
+  "correctedLocal": {
+    "node": "20.20.2",
+    "focused": 26,
+    "existingPhotoInventory": 16,
+    "fail": 0,
+    "skip": 0,
+    "wholeBackendMultipage": "Source contract checked directly; complete named backend suite requires CI dependencies."
+  },
+  "installed": false
+}

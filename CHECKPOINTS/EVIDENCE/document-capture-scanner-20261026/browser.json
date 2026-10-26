@@ -1,0 +1,25 @@
+{
+  "kind": "isolated synthetic Chromium153, no hardware/business action",
+  "geometry": {
+    "width": 1100,
+    "scroll": 1100,
+    "height": 48
+  },
+  "mobile": {
+    "width": 390,
+    "scroll": 390
+  },
+  "pixels": {
+    "width": 1030,
+    "height": 743,
+    "colors": [
+      1551,
+      1548,
+      1529,
+      1542
+    ],
+    "originalRetained": true,
+    "cropped": false
+  },
+  "pageErrors": []
+}

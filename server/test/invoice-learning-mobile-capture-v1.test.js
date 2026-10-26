@@ -13,7 +13,7 @@ test("Invoice Learning Lab exposes camera and mobile QR intake",()=>{
   assert.match(lab,/Λήψη από κάμερα/);
   assert.match(lab,/id="mobileQr"/);
   assert.match(lab,/QR από κινητό/);
-  assert.match(lab,/navigator\.mediaDevices\.getUserMedia/);
+  assert.match(lab,/createCameraAcquisition/);
   assert.match(lab,/QRCode\.toDataURL/);
   assert.match(lab,/invoice-learning\/mobile-upload-sessions/);
 });

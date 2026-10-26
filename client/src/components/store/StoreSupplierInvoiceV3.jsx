@@ -1,3 +1,7 @@
+import DocumentCameraFocus from "./DocumentCameraFocus.jsx";
+import useCameraAcquisition from "./useCameraAcquisition.js";
+import {captureCameraFrame} from "../../lib/camera-acquisition.js";
+import DocumentScanButton from "./DocumentScanButton.jsx";
 import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import React,{useEffect,useMemo,useRef,useState} from "react";
 import {Camera,FileUp,Wallet} from "lucide-react";
@@ -73,14 +77,15 @@ function localMeta(rawText,suppliers=[]){
 const emptyInvoice=()=>({file:null,jobId:"",stage:"IDLE",confidence:null,aiCalled:false,supplierId:"",documentNumber:"",documentDate:today(),totalGross:"",settlementMode:"",note:"",status:"Περιμένει τιμολόγιο.",working:false,done:false});
 
 export default function StoreSupplierInvoiceV3({api,store,suppliers=[],onChanged,setMessage}){
+  const cameraSession=useCameraAcquisition(store.id);
   const [invoice,setInvoice]=useState(emptyInvoice),[candidate,setCandidate]=useState({name:"",taxId:"",phone:"",email:"",address:"",city:""});
   const [cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);const videoRef=useRef(null),canvasRef=useRef(null);
   const selectedSupplier=useMemo(()=>suppliers.find(row=>String(row.id)===String(invoice.supplierId))||null,[suppliers,invoice.supplierId]);
-  const stopCamera=()=>{stream?.getTracks?.().forEach(track=>track.stop());setStream(null);setCameraOpen(false)};
+  const stopCamera=()=>{cameraSession.cancel();stream?.getTracks?.().forEach(track=>track.stop());setStream(null);setCameraOpen(false)};
   useEffect(()=>()=>stream?.getTracks?.().forEach(track=>track.stop()),[stream]);
 
   const setFailure=message=>setInvoice(current=>({...current,stage:"ERROR",working:false,status:`❌ ${message}`}));
-  const startCamera=async()=>{try{stopCamera();const next=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});setStream(next);setCameraOpen(true);setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=next},0)}catch{setFailure("Δεν μπόρεσε να ανοίξει η κάμερα. Έλεγξε την άδεια κάμερας του browser.")}};
+  const startCamera=async()=>{try{stopCamera();const next=await cameraSession.open();if(!next)return;setStream(next);setCameraOpen(true);setTimeout(()=>{if(videoRef.current&&cameraSession.current(epoch))videoRef.current.srcObject=next},0);const epoch=cameraSession.checkpoint()}catch(error){setFailure(error.message)}};
 
   const applyReady=(base,result={},supplierMatch=null,aiCalled=false,confidence=null)=>{
     const supplierCandidate=result?.supplier||base.supplierCandidate||{};
@@ -115,7 +120,7 @@ export default function StoreSupplierInvoiceV3({api,store,suppliers=[],onChanged
     }catch(error){setFailure(error.message||"Ο επανέλεγχος με AI απέτυχε.")}
   };
 
-  const capture=()=>{const video=videoRef.current,canvas=canvasRef.current;if(!video||!canvas)return;canvas.width=video.videoWidth||1280;canvas.height=video.videoHeight||720;canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);canvas.toBlob(blob=>{if(!blob)return;stopCamera();processFile(new File([blob],`timologio-${Date.now()}.jpg`,{type:"image/jpeg"}))},"image/jpeg",.92)};
+  const capture=async()=>{const epoch=cameraSession.checkpoint();try{const file=await captureCameraFrame(videoRef.current,{name:`parastatiko-${Date.now()}.jpg`,isCurrent:()=>cameraSession.current(epoch)});if(!file)return;stopCamera();processFile(file)}catch(error){setFailure(error.message)}};
 
   const saveSupplier=async()=>{
     if(!invoice.jobId)return setFailure("Η ενεργή ανάγνωση τιμολογίου χάθηκε. Επίλεξε ξανά το αρχείο.");
@@ -143,8 +148,8 @@ export default function StoreSupplierInvoiceV3({api,store,suppliers=[],onChanged
   return <div className="pos-invoice-v3" data-pos-supplier-invoice-v3="true" style={{border:"2px solid #d8b45b",borderRadius:12,padding:14,marginTop:12,background:"#fffaf0"}}>
     <div style={{fontWeight:900,fontSize:18}}>Αυτόματη καταχώριση τιμολογίου <small style={{fontSize:12,background:"#dcfce7",padding:"4px 7px",borderRadius:12}}>V3 · React</small></div>
     <div style={{padding:"10px 12px",borderRadius:9,background:invoice.stage==="ERROR"?"#fff1f2":invoice.stage==="DONE"?"#ecfdf5":"#fff",fontWeight:800,margin:"10px 0"}}>{invoice.status}</div>
-    <div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={invoice.working||invoice.done}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" disabled={invoice.working||invoice.done} onChange={event=>processFile(event.target.files?.[0]||null)}/></label><b>{invoice.file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>
-    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button></div></div>}
+    <DocumentScanButton scopeKey={store.id} onFiles={files=>processFile(files[0])} disabled={invoice.working||invoice.done} maxPages={1}/><div className="pos-photo-actions"><button type="button" onClick={startCamera} disabled={invoice.working||invoice.done}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή αρχείου / PDF<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" disabled={invoice.working||invoice.done} onChange={event=>processFile(event.target.files?.[0]||null)}/></label><b>{invoice.file?.name||"Δεν επιλέχθηκε τιμολόγιο"}</b></div>
+    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><DocumentCameraFocus track={stream?.getVideoTracks?.()[0]} videoRef={videoRef}/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" onClick={stopCamera}>Κλείσιμο κάμερας</button></div></div>}
     {invoice.confidence!==null&&<small style={{display:"block",margin:"8px 0",fontWeight:700}}>Ανάγνωση {Math.round(Number(invoice.confidence)||0)}%{invoice.aiCalled?" · AI επανέλεγχος":" · τοπικό OCR"}</small>}
     {invoice.jobId&&invoice.stage==="READY"&&!invoice.aiCalled&&!invoice.done&&<button type="button" onClick={manualAiRecheck} disabled={invoice.working} style={{margin:"0 0 10px",fontWeight:800}}>Επανέλεγχος με AI</button>}
 
@@ -160,3 +165,4 @@ export default function StoreSupplierInvoiceV3({api,store,suppliers=[],onChanged
     <button className="pos-primary-action" type="button" disabled={!ready} onClick={submit}><Wallet/> {invoice.stage==="SUBMITTING"?"Καταχώριση σε εξέλίξη…":"Καταχώριση τιμολογίου για έλεγχο"}</button>
   </div>;
 }
+

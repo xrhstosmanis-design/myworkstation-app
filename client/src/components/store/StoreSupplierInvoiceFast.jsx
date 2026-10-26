@@ -1,3 +1,6 @@
+import useCameraAcquisition from "./useCameraAcquisition.js";
+import {captureCameraFrame} from "../../lib/camera-acquisition.js";
+import DocumentScanButton from "./DocumentScanButton.jsx";
 import {greeceDateInput} from "../../../../shared/greece-time.mjs";
 import DocumentPhotoList from "./DocumentPhotoList.jsx";
 import MobileDocumentPhotosQr from "./MobileDocumentPhotosQr.jsx";
@@ -39,6 +42,7 @@ async function backgroundV244({api,store,fileDataUrl,filename,mimeType,supplierI
 }
 
 export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChanged,onCompleted,setMessage}){
+  const cameraSession=useCameraAcquisition(store.id);
   const [files,setFiles]=useState([]),[supplierId,setSupplierId]=useState(""),[amount,setAmount]=useState(""),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(today()),[mode,setMode]=useState(""),[paymentMethod,setPaymentMethod]=useState("CASH_SHIFT"),[busy,setBusy]=useState(false),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);
   const [invoiceQrOpen,setInvoiceQrOpen]=useState(false);
   const [invoiceScannerOpen,setInvoiceScannerOpen]=useState(false);
@@ -50,7 +54,7 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
   const paymentSource=paymentMethod==="CASH_SHIFT"?"CASH_SHIFT":"EXTERNAL";
   const paymentMethodLabel={CASH_SHIFT:"Μετρητά από ενεργή βάρδια",CORPORATE_CARD:"Εταιρική κάρτα",BANK_TRANSFER:"Τραπεζική μεταφορά",EMPLOYEE_REIMBURSEMENT:"Πληρωμή υπαλλήλου προς επιστροφή"}[paymentMethod];
   useEffect(()=>()=>{stream?.getTracks?.().forEach(track=>track.stop())},[stream]);
-  const stopCamera=()=>{stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
+  const stopCamera=()=>{cameraSession.cancel();stream?.getTracks?.().forEach(t=>t.stop());setStream(null);setCameraOpen(false)};
   const openInvoiceQr=()=>{stopCamera();setInvoiceQrOpen(true)};
   const readInvoiceQr=data=>{
     setSelectedInboxId(data.inboxId||null);
@@ -75,8 +79,8 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
   const chooseFile=next=>chooseFiles(next?[next]:[]);
   const mobile=useMobileDocumentPhotos({api,storeId:store.id,count:files.length,onFiles:chooseFiles,setMessage});
 
-  const startCamera=async()=>{try{stopCamera();const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});setStream(s);setCameraOpen(true);setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=s},0)}catch{setMessage?.("❌ Δεν μπόρεσε να ανοίξει η κάμερα.")}};
-  const capture=()=>{const v=videoRef.current,c=canvasRef.current;if(!v||!c)return;c.width=v.videoWidth||1280;c.height=v.videoHeight||720;c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.toBlob(blob=>{stopCamera();if(blob)chooseFile(new File([blob],`timologio-${Date.now()}.jpg`,{type:"image/jpeg"}))},"image/jpeg",.94)};
+  const startCamera=async()=>{try{stopCamera();const next=await cameraSession.open();if(!next)return;setStream(next);setCameraOpen(true);setTimeout(()=>{if(videoRef.current&&cameraSession.current(epoch))videoRef.current.srcObject=next},0);const epoch=cameraSession.checkpoint()}catch(error){setMessage?.(`❌ ${error.message}`)}};
+  const capture=async()=>{const epoch=cameraSession.checkpoint();try{const file=await captureCameraFrame(videoRef.current,{name:`parastatiko-${Date.now()}.jpg`,isCurrent:()=>cameraSession.current(epoch)});if(!file)return;stopCamera();chooseFile(file)}catch(error){setMessage?.(`❌ ${error.message}`)}};
 
   const ready=Boolean(file&&supplierId&&num(amount)>0&&mode&&!busy&&!mobile.pending);
   const submit=async()=>{
@@ -121,9 +125,9 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
     <div className="pos-invoice-document-area">
     <InvoiceVatInbox key={store.id} api={api} store={store} suppliers={supplierOptions} disabled={busy||mobile.pending} onSupplier={next=>{setCreatedSupplier(next);setSupplierId(next.id)}} onRead={readInvoiceQr}/>
     <div style={{padding:"10px 12px",borderRadius:10,background:"#e9f8f1",fontWeight:900,color:"#0b6249",marginBottom:10}}>FAST PAYMENT — ο υπάλληλος πληρώνει/παραλαμβάνει και επιστρέφει αμέσως στις πωλήσεις. Ο έλεγχος γίνεται στο BackOffice.</div>
-    <div className="pos-photo-actions"><button type="button" disabled={busy||mobile.pending||files.length>0} onClick={()=>{stopCamera();setInvoiceQrOpen(false);setInvoiceScannerOpen(true)}}>Σάρωση QR με scanner</button><button type="button" disabled={busy||mobile.pending||files.length>=5||file?.type==="application/pdf"} onClick={startCamera}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή έως 5 φωτογραφιών / PDF<input type="file" multiple accept="image/*,application/pdf" disabled={busy||mobile.pending||files.length>=5||file?.type==="application/pdf"} onChange={e=>{const selected=Array.from(e.target.files||[]);e.target.value="";chooseFiles(selected)}}/></label><button type="button" disabled={busy||mobile.pending||files.length>=5||file?.type==="application/pdf"} onClick={mobile.createQr}>QR από κινητό</button></div><DocumentPhotoList files={files} onChange={setFiles} disabled={busy||mobile.pending}/><MobileDocumentPhotosQr mobile={mobile}/>
+    <DocumentScanButton scopeKey={store.id} onFiles={chooseFiles} disabled={busy||mobile.pending||files.length>=5||file?.type==="application/pdf"} maxPages={5-files.length}/><div className="pos-photo-actions"><button type="button" disabled={busy||mobile.pending||files.length>0} onClick={()=>{stopCamera();setInvoiceQrOpen(false);setInvoiceScannerOpen(true)}}>Σάρωση QR με scanner</button><button type="button" disabled={busy||mobile.pending||files.length>=5||file?.type==="application/pdf"} onClick={startCamera}><Camera/> Λήψη από κάμερα</button><label><FileUp/> Επιλογή έως 5 φωτογραφιών / PDF<input type="file" multiple accept="image/*,application/pdf" disabled={busy||mobile.pending||files.length>=5||file?.type==="application/pdf"} onChange={e=>{const selected=Array.from(e.target.files||[]);e.target.value="";chooseFiles(selected)}}/></label><button type="button" disabled={busy||mobile.pending||files.length>=5||file?.type==="application/pdf"} onClick={mobile.createQr}>QR από κινητό</button></div><DocumentPhotoList files={files} onChange={setFiles} disabled={busy||mobile.pending}/><MobileDocumentPhotosQr mobile={mobile}/>
 
-    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><DocumentCameraFocus track={stream?.getVideoTracks?.()[0]}/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" disabled={busy||mobile.pending||files.length>0} onClick={openInvoiceQr}>Σάρωση QR τιμολογίου</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
+    {cameraOpen&&<div className="pos-camera-live"><video ref={videoRef} autoPlay playsInline/><canvas ref={canvasRef} hidden/><DocumentCameraFocus track={stream?.getVideoTracks?.()[0]} videoRef={videoRef}/><div><button type="button" onClick={capture}><Camera/> Φωτογράφιση</button><button type="button" disabled={busy||mobile.pending||files.length>0} onClick={openInvoiceQr}>Σάρωση QR τιμολογίου</button><button type="button" onClick={stopCamera}>Κλείσιμο</button></div></div>}
     {invoiceScannerOpen&&<InvoiceQrScanner key={store.id} api={api} store={store} onRead={readInvoiceQr} onClose={()=>setInvoiceScannerOpen(false)}/>}
     {invoiceQrOpen&&<InvoiceQrCamera key={store.id} api={api} store={store} onRead={readInvoiceQr} onClose={()=>setInvoiceQrOpen(false)}/>}
     </div>
@@ -136,3 +140,4 @@ export default function StoreSupplierInvoiceFast({api,store,suppliers=[],onChang
     </div>
   </div>;
 }
+
