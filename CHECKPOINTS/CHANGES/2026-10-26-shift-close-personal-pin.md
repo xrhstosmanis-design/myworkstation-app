@@ -8,7 +8,7 @@ Local Node20 focused48PASS/0FAIL/1explicit isolated-PG environmentSKIP; original
 
 This documentation-only publication fromfreshc5b79493325095d76938abb5b159e949030022a6 synchronizes evidence/checkpoint/three registries/canonical PDF BEFORE the runtime PR is rebuilt. Latest invoice13-path amendments3172/3176, default PLAIN_CAPTURE versus separately licensed AI_HANDOFF, scanner3174 and cash3175 owners remain authoritative. The invoice checkpoint is unchanged byte-for-byte; no obsolete12-only prefix or PIN integration included. The six source/test bytes stay frozen9e379dc; no source in this docs PR. Future invoice edits to shared close files are serialized by sole writer shift_pin under their separate claim.
 
-PIN_SOURCE_PUBLICATION_STAGE: FROZEN_SOURCE_REVIEWED_AWAITING_SOURCE_ONLY_ASSEMBLY.
+PIN_SOURCE_PUBLICATION_STAGE: FROZEN_SOURCE_ASSEMBLED_AWAITING_EXACT_FULL_CI.
 
 Next: after this docs-only evidence is green/main, rebuild3173 with exactly6frozen source paths plus the MINIMUM2mandatory scoped implementation-record changes in this checkpoint and the existing active list. Do not weaken tools/verify-checkpoint-policy.mjs; no source-only bypass. Avoid global registry/PDF rewrite in that runtime PR because the same candidate/evidence is already centrally synchronized here. Its new exact head MUST pass fullNode20/native all3subcases unskipped, root review, normal merge/mainCI/ordinaryguard/exactLIVE before separately authorized measured acceptance. No source change, runtime install, USER/LAB/manual PASS, real PIN/card/close/payment/stock/provider action or whole-project closure in this record. Existing Gates2/3/8 and accepted card/scanner/normal/shortage closings protected.
 

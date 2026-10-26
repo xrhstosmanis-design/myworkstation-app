@@ -2,7 +2,7 @@
 
 Central owner codex/central-four-streams-20261018; worker/root/shift_pin. Greenclaim3169/main771b546 before6frozen9e379dc sourcebytes/rootreviewCLEAR. Prior3173/headbbd7676 fullCI40373196254ALL5SUCCESS/4281server+8backupPASS0FAIL0SKIP/nativeparent3058+3unskipped/startuppatchPASS, notfutureheadCI orinstallation.
 Local48PASS0FAIL1PGenvSKIP/originalnegative0PASS1FAIL2filteredSKIP/build10.85s rawretained; WorkforceSQLstand-in provescloseinvocationonly/notfullOUTacceptance. Exactevidence CHECKPOINTS/EVIDENCE/shift-close-pin-20261026/. Existingcard/opener/terminal/roles/acceptedclosings/Gate8PASS protected.
-PIN_SOURCE_PUBLICATION_STAGE: FROZEN_SOURCE_REVIEWED_AWAITING_SOURCE_ONLY_ASSEMBLY.
+PIN_SOURCE_PUBLICATION_STAGE: FROZEN_SOURCE_ASSEMBLED_AWAITING_EXACT_FULL_CI.
 DOCSONLYevidence-first: next3173runtimePR frozen6source+minimum2mandatedscopedcheckpoint/activerecords; no mandatorypolicybypass/globalPDFchurn. NewheadfullnativeCI/mainCI/ordinaryexactrelease+actualacceptanceREQUIRED. Current13pathinvoice/PLAIN_CAPTURE/scanner/cashownersunchanged, noinvoiceintegration/PINinstall/newUSER-LABmanualPASS.
 Checkpoint CHECKPOINTS/CHANGES/2026-10-26-shift-close-personal-pin.md. All previousregistrybytesretainedexactafterprefix/canonicalPDFsynchronized; no runtime orbusinessaction inthisrecord.
 
