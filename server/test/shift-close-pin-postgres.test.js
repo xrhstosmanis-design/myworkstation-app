@@ -77,8 +77,9 @@ test('actual registered PIN close commits only failure guards, enforces scope an
   const normalizers=source.slice(source.indexOf('function money('),source.indexOf('async function findConsecutiveDuplicateSales'));
   const totals=source.slice(source.indexOf('async function authoritativeShiftTotals'),source.indexOf('async function existingAuditTables'));
   const closeRoute=source.slice(source.indexOf('router.post("/sessions/:sessionId/close"'),source.indexOf('\nexport default router;'));
-  const requireCashAccess=new Function('router','route','z','declaredEftpos','prisma','crypto','verifyShiftCloseCredential','syncOperatorWorkforceAttendance','findConsecutiveDuplicateSales','sendEmail',schemaSource+accessSource+terminalSource+normalizers+totals+closeRoute+'\nreturn requireCashAccess;')(
+  const requireCashAccess=new Function('router','route','z','declaredEftpos','prisma','crypto','verifyShiftCloseCredential','checkClosePendingInvoices','recordClosePendingInvoices','syncOperatorWorkforceAttendance','findConsecutiveDuplicateSales','sendEmail',schemaSource+accessSource+terminalSource+normalizers+totals+closeRoute+'\nreturn requireCashAccess;')(
    {post(route,handler){handlers.set(route,handler)}},handler=>handler,z,declaredEftpos,runtime,crypto,verifyShiftCloseCredential,
+   async()=>({count:0,rows:[],confirmationRequired:false}),async()=>{}, // PIN-only isolation; invoice fixture exercises the real pending helpers.
    async(tx,req,storeId,eventType,sessionId)=>{attendanceCalls++;await tx.$executeRaw`INSERT INTO "TestAttendance"("sessionId","eventType") VALUES(${sessionId},${eventType})`;return {status:'FIXTURE_CLOCKED_OUT'}},
    async()=>{throw Error('unexpected duplicate scan')},async()=>{mailCalls++;throw Error('unexpected mail')}
   );

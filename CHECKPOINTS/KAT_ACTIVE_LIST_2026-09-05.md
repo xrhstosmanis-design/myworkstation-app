@@ -4,7 +4,7 @@ Actual3181 CI40380860057:4302PASS/7fixture-compatFAIL/0SKIP, newPGparent+4PASS; 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-new-product-full-card.md; cash/PIN/invoice owners and all historical passes preserved. No production fallback, assertionweakening, newskip or business replay.
 
 ## 26/10/2026 - Deferred invoice: reviewed13path patch, awaiting exact CI/install
-DEFERRED_INVOICE_PUBLICATION_STAGE: REVIEWED_PATCH_AWAITING_FRESH_RUNTIME_RECONCILIATION.
+DEFERRED_INVOICE_PUBLICATION_STAGE: PATCH_RECONCILED_AWAITING_EXACT_FULL_CI_POS_FIRST_MERGE.
 Owner central-four-streams/next_reports; shared close sole writer shift_pin. Plain original capture default, scoped SUPPLIER_PAYMENT without AI; explicit licensed AI separate. One original payment, durable pending and locked pre-close ACK; no document from payment proof alone.
 Reviewed212d0f3 patch versus afed562; local77PASS/0FAIL/1explicitPGenvSKIP, build10.40s. Native registered close/PIN/ACK/concurrency PREPARED not locally executed. Fresh3way source reconciliation must preserve current cash-paper mount and all other owner bytes.
 Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md; qualified raw evidence CHECKPOINTS/EVIDENCE/pos-deferred-invoice-20261026/. NOT INSTALLED/AWAITING LAB; no USER/LAB PASS or accepted action replay.

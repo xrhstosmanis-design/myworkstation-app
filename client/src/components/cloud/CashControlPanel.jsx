@@ -1,5 +1,6 @@
 import CashPaperReadingPanel from "../shared/CashPaperReadingPanel.jsx";
 import CashReportPeriodFields from "../platform/CashReportPeriodFields.jsx";
+import StorePendingInvoicePanel from "../store/StorePendingInvoicePanel.jsx";
 import {cashChatEvidenceLines} from "../../lib/cash-chat-evidence.js";
 import {cashReportPeriod} from "../../lib/cash-report-period.js";
 import React,{useEffect,useMemo,useState,useRef} from "react";
@@ -17,6 +18,7 @@ const cashControlExportLabels=["ΣΗΜΕΡΙΝΟΣ ΑΥΤΟΜΑΤΟΣ ΕΛΕΓΧ
 
 export default function CashControlPanel({api,store}){
   const [data,setData]=useState(null);
+  const closeContext=useRef(null);closeContext.current={storeId:store.id,sessionId:data?.openSession?.id};
   const [daily,setDaily]=useState(null);
   const loadSequence=useRef(0);
   const [period,setPeriod]=useState("DAY"),[rangeFrom,setRangeFrom]=useState(""),[rangeTo,setRangeTo]=useState("");
@@ -102,12 +104,19 @@ export default function CashControlPanel({api,store}){
 
   const closeShift=async event=>{
     event.preventDefault();setBusy(true);setError("");setMessage("");
+    const context={storeId:store.id,sessionId:data?.openSession?.id},current=()=>closeContext.current?.storeId===context.storeId&&closeContext.current?.sessionId===context.sessionId;
     try{
+      const fresh=await api(`/api/cash/stores/${encodeURIComponent(context.storeId)}/overview`);
+      if(!current()||fresh?.store?.id!==context.storeId||fresh?.openSession?.id!==context.sessionId)return;
+      const pending=fresh.pendingInvoices||{count:0,fingerprint:null};
+      const pendingInvoiceAcknowledged=pending.count>0?window.confirm(`Υπάρχουν ${pending.count} εκκρεμότητες τιμολογίων της βάρδιας (${pending.missingCount||0} προς ανέβασμα, ${pending.uploadedCount||0} ανεβασμένα προς σύνδεση/έλεγχο).\n\nΟΚ: κλείσιμο με καταγεγραμμένες εκκρεμότητες.\nΑκύρωση: ανέβασμα τώρα από «Εκκρεμότητες τιμολογίων», χωρίς νέα πληρωμή.`):false;
+      if(pending.count>0&&!pendingInvoiceAcknowledged){setMessage("Ανέβασε το πρωτότυπο από τις εκκρεμότητες και μετά συνέχισε το κλείσιμο.");return;}
       const result=await api(`/api/cash/sessions/${data.openSession.id}/close`,{method:"POST",body:JSON.stringify({
         cashSales:number(closeForm.cashSales),cardSales:number(closeForm.cardSales),eftposTotal:number(closeForm.eftposTotal),expenses:number(closeForm.expenses),
         drawer:number(closeForm.drawer),custody:number(closeForm.custody),coins:number(closeForm.coins),
-        safe:number(closeForm.safe),note:closeForm.note
+        safe:number(closeForm.safe),note:closeForm.note,pendingInvoiceAcknowledged,pendingInvoiceFingerprint:pending.fingerprint||undefined
       })});
+      if(!current())return;
       setMessage(`Η βάρδια έκλεισε. Διαφορά: ${money(result.variance)}. Έναρξη επόμενης: ${money(result.nextOpeningTotal)}.`);
       if(result.emailNotification?.status==="SENT")setMessage(`Η βάρδια έκλεισε και η αναφορά στάλθηκε με email. Διαφορά: ${money(result.variance)}. Έναρξη επόμενης: ${money(result.nextOpeningTotal)}.`);
       if(result.emailNotification?.status==="FAILED")setError("Η βάρδια έκλεισε κανονικά, αλλά το email αναφοράς δεν στάλθηκε. Ενημέρωσε τον διαχειριστή.");
@@ -117,6 +126,7 @@ export default function CashControlPanel({api,store}){
   };
 
   return <article className="cloud-panel cash-module">
+    <StorePendingInvoicePanel key={store.id} api={api} store={store} allowCreate={false}/>
     <div className="cloud-panel-head cash-heading">
       <div><h3><WalletCards/>Αυτόματος Έλεγχος Ταμείων</h3><p>Αυτόματη διασταύρωση βαρδιών, POS–EFTPOS, εξόδων και παραστατικών. Η έναρξη βάρδιας γίνεται μόνο από το POS / Store Mode.</p></div>
       <button className="cash-refresh" type="button" onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button>
