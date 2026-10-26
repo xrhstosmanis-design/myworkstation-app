@@ -1,0 +1,50 @@
+✔ internet market search is owner/module gated and tenant scoped (8.368761ms)
+✔ internet market search records history and applies a price only after explicit locked approval (0.255707ms)
+✔ owner UI exposes catalog linking market prices offers margin and history (0.206873ms)
+✔ Super Admin gets a central company-scoped view and purchase suggestions (0.427667ms)
+✔ market bootstrap and provider failures cannot surface as a generic internal error (0.167153ms)
+✔ warehouse selection and safe matching protect purchase suggestions (0.170177ms)
+✔ store-context native fixture refuses remote production and URL override targets (2.38782ms)
+﹣ actual registered history/proposal readers require active owned store before schema and isolate real PostgreSQL rows (0.293914ms) # SKIP
+✔ actual mounted history and proposal reads follow selected store and reject absent membership (304.236195ms)
+✔ actual mounted A-to-B-to-A search lifetime discards old success, error and close replies without business writes (170.382262ms)
+✔ StrictMode and API authority replacement retain current reads but discard previous errors (133.985387ms)
+✔ late proposal completion cannot reload or clear the newly selected store, and writer payload stays captured (128.26572ms)
+✔ dropdown and inventory typing share latest catalog generation and ignore prior query or scope replies (352.331149ms)
+✔ retained prior-render proposal callback cannot retarget a new store result (145.930805ms)
+✔ platform company change never issues a transient old-store request and rejects previous company result (111.590621ms)
+✔ retained older search callbacks cannot propose, add local order items or acknowledge reused result IDs (140.982325ms)
+✔ invalid retained result callback cannot consume the current write generation or leave busy stuck (147.167856ms)
+✔ single Greek decimal item amount remains usable (3.372198ms)
+✔ currency-prefix and repeated same amount remain usable (1.044289ms)
+✔ observed LAB per-litre price cannot become item price (0.241555ms)
+✔ Greek and English weight volume and piece unit rates stay excluded (0.596372ms)
+✔ a distinct explicitly labelled item amount survives excluded rate and old price (0.211049ms)
+✔ different unlabelled prices cannot silently choose the first or cheapest (0.235336ms)
+✔ bulk tiers with different amounts require source review (0.185691ms)
+✔ shipping amount is excluded when clearly labelled (0.172141ms)
+✔ grouped Greek item amount is read whole rather than truncated (0.358142ms)
+✔ barcode malformed or absent amounts cannot produce a truncated price (0.535209ms)
+✔ observed LAB 13 percent VAT margin matches inventory archive (1.054384ms)
+✔ zero VAT retains the existing net calculation (0.210128ms)
+✔ 24 percent VAT is removed before comparing net cost (0.161444ms)
+✔ below-cost margin remains negative (0.135885ms)
+✔ missing VAT or cost cannot imply zero VAT or free stock (0.188325ms)
+✔ invalid non-finite or out of range values produce no margin (0.273543ms)
+✔ market own-product query includes VAT and uses only the pure net metric (0.623483ms)
+✔ signed support tenant supplies missing commerce company (3.019695ms)
+✔ missing or conflicting support context cannot infer a Super Admin tenant (2.48705ms)
+✔ global platform keeps explicit company requirement even with support context (0.955264ms)
+✔ explicit Super Admin platform query/body selection is preserved (0.968705ms)
+✔ Owner foreign company parameters cannot cross tenant (1.599909ms)
+✔ Owner inactive module remains denied (1.588081ms)
+✔ Manager remains denied even with support-shaped context (3.801818ms)
+✔ non-Super Admin cannot enter platform route (0.662852ms)
+ℹ tests 42
+ℹ suites 0
+ℹ pass 41
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 2036.529894
