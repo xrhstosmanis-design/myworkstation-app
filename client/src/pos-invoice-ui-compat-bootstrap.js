@@ -87,12 +87,12 @@ function openCamera(target){
   const acquisition=createCameraAcquisition();let clearControls=()=>{};
   const overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:18px';
-  overlay.innerHTML=`<div style="width:min(900px,96vw);max-height:96vh;overflow:auto;background:#fff;border-radius:16px;padding:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px"><b style="font-size:20px">📷 Φωτογράφιση τιμολογίου</b><button type="button" class="cam-close" style="padding:8px 12px">✕</button></div>
-    <video class="cam-video" autoplay playsinline muted style="width:100%;max-height:62vh;background:#111;border-radius:10px;object-fit:contain"></video>
+  overlay.innerHTML=`<div data-document-camera-shell style="width:min(900px,100%);max-height:calc(100vh - 24px);overflow:auto;background:#fff;border-radius:16px;padding:16px">
+    <div data-document-camera-header style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;background:#fff"><b style="font-size:20px">📷 Φωτογράφιση τιμολογίου</b><button type="button" class="cam-close" style="padding:8px 12px">✕</button></div>
+    <div data-document-camera-view><video class="cam-video" autoplay playsinline muted style="width:100%;height:100%;max-height:42vh;background:#111;border-radius:10px;object-fit:contain"></video></div>
     <div class="cam-status" style="padding:10px 0">Άνοιγμα κάμερας…</div>
     <div class="cam-previews" style="display:flex;gap:8px;overflow:auto;margin:8px 0"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div data-document-camera-actions style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button type="button" class="cam-shot" style="padding:13px;font-weight:800">📸 Λήψη φωτογραφίας</button>
       <button type="button" class="cam-use" disabled style="padding:13px;font-weight:800">📄 Δημιουργία PDF & χρήση</button>
     </div>
