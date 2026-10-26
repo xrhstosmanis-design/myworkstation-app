@@ -1,3 +1,11 @@
+## 26/10/2026 - POS-NEW-PRODUCT-FULL-CARD-01 / FROZEN SOURCE EVIDENCE / NOT INSTALLED / AWAITING LAB
+
+Central next_commerce/ownercodex/central-four-streams-20261018; claim3169greenmain771b546 before15frozendae2ece paths/rootUI+backendnativeCLEAR. Samecompletecreator/defaultfalsePOSpermission/activeownstore/STORE_MODE+INVENTORY/onlineBarcodeguard; UserFKNULLforPOSoriginalauditretained, BackOfficeunchanged.
+ActualNode20 focused49PASS0FAIL2explicitPGenvSKIP (51total); retainedcallbacknegativecontrol0PASS1FAIL5filteredSKIP; build10.07s/TABLE_SERVICE. Rawqualifiedevidence+15SHA256 CHECKPOINTS/EVIDENCE/pos-new-product-full-card-20261026/. Newnativeparent+4/legacyBackOfficePGrequireactualunskippedfullCI; nolocalnativeclaim.
+POS_NEW_PRODUCT_PUBLICATION_STAGE: FROZEN_SOURCE_REVIEWED_AWAITING_RUNTIME_ASSEMBLY.
+DOCSONLYevidence-first; aftergreenandPINmerge runtime15frozen+minimum2scopedcheckpoint/activerecords, no policybypass/globalPDFchurn. NewexactfullCI/mainCI/ordinaryLIVE+realproductsaveacceptancepending. Originalinventoryowner/PASS andPIN/invoice/scanner/cashownersprotected; nocart/business/provider/licenceaction/newUSER-LABmanualPASS.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-new-product-full-card.md. All originalregistrybytespreservedexactafterprefix/canonicalPDFsynchronized; no runtimechangeinthisrecord.
+
 ## 26/10/2026 - SHIFT-CLOSE-PERSONAL-PIN-01 / FROZEN SOURCE EVIDENCE / NOT INSTALLED / AWAITING LAB
 
 Central owner codex/central-four-streams-20261018; worker/root/shift_pin. Greenclaim3169/main771b546 before6frozen9e379dc sourcebytes/rootreviewCLEAR. Prior3173/headbbd7676 fullCI40373196254ALL5SUCCESS/4281server+8backupPASS0FAIL0SKIP/nativeparent3058+3unskipped/startuppatchPASS, notfutureheadCI orinstallation.
