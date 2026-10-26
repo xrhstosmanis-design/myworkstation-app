@@ -1,3 +1,8 @@
+## 26/10/2026 - Invoice causal follow-up:14paths BEFORE SOURCE
+Retained next_reports/shift_pin ownership; add ONLY server/test/cash-period-ui-mounted.test.js to13path claim. ExactA/B pending-list GET mocks/allowances, retainedweek/month/stale-store/noPOST/provider/payment/shiftwrite checks; no broadprefix/weakening.
+Actual3184 CI40383511857:4328PASS/3FAIL/0SKIP (legacyAPIassumption +native17 default5s expiry/parent); actualregisteredclose18PASS. Diagnose query/workload versus lockwait before bounded existingservice/native correction; no blindtimeout/skip/retry.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md. Waitgreenmain beforeedits; exactreview/newfullnativeCI required. NOTINSTALLED/AWAITINGLAB, no newruntimepath/DDL or businessPASS/replay; existingowners/PINtechnicalreceipt preserved.
+
 ## 26/10/2026 - Personal PIN technically installed7d61 / AWAITING LAB
 Central shift_pin/retainedowners:3173 exactPRCI40377962012 ALL5SUCCESS4281+8PASS/0FAIL/0SKIP; mergedmain7d61 CI40380504828 ALL5SUCCESS4294+8PASS/0FAIL/0SKIP, actualnativeparent+3andstartup unskipped.
 Ordinaryguard40382042659 SUCCESS; Renderdep-dbfq4pnlk1mc73asa2bg LIVE7d61 at19:01:07.282847UTC; independentroot and publisherHTTP200/oktrue/exactrevision (publisher19:05:19UTC). No manualdeploy.
