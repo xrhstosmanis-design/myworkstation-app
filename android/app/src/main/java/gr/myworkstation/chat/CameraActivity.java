@@ -30,6 +30,7 @@ public final class CameraActivity extends Activity {
     private final RequestEpoch epoch = new RequestEpoch();
     private Button take, use;
     private int sensorOrientation = 90;
+    private int focusMode = CaptureRequest.CONTROL_AF_MODE_OFF;
     @Override public void onCreate(Bundle state) {
         super.onCreate(null); getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         if (android.os.Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false);
@@ -37,7 +38,7 @@ public final class CameraActivity extends Activity {
         LinearLayout layout = new LinearLayout(this); layout.setOrientation(LinearLayout.VERTICAL);
         status = new TextView(this); status.setText("Έως 5 λήψεις · μετά πάτησε Χρήση φωτογραφιών · χωρίς αποθήκευση στη συλλογή"); status.setPadding(20, 40, 20, 16); layout.addView(status);
         texture = new TextureView(this); layout.addView(texture, new LinearLayout.LayoutParams(-1, 0, 1));
-        take = new Button(this); take.setText("Λήψη"); take.setMinHeight(64); take.setOnClickListener(v -> capture()); layout.addView(take);
+        take = new Button(this); take.setText("Λήψη · κράτησε την κάμερα σταθερή"); take.setMinHeight(64); take.setOnClickListener(v -> capture()); layout.addView(take);
         use = new Button(this); use.setText("Χρήση φωτογραφιών"); use.setEnabled(false); use.setOnClickListener(v -> usePhotos()); layout.addView(use);
         take.setEnabled(false);
         Button cancel = new Button(this); cancel.setText("Ακύρωση"); cancel.setOnClickListener(v -> finish()); layout.addView(cancel); setContentView(layout);
@@ -63,7 +64,15 @@ public final class CameraActivity extends Activity {
             CameraCharacteristics info = manager.getCameraCharacteristics(chosen); Integer orientation = info.get(CameraCharacteristics.SENSOR_ORIENTATION); sensorOrientation = orientation == null ? 90 : orientation;
             StreamConfigurationMap map = info.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP); if (map == null) { fail(generation); return; }
             Size[] sizes = map.getOutputSizes(ImageFormat.JPEG); if (sizes == null || sizes.length == 0) { fail(generation); return; }
-            Size size = Arrays.stream(sizes).filter(s -> s.getWidth() <= 1600 && s.getHeight() <= 1600).max(java.util.Comparator.comparingLong(s -> (long) s.getWidth() * s.getHeight())).orElse(sizes[sizes.length - 1]);
+            int[][] dimensions = new int[sizes.length][2];
+            for (int i = 0; i < sizes.length; i++) { dimensions[i][0] = sizes[i].getWidth(); dimensions[i][1] = sizes[i].getHeight(); }
+            Size size = sizes[CameraPhotoPolicy.select(dimensions)];
+            int[] supportedFocus = info.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES);
+            focusMode = CaptureRequest.CONTROL_AF_MODE_OFF;
+            if (supportedFocus != null) for (int mode : supportedFocus) {
+                if (mode == CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE) { focusMode = mode; break; }
+                if (mode == CaptureRequest.CONTROL_AF_MODE_AUTO) focusMode = mode;
+            }
             reader = ImageReader.newInstance(size.getWidth(), size.getHeight(), ImageFormat.JPEG, 2);
             reader.setOnImageAvailableListener(source -> {
                 try (Image image = source.acquireLatestImage()) {
@@ -88,7 +97,7 @@ public final class CameraActivity extends Activity {
             device.createCaptureSession(Arrays.asList(surface, reader.getSurface()), new CameraCaptureSession.StateCallback() {
                 @Override public void onConfigured(CameraCaptureSession value) {
                     if (!active || !epoch.current(generation) || device == null) { value.close(); return; } session = value;
-                    try { request.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE); value.setRepeatingRequest(request.build(), null, camera); runOnUiThread(() -> { if (active && epoch.current(generation)) updateControls(); }); }
+                    try { request.set(CaptureRequest.CONTROL_AF_MODE, focusMode); value.setRepeatingRequest(request.build(), null, camera); runOnUiThread(() -> { if (active && epoch.current(generation)) updateControls(); }); }
                     catch (Exception ignored) { fail(generation); }
                 }
                 @Override public void onConfigureFailed(CameraCaptureSession value) { fail(generation); }
@@ -103,6 +112,8 @@ public final class CameraActivity extends Activity {
             CaptureRequest.Builder request = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE); request.addTarget(reader.getSurface());
             int rotation = getWindowManager().getDefaultDisplay().getRotation(); int degrees = rotation == Surface.ROTATION_90 ? 90 : rotation == Surface.ROTATION_180 ? 180 : rotation == Surface.ROTATION_270 ? 270 : 0;
             request.set(CaptureRequest.JPEG_ORIENTATION, (sensorOrientation - degrees + 360) % 360);
+            request.set(CaptureRequest.CONTROL_AF_MODE, focusMode);
+            request.set(CaptureRequest.JPEG_QUALITY, (byte) 96);
             session.capture(request.build(), new CameraCaptureSession.CaptureCallback() {
                 @Override public void onCaptureFailed(CameraCaptureSession ignored, CaptureRequest request, CaptureFailure failure) { fail(generation); }
             }, camera);

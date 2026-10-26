@@ -239,6 +239,15 @@ jobs:
           path: /tmp/mws-wholesale-commercial-offline/*
           if-no-files-found: ignore
           retention-days: 14
+      - name: Verify document camera pointer access in Chromium
+        run: node server/e2e/document-camera-browser-flow.mjs
+      - name: Preserve document camera geometry
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-document-camera-browser
+          path: /tmp/mws-document-camera-browser/*
+          retention-days: 7
       - name: Render isolated POS header in Chromium
         run: node server/e2e/pos-header-browser-flow.mjs
       - name: Verify report dialog pointer access in Chromium
