@@ -1,4 +1,5 @@
 import CashReportPeriodFields from "../platform/CashReportPeriodFields.jsx";
+import {cashChatEvidenceLines} from "../../lib/cash-chat-evidence.js";
 import {cashReportPeriod} from "../../lib/cash-report-period.js";
 import React,{useEffect,useMemo,useState,useRef} from "react";
 import {CheckCircle2,Coins,RefreshCw,ShieldCheck,TrendingDown,TrendingUp,WalletCards} from "lucide-react";
@@ -24,6 +25,8 @@ export default function CashControlPanel({api,store}){
   const [message,setMessage]=useState("");
   const [eftposReview,setEftposReview]=useState(null);
   const [investigation,setInvestigation]=useState(null);
+  const investigationSequence=useRef(0),investigationStore=useRef(store.id);
+  investigationStore.current=store.id;
   const [reportDate,setReportDate]=useState(()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()));
   const [fromTime,setFromTime]=useState("00:00"),[toTime,setToTime]=useState("23:59");
   const [openForm,setOpenForm]=useState({shiftLabel:"Πρωινή βάρδια",...initialAmounts,note:""});
@@ -66,7 +69,7 @@ export default function CashControlPanel({api,store}){
       }
     }catch(err){if(sequence===loadSequence.current){setDaily(null);setError(err.message)}}finally{if(sequence===loadSequence.current)setLoading(false)}
   };
-  useEffect(()=>{setDaily(null);setInvestigation(null);load();return()=>{loadSequence.current++;}},[store.id,reportDate,period,rangeFrom,rangeTo]);
+  useEffect(()=>{setDaily(null);setInvestigation(null);setBusy(false);investigationSequence.current++;load();return()=>{loadSequence.current++;investigationSequence.current++;}},[store.id,reportDate,period,rangeFrom,rangeTo]);
   const visibleSessions=useMemo(()=>[...(daily?.sessions||[])].filter(row=>{const value=new Date(row.closedAt).toLocaleTimeString("el-GR",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return value>=fromTime&&value<=toTime}).sort((a,b)=>new Date(a.closedAt)-new Date(b.closedAt)),[daily,fromTime,toTime]);
 
   const openingOperational=useMemo(()=>number(openForm.drawer)+number(openForm.custody)+number(openForm.coins),[openForm]);
@@ -82,7 +85,7 @@ export default function CashControlPanel({api,store}){
 
   const updateOpen=(key,value)=>setOpenForm(form=>({...form,[key]:value}));
   const updateClose=(key,value)=>setCloseForm(form=>({...form,[key]:value}));
-  const investigate=async sessionId=>{setBusy(true);setError("");try{setInvestigation(await api(`/api/cash/sessions/${sessionId}/investigation`))}catch(err){setError(err.message)}finally{setBusy(false)}};
+  const investigate=async sessionId=>{const sequence=++investigationSequence.current,storeId=store.id;setBusy(true);setError("");setInvestigation(null);const current=()=>sequence===investigationSequence.current&&investigationStore.current===storeId;try{const result=await api(`/api/cash/sessions/${sessionId}/investigation`);if(current()&&result?.session?.storeId===storeId&&result.session.id===sessionId)setInvestigation(result)}catch(err){if(current())setError(err.message)}finally{if(current())setBusy(false)}};
   const addReview=async decision=>{if(!investigation)return;let amount=0;if(decision==="EXPLANATION"){if(investigation.unexplainedVariance==null)return setError("Το υπόλοιπο είναι άγνωστο. Απαιτείται επανέλεγχος των εξηγήσεων.");const entered=window.prompt("Ποσό που εξηγείται (€):",Math.abs(number(investigation.unexplainedVariance)).toFixed(2));if(entered===null)return;amount=number(String(entered).replace(",","."));if(amount<=0)return setError("Γράψε θετικό ποσό εξήγησης.")}const note=String(window.prompt(decision==="CONFIRMED_SHORTAGE"?"Υποχρεωτική αιτιολογία οριστικοποίησης ελλείμματος:":"Υποχρεωτικό σχόλιο ελέγχου:","")||"").trim();if(note.length<5)return setError("Το σχόλιο πρέπει να έχει τουλάχιστον 5 χαρακτήρες.");setBusy(true);setError("");try{await api(`/api/cash/sessions/${investigation.session.id}/reviews`,{method:"POST",body:JSON.stringify({decision,amount,note})});await investigate(investigation.session.id)}catch(err){setError(err.message)}finally{setBusy(false)}};
 
   const openShift=async event=>{
@@ -126,7 +129,7 @@ export default function CashControlPanel({api,store}){
     </div>}
     {loading?<div className="cloud-loading">Φόρτωση ελέγχου ταμείου…</div>:<>
       <section className="cash-shift-search" aria-label="Αναζήτηση βαρδιών"><CashReportPeriodFields period={period} date={reportDate} from={rangeFrom} to={rangeTo} onPeriod={value=>{if(value==="CUSTOM"){setRangeFrom(reportDate);setRangeTo(reportDate)}setPeriod(value)}} onDate={setReportDate} onFrom={setRangeFrom} onTo={setRangeTo}/><label>Από ώρα<input type="time" value={fromTime} onChange={e=>setFromTime(e.target.value)}/></label><label>Έως ώρα<input type="time" value={toTime} onChange={e=>setToTime(e.target.value)}/></label><strong>{visibleSessions.length} βάρδιες</strong></section>
-      <p>Προσωρινή σύνοψη καταγεγραμμένων βαρδιών — ο ολοκληρωμένος έλεγχος κινήσεων και συνέχειας παραμένει εκκρεμής.</p><div className="cash-shift-sequence">{visibleSessions.length?visibleSessions.map((row,index)=>{const variance=number(row.effectiveVariance??row.variance),cardVariance=number(row.cardVariance),needsReview=Math.abs(variance)>.009||Math.abs(cardVariance)>.009;return <section className={`cash-shift-check ${needsReview?"needs-review":"agreement"}`} key={row.id}><header><span>ΒΑΡΔΙΑ {index+1}</span><strong>{row.shiftLabel||"Βάρδια"} · {row.terminalPos||"MAIN"}</strong><small>{when(row.openedAt)} → {when(row.closedAt)}</small></header><div><span>Χειριστής</span><b>{row.closedByName||row.openedByName||"—"}</b></div><div><span>Μετρητά</span><b>{money(row.cashSales)}</b></div><div><span>Κάρτες / EFTPOS</span><b>{money(row.cardSales)} / {money(row.eftposTotal)}</b></div><div><span>Διαφορά</span><b className={Math.abs(variance)>.009?"cash-negative":"cash-positive"}>{money(variance)}</b></div><div><span>Κατάσταση</span><b>{needsReview?"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ":"ΣΥΜΦΩΝΙΑ"}</b></div></section>}):<div className="cloud-empty">Δεν βρέθηκαν κλεισμένες βάρδιες στην ημερομηνία και ώρα που επέλεξες.</div>}</div>
+      <p>Προσωρινή σύνοψη καταγεγραμμένων βαρδιών — ο ολοκληρωμένος έλεγχος κινήσεων και συνέχειας παραμένει εκκρεμής.</p><div className="cash-shift-sequence">{visibleSessions.length?visibleSessions.map((row,index)=>{const variance=number(row.effectiveVariance??row.variance),cardVariance=number(row.cardVariance),needsReview=Math.abs(variance)>.009||Math.abs(cardVariance)>.009;return <section className={`cash-shift-check ${needsReview?"needs-review":"agreement"}`} key={row.id}><header><span>ΒΑΡΔΙΑ {index+1}</span><strong>{row.shiftLabel||"Βάρδια"} · {row.terminalPos||"MAIN"}</strong><small>{when(row.openedAt)} → {when(row.closedAt)}</small></header><div><span>Χειριστής</span><b>{row.closedByName||row.openedByName||"—"}</b></div><div><span>Μετρητά</span><b>{money(row.cashSales)}</b></div><div><span>Κάρτες / EFTPOS</span><b>{money(row.cardSales)} / {money(row.eftposTotal)}</b></div><div><span>Διαφορά</span><b className={Math.abs(variance)>.009?"cash-negative":"cash-positive"}>{money(variance)}</b></div><div><span>Κατάσταση</span><b>{needsReview?"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ":"ΣΥΜΦΩΝΙΑ"}</b></div><button type="button" className="cash-investigate" disabled={busy} onClick={()=>investigate(row.id)}>Ανάλυση παράδοσης και χειρόγραφων</button></section>}):<div className="cloud-empty">Δεν βρέθηκαν κλεισμένες βάρδιες στην ημερομηνία και ώρα που επέλεξες.</div>}</div>
       <section className={`cash-daily-summary ${(data?.offlineSync?.counts?.pending||data?.offlineSync?.counts?.failed)?"needs-review":"agreement"}`} data-offline-sync-evidence="true">
         <div><span>OFFLINE ΣΥΓΧΡΟΝΙΣΜΟΣ</span><strong>{(data?.offlineSync?.counts?.pending||data?.offlineSync?.counts?.failed)?"ΧΡΕΙΑΖΕΤΑΙ ΕΛΕΓΧΟΣ":"ΣΥΜΦΩΝΙΑ"}</strong><small>Αμετάβλητο audit ανά transaction ID</small></div>
         <div><span>Αναμονή</span><strong>{data?.offlineSync?.counts?.pending||0}</strong></div>
@@ -135,6 +138,7 @@ export default function CashControlPanel({api,store}){
         <div><span>Idempotent replay</span><strong>{data?.offlineSync?.counts?.replays||0}</strong></div>
       </section>
       {(data?.offlineSync?.rows||[]).length>0&&<div className="cash-history"><h4>Offline συναλλαγές</h4><div className="cash-history-list">{data.offlineSync.rows.slice(0,10).map(row=><div className="cash-history-row" key={row.clientTransactionId}><div><b>{row.status} · {String(row.clientTransactionId).slice(0,8)}</b><small>{when(row.lastReportedAt)} · προσπάθειες {row.attempts}{row.idempotentReplay?" · DUPLICATE/REPLAY":""}</small></div><span className={`status-pill ${row.status==="SYNCED"?"active":"revoked"}`}>{row.status}</span><div><span>Sale</span><b>{row.saleId||"—"}</b></div><div><span>Σφάλμα</span><b>{row.lastErrorCode||"—"}</b></div></div>)}</div></div>}
+      {investigation?.session?.storeId===store.id&&<section className="cash-investigation" aria-label="Στοιχεία παράδοσης και χειρόγραφων"><header><h4>{investigation.session.openedByName||"Βάρδια"} · {when(investigation.session.openedAt)}</h4><button type="button" onClick={()=>{investigationSequence.current++;setInvestigation(null);setBusy(false)}}>Κλείσιμο</button></header><p>Αρχική διαφορά μετρητών: {money(investigation.initialVariance)}. Διαφορά POS–EFTPOS: {money(investigation.cardVariance)}.</p>{investigation.reviewEvidence?cashChatEvidenceLines(investigation.reviewEvidence).map((line,index)=><p key={index}>{line}</p>):<p>Δεν υπάρχουν διαθέσιμα πρόσθετα στοιχεία για τον συγκεκριμένο ρόλο.</p>}</section>}
       <div className="cloud-alert"><b>Οι βάρδιες ανοίγουν και κλείνουν αποκλειστικά από το POS / Store Mode.</b><br/>Το BackOffice εμφανίζει μόνο τον αυτόματο έλεγχο, τη συμφωνία και τις αποκλίσεις.</div>
     </>}
   </article>;
