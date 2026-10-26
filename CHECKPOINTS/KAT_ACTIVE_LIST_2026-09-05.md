@@ -52,6 +52,16 @@ Local actual Node20.20.2 focused26PASS/0FAIL/0SKIP, including mounted scanner pa
 
 Checkpoint `CHECKPOINTS/CHANGES/2026-10-26-document-capture-scanner.md`. Owner retained. Source is NOT INSTALLED; next resolve exact required CI/build/review, then ordinary exact guarded release and a new non-financial synthetic camera/scanner acceptance when hardware exists. Existing qualified manual PASS unchanged; no new manual PASS.
 
+## 26/10/2026 - Invoice startup/query follow-up:15paths BEFORE SOURCE
+Retained next_reports/shift_pin owners; add ONLY server/e2e/payment-shift-flow.mjs to14path claim. Actual startup positive plain payment/capture before/after absent lazyAI fields; retain startup-created tasktable and all original money/control/POS/PIN checks, zeroAI/job/draft/provider/module/schema activation.
+Existing service/native correction: schema-aware positiveplain/proof/intents independentoptionalAIgraph, missingAIcapability staysREVIEW; fullysetbased chain/page/proof/tombstone guards without newDDL/index/timeout/PGsetting/historydrop. Actual8912 CI40386836693 server4347+8PASS0skip butrealHTTP42703FAILED; EXPLAIN7795.799ms/1,018,081docPKloops/3.28Mhits/JITnull, notfullPASS/install.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md. Wait exactgreenmain beforeedits; rootcombinedreview/newfullnativeHTTP CI/normalrelease required. No USER/LAB/manualPASS or businessreplay; currentPOS/PIN/cash owners preserved.
+
+## 26/10/2026 - POS complete new-product card technically installedc0b / AWAITING LAB
+Retained next_commerce/inventoryowners;3181 finalPR CI40383471309 and exactmain CI40385246990 ALL5SUCCESS,4309server+8backupPASS/0FAIL/0SKIP each; actualnewPGparent+4unskipped, allprotectedchecks retained.
+Ordinaryguard40386710263 SUCCESS; Renderdep-dbfqj759fdbs739qc630 LIVEc0b finished19:32:11.347908UTC, publisherHTTP200/oktrue/exactrevision19:33:04UTC and independentroot19:34:47.730656UTC. No manualdeploy.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-new-product-full-card.md. Fullsharedcard/defaultfalsecurrentpermission/bothlicences/UserFKNULL+operatoraudit technicallyinstalled; realproductsave/stock controls acceptanceOPEN, no functional/USER/LAB/manualPASS or businessreplay. PIN/invoice/cash owners/history preserved.
+
 ## 26/10/2026 — CASH-REVIEWED-MANUAL-CONSUMER-04A / SAME OWNER / BEFORE SOURCE CLAIM
 
 ASSIGNED codex/cash-chat-reconciliation-20261026, source feat/cash-reviewed-consumers-20261026. Independent bounded continuation of received cash extension, not a transfer of retained automatic-dispatch, Task14 assistant, mail transport, lifecycle/native/invoice or financial writers. Claim must merge green/main BEFORE runtime edits. Reviewed3180 exact head79831aa07e740c850797f6ae886f81b59a20e7b8 fullCI40385981317/all5jobs SUCCESS:4326server+8backupPASS/0FAIL/0SKIP including native two-client review/archive/source/HTTP proof. Squash mergedaf9517ee1c0893d665962de788e54cd556c3fa2d. Exact mainCI40387741454/guarded deployment/measured LAB still pending; no LAB/manual/whole-workflow PASS.
