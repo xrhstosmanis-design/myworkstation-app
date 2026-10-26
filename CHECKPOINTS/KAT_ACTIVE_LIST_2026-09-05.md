@@ -1,3 +1,10 @@
+## 26/10/2026 - ΤΕΛΙΚΗ ΛΙΣΤΑ ΕΚΚΡΕΜΟΤΗΤΩΝ / CENTRAL ORDER / NO NEW PASS
+
+Coordinator codex/central-four-streams-20261018/root; four retained groups: stores/fiscal, infrastructure/recovery, commerce/catalogue, reports/workforce/AI/mobile. Internet3161 technically installed025a9a3/receipt3164 main33d5da1; authenticated acceptance stays OPEN. Existing catalogue/imports/CASH/PASS protected, no replay.
+Order deferred to one final coordinated batch:1 normal SuperAdmin read-only existing-data checks;2 owner-coordinated physical Windows/device states;3 exact workbook/Apple/Azure/private recovery prerequisites. Latest26Oct FTEXT unresolvedNO/REQUIRES_CHECK supersedes old25Oct CARDoff/no-unresolved snapshot; first inspect existing POS, never repeat payment or infer fiscal cancellation.
+Other-owner cash-chat3163 first source merged9ecbb3e (installation unverified here) and3165 next claim remains open/locked, not user-only work. Fresh supplier109rows:98NO_SHORTAGE/11REVIEW_REQUIRED/0positive; wait for a genuine candidate, no stock/order manufacture. No source/config/device/business action, new manual/USER/LAB PASS or ownership transfer.
+Full deduplicated four-group status, evidence and prerequisites: CHECKPOINTS/CHANGES/2026-10-26-central-final-batch-order.md. All previous registry bytes retained exactly after this short pointer; canonical PDF synchronized. No user action requested now.
+
 ## 26/10/2026 — CASH-CHAT-RECONCILIATION-01 / EXACT SOURCE CI PASS / CURRENT-MAIN RECONCILIATION
 
 Same receiving owner and source3163. Exact31e28d2adc6843a603cebfbd234e4a5d4a571188 CI40347645274 all5jobs SUCCESS; actual Node20 job121659476258 logs4245server+8backupPASS/0FAIL/0SKIP. Native chat SQL and cross-day handoff/correction cases executed unskipped. This is isolated technical proof, not handwriting reading, LAB acceptance or installation.
