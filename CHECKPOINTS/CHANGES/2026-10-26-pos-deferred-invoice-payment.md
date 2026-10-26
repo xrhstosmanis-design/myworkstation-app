@@ -1,0 +1,31 @@
+# POS-DEFERRED-INVOICE-PAYMENT-01 - payment without upload and durable reminder / BEFORE SOURCE
+
+26/10/2026. Central owner `codex/central-four-streams-20261018`; worker `/root/next_reports`, source branch `fix/pos-deferred-invoice-payment-20261026`. Fresh main `27ab5bce55fc3987457faa52308e7acabb0c875f`. Explicit user request: allow invoice payment before uploading its document, ask about missing documents before shift close, record pending invoices durably and later attach the invoice to the ORIGINAL payment without paying again. Distinct purpose NO_DOCUMENT pending flow, not blanket conversion of generic NO_DOCUMENT advances/CREDIT. Existing Gate3 accepted payments/one-draft/AI job/source acquisition, original supplier duplicate-payment prevention and myDATA/QR/invoice owners remain protected. No broad takeover or correction of historical payments.
+
+## Exact source/test claim - 11 paths
+
+1. NEW `server/src/services/pos-pending-invoices.js`: bounded pending marker/queries/provenance and original-payment resolution service.
+2. `server/src/routes/store-transactions.js`: explicit deferred-invoice payment purpose and atomic deterministic pending marker/replay binding; ordinary payments/advances/CREDIT unchanged.
+3. `server/src/routes/commerce-pos-v244.js`: ONLY optional expected pending ID/fingerprint guard and replay binding on existing fast-duplicate-check/fast-handoff. Check before money/job/provider side effects and again under store/session lock.
+4. NEW `client/src/components/store/StorePendingInvoicePanel.jsx`: shared payment/list/explicit later-upload flow using known manual headers and existing guarded handoff.
+5. `client/src/components/store/StorePosPaymentsModal.jsx`: mount that shared panel only.
+6. `client/src/components/cloud/CashControlPanel.jsx`: separate pending-invoice section, no cash investigation/chat-writer edit.
+7. `server/src/routes/cash-control.js`: ONLY shared pending service/schema/overview and locked pre-close acknowledgement record; sole file writer `/root/shift_pin`, separate from PIN credential sections.
+8. `client/src/components/store/StoreShiftClosePanel.jsx`: ONLY pending reminder/upload-or-explicit-continue acknowledgement UI; sole file writer `/root/shift_pin` after its PIN commit.
+9. NEW `server/test/pos-pending-invoices.test.js`.
+10. NEW `server/test/pos-pending-invoices-postgres.test.js`.
+11. NEW `server/test/pos-pending-invoices-ui.test.js`.
+
+## Required behavior and safety boundaries
+
+New purpose distinguishes an invoice awaiting its actual document from an ordinary advance or existing generic no-document payment. Require actual supplier identity, real document number/date and amount for the initial intent; no fabricated placeholder. Persist a deterministic audit marker atomically with the one original payment; no extra tables, DDL or lifecycle manifest changes. Preserve external financial-session NULL semantics; contextual session metadata does not silently reassign financial ownership. Before close, show remaining document obligations and offer explicit upload or continue acknowledgement; continuing records the acknowledged still-pending state, not a false completed invoice, cancellation or second payment. No unconditional close block beyond the agreed explicit question/acknowledgement contract.
+
+Later upload reuses original payment identity and amount through the existing duplicate-prevention/fast-handoff path. Bind expected pending ID/fingerprint before monetary/job/provider work and recheck under authoritative store/session lock. Durable first-source claim and same-checksum uncertain retry reuse the same job/draft. Reject changed/foreign/stale/reversed bindings or a foreign/changed upload against a resolved binding. An exact completed immutable same-header and same file-manifest/checksum retry returns the EXISTING job/draft/payment readback even after resolution, with no new work. A fresh different attachment requires the separate existing explicit reread flow. No second payment, AI job or draft. Only actual invoice content can resolve the missing-invoice obligation; a payment proof alone is not invoice content. No automatic provider call from a GET, automatic OCR retry or invented document/header. No changes to Fast/Premium forms: the shared new panel directly uses known manual headers and the existing guarded upload/handoff contract.
+
+## Verification and serialization
+
+Actual registered SQL/HTTP and native PostgreSQL tests: no-document payment/marker atomic rollback, UUID and body-conflict replay, company/store/operator/session scope, concurrent close acknowledgement versus upload/reversal, expected pending binding before side effects and under lock, durable first-source/checksum retry, exact one original payment/job/draft and unchanged controls. Meaningful mounted UI covers no-file payment, pending list/reload, pre-close question/upload or explicit continue, later original-payment upload and no second money/job/draft. Protect existing advance/CREDIT, Gate3 assistant/attachment, invoice global duplicate-prevention, close/card/PIN and lifecycle/recovery behavior.
+
+Shared close panel and cash-control route are edited ONLY by `/root/shift_pin`, using reviewed invoice section snippets/interface after its PIN source commit; invoice worker edits its other nine paths. Do not edit the other owner's cash-chat investigation sections in CashControlPanel or myDATA diagnostics. Exact combined review and CI required after serialized integration. Separate source PRs or serial integration, not three speculative runtime fixes in one PR.
+
+Status ASSIGNED / SOURCE NOT STARTED / NEW FLOW NOT IMPLEMENTED OR INSTALLED / AWAITING LAB. Require this claim green/main before source, then Node20 exact PR/main full CI with real native cases unskipped, independent review and ordinary guarded exact LIVE. Actual payment/close/upload acceptance remains separately authorized with measured before/after/control and no replay of accepted transactions. No production document, job/provider call, payment, close, stock or fiscal mutation occurred in this claim; no new manual/USER/LAB PASS.
