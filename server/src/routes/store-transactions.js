@@ -1,4 +1,5 @@
 import {supplierAdvanceContext,associateExpenseAsAdvance,allocateSupplierAdvance} from "../lib/supplier-advance.js";
+import {createPendingInvoicePayment,readPendingInvoices,capturePendingInvoice} from "../services/pos-pending-invoices.js";
 import {supplierCreditCashContext,applySupplierCreditCash,assertCreditCashUnlinked} from "../lib/supplier-credit-cash.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import { Router } from "express";
@@ -191,8 +192,9 @@ function requireLedgerAccess(req,res,next){
   );
   const transferContext=req.method==="GET"&&/\/stores\/[^/]+\/cash-transfer\/context(?:\?|$)/.test(String(req.originalUrl||""))&&permissions.includes("TRANSFER_AMOUNT");
   const creditContext=req.method==="GET"&&/\/stores\/[^/]+\/supplier-credit-cash(?:\?|$)/.test(String(req.originalUrl||""))&&permissions.includes("SUPPLIER_PAYMENT")&&permissions.includes("SAME_SHIFT_PAYMENTS");
+  const pendingInvoiceContext=req.method==="GET"&&/\/stores\/[^/]+\/pending-invoices(?:\?|$)/.test(String(req.originalUrl||""))&&permissions.includes("SUPPLIER_PAYMENT");
   const operator=req.user?.tokenType==="STORE_OPERATOR"&&(
-    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission||transferContext||creditContext
+    permissions.includes("STORE_LEDGER")||permissions.includes("CASH_CONTROL")||actionPermission||transferContext||creditContext||pendingInvoiceContext
   );
   if(!backoffice&&!superAdmin&&!operator)return res.status(403).json({error:"Δεν έχεις δικαίωμα καταχώρισης συναλλαγών."});
   next();
@@ -286,6 +288,7 @@ const transactionSchema=z.object({
   supplierName:z.string().trim().max(180).optional().nullable(),
   supplierId:z.string().optional().nullable(),
   invoiceDocumentNumber:z.string().trim().min(1).max(80).optional().nullable(),
+  deferredInvoice:z.object({documentDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),sessionId:z.string().trim().min(1).max(180)}).optional(),
   evidenceMode:z.enum(["DOCUMENT","NO_DOCUMENT"]).optional().nullable(),
   purchaseDocumentId:z.string().trim().min(1).max(180).optional().nullable(),
   paymentSource:z.enum(["CASH_SHIFT","EXTERNAL"]).optional().nullable(),
@@ -1018,11 +1021,31 @@ router.post("/stores/:storeId/cash-transfer",route(async(req,res)=>{
   res.status(result.duplicate?200:201).json({ok:true,...result,transaction:normalize(result.transaction)});
 }));
 
+router.get("/stores/:storeId/pending-invoices",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId),terminalPos=await requestTerminal(req);
+  const pending=await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos});
+  const sessions=await prisma.$queryRaw`SELECT "id","terminalPos","openedBy" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "terminalPos"=${terminalPos} AND "status"='OPEN' LIMIT 1`;
+  res.json({storeId:store.id,...pending,openSession:sessions[0]||null});
+}));
+
+router.post("/stores/:storeId/pending-invoices/:transactionId/attachment",route(async(req,res)=>{
+  assertStoreAccess(req,req.params.storeId);
+  const store=await ownedStore(req.params.storeId,req.user.companyId);
+  if(req.body?.paymentTransactionId!==req.params.transactionId)return res.status(409).json({error:"Το πρωτότυπο δεν αντιστοιχεί στην επιλεγμένη πληρωμή.",code:"PENDING_INVOICE_CONFLICT"});
+  const captured=await capturePendingInvoice(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos:await requestTerminal(req)},req.body||{});
+  res.status(captured.duplicate?200:201).json(captured);
+}));
+
 router.post("/stores/:storeId",route(async(req,res)=>{
   if(req.user?.tokenType==="STORE_OPERATOR"&&req.body?.type==="TRANSFER_AMOUNT")return res.status(403).json({error:"Η μεταφορά χειριστή γίνεται προς τον Ιδιοκτήτη από τη λειτουργία Μεταφοράς μετρητών."});
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const body=transactionSchema.parse(req.body||{});
+  if(body.deferredInvoice){
+    const result=await createPendingInvoicePayment(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos:await requestTerminal(req)},body);
+    return res.status(result.duplicate?200:201).json({...normalize(result.transaction),duplicate:result.duplicate,pendingInvoiceId:result.pendingInvoiceId,fingerprint:result.fingerprint,evidenceMode:"NO_DOCUMENT",paymentSource:body.paymentSource,paymentMethod:body.paymentMethod});
+  }
   const isPayment=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";
   if(body.amount<0&&(!["SUPPLIER_PAYMENT","OTHER_EXPENSE"].includes(body.type)||body.paymentSource!=="CASH_SHIFT"))return res.status(400).json({error:"Αρνητική κίνηση επιτρέπεται μόνο στο ταμείο της ενεργής βάρδιας."});
   const needsPhoto=body.type==="SUPPLIER_PAYMENT"||body.type==="OTHER_EXPENSE";

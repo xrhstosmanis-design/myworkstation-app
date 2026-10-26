@@ -14,6 +14,7 @@ import { auth } from "../middleware/auth.js";
 import { sendEmail } from "../services/mail.js";
 import {ensurePosSaleSafetySchema} from "../pos-sale-safety.js";
 import {buildKatShiftReconciliation} from "../kat-shift-reconciliation.js";
+import {readPendingInvoices,checkClosePendingInvoices,recordClosePendingInvoices} from "../services/pos-pending-invoices.js";
 import {verifyShiftCloseCredential} from "../services/shift-close-card.js";
 import {normalizeWorkCard} from "../workforce-card-code.js";
 import {legacyCashControlRule as legacyStoreRule} from "../services/cash-control-rules.js";
@@ -152,7 +153,7 @@ async function requestTerminal(req){
 
 const amount=z.coerce.number().finite().min(0).max(999999999).default(0);
 const openSchema=z.object({shiftLabel:z.string().trim().min(2).max(80).default("Βάρδια"),drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable()});
-const closeSchema=z.object({cardCode:z.string().max(120).optional(),pin:z.string().regex(/^\d{4,8}$/).optional(),closeCredentialMethod:z.enum(["CARD","PIN"]).optional(),cashSales:amount,cardSales:amount,eftposTotal:z.preprocess(value=>declaredEftpos(value)??NaN,z.number().finite().min(0).max(999999999)),expenses:amount,drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable(),forceCloseWithShortage:z.boolean().optional().default(false)}).superRefine((body,ctx)=>{if((body.pin&&String(body.cardCode||"").trim())||(body.pin&&body.closeCredentialMethod!=="PIN")||(body.closeCredentialMethod==="PIN"&&!body.pin))ctx.addIssue({code:z.ZodIssueCode.custom,path:["closeCredentialMethod"],message:"Επίλεξε μόνο κάρτα ή προσωπικό PIN για το κλείσιμο."})});
+const closeSchema=z.object({pendingInvoiceAcknowledged:z.boolean().optional().default(false),pendingInvoiceFingerprint:z.string().regex(/^[0-9a-f]{64}$/).optional(),cardCode:z.string().max(120).optional(),pin:z.string().regex(/^\d{4,8}$/).optional(),closeCredentialMethod:z.enum(["CARD","PIN"]).optional(),cashSales:amount,cardSales:amount,eftposTotal:z.preprocess(value=>declaredEftpos(value)??NaN,z.number().finite().min(0).max(999999999)),expenses:amount,drawer:amount,custody:amount,coins:amount,safe:amount,note:z.string().trim().max(1000).optional().nullable(),safeReason:z.string().trim().max(1000).optional().nullable(),forceCloseWithShortage:z.boolean().optional().default(false)}).superRefine((body,ctx)=>{if((body.pin&&String(body.cardCode||"").trim())||(body.pin&&body.closeCredentialMethod!=="PIN")||(body.closeCredentialMethod==="PIN"&&!body.pin))ctx.addIssue({code:z.ZodIssueCode.custom,path:["closeCredentialMethod"],message:"Επίλεξε μόνο κάρτα ή προσωπικό PIN για το κλείσιμο."})});
 const reportDateSchema=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const reviewSchema=z.object({decision:z.enum(["EXPLANATION","CONFIRMED_SHORTAGE","REVIEWED_NO_CHANGE"]),amount:z.coerce.number().finite().min(0).max(999999999).default(0),note:z.string().trim().min(5).max(1000)}).superRefine((value,ctx)=>{if(value.decision==="EXPLANATION"&&value.amount<=0)ctx.addIssue({code:z.ZodIssueCode.custom,path:["amount"],message:"Η εξήγηση χρειάζεται θετικό ποσό."})});
 
@@ -308,7 +309,9 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     prisma.$queryRaw`SELECT "clientTransactionId","status","saleId","attempts","lastErrorCode","idempotentReplay","firstReportedAt","lastReportedAt","syncedAt" FROM "OfflineSaleSyncEvidence" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} ORDER BY "lastReportedAt" DESC LIMIT 50`,
     prisma.$queryRaw`SELECT COUNT(*) FILTER (WHERE "status"='PENDING')::int AS pending,COUNT(*) FILTER (WHERE "status"='FAILED')::int AS failed,COUNT(*) FILTER (WHERE "status"='SYNCED')::int AS synced,COUNT(*) FILTER (WHERE "idempotentReplay"=TRUE)::int AS replays FROM "OfflineSaleSyncEvidence" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id}`
   ]);
-  const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
+  const openSession=normalize(openRows[0]);
+  const pendingInvoices=openSession&&(req.user.tokenType!=="STORE_OPERATOR"||openSession.openedBy===req.user.id)?await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos,sessionId:openSession.id,sessionAll:true}):null;
+  const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
 }));
 
 router.get("/stores/:storeId/reporting-overview",route(async(req,res)=>{
@@ -500,6 +503,8 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
     const session=normalize(found[0]);if(!session)return null;assertStoreAccess(req,session.storeId);
     const authentication=await verifyShiftCloseCredential(tx,req.user,session,body);
     if(!authentication.ok)return {authFailed:authentication};
+    const pendingInvoices=await checkClosePendingInvoices(tx,{companyId:req.user.companyId,storeId:session.storeId,user:req.user,session,acknowledged:body.pendingInvoiceAcknowledged,expectedFingerprint:body.pendingInvoiceFingerprint});
+    if(pendingInvoices.confirmationRequired)return {pendingInvoiceConfirmationRequired:true,pendingInvoices};
     // KAT_SAFE_VAULT_CLOSE_ALERT_V1
     const previousSafe=money(session.openingSafe),safeDelta=Number((body.safe-previousSafe).toFixed(2)),safeReason=String(body.safeReason||"").trim();
     if(safeDelta < -0.009 && safeReason.length < 3){const error=new Error(`Το Χρηματοκιβώτιο μειώθηκε από ${previousSafe.toFixed(2)} € σε ${body.safe.toFixed(2)} €. Απαιτείται αιτιολογία πριν κλείσει η βάρδια.`);error.status=409;throw error}
@@ -519,6 +524,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
         "cashSales"=${ledger.cashSales},"cardSales"=${ledger.cardSales},"eftposTotal"=${body.eftposTotal},"cardVariance"=${cardVariance},"duplicateReviewJson"=${duplicateReviewJson}::jsonb,"expenses"=${ledger.expenses},
         "closingDrawer"=${body.drawer},"closingCustody"=${body.custody},"closingCoins"=${body.coins},"closingSafe"=${body.safe},"expectedOperational"=${expected},"actualOperational"=${actual},"variance"=${variance},"nextOpeningTotal"=${actual},"closingNote"=${body.note||null},"updatedAt"=NOW()
       WHERE "id"=${session.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' RETURNING *`;
+    if(rows[0])await recordClosePendingInvoices(tx,{companyId:req.user.companyId,storeId:session.storeId,user:req.user,session,snapshot:pendingInvoices});
     if(rows[0]&&authentication.method==="PIN"){
       const details=JSON.stringify({sessionId:session.id,terminalPos:session.terminalPos,credentialMethod:"PIN"});
       await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details","createdAt") VALUES (${crypto.randomUUID()},${req.user.companyId},${session.storeId},${req.user.operatorId||req.user.id},${req.user.id},'SHIFT_CLOSED_WITH_PERSONAL_PIN',${details}::jsonb,NOW())`;
@@ -527,6 +533,7 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
   });
   if(!closeResult)return res.status(409).json({error:"Η βάρδια έχει ήδη κλείσει ή δεν είναι πλέον ενεργή. Δεν δημιουργήθηκε δεύτερο κλείσιμο ή email."});
   if(closeResult.authFailed)return res.status(closeResult.authFailed.status).json({code:closeResult.authFailed.code,error:closeResult.authFailed.error});
+  if(closeResult.pendingInvoiceConfirmationRequired)return res.status(409).json({code:"MISSING_INVOICES_CONFIRMATION_REQUIRED",error:"Υπάρχουν εκκρεμότητες τιμολογίων. Ανέβασε τώρα ή επιβεβαίωσε κλείσιμο με καταγεγραμμένες εκκρεμότητες.",pendingInvoices:closeResult.pendingInvoices});
   if(closeResult.recountRequired)return res.status(409).json({code:"SHIFT_RECOUNT_REQUIRED",error:`Βρέθηκε έλλειμμα ${Number(closeResult.shortage).toFixed(2)} €. Θέλεις να ξαναμετρήσεις; Πάτησε ΝΑΙ για επανακαταμέτρηση ή ΟΧΙ για κλείσιμο της βάρδιας με καταγεγραμμένο έλλειμμα. Η απόπειρα και τα ποσά καταγράφηκαν στα Συμβάντα.`,...closeResult});
   const {closed,storeId,safeChange,attendanceSync}=closeResult;
   const [store,owners]=await Promise.all([prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{name:true,responsibleEmail:true}}),prisma.user.findMany({where:{companyId:req.user.companyId,role:"OWNER"},select:{email:true}})]);

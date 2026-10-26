@@ -12,9 +12,11 @@ test("actual backoffice period controls request the whole week/month and reject 
   const React=await import("react"),{createRoot}=await import("react-dom/client"),{act}=React;
   const compiled=await build({entryPoints:[fileURLToPath(new URL("../../client/src/components/cloud/CashControlPanel.jsx",import.meta.url))],bundle:true,write:false,format:"cjs",platform:"node",loader:{".css":"empty"},external:["react","react-dom","react-dom/client","react/jsx-runtime"]});
   const module={exports:{}};new Function("require","module","exports",compiled.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
-  const root=createRoot(document.getElementById("root")),calls=[];let delayed=false,finish;
-  const api=async path=>{
-    calls.push(path);
+  const root=createRoot(document.getElementById("root")),calls=[],requests=[];let delayed=false,finish;
+  const api=async(path,options={})=>{
+    calls.push(path);requests.push({path,method:options.method||"GET",body:options.body});
+    const pending=/^\/api\/transactions\/stores\/(A|B)\/pending-invoices$/.exec(path);
+    if(pending)return {storeId:pending[1],rows:[],count:0,missingCount:0,uploadedCount:0,reviewCount:0,fingerprint:"0".repeat(64),openSession:null};
     if(path.includes("daily-summary")){
       const row={sessions:[{id:"shift",openedAt:"2026-10-15T04:00Z",closedAt:"2026-10-15T12:00Z",closedByName:path.includes("/A/")?"FROM STORE A":"FROM STORE B",variance:0}]};
       if(delayed&&path.includes("/A/"))return new Promise(resolve=>{finish=()=>resolve(row)});
@@ -34,7 +36,9 @@ test("actual backoffice period controls request the whole week/month and reject 
     delayed=true;await select("DAY");assert.equal(typeof finish,"function");
     await render("B");await act(async()=>finish());
     assert.match(document.body.textContent,/FROM STORE B/);assert.doesNotMatch(document.body.textContent,/FROM STORE A/);
-    assert(calls.every(path=>path.startsWith("/api/cash/stores/"))); // Read-only, no payment or shift mutation.
+    assert(calls.every(path=>path.startsWith("/api/cash/stores/")||/^\/api\/transactions\/stores\/(A|B)\/pending-invoices$/.test(path)));
+    assert(requests.every(request=>request.method==="GET"&&request.body===undefined)); // Read-only, no payment or shift mutation.
+    assert.deepEqual([...new Set(calls.filter(path=>/^\/api\/transactions\/stores\/(A|B)\/pending-invoices$/.test(path)))].sort(),["/api/transactions/stores/A/pending-invoices","/api/transactions/stores/B/pending-invoices"]);
   }finally{
     await act(async()=>root.unmount());dom.window.close();
     for(const key of keys){const descriptor=previous.get(key);if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}
