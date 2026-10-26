@@ -1,3 +1,10 @@
+## 26/10/2026 - SHIFT-CLOSE-PERSONAL-PIN-01 / SOURCE PREPARED / NOT INSTALLED / AWAITING LAB
+
+Central owner codex/central-four-streams-20261018; worker/root/shift_pin. Claim3169 green merged771b546 BEFORE exact6pathsource9e379dc/rootreviewCLEAR. Personal openerPIN alternative only; existingcard/roles/terminal/financial rules and acceptedclosings/Gate8PASS protected.
+LocalNode20 focused48PASS/0FAIL/1explicitnativePGenvSKIP; originalmountednegative0PASS/1FAIL/2filteredSKIP; build10.85s/TABLE_SERVICE. ActualstartuppatchpreservationPASS; realregisteredPGparent+3subcases REQUIREunskippedfullCI. WorkforcecallbackSQLstand-in provesinvocationonly, notfullOUTacceptance.
+Invoice13pathcausalamendment3172 is separatelyGREENMAIN93aa688; originalinvoicecheckpointpreservedEXACTfreshmain/noPINPRdiff. FrozenPIN6sourcehashesunchanged; futureinvoicefixture/integrationeditsremainseparate. SeparateinvoicependingintegrationNOTinthiscandidate; solewritershift_pin willserialize reviewedsharedclosefilechangeslater. No newbusiness/device/provider/configaction ormanual/USER/LABPASS. FullCI/rootreview/mainCI/ordinaryexactrelease andactualacceptancepending.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-shift-close-personal-pin.md; rawqualifiedevidence CHECKPOINTS/EVIDENCE/shift-close-pin-20261026/. All originalregistrybytesretainedafterthisshortpointer; canonicalPDFsynchronized. Otherowners/3claimsremainunchanged.
+
 ## 26/10/2026 - POS-DEFERRED-INVOICE-PAYMENT-01 / BEFORE-SOURCE CAUSAL AMENDMENT / 13 PATHS
 
 Retained central owner codex/central-four-streams-20261018; invoice next_reports/shared close solewriter shift_pin. Original3169/main771b546 claim protected; freshmain2c20d2c myDATA3171 receipt preserved. DOCS ONLY, no PIN/source edit.
