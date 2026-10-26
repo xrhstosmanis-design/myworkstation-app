@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {Prisma} from '@prisma/client';
 import {invoiceToken,findInvoicePayment} from '../lib/invoice-payment-reuse.js';
 import {lockInvoiceStore} from '../lib/invoice-common-draft.js';
 import {assertLifecycleMutation} from './store-lifecycle-generation.js';
@@ -109,8 +110,11 @@ export async function capturePendingInvoice(db,scope,body){
 // These are existing durable invoice sources, never a generic payment proof.
 export async function pendingInvoiceSource(db,scope,row){
  const plain=await plainCaptureSource(db,scope,row);if(plain)return plain;
+ const capability=await pendingProbe(db,scope);
+ if(!capability.jobs){if(capability.jobTable)fail('Η υπάρχουσα πηγή απαιτεί έλεγχο συμβατότητας.','PENDING_INVOICE_REVIEW_REQUIRED');return null;}
  const jobs=await db.$queryRaw`SELECT "id","attachmentId","purchaseDocumentId","status","resultJson" FROM "AiReaderJob" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND (("resultJson"->'posHandoff'->>'paymentTransactionId'=${row.id} AND COALESCE("resultJson"->'posHandoff'->>'pageIndex','0')='0') OR "resultJson"->'mydataPosReceipt'->>'paymentTransactionId'=${row.id}) ORDER BY "createdAt","id" LIMIT 2`;
  if(!jobs.length)return null;if(jobs.length>1)fail('Περισσότερες από μία πηγές απαιτούν έλεγχο.');
+ if(!capability.full)fail('Η υπάρχουσα πηγή απαιτεί έλεγχο της αλυσίδας παραστατικού.','PENDING_INVOICE_REVIEW_REQUIRED');
  const job=jobs[0],h=job.resultJson?.posHandoff,receipt=job.resultJson?.mydataPosReceipt;
  if(['REJECTED','CANCELLED','DELETED'].includes(job.status)||!job.purchaseDocumentId&&['AWAITING_APPROVAL','CONFIRMED'].includes(job.status))fail('Η αρχική αλυσίδα παραστατικού δεν είναι διαθέσιμη για επανάληψη.','PENDING_INVOICE_REVIEW_REQUIRED');
  if(job.purchaseDocumentId){
@@ -156,67 +160,112 @@ export async function pendingIntentForPayment(db,scope,paymentId){
  return rows[0]?.details?.version===VERSION?{id:paymentId,fingerprint:rows[0].details.fingerprint}:null;
 }
 
+// Catalog reads never initialize the optional AI intake schema. Absence is not
+// cached: a later explicitly licensed intake may add its own capabilities.
+async function pendingProbe(db,scope){
+ const actor=operator(scope.user)&&!scope.sessionAll?scope.user.id:null,terminal=operator(scope.user)&&!scope.sessionAll?scope.terminalPos:null,sessionId=scope.sessionId||null;
+ const rows=await db.$queryRaw`WITH required("relation","columns") AS (VALUES
+ ('AiReaderJob',ARRAY['id','companyId','storeId','attachmentId','purchaseDocumentId','status','resultJson','createdAt']::text[]),
+ ('PurchaseDocument',ARRAY['id','companyId','storeId','supplierId','documentType','documentNumber','documentDate','totalGross','status','purchaseOrderId','paymentTransactionId']::text[]),
+ ('PurchaseOrder',ARRAY['id','companyId','storeId','status','sourceDocumentId']::text[]),
+ ('DocumentAttachment',ARRAY['id','companyId','storeId','mimeType','checksum','contentData']::text[]),
+ ('PosInvoiceBackgroundTask',ARRAY['jobId','companyId','storeId']::text[])
+ ), capabilities AS (
+ SELECT r."relation",cardinality(r."columns") AS wanted,COUNT(a.attname) AS present,
+ to_regclass(format('%I.%I',current_schema(),r."relation")) IS NOT NULL AS "tableExists"
+ FROM required r LEFT JOIN pg_attribute a ON a.attrelid=to_regclass(format('%I.%I',current_schema(),r."relation")) AND a.attname=ANY(r."columns") AND a.attnum>0 AND NOT a.attisdropped
+ GROUP BY r."relation",r."columns"
+ ) SELECT bool_and(present=wanted) AS full,bool_and(present=wanted) FILTER (WHERE "relation"='AiReaderJob') AS jobs,bool_or("tableExists") FILTER (WHERE "relation"='AiReaderJob') AS "jobTable",
+ EXISTS(SELECT 1 FROM "StoreOperatorAudit" a JOIN "StoreTransaction" t ON t."id"=a."details"->>'transactionId' AND t."companyId"=a."companyId" AND t."storeId"=a."storeId"
+ WHERE a."companyId"=${scope.companyId} AND a."storeId"=${scope.storeId} AND a."eventType"=${EVENT} AND a."details"->>'version'=${VERSION} AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
+ AND (${actor}::text IS NULL OR t."actorId"=${actor}) AND (${terminal}::text IS NULL OR a."details"->>'terminalPos'=${terminal}) AND (${sessionId}::text IS NULL OR a."details"->>'contextSessionId'=${sessionId})) AS "hasIntents" FROM capabilities`;
+ return rows[0];
+}
+
 export async function readPendingInvoices(db,scope){
  scopeCheck(scope);if(operator(scope.user)&&scope.user.storeId!==scope.storeId)fail('Δεν έχεις πρόσβαση στο κατάστημα.','PENDING_INVOICE_SCOPE',403);
+ const capability=await pendingProbe(db,scope);
+ if(!capability.hasIntents)return {rows:[],count:0,missingCount:0,uploadedCount:0,reviewCount:0,truncated:false,fingerprint:hash([0,'d41d8cd98f00b204e9800998ecf8427e'])};
  const actor=operator(scope.user)&&!scope.sessionAll?scope.user.id:null,terminal=operator(scope.user)&&!scope.sessionAll?scope.terminalPos:null,sessionId=scope.sessionId||null;
- const result=await db.$queryRaw`WITH primary_bindings AS MATERIALIZED (
- SELECT "id", "resultJson"->'posHandoff'->>'paymentTransactionId' AS "paymentId" FROM "AiReaderJob"
- WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "resultJson"->'posHandoff'->>'paymentTransactionId' IS NOT NULL AND COALESCE("resultJson"->'posHandoff'->>'pageIndex','0')='0'
- UNION
- SELECT "id", "resultJson"->'mydataPosReceipt'->>'paymentTransactionId' AS "paymentId" FROM "AiReaderJob"
- WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "resultJson"->'mydataPosReceipt'->>'paymentTransactionId' IS NOT NULL
- ), primary_sources AS MATERIALIZED (
- SELECT "paymentId",COUNT(*) AS "sourceCount",MIN("id") AS "sourceId" FROM primary_bindings GROUP BY "paymentId"
- ), pending AS (
- SELECT t."id",t."supplierId",t."supplierName",t."amount",t."actorName",t."occurredAt",a."details"->>'documentNumber' AS "documentNumber",a."details"->>'documentDate' AS "documentDate",a."details"->>'contextSessionId' AS "sessionId",a."details"->>'terminalPos' AS "terminalPos",a."details"->>'fingerprint' AS fingerprint,
- CASE WHEN t."actorId"=a."actorId" AND t."paymentMethod"=a."details"->>'paymentMethod' AND t."subtractFromShift"=(a."details"->>'paymentSource'='CASH_SHIFT') AND ((a."details"->>'paymentSource'='CASH_SHIFT' AND t."sessionId"=a."details"->>'contextSessionId') OR (a."details"->>'paymentSource'='EXTERNAL' AND t."sessionId" IS NULL)) AND t."supplierId"=a."details"->>'supplierId' AND t."invoiceDocumentNumber"=a."details"->>'documentNumber' AND ROUND(t."amount"*100)::bigint::text=a."details"->>'amountCents' AND NOT EXISTS(SELECT 1 FROM "StoreOperatorAudit" deleted WHERE deleted."companyId"=t."companyId" AND deleted."storeId"=t."storeId" AND deleted."eventType"='PURCHASE_ORDER_DELETED' AND deleted."details"->>'preservedPaymentTransactionId'=t."id") THEN CASE WHEN COALESCE(ps."sourceCount",0)>1 THEN 'REVIEW_REQUIRED' WHEN EXISTS(SELECT 1 FROM "StoreOperatorAudit" invalidcapture WHERE invalidcapture."companyId"=t."companyId" AND invalidcapture."storeId"=t."storeId" AND invalidcapture."eventType"='POS_INVOICE_PLAIN_CAPTURED' AND invalidcapture."details"->>'transactionId'=t."id") THEN 'REVIEW_REQUIRED' WHEN EXISTS(SELECT 1 FROM "AiReaderJob" broken WHERE broken."id"=ps."sourceId" AND broken."companyId"=t."companyId" AND broken."storeId"=t."storeId" AND ((broken."resultJson"->'posHandoff'->>'paymentTransactionId'=t."id" AND COALESCE(broken."resultJson"->'posHandoff'->>'pageIndex','0')='0') OR broken."resultJson"->'mydataPosReceipt'->>'paymentTransactionId'=t."id") AND
- (broken."status" IN ('REJECTED','CANCELLED','DELETED') OR
- (broken."purchaseDocumentId" IS NOT NULL AND NOT EXISTS(SELECT 1 FROM "PurchaseDocument" bd JOIN "PurchaseOrder" bo ON bo."id"=bd."purchaseOrderId" AND bo."companyId"=bd."companyId" AND bo."storeId"=bd."storeId" AND bo."sourceDocumentId"=bd."id" WHERE bd."id"=broken."purchaseDocumentId" AND bd."companyId"=t."companyId" AND bd."storeId"=t."storeId" AND bd."paymentTransactionId"=t."id" AND bd."supplierId"=t."supplierId" AND bd."documentType"='INVOICE' AND bd."documentNumber"=t."invoiceDocumentNumber" AND (bd."documentDate" AT TIME ZONE 'UTC')::date::text=a."details"->>'documentDate' AND bd."totalGross"=t."amount" AND bd."status" IN ('DRAFT','APPROVED') AND bo."status" IN ('NEW','FINAL','INVOICED'))) OR
- (broken."resultJson"->'posHandoff'->>'paymentTransactionId'=t."id" AND
- (COALESCE(jsonb_typeof(broken."resultJson"->'posHandoff'->'pageJobIds'),'null')<>'array' OR broken."resultJson"->'posHandoff'->>'pageCount' IS DISTINCT FROM jsonb_array_length(CASE WHEN jsonb_typeof(broken."resultJson"->'posHandoff'->'pageJobIds')='array' THEN broken."resultJson"->'posHandoff'->'pageJobIds' ELSE '[]'::jsonb END)::text OR
- EXISTS(SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(broken."resultJson"->'posHandoff'->'pageJobIds')='array' THEN broken."resultJson"->'posHandoff'->'pageJobIds' ELSE '[]'::jsonb END) member(id) WHERE NOT EXISTS(SELECT 1 FROM "AiReaderJob" bj JOIN "DocumentAttachment" ba ON ba."id"=bj."attachmentId" AND ba."companyId"=bj."companyId" AND ba."storeId"=bj."storeId" WHERE bj."id"=member.id AND bj."companyId"=t."companyId" AND bj."storeId"=t."storeId" AND bj."resultJson"->'posHandoff'->>'paymentTransactionId'=t."id" AND ba."contentData" IS NOT NULL AND ba."checksum" ~ '^[0-9a-f]{64}$')))) OR
- (broken."resultJson"->'mydataPosReceipt'->>'paymentTransactionId'=t."id" AND
- (COALESCE(jsonb_typeof(broken."resultJson"->'mydataPosReceipt'->'attachmentIds'),'null')<>'array' OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(broken."resultJson"->'mydataPosReceipt'->'attachmentIds')='array' THEN broken."resultJson"->'mydataPosReceipt'->'attachmentIds' ELSE '[]'::jsonb END) member(id) WHERE NOT EXISTS(SELECT 1 FROM "DocumentAttachment" ba WHERE ba."id"=member.id AND ba."companyId"=t."companyId" AND ba."storeId"=t."storeId" AND ba."contentData" IS NOT NULL AND ba."checksum" ~ '^[0-9a-f]{64}$')))))) THEN 'REVIEW_REQUIRED' WHEN EXISTS(SELECT 1 FROM "AiReaderJob" uploaded JOIN "DocumentAttachment" original ON original."companyId"=uploaded."companyId" AND original."storeId"=uploaded."storeId" AND (original."id"=uploaded."attachmentId" OR uploaded."resultJson"->'mydataPosReceipt'->'attachmentIds' ? original."id") WHERE uploaded."companyId"=t."companyId" AND uploaded."storeId"=t."storeId" AND original."contentData" IS NOT NULL AND original."checksum" ~ '^[0-9a-f]{64}$' AND (uploaded."resultJson"->'posHandoff'->>'paymentTransactionId'=t."id" OR uploaded."resultJson"->'mydataPosReceipt'->>'paymentTransactionId'=t."id")) THEN 'UPLOADED_AWAITING_REVIEW' ELSE 'AWAITING_INVOICE' END ELSE 'REVIEW_REQUIRED' END AS status
- FROM "StoreOperatorAudit" a JOIN "StoreTransaction" t ON t."id"=a."details"->>'transactionId' AND t."companyId"=a."companyId" AND t."storeId"=a."storeId"
- LEFT JOIN primary_sources ps ON ps."paymentId"=t."id"
- WHERE a."companyId"=${scope.companyId} AND a."storeId"=${scope.storeId} AND a."eventType"=${EVENT} AND a."details"->>'version'=${VERSION} AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
+ const jobRows=capability.jobs?Prisma.sql`SELECT "id","attachmentId","purchaseDocumentId","status","resultJson"->'posHandoff' AS h,"resultJson"->'mydataPosReceipt' AS r FROM "AiReaderJob" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`:Prisma.sql`SELECT NULL::text AS "id",NULL::text AS "attachmentId",NULL::text AS "purchaseDocumentId",NULL::text AS "status",NULL::jsonb AS h,NULL::jsonb AS r WHERE FALSE`;
+ const sourceFacts=capability.full?Prisma.sql`
+ attachment_meta AS MATERIALIZED (
+ SELECT "id","mimeType","checksum","contentData" IS NOT NULL AS present FROM "DocumentAttachment" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}
+ ), document_chains AS MATERIALIZED (
+ SELECT d."id",d."paymentTransactionId",d."supplierId",d."documentType",d."documentNumber",(d."documentDate" AT TIME ZONE 'UTC')::date::text AS "documentDay",d."totalGross",d."status",o."status" AS "orderStatus"
+ FROM "PurchaseDocument" d JOIN "PurchaseOrder" o ON o."id"=d."purchaseOrderId" AND o."companyId"=d."companyId" AND o."storeId"=d."storeId" AND o."sourceDocumentId"=d."id"
+ WHERE d."companyId"=${scope.companyId} AND d."storeId"=${scope.storeId}
+ ), task_meta AS MATERIALIZED (
+ SELECT DISTINCT "jobId" FROM "PosInvoiceBackgroundTask" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}
+ ), handoff_pages AS MATERIALIZED (
+ SELECT b."paymentId",b."sourceId",p."pageId",p.n,j.h->'pendingInvoiceManifest'->((p.n-1)::int) AS manifest,j.h->'pendingInvoiceManifest' IS NULL AS "legacyManifest"
+ FROM primary_bindings b JOIN jobs j ON j."id"=b."sourceId"
+ CROSS JOIN LATERAL jsonb_array_elements_text(CASE WHEN jsonb_typeof(j.h->'pageJobIds')='array' THEN j.h->'pageJobIds' ELSE '[]'::jsonb END) WITH ORDINALITY p("pageId",n)
+ ), handoff_page_facts AS MATERIALIZED (
+ SELECT d."paymentId",d."sourceId",COUNT(*) AS n,
+ bool_and(COALESCE(p."id" IS NOT NULL AND p."status" NOT IN ('REJECTED','CANCELLED','DELETED') AND p.h->>'paymentTransactionId'=i."id" AND p.h->>'supplierId'=i."supplierId" AND p.h->>'documentNumber'=i."invoiceDocumentNumber" AND a.present AND a."checksum" ~ '^[0-9a-f]{64}$',FALSE)) AS valid,
+ bool_and(COALESCE(d."legacyManifest" OR (a."checksum"=d.manifest->>'checksum' AND a."mimeType"=d.manifest->>'mimeType'),FALSE)) AS "manifestValid"
+ FROM handoff_pages d JOIN intents i ON i."id"=d."paymentId" LEFT JOIN jobs p ON p."id"=d."pageId" LEFT JOIN attachment_meta a ON a."id"=p."attachmentId"
+ GROUP BY d."paymentId",d."sourceId"
+ ), receipt_pages AS MATERIALIZED (
+ SELECT b."paymentId",b."sourceId",p."attachmentId" FROM primary_bindings b JOIN jobs j ON j."id"=b."sourceId"
+ CROSS JOIN LATERAL jsonb_array_elements_text(CASE WHEN jsonb_typeof(j.r->'attachmentIds')='array' THEN j.r->'attachmentIds' ELSE '[]'::jsonb END) p("attachmentId")
+ ), receipt_page_facts AS MATERIALIZED (
+ SELECT p."paymentId",p."sourceId",COUNT(*) AS n,bool_and(COALESCE(a.present AND a."checksum" ~ '^[0-9a-f]{64}$',FALSE)) AS valid
+ FROM receipt_pages p LEFT JOIN attachment_meta a ON a."id"=p."attachmentId" GROUP BY p."paymentId",p."sourceId"
+ ), content_rows AS MATERIALIZED (
+ SELECT b."paymentId",a.present AND a."checksum" ~ '^[0-9a-f]{64}$' AS present FROM all_bindings b JOIN jobs j ON j."id"=b."sourceId" JOIN attachment_meta a ON a."id"=j."attachmentId"
+ UNION ALL SELECT p."paymentId",a.present AND a."checksum" ~ '^[0-9a-f]{64}$' FROM receipt_pages p JOIN attachment_meta a ON a."id"=p."attachmentId"
+ ), source_content AS MATERIALIZED (SELECT "paymentId",bool_or(present) AS present FROM content_rows GROUP BY "paymentId"),
+ source_headers AS MATERIALIZED (
+ SELECT b."paymentId",b."sourceId",j."purchaseDocumentId",j."status",j.h,j.r,
+ COALESCE(c."id" IS NOT NULL AND c."paymentTransactionId"=i."id" AND c."supplierId"=i."supplierId" AND c."documentType"='INVOICE' AND c."documentNumber"=i."invoiceDocumentNumber" AND c."documentDay"=i.details->>'documentDate' AND c."totalGross"=i."amount" AND c."status" IN ('DRAFT','APPROVED') AND c."orderStatus" IN ('NEW','FINAL','INVOICED'),FALSE) AS "chainValid",
+ COALESCE(j.h->>'paymentTransactionId'=i."id" AND j.h->>'supplierId'=i."supplierId" AND j.h->>'documentNumber'=i."invoiceDocumentNumber" AND j.h->>'documentDate'=i.details->>'documentDate' AND j.h->>'totalGross'=i."amount"::float8::text,FALSE) AS "headerValid",
+ COALESCE(jsonb_typeof(j.h->'pageJobIds')='array' AND jsonb_array_length(CASE WHEN jsonb_typeof(j.h->'pageJobIds')='array' THEN j.h->'pageJobIds' ELSE '[]'::jsonb END) BETWEEN 1 AND 5 AND j.h->>'pageCount'=hp.n::text AND hp.valid,FALSE) AS "handoffPagesValid",
+ COALESCE(j.h->'pendingInvoiceManifest' IS NULL OR (jsonb_typeof(j.h->'pendingInvoiceManifest')='array' AND jsonb_array_length(CASE WHEN jsonb_typeof(j.h->'pendingInvoiceManifest')='array' THEN j.h->'pendingInvoiceManifest' ELSE '[]'::jsonb END)=hp.n AND hp."manifestValid"),FALSE) AS "manifestValid",
+ COALESCE(jsonb_typeof(j.r->'attachmentIds')='array' AND rp.n BETWEEN 1 AND 5 AND rp.valid,FALSE) AS "receiptPagesValid",task."jobId" IS NOT NULL AS "hasTask"
+ FROM primary_bindings b JOIN jobs j ON j."id"=b."sourceId" JOIN intents i ON i."id"=b."paymentId"
+ LEFT JOIN document_chains c ON c."id"=j."purchaseDocumentId" LEFT JOIN task_meta task ON task."jobId"=j."id"
+ LEFT JOIN handoff_page_facts hp ON hp."paymentId"=b."paymentId" AND hp."sourceId"=b."sourceId" LEFT JOIN receipt_page_facts rp ON rp."paymentId"=b."paymentId" AND rp."sourceId"=b."sourceId"
+ ), source_facts AS MATERIALIZED (
+ SELECT "paymentId","sourceId",
+ "status" NOT IN ('REJECTED','CANCELLED','DELETED') AND "chainValid" AND "manifestValid" AND (("headerValid" AND "handoffPagesValid" AND ("status" IN ('AWAITING_APPROVAL','CONFIRMED') OR "hasTask")) OR (r->>'paymentTransactionId'="paymentId" AND "receiptPagesValid")) AS valid,
+ "status" IN ('REJECTED','CANCELLED','DELETED') OR ("purchaseDocumentId" IS NULL AND "status" IN ('AWAITING_APPROVAL','CONFIRMED')) OR ("purchaseDocumentId" IS NOT NULL AND NOT "chainValid") OR (h->>'paymentTransactionId'="paymentId" AND (NOT "headerValid" OR NOT "handoffPagesValid" OR NOT "manifestValid")) OR (r->>'paymentTransactionId'="paymentId" AND NOT "receiptPagesValid") AS broken
+ FROM source_headers
+ )`:Prisma.sql`
+ source_content AS MATERIALIZED (SELECT NULL::text AS "paymentId",FALSE AS present WHERE FALSE),
+ source_facts AS MATERIALIZED (SELECT "paymentId","sourceId",FALSE AS valid,TRUE AS broken FROM primary_bindings)
+ `;
+ const result=await db.$queryRaw(Prisma.sql`WITH scoped_audits AS MATERIALIZED (
+ SELECT "eventType","actorId","details" FROM "StoreOperatorAudit" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "eventType" IN (${EVENT},${CAPTURE_EVENT},'PURCHASE_ORDER_DELETED')
+ ), intents AS MATERIALIZED (
+ SELECT t."id",t."supplierId",t."supplierName",t."amount",t."actorId",t."actorName",t."occurredAt",t."invoiceDocumentNumber",t."attachmentMimeType",t."attachmentFilename",t."attachmentChecksum",t."attachmentData" IS NOT NULL AS "hasAttachment",a."details" AS details,
+ COALESCE(t."actorId"=a."actorId" AND t."paymentMethod"=a."details"->>'paymentMethod' AND t."subtractFromShift"=(a."details"->>'paymentSource'='CASH_SHIFT') AND ((a."details"->>'paymentSource'='CASH_SHIFT' AND t."sessionId"=a."details"->>'contextSessionId') OR (a."details"->>'paymentSource'='EXTERNAL' AND t."sessionId" IS NULL)) AND t."supplierId"=a."details"->>'supplierId' AND t."invoiceDocumentNumber"=a."details"->>'documentNumber' AND ROUND(t."amount"*100)::bigint::text=a."details"->>'amountCents',FALSE) AS "paymentValid"
+ FROM scoped_audits a JOIN "StoreTransaction" t ON t."id"=a."details"->>'transactionId' AND t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId}
+ WHERE a."eventType"=${EVENT} AND a."details"->>'version'=${VERSION} AND t."type"='SUPPLIER_PAYMENT' AND t."reversedAt" IS NULL
  AND (${actor}::text IS NULL OR t."actorId"=${actor}) AND (${terminal}::text IS NULL OR a."details"->>'terminalPos'=${terminal}) AND (${sessionId}::text IS NULL OR a."details"->>'contextSessionId'=${sessionId})
- AND NOT EXISTS(SELECT 1 FROM "StoreOperatorAudit" capture WHERE capture."companyId"=t."companyId" AND capture."storeId"=t."storeId" AND capture."eventType"='POS_INVOICE_PLAIN_CAPTURED'
- AND capture."details"->>'version'=${VERSION} AND capture."details"->>'sourceKind'='PLAIN_CAPTURE' AND capture."details"->>'transactionId'=t."id" AND capture."details"->>'fingerprint'=a."details"->>'fingerprint'
- AND capture."details"->>'supplierId'=t."supplierId" AND capture."details"->>'documentNumber'=t."invoiceDocumentNumber" AND capture."details"->>'documentDate'=a."details"->>'documentDate' AND capture."details"->>'amountCents'=ROUND(t."amount"*100)::bigint::text
- AND capture."details"->>'contextSessionId'=a."details"->>'contextSessionId' AND capture."details"->>'originalActorId'=t."actorId" AND t."actorId"=a."actorId" AND t."paymentMethod"=a."details"->>'paymentMethod' AND t."subtractFromShift"=(a."details"->>'paymentSource'='CASH_SHIFT') AND ((a."details"->>'paymentSource'='CASH_SHIFT' AND t."sessionId"=a."details"->>'contextSessionId') OR (a."details"->>'paymentSource'='EXTERNAL' AND t."sessionId" IS NULL))
- AND t."attachmentData" IS NOT NULL AND t."attachmentChecksum" ~ '^[0-9a-f]{64}$' AND t."attachmentChecksum"=capture."details"->>'checksum' AND t."attachmentMimeType"=capture."details"->>'mimeType' AND t."attachmentFilename"=capture."details"->>'filename'
- AND capture."details"->'manifest'=jsonb_build_array(jsonb_build_object('checksum',t."attachmentChecksum",'mimeType',t."attachmentMimeType"))
- AND NOT EXISTS(SELECT 1 FROM "StoreOperatorAudit" deleted WHERE deleted."companyId"=t."companyId" AND deleted."storeId"=t."storeId" AND deleted."eventType"='PURCHASE_ORDER_DELETED' AND deleted."details"->>'preservedPaymentTransactionId'=t."id"))
- AND (COALESCE(ps."sourceCount",0)<>1 OR NOT EXISTS (SELECT 1 FROM "AiReaderJob" j JOIN "DocumentAttachment" f ON f."companyId"=j."companyId" AND f."storeId"=j."storeId" AND (f."id"=j."attachmentId" OR j."resultJson"->'mydataPosReceipt'->'attachmentIds' ? f."id")
- LEFT JOIN "PurchaseDocument" d ON d."id"=j."purchaseDocumentId" AND d."companyId"=j."companyId" AND d."storeId"=j."storeId" AND d."paymentTransactionId"=t."id"
- WHERE j."id"=ps."sourceId" AND j."companyId"=t."companyId" AND j."storeId"=t."storeId" AND f."contentData" IS NOT NULL AND f."checksum" ~ '^[0-9a-f]{64}$'
- AND t."actorId"=a."actorId" AND t."paymentMethod"=a."details"->>'paymentMethod' AND t."subtractFromShift"=(a."details"->>'paymentSource'='CASH_SHIFT') AND ((a."details"->>'paymentSource'='CASH_SHIFT' AND t."sessionId"=a."details"->>'contextSessionId') OR (a."details"->>'paymentSource'='EXTERNAL' AND t."sessionId" IS NULL)) AND t."supplierId"=a."details"->>'supplierId' AND t."invoiceDocumentNumber"=a."details"->>'documentNumber' AND ROUND(t."amount"*100)::bigint::text=a."details"->>'amountCents'
- AND j."status" NOT IN ('REJECTED','CANCELLED','DELETED') AND NOT EXISTS(SELECT 1 FROM "StoreOperatorAudit" deleted WHERE deleted."companyId"=t."companyId" AND deleted."storeId"=t."storeId" AND deleted."eventType"='PURCHASE_ORDER_DELETED' AND deleted."details"->>'preservedPaymentTransactionId'=t."id")
- AND (j."purchaseDocumentId" IS NULL OR EXISTS(SELECT 1 FROM "PurchaseDocument" chain JOIN "PurchaseOrder" original ON original."id"=chain."purchaseOrderId" AND original."companyId"=chain."companyId" AND original."storeId"=chain."storeId" AND original."sourceDocumentId"=chain."id" WHERE chain."id"=j."purchaseDocumentId" AND chain."companyId"=t."companyId" AND chain."storeId"=t."storeId" AND chain."paymentTransactionId"=t."id" AND chain."supplierId"=t."supplierId" AND chain."documentType"='INVOICE' AND chain."documentNumber"=t."invoiceDocumentNumber" AND (chain."documentDate" AT TIME ZONE 'UTC')::date::text=a."details"->>'documentDate' AND chain."totalGross"=t."amount" AND chain."status" IN ('DRAFT','APPROVED') AND original."status" IN ('NEW','FINAL','INVOICED')))
- AND (j."resultJson"->'posHandoff'->'pendingInvoiceManifest' IS NULL OR
- (jsonb_typeof(j."resultJson"->'posHandoff'->'pendingInvoiceManifest')='array'
- AND jsonb_array_length(CASE WHEN jsonb_typeof(j."resultJson"->'posHandoff'->'pendingInvoiceManifest')='array' THEN j."resultJson"->'posHandoff'->'pendingInvoiceManifest' ELSE '[]'::jsonb END)=jsonb_array_length(CASE WHEN jsonb_typeof(j."resultJson"->'posHandoff'->'pageJobIds')='array' THEN j."resultJson"->'posHandoff'->'pageJobIds' ELSE '[]'::jsonb END)
- AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(j."resultJson"->'posHandoff'->'pendingInvoiceManifest')='array' THEN j."resultJson"->'posHandoff'->'pendingInvoiceManifest' ELSE '[]'::jsonb END) WITH ORDINALITY manifest(value,n)
- WHERE NOT EXISTS(SELECT 1 FROM "AiReaderJob" mj JOIN "DocumentAttachment" ma ON ma."id"=mj."attachmentId" AND ma."companyId"=mj."companyId" AND ma."storeId"=mj."storeId"
- WHERE mj."id"=j."resultJson"->'posHandoff'->'pageJobIds'->>((manifest.n-1)::int) AND mj."companyId"=j."companyId" AND mj."storeId"=j."storeId" AND ma."checksum"=manifest.value->>'checksum' AND ma."mimeType"=manifest.value->>'mimeType'))))
- AND ((j."resultJson"->'mydataPosReceipt'->>'paymentTransactionId'=t."id"
- AND jsonb_typeof(j."resultJson"->'mydataPosReceipt'->'attachmentIds')='array'
- AND jsonb_array_length(CASE WHEN jsonb_typeof(j."resultJson"->'mydataPosReceipt'->'attachmentIds')='array' THEN j."resultJson"->'mydataPosReceipt'->'attachmentIds' ELSE '[]'::jsonb END) BETWEEN 1 AND 5
- AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(j."resultJson"->'mydataPosReceipt'->'attachmentIds')='array' THEN j."resultJson"->'mydataPosReceipt'->'attachmentIds' ELSE '[]'::jsonb END) expected(id)
- WHERE NOT EXISTS(SELECT 1 FROM "DocumentAttachment" page WHERE page."id"=expected.id AND page."companyId"=j."companyId" AND page."storeId"=j."storeId" AND page."contentData" IS NOT NULL AND page."checksum" ~ '^[0-9a-f]{64}$')))
- OR (j."resultJson"->'posHandoff'->>'paymentTransactionId'=t."id"
- AND jsonb_typeof(j."resultJson"->'posHandoff'->'pageJobIds')='array'
- AND jsonb_array_length(CASE WHEN jsonb_typeof(j."resultJson"->'posHandoff'->'pageJobIds')='array' THEN j."resultJson"->'posHandoff'->'pageJobIds' ELSE '[]'::jsonb END) BETWEEN 1 AND 5
- AND (j."resultJson"->'posHandoff'->>'pageCount')=jsonb_array_length(CASE WHEN jsonb_typeof(j."resultJson"->'posHandoff'->'pageJobIds')='array' THEN j."resultJson"->'posHandoff'->'pageJobIds' ELSE '[]'::jsonb END)::text
- AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(j."resultJson"->'posHandoff'->'pageJobIds')='array' THEN j."resultJson"->'posHandoff'->'pageJobIds' ELSE '[]'::jsonb END) expected(id)
- WHERE NOT EXISTS(SELECT 1 FROM "AiReaderJob" pagejob JOIN "DocumentAttachment" page ON page."id"=pagejob."attachmentId" AND page."companyId"=pagejob."companyId" AND page."storeId"=pagejob."storeId"
- WHERE pagejob."id"=expected.id AND pagejob."companyId"=j."companyId" AND pagejob."storeId"=j."storeId" AND pagejob."status" NOT IN ('REJECTED','CANCELLED','DELETED') AND pagejob."resultJson"->'posHandoff'->>'paymentTransactionId'=t."id" AND pagejob."resultJson"->'posHandoff'->>'supplierId'=t."supplierId" AND pagejob."resultJson"->'posHandoff'->>'documentNumber'=t."invoiceDocumentNumber" AND page."contentData" IS NOT NULL AND page."checksum" ~ '^[0-9a-f]{64}$'))))
- AND ((j."resultJson"->'posHandoff'->>'paymentTransactionId'=t."id" AND j."purchaseDocumentId" IS NOT NULL AND (j."status" IN ('AWAITING_APPROVAL','CONFIRMED') OR EXISTS(SELECT 1 FROM "PosInvoiceBackgroundTask" task WHERE task."jobId"=j."id" AND task."companyId"=j."companyId" AND task."storeId"=j."storeId")) AND j."resultJson"->'posHandoff'->>'supplierId'=t."supplierId" AND j."resultJson"->'posHandoff'->>'documentNumber'=t."invoiceDocumentNumber" AND j."resultJson"->'posHandoff'->>'documentDate'=a."details"->>'documentDate' AND j."resultJson"->'posHandoff'->>'totalGross'=t."amount"::float8::text)
- OR (j."resultJson"->'mydataPosReceipt'->>'paymentTransactionId'=t."id" AND d."documentType"='INVOICE' AND d."status" IN ('DRAFT','APPROVED') AND d."supplierId"=t."supplierId" AND d."documentNumber"=t."invoiceDocumentNumber" AND (d."documentDate" AT TIME ZONE 'UTC')::date::text=a."details"->>'documentDate' AND d."totalGross"=t."amount")))
- )
+ ), tombstones AS MATERIALIZED (SELECT DISTINCT "details"->>'preservedPaymentTransactionId' AS "paymentId" FROM scoped_audits WHERE "eventType"='PURCHASE_ORDER_DELETED'),
+ capture_facts AS MATERIALIZED (
+ SELECT i."id",bool_or(COALESCE(c."details"->>'version'=${VERSION} AND c."details"->>'sourceKind'='PLAIN_CAPTURE' AND c."details"->>'fingerprint'=i.details->>'fingerprint' AND c."details"->>'supplierId'=i."supplierId" AND c."details"->>'documentNumber'=i."invoiceDocumentNumber" AND c."details"->>'documentDate'=i.details->>'documentDate' AND c."details"->>'amountCents'=ROUND(i."amount"*100)::bigint::text AND c."details"->>'contextSessionId'=i.details->>'contextSessionId' AND c."details"->>'originalActorId'=i."actorId" AND i."hasAttachment" AND i."attachmentChecksum" ~ '^[0-9a-f]{64}$' AND i."attachmentChecksum"=c."details"->>'checksum' AND i."attachmentMimeType"=c."details"->>'mimeType' AND i."attachmentFilename"=c."details"->>'filename' AND c."details"->'manifest'=jsonb_build_array(jsonb_build_object('checksum',i."attachmentChecksum",'mimeType',i."attachmentMimeType")),FALSE)) AS valid,TRUE AS present
+ FROM scoped_audits c JOIN intents i ON i."id"=c."details"->>'transactionId' WHERE c."eventType"=${CAPTURE_EVENT} GROUP BY i."id"
+ ), jobs AS MATERIALIZED (${jobRows}),
+ primary_bindings AS MATERIALIZED (
+ SELECT "id" AS "sourceId",h->>'paymentTransactionId' AS "paymentId" FROM jobs WHERE h->>'paymentTransactionId' IS NOT NULL AND COALESCE(h->>'pageIndex','0')='0'
+ UNION SELECT "id",r->>'paymentTransactionId' FROM jobs WHERE r->>'paymentTransactionId' IS NOT NULL
+ ), all_bindings AS MATERIALIZED (
+ SELECT "id" AS "sourceId",h->>'paymentTransactionId' AS "paymentId" FROM jobs WHERE h->>'paymentTransactionId' IS NOT NULL
+ UNION SELECT "id",r->>'paymentTransactionId' FROM jobs WHERE r->>'paymentTransactionId' IS NOT NULL
+ ), source_counts AS MATERIALIZED (SELECT "paymentId",COUNT(*) AS n,MIN("sourceId") AS "sourceId" FROM primary_bindings GROUP BY "paymentId"),
+ ${sourceFacts}, decisions AS MATERIALIZED (
+ SELECT i.*,c.valid AS "captureValid",c.present AS "capturePresent",t."paymentId" IS NOT NULL AS tombstoned,COALESCE(s.n,0) AS "sourceCount",f.valid AS "sourceValid",f.broken AS "sourceBroken",content.present AS "sourcePresent"
+ FROM intents i LEFT JOIN capture_facts c ON c."id"=i."id" LEFT JOIN tombstones t ON t."paymentId"=i."id"
+ LEFT JOIN source_counts s ON s."paymentId"=i."id" LEFT JOIN source_facts f ON f."paymentId"=i."id" AND f."sourceId"=s."sourceId" LEFT JOIN source_content content ON content."paymentId"=i."id"
+ ), pending AS (
+ SELECT "id","supplierId","supplierName","amount","actorName","occurredAt",details->>'documentNumber' AS "documentNumber",details->>'documentDate' AS "documentDate",details->>'contextSessionId' AS "sessionId",details->>'terminalPos' AS "terminalPos",details->>'fingerprint' AS fingerprint,
+ CASE WHEN NOT "paymentValid" OR tombstoned OR "sourceCount">1 OR "capturePresent" OR ${Boolean(capability.jobTable&&!capability.jobs)} OR COALESCE("sourceBroken",FALSE) THEN 'REVIEW_REQUIRED' WHEN "sourcePresent" THEN 'UPLOADED_AWAITING_REVIEW' ELSE 'AWAITING_INVOICE' END AS status
+ FROM decisions WHERE NOT ("paymentValid" AND NOT tombstoned AND (COALESCE("captureValid",FALSE) OR ("sourceCount"=1 AND COALESCE("sourceValid",FALSE))))
  ) SELECT COUNT(*)::int AS count,COUNT(*) FILTER (WHERE status='AWAITING_INVOICE')::int AS "missingCount",COUNT(*) FILTER (WHERE status='UPLOADED_AWAITING_REVIEW')::int AS "uploadedCount",COUNT(*) FILTER (WHERE status='REVIEW_REQUIRED')::int AS "reviewCount",md5(COALESCE(string_agg("id"||':'||fingerprint||':'||status,',' ORDER BY "id"),'')) AS digest,
- (SELECT jsonb_agg(p ORDER BY p."occurredAt",p."id") FROM (SELECT * FROM pending ORDER BY "occurredAt","id" LIMIT 50) p) AS rows FROM pending`;
+ (SELECT jsonb_agg(p ORDER BY p."occurredAt",p."id") FROM (SELECT * FROM pending ORDER BY "occurredAt","id" LIMIT 50) p) AS rows FROM pending`);
  const value=result[0]||{count:0,digest:'',rows:[]};
  return {rows:(value.rows||[]).map(row=>({...row,amount:Number(row.amount)})),count:Number(value.count),missingCount:Number(value.missingCount||0),uploadedCount:Number(value.uploadedCount||0),reviewCount:Number(value.reviewCount||0),truncated:Number(value.count)>50,fingerprint:hash([Number(value.count),value.digest])};
 }
