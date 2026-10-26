@@ -1,3 +1,14 @@
+## 26/10/2026 - POS product causal test amendment:18paths BEFORE SOURCE
+Central next_commerce/retainedowner; add ONLY operator-checkbox-acceptance.test.js, pos-barcode-pending.test.js and pos-catalog-completeness.test.js to original15path claim. Runtime15unchanged; preserve all old assertions/newrealroute nativecoverage; constructor DI only for legacyfixtures and explicit24checkbox/newProductdefaultfalse/toggle persistence.
+Actual3181 CI40380860057:4302PASS/7fixture-compatFAIL/0SKIP, newPGparent+4PASS; no fullCI/install/LABPASS. Worker waits this amendment green/main before3test edits, then exactreview/fullCI required.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-new-product-full-card.md; cash/PIN/invoice owners and all historical passes preserved. No production fallback, assertionweakening, newskip or business replay.
+
+## 26/10/2026 - Deferred invoice: reviewed13path patch, awaiting exact CI/install
+DEFERRED_INVOICE_PUBLICATION_STAGE: REVIEWED_PATCH_AWAITING_FRESH_RUNTIME_RECONCILIATION.
+Owner central-four-streams/next_reports; shared close sole writer shift_pin. Plain original capture default, scoped SUPPLIER_PAYMENT without AI; explicit licensed AI separate. One original payment, durable pending and locked pre-close ACK; no document from payment proof alone.
+Reviewed212d0f3 patch versus afed562; local77PASS/0FAIL/1explicitPGenvSKIP, build10.40s. Native registered close/PIN/ACK/concurrency PREPARED not locally executed. Fresh3way source reconciliation must preserve current cash-paper mount and all other owner bytes.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md; qualified raw evidence CHECKPOINTS/EVIDENCE/pos-deferred-invoice-20261026/. NOT INSTALLED/AWAITING LAB; no USER/LAB PASS or accepted action replay.
+
 ## 26/10/2026 - POS-NEW-PRODUCT-FULL-CARD-01 / FROZEN SOURCE EVIDENCE / NOT INSTALLED / AWAITING LAB
 
 Central next_commerce/ownercodex/central-four-streams-20261018; claim3169greenmain771b546 before15frozendae2ece paths/rootUI+backendnativeCLEAR. Samecompletecreator/defaultfalsePOSpermission/activeownstore/STORE_MODE+INVENTORY/onlineBarcodeguard; UserFKNULLforPOSoriginalauditretained, BackOfficeunchanged.
