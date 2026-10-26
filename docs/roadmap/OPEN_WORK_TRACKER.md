@@ -1,3 +1,10 @@
+## 26/10/2026 - POS-DEFERRED-INVOICE-PAYMENT-01 / DEFAULT PLAIN CAPTURE / BEFORE SOURCE / SAME 13 PATHS
+
+Retained central invoice next_reports/shared close solewriter shift_pin; freshmain328e1e2 scanner3174/cash3175 owners/fullbytes preserved. Original3169+3172claims retained. DOCS ONLY, frozenPIN6sourceunchanged; no newruntimepaths/schema/manifest.
+DefaultoriginalinvoicePDF/images save to existingtransactionattachments with ORIGINALpending/paymentidentity+checksum/immutablemanifest/provenance. ScopedSUPPLIER_PAYMENT withoutAIlicence/provider/job/walletcalls. Explicit sourceKind PLAIN_CAPTURE versus AI_HANDOFF mandatory; realattachmentreadback, never jobId:nullfakecompletion. Exactretryreusesoriginal/no secondpayment; closedshiftattachmentchangesnomoney/reopen.
+This supersedes ONLYcompulsoryAIhandoff forstandardcapture; separatelychosenlicensedAIkeepsALLentitlement/provider/wallet/onceonlyguards/noautomaticpaidAI. PrecloseexplicitACKremainsmissinginvoicepending untilrealinvoicecontentstored. All13paths/sharedwriters/acceptedGate3/otherownersprotected.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md. WorkerswaitGREENMAINbeforeamendedsections; NOTIMPLEMENTED/NOTINSTALLED/NOTTESTED/noUSER-LABmanualPASS. All originalregistrybytesretainedafterprefix; canonicalPDFsynchronized.
+
 ## 26/10/2026 — DOCUMENT-CAPTURE-SCANNER-01 / EXPLICIT LIMITED HANDOFF / ASSIGNED BEFORE SOURCE
 
 Owner `codex/document-capture-scanner-20261026`. User explicitly approved this conversation's unified takeover after being told about existing camera/invoice-QR/native ownership. This supersedes ONLY acquisition/focus/photo-quality presentation and document-scanner integration ownership across existing web camera/document intakes and native photo capture. Existing QR/provider resolution, attendance decisions, native messaging/privacy/distribution, Gate3 OCR/learning/payment/stock/fiscal owners and their qualified PASS remain unchanged. No parallel writer is authorized for the received capture scope.
