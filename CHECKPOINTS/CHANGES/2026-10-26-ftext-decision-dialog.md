@@ -1,0 +1,7 @@
+## 26 October 2026 — resumed same-owner ftext decision dialog correction
+
+Retained owner codex/rizareio-ftext-bridge-20261022. Follow-up branch fix/ftext-decision-dialog-20261026; existing FTEXT-OPERATOR-CARD-01 assignment continues, no transfer or parallel scope. Before-source baseline main688038f8fdd0cb1fd096205faf01ae3cb6f795c5 (sourcePR3157); original claimPR3156 retained.
+
+Latest USER FAIL: after selecting NO the modal remains blocking. Read-only production request1e50a87c-e5ed-491b-9e1c-cac73ee2bec9: CARD0.50, statusREQUIRES_CHECK, recorded original-cashier NO at2026-10-26T10:25:28.149Z, saleIdNULL, result description physical receipt could not be verified. Owner reports EFTPOS and register both returned to initial screen. This is not proof of fiscal cancellation or a stock/financial delta; no repeat payment permitted.
+
+Bounded correction: dismiss the blocking confirmation after persisted NO, retain cart, pending identity, checkout key, polling and server register lock; make pending review visible without a blocking modal. YES must still close only after actual successful atomic commit. Network failure or uncertain result cannot be presented as success. No device/result/profile/lifecycle/financial changes. No automatic VOID or resend; RBS unchanged. Mounted UI must prove NO closes the dialog while cart and original pending request survive, same checkout cannot be reissued, failed decision remains visible, and YES closes following commit. Physical acceptance AWAITING LAB; existing CASH USER PASS protected.
