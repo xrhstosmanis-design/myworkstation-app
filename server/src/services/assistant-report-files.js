@@ -21,13 +21,18 @@ function csv(tables){
  const quote=v=>'"'+(v&&typeof v==="object"&&Object.hasOwn(v,"number")?v.number:spreadsheetSafeText(v)).replaceAll('"','""')+'"';return Buffer.from("\uFEFF"+rows.map(r=>r.map(quote).join(";")).join("\r\n"),"utf8");
 }
 async function pdf(tables){
- const doc=new PDFDocument({size:"A4",layout:"landscape",margin:32,bufferPages:true,info:{Title:"Αναφορά MyWorkStation",Author:"MyWorkStation"}}),chunks=[];
+ const doc=new PDFDocument({size:"A4",layout:tables.every(t=>t.prose===true)?"portrait":"landscape",margin:32,bufferPages:true,info:{Title:"Αναφορά MyWorkStation",Author:"MyWorkStation"}}),chunks=[];
  const complete=new Promise((resolve,reject)=>{doc.on("data",c=>chunks.push(c));doc.on("end",()=>resolve(Buffer.concat(chunks)));doc.on("error",reject)});
  doc.font(fileURLToPath(new URL("../../assets/fonts/DejaVuSans.ttf",import.meta.url)));
  const bottom=()=>doc.page.height-42,width=()=>doc.page.width-64;
  for(const [section,t] of tables.entries()){
   if(section)doc.addPage();doc.fontSize(18).fillColor("#12304d").text("MyWorkStation");doc.fontSize(13).text(t.title);doc.moveDown(.4);
   for(const note of t.notes)doc.fontSize(8).fillColor("#526477").text(note,{width:width()});doc.moveDown(.6);
+  if(t.prose===true){
+   const blocks=[];let shift=[];const flush=()=>{if(shift.length){blocks.push(shift);shift=[]}};
+   for(const [line]of t.rows){const text=String(line);if(/^20\d{2}-\d{2}-\d{2} ·/.test(text)){flush();shift.push(text)}else if(shift.length&&text)shift.push(text);else{flush();blocks.push([text])}}flush();
+   for(const block of blocks){const text=block.join("\n"),options={width:width(),lineGap:2};doc.fontSize(10).fillColor("#172b3a");const height=doc.heightOfString(text,options);if(height<=doc.page.height-doc.page.margins.top-42&&doc.y+height>bottom())doc.addPage();doc.text(text,options).moveDown(.15)}continue;
+  }
   const w=width()/t.columns.length;
   const rowHeight=values=>Math.max(...values.map(v=>doc.fontSize(8).heightOfString(String(v),{width:w-10,lineGap:1})),10)+12;
   const draw=(values,header=false)=>{const h=rowHeight(values),y=doc.y;if(header)doc.rect(32,y,width(),h).fill("#12304d");for(const [i,v] of values.entries())doc.fillColor(header?"#ffffff":"#172b3a").fontSize(8).text(String(v),37+i*w,y+6,{width:w-10,height:h-10,lineGap:1});doc.moveTo(32,y+h).lineTo(32+width(),y+h).strokeColor("#d8e1e9").stroke();doc.y=y+h;};
@@ -41,10 +46,11 @@ async function pdf(tables){
 async function word(tables){
  const body=[];
  for(const t of tables){body.push(new Paragraph({children:[new TextRun({text:t.title,bold:true,size:28})],spacing:{before:240,after:160}}));for(const n of t.notes)body.push(new Paragraph({text:n,spacing:{after:80}}));
+  if(t.prose===true){for(const [line]of t.rows){const text=String(line);body.push(new Paragraph({text,keepNext:/^20\d{2}-\d{2}-\d{2} ·/.test(text)||text.startsWith("Αρχική διαφορά"),spacing:{after:80}}))}continue;}
   const row=(values,header=false)=>new TableRow({tableHeader:header,cantSplit:true,children:values.map((v,i)=>new TableCell({children:[new Paragraph({children:[new TextRun({text:header?String(v):cell(v,t.columns[i]),bold:header,size:18})]})]}))});
   body.push(new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[row(t.columns,true),...t.rows.map(r=>row(r))]}));if(!t.rows.length)body.push(new Paragraph("Δεν υπάρχουν γραμμές προς εξαγωγή· δες τους περιορισμούς της πηγής."));
  }
- const doc=new Document({creator:"MyWorkStation",title:"Αναφορά MyWorkStation",styles:{default:{document:{run:{font:"Calibri",size:20}}}},sections:[{properties:{page:{size:{orientation:PageOrientation.LANDSCAPE},margin:{top:720,bottom:720,left:720,right:720}}},children:body}]});return Packer.toBuffer(doc);
+ const doc=new Document({creator:"MyWorkStation",title:"Αναφορά MyWorkStation",styles:{default:{document:{run:{font:"Calibri",size:20}}}},sections:[{properties:{page:{size:{orientation:tables.every(t=>t.prose===true)?PageOrientation.PORTRAIT:PageOrientation.LANDSCAPE},margin:{top:720,bottom:720,left:720,right:720}}},children:body}]});return Packer.toBuffer(doc);
 }
 export async function buildAssistantReportFile(format,evidence,{now=new Date()}={}){
  if(!Object.hasOwn(formats,format))throw Object.assign(new Error("Επίλεξε Excel, PDF, CSV ή Word."),{status:422});
