@@ -1,3 +1,4 @@
+import {assertFtextOperatorCardApproved} from './ftext-operator-card.js';
 import {randomUUID} from 'node:crypto';
 import {insertPosSaleSafetyAudit} from '../pos-sale-safety.js';
 import {lockActiveSaleProducts} from '../lib/inventory-sale-product-lock.js';
@@ -14,6 +15,7 @@ export async function finalizeFtextCashRequest(db,id,scope,{context,reserveStock
   if(row.status==='SALE_COMMITTED')return {saleId:row.saleId,replay:true,inventoryWarnings:row.checkoutJson?.inventoryWarnings||[]};
   if(row.status!=='CONFIRMED'||!row.resultHash||row.result?.outcome!=='CONFIRMED')fail('Η φορολογική απόδειξη δεν έχει επιβεβαιωθεί.');
   validateFtextCashResult(row.result,row);
+  assertFtextOperatorCardApproved(row,current.settings);
   const saved=row.checkoutJson,items=saved?.resolvedItems,summary=saved?.baseSummary;
   const method=saved?.paymentMethod;
   if(!['CASH','CARD'].includes(method)||method!==row.plan?.payment?.method||(method==='CARD'&&(current.settings.cardEnabled!==true||current.settings.cardPayment?.code!==row.plan.payment.code)))fail('Δεν επιβεβαιώθηκε ο αρχικός τρόπος πληρωμής.');

@@ -1,3 +1,7 @@
+## 26/10/2026 - FTEXT OPERATOR CARD SOURCE / AWAITING NATIVE CI AND PHYSICAL ACCEPTANCE
+
+Retained codex/rizareio-ftext-bridge-20261022; explicit owner YES/NO requirement claimPR3156 greenCI40298426337 merged2ead86fd7 before source. Added separately configured OPERATOR_CONFIRMATION/type1 mode, immutable authenticated fiscal result plus separately bound original-cashier YES/NO decision, and existing atomic CARD/stock finalizer. NO/UNCERTAIN cannot write finances/stock, resend, erase a receipt or release an unresolved register lock; actual cancellation/reconciliation remains required. CASH/strictOS7/RBS remain protected; no new schema or lifecycle edits. Local Node20 targeted17PASS/0FAIL/0SKIP and client build PASS; native PG/Windows/full CI and physical acceptance pending. No production setting, package installation, charge or receipt. Card activation OFF, connector OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-26-ftext-operator-card.md.
+
 ## 26/10/2026 - FTEXT-OPERATOR-CARD-01 / EXPLICIT OWNER CHANGE / ASSIGNED BEFORE SOURCE
 
 Retained owner codex/rizareio-ftext-bridge-20261022; branch feat/ftext-operator-card-20261026. Owner explicitly requests operator YES/NO payment acknowledgement as in RBS instead of requiring OS7 POS line8. This supersedes the earlier no-manual-card-confirmation requirement ONLY for a new explicitly configured OPERATOR_CONFIRMATION profile. Existing POS_LINE8_OS7, CASH, STATUS, one-shot dispatch, immutable device results, fiscal receipt binding, original shift, tenant/licence/lifecycle, recovery and RBS behavior remain protected.

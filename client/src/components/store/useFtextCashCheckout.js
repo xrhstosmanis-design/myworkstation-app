@@ -1,6 +1,5 @@
 import {useEffect,useRef} from 'react';
-// Ftext never follows the RBS DISPATCHED -> cash commit transition. A durable
-// verified final receipt is required, and polling never creates a sale request.
+// Polling never creates/resends a sale. Operator card mode also needs an explicit decision.
 export default function useFtextCashCheckout({api,storeId,pending,onRequest,onCommitted,onCancelled,onError}){
  const callbacks=useRef({onRequest,onCommitted,onCancelled,onError});callbacks.current={onRequest,onCommitted,onCancelled,onError};
  const requestId=pending?.request?.kind==='FTEXT_CASH'?pending.request.id:null;
@@ -13,7 +12,7 @@ export default function useFtextCashCheckout({api,storeId,pending,onRequest,onCo
    callbacks.current.onRequest(row);
    if(row.status==='CANCELLED'){done=true;callbacks.current.onCancelled?.(row);}
    else if(row.status==='SALE_COMMITTED'){done=true;callbacks.current.onCommitted(row);}
-   else if(row.status==='CONFIRMED'){await api(`/api/store-pos/stores/${storeId}/ftext-cash/${encodeURIComponent(requestId)}/finalize`,{method:'POST',body:'{}'});}
+   else if(row.status==='CONFIRMED'&&!row.operatorConfirmationRequired&&(!row.operatorOutcome||row.operatorOutcome==='YES')){await api(`/api/store-pos/stores/${storeId}/ftext-cash/${encodeURIComponent(requestId)}/finalize`,{method:'POST',body:'{}'});}
   }catch(error){if(!cancelled&&scopeRef.current===scope)callbacks.current.onError(error.message)}finally{running=false}};
   check();const timer=setInterval(check,1800);return()=>{cancelled=true;clearInterval(timer)};
  },[api,storeId,requestId]);

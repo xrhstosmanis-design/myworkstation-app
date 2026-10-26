@@ -98,5 +98,18 @@ try {
   MustThrow {Invoke-FtextCashRequest -ConfigPath $configPath -Request $card -TimeoutSeconds 1}
   Assert (-not (Test-Path -LiteralPath (Join-Path $root ('mws-cash-'+$card.id+'.txt')))) 'Acknowledged card was resent.'
  } finally {Remove-Job $cardJob -Force}
+ # Legacy operator-confirmed card: final fiscal receipt is required, POS line8 is optional.
+ $manual=$c | ConvertTo-Json -Depth 12 | ConvertFrom-Json
+ $manual | Add-Member -Force NoteProperty cardEnabled $true
+ $manual | Add-Member -Force NoteProperty cardPayment ([pscustomobject]@{code=2;posTerminalId=1;transactionType=1;resultFormat='OPERATOR_CONFIRMATION';confirmed=$true})
+ $mr=$r | ConvertTo-Json -Depth 12 | ConvertFrom-Json;$mr.plan.payment.method='CARD';$mr.plan.payment.code=2
+ Assert ($enc.GetString((New-FtextCashCommand $manual $mr $resultPath)).EndsWith("PAY||2`r`n")) 'Operator card did not use the configured code.'
+ Assert ((Read-FtextCashResult $enc.GetBytes($valid) $manual $mr).outcome -ceq 'CONFIRMED') 'Legacy final receipt was not accepted for operator review.'
+ foreach($bad in @($valid.Replace('TEST12345','FOREIGN'),$valid.Replace('https://www1.aade.gr/dcl/fixture',''),"48`r`nEFT-POS ERROR`r`nPAY||2`r`n")) {
+  Assert ((Read-FtextCashResult $enc.GetBytes($bad) $manual $mr).outcome -ceq 'REQUIRES_CHECK') 'Operator mode accepted an unverified receipt.'
+ }
+ $manual.cardPayment.resultFormat='POS_LINE8_OS7'
+ Assert ((Read-FtextCashResult $enc.GetBytes($valid) $manual $mr).outcome -ceq 'REQUIRES_CHECK') 'Strict OS7 unexpectedly accepted missing line8.'
+
  Write-Host ('PASS: '+$passed+' cash command/result/scope/timeout/restart/tombstone boundaries; synthetic folder only.')
 } finally {Remove-Item -LiteralPath $root -Recurse -Force}

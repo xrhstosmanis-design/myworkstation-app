@@ -1,3 +1,4 @@
+import {ftextOperatorCardMode} from '../services/ftext-operator-card.js';
 import {claimFtextVoid,requestFtextVoid,recordFtextVoidResult} from '../services/ftext-void.js';
 import {Router} from 'express';
 import {claimFtextCashRequest,recordFtextCashResult,ftextCashRequestView} from '../services/ftext-cash-requests.js';
@@ -29,7 +30,7 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
  router.post('/device/cash-poll',wrap(async(req,res)=>res.json(await service.authenticated(token(req),async(t,d,c)=>({request:c.cashEnabled===true&&await ftextCashTableExists(t)?await claimFtextCashRequest(t,d,c):null})))));
  router.post('/device/cash-result',wrap(async(req,res)=>{
   const row=await service.authenticated(token(req),async(t,d,c)=>recordFtextCashResult(t,d,c,req.body));
-  let committed=null;if(row.status==='CONFIRMED')try{committed=await finalizeFtextCashRequest(db,row.id,row,{context:service.cashContext})}catch{}
+  let committed=null;if(row.status==='CONFIRMED'&&!ftextOperatorCardMode(row))try{committed=await finalizeFtextCashRequest(db,row.id,row,{context:service.cashContext})}catch{}
   res.json({ok:true,status:committed?'SALE_COMMITTED':row.status,saleId:committed?.saleId||row.saleId||null,finalizationPending:row.status==='CONFIRMED'&&!committed});
  }));
  const prefix='/companies/:companyId/stores/:storeId';
