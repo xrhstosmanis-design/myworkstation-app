@@ -1,3 +1,4 @@
+import {renderReviewedCashEmail} from './cash-reviewed-email.js';
 import {assertCustomerDemoOutboundAllowed} from "../customer-demo-runtime.js";
 import { normalizeReportRecipients, reportRecipientListSchema } from "./report-recipients.js";
 import nodemailer from "nodemailer";
@@ -207,14 +208,10 @@ export async function sendCashShiftClosedEmail({to,storeName,session,companyId,s
   return sendEmail({to,subject,text,html,companyId,storeId});
 }
 
-export async function sendCashControlDailyReportEmail({to,storeName,date,rows,comment,auditorName,companyId,storeId}){
-  const shortage=rows.reduce((sum,row)=>sum+(Number(row.variance)<0?Math.abs(Number(row.variance)):0),0);
-  const surplus=rows.reduce((sum,row)=>sum+(Number(row.variance)>0?Number(row.variance):0),0);
-  const subject=`Αναφορά ελέγχου ταμείων · ${storeName} · ${date}`;
-  const lines=rows.map(row=>`${row.shiftLabel} · ${row.terminalPos||"MAIN"} · ${row.openedByName||"—"} · Διαφορά ${eur(row.variance)} · POS–EFTPOS ${eur(row.cardVariance)}`);
-  const text=[subject,"",...lines,"",`Συνολικό έλλειμμα: ${eur(shortage)}`,`Συνολικό πλεόνασμα: ${eur(surplus)}`,comment?`Σχόλιο ελέγχου: ${comment}`:"",`Ελέγχθηκε από: ${auditorName}`].filter(Boolean).join("\n");
-  const htmlRows=rows.map(row=>`<tr><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(row.shiftLabel)}</td><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(row.terminalPos||"MAIN")}</td><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(row.openedByName||"—")}</td><td style="padding:8px;border-bottom:1px solid #ddd;font-weight:700">${escapeHtml(eur(row.variance))}</td><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(eur(row.cardVariance))}</td></tr>`).join("");
-  const html=`<div style="font-family:Arial,sans-serif;max-width:760px"><h2>${escapeHtml(subject)}</h2><table style="width:100%;border-collapse:collapse"><tr><th>Βάρδια</th><th>POS</th><th>Χειριστής</th><th>Διαφορά</th><th>POS–EFTPOS</th></tr>${htmlRows}</table><p><strong>Συνολικό έλλειμμα:</strong> ${escapeHtml(eur(shortage))}<br><strong>Συνολικό πλεόνασμα:</strong> ${escapeHtml(eur(surplus))}</p>${comment?`<p><strong>Σχόλιο ελέγχου:</strong> ${escapeHtml(comment)}</p>`:""}<p><strong>Ελέγχθηκε από:</strong> ${escapeHtml(auditorName)}</p><p style="color:#64748b">Η αναφορά στάλθηκε χειροκίνητα από τον Super Admin.</p></div>`;
+export async function sendCashControlDailyReportEmail({to,storeName,date,evidence,comment,companyId,storeId,previewOnly=false}){
+  assertCustomerDemoOutboundAllowed({companyId,storeId});
+  const {subject,text,html:body}=renderReviewedCashEmail({evidence,companyId,storeId,storeName,date,comment,previewOnly});
+  const html=body+`<p style="color:#64748b">Η αναφορά στάλθηκε χειροκίνητα από τον Super Admin.</p>`;
   return sendEmail({to,subject,text,html,companyId,storeId});
 }
 
