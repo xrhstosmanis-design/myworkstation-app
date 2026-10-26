@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-26",
+  "baseline": "5ca3fb5e1bd6b408956e098a93ebe72fff70ac1f",
+  "method": "rg call-site audit client/src and server/test; read actual route/panel",
+  "callers": [
+    {
+      "path": "client/src/components/commerce/InternetProductSearchPanel.jsx",
+      "history": "useEffect line26 withCompany only; dependency companyId only",
+      "proposals": "reloadProposals line24 withCompany only; shared commerce/platform panel"
+    }
+  ],
+  "separateIntentionalCompanyWideReaderFound": false,
+  "proposedContract": "Require explicit active owned store in GET/history and GET/price-proposals before ensureMarketSchema; unrelated company endpoints and writers unchanged",
+  "sourceOrRuntimeChanged": false
+}

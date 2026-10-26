@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-26",
+  "node": "24.22.1",
+  "baseline": "5ca3fb5e1bd6b408956e098a93ebe72fff70ac1f",
+  "status": "LOCAL_SYNTHETIC_FAIL_NOT_LAB",
+  "noProductionAction": true,
+  "rawLogFile": null,
+  "sourceEdits": false,
+  "kind": "actual extracted existing GET /history handler and parameterized SQL executed on isolated in-memory SQLite",
+  "toolOutputChunk": "75f2d0",
+  "selectedStore": "store-A",
+  "expectedReturnedStores": [
+    "store-A"
+  ],
+  "observedReturnedStores": [
+    "store-B",
+    "store-A"
+  ],
+  "queryBindings": [
+    "own"
+  ],
+  "observedStorePredicate": false,
+  "limits": "Not PostgreSQL/native CI, not hosted/real-store result; ensureMarketSchema replaced with no-op because only read projection was exercised."
+}
