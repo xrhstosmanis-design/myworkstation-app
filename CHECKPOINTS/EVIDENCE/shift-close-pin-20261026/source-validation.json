@@ -34,6 +34,19 @@
     "server/test/shift-close-pin.test.js": "f0693717de6db8336fa65847f66c9f8b36e1d46deb69d377f7d39270fe2460d9"
   },
   "noBusinessAction": true,
-  "publicationBase": "93aa6884cbbe938bedaf01a89f0aaae4895df132",
-  "invoiceAmendment": "Separate docs3172 green main93aa688: authoritative13paths; invoice checkpoint unchanged in PIN candidate; future integration not included"
+  "publicationBase": "c5b79493325095d76938abb5b159e949030022a6",
+  "invoiceAmendment": "Authoritative13paths3172/plain-capture3176; invoicecheckpointunchanged",
+  "priorCandidateCI": {
+    "head": "bbd76760512be9b22c48adf33c6669a9c4b57669",
+    "run": 40373196254,
+    "job": 121749679700,
+    "status": "ALL5_SUCCESS",
+    "serverPass": 4281,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "native": "parent3058 +3 subcases actually unskipped",
+    "qualification": "prior-head proof only; new reconciled head requires full CI"
+  },
+  "publicationKind": "DOCS_ONLY_EVIDENCE_FIRST_NO_RUNTIME_CHANGE"
 }
