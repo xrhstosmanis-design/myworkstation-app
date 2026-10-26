@@ -1,0 +1,125 @@
+TAP version 13
+# Subtest: mounted close form requires deliberate EFTPOS including zero before either submit
+ok 1 - mounted close form requires deliberate EFTPOS including zero before either submit
+  ---
+  duration_ms: 672.826345
+  ...
+# Subtest: deferred invoice native fixture refuses unsafe targets and cannot silently skip CI
+ok 2 - deferred invoice native fixture refuses unsafe targets and cannot silently skip CI
+  ---
+  duration_ms: 2.403526
+  ...
+# Subtest: native atomic deferred payment, actual HTTP pending binding, original upload and completed replay
+ok 3 - native atomic deferred payment, actual HTTP pending binding, original upload and completed replay # SKIP
+  ---
+  duration_ms: 0.421537
+  ...
+# Subtest: mounted payment requires no file/provider and keeps idempotency key after an uncertain response
+ok 4 - mounted payment requires no file/provider and keeps idempotency key after an uncertain response
+  ---
+  duration_ms: 281.216003
+  ...
+# Subtest: mounted plain photo capture lost response retries exact prepared PDF once without AI or another payment
+ok 5 - mounted plain photo capture lost response retries exact prepared PDF once without AI or another payment
+  ---
+  duration_ms: 114.981894
+  ...
+# Subtest: mounted altered capture receipt ID is not accepted, and store change removes stale pending data
+ok 6 - mounted altered capture receipt ID is not accepted, and store change removes stale pending data
+  ---
+  duration_ms: 68.615729
+  ...
+# Subtest: mounted already-uploaded incomplete source is labelled for existing review without offering source-kind downgrade
+ok 7 - mounted already-uploaded incomplete source is labelled for existing review without offering source-kind downgrade
+  ---
+  duration_ms: 18.00149
+  ...
+# Subtest: retained rendered payment/upload/refresh callbacks cannot act in a replacement store
+ok 8 - retained rendered payment/upload/refresh callbacks cannot act in a replacement store
+  ---
+  duration_ms: 48.166658
+  ...
+# Subtest: confirmed payment or capture followed by list failure asks only for refresh, without uncertain-repeat claims
+ok 9 - confirmed payment or capture followed by list failure asks only for refresh, without uncertain-repeat claims
+  ---
+  duration_ms: 90.121209
+  ...
+# Subtest: mounted pending ACK gates close and strips credential on decision; counts/status are accurate
+ok 10 - mounted pending ACK gates close and strips credential on decision; counts/status are accurate
+  ---
+  duration_ms: 366.590722
+  ...
+# Subtest: actual stale409 refreshes fingerprint, keeps count confirmation and requires new ACK and credential
+ok 11 - actual stale409 refreshes fingerprint, keeps count confirmation and requires new ACK and credential
+  ---
+  duration_ms: 391.895329
+  ...
+# Subtest: forced shortage keeps counts after pending409 and requires new ACK plus fresh PIN with current EFTPOS
+ok 12 - forced shortage keeps counts after pending409 and requires new ACK plus fresh PIN with current EFTPOS
+  ---
+  duration_ms: 214.392398
+  ...
+# Subtest: explicit deferred intent validates real header and payment agreement before touching database
+ok 13 - explicit deferred intent validates real header and payment agreement before touching database
+  ---
+  duration_ms: 2.507733
+  ...
+# Subtest: invoice manifest validates original magic, size, ordered checksums and bounded pages
+ok 14 - invoice manifest validates original magic, size, ordered checksums and bounded pages
+  ---
+  duration_ms: 28.59919
+  ...
+# Subtest: expected binding refuses wrong actor, fingerprint, tombstone and immutable payment before any job mutation
+ok 15 - expected binding refuses wrong actor, fingerprint, tombstone and immutable payment before any job mutation
+  ---
+  duration_ms: 2.084373
+  ...
+# Subtest: list and close project bounded metadata in one query; close decision does not write before closure
+ok 16 - list and close project bounded metadata in one query; close decision does not write before closure
+  ---
+  duration_ms: 0.724806
+  ...
+# Subtest: actual registered HTTP readers reject forged pending ID before schema, provider, job and monetary work
+ok 17 - actual registered HTTP readers reject forged pending ID before schema, provider, job and monetary work
+  ---
+  duration_ms: 57.686798
+  ...
+# Subtest: actual registered HTTP exact completed replay returns original chain without schema, provider, queue or second job; changed file and deleted chain refuse
+ok 18 - actual registered HTTP exact completed replay returns original chain without schema, provider, queue or second job; changed file and deleted chain refuse
+  ---
+  duration_ms: 18.51721
+  ...
+# Subtest: actual standard HTTP plain capture with supplier permission stores one original and exact replay, without any AI path
+ok 19 - actual standard HTTP plain capture with supplier permission stores one original and exact replay, without any AI path
+  ---
+  duration_ms: 22.194972
+  ...
+# Subtest: licensed AI registration still rejects missing module before its handler
+ok 20 - licensed AI registration still rejects missing module before its handler
+  ---
+  duration_ms: 6.764352
+  ...
+# Subtest: personal PIN closes the actual mounted form without a card and never submits on method selection
+ok 21 - personal PIN closes the actual mounted form without a card and never submits on method selection
+  ---
+  duration_ms: 608.686966
+  ...
+# Subtest: failed PIN clears the immediate secret and switching back to the legacy card cannot reuse it
+ok 22 - failed PIN clears the immediate secret and switching back to the legacy card cannot reuse it
+  ---
+  duration_ms: 357.372244
+  ...
+# Subtest: forced shortage close requires a fresh PIN and preserves deliberate current EFTPOS override
+ok 23 - forced shortage close requires a fresh PIN and preserves deliberate current EFTPOS override
+  ---
+  duration_ms: 348.012174
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 2057.781797

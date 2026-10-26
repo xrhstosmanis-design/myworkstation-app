@@ -4,7 +4,7 @@ import {exactCents,hash,reconcileError} from './cash-reconciliation-contract.js'
 
 export const cashReconciliationSourceLimit=200;
 export async function readReconciliationSession(db,scope,id,rule){
-  const rows=await db.$queryRaw`SELECT s.*,to_jsonb(n) AS "nextSession",to_jsonb(p) AS "previousSession" FROM "CashShiftSession" s LEFT JOIN LATERAL (
+  const rows=await db.$queryRaw`SELECT s."id",s."companyId",s."storeId",s."terminalPos",s."status",s."openedBy",s."openedByName",s."shiftLabel",s."openedAt",s."closedAt",s."variance",s."cardVariance",s."openingOperational",s."actualOperational",s."updatedAt",to_jsonb(n) AS "nextSession",to_jsonb(p) AS "previousSession" FROM "CashShiftSession" s LEFT JOIN LATERAL (
     SELECT next."id",next."companyId",next."storeId",next."terminalPos",next."status",next."openedAt",next."closedAt",next."openedByName"
     FROM "CashShiftSession" next WHERE next."companyId"=s."companyId" AND next."storeId"=s."storeId" AND next."terminalPos"=s."terminalPos"
       AND (next."openedAt">s."openedAt" OR (next."openedAt"=s."openedAt" AND next."id">s."id")) ORDER BY next."openedAt",next."id" LIMIT 1
@@ -25,7 +25,7 @@ export async function readReconciliationSession(db,scope,id,rule){
   const next=session.nextSession;
   const nextClosed=Boolean(next&&next.companyId===scope.companyId&&next.storeId===scope.storeId&&next.terminalPos===session.terminalPos&&next.status==='CLOSED'&&next.closedAt&&new Date(next.closedAt)>=new Date(next.openedAt)&&new Date(session.closedAt)<=new Date(next.openedAt));
   return {session,sourceHash,initialCents,cardCents,basisCents,reviewStatus:review.balance.status,explainedCents:exactCents(review.balance.explainedAmount),nextClosed,
-    transactions:transactions.map(t=>({id:t.record.id,type:t.record.type,amountCents:exactCents(t.record.amount),reversed:Boolean(t.record.reversedAt),occurredAt:t.record.occurredAt}))};
+    transactions:transactions.map(t=>({id:t.record.id,type:t.record.type,amountCents:exactCents(t.record.amount),reversed:Boolean(t.record.reversedAt),cashEffect:t.record.subtractFromShift===true,occurredAt:t.record.occurredAt}))};
 }
 export async function readReconciliationSources(db,scope,period,extraIds=[]){
   const stores=await db.store.findUnique({where:{id:scope.storeId},select:{id:true,companyId:true,name:true}});

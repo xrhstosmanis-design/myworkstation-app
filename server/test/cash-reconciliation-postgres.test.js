@@ -6,9 +6,10 @@ import {createServer} from 'node:http';
 import {createCashReconciliationRepository} from '../src/services/cash-reconciliation-repository.js';
 import {createCashReconciliationRouter} from '../src/routes/cash-reconciliation.js';
 import {paperKey,intentId,completionId} from '../src/services/cash-paper-contract.js';
+import {scopeKey,hash,actionId,requestHash} from '../src/services/cash-reconciliation-contract.js';
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 test('native reviewed cash: real source/HTTP, serialized two-client once-only offsets, paper allocation, stale sources and checkpoint with immutable finance/control',{skip:!isolated()},async()=>{
- const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_reconcile_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
+ const {PrismaClient,Prisma}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_reconcile_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
  const db=new PrismaClient({datasourceUrl:url.toString()}),other=new PrismaClient({datasourceUrl:url.toString()}),scope={companyId:'co',storeId:'store',generation:'0'},actor={id:'actor',fullName:'Χρήστος Μάνης'},period={from:'2026-10-21',to:'2026-10-23'};let server;
  try{
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
@@ -19,7 +20,7 @@ test('native reviewed cash: real source/HTTP, serialized two-client once-only of
    'CREATE TABLE "StoreLifecycleFence"("storeId" text primary key,"companyId" text,"generation" bigint,"maintenance" boolean,"retired" boolean)',
    'CREATE TABLE "CashControlStoreRule"("storeId" text primary key,"companyId" text,"mode" text,"deliveryTerminalPattern" text,"carryOverEnabled" boolean,"posEftposEnabled" boolean,"updatedAt" timestamp default NOW())',
    'CREATE TABLE "CashShiftSession"("id" text primary key,"companyId" text,"storeId" text,"terminalPos" text,"status" text,"openedBy" text,"openedByName" text,"shiftLabel" text,"openedAt" timestamp,"closedAt" timestamp,"variance" numeric(14,2),"cardVariance" numeric(14,2),"openingOperational" numeric(14,2),"actualOperational" numeric(14,2),"updatedAt" timestamp default NOW())',
-   'CREATE TABLE "StoreTransaction"("id" text primary key,"companyId" text,"storeId" text,"sessionId" text,"type" text,"amount" numeric(14,2),"description" text,"attachmentData" text,"occurredAt" timestamp,"createdAt" timestamp default NOW(),"reversedAt" timestamp)',
+   'CREATE TABLE "StoreTransaction"("id" text primary key,"companyId" text,"storeId" text,"sessionId" text,"type" text,"amount" numeric(14,2),"description" text,"subtractFromShift" boolean default true,"attachmentData" text,"occurredAt" timestamp,"createdAt" timestamp default NOW(),"reversedAt" timestamp)',
    'CREATE TABLE "CashControlReview"("id" text,"companyId" text,"storeId" text,"sessionId" text,"decision" text,"amount" numeric,"note" text,"actorId" text,"actorName" text,"snapshotJson" jsonb,"createdAt" timestamp)',
    'CREATE TABLE "StoreChatMessage"("id" text primary key,"companyId" text,"storeId" text,"attachmentName" text,"attachmentMimeType" text,"attachmentSize" integer,"attachmentChecksum" text,"attachmentData" text)',
    'CREATE TABLE "WorkforceAuditLog"("id" text primary key,"companyId" text,"storeId" text,"actorUserId" text,"action" text,"entityType" text,"entityId" text,"afterJson" jsonb,"createdAt" timestamp default NOW())',
@@ -42,14 +43,16 @@ test('native reviewed cash: real source/HTTP, serialized two-client once-only of
   const financial=async()=>({sessions:await db.$queryRaw`SELECT * FROM "CashShiftSession" ORDER BY "id"`,transactions:await db.$queryRaw`SELECT * FROM "StoreTransaction" ORDER BY "id"`,reviews:await db.$queryRaw`SELECT * FROM "CashControlReview"`,sales:await db.$queryRaw`SELECT * FROM "Sale"`,payments:await db.$queryRaw`SELECT * FROM "Payment"`}),before=await financial(),originals=await db.$queryRaw`SELECT * FROM "StoreChatMessage"`;
   const repository=createCashReconciliationRepository(db),repositoryB=createCashReconciliationRepository(other),initial=await repository.read(scope,period),a=initial.rows.find(r=>r.sessionId==='a'),b=initial.rows.find(r=>r.sessionId==='b');
   assert.deepEqual(initial.rows.map(r=>r.remainingCents),[-8700,8000,-1000]);assert.equal(initial.totals.pending,3);assert(!JSON.stringify(initial).includes('foreign'));
-  const offset={kind:'OFFSET',previousSessionId:'a',nextSessionId:'b',previousHash:a.sourceHash,nextHash:b.sourceHash,amountCents:8000,countingErrorConfirmed:true,note:'Επαληθεύτηκε λάθος καταμέτρησης.'},make=(head,data)=>({requestId:randomUUID(),generation:'0',head,period,data});
+  const offset={kind:'OFFSET',previousSessionId:'a',nextSessionId:'b',previousHash:a.sourceHash,nextHash:b.sourceHash,amountCents:2000,countingErrorConfirmed:true,note:'Επαληθεύτηκε λάθος καταμέτρησης.'},make=(head,data)=>({requestId:randomUUID(),generation:'0',head,period,data});
   const requests=[make(initial.head,offset),make(initial.head,offset)],race=await Promise.allSettled([repository.apply(scope,actor,requests[0]),repositoryB.apply(scope,actor,requests[1])]);
   assert.equal(race.filter(r=>r.status==='fulfilled').length,1);assert.equal(race.find(r=>r.status==='rejected').reason.code,'CASH_RECONCILIATION_STALE_HEAD');
-  const winner=race.findIndex(r=>r.status==='fulfilled'),replay=await repositoryB.apply(scope,actor,requests[winner]);assert.equal(replay.reused,true);assert.equal(replay.rows.find(r=>r.sessionId==='a').remainingCents,-700);assert.equal(replay.rows.find(r=>r.sessionId==='b').remainingCents,0);assert.equal(replay.rows[0].cardCents,20000);
+  const winner=race.findIndex(r=>r.status==='fulfilled'),replay=await repositoryB.apply(scope,actor,requests[winner]);assert.equal(replay.reused,true);assert.equal(replay.rows.find(r=>r.sessionId==='a').remainingCents,-6700);assert.equal(replay.rows.find(r=>r.sessionId==='b').remainingCents,6000);assert.equal(replay.rows[0].cardCents,20000);
   await assert.rejects(repository.apply(scope,actor,{...requests[winner],data:{...offset,amountCents:7999}}),e=>e.code==='CASH_RECONCILIATION_REPLAY_CHANGED');
   let current=replay;const save=async data=>current=await repository.apply(scope,actor,make(current.head,data));
   const row=id=>[...current.rows,...current.context].find(r=>r.sessionId===id);
-  await assert.rejects(save({...offset,amountCents:1}),e=>e.code==='CASH_RECONCILIATION_AMOUNT_INVALID');
+  await assert.rejects(save({...offset,amountCents:1}),e=>e.code==='CASH_RECONCILIATION_PAIR_ALREADY_REVIEWED');
+  await save({kind:'REVOKE',targetId:replay.actionId,note:'Αναιρείται η μερική καταμέτρηση.'});
+  await save({...offset,amountCents:8000});assert.equal(row('a').remainingCents,-700);assert.equal(row('b').remainingCents,0);
   await assert.rejects(save({...offset,nextSessionId:'c',nextHash:row('c').sourceHash}),e=>e.code==='CASH_RECONCILIATION_PAIR_INVALID');
   await assert.rejects(save({...offset,nextSessionId:'delivery',nextHash:'a'.repeat(64)}),e=>e.code==='CASH_RECONCILIATION_PAIR_INVALID');
   await assert.rejects(save({...offset,previousSessionId:'c',previousHash:row('c').sourceHash,nextSessionId:'d',nextHash:row('d').sourceHash}),e=>e.code==='CASH_RECONCILIATION_PAIR_INVALID');
@@ -58,14 +61,26 @@ test('native reviewed cash: real source/HTTP, serialized two-client once-only of
   await assert.rejects(save({kind:'CONFIRM',sessionId:'c',sourceHash:row('c').sourceHash,planHash:row('c').planHash,note:'Δεν έχει κλείσει η επόμενη βάρδια.',reviewed:true}),e=>e.code==='CASH_RECONCILIATION_SOURCE_CHANGED');
   await assert.rejects(save({kind:'CHECKPOINT',resumeFrom:'2026-10-24',reportHash:current.reportHash,pendingNotes:[],note:'Έλεγχος μέχρι την τελευταία βάρδια.',reviewed:true}),e=>e.code==='CASH_RECONCILIATION_CHECKPOINT_INVALID');
   await save({kind:'CHECKPOINT',resumeFrom:'2026-10-23',reportHash:current.reportHash,pendingNotes:['Αναμονή επόμενης βάρδιας της Χρυσάνθης.'],note:'Καταγράφηκε το σημείο συνέχειας.',reviewed:true});assert.equal(current.checkpoint.current,true);
-  const association={kind:'ASSOCIATE',messageId:'paper',checksum,sourceKey:key,line:0,sessionId:'c',sourceHash:row('c').sourceHash,transactionId:'expense',confirmedDate:'2026-10-23',confirmedAmountCents:1234,operatorContext:'Χρυσάνθη · Πρωινή',note:'Συγκρίθηκε το πρωτότυπο με την κίνηση.',reviewed:true};
+  const association={kind:'ASSOCIATE',messageId:'paper',checksum,sourceKey:key,line:0,sessionId:'c',sourceHash:row('c').sourceHash,transactionId:'expense',confirmedKind:'EXPENSE',confirmedDate:'2026-10-23',confirmedAmountCents:1234,operatorContext:'Χρυσάνθη · Πρωινή',note:'Συγκρίθηκε το πρωτότυπο με την κίνηση.',reviewed:true};
   await assert.rejects(save({...association,confirmedAmountCents:1200}),e=>e.code==='CASH_RECONCILIATION_TRANSACTION_MISMATCH');
   await save(association);assert.equal(current.checkpoint.current,false);assert.equal(row('a').remainingCents,-700);
   await assert.rejects(save({...association,sessionId:'a',sourceHash:row('a').sourceHash,transactionId:null}),e=>e.code==='CASH_RECONCILIATION_LINE_USED');
   assert.deepEqual(await financial(),before);assert.deepEqual(await db.$queryRaw`SELECT * FROM "StoreChatMessage"`,originals);
+  // Historical metadata stays available beyond the old 500-record threshold;
+  // these isolated archived confirmations never enter the selected cash rows.
+  const scopeId=scopeKey(scope),archive=[];let previousHead=current.head;
+  const existing=(await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "WorkforceAuditLog" WHERE "entityType"='CASH_RECONCILIATION'`)[0].count;
+  for(let i=0;i<501;i++){
+    const requestId=randomUUID(),data={kind:'CONFIRM',sessionId:'archived-'+i,sourceHash:'a'.repeat(64),planHash:'b'.repeat(64),note:'Αρχειοθετημένος δοκιμαστικός έλεγχος.',reviewed:true},proof={period},id=actionId(scopeId,requestId),sequence=existing+i+1,digest=requestHash({generation:'0',period,data});
+    const detail={version:1,generation:'0',sequence,previousHead,requestId,requestHash:digest,data,proof,actorName:'Archive fixture'};detail.head=hash({id,sequence,previousHead,requestHash:digest,data,proof,actorName:detail.actorName});previousHead=detail.head;
+    archive.push(Prisma.sql`(${id},'co','store','actor','CASH_RECONCILIATION_REVIEWED','CASH_RECONCILIATION',${scopeId},${JSON.stringify(detail)}::jsonb,NOW())`);
+  }
+  await db.$executeRaw(Prisma.sql`INSERT INTO "WorkforceAuditLog" ("id","companyId","storeId","actorUserId","action","entityType","entityId","afterJson","createdAt") VALUES ${Prisma.join(archive)}`);
+  const latest=await repository.read(scope,period,{requestId:requests[winner].requestId}),oldPage=await repository.read(scope,period,{historyPage:10});
+  assert.equal(latest.requestStatus,'APPLIED');assert.equal(latest.history.length,50);assert(latest.historyTotal>500);assert(oldPage.history.length>0);assert(!oldPage.history.some(h=>latest.history.some(n=>n.id===h.id)));assert.equal(latest.totals.shortageCents,700);
   // Exercise the actual registered router, current role lookup and source SQL.
   const app=express();app.use(express.json());app.use((req,res,next)=>{req.user={id:'actor',companyId:'co',role:'OWNER'};next()});app.use(createCashReconciliationRouter({db}));server=createServer(app);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin=`http://127.0.0.1:${server.address().port}`;
-  const response=await fetch(origin+'/stores/store?from=2026-10-21&to=2026-10-23');assert.equal(response.status,200);const body=await response.json();assert.equal(body.head,current.head);assert.doesNotMatch(JSON.stringify(body),/attachmentData|JVBERi/);
+  const response=await fetch(origin+'/stores/store?from=2026-10-21&to=2026-10-23');assert.equal(response.status,200);const body=await response.json();assert.equal(body.head,latest.head);assert.doesNotMatch(JSON.stringify(body),/attachmentData|JVBERi/);
   assert.match(response.headers.get('cache-control'),/no-store/);
   const postBody=make(body.head,{kind:'CHECKPOINT',resumeFrom:'2026-10-23',reportHash:body.reportHash,pendingNotes:['Αναμονή επόμενης βάρδιας.'],note:'Ενημερώθηκε το σημείο συνέχειας.',reviewed:true});
   const post=await fetch(origin+'/stores/store/reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(postBody)});assert.equal(post.status,200);assert.equal((await post.json()).reused,false);

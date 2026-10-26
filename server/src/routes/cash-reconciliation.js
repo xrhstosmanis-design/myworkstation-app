@@ -2,9 +2,10 @@ import {Router} from 'express';
 import {prisma} from '../prisma.js';
 import {authorizeCashPaper} from './cash-papers.js';
 import {createCashReconciliationRepository} from '../services/cash-reconciliation-repository.js';
-import {periodSchema,reconciliationRequest,reconcileError} from '../services/cash-reconciliation-contract.js';
+import {periodSchema,reviewRequestId,reconciliationRequest,reconcileError} from '../services/cash-reconciliation-contract.js';
 
 const messages={
+  CASH_RECONCILIATION_SCOPE_INVALID:'Η επιλογή ιστορικού ή καταστήματος δεν είναι έγκυρη. Ανανέωσε τα στοιχεία.',
   CASH_RECONCILIATION_NOT_FOUND:'Δεν βρέθηκε η βάρδια ή το στοιχείο στο επιλεγμένο κατάστημα.',
   CASH_RECONCILIATION_STALE_HEAD:'Υπάρχει νεότερος έλεγχος. Ανανέωσε πριν καταχωρίσεις.',
   CASH_RECONCILIATION_REPLAY_CHANGED:'Το προηγούμενο αίτημα είχε διαφορετικά στοιχεία. Ανανέωσε τον έλεγχο.',
@@ -12,6 +13,7 @@ const messages={
   CASH_RECONCILIATION_PAPER_UNAVAILABLE:'Το χαρτί δεν έχει επιβεβαιωμένη διαθέσιμη ανάγνωση.',
   CASH_RECONCILIATION_LINE_USED:'Η γραμμή του χαρτιού έχει ήδη αντιστοιχιστεί. Έλεγξε το ιστορικό.',
   CASH_RECONCILIATION_PAIR_INVALID:'Οι βάρδιες δεν αποτελούν επιλέξιμη διαδοχική παράδοση του ίδιου ταμείου.',
+  CASH_RECONCILIATION_PAIR_ALREADY_REVIEWED:'Η παράδοση έχει ήδη ενεργό συμψηφισμό. Για διόρθωση, αναίρεσε πρώτα την προηγούμενη καταχώρηση.',
   CASH_RECONCILIATION_AMOUNT_INVALID:'Το ποσό δεν καλύπτεται από τα διαθέσιμα αντίθετα υπόλοιπα των δύο βαρδιών.',
   CASH_RECONCILIATION_TRANSACTION_MISMATCH:'Η επιλεγμένη κίνηση δεν συμφωνεί με το ποσό ή τη βάρδια του χαρτιού.',
   CASH_RECONCILIATION_CHECKPOINT_INVALID:'Το σημείο συνέχειας προσπερνά βάρδια που παραμένει σε εκκρεμότητα.',
@@ -28,8 +30,10 @@ export function createCashReconciliationRouter({db=prisma,authorize=authorizeCas
   const current=async(req,scope)=>{await authorize(db,req.user,req.params.storeId);if(await repository.generation(scope)!==scope.generation)throw reconcileError('STORE_LIFECYCLE_STALE_GENERATION');};
   router.get('/stores/:storeId',async(req,res)=>{try{
     const period=periodSchema.safeParse({from:req.query.from,to:req.query.to});if(!period.success)return res.status(400).json({error:'Επίλεξε έγκυρη περίοδο έως 31 ημέρες.',code:'CASH_RECONCILIATION_INVALID_REQUEST'});
+    const historyPage=req.query.historyPage===undefined?0:Number(req.query.historyPage),requestId=req.query.requestId??null;
+    if(!Number.isInteger(historyPage)||historyPage<0||historyPage>199||(requestId!==null&&!reviewRequestId.safeParse(requestId).success))return res.status(400).json({error:'Μη έγκυρη επιλογή ιστορικού.',code:'CASH_RECONCILIATION_INVALID_REQUEST'});
     const {scope}=await authorize(db,req.user,req.params.storeId);scope.generation=await repository.generation(scope);
-    const result=await repository.read(scope,period.data);await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
+    const result=await repository.read(scope,period.data,{historyPage,requestId});await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
   }catch(error){failed(res,error);}});
   router.post('/stores/:storeId/reviews',async(req,res)=>{try{
     const request=reconciliationRequest.safeParse(req.body);if(!request.success)return res.status(400).json({error:'Τα στοιχεία ελέγχου δεν είναι έγκυρα.',code:'CASH_RECONCILIATION_INVALID_REQUEST'});

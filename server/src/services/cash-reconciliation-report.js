@@ -10,10 +10,16 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
   const active=activeRecords(records),activeIds=new Set(active.map(r=>r.id));
   const rows=new Map([...source.sessions].map(([id,s])=>[id,{sessionId:id,sourceHash:s.sourceHash,openedAt:s.session.openedAt,closedAt:s.session.closedAt,terminalPos:s.session.terminalPos,shiftLabel:s.session.shiftLabel||'Βάρδια',operatorId:s.session.openedBy||null,operatorName:s.session.openedByName||'Χωρίς καταγεγραμμένο χειριστή',initialCents:s.initialCents,explainedCents:s.explainedCents,offsetCents:0,remainingCents:s.basisCents,cardCents:s.cardCents,nextClosed:s.nextClosed,recheck:s.reviewStatus!=='VALID',associations:[],offsets:[]} ]));
   const offsets=active.filter(r=>r.data.kind==='OFFSET'),invalid=new Set();
+  const pairs=new Set();for(const r of offsets){const key=JSON.stringify([r.data.previousSessionId,r.data.nextSessionId]);if(pairs.has(key))throw reconcileError('CASH_RECONCILIATION_INVALID_HISTORY');pairs.add(key);}
   for(const r of active.filter(r=>r.data.kind==='ASSOCIATE')){
     const row=rows.get(r.data.sessionId);if(!row)continue;
-    row.associations.push(r.id);
-    if(row.sourceHash!==r.data.sourceHash||r.proof.sourceHash!==r.data.sourceHash||paperValidity.get(r.id)!==true)invalid.add(row.sessionId);
+    row.associations.push(r.id);row.cashAssociations??=[];row.pendingEvidence??=[];
+    const separate=['POS','EFTPOS','PREPAID'].includes(r.data.confirmedKind),valid=row.sourceHash===r.data.sourceHash&&r.proof.sourceHash===r.data.sourceHash&&paperValidity.get(r.id)===true;
+    if(!separate)row.cashAssociations.push(r.id);
+    if(!valid||r.data.confirmedKind==='OTHER'){
+      if(!separate)invalid.add(row.sessionId);
+      row.pendingEvidence.push({id:r.id,kind:r.data.confirmedKind,label:r.proof.rawLine?.label||'Συνδεδεμένο χαρτί',date:r.data.confirmedDate,amountCents:r.data.confirmedAmountCents});
+    }
   }
   for(const r of offsets){
     const d=r.data,a=source.sessions.get(d.previousSessionId),b=source.sessions.get(d.nextSessionId);
@@ -31,22 +37,25 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
   }
   for(const [id,row]of rows){
     const original=source.sessions.get(id),lastConfirmation=[...records].reverse().find(r=>r.data.kind==='CONFIRM'&&r.data.sessionId===id);
-    row.recheck=invalid.has(id);row.planHash=hash({sessionId:id,sourceHash:row.sourceHash,remainingCents:row.remainingCents,associations:row.associations,offsets:row.offsets});
+    row.recheck=invalid.has(id);row.planHash=hash({sessionId:id,sourceHash:row.sourceHash,remainingCents:row.remainingCents,associations:row.cashAssociations||[],offsets:row.offsets});
     const needsNext=source.rule.mode==='FULL'&&source.rule.carryOverEnabled;
     row.eligible=original.session.status==='CLOSED'&&Number.isFinite(timestamp(row.closedAt))&&timestamp(row.closedAt)>=timestamp(row.openedAt)&&row.remainingCents!==null&&!row.recheck&&(!needsNext||row.nextClosed)&&source.rule.mode!=='POS_EFTPOS_ONLY';
     row.reviewed=Boolean(row.eligible&&lastConfirmation&&activeIds.has(lastConfirmation.id)&&lastConfirmation.data.sourceHash===row.sourceHash&&lastConfirmation.data.planHash===row.planHash);
     row.status=source.rule.mode==='POS_EFTPOS_ONLY'?'NOT_APPLICABLE':row.recheck?'RECHECK_REQUIRED':needsNext&&!row.nextClosed?'AWAITING_NEXT_SHIFT':row.reviewed?'REVIEWED':'AWAITING_REVIEW';
     row.reviewedBy=row.reviewed?lastConfirmation.actorName:null;
+    row.reviewNote=row.reviewed?lastConfirmation.data.note||null:null;
     row.day=row.closedAt?cashReportRowDay(row.closedAt):null;
     row.transactions=original.transactions.slice(0,30);row.transactionsLimited=original.transactions.length>30;
     row.nextSessionId=original.session.nextSession?.id||null;row.previousSessionId=original.session.previousSession?.id||null;
   }
   const selected=source.selectedIds.map(id=>rows.get(id));
-  const reportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status}))});
+  const reportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[]}))});
   const checkpoint=[...records].reverse().find(r=>r.data.kind==='CHECKPOINT');
   const totals={shortageCents:0,surplusCents:0,pending:selected.filter(r=>!r.reviewed&&r.status!=='NOT_APPLICABLE').length},employees=new Map();
+  const operatorNames=new Map();for(const r of rows.values()){const names=operatorNames.get(r.operatorId)||new Set();names.add(r.operatorName);operatorNames.set(r.operatorId,names);}
   for(const r of selected.filter(r=>r.reviewed)){
-    const shared=!r.operatorId||/ΕΚΤΑΚΤ|ΧΩΡΙΣ|UNKNOWN/i.test(r.operatorName),key=shared?'session:'+r.sessionId:'operator:'+r.operatorId;
+    const normalized=r.operatorName.normalize('NFD').replace(/\p{M}/gu,'').toLocaleUpperCase('el-GR');
+    const shared=!r.operatorId||/ΕΚΤΑΚΤ|ΧΩΡΙΣ|UNKNOWN/.test(normalized)||operatorNames.get(r.operatorId)?.size>1,key=shared?'session:'+r.sessionId:'operator:'+r.operatorId;
     const e=employees.get(key)||{key,name:r.operatorName,identityRequiresReview:shared,shortageCents:0,surplusCents:0};
     const shortage=Math.max(0,-r.remainingCents),surplus=Math.max(0,r.remainingCents);totals.shortageCents+=shortage;totals.surplusCents+=surplus;e.shortageCents+=shortage;e.surplusCents+=surplus;employees.set(key,e);
   }
@@ -69,6 +78,8 @@ export function reconciliationText(report){
       if(row.status==='RECHECK_REQUIRED')lines.push('Απαιτείται επανέλεγχος των κινήσεων ή των συνδεδεμένων στοιχείων.');
     }
     lines.push(`POS–EFTPOS: ${row.cardCents===null?'δεν υπάρχουν πλήρη στοιχεία':row.cardCents===0?'χωρίς διαφορά':'διαφορά '+(row.cardCents>0?'+':'−')+money(row.cardCents)}.`);
+    if(row.reviewNote)lines.push('Σχόλιο ελέγχου: '+row.reviewNote);
+    for(const evidence of row.pendingEvidence||[])lines.push(`Εκκρεμεί επανέλεγχος: ${evidence.date} · ${evidence.label} · ${money(evidence.amountCents)}.`);
   }
   if(report.rows.some(r=>r.reviewed))lines.push('',`Ελεγμένα ελλείμματα: ${money(report.totals.shortageCents)}. Ελεγμένα πλεονάσματα: ${money(report.totals.surplusCents)}.`);
   if(report.totals.pending)lines.push(`Εκκρεμούν ${report.totals.pending} βάρδιες· δεν περιλαμβάνονται στα ελεγμένα σύνολα.`);

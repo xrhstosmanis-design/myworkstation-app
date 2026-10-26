@@ -29,3 +29,20 @@ test('context outside the selected day does not enter totals, revoked approval n
  assert.equal(projectReconciliation(source,[pair,one,two,revoke]).rows[0].reviewed,false);
  source.sessions.get('a').basisCents=null;const unknown=projectReconciliation(source,[]);assert.equal(unknown.rows[0].remainingCents,null);assert.match(unknown.text,/Άγνωστη διαφορά/);assert.equal(unknown.rows[0].eligible,false);
 });
+test('a stale card/prepaid paper remains a separate pending item without consuming or invalidating reviewed cash',()=>{
+ const source=fixture(),pair=offset(source,'a','b',8000),draft=projectReconciliation(source,[pair]),confirmed=confirmation(draft.rows[0]);
+ const card={id:'card-paper',sequence:3,data:{kind:'ASSOCIATE',confirmedKind:'PREPAID',sessionId:'a',sourceHash:source.sessions.get('a').sourceHash,confirmedDate:'2026-10-21',confirmedAmountCents:2000},proof:{sourceHash:source.sessions.get('a').sourceHash,rawLine:{label:'Vodafone 20'}}};
+ const result=projectReconciliation(source,[pair,confirmed,card],new Map([['card-paper',false]]));assert.equal(result.rows[0].reviewed,true);assert.equal(result.rows[0].remainingCents,-700);assert.equal(result.rows[0].cardCents,20000);assert.match(result.text,/Εκκρεμεί επανέλεγχος: 2026-10-21 · Vodafone 20/);
+});
+test('one login with different recorded names or a shared generic code never becomes one employee net balance',()=>{
+ for(const generic of [false,true]){
+  const source=fixture(),a=source.sessions.get('a'),b=source.sessions.get('b');b.session.openedBy=a.session.openedBy;if(generic){a.session.openedByName='Έκτακτος';b.session.openedByName='Έκτακτος';}
+  const draft=projectReconciliation(source,[]),done=projectReconciliation(source,[confirmation(draft.rows[0],'confirm-a',1),confirmation(draft.rows[1],'confirm-b',2)]);
+  assert.equal(done.employees.length,2);assert(done.employees.every(e=>e.identityRequiresReview));assert.equal(done.totals.shortageCents,8700);assert.equal(done.totals.surplusCents,8000);
+ }
+});
+test('a verified wrong-handover note on a zero-cash shift remains a note without manufacturing a shortage',()=>{
+ const source=fixture(),a=source.sessions.get('a');a.initialCents=0;a.basisCents=0;a.cardCents=0;source.selectedIds=['a'];
+ const draft=projectReconciliation(source,[]),review=confirmation(draft.rows[0]);review.data.note='Λάθος παράδοση ταμείου.';
+ const done=projectReconciliation(source,[review]);assert.match(done.text,/Χρυσάνθη: Χωρίς διαφορά/);assert.match(done.text,/Σχόλιο ελέγχου: Λάθος παράδοση ταμείου\./);assert.equal(done.totals.shortageCents,0);
+});

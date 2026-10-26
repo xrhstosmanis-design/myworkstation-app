@@ -1,16 +1,21 @@
 import {readLifecycleGeneration,assertLifecycleMutation} from './store-lifecycle-generation.js';
 import {createCashPaperRepository} from './cash-paper-repository.js';
-import {reconciliationEntity,reconciliationLimit,scopeKey,hash,actionId,requestHash,chainState,activeRecords,reconcileError} from './cash-reconciliation-contract.js';
+import {reconciliationEntity,reconciliationLimit,scopeKey,hash,actionId,requestHash,chainState,activeRecords,reconcileError,transactionMatchesPaper} from './cash-reconciliation-contract.js';
 import {readReconciliationSources,readReconciliationSession} from './cash-reconciliation-source.js';
 import {projectReconciliation,immediateCashPair} from './cash-reconciliation-report.js';
 
 export function createCashReconciliationRepository(db){
   async function generation(scope){const s=await readLifecycleGeneration(db,scope);if(s.maintenance||s.retired)throw reconcileError('STORE_LIFECYCLE_MAINTENANCE');return s.generation;}
-  async function state(tx,scope){const key=scopeKey(scope),rows=await tx.$queryRaw`SELECT "id","companyId","storeId","action","entityType","entityId","afterJson","createdAt" FROM "WorkforceAuditLog" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "entityType"=${reconciliationEntity} AND "entityId"=${key} ORDER BY "createdAt","id" LIMIT 501`;return chainState(rows,scope);}
-  async function paperProof(tx,scope,data){
+  async function state(tx,scope){const key=scopeKey(scope),rows=await tx.$queryRaw`SELECT "id","companyId","storeId","action","entityType","entityId","afterJson","createdAt" FROM "WorkforceAuditLog" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "entityType"=${reconciliationEntity} AND "entityId"=${key} ORDER BY "createdAt","id" LIMIT ${reconciliationLimit+1}`;return chainState(rows,scope);}
+  async function paperReading(tx,scope,data){
     const papers=createCashPaperRepository(tx);await papers.source(scope,data.messageId,data.checksum);
-    const reading=await papers.get(scope,data.checksum),line=reading.extraction?.lines?.[data.line];
-    if(reading.status!=='EXTRACTED_UNVERIFIED'||reading.sourceKey!==data.sourceKey||!line)throw reconcileError('CASH_RECONCILIATION_PAPER_UNAVAILABLE');
+    const reading=await papers.get(scope,data.checksum);
+    if(reading.status!=='EXTRACTED_UNVERIFIED'||reading.sourceKey!==data.sourceKey)throw reconcileError('CASH_RECONCILIATION_PAPER_UNAVAILABLE');
+    return reading;
+  }
+  async function paperProof(tx,scope,data,cachedReading){
+    const reading=cachedReading||await paperReading(tx,scope,data),line=reading.extraction?.lines?.[data.line];
+    if(!line)throw reconcileError('CASH_RECONCILIATION_PAPER_UNAVAILABLE');
     return {paperLineHash:hash(line),rawLine:line,printedDate:reading.extraction.dateText,modelDocumentDate:reading.extraction.documentDate};
   }
   async function materialize(tx,scope,period,chain,extraIds=[]){
@@ -21,21 +26,29 @@ export function createCashReconciliationRepository(db){
     }if(connected.size>500)throw reconcileError('CASH_RECONCILIATION_LIMIT');}
     for(const id of connected)if(!source.sessions.has(id))source.sessions.set(id,await readReconciliationSession(tx,scope,id,source.rule));
     const validity=new Map(),associations=active.filter(r=>r.data.kind==='ASSOCIATE'&&source.sessions.has(r.data.sessionId));
-    if(associations.length>20)throw reconcileError('CASH_RECONCILIATION_LIMIT');
+    const readings=new Map(),fileKey=d=>JSON.stringify([d.messageId,d.checksum,d.sourceKey]);
+    if(new Set(associations.map(r=>fileKey(r.data))).size>50)throw reconcileError('CASH_RECONCILIATION_LIMIT');
     for(const r of associations){
-      try{const proof=await paperProof(tx,scope,r.data),s=source.sessions.get(r.data.sessionId),t=r.data.transactionId?s.transactions.find(t=>t.id===r.data.transactionId):null;
-        validity.set(r.id,proof.paperLineHash===r.proof.paperLineHash&&(!r.data.transactionId||Boolean(t&&!t.reversed&&t.amountCents!==null&&Math.abs(t.amountCents)===Math.abs(r.data.confirmedAmountCents))));
+      try{const key=fileKey(r.data);if(!readings.has(key)){try{readings.set(key,await paperReading(tx,scope,r.data));}catch{readings.set(key,null);}}
+        if(!readings.get(key))throw reconcileError('CASH_RECONCILIATION_PAPER_UNAVAILABLE');
+        const proof=await paperProof(tx,scope,r.data,readings.get(key)),s=source.sessions.get(r.data.sessionId),t=r.data.transactionId?s.transactions.find(t=>t.id===r.data.transactionId):null;
+        validity.set(r.id,proof.paperLineHash===r.proof.paperLineHash&&(!r.data.transactionId||transactionMatchesPaper(r.data.confirmedKind,t,r.data.confirmedAmountCents)));
       }catch{validity.set(r.id,false);}
     }
     const report=projectReconciliation(source,chain.records,validity);
     return {source,report};
   }
-  const response=(chain,report,extra={})=>{const ids=new Set(activeRecords(chain.records).map(r=>r.id));return {...report,head:chain.head,completedRequestIds:chain.records.map(r=>r.requestId),history:chain.records.slice(-50).map(r=>({id:r.id,kind:r.data.kind,note:r.data.note,actorName:r.actorName,createdAt:r.createdAt,active:ids.has(r.id),sessionId:r.data.sessionId||r.data.previousSessionId||null,relatedSessionId:r.data.nextSessionId||null,amountCents:r.data.amountCents??null})),...extra};};
-  async function read(scope,period){
+  const response=(chain,report,extra={},historyPage=0,requestId=null)=>{
+    const ids=new Set(activeRecords(chain.records).map(r=>r.id)),end=Math.max(0,chain.records.length-historyPage*50),start=Math.max(0,end-50);
+    return {...report,head:chain.head,requestId,requestStatus:requestId?(chain.records.some(r=>r.requestId===requestId)?'APPLIED':'NOT_FOUND'):null,historyPage,historyPages:Math.max(1,Math.ceil(chain.records.length/50)),historyTotal:chain.records.length,history:chain.records.slice(start,end).map(r=>({id:r.id,kind:r.data.kind,note:r.data.note,actorName:r.actorName,createdAt:r.createdAt,active:r.data.kind==='REVOKE'?null:ids.has(r.id),sessionId:r.data.sessionId||r.data.previousSessionId||null,relatedSessionId:r.data.nextSessionId||null,amountCents:r.data.amountCents??null,paper:r.data.kind==='ASSOCIATE'?{label:r.proof.rawLine?.label||'Χαρτί',rawAmountText:r.proof.rawLine?.amountText??null,rawTimeText:r.proof.rawLine?.timeText??null,rawDate:r.proof.printedDate??null,confirmedKind:r.data.confirmedKind,confirmedDate:r.data.confirmedDate,confirmedAmountCents:r.data.confirmedAmountCents}:null})),...extra};
+  };
+  async function read(scope,period,{historyPage=0,requestId=null}={}){
+    if(!Number.isInteger(historyPage)||historyPage<0||historyPage>199)throw reconcileError('CASH_RECONCILIATION_SCOPE_INVALID',400);
     return db.$transaction(async tx=>{
       if(await generationFor(tx,scope)!==scope.generation)throw reconcileError('STORE_LIFECYCLE_STALE_GENERATION');
-      const chain=await state(tx,scope),{report}=await materialize(tx,scope,period,chain);
-      return response(chain,report,{generation:scope.generation,checkedAt:new Date().toISOString()});
+      const chain=await state(tx,scope);if(historyPage>=Math.max(1,Math.ceil(chain.records.length/50)))throw reconcileError('CASH_RECONCILIATION_SCOPE_INVALID',400);
+      const {report}=await materialize(tx,scope,period,chain);
+      return response(chain,report,{generation:scope.generation,checkedAt:new Date().toISOString()},historyPage,requestId);
     },{isolationLevel:'RepeatableRead',maxWait:5000,timeout:15000});
   }
   async function generationFor(tx,scope){const s=await readLifecycleGeneration(tx,scope);if(s.maintenance||s.retired)throw reconcileError('STORE_LIFECYCLE_MAINTENANCE');return s.generation;}
@@ -55,11 +68,12 @@ export function createCashReconciliationRepository(db){
         const s=source.sessions.get(d.sessionId);if(!source.selectedIds.includes(d.sessionId)||!s||s.sourceHash!==d.sourceHash)throw reconcileError('CASH_RECONCILIATION_SOURCE_CHANGED');
         if(active.some(r=>r.data.kind==='ASSOCIATE'&&r.data.sourceKey===d.sourceKey&&r.data.line===d.line))throw reconcileError('CASH_RECONCILIATION_LINE_USED');
         const p=await paperProof(tx,scope,d),t=d.transactionId?s.transactions.find(t=>t.id===d.transactionId):null;
-        if(d.transactionId&&(!t||t.reversed||t.amountCents===null||Math.abs(t.amountCents)!==Math.abs(d.confirmedAmountCents)))throw reconcileError('CASH_RECONCILIATION_TRANSACTION_MISMATCH');
+        if(d.transactionId&&!transactionMatchesPaper(d.confirmedKind,t,d.confirmedAmountCents))throw reconcileError('CASH_RECONCILIATION_TRANSACTION_MISMATCH');
         proof={...proof,...p,sourceHash:s.sourceHash};
       }else if(d.kind==='OFFSET'){
         const a=source.sessions.get(d.previousSessionId),b=source.sessions.get(d.nextSessionId),ra=allRows.find(r=>r.sessionId===d.previousSessionId),rb=allRows.find(r=>r.sessionId===d.nextSessionId);
         if(![d.previousSessionId,d.nextSessionId].some(id=>source.selectedIds.includes(id))||!a||!b||!immediateCashPair(a,b,source.rule)||a.sourceHash!==d.previousHash||b.sourceHash!==d.nextHash)throw reconcileError('CASH_RECONCILIATION_PAIR_INVALID');
+        if(active.some(r=>r.data.kind==='OFFSET'&&r.data.previousSessionId===d.previousSessionId&&r.data.nextSessionId===d.nextSessionId))throw reconcileError('CASH_RECONCILIATION_PAIR_ALREADY_REVIEWED');
         if(!ra||!rb||ra.recheck||rb.recheck||ra.remainingCents===null||rb.remainingCents===null||ra.remainingCents*rb.remainingCents>=0||d.amountCents>Math.min(Math.abs(ra.remainingCents),Math.abs(rb.remainingCents)))throw reconcileError('CASH_RECONCILIATION_AMOUNT_INVALID');
         proof={...proof,previousHash:a.sourceHash,nextHash:b.sourceHash,previousRemainingCents:ra.remainingCents,nextRemainingCents:rb.remainingCents};
       }else if(d.kind==='CONFIRM'){
