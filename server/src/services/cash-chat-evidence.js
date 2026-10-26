@@ -26,7 +26,7 @@ export async function readCashChatEvidence(db, {companyId, storeId}) {
       const reference = {messageId:row.id, uploadedAt:row.createdAt, category:row.category, filename:String(row.attachmentName || '').slice(0,180)};
       if (checksum && byChecksum.has(checksum)) { byChecksum.get(checksum).references.push(reference); continue; }
       const source = {sourceId:checksum ? `SHA256:${checksum}` : `MESSAGE:${row.id}`, checksum, mimeType:row.attachmentMimeType,
-        references:[reference], readingStatus:'NOT_READ', documentDate:null, sessionId:null, associationStatus:'UNVERIFIED'};
+        references:[reference], readingStatus:'NOT_CHECKED', documentDate:null, sessionId:null, associationStatus:'UNVERIFIED'};
       sources.push(source);
       if (checksum) byChecksum.set(checksum,source);
     }
