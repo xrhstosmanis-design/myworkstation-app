@@ -22,6 +22,7 @@ test('only original cashier can decide after response, immutable decisions bind 
  await assert.rejects(recordFtextOperatorDecision(tx,row.id,scope,'foreign',{outcome:'YES'},{context}));
  await assert.rejects(recordFtextOperatorDecision(tx,row.id,{...scope,storeId:'foreign'},'cashier',{outcome:'YES'},{context}));assert.equal(writes,0);
  await recordFtextOperatorDecision(tx,row.id,scope,'cashier',{outcome:'UNCERTAIN'},{context});
+ await recordFtextOperatorDecision(tx,row.id,scope,'cashier',{outcome:'UNCERTAIN'},{context});assert.equal(writes,1);
  await recordFtextOperatorDecision(tx,row.id,scope,'cashier',{outcome:'YES'},{context});assert.equal(writes,2);
  assert.doesNotThrow(()=>assertFtextOperatorCardApproved(saved,settings));
  await recordFtextOperatorDecision(tx,row.id,scope,'cashier',{outcome:'YES'},{context});assert.equal(writes,2);

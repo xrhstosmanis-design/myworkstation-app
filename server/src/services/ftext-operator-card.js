@@ -17,7 +17,7 @@ export async function recordFtextOperatorDecision(tx,id,scope,actorId,input,{con
  const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} FOR UPDATE`)[0];
  if(!row||!actorId||actorId!==row.checkoutJson?.actorId||!ftextOperatorCardMode(row)||current.settings.cardEnabled!==true||current.settings.cardPayment?.resultFormat!=='OPERATOR_CONFIRMATION'||row.settingsHash!==ftextSettingsHash(current.settings)||row.lifecycleGeneration!==current.settings.lifecycleGeneration||row.checkoutJson?.ftextVoid||!row.resultHash||!row.result||!['CONFIRMED','REQUIRES_CHECK','SALE_COMMITTED'].includes(row.status))fail();
  const previous=row.checkoutJson.ftextCardDecision;
- if(previous&&previous.outcome!=='UNCERTAIN'){
+ if(previous&&(previous.outcome!=='UNCERTAIN'||outcome==='UNCERTAIN')){
   if(previous.outcome!==outcome||previous.actorId!==actorId||previous.resultHash!==row.resultHash||previous.settingsHash!==row.settingsHash)fail();
   return row;
  }
