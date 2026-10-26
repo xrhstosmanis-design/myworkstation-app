@@ -1,0 +1,9 @@
+# myDATA HTTP failure diagnostics
+
+## 26/10/2026 — MYDATA-HTTP-DIAGNOSTICS-01 / ASSIGNED / NOT TESTED
+
+Owner fix/mydata-http-diagnostics-20261026. User explicitly requests a central correction after a real selected-store receiving failure at 18:54 Europe/Athens. Render production revision025a9a3a runtime18:54:19 confirms upstream403 in performSync, not an application role denial. Installed source discards the upstream body and emits generic502. Root cause of upstream refusal remains UNKNOWN; stored/enabled credentials are not proof of acceptance.
+
+Independent bounded diagnostic subtask only: classify recognized HTTP error responses into fixed safe Greek guidance, preserve unknown403 as unknown, give a random support reference and safe metadata for manual AND scheduled receiving. Never return/log upstream bodies, credentials, URLs, taxpayer/document identifiers or arbitrary remote text. No automatic credential changes, retry, endpoint change, new sync, invoice/payment/stock/fiscal mutation or production DB operation. Preserve existing receiving owner codex/mydata-completion-20261006, other invoice owners and all previous PASS; no broader takeover. Required source/unit and actual route failure-path tests, full PR/main CI, ordinary guarded release and exact revision. Actual new behavior NOT TESTED/AWAITING LAB; upstream403 resolution is separate and unproven. Checkpoint CHECKPOINTS/CHANGES/2026-10-26-mydata-http-diagnostics.md. Claim must merge green before source.
+
+Protected: store/tenant/role/license/lifecycle admission, manual/scheduled shared service, cursor and pagination, original acquisition, one-draft/MARK idempotency and no automatic financial/stock/fiscal action. Existing scoped manual PASS remains unchanged. Synthetic failures must prove no document writes or original acquisition and secret/raw-response exclusion.
