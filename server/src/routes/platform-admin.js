@@ -1,3 +1,4 @@
+import {createReviewedCashEmailReader,reviewedCashEmailReadiness,assertReviewedCashEmailPreview} from '../services/cash-reviewed-email.js';
 import {saveOnlineVisibility} from "../online-catalog-visibility.js";
 import {saveStoreMetadata} from '../services/store-metadata-mutation.js';
 import {assistantHistoryTurnMetadata} from '../services/assistant-history-turns.js';
@@ -1373,37 +1374,43 @@ router.get("/cash-control/shortages",async(req,res,next)=>{try{
   res.json({from:range.from,to:range.to,fromTime:range.fromTime,toTime:range.toTime,storeId:range.storeId||null,operator:range.operator||null,rows:normalized,operators:[...byOperator.values()],totalShortage:normalized.reduce((sum,row)=>sum+row.shortage,0),timeZone:"Europe/Athens"});
 }catch(error){next(error)}});
 
-async function cashReportEmailData(storeId,date){
+const readReviewedCashEmail=createReviewedCashEmailReader({db:prisma});
+async function cashReportEmailData(storeId,date,user){
+  const evidence=await readReviewedCashEmail(user,storeId,date);
   const store=await prisma.store.findUnique({where:{id:storeId},select:{id:true,name:true,responsibleEmail:true,companyId:true,company:{select:{users:{where:{role:"OWNER"},select:{email:true}}}}}});
   if(!store)return null;
   const rows=await prisma.$queryRaw`SELECT s."id" AS "sessionId",s."shiftLabel",s."terminalPos",s."openedByName",s."variance",s."cardVariance",r."decision" AS "reviewDecision",r."actorName" AS "reviewedBy",r."createdAt" AS "reviewedAt",mv."lastMovementAt",(r."id" IS NOT NULL AND (mv."lastMovementAt" IS NULL OR r."createdAt">=mv."lastMovementAt")) AS "reviewValid" FROM "CashShiftSession" s LEFT JOIN LATERAL (SELECT cr."id",cr."decision",cr."actorName",cr."createdAt" FROM "CashControlReview" cr WHERE cr."companyId"=s."companyId" AND cr."storeId"=s."storeId" AND cr."sessionId"=s."id" ORDER BY cr."createdAt" DESC LIMIT 1) r ON TRUE LEFT JOIN LATERAL (SELECT MAX(GREATEST(t."createdAt",COALESCE(t."reversedAt",t."createdAt"))) AS "lastMovementAt" FROM "StoreTransaction" t WHERE t."companyId"=s."companyId" AND t."storeId"=s."storeId" AND t."sessionId"=s."id") mv ON TRUE WHERE s."storeId"=${storeId} AND s."companyId"=${store.companyId} AND s."status"='CLOSED' AND (s."closedAt" AT TIME ZONE 'Europe/Athens')::date=${date}::date ORDER BY s."openedAt"`;
   const recipients=normalizeReportRecipients([...store.company.users.map(row=>row.email),store.responsibleEmail]);
-  return {store,recipients,rows:rows.map(row=>({...row,variance:Number(row.variance||0),cardVariance:Number(row.cardVariance||0),reviewValid:Boolean(row.reviewValid)}))};
+  if(store.companyId!==evidence.companyId)throw Object.assign(new Error("Η επιλογή καταστήματος άλλαξε."),{status:409});
+  const normalized=rows.map(row=>({...row,variance:Number(row.variance||0),cardVariance:Number(row.cardVariance||0),reviewValid:Boolean(row.reviewValid)}));
+  return {store,recipients,rows:normalized,evidence,readyToSend:reviewedCashEmailReadiness(evidence,normalized)};
 }
 
 router.get("/cash-control/stores/:storeId/email-preview",async(req,res,next)=>{try{
   const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(String(req.query.date||""));
-  const report=await cashReportEmailData(req.params.storeId,date);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
-  res.json({date,storeId:report.store.id,storeName:report.store.name,recipients:report.recipients,rows:report.rows,readyToSend:report.rows.length>0&&report.rows.every(row=>row.reviewValid),manualSendOnly:true});
+  const report=await cashReportEmailData(req.params.storeId,date,req.user);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  res.json({date,storeId:report.store.id,storeName:report.store.name,recipients:report.recipients,rows:report.rows,readyToSend:report.readyToSend,text:report.evidence.report.text,reportHash:report.evidence.fingerprint,generation:report.evidence.generation,manualSendOnly:true});
 }catch(error){next(error)}});
 
 router.post("/cash-control/stores/:storeId/send-email",async(req,res,next)=>{try{
-  const body=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),comment:z.string().trim().max(2000).optional().default("")}).parse(req.body||{});
-  const report=await cashReportEmailData(req.params.storeId,body.date);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  const body=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),comment:z.string().trim().max(2000).optional().default(""),reportHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/).optional()}).parse(req.body||{});
+  const report=await cashReportEmailData(req.params.storeId,body.date,req.user);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   if(!report.rows.length)return res.status(422).json({error:"Δεν υπάρχουν κλεισμένες βάρδιες για αυτή την ημερομηνία."});
-  if(report.rows.some(row=>!row.reviewValid))return res.status(409).json({error:"Η αναφορά δεν μπορεί να σταλεί: υπάρχει βάρδια χωρίς ολοκληρωμένο έλεγχο ή με νεότερη κίνηση που απαιτεί επανέλεγχο.",code:"CASH_CONTROL_RECHECK_REQUIRED"});
+  assertReviewedCashEmailPreview(report.evidence,body);
+  if(!report.readyToSend||report.rows.some(row=>!row.reviewValid))return res.status(409).json({error:"Η αναφορά δεν μπορεί να σταλεί: υπάρχει βάρδια χωρίς ολοκληρωμένο έλεγχο ή με νεότερη κίνηση που απαιτεί επανέλεγχο.",code:"CASH_CONTROL_RECHECK_REQUIRED"});
   if(!report.recipients.length)return res.status(422).json({error:"Δεν έχει οριστεί email ιδιοκτήτη ή υπευθύνου."});
-  const sent=await sendCashControlDailyReportEmail({companyId:report.store.companyId,storeId:report.store.id,to:report.recipients,storeName:report.store.name,date:body.date,rows:report.rows,comment:body.comment,auditorName:req.user.fullName||req.user.email||"Super Admin"});
+  const sent=await sendCashControlDailyReportEmail({companyId:report.store.companyId,storeId:report.store.id,to:report.recipients,storeName:report.store.name,date:body.date,rows:report.rows,evidence:report.evidence,comment:body.comment,auditorName:req.user.fullName||req.user.email||"Super Admin"});
   await prisma.authAudit.create({data:{userId:req.user.id,email:req.user.email||"super-admin",event:"CASH_CONTROL_REPORT_EMAIL_SENT",success:true,deviceName:`${report.store.name} · ${body.date} · ${sent.recipients.join(", ")}`}});
   res.json({ok:true,recipients:sent.recipients,messageId:sent.messageId});
 }catch(error){next(error)}});
 
 router.post("/cash-control/stores/:storeId/send-preview",async(req,res,next)=>{try{
-  const body=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),comment:z.string().trim().max(2000).optional().default("")}).parse(req.body||{});
+  const body=z.object({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),comment:z.string().trim().max(2000).optional().default(""),reportHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/).optional()}).parse(req.body||{});
   const recipient=String(req.user.email||"").trim().toLowerCase();if(!recipient)return res.status(422).json({error:"Δεν έχει οριστεί email στον λογαριασμό Super Admin."});
-  const report=await cashReportEmailData(req.params.storeId,body.date);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
+  const report=await cashReportEmailData(req.params.storeId,body.date,req.user);if(!report)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   if(!report.rows.length)return res.status(422).json({error:"Δεν υπάρχουν κλεισμένες βάρδιες για αυτή την ημερομηνία."});
-  const sent=await sendCashControlDailyReportEmail({companyId:report.store.companyId,storeId:report.store.id,to:[recipient],storeName:report.store.name,date:body.date,rows:report.rows,comment:body.comment,auditorName:req.user.fullName||req.user.email||"Super Admin"});
+  assertReviewedCashEmailPreview(report.evidence,body);
+  const sent=await sendCashControlDailyReportEmail({companyId:report.store.companyId,storeId:report.store.id,to:[recipient],previewOnly:true,storeName:report.store.name,date:body.date,rows:report.rows,evidence:report.evidence,comment:body.comment,auditorName:req.user.fullName||req.user.email||"Super Admin"});
   await prisma.authAudit.create({data:{userId:req.user.id,email:recipient,event:"CASH_CONTROL_REPORT_PREVIEW_SENT",success:true,deviceName:`${report.store.name} · ${body.date}`}});
   res.json({ok:true,recipients:sent.recipients,messageId:sent.messageId,previewOnly:true});
 }catch(error){next(error)}});

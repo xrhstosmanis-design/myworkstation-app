@@ -577,28 +577,39 @@ export default function PlatformAdminApp(){
   const previewAndSendCashReport=async store=>{
     if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Εμφάνιση πριν από εξαγωγή ή αποστολή.");
     if(!cashReport||cashReport.from!==cashReport.to||cashReport.sessionId||cashReport.fromTime!=="00:00"||cashReport.toTime!=="23:59")return setError("Το υπάρχον email καλύπτει μόνο πλήρη ημερολογιακή ημέρα. Η αποστολή της επιλεγμένης περιόδου εκκρεμεί.");
+    const sequence=++cashLoadSequence.current,date=cashReport.from||cashReport.date,api=requestFor("cash");
+    const current=()=>sequence===cashLoadSequence.current;
     setBusy(`cash-email:${store.storeId}`);setError("");setMessage("");
     try{
-      const preview=await requestFor("cash")(`/api/platform/cash-control/stores/${store.storeId}/email-preview?date=${cashReport.from||cashReport.date}`);
+      const preview=await api(`/api/platform/cash-control/stores/${store.storeId}/email-preview?date=${date}`);
+      if(!current())return;
+      if(preview.storeId!==store.storeId||preview.date!==date||typeof preview.text!=="string"||!preview.text||!/^[a-f0-9]{64}$/.test(preview.reportHash)||!String(preview.generation).match(/^(0|[1-9][0-9]{0,18})$/))throw new Error("Ανανέωσε την προεπισκόπηση της αναφοράς.");
       if(!preview.rows.length)throw new Error("Δεν υπάρχουν κλεισμένες βάρδιες για αποστολή.");
-      if(!preview.readyToSend)throw new Error("Υπάρχει βάρδια χωρίς ολοκληρωμένο έλεγχο ή με νεότερη κίνηση. Κάνε επανέλεγχο πριν την αποστολή στους ιδιοκτήτες.");
+      if(!preview.readyToSend){window.alert(preview.text+"\n\nΥπάρχει βάρδια χωρίς ολοκληρωμένο έλεγχο ή με νεότερη κίνηση. Κάνε επανέλεγχο πριν την αποστολή στους ιδιοκτήτες.");return;}
       const recipients=preview.recipients.join(", ")||"Δεν έχουν οριστεί παραλήπτες";
-      const comment=window.prompt(`ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΑΝΑΦΟΡΑΣ\n${preview.storeName} · ${preview.date}\nΒάρδιες: ${preview.rows.length}\nΠαραλήπτες: ${recipients}\n\nΓράψε προαιρετικό σχόλιο. Πατώντας OK θα σταλεί το email.`,"");
-      if(comment===null)return;
-      const sent=await requestFor("cash")(`/api/platform/cash-control/stores/${store.storeId}/send-email`,{method:"POST",body:JSON.stringify({date:cashReport.from||cashReport.date,comment})});
+      const comment=window.prompt(`ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΑΝΑΦΟΡΑΣ\n${preview.text}\nΠαραλήπτες: ${recipients}\n\nΓράψε προαιρετικό σχόλιο. Πατώντας OK θα σταλεί το email.`,"");
+      if(comment===null||!current())return;
+      const sent=await api(`/api/platform/cash-control/stores/${store.storeId}/send-email`,{method:"POST",body:JSON.stringify({date,comment,reportHash:preview.reportHash,generation:preview.generation})});
+      if(!current())return;
       setMessage(`Η αναφορά του ${preview.storeName} στάλθηκε σε: ${sent.recipients.join(", ")}.`);
-    }catch(err){setError(err.message)}finally{setBusy("")}
+    }catch(err){if(current())setError(err.message)}finally{if(current())setBusy("")}
   };
 
   const sendCashPreviewToMe=async store=>{
     if(!cashReportMatchesSelection())return setError("Τα φίλτρα άλλαξαν. Πάτησε Εμφάνιση πριν από εξαγωγή ή αποστολή.");
     if(!cashReport||cashReport.from!==cashReport.to||cashReport.sessionId||cashReport.fromTime!=="00:00"||cashReport.toTime!=="23:59")return setError("Το υπάρχον email καλύπτει μόνο πλήρη ημερολογιακή ημέρα. Η αποστολή της επιλεγμένης περιόδου εκκρεμεί.");
+    const sequence=++cashLoadSequence.current,date=cashReport.from||cashReport.date,api=requestFor("cash");
+    const current=()=>sequence===cashLoadSequence.current;
     const key=`cash-preview:${store.storeId}`;setBusy(key);setError("");setMessage("");
     try{
-      const comment=window.prompt(`Δοκιμαστική αναφορά στο δικό σου email\n${store.storeName} · ${cashReportDate}\n\nΓράψε προαιρετικό σχόλιο.`,"");if(comment===null)return;
-      const sent=await requestFor("cash")(`/api/platform/cash-control/stores/${store.storeId}/send-preview`,{method:"POST",body:JSON.stringify({date:cashReport.from||cashReport.date,comment})});
+      const preview=await api(`/api/platform/cash-control/stores/${store.storeId}/email-preview?date=${date}`);
+      if(!current())return;
+      if(preview.storeId!==store.storeId||preview.date!==date||typeof preview.text!=="string"||!preview.text||!/^[a-f0-9]{64}$/.test(preview.reportHash)||!String(preview.generation).match(/^(0|[1-9][0-9]{0,18})$/))throw new Error("Ανανέωσε την προεπισκόπηση της αναφοράς.");
+      const comment=window.prompt(`Δοκιμαστική αναφορά στο δικό σου email\n${preview.text}\n\nΓράψε προαιρετικό σχόλιο.`,"");if(comment===null||!current())return;
+      const sent=await api(`/api/platform/cash-control/stores/${store.storeId}/send-preview`,{method:"POST",body:JSON.stringify({date,comment,reportHash:preview.reportHash,generation:preview.generation})});
+      if(!current())return;
       setMessage(`Η δοκιμαστική αναφορά στάλθηκε μόνο στο ${sent.recipients.join(", ")}.`);
-    }catch(err){setError(err.message)}finally{setBusy("")}
+    }catch(err){if(current())setError(err.message)}finally{if(current())setBusy("")}
   };
 
   const downloadShortages=async store=>{
