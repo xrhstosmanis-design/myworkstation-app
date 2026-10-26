@@ -26,7 +26,8 @@ function New-FtextCashCommand($Config,$Request,[string]$ResultPath) {
  if($isCard) {
   if(-not $Config.PSObject.Properties['cardEnabled'] -or $Config.cardEnabled -ne $true -or -not $Config.PSObject.Properties['cardPayment']) {throw 'Card execution is not enabled.'}
   $profile=$Config.cardPayment
-  if($profile.confirmed -ne $true -or $profile.resultFormat -cne 'POS_LINE8_OS7' -or [string]$profile.code -notmatch '^([2-9]|[12][0-9]|30)$' -or [string]$p.payment.code -cne [string]$profile.code -or [string]$profile.posTerminalId -notmatch '^([1-9]|10)$' -or $profile.transactionType -notin @(1,6)) {throw 'Card payment profile is not confirmed.'}
+  if($profile.resultFormat -ceq 'OPERATOR_CONFIRMATION' -and $profile.transactionType -ne 1) {throw 'Operator confirmation requires the programmed Sale payment type.'}
+  if($profile.confirmed -ne $true -or $profile.resultFormat -cnotin @('POS_LINE8_OS7','OPERATOR_CONFIRMATION') -or [string]$profile.code -notmatch '^([2-9]|[12][0-9]|30)$' -or [string]$p.payment.code -cne [string]$profile.code -or [string]$profile.posTerminalId -notmatch '^([1-9]|10)$' -or $profile.transactionType -notin @(1,6)) {throw 'Card payment profile is not confirmed.'}
  } elseif([string]$p.payment.method -cne 'CASH' -or $p.payment.code -ne 1) {throw 'Unsupported fiscal payment.'}
  if($ResultPath -match '[|\r\n]' -or [IO.Path]::GetDirectoryName($ResultPath) -cne [string]$Config.workFolder) {throw 'Invalid cash result path.'}
  $lines=@($p.lines);if($lines.Count -lt 1 -or $lines.Count -gt 400) {throw 'Invalid cash line count.'}
@@ -70,15 +71,17 @@ function Read-FtextCashResult([byte[]]$Bytes,$Config,$Request) {
   if(-not $status.ok -and [string]$status.failedCommand -match '^PAY\|(?:[0-9]+\.[0-9]{2})?\|(?:[2-9]|[12][0-9]|30)$') {$report.failedCommand=[string]$status.failedCommand}
   if($status.ok) {
    $text=[Text.Encoding]::GetEncoding(1253).GetString($Bytes);$lines=@($text -split '\r?\n');$uri=$null
-   if($lines.Count -lt 8 -or [decimal]$status.dayCounter -le 0 -or -not [Uri]::TryCreate($lines[6],[UriKind]::Absolute,[ref]$uri) -or $uri.Scheme -cne 'https' -or $uri.UserInfo -or -not ($uri.Host -eq 'aade.gr' -or $uri.Host.EndsWith('.aade.gr'))) {throw 'No final AADE receipt URL.'}
+   if($lines.Count -lt 7 -or [decimal]$status.dayCounter -le 0 -or -not [Uri]::TryCreate($lines[6],[UriKind]::Absolute,[ref]$uri) -or $uri.Scheme -cne 'https' -or $uri.UserInfo -or -not ($uri.Host -eq 'aade.gr' -or $uri.Host.EndsWith('.aade.gr'))) {throw 'No final AADE receipt URL.'}
    if([string]$Request.plan.payment.method -ceq 'CARD') {
-    if(-not $Config.PSObject.Properties['cardEnabled'] -or $Config.cardEnabled -ne $true -or -not $Config.PSObject.Properties['cardPayment'] -or $Config.cardPayment.resultFormat -cne 'POS_LINE8_OS7' -or $Config.cardPayment.confirmed -ne $true -or [string]$Request.plan.payment.code -cne [string]$Config.cardPayment.code) {throw 'Unconfirmed card result format.'}
-    $line=[string]$lines[7]
+    if(-not $Config.PSObject.Properties['cardEnabled'] -or $Config.cardEnabled -ne $true -or -not $Config.PSObject.Properties['cardPayment'] -or $Config.cardPayment.resultFormat -cnotin @('POS_LINE8_OS7','OPERATOR_CONFIRMATION') -or $Config.cardPayment.confirmed -ne $true -or [string]$Request.plan.payment.code -cne [string]$Config.cardPayment.code) {throw 'Unconfirmed card result format.'}
+    $line='';if($lines.Count -gt 7) {$line=[string]$lines[7]}
+    if($Config.cardPayment.resultFormat -ceq 'POS_LINE8_OS7' -or -not [string]::IsNullOrWhiteSpace($line)) {
     if($line -notmatch '^#[^#]+$') {throw 'One complete POS payment is required.'}
     $fields=@($line.Substring(1).Split(';'))
     if($fields.Count -ne 3 -or [string]::IsNullOrWhiteSpace($fields[0]) -or $fields[0] -cne $fields[0].Trim() -or $fields[0].Length -gt 60 -or $fields[0] -match '[|\x00-\x1f\x7f-\x9f]' -or $fields[0] -match '(?i)iris|[0-9]{7}' -or $fields[1] -notmatch '^(0|[1-9][0-9]{0,8})\.[0-9]{2}$' -or $fields[2].Length -lt 13 -or $fields[2].Length -gt 19 -or $fields[2] -notmatch '^[0-9]{0,6}\*{6,15}[0-9]{4}$') {throw 'Invalid masked-card evidence.'}
     if($fields[1] -cne [string]$Request.plan.payment.amount -or $fields[1] -cne [string]$Request.plan.total -or [decimal]::Parse($fields[1],[Globalization.CultureInfo]::InvariantCulture) -le 0) {throw 'Card amount does not match the checkout.'}
     $report.posPayments=@([pscustomobject]@{cardType=$fields[0];amount=$fields[1];cardNumberMasked=$fields[2]})
+    }
    } elseif($lines.Count -gt 7 -and -not [string]::IsNullOrWhiteSpace([string]$lines[7])) {throw 'Unexpected POS payment in cash receipt.'}
    $report.outcome='CONFIRMED';$report.serialNumber=$status.serialNumber;$report.dayId=$status.dayId;$report.dayCounter=$status.dayCounter;$report.deviceTime=$status.deviceTime;$report.qr=$lines[6];$report.Remove('description')
   }

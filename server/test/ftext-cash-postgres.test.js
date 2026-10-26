@@ -1,3 +1,4 @@
+import {recordFtextOperatorDecision} from '../src/services/ftext-operator-card.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
@@ -93,6 +94,41 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    const stock=await a.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct"`;assert.equal(Number(stock.find(s=>s.storeId==='store-a').currentStock),-2);assert.equal(Number(stock.find(s=>s.storeId==='store-control').currentStock),20);
    assert.equal((await a.$queryRaw`SELECT * FROM "StockMovement"`).length,2);
    assert.equal(await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings)),null);
+  });
+
+  await t.test('operator card: no auto commit, original cashier decision bound to receipt, concurrent exactly-once commit',async()=>{
+   settings.cardPayment={code:2,posTerminalId:1,transactionType:1,resultFormat:'OPERATOR_CONFIRMATION',confirmed:true};
+   const card=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'operator-card',checkout:{...input.checkout,paymentMethod:'CARD'}}));
+   await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+   const decide=(db,outcome,actor='operator-a',selected=scope)=>db.$transaction(tx=>recordFtextOperatorDecision(tx,card.id,selected,actor,{outcome},{context}));
+   await assert.rejects(decide(a,'YES'));
+   const result={...receipt,requestId:card.id,settingsHash:card.settingsHash,dayCounter:'44'};
+   await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,result));
+   await assert.rejects(finalizeFtextCashRequest(a,card.id,scope,opts));
+   await assert.rejects(decide(a,'YES','foreign-cashier'));
+   await assert.rejects(decide(a,'YES','operator-a',{...scope,terminalPos:'foreign'}));
+   assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,2);
+   const results=await Promise.all([decide(a,'YES'),decide(b,'YES')]);assert.deepEqual(results[0].checkoutJson.ftextCardDecision,results[1].checkoutJson.ftextCardDecision);
+   await assert.rejects(decide(a,'NO'));
+   await assert.rejects(finalizeFtextCashRequest(a,card.id,scope,{context,reserveStock:async()=>{throw Error('stock failure')}}));
+   assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,2);
+   const commits=await Promise.all([finalizeFtextCashRequest(a,card.id,scope,opts),finalizeFtextCashRequest(b,card.id,scope,opts)]);assert.equal(commits[0].saleId,commits[1].saleId);assert.equal(commits.filter(x=>x.replay).length,1);
+   assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,3);
+   assert.equal((await a.$queryRaw`SELECT * FROM "StockMovement"`).length,3);
+   assert.equal(Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-a'`)[0].currentStock),-3);
+   assert.equal(Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-control'`)[0].currentStock),20);
+   const replay=await decide(a,'YES');assert.equal(replay.status,'SALE_COMMITTED');
+  });
+  await t.test('operator NO on failed PAY preserves immutable result, no business writes and no register lock release',async()=>{
+   const card=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'operator-declined',checkout:{...input.checkout,paymentMethod:'CARD'}}));
+   await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+   const original=await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{requestId:card.id,settingsHash:card.settingsHash,outcome:'REQUIRES_CHECK',code:48,failedCommand:'PAY||2',rawResultHash:'e'.repeat(64)}));
+   const row=await a.$transaction(tx=>recordFtextOperatorDecision(tx,card.id,scope,'operator-a',{outcome:'NO'},{context}));
+   assert.equal(row.status,'REQUIRES_CHECK');assert.equal(row.resultHash,original.resultHash);assert.deepEqual(row.result,original.result);
+   await assert.rejects(a.$transaction(tx=>recordFtextOperatorDecision(tx,card.id,scope,'operator-a',{outcome:'YES'},{context})));
+   await assert.rejects(finalizeFtextCashRequest(a,card.id,scope,opts));
+   await assert.rejects(a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'no-resend'})),e=>e.code==='FTEXT_CASH_PENDING');
+   assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,3);assert.equal((await a.$queryRaw`SELECT * FROM "StockMovement"`).length,3);
   });
 
  }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);try{if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`)}finally{await admin.$disconnect()}}
