@@ -1,3 +1,5 @@
+import {createCameraAcquisition,captureCameraFrame} from "./lib/camera-acquisition.js";
+import {mountCameraControls} from "./lib/mount-camera-controls.js";
 import {greeceDateTimeInput} from "../../shared/greece-time.mjs";
 function setFiles(target,files){
   if(!target||!files?.length)return;
@@ -82,6 +84,7 @@ function makePdfFromJpegs(images){
 }
 
 function openCamera(target){
+  const acquisition=createCameraAcquisition();let clearControls=()=>{};
   const overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:18px';
   overlay.innerHTML=`<div style="width:min(900px,96vw);max-height:96vh;overflow:auto;background:#fff;border-radius:16px;padding:16px">
@@ -103,24 +106,23 @@ function openCamera(target){
   const use=overlay.querySelector('.cam-use');
   const captures=[];
   let stream=null;
-  const close=()=>{stream?.getTracks?.().forEach(t=>t.stop());overlay.remove();};
+  const lifetime=new MutationObserver(()=>{if(!target.isConnected||!overlay.isConnected)close()});const close=()=>{lifetime.disconnect();clearControls();acquisition.dispose();captures.splice(0);stream?.getTracks?.().forEach(t=>t.stop());overlay.remove();};lifetime.observe(document.body,{childList:true,subtree:true});
   overlay.querySelector('.cam-close').onclick=close;
   overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
 
-  navigator.mediaDevices?.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})
-    .then(s=>{stream=s;video.srcObject=s;status.textContent='Η κάμερα είναι έτοιμη. Βάλε ολόκληρη τη σελίδα του τιμολογίου μέσα στο κάδρο.';})
+  acquisition.open()
+    .then(s=>{if(!s)return;if(!overlay.isConnected||!target.isConnected){acquisition.dispose();return}stream=s;video.srcObject=s;clearControls=mountCameraControls(video,s);status.textContent='Η κάμερα είναι έτοιμη. Βάλε ολόκληρη τη σελίδα του τιμολογίου μέσα στο κάδρο.';})
     .catch(error=>{status.textContent='Δεν άνοιξε η κάμερα. Έλεγξε την άδεια κάμερας του browser ή χρησιμοποίησε «Επιλογή αρχείου / PDF».';shot.disabled=true;console.warn(error);});
 
-  shot.onclick=()=>{
-    if(!video.videoWidth||!video.videoHeight)return;
-    const canvas=document.createElement('canvas');
-    canvas.width=video.videoWidth;canvas.height=video.videoHeight;
-    canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
-    const dataUrl=canvas.toDataURL('image/jpeg',0.92);
-    captures.push({dataUrl});
-    const img=document.createElement('img');img.src=dataUrl;img.style.cssText='height:90px;border:1px solid #ccc;border-radius:6px';previews.appendChild(img);
-    status.textContent=`Λήψεις: ${captures.length}. Μπορείς να τραβήξεις άλλη σελίδα ή να δημιουργήσεις PDF.`;
-    use.disabled=false;
+  shot.onclick=async()=>{
+    if(shot.disabled||captures.length>=5)return;shot.disabled=true;
+    try{
+      const epoch=acquisition.checkpoint(),file=await captureCameraFrame(video,{isCurrent:()=>target.isConnected&&overlay.isConnected&&acquisition.current(epoch)});if(!file)return;
+      const dataUrl=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)});
+      if(!target.isConnected||!overlay.isConnected)return;
+      captures.push({dataUrl});const img=document.createElement('img');img.src=dataUrl;img.style.cssText='height:90px;border:1px solid #ccc;border-radius:6px';previews.appendChild(img);
+      status.textContent=`Λήψεις: ${captures.length}/5. Έλεγξε όλες τις άκρες και το κείμενο πριν δημιουργήσεις PDF.`;use.disabled=false;
+    }catch(error){status.textContent=error.message}finally{shot.disabled=captures.length>=5}
   };
 
   use.onclick=()=>{

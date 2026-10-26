@@ -1,3 +1,6 @@
+import {createCameraAcquisition,captureCameraFrame} from "./lib/camera-acquisition.js";
+import {mountCameraControls} from "./lib/mount-camera-controls.js";
+import {mountDocumentScanner} from "./lib/mount-document-scanner.js";
 import QRCode from "qrcode";
 import {invoiceLearningStockMapping} from "./lib/invoice-learning-stock-mapping.js";
 const path=window.location.pathname.replace(/\/+$/,'');
@@ -45,16 +48,15 @@ if(path==='/platform-admin/invoice-learning-lab'){
   const ingestExternalFile=async file=>{if(!file)return;prepareFile(file);const accept=window.__MWS_INVOICE_LEARNING_ACCEPT_FILE__;if(typeof accept!=='function'){alert('Δεν φορτώθηκε ακόμη η ανάγνωση Azure/AI. Ανανέωσε τη σελίδα και ξαναδοκίμασε.');return}await accept(file)};
   async function openInvoiceCamera(){
     if(!navigator.mediaDevices?.getUserMedia){alert('Η κάμερα δεν υποστηρίζεται από αυτόν τον browser.');return}
-    let stream;
-    try{try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})}catch{stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false})}}
-    catch{alert('Δεν μπόρεσε να ανοίξει η κάμερα. Έλεγξε την άδεια κάμερας του browser.');return}
+    const acquisition=createCameraAcquisition(),owner=$('#camera'),ownerToken=token();let stream;
+    try{stream=await acquisition.open();if(!stream)return;if(!owner.isConnected||token()!==ownerToken){acquisition.dispose();return}}catch{alert('Δεν μπόρεσε να ανοίξει η κάμερα. Έλεγξε την άδεια κάμερας του browser.');return}
     const overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;z-index:100000;background:#041c2dcc;display:grid;place-items:center;padding:18px';
     overlay.innerHTML=`<div style="width:min(820px,96vw);background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 70px #0006"><div style="background:#123f5b;color:#fff;padding:13px 16px;font-weight:900;display:flex;justify-content:space-between;align-items:center">Φωτογράφιση τιμολογίου<button type="button" data-camera-close style="font-size:22px;color:#fff;background:transparent;border:0">×</button></div><video autoplay playsinline style="display:block;width:100%;max-height:68vh;background:#111"></video><div style="display:flex;gap:10px;padding:14px"><button type="button" data-camera-shot style="flex:1;padding:13px;background:#0f8877;color:#fff;font-weight:900;border:0;border-radius:8px">📷 Χρήση φωτογραφίας</button><button type="button" data-camera-cancel style="padding:13px;border-radius:8px">Ακύρωση</button></div></div>`;
     document.body.appendChild(overlay);const video=overlay.querySelector('video');video.srcObject=stream;video.play().catch(()=>{});
-    const close=()=>{stream.getTracks().forEach(track=>track.stop());overlay.remove()};
+    const clearControls=mountCameraControls(video,stream);const lifetime=new MutationObserver(()=>{if(!owner.isConnected||token()!==ownerToken)close()});const close=()=>{lifetime.disconnect();clearControls();acquisition.dispose();overlay.remove()};lifetime.observe(document.body,{childList:true,subtree:true});
     overlay.querySelectorAll('[data-camera-close],[data-camera-cancel]').forEach(button=>button.onclick=close);
     overlay.onclick=event=>{if(event.target===overlay)close()};
-    overlay.querySelector('[data-camera-shot]').onclick=()=>{if(!video.videoWidth||!video.videoHeight){alert('Η κάμερα δεν είναι ακόμη έτοιμη. Περίμενε μια στιγμή.');return}const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;canvas.getContext('2d').drawImage(video,0,0);canvas.toBlob(blob=>{if(!blob)return;const file=new File([blob],`timologio-kamera-${Date.now()}.jpg`,{type:'image/jpeg'});close();ingestExternalFile(file)} ,'image/jpeg',.94)};
+    overlay.querySelector('[data-camera-shot]').onclick=async event=>{const button=event.currentTarget;if(button.disabled)return;button.disabled=true;try{const epoch=acquisition.checkpoint(),file=await captureCameraFrame(video,{name:`timologio-kamera-${Date.now()}.jpg`,isCurrent:()=>owner.isConnected&&overlay.isConnected&&token()===ownerToken&&acquisition.current(epoch)});if(file){close();await ingestExternalFile(file)}}catch(error){alert(error.message)}finally{button.disabled=false}};
   }
   async function startMobileQr(){
     stopQrPolling();$('#status').textContent='Δημιουργία ασφαλούς QR για αποστολή από κινητό…';
@@ -183,6 +185,7 @@ if(path==='/platform-admin/invoice-learning-lab'){
   }
   const stockRulesButton=document.createElement('button');stockRulesButton.id='supplierStockRules';stockRulesButton.type='button';stockRulesButton.textContent='⚙ Κανόνες συσκευασίας & stock';stockRulesButton.style.cssText='margin:0 0 12px 8px;border:1px solid #1677b8;background:#eef7fd;color:#115c8d;border-radius:8px;padding:9px 11px;font-weight:900;cursor:pointer';$('#columnMap').after(stockRulesButton);stockRulesButton.onclick=openSupplierStockRules;
   const professionalButton=document.createElement('button');professionalButton.id='professionalInvoiceView';professionalButton.type='button';professionalButton.textContent='▣ Επαγγελματική προβολή & οικονομικός έλεγχος';professionalButton.style.cssText='margin:0 0 12px 8px;border:1px solid #1677b8;background:#eef7fd;color:#115c8d;border-radius:8px;padding:9px 11px;font-weight:900;cursor:pointer';$('#columnMap').after(professionalButton);professionalButton.onclick=()=>{if(!current){alert('Ανέβασε και διάβασε πρώτα ένα τιμολόγιο.');return}openProfessionalInvoice(current)};
+  const scannerHost=document.createElement('div');$('.uploadBtns').after(scannerHost);mountDocumentScanner(scannerHost,{getScope:()=>token()?'invoice-learning':'',onFiles:files=>ingestExternalFile(files[0])});
   $('#pdf').onclick=()=>$('#pdfFile').click();$('#photo').onclick=()=>$('#photoFile').click();$('#camera').onclick=openInvoiceCamera;$('#mobileQr').onclick=startMobileQr;$('#mobileQrClose').onclick=stopQrPolling;$('#pdfFile').onchange=e=>e.target.files[0]&&prepareFile(e.target.files[0]);$('#photoFile').onchange=e=>e.target.files[0]&&prepareFile(e.target.files[0]);window.addEventListener('beforeunload',stopQrPolling,{once:true});
   const addInvoiceLineButton=document.createElement('button');addInvoiceLineButton.type='button';addInvoiceLineButton.textContent='＋ Προσθήκη γραμμής';addInvoiceLineButton.style.cssText='margin:0 0 12px 8px;border:1px solid #b45309;background:#fff7ed;color:#92400e;border-radius:8px;padding:9px 11px;font-weight:900;cursor:pointer';$('#columnMap').after(addInvoiceLineButton);addInvoiceLineButton.onclick=()=>{if(!current)return;current.lines.push({id:uuid(),lineNo:current.lines.length+1,description:'',supplierItemCode:'',quantity:'',unit:'ΤΜΧ',invoiceQuantity:'',invoiceUnit:'ΤΜΧ',unitsPerPackage:'',unitPrice:'',packageUnitPrice:'',discount1:0,discount2:0,discount3:0,netValue:'',vatRate:24,barcode:'',status:'REVIEW'});renderLines();$('#status').textContent='Προστέθηκε κενή γραμμή. Συμπλήρωσέ την από το πρωτότυπο τιμολόγιο.'};
   $('#saveDraft').onclick=async()=>{
