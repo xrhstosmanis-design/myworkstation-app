@@ -18,12 +18,12 @@ test('chat reader selects only bounded owned metadata; repeated file retains bot
  const original=JSON.stringify(rows),db={$queryRaw:async(strings,...values)=>{calls.push({sql:strings.join('?'),values});return rows;}};
  const result=await readCashChatEvidence(db,scope);
  assert.equal(result.sources.length,2);assert.deepEqual(result.sources[0].references.map(r=>r.messageId),['late','copy']);
- assert.equal(result.sources[0].sessionId,null);assert.equal(result.sources[0].documentDate,null);assert.equal(result.sources[0].readingStatus,'NOT_READ');
+ assert.equal(result.sources[0].sessionId,null);assert.equal(result.sources[0].documentDate,null);assert.equal(result.sources[0].readingStatus,'NOT_CHECKED');
  assert.equal(result.documentAssociation,'UNVERIFIED');assert.equal(result.complete,false);assert.equal(JSON.stringify(rows),original);
  assert.deepEqual(calls[0].values,['company','store']);assert.match(calls[0].sql,/LIMIT 51/);
  const select=calls[0].sql.split('FROM')[0];assert.doesNotMatch(select,/attachmentData|body|senderId/);
  assert.doesNotMatch(calls[0].sql,/INSERT|UPDATE|DELETE|CREATE|ALTER/);
- assert.match(cashChatEvidenceLines({chatEvidence:result}).join('\n'),/εκκρεμούν|Εκκρεμούν/);
+ assert.match(cashChatEvidenceLines({chatEvidence:result}).join('\n'),/αντιστοίχιση/);
 });
 test('missing/foreign/unsupported/duplicate/over-limit chat source is never a complete agreement',async()=>{
  const missing=await readCashChatEvidence({$queryRaw:()=>{throw Error('missing table')}},scope);assert.equal(missing.status,'UNAVAILABLE');

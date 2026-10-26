@@ -9,7 +9,7 @@ test("mounted scanner pairs without scanning, delivers once, and discards cross-
   const output=await build({entryPoints:[fileURLToPath(new URL("../../client/src/components/store/DocumentScanButton.jsx",import.meta.url))],bundle:true,write:false,format:"cjs",platform:"node",packages:"external"});
   const module={exports:{}};new Function("require","module","exports",output.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);const Control=module.exports.default;
   const dom=new JSDOM("<div id=root></div>",{url:"https://myworkstation-app.onrender.com"}),saved=new Map();
-  const names=["window","document","navigator","HTMLElement","File","sessionStorage","IS_REACT_ACT_ENVIRONMENT","fetch"];
+  const names=["window","document","navigator","HTMLElement","File","sessionStorage","localStorage","IS_REACT_ACT_ENVIRONMENT","fetch"];
   for(const name of names){saved.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{configurable:true,writable:true,value:name==="IS_REACT_ACT_ENVIRONMENT"?true:dom.window[name]})}
   const React=await import("react"),{createRoot}=await import("react-dom/client"),root=createRoot(document.getElementById("root"));let resolve,calls=[],received=[];
   const fetcher=async(url,options)=>{calls.push({url,options});if(url.endsWith("/pair"))return{ok:true,status:200,text:async()=>JSON.stringify({token:"a".repeat(64)})};return new Promise(r=>resolve=r)};

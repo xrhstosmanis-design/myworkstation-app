@@ -6,8 +6,9 @@ using System.Text.Json;
 
 const string Origin = "https://myworkstation-app.onrender.com";
 bool selfTest = args.Contains("--self-test");
-var state = new ScannerSession();
-var builder = WebApplication.CreateBuilder(Array.Empty<string>());
+if(args.Contains("--reset-pairing")){ PairTokenStore.Reset();Console.WriteLine("Η σύνδεση μηδενίστηκε. Κλείστε τυχόν παλιό παράθυρο και ανοίξτε ξανά τον σύνδεσμο.");return; }
+var state = new ScannerSession(persistent:!selfTest);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions{Args=Array.Empty<string>(),EnvironmentName="Production"});
 builder.Logging.ClearProviders();
 builder.WebHost.ConfigureKestrel(options => { options.Listen(IPAddress.Loopback, 17839); options.Limits.MaxRequestBodySize = 2048; options.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(10); });
 var app = builder.Build();
@@ -51,7 +52,7 @@ if (selfTest) {
 }
 if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Απαιτούνται Windows και οδηγός WIA.");
 Console.WriteLine("MyWorkStation · Σύνδεσμος σαρωτή εγγράφων");
-Console.WriteLine("Κωδικός σύνδεσης (10 λεπτά): " + state.PairCode);
+Console.WriteLine(state.IsPaired?"Η αρχική σύνδεση διατηρήθηκε. Πατήστε Σάρωση εγγράφου στο MyWorkStation.":"Κωδικός αρχικής σύνδεσης (10 λεπτά): " + state.PairCode);
 Console.WriteLine("Σύνδεση μόνο από το MyWorkStation. Δεν γίνεται σάρωση πριν πατήσετε το αντίστοιχο κουμπί. Κλείστε αυτό το παράθυρο για διακοπή.");
 await app.RunAsync();
 
@@ -128,6 +129,13 @@ static async Task VerifyProtocol(ScannerSession state,string origin) {
     Check((await state.Scan(new ScanRequest(Guid.NewGuid().ToString(),1),FakeScan,CancellationToken.None)).Status==409);
     pending.SetResult(new[]{"/9j/2Q=="});Check((await one).Status==200);
     var exhausted=new ScannerSession();for(var n=0;n<5;n++)Check(exhausted.Pair("wrong")==null);Check(exhausted.Pair(exhausted.PairCode)==null);
+    var temporary=Path.Combine(Path.GetTempPath(),"mws-scanner-test-"+Guid.NewGuid().ToString("N"));
+    try {
+        var file=Path.Combine(temporary,"pair.bin");var firstState=new ScannerSession(true,file);var saved=firstState.Pair(firstState.PairCode)!;
+        Check(new ScannerSession(true,file).Authorize("Bearer "+saved));
+        Check(!File.ReadAllText(file).Contains(saved,StringComparison.Ordinal));
+        File.WriteAllBytes(file,new byte[]{1,2,3});Check(!new ScannerSession(true,file).Authorize("Bearer "+saved));
+    } finally { if(Directory.Exists(temporary))Directory.Delete(temporary,true); }
 }
 
 internal sealed record PairRequest(string code);
@@ -139,7 +147,10 @@ internal sealed class ScannerSession {
     readonly DateTimeOffset pairExpiry=DateTimeOffset.UtcNow.AddMinutes(10);
     string? token;int attempts;bool busy;string? lastId;int lastLimit;ProtocolResult? last;
     readonly HashSet<string> seen=new(StringComparer.Ordinal);
-    public string? Pair(string code){lock(gate){if(token!=null||attempts>=5||DateTimeOffset.UtcNow>pairExpiry)return null;attempts++;if(!Equal(code,PairCode))return null;return token=Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();}}
+    readonly PairTokenStore? store;
+    public bool IsPaired{get{lock(gate)return token!=null;}}
+    public ScannerSession(bool persistent=false,string? file=null){if(persistent){store=new PairTokenStore(file);token=store.Read();}}
+    public string? Pair(string code){lock(gate){if(token!=null||attempts>=5||DateTimeOffset.UtcNow>pairExpiry)return null;attempts++;if(!Equal(code,PairCode))return null;var issued=Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();store?.Save(issued);return token=issued;}}
     public bool Authorize(string value){lock(gate)return token!=null&&Equal(value,"Bearer "+token);}
     static bool Equal(string a,string b)=>CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(a),Encoding.UTF8.GetBytes(b));
     public async Task<ProtocolResult> Scan(ScanRequest command,Func<int,CancellationToken,Task<string[]>> scan,CancellationToken ct){
@@ -154,4 +165,22 @@ internal sealed class ScannerSession {
         catch {result=new(422,new{code="SCAN_FAILED"});}
         lock(gate){last=result;busy=false;}return result;
     }
+}
+
+internal sealed class PairTokenStore {
+    static string DefaultFile=>Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MyWorkStation","DocumentScanner","pair.bin");
+    readonly string file;
+    public PairTokenStore(string? file=null){this.file=file??DefaultFile;}
+    public string? Read(){try{
+        if(!File.Exists(file)||new FileInfo(file).Length>4096)return null;
+        var bytes=ProtectedData.Unprotect(File.ReadAllBytes(file),null,DataProtectionScope.CurrentUser);
+        try{var value=Encoding.ASCII.GetString(bytes);return value.Length==64&&value.All(c=>c is >= '0' and <= '9' or >= 'a' and <= 'f')?value:null;}finally{CryptographicOperations.ZeroMemory(bytes);}
+    }catch{return null;}}
+    public void Save(string token){
+        var bytes=Encoding.ASCII.GetBytes(token);try{
+            var protectedBytes=ProtectedData.Protect(bytes,null,DataProtectionScope.CurrentUser);
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);File.WriteAllBytes(file+".new",protectedBytes);File.Move(file+".new",file,true);
+        }finally{CryptographicOperations.ZeroMemory(bytes);}
+    }
+    public static void Reset(){if(File.Exists(DefaultFile))File.Delete(DefaultFile);}
 }

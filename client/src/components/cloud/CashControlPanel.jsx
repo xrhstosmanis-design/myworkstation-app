@@ -1,3 +1,4 @@
+import CashPaperReadingPanel from "../shared/CashPaperReadingPanel.jsx";
 import CashReportPeriodFields from "../platform/CashReportPeriodFields.jsx";
 import {cashChatEvidenceLines} from "../../lib/cash-chat-evidence.js";
 import {cashReportPeriod} from "../../lib/cash-report-period.js";
@@ -139,6 +140,7 @@ export default function CashControlPanel({api,store}){
       </section>
       {(data?.offlineSync?.rows||[]).length>0&&<div className="cash-history"><h4>Offline συναλλαγές</h4><div className="cash-history-list">{data.offlineSync.rows.slice(0,10).map(row=><div className="cash-history-row" key={row.clientTransactionId}><div><b>{row.status} · {String(row.clientTransactionId).slice(0,8)}</b><small>{when(row.lastReportedAt)} · προσπάθειες {row.attempts}{row.idempotentReplay?" · DUPLICATE/REPLAY":""}</small></div><span className={`status-pill ${row.status==="SYNCED"?"active":"revoked"}`}>{row.status}</span><div><span>Sale</span><b>{row.saleId||"—"}</b></div><div><span>Σφάλμα</span><b>{row.lastErrorCode||"—"}</b></div></div>)}</div></div>}
       {investigation?.session?.storeId===store.id&&<section className="cash-investigation" aria-label="Στοιχεία παράδοσης και χειρόγραφων"><header><h4>{investigation.session.openedByName||"Βάρδια"} · {when(investigation.session.openedAt)}</h4><button type="button" onClick={()=>{investigationSequence.current++;setInvestigation(null);setBusy(false)}}>Κλείσιμο</button></header><p>Αρχική διαφορά μετρητών: {money(investigation.initialVariance)}. Διαφορά POS–EFTPOS: {money(investigation.cardVariance)}.</p>{investigation.reviewEvidence?cashChatEvidenceLines(investigation.reviewEvidence).map((line,index)=><p key={index}>{line}</p>):<p>Δεν υπάρχουν διαθέσιμα πρόσθετα στοιχεία για τον συγκεκριμένο ρόλο.</p>}</section>}
+      <CashPaperReadingPanel api={api} storeId={store.id}/>
       <div className="cloud-alert"><b>Οι βάρδιες ανοίγουν και κλείνουν αποκλειστικά από το POS / Store Mode.</b><br/>Το BackOffice εμφανίζει μόνο τον αυτόματο έλεγχο, τη συμφωνία και τις αποκλίσεις.</div>
     </>}
   </article>;

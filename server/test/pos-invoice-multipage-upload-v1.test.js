@@ -183,12 +183,13 @@ test("BackOffice purchase intake keeps every selected invoice page",()=>{
   assert.match(backofficeIntake,/headerIndexes=files\.length>1\?\[0,files\.length-1\]:\[0\]/);
 });
 
-test("camera preview attaches and plays the acquired stream before capture",()=>{
+test("camera preview attaches and plays the acquired stream before capture",async()=>{
   assert.match(client,/useEffect\(\(\)=>\{if\(!cameraOpen\|\|!stream\|\|!videoRef\.current\)return/);
   assert.match(client,/video\.srcObject=stream/);
   assert.match(client,/video\.play\(\)\.catch/);
-  assert.match(client,/facingMode:\{ideal:"environment"\}/);
-  assert.match(client,/Η προεπισκόπηση κάμερας δεν είναι ακόμη έτοιμη/);
+  assert.match(client,/cameraSession\.open\(\)/);
+  const acquisition=await readFile(new URL("../../client/src/lib/camera-acquisition.js",import.meta.url),"utf8");assert.match(acquisition,/facingMode:\{ideal:"environment"\}/);
+  assert.match(client,/captureCameraFrame\(videoRef\.current/);assert.match(acquisition,/video\.readyState<2/);
 });
 
 test("multipage OCR sends all ordered pages through one invoice analysis",()=>{

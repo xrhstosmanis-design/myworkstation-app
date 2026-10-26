@@ -2,8 +2,8 @@ const BASE="http://127.0.0.1:17839";
 const KEY="myworkstation:document-scanner:v1";
 let inFlight=false;
 export class ScannerPairingRequired extends Error{}
-export function scannerToken(storage=globalThis.sessionStorage){try{return storage?.getItem(KEY)||""}catch{return ""}}
-export function forgetScanner(storage=globalThis.sessionStorage){try{storage?.removeItem(KEY)}catch{}}
+export function scannerToken(storage=globalThis.localStorage){try{return storage?.getItem(KEY)||""}catch{return ""}}
+export function forgetScanner(storage=globalThis.localStorage){try{storage?.removeItem(KEY)}catch{}}
 async function request(path,body,{signal,token="",fetcher=globalThis.fetch}={}){
   let response;
   try{response=await fetcher(`${BASE}${path}`,{method:"POST",credentials:"omit",redirect:"error",referrerPolicy:"no-referrer",cache:"no-store",signal,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body)})}
@@ -14,7 +14,7 @@ async function request(path,body,{signal,token="",fetcher=globalThis.fetch}={}){
   if(!response.ok)throw new Error(({BUSY:"Ο σαρωτής χρησιμοποιείται ήδη. Περίμενε να ολοκληρωθεί η προηγούμενη σάρωση.",NO_PAPER:"Δεν βρέθηκε χαρτί στον σαρωτή.",PAIR_REFUSED:"Ο κωδικός σύνδεσης είναι λανθασμένος ή έληξε.",SCAN_FAILED:"Η σάρωση απέτυχε. Έλεγξε χαρτί, σύνδεση και οδηγό WIA. Δεν έγινε αποστολή."})[data?.code]||"Ο σαρωτής δεν ολοκλήρωσε τη σάρωση.");
   return data;
 }
-export async function pairDocumentScanner(code,{storage=globalThis.sessionStorage,...options}={}){
+export async function pairDocumentScanner(code,{storage=globalThis.localStorage,...options}={}){
   if(!/^\d{6}$/.test(code))throw new Error("Συμπλήρωσε τον εξαψήφιο κωδικό που εμφανίζει ο τοπικός σύνδεσμος.");
   const data=await request("/pair",{code},options);
   if(!/^[a-f0-9]{64}$/.test(data?.token||""))throw new Error("Δεν ολοκληρώθηκε η σύνδεση σαρωτή.");
@@ -30,7 +30,7 @@ export function decodeScannedPages(data,maxPages=5){
     return new File([bytes],`sarosi-selida-${index+1}.jpg`,{type:"image/jpeg"});
   });
 }
-export async function scanDocument({maxPages=5,signal,storage=globalThis.sessionStorage,...options}={}){
+export async function scanDocument({maxPages=5,signal,storage=globalThis.localStorage,...options}={}){
   if(inFlight)throw new Error("Υπάρχει ήδη σάρωση σε εξέλιξη.");
   const token=scannerToken(storage);if(!token)throw new ScannerPairingRequired("Χρειάζεται σύνδεση με τον σαρωτή αυτού του υπολογιστή.");
   if(!Number.isInteger(maxPages)||maxPages<1||maxPages>5)throw new Error("Επιτρέπονται έως 5 σελίδες ανά σάρωση.");

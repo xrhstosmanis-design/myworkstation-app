@@ -9,7 +9,7 @@ import {cashChatEvidenceLines} from '../../client/src/lib/cash-chat-evidence.js'
 
 test('shared written labels retain source identity, unread/missing/limited coverage and do not turn upload time into document date',()=>{
  const evidence={chatEvidence:{status:'LIMITED',sources:[{references:[{messageId:'paper-1',filename:'<img onerror=alert(1)>',uploadedAt:'2026-10-26T10:00Z'}]}]},handoffs:{status:'CONTEXT_ONLY',rows:[{previousSessionId:'old',nextSessionId:null,status:'AWAITING_NEXT_SHIFT'}]}};
- const text=cashChatEvidenceLines(evidence).join('\n');assert.match(text,/paper-1/);assert.match(text,/περιορισμένη κάλυψη/);assert.match(text,/Εκκρεμούν ανάγνωση/);assert.match(text,/Αναμονή επόμενης βάρδιας/);assert.match(text,/δεν είναι ημερομηνία παραστατικού/);
+ const text=cashChatEvidenceLines(evidence).join('\n');assert.match(text,/paper-1/);assert.match(text,/περιορισμένη κάλυψη/);assert.match(text,/Η ανάγνωση και η αντιστοίχιση/);assert.match(text,/Αναμονή επόμενης βάρδιας/);assert.match(text,/δεν είναι ημερομηνία παραστατικού/);
  const platform=readFileSync(new URL('../../client/src/components/platform/PlatformAdminApp.jsx',import.meta.url),'utf8');assert.match(platform,/rows\.flatMap\(row=>cashChatEvidenceLines\(row\.investigation\?\.reviewEvidence\)\)/);assert.match(platform,/cashChatEvidenceLines\(row\.investigation\?\.reviewEvidence\)\.map/);
 });
 

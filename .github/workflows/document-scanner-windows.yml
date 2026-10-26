@@ -22,6 +22,15 @@ jobs:
         run: |
           dotnet publish tools/windows-document-scanner/MyWorkStation.DocumentScanner.csproj -c Release -r win-x64 --self-contained true -o scanner-release
           Copy-Item tools/windows-document-scanner/README.md scanner-release/README.md
+          Copy-Item tools/windows-document-scanner/Install.ps1 scanner-release/Install.ps1
+          Copy-Item tools/windows-document-scanner/INSTALL.cmd scanner-release/INSTALL.cmd
+      - name: Parse explicit per-user installation script
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/windows-document-scanner/Install.ps1'),[ref]$tokens,[ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
       - uses: actions/upload-artifact@v4
         with:
           name: MyWorkStation-DocumentScanner-Windows-x64
