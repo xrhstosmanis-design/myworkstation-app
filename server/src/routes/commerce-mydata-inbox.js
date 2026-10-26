@@ -8,6 +8,7 @@ import {prisma} from "../prisma.js";
 import {companyModuleState,requireCompanyModule} from "../middleware/module-access.js";
 import {decryptStoreIntegrationCredentials,ensureStoreIntegrationSchema} from "./platform-store-integrations.js";
 import {invoiceNodes,invoiceSummary,myDataError,nextPage,unwrapMyDataXml} from "../mydata-xml.js";
+import {myDataHttpError} from "../mydata-http-error.js";
 import {archiveQuery,archiveExportRows,archiveReportHtml} from "../invoice-archive.js";
 import {acquireOriginal} from "../mydata-original.js";
 import {lifecycleContext,withLifecycleContext} from '../services/store-lifecycle-context.js';
@@ -82,7 +83,7 @@ export function syncMyDataStore(req,{db=prisma}={}){
     if(req.user.companyId!==scope.companyId||req.body.storeId!==scope.storeId)throw syncError('Η επιλογή καταστήματος άλλαξε πριν από τη λήψη.',409);
     await assertLifecycleMutation(lock,scope,generation);admitted=true;
     return performSync(req);
-  },{timeout:3600000,maxWait:5000}).then(result=>{syncStatus.set(key,{lastSyncAt:new Date().toISOString(),lastSyncError:null});return result},error=>{if(admitted)syncStatus.set(key,{...syncStatus.get(key),lastSyncError:"Ο τελευταίος έλεγχος δεν ολοκληρώθηκε."});throw error}).finally(()=>syncInFlight.delete(key));
+  },{timeout:3600000,maxWait:5000}).then(result=>{syncStatus.set(key,{lastSyncAt:new Date().toISOString(),lastSyncError:null});return result},error=>{if(admitted)syncStatus.set(key,{...syncStatus.get(key),lastSyncError:error.code==='MYDATA_HTTP_ERROR'?error.message:"Ο τελευταίος έλεγχος δεν ολοκληρώθηκε."});throw error}).finally(()=>syncInFlight.delete(key));
   syncInFlight.set(key,run);return run;
 }
 async function performSync(req){
@@ -106,7 +107,11 @@ async function performSync(req){
     if(page){url.searchParams.set("nextPartitionKey",page.partition);url.searchParams.set("nextRowKey",page.row)}
     assertCustomerDemoOutboundAllowed({companyId:req.user.companyId,storeId:store.id});
     const response=await fetch(url,{headers:{"aade-user-id":credentials.accountId,"Ocp-Apim-Subscription-Key":credentials.secret,"Accept":"application/xml"},signal:AbortSignal.timeout(30000)});
-    const responseXml=await response.text();if(!response.ok)throw syncError(`Το myDATA απάντησε με σφάλμα ${response.status}. Δεν αποθηκεύτηκε παραστατικό.`);
+    const responseXml=await response.text();if(!response.ok){
+      const error=myDataHttpError({status:response.status,body:responseXml,environment:integration.environment});
+      console.warn('myDATA receiving HTTP failure',error.diagnostic);
+      throw error;
+    }
     const xml=unwrapMyDataXml(responseXml);
     const remoteError=myDataError(xml);if(remoteError)throw syncError(`Το myDATA δεν ολοκλήρωσε τη λήψη: ${remoteError}`,409);
     const invoices=invoiceNodes(xml);fetched+=invoices.length;
