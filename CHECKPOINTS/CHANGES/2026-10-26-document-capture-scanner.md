@@ -1,3 +1,9 @@
+## 26/10/2026 — DOCUMENT-CAPTURE-SCANNER-01 / RECONCILED RUNTIME GREEN / DOCS CONFLICT FOLLOW-UP
+
+Owner retained. Exactad9628fd73da8a33d5d5373e4b9cb2cdfb6958ab PR3177: full CI40387889478 all5jobs PASS;4335server+8backup PASS/0FAIL/0CANCEL/0SKIP; client12.41s,12actual camera Chromium cases, isolated PostgreSQL/archive/HTTP E2E/invariants PASS. Windows40387889457 protocol/DPAPI/package PASS artifact12681803163; Android40387889430 compile/unit/lint/emulator PASS artifact12681674142. Runtime capture/scanner bytes unchanged from earlier25bd684c; independent new-product/cash source preserved. No hardware/LAB PASS.
+
+Second merge405 was caused solely by new independent main684c735 cash-email claim in3registries/canonicalPDF, no runtime changes. Preserve that claim and regenerate PDF. Current docs reconciliation requires its own CI; source not merged/installed yet. Physical camera legibility, WIA driver/transfer, Windows install/reboot/browser permission and native stable distribution remain pending with existing owners. No payment/invoice/provider/stock action or accepted replay. Next: green current PR3177, ordinary guarded main release; hardware acceptance only when available.
+
 ## 26/10/2026 — DOCUMENT-CAPTURE-SCANNER-01 / EXACT SOURCE CI GREEN / RECONCILING INDEPENDENT MAIN
 
 Owner codex/document-capture-scanner-20261026 retained. Source PR3177 exact25bd684c9035d5884e78b8d250581e7fed51601e: full CI40385484343 all5jobs PASS;4318server+8backup PASS/0FAIL/0CANCEL/0SKIP; client build12.08s, actual12camera Chromium geometry/pointer/cleanup cases and PostgreSQL/archive/HTTP E2E/invariants PASS. Windows40385484457 protocol/DPAPI/PowerShell/package PASS, artifact12679814012. Android40385484430 compile/unit/lint and36emulator tests PASS, artifact12680851976. This supersedes earlier SDK timeout as newest technical evidence only; no hardware/LAB PASS. Local actualNode20 focused42PASS.
