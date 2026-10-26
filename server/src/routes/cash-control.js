@@ -1,4 +1,5 @@
 import {readCashExpenseEvidence,cashExpenseFindings} from "../services/cash-expense-evidence.js";
+import {readCashReviewEvidence} from "../services/cash-review-evidence.js";
 import {declaredEftpos} from "../../../shared/declared-eftpos.mjs";
 import {confirmedExplanationBalance,readCashReviewSnapshot,sameCashReviewSnapshot} from "../services/cash-review-balance.js";
 import {partitionCashAuditEvents} from "../services/cash-audit-association.js";
@@ -415,7 +416,11 @@ router.get("/sessions/:sessionId/investigation",route(async(req,res)=>{
   const recheckRequired=snapshotRecheckRequired||reviewBalance.status==="RECHECK_REQUIRED";
   const unexplainedVariance=reviewBalance.unexplainedVariance;
   const finalizedShortage=validReviews.some(row=>row.decision==="CONFIRMED_SHORTAGE");
-  res.json({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance:money(session.variance),cardVariance:money(session.cardVariance),expenseChecks,transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,status:recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
+  // Chat discovery is limited to the existing authenticated Owner review, after
+  // company/store authorization. Operators receive no additional chat metadata.
+  const reviewEvidence=req.user.tokenType!=="STORE_OPERATOR"&&req.user.role==="OWNER"
+    ?await readCashReviewEvidence(prisma,{...session,sessionId:session.id,auditRule:controlRule}):null;
+  res.json({session,controlRule,varianceConsidered,unassignedAuditEvents,auditAssociation:{linked:auditEvents.length,unassigned:unassignedAuditEvents.length,excluded:association.excluded.length},coverageStatus:"PROVISIONAL",initialVariance:money(session.variance),cardVariance:money(session.cardVariance),expenseChecks,transactions:transactions.map(row=>({...row,amount:money(row.amount)})),auditEvents,findings,reviews,currentSnapshot,recheckRequired,reviewBalance,confirmedExplanations,unexplainedVariance,finalizedShortage,reviewEvidence,status:recheckRequired?"RECHECK_REQUIRED":finalizedShortage?"CONFIRMED_SHORTAGE":findings.length?"NEEDS_REVIEW":"AGREEMENT",rule:"Κανένα ύποπτο εύρημα δεν μειώνει αυτόματα τη διαφορά χωρίς επιβεβαίωση διαχειριστή."});
 }));
 
 router.post("/sessions/:sessionId/reviews",route(async(req,res)=>{

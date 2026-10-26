@@ -1,5 +1,6 @@
 // Read-only evidence. Candidates never change a ledger, review or employee balance.
 import {readRecordedCorrections} from './cash-correction-links.js';
+import {readCashChatEvidence} from './cash-chat-evidence.js';
 const number=value=>Number(value);
 const cents=value=>Math.round(number(value)*100);
 const instant=value=>new Date(value).getTime();
@@ -44,9 +45,35 @@ export function shiftChainEvidence(session,adjacent){
   return {context,findings,nextClosedCount:rows.slice(index+1).filter(r=>r.closedAt&&r.status!=='OPEN').length};
 }
 
-export async function readCashReviewEvidence(db,session){
+// Only immediate same-terminal neighbours are handoffs. Equal variances do not
+// establish a counting error and these facts never alter any employee balance.
+export function cashHandoffEvidence(session,adjacent){
+  if(session.auditRule && session.auditRule.mode!=='FULL')return {status:'NOT_APPLICABLE',rows:[]};
+  const same=r=>r.companyId===session.companyId&&r.storeId===session.storeId&&r.terminalPos===session.terminalPos;
+  const rows=[...adjacent.filter(same),session].sort((a,b)=>instant(a.openedAt)-instant(b.openedAt)||String(a.sessionId).localeCompare(String(b.sessionId)));
+  if(rows.some(r=>!r.sessionId||!r.openedAt||!Number.isFinite(instant(r.openedAt)))||new Set(rows.map(r=>r.sessionId)).size!==rows.length)return {status:'UNAVAILABLE',rows:[]};
+  const index=rows.findIndex(r=>r.sessionId===session.sessionId),handoffs=[];
+  const amount=v=>v!==null&&v!==undefined&&typeof v!=='boolean'&&String(v).trim()!==''&&Number.isSafeInteger(cents(v))?cents(v):null;
+  for(const [previous,next] of [[rows[index-1],session],[session,rows[index+1]]]){
+    if(!previous)continue;
+    if(!next){handoffs.push({previousSessionId:previous.sessionId,nextSessionId:null,status:'AWAITING_NEXT_SHIFT',difference:null});continue;}
+    const closing=amount(previous.actualOperational),opening=amount(next.openingOperational);
+    let status='MATCHED',difference=null;
+    if((previous.status&&previous.status!=='CLOSED')||!previous.closedAt||!Number.isFinite(instant(previous.closedAt)))status='PREVIOUS_SHIFT_NOT_CLOSED';
+    else if(instant(previous.closedAt)>instant(next.openedAt))status='OVERLAP';
+    else if(closing===null||opening===null)status='MISSING_AMOUNTS';
+    else{difference=(opening-closing)/100;status=difference===0?'MATCHED':'MISMATCH';}
+    handoffs.push({previousSessionId:previous.sessionId,nextSessionId:next.sessionId,previousOperator:previous.openedByName||null,
+      nextOperator:next.openedByName||null,closedAt:previous.closedAt,openedAt:next.openedAt,
+      closingOperational:closing===null?null:closing/100,openingOperational:opening===null?null:opening/100,difference,status,
+      nextShiftClosed:(next.status||(next.closedAt?'CLOSED':null))==='CLOSED'&&Boolean(next.closedAt),requiresConfirmation:true});
+  }
+  return {status:'CONTEXT_ONLY',rows:handoffs,employeeLiabilityAdjusted:false};
+}
+
+export async function readCashReviewEvidence(db,session,{includeChat=true}={}){
   if(!session.companyId||!session.storeId||!session.sessionId||!session.terminalPos||!session.openedAt||!session.closedAt)return {findings:[],salesStatus:'UNAVAILABLE',chainStatus:'UNAVAILABLE',context:[],pendingChecks:['SALE_LINE_DUPLICATES','CROSS_PERIOD_SHIFT_CHAIN']};
-  const [salesResult,chainResult]=await Promise.allSettled([
+  const [salesResult,chainResult,chatResult]=await Promise.allSettled([
     db.$queryRaw`
       SELECT s."id" AS "saleId",s."receiptNumber",s."occurredAt",s."total",
         EXISTS (SELECT 1 FROM "StoreTransaction" t WHERE t."companyId"=${session.companyId} AND t."storeId"=${session.storeId} AND t."sessionId"=${session.sessionId} AND t."type" IN ('SALE_CASH','SALE_CARD','SALE_IRIS') AND t."reversedAt" IS NULL AND t."description" LIKE ('POS πώληση ' || s."id" || ' ·%')) AS "linked",
@@ -57,16 +84,19 @@ export async function readCashReviewEvidence(db,session){
         AND s."occurredAt">=${session.openedAt} AND s."occurredAt"<=${session.closedAt}
       ORDER BY s."occurredAt",s."id" LIMIT 2001`,
     db.$queryRaw`
-      (SELECT s."id" AS "sessionId",s."companyId",s."storeId",s."terminalPos",s."openedAt",s."closedAt",s."status",s."openedByName",s."variance"
+      (SELECT s."id" AS "sessionId",s."companyId",s."storeId",s."terminalPos",s."openedAt",s."closedAt",s."status",s."openedByName",s."variance",s."openingOperational",s."actualOperational"
        FROM "CashShiftSession" s WHERE s."companyId"=${session.companyId} AND s."storeId"=${session.storeId} AND s."terminalPos"=${session.terminalPos} AND s."id"<>${session.sessionId} AND s."openedAt"<${session.openedAt} ORDER BY s."openedAt" DESC,s."id" DESC LIMIT 2)
       UNION ALL
-      (SELECT s."id" AS "sessionId",s."companyId",s."storeId",s."terminalPos",s."openedAt",s."closedAt",s."status",s."openedByName",s."variance"
-       FROM "CashShiftSession" s WHERE s."companyId"=${session.companyId} AND s."storeId"=${session.storeId} AND s."terminalPos"=${session.terminalPos} AND s."id"<>${session.sessionId} AND s."openedAt">=${session.openedAt} ORDER BY s."openedAt",s."id" LIMIT 2)`
+      (SELECT s."id" AS "sessionId",s."companyId",s."storeId",s."terminalPos",s."openedAt",s."closedAt",s."status",s."openedByName",s."variance",s."openingOperational",s."actualOperational"
+       FROM "CashShiftSession" s WHERE s."companyId"=${session.companyId} AND s."storeId"=${session.storeId} AND s."terminalPos"=${session.terminalPos} AND s."id"<>${session.sessionId} AND s."openedAt">=${session.openedAt} ORDER BY s."openedAt",s."id" LIMIT 2)`,
+    includeChat?readCashChatEvidence(db,session):Promise.resolve({status:'NOT_AUTHORIZED',sources:[],readOnly:true})
   ]);
   const sales=salesResult.status==='fulfilled'?salesResult.value:[];
   const salesStatus=salesResult.status!=='fulfilled'?'UNAVAILABLE':sales.length>cashEvidenceLimits.sales||sales.some(s=>!Array.isArray(s.lines)||!s.lines.length||s.lines.length>cashEvidenceLimits.linesPerSale)?'LIMITED':'LINKED_POS_SCOPE';
   const chain=shiftChainEvidence(session,chainResult.status==='fulfilled'?chainResult.value:[]);
   const chainStatus=chainResult.status!=='fulfilled'?'UNAVAILABLE':chain.nextClosedCount<2?'AWAITING_NEXT_SHIFTS':'CONTEXT_AVAILABLE';
   const candidates=await readRecordedCorrections(db,session,salesStatus==='LINKED_POS_SCOPE'?consecutiveSaleCandidates(sales):[]);
-  return {salesStatus,chainStatus,checkedSales:salesStatus==='LINKED_POS_SCOPE'?sales.filter(s=>s.linked).length:null,duplicateWindowSeconds:cashEvidenceLimits.duplicateSeconds,context:chain.context,findings:[...candidates,...chain.findings],pendingChecks:['SALE_LINE_DUPLICATES','CROSS_PERIOD_SHIFT_CHAIN'],scope:'LINKED_COMPLETED_POS_SALES_IN_SESSION',readOnly:true};
+  const handoffs=chainResult.status==='fulfilled'?cashHandoffEvidence(session,chainResult.value):{status:'UNAVAILABLE',rows:[]};
+  const chatEvidence=chatResult.status==='fulfilled'?chatResult.value:{status:'UNAVAILABLE',sources:[],readOnly:true};
+  return {salesStatus,chainStatus,handoffs,chatEvidence,checkedSales:salesStatus==='LINKED_POS_SCOPE'?sales.filter(s=>s.linked).length:null,duplicateWindowSeconds:cashEvidenceLimits.duplicateSeconds,context:chain.context,findings:[...candidates,...chain.findings],pendingChecks:['SALE_LINE_DUPLICATES','CROSS_PERIOD_SHIFT_CHAIN','CHAT_DOCUMENT_READING_AND_ASSOCIATION'],scope:'LINKED_COMPLETED_POS_SALES_IN_SESSION',readOnly:true};
 }
