@@ -2,7 +2,7 @@
 
 Central next_commerce/ownercodex/central-four-streams-20261018; claim3169greenmain771b546 before15frozendae2ece paths/rootUI+backendnativeCLEAR. Samecompletecreator/defaultfalsePOSpermission/activeownstore/STORE_MODE+INVENTORY/onlineBarcodeguard; UserFKNULLforPOSoriginalauditretained, BackOfficeunchanged.
 ActualNode20 focused49PASS0FAIL2explicitPGenvSKIP (51total); retainedcallbacknegativecontrol0PASS1FAIL5filteredSKIP; build10.07s/TABLE_SERVICE. Rawqualifiedevidence+15SHA256 CHECKPOINTS/EVIDENCE/pos-new-product-full-card-20261026/. Newnativeparent+4/legacyBackOfficePGrequireactualunskippedfullCI; nolocalnativeclaim.
-POS_NEW_PRODUCT_PUBLICATION_STAGE: FROZEN_SOURCE_REVIEWED_AWAITING_RUNTIME_ASSEMBLY.
+POS_NEW_PRODUCT_PUBLICATION_STAGE: FROZEN_SOURCE_ASSEMBLED_AWAITING_EXACT_FULL_CI.
 DOCSONLYevidence-first; aftergreenandPINmerge runtime15frozen+minimum2scopedcheckpoint/activerecords, no policybypass/globalPDFchurn. NewexactfullCI/mainCI/ordinaryLIVE+realproductsaveacceptancepending. Originalinventoryowner/PASS andPIN/invoice/scanner/cashownersprotected; nocart/business/provider/licenceaction/newUSER-LABmanualPASS.
 Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-new-product-full-card.md. All originalregistrybytespreservedexactafterprefix/canonicalPDFsynchronized; no runtimechangeinthisrecord.
 

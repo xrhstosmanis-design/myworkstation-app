@@ -6,6 +6,7 @@ import {advancedOnlineProductSearch} from "../advanced-online-product-search.js"
 import {z} from "zod";
 import {getStoreLabelSettings} from "../services/store-label-settings.js";
 import {registerPermanentPriceRoutes} from "../lib/pos-permanent-price.js";
+import {registerPosNewProductRoutes,posNewProductAllowed} from "../lib/pos-new-product-card.js";
 
 const router=Router();
 
@@ -29,7 +30,7 @@ async function storeFor(req,storeId){
 }
 const adminAccess={leftKeys:true,editPosButtons:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,customerCardOnly:false,cash:true,cards:true,initialCash:true,centralCashPos:true,closeShift:true,purchaseOrders:true};
 async function operatorAccess(req,storeId){
-  if(req.user?.tokenType!=="STORE_OPERATOR")return adminAccess;
+  if(req.user?.tokenType!=="STORE_OPERATOR")return {...adminAccess,newProduct:posNewProductAllowed(req.user)};
   const rows=await prisma.$queryRaw`
     SELECT COALESCE(p."permissions",'{}'::jsonb) AS "permissions",COALESCE(p."backofficeMenu",'{}'::jsonb) AS "backofficeMenu",COALESCE(p."posAccess",TRUE) AS "posAccess"
     FROM "StoreOperatorCredential" c
@@ -39,7 +40,7 @@ async function operatorAccess(req,storeId){
   if(!row||row.posAccess===false){const error=new Error("Ο χειριστής δεν έχει ενεργή πρόσβαση στο POS από το BackOffice.");error.status=403;throw error}
   const p=row.permissions&&typeof row.permissions==="object"?row.permissions:{};
   return {
-    purchaseOrders:row.backofficeMenu?.orders===true,leftKeys:Boolean(p.leftKeys),editPosButtons:Boolean(p.editPosButtons),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash),sameShiftPayments:p.sameShiftPayments!==false,centralCashPos:Boolean(p.centralCashPos),closeShift:Boolean(p.closeShift)
+    newProduct:posNewProductAllowed(req.user,row),purchaseOrders:row.backofficeMenu?.orders===true,leftKeys:Boolean(p.leftKeys),editPosButtons:Boolean(p.editPosButtons),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash),sameShiftPayments:p.sameShiftPayments!==false,centralCashPos:Boolean(p.centralCashPos),closeShift:Boolean(p.closeShift)
   };
 }
 async function audit(req,store,eventType,details={}){
@@ -97,6 +98,7 @@ router.use("/stores/:storeId",async(req,res,next)=>{
 });
 
 registerPermanentPriceRoutes(router,prisma);
+registerPosNewProductRoutes(router,prisma);
 
 router.get("/stores/:storeId/access",async(req,res)=>{
   const rows=await prisma.$queryRaw`SELECT "settings" FROM "ManagementParameters" WHERE "companyId"=${req.user.companyId} LIMIT 1`.catch(()=>[]);

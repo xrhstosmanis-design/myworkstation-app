@@ -8,7 +8,7 @@ Actual Node20.20.2 focused51tests:49PASS/0FAIL/2explicit isolated-PG environment
 
 New native actual registered POS routes/shared creator PostgreSQL parent+4subcases PREPARED, CIassert requires unskipped execution: current role/company/store/profile and both licences; concurrent full-field create/replay once/exact VAT/credential-User collision; invalid/foreign metadata/collisions/late audit failure atomic rollback; legacy BackOffice real User attribution. Fixture enforces actual StockMovement-to-User FK and active-owned options. Existing original BackOffice native regression also remains required; neither native parent executed locally. No provider call, production product or accepted transaction replay.
 
-POS_NEW_PRODUCT_PUBLICATION_STAGE: FROZEN_SOURCE_REVIEWED_AWAITING_RUNTIME_ASSEMBLY.
+POS_NEW_PRODUCT_PUBLICATION_STAGE: FROZEN_SOURCE_ASSEMBLED_AWAITING_EXACT_FULL_CI.
 
 Documentation-only evidence prepared from683f46a, preserving every PIN/invoice/scanner/cash owner. After this evidence is green/main and PIN source is merged, runtime publication uses exactly15frozen source paths plus minimum2mandated scoped checkpoint/active-list implementation records, no policy bypass/globalPDF rewrite. Require new exact fullNode20CI/native unskipped, independent root byte review, normal mainCI/ordinaryguarded exactLIVE, then separately authorized real product creation with measured controls. Technical CI is not business/product-save acceptance. SOURCE PREPARED / NOT INSTALLED / AWAITING LAB; no manual/USER/LAB PASS, licences/settings change, stock/product write or whole-project closure here. Original Gates2/3/8 and all owners retained.
 
