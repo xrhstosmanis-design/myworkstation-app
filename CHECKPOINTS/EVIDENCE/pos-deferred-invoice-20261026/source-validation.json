@@ -1,0 +1,31 @@
+{
+  "reviewedPatchHead": "212d0f3dc43905411b91db7c87f71a480757ebd0",
+  "patchBase": "afed562389e39eb35906bc0f17e24df8d32c95c9",
+  "evidenceBaseline": "0400421f574e96ae46f1698c01eb764ab587f8a6",
+  "status": "PATCH_REVIEWED_NOT_INSTALLED_AWAITING_LAB",
+  "local": {
+    "node": "20.20.2",
+    "tests": 78,
+    "pass": 77,
+    "fail": 0,
+    "explicitPgEnvironmentSkip": 1,
+    "nativeExecuted": false,
+    "buildSeconds": 10.4
+  },
+  "reconciliation": "Normal three-way patch onto fresh main; preserve current cash-paper mount and PIN/POS/unrelated owner changes. Full-file byte equality is not expected where legitimate newer base differs. Exact combined review/fullCI required.",
+  "patchHeadFiles": {
+    "client/src/components/cloud/CashControlPanel.jsx": "2459e5a8cd70c5e2967277bc0c580457055a69d903ccc166f9d7ac652b531beb",
+    "client/src/components/store/StorePendingInvoicePanel.jsx": "9055b9ae4cc0cf730693fed9ccb9300b392ab5bfc74bea95464f01a7a5d5fa3a",
+    "client/src/components/store/StorePosPaymentsModal.jsx": "1c1334154ad2d10d09e2c5d15f112e4e18227576025719f9f170efdcd78656c9",
+    "client/src/components/store/StoreShiftClosePanel.jsx": "68190d7b583e8e3725b6bf05264b7fe255901d8ab2f72a7f78524d055c9d31b1",
+    "server/src/routes/cash-control.js": "cb3b81adce083c8b3c8f11446367d66defb20c4f8f1772ac75cefc28cf1f9467",
+    "server/src/routes/commerce-pos-v244.js": "de70368a4f83ca1fe81e5a398ca8aed3f60803bfb97e70d263dacd64a70e7a31",
+    "server/src/routes/store-transactions.js": "2194ff56b39640d36071c5d14286dbbee0fb4fe6cb39f767df096f3118815865",
+    "server/src/services/pos-pending-invoices.js": "10abdb2cda889c2a1a87e5a60697b44f5c8b4d9dde5b255e776d10473f6a8a78",
+    "server/test/pos-first-payment-header-review.test.js": "c0b2291ca5dfee593f97a9436c145f3d29f175bb8ef29376ff68373c54d69e39",
+    "server/test/pos-pending-invoices-postgres.test.js": "c0eae946671626acc12bbe361b57d2e7cf9fa98ae1d967af503cc15b251eab43",
+    "server/test/pos-pending-invoices-ui.test.js": "f95754c5baa755a9d160f43540afef531372184dcf0cb381b66429e5ea4b2293",
+    "server/test/pos-pending-invoices.test.js": "dc20753fa3ad6adbcd597d428f5011d78e78c38810e6f92a4d1e730e4ef08b96",
+    "server/test/shift-close-pin-postgres.test.js": "f1114072eeda2aa50934361dd9f8d45e0611f0f4bd8a1fa8bcc372dd8f5a06d3"
+  }
+}
