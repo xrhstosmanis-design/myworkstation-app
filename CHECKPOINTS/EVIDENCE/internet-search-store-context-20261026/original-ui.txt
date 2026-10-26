@@ -1,0 +1,46 @@
+✖ actual mounted history and proposal reads follow selected store and reject absent membership (335.955ms)
+✖ actual mounted A-to-B-to-A search lifetime discards old success, error and close replies without business writes (208.993296ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 889.632739
+
+✖ failing tests:
+
+test at server/test/internet-search-store-context-ui.test.js:26:1
+✖ actual mounted history and proposal reads follow selected store and reject absent membership (335.955ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(h.calls.some(c=>new URL(c.path,'https://test.invalid').pathname.endsWith(suffix)&&new URL(c.path,'https://test.invalid').searchParams.get('storeId')==='A'))
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/eb29e220489c/internet-store-source/server/test/internet-search-store-context-ui.test.js:28:62)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at server/test/internet-search-store-context-ui.test.js:34:1
+✖ actual mounted A-to-B-to-A search lifetime discards old success, error and close replies without business writes (208.993296ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /STALE_A/. Input:
+  
+  'ΠΛΗΡΩΜΕΝΟ MODULE · SUPER ADMIN / ΙΔΙΟΚΤΗΤΗΣΑναζήτηση προϊόντων στο InternetΣύγκριση δημόσιων τιμών, προσφορών και περιθωρίου — χωρίς αυτόματη αλλαγή τιμής.ΚατάστημαStore AStore BΌνομα, barcode, προμηθευτής ή κατηγορίαΣύνδεση με δικό μας προϊόν αποθήκηςΑποθήκη προϊόντωνΑναζήτησηΔική μας αγορά (καθαρή)1,00 €Δική μας πώληση (με ΦΠΑ)2,00 €Margin χωρίς ΦΠΑ50.00%Φθηνότερη επιβεβαιωμένη τιμή—Πρόταση ελέγχουSTALE_AsyntheticΔεν υπάρχει ακόμη ασφαλής τιμή για πρόταση παραγγελίας. Επιτρέπεται μόνο ίδιο barcode ή χειροκίνητη επιβεβαίωση πιθανής αντιστοίχισης.Πρόταση νέας τιμής — δεν εφαρμόζεται πριν την έγκρισηΥποβολή πρότασηςΠηγή / προϊόνΑσφάλειαΠροσφοράΤιμή / τεμ.ΔιαφοράΔεν βρέθηκαν δημόσια αποτελέσματα.Πρόταση παραγγελίαςΠρόσθεσε προϊόντα αφού συγκρίνεις τις τιμές.Προτάσεις τιμήςΔεν υπάρχουν προτάσεις.Πρόσφατες αναζητήσεις0 αποτελέσματα · 26/10/2026, 08:18:25'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/eb29e220489c/internet-store-source/server/test/internet-search-store-context-ui.test.js:37:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'ΠΛΗΡΩΜΕΝΟ MODULE · SUPER ADMIN / ΙΔΙΟΚΤΗΤΗΣΑναζήτηση προϊόντων στο InternetΣύγκριση δημόσιων τιμών, προσφορών και περιθωρίου — χωρίς αυτόματη αλλαγή τιμής.ΚατάστημαStore AStore BΌνομα, barcode, προμηθευτής ή κατηγορίαΣύνδεση με δικό μας προϊόν αποθήκηςΑποθήκη προϊόντωνΑναζήτησηΔική μας αγορά (καθαρή)1,00 €Δική μας πώληση (με ΦΠΑ)2,00 €Margin χωρίς ΦΠΑ50.00%Φθηνότερη επιβεβαιωμένη τιμή—Πρόταση ελέγχουSTALE_AsyntheticΔεν υπάρχει ακόμη ασφαλής τιμή για πρόταση παραγγελίας. Επιτρέπεται μόνο ίδιο barcode ή χειροκίνητη επιβεβαίωση πιθανής αντιστοίχισης.Πρόταση νέας τιμής — δεν εφαρμόζεται πριν την έγκρισηΥποβολή πρότασηςΠηγή / προϊόνΑσφάλειαΠροσφοράΤιμή / τεμ.ΔιαφοράΔεν βρέθηκαν δημόσια αποτελέσματα.Πρόταση παραγγελίαςΠρόσθεσε προϊόντα αφού συγκρίνεις τις τιμές.Προτάσεις τιμήςΔεν υπάρχουν προτάσεις.Πρόσφατες αναζητήσεις0 αποτελέσματα · 26/10/2026, 08:18:25',
+    expected: /STALE_A/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
