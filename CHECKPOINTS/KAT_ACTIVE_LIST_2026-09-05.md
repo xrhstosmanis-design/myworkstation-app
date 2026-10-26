@@ -1,3 +1,9 @@
+## 26/10/2026 — DOCUMENT-CAPTURE-SCANNER-01 / EXACT SOURCE CI GREEN / RECONCILING INDEPENDENT MAIN
+
+Owner codex/document-capture-scanner-20261026 retained. Source PR3177 exact25bd684c9035d5884e78b8d250581e7fed51601e: full CI40385484343 all5jobs PASS;4318server+8backup PASS/0FAIL/0CANCEL/0SKIP; client build12.08s, actual12camera Chromium geometry/pointer/cleanup cases and PostgreSQL/archive/HTTP E2E/invariants PASS. Windows40385484457 protocol/DPAPI/PowerShell/package PASS, artifact12679814012. Android40385484430 compile/unit/lint and36emulator tests PASS, artifact12680851976. This supersedes earlier SDK timeout as newest technical evidence only; no hardware/LAB PASS. Local actualNode20 focused42PASS.
+
+Merge attempt safely refused405 due independent main registry/PDF conflicts. Reconcile exact mainf706663de073bbda8b256e3cabfaa29af3c88989 preserving all new-product and deferred-invoice source/records, then regenerate canonical PDF. No overlapping runtime source changes; new exact reconciliation CI remains REQUIRED before merge, ordinary mainCI/guarded release afterwards. Physical cameras, document legibility, Windows installation/reboot/driver/WIA transfer/browser permission NOT TESTED; native stable distribution retained by existing owner. Source NOT INSTALLED / AWAITING LAB. Single next action: green reconciled PR3177, normal guarded release and separately measured non-financial hardware acceptance when available. No payment/stock/invoice/provider action or accepted replay.
+
 ## 26/10/2026 — DOCUMENT-CAPTURE-SCANNER-01 / FULL SOURCE CI PASS + OBSERVED SMALL-SCREEN FOLLOW-UP
 
 Same owner/sourcePR3177. Exact54a296c8 fullCI40381136312/job121777898931 all five jobs SUCCESS:4303server+8backupPASS/0FAIL/0CANCEL/0SKIP, actual frontend build12.01s, native PostgreSQL/archive/HTTP/browser/invariants. Windows40381136112/job121777353552 SUCCESS including persistent DPAPI HTTP self-test, install-script parsing and standalone package12678157787/digestd7cc40d2b516f6f4e1aa95796f8a94b3d167bc4b2076c3b112d7b6e8b0782613. These certify54a296c8, not later layout changes. Android40381136286 compiled/unit/lint but timed out during SDK image installation before emulator execution; no app assertion failed. Earlier Android40378479827 completed compile/unit/lint/36emulator tests; all three native capture source/test Git blobs are independently identical between f1529467 and54a296c8. Latest native workflow is NOT PASS and stable native public distribution remains with its original owner.
@@ -40,6 +46,11 @@ Local actual Node20.20.2 focused26PASS/0FAIL/0SKIP, including mounted scanner pa
 
 Checkpoint `CHECKPOINTS/CHANGES/2026-10-26-document-capture-scanner.md`. Owner retained. Source is NOT INSTALLED; next resolve exact required CI/build/review, then ordinary exact guarded release and a new non-financial synthetic camera/scanner acceptance when hardware exists. Existing qualified manual PASS unchanged; no new manual PASS.
 
+## 26/10/2026 - Invoice causal follow-up:14paths BEFORE SOURCE
+Retained next_reports/shift_pin ownership; add ONLY server/test/cash-period-ui-mounted.test.js to13path claim. ExactA/B pending-list GET mocks/allowances, retainedweek/month/stale-store/noPOST/provider/payment/shiftwrite checks; no broadprefix/weakening.
+Actual3184 CI40383511857:4328PASS/3FAIL/0SKIP (legacyAPIassumption +native17 default5s expiry/parent); actualregisteredclose18PASS. Diagnose query/workload versus lockwait before bounded existingservice/native correction; no blindtimeout/skip/retry.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md. Waitgreenmain beforeedits; exactreview/newfullnativeCI required. NOTINSTALLED/AWAITINGLAB, no newruntimepath/DDL or businessPASS/replay; existingowners/PINtechnicalreceipt preserved.
+
 ## 26/10/2026 - Personal PIN technically installed7d61 / AWAITING LAB
 Central shift_pin/retainedowners:3173 exactPRCI40377962012 ALL5SUCCESS4281+8PASS/0FAIL/0SKIP; mergedmain7d61 CI40380504828 ALL5SUCCESS4294+8PASS/0FAIL/0SKIP, actualnativeparent+3andstartup unskipped.
 Ordinaryguard40382042659 SUCCESS; Renderdep-dbfq4pnlk1mc73asa2bg LIVE7d61 at19:01:07.282847UTC; independentroot and publisherHTTP200/oktrue/exactrevision (publisher19:05:19UTC). No manualdeploy.
@@ -60,7 +71,8 @@ Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-deferred-invoice-payment.md; quali
 
 Central next_commerce/ownercodex/central-four-streams-20261018; claim3169greenmain771b546 before15frozendae2ece paths/rootUI+backendnativeCLEAR. Samecompletecreator/defaultfalsePOSpermission/activeownstore/STORE_MODE+INVENTORY/onlineBarcodeguard; UserFKNULLforPOSoriginalauditretained, BackOfficeunchanged.
 ActualNode20 focused49PASS0FAIL2explicitPGenvSKIP (51total); retainedcallbacknegativecontrol0PASS1FAIL5filteredSKIP; build10.07s/TABLE_SERVICE. Rawqualifiedevidence+15SHA256 CHECKPOINTS/EVIDENCE/pos-new-product-full-card-20261026/. Newnativeparent+4/legacyBackOfficePGrequireactualunskippedfullCI; nolocalnativeclaim.
-POS_NEW_PRODUCT_PUBLICATION_STAGE: FROZEN_SOURCE_REVIEWED_AWAITING_RUNTIME_ASSEMBLY.
+POS_NEW_PRODUCT_PUBLICATION_STAGE: FROZEN_SOURCE_AND_THREE_CAUSAL_FIXTURES_AWAITING_EXACT_FULL_CI.
+Scoped implementation: claim3183 green/main96bc3c5 preceded reviewed3test commit7936a6f. Runtime15bytes unchangeddae2ece; legacy constructor fixtures inject REAL posNewProductAllowed plus no-op registrar, retained checkbox/legacy assertions unchanged with explicit newProduct defaultfalse/persistedtrue. Node20 targeted9:7PASS/0FAIL/2explicit localPGenvSKIP. Prior full3181 CI40380860057:4302PASS/7fixturecompatFAIL/0SKIP, actualnewPGparent+4PASS; priorfailedhead not fullCI/install/LABPASS. New exact fullCI/native unskipped required.
 DOCSONLYevidence-first; aftergreenandPINmerge runtime15frozen+minimum2scopedcheckpoint/activerecords, no policybypass/globalPDFchurn. NewexactfullCI/mainCI/ordinaryLIVE+realproductsaveacceptancepending. Originalinventoryowner/PASS andPIN/invoice/scanner/cashownersprotected; nocart/business/provider/licenceaction/newUSER-LABmanualPASS.
 Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-new-product-full-card.md. All originalregistrybytespreservedexactafterprefix/canonicalPDFsynchronized; no runtimechangeinthisrecord.
 

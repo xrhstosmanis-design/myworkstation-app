@@ -1,3 +1,4 @@
+import {posNewProductAllowed} from '../src/lib/pos-new-product-card.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,7 +11,8 @@ function handler(prisma){
  const routes=new Map(),middleware=[];
  const Router=()=>({get:(path,...fns)=>routes.set(path,fns),post(){},put(){},delete(){},use:(_,fn)=>middleware.push(fn)});
  const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','').replace('const {barcodeRegistrationList}=await import("../lib/pos-barcode-pending.js");','');
- new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes','barcodeRegistrationList',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes,barcodeRegistrationList);
+ // Isolate legacy catalogue routes; real new-product registration is covered by its mounted/native tests.
+ new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes','registerPosNewProductRoutes','posNewProductAllowed','barcodeRegistrationList',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes,()=>{},posNewProductAllowed,barcodeRegistrationList);
  return async(query={},user={id:'u',companyId:'c',role:'OWNER'},storeId='s')=>{
   const req={query,user,params:{storeId},method:'GET',path:`/stores/${storeId}/barcode-registration`},res={statusCode:200,status(c){this.statusCode=c;return this},json(b){this.body=b;return this}};
   for(const fn of [...middleware,...routes.get('/stores/:storeId/barcode-registration')]){let proceed=false,error;await fn(req,res,e=>{proceed=true;error=e});if(error)throw error;if(!proceed)break}

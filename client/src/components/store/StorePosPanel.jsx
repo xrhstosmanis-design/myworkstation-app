@@ -3,6 +3,7 @@ import {addSetCartProduct,setCartProductQuantity,removeSetCartProduct,isSetCartC
 import {useBarcodePendingCount} from "../../hooks/useBarcodePendingCount.js";
 import PosModernCatalog from "./PosModernCatalog.jsx";
 import PosPermanentPrice from "./PosPermanentPrice.jsx";
+import InventoryNewProductCard from '../commerce/InventoryNewProductCard.jsx';
 import {greeceDateTimeInput,greeceDateTimeToIso} from "../../../../shared/greece-time.mjs";
 import {customerLineTotal,customerAudience} from "../../../../shared/customer-discount.mjs";
 import PosCustomerReceiptModal,{pendingCustomerReceipt} from "./PosCustomerReceiptModal.jsx";
@@ -81,6 +82,8 @@ export default function StorePosPanel({api,store,operator=null,company=null,onLo
   useEffect(()=>{if(!canPurchaseOrders)setPurchaseOrdersOpen(false)},[canPurchaseOrders]);
   useEffect(()=>setPurchaseOrdersOpen(false),[store.id]);
   const [barcodeOpen,setBarcodeOpen]=useState(false),[attendanceOpen,setAttendanceOpen]=useState(false);
+  const [newProductOpen,setNewProductOpen]=useState(null);
+  useEffect(()=>setNewProductOpen(null),[store.id,api]);
   const pendingBarcodeCount=useBarcodePendingCount(api,store.id,canRegisterBarcode,barcodeOpen);
   const auxiliaryChanged=text=>{setMessage(text);load();onChanged?.()};
   useEffect(()=>{setChatOpen(false);setBarcodeOpen(false);setAttendanceOpen(false)},[store.id]);
@@ -127,6 +130,8 @@ export default function StorePosPanel({api,store,operator=null,company=null,onLo
   useEffect(()=>{setPriceEdit(null);setPriceScope("CURRENT_TRANSACTION")},[store.id]);
   const priceSaveLock=useRef(false);
   const liveAccess=runtimeAccess?{...(data?.access||{}),...runtimeAccess,onlineProductSearch:Boolean(runtimeAccess.onlineBarcode)}:data?.access;
+  const canCreateProduct=data?.selectedStoreId===store.id&&data?.access?.newProduct===true&&runtimeAccess?.newProduct!==false;
+  useEffect(()=>{if(!canCreateProduct)setNewProductOpen(null)},[canCreateProduct]);
   const canChangePrice=Boolean(liveAccess?.changeRetail);
   const priceAccessRef=useRef(canChangePrice);priceAccessRef.current=canChangePrice;
   useEffect(()=>{if(priceEdit&&!canChangePrice)setPriceEdit(null)},[priceEdit,canChangePrice]);
@@ -305,6 +310,7 @@ const checkout=async(paymentMethod,payments,continuation=null)=>{if(fiscalPendin
 
   return <article className="store-pos-card mws-standard-pos pos-modern" style={{"--pos-head":layout.theme?.headerColor||"#033d2f","--pos-accent":layout.theme?.accentColor||"#087a52","--pos-button-font":fontScale,"--pos-text-scale":selectedPosTextSize.scale}}>
     {chatOpen&&createPortal(<StoreChatPanel api={api} store={store} onClose={()=>setChatOpen(false)}/>,document.body)}
+    {newProductOpen?.storeId===store.id&&newProductOpen.api===api&&canCreateProduct&&createPortal(<InventoryNewProductCard key={store.id} api={api} storeId={store.id} optionsPath={`/api/store-pos/stores/${encodeURIComponent(store.id)}/new-product/options`} createPath={`/api/store-pos/stores/${encodeURIComponent(store.id)}/new-product`} barcodePath={`/api/store-pos/stores/${encodeURIComponent(store.id)}/new-product/barcode/`} lookupAllowed={Boolean(liveAccess?.onlineProductSearch)} initialBarcode={/^\d{3,80}$/.test(unknownScan||query)?unknownScan||query:''} onClose={()=>{setNewProductOpen(null);requestScanFocus()}} onSaved={async result=>{if(selectedStoreId.current!==result.storeId)return;setNewProductOpen(null);await load();if(selectedStoreId.current===result.storeId){setMessage(`Το νέο είδος δημιουργήθηκε · SKU ${result.sku}. Το καλάθι διατηρήθηκε.`);onChanged?.();requestScanFocus()}}}/>,document.body)}
     {barcodeOpen&&createPortal(<PosBarcodeRegistrationModal key={store.id} api={api} store={store} initialQuery={typeof barcodeOpen==="string"?barcodeOpen:""} onClose={()=>setBarcodeOpen(false)} onChanged={auxiliaryChanged}/>,document.body)}
     {attendanceOpen&&createPortal(<PosAttendanceCardModal api={api} store={store} onClose={()=>setAttendanceOpen(false)} onChanged={auxiliaryChanged}/>,document.body)}
     {cancelPending&&!cancelReasonOpen&&<div className="category-product-overlay pos-cancel-reasons"><section role="dialog" aria-modal="true" aria-busy="true" aria-label="Καταγραφή ακύρωσης" tabIndex={-1} ref={node=>node?.focus()} onKeyDown={e=>{if(e.key==="Tab")e.preventDefault()}}><header><h2>Καταγραφή ακύρωσης…</h2></header></section></div>}
@@ -315,6 +321,7 @@ const checkout=async(paymentMethod,payments,continuation=null)=>{if(fiscalPendin
 
     <PosCollapsibleHeader flat key={JSON.stringify([company?.id,store.id])}><div className="pos-header-main"><div className="pos-flat-brand"><strong>MyWorkStation</strong><button type="button" className="pos-last-transaction" data-pos-last-transaction="" aria-label={`Τελευταία συναλλαγή ${euro(lastTransactionAmount)}. Μηδενισμός ένδειξης`} title="Πάτησε για μηδενισμό της ένδειξης" onClick={()=>{resetLastTransaction();requestScanFocus()}}><span>ΤΕΛΕΥΤΑΙΑ</span><strong aria-live="polite" aria-atomic="true">{euro(lastTransactionAmount)}</strong></button>{canRegisterBarcode&&pendingBarcodeCount>0&&<button type="button" className="pos-flat-barcode-badge" title="Έλεγχος και καταχώρηση νέου Barcode" aria-label={`${pendingBarcodeCount} είδη χωρίς barcode`} onClick={()=>setBarcodeOpen(true)}>Barcode: {pendingBarcodeCount}</button>}</div><div className="pos-header-context" style={{display:"flex",alignItems:"center",gap:10,marginLeft:"auto",marginRight:12}}><div className="pos-store-controls"><PosHeaderActionsMenu open={headerMenuOpen} onOpenChange={setHeaderMenuOpen} scale={selectedPosTextSize.scale}><button type="button" onClick={()=>setStoreMenu(true)} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 10px",border:"1px solid #ffffff30",borderRadius:10,background:"transparent",color:"inherit",cursor:"pointer",font:"inherit",textAlign:"left"}}><Store size={18}/><div><small style={{display:"block"}}>Κατάστημα</small><b>{store.name}</b></div></button><div className="runtime-top-actions">{netlinkAvailable&&<button className="store-pos-netlink" onClick={()=>setNetlinkPanel(true)}>NETLINK</button>}{screenRecordingEnabled&&<ScreenRecorderControl/>}<button className="pos-text-size-trigger" onClick={()=>setPosTextSizeMenu(true)} title="Μέγεθος γραμμάτων για όλο το POS" aria-label="Μέγεθος γραμμάτων για όλο το POS"><Type/><span>{selectedPosTextSize.label}</span></button><button type="button" className="pos-keypad-toggle" onClick={()=>setKeypadOpen(v=>!v)} aria-pressed={keypadOpen} title={keypadOpen?"Απόκρυψη κομπιουτερακίου":"Εμφάνιση κομπιουτερακίου"}><Keyboard/><span>Κομπιουτεράκι</span></button></div>      <div className="pos-aux-actions" aria-label="Πρόσθετες λειτουργίες POS">
         <button type="button" className="store-chat-top-button" onClick={()=>setBakingOpen(true)}>Ψήσιμο σφολιατοειδών</button>
+        {canCreateProduct&&<button type="button" className="store-chat-top-button" data-pos-new-product="" disabled={busy||cancelPending||Boolean(fiscalPending)||connectionStatus!=="ONLINE"} title="Νέο είδος · Πλήρης καρτέλα" onClick={()=>setNewProductOpen({storeId:store.id,api})}>＋ Νέο είδος</button>}
         <span data-invoice-assistant-dock-host=""/>
         {canPurchaseOrders&&<button type="button" className="store-chat-top-button" onClick={()=>{document.dispatchEvent(new Event("mws:invoice-workspace-restore"));document.dispatchEvent(new Event("mws:invoice-assistant-restore"));setPurchaseOrdersOpen(true)}}>▤ Τιμολόγια / Παραλαβές</button>}
         {tableServiceAvailable&&<button type="button" className="store-chat-top-button table-service-top-button" onClick={()=>setActiveModal("TABLES")}><Wifi size={18}/> Ασύρματη παραγγελιοληψία</button>}

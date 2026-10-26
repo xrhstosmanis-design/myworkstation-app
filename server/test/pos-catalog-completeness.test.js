@@ -1,3 +1,4 @@
+import {posNewProductAllowed} from '../src/lib/pos-new-product-card.js';
 import {readLifecycleGeneration} from '../src/services/store-lifecycle-generation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +13,8 @@ function handlers(prisma){
   const routes=new Map(),middleware=[];
   const Router=()=>({get:(path,...fns)=>routes.set(path,fns),post(){},put(){},delete(){},use:(path,fn)=>middleware.push(fn)});
   const source=fs.readFileSync(new URL('../src/routes/store-pos-catalog.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default router;','');
-  new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes','readLifecycleGeneration',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes,readLifecycleGeneration);
+  // Isolate legacy catalogue routes; real new-product registration is covered by its mounted/native tests.
+  new Function('Router','prisma','z','crypto','registerPermanentPriceRoutes','registerPosNewProductRoutes','posNewProductAllowed','readLifecycleGeneration',source)(Router,prisma,z,crypto,registerPermanentPriceRoutes,()=>{},posNewProductAllowed,readLifecycleGeneration);
   const older=fs.readFileSync(new URL('../src/routes/store-pos.js',import.meta.url),'utf8');
   const start=older.indexOf('router.get("/stores/:storeId",');
   const end=older.indexOf('\n',start);
