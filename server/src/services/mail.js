@@ -209,6 +209,7 @@ export async function sendCashShiftClosedEmail({to,storeName,session,companyId,s
 }
 
 export async function sendCashControlDailyReportEmail({to,storeName,date,evidence,comment,companyId,storeId,previewOnly=false}){
+  assertCustomerDemoOutboundAllowed({companyId,storeId});
   const {subject,text,html:body}=renderReviewedCashEmail({evidence,companyId,storeId,storeName,date,comment,previewOnly});
   const html=body+`<p style="color:#64748b">Η αναφορά στάλθηκε χειροκίνητα από τον Super Admin.</p>`;
   return sendEmail({to,subject,text,html,companyId,storeId});
