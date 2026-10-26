@@ -1,3 +1,8 @@
+## 26/10/2026 - POS complete new-product card technically installedc0b / AWAITING LAB
+Retained next_commerce/inventoryowners;3181 finalPR CI40383471309 and exactmain CI40385246990 ALL5SUCCESS,4309server+8backupPASS/0FAIL/0SKIP each; actualnewPGparent+4unskipped, allprotectedchecks retained.
+Ordinaryguard40386710263 SUCCESS; Renderdep-dbfqj759fdbs739qc630 LIVEc0b finished19:32:11.347908UTC, publisherHTTP200/oktrue/exactrevision19:33:04UTC and independentroot19:34:47.730656UTC. No manualdeploy.
+Checkpoint CHECKPOINTS/CHANGES/2026-10-26-pos-new-product-full-card.md. Fullsharedcard/defaultfalsecurrentpermission/bothlicences/UserFKNULL+operatoraudit technicallyinstalled; realproductsave/stock controls acceptanceOPEN, no functional/USER/LAB/manualPASS or businessreplay. PIN/invoice/cash owners/history preserved.
+
 ## 26/10/2026 - Invoice causal follow-up:14paths BEFORE SOURCE
 Retained next_reports/shift_pin ownership; add ONLY server/test/cash-period-ui-mounted.test.js to13path claim. ExactA/B pending-list GET mocks/allowances, retainedweek/month/stale-store/noPOST/provider/payment/shiftwrite checks; no broadprefix/weakening.
 Actual3184 CI40383511857:4328PASS/3FAIL/0SKIP (legacyAPIassumption +native17 default5s expiry/parent); actualregisteredclose18PASS. Diagnose query/workload versus lockwait before bounded existingservice/native correction; no blindtimeout/skip/retry.
