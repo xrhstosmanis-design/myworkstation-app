@@ -6,6 +6,9 @@ import {cashRuleFields,legacyCashControlRule} from '../src/services/cash-control
 import {hash} from '../src/services/cash-reconciliation-contract.js';
 import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
 import {projectAutomaticReviewedReport} from '../src/services/cash-reviewed-automatic-contract.js';
+import {createAutomaticReportMailAdapter} from '../src/services/automatic-report-mail-adapter.js';
+import {createDeliverySlot,claimDelivery,startDelivery} from '../src/services/automatic-report-delivery-lifecycle.js';
+import {createHash} from 'node:crypto';
 
 test('complete human-reviewed fixture feeds common text into payload, while modified evidence is rejected',async()=>{
  const configuration={dayStartHour:7,secondShiftStartHour:15,thirdShiftStartHour:23,terminals:[{terminalPos:'MAIN',requiredSlots:[1,2,3]}],cashRule:cashRuleFields(legacyCashControlRule({name:'LAB'}))};
@@ -20,5 +23,15 @@ test('complete human-reviewed fixture feeds common text into payload, while modi
  const result=buildAutomaticCashPayload({preview:p,companyId:'co',storeId:'store',settingsVersion:1}),content=JSON.parse(result.body);
  assert.match(automaticReviewedMailText(content),/ΑΠΟΤΕΛΕΣΜΑ ΜΕΤΑ ΑΠΟ ΕΛΕΓΧΟ/);assert.match(automaticReviewedMailText(content),/POS–EFTPOS: διαφορά \+200,00/);assert.equal(result.body.includes('PRIVATE'),false);
  assert.equal(content.reviewedCash.report.totals.shortageCents,1000);assert.equal(content.reviewedCash.report.totals.surplusCents,800);
+ const now='2026-10-22T06:00:00.000Z',recipient='fixture@example.com',input={companyId:'co',storeId:'store',reportType:'CASH',frequency:'DAILY',periodFrom:result.period.from,periodTo:result.period.to,recipient,snapshot:{settingsVersion:1,recipientVersion:1,consentRevision:1,lifecycleGeneration:'0',sourceFingerprint:result.sourceFingerprint,payloadFingerprint:result.payloadFingerprint,policyFingerprint:'a'.repeat(64),principalId:'u',financialFinality:'PROVISIONAL',financialReconciliationComplete:false}};
+ const auth={...input,checkedAt:now,companyActive:true,storeActive:true,licenseActive:true,moduleActive:true,principalAuthorized:true,recipientVerified:true,consentActive:true,dispatchEnabled:true,sourceReady:true,policyAllowsProvisional:true,maintenanceBlocked:false};
+ const pending=createDeliverySlot(input,{now,current:auth}),claimed=claimDelivery(pending,{expectedVersion:1,token:'test',now,leaseMs:60000}),started=startDelivery(claimed,{expectedVersion:2,token:'test',now,current:auth}),calls=[];
+ const adapter=createAutomaticReportMailAdapter({startAttempt:async()=>{calls.push('start');return started},sendMail:async message=>{calls.push(message.text);return {accepted:[recipient],rejected:[],messageId:'fixture'}}});
+ const args={scope:{companyId:'co',storeId:'store',slotId:started.slotId},expectedVersion:2,token:'test',now,payload:result};
+ assert.equal((await adapter.attempt(args)).outcome,'ACCEPTED');assert.equal(calls[0],'start');assert.equal(calls[1],automaticReviewedMailText(content));
+ const altered=structuredClone(args),body=JSON.parse(altered.payload.body);body.reviewedCash.report.rows[0].remainingCents=0;altered.payload.body=JSON.stringify(body);altered.payload.byteLength=Buffer.byteLength(altered.payload.body);altered.payload.payloadFingerprint=createHash('sha256').update(altered.payload.body).digest('hex');calls.length=0;
+ await assert.rejects(adapter.attempt(altered),{code:'INVALID_MAIL_ATTEMPT'});assert.equal(calls.length,0);
+ const missing=structuredClone(p);missing.reviewedCash.report.rows[0].cardCents=null;const {fingerprint,...missingUnsigned}=missing.reviewedCash;missing.reviewedCash.fingerprint=hash(missingUnsigned);
+ assert.throws(()=>buildAutomaticCashPayload({preview:missing,companyId:'co',storeId:'store',settingsVersion:1}),{code:'INVALID_CASH_PAYLOAD'});
  p.reviewedCash.report.rows[0].remainingCents=0;assert.throws(()=>buildAutomaticCashPayload({preview:p,companyId:'co',storeId:'store',settingsVersion:1}),{code:'INVALID_CASH_PAYLOAD'});
 });

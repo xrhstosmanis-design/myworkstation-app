@@ -48,6 +48,6 @@ const receiptSchema=z.object({status:z.literal('READY'),reason:z.null(),companyI
 export function validateAutomaticReviewedReceipt(value,{companyId,storeId,groups,rule,dayStartHour,sourceFingerprint}){
  try{
   const receipt=receiptSchema.parse(value),{fingerprint,...unsigned}=receipt;
-  return receipt.companyId===companyId&&receipt.storeId===storeId&&receipt.sourceFingerprint===sourceFingerprint&&BigInt(receipt.generation)<=9223372036854775807n&&hash(unsigned)===fingerprint&&receipt.report.rows.every(r=>r.reviewed)&&validateAutomaticReviewedReport(receipt.report,{companyId,storeId,groups,rule,dayStartHour});
+  return receipt.companyId===companyId&&receipt.storeId===storeId&&receipt.sourceFingerprint===sourceFingerprint&&BigInt(receipt.generation)<=9223372036854775807n&&hash(unsigned)===fingerprint&&receipt.report.rows.every(r=>r.reviewed&&r.cardCents!==null&&r.pendingEvidence.length===0)&&validateAutomaticReviewedReport(receipt.report,{companyId,storeId,groups,rule,dayStartHour});
  }catch{return false}
 }

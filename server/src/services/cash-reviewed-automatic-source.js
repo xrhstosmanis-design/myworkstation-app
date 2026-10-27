@@ -20,7 +20,8 @@ export async function readReviewedAutomaticCash(tx,{actorId,companyId,storeId,pe
   const selected=await createCashReconciliationRepository(tx).readSelectedInTransaction(tx,scope,{from:period.fromDay,to:period.toDay},rows.map(r=>r.id));
   const report=projectAutomaticReviewedReport(selected.report);
   if(!validateAutomaticReviewedReport(report,{companyId,storeId,groups,rule,dayStartHour:period.dayStartHour}))return hold('REVIEWED_SOURCE_MISMATCH');
-  const result={status:report.rows.every(r=>r.reviewed)?'READY':'HOLD',reason:report.rows.every(r=>r.reviewed)?null:'REVIEW_REQUIRED',companyId,storeId,generation:state.generation,head:selected.head,sourceFingerprint,report};
+  const complete=report.rows.every(r=>r.reviewed&&r.cardCents!==null&&r.pendingEvidence.length===0);
+  const result={status:complete?'READY':'HOLD',reason:complete?null:'REVIEW_REQUIRED',companyId,storeId,generation:state.generation,head:selected.head,sourceFingerprint,report};
   return {...result,fingerprint:hash(result)};
  }catch{return hold('REVIEWED_SOURCE_UNAVAILABLE')}
 }
