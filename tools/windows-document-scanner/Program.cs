@@ -62,18 +62,24 @@ static Task<string[]> WiaScan(int maxPages, CancellationToken ct) {
     var completion = new TaskCompletionSource<string[]>(TaskCreationOptions.RunContinuationsAsynchronously);
     var thread = new Thread(() => {
         object? managerObject=null,deviceObject=null,itemObject=null;
+        string stage="starting";
         try {
             ct.ThrowIfCancellationRequested();
+            stage="device-manager";
             managerObject=Activator.CreateInstance(Type.GetTypeFromProgID("WIA.DeviceManager")!);
             dynamic manager=managerObject!;
             var scanners=new List<object>();
+            stage="enumerate-devices";
             foreach(dynamic info in manager.DeviceInfos) { if((int)info.Type==1)scanners.Add(info);else if(Marshal.IsComObject(info))Marshal.FinalReleaseComObject(info); }
             try {
                 if(scanners.Count!=1)throw new InvalidOperationException("Configure exactly one default WIA scanner.");
+                stage="connect-device";
                 deviceObject=((dynamic)scanners[0]).Connect();
             } finally { foreach(var info in scanners)if(Marshal.IsComObject(info))Marshal.FinalReleaseComObject(info); }
             dynamic device=deviceObject!;
+            stage="scanner-item";
             itemObject=device.Items[1];dynamic item=itemObject;
+            stage="configure";
             SetProperty(item.Properties,6146,1); // Color: retain stamps and annotations.
             SetProperty(item.Properties,6147,300);SetProperty(item.Properties,6148,300);
             // Scan one page per explicit command; never consume unreviewed ADF
@@ -82,15 +88,22 @@ static Task<string[]> WiaScan(int maxPages, CancellationToken ct) {
             ct.ThrowIfCancellationRequested();
             object? imageObject=null;
             try {
+                stage="wia-transfer";
                 imageObject=item.Transfer("{B96B3CAE-0728-11D3-9D7B-0000F81EF32E}");
+                stage="read-image-bytes";
                 dynamic image=imageObject!;byte[] bytes=(byte[])image.FileData.BinaryData;
                 ct.ThrowIfCancellationRequested();
+                stage=bytes.Length>7*1024*1024?"image-too-large":"validate-jpeg";
                 if(bytes.Length<4||bytes.Length>7*1024*1024||bytes[0]!=255||bytes[1]!=216||bytes[^2]!=255||bytes[^1]!=217)throw new InvalidOperationException("Invalid JPEG transfer.");
                 completion.TrySetResult(new[]{Convert.ToBase64String(bytes)});
                 CryptographicOperations.ZeroMemory(bytes);
             } finally { if(imageObject!=null&&Marshal.IsComObject(imageObject))Marshal.FinalReleaseComObject(imageObject); }
         } catch(OperationCanceledException) { completion.TrySetCanceled(ct); }
-        catch { completion.TrySetException(new InvalidOperationException("SCAN_FAILED")); }
+        catch(Exception error) {
+            // Do not log document data, device identifiers, tokens or driver messages.
+            Console.WriteLine($"Scanner diagnostic: stage={stage}, error={error.GetType().Name}, hresult=0x{error.HResult:X8}");
+            completion.TrySetException(new InvalidOperationException("SCAN_FAILED"));
+        }
         finally {
             foreach(var com in new[]{itemObject,deviceObject,managerObject})if(com!=null&&Marshal.IsComObject(com))Marshal.FinalReleaseComObject(com);
         }
