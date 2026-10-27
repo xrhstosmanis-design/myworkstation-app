@@ -8,6 +8,10 @@ No lifecycle, database, schema, persistence, backend, auth, device, fiscal, stoc
 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-27-install-support-print-guide-source.md.
 
+## 27/10/2026 — CASH-PENDING-EMAIL-08 / SOURCE CANDIDATE / NOT DEPLOYED
+
+Retained owner codex/cash-chat-reconciliation-20261026. Claim #3235 headb3e33fb exact CI40579929360 SUCCESS mergedcd7f6f28 before source. Source candidate on feat/cash-pending-email-source-20261027 permits known, internally consistent AWAITING_REVIEW/AWAITING_NEXT_SHIFT rows only in the existing per-store opt-in provisional report; pending rows remain explicitly marked and excluded from reviewed totals. Unknown amounts/cards, stale or invalidated source, inconsistent statuses, source/generation/authorization failures stay held. Existing recipient, consent, mail boundary, original cash/card separation and legacy defaults unchanged. Focused47 tests PASS/0 FAIL/0 SKIP including actual injected mail adapter text and hard-hold cases. No actual email, production setting change, financial/provider transaction or new LAB PASS. Exact PR/main CI, guarded deployment and scoped measured actual preview/email acceptance remain required; whole workflow OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-27-cash-pending-email.md.
+
 ## 27/10/2026 — CASH-PENDING-EMAIL-08 / ASSIGNED BEFORE SOURCE
 
 Retained owner codex/cash-chat-reconciliation-20261026, branch feat/cash-pending-email-20261027, baseline a36f8e6c0e78991bb2ca4b889f54a6a66652c5b3. Owner asks MyWorkStation to email the demonstrated report including shifts explicitly under review. Existing opt-in reviewedReconciliation path holds whenever any row is unreviewed, even when original cash and card data are known; the canonical report already marks pending rows and excludes them from reviewed totals. Limited read-only expense-report LAB #3232 remains PASS; actual scheduled or manual email acceptance NOT TESTED.

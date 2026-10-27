@@ -1,3 +1,7 @@
+## 27/10/2026 — CASH-PENDING-EMAIL-08 / SOURCE CANDIDATE / NOT DEPLOYED
+
+Retained owner codex/cash-chat-reconciliation-20261026. Claim #3235 headb3e33fb exact CI40579929360 SUCCESS mergedcd7f6f28 before source. Source candidate on feat/cash-pending-email-source-20261027 permits known, internally consistent AWAITING_REVIEW/AWAITING_NEXT_SHIFT rows only in the existing per-store opt-in provisional report; pending rows remain explicitly marked and excluded from reviewed totals. Unknown amounts/cards, stale or invalidated source, inconsistent statuses, source/generation/authorization failures stay held. Existing recipient, consent, mail boundary, original cash/card separation and legacy defaults unchanged. Focused47 tests PASS/0 FAIL/0 SKIP including actual injected mail adapter text and hard-hold cases. No actual email, production setting change, financial/provider transaction or new LAB PASS. Exact PR/main CI, guarded deployment and scoped measured actual preview/email acceptance remain required; whole workflow OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-27-cash-pending-email.md.
+
 # Pending-shift provisional email
 
 ## 27/10/2026 — CASH-PENDING-EMAIL-08 / ASSIGNED BEFORE SOURCE
