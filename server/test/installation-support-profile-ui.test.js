@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
+import {existsSync} from 'node:fs';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 import {JSDOM} from 'jsdom';
 
 // These existing views are represented by inert components: their independent
@@ -84,3 +87,13 @@ test('isolated printable guide contains only fixed text and reports blocked popu
   assert.match(page.document.body.textContent,/δεν καταχωρεί βλάβη/);assert.doesNotMatch(page.document.body.textContent,/Εταιρεία Α|Κατάστημα Α|Εταιρεία Β|Κατάστημα Β|SECRET|HIDDEN|a@example/);
   assert.equal(page.document.documentElement.lang,'el');assert.equal(requests.length,before);output.window.close();
 }));
+
+
+const chromeCandidates=[process.env.CHROME_BIN,'/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser'].filter(Boolean);
+const chromePath=chromeCandidates.find(candidate=>existsSync(candidate));
+test('real Chromium isolates and prints the support guide to one-page PDF', {skip:!chromePath&&process.env.CI!=='true'?'Chromium unavailable locally':false,timeout:120000},async()=>{
+  assert.ok(chromePath,'Chromium is mandatory in CI');
+  const flow=fileURLToPath(new URL('../e2e/installation-support-fault-guide-browser-flow.mjs',import.meta.url));
+  const {stdout}=await promisify(execFile)(process.execPath,[flow],{env:{...process.env,CHROME_BIN:chromePath},timeout:110000,maxBuffer:1024*1024});
+  assert.match(stdout,/Chromium synthetic popup and one-page PDF passed/);
+});
