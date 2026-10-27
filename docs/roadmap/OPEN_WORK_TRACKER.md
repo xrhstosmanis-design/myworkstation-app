@@ -1,3 +1,10 @@
+## 27/10/2026 — DOCUMENT-CAMERA CI FAILURE / SCOPED DIAGNOSTIC CLAIM BEFORE TEST CHANGE
+
+Owner codex/canon-lide400-scan-diagnostics-20261027; branch fix/camera-ci-pointer-diagnosis-20261027. Owner requests continuation until the Canon hardware diagnostic is ready. Scanner diagnostics PR #3222 passed full PR CI and Windows connector CI and merged e8579e26; exact main CI 40560090184 failed twice in document-camera-browser-flow at cancellation: closed=false, stopped=false, calls=0. No main full CI PASS or exact guarded release is claimed. A later documentation-only green skipped full tests and deploy, so it cannot replace that evidence. The same runtime tree passed earlier PR CI, but timing is an unconfirmed hypothesis; preserve all failed evidence and never weaken the assertions.
+
+Claim only diagnosis and correction of the synthetic Chromium camera pointer/cleanup test or a directly established camera cancellation regression, under the existing capture owner. Before touching test or runtime code, publish this claim. Record coordinates and event/DOM timing, reproduce the failure and establish cause before a bounded change; preserve real pointer testing, camera cleanup, all capture and payment behavior. Full fresh CI and reviewed guarded release are required. Canon hardware cause, installed diagnostic build and physical PASS remain UNKNOWN/NOT TESTED; no invoice upload, payment or other financial action. Checkpoint CHECKPOINTS/CHANGES/2026-10-26-document-capture-scanner.md.
+
+
 ## 27/10/2026 — CASH-REPORT-EXPENSE-PROSE-07 / ASSIGNED BEFORE SOURCE
 
 Owner codex/cash-chat-reconciliation-20261026 retained; branch feat/cash-report-expense-prose-20261027; 2026-10-27T19:19Z; baseline dc1cdf2c64870aefb2220eb37011e1829d2cff65. User requires the actual emailed MyWorkStation report to show shift/date/operator, original and reviewed results, separate POS–EFTPOS, documented missing receipts and signature in concise prose. Actual 26/10 Diadochou view showed 3 pending shifts, 3 expenses without documents and no recent chat attachments. This observation is not LAB PASS or a determination of liability.
