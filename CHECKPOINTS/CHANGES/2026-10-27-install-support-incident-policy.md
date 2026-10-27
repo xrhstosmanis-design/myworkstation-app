@@ -1,3 +1,7 @@
+## 27/10/2026 - INSTALL-SUPPORT-INCIDENT-POLICY / REVIEWED SOURCE / AWAITING FULL CI
+
+SCOPED_SOURCE_STAGE: REVIEWED_PURE_CONTRACT_AWAITING_EXACT_FULL_CI. Before-source claim #3212 exact head ea9a24e686ae888be9cefbc19c52e053950df74d merged main 979356c1da8c7436e967934f2cb1b69e2de788db BEFORE the two-path source; final source 09ad31174ec8dc6e79b6a02627e8fe0b39130a4a independently reviewed by root and lifecycle reviewer. Local Node20 focused tests 9 PASS / 0 FAIL / 0 SKIP. Receipt replay requires a trusted authoritative receipt check and caller-side atomic persistence; historical result is not necessarily current state. Confirmer is bounded claimed text until future server validates identity. Stale or equal-version inconsistent replay is refused. No runtime route/mount, storage, database/schema, authorization, existing feature, business action or LAB/user/manual PASS. Full persistent INSTALL-SUPPORT, owner-reviewed lifecycle integration and actual incident handling remain OPEN/NOT INSTALLED. Exact full PR/main CI and ordinary guarded release required.
+
 # INSTALL-SUPPORT incident lifecycle — before-source claim
 
 ## 27/10/2026 — INSTALL-SUPPORT-INCIDENT-POLICY-01 / ASSIGNED BEFORE SOURCE / PURE CONTRACT ONLY
