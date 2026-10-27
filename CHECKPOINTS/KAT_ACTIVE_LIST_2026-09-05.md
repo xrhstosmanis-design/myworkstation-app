@@ -1,3 +1,7 @@
+## 27/10/2026 — CASH-REPORT-EXPENSE-PROSE-07 / SOURCE CANDIDATE / NOT DEPLOYED
+
+Retained owner codex/cash-chat-reconciliation-20261026. Claim #3225 exact CI40569266384 SUCCESS merged807e4d3 before source. Source PR #3228 headcc704e CI40569905008 FAILED: global Greece time policy found two new clock formatters missing hour12:false. Locally corrected both; focused 18 tests PASS. Rebase preserves scanner owner #3227 and all other changes. This is a source candidate; no deploy, new LAB PASS, actual email or financial action. Full exact PR/main CI, guarded release and scoped cash LAB remain required. Whole workflow OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-27-cash-report-expense-prose.md.
+
 ## 27/10/2026 — DOCUMENT-CAMERA CI FAILURE / SCOPED DIAGNOSTIC CLAIM BEFORE TEST CHANGE
 
 Owner codex/canon-lide400-scan-diagnostics-20261027; branch fix/camera-ci-pointer-diagnosis-20261027. Owner requests continuation until the Canon hardware diagnostic is ready. Scanner diagnostics PR #3222 passed full PR CI and Windows connector CI and merged e8579e26; exact main CI 40560090184 failed twice in document-camera-browser-flow at cancellation: closed=false, stopped=false, calls=0. No main full CI PASS or exact guarded release is claimed. A later documentation-only green skipped full tests and deploy, so it cannot replace that evidence. The same runtime tree passed earlier PR CI, but timing is an unconfirmed hypothesis; preserve all failed evidence and never weaken the assertions.

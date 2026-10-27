@@ -1,3 +1,7 @@
+## 27/10/2026 — CASH-REPORT-EXPENSE-PROSE-07 / SOURCE CANDIDATE / NOT DEPLOYED
+
+Retained owner codex/cash-chat-reconciliation-20261026. Claim #3225 exact CI40569266384 SUCCESS merged807e4d3 before source. Source PR #3228 headcc704e CI40569905008 FAILED: global Greece time policy found two new clock formatters missing hour12:false. Locally corrected both; focused 18 tests PASS. Rebase preserves scanner owner #3227 and all other changes. This is a source candidate; no deploy, new LAB PASS, actual email or financial action. Full exact PR/main CI, guarded release and scoped cash LAB remain required. Whole workflow OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-27-cash-report-expense-prose.md.
+
 # Cash report expense evidence and prose
 
 ## 27/10/2026 — CASH-REPORT-EXPENSE-PROSE-07 / ASSIGNED BEFORE SOURCE
