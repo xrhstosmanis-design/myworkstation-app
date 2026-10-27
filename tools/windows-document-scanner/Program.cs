@@ -109,7 +109,8 @@ static Task<string[]> WiaScan(int maxPages, CancellationToken ct) {
         } catch(OperationCanceledException) { completion.TrySetCanceled(ct); }
         catch(Exception error) {
             // Do not log document data, device identifiers, tokens or driver messages.
-            Console.WriteLine($"Scanner diagnostic: stage={stage}, error={error.GetType().Name}, hresult=0x{error.HResult:X8}");
+            if(error is ScannerFitException fitError) Console.WriteLine($"Scanner diagnostic: stage={stage}, reason={fitError.Reason}, inputBytes={fitError.InputBytes}, width={fitError.Width}, height={fitError.Height}");
+            else Console.WriteLine($"Scanner diagnostic: stage={stage}, error={error.GetType().Name}, hresult=0x{error.HResult:X8}");
             completion.TrySetException(new InvalidOperationException("SCAN_FAILED"));
         }
         finally {
@@ -211,14 +212,15 @@ internal static class ScannerJpeg {
     private const long MaxPixels=48_000_000;
 
     public static byte[] Fit(byte[] input,int maxBytes) {
-        if(maxBytes<4 || input.Length<4 || input.Length>MaxInputBytes ||
-           input[0]!=255 || input[1]!=216 || input[^2]!=255 || input[^1]!=217)
-            throw new InvalidOperationException("Invalid or oversized JPEG input.");
+        if(maxBytes<4)throw new ScannerFitException("invalid-limit",input.Length);
+        if(input.Length>MaxInputBytes)throw new ScannerFitException("input-over-64mb",input.Length);
+        if(input.Length<4 || input[0]!=255 || input[1]!=216 || input[^2]!=255 || input[^1]!=217)
+            throw new ScannerFitException("invalid-jpeg",input.Length);
         if(input.Length<=maxBytes)return input;
         using var source=new MemoryStream(input,false);
         using var image=System.Drawing.Image.FromStream(source,false,true);
         if(image.Width<=0||image.Height<=0||(long)image.Width*image.Height>MaxPixels)
-            throw new InvalidOperationException("Unsupported image dimensions.");
+            throw new ScannerFitException("dimensions-over-limit",input.Length,image.Width,image.Height);
         var codec=System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
             .First(c=>c.FormatID==System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
         foreach(long quality in new long[]{90,85,80,75}) {
@@ -232,7 +234,7 @@ internal static class ScannerJpeg {
                 CryptographicOperations.ZeroMemory(result);
             }
         }
-        throw new InvalidOperationException("JPEG cannot fit without excessive compression.");
+        throw new ScannerFitException("cannot-fit-at-quality-75",input.Length,image.Width,image.Height);
     }
 
     public static void Verify() {
@@ -262,11 +264,21 @@ internal static class ScannerJpeg {
         using(var stream=new MemoryStream(fitted,false))
         using(var decoded=System.Drawing.Image.FromStream(stream,false,true))
             if(decoded.Width!=width||decoded.Height!=height)throw new InvalidOperationException("JPEG dimensions changed.");
-        bool rejected=false;try { Fit(bytes,4); } catch(InvalidOperationException) { rejected=true; }
-        if(!rejected)throw new InvalidOperationException("Unfittable JPEG was accepted.");
-        rejected=false;try { Fit(new byte[]{1,2,3,4},100); } catch(InvalidOperationException) { rejected=true; }
-        if(!rejected)throw new InvalidOperationException("Invalid JPEG was accepted.");
+        bool rejected=false;try { Fit(bytes,4); } catch(ScannerFitException error) { rejected=error.Reason=="cannot-fit-at-quality-75" && error.Width==width && error.Height==height && error.InputBytes==bytes.Length; }
+        if(!rejected)throw new InvalidOperationException("Unfittable JPEG diagnostic failed.");
+        rejected=false;try { Fit(new byte[]{1,2,3,4},100); } catch(ScannerFitException error) { rejected=error.Reason=="invalid-jpeg" && error.InputBytes==4; }
+        if(!rejected)throw new InvalidOperationException("Invalid JPEG diagnostic failed.");
         CryptographicOperations.ZeroMemory(bytes);CryptographicOperations.ZeroMemory(fitted);
         Console.WriteLine("Scanner JPEG size self-test PASS");
+    }
+}
+
+internal sealed class ScannerFitException : InvalidOperationException {
+    public string Reason { get; }
+    public int InputBytes { get; }
+    public int Width { get; }
+    public int Height { get; }
+    public ScannerFitException(string reason,int inputBytes,int width=0,int height=0) {
+        Reason=reason;InputBytes=inputBytes;Width=width;Height=height;
     }
 }
