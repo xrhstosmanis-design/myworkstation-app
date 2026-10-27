@@ -30,6 +30,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "jszip": "^3.10.1",
     "prisma": "^6.3.1"
   }
 }
