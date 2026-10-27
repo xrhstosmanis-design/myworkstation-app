@@ -50,6 +50,7 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   const from=period.from.toISOString(),to=period.to.toISOString();
   if(!activationAllows(control,{activationEpoch:grant.activationEpoch,activationFingerprint:grant.activationFingerprint,createdAt:iso(grant.createdAt),periodFrom:from,now})||from<iso(grant.notBefore))hold();
   const preview=await readAutomaticCashPreviewInTransaction(tx,{actorId:principal.id,companyId:scope.companyId,storeId:scope.storeId,day:period.fromDay,frequency:scope.frequency,configuration,settingsVersion:settings.version,now:new Date(now)});
+  if(configuration.reviewedReconciliation===true&&preview.reviewedCash?.generation!==lifecycle.generation)hold();
   const payload=buildAutomaticCashPayload({preview,companyId:scope.companyId,storeId:scope.storeId,settingsVersion:settings.version});
   if(payload.period.from!==from||payload.period.to!==to)hold();
   // Re-read activation after source work as well as independently at every start.
