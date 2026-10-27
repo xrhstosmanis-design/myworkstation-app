@@ -9,3 +9,5 @@
 .install-support-profile dt{font-size:.88rem;font-weight:700;color:#52647e}.install-support-profile dd{margin:5px 0 0;overflow-wrap:anywhere;font-weight:600}
 .install-support-unchecked{margin-top:20px}.install-support-unchecked h3{font-size:1rem;margin:0 0 10px}
 @media(max-width:600px){.install-support-overlay{padding:12px}.install-support-profile{max-height:calc(100dvh - 24px);padding:18px}.install-support-fields,.install-support-unchecked dl{grid-template-columns:1fr}.install-support-head{gap:10px}.install-support-head h2{font-size:1.1rem}}
+
+.install-support-guide{margin:0 0 18px}.install-support-guide button{min-height:44px;padding:10px 16px;border:1px solid #173967;border-radius:10px;background:#fff;color:#173967;font:inherit;font-weight:700;cursor:pointer}.install-support-guide button:focus-visible{outline:3px solid #008b9c;outline-offset:3px}.install-support-guide p{color:#9b1c1c}
