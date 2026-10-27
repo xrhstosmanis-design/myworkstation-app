@@ -8,6 +8,11 @@ No lifecycle, database, schema, persistence, backend, auth, device, fiscal, stoc
 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-27-install-support-print-guide-source.md.
 
+## 27/10/2026 — CAMERA CI / MEASURED LAYOUT MOVEMENT / CANDIDATE TEST REPAIR
+
+Diagnostic draft PR #3230 head 91a7f527 and full CI 40570911149 passed all five jobs, with 12 real Chromium camera scenarios and all original cleanup assertions. Instrumentation measured the cancellation button center moving 16.203 pixels between the original geometry measurement and the immediate pre-click check in one 1366x768 case; real pointer events reached the button in that successful run. This establishes that the old test can use stale coordinates but does not prove the exact cause of each earlier failure. Candidate updates only the test to wait two animation frames, remeasure, validate visible target and hit-test immediately before real mouse interaction; it preserves original geometry and stream-stop/closed/zero-backend assertions. No runtime behavior or production transaction changes. Fresh full PR/main CI and guarded release remain required. Canon WIA failure cause and physical acceptance remain UNKNOWN/NOT TESTED.
+
+
 ## 27/10/2026 — CASH-REPORT-EXPENSE-PROSE-07 / SOURCE CANDIDATE / NOT DEPLOYED
 
 Retained owner codex/cash-chat-reconciliation-20261026. Claim #3225 exact CI40569266384 SUCCESS merged807e4d3 before source. Source PR #3228 headcc704e CI40569905008 FAILED: global Greece time policy found two new clock formatters missing hour12:false. Locally corrected both; focused 18 tests PASS. Rebase preserves scanner owner #3227 and all other changes. This is a source candidate; no deploy, new LAB PASS, actual email or financial action. Full exact PR/main CI, guarded release and scoped cash LAB remain required. Whole workflow OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-27-cash-report-expense-prose.md.
