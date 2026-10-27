@@ -21,3 +21,14 @@ test('explicit reviewed mode fails closed until reviewed result is available',as
  assert.equal(preview.reviewedReconciliation,true);
  assert.throws(()=>buildAutomaticCashPayload({preview,companyId:'c',storeId:'s',settingsVersion:1}),e=>e.code==='INVALID_CASH_PAYLOAD');
 });
+
+import {createCashReconciliationRepository} from '../src/services/cash-reconciliation-repository.js';
+test('internal selection rejects invalid, duplicate and stale requests before reading cash',async()=>{
+ let reads=0;
+ const tx={$queryRawUnsafe:async(sql)=>{reads++;return sql.includes('current_schema()')?[{schema:'fixture',fence:'fixture.StoreLifecycleFence'}]:[{companyId:'c',generation:'2',maintenance:false,retired:false}]},$queryRaw:async()=>{throw Error('unexpected cash read')}};
+ const repo=createCashReconciliationRepository(tx),scope={companyId:'c',storeId:'s',generation:'1'},period={from:'2026-10-01',to:'2026-10-31'};
+ for(const ids of [[],['same','same'],Array(201).fill('x'),['']])await assert.rejects(repo.readSelectedInTransaction(tx,scope,period,ids),e=>e.code==='CASH_RECONCILIATION_SCOPE_INVALID');
+ assert.equal(reads,0);
+ await assert.rejects(repo.readSelectedInTransaction(tx,scope,period,['shift']),e=>e.code==='STORE_LIFECYCLE_STALE_GENERATION');
+ assert.equal(reads,2);
+});
