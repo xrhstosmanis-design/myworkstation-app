@@ -32,3 +32,19 @@ test('internal selection rejects invalid, duplicate and stale requests before re
  await assert.rejects(repo.readSelectedInTransaction(tx,scope,period,['shift']),e=>e.code==='STORE_LIFECYCLE_STALE_GENERATION');
  assert.equal(reads,2);
 });
+
+import {hash} from '../src/services/cash-reconciliation-contract.js';
+import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
+import {projectAutomaticReviewedReport,validateAutomaticReviewedReport} from '../src/services/cash-reviewed-automatic-contract.js';
+test('common reviewed report preserves separate cash and cards and rejects changed source or totals',()=>{
+ const s={session:{id:'a',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',openedBy:'employee',openedByName:'Σούλα',openedAt:'2026-10-21T06:00:00Z',closedAt:'2026-10-21T14:00:00Z',shiftLabel:'Πρωινή'},sourceHash:hash('session'),initialCents:-700,basisCents:-700,cardCents:20000,explainedCents:0,reviewStatus:'VALID',nextClosed:true,transactions:[{id:'PRIVATE_TRANSACTION'}]};
+ const source={store:{id:'store',name:'Δοκιμή'},rule:{mode:'FULL',carryOverEnabled:true},sessions:new Map([['a',s]]),selectedIds:['a'],period:{from:'2026-10-21',to:'2026-10-21'},coverage:'BOUNDED_CLOSED_SHIFTS'};
+ const initial=projectReconciliation(source,[]),r=initial.rows[0],record={id:'review',sequence:1,actorName:'Χρήστος Μάνης',data:{kind:'CONFIRM',sessionId:'a',sourceHash:r.sourceHash,planHash:r.planHash,note:'Ελέγχθηκε η βάρδια.'},proof:{}};
+ const report=projectAutomaticReviewedReport(projectReconciliation(source,[record]));
+ const input={companyId:'co',storeId:'store',dayStartHour:7,rule:{deliveryTerminalPattern:'DELIVERY'},groups:[{companyId:'co',storeId:'store',terminalPos:'MAIN',cashChain:'STORE',day:'2026-10-21',rows:[{sessionId:'a',employeeId:'employee',employeeName:'Σούλα',variance:-7}]}]};
+ assert.equal(validateAutomaticReviewedReport(report,input),true);
+ assert.match(report.text,/POS–EFTPOS: διαφορά \+200,00/);assert.equal(JSON.stringify(report).includes('PRIVATE_TRANSACTION'),false);
+ assert.equal(validateAutomaticReviewedReport({...report,totals:{...report.totals,shortageCents:0}},input),false);
+ assert.equal(validateAutomaticReviewedReport(report,{...input,storeId:'foreign'}),false);
+ assert.equal(validateAutomaticReviewedReport(report,{...input,groups:[{...input.groups[0],rows:[{...input.groups[0].rows[0],variance:-8}]}]}),false);
+});
