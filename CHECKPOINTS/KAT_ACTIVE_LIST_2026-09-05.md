@@ -1,3 +1,9 @@
+## 27/10/2026 - INSTALL-SUPPORT-01 / REVIEWED SOURCE / AWAITING EXACT FULL CI
+
+SCOPED_SOURCE_STAGE: REVIEWED_SOURCE_AWAITING_EXACT_FULL_CI. Claim3207 merged be970acf34daa13ea6188ef14e312e70003ffdf4 BEFORE the four-path source7a12467875fdd876cbd4f5dc506ec7169b7ab400. Root and independent source review CLEAR; original owner codex/central-four-streams-20261018 / worker /root/priority_support retained.
+
+Only selected-store read-only summary and launcher, scoped CSS and actual mounted tests; no backend, schema, workflow, lifecycle records, PDF export or actual support-incident functionality. Exact local Node20 mounted tests 5PASS/0FAIL/0SKIP and Work build PASS10.59s; old guide/scheduler are inert isolated stubs, not functional acceptance. Full exactPR CI, merged main CI, normal guarded release and actual authenticated LAB observation remain required. No USER/LAB/manual PASS, device, settings, financial or business write claimed. Broader installation/support module remains OPEN.
+
 ## 27/10/2026 — FTEXT late error evidence released cdd0d4e / AWAITING DEVICE UPDATE
 
 Retained owner codex/rizareio-ftext-bridge-20261022. Claim3203 merged0d5cc4cf before source; sourcePR3204 headf67c341bedd638463bd744e105e2b2f327fd89ad mergedcdd0d4e5b0f6bd418d3af2670d299ab1494a29e7. Local31PASS/0FAIL/0SKIP. SourcefullCI40489890982 all5SUCCESS4409server+8backup/0FAIL/0SKIP; Windows40489891074/job122140880040 SUCCESS including76 cash/error boundaries,29STATUS,17VOID, unchanged-files/no new txt and retained install/DPAPI. Native40489891015/job122140880256 SUCCESS28PASS/0FAIL/0SKIP including original byte replay, concurrent immutable append, separate one-shot verified VOID, no financial tables and native full-schema/archive/COPY.
