@@ -5,7 +5,7 @@ import {buildAutomaticCashPayload,automaticReviewedMailText} from '../src/servic
 import {cashRuleFields,legacyCashControlRule} from '../src/services/cash-control-rules.js';
 import {hash} from '../src/services/cash-reconciliation-contract.js';
 import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
-import {projectAutomaticReviewedReport} from '../src/services/cash-reviewed-automatic-contract.js';
+import {projectAutomaticReviewedReport,canSendProvisionalCashReport} from '../src/services/cash-reviewed-automatic-contract.js';
 import {createAutomaticReportMailAdapter} from '../src/services/automatic-report-mail-adapter.js';
 import {createDeliverySlot,claimDelivery,startDelivery} from '../src/services/automatic-report-delivery-lifecycle.js';
 import {createHash} from 'node:crypto';
@@ -34,6 +34,34 @@ test('complete human-reviewed fixture feeds common text into payload, while modi
  assert.equal((await adapter.attempt(args)).outcome,'ACCEPTED');assert.equal(calls[0],'start');assert.equal(calls[1],automaticReviewedMailText(content));
  const altered=structuredClone(args),body=JSON.parse(altered.payload.body);body.reviewedCash.report.rows[0].remainingCents=0;altered.payload.body=JSON.stringify(body);altered.payload.byteLength=Buffer.byteLength(altered.payload.body);altered.payload.payloadFingerprint=createHash('sha256').update(altered.payload.body).digest('hex');calls.length=0;
  await assert.rejects(adapter.attempt(altered),{code:'INVALID_MAIL_ATTEMPT'});assert.equal(calls.length,0);
+ const pendingReport=projectAutomaticReviewedReport(projectReconciliation(source,records.filter(r=>r.id!=='confirm0')));
+ const pendingUnsigned={...unsigned,report:pendingReport},pendingPreview=structuredClone(p);
+ pendingPreview.reviewedCash={...pendingUnsigned,fingerprint:hash(pendingUnsigned)};
+ const pendingPayload=buildAutomaticCashPayload({preview:pendingPreview,companyId:'co',storeId:'store',settingsVersion:1});
+ const pendingContent=JSON.parse(pendingPayload.body);
+ assert.match(automaticReviewedMailText(pendingContent),/ΥΠΟ ΕΛΕΓΧΟ/);
+ assert.equal(canSendProvisionalCashReport(pendingReport),true);
+ const badReadiness=structuredClone(pendingReport);badReadiness.rows[0].cardCents=null;assert.equal(canSendProvisionalCashReport(badReadiness),false);
+ badReadiness.rows[0].cardCents=20000;badReadiness.rows[0].status='RECHECK_REQUIRED';badReadiness.rows[0].recheck=true;assert.equal(canSendProvisionalCashReport(badReadiness),false);
+ const nextPending=structuredClone(pendingReport);nextPending.rows[0].status='AWAITING_NEXT_SHIFT';nextPending.rows[0].eligible=false;nextPending.rows[0].nextClosed=false;assert.equal(canSendProvisionalCashReport(nextPending),true);
+ nextPending.rows[0].nextClosed=true;assert.equal(canSendProvisionalCashReport(nextPending),false);
+ assert.equal(pendingContent.reviewedCash.report.totals.pending,1);
+ assert.equal(pendingContent.reviewedCash.report.totals.shortageCents,0);
+ assert.equal(pendingContent.reviewedCash.report.totals.surplusCents,600);
+ const pendingInput={...input,snapshot:{...input.snapshot,payloadFingerprint:pendingPayload.payloadFingerprint}};
+ const pendingAuth={...auth,...pendingInput};
+ const slot=createDeliverySlot(pendingInput,{now,current:pendingAuth});
+ const claim=claimDelivery(slot,{expectedVersion:1,token:'pending-test',now,leaseMs:60000});
+ const attempt=startDelivery(claim,{expectedVersion:2,token:'pending-test',now,current:pendingAuth});
+ const delivered=[];const pendingAdapter=createAutomaticReportMailAdapter({startAttempt:async()=>attempt,sendMail:async msg=>{delivered.push(msg.text);return {accepted:[recipient],rejected:[],messageId:'pending-fixture'}}});
+ assert.equal((await pendingAdapter.attempt({scope:{companyId:'co',storeId:'store',slotId:attempt.slotId},expectedVersion:2,token:'pending-test',now,payload:pendingPayload})).outcome,'ACCEPTED');
+ assert.match(delivered[0],/ΥΠΟ ΕΛΕΓΧΟ/);assert.match(delivered[0],/δεν περιλαμβάνονται στα ελεγμένα σύνολα/);
+
+ for(const mutation of [r=>r.remainingCents=null,r=>r.cardCents=null,r=>{r.recheck=true;r.status='RECHECK_REQUIRED'},r=>{r.eligible=false;r.status='AWAITING_REVIEW'}]){
+  const bad=structuredClone(pendingPreview);mutation(bad.reviewedCash.report.rows[0]);
+  const {fingerprint,...modified}=bad.reviewedCash;bad.reviewedCash.fingerprint=hash(modified);
+  assert.throws(()=>buildAutomaticCashPayload({preview:bad,companyId:'co',storeId:'store',settingsVersion:1}),{code:'INVALID_CASH_PAYLOAD'});
+ }
  const missing=structuredClone(p);missing.reviewedCash.report.rows[0].cardCents=null;const {fingerprint,...missingUnsigned}=missing.reviewedCash;missing.reviewedCash.fingerprint=hash(missingUnsigned);
  assert.throws(()=>buildAutomaticCashPayload({preview:missing,companyId:'co',storeId:'store',settingsVersion:1}),{code:'INVALID_CASH_PAYLOAD'});
  p.reviewedCash.report.rows[0].remainingCents=0;assert.throws(()=>buildAutomaticCashPayload({preview:p,companyId:'co',storeId:'store',settingsVersion:1}),{code:'INVALID_CASH_PAYLOAD'});

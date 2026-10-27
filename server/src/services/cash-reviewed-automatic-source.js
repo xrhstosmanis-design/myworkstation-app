@@ -2,7 +2,7 @@ import {authorizeCashPaper} from '../routes/cash-papers.js';
 import {createCashReconciliationRepository} from './cash-reconciliation-repository.js';
 import {readLifecycleGeneration} from './store-lifecycle-generation.js';
 import {hash} from './cash-reconciliation-contract.js';
-import {projectAutomaticReviewedReport,validateAutomaticReviewedReport} from './cash-reviewed-automatic-contract.js';
+import {projectAutomaticReviewedReport,validateAutomaticReviewedReport,canSendProvisionalCashReport} from './cash-reviewed-automatic-contract.js';
 
 // This adapter runs inside the caller's existing authenticated, read-only
 // business-day transaction. It never calls the handwriting provider or writes
@@ -20,7 +20,7 @@ export async function readReviewedAutomaticCash(tx,{actorId,companyId,storeId,pe
   const selected=await createCashReconciliationRepository(tx).readSelectedInTransaction(tx,scope,{from:period.fromDay,to:period.toDay},rows.map(r=>r.id));
   const report=projectAutomaticReviewedReport(selected.report);
   if(!validateAutomaticReviewedReport(report,{companyId,storeId,groups,rule,dayStartHour:period.dayStartHour}))return hold('REVIEWED_SOURCE_MISMATCH');
-  const complete=report.rows.every(r=>r.reviewed&&r.cardCents!==null&&r.pendingEvidence.length===0);
+  const complete=canSendProvisionalCashReport(report);
   const result={status:complete?'READY':'HOLD',reason:complete?null:'REVIEW_REQUIRED',companyId,storeId,generation:state.generation,head:selected.head,sourceFingerprint,report};
   return {...result,fingerprint:hash(result)};
  }catch{return hold('REVIEWED_SOURCE_UNAVAILABLE')}
