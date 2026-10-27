@@ -7,7 +7,7 @@ const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 export const ftextVoidConfirmed=row=>row?.status==='REQUIRES_CHECK'&&row.checkoutJson?.ftextVoid?.status==='CONFIRMED';
 export function assertFtextVoidEligible(row){
  const error=ftextPaymentError(row);
- if(!row||row.status!=='REQUIRES_CHECK'||row.saleId||row.plan?.payment?.method!=='CARD'||row.checkoutJson?.paymentMethod!=='CARD'||!row.resultHash||!error)fail();
+ if(!row||row.status!=='REQUIRES_CHECK'||row.saleId||row.checkoutJson?.ftextOperatorRelease||row.plan?.payment?.method!=='CARD'||row.checkoutJson?.paymentMethod!=='CARD'||!row.resultHash||!error)fail();
  return error;
 }
 async function locked(tx,scope,id){return (await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} FOR UPDATE`)[0]}

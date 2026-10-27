@@ -14986,3 +14986,7 @@ ASSIGNED codex/cash-chat-reconciliation-20261026 retained. Branch feat/cash-revi
 ## 27/10/2026 — CASH ASSISTANT3195 / CAUSAL FIXTURE UPDATE / AWAITING CI + LAB
 
 Same owner codex/cash-chat-reconciliation-20261026. FullCI40400178237:4393PASS/2FAIL/0SKIP; exact causal sales/stock fixture amendment3197 green40456577255 mergedb37d2cb BEFORE edits. Semantic revocation boundaries preserve all access assertions; no production security change. Updated source awaiting new exact fullCI/release/LAB. Existing readonly3190 PASS protected; whole cash workflow OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-26-cash-reviewed-assistant-consumer.md.
+
+
+## 27/10/2026 — FTEXT operator return · ASSIGNED · AWAITING CI
+Retained owner codex/rizareio-ftext-bridge-20261022. Draft PR #3216: reviewed PAY error release after NO, no fiscal command. Local POS and native PostgreSQL tests passed; physical acceptance remains open.
