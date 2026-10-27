@@ -45,6 +45,7 @@ app.MapPost("/scan", async (HttpContext context) => {
     return Results.Json(result.Body,statusCode:result.Status);
 });
 if (selfTest) {
+    ScannerJpeg.Verify();
     await app.StartAsync();
     try { await VerifyProtocol(state, Origin); Console.WriteLine("Scanner protocol HTTP self-test PASS"); }
     finally { await app.StopAsync(); await app.DisposeAsync(); }
@@ -93,10 +94,17 @@ static Task<string[]> WiaScan(int maxPages, CancellationToken ct) {
                 stage="read-image-bytes";
                 dynamic image=imageObject!;byte[] bytes=(byte[])image.FileData.BinaryData;
                 ct.ThrowIfCancellationRequested();
-                stage=bytes.Length>7*1024*1024?"image-too-large":"validate-jpeg";
-                if(bytes.Length<4||bytes.Length>7*1024*1024||bytes[0]!=255||bytes[1]!=216||bytes[^2]!=255||bytes[^1]!=217)throw new InvalidOperationException("Invalid JPEG transfer.");
-                completion.TrySetResult(new[]{Convert.ToBase64String(bytes)});
-                CryptographicOperations.ZeroMemory(bytes);
+                stage="validate-jpeg";
+                byte[]? fitted=null;
+                try {
+                    stage=bytes.Length>7*1024*1024?"compress-image":"validate-jpeg";
+                    fitted=ScannerJpeg.Fit(bytes,7*1024*1024);
+                    ct.ThrowIfCancellationRequested();
+                    completion.TrySetResult(new[]{Convert.ToBase64String(fitted)});
+                } finally {
+                    if(fitted!=null&&!ReferenceEquals(fitted,bytes))CryptographicOperations.ZeroMemory(fitted);
+                    CryptographicOperations.ZeroMemory(bytes);
+                }
             } finally { if(imageObject!=null&&Marshal.IsComObject(imageObject))Marshal.FinalReleaseComObject(imageObject); }
         } catch(OperationCanceledException) { completion.TrySetCanceled(ct); }
         catch(Exception error) {
@@ -196,4 +204,69 @@ internal sealed class PairTokenStore {
         }finally{CryptographicOperations.ZeroMemory(bytes);}
     }
     public static void Reset(){if(File.Exists(DefaultFile))File.Delete(DefaultFile);}
+}
+
+internal static class ScannerJpeg {
+    private const int MaxInputBytes=64*1024*1024;
+    private const long MaxPixels=48_000_000;
+
+    public static byte[] Fit(byte[] input,int maxBytes) {
+        if(maxBytes<4 || input.Length<4 || input.Length>MaxInputBytes ||
+           input[0]!=255 || input[1]!=216 || input[^2]!=255 || input[^1]!=217)
+            throw new InvalidOperationException("Invalid or oversized JPEG input.");
+        if(input.Length<=maxBytes)return input;
+        using var source=new MemoryStream(input,false);
+        using var image=System.Drawing.Image.FromStream(source,false,true);
+        if(image.Width<=0||image.Height<=0||(long)image.Width*image.Height>MaxPixels)
+            throw new InvalidOperationException("Unsupported image dimensions.");
+        var codec=System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
+            .First(c=>c.FormatID==System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
+        foreach(long quality in new long[]{90,85,80,75}) {
+            using var output=new MemoryStream();
+            using var parameters=new System.Drawing.Imaging.EncoderParameters(1);
+            parameters.Param[0]=new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality,quality);
+            image.Save(output,codec,parameters);
+            if(output.Length<=maxBytes) {
+                var result=output.ToArray();
+                if(result.Length>=4&&result[0]==255&&result[1]==216&&result[^2]==255&&result[^1]==217)return result;
+                CryptographicOperations.ZeroMemory(result);
+            }
+        }
+        throw new InvalidOperationException("JPEG cannot fit without excessive compression.");
+    }
+
+    public static void Verify() {
+        // A noisy full-size page forces the actual 7 MiB branch on Windows.
+        const int width=2600,height=2600;
+        using var bitmap=new System.Drawing.Bitmap(width,height,System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+        var rect=new System.Drawing.Rectangle(0,0,width,height);
+        var data=bitmap.LockBits(rect,System.Drawing.Imaging.ImageLockMode.WriteOnly,System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+        try {
+            byte[] row=new byte[Math.Abs(data.Stride)];
+            for(int y=0;y<height;y++) {
+                RandomNumberGenerator.Fill(row);
+                Marshal.Copy(row,0,IntPtr.Add(data.Scan0,y*data.Stride),row.Length);
+            }
+            CryptographicOperations.ZeroMemory(row);
+        } finally { bitmap.UnlockBits(data); }
+        var codec=System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders().First(c=>c.FormatID==System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
+        using var original=new MemoryStream();
+        using(var parameters=new System.Drawing.Imaging.EncoderParameters(1)) {
+            parameters.Param[0]=new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality,100L);
+            bitmap.Save(original,codec,parameters);
+        }
+        var bytes=original.ToArray();
+        if(bytes.Length<=7*1024*1024)throw new InvalidOperationException("Oversize fixture did not exceed the limit.");
+        var fitted=Fit(bytes,7*1024*1024);
+        if(fitted.Length>7*1024*1024||ReferenceEquals(bytes,fitted))throw new InvalidOperationException("JPEG fitting failed.");
+        using(var stream=new MemoryStream(fitted,false))
+        using(var decoded=System.Drawing.Image.FromStream(stream,false,true))
+            if(decoded.Width!=width||decoded.Height!=height)throw new InvalidOperationException("JPEG dimensions changed.");
+        bool rejected=false;try { Fit(bytes,4); } catch(InvalidOperationException) { rejected=true; }
+        if(!rejected)throw new InvalidOperationException("Unfittable JPEG was accepted.");
+        rejected=false;try { Fit(new byte[]{1,2,3,4},100); } catch(InvalidOperationException) { rejected=true; }
+        if(!rejected)throw new InvalidOperationException("Invalid JPEG was accepted.");
+        CryptographicOperations.ZeroMemory(bytes);CryptographicOperations.ZeroMemory(fitted);
+        Console.WriteLine("Scanner JPEG size self-test PASS");
+    }
 }
