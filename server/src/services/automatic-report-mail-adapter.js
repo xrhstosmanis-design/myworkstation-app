@@ -1,5 +1,6 @@
 import {createHash} from "node:crypto";
 import {reconcileDeliverySlot} from "./automatic-report-delivery-lifecycle.js";
+import {automaticReviewedMailText} from "./automatic-report-cash-payload.js";
 
 // Dormant dependency-injected adapter. No SMTP client, credentials, DB or timer.
 // startAttempt MUST be a trusted lock-safe repository driver, resolving only
@@ -44,6 +45,7 @@ function request(raw){
   if(typeof p.body!=="string"||!Number.isSafeInteger(p.byteLength)||p.byteLength<1||p.byteLength>2*1024*1024||Buffer.byteLength(p.body,"utf8")!==p.byteLength||p.payloadFingerprint!==hash(p.body)||typeof p.sourceFingerprint!=="string"||!/^[a-f0-9]{64}$/.test(p.sourceFingerprint))fail();
   let content;try{content=JSON.parse(p.body)}catch{fail()}
   if(!content||content.format!==p.format||content.scope?.companyId!==p.scope.companyId||content.scope?.storeId!==p.scope.storeId||content.frequency!==p.frequency||content.sourceFingerprint!==p.sourceFingerprint||content.financialFinality!=="PROVISIONAL"||content.financialReconciliationComplete!==false||content.employeeLiabilityAdjusted!==false||canonical(content.period)!==canonical(p.period)||canonical(content.financialLimitations)!==canonical(p.financialLimitations))fail();
+  if(Object.hasOwn(content,'reviewedCash'))try{automaticReviewedMailText(content)}catch{fail()}
   if(!iso(p.period?.from)||!iso(p.period?.to)||p.period.from>=p.period.to||p.period.to>args.now)fail();
   return freeze(args);
 }
@@ -103,7 +105,8 @@ export function createAutomaticReportMailAdapter({startAttempt,sendMail}){
     // No Promise.race timer: send could continue after a local timer expires.
     // The injected transport owns its timeout; any uncertainty is terminal.
     try{
-      const result=await sendMail(Object.freeze({to:r.input.recipient,subject:`ΠΡΟΣΩΡΙΝΗ ΑΝΑΦΟΡΑ ΤΑΜΕΙΩΝ · ${r.input.frequency} · ${r.input.periodFrom} — ${r.input.periodTo}`,text:args.payload.body}));
+      const content=JSON.parse(args.payload.body);
+      const result=await sendMail(Object.freeze({to:r.input.recipient,subject:`ΠΡΟΣΩΡΙΝΗ ΑΝΑΦΟΡΑ ΤΑΜΕΙΩΝ · ${r.input.frequency} · ${r.input.periodFrom} — ${r.input.periodTo}`,text:Object.hasOwn(content,'reviewedCash')?automaticReviewedMailText(content):args.payload.body}));
       return evidence(result,r.input.recipient);
     }catch{return unknown("TRANSPORT_UNCERTAIN")}
   }});
