@@ -1,5 +1,13 @@
 ## 27/10/2026 — INSTALL-SUPPORT-INCIDENT-POLICY-01 / ASSIGNED BEFORE SOURCE / PURE CONTRACT ONLY
 
+## AUTO CASH 06 — source merged, main CI queued — 27/10/2026
+
+Owner codex/cash-chat-reconciliation-20261026 retained. Exact PR3214 head b5138c951be28c9b72c9344c88cbfcaa1e7f8240 passed full CI40547870893: all 5 jobs SUCCESS; server 4423 PASS/0 FAIL/0 SKIP, backup 8 PASS/0 FAIL/0 SKIP. Real isolated PostgreSQL reviewed-offset read-only proof and synthetic DST/month-end test passed unskipped. Merged main 0712a85c639f183e8ad6767d161fa77c2e0224ce. Previous missing-test-jszip fix PR3218 merged00c6340399161e44c62a2f87529dfe35012e529b after full CI40547648126 SUCCESS.
+
+Exact main CI40550160680 is PENDING behind main CI40549587345, whose build-and-test checkout has remained in progress since 17:23 UTC. No exact 0712a85 main CI success or guarded deployment/health proof has been observed. Do not assert installed or LAB PASS. Browser secure authentication previously timed out; no actual authenticated assistant/archive/automatic LAB, settings Save, provider call, real mail or financial action is claimed. Earlier cash3180 limited read-only LAB remains valid. Automatic mode is explicit per store and no mode activation/save was performed.
+
+Single next action: monitor exact main CI40550160680 to completion; if green inspect normal guarded release and exact healthy source revision, or a verified descendant with byte-identical cash paths. Record technical release centrally; then perform authorized fresh measured scoped LAB with secure login. If CI fails inspect and resolve causally under the current claim, preserving all other owners. The overall request is OPEN: per-store configuration, grouped LAB, company-wide workbook, autonomous handover matching, full prepaid/Netlink, safe/refill and handwritten evidence remain. No global employee net, cash-card offset, forced deploy, credential exposure or repeat of protected LAB transactions.
+
 ## CI JSZIP 01 — 27/10/2026 — ASSIGNED BEFORE CONFIG
 
 CI JSZIP source candidate — 27/10/2026: claim PR3217 head74d95e3f/docsCI40547125231 SUCCESS merged7ba526477baabb8d2faa00aca4188c8778cdbc54 before config. Adds only server devDependency jszip ^3.10.1 for the existing directly importing DOCX/export tests; no source/runtime, real mail, DB or LAB action. Local replay with installed jszip3.10.2: 32 PASS/0 FAIL/0 SKIP over all five affected files. Clean install and exact full CI must still run; cash PR3214 4409/5/0 remains FAIL pending rebase and full rerun. Retained cash native isolated proof passed; actual authenticated LAB remains NOT TESTED.
