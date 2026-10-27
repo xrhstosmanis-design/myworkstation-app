@@ -38,11 +38,14 @@ import {projectReconciliation} from '../src/services/cash-reconciliation-report.
 import {projectAutomaticReviewedReport,validateAutomaticReviewedReport} from '../src/services/cash-reviewed-automatic-contract.js';
 test('common reviewed report preserves separate cash and cards and rejects changed source or totals',()=>{
  const s={session:{id:'a',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',openedBy:'employee',openedByName:'Σούλα',openedAt:'2026-10-21T06:00:00Z',closedAt:'2026-10-21T14:00:00Z',shiftLabel:'Πρωινή'},sourceHash:hash('session'),initialCents:-700,basisCents:-700,cardCents:20000,explainedCents:0,reviewStatus:'VALID',nextClosed:true,transactions:[{id:'PRIVATE_TRANSACTION'}]};
+ s.expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',amountCents:12000,occurredAt:'2026-10-21T07:00:00.000Z'}];
  const source={store:{id:'store',name:'Δοκιμή'},rule:{mode:'FULL',carryOverEnabled:true},sessions:new Map([['a',s]]),selectedIds:['a'],period:{from:'2026-10-21',to:'2026-10-21'},coverage:'BOUNDED_CLOSED_SHIFTS'};
  const initial=projectReconciliation(source,[]),r=initial.rows[0],record={id:'review',sequence:1,actorName:'Χρήστος Μάνης',data:{kind:'CONFIRM',sessionId:'a',sourceHash:r.sourceHash,planHash:r.planHash,note:'Ελέγχθηκε η βάρδια.'},proof:{}};
  const report=projectAutomaticReviewedReport(projectReconciliation(source,[record]));
  const input={companyId:'co',storeId:'store',dayStartHour:7,rule:{deliveryTerminalPattern:'DELIVERY'},groups:[{companyId:'co',storeId:'store',terminalPos:'MAIN',cashChain:'STORE',day:'2026-10-21',rows:[{sessionId:'a',employeeId:'employee',employeeName:'Σούλα',variance:-7}]}]};
  assert.equal(validateAutomaticReviewedReport(report,input),true);
+ assert.match(report.text,/έξοδο 120,00\s*€ χωρίς παραστατικό/);
+ assert.equal(validateAutomaticReviewedReport({...report,rows:[{...report.rows[0],expenseFindings:[]}]},input),false);
  assert.match(report.text,/POS–EFTPOS: διαφορά \+200,00/);assert.equal(JSON.stringify(report).includes('PRIVATE_TRANSACTION'),false);
  assert.equal(validateAutomaticReviewedReport({...report,totals:{...report.totals,shortageCents:0}},input),false);
  assert.equal(validateAutomaticReviewedReport(report,{...input,storeId:'foreign'}),false);
