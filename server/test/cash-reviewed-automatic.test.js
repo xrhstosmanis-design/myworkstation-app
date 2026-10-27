@@ -48,3 +48,11 @@ test('common reviewed report preserves separate cash and cards and rejects chang
  assert.equal(validateAutomaticReviewedReport(report,{...input,storeId:'foreign'}),false);
  assert.equal(validateAutomaticReviewedReport(report,{...input,groups:[{...input.groups[0],rows:[{...input.groups[0].rows[0],variance:-8}]}]}),false);
 });
+
+import {readReviewedAutomaticCash} from '../src/services/cash-reviewed-automatic-source.js';
+test('unready or inaccessible sources never produce reviewed totals or expose errors',async()=>{
+ const input={actorId:'actor',companyId:'co',storeId:'store',period:{fromDay:'2026-10-21',toDay:'2026-10-21',dayStartHour:7},rows:[{id:'a'}],groups:[],rule:{deliveryTerminalPattern:'DELIVERY'},sourceFingerprint:'a'.repeat(64)};
+ assert.deepEqual(await readReviewedAutomaticCash({}, {...input,ready:false}),{status:'HOLD',reason:'SOURCE_NOT_READY',report:null});
+ assert.deepEqual(await readReviewedAutomaticCash({user:{findUnique:async()=>{throw Error('private detail')}}}, {...input,ready:true}),{status:'HOLD',reason:'REVIEWED_SOURCE_UNAVAILABLE',report:null});
+ assert.deepEqual(await readReviewedAutomaticCash({}, {...input,rows:[],ready:true}),{status:'HOLD',reason:'SOURCE_LIMIT_OR_EMPTY',report:null});
+});
