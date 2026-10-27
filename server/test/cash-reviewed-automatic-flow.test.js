@@ -38,3 +38,25 @@ test('complete human-reviewed fixture feeds common text into payload, while modi
  assert.throws(()=>buildAutomaticCashPayload({preview:missing,companyId:'co',storeId:'store',settingsVersion:1}),{code:'INVALID_CASH_PAYLOAD'});
  p.reviewedCash.report.rows[0].remainingCents=0;assert.throws(()=>buildAutomaticCashPayload({preview:p,companyId:'co',storeId:'store',settingsVersion:1}),{code:'INVALID_CASH_PAYLOAD'});
 });
+
+import {cashPreviewPeriod,reportDayOffset,reportWallTime} from '../src/services/automatic-report-policy.js';
+test('reviewed business windows cover DST and month-end morning without dropping sessions',async()=>{
+ const configuration={dayStartHour:7,secondShiftStartHour:15,thirdShiftStartHour:23,terminals:[{terminalPos:'MAIN',requiredSlots:[1,2,3]}],cashRule:cashRuleFields(legacyCashControlRule({name:'LAB'}))};
+ for(const [frequency,day,hours]of [['DAILY','2026-03-28',23],['DAILY','2026-10-24',25],['WEEKLY','2026-10-21',169],['MONTHLY','2026-10-15',745]]){
+  const window=cashPreviewPeriod(day,frequency,configuration),rows=[];
+  for(let d=window.fromDay;d<=window.toDay;d=reportDayOffset(d,1))for(let slot=0;slot<3;slot++){
+   const next=reportDayOffset(d,1),start=reportWallTime(d,7).getTime(),from=new Date(start+slot*8*3600000),to=slot===2?reportWallTime(next,7):new Date(start+(slot+1)*8*3600000);
+   rows.push({id:d+'-'+slot,companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',openedBy:'e'+slot,openedByName:'Χειριστής '+slot,openedAt:from,closedAt:to,variance:[-10,8,0][slot]});
+  }
+  const tx={user:{findUnique:async()=>({role:'SUPER_ADMIN'})},store:{findFirst:async()=>({id:'store',companyId:'co',name:'LAB'})},$queryRaw:async strings=>strings.join('').includes('FROM "AutomaticReportSettings"')?[{version:1}]:strings.join('').includes('FROM "CashControlStoreRule"')?[]:rows};
+  const p=await readAutomaticCashPreview({$transaction:fn=>fn(tx)},{actorId:'u',companyId:'co',storeId:'store',day,frequency,configuration,settingsVersion:1,now:new Date(window.to.getTime()+3600000)});
+  assert.equal(p.ready,true);assert.equal((window.to-window.from)/3600000,hours);
+  const sessions=new Map(rows.map(r=>[r.id,{session:{...r,shiftLabel:'Βάρδια'},sourceHash:hash(r.id),initialCents:r.variance*100,basisCents:r.variance*100,cardCents:0,explainedCents:0,reviewStatus:'VALID',nextClosed:true,transactions:[]} ]));
+  const source={store:{id:'store',name:'LAB'},rule:{mode:'FULL',carryOverEnabled:true},sessions,selectedIds:rows.map(r=>r.id),period:{from:window.fromDay,to:reportDayOffset(window.toDay,1)},coverage:'BOUNDED_CLOSED_SHIFTS'},draft=projectReconciliation(source,[]);
+  const records=draft.rows.map((r,i)=>({id:'confirm'+i,sequence:i+1,actorName:'Χρήστος Μάνης',data:{kind:'CONFIRM',sessionId:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,note:'Ελέγχθηκε η βάρδια.'},proof:{}}));
+  const report=projectAutomaticReviewedReport(projectReconciliation(source,records)),unsigned={status:'READY',reason:null,companyId:'co',storeId:'store',generation:'0',head:'ROOT',sourceFingerprint:p.sourceFingerprint,report};
+  p.reviewedReconciliation=true;p.reviewedCash={...unsigned,fingerprint:hash(unsigned)};
+  const result=buildAutomaticCashPayload({preview:p,companyId:'co',storeId:'store',settingsVersion:1}),content=JSON.parse(result.body);
+  assert.equal(content.reviewedCash.report.rows.length,rows.length);assert.equal(content.reviewedCash.report.period.to,reportDayOffset(window.toDay,1));assert.equal(new Set(content.reviewedCash.report.rows.map(r=>r.sessionId)).size,rows.length);
+ }
+});
