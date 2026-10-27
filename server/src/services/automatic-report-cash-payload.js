@@ -73,6 +73,10 @@ export function buildAutomaticCashPayload(raw){
 }
 function build(raw){
   const args=copy(raw),{preview:p,companyId,storeId,settingsVersion}=args;
+  // WIP: never substitute the legacy original-variance report when a store
+  // explicitly requires reviewed results. The complete consumer will replace
+  // this guard only after its bound evidence and flow tests are in place.
+  check(p?.reviewedReconciliation!==true,"Reviewed cash results are not yet available.");
   check(args&&typeof args==="object"&&Object.keys(args).length===4&&["preview","companyId","storeId","settingsVersion"].every(k=>own(args,k)),"Explicit payload arguments required.");
   label(companyId);label(storeId);
   check(Number.isSafeInteger(settingsVersion)&&settingsVersion>0&&p?.settingsVersion===settingsVersion,"Settings version mismatch.");

@@ -83,6 +83,7 @@ export async function readAutomaticCashPreviewInTransaction(tx,{actorId,companyI
     const groups=ready?summarizeCashVariances(rows.map(row=>({...row,cashChain:row.terminalPos.toUpperCase().includes(rule.deliveryTerminalPattern.toUpperCase())?"DELIVERY":"STORE"})),settings):null;
     const sourceFingerprint=createHash("sha256").update(JSON.stringify({companyId,storeId,day,frequency,period,configuration,rule,rows})).digest("hex");
     return {kind:`${frequency}_CASH_PREVIEW`,frequency,store,period,ready,holds,dayReadiness,sourceCount:rows.length,
+      ...(configuration.reviewedReconciliation===true?{reviewedReconciliation:true}:{}),
       complete:rows.length<=sourceLimit,groups,...(frequency==="MONTHLY"?{openingOperatorSummary:ready?summarizeOpeningOperators(groups):null}:{}),sourceFingerprint,generatedAt:new Date(now),
       rule:rule?{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled}:null,
       settingsVersion:settingsVersion??null,employeeLiabilityAdjusted:false,deliveryStatus:"PREVIEW_ONLY",
