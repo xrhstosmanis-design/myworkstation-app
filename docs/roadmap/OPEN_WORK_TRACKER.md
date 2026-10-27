@@ -1,3 +1,11 @@
+## 27/10/2026 — DOCUMENT-CAPTURE-SCANNER-01 / OWNER-DIRECTED TAKEOVER / HARDWARE FAIL
+
+At 2026-10-27T17:44Z the owner explicitly authorized this conversation to take over scanner integration because the former page is unavailable. Receiving owner: codex/canon-lide400-scan-diagnostics-20261027; branch fix/canon-lide400-scan-diagnostics-20261027. This is a direct owner-directed transfer, not a claim that the former owner published a handoff. Scope: diagnose and correct the Windows WIA connector failure observed with Canon LiDE 400, preserve existing origin, pairing, explicit scan, image limits, no automatic upload/payment and all other camera/invoice/OCR/financial behavior.
+
+USER OBSERVATION / FAIL: Windows scanner diagnostic reported success; Canon utility reportedly scanned; the MyWorkStation connector was paired and the physical scanner moved after the scan button, then the UI reported scan failure and no upload. Connector console displayed no diagnostic details. Cause remains unknown: the code collapses WIA exceptions into SCAN_FAILED; JPEG size/format and COM transfer are hypotheses only. Exact installed connector build and deployed web revision are not independently verified. No invoice/payment was submitted in the failed attempts. No hardware PASS.
+
+Next: publish takeover before source changes, identify the failing stage without logging invoice content or credentials, make one bounded correction, run Windows CI and guarded deployment, then a separately identified non-financial physical acceptance. Do not replay accepted invoices or perform payment/stock/AI submissions. Existing capture scope and other owners remain protected.
+
 ## 27/10/2026 — INSTALL-SUPPORT-INCIDENT-POLICY-01 / ASSIGNED BEFORE SOURCE / PURE CONTRACT ONLY
 
 ## CI JSZIP 01 — 27/10/2026 — ASSIGNED BEFORE CONFIG
