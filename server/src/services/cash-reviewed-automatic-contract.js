@@ -2,6 +2,7 @@ import {z} from 'zod';
 import {hash,day} from './cash-reconciliation-contract.js';
 import {reconciliationText} from './cash-reconciliation-report.js';
 import {summarizeCashVariances} from './automatic-report-policy.js';
+import {cashReportRowDay} from '../../../client/src/lib/cash-report-period.js';
 
 // Only public report fields cross this boundary. Original transactions,
 // associated paper contents and adjacent context are deliberately excluded.
@@ -31,6 +32,7 @@ export function validateAutomaticReviewedReport(report,{companyId,storeId,groups
   const employees=new Map();let shortage=0,surplus=0,pending=0;
   for(const r of p.rows){
    const original=originals.get(r.sessionId);if(!original||original.terminalPos!==r.terminalPos||(original.employeeId??null)!==r.operatorId||(original.employeeName??null)!==(r.operatorName==='Χωρίς καταγεγραμμένο χειριστή'?null:r.operatorName)||!Number.isSafeInteger(r.initialCents)||Math.round(original.variance*100)!==r.initialCents)return false;
+   if(r.closedAt<r.openedAt||cashReportRowDay(r.closedAt)!==r.day||r.day<p.period.from||r.day>p.period.to)return false;
    const reconstructed=summarizeCashVariances([{id:r.sessionId,status:'CLOSED',companyId,storeId,terminalPos:r.terminalPos,cashChain:original.cashChain,openedAt:r.openedAt,variance:r.initialCents/100}],{dayStartHour});
    if(reconstructed.length!==1||reconstructed[0].day!==original.day||original.cashChain!==(r.terminalPos.toUpperCase().includes(rule.deliveryTerminalPattern.toUpperCase())?'DELIVERY':'STORE'))return false;
    if(!r.reviewed&&r.status!=='NOT_APPLICABLE')pending++;
