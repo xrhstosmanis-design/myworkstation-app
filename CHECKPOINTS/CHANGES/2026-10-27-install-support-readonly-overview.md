@@ -1,3 +1,9 @@
+## 27/10/2026 - INSTALL-SUPPORT-01 / REVIEWED SOURCE / AWAITING EXACT FULL CI
+
+SCOPED_SOURCE_STAGE: REVIEWED_SOURCE_AWAITING_EXACT_FULL_CI. Claim3207 merged be970acf34daa13ea6188ef14e312e70003ffdf4 BEFORE the four-path source7a12467875fdd876cbd4f5dc506ec7169b7ab400. Root and independent source review CLEAR; original owner codex/central-four-streams-20261018 / worker /root/priority_support retained.
+
+Only selected-store read-only summary and launcher, scoped CSS and actual mounted tests; no backend, schema, workflow, lifecycle records, PDF export or actual support-incident functionality. Exact local Node20 mounted tests 5PASS/0FAIL/0SKIP and Work build PASS10.59s; old guide/scheduler are inert isolated stubs, not functional acceptance. Full exactPR CI, merged main CI, normal guarded release and actual authenticated LAB observation remain required. No USER/LAB/manual PASS, device, settings, financial or business write claimed. Broader installation/support module remains OPEN.
+
 # INSTALL-SUPPORT-01 — Read-only selected-store installation overview
 
 ## 27/10/2026 — INSTALL-SUPPORT-01 / ASSIGNED BEFORE SOURCE / READ-ONLY OVERVIEW
