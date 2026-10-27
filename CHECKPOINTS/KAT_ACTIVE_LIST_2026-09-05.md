@@ -1,3 +1,10 @@
+## 28/10/2026 — CANON LIDE 400 / REAL RETEST FAILED AT COMPRESSION / DIAGNOSTICS CANDIDATE
+
+User tested the Windows package containing 7 MiB fitting. The connector window showed stage=compress-image, InvalidOperationException, HRESULT 0x80131509; UI reported scan failure and no upload. This is a new physical FAIL, not hardware acceptance. The current implementation uses the same exception type for multiple conditions: invalid/over-64-MiB input, dimensions beyond 48 megapixels, or inability to fit at quality 75. The screenshots do not establish which condition occurred, input size, dimensions or actual image legibility. No payment/upload is claimed.
+
+Under the existing scanner diagnosis/fix ownership, candidate changes local diagnostics only: print a fixed reason code and numeric byte count/dimensions for known fit failures, no image data, driver text, tokens or device identity. Tests verify specific invalid and unfittable reason codes; existing 7 MiB, full-page, quality, security and nonfinancial boundaries remain unchanged. No speculative reduction of resolution/quality. Windows CI, full CI, guarded release and a separately observed physical scan are required; the real cause within compression and physical PASS remain OPEN.
+
+
 ## 28/10/2026 — CASH-PENDING-EMAIL-08 / TECHNICALLY INSTALLED / LAB EMAIL OPEN
 
 Retained owner codex/cash-chat-reconciliation-20261026. Claim #3235 headb3e33fb CI40579929360 SUCCESS mergedcd7f6f28. Source #3236 head94b6d0c CI40580578852 SUCCESS merged4ec1e154a3140f98b06dbecaa9e93d027a4efa34. Exact main CI40581944084 SUCCESS, job122463739178 4436 server plus8 backup tests PASS/0 FAIL/0 SKIP. Normal guarded deploy40583559739/job122469188632 SUCCESS and health exactly4ec1e154; later guarded deploy40586347505/job122478746369 healthy exactly167fd55c54569c99c66793fa4eddd70a8c612d7e, a descendant carrying the same cash paths. No force or rollback. Actual tested delivery remains NOT TESTED; prior limited read-only expense-report LAB PASS remains.
