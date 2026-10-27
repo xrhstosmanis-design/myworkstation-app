@@ -4,7 +4,7 @@ import {randomBytes} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {provisionFtextRecoverySchema} from '../src/services/ftext-cash-schema.js';
 import {prepareFtextCashRequest,claimFtextCashRequest,recordFtextCashResult} from '../src/services/ftext-cash-requests.js';
-import {recordFtextOperatorDecision} from '../src/services/ftext-operator-card.js';
+import {recordFtextOperatorDecision,releaseFtextRejectedAttempt} from '../src/services/ftext-operator-card.js';
 import {pollFtextErrorEvidence,recordFtextErrorEvidence,ftextOriginalCommandHash} from '../src/services/ftext-error-evidence.js';
 import {requestFtextVoid,claimFtextVoid,recordFtextVoidResult} from '../src/services/ftext-void.js';
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&!u.search&&!u.hash&&/^\/[^/]*test[^/]*$/i.test(decodeURIComponent(u.pathname))}catch{return false}}
@@ -39,6 +39,15 @@ test('native late error evidence is scoped, immutable and concurrent; only separ
   assert.deepEqual(finished.result,original.result);assert.equal(finished.resultHash,original.resultHash);assert.equal(finished.saleId,null);assert.deepEqual(finished.checkoutJson.ftextLateError,saved[0].checkoutJson.ftextLateError);
   assert.equal((await a.$transaction(tx=>recordFtextErrorEvidence(tx,device,settings,proof))).checkoutJson.ftextVoid.status,'CONFIRMED');
   const next=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'next'}));assert.notEqual(next.id,first.id);
+  await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+  await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{requestId:next.id,settingsHash:next.settingsHash,outcome:'REQUIRES_CHECK',code:48,failedCommand:'PAY||2',rawResultHash:'a'.repeat(64)}));
+  const rejected=await a.$transaction(tx=>recordFtextOperatorDecision(tx,next.id,scope,'cashier',{outcome:'NO'},{context}));
+  await assert.rejects(a.$transaction(tx=>releaseFtextRejectedAttempt(tx,next.id,scope,'other',{registerReady:true})));
+  const released=await Promise.all([a.$transaction(tx=>releaseFtextRejectedAttempt(tx,next.id,scope,'cashier',{registerReady:true})),b.$transaction(tx=>releaseFtextRejectedAttempt(tx,next.id,scope,'cashier',{registerReady:true}))]);
+  assert.deepEqual(released[0].checkoutJson.ftextOperatorRelease,released[1].checkoutJson.ftextOperatorRelease);
+  assert.deepEqual(released[0].result,rejected.result);assert.equal(released[0].saleId,null);
+  await assert.rejects(a.$transaction(tx=>requestFtextVoid(tx,scope,next.id,'admin',ack,{device,settings})));
+  const afterRelease=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'after-release'}));assert.notEqual(afterRelease.id,next.id);
   // Only the reviewed request table exists: any financial/stock/shift mutation fails.
  }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);try{await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`)}finally{await admin.$disconnect()}}
 });

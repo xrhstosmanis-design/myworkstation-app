@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ftextSettingsInput,ftextSettingsHash} from '../src/services/ftext-installation.js';
 import {validateFtextCashResult,ftextCashRequestView} from '../src/services/ftext-cash-requests.js';
-import {assertFtextOperatorCardApproved,recordFtextOperatorDecision} from '../src/services/ftext-operator-card.js';
+import {assertFtextOperatorCardApproved,recordFtextOperatorDecision,releaseFtextRejectedAttempt} from '../src/services/ftext-operator-card.js';
 const settings={companyId:'company-a',storeId:'store-a',terminalPos:'POS-01',fiscalDeviceCode:'FISCAL-01',serialNumber:'SYNTHETIC',workFolder:'C:\\FText',protocol:'SOLIDUS(II)T',configurationId:'38cc2dfa-365a-4c00-aa0a-e713555352cd',lifecycleGeneration:'0',cashEnabled:true,cashDepartments:[{department:4,vatRate:13,vatCode:'2'}],cardEnabled:true,cardPayment:{code:2,posTerminalId:1,transactionType:1,resultFormat:'OPERATOR_CONFIRMATION',confirmed:true}};
 const row={id:'370a0232-aeb7-4320-9919-d96c3f9f52d5',settingsHash:ftextSettingsHash(settings),serialNumber:settings.serialNumber,lifecycleGeneration:'0',status:'CONFIRMED',total:1.25,plan:{payment:{method:'CARD',amount:'1.25',code:2}},checkoutJson:{paymentMethod:'CARD',ftextCardMode:'OPERATOR_CONFIRMATION',actorId:'cashier'},resultHash:'f'.repeat(64)};
 const result={requestId:row.id,settingsHash:row.settingsHash,outcome:'CONFIRMED',code:0,serialNumber:row.serialNumber,dayId:'17',dayCounter:'42',deviceTime:'fixture',qr:'https://www1.aade.gr/dcl/fixture',rawResultHash:'b'.repeat(64)};
@@ -14,6 +14,15 @@ test('explicit operator profile accepts legacy final receipt but never relaxes s
  for(const patch of [{code:48},{serialNumber:'FOREIGN'},{qr:undefined},{rawResultHash:undefined},{posPayments:[]}])assert.throws(()=>validateFtextCashResult({...result,...patch},row));
  assert.equal(ftextCashRequestView(row).operatorConfirmationRequired,true);
  assert.throws(()=>assertFtextOperatorCardApproved(row,settings));
+});
+test('operator releases only their rejected payment error without sending a fiscal command',async()=>{
+ let saved={...structuredClone(row),status:'REQUIRES_CHECK',result:{outcome:'REQUIRES_CHECK',code:48,failedCommand:'PAY||2',rawResultHash:'a'.repeat(64)},checkoutJson:{...row.checkoutJson,ftextCardDecision:{outcome:'NO',actorId:'cashier',resultHash:row.resultHash,settingsHash:row.settingsHash}}},writes=0;
+ const tx={$queryRaw:async(parts,...values)=>{if(parts.join('?').startsWith('SELECT'))return values[1]===settings.companyId&&values[2]===settings.storeId&&values[3]===settings.terminalPos?[saved]:[];writes++;saved={...saved,checkoutJson:JSON.parse(values[0])};return [saved]}};
+ await assert.rejects(releaseFtextRejectedAttempt(tx,row.id,settings,'other',{registerReady:true}));
+ await assert.rejects(releaseFtextRejectedAttempt(tx,row.id,settings,'cashier',{registerReady:false}));
+ const original=structuredClone(saved);saved.result={outcome:'REQUIRES_CHECK'};await assert.rejects(releaseFtextRejectedAttempt(tx,row.id,settings,'cashier',{registerReady:true}));saved=original;
+ await releaseFtextRejectedAttempt(tx,row.id,settings,'cashier',{registerReady:true});assert.equal(saved.checkoutJson.ftextOperatorRelease.registerReady,true);assert.equal(saved.status,'REQUIRES_CHECK');assert.deepEqual(saved.result,original.result);assert.equal(writes,1);
+ await releaseFtextRejectedAttempt(tx,row.id,settings,'cashier',{registerReady:true});assert.equal(writes,1);
 });
 test('only original cashier can decide after response, immutable decisions bind settings/result; NO cannot finalize',async()=>{
  let saved=structuredClone(row),writes=0;

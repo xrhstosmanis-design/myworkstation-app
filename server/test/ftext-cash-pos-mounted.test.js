@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {withMountedPos} from './helpers/pos-modern-fixture.mjs';
+test('rejected ftext return releases only after readiness confirmation and retains basket',()=>withMountedPos({
+ ftextConfigured:true,
+ apiOverride:async path=>{const row={id:'rejected-request',kind:'FTEXT_CASH',storeId:'A',status:'REQUIRES_CHECK',operatorOutcome:'NO',paymentMethod:'CARD',total:2.2,checkout:{items:[{productId:'p0',quantity:1}]}};if(path.endsWith('/pending'))return {requests:[row]};if(path.endsWith('/ftext-cash/rejected-request'))return {request:row};if(path.endsWith('/release'))return {request:row}},
+ run:async({calls,click,dom})=>{let accepted=false;dom.window.confirm=()=>accepted;const button=[...document.querySelectorAll('button')].find(x=>x.textContent==='Επιστροφή στο καλάθι');await click(button);assert.equal(calls.some(c=>c.path.endsWith('/release')),false);accepted=true;await click(button);const release=calls.filter(c=>c.path.endsWith('/release'));assert.equal(release.length,1);assert.deepEqual(JSON.parse(release[0].options.body),{registerReady:true});assert.equal(document.querySelectorAll('.standard-line').length,1);assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')),false);}
+}));
 for(const method of ['CASH','CARD'])test(`actual POS recovers dispatched ftext ${method} without RBS continuation, manual confirmation or checkout resend`,()=>withMountedPos({
  ftextConfigured:true,
  apiOverride:async path=>{
