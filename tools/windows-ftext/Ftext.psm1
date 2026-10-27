@@ -22,11 +22,13 @@ function Read-FtextStatusResult([byte[]]$Bytes, [string]$ExpectedSerial) {
     $text = $enc.GetString($Bytes)
     if ($text -notmatch '[\r\n]$' -or $text.Contains([char]0)) { throw 'Incomplete ftext result.' }
     $lines = @($text -split '\r?\n')
-    if ($lines[0] -notmatch '^\d{1,3}$') { throw 'Invalid ftext result code.' }
-    $code = [int]$lines[0]
+    if ($lines[0] -notmatch '^[ \t]*(\d{1,3})[ \t]*$') { throw 'Invalid ftext result code.' }
+    $code = [int]$Matches[1]
     if ($code -ne 0) {
         if ($lines.Length -lt 4 -or [string]::IsNullOrWhiteSpace($lines[1]) -or [string]::IsNullOrWhiteSpace($lines[2])) { throw 'Incomplete ftext error.' }
-        return [pscustomobject]@{ ok=$false; code=$code; description=$lines[1]; failedCommand=$lines[2]; fiscalExecution=$false }
+        $failedCommand = [string]$lines[2]
+        if ($failedCommand.StartsWith('InputLine: ', [StringComparison]::Ordinal)) { $failedCommand = $failedCommand.Substring(11) }
+        return [pscustomobject]@{ ok=$false; code=$code; description=$lines[1]; failedCommand=$failedCommand; fiscalExecution=$false }
     }
     if ($lines.Length -lt 6 -or $lines[1] -notmatch '^\d+$' -or $lines[2] -notmatch '^\d+$' -or [string]::IsNullOrWhiteSpace($lines[4])) { throw 'Incomplete ftext status.' }
     if ($lines[3].Trim() -cne $ExpectedSerial) { throw 'The fiscal device serial does not match this installation.' }
