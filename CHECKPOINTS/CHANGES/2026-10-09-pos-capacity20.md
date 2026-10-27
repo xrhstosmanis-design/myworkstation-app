@@ -1,3 +1,15 @@
+## 27/10/2026 - CAPACITY20 FULL RUN EVIDENCE RECONCILED / BURST FAIL / REMAINS OPEN
+
+Evidence review 2026-10-27 12:58:39 EET; branch docs/capacity20-evidence-receipt-20261027.
+
+Retained incident owner codex/pos-startup-loading-20261008 and source owner codex/pos-capacity20-profiles-20261009; central evidence-only coordination, NO takeover or release. Independently re-read existing run37937519901/job113843198454 and downloaded its original artifact11622347974. Run concluded FAILURE09Oct14:23:56UTC; earlier IN_PROGRESS/PENDING entries below are historical only. ZIP SHA256 7d5e56b1e618f20ac8e717dcf17d3b86dc3ff4884953f6fc5ac5b91dea16f191, expires08Nov2026; https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/37937519901 .
+
+Actual isolated full-profile model: warmup5min, normal30min and peak15min PASS; synchronized 84-action read burst FAIL solely pos-refresh latency, p95=4131.316ms/p99=4237.201ms, all22 refreshes completed with zero errors/drops. The 120min endurance did NOT START. result.json overall after=null and capacityAcceptance=NOT_TESTED. No overall capacity or production PASS.
+
+Actual synthetic evidence before and after the read-only burst: 1760 unique request IDs exactly equal 1760 distinct sale client IDs; one payment, stock movement and audit per sale, CASH EUR4400 and stock delta -1760, control stock100000 unchanged. Burst before/after snapshots identical; these are isolated synthetic records, not production financial results. Container model app1CPU/512MiB, PostgreSQL18.6 2CPU/256MiB, test pool5; production pool, cloud/storage/network/history/jobs/provider/device/failover/restore equivalence NOT MEASURED. Both containers running and OOM=false at finish; this is not a production SLA/capacity certification.
+
+Next retained-owner action: diagnose the demonstrated burst latency using existing evidence, then separately claim any bounded source change or fresh isolated workload before performing it; retain thresholds, financial safeguards and failed measurement. Production20 readiness NOT ESTABLISHED, 50/100 NOT TESTED. No new workload, financial/stock/fiscal/provider action, LAB/USER/manual PASS, config, deployment, paid resource, or other-owner change occurred in this evidence reconciliation.
+
 ## 2026-10-09T16:34:06.060404+03:00 - POS-DB-LOCK-01 / full20store22POS model RUNNING / result PENDING, production readiness NOT ESTABLISHED
 
 Full claimPR1955/head2a484bf5/docsCI37937339780 SUCCESS merged47b11dc7ff0b58dcc766e3e99b3de8ec1fee7809 before fresh full execution. MainCI37937511405 SUCCESS, guard37937571742 SUCCESS; no production source/resource change. Exact prepared source992f5aec/fullCI37936078269 SUCCESS1966/1966 and all short capped phases37936078268 PASS preserved.
