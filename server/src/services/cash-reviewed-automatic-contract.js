@@ -46,10 +46,26 @@ export function validateAutomaticReviewedReport(report,{companyId,storeId,groups
  }catch{return false}
 }
 
+// Pending shifts may be delivered only as explicitly provisional lines. Missing
+// amounts or invalidated evidence must remain a hard hold, not become zero.
+export function canSendProvisionalCashReport(report){
+ try{
+  const p=reportSchema.parse(report);
+  return p.rows.every(r=>{
+   if(!Number.isSafeInteger(r.initialCents)||!Number.isSafeInteger(r.remainingCents)||!Number.isSafeInteger(r.cardCents)||r.recheck)return false;
+   if(r.reviewed)return r.status==='REVIEWED'&&r.eligible&&!!r.reviewedBy;
+   if(r.reviewedBy!==null)return false;
+   if(r.status==='AWAITING_REVIEW')return r.eligible;
+   if(r.status==='AWAITING_NEXT_SHIFT')return !r.nextClosed&&!r.eligible;
+   return false;
+  });
+ }catch{return false}
+}
+
 const receiptSchema=z.object({status:z.literal('READY'),reason:z.null(),companyId:id,storeId:id,generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/),head:z.union([sha,z.literal('ROOT')]),sourceFingerprint:sha,report:reportSchema,fingerprint:sha}).strict();
 export function validateAutomaticReviewedReceipt(value,{companyId,storeId,groups,rule,dayStartHour,sourceFingerprint}){
  try{
   const receipt=receiptSchema.parse(value),{fingerprint,...unsigned}=receipt;
-  return receipt.companyId===companyId&&receipt.storeId===storeId&&receipt.sourceFingerprint===sourceFingerprint&&BigInt(receipt.generation)<=9223372036854775807n&&hash(unsigned)===fingerprint&&receipt.report.rows.every(r=>r.reviewed&&r.cardCents!==null&&r.pendingEvidence.length===0)&&validateAutomaticReviewedReport(receipt.report,{companyId,storeId,groups,rule,dayStartHour});
+  return receipt.companyId===companyId&&receipt.storeId===storeId&&receipt.sourceFingerprint===sourceFingerprint&&BigInt(receipt.generation)<=9223372036854775807n&&hash(unsigned)===fingerprint&&canSendProvisionalCashReport(receipt.report)&&validateAutomaticReviewedReport(receipt.report,{companyId,storeId,groups,rule,dayStartHour});
  }catch{return false}
 }
