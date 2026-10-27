@@ -56,3 +56,12 @@ test('unready or inaccessible sources never produce reviewed totals or expose er
  assert.deepEqual(await readReviewedAutomaticCash({user:{findUnique:async()=>{throw Error('private detail')}}}, {...input,ready:true}),{status:'HOLD',reason:'REVIEWED_SOURCE_UNAVAILABLE',report:null});
  assert.deepEqual(await readReviewedAutomaticCash({}, {...input,rows:[],ready:true}),{status:'HOLD',reason:'SOURCE_LIMIT_OR_EMPTY',report:null});
 });
+
+
+test('blank operator name stays explicitly unattributed without making source comparison fail',()=>{
+ const session={id:'shift',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',openedBy:null,openedByName:'',openedAt:'2026-10-21T06:00:00Z',closedAt:'2026-10-21T14:00:00Z',shiftLabel:'Πρωινή'};
+ const source={store:{id:'store',name:'LAB'},rule:{mode:'FULL',carryOverEnabled:true},sessions:new Map([['shift',{session,sourceHash:hash('shift'),initialCents:0,basisCents:0,cardCents:0,explainedCents:0,reviewStatus:'VALID',nextClosed:true,transactions:[]}]]),selectedIds:['shift'],period:{from:'2026-10-21',to:'2026-10-21'},coverage:'BOUNDED_CLOSED_SHIFTS'};
+ const draft=projectReconciliation(source,[]),r=draft.rows[0],report=projectAutomaticReviewedReport(projectReconciliation(source,[{id:'confirmed',sequence:1,actorName:'Χρήστος Μάνης',data:{kind:'CONFIRM',sessionId:'shift',sourceHash:r.sourceHash,planHash:r.planHash,note:'Ελέγχθηκε η βάρδια.'},proof:{}}]));
+ const input={companyId:'co',storeId:'store',dayStartHour:7,rule:{deliveryTerminalPattern:'DELIVERY'},groups:[{companyId:'co',storeId:'store',terminalPos:'MAIN',cashChain:'STORE',day:'2026-10-21',rows:[{sessionId:'shift',employeeId:null,employeeName:'',variance:0}]}]};
+ assert.equal(validateAutomaticReviewedReport(report,input),true);assert.equal(report.rows[0].identityRequiresReview,true);assert.equal(report.rows[0].employeeKey,'session:shift');
+});
