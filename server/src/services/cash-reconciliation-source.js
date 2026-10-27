@@ -1,3 +1,4 @@
+import {readCashExpenseEvidence,cashExpenseFindings,purchaseDocumentMime} from './cash-expense-evidence.js';
 import {readCashReviewState} from './cash-review-balance.js';
 import {readCashControlRule} from './cash-control-rules.js';
 import {exactCents,hash,reconcileError} from './cash-reconciliation-contract.js';
@@ -15,16 +16,20 @@ export async function readReconciliationSession(db,scope,id,rule){
   ) p ON TRUE WHERE s."id"=${id} AND s."companyId"=${scope.companyId} AND s."storeId"=${scope.storeId} LIMIT 1`;
   const session=rows[0];
   if(!session||session.companyId!==scope.companyId||session.storeId!==scope.storeId||session.id!==id||!session.terminalPos)throw reconcileError('CASH_RECONCILIATION_NOT_FOUND',404);
-  const transactions=await db.$queryRaw`SELECT to_jsonb(t)-'attachmentData' AS record,md5(COALESCE(to_jsonb(t)->>'attachmentData','')) AS "attachmentDigest" FROM "StoreTransaction" t WHERE t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} AND t."sessionId"=${id} ORDER BY t."id" LIMIT 501`;
+  const transactions=await db.$queryRaw`SELECT to_jsonb(t)-'attachmentData' AS record,md5(COALESCE(to_jsonb(t)->>'attachmentData','')) AS "attachmentDigest",(t."attachmentData" IS NOT NULL) AS "hasAttachment" FROM "StoreTransaction" t WHERE t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} AND t."sessionId"=${id} ORDER BY t."id" LIMIT 501`;
   if(transactions.length>500||transactions.some(t=>t.record?.companyId!==scope.companyId||t.record?.storeId!==scope.storeId||t.record?.sessionId!==id))throw reconcileError('CASH_RECONCILIATION_LIMIT');
   const count=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "CashControlReview" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sessionId"=${id}`;
   if(!Number.isInteger(count[0]?.count)||count[0].count>500)throw reconcileError('CASH_RECONCILIATION_LIMIT');
   const review=await readCashReviewState(db,{...session,sessionId:id},{enabled:rule.mode!=='POS_EFTPOS_ONLY'});
   const initialCents=exactCents(session.variance),cardCents=exactCents(session.cardVariance),basisCents=review.balance.status==='VALID'?exactCents(review.balance.unexplainedVariance):null;
-  const sourceHash=hash({version:1,session,transactions,review,rule});
+  const originalTransactions=transactions.map(({record,attachmentDigest})=>({record,attachmentDigest}));
+  const sourceHash=hash({version:1,session,transactions:originalTransactions,review,rule});
+  const expenseInputs=transactions.map(({record,hasAttachment})=>({...record,hasAttachment,purchaseDocumentId:record.attachmentMimeType===purchaseDocumentMime?record.attachmentFilename:null}));
+  const expenseChecks=await readCashExpenseEvidence(db,scope,expenseInputs);
+  const expenseFindings=cashExpenseFindings(expenseChecks).map(f=>({code:f.code,amountCents:exactCents(f.amount),occurredAt:f.at?new Date(f.at).toISOString():null}));
   const next=session.nextSession;
   const nextClosed=Boolean(next&&next.companyId===scope.companyId&&next.storeId===scope.storeId&&next.terminalPos===session.terminalPos&&next.status==='CLOSED'&&next.closedAt&&new Date(next.closedAt)>=new Date(next.openedAt)&&new Date(session.closedAt)<=new Date(next.openedAt));
-  return {session,sourceHash,initialCents,cardCents,basisCents,reviewStatus:review.balance.status,explainedCents:exactCents(review.balance.explainedAmount),nextClosed,
+  return {session,sourceHash,expenseFindings,initialCents,cardCents,basisCents,reviewStatus:review.balance.status,explainedCents:exactCents(review.balance.explainedAmount),nextClosed,
     transactions:transactions.map(t=>({id:t.record.id,type:t.record.type,amountCents:exactCents(t.record.amount),reversed:Boolean(t.record.reversedAt),cashEffect:t.record.subtractFromShift===true,occurredAt:t.record.occurredAt}))};
 }
 export async function readReconciliationSources(db,scope,period,extraIds=[]){

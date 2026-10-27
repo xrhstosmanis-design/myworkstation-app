@@ -14,10 +14,12 @@ const projectRoot=fileURLToPath(new URL('../../',import.meta.url));
 await build({entryPoints:[path.join(projectRoot,'server/e2e/installation-support-fault-guide-fixture.jsx')],bundle:true,outfile:path.join(directory,'fixture.js'),platform:'browser',format:'iife',define:{'process.env.NODE_ENV':'"production"'},logLevel:'error'});
 await fs.writeFile(path.join(directory,'index.html'),'<!doctype html><html lang="el"><meta charset="utf-8"><link rel="stylesheet" href="fixture.css"><div id="root"></div><script src="fixture.js"></script></html>');
 const browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--no-first-run','--remote-debugging-pipe','--no-startup-window',`--user-data-dir=${path.join(directory,'profile')}`],{stdio:['ignore','ignore','pipe','pipe','pipe']});
-let id=0,buffer='',errors='';const pending=new Map();browser.stderr.on('data',data=>{errors=(errors+data).slice(-4000)});
+const browserExited=new Promise(resolve=>{browser.once('exit',(code,signal)=>resolve({code,signal}));browser.once('error',error=>resolve({error}));});
+let id=0,buffer='',errors='';const pending=new Map();const rejectPending=error=>{for(const request of pending.values()){clearTimeout(request.timer);request.reject(error)}pending.clear()};browser.once('exit',()=>rejectPending(Error('Chromium exited')));browser.stdio[3].on('error',error=>rejectPending(error));browser.stderr.on('data',data=>{errors=(errors+data).slice(-4000)});
 browser.stdio[4].on('data',data=>{buffer+=data;let end;while((end=buffer.indexOf('\0'))>=0){const raw=buffer.slice(0,end);buffer=buffer.slice(end+1);if(!raw)continue;const message=JSON.parse(raw),request=pending.get(message.id);if(request){pending.delete(message.id);clearTimeout(request.timer);message.error?request.reject(Error(JSON.stringify(message.error))):request.resolve(message.result)}}});
 const cdp=(method,params={},sessionId)=>new Promise((resolve,reject)=>{const n=++id,timer=setTimeout(()=>{pending.delete(n);reject(Error(method+' timed out: '+errors))},20000);pending.set(n,{resolve,reject,timer});browser.stdio[3].write(JSON.stringify({id:n,method,params,...(sessionId?{sessionId}:{})})+'\0')});
 const evaluate=async(sessionId,expression)=>{const result=await cdp('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true},sessionId);assert.equal(result.exceptionDetails,undefined,JSON.stringify(result.exceptionDetails));return result.result.value};
+let primaryError;
 try{
  for(const [width,height] of [[1348,936],[390,844]]){
   const {targetId}=await cdp('Target.createTarget',{url:'about:blank'}),{sessionId}=await cdp('Target.attachToTarget',{targetId,flatten:true});
@@ -47,4 +49,19 @@ try{
   await pdf.destroy();await cdp('Target.closeTarget',{targetId:popup.targetId});await cdp('Target.closeTarget',{targetId});
  }
  console.log('Chromium synthetic popup and one-page PDF passed at desktop and mobile sizes; native print dialog and physical printer not tested.');
-}finally{await cdp('Browser.close').catch(()=>{});browser.kill();await fs.rm(directory,{recursive:true,force:true})}
+}catch(error){primaryError=error;throw error}
+finally{
+  // Browser.close may return before Chromium has stopped writing its profile.
+  // Keep the first test failure visible if shutdown or cleanup also fails.
+  try{
+    if(browser.exitCode===null&&browser.signalCode===null){
+      await Promise.race([cdp('Browser.close').catch(()=>{}),new Promise(resolve=>setTimeout(resolve,2000))]);
+      const ended=await Promise.race([browserExited.then(()=>true),new Promise(resolve=>setTimeout(()=>resolve(false),5000))]);
+      if(!ended){browser.kill('SIGKILL');await browserExited}
+    }
+    await fs.rm(directory,{recursive:true,force:true,maxRetries:5,retryDelay:200});
+  }catch(cleanupError){
+    if(primaryError)console.error('Chromium cleanup also failed:',cleanupError);
+    else throw cleanupError;
+  }
+}

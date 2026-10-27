@@ -46,3 +46,14 @@ test('a verified wrong-handover note on a zero-cash shift remains a note without
  const draft=projectReconciliation(source,[]),review=confirmation(draft.rows[0]);review.data.note='Λάθος παράδοση ταμείου.';
  const done=projectReconciliation(source,[review]);assert.match(done.text,/Χρυσάνθη: Χωρίς διαφορά/);assert.match(done.text,/Σχόλιο ελέγχου: Λάθος παράδοση ταμείου\./);assert.equal(done.totals.shortageCents,0);
 });
+
+test('document findings stay factual and scoped to their shift, and do not change cash or cards',()=>{
+ const source=fixture(); source.selectedIds=['a'];
+ source.sessions.get('a').expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',amountCents:12000,occurredAt:'2026-10-21T06:40:00.000Z'},{code:'EXPENSE_DOCUMENT_UNVERIFIED',amountCents:7529,occurredAt:'2026-10-21T07:00:00.000Z'}];
+ source.sessions.get('b').expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',amountCents:50000,occurredAt:null}];
+ const report=projectReconciliation(source,[]);
+ assert.match(report.text,/έξοδο 120,00\s*€ χωρίς παραστατικό/);
+ assert.match(report.text,/παραστατικό ή πληρωμή 75,29\s*€ χρειάζεται επανέλεγχο/);
+ assert.doesNotMatch(report.text,/500,00/);assert.equal(report.rows[0].remainingCents,-8700);assert.equal(report.rows[0].cardCents,20000);
+ const oldHash=report.reportHash;source.sessions.get('a').expenseFindings=[];assert.notEqual(projectReconciliation(source,[]).reportHash,oldHash);
+});

@@ -45,11 +45,12 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
     row.reviewedBy=row.reviewed?lastConfirmation.actorName:null;
     row.reviewNote=row.reviewed?lastConfirmation.data.note||null:null;
     row.day=row.closedAt?cashReportRowDay(row.closedAt):null;
+    row.expenseFindings=original.expenseFindings||[];
     row.transactions=original.transactions.slice(0,30);row.transactionsLimited=original.transactions.length>30;
     row.nextSessionId=original.session.nextSession?.id||null;row.previousSessionId=original.session.previousSession?.id||null;
   }
   const selected=source.selectedIds.map(id=>rows.get(id));
-  const reportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[]}))});
+  const reportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[],...(r.expenseFindings?.length?{expenseFindings:r.expenseFindings}:{})}))});
   const checkpoint=[...records].reverse().find(r=>r.data.kind==='CHECKPOINT');
   const totals={shortageCents:0,surplusCents:0,pending:selected.filter(r=>!r.reviewed&&r.status!=='NOT_APPLICABLE').length},employees=new Map();
   const operatorNames=new Map();for(const r of rows.values()){const names=operatorNames.get(r.operatorId)||new Set();names.add(r.operatorName);operatorNames.set(r.operatorId,names);}
@@ -75,6 +76,7 @@ export function reconciliationText(report){
   const lines=['ΕΛΕΓΧΟΣ ΤΑΜΕΙΩΝ MYWORKSTATION',`${report.storeName} · ${report.period.from} έως ${report.period.to}`,'','ΑΠΟΤΕΛΕΣΜΑ ΜΕΤΑ ΑΠΟ ΕΛΕΓΧΟ'+(signature?' — '+signature:'')];
   if(!report.rows.length)lines.push('Δεν βρέθηκαν κλεισμένες βάρδιες στην επιλεγμένη περίοδο.');
   for(const row of report.rows){
+    if(row.openedAt&&row.closedAt){const clock=v=>new Date(v).toLocaleTimeString('el-GR',{timeZone:'Europe/Athens',hour:'2-digit',minute:'2-digit',hour12:false});lines.push(`Ώρες βάρδιας ${row.operatorName}: ${clock(row.openedAt)}–${clock(row.closedAt)}.`);}
     if(row.status==='NOT_APPLICABLE')lines.push(`${row.day} · ${row.shiftLabel} · ${row.operatorName}: δεν εφαρμόζεται έλεγχος μετρητών.`);
     else{lines.push(`${row.day} · ${row.shiftLabel} · ${row.operatorName}: ${signedResult(row.remainingCents)}${row.reviewed?'':' — ΥΠΟ ΕΛΕΓΧΟ'}.`);
       if(row.offsetCents)lines.push(`Αρχική διαφορά ${signedResult(row.initialCents)} · επαληθευμένος συμψηφισμός με διαδοχική βάρδια ${money(row.offsetCents)}.`);
@@ -82,9 +84,15 @@ export function reconciliationText(report){
       if(row.status==='RECHECK_REQUIRED')lines.push('Απαιτείται επανέλεγχος των κινήσεων ή των συνδεδεμένων στοιχείων.');
     }
     lines.push(`POS–EFTPOS: ${row.cardCents===null?'δεν υπάρχουν πλήρη στοιχεία':row.cardCents===0?'χωρίς διαφορά':'διαφορά '+(row.cardCents>0?'+':'−')+money(row.cardCents)}.`);
+    for(const finding of row.expenseFindings||[]){
+      const amount=money(finding.amountCents),when=finding.occurredAt?new Date(finding.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',dateStyle:'short',timeStyle:'short',hour12:false}):'χωρίς ώρα';
+      lines.push(finding.code==='EXPENSE_WITHOUT_DOCUMENT'?`Εκκρεμότητα ${when}: έξοδο ${amount} χωρίς παραστατικό.`:`Εκκρεμότητα ${when}: παραστατικό ή πληρωμή ${amount} χρειάζεται επανέλεγχο.`);
+    }
     if(row.reviewNote)lines.push('Σχόλιο ελέγχου: '+row.reviewNote);
     for(const evidence of row.pendingEvidence||[])lines.push(`Εκκρεμεί επανέλεγχος: ${evidence.date} · ${evidence.label} · ${money(evidence.amountCents)}.`);
   }
+  const original=report.rows.filter(r=>r.status!=='NOT_APPLICABLE');
+  if(original.length&&original.every(r=>r.initialCents!==null)){const surplus=original.reduce((a,r)=>a+Math.max(0,r.initialCents),0),shortage=original.reduce((a,r)=>a+Math.max(0,-r.initialCents),0);lines.push('',`Αρχικά ελλείμματα: ${money(shortage)}. Αρχικά πλεονάσματα: ${money(surplus)}.`);}
   if(report.rows.some(r=>r.reviewed))lines.push('',`Ελεγμένα ελλείμματα: ${money(report.totals.shortageCents)}. Ελεγμένα πλεονάσματα: ${money(report.totals.surplusCents)}.`);
   if(report.totals.pending)lines.push(`Εκκρεμούν ${report.totals.pending} βάρδιες· δεν περιλαμβάνονται στα ελεγμένα σύνολα.`);
   for(const employee of report.employees)lines.push(`${employee.name}: ελλείμματα ${money(employee.shortageCents)} · πλεονάσματα ${money(employee.surplusCents)}${employee.identityRequiresReview?' · απαιτείται ταυτοποίηση της βάρδιας':''}.`);
