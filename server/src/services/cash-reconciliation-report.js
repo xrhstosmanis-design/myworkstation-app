@@ -53,10 +53,14 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
   const checkpoint=[...records].reverse().find(r=>r.data.kind==='CHECKPOINT');
   const totals={shortageCents:0,surplusCents:0,pending:selected.filter(r=>!r.reviewed&&r.status!=='NOT_APPLICABLE').length},employees=new Map();
   const operatorNames=new Map();for(const r of rows.values()){const names=operatorNames.get(r.operatorId)||new Set();names.add(r.operatorName);operatorNames.set(r.operatorId,names);}
-  for(const r of selected.filter(r=>r.reviewed)){
+  for(const r of rows.values()){
     const normalized=r.operatorName.normalize('NFD').replace(/\p{M}/gu,'').toLocaleUpperCase('el-GR');
-    const shared=!r.operatorId||/ΕΚΤΑΚΤ|ΧΩΡΙΣ|UNKNOWN/.test(normalized)||operatorNames.get(r.operatorId)?.size>1,key=shared?'session:'+r.sessionId:'operator:'+r.operatorId;
-    const e=employees.get(key)||{key,name:r.operatorName,identityRequiresReview:shared,shortageCents:0,surplusCents:0};
+    r.identityRequiresReview=!r.operatorId||/ΕΚΤΑΚΤ|ΧΩΡΙΣ|UNKNOWN/.test(normalized)||operatorNames.get(r.operatorId)?.size>1;
+    r.employeeKey=r.identityRequiresReview?'session:'+r.sessionId:'operator:'+r.operatorId;
+  }
+  for(const r of selected.filter(r=>r.reviewed)){
+    const key=r.employeeKey;
+    const e=employees.get(key)||{key,name:r.operatorName,identityRequiresReview:r.identityRequiresReview,shortageCents:0,surplusCents:0};
     const shortage=Math.max(0,-r.remainingCents),surplus=Math.max(0,r.remainingCents);totals.shortageCents+=shortage;totals.surplusCents+=surplus;e.shortageCents+=shortage;e.surplusCents+=surplus;employees.set(key,e);
   }
   const sameCheckpointPeriod=checkpoint?.proof.period?.from===source.period.from&&checkpoint?.proof.period?.to===source.period.to;
