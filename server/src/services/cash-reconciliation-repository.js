@@ -1,8 +1,9 @@
 import {readLifecycleGeneration,assertLifecycleMutation} from './store-lifecycle-generation.js';
 import {createCashPaperRepository} from './cash-paper-repository.js';
-import {reconciliationEntity,reconciliationLimit,scopeKey,hash,actionId,requestHash,chainState,activeRecords,reconcileError,transactionMatchesPaper} from './cash-reconciliation-contract.js';
+import {reconciliationEntity,reconciliationLimit,scopeKey,hash,actionId,requestHash,chainState,activeRecords,reconcileError,transactionMatchesPaper,periodSchema} from './cash-reconciliation-contract.js';
 import {readReconciliationSources,readReconciliationSession} from './cash-reconciliation-source.js';
 import {projectReconciliation,immediateCashPair} from './cash-reconciliation-report.js';
+import {cashReportRowDay} from '../../../client/src/lib/cash-report-period.js';
 
 export function createCashReconciliationRepository(db){
   async function generation(scope){const s=await readLifecycleGeneration(db,scope);if(s.maintenance||s.retired)throw reconcileError('STORE_LIFECYCLE_MAINTENANCE');return s.generation;}
@@ -18,8 +19,9 @@ export function createCashReconciliationRepository(db){
     if(!line)throw reconcileError('CASH_RECONCILIATION_PAPER_UNAVAILABLE');
     return {paperLineHash:hash(line),rawLine:line,printedDate:reading.extraction.dateText,modelDocumentDate:reading.extraction.documentDate};
   }
-  async function materialize(tx,scope,period,chain,extraIds=[]){
+  async function materialize(tx,scope,period,chain,extraIds=[],selection=null){
     const active=activeRecords(chain.records),source=await readReconciliationSources(tx,scope,period,extraIds);
+    if(selection){source.selectedIds=selection.ids;source.period=selection.displayPeriod;}
     const connected=new Set(source.sessions.keys());let expanded=true;
     while(expanded){expanded=false;for(const r of active.filter(r=>r.data.kind==='OFFSET')){
       const ids=[r.data.previousSessionId,r.data.nextSessionId];if(ids.some(id=>connected.has(id)))for(const id of ids)if(!connected.has(id)){connected.add(id);expanded=true;}
@@ -52,6 +54,23 @@ export function createCashReconciliationRepository(db){
     },{isolationLevel:'RepeatableRead',maxWait:5000,timeout:15000});
   }
   async function generationFor(tx,scope){const s=await readLifecycleGeneration(tx,scope);if(s.maintenance||s.retired)throw reconcileError('STORE_LIFECYCLE_MAINTENANCE');return s.generation;}
+  // Internal consumer only: the caller supplies session IDs from its trusted,
+  // same-transaction business-window query. This is not a public ID-list API.
+  async function readSelectedInTransaction(tx,scope,scanPeriod,sessionIds){
+    if(!periodSchema.safeParse(scanPeriod).success||!Array.isArray(sessionIds)||!sessionIds.length||sessionIds.length>200||sessionIds.some(id=>typeof id!=='string'||!id.trim())||new Set(sessionIds).size!==sessionIds.length)throw reconcileError('CASH_RECONCILIATION_SCOPE_INVALID',400);
+    if(await generationFor(tx,scope)!==scope.generation)throw reconcileError('STORE_LIFECYCLE_STALE_GENERATION');
+    const chain=await state(tx,scope);
+    const source=await readReconciliationSources(tx,scope,scanPeriod,sessionIds);
+    const chosen=sessionIds.map(id=>source.sessions.get(id));
+    if(chosen.some(s=>!s||s.session.status!=='CLOSED'||!s.session.openedAt||!s.session.closedAt||!Number.isFinite(new Date(s.session.openedAt).getTime())||!Number.isFinite(new Date(s.session.closedAt).getTime())||new Date(s.session.closedAt)<new Date(s.session.openedAt)))throw reconcileError('CASH_RECONCILIATION_SOURCE_CHANGED');
+    chosen.sort((a,b)=>new Date(a.session.closedAt)-new Date(b.session.closedAt)||a.session.id.localeCompare(b.session.id));
+    const days=chosen.map(s=>cashReportRowDay(s.session.closedAt)).sort();
+    const displayPeriod={from:days[0],to:days.at(-1)};
+    if(!days.every(d=>typeof d==='string')||(Date.parse(displayPeriod.to)-Date.parse(displayPeriod.from))/86400000>=32)throw reconcileError('CASH_RECONCILIATION_LIMIT');
+    const ids=chosen.map(s=>s.session.id);
+    const {report}=await materialize(tx,scope,scanPeriod,chain,ids,{ids,displayPeriod});
+    return {report,head:chain.head,generation:scope.generation};
+  }
   async function apply(scope,actor,request){
     return db.$transaction(async tx=>{
       const stores=await tx.$queryRaw`SELECT s."id" FROM "Store" s JOIN "Company" c ON c."id"=s."companyId" WHERE s."id"=${scope.storeId} AND s."companyId"=${scope.companyId} AND s."active"=TRUE AND c."active"=TRUE FOR UPDATE OF s`;
@@ -99,5 +118,5 @@ export function createCashReconciliationRepository(db){
       return response(next,material.report,{generation:scope.generation,actionId:id,reused:false,checkedAt:new Date().toISOString()});
     },{isolationLevel:'ReadCommitted',maxWait:5000,timeout:15000});
   }
-  return {generation,read,apply};
+  return {generation,read,apply,readSelectedInTransaction};
 }
