@@ -1,5 +1,6 @@
 import {createHash} from "node:crypto";
 import {cashPreviewPeriod,reportBusinessPeriod,reportDayOffset,summarizeOpeningOperators} from "./automatic-report-policy.js";
+import {validateAutomaticReviewedReceipt} from "./cash-reviewed-automatic-contract.js";
 
 // Unwired payload preparation only. An internally consistent preview does not
 // prove authorization, source authenticity, reconciliation or permission to send.
@@ -26,7 +27,10 @@ function copy(value,path=[],depth=0,budget={nodes:0,bytes:0}){
   check(++budget.nodes<=100000&&depth<=20,"Metadata exceeds bounds.");
   if(value===undefined&&["employeeId","employeeName"].includes(path.at(-1)))return null;
   if(value===null||typeof value==="boolean")return value;
-  if(typeof value==="string"){check(value.length<=8192&&!/[\u0000-\u001f\u007f]/.test(value),"Invalid text metadata.");textBudget(value,budget);return value;}
+  if(typeof value==="string"){
+    const reviewed=path[0]==="preview"&&path[1]==="reviewedCash";
+    const prose=reviewed&&path.join(".")==="preview.reviewedCash.report.text";
+    check(value.length<=(prose?200000:8192)&&!(reviewed?/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/:/[\u0000-\u001f\u007f]/).test(value),"Invalid text metadata.");textBudget(value,budget);return value;}
   if(typeof value==="number"){check(Number.isFinite(value),"Nonfinite metadata.");return value;}
   check(value&&typeof value==="object","Only plain metadata is accepted.");
   const prototype=Object.getPrototypeOf(value);
@@ -73,10 +77,6 @@ export function buildAutomaticCashPayload(raw){
 }
 function build(raw){
   const args=copy(raw),{preview:p,companyId,storeId,settingsVersion}=args;
-  // WIP: never substitute the legacy original-variance report when a store
-  // explicitly requires reviewed results. The complete consumer will replace
-  // this guard only after its bound evidence and flow tests are in place.
-  check(p?.reviewedReconciliation!==true,"Reviewed cash results are not yet available.");
   check(args&&typeof args==="object"&&Object.keys(args).length===4&&["preview","companyId","storeId","settingsVersion"].every(k=>own(args,k)),"Explicit payload arguments required.");
   label(companyId);label(storeId);
   check(Number.isSafeInteger(settingsVersion)&&settingsVersion>0&&p?.settingsVersion===settingsVersion,"Settings version mismatch.");
@@ -132,7 +132,16 @@ function build(raw){
   const scope={companyId,storeId};
   const financialLimitations=[...LIMITATIONS],disclosures=[...DISCLOSURES];
   if(p.frequency==="MONTHLY")disclosures.push("Οι καταγεγραμμένοι χρήστες έναρξης δεν αποτελούν επιβεβαιωμένη ταυτότητα εργαζομένου ή στοιχείο μισθοδοσίας.");
-  const content={format:FORMAT,scope,storeName:p.store.name,period:bounds,frequency:p.frequency,settingsVersion,sourceFingerprint:p.sourceFingerprint,sourceCount:p.sourceCount,financialFinality:"PROVISIONAL",financialReconciliationComplete:false,financialLimitations,employeeLiabilityAdjusted:false,disclosures,rule:{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled},groups,dayReadiness,...(openingOperatorSummary?{openingOperatorSummary}:{})};
+  const reviewed=p.reviewedReconciliation===true?p.reviewedCash:null;
+  if(p.reviewedReconciliation===true)check(validateAutomaticReviewedReceipt(reviewed,{companyId,storeId,groups,rule,dayStartHour:bounds.dayStartHour,sourceFingerprint:p.sourceFingerprint}),"Reviewed cash result unavailable or changed.");
+  else check(!own(p,"reviewedCash"),"Unexpected reviewed cash result.");
+  const content={format:FORMAT,scope,storeName:p.store.name,period:bounds,frequency:p.frequency,settingsVersion,sourceFingerprint:p.sourceFingerprint,sourceCount:p.sourceCount,financialFinality:"PROVISIONAL",financialReconciliationComplete:false,financialLimitations,employeeLiabilityAdjusted:false,disclosures,rule:{mode:rule.mode,deliveryTerminalPattern:rule.deliveryTerminalPattern,carryOverEnabled:rule.carryOverEnabled,posEftposEnabled:rule.posEftposEnabled},groups,dayReadiness,...(openingOperatorSummary?{openingOperatorSummary}:{}),...(reviewed?{reviewedCash:reviewed}:{})};
   const body=canonical(content),byteLength=Buffer.byteLength(body,"utf8");check(byteLength<=2*1024*1024,"Payload exceeds two MiB.");
   return freeze({format:FORMAT,scope,period:bounds,frequency:p.frequency,sourceFingerprint:p.sourceFingerprint,financialFinality:"PROVISIONAL",financialLimitations,contentType:"application/json; charset=utf-8",body,byteLength,payloadFingerprint:createHash("sha256").update(body,"utf8").digest("hex")});
+}
+
+export function automaticReviewedMailText(content){
+  check(content&&Array.isArray(content.disclosures)&&content.disclosures.every(v=>typeof v==='string'&&v.length<=1000&&!/[\u0000-\u001f\u007f]/.test(v)),"Invalid disclosures.");
+  check(validateAutomaticReviewedReceipt(content.reviewedCash,{companyId:content.scope?.companyId,storeId:content.scope?.storeId,groups:content.groups,rule:content.rule,dayStartHour:content.period?.dayStartHour,sourceFingerprint:content.sourceFingerprint}),"Invalid reviewed cash result.");
+  return [...content.disclosures,'',content.reviewedCash.report.text].join('\n');
 }

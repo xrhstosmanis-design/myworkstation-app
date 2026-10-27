@@ -43,3 +43,11 @@ export function validateAutomaticReviewedReport(report,{companyId,storeId,groups
   return [shortage,surplus].every(Number.isSafeInteger)&&p.totals.shortageCents===shortage&&p.totals.surplusCents===surplus&&p.totals.pending===pending&&hash([...employees.values()])===hash(p.employees);
  }catch{return false}
 }
+
+const receiptSchema=z.object({status:z.literal('READY'),reason:z.null(),companyId:id,storeId:id,generation:z.string().regex(/^(0|[1-9][0-9]{0,18})$/),head:z.union([sha,z.literal('ROOT')]),sourceFingerprint:sha,report:reportSchema,fingerprint:sha}).strict();
+export function validateAutomaticReviewedReceipt(value,{companyId,storeId,groups,rule,dayStartHour,sourceFingerprint}){
+ try{
+  const receipt=receiptSchema.parse(value),{fingerprint,...unsigned}=receipt;
+  return receipt.companyId===companyId&&receipt.storeId===storeId&&receipt.sourceFingerprint===sourceFingerprint&&BigInt(receipt.generation)<=9223372036854775807n&&hash(unsigned)===fingerprint&&receipt.report.rows.every(r=>r.reviewed)&&validateAutomaticReviewedReport(receipt.report,{companyId,storeId,groups,rule,dayStartHour});
+ }catch{return false}
+}
