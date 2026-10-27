@@ -1,3 +1,4 @@
+import {fetchCashArchive,saveCashArchive} from '../../lib/cash-reviewed-archive.js';
 import React,{useEffect,useRef,useState} from 'react';
 
 const kindLabels={OPENING_CASH:'Έναρξη ταμείου',CLOSING_CASH:'Λήξη ταμείου',CASHBOX:'Cashbox',REFILL:'Refill',BANK_DEPOSIT:'Κατάθεση',EXPENSE:'Έξοδο',POS:'POS',EFTPOS:'EFTPOS',PREPAID:'Προπληρωμένη κάρτα',OTHER:'Αδιευκρίνιστο'};
@@ -43,11 +44,21 @@ export default function CashReconciliationPanel({api,storeId,from,to}){
     catch(e){if(id===sequence.current&&selected.current===own){setNeedsRefresh(true);setError((e.message||'Δεν επιβεβαιώθηκε η καταχώρηση.')+' Πάτησε Ανανέωση ελέγχου πριν από νέα ενέργεια.');}}
     finally{if(id===sequence.current&&selected.current===own){busyRef.current=false;setBusy(false);}}
   };
+  const exportArchive=async()=>{
+    if(busyRef.current||needsRefresh||!data)return;
+    const own=scope,id=++sequence.current,receipt={storeId,from,to,generation:data.generation,head:data.head,reportHash:data.reportHash,report:data};
+    const current=()=>id===sequence.current&&selected.current===own;
+    busyRef.current=true;setBusy(true);setError('');setMessage('');
+    try{const download=await fetchCashArchive(api,receipt,{isCurrent:current});if(!download||!current())return;saveCashArchive(download);setMessage('Δημιουργήθηκε το Excel ελέγχου με χωριστά ελλείμματα, πλεονάσματα και εκκρεμότητες.');}
+    catch(e){if(current()){setError(e.message||'Δεν δημιουργήθηκε το αρχείο.');setNeedsRefresh(true);}}
+    finally{if(current()){busyRef.current=false;setBusy(false);}}
+  };
   const toggle=()=>{if(opened){sequence.current++;busyRef.current=false;setOpened(false);setData(null);setBusy(false);}else{setOpened(true);load();}};
   return <section className="cash-reconciliation-panel" aria-label="Έλεγχος και επανυπολογισμός">
     <button type="button" onClick={toggle} disabled={!storeId||!from||!to} aria-expanded={opened}>Έλεγχος με επανυπολογισμούς</button>
     {opened&&<div><p>{from} έως {to}</p><button type="button" onClick={()=>load(0)} disabled={busy}>Ανανέωση ελέγχου</button>{busy&&<p role="status">Αναμονή αποτελέσματος…</p>}{error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
       {data&&<><pre style={{whiteSpace:'pre-wrap',fontFamily:'inherit'}}>{data.text}</pre><button type="button" disabled={busy||needsRefresh} onClick={()=>navigator.clipboard.writeText(data.text)}>Αντιγραφή ελεγμένης αναφοράς</button>
+        <button type="button" disabled={busy||needsRefresh} onClick={exportArchive}>Excel με επανυπολογισμούς</button>
         <form onSubmit={submit}><label>Ενέργεια ελέγχου<select value={mode} onChange={e=>chooseMode(e.target.value)} disabled={busy}>{Object.entries(labels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
           {['OFFSET','ASSOCIATE','CONFIRM'].includes(mode)&&<label>{mode==='OFFSET'?'Προηγούμενη βάρδια':'Βάρδια ελέγχου'}<select value={first} onChange={e=>{setFirst(e.target.value);setVerified(false);setTransactionId('');const r=allRows.find(r=>r.sessionId===e.target.value);setOperatorContext(r?.operatorName||'');}} disabled={busy}><option value="">Επίλεξε βάρδια</option>{(mode==='OFFSET'?allRows:data.rows).map(r=><option key={r.sessionId} value={r.sessionId} disabled={mode==='CONFIRM'&&!r.eligible}>{option(r)}</option>)}</select></label>}
           {mode==='OFFSET'&&<><label>Επόμενη βάρδια<select value={second} onChange={e=>{setSecond(e.target.value);setVerified(false);}} disabled={busy}><option value="">Επίλεξε επόμενη βάρδια</option>{allRows.filter(r=>r.sessionId===row?.nextSessionId).map(r=><option key={r.sessionId} value={r.sessionId}>{option(r)}</option>)}</select></label><p>Ο συμψηφισμός χρειάζεται τεκμηριωμένη επιβεβαίωση λάθους καταμέτρησης.</p></>}
