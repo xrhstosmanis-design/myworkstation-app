@@ -1,3 +1,5 @@
+import {reviewedCashTool,readAssistantReviewedCash} from './assistant-reviewed-cash.js';
+import {reviewedCashQuestion} from '../../../shared/assistant-reviewed-cash.mjs';
 import {businessTool,readAssistantBusiness} from './assistant-business-reports.js';
 import {parseAssistantSourceRead} from "./assistant-source-read.js";
 import {prisma} from "../prisma.js";
@@ -28,7 +30,7 @@ export async function authorizePlatformAssistant(req,selection,{db=prisma,now=ne
 
 // The model gets no scope argument. Only an explicit UI pair, reauthorized at
 // every boundary, can reach the shared, parameterized canonical calculation.
-export async function createPlatformAssistantSession(req,selection,{authorize=authorizePlatformAssistant,readSalesReport=readSalesAnalysisReport,readStockReport=readStockAnalysisReport,readCash=readCanonicalPlatformCash,readConsumption=readAssistantConsumption,readBusiness=readAssistantBusiness,readSalesCatalog,authorizeSalesStores=authorizePlatformSalesStores,allStores=false,signal}={}){
+export async function createPlatformAssistantSession(req,selection,{authorize=authorizePlatformAssistant,readSalesReport=readSalesAnalysisReport,readStockReport=readStockAnalysisReport,readCash=readCanonicalPlatformCash,readReviewedCash=readAssistantReviewedCash,readConsumption=readAssistantConsumption,readBusiness=readAssistantBusiness,readSalesCatalog,authorizeSalesStores=authorizePlatformSalesStores,allStores=false,signal}={}){
   const scope=await authorize(req,selection);
   if(!scope&&!allStores)fail(422,"Επίλεξε κατάστημα ή την κεντρική αναφορά όλων των καταστημάτων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
   let salesAccess=null;
@@ -42,8 +44,9 @@ export async function createPlatformAssistantSession(req,selection,{authorize=au
   const evidence=report=>({...report,scope:"PLATFORM_SELECTED_STORE"});
   const cashScope=allStores?null:scope;
   const sessionCashTool=cashScope?{...cashTool,description:"Διαβάζει τον κανονικό έλεγχο κλεισμένων βαρδιών μόνο στο ήδη επιλεγμένο εξουσιοδοτημένο κατάστημα. date: YYYY-MM-DD ή null για σήμερα (ώρα Ελλάδας). Δεν περιλαμβάνει ανοικτές βάρδιες και δεν αλλάζει στοιχεία."}:cashTool;
-  const tools=[sessionCashTool,...(scope?assistantProductTools:[]),...(scope||allStores?[salesStoresTool]:[]),...(scope?[consumptionTool,businessTool]:[])];
+  const tools=[sessionCashTool,...(scope&&!allStores?[reviewedCashTool]:[]),...(scope?assistantProductTools:[]),...(scope||allStores?[salesStoresTool]:[]),...(scope?[consumptionTool,businessTool]:[])];
   const sourceReaders={
+      cash_review:async args=>{await verify();const report=await readReviewedCash(req,args,scope,{signal});await verify();return evidence(report)},
       business_records:async args=>{await verify();const report=await readBusiness(args,scope,{signal});await verify();return evidence(report)},
       consumption_details:async args=>{await verify();const report=await readConsumption(args,scope,{signal});await verify();return evidence(report)},
       sales_by_store:async args=>{salesAccess=await authorizeSalesStores(req,selection,allStores,{authorize});return readAssistantSalesStores(args,salesAccess,{readReport:readSalesReport,...(readSalesCatalog?{readCatalog:readSalesCatalog}:{}),verify,signal})},
@@ -63,9 +66,9 @@ export async function createPlatformAssistantSession(req,selection,{authorize=au
   const readSource=async value=>{const read=parseAssistantSourceRead(value);if(!tools.some(t=>t.name===read.name))fail(403,"Η πηγή δεν είναι διαθέσιμη στο επιλεγμένο εύρος.","PLATFORM_ASSISTANT_SOURCE_DENIED");return sourceReaders[read.name](read.args)};
   return {scope,tools,verify,async replay(reads){if(!Array.isArray(reads)||!reads.length||reads.length>2)fail(422,"Μη έγκυρη αναφορά εξαγωγής.","PLATFORM_ASSISTANT_SOURCE_DENIED");const result=[];for(const read of reads)result.push(await readSource(read));await verify();return result},async run({prompt,question="",requestProvider}){
     const questionTools=toolsForAssistantQuestion(question,tools);
-    if(!questionTools.length)fail(422,"Επίλεξε συγκεκριμένο κατάστημα για ιδιοκατανάλωση ή καταστροφή προϊόντων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
+    if(!questionTools.length)fail(422,reviewedCashQuestion(question)?"Επίλεξε συγκεκριμένο κατάστημα για τον έλεγχο με επανυπολογισμούς.":"Επίλεξε συγκεκριμένο κατάστημα για ιδιοκατανάλωση ή καταστροφή προϊόντων.","PLATFORM_ASSISTANT_SCOPE_REQUIRED");
     const out=await runProductAssistant({prompt,question,cashTool:sessionCashTool,tools:questionTools,requestProvider:async settings=>{await verify();return requestProvider(settings)},
-      readBusiness:args=>readSource({name:"business_records",args}),readConsumption:args=>readSource({name:"consumption_details",args}),readCash:date=>readSource({name:"cash_details",args:{date}}),
+      readReviewedCash:args=>readSource({name:"cash_review",args}),readBusiness:args=>readSource({name:"business_records",args}),readConsumption:args=>readSource({name:"consumption_details",args}),readCash:date=>readSource({name:"cash_details",args:{date}}),
       readSalesStores:args=>readSource({name:"sales_by_store",args}),readSales:args=>readSource({name:"sales_by_product",args}),readStock:args=>readSource({name:"stock_by_product",args})});
     await verify();return {...out,scope};
   }};

@@ -56,9 +56,20 @@ test("stock dispatch preserves reasoning, rejects missing capability/extra scope
   providers=0;reads=0;await deny(runOwnerAssistant({prompt:"Fixture",cashTool:ownerCashTool,tools,readStock:async()=>{reads++;return {}},readCash:async()=>{reads++;return {}},requestProvider:async settings=>{providers++;if(providers===3)assert.equal(settings.tool_choice,"none");return {response:{ok:true},raw:{output:[providers===2?{...toolCall,name:"cash_details",arguments:'{"date":null}'}:toolCall]}}}}),502);assert.equal(providers,3);assert.equal(reads,2);
 });
 test("stock catalog uses the existing INVENTORY gate and handler rechecks every read/provider/final boundary",async()=>{
-  let status;const h=createOwnerAssistantHandlers({authorize:async(r,o)=>{if(o.requiredModules.includes("INVENTORY"))throw Object.assign(Error("disabled"),{code:"MODULE_DISABLED",status:403});return scope},requestProvider:async()=>answer()});await h.status({...req,query:{}},{json:v=>status=v},e=>{throw e});assert.deepEqual(status.supported,["cash_details","business_records"]);
-  for(const boundary of [5,6,7,8]){let auth=0,providers=0,reads=0,out,err;const h=createOwnerAssistantHandlers({authorize:async(r,o)=>{auth++;if(auth===boundary)throw Object.assign(Error("revoked"),{status:403});if(auth>=5)assert.deepEqual(o.requiredModules,["INVENTORY"]);return scope},requestProvider:async()=>++providers===1?{response:{ok:true},raw:{output:[toolCall]}}:answer(),readStock:async()=>{reads++;return {kind:"product_stock"}}});await h.ask({...req,body:{question:"Πόσο απόθεμα έχει το SKU2269;"}},{json:v=>out=v,status(){return this}},e=>err=e);assert.equal(out,undefined);assert.equal(err.status,403);if(boundary===5)assert.equal(reads,0)}
-  let auth=0,providers=0,out,err;const h2=createOwnerAssistantHandlers({authorize:async()=>++auth===6?{...scope,storeId:"changed"}:scope,requestProvider:async()=>++providers===1?{response:{ok:true},raw:{output:[toolCall]}}:answer(),readStock:async()=>({kind:"product_stock"})});await h2.ask({...req,body:{question:"Απόθεμα 2269"}},{json:v=>out=v,status(){return this}},e=>err=e);assert.equal(out,undefined);assert.equal(err.code,"OWNER_ASSISTANT_CONTEXT_CHANGED");assert.equal(providers,1);
+  let status;
+  const h=createOwnerAssistantHandlers({authorize:async(r,o)=>{if(o.requiredModules.some(m=>["INVENTORY","STORE_CHAT","AI_READER"].includes(m)))throw Object.assign(Error("disabled"),{code:"MODULE_DISABLED",status:403});return scope},requestProvider:async()=>answer()});
+  await h.status({...req,query:{}},{json:v=>status=v},e=>{throw e});assert.deepEqual(status.supported,["cash_details","business_records"]);
+  const complete=createOwnerAssistantHandlers({authorize:async(r,o)=>{if(o.requiredModules.includes("INVENTORY"))throw Object.assign(Error("disabled"),{code:"MODULE_DISABLED",status:403});return scope},requestProvider:async()=>answer()});
+  await complete.status({...req,query:{}},{json:v=>status=v},e=>{throw e});assert.deepEqual(status.supported,["cash_details","cash_review","business_records"]);
+  for(const boundary of [1,2,3,4]){
+    let checks=0,providers=0,reads=0,out,err;
+    const h=createOwnerAssistantHandlers({authorize:async(r,o)=>{if(providers){assert.deepEqual(o.requiredModules,["INVENTORY"]);if(++checks===boundary)throw Object.assign(Error("revoked"),{status:403});}return scope},requestProvider:async()=>++providers===1?{response:{ok:true},raw:{output:[toolCall]}}:answer(),readStock:async()=>{reads++;return {kind:"product_stock"}}});
+    await h.ask({...req,body:{question:"Πόσο απόθεμα έχει το SKU2269;"}},{json:v=>out=v,status(){return this}},e=>err=e);
+    assert.equal(out,undefined);assert.equal(err.status,403);assert.equal(checks,boundary);assert.equal(reads,boundary===1?0:1);assert.equal(providers,boundary===4?2:1);
+  }
+  let providers=0,reads=0,out,err;
+  const h2=createOwnerAssistantHandlers({authorize:async(r,o)=>{if(reads){assert.deepEqual(o.requiredModules,["INVENTORY"]);return {...scope,storeId:"changed"};}return scope},requestProvider:async()=>++providers===1?{response:{ok:true},raw:{output:[toolCall]}}:answer(),readStock:async()=>{reads++;return {kind:"product_stock"}}});
+  await h2.ask({...req,body:{question:"Απόθεμα 2269"}},{json:v=>out=v,status(){return this}},e=>err=e);assert.equal(out,undefined);assert.equal(err.code,"OWNER_ASSISTANT_CONTEXT_CHANGED");assert.equal(providers,1);assert.equal(reads,1);
 });
 test("existing canonical stock HTTP route enforces own active store, parameterized company/store and numeric contract",async()=>{
   const originalQuery=prisma.$queryRaw,originalStore=prisma.store.findFirst,queries=[];
