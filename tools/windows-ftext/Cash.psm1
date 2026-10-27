@@ -156,4 +156,41 @@ function Complete-FtextCashReport($Config,[string]$RequestId) {
  # Keep intent/report permanently; only release the active marker after cloud acknowledgement.
  Remove-Item -LiteralPath (Join-Path $Config.workFolder '.mws-ftext-cash.json')
 }
-Export-ModuleMember -Function New-FtextCashCommand,Read-FtextCashResult,Get-FtextCashPending,Invoke-FtextCashRequest,Complete-FtextCashReport
+function Read-FtextEvidenceFile([string]$Path,[int]$Limit) {
+ $item=Get-Item -LiteralPath $Path -ErrorAction Stop
+ if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {throw 'Unsafe evidence file.'}
+ $s=[IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
+ try {
+  if($s.Length -lt 1 -or $s.Length -gt $Limit) {throw 'Invalid evidence size.'}
+  $bytes=New-Object byte[] ([int]$s.Length);$offset=0
+  while($offset -lt $bytes.Length) {$n=$s.Read($bytes,$offset,$bytes.Length-$offset);if($n -eq 0){throw 'Incomplete evidence file.'};$offset+=$n}
+  return ,$bytes
+ } finally {$s.Dispose()}
+}
+function Read-FtextLateErrorEvidence($Config,$Request) {
+ if([string]$Request.kind -cne 'FTEXT_ERROR_RECHECK' -or [string]$Request.originalResultHash -notmatch '^[a-f0-9]{64}$' -or [string]$Request.plan.payment.method -cne 'CARD') {throw 'Invalid error recheck.'}
+ $folder=[string]$Config.workFolder
+ $resultPath=Join-Path $folder ('mws-cash-'+$Request.id+'.res')
+ # This validates the original plan and computes bytes; it never publishes them.
+ $commandHash=Get-FtextCashHash (New-FtextCashCommand $Config $Request $resultPath)
+ $hash=Get-FtextCashHash ([Text.Encoding]::UTF8.GetBytes($folder.ToUpperInvariant()))
+ $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtext_'+$hash.ToUpperInvariant()));$held=$false
+ try {
+  try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
+  if(-not $held) {throw 'Another connector is using this ftext folder.'}
+  if((Get-FtextCashPending $Config) -or (Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-status.json')) -or @(Get-ChildItem -LiteralPath $folder -Filter '*.txt' -File).Count -gt 0) {throw 'The ftext folder is busy; evidence retained.'}
+  $intentBytes=Read-FtextEvidenceFile (Join-Path $folder ('mws-cash-'+$Request.id+'.intent.json')) 4096
+  $intent=[Text.Encoding]::UTF8.GetString($intentBytes) | ConvertFrom-Json
+  if(@($intent.PSObject.Properties).Count -ne 3 -or [string]$intent.requestId -cne [string]$Request.id -or [string]$intent.settingsHash -cne [string]$Config.settingsHash -or [string]$intent.commandHash -cne $commandHash) {throw 'Original intent does not match.'}
+  $reportBytes=Read-FtextEvidenceFile (Join-Path $folder ('mws-cash-'+$Request.id+'.report.json')) 4096
+  if((Get-FtextCashHash $reportBytes) -cne [string]$Request.originalResultHash) {throw 'Original report does not match.'}
+  $report=[Text.Encoding]::UTF8.GetString($reportBytes) | ConvertFrom-Json
+  if(@($report.PSObject.Properties).Count -ne 4 -or [string]$report.requestId -cne [string]$Request.id -or [string]$report.settingsHash -cne [string]$Config.settingsHash -or [string]$report.outcome -cne 'REQUIRES_CHECK' -or [string]$report.description -cne 'The physical receipt could not be verified. Do not resend.') {throw 'Only the original unknown report can be rechecked.'}
+  $bytes=Read-FtextEvidenceFile $resultPath 65536
+  $parsed=Read-FtextCashResult $bytes $Config $Request
+  $lines=@([Text.Encoding]::GetEncoding(1253).GetString($bytes) -split '\r?\n')
+  if(-not $parsed.PSObject.Properties['code'] -or $parsed.code -notin @(44,48) -or -not $parsed.PSObject.Properties['failedCommand'] -or [string]$parsed.failedCommand -cne ('PAY||'+[string]$Request.plan.payment.code) -or @($lines | Select-Object -Skip 3 | Where-Object {$_ -notmatch '^[ \t]*$'}).Count -gt 0) {throw 'No exact original PAY error was found.'}
+  return [pscustomobject]@{requestId=[string]$Request.id;settingsHash=[string]$Config.settingsHash;originalResultHash=[string]$Request.originalResultHash;commandHash=$commandHash;rawResultBase64=[Convert]::ToBase64String($bytes)}
+ } finally {if($held){$mutex.ReleaseMutex()};$mutex.Dispose()}
+}
+Export-ModuleMember -Function New-FtextCashCommand,Read-FtextCashResult,Get-FtextCashPending,Invoke-FtextCashRequest,Complete-FtextCashReport,Read-FtextLateErrorEvidence

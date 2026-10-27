@@ -42,7 +42,7 @@ function Invoke-FtextCloudPing($Config) {
     return $response
 }
 function Invoke-FtextCashApi($Config,[string]$Action,$Body) {
-    if($Action -notin @('cash-poll','cash-result','void-poll','void-result')) {throw 'Unsupported cash API action.'}
+    if($Action -notin @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result')) {throw 'Unsupported cash API action.'}
     $token=Read-FtextDeviceToken $Config
     return Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/'+$Action) -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -TimeoutSec 30
 }

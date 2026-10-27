@@ -37,7 +37,7 @@ try {
         param($config)
         function script:Invoke-RestMethod {param($Method,$Uri,$Headers,$ContentType,$Body,$TimeoutSec);if($Headers.Authorization -cne 'Bearer fixture-only-device-token'){throw 'Wrong scoped device credential'};return [pscustomobject]@{uri=$Uri;body=$Body}}
         try {
-            foreach($action in @('cash-poll','cash-result','void-poll','void-result')) {
+            foreach($action in @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result')) {
                 $reply=Invoke-FtextCashApi $config $action @{requestId='fixture'}
                 if($reply.uri -cne ($config.apiBase+'/api/ftext/v1/device/'+$action) -or ($reply.body | ConvertFrom-Json).requestId -cne 'fixture'){throw 'Wrong authenticated ftext action'}
             }

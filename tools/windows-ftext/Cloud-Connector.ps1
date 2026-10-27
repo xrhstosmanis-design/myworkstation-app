@@ -12,6 +12,7 @@ try {
     Write-Host ('MyWorkStation ftext / '+$c.storeId+' / '+$c.terminalPos)
     $cashEnabled=$c.PSObject.Properties['cashEnabled'] -and $c.cashEnabled -eq $true
     if($cashEnabled) {Write-Host 'Cash connector enabled for this installation. Keep this window open.'} else {Write-Host 'Communication only. Fiscal checkout is not enabled. Keep this window open.'}
+    $recheckAttempted=@{}
     while($true) {
         Invoke-FtextCloudPing $c | Out-Null
         if($cashEnabled) {
@@ -25,6 +26,22 @@ try {
                 if($ack.ok -ne $true -or $ack.status -notin @('CONFIRMED','REQUIRES_CHECK','SALE_COMMITTED')) {throw 'Cash result was not acknowledged. The local evidence was retained.'}
                 Complete-FtextCashReport $c ([string]$request.id)
                 Write-Host ('Cash request '+$request.id+': '+$ack.status)
+            }
+            if(-not $request) {
+                $recheck=(Invoke-FtextCashApi $c 'error-evidence-poll' @{}).request
+                if($recheck -and -not $recheckAttempted.ContainsKey([string]$recheck.id)) {
+                    $evidence=$null
+                    try {$evidence=Read-FtextLateErrorEvidence $c $recheck} catch {
+                        $recheckAttempted[[string]$recheck.id]=$true
+                        Write-Host 'Original error files could not be verified. No payment or cancellation was sent.'
+                    }
+                    if($evidence) {
+                        $accepted=Invoke-FtextCashApi $c 'error-evidence-result' $evidence
+                        if($accepted.ok -ne $true -or [string]$accepted.requestId -cne [string]$recheck.id -or [string]$accepted.evidenceHash -notmatch '^[a-f0-9]{64}$' -or [string]$accepted.status -cne 'REQUIRES_CHECK') {throw 'Original error evidence was not acknowledged.'}
+                        $recheckAttempted[[string]$recheck.id]=$true
+                        Write-Host 'Original error evidence delivered. No payment or cancellation was sent.'
+                    }
+                }
             }
         }
         Write-Host ([DateTime]::Now.ToString('HH:mm:ss')+' connected');Start-Sleep -Seconds 5
