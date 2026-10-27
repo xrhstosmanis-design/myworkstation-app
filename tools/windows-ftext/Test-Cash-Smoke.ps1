@@ -124,5 +124,35 @@ try {
  $manual.cardPayment.resultFormat='POS_LINE8_OS7'
  Assert ((Read-FtextCashResult $enc.GetBytes($valid) $manual $mr).outcome -ceq 'REQUIRES_CHECK') 'Strict OS7 unexpectedly accepted missing line8.'
 
+ # Read-only late recheck of an already acknowledged generic result.
+ $lateFolder=Join-Path $root 'late';New-Item -ItemType Directory -Path $lateFolder | Out-Null
+ $lateConfig=$manual | ConvertTo-Json -Depth 12 | ConvertFrom-Json;$lateConfig.workFolder=$lateFolder;$lateConfig.cardPayment.resultFormat='OPERATOR_CONFIRMATION'
+ $late=$mr | ConvertTo-Json -Depth 12 | ConvertFrom-Json;$late.id=[Guid]::NewGuid().ToString();$late | Add-Member NoteProperty kind 'FTEXT_ERROR_RECHECK'
+ $lateReport=[ordered]@{requestId=$late.id;settingsHash=$lateConfig.settingsHash;outcome='REQUIRES_CHECK';description='The physical receipt could not be verified. Do not resend.'}
+ $utf8=New-Object Text.UTF8Encoding($false);$reportBytes=$utf8.GetBytes(($lateReport | ConvertTo-Json -Compress))
+ $sha=[Security.Cryptography.SHA256]::Create();try{$reportHash=[BitConverter]::ToString($sha.ComputeHash($reportBytes)).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
+ $late | Add-Member NoteProperty originalResultHash $reportHash
+ $lateResult=Join-Path $lateFolder ('mws-cash-'+$late.id+'.res');$lateReportPath=Join-Path $lateFolder ('mws-cash-'+$late.id+'.report.json');$lateIntentPath=Join-Path $lateFolder ('mws-cash-'+$late.id+'.intent.json')
+ $commandBytes=New-FtextCashCommand $lateConfig $late $lateResult
+ $sha=[Security.Cryptography.SHA256]::Create();try{$commandHash=[BitConverter]::ToString($sha.ComputeHash($commandBytes)).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
+ $intentBytes=$utf8.GetBytes((([ordered]@{commandHash=$commandHash;settingsHash=$lateConfig.settingsHash;requestId=$late.id}) | ConvertTo-Json -Compress))
+ [IO.File]::WriteAllBytes($lateIntentPath,$intentBytes);[IO.File]::WriteAllBytes($lateReportPath,$reportBytes);[IO.File]::WriteAllBytes($lateResult,$physicalErrorBytes)
+ $before=@(Get-ChildItem -LiteralPath $lateFolder -File | Get-FileHash -Algorithm SHA256 | Select-Object Path,Hash) | ConvertTo-Json -Compress
+ $evidence=Read-FtextLateErrorEvidence $lateConfig $late
+ Assert ($evidence.originalResultHash -ceq $reportHash -and $evidence.commandHash -ceq $commandHash -and $evidence.rawResultBase64 -ceq [Convert]::ToBase64String($physicalErrorBytes)) 'Late evidence binding was lost.'
+ $after=@(Get-ChildItem -LiteralPath $lateFolder -File | Get-FileHash -Algorithm SHA256 | Select-Object Path,Hash) | ConvertTo-Json -Compress
+ Assert ($before -ceq $after -and @(Get-ChildItem -LiteralPath $lateFolder -Filter '*.txt').Count -eq 0) 'Read-only recheck changed files or published a command.'
+ Read-FtextLateErrorEvidence $lateConfig $late | Out-Null
+ foreach($bad in @($valid,"48`r`nEFT-POS ERROR`r`nPAY||3`r`n","48`r`nEFT-POS ERROR`r`nPAY||2`r`nhttps://www1.aade.gr/receipt`r`n",'')) {
+  [IO.File]::WriteAllBytes($lateResult,$enc.GetBytes($bad));MustThrow {Read-FtextLateErrorEvidence $lateConfig $late}
+ }
+ [IO.File]::WriteAllBytes($lateResult,$physicalErrorBytes)
+ [IO.File]::WriteAllText($lateReportPath,'changed');MustThrow {Read-FtextLateErrorEvidence $lateConfig $late};[IO.File]::WriteAllBytes($lateReportPath,$reportBytes)
+ [IO.File]::WriteAllText($lateIntentPath,'{}');MustThrow {Read-FtextLateErrorEvidence $lateConfig $late};[IO.File]::WriteAllBytes($lateIntentPath,$intentBytes)
+ Remove-Item -LiteralPath $lateResult;MustThrow {Read-FtextLateErrorEvidence $lateConfig $late};[IO.File]::WriteAllBytes($lateResult,$physicalErrorBytes)
+ $foreign=$late | ConvertTo-Json -Depth 12 | ConvertFrom-Json;$foreign.scope.storeId='foreign';MustThrow {Read-FtextLateErrorEvidence $lateConfig $foreign}
+ [IO.File]::WriteAllText((Join-Path $lateFolder 'busy.txt'),'unrelated');MustThrow {Read-FtextLateErrorEvidence $lateConfig $late}
+ Assert (@(Get-ChildItem -LiteralPath $lateFolder -File).Count -eq 4) 'Recheck created unexpected files.'
+
  Write-Host ('PASS: '+$passed+' cash command/result/scope/timeout/restart/tombstone boundaries; synthetic folder only.')
 } finally {Remove-Item -LiteralPath $root -Recurse -Force}
