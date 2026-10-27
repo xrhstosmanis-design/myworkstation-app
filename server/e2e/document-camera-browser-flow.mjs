@@ -25,7 +25,13 @@ try{
   for(const key of ['close','shot','cancel']){const r=result[key];assert.ok(r.top>=0&&r.bottom<=height+1&&r.left>=0&&r.right<=width+1,JSON.stringify({case:result,key}));assert.ok(r.height>=48,'Large camera button target required');assert.equal(r.hit,true,'Camera button must accept a real pointer');}
   assert.equal(result.calls,0,'Preview cannot call OCR/payment/backend');
   const screenshot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId);await fs.writeFile(path.join(out,width+'-'+height+'-'+mode+'-'+font+'.png'),Buffer.from(screenshot.data,'base64'));
-  const cancel=result.cancel;await cdp('Input.dispatchMouseEvent',{type:'mousePressed',x:cancel.left+cancel.width/2,y:cancel.top+cancel.height/2,button:'left',clickCount:1},sessionId);await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',x:cancel.left+cancel.width/2,y:cancel.top+cancel.height/2,button:'left',clickCount:1},sessionId);
+  // The camera controls can finish rendering while the screenshot is taken.
+  // Measure and hit-test the actual target again immediately before the real pointer click.
+  const fresh=await cdp('Runtime.evaluate',{awaitPromise:true,returnByValue:true,expression:`(async()=>{await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));const b=document.querySelector('[data-cam-cancel]'),r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;return{left:r.left,top:r.top,width:r.width,height:r.height,hit:b.contains(document.elementFromPoint(x,y))}})()`},sessionId);
+  assert.ok(!fresh.exceptionDetails,JSON.stringify(fresh.exceptionDetails));
+  const cancel=fresh.result.value;assert.equal(cancel.hit,true,'Camera cancel must accept the actual pointer immediately before click');
+  assert.ok(cancel.left>=0&&cancel.top>=0&&cancel.left+cancel.width<=width+1&&cancel.top+cancel.height<=height+1,'Camera cancel must remain visible before click');
+  await cdp('Input.dispatchMouseEvent',{type:'mousePressed',x:cancel.left+cancel.width/2,y:cancel.top+cancel.height/2,button:'left',clickCount:1},sessionId);await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',x:cancel.left+cancel.width/2,y:cancel.top+cancel.height/2,button:'left',clickCount:1},sessionId);
   const cleanup=await cdp('Runtime.evaluate',{returnByValue:true,expression:"({closed:!document.querySelector('[data-cam-shot]'),stopped:window.fixtureTracks.every(track=>track.readyState==='ended'),calls:window.fixtureCalls.length})"},sessionId);assert.deepEqual(cleanup.result.value,{closed:true,stopped:true,calls:0});
   await cdp('Target.closeTarget',{targetId});
  }
