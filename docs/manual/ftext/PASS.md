@@ -1,3 +1,9 @@
+## 26 October 2026 — limited recovered-NO confirmation UI USER PASS
+
+Authorized original cashier in selected Rizareio/RIZAREIO-POS-01. Keep paired connector and FTEXT+ running and refresh the existing POS after release71ca6f15/PR3159. Owner observed that the blocking confirmation disappeared; image-1793013541128.jpg shows original one-item ΝΕΡΟ500ML basket0.50 retained and pending-review notice visible, without another Return button. This verifies presentation of an already-recorded NO after refresh only. Fresh NO click, physical YES/card acceptance and measured financial/stock effects remain NOT TESTED; no receipt or charge was repeated.
+
+Current operator card setting is explicitly enabled code2/POS1/type1. Historical CARD OFF statements below describe the older dates. Tenant/POS/current configuration/original cashier checks remain enforced. Closing a dialog does not cancel an unresolved fiscal document: original request1e50a87c still has NO/REQUIRES_CHECK and no saleId. Do not send another payment, erase pending files or use RBS controls for recovery. Support inspects the existing result. On27Oct the uploaded original response showed padded code48/EFT-POS ERROR/InputLine: PAY||2; this is an error, not proof of bank decline or fiscal cancellation. Whole connector remains OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-27-ftext-error-result-format.md.
+
 # ftext - verified communication and limited single CASH receipt
 
 22 October 2026, 18:29 Europe/Athens. The authorized owner/technician used the final Rizareio Windows PC through AnyDesk. This is a LIMITED USER-observed physical communication PASS, not generic model certification, cloud pairing or POS checkout acceptance.

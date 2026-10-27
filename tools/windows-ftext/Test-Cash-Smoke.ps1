@@ -13,6 +13,19 @@ try {
  $scope=[pscustomobject]@{companyId=$c.companyId;storeId=$c.storeId;terminalPos=$c.terminalPos;fiscalDeviceCode=$c.fiscalDeviceCode}
  $r=[pscustomobject]@{id=[Guid]::NewGuid().ToString();settingsHash=$c.settingsHash;scope=$scope;serialNumber=$c.serialNumber;plan=[pscustomobject]@{schemaVersion='MWS_FTEXT_SALE_PLAN_V1';configurationId=$c.configurationId;settingsHash=$c.settingsHash;scope=$scope;total='1.25';payment=[pscustomobject]@{method='CASH';code=1;amount='1.25'};lines=@([pscustomobject]@{description='SYNTHETIC';quantity='1.000';unitPrice='1.25';discount='0.00';lineTotal='1.25';department='4';vatRate='13.00';vatCode='2'})}}
  $enc=[Text.Encoding]::GetEncoding(1253);$resultPath=Join-Path $root ('mws-cash-'+$r.id+'.res')
+ # Exact original53-byte FTEXT+ reply: padded code and labelled failed input.
+ $physicalErrorBytes=[IO.File]::ReadAllBytes((Join-Path $PSScriptRoot 'fixtures/eftpos-error-48.res'))
+ $physicalError=Read-FtextCashResult $physicalErrorBytes $c $r
+ Assert ($physicalErrorBytes.Length -eq 53) 'Physical error fixture bytes changed.'
+ Assert ($physicalError.outcome -ceq 'REQUIRES_CHECK' -and $physicalError.code -eq 48 -and $physicalError.failedCommand -ceq 'PAY||2') 'Physical EFTPOS error was not retained and bound.'
+ Assert ($physicalError.rawResultHash -ceq '022ddb6a253c87c3c0b15036bf9ab312b9af222a58eede98a94530b1ca57fc53') 'Original error bytes were normalized before hashing.'
+ Assert (-not $physicalError.PSObject.Properties['qr']) 'Physical error was promoted to a receipt.'
+ foreach($badCode in @('4 8','+48','-48','48x','1048')) {
+  $invalid=Read-FtextCashResult $enc.GetBytes($badCode+"`r`nEFT-POS ERROR`r`nInputLine: PAY||2`r`n") $c $r
+  Assert ($invalid.outcome -ceq 'REQUIRES_CHECK' -and -not $invalid.PSObject.Properties['code']) 'Malformed result code was accepted.'
+ }
+ $nested=Read-FtextCashResult $enc.GetBytes("48`r`nEFT-POS ERROR`r`nInputLine: InputLine: PAY||2`r`n") $c $r
+ Assert (-not $nested.PSObject.Properties['failedCommand']) 'Nested input label was accepted as exact PAY.'
  $command=$enc.GetString((New-FtextCashCommand $c $r $resultPath))
  Assert ($command -ceq "RESULT_FILENAME|$resultPath`r`nS|SYNTHETIC|1.000|1.25||4`r`nPAY||1`r`n") 'Unexpected cash command.'
  foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode')) {
