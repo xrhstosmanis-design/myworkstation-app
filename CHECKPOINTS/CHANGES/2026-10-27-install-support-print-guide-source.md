@@ -1,0 +1,7 @@
+## 27/10/2026 — INSTALL-SUPPORT-PRINT-GUIDE-01 / REVIEWED SOURCE / AWAITING EXACT CI
+
+User-authorized narrow takeover claim #3226 merged ea2f94b7f4b27748e74a0ea30b1d5ecd28b3c813 before source. Retained owner codex/central-four-streams-20261018 / previous worker /root/priority_support; receiving worker /root/support_design. Reviewed source candidate 54c42de550cbc7d97c2151b5f59d2a75786cabdd is limited to InstallationSupportProfile, its CSS, existing focus-trap UI tests and two approved isolated browser fixture/flow paths. The actual browser test is exercised through the existing test runner without any workflow edit. Initial focused mounted tests: 6 PASS / 0 FAIL / 0 SKIP. Earlier exact draft CI 40570699879 failed at the checkpoint/active-list policy before running source tests or browser; this source checkpoint and active-list prefix address that requirement, with no policy bypass.
+
+Status AWAITING EXACT FULL CI / ACTUAL CHROMIUM PDF NOT YET TESTED / NOT INSTALLED / NO PHYSICAL PRINT OR USER PASS. Do not merge or claim delivery before actual browser/PDF evidence and independent review. No lifecycle, database, schema, persistence, backend, auth, device, fiscal, stock, payment, incident workflow or other owner transfer. Full support module remains OPEN; lifecycle changes still require the retained owner feat/store-shifts-inventory-clear-20261018 and separate reviewed handoff.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-10-27-install-support-print-guide-source.md.
