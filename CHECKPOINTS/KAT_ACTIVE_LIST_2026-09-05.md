@@ -1,3 +1,9 @@
+## 27/10/2026 13:36:13 EET - CAPACITY20 HISTORICAL BURST DIAGNOSTIC / RETAINED OWNER / OPEN
+
+Run37937519901/job113843198454 at historical aacae12: 84 logical actions =22 POS refresh +22 local searches +20 BackOffice searches +20 reports /106 HTTP. All22 refreshes completed, zero action errors/drops; isolated burst p95=4131.316ms/p99=4237.201ms FAIL, normal p95=322.196ms/peak310.730ms PASS in their qualified phase scopes. Endurance did not start, final after=null; no production capacity PASS. Each refresh aggregates three GETs plus JSON/resolver; no component timing/bytes or definitive root cause. Historic fixture/code implies ~4500 active items/store/~99000 across22 refreshes, not separately measured payload. 1s DB and ~7.5s resource samples cannot establish queue/CPU cause. Historical aacae12 differs from current source; no current performance inference.
+
+Retained owners codex/pos-startup-loading-20261008 and codex/pos-capacity20-profiles-20261009; no takeover. Next: separately claim and instrument an isolated read-only diagnostic on exact current source with per-endpoint/pool/SQL/serialization/JSON/resolver timing and higher-resolution resources before any causal code decision. Preserve complete catalog/tenant/financial safeguards; no actual workload, production action, source, paid resource, LAB/USER/manual PASS or status closure here. Checkpoint CHECKPOINTS/CHANGES/2026-10-09-pos-capacity20.md; original run artifact SHA256 7d5e56b1e618f20ac8e717dcf17d3b86dc3ff4884953f6fc5ac5b91dea16f191.
+
 ## 27/10/2026 - INSTALL-SUPPORT-01 / REVIEWED SOURCE / AWAITING EXACT FULL CI
 
 SCOPED_SOURCE_STAGE: REVIEWED_SOURCE_AWAITING_EXACT_FULL_CI. Claim3207 merged be970acf34daa13ea6188ef14e312e70003ffdf4 BEFORE the four-path source7a12467875fdd876cbd4f5dc506ec7169b7ab400. Root and independent source review CLEAR; original owner codex/central-four-streams-20261018 / worker /root/priority_support retained.
