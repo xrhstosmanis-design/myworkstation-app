@@ -1,0 +1,22 @@
+{
+  "source": "actual browser download",
+  "sheets": {
+    "Βάρδιες": 2,
+    "Ανά εργαζόμενο": 1,
+    "Ανά ημέρα": 1,
+    "Εκκρεμότητες": 2,
+    "Αναφορά": 16,
+    "Στοιχεία ελέγχου": 14
+  },
+  "contains": {
+    "Μηδενική χρέωση:": true,
+    "27/10/2026, 21:09:17": true,
+    "865001": true,
+    "Δεν επιβεβαιώθηκε εφαρμογή της αλλαγής στις διαθέσιμες πωλήσεις": true
+  },
+  "sameCanonicalText": true,
+  "nativeOriginalCashAndCardCents": 0,
+  "unreviewedFinancialTotalsExcluded": true,
+  "externalOperatorNotAllocatedToNativeEmployee": true,
+  "nativeShiftId": "a3494bb3-61cf-447c-9707-27311f35708c"
+}

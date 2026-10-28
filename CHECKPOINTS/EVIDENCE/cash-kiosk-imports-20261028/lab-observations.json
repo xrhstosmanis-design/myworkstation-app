@@ -1,0 +1,133 @@
+{
+  "revision": "ac5850c0d9c5e5b170500badded0a9cb10537b19",
+  "baselinePR": 3263,
+  "baselineMain": "a474c553e184ddaeb8ce1017682813bfe4c8ce49",
+  "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "period": "2026-10-27",
+  "scope": "synthetic external evidence input/report ONLY",
+  "nativeBaseline": {
+    "shifts": 1,
+    "shortageCents": 0,
+    "surplusCents": 0,
+    "cardDifferenceCents": 0,
+    "pending": 1
+  },
+  "controlBaseline": {
+    "store": "N40 CONTROL 20261010",
+    "shifts": 0,
+    "sourceRows": 0,
+    "cashCardDifferencesCents": 0
+  },
+  "actions": [
+    {
+      "action": "IMPORT EVENTS",
+      "beforeAt": "2026-10-28T17:22:52.265703+00:00",
+      "sourcesBefore": 0,
+      "file": "lab-kiosk-events-20261028.xls",
+      "status": "OBSERVED",
+      "afterAt": "2026-10-28T17:23:32.476458+00:00",
+      "sourcesAfter": 1,
+      "sequence": 1,
+      "externalCoverage": "INCOMPLETE",
+      "nativeFinanceUnchanged": true
+    },
+    {
+      "action": "IMPORT JOURNAL",
+      "beforeAt": "2026-10-28T17:24:15.285631+00:00",
+      "sourcesBefore": 1,
+      "file": "lab-kiosk-journal-20261028.xls",
+      "binding": {
+        "shift": "LAB-436",
+        "operator": "LAB_KIOSK_28OCT"
+      },
+      "status": "OBSERVED",
+      "afterAt": "2026-10-28T17:25:19.747096+00:00",
+      "sourcesAfter": 2,
+      "sequence": 2,
+      "findings": [
+        "ZERO_VALUE_SALE",
+        "PRICE_APPLICATION_UNCONFIRMED"
+      ],
+      "cameraTime": "27/10/2026, 21:09:17",
+      "transaction": "865001",
+      "quantity": 1,
+      "originalPriceCents": 200,
+      "finalPriceCents": 0,
+      "reductionCents": 200,
+      "nativeFinanceUnchanged": true
+    },
+    {
+      "action": "REVOKE JOURNAL FROM ANALYSIS",
+      "beforeAt": "2026-10-28T17:29:09.141872+00:00",
+      "sourcesBefore": 2,
+      "file": "lab-kiosk-journal-20261028.xls",
+      "sequence": 2,
+      "originalsNotDeleted": true,
+      "status": "OBSERVED",
+      "afterAt": "2026-10-28T17:30:06.284892+00:00",
+      "sourcesAfter": 1,
+      "externalCoverage": "INCOMPLETE",
+      "nativeFinanceUnchanged": true
+    },
+    {
+      "action": "REVOKE EVENTS FROM ANALYSIS",
+      "beforeAt": "2026-10-28T17:30:06.284892+00:00",
+      "sourcesBefore": 1,
+      "file": "lab-kiosk-events-20261028.xls",
+      "sequence": 1,
+      "originalsNotDeleted": true,
+      "status": "OBSERVED",
+      "afterAt": "2026-10-28T17:33:59.534117+00:00",
+      "sourcesAfter": 0,
+      "externalSection": false,
+      "nativeFinanceUnchanged": true
+    }
+  ],
+  "financialMutations": 0,
+  "emailsSent": 0,
+  "physicalStockCashAcceptance": "NOT TESTED",
+  "actualExport": {
+    "observedAt": "2026-10-28T17:27:42.305908+00:00",
+    "bytes": 30433,
+    "sheets": 6,
+    "canonicalCopyExactlyMatches": true,
+    "nativeFinancialCents": 0,
+    "unreviewedTotalsRemainExcluded": true,
+    "externalOperatorNotNativeAllocated": true
+  },
+  "controlAfterTwoImports": {
+    "at": "2026-10-28T17:28:13.606856+00:00",
+    "store": "N40 CONTROL 20261010",
+    "sourceRows": 0,
+    "nativeShifts": 0,
+    "cashCardDifferencesCents": 0,
+    "externalSection": false
+  },
+  "persistenceAfterScopeReset": {
+    "at": "2026-10-28T17:29:09.141872+00:00",
+    "sources": 2,
+    "sequences": [
+      1,
+      2
+    ],
+    "transactionStillPresent": "865001",
+    "nativeFinanceUnchanged": true
+  },
+  "final": {
+    "at": "2026-10-28T17:33:59.534117+00:00",
+    "status": "LIMITED LAB PASS",
+    "sourceRows": 0,
+    "alerts": 0,
+    "nativeShifts": 1,
+    "shortageCents": 0,
+    "surplusCents": 0,
+    "cardDifferenceCents": 0,
+    "pendingExcluded": 1,
+    "reviewAmount": "",
+    "reviewConfirmed": false,
+    "scope": "actual synthetic XLS input/canonical report/copy/actual XLSX export/read persistence/control/analysis revoke ONLY",
+    "originalRetentionHostedDownload": "NOT TESTED; native CI original/hash/revoke proof passed",
+    "emailsSent": 0,
+    "financialMutations": 0
+  }
+}
