@@ -45,6 +45,7 @@ app.MapPost("/scan", async (HttpContext context) => {
     return Results.Json(result.Body,statusCode:result.Status);
 });
 if (selfTest) {
+    ScannerJpeg.Verify();
     await app.StartAsync();
     try { await VerifyProtocol(state, Origin); Console.WriteLine("Scanner protocol HTTP self-test PASS"); }
     finally { await app.StopAsync(); await app.DisposeAsync(); }
@@ -93,15 +94,23 @@ static Task<string[]> WiaScan(int maxPages, CancellationToken ct) {
                 stage="read-image-bytes";
                 dynamic image=imageObject!;byte[] bytes=(byte[])image.FileData.BinaryData;
                 ct.ThrowIfCancellationRequested();
-                stage=bytes.Length>7*1024*1024?"image-too-large":"validate-jpeg";
-                if(bytes.Length<4||bytes.Length>7*1024*1024||bytes[0]!=255||bytes[1]!=216||bytes[^2]!=255||bytes[^1]!=217)throw new InvalidOperationException("Invalid JPEG transfer.");
-                completion.TrySetResult(new[]{Convert.ToBase64String(bytes)});
-                CryptographicOperations.ZeroMemory(bytes);
+                stage="validate-jpeg";
+                byte[]? fitted=null;
+                try {
+                    stage=bytes.Length>7*1024*1024?"compress-image":"validate-jpeg";
+                    fitted=ScannerJpeg.Fit(bytes,7*1024*1024);
+                    ct.ThrowIfCancellationRequested();
+                    completion.TrySetResult(new[]{Convert.ToBase64String(fitted)});
+                } finally {
+                    if(fitted!=null&&!ReferenceEquals(fitted,bytes))CryptographicOperations.ZeroMemory(fitted);
+                    CryptographicOperations.ZeroMemory(bytes);
+                }
             } finally { if(imageObject!=null&&Marshal.IsComObject(imageObject))Marshal.FinalReleaseComObject(imageObject); }
         } catch(OperationCanceledException) { completion.TrySetCanceled(ct); }
         catch(Exception error) {
             // Do not log document data, device identifiers, tokens or driver messages.
-            Console.WriteLine($"Scanner diagnostic: stage={stage}, error={error.GetType().Name}, hresult=0x{error.HResult:X8}");
+            if(error is ScannerFitException fitError) Console.WriteLine($"Scanner diagnostic: stage={stage}, reason={fitError.Reason}, inputBytes={fitError.InputBytes}, width={fitError.Width}, height={fitError.Height}");
+            else Console.WriteLine($"Scanner diagnostic: stage={stage}, error={error.GetType().Name}, hresult=0x{error.HResult:X8}");
             completion.TrySetException(new InvalidOperationException("SCAN_FAILED"));
         }
         finally {
@@ -197,3 +206,135 @@ internal sealed class PairTokenStore {
     }
     public static void Reset(){if(File.Exists(DefaultFile))File.Delete(DefaultFile);}
 }
+
+internal static class ScannerJpeg {
+    private const int MaxInputBytes=64*1024*1024;
+    private const long MaxPixels=48_000_000;
+
+    public static byte[] Fit(byte[] input,int maxBytes) {
+        if(maxBytes<4)throw new ScannerFitException("invalid-limit",input.Length);
+        if(input.Length>MaxInputBytes)throw new ScannerFitException("input-over-64mb",input.Length);
+        bool jpeg=input.Length>=4&&input[0]==255&&input[1]==216&&input[^2]==255&&input[^1]==217;
+        bool bmp=input.Length>=54&&input[0]==(byte)'B'&&input[1]==(byte)'M';
+        if(!jpeg&&!bmp)throw new ScannerFitException("unsupported-image-format",input.Length);
+        // WIA Transfer may return the driver's preferred BMP even when JPEG was requested.
+        // Bound BMP dimensions before invoking the decoder; never return BMP as JPEG.
+        if(bmp) {
+            int width=System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(input.AsSpan(18,4));
+            int signedHeight=System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(input.AsSpan(22,4));
+            uint header=System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(input.AsSpan(14,4));
+            uint offset=System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(input.AsSpan(10,4));
+            if(header<40||header>(uint)input.Length-14||offset<14+header||offset>=(uint)input.Length||width<=0||signedHeight==0||signedHeight==int.MinValue)
+                throw new ScannerFitException("invalid-bmp",input.Length);
+            int height=Math.Abs(signedHeight);
+            if((long)width*height>MaxPixels)throw new ScannerFitException("dimensions-over-limit",input.Length,width,height);
+        }
+        if(jpeg&&input.Length<=maxBytes)return input;
+        using var source=new MemoryStream(input,false);
+        using var image=System.Drawing.Image.FromStream(source,false,true);
+        if(image.Width<=0||image.Height<=0||(long)image.Width*image.Height>MaxPixels)
+            throw new ScannerFitException("dimensions-over-limit",input.Length,image.Width,image.Height);
+        if(bmp&&image.RawFormat.Guid!=System.Drawing.Imaging.ImageFormat.Bmp.Guid)
+            throw new ScannerFitException("invalid-bmp",input.Length,image.Width,image.Height);
+        var codec=System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
+            .First(c=>c.FormatID==System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
+        foreach(long quality in new long[]{90,85,80,75}) {
+            using var output=new MemoryStream();
+            using var parameters=new System.Drawing.Imaging.EncoderParameters(1);
+            parameters.Param[0]=new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality,quality);
+            image.Save(output,codec,parameters);
+            if(output.Length<=maxBytes) {
+                var result=output.ToArray();
+                if(result.Length>=4&&result[0]==255&&result[1]==216&&result[^2]==255&&result[^1]==217)return result;
+                CryptographicOperations.ZeroMemory(result);
+            }
+        }
+        throw new ScannerFitException("cannot-fit-at-quality-75",input.Length,image.Width,image.Height);
+    }
+
+    public static void Verify() {
+        // A noisy full-size page forces the actual 7 MiB branch on Windows.
+        const int width=2600,height=2600;
+        using var bitmap=new System.Drawing.Bitmap(width,height,System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+        var rect=new System.Drawing.Rectangle(0,0,width,height);
+        var data=bitmap.LockBits(rect,System.Drawing.Imaging.ImageLockMode.WriteOnly,System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+        try {
+            byte[] row=new byte[Math.Abs(data.Stride)];
+            for(int y=0;y<height;y++) {
+                RandomNumberGenerator.Fill(row);
+                Marshal.Copy(row,0,IntPtr.Add(data.Scan0,y*data.Stride),row.Length);
+            }
+            CryptographicOperations.ZeroMemory(row);
+        } finally { bitmap.UnlockBits(data); }
+        var codec=System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders().First(c=>c.FormatID==System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
+        using var original=new MemoryStream();
+        using(var parameters=new System.Drawing.Imaging.EncoderParameters(1)) {
+            parameters.Param[0]=new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality,100L);
+            bitmap.Save(original,codec,parameters);
+        }
+        var bytes=original.ToArray();
+        if(bytes.Length<=7*1024*1024)throw new InvalidOperationException("Oversize fixture did not exceed the limit.");
+        var fitted=Fit(bytes,7*1024*1024);
+        if(fitted.Length>7*1024*1024||ReferenceEquals(bytes,fitted))throw new InvalidOperationException("JPEG fitting failed.");
+        using(var stream=new MemoryStream(fitted,false))
+        using(var decoded=System.Drawing.Image.FromStream(stream,false,true))
+            if(decoded.Width!=width||decoded.Height!=height)throw new InvalidOperationException("JPEG dimensions changed.");
+        bool rejected=false;try { Fit(bytes,4); } catch(ScannerFitException error) { rejected=error.Reason=="cannot-fit-at-quality-75" && error.Width==width && error.Height==height && error.InputBytes==bytes.Length; }
+        if(!rejected)throw new InvalidOperationException("Unfittable JPEG diagnostic failed.");
+        rejected=false;try { Fit(new byte[]{1,2,3,4},100); } catch(ScannerFitException error) { rejected=error.Reason=="unsupported-image-format" && error.InputBytes==4; }
+        if(!rejected)throw new InvalidOperationException("Invalid JPEG diagnostic failed.");
+        CryptographicOperations.ZeroMemory(bytes);CryptographicOperations.ZeroMemory(fitted);
+        // Exercise the WIA fallback: a 300dpi A4 24-bit BMP has the observed byte count.
+        using(var page=new System.Drawing.Bitmap(2480,3507,System.Drawing.Imaging.PixelFormat.Format24bppRgb)) {
+            using(var graphics=System.Drawing.Graphics.FromImage(page)) {
+                graphics.Clear(System.Drawing.Color.White);
+                graphics.FillRectangle(System.Drawing.Brushes.Red,0,0,80,80);
+                graphics.FillRectangle(System.Drawing.Brushes.Blue,page.Width-80,page.Height-80,80,80);
+            }
+            using var raw=new MemoryStream();page.Save(raw,System.Drawing.Imaging.ImageFormat.Bmp);
+            var bmpBytes=raw.ToArray();
+            if(bmpBytes.Length!=26_092_134)throw new InvalidOperationException("A4 BMP fixture byte count changed.");
+            var jpegBytes=Fit(bmpBytes,7*1024*1024);
+            using(var stream=new MemoryStream(jpegBytes,false))
+            using(var decoded=new System.Drawing.Bitmap(stream)) {
+                if(jpegBytes.Length>7*1024*1024||decoded.RawFormat.Guid!=System.Drawing.Imaging.ImageFormat.Jpeg.Guid||decoded.Width!=page.Width||decoded.Height!=page.Height)
+                    throw new InvalidOperationException("BMP to JPEG conversion failed.");
+                var first=decoded.GetPixel(20,20);var last=decoded.GetPixel(page.Width-20,page.Height-20);
+                if(first.R<200||first.B>50||last.B<200||last.R>50)throw new InvalidOperationException("BMP page edges changed.");
+            }
+            // Malformed or excessive BMP dimensions must fail before decoding/allocation.
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bmpBytes.AsSpan(18,4),int.MaxValue);
+            rejected=false;try { Fit(bmpBytes,7*1024*1024); } catch(ScannerFitException error) { rejected=error.Reason=="dimensions-over-limit"; }
+            if(!rejected)throw new InvalidOperationException("BMP pixel limit failed.");
+            CryptographicOperations.ZeroMemory(bmpBytes);CryptographicOperations.ZeroMemory(jpegBytes);
+        }
+        // Small BMP must also be encoded, even when its bytes already fit the page limit.
+        using(var small=new System.Drawing.Bitmap(10,10)) {
+            using var raw=new MemoryStream();small.Save(raw,System.Drawing.Imaging.ImageFormat.Bmp);
+            var bmpBytes=raw.ToArray();var jpegBytes=Fit(bmpBytes,7*1024*1024);
+            if(ReferenceEquals(bmpBytes,jpegBytes)||jpegBytes[0]!=255||jpegBytes[1]!=216)throw new InvalidOperationException("Small BMP returned without conversion.");
+            CryptographicOperations.ZeroMemory(bmpBytes);CryptographicOperations.ZeroMemory(jpegBytes);
+        }
+        using(var raw=new MemoryStream()) {
+            bitmap.Save(raw,System.Drawing.Imaging.ImageFormat.Bmp);
+            var bmpBytes=raw.ToArray();var jpegBytes=Fit(bmpBytes,7*1024*1024);
+            if(jpegBytes.Length>7*1024*1024)throw new InvalidOperationException("Noisy BMP exceeded output limit.");
+            bool unfittable=false;try { Fit(bmpBytes,4); } catch(ScannerFitException error) { unfittable=error.Reason=="cannot-fit-at-quality-75"; }
+            if(!unfittable)throw new InvalidOperationException("Unfittable BMP accepted.");
+            CryptographicOperations.ZeroMemory(bmpBytes);CryptographicOperations.ZeroMemory(jpegBytes);
+        }
+        Console.WriteLine("Scanner WIA BMP fallback self-test PASS");
+        Console.WriteLine("Scanner JPEG size self-test PASS");
+    }
+}
+
+internal sealed class ScannerFitException : InvalidOperationException {
+    public string Reason { get; }
+    public int InputBytes { get; }
+    public int Width { get; }
+    public int Height { get; }
+    public ScannerFitException(string reason,int inputBytes,int width=0,int height=0) {
+        Reason=reason;InputBytes=inputBytes;Width=width;Height=height;
+    }
+}
+
