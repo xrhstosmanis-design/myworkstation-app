@@ -36,16 +36,15 @@ test("mounted original-image preview is explicit, local, bounded and scope/sourc
   }finally{dom.window.close();for(const [name,prior] of saved){if(prior)Object.defineProperty(globalThis,name,prior);else delete globalThis[name]}}
 });
 
-test("actual Premium Fast parent previews its retained page without repeating header or payment calls",async()=>{
+test("actual Premium Fast with real scanner control appends five pages and previews without extra header/payment calls",async()=>{
   const entry=fileURLToPath(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url));
   const output=await build({entryPoints:[entry],bundle:true,write:false,format:"cjs",platform:"node",packages:"external",loader:{".css":"empty"},plugins:[{name:"isolated-media-and-reader",setup(b){
-    b.onResolve({filter:/^\./},args=>args.importer===entry&&args.path!=="./DocumentPagePreview.jsx"?{path:args.path,namespace:"fixture"}:undefined);
+    b.onResolve({filter:/^\./},args=>args.importer===entry&&!["./DocumentPagePreview.jsx","./DocumentScanButton.jsx"].includes(args.path)?{path:args.path,namespace:"fixture"}:undefined);
     b.onResolve({filter:/^lucide-react$/},()=>({path:"icons",namespace:"fixture"}));
     b.onLoad({filter:/.*/,namespace:"fixture"},args=>{
       let contents="export default function Stub(){return null}";
       if(args.path.includes("useCameraAcquisition"))contents="export default()=>({cancel(){},checkpoint(){return 0},current(){return true}})";
       else if(args.path.includes("camera-acquisition"))contents="export const captureCameraFrame=()=>{throw Error('No scan in preview test')}";
-      else if(args.path.includes("DocumentScanButton"))contents="import React from 'react';export default({onFiles})=>React.createElement('button',{type:'button',onClick:()=>onFiles([globalThis.previewFixtureFile])},'Synthetic scanner page')";
       else if(args.path.includes("useMobileDocumentPhotos"))contents="export default()=>({pending:false})";
       else if(args.path.includes("document-image-quality"))contents="export const prepareDocumentFile=async file=>({file,changed:false,quality:{}})";
       else if(args.path.includes("invoice-fast-header-merge"))contents="export const mergeFastInvoiceHeaders=()=>({confidence:100})";
@@ -57,19 +56,19 @@ test("actual Premium Fast parent previews its retained page without repeating he
   }}]});
   const module={exports:{}};new Function("require","module","exports",output.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);const Parent=module.exports.default;
   const dom=new JSDOM("<div id=root></div>",{url:"https://myworkstation-app.onrender.com"}),saved=new Map();
-  for(const name of ["window","document","navigator","HTMLElement","File","FileReader","IS_REACT_ACT_ENVIRONMENT","previewFixtureFile"]){saved.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{configurable:true,writable:true,value:name==="IS_REACT_ACT_ENVIRONMENT"?true:dom.window[name]})}
+  for(const name of ["window","document","navigator","HTMLElement","File","FileReader","IS_REACT_ACT_ENVIRONMENT","localStorage","sessionStorage","fetch"]){saved.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{configurable:true,writable:true,value:name==="IS_REACT_ACT_ENVIRONMENT"?true:dom.window[name]})}
   const React=await import("react"),{createRoot}=await import("react-dom/client"),root=createRoot(document.getElementById("root")),calls=[];
-  globalThis.previewFixtureFile=new File([new Uint8Array([137,80,78,71])],"scanned-page.png",{type:"image/png"});
+  localStorage.setItem("myworkstation:document-scanner:v1","a".repeat(64));const transfers=[];globalThis.fetch=async(url,options)=>{assert.equal(url,"http://127.0.0.1:17839/scan");transfers.push(JSON.parse(options.body));return{ok:true,status:200,text:async()=>JSON.stringify({pages:[{jpeg:"/9j/2Q=="}]})}};
   const api=async(url)=>{calls.push(url);assert.equal(url,"/api/commerce/ai-reader/fast-header");return{}};
   const render=async id=>React.act(async()=>root.render(React.createElement(Parent,{key:id,store:{id},api,suppliers:[]})));
   const click=async text=>React.act(async()=>{const b=[...document.querySelectorAll("button")].find(b=>b.textContent===text||b.getAttribute("aria-label")===text);assert.ok(b,text);b.click();await new Promise(r=>setTimeout(r,20))});
   try{
-    await render("A");assert.equal(calls.length,0);await click("Synthetic scanner page");
+    await render("A");assert.equal(calls.length,0);await click("Σάρωση εγγράφου");
     for(let i=0;i<50&&!document.querySelector('.document-page-preview');i++)await React.act(async()=>new Promise(r=>setTimeout(r,10)));
-    assert.equal(calls.length,1);assert.match(document.body.textContent,/scanned-page.png/);assert.equal(document.querySelector("img"),null);
-    await click("Προεπισκόπηση σελίδας 1");assert.equal(document.querySelector("img").getAttribute("src"),"data:image/png;base64,iVBORw==");
-    await click("Μεγέθυνση εικόνας");await click("Κλείσιμο προεπισκόπησης");assert.equal(calls.length,1,"Viewing must not replay the existing header read or submit any payment");assert.match(document.body.textContent,/scanned-page.png/);
-    await render("B");assert.equal(document.querySelector("img"),null);assert.equal(document.querySelector('.document-page-preview'),null);assert.equal(calls.length,1);await React.act(async()=>root.unmount());
+    assert.equal(calls.length,1);assert.match(document.body.textContent,/sarosi-selida-1.jpg/);assert.equal(document.querySelector("img"),null);
+    await click("Προεπισκόπηση σελίδας 1");assert.equal(document.querySelector("img").getAttribute("src"),"data:image/jpeg;base64,/9j/2Q==");
+    await click("Μεγέθυνση εικόνας");await click("Κλείσιμο προεπισκόπησης");assert.equal(calls.length,1,"Viewing must not replay the existing header read or submit any payment");assert.match(document.body.textContent,/sarosi-selida-1.jpg/);
+    for(let n=2;n<=5;n++){await click("Σάρωση εγγράφου");assert.equal(document.querySelectorAll(".document-page-preview").length,n);assert.equal(calls.length,n)}assert.deepEqual(transfers.map(t=>t.maxPages),[5,4,3,2,1]);assert.equal(new Set(transfers.map(t=>t.requestId)).size,5);assert.equal([...document.querySelectorAll("button")].find(b=>b.textContent==="Σάρωση εγγράφου").disabled,true);await render("B");assert.equal(document.querySelector("img"),null);assert.equal(document.querySelector('.document-page-preview'),null);assert.equal(calls.length,5);await React.act(async()=>root.unmount());
   }finally{dom.window.close();for(const [name,prior]of saved){if(prior)Object.defineProperty(globalThis,name,prior);else delete globalThis[name]}}
 });
 
