@@ -1,0 +1,21 @@
+# POS-CLOSE-WITHOUT-PRINT-PERMISSION-28 - reviewed source / awaiting exact CI
+
+**B source status 28/10/2026 - REVIEWED SOURCE CANDIDATE / AWAITING EXACT FULL CI.** Claim #3253 preceded source. Frozen B source 5037e4b3a517bb7d31801987cd7919ca4ce5ddca passed root and independent review, with exactly eight claimed paths layered on the reviewed A1 source. A1 merged to main 1d5aa484992af92f6e3b998ff521d0dc4bd4f0b4 before this publication; that fresh base includes A2 editor source #3256, A1 layout source #3257 and cash XLS source #3255. Explicit comparison confirms all eight B paths are unchanged from the reviewed A1 source base, so no other source is overlaid or lost. A dedicated strict boolean closeWithoutPrint grant is absent/false by default, projected from the fresh persisted profile and enforced before both normal/table business entrypoints; manager/payment grants do not substitute. UI visibility and retained-callback authority epochs are protected. Local author group: 26 PASS / 0 FAIL / 2 retained native PostgreSQL environment SKIP; new permission group 5 PASS / 0 FAIL. Independent group 12 PASS / 0 FAIL / 0 SKIP. Node20 build PASS10.37s / TABLE_SERVICE retained. A supplemental batch was incomplete due to missing local Prisma client and is NOT a PASS. Mandatory exact full CI and actual acceptance remain OPEN; NOT INSTALLED / NO USER OR LAB PASS. No real role grant, no-print transaction or business/configuration write. Checkpoint CHECKPOINTS/CHANGES/2026-10-28-pos-no-print-permission-source.md.
+
+The owner explicitly requested separate rights for item 7, closing without printing. Sole shared StorePosPanel writer /root/pos_ui_new prepared B only after freezing A1. This is a distinct source PR from A1 and A2. Existing KAT, header, last-transaction, all other permission/role and table-service owners remain intact; no general ownership transfer is asserted.
+
+The new checkbox defaults to false unless current persisted closeWithoutPrint is strictly boolean true. Current-profile server authorization refuses unauthorized STORE_OPERATOR requests for normal and table waste entrypoints before existing business handlers; case-insensitive and optional trailing-slash paths retain coverage. A STORE_OPERATOR manager role or ordinary payment grant does not replace this explicit permission; existing administrative access remains unchanged. UI entry/callback checks include revocation and revoke/regrant epochs. Generic existing profile JSON storage is reused without schema, credential/login or operator-management backend changes.
+
+Original authorized request bodies and NON_FISCAL/CASH-turnover, WASTE stock/reporting, server prices, whole-table reason, failure-retained-cart and duplicate-click semantics remain unchanged. Authorized compatibility fixtures explicitly receive closeWithoutPrint:true; all eight footer controls remain in the retained geometry cases, and checkbox counts become25/23 with default-false and persisted-true checks without assertion weakening. No actual financial/fiscal/no-print action, permission assignment, stock mutation, device call, retry queue or accepted transaction replay was performed.
+
+Local native PostgreSQL skips and the incomplete missing-Prisma supplemental batch are environment limits, not successful proof. The required A1-main publication gate is now satisfied; require exact full PR/main CI, independent review and ordinary guarded release. Actual authorized-user/financial acceptance remains separately OPEN. No manual/PASS is created from synthetic checks.
+
+Exact eight source/test paths:
+- client/src/components/commerce/OperatorManagementPanel.jsx
+- client/src/components/store/StorePosPanel.jsx
+- server/src/middleware/auth.js
+- server/src/routes/store-pos-catalog.js
+- server/test/helpers/pos-modern-fixture.mjs
+- server/test/operator-checkbox-acceptance.test.js
+- server/test/pos-close-without-print-permission.test.js
+- server/test/pos-close-without-print.test.js

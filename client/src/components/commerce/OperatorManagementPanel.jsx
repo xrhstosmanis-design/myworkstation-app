@@ -11,6 +11,7 @@ const POS_PERMISSIONS=[
   ["stockPos","στήλη Stock (PoS)"],
   ["confirmDeleteSale","Επιβεβαίωση διαγραφής λίστας πώλησης (PoS)"],
   ["editPosButtons","Ρύθμιση πλήκτρων, κατηγοριών και υποκατηγοριών (PoS)"],
+  ["closeWithoutPrint","Κλείσιμο χωρίς εκτύπωση (PoS)"],
   ["deleteSaleReason","διαγραφή λίστας πώλησης (PoS) με αιτιολογία"],
   ["addBarcode","Προσθήκη barcode είδους (PoS & BackOffice)"],
   ["onlineBarcode","Online αναζήτηση barcode (PoS)"],

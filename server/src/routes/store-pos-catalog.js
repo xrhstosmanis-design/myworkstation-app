@@ -28,7 +28,7 @@ async function storeFor(req,storeId){
   if(!row){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}
   return row;
 }
-const adminAccess={leftKeys:true,editPosButtons:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,customerCardOnly:false,cash:true,cards:true,initialCash:true,centralCashPos:true,closeShift:true,purchaseOrders:true};
+const adminAccess={closeWithoutPrint:true,leftKeys:true,editPosButtons:true,onlineProductSearch:true,transferAmount:true,shiftTransactions:true,allShiftTransactions:true,supplierPayment:true,thirdPartyPayment:true,returnItems:true,changeRetail:true,addBarcode:true,editDescription:true,customerCardOnly:false,cash:true,cards:true,initialCash:true,centralCashPos:true,closeShift:true,purchaseOrders:true};
 async function operatorAccess(req,storeId){
   if(req.user?.tokenType!=="STORE_OPERATOR")return {...adminAccess,newProduct:posNewProductAllowed(req.user)};
   const rows=await prisma.$queryRaw`
@@ -40,7 +40,7 @@ async function operatorAccess(req,storeId){
   if(!row||row.posAccess===false){const error=new Error("Ο χειριστής δεν έχει ενεργή πρόσβαση στο POS από το BackOffice.");error.status=403;throw error}
   const p=row.permissions&&typeof row.permissions==="object"?row.permissions:{};
   return {
-    newProduct:posNewProductAllowed(req.user,row),purchaseOrders:row.backofficeMenu?.orders===true,leftKeys:Boolean(p.leftKeys),editPosButtons:Boolean(p.editPosButtons),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash),sameShiftPayments:p.sameShiftPayments!==false,centralCashPos:Boolean(p.centralCashPos),closeShift:Boolean(p.closeShift)
+    closeWithoutPrint:p.closeWithoutPrint===true,newProduct:posNewProductAllowed(req.user,row),purchaseOrders:row.backofficeMenu?.orders===true,leftKeys:Boolean(p.leftKeys),editPosButtons:Boolean(p.editPosButtons),onlineProductSearch:Boolean(p.onlineBarcode),transferAmount:Boolean(p.transferAmount),shiftTransactions:Boolean(p.shiftTransactionsPos),allShiftTransactions:Boolean(p.allShiftTransactionsPos),supplierPayment:Boolean(p.supplierPayment),thirdPartyPayment:Boolean(p.thirdPartyPayment),returnItems:Boolean(p.returnItems),changeRetail:Boolean(p.changeRetail),addBarcode:Boolean(p.addBarcode),editDescription:Boolean(p.editDescription),customerCardOnly:Boolean(p.customerCardOnly),cash:Boolean(p.cash),cards:Boolean(p.cards),initialCash:Boolean(p.initialCash),sameShiftPayments:p.sameShiftPayments!==false,centralCashPos:Boolean(p.centralCashPos),closeShift:Boolean(p.closeShift)
   };
 }
 async function audit(req,store,eventType,details={}){
@@ -90,6 +90,7 @@ function layoutForAccess(rawLayout,access){if(!rawLayout||typeof rawLayout!=="ob
 router.use("/stores/:storeId",async(req,res,next)=>{
   try{
     assertStore(req,req.params.storeId);const store=await storeFor(req,req.params.storeId);const access=await operatorAccess(req,store.id);req.storeOperatorAccess=access;req.storeOperatorStore=store;
+    if(req.method==="POST"&&/^\/(?:waste|table-orders\/[^/]+\/waste)\/?$/i.test(req.path)&&access.closeWithoutPrint!==true)return res.status(403).json({error:"Δεν έχεις δικαίωμα «Κλείσιμο χωρίς εκτύπωση» από το BackOffice."});
     if(req.method==="POST"&&req.path.endsWith("/checkout")){const methods=requestedPaymentMethods(req.body||{}),needsCash=methods.includes("CASH"),needsCards=methods.includes("CARD")||methods.includes("IRIS");if(needsCash&&!access.cash){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cash",action:"CHECKOUT",paymentMethods:methods});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Μετρητά» από το BackOffice."})}if(needsCards&&!access.cards){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"cards",action:"CHECKOUT",paymentMethods:methods});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Κάρτες» από το BackOffice."})}}
     if(req.method==="POST"&&(/\/sales\/[^/]+\/reverse$/.test(req.path)||/\/sales\/[^/]+\/internal-return$/.test(req.path))&&!access.returnItems){await audit(req,store,"POS_PERMISSION_DENIED",{permission:"returnItems",action:"SALE_REVERSE",saleId:req.path.split("/").at(-2)||null});return res.status(403).json({error:"Ο χειριστής δεν έχει δικαίωμα «Επιστροφή ειδών» από το BackOffice."})}
     await persistProductAuditAction(req,store,access);
