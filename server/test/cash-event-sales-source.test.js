@@ -14,7 +14,7 @@ test('native reader uses explicit scope, completed ledger linkage and safe proje
 });
 test('foreign/open scopes never read; missing audit table and source limits are explicitly unavailable',async()=>{
  let calls=0;const db={$queryRaw:async()=>{calls++;return [{auditTable:null}]}};
- for(const s of [{...session,storeId:'foreign'},{...session,status:'OPEN'}])assert.equal((await readCashEventSales(db,scope,s)).status,'UNAVAILABLE');assert.equal(calls,0);
+ for(const s of [{...session,storeId:'foreign'},{...session,status:'OPEN'},{...session,openedAt:'invalid'},{...session,closedAt:'2026-10-21T00:00:00Z'}])assert.equal((await readCashEventSales(db,scope,s)).status,'UNAVAILABLE');assert.equal(calls,0);
  assert.equal((await readCashEventSales(db,scope,session)).status,'UNAVAILABLE');assert.equal(calls,1);
  const overflow={$queryRaw:async strings=>strings.join('').includes('to_regclass')?[{auditTable:'present',completionTable:'present'}]:strings.join('').includes('FROM "Sale"')?Array(2001).fill({}):[]};assert.equal((await readCashEventSales(overflow,scope,session)).status,'LIMITED');
 });

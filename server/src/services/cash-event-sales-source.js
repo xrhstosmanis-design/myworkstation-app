@@ -6,6 +6,8 @@ const unavailable=status=>({status,findings:[],financialAdjustmentCents:0});
 // No schema bootstrap, mutable catalog lookup, external reader or financial write.
 export async function readCashEventSales(db,scope,session){
  if(!scope.companyId||!scope.storeId||session.companyId!==scope.companyId||session.storeId!==scope.storeId||!session.id||session.status!=='CLOSED'||!session.openedAt||!session.closedAt)return unavailable('UNAVAILABLE');
+ const openedAt=new Date(session.openedAt),closedAt=new Date(session.closedAt);
+ if(!Number.isFinite(openedAt.getTime())||!Number.isFinite(closedAt.getTime())||closedAt<openedAt)return unavailable('UNAVAILABLE');
  const present=await db.$queryRaw`SELECT to_regclass(format('%I.%I',current_schema(),'PosSaleActionAudit'))::text AS "auditTable",to_regclass(format('%I.%I',current_schema(),'StoreOperatorAudit'))::text AS "completionTable"`;
  if(!present[0]?.auditTable||!present[0]?.completionTable)return unavailable('UNAVAILABLE');
  const sales=await db.$queryRaw`
@@ -26,12 +28,12 @@ export async function readCashEventSales(db,scope,session){
    HAVING COUNT(*)>0 AND COUNT(DISTINCT t."sessionId")=1 AND MIN(t."sessionId")=${session.id}
   ) link ON TRUE
   WHERE s."companyId"=${scope.companyId} AND s."storeId"=${scope.storeId} AND s."status"='COMPLETED' AND s."source"='POS'
-   AND s."occurredAt">=${session.openedAt} AND s."occurredAt"<=${session.closedAt}
+   AND s."occurredAt">=${openedAt} AND s."occurredAt"<=${closedAt}
   ORDER BY s."occurredAt",s."id" LIMIT 2001`;
  const records=await db.$queryRaw`
   SELECT a."id",a."companyId",a."storeId",a."saleId",a."actionType",a."actorId",a."actorName",a."createdAt",a."details"
   FROM "PosSaleActionAudit" a WHERE a."companyId"=${scope.companyId} AND a."storeId"=${scope.storeId}
-   AND a."details"->>'sessionId'=${session.id} AND a."createdAt">=${session.openedAt} AND a."createdAt"<=${session.closedAt}
+   AND a."details"->>'sessionId'=${session.id} AND a."createdAt">=${openedAt} AND a."createdAt"<=${closedAt}
    AND a."actionType" IN ('PRICE_CHANGE','PERMANENT_PRICE_CHANGE','DISCOUNT','DISCOUNT_SET') ORDER BY a."createdAt",a."id" LIMIT 2001`;
  if(sales.length>cashEventSalesLimits.sales||records.length>cashEventSalesLimits.events||sales.some(s=>Array.isArray(s.completions)&&(s.completions.length>1000||s.completions.some(c=>Array.isArray(c.items)&&c.items.length>1000))))return unavailable('LIMITED');
  // Details are projection only, never trusted authorization or approval flags.

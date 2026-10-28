@@ -1,3 +1,7 @@
+## Native CI diagnosis — 28/10/2026
+
+Initial06f3056 CI40682281650 native PostgreSQL source test failed42883: fixture ISO timestamp strings were bound as PostgreSQL text against timestamptz. The in-flight run was later superseded/cancelled by35b6406; neither is a passing receipt. Reader now validates and binds actual Date values for both endpoints, preserving string/Date inputs without weakening time or scope checks. Adds invalid/reversed-period no-read regression. New exact full CI/native execution required. No production mutation or LAB PASS.
+
 ## Candidate hardening — 28/10/2026
 
 Initial source head06f305608ae173cc4d5bb164ca2e2ef2dc8e0b6e/PR3246 fullCI40682281650 was still running when review identified the need for a whole-session line bound. Candidate now refuses over10000 total lines (in addition to per-sale1000), bounds completion records/items and requires exact nonblank sale/line confirmation identities. The same37 focused/broad checks pass with3 native DB skips; overflow is explicit LIMITED, never truncated success. No financial or LAB action. Full fresh exact CI is required; the old in-flight head is not a PASS for this revision.
