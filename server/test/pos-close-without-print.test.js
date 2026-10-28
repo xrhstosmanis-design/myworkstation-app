@@ -55,7 +55,7 @@ test('POS no-print button posts once without a dialog and retains cart on reject
   const api=async(path,options={})=>{
     calls.push({path,options});if(path.endsWith('/ftext-cash/capability'))return {storeId:path.split('/')[4],configured:false};
     if(path.endsWith('/waste'))return new Promise((resolve,reject)=>{finish={resolve,reject}});
-    if(path==='/api/store-pos/stores/A')return {products:[product],layoutVersion:11,layout:{title:'OPERATOR POS',quickKeys:[{id:'quick',label:product.name,productQuery:'2270',visible:true}],categories:[]},access:{}};
+    if(path==='/api/store-pos/stores/A')return {products:[product],layoutVersion:11,layout:{title:'OPERATOR POS',quickKeys:[{id:'quick',label:product.name,productQuery:'2270',visible:true}],categories:[]},access:{closeWithoutPrint:true}};
     if(path.endsWith('/table-service')||path==='/api/netlink/status')throw new Error('not enabled');
     if(path.endsWith('/online-radio'))return {stations:[],state:{}};
     return {rows:[],items:[],requests:[],offers:[]};

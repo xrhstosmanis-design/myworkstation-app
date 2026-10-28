@@ -32,6 +32,7 @@ function storeRuntimePermissions(profile){
   if(rights.editDescription)permissions.push("EDIT_DESCRIPTION");
   if(rights.customersPos)permissions.push("CUSTOMERS_POS");
   if(rights.onlineBarcode)permissions.push("ONLINE_PRODUCT_SEARCH");
+  if(rights.closeWithoutPrint===true)permissions.push("POS_CLOSE_WITHOUT_PRINT");
   return [...new Set(permissions)];
 }
 
@@ -110,7 +111,7 @@ function exposeStorePosRuntimeAccess(req,res,rights){
   const path=String(req.originalUrl||"").split("?")[0];
   if(req.method!=="GET"||!/^\/api\/store-pos\/stores\/[^/]+(?:\/access)?$/.test(path))return;
   const send=res.json.bind(res);
-  res.json=body=>send({...body,access:{...(body?.access||{}),...rights}});
+  res.json=body=>send({...body,access:{...(body?.access||{}),...rights,closeWithoutPrint:rights.closeWithoutPrint===true}});
 }
 
 export async function auth(req,res,next){
