@@ -50,6 +50,7 @@ test('fractional unit prices are rounded after quantity multiplication, and fore
  assert.equal(compare([sale({storeId:'foreign'})]).status,'UNAVAILABLE');
  assert.equal(compare([sale({lines:[line({lineTotal:null})]})]).status,'LIMITED');
  assert.equal(compare([sale(),sale()]).status,'LIMITED');
+ assert.equal(compare(Array.from({length:11},(_,i)=>sale({saleId:'many-'+i,lines:Array.from({length:1000},()=>line())}))).status,'LIMITED');
 });
 test('canonical report and automatic projection retain findings without cash/card allocation or duplicate financial totals',()=>{
  const evidence=compare([sale()],[event()]);const initial={session:{id:'shift',companyId:'company',storeId:'estia',status:'CLOSED',openedBy:'employee',openedByName:'Σωτήρης',terminalPos:'MAIN',shiftLabel:'Απογευματινή',openedAt:'2026-10-22T12:00:00.000Z',closedAt:'2026-10-22T20:00:00.000Z'},sourceHash:hash('unchanged-cash'),initialCents:-500,basisCents:-500,explainedCents:0,cardCents:200,nextClosed:true,reviewStatus:'VALID',transactions:[],eventSales:evidence};

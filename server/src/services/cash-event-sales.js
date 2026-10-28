@@ -1,6 +1,6 @@
 // Read-only audit observations. No finding is an allocation to a cash balance.
 export const unmatchedPriceApplication='Δεν επιβεβαιώθηκε εφαρμογή της αλλαγής στις διαθέσιμες πωλήσεις';
-export const cashEventSalesLimits=Object.freeze({sales:2000,events:2000,lines:1000,findings:500,matchSeconds:120});
+export const cashEventSalesLimits=Object.freeze({sales:2000,events:2000,lines:1000,totalLines:10000,findings:500,matchSeconds:120});
 const numeric=v=>v!==null&&v!==undefined&&typeof v!=='boolean'&&String(v).trim()!==''&&Number.isFinite(Number(v))?Number(v):null;
 const cents=v=>{const n=numeric(v);return n!==null&&Number.isSafeInteger(Math.round(n*100))?Math.round(n*100):null};
 const clean=v=>typeof v==='string'&&v.trim()?v.replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,500):null;
@@ -13,7 +13,7 @@ const kinds=new Set(['PRICE_CHANGE','PERMANENT_PRICE_CHANGE','DISCOUNT','DISCOUN
 // The caller must supply the exact sale line and amounts; a name alone cannot
 // approve all beer, chocolate, BLU BAR or zero-price water transactions.
 function confirmed(confirmations,scope,sale,line,kind){
- return confirmations.some(c=>sameScope(c,scope)&&c.kind===kind&&c.saleId===sale.saleId&&c.lineId===line.lineId&&c.productId===line.productId&&c.occurredAt===iso(sale.occurredAt)&&c.quantity===numeric(line.quantity)&&c.unitPriceCents===cents(line.unitPrice)&&c.lineTotalCents===cents(line.lineTotal)&&Boolean(clean(c.evidenceId)));
+ return confirmations.some(c=>Boolean(clean(c.lineId))&&Boolean(clean(c.saleId))&&sameScope(c,scope)&&c.kind===kind&&c.saleId===sale.saleId&&c.lineId===line.lineId&&c.productId===line.productId&&c.occurredAt===iso(sale.occurredAt)&&c.quantity===numeric(line.quantity)&&c.unitPriceCents===cents(line.unitPrice)&&c.lineTotalCents===cents(line.lineTotal)&&Boolean(clean(c.evidenceId)));
 }
 
 export function compareCashEventSales({scope,sales=[],events=[],confirmations=[]}){
@@ -23,6 +23,7 @@ export function compareCashEventSales({scope,sales=[],events=[],confirmations=[]
  if(sales.some(s=>!sameScope(s,scope))||events.some(e=>!sameScope(e,scope)))return empty('UNAVAILABLE');
  const eligible=sales.filter(s=>sameScope(s,scope)&&s.sessionId===scope.sessionId&&s.linked===true&&s.status==='COMPLETED'&&s.source==='POS'&&s.saleId&&iso(s.occurredAt)&&numeric(s.total)!==null&&numeric(s.total)>=0);
  if(new Set(eligible.map(s=>s.saleId)).size!==eligible.length||eligible.some(s=>!Array.isArray(s.lines)||s.lines.length>cashEventSalesLimits.lines||s.lines.some(l=>numeric(l.quantity)===null||cents(l.lineTotal)===null)))return empty('LIMITED');
+ if(eligible.reduce((n,s)=>n+s.lines.length,0)>cashEventSalesLimits.totalLines)return empty('LIMITED');
  const rows=[];
  for(const sale of eligible)for(const line of sale.lines){
   const quantity=numeric(line.quantity),total=cents(line.lineTotal),unit=cents(line.unitPrice);

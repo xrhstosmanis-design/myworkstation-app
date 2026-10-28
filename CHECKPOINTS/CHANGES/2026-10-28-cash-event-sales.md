@@ -1,3 +1,7 @@
+## Candidate hardening — 28/10/2026
+
+Initial source head06f305608ae173cc4d5bb164ca2e2ef2dc8e0b6e/PR3246 fullCI40682281650 was still running when review identified the need for a whole-session line bound. Candidate now refuses over10000 total lines (in addition to per-sale1000), bounds completion records/items and requires exact nonblank sale/line confirmation identities. The same37 focused/broad checks pass with3 native DB skips; overflow is explicit LIMITED, never truncated success. No financial or LAB action. Full fresh exact CI is required; the old in-flight head is not a PASS for this revision.
+
 ## 28/10/2026 — CASH-EVENT-SALES-09 / SOURCE CANDIDATE / AWAITING CI AND LAB
 
 Retained owner codex/cash-chat-reconciliation-20261026. Before-source claim #3245 headc8981338e62c631716ff3ba2e73df1685cae5b79 passed applicable CI40680691450 and mergedc8645d7bcc1e7ffd44456378511031dec02bc95e before runtime edits. Independent read-only source candidate on feat/cash-event-sales-20261028. No deployment, LAB PASS, financial action, settings change or email claimed.

@@ -12,7 +12,7 @@ export async function readCashEventSales(db,scope,session){
   SELECT s."id" AS "saleId",s."companyId",s."storeId",s."status",s."source",s."receiptNumber",s."occurredAt",s."total",link."sessionId",link."actorId",link."actorName",TRUE AS "linked",
    (SELECT jsonb_agg(jsonb_build_object('lineId',l."id",'productId',l."productId",'description',l."description",'quantity',l."quantity",'unitPrice',l."unitPrice",'discount',l."discount",'lineTotal',l."lineTotal",'promotionId',to_jsonb(l)->>'promotionId','promotionType',to_jsonb(l)->>'promotionType') ORDER BY l."id")
     FROM (SELECT * FROM "SaleLine" sl WHERE sl."saleId"=s."id" ORDER BY sl."id" LIMIT 1001) l) AS "lines",
-   (SELECT jsonb_agg(jsonb_build_object('eventId',a."id",'items',a."details"->'items') ORDER BY a."id") FROM "StoreOperatorAudit" a
+   (SELECT jsonb_agg(jsonb_build_object('eventId',a."id",'items',a."details"->'items') ORDER BY a."id") FROM (SELECT * FROM "StoreOperatorAudit" raw WHERE raw."companyId"=${scope.companyId} AND raw."storeId"=${scope.storeId} AND raw."eventType"='POS_SALE_COMPLETED' AND raw."details"->>'saleId'=s."id" AND raw."details"->>'sessionId'=${session.id} ORDER BY raw."id" LIMIT 1001) a
     WHERE a."companyId"=${scope.companyId} AND a."storeId"=${scope.storeId} AND a."eventType"='POS_SALE_COMPLETED' AND a."details"->>'saleId'=s."id" AND a."details"->>'sessionId'=${session.id}) AS "completions"
   FROM "Sale" s JOIN LATERAL (
    SELECT MIN(t."sessionId") AS "sessionId",CASE WHEN COUNT(DISTINCT t."actorId")=1 THEN MIN(t."actorId") END AS "actorId",CASE WHEN COUNT(DISTINCT t."actorName")=1 THEN MIN(t."actorName") END AS "actorName"
@@ -33,7 +33,7 @@ export async function readCashEventSales(db,scope,session){
   FROM "PosSaleActionAudit" a WHERE a."companyId"=${scope.companyId} AND a."storeId"=${scope.storeId}
    AND a."details"->>'sessionId'=${session.id} AND a."createdAt">=${session.openedAt} AND a."createdAt"<=${session.closedAt}
    AND a."actionType" IN ('PRICE_CHANGE','PERMANENT_PRICE_CHANGE','DISCOUNT','DISCOUNT_SET') ORDER BY a."createdAt",a."id" LIMIT 2001`;
- if(sales.length>cashEventSalesLimits.sales||records.length>cashEventSalesLimits.events)return unavailable('LIMITED');
+ if(sales.length>cashEventSalesLimits.sales||records.length>cashEventSalesLimits.events||sales.some(s=>Array.isArray(s.completions)&&(s.completions.length>1000||s.completions.some(c=>Array.isArray(c.items)&&c.items.length>1000))))return unavailable('LIMITED');
  // Details are projection only, never trusted authorization or approval flags.
  const events=records.map(r=>{const d=r.details||{};return {id:r.id,companyId:r.companyId,storeId:r.storeId,saleId:r.saleId,actionType:r.actionType,actorId:r.actorId,actorName:r.actorName,createdAt:r.createdAt,sessionId:d.sessionId,productId:d.productId,productName:d.productName,lineId:d.lineId,quantity:d.newQuantity??d.previousQuantity??d.quantity,oldPrice:d.oldPrice,newPrice:d.newPrice,newTotal:d.newTotal};});
  const confirmations=[];
