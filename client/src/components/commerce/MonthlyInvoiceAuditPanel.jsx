@@ -10,6 +10,21 @@ export default function MonthlyInvoiceAuditPanel({api,storeId='',storeName='',in
  const [month,setMonth]=useState(initialMonth||currentMonth),[observation,setObservation]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState('');
  const result=observation?.api===api&&observation?.data?.store?.id===storeId?observation.data:null;
  const request=useRef(0),abort=useRef(null),current=useRef({storeId,month,api});current.current={storeId,month,api};
+ const [previewObservation,setPreviewObservation]=useState(null),previewRequest=useRef(0),previewAbort=useRef(null);
+ const previewScope=previewObservation?.api===api&&previewObservation.storeId===storeId&&previewObservation.month===month?previewObservation:null;
+ useEffect(()=>{previewRequest.current++;previewAbort.current?.abort();setPreviewObservation(null);return()=>{previewRequest.current++;previewAbort.current?.abort()}},[storeId,api,month]);
+ const loadPreview=async()=>{
+  if(!storeId||!month)return;
+  previewAbort.current?.abort();const controller=new AbortController();previewAbort.current=controller;
+  const serial=++previewRequest.current,selected={storeId,month},scope={...selected,api};setPreviewObservation({...scope,loading:true});
+  const currentScope=()=>!controller.signal.aborted&&previewRequest.current===serial&&current.current.storeId===selected.storeId&&current.current.month===selected.month&&current.current.api===api;
+  try{
+   const data=await api('/api/reports/invoice-audit-email-preview?'+new URLSearchParams(selected).toString(),{signal:controller.signal});
+   if(!currentScope())return;
+   if(data?.store?.id!==selected.storeId||data?.period?.month!==selected.month||data?.previewOnly!==true||data?.sendingEnabled!==false||data?.readOnly!==true||data?.separateSnapshots!==true||data?.purposeConsent!=='NOT_ASSUMED'||typeof data?.payload?.subject!=='string'||typeof data?.payload?.body!=='string'||!data?.payload?.coverage||!data?.recipients)throw Error('Η προεπισκόπηση δεν αντιστοιχεί στην τρέχουσα επιλογή.');
+   setPreviewObservation({...scope,data,loading:false});
+  }catch(failure){if(currentScope())setPreviewObservation({...scope,error:failure.message||'Η προεπισκόπηση δεν ολοκληρώθηκε.',loading:false})}
+ };
  useEffect(()=>{request.current++;abort.current?.abort();setObservation(null);setError('');setLoading(false);return()=>{request.current++;abort.current?.abort()}},[storeId,api]);
  const load=async(page=null)=>{
   if(!storeId)return;
@@ -24,7 +39,7 @@ export default function MonthlyInvoiceAuditPanel({api,storeId='',storeName='',in
   }catch(failure){if(!controller.signal.aborted&&request.current===serial){setError(failure.message||'Ο έλεγχος δεν ολοκληρώθηκε.');setObservation(null)}}
   finally{if(request.current===serial)setLoading(false)}
  };
- const changeMonth=value=>{request.current++;abort.current?.abort();setLoading(false);setError('');setMonth(value)};
+ const changeMonth=value=>{request.current++;abort.current?.abort();previewRequest.current++;previewAbort.current?.abort();setLoading(false);setError('');setMonth(value)};
  const edited=result&&result.period.month!==month,pending=result?.pendingOriginals,summary=result?.summary;
  return <section className="invoice-month-audit" aria-labelledby="invoice-month-audit-title">
   <style>{styles}</style>
@@ -32,7 +47,19 @@ export default function MonthlyInvoiceAuditPanel({api,storeId='',storeName='',in
   <p>Μόνο ανάγνωση αποθηκευμένων στοιχείων. Δεν καταχωρεί, ενοποιεί, πληρώνει ή διαγράφει παραστατικά και δεν στέλνει email.</p>
   {!storeId?<p role="status">Επίλεξε συγκεκριμένο κατάστημα για να ανοίξεις τον έλεγχο.</p>:<>
    <p><b>Κατάστημα:</b> {storeName||storeId}</p>
-   <form onSubmit={event=>{event.preventDefault();load()}}><label>Μήνας έκδοσης<input type="month" value={month} min="2000-01" max="2099-12" required onChange={event=>changeMonth(event.target.value)}/></label><button type="submit" disabled={loading||!month}>{loading?'Έλεγχος...':'Έλεγχος μήνα'}</button></form>
+   <form onSubmit={event=>{event.preventDefault();load()}}><label>Μήνας έκδοσης<input type="month" value={month} min="2000-01" max="2099-12" required onChange={event=>changeMonth(event.target.value)}/></label><button type="submit" disabled={loading||!month}>{loading?'Έλεγχος...':'Έλεγχος μήνα'}</button><button type="button" disabled={Boolean(previewScope?.loading)||!month} onClick={loadPreview}>{previewScope?.loading?'Προετοιμασία email...':'Προεπισκόπηση μηνιαίου email'}</button></form>
+   {previewScope?.error&&<p role="alert" className="ima-warning">{previewScope.error}</p>}
+   {previewScope?.data&&<section className="ima-email-preview" aria-labelledby="invoice-email-preview-title" style={{border:'1px solid #8caac5',borderRadius:8,padding:12,marginTop:16,overflowWrap:'anywhere'}}>
+    <h4 id="invoice-email-preview-title">Προεπισκόπηση μηνιαίου email — {previewScope.data.period.month}</h4>
+    <p className="ima-warning">Προεπισκόπηση μόνο. Η αποστολή είναι απενεργοποιημένη. Οι υπάρχουσες εγκρίσεις μηνιαίων αναφορών δεν ενεργοποιούν την αποστολή αυτού του email.</p>
+    <p>Προγραμματισμένη ώρα: {previewScope.data.period.nominalLocalTime} (ώρα Ελλάδας). Προσωρινή εικόνα κατά την παρατήρηση, χωρίς ανακατασκευή ιστορικού ή οριστικό λογιστικό κλείσιμο.</p>
+    <p>Παρατήρηση τιμολογίων: {new Date(previewScope.data.reportObservedAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false})}. Χωριστή παρατήρηση παραληπτών: {new Date(previewScope.data.recipientObservedAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false})}. Οι δύο παρατηρήσεις δεν αποτελούν κοινή έγκριση αποστολής.</p>
+    {!previewScope.data.payload.coverage.complete&&<p className="ima-warning">Η κάλυψη είναι ελλιπής. Τα άγνωστα σύνολα δεν θεωρούνται μηδενικά.</p>}
+    <div aria-label="Σύνοψη παραληπτών προεπισκόπησης">{previewScope.data.recipients.available?<><p>Επαληθευμένοι παραλήπτες καταστήματος: <b>{previewScope.data.recipients.verifiedCount}</b>. Με τρέχουσα έγκριση μηνιαίας συχνότητας: <b>{previewScope.data.recipients.monthlyConsentEligibleCount}</b> — χωρίς έγκριση σκοπού για αυτό το email.</p><ul>{previewScope.data.recipients.identities.map((r,index)=><li key={index}>{r.maskedEmail}</li>)}</ul></>:<p className="ima-warning">Η σύνοψη παραληπτών δεν είναι διαθέσιμη. Το πλήθος είναι άγνωστο.</p>}</div>
+    <p><b>Θέμα:</b> <span className="ima-email-subject">{previewScope.data.payload.subject}</span></p>
+    <pre className="ima-email-body" style={{font:'inherit',whiteSpace:'pre-wrap',overflowWrap:'anywhere',maxWidth:'100%'}}>{previewScope.data.payload.body}</pre>
+    <a href="https://myworkstation-app.onrender.com/" target="_blank" rel="noopener noreferrer">Άνοιγμα BackOffice με προσωπική σύνδεση</a>
+   </section>}
    {error&&<p role="alert" className="ima-warning">{error}</p>}
    {edited&&<p className="ima-warning">Η επιλογή άλλαξε. Τα στοιχεία παρακάτω αφορούν ακόμη τον μήνα {result.period.month}. Πάτησε Έλεγχος μήνα για νέα αποτελέσματα.</p>}
    {result&&<>
