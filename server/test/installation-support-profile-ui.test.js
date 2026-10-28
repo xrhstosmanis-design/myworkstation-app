@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
+import {existsSync} from 'node:fs';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 import {JSDOM} from 'jsdom';
 
 // These existing views are represented by inert components: their independent
@@ -47,7 +50,7 @@ test('unknown fields are explicit and refreshed props cannot leak an old or remo
   let dialog=document.querySelector('[role="dialog"]');assert.match(dialog.textContent,/Κατάστημα Β/);assert.match(dialog.textContent,/Μη καταχωρημένο/);assert.match(dialog.textContent,/Δεν έχει ελεγχθεί/);assert.match(dialog.querySelector(".install-support-unchecked").textContent,/ΤεχνικόςΔεν έχει ελεγχθεί/);assert.doesNotMatch(dialog.textContent,/Κατάστημα Α|Αθηνάς 1|a@example\.test|SECRET/);
   const before=requests.length;await render([{id:'company-b',name:'Εταιρεία Β',stores:[{id:'store-b',name:'Κατάστημα Β νέο',city:'Πάτρα',address:'Νέα 2',responsibleEmail:null}]}]);
   dialog=document.querySelector('[role="dialog"]');assert.match(dialog.textContent,/Κατάστημα Β νέο/);assert.match(dialog.textContent,/Νέα 2/);assert.doesNotMatch(dialog.textContent,/Αθηνάς 1|Κατάστημα Α/);
-  await render([{id:'company-a',name:'Εταιρεία Α',stores:[{id:'store-b',name:'Ξένο ίδιο ID',city:'Αθήνα'}]}]);dialog=document.querySelector('[role="dialog"]');assert.match(dialog.textContent,/δεν είναι πλέον διαθέσιμο/);assert.doesNotMatch(dialog.textContent,/Νέα 2|Ξένο ίδιο ID/);assert.equal(requests.length,before);
+  await render([{id:'company-a',name:'Εταιρεία Α',stores:[{id:'store-b',name:'Ξένο ίδιο ID',city:'Αθήνα'}]}]);dialog=document.querySelector('[role="dialog"]');assert.match(dialog.textContent,/δεν είναι πλέον διαθέσιμο/);assert.equal(byText(dialog,'Εκτύπωση οδηγού βλάβης'),undefined);assert.doesNotMatch(dialog.textContent,/Νέα 2|Ξένο ίδιο ID/);assert.equal(requests.length,before);
 }));
 
 test('closing one store and selecting another updates the view without requests or HTML interpretation',async()=>withCenter(async({click,byText,render,requests})=>{
@@ -67,6 +70,30 @@ test('existing guide, terminal, scheduler and module save controls remain reacha
 
 test('keyboard dismissal closes only the new view and restores focus',async()=>withCenter(async({click,byText,dom})=>{
   const button=byText(document.querySelector('.security-list article'),'Στοιχεία υποστήριξης');button.focus();await click(button);const dialog=document.querySelector('[role="dialog"]');
-  dialog.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));assert.equal(document.activeElement.getAttribute('aria-label'),'Κλείσιμο στοιχείων υποστήριξης');
+  const print=byText(dialog,'Εκτύπωση οδηγού βλάβης');print.focus();dialog.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));assert.equal(document.activeElement.getAttribute('aria-label'),'Κλείσιμο στοιχείων υποστήριξης');
+  dialog.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true}));assert.equal(document.activeElement,print);
   await (await import('react')).act(async()=>dialog.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true})));assert.equal(document.querySelector('[role="dialog"]'),null);assert.equal(document.activeElement,button);
 }));
+
+
+test('isolated printable guide contains only fixed text and reports blocked popup',async()=>withCenter(async({click,byText,dom,requests})=>{
+  const before=requests.length;await click(byText(document.querySelector('.security-list article'),'Στοιχεία υποστήριξης'));
+  const dialog=document.querySelector('[role="dialog"]'),button=byText(dialog,'Εκτύπωση οδηγού βλάβης');
+  dom.window.open=()=>null;await click(button);assert.match(dialog.querySelector('[role="alert"]').textContent,/αναδυόμενα/);
+  dom.window.open=()=>{throw new Error('blocked')};await click(button);assert.ok(dialog.querySelector('[role="alert"]'));
+  const output=new JSDOM('<!doctype html><html><head></head><body></body></html>',{url:'about:blank'}),page=output.window;let calls=0;
+  page.focus=()=>{};page.print=()=>{calls++};dom.window.open=()=>page;await click(button);
+  assert.equal(calls,1);assert.equal(dialog.querySelector('[role="alert"]'),null);assert.match(page.document.body.textContent,/Σε περίπτωση βλάβης/);
+  assert.match(page.document.body.textContent,/δεν καταχωρεί βλάβη/);assert.doesNotMatch(page.document.body.textContent,/Εταιρεία Α|Κατάστημα Α|Εταιρεία Β|Κατάστημα Β|SECRET|HIDDEN|a@example/);
+  assert.equal(page.document.documentElement.lang,'el');assert.equal(requests.length,before);output.window.close();
+}));
+
+
+const chromeCandidates=[process.env.CHROME_BIN,'/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser'].filter(Boolean);
+const chromePath=chromeCandidates.find(candidate=>existsSync(candidate));
+test('real Chromium isolates and prints the support guide to one-page PDF', {skip:!chromePath&&process.env.CI!=='true'?'Chromium unavailable locally':false,timeout:120000},async()=>{
+  assert.ok(chromePath,'Chromium is mandatory in CI');
+  const flow=fileURLToPath(new URL('../e2e/installation-support-fault-guide-browser-flow.mjs',import.meta.url));
+  const {stdout}=await promisify(execFile)(process.execPath,[flow],{env:{...process.env,CHROME_BIN:chromePath},timeout:110000,maxBuffer:1024*1024});
+  assert.match(stdout,/Chromium synthetic popup and one-page PDF passed/);
+});
