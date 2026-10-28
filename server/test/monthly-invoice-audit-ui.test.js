@@ -23,12 +23,13 @@ async function mounted(run,{hub=false}={}){
  const root=createRoot(document.getElementById('root')),calls=[];let unmounted=false,responder=async(url)=>response(url.searchParams.get('storeId'),url.searchParams.get('month'));
  const api=async(path,options)=>{const url=new URL(path,'https://isolated.invalid');calls.push({url,options});if(url.pathname==='/api/license/current')return{modules:[],activeModules:['INVENTORY']};return responder(url,options)};
  const props=hub?{api,stores:[{id:'s',name:'Selected'},{id:'other',name:'Other'}],activeStoreId:'s'}:{api,storeId:'s',storeName:'Selected',initialMonth:'2026-10'};
- const render=async(patch={})=>{Object.assign(props,patch);await act(async()=>root.render(React.createElement(module.exports.default,props)))};
+ const commitSnapshots=[];function ObservedPanel(p){React.useLayoutEffect(()=>{commitSnapshots.push(document.querySelector('.invoice-month-audit')?.textContent||'')});return React.createElement(module.exports.default,p)}
+ const render=async(patch={})=>{Object.assign(props,patch);await act(async()=>root.render(React.createElement(ObservedPanel,props)))};
  const click=async(text)=>{const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);assert.ok(button,'Missing button '+text);await act(async()=>button.click())};
  const submit=async()=>{const form=document.querySelector('.invoice-month-audit form');assert.ok(form);await act(async()=>form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})))};
  const changeMonth=async(value)=>{const input=document.querySelector('input[type=month]');await act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new dom.window.Event('input',{bubbles:true}));input.dispatchEvent(new dom.window.Event('change',{bubbles:true}))})};
  const unmount=async()=>{await act(async()=>root.unmount());unmounted=true};
- try{await render();await run({dom,render,click,submit,changeMonth,calls,setResponder:fn=>{responder=fn},act,unmount})}finally{if(!unmounted)await act(async()=>root.unmount());dom.window.close();for(const[name,descriptor]of previous){if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name]}}
+ try{await render();await run({dom,render,click,submit,changeMonth,calls,commitSnapshots,setResponder:fn=>{responder=fn},act,unmount})}finally{if(!unmounted)await act(async()=>root.unmount());dom.window.close();for(const[name,descriptor]of previous){if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name]}}
 }
 
 test('actual panel is explicit GET-only, escapes labels and separates complete month totals from all-month pending',async()=>mounted(async({submit,calls})=>{
@@ -73,3 +74,11 @@ test('real Chromium monthly invoice audit is reachable and honest at desktop/mob
  const flow=fileURLToPath(new URL('../e2e/monthly-invoice-audit-browser-flow.mjs',import.meta.url));
  const {stdout}=await promisify(execFile)(process.execPath,[flow],{env:{...process.env,CHROME_BIN:chromePath},timeout:110000,maxBuffer:1024*1024});assert.match(stdout,/Chromium monthly invoice audit passed/);
 });
+
+
+test('first committed store/API render masks loaded observations before passive cleanup',async()=>mounted(async({submit,render,commitSnapshots})=>{
+ await submit();assert.match(document.querySelector('.ima-pending').textContent,/OLD 1/);
+ const before=commitSnapshots.length;await render({storeId:'other',storeName:'Other'});assert.ok(commitSnapshots.length>before);assert.doesNotMatch(commitSnapshots[before],/OLD 1|120|75|Φορτωμένος μήνας/);
+ await submit();assert.ok(document.querySelector('.ima-pending'));
+ const apiBefore=commitSnapshots.length;await render({api:async()=>response('other')});assert.doesNotMatch(commitSnapshots[apiBefore],/OLD 1|120|75|Φορτωμένος μήνας/);
+}));
