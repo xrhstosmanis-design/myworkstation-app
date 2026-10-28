@@ -84,6 +84,7 @@ import kioskReportsSalesV4Routes from "./routes/kiosk-reports-sales-v4.js";
 import kioskReportsDeliveryV5Routes from "./routes/kiosk-reports-delivery-v5.js";
 import kioskReportsRoutes from "./routes/kiosk-reports.js";
 import {createMonthlyInvoiceAuditRouter} from "./routes/monthly-invoice-audit.js";
+import {createInvoiceAuditEmailPreviewRouter} from "./routes/invoice-audit-email-preview.js";
 import inventoryArchiveImportRoutes from "./routes/inventory-archive-import.js";
 import inventoryArchiveRoutes from "./routes/inventory-archive.js";
 import inventoryProductLedgerRoutes from "./routes/inventory-product-ledger.js";
@@ -274,6 +275,7 @@ app.use("/api/price-catalog",auth,requireCompanyModule("INVENTORY"),priceCatalog
 app.use("/api/reports",auth,kioskReportsPosSaleActionsRoutes);
 app.use("/api/reports",auth,kioskReportsAuditRoutes);
 app.use("/api/reports/invoice-month-audit",auth,requireStoreModule("INVENTORY"),createMonthlyInvoiceAuditRouter(prisma));
+app.use("/api/reports/invoice-audit-email-preview",auth,requireStoreModule("INVENTORY"),createInvoiceAuditEmailPreviewRouter(prisma));
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsStockV3Routes);
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsSalesV4Routes);
 app.use("/api/reports",auth,requireCompanyModule("INVENTORY"),kioskReportsDeliveryV5Routes);
