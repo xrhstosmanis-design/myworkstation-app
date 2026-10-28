@@ -71,6 +71,7 @@ test('explicit provenance and separate Kiosk shift/operator namespaces cannot be
  const b=workbook(journal());assert.equal((await parseKioskCashWorkbook(b,{...scope,sourceId:'file',kind:'JOURNAL'})).reason,'EXPLICIT_KIOSK_JOURNAL_BINDING_REQUIRED');
  const e=await parse(events(),'EVENTS'),j=await parse(journal(),'JOURNAL',{}, {kioskShiftId:'different-native-id',kioskOperator:'different-native-user'});
  const r=compareKioskCashWorkbooks({scope,documents:[e,j]});assert.equal(r.findings.find(f=>f.code==='PRICE_APPLICATION_UNCONFIRMED').saleId,null);
+ assert.equal(r.status,'LIMITED');assert.deepEqual(r.coverage.missingJournalShiftIds,['436']);
  assert.equal(compareKioskCashWorkbooks({scope:{...scope,storeId:'foreign'},documents:[e,j]}).reason,'SOURCE_INCOMPLETE_OR_FOREIGN');assert.equal(compareKioskCashWorkbooks({scope,documents:[e]}).reason,'EVENTS_AND_JOURNAL_REQUIRED');
 });
 test('formula/link/error/unknown schema and malformed dates are explicit unavailable, never zero agreement',async()=>{

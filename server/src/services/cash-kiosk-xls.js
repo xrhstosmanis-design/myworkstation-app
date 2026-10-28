@@ -170,5 +170,7 @@ export function compareKioskCashWorkbooks({scope,documents,confirmations=[]}){
   results.push(...result.findings);
  }
  if(results.length>500)return fail('FINDING_LIMIT','LIMITED');
- return {status:'AVAILABLE',findings:results,sourceChecksums:unique.map(d=>d.source.checksum).sort(),financialAdjustmentCents:0,coverage:{eventCount:events.length,saleCount:sales.length,eventQuantityAvailable:false,externalOnly:true}};
+ const journalShifts=new Set(unique.filter(d=>d.source.kind==='JOURNAL').map(d=>String(d.source.kioskShiftId)));
+ const missingJournalShiftIds=[...new Set(events.map(e=>e.shiftId).filter(shift=>!journalShifts.has(shift)))].sort();
+ return {status:missingJournalShiftIds.length?'LIMITED':'AVAILABLE',findings:results,sourceChecksums:unique.map(d=>d.source.checksum).sort(),financialAdjustmentCents:0,coverage:{eventCount:events.length,saleCount:sales.length,eventQuantityAvailable:false,externalOnly:true,missingJournalShiftIds}};
 }
