@@ -59,3 +59,9 @@ test('canonical report and automatic projection retain findings without cash/car
  initial.eventSales={status:'AVAILABLE',findings:[],financialAdjustmentCents:0};assert.notEqual(projectReconciliation(source,[]).reportHash,report.reportHash);assert.equal(projectReconciliation(source,[]).rows[0].sourceHash,report.rows[0].sourceHash);
  assert.throws(()=>projectAutomaticReviewedReport({...report,text:report.text.replace('Μηδενική χρέωση','Αυτόματη έκπτωση')}));
 });
+
+test('camera time after Greek midnight uses00 rather than24 with the correct local date',()=>{
+ const r=compare([sale({occurredAt:'2026-10-11T21:13:46.000Z'})]);
+ const text=cashEventSalesText(r).join('\n');assert(text.includes('12/10/2026, 00:13:46'));assert(!text.includes('24:13'));
+ const winter=compare([sale({occurredAt:'2026-10-28T22:13:46.000Z'})]);assert(cashEventSalesText(winter).join('').includes('29/10/2026, 00:13:46'));
+});

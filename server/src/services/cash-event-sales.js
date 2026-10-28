@@ -1,3 +1,4 @@
+import {greeceDateTimeInput} from '../../../shared/greece-time.mjs';
 // Read-only audit observations. No finding is an allocation to a cash balance.
 export const unmatchedPriceApplication='Δεν επιβεβαιώθηκε εφαρμογή της αλλαγής στις διαθέσιμες πωλήσεις';
 export const cashEventSalesLimits=Object.freeze({sales:2000,events:2000,lines:1000,totalLines:10000,findings:500,matchSeconds:120});
@@ -75,7 +76,8 @@ export function cashEventSalesText(evidence,{storeName,shiftLabel}={}){
  if(!evidence)return [];
  if(evidence.status!=='AVAILABLE')return ['Ο έλεγχος συμβάντων τιμών και μηδενικών χρεώσεων δεν ολοκληρώθηκε από τις διαθέσιμες πηγές.'];
  return evidence.findings.map(f=>{
-  const when=f.occurredAt?new Date(f.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',dateStyle:'short',timeStyle:'medium',hour12:false}):'χωρίς επιβεβαιωμένη ώρα';
+  const stamp=f.occurredAt?greeceDateTimeInput(f.occurredAt,true):null;
+  const when=stamp?stamp.slice(8,10)+'/'+stamp.slice(5,7)+'/'+stamp.slice(0,4)+', '+stamp.slice(11):'χωρίς επιβεβαιωμένη ώρα';
   const subject=f.code==='ZERO_VALUE_SALE'?'Μηδενική χρέωση':f.code==='CATALOG_PRICE_CHANGE_UNCONFIRMED'?'Μόνιμη αλλαγή τιμοκαταλόγου':f.code==='PRICE_APPLICATION_UNCONFIRMED'?'Συμβάν αλλαγής τιμής / έκπτωσης':'Αλλαγή τιμής / έκπτωση πώλησης';
   const details=`${subject}: ${storeName||'κατάστημα μη διαθέσιμο'} · ${when} · ${shiftLabel||'βάρδια'} (${f.sessionId||'χωρίς αντιστοίχιση'}) · ${f.operatorName||'χειριστής μη επιβεβαιωμένος'} (${f.operatorId||'κωδικός μη διαθέσιμος'}) · ${f.productName||f.productId||'είδος μη διαθέσιμο'} · ποσότητα ${f.quantity??'μη διαθέσιμη'} · αρχική τιμή ${money(f.originalPriceCents)} · τελική τιμή ${money(f.finalPriceCents)} · συνολική μείωση ${money(f.totalReductionCents)} · συναλλαγή ${f.transactionNumber||'δεν αντιστοιχίστηκε'}.`;
   return details+(f.code.endsWith('UNCONFIRMED')?' '+unmatchedPriceApplication+'.':f.code==='ZERO_VALUE_SALE'?` Να διευκρινιστεί η μηδενική χρέωση και η διάθεση του είδους. Ώρα για έλεγχο κάμερας: ${when}.`:` Να διευκρινιστεί η αλλαγή τιμής ή έκπτωση. Ώρα για έλεγχο κάμερας: ${when}.`);
