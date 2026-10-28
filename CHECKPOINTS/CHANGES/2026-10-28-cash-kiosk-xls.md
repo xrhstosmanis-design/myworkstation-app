@@ -1,3 +1,7 @@
+## Final parser hardening before merge
+
+Missing journal shifts now produce LIMITED coverage with exact external shift IDs. A repeated event occurrence across nonidentical exports also stays LIMITED because this schema has no stable event IDs: multiset counts do not prove the same physical edit. Identical original-byte reuploads are safely reused; transaction IDs with differing facts still refuse. Local overlap test initially produced byte-identical workbooks when only a blank row was added; corrected fixture adds a distinct irrelevant category and asserts different original checksums. Final exact22Node20 tests PASS/0FAIL/0SKIP. Superseded intermediate PR heads are not final CI acceptance. Source/application input integration remains separately claimed before code, with no retained chat writer edits.
+
 ## 28/10/2026 — CASH-KIOSK-XLS-10 / PARSER SOURCE CANDIDATE / INPUT AND REPORT INTEGRATION OPEN
 
 Retained owner codex/cash-chat-reconciliation-20261026. Before-source claim3254/head457089677eec85dc819a4e1aae4d4ab411189cc9 passed applicable docsCI40705935013 and merged10df367323266602965e150560d6f3eb39cb4270 before either new runtime/test path. Two-path independent candidate only: cash-kiosk-xls.js and its test. No retained writer, API/UI, schema, input whitelist, financial, stock, dispatch or configuration change. Native6bbf006 limited LAB PASS remains protected; external input/canonical report integration and actual hosted acceptance remain OPEN/NOT TESTED. This module is not yet connected to the application.

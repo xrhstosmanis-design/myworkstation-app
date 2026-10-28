@@ -64,7 +64,8 @@ test('reuploads and overlapping exports are counted once; conflicting transactio
  assert.equal(compareKioskCashWorkbooks({scope,documents:[e,j,{...j,source:{...j.source,kioskShiftId:'999'}}]}).reason,'CONFLICTING_FILE_BINDING');
 });
 test('identical same-time events are preserved as a multiset across overlapping exports',async()=>{
- const rows=events();rows.push(rows.at(-1));const e=await parse(rows,'EVENTS'),overlap=await parse([...rows,[]],'EVENTS'),j=await parse(journal(),'JOURNAL');
+ const rows=events();rows.push(rows.at(-1));const e=await parse(rows,'EVENTS'),overlap=await parse([...rows,['Συμβάντα','Κατηγορία'],[0,'BackOffice: κλείσιμο εφαρμογής']],'EVENTS'),j=await parse(journal(),'JOURNAL');
+ assert.notEqual(e.source.checksum,overlap.source.checksum);
  const r=compareKioskCashWorkbooks({scope,documents:[e,overlap,j]});assert.equal(r.status,'LIMITED');assert.equal(r.coverage.unverifiedEventOverlapCount,2);assert.equal(r.coverage.eventCount,2);assert.equal(r.findings.filter(f=>f.code==='PRICE_APPLICATION_UNCONFIRMED').length,2);
 });
 test('explicit provenance and separate Kiosk shift/operator namespaces cannot be guessed from filenames or native IDs',async()=>{
