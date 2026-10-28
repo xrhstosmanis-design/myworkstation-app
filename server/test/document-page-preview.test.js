@@ -10,7 +10,7 @@ import {promisify} from "node:util";
 
 const original="data:image/png;base64,iVBORw0KGgo=",processed="data:image/jpeg;base64,/9j/2Q==";
 test("mounted original-image preview is explicit, local, bounded and scope/source fenced",async()=>{
-  const output=await build({entryPoints:[fileURLToPath(new URL("../../client/src/components/store/DocumentPagePreview.jsx",import.meta.url))],bundle:true,write:false,format:"cjs",platform:"node",packages:"external",loader:{".css":"empty"}});
+  const output=await build({entryPoints:[fileURLToPath(new URL("../../client/src/components/store/DocumentPagePreview.jsx",import.meta.url))],bundle:true,write:false,format:"cjs",platform:"node",packages:"external"});
   const module={exports:{}};new Function("require","module","exports",output.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);const Preview=module.exports.default;
   const dom=new JSDOM("<div id=root></div>",{url:"https://myworkstation-app.onrender.com"}),saved=new Map();let calls=0;
   for(const name of ["window","document","navigator","HTMLElement","IS_REACT_ACT_ENVIRONMENT","fetch"]){saved.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{configurable:true,writable:true,value:name==="IS_REACT_ACT_ENVIRONMENT"?true:name==="fetch"?()=>{calls++;throw Error("Preview cannot call a backend")}:dom.window[name]})}
@@ -38,7 +38,7 @@ test("mounted original-image preview is explicit, local, bounded and scope/sourc
 
 test("actual Premium Fast with real scanner control appends five pages and previews without extra header/payment calls",async()=>{
   const entry=fileURLToPath(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url));
-  const output=await build({entryPoints:[entry],bundle:true,write:false,format:"cjs",platform:"node",packages:"external",loader:{".css":"empty"},plugins:[{name:"isolated-media-and-reader",setup(b){
+  const output=await build({entryPoints:[entry],bundle:true,write:false,format:"cjs",platform:"node",packages:"external",plugins:[{name:"isolated-media-and-reader",setup(b){
     b.onResolve({filter:/^\./},args=>args.importer===entry&&!["./DocumentPagePreview.jsx","./DocumentScanButton.jsx"].includes(args.path)?{path:args.path,namespace:"fixture"}:undefined);
     b.onResolve({filter:/^lucide-react$/},()=>({path:"icons",namespace:"fixture"}));
     b.onLoad({filter:/.*/,namespace:"fixture"},args=>{

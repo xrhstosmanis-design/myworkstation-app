@@ -1,5 +1,15 @@
 import React,{useEffect,useState} from "react";
-import "./document-page-preview.css";
+const previewCss=`.document-page-preview{flex:0 0 100%;min-width:0;max-width:100%;margin-top:4px}
+.document-page-preview>button,.document-page-preview__controls button{min-height:48px;min-width:48px;padding:8px 12px;border:1px solid #8bbcac;border-radius:8px;background:#fff;color:#124c3d;font:inherit;font-weight:700;cursor:pointer}
+.document-page-preview>button{width:100%}
+.document-page-preview button:disabled{opacity:.5;cursor:default}
+.document-page-preview button:focus-visible,.document-page-preview__viewport:focus-visible{outline:3px solid #007c58;outline-offset:2px}
+.document-page-preview__body{min-width:0;padding-top:8px}
+.document-page-preview__controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}
+.document-page-preview__controls output{min-width:48px;text-align:center}
+.document-page-preview__viewport{max-height:65vh;max-width:100%;overflow:auto;overscroll-behavior:contain;background:#e6eeea;border:1px solid #8bbcac;border-radius:6px}
+.document-page-preview__viewport img{display:block;max-width:none!important;height:auto!important;object-fit:contain;margin:0}
+`;
 
 // Inspect only bytes already retained by this form. Never fetch a URL or reread a file.
 export default function DocumentPagePreview({page,index=0,scopeKey}){
@@ -12,6 +22,7 @@ export default function DocumentPagePreview({page,index=0,scopeKey}){
   const changeZoom=next=>setView(current=>current&&({...current,zoom:Math.max(.5,Math.min(4,next))}));
   if(!supported)return null;
   return <section className="document-page-preview" aria-label={`Προεπισκόπηση σελίδας ${index+1}`}>
+    <style>{previewCss}</style>
     <button type="button" aria-expanded={Boolean(open)} onClick={()=>setView(open?null:{source,scopeKey,zoom:1,failed:false})}>
       {open?"Κλείσιμο προεπισκόπησης":`Προεπισκόπηση σελίδας ${index+1}`}
     </button>
