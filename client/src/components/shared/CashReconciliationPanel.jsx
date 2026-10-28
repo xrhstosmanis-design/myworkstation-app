@@ -1,5 +1,6 @@
 import {fetchCashArchive,saveCashArchive} from '../../lib/cash-reviewed-archive.js';
 import React,{useEffect,useRef,useState} from 'react';
+import CashKioskImportPanel from './CashKioskImportPanel.jsx';
 
 const kindLabels={OPENING_CASH:'Έναρξη ταμείου',CLOSING_CASH:'Λήξη ταμείου',CASHBOX:'Cashbox',REFILL:'Refill',BANK_DEPOSIT:'Κατάθεση',EXPENSE:'Έξοδο',POS:'POS',EFTPOS:'EFTPOS',PREPAID:'Προπληρωμένη κάρτα',OTHER:'Αδιευκρίνιστο'};
 const labels={OFFSET:'Συμψηφισμός διαδοχικών βαρδιών',ASSOCIATE:'Αντιστοίχιση χαρτιού',CONFIRM:'Επιβεβαίωση βάρδιας',CHECKPOINT:'Σημείο συνέχειας',REVOKE:'Αναίρεση ελέγχου'};
@@ -55,7 +56,7 @@ export default function CashReconciliationPanel({api,storeId,from,to}){
   };
   const toggle=()=>{if(opened){sequence.current++;busyRef.current=false;setOpened(false);setData(null);setBusy(false);}else{setOpened(true);load();}};
   return <section className="cash-reconciliation-panel" aria-label="Έλεγχος και επανυπολογισμός">
-    <button type="button" onClick={toggle} disabled={!storeId||!from||!to} aria-expanded={opened}>Έλεγχος με επανυπολογισμούς</button>
+    <button type="button" onClick={toggle} disabled={!storeId||!from||!to||busy} aria-expanded={opened}>Έλεγχος με επανυπολογισμούς</button>
     {opened&&<div><p>{from} έως {to}</p><button type="button" onClick={()=>load(0)} disabled={busy}>Ανανέωση ελέγχου</button>{busy&&<p role="status">Αναμονή αποτελέσματος…</p>}{error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
       {data&&<><pre style={{whiteSpace:'pre-wrap',fontFamily:'inherit'}}>{data.text}</pre><button type="button" disabled={busy||needsRefresh} onClick={()=>navigator.clipboard.writeText(data.text)}>Αντιγραφή ελεγμένης αναφοράς</button>
         <button type="button" disabled={busy||needsRefresh} onClick={exportArchive}>Excel με επανυπολογισμούς</button>
@@ -74,6 +75,7 @@ export default function CashReconciliationPanel({api,storeId,from,to}){
           <label><input type="checkbox" checked={verified} onChange={e=>setVerified(e.target.checked)} disabled={busy||needsRefresh}/>{mode==='OFFSET'?'Επιβεβαίωσα από τα στοιχεία το λάθος καταμέτρησης.':'Επαλήθευσα τα στοιχεία και επιβεβαιώνω την επιλεγμένη ενέργεια.'}</label>
           <button type="submit" disabled={busy||needsRefresh||!verified||note.trim().length<10}>Καταχώριση ελέγχου</button>
         </form><details><summary>Ιστορικό ελέγχων</summary><p>Σελίδα {(data.historyPage||0)+1} από {data.historyPages||1} · {data.historyTotal??data.history?.length??0} καταχωρήσεις</p><button type="button" disabled={busy||!data.historyPage} onClick={()=>load(data.historyPage-1)}>Νεότερες καταχωρήσεις</button><button type="button" disabled={busy||(data.historyPage||0)+1>=(data.historyPages||1)} onClick={()=>load((data.historyPage||0)+1)}>Παλαιότερες καταχωρήσεις</button>{(data.history||[]).map(h=><p key={h.id}>{h.createdAt} · {h.actorName} · {labels[h.kind]||h.kind} · {h.note}{h.paper&&<span> · {h.paper.label} · αρχικό {h.paper.rawDate||'μη αναγνώσιμη ημερομηνία'} · {h.paper.rawAmountText??'δυσανάγνωστο ποσό'}{h.paper.rawTimeText?' · '+h.paper.rawTimeText:''} · επιβεβαιώθηκε {kindLabels[h.paper.confirmedKind]} · {h.paper.confirmedDate} · {money(h.paper.confirmedAmountCents)}</span>}{h.active===false?' · έχει αναιρεθεί':''}</p>)}</details>
+        <CashKioskImportPanel api={api} storeId={storeId} storeName={data.storeName} generation={data.generation} from={from} to={to} disabled={busy||needsRefresh} onBusyChange={value=>{if(selected.current!==scope)return;busyRef.current=value;setBusy(value);}} onUncertain={()=>{if(selected.current===scope)setNeedsRefresh(true);}} onChanged={()=>{if(selected.current!==scope)return;setNeedsRefresh(true);void load(0);}}/>
       </>}
     </div>}
   </section>;

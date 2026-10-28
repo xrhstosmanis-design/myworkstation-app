@@ -4,6 +4,7 @@ import {reconciliationEntity,reconciliationLimit,scopeKey,hash,actionId,requestH
 import {readReconciliationSources,readReconciliationSession} from './cash-reconciliation-source.js';
 import {projectReconciliation,immediateCashPair} from './cash-reconciliation-report.js';
 import {cashReportRowDay} from '../../../client/src/lib/cash-report-period.js';
+import {readKioskCashEvidence} from './cash-kiosk-imports.js';
 
 export function createCashReconciliationRepository(db){
   async function generation(scope){const s=await readLifecycleGeneration(db,scope);if(s.maintenance||s.retired)throw reconcileError('STORE_LIFECYCLE_MAINTENANCE');return s.generation;}
@@ -37,6 +38,7 @@ export function createCashReconciliationRepository(db){
         validity.set(r.id,proof.paperLineHash===r.proof.paperLineHash&&(!r.data.transactionId||transactionMatchesPaper(r.data.confirmedKind,t,r.data.confirmedAmountCents)));
       }catch{validity.set(r.id,false);}
     }
+    source.kioskEventSales=await readKioskCashEvidence(tx,scope,source.period);
     const report=projectReconciliation(source,chain.records,validity);
     return {source,report};
   }

@@ -52,7 +52,7 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
     row.nextSessionId=original.session.nextSession?.id||null;row.previousSessionId=original.session.previousSession?.id||null;
   }
   const selected=source.selectedIds.map(id=>rows.get(id));
-  const reportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[],...(r.expenseFindings?.length?{expenseFindings:r.expenseFindings}:{}),...(r.eventSales?{eventSales:r.eventSales}:{})}))});
+  const reportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[],...(r.expenseFindings?.length?{expenseFindings:r.expenseFindings}:{}),...(r.eventSales?{eventSales:r.eventSales}:{})})),...(source.kioskEventSales?{kioskEventSales:source.kioskEventSales}:{})});
   const checkpoint=[...records].reverse().find(r=>r.data.kind==='CHECKPOINT');
   const totals={shortageCents:0,surplusCents:0,pending:selected.filter(r=>!r.reviewed&&r.status!=='NOT_APPLICABLE').length},employees=new Map();
   const operatorNames=new Map();for(const r of rows.values()){const names=operatorNames.get(r.operatorId)||new Set();names.add(r.operatorName);operatorNames.set(r.operatorId,names);}
@@ -68,6 +68,7 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
   }
   const sameCheckpointPeriod=checkpoint?.proof.period?.from===source.period.from&&checkpoint?.proof.period?.to===source.period.to;
   const result={storeId:source.store.id,storeName:source.store.name,period:source.period,rows:selected,context:[...rows.values()].filter(r=>!source.selectedIds.includes(r.sessionId)),totals,employees:[...employees.values()],reportHash,checkpoint:checkpoint?{resumeFrom:checkpoint.data.resumeFrom,pendingNotes:checkpoint.data.pendingNotes,period:checkpoint.proof.period,createdAt:checkpoint.createdAt,reviewedBy:checkpoint.actorName,current:sameCheckpointPeriod?checkpoint.data.reportHash===reportHash:null}:null,coverage:source.coverage,financialFinality:'REVIEWED_CASH_ROWS_ONLY',originalFinancialLedgerChanged:false};
+  if(source.kioskEventSales)result.kioskEventSales=source.kioskEventSales;
   result.text=reconciliationText(result);return result;
 }
 const money=cents=>cents===null?'άγνωστο':(Math.abs(cents)/100).toLocaleString('el-GR',{style:'currency',currency:'EUR'});
@@ -95,6 +96,16 @@ export function reconciliationText(report){
   }
   const eventRows=report.rows.filter(r=>r.eventSales&&(r.eventSales.status!=='AVAILABLE'||r.eventSales.findings.length));
   if(eventRows.length){lines.push('','ΕΛΕΓΧΟΣ ΣΥΜΒΑΝΤΩΝ — ΑΛΛΑΓΕΣ ΤΙΜΩΝ ΚΑΙ ΕΚΠΤΩΣΕΙΣ');for(const row of eventRows)lines.push(...cashEventSalesText(row.eventSales,{storeName:report.storeName,shiftLabel:row.shiftLabel}));}
+  if(report.kioskEventSales){
+    const external=report.kioskEventSales,coverage=external.coverage;
+    lines.push('','ΣΥΜΒΑΝΤΑ ΚΑΙ ΠΩΛΗΣΕΙΣ ΑΠΟ ΑΡΧΕΙΑ KIOSK');
+    if(external.status!=='AVAILABLE')lines.push('Ο έλεγχος των αρχείων Kiosk παραμένει ελλιπής.');
+    if(coverage.missingJournalShiftIds.length)lines.push('Λείπουν ημερολόγια Kiosk για τις βάρδιες: '+coverage.missingJournalShiftIds.join(', ')+'.');
+    if(coverage.unverifiedEventOverlapCount)lines.push('Υπάρχουν επικαλυπτόμενα συμβάντα μεταξύ διαφορετικών αρχείων, χωρίς ασφαλή ταυτοποίηση.');
+    if(coverage.sourceUnavailable)lines.push('Δεν επιβεβαιώθηκαν όλα τα πρωτότυπα και η ανάγνωσή τους.');
+    lines.push(...cashEventSalesText({...external,status:'AVAILABLE'},{storeName:report.storeName,shiftLabel:'Βάρδια Kiosk'}));
+    if(external.status==='AVAILABLE'&&!external.findings.length)lines.push('Δεν εντοπίστηκαν πρόσθετα ευρήματα στα ανεβασμένα αρχεία της επιλεγμένης περιόδου.');
+  }
   const original=report.rows.filter(r=>r.status!=='NOT_APPLICABLE');
   if(original.length&&original.every(r=>r.initialCents!==null)){const surplus=original.reduce((a,r)=>a+Math.max(0,r.initialCents),0),shortage=original.reduce((a,r)=>a+Math.max(0,-r.initialCents),0);lines.push('',`Αρχικά ελλείμματα: ${money(shortage)}. Αρχικά πλεονάσματα: ${money(surplus)}.`);}
   if(report.rows.some(r=>r.reviewed))lines.push('',`Ελεγμένα ελλείμματα: ${money(report.totals.shortageCents)}. Ελεγμένα πλεονάσματα: ${money(report.totals.surplusCents)}.`);
