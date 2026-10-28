@@ -65,7 +65,7 @@ test('reuploads and overlapping exports are counted once; conflicting transactio
 });
 test('identical same-time events are preserved as a multiset across overlapping exports',async()=>{
  const rows=events();rows.push(rows.at(-1));const e=await parse(rows,'EVENTS'),overlap=await parse([...rows,[]],'EVENTS'),j=await parse(journal(),'JOURNAL');
- const r=compareKioskCashWorkbooks({scope,documents:[e,overlap,j]});assert.equal(r.status,'AVAILABLE');assert.equal(r.coverage.eventCount,2);assert.equal(r.findings.filter(f=>f.code==='PRICE_APPLICATION_UNCONFIRMED').length,2);
+ const r=compareKioskCashWorkbooks({scope,documents:[e,overlap,j]});assert.equal(r.status,'LIMITED');assert.equal(r.coverage.unverifiedEventOverlapCount,2);assert.equal(r.coverage.eventCount,2);assert.equal(r.findings.filter(f=>f.code==='PRICE_APPLICATION_UNCONFIRMED').length,2);
 });
 test('explicit provenance and separate Kiosk shift/operator namespaces cannot be guessed from filenames or native IDs',async()=>{
  const b=workbook(journal());assert.equal((await parseKioskCashWorkbook(b,{...scope,sourceId:'file',kind:'JOURNAL'})).reason,'EXPLICIT_KIOSK_JOURNAL_BINDING_REQUIRED');

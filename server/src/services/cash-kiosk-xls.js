@@ -148,12 +148,12 @@ export function compareKioskCashWorkbooks({scope,documents,confirmations=[]}){
  const byChecksum=new Map();
  for(const d of documents){const previous=byChecksum.get(d.source.checksum);if(previous&&JSON.stringify([previous.source.kind,previous.source.kioskShiftId,previous.source.kioskOperator])!==JSON.stringify([d.source.kind,d.source.kioskShiftId,d.source.kioskOperator]))return fail('CONFLICTING_FILE_BINDING');byChecksum.set(d.source.checksum,d);}
  const unique=[...byChecksum.values()];
- const events=[],sales=[],seenSales=new Map(),seenEvents=new Map();
+ const events=[],sales=[],seenSales=new Map(),seenEvents=new Map(),overlappingEventKeys=new Set();
  // Dedup overlapping exports as multisets: preserve genuinely repeated events
  // inside one export, and reject inconsistent versions of one transaction.
  for(const doc of unique){
   const counts=new Map();
-  for(const e of doc.events){const signature=JSON.stringify([e.actionType,e.productName,e.operator,e.shiftId,e.oldPrice,e.newPrice,e.when]);const occurrence=(counts.get(signature)||0)+1;counts.set(signature,occurrence);const key=signature+':'+occurrence;if(!seenEvents.has(key)){seenEvents.set(key,true);events.push(e);}}
+  for(const e of doc.events){const signature=JSON.stringify([e.actionType,e.productName,e.operator,e.shiftId,e.oldPrice,e.newPrice,e.when]);const occurrence=(counts.get(signature)||0)+1;counts.set(signature,occurrence);const key=signature+':'+occurrence;if(!seenEvents.has(key)){seenEvents.set(key,true);events.push(e);}else overlappingEventKeys.add(key);}
   for(const s of doc.sales){const key=s.shiftId+':'+s.transactionNumber,signature=JSON.stringify({...s,lines:s.lines.map(({row,...line})=>line)});if(seenSales.has(key)){if(seenSales.get(key)!==signature)return fail('CONFLICTING_TRANSACTION');continue;}seenSales.set(key,signature);sales.push(s);}
  }
  if(events.length>2000||sales.length>2000||sales.reduce((n,s)=>n+s.lines.length,0)>10000)return fail('COMPARISON_LIMIT','LIMITED');
@@ -172,5 +172,7 @@ export function compareKioskCashWorkbooks({scope,documents,confirmations=[]}){
  if(results.length>500)return fail('FINDING_LIMIT','LIMITED');
  const journalShifts=new Set(unique.filter(d=>d.source.kind==='JOURNAL').map(d=>String(d.source.kioskShiftId)));
  const missingJournalShiftIds=[...new Set(events.map(e=>e.shiftId).filter(shift=>!journalShifts.has(shift)))].sort();
- return {status:missingJournalShiftIds.length?'LIMITED':'AVAILABLE',findings:results,sourceChecksums:unique.map(d=>d.source.checksum).sort(),financialAdjustmentCents:0,coverage:{eventCount:events.length,saleCount:sales.length,eventQuantityAvailable:false,externalOnly:true,missingJournalShiftIds}};
+ // No event IDs exist in these exports. A matching occurrence in another
+ // nonidentical file is overlap evidence, not proof of the same physical edit.
+ return {status:missingJournalShiftIds.length||overlappingEventKeys.size?'LIMITED':'AVAILABLE',findings:results,sourceChecksums:unique.map(d=>d.source.checksum).sort(),financialAdjustmentCents:0,coverage:{eventCount:events.length,saleCount:sales.length,eventQuantityAvailable:false,externalOnly:true,missingJournalShiftIds,unverifiedEventOverlapCount:overlappingEventKeys.size}};
 }
