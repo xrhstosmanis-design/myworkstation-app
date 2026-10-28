@@ -4,8 +4,19 @@ import {prisma} from '../prisma.js';
 import {authorizeCashPaper} from './cash-papers.js';
 import {createCashReconciliationRepository} from '../services/cash-reconciliation-repository.js';
 import {periodSchema,reviewRequestId,reconciliationRequest,reconcileError} from '../services/cash-reconciliation-contract.js';
+import {createKioskCashImports,kioskImportRequest,kioskRevokeRequest} from '../services/cash-kiosk-imports.js';
 
 const messages={
+  CASH_KIOSK_INVALID_FILE:'Το αρχείο δεν είναι έγκυρο XLS ή XLSX.',
+  CASH_KIOSK_UNREADABLE:'Δεν επιβεβαιώθηκαν η ασφαλής ανάγνωση και η δηλωμένη περίοδος του αρχείου.',
+  CASH_KIOSK_LIMIT:'Τα αρχεία υπερβαίνουν το ασφαλές όριο του ελέγχου.',
+  CASH_KIOSK_BUSY:'Εκτελούνται ήδη αναγνώσεις αρχείων. Δοκίμασε αργότερα.',
+  CASH_KIOSK_SOURCE_CHANGED:'Το πρωτότυπο αρχείο χρειάζεται επανέλεγχο.',
+  CASH_KIOSK_REPLAY_CHANGED:'Το προηγούμενο αίτημα είχε διαφορετικά στοιχεία.',
+  CASH_KIOSK_BINDING_CONFLICT:'Το ίδιο αρχείο έχει διαφορετική δηλωμένη βάρδια ή περίοδο. Έλεγξε την προηγούμενη σύνδεση.',
+  CASH_KIOSK_STALE:'Άλλαξε η κατάσταση του καταστήματος. Ανανέωσε τον έλεγχο.',
+  CASH_KIOSK_NOT_FOUND:'Δεν βρέθηκε ενεργό αρχείο στο επιλεγμένο κατάστημα.',
+  CASH_KIOSK_INVALID_HISTORY:'Το ιστορικό αρχείων χρειάζεται επανέλεγχο.',
   CASH_ARCHIVE_INVALID_REQUEST:'Η εξαγωγή χρειάζεται την ακριβή αναφορά της επιλεγμένης περιόδου.',
   CASH_ARCHIVE_INVALID_SOURCE:'Δεν επιβεβαιώθηκαν τα στοιχεία της εξαγωγής. Ανανέωσε τον έλεγχο.',
   CASH_ARCHIVE_STALE:'Άλλαξε ο έλεγχος ή το κατάστημα. Ανανέωσε πριν δημιουργήσεις το αρχείο.',
@@ -30,9 +41,25 @@ const messages={
   CASH_PAPER_NOT_FOUND:'Δεν βρέθηκε το κατάστημα ή το συνημμένο.'
 };
 const failed=(res,error)=>{const code=Object.hasOwn(messages,error?.code)?error.code:'CASH_RECONCILIATION_UNAVAILABLE';res.status(Number.isInteger(error?.status)&&error.status>=400&&error.status<=503?error.status:503).json({code,error:messages[code]||'Δεν ολοκληρώθηκε ο έλεγχος. Ανανέωσε για να δεις αν καταχωρίστηκε η ενέργεια.'});};
-export function createCashReconciliationRouter({db=prisma,authorize=authorizeCashPaper,repository=createCashReconciliationRepository(db)}={}){
+export function createCashReconciliationRouter({db=prisma,authorize=authorizeCashPaper,repository=createCashReconciliationRepository(db),imports=createKioskCashImports(db)}={}){
   const router=Router();
   const current=async(req,scope)=>{await authorize(db,req.user,req.params.storeId);if(await repository.generation(scope)!==scope.generation)throw reconcileError('STORE_LIFECYCLE_STALE_GENERATION');};
+  const freshAuthorization=(req,scope)=>async tx=>{const fresh=await authorize(tx,req.user,req.params.storeId);if(fresh.scope.companyId!==scope.companyId||fresh.scope.storeId!==scope.storeId)throw reconcileError('CASH_PAPER_NOT_FOUND',404);};
+  router.get('/stores/:storeId/kiosk-sources',async(req,res)=>{try{
+    const parsed=periodSchema.safeParse({from:req.query.from,to:req.query.to});if(!parsed.success)return res.status(400).json({error:'Επίλεξε έγκυρη περίοδο έως 31 ημέρες.'});
+    const {scope}=await authorize(db,req.user,req.params.storeId);scope.generation=await repository.generation(scope);
+    const result=await imports.list(scope,parsed.data);await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
+  }catch(error){failed(res,error);}});
+  router.post('/stores/:storeId/kiosk-sources',async(req,res)=>{try{
+    const parsed=kioskImportRequest.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Έλεγξε αρχείο, περίοδο και στοιχεία βάρδιας.'});
+    const {scope,actor}=await authorize(db,req.user,req.params.storeId);scope.generation=parsed.data.generation;
+    const result=await imports.importFile(scope,actor,parsed.data,freshAuthorization(req,scope));await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
+  }catch(error){failed(res,error);}});
+  router.post('/stores/:storeId/kiosk-sources/revoke',async(req,res)=>{try{
+    const parsed=kioskRevokeRequest.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Επίλεξε αρχείο και αιτιολόγησε την αφαίρεση από την ανάλυση.'});
+    const {scope,actor}=await authorize(db,req.user,req.params.storeId);scope.generation=parsed.data.generation;
+    const result=await imports.revoke(scope,actor,parsed.data,freshAuthorization(req,scope));await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
+  }catch(error){failed(res,error);}});
   router.get('/stores/:storeId',async(req,res)=>{try{
     const period=periodSchema.safeParse({from:req.query.from,to:req.query.to});if(!period.success)return res.status(400).json({error:'Επίλεξε έγκυρη περίοδο έως 31 ημέρες.',code:'CASH_RECONCILIATION_INVALID_REQUEST'});
     const historyPage=req.query.historyPage===undefined?0:Number(req.query.historyPage),requestId=req.query.requestId??null;

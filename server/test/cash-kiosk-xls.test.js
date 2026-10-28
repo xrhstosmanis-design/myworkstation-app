@@ -85,3 +85,7 @@ test('input bytes, worksheet range and inflated XLSX directory are bounded befor
  assert.equal((await parse(events(),'EVENTS',{type:'xlsx',mutate:s=>{s['!ref']='A1:E20001';}})).reason,'SHEET_LIMIT');
  const b=workbook(events(),{type:'xlsx'});let changed=false;for(let i=0;i<b.length-46;i++)if(b.readUInt32LE(i)===0x02014b50){b.writeUInt32LE(kioskXlsLimits.inflated+1,i+24);changed=true;break;}assert(changed);assert.equal((await parseKioskCashWorkbook(b,context('EVENTS'))).reason,'ZIP_LIMIT');
 });
+test('normalized facts are bounded inside the worker before their result can allocate a large parent payload',async()=>{
+ const rows=[];for(let i=0;i<350;i++)rows.push(...journal({number:1000+i,lines:[line('Π'.repeat(950),1,2,1)]}));
+ const result=await parse(rows,'JOURNAL',{type:'xlsx'});assert.equal(result.status,'UNAVAILABLE');assert.equal(result.reason,'NORMALIZED_RESULT_LIMIT');assert.equal(result.sales,undefined);
+});

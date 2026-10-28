@@ -54,6 +54,8 @@ function sourceContext(context,checksum){
 }
 function parseRows(rows,date1904,context,source){
  const events=[],sales=[];let category=null,eventHeader=false,transactionHeader=false,itemHeader=false,current=null,seenHeader=false;const issues=[];
+ let resultBytes=0,totalLines=0;
+ const budget=value=>{resultBytes+=Buffer.byteLength(JSON.stringify(value));if(resultBytes>600000)throw Error('NORMALIZED_RESULT_LIMIT');};
  const stamp=v=>{const c=clock(v,date1904);if(!c.iso)issues.push({code:c.reason,wall:c.wall});return c;};
  function finish(){
   if(!current)return;
@@ -61,6 +63,7 @@ function parseRows(rows,date1904,context,source){
    // Kiosk's Είδη is a product count, not physical printed line count: the
    // export can print the same product twice while Είδη remains one.
    if(!current.lines.length||current.itemCount>current.lines.length||current.lines.reduce((n,l)=>n+Math.round(l.lineTotal*100),0)!==current.totalCents)throw Error('INCOMPLETE_SALE_ITEMS');
+   budget({...current,lines:[]});if(sales.length>=2000)throw Error('PARSED_RECORD_LIMIT');
    sales.push(current);
   }
   current=null;itemHeader=false;
@@ -86,6 +89,7 @@ function parseRows(rows,date1904,context,source){
    if(!id(r[2])||!id(r[3]))throw Error('INVALID_KIOSK_IDENTITY');
    const when=stamp(r[1]);
    events.push({id:`KIOSK_EVENT:${source.checksum}:${index+1}`,row:index+1,category,actionType:permanent?'PERMANENT_PRICE_CHANGE':'PRICE_CHANGE',productName:text(m[1]),operator:String(r[2]),shiftId:String(r[3]),oldPrice:Number(m[2].replace(',','.')),newPrice:Number(m[3].replace(',','.')),quantity:null,newTotal:null,when});
+   budget(events.at(-1));if(events.length>2000)throw Error('PARSED_RECORD_LIMIT');
   }else{
    if(r[0]==='Κωδ'&&r[1]==='Ημερομηνία'&&r[3]==='Περιγραφή συναλλαγής'&&r[5]==='Τζίρος πώλησης'&&r[17]==='Είδη'){finish();transactionHeader=true;seenHeader=true;continue;}
    if(!transactionHeader&&id(r[0])&&numeric(r[1])!==null)throw Error('MISSING_TRANSACTION_HEADER');
@@ -100,11 +104,14 @@ function parseRows(rows,date1904,context,source){
    if(itemHeader&&current?.eligible&&typeof r[1]==='string'&&numeric(r[4])!==null){
     if(r[4]<=0||money(r[5])===null||money(r[9])===null||money(r[10])===null||r[5]<0||r[9]<0||r[10]<0)throw Error('INVALID_SALE_ITEM');
     current.lines.push({lineId:`KIOSK_LINE:${current.transactionNumber}:${current.lines.length+1}`,productName:r[1],quantity:r[4],retailPrice:r[5],unitPrice:r[9],lineTotal:r[10],discount:r[6],row:index+1});
+    budget(current.lines.at(-1));if(current.lines.length>1000||++totalLines>10000)throw Error('PARSED_RECORD_LIMIT');
    }
   }
  }
  finish();if(!seenHeader)throw Error('UNSUPPORTED_HEADERS');
- return {status:issues.length?'LIMITED':'AVAILABLE',source,events,sales,issues,financialAdjustmentCents:0};
+ const result={status:issues.length?'LIMITED':'AVAILABLE',source,events,sales,issues,financialAdjustmentCents:0};
+ if(Buffer.byteLength(JSON.stringify(result))>750000)throw Error('NORMALIZED_RESULT_LIMIT');
+ return result;
 }
 
 function parseInternal(input,context){
