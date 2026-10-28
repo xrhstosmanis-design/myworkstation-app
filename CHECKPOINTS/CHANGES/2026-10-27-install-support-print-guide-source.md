@@ -1,3 +1,17 @@
+## 28/10/2026 - PRINT GUIDE TECHNICAL RELEASE RECEIPT
+
+**28/10/2026 - PRINT GUIDE TECHNICALLY INSTALLED / ACTUAL USER AND PHYSICAL PRINT ACCEPTANCE OPEN**
+
+User-authorized narrow claim #3226 preceded source. PR #3229 exact reviewed head 2f09dc7f5f54b3a32a5213a5416bf6f9ecb0f280 passed full CI 40687951276 (job 122815867240): all five jobs SUCCESS, 4,453 server and 8 backup tests PASS / 0 FAIL / 0 SKIP. Normal expected-head merge produced main b8773ac909f1001be3987d84335571d5717a1c8e with the exact reviewed tree 149998083c61fb600cd8dfa80ebb8534e176040d. Exact merged-main CI 40689830869 (job 122822007940) also passed all five jobs with 4,453 server and 8 backup tests / 0 FAIL / 0 SKIP. Both exact logs contain the real Chromium isolated one-page PDF regression (ok 1090).
+
+Ordinary guard 40691387009 / deploy job 122826888468 completed SUCCESS, including actual trigger and exact-revision wait (not a skipped deploy). Render service srv-d9isenfavr4c73bdh52g / workspace tea-d9ie26vaqgkc739uudqg deploy dep-dbgv0hmgekts738tv1a0 became LIVE at b8773ac909f1001be3987d84335571d5717a1c8e on 28Oct12:55:18Z. Independent root no-cache GET /api/health at12:55:44Z returned HTTP200, ok=true, exact b877; publisher corroborated12:56:06Z with the same result. No manual deploy, rollback or safeguard bypass.
+
+Installed technical scope: the existing selected-store support overview offers an explicit printable static Greek fault guide. The output is a separate document built from fixed text only, not the application DOM or store data. It does not register an incident, invent contact data, disclose PINs/credentials or perform API, device, payment, stock or fiscal actions. Popup failure feedback and keyboard focus handling are covered by mounted tests. The Chromium regression used synthetic data at desktop and narrow viewport sizes, a real popup and CDP print-to-PDF; it verified one page, Greek text and exclusion of background/store sentinels. The fixture intercepts the native print call to avoid a modal dialog, so this evidence does not verify a native print dialog, physical printer or mobile operating system.
+
+Status TECHNICALLY INSTALLED / AUTHENTICATED ACTUAL UI AND PHYSICAL PRINT ACCEPTANCE NOT TESTED. No USER, LAB, manual or hardware PASS is claimed and no manual/PASS entry is created from CI. Full INSTALL-SUPPORT remains OPEN: durable profiles, incident operations, attachments and lifecycle integration are not delivered by this slice; retained lifecycle owner and all other assignments remain unchanged. Older AWAITING CI/NOT INSTALLED paragraphs below are historical source preparation, superseded only by this narrowly scoped technical release receipt.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-10-27-install-support-print-guide-source.md.
+
 ## 27/10/2026 — INSTALL-SUPPORT-PRINT-GUIDE-01 / REVIEWED CLEANUP / AWAITING EXACT CI
 
 User-authorized narrow takeover claim #3226 merged ea2f94b7f4b27748e74a0ea30b1d5ecd28b3c813 before source. Retained central owner codex/central-four-streams-20261018 / previous worker /root/priority_support; receiving worker /root/support_design. Candidate d419d627ad723e732ddfcbf6b74377b70f2f8d5d preserves the reviewed printable guide and adds a reviewed isolated browser cleanup correction. Scope remains exactly InstallationSupportProfile, its CSS, existing focus-trap UI test and two approved browser fixture/flow paths; no workflow edit. Focused mounted tests previously passed 6 / 0 failed / 0 skipped.
