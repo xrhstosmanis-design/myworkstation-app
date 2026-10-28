@@ -1,0 +1,17 @@
+# POS-LAYOUT-REQUESTS-28 - reviewed source / awaiting exact CI
+
+**A1 source status 28/10/2026 - REVIEWED PRESENTATION CANDIDATE / AWAITING EXACT FULL CI.** Before-source claim #3253 merged 1c0f093e99d9b915e4e095d685457eb47945b627 before runtime edits. Frozen source a5d3b8cecc138e1beb954b59f12b13843d64f628 received root and independent review. Exactly the four claimed A1 source/test paths are byte-identical to that freeze. The single existing last-transaction JSX/reset action and four payment-control fragments/disabled conditions remain byte-identical apart from their placement/order and scoped CSS. Local focused group: 8 PASS / 0 FAIL / 42 explicit local browser-environment SKIP (36 retained browser cases plus 6 mandatory Font20 cases). Node20 Work-safe build PASS12.78s with TABLE_SERVICE retained. Actual mandatory Chromium geometry, font/viewport/calculator variants and full regressions await exact CI; no USER, LAB, physical POS or installation PASS is claimed. No financial handler, payload, permission, amount/state or business data change. Checkpoint CHECKPOINTS/CHANGES/2026-10-28-pos-layout-source.md.
+
+The 28 October handwritten requirement requests the last transaction at the top of the basket, more compact buttons and separated cash/card controls (items 2/3/6). Sole source worker /root/pos_ui_new under root coordination. Claim #3253 preceded source; fresh publication base 10df367323266602965e150560d6f3eb39cb4270 preserves the independent cash XLS claim #3254 and all other owner records. A2 empty-slot editor and B no-print permission remain separate source PRs; B same-file edits start from the frozen A1 bytes and are not published before A1 reaches main.
+
+Only presentation/DOM order and targeted CSS change. The single existing last-completed-transaction indicator moves into the basket top without changing amount state, completion identity/replay guard, same-store masking, resetScanFocus or reset handler. Four original payment button fragments including current disabled conditions and callbacks are retained. Cash and card are separated in both DOM and visual order. Category/quick tiles are more compact while retaining labels, 20-root/quick navigation, scroll reachability, font scaling and usable minimum hit targets. Original runtime prefix remains byte-identical; no checkout, tender, payment/financial, permission, scanner, PIN, fiscal, stock or device handler/payload changes.
+
+Retained limited last-transaction USER PASS from 12Oct22:48:39 Athens remains protected under codex/pos-last-transaction-20261012 and CHECKPOINTS/CHANGES/2026-10-12-pos-last-transaction.md. Retained header owner fix/pos-header-collapse-20261016 and wider selected-design/appearance owners remain unchanged. Existing KAT layout/configuration and actual transactions are not replayed or modified for this layout work.
+
+Local skips are explicit environment limitations, not successful browser proof. The retained 36 Chromium geometry cases and six Font20 cases are mandatory in CI. Require exact full PR/main CI, independent review and ordinary guarded release before technical installation; actual authorized-user visual/physical acceptance stays OPEN. No manual/PASS is created from simulated checks.
+
+Exact source/test paths:
+- client/src/components/store/StorePosPanel.jsx
+- client/src/components/store/pos-ui-v2.css
+- server/test/pos-last-transaction.test.js
+- server/test/pos-ui-v2-layout.test.js
