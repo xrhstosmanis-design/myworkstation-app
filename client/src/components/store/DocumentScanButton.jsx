@@ -1,3 +1,4 @@
+import DeviceSetupPanel from "./DeviceSetupPanel.jsx";
 import React,{useEffect,useRef,useState} from "react";
 import {forgetScanner,pairDocumentScanner,scanDocument,ScannerPairingRequired} from "../../lib/document-scanner.js";
 
@@ -21,8 +22,10 @@ export default function DocumentScanButton({scopeKey,onFiles,disabled=false,maxP
   };
   return <div className="document-scan-control" style={{display:"grid",gap:8,margin:"8px 0"}}>
     <button type="button" disabled={disabled||busy||maxPages<1} onClick={()=>run(false)} style={{minHeight:48,fontSize:18,fontWeight:800,padding:"10px 14px"}}>{busy?"Σάρωση…":"Σάρωση εγγράφου"}</button>
+    <DeviceSetupPanel scopeKey={scopeKey} disabled={disabled||busy} label="Εγκατάσταση σαρωτή / εκτυπωτή"/>
     {busy&&<button type="button" onClick={()=>{live.current?.controller?.abort();setError("Η λήψη ακυρώθηκε. Ο σαρωτής μπορεί να ολοκληρώνει τη φυσική κίνηση· περίμενε πριν ξαναδοκιμάσεις.")}}>Ακύρωση λήψης</button>}
     {pairing&&<div role="group" aria-label="Σύνδεση σαρωτή"><p>Μόνο στην αρχική ρύθμιση αυτού του υπολογιστή: άνοιξε τον σύνδεσμο σαρωτή MyWorkStation στα Windows και γράψε τον κωδικό του.</p><label>Κωδικός σύνδεσης σαρωτή<input inputMode="numeric" autoComplete="off" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))}/></label><button type="button" disabled={busy||disabled||code.length!==6} onClick={()=>run(true)}>Σύνδεση σαρωτή</button></div>}
     {error&&<p role="alert">{error}</p>}
   </div>;
 }
+

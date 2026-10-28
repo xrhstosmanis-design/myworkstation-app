@@ -1,7 +1,7 @@
 name: Document scanner connector
 on:
   pull_request:
-    paths: ['tools/windows-document-scanner/**', '.github/workflows/document-scanner-windows.yml']
+    paths: ['tools/windows-document-scanner/**', 'tools/windows-device-setup/**', 'client/public/downloads/device-setup/**', '.github/workflows/document-scanner-windows.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,8 +31,71 @@ jobs:
           $errors = $null
           [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/windows-document-scanner/Install.ps1'),[ref]$tokens,[ref]$errors) | Out-Null
           if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
+      - name: Build and exercise native per-user device setup
+        shell: powershell
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          New-Item -ItemType Directory -Force device-setup | Out-Null
+          [IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path scanner-release), (Join-Path $PWD 'device-setup/scanner-payload.zip'), [IO.Compression.CompressionLevel]::Optimal, $false)
+          $zipHash = (Get-FileHash device-setup/scanner-payload.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $base = (Resolve-Path scanner-release).Path
+          $lines = @("zip`t$zipHash")
+          Get-ChildItem scanner-release -File -Recurse | Sort-Object FullName | ForEach-Object {
+            $name = $_.FullName.Substring($base.Length + 1).Replace('\','/')
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            $lines += "$hash`t$($_.Length)`t$name"
+          }
+          [IO.File]::WriteAllLines((Join-Path $PWD 'device-setup/scanner-payload.manifest'), $lines, (New-Object Text.UTF8Encoding($false)))
+          $framework = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319'
+          $reference = Join-Path ${env:ProgramFiles(x86)} 'Reference Assemblies/Microsoft/Framework/.NETFramework/v4.8'
+          $compiler = Join-Path $framework 'csc.exe'
+          $source = (Resolve-Path 'tools/windows-device-setup/Setup.cs').Path
+          $payload = (Resolve-Path 'device-setup/scanner-payload.zip').Path
+          $payloadManifest = (Resolve-Path 'device-setup/scanner-payload.manifest').Path
+          $output = Join-Path $PWD 'device-setup\MyWorkStationDevicesSetup.exe'
+          $arguments = @('/nologo','/target:winexe','/codepage:65001','/optimize+','/reference:System.dll','/reference:System.Core.dll','/reference:System.Drawing.dll','/reference:System.Windows.Forms.dll','/reference:Microsoft.CSharp.dll',("/reference:" + (Join-Path $reference 'System.IO.Compression.dll')),("/reference:" + (Join-Path $reference 'System.IO.Compression.FileSystem.dll')),("/resource:" + $payload + ',ScannerPayload.zip'),("/resource:" + $payloadManifest + ',ScannerPayload.manifest'),("/out:" + $output),$source)
+          & $compiler @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'Native setup compilation failed' }
+          $test = Start-Process -FilePath (Resolve-Path device-setup/MyWorkStationDevicesSetup.exe) -ArgumentList '--self-test' -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput device-setup/self-test.log -RedirectStandardError device-setup/self-test-error.log
+          Get-Content device-setup/self-test.log
+          if ($test.ExitCode -ne 0) { Get-Content device-setup/self-test-error.log; throw 'Native setup isolated tests failed' }
+          $sources = [ordered]@{}
+          foreach ($name in @('tools/windows-device-setup/Setup.cs','tools/windows-document-scanner/Program.cs','tools/windows-document-scanner/MyWorkStation.DocumentScanner.csproj')) { $sources[$name] = (& git rev-parse "HEAD:$name").Trim() }
+          $exe = Get-Item device-setup/MyWorkStationDevicesSetup.exe
+          @{ version='1.0.0'; size=$exe.Length; sha256=(Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant(); sourceGitBlobs=$sources } | ConvertTo-Json -Depth 5 | Set-Content device-setup/build.json -Encoding UTF8
+      - name: Verify the exact published helper when present
+        shell: powershell
+        run: |
+          $root = Join-Path $PWD 'client/public/downloads/device-setup/v1'
+          if (-not (Test-Path (Join-Path $root 'manifest.json'))) { Write-Host 'Public package not added yet; no distribution PASS'; exit 0 }
+          $manifest = Get-Content (Join-Path $root 'manifest.json') -Raw | ConvertFrom-Json
+          $out = Join-Path $PWD 'device-setup/PublishedSetup.exe'
+          $stream = [IO.File]::Create($out)
+          try {
+            foreach ($part in $manifest.parts) {
+              if ($part.name -notmatch '^part-\d{3}\.bin$') { throw 'Unsafe published part' }
+              $p = Join-Path $root $part.name
+              if ((Get-Item $p).Length -ne $part.size -or (Get-FileHash $p -Algorithm SHA256).Hash.ToLowerInvariant() -ne $part.sha256) { throw 'Published part mismatch' }
+              $bytes = [IO.File]::ReadAllBytes($p); $stream.Write($bytes,0,$bytes.Length)
+            }
+          } finally { $stream.Dispose() }
+          if ((Get-Item $out).Length -ne $manifest.size -or (Get-FileHash $out -Algorithm SHA256).Hash.ToLowerInvariant() -ne $manifest.sha256) { throw 'Published installer mismatch' }
+          $expected = Get-Content device-setup/build.json -Raw | ConvertFrom-Json
+          foreach ($property in $expected.sourceGitBlobs.PSObject.Properties) { if ($manifest.sourceGitBlobs.($property.Name) -ne $property.Value) { throw 'Published native sources are stale' } }
+          $test = Start-Process -FilePath $out -ArgumentList '--self-test' -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput device-setup/published-test.log -RedirectStandardError device-setup/published-test-error.log
+          if ($test.ExitCode -ne 0) { Get-Content device-setup/published-test-error.log; throw 'Published installer tests failed' }
+          Write-Host 'Exact published helper integrity and isolated Windows tests PASS'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyWorkStation-Device-Setup-Windows
+          path: |
+            device-setup/MyWorkStationDevicesSetup.exe
+            device-setup/build.json
+            device-setup/*test*.log
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
           name: MyWorkStation-DocumentScanner-Windows-x64
           path: scanner-release/
           retention-days: 14
+
