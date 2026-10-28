@@ -1,3 +1,4 @@
+import {readCashEventSales} from './cash-event-sales-source.js';
 import {readCashExpenseEvidence,cashExpenseFindings,purchaseDocumentMime} from './cash-expense-evidence.js';
 import {readCashReviewState} from './cash-review-balance.js';
 import {readCashControlRule} from './cash-control-rules.js';
@@ -27,9 +28,10 @@ export async function readReconciliationSession(db,scope,id,rule){
   const expenseInputs=transactions.map(({record,hasAttachment})=>({...record,hasAttachment,purchaseDocumentId:record.attachmentMimeType===purchaseDocumentMime?record.attachmentFilename:null}));
   const expenseChecks=await readCashExpenseEvidence(db,scope,expenseInputs);
   const expenseFindings=cashExpenseFindings(expenseChecks).map(f=>({code:f.code,amountCents:exactCents(f.amount),occurredAt:f.at?new Date(f.at).toISOString():null}));
+  const eventSales=await readCashEventSales(db,scope,session);
   const next=session.nextSession;
   const nextClosed=Boolean(next&&next.companyId===scope.companyId&&next.storeId===scope.storeId&&next.terminalPos===session.terminalPos&&next.status==='CLOSED'&&next.closedAt&&new Date(next.closedAt)>=new Date(next.openedAt)&&new Date(session.closedAt)<=new Date(next.openedAt));
-  return {session,sourceHash,expenseFindings,initialCents,cardCents,basisCents,reviewStatus:review.balance.status,explainedCents:exactCents(review.balance.explainedAmount),nextClosed,
+  return {session,sourceHash,expenseFindings,eventSales,initialCents,cardCents,basisCents,reviewStatus:review.balance.status,explainedCents:exactCents(review.balance.explainedAmount),nextClosed,
     transactions:transactions.map(t=>({id:t.record.id,type:t.record.type,amountCents:exactCents(t.record.amount),reversed:Boolean(t.record.reversedAt),cashEffect:t.record.subtractFromShift===true,occurredAt:t.record.occurredAt}))};
 }
 export async function readReconciliationSources(db,scope,period,extraIds=[]){
