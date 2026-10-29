@@ -11,6 +11,7 @@ import StoreChatPanel from "./components/store/StoreChatPanel.jsx";
 import OwnerWorkforceHub from "./components/cloud/OwnerWorkforceHub.jsx";
 import BackofficeStaffAdmin from "./components/BackofficeStaffAdmin.jsx";
 import BackofficeStaffWorkspace from "./components/BackofficeStaffWorkspace.jsx";
+import {logoutBackofficeStaff} from './utils/backoffice-staff-logout.mjs';
 
 const api=async(path,options={})=>{
   let scope=null;try{scope=JSON.parse(localStorage.getItem("supportContext")||"null")}catch{}
@@ -88,7 +89,7 @@ function App(){
  const logout=()=>{localStorage.clear();setSessionProblem("");setUser(null)};
  if(!user)return <Login onLogin={startSession}/>;
  if(sessionProblem)return <div className="login-shell"><section className="login-card" role="alert"><h1>Η προβολή Backoffice διακόπηκε</h1><p>{sessionProblem==="unauthorized"?"Η συνεδρία δεν είναι πλέον ενεργή.":"Η σύνδεση άλλαξε. Τα δεδομένα της προηγούμενης προβολής αποσύρθηκαν."}</p><p>Οι αυτόματες ανανεώσεις αυτής της προβολής σταμάτησαν. Άνοιξε ξανά το Backoffice ή συνδέσου με τον λογαριασμό που θέλεις.</p><button type="button" onClick={()=>window.location.assign("/")}>Άνοιγμα Backoffice</button><button type="button" onClick={()=>{setSessionProblem("");setUser(null)}}>Νέα σύνδεση</button></section></div>;
- if(user.staffAccess)return <BackofficeStaffWorkspace api={scopedApi} user={user} onLogout={async()=>{try{await scopedApi("/api/auth/logout",{method:"POST",body:"{}"})}finally{logout()}}}/>;
+ if(user.staffAccess)return <BackofficeStaffWorkspace api={scopedApi} user={user} onLogout={()=>logoutBackofficeStaff({storage:localStorage,request:scopedApi,onLogout:()=>{setSessionProblem("");setUser(null)}})}/>;
  return <div className="app"><aside><div className="brand"><div className="mark">MW</div><div><b>MyWorkStation</b><small>{companyName}</small></div></div>
  <nav>{(user.role==="OWNER"||user.role==="SUPER_ADMIN"||supportContext)&&<Nav active={page==="staff-access"} onClick={()=>setPage("staff-access")} icon={<Users/>}>Προσωπικές προσβάσεις</Nav>}<Nav active={page==="dashboard"} onClick={()=>setPage("dashboard")} icon={<LayoutDashboard/>}>Αρχική</Nav><Nav active={page==="workforce"} onClick={()=>setPage("workforce")} icon={<Users/>}>Προσωπικό & Πρόγραμμα</Nav><Nav active={page==="stores"} onClick={()=>{setSelectedStore(null);setPage("stores")}} icon={<Building2/>}>Καταστήματα</Nav>{activeModules.includes("STORE_CHAT")&&<Nav active={page==="chat"} onClick={()=>setPage("chat")} icon={<MessageCircle/>}>Chat</Nav>}</nav>
  {supportContext&&<button className="logout" onClick={returnToPlatform}><LogOut/>Επιστροφή στο Super Admin</button>}{!supportContext&&<button className="logout" onClick={logout}><LogOut/>Έξοδος</button>}</aside>
