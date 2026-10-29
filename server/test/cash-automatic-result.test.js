@@ -54,7 +54,7 @@ test('a cash contradiction invalidates both connected offset halves before alloc
 });
 test('forged effective flags, deductions, aggregate totals and missing required checks reject without manufacturing approval',()=>{
  const r=complete(fixture());
- for(const mutate of [v=>{v.calculatedResult.shortageCents=0},v=>{v.rows[2].automaticallyCalculated=true},v=>{v.rows[0].remainingCents=0},v=>{v.rows[0].automaticAudit.checks=v.rows[0].automaticAudit.checks.filter(c=>c.code!=='CASH_SALES')}]){
+ for(const mutate of [v=>{delete v.calculatedResult},v=>{v.calculatedResult.shortageCents=0},v=>{v.rows[2].automaticallyCalculated=true},v=>{v.rows[0].remainingCents=0},v=>{v.rows[0].automaticAudit.checks=v.rows[0].automaticAudit.checks.filter(c=>c.code!=='CASH_SALES')}]){
   const bad=structuredClone(r);mutate(bad);assert.throws(()=>assertCalculatedCashResult(bad));assert.throws(()=>projectAutomaticReviewedReport(bad));assert.throws(()=>cashArchiveWorkbook(bad,{companyId:'co',storeId:'store'}));
  }
  const row=structuredClone(r.rows[0]);row.explainedCents=600;assert.equal(canAutomaticallyCalculate(row),false);

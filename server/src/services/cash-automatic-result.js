@@ -42,7 +42,10 @@ export function calculateCashResult(rows){
  return calculatedCashResultSchema.parse({version:1,automaticCount,manualCount,pending,shortageCents,surplusCents,employees:[...employees.values()],days:[...days.values()],financialAdjustmentCents:0,humanApproval:false});
 }
 export function assertCalculatedCashResult(report){
- if(report.calculatedResult===undefined)return;
+ if(report.calculatedResult===undefined){
+  if(report.rows.some(r=>r.automaticallyCalculated!==undefined))throw Error('Cash calculated result missing.');
+  return;
+ }
  const expected=calculateCashResult(report.rows);
  if(hash(calculatedCashResultSchema.parse(report.calculatedResult))!==hash(expected)||report.rows.some(r=>r.automaticallyCalculated!==canAutomaticallyCalculate(r)))throw Error('Cash calculated result changed.');
 }
