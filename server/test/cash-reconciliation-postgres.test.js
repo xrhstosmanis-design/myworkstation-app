@@ -33,12 +33,12 @@ test('native automatic arithmetic reads real original fields and keeps document 
   const scope={companyId:'co',storeId:'store'},period={from:'2026-10-21',to:'2026-10-21'};
   const read=async()=>projectReconciliation(await readReconciliationSources(db,scope,period),[]);
   const report=await read(),a=report.rows.find(r=>r.sessionId==='a');
-  assert.equal(a.automaticAudit.status,'CALCULATED');assert.equal(a.automaticAudit.cashVarianceCents,-500);assert.equal(a.automaticAudit.bankCardVarianceCents,0);assert.equal(a.reviewed,false);assert.equal(a.remainingCents,-500);assert.equal(a.offsetCents,0);
+  assert.equal(a.automaticAudit.status,'CALCULATED');assert.equal(a.automaticAudit.cashVarianceCents,-500);assert.equal(a.automaticAudit.bankCardVarianceCents,0);assert.equal(a.reviewed,false);assert.equal(a.remainingCents,-500);assert.equal(a.offsetCents,0);assert.equal(a.automaticallyCalculated,true);assert.equal(report.calculatedResult.shortageCents,500);assert.equal(report.calculatedResult.automaticCount,1);assert.equal(report.calculatedResult.pending,1);
   assert.match(report.text,/έξοδο 25,00.*χωρίς παραστατικό/);assert(!report.rows.some(r=>r.sessionId==='control'));assert.equal(report.totals.shortageCents,0);
   assert.deepEqual(await db.$queryRaw`SELECT to_jsonb(s) AS row FROM "CashShiftSession" s ORDER BY "id"`,before);assert.deepEqual(await db.$queryRaw`SELECT to_jsonb(t) AS row FROM "StoreTransaction" t ORDER BY "id"`,txBefore);
   assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "CashControlReview"`)[0].n,0);
   await db.$executeRaw`UPDATE "CashShiftSession" SET "closingDrawer"=94 WHERE "id"='a'`;
-  const changed=await read(),changedA=changed.rows.find(r=>r.sessionId==='a');assert.equal(changedA.automaticAudit.status,'INCOMPLETE');assert.notEqual(changed.reportHash,report.reportHash);assert.equal(changedA.sourceHash,a.sourceHash,'new snapshot cannot rewrite old manual review identity');assert.equal(changedA.planHash,a.planHash);
+  const changed=await read(),changedA=changed.rows.find(r=>r.sessionId==='a');assert.equal(changedA.automaticAudit.status,'INCOMPLETE');assert.equal(changedA.automaticallyCalculated,false);assert.equal(changedA.recheck,true);assert.equal(changed.calculatedResult.automaticCount,0);assert.equal(changed.calculatedResult.pending,2);assert.notEqual(changed.reportHash,report.reportHash);assert.equal(changedA.sourceHash,a.sourceHash,'new snapshot cannot rewrite old manual review identity');assert.equal(changedA.planHash,a.planHash);
   assert.deepEqual((await db.$queryRaw`SELECT to_jsonb(s) AS row FROM "CashShiftSession" s WHERE "id"='control'`)[0].row,before.find(x=>x.row.id==='control').row);
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
