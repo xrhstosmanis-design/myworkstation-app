@@ -1,3 +1,11 @@
+## 30/10/2026 — POS-LOCK-CONVOY-20261030 / SOURCE CANDIDATE / AWAITING NATIVE CI
+
+Before-source transfer PR3300/head9270e8e002d654e3b77c2df7a6cc96830ea3c95a passed CI40964887697 and merged5c725c82296f085aaed4d36476ff5b05436de8c6 before runtime edits. Owner fix/pos-lock-convoy-20261030; source fix/store-transaction-bootstrap-lock-20261030.
+
+Bounded source adds only the nine exact existing StoreTransaction column definitions from the existing tableStatements to the current-client pg_attribute guard. Present columns skip redundant ALTER; absent columns retain identical original SQL; unknown ledger names/definitions/multi-action SQL retain the old path. No caller/business SQL, schema/index definition, pool/config/timeout, auth/session/rights or financial writer change. Existing helper integration already routes this caller through the guard. The long Sale reader itself remains separately OPEN; this slice prevents its demonstrated amplification through redundant ledger DDL, not every possible database stall.
+
+Local Node24.22.1 unit5PASS/0FAIL/0SKIP; native E2E syntax PASS. Required repository Node20/native PostgreSQL proof remains NOT EXECUTED locally. Expanded existing CI E2E replays all nine real ledger definitions alongside prior hot tables, compares original missing-schema definitions/retained records, observes the old AccessExclusiveLock waiter, verifies a third ordinary ledger SELECT also blocks, then verifies guarded checks take no exclusive lock and third reads succeed while the first reader stays open. Original concurrency/rollback/search-path/dropped/error fixtures remain. Full exact source PR/main CI and ordinary guarded release plus healthy exact revision/read-only lock/API acceptance REQUIRED. No permanent LAB/manual PASS or transaction replay.
+
 ## 30/10/2026 — POS-LOCK-CONVOY-20261030 / OWNER-APPROVED NARROW TRANSFER / BEFORE SOURCE
 
 ΑΝΑΛΗΨΗ ΑΠΟ codex/pos-startup-loading-20261008 — ASSIGNED fix/pos-lock-convoy-20261030, current POS incident conversation. Owner explicitly approved this named transfer on30Oct2026. Transfer covers ONLY preventing recurrence of the29Oct21:38–21:48UTC Sale reader / StoreTransaction existing-column ALTER lock convoy. Original wider performance/capacity/shutdown owners remain retained; no second parallel owner for this incident slice.
