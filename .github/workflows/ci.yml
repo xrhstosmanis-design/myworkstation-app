@@ -124,7 +124,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .node-version
       - name: Build isolated wholesale runtime and embedded database
         run: docker build --file ops/wholesale-lab/Dockerfile --tag mws-wholesale-lab:ci .
       - name: Start synthetic-only wholesale lab
@@ -209,7 +209,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .node-version
+      - name: Verify patched Node runtime policy
+        run: node tools/node-runtime/verify.mjs
       - name: Install dependencies
         run: npm install
       - name: Verify active list and checkpoint were updated
@@ -219,6 +221,8 @@ jobs:
         run: node tools/verify-checkpoint-policy.mjs "$BASE_SHA" "$HEAD_SHA"
       - name: Prepare server sources and generate Prisma client
         run: npm run build:server
+      - name: Exercise native image, PDF and generated client compatibility
+        run: node tools/node-runtime/smoke.mjs
       - name: Build the actual PostgreSQL 18 recovery image
         run: docker build --file ops/backup/Dockerfile --tag mws-lifecycle-recovery:ci .
       - name: Use matching native PostgreSQL 16 recovery tools

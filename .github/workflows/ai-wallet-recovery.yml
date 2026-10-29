@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .node-version
       - run: npm install
       - run: npx prisma generate --schema server/prisma/schema.prisma
       - name: Build actual PG18 recovery image

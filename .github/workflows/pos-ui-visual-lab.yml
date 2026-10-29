@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: .node-version
       - run: npm install --ignore-scripts --include=dev --no-audit --no-fund
       - run: node --test server/test/pos-ui-v2-visual-lab.test.js
       - run: node ops/pos-ui-lab/build.mjs

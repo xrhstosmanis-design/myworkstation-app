@@ -1,0 +1,41 @@
+{
+  "sourceBase": "69198a7c2d1b41d1d1dd24ddccf9cfb958dee8fa",
+  "claimMerge": "9ffd833e133295d0f1b87ba1f6d2f305feee7345",
+  "node": "22.23.4",
+  "localServerSuite": {
+    "tests": 4413,
+    "pass": 4110,
+    "fail": 0,
+    "skipped": 303,
+    "nativeInfrastructure": "NOT TESTED locally"
+  },
+  "productionBuild": "PASS",
+  "nativeSmoke": {
+    "sharpResizePng": "PASS",
+    "serverPdfText": "PASS",
+    "clientPdfText": "PASS",
+    "prismaGeneratedConstructor": "PASS; no DB connect",
+    "tesseract": "module load ONLY; recognition NOT TESTED"
+  },
+  "production": {
+    "deployment": "NONE by this work",
+    "latestReadOnlyDeploy": "dep-dbhrdougekts73c4u4fg",
+    "revision": "ce5ec3a6b37c3844aa57298a88a787ed05ec1def",
+    "buildLogNode": "20.20.2",
+    "observedAt": "2026-10-29T21:13:26.928695949Z"
+  },
+  "files": {
+    "local-node22-tests.tap": {
+      "bytes": 1255038,
+      "sha256": "554f8e9ad800bad09437302ca123d428e90e3cd3eb7eccbc8b4d36f7ac120453"
+    },
+    "local-production-build.log": {
+      "bytes": 12421,
+      "sha256": "211858f46eed425d5a73051dd05c95eff16006c1b2be707ad9189e6fa301a561"
+    },
+    "local-native-pdf-smoke.log": {
+      "bytes": 822,
+      "sha256": "f177bbf033e2faf008f15208ee9705a066577469fa92d98e71923b51954ab3af"
+    }
+  }
+}
