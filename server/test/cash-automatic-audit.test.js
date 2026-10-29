@@ -50,5 +50,5 @@ test('handoff mismatches and the last shift stay open without suppressing a know
 test('a safe movement is an open document question, not another cash deduction; mode and fingerprints retain provenance',()=>{
  const input=fixture(),before=assessAutomaticCash(input);input.session.closingSafe=300;const after=assessAutomaticCash(input);assert.notEqual(after.fingerprint,before.fingerprint);assert.equal(after.cashVarianceCents,-500);assert(after.openIssues.includes('SAFE_MOVEMENT_REQUIRES_DOCUMENT'));
  assert.equal(assessAutomaticCash({...input,rule:{mode:'POS_EFTPOS_ONLY'}}).status,'NOT_APPLICABLE');
- const difference=assessAutomaticCash({...input,rule:{mode:'DIFFERENCE_ONLY',carryOverEnabled:false}});assert(!difference.checks.some(c=>c.code.endsWith('_HANDOFF')));
+ const difference=assessAutomaticCash({session:{id:'difference-only',variance:-7},transactions:undefined,rule:{mode:'DIFFERENCE_ONLY',carryOverEnabled:false}});assert.equal(difference.status,'NOT_APPLICABLE');assert.deepEqual(difference.checks,[]);assert.deepEqual(difference.openIssues,[]);
 });

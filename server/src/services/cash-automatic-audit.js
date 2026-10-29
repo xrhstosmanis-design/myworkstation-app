@@ -25,7 +25,9 @@ export function assessAutomaticCash({session,transactions,previous=null,next=nul
  const fingerprint=hash({version:1,session,transactions,previous,next,rule,sourceValid});
  const finish=(status,cash=null,card=null,iris=null)=>automaticCashAuditSchema.parse({version:1,status,fingerprint,cashVarianceCents:cash,bankCardVarianceCents:card,irisCents:iris,checks,openIssues:[...issues],financialAdjustmentCents:0,humanApproval:false});
  if(!['FULL','DIFFERENCE_ONLY','POS_EFTPOS_ONLY'].includes(rule?.mode)||rule.mode==='FULL'&&typeof rule.carryOverEnabled!=='boolean'){issue('SOURCE_INCOMPLETE');return finish('INCOMPLETE');}
- if(rule?.mode==='POS_EFTPOS_ONLY')return finish('NOT_APPLICABLE');
+ // Difference-only stores retain their authoritative variance-column rule;
+ // they must not silently acquire FULL operational-cash requirements.
+ if(rule.mode!=='FULL')return finish('NOT_APPLICABLE');
  if(!session?.id||!session.companyId||!session.storeId||!session.terminalPos||session.status!=='CLOSED'||!Number.isFinite(at(session.openedAt))||!Number.isFinite(at(session.closedAt))||at(session.closedAt)<at(session.openedAt)||!Array.isArray(transactions)||transactions.length>500){issue('SOURCE_INCOMPLETE');return finish('INCOMPLETE');}
  if(!sourceValid)issue('SOURCE_CHANGED');
  compare('OPENING',sum(['openingDrawer','openingCustody','openingCoins'].map(value)),value('openingOperational'));
