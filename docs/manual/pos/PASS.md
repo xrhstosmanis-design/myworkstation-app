@@ -1,3 +1,13 @@
+## 29/10/2026 - CITIZEN CT-S310II: περιορισμένο USER PASS μέσω Acrobat
+
+Ο Χρήστος επιβεβαίωσε φυσικό καρτελάκι ΝΕΡΟ500ML / EAN5201219000118 /0,50EUR και κανονικό αυτόματο σταμάτημα («Μόνος του κανονικά»). Η φωτογραφία δείχνει τίτλο, barcode και τιμή. Δεν έχει ελεγχθεί ανάγνωση αυτού του τυπωμένου barcode με σαρωτή. Συσκευή TZ30-M01 / CT-S310IIETEBK, Windows queue CITIZEN CT-S310II, συνεχόμενο ρολό80mm.
+
+Εξουσιοδοτημένος χρήστης στο επιλεγμένο κατάστημα ανοίγει την υπάρχουσα προεπισκόπηση ετικέτας και αποθηκεύει το PDF. Ανοίγει το PDF στο Adobe Acrobat Reader, Ctrl+P, επιλέγει CITIZEN CT-S310II, Advanced > Print As Image, Properties > Για προχωρημένους > MyWorkStation-80x40, OK, Actual size και1αντίγραφο. Ελέγχει προεπισκόπηση3,15x1,58in πριν από μία εκτύπωση. Κριτήριο του συγκεκριμένου PASS: ορατό περιεχόμενο στο χαρτί και κανονικό σταμάτημα, επιβεβαιωμένα από τον ιδιοκτήτη. Η μορφή80x40 αφορά φυσικό χαρτί· η ίδια η ετικέτα παραμένει περίπου60x40mm.
+
+Η απευθείας εκτύπωση Chrome/Edge απέτυχε με συνεχόμενο λευκό χαρτί και παραμένει OPEN. Μην επαναλαμβάνετε αυτές τις ρυθμίσεις ως λύση browser. Αν ξεκινήσει συνεχόμενη τροφοδοσία, κλείστε τον εκτυπωτή και ακυρώστε την εργασία πριν από νέα ενεργοποίηση. Το παρόν δεν αλλάζει ρυθμίσεις/δικαιώματα άλλου καταστήματος, δεν δημιουργεί πώληση/πληρωμή/stock/fiscal και δεν πιστοποιεί άλλα μοντέλα. Ο οδηγός εγκαταστάθηκε από την επίσημη Citizen πηγή και η σελίδα Windows τυπώθηκε, αλλά η ακριβής τοπική έκδοση/hash δεν μετρήθηκε ανεξάρτητα. Νέα raster διόρθωση δεν λαμβάνει PASS από αυτό το workaround.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-10-29-citizen-label-raster.md.
+
 ## 22/10/2026 — KAT saved photo-key layout / LIMITED REAL CONFIGURATION PASS
 
 Actual KAT store now uses saved StorePosLayoutv3702, published once by authorized PlatformSuperAdmin after merged LAB receipt3005. Store-level layout is common to KAT POS terminals: perform normal Ανανέωση on each empty/idle POS to load it.20quick positions (15assigned/5blank),20category positions (16named/4blank) and7beveragechildren refer to242existing active KAT products. Native saved template and full independent readback match reviewed order/identities; existing MyWorkStation palette retained. Exact real publication10:07:35.196225UTC22Oct; shared runtime verified1b98d90f (source2983/20d99045 ancestor).
