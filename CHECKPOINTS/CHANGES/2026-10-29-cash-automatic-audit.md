@@ -1,3 +1,13 @@
+## 29/10/2026 — Reconciliation publication scope
+
+Current-main reconciliation retains all other owners' fresh tracker/pending/PDF bytes. The approved main assignment3277 is unchanged; this is a candidate update, not a new claim or PASS. Only an appended active pointer and this exact checkpoint accompany the unchanged ten cash runtime/test blobs, avoiding repeated conflicts with simultaneous top-of-registry updates and PDF generation. Actual PASS still requires the five synchronized records/manual/PDF. Earlier intended prepending/regeneration below describes a local preparation, superseded by this publication scope; no source gate or CI is waived.
+
+## 29/10/2026 — CASH-AUTOMATIC-AUDIT-12 / FIRST EXACT PR CI PASS / CURRENT-MAIN RECONCILIATION / NOT INSTALLED
+
+Source3278 final7bc3baffd3c78ec81eb4cf68d82388e4f22cc44a passed fullCI40948052166/job123709823842:4582server+8backup PASS,0FAIL/0SKIP. New native automatic-original/control/zero-review-write proof executed unskipped (ok730,20:25:35UTC), existing reviewed-native ok731 and automatic-native ok777 retained. The obsolete b775fa run40947730444 was automatically cancelled after the newer source, not a PASS. Difference-only/POS-only rules retain their existing variance policy; FULL arithmetic must not override them.
+
+Before source merge, main advanced through central BackOffice scoped claims, Citizen raster750c256 and chat first-entry6fb7e55. The merge was refused for shared-document conflicts; no force or safeguard bypass. All these other owners' runtime/docs are preserved, with only the current cash candidate text prepended to fresh tracker/active/pending and regenerated PDF. Own ten runtime/test blobs are unchanged from tested7bc3baf. Exact CI of the reconciled head, main CI, ordinary guarded release and actual read-only LAB still required. No new LAB PASS, financial/review action, settings change or email. Same cash owner retained; broader automatic business residual stays OPEN.
+
 ## 29/10/2026 — CASH-AUTOMATIC-AUDIT-12 / SOURCE CANDIDATE / NOT INSTALLED / AWAITING NATIVE CI AND LAB
 
 Retained cash owner codex/cash-chat-reconciliation-20261026. Before-source claim3277 final7f0e8ba passed documentation CI40946178621 (classifier and both Windows jobs SUCCESS; runtime jobs correctly skipped), merged d0829f1 before any source/test edit. Source branch feat/cash-automatic-audit-20261029 preserves concurrent invoice projection, Citizen raster, chat first-entry and central BackOffice access ownership; fresh source baseline323eea3.

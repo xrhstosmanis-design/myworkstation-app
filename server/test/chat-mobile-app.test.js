@@ -12,7 +12,7 @@ function mobile(db){
 }
 function operator(db){
  const source=fs.readFileSync(new URL("../src/chat-operator-auth.mjs",import.meta.url),"utf8").replace(/^import .*;\n/gm,"").replace(/^export /gm,"");
- return new Function("prisma","crypto",source+";return {authorizeChatOperator,chatCredentialStamp};")(db,crypto);
+ return new Function("prisma","crypto","chatEnabled",source+";return {authorizeChatOperator,chatCredentialStamp};")(db,crypto,async()=>true);
 }
 test("all stores install one stable app and root worker, without private manifest data",()=>{
  const manifest=chatManifest("A");assert.deepEqual(chatManifest("B"),manifest);assert.equal(manifest.id,"/chat/");assert.equal(manifest.start_url,"/chat/");assert.equal(manifest.scope,"/chat/");assert.equal(manifest.display,"standalone");

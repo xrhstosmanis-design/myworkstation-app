@@ -43,6 +43,7 @@ public final class MainActivity extends Activity {
     private final RequestEpoch epoch = new RequestEpoch();
     private TokenVault vault, pendingTwoFactor;
     private String pushStore = "", pushCompany = "";
+    private String entryStore = "";
     private String token = "", challenge = "", view = "login", tab = "chat", photoBinding = "", photoToken = "";
     private JSONObject identity = new JSONObject(), selected;
     private JSONArray history = new JSONArray();
@@ -72,6 +73,8 @@ public final class MainActivity extends Activity {
     private Bitmap preview;
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
+            if (foreground && needsChatRenewal() && selected != null && view.equals("conversation") && !busy)
+                call("/api/store-chat/stores/" + enc(identity.optString("storeId")) + "/mobile-renew", "POST", object(), false, MainActivity.this::saveRenewedConnection);
             if (foreground && !token.isEmpty() && selected != null && view.equals("conversation") && tab.equals("chat") && !busy) loadMessages(false);
             if (foreground) ui.postDelayed(this, 10000);
         }
@@ -85,6 +88,7 @@ public final class MainActivity extends Activity {
         vault = new TokenVault(this); pendingTwoFactor = TokenVault.pendingTwoFactor(this); token = vault.load();
         if (token.isEmpty()) restoreTwoFactor(); else clearTwoFactor();
         receivePushIntent(getIntent());
+        receiveStoreEntry(getIntent());
         if (!token.isEmpty()) {
             try { identity = claims(token); if (identity.optLong("exp") * 1000L <= System.currentTimeMillis()) clearSession(); }
             catch (Exception ignored) { clearSession(); }
@@ -92,8 +96,9 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onResume() {
         super.onResume(); foreground = true;
-        if (!token.isEmpty() && NativePush.opted(this)) NativePush.register(this, token, ok -> {});
-        if (token.isEmpty()) { restoreTwoFactor(); loginScreen(); }
+        if (!token.isEmpty() && NativePush.opted(this) && !needsChatRenewal()) NativePush.register(this, token, ok -> {});
+        if (token.isEmpty()) { restoreTwoFactor(); if (!entryStore.isEmpty()) openEntryStore(); else loginScreen(); }
+        else if (needsChatRenewal()) renewChatConnection();
         else if (!pushStore.isEmpty()) stores();
         else if (selected != null) conversation();
         else stores();
@@ -165,7 +170,7 @@ public final class MainActivity extends Activity {
         if (user == null || user.optBoolean("mustChangePassword")) { status("Χρειάζεται αλλαγή προσωρινού κωδικού από το Backoffice."); return; }
         String next = result.getString("token"); JSONObject decoded = claims(next);
         if (!decoded.optString("tokenType").equals("BACKOFFICE_USER") && !decoded.optString("tokenType").equals("STORE_CHAT_OPERATOR")) throw new IllegalArgumentException();
-        NativePush.clearNotifications(this); vault.save(next); navigate(); token = next; identity = decoded; clearTwoFactor(); selected = null; stores();
+        NativePush.clearNotifications(this); vault.save(next); navigate(); token = next; identity = decoded; clearTwoFactor(); entryStore = ""; selected = null; stores();
     }
     private void restoreTwoFactor() {
         String saved = pendingTwoFactor.load();
@@ -195,6 +200,7 @@ public final class MainActivity extends Activity {
         content.addView(text("Δοκιμαστική έκδοση · Οι ειδοποιήσεις με κλειστή εφαρμογή δεν έχουν ακόμη συνδεθεί.", 14, MUTED));
     }
     private void operatorEntry() {
+        entryStore = "";
         view = "operator"; layout("Προσωπικό καταστήματος", "Σύνδεση μόνο στο δικό σου Chat");
         EditText link = input("Σύνδεσμος Chat από τον υπεύθυνο", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI, 500); content.addView(link);
         content.addView(button("Εύρεση καταστήματος", () -> {
@@ -207,8 +213,47 @@ public final class MainActivity extends Activity {
         }));
         content.addView(button("Πίσω", this::loginScreen));
     }
+    private void receiveStoreEntry(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return;
+        String hint = StoreEntry.parse(intent.getDataString());
+        intent.setData(null);
+        if (token.isEmpty() && challenge.isEmpty() && !hint.isEmpty()) entryStore = hint;
+    }
+    private void openEntryStore() {
+        final String storeId = entryStore;
+        view = "operator"; layout("Σύνδεση στο κατάστημα", "Επίλεξε το όνομά σου και το προσωπικό σου PIN");
+        content.addView(button("Άλλος τρόπος σύνδεσης", () -> { entryStore = ""; navigate(); loginScreen(); }));
+        call("/api/operators/stores/" + enc(storeId) + "/directory", "GET", null, true, data -> {
+            if (entryStore.equals(storeId)) operatorPin(storeId, data);
+        });
+    }
+    private void renewChatConnection() {
+        layout("Σύνδεση Chat", "Επαναφορά της σύνδεσής σου…");
+        call("/api/store-chat/stores/" + enc(identity.optString("storeId")) + "/mobile-renew", "POST", object(), false, data -> {
+            saveRenewedConnection(data);
+            if (selected != null) conversation(); else stores();
+        });
+        content.addView(button("Συνέχεια χωρίς ανανέωση", () -> { navigate(); stores(); }));
+    }
+    private boolean needsChatRenewal() {
+        return !token.isEmpty() && staff() && identity.optLong("exp") * 1000L - System.currentTimeMillis() < 29L * 86400000L;
+    }
+    private void saveRenewedConnection(JSONObject data) throws Exception {
+        String next = data.getString("token"); JSONObject decoded = claims(next);
+        if (!decoded.optString("tokenType").equals("STORE_CHAT_OPERATOR")
+            || !decoded.optString("id").equals(identity.optString("id"))
+            || !decoded.optString("companyId").equals(identity.optString("companyId"))
+            || !decoded.optString("chatSessionId").equals(identity.optString("chatSessionId"))
+            || !decoded.optString("storeId").equals(identity.optString("storeId"))
+            || decoded.optLong("exp") * 1000L <= System.currentTimeMillis()) throw new IllegalArgumentException();
+        vault.save(next); token = next; identity = decoded;
+        if (NativePush.opted(this)) NativePush.register(this, token, ok -> {});
+    }
     private void operatorPin(String storeId, JSONObject data) {
         layout("Προσωπικό PIN", "Μόνο συνομιλία καταστήματος");
+        JSONObject entry = data.optJSONObject("store");
+        if (entry == null || !storeId.equals(entry.optString("id"))) { status("Δεν επιβεβαιώθηκε το κατάστημα."); return; }
+        content.addView(text(entry.optString("name"), 24, INK));
         JSONArray operators = data.optJSONArray("operators"); if (operators == null) operators = data.optJSONArray("rows");
         ArrayList<String> names = new ArrayList<>(), ids = new ArrayList<>();
         if (operators != null) for (int n = 0; n < operators.length(); n++) { JSONObject row = operators.optJSONObject(n); if (row != null && row.optBoolean("hasPin")) { names.add(row.optString("displayName")); ids.add(row.optString("employeeId")); } }
@@ -715,7 +760,7 @@ public final class MainActivity extends Activity {
         clearSession(); loginScreen();
         worker.execute(() -> { try { api.json(path, "POST", object(), captured); } catch (Exception ignored) { /* Never retain content or credential to retry later. */ } });
     }
-    private void clearSession() { NativePush.logout(this); pushStore = ""; pushCompany = ""; navigate(); token = ""; identity = new JSONObject(); selected = null; uncertainStoreId = ""; try { clearTwoFactor(); vault.clear(); } catch (Exception ignored) { finishAndRemoveTask(); } }
+    private void clearSession() { entryStore = ""; NativePush.logout(this); pushStore = ""; pushCompany = ""; navigate(); token = ""; identity = new JSONObject(); selected = null; uncertainStoreId = ""; try { clearTwoFactor(); vault.clear(); } catch (Exception ignored) { finishAndRemoveTask(); } }
     private void enableNativePush() {
         if (busy || token.isEmpty()) return;
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -731,6 +776,8 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent); receivePushIntent(intent);
+        receiveStoreEntry(intent);
+        if (token.isEmpty() && foreground && !entryStore.isEmpty()) { navigate(); openEntryStore(); return; }
         if (!pushStore.isEmpty() && foreground) { navigate(); selected = null; stores(); }
     }
     @Override public void onBackPressed() {
