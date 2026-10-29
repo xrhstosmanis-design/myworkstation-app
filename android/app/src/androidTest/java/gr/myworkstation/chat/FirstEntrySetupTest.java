@@ -42,11 +42,13 @@ public class FirstEntrySetupTest {
     }
     private void set(MainActivity a,String name,Object value) throws Exception {Field f=MainActivity.class.getDeclaredField(name);f.setAccessible(true);f.set(a,value);}
     private boolean visible(View v,String text){if(v instanceof TextView&&((TextView)v).getText().toString().contains(text))return true;if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++)if(visible(((ViewGroup)v).getChildAt(i),text))return true;return false;}
+    private boolean click(View v,String text){if(v instanceof TextView&&((TextView)v).getText().toString().equals(text)){v.performClick();return true;}if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++)if(click(((ViewGroup)v).getChildAt(i),text))return true;return false;}
     private void await(ActivityScenario<MainActivity> s,String text) throws Exception {for(int i=0;i<100;i++){boolean[] ok={false};s.onActivity(a->ok[0]=visible(a.getWindow().getDecorView(),text));if(ok[0])return;Thread.sleep(50);}fail("Missing fixture view: "+text);}
     @Test public void linkOpensVerifiedStorePinScreenAndNeverReplacesSignedInAccount() throws Exception {
         FixtureApi api=new FixtureApi();try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){
             s.onActivity(a->{try{set(a,"api",api);a.onNewIntent(new Intent(Intent.ACTION_VIEW,Uri.parse("myworkstation-chat://store/fixture-store")));}catch(Exception e){throw new AssertionError(e);}});
             await(s,"Fixture shop");assertEquals(1,api.paths.size());assertEquals("GET /api/operators/stores/fixture-store/directory",api.paths.get(0));
+            s.onActivity(a->{try{assertTrue(click(a.getWindow().getDecorView(),"Πίσω"));Field hint=MainActivity.class.getDeclaredField("entryStore");hint.setAccessible(true);assertEquals("",hint.get(a));}catch(Exception e){throw new AssertionError(e);}});
             s.onActivity(a->{try{String value=token(30*86400);set(a,"token",value);set(a,"identity",new JSONObject(new String(Base64.decode(value.split("\\.")[1],Base64.URL_SAFE),StandardCharsets.UTF_8)));a.onNewIntent(new Intent(Intent.ACTION_VIEW,Uri.parse("myworkstation-chat://store/other-store")));Field f=MainActivity.class.getDeclaredField("token");f.setAccessible(true);assertEquals(value,f.get(a));}catch(Exception e){throw new AssertionError(e);}});
             assertEquals(1,api.paths.size());
         }
