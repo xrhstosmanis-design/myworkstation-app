@@ -1,3 +1,7 @@
+## 29/10/2026 - CI harness correction / physical acceptance still OPEN
+
+First PRCI40941823064/job123687430344 was cancelled at the15minute job limit after npm install consumed9m18s. Logs also reveal a genuine NEW TEST HARNESS FAIL: ZXing bundling used process.cwd()/client while npm test runs from server/. This was not a runtime/hardware failure, and the cancelled run is not PASS. Correct the test resolveDir to import.meta.url-relative repository client directory, without weakening barcode assertions or changing runtime source/CI policy. Same actual Node20/Chromium8checks now PASS/0FAIL/0SKIP when launched from server/, reproducing the CI working directory. Requested initial job retry before the harness failure was discovered; new corrected head supersedes/cancels that retry. Fresh full head CI is mandatory. Minified bundled renderer also independently decoded successfully in actual Chromium. No physical reprint or new USER PASS.
+
 ## 29/10/2026 - CITIZEN-LABEL-RASTER-01 / RASTER SOURCE CANDIDATE / AWAITING CI AND PHYSICAL LAB
 
 Before-source claim PR3271/headbd0790c5 passed applicable documentation CI40941136484 (classification and both Windows jobs; source suites correctly not applicable), mergedfa520203060d4f0ab31ac41d4bfbc458b8a8fddd before source. Same retained device owner; implementation branch fix/citizen-label-raster-source-20261029. The original claim/manual entry records actual scanner-after-install and Acrobat USER PASS, while direct Chrome/Edge USER FAIL remains authoritative.

@@ -4,6 +4,7 @@ import {existsSync} from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import {writeEan13Label} from '../../client/src/utils/ean13-label.js';
 import {renderPosFixture} from './helpers/pos-ui-browser.mjs';
@@ -24,7 +25,7 @@ test('raster label bounds paper sizes and escapes text without a network/vector 
 test('actual Chromium renders one decoded raster, readable EAN, fixed paper and explicit printing only',{skip:!chrome,timeout:90000},async()=>{
  const temp=await fs.mkdtemp(path.join(os.tmpdir(),'mws-label-raster-'));
  try{
-  await build({stdin:{contents:"import{MultiFormatReader,RGBLuminanceSource,BinaryBitmap,HybridBinarizer}from'@zxing/library';window.readBarcode=(canvas)=>{const c=canvas.getContext('2d'),p=c.getImageData(0,0,canvas.width,canvas.height).data,l=new Uint8ClampedArray(canvas.width*canvas.height);for(let i=0;i<l.length;i++)l[i]=(p[i*4]+2*p[i*4+1]+p[i*4+2])/4;return new MultiFormatReader().decode(new BinaryBitmap(new HybridBinarizer(new RGBLuminanceSource(l,canvas.width,canvas.height)))).getText()};",resolveDir:path.resolve('client'),loader:'js'},bundle:true,format:'iife',outfile:path.join(temp,'decoder.js'),logLevel:'error'});
+  await build({stdin:{contents:"import{MultiFormatReader,RGBLuminanceSource,BinaryBitmap,HybridBinarizer}from'@zxing/library';window.readBarcode=(canvas)=>{const c=canvas.getContext('2d'),p=c.getImageData(0,0,canvas.width,canvas.height).data,l=new Uint8ClampedArray(canvas.width*canvas.height);for(let i=0;i<l.length;i++)l[i]=(p[i*4]+2*p[i*4+1]+p[i*4+2])/4;return new MultiFormatReader().decode(new BinaryBitmap(new HybridBinarizer(new RGBLuminanceSource(l,canvas.width,canvas.height)))).getText()};",resolveDir:fileURLToPath(new URL('../../client/',import.meta.url)),loader:'js'},bundle:true,format:'iife',outfile:path.join(temp,'decoder.js'),logLevel:'error'});
   for(const [widthMm,heightMm,fail]of[[60,40,false],[30,25,false],[100,80,false],[60,40,true]]){
    const html=htmlFor({...label,productName:'ΝΕΡΟ 500ML </script><script>window.pwned=true</script>',settings:{widthMm,heightMm}});
    const stub=`<script>window.printCalls=0;window.networkCalls=0;window.print=()=>window.printCalls++;window.fetch=()=>{window.networkCalls++;throw Error('network')};${fail?"HTMLImageElement.prototype.decode=()=>Promise.reject(Error('fixture decode failure'));":''}</script><script src="decoder.js"></script>`;
