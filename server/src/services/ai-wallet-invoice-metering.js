@@ -25,7 +25,9 @@ export function createInvoiceWalletMeter({repository=aiOwnerWalletRepository,env
   const context=new AsyncLocalStorage();
   const active=()=>env.AI_OWNER_WALLET_ENABLED==='true'&&env.AI_OWNER_WALLET_INVOICES_ENABLED==='true';
   const requiredScope=()=>{const scope=context.getStore();if(!scope)throw walletError('AI_WALLET_SCOPE_DENIED',403);return scope};
-  const meter=createWalletProvider({repository,enabled:active,tariffs:()=>env.AI_OWNER_WALLET_TARIFFS});
+  // Dedicated invoice schedules can be installed without replacing the Owner
+  // assistant's already accepted tariff. Legacy configuration stays compatible.
+  const meter=createWalletProvider({repository,enabled:active,tariffs:()=>env.AI_OWNER_WALLET_INVOICE_TARIFFS??env.AI_OWNER_WALLET_TARIFFS});
   function run(scope,work){
     if(!active())return work();
     if(!scope||!['companyId','storeId'].every(k=>typeof scope[k]==='string'&&scope[k].trim()&&scope[k].length<=160))throw walletError('AI_WALLET_SCOPE_DENIED',403);
@@ -48,7 +50,7 @@ export function createInvoiceWalletMeter({repository=aiOwnerWalletRepository,env
   async function azure({contentData,mimeType,model,apiVersion},invoke){
     if(!active())return invoke(()=>{});
     const scope=requiredScope();if(!await repository.enabledFor(scope.companyId))return invoke(()=>{});
-    let tariffs;try{tariffs=z.array(pageTariffSchema).max(20).parse(JSON.parse(env.AI_OWNER_WALLET_AZURE_TARIFFS||'[]'))}catch{throw walletError('AI_WALLET_TARIFF_REQUIRED',409)}
+    let tariffs;try{tariffs=z.array(pageTariffSchema).max(20).parse(JSON.parse(env.AI_OWNER_WALLET_INVOICE_AZURE_TARIFFS??env.AI_OWNER_WALLET_AZURE_TARIFFS??'[]'))}catch{throw walletError('AI_WALLET_TARIFF_REQUIRED',409)}
     const matches=tariffs.filter(t=>t.model===model&&t.apiVersion===apiVersion);if(matches.length!==1)throw walletError('AI_WALLET_TARIFF_REQUIRED',409);
     const tariff={...matches[0],billingUnit:'PAGES',currency:'EUR'},pages=await countPages([{contentData,mimeType}]);
     if(!Number.isInteger(pages)||pages<1||pages>tariff.maxPages)throw walletError('AI_WALLET_INVALID_INPUT',400);

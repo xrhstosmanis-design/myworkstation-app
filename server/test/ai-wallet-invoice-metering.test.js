@@ -106,4 +106,15 @@ test('invoice count failure cannot enter paid fallback, reserve money or affect 
  await f.meter.run(scope,()=>f.meter.azure({...page},async mark=>{mark('synthetic-azure-operation');return azurePayload}));
  assert.equal(f.events[0].amountMicros,80n);assert.equal(f.events[1].amountMicros,80n);
 });
+test('dedicated invoice schedules override only invoice prices and an invalid dedicated schedule never silently uses the Owner rate',async()=>{
+ const configuration={...env,AI_OWNER_WALLET_INVOICE_TARIFFS:JSON.stringify([{...token,inputMicrosPerMillion:2000000}]),AI_OWNER_WALLET_INVOICE_AZURE_TARIFFS:JSON.stringify([{...page,unitMicros:60}])};
+ const f=fixture({configuration});await f.meter.run(scope,()=>f.meter.responsesFetch(url,options));
+ assert.equal(f.events[1].amountMicros,13n);
+ await f.meter.run(scope,()=>f.meter.azure({...page},async mark=>{mark('dedicated-price-operation');return azurePayload}));assert.equal(f.events[3].amountMicros,120n);
+ assert.equal(configuration.AI_OWNER_WALLET_TARIFFS,env.AI_OWNER_WALLET_TARIFFS);
+ for(const bad of ['[]','not JSON']){
+  const g=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_TARIFFS:bad}});
+  await assert.rejects(g.meter.run(scope,()=>g.meter.responsesFetch(url,options)),e=>e.code==='AI_WALLET_TARIFF_REQUIRED');assert.equal(g.events.length,0);
+ }
+});
 

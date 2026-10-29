@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {countInvoiceInput} from '../src/services/ai-invoice-input-count.js';
 import {reserveAmount,reserveRequestAmount,tariffFor} from '../src/services/ai-owner-wallet-contract.js';
 import {createWalletProvider} from '../src/services/ai-owner-wallet-provider.js';
+import {readFileSync} from 'node:fs';
 
 const tariff={model:'synthetic',inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:100000,outputMicrosPerMillion:2000000,contextTokens:100000,maxOutputTokens:30000};
 const scope={companyId:'c',storeId:'s',feature:'INVOICE_OPENAI'};
@@ -83,4 +84,13 @@ test('invalid/unavailable/aborted count responses fail safely without leaking pr
   }
   const abort=new AbortController();abort.abort();let calls=0;
   await assert.rejects(countInvoiceInput(settings,{...options,signal:abort.signal},async()=>{calls++}),e=>e.code==='AI_WALLET_INPUT_COUNT_REQUIRED');assert.equal(calls,0);
+});
+test('invoice reference candidate validates exact aliases/cache tiers and bounds a small request without reducing model capacity',()=>{
+  const candidate=JSON.parse(readFileSync(new URL('../../CHECKPOINTS/EVIDENCE/ai-owner-wallet-20261022/invoice-tariff-candidate-20261029.json',import.meta.url),'utf8'));
+  assert.equal(candidate.status,'REFERENCE_CANDIDATE_NOT_APPLIED');assert.equal(candidate.azure.accountPriceVerified,false);
+  const rows=candidate.config.AI_OWNER_WALLET_INVOICE_TARIFFS;
+  assert.deepEqual(rows.map(row=>row.model),['gpt-5','gpt-5-mini','gpt-5.6-sol']);
+  for(const row of rows){const price=tariffFor(row.model,JSON.stringify(rows));assert.ok(reserveRequestAmount(price,{inputTokens:10000,maxOutputTokens:30000})<10000000n)}
+  const sol=tariffFor('gpt-5.6-sol',JSON.stringify(rows));assert.equal(sol.contextTokens,1050000);assert.equal(sol.maxOutputTokens,128000);assert.ok(reserveAmount(sol)>10000000n);
+  assert.equal(candidate.config.AI_OWNER_WALLET_INVOICE_AZURE_TARIFFS[0].unitMicros,13200);
 });
