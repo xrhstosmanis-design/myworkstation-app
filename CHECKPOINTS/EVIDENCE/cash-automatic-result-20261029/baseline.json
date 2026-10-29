@@ -1,0 +1,26 @@
+{
+  "observedAt": "2026-10-29T21:14:01.558666+00:00",
+  "revision": "86a5b5b32cdcf9942044b48b608be5fc52e49ed0",
+  "period": {
+    "from": "2026-10-29",
+    "to": "2026-10-29"
+  },
+  "lab": {
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+    "closedShifts": 1,
+    "operator": "LAB POS 2",
+    "terminal": "MAIN",
+    "originalCashCents": -940,
+    "originalCardCents": 0,
+    "manualPending": 1,
+    "manualReviewWritten": false
+  },
+  "control": {
+    "name": "N40 CONTROL 20261010",
+    "closedShifts": 0,
+    "cashCents": 0,
+    "cardCents": 0
+  },
+  "actions": "Read-only UI selection and display. Copy click returned empty clipboard; report text recorded from rendered DOM. No copy PASS claimed. No approval, transaction, settings, provider or real email."
+}

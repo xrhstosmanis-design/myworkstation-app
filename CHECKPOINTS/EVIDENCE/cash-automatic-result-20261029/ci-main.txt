@@ -1,0 +1,14 @@
+2026-10-29T21:40:42.6882298Z ok 737 - original image preparation decodes bounded pixels; broken image/PDF fail before provider dispatch
+2026-10-29T21:40:42.7119929Z # Subtest: native automatic arithmetic reads real original fields and keeps document issues, original finance and control unchanged
+2026-10-29T21:40:42.7120870Z ok 749 - native automatic arithmetic reads real original fields and keeps document issues, original finance and control unchanged
+2026-10-29T21:40:42.7225868Z ok 784 - actual archive GET checks selected store, current evidence-module admission and bound receipt; returns a real workbook without writers or diagnostics
+2026-10-29T21:40:42.7259282Z # Subtest: isolated postgres reviewed offset and confirmations feed exact business shifts without writes
+2026-10-29T21:40:42.7260062Z ok 796 - isolated postgres reviewed offset and confirmations feed exact business shifts without writes
+2026-10-29T21:43:54.5308782Z # tests 4634
+2026-10-29T21:43:54.5309112Z # pass 4634
+2026-10-29T21:43:54.5309276Z # fail 0
+2026-10-29T21:43:54.5309605Z # skipped 0
+2026-10-29T21:44:37.4513866Z # tests 8
+2026-10-29T21:44:37.4514437Z # pass 8
+2026-10-29T21:44:37.4515650Z # fail 0
+2026-10-29T21:44:37.4516194Z # skipped 0
