@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { auth } from "../middleware/auth.js";
+import {staffAccount,staffError} from '../services/backoffice-staff-access.js';
 import {createN40SupportHistoryHandler} from "../services/n40-support-history.mjs";
 import {
   buildOtpAuthUri,
@@ -57,10 +58,13 @@ async function audit(req,{userId=null,email,event,success,deviceName=null}){
   }).catch(()=>{});
 }
 
-async function issueSession(user,req,deviceName){
+export async function issueSession(user,req,deviceName,db=prisma){
   assertCustomerDemoRuntimeClosed(user);
+  const account=user.role==='EMPLOYEE'?await staffAccount(db,user):null;
+  if((account&&!account.active)||(!account&&user.email?.endsWith('@staff.myworkstation.invalid')))throw staffError(403,'STAFF_ACCESS_DENIED','Η προσωπική πρόσβαση δεν είναι ενεργή.');
+  const staffAccess=Boolean(account);
   const expiresAt=new Date(Date.now()+SESSION_HOURS*60*60*1000);
-  const session=await prisma.userSession.create({
+  const session=await db.userSession.create({
     data:{
       userId:user.id,
       deviceName:deviceLabel(deviceName),
@@ -80,10 +84,11 @@ async function issueSession(user,req,deviceName){
     email:user.email,
     mustChangePassword:Boolean(user.mustChangePassword),
     tokenType:"BACKOFFICE_USER",
+    ...(staffAccess?{staffAccess:true}:{}),
     sessionId:session.id,
     sessionVersion:user.sessionVersion
   },process.env.JWT_SECRET,{expiresIn:`${SESSION_HOURS}h`});
-  return {token,user:publicUser(user),session:{id:session.id,deviceName:session.deviceName,expiresAt}};
+  return {token,user:{...publicUser(user),...(staffAccess?{staffAccess:true,username:account.username,company:{id:user.company.id,name:user.company.name}}:{})},session:{id:session.id,deviceName:session.deviceName,expiresAt}};
 }
 
 // Renew only an already authenticated, non-revoked BackOffice session. Keep the
@@ -98,7 +103,7 @@ router.post("/renew",auth,async(req,res,next)=>{
     if(supportContext&&user.role!=="SUPER_ADMIN")return res.status(403).json({error:"Η πρόσβαση υποστήριξης δεν είναι έγκυρη."});
     const extended=await prisma.userSession.updateMany({where:{id:req.user.sessionId,userId:user.id,revokedAt:null,expiresAt:{gt:new Date()}},data:{expiresAt:new Date(Date.now()+SESSION_HOURS*60*60*1000),lastSeenAt:new Date()}});
     if(extended.count!==1)return res.status(401).json({error:"Η συνεδρία δεν είναι πλέον ενεργή."});
-    const base={id:user.id,companyId:user.companyId,role:user.role==="SUPER_ADMIN"?"OWNER":user.role,platformRole:user.role,isSuperAdmin:user.role==="SUPER_ADMIN",fullName:user.fullName,email:user.email,mustChangePassword:Boolean(user.mustChangePassword),tokenType:"BACKOFFICE_USER",sessionId:req.user.sessionId,sessionVersion:user.sessionVersion};
+    const base={id:user.id,companyId:user.companyId,role:user.role==="SUPER_ADMIN"?"OWNER":user.role,platformRole:user.role,isSuperAdmin:user.role==="SUPER_ADMIN",fullName:user.fullName,email:user.email,mustChangePassword:Boolean(user.mustChangePassword),tokenType:"BACKOFFICE_USER",sessionId:req.user.sessionId,sessionVersion:user.sessionVersion,...(req.user.staffAccess?{staffAccess:true}:{})};
     const platformToken=jwt.sign(base,process.env.JWT_SECRET,{expiresIn:`${SESSION_HOURS}h`});
     let ownerCompanyId=null;
     if(!supportContext&&user.role==="OWNER"&&req.user.ownerCompanyId&&req.user.ownerCompanyId!==user.companyId){

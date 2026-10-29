@@ -1,3 +1,4 @@
+import {ensureBackofficeStaffSchema} from "../src/backoffice-staff-bootstrap.js";
 import {provisionAiWalletRecovery,validateAiWalletSchema} from '../src/services/ai-owner-wallet-schema.js';
 import {createAiOwnerWalletRepository} from '../src/services/ai-owner-wallet-repository.js';
 import test from 'node:test';
@@ -44,9 +45,18 @@ test('wallet full catalogue PG18 archive/COPY retains company money/history, blo
   for(const trigger of metadata.triggers){await db.$executeRawUnsafe(trigger.definition);await db.$executeRawUnsafe(`ALTER TABLE ${q(trigger.table)} ${trigger.enabled==='A'?'ENABLE ALWAYS':trigger.enabled==='D'?'DISABLE':'ENABLE'} TRIGGER ${q(trigger.name)}`);}
   await provisionFtextRecoverySchema(db);
   await provisionAiWalletRecovery(db);
+  await ensureBackofficeStaffSchema(db);
+  tables.push("BackofficeStaffAccount","BackofficeStaffGrant","BackofficeStaffAudit","BackofficeStaffLoginGuard");
   assert.doesNotThrow(()=>assertFtextCashLifecycleApproved(manifest));
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","updatedAt") VALUES ('fixture-company','SYNTHETIC',NOW()),('foreign-company','CONTROL',NOW())`);
   await db.$executeRawUnsafe(`INSERT INTO "Store"("id","name","companyId","updatedAt") VALUES ('target','SYNTHETIC','fixture-company',NOW()),('sibling','CONTROL','fixture-company',NOW()),('foreign','CONTROL','foreign-company',NOW())`);
+  // Synthetic security metadata must survive target RESET and archive/COPY;
+  // these are non-login fixtures, never production accounts or credentials.
+  await db.$executeRawUnsafe(`INSERT INTO "User" ("id","companyId","email","passwordHash","fullName","role","updatedAt") VALUES ('staff-recovery-fixture','fixture-company','staff@recovery.invalid','not-a-login-hash','SYNTHETIC STAFF','EMPLOYEE',NOW())`);
+  await db.$executeRawUnsafe(`INSERT INTO "BackofficeStaffAccount" ("userId","companyId","username","pinHash") VALUES ('staff-recovery-fixture','fixture-company','native.recovery.staff','not-a-login-hash')`);
+  await db.$executeRawUnsafe(`INSERT INTO "BackofficeStaffGrant" ("userId","companyId","storeId","profile","capabilities") VALUES ('staff-recovery-fixture','fixture-company','target','STOCKTAKER','["inventory.read"]'::jsonb),('staff-recovery-fixture','fixture-company','sibling','STOCKTAKER','["inventory.read"]'::jsonb)`);
+  await db.$executeRawUnsafe(`INSERT INTO "BackofficeStaffAudit" ("id","companyId","actorId","targetUserId","event","detail") VALUES ('staff-fixture-audit','fixture-company','isolated-admin','staff-recovery-fixture','FIXTURE','{}'::jsonb)`);
+  await db.$executeRawUnsafe(`INSERT INTO "BackofficeStaffLoginGuard" ("key","attempts") VALUES ('synthetic-non-login-guard',2)`);
   const repository=createAiOwnerWalletRepository(db);
   await repository.credit('fixture-company',{amountMicros:'10000000',receiptReference:'synthetic-wallet-credit'},'isolated-admin');
   await repository.grantTrial('foreign-company',{amountMicros:'7000000',grantReference:'synthetic-foreign-trial',reason:'Synthetic control grant'},'isolated-admin');

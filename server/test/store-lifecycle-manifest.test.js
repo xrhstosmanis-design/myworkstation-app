@@ -27,11 +27,13 @@ test('canonical new-start manifest covers reviewed ownership and retains both in
  assert.equal(nodes.get('WorkforceEmployee').owner.kind,'BASE_STORE');
  assert.deepEqual(nodes.get('WholesalePortalSession').owner.columns,[['accountId','id'],['siteId','siteId'],['companyId','companyId']]);
  for(const node of nodes.values())if(node.owner.kind==='CHILD')assert.ok(metadata.foreignKeys.some(f=>f.child===node.name&&f.parent===node.owner.parent&&JSON.stringify(f.local)===JSON.stringify(node.owner.columns.map(p=>p[0]))&&JSON.stringify(f.remote)===JSON.stringify(node.owner.columns.map(p=>p[1]))),node.name);
- const review=read('../../ops/backup/lifecycle/column-review.json');assert.equal(review.executionEnabled,false);assert.deepEqual([...new Set(review.columns.map(c=>c.column))].sort(),m.reviewedColumns);
+ const review=read('../../ops/backup/lifecycle/column-review.json');assert.equal(review.executionEnabled,false);assert.deepEqual([...new Set(review.columns.map(c=>c.column))].sort(),m.reviewedColumns.filter(c=>!c.startsWith('BackofficeStaff')));
  const proposed=read('../../ops/backup/lifecycle/automatic-report-manifest.proposed.json');
  // The retained automatic-report proposal is an immutable prior catalogue;
  // only the independently reviewed ftext extension differs.
  const withoutFtext=structuredClone(m);delete withoutFtext.ftextRecoveryAcceptance;
+ withoutFtext.knownTables=withoutFtext.knownTables.filter(n=>!n.startsWith('BackofficeStaff'));for(const name of Object.keys(withoutFtext.knownColumns))if(name.startsWith('BackofficeStaff'))delete withoutFtext.knownColumns[name];withoutFtext.reviewedColumns=withoutFtext.reviewedColumns.filter(n=>!n.startsWith('BackofficeStaff'));withoutFtext.tables=withoutFtext.tables.filter(n=>n.name!=='BackofficeStaffGrant');
+ assert.deepEqual(nodes.get('BackofficeStaffGrant'),{name:'BackofficeStaffGrant',owner:{kind:'DIRECT'},reset:'KEEP'});for(const name of ['BackofficeStaffAccount','BackofficeStaffAudit','BackofficeStaffLoginGuard'])assert.equal(nodes.has(name),false,name);
  withoutFtext.knownTables=withoutFtext.knownTables.filter(n=>n!=='FtextCashRequest');delete withoutFtext.knownColumns.FtextCashRequest;
  withoutFtext.reviewedColumns=withoutFtext.reviewedColumns.filter(n=>!n.startsWith('FtextCashRequest.'));withoutFtext.tables=withoutFtext.tables.filter(n=>n.name!=='FtextCashRequest');
  assert.deepEqual(withoutFtext,proposed);

@@ -1,3 +1,4 @@
+import {ensureBackofficeStaffSchema} from "../src/backoffice-staff-bootstrap.js";
 import {provisionAiWalletRecovery} from '../src/services/ai-owner-wallet-schema.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -43,9 +44,18 @@ test('full reviewed native schema plus ftext verifies PG18 archive/COPY recovery
   for(const trigger of metadata.triggers){await db.$executeRawUnsafe(trigger.definition);await db.$executeRawUnsafe(`ALTER TABLE ${q(trigger.table)} ${trigger.enabled==='A'?'ENABLE ALWAYS':trigger.enabled==='D'?'DISABLE':'ENABLE'} TRIGGER ${q(trigger.name)}`);}
   await provisionFtextRecoverySchema(db);
   await provisionAiWalletRecovery(db);
+  await ensureBackofficeStaffSchema(db);
+  tables.push("BackofficeStaffAccount","BackofficeStaffGrant","BackofficeStaffAudit","BackofficeStaffLoginGuard");
   assert.doesNotThrow(()=>assertFtextCashLifecycleApproved(manifest));
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","updatedAt") VALUES ('fixture-company','SYNTHETIC',NOW()),('foreign-company','CONTROL',NOW())`);
   await db.$executeRawUnsafe(`INSERT INTO "Store"("id","name","companyId","updatedAt") VALUES ('target','SYNTHETIC','fixture-company',NOW()),('sibling','CONTROL','fixture-company',NOW()),('foreign','CONTROL','foreign-company',NOW())`);
+  // Synthetic security metadata must survive target RESET and archive/COPY;
+  // these are non-login fixtures, never production accounts or credentials.
+  await db.$executeRawUnsafe(`INSERT INTO "User" ("id","companyId","email","passwordHash","fullName","role","updatedAt") VALUES ('staff-recovery-fixture','fixture-company','staff@recovery.invalid','not-a-login-hash','SYNTHETIC STAFF','EMPLOYEE',NOW())`);
+  await db.$executeRawUnsafe(`INSERT INTO "BackofficeStaffAccount" ("userId","companyId","username","pinHash") VALUES ('staff-recovery-fixture','fixture-company','native.recovery.staff','not-a-login-hash')`);
+  await db.$executeRawUnsafe(`INSERT INTO "BackofficeStaffGrant" ("userId","companyId","storeId","profile","capabilities") VALUES ('staff-recovery-fixture','fixture-company','target','STOCKTAKER','["inventory.read"]'::jsonb),('staff-recovery-fixture','fixture-company','sibling','STOCKTAKER','["inventory.read"]'::jsonb)`);
+  await db.$executeRawUnsafe(`INSERT INTO "BackofficeStaffAudit" ("id","companyId","actorId","targetUserId","event","detail") VALUES ('staff-fixture-audit','fixture-company','isolated-admin','staff-recovery-fixture','FIXTURE','{}'::jsonb)`);
+  await db.$executeRawUnsafe(`INSERT INTO "BackofficeStaffLoginGuard" ("key","attempts") VALUES ('synthetic-non-login-guard',2)`);
   for(const [id,store,status,method,counter] of [['cash','target','SALE_COMMITTED','CASH','1'],['card','target','SALE_COMMITTED','CARD','2'],['pending','target','DISPATCHED','CASH','3'],['sibling','sibling','SALE_COMMITTED','CARD','4'],['foreign','foreign','SALE_COMMITTED','CASH','5']])await db.$executeRawUnsafe(`INSERT INTO "FtextCashRequest"("id","companyId","storeId","terminalPos","fiscalDeviceCode","serialNumber","clientTransactionId","requestHash","settingsHash","lifecycleGeneration","sessionId","plan","checkoutJson","total","status","claimedByDeviceId","claimedTokenVersion","result","resultHash","saleId") VALUES($1,$2,$3,'POS-01','FISCAL-01',$3,$1,'request-hash','settings-hash','0','historical-shift',$4::jsonb,$5::jsonb,1.25,$6,'historical-device',3,$7::jsonb,'result-hash','historical-sale')`,id,store==='foreign'?'foreign-company':'fixture-company',store,JSON.stringify({payment:{method},scope:{storeId:store}}),JSON.stringify({paymentMethod:method,foreignProductId:'never-expand-ownership'}),status,JSON.stringify({outcome:status==='DISPATCHED'?'REQUIRES_CHECK':'CONFIRMED',dayId:'17',dayCounter:counter}));
   const allRows=async()=>{const result={};for(const table of [...tables,'FtextCashRequest'])result[table]=await db.$queryRawUnsafe(`SELECT row_to_json(t)::text AS row FROM ${q(table)} t ORDER BY row_to_json(t)::text`);return result;};
   const core=createLifecycleExecutionCore(manifest,{sourceRevision:revision,persistAndVerifyRecovery:async(snapshot)=>{assert.ok(proof);assert.equal(proof.restoredSnapshotHash,snapshot.snapshotHash);return {...proof,...snapshot.scope,sourceRevision:revision,manifestHash:snapshot.planHash,snapshotHash:snapshot.snapshotHash,storageReadbackVerified:true,artifactSha256:createHash('sha256').update(await readFile(path.join(directory,'fixture.dump'))).digest('hex')};}});
