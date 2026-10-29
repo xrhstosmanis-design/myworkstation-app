@@ -22,11 +22,19 @@ const callers=[
 const statements=callers.flatMap(path=>{
   const source=fs.readFileSync(new URL(`../src/${path}`,import.meta.url),"utf8");
   assert.match(source,/executeHotTableBootstrap/);
-  return Array.from(source.matchAll(/`(ALTER TABLE "(?:Product|ProductBarcode|PurchaseDocument|StoreTransaction)" ADD COLUMN IF NOT EXISTS [^`]+)`/g),match=>match[1]);
+  return Array.from(source.matchAll(/`(ALTER TABLE "(?:Product|ProductBarcode|PurchaseDocument)" ADD COLUMN IF NOT EXISTS [^`]+)`/g),match=>match[1]);
 });
 assert.ok(statements.length>40,"Replay all audited initialization definitions, not one synthetic column");
+const ledgerSource=fs.readFileSync(new URL("../src/routes/store-transactions.js",import.meta.url),"utf8");
+const ledgerStart=ledgerSource.indexOf("const tableStatements=[");
+const ledgerEnd=ledgerSource.indexOf("async function ensureTables()",ledgerStart);
+assert.ok(ledgerStart>=0&&ledgerEnd>ledgerStart,"Locate the actual ledger initialization array");
+const ledgerStatements=Array.from(ledgerSource.slice(ledgerStart,ledgerEnd).matchAll(/\`(ALTER TABLE "StoreTransaction" ADD COLUMN IF NOT EXISTS [^\`]+)\`/g),match=>match[1]);
+assert.equal(ledgerStatements.length,9,"Exercise all nine actual ledger initialization definitions");
+statements.push(...ledgerStatements);
+
 const tables=["Product","ProductBarcode","PurchaseDocument","StoreTransaction"];
-assert.equal(statements.filter(sql=>sql.startsWith('ALTER TABLE "StoreTransaction"')).length,9,"Exercise all nine actual ledger initialization definitions");
+
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r});return {promise,resolve}};
 const columnDescription=client=>client.$queryRaw`
   SELECT c.relname,a.attname,pg_catalog.format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull,
