@@ -5,6 +5,11 @@ import {lifecycleContext} from './store-lifecycle-context.js';
 export const staffError=(status=403,code='STAFF_ACCESS_DENIED',message='Δεν υπάρχει δικαίωμα για αυτή την ενέργεια.')=>Object.assign(new Error(message),{status,code});
 export async function staffAccount(db,user){
   if(!user?.id)return null;
+  // Older, independently hosted test runtimes legitimately have no delegated
+  // schema. Existing accounts retain their issuer; reserved staff identities
+  // are still refused by issueSession when no active membership exists.
+  const metadata=await db.$queryRaw`SELECT to_regclass(format('%I.%I',current_schema(),'BackofficeStaffAccount'))::text AS "relation"`;
+  if(!metadata[0]?.relation)return null;
   return (await db.$queryRaw`SELECT "userId","companyId","username","active","revision" FROM "BackofficeStaffAccount" WHERE "userId"=${user.id} LIMIT 1`)[0]||null;
 }
 export async function liveStaff(db,user){

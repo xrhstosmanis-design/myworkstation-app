@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {staffRequestCapability} from '../../shared/backoffice-staff.mjs';
 import {createStaffInput,updateStaffInput,staffLoginInput} from '../src/services/backoffice-staff-accounts.js';
-import {enforceBackofficeStaff} from '../src/services/backoffice-staff-access.js';
+import {enforceBackofficeStaff,staffAccount,liveStaff} from '../src/services/backoffice-staff-access.js';
 const grant={storeId:'store-a',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']};
 const account={username:'counter.1',fullName:'Isolated Counter',password:'isolated-test-password',pin:'624918',grants:[grant]};
 test('staff profiles cannot elevate role, cross-profile capabilities or implicitly enable finalization',()=>{
@@ -23,4 +23,9 @@ test('delegated request admission is an exact default-deny allowlist',()=>{
 test('ordinary owner, operator and existing employee auth never queries new staff tables',async()=>{
   const db={$queryRaw:()=>assert.fail('unrelated identity queried new staff schema')};
   for(const user of [{role:'OWNER',tokenType:'BACKOFFICE_USER'},{role:'EMPLOYEE',tokenType:'BACKOFFICE_USER'},{role:'EMPLOYEE',tokenType:'STORE_OPERATOR'}])assert.equal(await enforceBackofficeStaff(db,{user},{}),true);
+});
+test('schema absence preserves old account discovery but never admits a signed staff identity',async()=>{
+  let queries=0;const db={$queryRaw:async()=>{queries++;return [{relation:null}]}};
+  assert.equal(await staffAccount(db,{id:'ordinary-user'}),null);assert.equal(queries,1);
+  await assert.rejects(liveStaff({$queryRaw:async()=>[]},{id:'staff',role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',staffAccess:true,sessionId:'session',companyId:'a',sessionVersion:0}),{code:'STAFF_SESSION_INVALID'});
 });
