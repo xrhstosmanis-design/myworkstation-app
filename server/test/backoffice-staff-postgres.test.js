@@ -59,7 +59,8 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     let beforeCount;
     const countGrant=async(...args)=>{if(beforeCount){const wait=beforeCount;beforeCount=null;await wait()}return requireStaffGrant(...args)};
     const inventory=new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed','requireStaffGrant',inventorySource+'\nreturn router;')(express.Router,z,crypto,db,jwt,assertCustomerDemoRuntimeClosed,()=>assert.fail('finalization executed'),lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed,countGrant);
-    const app=express();app.use(express.json());app.use('/api/backoffice-staff',createBackofficeStaffRouter({db,authenticate:auth,issueSession,repository:{}}));app.use('/api/inventory-v2',auth,inventory);app.get('/api/platform/companies',auth,(_req,res)=>res.json({leak:true}));app.use((e,_req,res,_next)=>res.status(e.status||500).json({code:e.code,error:e.message}));
+    const reportReads=[],repository={generation:async()=>'0',read:async(scope,period)=>{reportReads.push({...scope,period});return {...scope,period,text:'Isolated read-only report',rows:[]}}};
+    const app=express();app.use(express.json());app.use('/api/backoffice-staff',createBackofficeStaffRouter({db,authenticate:auth,issueSession,repository}));app.use('/api/inventory-v2',auth,inventory);app.get('/api/platform/companies',auth,(_req,res)=>res.json({leak:true}));app.use((e,_req,res,_next)=>res.status(e.status||500).json({code:e.code,error:e.message}));
     server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s))});
     const request=async(path,{token,method='GET',body,storeId}={})=>{
       const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{method,headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{}),...(storeId?{'x-backoffice-store-id':storeId}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json(),headers:r.headers};
@@ -134,6 +135,18 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       for(let i=0;i<5;i++)assert.equal((await verifyStaffLogin(db,{username:'absent.fixture',pin:'999999'},'fixture-ip',process.env.JWT_SECRET)).ok,false);
       assert.equal((await verifyStaffLogin(db,{username:'absent.fixture',pin:'999999'},'other-ip',process.env.JWT_SECRET)).limited,true);
       assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "BackofficeStaffAccount"`)[0].n),1);
+    });
+    await t.test('native auditor HTTP admits only own read projection and manager label cannot restore unchecked actions',async()=>{
+      for(const [profile,capabilities] of [['AUDITOR',['cash.read']],['MANAGER',['inventory.read']]]){
+        const username=profile.toLowerCase()+'.fixture';
+        await createStaffAccount(db,owner,{...input,username,fullName:profile,grants:[{storeId:'a1',profile,capabilities}]});
+        const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});assert.equal(login.status,200);const roleToken=login.data.token;
+        assert.equal(jwt.verify(roleToken,process.env.JWT_SECRET).role,'EMPLOYEE');
+        const cash=await request('/api/backoffice-staff/cash/stores/a1?from=2026-10-29&to=2026-10-29',{token:roleToken,storeId:'a1'});assert.equal(cash.status,profile==='AUDITOR'?200:403);
+        if(profile==='AUDITOR'){assert.equal(cash.data.text,'Isolated read-only report');assert.deepEqual(reportReads.at(-1),{companyId:'a',storeId:'a1',generation:'0',period:{from:'2026-10-29',to:'2026-10-29'}})}
+        assert.equal((await request('/api/inventory-v2/stocktakes/sta/count',{token:roleToken,storeId:'a1',method:'POST',body:count})).status,403);
+        assert.equal((await request('/api/backoffice-staff/admin',{token:roleToken})).status,403);
+      }
     });
   }finally{
     if(server)await new Promise(resolve=>{server.close(resolve);server.closeIdleConnections()});await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();if(oldSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=oldSecret;
