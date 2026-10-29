@@ -87,3 +87,49 @@ test('failed review persistence still stops paid fallbacks and retains the origi
   assert.equal(paid,1);assert.equal(fallback,0);assert.equal(f.events.filter(e=>e.kind==='reserve').length,1);assert.equal(f.events.filter(e=>e.kind==='settle').length,0);
  }
 });
+
+test('opt-in invoice request reservation counts exact input before reserve, then settles only the original generation',async()=>{
+ const calls=[];let f;
+ f=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_REQUEST_RESERVE_ENABLED:'true'},transport:async(u,o)=>{
+  calls.push(u);
+  if(u.endsWith('/input_tokens')){assert.equal(f.events.length,0);assert.equal(JSON.parse(o.body).input,'synthetic private invoice');return new Response(JSON.stringify({object:'response.input_tokens',input_tokens:5}))}
+  assert.equal(f.events[0].amountMicros,25n);return new Response(JSON.stringify(raw('counted-response')));
+ }});
+ await f.meter.run(scope,()=>f.meter.responsesFetch(url,options));
+ assert.deepEqual(calls,[url+'/input_tokens',url]);assert.equal(f.events[1].amountMicros,8n);assert.equal(f.events[0].tariff.contextTokens,100);
+});
+test('invoice count failure cannot enter paid fallback, reserve money or affect Azure page metering',async()=>{
+ let generated=0,fallback=0;
+ const f=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_REQUEST_RESERVE_ENABLED:'true'},transport:async u=>{if(u.endsWith('/input_tokens'))return new Response('unavailable',{status:503});generated++;return new Response('{}')}});
+ await assert.rejects(f.meter.run(scope,async()=>{try{return await f.meter.responsesFetch(url,options)}catch(error){throwIfWalletError(error);fallback++}}),e=>e.code==='AI_WALLET_INPUT_COUNT_REQUIRED'&&e.status===409);
+ assert.equal(generated,0);assert.equal(fallback,0);assert.equal(f.events.length,0);
+ await f.meter.run(scope,()=>f.meter.azure({...page},async mark=>{mark('synthetic-azure-operation');return azurePayload}));
+ assert.equal(f.events[0].amountMicros,80n);assert.equal(f.events[1].amountMicros,80n);
+});
+test('dedicated invoice schedules override only invoice prices and an invalid dedicated schedule never silently uses the Owner rate',async()=>{
+ const configuration={...env,AI_OWNER_WALLET_INVOICE_TARIFFS:JSON.stringify([{...token,inputMicrosPerMillion:2000000}]),AI_OWNER_WALLET_INVOICE_AZURE_TARIFFS:JSON.stringify([{...page,unitMicros:60}])};
+ const f=fixture({configuration});await f.meter.run(scope,()=>f.meter.responsesFetch(url,options));
+ assert.equal(f.events[1].amountMicros,13n);
+ await f.meter.run(scope,()=>f.meter.azure({...page},async mark=>{mark('dedicated-price-operation');return azurePayload}));assert.equal(f.events[3].amountMicros,120n);
+ assert.equal(configuration.AI_OWNER_WALLET_TARIFFS,env.AI_OWNER_WALLET_TARIFFS);
+ for(const bad of ['[]','not JSON']){
+  const g=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_TARIFFS:bad}});
+  await assert.rejects(g.meter.run(scope,()=>g.meter.responsesFetch(url,options)),e=>e.code==='AI_WALLET_TARIFF_REQUIRED');assert.equal(g.events.length,0);
+ }
+});
+test('company rollout boundary meters only the selected invoice companies and reports the same scope',async()=>{
+ const configuration={...env,AI_OWNER_WALLET_INVOICE_COMPANIES:JSON.stringify(['lab'])};let original=0;
+ const excluded=fixture({configuration,repository:{enabledFor(){throw Error('unselected invoice must not touch wallet')}},transport:async(u,o)=>{assert.equal(o,options);original++;return 'original'}});
+ assert.equal(await excluded.meter.run(scope,()=>excluded.meter.responsesFetch(url,options)),'original');
+ assert.equal(await excluded.meter.run(scope,()=>excluded.meter.azure({},async()=>azurePayload)),azurePayload);assert.equal(original,1);assert.equal(excluded.events.length,0);
+ assert.deepEqual(invoiceWalletFeatures(configuration,'c'),['OWNER_ASSISTANT']);assert.ok(invoiceWalletFeatures(configuration,'lab').includes('INVOICE_AZURE'));
+ const selected=fixture({configuration});await selected.meter.run({companyId:'lab',storeId:'lab1'},()=>selected.meter.responsesFetch(url,options));assert.equal(selected.events[1].amountMicros,8n);
+});
+test('invalid explicit company rollout cannot silently broaden invoice charging or call a provider',async()=>{
+ for(const value of ['not JSON','null','{}','["lab","lab"]','[""]','[" lab"]']){
+  let called=0;const f=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_COMPANIES:value},transport:async()=>{called++}});
+  await assert.rejects(f.meter.run(scope,()=>f.meter.responsesFetch(url,options)),e=>e.code==='AI_WALLET_TARIFF_REQUIRED');assert.equal(called,0);assert.equal(f.events.length,0);
+ }
+ assert.deepEqual(invoiceWalletFeatures({...env,AI_OWNER_WALLET_INVOICE_COMPANIES:'[]'},'c'),['OWNER_ASSISTANT']);
+});
+
