@@ -1,0 +1,1949 @@
+{
+  "format": "EXPLICIT_COLUMN_CLASSIFICATION_V1",
+  "profileId": "REVIEWED_MONTHLY_SNAPSHOT_STORAGE_PROPOSED_V1_20261029",
+  "executionEnabled": false,
+  "deletionSelectors": "Only the explicit ownership descriptors in manifest.json; never JSON contents, actor IDs, filename or naming heuristics.",
+  "externalObjects": "No external object deletion is allowed. Inline bytes and exact database references must be included in verified recovery.",
+  "columns": [
+    {
+      "column": "AdvancedOnlineSearchUsage.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AdvancedOnlineSearchUsage.details",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiReaderJob.resultJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AssistantHistoryArchive.actorId",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AssistantHistoryArchive.companyId",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AssistantHistoryArchive.digest",
+      "classification": "BOUNDED_HISTORY_PAYLOAD_EXPIRY_OR_STALE_RETRY_TOMBSTONE_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "AssistantHistoryArchive.expiresAt",
+      "classification": "BOUNDED_HISTORY_PAYLOAD_EXPIRY_OR_STALE_RETRY_TOMBSTONE_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "AssistantHistoryArchive.generation",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AssistantHistoryArchive.mode",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AssistantHistoryArchive.payload",
+      "classification": "BOUNDED_HISTORY_PAYLOAD_EXPIRY_OR_STALE_RETRY_TOMBSTONE_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "AssistantHistoryArchive.requestId",
+      "classification": "BOUNDED_HISTORY_PAYLOAD_EXPIRY_OR_STALE_RETRY_TOMBSTONE_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "AssistantHistoryArchive.revision",
+      "classification": "BOUNDED_HISTORY_PAYLOAD_EXPIRY_OR_STALE_RETRY_TOMBSTONE_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "AssistantHistoryArchive.scopeKey",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AssistantHistoryArchive.storeId",
+      "classification": "EXACT_SERVER_DERIVED_SCOPE_COMPONENT_NOT_AN_OWNERSHIP_EXPANSION"
+    },
+    {
+      "column": "AttendanceEvent.voidedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AttendanceEvent.supersedesEventId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AudienceDiscountCard.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AuthAudit.userId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "AutomaticReportSettings.configurationJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "BankLedgerEntry.sourceTransactionId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "BankLedgerEntry.attachmentData",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "BulkPriceBatchAudit.productIdsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "BulkPriceBatchAudit.storeIdsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "BulkPriceBatchAudit.actorId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "CashControlReview.sessionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "CashControlReview.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CashControlReview.snapshotJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CashShiftSession.duplicateReviewJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CloudAudit.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CloudAudit.details",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CloudChange.entityId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CloudChange.payload",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CloudDevice.metadata",
+      "classification": "INSTALLATION_CONFIGURATION_RETAINED_EXACTLY_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "CloudDeviceCursor.deviceId",
+      "classification": "INSTALLATION_CONFIGURATION_RETAINED_EXACTLY_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "CloudInboundEvent.deviceId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "CloudInboundEvent.payload",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "Company.taxId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "ConnectorDevice.cloudDeviceId",
+      "classification": "INSTALLATION_CONFIGURATION_RETAINED_EXACTLY_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "ConnectorDevice.healthJson",
+      "classification": "INSTALLATION_CONFIGURATION_RETAINED_EXACTLY_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "Customer.taxId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "Customer.customerProfessionId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "Customer.customerCategoryId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "CustomerAddress.customerId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "CustomerLedger.referenceId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CustomerLedger.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CustomerLedger.sessionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "CustomerLoyaltyLedger.customerId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CustomerLoyaltyLedger.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "CustomerLoyaltyLedger.sessionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "CustomerLoyaltyLedger.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "CustomerWholesalePrice.customerId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "CustomerWholesalePrice.productId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "CustomerWholesalePrice.createdByUserId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "DataPatchMarker.detailsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "DeviceDeploymentJob.terminalId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DeviceDeploymentJob.payloadJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DeviceDeploymentJob.resultJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DeviceOperationsReport.terminalId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DeviceOperationsReport.servicesJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DeviceOperationsReport.warningsJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DiningTable.areaId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "DispatchNote.recipientTaxId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DispatchNote.finalizedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DispatchNote.cancelledByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DispatchNote.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DocumentAttachment.storageKey",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DocumentAttachment.contentData",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "DocumentInbox.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "EfoodIntegrationPreview.requestJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "EfoodIntegrationPreview.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "EfoodProductMapping.externalProductId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "EfoodWebhookEvent.externalEventId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "EfoodWebhookEvent.externalOrderId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "EfoodWebhookEvent.providerStoreId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "EfoodWebhookEvent.externalPartnerConfigId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "EmployeeNaturalRule.employeeId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "EmployeeNaturalRule.interpretation",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "FiscalBridgeDryRun.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "FiscalBridgeDryRun.payloadJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "FiscalBridgeDryRun.validationJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "FiscalBridgeDryRun.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "FiscalDocument.externalId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InternetPriceProposal.productId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InternetPriceProposal.searchId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InternetPriceProposalAudit.proposalId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InternetPriceProposalAudit.productId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InternetPriceProposalAudit.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InternetProductSearch.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InternetProductSearch.productId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InternetProductSearch.results",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InventoryAccessGrant.zoneId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InventoryAccessGrant.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InventoryCountEvent.zoneId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InventoryCountEvent.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InventoryCountEvent.deviceId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InventoryCountEvent.clientEventId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InventoryParticipant.zoneId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InventoryParticipant.userId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InventoryZone.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InvoiceDraftAlias.aliasOrderId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InvoiceDraftAlias.aliasDocumentId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InvoiceDraftAlias.canonicalOrderId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InvoiceDraftAlias.canonicalDocumentId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InvoiceDraftAlias.inboxId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InvoiceDraftAlias.details",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InvoiceDraftAlias.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "InvoiceLearningProductKnowledge.supplierTaxId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "InvoiceLearningProductKnowledge.masterProductId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "InvoiceLearningProductKnowledge.knowledge",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "InvoiceLearningWorkspaceState.state",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "InvoiceLearningWorkspaceState.updatedByUserId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "InvoiceStockPosting.sourceDocumentId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InvoiceStockPosting.orderId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InvoiceStockPosting.postedDocumentId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "InvoiceSupplierReadingProfile.supplierTaxId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "InvoiceSupplierReadingProfile.profile",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "InvoiceSupplierReadingProfile.updatedByUserId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "KioskAuditEvent.productId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "KioskAuditEvent.sourceId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "KioskAuditEvent.shiftId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "KioskAuditEvent.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "KioskAuditEvent.details",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ManagementModifierGroup.legacyId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "ManagementParameterAudit.actorId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "ManagementParameters.settings",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "ManagementPosTerminal.bankId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "MasterCatalogMaintenanceAudit.actorId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "MasterCatalogMaintenanceAudit.productIdsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "ModifierInventoryPrice.modifierId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ModifierInventoryPrice.productId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "MyDataInboundDocument.inboxId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "MyDataInboundDocument.rawPayload",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "NetlinkCancellationRequest.transactionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "NetlinkCancellationRequest.requestedById",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "NetlinkStoreConfig.saleProductId",
+      "classification": "INSTALLATION_CONFIGURATION_RETAINED_EXACTLY_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "NetlinkStoreConfig.serviceFeeProductId",
+      "classification": "INSTALLATION_CONFIGURATION_RETAINED_EXACTLY_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "NetlinkTransaction.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "NetlinkTransaction.requestId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "NetlinkTransaction.productId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "NetlinkTransaction.providerTransactionId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "NetlinkTransaction.operatorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "NetlinkTransaction.fiscalDocumentId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "OfflineSaleSyncEvidence.clientTransactionId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "OfflineSaleSyncEvidence.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "OnlineOrder.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "OnlineOrderLine.modifiersJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "OnlineOrderingConfig.weeklyHours",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "OtherExpenseReview.transactionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PaymentDeviceRouteAttempt.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PaymentDeviceRouteAttempt.sessionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PayrollPeriod.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PayrollPeriod.lockedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PlatformAiCreditMonitor.settings",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformAudit.actorUserId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformAudit.targetId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformAudit.details",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformBackupRun.runId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformBulkCatalogAudit.actorId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformBulkCatalogAudit.productIdsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformBulkCatalogAudit.storeIdsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformBulkPromotionAudit.actorId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformBulkPromotionAudit.masterProductIdsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformBulkPromotionAudit.storeIdsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PlatformPosDraft.layoutJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PosAudienceSelection.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosHeldTransaction.sessionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PosHeldTransaction.operatorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosHeldTransaction.itemsJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosHeldTransaction.customerId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosOnlineRadioState.stationId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosOperationalEvent.sessionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PosOperationalEvent.operatorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosOperationalEvent.itemsJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosOperationalEvent.detailsJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosSaleActionAudit.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PosSaleActionAudit.relatedSaleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PosSaleActionAudit.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosSaleActionAudit.details",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosSaleSafetyAudit.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PosSaleSafetyAudit.relatedSaleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PosSaleSafetyAudit.clientTransactionId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosSaleSafetyAudit.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PosSaleSafetyAudit.details",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PreparationModifierBehavior.modifierId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PreparationModifierConsumption.modifierId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PreparationModifierConsumption.ingredientProductId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PreparationProductModifierGroup.productId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PreparationProductModifierGroup.groupId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PreparationProductSettings.productId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PreparationRecipeLine.productId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PreparationRecipeLine.ingredientProductId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PreparationStockConsumption.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PreparationStockConsumption.batchId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PreparationStockConsumption.sourceProductId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PreparationStockConsumption.ingredientProductId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PreparationStockConsumption.modifierId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PriceCatalogPromotion.productId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PriceCatalogPromotion.createdByUserId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PriceCatalogPromotionGiftProduct.promotionId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PriceCatalogPromotionGiftProduct.productId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PriceCatalogPromotionImportAudit.storeIdsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PriceCatalogPromotionImportAudit.countsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PriceCatalogPromotionImportAudit.actorId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "PriceCatalogPromotionStore.promotionId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "Product.subcategoryId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "Product.vatDepartmentId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "ProductBarcodePriceRequest.productId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductBarcodePriceRequest.barcodeId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductSetItem.productId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "ProductSetItem.relatedProductId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "ProviderAttempt.responseJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProviderAttempt.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProviderOutbox.aggregateId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "ProviderOutbox.payloadJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PurchaseDocument.paymentTransactionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PurchaseDocument.purchaseOrderId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PurchaseDocumentLine.purchaseOrderLineId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PurchaseOrder.supplierId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PurchaseOrder.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PurchaseOrder.sourceDocumentId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PurchaseOrderLine.orderId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "PurchaseOrderLine.productId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PurchaseOrderPackCorrection.orderId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "PurchaseOrderPackCorrection.correctedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PurchaseOrderPosting.orderId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "PurchaseOrderPosting.supplierId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PurchaseOrderPosting.purchaseDocumentId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PurchaseOrderPosting.postedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PurchaseOrderReopenAudit.orderId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PurchaseOrderReopenAudit.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PurchaseOrderReopenAudit.snapshot",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PurchaseOrderReopenAudit.result",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "PurchaseOrderReopenMovement.movementId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PurchaseOrderReopenMovement.orderId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PurchaseOrderReopenMovement.reversalMovementId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PurchaseOrderTotalOverrideAudit.orderId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "PurchaseOrderTotalOverrideAudit.purchaseDocumentId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "PurchaseOrderTotalOverrideAudit.actorUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "RbsCapDriverV1Request.clientTransactionId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "RbsCapDriverV1Request.checkoutJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "RbsCapDriverV1Request.claimedByDeviceId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "RbsCapDriverV1Request.operatorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "RbsCapDriverV1Request.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "RecoveryWorkflowRun.countsJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "RecoveryWorkflowRun.warningsJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "RemoteSupportSession.auditJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "Sale.clientTransactionId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "Sale.originalSaleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "SaleLine.promotionId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ScheduleGenerationBrief.shiftOverrides",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ShiftHandover.acknowledgedById",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ShiftHandover.attachmentData",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StockMovement.sourceId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "Stocktake.snapshotJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "Stocktake.scopeJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StocktakeLine.zoneId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StocktakeMovementAdjustment.movementId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreBakedBalanceEvent.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreBakingEntry.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreChatAcknowledgement.messageId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreChatAcknowledgement.userId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreChatMessage.senderId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreChatMessage.attachmentData",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreChatMessage.aiReaderJobId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreChatMobilePush.userId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "StoreChatMobilePush.sessionId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "StoreChatMobilePush.supportCompanyId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "StoreChatMobilePush.storeIds",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "StoreChatMobilePush.subscriptionJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "StoreChatMobileSession.operatorId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreChatNativePush.userId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "StoreChatNativePush.sessionId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "StoreChatNativePush.identityJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "StoreChatPushSubscription.userId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreChatPushSubscription.subscriptionJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreChatPushSubscription.chatSessionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreChatRead.messageId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "StoreChatRead.userId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreChatTask.messageId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreChatTask.assigneeEmployeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreIntegrationCredential.metadataJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreIntegrationCredential.webhookTestEventId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreOnlineRadioConfig.allowedStationIds",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreOperatorAudit.operatorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreOperatorAudit.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreOperatorAudit.details",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreOperatorCredential.employeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreOperatorProfile.employeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreOperatorProfile.permissions",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreOperatorProfile.backofficeMenu",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreOperatorProfile.backofficeTabs",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreOperatorProfile.customerDisplay",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreOperatorSession.operatorId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StorePosLayout.layoutJson",
+      "classification": "INSTALLATION_CONFIGURATION_RETAINED_EXACTLY_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "StorePreparationBatch.operatorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StorePreparationBatch.itemsJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StorePreparationBatch.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StorePreparationBatch.tableOrderId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreProductAudienceDiscount.productId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreProductAudienceDiscount.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreProductAudienceDiscountAudit.productIds",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreProductAudienceDiscountAudit.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreTransaction.sessionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreTransaction.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreTransaction.attachmentData",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreTransaction.supplierId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreTransaction.expenseCategoryId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "Supplier.taxId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "SupplierAddress.supplierId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "SupplierBalanceAdjustment.supplierId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "SupplierBalanceAdjustment.actorId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "SupplierBusinessUnit.supplierId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "SupplierPaymentSettlement.transactionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "SupplierPaymentSettlement.supplierId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "SupplierProductLink.supplierId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "SupplierProductLink.productId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "SupplierProductTransfer.fromSupplierId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "SupplierProductTransfer.toSupplierId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "SupplierProductTransfer.productIdsJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "SupplierProductTransfer.actorId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "TableOrder.tableId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "TableOrder.operatorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "TableOrder.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "TableOrderLine.orderId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "TableOrderLine.productId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "TableOrderLine.allergensJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "TableOrderRequest.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "TableOrderRequest.resultJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "TestStateSnapshot.layoutJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "TestStateSnapshot.snapshotJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "VideoAccessAudit.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "VideoAccessAudit.details",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "VideoConnectorCommand.connectorDeviceId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "VideoConnectorCommand.videoEventId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "VideoConnectorCommand.payload",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "VideoConnectorCommand.result",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "VideoMediaArtifact.videoEventId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "VideoMediaArtifactChunk.bytes",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "VideoOperationalEvent.operatorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "VideoOperationalEvent.sourceId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "VideoOperationalEvent.details",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WholesaleCustomer.taxId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "WholesaleOrderEvent.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WholesaleOrderEvent.details",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WholesaleOrderRequest.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WholesaleOrderRequest.clientOrderId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WholesaleOrderRequest.quoteId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WholesaleOrderRequest.snapshot",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WholesalePriceAudit.actorId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "WholesalePriceAudit.priceListId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "WholesalePriceAudit.productId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "WholesalePriceAudit.oldJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "WholesalePriceAudit.newJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "WholesaleSellerAudit.actorId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "WholesaleSellerAudit.targetUserId",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "WholesaleSellerAudit.beforeJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "WholesaleSellerAudit.afterJson",
+      "classification": "SHARED_GLOBAL_RETAINED_NO_OWNERSHIP_INFERRED"
+    },
+    {
+      "column": "WorkforceAbsence.employeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceAbsence.approvedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceAttendanceSession.employeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceAttendanceSession.scheduledAssignmentId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceAttendanceSession.clockInEntryId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceAttendanceSession.clockOutEntryId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceAttendanceSession.issueJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceAuditLog.actorUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceAuditLog.entityId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceAuditLog.beforeJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceAuditLog.afterJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceChatCommand.scheduleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceChatCommand.actorUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceChatCommand.proposalJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceChatCommand.warningJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceChatCommand.approvedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceEmployee.baseStoreId",
+      "classification": "EXPLICIT_BASE_STORE_OWNERSHIP_NULL_UNASSIGNED_RETAINED_CROSS_STORE_LINKS_BLOCK"
+    },
+    {
+      "column": "WorkforceEmployee.userId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceEmployee.legacyEmployeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceEmployee.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceEmployeeEvaluation.employeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceEmployeeEvaluation.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceEmployeePayment.sourceId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceEmployeePayment.approvedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceEmployeePayment.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceEmployeeRole.employeeId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "WorkforceEmployeeRole.roleId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceEmployeeRule.employeeId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "WorkforceEmployeeRule.relatedEmployeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceEmployeeRule.valueJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceEmployeeStoreAccess.employeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceHourlyRate.employeeId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "WorkforceHourlyRate.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceLeaveRequest.employeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceLeaveRequest.requestedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceLeaveRequest.approvedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforcePayrollClosing.previewJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforcePayrollClosing.totalsJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforcePayrollClosing.closedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforcePayrollClosing.reopenedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforcePayrollLine.calculationJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforcePayrollLine.issueJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforcePayrollPeriod.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforcePayrollPeriod.closedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceSchedule.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceSchedule.approvedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceScheduleAssignment.scheduleId",
+      "classification": "EXPLICIT_OWNERSHIP_JOIN_REQUIRED_NOT_INFERRED_FROM_NAME"
+    },
+    {
+      "column": "WorkforceScheduleAssignment.shiftTemplateId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceScheduleAssignment.employeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceScheduleAssignment.warningJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceShiftTemplate.requiredRoleId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceTimeClockEntry.employeeId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceTimeClockEntry.sourceShiftId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceTimeClockEntry.deviceId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceTimeClockEntry.correctionOfId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "WorkforceTimeClockEntry.approvedByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "WorkforceTimeClockEntry.createdByUserId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportAutomationGrant.grantedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportAutomationGrant.principalId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportAutomationGrant.revokedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportAutomationGrant.updatedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportDeliverySlot.record",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportDeliverySlot.slotId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportDispatchPolicy.updatedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportPayload.bytes",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportPayload.payloadId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipient.createdBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipient.recipientId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipient.revokedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipient.updatedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipient.verifiedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipientConsent.consentedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipientConsent.recipientId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipientConsent.revokedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AutomaticReportRecipientConsent.updatedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrinter.settings",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrinter.tokenHash",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrinter.pairHash",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintRequest.requestId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintRequest.batchId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "ProductionPrintRequest.response",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintJob.batchId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "ProductionPrintJob.ticket",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintJob.claimId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintJob.claimedBy",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "ProductionPrintResolution.jobId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "ProductionPrintResolution.actorId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "FtextCashRequest.checkoutJson",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "FtextCashRequest.claimedByDeviceId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "FtextCashRequest.clientTransactionId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "FtextCashRequest.plan",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "FtextCashRequest.result",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "FtextCashRequest.saleId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "FtextCashRequest.sessionId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "AiOwnerWallet.cycleId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWallet.notificationOwnerId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletAudit.actorId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletAudit.detail",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletEntry.actorId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletEntry.reference",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletEntry.resolutionReference",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletEntry.tariff",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletEntry.usage",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletNotice.cycleId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletNotice.messageId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "AiOwnerWalletNotice.ownerId",
+      "classification": "COMPANY_FINANCIAL_HISTORY_OR_NONOWNING_PAYLOAD_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.candidateJsonText",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.capturePrincipal",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.companyId",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.delayMs",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.formatVersion",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.id",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.issueMonth",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.lifecycleGeneration",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.observationStatus",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.payloadHash",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.scheduledFor",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.sourceCoverage",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.sourceHash",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.sourceObservedAt",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.sourceReadFinishedAt",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.sourceReadStartedAt",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.sourceRevision",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.storeId",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.storedAt",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.storedBytesSha256",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.transactionStartedAt",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "MonthlyInventorySnapshot.valuationBasis",
+      "classification": "IMMUTABLE_DETACHED_MONTHLY_HISTORY_METADATA_OR_PAYLOAD_NEVER_AN_OWNERSHIP_SELECTOR"
+    }
+  ]
+}

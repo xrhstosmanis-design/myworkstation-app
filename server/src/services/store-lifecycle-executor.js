@@ -108,6 +108,16 @@ function guardBody(plan,schema,node){return `DECLARE old_store text; new_store t
  END LOOP;
  IF TG_OP='DELETE' THEN RETURN OLD; END IF; RETURN NEW;
 END;`}
+// Pure guard identity for the proposed detached monthly-history node. No install,
+// enrollment, metadata query or execution occurs here. Its two reviewed root
+// identity FKs protect history; only Store participates in the scoped node graph.
+export function getReviewedMonthlySnapshotLifecycleGuardDefinitions(manifest,schema){
+ const plan=planFor(manifest),node=plan.nodes.get('MonthlyInventorySnapshot');
+ if(typeof schema!=='string'||!schema||!node||node.owner.kind!=='DIRECT'||node.references?.length)fail('Monthly snapshot guard review differs.');
+ bindDatabaseReferences(plan,schema,[{child:'MonthlyInventorySnapshot',parent:'Store',childSchema:schema,parentSchema:schema,local:['storeId'],remote:['id']}]);
+ const name=guardName(node);
+ return [{name,mask:31,body:guardBody(plan,schema,node)},{name:name+'_truncate',mask:34,body:truncateBody}];
+}
 async function schemaFor(tx){const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS name'))[0]?.name;if(!schema)fail('Schema unavailable.');return schema}
 async function readForeignKeys(tx,schema){ return await tx.$queryRawUnsafe(`SELECT child.relname AS child,parent.relname AS parent,pn.nspname AS "parentSchema",cn.nspname AS "childSchema",ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.n ORDER BY k.p) AS local,ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.confrelid AND a.attnum=k.n ORDER BY k.p) AS remote FROM pg_constraint c JOIN pg_class child ON child.oid=c.conrelid JOIN pg_class parent ON parent.oid=c.confrelid JOIN pg_namespace cn ON cn.oid=child.relnamespace JOIN pg_namespace pn ON pn.oid=parent.relnamespace WHERE c.contype='f' AND (cn.nspname=$1 OR pn.nspname=$1) ORDER BY cn.nspname,child.relname,c.conname`,schema);
 }
@@ -191,6 +201,9 @@ async function assertQuiescent(tx,plan,schema,scope,meta,{connectors=true,lockBa
  if(lockBackground&&plan.nodes.has('MyDataInboundDocument')){const held=(await tx.$queryRawUnsafe(`SELECT pg_try_advisory_xact_lock(hashtextextended($1,0)) AS held`,lifecycleMyDataLockKey(scope)))[0]?.held;if(!held)fail('Active shift, operator, Writer or fiscal work blocks maintenance.');}
 }
 async function assertScopedRelations(tx,plan,schema,scope,meta,mode){
+ // Detached monthly history survives reset. Store deletion requires a separately
+ // approved retention/export decision; this proposed node grants no purge policy.
+ if(mode==='DELETE'&&plan.nodes.has('MonthlyInventorySnapshot')&&(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."MonthlyInventorySnapshot" WHERE "storeId"=$1 LIMIT 1`,scope.storeId)).length)fail('Monthly inventory snapshot history blocks store deletion.');
  // Company financial history must never be removed by deleting a store.
  // RESET keeps its attributed rows; DELETE refuses until a separate reviewed
  // financial retention workflow exists. No generic KEEP/DELETE rule changes.
