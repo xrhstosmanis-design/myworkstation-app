@@ -55,7 +55,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     assert.notEqual(saved.passwordHash,input.password);assert.notEqual(saved.pinHash,input.pin);assert.notEqual(saved.pinHash,saved.passwordHash);
     const authSource=(await readFile(new URL('../src/middleware/auth.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export async function auth','async function auth');
     const auth=new Function('jwt','crypto','prisma','assertCustomerDemoRuntimeClosed','authorizeChatOperator','enforceBackofficeStaff',authSource+'\nreturn auth;')(jwt,crypto,db,assertCustomerDemoRuntimeClosed,async()=>null,enforceBackofficeStaff);
-    const inventorySource=(await readFile(new URL('../src/routes/inventory-v2.js',import.meta.url),'utf8')).replace(/^import[\s\S]*?;\n/gm,'').replace(/^export default .*;\n/gm,'');
+    const inventorySource=(await readFile(new URL('../src/routes/inventory-v2.js',import.meta.url),'utf8')).replace(/^import[\s\S]*?;\n/gm,'').replace(/^export .*;\n/gm,'');
     let beforeCount;
     const countGrant=async(...args)=>{if(beforeCount){const wait=beforeCount;beforeCount=null;await wait()}return requireStaffGrant(...args)};
     const inventory=new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed','requireStaffGrant',inventorySource+'\nreturn router;')(express.Router,z,crypto,db,jwt,assertCustomerDemoRuntimeClosed,()=>assert.fail('finalization executed'),lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed,countGrant);
