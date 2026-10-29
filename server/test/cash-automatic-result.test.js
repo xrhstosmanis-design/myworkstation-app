@@ -44,6 +44,12 @@ test('card-only contradiction does not change cash results; missing cash, unsafe
  }
  const unknown=fixture();unknown.sessions.get('a').automaticTransactions.push({id:'unknown',companyId:'co',storeId:'store',sessionId:'a',type:'UNKNOWN',amount:10});assert.equal(complete(unknown).rows[0].automaticallyCalculated,false);
 });
+test('difference-only configuration retains its provisional variance-column policy without acquiring FULL automatic approvals',()=>{
+ const source=fixture();source.rule={mode:'DIFFERENCE_ONLY',carryOverEnabled:false};
+ const r=complete(source);assert(r.rows.every(row=>row.automaticAudit.status==='NOT_APPLICABLE'&&!row.automaticallyCalculated&&!row.reviewed));
+ assert.equal(r.calculatedResult.automaticCount,0);assert.equal(r.calculatedResult.pending,3);
+ assert.equal(canSendProvisionalCashReport(projectAutomaticReviewedReport(r)),true);
+});
 test('a cash contradiction invalidates both connected offset halves before allocation; card-only change preserves verified allocation',()=>{
  const input=fixture(),a=input.sessions.get('a'),b=input.sessions.get('b');
  const records=[{id:'offset',sequence:1,actorName:'Ελεγκτής',data:{kind:'OFFSET',previousSessionId:'a',nextSessionId:'b',previousHash:a.sourceHash,nextHash:b.sourceHash,amountCents:500},proof:{previousHash:a.sourceHash,nextHash:b.sourceHash}}];

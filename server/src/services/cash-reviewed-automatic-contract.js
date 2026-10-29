@@ -57,7 +57,7 @@ export function canSendProvisionalCashReport(report){
  try{
   const p=reportSchema.parse(report);assertCalculatedCashResult(p);
   return p.rows.every(r=>{
-   if(hasCashNumericContradiction(r.automaticAudit)||!r.reviewed&&r.automaticAudit&&!cashArithmeticIsCurrent(r))return false;
+   if(hasCashNumericContradiction(r.automaticAudit)||!r.reviewed&&r.automaticAudit&&r.automaticAudit.status!=='NOT_APPLICABLE'&&!cashArithmeticIsCurrent(r))return false;
    if(!r.reviewed&&r.automaticAudit?.checks.some(c=>c.code.startsWith('CARD_')&&c.status==='UNAVAILABLE'))return false;
    if(!Number.isSafeInteger(r.initialCents)||!Number.isSafeInteger(r.remainingCents)||!Number.isSafeInteger(r.cardCents)||r.recheck)return false;
    if(r.reviewed)return r.status==='REVIEWED'&&r.eligible&&!!r.reviewedBy;
