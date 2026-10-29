@@ -17,7 +17,7 @@ import {inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed} from '../src/
 import {reviewedFreshStoreManifest} from '../src/services/store-lifecycle-manifest.js';
 import {lifecyclePreview} from '../src/services/store-lifecycle-preview.js';
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&u.pathname==='/myworkstation_test'}catch{return false}};
-test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revocation and immutable audit',{skip:!isolated()},async t=>{
+test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revocation and immutable audit',{skip:!isolated(),timeout:90000},async t=>{
   const schema='staff_'+crypto.randomBytes(8).toString('hex'),admin=new PrismaClient(),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
   const db=new PrismaClient({datasourceUrl:url.toString()}),oldSecret=process.env.JWT_SECRET;process.env.JWT_SECRET||='isolated-staff-only';let server;
   try{
@@ -63,7 +63,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     const app=express();app.use(express.json());app.use('/api/backoffice-staff',createBackofficeStaffRouter({db,authenticate:auth,issueSession,repository}));app.use('/api/inventory-v2',auth,inventory);app.get('/api/platform/companies',auth,(_req,res)=>res.json({leak:true}));app.use((e,_req,res,_next)=>res.status(e.status||500).json({code:e.code,error:e.message}));
     server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s))});
     const request=async(path,{token,method='GET',body,storeId}={})=>{
-      const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{method,headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{}),...(storeId?{'x-backoffice-store-id':storeId}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json(),headers:r.headers};
+      const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{method,signal:AbortSignal.timeout(15000),headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{}),...(storeId?{'x-backoffice-store-id':storeId}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json(),headers:r.headers};
     };
     let token;
     await t.test('username/PIN and username/password use personal revocable UserSession and omit secrets',async()=>{
@@ -105,7 +105,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     await t.test('withdrawal after HTTP admission but before native count transaction refuses without a second event',async()=>{
       let reached,release;const entered=new Promise(r=>{reached=r}),wait=new Promise(r=>{release=r});beforeCount=async()=>{reached();await wait};
       const pending=request('/api/inventory-v2/stocktakes/sta/count',{token,storeId:'a1',method:'POST',body:{...count,quantity:9,expectedVersion:1,clientEventId:crypto.randomUUID()}});
-      await entered;
+      await Promise.race([entered,pending.then(result=>{throw Error("Count did not reach the transaction admission hook: "+JSON.stringify(result))})]);
       try{await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "active"=false WHERE "userId"=${staffId}`;}finally{release()}
       assert.equal((await pending).status,403);
       assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "InventoryCountEvent"`)[0].n),1);
@@ -149,6 +149,6 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       }
     });
   }finally{
-    if(server)await new Promise(resolve=>{server.close(resolve);server.closeIdleConnections()});await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();if(oldSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=oldSecret;
+    if(server)await new Promise(resolve=>{server.close(resolve);server.closeAllConnections()});await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();if(oldSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=oldSecret;
   }
 });
