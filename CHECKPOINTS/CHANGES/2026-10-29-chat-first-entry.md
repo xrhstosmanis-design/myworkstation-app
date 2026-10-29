@@ -1,3 +1,7 @@
+## Expanded local regression and review receipt
+
+Node20.20.2 related Chat/native/push/server suite103tests:99PASS/0FAIL/4isolated-PGSKIP; Node20 frontend build8.68sPASS. Reviewed first-entry manual-back clearing and quiet renewal push rebind; both are in current candidate. Initial older85a2aa Android job123700448452 compile/unit/lint succeeded and emulator is running, but that is NOT evidence for newer head and cannot authorize release. Require full exact latest server/PG/Android checks before merge. No new device/hosted acceptance or installed fix.
+
 ## Local verification receipt before source publication
 
 Node20.20.2 frontend build passed8.68s; TABLE_SERVICE retained in entry-CxaK45x1.js. Focused39tests36PASS/0FAIL/3nativePGSKIP. Native Android/emulator and real isolated PostgreSQL cases remain required in CI. This is not device/hosted acceptance.
