@@ -57,3 +57,18 @@ test('document findings stay factual and scoped to their shift, and do not chang
  assert.doesNotMatch(report.text,/500,00/);assert.equal(report.rows[0].remainingCents,-8700);assert.equal(report.rows[0].cardCents,20000);
  const oldHash=report.reportHash;source.sessions.get('a').expenseFindings=[];assert.notEqual(projectReconciliation(source,[]).reportHash,oldHash);
 });
+
+test('automatic arithmetic is carried in canonical prose without closing documents, creating approvals or allocating equal amounts',()=>{
+ const source=fixture(),a=source.sessions.get('a');source.selectedIds=['a'];
+ a.automaticSnapshot={openingDrawer:100,openingCustody:0,openingCoins:0,openingOperational:100,closingDrawer:13,closingCustody:0,closingCoins:0,actualOperational:13,expectedOperational:100,variance:-87,cashSales:0,expenses:0,cardSales:200,eftposTotal:0,cardVariance:200};
+ a.automaticTransactions=[{id:'card',companyId:'co',storeId:'store',sessionId:'a',type:'SALE_CARD',amount:200,reversedAt:null}];
+ a.expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',amountCents:1000,occurredAt:null}];
+ const before=structuredClone(source),report=projectReconciliation(source,[]),r=report.rows[0];
+ assert.equal(r.automaticAudit.status,'CALCULATED');assert.equal(r.automaticAudit.cashVarianceCents,-8700);assert.equal(r.reviewed,false);assert.equal(r.offsetCents,0);
+ assert.equal(report.totals.pending,1);assert.equal(report.totals.shortageCents,0);assert.equal(r.cardCents,20000);
+ assert.match(report.text,/Ο αυτόματος αριθμητικός έλεγχος.*ολοκληρώθηκε/);assert.match(report.text,/έξοδο 10,00.*χωρίς παραστατικό/);assert.doesNotMatch(report.text,/ΜΑΝΗΣ ΧΡΗΣΤΟΣ/);
+ assert.deepEqual(source,before);
+ const oldHash=report.reportHash,oldSource=r.sourceHash,oldPlan=r.planHash;
+ a.automaticSnapshot.expectedOperational=101;
+ const changed=projectReconciliation(source,[]);assert.equal(changed.rows[0].automaticAudit.status,'INCOMPLETE');assert.notEqual(changed.reportHash,oldHash);assert.equal(changed.rows[0].sourceHash,oldSource);assert.equal(changed.rows[0].planHash,oldPlan);
+});
