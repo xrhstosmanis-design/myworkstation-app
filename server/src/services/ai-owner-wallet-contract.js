@@ -33,6 +33,17 @@ export function reserveAmount(tariff){
   if(amount<=0n||amount>MAX_WALLET_MICROS)throw walletError('AI_WALLET_TARIFF_REQUIRED',503);
   return amount;
 }
+// Only authoritative, immutable request input counts may narrow a hold.
+// The full model tariff/capacity remains unchanged for settlement and history.
+export function reserveRequestAmount(tariff,{inputTokens,maxOutputTokens}){
+  if(!Number.isSafeInteger(inputTokens)||inputTokens<0||inputTokens>tariff.contextTokens||
+    !Number.isSafeInteger(maxOutputTokens)||maxOutputTokens<1||maxOutputTokens>tariff.maxOutputTokens)throw walletError('AI_WALLET_INPUT_COUNT_REQUIRED',409);
+  const tier=tariff.longContext&&inputTokens>tariff.longContext.thresholdTokens?tariff.longContext:tariff;
+  const inputRate=Math.max(tier.inputMicrosPerMillion,tier.cachedInputMicrosPerMillion,...Object.values(tier.cacheWriteMicrosPerMillion||{}));
+  const amount=ceilMillion(BigInt(inputTokens)*BigInt(inputRate)+BigInt(maxOutputTokens)*BigInt(tier.outputMicrosPerMillion));
+  if(amount<=0n||amount>MAX_WALLET_MICROS)throw walletError('AI_WALLET_TARIFF_REQUIRED',503);
+  return amount;
+}
 export function meteredUsage(raw,tariff){
   const u=raw?.usage,d=u?.input_tokens_details,input=u?.input_tokens,output=u?.output_tokens,cached=d?.cached_tokens??0;
   const writes=d?.cache_write_tokens===undefined&&!tariff.cacheWriteMicrosPerMillion?0:d?.cache_write_tokens;
@@ -57,3 +68,4 @@ export function positiveMicros(value){
   const amount=BigInt(value);if(amount<=0n||amount>MAX_WALLET_MICROS)throw walletError('AI_WALLET_INVALID_AMOUNT',400);return amount;
 }
 export const walletView=row=>({companyId:row.companyId,currency:'EUR',enabled:row.enabled,emailEnabled:row.emailEnabled,notificationOwnerId:row.notificationOwnerId||'',balanceMicros:String(row.balanceMicros),reservedMicros:String(row.reservedMicros),availableMicros:String(BigInt(row.balanceMicros)-BigInt(row.reservedMicros)),lastCreditMicros:String(row.lastCreditMicros),version:row.version,state:BigInt(row.balanceMicros)===0n?'EMPTY':BigInt(row.balanceMicros)<=BigInt(row.lastCreditMicros)/5n?'LOW':'OK'});
+

@@ -5,6 +5,7 @@ import {createWalletProvider} from './ai-owner-wallet-provider.js';
 import {aiOwnerWalletRepository} from './ai-owner-wallet-runtime.js';
 import {walletError,MAX_WALLET_MICROS} from './ai-owner-wallet-contract.js';
 import {invoiceAssistantPageCount} from '../lib/invoice-assistant-page-count.js';
+import {countInvoiceInput} from './ai-invoice-input-count.js';
 
 export function throwIfWalletError(error){
   if(String(error?.code||'').startsWith('AI_WALLET_')){
@@ -41,7 +42,7 @@ export function createInvoiceWalletMeter({repository=aiOwnerWalletRepository,env
       const response=await transport(url,{...options,body:JSON.stringify(billed)});
       const raw=await response.clone().json();
       return {response,raw};
-    });
+    },env.AI_OWNER_WALLET_INVOICE_REQUEST_RESERVE_ENABLED==='true'?settings=>countInvoiceInput(settings,options,transport):undefined);
     return result.response;
   }
   async function azure({contentData,mimeType,model,apiVersion},invoke){
@@ -77,3 +78,4 @@ const invoiceMeter=createInvoiceWalletMeter();
 export const withInvoiceWalletScope=invoiceMeter.run;
 export const invoiceWalletResponsesFetch=invoiceMeter.responsesFetch;
 export const meterInvoiceAzure=invoiceMeter.azure;
+

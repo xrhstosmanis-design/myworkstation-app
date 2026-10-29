@@ -87,3 +87,23 @@ test('failed review persistence still stops paid fallbacks and retains the origi
   assert.equal(paid,1);assert.equal(fallback,0);assert.equal(f.events.filter(e=>e.kind==='reserve').length,1);assert.equal(f.events.filter(e=>e.kind==='settle').length,0);
  }
 });
+
+test('opt-in invoice request reservation counts exact input before reserve, then settles only the original generation',async()=>{
+ const calls=[];let f;
+ f=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_REQUEST_RESERVE_ENABLED:'true'},transport:async(u,o)=>{
+  calls.push(u);
+  if(u.endsWith('/input_tokens')){assert.equal(f.events.length,0);assert.equal(JSON.parse(o.body).input,'synthetic private invoice');return new Response(JSON.stringify({object:'response.input_tokens',input_tokens:5}))}
+  assert.equal(f.events[0].amountMicros,25n);return new Response(JSON.stringify(raw('counted-response')));
+ }});
+ await f.meter.run(scope,()=>f.meter.responsesFetch(url,options));
+ assert.deepEqual(calls,[url+'/input_tokens',url]);assert.equal(f.events[1].amountMicros,8n);assert.equal(f.events[0].tariff.contextTokens,100);
+});
+test('invoice count failure cannot enter paid fallback, reserve money or affect Azure page metering',async()=>{
+ let generated=0,fallback=0;
+ const f=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_REQUEST_RESERVE_ENABLED:'true'},transport:async u=>{if(u.endsWith('/input_tokens'))return new Response('unavailable',{status:503});generated++;return new Response('{}')}});
+ await assert.rejects(f.meter.run(scope,async()=>{try{return await f.meter.responsesFetch(url,options)}catch(error){throwIfWalletError(error);fallback++}}),e=>e.code==='AI_WALLET_INPUT_COUNT_REQUIRED'&&e.status===409);
+ assert.equal(generated,0);assert.equal(fallback,0);assert.equal(f.events.length,0);
+ await f.meter.run(scope,()=>f.meter.azure({...page},async mark=>{mark('synthetic-azure-operation');return azurePayload}));
+ assert.equal(f.events[0].amountMicros,80n);assert.equal(f.events[1].amountMicros,80n);
+});
+
