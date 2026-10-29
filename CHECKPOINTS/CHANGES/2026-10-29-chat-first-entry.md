@@ -1,3 +1,18 @@
+## Local verification receipt before source publication
+
+Node20.20.2 frontend build passed8.68s; TABLE_SERVICE retained in entry-CxaK45x1.js. Focused39tests36PASS/0FAIL/3nativePGSKIP. Native Android/emulator and real isolated PostgreSQL cases remain required in CI. This is not device/hosted acceptance.
+
+## 29/10/2026 — CHAT-FIRST-ENTRY-01 / SOURCE CANDIDATE / NOT INSTALLED
+
+Same owner codex/chat-first-entry-20261029. Before-source claim3273/head062cd0d7 passed exact documentation CI (classification/Windows checks success, runtime jobs correctly skipped) and merged4498b64b13a353a8a071a8bd3259b436ed56389f before source. Implemented selected-store sharing/QR in existing authorized chat panel, bounded explicit post-install Android intent handoff (visible only for supporting manifest versionCode>=12), strict noncredential store parser and existing directory/PIN screen with server store name. Authenticated session cannot be switched by incoming link; generic/manual/account paths preserved. Candidate native0.1.11/code12, public release.json/APK unchanged until signed delivery.
+
+Employee-only chat connection uses30day finite rolling window, encrypted native token restore/renew on resume and foreground activity, same revocable session row and credential-stamp/current active employee/store/company/role checks plus paid Chat check on every authorization. Conditional GREATEST expiry update never clears revokedAt or renews expired/foreign rows; no PIN/password stored and no changes to general Owner/SuperAdmin/BackOffice authentication. Thirty days without successful online renewal requires sign-in; do not call this unexpiring authentication. Ordinary logout/PIN/role/employee/module revocation remain authoritative. Legacy already-expired12h token needs one normal PIN login after update. No financial/stock/fiscal/API key/provider/message/email or production action.
+
+Local Node20.20.2 focused39tests:36PASS/0FAIL/3nativePGSKIP. Mounted decoded selected-store QR, explicit clipboard/share, store switch, generic/download-manifest compatibility and version-gated/no-auto-launch handoff pass. Actual JWT scope/window/current module refusal/conditional renewal tested. Frontend build passed previously onNode24; required Node20 build result is tracked next. Added native isolated PostgreSQL concurrent-logout/expiry/foreign renewal and actual Android activity first-entry/no-account-switch/encrypted lifecycle renewal tests; these MUST run unskipped in full/native CI, not yet verified. No Android SDK/JDK locally, no physical install/login acceptance. No manual/functional/whole feature PASS.
+
+Exact fullPR/nativeAndroid/PG/mainCI, code review, ordinary guarded release and stable-signed APK/hash/manifest distribution remain REQUIRED. Do not release web handoff as a supported installed feature while old publicAPK0.1.10 lacks handler. Physical selected-store installation/Open Chat/PIN/reopen and expiry/revocation acceptance remains AWAITING DEVICE. Checkpoint CHECKPOINTS/CHANGES/2026-10-29-chat-first-entry.md. Same owner retains assignment. Single next action: resolve exact full/native CI then signed/guarded release; no user confirmation needed for routine engineering continuation.
+
+
 ## 29/10/2026 — CHAT-FIRST-ENTRY-01 / FIRST SETUP, STORE SHARING AND PERSISTENT CHAT LOGIN / ASSIGNED BEFORE SOURCE
 
 Owner codex/chat-first-entry-20261029. User explicitly requests implementation: easiest selected-store QR/link setup, Super Admin sharing for each store, Owner sharing only own stores, and staying signed in. Independent new onboarding/session-renewal slice; prior native media/push/signing/2FA/role/tenant/revocation PASS retained. Existing native owner retains all other scopes. No accepted tests repeated.
