@@ -73,8 +73,7 @@ public final class MainActivity extends Activity {
     private Bitmap preview;
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
-            if (foreground && staff() && !token.isEmpty() && selected != null && view.equals("conversation") && !busy
-                && identity.optLong("exp") * 1000L - System.currentTimeMillis() < 29L * 86400000L)
+            if (foreground && needsChatRenewal() && selected != null && view.equals("conversation") && !busy)
                 call("/api/store-chat/stores/" + enc(identity.optString("storeId")) + "/mobile-renew", "POST", object(), false, MainActivity.this::saveRenewedConnection);
             if (foreground && !token.isEmpty() && selected != null && view.equals("conversation") && tab.equals("chat") && !busy) loadMessages(false);
             if (foreground) ui.postDelayed(this, 10000);
@@ -97,9 +96,9 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onResume() {
         super.onResume(); foreground = true;
-        if (!token.isEmpty() && NativePush.opted(this)) NativePush.register(this, token, ok -> {});
+        if (!token.isEmpty() && NativePush.opted(this) && !needsChatRenewal()) NativePush.register(this, token, ok -> {});
         if (token.isEmpty()) { restoreTwoFactor(); if (!entryStore.isEmpty()) openEntryStore(); else loginScreen(); }
-        else if (staff() && identity.optLong("exp") * 1000L - System.currentTimeMillis() < 29L * 86400000L) renewChatConnection();
+        else if (needsChatRenewal()) renewChatConnection();
         else if (!pushStore.isEmpty()) stores();
         else if (selected != null) conversation();
         else stores();
@@ -232,10 +231,12 @@ public final class MainActivity extends Activity {
         layout("Σύνδεση Chat", "Επαναφορά της σύνδεσής σου…");
         call("/api/store-chat/stores/" + enc(identity.optString("storeId")) + "/mobile-renew", "POST", object(), false, data -> {
             saveRenewedConnection(data);
-            if (NativePush.opted(this)) NativePush.register(this, token, ok -> {});
             if (selected != null) conversation(); else stores();
         });
         content.addView(button("Συνέχεια χωρίς ανανέωση", () -> { navigate(); stores(); }));
+    }
+    private boolean needsChatRenewal() {
+        return !token.isEmpty() && staff() && identity.optLong("exp") * 1000L - System.currentTimeMillis() < 29L * 86400000L;
     }
     private void saveRenewedConnection(JSONObject data) throws Exception {
         String next = data.getString("token"); JSONObject decoded = claims(next);
@@ -246,6 +247,7 @@ public final class MainActivity extends Activity {
             || !decoded.optString("storeId").equals(identity.optString("storeId"))
             || decoded.optLong("exp") * 1000L <= System.currentTimeMillis()) throw new IllegalArgumentException();
         vault.save(next); token = next; identity = decoded;
+        if (NativePush.opted(this)) NativePush.register(this, token, ok -> {});
     }
     private void operatorPin(String storeId, JSONObject data) {
         layout("Προσωπικό PIN", "Μόνο συνομιλία καταστήματος");
