@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {hash} from '../src/services/cash-reconciliation-contract.js';
 import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
 import {createReviewedCashEmailReader,reviewedCashEmailReadiness,assertReviewedCashEmailPreview,renderReviewedCashEmail} from '../src/services/cash-reviewed-email.js';
+import {assessAutomaticCash} from '../src/services/cash-automatic-audit.js';
+import {reconciliationText} from '../src/services/cash-reconciliation-report.js';
 
 function report({reviewed=true,offset=true,name='Δοκιμή'}={}){
  const sessions=new Map([['a',-8700],['b',8000]].map(([id,cents],i)=>[id,{session:{id,companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',openedBy:id,openedByName:id==='a'?'Χρυσάνθη':'Γιάννης',openedAt:`2026-10-${21+i}T06:00:00Z`,closedAt:`2026-10-${21+i}T14:00:00Z`,shiftLabel:'Πρωινή'},sourceHash:hash(id),initialCents:cents,basisCents:cents,cardCents:20000,explainedCents:0,reviewStatus:'VALID',nextClosed:i===0,transactions:[]} ]));
@@ -36,4 +38,17 @@ test('reader checks admission twice and original generation after source read; i
  await assert.rejects(reader({},'store','2026-02-30'),e=>e.status===400);assert.equal(admission,0);await assert.rejects(reader({},'store','2026-10-21'),e=>e.status===403&&!e.message.includes('PRIVATE'));assert.equal(reads,1);
  const stale=createReviewedCashEmailReader({db:{},authorize:async()=>({scope:{companyId:'co',storeId:'store'}}),repository:{generation:async()=>String(generation),read:async()=>{generation++;return r}}});await assert.rejects(stale({},'store','2026-10-21'),e=>e.code==='CASH_EMAIL_RECHECK_REQUIRED');
  for(const bad of [{...r,storeId:'foreign'},{...r,generation:'2'},{...r,head:undefined},{...r,coverage:'LIMITED'},{...r,period:{from:'2026-10-20',to:'2026-10-20'}}])await assert.rejects(envelope(bad));
+});
+
+test('a current calculated provisional report can keep open document and handoff questions without a forged confirmation',async()=>{
+ const r=report({reviewed:false,offset:false}),row=r.rows[0];
+ const session={id:'a',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',openedAt:row.openedAt,closedAt:row.closedAt,openingDrawer:100,openingCustody:0,openingCoins:0,openingOperational:100,closingDrawer:13,closingCustody:0,closingCoins:0,actualOperational:13,expectedOperational:100,variance:-87,cashSales:0,expenses:0,cardSales:200,eftposTotal:0,cardVariance:200};
+ row.automaticAudit=assessAutomaticCash({session,transactions:[{id:'card',companyId:'co',storeId:'store',sessionId:'a',type:'SALE_CARD',amount:200,reversedAt:null}],rule:{mode:'FULL',carryOverEnabled:true}});
+ row.expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',amountCents:1000,occurredAt:null}];r.text=reconciliationText(r);
+ const e=await envelope(r);assert.equal(reviewedCashEmailReadiness(e,legacy),true);assert.equal(e.report.rows[0].reviewed,false);assert.equal(e.report.totals.shortageCents,0);assert.match(render(e).text,/χωρίς παραστατικό/);assert.match(render(e).text,/Αναμονή κλεισίματος/);assert.doesNotMatch(render(e).text,/ΜΑΝΗΣ ΧΡΗΣΤΟΣ/);
+ assert.equal(reviewedCashEmailReadiness(e,[{...legacy[0],reviewValid:false}]),false);
+ for(const patch of [{expectedOperational:99},{eftposTotal:null}]){
+  row.automaticAudit=assessAutomaticCash({session:{...session,...patch},transactions:[{id:'card',companyId:'co',storeId:'store',sessionId:'a',type:'SALE_CARD',amount:200,reversedAt:null}],rule:{mode:'FULL',carryOverEnabled:true}});r.text=reconciliationText(r);
+  assert.equal(reviewedCashEmailReadiness(await envelope(r),legacy),false);
+ }
 });

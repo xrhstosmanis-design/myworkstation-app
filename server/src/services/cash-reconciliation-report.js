@@ -1,3 +1,4 @@
+import {assessAutomaticCash,automaticCashAuditText} from './cash-automatic-audit.js';
 import {cashEventSalesText} from './cash-event-sales.js';
 import {hash,activeRecords,reconcileError} from './cash-reconciliation-contract.js';
 import {cashReportRowDay} from '../../../client/src/lib/cash-report-period.js';
@@ -48,11 +49,15 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
     row.day=row.closedAt?cashReportRowDay(row.closedAt):null;
     row.expenseFindings=original.expenseFindings||[];
     if(original.eventSales)row.eventSales=original.eventSales;
+    if(original.automaticSnapshot){
+      const full=s=>s?{...s.automaticSnapshot,...s.session}:null;
+      row.automaticAudit=assessAutomaticCash({session:full(original),transactions:original.automaticTransactions,previous:full(source.sessions.get(original.session.previousSession?.id)),next:full(source.sessions.get(original.session.nextSession?.id)),rule:source.rule,sourceValid:!row.recheck});
+    }
     row.transactions=original.transactions.slice(0,30);row.transactionsLimited=original.transactions.length>30;
     row.nextSessionId=original.session.nextSession?.id||null;row.previousSessionId=original.session.previousSession?.id||null;
   }
   const selected=source.selectedIds.map(id=>rows.get(id));
-  const reportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[],...(r.expenseFindings?.length?{expenseFindings:r.expenseFindings}:{}),...(r.eventSales?{eventSales:r.eventSales}:{})})),...(source.kioskEventSales?{kioskEventSales:source.kioskEventSales}:{})});
+  const reportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[],...(r.automaticAudit?{automaticAudit:r.automaticAudit}:{}),...(r.expenseFindings?.length?{expenseFindings:r.expenseFindings}:{}),...(r.eventSales?{eventSales:r.eventSales}:{})})),...(source.kioskEventSales?{kioskEventSales:source.kioskEventSales}:{})});
   const checkpoint=[...records].reverse().find(r=>r.data.kind==='CHECKPOINT');
   const totals={shortageCents:0,surplusCents:0,pending:selected.filter(r=>!r.reviewed&&r.status!=='NOT_APPLICABLE').length},employees=new Map();
   const operatorNames=new Map();for(const r of rows.values()){const names=operatorNames.get(r.operatorId)||new Set();names.add(r.operatorName);operatorNames.set(r.operatorId,names);}
@@ -91,6 +96,7 @@ export function reconciliationText(report){
       const amount=money(finding.amountCents),when=finding.occurredAt?new Date(finding.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',dateStyle:'short',timeStyle:'short',hour12:false}):'χωρίς ώρα';
       lines.push(finding.code==='EXPENSE_WITHOUT_DOCUMENT'?`Εκκρεμότητα ${when}: έξοδο ${amount} χωρίς παραστατικό.`:`Εκκρεμότητα ${when}: παραστατικό ή πληρωμή ${amount} χρειάζεται επανέλεγχο.`);
     }
+    if(row.automaticAudit)lines.push(...automaticCashAuditText(row.automaticAudit));
     if(row.reviewNote)lines.push('Σχόλιο ελέγχου: '+row.reviewNote);
     for(const evidence of row.pendingEvidence||[])lines.push(`Εκκρεμεί επανέλεγχος: ${evidence.date} · ${evidence.label} · ${money(evidence.amountCents)}.`);
   }
