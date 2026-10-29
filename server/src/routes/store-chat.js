@@ -1,4 +1,5 @@
 import {sendNativeChatPush,nativePushStatus} from '../native-chat-push.mjs';
+import {renewChatOperatorSession} from '../chat-operator-auth.mjs';
 import {parseVoiceAttachment} from '../chat-voice.mjs';
 import {parseVideoAttachment} from '../chat-video.mjs';
 import crypto from "node:crypto";
@@ -171,6 +172,11 @@ router.patch("/stores/:storeId/tasks/:taskId",async(req,res,next)=>{try{
   await audit(req,store,completed?"STORE_CHAT_TASK_COMPLETED":"STORE_CHAT_TASK_REOPENED",{messageId:found[0].messageId,taskId,status:completed?"COMPLETED":"OPEN"});res.json({ok:true});
 }catch(e){next(e)}});
 router.post("/stores/:storeId/messages",async(req,res,next)=>{try{const store=await storeFor(req,res);if(!store)return;const body=String(req.body?.body||"").trim(),category=String(req.body?.category||"GENERAL").toUpperCase(),attachment=parseAttachment(req.body?.attachment),settings=await chatSettings(store);if(attachment?.mimeType.startsWith("image/")&&!settings.photosEnabled)return res.status(403).json({error:"Οι φωτογραφίες είναι ανενεργές για το Chat αυτού του καταστήματος.",code:"STORE_CHAT_PHOTOS_DISABLED"});if(attachment?.mimeType==="application/pdf"&&!settings.pdfEnabled)return res.status(403).json({error:"Τα PDF είναι ανενεργά για το Chat αυτού του καταστήματος.",code:"STORE_CHAT_PDF_DISABLED"});if((!body&&!attachment)||body.length>5000||!TYPES.has(category))return res.status(400).json({error:"Μη έγκυρο μήνυμα ή κατηγορία."});const id=`chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;await prisma.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},${category},${body},${attachment?.name||null},${attachment?.mimeType||null},${attachment?.size||null},${attachment?.checksum||null},${attachment?.data||null},NOW(),NOW())`;await audit(req,store,"STORE_CHAT_MESSAGE_SENT",{messageId:id,category,hasAttachment:Boolean(attachment),attachmentName:attachment?.name||null,attachmentMimeType:attachment?.mimeType||null,attachmentSize:attachment?.size||null,attachmentChecksum:attachment?.checksum||null});const push=await sendStoreChatPush({store,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store,senderId:req.user.id}).catch(()=>{});});res.status(201).json({ok:true,id,push})}catch(e){next(e)}});
+router.post("/stores/:storeId/mobile-renew",async(req,res,next)=>{try{
+ const store=await storeFor(req,res);if(!store)return;
+ res.setHeader("Cache-Control","no-store");
+ res.json(await renewChatOperatorSession(req.user));
+}catch(e){next(e)}});
 router.post("/stores/:storeId/mobile-logout",async(req,res,next)=>{try{
  const store=await storeFor(req,res);if(!store)return;
  if(!req.user.chatSessionId)return res.status(403).json({error:"Απαιτείται σύνδεση εφαρμογής Chat."});
