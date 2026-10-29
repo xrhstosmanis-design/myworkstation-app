@@ -15562,3 +15562,8 @@ Same owner codex/cash-chat-reconciliation-20261026. FullCI40400178237:4393PASS/2
 
 ## 27/10/2026 — FTEXT operator return · ASSIGNED · AWAITING CI
 Retained owner codex/rizareio-ftext-bridge-20261022. Draft PR #3216: reviewed PAY error release after NO, no fiscal command. Local POS and native PostgreSQL tests passed; physical acceptance remains open.
+
+
+## 29/10/2026 — CASH-AUTOMATIC-AUDIT-12 / CURRENT SOURCE CANDIDATE / FULL PR PASS, COMBINED HEAD PENDING
+
+Same cash owner retained; before-source3277/d0829f1 stays the authoritative main assignment. Source3278/head7bc3baf passed full40948052166/job123709823842,4582server+8backup/0FAIL/0SKIP,including unskipped native arithmetic/original/control/zero-review-write. Reconcile over current6fb7e55 preserving Citizen raster, chat entry/auth, BackOffice claims and all other runtime/docs. Append this candidate pointer only to avoid conflicting with independent owners' top registry updates. Tracker/pending/PDF keep the existing approved assignment; this is neither a new claim nor a PASS closure. Final actual PASS will synchronize all mandatory records/manual/PDF in its own receipt. Ten cash runtime/test blobs unchanged; fresh combined exact CI/main/guarded release/LAB still required. NOT INSTALLED / NO NEW LAB PASS / NO EMAIL. Checkpoint CHECKPOINTS/CHANGES/2026-10-29-cash-automatic-audit.md.

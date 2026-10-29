@@ -7,7 +7,41 @@ import {createCashReconciliationRepository} from '../src/services/cash-reconcili
 import {createCashReconciliationRouter} from '../src/routes/cash-reconciliation.js';
 import {paperKey,intentId,completionId} from '../src/services/cash-paper-contract.js';
 import {scopeKey,hash,actionId,requestHash} from '../src/services/cash-reconciliation-contract.js';
+import {readReconciliationSources} from '../src/services/cash-reconciliation-source.js';
+import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
+
+test('native automatic arithmetic reads real original fields and keeps document issues, original finance and control unchanged',{skip:!isolated()},async()=>{
+ const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_auto_arithmetic_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const db=new PrismaClient({datasourceUrl:url.toString()});
+ try{
+  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
+  for(const sql of [
+   'CREATE TABLE "Store"("id" text primary key,"companyId" text,"name" text)',
+   'CREATE TABLE "CashControlStoreRule"("storeId" text,"companyId" text,"mode" text,"deliveryTerminalPattern" text,"carryOverEnabled" boolean,"posEftposEnabled" boolean,"updatedAt" timestamp)',
+   'CREATE TABLE "CashShiftSession"("id" text primary key,"companyId" text,"storeId" text,"terminalPos" text,"status" text,"openedBy" text,"openedByName" text,"shiftLabel" text,"openedAt" timestamptz,"closedAt" timestamptz,"variance" numeric(14,2),"cardVariance" numeric(14,2),"openingDrawer" numeric,"openingCustody" numeric,"openingCoins" numeric,"openingOperational" numeric,"closingDrawer" numeric,"closingCustody" numeric,"closingCoins" numeric,"actualOperational" numeric,"expectedOperational" numeric,"cashSales" numeric,"expenses" numeric,"cardSales" numeric,"eftposTotal" numeric,"updatedAt" timestamp)',
+   'CREATE TABLE "StoreTransaction"("id" text primary key,"companyId" text,"storeId" text,"sessionId" text,"type" text,"amount" numeric(14,2),"description" text,"subtractFromShift" boolean,"attachmentData" text,"occurredAt" timestamptz,"createdAt" timestamptz,"reversedAt" timestamptz)',
+   'CREATE TABLE "CashControlReview"("id" text,"companyId" text,"storeId" text,"sessionId" text,"decision" text,"amount" numeric,"note" text,"actorId" text,"actorName" text,"snapshotJson" jsonb,"createdAt" timestamp)'
+  ])await db.$executeRawUnsafe(sql);
+  await db.$executeRaw`INSERT INTO "Store" VALUES ('store','co','LAB'),('control','other','Control')`;
+  for(const [id,store,company,opening,closing,cash,expenses,card,variance,opened,closed] of [
+   ['a','store','co',100,95,25,25,20,-5,'2026-10-21T06:00Z','2026-10-21T14:00Z'],
+   ['b','store','co',95,95,0,0,0,0,'2026-10-21T14:01Z','2026-10-21T22:00Z'],
+   ['control','control','other',0,0,0,0,0,0,'2026-10-21T06:00Z','2026-10-21T14:00Z']
+  ])await db.$executeRaw`INSERT INTO "CashShiftSession" VALUES (${id},${company},${store},'MAIN','CLOSED',${'employee-'+id},${id},'Βάρδια',${new Date(opened)},${new Date(closed)},${variance},0,${opening},0,0,${opening},${closing},0,0,${closing},${opening+cash-expenses},${cash},${expenses},${card},${card},NOW())`;
+  for(const [id,type,amount,reversed] of [['cash','SALE_CASH',25,false],['expense','OTHER_EXPENSE',25,false],['card','SALE_CARD',20,false],['reversed','SALE_CASH',100,true]])await db.$executeRaw`INSERT INTO "StoreTransaction" VALUES (${id},'co','store','a',${type},${amount},'Original',true,NULL,'2026-10-21 10:00Z','2026-10-21 10:00Z',${reversed?new Date('2026-10-21T11:00Z'):null})`;
+  const before=await db.$queryRaw`SELECT to_jsonb(s) AS row FROM "CashShiftSession" s ORDER BY "id"`,txBefore=await db.$queryRaw`SELECT to_jsonb(t) AS row FROM "StoreTransaction" t ORDER BY "id"`;
+  const scope={companyId:'co',storeId:'store'},period={from:'2026-10-21',to:'2026-10-21'};
+  const read=async()=>projectReconciliation(await readReconciliationSources(db,scope,period),[]);
+  const report=await read(),a=report.rows.find(r=>r.sessionId==='a');
+  assert.equal(a.automaticAudit.status,'CALCULATED');assert.equal(a.automaticAudit.cashVarianceCents,-500);assert.equal(a.automaticAudit.bankCardVarianceCents,0);assert.equal(a.reviewed,false);assert.equal(a.remainingCents,-500);assert.equal(a.offsetCents,0);
+  assert.match(report.text,/έξοδο 25,00.*χωρίς παραστατικό/);assert(!report.rows.some(r=>r.sessionId==='control'));assert.equal(report.totals.shortageCents,0);
+  assert.deepEqual(await db.$queryRaw`SELECT to_jsonb(s) AS row FROM "CashShiftSession" s ORDER BY "id"`,before);assert.deepEqual(await db.$queryRaw`SELECT to_jsonb(t) AS row FROM "StoreTransaction" t ORDER BY "id"`,txBefore);
+  assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "CashControlReview"`)[0].n,0);
+  await db.$executeRaw`UPDATE "CashShiftSession" SET "closingDrawer"=94 WHERE "id"='a'`;
+  const changed=await read(),changedA=changed.rows.find(r=>r.sessionId==='a');assert.equal(changedA.automaticAudit.status,'INCOMPLETE');assert.notEqual(changed.reportHash,report.reportHash);assert.equal(changedA.sourceHash,a.sourceHash,'new snapshot cannot rewrite old manual review identity');assert.equal(changedA.planHash,a.planHash);
+  assert.deepEqual((await db.$queryRaw`SELECT to_jsonb(s) AS row FROM "CashShiftSession" s WHERE "id"='control'`)[0].row,before.find(x=>x.row.id==='control').row);
+ }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
+});
 test('native reviewed cash: real source/HTTP, serialized two-client once-only offsets, paper allocation, stale sources and checkpoint with immutable finance/control',{skip:!isolated()},async()=>{
  const {PrismaClient,Prisma}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_reconcile_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
  const db=new PrismaClient({datasourceUrl:url.toString()}),other=new PrismaClient({datasourceUrl:url.toString()}),scope={companyId:'co',storeId:'store',generation:'0'},actor={id:'actor',fullName:'Χρήστος Μάνης'},period={from:'2026-10-21',to:'2026-10-23'};let server;

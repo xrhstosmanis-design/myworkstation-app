@@ -36,6 +36,7 @@ test('internal selection rejects invalid, duplicate and stale requests before re
 import {hash} from '../src/services/cash-reconciliation-contract.js';
 import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
 import {projectAutomaticReviewedReport,validateAutomaticReviewedReport} from '../src/services/cash-reviewed-automatic-contract.js';
+import {canSendProvisionalCashReport} from '../src/services/cash-reviewed-automatic-contract.js';
 test('common reviewed report preserves separate cash and cards and rejects changed source or totals',()=>{
  const s={session:{id:'a',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',openedBy:'employee',openedByName:'Σούλα',openedAt:'2026-10-21T06:00:00Z',closedAt:'2026-10-21T14:00:00Z',shiftLabel:'Πρωινή'},sourceHash:hash('session'),initialCents:-700,basisCents:-700,cardCents:20000,explainedCents:0,reviewStatus:'VALID',nextClosed:true,transactions:[{id:'PRIVATE_TRANSACTION'}]};
  s.expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',amountCents:12000,occurredAt:'2026-10-21T07:00:00.000Z'}];
@@ -67,4 +68,15 @@ test('blank operator name stays explicitly unattributed without making source co
  const draft=projectReconciliation(source,[]),r=draft.rows[0],report=projectAutomaticReviewedReport(projectReconciliation(source,[{id:'confirmed',sequence:1,actorName:'Χρήστος Μάνης',data:{kind:'CONFIRM',sessionId:'shift',sourceHash:r.sourceHash,planHash:r.planHash,note:'Ελέγχθηκε η βάρδια.'},proof:{}}]));
  const input={companyId:'co',storeId:'store',dayStartHour:7,rule:{deliveryTerminalPattern:'DELIVERY'},groups:[{companyId:'co',storeId:'store',terminalPos:'MAIN',cashChain:'STORE',day:'2026-10-21',rows:[{sessionId:'shift',employeeId:null,employeeName:'',variance:0}]}]};
  assert.equal(validateAutomaticReviewedReport(report,input),true);assert.equal(report.rows[0].identityRequiresReview,true);assert.equal(report.rows[0].employeeKey,'session:shift');
+});
+
+test('automatic calculation crosses the strict consumer once with open findings, no raw source and no fabricated reviewed totals',()=>{
+ const session={id:'a',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',openedBy:'employee',openedByName:'Σούλα',openedAt:'2026-10-21T06:00:00Z',closedAt:'2026-10-21T14:00:00Z',shiftLabel:'Πρωινή'};
+ const s={session,sourceHash:hash('session'),initialCents:-700,basisCents:-700,cardCents:0,explainedCents:0,reviewStatus:'VALID',nextClosed:false,transactions:[],automaticSnapshot:{openingDrawer:100,openingCustody:0,openingCoins:0,openingOperational:100,closingDrawer:93,closingCustody:0,closingCoins:0,actualOperational:93,expectedOperational:100,variance:-7,cashSales:0,expenses:0,cardSales:0,eftposTotal:0,cardVariance:0},automaticTransactions:[]};
+ const source={store:{id:'store',name:'LAB'},rule:{mode:'FULL',carryOverEnabled:true},sessions:new Map([['a',s]]),selectedIds:['a'],period:{from:'2026-10-21',to:'2026-10-21'},coverage:'BOUNDED_CLOSED_SHIFTS'};
+ const report=projectAutomaticReviewedReport(projectReconciliation(source,[]));
+ assert.equal(report.rows[0].automaticAudit.status,'CALCULATED');assert.equal(report.rows[0].reviewed,false);assert.equal(report.totals.shortageCents,0);assert.equal(report.totals.pending,1);assert(canSendProvisionalCashReport(report));
+ assert.match(report.text,/Εκκρεμότητα: Αναμονή κλεισίματος/);assert(!JSON.stringify(report).includes('automaticSnapshot'));assert(!JSON.stringify(report).includes('automaticTransactions'));
+ assert.throws(()=>projectAutomaticReviewedReport({...projectReconciliation(source,[]),rows:[{...projectReconciliation(source,[]).rows[0],automaticAudit:{...report.rows[0].automaticAudit,humanApproval:true}}]}));
+ s.automaticSnapshot.cashSales=1;const changed=projectAutomaticReviewedReport(projectReconciliation(source,[]));assert.equal(changed.rows[0].automaticAudit.status,'INCOMPLETE');assert.equal(canSendProvisionalCashReport(changed),false);
 });
