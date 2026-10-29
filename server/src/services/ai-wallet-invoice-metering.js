@@ -6,6 +6,7 @@ import {aiOwnerWalletRepository} from './ai-owner-wallet-runtime.js';
 import {walletError,MAX_WALLET_MICROS} from './ai-owner-wallet-contract.js';
 import {invoiceAssistantPageCount} from '../lib/invoice-assistant-page-count.js';
 import {countInvoiceInput} from './ai-invoice-input-count.js';
+import {invoiceWalletCompanyAllowed} from './ai-invoice-company-scope.js';
 
 export function throwIfWalletError(error){
   if(String(error?.code||'').startsWith('AI_WALLET_')){
@@ -16,7 +17,7 @@ export function throwIfWalletError(error){
   }
 }
 const pageTariffSchema=z.object({model:z.string().min(1).max(160),apiVersion:z.string().min(1).max(50),unitMicros:z.number().int().positive().max(1000000000),maxPages:z.number().int().min(1).max(5)}).strict();
-export function invoiceWalletFeatures(env=process.env){return ['OWNER_ASSISTANT',...(env.AI_OWNER_WALLET_INVOICES_ENABLED==='true'?['INVOICE_OPENAI','INVOICE_AZURE']:[])]}
+export function invoiceWalletFeatures(env=process.env,companyId){return ['OWNER_ASSISTANT',...(env.AI_OWNER_WALLET_INVOICES_ENABLED==='true'&&invoiceWalletCompanyAllowed(companyId,env)?['INVOICE_OPENAI','INVOICE_AZURE']:[])]}
 
 // Canonical scope is supplied only AFTER existing route/job authorization, not
 // from headers/body inside a provider helper. AsyncLocalStorage keeps parallel
@@ -36,6 +37,7 @@ export function createInvoiceWalletMeter({repository=aiOwnerWalletRepository,env
   async function responsesFetch(url,options){
     if(!active())return transport(url,options);
     const scope=requiredScope();
+    if(!invoiceWalletCompanyAllowed(scope.companyId,env))return transport(url,options);
     if(!await repository.enabledFor(scope.companyId))return transport(url,options);
     if(url!=='https://api.openai.com/v1/responses'||options?.method!=='POST'||typeof options.body!=='string')throw walletError('AI_WALLET_SCOPE_DENIED',403);
     options.signal?.throwIfAborted();
@@ -49,7 +51,7 @@ export function createInvoiceWalletMeter({repository=aiOwnerWalletRepository,env
   }
   async function azure({contentData,mimeType,model,apiVersion},invoke){
     if(!active())return invoke(()=>{});
-    const scope=requiredScope();if(!await repository.enabledFor(scope.companyId))return invoke(()=>{});
+    const scope=requiredScope();if(!invoiceWalletCompanyAllowed(scope.companyId,env)||!await repository.enabledFor(scope.companyId))return invoke(()=>{});
     let tariffs;try{tariffs=z.array(pageTariffSchema).max(20).parse(JSON.parse(env.AI_OWNER_WALLET_INVOICE_AZURE_TARIFFS??env.AI_OWNER_WALLET_AZURE_TARIFFS??'[]'))}catch{throw walletError('AI_WALLET_TARIFF_REQUIRED',409)}
     const matches=tariffs.filter(t=>t.model===model&&t.apiVersion===apiVersion);if(matches.length!==1)throw walletError('AI_WALLET_TARIFF_REQUIRED',409);
     const tariff={...matches[0],billingUnit:'PAGES',currency:'EUR'},pages=await countPages([{contentData,mimeType}]);
