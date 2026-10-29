@@ -25,7 +25,9 @@ import { fileURLToPath } from "url";
 import {storeHtmlWithManifest,storeManifest,validPwaStoreId} from "./store-pwa.js";
 import {clearKatStuckRbsRequest} from "./clear-kat-stuck-rbs-request.js";
 import {startWorkforceAutoOutWorker} from "./workers/workforce-auto-out.js";
-import authRoutes from "./routes/auth.js";
+import authRoutes,{issueSession} from "./routes/auth.js";
+import {createBackofficeStaffRouter} from "./routes/backoffice-staff.js";
+import {ensureBackofficeStaffSchema} from "./backoffice-staff-bootstrap.js";
 import apiRoutes from "./routes/api.js";
 import cloudV1Routes from "./routes/cloud-v1.js";
 import katOnlineOrderingRoutes from "./routes/kat-online-ordering.js";
@@ -202,6 +204,7 @@ app.use("/api/public/kat",katOnlineOrderingModifierRoutes);
 app.use("/api/public/online",katOnlineOrderingModifierRoutes);
 app.use("/api/public/efood",efoodPelicanWebhookRoutes);
 app.use("/api/auth",authRoutes);
+app.use("/api/backoffice-staff",createBackofficeStaffRouter({db:prisma,authenticate:auth,issueSession}));
 app.use("/api/lifecycle",storeLifecycleStateRoutes);
 app.use("/api/public/inventory-v2",inventoryV2PublicRoutes);
 app.use("/api/system/backup-monitor",backupMonitorRoutes);
@@ -366,6 +369,7 @@ app.get("*",(req,res,next)=>{if(req.path.startsWith("/api/")) return next();res.
 try{await ensurePlatformSchema();await ensureCashControlSchema();await ensureAutomaticReportSettingsSchema(prisma);await ensurePlatformAuditSchema();await ensureCommercialSchema();await ensureExtendedModulesSchema();await ensureCommerceCompatibility();await ensureMasterCatalogSchema();await ensureOwnerProductSchema();await ensureProductDeliverySchema();await ensurePosPricingSchema();await ensurePosSaleSafetySchema();await ensurePosSaleActionSchema();await ensureKatAiReaderTestEntitlement();await ensurePurchaseOrderSchema();await ensureSupplierItemLearningSchema();await ensureKatPreparationSeed();await productionPrinting.ensure();await ensureKatPreparationCleanup();await ensureDailyBiteCoffeeBehavior();await ensureStoreBakingSchema(prisma);await ensureKatOnlineOrderingSchema();await ensureVideoEventsSchema()}catch(error){console.error("Platform/commercial schema bootstrap failed.",error);process.exit(1)}
 await ensureStorePaidModulesSchema();
 await ensureStoreChatSchema();
+await ensureBackofficeStaffSchema(prisma);
 await ensurePosInvoiceBackgroundWorkerSchema();
 await clearKatStuckRbsRequest();
 const automaticReportActivationProvider=()=>readActivation(process.env);

@@ -280,7 +280,11 @@
     "AiOwnerWallet",
     "AiOwnerWalletAudit",
     "AiOwnerWalletEntry",
-    "AiOwnerWalletNotice"
+    "AiOwnerWalletNotice",
+    "BackofficeStaffAccount",
+    "BackofficeStaffAudit",
+    "BackofficeStaffGrant",
+    "BackofficeStaffLoginGuard"
   ],
   "knownColumns": {
     "AdvancedOnlineSearchUsage": [
@@ -16503,6 +16507,149 @@
         "text",
         false
       ]
+    ],
+    "BackofficeStaffAccount": [
+      [
+        "userId",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "username",
+        "text",
+        true
+      ],
+      [
+        "pinHash",
+        "text",
+        true
+      ],
+      [
+        "active",
+        "boolean",
+        true
+      ],
+      [
+        "revision",
+        "integer",
+        true
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
+      ]
+    ],
+    "BackofficeStaffGrant": [
+      [
+        "userId",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "profile",
+        "text",
+        true
+      ],
+      [
+        "capabilities",
+        "jsonb",
+        true
+      ],
+      [
+        "active",
+        "boolean",
+        true
+      ],
+      [
+        "revision",
+        "integer",
+        true
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
+      ]
+    ],
+    "BackofficeStaffAudit": [
+      [
+        "id",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "actorId",
+        "text",
+        true
+      ],
+      [
+        "targetUserId",
+        "text",
+        true
+      ],
+      [
+        "event",
+        "text",
+        true
+      ],
+      [
+        "detail",
+        "jsonb",
+        true
+      ],
+      [
+        "createdAt",
+        "timestamp with time zone",
+        true
+      ]
+    ],
+    "BackofficeStaffLoginGuard": [
+      [
+        "key",
+        "text",
+        true
+      ],
+      [
+        "attempts",
+        "integer",
+        true
+      ],
+      [
+        "windowStartedAt",
+        "timestamp with time zone",
+        true
+      ],
+      [
+        "blockedUntil",
+        "timestamp with time zone",
+        false
+      ]
     ]
   },
   "reviewedColumns": [
@@ -16968,7 +17115,11 @@
     "WorkforceTimeClockEntry.createdByUserId",
     "WorkforceTimeClockEntry.deviceId",
     "WorkforceTimeClockEntry.employeeId",
-    "WorkforceTimeClockEntry.sourceShiftId"
+    "WorkforceTimeClockEntry.sourceShiftId",
+    "BackofficeStaffAudit.actorId",
+    "BackofficeStaffAudit.detail",
+    "BackofficeStaffAudit.targetUserId",
+    "BackofficeStaffGrant.capabilities"
   ],
   "tables": [
     {
@@ -19777,6 +19928,13 @@
     },
     {
       "name": "AiOwnerWalletEntry",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "KEEP"
+    },
+    {
+      "name": "BackofficeStaffGrant",
       "owner": {
         "kind": "DIRECT"
       },

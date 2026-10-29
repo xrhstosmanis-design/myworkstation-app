@@ -3,6 +3,7 @@ import {assertCustomerDemoRuntimeClosed} from "../customer-demo-runtime.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { prisma } from "../prisma.js";
+import {enforceBackofficeStaff} from '../services/backoffice-staff-access.js';
 
 const POS_BACKGROUND_TOKEN_ISSUER="myworkstation-pos-background";
 const POS_BACKGROUND_TOKEN_AUDIENCE="commerce-pos-background";
@@ -266,8 +267,10 @@ export async function auth(req,res,next){
     }
 
     req.user={...payload,mustChangePassword:passwordChangeRequired};
+    if(payload.staffAccess===true)await enforceBackofficeStaff(prisma,req,res);
     next();
   }catch(error){
+    if(error?.code?.startsWith('STAFF_')||error?.code==='MODULE_DISABLED'||error?.code==='LICENSE_INACTIVE')return res.status(error.status||403).json({error:error.message,code:error.code});
     if(error?.code==="CUSTOMER_DEMO_RUNTIME_LOCKED")return res.status(error.status).json({error:error.message,code:error.code});
     console.error("Authentication validation failed",error?.message||error);
     if(error?.name==="TokenExpiredError")return res.status(401).json({error:"Η συνεδρία έληξε.",code:"AUTH_TOKEN_EXPIRED"});
