@@ -1,3 +1,9 @@
+## Native fixture correction — 30/10/2026
+
+First exact source head79fc594 CI40965257569:4652serverPASS/0FAIL/0SKIP and8backupPASS; build/native business/tenant flows preceding the lock fixture passed. New lock E2E stopped before execution because its broad caller scan included11 ledger statements rather than the9 targeted initialization-array entries. Corrected only fixture extraction: preserve original three-table caller scan and independently append exactly the9 statements from the actual StoreTransaction tableStatements region. The two other callers' ledger definitions remain outside this patch and retain their original behavior. Runtime helper unchanged. Do not report native prevention PASS until the corrected complete fixture runs. Independent wholesale browser job failed Target.createTarget before navigation; one scoped retry was requested after the run ended, not a test weakening. Exact corrected fullCI required again; no release or permanent LAB PASS.
+
+Read-only runtime source search additionally identified the initiating long Sale query at server/src/routes/owner-shifts.js in GET /:sessionId/detail. It correlates complete store sales against tokenized ledger evidence per sale. No query edit or performance equivalence claim in this first causal patch; that optimization remains separately OPEN with its tenant/session/conflict-exclusion evidence protected.
+
 ## 30/10/2026 — POS-LOCK-CONVOY-20261030 / SOURCE CANDIDATE / AWAITING NATIVE CI
 
 Before-source transfer PR3300/head9270e8e002d654e3b77c2df7a6cc96830ea3c95a passed CI40964887697 and merged5c725c82296f085aaed4d36476ff5b05436de8c6 before runtime edits. Owner fix/pos-lock-convoy-20261030; source fix/store-transaction-bootstrap-lock-20261030.
