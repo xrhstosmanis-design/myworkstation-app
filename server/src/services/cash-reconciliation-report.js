@@ -1,3 +1,4 @@
+import {canAutomaticallyCalculate,hasCashNumericContradiction,calculateCashResult,assertCalculatedCashResult} from './cash-automatic-result.js';
 import {assessAutomaticCash,automaticCashAuditText} from './cash-automatic-audit.js';
 import {cashEventSalesText} from './cash-event-sales.js';
 import {hash,activeRecords,reconcileError} from './cash-reconciliation-contract.js';
@@ -27,6 +28,12 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
     const d=r.data,a=source.sessions.get(d.previousSessionId),b=source.sessions.get(d.nextSessionId);
     if(!a||!b||!immediateCashPair(a,b,source.rule)||a.sourceHash!==d.previousHash||b.sourceHash!==d.nextHash||r.proof.previousHash!==d.previousHash||r.proof.nextHash!==d.nextHash){invalid.add(d.previousSessionId);invalid.add(d.nextSessionId);}
   }
+  // Assess before allocating offsets so a contradiction invalidates both halves.
+  const automatic=new Map(),full=s=>s?{...s.automaticSnapshot,...s.session}:null;
+  for(const [id,original]of source.sessions)if(original.automaticSnapshot){
+    const audit=assessAutomaticCash({session:full(original),transactions:original.automaticTransactions,previous:full(source.sessions.get(original.session.previousSession?.id)),next:full(source.sessions.get(original.session.nextSession?.id)),rule:source.rule,sourceValid:original.reviewStatus==='VALID'});
+    automatic.set(id,audit);if(hasCashNumericContradiction(audit))invalid.add(id);
+  }
   for(const row of rows.values())if(row.recheck)invalid.add(row.sessionId);
   // A changed half invalidates every connected allocation, never only one side.
   let propagated=true;
@@ -49,15 +56,12 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
     row.day=row.closedAt?cashReportRowDay(row.closedAt):null;
     row.expenseFindings=original.expenseFindings||[];
     if(original.eventSales)row.eventSales=original.eventSales;
-    if(original.automaticSnapshot){
-      const full=s=>s?{...s.automaticSnapshot,...s.session}:null;
-      row.automaticAudit=assessAutomaticCash({session:full(original),transactions:original.automaticTransactions,previous:full(source.sessions.get(original.session.previousSession?.id)),next:full(source.sessions.get(original.session.nextSession?.id)),rule:source.rule,sourceValid:!row.recheck});
-    }
+    if(automatic.has(id))row.automaticAudit=automatic.get(id);
     row.transactions=original.transactions.slice(0,30);row.transactionsLimited=original.transactions.length>30;
     row.nextSessionId=original.session.nextSession?.id||null;row.previousSessionId=original.session.previousSession?.id||null;
   }
   const selected=source.selectedIds.map(id=>rows.get(id));
-  const reportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[],...(r.automaticAudit?{automaticAudit:r.automaticAudit}:{}),...(r.expenseFindings?.length?{expenseFindings:r.expenseFindings}:{}),...(r.eventSales?{eventSales:r.eventSales}:{})})),...(source.kioskEventSales?{kioskEventSales:source.kioskEventSales}:{})});
+  const sourceReportHash=hash({period:source.period,rows:selected.map(r=>({id:r.sessionId,sourceHash:r.sourceHash,planHash:r.planHash,status:r.status,associations:r.associations,pendingEvidence:r.pendingEvidence||[],...(r.automaticAudit?{automaticAudit:r.automaticAudit}:{}),...(r.expenseFindings?.length?{expenseFindings:r.expenseFindings}:{}),...(r.eventSales?{eventSales:r.eventSales}:{})})),...(source.kioskEventSales?{kioskEventSales:source.kioskEventSales}:{})});
   const checkpoint=[...records].reverse().find(r=>r.data.kind==='CHECKPOINT');
   const totals={shortageCents:0,surplusCents:0,pending:selected.filter(r=>!r.reviewed&&r.status!=='NOT_APPLICABLE').length},employees=new Map();
   const operatorNames=new Map();for(const r of rows.values()){const names=operatorNames.get(r.operatorId)||new Set();names.add(r.operatorName);operatorNames.set(r.operatorId,names);}
@@ -71,14 +75,18 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
     const e=employees.get(key)||{key,name:r.operatorName,identityRequiresReview:r.identityRequiresReview,shortageCents:0,surplusCents:0};
     const shortage=Math.max(0,-r.remainingCents),surplus=Math.max(0,r.remainingCents);totals.shortageCents+=shortage;totals.surplusCents+=surplus;e.shortageCents+=shortage;e.surplusCents+=surplus;employees.set(key,e);
   }
+  for(const r of selected)r.automaticallyCalculated=canAutomaticallyCalculate(r);
+  const calculatedResult=calculateCashResult(selected);
+  const reportHash=hash({sourceReportHash,calculatedResult,identities:selected.map(r=>({sessionId:r.sessionId,employeeKey:r.employeeKey,operatorName:r.operatorName,identityRequiresReview:r.identityRequiresReview,automaticallyCalculated:r.automaticallyCalculated}))});
   const sameCheckpointPeriod=checkpoint?.proof.period?.from===source.period.from&&checkpoint?.proof.period?.to===source.period.to;
-  const result={storeId:source.store.id,storeName:source.store.name,period:source.period,rows:selected,context:[...rows.values()].filter(r=>!source.selectedIds.includes(r.sessionId)),totals,employees:[...employees.values()],reportHash,checkpoint:checkpoint?{resumeFrom:checkpoint.data.resumeFrom,pendingNotes:checkpoint.data.pendingNotes,period:checkpoint.proof.period,createdAt:checkpoint.createdAt,reviewedBy:checkpoint.actorName,current:sameCheckpointPeriod?checkpoint.data.reportHash===reportHash:null}:null,coverage:source.coverage,financialFinality:'REVIEWED_CASH_ROWS_ONLY',originalFinancialLedgerChanged:false};
+  const result={storeId:source.store.id,storeName:source.store.name,period:source.period,rows:selected,context:[...rows.values()].filter(r=>!source.selectedIds.includes(r.sessionId)),totals,employees:[...employees.values()],calculatedResult,reportHash,checkpoint:checkpoint?{resumeFrom:checkpoint.data.resumeFrom,pendingNotes:checkpoint.data.pendingNotes,period:checkpoint.proof.period,createdAt:checkpoint.createdAt,reviewedBy:checkpoint.actorName,current:sameCheckpointPeriod?checkpoint.data.reportHash===reportHash:null}:null,coverage:source.coverage,financialFinality:'REVIEWED_CASH_ROWS_ONLY',originalFinancialLedgerChanged:false};
   if(source.kioskEventSales)result.kioskEventSales=source.kioskEventSales;
   result.text=reconciliationText(result);return result;
 }
 const money=cents=>cents===null?'άγνωστο':(Math.abs(cents)/100).toLocaleString('el-GR',{style:'currency',currency:'EUR'});
 const signedResult=cents=>cents===null?'Άγνωστη διαφορά':cents<0?'Έλλειμμα '+money(cents):cents>0?'Πλεόνασμα '+money(cents):'Χωρίς διαφορά';
 export function reconciliationText(report){
+  assertCalculatedCashResult(report);
   const names=[...new Set(report.rows.filter(r=>r.reviewed).map(r=>r.reviewedBy).filter(Boolean))],tokens=names.length===1?names[0].normalize('NFD').replace(/\p{M}/gu,'').toLocaleUpperCase('el-GR').split(/\s+/):[];
   const signature=names.length===1?tokens.includes('ΧΡΗΣΤΟΣ')&&tokens.includes('ΜΑΝΗΣ')?'ΜΑΝΗΣ ΧΡΗΣΤΟΣ':names[0].toLocaleUpperCase('el-GR'):null;
   const lines=['ΕΛΕΓΧΟΣ ΤΑΜΕΙΩΝ MYWORKSTATION',`${report.storeName} · ${report.period.from} έως ${report.period.to}`,'','ΑΠΟΤΕΛΕΣΜΑ ΜΕΤΑ ΑΠΟ ΕΛΕΓΧΟ'+(signature?' — '+signature:'')];
@@ -86,16 +94,18 @@ export function reconciliationText(report){
   for(const row of report.rows){
     if(row.openedAt&&row.closedAt){const clock=v=>new Date(v).toLocaleTimeString('el-GR',{timeZone:'Europe/Athens',hour:'2-digit',minute:'2-digit',hour12:false});lines.push(`Ώρες βάρδιας ${row.operatorName}: ${clock(row.openedAt)}–${clock(row.closedAt)}.`);}
     if(row.status==='NOT_APPLICABLE')lines.push(`${row.day} · ${row.shiftLabel} · ${row.operatorName}: δεν εφαρμόζεται έλεγχος μετρητών.`);
-    else{lines.push(`${row.day} · ${row.shiftLabel} · ${row.operatorName}: ${signedResult(row.remainingCents)}${row.reviewed?'':' — ΥΠΟ ΕΛΕΓΧΟ'}.`);
+    else{lines.push(`${row.day} · ${row.shiftLabel} · ${row.operatorName}: ${signedResult(row.remainingCents)}${row.reviewed||row.automaticallyCalculated?'':' — ΥΠΟ ΕΛΕΓΧΟ'}.`);
       if(row.offsetCents)lines.push(`Αρχική διαφορά ${signedResult(row.initialCents)} · επαληθευμένος συμψηφισμός με διαδοχική βάρδια ${money(row.offsetCents)}.`);
       if(row.status==='AWAITING_NEXT_SHIFT')lines.push('Αναμονή κλεισίματος της επόμενης βάρδιας.');
       if(row.status==='RECHECK_REQUIRED')lines.push('Απαιτείται επανέλεγχος των κινήσεων ή των συνδεδεμένων στοιχείων.');
     }
     lines.push(`POS–EFTPOS: ${row.cardCents===null?'δεν υπάρχουν πλήρη στοιχεία':row.cardCents===0?'χωρίς διαφορά':'διαφορά '+(row.cardCents>0?'+':'−')+money(row.cardCents)}.`);
+    if(row.automaticAudit?.irisCents)lines.push('Εκκρεμεί ο διαχωρισμός IRIS από το παραπάνω καταχωρισμένο σύνολο καρτών.');
     for(const finding of row.expenseFindings||[]){
       const amount=money(finding.amountCents),when=finding.occurredAt?new Date(finding.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',dateStyle:'short',timeStyle:'short',hour12:false}):'χωρίς ώρα';
       lines.push(finding.code==='EXPENSE_WITHOUT_DOCUMENT'?`Εκκρεμότητα ${when}: έξοδο ${amount} χωρίς παραστατικό.`:`Εκκρεμότητα ${when}: παραστατικό ή πληρωμή ${amount} χρειάζεται επανέλεγχο.`);
     }
+    if(row.automaticallyCalculated)lines.push('Το αποτέλεσμα μετρητών υπολογίστηκε αυτόματα από τις διαθέσιμες κινήσεις και παραδόσεις.');
     if(row.automaticAudit)lines.push(...automaticCashAuditText(row.automaticAudit));
     if(row.reviewNote)lines.push('Σχόλιο ελέγχου: '+row.reviewNote);
     for(const evidence of row.pendingEvidence||[])lines.push(`Εκκρεμεί επανέλεγχος: ${evidence.date} · ${evidence.label} · ${money(evidence.amountCents)}.`);
@@ -114,9 +124,12 @@ export function reconciliationText(report){
   }
   const original=report.rows.filter(r=>r.status!=='NOT_APPLICABLE');
   if(original.length&&original.every(r=>r.initialCents!==null)){const surplus=original.reduce((a,r)=>a+Math.max(0,r.initialCents),0),shortage=original.reduce((a,r)=>a+Math.max(0,-r.initialCents),0);lines.push('',`Αρχικά ελλείμματα: ${money(shortage)}. Αρχικά πλεονάσματα: ${money(surplus)}.`);}
-  if(report.rows.some(r=>r.reviewed))lines.push('',`Ελεγμένα ελλείμματα: ${money(report.totals.shortageCents)}. Ελεγμένα πλεονάσματα: ${money(report.totals.surplusCents)}.`);
-  if(report.totals.pending)lines.push(`Εκκρεμούν ${report.totals.pending} βάρδιες· δεν περιλαμβάνονται στα ελεγμένα σύνολα.`);
-  for(const employee of report.employees)lines.push(`${employee.name}: ελλείμματα ${money(employee.shortageCents)} · πλεονάσματα ${money(employee.surplusCents)}${employee.identityRequiresReview?' · απαιτείται ταυτοποίηση της βάρδιας':''}.`);
+  const effective=report.calculatedResult?.automaticCount?report.calculatedResult:null;
+  if(effective)lines.push('',`Ελλείμματα μετά τον έλεγχο: ${money(effective.shortageCents)}. Πλεονάσματα μετά τον έλεγχο: ${money(effective.surplusCents)}.`);
+  else if(report.rows.some(r=>r.reviewed))lines.push('',`Ελεγμένα ελλείμματα: ${money(report.totals.shortageCents)}. Ελεγμένα πλεονάσματα: ${money(report.totals.surplusCents)}.`);
+  const pending=effective?.pending??report.totals.pending;
+  if(pending)lines.push(`Εκκρεμούν ${pending} βάρδιες· δεν περιλαμβάνονται στα ελεγμένα σύνολα.`);
+  for(const employee of effective?.employees??report.employees)lines.push(`${employee.name}: ελλείμματα ${money(employee.shortageCents)} · πλεονάσματα ${money(employee.surplusCents)}${employee.identityRequiresReview?' · απαιτείται ταυτοποίηση της βάρδιας':''}.`);
   if(report.checkpoint){lines.push('',`Συνέχεια από ${report.checkpoint.resumeFrom}${report.checkpoint.current===false?' — το σημείο συνέχειας χρειάζεται ενημέρωση':''}. Έλεγχος ${report.checkpoint.period.from} έως ${report.checkpoint.period.to}.`,...report.checkpoint.pendingNotes.map(n=>'Εκκρεμότητα: '+n));}
   return lines.join('\n');
 }

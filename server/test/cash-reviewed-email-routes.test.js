@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import express from 'express';
 import {createServer} from 'node:http';
 import {hash} from '../src/services/cash-reconciliation-contract.js';
-import {reconciliationText} from '../src/services/cash-reconciliation-report.js';
+import {reconciliationText,projectReconciliation} from '../src/services/cash-reconciliation-report.js';
 import {createReviewedCashEmailReader} from '../src/services/cash-reviewed-email.js';
 const data=text=>'data:text/javascript;base64,'+Buffer.from(text).toString('base64');
 
@@ -15,7 +15,7 @@ test('actual registered Platform email routes preview common text, refuse stale/
  const row={sessionId:'a',day:'2026-10-21',shiftLabel:'Πρωινή',operatorName:'Χρυσάνθη',initialCents:-8700,remainingCents:-700,offsetCents:8000,cardCents:20000,reviewed:true,status:'REVIEWED',reviewedBy:'Χρήστος Μάνης'};
  f.report={storeId:'store',storeName:'Δοκιμή',generation:'0',period:{from:'2026-10-21',to:'2026-10-21'},head:hash('head'),reportHash:hash('source'),rows:[row],context:[],coverage:'BOUNDED_CLOSED_SHIFTS',financialFinality:'REVIEWED_CASH_ROWS_ONLY',originalFinancialLedgerChanged:false,totals:{shortageCents:700,surplusCents:0,pending:0},employees:[],checkpoint:null};
  const refresh=()=>{f.report.text=reconciliationText(f.report)};refresh();
- f.db={store:{findUnique:async()=>({id:'store',companyId:'co',name:'Δοκιμή',responsibleEmail:'responsible@example.invalid',company:{users:[{email:'owner@example.invalid'}]}})},$queryRaw:async()=>[{sessionId:'a',variance:-87,cardVariance:200,reviewValid:f.legacyValid}],authAudit:{create:async({data})=>{f.audits.push(data);return data}}};
+ f.db={store:{findUnique:async()=>({id:'store',companyId:'co',name:'Δοκιμή',responsibleEmail:'responsible@example.invalid',company:{users:[{email:'owner@example.invalid'}]}})},$queryRaw:async()=>f.legacyRows||[{sessionId:'a',variance:-87,cardVariance:200,reviewValid:f.legacyValid}],authAudit:{create:async({data})=>{f.audits.push(data);return data}}};
  f.read=createReviewedCashEmailReader({db:f.db,authorize:async(_db,user,storeId)=>{if(f.deny||storeId!=='store'||!user?.isSuperAdmin)throw Object.assign(Error('private diagnostics'),{status:403});return {scope:{companyId:'co',storeId:'store'}}},repository:{generation:async()=> '0',read:async()=>structuredClone(f.report)}});
  const modules={
   '../prisma.js':data(`export const prisma=globalThis[${JSON.stringify(key)}].db;`),
@@ -38,7 +38,16 @@ test('actual registered Platform email routes preview common text, refuse stale/
   const own=await post('send-preview',body);assert.equal(own.status,200);assert.equal(f.sent.length,1);assert.deepEqual(f.sent[0].args.to,['auditor@example.invalid']);assert.equal(f.sent[0].args.previewOnly,true);assert.match(f.sent[0].message.text,/ΥΠΟ ΕΛΕΓΧΟ/);assert.match(f.sent[0].message.text,/^ΠΡΟΕΠΙΣΚΟΠΗΣΗ/);
   row.reviewed=true;row.status='REVIEWED';f.report.totals.pending=0;refresh();body.reportHash=(await(await get()).json()).reportHash;
   assert.equal((await post('send-email',{...body,text:'FAKE RESULT',evidence:{}})).status,200);assert.equal(f.sent.length,2);assert.equal(f.sent[1].message.text,f.report.text+'\n\nΠρόσθετο σχόλιο αποστολής: '+body.comment);assert(!f.sent[1].message.text.includes('FAKE'));assert.deepEqual(f.sent[1].args.to,['owner@example.invalid','responsible@example.invalid']);assert.equal(f.audits.length,2);
-  f.deny=true;assert.equal((await get()).status,403);assert.equal((await post('send-email',body)).status,403);f.deny=false;assert.equal((await get('foreign')).status,403);assert.equal(f.sent.length,2);
-  f.user={id:'actor',role:'OWNER'};assert.equal((await get()).status,403);f.user=null;assert.equal((await get()).status,401);assert.equal(f.sent.length,2);
+  // Exercise the registered route with truly absent SQL review fields, not a
+  // helper-only shortcut or a synthetic manual approval. No SMTP is installed.
+  const session={id:'a',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',openedBy:'employee',openedByName:'Εργαζόμενος',openedAt:'2026-10-21T06:00:00Z',closedAt:'2026-10-21T14:00:00Z',shiftLabel:'Πρωινή'};
+  const automaticSource={store:{id:'store',name:'Δοκιμή'},rule:{mode:'FULL',carryOverEnabled:false},sessions:new Map([['a',{session,sourceHash:hash('original'),initialCents:-500,basisCents:-500,explainedCents:0,cardCents:0,nextClosed:false,reviewStatus:'VALID',transactions:[],automaticSnapshot:{openingDrawer:100,openingCustody:0,openingCoins:0,openingOperational:100,closingDrawer:95,closingCustody:0,closingCoins:0,actualOperational:95,expectedOperational:100,variance:-5,cashSales:0,expenses:0,cardSales:0,eftposTotal:0,cardVariance:0},automaticTransactions:[]}]]),selectedIds:['a'],period:{from:'2026-10-21',to:'2026-10-21'},coverage:'BOUNDED_CLOSED_SHIFTS'};
+  f.report={...projectReconciliation(automaticSource,[]),generation:'0',head:'ROOT'};
+  f.legacyRows=[{sessionId:'a',variance:-5,cardVariance:0,reviewValid:false,reviewDecision:null,reviewedAt:null,reviewedBy:null}];
+  const automatic=await(await get()).json();assert.equal(automatic.readyToSend,true);assert.equal(f.report.rows[0].reviewed,false);assert.equal(f.report.calculatedResult.shortageCents,500);
+  body.reportHash=automatic.reportHash;assert.equal((await post('send-email',body)).status,200);assert.equal(f.sent.length,3);assert.equal(f.sent[2].message.text,f.report.text+'\n\nΠρόσθετο σχόλιο αποστολής: '+body.comment);assert.doesNotMatch(f.sent[2].message.text,/ΜΑΝΗΣ ΧΡΗΣΤΟΣ/);
+  f.legacyRows[0].reviewedAt='2026-10-20T10:00:00Z';assert.equal((await(await get()).json()).readyToSend,false);assert.equal((await post('send-email',body)).status,409);assert.equal(f.sent.length,3);f.legacyRows[0].reviewedAt=null;
+  f.deny=true;assert.equal((await get()).status,403);assert.equal((await post('send-email',body)).status,403);f.deny=false;assert.equal((await get('foreign')).status,403);assert.equal(f.sent.length,3);
+  f.user={id:'actor',role:'OWNER'};assert.equal((await get()).status,403);f.user=null;assert.equal((await get()).status,401);assert.equal(f.sent.length,3);
  }finally{if(server)await new Promise(resolve=>server.close(resolve));delete globalThis[key];}
 });

@@ -1,3 +1,4 @@
+import {cashArithmeticIsCurrent,hasCashNumericContradiction} from './cash-automatic-result.js';
 import {projectAutomaticReviewedReport,canSendProvisionalCashReport} from './cash-reviewed-automatic-contract.js';
 import {periodSchema,hash} from './cash-reconciliation-contract.js';
 import {reconciliationText} from './cash-reconciliation-report.js';
@@ -27,14 +28,12 @@ export function createReviewedCashEmailReader({db,authorize,repository}){
 export function reviewedCashEmailReadiness(evidence,legacyRows){
  const e=checked(evidence),rows=e.report.rows;
  if(!Array.isArray(legacyRows)||legacyRows.length!==rows.length||new Set(legacyRows.map(r=>r.sessionId)).size!==legacyRows.length||legacyRows.some(r=>!rows.some(v=>v.sessionId===r.sessionId)))fail();
- if(!rows.length||!legacyRows.every(r=>r.reviewValid===true))return false;
- // A provisional report may retain open questions; no CONFIRM is fabricated.
- // New automatic evidence must be complete for this path. Historical reviewed
- // reports retain their previous admission and source-freshness behavior.
- if(rows.some(r=>r.automaticAudit?.openIssues.includes('SOURCE_CHANGED')))return false;
+ if(!rows.length)return false;
+ const byId=new Map(rows.map(r=>[r.sessionId,r]));
+ if(!legacyRows.every(r=>r.reviewValid===true||r.reviewValid===false&&r.reviewDecision===null&&r.reviewedAt===null&&r.reviewedBy===null&&cashArithmeticIsCurrent(byId.get(r.sessionId))))return false;
+ if(rows.some(r=>hasCashNumericContradiction(r.automaticAudit)))return false;
  if(rows.every(r=>r.reviewed===true||r.status==='NOT_APPLICABLE'))return true;
- if(rows.some(r=>!r.reviewed&&r.automaticAudit?.status==='INCOMPLETE'))return false;
- return rows.every(r=>r.automaticAudit?.status==='CALCULATED')&&canSendProvisionalCashReport(projectAutomaticReviewedReport(e.report));
+ return rows.every(r=>r.reviewed||cashArithmeticIsCurrent(r))&&canSendProvisionalCashReport(projectAutomaticReviewedReport(e.report));
 }
 export function assertReviewedCashEmailPreview(evidence,{reportHash,generation}){
  const e=checked(evidence);if(e.fingerprint!==reportHash||e.generation!==generation)fail('CASH_EMAIL_PREVIEW_CHANGED');return e;

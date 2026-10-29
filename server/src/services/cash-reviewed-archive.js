@@ -1,3 +1,5 @@
+import {assertCalculatedCashResult,canAutomaticallyCalculate} from './cash-automatic-result.js';
+import {automaticCashAuditText} from './cash-automatic-audit.js';
 import XLSX from 'xlsx';
 import {createHash} from 'node:crypto';
 import {cashArchivePreviewPayload} from '../../../client/src/lib/cash-reviewed-archive.js';
@@ -19,6 +21,7 @@ const status={REVIEWED:'Ελεγμένη',AWAITING_NEXT_SHIFT:'Αναμονή ε
 const sameReceipt=(r,q)=>r.generation===q.generation&&r.head===q.head&&r.reportHash===q.reportHash&&r.period?.from===q.from&&r.period?.to===q.to&&cashArchiveSourceHash(r)===q.previewHash;
 export function cashArchiveWorkbook(report,scope){
   if(report?.storeId!==scope.storeId||!periodSchema.safeParse(report.period).success||report.coverage!=='BOUNDED_CLOSED_SHIFTS'||report.financialFinality!=='REVIEWED_CASH_ROWS_ONLY'||report.originalFinancialLedgerChanged!==false||!Array.isArray(report.rows)||report.rows.length>200||!Array.isArray(report.employees)||!report.totals)invalid();
+  try{assertCalculatedCashResult(report)}catch{invalid()}
   if(report.text!==reconciliationText(report))invalid();
   const rows=report.rows,seen=new Set(),employees=new Map(),days=new Map(),pending=[];
   let shortage=0,surplus=0,pendingCount=0;
@@ -34,9 +37,11 @@ export function cashArchiveWorkbook(report,scope){
         const a=map.get(key)||{name:text(r.operatorName),operatorId:r.identityRequiresReview?null:text(r.operatorId),requiresIdentity:r.identityRequiresReview,day,shifts:0,shortage:0,surplus:0};
         if(a.name!==r.operatorName)invalid();a.shifts++;a.shortage+=deficit;a.surplus+=excess;map.set(key,a);
       }
-    }else if(r.status!=='NOT_APPLICABLE'){pendingCount++;pending.push([r.day,r.shiftLabel,r.operatorName,status[r.status],amount(r.remainingCents),'Δεν περιλαμβάνεται στα ελεγμένα σύνολα.']);}
+    }else if(r.status!=='NOT_APPLICABLE'){pendingCount++;if(!canAutomaticallyCalculate(r))pending.push([r.day,r.shiftLabel,r.operatorName,status[r.status],amount(r.remainingCents),'Δεν περιλαμβάνεται στα ελεγμένα σύνολα.']);}
     if(r.identityRequiresReview)pending.push([r.day,r.shiftLabel,r.operatorName,'Ταυτοποίηση εργαζομένου',null,'Ο κοινός ή μη επιβεβαιωμένος κωδικός δεν συνενώνει βάρδιες.']);
     if(r.cardCents===null||r.cardCents!==0)pending.push([r.day,r.shiftLabel,r.operatorName,r.cardCents===null?'Μη πλήρη στοιχεία καρτών':'Διαφορά POS–EFTPOS',amount(r.cardCents),'Χωριστά από τα μετρητά.']);
+    if(r.automaticAudit)for(const message of automaticCashAuditText(r.automaticAudit).filter(v=>v.startsWith('Εκκρεμότητα:')))pending.push([r.day,r.shiftLabel,r.operatorName,'Αυτόματος έλεγχος',null,message]);
+    for(const e of r.expenseFindings||[])pending.push([r.day,r.shiftLabel,r.operatorName,'Παραστατικό εξόδου',amount(e.amountCents),e.code==='EXPENSE_WITHOUT_DOCUMENT'?'Λείπει παραστατικό.':'Απαιτείται επανέλεγχος παραστατικού.']);
     for(const e of r.pendingEvidence||[])pending.push([e.date,r.shiftLabel,r.operatorName,'Επανέλεγχος συνδεδεμένου στοιχείου',amount(e.amountCents),e.label]);
     shifts.push([report.storeName,r.day,at(r.openedAt),at(r.closedAt),r.terminalPos||null,r.shiftLabel,r.operatorName,r.identityRequiresReview?null:r.operatorId,r.sessionId,status[r.status],amount(r.initialCents),amount(r.offsetCents),amount(r.remainingCents),deficit===null?null:deficit/100,excess===null?null:excess/100,amount(r.cardCents),r.reviewNote||'']);
   }
@@ -49,6 +54,12 @@ export function cashArchiveWorkbook(report,scope){
   add('Βάρδιες',shifts,[10,11,12,13,14,15]);
   add('Ανά εργαζόμενο',[['Κατάστημα','Χειριστής','Κωδικός εργαζομένου','Ταυτοποίηση','Ελεγμένες βάρδιες','Έλλειμμα','Πλεόνασμα'],...[...employees.values()].map(summary)],[5,6]);
   add('Ανά ημέρα',[['Κατάστημα','Ημερομηνία','Χειριστής','Κωδικός εργαζομένου','Ταυτοποίηση','Ελεγμένες βάρδιες','Έλλειμμα','Πλεόνασμα'],...[...days.values()].map(summary)],[6,7]);
+  if(report.calculatedResult?.automaticCount){
+    const result=report.calculatedResult;
+    add('Αποτελέσματα βαρδιών',[['Κατάστημα','Ημερομηνία','Βάρδια','Χειριστής','Αναφορά βάρδιας','Τρόπος ελέγχου','Έλλειμμα','Πλεόνασμα'],...rows.filter(r=>r.reviewed||r.automaticallyCalculated).map(r=>[report.storeName,r.day,r.shiftLabel,r.operatorName,r.sessionId,r.reviewed?'Επιβεβαίωση ελεγκτή':'Αυτόματος υπολογισμός',Math.max(0,-r.remainingCents)/100,Math.max(0,r.remainingCents)/100])],[6,7]);
+    add('Αποτελέσματα εργαζομένων',[['Κατάστημα','Χειριστής','Αναφορά εργαζομένου','Βάρδιες','Έλλειμμα','Πλεόνασμα'],...result.employees.map(e=>[report.storeName,e.name,e.key,e.shifts,e.shortageCents/100,e.surplusCents/100])],[4,5]);
+    add('Αποτελέσματα ημέρας',[['Κατάστημα','Ημερομηνία','Χειριστής','Αναφορά εργαζομένου','Βάρδιες','Έλλειμμα','Πλεόνασμα'],...result.days.map(e=>[report.storeName,e.day,e.name,e.key,e.shifts,e.shortageCents/100,e.surplusCents/100])],[5,6]);
+  }
   add('Εκκρεμότητες',[['Ημερομηνία','Βάρδια','Χειριστής','Θέμα','Ποσό','Σημείωση'],...pending],[4]);
   add('Αναφορά',[['Κείμενο αναφοράς'],...report.text.split('\n').map(line=>[line])]);
   add('Στοιχεία ελέγχου',[['Πεδίο','Τιμή'],['Κατάστημα',text(report.storeName)],['Αναφορά καταστήματος',text(scope.storeId)],['Εταιρεία',text(scope.companyId)],['Από',report.period.from],['Έως',report.period.to],['Ελεγμένα ελλείμματα',shortage/100],['Ελεγμένα πλεονάσματα',surplus/100],['Εκκρεμείς βάρδιες',pendingCount],['Κατάσταση ιστορικού',text(report.generation)],['Αποτύπωμα αναφοράς',text(report.reportHash)],['Αποτύπωμα προβολής',cashArchiveSourceHash(report)],['Τελευταίος έλεγχος',text(report.head)],['Χρόνος ανάγνωσης',report.checkedAt||'']]);
