@@ -43,7 +43,7 @@ For every page, agent, checkpoint, message template and user-facing instruction,
 
 ## Runtime and setup
 
-- Use Node.js 20.
+- Use Node.js 22.23.4 (or a later patched Node 22 release); the shared pin is `.node-version`.
 - Install dependencies from the repository root with `npm install`.
 - The repository is an npm workspace with `client` and `server` packages.
 - Do not run production database migrations, `prisma db push`, seeds or destructive scripts from a Work sandbox unless the task explicitly requires an isolated test database.

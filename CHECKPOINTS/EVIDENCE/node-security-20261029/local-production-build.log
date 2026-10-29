@@ -1,0 +1,161 @@
+(node:5) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+> myworkstation-app@0.6.0 build:production
+> npm run build:client && npm run build:server
+
+(node:18) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+> myworkstation-app@0.6.0 build:client
+> npm run prepare:client && npm run build -w client && node tools/verify-table-service-bundle.mjs
+
+(node:31) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+> myworkstation-app@0.6.0 prepare:client
+> node client/scripts/restore-pos-modifier-groups.js && node client/scripts/patch-close-shift-client-permission.js && node client/scripts/patch-kat-offline-runtime-access.js && node client/scripts/patch-kat-offline-catalog.js && node client/scripts/patch-kat-offline-sale-queue.js && node client/scripts/patch-safe-vault-decrease-reason.js && node client/scripts/patch-return-sales-active-shift.js && node client/scripts/patch-pos-void-sale.js
+
+(node:44) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[build] Product-specific POS preparation modifiers preserved.
+(node:52) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+close-shift client permission already compiled
+(node:60) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+KAT offline runtime access preservation already installed.
+(node:68) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+KAT offline catalog fallback already installed.
+(node:76) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+KAT offline sale queue v2 already installed.
+(node:84) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Safe decrease client reason patch already installed.
+(node:92) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Return sales exact-session filter already installed.
+(node:100) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+POS VOID sale patch already installed.
+(node:108) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+> myworkstation-client@0.3.0 build
+> node src/patch-pos-online-orders-host.js && node src/patch-pos-transfer-amount.js && node src/patch-pos-close-shift-permission.js && vite build
+
+(node:121) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[build] POS online orders host already present
+(node:129) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+POS employee transfer amount already installed.
+(node:137) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+close-shift permission: BackOffice permission checkbox anchor unavailable; skipped safely
+close-shift permission: POS close-shift access already installed
+close-shift permission: central cash visibility only anchor unavailable; skipped safely
+Dedicated close-shift permission patch completed.
+(node:145) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+vite v6.4.5 building for production...
+transforming...
+✓ 2465 modules transformed.
+rendering chunks...
+[plugin vite:reporter] 
+(!) /workspace/scratch/0825dd6fed4b/node-security/client/src/components/commerce/installPurchaseOrdersSuite.js is dynamically imported by /workspace/scratch/0825dd6fed4b/node-security/client/src/components/store/PosPurchaseOrdersModal.jsx but also statically imported by /workspace/scratch/0825dd6fed4b/node-security/client/src/entry.jsx, dynamic import will not move module into another chunk.
+
+computing gzip size...
+dist/b2b.html                                                                0.49 kB │ gzip:   0.33 kB
+dist/wholesale.html                                                          0.98 kB │ gzip:   0.48 kB
+dist/index.html                                                              1.06 kB │ gzip:   0.54 kB
+dist/wholesale-sw.js                                                         2.22 kB
+dist/assets/pdf.worker.min-iDqQPrd3.mjs                                  1,232.30 kB
+dist/assets/pdf.worker.min-Dr1KORA9.mjs                                  1,286.28 kB
+dist/assets/invoice-assistant-pos-client-Dyyo7iji.css                        0.99 kB │ gzip:   0.45 kB
+dist/assets/screen-recorder-entry-C4LYxxzq.css                               1.52 kB │ gzip:   0.68 kB
+dist/assets/b2b-Bj-OX6zD.css                                                 1.79 kB │ gzip:   0.78 kB
+dist/assets/ScreenRecorderControl-CP8VhhBv.css                               2.66 kB │ gzip:   0.92 kB
+dist/assets/wholesale-DrQS87Eg.css                                           3.61 kB │ gzip:   1.04 kB
+dist/assets/wholesale-b2b-D4R_T_id.css                                      10.00 kB │ gzip:   1.89 kB
+dist/assets/main-BrRRTxmM.css                                               12.76 kB │ gzip:   3.13 kB
+dist/assets/main-BQwtZXhN.css                                               47.19 kB │ gzip:   7.27 kB
+dist/assets/entry-SrUiN24h.css                                             713.35 kB │ gzip: 122.24 kB
+dist/assets/screen-recorder-entry-D-Ch1J76.js                                1.11 kB │ gzip:   0.62 kB
+dist/assets/invoice-learning-profile-summary-extension-4m0zO5iP.js           1.66 kB │ gzip:   0.93 kB
+dist/assets/store-lifecycle-fetch-BCEXV0hN.js                                1.92 kB │ gzip:   0.99 kB
+dist/assets/invoice-learning-generate-barcode-extension-mMDEKszC.js          2.58 kB │ gzip:   1.49 kB
+dist/assets/invoice-learning-server-sync-bootstrap-CGeOeSkj.js               2.70 kB │ gzip:   1.22 kB
+dist/assets/product-barcode-photo-D628ZOlW.js                                3.12 kB │ gzip:   1.70 kB
+dist/assets/invoice-learning-product-form-selects-extension-Dd179_NF.js      3.50 kB │ gzip:   1.58 kB
+dist/assets/invoice-learning-taxonomy-bootstrap-B59zjbJ3.js                  5.94 kB │ gzip:   2.35 kB
+dist/assets/ScreenRecorderControl-CYYVpSkT.js                                6.02 kB │ gzip:   2.63 kB
+dist/assets/kat-online-orders-pos-bootstrap-BguSIpy2.js                     12.68 kB │ gzip:   4.95 kB
+dist/assets/invoice-learning-catalog-publication--3jBOwZu.js                12.69 kB │ gzip:   4.84 kB
+dist/assets/index-vIxPXL69.js                                               15.89 kB │ gzip:   6.87 kB
+dist/assets/b2b-DbhYGpAq.js                                                 16.27 kB │ gzip:   5.62 kB
+dist/assets/invoice-learning-pending-barcodes-bootstrap-BTR3Nbqo.js         17.87 kB │ gzip:   6.16 kB
+dist/assets/browser-tX2_6E8z.js                                             25.79 kB │ gzip:  10.14 kB
+dist/assets/invoice-assistant-pos-client-D9O-ra-k.js                        54.50 kB │ gzip:  17.16 kB
+dist/assets/wholesale-b2b-BDw5_ExF.js                                       60.44 kB │ gzip:  15.63 kB
+dist/assets/wholesale-Earh0pgf.js                                           61.74 kB │ gzip:  19.15 kB
+dist/assets/invoice-learning-lab-bootstrap-BAkPeFWX.js                      71.41 kB │ gzip:  21.37 kB
+dist/assets/main-DtcHj244.js                                               122.34 kB │ gzip:  34.98 kB
+dist/assets/client-ksG2vkgI.js                                             223.96 kB │ gzip:  69.54 kB
+dist/assets/main-Dun6PDJ0.js                                               350.26 kB │ gzip:  94.45 kB
+dist/assets/invoice-assistant-pdf-viewer-Cl0cyFzQ.js                       460.63 kB │ gzip: 137.07 kB
+dist/assets/pdf-qG1jx4kV.js                                                517.86 kB │ gzip: 156.88 kB
+dist/assets/entry-C9GY5vGG.js                                            2,799.64 kB │ gzip: 732.69 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 10.61s
+(node:170) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[build] TABLE_SERVICE verified in entry-C9GY5vGG.js
+(node:178) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+> myworkstation-app@0.6.0 build:server
+> npm run prepare:server && npm run prisma:generate -w server
+
+(node:191) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+> myworkstation-app@0.6.0 prepare:server
+> node server/scripts/patch-health-revision-source.js && node server/scripts/patch-kiosk-modifier-only-source.js && node server/scripts/patch-invoice-learning-product-search-route.js && node server/scripts/patch-audit-action-filter.js && node server/scripts/patch-efood-pelican-routes.js && node server/scripts/prepare-startup-source.js
+
+(node:204) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Health revision source already patched.
+(node:212) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+KAT modifier-only milk/ice source patch applied.
+(node:220) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Invoice Learning product search route registered.
+(node:228) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Central Audit POS action allow-list already safe.
+(node:236) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:248) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:324) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+> myworkstation-server@0.19.0 prisma:generate
+> prisma generate
+
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v6.19.3) to ./../node_modules/@prisma/client in 213ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
+

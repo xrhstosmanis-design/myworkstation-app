@@ -1,0 +1,9 @@
+(node:5) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:20) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+server PDF.js: synthetic PDF text extraction PASS
+(node:40) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+client PDF.js: synthetic PDF text extraction PASS
+{"check":"runtime-compatibility","node":"v22.23.4","sharp":"png","prisma":"generated client constructor","tesseract":"module load only; recognition NOT TESTED","externalRequests":0,"status":"PASS"}
