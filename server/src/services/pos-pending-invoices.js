@@ -182,10 +182,10 @@ async function pendingProbe(db,scope){
  return rows[0];
 }
 
-export async function readPendingInvoices(db,scope){
+async function readPendingInvoiceRows(db,scope,full=false){
  scopeCheck(scope);if(operator(scope.user)&&scope.user.storeId!==scope.storeId)fail('Δεν έχεις πρόσβαση στο κατάστημα.','PENDING_INVOICE_SCOPE',403);
  const capability=await pendingProbe(db,scope);
- if(!capability.hasIntents)return {rows:[],count:0,missingCount:0,uploadedCount:0,reviewCount:0,truncated:false,fingerprint:hash([0,'d41d8cd98f00b204e9800998ecf8427e'])};
+ if(!capability.hasIntents)return {capability,value:{count:0,missingCount:0,uploadedCount:0,reviewCount:0,digest:'d41d8cd98f00b204e9800998ecf8427e',rows:[]}};
  const actor=operator(scope.user)&&!scope.sessionAll?scope.user.id:null,terminal=operator(scope.user)&&!scope.sessionAll?scope.terminalPos:null,sessionId=scope.sessionId||null;
  const jobRows=capability.jobs?Prisma.sql`SELECT "id","attachmentId","purchaseDocumentId","status","resultJson"->'posHandoff' AS h,"resultJson"->'mydataPosReceipt' AS r FROM "AiReaderJob" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`:Prisma.sql`SELECT NULL::text AS "id",NULL::text AS "attachmentId",NULL::text AS "purchaseDocumentId",NULL::text AS "status",NULL::jsonb AS h,NULL::jsonb AS r WHERE FALSE`;
  const sourceFacts=capability.full?Prisma.sql`
@@ -236,6 +236,15 @@ export async function readPendingInvoices(db,scope){
  source_content AS MATERIALIZED (SELECT NULL::text AS "paymentId",FALSE AS present WHERE FALSE),
  source_facts AS MATERIALIZED (SELECT "paymentId","sourceId",FALSE AS valid,TRUE AS broken FROM primary_bindings)
  `;
+ const projection=full?Prisma.sql`"id","supplierName","amount"::text AS "amount","documentNumber","documentDate",status,"occurredAt"`:Prisma.sql`*`;
+ const bounded=Prisma.sql`octet_length("id")<=160 AND ("supplierName" IS NULL OR octet_length("supplierName")<=512) AND ("documentNumber" IS NULL OR octet_length("documentNumber")<=160) AND ("documentDate" IS NULL OR octet_length("documentDate")<=10) AND ("amount" IS NULL OR octet_length("amount"::text)<=32)`;
+ const metadataRow=Prisma.sql`jsonb_build_object('id',"id",'companyId',${scope.companyId},'storeId',${scope.storeId},'supplierName',"supplierName",'documentNumber',"documentNumber",'documentDate',"documentDate",'status',status,'amount',"amount"::text)`;
+ // Full mode preflights bounded fields before constructing any row JSON and
+ // gates the aggregate in a scalar subquery. CASE around an aggregate alone
+ // would still allocate that aggregate before checking its condition.
+ const metadataLimits=full?Prisma.sql`, pending_count AS MATERIALIZED (SELECT COUNT(*) AS n FROM pending), metadata_limits AS MATERIALIZED (SELECT COUNT(*) AS n,COALESCE(bool_and(${bounded}),TRUE) AS valid,COALESCE(SUM(CASE WHEN (SELECT n<=20000 FROM pending_count) AND ${bounded} THEN octet_length(${metadataRow}::text)+1 ELSE 0 END),0) AS bytes FROM pending)`:Prisma.sql``;
+ const metadataFlags=full?Prisma.sql`,(SELECT valid FROM metadata_limits) AS "_snapshotMetadataValid",(SELECT bytes::text FROM metadata_limits) AS "_snapshotBytes"`:Prisma.sql``;
+ const rowSelection=full?Prisma.sql`CASE WHEN (SELECT n<=20000 AND valid AND bytes<=4193280 FROM metadata_limits) THEN (SELECT jsonb_agg(to_jsonb(p)-'occurredAt' ORDER BY p."occurredAt",p."id") FROM (SELECT ${projection} FROM pending ORDER BY "occurredAt","id" LIMIT 20001) p) ELSE '[]'::jsonb END`:Prisma.sql`(SELECT jsonb_agg(p ORDER BY p."occurredAt",p."id") FROM (SELECT * FROM pending ORDER BY "occurredAt","id" LIMIT 50) p)`;
  const result=await db.$queryRaw(Prisma.sql`WITH scoped_audits AS MATERIALIZED (
  SELECT "eventType","actorId","details" FROM "StoreOperatorAudit" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "eventType" IN (${EVENT},${CAPTURE_EVENT},'PURCHASE_ORDER_DELETED')
  ), intents AS MATERIALIZED (
@@ -264,10 +273,30 @@ export async function readPendingInvoices(db,scope){
  SELECT "id","supplierId","supplierName","amount","actorName","occurredAt",details->>'documentNumber' AS "documentNumber",details->>'documentDate' AS "documentDate",details->>'contextSessionId' AS "sessionId",details->>'terminalPos' AS "terminalPos",details->>'fingerprint' AS fingerprint,
  CASE WHEN NOT "paymentValid" OR tombstoned OR "sourceCount">1 OR "capturePresent" OR ${Boolean(capability.jobTable&&!capability.jobs)} OR COALESCE("sourceBroken",FALSE) THEN 'REVIEW_REQUIRED' WHEN "sourcePresent" THEN 'UPLOADED_AWAITING_REVIEW' ELSE 'AWAITING_INVOICE' END AS status
  FROM decisions WHERE NOT ("paymentValid" AND NOT tombstoned AND (COALESCE("captureValid",FALSE) OR ("sourceCount"=1 AND COALESCE("sourceValid",FALSE))))
- ) SELECT COUNT(*)::int AS count,COUNT(*) FILTER (WHERE status='AWAITING_INVOICE')::int AS "missingCount",COUNT(*) FILTER (WHERE status='UPLOADED_AWAITING_REVIEW')::int AS "uploadedCount",COUNT(*) FILTER (WHERE status='REVIEW_REQUIRED')::int AS "reviewCount",md5(COALESCE(string_agg("id"||':'||fingerprint||':'||status,',' ORDER BY "id"),'')) AS digest,
- (SELECT jsonb_agg(p ORDER BY p."occurredAt",p."id") FROM (SELECT * FROM pending ORDER BY "occurredAt","id" LIMIT 50) p) AS rows FROM pending`);
- const value=result[0]||{count:0,digest:'',rows:[]};
+ ) ${metadataLimits} SELECT COUNT(*)::int AS count,COUNT(*) FILTER (WHERE status='AWAITING_INVOICE')::int AS "missingCount",COUNT(*) FILTER (WHERE status='UPLOADED_AWAITING_REVIEW')::int AS "uploadedCount",COUNT(*) FILTER (WHERE status='REVIEW_REQUIRED')::int AS "reviewCount",md5(COALESCE(string_agg("id"||':'||fingerprint||':'||status,',' ORDER BY "id"),'')) AS digest,
+ ${rowSelection} AS rows ${metadataFlags} FROM pending`);
+ return {capability,value:result[0]||{count:0,digest:'',rows:[]}};
+}
+
+export async function readPendingInvoices(db,scope){
+ const {value}=await readPendingInvoiceRows(db,scope);
  return {rows:(value.rows||[]).map(row=>({...row,amount:Number(row.amount)})),count:Number(value.count),missingCount:Number(value.missingCount||0),uploadedCount:Number(value.uploadedCount||0),reviewCount:Number(value.reviewCount||0),truncated:Number(value.count)>50,fingerprint:hash([Number(value.count),value.digest])};
+}
+
+// Internal metadata mode for an already authorized caller-held source snapshot.
+// The payment/source decisions above are shared with the unchanged POS reader.
+export async function readPendingInvoiceSnapshotRows(db,scope){
+ if(!scope?.user||scope.user.companyId!==scope.companyId||scope.user.storeId&&scope.user.storeId!==scope.storeId||scope.user.tokenType&&scope.user.tokenType!=='BACKOFFICE_USER'||!['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(scope.user.role))fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.','PENDING_SNAPSHOT_DENIED',403);
+ const state=await db.$queryRawUnsafe(`SELECT current_setting('transaction_read_only') AS "readOnly",current_setting('transaction_isolation') AS isolation`);
+ if(state[0]?.readOnly!=='on'||!['repeatable read','serializable'].includes(state[0]?.isolation))fail('Απαιτείται κοινό στιγμιότυπο μόνο ανάγνωσης.','PENDING_SNAPSHOT_TRANSACTION_REQUIRED',422);
+ const {capability,value}=await readPendingInvoiceRows(db,scope,true),count=Number(value.count),rows=value.rows||[];
+ if(!Number.isSafeInteger(count)||count<0||count>20000||!Array.isArray(rows)||rows.length>20000)fail('Η πηγή υπερβαίνει το ασφαλές όριο.','PENDING_SNAPSHOT_LIMIT',422);
+ if(value._snapshotMetadataValid===false)fail('Η πηγή περιέχει υπερμεγέθη μεταδεδομένα.','PENDING_SNAPSHOT_TEXT_LIMIT',422);
+ if(value._snapshotBytes!==undefined&&(!/^\d+$/.test(value._snapshotBytes)||BigInt(value._snapshotBytes)>4193280n))fail('Η πηγή υπερβαίνει το ασφαλές μέγεθος.','PENDING_SNAPSHOT_PAYLOAD_LIMIT',422);
+ if(rows.length!==count)fail('Δεν επιβεβαιώθηκε πλήρης ανάγνωση εκκρεμοτήτων.','PENDING_SNAPSHOT_COUNT_MISMATCH',502);
+ const counts={total:count,missingOriginal:Number(value.missingCount||0),uploadedAwaitingReview:Number(value.uploadedCount||0),reviewRequired:Number(value.reviewCount||0)};
+ if(Object.values(counts).some(n=>!Number.isSafeInteger(n)||n<0)||counts.missingOriginal+counts.uploadedAwaitingReview+counts.reviewRequired!==count)fail('Δεν επιβεβαιώθηκαν τα πλήρη σύνολα.','PENDING_SNAPSHOT_COUNT_MISMATCH',502);
+ return {period:'ALL_MONTHS',coverage:{complete:capability.full===true,unavailable:capability.full===true?[]:['PENDING_SOURCE_SCHEMA_INCOMPLETE'],sourceLimit:20000},counts,rows,fingerprint:hash([count,value.digest])};
 }
 
 export async function checkClosePendingInvoices(tx,{companyId,storeId,user,session,acknowledged,expectedFingerprint}){

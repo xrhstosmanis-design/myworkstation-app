@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import {invoiceNumberParts,sameInvoiceIdentityForReview} from '../lib/invoice-common-draft.js';
-import {readPendingInvoices} from './pos-pending-invoices.js';
+import {readPendingInvoices,readPendingInvoiceSnapshotRows} from './pos-pending-invoices.js';
 import {companyModuleState,isCurrentlyActive} from '../middleware/module-access.js';
 
 const roles=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
@@ -72,7 +72,7 @@ function sameIncomingIdentity(a,b){return /^\d{9}$/.test(vat(a.supplierTaxId))&&
 
 // All source metadata has been fetched before this function is called. An
 // analysis cap never becomes a zero-issues conclusion or a partial summary.
-export function classifyInvoiceMonth(facts,period){
+function classifyInvoiceMonthCore(facts,period){
  const docs=new Map(facts.documents.map(d=>[d.id,{...d,key:'doc:'+d.id,issueDay:day(d.issueDay)}]));
  const orders=new Map(facts.orders.map(o=>[o.id,o])),inbound=facts.inbound.map(m=>({...m,key:'inbound:'+m.id,documentNumber:[m.series,m.documentNumber].filter(Boolean).join(' '),documentType:inboundDocumentType(m.invoiceType),supplierTaxId:m.issuerVat,issueDay:day(m.issueDay)}));
  const inboxById=new Map(facts.inbox.map(i=>[i.id,i])),inboundByInbox=new Map(facts.inbound.map(m=>[m.inboxId,m])),postingsByOrder=new Map(facts.postings.map(p=>[p.orderId,p]));
@@ -131,7 +131,7 @@ export function classifyInvoiceMonth(facts,period){
  for(const d of docs.values())add(d.key,{...d,kind:'DOCUMENT'});
  for(const m of inbound)add(m.key,{...m,kind:'MYDATA'});
  for(const o of orders.values())add('order:'+o.id,{...o,kind:'ORDER',documentNumber:o.invoiceNumber,issueDay:null});
- const findings=[],duplicateSuppressed=new Set();let inactive=0,credits=0;
+ const findings=[],primaryAmounts=new Map(),duplicateSuppressed=new Set();let inactive=0,credits=0;
  const selected=g=>{let active=g.sources.filter(s=>s.status!=='MERGED');if(!active.length&&g.reasons.length)active=g.sources;const dates=active.map(s=>s.issueDay).filter(Boolean);return dates.some(d=>d>=period.fromDay&&d<period.toDayExclusive)||!dates.length&&active.some(s=>{const d=day(s.createdAt);return d&&d>=period.fromDay&&d<period.toDayExclusive})};
  for(const g of groups.values()){
   if(!selected(g))continue;
@@ -151,7 +151,7 @@ export function classifyInvoiceMonth(facts,period){
   if(!posted&&g.sources.some(s=>s.kind==='DOCUMENT'&&uploadedDocs.has(s.id)))categories.push('UPLOADED_AWAITING_REVIEW');
   if(g.reasons.length)categories.push('IDENTITY_OR_LINK_REVIEW');
   const value={id:g.id,documentNumber:primary.documentNumber||null,documentType:primary.documentType||null,issueDay:issueDay||null,registeredAt:primary.createdAt?new Date(primary.createdAt).toISOString():null,supplierName:primary.supplierName||null,supplierTaxId:vat(primary.supplierTaxId)||null,totalCents:cents(primary.totalGross),status:posted?'POSTED':'UNPOSTED',sources:g.sources.map(s=>({kind:s.kind,id:s.id,status:s.status||null})),categories,reasons:[...new Set(g.reasons)]};
-  findings.push(value);if(linkReview)duplicateSuppressed.add(value.id);
+  primaryAmounts.set(value.id,primary.totalGross);findings.push(value);if(linkReview)duplicateSuppressed.add(value.id);
  }
  // Bucket by corroborated supplier VAT and full series/number/date/type before totals.
  // Distinct logical invoices remain distinct; this is human review, not reuse.
@@ -173,8 +173,28 @@ export function classifyInvoiceMonth(facts,period){
  findings.sort((a,b)=>(a.issueDay||'9999').localeCompare(b.issueDay||'9999')||a.id.localeCompare(b.id));
  const counts={logicalRecords:findings.length,unposted:0,uploadedAwaitingReview:0,possibleDuplicates:0,identityReview:0,credits,inactive};
  for(const r of findings){if(r.categories.includes('UNPOSTED_DOCUMENT'))counts.unposted++;if(r.categories.includes('UPLOADED_AWAITING_REVIEW'))counts.uploadedAwaitingReview++;if(r.categories.includes('POSSIBLE_DUPLICATE'))counts.possibleDuplicates++;if(r.categories.includes('IDENTITY_OR_LINK_REVIEW'))counts.identityReview++}
- return {counts,items:findings};
+ return {counts,items:findings,primaryAmounts};
 }
+
+export function classifyInvoiceMonth(facts,period){
+ const {counts,items}=classifyInvoiceMonthCore(facts,period);return {counts,items};
+}
+
+async function readInvoiceSources(tx,actor,input,now,fullPending=false){
+ const store=await authorize(tx,actor,input.storeId,now),cap=await capabilities(tx),facts={},sourceCounts={},unavailable=[],limited=[];
+ for(const [name,d]of Object.entries(domains)){
+  if(!cap[d.table]||name==='documents'&&!cap.Supplier||name==='postings'&&!cap.PurchaseOrder){facts[name]=[];sourceCounts[name]=null;unavailable.push(name);continue}
+  const rows=await tx.$queryRawUnsafe(`SELECT source.*,COUNT(*) OVER()::text AS "_sourceCount" FROM (${d.sql}) source ORDER BY source."${d.id||'id'}" LIMIT $3`,actor.companyId,input.storeId,MAX_SOURCE_ROWS+1);
+  const total=rows.length?Number(rows[0]._sourceCount):0;
+  if(!Number.isSafeInteger(total)||total<rows.length)fail('Δεν επιβεβαιώθηκε η πληρότητα της πηγής.',502);
+  sourceCounts[name]=total;if(total>MAX_SOURCE_ROWS)limited.push(name);
+  facts[name]=rows.slice(0,MAX_SOURCE_ROWS).map(({_sourceCount,...row})=>row);
+ }
+ const pendingAvailable=Object.keys(pendingRequired).every(table=>cap[table]);
+ const pending=pendingAvailable?await (fullPending?readPendingInvoiceSnapshotRows:readPendingInvoices)(tx,{companyId:actor.companyId,storeId:store.id,user:actor}):null;
+ return {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending};
+}
+
 
 export async function readMonthlyInvoiceAudit(db,actor,input,{now=new Date()}={}){
  if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==input?.storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
@@ -184,19 +204,7 @@ export async function readMonthlyInvoiceAudit(db,actor,input,{now=new Date()}={}
  return db.$transaction(async tx=>{
   await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
   await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '8000ms'");
-  const store=await authorize(tx,actor,input.storeId,now),cap=await capabilities(tx),facts={},sourceCounts={},unavailable=[],limited=[];
-  for(const [name,d]of Object.entries(domains)){
-   if(!cap[d.table]||name==='documents'&&!cap.Supplier||name==='postings'&&!cap.PurchaseOrder){facts[name]=[];sourceCounts[name]=null;unavailable.push(name);continue}
-   // Window count covers the complete scoped source independently of this
-   // materialization bound. Over-limit analysis is explicitly unavailable.
-   const rows=await tx.$queryRawUnsafe(`SELECT source.*,COUNT(*) OVER()::text AS "_sourceCount" FROM (${d.sql}) source ORDER BY source."${d.id||'id'}" LIMIT $3`,actor.companyId,input.storeId,MAX_SOURCE_ROWS+1);
-   const total=rows.length?Number(rows[0]._sourceCount):0;
-   if(!Number.isSafeInteger(total)||total<rows.length)fail('Δεν επιβεβαιώθηκε η πληρότητα της πηγής.',502);
-   sourceCounts[name]=total;if(total>MAX_SOURCE_ROWS)limited.push(name);
-   facts[name]=rows.slice(0,MAX_SOURCE_ROWS).map(({_sourceCount,...row})=>row);
-  }
-  const pendingAvailable=Object.keys(pendingRequired).every(table=>cap[table]);
-  const pending=pendingAvailable?await readPendingInvoices(tx,{companyId:actor.companyId,storeId:store.id,user:actor}):null;
+  const {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending}=await readInvoiceSources(tx,actor,input,now);
   const complete=unavailable.length===0&&limited.length===0,analysis=complete?classifyInvoiceMonth(facts,period):{counts:null,items:[]};
   const fingerprint=hash({period,sourceCounts,facts:complete?facts:null,pending:pending?.fingerprint||null,unavailable,limited});
   if(cursor&&cursor.fingerprint!==fingerprint)fail('Τα στοιχεία άλλαξαν. Εκτέλεσε νέο έλεγχο πριν συνεχίσεις.',409,'INVOICE_MONTH_AUDIT_STALE_PAGE');
@@ -205,4 +213,65 @@ export async function readMonthlyInvoiceAudit(db,actor,input,{now=new Date()}={}
   const items=analysis.items.slice(after+1,after+1+PAGE_SIZE),hasMore=after+1+items.length<analysis.items.length;
   return {store:{id:store.id,name:store.name},period,asOf:now.toISOString(),fingerprint,coverage:{complete,sourceCounts,sourceCountBasis:'ALL_STORED_METADATA_FOR_LINK_CONTEXT',unavailable,limited,sourceLimit:MAX_SOURCE_ROWS,detailsPageSize:PAGE_SIZE,scope:'STORED_SELECTED_STORE_SOURCES'},summary:analysis.counts,items,nextPage:hasMore?Buffer.from(JSON.stringify({after:items.at(-1).id,fingerprint,scope:hash([actor.companyId,store.id,input.month])})).toString('base64url'):null,pendingOriginals:{period:'ALL_MONTHS',label:'Όλοι οι μήνες',available:pendingAvailable,counts:pending?{total:pending.count,missingOriginal:pending.missingCount,uploadedAwaitingReview:pending.uploadedCount,reviewRequired:pending.reviewCount}:null,items:(pending?.rows||[]).map(row=>({id:row.id,supplierName:row.supplierName,amount:row.amount,documentNumber:row.documentNumber,documentDate:row.documentDate,status:row.status,occurredAt:row.occurredAt})),truncated:pending?.truncated||false,detailLimit:50},allClear:complete&&pendingAvailable&&analysis.counts.unposted===0&&analysis.counts.possibleDuplicates===0&&analysis.counts.identityReview===0&&pending.count===0,immutableSnapshot:false,readOnly:true};
  },{isolationLevel:'RepeatableRead',maxWait:2000,timeout:30000});
+}
+
+const snapshotFail=code=>fail(code,422,code);
+const snapshotText=(value,max,{optional=false,id=false}={})=>{
+ if(optional&&(value===null||value===undefined))return '';
+ if(typeof value!=='string'||value.length>max||Buffer.byteLength(value,'utf8')>max||/[\u0000-\u001f\u007f]/.test(value)||id&&(!value||value.trim()!==value))snapshotFail('INVOICE_SNAPSHOT_TEXT_INVALID');
+ return value;
+};
+const snapshotAmount=value=>{
+ if(value===null||value===undefined)return null;
+ if(typeof value!=='string'||value.length>32)snapshotFail('INVOICE_SNAPSHOT_AMOUNT_INVALID');
+ // Unknown bounded monetary facts remain unknown in D1; never reconstruct a
+ // decimal from the public rounded totalCents or the legacy pending Number.
+ return value;
+};
+async function snapshotTransactionState(tx){
+ const rows=await tx.$queryRawUnsafe(`SELECT current_setting('transaction_read_only') AS "readOnly",current_setting('transaction_isolation') AS isolation,to_char(transaction_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "transactionStartedAt",to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "readAt",(EXTRACT(EPOCH FROM(clock_timestamp()-transaction_timestamp()))*1000)::text AS "ageMs"`);
+ const row=rows[0];
+ if(row?.readOnly!=='on'||!['repeatable read','serializable'].includes(row.isolation))snapshotFail('INVOICE_SNAPSHOT_TRANSACTION_REQUIRED');
+ const stamp=value=>typeof value==='string'&&value.length===24&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value;
+ const age=typeof row.ageMs==='string'&&/^\d+(?:\.\d+)?$/.test(row.ageMs)?Number(row.ageMs):NaN;
+ if(!stamp(row.transactionStartedAt)||!stamp(row.readAt)||!Number.isFinite(age)||age<0||age>30000||row.transactionStartedAt>row.readAt||Date.parse(row.readAt)-Date.parse(row.transactionStartedAt)>30000)snapshotFail('INVOICE_SNAPSHOT_TRANSACTION_STALE');
+ return row;
+}
+
+// Internal, unmounted source metadata for a future same-transaction stock
+// coordinator. It neither captures nor stores inventory and does not claim
+// live authorization beyond the caller's bounded held MVCC snapshot.
+export async function readMonthlyInvoiceSnapshotProjectionInTransaction(tx,actor,input){
+ if(arguments.length!==3||!input||Object.keys(input).some(k=>!['storeId','month'].includes(k))||!safeText(input.storeId))snapshotFail('INVOICE_SNAPSHOT_INPUT_INVALID');
+ if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==input.storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
+ const period=invoiceAuditMonth(input.month),entry=await snapshotTransactionState(tx);
+ const source=await readInvoiceSources(tx,actor,input,new Date(entry.readAt),true),{store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending}=source;
+ for(const [name,count]of Object.entries(sourceCounts))if(count!==null&&!limited.includes(name)&&count!==facts[name].length)snapshotFail('INVOICE_SNAPSHOT_SOURCE_COUNT_MISMATCH');
+ const reasons=[...unavailable.map(name=>'SOURCE_UNAVAILABLE:'+name),...limited.map(name=>'SOURCE_LIMIT:'+name)];
+ const complete=unavailable.length===0&&limited.length===0;
+ const analysis=complete?classifyInvoiceMonthCore(facts,period):{counts:null,items:[],primaryAmounts:new Map()};
+ if(analysis.items.length>MAX_SOURCE_ROWS)snapshotFail('INVOICE_SNAPSHOT_ROW_LIMIT');
+ if(!pendingAvailable||!pending?.coverage.complete)reasons.push('PENDING_SOURCE_UNAVAILABLE');
+ let bytes=1024;
+ const account=row=>{bytes+=Buffer.byteLength(JSON.stringify(row),'utf8')+1;if(bytes>4*1024*1024)snapshotFail('INVOICE_SNAPSHOT_PAYLOAD_LIMIT');return row};
+ const categories=new Set(['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','POSSIBLE_DUPLICATE','IDENTITY_OR_LINK_REVIEW','MISSING_ORIGINAL']);
+ const companyId=snapshotText(actor.companyId,160,{id:true}),storeId=snapshotText(store.id,160,{id:true});
+ const invoices={period:period.month,items:analysis.items.map(row=>{
+  const issueDay=row.issueDay;
+  if(!issueDay)reasons.push('INVOICE_ISSUE_DATE_UNKNOWN');else if(issueDay<period.fromDay||issueDay>=period.toDayExclusive)reasons.push('INVOICE_PRIMARY_OUTSIDE_PERIOD');
+  if(!Array.isArray(row.categories)||row.categories.some(c=>!categories.has(c)))snapshotFail('INVOICE_SNAPSHOT_CATEGORY_INVALID');
+  return account({id:snapshotText(row.id,160,{id:true}),companyId,storeId,documentNumber:snapshotText(row.documentNumber,160,{optional:true}),supplierName:snapshotText(row.supplierName,512,{optional:true}),issueDay,categories:[...row.categories],totalAmount:snapshotAmount(analysis.primaryAmounts.get(row.id))});
+ })};
+ const statuses=new Set(['AWAITING_INVOICE','UPLOADED_AWAITING_REVIEW','REVIEW_REQUIRED']);
+ const pendingOriginals={period:'ALL_MONTHS',items:(pending?.rows||[]).map(row=>{
+  if(!statuses.has(row.status))snapshotFail('INVOICE_SNAPSHOT_STATUS_INVALID');
+  const documentDate=row.documentDate===null||row.documentDate===undefined?'':row.documentDate;
+  if(documentDate!==''&&(!/^\d{4}-\d{2}-\d{2}$/.test(documentDate)||!Number.isFinite(Date.parse(documentDate))||new Date(documentDate).toISOString().slice(0,10)!==documentDate))snapshotFail('INVOICE_SNAPSHOT_PENDING_DATE_INVALID');
+  return account({id:snapshotText(row.id,160,{id:true}),companyId,storeId,documentNumber:snapshotText(row.documentNumber,160,{optional:true}),supplierName:snapshotText(row.supplierName,512,{optional:true}),documentDate,status:row.status,amount:snapshotAmount(row.amount)});
+ })};
+ const finished=await snapshotTransactionState(tx);
+ if(finished.transactionStartedAt!==entry.transactionStartedAt||finished.readAt<entry.readAt)snapshotFail('INVOICE_SNAPSHOT_TRANSACTION_CHANGED');
+ const result={companyId,storeId,period,observation:{transactionStartedAt:entry.transactionStartedAt,readStartedAt:entry.readAt,readFinishedAt:finished.readAt,snapshotBasis:'HELD_REPEATABLE_READ_TRANSACTION',authorizationBasis:'ASSESSED_IN_HELD_TRANSACTION_SNAPSHOT'},coverage:{complete:complete&&pendingAvailable&&pending?.coverage.complete===true,sourceCounts,invoiceCount:invoices.items.length,pendingOriginalCount:pending?.counts.total??null,unavailable,limited,sourceLimit:MAX_SOURCE_ROWS},freezeEligibility:{eligible:reasons.length===0,reasons:[...new Set(reasons)]},invoices,pendingOriginals,candidateOnly:true,persisted:false};
+ if(Buffer.byteLength(JSON.stringify(result),'utf8')>4*1024*1024)snapshotFail('INVOICE_SNAPSHOT_PAYLOAD_LIMIT');
+ return result;
 }
