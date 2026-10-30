@@ -1,3 +1,13 @@
+## 30/10/2026 — Ριζαρείου: λειτουργία από το πρωί / OWNER-REPORTED USER PASS
+
+Ρητή επιβεβαίωση ιδιοκτήτη Χρήστου στις 30/10/2026: «Είναι οκ..όλα λειτουργούν στην Ριζαρείου.. ενημέρωσε το Μέιν ότι είναι σε λειτουργία από το πρωί.. ταμειακή οκ..pos οκ.. σαρωτής οκ..». Καταγράφεται πραγματική αναφορά χρήστη για το συγκεκριμένο κατάστημα, σε λειτουργία από το πρωί (Europe/Athens, χωρίς ακριβή ώρα έναρξης). Ταμειακή USER PASS, POS USER PASS, Canon LiDE400/σάρωση USER PASS ως προς τη δηλωμένη λειτουργία. Δεν έγινε ανεξάρτητη απομακρυσμένη συναλλαγή ή νέα δοκιμή για τεκμηρίωση.
+
+Προηγούμενο scanner FAIL enumerate-devices/InvalidOperationException0x80131509 και προσωρινό μη προσβάσιμο helper παραμένουν ιστορικά. Ο χρήστης αφαίρεσε παλιά μη χρησιμοποιούμενη HP καταχώριση και αργότερα επιβεβαίωσε λειτουργία. Δεν αποδίδεται αποδεδειγμένη αιτία ούτε νέα διόρθωση κώδικα. Ακριβής installed helper/driver hash, production revision κατά τη φυσική δοκιμή, reboot/Startup, νέα σύζευξη, πολυσέλιδο και πολλαπλοί σαρωτές NOT TESTED. Η σημερινή αναφορά δεν πιστοποιεί κάθε EFTPOS/IRIS/VOID/παλιά REQUIRES_CHECK υπόθεση ούτε οικονομικά/stock υπόλοιπα. Δεν κλείνει παλιές συγκεκριμένες εκκρεμότητες ή άλλες αναθέσεις χωρίς τα αντίστοιχα τεκμήρια.
+
+Για εξουσιοδοτημένο προσωπικό Ριζαρείου: χρήση του υπάρχοντος POS/ταμειακής και της «Σάρωσης εγγράφου» στην υπάρχουσα φόρμα του επιλεγμένου καταστήματος. Διατηρούνται δικαιώματα, tenant/store isolation και η υφιστάμενη ροή πληρωμής. Δεν επαναλαμβάνεται πληρωμή/καταχώριση μόνο για απόδειξη λειτουργίας. Σε νέο scanner σφάλμα συλλέγεται ο τίτλος/διαγνωστικό του συγκεκριμένου helper, χωρίς επέμβαση στον σύνδεσμο ταμειακής. Υπόλοιπα και retained owners παραμένουν ως έχουν.
+
+Checkpoint: CHECKPOINTS/CHANGES/2026-10-30-rizareio-morning-operational-user-confirmation.md.
+
 ## AI-OWNER-WALLET-01 — 30Oct2026 / SELECTED REAL-COMPANY INVOICE BILLING ACTIVATED / SCOPED LIVE CONFIGURATION PASS
 
 Retained owner feat/ai-owner-wallet-20261022 / fix/ai-wallet-invoice-request-reserve-20261029. Measured Azure/OpenAI LAB acceptance3304 exact8061eb758db96913ff4a2fc7f39dc0dbb18e1f82 passedCI41044781211 and merged7bb1dc6adcfa2687bfcdec805c45571307674d87 BEFORE real-company rollout. Receipt includes manual, synthetic evidence, both configuration/acceptance checkpoints and synchronized registers/PDF; unmerged3299 was superseded without discarding concurrent owners. Exact merged-mainCI41044967277 SUCCESS. All2341 production runtime blobs at7bb1dc6 equal fully checked/hosted sourcee950d9b; exact fullsourceCI41041653691 and normal guard41042881821 verification remain protected.
