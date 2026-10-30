@@ -58,7 +58,7 @@ export async function recordFtextCashResult(tx,device,settings,input){
  const result=validateFtextCashResult(input,row),resultHash=hash(JSON.stringify(result));
  if(row.resultHash){if(row.resultHash!==resultHash)fail('FTEXT_CASH_RESULT_CHANGED','Το ίδιο αποτέλεσμα άλλαξε. Απαιτείται έλεγχος.');return row;}
  if(result.outcome==='CONFIRMED'){
-  const reused=(await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${settings.companyId} AND "storeId"=${settings.storeId} AND "serialNumber"=${settings.serialNumber} AND "id"<>${row.id} AND "status" IN ('CONFIRMED','SALE_COMMITTED') AND "result"->>'dayId'=${result.dayId} AND "result"->>'dayCounter'=${result.dayCounter} LIMIT 1`)[0];
+  const reused=(await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${settings.companyId} AND "storeId"=${settings.storeId} AND "serialNumber"=${settings.serialNumber} AND "id"<>${row.id} AND "status" IN ('CONFIRMED','SALE_COMMITTED') AND COALESCE("checkoutJson"->'ftextLateCashReceipt'->'result'->>'dayId',"result"->>'dayId')=${result.dayId} AND COALESCE("checkoutJson"->'ftextLateCashReceipt'->'result'->>'dayCounter',"result"->>'dayCounter')=${result.dayCounter} LIMIT 1`)[0];
   if(reused)fail('FTEXT_CASH_RECEIPT_REUSED','Η ίδια φορολογική απόδειξη έχει ήδη συνδεθεί με άλλη συναλλαγή. Δεν έγινε δεύτερη καταχώριση.');
  }
  if(row.status!=='DISPATCHED')fail('FTEXT_CASH_RESULT_STATE','Η εντολή δεν βρίσκεται σε κατάσταση αποστολής.');

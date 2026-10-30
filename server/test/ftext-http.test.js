@@ -13,7 +13,7 @@ async function fixture(fn){
  try{await fn({calls,request:(path,options={})=>fetch(base+path,options)})}finally{await new Promise(r=>server.close(r))}
 }
 test('actual HTTP rejects employee installation access before service or package action',()=>fixture(async({calls,request})=>{
- for(const [path,method] of [['/companies/company/stores/store/installation/POS-01','GET'],['/companies/company/stores/store/installation','PUT'],['/companies/company/stores/store/installation/POS-01/pairing','POST'],['/companies/company/stores/store/installation/POS-01/package','POST'],['/companies/company/stores/store/installation/POS-01/unresolved','GET'],['/companies/company/stores/store/installation/POS-01/requests/request/void','POST']]){const r=await request(path,{method});assert.equal(r.status,403);assert.equal(r.headers.get('cache-control'),'no-store')}
+ for(const [path,method] of [['/companies/company/stores/store/installation/POS-01','GET'],['/companies/company/stores/store/installation','PUT'],['/companies/company/stores/store/installation/POS-01/pairing','POST'],['/companies/company/stores/store/installation/POS-01/package','POST'],['/companies/company/stores/store/installation/POS-01/unresolved','GET'],['/companies/company/stores/store/installation/POS-01/requests/request/void','POST'],['/companies/company/stores/store/installation/POS-01/requests/request/late-cash-receipt','POST']]){const r=await request(path,{method});assert.equal(r.status,403);assert.equal(r.headers.get('cache-control'),'no-store')}
  assert.deepEqual(calls,[]);
 }));
 test('actual HTTP binds manager requests to selected path and routes device credentials separately',()=>fixture(async({calls,request})=>{
