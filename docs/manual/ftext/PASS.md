@@ -1,3 +1,11 @@
+## 30 October 2026 — recovered payment error / return-to-basket USER PASS
+
+Who/where: the original authorized cashier in the same selected physical FTEXT POS and shift, using the paired existing Windows connector. On released778d3f0, the connector recovered the original bound PAY error48 after the polling repair; the cashier then explicitly released the rejected application attempt and the owner confirmed «ΕΙΝΑΙ ΟΚ». Independent read-only records show preserved original NO/result/no-sale identity and two later distinct completed normal requests. No old sale was replayed for evidence.
+
+Verified usage: keep the existing paired connector and FTEXT+ running; refresh the original POS. After recorded NO and recovery of the original verified payment error, use «Επιστροφή στο καλάθι» and confirm readiness only after checking the physical register/EFTPOS. The application says «Η προηγούμενη προσπάθεια έκλεισε στο MyWorkStation. Το καλάθι διατηρήθηκε.» The old attempt is not made into a sale and the cashier can resume the normal checkout flow.
+
+Scope/security: original cashier, company, store, POS and original result/decision bindings remain enforced; no resend, bank decline or fiscal cancellation is inferred. A pending unique lock remains for unresolved/confirmed/foreign outcomes. If return is refused, preserve the original request/files and inspect its actual result. This acceptance covers this recovery and observed resumed operation, not independently measured stock/financial deltas, every device/failure or the new reviewed-unknown recovery requested afterwards. That new path remains AWAITING IMPLEMENTATION/LAB and is not part of this manual PASS.
+
 ## 26 October 2026 — limited recovered-NO confirmation UI USER PASS
 
 Authorized original cashier in selected Rizareio/RIZAREIO-POS-01. Keep paired connector and FTEXT+ running and refresh the existing POS after release71ca6f15/PR3159. Owner observed that the blocking confirmation disappeared; image-1793013541128.jpg shows original one-item ΝΕΡΟ500ML basket0.50 retained and pending-review notice visible, without another Return button. This verifies presentation of an already-recorded NO after refresh only. Fresh NO click, physical YES/card acceptance and measured financial/stock effects remain NOT TESTED; no receipt or charge was repeated.
