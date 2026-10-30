@@ -1,3 +1,9 @@
+## 30/10/2026 — Polling repair implemented / AWAITING EXACT CI AND RELEASE
+
+Owner fix/ftext-poll-released-takeover-20261030; explicit takeover merged PR3313/main0db9d47 before source. One causal SQL predicate excludes operator-released registerReady=true rows before oldest-row selection, matching the existing pending-request eligibility. Device/settings/lifecycle binding, original evidence, release/VOID and finalizer remain unchanged. Added actual PostgreSQL regression: historical released direct error then new unknown NO; select current request, reject foreign device/token/company/store/terminal/lifecycle, prove poll read-only, append exact evidence without changing original result/decision/sale and retain pending until explicit review. Only synthetic request table exists, so financial/stock writes fail.
+
+Local Node20 focused:12PASS/0FAIL/1 native PostgreSQL skip (no local PostgreSQL). Initial HTTP test failed because first dependency tree lacked generated Prisma; rerun with existing generated dependencies passed unchanged tests. Native regression/full exact PR/main CI and guarded deployment still required. Physical recovery NOT TESTED. No production or financial action, package/settings change or fiscal dispatch. Existing limited CASH and recovered-NO UI PASS preserved.
+
 ## 30/10/2026 — Explicit owner handoff
 
 ΑΝΑΛΗΨΗ ΑΠΟ fix/ftext-poll-released-20261030 — ASSIGNED fix/ftext-poll-released-takeover-20261030. Χρήστος explicitly authorized this page to take over because the previous page stopped. Preserve the same bounded scope, existing claim PR3313, all protected PASS and all unrelated owners. No production or financial action occurred.
