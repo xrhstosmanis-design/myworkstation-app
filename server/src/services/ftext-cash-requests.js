@@ -7,6 +7,9 @@ import {prepareFtextSalePlan} from './ftext-sale-plan.js';
 import {ftextSettingsHash} from './ftext-installation.js';
 const fail=(code,message)=>{throw Object.assign(new Error(message),{status:409,code})};
 const hash=s=>createHash('sha256').update(s).digest('hex');
+export async function findPendingFtextCashRequest(tx,scope){
+ return (await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} AND "status"<>'SALE_COMMITTED' AND COALESCE("checkoutJson"->'ftextVoid'->>'status','')<>'CONFIRMED' AND COALESCE("checkoutJson"->'ftextOperatorRelease'->>'registerReady','')<>'true' ORDER BY "createdAt" LIMIT 1`)[0]||null;
+}
 export function ftextCashRequestView(row){return row?{id:row.id,kind:'FTEXT_CASH',storeId:row.storeId,terminalPos:row.terminalPos,clientTransactionId:row.clientTransactionId,paymentMethod:row.checkoutJson?.paymentMethod||'CASH',total:Number(row.total),status:ftextVoidConfirmed(row)?'CANCELLED':row.status,voidStatus:row.checkoutJson?.ftextVoid?.status||null,saleId:row.saleId||null,operatorConfirmationRequired:ftextOperatorDecisionRequired(row),operatorOutcome:row.checkoutJson?.ftextCardDecision?.outcome||null,checkout:row.checkoutJson,createdAt:row.createdAt}:null;}
 export function assertFtextSimpleCash(checkout,items){
  if(checkout.paymentMethod!=='CASH'||checkout.customerId||checkout.onlineOrderId||checkout.tableOrderId||Number(checkout.redeemPoints||0)!==0||checkout.payments?.length||!['COUNTER',undefined].includes(checkout.operationChannel)||!['NORMAL',undefined].includes(checkout.audience)||items.some(i=>Number(i.discount||0)!==0||i.promotionId||i.promotionType||!Number.isSafeInteger(Number(i.quantity))||Number(i.quantity)<=0))fail('FTEXT_CASH_UNSUPPORTED','Η πρώτη έκδοση ftext υποστηρίζει απλή πώληση μετρητών στο κατάστημα, χωρίς πελάτη, προσφορά ή έκπτωση.');

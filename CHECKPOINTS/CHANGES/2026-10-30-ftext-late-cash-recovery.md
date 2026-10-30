@@ -1,3 +1,9 @@
+## 30/10/2026 — FTEXT-LATE-CASH-01 / installed recovery, support selector LIVE FAIL / corrective candidate
+
+Retained recovery owner fix/ftext-support-pending-20261030. Source3323/head816fe41 passed exact full PR41103072578 and native41103072048; mergedda557a2 passed exact main41104952321 and ordinary guarded release41106593044/dep-dbie26c9v7es73d81j4g. Independent health200/oktrue/exactda557a2. Recovery has NOT executed and original request remains REQUIRES_CHECK/no sale. This is not LIVE PASS.
+
+Actual selected-POS support inspection returns an older already operator-released CARD before the current unknown CASH, hiding the newly installed form. Correct only the unresolved-selector eligibility: exclude registerReady=true releases before ORDER BY/LIMIT, matching original pending-creation/polling guards. Keep all rows and old evidence unchanged; no financial/fiscal operation or source recovery-policy change. Actual native regression now retains the historical CARD via the real release service, verifies selection of subsequent CASH and foreign-store/POS refusal with before/after row equality. Existing concurrent late receipt/finalization tests retained. Exact new PR/native/main CI and guarded release required. Startup/automatic prevention remains follow-up OPEN.
+
 ## 30/10/2026 — FTEXT-LATE-CASH-01 / candidate implemented / AWAITING EXACT NATIVE CI AND RELEASE
 
 Owner fix/ftext-late-cash-proof-20261030, bounded independent continuation of claim3322/main4a7f724. Owner explicitly prioritized existing printed CASH recovery before prevention. Claim was documentation-only; its CI remained queued at merge and is not represented as green. Production remains unchanged and incident is NOT RECOVERED.
@@ -14,3 +20,5 @@ Owner explicitly requests immediate recovery first, prevention afterwards. Indep
 
 
 Acceptance: bound original intent and unknown report; complete final receipt/serial/amount; immutable original evidence; reject foreign/stale/tampered/reused receipts and VOID/released requests; concurrent replay creates exactly one business sale through original finalizer; original shift and stock measured before/after actual recovery. Generic startup/preflight prevention is follow-up, not part of immediate recovery. Existing CASH, CARD operator and RBS PASS remain protected. No customer identifiers or raw receipts are published.
+
+Before actual recovery: private original-request baseline collected after exact live da557a2. Original shift OPEN; no linked sale; original resultHash retained; CASH7/66.10, CARD17/127.90; both affected tracked SKU stocks0/movements0. Expected one CASH5.50 posting and stock -2/-1; no new fiscal dispatch. Raw identifiers kept private.

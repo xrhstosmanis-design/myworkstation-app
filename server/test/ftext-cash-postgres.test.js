@@ -1,11 +1,11 @@
 import {recordLateCashReceipt} from '../src/services/ftext-late-cash-receipt.js';
 import {ftextOriginalCommandHash} from '../src/services/ftext-error-evidence.js';
-import {recordFtextOperatorDecision} from '../src/services/ftext-operator-card.js';
+import {recordFtextOperatorDecision,releaseFtextRejectedAttempt} from '../src/services/ftext-operator-card.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {ensureFtextCashSchema,ftextCashLifecycleReviewProposal} from '../src/services/ftext-cash-schema.js';
-import {prepareFtextCashRequest,claimFtextCashRequest,recordFtextCashResult} from '../src/services/ftext-cash-requests.js';
+import {prepareFtextCashRequest,claimFtextCashRequest,recordFtextCashResult,findPendingFtextCashRequest} from '../src/services/ftext-cash-requests.js';
 import {finalizeFtextCashRequest} from '../src/services/ftext-cash-finalize.js';
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&!u.search&&!u.hash&&/^\/[^/]*test[^/]*$/i.test(decodeURIComponent(u.pathname))}catch{return false}}
 test('native ftext cash: concurrent one-shot dispatch, durable result, real stock/financial atomic commit and replay',{skip:!isolated(),timeout:120000},async t=>{
@@ -135,11 +135,17 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
 
 
   await t.test('late CASH receipt retains original timeout and commits once with original shift; replay, foreign and reused proof protected',async()=>{
-   await a.$executeRaw`DELETE FROM "FtextCashRequest" WHERE "clientTransactionId"='operator-declined'`;
+   const rejected=(await a.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "clientTransactionId"='operator-declined'`)[0];
+   await a.$transaction(tx=>releaseFtextRejectedAttempt(tx,rejected.id,scope,'operator-a',{registerReady:true}));
    const late=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'late-cash'}));
    await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
    const unknown={requestId:late.id,settingsHash:late.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
    const original=await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,unknown));
+   const unchanged=await a.$queryRaw`SELECT * FROM "FtextCashRequest" ORDER BY "createdAt"`;
+   assert.equal((await findPendingFtextCashRequest(a,scope)).id,late.id,'Released historical CARD must not hide the current CASH recovery');
+   assert.equal(await findPendingFtextCashRequest(a,{...scope,storeId:'foreign'}),null);
+   assert.equal(await findPendingFtextCashRequest(a,{...scope,terminalPos:'foreign'}),null);
+   assert.deepEqual(await a.$queryRaw`SELECT * FROM "FtextCashRequest" ORDER BY "createdAt"`,unchanged,'Inspection must never mutate released history');
    const encode=x=>Buffer.from(x).toString('base64'),raw='0\r\n17\r\n45\r\nSYNTHETIC01\r\n30/10/2026 19:32\r\n0\r\nhttps://www1.aade.gr/tameiakes/myweb/q1.php?SIG=SYNTHETIC01ABC26103019321.25\r\n\r\n671\r\n\r\n';
    const proof={intentBase64:encode(JSON.stringify({requestId:late.id,settingsHash:late.settingsHash,commandHash:ftextOriginalCommandHash(original,settings)})),reportBase64:encode(JSON.stringify(unknown)),rawResultBase64:encode(raw),reason:'Synthetic owner verified original printed receipt'};
    const recover=(db,selected=scope,current={device,settings})=>db.$transaction(tx=>recordLateCashReceipt(tx,selected,late.id,'admin',proof,{context:async()=>current}));

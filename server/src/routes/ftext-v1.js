@@ -3,7 +3,7 @@ import {recordLateCashReceipt} from '../services/ftext-late-cash-receipt.js';
 import {pollFtextErrorEvidence,recordFtextErrorEvidence,ftextPaymentError} from '../services/ftext-error-evidence.js';
 import {claimFtextVoid,requestFtextVoid,recordFtextVoidResult} from '../services/ftext-void.js';
 import {Router} from 'express';
-import {claimFtextCashRequest,recordFtextCashResult,ftextCashRequestView} from '../services/ftext-cash-requests.js';
+import {claimFtextCashRequest,recordFtextCashResult,ftextCashRequestView,findPendingFtextCashRequest} from '../services/ftext-cash-requests.js';
 import {finalizeFtextCashRequest} from '../services/ftext-cash-finalize.js';
 import {ftextCashTableExists} from '../services/ftext-cash-schema.js';
 import {prisma} from '../prisma.js';
@@ -44,8 +44,8 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
   res.json({ok:true,requestId:row.id,status:'SALE_COMMITTED',saleId:completed.saleId,replay:completed.replay,allowResend:false});
  }));
  router.get(prefix+'/installation/:terminalPos/unresolved',userAuth,manager,wrap(async(req,res)=>{
-  const scope=scoped(req),rows=await db.$transaction(async tx=>{await service.cashContext(tx,scope,{requireOnline:false});if(!await ftextCashTableExists(tx))return [];return tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} AND "status"<>'SALE_COMMITTED' AND COALESCE("checkoutJson"->'ftextVoid'->>'status','')<>'CONFIRMED' ORDER BY "createdAt" LIMIT 1`});
-  const error=ftextPaymentError(rows[0]);res.json({request:rows[0]?{...ftextCashRequestView(rows[0]),resultCode:error?.code??rows[0].result?.code,failedCommand:error?.failedCommand??rows[0].result?.failedCommand}:null});
+  const scope=scoped(req),row=await db.$transaction(async tx=>{await service.cashContext(tx,scope,{requireOnline:false});if(!await ftextCashTableExists(tx))return null;return findPendingFtextCashRequest(tx,scope)});
+  const error=ftextPaymentError(row);res.json({request:row?{...ftextCashRequestView(row),resultCode:error?.code??row.result?.code,failedCommand:error?.failedCommand??row.result?.failedCommand}:null});
  }));
  router.post(prefix+'/installation/:terminalPos/requests/:requestId/void',userAuth,manager,wrap(async(req,res)=>{
   const scope=scoped(req),row=await db.$transaction(async tx=>requestFtextVoid(tx,scope,req.params.requestId,req.user.id,req.body,await service.cashContext(tx,scope)));res.json({request:ftextCashRequestView(row)});
