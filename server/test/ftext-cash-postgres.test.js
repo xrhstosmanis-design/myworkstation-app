@@ -1,3 +1,5 @@
+import {recordLateCashReceipt} from '../src/services/ftext-late-cash-receipt.js';
+import {ftextOriginalCommandHash} from '../src/services/ftext-error-evidence.js';
 import {recordFtextOperatorDecision} from '../src/services/ftext-operator-card.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -129,6 +131,35 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    await assert.rejects(finalizeFtextCashRequest(a,card.id,scope,opts));
    await assert.rejects(a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'no-resend'})),e=>e.code==='FTEXT_CASH_PENDING');
    assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,3);assert.equal((await a.$queryRaw`SELECT * FROM "StockMovement"`).length,3);
+  });
+
+
+  await t.test('late CASH receipt retains original timeout and commits once with original shift; replay, foreign and reused proof protected',async()=>{
+   await a.$executeRaw`DELETE FROM "FtextCashRequest" WHERE "clientTransactionId"='operator-declined'`;
+   const late=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'late-cash'}));
+   await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+   const unknown={requestId:late.id,settingsHash:late.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
+   const original=await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,unknown));
+   const encode=x=>Buffer.from(x).toString('base64'),raw='0\r\n17\r\n45\r\nSYNTHETIC01\r\n30/10/2026 19:32\r\n0\r\nhttps://www1.aade.gr/tameiakes/myweb/q1.php?SIG=SYNTHETIC01ABC26103019321.25\r\n\r\n671\r\n\r\n';
+   const proof={intentBase64:encode(JSON.stringify({requestId:late.id,settingsHash:late.settingsHash,commandHash:ftextOriginalCommandHash(original,settings)})),reportBase64:encode(JSON.stringify(unknown)),rawResultBase64:encode(raw),reason:'Synthetic owner verified original printed receipt'};
+   const recover=(db,selected=scope,current={device,settings})=>db.$transaction(tx=>recordLateCashReceipt(tx,selected,late.id,'admin',proof,{context:async()=>current}));
+   await assert.rejects(recover(a,{...scope,storeId:'foreign'}));await assert.rejects(recover(a,scope,{device:{...device,tokenVersion:4},settings}));
+   const before=(await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${late.id}`)[0];assert.deepEqual(before,original);
+   const copies=await Promise.all([recover(a),recover(b)]);assert.deepEqual(copies[0].checkoutJson.ftextLateCashReceipt,copies[1].checkoutJson.ftextLateCashReceipt);
+   for(const recovered of copies){assert.equal(recovered.status,'CONFIRMED');assert.deepEqual(recovered.result,original.result);assert.equal(recovered.resultHash,original.resultHash);assert.equal(recovered.saleId,null);}
+   assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,3);
+   await a.$executeRaw`UPDATE "CashShiftSession" SET "status"='CLOSED' WHERE "id"='shift-a'`;
+   await assert.rejects(finalizeFtextCashRequest(a,late.id,scope,opts));await a.$executeRaw`UPDATE "CashShiftSession" SET "status"='OPEN' WHERE "id"='shift-a'`;
+   await assert.rejects(finalizeFtextCashRequest(a,late.id,scope,{context,reserveStock:async()=>{throw Error('late stock failure')}}));
+   assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,3);
+   const commits=await Promise.all([finalizeFtextCashRequest(a,late.id,scope,opts),finalizeFtextCashRequest(b,late.id,scope,opts)]);assert.equal(commits[0].saleId,commits[1].saleId);assert.equal(commits.filter(x=>x.replay).length,1);
+   for(const table of ['Sale','Payment','StockMovement','StoreTransaction','StoreOperatorAudit'])assert.equal((await a.$queryRawUnsafe(`SELECT * FROM "${table}"`)).length,4,table);
+   assert.equal(Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-a'`)[0].currentStock),-4);
+   assert.equal(Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-control'`)[0].currentStock),20);
+   const audit=(await a.$queryRaw`SELECT "details" FROM "StoreOperatorAudit" WHERE "details"->>'requestId'=${late.id}`)[0];assert.equal(audit.details.receipt.dayCounter,'45');assert.equal(audit.details.receipt.outcome,'CONFIRMED');
+   const replay=await recover(a);assert.equal(replay.saleId,commits[0].saleId);assert.deepEqual(replay.result,original.result);assert.equal(replay.resultHash,original.resultHash);
+   const next=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'late-reused'}));await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+   await assert.rejects(a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{...receipt,requestId:next.id,settingsHash:next.settingsHash,dayCounter:'45'})),e=>e.code==='FTEXT_CASH_RECEIPT_REUSED');
   });
 
  }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);try{if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`)}finally{await admin.$disconnect()}}
