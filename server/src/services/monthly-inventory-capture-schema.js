@@ -27,7 +27,7 @@ const checks={
   mws_capture_job_ids:ids(['id','companyId','storeId','grantId','activationId']),
   mws_capture_job_purpose:`"purpose"='MONTHLY_INVENTORY_CAPTURE' AND "purposeVersion"=1`,
   mws_capture_job_epoch:'"lifecycleGeneration">=0 AND "grantRevision">=1 AND "attempt">=0 AND "attempt"<=60',
-  mws_capture_job_slot:`${month('issueMonth')} AND "scheduledFor"=${slot('issueMonth')}`,
+  mws_capture_job_nominal_slot:`${month('issueMonth')} AND "scheduledFor"=${slot('issueMonth')}`,
   mws_capture_job_status:`("status"='PENDING' OR "status"='LEASED' OR "status"='SUCCEEDED' OR "status"='HOLD' OR "status"='FAILED')`,
   mws_capture_job_lease:`(("status"='LEASED' AND "attempt">=1 AND "leaseTokenHash" IS NOT NULL AND "leaseTokenHash" ~ '^[a-f0-9]{64}$' AND "leaseExpiresAt" IS NOT NULL AND "claimedSourceRevision" IS NOT NULL AND "claimedSourceRevision" ~ '^[a-f0-9]{40}$') OR ("status"<>'LEASED' AND "leaseTokenHash" IS NULL AND "leaseExpiresAt" IS NULL AND "claimedSourceRevision" IS NULL))`,
   mws_capture_job_hold:`("holdReason" IS NULL OR ("holdReason"='AUTHORITY_REVOKED' OR "holdReason"='LEASE_EXPIRED' OR "holdReason"='SOURCE_UNAVAILABLE' OR "holdReason"='SCHEMA_UNAVAILABLE' OR "holdReason"='MAINTENANCE' OR "holdReason"='RETRY_LIMIT'))`,
