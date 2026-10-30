@@ -143,6 +143,69 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     const readyRead=await request('/platform/companies/c','admin');assert.equal(readyRead.body.activationReadiness.ready,true);assert.doesNotMatch(JSON.stringify(readyRead.body),/synthetic-private-provider-key/);
     assert.equal((await request('/platform/companies/c','owner','PUT',enableConfig)).status,403);
     const enabledConfig=await request('/platform/companies/c','admin','PUT',enableConfig);assert.equal(enabledConfig.status,200);assert.equal((await repository.read('c')).enabled,true);
+
+    // New in-app invoice policy: real HTTP authorization + native row-locked
+    // audit/version persistence, with no external providers or business writes.
+    await db.$executeRaw`INSERT INTO "Company" VALUES('invoice-switch','Synthetic invoice switch',true)`;
+    await db.$executeRaw`INSERT INTO "Store" VALUES('invoice-switch-store','Synthetic switch store','invoice-switch',true)`;
+    await repository.configure('invoice-switch',{version:0,enabled:true,emailEnabled:false,notificationOwnerId:''},'admin');
+    Object.assign(activationEnv,{
+      AI_OWNER_WALLET_ENABLED:'true',AI_OWNER_WALLET_INVOICES_ENABLED:'true',AI_OWNER_WALLET_INVOICE_COMPANIES:'[]',
+      AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'synthetic-private-azure-endpoint',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic-private-azure-key',
+      OPENAI_INVOICE_MODEL:activationEnv.OPENAI_COMMAND_CENTER_MODEL,OPENAI_INVOICE_FAST_MODEL:activationEnv.OPENAI_COMMAND_CENTER_MODEL,
+      OPENAI_INVOICE_FULL_MODEL:activationEnv.OPENAI_COMMAND_CENTER_MODEL,OPENAI_INVOICE_ASSISTANT_MODEL:activationEnv.OPENAI_COMMAND_CENTER_MODEL,
+      AI_OWNER_WALLET_INVOICE_TARIFFS:JSON.stringify([{model:activationEnv.OPENAI_COMMAND_CENTER_MODEL,inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:100000,outputMicrosPerMillion:2000000,contextTokens:400000,maxOutputTokens:128000}]),
+      AI_OWNER_WALLET_INVOICE_AZURE_TARIFFS:JSON.stringify([{model:'prebuilt-invoice',apiVersion:'2024-11-30',unitMicros:13200,maxPages:5}])
+    });
+    const switchPath='/platform/companies/invoice-switch',switchRead=()=>request(switchPath,'admin');
+    let switchState=(await switchRead()).body;
+    assert.equal(switchState.invoiceBilling.enabled,false);assert.equal(switchState.invoiceBilling.readiness.ready,true);
+    assert.doesNotMatch(JSON.stringify(switchState),/synthetic-private-/);
+    const switchInput=()=>({version:switchState.version,enabled:true,emailEnabled:false,notificationOwnerId:'',invoiceEnabled:true});
+    for(const actor of ['owner','employee'])assert.equal((await request(switchPath,actor,'PUT',switchInput())).status,403);
+    assert.equal((await request('/platform/companies/missing','admin','PUT',switchInput())).status,404);
+    assert.equal((await request(switchPath,'admin','PUT',{...switchInput(),invoiceEnabled:'true'})).status,400);
+    const switchControl=async()=>({wallet:await db.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"='invoice-switch'`,entries:await db.$queryRaw`SELECT * FROM "AiOwnerWalletEntry" WHERE "companyId"='invoice-switch'`,notices:await db.$queryRaw`SELECT * FROM "AiOwnerWalletNotice" WHERE "companyId"='invoice-switch'`,audits:await db.$queryRaw`SELECT * FROM "AiOwnerWalletAudit" WHERE "companyId"='invoice-switch' ORDER BY "id"`});
+    const switchBefore=await switchControl();
+    assert.equal((await request(switchPath,'admin','PUT',switchInput())).status,200);
+    switchState=(await switchRead()).body;assert.equal(switchState.invoiceBilling.enabled,true);assert.equal(switchState.invoiceBilling.active,true);
+    assert.ok(switchState.meteredFeatures.includes('INVOICE_OPENAI'));assert.equal(switchState.serviceConfiguration.invoices.enabled,true);
+    let switchAfter=await switchControl();assert.equal(switchAfter.audits.length,switchBefore.audits.length+1);
+    assert.equal(switchAfter.wallet[0].version,switchBefore.wallet[0].version+1);assert.deepEqual(switchAfter.entries,switchBefore.entries);assert.deepEqual(switchAfter.notices,switchBefore.notices);
+    assert.equal(switchAfter.wallet[0].balanceMicros,switchBefore.wallet[0].balanceMicros);assert.equal(switchAfter.wallet[0].reservedMicros,switchBefore.wallet[0].reservedMicros);
+    // Omitted-field clients cannot silently erase a newer explicit decision.
+    const omitted=switchInput();delete omitted.invoiceEnabled;
+    assert.equal((await request(switchPath,'admin','PUT',omitted)).status,200);switchState=(await switchRead()).body;assert.equal(switchState.invoiceBilling.enabled,true);
+    const raced={...switchInput(),invoiceEnabled:false},auditCount=(await switchControl()).audits.length;
+    const races2=await Promise.all([request(switchPath,'admin','PUT',raced),request(switchPath,'admin','PUT',raced)]);
+    assert.deepEqual(races2.map(r=>r.status).sort(),[200,409]);assert.equal((await switchControl()).audits.length,auditCount+1);
+    activationEnv.AI_OWNER_WALLET_INVOICE_COMPANIES='["invoice-switch"]';
+    switchState=(await switchRead()).body;assert.equal(switchState.invoiceBilling.enabled,false);
+    assert.equal(await repository.invoiceEnabledFor('invoice-switch',true),false);assert.equal(await repository.invoiceEnabledFor('c',true),true);
+    // Invalid enable is all-or-nothing; disable remains possible even if the
+    // existing Owner/provider configuration is temporarily unavailable.
+    const validInvoicePrices=activationEnv.AI_OWNER_WALLET_INVOICE_TARIFFS;
+    activationEnv.AI_OWNER_WALLET_INVOICE_TARIFFS='invalid';
+    const invalidBefore=await switchControl();assert.equal((await request(switchPath,'admin','PUT',switchInput())).body.code,'AI_WALLET_INVOICE_TARIFF_REQUIRED');assert.deepEqual(await switchControl(),invalidBefore);
+    activationEnv.AI_OWNER_WALLET_INVOICE_TARIFFS=validInvoicePrices;
+    assert.equal((await request(switchPath,'admin','PUT',switchInput())).status,200);
+    await repository.grantTrial('invoice-switch',{amountMicros:'1000',grantReference:'synthetic-switch-hold',reason:'Synthetic native pending hold control'},'admin');
+    const pendingInvoice=await repository.reserve({companyId:'invoice-switch',storeId:'invoice-switch-store',feature:'INVOICE_OPENAI',invoicePolicyFallback:false,amountMicros:'10',reference:'synthetic-switch-pending',tariff:{model:'synthetic-original'}});
+    switchState=(await switchRead()).body;assert.equal(switchState.reservedMicros,'10');
+    const validProviderKey=activationEnv.OPENAI_API_KEY;activationEnv.OPENAI_API_KEY='';
+    assert.equal((await request(switchPath,'admin','PUT',{...switchInput(),invoiceEnabled:false})).status,200);
+    switchState=(await switchRead()).body;assert.equal(switchState.enabled,true);assert.equal(switchState.invoiceBilling.enabled,false);assert.equal(switchState.reservedMicros,'10');
+    assert.equal(await repository.reserve({companyId:'invoice-switch',storeId:'invoice-switch-store',feature:'INVOICE_AZURE',invoicePolicyFallback:true,amountMicros:'1',reference:'synthetic-switch-late',tariff:{}}),null);
+    await repository.settle('invoice-switch',pendingInvoice.id,{amountMicros:'8',usage:{synthetic:true}});
+    switchState=(await switchRead()).body;assert.equal(switchState.balanceMicros,'992');assert.equal(switchState.reservedMicros,'0');
+    activationEnv.OPENAI_API_KEY=validProviderKey;
+    // Deliberately reverse timestamps in this isolated fixture: wallet version
+    // remains the source of configuration order, not transaction start time.
+    await db.$executeRaw`UPDATE "AiOwnerWalletAudit" SET "createdAt"=CASE WHEN ("detail"->>'invoiceEnabled')::boolean THEN '2100-01-01'::timestamptz ELSE '2000-01-01'::timestamptz END WHERE "companyId"='invoice-switch' AND "detail" ? 'invoiceEnabled'`;
+    assert.equal(await repository.invoiceEnabledFor('invoice-switch',true),false);
+    await db.$executeRaw`INSERT INTO "AiOwnerWalletAudit" ("id","companyId","actorId","event","detail") VALUES (${randomUUID()},'invoice-switch','admin','CONFIGURED','{"version":999999,"invoiceEnabled":"invalid"}'::jsonb)`;
+    await assert.rejects(repository.invoiceEnabledFor('invoice-switch',true),e=>e.code==='AI_WALLET_INVOICE_CONFIG_INVALID');
+
     // Internal trial funding never claims a customer receipt. Separate company
     // controls protect all existing fixture counts and real business rows.
     await db.$executeRaw`INSERT INTO "Company" VALUES('trial','Synthetic internal trial',true)`;
@@ -219,3 +282,4 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     assert.deepEqual(await db.$queryRaw`SELECT * FROM "BusinessControl"`,before);
   }finally{if(server)await new Promise(resolve=>server.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
+

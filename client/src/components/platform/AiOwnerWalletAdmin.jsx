@@ -12,19 +12,19 @@ function TrialGrantForm({busy,onGrant}){
   </form>;
 }
 export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
-  const [companyId,setCompanyId]=useState(''),[data,setData]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[amount,setAmount]=useState(''),[receipt,setReceipt]=useState(''),[confirmed,setConfirmed]=useState(false),[enabled,setEnabled]=useState(false),[emailEnabled,setEmailEnabled]=useState(false),[ownerId,setOwnerId]=useState('');
+  const [companyId,setCompanyId]=useState(''),[data,setData]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[amount,setAmount]=useState(''),[receipt,setReceipt]=useState(''),[confirmed,setConfirmed]=useState(false),[enabled,setEnabled]=useState(false),[emailEnabled,setEmailEnabled]=useState(false),[ownerId,setOwnerId]=useState(''),[invoiceEnabled,setInvoiceEnabled]=useState(false);
   const epoch=useRef(0),pending=useRef(null),mutating=useRef(false);
   const path=`/api/ai-wallet/platform/companies/${encodeURIComponent(companyId)}`;
   useEffect(()=>{
     const generation=++epoch.current;pending.current?.abort();const controller=new AbortController();pending.current=controller;
     setData(null);setError('');setNotice('');setAmount('');setReceipt('');setConfirmed(false);
-    if(companyId)api(path,{signal:controller.signal,cache:'no-store'}).then(value=>{if(generation===epoch.current&&!controller.signal.aborted){if(value.companyId!==companyId)throw new Error('Η εταιρεία άλλαξε.');setData(value);setEnabled(value.enabled);setEmailEnabled(value.emailEnabled||false);setOwnerId(value.notificationOwnerId||'')}}).catch(e=>{if(!controller.signal.aborted&&generation===epoch.current)setError(e.message)});
+    if(companyId)api(path,{signal:controller.signal,cache:'no-store'}).then(value=>{if(generation===epoch.current&&!controller.signal.aborted){if(value.companyId!==companyId)throw new Error('Η εταιρεία άλλαξε.');setData(value);setEnabled(value.enabled);setEmailEnabled(value.emailEnabled||false);setOwnerId(value.notificationOwnerId||'');setInvoiceEnabled(Boolean(value.invoiceBilling?.enabled))}}).catch(e=>{if(!controller.signal.aborted&&generation===epoch.current)setError(e.message)});
     return()=>{epoch.current++;controller.abort()};
   },[api,companyId]);
   const execute=async(operation,success)=>{
     if(mutating.current||!companyId||!data?.runtimeEnabled||data.companyId!==companyId)return;
     mutating.current=true;setBusy(true);setError('');setNotice('');const generation=epoch.current;
-    try{await operation();const value=await api(path,{cache:'no-store'});if(generation===epoch.current){if(value.companyId!==companyId)throw new Error('Η εταιρεία άλλαξε.');setData(value);setEnabled(value.enabled);setEmailEnabled(value.emailEnabled);setOwnerId(value.notificationOwnerId||'');setNotice(success);setAmount('');setReceipt('');setConfirmed(false)}}catch(e){if(generation===epoch.current)setError(e.message)}finally{mutating.current=false;if(generation===epoch.current)setBusy(false)};
+    try{await operation();const value=await api(path,{cache:'no-store'});if(generation===epoch.current){if(value.companyId!==companyId)throw new Error('Η εταιρεία άλλαξε.');setData(value);setEnabled(value.enabled);setEmailEnabled(value.emailEnabled);setOwnerId(value.notificationOwnerId||'');setInvoiceEnabled(Boolean(value.invoiceBilling?.enabled));setNotice(success);setAmount('');setReceipt('');setConfirmed(false)}}catch(e){if(generation===epoch.current)setError(e.message)}finally{mutating.current=false;if(generation===epoch.current)setBusy(false)};
   };
   return <div role="dialog" aria-modal="true" aria-label="Διαχείριση υπολοίπου AI" style={{position:'fixed',inset:0,zIndex:1500,background:'#fff',padding:24,overflow:'auto',color:'#173550'}}>
     <button type="button" onClick={onClose} disabled={busy}>Κλείσιμο</button><h1>Υπόλοιπα AI πελατών</h1>
@@ -43,9 +43,16 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
         <p>Τιμολόγια: OpenAI {data.serviceConfiguration.invoices.openaiConfigured?'ρυθμισμένο':'χωρίς σύνδεση'} · Azure {data.serviceConfiguration.invoices.azureConfigured?'ρυθμισμένο':'χωρίς σύνδεση'} · {data.serviceConfiguration.invoices.azureModel} / {data.serviceConfiguration.invoices.azureApiVersion}</p>
         <ul>{data.serviceConfiguration.invoices.modelOverrides.map(row=><li key={row.key}>{row.key}: {row.model||'προεπιλογή εφαρμογής'}</li>)}</ul>
       </section>}
-      <form onSubmit={e=>{e.preventDefault();execute(()=>api(path,{method:'PUT',body:JSON.stringify({version:data.version,enabled,emailEnabled,notificationOwnerId:ownerId})}),'Οι ρυθμίσεις αποθηκεύτηκαν.')}}>
+      <form onSubmit={e=>{e.preventDefault();execute(()=>api(path,{method:'PUT',body:JSON.stringify({version:data.version,enabled,emailEnabled,notificationOwnerId:ownerId,...(data.invoiceBilling?{invoiceEnabled}:{})})}),'Οι ρυθμίσεις αποθηκεύτηκαν.')}}>
         <label><input type="checkbox" checked={enabled} disabled={busy||!enabled&&data.activationReadiness?.ready===false} onChange={e=>setEnabled(e.target.checked)}/> Χρέωση AI στον πελάτη</label><br/>
         <p>Ρύθμιση για αυτή την εταιρεία, σύμφωνα με τη συμφωνία της. Όταν είναι ανενεργή, η χρήση AI συνεχίζεται με κόστος του MyWorkStation. Το υπάρχον υπόλοιπο και το ιστορικό διατηρούνται. Κλήσεις που έχουν ήδη δεσμευτεί ολοκληρώνουν τη χρέωσή τους.</p>
+        {data.invoiceBilling&&<section aria-label="Χρέωση τιμολογίων εταιρείας">
+          <label><input type="checkbox" checked={invoiceEnabled} disabled={busy||!invoiceEnabled&&!data.invoiceBilling.readiness?.ready} onChange={e=>setInvoiceEnabled(e.target.checked)}/> Χρέωση AI τιμολογίων</label>
+          <p>Ισχύει για όλα τα καταστήματα αυτής της εταιρείας. Η τοπική ανάγνωση χωρίς AI δεν χρεώνεται.</p>
+          <p>{data.invoiceBilling.active?'Η χρέωση τιμολογίων είναι ενεργή.':data.invoiceBilling.enabled?'Η επιλογή τιμολογίων έχει αποθηκευτεί. Για χρέωση χρειάζεται ενεργή γενική χρέωση AI.':'Η χρέωση τιμολογίων είναι ανενεργή.'}</p>
+          {!data.invoiceBilling.readiness?.ready&&<p>{!data.invoiceBilling.readiness?.globalEnabled?'Η υπηρεσία χρέωσης τιμολογίων δεν είναι διαθέσιμη αυτή τη στιγμή.':!data.invoiceBilling.readiness?.providerConfigured?'Απαιτείται σύνδεση των υπηρεσιών ανάγνωσης πριν από την ενεργοποίηση.':'Απαιτείται έγκυρος τιμοκατάλογος τιμολογίων πριν από την ενεργοποίηση.'}</p>}
+          <p>Η απενεργοποίηση διατηρεί το υπόλοιπο και το ιστορικό. Οι κλήσεις που έχουν ήδη δεσμευτεί ολοκληρώνουν τη χρέωσή τους.</p>
+        </section>}
         <label><input type="checkbox" checked={emailEnabled} disabled={busy} onChange={e=>setEmailEnabled(e.target.checked)}/> Ειδοποιήσεις email στον ιδιοκτήτη</label>
         <select aria-label="Ιδιοκτήτης για ειδοποιήσεις" value={ownerId} disabled={busy} onChange={e=>setOwnerId(e.target.value)}><option value="">Επίλεξε ιδιοκτήτη</option>{(data.owners||[]).map(o=><option key={o.id} value={o.id}>{o.fullName} · {o.email}</option>)}</select>
         <button disabled={busy||emailEnabled&&!ownerId}>Αποθήκευση ρυθμίσεων</button>
@@ -65,3 +72,4 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
     <style>{`[aria-label="Διαχείριση υπολοίπου AI"] form{display:grid;gap:12px;max-width:800px;margin:20px 0;padding:16px;background:#f1f5f9;border-radius:12px}[aria-label="Διαχείριση υπολοίπου AI"] input:not([type=checkbox]),[aria-label="Διαχείριση υπολοίπου AI"] select{padding:10px;max-width:100%;box-sizing:border-box}[aria-label="Διαχείριση υπολοίπου AI"] button{padding:10px;min-height:44px}`}</style>
   </div>;
 }
+
