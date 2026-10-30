@@ -69,7 +69,7 @@ export function createMonthlyInventorySnapshotInstallation(db,{sourceRevision,en
   async inspect(actor,input){const a=actorCopy(actor),scope=scopeCopy(input);const result=await transaction(tx=>observe(tx,a,scope),true);return freeze({packet:result.packet,eligible:result.eligible,reasons:result.reasons})},
   async install(actor,input){if(!enabled)fail('MONTHLY_INSTALL_DISABLED');const a=actorCopy(actor),scope=scopeCopy(input,true);if(scope.packet.companyId!==scope.companyId||scope.packet.storeId!==scope.storeId||scope.packet.sourceRevision!==sourceRevision||scope.packet.oldPlanHash!==oldPlanHash||scope.packet.targetPlanHash!==targetPlanHash)fail('MONTHLY_INSTALL_STATE_CHANGED');
    return transaction(async tx=>{
-    await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended('mws:monthly-snapshot-install-v1',0))");
+    await tx.$queryRawUnsafe("SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended('mws:monthly-snapshot-install-v1',0))");
     const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS schema'))[0]?.schema;if(schema!==scope.packet.schema)fail('MONTHLY_INSTALL_STATE_CHANGED');
     // Real relation locks also exclude legacy installers/reset row locks. A new
     // advisory key alone would not serialize those existing entry points.
