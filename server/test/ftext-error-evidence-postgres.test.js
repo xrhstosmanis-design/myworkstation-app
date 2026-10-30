@@ -48,6 +48,25 @@ test('native late error evidence is scoped, immutable and concurrent; only separ
   assert.deepEqual(released[0].result,rejected.result);assert.equal(released[0].saleId,null);
   await assert.rejects(a.$transaction(tx=>requestFtextVoid(tx,scope,next.id,'admin',ack,{device,settings})));
   const afterRelease=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'after-release'}));assert.notEqual(afterRelease.id,next.id);
+  // Earlier released direct errors must not starve a later unknown NO report.
+  // Use the real request/decision/release services and actual PostgreSQL ordering.
+  await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+  await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{requestId:afterRelease.id,settingsHash:afterRelease.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'}));
+  const current=await a.$transaction(tx=>recordFtextOperatorDecision(tx,afterRelease.id,scope,'cashier',{outcome:'NO'},{context}));
+  const before=await a.$queryRaw`SELECT * FROM "FtextCashRequest" ORDER BY "createdAt", "id"`;
+  assert.equal(before.length,3);
+  const eligible=await a.$transaction(tx=>pollFtextErrorEvidence(tx,device,settings));
+  assert.equal(eligible.id,current.id);assert.equal(eligible.kind,'FTEXT_ERROR_RECHECK');
+  assert.equal(eligible.originalResultHash,current.resultHash);
+  for(const [d,s] of [[{...device,id:'foreign'},settings],[{...device,tokenVersion:4},settings],[device,{...settings,storeId:'foreign'}],[device,{...settings,terminalPos:'foreign'}],[device,{...settings,companyId:'foreign'}],[device,{...settings,lifecycleGeneration:'1'}]])assert.equal(await a.$transaction(tx=>pollFtextErrorEvidence(tx,d,s)),null);
+  assert.deepEqual(await a.$queryRaw`SELECT * FROM "FtextCashRequest" ORDER BY "createdAt", "id"`,before);
+  const currentProof={requestId:current.id,settingsHash:current.settingsHash,originalResultHash:current.resultHash,commandHash:ftextOriginalCommandHash(current,settings),rawResultBase64:raw.toString('base64')};
+  const appended=await a.$transaction(tx=>recordFtextErrorEvidence(tx,device,settings,currentProof));
+  for(const key of ['status','result','resultHash','saleId'])assert.deepEqual(appended[key],current[key]);
+  assert.deepEqual(appended.checkoutJson.ftextCardDecision,current.checkoutJson.ftextCardDecision);
+  assert.equal(await a.$transaction(tx=>pollFtextErrorEvidence(tx,device,settings)),null);
+  assert.deepEqual((await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${next.id}`)[0],before.find(row=>row.id===next.id));
+  await assert.rejects(a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'pending-after-evidence'})));
   // Only the reviewed request table exists: any financial/stock/shift mutation fails.
  }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);try{await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`)}finally{await admin.$disconnect()}}
 });
