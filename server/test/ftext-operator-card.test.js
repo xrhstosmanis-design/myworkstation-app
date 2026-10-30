@@ -41,16 +41,16 @@ test('only original cashier can decide after response, immutable decisions bind 
  saved=structuredClone(row);await recordFtextOperatorDecision(tx,row.id,scope,'cashier',{outcome:'NO'},{context});assert.equal(ftextCashRequestView(saved).operatorConfirmationRequired,false);assert.throws(()=>assertFtextOperatorCardApproved(saved,settings));
 });
 
-test('unknown NO requires explicit original-cashier no-receipt/no-charge review and current configuration; review never confirms a sale',async()=>{
+test('unknown NO uses only the original operator decision and current configuration; release never invents physical checks',async()=>{
  const original=structuredClone(row);original.status='REQUIRES_CHECK';original.saleId=null;
  original.result={requestId:row.id,settingsHash:row.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
  original.resultHash=createHash('sha256').update(JSON.stringify(original.result)).digest('hex');
  original.checkoutJson.ftextCardDecision={outcome:'NO',actorId:'cashier',resultHash:original.resultHash,settingsHash:original.settingsHash};
  let saved=structuredClone(original),writes=0;
  const tx={$queryRaw:async(parts,...values)=>{if(parts.join('?').startsWith('SELECT'))return values[1]===settings.companyId&&values[2]===settings.storeId&&values[3]===settings.terminalPos?[saved]:[];writes++;saved={...saved,checkoutJson:JSON.parse(values[0])};return [saved]}};
- const ack={registerReady:true,noReceiptIssued:true,noChargeApproved:true},context=async()=>({settings}),release=(a=ack,actor='cashier',scope=settings,c=context)=>releaseFtextRejectedAttempt(tx,row.id,scope,actor,a,{context:c});
+ const ack={operatorNo:true},context=async()=>({settings}),release=(a=ack,actor='cashier',scope=settings,c=context)=>releaseFtextRejectedAttempt(tx,row.id,scope,actor,a,{context:c});
  assert.equal(ftextOperatorReleaseMode(saved),'OPERATOR_REVIEW');assert.equal(ftextCashRequestView(saved).operatorReleaseMode,'OPERATOR_REVIEW');
- for(const a of [{registerReady:true},{...ack,noReceiptIssued:false},{...ack,noChargeApproved:false},{...ack,registerReady:false}])await assert.rejects(release(a));
+ for(const a of [{registerReady:true},{operatorNo:false},{operatorNo:true,registerReady:true}])await assert.rejects(release(a));
  await assert.rejects(release(ack,'foreign'));await assert.rejects(release(ack,'cashier',{...settings,terminalPos:'foreign'}));await assert.rejects(release(ack,'cashier',settings,null));
  for(const patch of [{lifecycleGeneration:'1'},{serialNumber:'foreign'},{cardEnabled:false},{storeId:'foreign'},{cardPayment:{...settings.cardPayment,resultFormat:'POS_LINE8_OS7'}},{cardPayment:{...settings.cardPayment,code:3}}])await assert.rejects(release(ack,'cashier',settings,async()=>({settings:{...settings,...patch}})));
  for(const patch of [{saleId:'sale'},{status:'CONFIRMED'},{result:{...original.result,code:0}},{result:{...original.result,posPayments:[]}},{checkoutJson:{...original.checkoutJson,ftextVoid:{status:'REQUESTED'}}},{checkoutJson:{...original.checkoutJson,ftextCardMode:'POS_LINE8_OS7'}},{checkoutJson:{...original.checkoutJson,ftextCardDecision:{...original.checkoutJson.ftextCardDecision,outcome:'UNCERTAIN'}}}]){
@@ -58,8 +58,8 @@ test('unknown NO requires explicit original-cashier no-receipt/no-charge review 
  }
  assert.equal(writes,0);saved=structuredClone(original);
  const released=await release();assert.equal(writes,1);assert.equal(ftextOperatorReleaseMode(released),'RELEASED');
- assert.equal(released.checkoutJson.ftextOperatorRelease.reviewMode,'OPERATOR_VERIFIED_NO_SALE');
- for(const key of ['noReceiptIssued','noChargeApproved','registerReady'])assert.equal(released.checkoutJson.ftextOperatorRelease[key],true);
+ assert.equal(released.checkoutJson.ftextOperatorRelease.reviewMode,'OPERATOR_NO');
+ assert.equal(released.checkoutJson.ftextOperatorRelease.readinessVerified,false);for(const key of ['noReceiptIssued','noChargeApproved'])assert.equal(released.checkoutJson.ftextOperatorRelease[key],undefined);
  assert.equal(released.checkoutJson.ftextOperatorRelease.actorId,'cashier');assert.equal(released.checkoutJson.ftextOperatorRelease.resultHash,original.resultHash);
  for(const key of ['status','result','resultHash','saleId'])assert.deepEqual(released[key],original[key]);assert.deepEqual(released.checkoutJson.ftextCardDecision,original.checkoutJson.ftextCardDecision);
  assert.throws(()=>assertFtextOperatorCardApproved(released,settings));

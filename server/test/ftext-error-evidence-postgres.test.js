@@ -7,6 +7,12 @@ import {prepareFtextCashRequest,claimFtextCashRequest,recordFtextCashResult} fro
 import {recordFtextOperatorDecision,releaseFtextRejectedAttempt} from '../src/services/ftext-operator-card.js';
 import {pollFtextErrorEvidence,recordFtextErrorEvidence,ftextOriginalCommandHash} from '../src/services/ftext-error-evidence.js';
 import {requestFtextVoid,claimFtextVoid,recordFtextVoidResult} from '../src/services/ftext-void.js';
+// Historical unreleased NO fixtures preserve pre-upgrade evidence/VOID coverage.
+async function historicalNo(tx,id,scope,actorId){
+ const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${id}`)[0];
+ const decision={outcome:'NO',actorId,resultHash:row.resultHash,settingsHash:row.settingsHash,at:new Date().toISOString()};
+ return (await tx.$queryRaw`UPDATE "FtextCashRequest" SET "checkoutJson"=${JSON.stringify({...row.checkoutJson,ftextCardDecision:decision,ftextCardDecisionHistory:[decision]})}::jsonb WHERE "id"=${id} RETURNING *`)[0];
+}
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&!u.search&&!u.hash&&/^\/[^/]*test[^/]*$/i.test(decodeURIComponent(u.pathname))}catch{return false}}
 test('native late error evidence is scoped, immutable and concurrent; only separate verified VOID releases pending',{skip:!isolated(),timeout:120000},async()=>{
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='ftext_error_'+randomBytes(10).toString('hex'),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const a=new PrismaClient({datasourceUrl:url.href}),b=new PrismaClient({datasourceUrl:url.href});
@@ -18,7 +24,7 @@ test('native late error evidence is scoped, immutable and concurrent; only separ
   const result={requestId:first.id,settingsHash:first.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
   await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,result));
   const context=async()=>({device,settings});
-  const original=await a.$transaction(tx=>recordFtextOperatorDecision(tx,first.id,scope,'cashier',{outcome:'NO'},{context}));
+  const original=await a.$transaction(tx=>historicalNo(tx,first.id,scope,'cashier'));
   const raw=await readFile(new URL('../../tools/windows-ftext/fixtures/eftpos-error-48.res',import.meta.url));
   const proof={requestId:first.id,settingsHash:first.settingsHash,originalResultHash:original.resultHash,commandHash:ftextOriginalCommandHash(original,settings),rawResultBase64:raw.toString('base64')};
   const poll=await a.$transaction(tx=>pollFtextErrorEvidence(tx,device,settings));assert.equal(poll.id,first.id);assert.equal(poll.kind,'FTEXT_ERROR_RECHECK');
@@ -41,7 +47,7 @@ test('native late error evidence is scoped, immutable and concurrent; only separ
   const next=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'next'}));assert.notEqual(next.id,first.id);
   await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
   await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{requestId:next.id,settingsHash:next.settingsHash,outcome:'REQUIRES_CHECK',code:48,failedCommand:'PAY||2',rawResultHash:'a'.repeat(64)}));
-  const rejected=await a.$transaction(tx=>recordFtextOperatorDecision(tx,next.id,scope,'cashier',{outcome:'NO'},{context}));
+  const rejected=await a.$transaction(tx=>historicalNo(tx,next.id,scope,'cashier'));
   await assert.rejects(a.$transaction(tx=>releaseFtextRejectedAttempt(tx,next.id,scope,'other',{registerReady:true})));
   const released=await Promise.all([a.$transaction(tx=>releaseFtextRejectedAttempt(tx,next.id,scope,'cashier',{registerReady:true})),b.$transaction(tx=>releaseFtextRejectedAttempt(tx,next.id,scope,'cashier',{registerReady:true}))]);
   assert.deepEqual(released[0].checkoutJson.ftextOperatorRelease,released[1].checkoutJson.ftextOperatorRelease);
@@ -52,7 +58,7 @@ test('native late error evidence is scoped, immutable and concurrent; only separ
   // Use the real request/decision/release services and actual PostgreSQL ordering.
   await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
   await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{requestId:afterRelease.id,settingsHash:afterRelease.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'}));
-  const current=await a.$transaction(tx=>recordFtextOperatorDecision(tx,afterRelease.id,scope,'cashier',{outcome:'NO'},{context}));
+  const current=await a.$transaction(tx=>historicalNo(tx,afterRelease.id,scope,'cashier'));
   const before=await a.$queryRaw`SELECT * FROM "FtextCashRequest" ORDER BY "createdAt", "id"`;
   assert.equal(before.length,3);
   const eligible=await a.$transaction(tx=>pollFtextErrorEvidence(tx,device,settings));
@@ -68,5 +74,31 @@ test('native late error evidence is scoped, immutable and concurrent; only separ
   assert.deepEqual((await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${next.id}`)[0],before.find(row=>row.id===next.id));
   await assert.rejects(a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'pending-after-evidence'})));
   // Only the reviewed request table exists: any financial/stock/shift mutation fails.
+ }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);try{await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`)}finally{await admin.$disconnect()}}
+});
+
+test('native operator NO atomically releases once with no second confirmation or invented physical attestation',{skip:!isolated(),timeout:120000},async()=>{
+ const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='ftext_review_'+randomBytes(10).toString('hex'),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const a=new PrismaClient({datasourceUrl:url.href}),b=new PrismaClient({datasourceUrl:url.href});
+ const scope={companyId:'company-a',storeId:'store-a',terminalPos:'POS-01',fiscalDeviceCode:'FISCAL-01'},device={id:'device-a',tokenVersion:3},settings={...scope,serialNumber:'TEST12345',workFolder:'C:\\FText',protocol:'SOLIDUS(II)T',configurationId:'38cc2dfa-365a-4c00-aa0a-e713555352cd',lifecycleGeneration:'0',cashEnabled:true,cashDepartments:[{department:4,vatRate:13,vatCode:'2'}],cardEnabled:true,cardPayment:{code:2,posTerminalId:1,transactionType:1,resultFormat:'OPERATOR_CONFIRMATION',confirmed:true}};
+ const input={settings,scope,sessionId:'shift-a',clientTransactionId:'review-original',requestHash:'fixture',checkout:{actorId:'cashier',paymentMethod:'CARD'},items:[{productId:'product-a',name:'SYNTHETIC',quantity:1,effectiveUnitPrice:0.5,lineTotal:0.5,fiscalDepartment:4,vatRate:13}],summary:{subtotal:0.5,total:0.5}},context=async()=>({device,settings}),ack={registerReady:true,noReceiptIssued:true,noChargeApproved:true};
+ try{
+  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);await provisionFtextRecoverySchema(a);
+  const original=await a.$transaction(tx=>prepareFtextCashRequest(tx,input));await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+  await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{requestId:original.id,settingsHash:original.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'}));
+  const before=(await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${original.id}`)[0];
+  for(const [actor,selected,current] of [['foreign',scope,settings],['cashier',{...scope,storeId:'foreign'},settings],['cashier',{...scope,terminalPos:'foreign'},settings],['cashier',{...scope,companyId:'foreign'},settings],['cashier',scope,{...settings,lifecycleGeneration:'1'}],['cashier',scope,{...settings,serialNumber:'foreign'}]])await assert.rejects(a.$transaction(tx=>recordFtextOperatorDecision(tx,original.id,selected,actor,{outcome:'NO'},{context:async()=>({settings:current})})));
+  let lookups=0;
+  await assert.rejects(a.$transaction(tx=>recordFtextOperatorDecision(tx,original.id,scope,'cashier',{outcome:'NO'},{context:async()=>{if(++lookups===2)throw Error('fresh context unavailable');return {settings}}})));
+  assert.deepEqual((await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${original.id}`)[0],before,'NO and release must roll back together');
+  const released=await Promise.all([a.$transaction(tx=>recordFtextOperatorDecision(tx,original.id,scope,'cashier',{outcome:'NO'},{context})),b.$transaction(tx=>recordFtextOperatorDecision(tx,original.id,scope,'cashier',{outcome:'NO'},{context}))]);
+  assert.deepEqual(released[0].checkoutJson.ftextOperatorRelease,released[1].checkoutJson.ftextOperatorRelease);
+  assert.deepEqual(released[0].checkoutJson.ftextCardDecision,released[1].checkoutJson.ftextCardDecision);
+  for(const row of released){for(const key of ['status','result','resultHash','saleId'])assert.deepEqual(row[key],before[key]);assert.equal(row.checkoutJson.ftextCardDecision.outcome,'NO');assert.equal(row.checkoutJson.ftextCardDecisionHistory.length,1);assert.equal(row.checkoutJson.ftextOperatorRelease.reviewMode,'OPERATOR_NO');assert.equal(row.checkoutJson.ftextOperatorRelease.readinessVerified,false);assert.equal(row.checkoutJson.ftextOperatorRelease.noReceiptIssued,undefined);assert.equal(row.checkoutJson.ftextOperatorRelease.noChargeApproved,undefined)}
+  assert.deepEqual((await a.$transaction(tx=>recordFtextOperatorDecision(tx,original.id,scope,'cashier',{outcome:'NO'},{context}))).checkoutJson.ftextOperatorRelease,released[0].checkoutJson.ftextOperatorRelease);
+  assert.equal(await a.$transaction(tx=>pollFtextErrorEvidence(tx,device,settings)),null);
+  await assert.rejects(a.$transaction(tx=>requestFtextVoid(tx,scope,original.id,'admin',{noCardPresented:true,eftposStopped:true,exclusiveRegister:true},{device,settings})));
+  const next=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'new-after-review'}));assert.notEqual(next.id,original.id);assert.equal(next.status,'PREPARED');
+  assert.equal((await a.$queryRaw`SELECT COUNT(*)::int AS count FROM "FtextCashRequest"`)[0].count,2);
+  // No Sale/Payment/stock/shift tables exist: accidental business writes fail.
  }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);try{await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`)}finally{await admin.$disconnect()}}
 });

@@ -119,7 +119,7 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    assert.equal(Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-control'`)[0].currentStock),20);
    const replay=await decide(a,'YES');assert.equal(replay.status,'SALE_COMMITTED');
   });
-  await t.test('operator NO on failed PAY preserves immutable result, no business writes and no register lock release',async()=>{
+  await t.test('operator NO on failed PAY preserves immutable result, no business writes and atomic application release',async()=>{
    const card=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'operator-declined',checkout:{...input.checkout,paymentMethod:'CARD'}}));
    await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
    const original=await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{requestId:card.id,settingsHash:card.settingsHash,outcome:'REQUIRES_CHECK',code:48,failedCommand:'PAY||2',rawResultHash:'e'.repeat(64)}));
@@ -127,7 +127,8 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    assert.equal(row.status,'REQUIRES_CHECK');assert.equal(row.resultHash,original.resultHash);assert.deepEqual(row.result,original.result);
    await assert.rejects(a.$transaction(tx=>recordFtextOperatorDecision(tx,card.id,scope,'operator-a',{outcome:'YES'},{context})));
    await assert.rejects(finalizeFtextCashRequest(a,card.id,scope,opts));
-   await assert.rejects(a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'no-resend'})),e=>e.code==='FTEXT_CASH_PENDING');
+   assert.equal(row.checkoutJson.ftextOperatorRelease.reviewMode,'OPERATOR_NO');assert.equal(row.checkoutJson.ftextOperatorRelease.readinessVerified,false);
+   assert.equal((await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'new-after-no'}))).status,'PREPARED');
    assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,3);assert.equal((await a.$queryRaw`SELECT * FROM "StockMovement"`).length,3);
   });
 
