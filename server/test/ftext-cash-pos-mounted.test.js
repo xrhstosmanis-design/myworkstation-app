@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {withMountedPos} from './helpers/pos-modern-fixture.mjs';
+test('reviewed unknown NO return requires explicit no-receipt/no-charge confirmation and keeps the same basket',()=>withMountedPos({
+ ftextConfigured:true,
+ apiOverride:async path=>{const row={id:'review-request',kind:'FTEXT_CASH',storeId:'A',status:'REQUIRES_CHECK',operatorOutcome:'NO',operatorReleaseMode:'OPERATOR_REVIEW',paymentMethod:'CARD',total:2.2,checkout:{items:[{productId:'p0',quantity:1}]}};if(path.endsWith('/pending')||path.endsWith('/ftext-cash/review-request'))return path.endsWith('/pending')?{requests:[row]}:{request:row};if(path.endsWith('/release'))return {request:{...row,operatorReleaseMode:'RELEASED'}}},
+ run:async({calls,click,dom})=>{let accepted=false,prompt='';dom.window.confirm=message=>(prompt=message,accepted);const button=[...document.querySelectorAll('button')].find(x=>x.textContent==='Επιστροφή στο καλάθι');await click(button);assert.equal(calls.some(c=>c.path.endsWith('/release')),false);assert.match(prompt,/δεν εκδόθηκε απόδειξη/);assert.match(prompt,/δεν εγκρίθηκε χρέωση κάρτας/);accepted=true;await click(button);const writes=calls.filter(c=>c.path.endsWith('/release'));assert.equal(writes.length,1);assert.deepEqual(JSON.parse(writes[0].options.body),{registerReady:true,noReceiptIssued:true,noChargeApproved:true});assert.equal(document.querySelectorAll('.standard-line').length,1);assert.match(document.body.textContent,/Η προηγούμενη προσπάθεια έκλεισε στο MyWorkStation/);assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')),false);}
+}));
+test('polling an already reviewed release clears its own stale pending UI without checkout or clearing basket',()=>withMountedPos({
+ ftextConfigured:true,
+ apiOverride:async path=>{const row={id:'released-request',kind:'FTEXT_CASH',storeId:'A',status:'REQUIRES_CHECK',operatorOutcome:'NO',paymentMethod:'CARD',total:2.2,checkout:{items:[{productId:'p0',quantity:1}]}};if(path.endsWith('/pending'))return {requests:[row]};if(path.endsWith('/ftext-cash/released-request'))return {request:{...row,operatorReleaseMode:'RELEASED'}}},
+ run:async({calls})=>{assert.match(document.body.textContent,/Η προηγούμενη προσπάθεια έκλεισε στο MyWorkStation/);assert.equal(document.querySelectorAll('.standard-line').length,1);assert.equal(calls.some(c=>c.path.endsWith('/release')||c.path.endsWith('/checkout')||c.path.endsWith('/finalize')),false);}
+}));
 test('rejected ftext return releases only after readiness confirmation and retains basket',()=>withMountedPos({
  ftextConfigured:true,
  apiOverride:async path=>{const row={id:'rejected-request',kind:'FTEXT_CASH',storeId:'A',status:'REQUIRES_CHECK',operatorOutcome:'NO',paymentMethod:'CARD',total:2.2,checkout:{items:[{productId:'p0',quantity:1}]}};if(path.endsWith('/pending'))return {requests:[row]};if(path.endsWith('/ftext-cash/rejected-request'))return {request:row};if(path.endsWith('/release'))return {request:row}},

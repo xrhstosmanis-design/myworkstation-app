@@ -1,18 +1,31 @@
 import {z} from 'zod';
 import {ftextSettingsHash} from './ftext-installation.js';
-import {ftextPaymentError} from './ftext-error-evidence.js';
+import {ftextPaymentError,ftextUnknownCardError} from './ftext-error-evidence.js';
 const fail=()=>{throw Object.assign(new Error('Η επιβεβαίωση κάρτας δεν αντιστοιχεί στην αρχική συναλλαγή ή χρειάζεται έλεγχο της απόδειξης.'),{status:409,code:'FTEXT_OPERATOR_CARD_REVIEW'})};
 export const ftextOperatorCardMode=row=>row?.plan?.payment?.method==='CARD'&&row.checkoutJson?.paymentMethod==='CARD'&&row.checkoutJson?.ftextCardMode==='OPERATOR_CONFIRMATION';
 export const ftextOperatorDecisionRequired=row=>ftextOperatorCardMode(row)&&['CONFIRMED','REQUIRES_CHECK'].includes(row.status)&&!['YES','NO'].includes(row.checkoutJson?.ftextCardDecision?.outcome);
 // Release only the application's pending lock after an explicit operator review.
 // This is not evidence of a fiscal cancellation or a bank decline.
-export async function releaseFtextRejectedAttempt(tx,id,scope,actorId,input){
- z.object({registerReady:z.literal(true)}).strict().parse(input);
+export function ftextOperatorReleaseMode(row){
+ const d=row?.checkoutJson?.ftextCardDecision;
+ if(!row||row.saleId||row.status!=='REQUIRES_CHECK'||!ftextOperatorCardMode(row)||d?.outcome!=='NO'||d.actorId!==row.checkoutJson.actorId||d.resultHash!==row.resultHash||d.settingsHash!==row.settingsHash||row.checkoutJson.ftextVoid)return null;
+ if(row.checkoutJson.ftextOperatorRelease?.registerReady===true)return 'RELEASED';
+ if(ftextPaymentError(row))return 'VERIFIED_ERROR';
+ return ftextUnknownCardError(row)?'OPERATOR_REVIEW':null;
+}
+export async function releaseFtextRejectedAttempt(tx,id,scope,actorId,input,{context}={}){
+ const ack=z.object({registerReady:z.literal(true),noReceiptIssued:z.literal(true).optional(),noChargeApproved:z.literal(true).optional()}).strict().parse(input);
  const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} FOR UPDATE`)[0];
  const decision=row?.checkoutJson?.ftextCardDecision;
- if(!actorId||!row||row.saleId||row.status!=='REQUIRES_CHECK'||!ftextOperatorCardMode(row)||!ftextPaymentError(row)||decision?.outcome!=='NO'||decision.actorId!==actorId||decision.resultHash!==row.resultHash||decision.settingsHash!==row.settingsHash||row.checkoutJson?.ftextVoid)fail();
- if(row.checkoutJson?.ftextOperatorRelease)return row;
- const release={actorId,at:new Date().toISOString(),resultHash:row.resultHash,settingsHash:row.settingsHash,registerReady:true};
+ const mode=ftextOperatorReleaseMode(row);
+ if(!actorId||!mode||decision.actorId!==actorId)fail();
+ if(mode==='RELEASED')return row;
+ if(mode==='OPERATOR_REVIEW'){
+  if(ack.noReceiptIssued!==true||ack.noChargeApproved!==true||typeof context!=='function')fail();
+  const {settings}=await context(tx,scope,{requireOnline:false});
+  if(!settings||settings.cardEnabled!==true||settings.cardPayment?.resultFormat!=='OPERATOR_CONFIRMATION'||settings.companyId!==scope.companyId||settings.storeId!==scope.storeId||settings.terminalPos!==scope.terminalPos||row.settingsHash!==ftextSettingsHash(settings)||row.lifecycleGeneration!==settings.lifecycleGeneration||row.serialNumber!==settings.serialNumber||row.plan.payment.code!==settings.cardPayment.code)fail();
+ }
+ const release={actorId,at:new Date().toISOString(),resultHash:row.resultHash,settingsHash:row.settingsHash,registerReady:true,...(mode==='OPERATOR_REVIEW'?{reviewMode:'OPERATOR_VERIFIED_NO_SALE',noReceiptIssued:true,noChargeApproved:true}:{} )};
  return (await tx.$queryRaw`UPDATE "FtextCashRequest" SET "checkoutJson"=${JSON.stringify({...row.checkoutJson,ftextOperatorRelease:release})}::jsonb,"updatedAt"=NOW() WHERE "id"=${row.id} RETURNING *`)[0];
 }
 export function assertFtextOperatorCardApproved(row,settings){
