@@ -247,6 +247,13 @@ async function snapshotTransactionState(tx){
  return row;
 }
 
+// Shared actual database admission probe for the internal composed stock reader.
+// No injected clock/options and no change to the existing C2 reader contract.
+export async function readMonthlyInvoiceSnapshotTransactionState(tx){
+ if(arguments.length!==1)snapshotFail('INVOICE_SNAPSHOT_INPUT_INVALID');
+ return snapshotTransactionState(tx);
+}
+
 // Internal, unmounted source metadata for a future same-transaction stock
 // coordinator. It neither captures nor stores inventory and does not claim
 // live authorization beyond the caller's bounded held MVCC snapshot.

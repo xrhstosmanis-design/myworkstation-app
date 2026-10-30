@@ -23,3 +23,26 @@ test('storage refuses pre-due transaction snapshots, inverted/overlong intervals
  for(const patch of [{transactionStartedAt:'2026-11-01T04:59:59.999Z'},{sourceReadStartedAt:'2026-11-01T05:00:00.003Z'},{transactionStartedAt:'2026-10-31T05:00:00.000Z'},{sourceReadFinishedAt:'2026-11-01T05:00:00.003Z'},{transactionStartedAt:'2026-11-01T05:00:00Z'}])await assert.rejects(repository.store({companyId:'c'},{...request(),...patch}),{code:'MONTHLY_SNAPSHOT_OBSERVATION_INVALID'});
  assert.equal(opened,0);
 });
+
+test('fixed cost limitations refuse mismatched counts, private keys and accessors before opening storage',async()=>{
+ let opened=0,touched=0;const repository=createMonthlyInventorySnapshotRepository({$transaction:()=>{opened++;throw Error('admission reached')}}),actor={id:'u',companyId:'c'};
+ const base={NON_REPRESENTABLE_PACKAGE_COST:0,AMBIGUOUS_LATEST_PURCHASE_COST:0};
+ for(const stockCostLimitations of [null,[],{}, {...base,private:'secret'},{...base,NON_REPRESENTABLE_PACKAGE_COST:-1},{...base,NON_REPRESENTABLE_PACKAGE_COST:20001},{...base,NON_REPRESENTABLE_PACKAGE_COST:0.5},{...base,NON_REPRESENTABLE_PACKAGE_COST:1},{...base,NON_REPRESENTABLE_PACKAGE_COST:true}])await assert.rejects(repository.store(actor,{...request(),stockCostLimitations}),{code:'MONTHLY_SNAPSHOT_COVERAGE_INVALID'});
+ const getter={...base};Object.defineProperty(getter,'NON_REPRESENTABLE_PACKAGE_COST',{enumerable:true,get(){touched++;throw Error('not called')}});await assert.rejects(repository.store(actor,{...request(),stockCostLimitations:getter}),{code:'MONTHLY_SNAPSHOT_COVERAGE_INVALID'});
+ assert.equal(opened,0);assert.equal(touched,0);
+ await assert.rejects(repository.store(actor,{...request(),stockCostLimitations:base}),/admission reached/);assert.equal(opened,1);
+});
+test('limitation sums cover exactly INVALID purchase facts while unknown MISSING values are not invented limitations',async()=>{
+ let opened=0;const repository=createMonthlyInventorySnapshotRepository({$transaction:()=>{opened++;throw Error('admission reached')}}),value=input();
+ value.products=[{id:'p',companyId:'c',storeId:'s',name:'Συνθετικό',sku:'',unit:'piece',quantity:'-2',retailUnitPrice:'0',purchaseUnitCost:false},{id:'missing',companyId:'c',storeId:'s',name:'Missing',sku:'',unit:'piece',quantity:'1',retailUnitPrice:null,purchaseUnitCost:null}];value.coverage.productCount=2;
+ const r={...request(),candidateJsonText:serialize(build(value))};
+ await assert.rejects(repository.store({companyId:'c'}, {...r,stockCostLimitations:{NON_REPRESENTABLE_PACKAGE_COST:0,AMBIGUOUS_LATEST_PURCHASE_COST:0}}),{code:'MONTHLY_SNAPSHOT_COVERAGE_INVALID'});assert.equal(opened,0);
+ await assert.rejects(repository.store({companyId:'c'}, {...r,stockCostLimitations:{NON_REPRESENTABLE_PACKAGE_COST:1,AMBIGUOUS_LATEST_PURCHASE_COST:0}}),/admission reached/);assert.equal(opened,1);
+ await assert.rejects(repository.store({companyId:'c'},r),/admission reached/);assert.equal(opened,2,'legacy request with no subtype metadata remains valid');
+});
+test('existing lookup requires explicit bounded epoch and scope and never accepts caller clocks or provenance',async()=>{
+ let opened=0,touched=0;const repository=createMonthlyInventorySnapshotRepository({$transaction:()=>{opened++;throw Error('admission reached')}}),actor={id:'u',companyId:'c'},valid={storeId:'s',month:'2026-10',lifecycleGeneration:'0'};
+ for(const input of [null,{}, {storeId:'s',month:'2026-10'}, {...valid,lifecycleGeneration:0},{...valid,lifecycleGeneration:'01'},{...valid,storeId:''},{...valid,now:'2026-11-01T05:00:00.000Z'},{...valid,sourceRevision:'a'.repeat(40)}])await assert.rejects(repository.findExisting(actor,input));
+ const getter={...valid};Object.defineProperty(getter,'lifecycleGeneration',{enumerable:true,get(){touched++;throw Error('not called')}});await assert.rejects(repository.findExisting(actor,getter),{code:'MONTHLY_SNAPSHOT_INPUT_INVALID'});assert.equal(touched,0);assert.equal(opened,0);
+ await assert.rejects(repository.findExisting(actor,valid),/admission reached/);assert.equal(opened,1);
+});
