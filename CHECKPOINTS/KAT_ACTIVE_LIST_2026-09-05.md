@@ -1,3 +1,7 @@
+## 30/10/2026 — Explicit owner handoff
+
+ΑΝΑΛΗΨΗ ΑΠΟ fix/ftext-poll-released-20261030 — ASSIGNED fix/ftext-poll-released-takeover-20261030. Χρήστος explicitly authorized this page to take over because the previous page stopped. Preserve the same bounded scope, existing claim PR3313, all protected PASS and all unrelated owners. No production or financial action occurred.
+
 ## 30/10/2026 — FTEXT-POLL-RELEASED-01 / polling starvation regression / ASSIGNED BEFORE SOURCE
 
 Owner fix/ftext-poll-released-20261030 under the current explicit user repair request. Narrow independent regression only; all other codex/rizareio-ftext-bridge-20261022 integration scope remains retained. No customer incident details or identifiers are included here.
