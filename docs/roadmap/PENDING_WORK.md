@@ -1,3 +1,11 @@
+## 30/10/2026 — FTEXT-POLL-RELEASED-01 / polling starvation regression / ASSIGNED BEFORE SOURCE
+
+Owner fix/ftext-poll-released-20261030 under the current explicit user repair request. Narrow independent regression only; all other codex/rizareio-ftext-bridge-20261022 integration scope remains retained. No customer incident details or identifiers are included here.
+
+Causal source finding: the late-error evidence poll selects the earliest NO/REQUIRES_CHECK row without excluding an already operator-released attempt. A historical released direct-error row without a late-error field passes the SQL filter, fails the subsequent unknown-report binding, and returns null before examining a later eligible original unknown NO. Status/financial outcome of a real incident remains NOT TESTED here; no live acceptance claimed.
+
+Bound source after this claim is green/main: server/src/services/ftext-error-evidence.js plus focused/native regression tests. Exclude already operator-released rows before ORDER BY/LIMIT. Preserve every device/token/settings/lifecycle binding, original result/hash/decision, immutable append, operator release, VOID and finalizer. Test synthetic earlier released direct-error row followed by current original unknown NO and prove only the latter is selected, with unrelated scopes and financial tables unaffected. No schema, Windows dispatch, credential, production data or financial/stock writer change. Existing manual CASH/communication/recovered-NO presentation and strict fiscal gates stay protected. Full exact PR/main CI and ordinary guarded release required; runtime recovery and broader UX acceptance remain OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-10-30-ftext-poll-released.md.
+
 ## AI-OWNER-WALLET-01 — ASSIGNED RESIDUALS AFTER INVOICE SWITCH LAB PASS
 
 30Oct2026 completed SuperAdmin invoice switch task removed from pending after measured ON/readback/OFF/readback on c029c4e. Current checkpoint CHECKPOINTS/CHANGES/2026-10-30-ai-wallet-invoice-admin-switch.md and manual preserve the scoped PASS. Remaining actual OWNER-session detail acceptance, other hosted models/cache/long-context tiers and delivered-email acceptance stay OPEN/ASSIGNED to feat/ai-owner-wallet-20261022. No completed switch replay or whole-wallet closure; other owners unchanged.
