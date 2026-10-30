@@ -1,3 +1,7 @@
+## 30/10/2026 — FTEXT-LATE-CASH-01 / ASSIGNED - fix/ftext-late-cash-recovery-20261030
+
+Owner explicitly requests immediate recovery first, prevention afterwards. Independent CASH late-success scope only; PR3317 CARD/NO remains with its existing owner. User-confirmed physical receipt after FTEXT reopened; uploaded original intent/report/result match request, settings and command hashes. Current application remains REQUIRES_CHECK/no sale: LIVE FAIL for late-success recovery, no new LAB PASS. Preserve original result/hash, one-shot dispatch, tenant/device/settings/lifecycle, original shift and unique receipt guards. Implement separately audited late CASH receipt evidence and existing idempotent finalizer only after exact CI/guarded release; no resend, VOID, fabricated fiscal result or direct financial SQL. Checkpoint CHECKPOINTS/CHANGES/2026-10-30-ftext-late-cash-recovery.md. Physical recovery and prevention are NOT TESTED; production unchanged.
+
 ## 30/10/2026 — FTEXT-REVIEWED-NO-01 / RBS-style operator recovery / ASSIGNED BEFORE SOURCE
 
 Owner fix/ftext-reviewed-no-20261030, explicitly requested by Χρήστος after confirming the incident is OK and requiring the RBS-style operator workflow to prevent another prolonged store lock. This is a bounded continuation; all unrelated FTEXT/other-owner scopes and protected CASH/RBS/strict-card/final receipt/idempotency PASS remain retained.
