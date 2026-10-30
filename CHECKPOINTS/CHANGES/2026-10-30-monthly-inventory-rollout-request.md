@@ -1,3 +1,9 @@
+## 30/10/2026 - Owner direction received; historical request retained below
+
+The program owner explicitly replied **«Εγκρίνω»** to the central coordinator's narrow transfer question for installation preparation and monthly automation, source/tests before production activation. The receiving BEFORE-SOURCE claim is CHECKPOINTS/CHANGES/2026-10-30-monthly-inventory-installation-claim.md, sole branch codex/central-monthly-inventory-install-preparation-20261030. Its exact source allowance becomes effective only after applicable green CI/main. The retained lifecycle and scheduler owners transfer only this named preparation slice by program-owner direction; no old-owner release is fabricated and unrelated scopes remain retained. First installation source keeps both canonical and proposed catalogue bytes/default activation unchanged; cross-version promotion needs design review. Monthly purpose/principal/scheduler implementation is approved preparation with a later exact-path amendment, not another user permission question. Production DDL/enrollment/capture/scheduler activation/email remains a separate final concrete packet. No such action has occurred. The original request below is historical and does not override the newer claim.
+
+---
+
 # D4 - Monthly inventory rollout preparation - REVIEW REQUEST, NOT AN ASSIGNMENT
 
 30/10/2026 Europe/Athens. Review REQUEST only, not an effective assignment, source claim or execution approval. The next gate is a narrow owner-directed reassignment for INSTALL/ENROLL-ONLY PREPARATION and distinct monthly capture purpose/principal/scheduler implementation. This request authorizes no production DDL, enrollment, snapshot, reset, financial/stock action, email/provider send or scheduler activation. Production execution stays a separate concrete final packet. No other owner's current assignment is changed.
