@@ -66,6 +66,15 @@ async function authorize(tx,actor,storeId,now){
  return store;
 }
 
+// Same personal admission and persisted authorization core, reusable by an
+// unmounted storage writer in its OWN fresh transaction. This does not certify
+// supplied source facts or bypass the C2 read-only transaction contract.
+export async function authorizeMonthlyInvoiceAuditInTransaction(tx,actor,storeId,now){
+ if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
+ if(!safeText(storeId)||!(now instanceof Date)||!Number.isFinite(now.getTime()))fail('Επίλεξε συγκεκριμένο κατάστημα.');
+ return authorize(tx,actor,storeId,now);
+}
+
 function identity(row){return {documentNumber:row.documentNumber,documentDate:row.issueDay,documentType:row.documentType,totalGross:row.totalGross};}
 function sameIdentity(a,b){return sameInvoiceIdentityForReview(identity(a),identity(b))&&(!vat(a.supplierTaxId)||!vat(b.supplierTaxId)||vat(a.supplierTaxId)===vat(b.supplierTaxId));}
 function sameIncomingIdentity(a,b){return /^\d{9}$/.test(vat(a.supplierTaxId))&&vat(a.supplierTaxId)===vat(b.supplierTaxId)&&sameIdentity(a,b)}
