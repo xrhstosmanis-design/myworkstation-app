@@ -1,3 +1,4 @@
+import {ensureStoreChatInteractions,requireChatReply,acknowledgeChatDelivery,setChatReaction} from "../chat-interactions.mjs";
 import {sendNativeChatPush,nativePushStatus} from '../native-chat-push.mjs';
 import {renewChatOperatorSession} from '../chat-operator-auth.mjs';
 import {parseVoiceAttachment} from '../chat-voice.mjs';
@@ -29,6 +30,7 @@ export async function ensureStoreChatSchema(){
   await prisma.$executeRawUnsafe(`ALTER TABLE "StoreChatSettings" ADD COLUMN IF NOT EXISTS "employeeDownloadsEnabled" BOOLEAN NOT NULL DEFAULT false`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "StoreChatSettings" ADD COLUMN IF NOT EXISTS "employeeTaskCreationEnabled" BOOLEAN NOT NULL DEFAULT true`);
   await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreChatAcknowledgement" ("messageId" TEXT NOT NULL,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"userId" TEXT NOT NULL,"acknowledgedAt" TIMESTAMP NOT NULL DEFAULT NOW(),PRIMARY KEY ("messageId","userId"))`);
+  await ensureStoreChatInteractions(prisma);
 }
 async function storeFor(req,res){const id=String(req.params.storeId||req.body?.storeId||"");if(!id){res.status(400).json({error:"Δεν προσδιορίστηκε κατάστημα."});return null;}const store=await prisma.store.findUnique({where:{id},select:{id:true,companyId:true,name:true}}),user=req.user||{};if(!store||(!isPlatformSuperAdmin(user)&&String(user.companyId)!==String(store.companyId))||(user.tokenType==="STORE_OPERATOR"&&String(user.storeId)!==String(id))){res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});return null;}return store}
 function canPin(user){return isPlatformSuperAdmin(user)||(user?.tokenType!=="STORE_OPERATOR"&&user?.role==="OWNER")}
@@ -53,10 +55,20 @@ function parseAttachment(value){
 
 router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
   const store=await storeFor(req,res);if(!store)return;
-  const limit=Math.min(Math.max(Number(req.query.limit||100),1),200);
+  const requested=Number(req.query.limit||100),limit=Number.isFinite(requested)?Math.min(Math.max(Math.trunc(requested),1),200):100;
   const fetched=await prisma.$queryRaw`
-    SELECT m."id",m."senderId",COALESCE(NULLIF(su."fullName",''),NULLIF(su."email",''),NULLIF(so."displayName",''),m."senderId") AS "senderName",
-      m."category",m."body",m."important",m."pinned",m."completed",m."completedAt",m."completedBy",m."aiReaderJobId",m."aiReaderSentAt",m."aiReaderSentBy",
+    WITH timeline AS MATERIALIZED (
+      SELECT candidate."id" FROM "StoreChatMessage" candidate
+      WHERE candidate."companyId"=${store.companyId} AND candidate."storeId"=${store.id}
+      ORDER BY (candidate."senderId"=${req.user.id} OR EXISTS(SELECT 1 FROM "StoreChatRead" mine WHERE mine."messageId"=candidate."id" AND mine."userId"=${req.user.id})) ASC,candidate."pinned" DESC,candidate."createdAt" DESC
+      LIMIT ${limit}
+    ), pin_candidates AS MATERIALIZED (
+      SELECT pin."id" FROM "StoreChatMessage" pin WHERE pin."companyId"=${store.companyId} AND pin."storeId"=${store.id} AND pin."pinned"=true AND pin."category"='ANNOUNCEMENT'
+      ORDER BY pin."createdAt" DESC LIMIT 20
+    )
+    SELECT EXISTS(SELECT 1 FROM timeline candidate WHERE candidate."id"=m."id") AS "inTimeline",m."id",m."senderId",COALESCE(NULLIF(su."fullName",''),NULLIF(su."email",''),NULLIF(so."displayName",''),m."senderId") AS "senderName",
+      m."category",m."body",m."replyToId",(m."senderId"=${req.user.id}) AS "ownMessage",
+      CASE WHEN parent."id" IS NULL THEN NULL ELSE json_build_object('id',parent."id",'senderName',COALESCE(NULLIF(pu."fullName",''),NULLIF(po."displayName",''),'Χρήστης'),'body',LEFT(parent."body",280),'attachmentName',parent."attachmentName") END AS "replyTo",m."important",m."pinned",m."completed",m."completedAt",m."completedBy",m."aiReaderJobId",m."aiReaderSentAt",m."aiReaderSentBy",
       COALESCE(NULLIF(au."fullName",''),NULLIF(au."email",''),NULLIF(ao."displayName",''),m."aiReaderSentBy") AS "aiReaderSentByName",
       COALESCE(NULLIF(cu."fullName",''),NULLIF(cu."email",''),NULLIF(co."displayName",''),m."completedBy") AS "completedByName",
       t."assigneeEmployeeId" AS "taskAssigneeEmployeeId",te."fullName" AS "taskAssigneeName",t."assignedBy" AS "taskAssignedBy",t."assignedAt" AS "taskAssignedAt",
@@ -72,12 +84,24 @@ router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
         LEFT JOIN "User" u2 ON u2."id"=a."userId" AND u2."companyId"=m."companyId"
         LEFT JOIN "StoreOperatorCredential" o2 ON o2."id"=a."userId" AND o2."companyId"=m."companyId" AND o2."storeId"=m."storeId"
         WHERE a."messageId"=m."id" AND a."companyId"=m."companyId" AND a."storeId"=m."storeId") AS "acknowledgements",
+      (m."senderId"=${req.user.id} OR EXISTS(SELECT 1 FROM "StoreChatDelivery" mine WHERE mine."messageId"=m."id" AND mine."userId"=${req.user.id} AND mine."companyId"=m."companyId" AND mine."storeId"=m."storeId")) AS "deliveredByMe",
+      (SELECT COALESCE(json_agg(json_build_object('id',d."userId",'name',COALESCE(NULLIF(du."fullName",''),NULLIF(dop."displayName",''),'Χρήστης'),'deliveredAt',d."deliveredAt") ORDER BY d."deliveredAt"),'[]'::json)
+       FROM "StoreChatDelivery" d LEFT JOIN "User" du ON du."id"=d."userId" AND du."companyId"=m."companyId"
+       LEFT JOIN "StoreOperatorCredential" dop ON dop."id"=d."userId" AND dop."companyId"=m."companyId" AND dop."storeId"=m."storeId"
+       WHERE d."messageId"=m."id" AND d."companyId"=m."companyId" AND d."storeId"=m."storeId" AND d."userId"<>m."senderId") AS "deliveries",
+      (SELECT COALESCE(json_agg(json_build_object('id',rx."userId",'name',COALESCE(NULLIF(ru."fullName",''),NULLIF(rop."displayName",''),'Χρήστης'),'reaction',rx."reaction",'mine',rx."userId"=${req.user.id}) ORDER BY rx."updatedAt"),'[]'::json)
+       FROM "StoreChatReaction" rx LEFT JOIN "User" ru ON ru."id"=rx."userId" AND ru."companyId"=m."companyId"
+       LEFT JOIN "StoreOperatorCredential" rop ON rop."id"=rx."userId" AND rop."companyId"=m."companyId" AND rop."storeId"=m."storeId"
+       WHERE rx."messageId"=m."id" AND rx."companyId"=m."companyId" AND rx."storeId"=m."storeId") AS "reactions",
       (SELECT COALESCE(json_agg(json_build_object('id',r."userId",'name',COALESCE(NULLIF(u."fullName",''),NULLIF(u."email",''),NULLIF(o."displayName",''),r."userId")) ORDER BY r."readAt"),'[]'::json)
         FROM "StoreChatRead" r
         LEFT JOIN "User" u ON u."id"=r."userId" AND u."companyId"=m."companyId"
         LEFT JOIN "StoreOperatorCredential" o ON o."id"=r."userId" AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
         WHERE r."messageId"=m."id") AS "readers"
     FROM "StoreChatMessage" m
+    LEFT JOIN "StoreChatMessage" parent ON parent."id"=m."replyToId" AND parent."companyId"=m."companyId" AND parent."storeId"=m."storeId"
+    LEFT JOIN "User" pu ON pu."id"=parent."senderId" AND pu."companyId"=m."companyId"
+    LEFT JOIN "StoreOperatorCredential" po ON po."id"=parent."senderId" AND po."companyId"=m."companyId" AND po."storeId"=m."storeId"
     LEFT JOIN "User" su ON su."id"=m."senderId" AND su."companyId"=m."companyId"
     LEFT JOIN "StoreOperatorCredential" so ON so."id"=m."senderId" AND so."companyId"=m."companyId" AND so."storeId"=m."storeId"
     LEFT JOIN "User" cu ON cu."id"=m."completedBy" AND cu."companyId"=m."companyId"
@@ -90,12 +114,25 @@ router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
     LEFT JOIN "StoreOperatorCredential" to2 ON to2."id"=t."createdBy" AND to2."companyId"=m."companyId" AND to2."storeId"=m."storeId"
     LEFT JOIN "User" tcu ON tcu."id"=t."completedBy" AND tcu."companyId"=m."companyId"
     LEFT JOIN "StoreOperatorCredential" tco ON tco."id"=t."completedBy" AND tco."companyId"=m."companyId" AND tco."storeId"=m."storeId"
-    WHERE m."companyId"=${store.companyId} AND m."storeId"=${store.id}
+    WHERE m."companyId"=${store.companyId} AND m."storeId"=${store.id} AND m."id" IN (SELECT "id" FROM timeline UNION SELECT "id" FROM pin_candidates)
     ORDER BY "readByMe" ASC,m."pinned" DESC,m."createdAt" DESC`;
   res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");
   const settings=await chatSettings(store);
   const assignees=canPin(req.user)?await prisma.employee.findMany({where:{storeId:store.id,active:true},select:{id:true,fullName:true},orderBy:[{fullName:"asc"},{id:"asc"}]}):[];
-  res.json({store,rows:fetched.slice(0,limit),settings,voiceMessagesAvailable:true,videoMessagesAvailable:settings.photosEnabled,assignees,permissions:{canPin:canPin(req.user),canDownload:canDownload(req.user,settings),canComplete:canPin(req.user),canCreateTask:canCreateTask(req.user,settings),canManageTask:canPin(req.user),canManageSettings:canPin(req.user)}});
+  const publicRow=({inTimeline,...row})=>row;
+  res.json({store,rows:fetched.filter(row=>row.inTimeline).map(publicRow),interactionsAvailable:true,pinnedAnnouncements:fetched.filter(row=>row.pinned&&row.category==="ANNOUNCEMENT").slice(0,20).map(publicRow),settings,voiceMessagesAvailable:true,videoMessagesAvailable:settings.photosEnabled,assignees,permissions:{canPin:canPin(req.user),canDownload:canDownload(req.user,settings),canComplete:canPin(req.user),canCreateTask:canCreateTask(req.user,settings),canManageTask:canPin(req.user),canManageSettings:canPin(req.user)}});
+}catch(e){next(e)}});
+
+// Delivery is acknowledged by a recipient client after accepting the actual response, never by Push/save.
+router.post("/stores/:storeId/messages/delivered",async(req,res,next)=>{try{
+ const store=await storeFor(req,res);if(!store)return;
+ const result=await acknowledgeChatDelivery(prisma,store,req.user,req.body?.messageIds);
+ res.setHeader("Cache-Control","no-store, private");res.json(result);
+}catch(e){next(e)}});
+router.put("/stores/:storeId/messages/:messageId/reaction",async(req,res,next)=>{try{
+ const store=await storeFor(req,res);if(!store)return;
+ const result=await setChatReaction(prisma,store,req.user,req.params.messageId,req.body?.reaction);
+ res.setHeader("Cache-Control","no-store, private");res.json(result);
 }catch(e){next(e)}});
 
 // Independent GENERAL-only voice endpoint: old image/PDF parsing and invoice handling stay unchanged.
@@ -105,7 +142,8 @@ router.post('/stores/:storeId/voice-messages',async(req,res,next)=>{try{
   if(typeof text!=='string'||text.trim().length>5000||(req.body?.category!==undefined&&req.body.category!=='GENERAL'))return res.status(400).json({error:'Μη έγκυρο φωνητικό μήνυμα.'});
   const attachment=parseVoiceAttachment(req.body?.attachment),body=text.trim(),id=crypto.randomUUID();
   await prisma.$transaction(async tx=>{
-    await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},'GENERAL',${body},${attachment.name},${attachment.mimeType},${attachment.size},${attachment.checksum},${attachment.data},NOW(),NOW())`;
+    const replyToId=req.body?.replyToId==null?null:await requireChatReply(tx,store,req.body.replyToId);
+    await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","replyToId","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},'GENERAL',${body},${attachment.name},${attachment.mimeType},${attachment.size},${attachment.checksum},${attachment.data},${replyToId},NOW(),NOW())`;
     await audit(req,store,'STORE_CHAT_MESSAGE_SENT',{messageId:id,category:'GENERAL',hasAttachment:true,attachmentName:attachment.name,attachmentMimeType:attachment.mimeType,attachmentSize:attachment.size,attachmentChecksum:attachment.checksum,durationMs:attachment.durationMs},tx);
   });
   const push=await sendStoreChatPush({store,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));
@@ -121,7 +159,8 @@ router.post('/stores/:storeId/video-messages',async(req,res,next)=>{try{
   if(typeof text!=='string'||text.trim().length>5000||(req.body?.category!==undefined&&req.body.category!=='GENERAL'))return res.status(400).json({error:'Μη έγκυρο βίντεο μήνυμα.'});
   const attachment=parseVideoAttachment(req.body?.attachment),body=text.trim(),id=crypto.randomUUID();
   await prisma.$transaction(async tx=>{
-    await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},'GENERAL',${body},${attachment.name},${attachment.mimeType},${attachment.size},${attachment.checksum},${attachment.data},NOW(),NOW())`;
+    const replyToId=req.body?.replyToId==null?null:await requireChatReply(tx,store,req.body.replyToId);
+    await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","replyToId","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},'GENERAL',${body},${attachment.name},${attachment.mimeType},${attachment.size},${attachment.checksum},${attachment.data},${replyToId},NOW(),NOW())`;
     await audit(req,store,'STORE_CHAT_MESSAGE_SENT',{messageId:id,category:'GENERAL',hasAttachment:true,attachmentName:attachment.name,attachmentMimeType:attachment.mimeType,attachmentSize:attachment.size,attachmentChecksum:attachment.checksum,durationMs:attachment.durationMs},tx);
   });
   const push=await sendStoreChatPush({store,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));
@@ -171,7 +210,7 @@ router.patch("/stores/:storeId/tasks/:taskId",async(req,res,next)=>{try{
   await prisma.$executeRaw`UPDATE "StoreChatTask" SET "status"=${completed?"COMPLETED":"OPEN"},"completedBy"=${completed?req.user.id:null},"completedAt"=${completed?new Date():null} WHERE "id"=${taskId} AND "companyId"=${store.companyId} AND "storeId"=${store.id}`;
   await audit(req,store,completed?"STORE_CHAT_TASK_COMPLETED":"STORE_CHAT_TASK_REOPENED",{messageId:found[0].messageId,taskId,status:completed?"COMPLETED":"OPEN"});res.json({ok:true});
 }catch(e){next(e)}});
-router.post("/stores/:storeId/messages",async(req,res,next)=>{try{const store=await storeFor(req,res);if(!store)return;const body=String(req.body?.body||"").trim(),category=String(req.body?.category||"GENERAL").toUpperCase(),attachment=parseAttachment(req.body?.attachment),settings=await chatSettings(store);if(attachment?.mimeType.startsWith("image/")&&!settings.photosEnabled)return res.status(403).json({error:"Οι φωτογραφίες είναι ανενεργές για το Chat αυτού του καταστήματος.",code:"STORE_CHAT_PHOTOS_DISABLED"});if(attachment?.mimeType==="application/pdf"&&!settings.pdfEnabled)return res.status(403).json({error:"Τα PDF είναι ανενεργά για το Chat αυτού του καταστήματος.",code:"STORE_CHAT_PDF_DISABLED"});if((!body&&!attachment)||body.length>5000||!TYPES.has(category))return res.status(400).json({error:"Μη έγκυρο μήνυμα ή κατηγορία."});const id=`chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;await prisma.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},${category},${body},${attachment?.name||null},${attachment?.mimeType||null},${attachment?.size||null},${attachment?.checksum||null},${attachment?.data||null},NOW(),NOW())`;await audit(req,store,"STORE_CHAT_MESSAGE_SENT",{messageId:id,category,hasAttachment:Boolean(attachment),attachmentName:attachment?.name||null,attachmentMimeType:attachment?.mimeType||null,attachmentSize:attachment?.size||null,attachmentChecksum:attachment?.checksum||null});const push=await sendStoreChatPush({store,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store,senderId:req.user.id}).catch(()=>{});});res.status(201).json({ok:true,id,push})}catch(e){next(e)}});
+router.post("/stores/:storeId/messages",async(req,res,next)=>{try{const store=await storeFor(req,res);if(!store)return;const body=String(req.body?.body||"").trim(),category=String(req.body?.category||"GENERAL").toUpperCase(),attachment=parseAttachment(req.body?.attachment),settings=await chatSettings(store);if(attachment?.mimeType.startsWith("image/")&&!settings.photosEnabled)return res.status(403).json({error:"Οι φωτογραφίες είναι ανενεργές για το Chat αυτού του καταστήματος.",code:"STORE_CHAT_PHOTOS_DISABLED"});if(attachment?.mimeType==="application/pdf"&&!settings.pdfEnabled)return res.status(403).json({error:"Τα PDF είναι ανενεργά για το Chat αυτού του καταστήματος.",code:"STORE_CHAT_PDF_DISABLED"});if((!body&&!attachment)||body.length>5000||!TYPES.has(category))return res.status(400).json({error:"Μη έγκυρο μήνυμα ή κατηγορία."});const id=`chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;await prisma.$transaction(async tx=>{const replyToId=req.body?.replyToId==null?null:await requireChatReply(tx,store,req.body.replyToId);await tx.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","replyToId","createdAt","updatedAt") VALUES (${id},${store.companyId},${store.id},${req.user.id},${category},${body},${attachment?.name||null},${attachment?.mimeType||null},${attachment?.size||null},${attachment?.checksum||null},${attachment?.data||null},${replyToId},NOW(),NOW())`;await audit(req,store,"STORE_CHAT_MESSAGE_SENT",{messageId:id,category,hasAttachment:Boolean(attachment),attachmentName:attachment?.name||null,attachmentMimeType:attachment?.mimeType||null,attachmentSize:attachment?.size||null,attachmentChecksum:attachment?.checksum||null},tx);});const push=await sendStoreChatPush({store,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store,senderId:req.user.id}).catch(()=>{});});res.status(201).json({ok:true,id,push})}catch(e){next(e)}});
 router.post("/stores/:storeId/mobile-renew",async(req,res,next)=>{try{
  const store=await storeFor(req,res);if(!store)return;
  res.setHeader("Cache-Control","no-store");
