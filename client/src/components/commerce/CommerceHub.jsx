@@ -14,6 +14,7 @@ import PendingCenterPanel from "./PendingCenterPanel.jsx";
 import BackofficeVideoAuditPanel from "./BackofficeVideoAuditPanel.jsx";
 import OwnerAssistantPanel from "../voice/OwnerAssistantPanel.jsx";
 import MonthlyInvoiceAuditPanel from "./MonthlyInvoiceAuditPanel.jsx";
+import MonthlyInventoryCapturePanel from "./MonthlyInventoryCapturePanel.jsx";
 import "./commerce-hub.css";
 import "./commerce-external-tabs.css";
 
@@ -165,6 +166,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
         <button disabled={!active.has("INVENTORY")} className={`${tab==="inventory"?"active":""} ${!active.has("INVENTORY")?"locked":""}`} onClick={()=>setTab("inventory")}><Boxes/> Αποθήκη</button>
         <button disabled={!active.has("INVENTORY")} className={tab==="supplierComparison"?"active":""} onClick={()=>setTab("supplierComparison")}>Σύγκριση Προμηθευτών</button>
         <button disabled={!active.has("INVENTORY")} className={tab==="invoiceMonthAudit"?"active":""} onClick={()=>setTab("invoiceMonthAudit")}>Έλεγχος τιμολογίων μήνα</button>
+        <button disabled={!active.has("INVENTORY")} className={tab==="monthlyInventoryCapture"?"active":""} onClick={()=>setTab("monthlyInventoryCapture")}>Εξουσιοδότηση μηνιαίας απογραφής</button>
         <button disabled={!active.has("ORDER_SUGGESTIONS")} className={tab==="orderSuggestions"?"active":""} onClick={()=>setTab("orderSuggestions")}>Προτάσεις Παραγγελίας</button>
         
         <button disabled={!active.has("SALES_ANALYTICS")} className={`${tab==="analytics"?"active":""} ${!active.has("SALES_ANALYTICS")?"locked":""}`} onClick={()=>setTab("analytics")}><BarChart3/> Αναλυτική</button>
@@ -177,7 +179,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
         <button disabled={!active.has("CONNECTOR_RBS")} className={`${tab==="observer"?"active":""} ${!active.has("CONNECTOR_RBS")?"locked":""}`} onClick={()=>setTab("observer")}><RadioTower/> RBS Observer</button>
         <button disabled={!active.has("VIDEO_EVENTS")} className={`${tab==="video"?"active":""} ${!active.has("VIDEO_EVENTS")?"locked":""}`} onClick={()=>setTab("video")}><Camera/> Κάμερες / Video Audit</button>
       </div>
-      <label>Κατάστημα <select value={tab==="ownerAssistant"?assistantStoreId:storeId} onChange={e=>{setStoreId(e.target.value);setAssistantStoreId(e.target.value)}}>{tab==="ownerAssistant"&&<option value="">Επίλεξε κατάστημα</option>}{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      {tab==="monthlyInventoryCapture"?<p aria-label="Επιλεγμένο κατάστημα εξουσιοδότησης">Κατάστημα: <strong>{stores.find(store=>store.id===activeStoreId)?.name||stores.find(store=>store.id===activeStoreId)?.id||"Καμία έγκυρη επιλογή"}</strong></p>:<label>Κατάστημα <select value={tab==="ownerAssistant"?assistantStoreId:storeId} onChange={e=>{setStoreId(e.target.value);setAssistantStoreId(e.target.value)}}>{tab==="ownerAssistant"&&<option value="">Επίλεξε κατάστημα</option>}{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>}
       {error&&<div className="commerce-error">{error}</div>}{message&&<div className="commerce-success">{message}</div>}
     </section>
 
@@ -206,6 +208,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
 
     {tab==="analytics"&&<AdvancedSalesAnalytics api={api} stores={stores} initialStoreId={storeId}/>}
     {tab==="invoiceMonthAudit"&&active.has("INVENTORY")&&<MonthlyInvoiceAuditPanel key={activeStoreId} api={api} storeId={stores.find(store=>store.id===activeStoreId)?.id||""} storeName={stores.find(store=>store.id===activeStoreId)?.name||""}/>}
+    {tab==="monthlyInventoryCapture"&&active.has("INVENTORY")&&<MonthlyInventoryCapturePanel api={api} storeId={stores.find(store=>store.id===activeStoreId)?.id||""} storeName={stores.find(store=>store.id===activeStoreId)?.name||""}/>}
 
     {tab==="handover"&&<div className="commerce-grid"><section className="commerce-box"><h3>Εκκρεμότητες βάρδιας</h3><div className="commerce-table">{handover.map(item=><article className={`handover-item ${item.priority}`} key={item.id}><b>{item.priority} · {item.status}</b><span>{item.message}</span><small>{item.fromName||"—"} → {item.toName||"Επόμενη βάρδια"}</small>{item.status==="OPEN"&&<button className="commerce-primary" onClick={()=>acknowledge(item.id)}>Επιβεβαίωση παραλαβής</button>}</article>)}</div></section><aside className="commerce-box"><h3>Νέα παράδοση</h3><form className="commerce-form" onSubmit={createHandover}><select name="priority"><option value="NORMAL">Κανονική</option><option value="LOW">Χαμηλή</option><option value="HIGH">Υψηλή</option><option value="SOS">SOS</option></select><textarea name="message" rows="6" placeholder="Τι πρέπει να γνωρίζει η επόμενη βάρδια;" required/><button>Παράδοση στην επόμενη βάρδια</button></form></aside></div>}
 
