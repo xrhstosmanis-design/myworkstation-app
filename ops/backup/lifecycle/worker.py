@@ -18,6 +18,17 @@ from verify_restore import compact, ident, literal, verify_archive, ROW_DIGEST_F
 
 PROTOCOL = 'MWS_STORE_RECOVERY_PROOF_V1'
 
+def selected_manifest_file(env=None):
+    configuration = os.environ if env is None else env
+    profile = configuration.get('MWS_STORE_LIFECYCLE_PROFILE', 'BASE')
+    if profile == 'BASE':
+        filename = 'manifest.json'
+    elif profile == 'MONTHLY_INVENTORY_CAPTURE_V1':
+        filename = 'monthly-inventory-capture-manifest.proposed.json'
+    else:
+        raise ValueError('Invalid store lifecycle profile')
+    return pathlib.Path(__file__).resolve().parent / filename
+
 def run(args, **kwargs):
     result = subprocess.run(args, timeout=300, stderr=subprocess.PIPE, **kwargs)
     if result.returncode:
@@ -38,7 +49,7 @@ def file_sha(filename):
             digest.update(chunk)
     return digest.hexdigest()
 
-def publish_capability(schema, manifest):
+def publish_capability(schema, manifest_hash):
     revision = os.environ.get('RENDER_GIT_COMMIT', '')
     if len(revision) != 40 or any(c not in '0123456789abcdef' for c in revision):
         raise ValueError('Verified recovery worker revision unavailable')
@@ -46,7 +57,7 @@ def publish_capability(schema, manifest):
     if s3('get-bucket-versioning', '--bucket', bucket).get('Status') != 'Enabled':
         raise ValueError('Versioned recovery storage required')
     s3('get-bucket-encryption', '--bucket', bucket)
-    heartbeat = compact({'protocol': 'MWS_STORE_RECOVERY_CAPABILITY_V1', 'manifestHash': hashlib.sha256(compact(manifest).encode()).hexdigest(), 'workerRevision': revision, 'storagePolicyVerified': True, 'rowDigestFormat': ROW_DIGEST_FORMAT, 'checkedAt': datetime.datetime.now(datetime.timezone.utc).isoformat()})
+    heartbeat = compact({'protocol': 'MWS_STORE_RECOVERY_CAPABILITY_V1', 'manifestHash': manifest_hash, 'workerRevision': revision, 'storagePolicyVerified': True, 'rowDigestFormat': ROW_DIGEST_FORMAT, 'checkedAt': datetime.datetime.now(datetime.timezone.utc).isoformat()})
     mac = hmac.new(os.environ['BACKUP_MONITOR_SECRET'].encode(), ('MWS_STORE_RECOVERY_CAPABILITY_V1\n' + heartbeat).encode(), hashlib.sha256).hexdigest()
     # Global service-readiness metadata only; no store enrollment or business rows.
     query('CREATE TABLE IF NOT EXISTS ' + ident(schema) + '."StoreLifecycleRuntime" ("id" text PRIMARY KEY,"heartbeatJson" text NOT NULL,"mac" text NOT NULL);')
@@ -60,8 +71,9 @@ def process_one(manifest_file, audit_module):
     if len(os.environ['BACKUP_MONITOR_SECRET']) < 24:
         raise ValueError('Invalid worker signing configuration')
     manifest = json.loads(pathlib.Path(manifest_file).read_text())
+    manifest_hash = hashlib.sha256(compact(manifest).encode()).hexdigest()
     schema = query('SELECT current_schema();')
-    publish_capability(schema, manifest)
+    publish_capability(schema, manifest_hash)
     if query('SELECT to_regclass(' + literal(ident(schema) + '."StoreLifecycleExecution"') + ') IS NOT NULL;') != 't':
         return {'state': 'NOT_ENROLLED'}
     lease = str(uuid.uuid4())
@@ -69,12 +81,12 @@ def process_one(manifest_file, audit_module):
     # cron service itself also guarantees a single scheduled run at a time.
     sql = '''WITH candidate AS (
  SELECT e."id" FROM {s}."StoreLifecycleExecution" e JOIN {s}."StoreLifecycleFence" f ON f."storeId"=e."storeId" AND f."companyId"=e."companyId"
- WHERE e."state"='PREPARED' AND e."mode"='RESET' AND e."expiresAt">NOW() AND f."maintenance" AND NOT f."retired" AND f."operationId"=e."id" AND f."planHash"=e."planHash"
+ WHERE e."state"='PREPARED' AND e."mode"='RESET' AND e."expiresAt">NOW() AND f."maintenance" AND NOT f."retired" AND f."operationId"=e."id" AND f."planHash"=e."planHash" AND e."planHash"={manifest_hash}
  AND e."result"->'recoveryRequest' IS NOT NULL AND e."result"->'recoveryProof' IS NULL
  AND (e."result"->>'workerLeaseExpiresAt' IS NULL OR (e."result"->>'workerLeaseExpiresAt')::timestamptz<NOW())
  ORDER BY e."expiresAt" LIMIT 1 FOR UPDATE OF e SKIP LOCKED
  ) UPDATE {s}."StoreLifecycleExecution" e SET "result"=e."result"||jsonb_build_object('workerLease',{lease},'workerLeaseExpiresAt',NOW()+INTERVAL '11 minutes') FROM candidate c WHERE e."id"=c."id"
- RETURNING (e."result"->'recoveryRequest')::text;'''.format(s=ident(schema), lease=literal(lease))
+ RETURNING (e."result"->'recoveryRequest')::text;'''.format(s=ident(schema), lease=literal(lease), manifest_hash=literal(manifest_hash))
     raw = query(sql)
     if not raw:
         return {'state': 'IDLE'}
@@ -83,8 +95,7 @@ def process_one(manifest_file, audit_module):
     if job['schema'] != schema or operation != job['operationId']:
         raise ValueError('Worker scope differs')
     snapshot = json.loads(job['snapshotMetadataJson'])
-    manifest = json.loads(pathlib.Path(manifest_file).read_text())
-    if snapshot['planHash'] != hashlib.sha256(compact(manifest).encode()).hexdigest() or snapshot['scope']['mode'] != 'RESET':
+    if snapshot['planHash'] != manifest_hash or snapshot['scope']['mode'] != 'RESET':
         raise ValueError('Worker manifest differs')
     bucket = os.environ['S3_BUCKET_NAME']
     if s3('get-bucket-versioning', '--bucket', bucket).get('Status') != 'Enabled':
@@ -122,7 +133,7 @@ def process_one(manifest_file, audit_module):
 if __name__ == '__main__':
     try:
         here = pathlib.Path(__file__).resolve().parent
-        print(compact(process_one(here / 'manifest.json', here / 'store-lifecycle-verify-copy.py')))
+        print(compact(process_one(selected_manifest_file(), here / 'store-lifecycle-verify-copy.py')))
     except Exception as error:
         # No exception text, SQL, business rows, filenames, endpoints or secrets.
         print(compact({'state': 'FAILED', 'error': type(error).__name__}), file=sys.stderr)
