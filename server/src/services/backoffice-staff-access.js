@@ -18,7 +18,7 @@ export async function liveStaff(db,user){
   if(!rows[0])throw staffError(401,'STAFF_SESSION_INVALID','Η προσωπική σύνδεση δεν είναι πλέον ενεργή.');
   return rows[0];
 }
-export async function requireStaffGrant(db,user,storeId,capability){
+export async function requireStaffGrant(db,user,storeId,capability,{additionalModules=[]}={}){
   const account=await liveStaff(db,user);
   if(account.mustChangePassword)throw staffError();
   if(typeof storeId!=='string'||!storeId||storeId.length>200||!staffCapabilities.includes(capability))throw staffError();
@@ -27,12 +27,12 @@ export async function requireStaffGrant(db,user,storeId,capability){
   if(!grant||!staffProfiles[grant.profile]||!validStaffCapabilities(grant.capabilities)||!grant.capabilities.includes(capability))throw staffError();
   const license=await companyModuleState(user.companyId,{db});
   if(!license?.licenseAllowed)throw staffError(403,'LICENSE_INACTIVE','Η άδεια της εταιρείας δεν είναι ενεργή.');
-  const modules=modulesForCapability(capability);
+  const modules=[...new Set([...modulesForCapability(capability),...additionalModules])];
   for(const moduleKey of modules){
     const override=(await db.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "moduleKey"=${moduleKey} LIMIT 1`)[0];
     if(!effectiveModuleEnabled(license.activeModules.includes(moduleKey),override?{...override,configured:true}:{configured:false}))throw staffError(403,'MODULE_DISABLED','Η λειτουργία δεν είναι ενεργή στο κατάστημα.');
   }
-  if(['inventory.count','inventory.create','inventory.finalize','products.create','products.opening-stock'].includes(capability))await assertLifecycleMutation(db,{companyId:user.companyId,storeId},lifecycleContext()[storeId]??'0');
+  if(!capability.endsWith('.read'))await assertLifecycleMutation(db,{companyId:user.companyId,storeId},lifecycleContext()[storeId]??'0');
   return {account,grant};
 }
 // Invoked inside the existing authentication middleware, before any legacy route.
@@ -43,7 +43,7 @@ export async function enforceBackofficeStaff(db,req,res){
   // provisioned staff Users. No pre-existing User is converted into staff.
   if(user?.tokenType!=='BACKOFFICE_USER'||user.staffAccess!==true)return true;
   await liveStaff(db,user);
-  const path=String(req.originalUrl||'').split('?')[0],capability=staffRequestCapability(req.method,path);
+  const path=String(req.originalUrl||'').split('?')[0],capability=staffRequestCapability(req.method,path,req.body||{});
   if(!capability)throw staffError();
   req.user={...user,staffAccess:true};
   res.setHeader('Cache-Control','private, no-store');
@@ -61,9 +61,25 @@ export async function enforceBackofficeStaff(db,req,res){
   }
   const storeId=req.get('x-backoffice-store-id');
   if(!storeId||req.query?.storeId&&req.query.storeId!==storeId||req.body?.storeId&&req.body.storeId!==storeId)throw staffError();
-  const sales=path.match(/^\/api\/(?:transactions|cash|store-pos)\/stores\/([^/]+)\//);
+  const sales=path.match(/^\/api\/(?:transactions|cash|store-pos)\/stores\/([^/]+)(?:\/|$)/);
   if(sales&&sales[1]!==storeId)throw staffError();
-  const {grant}=await requireStaffGrant(db,user,storeId,capability);
+  const {grant}=await requireStaffGrant(db,user,storeId,capability,capability==='invoices.read'&&path.startsWith('/api/purchase-orders/')?{additionalModules:['INVENTORY']}:undefined);
+  const order=path.match(/^\/api\/(?:commerce\/)?purchase-orders\/([^/]+)(?:\/|$)/);
+  if(order&&order[1]!=='report'){
+    const rows=await db.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "id"=${order[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
+    if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
+  }
+  const close=path.match(/^\/api\/cash\/sessions\/([^/]+)\/close$/);
+  if(close){
+    const rows=await db.$queryRaw`SELECT "id" FROM "CashShiftSession" WHERE "id"=${close[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
+    if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
+  }
+  const paymentContext=path.match(/^\/api\/backoffice-staff\/payments\/stores\/([^/]+)$/);
+  if(paymentContext&&paymentContext[1]!==storeId)throw staffError();
+  const terminals=path.match(/^\/api\/backoffice-staff\/sales\/stores\/([^/]+)\/terminals$/);
+  if(terminals&&terminals[1]!==storeId)throw staffError();
+  if(capability==='invoices.approve'&&Object.keys(req.body||{}).some(key=>!['status','expectedReopenVersion'].includes(key)))throw staffError();
+  if(capability.startsWith('payments.')&&(req.body?.paymentSource==='CASH_SHIFT'||req.body?.paymentMethod==='CASH_SHIFT'||req.body?.subtractFromShift===true))await requireStaffGrant(db,user,storeId,'payments.cash');
   const invoice=path.match(/^\/api\/commerce\/documents\/inbox\/([^/]+)\/file$/);
   if(invoice){
     const rows=await db.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "id"=${invoice[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
@@ -83,5 +99,33 @@ export async function enforceBackofficeStaff(db,req,res){
   return true;
 }
 function modulesForCapability(capability){
-  return capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability==='sales.read'?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:['INVENTORY'];
+  return capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability.startsWith('sales.')||capability.startsWith('payments.')||capability==='shifts.close'?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:capability.startsWith('invoices.')?['DOCUMENTS','INVENTORY']:['INVENTORY'];
+}
+
+// Must run inside each canonical writer transaction, before writes or replay.
+// It locks the live account/session/grant until that transaction commits.
+export async function requireStaffAction(db,req,storeId,capability){
+  if(req.user?.staffAccess!==true)return;
+  if(req.user.storeId!==storeId||req.staffGrant?.capability!==capability)throw staffError();
+  if(['sales.cancel','shifts.close'].includes(capability)||capability.startsWith('payments.')&&(req.body?.paymentSource==='CASH_SHIFT'||req.body?.paymentMethod==='CASH_SHIFT')){
+    if(!String(req.get('x-mws-terminal-pos')||'').trim())throw staffError(400,'STAFF_TERMINAL_REQUIRED','Επίλεξε ταμείο πριν συνεχίσεις.');
+  }
+  await requireStaffGrant(db,req.user,storeId,capability);
+  if(capability==='payments.expense'){
+    const body=req.body||{};
+    if(body.supplierId||body.supplierName||body.invoiceDocumentNumber||body.type!=='OTHER_EXPENSE'||Number(body.amount)<=0||body.deferredInvoice||!body.idempotencyKey||!['DOCUMENT','NO_DOCUMENT'].includes(body.evidenceMode)||!['CASH_SHIFT','EXTERNAL'].includes(body.paymentSource)||!['CASH_SHIFT','CORPORATE_CARD','BANK_TRANSFER','EMPLOYEE_REIMBURSEMENT'].includes(body.paymentMethod)||(body.paymentSource==='CASH_SHIFT')!==(body.paymentMethod==='CASH_SHIFT'))throw staffError(400,'STAFF_PAYMENT_INVALID','Έλεγξε το είδος και τον τρόπο πληρωμής.');
+    if(body.evidenceMode==='NO_DOCUMENT'&&body.responsibilityAcknowledged!==true)throw staffError(400,'STAFF_PAYMENT_DECLARATION','Επιβεβαίωσε τη δήλωση χωρίς παραστατικό.');
+  }
+  if(capability.startsWith('payments.')&&(req.body?.paymentSource==='CASH_SHIFT'||req.body?.paymentMethod==='CASH_SHIFT'||req.body?.subtractFromShift===true))await requireStaffGrant(db,req.user,storeId,'payments.cash');
+}
+export async function requireStaffOrderAction(db,req,orderId,capability){
+  if(req.user?.staffAccess!==true)return;
+  const rows=await db.$queryRaw`SELECT "storeId","status" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${req.user.companyId} AND "storeId"=${req.user.storeId} FOR UPDATE`;
+  if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
+  await requireStaffAction(db,req,rows[0].storeId,capability);
+  if(capability==='invoices.edit'&&rows[0].status!=='NEW')throw staffError(409,'STAFF_DRAFT_CLOSED','Επιτρέπεται επεξεργασία μόνο ανοικτού πρόχειρου.');
+  if(capability==='invoices.edit'&&req.body?.productId){
+    const products=await db.$queryRaw`SELECT p."id" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" WHERE p."id"=${req.body.productId} AND p."companyId"=${req.user.companyId} AND sp."storeId"=${req.user.storeId} AND sp."active"=true AND p."active"=true LIMIT 1 FOR SHARE OF p,sp`;
+    if(!products[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Το είδος δεν είναι διαθέσιμο στο επιλεγμένο κατάστημα.');
+  }
 }

@@ -1,3 +1,4 @@
+import {walletActivityFromRequest} from "../services/ai-wallet-activity.js";
 import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import {loadInvoiceAssistantSource} from "../lib/invoice-assistant-source.js";
 import {Router} from "express";
@@ -71,7 +72,7 @@ router.post("/purchase-orders/:orderId/invoice-assistant/preview",requireCompany
     const result=await source(req.user.companyId,req.params.orderId,req.invoiceAssistantSource);
     if(!result)return res.status(404).json({error:"Δεν υπάρχει ενεργό πρόχειρο POS για αυτό το τιμολόγιο."});
     if(!result.pages.length)return res.status(409).json({error:req.invoiceAssistantSource.inboxId?"Δεν βρέθηκε το πρωτότυπο PDF της συγκεκριμένης εγγραφής myDATA στο ίδιο πρόχειρο και κατάστημα.":"Δεν βρέθηκαν όλες οι φωτογραφίες του τιμολογίου."});
-    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:result.document.storeId,invoiceDocumentId:result.document.id},async()=>{
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:result.document.storeId,invoiceDocumentId:result.document.id,activity:walletActivityFromRequest(req,{storeId:result.document.storeId,purpose:"INVOICE_ASSISTANT",documentId:result.document.id,documentNumber:result.document.documentNumber})},async()=>{
     const rows=await prisma.$queryRaw`SELECT "id","ocrSequence","supplierCode","description","quantity","unitCost","invoiceUnit","stockUnitsPerInvoiceUnit","discount1","discount2","discount3","exciseTotal","vatRate","netAmount","grossAmount","ocrRawText"
       FROM "PurchaseOrderLine" WHERE "orderId"=${req.params.orderId} ORDER BY COALESCE("ocrSequence",2147483647),"createdAt","id"`;
     const current=rows.map(row=>({...row,quantity:Number(row.quantity||0),unitCost:Number(row.unitCost||0),stockUnitsPerInvoiceUnit:Number(row.stockUnitsPerInvoiceUnit||1),discount1:Number(row.discount1||0),discount2:Number(row.discount2||0),discount3:Number(row.discount3||0),exciseTotal:Number(row.exciseTotal||0),vatRate:Number(row.vatRate||0),netAmount:Number(row.netAmount||0),grossAmount:Number(row.grossAmount||0)}));

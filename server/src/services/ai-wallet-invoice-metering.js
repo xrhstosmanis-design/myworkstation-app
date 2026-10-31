@@ -7,6 +7,7 @@ import {invoiceAssistantPageCount} from '../lib/invoice-assistant-page-count.js'
 import {countInvoiceInput} from './ai-invoice-input-count.js';
 import {invoiceWalletCompanyAllowed,resolvedInvoiceWalletCompany} from './ai-invoice-company-scope.js';
 import {invoicePageTariff} from './ai-invoice-wallet-readiness.js';
+import {reservationWalletActivity} from './ai-wallet-activity.js';
 
 export function throwIfWalletError(error){
   if(String(error?.code||'').startsWith('AI_WALLET_')){
@@ -32,7 +33,8 @@ export function createInvoiceWalletMeter({repository=aiOwnerWalletRepository,env
     if(!active())return work();
     if(!scope||!['companyId','storeId'].every(k=>typeof scope[k]==='string'&&scope[k].trim()&&scope[k].length<=160))throw walletError('AI_WALLET_SCOPE_DENIED',403);
     if(scope.invoiceDocumentId!==undefined&&(typeof scope.invoiceDocumentId!=='string'||!scope.invoiceDocumentId.trim()||scope.invoiceDocumentId.length>160))throw walletError('AI_WALLET_SCOPE_DENIED',403);
-    return context.run(Object.freeze({companyId:scope.companyId,storeId:scope.storeId,feature:'INVOICE_AI',...(scope.invoiceDocumentId===undefined?{}:{invoiceDocumentId:scope.invoiceDocumentId})}),async()=>{try{return await work()}catch(error){throwIfWalletError(error);throw error}});
+    const activity=reservationWalletActivity(scope.activity,scope);
+    return context.run(Object.freeze({companyId:scope.companyId,storeId:scope.storeId,feature:'INVOICE_AI',...(activity?{activity}:{}),...(scope.invoiceDocumentId===undefined?{}:{invoiceDocumentId:scope.invoiceDocumentId})}),async()=>{try{return await work()}catch(error){throwIfWalletError(error);throw error}});
   }
   async function responsesFetch(url,options){
     if(!active())return transport(url,options);

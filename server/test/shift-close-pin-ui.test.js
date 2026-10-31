@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import {JSDOM} from 'jsdom';
 
-async function withCloseForm(run,{write=async()=>({variance:0})}={}){
+async function withCloseForm(run,{write=async()=>({variance:0}),backoffice=false}={}){
  const dom=new JSDOM('<div id="root"></div>',{url:'https://fixture.invalid'}),keys=['window','document','navigator','HTMLElement','Event','IS_REACT_ACT_ENVIRONMENT'],previous=new Map(keys.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
  for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[key]});
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React;
@@ -17,12 +17,20 @@ async function withCloseForm(run,{write=async()=>({variance:0})}={}){
  const choose=async method=>{const button=[...document.querySelectorAll('button')].find(element=>element.textContent.trim()===method);assert.ok(button,`close form offers ${method}`);await act(async()=>button.click())};
  const submit=async()=>act(async()=>{document.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await new Promise(resolve=>setTimeout(resolve,15))});
  try{
-  await act(async()=>{root.render(React.createElement(module.exports.default,{api,store:{id:'store'},onClosed:()=>closed.push(true)}));await new Promise(resolve=>setTimeout(resolve,15))});
+  await act(async()=>{root.render(React.createElement(module.exports.default,{api,store:{id:'store'},backoffice,onClosed:()=>closed.push(true)}));await new Promise(resolve=>setTimeout(resolve,15))});
   await act(async()=>document.querySelector('input[type="checkbox"]').click());
   await input(document.querySelector('input[required]'),'0');
   await run({dom,act,input,choose,submit,writes,closed});
  }finally{await act(async()=>root.unmount());dom.window.close();for(const[key,descriptor]of previous)descriptor?Object.defineProperty(globalThis,key,descriptor):delete globalThis[key]}
 }
+test('delegated BackOffice counted close uses its personal session, still requires EFTPOS and never asks for or sends another operator PIN',async()=>{
+ await withCloseForm(async({input,submit,writes,closed})=>{
+  assert.equal(document.querySelector('[name="shift-close-pin"]'),null);assert.equal(document.querySelector('[name="shift-work-card"]'),null);
+  await input(document.querySelector('input[required]'),'');await submit();assert.equal(writes.length,0);
+  await input(document.querySelector('input[required]'),'0');await submit();assert.equal(writes.length,1);assert.equal(writes[0].eftposTotal,0);
+  for(const key of ['pin','cardCode','closeCredentialMethod'])assert.equal(Object.hasOwn(writes[0],key),false);assert.equal(closed.length,1);
+ },{backoffice:true});
+});
 
 test('personal PIN closes the actual mounted form without a card and never submits on method selection',async()=>{
  await withCloseForm(async({input,choose,submit,writes,closed})=>{

@@ -4,6 +4,7 @@ import {recordInternalReturn} from "../lib/pos-internal-return.js";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
+import {requireStaffAction,requireStaffGrant} from '../services/backoffice-staff-access.js';
 
 const router=Router();
 let readyPromise;
@@ -58,7 +59,7 @@ export async function ensurePosSaleActionSchema(){
 }
 
 function assertStore(req,storeId){
-  if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){
+  if((req.user?.tokenType==="STORE_OPERATOR"||req.user?.staffAccess===true)&&req.user.storeId!==storeId){
     const error=new Error("Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα.");
     error.status=403;throw error;
   }
@@ -90,6 +91,7 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
       LEFT JOIN "Customer" c ON c."id"=s."customerId" AND c."companyId"=s."companyId"
       WHERE s."companyId"=${req.user.companyId} AND s."storeId"=${store.id} AND s."source"='POS' AND s."status"='COMPLETED'
       ORDER BY s."createdAt" DESC LIMIT 30`;
+    if(req.user?.staffAccess===true)await requireStaffGrant(prisma,req.user,store.id,'sales.read');
     res.json({store,rows:rows.map(row=>({...row,total:money(row.total),subtotal:money(row.subtotal),discount:money(row.discount),payments:(row.payments||[]).map(p=>({...p,amount:money(p.amount)})),lines:(row.lines||[]).map(l=>({...l,quantity:money(l.quantity),unitPrice:money(l.unitPrice),lineTotal:money(l.lineTotal)}))}))});
   }catch(error){next(error)}
 });
@@ -129,6 +131,8 @@ router.post("/stores/:storeId/sales/:saleId/reverse",async(req,res,next)=>{
     const store=await ownedStore(req,req.params.storeId),body=reverseSchema.parse(req.body||{}),terminalPos=await requestTerminal(req);
     // returnItems is enforced once by store-pos-catalog from the central BackOffice operator profile.
     const result=await prisma.$transaction(async tx=>{
+      if(req.user?.staffAccess===true&&body.kind!=='CANCEL')throw Object.assign(new Error('Δεν υπάρχει δικαίωμα επιστροφής.'),{status:403});
+      if(req.user?.staffAccess===true)await requireStaffAction(tx,req,store.id,'sales.cancel');
       await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`reverse:${req.params.saleId}`})) IS NULL) AS locked`;
       const sale=(await tx.$queryRaw`SELECT * FROM "Sale" WHERE "id"=${req.params.saleId} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} FOR UPDATE`)[0];
       if(!sale){const e=new Error("Δεν βρέθηκε η πώληση.");e.status=404;throw e}

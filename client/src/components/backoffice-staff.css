@@ -2,3 +2,5 @@
 
 .staff-role-row{display:flex;align-items:end;gap:16px;flex-wrap:wrap}.staff-permission-matrix{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.staff-permission-matrix fieldset{margin-top:12px}.staff-permission-matrix small{display:block;line-height:1.5;color:#526476;margin-top:4px}.staff-permission-summary{font-weight:600;color:#344e69}
 .staff-backoffice .staff-workspace{max-width:none;width:100%;box-sizing:border-box}.staff-backoffice aside small{display:block}.staff-backoffice nav button{width:100%;text-align:left;min-height:48px;border:0;border-radius:8px;padding:12px;font:inherit;color:inherit;background:transparent}.staff-backoffice nav button.active{background:#233551}.staff-backoffice .ia-shell{margin-top:16px}
+
+.staff-backoffice .pos-sale-actions-dock{position:static;display:flex;align-items:center;flex-wrap:wrap;margin:16px 0;z-index:auto}

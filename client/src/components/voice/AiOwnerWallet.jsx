@@ -1,3 +1,4 @@
+import AiWalletActivityHistory from "./AiWalletActivityHistory.jsx";
 import React,{useEffect,useState} from 'react';
 import {walletMoney} from './ai-wallet-money.mjs';
 const noticeLabels={CREDIT:'Επιβεβαίωση πίστωσης',LOW:'Χαμηλό υπόλοιπο AI',EMPTY:'Εξαντλήθηκε το υπόλοιπο AI'};
@@ -49,8 +50,7 @@ export default function AiOwnerWallet({api,storeId='',enabled=false}){
           <tbody>{data.usageSummary.daily.map(row=><tr key={row.date+row.category}><td>{dayLabel(row.date)}</td><td>{categoryLabels[row.category]||categoryLabels.OTHER}</td><td>{walletMoney(row.chargedMicros)}</td></tr>)}</tbody>
         </table></div>}
         <p>Κατανάλωση επιλεγμένου καταστήματος: {walletMoney(data.usageSummary?.allTimeMicros??data.usage?.[0]?.chargedMicros??'0')} συνολικά. {data.meteredFeatures?.includes('INVOICE_OPENAI')?'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη και τις αναγνώσεις τιμολογίων με AI.':'Η χρέωση καλύπτει προς το παρόν τον Βοηθό Ιδιοκτήτη.'}</p>
-        <h4>Πρόσφατες κινήσεις · έως 100</h4>
-        <ul>{(data.entries||[]).map(e=><li key={e.id}>{new Date(e.status==='SETTLED'?e.settledAt||e.createdAt:e.createdAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hourCycle:'h23'})} · {e.kind==='CREDIT'?`${e.feature==='TRIAL_GRANT'?'Δοκιμαστική πίστωση από MyWorkStation':'Πίστωση'} ${walletMoney(e.creditedMicros)}`:`${featureLabel(e.feature)} · ${e.status==='SETTLED'?`Χρήση AI ${walletMoney(e.chargedMicros)}`:e.status==='REVIEW'?'Κλήση AI υπό έλεγχο':'Κλήση AI σε εξέλιξη'}`}</li>)}</ul>
+        <AiWalletActivityHistory key={storeId+":activity"} entries={data.entries||[]}/>
         <h4>Ειδοποιήσεις εταιρείας</h4><ul>{(data.notices||[]).map(n=><li key={n.id}>{noticeLabels[n.kind]} · {new Date(n.createdAt).toLocaleString('el-GR',{hour12:false})} · Υπόλοιπο τότε {walletMoney(n.balanceMicros)}</li>)}</ul>
       </>}
     </>}

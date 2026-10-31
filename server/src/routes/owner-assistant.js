@@ -8,9 +8,9 @@ import {aiCommandUsage} from "../services/ai-command-usage.js";
 import {meterOwnerProvider} from '../services/ai-owner-wallet-runtime.js';
 import {walletHttpError} from './ai-owner-wallet.js';
 
-const requestProvider=async(settings,{signal,inputChannel,scope})=>{
+const requestProvider=async(settings,{signal,inputChannel,scope,activity})=>{
   const model=process.env.OPENAI_COMMAND_CENTER_MODEL||"gpt-5-mini";
-  return meterOwnerProvider({...scope,feature:'OWNER_ASSISTANT'},{model,reasoning:{effort:"low"},max_output_tokens:1200,...settings,text:{format:{type:"json_schema",name:"owner_assistant_answer",strict:true,schema:ownerAnswerSchema}}},async billed=>{
+  return meterOwnerProvider({...scope,feature:'OWNER_ASSISTANT',activity},{model,reasoning:{effort:"low"},max_output_tokens:1200,...settings,text:{format:{type:"json_schema",name:"owner_assistant_answer",strict:true,schema:ownerAnswerSchema}}},async billed=>{
   const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal,body:JSON.stringify(billed)});
   const raw=await response.json().catch(()=>({}));
   console.info("AI_OWNER_ASSISTANT_USAGE",JSON.stringify({...aiCommandUsage(raw,inputChannel,model),...assistantResponseDiagnostics(raw),status:response.ok?"response_received":"provider_error"}));
