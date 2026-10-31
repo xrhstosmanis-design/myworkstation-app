@@ -1,3 +1,5 @@
+31Oct bounded forward correction: first32bf5de Windows41184894746 and native41184894755 PASS. Before merge, readiness review found that an old unresolved STATUS can be consumed after restart with a new local read timestamp. Updated helper treats an old marker as historical, requires a new nonfiscal round trip, and keeps the original creation time for a recent resumed STATUS instead of extending its freshness. Added actual helper tests with an old file/current driver unavailable (no status upload) and recent response (original time retained). No fiscal claim/result policy change; require fresh exact Windows/full/native CI at the new head.
+
 31Oct integration note: main advanced to785923d with another owner's documentation-only AI-wallet claim during publication. Preserve that claim and its checkpoint; union only registry prefixes and regenerate the tracker PDF. FTEXT source unchanged from candidate86c3420; no AI scope takeover. Fresh exact final-head checks required.
 
 ## 31/10/2026 — FTEXT-RESILIENCE-01 / source candidate / AWAITING EXACT NATIVE + WINDOWS CI

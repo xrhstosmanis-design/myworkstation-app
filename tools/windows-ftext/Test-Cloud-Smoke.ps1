@@ -44,6 +44,42 @@ try {
             $rejected=$false;try{Invoke-FtextCashApi $config 'execute' @{} | Out-Null}catch{$rejected=$true};if(-not $rejected){throw 'Arbitrary execution API was allowed'}
         }finally{Remove-Item Function:script:Invoke-RestMethod -ErrorAction SilentlyContinue}
     } $c
+    # A recovered old STATUS must not make a closed driver look ready after a restart.
+    $readyFolder=Join-Path $root 'readiness';New-Item -ItemType Directory -Path $readyFolder | Out-Null
+    $readyConfig=$c | ConvertTo-Json -Depth 12 | ConvertFrom-Json;$readyConfig.workFolder=$readyFolder
+    $readyConfigPath=Join-Path $readyFolder 'config.json';$readyConfig | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $readyConfigPath -Encoding UTF8
+    & (Get-Module 'Cloud-Tools') {
+        param($config,$path)
+        $script:readyConfig=$config;$script:statusReads=0;$script:readyPosts=0;$script:stalePhase=$true
+        function script:Invoke-RestMethod {
+            param($Method,$Uri,$Headers,$ContentType,$Body,$TimeoutSec)
+            if($Headers.Authorization -cne 'Bearer fixture-only-device-token'){throw 'Wrong readiness credential'}
+            if($Uri.EndsWith('/ping')){return [pscustomobject]@{companyId=$script:readyConfig.companyId;storeId=$script:readyConfig.storeId;terminalPos=$script:readyConfig.terminalPos;settingsHash=$script:readyConfig.settingsHash;settings=$script:readyConfig;fiscalCheckoutEnabled=$false}}
+            if(-not $Uri.EndsWith('/status-result')){throw 'Unexpected readiness action'}
+            $script:readyPosts++;$script:lastReadinessBody=$Body | ConvertFrom-Json;return @{ok=$true}
+        }
+        function script:Invoke-FtextStatus {
+            param($ConfigPath,$TimeoutSeconds)
+            $script:statusReads++
+            if($script:stalePhase -and $script:statusReads -eq 2){throw 'Synthetic current driver closed'}
+            return [pscustomobject]@{requestId=('a'*32);checkedAt=[DateTime]::UtcNow.ToString('o');result=[pscustomobject]@{ok=$true;code=0;serialNumber=$script:readyConfig.serialNumber;deviceTime='fixture clock';fiscalExecution=$false}}
+        }
+        try {
+            $marker=Join-Path $config.workFolder '.mws-ftext-status.json'
+            @{id=('a'*32);command='STATUS';companyId=$config.companyId;storeId=$config.storeId;terminalPos=$config.terminalPos;serialNumber=$config.serialNumber;createdAt=[DateTime]::UtcNow.AddHours(-1).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath $marker -Encoding UTF8
+            $rejected=$false;try{Invoke-FtextCloudReadiness $path | Out-Null}catch{$rejected=$true}
+            if(-not $rejected -or $script:statusReads -ne 2 -or $script:readyPosts -ne 0){throw 'Old recovered STATUS authorized readiness without a fresh driver response.'}
+            $script:stalePhase=$false;$script:statusReads=0;$started=[DateTime]::UtcNow.AddSeconds(-5).ToString('o')
+            @{id=('a'*32);command='STATUS';companyId=$config.companyId;storeId=$config.storeId;terminalPos=$config.terminalPos;serialNumber=$config.serialNumber;createdAt=$started} | ConvertTo-Json | Set-Content -LiteralPath $marker -Encoding UTF8
+            $ok=Invoke-FtextCloudReadiness $path
+            if(-not $ok -or $script:statusReads -ne 1 -or $script:readyPosts -ne 1 -or $script:lastReadinessBody.checkedAt -cne $started){throw 'Recent recovered STATUS was re-dated or not delivered.'}
+        }finally{
+            Remove-Item Function:script:Invoke-RestMethod -ErrorAction SilentlyContinue
+            Remove-Item Function:script:Invoke-FtextStatus -ErrorAction SilentlyContinue
+        }
+    } $readyConfig $readyConfigPath
+    Import-Module (Join-Path $PSScriptRoot 'Cloud-Tools.psm1') -Force
+
     # Exercise the production connector loop across two lost HTTP outcomes, without any fiscal transport.
     $harness=Join-Path $root 'retry-harness';New-Item -ItemType Directory -Path $harness | Out-Null
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Cloud-Connector.ps1') -Destination (Join-Path $harness 'Cloud-Connector.ps1')

@@ -46,9 +46,22 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath) {
     $config=Get-FtextCloudConfig $ConfigPath
     # Authenticate current installation before the nonfiscal STATUS command.
     Invoke-FtextCloudPing $config | Out-Null
+    $pendingPath=Join-Path $config.workFolder '.mws-ftext-status.json';$started=$null
+    if(Test-Path -LiteralPath $pendingPath) {
+        $marker=Get-Content -LiteralPath $pendingPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $started=[DateTime]::Parse([string]$marker.createdAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
+    }
     $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds 2
+    if($null -ne $started) {
+        $age=([DateTime]::UtcNow-$started).TotalSeconds
+        if($age -ge 20 -or $age -lt -2) {
+            # A recovered old STATUS proves history only. Consume it durably, then require a new round trip.
+            $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds 2;$started=$null
+        }
+    }
     $result=$evidence.result
-    $report=[ordered]@{requestId=$evidence.requestId;checkedAt=$evidence.checkedAt;ok=$result.ok;code=$result.code;fiscalExecution=$false}
+    $checkedAt=if($null -ne $started){$started.ToString('o')}else{$evidence.checkedAt}
+    $report=[ordered]@{requestId=$evidence.requestId;checkedAt=$checkedAt;ok=$result.ok;code=$result.code;fiscalExecution=$false}
     foreach($key in @('serialNumber','deviceTime','description')) {if($result.PSObject.Properties[$key]) {$report[$key]=$result.$key}}
     $token=Read-FtextDeviceToken $config
     # Local STATUS evidence is durable. An undelivered/stale readiness sample never authorizes checkout.
