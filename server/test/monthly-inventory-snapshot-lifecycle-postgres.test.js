@@ -1,3 +1,4 @@
+import {ensureStoreChatInteractions} from '../src/chat-interactions.mjs';
 import {ensureBackofficeStaffSchema} from '../src/backoffice-staff-bootstrap.js';
 import {provisionAiWalletRecovery} from '../src/services/ai-owner-wallet-schema.js';
 import {provisionFtextRecoverySchema} from '../src/services/ftext-cash-schema.js';
@@ -47,6 +48,7 @@ test('native monthly detached history survives reset and real full/selective pri
   await provisionFtextRecoverySchema(db);
   await provisionAiWalletRecovery(db);
   await ensureBackofficeStaffSchema(db);
+  await ensureStoreChatInteractions(db);
   await provisionMonthlyInventorySnapshotSchema(db,{manifest});
 
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","updatedAt") VALUES ('fixture-company','SYNTHETIC',NOW()),('foreign-company','CONTROL',NOW())`);

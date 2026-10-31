@@ -77,3 +77,45 @@ for(const outcome of ['YES','NO'])test(`actual POS failed ${outcome} decision ke
   assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')),false);
  }
 }));
+
+for(const outcome of ['NO','UNCERTAIN'])test(`actual POS generic CASH ${outcome} preserves basket and never emits another checkout`,()=>withMountedPos({
+ ftextConfigured:true,
+ apiOverride:async path=>{
+  const row={id:'cash-review',kind:'FTEXT_CASH',storeId:'A',terminalPos:'POS-01',status:'REQUIRES_CHECK',operatorConfirmationRequired:false,operatorReviewMode:'CASH_UNKNOWN',paymentMethod:'CASH',total:2.2,clientTransactionId:'cash-review-key',checkout:{paymentMethod:'CASH',items:[{productId:'p0',quantity:1}]}};
+  if(path.endsWith('/pending'))return {requests:[row]};
+  if(path.endsWith('/ftext-cash/cash-review'))return {request:row};
+  if(path.endsWith('/outcome'))return {request:{...row,operatorOutcome:outcome,operatorReviewMode:outcome==='NO'?null:'CASH_UNKNOWN',operatorReleaseMode:outcome==='NO'?'RELEASED':null},allowResend:false};
+ },
+ run:async({calls,click,dom})=>{
+  dom.window.confirm=()=>assert.fail('No second confirmation');
+  assert.equal([...document.querySelectorAll('button')].some(x=>x.textContent==='Ναι · εγκρίθηκε'),false);
+  const button=[...document.querySelectorAll('button')].find(x=>x.textContent===(outcome==='NO'?'Όχι · δεν εκδόθηκε απόδειξη':'Αβέβαιο · έλεγχος'));
+  assert.ok(button);await click(button);
+  assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')||c.path.endsWith('/release')),false);const writes=calls.filter(c=>c.path.includes('/ftext-cash/')&&c.options?.method==='POST');assert.equal(writes.length,1);assert.ok(writes[0].path.endsWith('/cash-review/outcome'));assert.deepEqual(JSON.parse(writes[0].options.body),{outcome});
+  assert.equal(document.querySelectorAll('.standard-line').length,1);
+  if(outcome==='NO'){assert.match(document.body.textContent,/Η προηγούμενη προσπάθεια έκλεισε στο MyWorkStation/);assert.equal(document.querySelector('[data-pos-scanner]').disabled,false);}
+  else {assert.equal(document.querySelector('[data-pos-scanner]').disabled,true);assert.match(document.body.textContent,/δεν αποστέλλεται νέα πληρωμή/);}
+ }
+}));
+
+for(const succeeds of [true,false])test(`actual POS unpublished stop ${succeeds?'releases its basket':'refusal keeps original hold'} without fiscal resend`,()=>withMountedPos({
+ ftextConfigured:true,
+ apiOverride:async path=>{
+  const row={id:'unpublished-request',kind:'FTEXT_CASH',storeId:'A',terminalPos:'POS-01',status:'DISPATCHED',canStopBeforeExecution:true,deliveryStage:'OFFERED',paymentMethod:'CASH',total:2.2,checkout:{items:[{productId:'p0',quantity:1}]}};
+  if(path.endsWith('/pending'))return {requests:[row]};if(path.endsWith('/ftext-cash/unpublished-request'))return {request:row};
+  if(path.endsWith('/stop-before-execution')){if(!succeeds)throw Error('Η εντολή έχει ήδη πάρει άδεια εκτέλεσης.');return {request:{...row,canStopBeforeExecution:false,operatorReleaseMode:'RELEASED'},allowResend:false};}
+ },
+ run:async({calls,click,dom})=>{
+  dom.window.confirm=()=>assert.fail('No second confirmation for a provably unpublished command');
+  const button=[...document.querySelectorAll('button')].find(x=>x.textContent==='Διακοπή πριν την αποστολή');assert.ok(button);await click(button);
+  const writes=calls.filter(c=>c.path.endsWith('/stop-before-execution'));assert.equal(writes.length,1);assert.deepEqual(JSON.parse(writes[0].options.body),{stopBeforeExecution:true});assert.equal(document.querySelectorAll('.standard-line').length,1);
+  assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')||c.path.endsWith('/outcome')||c.path.endsWith('/release')),false);
+  assert.equal(document.querySelector('[data-pos-scanner]').disabled,!succeeds);
+  if(succeeds)assert.match(document.body.textContent,/Η προηγούμενη προσπάθεια έκλεισε στο MyWorkStation/);else assert.match(document.body.textContent,/ήδη πάρει άδεια εκτέλεσης/);
+ }
+}));
+test('actual POS accepted work offers no stop and never treats elapsed waiting as a failure',()=>withMountedPos({
+ ftextConfigured:true,
+ apiOverride:async path=>{const row={id:'accepted-request',kind:'FTEXT_CASH',storeId:'A',status:'DISPATCHED',canStopBeforeExecution:false,deliveryStage:'ACCEPTED',createdAt:'2020-01-01T00:00:00.000Z',paymentMethod:'CARD',total:2.2,checkout:{items:[{productId:'p0',quantity:1}]}};if(path.endsWith('/pending'))return {requests:[row]};if(path.endsWith('/ftext-cash/accepted-request'))return {request:row};},
+ run:async({calls})=>{assert.equal([...document.querySelectorAll('button')].some(x=>x.textContent==='Διακοπή πριν την αποστολή'),false);assert.match(document.body.textContent,/Έχει δοθεί άδεια εκτέλεσης/);assert.equal(document.querySelector('[data-pos-scanner]').disabled,true);assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')||c.path.endsWith('/stop-before-execution')),false);}
+}));

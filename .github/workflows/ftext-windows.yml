@@ -3,11 +3,23 @@ on:
   pull_request:
     paths:
       - 'tools/windows-ftext/**'
+      - 'server/src/services/ftext-cash-review.js'
+      - 'server/src/services/ftext-handoff.js'
+      - 'server/src/services/ftext-device-work.js'
+      - 'server/src/routes/ftext-v1.js'
+      - 'server/test/ftext-unpublished-stop*'
+      - 'server/test/ftext-cash-review.test.js'
       - '.github/workflows/ftext-windows.yml'
   push:
     branches: [main]
     paths:
       - 'tools/windows-ftext/**'
+      - 'server/src/services/ftext-cash-review.js'
+      - 'server/src/services/ftext-handoff.js'
+      - 'server/src/services/ftext-device-work.js'
+      - 'server/src/routes/ftext-v1.js'
+      - 'server/test/ftext-unpublished-stop*'
+      - 'server/test/ftext-cash-review.test.js'
       - '.github/workflows/ftext-windows.yml'
 jobs:
   status-foundation:
@@ -29,5 +41,6 @@ jobs:
           ./tools/windows-ftext/Test-Cash-Smoke.ps1
           ./tools/windows-ftext/Test-Cloud-Recovery-Smoke.ps1
           ./tools/windows-ftext/Test-Handoff-Smoke.ps1
+          ./tools/windows-ftext/Test-Unpublished-Stop-Smoke.ps1
           ./tools/windows-ftext/Test-Void-Smoke.ps1
           ./tools/windows-ftext/Test-Install-Smoke.ps1

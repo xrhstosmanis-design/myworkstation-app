@@ -17,6 +17,7 @@ import {ensurePosSaleSafetySchema} from "../pos-sale-safety.js";
 import {buildKatShiftReconciliation} from "../kat-shift-reconciliation.js";
 import {readPendingInvoices,checkClosePendingInvoices,recordClosePendingInvoices} from "../services/pos-pending-invoices.js";
 import {verifyShiftCloseCredential} from "../services/shift-close-card.js";
+import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {normalizeWorkCard} from "../workforce-card-code.js";
 import {legacyCashControlRule as legacyStoreRule} from "../services/cash-control-rules.js";
 
@@ -109,6 +110,7 @@ export async function ensureCashControlSchema(){return ensureTables()}
 
 async function requireCashAccess(req,res,next){
   if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='sales.read')return next();
+  if(req.user?.staffAccess===true&&req.method==='POST'&&req.staffGrant?.capability==='shifts.close')return next();
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   if(backoffice)return next();
   if(req.user?.tokenType!=="STORE_OPERATOR")return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
@@ -313,8 +315,10 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   ]);
   const openSession=normalize(openRows[0]);
   if(req.user.staffAccess===true){
+    const {grant}=await requireStaffGrant(prisma,req.user,store.id,'sales.read');
+    const pendingInvoices=grant.capabilities.includes('shifts.close')&&openSession?await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos,sessionId:openSession.id,sessionAll:true}):null;
     await requireStaffGrant(prisma,req.user,store.id,'sales.read');
-    return res.json({store:{id:store.id,name:store.name},openSession,recent:recentRows.map(normalize)});
+    return res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession,recent:recentRows.map(normalize)});
   }
   const pendingInvoices=openSession&&(req.user.tokenType!=="STORE_OPERATOR"||openSession.openedBy===req.user.id)?await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos,sessionId:openSession.id,sessionAll:true}):null;
   const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
@@ -507,6 +511,8 @@ router.post("/sessions/:sessionId/close",route(async(req,res)=>{
       SELECT s.* FROM "CashShiftSession" s JOIN "Store" st ON st."id"=s."storeId"
       WHERE s."id"=${req.params.sessionId} AND s."companyId"=${req.user.companyId} AND st."companyId"=${req.user.companyId} AND s."status"='OPEN' LIMIT 1 FOR UPDATE OF s`;
     const session=normalize(found[0]);if(!session)return null;assertStoreAccess(req,session.storeId);
+    if(req.user?.staffAccess===true)await requireStaffAction(tx,req,session.storeId,'shifts.close');
+    if(req.user?.staffAccess===true&&String(session.terminalPos||'MAIN').toUpperCase()!==await requestTerminal(req))throw Object.assign(new Error('Επίλεξε το ταμείο της βάρδιας.'),{status:403});
     const authentication=await verifyShiftCloseCredential(tx,req.user,session,body);
     if(!authentication.ok)return {authFailed:authentication};
     const pendingInvoices=await checkClosePendingInvoices(tx,{companyId:req.user.companyId,storeId:session.storeId,user:req.user,session,acknowledged:body.pendingInvoiceAcknowledged,expectedFingerprint:body.pendingInvoiceFingerprint});

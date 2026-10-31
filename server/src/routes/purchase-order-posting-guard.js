@@ -1,3 +1,4 @@
+import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {assertReopenedIdentity,reuseReopenedPurchaseDocument} from "../services/purchase-order-reopen.js";
 import {ensureInvoiceCommonDraftSchema,lockInvoiceStore,assertInvoiceStockAvailable,recordInvoiceStockPosting} from "../lib/invoice-common-draft.js";
 import crypto from "crypto";
@@ -78,7 +79,7 @@ router.use(async(req,res,next)=>{try{await ensureSchema();await ensureInvoiceCom
 
 router.post("/",async(req,res,next)=>{
   try{
-    if(!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return next();
+    if(!(req.user?.staffAccess===true&&req.staffGrant?.capability==='invoices.approve')&&!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return next();
     const supplierId=req.body?.supplierId||null;
     const invoiceNumber=req.body?.invoiceNumber||null;
     if(!supplierId||!normalizeDocumentNumber(invoiceNumber))return next();
@@ -166,13 +167,14 @@ router.patch("/:orderId",async(req,res,next)=>{
   try{
     const requestedStatus=req.body?.status;
     if(requestedStatus!=="FINAL"&&requestedStatus!=="INVOICED")return next();
-    if(!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Δεν έχεις δικαίωμα οριστικοποίησης αγορών."});
+    if(!(req.user?.staffAccess===true&&req.staffGrant?.capability==='invoices.approve')&&!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Δεν έχεις δικαίωμα οριστικοποίησης αγορών."});
 
     const companyId=req.user.companyId;
     const actor=req.user.fullName||"Χρήστης";
     const result=await prisma.$transaction(async tx=>{
       const scopes=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${req.params.orderId} AND "companyId"=${companyId} LIMIT 1`;
       if(!scopes[0])throw Object.assign(new Error("Δεν βρέθηκε η παραγγελία."),{status:404});
+      if(req.user?.staffAccess===true)await requireStaffAction(tx,req,scopes[0].storeId,'invoices.approve');
       await lockInvoiceStore(tx,companyId,scopes[0].storeId);
       const rows=await tx.$queryRaw`
         SELECT o.* FROM "PurchaseOrder" o

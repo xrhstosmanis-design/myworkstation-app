@@ -1,3 +1,4 @@
+import {ensureStoreChatInteractions} from '../src/chat-interactions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes,createHash} from 'node:crypto';
@@ -75,6 +76,7 @@ async function fixture(){const {PrismaClient}=await import('@prisma/client'),adm
   await provisionFtextRecoverySchema(db);
   await provisionAiWalletRecovery(db);
   await ensureBackofficeStaffSchema(db);
+  await ensureStoreChatInteractions(db);
 
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","updatedAt") VALUES ('company','SYNTHETIC',NOW()),('foreign-company','CONTROL',NOW())`);
   await db.$executeRawUnsafe(`INSERT INTO "Store"("id","name","companyId","updatedAt") VALUES ('store','SYNTHETIC','company',NOW()),('sibling','CONTROL','company',NOW()),('foreign','CONTROL','foreign-company',NOW())`);

@@ -54,7 +54,11 @@ async function nativeFacts(){
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","updatedAt") VALUES ('fixture-company','SYNTHETIC',NOW())`);
   await db.$executeRawUnsafe(`INSERT INTO "Store"("id","name","companyId","updatedAt") VALUES ('target','SYNTHETIC','fixture-company',NOW())`);
   const{reviewedFreshStoreManifest}=await import('../src/services/store-lifecycle-manifest.js'),{createLifecycleInspectionCore}=await import('../src/services/store-lifecycle-executor.js');
-  const manifest=reviewedFreshStoreManifest(),manifestBefore=JSON.stringify(manifest),actor={id:'isolated-lifecycle-admin',isSuperAdmin:true},scope={companyId:'fixture-company',storeId:'target'};
+  // Invert only this reviewed Chat delta, preserving JSON key/array order.
+  // This replays the observed old catalogue, not an old installer binary.
+  const manifest=reviewedFreshStoreManifest();manifest.knownTables=manifest.knownTables.filter(n=>!names.includes(n));for(const n of names)delete manifest.knownColumns[n];manifest.knownColumns.StoreChatMessage=manifest.knownColumns.StoreChatMessage.filter(c=>c[0]!=='replyToId');manifest.reviewedColumns=manifest.reviewedColumns.filter(c=>!names.some(n=>c.startsWith(n+'.'))&&c!=='StoreChatMessage.replyToId');manifest.tables=manifest.tables.filter(n=>!names.includes(n.name));const message=manifest.tables.find(n=>n.name==='StoreChatMessage');message.references=message.references.filter(r=>!(r.parent==='StoreChatMessage'&&r.columns.some(c=>c[0]==='replyToId')));
+  assert.equal(digest(manifest),'da2844a0cd3d4fe6ae3e78a57ffbcf882277be4aa21eed5a6eb2e7a44df1ecda');
+  const manifestBefore=JSON.stringify(manifest),actor={id:'isolated-lifecycle-admin',isSuperAdmin:true},scope={companyId:'fixture-company',storeId:'target'};
   assert.ok(names.every(name=>!manifest.knownTables.includes(name)));assert.ok(!manifest.knownColumns.StoreChatMessage.some(c=>c[0]==='replyToId'));
   const old=createLifecycleInspectionCore(manifest,{sourceRevision:'a'.repeat(40)});
   const beforeData=await allRows(db),accepted=await old.inspect(db,actor,scope);assert.equal(accepted.guardsInstalled,false);assert.equal(accepted.executionAvailable,false);assert.equal(accepted.recoveryVerified,false);assert.deepEqual(await allRows(db),beforeData);
@@ -93,6 +97,54 @@ async function nativeFacts(){
   const facts={format:factsMarker,...after.environment,relations:addedRelations,columns:addedColumns,constraints:after.constraints,indexes:addedIndexes,triggers:after.triggers,foreignKeyCount:0};
   console.log(factsMarker+' '+JSON.stringify(facts));
   console.log(holdMarker+' '+JSON.stringify({format:holdMarker,status:hold.status,reason:hold.message,oldBaselineAccepted:true,oldManifestSha256:digest(manifest),beforeDataSha256:digest(afterBootstrapData),afterDataSha256:digest(afterHoldData),absent,capabilityConsulted:false,installationPerformed:false}));
+  // Actual aligned CAPTURE3 packet/install/readback. No execution capability or
+  // recovery adapter is supplied to this installation-only entry point.
+  const{createMonthlyInventoryCaptureInstallation}=await import('../src/services/monthly-inventory-snapshot-installation.js');
+  const{monthlyInventoryCaptureLifecycleManifestProposal,validateMonthlyInventoryCaptureSchema}=await import('../src/services/monthly-inventory-capture-schema.js');
+  const{validateMonthlyInventorySnapshotSchema}=await import('../src/services/monthly-inventory-snapshot-schema.js');
+  const aligned=monthlyInventoryCaptureLifecycleManifestProposal(),service=createMonthlyInventoryCaptureInstallation(db,{sourceRevision:'a'.repeat(40),enabled:true});
+  const inspection=await service.inspect(actor,scope);assert.equal(inspection.eligible,true);assert.equal(inspection.packet.profile,'BASE');assert.equal(inspection.packet.oldPlanHash,digest(reviewedFreshStoreManifest()));assert.equal(inspection.packet.targetPlanHash,digest(aligned));assert.deepEqual(await allRows(db),afterHoldData);
+  const request={...scope,packet:inspection.packet};
+  const late=createMonthlyInventoryCaptureInstallation({$transaction:(fn,options)=>db.$transaction(async tx=>{const result=await fn(tx);assert.equal(result.installed,true);throw new Error('SYNTHETIC_CHAT_INSTALL_ROLLBACK')},options)},{sourceRevision:'a'.repeat(40),enabled:true});
+  await assert.rejects(late.install(actor,request),/SYNTHETIC_CHAT_INSTALL_ROLLBACK/);assert.deepEqual(await allRows(db),afterHoldData,'all DDL and guard changes roll back atomically');
+  const installed=await service.install(actor,request);assert.equal(installed.installationProfile,'CAPTURE3');assert.equal(installed.productionActivated,false);assert.equal(installed.captureEnabled,false);assert.deepEqual(installed.createdTables,['MonthlyInventorySnapshot','MonthlyInventoryCaptureGrant','MonthlyInventoryCaptureJob']);
+  await validateMonthlyInventorySnapshotSchema(db);assert.deepEqual(await validateMonthlyInventoryCaptureSchema(db),{available:true,lifecycleGuardsInstalled:true});
+  const readback=await service.inspect(actor,scope);assert.equal(readback.eligible,true);assert.equal(readback.packet.profile,'TARGET');assert.equal(readback.packet.enrollment.planHash,digest(aligned));assert.equal(readback.packet.enrollment.generation,'0');assert.equal((await createLifecycleInspectionCore(aligned,{sourceRevision:'a'.repeat(40)}).inspect(db,actor,scope)).guardsInstalled,true);
+  const guardRows=await db.$queryRawUnsafe(`SELECT c.relname AS name,t.tgname AS trigger,t.tgenabled::text AS enabled FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=current_schema() AND left(t.tgname,14)='mws_lifecycle_' ORDER BY c.relname,t.tgname`);
+  for(const node of aligned.tables){const prefix='mws_lifecycle_'+digest(node.name).slice(0,16);assert.deepEqual(guardRows.filter(r=>r.name===node.name),[{name:node.name,trigger:prefix,enabled:'A'},{name:node.name,trigger:prefix+'_truncate',enabled:'A'}])}
+  const installedRows=await allRows(db);for(const [name,rows]of Object.entries(afterHoldData))assert.deepEqual(installedRows[name],rows,'installation preserves '+name);
+  // Global obsolete/unknown enrollment is a HOLD, never a hash migration/CAS.
+  await db.$executeRawUnsafe(`INSERT INTO "Store"("id","name","companyId","updatedAt") VALUES ('sibling','CONTROL','fixture-company',NOW())`);
+  for(const hash of [digest(manifest),'f'.repeat(64)]){
+   await db.$executeRawUnsafe(`INSERT INTO "StoreLifecycleFence"("storeId","companyId","planHash") VALUES ('sibling','fixture-company',$1)`,hash);
+   const beforeFenceHold=await allRows(db),held=await service.inspect(actor,scope);assert.equal(held.eligible,false);assert.ok(held.reasons.length);await assert.rejects(service.install(actor,{...scope,packet:held.packet}));assert.deepEqual(await allRows(db),beforeFenceHold,'global old/unknown Fence HOLD does not rewrite hashes or business rows');
+   await db.$executeRawUnsafe(`DELETE FROM "StoreLifecycleFence" WHERE "storeId"='sibling' AND "planHash"=$1`,hash);
+  }
+  const{createLifecycleExecutionCore}=await import('../src/services/store-lifecycle-executor.js');
+  let recoveries=0;const execution=createLifecycleExecutionCore(aligned,{sourceRevision:'a'.repeat(40),persistAndVerifyRecovery:async()=>{recoveries++;assert.fail('Admission-only checks cannot invoke recovery')}});
+  const messageSql=`INSERT INTO "StoreChatMessage"("id","companyId","storeId","senderId","category","body","updatedAt","replyToId") VALUES ($1,'fixture-company',$2,'external-actor','CHAT','SYNTHETIC',NOW(),$3)`;
+  await db.$executeRawUnsafe(messageSql,'target-message','target',null);await db.$executeRawUnsafe(messageSql,'target-self','target','target-self');await db.$executeRawUnsafe(messageSql,'sibling-message','sibling','unrelated-absent-history');
+  await db.$executeRawUnsafe(`INSERT INTO "StoreChatDelivery"("messageId","userId","companyId","storeId") VALUES ('target-message','external-actor','fixture-company','target'),('unrelated-absent-history','historical-actor','fixture-company','sibling')`);
+  await db.$executeRawUnsafe(`INSERT INTO "StoreChatReaction"("messageId","userId","companyId","storeId","reaction") VALUES ('target-self','external-actor','fixture-company','target','👍')`);
+  const chatBaseline=await allRows(db);
+  await assert.rejects(db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT set_config('mws.lifecycle_generations','{"target":"1"}',true)`);await tx.$executeRawUnsafe(messageSql,'stale-generation','target',null)}),/STORE_LIFECYCLE_STALE_GENERATION/);assert.deepEqual(await allRows(db),chatBaseline);
+  // A historical reference is permitted to be absent, but an existing incoming
+  // cross-store edge must HOLD before any deletion or recovery.
+  await db.$executeRawUnsafe(`UPDATE "StoreChatMessage" SET "replyToId"='target-message' WHERE "id"='sibling-message'`);
+  const incoming=await allRows(db);await assert.rejects(execution.prepare(db,actor,scope,'RESET'),/Cross-store dependency/);assert.equal(recoveries,0);assert.deepEqual(await allRows(db),incoming);
+  await db.$executeRawUnsafe(`UPDATE "StoreChatMessage" SET "replyToId"='unrelated-absent-history' WHERE "id"='sibling-message'`);assert.deepEqual(await allRows(db),chatBaseline,'restore only the identified synthetic reply reference');
+  // A live lock on the referenced target Fence is observed even though the
+  // attempted new Delivery belongs to the unmaintained sibling store.
+  let releaseLock,markLocked;const lockGate=new Promise(resolve=>{releaseLock=resolve}),locked=new Promise(resolve=>{markLocked=resolve});
+  const lockTask=db.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT "storeId" FROM "StoreLifecycleFence" WHERE "storeId"='target' FOR UPDATE`);markLocked();await lockGate},{timeout:10000});
+  try{await Promise.race([locked,lockTask.then(()=>assert.fail('Lock transaction ended before its barrier'))]);await assert.rejects(db.$executeRawUnsafe(`INSERT INTO "StoreChatDelivery"("messageId","userId","companyId","storeId") VALUES ('target-message','lock-race','fixture-company','sibling')`),/STORE_LIFECYCLE_MAINTENANCE/)}finally{releaseLock();await lockTask}
+  assert.deepEqual(await allRows(db),chatBaseline,'reference-store locking preserves every row');
+  const prepared=await execution.prepare(db,actor,scope,'RESET');
+  await assert.rejects(db.$executeRawUnsafe(`INSERT INTO "StoreChatDelivery"("messageId","userId","companyId","storeId") VALUES ('target-message','maintenance-race','fixture-company','sibling')`),/STORE_LIFECYCLE_MAINTENANCE/);
+  await assert.rejects(db.$executeRawUnsafe(messageSql,'maintenance-self','sibling','target-message'),/STORE_LIFECYCLE_MAINTENANCE/);
+  await execution.abort(db,actor,{...scope,operationId:prepared.operationId});assert.equal(recoveries,0);
+  const afterAdmission=await allRows(db);for(const table of aligned.knownTables)assert.deepEqual(afterAdmission[table],chatBaseline[table],table);
+
  }finally{await db.$disconnect()}
 }
 

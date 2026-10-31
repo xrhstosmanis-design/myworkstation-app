@@ -1,3 +1,4 @@
+import {ensureStoreChatInteractions} from '../src/chat-interactions.mjs';
 import {provisionMonthlyInventoryCaptureSchema,validateMonthlyInventoryCaptureSchema,monthlyInventoryCaptureLifecycleManifestProposal,assertMonthlyInventoryCaptureLifecycleCatalogue,monthlyInventoryCaptureRecoveryColumns} from '../src/services/monthly-inventory-capture-schema.js';
 import {createMonthlyInventoryCaptureJobs} from '../src/services/monthly-inventory-capture-jobs.js';
 import {monthlyInventorySnapshotPeriod} from '../src/services/monthly-inventory-snapshot-period.js';
@@ -57,6 +58,7 @@ test('native D5 grant revision'+grantRevision+' and old job revision1 survive fu
   await provisionFtextRecoverySchema(db);
   await provisionAiWalletRecovery(db);
   await ensureBackofficeStaffSchema(db);
+  await ensureStoreChatInteractions(db);
   await provisionMonthlyInventorySnapshotSchema(db);await provisionMonthlyInventoryCaptureSchema(db,{manifest});assert.deepEqual(await validateMonthlyInventoryCaptureSchema(db),{available:true,lifecycleGuardsInstalled:false});
 
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","updatedAt") VALUES ('fixture-company','SYNTHETIC',NOW()),('foreign-company','CONTROL',NOW())`);
@@ -83,6 +85,13 @@ test('native D5 grant revision'+grantRevision+' and old job revision1 survive fu
   await db.$executeRawUnsafe(`INSERT INTO "Product"("id","companyId","name") VALUES ('detached-product','fixture-company','SYNTHETIC SHARED PRODUCT'),('foreign-product','foreign-company','CONTROL')`);
   await db.$executeRawUnsafe(`INSERT INTO "StoreProduct"("id","storeId","productId","currentStock") VALUES ('target-stock','target','detached-product',-12.3456),('sibling-stock','sibling','detached-product',7.0001),('foreign-stock','foreign','foreign-product',3.0001)`);
   await db.$executeRawUnsafe(`INSERT INTO "StockMovement"("id","storeId","productId","movementType","quantity") VALUES ('target-movement','target','detached-product','SYNTHETIC',-12.3456),('sibling-movement','sibling','detached-product','SYNTHETIC',7.0001),('foreign-movement','foreign','foreign-product','SYNTHETIC',3.0001)`);
+  // Exact target/sibling/foreign Chat controls share external actor users;
+  // historical missing/self references do not infer ownership of another store.
+  for(const [store,company,user]of [['target','fixture-company','grant-owner'],['sibling','fixture-company','grant-owner'],['foreign','foreign-company','foreign-owner']]){
+   await db.$executeRawUnsafe(`INSERT INTO "StoreChatMessage"("id","companyId","storeId","senderId","body","updatedAt","replyToId") VALUES ($1,$2,$3,$4,'SYNTHETIC CHAT',NOW(),$1),($5,$2,$3,$4,'DETACHED HISTORY',NOW(),'unrelated-absent-history')`,store+'-message',company,store,user,store+'-missing');
+   await db.$executeRawUnsafe(`INSERT INTO "StoreChatDelivery"("messageId","userId","companyId","storeId") VALUES ($1,$2,$3,$4)`,store+'-message',store+'-delivery-actor',company,store);
+   await db.$executeRawUnsafe(`INSERT INTO "StoreChatReaction"("messageId","userId","companyId","storeId","reaction") VALUES ($1,$2,$3,$4,'❤️')`,store+'-message',user,company,store);
+  }
   await createLifecycleInstallationCore(manifest,{sourceRevision:revision}).install(db,actor,scope);await validateMonthlyInventorySnapshotSchema(db);assert.deepEqual(await validateMonthlyInventoryCaptureSchema(db),{available:true,lifecycleGuardsInstalled:true});
   // Obtain genuine runtime authority before revocation. The historical row is
   // subsequently archived exactly as a LEASED revision1 job, never relabelled.
@@ -98,13 +107,25 @@ test('native D5 grant revision'+grantRevision+' and old job revision1 survive fu
   await assert.rejects(db.$transaction(async tx=>{await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');return authorizeMonthlyCaptureSourceInTransaction(tx,claimed.execution,{sourceRevision:revision,db,attempt:claimed.attempt})},{isolationLevel:'RepeatableRead'}),{code:'MONTHLY_CAPTURE_DELEGATION_STALE'});
 
   await assert.rejects(core.prepare(db,actor,scope,'DELETE'),/Monthly inventory snapshot history blocks store deletion/);
+  // Each existing incoming historical edge independently blocks RESET. The
+  // only fixture repair restores the exact identified synthetic reference.
+  for(const [table,column,where,original]of [['StoreChatMessage','replyToId',`"id"='sibling-message'`,'sibling-message'],['StoreChatDelivery','messageId',`"storeId"='sibling'`,'sibling-message'],['StoreChatReaction','messageId',`"storeId"='foreign'`,'foreign-message']]){
+   await db.$executeRawUnsafe(`UPDATE ${q(table)} SET ${q(column)}='target-message' WHERE ${where}`);
+   const held=await allRows(),controls=await db.$queryRawUnsafe(`SELECT row_to_json(f)::text AS row FROM "StoreLifecycleFence" f ORDER BY "storeId"`);
+   await assert.rejects(core.prepare(db,actor,scope,'RESET'),/Cross-store dependency/);assert.equal(proof,undefined);assert.deepEqual(await allRows(),held,'HOLD deletes no Chat/history/control rows');assert.deepEqual(await db.$queryRawUnsafe(`SELECT row_to_json(f)::text AS row FROM "StoreLifecycleFence" f ORDER BY "storeId"`),controls);assert.equal((await db.$queryRawUnsafe(`SELECT count(*)::integer AS n FROM "StoreLifecycleExecution"`))[0].n,0);
+   await db.$executeRawUnsafe(`UPDATE ${q(table)} SET ${q(column)}=$1 WHERE ${where}`,original);assert.deepEqual(await allRows(),before,'identified synthetic reference restored byte-for-byte');
+  }
+  const resetBaseline=await allRows();assert.deepEqual(resetBaseline,before,'separate target-only RESET starts from a fresh restored baseline');
   const prep=await core.prepare(db,actor,scope,'RESET');assert.deepEqual(prep.counts.find(c=>c.table==='MonthlyInventorySnapshot'),{table:'MonthlyInventorySnapshot',count:1,action:'KEEP'});
+  for(const sql of [`INSERT INTO "StoreChatDelivery"("messageId","userId","companyId","storeId") VALUES ('target-message','race-delivery','fixture-company','sibling')`,`INSERT INTO "StoreChatReaction"("messageId","userId","companyId","storeId","reaction") VALUES ('target-message','race-reaction','foreign-company','foreign','✅')`,`UPDATE "StoreChatMessage" SET "replyToId"='target-message' WHERE "id"='sibling-message'`])await assert.rejects(db.$executeRawUnsafe(sql),/STORE_LIFECYCLE_MAINTENANCE/);
+  assert.deepEqual(await allRows(),before,'reference maintenance races cannot alter the archive baseline');
   const request=(await db.$queryRawUnsafe(`SELECT "result" FROM "StoreLifecycleExecution" WHERE "id"=$1`,prep.operationId))[0].result.recoveryRequest;
   const archive=path.join(directory,'fixture.dump');await writeFile(path.join(directory,'job.json'),JSON.stringify(request),{mode:0o600});await writeFile(path.join(directory,'manifest.json'),JSON.stringify(manifest),{mode:0o600});
   const dump=spawnSync('pg_dump',['--format=custom','--no-owner','--no-privileges','--file='+archive,url.href],{timeout:60000,encoding:'utf8',maxBuffer:1048576});assert.equal(dump.status,0,'isolated full-schema pg_dump failed');await chmod(archive,0o600);
   // Test-only observation of the restored SQL facts. This changes no restore
   // operation or state; actual SOURCE authority is tested separately above.
   // Host and PG18 copies run the unchanged full/selective restore verifier.
+  await writeFile(path.join(directory,'observed-controls.json'),JSON.stringify(Object.fromEntries(['StoreChatMessage','StoreChatDelivery','StoreChatReaction','User','MonthlyInventorySnapshot','MonthlyInventoryCaptureGrant','MonthlyInventoryCaptureJob'].map(table=>[table,before[table].map(r=>r.row)]))),{mode:0o600});
   const script=`import json,sys
 sys.path.insert(0,sys.argv[1])
 import verify_restore as verifier
@@ -117,15 +138,21 @@ class ObservedPostgres(original):
     expected=int(sys.argv[6])
     sql=\"SELECT count(*) FROM \\"MonthlyInventoryCaptureJob\\" j JOIN \\"MonthlyInventoryCaptureGrant\\" g ON g.\\"id\\"=j.\\"grantId\\" WHERE j.\\"id\\"='target-old-job' AND j.\\"grantRevision\\"=1 AND j.\\"activationId\\"='original-activation' AND j.\\"status\\"='LEASED' AND g.\\"revision\\"=\"+str(expected)+\" AND g.\\"active\\"=\"+('true' if expected==3 else 'false')+\" AND g.\\"activationId\\"=\"+(\"'new-activation'\" if expected==3 else \"'original-activation'\")+\";\"
     if self.query(sql).decode().strip()!='1':raise ValueError('Restored old-job facts differ')
+    controls=json.load(open(sys.argv[2].rsplit('/',1)[0]+'/observed-controls.json'))
+    for table,rows in controls.items():
+     quoted='\\"'+table.replace('\\"','\\"\\"')+'\\"'
+     restored=self.query("SET TIME ZONE 'UTC'; SELECT row_to_json(t)::text FROM "+quoted+" t ORDER BY row_to_json(t)::text;").decode().splitlines()
+     if restored!=rows:raise ValueError('Restored exact Chat/history/user controls differ: '+table)
     observed.append(True)
   finally:super().__exit__(*error)
 verifier.PrivatePostgres=ObservedPostgres
 proof=verifier.verify_archive(sys.argv[2],json.load(open(sys.argv[3])),json.load(open(sys.argv[4])),sys.argv[5])
 if observed!=[True]:raise ValueError('Restored facts observation absent')
 proof['restoredOldJobFactsVerified']=True
+proof['restoredExactChatControlsVerified']=True
 print(json.dumps(proof))`;
 
-  const verify=result=>{assert.equal(result.status,0,'full schema private recovery failed: '+result.stderr);const p=JSON.parse(result.stdout);assert.equal(p.restoredSnapshotHash,prep.snapshotHash);assert.equal(p.selectiveRestoreVerified,true);assert.equal(p.restoredOldJobFactsVerified,true);assert.equal(p.controlsUnchanged,true);assert.equal(p.fullRestoreAudit.dataMatches,true);assert.equal(p.selectiveRestoreAudit.dataMatches,true);return p;};
+  const verify=result=>{assert.equal(result.status,0,'full schema private recovery failed: '+result.stderr);const p=JSON.parse(result.stdout);assert.equal(p.restoredSnapshotHash,prep.snapshotHash);assert.equal(p.selectiveRestoreVerified,true);assert.equal(p.restoredOldJobFactsVerified,true);assert.equal(p.restoredExactChatControlsVerified,true);assert.equal(p.controlsUnchanged,true);assert.equal(p.fullRestoreAudit.dataMatches,true);assert.equal(p.selectiveRestoreAudit.dataMatches,true);return p;};
   proof=verify(spawnSync('python3',['-c',script,path.join(root,'ops/backup/lifecycle'),archive,path.join(directory,'job.json'),path.join(directory,'manifest.json'),path.join(root,'server/scripts/store-lifecycle-verify-copy.py'),String(grantRevision)],{timeout:120000,encoding:'utf8',maxBuffer:1048576,env:{PATH:process.env.PATH,LANG:'C.UTF-8'}}));
   if(process.env.CI)assert.ok(process.env.MWS_LIFECYCLE_RECOVERY_IMAGE,'PG18 recovery image required');
   if(process.env.MWS_LIFECYCLE_RECOVERY_IMAGE)proof=verify(spawnSync('docker',['run','--rm','--network=none','--memory=256m','--pids-limit=80','--mount',`type=bind,source=${directory},target=/fixture,readonly`,'--entrypoint','python3',process.env.MWS_LIFECYCLE_RECOVERY_IMAGE,'-c',script,'/backup/lifecycle','/fixture/fixture.dump','/fixture/job.json','/fixture/manifest.json','/backup/lifecycle/store-lifecycle-verify-copy.py',String(grantRevision)],{timeout:120000,encoding:'utf8',maxBuffer:1048576}));
@@ -133,9 +160,18 @@ print(json.dumps(proof))`;
   const result=await core.execute(db,actor,{...scope,...prep});assert.equal(result.deleted.some(r=>r.table==='MonthlyInventorySnapshot'),false);assert.equal(result.kept.find(r=>r.name==='MonthlyInventorySnapshot').rowCount,1);assert.equal(result.generation,'1');
   assert.equal((await core.execute(db,actor,{...scope,...prep})).idempotentReplay,true);
   await core.reopen(db,actor,{...scope,operationId:prep.operationId});
-  const expected=structuredClone(before);for(const table of ['StoreProduct','StockMovement','MonthlyInventoryCaptureGrant','MonthlyInventoryCaptureJob'])expected[table]=expected[table].filter(r=>JSON.parse(r.row).storeId!=='target');
+  const expected=structuredClone(before);for(const table of ['StoreProduct','StockMovement','MonthlyInventoryCaptureGrant','MonthlyInventoryCaptureJob','StoreChatMessage','StoreChatDelivery','StoreChatReaction'])expected[table]=expected[table].filter(r=>JSON.parse(r.row).storeId!=='target');
   assert.deepEqual(await allRows(),expected,'reset removes target business stock but preserves exact detached history, shared Product and sibling/foreign controls');
   await validateMonthlyInventorySnapshotSchema(db);
+  // Even a genuinely current generation cannot reattach retired message
+  // identities. Missing unrelated historical identities remain allowed.
+  for(const sql of [`INSERT INTO "StoreChatDelivery"("messageId","userId","companyId","storeId") VALUES ('target-message','replay-delivery','fixture-company','target')`,`INSERT INTO "StoreChatReaction"("messageId","userId","companyId","storeId","reaction") VALUES ('target-message','replay-reaction','fixture-company','target','👍')`,`INSERT INTO "StoreChatMessage"("id","companyId","storeId","senderId","body","updatedAt","replyToId") VALUES ('replay-reply','fixture-company','target','grant-owner','SYNTHETIC',NOW(),'target-message')`]){
+   await assert.rejects(db.$executeRawUnsafe(sql),/STORE_LIFECYCLE_RETIRED_REFERENCE/);
+   await assert.rejects(db.$transaction(async tx=>{await assertLifecycleMutation(tx,scope,'1');await tx.$executeRawUnsafe(sql)}),/STORE_LIFECYCLE_RETIRED_REFERENCE/);
+  }
+  assert.deepEqual(await allRows(),expected,'retired references preserve all exact controls and shared users');
+  await db.$transaction(async tx=>{await assertLifecycleMutation(tx,scope,'1');await tx.$executeRawUnsafe(`INSERT INTO "StoreChatDelivery"("messageId","userId","companyId","storeId") VALUES ('different-absent-history','historical-actor','fixture-company','target')`)});
+  await db.$transaction(async tx=>{await assertLifecycleMutation(tx,scope,'1');await tx.$executeRawUnsafe(`DELETE FROM "StoreChatDelivery" WHERE "messageId"='different-absent-history' AND "userId"='historical-actor'`)});assert.deepEqual(await allRows(),expected);
   await assert.rejects(db.$transaction(tx=>assertLifecycleMutation(tx,scope,'0')),e=>e.code==='STORE_LIFECYCLE_STALE_GENERATION');
   await assert.rejects(core.prepare(db,actor,scope,'DELETE'),/Monthly inventory snapshot history blocks store deletion/);
  }finally{for(const key of envKeys){if(previousEnv[key]===undefined)delete process.env[key];else process.env[key]=previousEnv[key]}await db?.$disconnect();try{if(created)await admin.$executeRawUnsafe(`DROP DATABASE ${q(name)}`);}finally{await admin.$disconnect();await rm(directory,{recursive:true,force:true});}}

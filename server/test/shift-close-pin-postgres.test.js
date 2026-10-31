@@ -9,6 +9,8 @@ import bcrypt from 'bcryptjs';
 import {z} from 'zod';
 import {declaredEftpos} from '../../shared/declared-eftpos.mjs';
 import {verifyShiftCloseCredential} from '../src/services/shift-close-card.js';
+import {requireStaffAction} from '../src/services/backoffice-staff-access.js';
+import {installStaffActionPolicy} from './helpers/backoffice-staff-actions-fixture.js';
 
 function isolated(value=process.env.DATABASE_URL){
  try{const url=new URL(value);if(process.env.NODE_ENV!=='test'||!['postgres:','postgresql:'].includes(url.protocol)||!['localhost','127.0.0.1','postgres'].includes(url.hostname)||!/^\/(?:test(?:[_-][a-z0-9_-]+)?|[a-z0-9_-]+[_-]test(?:[_-][a-z0-9_-]+)?)$/i.test(url.pathname)||url.hash)return false;
@@ -77,11 +79,11 @@ test('actual registered PIN close commits only failure guards, enforces scope an
   const normalizers=source.slice(source.indexOf('function money('),source.indexOf('async function findConsecutiveDuplicateSales'));
   const totals=source.slice(source.indexOf('async function authoritativeShiftTotals'),source.indexOf('async function existingAuditTables'));
   const closeRoute=source.slice(source.indexOf('router.post("/sessions/:sessionId/close"'),source.indexOf('\nexport default router;'));
-  const requireCashAccess=new Function('router','route','z','declaredEftpos','prisma','crypto','verifyShiftCloseCredential','checkClosePendingInvoices','recordClosePendingInvoices','syncOperatorWorkforceAttendance','findConsecutiveDuplicateSales','sendEmail',schemaSource+accessSource+terminalSource+normalizers+totals+closeRoute+'\nreturn requireCashAccess;')(
+  const requireCashAccess=new Function('router','route','z','declaredEftpos','prisma','crypto','verifyShiftCloseCredential','checkClosePendingInvoices','recordClosePendingInvoices','syncOperatorWorkforceAttendance','findConsecutiveDuplicateSales','sendEmail','requireStaffAction',schemaSource+accessSource+terminalSource+normalizers+totals+closeRoute+'\nreturn requireCashAccess;')(
    {post(route,handler){handlers.set(route,handler)}},handler=>handler,z,declaredEftpos,runtime,crypto,verifyShiftCloseCredential,
    async()=>({count:0,rows:[],confirmationRequired:false}),async()=>{}, // PIN-only isolation; invoice fixture exercises the real pending helpers.
-   async(tx,req,storeId,eventType,sessionId)=>{attendanceCalls++;await tx.$executeRaw`INSERT INTO "TestAttendance"("sessionId","eventType") VALUES(${sessionId},${eventType})`;return {status:'FIXTURE_CLOCKED_OUT'}},
-   async()=>{throw Error('unexpected duplicate scan')},async()=>{mailCalls++;throw Error('unexpected mail')}
+   async(tx,req,storeId,eventType,sessionId)=>{if(req.user.staffAccess===true)return {status:'SKIPPED',reason:'NOT_STORE_OPERATOR'};attendanceCalls++;await tx.$executeRaw`INSERT INTO "TestAttendance"("sessionId","eventType") VALUES(${sessionId},${eventType})`;return {status:'FIXTURE_CLOCKED_OUT'}},
+   async()=>{throw Error('unexpected duplicate scan')},async()=>{mailCalls++;throw Error('unexpected mail')},requireStaffAction
   );
   const body={closeCredentialMethod:'PIN',pin,cashSales:999,cardSales:999,eftposTotal:0,expenses:999,drawer:0,custody:0,coins:0,safe:0};
   const invoke=async(overrides={},actor=user)=>{
@@ -111,6 +113,17 @@ test('actual registered PIN close commits only failure guards, enforces scope an
    const audit=await db.$queryRaw`SELECT "details" FROM "StoreOperatorAudit" WHERE "eventType"='SHIFT_CLOSED_WITH_PERSONAL_PIN'`;assert.equal(audit.length,1);assert.deepEqual(audit[0].details,{sessionId:'shift',terminalPos:'POS-1',credentialMethod:'PIN'});
    assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "TestAttendance"`)[0].count),1);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreOperatorLoginGuard"`)[0].count),0);
    const after=await financialSnapshot(),auditCount=(await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreOperatorAudit"`)[0].count;assert.equal((await invoke({forceCloseWithShortage:true})).status,409);assert.equal(await financialSnapshot(),after);assert.equal((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreOperatorAudit"`)[0].count,auditCount);assert.equal(attendanceCalls,1);
+   assert.equal((await db.$queryRaw`SELECT "status" FROM "CashShiftSession" WHERE "id"='control'`)[0].status,'OPEN');assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "StoreTransaction" WHERE "id"='control-tx'`)[0].amount),11.11);
+  });
+  await t.test('separate delegated BackOffice close uses live right, explicit terminal and real count without changing legacy POS authentication',async()=>{
+   const staff=await installStaffActionPolicy(db,{companyId:'company',storeId:'store',capabilities:['sales.read']});
+   await db.$executeRaw`INSERT INTO "CashShiftSession" ("id","companyId","storeId","terminalPos","status","shiftLabel","openedBy") VALUES ('staff-shift','company','store','POS-1','OPEN','Delegated close','operator')`;
+   const close=async(terminal='POS-1',extra={})=>{const req={params:{sessionId:'staff-shift'},user:staff,staffGrant:{capability:'shifts.close'},method:'POST',originalUrl:'/api/cash/sessions/staff-shift/close',headers:{'x-mws-terminal-pos':terminal},get:()=>terminal,query:{},body:{cashSales:999,cardSales:999,expenses:999,eftposTotal:0,drawer:10,custody:0,coins:0,safe:0,...extra}},out={status:200},res={status(s){out.status=s;return this},json(value){out.body=value;return this}};try{await requireCashAccess(req,res,()=>handlers.get('/sessions/:sessionId/close')(req,res))}catch(error){out.status=error.name==='ZodError'?400:error.status||500;out.body={code:error.code,error:error.message}}return out};
+   const before=await financialSnapshot();assert.equal((await close()).status,403);assert.equal(await financialSnapshot(),before);
+   await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["sales.read","shifts.close"]'::jsonb`;
+   assert.equal((await close('POS-2')).status,403);assert.equal((await close('POS-1',{eftposTotal:null})).status,400);
+   const result=await close();assert.equal(result.status,200,JSON.stringify(result));assert.equal(result.body.closedBy,'delegated');assert.equal(Number(result.body.cashSales),0);assert.equal(Number(result.body.actualOperational),10);assert.equal(Number(result.body.variance),0);
+   const after=await financialSnapshot();assert.equal((await close()).status,409);assert.equal(await financialSnapshot(),after);assert.equal(attendanceCalls,1);assert.equal(mailCalls,0);
    assert.equal((await db.$queryRaw`SELECT "status" FROM "CashShiftSession" WHERE "id"='control'`)[0].status,'OPEN');assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "StoreTransaction" WHERE "id"='control-tx'`)[0].amount),11.11);
   });
  }finally{await db.$disconnect();if(created)await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}

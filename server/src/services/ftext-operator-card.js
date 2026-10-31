@@ -1,3 +1,4 @@
+import {decideFtextCashReview} from './ftext-cash-review.js';
 import {z} from 'zod';
 import {effectiveFtextCashReceipt} from './ftext-late-cash-receipt.js';
 import {ftextSettingsHash} from './ftext-installation.js';
@@ -42,6 +43,12 @@ export async function recordFtextOperatorDecision(tx,id,scope,actorId,input,{con
  const {outcome}=z.object({outcome:z.enum(['YES','NO','UNCERTAIN'])}).strict().parse(input);
  const current=await context(tx,scope,{requireOnline:false});
  const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} FOR UPDATE`)[0];
+ if(row?.plan?.payment?.method==='CASH'){
+  if(!current.device||row.claimedByDeviceId!==current.device.id||row.claimedTokenVersion!==current.device.tokenVersion)fail();
+  const saved=decideFtextCashReview(row,current.settings,scope,actorId,outcome,clock());
+  if(!saved)return row;
+  return (await tx.$queryRaw`UPDATE "FtextCashRequest" SET "checkoutJson"=${JSON.stringify(saved)}::jsonb,"updatedAt"=NOW() WHERE "id"=${row.id} RETURNING *`)[0];
+ }
  if(!row||!actorId||actorId!==row.checkoutJson?.actorId||!ftextOperatorCardMode(row)||current.settings.cardEnabled!==true||current.settings.cardPayment?.resultFormat!=='OPERATOR_CONFIRMATION'||row.settingsHash!==ftextSettingsHash(current.settings)||row.lifecycleGeneration!==current.settings.lifecycleGeneration||row.checkoutJson?.ftextVoid||!row.resultHash||!row.result||!['CONFIRMED','REQUIRES_CHECK','SALE_COMMITTED'].includes(row.status))fail();
  const previous=row.checkoutJson.ftextCardDecision;
  const complete=async candidate=>outcome==='NO'&&['VERIFIED_ERROR','OPERATOR_REVIEW'].includes(ftextOperatorReleaseMode(candidate))?releaseFtextRejectedAttempt(tx,id,scope,actorId,{operatorNo:true},{context}):candidate;

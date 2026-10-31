@@ -1,0 +1,233 @@
+{
+  "recordedAt": "2026-10-31T20:57:28.296Z",
+  "source": "Read-only production FtextCashRequest snapshot; 12 latest existing Rizareio requests. Exact query timestamp not captured. No new transaction.",
+  "storeId": "cmvgtyt6d000zh7gtbsp1en3p",
+  "terminalPos": "RIZAREIO-POS-01",
+  "rows": [
+    {
+      "id": "e99e2785-f6b3-4662-92f0-5c24d3bddb17",
+      "method": "CASH",
+      "created_to_dispatch": 8.08,
+      "dispatch_to_accept": 0.431,
+      "accept_to_commit": 5.006,
+      "total": 13.517
+    },
+    {
+      "id": "0420935f-e118-4aaf-91a4-c4919d4d6cc9",
+      "method": "CARD",
+      "created_to_dispatch": 7.211,
+      "dispatch_to_accept": 0.407,
+      "accept_to_commit": 20.559,
+      "total": 28.177
+    },
+    {
+      "id": "0c5fc2b8-6e00-486e-9bc1-55517973c57b",
+      "method": "CASH",
+      "created_to_dispatch": 0.238,
+      "dispatch_to_accept": 0.431,
+      "accept_to_commit": 4.53,
+      "total": 5.199
+    },
+    {
+      "id": "d8b4c7bd-511e-45de-aa9f-25e37a6178fe",
+      "method": "CASH",
+      "created_to_dispatch": 1.15,
+      "dispatch_to_accept": 0.427,
+      "accept_to_commit": 6.201,
+      "total": 7.778
+    },
+    {
+      "id": "8aeafa3e-34a1-40db-9238-1920a1ba5111",
+      "method": "CASH",
+      "created_to_dispatch": 0.188,
+      "dispatch_to_accept": 0.448,
+      "accept_to_commit": 4.655,
+      "total": 5.291
+    },
+    {
+      "id": "f5cc3387-7267-4237-a8f1-e9987e446907",
+      "method": "CASH",
+      "created_to_dispatch": 6.386,
+      "dispatch_to_accept": 21.585,
+      "accept_to_commit": 6.786,
+      "total": 34.757
+    },
+    {
+      "id": "48afaa29-e84d-4856-ba58-f652f46fdd4e",
+      "method": "CASH",
+      "created_to_dispatch": 0.472,
+      "dispatch_to_accept": 0.424,
+      "accept_to_commit": 5.472,
+      "total": 6.368
+    },
+    {
+      "id": "23a53e5a-590b-4f86-905a-7a954ed69159",
+      "method": "CASH",
+      "created_to_dispatch": 1.108,
+      "dispatch_to_accept": 0.409,
+      "accept_to_commit": 8.654,
+      "total": 10.171
+    },
+    {
+      "id": "a1aaa641-c641-4262-b1f9-7dcb690bbb00",
+      "method": "CARD",
+      "created_to_dispatch": 3.434,
+      "dispatch_to_accept": 0.408,
+      "accept_to_commit": 26.406,
+      "total": 30.248
+    },
+    {
+      "id": "2d1fd23e-787d-4394-a641-fb34977f8416",
+      "method": "CARD",
+      "created_to_dispatch": 4.396,
+      "dispatch_to_accept": 0.417,
+      "accept_to_commit": 23.401,
+      "total": 28.214
+    },
+    {
+      "id": "a285f8ec-d009-4030-9488-29d083c70c9e",
+      "method": "CASH",
+      "created_to_dispatch": 4.857,
+      "dispatch_to_accept": 0.429,
+      "accept_to_commit": 6.911,
+      "total": 12.197
+    },
+    {
+      "id": "9ba8330d-05ed-4949-b429-45a5a7403a57",
+      "method": "CASH",
+      "created_to_dispatch": 6.61,
+      "dispatch_to_accept": 22.424,
+      "accept_to_commit": 6.963,
+      "total": 35.997
+    }
+  ],
+  "originalRows":   [
+    {
+      "accepted_at": "2026-10-31T20:44:48.218Z",
+      "createdAt": "2026-10-31T20:44:39.707887Z",
+      "dispatchedAt": "2026-10-31T20:44:47.787331Z",
+      "id": "e99e2785-f6b3-4662-92f0-5c24d3bddb17",
+      "method": "CASH",
+      "saleId": "f10d31af-f11c-445f-8c40-5cfd9b9b04eb",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T20:44:53.224726Z"
+    },
+    {
+      "accepted_at": "2026-10-31T20:38:35.033Z",
+      "createdAt": "2026-10-31T20:38:27.415048Z",
+      "dispatchedAt": "2026-10-31T20:38:34.626971Z",
+      "id": "0420935f-e118-4aaf-91a4-c4919d4d6cc9",
+      "method": "CARD",
+      "saleId": "69b621d5-10af-48b6-999a-072c2b4093de",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T20:38:55.592722Z"
+    },
+    {
+      "accepted_at": "2026-10-31T20:34:08.552Z",
+      "createdAt": "2026-10-31T20:34:07.883131Z",
+      "dispatchedAt": "2026-10-31T20:34:08.121772Z",
+      "id": "0c5fc2b8-6e00-486e-9bc1-55517973c57b",
+      "method": "CASH",
+      "saleId": "030f38ea-e2da-4da0-a2a5-1e2c26e48a9f",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T20:34:13.082878Z"
+    },
+    {
+      "accepted_at": "2026-10-31T20:33:25.503Z",
+      "createdAt": "2026-10-31T20:33:23.92698Z",
+      "dispatchedAt": "2026-10-31T20:33:25.076473Z",
+      "id": "d8b4c7bd-511e-45de-aa9f-25e37a6178fe",
+      "method": "CASH",
+      "saleId": "a44c9314-9735-46c3-af13-0512509e24b6",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T20:33:31.704311Z"
+    },
+    {
+      "accepted_at": "2026-10-31T20:31:16.654Z",
+      "createdAt": "2026-10-31T20:31:16.018577Z",
+      "dispatchedAt": "2026-10-31T20:31:16.206659Z",
+      "id": "8aeafa3e-34a1-40db-9238-1920a1ba5111",
+      "method": "CASH",
+      "saleId": "64de7e6c-e4c6-4ca3-b783-76f3d2bdd95d",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T20:31:21.309735Z"
+    },
+    {
+      "accepted_at": "2026-10-31T20:28:48.379Z",
+      "createdAt": "2026-10-31T20:28:20.408297Z",
+      "dispatchedAt": "2026-10-31T20:28:26.794895Z",
+      "id": "f5cc3387-7267-4237-a8f1-e9987e446907",
+      "method": "CASH",
+      "saleId": "c1246b55-630a-41c0-ad77-09b8a78fb378",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T20:28:55.165376Z"
+    },
+    {
+      "accepted_at": "2026-10-31T20:20:39.636Z",
+      "createdAt": "2026-10-31T20:20:38.740963Z",
+      "dispatchedAt": "2026-10-31T20:20:39.212115Z",
+      "id": "48afaa29-e84d-4856-ba58-f652f46fdd4e",
+      "method": "CASH",
+      "saleId": "e6840392-b01f-4dad-800b-f51154c1e54b",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T20:20:45.108631Z"
+    },
+    {
+      "accepted_at": "2026-10-31T20:20:22.856Z",
+      "createdAt": "2026-10-31T20:20:21.339066Z",
+      "dispatchedAt": "2026-10-31T20:20:22.447312Z",
+      "id": "23a53e5a-590b-4f86-905a-7a954ed69159",
+      "method": "CASH",
+      "saleId": "6c9b4301-d3ad-4200-9197-df00837dcf46",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T20:20:31.510957Z"
+    },
+    {
+      "accepted_at": "2026-10-31T20:13:43.152Z",
+      "createdAt": "2026-10-31T20:13:39.31015Z",
+      "dispatchedAt": "2026-10-31T20:13:42.744045Z",
+      "id": "a1aaa641-c641-4262-b1f9-7dcb690bbb00",
+      "method": "CARD",
+      "saleId": "010578cf-a474-493b-ae0d-8f68e45049f6",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T20:14:09.558224Z"
+    },
+    {
+      "accepted_at": "2026-10-31T20:02:08.117Z",
+      "createdAt": "2026-10-31T20:02:03.304924Z",
+      "dispatchedAt": "2026-10-31T20:02:07.700391Z",
+      "id": "2d1fd23e-787d-4394-a641-fb34977f8416",
+      "method": "CARD",
+      "saleId": "f781a216-44c1-40c3-8d86-5d59790501f7",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T20:02:31.518135Z"
+    },
+    {
+      "accepted_at": "2026-10-31T19:59:14.195Z",
+      "createdAt": "2026-10-31T19:59:08.909265Z",
+      "dispatchedAt": "2026-10-31T19:59:13.766627Z",
+      "id": "a285f8ec-d009-4030-9488-29d083c70c9e",
+      "method": "CASH",
+      "saleId": "32698d5f-a322-44db-bc49-4553e71fa007",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T19:59:21.106753Z"
+    },
+    {
+      "accepted_at": "2026-10-31T19:57:44.140Z",
+      "createdAt": "2026-10-31T19:57:15.106368Z",
+      "dispatchedAt": "2026-10-31T19:57:21.716873Z",
+      "id": "9ba8330d-05ed-4949-b429-45a5a7403a57",
+      "method": "CASH",
+      "saleId": "47857372-f7af-44e7-af9a-4242ee8cf5a9",
+      "status": "SALE_COMMITTED",
+      "updatedAt": "2026-10-31T19:57:51.103197Z"
+    }
+  ],
+  "limits": [
+    "Server creation to final stored update, not UI click-to-close.",
+    "Acceptance precedes possible fiscal publication; its delay does not alone prove a cause.",
+    "Post-acceptance interval combines connector, driver, EFTPOS/operator where applicable, network and commit.",
+    "Mixed preceding production deployments; no attribution to the new review feature.",
+    "No before/control financial or stock deltas, new physical acceptance, or speed-improvement claim."
+  ]
+}

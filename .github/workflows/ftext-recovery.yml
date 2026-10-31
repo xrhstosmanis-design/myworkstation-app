@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'server/src/services/ftext-cash-schema.js'
+      - 'server/src/services/ftext-handoff.js'
+      - 'server/src/services/ftext-device-work.js'
       - 'server/scripts/ensure-ftext-recovery-schema.js'
       - 'server/test/ftext*'
       - 'server/test/fixtures/ftext*'
@@ -50,4 +52,4 @@ jobs:
           echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
       - name: Verify actual schema, archive/COPY, pending and stale controls
         working-directory: server
-        run: node --test test/ftext-recovery-schema.test.js test/ftext-full-recovery-postgres.test.js test/ftext-cash.test.js test/ftext-cash-postgres.test.js test/ftext-void.test.js test/ftext-void-postgres.test.js test/ftext-error-evidence.test.js test/ftext-error-evidence-postgres.test.js test/store-lifecycle-manifest.test.js
+        run: node --test test/ftext-recovery-schema.test.js test/ftext-full-recovery-postgres.test.js test/ftext-cash.test.js test/ftext-cash-postgres.test.js test/ftext-cash-review.test.js test/ftext-unpublished-stop.test.js test/ftext-unpublished-stop-http.test.js test/ftext-unpublished-context.test.js test/ftext-unpublished-stop-postgres.test.js test/ftext-void.test.js test/ftext-void-postgres.test.js test/ftext-error-evidence.test.js test/ftext-error-evidence-postgres.test.js test/store-lifecycle-manifest.test.js
