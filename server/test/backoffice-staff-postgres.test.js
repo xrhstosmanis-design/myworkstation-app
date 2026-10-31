@@ -13,10 +13,12 @@ import {createStaffAccount,updateStaffAccount,verifyStaffLogin} from '../src/ser
 import {createBackofficeStaffRouter} from '../src/routes/backoffice-staff.js';
 import {issueSession} from '../src/routes/auth.js';
 import {assertCustomerDemoRuntimeClosed} from '../src/customer-demo-runtime.js';
+import {finalizeInventoryStocktake} from '../src/lib/inventory-stocktake-finalize.js';
 import {lockDraftInventoryStocktake} from '../src/lib/inventory-stocktake-draft.js';
 import {inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed} from '../src/lib/inventory-stocktake-scope.js';
 import {reviewedFreshStoreManifest} from '../src/services/store-lifecycle-manifest.js';
 import {lifecyclePreview} from '../src/services/store-lifecycle-preview.js';
+import {lifecycleStateHandler} from '../src/routes/store-lifecycle-state.js';
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&u.pathname==='/myworkstation_test'}catch{return false}};
 test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revocation and immutable audit',{skip:!isolated(),timeout:90000},async t=>{
   const schema='staff_'+crypto.randomBytes(8).toString('hex'),admin=new PrismaClient(),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
@@ -42,7 +44,7 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     ])await db.$executeRawUnsafe(sql);
     await db.$executeRaw`INSERT INTO "Company" ("id","name") VALUES ('a','A'),('b','B')`;
     await db.$executeRaw`INSERT INTO "Store" ("id","companyId","name") VALUES ('a1','a','A1'),('a2','a','A2'),('b1','b','B1')`;
-    await db.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey") SELECT 'a-'||key,'a',key FROM unnest(ARRAY['CORE','INVENTORY','CASH_CONTROL','STORE_CHAT','AI_READER']) AS key`;
+    await db.$executeRaw`INSERT INTO "CompanyModule" ("id","companyId","moduleKey") SELECT 'a-'||key,'a',key FROM unnest(ARRAY['CORE','INVENTORY','CASH_CONTROL','STORE_CHAT','AI_READER','STORE_MODE','DOCUMENTS']) AS key`;
     await db.$executeRaw`INSERT INTO "User" ("id","companyId","email","fullName","role","passwordHash") VALUES ('owner-a','a','a@isolated.invalid','Owner A','OWNER','unused'),('owner-b','b','b@isolated.invalid','Owner B','OWNER','unused')`;
     await db.$executeRaw`INSERT INTO "UserSession" ("id","userId","expiresAt") VALUES ('session-owner-a','owner-a',NOW()+INTERVAL '1 hour'),('session-owner-b','owner-b',NOW()+INTERVAL '1 hour')`;
     await ensureBackofficeStaffSchema(db);await ensureBackofficeStaffSchema(db);
@@ -59,9 +61,14 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     const inventorySource=(await readFile(new URL('../src/routes/inventory-v2.js',import.meta.url),'utf8')).replace(/^import[\s\S]*?;\n/gm,'').replace(/^export .*;\n/gm,'');
     let beforeCount;
     const countGrant=async(...args)=>{if(beforeCount){const wait=beforeCount;beforeCount=null;await wait()}return requireStaffGrant(...args)};
-    const inventory=new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed','requireStaffGrant',inventorySource+'\nreturn router;')(express.Router,z,crypto,db,jwt,assertCustomerDemoRuntimeClosed,()=>assert.fail('finalization executed'),lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed,countGrant);
+    const inventory=new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed','requireStaffGrant',inventorySource+'\nreturn router;')(express.Router,z,crypto,db,jwt,assertCustomerDemoRuntimeClosed,finalizeInventoryStocktake,lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed,countGrant);
     const reportReads=[],repository={generation:async()=>'0',read:async(scope,period)=>{reportReads.push({...scope,period});return {...scope,period,text:'Isolated read-only report',rows:[]}}};
-    const app=express();app.use(express.json());app.use('/api/backoffice-staff',createBackofficeStaffRouter({db,authenticate:auth,issueSession,repository}));app.use('/api/inventory-v2',auth,inventory);app.get('/api/platform/companies',auth,(_req,res)=>res.json({leak:true}));app.use((e,_req,res,_next)=>res.status(e.status||500).json({code:e.code,error:e.message}));
+    const commerceSource=await readFile(new URL('../src/routes/commerce-v1.js',import.meta.url),'utf8');
+    const fileStart=commerceSource.indexOf('router.get("/documents/inbox/:inboxId/file",');
+    const fileEnd=commerceSource.indexOf('\nrouter.get("/ai-reader/status",',fileStart);
+    assert.ok(fileStart>=0&&fileEnd>fileStart);let fileHandlers;
+    new Function('router','requireCompanyModule','prisma','requireStaffGrant',commerceSource.slice(fileStart,fileEnd))({get:(_path,...handlers)=>{fileHandlers=handlers}},()=> (_req,_res,next)=>next(),db,requireStaffGrant);
+    const app=express();app.use(express.json());app.use('/api/backoffice-staff',createBackofficeStaffRouter({db,authenticate:auth,issueSession,repository}));app.use('/api/inventory-v2',auth,inventory);app.get('/api/lifecycle/stores/:storeId',auth,lifecycleStateHandler(db));app.get('/api/platform/companies',auth,(_req,res)=>res.json({leak:true}));app.get(['/api/transactions/stores/:storeId/overview','/api/cash/stores/:storeId/overview','/api/store-pos/stores/:storeId/sales/recent'],auth,(req,res)=>res.json({storeId:req.user.storeId,capability:req.staffGrant.capability}));app.post('/api/transactions/stores/:storeId',auth,(_req,res)=>res.json({leak:true}));app.get('/api/commerce/documents/inbox/:inboxId/file',auth,...fileHandlers);app.use((e,_req,res,_next)=>res.status(e.status||500).json({code:e.code,error:e.message}));
     server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s))});
     const request=async(path,{token,method='GET',body,storeId}={})=>{
       const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{method,signal:AbortSignal.timeout(15000),headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{}),...(storeId?{'x-backoffice-store-id':storeId}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json(),headers:r.headers};
@@ -170,6 +177,99 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       await updateStaffAccount(db,owner,second.id,{expectedRevision:1,active:true,grants:short.grants,password:optional});
       for(const credential of [{pin:short.pin},{password:optional}]){const r=await request('/api/backoffice-staff/login',{method:'POST',body:{username:'pin.other.fixture',...credential}});assert.equal(r.status,200);assert.equal(r.data.user.staffAccess,true)}
       assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale"`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement"`)[0].quantity),42);
+    });
+    await t.test('owner-defined cross-profile rights execute only explicit operations and revoke the existing session on edit',async()=>{
+      const username='custom.rights.fixture';
+      const grants=[{storeId:'a1',profile:'STOCKTAKER',capabilities:['inventory.read','cash.read']}];
+      const created=await createStaffAccount(db,owner,{...input,username,grants});
+      const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});
+      assert.equal(login.status,200);const customToken=login.data.token;
+      assert.equal(jwt.verify(customToken,process.env.JWT_SECRET).role,'EMPLOYEE');
+      assert.equal((await request('/api/backoffice-staff/cash/stores/a1?from=2026-10-29&to=2026-10-29',{token:customToken,storeId:'a1'})).status,200);
+      assert.equal((await request('/api/backoffice-staff/inventory/stores/a1/stocktakes',{token:customToken,storeId:'a1'})).status,200);
+      assert.equal((await request('/api/inventory-v2/stocktakes/sta/count',{token:customToken,storeId:'a1',method:'POST',body:count})).status,403);
+      assert.equal((await request('/api/backoffice-staff/cash/stores/a2?from=2026-10-29&to=2026-10-29',{token:customToken,storeId:'a2'})).status,403);
+      assert.equal((await request('/api/backoffice-staff/admin',{token:customToken})).status,403);
+      await db.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "companyId"='a' AND "moduleKey"='INVENTORY'`;
+      assert.equal((await request('/api/lifecycle/stores/a1',{token:customToken})).status,200);
+      await db.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "companyId"='a' AND "moduleKey"='INVENTORY'`;
+      await updateStaffAccount(db,owner,created.id,{expectedRevision:1,active:true,grants:[{storeId:'a1',profile:'MANAGER',capabilities:[]}]});
+      assert.equal((await request('/api/backoffice-staff/me',{token:customToken})).status,401);
+      const next=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});assert.equal(next.status,200);
+      assert.equal((await request('/api/backoffice-staff/cash/stores/a1?from=2026-10-29&to=2026-10-29',{token:next.data.token,storeId:'a1'})).status,403);
+      assert.equal((await request('/api/backoffice-staff/inventory/stores/a1/stocktakes',{token:next.data.token,storeId:'a1'})).status,403);
+      assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale"`)[0].amount),77.33);
+      assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement"`)[0].quantity),42);
+    });
+    await t.test('native sales read admission keeps exact selected store, module licence, explicit zero-write scope and live withdrawal',async()=>{
+      const username='sales.read.fixture',grants=[{storeId:'a1',profile:'AUDITOR',capabilities:['sales.read']}];
+      const created=await createStaffAccount(db,owner,{...input,username,grants});
+      const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});assert.equal(login.status,200);const salesToken=login.data.token;
+      for(const path of ['/api/transactions/stores/a1/overview','/api/cash/stores/a1/overview','/api/store-pos/stores/a1/sales/recent']){
+        const r=await request(path,{token:salesToken,storeId:'a1'});assert.equal(r.status,200);assert.deepEqual(r.data,{storeId:'a1',capability:'sales.read'});
+        assert.equal((await request(path.replace('/a1/','/a2/'),{token:salesToken,storeId:'a1'})).status,403);
+      }
+      assert.equal((await request('/api/transactions/stores/a1',{token:salesToken,storeId:'a1',method:'POST',body:{storeId:'a1',amount:1}})).status,403);
+      await db.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "companyId"='a' AND "moduleKey"='STORE_MODE'`;
+      assert.equal((await request('/api/transactions/stores/a1/overview',{token:salesToken,storeId:'a1'})).status,403);
+      await db.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "companyId"='a' AND "moduleKey"='STORE_MODE'`;
+      await updateStaffAccount(db,owner,created.id,{expectedRevision:1,active:false,grants});
+      assert.equal((await request('/api/transactions/stores/a1/overview',{token:salesToken,storeId:'a1'})).status,401);
+      assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale"`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement"`)[0].quantity),42);
+    });
+    await t.test('native original invoice file stays inside both inbox and attachment store with live read grant',async()=>{
+      await db.$executeRawUnsafe('CREATE TABLE "DocumentInbox" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"attachmentId" text)');
+      await db.$executeRawUnsafe('CREATE TABLE "DocumentAttachment" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"contentData" text,"filename" text,"mimeType" text)');
+      await db.$executeRaw`INSERT INTO "DocumentAttachment" VALUES ('file-a','a','a1','data:application/pdf;base64,JVBERi0=','Synthetic.pdf','application/pdf'),('file-a2','a','a2','PRIVATE-CONTROL','Control.pdf','application/pdf')`;
+      await db.$executeRaw`INSERT INTO "DocumentInbox" VALUES ('invoice-a','a','a1','file-a'),('invoice-a2','a','a2','file-a2'),('mismatch','a','a1','file-a2')`;
+      const username='invoices.read.fixture',grants=[{storeId:'a1',profile:'AUDITOR',capabilities:['invoices.read']}];
+      const created=await createStaffAccount(db,owner,{...input,username,grants});
+      const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});assert.equal(login.status,200);const invoiceToken=login.data.token;
+      const original=await request('/api/commerce/documents/inbox/invoice-a/file',{token:invoiceToken,storeId:'a1'});
+      assert.equal(original.status,200);assert.equal(original.data.filename,'Synthetic.pdf');assert.match(original.headers.get('cache-control'),/no-store/);
+      for(const id of ['invoice-a2','mismatch']){const r=await request('/api/commerce/documents/inbox/'+id+'/file',{token:invoiceToken,storeId:'a1'});assert.equal(r.status,404);assert.ok(!JSON.stringify(r.data).includes('PRIVATE-CONTROL'))}
+      assert.equal((await request('/api/commerce/documents/inbox/invoice-a/file',{token:invoiceToken,storeId:'a2'})).status,403);
+      await db.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "companyId"='a' AND "moduleKey"='DOCUMENTS'`;
+      assert.equal((await request('/api/commerce/documents/inbox/invoice-a/file',{token:invoiceToken,storeId:'a1'})).status,403);
+      await db.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "companyId"='a' AND "moduleKey"='DOCUMENTS'`;
+      await updateStaffAccount(db,owner,created.id,{expectedRevision:1,active:false,grants});
+      assert.equal((await request('/api/commerce/documents/inbox/invoice-a/file',{token:invoiceToken,storeId:'a1'})).status,401);
+      assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale"`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement"`)[0].quantity),42);
+    });
+    await t.test('native separately delegated create/count/finalize replays creation and posts one audited adjustment',async()=>{
+      for(const sql of [
+        'ALTER TABLE "Product" ADD COLUMN "costPrice" numeric DEFAULT 0, ADD COLUMN "active" boolean DEFAULT true, ADD COLUMN "categoryId" text',
+        'ALTER TABLE "Stocktake" ADD COLUMN "createdByUserId" text REFERENCES "User"("id"), ADD COLUMN "finalizedByUserId" text REFERENCES "User"("id"), ADD COLUMN "updatedAt" timestamptz DEFAULT now()',
+        'CREATE TABLE "StoreProduct" ("storeId" text,"productId" text,"currentStock" numeric,"active" boolean DEFAULT true,"updatedAt" timestamptz DEFAULT now(),PRIMARY KEY("storeId","productId"))',
+        'ALTER TABLE "StockMovement" ADD COLUMN "storeId" text, ADD COLUMN "productId" text, ADD COLUMN "movementType" text, ADD COLUMN "unitCost" numeric, ADD COLUMN "sourceType" text, ADD COLUMN "sourceId" text, ADD COLUMN "note" text, ADD COLUMN "createdByUserId" text REFERENCES "User"("id")'
+      ])await db.$executeRawUnsafe(sql);
+      await db.$executeRaw`INSERT INTO "StoreProduct" ("storeId","productId","currentStock") VALUES ('a1','pa',10),('a2','pa',42)`;
+      const username='inventory.lifecycle.fixture',grants=[{storeId:'a1',profile:'AUDITOR',capabilities:['inventory.read','inventory.create','inventory.count']}];
+      const created=await createStaffAccount(db,owner,{...input,username,grants});
+      const login=async()=>{const r=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});assert.equal(r.status,200);assert.equal(r.data.user.role,'EMPLOYEE');return r.data.token};
+      let inventoryToken=await login();
+      const send=(path,body,method='POST')=>request(path,{token:inventoryToken,storeId:'a1',method,body});
+      const create={storeId:'a1',name:'Synthetic delegated inventory',scopeType:'FULL',recountPolicy:'NONE',clientEventId:crypto.randomUUID()};
+      const first=await send('/api/inventory-v2/stocktakes',create);assert.equal(first.status,201,JSON.stringify(first.data));
+      const stId=first.data.id;
+      const replay=await send('/api/inventory-v2/stocktakes',create);assert.equal(replay.status,200);assert.equal(replay.data.id,stId);assert.equal(replay.data.replayed,true);
+      assert.equal((await send('/api/inventory-v2/stocktakes',{...create,name:'Changed'})).status,409);
+      const {clientEventId,...missingNonce}=create;assert.equal((await send('/api/inventory-v2/stocktakes',missingNonce)).status,400);
+      assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "Stocktake" WHERE "createdByUserId"=${created.id}`)[0].n),1);
+      const line=(await db.$queryRaw`SELECT "id","expectedQuantity" FROM "StocktakeLine" WHERE "stocktakeId"=${stId}`)[0];assert.equal(Number(line.expectedQuantity),10);
+      const counted=await send('/api/inventory-v2/stocktakes/'+stId+'/count',{lineId:line.id,quantity:12,expectedVersion:0,clientEventId:crypto.randomUUID(),source:'BACKOFFICE'});assert.equal(counted.status,200,JSON.stringify(counted.data));
+      const finalPath='/api/inventory-v2/stocktakes/'+stId+'/finalize';
+      assert.equal((await send(finalPath,{reason:'Synthetic correction'})).status,403);
+      assert.equal(Number((await db.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='a1'`)[0].currentStock),10);
+      grants[0].capabilities.push('inventory.finalize');await updateStaffAccount(db,owner,created.id,{expectedRevision:1,active:true,grants});
+      assert.equal((await send(finalPath,{reason:'Synthetic correction'})).status,401);inventoryToken=await login();
+      const finalized=await send(finalPath,{reason:'Synthetic correction'});assert.equal(finalized.status,200,JSON.stringify(finalized.data));
+      assert.equal((await send(finalPath,{reason:'Synthetic correction'})).status,409);
+      const movements=await db.$queryRaw`SELECT "quantity","createdByUserId","note" FROM "StockMovement" WHERE "sourceId"=${stId}`;
+      assert.equal(movements.length,1);assert.equal(Number(movements[0].quantity),2);assert.equal(movements[0].createdByUserId,created.id);assert.match(movements[0].note,/Synthetic correction/);
+      const detail=await send('/api/backoffice-staff/inventory/stores/a1/stocktakes/'+stId,undefined,'GET');assert.equal(detail.status,200,JSON.stringify(detail.data));assert.equal(detail.data.status,'FINALIZED');assert.equal(Number(detail.data.lines[0].expectedQuantity),10);assert.equal(Number(detail.data.lines[0].countedQuantity),12);
+      const stocks=await db.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"`;assert.deepEqual(stocks.map(r=>[r.storeId,Number(r.currentStock)]),[['a1',12],['a2',42]]);
+      assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale" WHERE "id"='control'`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement" WHERE "id"='control'`)[0].quantity),42);
     });
   }finally{
     if(server)await new Promise(resolve=>{server.close(resolve);server.closeAllConnections()});await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();if(oldSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=oldSecret;

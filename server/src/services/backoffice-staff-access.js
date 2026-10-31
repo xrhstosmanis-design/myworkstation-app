@@ -1,4 +1,4 @@
-import {staffCapabilities,staffProfiles,staffRequestCapability} from '../../../shared/backoffice-staff.mjs';
+import {staffCapabilities,staffProfiles,staffRequestCapability,validStaffCapabilities} from '../../../shared/backoffice-staff.mjs';
 import {companyModuleState,effectiveModuleEnabled} from '../middleware/module-access.js';
 import {assertLifecycleMutation} from './store-lifecycle-generation.js';
 import {lifecycleContext} from './store-lifecycle-context.js';
@@ -24,15 +24,15 @@ export async function requireStaffGrant(db,user,storeId,capability){
   if(typeof storeId!=='string'||!storeId||storeId.length>200||!staffCapabilities.includes(capability))throw staffError();
   const rows=await db.$queryRaw`SELECT g."profile",g."capabilities",g."revision" FROM "BackofficeStaffGrant" g JOIN "Store" s ON s."id"=g."storeId" AND s."companyId"=g."companyId" WHERE g."userId"=${user.id} AND g."companyId"=${user.companyId} AND g."storeId"=${storeId} AND g."active"=true AND s."active"=true LIMIT 1 FOR SHARE OF g,s`;
   const grant=rows[0];
-  if(!grant||!staffProfiles[grant.profile]||!Array.isArray(grant.capabilities)||!grant.capabilities.includes(capability)||grant.capabilities.some(c=>!staffProfiles[grant.profile].capabilities.includes(c)))throw staffError();
+  if(!grant||!staffProfiles[grant.profile]||!validStaffCapabilities(grant.capabilities)||!grant.capabilities.includes(capability))throw staffError();
   const license=await companyModuleState(user.companyId,{db});
   if(!license?.licenseAllowed)throw staffError(403,'LICENSE_INACTIVE','Η άδεια της εταιρείας δεν είναι ενεργή.');
-  const modules=capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:['INVENTORY'];
+  const modules=modulesForCapability(capability);
   for(const moduleKey of modules){
     const override=(await db.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "moduleKey"=${moduleKey} LIMIT 1`)[0];
     if(!effectiveModuleEnabled(license.activeModules.includes(moduleKey),override?{...override,configured:true}:{configured:false}))throw staffError(403,'MODULE_DISABLED','Η λειτουργία δεν είναι ενεργή στο κατάστημα.');
   }
-  if(capability==='inventory.count')await assertLifecycleMutation(db,{companyId:user.companyId,storeId},lifecycleContext()[storeId]??'0');
+  if(['inventory.count','inventory.create','inventory.finalize','products.create','products.opening-stock'].includes(capability))await assertLifecycleMutation(db,{companyId:user.companyId,storeId},lifecycleContext()[storeId]??'0');
   return {account,grant};
 }
 // Invoked inside the existing authentication middleware, before any legacy route.
@@ -51,12 +51,24 @@ export async function enforceBackofficeStaff(db,req,res){
   if(capability==='LIFECYCLE'){
     const storeId=path.split('/').at(-1);
     const row=(await db.$queryRaw`SELECT "capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${user.id} AND "companyId"=${user.companyId} AND "storeId"=${storeId} AND "active"=true LIMIT 1`)[0];
-    const read=row?.capabilities?.includes('inventory.read')?'inventory.read':'cash.read';
-    await requireStaffGrant(db,user,storeId,read);
-    req.user={...req.user,storeId};return true;
+    const reads=Array.isArray(row?.capabilities)?row.capabilities.filter(c=>['inventory.read','cash.read','products.read','sales.read','invoices.read'].includes(c)):[];
+    let disabled;
+    for(const read of reads){
+      try{await requireStaffGrant(db,user,storeId,read);req.user={...req.user,storeId};return true}
+      catch(error){if(error.code!=='MODULE_DISABLED')throw error;disabled=error}
+    }
+    throw disabled||staffError();
   }
   const storeId=req.get('x-backoffice-store-id');
   if(!storeId||req.query?.storeId&&req.query.storeId!==storeId||req.body?.storeId&&req.body.storeId!==storeId)throw staffError();
+  const sales=path.match(/^\/api\/(?:transactions|cash|store-pos)\/stores\/([^/]+)\//);
+  if(sales&&sales[1]!==storeId)throw staffError();
+  const {grant}=await requireStaffGrant(db,user,storeId,capability);
+  const invoice=path.match(/^\/api\/commerce\/documents\/inbox\/([^/]+)\/file$/);
+  if(invoice){
+    const rows=await db.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "id"=${invoice[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
+    if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
+  }
   const cash=path.match(/^\/api\/backoffice-staff\/cash\/stores\/([^/]+)$/);
   if(cash&&cash[1]!==storeId)throw staffError();
   const inventory=path.match(/^\/api\/backoffice-staff\/inventory\/stores\/([^/]+)\/stocktakes(?:\/([^/]+))?$/);
@@ -66,8 +78,10 @@ export async function enforceBackofficeStaff(db,req,res){
     const rows=await db.$queryRaw`SELECT "id" FROM "Stocktake" WHERE "id"=${stocktake[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
     if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
   }
-  const {grant}=await requireStaffGrant(db,user,storeId,capability);
   req.staffGrant={...grant,capability};
-  req.user={...req.user,storeId,permissions:capability.startsWith('inventory.')?['INVENTORY']:['CASH_CONTROL','STORE_CHAT','AI_READER']};
+  req.user={...req.user,storeId,permissions:modulesForCapability(capability)};
   return true;
+}
+function modulesForCapability(capability){
+  return capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:capability==='sales.read'?['STORE_MODE','CASH_CONTROL']:capability==='invoices.read'?['DOCUMENTS']:['INVENTORY'];
 }

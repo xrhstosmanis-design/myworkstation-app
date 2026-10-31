@@ -1,12 +1,12 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import {z} from 'zod';
-import {staffProfiles,staffCapabilities} from '../../../shared/backoffice-staff.mjs';
+import {staffCapabilities,validStaffCapabilities} from '../../../shared/backoffice-staff.mjs';
 import {staffError} from './backoffice-staff-access.js';
 import {bindFreshLifecycleRead} from './store-lifecycle-generation.js';
 const pin=z.string().regex(/^\d{4,12}$/,'Το PIN πρέπει να έχει 4–12 ψηφία.');
 const password=z.string().min(10).max(100).refine(value=>Buffer.byteLength(value,'utf8')<=72,'Ο κωδικός είναι πολύ μεγάλος.');
-const grants=z.array(z.object({storeId:z.string().trim().min(1).max(200),profile:z.enum(['MANAGER','STOCKTAKER','AUDITOR']),capabilities:z.array(z.enum(staffCapabilities)).max(3)}).strict()).max(100).refine(rows=>new Set(rows.map(r=>r.storeId)).size===rows.length,'Διπλό κατάστημα.').refine(rows=>rows.every(r=>r.capabilities.every(c=>staffProfiles[r.profile].capabilities.includes(c))&&(!r.capabilities.includes('inventory.count')||r.capabilities.includes('inventory.read'))),'Μη έγκυρα δικαιώματα ρόλου.');
+const grants=z.array(z.object({storeId:z.string().trim().min(1).max(200),profile:z.enum(['MANAGER','STOCKTAKER','AUDITOR']),capabilities:z.array(z.enum(staffCapabilities)).max(staffCapabilities.length)}).strict()).max(100).refine(rows=>new Set(rows.map(r=>r.storeId)).size===rows.length,'Διπλό κατάστημα.').refine(rows=>rows.every(r=>validStaffCapabilities(r.capabilities)),'Μη έγκυρα δικαιώματα χειριστή.');
 export const createStaffInput=z.object({username:z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9._-]{2,79}$/),fullName:z.string().trim().min(2).max(180),password:password.optional(),pin,grants}).strict();
 export const updateStaffInput=z.object({expectedRevision:z.number().int().positive(),active:z.boolean(),grants,password:password.optional(),pin:pin.optional()}).strict();
 export async function authorizeStaffAdmin(db,user){

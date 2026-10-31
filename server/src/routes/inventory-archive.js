@@ -1,4 +1,5 @@
 import {productCardVatOptions} from '../lib/product-card-vat.js';
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import {prisma} from "../prisma.js";
 import {z} from "zod";
@@ -9,6 +10,7 @@ const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const n=value=>Number(value||0);
 
 function requireAccess(req,res,next){
+  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='products.read')return next();
   if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Το Αρχείο ειδών είναι διαθέσιμο μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
   next();
 }
@@ -170,6 +172,7 @@ router.get("/",async(req,res,next)=>{
       prisma.$queryRaw`SELECT "id","categoryId","name" FROM "ProductSubcategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`
     ]);
 
+    if(req.user?.staffAccess===true)await requireStaffGrant(prisma,req.user,storeId,'products.read');
     res.json({store,page,pageSize,total,pages:Math.max(1,Math.ceil(total/pageSize)),items,
       categories:categories.map(r=>r.name),subcategories:subcategories.map(r=>r.name),
       vatDepartments:await productCardVatOptions(prisma,companyId),

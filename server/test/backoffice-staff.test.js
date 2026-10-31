@@ -1,13 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {staffRequestCapability} from '../../shared/backoffice-staff.mjs';
+import {staffRequestCapability,changeStaffCapability,validStaffCapabilities} from '../../shared/backoffice-staff.mjs';
 import {createStaffInput,updateStaffInput,staffLoginInput} from '../src/services/backoffice-staff-accounts.js';
 import {enforceBackofficeStaff,staffAccount,liveStaff} from '../src/services/backoffice-staff-access.js';
 const grant={storeId:'store-a',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']};
 const account={username:'counter.1',fullName:'Isolated Counter',password:'isolated-test-password',pin:'624918',grants:[grant]};
-test('staff profiles cannot elevate role, cross-profile capabilities or implicitly enable finalization',()=>{
+test('invoice read is an exact list/file admission, never sync, AI, draft approval or deletion',()=>{
+  assert.equal(staffRequestCapability('GET','/api/commerce/documents/inbox/archive'),'invoices.read');
+  assert.equal(staffRequestCapability('GET','/api/commerce/documents/inbox/invoice/file'),'invoices.read');
+  for(const [method,path] of [['POST','/api/commerce/documents/mydata/sync'],['POST','/api/commerce/documents/inbox/invoice/original'],['PATCH','/api/commerce/documents/inbox/invoice'],['DELETE','/api/commerce/documents/inbox/invoice'],['POST','/api/commerce/purchases/invoice/approve'],['POST','/api/commerce/ai-reader/jobs/job/confirm']])assert.equal(staffRequestCapability(method,path),null);
+});
+test('product view, creation and opening stock are independent explicit rights with dependency closure',()=>{
+  const all=changeStaffCapability([],'products.opening-stock',true);
+  assert.deepEqual(new Set(all),new Set(['products.read','products.create','products.opening-stock']));
+  assert.equal(validStaffCapabilities(all),true);
+  assert.deepEqual(changeStaffCapability(all,'products.create',false),['products.read']);
+  assert.deepEqual(changeStaffCapability(all,'products.read',false),[]);
+  assert.equal(validStaffCapabilities(['products.create']),false);
+  assert.equal(validStaffCapabilities(['products.read','products.opening-stock']),false);
+  for(const profile of ['MANAGER','STOCKTAKER','AUDITOR'])assert.equal(createStaffInput.safeParse({...account,grants:[{...grant,profile,capabilities:all}]}).success,true);
+  assert.equal(staffRequestCapability('GET','/api/inventory-archive'),'products.read');
+  assert.equal(staffRequestCapability('GET','/api/owner-products/new-card/options'),'products.create');
+  assert.equal(staffRequestCapability('POST','/api/owner-products/new-card'),'products.create');
+  for(const [method,path] of [['PATCH','/api/owner-products/p/card'],['POST','/api/owner-products/p/stock-adjustment'],['POST','/api/inventory-archive/import'],['POST','/api/inventory-archive/stock-transfer'],['GET','/api/owner-products/catalog']])assert.equal(staffRequestCapability(method,path),null);
+});
+test('owner chooses explicit rights independently of profile without role elevation or implicit finalization',()=>{
   assert.equal(createStaffInput.parse({...account,username:'Counter.1'}).username,'counter.1');
-  for(const body of [{...account,role:'OWNER'},{...account,grants:[{...grant,capabilities:['cash.read']}]},{...account,grants:[{...grant,capabilities:['inventory.count']}]},{...account,grants:[grant,grant]},{...account,pin:'123'},{...account,password:'short'}])assert.equal(createStaffInput.safeParse(body).success,false);
+  assert.equal(createStaffInput.safeParse({...account,grants:[{...grant,capabilities:['cash.read']}]}).success,true);
+  assert.equal(createStaffInput.safeParse({...account,grants:[{...grant,profile:'AUDITOR',capabilities:['inventory.read','inventory.count']}]}).success,true);
+  assert.equal(createStaffInput.safeParse({...account,grants:[{...grant,profile:'MANAGER',capabilities:[]}]}).success,true);
+  for(const body of [{...account,role:'OWNER'},{...account,grants:[{...grant,capabilities:['inventory.count']}]},{...account,grants:[{...grant,capabilities:['cash.read','cash.read']}]},{...account,grants:[{...grant,capabilities:['inventory.finalize']}]},{...account,grants:[grant,grant]},{...account,pin:'123'},{...account,password:'short'}])assert.equal(createStaffInput.safeParse(body).success,false);
   assert.equal(updateStaffInput.safeParse({expectedRevision:0,active:true,grants:[]}).success,false);
 });
 test('personal login requires exactly one credential and refuses scope/session injection',()=>{
@@ -18,7 +40,7 @@ test('delegated request admission is an exact default-deny allowlist',()=>{
   assert.equal(staffRequestCapability('GET','/api/backoffice-staff/me'),'SESSION');
   assert.equal(staffRequestCapability('GET','/api/backoffice-staff/inventory/stores/s/stocktakes/st'),'inventory.read');
   assert.equal(staffRequestCapability('POST','/api/inventory-v2/stocktakes/st/count'),'inventory.count');
-  for(const [method,path] of [['POST','/api/inventory-v2/stocktakes/st/finalize'],['POST','/api/inventory-v2/stocktakes/st/products'],['POST','/api/inventory-v2/stocktakes'],['GET','/api/inventory-v2/stocktakes/st'],['POST','/api/backoffice-staff/admin/accounts'],['GET','/api/platform/companies'],['POST','/api/transactions/stores/s'],['POST','/api/backoffice-staff/cash/stores/s'],['POST','/api/auth/owner-companies/select'],['GET','/api/backoffice-staff/me/'],['GET','/api/backoffice-staff/cash/stores/s/archive']])assert.equal(staffRequestCapability(method,path),null,path);
+  for(const [method,path] of [['POST','/api/inventory-v2/stocktakes/st/products'],['GET','/api/inventory-v2/stocktakes/st'],['POST','/api/backoffice-staff/admin/accounts'],['GET','/api/platform/companies'],['POST','/api/transactions/stores/s'],['POST','/api/backoffice-staff/cash/stores/s'],['POST','/api/auth/owner-companies/select'],['GET','/api/backoffice-staff/me/'],['GET','/api/backoffice-staff/cash/stores/s/archive']])assert.equal(staffRequestCapability(method,path),null,path);
 });
 test('ordinary owner, operator and existing employee auth never queries new staff tables',async()=>{
   const db={$queryRaw:()=>assert.fail('unrelated identity queried new staff schema')};
@@ -41,4 +63,16 @@ test('PIN-first creation accepts four digits without weakening optional password
   assert.equal(createStaffInput.safeParse({...pinOnly,password:'short'}).success,false);
   assert.equal(createStaffInput.safeParse({...pinOnly,password:''}).success,false);
   assert.equal(createStaffInput.safeParse({...pinOnly,password}).success,true);
+});
+
+test('inventory creation and finalization require explicit independent rights plus view, and never admit other writers',()=>{
+  for(const cap of ['inventory.create','inventory.finalize']){
+    assert.equal(validStaffCapabilities([cap]),false);
+    assert.equal(validStaffCapabilities(['inventory.read',cap]),true);
+    assert.deepEqual(new Set(changeStaffCapability([],cap,true)),new Set([cap,'inventory.read']));
+    assert.deepEqual(changeStaffCapability([cap,'inventory.read'],'inventory.read',false),[]);
+  }
+  assert.equal(staffRequestCapability('POST','/api/inventory-v2/stocktakes'),'inventory.create');
+  assert.equal(staffRequestCapability('POST','/api/inventory-v2/stocktakes/st/finalize'),'inventory.finalize');
+  for(const [method,path] of [['DELETE','/api/inventory-v2/stocktakes/st'],['POST','/api/inventory-v2/stocktakes/st/access-grants'],['POST','/api/inventory-v2/stocktakes/st/count/bulk-zero'],['POST','/api/inventory-v2/stocktakes/st/attach-barcode']])assert.equal(staffRequestCapability(method,path),null);
 });

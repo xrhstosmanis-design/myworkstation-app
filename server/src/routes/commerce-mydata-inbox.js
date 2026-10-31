@@ -1,4 +1,5 @@
 import {greeceExportRows} from "../../../shared/greece-time.mjs";
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {assertCustomerDemoOutboundAllowed,isCustomerDemoTenant} from "../customer-demo-runtime.js";
 import {backgroundDrain} from "../server-shutdown.js";
 import crypto from "crypto";
@@ -43,7 +44,7 @@ router.post("/documents/inbox/:inboxId/original",requireCompanyModule("DOCUMENTS
 }catch(error){next(error)}});
 
 router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{
-  if(!canSync(req))return res.status(403).json({error:"Το αρχείο επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
+  if(!canSync(req)&&!(req.user.staffAccess===true&&req.staffGrant?.capability==='invoices.read'))return res.status(403).json({error:"Το αρχείο επιτρέπεται μόνο σε εξουσιοδοτημένο χρήστη BackOffice."});
   const store=await prisma.store.findFirst({where:{id:String(req.query.storeId||""),companyId:req.user.companyId},select:{id:true,name:true}});
   if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
   await ensureSchema();
@@ -53,6 +54,7 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
   const filters={processing:req.query.processing,q:req.query.q,supplier:req.query.supplier,date:req.query.date,dateFrom:req.query.dateFrom,dateTo:req.query.dateTo,receivedToday:req.query.receivedToday==="true",receivedBeforeToday:req.query.receivedBeforeToday==="true",id:req.query.id,limit:exporting?20001:100,offset};
   const query=archiveQuery(req.user.companyId,store.id,filters),count=archiveQuery(req.user.companyId,store.id,filters,true),all=archiveQuery(req.user.companyId,store.id,{processing:filters.processing,receivedToday:filters.receivedToday,receivedBeforeToday:filters.receivedBeforeToday},true);
   const [rows,counts,totals]=await Promise.all([prisma.$queryRawUnsafe(query.sql,...query.values),prisma.$queryRawUnsafe(count.sql,...count.values),prisma.$queryRawUnsafe(all.sql,...all.values)]);
+  if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,store.id,'invoices.read');
   if(exporting){
     if(rows.length>20000)return res.status(409).json({error:"Η εξαγωγή ξεπερνά 20.000 εγγραφές. Περιορίστε με ημερομηνία ή προμηθευτή."});
     if(format==="pdf")return res.json({html:archiveReportHtml(rows,store.name),count:rows.length});
@@ -64,6 +66,7 @@ router.get("/documents/inbox/archive",requireCompanyModule("DOCUMENTS"),async(re
     return res.json({filename:"mydata-invoices.xlsx",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",dataUrl:`data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${buffer.toString("base64")}`,count:rows.length});
   }
   const suppliers=await prisma.$queryRaw`SELECT DISTINCT s."name" FROM "DocumentInbox" i JOIN "Supplier" s ON s."id"=i."supplierId" AND s."companyId"=i."companyId" WHERE i."companyId"=${req.user.companyId} AND i."storeId"=${store.id} ORDER BY s."name"`;
+  if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,store.id,'invoices.read');
   res.json({items:rows,total:counts[0]?.count||0,archiveTotal:totals[0]?.count||0,offset,limit:100,suppliers:suppliers.map(s=>s.name)});
 }catch(error){next(error)}});
 

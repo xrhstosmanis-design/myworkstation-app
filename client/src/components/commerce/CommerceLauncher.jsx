@@ -58,7 +58,7 @@ export default function CommerceLauncher(){
   const [legacyView,setLegacyView]=useState("operations");
   const [inventoryStoreId,setInventoryStoreId]=useState("");
   const [inventoryInitialProduct,setInventoryInitialProduct]=useState(null);
-  const [authenticated,setAuthenticated]=useState(()=>Boolean(localStorage.getItem("token")&&localStorage.getItem("user")));
+  const [authenticated,setAuthenticated]=useState(()=>Boolean(localStorage.getItem("token")&&localStorage.getItem("user")&&readStored("user")?.staffAccess!==true));
   const [stores,setStores]=useState([]);
   const [activeModules,setActiveModules]=useState([]);
   const [wholesaleIdentity,setWholesaleIdentity]=useState(readWholesaleIdentity);
@@ -84,7 +84,7 @@ export default function CommerceLauncher(){
   const canManageParameters=parameterRoles.has(readStored("user")?.role);
   useEffect(()=>{
     const timer=setInterval(()=>{
-      setAuthenticated(Boolean(localStorage.getItem("token")&&localStorage.getItem("user")));
+      setAuthenticated(Boolean(localStorage.getItem("token")&&localStorage.getItem("user")&&readStored("user")?.staffAccess!==true));
       const next=readWholesaleIdentity(),previous=wholesaleIdentityRef.current;
       if(wholesaleIdentityKey(next)!==wholesaleIdentityKey(previous)||next.role!==previous.role){
         wholesaleIdentityRef.current=next;setWholesaleIdentity(next);wholesaleAccessRef.current=null;setWholesaleAccess(null);wholesaleAccessRequest.current++;
@@ -118,6 +118,7 @@ export default function CommerceLauncher(){
     return()=>clearTimeout(timer);
   },[wholesaleAccess,refreshWholesaleAccess]);
   const open=async(target)=>{
+    if(readStored("user")?.staffAccess===true)return;
     if(wholesaleLockRef.current)return;
     const operations=target?.view==="operations";
     const hasRequestedStore=Object.hasOwn(target||{},"storeId");
