@@ -363,6 +363,35 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     await assert.rejects(pricedProvider({companyId:'pricing',storeId:'pricing-store',feature:'OWNER_ASSISTANT'},{model:'synthetic'},async()=>{paidCalls++;throw Error('must not call')}),e=>e.code==='AI_WALLET_INSUFFICIENT');assert.equal(paidCalls,0);
     assert.equal((await repository.read('pricing')).balanceMicros,pw.balanceMicros);assert.equal((await repository.read('pricing')).entries.length,pw.entries.length);
     }
+    // Real native persistence/HTTP proof: initiator is immutable and the
+    // later manual resolver is displayed separately. No business writer.
+    {
+      const {walletActivityFromRequest}=await import('../src/services/ai-wallet-activity.js');
+      await db.$executeRaw`INSERT INTO "Company" VALUES('activity','Synthetic activity company',true)`;
+      await db.$executeRaw`INSERT INTO "Store" VALUES('activity-store','Synthetic activity store','activity',true)`;
+      await repository.configure('activity',{version:0,enabled:true,emailEnabled:false,notificationOwnerId:''},'admin');
+      await repository.credit('activity',{amountMicros:'10000',receiptReference:'activity-synthetic-credit'},'admin');
+      const activity=walletActivityFromRequest({user:{id:null,operatorId:'synthetic-pos-operator',companyId:'activity',storeId:'activity-store',tokenType:'STORE_OPERATOR',fullName:'Synthetic initiating operator',role:'MANAGER',terminalPos:'MAIN'},body:{actorId:'forged',secret:'DO_NOT_STORE'}},{storeId:'activity-store',purpose:'INVOICE_ASSISTANT',documentNumber:'SYNTHETIC-E'});
+      const first=await repository.reserve({companyId:'activity',storeId:'activity-store',feature:'INVOICE_OPENAI',amountMicros:'100',reference:'activity-request-1',tariff:{model:'synthetic'},activity});
+      activity.actor.name='Changed later';
+      await repository.settle('activity',first.id,{amountMicros:'20',usage:{inputTokens:10,outputTokens:10}});
+      const second=await repository.reserve({companyId:'activity',storeId:'activity-store',feature:'INVOICE_OPENAI',amountMicros:'100',reference:'activity-request-2',tariff:{model:'synthetic'},activity:{...activity,actor:{...activity.actor,name:'Synthetic initiating operator'}}});
+      await repository.review('activity',second.id);
+      let view=await repository.read('activity');assert.equal(view.reservedMicros,'100');assert.equal(view.entries.find(e=>e.id===second.id).activity.actor.name,'Synthetic initiating operator');
+      await repository.settle('activity',second.id,{amountMicros:'30',actorId:'admin',resolutionReference:'activity-reviewed-original-final',usage:{reviewReference:'synthetic-confirmed'}});
+      view=await repository.read('activity');assert.equal(view.balanceMicros,'9950');assert.equal(view.reservedMicros,'0');
+      const one=view.entries.find(e=>e.id===first.id),two=view.entries.find(e=>e.id===second.id);
+      assert.equal(one.activity.actor.name,'Synthetic initiating operator');assert.equal(one.model,'synthetic');assert.equal(one.inputTokens,'10');assert.equal(one.storeName,'Synthetic activity store');
+      assert.equal(two.activity.actor.id,'synthetic-pos-operator');assert.equal(two.manuallyResolved,true);assert.deepEqual(two.actionUser,{id:'admin',name:'Admin'});
+      assert.equal(view.entries.find(e=>e.kind==='CREDIT').actionUser.name,'Admin');
+      assert.doesNotMatch(JSON.stringify(view),/DO_NOT_STORE|forged|@example.invalid|operatorSessionId/);
+      const http=await request('/platform/companies/activity','admin');assert.equal(http.status,200);assert.equal(http.body.entries.find(e=>e.id===second.id).activity.actor.id,'synthetic-pos-operator');
+      assert.equal((await request('/stores/activity-store','owner')).status,403);
+      const beforeBad=await repository.read('activity');
+      await assert.rejects(repository.reserve({companyId:'activity',storeId:'activity-store',feature:'INVOICE_OPENAI',amountMicros:'100',reference:'activity-foreign',tariff:{model:'synthetic'},activity:{...activity,companyId:'x'}}),e=>e.code==='AI_WALLET_INVALID_INPUT');
+      const afterBad=await repository.read('activity');for(const key of ['balanceMicros','reservedMicros','version','entries','notices'])assert.deepEqual(afterBad[key],beforeBad[key]);
+      const otherStore=await repository.read('activity','other-store');assert.ok(otherStore.entries.every(e=>e.kind==='CREDIT'));assert.doesNotMatch(JSON.stringify(otherStore.entries),/Synthetic initiating operator|synthetic-pos-operator/);
+    }
     assert.deepEqual(await db.$queryRaw`SELECT * FROM "BusinessControl"`,before);
   }finally{if(server)await new Promise(resolve=>server.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

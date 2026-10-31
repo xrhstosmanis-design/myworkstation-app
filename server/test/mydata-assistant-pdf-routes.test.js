@@ -1,3 +1,4 @@
+import {walletActivityFromRequest} from "../src/services/ai-wallet-activity.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
@@ -24,7 +25,7 @@ test("actual source and preview handlers use identical inbox PDF, enforce contex
  }};
  const routes=[];const router={get:(path,...handlers)=>routes.push({method:"GET",handlers}),post:(path,...handlers)=>routes.push({method:"POST",handlers})};
  const modules=[];let denied="";
- const deps={withInvoiceWalletScope,throwIfWalletError,fetch,Router:()=>router,z,prisma:db,loadInvoiceAssistantSource,requireCompanyModule:name=>(req,res,next)=>{modules.push(name);if(name===denied)return res.status(403).json({error:"module denied"});next()},...review,...pageCount,invoiceAssistantImageViews,invoiceAssistantProviderError,invoiceAssistantDiscounts,verifiedSetUnit};
+ const deps={walletActivityFromRequest,withInvoiceWalletScope,throwIfWalletError,fetch,Router:()=>router,z,prisma:db,loadInvoiceAssistantSource,requireCompanyModule:name=>(req,res,next)=>{modules.push(name);if(name===denied)return res.status(403).json({error:"module denied"});next()},...review,...pageCount,invoiceAssistantImageViews,invoiceAssistantProviderError,invoiceAssistantDiscounts,verifiedSetUnit};
  const source=(await readFile(new URL("../src/routes/invoice-assistant-pos.js",import.meta.url),"utf8")).replace(/^import .*;\n/gm,"").replace("export default router;","return router;");
  new Function(...Object.keys(deps),source)(...Object.values(deps));
  const call=async(method,input,overrides={})=>{let status=200,body,error;const req={method,user:{companyId:"c",role:"OWNER"},params:{orderId:"o"},query:method==="GET"?input:{},body:method==="POST"?input:{},...overrides};const res={status:n=>(status=n,res),json:x=>(body=x,res)};const handlers=routes.find(r=>r.method===method).handlers;
