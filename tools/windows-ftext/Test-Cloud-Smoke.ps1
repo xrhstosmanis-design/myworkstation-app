@@ -44,6 +44,24 @@ try {
             $rejected=$false;try{Invoke-FtextCashApi $config 'execute' @{} | Out-Null}catch{$rejected=$true};if(-not $rejected){throw 'Arbitrary execution API was allowed'}
         }finally{Remove-Item Function:script:Invoke-RestMethod -ErrorAction SilentlyContinue}
     } $c
+    # One scoped work request replaces heartbeat plus four sequential polls.
+    & (Get-Module 'Cloud-Tools') {
+        param($config)
+        $script:pollCalls=0;$script:pollForeign=$false;$script:pollWork=$false
+        function script:Invoke-RestMethod {
+            param($Method,$Uri,$Headers,$ContentType,$Body,$TimeoutSec)
+            $script:pollCalls++;$data=$Body | ConvertFrom-Json
+            if(-not $Uri.EndsWith('/work-poll') -or $Headers.Authorization -cne 'Bearer fixture-only-device-token' -or $data.readinessVersion -ne 1 -or $data.recovering -isnot [bool] -or $data.settingsHash -cne $config.settingsHash -or $data.settings.workFolder -cne $config.workFolder -or $data.settings.configurationId -cne $config.configurationId) {throw 'Wrong combined authenticated request'}
+            return [pscustomobject]@{companyId=$config.companyId;storeId=$config.storeId;terminalPos=$config.terminalPos;settingsHash=$(if($script:pollForeign){'b'*64}else{$config.settingsHash});settings=$config;fiscalCheckoutEnabled=$false;request=$(if($script:pollWork){@{id='unexpected'}}else{$null});lateReceipt=$null;errorEvidence=$null}
+        }
+        try {
+            $reply=Invoke-FtextCloudPoll $config $false
+            if($script:pollCalls -ne 1 -or $reply.request){throw 'Idle work discovery did not use exactly one cloud call'}
+            Invoke-FtextCloudPoll $config $true | Out-Null
+            $script:pollForeign=$true;$refused=$false;try{Invoke-FtextCloudPoll $config $false | Out-Null}catch{$refused=$true};if(-not $refused){throw 'Foreign combined response was accepted'}
+            $script:pollForeign=$false;$script:pollWork=$true;$refused=$false;try{Invoke-FtextCloudPoll $config $true | Out-Null}catch{$refused=$true};if(-not $refused){throw 'New work interrupted original-result recovery'}
+        }finally{Remove-Item Function:script:Invoke-RestMethod -ErrorAction SilentlyContinue}
+    } $c
     # A recovered old STATUS must not make a closed driver look ready after a restart.
     $readyFolder=Join-Path $root 'readiness';New-Item -ItemType Directory -Path $readyFolder | Out-Null
     $readyConfig=$c | ConvertTo-Json -Depth 12 | ConvertFrom-Json;$readyConfig.workFolder=$readyFolder
@@ -91,6 +109,11 @@ $script:pings=0;$script:posts=0;$script:done=$false
 function Get-FtextCloudConfig($Path){return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json}
 function Invoke-FtextCloudReadiness($ConfigPath){return $true}
 function Invoke-FtextCloudPing($Config){$script:pings++;if($script:pings -eq 1){throw 'Synthetic lost heartbeat'};return @{ok=$true}}
+function Invoke-FtextCloudPoll($Config,$Recovering){
+ Invoke-FtextCloudPing $Config | Out-Null
+ [IO.File]::AppendAllText($env:MWS_FTEXT_RETRY_LOG,((@{action='work-poll';body=@{recovering=$Recovering}}|ConvertTo-Json -Compress)+"`n"))
+ return @{request=$null;lateReceipt=$(if($script:done){$null}else{@{id='370a0232-aeb7-4320-9919-d96c3f9f52d5'}});errorEvidence=$null}
+}
 function Invoke-FtextCashApi($Config,$Action,$Body){
  [IO.File]::AppendAllText($env:MWS_FTEXT_RETRY_LOG,((@{action=$Action;body=$Body}|ConvertTo-Json -Depth 12 -Compress)+"`n"))
  switch($Action){
@@ -102,7 +125,7 @@ function Invoke-FtextCashApi($Config,$Action,$Body){
   default {throw 'Unexpected action in retry harness'}
  }
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPing,Invoke-FtextCloudReadiness,Invoke-FtextCashApi
+Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Invoke-FtextCashApi
 '@
     $mockCash=@'
 function Get-FtextCashPending($Config){return $null}
@@ -123,6 +146,7 @@ Export-ModuleMember -Function Get-FtextCashPending,Read-FtextLateReceiptEvidence
         $posts=@($calls | Where-Object {$_.action -ceq 'late-receipt-result'})
         if($posts.Count -ne 2 -or ($posts[0].body | ConvertTo-Json -Compress) -cne ($posts[1].body | ConvertTo-Json -Compress)){throw 'Lost HTTP outcome did not retry the same original proof.'}
         if(@($calls | Where-Object {$_.action -in @('cash-result','void-result')}).Count -ne 0){throw 'Recovery retried fiscal dispatch instead of evidence.'}
+        if(@($calls | Where-Object {$_.action -in @('cash-poll','void-poll','late-receipt-poll','error-evidence-poll')}).Count -ne 0){throw 'Connector still issued sequential legacy work polls.'}
     }finally{$env:MWS_FTEXT_RETRY_LOG=$oldRetryLog}
 
     # No credential means no network call and no physical STATUS input.
