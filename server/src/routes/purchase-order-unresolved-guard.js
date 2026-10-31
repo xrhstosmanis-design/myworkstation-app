@@ -1,3 +1,4 @@
+import {requireStaffOrderAction,requireStaffAction} from '../services/backoffice-staff-access.js';
 import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import crypto from "crypto";
 import {Router} from "express";
@@ -53,11 +54,12 @@ async function ensureSchema(){
   schemaReady=true;
 }
 
-async function applyPackStockCorrection({orderId,companyId,userId,userName,expectedReopenVersion=0}){
+async function applyPackStockCorrection({orderId,companyId,userId,userName,expectedReopenVersion=0,req}){
   await ensureSchema();
   return prisma.$transaction(async tx=>{
     const scope=await tx.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} LIMIT 1`;
     if(!scope[0])throw Object.assign(new Error("Δεν βρέθηκε η αγορά."),{status:404});
+    if(req?.user?.staffAccess===true)await requireStaffAction(tx,req,scope[0].storeId,'invoices.approve');
     await lockInvoiceStore(tx,companyId,scope[0].storeId);
     await tx.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId} FOR UPDATE`;
     // Supplier credit notes already post signed return quantities. The
@@ -153,7 +155,7 @@ router.patch("/:orderId",async(req,res,next)=>{
 
     // Self-heal παλιά OCR flags: αν η γραμμή έχει ήδη συνδεθεί με πραγματικό
     // Product, δεν είναι πλέον άλυτη ανεξάρτητα από το παλιό resolutionStatus.
-    await prisma.$executeRaw`
+    await prisma.$transaction(async tx=>{if(req.user?.staffAccess===true)await requireStaffOrderAction(tx,req,req.params.orderId,'invoices.approve');return tx.$executeRaw`
       UPDATE "PurchaseOrderLine" l
       SET "resolutionStatus"='MATCHED',"updatedAt"=NOW()
       FROM "PurchaseOrder" o
@@ -162,7 +164,7 @@ router.patch("/:orderId",async(req,res,next)=>{
         AND o."companyId"=${req.user.companyId}
         AND l."productId" IS NOT NULL
         AND (COALESCE(l."invoiceUnit",'PIECE')<>'PACKAGE' OR COALESCE(l."stockUnitsPerInvoiceUnit",0)>0)
-        AND COALESCE(l."resolutionStatus",'MATCHED')='UNRESOLVED'`;
+        AND COALESCE(l."resolutionStatus",'MATCHED')='UNRESOLVED'`;});
 
     // Μπλοκάρουμε μόνο πραγματικές οικονομικές γραμμές προϊόντων που δεν έχουν
     // ακόμη productId. Πληροφοριακές/OCR βοηθητικές γραμμές δεν εμποδίζουν FINAL.
@@ -192,6 +194,7 @@ router.patch("/:orderId",async(req,res,next)=>{
       finished=true;
       applyPackStockCorrection({
         orderId:req.params.orderId,
+        req,
         companyId:req.user.companyId,
         userId:req.user.id,
         userName:req.user.fullName||"Χρήστης",
