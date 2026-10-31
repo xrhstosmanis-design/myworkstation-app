@@ -18,6 +18,7 @@ export const day=z.string().regex(/^20\d{2}-\d{2}-\d{2}$/).refine(v=>{try{return
 export const periodSchema=z.object({from:day,to:day}).strict().refine(p=>p.to>=p.from&&(Date.parse(p.to)-Date.parse(p.from))/86400000<31);
 const amount=z.number().int().min(-99999999900).max(99999999900);
 export const reviewAction=z.discriminatedUnion('kind',[
+  z.object({kind:z.literal('HANDOFF_ISSUE'),issueId:sha,previousSessionId:id,nextSessionId:id,previousHash:sha,nextHash:sha,issueFingerprint:sha,reportHash:sha,status:z.enum(['OPEN','CLOSED']),note:note.refine(v=>!/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(v)),reviewed:z.literal(true)}).strict(),
   z.object({kind:z.literal('ISSUE'),issueId:sha,sessionId:id,sourceHash:sha,issueFingerprint:sha,reportHash:sha,status:z.enum(['OPEN','CLOSED']),note:note.refine(v=>!/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(v)),reviewed:z.literal(true)}).strict(),
   z.object({kind:z.literal('ASSOCIATE'),messageId:id,checksum:sha,sourceKey:sha,line:z.number().int().min(0).max(59),sessionId:id,sourceHash:sha,transactionId:id.nullable(),confirmedKind:z.enum(paperKinds),confirmedDate:day,confirmedAmountCents:amount,operatorContext:z.string().trim().min(1).max(180),note,reviewed:z.literal(true)}).strict(),
   z.object({kind:z.literal('OFFSET'),previousSessionId:id,nextSessionId:id,previousHash:sha,nextHash:sha,amountCents:amount.refine(v=>v>0),note,countingErrorConfirmed:z.literal(true)}).strict(),

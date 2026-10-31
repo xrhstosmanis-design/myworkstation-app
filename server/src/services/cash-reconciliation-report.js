@@ -1,3 +1,4 @@
+import {projectHandoffIssues,assertHandoffIssues,handoffIssueText} from './cash-handoff-issues.js';
 import {canAutomaticallyCalculate,hasCashNumericContradiction,calculateCashResult,assertCalculatedCashResult} from './cash-automatic-result.js';
 import {projectCashIssues,assertCashIssues,cashIssueText,isExpenseIssueClosed} from './cash-issue-replies.js';
 import {assessAutomaticCash,automaticCashAuditText} from './cash-automatic-audit.js';
@@ -79,11 +80,14 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
   for(const r of selected)r.automaticallyCalculated=canAutomaticallyCalculate(r);
   const calculatedResult=calculateCashResult(selected);
   const issueRegister=projectCashIssues(source.store.id,selected,records);
-  const reportHash=hash({sourceReportHash,calculatedResult,...(issueRegister?{issueRegister}:{}),identities:selected.map(r=>({sessionId:r.sessionId,employeeKey:r.employeeKey,operatorName:r.operatorName,identityRequiresReview:r.identityRequiresReview,automaticallyCalculated:r.automaticallyCalculated}))});
+  const handoffRegister=projectHandoffIssues(source,records,immediateCashPair);
+  for(const row of selected){const ids=handoffRegister?.status==='AVAILABLE'?handoffRegister.issues.filter(q=>q.current&&[q.previousSessionId,q.nextSessionId].includes(row.sessionId)).map(q=>q.id):[];if(ids.length)row.handoffIssueIds=ids;}
+  const reportHash=hash({sourceReportHash,calculatedResult,...(handoffRegister?{handoffRegister}:{}),...(issueRegister?{issueRegister}:{}),identities:selected.map(r=>({sessionId:r.sessionId,employeeKey:r.employeeKey,operatorName:r.operatorName,identityRequiresReview:r.identityRequiresReview,automaticallyCalculated:r.automaticallyCalculated}))});
   const sameCheckpointPeriod=checkpoint?.proof.period?.from===source.period.from&&checkpoint?.proof.period?.to===source.period.to;
   const result={storeId:source.store.id,storeName:source.store.name,period:source.period,rows:selected,context:[...rows.values()].filter(r=>!source.selectedIds.includes(r.sessionId)),totals,employees:[...employees.values()],calculatedResult,reportHash,checkpoint:checkpoint?{resumeFrom:checkpoint.data.resumeFrom,pendingNotes:checkpoint.data.pendingNotes,period:checkpoint.proof.period,createdAt:checkpoint.createdAt,reviewedBy:checkpoint.actorName,current:sameCheckpointPeriod?checkpoint.data.reportHash===reportHash:null}:null,coverage:source.coverage,financialFinality:'REVIEWED_CASH_ROWS_ONLY',originalFinancialLedgerChanged:false};
   if(source.kioskEventSales)result.kioskEventSales=source.kioskEventSales;
   if(issueRegister)result.issueRegister=issueRegister;
+  if(handoffRegister)result.handoffRegister=handoffRegister;
   result.text=reconciliationText(result);return result;
 }
 const money=cents=>cents===null?'άγνωστο':(Math.abs(cents)/100).toLocaleString('el-GR',{style:'currency',currency:'EUR'});
@@ -91,6 +95,7 @@ const signedResult=cents=>cents===null?'Άγνωστη διαφορά':cents<0?'
 export function reconciliationText(report){
   assertCalculatedCashResult(report);
   assertCashIssues(report);
+  assertHandoffIssues(report);
   const names=[...new Set(report.rows.filter(r=>r.reviewed).map(r=>r.reviewedBy).filter(Boolean))],tokens=names.length===1?names[0].normalize('NFD').replace(/\p{M}/gu,'').toLocaleUpperCase('el-GR').split(/\s+/):[];
   const signature=names.length===1?tokens.includes('ΧΡΗΣΤΟΣ')&&tokens.includes('ΜΑΝΗΣ')?'ΜΑΝΗΣ ΧΡΗΣΤΟΣ':names[0].toLocaleUpperCase('el-GR'):null;
   const lines=['ΕΛΕΓΧΟΣ ΤΑΜΕΙΩΝ MYWORKSTATION',`${report.storeName} · ${report.period.from} έως ${report.period.to}`,'','ΑΠΟΤΕΛΕΣΜΑ ΜΕΤΑ ΑΠΟ ΕΛΕΓΧΟ'+(signature?' — '+signature:'')];
@@ -135,7 +140,7 @@ export function reconciliationText(report){
   const pending=effective?.pending??report.totals.pending;
   if(pending)lines.push(`Εκκρεμούν ${pending} βάρδιες· δεν περιλαμβάνονται στα ελεγμένα σύνολα.`);
   for(const employee of effective?.employees??report.employees)lines.push(`${employee.name}: ελλείμματα ${money(employee.shortageCents)} · πλεονάσματα ${money(employee.surplusCents)}${employee.identityRequiresReview?' · απαιτείται ταυτοποίηση της βάρδιας':''}.`);
-  lines.push(...cashIssueText(report.issueRegister));
+  lines.push(...cashIssueText(report.issueRegister),...handoffIssueText(report.handoffRegister));
   if(report.checkpoint){lines.push('',`Συνέχεια από ${report.checkpoint.resumeFrom}${report.checkpoint.current===false?' — το σημείο συνέχειας χρειάζεται ενημέρωση':''}. Έλεγχος ${report.checkpoint.period.from} έως ${report.checkpoint.period.to}.`,...report.checkpoint.pendingNotes.map(n=>'Εκκρεμότητα: '+n));}
   return lines.join('\n');
 }

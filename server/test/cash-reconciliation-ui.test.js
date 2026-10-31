@@ -128,3 +128,22 @@ test('individual issue reply selects the exact transaction, requires explicit de
   assert.equal(posts().length,2);assert.equal(JSON.parse(posts()[1].body).data.status,'OPEN');assert(!posts().some(p=>JSON.parse(p.body).data.kind==='CONFIRM'));
  }finally{await m.cleanup();}
 });
+
+test('original handoff reply selects both exact shifts, requires explicit decision and confirmation, recovers a lost reply and reopens without another cash approval',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,dom,React,root,Component}=m,calls=[],committed=[];let lost=true,decision='OPEN';
+ const q={id:'1'.repeat(64),previousSessionId:'a',nextSessionId:'b',previousHash:'a'.repeat(64),nextHash:'b'.repeat(64),fingerprint:'e'.repeat(64),previousDay:period.from,nextDay:period.to,previousOperator:'First',nextOperator:'Second',terminalPos:'MAIN',previousClosingCents:10000,nextOpeningCents:21900,differenceCents:11900,repliesCount:0,current:true};
+ const result=()=>({...report('A',period),handoffRegister:{version:1,status:'AVAILABLE',limit:500,issues:[{...q,status:decision,lastReply:committed.length?{note:'<img src=x onerror=bad> Συγκεκριμένη απάντηση.',actorName:'Auditor',createdAt:'2026-10-31T12:00:00Z'}:null},{...q,id:'2'.repeat(64),previousSessionId:'old-a',current:false,status:'RECHECK_REQUIRED',lastReply:null}]}});
+ const api=async(path,options={})=>{calls.push({path,...options});if(options.method==='POST'){const req=JSON.parse(options.body);assert.equal(req.data.kind,'HANDOFF_ISSUE');assert.equal(req.data.issueId,q.id);assert.equal(req.data.previousSessionId,q.previousSessionId);assert.equal(req.data.nextSessionId,q.nextSessionId);assert.equal(req.data.previousHash,q.previousHash);assert.equal(req.data.nextHash,q.nextHash);assert.equal(req.data.issueFingerprint,q.fingerprint);assert.equal(req.data.reportHash,'d'.repeat(64));decision=req.data.status;committed.push(req.requestId);if(lost)throw Error('Lost response');return result();}const id=new URL(path,'https://isolated.invalid').searchParams.get('requestId');return {...result(),requestId:id,requestStatus:id?(committed.includes(id)?'APPLIED':'NOT_FOUND'):null};};
+ const click=el=>act(async()=>el.click()),change=(el,value)=>act(async()=>{const proto=el.tagName==='SELECT'?dom.window.HTMLSelectElement.prototype:dom.window.HTMLTextAreaElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));});
+ const posts=()=>calls.filter(c=>c.method==='POST');
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await click(button('Έλεγχος με επανυπολογισμούς'));
+  assert.equal([...document.querySelectorAll('button')].filter(b=>b.textContent==='Απάντηση στην παράδοση')[1].disabled,true);
+  await click(button('Απάντηση στην παράδοση'));assert.equal(field('Παράδοση βάρδιας').value,q.id);
+  await change(field('Κατάσταση μετά την απάντηση'),'CLOSED');await change(field('Τεκμηρίωση'),'Ελέγχθηκε το πρωτότυπο της πρώτης κίνησης.');assert.equal(posts().length,0);assert.equal(button('Καταχώριση ελέγχου').disabled,true);
+  await click(document.querySelector('input[type="checkbox"]'));await click(button('Καταχώριση ελέγχου'));assert.equal(posts().length,1);assert.equal(JSON.parse(posts()[0].body).data.status,'CLOSED');
+  lost=false;await click(button('Ανανέωση ελέγχου'));assert.equal(posts().length,1);assert.match(document.body.textContent,/είχε ήδη καταχωριστεί/);assert.equal(document.querySelector('img'),null);assert.match(document.body.textContent,/Κλειστή με τεκμηρίωση/);
+  await click(button('Απάντηση στην παράδοση'));assert.equal(field('Κατάσταση μετά την απάντηση').value,'CLOSED');await change(field('Κατάσταση μετά την απάντηση'),'OPEN');await change(field('Τεκμηρίωση'),'Άνοιγμα ξανά της ίδιας συγκεκριμένης εκκρεμότητας.');await click(document.querySelector('input[type="checkbox"]'));await click(button('Καταχώριση ελέγχου'));
+  assert.equal(posts().length,2);assert.equal(JSON.parse(posts()[1].body).data.status,'OPEN');assert(!posts().some(p=>JSON.parse(p.body).data.kind==='CONFIRM'));
+ }finally{await m.cleanup();}
+});
