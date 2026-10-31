@@ -1,3 +1,11 @@
+## 31/10/2026 - POS-CONSUMPTION-ENTRY-01 / ASSIGNED BEFORE SOURCE / USER VISUAL FAIL
+
+Owner fix/pos-consumption-entry-20261031. User screenshot and clarification confirm both existing consumption/destruction operations remain reachable, but the entry looks like a heading instead of a button. Independent narrow entry-label/style correction explicitly requested; other retained POS/header/appearance and business-flow owners remain unchanged. Read current main dc336b5, AGENTS, active/tracker/pending/checklist and POS manual, header2599 and prior9Oct blank-WASTE-slot USER PASS. Screenshot shows LAB POS2, empty cart, original Functions menu; no production revision/physical ID independently established. No new functional PASS.
+
+After this claim green/main: change ONLY existing setStoreMenu(true) launcher to explicit «Ιδιοκατανάλωση / Καταστροφή» with store as secondary context, visible border/background, touch-sized target, focus/hover and navigation chevron. Preserve exact one menu/button/callback, current store, focus/Escape behavior and existing consumption modal, no direct submit, old blank-WASTE-slot and no WASTE restoration. No API/auth/permission/cart/payment/stock/fiscal change. Mounted original menu regression + build/full source CI/normal guarded release required; hosted empty-cart open/close only, never click actual consumption submit or create stock/financial action. Prior shared decimal keyboard PASS retained.
+
+Current USER VISUAL FAIL; implementation/hosted acceptance NOT TESTED. Manual unchanged until actual new PASS. Single next: merge this claim green before source; retain owner through exact release and visual acceptance. Checkpoint CHECKPOINTS/CHANGES/2026-10-31-pos-consumption-entry.md.
+
 ## 31/10/2026 20:00 UTC — FTEXT-RESILIENCE-01 / RBS outcome parity / ASSIGNED BEFORE SOURCE
 
 ΑΝΑΛΗΨΗ ΑΠΟ fix/ftext-payment-resilience-20261030 / fix/ftext-durable-handoff-20261031 — ASSIGNED fix/ftext-rbs-outcome-20261031, explicit owner request in current recovery conversation. No parallel ownership of this bounded outcome UX scope. Preserve all other owners and durable handoff work.
