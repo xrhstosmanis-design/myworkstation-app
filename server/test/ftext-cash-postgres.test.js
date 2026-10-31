@@ -138,7 +138,10 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
   await t.test('late CASH receipt retains original timeout and commits once with original shift; replay, foreign and reused proof protected',async()=>{
    const rejected=(await a.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "clientTransactionId"='operator-declined'`)[0];
    await a.$transaction(tx=>releaseFtextRejectedAttempt(tx,rejected.id,scope,'operator-a',{registerReady:true}));
-   const late=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'late-cash'}));
+   // Reuse the PREPARED request deliberately left by the preceding NO-release test; never delete a pending row to make recovery pass.
+   const late=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'new-after-no'}));
+   assert.equal(late.status,'PREPARED');
+   assert.equal(Number((await a.$queryRaw`SELECT COUNT(*)::int AS n FROM "FtextCashRequest" WHERE "clientTransactionId"='new-after-no'`)[0].n),1);
    await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
    const unknown={requestId:late.id,settingsHash:late.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
    const original=await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,unknown));
