@@ -1,0 +1,74 @@
+{
+  "verifiedAtUtc": "2026-10-31T13:52:15.389561+00:00",
+  "distributionPR": 3374,
+  "distributionHead": "48a8151fc5fb43eaa77abdfc9a7843a130367dfd",
+  "distributionMerge": "7332c0de8f3a1dc8b4d8fb01467de079fafa7de4",
+  "distributionPRCI": 41204962335,
+  "distributionPRTests": {
+    "server": 4864,
+    "backup": 8,
+    "failed": 0,
+    "skipped": 0
+  },
+  "distributionMainCI": 41206046498,
+  "distributionMainTests": {
+    "server": 4864,
+    "backup": 8,
+    "failed": 0,
+    "skipped": 0
+  },
+  "deployWorkflowRun": 41206962144,
+  "renderDeployId": "dep-dbiv2cks728c738d69hg",
+  "deployedRevision": "7332c0de8f3a1dc8b4d8fb01467de079fafa7de4",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "7332c0de8f3a1dc8b4d8fb01467de079fafa7de4"
+  },
+  "manifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "version": "0.1.12-preview",
+    "versionCode": 13,
+    "minimumAndroid": 8,
+    "videoCaptureMinimumAndroid": 11,
+    "maximumVideoSeconds": 30,
+    "maximumVideoBytes": 12582912,
+    "videoFormat": "MP4 H264/AAC",
+    "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.12-Preview.apk",
+    "sha256": "eaa1f8343de16765711dcc8c3e6ed748fba35a53d355ec21745cf155cdec3a5b",
+    "bytes": 3687436,
+    "sourceCommit": "0fdc753887821c3050174f284ce700fefc87a990",
+    "androidSourceTree": "3aa4333d7ebe886384076d5fdc9c93f6b43d4b03",
+    "ciRun": 41202991148,
+    "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+    "signing": "stable-owner-key",
+    "acceptance": "TECHNICAL CANDIDATE; NAMED READERS DEVICE ACCEPTANCE PENDING; prior first-entry/reopen and media user acceptance retained; device/hash not independently identified"
+  },
+  "manifestMatchesRepository": true,
+  "manifestBytesMatchRepository": true,
+  "publicApkMatchesSignedArtifact": true,
+  "publicApkSha256": "eaa1f8343de16765711dcc8c3e6ed748fba35a53d355ec21745cf155cdec3a5b",
+  "publicApkBytes": 3687436,
+  "binaryManifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "versionCode": 13,
+    "versionName": "0.1.12-preview"
+  },
+  "signingRun": 41202991148,
+  "signingAttempt": 2,
+  "artifactId": 13044132208,
+  "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "physicalNamedReaders": "NOT TESTED",
+  "realChatReadOrSend": "NOT PERFORMED",
+  "priorAcceptance": "Limited store-link/close-reopen and media USER PASS retained; device/hash not independently identified",
+  "browser": {
+    "publicUrl": "https://myworkstation-app.onrender.com/downloads/chat-android/",
+    "downloadHref": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.12-Preview.apk",
+    "displayedVersion": "0.1.12-preview",
+    "namedReaderInstructionsVisible": true,
+    "syntheticStore": "readers-fixture-20261031",
+    "explicitStoreHandoff": "intent://store/readers-fixture-20261031#Intent;scheme=myworkstation-chat;package=gr.myworkstation.chat.preview;end",
+    "nativeLaunch": "NOT PERFORMED",
+    "screenshot": "public-download-0.1.12.jpg"
+  }
+}
