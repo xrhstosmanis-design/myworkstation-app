@@ -1,0 +1,62 @@
+{
+  "scope": "synthetic MYWORKSTATION LAB only; read-only SA desktop",
+  "revision": "0fdc753887821c3050174f284ce700fefc87a990",
+  "sourcePR": 3360,
+  "sourceCI": 41200854613,
+  "mainCI": 41201990925,
+  "installedCI": 41202964821,
+  "guardedRelease": 41204097193,
+  "nativeServerPass": 4864,
+  "backupPass": 8,
+  "fail": 0,
+  "skip": 0,
+  "csv": {
+    "beforeBytes": 960,
+    "afterBytes": 1027,
+    "rows": 2,
+    "columns": 21,
+    "unchangedColumns": 18
+  },
+  "monthlyExpenses": {
+    "2026-10": {
+      "gross": 305.58,
+      "net": 257.34,
+      "VAT": 48.24
+    },
+    "2026-09": {
+      "gross": 313.2,
+      "net": 313.2,
+      "VAT": 0
+    }
+  },
+  "totals": {
+    "gross": 618.78,
+    "net": 570.54,
+    "VAT": 48.24
+  },
+  "day26September": {
+    "margin": 79.66,
+    "grossProfit": 0.35,
+    "expense": 313,
+    "expenseVAT": 0,
+    "netProfit": -312.65
+  },
+  "missingCostLines": 9,
+  "salesLines": 99,
+  "drilldownRows": 12,
+  "activeMAINBeforeAfter": {
+    "transactions": 0,
+    "cash": 0,
+    "cards": 0,
+    "IRIS": 0,
+    "total": 0,
+    "expenses": 0
+  },
+  "businessActions": 0,
+  "limits": [
+    "ordinary Owner",
+    "physical/mobile",
+    "native printer",
+    "hosted DB/stock hashes"
+  ]
+}
