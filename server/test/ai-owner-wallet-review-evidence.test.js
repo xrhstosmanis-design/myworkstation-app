@@ -50,7 +50,7 @@ test('explicit zero cache writes needs no lifetime breakdown and returns the ori
  const settlement=f.calls.find(c=>c[0]==='settle');assert.equal(settlement[3].amountMicros,92n);assert.equal(settlement[3].usage.cacheWriteTokens,0);assert.equal(settlement[3].usage.cacheWrite30mTokens,0);assert.equal(settlement[3].usage.cacheWrite12hTokens,0);assert.equal(f.calls.filter(c=>c[0]==='review').length,0);
 });
 test('zero-write compatibility never accepts unknown totals, missing reads or a malformed supplied partition',async()=>{
- for(const details of [{cached_tokens:20},{cached_tokens:20,cache_write_tokens:null},{cache_write_tokens:0},{cached_tokens:20,cache_write_tokens:1},{cached_tokens:20,cache_write_tokens:0,cache_write_tokens_details:{}},{cached_tokens:20,cache_write_tokens:0,cache_write_tokens_details:null},{cached_tokens:20,cache_write_tokens:0,cache_write_tokens_details:{ttl_30m_tokens:1,ttl_12h_tokens:0}}]){
+ for(const details of [{cached_tokens:20},{cached_tokens:20,cache_write_tokens:null},{cache_write_tokens:0},{cached_tokens:20,cache_write_tokens:'1'},{cached_tokens:20,cache_write_tokens:0,cache_write_tokens_details:{}},{cached_tokens:20,cache_write_tokens:0,cache_write_tokens_details:null},{cached_tokens:20,cache_write_tokens:0,cache_write_tokens_details:{ttl_30m_tokens:1,ttl_12h_tokens:0}}]){
   const f=fixture();await assert.rejects(f.provider(scope,{model:tariff.model},async()=>({response:{ok:true},raw:{...raw,usage:{...raw.usage,input_tokens_details:details}}})),e=>e.code==='AI_WALLET_USAGE_REVIEW');assert.equal(f.calls.filter(c=>c[0]==='settle').length,0);assert.equal(f.calls.filter(c=>c[0]==='review').length,1);
  }
 });
@@ -63,3 +63,4 @@ test('explicit zero writes retains cached-read accounting and exact long-context
  }
  assert.equal(meteredUsage({...raw,usage:{...raw.usage,input_tokens_details:{cached_tokens:20,cache_write_tokens:0}}},price).amount,92n);
 });
+
