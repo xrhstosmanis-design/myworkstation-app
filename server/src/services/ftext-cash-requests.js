@@ -6,6 +6,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {prepareFtextSalePlan} from './ftext-sale-plan.js';
 import {ftextSettingsHash,ftextRegisterReady} from './ftext-installation.js';
+import {newFtextHandoff,ftextHandoffRequest,assertFtextHandoffResult} from './ftext-handoff.js';
 const fail=(code,message)=>{throw Object.assign(new Error(message),{status:409,code})};
 const hash=s=>createHash('sha256').update(s).digest('hex');
 export async function findPendingFtextCashRequest(tx,scope){
@@ -33,14 +34,16 @@ export async function prepareFtextCashRequest(tx,{settings,scope,sessionId,clien
  if((await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "serialNumber"=${settings.serialNumber} AND "status"<>'SALE_COMMITTED' AND COALESCE("checkoutJson"->'ftextVoid'->>'status','')<>'CONFIRMED' AND COALESCE("checkoutJson"->'ftextOperatorRelease'->>'registerReady','')<>'true' LIMIT 1`).length)fail('FTEXT_CASH_PENDING','Υπάρχει εκκρεμής εντολή σε αυτή την ταμειακή. Δεν στάλθηκε νέα.');
  return (await tx.$queryRaw`INSERT INTO "FtextCashRequest" ("id","companyId","storeId","terminalPos","fiscalDeviceCode","serialNumber","clientTransactionId","requestHash","settingsHash","lifecycleGeneration","sessionId","plan","checkoutJson","total") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${scope.terminalPos},${scope.fiscalDeviceCode},${settings.serialNumber},${clientTransactionId},${requestHash},${settingsHash},${settings.lifecycleGeneration},${sessionId},${JSON.stringify(plan)}::jsonb,${JSON.stringify({...checkout,resolvedItems:items,baseSummary:summary,ftextCardMode:checkout.paymentMethod==='CARD'?settings.cardPayment.resultFormat:null,ftextCardDecision:null,ftextCardDecisionHistory:[]})}::jsonb,${summary.total}) RETURNING *`)[0];
 }
-export async function claimFtextCashRequest(tx,device,settings){
+export async function claimFtextCashRequest(tx,device,settings,{handoffVersion}={}){
  if(settings.cashEnabled!==true)return null;
  // Leave PREPARED untouched while the updated connector obtains a fresh nonfiscal STATUS.
  if(device.metadata?.ftextReadinessRequired===true&&!ftextRegisterReady(device,settings))return null;
  const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${settings.companyId} AND "storeId"=${settings.storeId} AND "terminalPos"=${settings.terminalPos} AND "status"='PREPARED' ORDER BY "createdAt" LIMIT 1 FOR UPDATE`)[0];
  if(!row)return null;
+ if(Object.hasOwn(row.checkoutJson||{},'ftextHandoff'))fail('FTEXT_HANDOFF_REVIEW','Η παλιά κατάσταση παράδοσης απαιτεί έλεγχο· δεν επανεκκινείται.');
  if(row.settingsHash!==ftextSettingsHash(settings)||row.lifecycleGeneration!==settings.lifecycleGeneration)fail('FTEXT_CASH_SETTINGS_CHANGED','Η εκκρεμής εντολή ανήκει σε προηγούμενες ρυθμίσεις.');
- const updated=(await tx.$queryRaw`UPDATE "FtextCashRequest" SET "status"='DISPATCHED',"claimedByDeviceId"=${device.id},"claimedTokenVersion"=${device.tokenVersion},"dispatchedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${row.id} AND "status"='PREPARED' RETURNING *`)[0];
+ const updated=handoffVersion===1?(await tx.$queryRaw`UPDATE "FtextCashRequest" SET "status"='DISPATCHED',"claimedByDeviceId"=${device.id},"claimedTokenVersion"=${device.tokenVersion},"checkoutJson"=${JSON.stringify({...row.checkoutJson,ftextHandoff:newFtextHandoff(row,device,settings)})}::jsonb,"dispatchedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${row.id} AND "status"='PREPARED' RETURNING *`)[0]:(await tx.$queryRaw`UPDATE "FtextCashRequest" SET "status"='DISPATCHED',"claimedByDeviceId"=${device.id},"claimedTokenVersion"=${device.tokenVersion},"dispatchedAt"=NOW(),"updatedAt"=NOW() WHERE "id"=${row.id} AND "status"='PREPARED' RETURNING *`)[0];
+ if(updated?.checkoutJson?.ftextHandoff)return ftextHandoffRequest(updated);
  // This committed transition is a one-shot dispatch, not a renewable lease.
  return updated?{id:updated.id,settingsHash:updated.settingsHash,scope:updated.plan.scope,serialNumber:updated.serialNumber,plan:updated.plan}:null;
 }
@@ -61,6 +64,7 @@ export function validateFtextCashResult(input,row){
 export async function recordFtextCashResult(tx,device,settings,input){
  const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${input?.requestId||''} AND "companyId"=${settings.companyId} AND "storeId"=${settings.storeId} AND "terminalPos"=${settings.terminalPos} FOR UPDATE`)[0];
  if(!row||row.claimedByDeviceId!==device.id||row.claimedTokenVersion!==device.tokenVersion||row.settingsHash!==ftextSettingsHash(settings))fail('FTEXT_CASH_RESULT_SCOPE','Η εντολή δεν αντιστοιχεί στη συγκεκριμένη ενεργή συσκευή.');
+ assertFtextHandoffResult(row,device,settings);
  const result=validateFtextCashResult(input,row),resultHash=hash(JSON.stringify(result));
  if(row.resultHash){if(row.resultHash!==resultHash)fail('FTEXT_CASH_RESULT_CHANGED','Το ίδιο αποτέλεσμα άλλαξε. Απαιτείται έλεγχος.');return row;}
  if(result.outcome==='CONFIRMED'){

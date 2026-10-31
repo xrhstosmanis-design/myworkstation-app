@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {staffProfiles,staffPermissionSections} from '../../../shared/backoffice-staff.mjs';
+import {staffProfiles,staffPermissionSections,changeStaffCapability} from '../../../shared/backoffice-staff.mjs';
 import './backoffice-staff.css';
 export default function BackofficeStaffAdmin({api}){
   const [data,setData]=useState(null),[edit,setEdit]=useState(null),[grants,setGrants]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
@@ -12,10 +12,7 @@ export default function BackofficeStaffAdmin({api}){
   const applyProfile=storeId=>setGrants(rows=>rows.map(r=>r.storeId===storeId?{...r,capabilities:[...staffProfiles[r.profile].capabilities]}:r));
   const toggleCapability=(storeId,cap,on)=>setGrants(rows=>rows.map(r=>{
     if(r.storeId!==storeId)return r;
-    let next=on?[...r.capabilities,cap]:r.capabilities.filter(c=>c!==cap);
-    if(cap==='inventory.read'&&!on)next=next.filter(c=>c!=='inventory.count');
-    if(cap==='inventory.count'&&on&&!next.includes('inventory.read'))next.push('inventory.read');
-    return {...r,capabilities:next};
+    return {...r,capabilities:changeStaffCapability(r.capabilities,cap,on)};
   }));
   const save=async e=>{
     e.preventDefault();if(saving.current)return;saving.current=true;setBusy(true);setError('');setMessage('');

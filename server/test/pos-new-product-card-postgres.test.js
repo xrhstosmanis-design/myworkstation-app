@@ -108,6 +108,33 @@ test('actual POS routes and shared creator enforce real PostgreSQL permissions, 
    const result=await createInventoryCard(db,owner,body({barcodes:[],sku:'BACKOFFICE',openingStock:2}));const move=(await db.$queryRawUnsafe(`SELECT * FROM "StockMovement" WHERE "productId"=$1`,result.id))[0];assert.equal(move.createdByUserId,'owner');
    const audit=(await db.$queryRawUnsafe(`SELECT "details" FROM "StoreOperatorAudit" WHERE "details"->>'productId'=$1`,result.id))[0];assert.equal(audit.details.terminalPos,'BACKOFFICE');assert.equal('origin' in audit.details,false);
   });
+  await t.test('delegated BackOffice creation rechecks explicit rights inside the transaction and separates opening stock',async()=>{
+   const {ensureBackofficeStaffSchema}=await import('../src/backoffice-staff-bootstrap.js');
+   for(const sql of [
+    `ALTER TABLE "User" ADD COLUMN "role" text DEFAULT 'OWNER', ADD COLUMN "fullName" text DEFAULT 'Fixture', ADD COLUMN "email" text DEFAULT 'fixture@invalid', ADD COLUMN "mustChangePassword" boolean DEFAULT false, ADD COLUMN "sessionVersion" int DEFAULT 0`,
+    `CREATE TABLE "UserSession" ("id" text PRIMARY KEY,"userId" text,"revokedAt" timestamptz,"expiresAt" timestamptz)`,
+    `INSERT INTO "User" ("id","companyId","role") VALUES ('delegated','company','EMPLOYEE')`,
+    `INSERT INTO "UserSession" VALUES ('delegated-session','delegated',NULL,NOW()+INTERVAL '1 hour')`
+   ])await db.$executeRawUnsafe(sql);
+   await ensureBackofficeStaffSchema(db);
+   await db.$executeRaw`INSERT INTO "BackofficeStaffAccount" ("userId","companyId","username","pinHash") VALUES ('delegated','company','delegated.fixture','not-a-real-credential')`;
+   await db.$executeRaw`INSERT INTO "BackofficeStaffGrant" ("userId","companyId","storeId","profile","capabilities") VALUES ('delegated','company','A','AUDITOR','["products.read"]'::jsonb)`;
+   const actor={id:'delegated',companyId:'company',storeId:'A',role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',sessionId:'delegated-session',sessionVersion:0,staffAccess:true,fullName:'Delegated fixture'};
+   let before=await snapshot();
+   await assert.rejects(createInventoryCard(db,actor,body({barcodes:[],openingStock:0})),{code:'STAFF_ACCESS_DENIED'});assert.equal(await snapshot(),before);
+   await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["products.read","products.create"]'::jsonb WHERE "userId"='delegated'`;
+   const zero=await createInventoryCard(db,actor,body({barcodes:[],openingStock:0,sku:'DELEGATED-ZERO'}));
+   assert.equal(Number((await db.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "productId"=${zero.id}`)[0].currentStock),0);
+   assert.equal((await db.$queryRaw`SELECT "id" FROM "StockMovement" WHERE "productId"=${zero.id}`).length,0);
+   before=await snapshot();await assert.rejects(createInventoryCard(db,actor,body({barcodes:[],openingStock:3})),{code:'STAFF_ACCESS_DENIED'});assert.equal(await snapshot(),before);
+   await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["products.read","products.create","products.opening-stock"]'::jsonb WHERE "userId"='delegated'`;
+   const stockBody=body({barcodes:[],openingStock:3,sku:'DELEGATED-STOCK'}),stock=await createInventoryCard(db,actor,stockBody);
+   assert.equal((await createInventoryCard(db,actor,stockBody)).id,stock.id);
+   const moves=await db.$queryRaw`SELECT "quantity","createdByUserId" FROM "StockMovement" WHERE "productId"=${stock.id}`;assert.equal(moves.length,1);assert.equal(Number(moves[0].quantity),3);assert.equal(moves[0].createdByUserId,'delegated');
+   before=await snapshot();await assert.rejects(createInventoryCard(db,actor,body({storeId:'B',barcodes:[],openingStock:0})),{status:403});assert.equal(await snapshot(),before);
+   const delayed={$transaction:async fn=>{await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "active"=false WHERE "userId"='delegated'`;return db.$transaction(fn)}};
+   await assert.rejects(createInventoryCard(delayed,actor,body({barcodes:[],openingStock:0})),{code:'STAFF_ACCESS_DENIED'});assert.equal(await snapshot(),before);
+  });
   assert.equal(await controls(),beforeControl,'control-store stock and all financial source rows unchanged');
  }finally{
   if(server)await new Promise(resolve=>server.close(resolve));

@@ -32,7 +32,7 @@ export async function requireStaffGrant(db,user,storeId,capability){
     const override=(await db.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "moduleKey"=${moduleKey} LIMIT 1`)[0];
     if(!effectiveModuleEnabled(license.activeModules.includes(moduleKey),override?{...override,configured:true}:{configured:false}))throw staffError(403,'MODULE_DISABLED','Η λειτουργία δεν είναι ενεργή στο κατάστημα.');
   }
-  if(capability==='inventory.count')await assertLifecycleMutation(db,{companyId:user.companyId,storeId},lifecycleContext()[storeId]??'0');
+  if(['inventory.count','products.create','products.opening-stock'].includes(capability))await assertLifecycleMutation(db,{companyId:user.companyId,storeId},lifecycleContext()[storeId]??'0');
   return {account,grant};
 }
 // Invoked inside the existing authentication middleware, before any legacy route.
@@ -51,7 +51,7 @@ export async function enforceBackofficeStaff(db,req,res){
   if(capability==='LIFECYCLE'){
     const storeId=path.split('/').at(-1);
     const row=(await db.$queryRaw`SELECT "capabilities" FROM "BackofficeStaffGrant" WHERE "userId"=${user.id} AND "companyId"=${user.companyId} AND "storeId"=${storeId} AND "active"=true LIMIT 1`)[0];
-    const read=row?.capabilities?.includes('inventory.read')?'inventory.read':'cash.read';
+    const read=row?.capabilities?.find(c=>['inventory.read','cash.read','products.read'].includes(c));
     await requireStaffGrant(db,user,storeId,read);
     req.user={...req.user,storeId};return true;
   }
@@ -68,6 +68,6 @@ export async function enforceBackofficeStaff(db,req,res){
   }
   const {grant}=await requireStaffGrant(db,user,storeId,capability);
   req.staffGrant={...grant,capability};
-  req.user={...req.user,storeId,permissions:capability.startsWith('inventory.')?['INVENTORY']:['CASH_CONTROL','STORE_CHAT','AI_READER']};
+  req.user={...req.user,storeId,permissions:capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:['INVENTORY']};
   return true;
 }

@@ -48,7 +48,7 @@ function Invoke-FtextCloudPoll($Config,[bool]$Recovering=$false) {
     foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode','serialNumber','workFolder','protocol','configurationId','lifecycleGeneration','cashEnabled','cashDepartments','cardEnabled','cardPayment')) {
         if($Config.PSObject.Properties[$key]) {$settings[$key]=$Config.$key}
     }
-    $body=@{readinessVersion=1;recovering=$Recovering;settingsHash=$Config.settingsHash;settings=$settings} | ConvertTo-Json -Depth 12 -Compress
+    $body=@{readinessVersion=1;recovering=$Recovering;settingsHash=$Config.settingsHash;settings=$settings;handoffVersion=1} | ConvertTo-Json -Depth 12 -Compress
     $response=Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/work-poll') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body $body -TimeoutSec 15
     Confirm-FtextCloudIdentity $Config $response
     foreach($key in @('request','lateReceipt','errorEvidence')) {if(-not $response.PSObject.Properties[$key]) {throw 'Incomplete scoped work response.'}}
@@ -83,8 +83,41 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath) {
     return $result.ok
 }
 function Invoke-FtextCashApi($Config,[string]$Action,$Body) {
-    if($Action -notin @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result','late-receipt-poll','late-receipt-result')) {throw 'Unsupported cash API action.'}
+    if($Action -notin @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result','late-receipt-poll','late-receipt-result','cash-handoff-accept')) {throw 'Unsupported cash API action.'}
     $token=Read-FtextDeviceToken $Config
     return Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/'+$Action) -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -TimeoutSec 30
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Invoke-FtextCashApi
+function Invoke-FtextCloudHandoff([string]$ConfigPath,$Request,[string]$CommandHash) {
+    $config=Get-FtextCloudConfig $ConfigPath
+    $assertOriginal={
+        $prefix=Join-Path $config.workFolder ('mws-cash-'+$Request.id)
+        if(Test-Path -LiteralPath ($prefix+'.publish.json')) {throw 'Publication journal exists. Authorization cannot publish again.'}
+        $intent=Get-Content -LiteralPath ($prefix+'.intent.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        $active=Get-Content -LiteralPath (Join-Path $config.workFolder '.mws-ftext-cash.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        if([string]$intent.requestId -cne [string]$Request.id -or [string]$intent.commandHash -cne $CommandHash -or [string]$intent.settingsHash -cne [string]$config.settingsHash -or [string]$active.request.id -cne [string]$Request.id -or [string]$active.request.handoff.nonce -cne [string]$Request.handoff.nonce -or [string]$active.request.handoff.commandHash -cne $CommandHash) {throw 'Original local handoff evidence is missing or changed.'}
+        foreach($key in @('companyId','storeId','terminalPos','serialNumber','settingsHash')) {if([string]$active.$key -cne [string]$config.$key) {throw 'Original active handoff belongs to another installation.'}}
+        foreach($suffix in @('.pending','.txt','.res','.report.json')) {if(Test-Path -LiteralPath ($prefix+$suffix)) {throw 'Original fiscal evidence exists. Authorization cannot publish again.'}}
+    }
+    for($attempt=0;$attempt -lt 2;$attempt++) {
+        & $assertOriginal
+        $clear=-not (Test-Path -LiteralPath (Join-Path $config.workFolder '.mws-ftext-status.json')) -and @(Get-ChildItem -LiteralPath $config.workFolder -Filter '*.txt' -File).Count -eq 0
+        $body=@{requestId=[string]$Request.id;settingsHash=[string]$config.settingsHash;nonce=[string]$Request.handoff.nonce;commandHash=$CommandHash;readyForExecution=[bool]$clear}
+        $ack=Invoke-FtextCashApi $config 'cash-handoff-accept' $body
+        if($ack.ok -ne $true -or $ack.version -ne 1 -or [string]$ack.requestId -cne [string]$Request.id -or [string]$ack.settingsHash -cne [string]$config.settingsHash -or [string]$ack.nonce -cne [string]$Request.handoff.nonce -or [string]$ack.commandHash -cne $CommandHash -or $ack.requiresReadiness -isnot [bool]) {throw 'Invalid original handoff acknowledgement.'}
+        if([string]$ack.state -ceq 'ACCEPTED') {
+            if($null -eq $ack.authorization -or [string]$ack.authorization.id -cne [string]$Request.handoff.nonce -or [string]::IsNullOrWhiteSpace([string]$ack.authorization.acceptedAt)) {throw 'Invalid immutable original authorization.'}
+            [void][DateTimeOffset]::Parse([string]$ack.authorization.acceptedAt,[Globalization.CultureInfo]::InvariantCulture)
+            if($ack.requiresReadiness -eq $false) {
+                if(-not $clear) {throw 'Local input is not clear for first publication.'}
+                & $assertOriginal
+                return [pscustomobject]@{requestId=$ack.requestId;settingsHash=$ack.settingsHash;nonce=$ack.nonce;commandHash=$ack.commandHash;acceptedAt=$ack.authorization.acceptedAt}
+            }
+        } elseif([string]$ack.state -cne 'OFFERED' -or $null -ne $ack.authorization -or $ack.requiresReadiness -ne $true) {throw 'Original handoff is not eligible for first publication.'}
+        # Only the durable original evidence with NO publication journal allows
+        # nonfiscal readiness refresh before the first possible publication.
+        & $assertOriginal
+        Invoke-FtextCloudReadiness $ConfigPath | Out-Null
+    }
+    throw 'Fresh readiness was not acknowledged before first publication. Original files retained.'
+}
+Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff

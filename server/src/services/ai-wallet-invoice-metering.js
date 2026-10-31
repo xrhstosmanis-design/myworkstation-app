@@ -31,7 +31,8 @@ export function createInvoiceWalletMeter({repository=aiOwnerWalletRepository,env
   function run(scope,work){
     if(!active())return work();
     if(!scope||!['companyId','storeId'].every(k=>typeof scope[k]==='string'&&scope[k].trim()&&scope[k].length<=160))throw walletError('AI_WALLET_SCOPE_DENIED',403);
-    return context.run(Object.freeze({companyId:scope.companyId,storeId:scope.storeId,feature:'INVOICE_AI'}),async()=>{try{return await work()}catch(error){throwIfWalletError(error);throw error}});
+    if(scope.invoiceDocumentId!==undefined&&(typeof scope.invoiceDocumentId!=='string'||!scope.invoiceDocumentId.trim()||scope.invoiceDocumentId.length>160))throw walletError('AI_WALLET_SCOPE_DENIED',403);
+    return context.run(Object.freeze({companyId:scope.companyId,storeId:scope.storeId,feature:'INVOICE_AI',...(scope.invoiceDocumentId===undefined?{}:{invoiceDocumentId:scope.invoiceDocumentId})}),async()=>{try{return await work()}catch(error){throwIfWalletError(error);throw error}});
   }
   async function responsesFetch(url,options){
     if(!active())return transport(url,options);
@@ -79,5 +80,6 @@ const invoiceMeter=createInvoiceWalletMeter();
 export const withInvoiceWalletScope=invoiceMeter.run;
 export const invoiceWalletResponsesFetch=invoiceMeter.responsesFetch;
 export const meterInvoiceAzure=invoiceMeter.azure;
+
 
 

@@ -5,8 +5,13 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.count','cash.read']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.count','cash.read','products.read','products.create','products.opening-stock']);
 export const staffPermissionSections=Object.freeze([
+  {key:'products',label:'Είδη και αποθήκη',actions:[
+    {key:'products.read',label:'Προβολή ειδών',description:'Βλέπει είδη, τιμές, κόστος και απόθεμα του καταστήματος.'},
+    {key:'products.create',label:'Νέο είδος',description:'Δημιουργεί πλήρη καρτέλα στο επιλεγμένο κατάστημα.',requires:['products.read']},
+    {key:'products.opening-stock',label:'Αρχικό απόθεμα νέου είδους',description:'Καταχωρίζει αρχικό απόθεμα κατά τη δημιουργία είδους.',requires:['products.read','products.create']}
+  ]},
   {key:'inventory',label:'Απογραφή',actions:[
     {key:'inventory.read',label:'Προβολή',description:'Βλέπει τις ανοιχτές απογραφές του καταστήματος.'},
     {key:'inventory.count',label:'Καταμέτρηση',description:'Καταχωρίζει ποσότητες σε ανοιχτή απογραφή.',requires:['inventory.read']}
@@ -18,9 +23,25 @@ export const staffPermissionSections=Object.freeze([
 export function validStaffCapabilities(capabilities){
   return Array.isArray(capabilities)&&new Set(capabilities).size===capabilities.length&&
     capabilities.every(c=>staffCapabilities.includes(c))&&
-    (!capabilities.includes('inventory.count')||capabilities.includes('inventory.read'));
+    staffPermissionSections.every(section=>section.actions.every(action=>!capabilities.includes(action.key)||(action.requires||[]).every(c=>capabilities.includes(c))));
+}
+export function changeStaffCapability(capabilities,key,enabled){
+  if(!staffCapabilities.includes(key))return [...capabilities];
+  const next=new Set(capabilities);enabled?next.add(key):next.delete(key);
+  const actions=staffPermissionSections.flatMap(section=>section.actions);
+  let changed=true;
+  while(changed){changed=false;for(const action of actions){
+    if(!next.has(action.key))continue;
+    for(const dependency of action.requires||[])if(!next.has(dependency)){
+      enabled?next.add(dependency):next.delete(action.key);changed=true;
+    }
+  }}
+  return [...next];
 }
 export function staffRequestCapability(method,path){
+  if(method==='GET'&&path==='/api/inventory-archive')return 'products.read';
+  if(method==='GET'&&path==='/api/owner-products/new-card/options')return 'products.create';
+  if(method==='POST'&&path==='/api/owner-products/new-card')return 'products.create';
   if(method==='GET'&&path==='/api/backoffice-staff/me')return 'SESSION';
   if(method==='POST'&&['/api/auth/logout','/api/auth/renew','/api/auth/change-password'].includes(path))return 'SESSION';
   if(method==='GET'&&/^\/api\/lifecycle\/stores\/[^/]+$/.test(path))return 'LIFECYCLE';

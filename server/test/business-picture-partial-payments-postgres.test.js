@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {z} from 'zod';
 import {businessPictureCalendarRange} from '../src/business-picture-dates.js';
 import {finishBusinessPictureRow} from '../src/business-picture-totals.js';
+import {applyBusinessPictureCostEstimates,collectBusinessPictureMissingCosts} from '../src/business-picture-cost-estimates.js';
 
 test('production expense SQL allocates payment dates, cents and tenant boundaries without writes',{skip:!process.env.DATABASE_URL,timeout:45000},async()=>{
  const url=new URL(process.env.DATABASE_URL);
@@ -17,7 +18,7 @@ test('production expense SQL allocates payment dates, cents and tenant boundarie
   const source=await readFile(new URL('../src/routes/owner-payments.js',import.meta.url),'utf8');const handlers=new Map();
   const router=Object.fromEntries(['get','post','patch','put','delete','use'].map(method=>[method,(path,...args)=>{if(method==='get')handlers.set(path,args.at(-1));}]));
   const prisma={store:{findFirst:async({where})=>where.companyId==='a'&&where.id==='a1'?{id:'a1'}:null,findMany:async()=>[{id:'a1',name:'Isolated test'}]},$queryRaw:(parts,...values)=>parts.join('').includes('WITH "expenseLinks"')?tx.$queryRaw(parts,...values):Promise.resolve([])};
-  new Function('Router','z','prisma','businessPictureCalendarRange','finishBusinessPictureRow',source.replace(/^import .*;\s*$/gm,'').replace(/export default router;?/,''))(()=>router,z,prisma,businessPictureCalendarRange,finishBusinessPictureRow);
+  new Function('Router','z','prisma','businessPictureCalendarRange','finishBusinessPictureRow','applyBusinessPictureCostEstimates','collectBusinessPictureMissingCosts',source.replace(/^import .*;\s*$/gm,'').replace(/export default router;?/,''))(()=>router,z,prisma,businessPictureCalendarRange,finishBusinessPictureRow,applyBusinessPictureCostEstimates,collectBusinessPictureMissingCosts);
   const report=async(from,to=from,role='OWNER',storeId='a1')=>{
    let result;await handlers.get('/business-picture')({user:{companyId:'a',role},query:{storeId,calendarFrom:from,calendarTo:to}},{set(){},json(r){result=r;}},e=>{throw e;});return result;
   };

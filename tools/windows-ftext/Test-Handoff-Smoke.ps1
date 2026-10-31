@@ -1,0 +1,80 @@
+$ErrorActionPreference='Stop'
+Set-StrictMode -Version Latest
+Import-Module (Join-Path $PSScriptRoot 'Cash.psm1') -Force
+function AssertHandoff([bool]$Value,[string]$Message){if(-not $Value){throw $Message}}
+function HandoffHash([byte[]]$Bytes){$sha=[Security.Cryptography.SHA256]::Create();try{return [BitConverter]::ToString($sha.ComputeHash($Bytes)).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}}
+function MustRefuseHandoff([scriptblock]$Action){$refused=$false;try{& $Action | Out-Null}catch{$refused=$true};AssertHandoff $refused 'Unsafe handoff was accepted'}
+$root=Join-Path ([IO.Path]::GetTempPath()) ('ftext-handoff-fixture-'+[Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $root | Out-Null
+try{
+ foreach($method in @('CASH','CARD-OPERATOR','CARD-STRICT')){foreach($loss in @('BEFORE','AFTER','BARRIER')){
+  $folder=Join-Path $root ([Guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Path $folder | Out-Null
+  $configPath=Join-Path $folder 'config.json'
+  $c=[pscustomobject]@{companyId='fixture-company';storeId='fixture-store';terminalPos='POS-01';fiscalDeviceCode='FISCAL-01';serialNumber='TEST12345';workFolder=$folder;settingsHash=('a'*64);configurationId=[Guid]::NewGuid().ToString();cashEnabled=$true;cashDepartments=@([pscustomobject]@{department=4;vatRate=13;vatCode='2'});cardEnabled=$true;cardPayment=[pscustomobject]@{code=2;posTerminalId=1;transactionType=$(if($method -ceq 'CARD-STRICT'){6}else{1});resultFormat=$(if($method -ceq 'CARD-STRICT'){'POS_LINE8_OS7'}else{'OPERATOR_CONFIRMATION'});confirmed=$true}}
+  $c | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $configPath -Encoding UTF8
+  $scope=[pscustomobject]@{companyId=$c.companyId;storeId=$c.storeId;terminalPos=$c.terminalPos;fiscalDeviceCode=$c.fiscalDeviceCode}
+  $r=[pscustomobject]@{id=[Guid]::NewGuid().ToString();settingsHash=$c.settingsHash;scope=$scope;serialNumber=$c.serialNumber;plan=[pscustomobject]@{schemaVersion='MWS_FTEXT_SALE_PLAN_V1';configurationId=$c.configurationId;settingsHash=$c.settingsHash;scope=$scope;total='1.25';payment=[pscustomobject]@{method=$(if($method -ceq 'CASH'){'CASH'}else{'CARD'});code=$(if($method -ceq 'CASH'){1}else{2});amount='1.25'};lines=@([pscustomobject]@{description='SYNTHETIC';quantity='1.000';unitPrice='1.25';discount='0.00';lineTotal='1.25';department='4';vatRate='13.00';vatCode='2'})}}
+  $resultPath=Join-Path $folder ('mws-cash-'+$r.id+'.res');$intentPath=Join-Path $folder ('mws-cash-'+$r.id+'.intent.json');$activePath=Join-Path $folder '.mws-ftext-cash.json';$target=Join-Path $folder ('mws-cash-'+$r.id+'.txt');$publicationPath=Join-Path $folder ('mws-cash-'+$r.id+'.publish.json')
+  $digest=HandoffHash (New-FtextCashCommand $c $r $resultPath)
+  $r | Add-Member NoteProperty handoff ([pscustomobject]@{version=1;nonce=[Guid]::NewGuid().ToString();commandHash=$digest})
+  MustRefuseHandoff {Invoke-FtextCashRequest -ConfigPath $configPath -Request $r -TimeoutSeconds 1}
+  AssertHandoff (@(Get-ChildItem -LiteralPath $folder -Filter '*.txt').Count -eq 0 -and -not (Test-Path -LiteralPath $intentPath)) 'Missing callback reached durable/fiscal execution'
+  $state=@{calls=0;accepted=$false;loss=$loss;intent=$intentPath;active=$activePath;expected=$digest;requestId=$r.id;settings=$c.settingsHash;nonce=$r.handoff.nonce;acceptedAt='2026-10-31T12:00:00.000Z'}
+  $grant={param($job,$hash)
+   if(-not ((Test-Path -LiteralPath $state.intent) -and (Test-Path -LiteralPath $state.active))){throw 'Grant requested before durable original intent/active marker'}
+   $intent=Get-Content -LiteralPath $state.intent -Raw | ConvertFrom-Json
+   if(-not ([string]$intent.commandHash -ceq $state.expected -and [string]$intent.requestId -ceq $state.requestId -and $hash -ceq $state.expected -and [string]$job.id -ceq $state.requestId)){throw 'Original intent/command identity changed before grant'}
+   $state.calls++
+   if($state.calls -eq 1 -and $state.loss -cne 'BARRIER'){if($state.loss -ceq 'AFTER'){$state.accepted=$true};throw 'Synthetic lost grant reply'}
+   $state.accepted=$true;return [pscustomobject]@{requestId=$state.requestId;settingsHash=$state.settings;nonce=$state.nonce;commandHash=$state.expected;acceptedAt=$state.acceptedAt}
+  }.GetNewClosure()
+  if($loss -ceq 'BARRIER') {
+   & (Get-Command Invoke-FtextCashRequest).Module {
+    $script:originalDurable=(Get-Command Write-FtextCashDurable).ScriptBlock
+    function script:Write-FtextCashDurable([string]$Path,$Value) {
+     & $script:originalDurable $Path $Value
+     if($Path.EndsWith('.publish.json')) {throw 'Synthetic crash after durable journal before fiscal input'}
+    }
+   }
+  }
+  MustRefuseHandoff {Invoke-FtextCashRequest -ConfigPath $configPath -Request $r -TimeoutSeconds 1 -AcceptHandoff $grant}
+  Import-Module (Join-Path $PSScriptRoot 'Cash.psm1') -Force
+  AssertHandoff (-not (Test-Path -LiteralPath $target) -and @(Get-ChildItem -LiteralPath $folder -Filter '*.pending').Count -eq 0) 'A lost grant acknowledgement published a fiscal command'
+  $intentBefore=HandoffHash ([IO.File]::ReadAllBytes($intentPath))
+  $report=Invoke-FtextCashRequest -ConfigPath $configPath -Request $r -TimeoutSeconds 1 -AcceptHandoff $grant
+  AssertHandoff ($report.outcome -ceq 'REQUIRES_CHECK') 'Synthetic missing hardware result became a receipt'
+  AssertHandoff ((HandoffHash ([IO.File]::ReadAllBytes($intentPath))) -ceq $intentBefore) 'Original intent was rewritten across lost response'
+  if($loss -ceq 'BARRIER') {
+   AssertHandoff (-not (Test-Path -LiteralPath $target) -and $state.calls -eq 1) 'Crash after journal allowed first/repeated fiscal publication'
+  } else {
+   AssertHandoff (Test-Path -LiteralPath $target) 'Lost authorization reply did not recover one original publication'
+   $published=HandoffHash ([IO.File]::ReadAllBytes($target));AssertHandoff ($published -ceq $digest) 'Published command differs from authorized original bytes'
+  }
+  $journal=Get-Content -LiteralPath $publicationPath -Raw | ConvertFrom-Json
+  AssertHandoff ($journal.requestId -ceq $r.id -and $journal.commandHash -ceq $digest -and $journal.nonce -ceq $r.handoff.nonce) 'Publication was not protected by its original durable journal'
+  $journalHash=HandoffHash ([IO.File]::ReadAllBytes($publicationPath));$publicationCalls=$state.calls
+  # Model driver consumption plus a crash before the local report was durable.
+  # The original irreversible intent/active marker and server acceptance remain.
+  $reportPath=Join-Path $folder ('mws-cash-'+$r.id+'.report.json')
+  Remove-Item -LiteralPath $target -ErrorAction SilentlyContinue;Remove-Item -LiteralPath $reportPath
+  $afterConsumption=Invoke-FtextCashRequest -ConfigPath $configPath -Request $r -TimeoutSeconds 1 -AcceptHandoff $grant
+  AssertHandoff ($state.calls -eq $publicationCalls -and (HandoffHash ([IO.File]::ReadAllBytes($publicationPath))) -ceq $journalHash -and -not (Test-Path -LiteralPath $target) -and $afterConsumption.outcome -ceq 'REQUIRES_CHECK') 'Consumed fiscal input was published again after restart'
+  $before=@(Get-ChildItem -LiteralPath $folder -File | Get-FileHash -Algorithm SHA256 | Select-Object Path,Hash) | ConvertTo-Json -Compress
+  $calls=$state.calls;Import-Module (Join-Path $PSScriptRoot 'Cash.psm1') -Force
+  $reopened=Invoke-FtextCashRequest -ConfigPath $configPath -Request $r -TimeoutSeconds 1 -AcceptHandoff $grant
+  AssertHandoff ($state.calls -eq $calls -and $reopened.requestId -ceq $report.requestId) 'Cached original report after module restart requested new permission'
+  $after=@(Get-ChildItem -LiteralPath $folder -File | Get-FileHash -Algorithm SHA256 | Select-Object Path,Hash) | ConvertTo-Json -Compress
+  AssertHandoff ($before -ceq $after) 'Restart changed original evidence or fiscal input bytes'
+  # A partial/foreign journal is still an irreversible barrier; never treat parse failure as absence.
+  foreach($journalContent in @('{','{"requestId":"foreign"}')) {
+   [IO.File]::WriteAllText($publicationPath,$journalContent) # synthetic corruption fixture only
+   Remove-Item -LiteralPath $reportPath
+   Invoke-FtextCashRequest -ConfigPath $configPath -Request $r -TimeoutSeconds 1 -AcceptHandoff $grant | Out-Null
+   AssertHandoff ($state.calls -eq $calls -and -not (Test-Path -LiteralPath $target)) 'Malformed existing journal allowed another publication'
+  }
+  Complete-FtextCashReport $c $r.id
+  MustRefuseHandoff {Invoke-FtextCashRequest -ConfigPath $configPath -Request $r -TimeoutSeconds 1 -AcceptHandoff $grant}
+  AssertHandoff ($state.calls -eq $calls) 'Acknowledged intent was revived into another grant'
+ }}
+ Write-Host 'PASS: actual CASH/both CARD modules retain original files across before/after-commit grant loss, exactly one fresh permitted publication after lost authorization replies, and no publication after journal/driver consumption/restart/corrupt journal.'
+}finally{Remove-Item -LiteralPath $root -Recurse -Force}

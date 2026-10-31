@@ -1,10 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {staffRequestCapability} from '../../shared/backoffice-staff.mjs';
+import {staffRequestCapability,changeStaffCapability,validStaffCapabilities} from '../../shared/backoffice-staff.mjs';
 import {createStaffInput,updateStaffInput,staffLoginInput} from '../src/services/backoffice-staff-accounts.js';
 import {enforceBackofficeStaff,staffAccount,liveStaff} from '../src/services/backoffice-staff-access.js';
 const grant={storeId:'store-a',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']};
 const account={username:'counter.1',fullName:'Isolated Counter',password:'isolated-test-password',pin:'624918',grants:[grant]};
+test('product view, creation and opening stock are independent explicit rights with dependency closure',()=>{
+  const all=changeStaffCapability([],'products.opening-stock',true);
+  assert.deepEqual(new Set(all),new Set(['products.read','products.create','products.opening-stock']));
+  assert.equal(validStaffCapabilities(all),true);
+  assert.deepEqual(changeStaffCapability(all,'products.create',false),['products.read']);
+  assert.deepEqual(changeStaffCapability(all,'products.read',false),[]);
+  assert.equal(validStaffCapabilities(['products.create']),false);
+  assert.equal(validStaffCapabilities(['products.read','products.opening-stock']),false);
+  for(const profile of ['MANAGER','STOCKTAKER','AUDITOR'])assert.equal(createStaffInput.safeParse({...account,grants:[{...grant,profile,capabilities:all}]}).success,true);
+  assert.equal(staffRequestCapability('GET','/api/inventory-archive'),'products.read');
+  assert.equal(staffRequestCapability('GET','/api/owner-products/new-card/options'),'products.create');
+  assert.equal(staffRequestCapability('POST','/api/owner-products/new-card'),'products.create');
+  for(const [method,path] of [['PATCH','/api/owner-products/p/card'],['POST','/api/owner-products/p/stock-adjustment'],['POST','/api/inventory-archive/import'],['POST','/api/inventory-archive/stock-transfer'],['GET','/api/owner-products/catalog']])assert.equal(staffRequestCapability(method,path),null);
+});
 test('owner chooses explicit rights independently of profile without role elevation or implicit finalization',()=>{
   assert.equal(createStaffInput.parse({...account,username:'Counter.1'}).username,'counter.1');
   assert.equal(createStaffInput.safeParse({...account,grants:[{...grant,capabilities:['cash.read']}]}).success,true);

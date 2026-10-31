@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {z} from 'zod';
 import {resolveProductCardVat} from './product-card-vat.js';
 
@@ -22,6 +23,10 @@ export async function createInventoryCard(db,user,input,context={}){
  if(new Set(body.supplierCodes.map(x=>x.supplierId)).size!==body.supplierCodes.length)fail('Ο ίδιος προμηθευτής έχει επιλεγεί περισσότερες από μία φορές.');
  const fingerprint=crypto.createHash('sha256').update(JSON.stringify(body)).digest('hex');
  return db.$transaction(async tx=>{
+  if(user.staffAccess===true){
+   await requireStaffGrant(tx,user,body.storeId,'products.create');
+   if(body.openingStock!==0)await requireStaffGrant(tx,user,body.storeId,'products.opening-stock');
+  }
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${company+':product-sku'}))`;
   const store=await tx.store.findFirst({where:{id:body.storeId,companyId:company,active:true},select:{id:true}});
   if(!store)fail('Μη έγκυρο κατάστημα.');

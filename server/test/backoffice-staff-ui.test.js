@@ -17,6 +17,20 @@ async function mount(Component,props){
 }
 const identity={userId:'staff',companyId:'a',fullName:'Fixture',username:'fixture',stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:['cash.read']}]};
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
+test('operator uses actual archive read-only without edit, import, transfer or creation controls',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['products.read']}]};return {store:{id:'a1',name:'A1'},page:1,pageSize:100,pages:1,total:1,categories:[],subcategories:[],items:[{productId:'water',name:'Scoped virtual water',currentStock:4,salePrice:1}],totals:{}}};
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+    await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    await m.act(async()=>button('Είδη και αποθήκη').click());
+    assert.match(document.body.textContent,/Scoped virtual water/);
+    for(const label of ['Νέο είδος','Εισαγωγή από Excel','Μεταφορά','Ομαδική διόρθωση'])assert.equal(button(label),undefined);
+    assert.equal(document.querySelector('[title="Διόρθωση είδους"]').hidden,true);
+    assert.ok(calls.some(c=>c.path.startsWith('/api/inventory-archive?')&&c.options.headers['x-backoffice-store-id']==='a1'));
+    assert.ok(calls.every(c=>!c.options.method||c.options.method==='GET'));
+  }finally{await m.close()}
+});
 test('mounted personal workspace requires store selection and discards delayed old-store data',async()=>{
   const Workspace=await component('BackofficeStaffWorkspace'),calls=[];let resolve;
   const api=async(path,options)=>{calls.push({path,options});if(path.endsWith('/me'))return identity;return new Promise(r=>{resolve=r})};
