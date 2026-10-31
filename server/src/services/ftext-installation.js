@@ -104,11 +104,13 @@ export function createFtextInstallationService({db,moduleState,secret,clock=()=>
    const paired=(await t.$queryRaw`UPDATE "CloudDevice" SET "status"='ACTIVE',"tokenVersion"="tokenVersion"+1,"metadata"=${JSON.stringify(metadata)}::jsonb,"pairedAt"=NOW(),"lastSeenAt"=NULL,"revokedAt"=NULL WHERE "id"=${d.id} RETURNING *`)[0];
    const token=sign(paired,c);await audit(t,s,{type:'DEVICE',id:d.id},'FTEXT_PAIRED',{terminalPos:s.terminalPos});return {token,settings:c,settingsHash:ftextSettingsHash(c),companyId:s.companyId,storeId:s.storeId,terminalPos:s.terminalPos,fiscalCheckoutEnabled:false};
   });},
-  ping(token,input={}){const body=z.object({readinessVersion:z.literal(1).optional()}).strict().parse(input);return authenticated(token,async(t,d,c,s)=>{
+  ping(token,input={},work=null){const body=z.object({readinessVersion:z.literal(1).optional()}).strict().parse(input);return authenticated(token,async(t,d,c,s)=>{
    const metadata=body.readinessVersion===1?{...d.metadata,ftextReadinessRequired:true}:d.metadata;
    if(body.readinessVersion===1)await t.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW(),"metadata"=${JSON.stringify(metadata)}::jsonb WHERE "id"=${d.id}`;
    else await t.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW() WHERE "id"=${d.id}`;
-   return {...s,settings:c,settingsHash:ftextSettingsHash(c),serialNumber:c.serialNumber,readinessRequired:metadata?.ftextReadinessRequired===true,registerReady:ftextRegisterReady({...d,metadata,lastSeenAt:clock()},c,clock()),fiscalCheckoutEnabled:false};
+   const currentDevice={...d,metadata,lastSeenAt:clock()};
+   const jobs=work?await work(t,currentDevice,c):{};
+   return {...s,settings:c,settingsHash:ftextSettingsHash(c),serialNumber:c.serialNumber,readinessRequired:metadata?.ftextReadinessRequired===true,registerReady:ftextRegisterReady(currentDevice,c,clock()),fiscalCheckoutEnabled:false,...jobs};
   });},
   report(token,input){return authenticated(token,async(t,d,c,s)=>{
    const body=reportSchema.parse(input),old=d.metadata?.ftextLastStatus;

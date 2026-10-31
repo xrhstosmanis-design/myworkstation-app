@@ -1,5 +1,6 @@
 import {walletReviewEvidence} from './ai-owner-wallet-review-evidence.js';
 import {randomUUID} from 'node:crypto';
+import {requestCacheWritePolicy} from './ai-owner-wallet-cache-policy.js';
 import {meteredUsage,reserveAmount,reserveRequestAmount,tariffFor,walletError} from './ai-owner-wallet-contract.js';
 
 // Composed only around an already authorized provider call, never around sales,
@@ -10,7 +11,11 @@ export function createWalletProvider({repository,enabled=()=>process.env.AI_OWNE
     if(!enabled())return invoke(settings);
     if(!scope?.companyId||!scope?.storeId)throw walletError('AI_WALLET_SCOPE_DENIED',403);
     if(!await repository.enabledFor(scope.companyId))return invoke(settings);
-    const tariff=tariffFor(settings.model,tariffs());
+    const configuredTariff=tariffFor(settings.model,tariffs());
+    // The original reservation carries policy provenance alongside the exact
+    // price snapshot; tariff version and all reserve rates stay unchanged.
+    const tariff=configuredTariff.cacheWriteMicrosPerMillion?
+      {...configuredTariff,requestCacheWritePolicy:requestCacheWritePolicy(settings)}:configuredTariff;
     const max=settings.max_output_tokens??tariff.maxOutputTokens;
     if(!Number.isInteger(max)||max<1||max>tariff.maxOutputTokens)throw walletError('AI_WALLET_TARIFF_REQUIRED',503);
     // Optional internal invoice preflight. Legacy/Owner callers retain their
@@ -45,4 +50,5 @@ export function createWalletProvider({repository,enabled=()=>process.env.AI_OWNE
     }
   };
 }
+
 

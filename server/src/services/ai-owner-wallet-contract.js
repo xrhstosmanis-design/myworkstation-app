@@ -51,10 +51,15 @@ export function meteredUsage(raw,tariff){
   const details=d?.cache_write_tokens_details,requiresWrites=Boolean(tariff.cacheWriteMicrosPerMillion);
   if(requiresWrites&&!Number.isSafeInteger(d?.cached_tokens))throw walletError('AI_WALLET_USAGE_REVIEW',503);
   let short=0,long=0;
-  // A provider-reported zero total proves both nonnegative lifetime buckets
-  // are zero. An omitted breakdown is then valid; any supplied breakdown is
-  // still checked, and positive/unknown writes never receive guessed counts.
-  if(writes>0||details!==undefined){
+  const policy=tariff.requestCacheWritePolicy;
+  const uniform=policy?.schemaVersion===1&&policy.state==='UNIFORM'&&
+    ['REQUEST_DEFAULT','REQUEST_EXPLICIT'].includes(policy.source)&&['30m','12h'].includes(policy.ttl);
+  const derived=writes>0&&details===undefined&&requiresWrites&&uniform;
+  // Uniform request lifetimes determine the optional aggregate partition.
+  // Supplied details always remain authoritative and must validate in full.
+  if(derived){
+    short=policy.ttl==='30m'?writes:0;long=policy.ttl==='12h'?writes:0;
+  }else if(writes>0||details!==undefined){
     short=details?.ttl_30m_tokens;long=details?.ttl_12h_tokens;
     if(![short,long].every(n=>Number.isSafeInteger(n)&&n>=0)||short+long!==writes)throw walletError('AI_WALLET_USAGE_REVIEW',503);
   }
@@ -64,11 +69,14 @@ export function meteredUsage(raw,tariff){
   const amount=ceilMillion(BigInt(input-cached-writes)*BigInt(price.inputMicrosPerMillion)+BigInt(cached)*BigInt(price.cachedInputMicrosPerMillion)+BigInt(output)*BigInt(price.outputMicrosPerMillion)+
     BigInt(short)*BigInt(price.cacheWriteMicrosPerMillion?.ttl30m||0)+BigInt(long)*BigInt(price.cacheWriteMicrosPerMillion?.ttl12h||0));
   return {amount,usage:{providerResponseId:raw.id,model:raw.model,inputTokens:input,cachedInputTokens:cached,outputTokens:output,
-    ...(requiresWrites?{cacheWriteTokens:writes,cacheWrite30mTokens:short,cacheWrite12hTokens:long}:{}),...(tariff.longContext?{pricingTier:extended?'LONG_CONTEXT':'STANDARD'}:{})}};
+    ...(requiresWrites?{cacheWriteTokens:writes,cacheWrite30mTokens:short,cacheWrite12hTokens:long}:{}),
+    ...(derived?{cacheWritePartitionSource:policy.source,cacheWriteTtl:policy.ttl}:{}),
+    ...(tariff.longContext?{pricingTier:extended?'LONG_CONTEXT':'STANDARD'}:{})}};
 }
 export function positiveMicros(value){
   if(typeof value!=='string'||!/^\d{1,13}$/.test(value))throw walletError('AI_WALLET_INVALID_AMOUNT',400);
   const amount=BigInt(value);if(amount<=0n||amount>MAX_WALLET_MICROS)throw walletError('AI_WALLET_INVALID_AMOUNT',400);return amount;
 }
 export const walletView=row=>({companyId:row.companyId,currency:'EUR',enabled:row.enabled,emailEnabled:row.emailEnabled,notificationOwnerId:row.notificationOwnerId||'',balanceMicros:String(row.balanceMicros),reservedMicros:String(row.reservedMicros),availableMicros:String(BigInt(row.balanceMicros)-BigInt(row.reservedMicros)),lastCreditMicros:String(row.lastCreditMicros),version:row.version,state:BigInt(row.balanceMicros)===0n?'EMPTY':BigInt(row.balanceMicros)<=BigInt(row.lastCreditMicros)/5n?'LOW':'OK'});
+
 

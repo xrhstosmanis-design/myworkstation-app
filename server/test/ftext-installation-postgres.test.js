@@ -5,6 +5,7 @@ import {createFtextInstallationService} from '../src/services/ftext-installation
 import {ensureFtextCashSchema,ftextCashLifecycleReviewProposal} from '../src/services/ftext-cash-schema.js';
 import {prepareFtextCashRequest,claimFtextCashRequest} from '../src/services/ftext-cash-requests.js';
 import {companyModuleState} from '../src/middleware/module-access.js';
+import {pollFtextDeviceWork} from '../src/services/ftext-device-work.js';
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(decodeURIComponent(u.pathname))}catch{return false}}
 export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
  const sql=[
@@ -86,6 +87,25 @@ export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
   await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"=2 WHERE "storeId"='store-A'`;
   await assert.rejects(service.authenticated(paired.token,(tx,d,c)=>claimFtextCashRequest(tx,d,c)),e=>e.status===409);
   assert.equal((await a.$queryRaw`SELECT "status" FROM "FtextCashRequest" WHERE "id"=${pending.id}`)[0].status,'PREPARED');
+  await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"=1 WHERE "storeId"='store-A'`;
+  const combined=(svc,recovering=false)=>svc.ping(paired.token,{readinessVersion:1},(tx,d,c)=>pollFtextDeviceWork(tx,d,c,{recovering}));
+  // Real heartbeat+claim transaction: old heartbeat may be renewed but old STATUS
+  // cannot; a durable local result must prevent any new dispatch.
+  const beforeRecovery=await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${pending.id}`;
+  assert.deepEqual(await combined(service,true).then(({request,lateReceipt,errorEvidence})=>({request,lateReceipt,errorEvidence})),{request:null,lateReceipt:null,errorEvidence:null});
+  assert.deepEqual(await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${pending.id}`,beforeRecovery);
+  await b.$executeRaw`UPDATE "CloudDevice" SET "metadata"=jsonb_set(jsonb_set("metadata",'{ftextLastStatus,checkedAt}','"2000-01-01T00:00:00Z"'::jsonb),'{ftextLastStatus,receivedAt}','"2000-01-01T00:00:00Z"'::jsonb) WHERE "storeId"='store-A'`;
+  assert.equal((await combined(service)).request,null);assert.equal((await a.$queryRaw`SELECT "status" FROM "FtextCashRequest" WHERE "id"=${pending.id}`)[0].status,'PREPARED');
+  await service.report(paired.token,{requestId:'f'.repeat(32),checkedAt:new Date(now.getTime()+1).toISOString(),ok:true,code:0,serialNumber:input.serialNumber,deviceTime:'combined poll readiness',fiscalExecution:false});
+  const beforeControl=(await snapshot()).find(r=>r.companyId===control.companyId);
+  const combinedClaims=await Promise.all([combined(service),combined(other)]);
+  assert.equal(combinedClaims.filter(w=>w.request).length,1);assert.equal(combinedClaims.find(w=>w.request).request.id,pending.id);
+  assert.ok(combinedClaims.every(w=>w.settingsHash===c.settingsHash&&w.readinessRequired===true));
+  assert.equal((await combined(service)).request,null,'Lost combined response cannot renew a one-shot dispatch');
+  assert.deepEqual((await snapshot()).find(r=>r.companyId===control.companyId),beforeControl);
+  await b.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "id"='module-A'`;await assert.rejects(combined(service),e=>e.status===403);
+  await b.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "id"='module-A'`;
+  await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"=2 WHERE "storeId"='store-A'`;await assert.rejects(combined(service),e=>e.status===409);
  });
 
 }

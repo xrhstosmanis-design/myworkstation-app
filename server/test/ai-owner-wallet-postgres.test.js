@@ -211,7 +211,7 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     await db.$executeRaw`INSERT INTO "Company" VALUES('review-proof','Synthetic review evidence',true)`;
     await db.$executeRaw`INSERT INTO "Store" VALUES('review-proof-store','Synthetic evidence store','review-proof',true)`;
     await repository.configure('review-proof',{version:0,enabled:true,emailEnabled:false,notificationOwnerId:''},'admin');
-    await repository.grantTrial('review-proof',{amountMicros:'10000',grantReference:'synthetic-review-proof',reason:'Synthetic diagnostic evidence control'},'admin');
+    await repository.grantTrial('review-proof',{amountMicros:'100000',grantReference:'synthetic-review-proof',reason:'Synthetic diagnostic evidence control'},'admin');
     const reviewHold=await repository.reserve({companyId:'review-proof',storeId:'review-proof-store',feature:'OWNER_ASSISTANT',amountMicros:'10',reference:'synthetic-review-original',tariff:{model:'synthetic-review-model'}});
     const reviewControls=async()=>({wallet:await db.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"='review-proof'`,entries:await db.$queryRaw`SELECT * FROM "AiOwnerWalletEntry" WHERE "companyId"='review-proof' ORDER BY "id"`,notices:await db.$queryRaw`SELECT * FROM "AiOwnerWalletNotice" WHERE "companyId"='review-proof'`,audits:await db.$queryRaw`SELECT * FROM "AiOwnerWalletAudit" WHERE "companyId"='review-proof' ORDER BY "id"`,foreign:await db.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"='c'`});
     const reviewBefore=await reviewControls(),diagnostic={stage:'USAGE',reason:'USAGE_INVALID',responseId:'resp_synthetic_native',model:'synthetic-review-model',reported:{inputTokens:100,outputTokens:5},presence:{inputTokens:'VALID',outputTokens:'VALID',cacheWriteTokens:'MISSING'},limits:{inputTokens:100,outputTokens:30000},secret:'SECRET_native_prompt',headers:{Authorization:'SECRET_native_token'}};
@@ -231,6 +231,17 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     await nativeZeroProvider({companyId:'review-proof',storeId:'review-proof-store',feature:'INVOICE_OPENAI'},{model:nativeZeroTariff.model,max_output_tokens:3000},async()=>({response:{ok:true},raw:{id:'resp_synthetic_native_zero',model:nativeZeroTariff.model,usage:{input_tokens:100,output_tokens:5,input_tokens_details:{cached_tokens:20,cache_write_tokens:0}}}}),async()=>100);
     const nativeZeroAfter=await reviewControls(),nativeZeroEntry=nativeZeroAfter.entries.find(x=>x.usage?.providerResponseId==='resp_synthetic_native_zero');
     assert.equal(nativeZeroAfter.wallet[0].balanceMicros,nativeZeroBefore.wallet[0].balanceMicros-92n);assert.equal(nativeZeroAfter.wallet[0].reservedMicros,nativeZeroBefore.wallet[0].reservedMicros);assert.equal(nativeZeroAfter.wallet[0].version,nativeZeroBefore.wallet[0].version+2);assert.equal(nativeZeroEntry.status,'SETTLED');assert.equal(nativeZeroEntry.chargedMicros,92n);assert.equal(nativeZeroEntry.usage.cacheWriteTokens,0);assert.equal(nativeZeroEntry.usage.cacheWrite30mTokens,0);assert.equal(nativeZeroEntry.usage.cacheWrite12hTokens,0);assert.deepEqual(nativeZeroAfter.audits,nativeZeroBefore.audits);assert.deepEqual(nativeZeroAfter.notices,nativeZeroBefore.notices);assert.deepEqual(nativeZeroAfter.foreign,nativeZeroBefore.foreign);
+
+    // Actual observed positive aggregate shape: known default lifetime is
+    // snapshotted with the original hold; old REVIEW/RESERVED holds survive.
+    const nativeUniformTariff={...nativeZeroTariff,model:'synthetic-uniform-write',contextTokens:40000,maxOutputTokens:40000};
+    const nativeUniformBefore=await reviewControls(),nativeUniformProvider=createWalletProvider({repository,enabled:()=>true,tariffs:()=>JSON.stringify([nativeUniformTariff])});
+    const nativeUniformResult={response:{ok:true},raw:{id:'resp_synthetic_native_uniform',model:nativeUniformTariff.model,usage:{input_tokens:9399,output_tokens:778,input_tokens_details:{cached_tokens:0,cache_write_tokens:9396}}}};
+    assert.equal(await nativeUniformProvider({companyId:'review-proof',storeId:'review-proof-store',feature:'INVOICE_OPENAI'},{model:nativeUniformTariff.model,input:'Synthetic uniform lifetime',max_output_tokens:30000},async()=>nativeUniformResult,async()=>9399),nativeUniformResult);
+    const nativeUniformAfter=await reviewControls(),nativeUniformEntry=nativeUniformAfter.entries.find(x=>x.usage?.providerResponseId==='resp_synthetic_native_uniform');
+    assert.equal(nativeUniformAfter.wallet[0].balanceMicros,nativeUniformBefore.wallet[0].balanceMicros-13304n);assert.equal(nativeUniformAfter.wallet[0].reservedMicros,nativeUniformBefore.wallet[0].reservedMicros);assert.equal(nativeUniformAfter.wallet[0].version,nativeUniformBefore.wallet[0].version+2);
+    assert.equal(nativeUniformAfter.entries.length,nativeUniformBefore.entries.length+1);assert.equal(nativeUniformEntry.status,'SETTLED');assert.equal(nativeUniformEntry.reservedMicros,83498n);assert.equal(nativeUniformEntry.chargedMicros,13304n);assert.equal(nativeUniformEntry.usage.cacheWrite30mTokens,9396);assert.equal(nativeUniformEntry.usage.cacheWrite12hTokens,0);assert.equal(nativeUniformEntry.usage.cacheWritePartitionSource,'REQUEST_DEFAULT');assert.deepEqual(nativeUniformEntry.tariff.requestCacheWritePolicy,{schemaVersion:1,state:'UNIFORM',ttl:'30m',source:'REQUEST_DEFAULT'});
+    assert.deepEqual(nativeUniformAfter.entries.filter(x=>x.id!==nativeUniformEntry.id),nativeUniformBefore.entries);assert.deepEqual(nativeUniformAfter.audits,nativeUniformBefore.audits);assert.deepEqual(nativeUniformAfter.notices,nativeUniformBefore.notices);assert.deepEqual(nativeUniformAfter.foreign,nativeUniformBefore.foreign);
 
     // Internal trial funding never claims a customer receipt. Separate company
     // controls protect all existing fixture counts and real business rows.
@@ -308,4 +319,5 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     assert.deepEqual(await db.$queryRaw`SELECT * FROM "BusinessControl"`,before);
   }finally{if(server)await new Promise(resolve=>server.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
+
 
