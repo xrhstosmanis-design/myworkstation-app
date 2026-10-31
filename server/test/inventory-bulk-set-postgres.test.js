@@ -15,7 +15,7 @@ test('atomic selected-store SET attachment preserves prices, tax, stock, recipes
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
   const tables={
    Store:'"id" text primary key,"companyId" text,"active" bool',
-   Product:'"id" text primary key,"companyId" text,"categoryId" text,"subcategoryId" text,"vatDepartmentId" text,"vatRate" numeric,"salePrice" numeric,"isSet" bool default false,"active" bool default true,"trackStock" bool default true,"updatedAt" timestamp default NOW()',
+   Product:'"allowPosPriceChange" bool default false,"id" text primary key,"companyId" text,"categoryId" text,"subcategoryId" text,"vatDepartmentId" text,"vatRate" numeric,"salePrice" numeric,"isSet" bool default false,"active" bool default true,"trackStock" bool default true,"updatedAt" timestamp default NOW()',
    StoreProduct:'"storeId" text,"productId" text,"salePrice" numeric,"active" bool default true,"currentStock" numeric default 0,"updatedAt" timestamp default NOW(),primary key("storeId","productId")',
    ProductSetItem:'"id" text primary key,"companyId" text,"productId" text,"relatedProductId" text,"quantity" numeric,"salePrice" numeric,"updatedBy" text,"updatedByName" text,"createdAt" timestamp default NOW(),"updatedAt" timestamp default NOW(),unique("companyId","productId","relatedProductId")',
    PreparationProductSettings:'"companyId" text,"productId" text,"environmentalFee" numeric,"preparationEnabled" bool,"productionStation" text,"autoPrint" bool,"updatedAt" timestamp default NOW(),primary key("companyId","productId")',

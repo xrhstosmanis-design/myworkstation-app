@@ -22,6 +22,21 @@ test('mounted Archive selects dependent taxonomy/real VAT, store price payload, 
  await change(field('Κατηγορία'),'cat');assert.ok([...field('Υποκατηγορία').options].some(o=>o.value==='sub'));assert.ok(![...field('Υποκατηγορία').options].some(o=>o.value==='foreign'));
  await change(field('Υποκατηγορία'),'sub');await change(field('Τμήμα ΦΠΑ'),'dep');await change(field('Αλλαγή λιανικής'),'INCREASE_PERCENT');await change(field('Ποσοστό %'),'10');await act(async()=>button('Καταχώρηση').click());
  const payload=JSON.parse(calls.find(c=>c.path.endsWith('/bulk-card')).options.body);assert.equal(payload.storeId,'A');assert.equal(payload.categoryId,'cat');assert.equal(payload.subcategoryId,'sub');assert.equal(payload.vatDepartmentId,'dep');assert.equal(payload.vatRate,13);assert.equal(payload.priceMode,'INCREASE_PERCENT');assert.equal(payload.priceValue,10);assert.deepEqual(payload.expectedPrices,{p1:2,p2:3});assert.match(payload.requestId,/^[a-f0-9-]{36}$/);
+ // Existing price-only save omits the permission (KEEP).
+ assert.equal(Object.hasOwn(payload,'allowPosPriceChange'),false);
+ await act(async()=>document.querySelectorAll('.ia-row.data > span:nth-child(2) input[type=checkbox]')[1].click());
+ await act(async()=>button('Ομαδική διόρθωση').click());assert.equal(field('Αλλαγή τιμής στο POS').value,'KEEP');
+ await change(field('Αλλαγή τιμής στο POS'),'YES');await act(async()=>button('Καταχώρηση').click());
+ let sent=JSON.parse(calls.filter(c=>c.path.endsWith('/bulk-card')).at(-1).options.body);assert.deepEqual(sent.productIds,['p1']);assert.equal(sent.allowPosPriceChange,true);assert.equal(Object.hasOwn(sent,'priceMode'),false);
+ await act(async()=>button('Ομαδική διόρθωση').click());await change(field('Αλλαγή τιμής στο POS'),'NO');await act(async()=>button('Καταχώρηση').click());assert.equal(JSON.parse(calls.filter(c=>c.path.endsWith('/bulk-card')).at(-1).options.body).allowPosPriceChange,false);
+ await act(async()=>document.querySelectorAll('.ia-row.data > span:nth-child(2) input[type=checkbox]')[0].click());
+ await act(async()=>button('Ομαδική διόρθωση').click());const count=calls.filter(c=>c.path.endsWith('/bulk-card')).length;
+ await act(async()=>button('Καταχώρηση').click());assert.equal(calls.filter(c=>c.path.endsWith('/bulk-card')).length,count);
+ await change(field('Κατηγορία'),'cat');await change(field('Εφαρμογή άδειας POS'),'ALL');assert.equal(field('Κατηγορία'),undefined);assert.match(document.querySelector('.ia-modal').textContent,/σε όλες τις σελίδες/);
+ await act(async()=>button('Καταχώρηση').click());assert.equal(calls.filter(c=>c.path.endsWith('/bulk-card')).length,count);
+ await change(field('Αλλαγή τιμής στο POS'),'YES');await act(async()=>button('Καταχώρηση').click());
+ sent=JSON.parse(calls.filter(c=>c.path.endsWith('/bulk-card')).at(-1).options.body);assert.equal(sent.allProducts,true);assert.deepEqual(sent.productIds,[]);assert.equal(sent.allowPosPriceChange,true);assert.equal(Object.hasOwn(sent,'categoryId'),false);
+ await act(async()=>document.querySelector('.ia-row.head input[type=checkbox]').click());
  await act(async()=>button('Συγχώνευση ειδών').click());await change(field('Είδος που θα κρατηθεί'),'p1');assert.equal(button('Επιβεβαίωση συγχώνευσης').disabled,true);await act(async()=>button('Προεπισκόπηση συγχώνευσης').click());assert.match(document.querySelector('.ia-merge-body').textContent,/Τελικό απόθεμα: -1/);assert.equal(button('Επιβεβαίωση συγχώνευσης').disabled,true);assert.equal(calls.some(c=>c.path.endsWith('/merge/confirm')),false);
  await act(async()=>root.render(React.createElement(module.exports.default,{api,storeId:'B',stores:[{id:'B',name:'CONTROL'}],onClose(){}})));assert.equal(document.querySelector('.ia-modal'),null);assert.equal(button('Συγχώνευση ειδών').disabled,true);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const [key,d]of previous){if(d)Object.defineProperty(globalThis,key,d);else delete globalThis[key]}}
