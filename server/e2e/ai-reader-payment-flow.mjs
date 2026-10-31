@@ -145,8 +145,7 @@ async function main(){
   assert.equal(await stock(productId),7,"Repeated approval moved credit stock twice");
   const creditLedger=await prisma.$queryRawUnsafe(`SELECT "status","documentType","totalGross" FROM "PurchaseDocument" WHERE "id"=$1`,creditDraft.payload.documentId);
   assert.equal(creditLedger[0].status,"APPROVED");assert.equal(creditLedger[0].documentType,"CREDIT_NOTE");assert.equal(Number(creditLedger[0].totalGross),6.04);
-  // Match the document's explicit date rather than the current Athens month:
-  // around local midnight on month-end those belong to different months.
+  // Scope the ledger to the fixture date: UTC and Athens can be in different months.
   const supplierLedger=await request(`/api/supplier-control/${supplierId}/ledger?from=${creditHeader.documentDate}&to=${creditHeader.documentDate}`,{token});
   assert.equal(supplierLedger.response.status,200,JSON.stringify(supplierLedger.payload));
   assert.ok(supplierLedger.payload.rows.some(row=>row.type==="CREDIT_NOTE"&&row.ref===creditNumber&&Number(row.amount)===-6.04),"Supplier balance did not subtract the credit");

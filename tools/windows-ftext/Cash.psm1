@@ -113,6 +113,7 @@ function Invoke-FtextCashRequest {
   }
   $intentPath=Join-Path $folder ('mws-cash-'+$Request.id+'.intent.json')
   $publicationPath=Join-Path $folder ('mws-cash-'+$Request.id+'.publish.json')
+  $stopPath=Join-Path $folder ('mws-cash-'+$Request.id+'.stop.json')
   $reportPath=Join-Path $folder ('mws-cash-'+$Request.id+'.report.json')
   $activePath=Join-Path $folder '.mws-ftext-cash.json'
   $pending=Get-FtextCashPending $c
@@ -123,7 +124,7 @@ function Invoke-FtextCashRequest {
    if([string]$intent.requestId -cne [string]$Request.id -or [string]$intent.commandHash -cne $digest -or [string]$intent.settingsHash -cne [string]$c.settingsHash) {throw 'Cash request changed; no resend is permitted.'}
    if(-not $pending) {throw 'This cash request was already acknowledged. No resend is permitted.'}
   } else {
-   if($pending -or (Test-Path -LiteralPath $publicationPath) -or (Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-status.json')) -or @(Get-ChildItem -LiteralPath $folder -Filter '*.txt' -File).Count -gt 0 -or (Test-Path -LiteralPath $resultPath) -or (Test-Path -LiteralPath $reportPath)) {throw 'Pending or pre-existing ftext files. No command was written.'}
+   if($pending -or (Test-Path -LiteralPath $publicationPath) -or (Test-Path -LiteralPath $stopPath) -or (Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-status.json')) -or @(Get-ChildItem -LiteralPath $folder -Filter '*.txt' -File).Count -gt 0 -or (Test-Path -LiteralPath $resultPath) -or (Test-Path -LiteralPath $reportPath)) {throw 'Pending or pre-existing ftext files. No command was written.'}
    if($Request.PSObject.Properties['kind'] -and [string]$Request.kind -ceq 'FTEXT_VOID') {
     $originalPath=Join-Path $folder ('mws-cash-'+[string]$Request.originalRequestId+'.res')
     if(-not (Test-Path -LiteralPath $originalPath -PathType Leaf) -or (Get-FtextCashHash ([IO.File]::ReadAllBytes($originalPath))) -cne [string]$Request.originalRawResultHash) {throw 'Original payment result changed or missing. No VOID was written.'}
@@ -135,11 +136,20 @@ function Invoke-FtextCashRequest {
    Write-FtextCashDurable $activePath ([ordered]@{companyId=$c.companyId;storeId=$c.storeId;terminalPos=$c.terminalPos;serialNumber=$c.serialNumber;settingsHash=$c.settingsHash;request=$Request})
    $publish=-not $handoff
   }
+  if(Test-Path -LiteralPath $stopPath) {return Read-FtextUnpublishedStop $c $Request $digest}
   if(Test-Path -LiteralPath $reportPath) {return Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json}
   $temp=Join-Path $folder ('mws-cash-'+$Request.id+'.pending');$target=Join-Path $folder ('mws-cash-'+$Request.id+'.txt')
   if($handoff -and -not (Test-Path -LiteralPath $publicationPath) -and -not (Test-Path -LiteralPath $resultPath) -and -not (Test-Path -LiteralPath $temp) -and -not (Test-Path -LiteralPath $target)) {
    $grant=& $AcceptHandoff $Request $digest $ConfigPath
-   if($null -eq $grant -or [string]$grant.requestId -cne [string]$Request.id -or [string]$grant.settingsHash -cne [string]$c.settingsHash -or [string]$grant.nonce -cne [string]$Request.handoff.nonce -or [string]$grant.commandHash -cne $digest -or [string]::IsNullOrWhiteSpace([string]$grant.acceptedAt)) {throw 'Original authorization was not verified. No fiscal command was written.'}
+   if($null -eq $grant -or [string]$grant.requestId -cne [string]$Request.id -or [string]$grant.settingsHash -cne [string]$c.settingsHash -or [string]$grant.nonce -cne [string]$Request.handoff.nonce -or [string]$grant.commandHash -cne $digest) {throw 'Original authorization was not verified. No fiscal command was written.'}
+   if($grant.PSObject.Properties['stopped']) {
+    if($grant.stopped -isnot [bool] -or $grant.stopped -ne $true -or -not $Request.handoff.PSObject.Properties['stopVersion'] -or $Request.handoff.stopVersion -ne 1 -or [string]$grant.stopId -notmatch '^[a-f0-9]{64}$' -or [string]::IsNullOrWhiteSpace([string]$grant.stoppedAt)) {throw 'Unverified original terminal stop. No fiscal command was written.'}
+    [void][DateTimeOffset]::Parse([string]$grant.stoppedAt,[Globalization.CultureInfo]::InvariantCulture)
+    foreach($suffix in @('.publish.json','.pending','.txt','.res','.report.json')) {if(Test-Path -LiteralPath (Join-Path $folder ('mws-cash-'+$Request.id+$suffix))) {throw 'Original fiscal evidence exists. Stop cannot clear it.'}}
+    Write-FtextCashDurable $stopPath ([ordered]@{requestId=$Request.id;settingsHash=$c.settingsHash;commandHash=$digest;nonce=$grant.nonce;stopId=$grant.stopId;stoppedAt=$grant.stoppedAt})
+    return Read-FtextUnpublishedStop $c $Request $digest
+   }
+   if([string]::IsNullOrWhiteSpace([string]$grant.acceptedAt)) {throw 'Original authorization was not verified. No fiscal command was written.'}
    [void][DateTimeOffset]::Parse([string]$grant.acceptedAt,[Globalization.CultureInfo]::InvariantCulture)
    $publish=$true
   }
@@ -176,6 +186,33 @@ function Complete-FtextCashReport($Config,[string]$RequestId) {
  if(-not $pending -or [string]$pending.request.id -cne $RequestId) {throw 'Cash acknowledgement identity mismatch.'}
  # Keep intent/report/publication journal permanently; only release the active marker after cloud acknowledgement.
  Remove-Item -LiteralPath (Join-Path $Config.workFolder '.mws-ftext-cash.json')
+}
+function Read-FtextUnpublishedStop($Config,$Request,[string]$Digest) {
+ if(-not $Request.PSObject.Properties['handoff'] -or $Request.handoff.version -ne 1 -or -not $Request.handoff.PSObject.Properties['stopVersion'] -or $Request.handoff.stopVersion -ne 1 -or [string]$Request.handoff.commandHash -cne $Digest) {throw 'Original request did not negotiate terminal stop.'}
+ $prefix=Join-Path $Config.workFolder ('mws-cash-'+$Request.id)
+ foreach($suffix in @('.publish.json','.pending','.txt','.res','.report.json')) {if(Test-Path -LiteralPath ($prefix+$suffix)) {throw 'Original fiscal evidence exists. Stop cannot clear it.'}}
+ $intent=[Text.Encoding]::UTF8.GetString((Read-FtextEvidenceFile ($prefix+'.intent.json') 4096)) | ConvertFrom-Json
+ if((@($intent.PSObject.Properties.Name | Sort-Object) -join ',') -cne 'commandHash,requestId,settingsHash' -or [string]$intent.requestId -cne [string]$Request.id -or [string]$intent.settingsHash -cne [string]$Config.settingsHash -or [string]$intent.commandHash -cne $Digest) {throw 'Original stop intent is missing or changed.'}
+ $s=[Text.Encoding]::UTF8.GetString((Read-FtextEvidenceFile ($prefix+'.stop.json') 4096)) | ConvertFrom-Json
+ if((@($s.PSObject.Properties.Name | Sort-Object) -join ',') -cne 'commandHash,nonce,requestId,settingsHash,stopId,stoppedAt' -or [string]$s.requestId -cne [string]$Request.id -or [string]$s.settingsHash -cne [string]$Config.settingsHash -or [string]$s.commandHash -cne $Digest -or [string]$s.nonce -cne [string]$Request.handoff.nonce -or [string]$s.stopId -notmatch '^[a-f0-9]{64}$' -or [string]::IsNullOrWhiteSpace([string]$s.stoppedAt)) {throw 'Original durable stop identity changed.'}
+ [void][DateTimeOffset]::Parse([string]$s.stoppedAt,[Globalization.CultureInfo]::InvariantCulture)
+ return [pscustomobject]@{requestId=$s.requestId;settingsHash=$s.settingsHash;outcome='STOPPED_BEFORE_EXECUTION';stopId=$s.stopId;stoppedAt=$s.stoppedAt}
+}
+function Complete-FtextUnpublishedStop($Config,[string]$RequestId,[string]$StopId) {
+ if($RequestId -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -or $StopId -notmatch '^[a-f0-9]{64}$') {throw 'Invalid original stop acknowledgement.'}
+ $hash=Get-FtextCashHash ([Text.Encoding]::UTF8.GetBytes(([string]$Config.workFolder).ToUpperInvariant()))
+ $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtext_'+$hash.ToUpperInvariant()));$held=$false
+ try {
+  try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
+  if(-not $held) {throw 'Another connector is using this ftext folder.'}
+  $pending=Get-FtextCashPending $Config
+  if(-not $pending -or [string]$pending.request.id -cne $RequestId) {throw 'Stop acknowledgement belongs to another active request.'}
+  $bytes=New-FtextCashCommand $Config $pending.request (Join-Path $Config.workFolder ('mws-cash-'+$RequestId+'.res'))
+  $stop=Read-FtextUnpublishedStop $Config $pending.request (Get-FtextCashHash $bytes)
+  if([string]$stop.stopId -cne $StopId) {throw 'Original stop proof changed.'}
+  # Preserve intent and terminal stop permanently. Never remove fiscal evidence.
+  Remove-Item -LiteralPath (Join-Path $Config.workFolder '.mws-ftext-cash.json')
+ } finally {if($held){$mutex.ReleaseMutex()};$mutex.Dispose()}
 }
 function Read-FtextEvidenceFile([string]$Path,[int]$Limit) {
  $item=Get-Item -LiteralPath $Path -ErrorAction Stop
@@ -239,4 +276,4 @@ function Read-FtextLateReceiptEvidence($Config,$Request) {
   return [pscustomobject]@{requestId=[string]$Request.id;settingsHash=[string]$Config.settingsHash;originalResultHash=[string]$Request.originalResultHash;intentBase64=[Convert]::ToBase64String($intentBytes);reportBase64=[Convert]::ToBase64String($reportBytes);rawResultBase64=[Convert]::ToBase64String($bytes)}
  } finally {if($held){$mutex.ReleaseMutex()};$mutex.Dispose()}
 }
-Export-ModuleMember -Function New-FtextCashCommand,Read-FtextCashResult,Get-FtextCashPending,Invoke-FtextCashRequest,Complete-FtextCashReport,Read-FtextLateErrorEvidence,Read-FtextLateReceiptEvidence
+Export-ModuleMember -Function New-FtextCashCommand,Read-FtextCashResult,Get-FtextCashPending,Invoke-FtextCashRequest,Complete-FtextCashReport,Complete-FtextUnpublishedStop,Read-FtextLateErrorEvidence,Read-FtextLateReceiptEvidence

@@ -7,10 +7,10 @@ import {pollFtextHandoffOffer} from './ftext-handoff.js';
 
 // Runs inside the existing authenticated device transaction and lock. It does
 // not renew dispatches, relax readiness or introduce any new fiscal operation.
-export async function pollFtextDeviceWork(tx,device,settings,{recovering=false,handoffVersion}={}){
+export async function pollFtextDeviceWork(tx,device,settings,{recovering=false,handoffVersion,handoffStopVersion}={}){
  const empty={request:null,lateReceipt:null,errorEvidence:null};
  if(recovering||settings.cashEnabled!==true||!await ftextCashTableExists(tx))return empty;
- const request=await claimFtextVoid(tx,device,settings)||(handoffVersion===1?await pollFtextHandoffOffer(tx,device,settings):null)||await claimFtextCashRequest(tx,device,settings,{handoffVersion});
+ const request=await claimFtextVoid(tx,device,settings)||(handoffVersion===1?await pollFtextHandoffOffer(tx,device,settings):null)||await claimFtextCashRequest(tx,device,settings,{handoffVersion,handoffStopVersion});
  if(request)return {...empty,request};
  return {...empty,lateReceipt:await pollFtextLateReceipt(tx,device,settings),errorEvidence:await pollFtextErrorEvidence(tx,device,settings)};
 }
