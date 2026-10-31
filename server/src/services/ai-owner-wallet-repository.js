@@ -1,3 +1,4 @@
+import {sanitizeWalletReviewEvidence} from './ai-owner-wallet-review-evidence.js';
 import {assertAiWalletCatalogue,createAiWalletSchema,validateAiWalletSchema} from './ai-owner-wallet-schema.js';
 import {bindFreshLifecycleRead} from './store-lifecycle-generation.js';
 import {randomUUID} from 'node:crypto';
@@ -145,12 +146,13 @@ export function createAiOwnerWalletRepository(db){
       return {id,replayed:false};
     });
   }
-  async function review(companyId,id){await ensure();return db.$transaction(async tx=>{
+  async function review(companyId,id,evidence){await ensure();return db.$transaction(async tx=>{
     await lock(tx,companyId);
     const entry=(await tx.$queryRaw`SELECT "storeId" FROM "AiOwnerWalletEntry" WHERE "id"=${id} AND "companyId"=${companyId} AND "status"='RESERVED' FOR UPDATE`)[0];
     if(!entry)return;
     await bindFreshLifecycleRead(tx,{companyId,storeId:entry.storeId});
     await tx.$executeRaw`UPDATE "AiOwnerWalletEntry" SET "status"='REVIEW' WHERE "id"=${id} AND "companyId"=${companyId} AND "status"='RESERVED'`;
+    if(evidence!==undefined)await tx.$executeRaw`INSERT INTO "AiOwnerWalletAudit" ("id","companyId","actorId","event","detail") VALUES (${randomUUID()},${companyId},'SYSTEM_AI_METER','USAGE_REVIEW',${JSON.stringify({id,evidence:sanitizeWalletReviewEvidence(evidence)})}::jsonb)`;
   })}
   async function enabledFor(companyId){await ensure();return (await db.$queryRaw`SELECT "enabled" FROM "AiOwnerWallet" WHERE "companyId"=${companyId}`)[0]?.enabled===true}
   async function invoiceEnabledFor(companyId,fallback){await ensure();return invoicePolicy(db,companyId,fallback)}
