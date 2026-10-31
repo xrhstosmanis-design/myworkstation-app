@@ -5,6 +5,11 @@ import {createStaffInput,updateStaffInput,staffLoginInput} from '../src/services
 import {enforceBackofficeStaff,staffAccount,liveStaff} from '../src/services/backoffice-staff-access.js';
 const grant={storeId:'store-a',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']};
 const account={username:'counter.1',fullName:'Isolated Counter',password:'isolated-test-password',pin:'624918',grants:[grant]};
+test('invoice read is an exact list/file admission, never sync, AI, draft approval or deletion',()=>{
+  assert.equal(staffRequestCapability('GET','/api/commerce/documents/inbox/archive'),'invoices.read');
+  assert.equal(staffRequestCapability('GET','/api/commerce/documents/inbox/invoice/file'),'invoices.read');
+  for(const [method,path] of [['POST','/api/commerce/documents/mydata/sync'],['POST','/api/commerce/documents/inbox/invoice/original'],['PATCH','/api/commerce/documents/inbox/invoice'],['DELETE','/api/commerce/documents/inbox/invoice'],['POST','/api/commerce/purchases/invoice/approve'],['POST','/api/commerce/ai-reader/jobs/job/confirm']])assert.equal(staffRequestCapability(method,path),null);
+});
 test('product view, creation and opening stock are independent explicit rights with dependency closure',()=>{
   const all=changeStaffCapability([],'products.opening-stock',true);
   assert.deepEqual(new Set(all),new Set(['products.read','products.create','products.opening-stock']));
@@ -35,7 +40,7 @@ test('delegated request admission is an exact default-deny allowlist',()=>{
   assert.equal(staffRequestCapability('GET','/api/backoffice-staff/me'),'SESSION');
   assert.equal(staffRequestCapability('GET','/api/backoffice-staff/inventory/stores/s/stocktakes/st'),'inventory.read');
   assert.equal(staffRequestCapability('POST','/api/inventory-v2/stocktakes/st/count'),'inventory.count');
-  for(const [method,path] of [['POST','/api/inventory-v2/stocktakes/st/finalize'],['POST','/api/inventory-v2/stocktakes/st/products'],['POST','/api/inventory-v2/stocktakes'],['GET','/api/inventory-v2/stocktakes/st'],['POST','/api/backoffice-staff/admin/accounts'],['GET','/api/platform/companies'],['POST','/api/transactions/stores/s'],['POST','/api/backoffice-staff/cash/stores/s'],['POST','/api/auth/owner-companies/select'],['GET','/api/backoffice-staff/me/'],['GET','/api/backoffice-staff/cash/stores/s/archive']])assert.equal(staffRequestCapability(method,path),null,path);
+  for(const [method,path] of [['POST','/api/inventory-v2/stocktakes/st/products'],['GET','/api/inventory-v2/stocktakes/st'],['POST','/api/backoffice-staff/admin/accounts'],['GET','/api/platform/companies'],['POST','/api/transactions/stores/s'],['POST','/api/backoffice-staff/cash/stores/s'],['POST','/api/auth/owner-companies/select'],['GET','/api/backoffice-staff/me/'],['GET','/api/backoffice-staff/cash/stores/s/archive']])assert.equal(staffRequestCapability(method,path),null,path);
 });
 test('ordinary owner, operator and existing employee auth never queries new staff tables',async()=>{
   const db={$queryRaw:()=>assert.fail('unrelated identity queried new staff schema')};
@@ -58,4 +63,16 @@ test('PIN-first creation accepts four digits without weakening optional password
   assert.equal(createStaffInput.safeParse({...pinOnly,password:'short'}).success,false);
   assert.equal(createStaffInput.safeParse({...pinOnly,password:''}).success,false);
   assert.equal(createStaffInput.safeParse({...pinOnly,password}).success,true);
+});
+
+test('inventory creation and finalization require explicit independent rights plus view, and never admit other writers',()=>{
+  for(const cap of ['inventory.create','inventory.finalize']){
+    assert.equal(validStaffCapabilities([cap]),false);
+    assert.equal(validStaffCapabilities(['inventory.read',cap]),true);
+    assert.deepEqual(new Set(changeStaffCapability([],cap,true)),new Set([cap,'inventory.read']));
+    assert.deepEqual(changeStaffCapability([cap,'inventory.read'],'inventory.read',false),[]);
+  }
+  assert.equal(staffRequestCapability('POST','/api/inventory-v2/stocktakes'),'inventory.create');
+  assert.equal(staffRequestCapability('POST','/api/inventory-v2/stocktakes/st/finalize'),'inventory.finalize');
+  for(const [method,path] of [['DELETE','/api/inventory-v2/stocktakes/st'],['POST','/api/inventory-v2/stocktakes/st/access-grants'],['POST','/api/inventory-v2/stocktakes/st/count/bulk-zero'],['POST','/api/inventory-v2/stocktakes/st/attach-barcode']])assert.equal(staffRequestCapability(method,path),null);
 });

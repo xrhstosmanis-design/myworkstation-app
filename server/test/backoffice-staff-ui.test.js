@@ -17,6 +17,53 @@ async function mount(Component,props){
 }
 const identity={userId:'staff',companyId:'a',fullName:'Fixture',username:'fixture',stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:['cash.read']}]};
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
+test('invoice-only operator reads the existing inbox and safe original preview without sync, delete, review or AI writes',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  const item={id:'invoice',filename:'Synthetic.pdf',issueDate:'2026-10-31',receivedAt:'2026-10-31T08:00:00Z',supplierName:'Synthetic',status:'RECEIVED',processingStatus:'PENDING',hasAttachment:true,mark:'SYNTHETIC',linkedOrderId:'order'};
+  const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['invoices.read']}]};if(path.endsWith('/file'))return {filename:'<script>UNTRUSTED</script>',mimeType:'image/png',dataUrl:'data:image/png;base64,AAAA'};return {items:[item],total:1,archiveTotal:1,suppliers:['Synthetic']}};
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}}),preview=new JSDOM('<!doctype html><body></body>');
+  try{
+    await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    await m.act(async()=>button('Τιμολόγια').click());
+    await m.act(async()=>new Promise(resolve=>setTimeout(resolve,300)));
+    assert.match(document.body.textContent,/Synthetic.pdf/);
+    for(const label of ['Διαγραφή φωτογραφίας','Επανεπεξεργασία γραμμών','Έλεγχος από βοηθό AI','Έλεγχος εγγραφής','Άνοιγμα υπάρχοντος'])assert.equal(button(label),undefined);
+    assert.equal(button('Λήψη από myDATA').hidden,true);
+    window.open=()=>({document:preview.window.document,opener:window,close(){}});
+    await m.act(async()=>button('Πρωτότυπο φωτογραφία/PDF').click());
+    assert.equal(preview.window.document.querySelector('script'),null);assert.equal(preview.window.document.title,'<script>UNTRUSTED</script>');assert.equal(preview.window.document.querySelector('img').src,'data:image/png;base64,AAAA');
+    assert.ok(calls.filter(c=>!c.path.endsWith('/me')).every(c=>c.options.headers['x-backoffice-store-id']==='a1'&&!c.options.method));
+    assert.ok(calls.every(c=>!c.path.includes('/mydata/')));
+  }finally{preview.window.close();await m.close()}
+});
+test('owner entry reuses existing POS operator administration only after explicit same-company store selection',async()=>{
+  const Admin=await component('BackofficeStaffAdmin'),calls=[];
+  const api=async(path,options={})=>{calls.push({path,options});return path==='/api/backoffice-staff/admin'?{accounts:[],stores:[{id:'a1',name:'A1'},{id:'a2',name:'A2'}]}:{operators:[]}};
+  const m=await mount(Admin,{api});
+  try{
+    await m.act(async()=>button('Χειριστές POS').click());
+    assert.equal(calls.length,1);assert.equal(document.querySelector('.operator-management-suite'),null);
+    await m.act(async()=>{const s=document.querySelector('section[aria-label="Δικαιώματα χειριστών POS"] select');s.value='a2';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    assert.ok(document.querySelector('.operator-management-suite'));
+    assert.ok(calls.some(c=>c.path==='/api/operator-management/stores/a2/operators'));
+    assert.ok(calls.every(c=>!c.options.method));
+  }finally{await m.close()}
+});
+test('sales-only operator mounts the normal shift centre but cannot close a shift even with a stale action flag',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+  const shift={id:'shift',status:'OPEN',shiftLabel:'Synthetic shift',openedAt:'2026-10-31T08:00:00Z',terminalPos:'MAIN',openingOperational:4};
+  const store={id:'a1',name:'A1'};
+  const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read']}]};if(path.includes('/store-pos/'))return {rows:[]};if(path.includes('/transactions/'))return {store,openSession:shift,openSessions:[shift],recent:[],summaryBySession:{shift:{cashSales:0,cardSales:0,expensesTotal:0,transferIn:0,transferOut:0}},access:{canForceClose:true}};return {store,openSession:shift,recent:[shift]}};
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+    await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    assert.equal(button('Απογραφή'),undefined);assert.equal(button('Είδη και αποθήκη'),undefined);
+    await m.act(async()=>button('Πωλήσεις και βάρδιες').click());
+    assert.match(document.body.textContent,/Κέντρο βαρδιών/);assert.match(document.body.textContent,/Synthetic shift/);
+    assert.equal(button('Κλείσιμο βάρδιας'),undefined);
+    assert.ok(calls.filter(c=>!c.path.endsWith('/me')).every(c=>c.options.headers['x-backoffice-store-id']==='a1'&&!c.options.method));
+  }finally{await m.close()}
+});
 test('operator uses actual archive read-only without edit, import, transfer or creation controls',async()=>{
   const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
   const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['products.read']}]};return {store:{id:'a1',name:'A1'},page:1,pageSize:100,pages:1,total:1,categories:[],subcategories:[],items:[{productId:'water',name:'Scoped virtual water',currentStock:4,salePrice:1}],totals:{}}};
@@ -108,5 +155,35 @@ test('owner permission matrix exposes all supported actions regardless of role a
     assert.equal(checkbox('A1: Απογραφή — Καταμέτρηση').checked,false);
     await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
     assert.deepEqual(writes[0].grants,[{storeId:'a1',profile:'MANAGER',capabilities:['cash.read']}]);
+  }finally{await m.close()}
+});
+
+test('uncertain stocktake creation reuses one event and finalization verifies by GET without a second write',async()=>{
+  const Workspace=await component('BackofficeStaffWorkspace'),writes=[];
+  const draft={storeId:'a1',id:'st',name:'Lifecycle draft',status:'DRAFT',lines:[{id:'line',name:'Water',sku:'001',countVersion:1,countedQuantity:'12',expectedQuantity:'10'}]};
+  let createAttempts=0,finalized=false;
+  const api=async(path,options={})=>{
+    if(path.endsWith('/me'))return {...identity,stores:[{...identity.stores[0],capabilities:['inventory.read','inventory.create','inventory.count','inventory.finalize']}]};
+    if(options.method==='POST'){
+      writes.push({path,body:JSON.parse(options.body)});
+      if(path.endsWith('/finalize')){finalized=true;throw Error('network uncertain')}
+      if(createAttempts++===0)throw Error('network uncertain');return {id:'st',status:'DRAFT',replayed:true};
+    }
+    return path.endsWith('/stocktakes')?{storeId:'a1',stocktakes:[{id:'st',name:'Lifecycle draft'}]}:{...draft,status:finalized?'FINALIZED':'DRAFT'};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+    await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+    await m.act(async()=>button('Απογραφή').click());
+    await m.act(async()=>{const n=document.querySelector('input[name="name"]');n.value='Lifecycle draft';n.form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))});
+    assert.equal(writes.length,1);assert.equal(document.querySelector('select').disabled,true);
+    await m.act(async()=>button('Επαλήθευση ίδιας δημιουργίας').click());assert.deepEqual(writes[0],writes[1]);assert.equal(document.querySelector('select').disabled,false);
+    await m.act(async()=>button('Lifecycle draft').click());
+    assert.match(document.body.textContent,/Αναμενόμενη ποσότητα: 10/);
+    await m.act(async()=>{const r=document.querySelector('input[name="reason"]');r.value='Synthetic correction';r.form.elements.confirm.checked=true;r.form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))});
+    assert.equal(writes.length,3);assert.equal(document.querySelector('select').disabled,true);
+    await m.act(async()=>button('Έλεγχος αποτελέσματος οριστικοποίησης').click());
+    assert.equal(writes.length,3);assert.equal(document.querySelector('select').disabled,false);assert.equal(button('Οριστικοποίηση και ενημέρωση αποθέματος'),undefined);assert.equal(button('Καταχώρηση μέτρησης'),undefined);assert.equal(document.querySelector('input[name="quantity"]').disabled,true);
+    assert.match(document.body.textContent,/Οριστικοποιημένη απογραφή/);
   }finally{await m.close()}
 });

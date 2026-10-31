@@ -1,4 +1,5 @@
 import {supplierAdvanceContext,associateExpenseAsAdvance,allocateSupplierAdvance} from "../lib/supplier-advance.js";
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {createPendingInvoicePayment,readPendingInvoices,capturePendingInvoice} from "../services/pos-pending-invoices.js";
 import {supplierCreditCashContext,applySupplierCreditCash,assertCreditCashUnlinked} from "../lib/supplier-credit-cash.js";
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
@@ -182,6 +183,7 @@ function route(handler){
 }
 
 function requireLedgerAccess(req,res,next){
+  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='sales.read')return next();
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   const superAdmin=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="SUPER_ADMIN";
   const permissions=req.user?.permissions||[];
@@ -200,7 +202,7 @@ function requireLedgerAccess(req,res,next){
   next();
 }
 function assertStoreAccess(req,storeId){
-  if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){
+  if((req.user?.tokenType==="STORE_OPERATOR"||req.user?.staffAccess===true)&&req.user.storeId!==storeId){
     const error=new Error("Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error;
   }
 }
@@ -938,7 +940,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     ?await prisma.$queryRaw`SELECT "id","shiftLabel","openedAt","openedBy","openedByName","terminalPos","openingOperational" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "status"='OPEN' ORDER BY "openedAt" DESC`
     :await prisma.$queryRaw`SELECT "id","shiftLabel","openedAt","openedBy","openedByName","terminalPos","openingOperational" FROM "CashShiftSession" WHERE "storeId"=${store.id} AND "companyId"=${req.user.companyId} AND "terminalPos"=${terminalPos} AND "status"='OPEN' ORDER BY "openedAt" DESC LIMIT 1`;
   const openSession=openRows[0]||null;
-  for(const session of openRows)await reconcileOnlineSalesForOpenSession({store,companyId:req.user.companyId,openSession:session});
+  if(req.user.staffAccess!==true)for(const session of openRows)await reconcileOnlineSalesForOpenSession({store,companyId:req.user.companyId,openSession:session});
   const canReviewStoreLedger=req.user.tokenType!=="STORE_OPERATOR"||req.user.permissions?.includes("STORE_LEDGER_REVIEW");
   const canReverse=req.user.tokenType!=="STORE_OPERATOR"
     ?["OWNER","ADMIN","MANAGER"].includes(req.user?.role)
@@ -977,8 +979,8 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
   `;
   const recent=recentRows.map(row=>({...normalize(row),canCorrectAmount:canCorrectPayment(req.user,row,openRows.find(session=>session.id===row.sessionId)?{...openRows.find(session=>session.id===row.sessionId),status:"OPEN",companyId:req.user.companyId,storeId:store.id}:null,terminalPos)}));
   const myPayments=myPaymentRows.map(row=>({...normalize(row),canCorrectAmount:canCorrectPayment(req.user,row,{...openSession,status:"OPEN",companyId:req.user.companyId,storeId:store.id},terminalPos)}));
-  const suppliers=await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
-  const purchaseDocuments=await prisma.$queryRaw`
+  const suppliers=req.user.staffAccess===true?[]:await prisma.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name"`;
+  const purchaseDocuments=req.user.staffAccess===true?[]:await prisma.$queryRaw`
     SELECT p."id",p."supplierId",p."documentNumber",p."documentDate",p."totalGross",p."status",s."name" AS "supplierName"
     FROM "PurchaseDocument" p
     LEFT JOIN "Supplier" s ON s."id"=p."supplierId" AND s."companyId"=${req.user.companyId}
@@ -992,6 +994,7 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
       FROM "StoreTransaction"
       WHERE "sessionId"=${openSession.id} AND "storeId"=${store.id} AND "companyId"=${req.user.companyId}
     `).map(normalize);
+  if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,store.id,'sales.read');
   res.json({
     store:{id:store.id,name:store.name},
     openSession,

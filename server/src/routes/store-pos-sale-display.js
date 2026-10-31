@@ -1,4 +1,5 @@
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {Router} from "express";
 import crypto from "crypto";
 import {prisma} from "../prisma.js";
@@ -9,7 +10,7 @@ const money=value=>Number(value||0);
 const uid=()=>crypto.randomUUID();
 
 function assertStore(req,storeId){
-  if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){
+  if((req.user?.tokenType==="STORE_OPERATOR"||req.user?.staffAccess===true)&&req.user.storeId!==storeId){
     const error=new Error("Η πρόσβαση ισχύει μόνο για το δικό σου κατάστημα.");
     error.status=403;
     throw error;
@@ -165,7 +166,8 @@ router.get("/stores/:storeId/sales/recent",async(req,res,next)=>{
       const exists=await prisma.$queryRaw`SELECT to_regclass('"RbsCapDriverV1Request"') IS NOT NULL AS "exists"`;
       if(exists[0]?.exists){const requests=await prisma.$queryRaw`SELECT "saleId" FROM "RbsCapDriverV1Request" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "status"='SALE_COMMITTED' AND "saleId"=ANY(${issuedIds}::text[])`;internalIds=new Set(requests.map(row=>row.saleId));}
     }
-    res.json({store,rows:rows.map(row=>normalizeSale({...row,canInternalReturn:internalIds.has(row.id)}))});
+    if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,store.id,'sales.read');
+    res.json({store,rows:rows.map(row=>normalizeSale({...row,canInternalReturn:req.user.staffAccess!==true&&internalIds.has(row.id)}))});
   }catch(error){next(error)}
 });
 

@@ -5,8 +5,14 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.count','cash.read','products.read','products.create','products.opening-stock']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.count','inventory.create','inventory.finalize','cash.read','products.read','products.create','products.opening-stock','sales.read','invoices.read']);
 export const staffPermissionSections=Object.freeze([
+  {key:'invoices',label:'Τιμολόγια',actions:[
+    {key:'invoices.read',label:'Προβολή και εξαγωγή παραστατικών',description:'Βλέπει τη θυρίδα και τα πρωτότυπα του καταστήματος και εξάγει αναφορές. Δεν αλλάζει, διαγράφει ή εγκρίνει παραστατικά.'}
+  ]},
+  {key:'sales',label:'Πωλήσεις και βάρδιες',actions:[
+    {key:'sales.read',label:'Προβολή πωλήσεων και ταμείων',description:'Βλέπει τις πωλήσεις, κινήσεις και τα υπόλοιπα βαρδιών του καταστήματος. Δεν καταχωρίζει πληρωμές ή κλείσιμο.'}
+  ]},
   {key:'products',label:'Είδη και αποθήκη',actions:[
     {key:'products.read',label:'Προβολή ειδών',description:'Βλέπει είδη, τιμές, κόστος και απόθεμα του καταστήματος.'},
     {key:'products.create',label:'Νέο είδος',description:'Δημιουργεί πλήρη καρτέλα στο επιλεγμένο κατάστημα.',requires:['products.read']},
@@ -14,7 +20,9 @@ export const staffPermissionSections=Object.freeze([
   ]},
   {key:'inventory',label:'Απογραφή',actions:[
     {key:'inventory.read',label:'Προβολή',description:'Βλέπει τις ανοιχτές απογραφές του καταστήματος.'},
-    {key:'inventory.count',label:'Καταμέτρηση',description:'Καταχωρίζει ποσότητες σε ανοιχτή απογραφή.',requires:['inventory.read']}
+    {key:'inventory.count',label:'Καταμέτρηση',description:'Καταχωρίζει ποσότητες σε ανοιχτή απογραφή.',requires:['inventory.read']},
+    {key:'inventory.create',label:'Νέα απογραφή',description:'Ανοίγει νέα απογραφή στο κατάστημα.',requires:['inventory.read']},
+    {key:'inventory.finalize',label:'Οριστικοποίηση και ενημέρωση αποθέματος',description:'Ολοκληρώνει ελεγμένη απογραφή και ενημερώνει τα αποθέματα. Απαιτεί αιτιολογία και επιβεβαίωση.',requires:['inventory.read']}
   ]},
   {key:'cash',label:'Έλεγχος ταμείων',actions:[
     {key:'cash.read',label:'Προβολή αναφοράς',description:'Βλέπει την αναφορά ελέγχου του καταστήματος.'}
@@ -39,6 +47,11 @@ export function changeStaffCapability(capabilities,key,enabled){
   return [...next];
 }
 export function staffRequestCapability(method,path){
+  if(method==='POST'&&path==='/api/inventory-v2/stocktakes')return 'inventory.create';
+  if(method==='POST'&&/^\/api\/inventory-v2\/stocktakes\/[^/]+\/finalize$/.test(path))return 'inventory.finalize';
+  if(method==='GET'&&(path==='/api/commerce/documents/inbox/archive'||/^\/api\/commerce\/documents\/inbox\/[^/]+\/file$/.test(path)))return 'invoices.read';
+  if(method==='GET'&&/^\/api\/(?:transactions|cash)\/stores\/[^/]+\/overview$/.test(path))return 'sales.read';
+  if(method==='GET'&&/^\/api\/store-pos\/stores\/[^/]+\/sales\/recent$/.test(path))return 'sales.read';
   if(method==='GET'&&path==='/api/inventory-archive')return 'products.read';
   if(method==='GET'&&path==='/api/owner-products/new-card/options')return 'products.create';
   if(method==='POST'&&path==='/api/owner-products/new-card')return 'products.create';

@@ -55,13 +55,16 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
   router.get('/inventory/stores/:storeId/stocktakes/:stocktakeId',async(req,res)=>{try{
     const {storeId,stocktakeId}=req.params;
     if(req.user.storeId!==storeId)throw staffError();
-    await requireStaffGrant(db,req.user,storeId,'inventory.read');
-    const stocktake=(await db.$queryRaw`SELECT "id","name","status" FROM "Stocktake" WHERE "id"=${stocktakeId} AND "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "inventoryVersion"=2 AND "status"='DRAFT' LIMIT 1`)[0];
+    const {grant}=await requireStaffGrant(db,req.user,storeId,'inventory.read');
+    const canFinalize=grant.capabilities.includes('inventory.finalize');
+    const stocktake=(await db.$queryRaw`SELECT "id","name","status","finalizedAt" FROM "Stocktake" WHERE "id"=${stocktakeId} AND "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "inventoryVersion"=2 AND ("status"='DRAFT' OR (${canFinalize} AND "status"='FINALIZED')) LIMIT 1`)[0];
     if(!stocktake)throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε ανοιχτή απογραφή στο κατάστημα.');
-    const lines=await db.$queryRaw`SELECT sl."id",sl."productId",p."name",p."sku",sl."countedQuantity",sl."countVersion",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."createdAt") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes" FROM "StocktakeLine" sl JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${req.user.companyId} WHERE sl."stocktakeId"=${stocktakeId} ORDER BY p."name",sl."id" LIMIT 10001`;
+    const lines=await db.$queryRaw`SELECT sl."id",sl."productId",p."name",p."sku",sl."expectedQuantity",sl."countedQuantity",sl."countVersion",sl."recountRequired",COALESCE((SELECT json_agg(pb."barcode" ORDER BY pb."createdAt") FROM "ProductBarcode" pb WHERE pb."productId"=p."id"),'[]') AS "barcodes" FROM "StocktakeLine" sl JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${req.user.companyId} WHERE sl."stocktakeId"=${stocktakeId} ORDER BY p."name",sl."id" LIMIT 10001`;
     if(lines.length>10000)throw staffError(503,'STAFF_LIMIT','Η απογραφή υπερβαίνει το όριο της προσωπικής προβολής.');
-    await requireStaffGrant(db,req.user,storeId,'inventory.read');
-    res.json({storeId,...stocktake,lines:lines.map(l=>({...l,countedQuantity:l.countedQuantity===null?null:String(l.countedQuantity)}))});
+    const {grant:latest}=await requireStaffGrant(db,req.user,storeId,'inventory.read');
+    const exposeFinalization=canFinalize&&latest.capabilities.includes('inventory.finalize');
+    if(stocktake.status==='FINALIZED'&&!exposeFinalization)throw staffError();
+    res.json({storeId,...stocktake,lines:lines.map(l=>{const {expectedQuantity,...visible}=l;return {...visible,countedQuantity:l.countedQuantity===null?null:String(l.countedQuantity),...(exposeFinalization?{expectedQuantity:String(expectedQuantity)}:{})}})});
   }catch(error){failure(res,error)}});
   router.get('/cash/stores/:storeId',async(req,res)=>{try{
     const {storeId}=req.params,period=periodSchema.parse({from:req.query.from,to:req.query.to});

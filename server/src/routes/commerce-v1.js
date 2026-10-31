@@ -1,4 +1,5 @@
 import {greeceRangeDate} from "../../../shared/greece-time.mjs";
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
@@ -328,7 +329,12 @@ router.patch("/documents/inbox/:inboxId",requireCompanyModule("DOCUMENTS"),async
 router.delete("/documents/inbox/:inboxId",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{try{const companyId=req.user.companyId;const result=await prisma.$transaction(async tx=>{const rows=await tx.$queryRaw`SELECT "id","attachmentId","status" FROM "DocumentInbox" WHERE "id"=${req.params.inboxId} AND "companyId"=${companyId} FOR UPDATE`;const item=rows[0];if(!item)throw Object.assign(new Error("Δεν βρέθηκε η φωτογραφία/PDF."),{status:404});if(item.status==="PROCESSED")throw Object.assign(new Error("Δεν διαγράφεται φωτογραφία από επιβεβαιωμένο τιμολόγιο."),{status:409});await tx.$executeRaw`DELETE FROM "DocumentInbox" WHERE "id"=${item.id} AND "companyId"=${companyId}`;await tx.$executeRaw`DELETE FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "attachmentId"=${item.attachmentId} AND "status" NOT IN ('AWAITING_APPROVAL','CONFIRMED')`;await tx.$executeRaw`DELETE FROM "DocumentAttachment" WHERE "id"=${item.attachmentId} AND "companyId"=${companyId}`;return {ok:true,deleted:true}});res.json(result)}catch(error){next(error)}});
 
 router.get("/documents/inbox/:inboxId/file",requireCompanyModule("DOCUMENTS"),async(req,res,next)=>{
-  try{const rows=await prisma.$queryRaw`SELECT a."contentData",a."filename",a."mimeType" FROM "DocumentInbox" i JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" WHERE i."id"=${req.params.inboxId} AND i."companyId"=${req.user.companyId} LIMIT 1`;const row=rows[0];if(!row?.contentData)return res.status(404).json({error:"Δεν βρέθηκε το αρχείο."});res.json({dataUrl:row.contentData,filename:row.filename,mimeType:row.mimeType})}catch(error){next(error)}
+  try{
+    const rows=await prisma.$queryRaw`SELECT a."contentData",a."filename",a."mimeType" FROM "DocumentInbox" i JOIN "DocumentAttachment" a ON a."id"=i."attachmentId" WHERE i."id"=${req.params.inboxId} AND i."companyId"=${req.user.companyId} AND (${req.user.staffAccess!==true} OR (i."storeId"=${req.user.storeId||''} AND a."storeId"=${req.user.storeId||''} AND a."companyId"=${req.user.companyId})) LIMIT 1`;
+    const row=rows[0];if(!row?.contentData)return res.status(404).json({error:"Δεν βρέθηκε το αρχείο."});
+    if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,req.user.storeId,'invoices.read');
+    res.json({dataUrl:row.contentData,filename:row.filename,mimeType:row.mimeType});
+  }catch(error){next(error)}
 });
 
 router.get("/ai-reader/status",requireCompanyModule("AI_READER"),async(req,res,next)=>{

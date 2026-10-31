@@ -1,7 +1,9 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {staffProfiles,staffPermissionSections,changeStaffCapability} from '../../../shared/backoffice-staff.mjs';
 import './backoffice-staff.css';
+const OperatorManagementPanel=React.lazy(()=>import('./commerce/OperatorManagementPanel.jsx'));
 export default function BackofficeStaffAdmin({api}){
+  const [area,setArea]=useState('BACKOFFICE'),[posStoreId,setPosStoreId]=useState('');
   const [data,setData]=useState(null),[edit,setEdit]=useState(null),[grants,setGrants]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const sequence=useRef(0),saving=useRef(false);
   const load=async()=>{const id=++sequence.current;setData(null);try{const d=await api('/api/backoffice-staff/admin');if(id===sequence.current)setData(d)}catch(e){if(id===sequence.current)setError(e.message)}};
@@ -24,7 +26,10 @@ export default function BackofficeStaffAdmin({api}){
     }catch(e){setError((e.message||'Δεν επιβεβαιώθηκε η αποθήκευση.')+' Ανανέωσε τη λίστα πριν επαναλάβεις.');setEdit(null);setGrants([]);await load()}
     finally{saving.current=false;setBusy(false)}
   };
-  return <section className="panel staff-panel"><h2>Χειριστές και δικαιώματα BackOffice</h2><p>Δημιούργησε χειριστή, επίλεξε τα καταστήματά του και όρισε ξεχωριστά τι βλέπει και τι κάνει σε καθένα.</p>
+  return <section className="panel staff-panel"><h2>Χειριστές και δικαιώματα</h2><p>Δημιούργησε χειριστή, επίλεξε τα καταστήματά του και όρισε ξεχωριστά τι βλέπει και τι κάνει σε καθένα.</p>
+    <nav className="staff-actions" aria-label="Τύπος πρόσβασης χειριστή"><button type="button" aria-pressed={area==='BACKOFFICE'} onClick={()=>setArea('BACKOFFICE')}>Πρόσβαση BackOffice</button><button type="button" aria-pressed={area==='POS'} onClick={()=>setArea('POS')}>Χειριστές POS</button></nav>
+    {area==='POS'&&<section aria-label="Δικαιώματα χειριστών POS"><label>Κατάστημα POS<select value={posStoreId} onChange={e=>setPosStoreId(e.target.value)}><option value="">Επίλεξε κατάστημα</option>{data?.stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>{posStoreId&&data?.stores.some(s=>s.id===posStoreId)&&<React.Suspense fallback={<p role="status">Φόρτωση χειριστών…</p>}><OperatorManagementPanel key={posStoreId} api={api} store={data.stores.find(s=>s.id===posStoreId)} onClose={()=>setPosStoreId('')}/></React.Suspense>}</section>}
+    <div hidden={area!=='BACKOFFICE'}>
     <p>Ο ρόλος περιγράφει τη θέση του χειριστή. Τα επιλεγμένα δικαιώματα ορίζουν την πρόσβασή του. Η αλλαγή ρόλου δεν αλλάζει αυτόματα τα δικαιώματα.</p>
     {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
     <div className="staff-actions"><button type="button" disabled={busy} onClick={()=>{setEdit(null);load()}}>Ανανέωση λίστας</button><button type="button" disabled={busy||!data} onClick={()=>open(null)}>Νέος χειριστής</button></div>
@@ -41,5 +46,5 @@ export default function BackofficeStaffAdmin({api}){
         </div>;
       })}</fieldset><div className="staff-actions"><button disabled={busy}>{busy?'Αποθήκευση…':'Αποθήκευση πρόσβασης'}</button><button type="button" disabled={busy} onClick={()=>setEdit(null)}>Ακύρωση</button></div>
     </form>}
-  </section>;
+    </div></section>;
 }

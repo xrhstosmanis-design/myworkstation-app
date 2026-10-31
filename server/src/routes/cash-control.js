@@ -1,4 +1,5 @@
 import {readCashExpenseEvidence,cashExpenseFindings} from "../services/cash-expense-evidence.js";
+import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {readCashReviewEvidence} from "../services/cash-review-evidence.js";
 import {effectiveModuleEnabled} from "../middleware/module-access.js";
 import {declaredEftpos} from "../../../shared/declared-eftpos.mjs";
@@ -107,6 +108,7 @@ async function ensureTables(){
 export async function ensureCashControlSchema(){return ensureTables()}
 
 async function requireCashAccess(req,res,next){
+  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='sales.read')return next();
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   if(backoffice)return next();
   if(req.user?.tokenType!=="STORE_OPERATOR")return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
@@ -137,7 +139,7 @@ async function requireCashAccess(req,res,next){
   if(permissions?.includes("CASH_CONTROL"))return next();
   return res.status(403).json({error:"Δεν έχεις δικαίωμα πρόσβασης στον Έλεγχο Ταμείου."});
 }
-function assertStoreAccess(req,storeId){if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==storeId){const error=new Error("Ο προσωπικός κωδικός ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error}}
+function assertStoreAccess(req,storeId){if((req.user?.tokenType==="STORE_OPERATOR"||req.user?.staffAccess===true)&&req.user.storeId!==storeId){const error=new Error("Ο προσωπικός κωδικός ισχύει μόνο για το δικό σου κατάστημα.");error.status=403;throw error}}
 async function ownedStore(storeId,companyId){const store=await prisma.store.findFirst({where:{id:storeId,companyId,active:true}});if(!store){const error=new Error("Δεν βρέθηκε ενεργό κατάστημα.");error.status=404;throw error}return store}
 async function requestTerminal(req){
   const testTerminal=(process.env.CI==="true"||process.env.NODE_ENV==="test"||process.env.MWS_E2E_TERMINAL_OVERRIDE==="1")?String(req.query?.mwsTerminal||req.headers?.["x-mws-terminal-pos"]||req.body?.terminalPos||"").trim():"";
@@ -310,6 +312,10 @@ router.get("/stores/:storeId/overview",route(async(req,res)=>{
     prisma.$queryRaw`SELECT COUNT(*) FILTER (WHERE "status"='PENDING')::int AS pending,COUNT(*) FILTER (WHERE "status"='FAILED')::int AS failed,COUNT(*) FILTER (WHERE "status"='SYNCED')::int AS synced,COUNT(*) FILTER (WHERE "idempotentReplay"=TRUE)::int AS replays FROM "OfflineSaleSyncEvidence" WHERE "companyId"=${req.user.companyId} AND "storeId"=${store.id}`
   ]);
   const openSession=normalize(openRows[0]);
+  if(req.user.staffAccess===true){
+    await requireStaffGrant(prisma,req.user,store.id,'sales.read');
+    return res.json({store:{id:store.id,name:store.name},openSession,recent:recentRows.map(normalize)});
+  }
   const pendingInvoices=openSession&&(req.user.tokenType!=="STORE_OPERATOR"||openSession.openedBy===req.user.id)?await readPendingInvoices(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos,sessionId:openSession.id,sessionAll:true}):null;
   const last=normalize(lastClosedRows[0]),counts=offlineCounts[0]||{};res.json({pendingInvoices,store:{id:store.id,name:store.name},openSession:normalize(openRows[0]),recent:recentRows.map(normalize),offlineSync:{counts:{pending:Number(counts.pending||0),failed:Number(counts.failed||0),synced:Number(counts.synced||0),replays:Number(counts.replays||0)},rows:offlineRows},suggestedOpening:last?{drawer:last.closingDrawer||0,custody:last.closingCustody||0,coins:last.closingCoins||0,safe:last.closingSafe||0,operational:last.nextOpeningTotal||0}:{drawer:0,custody:0,coins:0,safe:0,operational:0}});
 }));
