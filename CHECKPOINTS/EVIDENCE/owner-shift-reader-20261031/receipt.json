@@ -1,0 +1,117 @@
+{
+  "scope": "Limited authenticated Super Admin cloud Chrome LAB historical detail readback, not physical POS/whole incident/capacity acceptance",
+  "date": "2026-10-31",
+  "actorRole": "SUPER_ADMIN",
+  "physicalTerminal": "N/A: read-only cloud Chrome tab2",
+  "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "revision": "9644e95809ac0f0f1a80b1125dccfbed53aa3bed",
+  "healthObservedAt": "2026-10-31T10:13:39Z",
+  "guardedRelease": {
+    "run": 41191604346,
+    "job": 124509398468,
+    "requestedByThisConversation": false,
+    "observed": "Full-CI/freshness, rollback capture, trigger and exact-health wait SUCCESS",
+    "pinnedTriggerAt": "2026-10-31T10:10:58Z",
+    "exactHealthyWaitObservedAt": "2026-10-31T10:13:11Z",
+    "previousHealthyRevision": "71f27cafa294b427a8c5734e4518e6e009c775db"
+  },
+  "readWindowUTC": "After10:13:39 and before10:16:37",
+  "screenshots": {
+    "online-summary.jpg": "2026-10-31T10:14:44.247Z capture requested",
+    "control-summary.jpg": "2026-10-31T10:15:29.690Z capture requested"
+  },
+  "beforeAndFreshAfterList": {
+    "rows": 15,
+    "open": 1,
+    "closed": 14,
+    "cash": 18.1,
+    "card": 0.5,
+    "sales": 18.6,
+    "expenses": 147.0,
+    "variance": -18.3,
+    "activeShiftTransactions": 0
+  },
+  "online": {
+    "sessionPrefix": "865e6a48",
+    "saleCount": 1,
+    "salesNet": 1.4,
+    "average": 1.4,
+    "category": [
+      {
+        "name": "ΔΟΚΙΜΑΣΤΙΚΑ",
+        "quantity": 1,
+        "sales": 1,
+        "revenue": 1.4
+      }
+    ],
+    "paymentMethods": [
+      {
+        "method": "CASH",
+        "amount": 1.4,
+        "count": 1
+      }
+    ],
+    "journalRows": 3,
+    "journal": [
+      "pay_982 expense23",
+      "pay_036 expense1",
+      "7ca3cde ONL-003 cash1.40"
+    ],
+    "storedCash": 1.4,
+    "storedCard": 0,
+    "expenses": 24,
+    "closing": 97.4,
+    "variance": 0
+  },
+  "control": {
+    "sessionPrefix": "3a186861",
+    "saleCount": 6,
+    "salesNet": 2.2,
+    "average": 0.37,
+    "category": [
+      {
+        "name": "ΔΟΚΙΜΑΣΤΙΚΑ",
+        "quantity": 1,
+        "sales": 1,
+        "revenue": 1.4
+      },
+      {
+        "name": "ΝΕΡΑ",
+        "quantity": 1,
+        "sales": 5,
+        "revenue": 0.8
+      }
+    ],
+    "paymentMethods": [
+      {
+        "method": "CASH",
+        "amount": 1.4,
+        "count": 5
+      },
+      {
+        "method": "CREDIT",
+        "amount": 0.8,
+        "count": 1
+      }
+    ],
+    "journalRows": 8,
+    "onlineOrderLeaked": false,
+    "storedCash": 3.1,
+    "storedCard": 0.5,
+    "eftpos": 0.5,
+    "expenses": 0,
+    "closing": 7.2,
+    "variance": 0
+  },
+  "agentBusinessActions": [],
+  "unmeasured": [
+    "hosted raw database table digests",
+    "stock deltas",
+    "all production lock classes",
+    "large real-store timing",
+    "sustained capacity",
+    "physical Windows/Owner-role acceptance"
+  ],
+  "result": "LIMITED LAB READBACK PASS"
+}
