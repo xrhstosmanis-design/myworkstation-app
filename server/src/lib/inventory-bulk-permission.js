@@ -34,7 +34,7 @@ export async function saveInventoryBulkPermission(tx,user,body,ids,fingerprint){
    FROM selection q WHERE q.n>0 AND (${all} OR q.n=${ids.length}::int)
    RETURNING "id"
   ) SELECT q.n AS matched,(SELECT count(*)::int FROM updated) AS updated,(SELECT "id" FROM audit) AS "auditId" FROM selection q`;
- if(!result?.matched)throw Object.assign(new Error('Δεν υπάρχουν είδη στο επιλεγμένο κατάστημα.'),{status:400});
- if(!result.auditId)throw Object.assign(new Error('Κάποιο είδος δεν ανήκει στο επιλεγμένο κατάστημα.'),{status:409});
+ if(!result?.matched&&all)throw Object.assign(new Error('Δεν υπάρχουν είδη στο επιλεγμένο κατάστημα.'),{status:400});
+ if(!result?.auditId)throw Object.assign(new Error('Κάποιο είδος δεν ανήκει στο επιλεγμένο κατάστημα.'),{status:409});
  return {ok:true,changed:result.matched};
 }

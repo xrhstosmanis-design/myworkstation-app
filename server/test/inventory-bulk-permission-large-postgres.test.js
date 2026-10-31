@@ -47,6 +47,7 @@ test('native 8000-product permission update is atomic, leaves StoreProduct unloc
   assert.equal(Number((await db.$queryRaw`SELECT count(*) AS n FROM "Product" WHERE "allowPosPriceChange"`)[0].n),8000);
   const [receipt]=await db.$queryRaw`SELECT "details" FROM "StoreOperatorAudit"`;assert.equal(receipt.details.changes.length,8000);assert.equal(receipt.details.updatedCount,8000);assert.deepEqual(receipt.details.changes[0].before,{id:'p00001',allowPosPriceChange:false});assert.deepEqual(receipt.details.changes[0].after,{allowPosPriceChange:true});
   const retries=await Promise.all([saveInventoryBulkCard(db,user,first),saveInventoryBulkCard(db,user,first)]);assert.ok(retries.every(r=>r.idempotent));assert.equal(Number((await db.$queryRaw`SELECT count(*) AS n FROM "StoreOperatorAudit"`)[0].n),1);
+  await assert.rejects(saveInventoryBulkCard(db,user,request({allProducts:undefined,productIds:['foreign']})),e=>e.status===409);
   for(const patch of [{storeId:'foreign'},{storeId:'empty'},{allProducts:undefined,productIds:['p00001','foreign']}])await assert.rejects(saveInventoryBulkCard(db,user,request(patch)));
   // The real regression exceeded Prisma's old 5s budget. Delay one row only;
   // don't rely on flaky elapsed-time thresholds or weaken a global timeout.

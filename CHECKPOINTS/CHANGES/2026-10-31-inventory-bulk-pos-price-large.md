@@ -1,3 +1,7 @@
+### 31Oct — synchronized with diagnostics3350
+
+Main26af0bf adds private timeout phase diagnostics in the same helper. Retained those diagnostics for pure/mixed operations; combined SQL write is labelled permission-update-audit and known pure expiries map to the new retryable409 after diagnostic delivery. Mixed-operation original errors/default5s and logging behavior remain unchanged. Native historical callback-expiry reproduction now explicitly uses the unchanged mixed path; frozen-helper row-lock reproduction and separate10000-product test remain. Selected zero-membership preserves original409. Earlier exactPR41197177245 full4844server+8backup/0FAIL/0SKIP passed including native8000; synchronized combined fullCI must pass again.
+
 ## 31/10/2026 — LARGE BULK PERMISSION — IMPLEMENTED / AWAITING NATIVE CI AND RELEASE
 
 Claim3353/head6e0fd504 docsCI41196652851SUCCESS mergeda1ecfe7e before source. Retained owner fix/inventory-bulk-permission-large-20261031. New permission-only path keeps selected product IDs and original flags inside a materialized PostgreSQL CTE, updates only distinct flags and writes exact per-product before/after Audit in the same statement. Client receives only matched/updated/audit identity, not thousands of locked rows. Product row locks sorted; StoreProduct is membership-only and never locked/updated for this path. Existing actor/fingerprint/store/module/role validation and receipt semantics retained, including original processed count. Replay reads only three required receipt fields. No extra tables/schema/production SQL repairs.
