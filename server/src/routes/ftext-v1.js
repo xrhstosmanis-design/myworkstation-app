@@ -33,13 +33,13 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
  },wrap(async(req,res)=>res.status(201).json(await service.pair(req.body))));
  router.post('/device/ping',wrap(async(req,res)=>res.json(await service.ping(token(req),req.body))));
  router.post('/device/work-poll',wrap(async(req,res)=>{
-  const body=z.object({readinessVersion:z.literal(1),recovering:z.boolean(),settingsHash:z.string().regex(/^[a-f0-9]{64}$/),settings:z.record(z.unknown()),handoffVersion:z.literal(1).optional()}).strict().parse(req.body);
+  const body=z.object({readinessVersion:z.literal(1),recovering:z.boolean(),settingsHash:z.string().regex(/^[a-f0-9]{64}$/),settings:z.record(z.unknown()),handoffVersion:z.literal(1).optional(),handoffStopVersion:z.literal(1).optional()}).strict().refine(b=>!b.handoffStopVersion||b.handoffVersion===1).parse(req.body);
   res.json(await service.ping(token(req),{readinessVersion:body.readinessVersion},(t,d,c)=>{
    // Previously the separate ping verified local identity BEFORE any claim.
    // Keep that boundary inside the combined transaction, including raw local
    // values: normalization must not claim work for a mismatched local folder.
    if(body.settingsHash!==ftextSettingsHash(c)||!isDeepStrictEqual(body.settings,c))throw Object.assign(new Error('Οι τοπικές ρυθμίσεις FTEXT δεν αντιστοιχούν στην ενεργή σύνδεση. Δεν παραδόθηκε νέα εντολή.'),{status:409});
-   return pollFtextDeviceWork(t,d,c,{recovering:body.recovering,handoffVersion:body.handoffVersion});
+   return pollFtextDeviceWork(t,d,c,{recovering:body.recovering,handoffVersion:body.handoffVersion,handoffStopVersion:body.handoffStopVersion});
   }));
  }));
  router.post('/device/cash-handoff-accept',wrap(async(req,res)=>res.json(await service.authenticated(token(req),(t,d,c)=>acceptFtextHandoff(t,d,c,req.body)))));

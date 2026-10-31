@@ -2,6 +2,13 @@ param([Parameter(Mandatory=$true)][string]$ConfigPath)
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot 'Cloud-Tools.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'Cash.psm1') -Force
+# The new loop opts in only with its own matching Cash module. Old/mixed module
+# sets cannot advertise a terminal response they do not know how to complete.
+$cashRun=Get-Command Invoke-FtextCashRequest -ErrorAction SilentlyContinue
+$cashStop=Get-Command Complete-FtextUnpublishedStop -ErrorAction SilentlyContinue
+$stopVersion=0
+if($cashRun -and $cashStop -and [object]::ReferenceEquals($cashRun.Module,$cashStop.Module) -and $cashRun.Module.Path -ieq (Join-Path $PSScriptRoot 'Cash.psm1')) {$stopVersion=1}
+
 $c=Get-FtextCloudConfig $ConfigPath
 $sha=[Security.Cryptography.SHA256]::Create()
 try { $hash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($c.companyId+'|'+$c.storeId+'|'+$c.terminalPos))).Replace('-','') } finally { $sha.Dispose() }
@@ -22,7 +29,7 @@ try {
         # A cached local result takes priority. The server must not claim another
         # fiscal job while an acknowledgement for that original result is pending.
         $pending=if($cashEnabled) {Get-FtextCashPending $c} else {$null}
-        $work=Invoke-FtextCloudPoll $c ([bool]$pending)
+        $work=Invoke-FtextCloudPoll $c ([bool]$pending) $stopVersion
         $connected=$true
         if($cashEnabled) {
             # Recover durable local result first. Neither a network retry nor restart republishes a fiscal file.
@@ -31,6 +38,11 @@ try {
                 $stage='original cash request/result'
                 $acceptHandoff={param($job,$digest,$path);Invoke-FtextCloudHandoff -ConfigPath $path -Request $job -CommandHash $digest}
                 $report=Invoke-FtextCashRequest -ConfigPath $ConfigPath -Request $request -AcceptHandoff $acceptHandoff
+                if($report.outcome -ceq 'STOPPED_BEFORE_EXECUTION') {
+                    Complete-FtextUnpublishedStop $c ([string]$request.id) ([string]$report.stopId)
+                    Write-Host ('Original request '+$request.id+' stopped before execution. No receipt or payment was sent.')
+                    continue
+                }
                 $endpoint=if($request.PSObject.Properties['kind'] -and [string]$request.kind -ceq 'FTEXT_VOID') {'void-result'} else {'cash-result'}
                 $ack=Invoke-FtextCashApi $c $endpoint $report
                 if($ack.ok -ne $true -or $ack.status -notin @('CONFIRMED','REQUIRES_CHECK','SALE_COMMITTED')) {throw 'Cash result was not acknowledged. The local evidence was retained.'}
