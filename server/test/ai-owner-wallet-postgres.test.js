@@ -224,6 +224,14 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     const reviewFailureDb=new Proxy(db,{get(t,k){if(k==='$transaction')return fn=>t.$transaction(tx=>fn(new Proxy(tx,{get(a,b){if(b==='$executeRaw')return (ss,...v)=>{if(ss.join('').includes('INSERT INTO "AiOwnerWalletAudit"'))throw Error('synthetic diagnostic audit rollback');return a.$executeRaw(ss,...v)};const x=a[b];return typeof x==='function'?x.bind(a):x}})));const x=t[k];return typeof x==='function'?x.bind(t):x}});
     await assert.rejects(createAiOwnerWalletRepository(reviewFailureDb).review('review-proof',reviewRollbackHold.id,diagnostic),/synthetic diagnostic audit rollback/);assert.deepEqual(await reviewControls(),reviewRollbackBefore);
 
+    // Explicit provider zero writes is a complete zero partition even when
+    // the provider omits the optional lifetime-detail object.
+    const nativeZeroTariff={model:'synthetic-zero-write',inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:100000,outputMicrosPerMillion:2000000,cacheWriteMicrosPerMillion:{ttl30m:1250000,ttl12h:2500000},contextTokens:20000,maxOutputTokens:5000};
+    const nativeZeroBefore=await reviewControls(),nativeZeroProvider=createWalletProvider({repository,enabled:()=>true,tariffs:()=>JSON.stringify([nativeZeroTariff])});
+    await nativeZeroProvider({companyId:'review-proof',storeId:'review-proof-store',feature:'INVOICE_OPENAI'},{model:nativeZeroTariff.model,max_output_tokens:3000},async()=>({response:{ok:true},raw:{id:'resp_synthetic_native_zero',model:nativeZeroTariff.model,usage:{input_tokens:100,output_tokens:5,input_tokens_details:{cached_tokens:20,cache_write_tokens:0}}}}),async()=>100);
+    const nativeZeroAfter=await reviewControls(),nativeZeroEntry=nativeZeroAfter.entries.find(x=>x.usage?.providerResponseId==='resp_synthetic_native_zero');
+    assert.equal(nativeZeroAfter.wallet[0].balanceMicros,nativeZeroBefore.wallet[0].balanceMicros-92n);assert.equal(nativeZeroAfter.wallet[0].reservedMicros,nativeZeroBefore.wallet[0].reservedMicros);assert.equal(nativeZeroAfter.wallet[0].version,nativeZeroBefore.wallet[0].version+2);assert.equal(nativeZeroEntry.status,'SETTLED');assert.equal(nativeZeroEntry.chargedMicros,92n);assert.equal(nativeZeroEntry.usage.cacheWriteTokens,0);assert.equal(nativeZeroEntry.usage.cacheWrite30mTokens,0);assert.equal(nativeZeroEntry.usage.cacheWrite12hTokens,0);assert.deepEqual(nativeZeroAfter.audits,nativeZeroBefore.audits);assert.deepEqual(nativeZeroAfter.notices,nativeZeroBefore.notices);assert.deepEqual(nativeZeroAfter.foreign,nativeZeroBefore.foreign);
+
     // Internal trial funding never claims a customer receipt. Separate company
     // controls protect all existing fixture counts and real business rows.
     await db.$executeRaw`INSERT INTO "Company" VALUES('trial','Synthetic internal trial',true)`;

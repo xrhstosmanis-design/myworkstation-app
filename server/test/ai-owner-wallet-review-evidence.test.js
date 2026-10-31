@@ -1,3 +1,4 @@
+import {meteredUsage,tariffFor} from '../src/services/ai-owner-wallet-contract.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {sanitizeWalletReviewEvidence,walletReviewEvidence} from '../src/services/ai-owner-wallet-review-evidence.js';
@@ -41,4 +42,24 @@ test('review persistence failure still preserves the original hold error and nev
 test('field presence distinguishes absent, null and invalid data without coercion or inference',()=>{
  const evidence=walletReviewEvidence({raw:{id:'https://secret.invalid',model:'sk-proj-SECRET',usage:{input_tokens:10,output_tokens:'5',input_tokens_details:{cached_tokens:null,cache_write_tokens:0,cache_write_tokens_details:{ttl_30m_tokens:-1}}}}},{stage:'USAGE',reason:'USAGE_INVALID',tariff,limits:null,maxOutputTokens:5000});
  assert.equal(evidence.presence.outputTokens,'INVALID');assert.equal(evidence.presence.cachedInputTokens,'NULL');assert.equal(evidence.presence.cacheWriteTokens,'VALID');assert.equal(evidence.presence.cacheWrite30mTokens,'INVALID');assert.equal(evidence.presence.cacheWrite12hTokens,'MISSING');assert.equal(evidence.responseId,undefined);assert.equal(evidence.model,undefined);assert.equal(evidence.reported.cacheWriteTokens,0);assert.equal(evidence.reported.cachedInputTokens,undefined);
+});
+
+test('explicit zero cache writes needs no lifetime breakdown and returns the original response after exact settlement',async()=>{
+ const f=fixture(),zero={...raw,usage:{...raw.usage,input_tokens_details:{cached_tokens:20,cache_write_tokens:0}}},result={response:{ok:true,status:200},raw:zero};
+ assert.equal(await f.provider(scope,{model:tariff.model,max_output_tokens:3000},async()=>result,async()=>100),result);
+ const settlement=f.calls.find(c=>c[0]==='settle');assert.equal(settlement[3].amountMicros,92n);assert.equal(settlement[3].usage.cacheWriteTokens,0);assert.equal(settlement[3].usage.cacheWrite30mTokens,0);assert.equal(settlement[3].usage.cacheWrite12hTokens,0);assert.equal(f.calls.filter(c=>c[0]==='review').length,0);
+});
+test('zero-write compatibility never accepts unknown totals, missing reads or a malformed supplied partition',async()=>{
+ for(const details of [{cached_tokens:20},{cached_tokens:20,cache_write_tokens:null},{cache_write_tokens:0},{cached_tokens:20,cache_write_tokens:1},{cached_tokens:20,cache_write_tokens:0,cache_write_tokens_details:{}},{cached_tokens:20,cache_write_tokens:0,cache_write_tokens_details:null},{cached_tokens:20,cache_write_tokens:0,cache_write_tokens_details:{ttl_30m_tokens:1,ttl_12h_tokens:0}}]){
+  const f=fixture();await assert.rejects(f.provider(scope,{model:tariff.model},async()=>({response:{ok:true},raw:{...raw,usage:{...raw.usage,input_tokens_details:details}}})),e=>e.code==='AI_WALLET_USAGE_REVIEW');assert.equal(f.calls.filter(c=>c[0]==='settle').length,0);assert.equal(f.calls.filter(c=>c[0]==='review').length,1);
+ }
+});
+
+test('explicit zero writes retains cached-read accounting and exact long-context boundary pricing',()=>{
+ const row={...tariff,longContext:{thresholdTokens:10000,inputMicrosPerMillion:2000000,cachedInputMicrosPerMillion:200000,outputMicrosPerMillion:3000000,cacheWriteMicrosPerMillion:{ttl30m:2500000,ttl12h:5000000}}},price=tariffFor(row.model,JSON.stringify([row]));
+ for(const [input,amount,tier] of [[10000,10200n,'STANDARD'],[10001,20302n,'LONG_CONTEXT']]){
+  const measured=meteredUsage({...raw,usage:{input_tokens:input,output_tokens:100,input_tokens_details:{cached_tokens:0,cache_write_tokens:0}}},price);
+  assert.equal(measured.amount,amount);assert.equal(measured.usage.pricingTier,tier);assert.equal(measured.usage.cacheWriteTokens,0);
+ }
+ assert.equal(meteredUsage({...raw,usage:{...raw.usage,input_tokens_details:{cached_tokens:20,cache_write_tokens:0}}},price).amount,92n);
 });
