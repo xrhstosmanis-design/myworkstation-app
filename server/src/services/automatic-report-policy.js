@@ -66,14 +66,15 @@ export function dailyCashReportReadiness(sessions,{companyId,storeId,day,dayStar
   const period=reportBusinessPeriod(day,day,{dayStartHour}),holds=[];
   now=new Date(now);if(!Number.isFinite(now.getTime()))fail("Μη έγκυρη ώρα ελέγχου.");
   if(!companyId||!storeId)fail("Απαιτείται συγκεκριμένη εταιρεία και κατάστημα.");
-  if(!Number.isInteger(secondShiftStartHour)||!Number.isInteger(thirdShiftStartHour)||secondShiftStartHour<=dayStartHour||thirdShiftStartHour<=secondShiftStartHour||thirdShiftStartHour>23)fail("Επίλεξε τις ώρες έναρξης δεύτερης και τρίτης βάρδιας.");
+  if(!Number.isInteger(secondShiftStartHour)||secondShiftStartHour<=dayStartHour||secondShiftStartHour>22||
+    (thirdShiftStartHour!==null&&(!Number.isInteger(thirdShiftStartHour)||thirdShiftStartHour<=secondShiftStartHour||thirdShiftStartHour>23)))fail("Επίλεξε έγκυρες ώρες έναρξης βαρδιών. Η τρίτη ώρα μπορεί να μείνει κενή μόνο χωρίς αναμενόμενη τρίτη βάρδια.");
   if(!Array.isArray(sessions)||!Array.isArray(terminals)||terminals.length>100)fail("Μη έγκυρη λίστα βαρδιών ή τερματικών.");
   const policies=terminals.map(value=>typeof value==="string"?{terminalPos:value.trim(),requiredSlots:[1,2,3]}:value);
   if(policies.some(p=>!p||typeof p.terminalPos!=="string"||!p.terminalPos.trim()||p.terminalPos!==p.terminalPos.trim()||p.terminalPos.length>120||!Array.isArray(p.requiredSlots)||!p.requiredSlots.length||p.requiredSlots.some(slot=>![1,2,3].includes(slot))||new Set(p.requiredSlots).size!==p.requiredSlots.length))fail("Μη έγκυρος κανόνας βαρδιών τερματικού.");
   const expected=policies.map(p=>p.terminalPos);
   if(new Set(expected).size!==expected.length)fail("Διπλός κανόνας τερματικού.");
   if(!expected.length)holds.push({code:"TERMINALS_NOT_CONFIGURED"});
-  if(!policies.some(p=>p.requiredSlots.includes(3)))holds.push({code:"THIRD_SHIFT_NOT_CONFIGURED"});
+  if(thirdShiftStartHour===null&&policies.some(p=>p.requiredSlots.includes(3)))fail("Συμπλήρωσε ώρα έναρξης τρίτης βάρδιας ή αφαίρεσε την τρίτη από τα αναμενόμενα ταμεία.");
   if(new Date(now)<period.to)holds.push({code:"BUSINESS_DAY_NOT_FINISHED"});
   const seen=new Set(),accepted=[];
   for(const row of sessions){
@@ -101,10 +102,14 @@ export function dailyCashReportReadiness(sessions,{companyId,storeId,day,dayStar
       if(!furthest||interval.end>furthest.end)furthest=interval;
     }
     if(rows.length<new Set(required).size)holds.push({code:"MISSING_SHIFTS",terminalPos});
-    for(const [slot,start,end] of [[1,dayStartHour,secondShiftStartHour],[2,secondShiftStartHour,thirdShiftStartHour]]){
-      if(required.includes(slot)&&!rows.some(row=>{const hour=+parts(new Date(row.openedAt)).hour;return hour>=start&&hour<end;}))holds.push({code:"SHIFT_SLOT_MISSING",terminalPos,slot});
+    // Only a terminal expecting a third opening has a third-slot boundary.
+    // Otherwise the afternoon opening can occur until next business morning;
+    // actual closing after 23:00/midnight never fabricates a third shift.
+    const expectsThird=required.includes(3);
+    for(const [slot,start,end] of [[1,dayStartHour,secondShiftStartHour],[2,secondShiftStartHour,expectsThird?thirdShiftStartHour:null]]){
+      if(required.includes(slot)&&!rows.some(row=>{const hour=+parts(new Date(row.openedAt)).hour;return end===null?(hour>=start||hour<dayStartHour):(hour>=start&&hour<end);})){holds.push({code:"SHIFT_SLOT_MISSING",terminalPos,slot});}
     }
-    const third=rows.filter(row=>{const hour=+parts(new Date(row.openedAt)).hour;return hour>=thirdShiftStartHour||hour<dayStartHour;});
+    const third=expectsThird?rows.filter(row=>{const hour=+parts(new Date(row.openedAt)).hour;return hour>=thirdShiftStartHour||hour<dayStartHour;}):[];
     if(required.includes(3)&&!third.length)holds.push({code:"THIRD_SHIFT_MISSING",terminalPos});
     if(third.some(row=>row.status!=="CLOSED"))holds.push({code:"THIRD_SHIFT_OPEN",terminalPos});
   }

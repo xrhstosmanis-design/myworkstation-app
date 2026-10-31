@@ -27,7 +27,7 @@ export default function AutomaticReportSettingsManager({company,store,request,on
     event.preventDefault();if(!confirmed||!data||!draft||busy)return;
     const token=++sequence.current;setBusy("save");setError("");setMessage("");setReport(null);
     try{
-      const result=await request(path,{method:"PUT",body:JSON.stringify({expectedVersion:data.settings?.version||0,configuration:{...draft,cashRule:data.cashRule}})});
+      const result=await request(path,{method:"PUT",body:JSON.stringify({expectedVersion:data.settings?.version||0,configuration:{...draft,thirdShiftStartHour:draft.thirdShiftStartHour===""?null:draft.thirdShiftStartHour,cashRule:data.cashRule}})});
       if(token!==sequence.current)return;
       setData({...data,settings:result.settings});setDraft(result.settings.configuration);setDirty(false);setConfirmed(false);setMessage("Οι ρυθμίσεις αποθηκεύτηκαν. Δεν στάλθηκε email.");
     }catch(e){if(token===sequence.current)setError(e.message)}finally{if(token===sequence.current)setBusy("")}
@@ -41,12 +41,12 @@ export default function AutomaticReportSettingsManager({company,store,request,on
   return <div className="platform-modal automatic-report-settings-modal"><section role="dialog" aria-modal="true" aria-labelledby={id} className="platform-report-settings">
     <button type="button" className="modal-close" aria-label="Κλείσιμο ρυθμίσεων αναφορών" onClick={onClose}>×</button>
     <h2 id={id}>Ρυθμίσεις αναφορών ταμείων</h2><p>{company.name} · <strong>{store.name}</strong></p>
-    <p className="report-settings-note">Η αυτόματη αποστολή δεν έχει ενεργοποιηθεί. Εδώ αποθηκεύονται οι βάρδιες και ελέγχεται η προεπισκόπηση. Δεν αλλάζουν υπόλοιπα ή χρεώσεις υπαλλήλων.</p>
+    <p className="report-settings-note">Εδώ αποθηκεύονται οι βάρδιες και ελέγχεται η προεπισκόπηση. Η κατάσταση αποστολής εμφανίζεται στην ενότητα «Αυτόματες αποστολές». Η αποθήκευση αυτών των ρυθμίσεων δεν ενεργοποιεί αποστολές και δεν αλλάζει υπόλοιπα ή χρεώσεις υπαλλήλων.</p>
     <button type="button" className="secondary" disabled={Boolean(busy)} onClick={load}>Ανανέωση ρυθμίσεων</button>
     {busy==="load"&&<p role="status">Φόρτωση ρυθμίσεων…</p>}{error&&<p role="alert" className="store-pos-alert error">{error}</p>}{message&&<p role="status">{message}</p>}
     {draft&&data&&<><form onSubmit={save}><fieldset disabled={Boolean(busy)}><legend>Επιχειρησιακή ημέρα και βάρδιες · ώρα Ελλάδας</legend>
-      <div className="report-settings-hours">{[["dayStartHour","Αλλαγή ημέρας / έναρξη 1ης",5,12],["secondShiftStartHour","Έναρξη 2ης βάρδιας",6,22],["thirdShiftStartHour","Έναρξη 3ης βάρδιας",7,23]].map(([key,label,min,max])=><label key={key}>{label}<input aria-label={label} type="number" required min={min} max={max} step="1" value={draft[key]} onChange={e=>change({...draft,[key]:e.target.value===""?"":Number(e.target.value)})}/></label>)}</div>
-      <p>Ώρες 0–23, χωρίς λεπτά. Η τρίτη βάρδια ανήκει στην ημέρα που ξεκίνησε, ακόμη κι αν κλείσει την επόμενη. Οι βάρδιες αντιστοιχίζονται από την πραγματική ώρα ανοίγματος· πρώιμα ή έκτακτα ανοίγματα χρειάζονται έλεγχο.</p>
+      <div className="report-settings-hours">{[["dayStartHour","Αλλαγή ημέρας / έναρξη 1ης",5,12],["secondShiftStartHour","Έναρξη 2ης βάρδιας",6,22],["thirdShiftStartHour","Έναρξη 3ης βάρδιας",7,23]].map(([key,label,min,max])=><label key={key}>{label}<input aria-label={label} type="number" required={key!=="thirdShiftStartHour"||draft.terminals.some(t=>t.requiredSlots.includes(3))} min={min} max={max} step="1" value={draft[key]??""} onChange={e=>change({...draft,[key]:e.target.value===""?"":Number(e.target.value)})}/></label>)}</div>
+      <p>Ώρες έναρξης, όχι κλεισίματος. Για δύο βάρδιες επίλεξε μόνο 1η και 2η στο ταμείο· η ώρα τρίτης μπορεί να μείνει κενή. Η τελευταία βάρδια μπορεί να κλείνει μετά τα μεσάνυχτα και ανήκει στην επιχειρησιακή ημέρα που άνοιξε. Οι βάρδιες αντιστοιχίζονται από την πραγματική ώρα ανοίγματος στα δηλωμένα όρια· πρώιμα ή έκτακτα ανοίγματα χρειάζονται έλεγχο.</p>
       <h3>Αναμενόμενα ταμεία</h3><p>Δήλωσε κάθε ταμείο με τον ακριβή κωδικό του και τις βάρδιες που πρέπει να λειτουργεί. Το delivery μπορεί να έχει μόνο πρωινή βάρδια.</p>
       <datalist id={id+"-terminals"}>{data.observedTerminals.map(value=><option key={value} value={value}/>)}</datalist>
       {draft.terminals.map((terminal,index)=><div className="report-settings-terminal" key={index}><label>Ταμείο {index+1}<input aria-label={`Κωδικός ταμείου ${index+1}`} required maxLength="120" list={id+"-terminals"} value={terminal.terminalPos} onChange={e=>change({...draft,terminals:draft.terminals.map((t,i)=>i===index?{...t,terminalPos:e.target.value}:t)})}/></label>
