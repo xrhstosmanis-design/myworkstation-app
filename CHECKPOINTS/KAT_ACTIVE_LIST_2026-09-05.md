@@ -1,3 +1,7 @@
+## Detailed wallet history — month-boundary E2E fixture / AWAITING LAB
+
+Retained owner feat/ai-owner-wallet-20261022, continuation feat/ai-wallet-activity-details-20261031. Exact4b2ceba3 CI41246974984 server4978/0/0 and backup8/0/0, client/browser/invariants/archive SUCCESS; final credit-ledger E2E failed because UTC31Oct date-only credit is outside the default current Greek November range after midnight. Test now explicitly requests its existing24-hour fixture interval, preserving the exact credit assertion and production behavior. No runtime correction or LAB/customer action. Exact refreshed full CI/main/release still required; checkpoint CHECKPOINTS/CHANGES/2026-10-31-ai-wallet-activity-details.md.
+
 ## Detailed wallet history — native fixture dependency correction / AWAITING LAB
 
 Retained owner feat/ai-owner-wallet-20261022, continuation feat/ai-wallet-activity-details-20261031. PR3426 original fullCI41245826925 failed in one extracted fast-handoff native fixture missing the real new helper; wallet recovery41245826927 passed7/0/0. Test-only closure correction and durable initiator assertion; production source unchanged. Require fresh exact full CI/main/release before hosted acceptance. Checkpoint CHECKPOINTS/CHANGES/2026-10-31-ai-wallet-activity-details.md. No LAB/customer writes or old paid replay.
