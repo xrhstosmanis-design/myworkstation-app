@@ -1,3 +1,11 @@
+## 31/10/2026 — POS-OWNER-SHIFT-READER-20261030 / NATIVE EQUIVALENCE VERIFIED / COMBINED CI REQUIRED
+
+Same retained owner fix/owner-shift-reader-20261030. Initial exact d95b8bac CI41188314153/job124499889574 executed4,763PASS/2FAIL/0SKIP. Both failures were unchanged Chromium startup/Target.createTarget timeouts in DAILY1920/device-setup before UI assertions. Actual original-versus-candidate native PostgreSQL identity, complete registered detail output, source-table digests, historical isolation and synthetic scale all PASSED unskipped. Plan materialization1 versus original correlated141loops; synthetic32.443ms original/1.573ms candidate is not hosted timing. Full local Node20 server workspace4,012PASS/0FAIL/311infrastructureSKIP; initial root-directory invocation was invalid fixture setup and retained only as history.
+
+One retry of only failed job124499889574 started as124502130180; before completion, independent main changes produced real three-registry/PDF merge conflicts. Reconcile on current main preserving all other owners and immutable runtime/test blobs406fcfb52/f1a06000e; new exact CI supersedes the interrupted retry, not an assertion waiver. Relocate only this owned status within the existing incident section so future unrelated top prefixes merge independently. Preserve current main canonical PDF in this source-only/non-PASS PR to avoid repeated cross-owner regenerated-PDF conflicts; regenerate with the delivery/hosted receipt. No completion/manual/PDF-synchronized PASS is claimed here.
+
+No code/test/oracle/threshold change, production action, provider/business replay or capacity acceptance. Next: complete exact combined full CI, ordinary guarded main release and read-only existing LAB historical/control acceptance; publish final receipt and PDF. Existing nine-column lock prevention protected; broader owners retained.
+
 ## 31/10/2026 — POS-OWNER-SHIFT-READER-20261030 / SOURCE CANDIDATE / AWAITING NATIVE CI
 
 Owner fix/owner-shift-reader-20261030, explicit continuation of interrupted POS incident. Reconciled claim3311/e514a271 passed41187849714 and mergedbe1be1d57932606ff1c8a46dfd61a7b0b19f32c4 BEFORE source. Prior nine-column convoy prevention remains protected.
