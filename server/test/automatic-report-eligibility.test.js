@@ -94,8 +94,9 @@ test('separate SuperAdmin authority prepares and starts a report without forged 
  pair.consent.active=false;await assert.rejects(read({tx:h.tx,companyId:'c',storeId:'s',input:c.inputs[0],now:NOW}),'revocation is checked at start, not only at preparation');
 });
 test('administrative proof does not bypass tamper, principal, lifecycle, cutoff, closed-day or source HOLD',async()=>{
- const {administratorAuthorizationProof}=await import('../src/services/automatic-report-administrator-authorization.js');
- for(const change of [h=>h.auth.recipients[0].consent.proofHash='f'.repeat(64),h=>h.auth.recipients[0].recipient.email='other@example.invalid',h=>h.auth.recipients[0].recipient.version='2',h=>h.auth.recipients[0].consent.lifecycleGeneration='2',h=>h.auth.grant.principalId='other',h=>h.auth.recipients[0].consent.consentedAt=NOW,h=>h.rows[1].status='OPEN']){
+ const {administratorAuthorizationProof,reportRecipientAuthority}=await import('../src/services/automatic-report-administrator-authorization.js');
+ const redate=time=>h=>{const pair=h.auth.recipients[0];pair.consent.consentedAt=time;pair.consent.proofHash=administratorAuthorizationProof(pair.recipient,pair.consent);assert.equal(reportRecipientAuthority(pair.recipient,pair.consent,{generation:'1',principalId:'sa'}).basis,'SUPER_ADMIN','cutoff refusal must exercise valid administrative authority, not a broken hash')};
+ for(const change of [h=>h.auth.recipients[0].consent.proofHash='f'.repeat(64),h=>h.auth.recipients[0].recipient.email='other@example.invalid',h=>h.auth.recipients[0].recipient.version='2',h=>h.auth.recipients[0].consent.lifecycleGeneration='2',h=>h.auth.grant.principalId='other',redate(NOW),redate('2026-10-18T00:00:00.000Z'),h=>h.rows[1].status='OPEN']){
   const h=fixture(),pair=h.auth.recipients[0];Object.assign(pair.recipient,{companyId:'c',storeId:'s',verifiedAt:null});pair.consent.consentedBy='report-superadmin:sa';pair.consent.proofHash=administratorAuthorizationProof(pair.recipient,pair.consent);change(h);await assert.rejects(createAutomaticReportEligibilityReader(h).readContext(h.tx,scope,NOW));
  }
 });

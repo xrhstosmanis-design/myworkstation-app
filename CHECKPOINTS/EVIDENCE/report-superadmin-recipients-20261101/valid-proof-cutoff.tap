@@ -1,0 +1,55 @@
+TAP version 13
+# Subtest: actual source/payload preparation fences configuration and binds real principal, consent and period
+ok 1 - actual source/payload preparation fences configuration and binds real principal, consent and period
+  ---
+  duration_ms: 73.661168
+  ...
+# Subtest: authoritative revocation/role/session/license/settings and activation changes cannot authorize
+ok 2 - authoritative revocation/role/session/license/settings and activation changes cannot authorize
+  ---
+  duration_ms: 147.042668
+  ...
+# Subtest: start compares immutable input and exact stored bytes to freshly rebuilt source
+ok 3 - start compares immutable input and exact stored bytes to freshly rebuilt source
+  ---
+  duration_ms: 194.366924
+  ...
+# Subtest: configuration first-insert lock busy fails before source and no fallback/retry
+ok 4 - configuration first-insert lock busy fails before source and no fallback/retry
+  ---
+  duration_ms: 0.761061
+  ...
+# Subtest: partial installer report-table contention refuses before authorization or financial source
+ok 5 - partial installer report-table contention refuses before authorization or financial source
+  ---
+  duration_ms: 0.952606
+  ...
+# Subtest: scope own-data validation never invokes getters or falls back to company
+ok 6 - scope own-data validation never invokes getters or falls back to company
+  ---
+  duration_ms: 0.618331
+  ...
+# Subtest: fresh consent cannot backfill an older period and activation changes during source work fail closed
+ok 7 - fresh consent cannot backfill an older period and activation changes during source work fail closed
+  ---
+  duration_ms: 50.488843
+  ...
+# Subtest: separate SuperAdmin authority prepares and starts a report without forged verification or mailbox consent
+ok 8 - separate SuperAdmin authority prepares and starts a report without forged verification or mailbox consent
+  ---
+  duration_ms: 112.364506
+  ...
+# Subtest: administrative proof does not bypass tamper, principal, lifecycle, cutoff, closed-day or source HOLD
+ok 9 - administrative proof does not bypass tamper, principal, lifecycle, cutoff, closed-day or source HOLD
+  ---
+  duration_ms: 128.862996
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1454.763871
