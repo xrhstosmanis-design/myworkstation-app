@@ -51,3 +51,19 @@ test('closed client rejects late read results and cross-store envelopes',async()
  const pending=client.request('/access');client.dispose();finish({scope:{storeId:'S',actorId:'O'},capabilities:{read:true},lifecycle:{generation:'0'}});await assert.rejects(()=>pending);
  const bad=createPosInventoryClient({api:async()=>({scope:{storeId:'OTHER',actorId:'O'},capabilities:{read:true},lifecycle:{generation:'0'}}),storeId:'S',actorId:'O',sessionToken:'t',currentToken:()=> 't'});await assert.rejects(()=>bad.request('/access'));
 });
+
+test('exact mounted HTTP boundary inherits store params, buffers commit errors and leaves unrelated POS routes untouched',async()=>{
+ let prepared=0,commits=0,failCommit=false;
+ const db={company:{findUnique:async()=>({id:'C',name:'Fixture',active:true,licenseStatus:'ACTIVE',subscriptionEndsAt:null,modules:[{moduleKey:'INVENTORY',active:true},{moduleKey:'STORE_MODE',active:true}]})},$queryRaw:async()=>[],
+  $queryRawUnsafe:async sql=>sql.includes('FROM "StoreOperatorCredential"')?[{id:'O',employeeId:'E',permissions:rights}]:sql.includes('current_schema()')?[{schema:'public',fence:null}]:[],
+  $transaction:async callback=>{const result=await callback(db);if(failCommit)throw Error('commit failed');commits++;return result}};
+ const app=express();app.use(express.json());app.use((req,_res,next)=>{req.user=user;next()});app.use('/api/store-pos/stores/:storeId/inventory',createPosOperatorInventoryRouter({db,prepare:async()=>{prepared++}}));app.get('/api/store-pos/stores/S/unrelated',(_req,res)=>res.json({untouched:true}));app.use((error,_req,res,_next)=>res.status(error.status||500).json({error:error.message}));
+ const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/api/store-pos/stores/`;
+ try{
+  let response=await fetch(base+'S/inventory/access');assert.equal(response.status,200);assert.equal((await response.json()).scope.storeId,'S');assert.equal(commits,1);
+  response=await fetch(base+'OTHER/inventory/access');assert.equal(response.status,403);assert.equal(prepared,1);
+  response=await fetch(base+'S/unrelated');assert.deepEqual(await response.json(),{untouched:true});assert.equal(prepared,1);
+  response=await fetch(base+'S/inventory/products/P/stock-adjustment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({quantity:1})});assert.equal(response.status,403);assert.equal(prepared,1);
+  failCommit=true;response=await fetch(base+'S/inventory/access');assert.equal(response.status,500);assert.equal(commits,1);
+ }finally{await new Promise(resolve=>server.close(resolve))}
+});

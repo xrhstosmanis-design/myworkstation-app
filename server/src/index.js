@@ -295,7 +295,7 @@ app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2Ro
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ProductRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ImportRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2AuditRoutes);
-app.use("/api/store-pos",auth,posOperatorInventoryRoutes);
+app.use("/api/store-pos/stores/:storeId/inventory",auth,posOperatorInventoryRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storeBakingRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);
 app.use("/api/production-printers",productionPrinterRoutes);

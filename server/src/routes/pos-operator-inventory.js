@@ -49,8 +49,8 @@ export function createPosOperatorInventoryRouter({db=prisma,prepare=async()=>{
  await smartEntry.prepare();await compositions.prepare();
  await ensureProductCompanySchema();await ensureVatDepartmentSchema();
 }}={}){
- const router=Router();
- router.use('/stores/:storeId/inventory',async(req,res,next)=>{
+ const router=Router({mergeParams:true});
+ router.use(async(req,res,next)=>{
   try{
    const storeId=req.params.storeId,action=inventoryAction(req.method,req.path);
    // No schema preparation or transaction before the actual operator's live grant.
