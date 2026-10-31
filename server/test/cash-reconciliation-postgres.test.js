@@ -11,6 +11,49 @@ import {readReconciliationSources} from '../src/services/cash-reconciliation-sou
 import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 
+test('native original handoff HTTP lifecycle: concurrent once-only replies, both-half freshness, close/reopen and unchanged finance/control',{skip:!isolated()},async()=>{
+ const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_handoff_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const db=new PrismaClient({datasourceUrl:url.toString()});let server;
+ try{
+  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
+  for(const sql of [
+   'CREATE TABLE "Company"("id" text primary key,"active" boolean)',
+   'CREATE TABLE "Store"("id" text primary key,"companyId" text,"name" text,"active" boolean)',
+   'CREATE TABLE "User"("id" text primary key,"companyId" text,"fullName" text,"role" text,"mustChangePassword" boolean)',
+   'CREATE TABLE "StoreLifecycleFence"("storeId" text primary key,"companyId" text,"generation" bigint,"maintenance" boolean,"retired" boolean)',
+   'CREATE TABLE "CashControlStoreRule"("storeId" text,"companyId" text,"mode" text,"deliveryTerminalPattern" text,"carryOverEnabled" boolean,"posEftposEnabled" boolean,"updatedAt" timestamp)',
+   'CREATE TABLE "CashShiftSession"("id" text primary key,"companyId" text,"storeId" text,"terminalPos" text,"status" text,"openedBy" text,"openedByName" text,"shiftLabel" text,"openedAt" timestamptz,"closedAt" timestamptz,"variance" numeric,"cardVariance" numeric,"openingDrawer" numeric,"openingCustody" numeric,"openingCoins" numeric,"openingOperational" numeric,"closingDrawer" numeric,"closingCustody" numeric,"closingCoins" numeric,"actualOperational" numeric,"expectedOperational" numeric,"cashSales" numeric,"expenses" numeric,"cardSales" numeric,"eftposTotal" numeric,"updatedAt" timestamp)',
+   'CREATE TABLE "StoreTransaction"("id" text primary key,"companyId" text,"storeId" text,"sessionId" text,"type" text,"amount" numeric,"description" text,"subtractFromShift" boolean,"attachmentData" text,"occurredAt" timestamptz,"createdAt" timestamptz,"reversedAt" timestamptz)',
+   'CREATE TABLE "CashControlReview"("id" text,"companyId" text,"storeId" text,"sessionId" text,"decision" text,"amount" numeric,"note" text,"actorId" text,"actorName" text,"snapshotJson" jsonb,"createdAt" timestamp)',
+   'CREATE TABLE "WorkforceAuditLog"("id" text primary key,"companyId" text,"storeId" text,"actorUserId" text,"action" text,"entityType" text,"entityId" text,"afterJson" jsonb,"createdAt" timestamp default NOW())'
+  ])await db.$executeRawUnsafe(sql);
+  await db.$executeRaw`INSERT INTO "Company" VALUES ('co',true),('foreign',true)`;
+  await db.$executeRaw`INSERT INTO "Store" VALUES ('store','co','LAB',true),('control','foreign','Control',true)`;
+  await db.$executeRaw`INSERT INTO "User" VALUES ('actor','co','Synthetic auditor','SUPER_ADMIN',false)`;
+  await db.$executeRaw`INSERT INTO "StoreLifecycleFence" VALUES ('store','co',0,false,false)`;
+  for(const [id,store,company,cash,opened,closed]of [['a','store','co',100,'2026-10-21T06:00Z','2026-10-21T14:00Z'],['b','store','co',219,'2026-10-21T14:01Z','2026-10-21T22:00Z'],['control','control','foreign',7,'2026-10-21T06:00Z','2026-10-21T14:00Z']])await db.$executeRaw`INSERT INTO "CashShiftSession" VALUES (${id},${company},${store},'MAIN','CLOSED',${'operator-'+id},${id},'Βάρδια',${new Date(opened)},${new Date(closed)},0,0,${cash},0,0,${cash},${cash},0,0,${cash},${cash},0,0,0,0,NOW())`;
+  const finance=async()=>({sessions:await db.$queryRaw`SELECT to_jsonb(s) row FROM "CashShiftSession" s ORDER BY "id"`,transactions:await db.$queryRaw`SELECT to_jsonb(t) row FROM "StoreTransaction" t ORDER BY "id"`,reviews:await db.$queryRaw`SELECT * FROM "CashControlReview"`}),before=await finance();
+  const scope={companyId:'co',storeId:'store',generation:'0'},period={from:'2026-10-21',to:'2026-10-21'},repository=createCashReconciliationRepository(db);let current=await repository.read(scope,period);
+  assert.equal(current.handoffRegister.issues.length,1);assert.deepEqual(current.rows.map(r=>r.sessionId),['a']);assert.equal(current.handoffRegister.issues[0].differenceCents,11900);const initial=structuredClone(current.rows);
+  const app=express();app.use(express.json());app.use((req,res,next)=>{req.user={id:'actor',companyId:'co',role:'SUPER_ADMIN'};next()});app.use(createCashReconciliationRouter({db}));server=createServer(app);await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
+  const make=(status='OPEN',note='Συγκεκριμένη απάντηση για την αρχική παράδοση.')=>{const q=current.handoffRegister.issues[0];return {requestId:randomUUID(),generation:'0',head:current.head,period,data:{kind:'HANDOFF_ISSUE',issueId:q.id,previousSessionId:q.previousSessionId,nextSessionId:q.nextSessionId,previousHash:q.previousHash,nextHash:q.nextHash,issueFingerprint:q.fingerprint,reportHash:current.reportHash,status,note,reviewed:true}};};
+  const post=async(r,store='store')=>{const response=await fetch(origin+`/stores/${store}/reviews`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});return {status:response.status,body:await response.json()};};
+  const requests=[make(),make()],race=await Promise.all(requests.map(r=>post(r)));assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);const winner=race.findIndex(r=>r.status===200);current=race[winner].body;
+  assert.equal((await post(requests[winner])).body.reused,true);assert.equal((await post({...requests[winner],data:{...requests[winner].data,note:'Αλλαγμένη απάντηση με την ίδια ταυτότητα.'}})).body.code,'CASH_RECONCILIATION_REPLAY_CHANGED');
+  const close=await post(make('CLOSED'));assert.equal(close.status,200);current=close.body;assert.equal(current.handoffRegister.issues[0].status,'CLOSED');assert.deepEqual(current.rows,JSON.parse(JSON.stringify(initial)));assert.match(current.text,/απόκλιση/);
+  const held=make();await db.$executeRaw`UPDATE "CashShiftSession" SET "openingOperational"=220 WHERE "id"='b'`;
+  current=await repository.read(scope,period);assert.equal(current.handoffRegister.issues[0].status,'RECHECK_REQUIRED');const denied=await post({...held,data:{...held.data,reportHash:current.reportHash}});assert.equal(denied.status,409);assert.equal(denied.body.code,'CASH_HANDOFF_ISSUE_SOURCE_CHANGED');
+  await db.$executeRaw`UPDATE "CashShiftSession" SET "openingOperational"=219 WHERE "id"='b'`;
+  current=await repository.read(scope,period);const heldPrevious=make();await db.$executeRaw`UPDATE "CashShiftSession" SET "actualOperational"=101 WHERE "id"='a'`;
+  current=await repository.read(scope,period);assert.equal((await post({...heldPrevious,data:{...heldPrevious.data,reportHash:current.reportHash}})).body.code,'CASH_HANDOFF_ISSUE_SOURCE_CHANGED');
+  await db.$executeRaw`UPDATE "CashShiftSession" SET "actualOperational"=100 WHERE "id"='a'`;current=await repository.read(scope,period);
+  assert([404,409].includes((await post(make(),'control')).status));assert.equal((await post({...make(),generation:'1'})).status,409);
+  await db.$executeRaw`UPDATE "User" SET "role"='EMPLOYEE' WHERE "id"='actor'`;assert.equal((await post(make())).status,403);await db.$executeRaw`UPDATE "User" SET "role"='SUPER_ADMIN' WHERE "id"='actor'`;
+  const reopened=await post(make('OPEN'));assert.equal(reopened.status,200);current=reopened.body;assert.equal(current.handoffRegister.issues[0].repliesCount,3);assert.equal(current.handoffRegister.issues[0].status,'OPEN');assert.equal(current.historyTotal,3);assert.equal(current.history[1].handoff.status,'CLOSED');
+  assert.deepEqual(current.rows,JSON.parse(JSON.stringify(initial)));assert.deepEqual(await finance(),before);assert.equal((await db.$queryRaw`SELECT COUNT(*)::int n FROM "WorkforceAuditLog" WHERE "storeId"='control'`)[0].n,0);
+  await db.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=true WHERE "storeId"='store'`;assert.equal((await post(make())).status,409);assert.equal((await db.$queryRaw`SELECT COUNT(*)::int n FROM "WorkforceAuditLog"`)[0].n,3);
+ }finally{if(server)await new Promise(r=>server.close(r));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();}
+});
+
 test('native automatic arithmetic reads real original fields and keeps document issues, original finance and control unchanged',{skip:!isolated()},async()=>{
  let issueServer;
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_auto_arithmetic_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const db=new PrismaClient({datasourceUrl:url.toString()});
