@@ -1,3 +1,9 @@
+## Exact native/Windows PASS; full CI fixture date correction / NOT INSTALLED
+
+Head785639b passed native recovery41245669724 (49PASS/0FAIL/0SKIP) and actual Windows41245669758, including all three payment modes, lost replies, durable-stop crash/restart, foreign/malformed/published evidence and the actual connector loop with zero fiscal/payment output. This is engineering CI only, not physical acceptance.
+
+Full CI41245669725 passed server/build/browser checks but failed ai-reader-payment-flow at the supplier-credit ledger assertion. The fixture dates its credit with UTC YYYY-MM-DD; the real ledger correctly defaults to the current Europe/Athens month. At 22:08UTC31Oct it was already November in Athens, excluding the October fixture. Query the same explicit fixture date for both ledger bounds; preserve the exact credit/ref/negative amount assertion and all financial checks. No supplier production code or data changes. Re-run all exact checks before merge/deploy. Source/package remain NOT INSTALLED until the guarded exact release and independent health verification.
+
 ## First native run / raw-row snapshot correction / NOT INSTALLED
 
 Native recovery41245348755/job124667507559 reached the new three-mode test but its fixture tried structuredClone on a raw Prisma row containing Decimal, which is not cloneable. Retain the independent raw SQL snapshot directly for the unchanged-field comparisons; every assertion, native execution and no-business-write check remains. No production function or schema was changed for this failure. Source remains NOT INSTALLED pending final exact native/Windows/full CI.
