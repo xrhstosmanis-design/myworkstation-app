@@ -18,7 +18,7 @@ const columns=[
   ["salesLines","Γραμμές πωλήσεων",value=>Number(value||0).toLocaleString("el-GR")],
   ["returnTransactions","Επιστροφές",value=>Number(value||0).toLocaleString("el-GR")],
   ["cancelTransactions","Ακυρώσεις",value=>Number(value||0).toLocaleString("el-GR")],
-  ["missingExpenseVatPayments","Έξοδα χωρίς τεκμηρίωση ΦΠΑ",value=>Number(value||0).toLocaleString("el-GR")]
+  ["missingExpenseVatPayments","Έξοδα με ΦΠΑ 0% (χωρίς ανάλυση)",value=>Number(value||0).toLocaleString("el-GR")]
 ];
 
 export default function OwnerBusinessPicture({api,store,onClose}){
@@ -32,7 +32,7 @@ export default function OwnerBusinessPicture({api,store,onClose}){
   const visible=(value,key)=>{if(scope==="WITH_VAT"&&["salesNet","purchaseNet"].includes(key))return null;if(scope==="WITHOUT_VAT"&&["salesGross","purchaseGross","salesVat","purchaseVat"].includes(key))return null;return value};
   const exportCsv=()=>{const lines=[["Περίοδος",...columns.map(([,label])=>label)]];for(const row of data?.monthly||[])lines.push([row.month,...columns.map(([key])=>row[key]??"")]);const blob=new Blob(["\ufeff"+lines.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`eikona-epixeiriseis-${data?.calendarFrom||from}-${data?.calendarTo||to}.csv`;a.click();URL.revokeObjectURL(url)};
   const openExpenses=row=>setExpensePeriod(row?.day?{day:row.day}:row?.month&&row.month!=="ΣΥΝΟΛΟ"?{month:row.month}:{});
-  const rowCells=row=>columns.map(([key,,format])=>{const value=visible(row[key],key);return <td key={key} className={key==="netProfit"?"business-profit":key.includes("Vat")?"business-vat":""}>{key==="missingExpenseVatPayments"&&value>0?<button type="button" className="business-expense-link" aria-label={`Προβολή ${value} εξόδων χωρίς τεκμηρίωση ΦΠΑ`} onClick={e=>{e.stopPropagation();openExpenses(row)}}>{format(value)} · Προβολή</button>:value==null?"—":format(value)}</td>});
+  const rowCells=row=>columns.map(([key,,format])=>{const value=visible(row[key],key);return <td key={key} className={key==="netProfit"?"business-profit":key.includes("Vat")?"business-vat":""}>{key==="missingExpenseVatPayments"&&value>0?<button type="button" className="business-expense-link" aria-label={`Προβολή ${value} εξόδων με ΦΠΑ 0% χωρίς ανάλυση`} onClick={e=>{e.stopPropagation();openExpenses(row)}}>{format(value)} · Προβολή</button>:value==null?"—":format(value)}</td>});
   const printReport=()=>{
     const popup=window.open("","_blank");
     if(!popup){setError("Επίτρεψε το αναδυόμενο παράθυρο για την εκτυπώσιμη αναφορά.");return}
@@ -55,12 +55,12 @@ export default function OwnerBusinessPicture({api,store,onClose}){
       <div className="business-picture-tools">{data?.calendarFrom&&<strong className="business-loaded-period">{data.calendarFrom} έως {data.calendarTo}</strong>}<button onClick={load}><RefreshCw/> Ανανέωση</button><button onClick={exportCsv} disabled={busy||!!error||!data}><Download/> Excel / CSV</button><button onClick={printReport} disabled={busy||!!error||!data}><Printer/> Εκτύπωση</button></div>
       {data&&<div className="business-report-information">
         {!busy&&data?.totals?.missingCostLines>0&&<span className="business-data-warning" role="status">Ελλιπές κόστος: {data.totals.missingCostLines}/{data.totals.salesLines} γραμμές</span>}
-        {!busy&&data?.totals?.missingExpenseVatPayments>0&&<button type="button" className="business-data-warning business-expense-link" onClick={()=>openExpenses(data.totals)}>Ελλιπής τεκμηρίωση ΦΠΑ: {data.totals.missingExpenseVatPayments}/{data.totals.expensePayments} έξοδα · Προβολή</button>}
+        {!busy&&data?.totals?.missingExpenseVatPayments>0&&<button type="button" className="business-data-warning business-expense-link" onClick={()=>openExpenses(data.totals)}>ΦΠΑ 0% χωρίς ανάλυση: {data.totals.missingExpenseVatPayments}/{data.totals.expensePayments} έξοδα · Προβολή</button>}
         <details className="business-report-details"><summary>Πληροφορίες αναφοράς</summary><div className="business-report-explanations">
       {data?.calendarFrom&&<p >Εμφανιζόμενη περίοδος: {data.calendarFrom} έως {data.calendarTo} · ώρα Ελλάδας. Οι αλλαγές στα κριτήρια εφαρμόζονται με Αναζήτηση.</p>}
       {!busy&&data?.totals&&<p >Στην περίοδο: {data.totals.returnTransactions||0} επιστροφές και {data.totals.cancelTransactions||0} ακυρώσεις. {data.calculationNotes?.reversals}</p>}
       {!busy&&data?.totals?.missingCostLines>0&&<div >Λείπει κόστος σε {data.totals.missingCostLines} από {data.totals.salesLines} γραμμές πώλησης. Κέρδος και Margin εμφανίζονται ως «—» στις επηρεαζόμενες ημέρες, μήνες και στο σύνολο.</div>}
-      {!busy&&data?.totals?.missingExpenseVatPayments>0&&<div >Λείπει τεκμηρίωση ΦΠΑ σε {data.totals.missingExpenseVatPayments} από {data.totals.expensePayments} έξοδα. Τα μικτά ποσά εμφανίζονται· καθαρά έξοδα, ΦΠΑ, καθαρό κέρδος και ποσοστό εξόδων εμφανίζονται ως «—» στις επηρεαζόμενες περιόδους.</div>}
+      {!busy&&data?.totals?.missingExpenseVatPayments>0&&<div >Σε {data.totals.missingExpenseVatPayments} από {data.totals.expensePayments} έξοδα χωρίς ανάλυση ΦΠΑ, ολόκληρο το ποσό αφαιρείται ως έξοδο με ΦΠΑ 0% στην εικόνα ιδιοκτήτη. Η ανάλυση των συνδεδεμένων έγκυρων παραστατικών διατηρείται. Δεν αλλάζουν τα αρχικά παραστατικά.</div>}
           <p>{data?.calculationNotes?.expenses} {data?.calculationNotes?.costCoverage} <b>Υπολογισμός:</b> {data?.calculationNotes?.grossProfit} {data?.calculationNotes?.netProfit}</p>
         </div></details>
       </div>}

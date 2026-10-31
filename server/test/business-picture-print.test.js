@@ -7,7 +7,7 @@ const data={calendarFrom:'2026-09-26',calendarTo:'2026-09-26',totals:{missingCos
 test('print uses loaded period, escapes report text and keeps unknown amounts unknown',()=>{
  const html=businessPicturePrintHtml({data,storeName:'LAB <img onerror="bad">',columns,rows:[{label:'ΣΥΝΟΛΟ',salesGross:0.5,salesNet:0.44,expenses:null,expenseVat:null}]});
  assert.ok(html.includes('2026-09-26 έως 2026-09-26'));
- assert.ok(html.includes('5 από 5 έξοδα'));
+ assert.ok(html.includes('5 από 5 έξοδα'));assert.ok(html.includes('ΦΠΑ 0% χωρίς ανάλυση'));assert.ok(!html.includes('Άγνωστα καθαρά έξοδα'));
  assert.ok(html.includes('<td>—</td>'));
  assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>'));
  assert.ok(!html.includes('<img'));assert.ok(html.includes('ΣΥΝΟΛΟ'));
