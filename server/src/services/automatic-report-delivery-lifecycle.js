@@ -82,10 +82,13 @@ function slotId(input){
   return createHash("sha256").update(JSON.stringify([input.companyId,input.storeId,input.reportType,input.frequency,input.periodFrom,input.periodTo,input.recipient])).digest("hex");
 }
 function gate(input,current,now){
-  safe(current);shape(current,[...INPUT_KEYS,"checkedAt",...GATES,"maintenanceBlocked"]);
+  safe(current);
+  const administrator=current?.recipientAuthorizationBasis==='SUPER_ADMIN';
+  shape(current,[...INPUT_KEYS,"checkedAt",...GATES,"maintenanceBlocked",...(administrator?["recipientAuthorizationBasis","administratorAuthorizationActive"]:[])]);
   const metadata=Object.fromEntries(INPUT_KEYS.map(k=>[k,current[k]]));
   if(JSON.stringify(normalizeInput(metadata))!==JSON.stringify(input)||current.checkedAt!==now)fail("STALE_GATE","Fresh exact scope/snapshot assertions required.");
-  if(GATES.some(k=>current[k]!==true)||current.maintenanceBlocked!==false)fail("DELIVERY_BLOCKED","Delivery is not explicitly eligible.");
+  const required=administrator?GATES.filter(k=>!["recipientVerified","consentActive"].includes(k)):GATES;
+  if(required.some(k=>current[k]!==true)||current.maintenanceBlocked!==false||administrator&&(current.administratorAuthorizationActive!==true||current.consentActive!==false||typeof current.recipientVerified!=='boolean'))fail("DELIVERY_BLOCKED","Delivery is not explicitly eligible.");
   if(instant(input.periodTo)>instant(now))fail("DELIVERY_BLOCKED","Report period is not closed.");
 }
 function record(value){
