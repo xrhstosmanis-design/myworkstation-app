@@ -1,0 +1,120 @@
+TAP version 13
+# Subtest: mounted two-shift form saves null, reopens it and requires third hour only when selected
+not ok 1 - mounted two-shift form saves null, reopens it and requires third hour only when selected
+  ---
+  duration_ms: 308.824121
+  location: '/workspace/scratch/635e20e0142c/myworkstation-app/server/test/automatic-report-two-shifts-mounted.test.js:8:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input was expected to not match the regular expression /Η αυτόματη αποστολή δεν έχει ενεργοποιηθεί/. Input:
+    
+    'Η αυτόματη αποστολή δεν έχει ενεργοποιηθεί. Εδώ αποθηκεύονται οι βάρδιες και ελέγχεται η προεπισκόπηση. Δεν αλλάζουν υπόλοιπα ή χρεώσεις υπαλλήλων.'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Η αυτόματη αποστολή δεν έχει ενεργοποιηθεί. Εδώ αποθηκεύονται οι βάρδιες και ελέγχεται η προεπισκόπηση. Δεν αλλάζουν υπόλοιπα ή χρεώσεις υπαλλήλων.'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/test/automatic-report-two-shifts-mounted.test.js:27:10)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: explicit two-shift schema accepts absent third boundary but still validates required third, slot identity and hours
+not ok 2 - explicit two-shift schema accepts absent third boundary but still validates required third, slot identity and hours
+  ---
+  duration_ms: 9.492597
+  location: '/workspace/scratch/635e20e0142c/myworkstation-app/server/test/automatic-report-two-shifts.test.js:13:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    [
+      {
+        "code": "invalid_type",
+        "expected": "number",
+        "received": "null",
+        "path": [
+          "thirdShiftStartHour"
+        ],
+        "message": "Expected number, received null"
+      }
+    ]
+  code: 'ERR_TEST_FAILURE'
+  name: 'ZodError'
+  stack: |-
+    get error [as error] (file:///workspace/scratch/635e20e0142c/myworkstation-app/node_modules/zod/v3/types.js:39:31)
+    ZodEffects.parse (file:///workspace/scratch/635e20e0142c/myworkstation-app/node_modules/zod/v3/types.js:114:22)
+    TestContext.<anonymous> (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/test/automatic-report-two-shifts.test.js:14:54)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:796:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+    node:internal/test_runner/harness:255:12
+    node:internal/process/task_queues:140:7
+    AsyncResource.runInAsyncScope (node:async_hooks:206:9)
+    AsyncResource.runMicrotask (node:internal/process/task_queues:137:8)
+  ...
+# Subtest: two actual closed shifts are ready for variable late closing, never require a fabricated third
+not ok 3 - two actual closed shifts are ready for variable late closing, never require a fabricated third
+  ---
+  duration_ms: 10.17322
+  location: '/workspace/scratch/635e20e0142c/myworkstation-app/server/test/automatic-report-two-shifts.test.js:18:1'
+  failureType: 'testCodeFailure'
+  error: 'Επίλεξε τις ώρες έναρξης δεύτερης και τρίτης βάρδιας.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    fail (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/src/services/automatic-report-policy.js:5:42)
+    dailyCashReportReadiness (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/src/services/automatic-report-policy.js:69:189)
+    TestContext.<anonymous> (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/test/automatic-report-two-shifts.test.js:20:16)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:796:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+    Test.postRun (node:internal/test_runner/test:889:19)
+    Test.run (node:internal/test_runner/test:835:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: two-shift reporting retains missing, open, unknown, scope, duplicate, overlap and unfinished-day holds
+not ok 4 - two-shift reporting retains missing, open, unknown, scope, duplicate, overlap and unfinished-day holds
+  ---
+  duration_ms: 8.710164
+  location: '/workspace/scratch/635e20e0142c/myworkstation-app/server/test/automatic-report-two-shifts.test.js:30:1'
+  failureType: 'testCodeFailure'
+  error: 'Επίλεξε τις ώρες έναρξης δεύτερης και τρίτης βάρδιας.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    fail (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/src/services/automatic-report-policy.js:5:42)
+    dailyCashReportReadiness (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/src/services/automatic-report-policy.js:69:189)
+    TestContext.<anonymous> (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/test/automatic-report-two-shifts.test.js:32:68)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:796:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+    Test.postRun (node:internal/test_runner/test:889:19)
+    Test.run (node:internal/test_runner/test:835:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: two-shift day boundaries retain Greek DST and original source identities
+not ok 5 - two-shift day boundaries retain Greek DST and original source identities
+  ---
+  duration_ms: 45.376049
+  location: '/workspace/scratch/635e20e0142c/myworkstation-app/server/test/automatic-report-two-shifts.test.js:38:1'
+  failureType: 'testCodeFailure'
+  error: 'Επίλεξε τις ώρες έναρξης δεύτερης και τρίτης βάρδιας.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    fail (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/src/services/automatic-report-policy.js:5:42)
+    dailyCashReportReadiness (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/src/services/automatic-report-policy.js:69:189)
+    TestContext.<anonymous> (file:///workspace/scratch/635e20e0142c/myworkstation-app/server/test/automatic-report-two-shifts.test.js:43:16)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:796:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+    Test.postRun (node:internal/test_runner/test:889:19)
+    Test.run (node:internal/test_runner/test:835:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 0
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1951.002491
