@@ -1,0 +1,59 @@
+{
+  "at": "2026-10-31",
+  "sourceUnchanged": [
+    {
+      "path": "server/src/services/ai-wallet-customer-pricing.js",
+      "before": "1d5d5df36dd0a5d7b21d1f1c7ca6c499f57e9afe",
+      "now": "1d5d5df36dd0a5d7b21d1f1c7ca6c499f57e9afe"
+    },
+    {
+      "path": "server/src/services/ai-owner-wallet-repository.js",
+      "before": "123544d66a4a91d7639f2142da400ff1f3a79236",
+      "now": "123544d66a4a91d7639f2142da400ff1f3a79236"
+    },
+    {
+      "path": "server/src/routes/ai-owner-wallet.js",
+      "before": "272cd65e08bc3c639a9769c3fb06920d18a8b632",
+      "now": "272cd65e08bc3c639a9769c3fb06920d18a8b632"
+    },
+    {
+      "path": "server/src/services/ai-wallet-invoice-metering.js",
+      "before": "e6c0ab690f726df7c3a9e2a9ee26b605c91a8fa7",
+      "now": "e6c0ab690f726df7c3a9e2a9ee26b605c91a8fa7"
+    },
+    {
+      "path": "server/src/routes/invoice-assistant-pos.js",
+      "before": "48aaeeff5e75070458f6fbf945d24dce6c2b1d61",
+      "now": "48aaeeff5e75070458f6fbf945d24dce6c2b1d61"
+    },
+    {
+      "path": "client/src/components/platform/AiOwnerWalletAdmin.jsx",
+      "before": "0c9fbe4f5791d5a09edeba26e5e62b169b51d869",
+      "now": "0c9fbe4f5791d5a09edeba26e5e62b169b51d869"
+    },
+    {
+      "path": "client/src/components/platform/AiWalletCustomerPricing.jsx",
+      "before": "f775429409f0ff11f341a2d2439dc9aac9682863",
+      "now": "f775429409f0ff11f341a2d2439dc9aac9682863"
+    },
+    {
+      "path": "client/src/components/platform/ai-wallet-customer-pricing.mjs",
+      "before": "442b92f44b7c96b9a28df8956ab6cce9c45f4db9",
+      "now": "442b92f44b7c96b9a28df8956ab6cce9c45f4db9"
+    }
+  ],
+  "http": {
+    "capturedAt": "2026-10-31T17:27:36.662669+00:00",
+    "status": 200,
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "8b76cad4c16c571239940d8038bb248e3cae2819"
+    }
+  },
+  "db": {
+    "active_lock_waiters": 0,
+    "captured_at": "2026-10-31T17:28:09.146966Z",
+    "long_active_queries": 0
+  }
+}

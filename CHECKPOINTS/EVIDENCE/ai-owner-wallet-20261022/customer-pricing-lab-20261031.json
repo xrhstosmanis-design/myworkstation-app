@@ -1,0 +1,244 @@
+{
+  "scope": "Two separately identified original assistant calls on one new synthetic persisted invoice D",
+  "release": {
+    "sourcePr": 3381,
+    "sourceHead": "dad7976272e609b0b88204fbcb35124caa770700",
+    "sourcePrCi": 41207119453,
+    "sourcePrBuildJob": 124554751209,
+    "sourcePrTests": 4871,
+    "sourcePrBackupTests": 8,
+    "recoveryCi": 41207119467,
+    "recoveryJob": 124554369414,
+    "recoveryTests": 7,
+    "sourceMerge": "fb1a0ae5171005f6007ce851d07b58d3e274e73c",
+    "mainCandidate": "accf3ddd839c1255139dfd181b5ccb4f770555ff",
+    "mainCi": 41208544864,
+    "supersededMainCi": {
+      "id": 41208139847,
+      "sha": "20db21008e024ca35509d220503eb551f8b3b136",
+      "conclusion": "cancelled",
+      "reason": "Older strict ancestor was cancelled through ordinary GitHub UI after the queued full combined-main dispatch was verified. No guard/test/source was changed."
+    },
+    "pendingReplaced": [
+      41208242761,
+      41208257508,
+      41208470278
+    ],
+    "mainBuildJob": 124559192623,
+    "mainTests": 4885,
+    "mainBackupTests": 8,
+    "mainConclusion": "success",
+    "normalDeployRuns": [
+      41209698959,
+      41209715362
+    ],
+    "renderDeployId": "dep-dbivj4cs728c738edupg",
+    "normalDeployRun": 41209698959,
+    "normalDeployJob": 124561955744,
+    "deployConclusion": "success",
+    "renderLiveAt": "2026-10-31T14:24:04.551207Z",
+    "duplicateDeployCancelled": 41209715362,
+    "independentHttp": {
+      "capturedAt": "2026-10-31T14:24:53.807046+00:00",
+      "status": 200,
+      "health": {
+        "ok": true,
+        "version": "0.22.0+kat-test-pos",
+        "revision": "accf3ddd839c1255139dfd181b5ccb4f770555ff"
+      }
+    },
+    "databaseHealth": {
+      "active_lock_waiters": 0,
+      "captured_at": "2026-10-31T14:24:49.639847Z",
+      "long_active_queries": 0
+    }
+  },
+  "results": [
+    {
+      "phase": "FIRST",
+      "entry": {
+        "actorId": null,
+        "chargedMicros": 110308,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-31T14:45:00.039641+00:00",
+        "creditedMicros": 0,
+        "feature": "INVOICE_OPENAI",
+        "id": "9a589306-a47d-4b40-a62f-dbfac5f099d7",
+        "kind": "USAGE",
+        "reference": "4a749242-a788-435e-9f2b-ddb34625ecb6",
+        "reservedMicros": 1165869,
+        "resolutionReference": null,
+        "settledAt": "2026-10-31T14:45:07.568116+00:00",
+        "status": "SETTLED",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "tariff": {
+          "cacheWriteMicrosPerMillion": {
+            "ttl12h": 13401233,
+            "ttl30m": 6700617
+          },
+          "cachedInputMicrosPerMillion": 536050,
+          "contextTokens": 1050000,
+          "currency": "EUR",
+          "customerPricing": {
+            "additionalMarkupBps": 2500,
+            "callFeeMicros": "1000",
+            "invoiceDocumentId": "546c256a-f0ed-4fd4-9577-eb0ed349def8",
+            "invoiceFeeClaimed": true,
+            "invoiceFeeMicros": "10000",
+            "invoiceFeeScope": "FIRST_ASSISTANT_DOCUMENT",
+            "policyVersion": 25,
+            "schemaVersion": 1
+          },
+          "inputMicrosPerMillion": 5360494,
+          "longContext": {
+            "cacheWriteMicrosPerMillion": {
+              "ttl12h": 26802466,
+              "ttl30m": 13401233
+            },
+            "cachedInputMicrosPerMillion": 1072099,
+            "inputMicrosPerMillion": 10720987,
+            "outputMicrosPerMillion": 40203699,
+            "thresholdTokens": 272000
+          },
+          "maxOutputTokens": 128000,
+          "model": "gpt-5.6-sol",
+          "outputMicrosPerMillion": 26802466,
+          "requestCacheWritePolicy": {
+            "schemaVersion": 1,
+            "source": "REQUEST_DEFAULT",
+            "state": "UNIFORM",
+            "ttl": "30m"
+          },
+          "responseModels": [
+            "gpt-5.6-sol"
+          ],
+          "version": "c712792131de3f07abd437917c7072b74d47a71c126730f9a732754cccdd3056"
+        },
+        "usage": {
+          "cacheWrite12hTokens": 0,
+          "cacheWrite30mTokens": 8938,
+          "cacheWritePartitionSource": "REQUEST_DEFAULT",
+          "cacheWriteTokens": 8938,
+          "cacheWriteTtl": "30m",
+          "cachedInputTokens": 0,
+          "customerCharge": {
+            "additionalMarkupMicros": "19862",
+            "baseMicros": "79446",
+            "callFeeMicros": "1000",
+            "invoiceFeeMicros": "10000",
+            "totalMicros": "110308"
+          },
+          "inputTokens": 8941,
+          "model": "gpt-5.6-sol",
+          "outputTokens": 729,
+          "pricingTier": "STANDARD",
+          "providerResponseId": "resp_0361fd5f50ca5754006ae5feec318887d09ab41296b858fcf7"
+        }
+      },
+      "independentCharge": {
+        "baseMicros": "79446",
+        "additionalMarkupMicros": "19862",
+        "callFeeMicros": "1000",
+        "invoiceFeeMicros": "10000",
+        "totalMicros": "110308"
+      }
+    },
+    {
+      "phase": "FOLLOWUP",
+      "entry": {
+        "actorId": null,
+        "chargedMicros": 96764,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-10-31T14:52:02.66484+00:00",
+        "creditedMicros": 0,
+        "feature": "INVOICE_OPENAI",
+        "id": "08ca105d-0fb9-432c-b941-de6e3f5a83f8",
+        "kind": "USAGE",
+        "reference": "ecb214d4-cd10-46ba-a4d5-48895ef5cd36",
+        "reservedMicros": 1157963,
+        "resolutionReference": null,
+        "settledAt": "2026-10-31T14:52:10.30863+00:00",
+        "status": "SETTLED",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "tariff": {
+          "cacheWriteMicrosPerMillion": {
+            "ttl12h": 13401233,
+            "ttl30m": 6700617
+          },
+          "cachedInputMicrosPerMillion": 536050,
+          "contextTokens": 1050000,
+          "currency": "EUR",
+          "customerPricing": {
+            "additionalMarkupBps": 2500,
+            "callFeeMicros": "1000",
+            "invoiceDocumentId": "546c256a-f0ed-4fd4-9577-eb0ed349def8",
+            "invoiceFeeClaimed": false,
+            "invoiceFeeMicros": "10000",
+            "invoiceFeeScope": "FIRST_ASSISTANT_DOCUMENT",
+            "policyVersion": 25,
+            "schemaVersion": 1
+          },
+          "inputMicrosPerMillion": 5360494,
+          "longContext": {
+            "cacheWriteMicrosPerMillion": {
+              "ttl12h": 26802466,
+              "ttl30m": 13401233
+            },
+            "cachedInputMicrosPerMillion": 1072099,
+            "inputMicrosPerMillion": 10720987,
+            "outputMicrosPerMillion": 40203699,
+            "thresholdTokens": 272000
+          },
+          "maxOutputTokens": 128000,
+          "model": "gpt-5.6-sol",
+          "outputMicrosPerMillion": 26802466,
+          "requestCacheWritePolicy": {
+            "schemaVersion": 1,
+            "source": "REQUEST_DEFAULT",
+            "state": "UNIFORM",
+            "ttl": "30m"
+          },
+          "responseModels": [
+            "gpt-5.6-sol"
+          ],
+          "version": "c712792131de3f07abd437917c7072b74d47a71c126730f9a732754cccdd3056"
+        },
+        "usage": {
+          "cacheWrite12hTokens": 0,
+          "cacheWrite30mTokens": 9063,
+          "cacheWritePartitionSource": "REQUEST_DEFAULT",
+          "cacheWriteTokens": 9063,
+          "cacheWriteTtl": "30m",
+          "cachedInputTokens": 0,
+          "customerCharge": {
+            "additionalMarkupMicros": "19153",
+            "baseMicros": "76611",
+            "callFeeMicros": "1000",
+            "invoiceFeeMicros": "0",
+            "totalMicros": "96764"
+          },
+          "inputTokens": 9066,
+          "model": "gpt-5.6-sol",
+          "outputTokens": 592,
+          "pricingTier": "STANDARD",
+          "providerResponseId": "resp_0c1249c514778399006ae60092cbac87d0a7853acc2f4456b0"
+        }
+      },
+      "independentCharge": {
+        "baseMicros": "76611",
+        "additionalMarkupMicros": "19153",
+        "callFeeMicros": "1000",
+        "invoiceFeeMicros": "0",
+        "totalMicros": "96764"
+      }
+    }
+  ],
+  "checks": {
+    "exactOnceInvoiceFee": "PASS",
+    "originalIndependentIntegerCosts": "PASS",
+    "oldHoldAndEntries": "PASS",
+    "foreignWalletHistory": "PASS",
+    "labBusinessStockShifts": "PASS",
+    "noReviewRetry": "PASS"
+  }
+}
