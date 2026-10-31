@@ -1,3 +1,4 @@
+import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {supplierAdvanceContext,associateExpenseAsAdvance,allocateSupplierAdvance} from "../lib/supplier-advance.js";
 import {requireStaffGrant} from '../services/backoffice-staff-access.js';
 import {createPendingInvoicePayment,readPendingInvoices,capturePendingInvoice} from "../services/pos-pending-invoices.js";
@@ -183,7 +184,7 @@ function route(handler){
 }
 
 function requireLedgerAccess(req,res,next){
-  if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='sales.read')return next();
+  if(req.user?.staffAccess===true&&['sales.read','payments.supplier','payments.expense'].includes(req.staffGrant?.capability))return next();
   const backoffice=req.user?.tokenType!=="STORE_OPERATOR"&&["OWNER","ADMIN","MANAGER"].includes(req.user?.role);
   const superAdmin=req.user?.tokenType!=="STORE_OPERATOR"&&req.user?.role==="SUPER_ADMIN";
   const permissions=req.user?.permissions||[];
@@ -525,6 +526,7 @@ router.get("/stores/:storeId/supplier-open-invoices",route(async(req,res)=>{
     ORDER BY d."documentDate" ASC,d."id" ASC
   `;
   const advanceData=await availableSupplierAdvances(req.user.companyId,req.params.storeId,supplierId);
+  if(req.user.staffAccess===true)await requireStaffGrant(prisma,req.user,req.params.storeId,'payments.supplier');
   res.json({...advanceData,supplier:{id:supplier[0].id,name:supplier[0].name},items:rows.map(row=>({
     ...row,totalGross:Number(row.totalGross||0),reservedAmount:Number(row.reservedAmount||0),
     outstandingAmount:Number((Number(row.totalGross||0)-Number(row.reservedAmount||0)).toFixed(2))
@@ -549,7 +551,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   const total=body.totalAmount??allocatedTotal,advanceAmount=Number((total-allocatedTotal).toFixed(2));
   const proof=attachment?.mimeType==="application/pdf"
     ?await readSupplierProofPdf(Buffer.from(attachment.dataUrl.split(",")[1],"base64")):null;
-  const ownerPayment=req.user.tokenType!=="STORE_OPERATOR"&&(req.user.role==="OWNER"||isSuperAdminReview(req));
+  const ownerPayment=req.user.staffAccess!==true&&req.user.tokenType!=="STORE_OPERATOR"&&(req.user.role==="OWNER"||isSuperAdminReview(req));
   const ownerProofError=ownerPayment&&attachment?ownerSupplierProofError({mimeType:attachment.mimeType,proof}):null;
   if(ownerProofError)return res.status(400).json({error:ownerProofError});
   const proofError=supplierProofMismatch(proof,{amount:total,method:body.paymentMethod});
@@ -563,6 +565,7 @@ router.post("/stores/:storeId/supplier-settlements",route(async(req,res)=>{
   // A responsibility statement is not proof and always waits for human review.
   const initialStatus=ownerPayment&&!noDocument?"CONFIRMED":"PENDING_REVIEW";
   const result=await prisma.$transaction(async tx=>{
+    if(req.user?.staffAccess===true)await requireStaffAction(tx,req,store.id,'payments.supplier');
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${transactionId},0))::text AS locked`;
     const suppliers=await tx.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "id"=${body.supplierId} AND "companyId"=${req.user.companyId} AND "active"=true LIMIT 1`;
     if(!suppliers[0]){const error=new Error("Δεν βρέθηκε ο προμηθευτής.");error.status=404;throw error}
@@ -1138,9 +1141,11 @@ router.post("/stores/:storeId",route(async(req,res)=>{
       RETURNING *
     `;
   };
+  const persist=async tx=>{
+  if(req.user?.staffAccess===true)await requireStaffAction(tx,req,store.id,'payments.expense');
   let rows;
   if(invoicePaymentKey){
-    const outcome=await prisma.$transaction(async tx=>{
+    const checkInvoicePayment=async tx=>{
       await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
       const duplicate=await tx.$queryRaw`
         SELECT t."id",t."storeId",t."occurredAt",t."amount",t."actorName"
@@ -1152,26 +1157,33 @@ router.post("/stores/:storeId",route(async(req,res)=>{
         ORDER BY t."occurredAt" ASC LIMIT 1`;
       if(duplicate[0])return {duplicate:duplicate[0],rows:null};
       return {duplicate:null,rows:await insertTransaction(tx)};
-    });
-    if(outcome.duplicate)return res.status(409).json({error:`Η πληρωμή του τιμολογίου ${body.invoiceDocumentNumber||invoiceReference} υπάρχει ήδη. Δεν δημιουργήθηκε δεύτερη οικονομική κίνηση.`,code:"DUPLICATE_INVOICE_PAYMENT",existing:outcome.duplicate});
+    };
+    const outcome=tx===prisma?await prisma.$transaction(checkInvoicePayment):await checkInvoicePayment(tx);
+    if(outcome.duplicate)return {error:`Η πληρωμή του τιμολογίου ${body.invoiceDocumentNumber||invoiceReference} υπάρχει ήδη. Δεν δημιουργήθηκε δεύτερη οικονομική κίνηση.`,code:"DUPLICATE_INVOICE_PAYMENT",existing:outcome.duplicate};
     rows=outcome.rows;
-  }else rows=await insertTransaction(prisma);
-  if(!rows[0])return res.status(409).json({error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."});
+  }else rows=await insertTransaction(tx);
+  if(!rows[0])return {error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."};
   const transaction=normalize(rows[0]);
-  const expenseStatus=expenseReviewStatus(req.user);
-  if(body.type==="OTHER_EXPENSE")await prisma.$executeRaw`
+  const expenseStatus=req.user.staffAccess===true?"PENDING_REVIEW":expenseReviewStatus(req.user);
+  if(body.type==="OTHER_EXPENSE")await tx.$executeRaw`
     INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId","status","reviewedBy","reviewedAt","reviewNote")
     VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${transaction.id},${expenseStatus},${expenseStatus==="CONFIRMED"?req.user.id:null},${expenseStatus==="CONFIRMED"?new Date():null},${expenseStatus==="CONFIRMED"?"Καταχώριση από ιδιοκτήτη / υπερδιαχειριστή":null})
     ON CONFLICT ("transactionId") DO NOTHING
   `;
-  if(body.type==="OTHER_EXPENSE"&&["CORPORATE_CARD","BANK_TRANSFER"].includes(selectedPaymentMethod)&&!transaction.reversedAt)await prisma.$transaction(async tx=>{
+  if(req.user?.staffAccess===true)await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},NULL,${req.user.id},'BACKOFFICE_STAFF_EXPENSE_RECORDED',${JSON.stringify({transactionId:transaction.id,amount:body.amount,paymentMethod:selectedPaymentMethod,evidenceMode:body.evidenceMode,responsibilityAcknowledged:req.body.responsibilityAcknowledged===true,status:expenseStatus,terminalPos})}::jsonb)`;
+  if(body.type==="OTHER_EXPENSE"&&["CORPORATE_CARD","BANK_TRANSFER"].includes(selectedPaymentMethod)&&!transaction.reversedAt){const bankEntry=async tx=>{
     const account=await virtualBankAccount(tx,{companyId:req.user.companyId,storeId:store.id,userId:req.user.id});
     await tx.$executeRaw`
       INSERT INTO "BankLedgerEntry" ("id","companyId","storeId","bankAccountId","type","amount","status","sourceTransactionId","attachmentData","attachmentMimeType","attachmentFilename","occurredAt","createdBy","createdByName")
       VALUES (${crypto.randomUUID()},${req.user.companyId},${store.id},${account.id},${selectedPaymentMethod},${-Math.abs(Number(transaction.amount||0))},${expenseStatus},${transaction.id},${legacyAttachment?.dataUrl||null},${legacyAttachment?.mimeType||null},${legacyAttachment?.filename||null},${transaction.occurredAt||new Date()},${req.user.id},${actorName})
       ON CONFLICT ("sourceTransactionId") DO NOTHING
     `;
-  });
+  };if(tx===prisma)await prisma.$transaction(bankEntry);else await bankEntry(tx);}
+  return {transaction};
+  };
+  const persisted=req.user?.staffAccess===true?await prisma.$transaction(persist):await persist(prisma);
+  if(persisted.error)return res.status(409).json(persisted);
+  const transaction=persisted.transaction;
   const emailNotification=body.type==="PERCENTAGES"?await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"PERCENTAGES",transaction,actorName}):null;
   res.status(201).json({
     ...transaction,

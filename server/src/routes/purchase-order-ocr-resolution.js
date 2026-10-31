@@ -26,7 +26,7 @@ const normCode=value=>String(value||"").trim().toLocaleUpperCase("el-GR").replac
 const isPlatformSuper=req=>req.user?.isSuperAdmin===true||req.user?.platformRole==="SUPER_ADMIN"||req.user?.role==="SUPER_ADMIN";
 
 function requireManager(req,res,next){
-  if(!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Η επίλυση γραμμών τιμολογίου γίνεται μόνο από Ιδιοκτήτη ή Διαχειριστή."});
+  if(!(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='invoices.edit')&&!req.posPurchaseOrderAccess&&(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role)))return res.status(403).json({error:"Η επίλυση γραμμών τιμολογίου γίνεται μόνο από Ιδιοκτήτη ή Διαχειριστή."});
   next();
 }
 router.use(requireManager);

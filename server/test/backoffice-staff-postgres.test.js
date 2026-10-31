@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken';
 import {z} from 'zod';
 import {PrismaClient} from '@prisma/client';
 import {ensureBackofficeStaffSchema} from '../src/backoffice-staff-bootstrap.js';
-import {enforceBackofficeStaff,requireStaffGrant} from '../src/services/backoffice-staff-access.js';
+import {enforceBackofficeStaff,requireStaffGrant,requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
 import {createStaffAccount,updateStaffAccount,verifyStaffLogin} from '../src/services/backoffice-staff-accounts.js';
 import {createBackofficeStaffRouter} from '../src/routes/backoffice-staff.js';
 import {issueSession} from '../src/routes/auth.js';
@@ -270,6 +270,41 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       const detail=await send('/api/backoffice-staff/inventory/stores/a1/stocktakes/'+stId,undefined,'GET');assert.equal(detail.status,200,JSON.stringify(detail.data));assert.equal(detail.data.status,'FINALIZED');assert.equal(Number(detail.data.lines[0].expectedQuantity),10);assert.equal(Number(detail.data.lines[0].countedQuantity),12);
       const stocks=await db.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"`;assert.deepEqual(stocks.map(r=>[r.storeId,Number(r.currentStock)]),[['a1',12],['a2',42]]);
       assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale" WHERE "id"='control'`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement" WHERE "id"='control'`)[0].quantity),42);
+    });
+    await t.test('native canonical delegated expense is pending, attributed, atomic and single-write; stale grant, cash and foreign store refuse',async()=>{
+      for(const sql of [
+        'CREATE TABLE "StoreTransaction" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"sessionId" text,"type" text,"amount" numeric,"description" text,"supplierId" text,"supplierName" text,"invoiceDocumentNumber" text,"invoicePaymentKey" text,"subtractFromShift" boolean,"paymentMethod" text,"actorId" text REFERENCES "User"("id"),"actorName" text,"attachmentData" text,"attachmentMimeType" text,"attachmentFilename" text,"attachmentChecksum" text,"occurredAt" timestamptz DEFAULT now(),"createdAt" timestamptz DEFAULT now(),"reversedAt" timestamptz)',
+        'CREATE TABLE "OtherExpenseReview" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"transactionId" text UNIQUE,"status" text,"reviewedBy" text,"reviewedAt" timestamptz,"reviewNote" text)',
+        'CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"operatorId" text,"actorId" text,"eventType" text,"details" jsonb,"createdAt" timestamptz DEFAULT now())'
+      ])await db.$executeRawUnsafe(sql);
+      const grants=[{storeId:'a1',profile:'AUDITOR',capabilities:['sales.read','payments.read','payments.expense']}],username='actions.expense.fixture';
+      const created=await createStaffAccount(db,owner,{...input,username,grants});
+      const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});assert.equal(login.status,200);
+      const principal={...jwt.verify(login.data.token,process.env.JWT_SECRET),storeId:'a1'};
+      const source=await readFile(new URL('../src/routes/store-transactions.js',import.meta.url),'utf8');
+      const schema=source.slice(source.indexOf('const transactionSchema='),source.indexOf('const supplierSettlementSchema='));
+      const start=source.indexOf('router.post("/stores/:storeId",'),end=source.indexOf('\nrouter.get("/:transactionId/attachment",',start);assert.ok(start>0&&end>start);
+      let handler,beforeWriter;
+      const runtime={$transaction:async callback=>{if(beforeWriter){const change=beforeWriter;beforeWriter=null;await change()}return db.$transaction(callback)}};
+      const bindings={router:{post:(_path,h)=>handler=h},route:h=>h,z,prisma:runtime,crypto,
+        assertStoreAccess:(req,id)=>{assert.equal(req.user.storeId,id)},ownedStore:async id=>({id}),requestTerminal:async()=> 'POS2',parseAttachment:()=>null,
+        paymentId:(company,store,key)=>'pay_'+crypto.createHash('sha256').update(`${company}:${store}:${key}`).digest('hex'),invoicePaymentReference:()=>'',
+        requireStaffAction,expenseReviewStatus:()=> 'PENDING_REVIEW',normalize:row=>({...row,amount:Number(row.amount)}),
+        virtualBankAccount:()=>assert.fail('employee reimbursement must not create a bank ledger'),notifyLedgerAlert:()=>assert.fail('expense must not send a notification')};
+      new Function(...Object.keys(bindings),schema+source.slice(start,end))(...Object.values(bindings));
+      const body={type:'OTHER_EXPENSE',amount:2.15,description:'Synthetic delegated expense',evidenceMode:'NO_DOCUMENT',responsibilityAcknowledged:true,paymentSource:'EXTERNAL',paymentMethod:'EMPLOYEE_REIMBURSEMENT',idempotencyKey:'native-fixed-expense'};
+      const invoke=async overrides=>{const req={user:principal,staffGrant:{capability:'payments.expense'},params:{storeId:'a1'},body:{...body,...overrides},get:()=> 'POS2'},out={status:200};const res={status(value){out.status=value;return this},json(value){out.body=value;return this}};try{await handler(req,res)}catch(error){out.status=error.status||(['23505','P2010'].includes(error.code)?409:500);out.body={code:error.code,error:error.message}}return out};
+      const controls=async()=>JSON.stringify({sale:await db.$queryRaw`SELECT * FROM "Sale" ORDER BY "id"`,stock:await db.$queryRaw`SELECT * FROM "StoreProduct" ORDER BY "storeId","productId"`,movement:await db.$queryRaw`SELECT * FROM "StockMovement" ORDER BY "id"`});
+      const before=await controls();const first=await invoke();assert.equal(first.status,201,JSON.stringify(first));assert.equal(first.body.amount,2.15);assert.equal(first.body.actorId,created.id);assert.equal(first.body.sessionId,null);
+      const review=(await db.$queryRaw`SELECT * FROM "OtherExpenseReview"`)[0];assert.equal(review.status,'PENDING_REVIEW');assert.equal(review.reviewedBy,null);
+      const audit=(await db.$queryRaw`SELECT * FROM "StoreOperatorAudit" WHERE "eventType"='BACKOFFICE_STAFF_EXPENSE_RECORDED'`)[0];assert.equal(audit.actorId,created.id);assert.equal(audit.details.responsibilityAcknowledged,true);
+      assert.equal((await invoke()).status,409);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreTransaction"`)[0].count),1);
+      assert.equal((await invoke({idempotencyKey:'no-declaration',responsibilityAcknowledged:false})).status,400);
+      assert.equal((await invoke({idempotencyKey:'cash-not-granted',paymentSource:'CASH_SHIFT',paymentMethod:'CASH_SHIFT'})).status,403);
+      await assert.rejects(db.$transaction(tx=>requireStaffAction(tx,{user:principal,staffGrant:{capability:'payments.expense'},body,get:()=> 'POS2'},'a2','payments.expense')),{status:403});
+      beforeWriter=()=>updateStaffAccount(db,owner,created.id,{expectedRevision:1,active:false,grants});
+      assert.equal((await invoke({idempotencyKey:'revoked-between-admission-and-write'})).status,401);
+      assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreTransaction"`)[0].count),1);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "OtherExpenseReview"`)[0].count),1);assert.equal(await controls(),before);
     });
   }finally{
     if(server)await new Promise(resolve=>{server.close(resolve);server.closeAllConnections()});await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();if(oldSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=oldSecret;

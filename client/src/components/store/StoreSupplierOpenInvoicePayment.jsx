@@ -17,7 +17,7 @@ const euro=value=>Number(value||0).toLocaleString("el-GR",{style:"currency",curr
 const readFile=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("Δεν διαβάστηκε το αποδεικτικό."));reader.readAsDataURL(file)});
 const key=()=>`supplier-settlement-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
 
-export default function StoreSupplierOpenInvoicePayment({api,store,suppliers=[],onChanged,onCompleted,setMessage,allowCash=true}){
+export default function StoreSupplierOpenInvoicePayment({api,store,suppliers=[],onChanged,onCompleted,setMessage,allowCash=true,allowAdvanceAllocation=true}){
   const cameraSession=useCameraAcquisition(store.id);
   const [supplierId,setSupplierId]=useState(""),[items,setItems]=useState([]),[allocations,setAllocations]=useState({}),[paymentMethod,setPaymentMethod]=useState("CASH_SHIFT"),[files,setFiles]=useState([]),[paidAt,setPaidAt]=useState(()=>greeceDateTimeInput()),[note,setNote]=useState(""),[feedback,setFeedback]=useState(null),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[cameraOpen,setCameraOpen]=useState(false),[stream,setStream]=useState(null);
   const videoRef=useRef(null),canvasRef=useRef(null),paymentKey=useRef(key()),submitting=useRef(false);
@@ -44,7 +44,7 @@ export default function StoreSupplierOpenInvoicePayment({api,store,suppliers=[],
     if(!store.id||!supplierId)return;
     setLoading(true);
     invoiceCallbacks.current.api(`/api/transactions/stores/${encodeURIComponent(store.id)}/supplier-open-invoices?supplierId=${encodeURIComponent(supplierId)}`)
-      .then(data=>{if(!cancelled){setItems(data.items||[]);setAdvances(data.advances||[])}})
+      .then(data=>{if(!cancelled){setItems(data.items||[]);setAdvances(allowAdvanceAllocation?(data.advances||[]):[])}})
       .catch(error=>{if(!cancelled)invoiceCallbacks.current.setMessage?.(`❌ ${error?.message||"Δεν φορτώθηκαν τα ανοιχτά τιμολόγια."}`)})
       .finally(()=>{if(!cancelled)setLoading(false)});
     return()=>{cancelled=true};
