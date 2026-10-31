@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {monthlySnapshotPurchaseUnitCost as cost,readMonthlyInventorySnapshotSourcesInTransaction as read,normalizeMonthlyInventorySnapshotActor as actorCopy,normalizeMonthlyInventorySnapshotSourceInput as inputCopy} from '../src/services/monthly-inventory-snapshot-source.js';
-import {captureMonthlyInventorySnapshot} from '../src/services/monthly-inventory-snapshot-capture.js';
+import {captureMonthlyInventorySnapshot,captureMonthlyInventorySnapshotForAutomation} from '../src/services/monthly-inventory-snapshot-capture.js';
 import {buildMonthlyInventorySnapshotCandidate as build} from '../src/services/monthly-inventory-snapshot-payload.js';
 const actor={id:'sa',companyId:'c',role:'SUPER_ADMIN'},input={storeId:'s',month:'2000-01',lifecycleGeneration:'0'};
 const required={
@@ -77,4 +77,21 @@ test('scope and actor snapshots remain detached without reading private getters 
  const detached=actorCopy(original),selected=inputCopy(request);original.id='other';original.companyId='x';original.supportContext.storeId='foreign';request.lifecycleGeneration='1';request.storeId='foreign';
  assert.equal(detached.id,'sa');assert.equal(detached.companyId,'c');assert.equal(detached.supportContext.storeId,'s');assert.equal(detached.isSuperAdmin,true);assert.equal(detached.platformRole,'SUPER_ADMIN');assert.equal(selected.lifecycleGeneration,'0');assert.equal(selected.storeId,'s');assert.equal(touched,0);assert.ok(Object.isFrozen(detached.supportContext));
  for(const patch of [{quantity:'1\n'},{retailUnitPrice:'1\n'}])await assert.rejects(read(fixture({rows:[raw('p',patch)]}).tx,actor,input),{code:'STOCK_SNAPSHOT_NUMERIC_INVALID'});
+});
+
+test('raw automation and a cloned empty attempt cannot enter the source coordinator or touch SQL',async()=>{
+ let opened=0;const db={$transaction(){opened++;throw Error('must not open')}};
+ const execution={type:'SERVICE_DELEGATION',purpose:'MONTHLY_INVENTORY_CAPTURE',executor:'MONTHLY_INVENTORY_CAPTURE_V1',jobId:'job',leaseToken:'a'.repeat(64)};
+ await assert.rejects(captureMonthlyInventorySnapshotForAutomation(db,execution),{code:'MONTHLY_CAPTURE_ATTEMPT_REQUIRED'});
+ await assert.rejects(captureMonthlyInventorySnapshotForAutomation(db,execution,Object.freeze({})),{code:'MONTHLY_CAPTURE_ATTEMPT_REQUIRED'});
+ await assert.rejects(captureMonthlyInventorySnapshotForAutomation(db,execution,structuredClone(Object.freeze({}))),{code:'MONTHLY_CAPTURE_ATTEMPT_REQUIRED'});
+ await assert.rejects(captureMonthlyInventorySnapshotForAutomation(db,execution,{},()=>({enabled:true})),{code:'MONTHLY_CAPTURE_ATTEMPT_REQUIRED'});
+ assert.equal(opened,0);
+});
+
+test('typed automation does not accept supplied period, principal or clocks even with an apparent attempt object',async()=>{
+ let opened=0;const db={$transaction(){opened++;throw Error('must not open')}};
+ const execution={type:'SERVICE_DELEGATION',purpose:'MONTHLY_INVENTORY_CAPTURE',executor:'MONTHLY_INVENTORY_CAPTURE_V1',jobId:'job',leaseToken:'a'.repeat(64)};
+ for(const extra of [{month:'2026-01'},{companyId:'foreign'},{now:'2026-01-01'},{principal:{role:'OWNER'}},{fingerprint:'forged'}])await assert.rejects(captureMonthlyInventorySnapshotForAutomation(db,{...execution,...extra},Object.freeze({})),{code:'MONTHLY_CAPTURE_INPUT_INVALID'});
+ assert.equal(opened,0);
 });
