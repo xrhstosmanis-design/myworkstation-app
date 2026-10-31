@@ -22,7 +22,7 @@ export function createPosInventoryClient({api,storeId,actorId,sessionToken,curre
    generation=response.lifecycle.generation;
    return response;
   }catch(error){
-   if(active&&(error.status===401||['POS_INVENTORY_STALE','POS_INVENTORY_ACCESS_DENIED','LICENSE_INACTIVE','MODULE_DISABLED','STORE_LIFECYCLE_STALE_GENERATION','STORE_LIFECYCLE_MAINTENANCE'].includes(error.code))){active=false;controller.abort();onAccessLost?.(error)}
+   if(active&&(error.status===401||['POS_INVENTORY_STALE','POS_INVENTORY_ACCESS_DENIED','STORE_OPERATOR_POS_ACCESS_DISABLED','LICENSE_INACTIVE','MODULE_DISABLED','STORE_LIFECYCLE_STALE_GENERATION','STORE_LIFECYCLE_MAINTENANCE'].includes(error.code))){active=false;controller.abort();onAccessLost?.(error)}
    throw error;
   }
  };

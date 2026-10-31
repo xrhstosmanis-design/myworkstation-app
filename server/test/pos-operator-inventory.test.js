@@ -53,9 +53,9 @@ test('closed client rejects late read results and cross-store envelopes',async()
 });
 
 test('exact mounted HTTP boundary inherits store params, buffers commit errors and leaves unrelated POS routes untouched',async()=>{
- let prepared=0,commits=0,failCommit=false;
+ let prepared=0,commits=0,failCommit=false,permissions=rights;
  const db={company:{findUnique:async()=>({id:'C',name:'Fixture',active:true,licenseStatus:'ACTIVE',subscriptionEndsAt:null,modules:[{moduleKey:'INVENTORY',active:true},{moduleKey:'STORE_MODE',active:true}]})},$queryRaw:async()=>[],
-  $queryRawUnsafe:async sql=>sql.includes('FROM "StoreOperatorCredential"')?[{id:'O',employeeId:'E',permissions:rights}]:sql.includes('current_schema()')?[{schema:'public',fence:null}]:[],
+  $queryRawUnsafe:async sql=>sql.includes('FROM "StoreOperatorCredential"')?[{id:'O',employeeId:'E',permissions}]:sql.includes('current_schema()')?[{schema:'public',fence:null}]:[],
   $transaction:async callback=>{const result=await callback(db);if(failCommit)throw Error('commit failed');commits++;return result}};
  const app=express();app.use(express.json());app.use((req,_res,next)=>{req.user=user;next()});app.use('/api/store-pos/stores/:storeId/inventory',createPosOperatorInventoryRouter({db,prepare:async()=>{prepared++}}));app.get('/api/store-pos/stores/S/unrelated',(_req,res)=>res.json({untouched:true}));app.use((error,_req,res,_next)=>res.status(error.status||500).json({error:error.message}));
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/api/store-pos/stores/`;
@@ -65,5 +65,13 @@ test('exact mounted HTTP boundary inherits store params, buffers commit errors a
   response=await fetch(base+'S/unrelated');assert.deepEqual(await response.json(),{untouched:true});assert.equal(prepared,1);
   response=await fetch(base+'S/inventory/products/P/stock-adjustment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({quantity:1})});assert.equal(response.status,403);assert.equal(prepared,1);
   failCommit=true;response=await fetch(base+'S/inventory/access');assert.equal(response.status,500);assert.equal(commits,1);
+  permissions={...rights,inventoryPos:false};response=await fetch(base+'S/inventory/access');assert.equal(response.status,403);assert.equal((await response.json()).code,'POS_INVENTORY_ACCESS_DENIED','namespace retains revocation codes even when the global error handler strips them');
  }finally{await new Promise(resolve=>server.close(resolve))}
+});
+
+test('live access, POS access, module and lifecycle revocations close and disable the existing client',async()=>{
+ for(const code of ['POS_INVENTORY_ACCESS_DENIED','STORE_OPERATOR_POS_ACCESS_DISABLED','MODULE_DISABLED','LICENSE_INACTIVE','STORE_LIFECYCLE_STALE_GENERATION','STORE_LIFECYCLE_MAINTENANCE']){
+  let closed=0,calls=0;const client=createPosInventoryClient({api:async()=>{calls++;throw Object.assign(Error('revoked'),{status:403,code})},storeId:'S',actorId:'O',sessionToken:'t',currentToken:()=> 't',onAccessLost:()=>closed++});
+  await assert.rejects(()=>client.request('/access'));assert.equal(closed,1,code);await assert.rejects(()=>client.request('/access'));assert.equal(calls,1,code);
+ }
 });

@@ -42,7 +42,7 @@ test('native namespace validates live operator rows, commits scoped retail only,
   await db.$executeRawUnsafe(`INSERT INTO "StoreProduct"("id","storeId","productId","salePrice","currentStock") VALUES ('sp','S','P',3,17),('sq','S','Q',4,8),('sf','OTHER','P',9,22),('sff','OTHER','FOREIGN',99,50)`);
   await db.$executeRawUnsafe(`INSERT INTO "ProductBarcode" ("id","productId","barcode") VALUES ('b','Q','5200000012345')`);
   await db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES ('control','S',10)`);
-  const app=express();app.use(express.json());app.use((req,_res,next)=>{req.user={...user};next()});app.use('/api/store-pos/stores/:storeId/inventory',createPosOperatorInventoryRouter({db,prepare:async()=>{}}));app.use((error,_req,res,_next)=>res.status(error.status||500).json({error:error.message,code:error.code}));
+  const app=express();app.use(express.json());app.use((req,_res,next)=>{req.user={...user};next()});app.use('/api/store-pos/stores/:storeId/inventory',createPosOperatorInventoryRouter({db,prepare:async()=>{}}));app.use((error,_req,res,_next)=>res.status(error.status||500).json({error:error.message}));
   server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/api/store-pos/stores/S/inventory`;
   const request=async(path,method='GET',body)=>{const response=await fetch(base+path,{method,headers:{'Content-Type':'application/json','X-Inventory-Generation':'0'},...(body?{body:JSON.stringify(body)}:{})});return{status:response.status,json:await response.json()}};
   const prices=(price,storeId='S')=>({basePrice:55,stores:[{storeId,active:true,salePrice:price}]});

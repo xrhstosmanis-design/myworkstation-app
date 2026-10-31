@@ -96,6 +96,9 @@ export function createPosOperatorInventoryRouter({db=prisma,prepare=async()=>{
   }catch(error){
    if(error.inventoryResponse)return res.status(error.inventoryResponse.status).json(error.inventoryResponse.data);
    if(error.code==='P2034'||error.code==='40001'||error.meta?.code==='40001')return res.status(409).json({error:'Τα στοιχεία άλλαξαν ταυτόχρονα. Κάνε ανανέωση και προσπάθησε ξανά.',code:'POS_INVENTORY_CONCURRENT_CHANGE'});
+   // The shared legacy error handler omits codes. Keep this namespace's
+   // revocation/lifecycle codes intact so the operator view closes immediately.
+   if(error.status>=400&&/^(POS_INVENTORY_|STORE_LIFECYCLE_|LICENSE_INACTIVE$|MODULE_DISABLED$)/.test(String(error.code||'')))return res.status(error.status).json({error:error.message,code:error.code});
    next(error);
   }
  });
