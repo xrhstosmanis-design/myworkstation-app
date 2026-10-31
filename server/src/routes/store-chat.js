@@ -113,7 +113,7 @@ router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
       ORDER BY pin."createdAt" DESC LIMIT 20
     )
     SELECT EXISTS(SELECT 1 FROM timeline candidate WHERE candidate."id"=m."id") AS "inTimeline",m."id",m."senderId",COALESCE(NULLIF(su."fullName",''),NULLIF(su."email",''),NULLIF(so."displayName",''),m."senderId") AS "senderName",
-      m."category",m."body",m."forwarded",m."replyToId",(m."senderId"=${req.user.id}) AS "ownMessage",
+      m."category",m."body",(m."forwardBinding" IS NOT NULL) AS "forwarded",m."replyToId",(m."senderId"=${req.user.id}) AS "ownMessage",
       CASE WHEN parent."id" IS NULL THEN NULL ELSE json_build_object('id',parent."id",'senderName',COALESCE(NULLIF(pu."fullName",''),NULLIF(po."displayName",''),'Χρήστης'),'body',LEFT(parent."body",280),'attachmentName',parent."attachmentName") END AS "replyTo",m."important",m."pinned",m."completed",m."completedAt",m."completedBy",m."aiReaderJobId",m."aiReaderSentAt",m."aiReaderSentBy",
       COALESCE(NULLIF(au."fullName",''),NULLIF(au."email",''),NULLIF(ao."displayName",''),m."aiReaderSentBy") AS "aiReaderSentByName",
       COALESCE(NULLIF(cu."fullName",''),NULLIF(cu."email",''),NULLIF(co."displayName",''),m."completedBy") AS "completedByName",

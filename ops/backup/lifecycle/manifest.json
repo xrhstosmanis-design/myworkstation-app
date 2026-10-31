@@ -190,12 +190,14 @@
     "StoreBakingEntry",
     "StoreBakingPolicy",
     "StoreChatAcknowledgement",
+    "StoreChatDelivery",
     "StoreChatMessage",
     "StoreChatMobilePush",
     "StoreChatMobileSession",
     "StoreChatNativePush",
     "StoreChatPushKey",
     "StoreChatPushSubscription",
+    "StoreChatReaction",
     "StoreChatRead",
     "StoreChatSettings",
     "StoreChatTask",
@@ -10351,6 +10353,33 @@
         true
       ]
     ],
+    "StoreChatDelivery": [
+      [
+        "messageId",
+        "text",
+        true
+      ],
+      [
+        "userId",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "deliveredAt",
+        "timestamp with time zone",
+        true
+      ]
+    ],
     "StoreChatMessage": [
       [
         "id",
@@ -10455,6 +10484,16 @@
       [
         "aiReaderSentAt",
         "timestamp without time zone",
+        false
+      ],
+      [
+        "replyToId",
+        "text",
+        false
+      ],
+      [
+        "forwardBinding",
+        "text",
         false
       ]
     ],
@@ -10651,6 +10690,38 @@
         "credentialStamp",
         "text",
         false
+      ]
+    ],
+    "StoreChatReaction": [
+      [
+        "messageId",
+        "text",
+        true
+      ],
+      [
+        "userId",
+        "text",
+        true
+      ],
+      [
+        "companyId",
+        "text",
+        true
+      ],
+      [
+        "storeId",
+        "text",
+        true
+      ],
+      [
+        "reaction",
+        "text",
+        true
+      ],
+      [
+        "updatedAt",
+        "timestamp with time zone",
+        true
       ]
     ],
     "StoreChatRead": [
@@ -16963,8 +17034,12 @@
     "StoreBakingEntry.actorId",
     "StoreChatAcknowledgement.messageId",
     "StoreChatAcknowledgement.userId",
+    "StoreChatDelivery.messageId",
+    "StoreChatDelivery.userId",
     "StoreChatMessage.aiReaderJobId",
     "StoreChatMessage.attachmentData",
+    "StoreChatMessage.forwardBinding",
+    "StoreChatMessage.replyToId",
     "StoreChatMessage.senderId",
     "StoreChatMobilePush.sessionId",
     "StoreChatMobilePush.storeIds",
@@ -16978,6 +17053,8 @@
     "StoreChatPushSubscription.chatSessionId",
     "StoreChatPushSubscription.subscriptionJson",
     "StoreChatPushSubscription.userId",
+    "StoreChatReaction.messageId",
+    "StoreChatReaction.userId",
     "StoreChatRead.messageId",
     "StoreChatRead.userId",
     "StoreChatTask.assigneeEmployeeId",
@@ -18815,6 +18892,25 @@
       ]
     },
     {
+      "name": "StoreChatDelivery",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE",
+      "references": [
+        {
+          "parent": "StoreChatMessage",
+          "columns": [
+            [
+              "messageId",
+              "id"
+            ]
+          ],
+          "historical": true
+        }
+      ]
+    },
+    {
       "name": "StoreChatMessage",
       "owner": {
         "kind": "DIRECT"
@@ -18826,6 +18922,16 @@
           "columns": [
             [
               "aiReaderJobId",
+              "id"
+            ]
+          ],
+          "historical": true
+        },
+        {
+          "parent": "StoreChatMessage",
+          "columns": [
+            [
+              "replyToId",
               "id"
             ]
           ],
@@ -18864,6 +18970,25 @@
           "columns": [
             [
               "chatSessionId",
+              "id"
+            ]
+          ],
+          "historical": true
+        }
+      ]
+    },
+    {
+      "name": "StoreChatReaction",
+      "owner": {
+        "kind": "DIRECT"
+      },
+      "reset": "REMOVE",
+      "references": [
+        {
+          "parent": "StoreChatMessage",
+          "columns": [
+            [
+              "messageId",
               "id"
             ]
           ],

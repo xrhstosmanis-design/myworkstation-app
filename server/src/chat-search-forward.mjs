@@ -23,7 +23,7 @@ export async function searchChatMessages(db,store,query,before){
    AND (m."body" ILIKE $3 ESCAPE '!' OR COALESCE(m."attachmentName",'') ILIKE $3 ESCAPE '!')
    AND ($4::text IS NULL OR (m."createdAt",m."id") < (SELECT p."createdAt",p."id" FROM "StoreChatMessage" p WHERE p."id"=$4 AND p."companyId"=$1 AND p."storeId"=$2))
    ORDER BY m."createdAt" DESC,m."id" DESC LIMIT 21
-  ) SELECT m."id",m."senderId",LEFT(m."body",5000) AS "body",m."category",m."createdAt",m."forwarded",
+  ) SELECT m."id",m."senderId",LEFT(m."body",5000) AS "body",m."category",m."createdAt",(m."forwardBinding" IS NOT NULL) AS "forwarded",
    LEFT(COALESCE(NULLIF(u."fullName",''),NULLIF(o."displayName",''),'Χρήστης'),160) AS "senderName",
    m."attachmentName",m."attachmentMimeType",m."attachmentSize",(m."attachmentData" IS NOT NULL) AS "hasAttachment"
    FROM candidates c JOIN "StoreChatMessage" m ON m."id"=c."id" AND m."companyId"=$1 AND m."storeId"=$2
@@ -60,15 +60,16 @@ export async function forwardChatMessage(db,{source,target,user,messageId,reques
   const row=rows[0];if(!row)throw fail('Δεν βρέθηκε το μήνυμα σε αυτό το κατάστημα.',404);
   const attachment=forwardAttachment(row,attachmentPolicy);
   if(typeof row.body!=='string'||row.body.length>5000||!row.body.trim()&&!attachment)throw fail('Δεν επιβεβαιώθηκε το αρχικό μήνυμα.');
-  const inserted=await tx.$queryRawUnsafe(`INSERT INTO "StoreChatForwardIntent" ("userId","requestId","sourceCompanyId","sourceStoreId","sourceMessageId","targetCompanyId","targetStoreId","messageId")
-   VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT ("userId","requestId") DO NOTHING RETURNING "messageId"`,user.id,requestId,source.companyId,source.id,messageId,target.companyId,target.id,id);
+  // Bind the retry to immutable source/destination IDs without retaining an
+  // owning cross-store relation or exposing source metadata to recipients.
+  const binding=crypto.createHash('sha256').update(JSON.stringify([source.companyId,source.id,messageId,target.companyId,target.id])).digest('hex');
+  const inserted=await tx.$queryRawUnsafe(`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","forwardBinding","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","createdAt","updatedAt")
+   VALUES ($1,$2,$3,$4,'GENERAL',$5,$11,$6,$7,$8,$9,$10,NOW(),NOW()) ON CONFLICT ("id") DO NOTHING RETURNING "id"`,id,target.companyId,target.id,user.id,row.body,attachment?.name??null,attachment?.mime??null,attachment?.size??null,attachment?.checksum??null,attachment?.data??null,binding);
   if(!inserted.length){
-   const previous=(await tx.$queryRawUnsafe('SELECT * FROM "StoreChatForwardIntent" WHERE "userId"=$1 AND "requestId"=$2',user.id,requestId))[0];
-   if(!previous||previous.sourceCompanyId!==source.companyId||previous.sourceStoreId!==source.id||previous.sourceMessageId!==messageId||previous.targetCompanyId!==target.companyId||previous.targetStoreId!==target.id)throw fail('Το αίτημα προώθησης χρησιμοποιήθηκε για διαφορετικό μήνυμα ή προορισμό.',409);
-   return {ok:true,id:previous.messageId,targetStoreId:target.id,replayed:true};
+   const previous=(await tx.$queryRawUnsafe('SELECT "id","companyId","storeId","senderId","forwardBinding" FROM "StoreChatMessage" WHERE "id"=$1',id))[0];
+   if(!previous||previous.senderId!==user.id||previous.companyId!==target.companyId||previous.storeId!==target.id||previous.forwardBinding!==binding)throw fail('Το αίτημα προώθησης χρησιμοποιήθηκε για διαφορετικό μήνυμα ή προορισμό.',409);
+   return {ok:true,id,targetStoreId:target.id,replayed:true};
   }
-  await tx.$executeRawUnsafe(`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","forwarded","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","createdAt","updatedAt")
-   VALUES ($1,$2,$3,$4,'GENERAL',$5,true,$6,$7,$8,$9,$10,NOW(),NOW())`,id,target.companyId,target.id,user.id,row.body,attachment?.name??null,attachment?.mime??null,attachment?.size??null,attachment?.checksum??null,attachment?.data??null);
   await writeAudit(tx,id);
   return {ok:true,id,targetStoreId:target.id,replayed:false};
  });

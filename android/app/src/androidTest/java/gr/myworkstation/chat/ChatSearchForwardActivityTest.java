@@ -33,14 +33,16 @@ public class ChatSearchForwardActivityTest {
   int posts(){int n=0;for(Request r:calls)if(r.method.equals("POST"))n++;return n;}
  }
  private void idle(ActivityScenario<MainActivity> s)throws Exception{for(int i=0;i<150;i++){boolean[] ready={false};s.onActivity(a->{try{ready[0]=!(boolean)get(a,"busy")&&(boolean)get(a,"searchForwardReady");}catch(Exception e){throw new AssertionError(e);}});if(ready[0])return;Thread.sleep(20);}fail("Synthetic request did not finish");}
- private void start(ActivityScenario<MainActivity> s,Api api)throws Exception{s.onActivity(a->{try{set(a,"api",api);set(a,"token","fixture-token");set(a,"identity",new JSONObject().put("id","actor").put("role","OWNER").put("tokenType","BACKOFFICE_USER"));set(a,"selected",store());invoke(a,"conversation");}catch(Exception e){throw new AssertionError(e);}});idle(s);}
+ private void start(ActivityScenario<MainActivity> s,Api api)throws Exception{s.onActivity(a->{try{set(a,"api",api);set(a,"token","fixture-token");set(a,"identity",new JSONObject().put("id","actor").put("role",api.canForward?"OWNER":"EMPLOYEE").put("tokenType",api.canForward?"BACKOFFICE_USER":"STORE_OPERATOR"));set(a,"selected",store());invoke(a,"conversation");}catch(Exception e){throw new AssertionError(e);}});idle(s);}
  private AlertDialog dialog(MainActivity a)throws Exception{return (AlertDialog)get(a,"imageDialog");}
  private void clickRoot(ActivityScenario<MainActivity> s,String text)throws Exception{s.onActivity(a->{try{View v=find((View)get(a,"root"),text);assertNotNull(text,v);v.performClick();}catch(Exception e){throw new AssertionError(e);}});idle(s);}
  private void clickDialog(ActivityScenario<MainActivity> s,String text)throws Exception{s.onActivity(a->{try{View v=find(dialog(a).getWindow().getDecorView(),text);assertNotNull(text,v);v.performClick();}catch(Exception e){throw new AssertionError(e);}});idle(s);}
  private void search(ActivityScenario<MainActivity> s,String term)throws Exception{clickRoot(s,"Αναζήτηση μηνυμάτων");s.onActivity(a->{try{assertTrue((dialog(a).getWindow().getAttributes().flags&WindowManager.LayoutParams.FLAG_SECURE)!=0);edit(dialog(a).getWindow().getDecorView()).setText(term);}catch(Exception e){throw new AssertionError(e);}});clickDialog(s,"Αναζήτηση ιστορικού");}
  @Test public void actualHistorySearchPagesAndRepliesWithoutAnyAutomaticReadDeliveryOrAck()throws Exception{
   Api api=new Api();try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){start(s,api);search(s,"archive");clickDialog(s,"Επόμενα αποτελέσματα");clickDialog(s,"CI Other\nSecond page");
-   s.onActivity(a->{try{assertTrue((dialog(a).getWindow().getAttributes().flags&WindowManager.LayoutParams.FLAG_SECURE)!=0);dialog(a).getButton(AlertDialog.BUTTON_POSITIVE).performClick();assertEquals("older-b",((JSONObject)get(a,"quotedMessage")).getString("id"));}catch(Exception e){throw new AssertionError(e);}});assertEquals(0,api.posts());
+   s.onActivity(a->{try{assertTrue((dialog(a).getWindow().getAttributes().flags&WindowManager.LayoutParams.FLAG_SECURE)!=0);dialog(a).getButton(AlertDialog.BUTTON_POSITIVE).performClick();}catch(Exception e){throw new AssertionError(e);}});
+   InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+   s.onActivity(a->{try{assertNotNull(get(a,"quotedMessage"));assertEquals("older-b",((JSONObject)get(a,"quotedMessage")).getString("id"));}catch(Exception e){throw new AssertionError(e);}});assertEquals(0,api.posts());
   }
  }
  @Test public void actualForwardRequiresSelectionAndConfirmationAndRetryUsesTheSameIntent()throws Exception{

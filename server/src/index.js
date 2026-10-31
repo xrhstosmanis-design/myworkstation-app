@@ -89,6 +89,7 @@ import {createMonthlyInvoiceAuditRouter} from "./routes/monthly-invoice-audit.js
 import {createMonthlyInventoryCaptureRouter} from "./routes/monthly-inventory-capture.js";
 import {createInvoiceAuditEmailPreviewRouter} from "./routes/invoice-audit-email-preview.js";
 import inventoryArchiveImportRoutes from "./routes/inventory-archive-import.js";
+import posOperatorInventoryRoutes from "./routes/pos-operator-inventory.js";
 import inventoryArchiveRoutes from "./routes/inventory-archive.js";
 import inventoryProductLedgerRoutes from "./routes/inventory-product-ledger.js";
 import inventoryV2ProductRoutes from "./routes/inventory-v2-products.js";
@@ -294,6 +295,7 @@ app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2Ro
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ProductRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2ImportRoutes);
 app.use("/api/inventory-v2",auth,requireCompanyModule("INVENTORY"),inventoryV2AuditRoutes);
+app.use("/api/store-pos/stores/:storeId/inventory",auth,posOperatorInventoryRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storeBakingRoutes);
 app.use("/api/store-pos",auth,requireCompanyModule("STORE_MODE"),storePreparationRoutes);
 app.use("/api/production-printers",productionPrinterRoutes);

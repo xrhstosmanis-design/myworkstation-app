@@ -1,0 +1,81 @@
+{
+  "task": "POS-OPERATOR-INVENTORY-01",
+  "owner": "fix/pos-operator-inventory-20261031",
+  "status": "SOURCE_MERGED_RELEASE_BLOCKED_AWAITING_OPERATOR_LAB",
+  "sourcePr": 3427,
+  "claimPr": 3421,
+  "claimMerge": "6b34016a48eb181f93050360384a8631bbcfb408",
+  "nativeReceipt": {
+    "head": "bb6463ce5e913c8da55eb3f7e414ba1e5237095f",
+    "workflowRun": 41246986998,
+    "job": 124672617752,
+    "serverTests": {
+      "pass": 4984,
+      "fail": 0,
+      "skip": 0
+    },
+    "overallWorkflow": "FAIL",
+    "failure": "unchanged Chromium inventory SET footer visibility assertion",
+    "nativeBoundary": "PASS in isolated synthetic PostgreSQL; not LAB",
+    "nativeCoverage": [
+      "live credential/profile/session/store authorization",
+      "own-store retail preserves company base and other-store prices",
+      "barcode transfer between linked own-store products",
+      "bulk card and generic zero-stock import",
+      "stock, movement and financial controls unchanged",
+      "foreign-store/object and forged-stock denial",
+      "trigger-induced stock change rollback",
+      "deferred commit failure never sends HTTP success",
+      "concurrent profile revocation denies stale grant",
+      "module and session revocation"
+    ],
+    "stockAndFinancialControls": "fixture-only quantities P=17,Q=8; other-store=22,50; Sale control total=10; no StockMovement rows; exact before/after assertions in native test",
+    "fix": "remove permission fieldset wrappers; disable original controls individually; retain original SET direct-child layout and E2E assertions"
+  },
+  "localFollowup": {
+    "boundaryAndMountedClient": {
+      "pass": 11,
+      "fail": 0,
+      "skip": 0
+    },
+    "originalArchiveCardMounted": {
+      "pass": 4,
+      "fail": 0,
+      "skip": 0
+    },
+    "nativeInfrastructure": "unavailable locally; native receipt is from CI",
+    "latestRightsBatch": {
+      "pass": 28,
+      "fail": 0,
+      "skip": 0
+    },
+    "workSafeClientBuild": "PASS"
+  },
+  "realAccountGrants": 0,
+  "realModuleChanges": 0,
+  "hostedBusinessActions": 0,
+  "stockOrFinancialLabActions": 0,
+  "deployment": null,
+  "operatorLabAcceptance": "NOT_TESTED",
+  "physicalTerminalAcceptance": "NOT_TESTED",
+  "finalSource": {
+    "head": "fb634f5a7a9363883570256e061bae81d6fee952",
+    "workflowRun": 41252087179,
+    "job": 124687731623,
+    "conclusion": "SUCCESS",
+    "serverPass": 5024,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "merge": "50146f3f094d846f52b2801f1e60de0332aaf1c4"
+  },
+  "mainCi": {
+    "id": 41253122609,
+    "conclusion": "CANCELLED",
+    "buildAndTestRan": false,
+    "reason": "pending main run replaced by later documentation main in concurrency queue",
+    "retry": "HTTP403 This workflow run cannot be retried"
+  },
+  "previousHealthyRevision": "946fa417b858fbece65c9ded6cb8db506bca91b0",
+  "nextAction": "Workflow-dispatch existing MyWorkStation CI on latest main, then normal guarded deploy and independent exact health/assets; operator acceptance remains NOT_TESTED"
+}

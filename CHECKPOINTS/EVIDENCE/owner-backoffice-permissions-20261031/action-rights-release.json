@@ -1,0 +1,105 @@
+{
+  "scope": "CENTRAL-BACKOFFICE-ACCESS-01",
+  "status": "INSTALLED_ENGINEERING_AWAITING_OPERATOR_LAB",
+  "sourcePr": 3423,
+  "sourceHead": "c711316ca042c3aa4ed53888be729d0307da5a1b",
+  "sourceTree": "f4f5986f911edc2e7fc6744513cdc23c97cacea3",
+  "sourceMerge": "47f59e6fde628c8ea34efd30f54764381b402524",
+  "sourceCi": {
+    "run": 41248939925,
+    "job": 124678415118,
+    "server": {
+      "pass": 5005,
+      "fail": 0,
+      "skipped": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skipped": 0
+    },
+    "allFiveJobs": "SUCCESS"
+  },
+  "cancelledMainAttempt": {
+    "run": 41250164005,
+    "job": 124682118556,
+    "status": "CANCELLED_NOT_PASS"
+  },
+  "commonCi": {
+    "run": 41251255862,
+    "job": 124685672884,
+    "event": "workflow_dispatch",
+    "revision": "946fa417b858fbece65c9ded6cb8db506bca91b0",
+    "server": {
+      "pass": 5011,
+      "fail": 0,
+      "skipped": 0
+    },
+    "backup": {
+      "pass": 8,
+      "fail": 0,
+      "skipped": 0
+    },
+    "allFiveJobs": "SUCCESS"
+  },
+  "deployment": {
+    "run": 41252493732,
+    "job": 124688773943,
+    "event": "workflow_dispatch",
+    "guardPassedAt": "2026-10-31T23:27:23Z",
+    "pinnedTriggerAt": "2026-10-31T23:27:25Z",
+    "healthyAt": "2026-10-31T23:29:27Z",
+    "revision": "946fa417b858fbece65c9ded6cb8db506bca91b0",
+    "rollbackArtifact": 13061543721,
+    "independentBrowserHealth": {
+      "ok": true,
+      "revision": "946fa417b858fbece65c9ded6cb8db506bca91b0"
+    }
+  },
+  "observation": {
+    "at": "2026-10-31T23:31:39Z",
+    "context": "Existing SuperAdmin support session in MYWORKSTATION LAB; not ordinary Owner sign-in acceptance",
+    "account": "lab31",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "capabilityCheckboxes": 18,
+    "checkedCapabilities": [
+      "inventory.read",
+      "inventory.count"
+    ],
+    "otherTwoStoresChecked": false,
+    "profile": "STOCKTAKER",
+    "accountActive": true,
+    "grantSaved": false,
+    "credentialsEntered": false,
+    "hostedBusinessWrites": false,
+    "financialAndStockDeltas": "NOT_TESTED"
+  },
+  "runtimeBlobs": {
+    "client/src/components/BackofficeStaffWorkspace.jsx": "cca66a65e9fbf3035906d54c70c4d14be1029258",
+    "client/src/components/backoffice-staff.css": "8719e1caf7b9af89fe2c08bd6395fe58b3dad41c",
+    "client/src/components/cloud/OwnerPaymentQuickActions.jsx": "b5dd7f8b3b064c8ae1fa47ff8919b5ad12727f38",
+    "client/src/components/commerce/PosSaleActionsPanel.jsx": "733eb6b604d37410fbe4826fcb52b9c812e06908",
+    "client/src/components/commerce/StaffInvoicePurchases.jsx": "6d4a489a684776c83e679e9ca9f18ff92fd29142",
+    "client/src/components/commerce/installPurchaseOrdersSuite.js": "f8eb8c2c876aa41fc894f8a3d21b42a121092a91",
+    "client/src/components/store/StoreShiftClosePanel.jsx": "2d5b72dedff655320bd4d048e82794d8bbcb82ae",
+    "client/src/components/store/StoreSupplierOpenInvoicePayment.jsx": "83e4496580fa1259a21fbcb0136fead41696b4fe",
+    "server/src/lib/invoice-catalog-lookup.js": "49ced47e600c1e051990a3d8e9c85e0648d9f22c",
+    "server/src/routes/backoffice-staff.js": "14dcb0b84c88841e0317ddde8965b96be532a8e7",
+    "server/src/routes/cash-control.js": "8a0809163db93376c004e761571b9fdfb201dfb0",
+    "server/src/routes/pos-sale-actions.js": "a8c68e91c5edf641424b16abe2877ed64b166134",
+    "server/src/routes/purchase-order-actions.js": "e6bace9e6047390b67aaef00863397962a155962",
+    "server/src/routes/purchase-order-ocr-resolution.js": "a1fc813f313875633710f2ef649bd62b05062784",
+    "server/src/routes/purchase-order-posting-guard.js": "3e7822a4ac90367e3288036de980a50e6ccd0f5c",
+    "server/src/routes/purchase-order-unresolved-guard.js": "0d4ab4dfde5813e41381186ba3f5299d91d3597d",
+    "server/src/routes/purchase-orders.js": "f7aa53262d0fa39c80f2e2aa6498ded3f228ec55",
+    "server/src/routes/store-transactions.js": "0d71ae30d2719e0c181a23add67ae705a438bfc7",
+    "server/src/services/backoffice-staff-access.js": "62044b0480d5d3b37e00150114d93d0f4d287a10",
+    "shared/backoffice-staff.mjs": "89dd297d76b127c351a33f018e90c6a321acc99b"
+  },
+  "remaining": [
+    "Owner selects intended LAB grants and enters personal credentials securely",
+    "Grouped operator/store/revocation and writer acceptance with fresh measured before/after and unaffected control",
+    "Broader BackOffice module coverage and real-store readiness remain OPEN"
+  ],
+  "owner": "Retained Rizareio readiness / fix/owner-action-permissions-20261031"
+}
