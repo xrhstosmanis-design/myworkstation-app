@@ -1,3 +1,4 @@
+import {inventoryDenied} from "../services/pos-inventory-access.js";
 import {previewInventoryMerge,confirmInventoryMerge} from '../lib/inventory-product-merge.js';
 import {saveInventoryBulkCard} from '../lib/inventory-bulk-card.js';
 import {productCardVatOptions} from '../lib/product-card-vat.js';
@@ -6,11 +7,15 @@ import crypto from "crypto";
 import {Router} from "express";
 import {z} from "zod";
 import {prisma} from "../prisma.js";
-import {requireCompanyModule} from "../middleware/module-access.js";
+import {requireCompanyModule as defaultRequireCompanyModule} from "../middleware/module-access.js";
 import {destroyInventoryProduct} from "../lib/inventory-product-destruction.js";
 import {createInventoryCard} from "../lib/inventory-new-card.js";
 import {readInventoryNewCardOptions} from "../lib/inventory-new-card-options.js";
 
+export function createOwnerProductActionsRouter({db=prisma,scope=null}={}){
+const prisma=db;
+const scopedStoreId=scope?.storeId||null;
+const requireCompanyModule=key=>scope?.kind==='POS_INVENTORY'?(_req,_res,next)=>next():defaultRequireCompanyModule(key);
 const router=Router();
 const uid=()=>crypto.randomUUID();
 const companyId=req=>req.user?.companyId||null;
@@ -28,7 +33,7 @@ router.get("/new-card/options",requireCompanyModule("INVENTORY"),async(req,res,n
   }catch(error){next(error)}
 });
 router.post("/new-card",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
-  try{const result=await createInventoryCard(prisma,req.user,req.body);res.status(result.idempotent?200:201).json(result)}catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα στοιχεία της νέας καρτέλας.",details:error.issues});next(error)}
+  try{const result=await createInventoryCard(prisma,req.user,req.body,scope?{origin:"POS",terminalPos:scope.terminalPos,actorName:scope.actorName,employeeId:scope.employeeId}:{});res.status(result.idempotent?200:201).json(result)}catch(error){if(error?.name==="ZodError")return res.status(400).json({error:"Ελέγξτε τα στοιχεία της νέας καρτέλας.",details:error.issues});next(error)}
 });
 
 router.post("/new",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
@@ -96,6 +101,7 @@ router.patch("/:productId/delivery",requireCompanyModule("INVENTORY"),async(req,
     const company=companyId(req);if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
     const body=z.object({isModifier:z.boolean().default(false),modifierGroup:z.string().trim().max(160).nullable().optional(),isService:z.boolean().default(false),eDeliveryEnabled:z.boolean().default(false),efoodEnabled:z.boolean().default(false),woltEnabled:z.boolean().default(false),publishStock:z.boolean().default(false),publishPrices:z.boolean().default(false),efoodPrice:z.coerce.number().min(0).nullable().optional(),woltPrice:z.coerce.number().min(0).nullable().optional()}).parse(req.body||{});
     const exists=await prisma.$queryRaw`SELECT "id" FROM "Product" WHERE "companyId"=${company} AND "id"=${req.params.productId} LIMIT 1`;if(!exists[0])return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
+    if(scope&&!scope.capabilities.prices){const previous=(await prisma.$queryRaw`SELECT "efoodPrice","woltPrice" FROM "Product" WHERE "companyId"=${company} AND "id"=${req.params.productId}`)[0];if(["efoodPrice","woltPrice"].some(key=>Number(previous[key]??0)!==Number(body[key]??0)))throw inventoryDenied();}
     await prisma.$executeRaw`UPDATE "Product" SET "isModifier"=${body.isModifier},"modifierGroup"=${body.modifierGroup||null},"isService"=${body.isService},"eDeliveryEnabled"=${body.eDeliveryEnabled},"efoodEnabled"=${body.efoodEnabled},"woltEnabled"=${body.woltEnabled},"publishStock"=${body.publishStock},"publishPrices"=${body.publishPrices},"efoodPrice"=${body.efoodPrice??null},"woltPrice"=${body.woltPrice??null},"updatedAt"=CURRENT_TIMESTAMP WHERE "companyId"=${company} AND "id"=${req.params.productId}`;
     res.json({ok:true});
   }catch(error){next(error)}
@@ -174,4 +180,7 @@ router.get("/:productId/purchases",requireCompanyModule("INVENTORY"),async(req,r
   }catch(error){next(error)}
 });
 
+return router;
+}
+const router=createOwnerProductActionsRouter();
 export default router;

@@ -133,7 +133,7 @@ test("legacy invoice lines without product id repair by one exact tenant SKU",()
 });
 
 test("product card persists supplier by finalized purchase id before matching display text",()=>{
-  assert.match(route,/if\(!body\.supplierCodes\.length\)[\s\S]*PurchaseDocumentLine[\s\S]*PurchaseOrderLine/);
+  assert.match(route,/if\(!body\.supplierCodes\.length&&\(!scope\|\|scope\.capabilities\.edit\)\)[\s\S]*PurchaseDocumentLine[\s\S]*PurchaseOrderLine/);
   assert.match(route,/purchaseSupplier\[0\][\s\S]*supplierId:purchaseSupplier\[0\]\.supplierId/);
   assert.match(route,/body\.supplierName&&!body\.supplierCodes\.length[\s\S]*status\(409\)/);
 });
