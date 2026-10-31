@@ -5,6 +5,7 @@ function AssertRecovery([bool]$Value,[string]$Message) {if(-not $Value){throw $M
 function RecoveryHash([byte[]]$Bytes) {$sha=[Security.Cryptography.SHA256]::Create();try{return [BitConverter]::ToString($sha.ComputeHash($Bytes)).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}}
 $root=Join-Path ([IO.Path]::GetTempPath()) ('ftext-original-report-fixture-'+[Guid]::NewGuid().ToString('N'))
 $oldLog=$env:MWS_FTEXT_REPORT_LOG;$oldState=$env:MWS_FTEXT_REPORT_STATE
+$oldCycles=$env:MWS_FTEXT_FIXTURE_CYCLES;$oldLimit=$env:MWS_FTEXT_FIXTURE_LIMIT
 New-Item -ItemType Directory -Path $root | Out-Null
 try {
  foreach($name in @('Cloud-Connector.ps1','Cash.psm1','Ftext.psm1')) {Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $root $name)}
@@ -54,8 +55,8 @@ Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPing,Invoke-
   for($restart=0;$restart -lt 2;$restart++){
    & {
     param($path,$limit)
-    $script:recoveryCycles=0;$script:recoveryLimit=$limit
-    function Start-Sleep {param($Seconds);$script:recoveryCycles++;if($script:recoveryCycles -ge $script:recoveryLimit){throw 'Synthetic original-report process stopped'}}
+    $env:MWS_FTEXT_FIXTURE_CYCLES='0';$env:MWS_FTEXT_FIXTURE_LIMIT=[string]$limit
+    function Start-Sleep {param($Seconds);$env:MWS_FTEXT_FIXTURE_CYCLES=[string]([int]$env:MWS_FTEXT_FIXTURE_CYCLES+1);if([int]$env:MWS_FTEXT_FIXTURE_CYCLES -ge [int]$env:MWS_FTEXT_FIXTURE_LIMIT){throw 'Synthetic original-report process stopped'}}
     try{& (Join-Path $root 'Cloud-Connector.ps1') -ConfigPath $path}catch{if($_.Exception.Message -cne 'Synthetic original-report process stopped'){throw}}
    } $configPath $(if($restart -eq 0){2}else{4})
    if($restart -eq 0){AssertRecovery (Test-Path -LiteralPath $activePath) 'Lost acknowledgement removed the durable active marker before confirmation.'}
@@ -69,4 +70,4 @@ Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPing,Invoke-
   AssertRecovery ($before -ceq $after -and @(Get-ChildItem -LiteralPath $work -Filter '*.txt').Count -eq 0 -and @(Get-ChildItem -LiteralPath $work -Filter '*.pending').Count -eq 0) 'A restart republished a fiscal command or changed immutable evidence.'
  }}
  Write-Host 'PASS: actual Windows connector and cash module recover original CASH/operator-CARD/strict-CARD reports across heartbeat loss, before/after-commit response loss and process restart; zero fiscal files.'
-}finally{$env:MWS_FTEXT_REPORT_LOG=$oldLog;$env:MWS_FTEXT_REPORT_STATE=$oldState;Remove-Item -LiteralPath $root -Recurse -Force}
+}finally{$env:MWS_FTEXT_REPORT_LOG=$oldLog;$env:MWS_FTEXT_REPORT_STATE=$oldState;$env:MWS_FTEXT_FIXTURE_CYCLES=$oldCycles;$env:MWS_FTEXT_FIXTURE_LIMIT=$oldLimit;Remove-Item -LiteralPath $root -Recurse -Force}
