@@ -1,3 +1,13 @@
+## 31/10/2026 — POS-OWNER-SHIFT-READER-20261030 / SOURCE CANDIDATE / AWAITING NATIVE CI
+
+Owner fix/owner-shift-reader-20261030, explicit continuation of interrupted POS incident. Reconciled claim3311/e514a271 passed41187849714 and mergedbe1be1d57932606ff1c8a46dfd61a7b0b19f32c4 BEFORE source. Prior nine-column convoy prevention remains protected.
+
+Only the selectedSales SQL changes: scoped valid-session ledger descriptions tokenize once through a MATERIALIZED CTE, retain the exact original token and reversal-reference predicates, union valid audit evidence, and group unique sessions before joining completed same-company/store sales. UNION ALL is equivalent under COUNT DISTINCT/MIN; no date cutoff, row cap or reassignment. All response projections, monetary calculations, role guards, writers, schema/bootstrap, indexes, pool/config/runtime and other owners are byte-identical outside that query, verified by a frozen source hash.
+
+New native test freezes the original SQL verbatim from claim-main, compares selected identities and complete actual detail output, checks every source-table digest before/after, and inspects actual synthetic EXPLAIN plans for once-only materialization versus repeated original per-sale work. Covers old/negative/mixed/duplicate/empty/punctuation/prefix/wildcard references, reversals, ambiguous/missing/foreign session evidence, malformed audit and controls. Local Node20 affected regression13PASS/0FAIL/3native environmentSKIP; local PostgreSQL unavailable, native proof NOT YET EXECUTED. Full exact PR/main CI and ordinary guarded exact release required. No production benchmark of the old reader, business replay, financial/stock/fiscal action or new functional/manual PASS. Wider capacity stays OPEN.
+
+Single next action: complete native/full CI, correct any genuine failure without weakening the original oracle, then guarded release and scoped read-only hosted acceptance.
+
 ## 31/10/2026 — Interrupted POS incident continuation resumed
 
 ΑΝΑΛΗΨΗ ΑΠΟ «Έλεγχος σφάλματος POS» / fix/pos-lock-convoy-20261030 — ASSIGNED fix/owner-shift-reader-20261030, resumed by the explicitly requested receiving conversation. Same bounded scope and protected evidence below; no parallel source work. Read-only production health31Oct returned ok:true/revision4e52eec9bc610524e39063dfc77323b521a72e06. Original claim PR3311 exact3abe09b CI41056655940 SUCCESS but remained unmerged; attempted merge405 revealed additive registry conflicts after other owners advanced main. Resolve by retaining current main registries byte-for-byte after this incident prefix. No runtime change or new LAB PASS. Next: green/main reconciled claim before source.
