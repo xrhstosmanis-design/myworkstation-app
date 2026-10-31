@@ -29,7 +29,7 @@ try{
    $state.accepted=$true;return [pscustomobject]@{requestId=$state.requestId;settingsHash=$state.settings;nonce=$state.nonce;commandHash=$state.expected;acceptedAt=$state.acceptedAt}
   }.GetNewClosure()
   if($loss -ceq 'BARRIER') {
-   & (Get-Module 'Cash') {
+   & (Get-Command Invoke-FtextCashRequest).Module {
     $script:originalDurable=(Get-Command Write-FtextCashDurable).ScriptBlock
     function script:Write-FtextCashDurable([string]$Path,$Value) {
      & $script:originalDurable $Path $Value
