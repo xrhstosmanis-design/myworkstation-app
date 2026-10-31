@@ -1,3 +1,18 @@
+## Final authenticated form handoff — 31Oct2026 / prior sign-in blocker superseded
+
+After the verified authenticated form and saved screenshot, native browser scroll/diagnostic tool calls stopped responding (two300-second tool timeouts). No further UI action, save or provider call was attempted. The application is not diagnosed as down; the last verified form/readiness and original screenshot remain evidence, but persistence of the live browser tab after the tool fault is UNKNOWN. Continue via the canonical Platform Admin link if the live view is unavailable; no new secret is requested in chat.
+
+
+Receipt3389/head51c06459fe6856a37f9328c74471e8b06b07a370 passed documentation CI41224982092: classifier and both Windows jobs SUCCESS; source jobs intentionally skipped for evidence-only paths, not counted as new runtime tests. Normally merged4d9c450fcf5e9d89cc1dd3cc916e08a87f4e01ad. Full source/native/main and original hosted D proofs remain those already recorded below; no runtime edit or paid replay.
+
+Secure legitimate SuperAdmin password+2FA sign-in completed after the interruption; the native requested-company pricing form is open and verified read-only with all three fields present, zero prices, master/invoice/email OFF and no customer funding/history. No customer configuration save, credit, provider request or password change. Cropped pricing-form proof contains no identity/payment details.
+
+Canonical URL https://myworkstation-app.onrender.com/platform-admin, native Υπόλοιπα AI πελατών and the requested company selected by its actual registered name. Read-only availability/configuration matches prior private readiness. The form is a user-facing deliverable. Proof CHECKPOINTS/EVIDENCE/ai-owner-wallet-20261022/customer-pricing-form-20261031.jpg is cropped to the actual three-rate form only; no personal identity, account/payment history or real financial transaction screenshot is published.
+
+Single remaining activation action belongs to the user's actual agreement: enter and confirm its three intended rates, credit only a confirmed receipt or explicitly approved trial with unique reference, then explicitly save the intended master/invoice switches. No actual rates or credit amount has been supplied; do not copy LAB25%/0.001/0.01 or another company's50EUR. Customer activation remains NOT TESTED. Whole wallet retained by feat/ai-owner-wallet-20261022 for initial unmetered image/PDF, original historical REVIEW and wider Owner/email/model residuals. No second owner may duplicate this scope.
+
+
+
 # Authoritative result — 31Oct2026 / THREE ADDITIVE PRICES LIMITED HOSTED LAB PASS
 
 ## 31/10/2026 — AI-OWNER-WALLET-01 / THREE ADDITIVE CUSTOMER PRICES / LIMITED HOSTED LAB PASS
