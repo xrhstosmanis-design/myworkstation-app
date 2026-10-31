@@ -1,4 +1,5 @@
 import {canAutomaticallyCalculate,hasCashNumericContradiction,calculateCashResult,assertCalculatedCashResult} from './cash-automatic-result.js';
+import {projectCashIssues,assertCashIssues,cashIssueText,isExpenseIssueClosed} from './cash-issue-replies.js';
 import {assessAutomaticCash,automaticCashAuditText} from './cash-automatic-audit.js';
 import {cashEventSalesText} from './cash-event-sales.js';
 import {hash,activeRecords,reconcileError} from './cash-reconciliation-contract.js';
@@ -77,16 +78,19 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
   }
   for(const r of selected)r.automaticallyCalculated=canAutomaticallyCalculate(r);
   const calculatedResult=calculateCashResult(selected);
-  const reportHash=hash({sourceReportHash,calculatedResult,identities:selected.map(r=>({sessionId:r.sessionId,employeeKey:r.employeeKey,operatorName:r.operatorName,identityRequiresReview:r.identityRequiresReview,automaticallyCalculated:r.automaticallyCalculated}))});
+  const issueRegister=projectCashIssues(source.store.id,selected,records);
+  const reportHash=hash({sourceReportHash,calculatedResult,...(issueRegister?{issueRegister}:{}),identities:selected.map(r=>({sessionId:r.sessionId,employeeKey:r.employeeKey,operatorName:r.operatorName,identityRequiresReview:r.identityRequiresReview,automaticallyCalculated:r.automaticallyCalculated}))});
   const sameCheckpointPeriod=checkpoint?.proof.period?.from===source.period.from&&checkpoint?.proof.period?.to===source.period.to;
   const result={storeId:source.store.id,storeName:source.store.name,period:source.period,rows:selected,context:[...rows.values()].filter(r=>!source.selectedIds.includes(r.sessionId)),totals,employees:[...employees.values()],calculatedResult,reportHash,checkpoint:checkpoint?{resumeFrom:checkpoint.data.resumeFrom,pendingNotes:checkpoint.data.pendingNotes,period:checkpoint.proof.period,createdAt:checkpoint.createdAt,reviewedBy:checkpoint.actorName,current:sameCheckpointPeriod?checkpoint.data.reportHash===reportHash:null}:null,coverage:source.coverage,financialFinality:'REVIEWED_CASH_ROWS_ONLY',originalFinancialLedgerChanged:false};
   if(source.kioskEventSales)result.kioskEventSales=source.kioskEventSales;
+  if(issueRegister)result.issueRegister=issueRegister;
   result.text=reconciliationText(result);return result;
 }
 const money=cents=>cents===null?'άγνωστο':(Math.abs(cents)/100).toLocaleString('el-GR',{style:'currency',currency:'EUR'});
 const signedResult=cents=>cents===null?'Άγνωστη διαφορά':cents<0?'Έλλειμμα '+money(cents):cents>0?'Πλεόνασμα '+money(cents):'Χωρίς διαφορά';
 export function reconciliationText(report){
   assertCalculatedCashResult(report);
+  assertCashIssues(report);
   const names=[...new Set(report.rows.filter(r=>r.reviewed).map(r=>r.reviewedBy).filter(Boolean))],tokens=names.length===1?names[0].normalize('NFD').replace(/\p{M}/gu,'').toLocaleUpperCase('el-GR').split(/\s+/):[];
   const signature=names.length===1?tokens.includes('ΧΡΗΣΤΟΣ')&&tokens.includes('ΜΑΝΗΣ')?'ΜΑΝΗΣ ΧΡΗΣΤΟΣ':names[0].toLocaleUpperCase('el-GR'):null;
   const lines=['ΕΛΕΓΧΟΣ ΤΑΜΕΙΩΝ MYWORKSTATION',`${report.storeName} · ${report.period.from} έως ${report.period.to}`,'','ΑΠΟΤΕΛΕΣΜΑ ΜΕΤΑ ΑΠΟ ΕΛΕΓΧΟ'+(signature?' — '+signature:'')];
@@ -103,7 +107,8 @@ export function reconciliationText(report){
     if(row.automaticAudit?.irisCents)lines.push('Εκκρεμεί ο διαχωρισμός IRIS από το παραπάνω καταχωρισμένο σύνολο καρτών.');
     for(const finding of row.expenseFindings||[]){
       const amount=money(finding.amountCents),when=finding.occurredAt?new Date(finding.occurredAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',dateStyle:'short',timeStyle:'short',hour12:false}):'χωρίς ώρα';
-      lines.push(finding.code==='EXPENSE_WITHOUT_DOCUMENT'?`Εκκρεμότητα ${when}: έξοδο ${amount} χωρίς παραστατικό.`:`Εκκρεμότητα ${when}: παραστατικό ή πληρωμή ${amount} χρειάζεται επανέλεγχο.`);
+      const prefix=isExpenseIssueClosed(report,row,finding)?'Αρχικό εύρημα (κλειστή εκκρεμότητα με τεκμηρίωση)':'Εκκρεμότητα';
+      lines.push(finding.code==='EXPENSE_WITHOUT_DOCUMENT'?`${prefix} ${when}: έξοδο ${amount} χωρίς παραστατικό.`:`${prefix} ${when}: παραστατικό ή πληρωμή ${amount} χρειάζεται επανέλεγχο.`);
     }
     if(row.automaticallyCalculated)lines.push('Το αποτέλεσμα μετρητών υπολογίστηκε αυτόματα από τις διαθέσιμες κινήσεις και παραδόσεις.');
     if(row.automaticAudit)lines.push(...automaticCashAuditText(row.automaticAudit));
@@ -130,6 +135,7 @@ export function reconciliationText(report){
   const pending=effective?.pending??report.totals.pending;
   if(pending)lines.push(`Εκκρεμούν ${pending} βάρδιες· δεν περιλαμβάνονται στα ελεγμένα σύνολα.`);
   for(const employee of effective?.employees??report.employees)lines.push(`${employee.name}: ελλείμματα ${money(employee.shortageCents)} · πλεονάσματα ${money(employee.surplusCents)}${employee.identityRequiresReview?' · απαιτείται ταυτοποίηση της βάρδιας':''}.`);
+  lines.push(...cashIssueText(report.issueRegister));
   if(report.checkpoint){lines.push('',`Συνέχεια από ${report.checkpoint.resumeFrom}${report.checkpoint.current===false?' — το σημείο συνέχειας χρειάζεται ενημέρωση':''}. Έλεγχος ${report.checkpoint.period.from} έως ${report.checkpoint.period.to}.`,...report.checkpoint.pendingNotes.map(n=>'Εκκρεμότητα: '+n));}
   return lines.join('\n');
 }

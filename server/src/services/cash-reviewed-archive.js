@@ -1,3 +1,4 @@
+import {isExpenseIssueClosed,issueStatusLabel,issueCodeLabel} from './cash-issue-replies.js';
 import {assertCalculatedCashResult,canAutomaticallyCalculate} from './cash-automatic-result.js';
 import {automaticCashAuditText} from './cash-automatic-audit.js';
 import XLSX from 'xlsx';
@@ -41,7 +42,7 @@ export function cashArchiveWorkbook(report,scope){
     if(r.identityRequiresReview)pending.push([r.day,r.shiftLabel,r.operatorName,'Ταυτοποίηση εργαζομένου',null,'Ο κοινός ή μη επιβεβαιωμένος κωδικός δεν συνενώνει βάρδιες.']);
     if(r.cardCents===null||r.cardCents!==0)pending.push([r.day,r.shiftLabel,r.operatorName,r.cardCents===null?'Μη πλήρη στοιχεία καρτών':'Διαφορά POS–EFTPOS',amount(r.cardCents),'Χωριστά από τα μετρητά.']);
     if(r.automaticAudit)for(const message of automaticCashAuditText(r.automaticAudit).filter(v=>v.startsWith('Εκκρεμότητα:')))pending.push([r.day,r.shiftLabel,r.operatorName,'Αυτόματος έλεγχος',null,message]);
-    for(const e of r.expenseFindings||[])pending.push([r.day,r.shiftLabel,r.operatorName,'Παραστατικό εξόδου',amount(e.amountCents),e.code==='EXPENSE_WITHOUT_DOCUMENT'?'Λείπει παραστατικό.':'Απαιτείται επανέλεγχος παραστατικού.']);
+    for(const e of r.expenseFindings||[])if(!isExpenseIssueClosed(report,r,e))pending.push([r.day,r.shiftLabel,r.operatorName,'Παραστατικό εξόδου',amount(e.amountCents),e.code==='EXPENSE_WITHOUT_DOCUMENT'?'Λείπει παραστατικό.':'Απαιτείται επανέλεγχος παραστατικού.']);
     for(const e of r.pendingEvidence||[])pending.push([e.date,r.shiftLabel,r.operatorName,'Επανέλεγχος συνδεδεμένου στοιχείου',amount(e.amountCents),e.label]);
     shifts.push([report.storeName,r.day,at(r.openedAt),at(r.closedAt),r.terminalPos||null,r.shiftLabel,r.operatorName,r.identityRequiresReview?null:r.operatorId,r.sessionId,status[r.status],amount(r.initialCents),amount(r.offsetCents),amount(r.remainingCents),deficit===null?null:deficit/100,excess===null?null:excess/100,amount(r.cardCents),r.reviewNote||'']);
   }
@@ -60,6 +61,10 @@ export function cashArchiveWorkbook(report,scope){
     add('Αποτελέσματα εργαζομένων',[['Κατάστημα','Χειριστής','Αναφορά εργαζομένου','Βάρδιες','Έλλειμμα','Πλεόνασμα'],...result.employees.map(e=>[report.storeName,e.name,e.key,e.shifts,e.shortageCents/100,e.surplusCents/100])],[4,5]);
     add('Αποτελέσματα ημέρας',[['Κατάστημα','Ημερομηνία','Χειριστής','Αναφορά εργαζομένου','Βάρδιες','Έλλειμμα','Πλεόνασμα'],...result.days.map(e=>[report.storeName,e.day,e.name,e.key,e.shifts,e.shortageCents/100,e.surplusCents/100])],[5,6]);
   }
+  if(report.issueRegister?.status==='AVAILABLE')add('Απαντήσεις εκκρεμοτήτων',[
+    ['Ημερομηνία','Χειριστής','Θέμα','Κίνηση','Ποσό','Κατάσταση','Τελευταία απόφαση','Απάντηση','Ελεγκτής','Χρόνος απάντησης (Ελλάδα)','Απαντήσεις','Τρέχον εύρημα'],
+    ...report.issueRegister.issues.map(q=>[q.day,q.operatorName,issueCodeLabel[q.code],q.transactionId,amount(q.amountCents),issueStatusLabel[q.status],q.lastReply?(q.lastReply.decision==='CLOSED'?'Κλείσιμο':'Ανοιχτή / απάντηση'):'',q.lastReply?.note||'',q.lastReply?.actorName||'',at(q.lastReply?.createdAt),q.repliesCount,q.current?'Ναι':'Όχι - διατηρείται το ιστορικό'])
+  ],[4]);
   add('Εκκρεμότητες',[['Ημερομηνία','Βάρδια','Χειριστής','Θέμα','Ποσό','Σημείωση'],...pending],[4]);
   add('Αναφορά',[['Κείμενο αναφοράς'],...report.text.split('\n').map(line=>[line])]);
   add('Στοιχεία ελέγχου',[['Πεδίο','Τιμή'],['Κατάστημα',text(report.storeName)],['Αναφορά καταστήματος',text(scope.storeId)],['Εταιρεία',text(scope.companyId)],['Από',report.period.from],['Έως',report.period.to],['Ελεγμένα ελλείμματα',shortage/100],['Ελεγμένα πλεονάσματα',surplus/100],['Εκκρεμείς βάρδιες',pendingCount],['Κατάσταση ιστορικού',text(report.generation)],['Αποτύπωμα αναφοράς',text(report.reportHash)],['Αποτύπωμα προβολής',cashArchiveSourceHash(report)],['Τελευταίος έλεγχος',text(report.head)],['Χρόνος ανάγνωσης',report.checkedAt||'']]);

@@ -12,6 +12,7 @@ import {projectReconciliation} from '../src/services/cash-reconciliation-report.
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 
 test('native automatic arithmetic reads real original fields and keeps document issues, original finance and control unchanged',{skip:!isolated()},async()=>{
+ let issueServer;
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_auto_arithmetic_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const db=new PrismaClient({datasourceUrl:url.toString()});
  try{
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
@@ -44,6 +45,8 @@ test('native automatic arithmetic reads real original fields and keeps document 
   await db.$executeRawUnsafe('CREATE TABLE "WorkforceAuditLog"("id" text primary key,"companyId" text,"storeId" text,"actorUserId" text,"action" text,"entityType" text,"entityId" text,"afterJson" jsonb,"createdAt" timestamp default NOW())');
   await db.$executeRaw`INSERT INTO "Company" VALUES ('co',true),('other',true)`;
   await db.$executeRaw`INSERT INTO "StoreLifecycleFence" VALUES ('store','co',0,false,false)`;
+  await db.$executeRawUnsafe('CREATE TABLE "User"("id" text primary key,"companyId" text,"fullName" text,"role" text,"mustChangePassword" boolean)');
+  await db.$executeRaw`INSERT INTO "User" VALUES ('actor','co','Synthetic auditor','SUPER_ADMIN',false)`;
   const repository=createCashReconciliationRepository(db),writeScope={...scope,generation:'0'},actor={id:'actor',fullName:'Synthetic auditor'};
   let current=await repository.read(writeScope,period);
   const request={requestId:randomUUID(),generation:'0',head:current.head,period,data:{kind:'CHECKPOINT',resumeFrom:'2026-10-22',reportHash:current.reportHash,pendingNotes:['Έξοδο25EUR: αναμονή παραστατικού.'],note:'Συνέχεια μετά τον αυτόματο αριθμητικό έλεγχο.',reviewed:true}};
@@ -57,13 +60,33 @@ test('native automatic arithmetic reads real original fields and keeps document 
   assert(last.rows.some(r=>r.sessionId==='b'&&!r.automaticallyCalculated));
   await assert.rejects(repository.apply(writeScope,actor,{...request,requestId:randomUUID(),head:saved.head,period:lastPeriod,data:{...request.data,resumeFrom:'2026-10-23',reportHash:last.reportHash}}),e=>e.code==='CASH_RECONCILIATION_CHECKPOINT_INVALID');
   assert.deepEqual(await db.$queryRaw`SELECT to_jsonb(s) AS row FROM "CashShiftSession" s ORDER BY "id"`,before);assert.deepEqual(await db.$queryRaw`SELECT to_jsonb(t) AS row FROM "StoreTransaction" t ORDER BY "id"`,txBefore);
+  // Real registered HTTP lifecycle: each reply binds one original expense, not its amount.
+  const app=express();app.use(express.json());app.use((req,res,next)=>{req.user={id:'actor',companyId:'co',role:'SUPER_ADMIN'};next()});app.use(createCashReconciliationRouter({db}));issueServer=createServer(app);await new Promise(resolve=>issueServer.listen(0,'127.0.0.1',resolve));const origin=`http://127.0.0.1:${issueServer.address().port}`;
+  current=await repository.read(writeScope,period);
+  const makeIssue=(status,note='Ελέγχθηκε το πρωτότυπο της συγκεκριμένης κίνησης.')=>{const q=current.issueRegister.issues.find(q=>q.transactionId==='expense');return {requestId:randomUUID(),generation:'0',head:current.head,period,data:{kind:'ISSUE',issueId:q.id,sessionId:q.sessionId,sourceHash:q.sourceHash,issueFingerprint:q.fingerprint,reportHash:current.reportHash,status,note,reviewed:true}};};
+  const post=async(request,store='store')=>{const response=await fetch(origin+`/stores/${store}/reviews`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request)});return {status:response.status,body:await response.json()};};
+  const raceRequests=[makeIssue('OPEN'),makeIssue('OPEN','Ανεξάρτητη ταυτόχρονη απάντηση στην ίδια κίνηση.')],race=await Promise.all(raceRequests.map(r=>post(r)));
+  assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);const winner=race.findIndex(r=>r.status===200);current=race[winner].body;assert.equal((await post(raceRequests[winner])).body.reused,true);
+  const savedIssue=current.issueRegister.issues.find(q=>q.transactionId==='expense');assert.equal(savedIssue.status,'OPEN');assert.equal(savedIssue.repliesCount,1);
+  const close=await post(makeIssue('CLOSED'));assert.equal(close.status,200);current=close.body;assert.equal(current.issueRegister.issues.find(q=>q.transactionId==='expense').status,'CLOSED');assert.equal(current.rows[0].reviewed,false);assert.equal(current.rows[0].automaticallyCalculated,true);assert.equal(current.rows[0].remainingCents,-500);assert.equal(current.rows[0].cardCents,0);assert.equal(current.checkpoint.current,false,'a new answer changes the report snapshot, not the saved continuation notes');assert.deepEqual(current.checkpoint.pendingNotes,request.data.pendingNotes);
+  const held=makeIssue('OPEN');await db.$executeRaw`UPDATE "StoreTransaction" SET "amount"=26 WHERE "id"='expense'`;
+  const changedIssue=await repository.read(writeScope,period);assert.equal(changedIssue.issueRegister.issues.find(q=>q.transactionId==='expense').status,'RECHECK_REQUIRED');
+  const stale=await post({...held,data:{...held.data,reportHash:changedIssue.reportHash}});assert.equal(stale.status,409);assert.equal(stale.body.code,'CASH_ISSUE_SOURCE_CHANGED');
+  await db.$executeRaw`UPDATE "StoreTransaction" SET "amount"=25 WHERE "id"='expense'`;
+  current=await repository.read(writeScope,period);
+  assert([404,409].includes((await post(makeIssue('OPEN'),'control')).status));
+  assert.equal((await post({...makeIssue('OPEN'),generation:'1'})).status,409);
+  await db.$executeRaw`UPDATE "User" SET "role"='EMPLOYEE' WHERE "id"='actor'`;assert.equal((await post(makeIssue('OPEN'))).status,403);await db.$executeRaw`UPDATE "User" SET "role"='SUPER_ADMIN' WHERE "id"='actor'`;
+  const reopened=await post(makeIssue('OPEN','Η συγκεκριμένη εκκρεμότητα ανοίγει ξανά για τεκμηρίωση.'));assert.equal(reopened.status,200);current=reopened.body;assert.equal(current.issueRegister.issues.find(q=>q.transactionId==='expense').status,'OPEN');assert.equal(current.issueRegister.issues.find(q=>q.transactionId==='expense').repliesCount,3);
+  assert.deepEqual(await db.$queryRaw`SELECT to_jsonb(s) AS row FROM "CashShiftSession" s ORDER BY "id"`,before);assert.deepEqual(await db.$queryRaw`SELECT to_jsonb(t) AS row FROM "StoreTransaction" t ORDER BY "id"`,txBefore);assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "CashControlReview"`)[0].n,0);
+  assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "WorkforceAuditLog" WHERE "storeId"='control'`)[0].n,0);
   await db.$executeRaw`UPDATE "CashShiftSession" SET "closingDrawer"=94 WHERE "id"='a'`;
   const changed=await read(),changedA=changed.rows.find(r=>r.sessionId==='a');assert.equal(changedA.automaticAudit.status,'INCOMPLETE');assert.equal(changedA.automaticallyCalculated,false);assert.equal(changedA.recheck,true);assert.equal(changed.calculatedResult.automaticCount,0);assert.equal(changed.calculatedResult.pending,1);assert.notEqual(changed.reportHash,report.reportHash);assert.equal(changedA.sourceHash,a.sourceHash,'new snapshot cannot rewrite old manual review identity');assert.equal(changedA.planHash,a.planHash);
   current=await repository.read(writeScope,period);
-  await assert.rejects(repository.apply(writeScope,actor,{...request,requestId:randomUUID(),head:saved.head,data:{...request.data,reportHash:current.reportHash}}),e=>e.code==='CASH_RECONCILIATION_CHECKPOINT_INVALID');
-  assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "WorkforceAuditLog" WHERE "entityType"='CASH_RECONCILIATION'`)[0].n,1,'held requests never add audit records');
+  await assert.rejects(repository.apply(writeScope,actor,{...request,requestId:randomUUID(),head:current.head,data:{...request.data,reportHash:current.reportHash}}),e=>e.code==='CASH_RECONCILIATION_CHECKPOINT_INVALID');
+  assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "WorkforceAuditLog" WHERE "entityType"='CASH_RECONCILIATION'`)[0].n,4,'held requests never add audit records');
   assert.deepEqual((await db.$queryRaw`SELECT to_jsonb(s) AS row FROM "CashShiftSession" s WHERE "id"='control'`)[0].row,before.find(x=>x.row.id==='control').row);
- }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
+ }finally{if(issueServer)await new Promise(resolve=>issueServer.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });
 test('native reviewed cash: real source/HTTP, serialized two-client once-only offsets, paper allocation, stale sources and checkpoint with immutable finance/control',{skip:!isolated()},async()=>{
  const {PrismaClient,Prisma}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_reconcile_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
