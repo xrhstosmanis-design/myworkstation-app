@@ -53,13 +53,13 @@ export default function AutomaticReportDispatchManager({company,store,request}){
     <label>Νέο email<input aria-label="Νέο email αυτόματων αναφορών" type="email" maxLength={254} value={email} onChange={e=>setEmail(e.target.value)}/></label>
     <button type="button" disabled={!email||!selected.length} onClick={()=>authorize(email,data.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase()))}>Αποθήκευση και ενεργοποίηση</button>
     <details><summary>Προαιρετική πρόσκληση παραλήπτη</summary>
-    <button type="button" disabled={!email||!selected.length} onClick={()=>{const existing=data.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase())?.recipient;mutate('/invitations',{email,expectedVersion:existing?.version||0,...(existing?{recipientId:existing.recipientId}:{}),allowedFrequencies:selected},r=>r.alreadyConfirmed?'Το email και η ενεργή συγκατάθεση διατηρήθηκαν. Δεν στάλθηκε νέα πρόσκληση.':'Η πρόσκληση στάλθηκε. Ο παραλήπτης επιβεβαιώνει από το email του.')}}>Αποθήκευση email</button>
+    <button type="button" disabled={!email||!selected.length} onClick={()=>{const existing=data.recipients?.find(x=>!x.recipient.revokedAt&&x.recipient.email===email.trim().toLowerCase())?.recipient;mutate('/invitations',{email,expectedVersion:existing?.version||0,...(existing?{recipientId:existing.recipientId}:{}),allowedFrequencies:selected},r=>r.alreadyConfirmed?'Η υπάρχουσα έγκριση του παραλήπτη διατηρήθηκε. Δεν στάλθηκε νέα πρόσκληση.':'Η πρόσκληση στάλθηκε. Ο παραλήπτης επιβεβαιώνει από το email του.')}}>Αποθήκευση email</button>
     <details><summary>Παλαιά επιβεβαίωση με κωδικό</summary>
     <button type="button" disabled={!email||data.recipients?.filter(x=>!x.recipient.revokedAt).length>=5} onClick={()=>mutate('/recipients',{email,expectedVersion:0},'Ο παραλήπτης προστέθηκε χωρίς επιβεβαίωση.','PUT')}>Προσθήκη παραλήπτη</button>
     </details>
     </details>
-    {(data.recipients||[]).map(({recipient:r,consent,authorization})=><div key={r.recipientId} style={{padding:'14px 0',borderTop:'1px solid #e2e8f0'}}>
-     <strong>{r.email}</strong> · {r.revokedAt?'Ανακλημένος':authorization?.basis==='SUPER_ADMIN'?<>Εγκεκριμένο από Super Admin · {stamp(authorization.authorizedAt)}</>:<>{r.verifiedAt?'Επιβεβαιωμένο email':'Μη επιβεβαιωμένο email'} · {consent?.active?'Ενεργή συγκατάθεση':'Χωρίς ενεργή συγκατάθεση'}</>}
+    {(data.recipients||[]).map(({recipient:r,consent,authorization,authorizationBasis})=><div key={r.recipientId} style={{padding:'14px 0',borderTop:'1px solid #e2e8f0'}}>
+     <strong>{r.email}</strong> · {r.revokedAt?'Ανακλημένος':authorizationBasis==='SUPER_ADMIN'||authorization?.basis==='SUPER_ADMIN'?(authorization?.basis==='SUPER_ADMIN'?<>Εγκεκριμένο από Super Admin · {stamp(authorization.authorizedAt)}</>:<>Χωρίς ενεργή έγκριση από Super Admin</>):<>{r.verifiedAt?'Επιβεβαιωμένο email':'Μη επιβεβαιωμένο email'} · {consent?.active?'Ενεργή συγκατάθεση':'Χωρίς ενεργή συγκατάθεση'}</>}
      {!r.revokedAt&&<>
       <button type="button" disabled={!selected.length} onClick={()=>authorize(r.email,{recipient:r,consent})}>Έγκριση και ενεργοποίηση</button>
       <details><summary>Προαιρετική επιβεβαίωση παραλήπτη</summary>
@@ -75,7 +75,7 @@ export default function AutomaticReportDispatchManager({company,store,request}){
       </div>
       </details>
       </details>
-      <button type="button" onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/consent`,{expectedRecipientVersion:r.version,expectedRevision:consent?.revision||0,active:false,allowedFrequencies:[],explicitConsent:false},'Η έγκριση αποστολής ανακλήθηκε.','PUT')}>{authorization?.basis==='SUPER_ADMIN'?'Ανάκληση έγκρισης':'Ανάκληση συγκατάθεσης'}</button>{' '}
+      <button type="button" onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}/consent`,{expectedRecipientVersion:r.version,expectedRevision:consent?.revision||0,active:false,allowedFrequencies:[],explicitConsent:false},'Η έγκριση αποστολής ανακλήθηκε.','PUT')}>{authorizationBasis==='SUPER_ADMIN'||authorization?.basis==='SUPER_ADMIN'?'Ανάκληση έγκρισης':'Ανάκληση συγκατάθεσης'}</button>{' '}
       <button type="button" onClick={()=>mutate(`/recipients/${encodeURIComponent(r.recipientId)}`,{expectedVersion:r.version},'Ο παραλήπτης ανακλήθηκε.','DELETE')}>Ανάκληση παραλήπτη</button>
      </>}
     </div>)}

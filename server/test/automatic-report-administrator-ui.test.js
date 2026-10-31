@@ -14,7 +14,7 @@ test('mounted SuperAdmin email/save uses one administrative action, same recipie
  const request=async(path,options={})=>{
   calls.push({path,...options});if(!options.method)return {schemaReady:true,activation:{enabled:externalEnabled,epoch:'current-epoch'},policy:{revision:2,dispatchEnabled:true,allowedFrequencies:['DAILY']},grant:{revision:4,active:true,activationEpoch:'old-epoch'},recipients:path.includes('/stores/B/')?[]:recipients};
   if(hold)return new Promise(resolve=>{pending=resolve});const body=JSON.parse(options.body);
-  if(path.endsWith('/recipients/authorize'))recipients=[{recipient:{recipientId:'r',email:body.email,version:1,verifiedAt:null},consent:{active:true,revision:1,allowedFrequencies:body.allowedFrequencies},authorization:{basis:'SUPER_ADMIN',authorizedBy:'admin',authorizedAt:'2026-11-01T08:00:00Z'}}];
+  if(path.endsWith('/recipients/authorize'))recipients=[{recipient:{recipientId:'r',email:body.email,version:1,verifiedAt:null},consent:{active:true,revision:1,allowedFrequencies:body.allowedFrequencies},authorizationBasis:'SUPER_ADMIN',authorization:{basis:'SUPER_ADMIN',authorizedBy:'admin',authorizedAt:'2026-11-01T08:00:00Z'}}];
   if(path.endsWith('/consent')){recipients[0].authorization=null;recipients[0].consent={active:false,revision:2}}
   return {saved:true,externalActivationEnabled:false};
  };
@@ -28,7 +28,7 @@ test('mounted SuperAdmin email/save uses one administrative action, same recipie
   assert.match(document.body.textContent,/Εγκεκριμένο από Super Admin/);assert.doesNotMatch(document.body.textContent,/Ενεργή συγκατάθεση|Επιβεβαιωμένο email/);assert.match(document.querySelector('[role="status"]').textContent,/Η κεντρική αποστολή είναι κλειστή/);assert.equal(document.querySelectorAll('strong').length>0,true);
   externalEnabled=true;await act(async()=>button('Ανανέωση κατάστασης αποστολών').click());assert.match(document.body.textContent,/Η αυτόματη αποστολή είναι κλειστή ή αναμένει ενεργοποίηση/,'an old activation epoch must never be displayed as currently ON');
   await act(async()=>button('Έγκριση και ενεργοποίηση').click());writes=calls.filter(x=>x.method);assert.equal(JSON.parse(writes[1].body).recipientId,'r');assert.equal(JSON.parse(writes[1].body).expectedAuthorizationRevision,1);assert.equal(recipients.length,1,'stored list reused');
-  await act(async()=>button('Ανάκληση έγκρισης').click());assert.match(document.body.textContent,/Χωρίς ενεργή συγκατάθεση/);assert.doesNotMatch(document.body.textContent,/Εγκεκριμένο από Super Admin/);
+  await act(async()=>button('Ανάκληση έγκρισης').click());assert.match(document.body.textContent,/Χωρίς ενεργή έγκριση από Super Admin/);assert.doesNotMatch(document.body.textContent,/Εγκεκριμένο από Super Admin|Ενεργή συγκατάθεση/);
   hold=true;await act(async()=>button('Έγκριση και ενεργοποίηση').click());assert.ok(pending);await render('B');await act(async()=>pending({saved:true,externalActivationEnabled:true}));assert.doesNotMatch(document.body.textContent,/mail@example.invalid|Ο παραλήπτης εγκρίθηκε/);
   assert.equal(calls.some(x=>/\/invitations$|\/verification|\/consent\/(request|confirm)$/.test(x.path)),false);assert.equal(dom.window.localStorage.length,0);assert.equal(dom.window.sessionStorage.length,0);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const[k,d]of previous)d?Object.defineProperty(globalThis,k,d):delete globalThis[k]}
