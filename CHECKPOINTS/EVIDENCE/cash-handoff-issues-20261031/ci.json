@@ -1,0 +1,102 @@
+{
+  "claim": {
+    "pr": 3392,
+    "merge": "9dab21db25f93052c13bcb5a1499d44cfa1ce337",
+    "ci": 41226856849
+  },
+  "source": {
+    "pr": 3395,
+    "head": "0ff18430eaf236a8994f133769a9d12bd6a36591",
+    "merge": "e5063cf531e94269087cee1950bf6907f9729c2f",
+    "ci": 41228995265,
+    "job": 124619215594,
+    "serverPass": 4905,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "nativeHandoffCase": 819
+  },
+  "sharedDocs": {
+    "pr": 3398,
+    "merge": "d0f2602746f1077b7369b9cf7f16e25dc4f54a1d",
+    "ci": 41228794962
+  },
+  "mainValidation": [
+    {
+      "sha": "afbf419e56bcdb7ab3022dd696de13963f71ddbd",
+      "ci": 41230000823,
+      "job": 124624669709,
+      "serverPass": 4932,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "nativeHandoffCase": 832
+    },
+    {
+      "sha": "b693a2656ffbcaaed1d96c680182de16692258f7",
+      "ci": 41231351417,
+      "job": 124627494012,
+      "serverPass": 4938,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "nativeHandoffCase": 832
+    },
+    {
+      "sha": "d6aac017544e993919af9f56ee84c4579ca6f0b1",
+      "ci": 41233152725,
+      "event": "workflow_dispatch",
+      "job": 124631582221,
+      "serverPass": 4939,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "nativeHandoffCase": 833
+    }
+  ],
+  "localNode": "20.20.2",
+  "localFull": {
+    "pass": 4268,
+    "fail": 0,
+    "skip": 320
+  },
+  "localCash": {
+    "pass": 179,
+    "fail": 0,
+    "skip": 11
+  },
+  "localBuild": "PASS",
+  "all11RuntimeAndTestBlobsUnchangedThroughLatestMain": true,
+  "earlierGuardedDeferrals": [
+    {
+      "run": 41230803295,
+      "job": 124624489943
+    },
+    {
+      "run": 41231731551,
+      "job": 124627231069
+    },
+    {
+      "run": 41232914357,
+      "job": 124630693812
+    }
+  ],
+  "automaticDocsOnlyDeploySkipped": 41234313450,
+  "deploy": {
+    "run": 41234705574,
+    "job": 124635972199,
+    "requestedSha": "d6aac017544e993919af9f56ee84c4579ca6f0b1",
+    "status": "GUARDED_ALREADY_HEALTHY",
+    "guardCompletedAt": "2026-10-31T19:34:06.2598193Z",
+    "guardMessage": "Revision is already healthy or superseded",
+    "newTriggerByThisRun": false,
+    "browserHealth": {
+      "ok": true,
+      "revision": "d6aac017544e993919af9f56ee84c4579ca6f0b1",
+      "observedAtRecorded": "2026-10-31T19:36:39.164995+00:00"
+    },
+    "originOfEarlierInstallation": "Not independently identified by this cash task; do not invent a new pinned-trigger receipt."
+  },
+  "hostedHandoffActions": 0,
+  "hostedLabStatus": "NOT TESTED"
+}
