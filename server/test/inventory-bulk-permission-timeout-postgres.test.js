@@ -53,12 +53,13 @@ test('native diagnostic distinguishes row-lock expiry, callback delay at flag UP
   assert.equal(await snapshot(),initial,'failed request leaves every product/store row and audit unchanged');
   console.log('BULK_PERMISSION_TIMEOUT_DIAGNOSTIC '+JSON.stringify({fixtureProducts:110,code:failure.code,phases,productionCause:'NOT_ESTABLISHED'}));
   // A separate new request with controlled callback scheduling delay reaches
-  // the observed UPDATE boundary. This is a reproduction class, not an
+  // the unchanged mixed-operation UPDATE boundary. Permission-only writes now
+  // use the bounded SQL path. This is a reproduction class, not an
   // attribution of the historical production delay to event-loop starvation.
   const warnings=[],originalWarn=console.warn;
   console.warn=(label,value)=>{if(label==='INVENTORY_BULK_PERMISSION_TIMEOUT')warnings.push(JSON.parse(value));else originalWarn(label,value)};
   stallAfterMembership=true;phases.length=0;
-  try{await assert.rejects(saveInventoryBulkCard(measured,user,request()),{code:'P2028'})}finally{console.warn=originalWarn;stallAfterMembership=false;}
+  try{await assert.rejects(saveInventoryBulkCard(measured,user,{...request(),allProducts:undefined,productIds:Array.from({length:110},(_,n)=>'synthetic-'+String(n+1).padStart(6,'0')),active:true}),{code:'P2028'})}finally{console.warn=originalWarn;stallAfterMembership=false;}
   assert.equal(phases.at(-1).phase,'permission-update');
   assert.equal(warnings.length,1);assert.equal(warnings[0].phase,'permission-update');
   assert.equal(warnings[0].selectedCount,110);assert(warnings[0].eventLoop.activeMs>=5000);
@@ -80,18 +81,19 @@ test('native diagnostic distinguishes row-lock expiry, callback delay at flag UP
 });
 
 // Unit checks run without a database; error messages and identifiers must never
-// enter the diagnostic, and logging failure must not change the original error.
+// enter the diagnostic. Logging failure must not change mixed-operation errors
+// or the permission-only retryable response.
 test('permission timeout evidence is bounded, private and cannot mask the original error',async()=>{
  const failure=Object.assign(new Error('PRIVATE_REQUEST_AND_ERROR_CONTENT'),{code:'P2028'}),messages=[],original=console.warn;
  const db={$transaction:async()=>{throw failure}};
  try{
   console.warn=(...args)=>messages.push(args);
-  await assert.rejects(saveInventoryBulkCard(db,user,request()),error=>error===failure);
+  await assert.rejects(saveInventoryBulkCard(db,user,request()),error=>error.status===409&&/δεν ολοκληρώθηκε/.test(error.message));
   assert.equal(messages.length,1);assert.equal(messages[0][0],'INVENTORY_BULK_PERMISSION_TIMEOUT');
   const receipt=JSON.parse(messages[0][1]);assert.equal(receipt.phase,'transaction-start');assert.equal(receipt.selectedCount,null);
   assert(!JSON.stringify(messages).includes('PRIVATE'));assert(!JSON.stringify(messages).includes('synthetic-'));
   messages.length=0;await assert.rejects(saveInventoryBulkCard(db,user,{...request(),allProducts:undefined,productIds:['PRIVATE_PRODUCT'],active:false}),error=>error===failure);assert.equal(messages.length,1,'an explicit permission write is also diagnosed when another bulk option is present');assert.equal(JSON.parse(messages[0][1]).permissionOnly,false);
   messages.length=0;await assert.rejects(saveInventoryBulkCard(db,user,{...request(),allowPosPriceChange:undefined,allProducts:undefined,productIds:['PRIVATE_PRODUCT'],active:false}),error=>error===failure);assert.equal(messages.length,0,'non-permission operation retains previous logging behavior');
-  console.warn=()=>{throw Error('log sink failed')};await assert.rejects(saveInventoryBulkCard(db,user,request()),error=>error===failure);
+  console.warn=()=>{throw Error('log sink failed')};await assert.rejects(saveInventoryBulkCard(db,user,request()),error=>error.status===409&&/δεν ολοκληρώθηκε/.test(error.message));
  }finally{console.warn=original}
 });

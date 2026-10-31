@@ -1,3 +1,4 @@
+import {saveInventoryBulkPermission} from './inventory-bulk-permission.js';
 import {randomUUID,createHash} from 'node:crypto';
 import {z} from 'zod';
 import {performance} from 'node:perf_hooks';
@@ -24,7 +25,7 @@ export async function saveInventoryBulkCard(db,user,input){
  const fingerprint=createHash('sha256').update(JSON.stringify({...body,productIds:ids})).digest('hex');
  // Error-only phase evidence. Never log product/company/store/request IDs, the
  // request, SQL, audit contents or provider error messages. Business semantics,
- // transaction options and existing lock/replay behavior stay unchanged.
+ // mixed-operation behavior stay unchanged; permission-only writes use the bounded path below.
  const permissionWrite=body.allowPosPriceChange!==undefined;
  const permissionOnly=permissionWrite&&Object.keys(body).every(key=>['storeId','requestId','productIds','allProducts','allowPosPriceChange'].includes(key));
  const started=permissionWrite?performance.now():0,loopStart=permissionWrite?performance.eventLoopUtilization():null,phases=[];
@@ -36,8 +37,9 @@ export async function saveInventoryBulkCard(db,user,input){
   mark('store-check');
   if(!await tx.store.findFirst({where:{id:body.storeId,companyId:company,active:true},select:{id:true}}))fail('Μη έγκυρο κατάστημα.',403);
   mark('replay-read');
-  const replay=(await tx.$queryRaw`SELECT "details" FROM "StoreOperatorAudit" WHERE "companyId"=${company} AND "storeId"=${body.storeId} AND "eventType"='INVENTORY_BULK_CARD' AND "details"->>'requestId'=${body.requestId} LIMIT 1`)[0];
+  const replay=(await tx.$queryRaw`SELECT jsonb_build_object('fingerprint',"details"->'fingerprint','actorId',"details"->'actorId','changed',"details"->'changed') AS "details" FROM "StoreOperatorAudit" WHERE "companyId"=${company} AND "storeId"=${body.storeId} AND "eventType"='INVENTORY_BULK_CARD' AND "details"->>'requestId'=${body.requestId} LIMIT 1`)[0];
   if(replay){if(replay.details.fingerprint!==fingerprint||replay.details.actorId!==user.id)fail('Το αίτημα έχει ήδη διαφορετικά στοιχεία.',409);mark('commit');return {ok:true,changed:replay.details.changed,idempotent:true};}
+  if(permissionOnly){mark('permission-update-audit');const result=await saveInventoryBulkPermission(tx,user,body,ids,fingerprint);selectedCount=result.changed;mark('commit');return result;}
   mark('membership-lock');
   const rows=await tx.$queryRaw`SELECT p."id",p."categoryId",p."subcategoryId",p."vatDepartmentId",p."vatRate",p."isSet",p."allowPosPriceChange",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",sp."active" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${body.storeId} WHERE p."companyId"=${company} AND (${body.allProducts===true} OR p."id"=ANY(${ids}::text[])) ORDER BY p."id" FOR UPDATE OF p,sp`;
   selectedCount=rows.length;
@@ -85,13 +87,14 @@ export async function saveInventoryBulkCard(db,user,input){
   await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${randomUUID()},${company},${body.storeId},${user.id},${user.id},'INVENTORY_BULK_CARD',${JSON.stringify({requestId:body.requestId,fingerprint,actorId:user.id,allProducts:body.allProducts===true,changed:ids.length,changes,...(body.setItem?{setBefore,setItem:body.setItem}:{})})}::jsonb)`;
   mark('commit');
   return {ok:true,changed:ids.length};
- }).catch(error=>{
+ },permissionOnly?{timeout:20000,maxWait:2000}:undefined).catch(error=>{
   if(permissionWrite&&['P2028','P2024'].includes(error?.code)){
    try{
     const now=performance.now(),loop=performance.eventLoopUtilization(loopStart);
     console.warn('INVENTORY_BULK_PERMISSION_TIMEOUT',JSON.stringify({version:1,code:error.code,phase,totalMs:Math.round(now-started),phases:[...phases,{phase,ms:Math.round(now-phaseStarted)}].slice(-10),permissionOnly,allProducts:body.allProducts===true,requestedCount:requestedIds.length,selectedCount,eventLoop:{activeMs:Math.round(loop.active),idleMs:Math.round(loop.idle),utilization:Math.round(loop.utilization*10000)/10000}}));
    }catch{/* Diagnostic delivery must never replace the original failure. */}
   }
+  if(permissionOnly&&(error.code==='P2028'||error.meta?.code==='55P03'||error.code==='P2034'))throw Object.assign(new Error('Η μαζική αλλαγή δεν ολοκληρώθηκε εγκαίρως ή το είδος χρησιμοποιείται. Περίμενε λίγο και δοκίμασε ξανά.'),{status:409});
   throw error;
  });
 }
