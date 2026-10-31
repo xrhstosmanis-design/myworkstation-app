@@ -5,6 +5,7 @@ import {completedReportPeriod} from './automatic-report-policy.js';
 import {readAutomaticCashPreviewInTransaction} from './automatic-report-source.js';
 import {buildAutomaticCashPayload} from './automatic-report-cash-payload.js';
 import {activationAllows} from './automatic-report-activation.js';
+import {reportRecipientAuthority} from './automatic-report-administrator-authorization.js';
 
 const hold=()=>{throw Object.assign(new Error('Automatic report eligibility is on hold.'),{code:'REPORT_DISPATCH_HOLD',status:409})};
 const canonical=value=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
@@ -55,17 +56,19 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   if(payload.period.from!==from||payload.period.to!==to)hold();
   // Re-read activation after source work as well as independently at every start.
   if(canonical(activationProvider())!==canonical(control))hold();
-  const eligible=[];
+  const eligible=[],authorities={};
   for(const {recipient,consent} of recipients){
-   if(!recipient||!consent||!recipient.verifiedAt||recipient.revokedAt||consent.active!==true||consent.revokedAt||String(consent.recipientVersion)!==String(recipient.version)||consent.lifecycleGeneration!==lifecycle.generation||!consent.allowedFrequencies?.includes(scope.frequency)||iso(consent.consentedAt)<control.issuedAt||iso(consent.consentedAt)>now||from<iso(consent.consentedAt)||iso(recipient.verifiedAt)>now||typeof consent.proofHash!=='string'||!/^[a-f0-9]{64}$/.test(consent.proofHash))continue;
+   const authority=reportRecipientAuthority(recipient,consent,{generation:lifecycle.generation,principalId:principal.id});
+   if(!authority||!consent.allowedFrequencies.includes(scope.frequency)||authority.authorizedAt<control.issuedAt||authority.authorizedAt>now||from<authority.authorizedAt||authority.basis==='RECIPIENT'&&iso(recipient.verifiedAt)>now)continue;
    const recipientVersion=safe(recipient.version),consentRevision=safe(consent.revision);
    if(typeof recipient.email!=='string'||!recipient.recipientId)hold();
    const policyFingerprint=persistence.dispatchPolicyFingerprint?persistence.dispatchPolicyFingerprint({policy,grant,recipient}):createHash('sha256').update(canonical({format:'MWS_DISPATCH_AUTHORIZATION_V1',policy,grant,recipientId:recipient.recipientId})).digest('hex');
    const input={companyId:scope.companyId,storeId:scope.storeId,reportType:'CASH',frequency:scope.frequency,periodFrom:from,periodTo:to,recipient:recipient.email,snapshot:{settingsVersion:settings.version,recipientVersion,consentRevision,lifecycleGeneration:lifecycle.generation,sourceFingerprint:payload.sourceFingerprint,payloadFingerprint:payload.payloadFingerprint,policyFingerprint,principalId:principal.id,financialFinality:'PROVISIONAL',financialReconciliationComplete:false}};
    eligible.push(input);
+   authorities[recipient.email]={basis:authority.basis,mailboxVerified:!!recipient.verifiedAt};
   }
   if(!eligible.length)hold();
-  return {scope,now,payload,inputs:eligible,activation:control};
+  return {scope,now,payload,inputs:eligible,activation:control,authorities};
  }
  const reader=async({tx,companyId,storeId,input,now})=>{
   const current=await context(tx,{companyId,storeId,frequency:input.frequency},now);
@@ -74,7 +77,8 @@ export function createAutomaticReportEligibilityReader({activationProvider,persi
   const stored=await persistence.readImmutablePayload(tx,{companyId,storeId,frequency:input.frequency,periodFrom:input.periodFrom,periodTo:input.periodTo,payloadFingerprint:input.snapshot.payloadFingerprint,lifecycleGeneration:input.snapshot.lifecycleGeneration,now});
   const payload=stored?.payload??stored;
   if(!payload||canonical(payload)!==canonical(current.payload))hold();
-  return {...candidate,checkedAt:now,companyActive:true,storeActive:true,licenseActive:true,moduleActive:true,principalAuthorized:true,recipientVerified:true,consentActive:true,dispatchEnabled:true,sourceReady:true,policyAllowsProvisional:true,maintenanceBlocked:false};
+  const authority=current.authorities[candidate.recipient],administrator=authority.basis==='SUPER_ADMIN';
+  return {...candidate,checkedAt:now,companyActive:true,storeActive:true,licenseActive:true,moduleActive:true,principalAuthorized:true,recipientVerified:administrator?authority.mailboxVerified:true,consentActive:!administrator,...(administrator?{recipientAuthorizationBasis:'SUPER_ADMIN',administratorAuthorizationActive:true}:{}),dispatchEnabled:true,sourceReady:true,policyAllowsProvisional:true,maintenanceBlocked:false};
  };
  return Object.assign(reader,{readContext:context});
 }
