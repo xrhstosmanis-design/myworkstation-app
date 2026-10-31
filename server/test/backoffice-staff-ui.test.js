@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {JSDOM} from 'jsdom';
 import {createRequire} from 'node:module';
+import {readFile} from 'node:fs/promises';
 const require=createRequire(import.meta.url);
 async function component(name){
-  const r=await build({entryPoints:[new URL(`../../client/src/components/${name}.jsx`,import.meta.url).pathname],bundle:true,write:false,platform:'node',format:'cjs',external:['react','react-dom','react-dom/client','react/jsx-runtime'],loader:{'.css':'empty'}});
+  const r=await build({entryPoints:[new URL(`../../client/src/components/${name}.jsx`,import.meta.url).pathname],bundle:true,write:false,platform:'node',format:'cjs',external:['react','react-dom','react-dom/client','react/jsx-runtime','pdfjs-dist/build/pdf.worker.min.mjs?url','pdfjs-dist/build/pdf.mjs'],loader:{'.css':'empty'}});
   const mod={exports:{}};new Function('require','module','exports',r.outputFiles[0].text)(require,mod,mod.exports);return mod.exports.default;
 }
 async function mount(Component,props){
-  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid/'}),keys=['window','document','navigator','HTMLElement','Event','CustomEvent','MutationObserver','localStorage','sessionStorage','FormData','IS_REACT_ACT_ENVIRONMENT'];
+  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid/'}),keys=['window','document','navigator','HTMLElement','Event','CustomEvent','MutationObserver','localStorage','sessionStorage','FormData','alert','confirm','IS_REACT_ACT_ENVIRONMENT'];
   const saved=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
   for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[k]});
   const React=await import('react'),{createRoot}=await import('react-dom/client'),root=createRoot(document.getElementById('root'));await React.act(async()=>root.render(React.createElement(Component,props)));
@@ -17,6 +18,74 @@ async function mount(Component,props){
 }
 const identity={userId:'staff',companyId:'a',fullName:'Fixture',username:'fixture',stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:['cash.read']}]};
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
+test('delegated expense form exposes only its granted action, requires declaration and sends one scoped stable-key pending-review input',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[],store={id:'a1',name:'A1'};
+ const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read','payments.read','payments.expense']}]};if(path.endsWith('/terminals'))return {storeId:'a1',terminals:['POS2']};if(path.includes('/backoffice-staff/payments/'))return {storeId:'a1',suppliers:[],purchaseDocuments:[]};if(options.method)return {id:'synthetic',amount:2};return {store,openSession:null}};
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});await m.act(async()=>button('Πληρωμές').click());
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Ταμείο"]');s.value='POS2';s.dispatchEvent(new Event('change',{bubbles:true}))});await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  assert.equal(button('Πληρωμή Προμηθευτή'),undefined);assert.equal(button('Εισαγωγή αρχείου τράπεζας'),undefined);assert.equal(button('Μεταφορά Ποσού'),undefined);
+  await m.act(async()=>button('Λοιπά Έξοδα').click());
+  const form=document.querySelector('form'),amount=form.querySelector('input[inputmode="decimal"]');
+  await m.act(async()=>{Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(amount,'2');amount.dispatchEvent(new Event('input',{bubbles:true}))});
+  await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));assert.equal(calls.filter(c=>c.options.method).length,0);
+  assert.equal(form.querySelector('option[value="CASH_SHIFT"]'),null);
+  await m.act(async()=>form.querySelector('input[type="checkbox"]').click());await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  const writes=calls.filter(c=>c.options.method);assert.equal(writes.length,1);const body=JSON.parse(writes[0].options.body);assert.equal(body.type,'OTHER_EXPENSE');assert.equal(body.amount,2);assert.equal(body.responsibilityAcknowledged,true);assert.equal(body.paymentSource,'EXTERNAL');assert.equal(body.paymentMethod,'CORPORATE_CARD');assert.ok(body.idempotencyKey);assert.equal(body.supplierId,null);assert.equal(writes[0].options.headers['x-backoffice-store-id'],'a1');
+  await m.act(async()=>new Promise(resolve=>setTimeout(resolve,700)));
+ }finally{await m.close()}
+});
+test('delegated cancellation is visibly reachable outside POS, uses selected terminal and never offers RETURN',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[],shift={id:'shift',shiftLabel:'Synthetic',terminalPos:'POS2',status:'OPEN'},store={id:'a1',name:'A1'};
+ const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read','sales.cancel']}]};if(path.endsWith('/terminals'))return {storeId:'a1',terminals:['POS2']};if(path.endsWith('/sales/recent'))return {rows:[{id:'sale',total:6,occurredAt:'2026-10-31T08:00Z',lines:[],payments:[]}]};if(path.endsWith('/reverse'))return {total:6};return {store,openSession:shift,openSessions:[shift],recent:[],summaryBySession:{shift:{}},access:{}}};
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  const style=document.createElement('style');style.textContent=await readFile(new URL('../../client/src/components/commerce/pos-sale-actions.css',import.meta.url),'utf8')+await readFile(new URL('../../client/src/components/backoffice-staff.css',import.meta.url),'utf8');document.head.appendChild(style);
+  await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});await m.act(async()=>button('Πωλήσεις και βάρδιες').click());
+  assert.equal(button('ΠΩΛΗΣΕΙΣ / ΑΚΥΡΩΣΗ'),undefined);
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Ταμείο"]');s.value='POS2';s.dispatchEvent(new Event('change',{bubbles:true}))});await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  const dock=document.querySelector('.pos-sale-actions-dock');assert.ok(dock);assert.equal(window.getComputedStyle(dock).display,'flex');assert.equal(window.getComputedStyle(dock).position,'static');
+  await m.act(async()=>button('ΠΩΛΗΣΕΙΣ / ΑΚΥΡΩΣΗ').click());assert.equal(button('Επιστροφή'),undefined);
+  await m.act(async()=>button('Ακύρωση').click());
+  await m.act(async()=>{const input=document.querySelector('.pos-sale-actions-modal textarea');Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value').set.call(input,'Synthetic cancellation');input.dispatchEvent(new Event('input',{bubbles:true}))});
+  await m.act(async()=>button('Καταχώρηση ακύρωσης').click());
+  const writes=calls.filter(c=>c.options.method);assert.equal(writes.length,1);assert.deepEqual(JSON.parse(writes[0].options.body),{kind:'CANCEL',reason:'Synthetic cancellation'});assert.equal(writes[0].options.headers['x-backoffice-store-id'],'a1');assert.equal(writes[0].options.headers['x-mws-terminal-pos'],'POS2');
+ }finally{await m.close()}
+});
+test('actual invoice editor separates read, edit and approval controls and locks navigation while canonical approval is pending',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ for(const action of [null,'invoices.edit','invoices.approve']){
+  const calls=[],rights=['invoices.read',...(action?[action]:[])],order={id:'order',storeId:'a1',storeName:'A1',supplierId:'sup',supplierName:'Synthetic',status:'NEW',sourceType:'POS_OCR_DRAFT',invoiceNumber:'SYN-1'},line={id:'line',orderId:'order',productId:'p',description:'Synthetic row',quantity:1,unitCost:1,netAmount:1,grossAmount:1.24,vatRate:24};
+  let release;const pending=new Promise(resolve=>release=resolve);
+  const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:rights}]};
+   if(path.startsWith('/api/purchase-orders/report?'))return {stores:[{id:'a1',name:'A1'}],suppliers:[{id:'sup',name:'Synthetic'}],orders:[order],summary:{count:1}};
+   if(path.endsWith('/detail'))return {order,lines:[line],totals:{quantity:1,net:1,gross:1.24}};
+   if(options.method==='PATCH'){await pending;Object.assign(order,JSON.parse(options.body));return {ok:true,status:order.status};}
+   return {items:[],suppliers:[],total:0,archiveTotal:0};
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+  try{
+   window.confirm=globalThis.confirm=()=>true;window.alert=globalThis.alert=message=>assert.fail(message);
+   await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+   await m.act(async()=>button('Τιμολόγια').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+   await m.act(async()=>button('Αγορές και πρόχειρα τιμολογίων').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+   assert.equal(document.querySelector('[data-po-store]').disabled,true);assert.equal(document.querySelector('[data-po-new]'),null);
+   await m.act(async()=>document.querySelector('[data-po-open]').click());
+   for(const selector of ['[data-invoice-assistant]','[data-reopen]','[data-email]','[data-product-card]','[data-barcodes]'])assert.equal(document.querySelector(selector),null);
+   assert.equal(Boolean(document.querySelector('[data-line-edit]')),action==='invoices.edit');assert.equal(Boolean(document.querySelector('[data-finalize]')),action==='invoices.approve');
+   assert.equal(calls.some(c=>c.options.method),false,'opening an invoice must never auto-repair, recover or post');
+   if(action){
+    if(action==='invoices.edit')document.querySelector('[data-order-description]').value='Reviewed description';
+    await m.act(async()=>document.querySelector(action==='invoices.edit'?'[data-save-meta]':'[data-finalize]').click());
+    assert.equal(document.querySelector('select[aria-label="Κατάστημα"]').disabled,true);assert.equal(button('Έξοδος').disabled,true);
+    const write=calls.filter(c=>c.options.method);assert.equal(write.length,1);assert.equal(write[0].path,'/api/purchase-orders/order');assert.equal(write[0].options.headers['x-backoffice-store-id'],'a1');
+    assert.equal(JSON.parse(write[0].options.body)[action==='invoices.edit'?'description':'status'],action==='invoices.edit'?'Reviewed description':'FINAL');
+    await m.act(async()=>{release();await new Promise(resolve=>setTimeout(resolve,20))});assert.equal(document.querySelector('select[aria-label="Κατάστημα"]').disabled,false);
+   }
+  }finally{release();await m.close()}
+ }
+});
 test('invoice-only operator reads the existing inbox and safe original preview without sync, delete, review or AI writes',async()=>{
   const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
   const item={id:'invoice',filename:'Synthetic.pdf',issueDate:'2026-10-31',receivedAt:'2026-10-31T08:00:00Z',supplierName:'Synthetic',status:'RECEIVED',processingStatus:'PENDING',hasAttachment:true,mark:'SYNTHETIC',linkedOrderId:'order'};
@@ -53,12 +122,13 @@ test('sales-only operator mounts the normal shift centre but cannot close a shif
   const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
   const shift={id:'shift',status:'OPEN',shiftLabel:'Synthetic shift',openedAt:'2026-10-31T08:00:00Z',terminalPos:'MAIN',openingOperational:4};
   const store={id:'a1',name:'A1'};
-  const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read']}]};if(path.includes('/store-pos/'))return {rows:[]};if(path.includes('/transactions/'))return {store,openSession:shift,openSessions:[shift],recent:[],summaryBySession:{shift:{cashSales:0,cardSales:0,expensesTotal:0,transferIn:0,transferOut:0}},access:{canForceClose:true}};return {store,openSession:shift,recent:[shift]}};
+  const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read']}]};if(path.endsWith('/terminals'))return {storeId:'a1',terminals:['MAIN']};if(path.includes('/store-pos/'))return {rows:[]};if(path.includes('/transactions/'))return {store,openSession:shift,openSessions:[shift],recent:[],summaryBySession:{shift:{cashSales:0,cardSales:0,expensesTotal:0,transferIn:0,transferOut:0}},access:{canForceClose:true}};return {store,openSession:shift,recent:[shift]}};
   const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
   try{
     await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
     assert.equal(button('Απογραφή'),undefined);assert.equal(button('Είδη και αποθήκη'),undefined);
     await m.act(async()=>button('Πωλήσεις και βάρδιες').click());
+    await m.act(async()=>{const s=document.querySelector('select[aria-label="Ταμείο"]');s.value='MAIN';s.dispatchEvent(new Event('change',{bubbles:true}))});
     assert.match(document.body.textContent,/Κέντρο βαρδιών/);assert.match(document.body.textContent,/Synthetic shift/);
     assert.equal(button('Κλείσιμο βάρδιας'),undefined);
     assert.ok(calls.filter(c=>!c.path.endsWith('/me')).every(c=>c.options.headers['x-backoffice-store-id']==='a1'&&!c.options.method));

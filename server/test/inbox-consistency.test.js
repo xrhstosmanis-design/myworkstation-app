@@ -111,7 +111,7 @@ test('registered invoice opening uses only the existing detail GET; ordinary dra
  const line=source.split('\n').find(l=>l.startsWith('async function openOrder('));assert.ok(line);
  const calls=[],shown=[],state={storeId:'s'};
  const api=async(path,options={})=>{calls.push({path,options});return {order:{id:path.includes('/draft/')?'draft':'registered',status:path.includes('/draft/')?'NEW':'INVOICED'}}};
- const open=new Function('api','state','showOrder','notify',line+';return openOrder')(api,state,(...args)=>shown.push(args),e=>{throw Error(String(e))});
+ const open=new Function('api','state','posContext','showOrder','notify',line+';return openOrder')(api,state,null,(...args)=>shown.push(args),e=>{throw Error(String(e))});
  await open({isConnected:true},'registered','',null,false,true);
  assert.equal(calls.length,1);assert.equal(calls[0].path,'/api/purchase-orders/registered/detail');assert.equal(calls[0].options.method,undefined);assert.equal(shown.length,1);
  calls.length=0;await open({isConnected:true},'draft');

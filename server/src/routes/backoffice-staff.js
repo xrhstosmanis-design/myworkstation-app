@@ -43,6 +43,23 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
   }catch(error){failure(res,error)}});
   router.post('/admin/accounts',async(req,res)=>{try{res.status(201).json(await createStaffAccount(db,req.user,req.body))}catch(error){failure(res,error)}});
   router.put('/admin/accounts/:userId',async(req,res)=>{try{res.json(await updateStaffAccount(db,req.user,req.params.userId,req.body))}catch(error){failure(res,error)}});
+  router.get('/sales/stores/:storeId/terminals',async(req,res)=>{try{
+    const {storeId}=req.params;if(storeId!==req.user.storeId)throw staffError();
+    await requireStaffGrant(db,req.user,storeId,'sales.read');
+    const rows=await db.$queryRaw`SELECT DISTINCT "terminalPos" FROM "CashShiftSession" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} ORDER BY "terminalPos" LIMIT 101`;
+    if(rows.length>100)throw staffError(503,'STAFF_LIMIT');
+    await requireStaffGrant(db,req.user,storeId,'sales.read');
+    res.json({storeId,terminals:[...new Set(['MAIN',...rows.map(row=>row.terminalPos).filter(Boolean)])]});
+  }catch(error){failure(res,error)}});
+  router.get('/payments/stores/:storeId',async(req,res)=>{try{
+    const {storeId}=req.params;if(storeId!==req.user.storeId)throw staffError();
+    await requireStaffGrant(db,req.user,storeId,'payments.read');
+    const suppliers=await db.$queryRaw`SELECT "id","name","taxId" FROM "Supplier" WHERE "companyId"=${req.user.companyId} AND "active"=true ORDER BY "name" LIMIT 2001`;
+    const purchaseDocuments=await db.$queryRaw`SELECT "id","supplierId","documentNumber","documentDate","totalGross","status" FROM "PurchaseDocument" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "status" IN ('DRAFT','APPROVED') ORDER BY "documentDate" DESC,"id" LIMIT 500`;
+    if(suppliers.length>2000)throw staffError(503,'STAFF_LIMIT');
+    await requireStaffGrant(db,req.user,storeId,'payments.read');
+    res.json({storeId,suppliers,purchaseDocuments:purchaseDocuments.map(row=>({...row,totalGross:Number(row.totalGross)}))});
+  }catch(error){failure(res,error)}});
   router.get('/inventory/stores/:storeId/stocktakes',async(req,res)=>{try{
     const {storeId}=req.params;
     if(req.user.storeId!==storeId)throw staffError();
