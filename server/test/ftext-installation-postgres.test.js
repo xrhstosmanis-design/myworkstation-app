@@ -110,7 +110,7 @@ export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
   await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"=2 WHERE "storeId"='store-A'`;await assert.rejects(combined(service),e=>e.status===409);
  });
 
- await subtest('negotiated CASH and both CARD offers recover only before a unique execution grant across real concurrent clients',async()=>{
+ await subtest('negotiated CASH and both CARD preserve one authorization across concurrent acceptance and lost replies',async()=>{
   await a.$executeRaw`DELETE FROM "FtextCashRequest" WHERE "clientTransactionId"='fixture-checkout'`;
   for(const [method,format]of [['CASH','OPERATOR_CONFIRMATION'],['CARD','OPERATOR_CONFIRMATION'],['CARD','POS_LINE8_OS7']]){
    now=new Date();
@@ -130,12 +130,12 @@ export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
    const accept=(svc,patch={})=>svc.authenticated(paired.token,(tx,d,c)=>acceptFtextHandoff(tx,d,c,{...body,...patch}));
    await assert.rejects(accept(service,{commandHash:'b'.repeat(64)}),e=>e.code==='FTEXT_HANDOFF_REVIEW');
    assert.equal((await accept(service,{readyForExecution:false})).requiresReadiness,true);
-   await assert.rejects(service.authenticated(paired.token,async(tx,d,c)=>{assert.equal((await acceptFtextHandoff(tx,d,c,body)).canExecute,true);throw Error('synthetic lost grant before commit')}),/synthetic lost grant before commit/);
+   await assert.rejects(service.authenticated(paired.token,async(tx,d,c)=>{assert.ok((await acceptFtextHandoff(tx,d,c,body)).authorization?.acceptedAt);throw Error('synthetic lost grant before commit')}),/synthetic lost grant before commit/);
    assert.equal((await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0].checkoutJson.ftextHandoff.state,'OFFERED');
    const controlBefore=(await snapshot()).find(r=>r.companyId===control.companyId),grants=await Promise.all([accept(service),accept(other)]);
-   assert.equal(grants.filter(g=>g.canExecute).length,1,'Exactly one transaction may commit execution permission');
+   assert.ok(grants[0].authorization?.acceptedAt);assert.deepEqual(grants[0].authorization,grants[1].authorization,'Concurrent replies retrieve the same immutable authorization');
    const accepted=(await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0];assert.equal(accepted.status,'DISPATCHED');assert.equal(accepted.resultHash,null);assert.equal(accepted.saleId,null);
-   assert.equal((await accept(other)).canExecute,false,'Lost grant acknowledgement must never renew permission');
+   assert.deepEqual((await accept(other)).authorization,grants[0].authorization,'Lost acknowledgement retrieves the same original authorization');
    assert.deepEqual((await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0],accepted);
    assert.equal((await work(service)).request,null);assert.deepEqual((await snapshot()).find(r=>r.companyId===control.companyId),controlBefore);
    const reported=await service.authenticated(paired.token,(tx,d,c)=>recordFtextCashResult(tx,d,c,unknown));assert.equal(reported.status,'REQUIRES_CHECK');

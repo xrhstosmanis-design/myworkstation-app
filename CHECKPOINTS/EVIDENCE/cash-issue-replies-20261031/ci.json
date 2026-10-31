@@ -33,7 +33,7 @@
     "server/src/services/cash-reviewed-archive.js": "5062e5a2b34b98401f9ae710f85457ab1d88e4b2",
     "server/src/services/cash-reviewed-automatic-contract.js": "e8d506059fa0e151b061b438d23fd43845a8616e"
   },
-  "hosted_issue_lifecycle": "NOT TESTED",
+  "hosted_issue_lifecycle": "LIMITED LAB PASS: existing synthetic3EUR question OPEN reply, explicit CLOSED, OPEN reopen; no financial change inferred beyond unchanged observed report sheets",
   "guarded_deploy": {
     "run": 41201059265,
     "job": 124536843141,
@@ -42,5 +42,24 @@
     "healthy_at": "2026-10-31T12:32:24.574Z",
     "status": "PASS",
     "independent_browser_health": "exact42ae4a3; ok:true"
-  }
+  },
+  "hosted_actions": [
+    {
+      "at": "2026-10-31T12:40:16.650Z",
+      "decision": "OPEN",
+      "historyTotal": 2
+    },
+    {
+      "at": "2026-10-31T12:42:59.762Z",
+      "decision": "CLOSED",
+      "historyTotal": 3
+    },
+    {
+      "at": "2026-10-31T12:47:04.726Z",
+      "decision": "OPEN",
+      "historyTotal": 4
+    }
+  ],
+  "final_independent_browser_health": "ok:true exact42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+  "artifact_first_attempt_reliability": "OPEN; three first artifact paths unavailable; final first browser file stat44753bytes, so product cause is not established"
 }

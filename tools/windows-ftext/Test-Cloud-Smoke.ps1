@@ -98,28 +98,42 @@ try {
     } $readyConfig $readyConfigPath
     Import-Module (Join-Path $PSScriptRoot 'Cloud-Tools.psm1') -Force
 
-    # Production handoff helper refreshes STATUS only after the authenticated
-    # server proves OFFERED/no grant; ACCEPTED retries never gain permission.
+    # Exercise the production helper: same authorization after a lost response,
+    # fresh readiness before first publication, and no helper execution after journal.
     & (Get-Module 'Cloud-Tools') {
         param($config,$path)
         $script:handoffCalls=0;$script:handoffRefreshes=0;$script:handoffAccepted=$false;$script:handoffBad=$false
-        $script:handoffRequest=[pscustomobject]@{id='370a0232-aeb7-4320-9919-d96c3f9f52d5';handoff=[pscustomobject]@{nonce='370a0232-aeb7-4320-9919-d96c3f9f52d6'}}
+        $script:handoffRequest=[pscustomobject]@{id='370a0232-aeb7-4320-9919-d96c3f9f52d5';handoff=[pscustomobject]@{nonce='370a0232-aeb7-4320-9919-d96c3f9f52d6';commandHash=('a'*64)}}
         $script:handoffSettings=$config.settingsHash;$script:handoffFolder=$config.workFolder
+        $prefix=Join-Path $config.workFolder ('mws-cash-'+$script:handoffRequest.id)
+        @{requestId=$script:handoffRequest.id;commandHash=('a'*64);settingsHash=$config.settingsHash} | ConvertTo-Json | Set-Content -LiteralPath ($prefix+'.intent.json') -Encoding UTF8
+        $active=@{request=$script:handoffRequest};foreach($key in @('companyId','storeId','terminalPos','serialNumber','settingsHash')) {$active[$key]=$config.$key}
+        $active | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $config.workFolder '.mws-ftext-cash.json') -Encoding UTF8
         function script:Invoke-FtextCashApi {
             param($Config,$Action,$Body)
             $script:handoffCalls++;if($Action -cne 'cash-handoff-accept' -or $Body.readyForExecution -isnot [bool]){throw 'Unexpected handoff action'}
-            $execute=$false;$refresh=$false;$state='ACCEPTED'
-            if(-not $script:handoffAccepted){if($script:handoffRefreshes -eq 0){$state='OFFERED';$refresh=$true}else{$script:handoffAccepted=$true;$execute=$true}}
-            return [pscustomobject]@{ok=$true;version=1;requestId=$Body.requestId;settingsHash=$script:handoffSettings;nonce=$(if($script:handoffBad){'foreign'}else{$Body.nonce});commandHash=$Body.commandHash;state=$state;canExecute=[bool]$execute;requiresReadiness=[bool]$refresh}
+            $refresh=($script:handoffRefreshes -eq 0 -or -not $Body.readyForExecution)
+            if(-not $refresh){$script:handoffAccepted=$true}
+            $authorization=if($script:handoffAccepted){[pscustomobject]@{id=$Body.nonce;acceptedAt='2026-10-31T12:00:00.000Z'}}else{$null}
+            return [pscustomobject]@{ok=$true;version=1;requestId=$Body.requestId;settingsHash=$script:handoffSettings;nonce=$(if($script:handoffBad){'foreign'}else{$Body.nonce});commandHash=$Body.commandHash;state=$(if($script:handoffAccepted){'ACCEPTED'}else{'OFFERED'});authorization=$authorization;requiresReadiness=[bool]$refresh}
         }
         function script:Invoke-FtextCloudReadiness {param($ConfigPath);$script:handoffRefreshes++;Remove-Item -LiteralPath (Join-Path $script:handoffFolder '.mws-ftext-status.json') -ErrorAction SilentlyContinue;return $true}
         try{
-            if((Invoke-FtextCloudHandoff $path $script:handoffRequest ('a'*64)) -ne $true -or $script:handoffRefreshes -ne 1 -or $script:handoffCalls -ne 2){throw 'OFFERED handoff did not require one fresh STATUS before its first grant'}
+            $first=Invoke-FtextCloudHandoff $path $script:handoffRequest ('a'*64)
+            if($first.acceptedAt -cne '2026-10-31T12:00:00.000Z' -or $script:handoffRefreshes -ne 1 -or $script:handoffCalls -ne 2){throw 'First authorization did not require fresh STATUS'}
             $marker=Join-Path $config.workFolder '.mws-ftext-status.json';'synthetic' | Set-Content -LiteralPath $marker
-            if((Invoke-FtextCloudHandoff $path $script:handoffRequest ('a'*64)) -ne $false -or $script:handoffRefreshes -ne 1){throw 'Accepted grant was renewed or triggered another STATUS'}
+            $again=Invoke-FtextCloudHandoff $path $script:handoffRequest ('a'*64)
+            if(($again | ConvertTo-Json -Compress) -cne ($first | ConvertTo-Json -Compress) -or $script:handoffRefreshes -ne 2){throw 'Lost accepted reply did not recover the same proof with fresh readiness'}
             $script:handoffBad=$true;$refused=$false;try{Invoke-FtextCloudHandoff $path $script:handoffRequest ('a'*64) | Out-Null}catch{$refused=$true};if(-not $refused){throw 'Foreign handoff acknowledgement was accepted'}
-            Remove-Item -LiteralPath $marker
-        }finally{Remove-Item Function:script:Invoke-FtextCashApi -ErrorAction SilentlyContinue;Remove-Item Function:script:Invoke-FtextCloudReadiness -ErrorAction SilentlyContinue}
+            $script:handoffBad=$false;$calls=$script:handoffCalls;$refreshes=$script:handoffRefreshes
+            '{' | Set-Content -LiteralPath ($prefix+'.publish.json')
+            $refused=$false;try{Invoke-FtextCloudHandoff $path $script:handoffRequest ('a'*64) | Out-Null}catch{$refused=$true}
+            if(-not $refused -or $script:handoffCalls -ne $calls -or $script:handoffRefreshes -ne $refreshes){throw 'Existing journal reached authorization/readiness'}
+            Remove-Item -LiteralPath ($prefix+'.publish.json')
+            Remove-Item -LiteralPath (Join-Path $config.workFolder '.mws-ftext-cash.json')
+            $refused=$false;try{Invoke-FtextCloudHandoff $path $script:handoffRequest ('a'*64) | Out-Null}catch{$refused=$true}
+            if(-not $refused -or $script:handoffCalls -ne $calls){throw 'Missing active original evidence reached authorization'}
+        }finally{Remove-Item Function:script:Invoke-FtextCashApi -ErrorAction SilentlyContinue;Remove-Item Function:script:Invoke-FtextCloudReadiness -ErrorAction SilentlyContinue;Remove-Item -LiteralPath ($prefix+'.intent.json') -ErrorAction SilentlyContinue}
     } $readyConfig $readyConfigPath
     Import-Module (Join-Path $PSScriptRoot 'Cloud-Tools.psm1') -Force
 

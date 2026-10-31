@@ -89,21 +89,35 @@ function Invoke-FtextCashApi($Config,[string]$Action,$Body) {
 }
 function Invoke-FtextCloudHandoff([string]$ConfigPath,$Request,[string]$CommandHash) {
     $config=Get-FtextCloudConfig $ConfigPath
+    $assertOriginal={
+        $prefix=Join-Path $config.workFolder ('mws-cash-'+$Request.id)
+        if(Test-Path -LiteralPath ($prefix+'.publish.json')) {throw 'Publication journal exists. Authorization cannot publish again.'}
+        $intent=Get-Content -LiteralPath ($prefix+'.intent.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        $active=Get-Content -LiteralPath (Join-Path $config.workFolder '.mws-ftext-cash.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        if([string]$intent.requestId -cne [string]$Request.id -or [string]$intent.commandHash -cne $CommandHash -or [string]$intent.settingsHash -cne [string]$config.settingsHash -or [string]$active.request.id -cne [string]$Request.id -or [string]$active.request.handoff.nonce -cne [string]$Request.handoff.nonce -or [string]$active.request.handoff.commandHash -cne $CommandHash) {throw 'Original local handoff evidence is missing or changed.'}
+        foreach($key in @('companyId','storeId','terminalPos','serialNumber','settingsHash')) {if([string]$active.$key -cne [string]$config.$key) {throw 'Original active handoff belongs to another installation.'}}
+        foreach($suffix in @('.pending','.txt','.res','.report.json')) {if(Test-Path -LiteralPath ($prefix+$suffix)) {throw 'Original fiscal evidence exists. Authorization cannot publish again.'}}
+    }
     for($attempt=0;$attempt -lt 2;$attempt++) {
+        & $assertOriginal
         $clear=-not (Test-Path -LiteralPath (Join-Path $config.workFolder '.mws-ftext-status.json')) -and @(Get-ChildItem -LiteralPath $config.workFolder -Filter '*.txt' -File).Count -eq 0
         $body=@{requestId=[string]$Request.id;settingsHash=[string]$config.settingsHash;nonce=[string]$Request.handoff.nonce;commandHash=$CommandHash;readyForExecution=[bool]$clear}
         $ack=Invoke-FtextCashApi $config 'cash-handoff-accept' $body
-        if($ack.ok -ne $true -or $ack.version -ne 1 -or [string]$ack.requestId -cne [string]$Request.id -or [string]$ack.settingsHash -cne [string]$config.settingsHash -or [string]$ack.nonce -cne [string]$Request.handoff.nonce -or [string]$ack.commandHash -cne $CommandHash -or $ack.canExecute -isnot [bool] -or $ack.requiresReadiness -isnot [bool]) {throw 'Invalid original handoff acknowledgement.'}
-        if($ack.canExecute -eq $true) {
-            if(-not $clear -or [string]$ack.state -cne 'ACCEPTED' -or $ack.requiresReadiness -ne $false) {throw 'Inconsistent one-shot handoff permission.'}
-            return $true
-        }
-        if([string]$ack.state -ceq 'ACCEPTED' -and $ack.requiresReadiness -eq $false) {return $false}
-        if([string]$ack.state -cne 'OFFERED' -or $ack.requiresReadiness -ne $true) {throw 'Original handoff is not eligible for execution.'}
-        # The authenticated server proved no grant exists. Only in this
-        # pre-execution state may we refresh/resume a nonfiscal STATUS here.
+        if($ack.ok -ne $true -or $ack.version -ne 1 -or [string]$ack.requestId -cne [string]$Request.id -or [string]$ack.settingsHash -cne [string]$config.settingsHash -or [string]$ack.nonce -cne [string]$Request.handoff.nonce -or [string]$ack.commandHash -cne $CommandHash -or $ack.requiresReadiness -isnot [bool]) {throw 'Invalid original handoff acknowledgement.'}
+        if([string]$ack.state -ceq 'ACCEPTED') {
+            if($null -eq $ack.authorization -or [string]$ack.authorization.id -cne [string]$Request.handoff.nonce -or [string]::IsNullOrWhiteSpace([string]$ack.authorization.acceptedAt)) {throw 'Invalid immutable original authorization.'}
+            [void][DateTimeOffset]::Parse([string]$ack.authorization.acceptedAt,[Globalization.CultureInfo]::InvariantCulture)
+            if($ack.requiresReadiness -eq $false) {
+                if(-not $clear) {throw 'Local input is not clear for first publication.'}
+                & $assertOriginal
+                return [pscustomobject]@{requestId=$ack.requestId;settingsHash=$ack.settingsHash;nonce=$ack.nonce;commandHash=$ack.commandHash;acceptedAt=$ack.authorization.acceptedAt}
+            }
+        } elseif([string]$ack.state -cne 'OFFERED' -or $null -ne $ack.authorization -or $ack.requiresReadiness -ne $true) {throw 'Original handoff is not eligible for first publication.'}
+        # Only the durable original evidence with NO publication journal allows
+        # nonfiscal readiness refresh before the first possible publication.
+        & $assertOriginal
         Invoke-FtextCloudReadiness $ConfigPath | Out-Null
     }
-    throw 'Fresh readiness was not acknowledged before handoff. No fiscal command was published.'
+    throw 'Fresh readiness was not acknowledged before first publication. Original files retained.'
 }
 Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff

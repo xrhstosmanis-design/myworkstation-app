@@ -37,14 +37,16 @@ export async function acceptFtextHandoff(tx,d,c,input){
  const b=inputSchema.parse(input);
  const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${b.requestId} AND "companyId"=${c.companyId} AND "storeId"=${c.storeId} AND "terminalPos"=${c.terminalPos} FOR UPDATE`)[0];
  const h=bound(row,d,c);if(b.settingsHash!==h.settingsHash||b.nonce!==h.nonce||b.commandHash!==h.commandHash)fail();
- const reply=(canExecute,requiresReadiness=false)=>({ok:true,version:1,requestId:row.id,settingsHash:row.settingsHash,nonce:h.nonce,commandHash:h.commandHash,state:canExecute?'ACCEPTED':h.state,canExecute,requiresReadiness});
- // Permission is one-shot, not an idempotent execution lease. Losing the true
- // response after this commit MUST NOT turn a retry into another permission.
- if(h.state==='ACCEPTED')return reply(false);
- if(!b.readyForExecution||!ftextRegisterReady(d,c))return reply(false,true);
+ const ready=b.readyForExecution&&ftextRegisterReady(d,c);
+ const reply=proof=>({ok:true,version:1,requestId:row.id,settingsHash:row.settingsHash,nonce:proof.nonce,commandHash:proof.commandHash,state:proof.state,authorization:proof.state==='ACCEPTED'?{id:proof.nonce,acceptedAt:proof.acceptedAt}:null,requiresReadiness:!ready});
+ // Acceptance is committed once. A lost response retrieves the SAME proof,
+ // without renewing it. Windows must persist its irreversible publication
+ // journal before any fiscal input; an existing journal forbids publication.
+ if(h.state==='ACCEPTED')return reply(h);
+ if(!ready)return reply(h);
  const accepted={...h,state:'ACCEPTED',acceptedAt:new Date().toISOString()};
  const changed=await tx.$queryRaw`UPDATE "FtextCashRequest" SET "checkoutJson"=${JSON.stringify({...row.checkoutJson,ftextHandoff:accepted})}::jsonb,"updatedAt"=NOW() WHERE "id"=${row.id} AND "status"='DISPATCHED' AND "checkoutJson"->'ftextHandoff'->>'state'='OFFERED' RETURNING *`;
- if(changed.length!==1)fail();return reply(true);
+ if(changed.length!==1)fail();return reply(accepted);
 }
 export function assertFtextHandoffResult(row,d,c){
  if(!Object.hasOwn(row.checkoutJson||{},'ftextHandoff'))return;

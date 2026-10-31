@@ -1,0 +1,169 @@
+{
+  "scope": "One new synthetic native invoice assistant preview C / metering only",
+  "before": "2026-10-31T12:41:50.130911+00:00",
+  "after": "2026-10-31T12:42:33.851291+00:00",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "entry": {
+    "actorId": null,
+    "chargedMicros": 80973,
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "createdAt": "2026-10-31T12:42:12.662569+00:00",
+    "creditedMicros": 0,
+    "feature": "INVOICE_OPENAI",
+    "id": "cdac4c32-ddaf-4d98-8003-f3e3946e5047",
+    "kind": "USAGE",
+    "reference": "79a5e93b-75df-43f5-a970-14a370062114",
+    "reservedMicros": 930006,
+    "resolutionReference": null,
+    "settledAt": "2026-10-31T12:42:20.416388+00:00",
+    "status": "SETTLED",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "tariff": {
+      "cacheWriteMicrosPerMillion": {
+        "ttl12h": 13401233,
+        "ttl30m": 6700617
+      },
+      "cachedInputMicrosPerMillion": 536050,
+      "contextTokens": 1050000,
+      "currency": "EUR",
+      "inputMicrosPerMillion": 5360494,
+      "longContext": {
+        "cacheWriteMicrosPerMillion": {
+          "ttl12h": 26802466,
+          "ttl30m": 13401233
+        },
+        "cachedInputMicrosPerMillion": 1072099,
+        "inputMicrosPerMillion": 10720987,
+        "outputMicrosPerMillion": 40203699,
+        "thresholdTokens": 272000
+      },
+      "maxOutputTokens": 128000,
+      "model": "gpt-5.6-sol",
+      "outputMicrosPerMillion": 26802466,
+      "requestCacheWritePolicy": {
+        "schemaVersion": 1,
+        "source": "REQUEST_DEFAULT",
+        "state": "UNIFORM",
+        "ttl": "30m"
+      },
+      "responseModels": [
+        "gpt-5.6-sol"
+      ],
+      "version": "c712792131de3f07abd437917c7072b74d47a71c126730f9a732754cccdd3056"
+    },
+    "usage": {
+      "cacheWrite12hTokens": 0,
+      "cacheWrite30mTokens": 9394,
+      "cacheWritePartitionSource": "REQUEST_DEFAULT",
+      "cacheWriteTokens": 9394,
+      "cacheWriteTtl": "30m",
+      "cachedInputTokens": 0,
+      "inputTokens": 9397,
+      "model": "gpt-5.6-sol",
+      "outputTokens": 672,
+      "pricingTier": "STANDARD",
+      "providerResponseId": "resp_076178484cf28643006ae5e224c85c87d08963ab7ed74cc6a9"
+    }
+  },
+  "independentChargeMicros": 80973,
+  "oldBHoldMicros": 930033,
+  "checks": {
+    "exactOneSettlement": "PASS",
+    "independentIntegerCharge": "PASS",
+    "newHoldReleased": "PASS",
+    "oldEntriesPreserved": "PASS",
+    "foreignWalletAndHistory": "PASS",
+    "labBusinessAndShifts": "PASS",
+    "noticesAndAudits": "PASS"
+  },
+  "privateSnapshotDigests": {
+    "before": "71f7c73c51eaab6f83abfbd318ca2b6c810677adc4399596bbab16dae918ad5a",
+    "after": "01a846c83df3918a62ef4adb0b61be382540bfecee38864fb1d17b712494a56e"
+  },
+  "status": "LIMITED_HOSTED_LAB_PASS",
+  "intakeBinding": {
+    "attachmentId": "0d58779d-150d-4e23-8420-825088f88111",
+    "jobId": "64a72272-5d2e-465c-bd4f-759043047652",
+    "jobStatus": "AWAITING_APPROVAL",
+    "documentId": "f0b54aab-ea3e-4143-9a8d-e4089b82e680",
+    "documentNumber": "SOL-LAB-20261031-C",
+    "documentStatus": "DRAFT",
+    "settlementMode": "CREDIT",
+    "paymentTransactionId": null,
+    "orderId": "eaa7ed7a-8f07-49a3-b7d8-4539c037c51f",
+    "orderStatus": "NEW",
+    "lineId": "fc58d80f-7c48-4d7b-acde-a50719efcb62",
+    "sku": "SYN-C1",
+    "quantity": 1,
+    "unitCost": 14,
+    "productId": null,
+    "resolutionStatus": "UNRESOLVED",
+    "unchangedAfterPreview": true
+  },
+  "fixtureSha256": "60fb4a37cb8c7f4c09094e39c0098cf35bbb621626610a480fe44d86627897d8",
+  "proofImage": "sol-uniform-cache-assistant-pass-20261031.jpg",
+  "proofImageSha256": "91061662d91add5b7583ec8b425c3d6c1caba5106dc99c3117ba092ff65f243a",
+  "finalLabWallet": {
+    "balanceMicros": 4883059,
+    "emailEnabled": false,
+    "enabled": false,
+    "reservedMicros": 930033,
+    "version": 24
+  },
+  "controlsWholeCFlow": "PASS",
+  "residuals": [
+    "Historical REVIEW reconciliation including old B hold",
+    "Initial image reader metering and PDF file_data validation",
+    "Per-customer pricing, actual Owner session, email/threshold delivery",
+    "Hosted other models/cache12h/mixed/long-context and broader invoice approval/OCR scope"
+  ]
+}

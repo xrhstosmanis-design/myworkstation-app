@@ -112,6 +112,7 @@ function Invoke-FtextCashRequest {
    if($Request.handoff.version -ne 1 -or [string]$Request.handoff.nonce -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -or [string]$Request.handoff.commandHash -cne $digest -or $null -eq $AcceptHandoff -or ($Request.PSObject.Properties['kind'] -and [string]$Request.kind -ceq 'FTEXT_VOID')) {throw 'Unverified negotiated handoff. No fiscal command was written.'}
   }
   $intentPath=Join-Path $folder ('mws-cash-'+$Request.id+'.intent.json')
+  $publicationPath=Join-Path $folder ('mws-cash-'+$Request.id+'.publish.json')
   $reportPath=Join-Path $folder ('mws-cash-'+$Request.id+'.report.json')
   $activePath=Join-Path $folder '.mws-ftext-cash.json'
   $pending=Get-FtextCashPending $c
@@ -119,30 +120,34 @@ function Invoke-FtextCashRequest {
   if($null -ne $pending -and [string]$pending.request.id -cne [string]$Request.id) {throw 'Another cash request is unresolved.'}
   if(Test-Path -LiteralPath $intentPath) {
    $intent=Get-Content -LiteralPath $intentPath -Raw -Encoding UTF8 | ConvertFrom-Json
-   if([string]$intent.commandHash -cne $digest -or [string]$intent.settingsHash -cne [string]$c.settingsHash) {throw 'Cash request changed; no resend is permitted.'}
+   if([string]$intent.requestId -cne [string]$Request.id -or [string]$intent.commandHash -cne $digest -or [string]$intent.settingsHash -cne [string]$c.settingsHash) {throw 'Cash request changed; no resend is permitted.'}
    if(-not $pending) {throw 'This cash request was already acknowledged. No resend is permitted.'}
   } else {
-   if($pending -or (Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-status.json')) -or @(Get-ChildItem -LiteralPath $folder -Filter '*.txt' -File).Count -gt 0 -or (Test-Path -LiteralPath $resultPath) -or (Test-Path -LiteralPath $reportPath)) {throw 'Pending or pre-existing ftext files. No command was written.'}
+   if($pending -or (Test-Path -LiteralPath $publicationPath) -or (Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-status.json')) -or @(Get-ChildItem -LiteralPath $folder -Filter '*.txt' -File).Count -gt 0 -or (Test-Path -LiteralPath $resultPath) -or (Test-Path -LiteralPath $reportPath)) {throw 'Pending or pre-existing ftext files. No command was written.'}
    if($Request.PSObject.Properties['kind'] -and [string]$Request.kind -ceq 'FTEXT_VOID') {
     $originalPath=Join-Path $folder ('mws-cash-'+[string]$Request.originalRequestId+'.res')
     if(-not (Test-Path -LiteralPath $originalPath -PathType Leaf) -or (Get-FtextCashHash ([IO.File]::ReadAllBytes($originalPath))) -cne [string]$Request.originalRawResultHash) {throw 'Original payment result changed or missing. No VOID was written.'}
    }
    $intent=[ordered]@{commandHash=$digest;settingsHash=$c.settingsHash;requestId=$Request.id}
-   # Legacy intent is irreversible. Negotiated handoff still needs the unique
-   # server grant before its FIRST publication; accepted grants are never renewed.
+   # Keep the original intent/active marker before requesting authorization.
+   # Negotiated publication also requires a separate irreversible journal.
    Write-FtextCashDurable $intentPath $intent
    Write-FtextCashDurable $activePath ([ordered]@{companyId=$c.companyId;storeId=$c.storeId;terminalPos=$c.terminalPos;serialNumber=$c.serialNumber;settingsHash=$c.settingsHash;request=$Request})
    $publish=-not $handoff
   }
   if(Test-Path -LiteralPath $reportPath) {return Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json}
   $temp=Join-Path $folder ('mws-cash-'+$Request.id+'.pending');$target=Join-Path $folder ('mws-cash-'+$Request.id+'.txt')
-  if($handoff -and -not (Test-Path -LiteralPath $resultPath) -and -not (Test-Path -LiteralPath $temp) -and -not (Test-Path -LiteralPath $target)) {
+  if($handoff -and -not (Test-Path -LiteralPath $publicationPath) -and -not (Test-Path -LiteralPath $resultPath) -and -not (Test-Path -LiteralPath $temp) -and -not (Test-Path -LiteralPath $target)) {
    $grant=& $AcceptHandoff $Request $digest $ConfigPath
-   if($grant -isnot [bool]) {throw 'Handoff permission was not verified. No fiscal command was written.'}
-   $publish=$grant
+   if($null -eq $grant -or [string]$grant.requestId -cne [string]$Request.id -or [string]$grant.settingsHash -cne [string]$c.settingsHash -or [string]$grant.nonce -cne [string]$Request.handoff.nonce -or [string]$grant.commandHash -cne $digest -or [string]::IsNullOrWhiteSpace([string]$grant.acceptedAt)) {throw 'Original authorization was not verified. No fiscal command was written.'}
+   [void][DateTimeOffset]::Parse([string]$grant.acceptedAt,[Globalization.CultureInfo]::InvariantCulture)
+   $publish=$true
   }
   if($publish) {
    if((Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-status.json')) -or @(Get-ChildItem -LiteralPath $folder -Filter '*.txt' -File).Count -gt 0 -or (Test-Path -LiteralPath $temp) -or (Test-Path -LiteralPath $resultPath)) {throw 'Input changed before publication. Original handoff retained; no resend.'}
+   # CreateNew + Flush(true) is the irreversible local publication barrier.
+   # Even a partial journal left by a crash MUST prevent every future write.
+   if($handoff) {Write-FtextCashDurable $publicationPath ([ordered]@{requestId=$Request.id;settingsHash=$c.settingsHash;commandHash=$digest;nonce=$grant.nonce;acceptedAt=$grant.acceptedAt})}
    $temp=Join-Path $folder ('mws-cash-'+$Request.id+'.pending');$target=Join-Path $folder ('mws-cash-'+$Request.id+'.txt')
    $s=[IO.File]::Open($temp,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
    try {$s.Write($commandBytes,0,$commandBytes.Length);$s.Flush($true)} finally {$s.Dispose()}
@@ -169,7 +174,7 @@ function Invoke-FtextCashRequest {
 function Complete-FtextCashReport($Config,[string]$RequestId) {
  $pending=Get-FtextCashPending $Config
  if(-not $pending -or [string]$pending.request.id -cne $RequestId) {throw 'Cash acknowledgement identity mismatch.'}
- # Keep intent/report permanently; only release the active marker after cloud acknowledgement.
+ # Keep intent/report/publication journal permanently; only release the active marker after cloud acknowledgement.
  Remove-Item -LiteralPath (Join-Path $Config.workFolder '.mws-ftext-cash.json')
 }
 function Read-FtextEvidenceFile([string]$Path,[int]$Limit) {

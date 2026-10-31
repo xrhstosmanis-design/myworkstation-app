@@ -37,15 +37,15 @@ test('negotiated pre-execution offer survives lost delivery; legacy dispatch sti
  }
 });
 const handoffInput=f=>({requestId:f.row.id,settingsHash:f.row.settingsHash,nonce:f.row.checkoutJson.ftextHandoff.nonce,commandHash:f.row.checkoutJson.ftextHandoff.commandHash,readyForExecution:true});
-test('fresh readiness and local-clear evidence precede the one grant; a lost grant reply never renews permission',async()=>{
+test('one immutable authorization survives lost reply; fresh readiness still precedes publication',async()=>{
  for(const [method,format]of [['CASH','OPERATOR_CONFIRMATION'],['CARD','OPERATOR_CONFIRMATION'],['CARD','POS_LINE8_OS7']]){
   const f=fixture(method,format);await pollFtextDeviceWork(f.tx,f.device,f.settings,{handoffVersion:1});const b=handoffInput(f);
   assert.throws(()=>assertFtextHandoffResult(f.row,f.device,f.settings),e=>e.code==='FTEXT_HANDOFF_REVIEW');
-  const before=structuredClone(f.row);let ack=await acceptFtextHandoff(f.tx,f.device,f.settings,{...b,readyForExecution:false});assert.equal(ack.canExecute,false);assert.equal(ack.requiresReadiness,true);assert.deepEqual(f.row,before);
-  f.device.metadata.ftextLastStatus.checkedAt=new Date(Date.now()-21000).toISOString();ack=await acceptFtextHandoff(f.tx,f.device,f.settings,b);assert.equal(ack.canExecute,false);assert.equal(ack.requiresReadiness,true);assert.equal(f.row.checkoutJson.ftextHandoff.state,'OFFERED');
-  f.device.metadata.ftextLastStatus.checkedAt=new Date().toISOString();ack=await acceptFtextHandoff(f.tx,f.device,f.settings,b);assert.equal(ack.canExecute,true);assert.equal(ack.state,'ACCEPTED');assert.equal(ack.requiresReadiness,false);assert.doesNotThrow(()=>assertFtextHandoffResult(f.row,f.device,f.settings));
-  const accepted=structuredClone(f.row);assert.equal((await acceptFtextHandoff(f.tx,f.device,f.settings,b)).canExecute,false);assert.deepEqual(f.row,accepted,'Lost acknowledgement must not change or renew accepted evidence');
-  assert.equal((await pollFtextDeviceWork(f.tx,f.device,f.settings,{handoffVersion:1})).request,null,'Accepted execution is never offered again');
+  const before=structuredClone(f.row);let ack=await acceptFtextHandoff(f.tx,f.device,f.settings,{...b,readyForExecution:false});assert.equal(ack.authorization,null);assert.equal(ack.requiresReadiness,true);assert.deepEqual(f.row,before);
+  f.device.metadata.ftextLastStatus.checkedAt=new Date(Date.now()-21000).toISOString();ack=await acceptFtextHandoff(f.tx,f.device,f.settings,b);assert.equal(ack.authorization,null);assert.equal(ack.requiresReadiness,true);assert.equal(f.row.checkoutJson.ftextHandoff.state,'OFFERED');
+  f.device.metadata.ftextLastStatus.checkedAt=new Date().toISOString();ack=await acceptFtextHandoff(f.tx,f.device,f.settings,b);assert.ok(ack.authorization?.acceptedAt);assert.equal(ack.state,'ACCEPTED');assert.equal(ack.requiresReadiness,false);assert.doesNotThrow(()=>assertFtextHandoffResult(f.row,f.device,f.settings));
+  const accepted=structuredClone(f.row);const replay=await acceptFtextHandoff(f.tx,f.device,f.settings,b);assert.deepEqual(replay.authorization,ack.authorization);assert.ok(replay.authorization?.acceptedAt);f.device.metadata.ftextLastStatus.checkedAt=new Date(Date.now()-21000).toISOString();const stale=await acceptFtextHandoff(f.tx,f.device,f.settings,b);assert.equal(stale.requiresReadiness,true);assert.deepEqual(stale.authorization,ack.authorization);assert.deepEqual(f.row,accepted,'Lost acknowledgement must not change or renew accepted evidence');
+  f.device.metadata.ftextLastStatus.checkedAt=new Date().toISOString();assert.equal((await pollFtextDeviceWork(f.tx,f.device,f.settings,{handoffVersion:1})).request,null,'Accepted execution is never offered again');
  }
 });
 test('foreign, altered, released, final and unnegotiated handoffs cannot obtain permission or change a request',async()=>{
@@ -58,7 +58,7 @@ test('foreign, altered, released, final and unnegotiated handoffs cannot obtain 
  for(const patch of [{nonce:'370a0232-aeb7-4320-9919-d96c3f9f52d6'},{commandHash:'b'.repeat(64)},{settingsHash:'b'.repeat(64)},{readyForExecution:'true'},{arbitraryCommand:'PAY||2'}]){const f=fixture();await pollFtextDeviceWork(f.tx,f.device,f.settings,{handoffVersion:1});const before=structuredClone(f.row);await assert.rejects(acceptFtextHandoff(f.tx,f.device,f.settings,{...handoffInput(f),...patch}));assert.deepEqual(f.row,before);}
  const legacy=fixture();assert.doesNotThrow(()=>assertFtextHandoffResult(legacy.row,legacy.device,legacy.settings));
 });
-test('actual HTTP handoff is device authenticated, negotiated and refuses results before the sole grant',async()=>{
+test('actual HTTP handoff is device authenticated and retrieves the same authorization without permitting result before acceptance',async()=>{
  const {default:express}=await import('express'),{createFtextRouter}=await import('../src/routes/ftext-v1.js');const f=fixture();
  const auth=async(token,action)=>{if(token!=='fixture-token')throw Object.assign(Error('Unauthorized'),{status:401});return action(f.tx,f.device,f.settings);};
  const service={authenticated:auth,ping:(token,_body,work)=>auth(token,async(t,d,c)=>({settings:c,settingsHash:ftextSettingsHash(c),...(work?await work(t,d,c):{})}))};
@@ -73,8 +73,8 @@ test('actual HTTP handoff is device authenticated, negotiated and refuses result
   const b=handoffInput(f);assert.equal((await post('cash-handoff-accept',b,'foreign')).status,401);
   const before=structuredClone(f.row);response=await post('cash-result',{requestId:f.row.id,settingsHash:f.row.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'});assert.equal(response.status,409);assert.deepEqual(f.row,before);
   assert.equal((await post('cash-handoff-accept',{...b,commandHash:'b'.repeat(64)})).status,409);
-  response=await post('cash-handoff-accept',b);assert.equal(response.status,200);assert.equal((await response.json()).canExecute,true);
-  response=await post('cash-handoff-accept',b);assert.equal(response.status,200);assert.equal((await response.json()).canExecute,false);
+  response=await post('cash-handoff-accept',b);assert.equal(response.status,200);const authorization=(await response.json()).authorization;assert.ok(authorization.acceptedAt);
+  response=await post('cash-handoff-accept',b);assert.equal(response.status,200);assert.deepEqual((await response.json()).authorization,authorization);
   response=await post('work-poll',poll);assert.equal((await response.json()).request,null);assert.equal(f.row.result,null);assert.equal(f.row.saleId,null);
  }finally{await new Promise(r=>server.close(r));}
 });
