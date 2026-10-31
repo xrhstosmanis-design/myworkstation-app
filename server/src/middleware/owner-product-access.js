@@ -1,4 +1,6 @@
+import {staffProductBridge} from './backoffice-staff-products.js';
 export function requireOwnerProductAccess(req,res,next){
+  if(req.user?.staffAccess===true)return staffProductBridge(req,res,next);
   const role=String(req.user?.role||"").toUpperCase();
   const platformRole=String(req.user?.platformRole||"").toUpperCase();
   const allowed=req.user?.isSuperAdmin===true||role==="SUPER_ADMIN"||role==="OWNER"||platformRole==="SUPER_ADMIN";

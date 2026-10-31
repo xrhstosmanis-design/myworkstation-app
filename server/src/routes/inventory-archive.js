@@ -172,10 +172,11 @@ router.get("/",async(req,res,next)=>{
       prisma.$queryRaw`SELECT "id","categoryId","name" FROM "ProductSubcategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`
     ]);
 
+    const vatDepartments=await productCardVatOptions(prisma,companyId);
     if(req.user?.staffAccess===true)await requireStaffGrant(prisma,req.user,storeId,'products.read');
     res.json({store,page,pageSize,total,pages:Math.max(1,Math.ceil(total/pageSize)),items,
       categories:categories.map(r=>r.name),subcategories:subcategories.map(r=>r.name),
-      vatDepartments:await productCardVatOptions(prisma,companyId),
+      vatDepartments,
       taxonomy:{categories:taxonomyCategories,subcategories:taxonomySubcategories},
       totals:{retailStockValue:items.reduce((a,r)=>a+r.retailStockValue,0),costStockValue:items.reduce((a,r)=>a+r.costStockValue,0),stock:items.reduce((a,r)=>a+r.currentStock,0)}});
   }catch(error){next(error)}

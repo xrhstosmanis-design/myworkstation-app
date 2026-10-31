@@ -64,9 +64,9 @@ test('actual POS routes and shared creator enforce real PostgreSQL permissions, 
   // prisma.js explicitly supports an injected client. Module guards and creator
   // now share only this random isolated schema, never the configured public DB.
   globalThis.prisma=db;
-  const {registerPosNewProductRoutes}=await import('../src/lib/pos-new-product-card.js'),{createInventoryCard}=await import('../src/lib/inventory-new-card.js');
+  const {registerPosNewProductRoutes}=await import('../src/lib/pos-new-product-card.js'),{createInventoryCard}=await import('../src/lib/inventory-new-card.js'),{requireOwnerProductAccess}=await import('../src/middleware/owner-product-access.js');
   const operator={id:'credential',operatorId:'credential',employeeId:'employee',companyId:'company',storeId:'A',terminalPos:'POS-02',fullName:'Session name',tokenType:'STORE_OPERATOR',role:'EMPLOYEE'},owner={id:'owner',companyId:'company',fullName:'Owner',role:'OWNER'};let principal=operator;
-  const app=express(),router=express.Router();app.use(express.json());app.use((req,res,next)=>{req.user=principal;next()});registerPosNewProductRoutes(router,db);app.use(router);app.use((error,req,res,next)=>res.status(error.status||500).json({error:error.message}));
+  const app=express(),router=express.Router();app.use(express.json());app.use((req,res,next)=>{req.user=principal;next()});registerPosNewProductRoutes(router,db);app.use(router);app.use('/api/owner-products',(req,_res,next)=>{req.staffGrant={capability:'products.create'};next()},requireOwnerProductAccess,()=>assert.fail('delegated action reached legacy owner-wide middleware'));app.use((error,req,res,next)=>res.status(error.status||500).json({error:error.message}));
   server=await new Promise(resolve=>{const listening=app.listen(0,'127.0.0.1',()=>resolve(listening))});const origin='http://127.0.0.1:'+server.address().port;
   const request=async(path='/stores/A/new-product/options',payload)=>{const response=await fetch(origin+path,payload===undefined?undefined:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});return {status:response.status,body:await response.json()}};
   const snapshot=async()=>JSON.stringify(await db.$queryRawUnsafe(`SELECT (SELECT json_agg(p ORDER BY "id") FROM "Product" p)::text AS products,(SELECT json_agg(s ORDER BY "id") FROM "StoreProduct" s)::text AS cards,(SELECT json_agg(b ORDER BY "id") FROM "ProductBarcode" b)::text AS barcodes,(SELECT json_agg(l ORDER BY "id") FROM "SupplierProductLink" l)::text AS links,(SELECT json_agg(m ORDER BY "id") FROM "StockMovement" m)::text AS movements,(SELECT json_agg(a ORDER BY "id") FROM "StoreOperatorAudit" a)::text AS audit`));
@@ -123,7 +123,10 @@ test('actual POS routes and shared creator enforce real PostgreSQL permissions, 
    let before=await snapshot();
    await assert.rejects(createInventoryCard(db,actor,body({barcodes:[],openingStock:0})),{code:'STAFF_ACCESS_DENIED'});assert.equal(await snapshot(),before);
    await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["products.read","products.create"]'::jsonb WHERE "userId"='delegated'`;
-   const zero=await createInventoryCard(db,actor,body({barcodes:[],openingStock:0,sku:'DELEGATED-ZERO'}));
+   principal=actor;
+   const options=await request('/api/owner-products/new-card/options?storeId=A');assert.equal(options.status,200,JSON.stringify(options.body));assert.deepEqual(options.body.suppliers.map(row=>row.id),['supplier']);
+   for(const path of ['/api/owner-products/catalog','/api/owner-products/new-card/options?storeId=B'])assert.equal((await request(path)).status,403);
+   const zeroHttp=await request('/api/owner-products/new-card',body({barcodes:[],openingStock:0,sku:'DELEGATED-ZERO'}));assert.equal(zeroHttp.status,201,JSON.stringify(zeroHttp.body));const zero=zeroHttp.body;
    assert.equal(Number((await db.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "productId"=${zero.id}`)[0].currentStock),0);
    assert.equal((await db.$queryRaw`SELECT "id" FROM "StockMovement" WHERE "productId"=${zero.id}`).length,0);
    before=await snapshot();await assert.rejects(createInventoryCard(db,actor,body({barcodes:[],openingStock:3})),{code:'STAFF_ACCESS_DENIED'});assert.equal(await snapshot(),before);
