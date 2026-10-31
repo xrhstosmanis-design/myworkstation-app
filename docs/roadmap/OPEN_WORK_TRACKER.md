@@ -210,6 +210,16 @@ Required isolated PostgreSQL proof: held StoreTransaction reader + old redundant
 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-30-pos-lock-convoy.md. Publish claim green/main before runtime edits. Single next action: merge this claim after checks, then implement audited bounded guard and causal native regression. No new manual/numbered PASS.
 
+## 29/10/2026 - CASH-AUTOMATIC-RESULT-13 / LIMITED LAB PASS / CLOUD DOWNLOAD OPEN
+
+Retained owner codex/cash-chat-reconciliation-20261026. Source #3284 exact6b2e2e1 full CI40956722742:4613server+8backup,0FAIL/0SKIP; merged3db98a4. Integrated main69198a7 exact fullCI40959327048:4634server+8backup,0FAIL/0SKIP. Normal guarded deploy40960468909 verified exact69198a7 healthy. Later main changes through43048bb are documentation only; the six owned runtime files are unchanged from3db98a4. No forced release, schema, permission, financial, settings, provider or real-mail action.
+
+Actual read-only desktop Chrome/Platform SuperAdmin acceptance29Oct, after21:52:53UTC (23:52Athens), recorded in CHECKPOINTS/EVIDENCE/cash-automatic-result-20261029/receipt.json. LAB store cmtpopbgo000trhb5ng9ytiru / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ / operatorLAB POS2 / MAIN. Existing27Oct closed row originally cash0/cards0 and manual pending1: refreshed report now produces automatic cash0/employee0 without CONFIRM, human signature or remaining manual gate. Clipboard exactly matches canonical text. Actual owner-email preview opens the canonical automatic result as a prompt; it was dismissed, never sent. Existing29Oct row preserves original shortage9.40EUR/cards0 and remains pending the next close, outside calculated totals. N40CONTROL29Oct remains rows0/cash0/cards0 before and after. No transaction, stock action, allocation, approval, revoke or financial input was repeated. Full raw stock/transaction-count deltas were not measured in this read-only UI batch.
+
+Cloud workbook download is NOT PASS: both the pre-source baseline and installed-source export displayed the created toast, but the browser download event failed and no completed workbook file was obtained. Workbook construction, canonical text and separate employee/day shortage/surplus have native/unit CI proof; this is not current live completed-download proof. The attempted chrome://downloads diagnostic was blocked by browser URL policy; no workaround was attempted. Root cause is unverified; do not label an application defect or restore whole-XLS PASS from the toast. Keep current transport/user-device acceptance OPEN. Historical28Oct export PASS is dated, not a universal current-browser claim.
+
+Remaining OPEN under the same owner/#3243: verify completed download through the ordinary HTTPS app on a supported/user browser; if reproducible, claim a bounded diagnosed client/download fix before source edits. Live nonzero cash attribution, real delivered email, actual real-store acceptance, full physical/bank/safe/refill/Netlink source proof and durable per-issue replies/closure/continuation are not covered by this limited PASS. Do not repeat the accepted zero-row read/copy/preview or any earlier transaction merely to fill these gaps. Do not create Estia or any other store. Manual docs/manual/cash-control/PASS.md, active, tracker, pending and central PDF are synchronized in this receipt PR; until green/main this administrative receipt is pending.
+
 ## 29/10/2026 21:52 UTC — CENTRAL-BACKOFFICE-ACCESS-01 / INSTALLED, READ-ONLY UI OBSERVED / AWAITING PERSONAL LAB ACCEPTANCE
 
 Retained owner Rizareio readiness / feat/central-backoffice-access-20261029. Personal-account source PR3280 is installed in healthy production69198a7c2d1b41d1d1dd24ddccf9cfb958dee8fa. Newest full mainCI40959327048 PASS:4634 tests,0FAIL,0SKIP plus backup8PASS, Windows and isolated wholesale/HTTP/browser checks. Ordinary guarded deploy40960468909 succeeded; exact healthy revision observed21:51:12UTC and independently rechecked. Technical receipt3291 merged43048bb, docsPRCI40959960335 and docsmainCI40960222801 green. Other owners/source preserved.
@@ -246,7 +256,7 @@ Read-only source inspection found reservation uses full model context and full t
 
 Required acceptance: causal tests for exact request reservation, cached/write/long-context worst-case bounds, missing counts and errors before generation, overrun REVIEW, insufficient balance, tenant OFF and unchanged Owner adapter; full CI/native/browser/build then ordinary guarded exact release. Separately measured new synthetic LAB invoice metering before customer invoice activation. Existing invoice/manual PASS transactions must not be replayed. Invoice/Azure full billing remains NOT TESTED. Single next action: publish this before-source claim green/main, then implement the bounded reserve correction and prepare exact configured-model tariffs. No whole-wallet PASS or scope release.
 
-## 29/10/2026 — CASH-AUTOMATIC-RESULT-13 / ASSIGNED BEFORE SOURCE / NOT IMPLEMENTED
+## 29/10/2026 — CASH-AUTOMATIC-RESULT-13 / HISTORICAL BEFORE-SOURCE CLAIM - SUPERSEDED BY LIMITED RECEIPT
 
 Retained owner codex/cash-chat-reconciliation-20261026; planned feat/cash-automatic-result-20261029. Explicit owner asks automatic investigation and results, with unresolved questions staying OPEN. No new store/Estia creation. Foundation12/source3278 has exact4582+8/0/0 proof on7bc3baf; reconciled833fa760 current fullCI40950440841 is pending. This independent continuation may be coded ONLY after THIS claim green/main, and integrated only on the green foundation12 source. No new LAB PASS or mail.
 
@@ -298,7 +308,7 @@ Required acceptance: owner own-company visibility; stocktaker count-only with fi
 
 Checkpoint: CHECKPOINTS/CHANGES/2026-10-29-central-backoffice-access.md. Single next action: complete green/main claim, then implement one bounded central account/admission slice. This owner retains scope until completion or named handoff.
 
-## 29/10/2026 — CASH-AUTOMATIC-AUDIT-12 / ASSIGNED BEFORE SOURCE / NOT IMPLEMENTED
+## 29/10/2026 — CASH-AUTOMATIC-AUDIT-12 / HISTORICAL BEFORE-SOURCE CLAIM - SUPERSEDED BY LIMITED RECEIPT
 
 Retained owner codex/cash-chat-reconciliation-20261026; planned branch feat/cash-automatic-audit-20261029. Explicit owner request: implement automatic cash investigation instead of requiring manual confirmation for every shift. Latest clarification: unresolved issues remain OPEN in the report; they are not automatically resolved and do not require all other work to stop. No Estia store creation, mapping or blanket historical discount approval. Baseline4498b64; existing limited native/external-input PASS preserved. 29Oct read-only LAB observation: one closed LAB POS2 row initial shortage9.40EUR/card0/pending1; manual email preview refused unreviewed shift. No financial/review/setting/email action was executed. That observation is not a whole-workflow FAIL/PASS.
 
