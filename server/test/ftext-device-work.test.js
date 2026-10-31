@@ -43,11 +43,16 @@ test('one HTTP work poll authenticates once, validates input and keeps old ping 
  const app=express();app.use(express.json());app.use(createFtextRouter({service,db:{},ensure:async()=>{}}));app.use((e,_req,res,_next)=>res.status(e.status||500).json({error:e.message}));
  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
  const post=(path,body)=>fetch(base+path,{method:'POST',headers:{Authorization:'Bearer fixture-token','Content-Type':'application/json'},body:JSON.stringify(body)});
+ const input={readinessVersion:1,recovering:false,settingsHash:ftextSettingsHash(f.settings),settings:f.settings};
  try{
-  let response=await post('/device/work-poll',{readinessVersion:1,recovering:true});assert.equal(response.status,200);assert.equal((await response.json()).request,null);assert.equal(authenticated,1);assert.equal(f.row.status,'PREPARED');
-  for(const input of [{readinessVersion:1},{readinessVersion:1,recovering:'false'},{readinessVersion:1,recovering:false,terminalPos:'FOREIGN'},{readinessVersion:2,recovering:false}])assert.equal((await post('/device/work-poll',input)).status,400);
+  let response=await post('/device/work-poll',{...input,recovering:true});assert.equal(response.status,200);assert.equal((await response.json()).request,null);assert.equal(authenticated,1);assert.equal(f.row.status,'PREPARED');
+  for(const invalid of [{readinessVersion:1},{...input,recovering:'false'},{...input,terminalPos:'FOREIGN'},{...input,readinessVersion:2}])assert.equal((await post('/device/work-poll',invalid)).status,400);
   assert.equal(authenticated,1);
-  response=await post('/device/work-poll',{readinessVersion:1,recovering:false});assert.equal(response.status,200);assert.equal((await response.json()).request.id,f.row.id);assert.equal(authenticated,2);
-  response=await post('/device/ping',{readinessVersion:1});assert.equal(response.status,200);assert.equal(authenticated,3);
+  for(const patch of [{settingsHash:'b'.repeat(64)},...['companyId','storeId','terminalPos','serialNumber','configurationId','lifecycleGeneration','workFolder'].map(key=>({settings:{...f.settings,[key]:'FOREIGN'}})),{settings:{...f.settings,workFolder:f.settings.workFolder+'\\'}}]){
+   response=await post('/device/work-poll',{...input,...patch});assert.equal(response.status,409);assert.equal(f.row.status,'PREPARED');assert.equal(f.calls.length,0,'Mismatched local identity must refuse before queue reads/dispatch');
+  }
+  const before=authenticated;
+  response=await post('/device/work-poll',input);assert.equal(response.status,200);assert.equal((await response.json()).request.id,f.row.id);assert.equal(authenticated,before+1);
+  response=await post('/device/ping',{readinessVersion:1});assert.equal(response.status,200);assert.equal(authenticated,before+2);
  }finally{await new Promise(r=>server.close(r));}
 });

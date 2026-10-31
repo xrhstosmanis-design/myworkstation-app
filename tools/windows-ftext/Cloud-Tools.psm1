@@ -44,7 +44,11 @@ function Invoke-FtextCloudPing($Config) {
 }
 function Invoke-FtextCloudPoll($Config,[bool]$Recovering=$false) {
     $token=Read-FtextDeviceToken $Config
-    $body=@{readinessVersion=1;recovering=$Recovering} | ConvertTo-Json -Compress
+    $settings=[ordered]@{}
+    foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode','serialNumber','workFolder','protocol','configurationId','lifecycleGeneration','cashEnabled','cashDepartments','cardEnabled','cardPayment')) {
+        if($Config.PSObject.Properties[$key]) {$settings[$key]=$Config.$key}
+    }
+    $body=@{readinessVersion=1;recovering=$Recovering;settingsHash=$Config.settingsHash;settings=$settings} | ConvertTo-Json -Depth 12 -Compress
     $response=Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/work-poll') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body $body -TimeoutSec 15
     Confirm-FtextCloudIdentity $Config $response
     foreach($key in @('request','lateReceipt','errorEvidence')) {if(-not $response.PSObject.Properties[$key]) {throw 'Incomplete scoped work response.'}}

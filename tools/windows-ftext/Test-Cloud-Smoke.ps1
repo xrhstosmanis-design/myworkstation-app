@@ -51,7 +51,7 @@ try {
         function script:Invoke-RestMethod {
             param($Method,$Uri,$Headers,$ContentType,$Body,$TimeoutSec)
             $script:pollCalls++;$data=$Body | ConvertFrom-Json
-            if(-not $Uri.EndsWith('/work-poll') -or $Headers.Authorization -cne 'Bearer fixture-only-device-token' -or $data.readinessVersion -ne 1 -or $data.recovering -isnot [bool]) {throw 'Wrong combined authenticated request'}
+            if(-not $Uri.EndsWith('/work-poll') -or $Headers.Authorization -cne 'Bearer fixture-only-device-token' -or $data.readinessVersion -ne 1 -or $data.recovering -isnot [bool] -or $data.settingsHash -cne $config.settingsHash -or $data.settings.workFolder -cne $config.workFolder -or $data.settings.configurationId -cne $config.configurationId) {throw 'Wrong combined authenticated request'}
             return [pscustomobject]@{companyId=$config.companyId;storeId=$config.storeId;terminalPos=$config.terminalPos;settingsHash=$(if($script:pollForeign){'b'*64}else{$config.settingsHash});settings=$config;fiscalCheckoutEnabled=$false;request=$(if($script:pollWork){@{id='unexpected'}}else{$null});lateReceipt=$null;errorEvidence=$null}
         }
         try {
