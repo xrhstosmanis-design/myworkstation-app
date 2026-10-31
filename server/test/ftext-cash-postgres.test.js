@@ -1,3 +1,4 @@
+import {releaseFtextCashFirstLine,ftextCashFirstLineReleased} from '../src/services/ftext-cash-rejection.js';
 import {recordFtextLateDeviceReceipt,pollFtextLateReceipt} from '../src/services/ftext-late-device-receipt.js';
 import {recordLateCashReceipt} from '../src/services/ftext-late-cash-receipt.js';
 import {ftextOriginalCommandHash} from '../src/services/ftext-error-evidence.js';
@@ -200,6 +201,20 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    }
    const next=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'late-reused'}));await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
    await assert.rejects(a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{...receipt,requestId:next.id,settingsHash:next.settingsHash,dayCounter:'45'})),e=>e.code==='FTEXT_CASH_RECEIPT_REUSED');
+   {
+   const unknown={requestId:next.id,settingsHash:next.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
+   const rejected=await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,unknown));
+   const l=rejected.plan.lines[0],files={intentBase64:encode(JSON.stringify({requestId:rejected.id,settingsHash:rejected.settingsHash,commandHash:ftextOriginalCommandHash(rejected,settings)})),reportBase64:encode(JSON.stringify(unknown)),rawResultBase64:encode(' 2\r\nOVER LIMIT\r\nInputLine: S|'+l.description+'|'+l.quantity+'|'+l.unitPrice+'||'+l.department+'\r\n\r\n'),reason:'Verified first line rejection',noReceipt:true};
+   const snapshot=async()=>({counts:await Promise.all(['Sale','Payment','StockMovement','StoreTransaction','StoreOperatorAudit'].map(table=>a.$queryRawUnsafe(`SELECT COUNT(*)::int AS n FROM "${table}"`))),stock:await a.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"`});
+   const before=await snapshot(),recoveryContext=async()=>({settings,device});
+   await assert.rejects(a.$transaction(tx=>releaseFtextCashFirstLine(tx,{...scope,storeId:'foreign'},next.id,'admin',files,{context:recoveryContext})));
+   const releases=await Promise.all([a,b].map(db=>db.$transaction(tx=>releaseFtextCashFirstLine(tx,scope,next.id,'admin',files,{context:recoveryContext}))));
+   for(const r of releases){assert.equal(Boolean(ftextCashFirstLineReleased(r)),true);assert.deepEqual(r.result,rejected.result);assert.equal(r.resultHash,rejected.resultHash);assert.equal(r.saleId,null);}
+   assert.deepEqual(releases[0].checkoutJson.ftextCashFirstLineRejection,releases[1].checkoutJson.ftextCashFirstLineRejection);
+   assert.equal(await findPendingFtextCashRequest(a,scope),null);assert.deepEqual(await snapshot(),before);
+   await assert.rejects(finalizeFtextCashRequest(a,next.id,scope,opts));assert.deepEqual(await snapshot(),before);
+
+   }
   });
 
  }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);try{if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`)}finally{await admin.$disconnect()}}

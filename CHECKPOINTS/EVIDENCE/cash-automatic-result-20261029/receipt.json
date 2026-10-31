@@ -1,0 +1,99 @@
+{
+  "recordedAt": "2026-10-29T21:58:24.834729+00:00",
+  "observationWindowUTC": "2026-10-29T21:52:53.436Z/2026-10-29T21:58:24.834729+00:00",
+  "timeZone": "Europe/Athens",
+  "operatorRole": "authenticated Platform SuperAdmin",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "storeName": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+  "operator": "LAB POS 2",
+  "terminalPos": "MAIN",
+  "revision": "69198a7c2d1b41d1d1dd24ddccf9cfb958dee8fa",
+  "sourcePR": 3284,
+  "sourceHead": "6b2e2e1eea54cf8a330af5ba158d055945d55f93",
+  "sourceMerge": "3db98a4056f9fc78882af1e23a9c7ca434f2a306",
+  "sourceCI": {
+    "run": 40956722742,
+    "server": 4613,
+    "backup": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "mainCI": {
+    "run": 40959327048,
+    "server": 4634,
+    "backup": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "deployRun": 40960468909,
+  "checks": {
+    "automaticResult27": "LAB PASS - no manual confirmation; cash0/card0; one row; automatic result and separate employee total; no human signature",
+    "copy27": "LAB PASS - clipboard exactly equals canonical rendered text",
+    "emailPreview27": "LAB PASS - prompt with canonical automatic result; dismissed before send",
+    "lastShift29": "LAB PASS - original shortage940cents/card0 unchanged; pending next close and excluded from calculated totals",
+    "control29": "LAB PASS - N40CONTROL rows0/cash0/card0 before and after",
+    "xlsxGenerationUI": "Observed created toast after same-report export",
+    "cloudCompletedDownload": "FAIL - both baseline and installed-source download events failed; downloaded file content NOT TESTED; root cause unverified",
+    "downloadDiagnostics": "chrome://downloads was blocked by browser URL policy; no workaround attempted"
+  },
+  "financialActions": [],
+  "manualReviewWrites": [],
+  "realEmailsSent": [],
+  "settingsChanges": [],
+  "providerActions": [],
+  "limits": [
+    "No live nonzero completed shift result tested; nonzero native source/payload and workbook content have CI proof only.",
+    "Actual delivered email, real-store acceptance, full physical cash/bank/safe/refill/Netlink proof and persisted per-issue continuation remain OPEN.",
+    "No new acceptance of completed cloud workbook downloads. Prior dated PASS remains historical.",
+    "No Estia/store creation or blanket discount approval.",
+    "Underlying stock and full transaction counts were not measured in this read-only UI acceptance; no such action was executed."
+  ],
+  "files": [
+    {
+      "name": "automatic-result.jpg",
+      "sha256": "0a0ab1b3957e3716fde6cf133bcb471f7c5c1137677f9473463d5e946d1c798b",
+      "bytes": 103826
+    },
+    {
+      "name": "baseline.json",
+      "sha256": "9753d83e117c983ef023fa67ab8f5ca2c6645f2df1b2802b8548f147bf1e9f0b",
+      "bytes": 813
+    },
+    {
+      "name": "before-27.txt",
+      "sha256": "60d8bde7e7d6989df6f5e3137fe5ef2061fab4fec21897be3464e9b9d59f6d19",
+      "bytes": 693
+    },
+    {
+      "name": "ci-main.txt",
+      "sha256": "754fb4324bb1db514531356be7d171ef9694d032f1256e70e45261545396116d",
+      "bytes": 1228
+    },
+    {
+      "name": "ci-source.txt",
+      "sha256": "165bd99e1049d0c95b6df6fd2027a3638529000ccb298ec3b81edce956d8e6d8",
+      "bytes": 1224
+    },
+    {
+      "name": "control.txt",
+      "sha256": "7676d35b56d78779dbe3e5cfe22ac30a915a7bc7fa9ba809833e9d78568dc225",
+      "bytes": 559
+    },
+    {
+      "name": "deploy.txt",
+      "sha256": "e30035add4f9e32d3cea144603abc1e078d219da72cb79c6bd09a5f197f67232",
+      "bytes": 702
+    },
+    {
+      "name": "report-27.txt",
+      "sha256": "35e45552ce5109142490c8cde10d69ffc7c0f0812788b786e350fbaf37cc95fc",
+      "bytes": 927
+    },
+    {
+      "name": "report-29.txt",
+      "sha256": "054905c44a52055d62a1d3933e6f5d055dde66474528b6e43000febcdabc4c61",
+      "bytes": 874
+    }
+  ],
+  "financialSourceMutationExecutedByThisAcceptance": false
+}

@@ -18,7 +18,7 @@ function eligible(row,settings,allowCard){
  return allowCard&&method==='CARD'&&settings.cardEnabled===true&&settings.cardPayment?.confirmed===true&&settings.cardPayment.code===row.plan.payment.code&&settings.cardPayment.resultFormat===row.checkoutJson?.ftextCardMode&&['POS_LINE8_OS7','OPERATOR_CONFIRMATION'].includes(settings.cardPayment.resultFormat)&&row.checkoutJson?.ftextCardDecision?.outcome!=='NO';
 }
 
-export function verifyLateCashFiles(row,settings,input,{allowCard=false}={}){
+export function verifyFtextOriginalUnknownFiles(row,settings,input,{allowCard=false}={}){
  const value=inputSchema.parse(input);
  if(!eligible(row,settings,allowCard)||row.settingsHash!==ftextSettingsHash(settings)||row.lifecycleGeneration!==settings.lifecycleGeneration||row.serialNumber!==settings.serialNumber||!row.resultHash||row.result?.description!==unknown||row.result?.outcome!=='REQUIRES_CHECK')fail();
  const intentBytes=bytes(value.intentBase64,4096),reportBytes=bytes(value.reportBase64,4096),raw=bytes(value.rawResultBase64,65536);
@@ -27,6 +27,11 @@ export function verifyLateCashFiles(row,settings,input,{allowCard=false}={}){
  const command=['RESULT_FILENAME|'+path.win32.join(settings.workFolder,'mws-cash-'+row.id+'.res'),...row.plan.lines.map(l=>'S|'+l.description+'|'+l.quantity+'|'+l.unitPrice+'||'+l.department),'PAY||'+row.plan.payment.code].join('\r\n')+'\r\n';
  const commandBytes=Buffer.from(Array.from(command,c=>{if(!cp1253.has(c))fail();return cp1253.get(c);}));
  if(hash(commandBytes)!==intent.commandHash||Number(row.plan.total)!==Number(row.total)||Number(row.plan.payment.amount)!==Number(row.total))fail();
+ return {value,raw};
+}
+
+export function verifyLateCashFiles(row,settings,input,{allowCard=false}={}){
+ const {value,raw}=verifyFtextOriginalUnknownFiles(row,settings,input,{allowCard});
  let text;try{text=new TextDecoder('windows-1253',{fatal:true}).decode(raw)}catch{fail();}
  const lines=text.split(/\r?\n/),date=lines[4]?.match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})$/);
  if(!/[\r\n]$/.test(text)||lines[0]?.trim()!=='0'||!date||lines[3]!==row.serialNumber||lines.slice(8).some(l=>l.trim()&&!/^\d+$/.test(l)))fail();

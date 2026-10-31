@@ -1,3 +1,4 @@
+import {releaseFtextCashFirstLine} from '../services/ftext-cash-rejection.js';
 import {ftextOperatorCardMode} from '../services/ftext-operator-card.js';
 import {recordLateCashReceipt} from '../services/ftext-late-cash-receipt.js';
 import {pollFtextLateReceipt,recordFtextLateDeviceReceipt} from '../services/ftext-late-device-receipt.js';
@@ -46,6 +47,10 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
   res.json({ok:true,status:committed?'SALE_COMMITTED':row.status,saleId:committed?.saleId||row.saleId||null,finalizationPending:row.status==='CONFIRMED'&&!committed});
  }));
  const prefix='/companies/:companyId/stores/:storeId';
+ router.post(prefix+'/installation/:terminalPos/requests/:requestId/rejected-cash-line',userAuth,manager,wrap(async(req,res)=>{
+  const scope=scoped(req),row=await db.$transaction(tx=>releaseFtextCashFirstLine(tx,scope,req.params.requestId,req.user.id,req.body,{context:service.cashContext}));
+  res.json({ok:true,request:ftextCashRequestView(row),allowResend:false});
+ }));
  router.post(prefix+'/installation/:terminalPos/requests/:requestId/late-cash-receipt',userAuth,manager,wrap(async(req,res)=>{
   const scope=scoped(req),row=await db.$transaction(tx=>recordLateCashReceipt(tx,scope,req.params.requestId,req.user.id,req.body,{context:service.cashContext}));
   const completed=await finalizeFtextCashRequest(db,row.id,scope,{context:service.cashContext});
