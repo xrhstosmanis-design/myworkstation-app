@@ -1,3 +1,16 @@
+## Detailed wallet history — candidate green / ordinary peer integration / AWAITING LAB
+
+Retained owner feat/ai-owner-wallet-20261022; continuation feat/ai-wallet-activity-details-20261031. Exacta0dde fullCI41248269184 all5SUCCESS (4978server+8backup/0FAIL/0SKIP, all realHTTP E2E); exactrecovery41248269149 SUCCESS7/0/0. Normal merge found newer peer FTEXT3425/main8e1128e6; preserve its source/workflows/Windows/tests and retain its equivalent explicit-date E2E correction. No wallet runtime change, financial or LAB/customer action. Fresh exact combined CI/main/guarded release still required; checkpoint CHECKPOINTS/CHANGES/2026-10-31-ai-wallet-activity-details.md.
+
+## Detailed wallet history — month-boundary E2E fixture / AWAITING LAB
+
+Retained owner feat/ai-owner-wallet-20261022, continuation feat/ai-wallet-activity-details-20261031. Exact4b2ceba3 CI41246974984 server4978/0/0 and backup8/0/0, client/browser/invariants/archive SUCCESS; final credit-ledger E2E failed because UTC31Oct date-only credit is outside the default current Greek November range after midnight. Test now explicitly requests its existing24-hour fixture interval, preserving the exact credit assertion and production behavior. No runtime correction or LAB/customer action. Exact refreshed full CI/main/release still required; checkpoint CHECKPOINTS/CHANGES/2026-10-31-ai-wallet-activity-details.md.
+
+## Detailed wallet history — native fixture dependency correction / AWAITING LAB
+
+Retained owner feat/ai-owner-wallet-20261022, continuation feat/ai-wallet-activity-details-20261031. PR3426 original fullCI41245826925 failed in one extracted fast-handoff native fixture missing the real new helper; wallet recovery41245826927 passed7/0/0. Test-only closure correction and durable initiator assertion; production source unchanged. Require fresh exact full CI/main/release before hosted acceptance. Checkpoint CHECKPOINTS/CHANGES/2026-10-31-ai-wallet-activity-details.md. No LAB/customer writes or old paid replay.
+
+
 ## 31/10/2026 — AUTO-REPORT-TWO-SHIFTS-01 / INSTALLED / SCOPED HOSTED LAB + USER SETTINGS PASS
 
 Bounded correction owner fix/automatic-report-two-shifts-20261031 completed after approved transfer/green claim3416. Source3418 finalhead d962bd7e16cdad2ccf0289c32a84385e3af828fc CI41242839435 SUCCESS; merge c2af89a72cea3b9c8d9964b15172fb9f09a84aea exactmainCI41243812623 SUCCESS (4972server+8backup PASS/0FAIL/0SKIP). Ordinary guarded deploy41245048490 preflight/pinned trigger/exact health SUCCESS, healthy c2af89 confirmed31Oct21:52:43UTC; independent health200/ok/revision matched. No direct hook, force, schema or guard bypass.
@@ -29,7 +42,7 @@ Bounded source after green/main claim: closed provenance helper; original author
 
 Required: source/actor/provider separation; authenticated operator/user/support/delegation vs resolver; async isolation; immutable metadata across SETTLED/REVIEW; legacy unknown; injection/privacy and tenant/store denial; filters/totals scoped to displayed rows; Greek currency and narrow screen accessibility. Meaningful pure/mounted/native PostgreSQL/HTTP and existing pricing/cache/idempotency regressions, full exact PR/main CI and ordinary guarded exact healthy release before hosted read-only history acceptance and any separately identified new LAB provider request. No old paid B/C/D or customer replay. New LAB E, if needed, requires fresh per-action controls and native flags restore; no funding, payment, approval or stock.
 
-Status NOT IMPLEMENTED/NOT TESTED, not PASS. Existing manual unchanged. Checkpoint CHECKPOINTS/CHANGES/2026-10-31-ai-wallet-activity-details.md. Same owner retained for this continuation and prior REVIEW/initial unmetered reader/Owner/email/model residuals. Other owners preserved, including delegated BackOffice actions and POS operator warehouse. Single next action: publish this claim green/main, then implement the bounded provenance and detailed history.
+Status SOURCE PREPARED / AWAITING EXACT FULL NATIVE CI AND HOSTED ACCEPTANCE, not PASS. Local focused68 and final32 tests PASS, broad4328PASS/326nativeSKIP, Node20 build/TABLE_SERVICE PASS. Closed original-caller snapshots and shared Admin/Owner detailed history are implemented; no new provider/LAB/real-customer action. Claim3424/CI41244157022 mergedc6de9ad7 before source. Exact source, remaining native/hosted proof and protected invariants in the checkpoint. Existing manual unchanged. Checkpoint CHECKPOINTS/CHANGES/2026-10-31-ai-wallet-activity-details.md. Same owner retained for this continuation and prior REVIEW/initial unmetered reader/Owner/email/model residuals. Other owners preserved, including delegated BackOffice actions and POS operator warehouse. Single next action: exact full source/native/main CI, guarded release and measured new hosted acceptance. The preceding before-source design remains historical scope.
 
 ## 31/10/2026 - POS-OPERATOR-INVENTORY-01 / ASSIGNED BEFORE SOURCE / NOT IMPLEMENTED
 

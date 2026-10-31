@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import {publicWalletActivity} from '../services/ai-wallet-activity.js';
 import {acquireOriginal,fetchOriginalPdf,readOriginalPdf,verifyOriginalText} from "../mydata-original.js";
 import {sameInvoiceNumber,invoiceNumberParts,lockInvoiceStore,previewInvoiceReconciliation} from "./invoice-common-draft.js";
 
@@ -57,7 +58,8 @@ export async function assertInboxSelectionUnambiguous(db,scope){
 
 // Only an untouched, empty myDATA shell may enter the existing durable reader.
 // Populated/reviewed/posted drafts and retries retain their original rows/jobs.
-export async function queueEmptyInboxRead(db,identity,match,payment){
+export async function queueEmptyInboxRead(db,identity,match,payment,walletActivity=null){
+  const capturedActivity=publicWalletActivity(walletActivity,identity);
   return db.$transaction(async tx=>{
     await lockInvoiceStore(tx,identity.companyId,identity.storeId);
     const jobs=await tx.$queryRaw`SELECT j."resultJson",j."status",d."status" AS "documentStatus",o."status" AS "orderStatus",d."supplierId",d."documentNumber",d."documentDate",d."totalGross",d."documentType",
@@ -69,7 +71,7 @@ export async function queueEmptyInboxRead(db,identity,match,payment){
     const job=jobs[0];
     if(!job||job.documentStatus!=="DRAFT"||job.orderStatus!=="NEW"||job.orderLines!==0||job.documentLines!==0||job.resultJson?.posHandoff||!["AWAITING_APPROVAL","LOCAL_COMPLETE"].includes(job.status))return false;
     if(job.supplierId!==identity.supplierId||job.documentType!==identity.documentType||new Date(job.documentDate).toISOString().slice(0,10)!==identity.documentDate||Math.abs(Number(job.totalGross)-Number(identity.totalGross))>.050001||!sameInvoiceNumber(identity.documentNumber,...[invoiceNumberParts(job.documentNumber).series,invoiceNumberParts(job.documentNumber).number]))return false;
-    const handoff={version:"POS_FAST_HANDOFF_V1",fullReader:"ASSISTANT",inboxInitialRead:true,...identity,documentNumber:match.purchaseNumber,settlementMode:payment?"PAID":"CREDIT",paymentTransactionId:payment?.id||null,pageIndex:0,pageCount:1,pageJobIds:[match.jobId],primaryJobId:match.jobId,queuedAt:new Date().toISOString()};
+    const handoff={...(capturedActivity?{walletActivity:capturedActivity}:{}),version:"POS_FAST_HANDOFF_V1",fullReader:"ASSISTANT",inboxInitialRead:true,...identity,documentNumber:match.purchaseNumber,settlementMode:payment?"PAID":"CREDIT",paymentTransactionId:payment?.id||null,pageIndex:0,pageCount:1,pageJobIds:[match.jobId],primaryJobId:match.jobId,queuedAt:new Date().toISOString()};
     await tx.$executeRaw`UPDATE "AiReaderJob" SET "status"='POS_DRAFT_READY',"stage"='POS_DRAFT_READY',"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff})}::jsonb,"updatedAt"=NOW() WHERE "id"=${match.jobId} AND "companyId"=${identity.companyId} AND "storeId"=${identity.storeId}`;
     return true;
   });

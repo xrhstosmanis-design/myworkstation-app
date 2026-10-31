@@ -53,9 +53,9 @@ export function assistantRowsToProductLines(reading,{pageCount,totalGross}){
   return mapped;
 }
 
-export async function readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross}){
+export async function readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross,activity}){
   assertCustomerDemoOutboundAllowed({companyId,storeId});
-  return await withInvoiceWalletScope({companyId,storeId},async()=>{
+  return await withInvoiceWalletScope({companyId,storeId,activity},async()=>{
   if(!process.env.OPENAI_API_KEY)throw new Error("Δεν έχει ρυθμιστεί ο βοηθός τιμολογίου στον server.");
   if(!Array.isArray(pageJobIds)||pageJobIds.length<1||pageJobIds.length>5||new Set(pageJobIds).size!==pageJobIds.length)throw new Error("Λείπει η πλήρης λίστα σελίδων του τιμολογίου.");
   const pages=[];
