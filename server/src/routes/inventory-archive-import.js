@@ -23,7 +23,7 @@ const txt=value=>String(value??"").trim();
 const num=value=>{const normalized=String(value??"").replace(/\s/g,"").replace(",",".");if(!normalized)return null;const n=Number(normalized);return Number.isFinite(n)?n:null};
 const yes=value=>["1","TRUE","YES","ΝΑΙ","NAI","Ν"].includes(txt(value).toUpperCase());
 
-function requireAccess(req,res,next){if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η εισαγωγή ειδών επιτρέπεται μόνο σε Super Admin, Ιδιοκτήτη ή Admin."});next()}
+function requireAccess(req,res,next){if(req.user?.staffAccess===true&&req.staffGrant?.capability==='products.read'&&req.method==='GET'&&req.path==='/')return next('router');if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η εισαγωγή ειδών επιτρέπεται μόνο σε Super Admin, Ιδιοκτήτη ή Admin."});next()}
 router.use(requireAccess);
 
 export function readWorkbook(dataUrl){
