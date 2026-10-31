@@ -3,11 +3,15 @@ on:
   pull_request:
     paths:
       - 'tools/windows-ftext/**'
+      - 'server/src/services/ftext-cash-review.js'
+      - 'server/test/ftext-cash-review.test.js'
       - '.github/workflows/ftext-windows.yml'
   push:
     branches: [main]
     paths:
       - 'tools/windows-ftext/**'
+      - 'server/src/services/ftext-cash-review.js'
+      - 'server/test/ftext-cash-review.test.js'
       - '.github/workflows/ftext-windows.yml'
 jobs:
   status-foundation:
