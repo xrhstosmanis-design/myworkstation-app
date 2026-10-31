@@ -6,7 +6,7 @@ import {authorizeMonthlyInvoiceAuditInTransaction} from './monthly-invoice-audit
 import {assertLifecycleMutation,normalizeLifecycleGeneration} from './store-lifecycle-generation.js';
 import {monthlyInventorySnapshotPeriod} from './monthly-inventory-snapshot-period.js';
 import {validateMonthlyInventorySnapshotSchema} from './monthly-inventory-snapshot-schema.js';
-import {normalizeMonthlyCaptureExecution,authorizeMonthlyCaptureLookupInTransaction,authorizeMonthlyCaptureWriteInTransaction,requireMonthlyCaptureContext,monthlyCaptureWriteGuardParameters} from './monthly-inventory-capture-authorization.js';
+import {normalizeMonthlyCaptureExecution,requireMonthlyCaptureAttempt,authorizeMonthlyCaptureLookupInTransaction,authorizeMonthlyCaptureWriteInTransaction,requireMonthlyCaptureContext,monthlyCaptureWriteGuardParameters,finishMonthlyCaptureMutationInTransaction} from './monthly-inventory-capture-authorization.js';
 
 const fail=code=>{throw Object.assign(new Error(code),{code,status:409})};
 const sha=text=>createHash('sha256').update(text,'utf8').digest('hex');
@@ -102,10 +102,11 @@ function automationReceipt(row,key,status){
  // Existing personal receipt shape and historical principal bytes stay intact.
  return Object.freeze({...receipt,capturePrincipal:Object.freeze({...row.capturePrincipal})});
 }
-function admittedAutomation(db,execution,sourceRevision,stage,perform){
+function admittedAutomation(db,execution,sourceRevision,attempt,stage,perform){
+ requireMonthlyCaptureAttempt(db,execution,attempt);
  return db.$transaction(async tx=>{
   await tx.$executeRawUnsafe("SET LOCAL statement_timeout='8000ms'");
-  const context=await (stage==='LOOKUP'?authorizeMonthlyCaptureLookupInTransaction:authorizeMonthlyCaptureWriteInTransaction)(tx,execution,{sourceRevision});
+  const context=await (stage==='LOOKUP'?authorizeMonthlyCaptureLookupInTransaction:authorizeMonthlyCaptureWriteInTransaction)(tx,execution,{sourceRevision,db,attempt});
   const scope=requireMonthlyCaptureContext(tx,context,stage);
   const current=await assertLifecycleMutation(tx,{companyId:scope.companyId,storeId:scope.storeId},scope.lifecycleGeneration,{lock:true});
   if(!current.enrolled)fail('MONTHLY_SNAPSHOT_ENROLLMENT_REQUIRED');
@@ -116,11 +117,16 @@ function admittedAutomation(db,execution,sourceRevision,stage,perform){
   // here rolls back our own insertion and cannot remove a different winner.
   const [last]=await tx.$queryRawUnsafe(`SELECT EXISTS (SELECT 1 FROM "MonthlyInventoryCaptureJob" j JOIN "MonthlyInventoryCaptureGrant" g ON g."id"=j."grantId" AND g."companyId"=j."companyId" AND g."storeId"=j."storeId" AND g."lifecycleGeneration"=j."lifecycleGeneration" AND g."purpose"=j."purpose" AND g."purposeVersion"=j."purposeVersion" WHERE j."id"=$1 AND j."leaseTokenHash"=$2 AND j."claimedSourceRevision"=$3 AND j."companyId"=$5 AND j."storeId"=$6 AND j."lifecycleGeneration"=$7::bigint AND j."issueMonth"=$8 AND j."status"='LEASED' AND j."purpose"='MONTHLY_INVENTORY_CAPTURE' AND j."purposeVersion"=1 AND g."revision"=j."grantRevision" AND g."activationId"=j."activationId" AND g."active"=TRUE AND g."revokedAt" IS NULL AND j."leaseExpiresAt">clock_timestamp() AND clock_timestamp()<=$4::timestamptz) AS valid`,execution.jobId,sha(execution.leaseToken),sourceRevision,scope.validUntil,scope.companyId,scope.storeId,scope.lifecycleGeneration,scope.month);
   if(last?.valid!==true)fail('MONTHLY_CAPTURE_AUTHORIZATION_EXPIRED');
+  // The last actual DB clock must also still select this nominal month. An
+  // insertion/readback can cross the next Athens07 boundary inside its lease.
+  await finishMonthlyCaptureMutationInTransaction(tx,context);
+  // A process-control change during the final SQL await must also roll back.
+  requireMonthlyCaptureAttempt(db,execution,attempt);
   return receipt;
  },{isolationLevel:'ReadCommitted',maxWait:2000,timeout:30000});
 }
 
-export function createMonthlyInventorySnapshotRepository(db,{sourceRevision=process.env.RENDER_GIT_COMMIT||process.env.GIT_COMMIT}={}){
+export function createMonthlyInventorySnapshotRepository(db,{sourceRevision=process.env.RENDER_GIT_COMMIT||process.env.GIT_COMMIT,attempt}={}){
  return Object.freeze({
   async findExisting(actor,input){
    const {storeId,generation,period}=lookupRequest(input);
@@ -132,14 +138,26 @@ export function createMonthlyInventorySnapshotRepository(db,{sourceRevision=proc
   },
   async findExistingAutomation(input){
    const execution=normalizeMonthlyCaptureExecution(input);
-   return admittedAutomation(db,execution,sourceRevision,'LOOKUP',async(tx,context,scope)=>{
+   return admittedAutomation(db,execution,sourceRevision,attempt,'LOOKUP',async(tx,context,scope)=>{
     const key=[scope.companyId,scope.storeId,scope.lifecycleGeneration,scope.month],row=(await tx.$queryRawUnsafe(select,...key))[0];
     return row?automationReceipt(row,key,'ALREADY_CAPTURED'):null;
    });
   },
+  async findExistingForMonthlySettlementInTransaction(tx,context){
+   // Only a genuine same-transaction SETTLEMENT context can select this path.
+   // Reuse the exact immutable-byte/hash/coverage/principal validator above;
+   // a caller-supplied success receipt is never settlement evidence.
+   const scope=requireMonthlyCaptureContext(tx,context,'SETTLEMENT',db);
+   await validateMonthlyInventorySnapshotSchema(tx);
+   const key=[scope.companyId,scope.storeId,scope.lifecycleGeneration,scope.month];
+   const row=(await tx.$queryRawUnsafe(select,...key))[0];
+   return row?automationReceipt(row,key,'ALREADY_CAPTURED'):null;
+  },
   async storeAutomation(input,facts){
-   const execution=normalizeMonthlyCaptureExecution(input),supplied=request(facts),{candidate}=supplied,key=identity(candidate);
-   return admittedAutomation(db,execution,sourceRevision,'WRITE',async(tx,context,scope)=>{
+   const execution=normalizeMonthlyCaptureExecution(input);
+   requireMonthlyCaptureAttempt(db,execution,attempt);
+   const supplied=request(facts),{candidate}=supplied,key=identity(candidate);
+   return admittedAutomation(db,execution,sourceRevision,attempt,'WRITE',async(tx,context,scope)=>{
     if([scope.companyId,scope.storeId,scope.lifecycleGeneration,scope.month].some((value,index)=>value!==key[index])||candidate.sourceRevision!==sourceRevision)fail('MONTHLY_SNAPSHOT_SCOPE_INVALID');
     const existing=(await tx.$queryRawUnsafe(select,...key))[0];if(existing)return automationReceipt(existing,key,'ALREADY_CAPTURED');
     const beforeInsert=await clock(tx),age=Date.parse(beforeInsert)-Date.parse(supplied.sourceReadFinishedAt);

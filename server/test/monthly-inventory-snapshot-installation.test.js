@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {mkdtemp,writeFile,symlink,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {monthlyInventorySnapshotInstallRequest as request,runMonthlyInventorySnapshotInstall as run} from '../scripts/monthly-inventory-snapshot-install.mjs';
-import {createMonthlyInventorySnapshotInstallation as create} from '../src/services/monthly-inventory-snapshot-installation.js';
+import {monthlyInventorySnapshotInstallRequest as request,monthlyInventoryCaptureInstallRequest as captureRequest,runMonthlyInventorySnapshotInstall as run} from '../scripts/monthly-inventory-snapshot-install.mjs';
+import {createMonthlyInventorySnapshotInstallation as create,createMonthlyInventoryCaptureInstallation as createCapture} from '../src/services/monthly-inventory-snapshot-installation.js';
 import {createLifecycleExecutionCore} from '../src/services/store-lifecycle-executor.js';
 import {monthlyInventorySnapshotLifecycleManifestProposal} from '../src/services/monthly-inventory-snapshot-schema.js';
 const revision='a'.repeat(40),env={NODE_ENV:'production',RENDER_SERVICE_ID:'srv-d9isenfavr4c73bdh52g',RENDER_GIT_COMMIT:revision,MWS_MONTHLY_INVENTORY_INSTALL_ENABLED:'true'},actor={id:'synthetic-operator',isSuperAdmin:true},scope={companyId:'synthetic-company',storeId:'synthetic-store'};
@@ -54,4 +54,27 @@ test('operator reads one bounded regular UTF8 packet before any DB import',async
   await assert.rejects(invoke(link));await assert.rejects(invoke(directory));
   for(const bytes of [Buffer.alloc(65537,32),Buffer.from([0xff,0xff]),Buffer.from('{broken'),Buffer.from('')]){await writeFile(file,bytes);await assert.rejects(invoke(file));}
  }finally{await rm(directory,{recursive:true,force:true});}
+});
+
+
+test('CAPTURE3 is a separate closed purpose/profile with its own dormant enablement and no legacy output changes',async()=>{
+ const capEnv={...env,MWS_MONTHLY_INVENTORY_CAPTURE_INSTALL_ENABLED:'true'};
+ const capArgs=[...args.map(value=>value==='MONTHLY-INVENTORY-INSTALL-ONLY'?'MONTHLY-INVENTORY-CAPTURE3-INSTALL-ONLY':value),'--profile','CAPTURE3'];
+ const accepted=captureRequest(capArgs,capEnv);assert.equal(accepted.installationProfile,'CAPTURE3');assert.equal(accepted.actor.id,'service-operator:render:MONTHLY-INVENTORY-CAPTURE3-INSTALL-ONLY');assert.equal(accepted.enabled,true);assert.deepEqual(accepted.scope,scope);
+ assert.throws(()=>request(capArgs,capEnv),refused);
+ assert.equal(request(args.map(value=>value===scope.companyId?'--profile':value),env).scope.companyId,'--profile');assert.equal(captureRequest(capArgs.map(value=>value===scope.companyId?'--profile':value),capEnv).scope.companyId,'--profile');
+ for(const input of [args,[...capArgs,'--profile','CAPTURE3'],capArgs.map(value=>value==='CAPTURE3'?'AUTO':value),capArgs.map(value=>value==='MONTHLY-INVENTORY-CAPTURE3-INSTALL-ONLY'?'MONTHLY-INVENTORY-INSTALL-ONLY':value),['describe','--profile','SNAPSHOT']])assert.throws(()=>captureRequest(input,capEnv),refused);
+ for(const value of [undefined,'TRUE','false'])assert.throws(()=>captureRequest(capArgs,{...capEnv,MWS_MONTHLY_INVENTORY_CAPTURE_INSTALL_ENABLED:value}),refused);
+ const description=createCapture(null,{sourceRevision:revision}).describe(),legacy=create(null,{sourceRevision:revision}).describe();
+ assert.equal(description.installationProfile,'CAPTURE3');assert.equal(description.oldPlanHash,legacy.oldPlanHash);assert.notEqual(description.targetPlanHash,legacy.targetPlanHash);assert.equal(description.productionActivated,false);assert.equal(description.captureEnabled,false);
+ assert.deepEqual(await run(['describe','--profile','CAPTURE3'],{GIT_COMMIT:revision}),description);
+ assert.equal(Object.hasOwn(legacy,'installationProfile'),false);assert.deepEqual(request(['describe'],{GIT_COMMIT:revision}),{action:'describe',sourceRevision:revision,enabled:false});assert.deepEqual(await run(['describe'],{GIT_COMMIT:revision}),legacy);
+});
+
+test('CAPTURE3 rejects snapshot packets and malformed scope before database access',async()=>{
+ let calls=0;const db={$transaction(){calls++;throw new Error('DB must not start')}};
+ const cap=createCapture(db,{sourceRevision:revision,enabled:true}),legacy=create(null,{sourceRevision:revision}).describe();
+ const packet={...scope,sourceRevision:revision,schema:'public',profile:'BASE',catalogueSignature:'b'.repeat(64),globalStateSignature:'c'.repeat(64),oldPlanHash:legacy.oldPlanHash,targetPlanHash:legacy.targetPlanHash,guardsInstalled:false,enrollment:{enrolled:false,generation:null,planHash:null,maintenance:null,retired:null,operationId:null}};
+ await assert.rejects(cap.install(actor,{...scope,packet}),{code:'MONTHLY_INSTALL_STATE_CHANGED'});
+ await assert.rejects(cap.inspect(actor,{...scope,extra:true}));await assert.rejects(createCapture(db,{sourceRevision:revision}).install(actor,{...scope,packet}));assert.equal(calls,0);
 });
