@@ -1,0 +1,695 @@
+{
+  "bulk_audit_count": 2,
+  "ledger": [
+    {
+      "count": 6,
+      "hash": "a14c10e5b7204ea649c5bd19393b09fc",
+      "paymentMethod": null,
+      "sessionId": "0dc8e497-4975-43db-a180-68e3a7e001ca",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 9
+    },
+    {
+      "count": 6,
+      "hash": "1526e255277dd5ce1d17370d1cd07fee",
+      "paymentMethod": null,
+      "sessionId": "127e3512-e7ef-4bf9-9df0-a3e93b7a59a4",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 4.7
+    },
+    {
+      "count": 6,
+      "hash": "f9c96569c24e352d09dc06e749d2cfb2",
+      "paymentMethod": null,
+      "sessionId": "1c3d9103-f42e-4583-aa65-5a71f6aeb6b0",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 4.1
+    },
+    {
+      "count": 10,
+      "hash": "7691320356c08c7e0638a0c8ed05280c",
+      "paymentMethod": null,
+      "sessionId": "1ec9982e-a525-476d-b9e3-581ff07b3945",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 9.3
+    },
+    {
+      "count": 1,
+      "hash": "cd3f35677d105e9c409299c43aa7e096",
+      "paymentMethod": "CASH_SHIFT",
+      "sessionId": "2c2b6997-52dc-4fba-8654-5d810bf76a3d",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 50.69
+    },
+    {
+      "count": 2,
+      "hash": "667fdf5f261463a8d37e6bbca92cdd4a",
+      "paymentMethod": "CASH_SHIFT",
+      "sessionId": "3953929c-0be6-44d9-827a-282faab1dc6f",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 0.2
+    },
+    {
+      "count": 9,
+      "hash": "ce3503fb2da0279be3ce25992d90f66a",
+      "paymentMethod": null,
+      "sessionId": "3953929c-0be6-44d9-827a-282faab1dc6f",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 3
+    },
+    {
+      "count": 8,
+      "hash": "eef79de911e9bd0185a5fa4e2e63fdca",
+      "paymentMethod": null,
+      "sessionId": "3a186861-5fa0-4d44-a133-d3ea888c6d81",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 1.2
+    },
+    {
+      "count": 1,
+      "hash": "e3a065191c6b3649ca7786f0c870b9f0",
+      "paymentMethod": null,
+      "sessionId": "3d894e2f-c467-4293-9f57-4553c653601d",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 0.7
+    },
+    {
+      "count": 2,
+      "hash": "a7a7228ecd33fbcf345d774944ba93f9",
+      "paymentMethod": null,
+      "sessionId": "4d7cf5a7-5042-4cd8-9529-81afcda278a6",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 2.4
+    },
+    {
+      "count": 5,
+      "hash": "f4b2b6c804ba6884616285df65c8daac",
+      "paymentMethod": null,
+      "sessionId": "4d853b34-4ce3-4086-970e-14537cf1fd7b",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 4.5
+    },
+    {
+      "count": 1,
+      "hash": "7a7977fc28c35032b4dc43be8ac35fd8",
+      "paymentMethod": null,
+      "sessionId": "66fb2dce-5e4d-44c2-b6cf-d05e495fba5d",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 0.5
+    },
+    {
+      "count": 3,
+      "hash": "80697e315a8c10a71cd61d10a3023ad3",
+      "paymentMethod": null,
+      "sessionId": "695ec96e-9a72-4977-a705-d5cf3756951e",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 3
+    },
+    {
+      "count": 2,
+      "hash": "77ed4131b1b4f842e0e48a265b1bd33c",
+      "paymentMethod": null,
+      "sessionId": "6d682e12-1a17-44c6-bb7b-64762c741643",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 1
+    },
+    {
+      "count": 5,
+      "hash": "558124b4f96233b6b067b85c8502f204",
+      "paymentMethod": "CASH_SHIFT",
+      "sessionId": "74dfafb0-415a-4129-a87d-8a286eb2e94b",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 47.32
+    },
+    {
+      "count": 14,
+      "hash": "1aef99e54813f3949452417f6e97c365",
+      "paymentMethod": null,
+      "sessionId": "74dfafb0-415a-4129-a87d-8a286eb2e94b",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 8.9
+    },
+    {
+      "count": 2,
+      "hash": "190bdbaa117caf928181280d4c609072",
+      "paymentMethod": null,
+      "sessionId": "7f430556-5629-4a84-a9db-f48b27af3dae",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 0
+    },
+    {
+      "count": 2,
+      "hash": "5e691656b6a58cbd5030f8cde06c8f4e",
+      "paymentMethod": "CASH_SHIFT",
+      "sessionId": "865e6a48-ccbe-4238-8580-6d70682050a5",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 24
+    },
+    {
+      "count": 1,
+      "hash": "f17a5ea534137a04b4e34f98ae0018b3",
+      "paymentMethod": null,
+      "sessionId": "865e6a48-ccbe-4238-8580-6d70682050a5",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 1.4
+    },
+    {
+      "count": 1,
+      "hash": "9fe1aa9ef1bbdf9d83fe6be35d48a33d",
+      "paymentMethod": "CASH_SHIFT",
+      "sessionId": "88e654a5-9cf6-47da-bcb7-b4e16b1744ca",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 3
+    },
+    {
+      "count": 1,
+      "hash": "b35e584e246f9258a13e99967bf6519d",
+      "paymentMethod": "CASH_SHIFT",
+      "sessionId": "9bb5b452-5a46-4b10-8b97-cce24c5c7e2c",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 76.58
+    },
+    {
+      "count": 4,
+      "hash": "305a3dccfce673f465de1b947094aee0",
+      "paymentMethod": null,
+      "sessionId": "9eb71340-941f-4c3f-a7be-d9368d6b47c0",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 0.5
+    },
+    {
+      "count": 3,
+      "hash": "d5bea8134433a1ab3faa436797ec5bbb",
+      "paymentMethod": null,
+      "sessionId": "af1b7fd4-830c-4163-92f2-d7b1e356bc56",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 0.5
+    },
+    {
+      "count": 2,
+      "hash": "3c8a4a35cfd15eee8b39e4c3cf866871",
+      "paymentMethod": null,
+      "sessionId": "b39ef41a-1d1a-4887-ac88-50ce92903773",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 6
+    },
+    {
+      "count": 1,
+      "hash": "25d58e1f451bb9a722e3eee94bfb0c9b",
+      "paymentMethod": null,
+      "sessionId": "b9a931e5-054e-4df9-8195-e781fe13c30d",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 0.5
+    },
+    {
+      "count": 3,
+      "hash": "cc81117a6ae7d04f820cdf36a79abe71",
+      "paymentMethod": null,
+      "sessionId": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 2.2
+    },
+    {
+      "count": 4,
+      "hash": "92584d2beca4517587c9e722ed2058b0",
+      "paymentMethod": null,
+      "sessionId": "e8569e5f-2060-4fa6-944f-85ec7dcb8b37",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 2.5
+    },
+    {
+      "count": 2,
+      "hash": "7fd7bf7bb76b47cffa2975aeace74b4c",
+      "paymentMethod": "CASH_SHIFT",
+      "sessionId": "e8fab593-8d15-4cf7-968b-23c893f1db53",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 4739.98
+    },
+    {
+      "count": 2,
+      "hash": "c1237a7bcfb16e901eb1a8307325e9d8",
+      "paymentMethod": "CASH_SHIFT",
+      "sessionId": "f23ce42c-4ea2-453c-9710-65d09eb90480",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 120
+    },
+    {
+      "count": 1,
+      "hash": "052f5b2cc318b34fc1a81f29d0889b29",
+      "paymentMethod": null,
+      "sessionId": "f23ce42c-4ea2-453c-9710-65d09eb90480",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 0.5
+    },
+    {
+      "count": 1,
+      "hash": "f99a1327ce34f909679b5f86132dcda0",
+      "paymentMethod": null,
+      "sessionId": "f8093728-6752-40ca-b83b-b85d2ffcb5ba",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 0.5
+    },
+    {
+      "count": 12,
+      "hash": "80c416fd24eab024068abb2d1b7ebb59",
+      "paymentMethod": "BANK_TRANSFER",
+      "sessionId": null,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 253.94
+    },
+    {
+      "count": 11,
+      "hash": "0df09fbb9dd746f84815530bfee2f8ac",
+      "paymentMethod": "CORPORATE_CARD",
+      "sessionId": null,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 265.11
+    }
+  ],
+  "movements": [
+    {
+      "count": 14,
+      "hash": "30096d609c764eee5a8f07f767f5e0ae",
+      "latest": "2026-10-10T11:49:05.817",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "count": 1,
+      "hash": "4efb062bcf34a34cfc87068e448bd9e5",
+      "latest": "2026-10-10T08:15:01.673",
+      "storeId": "cmuk8gxui000ppabfykdxwb1y"
+    }
+  ],
+  "observed_at": "2026-10-31T10:17:37.63473Z",
+  "other_product_hash": "245f87e299aec02f25763e47d21625c9",
+  "payments": [
+    {
+      "amount": 2.9,
+      "count": 6,
+      "hash": "1229858e708765fe9a7aba67b8d71b7c",
+      "method": "CARD",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "amount": 65.2,
+      "count": 81,
+      "hash": "b7f03638daa5f9d3c0a626f2ae90fc4c",
+      "method": "CASH",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "amount": 0.8,
+      "count": 1,
+      "hash": "b5450fbd4420d6dad5b324e1fbb31226",
+      "method": "CREDIT",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "amount": 0,
+      "count": 2,
+      "hash": "b952111620abbcf892f923ebaa6bae25",
+      "method": "IRIS",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    }
+  ],
+  "price_history": 0,
+  "product": {
+    "active": true,
+    "allowDiscount": true,
+    "allowPosPriceChange": false,
+    "capacity": null,
+    "categoryId": "a3d2beff-b953-44cc-bf21-f6730f5f0e35",
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "costPrice": 0,
+    "createdAt": "2026-09-09T17:58:53.008",
+    "deliveryPrice": null,
+    "description": null,
+    "discountA": 0,
+    "discountB": 0,
+    "discountC": 0,
+    "eDeliveryEnabled": false,
+    "efoodEnabled": false,
+    "efoodPrice": null,
+    "freeSalePrice": false,
+    "id": "b1466a68-c47b-47cc-9139-69e6f9f7f978",
+    "isModifier": false,
+    "isRecipe": false,
+    "isService": false,
+    "isSet": false,
+    "masterProductId": "mp_1f466e2a3616c4b34c857f599dba288145abba05",
+    "minOrderQuantity": null,
+    "modifierGroup": null,
+    "name": "LAB EXCEL TEST 1",
+    "negativeStockWarning": false,
+    "productCompanyId": "b5489615-716a-4c53-b354-3dd3513f670b",
+    "publishPrices": false,
+    "publishStock": false,
+    "salePrice": 1.2,
+    "sku": "LAB-EXCEL-20260909-01",
+    "staffPrice": null,
+    "subcategoryId": "6da6921b-1acf-4bd3-852a-ec85c5def9bb",
+    "trackStock": true,
+    "unit": "PIECE",
+    "updatedAt": "2026-10-31T10:17:30.116",
+    "vatDepartmentId": "295ed004-943a-4793-9939-88c695841215",
+    "vatRate": 13,
+    "vatVerified": true,
+    "woltEnabled": false,
+    "woltPrice": null
+  },
+  "sales": [
+    {
+      "count": 90,
+      "hash": "508103ac834b4e8bcb465c76241f61b3",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "total": 68.9
+    }
+  ],
+  "shifts": [
+    {
+      "hash": "2e8ed358b2bf9204119e7847c609757b",
+      "id": "00fb75c5-da00-4c85-a610-f264becdc1bd",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-02"
+    },
+    {
+      "hash": "0bab70a6e19fbbb73eb801692cf0a8b3",
+      "id": "0dc8e497-4975-43db-a180-68e3a7e001ca",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "bf91c5ba25d35689bfcc5b0ad0c4b493",
+      "id": "127e3512-e7ef-4bf9-9df0-a3e93b7a59a4",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-01"
+    },
+    {
+      "hash": "aa0f253d28abb54f710955b86ff47d73",
+      "id": "1c3d9103-f42e-4583-aa65-5a71f6aeb6b0",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "3e787aab68d787ebb03524717bb02743",
+      "id": "1ec9982e-a525-476d-b9e3-581ff07b3945",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "b8b758b68e33c3bdef53901f7ccdb443",
+      "id": "2b64e8bf-cf78-40fa-b765-09209f0f9a0f",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "ae06861c07360c863606c63eff34a126",
+      "id": "2c2b6997-52dc-4fba-8654-5d810bf76a3d",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "59a8363a81f6f806373278738b068e89",
+      "id": "3953929c-0be6-44d9-827a-282faab1dc6f",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "2355b938943c427858a7abcbd6af9afa",
+      "id": "3a186861-5fa0-4d44-a133-d3ea888c6d81",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "9547185d531dcac6f21859352d674ef6",
+      "id": "3a609eeb-a798-4bd9-9caf-cda1e4b84e8f",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-02"
+    },
+    {
+      "hash": "de56daa18a0ac9d0f60038fab035e082",
+      "id": "3b4b18d5-149a-437a-bb25-8ad5dd660a1e",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "3c41f2b430fff7068ceff17974049f1c",
+      "id": "3becf9e6-fc23-406a-b5c9-1c7a1aae97c4",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "9b108d44911f279fea403589859abd16",
+      "id": "3d894e2f-c467-4293-9f57-4553c653601d",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-01"
+    },
+    {
+      "hash": "bda90db54a805dba282158d67d15e14c",
+      "id": "420769c1-5f1a-4e10-83f3-572f23230c62",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "52be0e0f8804985ba17b26a4763d52e9",
+      "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+      "status": "OPEN",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "d6288064c51103d4620bff60381f8a3e",
+      "id": "4d7cf5a7-5042-4cd8-9529-81afcda278a6",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "ded33e534fd9d34a17150c92ea5920a0",
+      "id": "4d853b34-4ce3-4086-970e-14537cf1fd7b",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "c1c71d26c52eaadaf56f2bdc6d035533",
+      "id": "667a6c38-f0cf-4595-bfbc-c0b48ae6665a",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "aaea9e7fb78873539dafdc61942ae2ee",
+      "id": "66fb2dce-5e4d-44c2-b6cf-d05e495fba5d",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "67ac2098d926624ba951ef62e8446636",
+      "id": "695ec96e-9a72-4977-a705-d5cf3756951e",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "b3ba91cf399c9f56e4072110335410a5",
+      "id": "6ae9dab1-92af-45d3-aa54-21b42f22f5a2",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "b30cfbc7e10a0cacedf6b704884fd07b",
+      "id": "6d682e12-1a17-44c6-bb7b-64762c741643",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-01"
+    },
+    {
+      "hash": "994ec1fb9fcc8e95c61232900caa8633",
+      "id": "73932474-69fc-4f0a-8098-0d69c29fe676",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "2147b4d9b91f6bbddc663a0926942240",
+      "id": "74dfafb0-415a-4129-a87d-8a286eb2e94b",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-02"
+    },
+    {
+      "hash": "ee6f26092a49cd0a22a1810f8eeb6d48",
+      "id": "78eb6807-4de4-4c6c-b453-450b578308b8",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "0b188b608f182b24a9802b9164219ff7",
+      "id": "7e9c57a2-54d3-49c7-b685-2ac78f2384c6",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "b4913eea932a5a1e0f31ff10ac5c3c9d",
+      "id": "7f430556-5629-4a84-a9db-f48b27af3dae",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "c5562dc288e6b8fc1b2327782ceae5d9",
+      "id": "865e6a48-ccbe-4238-8580-6d70682050a5",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-02"
+    },
+    {
+      "hash": "dc6bdb3113651d93f946d07f1b081023",
+      "id": "88e654a5-9cf6-47da-bcb7-b4e16b1744ca",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-02"
+    },
+    {
+      "hash": "48f49ad73bed3e628a1020d0f99d24a5",
+      "id": "9bb5b452-5a46-4b10-8b97-cce24c5c7e2c",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "4052a699f8dc5a450f18021cbb235840",
+      "id": "9eb71340-941f-4c3f-a7be-d9368d6b47c0",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-02"
+    },
+    {
+      "hash": "65736c6619ef771120393e34a64ba4cc",
+      "id": "a216f5b6-6f2a-44e5-b7c9-dec08edc6d23",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "6b62f69ba9bc3e743d6b60c721546ab6",
+      "id": "a3494bb3-61cf-447c-9707-27311f35708c",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "61914dbe1963e5b11ead6233370a2de0",
+      "id": "af1b7fd4-830c-4163-92f2-d7b1e356bc56",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-01"
+    },
+    {
+      "hash": "2c02cfc1e521741b2c9b1dffa9e38029",
+      "id": "b39ef41a-1d1a-4887-ac88-50ce92903773",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "b7d144509b4ace3615b3f6b0f71fff06",
+      "id": "b9a931e5-054e-4df9-8195-e781fe13c30d",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "ea54d44dc09a383b58f1705a7ee893b1",
+      "id": "c726d8de-2bbd-4b8a-a0d3-4854287c940b",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "8564d03c88debb3a1214981be8035792",
+      "id": "dbe06724-b449-4c55-8780-b3cefbaa1a9d",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "a885930e04fe18a433d3f40634555c17",
+      "id": "dd367625-cef3-40fd-8f4d-0df8116eaa0d",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "85957d107fee34c5fd70ce7dd9f3be2d",
+      "id": "e8569e5f-2060-4fa6-944f-85ec7dcb8b37",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-02"
+    },
+    {
+      "hash": "b034de6247d80021979d39d79ba5a2f0",
+      "id": "e8fab593-8d15-4cf7-968b-23c893f1db53",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "MAIN"
+    },
+    {
+      "hash": "d35c68f0a9e9b45150ff665234785412",
+      "id": "f23ce42c-4ea2-453c-9710-65d09eb90480",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-02"
+    },
+    {
+      "hash": "cee24c17b4bcb029bcdcbacf1f9838d7",
+      "id": "f8093728-6752-40ca-b83b-b85d2ffcb5ba",
+      "status": "CLOSED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "terminalPos": "LAB-POS-02"
+    }
+  ],
+  "stocks": [
+    {
+      "active": true,
+      "createdAt": "2026-09-09T17:58:53.008",
+      "currentStock": 4,
+      "id": "71bb29e4-2b90-4efa-9f51-3ee7a0091741",
+      "minStock": null,
+      "productId": "b1466a68-c47b-47cc-9139-69e6f9f7f978",
+      "salePrice": 1.2,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "updatedAt": "2026-10-10T11:49:05.817"
+    },
+    {
+      "active": true,
+      "createdAt": "2026-10-10T08:15:01.673",
+      "currentStock": 1,
+      "id": "d58c0212-8de7-46b9-92e1-b4c1b2fe05de",
+      "minStock": null,
+      "productId": "b1466a68-c47b-47cc-9139-69e6f9f7f978",
+      "salePrice": 1.2,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "updatedAt": "2026-10-10T08:15:01.673"
+    }
+  ]
+}
