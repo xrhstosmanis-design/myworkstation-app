@@ -1,4 +1,5 @@
 import {invoiceWalletFeatures} from "../services/ai-wallet-invoice-metering.js";
+import {customerPricingSchema,customerCharge,DEFAULT_CUSTOMER_PRICING} from '../services/ai-wallet-customer-pricing.js';
 import {Router} from 'express';
 import {z} from 'zod';
 import {prisma} from '../prisma.js';
@@ -38,11 +39,28 @@ export function createAiOwnerWalletRoutes({db=prisma,repository=aiOwnerWalletRep
     res.json({...result,runtimeEnabled:true,balanceScope:'COMPANY',paymentInstructions:process.env.AI_OWNER_WALLET_PAYMENT_INSTRUCTIONS||'Η ανανέωση υπολοίπου AI πληρώνεται στο MyWorkStation. Επικοινώνησε μαζί μας για τα στοιχεία πληρωμής. Η πίστωση γίνεται μετά την επιβεβαίωση της είσπραξης.',meteredFeatures:invoiceWalletFeatures(env,scope.companyId,invoiceEnabled)});
   }));
   const prefix='/platform/companies/:companyId';
+  router.put(prefix+'/pricing',run('platform',async(req,res,scope)=>{
+    const input=z.object({version:z.number().int().nonnegative(),policy:customerPricingSchema,additionalTariffConfirmed:z.literal(true)}).strict().parse(req.body);
+    await access.platform(req);res.json(await repository.configurePricing(scope.companyId,input,scope.actorId));
+  }));
   router.get(prefix,run('platform',async(req,res,scope)=>{
     const result=await repository.read(scope.companyId);
     const owners=await db.$queryRaw`SELECT u."id",u."email",u."fullName" FROM "User" u JOIN "Company" c ON c."id"=${scope.companyId} AND c."active"=TRUE WHERE u."role"::text='OWNER' AND u."mustChangePassword"=FALSE AND (u."companyId"=c."id" OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=c."id")) ORDER BY u."fullName",u."id"`;
     const invoiceEnabled=await resolvedInvoiceWalletCompany(repository,scope.companyId,env),readiness=invoiceWalletReadiness(env);
-    await access.platform(req);res.json({...result,owners,runtimeEnabled:true,meteredFeatures:invoiceWalletFeatures(env,scope.companyId,invoiceEnabled),activationReadiness:ownerWalletReadiness(env,result.availableMicros),serviceConfiguration:walletServiceConfiguration(env,scope.companyId,invoiceEnabled),invoiceBilling:{enabled:invoiceEnabled,active:invoiceEnabled&&result.enabled&&readiness.globalEnabled,readiness}});
+    const activationReadiness=ownerWalletReadiness(env,result.availableMicros);
+    if(activationReadiness.maxReservationMicros){
+      const p=result.customerPricing||DEFAULT_CUSTOMER_PRICING;
+      const policy={additionalMarkupBps:p.additionalMarkupBps,callFeeMicros:p.callFeeMicros,invoiceFeeMicros:p.invoiceFeeMicros};
+      activationReadiness.baseMaxReservationMicros=activationReadiness.maxReservationMicros;
+      try{
+        activationReadiness.maxReservationMicros=customerCharge(activationReadiness.maxReservationMicros,policy).totalMicros;
+        activationReadiness.availableEnough=BigInt(result.availableMicros)>=BigInt(activationReadiness.maxReservationMicros);
+      }catch(error){
+        if(error.code!=='AI_WALLET_PRICING_LIMIT')throw error;
+        Object.assign(activationReadiness,{ready:false,code:error.code,maxReservationMicros:null,availableEnough:false});
+      }
+    }
+    await access.platform(req);res.json({...result,owners,runtimeEnabled:true,meteredFeatures:invoiceWalletFeatures(env,scope.companyId,invoiceEnabled),activationReadiness,serviceConfiguration:walletServiceConfiguration(env,scope.companyId,invoiceEnabled),invoiceBilling:{enabled:invoiceEnabled,active:invoiceEnabled&&result.enabled&&readiness.globalEnabled,readiness}});
   }));
   router.put(prefix,run('platform',async(req,res,scope)=>{
     const input=configureSchema.parse(req.body);await access.platform(req);
@@ -65,6 +83,7 @@ export function createAiOwnerWalletRoutes({db=prisma,repository=aiOwnerWalletRep
   return router;
 }
 export default createAiOwnerWalletRoutes();
+
 
 
 

@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
+import AiWalletCustomerPricing from './AiWalletCustomerPricing.jsx';
 import {walletMoney,walletMicrosFromEuros} from '../voice/ai-wallet-money.mjs';
 function TrialGrantForm({busy,onGrant}){
   const [amount,setAmount]=useState(''),[reference,setReference]=useState(''),[reason,setReason]=useState(''),[confirmed,setConfirmed]=useState(false);
@@ -57,6 +58,7 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
         <select aria-label="Ιδιοκτήτης για ειδοποιήσεις" value={ownerId} disabled={busy} onChange={e=>setOwnerId(e.target.value)}><option value="">Επίλεξε ιδιοκτήτη</option>{(data.owners||[]).map(o=><option key={o.id} value={o.id}>{o.fullName} · {o.email}</option>)}</select>
         <button disabled={busy||emailEnabled&&!ownerId}>Αποθήκευση ρυθμίσεων</button>
       </form>
+      <AiWalletCustomerPricing key={companyId+':pricing:'+data.version} policy={data.customerPricing} busy={busy} onSave={policy=>execute(()=>api(path+'/pricing',{method:'PUT',body:JSON.stringify({version:data.version,policy,additionalTariffConfirmed:true})}),'Οι τιμές AI αποθηκεύτηκαν για αυτή την εταιρεία.')}/>
       <h2>Δοκιμαστική πίστωση από το MyWorkStation</h2>
       <TrialGrantForm key={companyId+':'+data.version} busy={busy} onGrant={input=>execute(()=>api(path+'/trial-grants',{method:'POST',body:JSON.stringify({amountMicros:walletMicrosFromEuros(input.amount),grantReference:input.reference.trim(),reason:input.reason.trim(),trialConfirmed:input.confirmed})}),'Η δοκιμαστική πίστωση καταγράφηκε.')}/>
       <h2>Πίστωση επιβεβαιωμένης είσπραξης</h2><form onSubmit={e=>{e.preventDefault();execute(()=>api(path+'/credits',{method:'POST',body:JSON.stringify({amountMicros:walletMicrosFromEuros(amount),receiptReference:receipt.trim(),receiptConfirmed:confirmed})}),'Η πίστωση καταγράφηκε.')}}>
@@ -66,10 +68,11 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
         <button disabled={busy||!confirmed}>Καταχώριση πίστωσης</button>
       </form>
       <h2>Κατανάλωση ανά κατάστημα</h2><ul>{(data.usage||[]).map(u=><li key={u.storeId}>{companies.find(c=>c.id===companyId)?.stores?.find(s=>s.id===u.storeId)?.name||u.storeId}: {walletMoney(u.chargedMicros)} · {u.requests} κλήσεις</li>)}</ul>
-      <h2>Πρόσφατες κινήσεις</h2><ul>{(data.entries||[]).map(e=><li key={e.id}>{new Date(e.createdAt).toLocaleString('el-GR',{hour12:false})} · {e.kind==='CREDIT'?(e.feature==='TRIAL_GRANT'?'Δοκιμαστική πίστωση από MyWorkStation ':'Πίστωση ')+walletMoney(e.creditedMicros):e.status==='SETTLED'?'Χρήση '+walletMoney(e.chargedMicros):e.status==='REVIEW'?'Υπό έλεγχο · '+e.id+' · Δέσμευση '+walletMoney(e.reservedMicros):'Σε εξέλιξη'}</li>)}</ul>
+      <h2>Πρόσφατες κινήσεις</h2><ul>{(data.entries||[]).map(e=><li key={e.id}>{new Date(e.createdAt).toLocaleString('el-GR',{hour12:false})} · {e.kind==='CREDIT'?(e.feature==='TRIAL_GRANT'?'Δοκιμαστική πίστωση από MyWorkStation ':'Πίστωση ')+walletMoney(e.creditedMicros):e.status==='SETTLED'?'Χρήση '+walletMoney(e.chargedMicros):e.status==='REVIEW'?'Υπό έλεγχο · '+e.id+' · Δέσμευση '+walletMoney(e.reservedMicros):'Σε εξέλιξη'}{e.status==='SETTLED'&&e.customerCharge&&<span> · Χρήση {walletMoney(e.customerCharge.baseMicros)} + προσαύξηση {walletMoney(e.customerCharge.additionalMarkupMicros)} + κλήση {walletMoney(e.customerCharge.callFeeMicros)} + τιμολόγιο {walletMoney(e.customerCharge.invoiceFeeMicros)}</span>}</li>)}</ul>
       <h2>Ειδοποιήσεις</h2><ul>{(data.notices||[]).map(n=><li key={n.id}>{({CREDIT:'Πίστωση',LOW:'Χαμηλό υπόλοιπο',EMPTY:'Μηδενικό υπόλοιπο'})[n.kind]} · {new Date(n.createdAt).toLocaleString('el-GR',{hour12:false})} · Email: {({ACCEPTED:'Παραλήφθηκε από SMTP',PENDING:'Σε αναμονή',ATTEMPTING:'Η αποστολή χρειάζεται έλεγχο',UNKNOWN:'Αβέβαιο αποτέλεσμα — χωρίς επανάληψη',DISABLED:'Ανενεργό',REVOKED:'Ανακλήθηκε'})[n.emailStatus]||n.emailStatus}</li>)}</ul>
     </>)}
     <style>{`[aria-label="Διαχείριση υπολοίπου AI"] form{display:grid;gap:12px;max-width:800px;margin:20px 0;padding:16px;background:#f1f5f9;border-radius:12px}[aria-label="Διαχείριση υπολοίπου AI"] input:not([type=checkbox]),[aria-label="Διαχείριση υπολοίπου AI"] select{padding:10px;max-width:100%;box-sizing:border-box}[aria-label="Διαχείριση υπολοίπου AI"] button{padding:10px;min-height:44px}`}</style>
   </div>;
 }
+
 

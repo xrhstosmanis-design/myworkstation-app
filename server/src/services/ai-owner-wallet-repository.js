@@ -4,6 +4,15 @@ import {bindFreshLifecycleRead} from './store-lifecycle-generation.js';
 import {randomUUID} from 'node:crypto';
 import {MAX_WALLET_MICROS,positiveMicros,walletError,walletView} from './ai-owner-wallet-contract.js';
 import {readWalletUsageSummary} from './ai-owner-wallet-usage.js';
+import {DEFAULT_CUSTOMER_PRICING,parseCustomerPricing,customerCharge,pricingSnapshot,chargeFromSnapshot,stableWalletJson,publicCustomerCharge} from './ai-wallet-customer-pricing.js';
+
+async function customerPricing(db,companyId){
+  const rows=await db.$queryRaw`SELECT "detail" FROM "AiOwnerWalletAudit" WHERE "companyId"=${companyId} AND "event"='PRICING_CONFIGURED' ORDER BY ("detail"->>'version')::bigint DESC LIMIT 1`;
+  if(!rows.length)return {version:0,...DEFAULT_CUSTOMER_PRICING};
+  const detail=rows[0].detail;
+  if(!Number.isSafeInteger(detail?.version)||detail.version<1)throw walletError('AI_WALLET_PRICING_INVALID');
+  return {version:detail.version,...parseCustomerPricing(detail.policy)};
+}
 
 async function invoicePolicy(db,companyId,fallback){
   if(typeof fallback!=='boolean')throw walletError('AI_WALLET_INVALID_INPUT',400);
@@ -43,12 +52,23 @@ export function createAiOwnerWalletRepository(db){
     await ensure();
     const row=(await db.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"=${companyId}`)[0];
     const wallet=row?walletView(row):{companyId,currency:'EUR',enabled:false,emailEnabled:false,notificationOwnerId:'',balanceMicros:'0',reservedMicros:'0',availableMicros:'0',lastCreditMicros:'0',version:0,state:'EMPTY'};
-    const entries=storeId?await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature","createdAt","settledAt" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND ("storeId"=${storeId} OR "kind"='CREDIT') ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`:await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature","createdAt","settledAt" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`;
+    const entries=storeId?await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature","usage"->'customerCharge' AS "customerCharge","createdAt","settledAt" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND ("storeId"=${storeId} OR "kind"='CREDIT') ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`:await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature","usage"->'customerCharge' AS "customerCharge","createdAt","settledAt" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`;
     const notices=await db.$queryRaw`SELECT "id","kind","balanceMicros","amountMicros","emailStatus","createdAt" FROM "AiOwnerWalletNotice" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 30`;
     const usage=storeId?await db.$queryRaw`SELECT "storeId",SUM("chargedMicros")::text AS "chargedMicros",COUNT(*)::int AS "requests" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "status"='SETTLED' GROUP BY "storeId"`:await db.$queryRaw`SELECT "storeId",SUM("chargedMicros")::text AS "chargedMicros",COUNT(*)::int AS "requests" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "status"='SETTLED' GROUP BY "storeId"`;
     const json=value=>JSON.parse(JSON.stringify(value,(_,v)=>typeof v==='bigint'?v.toString():v));
     const usageSummary=await readWalletUsageSummary(db,companyId,storeId);
-    return {...wallet,entries:json(entries),notices:json(notices),usage,usageSummary:json(usageSummary),usageScope:storeId?'SELECTED_STORE':'COMPANY',storeId};
+    return {...wallet,customerPricing:await customerPricing(db,companyId),entries:json(entries.map(e=>({...e,customerCharge:publicCustomerCharge(e.customerCharge)}))),notices:json(notices),usage,usageSummary:json(usageSummary),usageScope:storeId?'SELECTED_STORE':'COMPANY',storeId};
+  }
+  async function configurePricing(companyId,{version,policy},actorId){
+    const parsed=parseCustomerPricing(policy);
+    await ensure();return db.$transaction(async tx=>{
+      const row=await lock(tx,companyId);
+      if(row.version!==version)throw walletError('AI_WALLET_CHANGED');
+      const detail={version:row.version+1,policy:parsed,invoiceFeeScope:'FIRST_ASSISTANT_DOCUMENT'};
+      await tx.$executeRaw`INSERT INTO "AiOwnerWalletAudit" ("id","companyId","actorId","event","detail") VALUES (${randomUUID()},${companyId},${actorId},'PRICING_CONFIGURED',${JSON.stringify(detail)}::jsonb)`;
+      await tx.$executeRaw`UPDATE "AiOwnerWallet" SET "version"="version"+1,"updatedAt"=NOW() WHERE "companyId"=${companyId}`;
+      return {version:row.version+1};
+    });
   }
   async function configure(companyId,input,actorId){
     if(Object.hasOwn(input,'invoiceEnabled')&&typeof input.invoiceEnabled!=='boolean')throw walletError('AI_WALLET_INVALID_INPUT',400);
@@ -103,8 +123,8 @@ export function createAiOwnerWalletRepository(db){
       return {id,replayed:false};
     }).catch(e=>{if(e.code==='P2002'||e.meta?.code==='23505')throw walletError('AI_WALLET_TRIAL_CONFLICT');throw e});
   }
-  async function reserve({companyId,storeId,feature,tariff,amountMicros,reference,invoicePolicyFallback=true}){
-    const amount=positiveMicros(String(amountMicros));await ensure();
+  async function reserve({companyId,storeId,feature,tariff,amountMicros,reference,invoicePolicyFallback=true,invoiceDocumentId=null}){
+    const baseAmount=positiveMicros(String(amountMicros));await ensure();
     return db.$transaction(async tx=>{
       const row=await lock(tx,companyId);
       if(!row.enabled)return null;
@@ -115,6 +135,20 @@ export function createAiOwnerWalletRepository(db){
       const store=await tx.$queryRaw`SELECT s."id" FROM "Store" s JOIN "Company" c ON c."id"=s."companyId" WHERE s."id"=${storeId} AND s."companyId"=${companyId} AND s."active"=TRUE AND c."active"=TRUE`;
       if(!store.length)throw walletError('AI_WALLET_SCOPE_DENIED',403);
       if((await tx.$queryRaw`SELECT "id" FROM "AiOwnerWalletEntry" WHERE "kind"='USAGE' AND "reference"=${reference}`).length)throw walletError('AI_WALLET_REQUEST_REPLAY');
+      const {version:policyVersion,...policy}=await customerPricing(tx,companyId);
+      let invoiceFeeClaimed=false;
+      if(invoiceDocumentId!==null){
+        if(feature!=='INVOICE_OPENAI'||typeof invoiceDocumentId!=='string'||!invoiceDocumentId.trim()||invoiceDocumentId.length>160)throw walletError('AI_WALLET_SCOPE_DENIED',403);
+        const documents=await tx.$queryRaw`SELECT d."id" FROM "PurchaseDocument" d WHERE d."id"=${invoiceDocumentId} AND d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."status"='DRAFT' AND d."sourceType"='POS_OCR_DRAFT' AND EXISTS (SELECT 1 FROM "PurchaseOrder" o WHERE o."sourceDocumentId"=d."id" AND o."companyId"=d."companyId" AND o."status"='NEW' AND o."sourceType"='POS_OCR_DRAFT') LIMIT 1`;
+        if(!documents.length)throw walletError('AI_WALLET_SCOPE_DENIED',403);
+        if(BigInt(policy.invoiceFeeMicros)>0n){
+          const claimed=await tx.$queryRaw`SELECT "id" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "kind"='USAGE' AND "tariff"->'customerPricing'->>'invoiceDocumentId'=${invoiceDocumentId} AND "tariff"->'customerPricing'->>'invoiceFeeClaimed'='true' LIMIT 1`;
+          invoiceFeeClaimed=claimed.length===0;
+        }
+      }
+      const snapshot=pricingSnapshot(policy,{version:policyVersion,invoiceDocumentId,invoiceFeeClaimed});
+      const amount=BigInt(customerCharge(baseAmount,policy,invoiceFeeClaimed).totalMicros);
+      if(policyVersion>0)tariff={...tariff,customerPricing:snapshot};
       if(BigInt(row.balanceMicros)-BigInt(row.reservedMicros)<amount)throw walletError('AI_WALLET_INSUFFICIENT',402);
       const id=randomUUID();
       await tx.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","storeId","kind","reference","status","reservedMicros","feature","tariff") VALUES (${id},${companyId},${storeId},'USAGE',${reference},'RESERVED',${amount},${feature},${JSON.stringify(tariff)}::jsonb)`;
@@ -123,13 +157,18 @@ export function createAiOwnerWalletRepository(db){
     });
   }
   async function settle(companyId,id,{amountMicros,usage={},actorId=null,resolutionReference=null}){
-    const amount=BigInt(amountMicros);if(amount<0n)throw walletError('AI_WALLET_INVALID_AMOUNT',400);
+    let amount=BigInt(amountMicros);if(amount<0n)throw walletError('AI_WALLET_INVALID_AMOUNT',400);
     await ensure();return db.$transaction(async tx=>{
       const row=await lock(tx,companyId),entry=(await tx.$queryRaw`SELECT * FROM "AiOwnerWalletEntry" WHERE "id"=${id} AND "companyId"=${companyId} FOR UPDATE`)[0];
       if(!entry||entry.kind!=='USAGE')throw walletError('AI_WALLET_ENTRY_NOT_FOUND',404);
+      // Provider settlement supplies the measured base tariff charge. A manual
+      // review supplies an explicitly confirmed FINAL total and is never repriced.
+      if(!actorId&&entry.tariff?.customerPricing){
+        const customerCharge=chargeFromSnapshot(amount,entry.tariff.customerPricing);
+        amount=BigInt(customerCharge.totalMicros);usage={...usage,customerCharge};
+      }
       if(entry.status==='SETTLED'){
-        const stable=v=>JSON.stringify(v,Object.keys(v||{}).sort());
-        if(BigInt(entry.chargedMicros)!==amount||stable(entry.usage)!==stable(usage))throw walletError('AI_WALLET_SETTLEMENT_CONFLICT');
+        if(BigInt(entry.chargedMicros)!==amount||stableWalletJson(entry.usage)!==stableWalletJson(usage))throw walletError('AI_WALLET_SETTLEMENT_CONFLICT');
         return {id,replayed:true};
       }
       await bindFreshLifecycleRead(tx,{companyId,storeId:entry.storeId});
@@ -156,6 +195,7 @@ export function createAiOwnerWalletRepository(db){
   })}
   async function enabledFor(companyId){await ensure();return (await db.$queryRaw`SELECT "enabled" FROM "AiOwnerWallet" WHERE "companyId"=${companyId}`)[0]?.enabled===true}
   async function invoiceEnabledFor(companyId,fallback){await ensure();return invoicePolicy(db,companyId,fallback)}
-  return {ensure,read,configure,credit,grantTrial,reserve,settle,review,enabledFor,invoiceEnabledFor,db};
+  return {ensure,read,configure,configurePricing,credit,grantTrial,reserve,settle,review,enabledFor,invoiceEnabledFor,db};
 }
+
 
