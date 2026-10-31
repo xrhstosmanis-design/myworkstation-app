@@ -35,6 +35,8 @@ Frontend and server preparation/build PASS locally. Focused original+new mounted
 Broad correction remains OPEN/ASSIGNED. Next action: full/native PR and main CI, ordinary guarded exact healthy deployment, then read-only installed owner matrix and separately authorized measured Owner/operator LAB acceptance. No whole PASS/manual closure, no new live credentials, permission choice or financial/stock action. Checkpoint CHECKPOINTS/CHANGES/2026-10-31-owner-backoffice-permissions.md.
 
 
+01/11 00:05 Athens follow-up: exact d8c622a7 full CI41245498251 FAIL4985/1/0; one delegated invoice fixture omitted existing ocrReviewReasons. Test-only column correction; assertions/runtime unchanged, no release/LAB PASS. Full final CI/release still required; retained owner.
+
 ## 31/10/2026 23:00 Europe/Athens — CENTRAL-BACKOFFICE-ACCESS-01 / ACTION RIGHTS EXTENSION / ASSIGNED BEFORE SOURCE
 
 Same retained Rizareio readiness owner; continuation fix/owner-action-permissions-20261031. Explicit user instruction: proceed with the missing delegated invoice editing/approval, payment entry, sale cancellation and normal shift closing. Current main7a2dbdf5 and intervening common history, active/tracker/checklist/pending, original owner-permissions checkpoint and invoice/payment/POS/session manuals reviewed. Existing ten rights and installed form remain protected; broad correction is OPEN, no advanced writer LAB PASS. Historical login/read evidence is not repeated.

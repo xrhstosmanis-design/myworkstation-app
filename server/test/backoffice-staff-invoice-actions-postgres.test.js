@@ -28,7 +28,7 @@ test('native delegated invoice metadata and canonical approval preserve one post
   const before=await f.snapshot();const edited=await invoke(edit,'invoices.edit',{description:'Native reviewed metadata'});assert.ifError(edited.failure);assert.equal(edited.result.ok,true);
   assert.equal(await f.snapshot(),before);assert.equal((await db.$queryRaw`SELECT "description" FROM "PurchaseOrder" WHERE "id"='pos'`)[0].description,'Native reviewed metadata');
   assert.equal((await db.$queryRaw`SELECT "actorId" FROM "StoreOperatorAudit" WHERE "eventType"='PURCHASE_ORDER_DRAFT_UPDATED'`)[0].actorId,'delegated');
-  await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "gift" boolean DEFAULT false,ADD COLUMN IF NOT EXISTS "markupPercent" numeric DEFAULT 0,ADD COLUMN IF NOT EXISTS "updatedAt" timestamptz DEFAULT now(),ADD COLUMN IF NOT EXISTS "resolutionStatus" text DEFAULT \'MATCHED\'');
+  await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "gift" boolean DEFAULT false,ADD COLUMN IF NOT EXISTS "markupPercent" numeric DEFAULT 0,ADD COLUMN IF NOT EXISTS "updatedAt" timestamptz DEFAULT now(),ADD COLUMN IF NOT EXISTS "resolutionStatus" text DEFAULT \'MATCHED\',ADD COLUMN IF NOT EXISTS "ocrReviewReasons" text');
   const calc=source.slice(source.indexOf('function calc('),source.indexOf('async function learnConfirmedLineCorrection('));
   const lineSchema=source.slice(source.indexOf('const lineSchema='),source.indexOf('router.get("/report",'));
   const auditState=source.slice(source.indexOf('const auditLineState='),source.indexOf('async function writePurchaseAudit('));
