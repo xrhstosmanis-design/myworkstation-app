@@ -316,6 +316,53 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
       await db.$executeRawUnsafe(sql);assert.deepEqual((await sharedRead()).body.owners,[]);
       assert.equal((await request('/platform/companies/shared','admin','PUT',{...sharedConfig,version:sharedWallet.version})).body.code,'AI_WALLET_OWNER_REQUIRED');
     }
+    {
+    // Customer prices use the actual wallet lock/HTTP authorization, not a
+    // simulated ledger. Invoice identity is an authorized durable draft.
+    await db.$executeRaw`CREATE TABLE "PurchaseDocument" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"status" text,"sourceType" text)`;
+    await db.$executeRaw`CREATE TABLE "PurchaseOrder" ("id" text PRIMARY KEY,"companyId" text,"sourceDocumentId" text,"status" text,"sourceType" text)`;
+    await db.$executeRaw`INSERT INTO "Company" VALUES ('pricing','Synthetic pricing',true)`;
+    await db.$executeRaw`INSERT INTO "Store" VALUES ('pricing-store','Synthetic pricing store','pricing',true)`;
+    await db.$executeRaw`INSERT INTO "PurchaseDocument" VALUES ('pricing-d1','pricing','pricing-store','DRAFT','POS_OCR_DRAFT'),('pricing-d2','pricing','pricing-store','DRAFT','POS_OCR_DRAFT'),('foreign-doc','x','foreign','DRAFT','POS_OCR_DRAFT')`;
+    await db.$executeRaw`INSERT INTO "PurchaseOrder" VALUES ('pricing-o1','pricing','pricing-d1','NEW','POS_OCR_DRAFT'),('pricing-o2','pricing','pricing-d2','NEW','POS_OCR_DRAFT'),('foreign-order','x','foreign-doc','NEW','POS_OCR_DRAFT')`;
+    const pricingPath='/platform/companies/pricing/pricing',policy={additionalMarkupBps:2500,callFeeMicros:'20',invoiceFeeMicros:'100'};
+    const priceInput={version:0,policy,additionalTariffConfirmed:true};
+    assert.equal((await request(pricingPath,'owner','PUT',priceInput)).status,403);
+    assert.equal((await request(pricingPath,'admin','PUT',{...priceInput,additionalTariffConfirmed:false})).status,400);
+    assert.equal((await request(pricingPath,'admin','PUT',{...priceInput,policy:{...policy,unexpected:1}})).status,400);
+    assert.equal((await request(pricingPath,'admin','PUT',priceInput)).status,200);
+    assert.equal((await request(pricingPath,'admin','PUT',priceInput)).body.code,'AI_WALLET_CHANGED');
+    let pw=await repository.read('pricing');assert.equal(pw.enabled,false);assert.equal(pw.balanceMicros,'0');assert.equal(pw.entries.length,0);assert.equal(pw.notices.length,0);assert.deepEqual(pw.customerPricing,{version:1,...policy});
+    await repository.configure('pricing',{version:pw.version,enabled:true,emailEnabled:false,notificationOwnerId:'',invoiceEnabled:true},'admin');
+    await repository.credit('pricing',{amountMicros:'10000',receiptReference:'pricing-synthetic-funding'},'admin');
+    const pricedReserve=(document,reference)=>repository.reserve({companyId:'pricing',storeId:'pricing-store',feature:'INVOICE_OPENAI',tariff:{model:'synthetic'},amountMicros:'100',invoiceDocumentId:document,reference});
+    await assert.rejects(pricedReserve('foreign-doc','pricing-forbidden'),e=>e.code==='AI_WALLET_SCOPE_DENIED');
+    const pair=await Promise.all([pricedReserve('pricing-d1','pricing-concurrent-1'),pricedReserve('pricing-d1','pricing-concurrent-2')]);
+    assert.deepEqual(pair.map(x=>x.reservedMicros).sort(),['145','245']);
+    const originalEntries=await db.$queryRaw`SELECT "id","tariff" FROM "AiOwnerWalletEntry" WHERE "companyId"='pricing' AND "kind"='USAGE'`;
+    assert.equal(originalEntries.filter(x=>x.tariff.customerPricing.invoiceFeeClaimed).length,1);
+    pw=await repository.read('pricing');const changed={additionalMarkupBps:10000,callFeeMicros:'30',invoiceFeeMicros:'200'};
+    const configRaces=await Promise.all([request(pricingPath,'admin','PUT',{version:pw.version,policy:changed,additionalTariffConfirmed:true}),request(pricingPath,'admin','PUT',{version:pw.version,policy:changed,additionalTariffConfirmed:true})]);
+    assert.deepEqual(configRaces.map(x=>x.status).sort(),[200,409]);
+    for(const reservation of pair)await repository.settle('pricing',reservation.id,{amountMicros:'40',usage:{inputTokens:40,outputTokens:0}});
+    const settled=await db.$queryRaw`SELECT "id","chargedMicros","usage" FROM "AiOwnerWalletEntry" WHERE "companyId"='pricing' AND "kind"='USAGE'`;
+    assert.deepEqual(settled.map(x=>String(x.chargedMicros)).sort(),['170','70']);
+    assert.equal((await repository.settle('pricing',pair[0].id,{amountMicros:'40',usage:{outputTokens:0,inputTokens:40}})).replayed,true);
+    await assert.rejects(repository.settle('pricing',pair[0].id,{amountMicros:'41',usage:{inputTokens:41,outputTokens:0}}),e=>e.code==='AI_WALLET_SETTLEMENT_CONFLICT');
+    const again=await pricedReserve('pricing-d1','pricing-followup');assert.equal(again.reservedMicros,'230');await repository.settle('pricing',again.id,{amountMicros:'40',usage:{}});
+    const uncertain=await pricedReserve('pricing-d2','pricing-uncertain');assert.equal(uncertain.reservedMicros,'430');await repository.review('pricing',uncertain.id);
+    const afterReview=await pricedReserve('pricing-d2','pricing-after-review');assert.equal(afterReview.reservedMicros,'230');
+    await repository.settle('pricing',uncertain.id,{amountMicros:'123',actorId:'admin',resolutionReference:'pricing-confirmed-final',usage:{reviewReference:'confirmed-final'}});
+    await repository.settle('pricing',afterReview.id,{amountMicros:'40',usage:{}});
+    pw=await repository.read('pricing');assert.equal(pw.balanceMicros,'9417');assert.equal(pw.reservedMicros,'0');
+    assert.equal(pw.entries.find(e=>e.id===uncertain.id).customerCharge,null);assert.ok(pw.entries.some(e=>e.customerCharge?.invoiceFeeMicros==='100'));
+    assert.equal((await repository.read('x')).customerPricing.callFeeMicros,'0');
+    const high={additionalMarkupBps:0,callFeeMicros:'10000',invoiceFeeMicros:'0'};
+    await repository.configurePricing('pricing',{version:pw.version,policy:high},'admin');
+    let paidCalls=0;const pricedProvider=createWalletProvider({repository,enabled:()=>true,tariffs:()=>JSON.stringify([{model:'synthetic',inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:0,outputMicrosPerMillion:1000000,contextTokens:100,maxOutputTokens:20}])});
+    await assert.rejects(pricedProvider({companyId:'pricing',storeId:'pricing-store',feature:'OWNER_ASSISTANT'},{model:'synthetic'},async()=>{paidCalls++;throw Error('must not call')}),e=>e.code==='AI_WALLET_INSUFFICIENT');assert.equal(paidCalls,0);
+    assert.equal((await repository.read('pricing')).balanceMicros,pw.balanceMicros);assert.equal((await repository.read('pricing')).entries.length,pw.entries.length);
+    }
     assert.deepEqual(await db.$queryRaw`SELECT * FROM "BusinessControl"`,before);
   }finally{if(server)await new Promise(resolve=>server.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

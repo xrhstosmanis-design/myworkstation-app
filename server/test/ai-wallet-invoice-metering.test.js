@@ -8,6 +8,12 @@ const env={AI_OWNER_WALLET_ENABLED:'true',AI_OWNER_WALLET_INVOICES_ENABLED:'true
 const url='https://api.openai.com/v1/responses',options={method:'POST',body:JSON.stringify({model:'synthetic',input:'synthetic private invoice'})},scope={companyId:'c',storeId:'s'};
 const raw=id=>({id,model:'synthetic',usage:{input_tokens:5,output_tokens:3,input_tokens_details:{cached_tokens:0}},output_text:'synthetic answer'});
 const azurePayload={status:'succeeded',analyzeResult:{modelId:page.model,apiVersion:page.apiVersion,pages:[{pageNumber:1},{pageNumber:2}]}};
+test('invoice pricing receives only the server-supplied durable document and parallel scopes cannot leak it',async()=>{
+ const f=fixture();
+ await Promise.all(['document-a','document-b'].map(invoiceDocumentId=>f.meter.run({...scope,invoiceDocumentId},()=>f.meter.responsesFetch(url,options))));
+ assert.deepEqual(f.events.filter(e=>e.kind==='reserve').map(e=>e.invoiceDocumentId).sort(),['document-a','document-b']);
+ assert.throws(()=>f.meter.run({...scope,invoiceDocumentId:''},()=>{throw Error('must not invoke')}),e=>e.code==='AI_WALLET_SCOPE_DENIED');
+});
 function fixture({configuration=env,repository={},transport,countPages=async()=>2}={}){
  const events=[];let sequence=0;
  const repo={enabledFor:async()=>true,reserve:async data=>{const id='r'+(++sequence);events.push({kind:'reserve',id,...data});return {id}},settle:async(companyId,id,data)=>events.push({kind:'settle',companyId,id,...data}),review:async(companyId,id)=>events.push({kind:'review',companyId,id}),...repository};
@@ -132,4 +138,5 @@ test('invalid explicit company rollout cannot silently broaden invoice charging 
  }
  assert.deepEqual(invoiceWalletFeatures({...env,AI_OWNER_WALLET_INVOICE_COMPANIES:'[]'},'c'),['OWNER_ASSISTANT']);
 });
+
 
