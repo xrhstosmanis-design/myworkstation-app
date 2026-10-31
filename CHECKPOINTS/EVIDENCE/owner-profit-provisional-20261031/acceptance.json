@@ -1,0 +1,274 @@
+{
+  "status": "LIMITED_READ_ONLY_LAB_PASS",
+  "revision": "8b76cad4c16c571239940d8038bb248e3cae2819",
+  "validation": {
+    "sourcePR": 3385,
+    "sourceHead": "648e004a3d130b2fbe257b0bbbdd696a08dc7aea",
+    "sourceCI": 41210222440,
+    "buildJob": 124563714767,
+    "tests": 4896,
+    "pass": 4896,
+    "fail": 0,
+    "skip": 0,
+    "backupTests": 8,
+    "nativeCostQueryPassed": true,
+    "main": "8b76cad4c16c571239940d8038bb248e3cae2819",
+    "mainCI": 41211362481,
+    "mainJob": 124567120775,
+    "mainPass": 4896,
+    "mainFail": 0,
+    "mainSkip": 0,
+    "mainBackupPass": 8,
+    "deployRun": 41212451738,
+    "deployJob": 124570146592
+  },
+  "deployedHealthyAt": "2026-10-31T15:00:17.2457287Z",
+  "scope": "Existing synthetic LAB only; read-only report/CSV/print/detail/VAT toggle; no business transaction",
+  "before": [
+    {
+      "count": 90,
+      "digest": "1b4646005c841bb0cbaa2b9c0d61db03",
+      "observedAt": "2026-10-31T15:00:46.518167Z",
+      "source": "Sale"
+    },
+    {
+      "count": 99,
+      "digest": "55717aadf9735728cc319cbd21dbcc5f",
+      "observedAt": "2026-10-31T15:00:46.518167Z",
+      "source": "SaleLine"
+    },
+    {
+      "count": 110,
+      "digest": "f7ea986ec6c543c699ae3653ecf019ce",
+      "observedAt": "2026-10-31T15:00:46.518167Z",
+      "source": "Product"
+    },
+    {
+      "count": 71,
+      "digest": "3066842f7fe41875e551cd54d8a263ed",
+      "observedAt": "2026-10-31T15:00:46.518167Z",
+      "source": "PurchaseDocument"
+    },
+    {
+      "count": 713,
+      "digest": "14a7eac6875f45c97715bdc28188f93c",
+      "observedAt": "2026-10-31T15:00:46.518167Z",
+      "source": "PurchaseDocumentLine"
+    },
+    {
+      "count": 134,
+      "digest": "2bf49d1f29a40c0798dcb9bab3b15b82",
+      "observedAt": "2026-10-31T15:00:46.518167Z",
+      "source": "StoreTransaction"
+    },
+    {
+      "count": 95,
+      "digest": "79ee4ac8e22898d8a14513d505b4b112",
+      "observedAt": "2026-10-31T15:00:46.518167Z",
+      "source": "StockMovement"
+    }
+  ],
+  "after": [
+    {
+      "count": 90,
+      "digest": "1b4646005c841bb0cbaa2b9c0d61db03",
+      "observedAt": "2026-10-31T15:02:50.334004Z",
+      "source": "Sale"
+    },
+    {
+      "count": 99,
+      "digest": "55717aadf9735728cc319cbd21dbcc5f",
+      "observedAt": "2026-10-31T15:02:50.334004Z",
+      "source": "SaleLine"
+    },
+    {
+      "count": 110,
+      "digest": "f7ea986ec6c543c699ae3653ecf019ce",
+      "observedAt": "2026-10-31T15:02:50.334004Z",
+      "source": "Product"
+    },
+    {
+      "count": 71,
+      "digest": "3066842f7fe41875e551cd54d8a263ed",
+      "observedAt": "2026-10-31T15:02:50.334004Z",
+      "source": "PurchaseDocument"
+    },
+    {
+      "count": 713,
+      "digest": "14a7eac6875f45c97715bdc28188f93c",
+      "observedAt": "2026-10-31T15:02:50.334004Z",
+      "source": "PurchaseDocumentLine"
+    },
+    {
+      "count": 134,
+      "digest": "2bf49d1f29a40c0798dcb9bab3b15b82",
+      "observedAt": "2026-10-31T15:02:50.334004Z",
+      "source": "StoreTransaction"
+    },
+    {
+      "count": 95,
+      "digest": "79ee4ac8e22898d8a14513d505b4b112",
+      "observedAt": "2026-10-31T15:02:50.334004Z",
+      "source": "StockMovement"
+    }
+  ],
+  "allSevenHashesUnchanged": true,
+  "expectedDays": [
+    {
+      "day": "2026-09-07",
+      "lines": 1,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 1.74
+    },
+    {
+      "day": "2026-09-08",
+      "lines": 5,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 0.9274
+    },
+    {
+      "day": "2026-09-10",
+      "lines": 5,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 0.8232
+    },
+    {
+      "day": "2026-09-16",
+      "lines": 14,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 3.6241
+    },
+    {
+      "day": "2026-09-17",
+      "lines": 6,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 1.025
+    },
+    {
+      "day": "2026-09-19",
+      "lines": 2,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 0.18
+    },
+    {
+      "day": "2026-09-20",
+      "lines": 5,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 2.3
+    },
+    {
+      "day": "2026-09-24",
+      "lines": 20,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 1.2732
+    },
+    {
+      "day": "2026-09-25",
+      "lines": 7,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 1.9208
+    },
+    {
+      "day": "2026-09-26",
+      "lines": 1,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 0.09
+    },
+    {
+      "day": "2026-09-27",
+      "lines": 5,
+      "missing": 4,
+      "unestimated": 0,
+      "estimatedCost": 2.7900000000000005
+    },
+    {
+      "day": "2026-10-01",
+      "lines": 4,
+      "missing": 4,
+      "unestimated": 0,
+      "estimatedCost": 2.3400000000000003
+    },
+    {
+      "day": "2026-10-08",
+      "lines": 2,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 0.3666
+    },
+    {
+      "day": "2026-10-09",
+      "lines": 2,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 0.2733
+    },
+    {
+      "day": "2026-10-10",
+      "lines": 10,
+      "missing": 1,
+      "unestimated": 0,
+      "estimatedCost": 1.5399
+    },
+    {
+      "day": "2026-10-11",
+      "lines": 4,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 0
+    },
+    {
+      "day": "2026-10-12",
+      "lines": 6,
+      "missing": 0,
+      "unestimated": 0,
+      "estimatedCost": 1.8999
+    }
+  ],
+  "observed": {
+    "period": [
+      "2026-08-01",
+      "2026-10-31"
+    ],
+    "approximateTotals": {
+      "margin": 62.09,
+      "grossProfit": 37.86,
+      "netProfit": -532.68,
+      "coverage": 90.11
+    },
+    "missingLines": 9,
+    "salesLines": 99,
+    "missingProductRows": 4,
+    "septemberProductRows": 2,
+    "day27SeptemberProductRows": 2,
+    "csv": {
+      "monthlyRows": 2,
+      "columns": 26,
+      "canonicalUnknownsBlank": true,
+      "unaffectedColumnsMatch": true
+    },
+    "standalonePrint": "PASS; no native printer operation",
+    "mainShift": {
+      "transactions": 0,
+      "cash": 0,
+      "card": 0,
+      "iris": 0,
+      "total": 0
+    }
+  },
+  "limits": [
+    "No independent ordinary Owner/mobile/physical test",
+    "Unit-normalization cases are native PostgreSQL CI; existing LAB has none",
+    "No real-store financial/accounting acceptance",
+    "Broader financial27 remains OPEN"
+  ]
+}
