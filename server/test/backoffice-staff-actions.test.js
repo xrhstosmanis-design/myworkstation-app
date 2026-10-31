@@ -6,18 +6,19 @@ import {enforceBackofficeStaff,requireStaffAction,requireStaffOrderAction} from 
 
 const expense={type:'OTHER_EXPENSE',amount:2,evidenceMode:'NO_DOCUMENT',description:'Synthetic expense',responsibilityAcknowledged:true,paymentSource:'EXTERNAL',paymentMethod:'EMPLOYEE_REIMBURSEMENT',idempotencyKey:'synthetic-fixed-key'};
 function policy(){
- let capabilities=[...staffCapabilities],revoked=false,status='NEW';const calls=[];
+ let capabilities=[...staffCapabilities],revoked=false,status='NEW',inventoryEnabled=true;const calls=[];
  const user={id:'staff',companyId:'a',storeId:'a1',sessionId:'session',sessionVersion:0,role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',staffAccess:true};
  const db={company:{findUnique:async()=>({id:'a',active:true,licenseStatus:'ACTIVE',modules:['DOCUMENTS','INVENTORY','CASH_CONTROL','STORE_MODE'].map(moduleKey=>({moduleKey,active:true}))})},
   $queryRaw:async(strings,...values)=>{const sql=strings.join('?');calls.push({sql,values});
    if(sql.includes('FROM "BackofficeStaffAccount" a'))return revoked?[]:[{userId:'staff',companyId:'a',mustChangePassword:false}];
    if(sql.includes('FROM "BackofficeStaffGrant" g'))return [{profile:'AUDITOR',capabilities}];
+   if(sql.includes('FROM "StorePaidModule"')&&values.includes('INVENTORY'))return inventoryEnabled?[]:[{active:false}];
    if(sql.includes('FROM "PurchaseOrder"'))return values.includes('foreign')?[]:[{id:'order',storeId:'a1',status}];
    if(sql.includes('FROM "CashShiftSession"'))return [{id:'shift'}];
    if(sql.includes('FROM "Product" p'))return values.includes('foreign')?[]:[{id:'product'}];
    return [];
   },$queryRawUnsafe:async()=>[{schema:'isolated',fence:null}]};
- return {db,user,calls,grant(value){capabilities=value},revoke(){revoked=true},close(){status='FINAL'}};
+ return {db,user,calls,grant(value){capabilities=value},revoke(){revoked=true},close(){status='FINAL'},disableInventory(){inventoryEnabled=false}};
 }
 test('new actions remain explicit, dependency-closed and absent from every existing role preset',()=>{
  for(const key of ['invoices.edit','invoices.approve','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']){
@@ -66,6 +67,9 @@ test('actual admission binds actions to selected store/object and never grants o
   p.grant(['sales.read','payments.read','payments.expense']);
   assert.equal((await send('/api/transactions/stores/a1','POST',{...expense,paymentSource:'CASH_SHIFT',paymentMethod:'CASH_SHIFT'})).status,403);
   assert.equal((await send('/api/store-pos/stores/a1/sales/sale/reverse','POST',{kind:'CANCEL'})).status,403);
+  p.grant(['invoices.read']);p.disableInventory();
+  assert.equal((await send('/api/purchase-orders/report?storeId=a1','GET')).status,403,'purchase review needs the selected store inventory module');
+  assert.equal((await send('/api/commerce/documents/inbox/archive?storeId=a1','GET')).status,200,'existing document-only archive remains available');
  }finally{await new Promise(resolve=>{server.close(resolve);server.closeAllConnections()})}
 });
 test('writer revalidation uses current locked grants, selected terminal, declaration and editable draft state',async()=>{

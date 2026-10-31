@@ -18,7 +18,7 @@ export async function liveStaff(db,user){
   if(!rows[0])throw staffError(401,'STAFF_SESSION_INVALID','Η προσωπική σύνδεση δεν είναι πλέον ενεργή.');
   return rows[0];
 }
-export async function requireStaffGrant(db,user,storeId,capability){
+export async function requireStaffGrant(db,user,storeId,capability,{additionalModules=[]}={}){
   const account=await liveStaff(db,user);
   if(account.mustChangePassword)throw staffError();
   if(typeof storeId!=='string'||!storeId||storeId.length>200||!staffCapabilities.includes(capability))throw staffError();
@@ -27,7 +27,7 @@ export async function requireStaffGrant(db,user,storeId,capability){
   if(!grant||!staffProfiles[grant.profile]||!validStaffCapabilities(grant.capabilities)||!grant.capabilities.includes(capability))throw staffError();
   const license=await companyModuleState(user.companyId,{db});
   if(!license?.licenseAllowed)throw staffError(403,'LICENSE_INACTIVE','Η άδεια της εταιρείας δεν είναι ενεργή.');
-  const modules=modulesForCapability(capability);
+  const modules=[...new Set([...modulesForCapability(capability),...additionalModules])];
   for(const moduleKey of modules){
     const override=(await db.$queryRaw`SELECT "active","startsAt","endsAt" FROM "StorePaidModule" WHERE "storeId"=${storeId} AND "moduleKey"=${moduleKey} LIMIT 1`)[0];
     if(!effectiveModuleEnabled(license.activeModules.includes(moduleKey),override?{...override,configured:true}:{configured:false}))throw staffError(403,'MODULE_DISABLED','Η λειτουργία δεν είναι ενεργή στο κατάστημα.');
@@ -63,7 +63,7 @@ export async function enforceBackofficeStaff(db,req,res){
   if(!storeId||req.query?.storeId&&req.query.storeId!==storeId||req.body?.storeId&&req.body.storeId!==storeId)throw staffError();
   const sales=path.match(/^\/api\/(?:transactions|cash|store-pos)\/stores\/([^/]+)(?:\/|$)/);
   if(sales&&sales[1]!==storeId)throw staffError();
-  const {grant}=await requireStaffGrant(db,user,storeId,capability);
+  const {grant}=await requireStaffGrant(db,user,storeId,capability,capability==='invoices.read'&&path.startsWith('/api/purchase-orders/')?{additionalModules:['INVENTORY']}:undefined);
   const order=path.match(/^\/api\/(?:commerce\/)?purchase-orders\/([^/]+)(?:\/|$)/);
   if(order&&order[1]!=='report'){
     const rows=await db.$queryRaw`SELECT "id" FROM "PurchaseOrder" WHERE "id"=${order[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;

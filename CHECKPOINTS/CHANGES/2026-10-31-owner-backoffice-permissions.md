@@ -97,3 +97,7 @@ Source PR3423. Review found the existing POS dock CSS intentionally hides the la
 ## 31/10/2026 — Final action-form coverage before native CI
 
 Actual mounted UI16PASS/0FAIL/0SKIP: expense-only operator sees no supplier/transfer/bank-import action, cannot choose ungranted shift cash, must affirm no-document declaration and submits the canonical scoped stable-key expense input. Delegated counted close retains required EFTPOS and personal BackOffice attribution without asking for or sending a different operator PIN; legacy POS PIN cases still pass. Added native canonical supplier settlement coverage for pending review, separate cash-right refusal, foreign supplier and duplicate-payment protection. No production writer changed in this coverage follow-up. Exact full/native CI remains pending; no live grants, credentials or business operation.
+
+## 31/10/2026 — Purchase-review store-module boundary
+
+Final review adds the selected-store INVENTORY check to purchase-list/detail admission and final read revalidation, while preserving existing DOCUMENTS-only archive access. Shared invoices.read stays unchanged for the original archive; no new default right. Targeted policy/actual UI/inbox23tests:19PASS/0FAIL/4native-environmentSKIP, including disabled store inventory refusing purchase review while the existing archive remains readable. This necessary authorization correction supersedes the earlier full-CI candidate; final full/native CI and release are still required.
