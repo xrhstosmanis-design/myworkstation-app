@@ -27,7 +27,7 @@ export async function readReconciliationSession(db,scope,id,rule){
   const sourceHash=hash({version:1,session,transactions:originalTransactions,review,rule});
   const expenseInputs=transactions.map(({record,hasAttachment})=>({...record,hasAttachment,purchaseDocumentId:record.attachmentMimeType===purchaseDocumentMime?record.attachmentFilename:null}));
   const expenseChecks=await readCashExpenseEvidence(db,scope,expenseInputs);
-  const expenseFindings=cashExpenseFindings(expenseChecks).map(f=>({code:f.code,amountCents:exactCents(f.amount),occurredAt:f.at?new Date(f.at).toISOString():null}));
+  const expenseFindings=cashExpenseFindings(expenseChecks).map(f=>({code:f.code,amountCents:exactCents(f.amount),occurredAt:f.at?new Date(f.at).toISOString():null,transactionId:f.transactionId,evidenceHash:hash(f)}));
   const eventSales=await readCashEventSales(db,scope,session);
   const next=session.nextSession;
   const nextClosed=Boolean(next&&next.companyId===scope.companyId&&next.storeId===scope.storeId&&next.terminalPos===session.terminalPos&&next.status==='CLOSED'&&next.closedAt&&new Date(next.closedAt)>=new Date(next.openedAt)&&new Date(session.closedAt)<=new Date(next.openedAt));
