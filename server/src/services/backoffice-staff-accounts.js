@@ -4,10 +4,10 @@ import {z} from 'zod';
 import {staffProfiles,staffCapabilities} from '../../../shared/backoffice-staff.mjs';
 import {staffError} from './backoffice-staff-access.js';
 import {bindFreshLifecycleRead} from './store-lifecycle-generation.js';
-const pin=z.string().regex(/^\d{6,12}$/,'Το PIN πρέπει να έχει 6–12 ψηφία.');
+const pin=z.string().regex(/^\d{4,12}$/,'Το PIN πρέπει να έχει 4–12 ψηφία.');
 const password=z.string().min(10).max(100).refine(value=>Buffer.byteLength(value,'utf8')<=72,'Ο κωδικός είναι πολύ μεγάλος.');
 const grants=z.array(z.object({storeId:z.string().trim().min(1).max(200),profile:z.enum(['MANAGER','STOCKTAKER','AUDITOR']),capabilities:z.array(z.enum(staffCapabilities)).max(3)}).strict()).max(100).refine(rows=>new Set(rows.map(r=>r.storeId)).size===rows.length,'Διπλό κατάστημα.').refine(rows=>rows.every(r=>r.capabilities.every(c=>staffProfiles[r.profile].capabilities.includes(c))&&(!r.capabilities.includes('inventory.count')||r.capabilities.includes('inventory.read'))),'Μη έγκυρα δικαιώματα ρόλου.');
-export const createStaffInput=z.object({username:z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9._-]{2,79}$/),fullName:z.string().trim().min(2).max(180),password,pin,grants}).strict();
+export const createStaffInput=z.object({username:z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9._-]{2,79}$/),fullName:z.string().trim().min(2).max(180),password:password.optional(),pin,grants}).strict();
 export const updateStaffInput=z.object({expectedRevision:z.number().int().positive(),active:z.boolean(),grants,password:password.optional(),pin:pin.optional()}).strict();
 export async function authorizeStaffAdmin(db,user){
   if(user?.tokenType!=='BACKOFFICE_USER'||!user.id||!user.sessionId||user.staffAccess)throw staffError();
@@ -48,7 +48,9 @@ async function audit(tx,user,target,event,detail){
 }
 export async function createStaffAccount(db,user,input){
   const b=createStaffInput.parse(input),userId=crypto.randomUUID();
-  const [passwordHash,pinHash]=await Promise.all([bcrypt.hash(b.password,12),bcrypt.hash(b.pin,12)]);
+  // PIN-only identities never reuse the short PIN as an ordinary password.
+  // The random fallback is not returned, stored in plaintext or shared.
+  const [passwordHash,pinHash]=await Promise.all([bcrypt.hash(b.password??crypto.randomBytes(32).toString('hex'),12),bcrypt.hash(b.pin,12)]);
   return db.$transaction(async tx=>{
     await authorizeStaffAdmin(tx,user);await validateGrants(tx,user.companyId,b.grants);
     // New identity only: never attach privileges to an existing company User.

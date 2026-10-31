@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import {readFile} from 'node:fs/promises';
 import express from 'express';
 import jwt from 'jsonwebtoken';
@@ -147,6 +148,28 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
         assert.equal((await request('/api/inventory-v2/stocktakes/sta/count',{token:roleToken,storeId:'a1',method:'POST',body:count})).status,403);
         assert.equal((await request('/api/backoffice-staff/admin',{token:roleToken})).status,403);
       }
+    });
+    await t.test('PIN-only four-digit accounts keep independent password hashes, scoped sessions and durable lockout',async()=>{
+      const {password,...original}=input;
+      const short={...original,username:'pin.only.fixture',pin:'0483'};
+      const first=await createStaffAccount(db,owner,short);
+      const second=await createStaffAccount(db,owner,{...short,username:'pin.other.fixture'});
+      const hashes=await db.$queryRaw`SELECT u."id",u."passwordHash",a."pinHash" FROM "User" u JOIN "BackofficeStaffAccount" a ON a."userId"=u."id" WHERE u."id" IN (${first.id},${second.id})`;
+      assert.equal(hashes.length,2);assert.notEqual(hashes[0].passwordHash,hashes[1].passwordHash);
+      for(const row of hashes){assert.equal(await bcrypt.compare(short.pin,row.pinHash),true);assert.equal(await bcrypt.compare(short.pin,row.passwordHash),false);assert.notEqual(row.pinHash,row.passwordHash)}
+      const passwordFallback=await request('/api/backoffice-staff/login',{method:'POST',body:{username:short.username,password:short.pin}});assert.equal(passwordFallback.status,401);
+      const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username:short.username,pin:short.pin}});assert.equal(login.status,200);assert.equal(jwt.verify(login.data.token,process.env.JWT_SECRET).staffAccess,true);
+      const me=await request('/api/backoffice-staff/me',{token:login.data.token});assert.equal(me.status,200);assert.deepEqual(me.data.stores.map(s=>s.id),['a1']);
+      assert.equal((await request('/api/backoffice-staff/admin',{token:login.data.token})).status,403);
+      assert.equal((await request('/api/backoffice-staff/inventory/stores/a2/stocktakes',{token:login.data.token,storeId:'a2'})).status,403);
+      const audit=(await db.$queryRaw`SELECT "detail" FROM "BackofficeStaffAudit" WHERE "targetUserId"=${first.id}`)[0];
+      assert.deepEqual(audit.detail,{username:short.username,fullName:short.fullName,active:true,grants:short.grants});
+      for(let i=0;i<5;i++)assert.equal((await verifyStaffLogin(db,{username:short.username,pin:'9999'},'short-fixture-ip',process.env.JWT_SECRET)).ok,false);
+      assert.equal((await verifyStaffLogin(db,{username:short.username,pin:short.pin},'different-fixture-ip',process.env.JWT_SECRET)).limited,true);
+      const optional='isolated-optional-password';
+      await updateStaffAccount(db,owner,second.id,{expectedRevision:1,active:true,grants:short.grants,password:optional});
+      for(const credential of [{pin:short.pin},{password:optional}]){const r=await request('/api/backoffice-staff/login',{method:'POST',body:{username:'pin.other.fixture',...credential}});assert.equal(r.status,200);assert.equal(r.data.user.staffAccess,true)}
+      assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale"`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement"`)[0].quantity),42);
     });
   }finally{
     if(server)await new Promise(resolve=>{server.close(resolve);server.closeAllConnections()});await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();if(oldSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=oldSecret;
