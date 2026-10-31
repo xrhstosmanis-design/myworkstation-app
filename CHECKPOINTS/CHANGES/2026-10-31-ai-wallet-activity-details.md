@@ -23,3 +23,7 @@ Local Node20: expanded focused68PASS/0FAIL/0SKIP. Broad server suite4328PASS/0FA
 
 No hosted new provider call, LAB flag save, funding, actual-customer price/activation, historical REVIEW resolution/release, payment, stock, OCR/prompt/finalization, auth/permission/role/schema/DDL or peer feature change. Existing source-only local tests do not create a new manual PASS. Next: exact full PR/native recovery and combined-main CI, ordinary guarded healthy release, then measured native detailed-history acceptance and a separately identified new LAB E only if needed; never replay B/C/D/customer originals. Broader wallet residuals stay with the same owner.
 
+
+## Exact native CI correction — 31Oct2026
+
+Source d4d5df6d recovery41245826927 executed7PASS/0FAIL/0SKIP, including expanded native wallet proof. Full PR CI41245826925 FAILED (4968PASS/10FAIL): the existing extracted fast-handoff HTTP fixture omitted the newly imported walletActivityFromRequest dependency; subsequent same-fixture binding failures cascaded from the missing first upload. Production route already imports the helper. Bounded correction only adds the real helper to that test dependency closure and asserts the durable original POS caller/purpose/terminal; no runtime or pricing change. Require a new exact full CI before merge; still AWAITING LAB.
