@@ -1,3 +1,4 @@
+import {saveInventoryBulkPermission} from './inventory-bulk-permission.js';
 import {randomUUID,createHash} from 'node:crypto';
 import {z} from 'zod';
 import {resolveProductCardVat} from './product-card-vat.js';
@@ -20,12 +21,14 @@ export async function saveInventoryBulkCard(db,user,input){
  if(body.subcategoryId&&!body.categoryId)fail('Επίλεξε πρώτα κατηγορία.');
  if(body.priceMode&&body.priceValue===undefined||!body.priceMode&&body.priceValue!==undefined)fail('Επίλεξε τρόπο και τιμή αλλαγής.');
  if(!body.categoryId&&body.subcategoryId===undefined&&!body.vatDepartmentId&&!body.priceMode&&body.active===undefined&&body.allowPosPriceChange===undefined&&!body.setItem)fail('Διάλεξε τουλάχιστον μία αλλαγή.');
+ const permissionOnly=body.allowPosPriceChange!==undefined&&Object.keys(body).every(key=>['storeId','requestId','productIds','allProducts','allowPosPriceChange'].includes(key));
  const fingerprint=createHash('sha256').update(JSON.stringify({...body,productIds:ids})).digest('hex');
  return db.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${company+':inventory-bulk:'+body.storeId}))`;
   if(!await tx.store.findFirst({where:{id:body.storeId,companyId:company,active:true},select:{id:true}}))fail('Μη έγκυρο κατάστημα.',403);
-  const replay=(await tx.$queryRaw`SELECT "details" FROM "StoreOperatorAudit" WHERE "companyId"=${company} AND "storeId"=${body.storeId} AND "eventType"='INVENTORY_BULK_CARD' AND "details"->>'requestId'=${body.requestId} LIMIT 1`)[0];
+  const replay=(await tx.$queryRaw`SELECT jsonb_build_object('fingerprint',"details"->'fingerprint','actorId',"details"->'actorId','changed',"details"->'changed') AS "details" FROM "StoreOperatorAudit" WHERE "companyId"=${company} AND "storeId"=${body.storeId} AND "eventType"='INVENTORY_BULK_CARD' AND "details"->>'requestId'=${body.requestId} LIMIT 1`)[0];
   if(replay){if(replay.details.fingerprint!==fingerprint||replay.details.actorId!==user.id)fail('Το αίτημα έχει ήδη διαφορετικά στοιχεία.',409);return {ok:true,changed:replay.details.changed,idempotent:true};}
+  if(permissionOnly)return saveInventoryBulkPermission(tx,user,body,ids,fingerprint);
   const rows=await tx.$queryRaw`SELECT p."id",p."categoryId",p."subcategoryId",p."vatDepartmentId",p."vatRate",p."isSet",p."allowPosPriceChange",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",sp."active" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${body.storeId} WHERE p."companyId"=${company} AND (${body.allProducts===true} OR p."id"=ANY(${ids}::text[])) ORDER BY p."id" FOR UPDATE OF p,sp`;
   if(body.allProducts)ids=rows.map(row=>row.id);
   if(!ids.length)fail('Δεν υπάρχουν είδη στο επιλεγμένο κατάστημα.');
@@ -66,5 +69,8 @@ export async function saveInventoryBulkCard(db,user,input){
   }
   await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${randomUUID()},${company},${body.storeId},${user.id},${user.id},'INVENTORY_BULK_CARD',${JSON.stringify({requestId:body.requestId,fingerprint,actorId:user.id,allProducts:body.allProducts===true,changed:ids.length,changes,...(body.setItem?{setBefore,setItem:body.setItem}:{})})}::jsonb)`;
   return {ok:true,changed:ids.length};
+ },permissionOnly?{timeout:20000,maxWait:2000}:undefined).catch(error=>{
+  if(permissionOnly&&(error.code==='P2028'||error.meta?.code==='55P03'||error.code==='P2034'))throw Object.assign(new Error('Η μαζική αλλαγή δεν ολοκληρώθηκε εγκαίρως ή το είδος χρησιμοποιείται. Περίμενε λίγο και δοκίμασε ξανά.'),{status:409});
+  throw error;
  });
 }
