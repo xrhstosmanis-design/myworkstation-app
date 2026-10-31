@@ -60,15 +60,19 @@ test('actual operator editor toggles every retained checkbox and preserves remov
  try{
   await act(async()=>{root.render(React.createElement(m.exports.default,{api,store:{id:'A'},onClose(){}}));await new Promise(r=>setTimeout(r,10))});
   await click(document.querySelector('[title="Διόρθωση"]'));
-  const boxes=[...document.querySelectorAll('.om-modal input[type="checkbox"]')];assert.equal(boxes.length,25);
+  const boxes=[...document.querySelectorAll('.om-modal input[type="checkbox"]')];assert.equal(boxes.length,27);
   const newProductBox=boxes.find(b=>b.closest("label")?.textContent.includes("Νέο είδος"));assert.ok(newProductBox);assert.equal(newProductBox.checked,false);
   const noPrintBox=boxes.find(b=>b.closest("label")?.textContent.includes("Κλείσιμο χωρίς εκτύπωση"));assert.ok(noPrintBox);assert.equal(noPrintBox.checked,false);
+  const inventoryBox=boxes.find(b=>b.closest("label")?.textContent.includes("Αποθήκη από POS"));assert.ok(inventoryBox);assert.equal(inventoryBox.checked,false);
+  const metadataBox=boxes.find(b=>b.closest("label")?.textContent.includes("Επεξεργασία στοιχείων ειδών"));assert.ok(metadataBox);assert.equal(metadataBox.checked,true);
   for(const b of boxes.slice(2))await click(b);
+  assert.equal(metadataBox.checked,false);await click(metadataBox);
   await click(find('Δικαιώματα πρόσβασης'));assert.equal(document.querySelectorAll('.om-modal input[type="checkbox"]').length,1);
   await click(document.querySelector('.om-modal input[type="checkbox"]'));
   await click(find('Λοιπά'));assert.equal(document.querySelectorAll('.om-modal input[type="checkbox"]').length,0);
   await click(find('Καταχώρηση'));assert.equal(saves.length,1);
-  assert.equal(Object.entries(saves[0].permissions).filter(([k,v])=>v&& !['stockBackoffice','mixedPaymentChange','centralCashPos','editDescription'].includes(k)).length,23);
+  assert.equal(Object.entries(saves[0].permissions).filter(([k,v])=>v&& !['stockBackoffice','mixedPaymentChange','centralCashPos','editDescription'].includes(k)).length,24);
+  assert.equal(saves[0].permissions.inventoryPos,true);
   assert.equal(saves[0].permissions.newProduct,true);assert.equal(saves[0].permissions.closeWithoutPrint,true);
   assert.equal(saves[0].permissions.centralCashPos,true);assert.equal(saves[0].permissions.editDescription,true);assert.equal(saves[0].backofficeMenu.orders,true);assert.equal(saves[0].backofficeMenu.reports,true);
   assert.equal(saves[0].backofficeTabs.events,true);assert.equal(saves[0].customerDisplay.doubleScreen,true);

@@ -1,3 +1,4 @@
+import {assertInventoryCardRights,inventoryDenied} from "../services/pos-inventory-access.js";
 import {productCardVatOptions,resolveProductCardVat} from '../lib/product-card-vat.js';
 import crypto from "crypto";
 import {Router} from "express";
@@ -6,8 +7,12 @@ import XLSX from "xlsx";
 import {prisma} from "../prisma.js";
 import {createScopedPromotionBatch} from "./price-catalog-promotion-guard.js";
 import {parsePromotionDate} from "../promotion-time.js";
-import {requireCompanyModule} from "../middleware/module-access.js";
+import {requireCompanyModule as defaultRequireCompanyModule} from "../middleware/module-access.js";
 
+export function createOwnerProductsRouter({db=prisma,scope=null}={}){
+const prisma=db;
+const scopedStoreId=scope?.storeId||null;
+const requireCompanyModule=key=>scope?.kind==='POS_INVENTORY'?(_req,_res,next)=>next():defaultRequireCompanyModule(key);
 const router=Router();
 const uid=()=>crypto.randomUUID();
 const money=value=>value===null||value===undefined?null:Number(value);
@@ -30,7 +35,7 @@ router.get("/stores",requireCompanyModule("INVENTORY"),async(req,res,next)=>{
   try{
     const company=companyId(req);
     if(!company)return res.status(403).json({error:"Δεν υπάρχει ενεργή εταιρεία."});
-    const rows=await prisma.store.findMany({where:{companyId:company},select:{id:true,name:true,city:true,active:true},orderBy:{name:"asc"}});
+    const rows=await prisma.store.findMany({where:{companyId:company,...(scopedStoreId?{id:scopedStoreId}:{})},select:{id:true,name:true,city:true,active:true},orderBy:{name:"asc"}});
     res.json(rows);
   }catch(error){next(error)}
 });
@@ -167,23 +172,23 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
         SELECT m."id",m."supplierId",m."supplierItemCode" AS "supplierCode",m."updatedAt",1 AS priority FROM "SupplierProductMapping" m
         WHERE m."companyId"=${company} AND m."productId"=${productId} AND NOT EXISTS (SELECT 1 FROM "SupplierProductLink" spl WHERE spl."companyId"=${company} AND spl."productId"=${productId} AND spl."supplierId"=m."supplierId" AND spl."active"=true)
       ) SELECT DISTINCT ON (links."supplierId") links."id",links."supplierId",s."name" AS "supplierName",links."supplierCode",links."updatedAt",
-        COALESCE(lp."unitCost",pm."lastUnitCost",0) AS "lastCost",COALESCE(lp."documentDate",pm."lastSeenAt") AS "lastPurchaseAt"
+        COALESCE(lp."unitCost",CASE WHEN ${scopedStoreId}::text IS NULL THEN pm."lastUnitCost" END,0) AS "lastCost",COALESCE(lp."documentDate",CASE WHEN ${scopedStoreId}::text IS NULL THEN pm."lastSeenAt" END) AS "lastPurchaseAt"
         FROM links JOIN "Supplier" s ON s."id"=links."supplierId" AND s."companyId"=${company}
         LEFT JOIN "SupplierProductMapping" pm ON pm."companyId"=${company} AND pm."supplierId"=links."supplierId" AND pm."productId"=${productId}
         LEFT JOIN LATERAL (SELECT history."unitCost",history."documentDate" FROM (
-          SELECT l."unitCost",d."documentDate",d."createdAt" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE l."productId"=${productId} AND d."supplierId"=links."supplierId" AND d."companyId"=${company} AND d."status"='APPROVED'
-          UNION ALL SELECT l."unitCost",o."createdAt",o."createdAt" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."productId"=${productId} AND o."supplierId"=links."supplierId" AND o."companyId"=${company} AND o."status" IN ('FINAL','INVOICED')
+          SELECT l."unitCost",d."documentDate",d."createdAt" FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" WHERE l."productId"=${productId} AND d."supplierId"=links."supplierId" AND d."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR d."storeId"=${scopedStoreId}) AND d."status"='APPROVED'
+          UNION ALL SELECT l."unitCost",o."createdAt",o."createdAt" FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" WHERE l."productId"=${productId} AND o."supplierId"=links."supplierId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) AND o."status" IN ('FINAL','INVOICED')
         ) history ORDER BY history."documentDate" DESC,history."createdAt" DESC LIMIT 1) lp ON true
         ORDER BY links."supplierId",links.priority,s."name"`,
       prisma.$queryRaw`SELECT * FROM (
         SELECT d."id",d."documentNumber",d."documentDate",d."supplierId",s."name" AS "supplierName",l."quantity",l."unit",l."unitsPerPackage",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",d."createdAt"
-        FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=d."supplierId" WHERE l."productId"=${productId} AND d."status"='APPROVED'
+        FROM "PurchaseDocumentLine" l JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR d."storeId"=${scopedStoreId}) LEFT JOIN "Supplier" s ON s."id"=d."supplierId" WHERE l."productId"=${productId} AND d."status"='APPROVED'
         UNION ALL
         SELECT o."id",o."invoiceNumber",o."createdAt",o."supplierId",s."name",l."quantity",COALESCE(l."invoiceUnit",'PIECE'),l."stockUnitsPerInvoiceUnit",l."unitCost",l."netAmount",l."vatRate",l."vatAmount",l."grossAmount",o."createdAt"
-        FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} LEFT JOIN "Supplier" s ON s."id"=o."supplierId"
+        FROM "PurchaseOrderLine" l JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) LEFT JOIN "Supplier" s ON s."id"=o."supplierId"
         WHERE l."productId"=${productId} AND o."status" IN ('FINAL','INVOICED') AND NOT EXISTS (
           SELECT 1 FROM "PurchaseDocumentLine" document_line JOIN "PurchaseDocument" document ON document."id"=document_line."purchaseDocumentId"
-          WHERE document."companyId"=${company} AND document."status"='APPROVED' AND document_line."productId"=${productId}
+          WHERE document."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR document."storeId"=${scopedStoreId}) AND document."status"='APPROVED' AND document_line."productId"=${productId}
             AND (document_line."purchaseOrderLineId"=l."id" OR (document."supplierId"=o."supplierId" AND NULLIF(TRIM(document."documentNumber"),'')=NULLIF(TRIM(o."invoiceNumber"),'')))
         )
       ) purchase_history ORDER BY "documentDate" DESC,"createdAt" DESC LIMIT 250`,
@@ -192,11 +197,11 @@ router.get("/:productId/details",requireCompanyModule("INVENTORY"),async(req,res
         COALESCE(SUM(sl."lineTotal") FILTER (WHERE sale."status"='COMPLETED'),0) AS "salesGross",
         COALESCE(SUM(sl."lineTotal"/(1+sl."vatRate"/100)) FILTER (WHERE sale."status"='COMPLETED'),0) AS "salesNet",
         MAX(sale."occurredAt") FILTER (WHERE sale."status"='COMPLETED') AS "lastSaleAt"
-        FROM "SaleLine" sl JOIN "Sale" sale ON sale."id"=sl."saleId" AND sale."companyId"=${company} WHERE sl."productId"=${productId}`,
+        FROM "SaleLine" sl JOIN "Sale" sale ON sale."id"=sl."saleId" AND sale."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR sale."storeId"=${scopedStoreId}) WHERE sl."productId"=${productId}`,
       prisma.$queryRaw`SELECT
-        (SELECT MAX(st."finalizedAt") FROM "StocktakeLine" line JOIN "Stocktake" st ON st."id"=line."stocktakeId" WHERE line."productId"=${productId} AND st."companyId"=${company} AND st."status"='FINALIZED') AS "lastStocktakeAt",
-        (SELECT MAX(h."createdAt") FROM "ProductPriceHistory" h WHERE h."productId"=${productId} AND h."companyId"=${company}) AS "lastPriceChangeAt",
-        (SELECT COALESCE(SUM(sp."currentStock"),0) FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId" WHERE sp."productId"=${productId} AND s."companyId"=${company}) AS "currentStock"`,
+        (SELECT MAX(st."finalizedAt") FROM "StocktakeLine" line JOIN "Stocktake" st ON st."id"=line."stocktakeId" WHERE line."productId"=${productId} AND st."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR st."storeId"=${scopedStoreId}) AND st."status"='FINALIZED') AS "lastStocktakeAt",
+        (SELECT MAX(h."createdAt") FROM "ProductPriceHistory" h WHERE h."productId"=${productId} AND h."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR h."storeId"=${scopedStoreId})) AS "lastPriceChangeAt",
+        (SELECT COALESCE(SUM(sp."currentStock"),0) FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId" WHERE sp."productId"=${productId} AND s."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR sp."storeId"=${scopedStoreId})) AS "currentStock"`,
       prisma.$queryRaw`SELECT "id","name" FROM "Supplier" WHERE "companyId"=${company} AND "active"=true ORDER BY "name"`
     ]);
     const purchaseSummary=purchases.reduce((a,row)=>{a.quantity+=Number(row.quantity||0)*(row.unit==='PACKAGE'?Number(row.unitsPerPackage||1):1);a.net+=Number(row.netAmount||0);a.gross+=Number(row.grossAmount||0);return a},{quantity:0,net:0,gross:0});
@@ -225,22 +230,27 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       barcodes:z.array(z.object({barcode:z.string().trim().min(3).max(80),unitMultiplier:z.coerce.number().positive().max(100000),salePrice:z.coerce.number().min(0).nullable().optional(),name:z.string().trim().max(120).nullable().optional()})).max(30),
       stores:z.array(z.object({storeId:z.string().min(1),active:z.boolean(),salePrice:z.coerce.number().min(0),minStock:z.coerce.number().min(0).nullable()})).max(500)
     }).parse(req.body||{});
+    if(scope){
+      await assertInventoryCardRights(prisma,scope,product,body);
+      body.salePrice=money(product.salePrice)??0;
+      body.active=product.active;
+    }
     const storeIds=[...new Set(body.stores.map(row=>row.storeId))];
     const validStores=await prisma.store.findMany({where:{companyId:company,active:true,id:{in:storeIds}},select:{id:true}});
     if(validStores.length!==storeIds.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο κατάστημα."});
     let selectedCategoryId=body.categoryId||null,selectedSubcategoryId=body.subcategoryId||null;
     if(selectedCategoryId){const category=await prisma.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "id"=${selectedCategoryId} AND "companyId"=${company} AND "active"=true LIMIT 1`;if(!category[0])return res.status(400).json({error:"Η κατηγορία δεν είναι έγκυρη."})}
     if(selectedSubcategoryId){const subcategory=await prisma.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "id"=${selectedSubcategoryId} AND "categoryId"=${selectedCategoryId||''} AND "companyId"=${company} AND "active"=true LIMIT 1`;if(!subcategory[0])return res.status(400).json({error:"Η υποκατηγορία δεν ανήκει στην επιλεγμένη κατηγορία."})}
-    if(!body.supplierCodes.length){
+    if(!body.supplierCodes.length&&(!scope||scope.capabilities.edit)){
       const purchaseSupplier=await prisma.$queryRaw`
         SELECT history."supplierId" FROM (
           SELECT d."supplierId",d."documentDate" AS at,d."createdAt" FROM "PurchaseDocumentLine" l
-          JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} AND d."status"='APPROVED'
+          JOIN "PurchaseDocument" d ON d."id"=l."purchaseDocumentId" AND d."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR d."storeId"=${scopedStoreId}) AND d."status"='APPROVED'
           JOIN "Supplier" s ON s."id"=d."supplierId" AND s."companyId"=${company}
           WHERE l."productId"=${product.id}
           UNION ALL
           SELECT o."supplierId",o."createdAt" AS at,o."createdAt" FROM "PurchaseOrderLine" l
-          JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} AND o."status" IN ('FINAL','INVOICED')
+          JOIN "PurchaseOrder" o ON o."id"=l."orderId" AND o."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR o."storeId"=${scopedStoreId}) AND o."status" IN ('FINAL','INVOICED')
           JOIN "Supplier" s ON s."id"=o."supplierId" AND s."companyId"=${company}
           WHERE l."productId"=${product.id}
         ) history ORDER BY history.at DESC,history."createdAt" DESC LIMIT 1`;
@@ -250,7 +260,7 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
         if(inferred.length===1)body.supplierCodes=[{supplierId:inferred[0].id,supplierCode:""}];
       }
     }
-    if(body.supplierName&&!body.supplierCodes.length){
+    if(body.supplierName&&!body.supplierCodes.length&&(!scope||scope.capabilities.edit)){
       return res.status(409).json({error:"Ο προμηθευτής εμφανίζεται στην αγορά αλλά δεν μπόρεσε να συνδεθεί με το προϊόν. Έλεγξε ότι είναι ενεργός στην καρτέλα Προμηθευτών."});
     }
     const supplierIds=[...new Set(body.supplierCodes.map(row=>row.supplierId))];
@@ -265,7 +275,7 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       selectedSubcategoryId?prisma.$queryRaw`SELECT "name" FROM "ProductSubcategory" WHERE "id"=${selectedSubcategoryId} AND "companyId"=${company} LIMIT 1`:[],
       prisma.$queryRaw`SELECT "barcode","unitMultiplier","salePrice","name" FROM "ProductBarcode" WHERE "productId"=${product.id} ORDER BY "barcode"`,
       prisma.$queryRaw`SELECT "supplierId","supplierCode" FROM "SupplierProductLink" WHERE "companyId"=${company} AND "productId"=${product.id} AND "active"=true ORDER BY "supplierId"`,
-      prisma.$queryRaw`SELECT sp."storeId",sp."active",sp."salePrice",sp."minStock" FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId" WHERE sp."productId"=${product.id} AND s."companyId"=${company} ORDER BY sp."storeId"`
+      prisma.$queryRaw`SELECT sp."storeId",sp."active",sp."salePrice",sp."minStock" FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId" WHERE sp."productId"=${product.id} AND s."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR sp."storeId"=${scopedStoreId}) ORDER BY sp."storeId"`
     ]);
     const comparable=value=>value===null||value===undefined||value===""?null:value;
     const changes=[];
@@ -315,14 +325,15 @@ router.patch("/:productId/card",requireCompanyModule("INVENTORY"),async(req,res,
       }
       let categoryId=selectedCategoryId;
       if(!categoryId&&body.categoryName){const rows=await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "companyId"=${company} AND "name"=${body.categoryName} LIMIT 1`;categoryId=rows[0]?.id||uid();if(!rows[0])await tx.$executeRaw`INSERT INTO "ProductCategory" ("id","companyId","name") VALUES (${categoryId},${company},${body.categoryName})`}
-      if(money(product.salePrice)!==body.salePrice)await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${money(product.salePrice)},${body.salePrice},'PRODUCT_CARD',${req.user.id})`;
+      if(money(product.salePrice)!==body.salePrice)await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${money(product.salePrice)},${body.salePrice},'PRODUCT_CARD',${scope?null:req.user.id})`;
       await tx.$executeRaw`UPDATE "Product" SET "name"=${body.name},"sku"=${body.sku||null},"description"=${body.description||null},"categoryId"=${categoryId},"subcategoryId"=${selectedSubcategoryId},"unit"=${body.unit},"salePrice"=${body.salePrice},"costPrice"=${body.costPrice},"vatRate"=${body.vatRate},"vatVerified"=${body.vatVerified},"trackStock"=${body.trackStock},"active"=${body.active},"staffPrice"=${body.staffPrice??null},"deliveryPrice"=${body.deliveryPrice??null},"minOrderQuantity"=${body.minOrderQuantity??null},"capacity"=${body.capacity??null},"allowDiscount"=${body.allowDiscount},"allowPosPriceChange"=${body.allowPosPriceChange},"freeSalePrice"=${body.freeSalePrice},"negativeStockWarning"=${body.negativeStockWarning},"isSet"=${body.isSet},"isRecipe"=${body.isRecipe},"discountA"=${body.discountA},"discountB"=${body.discountB},"discountC"=${body.discountC},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${product.id}`;
       await tx.$executeRaw`DELETE FROM "ProductBarcode" WHERE "productId"=${product.id}`;
       for(const row of body.barcodes)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier","salePrice","name","updatedAt") VALUES (${uid()},${product.id},${row.barcode},${row.unitMultiplier},${row.salePrice??null},${row.name||null},CURRENT_TIMESTAMP)`;
       await tx.$executeRaw`UPDATE "SupplierProductLink" SET "active"=false,"updatedBy"=${req.user.id},"updatedAt"=NOW() WHERE "companyId"=${company} AND "productId"=${product.id} AND NOT ("supplierId"=ANY(${supplierIds}::text[]))`;
       for(const row of body.supplierCodes)await tx.$executeRaw`INSERT INTO "SupplierProductLink" ("id","companyId","supplierId","productId","supplierCode","active","source","updatedBy","updatedByName") VALUES (${uid()},${company},${row.supplierId},${product.id},${row.supplierCode||null},true,'PRODUCT_CARD',${req.user.id},${req.user.fullName||req.user.email||'BackOffice'}) ON CONFLICT ("companyId","supplierId","productId") DO UPDATE SET "supplierCode"=COALESCE(NULLIF(EXCLUDED."supplierCode",''),"SupplierProductLink"."supplierCode"),"active"=true,"source"='PRODUCT_CARD',"updatedBy"=EXCLUDED."updatedBy","updatedByName"=EXCLUDED."updatedByName","updatedAt"=NOW()`;
+      if(scope)for(const row of body.stores){const previous=oldStores.find(item=>item.storeId===row.storeId);if(money(previous?.salePrice??product.salePrice)!==row.salePrice)await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","storeId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${row.storeId},${money(previous?.salePrice??product.salePrice)},${row.salePrice},'PRODUCT_CARD',NULL)`;}
       for(const row of body.stores)await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","minStock","active") VALUES (${uid()},${row.storeId},${product.id},${row.salePrice},${row.minStock},${row.active}) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","minStock"=EXCLUDED."minStock","active"=EXCLUDED."active","updatedAt"=CURRENT_TIMESTAMP`;
-      for(const storeId of storeIds){const storeChanges=auditChangesByStore.get(storeId)||[];if(storeChanges.length)await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${uid()},${company},${storeId},${req.user.operatorId||req.user.id},${req.user.id},'PRODUCT_CARD_UPDATED',${JSON.stringify({productId:product.id,productName:body.name,sku:body.sku||product.sku||null,changes:storeChanges,actorName:req.user.fullName||req.user.name||req.user.email||'BackOffice',terminalPos:'BACKOFFICE'})}::jsonb)`}
+      for(const storeId of storeIds){const storeChanges=auditChangesByStore.get(storeId)||[];if(storeChanges.length)await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${uid()},${company},${storeId},${req.user.operatorId||req.user.id},${req.user.id},'PRODUCT_CARD_UPDATED',${JSON.stringify({productId:product.id,productName:body.name,sku:body.sku||product.sku||null,changes:storeChanges,actorName:req.user.fullName||req.user.name||req.user.email||'BackOffice',terminalPos:scope?.terminalPos||'BACKOFFICE'})}::jsonb)`}
     });
     res.json({ok:true,id:product.id});
   }catch(error){next(error)}
@@ -336,7 +347,7 @@ router.get("/:productId/barcode-owner",requireCompanyModule("INVENTORY"),async(r
     if(!/^\d{8,14}$/.test(barcode))return res.status(400).json({error:"Βάλε barcode 8–14 ψηφίων."});
     const rows=await prisma.$queryRaw`SELECT p."id" AS "productId",p."name",p."sku",b."unitMultiplier",b."salePrice",b."name" AS "barcodeName"
       FROM "ProductBarcode" b JOIN "Product" p ON p."id"=b."productId"
-      WHERE p."companyId"=${company} AND b."barcode"=${barcode} LIMIT 2`;
+      WHERE p."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR EXISTS(SELECT 1 FROM "StoreProduct" bound WHERE bound."productId"=p."id" AND bound."storeId"=${scopedStoreId})) AND b."barcode"=${barcode} LIMIT 2`;
     res.json({barcode,target:{id:target.id,name:target.name,sku:target.sku},owners:rows});
   }catch(error){next(error)}
 });
@@ -355,16 +366,16 @@ router.post("/:productId/barcode-transfer",requireCompanyModule("INVENTORY"),asy
       const source=products.find(p=>p.id===expectedSourceId),target=products.find(p=>p.id===targetId);
       if(!source||!target){const error=new Error("Δεν βρέθηκαν και τα δύο προϊόντα στην εταιρεία.");error.status=404;throw error}
       const rows=await tx.$queryRaw`SELECT b."id",b."productId" FROM "ProductBarcode" b JOIN "Product" p ON p."id"=b."productId"
-        WHERE p."companyId"=${company} AND b."barcode"=${barcode} FOR UPDATE OF b`;
+        WHERE p."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR EXISTS(SELECT 1 FROM "StoreProduct" bound WHERE bound."productId"=p."id" AND bound."storeId"=${scopedStoreId})) AND b."barcode"=${barcode} FOR UPDATE OF b`;
       if(rows.length!==1||rows[0].productId!==expectedSourceId){
         const error=new Error("Η αντιστοίχιση του barcode άλλαξε. Κάνε νέο έλεγχο πριν από τη μεταφορά.");error.status=409;throw error
       }
       await tx.$executeRaw`UPDATE "ProductBarcode" SET "productId"=${targetId},"unitMultiplier"=1,"salePrice"=NULL,"name"=NULL,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${rows[0].id}`;
       const stores=await tx.$queryRaw`SELECT DISTINCT sp."storeId" FROM "StoreProduct" sp JOIN "Store" s ON s."id"=sp."storeId"
-        WHERE s."companyId"=${company} AND sp."productId" IN (${expectedSourceId},${targetId})`;
+        WHERE s."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR sp."storeId"=${scopedStoreId}) AND sp."productId" IN (${expectedSourceId},${targetId})`;
       if(!stores.length){const error=new Error("Δεν υπάρχει συνδεδεμένο κατάστημα για την καταγραφή Audit της μεταφοράς.");error.status=409;throw error}
       const details=JSON.stringify({barcode,sourceProductId:source.id,sourceProductName:source.name,targetProductId:target.id,targetProductName:target.name,
-        resetBarcodeAttributes:true,actorName:req.user.fullName||req.user.name||req.user.email||"BackOffice",terminalPos:"BACKOFFICE"});
+        resetBarcodeAttributes:true,actorName:req.user.fullName||req.user.name||req.user.email||"BackOffice",terminalPos:scope?.terminalPos||"BACKOFFICE"});
       for(const store of stores)await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details")
         VALUES (${uid()},${company},${store.storeId},${req.user.operatorId||req.user.id},${req.user.id},'PRODUCT_BARCODE_TRANSFERRED',${details}::jsonb)`;
       return {barcode,source:{id:source.id,name:source.name},target:{id:target.id,name:target.name},auditedStores:stores.length};
@@ -384,13 +395,18 @@ router.patch("/:productId/prices",requireCompanyModule("INVENTORY"),async(req,re
       vatVerified:z.boolean().optional(),
       stores:z.array(z.object({storeId:z.string().min(1),active:z.boolean(),salePrice:z.coerce.number().min(0).nullable()})).max(500)
     }).parse(req.body||{});
+    if(scope){
+      if(!scope.capabilities.edit&&(body.vatRate!==undefined&&Number(body.vatRate)!==Number(product.vatRate)||body.vatVerified!==undefined&&body.vatVerified!==product.vatVerified))throw inventoryDenied();
+      if(!scope.capabilities.edit){const current=await prisma.$queryRaw`SELECT "active" FROM "StoreProduct" WHERE "storeId"=${scope.storeId} AND "productId"=${product.id}`;if(body.stores.some(row=>row.active!==current[0]?.active))throw inventoryDenied();}
+      body.basePrice=money(product.salePrice)??0;
+    }
     const ids=[...new Set(body.stores.map(x=>x.storeId))];
     const valid=await prisma.store.findMany({where:{companyId:company,id:{in:ids}},select:{id:true}});
     if(valid.length!==ids.length)return res.status(400).json({error:"Υπάρχει μη έγκυρο κατάστημα."});
     await prisma.$transaction(async tx=>{
       const oldBase=money(product.salePrice);
       if(oldBase!==body.basePrice){
-        await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${oldBase},${body.basePrice},'BASE_PRICE',${req.user.id})`;
+        await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${oldBase},${body.basePrice},'BASE_PRICE',${scope?null:req.user.id})`;
       }
       await tx.$executeRaw`UPDATE "Product" SET "salePrice"=${body.basePrice},"vatRate"=${body.vatRate??money(product.vatRate)??0},"vatVerified"=${body.vatVerified??product.vatVerified},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${product.id}`;
       for(const config of body.stores){
@@ -398,7 +414,7 @@ router.patch("/:productId/prices",requireCompanyModule("INVENTORY"),async(req,re
         const old=oldRows[0];
         const newPrice=config.salePrice===null?body.basePrice:config.salePrice;
         if(!old||money(old.salePrice)!==newPrice){
-          await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","storeId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${config.storeId},${old?money(old.salePrice):null},${newPrice},'STORE_PRICE',${req.user.id})`;
+          await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","storeId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${uid()},${company},${product.id},${config.storeId},${old?money(old.salePrice):null},${newPrice},'STORE_PRICE',${scope?null:req.user.id})`;
         }
         await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","active") VALUES (${uid()},${config.storeId},${product.id},${newPrice},${config.active}) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=EXCLUDED."salePrice","active"=EXCLUDED."active","updatedAt"=CURRENT_TIMESTAMP`;
       }
@@ -424,7 +440,7 @@ router.get("/:productId/price-history",requireCompanyModule("INVENTORY"),async(r
   try{
     const company=companyId(req);
     if(!await ownedProduct(company,req.params.productId))return res.status(404).json({error:"Δεν βρέθηκε το προϊόν."});
-    const rows=await prisma.$queryRaw`SELECT h."id",h."oldPrice",h."newPrice",h."changeType",h."createdAt",s."name" AS "storeName" FROM "ProductPriceHistory" h LEFT JOIN "Store" s ON s."id"=h."storeId" WHERE h."companyId"=${company} AND h."productId"=${req.params.productId} ORDER BY h."createdAt" DESC LIMIT 100`;
+    const rows=await prisma.$queryRaw`SELECT h."id",h."oldPrice",h."newPrice",h."changeType",h."createdAt",s."name" AS "storeName" FROM "ProductPriceHistory" h LEFT JOIN "Store" s ON s."id"=h."storeId" WHERE h."companyId"=${company} AND (${scopedStoreId}::text IS NULL OR h."storeId"=${scopedStoreId}) AND h."productId"=${req.params.productId} ORDER BY h."createdAt" DESC LIMIT 100`;
     res.json(rows);
   }catch(error){next(error)}
 });
@@ -576,4 +592,7 @@ router.post("/stocktakes/:stocktakeId/finalize",requireCompanyModule("INVENTORY"
   }catch(error){next(error)}
 });
 
+return router;
+}
+const router=createOwnerProductsRouter();
 export default router;

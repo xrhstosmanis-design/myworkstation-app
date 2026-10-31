@@ -12,8 +12,8 @@ function harness({department='dep13',rate=13,deny=false}={}){
  const execute=async(parts,...values)=>{writes.push({q:parts.join('?'),values});return 1};
  const prisma={$queryRaw:query,store:{findMany:async()=>[{id:'store'}]},$transaction:async fn=>{const start=writes.length;try{await fn({$queryRaw:query,$executeRaw:execute});committed.push(...writes.slice(start))}catch(e){writes.splice(start);throw e}}};
  const router={get(){},post(){},delete(){},patch(path,...handlers){routes.push({path,handler:handlers.at(-1)})}};
- const context={crypto,z,prisma,resolveProductCardVat,productCardVatOptions,Router:()=>router,requireCompanyModule:()=>()=>{},XLSX:{},createScopedPromotionBatch(){},parsePromotionDate(){}};
- vm.createContext(context);vm.runInContext(source.replace(/^import .*;\n/gm,'').replace('export default router;',''),context);
+ const context={crypto,z,prisma,resolveProductCardVat,productCardVatOptions,Router:()=>router,defaultRequireCompanyModule:()=>()=>{},requireCompanyModule:()=>()=>{},XLSX:{},createScopedPromotionBatch(){},parsePromotionDate(){}};
+ vm.createContext(context);vm.runInContext(source.replace(/^import .*;\n/gm,'').replace('export default router;','').replace(/^export function /gm,'function '),context);
  const handler=routes.find(r=>r.path==='/:productId/card').handler;
  const body={expectedBarcodeIds:[],name:'Product',sku:'P',description:'',unit:'PIECE',salePrice:2,costPrice:1,vatRate:13,vatVerified:true,trackStock:true,active:true,barcodes:[],supplierCodes:[],stores:[{storeId:'store',active:true,salePrice:2,minStock:null}]};
  return {writes,committed,body,run:async extra=>{let error,result;await handler({user:{companyId:'co',id:'owner'},params:{productId:'p'},body:{...body,...extra}},{status(){return this},json(v){result=v}},e=>error=e);return {error,result}}};
