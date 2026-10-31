@@ -1,3 +1,4 @@
+import {handoffQuestion} from './cash-handoff-issues.js';
 import {pendingCashContinuationRows} from './cash-automatic-result.js';
 import {cashIssueQuestion} from './cash-issue-replies.js';
 import {readLifecycleGeneration,assertLifecycleMutation} from './store-lifecycle-generation.js';
@@ -46,7 +47,7 @@ export function createCashReconciliationRepository(db){
   }
   const response=(chain,report,extra={},historyPage=0,requestId=null)=>{
     const ids=new Set(activeRecords(chain.records).map(r=>r.id)),end=Math.max(0,chain.records.length-historyPage*50),start=Math.max(0,end-50);
-    return {...report,head:chain.head,requestId,requestStatus:requestId?(chain.records.some(r=>r.requestId===requestId)?'APPLIED':'NOT_FOUND'):null,historyPage,historyPages:Math.max(1,Math.ceil(chain.records.length/50)),historyTotal:chain.records.length,history:chain.records.slice(start,end).map(r=>({id:r.id,kind:r.data.kind,note:r.data.note,actorName:r.actorName,createdAt:r.createdAt,active:r.data.kind==='REVOKE'?null:ids.has(r.id),sessionId:r.data.sessionId||r.data.previousSessionId||null,relatedSessionId:r.data.nextSessionId||null,amountCents:r.data.amountCents??null,issue:r.data.kind==='ISSUE'?{issueId:r.data.issueId,status:r.data.status,transactionId:r.proof.question?.transactionId||null}:null,paper:r.data.kind==='ASSOCIATE'?{label:r.proof.rawLine?.label||'Χαρτί',rawAmountText:r.proof.rawLine?.amountText??null,rawTimeText:r.proof.rawLine?.timeText??null,rawDate:r.proof.printedDate??null,confirmedKind:r.data.confirmedKind,confirmedDate:r.data.confirmedDate,confirmedAmountCents:r.data.confirmedAmountCents}:null})),...extra};
+    return {...report,head:chain.head,requestId,requestStatus:requestId?(chain.records.some(r=>r.requestId===requestId)?'APPLIED':'NOT_FOUND'):null,historyPage,historyPages:Math.max(1,Math.ceil(chain.records.length/50)),historyTotal:chain.records.length,history:chain.records.slice(start,end).map(r=>({id:r.id,kind:r.data.kind,note:r.data.note,actorName:r.actorName,createdAt:r.createdAt,active:r.data.kind==='REVOKE'?null:ids.has(r.id),sessionId:r.data.sessionId||r.data.previousSessionId||null,relatedSessionId:r.data.nextSessionId||null,amountCents:r.data.amountCents??null,handoff:r.data.kind==='HANDOFF_ISSUE'?{issueId:r.data.issueId,status:r.data.status,previousSessionId:r.data.previousSessionId,nextSessionId:r.data.nextSessionId}:null,issue:r.data.kind==='ISSUE'?{issueId:r.data.issueId,status:r.data.status,transactionId:r.proof.question?.transactionId||null}:null,paper:r.data.kind==='ASSOCIATE'?{label:r.proof.rawLine?.label||'Χαρτί',rawAmountText:r.proof.rawLine?.amountText??null,rawTimeText:r.proof.rawLine?.timeText??null,rawDate:r.proof.printedDate??null,confirmedKind:r.data.confirmedKind,confirmedDate:r.data.confirmedDate,confirmedAmountCents:r.data.confirmedAmountCents}:null})),...extra};
   };
   async function read(scope,period,{historyPage=0,requestId=null}={}){
     if(!Number.isInteger(historyPage)||historyPage<0||historyPage>199)throw reconcileError('CASH_RECONCILIATION_SCOPE_INVALID',400);
@@ -87,7 +88,12 @@ export function createCashReconciliationRepository(db){
       const d=request.data,extra=d.kind==='OFFSET'?[d.previousSessionId,d.nextSessionId]:d.sessionId?[d.sessionId]:[];
       const {source,report}=await materialize(tx,scope,request.period,chain,extra),active=activeRecords(chain.records),allRows=[...report.rows,...report.context];
       let proof={period:request.period};
-      if(d.kind==='ISSUE'){
+      if(d.kind==='HANDOFF_ISSUE'){
+        const issue=report.handoffRegister?.status==='AVAILABLE'?report.handoffRegister.issues.find(q=>q.id===d.issueId):null;
+        if(!issue?.current||issue.previousSessionId!==d.previousSessionId||issue.nextSessionId!==d.nextSessionId||issue.previousHash!==d.previousHash||issue.nextHash!==d.nextHash||issue.fingerprint!==d.issueFingerprint||d.reportHash!==report.reportHash||![d.previousSessionId,d.nextSessionId].some(id=>source.selectedIds.includes(id)))throw reconcileError('CASH_HANDOFF_ISSUE_SOURCE_CHANGED');
+        if(report.text.length+d.note.length*2>140000||report.handoffRegister.issues.reduce((n,q)=>n+(q.lastReply?.note.length||0),0)+d.note.length>60000)throw reconcileError('CASH_RECONCILIATION_LIMIT');
+        proof={...proof,handoffQuestion:handoffQuestion(issue),reportHash:report.reportHash};
+      }else if(d.kind==='ISSUE'){
         const issue=report.issueRegister?.status==='AVAILABLE'?report.issueRegister.issues.find(q=>q.id===d.issueId):null;
         if(!issue?.current||!source.selectedIds.includes(d.sessionId)||issue.sessionId!==d.sessionId||issue.sourceHash!==d.sourceHash||issue.fingerprint!==d.issueFingerprint||d.reportHash!==report.reportHash)throw reconcileError('CASH_ISSUE_SOURCE_CHANGED');
         if(report.text.length+d.note.length*2>140000||report.issueRegister.issues.reduce((n,q)=>n+(q.lastReply?.note.length||0),0)+d.note.length>60000)throw reconcileError('CASH_RECONCILIATION_LIMIT');
