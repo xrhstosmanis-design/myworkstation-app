@@ -46,7 +46,7 @@ router.post('/stores/:storeId/ftext-cash/:requestId/outcome',async(req,res,next)
  const terminalPos=await requestTerminal(req),scope={companyId:req.user.companyId,storeId:req.params.storeId,terminalPos};
  const row=await prisma.$transaction(async tx=>recordFtextOperatorDecision(tx,req.params.requestId,scope,req.user.id,req.body,{context:ftextCashService.cashContext}));
  // Acknowledgement never emits another fiscal command. Finalization is atomic and replay-safe.
- let committed=null;if(row.checkoutJson.ftextCardDecision.outcome==='YES')committed=await finalizeFtextCashRequest(prisma,row.id,scope,{context:ftextCashService.cashContext});
+ let committed=null;if(row.checkoutJson.ftextCardDecision?.outcome==='YES')committed=await finalizeFtextCashRequest(prisma,row.id,scope,{context:ftextCashService.cashContext});
  res.json({request:ftextCashRequestView(committed?{...row,status:'SALE_COMMITTED',saleId:committed.saleId}:row),allowResend:false});
 }catch(e){if(e.name==='ZodError')return res.status(400).json({error:'Επίλεξε Ναι, Όχι ή Αβέβαιο.'});next(e)}});
 router.post('/stores/:storeId/ftext-cash/:requestId/finalize',async(req,res,next)=>{try{assertStore(req,req.params.storeId);const terminalPos=await requestTerminal(req),scope={companyId:req.user.companyId,storeId:req.params.storeId,terminalPos};res.json(await finalizeFtextCashRequest(prisma,req.params.requestId,scope,{context:ftextCashService.cashContext}))}catch(e){next(e)}});

@@ -14,6 +14,7 @@ export async function finalizeFtextCashRequest(db,id,scope,{context,reserveStock
   const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} FOR UPDATE`)[0];
   if(!row||row.settingsHash!==ftextSettingsHash(current.settings)||row.lifecycleGeneration!==current.settings.lifecycleGeneration)fail('Η εντολή ανήκει σε διαφορετική εγκατάσταση ή κατάσταση καταστήματος.');
   if(row.status==='SALE_COMMITTED')return {saleId:row.saleId,replay:true,inventoryWarnings:row.checkoutJson?.inventoryWarnings||[]};
+  if(row.checkoutJson?.ftextOperatorRelease)fail('Η προηγούμενη προσπάθεια έχει αποδεσμευθεί στο MyWorkStation. Απαιτείται έλεγχος του αρχικού αποτελέσματος.');
   const receipt=effectiveFtextCashReceipt(row,current.settings);
   if(row.status!=='CONFIRMED'||!row.resultHash||receipt?.outcome!=='CONFIRMED')fail('Η φορολογική απόδειξη δεν έχει επιβεβαιωθεί.');
   validateFtextCashResult(receipt,row);

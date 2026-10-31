@@ -77,3 +77,23 @@ for(const outcome of ['YES','NO'])test(`actual POS failed ${outcome} decision ke
   assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')),false);
  }
 }));
+
+for(const outcome of ['NO','UNCERTAIN'])test(`actual POS generic CASH ${outcome} preserves basket and never emits another checkout`,()=>withMountedPos({
+ ftextConfigured:true,
+ apiOverride:async path=>{
+  const row={id:'cash-review',kind:'FTEXT_CASH',storeId:'A',terminalPos:'POS-01',status:'REQUIRES_CHECK',operatorConfirmationRequired:false,operatorReviewMode:'CASH_UNKNOWN',paymentMethod:'CASH',total:2.2,clientTransactionId:'cash-review-key',checkout:{paymentMethod:'CASH',items:[{productId:'p0',quantity:1}]}};
+  if(path.endsWith('/pending'))return {requests:[row]};
+  if(path.endsWith('/ftext-cash/cash-review'))return {request:row};
+  if(path.endsWith('/outcome'))return {request:{...row,operatorOutcome:outcome,operatorReviewMode:outcome==='NO'?null:'CASH_UNKNOWN',operatorReleaseMode:outcome==='NO'?'RELEASED':null},allowResend:false};
+ },
+ run:async({calls,click,dom})=>{
+  dom.window.confirm=()=>assert.fail('No second confirmation');
+  assert.equal([...document.querySelectorAll('button')].some(x=>x.textContent==='Ναι · εγκρίθηκε'),false);
+  const button=[...document.querySelectorAll('button')].find(x=>x.textContent===(outcome==='NO'?'Όχι · δεν εκδόθηκε απόδειξη':'Αβέβαιο · έλεγχος'));
+  assert.ok(button);await click(button);
+  assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')||c.path.endsWith('/release')),false);const writes=calls.filter(c=>c.path.includes('/ftext-cash/')&&c.options?.method==='POST');assert.equal(writes.length,1);assert.ok(writes[0].path.endsWith('/cash-review/outcome'));assert.deepEqual(JSON.parse(writes[0].options.body),{outcome});
+  assert.equal(document.querySelectorAll('.standard-line').length,1);
+  if(outcome==='NO'){assert.match(document.body.textContent,/Η προηγούμενη προσπάθεια έκλεισε στο MyWorkStation/);assert.equal(document.querySelector('[data-pos-scanner]').disabled,false);}
+  else {assert.equal(document.querySelector('[data-pos-scanner]').disabled,true);assert.match(document.body.textContent,/δεν αποστέλλεται νέα πληρωμή/);}
+ }
+}));
