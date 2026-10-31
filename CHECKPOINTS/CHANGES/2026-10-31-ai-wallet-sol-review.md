@@ -1,3 +1,15 @@
+## 31/10/2026 — AI-OWNER-WALLET-01 / SOL UNIFORM CACHE REVIEW CORRECTED / LIMITED HOSTED LAB PASS
+
+Retained owner feat/ai-owner-wallet-20261022, continuation fix/ai-wallet-uniform-cache-20261031. The new-request Sol usage-review incident is closed for the measured standard-context/uniform30m case; the whole wallet remains OPEN. Before-source claim3345/c816eb14 preserved. Source3358/head089c88b0950faba6c1ceb2e373e2bf702c6b47e5 fullPR41198974874 SUCCESS:4859server+8backup/0FAIL/0SKIP, actual native SQL/build/browser/HTTP E2E; recovery41198974751 SUCCESS. Merged32bfe940bf1398c57402d032d8ef1b8555610500. Own-main41199782907 was cancelled, never counted as success. Combined42ae4a3db371943fb0109aa815fac8a1b6bd9f33 exact fullmain41199931951 SUCCESS:4862server+8backup/0FAIL/0SKIP and native wallet executed. Normal guarded41201059265/job124536843141 SUCCESS, rollback preserved, dep-dbitt4s9v7es738j9bc0 LIVE12:32:12UTC. Independent HTTP exact42ae/oktrue and DB12:33:04 zero lock/long-query controls before native actions; post-test HTTP still42ae. Four affected wallet runtime files match accepted source.
+
+Measured native MYWORKSTATION LAB / MAIN / LAB POS2 / existing authenticated SuperAdmin,31Oct12:34–12:45UTC: temporary master+invoice ON20→21, one separately identified new image SOL-LAB-20261031-C/SYN-C1 qty1PIECE/unit14EUR/VAT0, original checksum-bound attachment/job, one unapproved CREDIT DRAFT/NEW POS_OCR_DRAFT/one unresolved line, paymentTransactionIdNULL. Initial image reader produced no wallet movement: that separate route is NOT a metering PASS. No old invoice or B replay.
+
+ONE original automatic assistant preview C returned completed comparison: its one physical row and totals14EUR agree; synthetic diagnostic status noted. Exactly one new INVOICE_OPENAI entry cdac4c32-ddaf-4d98-8003-f3e3946e5047 SETTLED, gpt-5.6-sol,9397input/0cached/9394writes/672output, uniform default30m provenance retained with original tariff version. Independent integer calculation80973microEUR equals charged amount and exact balance debit4964032→4883059. Its original hold was fully released, wallet21→23. Pre-existing B REVIEW930033microEUR remains separately unchanged. No new review audit/notices/retry/apply/product/stock/payment/approval/fiscal/email/learning action. Existing entries/foreign wallet/history and all three LAB sales/transaction/stock/shift/product controls agree; MAIN90/134/95 and open shift0transactions/0cash/card/IRIS/total. Only planned intake added one order/document/line/attachment/job. Native OFF23→24 added one config audit only, preserving final balance/old hold/history; LAB master+invoice/email nowOFF. The C draft/job/line stayed exactly unchanged after preview.
+
+Evidence CHECKPOINTS/CHANGES/2026-10-31-ai-wallet-sol-review.md; CHECKPOINTS/EVIDENCE/ai-owner-wallet-20261022/sol-uniform-cache-lab-20261031.json, sol-uniform-cache-ci-20261031.txt, sol-uniform-cache-assistant-pass-20261031.jpg and distinct C fixtures. Practical instructions docs/manual/ai-owner-wallet/PASS.md. Private before/after controls remain separate; no real-customer financial data published.
+
+Residuals remain assigned/OPEN: historical customer REVIEW reconciliation and B hold resolution require original bound evidence, no guessed/manual financial SQL; initial image-reader metering and PDF file_data validation are separate observations; per-customer pricing UI, actual Owner-session detail, delivered email/thresholds, other models/cache12h/mixed/long-context hosted acceptance and OCR/product/approval scope are not closed. Existing Azure/GPT5/configuration PASS and all other owners preserved. No whole-wallet or broader Gate3 PASS. The earlier LIVE FAIL/next-source notes below are historical for this completed bounded correction; do not repeat the paid test or reclaim other assigned work.
+
 ### Uniform cache policy source — 31Oct2026 / LOCAL REGRESSION PASS / AWAITING FULL CI AND LAB
 
 Same retained owner/continuation fix/ai-wallet-uniform-cache-20261031; before-source claim3345 merged c816eb14c39de4f854d0d91985e56aaf861c029e. Reviewed main history through2d80052: only unrelated documentation/inventory source, no intervening wallet change. Actual B remains LIVE FAIL; no new hosted or business action.
@@ -1869,3 +1881,1874 @@ Each state action requires a fresh recorded before and after snapshot. Existing 
 
 <!-- SOL_REVIEW_LAB_PHASES -->
 
+
+
+### BEFORE_ENABLE_C — 2026-10-31T12:34:52.234339+00:00
+
+```json
+{
+  "at": "2026-10-31T12:34:52.234339+00:00",
+  "action": "Enable LAB master+invoice charging once for separately identified new SYN-C1 test on independently verified42ae release; expect version+1 and one config audit only, preserve B930033microEUR hold/emailOFF/all money/history/business controls.",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "operator": "Authenticated SuperAdmin / LAB POS2",
+  "terminal": "MAIN",
+  "sku": "SYN-C1",
+  "quantity": 1,
+  "payment": "N/A / unapproved CREDIT only",
+  "wallet": {
+    "balanceMicros": 4964032,
+    "emailEnabled": false,
+    "enabled": false,
+    "reservedMicros": 930033,
+    "version": 20
+  },
+  "stores": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 57,
+      "sales": 90,
+      "stockDigest": "b9bdda30613d46ca65c30343703b6fba",
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactionDigest": "5a949cedd83adacaf2d0b19945334a54",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "7c0155e741462913d47f35fd5f59cafa",
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    }
+  ],
+  "labControls": {
+    "productDigest": "d9683c59c2227cf6d8beaeadf22cf30e",
+    "products": 110,
+    "shiftTransactions": [
+      {
+        "count": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "sum": 0,
+        "terminal": "MAIN"
+      }
+    ],
+    "shifts": [
+      {
+        "actualOperational": null,
+        "cardSales": 0,
+        "cardVariance": 0,
+        "cashSales": 0,
+        "closedAt": null,
+        "closedBy": null,
+        "closedByName": null,
+        "closingCoins": null,
+        "closingCustody": null,
+        "closingDrawer": null,
+        "closingNote": null,
+        "closingSafe": null,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "duplicateReviewJson": [],
+        "eftposTotal": 0,
+        "expectedOpeningOperational": 0,
+        "expectedOperational": null,
+        "expenses": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "nextOpeningTotal": null,
+        "openedAt": "2026-10-29T17:04:12.460567+00:00",
+        "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+        "openedByName": "LAB POS 2",
+        "openingCoins": 0,
+        "openingCustody": 0,
+        "openingDrawer": 0,
+        "openingNote": null,
+        "openingOperational": 0,
+        "openingSafe": 0,
+        "openingVariance": 0,
+        "shiftLabel": "Βάρδια",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "terminalPos": "MAIN",
+        "updatedAt": "2026-10-29T17:04:12.460567+00:00",
+        "variance": null
+      }
+    ],
+    "stores": [
+      {
+        "attachments": 79,
+        "documents": 69,
+        "id": "cmtpopbgo000trhb5ng9ytiru",
+        "jobs": 77,
+        "orderLines": 627
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmuk8gxui000ppabfykdxwb1y",
+        "jobs": 0,
+        "orderLines": 0
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmv2qanca000psigeizep8o9m",
+        "jobs": 0,
+        "orderLines": 0
+      }
+    ],
+    "suppliers": 62,
+    "syntheticProducts": null,
+    "syntheticSuppliers": [
+      {
+        "active": true,
+        "id": "3b26251d-2ff6-45b2-99e7-a43964b62844",
+        "name": "LAB METER TEST"
+      }
+    ]
+  }
+}
+```
+
+### AFTER_ENABLE_C — 2026-10-31T12:35:37.337445+00:00
+
+```json
+{
+  "at": "2026-10-31T12:35:37.337445+00:00",
+  "action": "Native LAB master+invoice saved ON once; observed success and active invoice label. Reconcile version+1/config audit+1 only before new synthetic C intake.",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "operator": "Authenticated SuperAdmin / LAB POS2",
+  "terminal": "MAIN",
+  "sku": "SYN-C1",
+  "quantity": 1,
+  "payment": "N/A / unapproved CREDIT only",
+  "wallet": {
+    "balanceMicros": 4964032,
+    "emailEnabled": false,
+    "enabled": true,
+    "reservedMicros": 930033,
+    "version": 21
+  },
+  "stores": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 57,
+      "sales": 90,
+      "stockDigest": "b9bdda30613d46ca65c30343703b6fba",
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactionDigest": "5a949cedd83adacaf2d0b19945334a54",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "7c0155e741462913d47f35fd5f59cafa",
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    }
+  ],
+  "labControls": {
+    "productDigest": "d9683c59c2227cf6d8beaeadf22cf30e",
+    "products": 110,
+    "shiftTransactions": [
+      {
+        "count": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "sum": 0,
+        "terminal": "MAIN"
+      }
+    ],
+    "shifts": [
+      {
+        "actualOperational": null,
+        "cardSales": 0,
+        "cardVariance": 0,
+        "cashSales": 0,
+        "closedAt": null,
+        "closedBy": null,
+        "closedByName": null,
+        "closingCoins": null,
+        "closingCustody": null,
+        "closingDrawer": null,
+        "closingNote": null,
+        "closingSafe": null,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "duplicateReviewJson": [],
+        "eftposTotal": 0,
+        "expectedOpeningOperational": 0,
+        "expectedOperational": null,
+        "expenses": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "nextOpeningTotal": null,
+        "openedAt": "2026-10-29T17:04:12.460567+00:00",
+        "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+        "openedByName": "LAB POS 2",
+        "openingCoins": 0,
+        "openingCustody": 0,
+        "openingDrawer": 0,
+        "openingNote": null,
+        "openingOperational": 0,
+        "openingSafe": 0,
+        "openingVariance": 0,
+        "shiftLabel": "Βάρδια",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "terminalPos": "MAIN",
+        "updatedAt": "2026-10-29T17:04:12.460567+00:00",
+        "variance": null
+      }
+    ],
+    "stores": [
+      {
+        "attachments": 79,
+        "documents": 69,
+        "id": "cmtpopbgo000trhb5ng9ytiru",
+        "jobs": 77,
+        "orderLines": 627
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmuk8gxui000ppabfykdxwb1y",
+        "jobs": 0,
+        "orderLines": 0
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmv2qanca000psigeizep8o9m",
+        "jobs": 0,
+        "orderLines": 0
+      }
+    ],
+    "suppliers": 62,
+    "syntheticProducts": null,
+    "syntheticSuppliers": [
+      {
+        "active": true,
+        "id": "3b26251d-2ff6-45b2-99e7-a43964b62844",
+        "name": "LAB METER TEST"
+      }
+    ]
+  }
+}
+```
+
+### BEFORE_UPLOAD_C_IMAGE — 2026-10-31T12:38:17.284714+00:00
+
+```json
+{
+  "at": "2026-10-31T12:38:17.284714+00:00",
+  "action": "Upload ONE distinct synthetic SOL-LAB-20261031-C image, SYN-C1 qty1 PIECE/unit14EUR/VAT0, SHA25660fb4a37cb8c7f4c09094e39c0098cf35bbb621626610a480fe44d86627897d8. Explicit LAB MAIN/existing LAB METER TEST selected. Expected one new attachment/job only; no payment/approval/product/stock/funding or replay.",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "operator": "Authenticated SuperAdmin / LAB POS2",
+  "terminal": "MAIN",
+  "sku": "SYN-C1",
+  "quantity": 1,
+  "payment": "N/A / unapproved CREDIT only",
+  "wallet": {
+    "balanceMicros": 4964032,
+    "emailEnabled": false,
+    "enabled": true,
+    "reservedMicros": 930033,
+    "version": 21
+  },
+  "stores": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 57,
+      "sales": 90,
+      "stockDigest": "b9bdda30613d46ca65c30343703b6fba",
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactionDigest": "5a949cedd83adacaf2d0b19945334a54",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "7c0155e741462913d47f35fd5f59cafa",
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    }
+  ],
+  "labControls": {
+    "productDigest": "d9683c59c2227cf6d8beaeadf22cf30e",
+    "products": 110,
+    "shiftTransactions": [
+      {
+        "count": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "sum": 0,
+        "terminal": "MAIN"
+      }
+    ],
+    "shifts": [
+      {
+        "actualOperational": null,
+        "cardSales": 0,
+        "cardVariance": 0,
+        "cashSales": 0,
+        "closedAt": null,
+        "closedBy": null,
+        "closedByName": null,
+        "closingCoins": null,
+        "closingCustody": null,
+        "closingDrawer": null,
+        "closingNote": null,
+        "closingSafe": null,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "duplicateReviewJson": [],
+        "eftposTotal": 0,
+        "expectedOpeningOperational": 0,
+        "expectedOperational": null,
+        "expenses": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "nextOpeningTotal": null,
+        "openedAt": "2026-10-29T17:04:12.460567+00:00",
+        "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+        "openedByName": "LAB POS 2",
+        "openingCoins": 0,
+        "openingCustody": 0,
+        "openingDrawer": 0,
+        "openingNote": null,
+        "openingOperational": 0,
+        "openingSafe": 0,
+        "openingVariance": 0,
+        "shiftLabel": "Βάρδια",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "terminalPos": "MAIN",
+        "updatedAt": "2026-10-29T17:04:12.460567+00:00",
+        "variance": null
+      }
+    ],
+    "stores": [
+      {
+        "attachments": 79,
+        "documents": 69,
+        "id": "cmtpopbgo000trhb5ng9ytiru",
+        "jobs": 77,
+        "orderLines": 627
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmuk8gxui000ppabfykdxwb1y",
+        "jobs": 0,
+        "orderLines": 0
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmv2qanca000psigeizep8o9m",
+        "jobs": 0,
+        "orderLines": 0
+      }
+    ],
+    "suppliers": 62,
+    "syntheticProducts": null,
+    "syntheticSuppliers": [
+      {
+        "active": true,
+        "id": "3b26251d-2ff6-45b2-99e7-a43964b62844",
+        "name": "LAB METER TEST"
+      }
+    ]
+  }
+}
+```
+
+### AFTER_UPLOAD_C_IMAGE — 2026-10-31T12:39:02.502666+00:00
+
+```json
+{
+  "at": "2026-10-31T12:39:02.502666+00:00",
+  "action": "Single C image read one physical row SYN-C1/qty1PIECE/unit14/net14/VAT0, date31Oct and invoiceSOL-LAB-20261031-C. No recheck clicked. Reconcile its original checksum-bound attachment/job and separately observe initial-reader wallet behavior.",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "operator": "Authenticated SuperAdmin / LAB POS2",
+  "terminal": "MAIN",
+  "sku": "SYN-C1",
+  "quantity": 1,
+  "payment": "N/A / unapproved CREDIT only",
+  "wallet": {
+    "balanceMicros": 4964032,
+    "emailEnabled": false,
+    "enabled": true,
+    "reservedMicros": 930033,
+    "version": 21
+  },
+  "stores": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 57,
+      "sales": 90,
+      "stockDigest": "b9bdda30613d46ca65c30343703b6fba",
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactionDigest": "5a949cedd83adacaf2d0b19945334a54",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "7c0155e741462913d47f35fd5f59cafa",
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    }
+  ],
+  "labControls": {
+    "productDigest": "d9683c59c2227cf6d8beaeadf22cf30e",
+    "products": 110,
+    "shiftTransactions": [
+      {
+        "count": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "sum": 0,
+        "terminal": "MAIN"
+      }
+    ],
+    "shifts": [
+      {
+        "actualOperational": null,
+        "cardSales": 0,
+        "cardVariance": 0,
+        "cashSales": 0,
+        "closedAt": null,
+        "closedBy": null,
+        "closedByName": null,
+        "closingCoins": null,
+        "closingCustody": null,
+        "closingDrawer": null,
+        "closingNote": null,
+        "closingSafe": null,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "duplicateReviewJson": [],
+        "eftposTotal": 0,
+        "expectedOpeningOperational": 0,
+        "expectedOperational": null,
+        "expenses": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "nextOpeningTotal": null,
+        "openedAt": "2026-10-29T17:04:12.460567+00:00",
+        "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+        "openedByName": "LAB POS 2",
+        "openingCoins": 0,
+        "openingCustody": 0,
+        "openingDrawer": 0,
+        "openingNote": null,
+        "openingOperational": 0,
+        "openingSafe": 0,
+        "openingVariance": 0,
+        "shiftLabel": "Βάρδια",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "terminalPos": "MAIN",
+        "updatedAt": "2026-10-29T17:04:12.460567+00:00",
+        "variance": null
+      }
+    ],
+    "stores": [
+      {
+        "attachments": 80,
+        "documents": 69,
+        "id": "cmtpopbgo000trhb5ng9ytiru",
+        "jobs": 78,
+        "orderLines": 627
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmuk8gxui000ppabfykdxwb1y",
+        "jobs": 0,
+        "orderLines": 0
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmv2qanca000psigeizep8o9m",
+        "jobs": 0,
+        "orderLines": 0
+      }
+    ],
+    "suppliers": 62,
+    "syntheticProducts": null,
+    "syntheticSuppliers": [
+      {
+        "active": true,
+        "id": "3b26251d-2ff6-45b2-99e7-a43964b62844",
+        "name": "LAB METER TEST"
+      }
+    ]
+  }
+}
+```
+
+### BEFORE_CREDIT_INTAKE_C — 2026-10-31T12:39:31.118339+00:00
+
+```json
+{
+  "at": "2026-10-31T12:39:31.118339+00:00",
+  "action": "Create ONE unapproved CREDIT draft from the newly read C image; expected one PurchaseDocument DRAFT/one PurchaseOrder NEW POS_OCR_DRAFT/one unresolved SYN-C1 line bound to original attachment/job. No paymentTransaction/product/stock/approval/fiscal/email/learning action.",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "operator": "Authenticated SuperAdmin / LAB POS2",
+  "terminal": "MAIN",
+  "sku": "SYN-C1",
+  "quantity": 1,
+  "payment": "N/A / unapproved CREDIT only",
+  "wallet": {
+    "balanceMicros": 4964032,
+    "emailEnabled": false,
+    "enabled": true,
+    "reservedMicros": 930033,
+    "version": 21
+  },
+  "stores": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 57,
+      "sales": 90,
+      "stockDigest": "b9bdda30613d46ca65c30343703b6fba",
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactionDigest": "5a949cedd83adacaf2d0b19945334a54",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "7c0155e741462913d47f35fd5f59cafa",
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    }
+  ],
+  "labControls": {
+    "productDigest": "d9683c59c2227cf6d8beaeadf22cf30e",
+    "products": 110,
+    "shiftTransactions": [
+      {
+        "count": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "sum": 0,
+        "terminal": "MAIN"
+      }
+    ],
+    "shifts": [
+      {
+        "actualOperational": null,
+        "cardSales": 0,
+        "cardVariance": 0,
+        "cashSales": 0,
+        "closedAt": null,
+        "closedBy": null,
+        "closedByName": null,
+        "closingCoins": null,
+        "closingCustody": null,
+        "closingDrawer": null,
+        "closingNote": null,
+        "closingSafe": null,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "duplicateReviewJson": [],
+        "eftposTotal": 0,
+        "expectedOpeningOperational": 0,
+        "expectedOperational": null,
+        "expenses": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "nextOpeningTotal": null,
+        "openedAt": "2026-10-29T17:04:12.460567+00:00",
+        "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+        "openedByName": "LAB POS 2",
+        "openingCoins": 0,
+        "openingCustody": 0,
+        "openingDrawer": 0,
+        "openingNote": null,
+        "openingOperational": 0,
+        "openingSafe": 0,
+        "openingVariance": 0,
+        "shiftLabel": "Βάρδια",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "terminalPos": "MAIN",
+        "updatedAt": "2026-10-29T17:04:12.460567+00:00",
+        "variance": null
+      }
+    ],
+    "stores": [
+      {
+        "attachments": 80,
+        "documents": 69,
+        "id": "cmtpopbgo000trhb5ng9ytiru",
+        "jobs": 78,
+        "orderLines": 627
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmuk8gxui000ppabfykdxwb1y",
+        "jobs": 0,
+        "orderLines": 0
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmv2qanca000psigeizep8o9m",
+        "jobs": 0,
+        "orderLines": 0
+      }
+    ],
+    "suppliers": 62,
+    "syntheticProducts": null,
+    "syntheticSuppliers": [
+      {
+        "active": true,
+        "id": "3b26251d-2ff6-45b2-99e7-a43964b62844",
+        "name": "LAB METER TEST"
+      }
+    ]
+  }
+}
+```
+
+### AFTER_CREDIT_INTAKE_C — 2026-10-31T12:40:27.616585+00:00
+
+```json
+{
+  "at": "2026-10-31T12:40:27.616585+00:00",
+  "action": "Native C intake completed once; grid shows one new SOL-LAB-20261031-C/one line/14EUR/AWAITING_APPROVAL LOCAL. Independently bind original C attachment/job to exactly one CREDIT DRAFT/NEW order and unresolved line; no payment/approval/product/stock action.",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "operator": "Authenticated SuperAdmin / LAB POS2",
+  "terminal": "MAIN",
+  "sku": "SYN-C1",
+  "quantity": 1,
+  "payment": "N/A / unapproved CREDIT only",
+  "wallet": {
+    "balanceMicros": 4964032,
+    "emailEnabled": false,
+    "enabled": true,
+    "reservedMicros": 930033,
+    "version": 21
+  },
+  "stores": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 58,
+      "sales": 90,
+      "stockDigest": "b9bdda30613d46ca65c30343703b6fba",
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactionDigest": "5a949cedd83adacaf2d0b19945334a54",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "7c0155e741462913d47f35fd5f59cafa",
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    }
+  ],
+  "labControls": {
+    "productDigest": "d9683c59c2227cf6d8beaeadf22cf30e",
+    "products": 110,
+    "shiftTransactions": [
+      {
+        "count": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "sum": 0,
+        "terminal": "MAIN"
+      }
+    ],
+    "shifts": [
+      {
+        "actualOperational": null,
+        "cardSales": 0,
+        "cardVariance": 0,
+        "cashSales": 0,
+        "closedAt": null,
+        "closedBy": null,
+        "closedByName": null,
+        "closingCoins": null,
+        "closingCustody": null,
+        "closingDrawer": null,
+        "closingNote": null,
+        "closingSafe": null,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "duplicateReviewJson": [],
+        "eftposTotal": 0,
+        "expectedOpeningOperational": 0,
+        "expectedOperational": null,
+        "expenses": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "nextOpeningTotal": null,
+        "openedAt": "2026-10-29T17:04:12.460567+00:00",
+        "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+        "openedByName": "LAB POS 2",
+        "openingCoins": 0,
+        "openingCustody": 0,
+        "openingDrawer": 0,
+        "openingNote": null,
+        "openingOperational": 0,
+        "openingSafe": 0,
+        "openingVariance": 0,
+        "shiftLabel": "Βάρδια",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "terminalPos": "MAIN",
+        "updatedAt": "2026-10-29T17:04:12.460567+00:00",
+        "variance": null
+      }
+    ],
+    "stores": [
+      {
+        "attachments": 80,
+        "documents": 70,
+        "id": "cmtpopbgo000trhb5ng9ytiru",
+        "jobs": 78,
+        "orderLines": 628
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmuk8gxui000ppabfykdxwb1y",
+        "jobs": 0,
+        "orderLines": 0
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmv2qanca000psigeizep8o9m",
+        "jobs": 0,
+        "orderLines": 0
+      }
+    ],
+    "suppliers": 62,
+    "syntheticProducts": null,
+    "syntheticSuppliers": [
+      {
+        "active": true,
+        "id": "3b26251d-2ff6-45b2-99e7-a43964b62844",
+        "name": "LAB METER TEST"
+      }
+    ]
+  }
+}
+```
+
+### BEFORE_SOL_PREVIEW_C — 2026-10-31T12:41:50.130911+00:00
+
+```json
+{
+  "at": "2026-10-31T12:41:50.130911+00:00",
+  "action": "Open ✦ invoice assistant ONCE for the newly bound C order eaa7ed7a-8f07-49a3-b7d8-4539c037c51f. Its window automatically sends first original preview; no separate recheck/retry/apply. Expected one original Sol response, exact integer settlement/new hold released; pre-existing B930033 hold remains. No approval/product/stock/payment/email/fiscal/learning write.",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "operator": "Authenticated SuperAdmin / LAB POS2",
+  "terminal": "MAIN",
+  "sku": "SYN-C1",
+  "quantity": 1,
+  "payment": "N/A / unapproved CREDIT only",
+  "wallet": {
+    "balanceMicros": 4964032,
+    "emailEnabled": false,
+    "enabled": true,
+    "reservedMicros": 930033,
+    "version": 21
+  },
+  "stores": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 58,
+      "sales": 90,
+      "stockDigest": "b9bdda30613d46ca65c30343703b6fba",
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactionDigest": "5a949cedd83adacaf2d0b19945334a54",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "7c0155e741462913d47f35fd5f59cafa",
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    }
+  ],
+  "labControls": {
+    "productDigest": "d9683c59c2227cf6d8beaeadf22cf30e",
+    "products": 110,
+    "shiftTransactions": [
+      {
+        "count": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "sum": 0,
+        "terminal": "MAIN"
+      }
+    ],
+    "shifts": [
+      {
+        "actualOperational": null,
+        "cardSales": 0,
+        "cardVariance": 0,
+        "cashSales": 0,
+        "closedAt": null,
+        "closedBy": null,
+        "closedByName": null,
+        "closingCoins": null,
+        "closingCustody": null,
+        "closingDrawer": null,
+        "closingNote": null,
+        "closingSafe": null,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "duplicateReviewJson": [],
+        "eftposTotal": 0,
+        "expectedOpeningOperational": 0,
+        "expectedOperational": null,
+        "expenses": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "nextOpeningTotal": null,
+        "openedAt": "2026-10-29T17:04:12.460567+00:00",
+        "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+        "openedByName": "LAB POS 2",
+        "openingCoins": 0,
+        "openingCustody": 0,
+        "openingDrawer": 0,
+        "openingNote": null,
+        "openingOperational": 0,
+        "openingSafe": 0,
+        "openingVariance": 0,
+        "shiftLabel": "Βάρδια",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "terminalPos": "MAIN",
+        "updatedAt": "2026-10-29T17:04:12.460567+00:00",
+        "variance": null
+      }
+    ],
+    "stores": [
+      {
+        "attachments": 80,
+        "documents": 70,
+        "id": "cmtpopbgo000trhb5ng9ytiru",
+        "jobs": 78,
+        "orderLines": 628
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmuk8gxui000ppabfykdxwb1y",
+        "jobs": 0,
+        "orderLines": 0
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmv2qanca000psigeizep8o9m",
+        "jobs": 0,
+        "orderLines": 0
+      }
+    ],
+    "suppliers": 62,
+    "syntheticProducts": null,
+    "syntheticSuppliers": [
+      {
+        "active": true,
+        "id": "3b26251d-2ff6-45b2-99e7-a43964b62844",
+        "name": "LAB METER TEST"
+      }
+    ]
+  }
+}
+```
+
+### AFTER_SOL_PREVIEW_C — 2026-10-31T12:42:33.851291+00:00
+
+```json
+{
+  "at": "2026-10-31T12:42:33.851291+00:00",
+  "action": "ONE original C assistant preview returned completed comparison: one physical row and totals14EUR agree, synthetic diagnostic document noted; no usage-review error. No recheck/retry/apply/product/stock/approval action. Independently reconcile all resulting entries and original tariff now.",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "operator": "Authenticated SuperAdmin / LAB POS2",
+  "terminal": "MAIN",
+  "sku": "SYN-C1",
+  "quantity": 1,
+  "payment": "N/A / unapproved CREDIT only",
+  "wallet": {
+    "balanceMicros": 4883059,
+    "emailEnabled": false,
+    "enabled": true,
+    "reservedMicros": 930033,
+    "version": 23
+  },
+  "stores": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 58,
+      "sales": 90,
+      "stockDigest": "b9bdda30613d46ca65c30343703b6fba",
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactionDigest": "5a949cedd83adacaf2d0b19945334a54",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "7c0155e741462913d47f35fd5f59cafa",
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    }
+  ],
+  "labControls": {
+    "productDigest": "d9683c59c2227cf6d8beaeadf22cf30e",
+    "products": 110,
+    "shiftTransactions": [
+      {
+        "count": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "sum": 0,
+        "terminal": "MAIN"
+      }
+    ],
+    "shifts": [
+      {
+        "actualOperational": null,
+        "cardSales": 0,
+        "cardVariance": 0,
+        "cashSales": 0,
+        "closedAt": null,
+        "closedBy": null,
+        "closedByName": null,
+        "closingCoins": null,
+        "closingCustody": null,
+        "closingDrawer": null,
+        "closingNote": null,
+        "closingSafe": null,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "duplicateReviewJson": [],
+        "eftposTotal": 0,
+        "expectedOpeningOperational": 0,
+        "expectedOperational": null,
+        "expenses": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "nextOpeningTotal": null,
+        "openedAt": "2026-10-29T17:04:12.460567+00:00",
+        "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+        "openedByName": "LAB POS 2",
+        "openingCoins": 0,
+        "openingCustody": 0,
+        "openingDrawer": 0,
+        "openingNote": null,
+        "openingOperational": 0,
+        "openingSafe": 0,
+        "openingVariance": 0,
+        "shiftLabel": "Βάρδια",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "terminalPos": "MAIN",
+        "updatedAt": "2026-10-29T17:04:12.460567+00:00",
+        "variance": null
+      }
+    ],
+    "stores": [
+      {
+        "attachments": 80,
+        "documents": 70,
+        "id": "cmtpopbgo000trhb5ng9ytiru",
+        "jobs": 78,
+        "orderLines": 628
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmuk8gxui000ppabfykdxwb1y",
+        "jobs": 0,
+        "orderLines": 0
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmv2qanca000psigeizep8o9m",
+        "jobs": 0,
+        "orderLines": 0
+      }
+    ],
+    "suppliers": 62,
+    "syntheticProducts": null,
+    "syntheticSuppliers": [
+      {
+        "active": true,
+        "id": "3b26251d-2ff6-45b2-99e7-a43964b62844",
+        "name": "LAB METER TEST"
+      }
+    ]
+  }
+}
+```
+
+### BEFORE_DISABLE_AFTER_C_PASS — 2026-10-31T12:44:22.836165+00:00
+
+```json
+{
+  "at": "2026-10-31T12:44:22.836165+00:00",
+  "action": "Restore original LAB master+invoice OFF once after one successful C settlement80973microEUR; expect version+1/config audit+1 only. Preserve existing B REVIEW930033microEUR hold, all historical entries and money. No refund/retry/new provider call.",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "operator": "Authenticated SuperAdmin / LAB POS2",
+  "terminal": "MAIN",
+  "sku": "SYN-C1",
+  "quantity": 1,
+  "payment": "N/A / unapproved CREDIT only",
+  "wallet": {
+    "balanceMicros": 4883059,
+    "emailEnabled": false,
+    "enabled": true,
+    "reservedMicros": 930033,
+    "version": 23
+  },
+  "stores": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 58,
+      "sales": 90,
+      "stockDigest": "b9bdda30613d46ca65c30343703b6fba",
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactionDigest": "5a949cedd83adacaf2d0b19945334a54",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "7c0155e741462913d47f35fd5f59cafa",
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    }
+  ],
+  "labControls": {
+    "productDigest": "d9683c59c2227cf6d8beaeadf22cf30e",
+    "products": 110,
+    "shiftTransactions": [
+      {
+        "count": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "sum": 0,
+        "terminal": "MAIN"
+      }
+    ],
+    "shifts": [
+      {
+        "actualOperational": null,
+        "cardSales": 0,
+        "cardVariance": 0,
+        "cashSales": 0,
+        "closedAt": null,
+        "closedBy": null,
+        "closedByName": null,
+        "closingCoins": null,
+        "closingCustody": null,
+        "closingDrawer": null,
+        "closingNote": null,
+        "closingSafe": null,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "duplicateReviewJson": [],
+        "eftposTotal": 0,
+        "expectedOpeningOperational": 0,
+        "expectedOperational": null,
+        "expenses": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "nextOpeningTotal": null,
+        "openedAt": "2026-10-29T17:04:12.460567+00:00",
+        "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+        "openedByName": "LAB POS 2",
+        "openingCoins": 0,
+        "openingCustody": 0,
+        "openingDrawer": 0,
+        "openingNote": null,
+        "openingOperational": 0,
+        "openingSafe": 0,
+        "openingVariance": 0,
+        "shiftLabel": "Βάρδια",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "terminalPos": "MAIN",
+        "updatedAt": "2026-10-29T17:04:12.460567+00:00",
+        "variance": null
+      }
+    ],
+    "stores": [
+      {
+        "attachments": 80,
+        "documents": 70,
+        "id": "cmtpopbgo000trhb5ng9ytiru",
+        "jobs": 78,
+        "orderLines": 628
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmuk8gxui000ppabfykdxwb1y",
+        "jobs": 0,
+        "orderLines": 0
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmv2qanca000psigeizep8o9m",
+        "jobs": 0,
+        "orderLines": 0
+      }
+    ],
+    "suppliers": 62,
+    "syntheticProducts": null,
+    "syntheticSuppliers": [
+      {
+        "active": true,
+        "id": "3b26251d-2ff6-45b2-99e7-a43964b62844",
+        "name": "LAB METER TEST"
+      }
+    ]
+  }
+}
+```
+
+### AFTER_DISABLE_AFTER_C_PASS — 2026-10-31T12:45:03.532357+00:00
+
+```json
+{
+  "at": "2026-10-31T12:45:03.532357+00:00",
+  "action": "LAB master+invoice restored OFF; native saved success/inactive invoice label, emailOFF. Preserve settled C80973microEUR and old B REVIEW930033microEUR. No new provider or business action.",
+  "release": {
+    "sourcePR": 3358,
+    "sourceHead": "089c88b0950faba6c1ceb2e373e2bf702c6b47e5",
+    "sourceMerge": "32bfe940bf1398c57402d032d8ef1b8555610500",
+    "sha": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "fullPR": {
+      "run": 41198974874,
+      "serverTests": 4859,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullMain": {
+      "run": 41199931951,
+      "serverTests": 4862,
+      "backupTests": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "guard": {
+      "run": 41201059265,
+      "job": 124536843141,
+      "status": "SUCCESS"
+    },
+    "render": {
+      "commit": {
+        "createdAt": "2026-10-31T12:10:35Z",
+        "id": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+        "message": "Merge pull request #3357 from xrhstosmanis-design/fix/ftext-connector-latency-20261031\n\nReduce FTEXT connector polling delay and keep readiness retries running"
+      },
+      "createdAt": "2026-10-31T12:26:59.660852Z",
+      "finishedAt": "2026-10-31T12:32:12.885202Z",
+      "id": "dep-dbitt4s9v7es738j9bc0",
+      "startedAt": "2026-10-31T12:26:59.630183Z",
+      "status": "live",
+      "trigger": "deploy_hook",
+      "updatedAt": "2026-10-31T12:32:41.834024Z"
+    },
+    "http": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33"
+    },
+    "db": {
+      "captured_at": "2026-10-31T12:33:04.516784Z",
+      "lock_waiters": 0,
+      "long_active_queries": 0
+    },
+    "runtimeFilesMatch": true
+  },
+  "operator": "Authenticated SuperAdmin / LAB POS2",
+  "terminal": "MAIN",
+  "sku": "SYN-C1",
+  "quantity": 1,
+  "payment": "N/A / unapproved CREDIT only",
+  "wallet": {
+    "balanceMicros": 4883059,
+    "emailEnabled": false,
+    "enabled": false,
+    "reservedMicros": 930033,
+    "version": 24
+  },
+  "stores": [
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 58,
+      "sales": 90,
+      "stockDigest": "b9bdda30613d46ca65c30343703b6fba",
+      "stockMovements": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "transactionDigest": "5a949cedd83adacaf2d0b19945334a54",
+      "transactions": 134
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "7c0155e741462913d47f35fd5f59cafa",
+      "stockMovements": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    },
+    {
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "purchaseOrders": 0,
+      "sales": 0,
+      "stockDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "stockMovements": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "transactionDigest": "d41d8cd98f00b204e9800998ecf8427e",
+      "transactions": 0
+    }
+  ],
+  "labControls": {
+    "productDigest": "d9683c59c2227cf6d8beaeadf22cf30e",
+    "products": 110,
+    "shiftTransactions": [
+      {
+        "count": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "sum": 0,
+        "terminal": "MAIN"
+      }
+    ],
+    "shifts": [
+      {
+        "actualOperational": null,
+        "cardSales": 0,
+        "cardVariance": 0,
+        "cashSales": 0,
+        "closedAt": null,
+        "closedBy": null,
+        "closedByName": null,
+        "closingCoins": null,
+        "closingCustody": null,
+        "closingDrawer": null,
+        "closingNote": null,
+        "closingSafe": null,
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "duplicateReviewJson": [],
+        "eftposTotal": 0,
+        "expectedOpeningOperational": 0,
+        "expectedOperational": null,
+        "expenses": 0,
+        "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+        "nextOpeningTotal": null,
+        "openedAt": "2026-10-29T17:04:12.460567+00:00",
+        "openedBy": "8e6a896f-8735-4ff6-a3dc-1ceb1741b578",
+        "openedByName": "LAB POS 2",
+        "openingCoins": 0,
+        "openingCustody": 0,
+        "openingDrawer": 0,
+        "openingNote": null,
+        "openingOperational": 0,
+        "openingSafe": 0,
+        "openingVariance": 0,
+        "shiftLabel": "Βάρδια",
+        "status": "OPEN",
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "terminalPos": "MAIN",
+        "updatedAt": "2026-10-29T17:04:12.460567+00:00",
+        "variance": null
+      }
+    ],
+    "stores": [
+      {
+        "attachments": 80,
+        "documents": 70,
+        "id": "cmtpopbgo000trhb5ng9ytiru",
+        "jobs": 78,
+        "orderLines": 628
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmuk8gxui000ppabfykdxwb1y",
+        "jobs": 0,
+        "orderLines": 0
+      },
+      {
+        "attachments": 0,
+        "documents": 0,
+        "id": "cmv2qanca000psigeizep8o9m",
+        "jobs": 0,
+        "orderLines": 0
+      }
+    ],
+    "suppliers": 62,
+    "syntheticProducts": null,
+    "syntheticSuppliers": [
+      {
+        "active": true,
+        "id": "3b26251d-2ff6-45b2-99e7-a43964b62844",
+        "name": "LAB METER TEST"
+      }
+    ]
+  }
+}
+```
