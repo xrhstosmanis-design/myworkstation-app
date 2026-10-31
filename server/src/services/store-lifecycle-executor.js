@@ -118,6 +118,17 @@ export function getReviewedMonthlySnapshotLifecycleGuardDefinitions(manifest,sch
  const name=guardName(node);
  return [{name,mask:31,body:guardBody(plan,schema,node)},{name:name+'_truncate',mask:34,body:truncateBody}];
 }
+// Pure closed guard identity for the two proposed capture nodes. This does no
+// metadata query, installation, enrollment or execution.
+export function getReviewedMonthlyCaptureLifecycleGuardDefinitions(manifest,schema){
+ const plan=planFor(manifest),names=['MonthlyInventoryCaptureGrant','MonthlyInventoryCaptureJob'];
+ if(typeof schema!=='string'||!schema||schema.length>128||names.some(name=>{const node=plan.nodes.get(name);return !node||JSON.stringify(node.owner)!==JSON.stringify({kind:'DIRECT'})||node.reset!=='REMOVE'||Object.keys(node).some(k=>!['name','owner','reset','existingTriggers'].includes(k))}))fail('Monthly capture guard review differs.');
+ bindDatabaseReferences(plan,schema,[
+  ...names.map(child=>({child,parent:'Store',childSchema:schema,parentSchema:schema,local:['storeId'],remote:['id']})),
+  {child:names[1],parent:names[0],childSchema:schema,parentSchema:schema,local:['grantId','companyId','storeId','lifecycleGeneration','purpose','purposeVersion'],remote:['id','companyId','storeId','lifecycleGeneration','purpose','purposeVersion']}
+ ]);
+ return names.flatMap(table=>{const node=plan.nodes.get(table),name=guardName(node);return [{table,name,mask:31,body:guardBody(plan,schema,node)},{table,name:name+'_truncate',mask:34,body:truncateBody}]});
+}
 async function schemaFor(tx){const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS name'))[0]?.name;if(!schema)fail('Schema unavailable.');return schema}
 async function readForeignKeys(tx,schema){ return await tx.$queryRawUnsafe(`SELECT child.relname AS child,parent.relname AS parent,pn.nspname AS "parentSchema",cn.nspname AS "childSchema",ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.n ORDER BY k.p) AS local,ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.confrelid AND a.attnum=k.n ORDER BY k.p) AS remote FROM pg_constraint c JOIN pg_class child ON child.oid=c.conrelid JOIN pg_class parent ON parent.oid=c.confrelid JOIN pg_namespace cn ON cn.oid=child.relnamespace JOIN pg_namespace pn ON pn.oid=parent.relnamespace WHERE c.contype='f' AND (cn.nspname=$1 OR pn.nspname=$1) ORDER BY cn.nspname,child.relname,c.conname`,schema);
 }
@@ -280,13 +291,7 @@ export function createLifecycleInspectionCore(manifest,{sourceRevision}={}){
  if(!/^[a-f0-9]{40}$/.test(sourceRevision||''))fail('Exact server source revision is required.');
  return Object.freeze({inspect:inspectionFor(plan)});
 }
-export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,sourceRevision}={}){
- const reviewed=structuredClone(manifest),plan=planFor(reviewed);plan.reviewedColumns=reviewed.reviewedColumns||[];plan.sourceRevision=sourceRevision;
- if(typeof persistAndVerifyRecovery!=='function')fail('A durable full-restore verification adapter is required.');if(!/^[a-f0-9]{40}$/.test(sourceRevision||''))fail('Exact server source revision is required.');
- const transaction=(db,fn)=>db.$transaction(async tx=>{await tx.$executeRawUnsafe("SET LOCAL TimeZone='UTC'");await tx.$executeRawUnsafe("SET LOCAL DateStyle='ISO,YMD'");await tx.$executeRawUnsafe("SET LOCAL extra_float_digits=3");await tx.$executeRawUnsafe("SET LOCAL bytea_output='hex'");await tx.$executeRawUnsafe("SET LOCAL lock_timeout='3s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");return fn(tx)},{isolationLevel:'ReadCommitted',timeout:120000,maxWait:5000});
- return {
-  inspect:inspectionFor(plan),
-  async install(db,actor,scope){requireLifecycleAdmin(actor);return transaction(db,async tx=>{
+async function installLifecyclePlanInTransaction(tx,actor,scope,plan){requireLifecycleAdmin(actor);
    const schema=await schemaFor(tx);
    if(!(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."Store" WHERE "id"=$1 AND "companyId"=$2`,scope?.storeId,scope?.companyId)).length)fail('Store not found in selected company.',404);
    await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS ${q(schema)}."StoreLifecycleFence" ("storeId" text PRIMARY KEY,"companyId" text NOT NULL,"generation" bigint NOT NULL DEFAULT 0,"maintenance" boolean NOT NULL DEFAULT false,"retired" boolean NOT NULL DEFAULT false,"operationId" text,"planHash" text NOT NULL)`);
@@ -300,7 +305,29 @@ export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,
    await tx.$executeRawUnsafe(`INSERT INTO ${q(schema)}."StoreLifecycleFence" ("storeId","companyId","planHash") VALUES($1,$2,$3) ON CONFLICT("storeId") DO NOTHING`,scope.storeId,scope.companyId,plan.planHash);
    const enrolled=(await tx.$queryRawUnsafe(`SELECT "companyId","planHash" FROM ${q(schema)}."StoreLifecycleFence" WHERE "storeId"=$1`,scope.storeId))[0];if(enrolled.companyId!==scope.companyId||enrolled.planHash!==plan.planHash)fail('Guard enrollment differs.');
    return {installed:true,planHash:plan.planHash};
-  })},
+
+ }
+
+// Install-only construction: no recovery adapter or destructive methods.
+export function createLifecycleInstallationCore(manifest,{sourceRevision}={}){
+ const reviewed=structuredClone(manifest),plan=planFor(reviewed);plan.reviewedColumns=reviewed.reviewedColumns||[];plan.sourceRevision=sourceRevision;
+ if(typeof sourceRevision!=='string'||sourceRevision.length!==40||!/^[a-f0-9]{40}$/.test(sourceRevision))fail('Exact server source revision is required.');
+ const installInTransaction=(tx,actor,scope)=>installLifecyclePlanInTransaction(tx,actor,scope,plan);
+
+ return Object.freeze({
+  describe:()=>Object.freeze({id:plan.id,planHash:plan.planHash,sourceRevision}),
+  async inspectInTransaction(tx,actor){requireLifecycleAdmin(actor);const schema=await schemaFor(tx);return validateDatabase(tx,plan,schema,{allowUninstalled:true})},
+  installInTransaction,
+  async install(db,actor,scope){requireLifecycleAdmin(actor);return db.$transaction(async tx=>{await tx.$executeRawUnsafe("SET LOCAL TimeZone='UTC'");await tx.$executeRawUnsafe("SET LOCAL DateStyle='ISO,YMD'");await tx.$executeRawUnsafe("SET LOCAL extra_float_digits=3");await tx.$executeRawUnsafe("SET LOCAL bytea_output='hex'");await tx.$executeRawUnsafe("SET LOCAL lock_timeout='3s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");return installInTransaction(tx,actor,scope)},{isolationLevel:'ReadCommitted',timeout:120000,maxWait:5000})}
+ });
+}
+export function createLifecycleExecutionCore(manifest,{persistAndVerifyRecovery,sourceRevision}={}){
+ const reviewed=structuredClone(manifest),plan=planFor(reviewed);plan.reviewedColumns=reviewed.reviewedColumns||[];plan.sourceRevision=sourceRevision;
+ if(typeof persistAndVerifyRecovery!=='function')fail('A durable full-restore verification adapter is required.');if(!/^[a-f0-9]{40}$/.test(sourceRevision||''))fail('Exact server source revision is required.');
+ const transaction=(db,fn)=>db.$transaction(async tx=>{await tx.$executeRawUnsafe("SET LOCAL TimeZone='UTC'");await tx.$executeRawUnsafe("SET LOCAL DateStyle='ISO,YMD'");await tx.$executeRawUnsafe("SET LOCAL extra_float_digits=3");await tx.$executeRawUnsafe("SET LOCAL bytea_output='hex'");await tx.$executeRawUnsafe("SET LOCAL lock_timeout='3s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");return fn(tx)},{isolationLevel:'ReadCommitted',timeout:120000,maxWait:5000});
+ return {
+  inspect:inspectionFor(plan),
+  async install(db,actor,scope){requireLifecycleAdmin(actor);return transaction(db,tx=>installLifecyclePlanInTransaction(tx,actor,scope,plan))},
   async beginDrain(db,actor,scope,mode){requireLifecycleAdmin(actor);if(mode!=='RESET')fail('Explicit RESET drain required.',400);return transaction(db,async tx=>{
    const schema=await schemaFor(tx);if(!(await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."Store" WHERE "id"=$1 AND "companyId"=$2`,scope.storeId,scope.companyId)).length)fail('Store not found in selected company.',404);
    const fence=(await tx.$queryRawUnsafe(`SELECT * FROM ${q(schema)}."StoreLifecycleFence" WHERE "storeId"=$1 FOR UPDATE`,scope.storeId))[0];if(!fence||fence.companyId!==scope.companyId||fence.retired||fence.maintenance||fence.planHash!==plan.planHash)fail('Store maintenance cannot be acquired.');

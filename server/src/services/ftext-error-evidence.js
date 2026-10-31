@@ -41,7 +41,7 @@ export function ftextPaymentError(row){
  }catch{return null}
 }
 export async function pollFtextErrorEvidence(tx,device,settings){
- const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${settings.companyId} AND "storeId"=${settings.storeId} AND "terminalPos"=${settings.terminalPos} AND "status"='REQUIRES_CHECK' AND "checkoutJson"->'ftextCardDecision'->>'outcome'='NO' AND NOT ("checkoutJson" ? 'ftextVoid') AND NOT ("checkoutJson" ? 'ftextLateError') ORDER BY "createdAt" LIMIT 1`)[0];
+ const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${settings.companyId} AND "storeId"=${settings.storeId} AND "terminalPos"=${settings.terminalPos} AND "status"='REQUIRES_CHECK' AND "checkoutJson"->'ftextCardDecision'->>'outcome'='NO' AND COALESCE("checkoutJson"->'ftextOperatorRelease'->>'registerReady','')<>'true' AND NOT ("checkoutJson" ? 'ftextVoid') AND NOT ("checkoutJson" ? 'ftextLateError') ORDER BY "createdAt" LIMIT 1`)[0];
  if(!row)return null;
  try{binding(row,device,settings)}catch{return null}
  return {id:row.id,kind:'FTEXT_ERROR_RECHECK',originalResultHash:row.resultHash,settingsHash:row.settingsHash,scope:row.plan.scope,serialNumber:row.serialNumber,plan:row.plan};

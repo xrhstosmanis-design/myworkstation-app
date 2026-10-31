@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import {invoiceNumberParts,sameInvoiceIdentityForReview} from '../lib/invoice-common-draft.js';
-import {readPendingInvoices,readPendingInvoiceSnapshotRows} from './pos-pending-invoices.js';
+import {readPendingInvoices,readPendingInvoiceSnapshotRows,readPendingInvoiceSnapshotRowsForAutomationInTransaction} from './pos-pending-invoices.js';
+import {requireMonthlyCaptureContext} from './monthly-inventory-capture-authorization.js';
 import {companyModuleState,isCurrentlyActive} from '../middleware/module-access.js';
 
 const roles=new Set(['SUPER_ADMIN','OWNER','ADMIN','MANAGER']);
@@ -190,17 +191,23 @@ export function classifyInvoiceMonth(facts,period){
 }
 
 async function readInvoiceSources(tx,actor,input,now,fullPending=false){
- const store=await authorize(tx,actor,input.storeId,now),cap=await capabilities(tx),facts={},sourceCounts={},unavailable=[],limited=[];
+ const store=await authorize(tx,actor,input.storeId,now);
+ return readInvoiceSourcesCore(tx,actor.companyId,store,input,()=> (fullPending?readPendingInvoiceSnapshotRows:readPendingInvoices)(tx,{companyId:actor.companyId,storeId:store.id,user:actor}));
+}
+
+// Private source/classifier composition, reached only through admitted entries.
+async function readInvoiceSourcesCore(tx,companyId,store,input,readPending){
+ const cap=await capabilities(tx),facts={},sourceCounts={},unavailable=[],limited=[];
  for(const [name,d]of Object.entries(domains)){
   if(!cap[d.table]||name==='documents'&&!cap.Supplier||name==='postings'&&!cap.PurchaseOrder){facts[name]=[];sourceCounts[name]=null;unavailable.push(name);continue}
-  const rows=await tx.$queryRawUnsafe(`SELECT source.*,COUNT(*) OVER()::text AS "_sourceCount" FROM (${d.sql}) source ORDER BY source."${d.id||'id'}" LIMIT $3`,actor.companyId,input.storeId,MAX_SOURCE_ROWS+1);
+  const rows=await tx.$queryRawUnsafe(`SELECT source.*,COUNT(*) OVER()::text AS "_sourceCount" FROM (${d.sql}) source ORDER BY source."${d.id||'id'}" LIMIT $3`,companyId,input.storeId,MAX_SOURCE_ROWS+1);
   const total=rows.length?Number(rows[0]._sourceCount):0;
   if(!Number.isSafeInteger(total)||total<rows.length)fail('Δεν επιβεβαιώθηκε η πληρότητα της πηγής.',502);
   sourceCounts[name]=total;if(total>MAX_SOURCE_ROWS)limited.push(name);
   facts[name]=rows.slice(0,MAX_SOURCE_ROWS).map(({_sourceCount,...row})=>row);
  }
  const pendingAvailable=Object.keys(pendingRequired).every(table=>cap[table]);
- const pending=pendingAvailable?await (fullPending?readPendingInvoiceSnapshotRows:readPendingInvoices)(tx,{companyId:actor.companyId,storeId:store.id,user:actor}):null;
+ const pending=pendingAvailable?await readPending():null;
  return {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending};
 }
 
@@ -261,7 +268,21 @@ export async function readMonthlyInvoiceSnapshotProjectionInTransaction(tx,actor
  if(arguments.length!==3||!input||Object.keys(input).some(k=>!['storeId','month'].includes(k))||!safeText(input.storeId))snapshotFail('INVOICE_SNAPSHOT_INPUT_INVALID');
  if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==input.storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
  const period=invoiceAuditMonth(input.month),entry=await snapshotTransactionState(tx);
- const source=await readInvoiceSources(tx,actor,input,new Date(entry.readAt),true),{store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending}=source;
+ const source=await readInvoiceSources(tx,actor,input,new Date(entry.readAt),true);
+ return buildMonthlyInvoiceSnapshotProjection(tx,actor.companyId,period,entry,source);
+}
+
+export async function readMonthlyInvoiceSnapshotProjectionForAutomationInTransaction(tx,context){
+ if(arguments.length!==2)snapshotFail('INVOICE_SNAPSHOT_INPUT_INVALID');
+ const authority=await requireMonthlyCaptureContext(tx,context,'SOURCE');
+ const input={storeId:authority.storeId,month:authority.month};
+ const period=invoiceAuditMonth(input.month),entry=await snapshotTransactionState(tx);
+ const source=await readInvoiceSourcesCore(tx,authority.companyId,authority.store,input,()=>readPendingInvoiceSnapshotRowsForAutomationInTransaction(tx,context));
+ return buildMonthlyInvoiceSnapshotProjection(tx,authority.companyId,period,entry,source);
+}
+
+async function buildMonthlyInvoiceSnapshotProjection(tx,admittedCompanyId,period,entry,source){
+ const {store,facts,sourceCounts,unavailable,limited,pendingAvailable,pending}=source;
  for(const [name,count]of Object.entries(sourceCounts))if(count!==null&&!limited.includes(name)&&count!==facts[name].length)snapshotFail('INVOICE_SNAPSHOT_SOURCE_COUNT_MISMATCH');
  const reasons=[...unavailable.map(name=>'SOURCE_UNAVAILABLE:'+name),...limited.map(name=>'SOURCE_LIMIT:'+name)];
  const complete=unavailable.length===0&&limited.length===0;
@@ -271,7 +292,7 @@ export async function readMonthlyInvoiceSnapshotProjectionInTransaction(tx,actor
  let bytes=1024;
  const account=row=>{bytes+=Buffer.byteLength(JSON.stringify(row),'utf8')+1;if(bytes>4*1024*1024)snapshotFail('INVOICE_SNAPSHOT_PAYLOAD_LIMIT');return row};
  const categories=new Set(['UNPOSTED_DOCUMENT','UPLOADED_AWAITING_REVIEW','POSSIBLE_DUPLICATE','IDENTITY_OR_LINK_REVIEW','MISSING_ORIGINAL']);
- const companyId=snapshotText(actor.companyId,160,{id:true}),storeId=snapshotText(store.id,160,{id:true});
+ const companyId=snapshotText(admittedCompanyId,160,{id:true}),storeId=snapshotText(store.id,160,{id:true});
  const invoices={period:period.month,items:analysis.items.map(row=>{
   const issueDay=row.issueDay;
   if(!issueDay)reasons.push('INVOICE_ISSUE_DATE_UNKNOWN');else if(issueDay<period.fromDay||issueDay>=period.toDayExclusive)reasons.push('INVOICE_PRIMARY_OUTSIDE_PERIOD');

@@ -1,3 +1,7 @@
+## 29/10/2026 - FOUNDATION12 / BASIC DISPLAY ACCEPTED THROUGH RESULT13 / REMAINDER OPEN
+
+Foundation12 #3278 green combined833fa760/40950440841 mergedb027783 and is installed in healthy69198a7 with result13 #3284. Actual limited zero-result27Oct/copy/preview-cancel, last-shift29Oct pending and N40 isolation receipt is CHECKPOINTS/CHANGES/2026-10-29-cash-automatic-result.md and CHECKPOINTS/EVIDENCE/cash-automatic-result-20261029/receipt.json. Old combined-head pending labels below are historical. No broad physical/card/refill/Netlink or nonzero live acceptance is promoted. Cloud completed workbook download remains OPEN/failed to complete in this browser; no real email or financial writer. The same owner/#3243 retains all remainder. New manual/active/tracker/pending/PDF receipt supersedes only the accepted limited display steps.
+
 ## 29/10/2026 — Reconciliation publication scope
 
 Current-main reconciliation retains all other owners' fresh tracker/pending/PDF bytes. The approved main assignment3277 is unchanged; this is a candidate update, not a new claim or PASS. Only an appended active pointer and this exact checkpoint accompany the unchanged ten cash runtime/test blobs, avoiding repeated conflicts with simultaneous top-of-registry updates and PDF generation. Actual PASS still requires the five synchronized records/manual/PDF. Earlier intended prepending/regeneration below describes a local preparation, superseded by this publication scope; no source gate or CI is waived.
@@ -20,7 +24,7 @@ Candidate is NOT INSTALLED / NOT LAB PASS / NO EMAIL SENT. Required next: exact 
 
 Checkpoint CHECKPOINTS/CHANGES/2026-10-29-cash-automatic-audit.md.
 
-## 29/10/2026 — CASH-AUTOMATIC-AUDIT-12 / ASSIGNED BEFORE SOURCE / NOT IMPLEMENTED
+## 29/10/2026 — CASH-AUTOMATIC-AUDIT-12 / HISTORICAL BEFORE-SOURCE CLAIM - SUPERSEDED BY LIMITED RECEIPT
 
 Retained owner codex/cash-chat-reconciliation-20261026; planned branch feat/cash-automatic-audit-20261029. Explicit owner request: implement automatic cash investigation instead of requiring manual confirmation for every shift. Latest clarification: unresolved issues remain OPEN in the report; they are not automatically resolved and do not require all other work to stop. No Estia store creation, mapping or blanket historical discount approval. Baseline4498b64; existing limited native/external-input PASS preserved. 29Oct read-only LAB observation: one closed LAB POS2 row initial shortage9.40EUR/card0/pending1; manual email preview refused unreviewed shift. No financial/review/setting/email action was executed. That observation is not a whole-workflow FAIL/PASS.
 

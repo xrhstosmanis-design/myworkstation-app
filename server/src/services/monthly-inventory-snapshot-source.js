@@ -1,5 +1,6 @@
 // Internal complete source adapter; no route, bootstrap or stock mutation.
-import {readMonthlyInvoiceSnapshotProjectionInTransaction,readMonthlyInvoiceSnapshotTransactionState} from './monthly-invoice-audit.js';
+import {readMonthlyInvoiceSnapshotProjectionInTransaction,readMonthlyInvoiceSnapshotProjectionForAutomationInTransaction,readMonthlyInvoiceSnapshotTransactionState} from './monthly-invoice-audit.js';
+import {requireMonthlyCaptureContext,finishMonthlyCaptureSourceInTransaction} from './monthly-inventory-capture-authorization.js';
 import {readLifecycleGeneration,normalizeLifecycleGeneration} from './store-lifecycle-generation.js';
 import {monthlyInventorySnapshotPeriod} from './monthly-inventory-snapshot-period.js';
 
@@ -111,6 +112,24 @@ export async function readMonthlyInventorySnapshotSourcesInTransaction(tx,actor,
  const selected=request(input),principal=normalizeMonthlyInventorySnapshotActor(actor),entry=await readMonthlyInvoiceSnapshotTransactionState(tx);
  if(entry.transactionStartedAt<selected.period.scheduledFor)fail('SNAPSHOT_BEFORE_DUE');
  const invoices=await readMonthlyInvoiceSnapshotProjectionInTransaction(tx,principal,{storeId:selected.storeId,month:selected.month});
+ return readCompleteSources(tx,selected,entry,invoices);
+}
+
+// Only an actual job authorization in this same held source transaction admits
+// this entry. A role-shaped object is never substituted for a logged-in user.
+export async function readMonthlyInventorySnapshotSourcesForAutomationInTransaction(tx,context){
+ if(arguments.length!==2)fail('STOCK_SNAPSHOT_INPUT_INVALID');
+ const scope=requireMonthlyCaptureContext(tx,context,'SOURCE');
+ const selected=request({storeId:scope.storeId,month:scope.month,lifecycleGeneration:scope.lifecycleGeneration}),entry=await readMonthlyInvoiceSnapshotTransactionState(tx);
+ if(entry.transactionStartedAt<selected.period.scheduledFor)fail('SNAPSHOT_BEFORE_DUE');
+ const invoices=await readMonthlyInvoiceSnapshotProjectionForAutomationInTransaction(tx,context);
+ if(invoices.companyId!==scope.companyId||invoices.storeId!==scope.storeId)fail('STOCK_SNAPSHOT_SOURCE_INCOMPLETE');
+ const result=await readCompleteSources(tx,selected,entry,invoices);
+ await finishMonthlyCaptureSourceInTransaction(tx,context);
+ return result;
+}
+
+async function readCompleteSources(tx,selected,entry,invoices){
  if(!invoices.coverage.complete||!invoices.freezeEligibility.eligible)fail('STOCK_SNAPSHOT_INVOICE_SOURCE_INCOMPLETE',invoices.freezeEligibility.reasons);
  const scope={companyId:invoices.companyId,storeId:invoices.storeId},generation=await readLifecycleGeneration(tx,scope);
  if(!generation.enrolled)fail('MONTHLY_SNAPSHOT_ENROLLMENT_REQUIRED');
