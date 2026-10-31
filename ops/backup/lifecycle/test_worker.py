@@ -9,7 +9,7 @@ from unittest.mock import patch
 import worker
 
 class WorkerContract(unittest.TestCase):
-    def attempt(self, failure=None):
+    def attempt(self, failure=None, change_manifest=False):
         operation = str(uuid.uuid4())
         manifest = {'id': 'ISOLATED_WORKER_TEST', 'streaming': True}
         snapshot = {'rowDigestFormat': 'MWS_ROW_MULTISET_SHA256_V1', 'planHash': hashlib.sha256(worker.compact(manifest).encode()).hexdigest(), 'sourceRevision': '1' * 40, 'scope': {'companyId': 'fixture-company', 'storeId': 'fixture-store', 'mode': 'RESET'}, 'snapshotHash': '2' * 64}
@@ -20,7 +20,11 @@ class WorkerContract(unittest.TestCase):
             if sql == 'SELECT current_schema();': return 'public'
             if sql.startswith('CREATE TABLE IF NOT EXISTS') or sql.startswith('INSERT INTO'): return ''
             if sql.startswith('SELECT to_regclass'): return 't'
-            if sql.startswith('WITH candidate'): return worker.compact(job)
+            if sql.startswith('WITH candidate'):
+                self.assertIn('AND e."planHash"=' + worker.literal(snapshot['planHash']), sql.split(') UPDATE ')[0])
+                if change_manifest:
+                    source.write_text(json.dumps({'id': 'CHANGED_AFTER_ADMISSION'}))
+                return worker.compact(job)
             if sql.startswith('UPDATE '): return '' if failure == 'expired' else operation
             self.fail('Unexpected live SQL')
         def run(args, **kwargs):
@@ -84,6 +88,21 @@ class WorkerContract(unittest.TestCase):
                 restore.assert_not_called()
         self.assertTrue(any('StoreLifecycleRuntime' in q and q.startswith('INSERT') for q in queries))
         self.assertFalse(any('StoreLifecycleFence' in q or q.startswith('UPDATE') or q.startswith('WITH') for q in queries))
+    def test_closed_profile_selection_preserves_default_and_full_files(self):
+        base = worker.selected_manifest_file({})
+        self.assertEqual(base, worker.selected_manifest_file({'MWS_STORE_LIFECYCLE_PROFILE': 'BASE'}))
+        self.assertEqual(base.name, 'manifest.json')
+        full = worker.selected_manifest_file({'MWS_STORE_LIFECYCLE_PROFILE': 'MONTHLY_INVENTORY_CAPTURE_V1'})
+        self.assertEqual(full.name, 'monthly-inventory-capture-manifest.proposed.json')
+        self.assertEqual(base.parent, full.parent)
+        self.assertNotEqual(json.loads(base.read_text()), json.loads(full.read_text()))
+    def test_invalid_profiles_refuse_without_database_or_fallback(self):
+        with patch.object(worker, 'query', side_effect=AssertionError('Unexpected database')) as query:
+            for value in ('', ' ', 'base', 'MONTHLY_INVENTORY_CAPTURE_V1 ', '../manifest.json', 'UNKNOWN', None, 1):
+                with self.subTest(value=value), self.assertRaises(ValueError):
+                    worker.selected_manifest_file({'MWS_STORE_LIFECYCLE_PROFILE': value})
+            query.assert_not_called()
+    def test_original_admitted_manifest_is_not_reread_after_lease(self): self.attempt(change_manifest=True)
     def test_success_exact_version_and_bound_publication(self): self.attempt()
     def test_disabled_versioning_denies(self): self.attempt('versioning')
     def test_missing_object_version_denies(self): self.attempt('version')
