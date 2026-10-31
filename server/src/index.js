@@ -144,6 +144,8 @@ import {createAutomaticReportInvitationRouter} from './routes/automatic-report-i
 import {readActivation} from './services/automatic-report-activation.js';
 import {createAutomaticReportDispatcher} from './services/automatic-report-dispatch.js';
 import {createAutomaticReportScheduler} from './services/automatic-report-scheduler.js';
+import {createMonthlyInventoryCaptureJobs} from './services/monthly-inventory-capture-jobs.js';
+import {createMonthlyInventoryCaptureScheduler} from './services/monthly-inventory-capture-scheduler.js';
 import {backgroundDrain} from './server-shutdown.js';
 import backupMonitorRoutes from "./routes/backup-monitor.js";
 import platformSuperAdminAnalyticsDetailsRoutes from "./routes/platform-super-admin-analytics-details.js";
@@ -375,11 +377,14 @@ await clearKatStuckRbsRequest();
 const automaticReportActivationProvider=()=>readActivation(process.env);
 const automaticReportDispatcher=createAutomaticReportDispatcher({db:prisma,activationProvider:automaticReportActivationProvider});
 const automaticReportScheduler=createAutomaticReportScheduler({db:prisma,dispatcher:automaticReportDispatcher,activationProvider:automaticReportActivationProvider,work:backgroundDrain});
+const monthlyInventoryCaptureJobs=createMonthlyInventoryCaptureJobs(prisma);
+const monthlyInventoryCaptureScheduler=createMonthlyInventoryCaptureScheduler({jobs:monthlyInventoryCaptureJobs,work:backgroundDrain});
 const server=app.listen(process.env.PORT||8080,()=>{
   console.log(`MyWorkStation v0.22.0 on port ${process.env.PORT||8080}`);
   startPosInvoiceBackgroundWorker();
   startMyDataReceivingWorker();
   startWorkforceAutoOutWorker();
   automaticReportScheduler.start();
+  monthlyInventoryCaptureScheduler.start();
 });
 shutdown.install(server);
