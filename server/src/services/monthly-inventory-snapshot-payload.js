@@ -3,6 +3,9 @@ import {classifyMonthlyInventoryObservation} from './monthly-inventory-snapshot-
 
 export const MONTHLY_INVENTORY_SNAPSHOT_BASIS='CURRENT_OPERATIONAL_V1';
 const MAX_ROWS=20000,MAX_BYTES=4*1024*1024;
+// New storage serializers accept only our detached, recursively frozen result.
+// A caller cannot supply getters/toJSON/cycles through a forged candidate.
+const validatedCandidates=new WeakSet();
 const fail=code=>{throw Object.assign(new Error(code),{code})};
 const ordinal=(a,b)=>a<b?-1:a>b?1:0;
 function shape(value,allowed){
@@ -100,5 +103,44 @@ export function buildMonthlyInventorySnapshotCandidate(input){
  const payload={format:'MWS_MONTHLY_INVENTORY_SNAPSHOT_CANDIDATE_V1',schemaVersion:1,candidateOnly:true,persisted:false,validationBasis:'FORMAT_VALIDATED_ONLY',...source,quantityByUnit};
  const payloadCanonical=canonical(payload);if(Buffer.byteLength(payloadCanonical)>MAX_BYTES)fail('SNAPSHOT_PAYLOAD_LIMIT');
  const candidate={...payload,sourceHash:hash(source),payloadHash:createHash('sha256').update(payloadCanonical,'utf8').digest('hex')};
- if(Buffer.byteLength(canonical(candidate))>MAX_BYTES)fail('SNAPSHOT_PAYLOAD_LIMIT');return freeze(candidate);
+ if(Buffer.byteLength(canonical(candidate))>MAX_BYTES)fail('SNAPSHOT_PAYLOAD_LIMIT');const result=freeze(candidate);validatedCandidates.add(result);return result;
+}
+
+export function serializeMonthlyInventorySnapshotCandidate(candidate){
+ if(!validatedCandidates.has(candidate))fail('SNAPSHOT_CANDIDATE_UNVERIFIED');
+ return canonical(candidate);
+}
+
+// Canonical JSON text is the deliberately narrow readback boundary. Rebuild
+// only original facts with the same validator/arithmetic/hash projections,
+// then compare the INPUT TEXT directly to the trusted rebuilt canonical text.
+// Never recursively canonicalize caller-controlled derived fields.
+export function verifyMonthlyInventorySnapshotCandidateText(candidateJsonText){
+ if(typeof candidateJsonText!=='string')fail('SNAPSHOT_CANDIDATE_TEXT_INVALID');
+ if(candidateJsonText.length>MAX_BYTES||Buffer.byteLength(candidateJsonText,'utf8')>MAX_BYTES)fail('SNAPSHOT_PAYLOAD_LIMIT');
+ let value;try{value=JSON.parse(candidateJsonText)}catch{fail('SNAPSHOT_CANDIDATE_TEXT_INVALID')}
+ shape(value,['format','schemaVersion','candidateOnly','persisted','validationBasis','companyId','storeId','lifecycleGeneration','sourceRevision','valuationBasis','period','coverage','products','invoices','pendingOriginals','quantityByUnit','sourceHash','payloadHash']);
+ const period=shape(get(value,'period'),['issueMonth','issueFromDay','issueToDayExclusive','scheduledFor','scheduledLocalTime','timeZone','sourceObservedAt','timing','delayMs']);
+ const money=(row,key,reasonKey)=>{
+  const amount=get(row,key),reason=get(row,reasonKey);
+  if(amount===null){if(reason==='MISSING')return null;if(reason==='INVALID')return false;fail('SNAPSHOT_CANDIDATE_TEXT_INVALID')}
+  if(typeof amount!=='string'||reason!==null)fail('SNAPSHOT_CANDIDATE_TEXT_INVALID');return amount;
+ };
+ const pick=(row,keys)=>Object.fromEntries(keys.map(key=>[key,get(row,key)]));
+ const products=each(get(value,'products'),row=>{
+  shape(row,['id','companyId','storeId','name','sku','unit','quantity','retailUnitPrice','purchaseUnitCost','retailUnknownReason','purchaseUnknownReason','retailValue','purchaseValue']);
+  return {...pick(row,['id','companyId','storeId','name','sku','unit','quantity']),retailUnitPrice:money(row,'retailUnitPrice','retailUnknownReason'),purchaseUnitCost:money(row,'purchaseUnitCost','purchaseUnknownReason')};
+ });
+ const invoiceSection=shape(get(value,'invoices'),['period','items']),pendingSection=shape(get(value,'pendingOriginals'),['period','items']);
+ const invoices={period:get(invoiceSection,'period'),items:each(get(invoiceSection,'items'),row=>{
+  shape(row,['id','companyId','storeId','documentNumber','supplierName','issueDay','categories','totalAmount','totalAmountUnknownReason']);
+  return {...pick(row,['id','companyId','storeId','documentNumber','supplierName','issueDay','categories']),totalAmount:money(row,'totalAmount','totalAmountUnknownReason')};
+ })};
+ const pendingOriginals={period:get(pendingSection,'period'),items:each(get(pendingSection,'items'),row=>{
+  shape(row,['id','companyId','storeId','documentNumber','supplierName','documentDate','status','amount','amountUnknownReason']);
+  return {...pick(row,['id','companyId','storeId','documentNumber','supplierName','documentDate','status']),amount:money(row,'amount','amountUnknownReason')};
+ })};
+ const rebuilt=buildMonthlyInventorySnapshotCandidate({...pick(value,['companyId','storeId','lifecycleGeneration','sourceRevision','valuationBasis','coverage']),issueMonth:get(period,'issueMonth'),sourceObservedAt:get(period,'sourceObservedAt'),products,invoices,pendingOriginals});
+ if(candidateJsonText!==canonical(rebuilt))fail('SNAPSHOT_CANDIDATE_TEXT_INVALID');
+ return rebuilt;
 }

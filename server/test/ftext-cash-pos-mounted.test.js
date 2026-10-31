@@ -1,10 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {withMountedPos} from './helpers/pos-modern-fixture.mjs';
-test('rejected ftext return releases only after readiness confirmation and retains basket',()=>withMountedPos({
+test('historical unknown NO returns without any second confirmation and keeps the same basket',()=>withMountedPos({
+ ftextConfigured:true,
+ apiOverride:async path=>{const row={id:'review-request',kind:'FTEXT_CASH',storeId:'A',status:'REQUIRES_CHECK',operatorOutcome:'NO',operatorReleaseMode:'OPERATOR_REVIEW',paymentMethod:'CARD',total:2.2,checkout:{items:[{productId:'p0',quantity:1}]}};if(path.endsWith('/pending')||path.endsWith('/ftext-cash/review-request'))return path.endsWith('/pending')?{requests:[row]}:{request:row};if(path.endsWith('/release'))return {request:{...row,operatorReleaseMode:'RELEASED'}}},
+ run:async({calls,click,dom})=>{dom.window.confirm=()=>assert.fail('No second confirmation permitted');const button=[...document.querySelectorAll('button')].find(x=>x.textContent==='Επιστροφή στο καλάθι');await click(button);const writes=calls.filter(c=>c.path.endsWith('/release'));assert.equal(writes.length,1);assert.deepEqual(JSON.parse(writes[0].options.body),{operatorNo:true});assert.equal(document.querySelectorAll('.standard-line').length,1);assert.match(document.body.textContent,/Η προηγούμενη προσπάθεια έκλεισε στο MyWorkStation/);assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')),false);}
+}));
+test('polling an already reviewed release clears its own stale pending UI without checkout or clearing basket',()=>withMountedPos({
+ ftextConfigured:true,
+ apiOverride:async path=>{const row={id:'released-request',kind:'FTEXT_CASH',storeId:'A',status:'REQUIRES_CHECK',operatorOutcome:'NO',paymentMethod:'CARD',total:2.2,checkout:{items:[{productId:'p0',quantity:1}]}};if(path.endsWith('/pending'))return {requests:[row]};if(path.endsWith('/ftext-cash/released-request'))return {request:{...row,operatorReleaseMode:'RELEASED'}}},
+ run:async({calls})=>{assert.match(document.body.textContent,/Η προηγούμενη προσπάθεια έκλεισε στο MyWorkStation/);assert.equal(document.querySelectorAll('.standard-line').length,1);assert.equal(calls.some(c=>c.path.endsWith('/release')||c.path.endsWith('/checkout')||c.path.endsWith('/finalize')),false);}
+}));
+test('historical rejected ftext returns without a readiness dialog and retains basket',()=>withMountedPos({
  ftextConfigured:true,
  apiOverride:async path=>{const row={id:'rejected-request',kind:'FTEXT_CASH',storeId:'A',status:'REQUIRES_CHECK',operatorOutcome:'NO',paymentMethod:'CARD',total:2.2,checkout:{items:[{productId:'p0',quantity:1}]}};if(path.endsWith('/pending'))return {requests:[row]};if(path.endsWith('/ftext-cash/rejected-request'))return {request:row};if(path.endsWith('/release'))return {request:row}},
- run:async({calls,click,dom})=>{let accepted=false;dom.window.confirm=()=>accepted;const button=[...document.querySelectorAll('button')].find(x=>x.textContent==='Επιστροφή στο καλάθι');await click(button);assert.equal(calls.some(c=>c.path.endsWith('/release')),false);accepted=true;await click(button);const release=calls.filter(c=>c.path.endsWith('/release'));assert.equal(release.length,1);assert.deepEqual(JSON.parse(release[0].options.body),{registerReady:true});assert.equal(document.querySelectorAll('.standard-line').length,1);assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')),false);}
+ run:async({calls,click,dom})=>{dom.window.confirm=()=>assert.fail('No readiness dialog permitted');const button=[...document.querySelectorAll('button')].find(x=>x.textContent==='Επιστροφή στο καλάθι');await click(button);const release=calls.filter(c=>c.path.endsWith('/release'));assert.equal(release.length,1);assert.deepEqual(JSON.parse(release[0].options.body),{operatorNo:true});assert.equal(document.querySelectorAll('.standard-line').length,1);assert.equal(calls.some(c=>c.path.endsWith('/checkout')||c.path.endsWith('/finalize')),false);}
 }));
 for(const method of ['CASH','CARD'])test(`actual POS recovers dispatched ftext ${method} without RBS continuation, manual confirmation or checkout resend`,()=>withMountedPos({
  ftextConfigured:true,
@@ -30,9 +40,10 @@ for(const outcome of ['YES','NO'])test(`actual POS operator card ${outcome} uses
   const row={id:'operator-request',kind:'FTEXT_CASH',storeId:'A',terminalPos:'POS-01',status:'CONFIRMED',operatorConfirmationRequired:true,paymentMethod:'CARD',total:2.2,clientTransactionId:'operator-checkout',checkout:{paymentMethod:'CARD',items:[{productId:'p0',quantity:1}]}};
   if(path.endsWith('/ftext-cash/pending'))return {requests:[row]};
   if(path.endsWith('/ftext-cash/operator-request'))return {request:row};
-  if(path.endsWith('/ftext-cash/operator-request/outcome'))return {request:{...row,operatorConfirmationRequired:false,operatorOutcome:outcome,status:outcome==='YES'?'SALE_COMMITTED':'REQUIRES_CHECK'}};
+  if(path.endsWith('/ftext-cash/operator-request/outcome'))return {request:{...row,operatorConfirmationRequired:false,operatorOutcome:outcome,operatorReleaseMode:outcome==='NO'?'RELEASED':null,status:outcome==='YES'?'SALE_COMMITTED':'REQUIRES_CHECK'}};
  },
- run:async({calls,click})=>{
+ run:async({calls,click,dom})=>{
+  dom.window.confirm=()=>assert.fail('NO must not open another dialog');
   assert.match(document.body.textContent,/Ναι · εγκρίθηκε/);
   assert.equal(calls.some(c=>c.path.endsWith('/finalize')),false);
   const button=[...document.querySelectorAll('button')].find(x=>x.textContent.startsWith(outcome==='YES'?'Ναι ·':'Όχι ·'));await click(button);
@@ -42,9 +53,8 @@ for(const outcome of ['YES','NO'])test(`actual POS operator card ${outcome} uses
   if(outcome==='NO'){
    assert.equal(document.querySelectorAll('.standard-line').length,1);
    assert.equal(document.querySelector('[data-pos-scanner]').disabled,false,'Return to usable basket after NO');
-   assert.match(document.body.textContent,/Εκκρεμεί έλεγχος της προηγούμενης εντολής/);
-   await click(document.querySelector('.pos-modern-primary-payments .cash'));
-   assert.equal(calls.some(c=>c.path.endsWith('/checkout')),false,'Unresolved request cannot be resubmitted after dialog closes');
+   assert.match(document.body.textContent,/Η προηγούμενη προσπάθεια έκλεισε στο MyWorkStation/);
+   assert.equal(calls.some(c=>c.path.endsWith('/release')),false,'NO must release atomically in its outcome request');
   }else{
    assert.equal(document.querySelectorAll('.standard-line').length,0,'Committed YES clears basket immediately');
    assert.match(document.body.textContent,/Νέα συναλλαγή/);

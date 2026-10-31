@@ -1,4 +1,4 @@
-import {ftextOperatorCardMode,ftextOperatorDecisionRequired} from './ftext-operator-card.js';
+import {ftextOperatorCardMode,ftextOperatorDecisionRequired,ftextOperatorReleaseMode} from './ftext-operator-card.js';
 import {ftextVoidConfirmed} from './ftext-void.js';
 import {validateFtextCardPayment} from './ftext-card-payment.js';
 import {createHash,randomUUID} from 'node:crypto';
@@ -7,7 +7,10 @@ import {prepareFtextSalePlan} from './ftext-sale-plan.js';
 import {ftextSettingsHash} from './ftext-installation.js';
 const fail=(code,message)=>{throw Object.assign(new Error(message),{status:409,code})};
 const hash=s=>createHash('sha256').update(s).digest('hex');
-export function ftextCashRequestView(row){return row?{id:row.id,kind:'FTEXT_CASH',storeId:row.storeId,terminalPos:row.terminalPos,clientTransactionId:row.clientTransactionId,paymentMethod:row.checkoutJson?.paymentMethod||'CASH',total:Number(row.total),status:ftextVoidConfirmed(row)?'CANCELLED':row.status,voidStatus:row.checkoutJson?.ftextVoid?.status||null,saleId:row.saleId||null,operatorConfirmationRequired:ftextOperatorDecisionRequired(row),operatorOutcome:row.checkoutJson?.ftextCardDecision?.outcome||null,checkout:row.checkoutJson,createdAt:row.createdAt}:null;}
+export async function findPendingFtextCashRequest(tx,scope){
+ return (await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} AND "status"<>'SALE_COMMITTED' AND COALESCE("checkoutJson"->'ftextVoid'->>'status','')<>'CONFIRMED' AND COALESCE("checkoutJson"->'ftextOperatorRelease'->>'registerReady','')<>'true' ORDER BY "createdAt" LIMIT 1`)[0]||null;
+}
+export function ftextCashRequestView(row){return row?{id:row.id,kind:'FTEXT_CASH',storeId:row.storeId,terminalPos:row.terminalPos,clientTransactionId:row.clientTransactionId,paymentMethod:row.checkoutJson?.paymentMethod||'CASH',total:Number(row.total),status:ftextVoidConfirmed(row)?'CANCELLED':row.status,voidStatus:row.checkoutJson?.ftextVoid?.status||null,saleId:row.saleId||null,operatorConfirmationRequired:ftextOperatorDecisionRequired(row),operatorOutcome:row.checkoutJson?.ftextCardDecision?.outcome||null,operatorReleaseMode:ftextOperatorReleaseMode(row),checkout:row.checkoutJson,createdAt:row.createdAt}:null;}
 export function assertFtextSimpleCash(checkout,items){
  if(checkout.paymentMethod!=='CASH'||checkout.customerId||checkout.onlineOrderId||checkout.tableOrderId||Number(checkout.redeemPoints||0)!==0||checkout.payments?.length||!['COUNTER',undefined].includes(checkout.operationChannel)||!['NORMAL',undefined].includes(checkout.audience)||items.some(i=>Number(i.discount||0)!==0||i.promotionId||i.promotionType||!Number.isSafeInteger(Number(i.quantity))||Number(i.quantity)<=0))fail('FTEXT_CASH_UNSUPPORTED','Η πρώτη έκδοση ftext υποστηρίζει απλή πώληση μετρητών στο κατάστημα, χωρίς πελάτη, προσφορά ή έκπτωση.');
 }
@@ -58,7 +61,7 @@ export async function recordFtextCashResult(tx,device,settings,input){
  const result=validateFtextCashResult(input,row),resultHash=hash(JSON.stringify(result));
  if(row.resultHash){if(row.resultHash!==resultHash)fail('FTEXT_CASH_RESULT_CHANGED','Το ίδιο αποτέλεσμα άλλαξε. Απαιτείται έλεγχος.');return row;}
  if(result.outcome==='CONFIRMED'){
-  const reused=(await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${settings.companyId} AND "storeId"=${settings.storeId} AND "serialNumber"=${settings.serialNumber} AND "id"<>${row.id} AND "status" IN ('CONFIRMED','SALE_COMMITTED') AND "result"->>'dayId'=${result.dayId} AND "result"->>'dayCounter'=${result.dayCounter} LIMIT 1`)[0];
+  const reused=(await tx.$queryRaw`SELECT "id" FROM "FtextCashRequest" WHERE "companyId"=${settings.companyId} AND "storeId"=${settings.storeId} AND "serialNumber"=${settings.serialNumber} AND "id"<>${row.id} AND "status" IN ('CONFIRMED','SALE_COMMITTED') AND COALESCE("checkoutJson"->'ftextLateCashReceipt'->'result'->>'dayId',"result"->>'dayId')=${result.dayId} AND COALESCE("checkoutJson"->'ftextLateCashReceipt'->'result'->>'dayCounter',"result"->>'dayCounter')=${result.dayCounter} LIMIT 1`)[0];
   if(reused)fail('FTEXT_CASH_RECEIPT_REUSED','Η ίδια φορολογική απόδειξη έχει ήδη συνδεθεί με άλλη συναλλαγή. Δεν έγινε δεύτερη καταχώριση.');
  }
  if(row.status!=='DISPATCHED')fail('FTEXT_CASH_RESULT_STATE','Η εντολή δεν βρίσκεται σε κατάσταση αποστολής.');

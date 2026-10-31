@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildMonthlyInventorySnapshotCandidate as build,MONTHLY_INVENTORY_SNAPSHOT_BASIS as basis} from '../src/services/monthly-inventory-snapshot-payload.js';
+import {serializeMonthlyInventorySnapshotCandidate as serialize,verifyMonthlyInventorySnapshotCandidateText as verify} from '../src/services/monthly-inventory-snapshot-payload.js';
 const product=(id='p',patch={})=>({id,companyId:'c',storeId:'s',name:'Προϊόν',sku:'SKU',unit:'piece',quantity:'2.5',retailUnitPrice:'1.234',purchaseUnitCost:'0.2',...patch});
 const invoice=(id='i',patch={})=>({id,companyId:'c',storeId:'s',documentNumber:'A 1',supplierName:'Supplier',issueDay:'2026-10-03',categories:['UNPOSTED_DOCUMENT','POSSIBLE_DUPLICATE'],totalAmount:'12.34',...patch});
 const pending=(id='pending',patch={})=>({id,companyId:'c',storeId:'s',documentNumber:'OLD',supplierName:'Supplier',documentDate:'2025-01-01',status:'AWAITING_INVOICE',amount:'10.5',...patch});
@@ -52,4 +53,27 @@ test('invoice and pending monetary facts retain signed precision or named UNKNOW
   const changed=structuredClone(v);changed[section].items[0][key]='1.234567890123';assert.notEqual(build(changed).sourceHash,r.sourceHash);assert.notEqual(build(changed).payloadHash,r.payloadHash);
   for(const [amount,reason]of [[undefined,'MISSING'],['1,23','INVALID'],['0.1234567890123','INVALID']]){const unknown=structuredClone(v);unknown[section].items[0][key]=amount;const row=build(unknown)[section].items[0];assert.equal(row[key],null);assert.equal(row[key+'UnknownReason'],reason)}
  }
+});
+
+test('storage serialization brands only original frozen results and verifies canonical bytes with the same D1 arithmetic and hashes',()=>{
+ const v=input();v.products[0].retailUnitPrice=null;v.products[0].purchaseUnitCost=false;v.invoices.items[0].totalAmount=false;v.pendingOriginals.items[0].amount=null;
+ const candidate=build(v),text=serialize(candidate),rebuilt=verify(text);
+ assert.deepEqual(rebuilt,candidate);assert.equal(serialize(rebuilt),text);assert.equal(rebuilt.products[0].retailUnknownReason,'MISSING');assert.equal(rebuilt.products[0].purchaseUnknownReason,'INVALID');assert.equal(rebuilt.invoices.items[0].totalAmountUnknownReason,'INVALID');assert.equal(rebuilt.pendingOriginals.items[0].amountUnknownReason,'MISSING');
+ assert.equal(rebuilt.persisted,false);assert.equal(rebuilt.candidateOnly,true);assert.equal(rebuilt.validationBasis,'FORMAT_VALIDATED_ONLY');assert.ok(Object.isFrozen(rebuilt));
+ assert.throws(()=>serialize(JSON.parse(text)),{code:'SNAPSHOT_CANDIDATE_UNVERIFIED'});
+ for(const key of ['payloadHash','sourceHash','candidateOnly','persisted','quantityByUnit','period','coverage']){
+  const changed=JSON.parse(text);changed[key]=key.endsWith('Hash')?'0'.repeat(64):null;assert.throws(()=>verify(JSON.stringify(changed)));
+ }
+ const changed=JSON.parse(text);changed.products[0].quantity='999';assert.throws(()=>verify(JSON.stringify(changed)));
+ assert.throws(()=>verify(JSON.stringify(candidate,null,2)),{code:'SNAPSHOT_CANDIDATE_TEXT_INVALID'});
+});
+
+test('storage text verification refuses pre-parse byte limits, forged getters, cycles and deeply nested ignored derived fields',()=>{
+ let touched=0;const forged={};Object.defineProperty(forged,'toJSON',{get(){touched++;throw Error('must not invoke')}});
+ assert.throws(()=>serialize(forged),{code:'SNAPSHOT_CANDIDATE_UNVERIFIED'});const cyclic={};cyclic.self=cyclic;assert.throws(()=>serialize(cyclic),{code:'SNAPSHOT_CANDIDATE_UNVERIFIED'});assert.equal(touched,0);
+ assert.throws(()=>verify(' '.repeat(4*1024*1024+1)),{code:'SNAPSHOT_PAYLOAD_LIMIT'});
+ assert.throws(()=>verify('Ω'.repeat(3*1024*1024)),{code:'SNAPSHOT_PAYLOAD_LIMIT'});
+ assert.throws(()=>verify('{'),{code:'SNAPSHOT_CANDIDATE_TEXT_INVALID'});
+ const text=serialize(build(input())),nested='['.repeat(20000)+'0'+']'.repeat(20000),derived=text.replace(/"quantityByUnit":\[[\s\S]*?\],"schemaVersion"/,`"quantityByUnit":${nested},"schemaVersion"`);
+ assert.notEqual(derived,text);assert.throws(()=>verify(derived),{code:'SNAPSHOT_CANDIDATE_TEXT_INVALID'});
 });

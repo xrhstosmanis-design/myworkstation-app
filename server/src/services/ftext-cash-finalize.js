@@ -4,6 +4,7 @@ import {insertPosSaleSafetyAudit} from '../pos-sale-safety.js';
 import {lockActiveSaleProducts} from '../lib/inventory-sale-product-lock.js';
 import {ftextSettingsHash} from './ftext-installation.js';
 import {validateFtextCashResult} from './ftext-cash-requests.js';
+import {effectiveFtextCashReceipt} from './ftext-late-cash-receipt.js';
 const fail=message=>{throw Object.assign(new Error(message),{status:409,code:'FTEXT_CASH_FINALIZE_REVIEW'})};
 export async function finalizeFtextCashRequest(db,id,scope,{context,reserveStock}={}){
  if(typeof context!=='function')throw new Error('A current authenticated installation context is required.');
@@ -13,8 +14,9 @@ export async function finalizeFtextCashRequest(db,id,scope,{context,reserveStock
   const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} FOR UPDATE`)[0];
   if(!row||row.settingsHash!==ftextSettingsHash(current.settings)||row.lifecycleGeneration!==current.settings.lifecycleGeneration)fail('Η εντολή ανήκει σε διαφορετική εγκατάσταση ή κατάσταση καταστήματος.');
   if(row.status==='SALE_COMMITTED')return {saleId:row.saleId,replay:true,inventoryWarnings:row.checkoutJson?.inventoryWarnings||[]};
-  if(row.status!=='CONFIRMED'||!row.resultHash||row.result?.outcome!=='CONFIRMED')fail('Η φορολογική απόδειξη δεν έχει επιβεβαιωθεί.');
-  validateFtextCashResult(row.result,row);
+  const receipt=effectiveFtextCashReceipt(row,current.settings);
+  if(row.status!=='CONFIRMED'||!row.resultHash||receipt?.outcome!=='CONFIRMED')fail('Η φορολογική απόδειξη δεν έχει επιβεβαιωθεί.');
+  validateFtextCashResult(receipt,row);
   assertFtextOperatorCardApproved(row,current.settings);
   const saved=row.checkoutJson,items=saved?.resolvedItems,summary=saved?.baseSummary;
   const method=saved?.paymentMethod;
@@ -36,7 +38,7 @@ export async function finalizeFtextCashRequest(db,id,scope,{context,reserveStock
   }
   await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${randomUUID()},${saleId},${method},${row.total})`;
   await tx.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","actorId","actorName") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${row.sessionId},${method==='CASH'?'SALE_CASH':'SALE_CARD'},${row.total},${'POS πώληση '+saleId+(method==='CASH'?' · ΜΕΤΡΗΤΑ':' · ΚΑΡΤΑ')},${saved.actorId},${saved.actorName})`;
-  await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${saved.operatorId||saved.actorId},${saved.actorId},'POS_SALE_COMPLETED',${JSON.stringify({source:method==='CASH'?'FTEXT_CASH':'FTEXT_CARD',requestId:row.id,saleId,terminalPos:scope.terminalPos,sessionId:row.sessionId,total:Number(row.total),inventoryWarnings,receipt:row.result})}::jsonb)`;
+  await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${randomUUID()},${scope.companyId},${scope.storeId},${saved.operatorId||saved.actorId},${saved.actorId},'POS_SALE_COMPLETED',${JSON.stringify({source:method==='CASH'?'FTEXT_CASH':'FTEXT_CARD',requestId:row.id,saleId,terminalPos:scope.terminalPos,sessionId:row.sessionId,total:Number(row.total),inventoryWarnings,receipt})}::jsonb)`;
   if(saved.duplicateConfirmed)await insertPosSaleSafetyAudit(tx,{...scope,saleId,relatedSaleId:saved.relatedSaleId,eventType:'DUPLICATE_CONFIRMED',clientTransactionId:row.clientTransactionId,saleFingerprint:row.requestHash,actorId:saved.actorId,actorName:saved.actorName,details:{source:method==='CASH'?'FTEXT_CASH':'FTEXT_CARD',requestId:row.id,total:Number(row.total),paymentMethod:method}});
   await tx.$executeRaw`UPDATE "FtextCashRequest" SET "status"='SALE_COMMITTED',"saleId"=${saleId},"checkoutJson"=${JSON.stringify({...saved,inventoryWarnings})}::jsonb,"updatedAt"=NOW() WHERE "id"=${row.id} AND "status"='CONFIRMED'`;
   return {saleId,replay:false,inventoryWarnings};

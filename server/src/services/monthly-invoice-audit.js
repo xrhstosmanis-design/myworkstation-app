@@ -66,6 +66,15 @@ async function authorize(tx,actor,storeId,now){
  return store;
 }
 
+// Same personal admission and persisted authorization core, reusable by an
+// unmounted storage writer in its OWN fresh transaction. This does not certify
+// supplied source facts or bypass the C2 read-only transaction contract.
+export async function authorizeMonthlyInvoiceAuditInTransaction(tx,actor,storeId,now){
+ if(!actor||!safeText(actor.id)||!safeText(actor.companyId)||actor.tokenType&&actor.tokenType!=='BACKOFFICE_USER'||!roles.has(actor.role)||actor.storeId&&actor.storeId!==storeId)fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.',403);
+ if(!safeText(storeId)||!(now instanceof Date)||!Number.isFinite(now.getTime()))fail('Επίλεξε συγκεκριμένο κατάστημα.');
+ return authorize(tx,actor,storeId,now);
+}
+
 function identity(row){return {documentNumber:row.documentNumber,documentDate:row.issueDay,documentType:row.documentType,totalGross:row.totalGross};}
 function sameIdentity(a,b){return sameInvoiceIdentityForReview(identity(a),identity(b))&&(!vat(a.supplierTaxId)||!vat(b.supplierTaxId)||vat(a.supplierTaxId)===vat(b.supplierTaxId));}
 function sameIncomingIdentity(a,b){return /^\d{9}$/.test(vat(a.supplierTaxId))&&vat(a.supplierTaxId)===vat(b.supplierTaxId)&&sameIdentity(a,b)}
@@ -236,6 +245,13 @@ async function snapshotTransactionState(tx){
  const age=typeof row.ageMs==='string'&&/^\d+(?:\.\d+)?$/.test(row.ageMs)?Number(row.ageMs):NaN;
  if(!stamp(row.transactionStartedAt)||!stamp(row.readAt)||!Number.isFinite(age)||age<0||age>30000||row.transactionStartedAt>row.readAt||Date.parse(row.readAt)-Date.parse(row.transactionStartedAt)>30000)snapshotFail('INVOICE_SNAPSHOT_TRANSACTION_STALE');
  return row;
+}
+
+// Shared actual database admission probe for the internal composed stock reader.
+// No injected clock/options and no change to the existing C2 reader contract.
+export async function readMonthlyInvoiceSnapshotTransactionState(tx){
+ if(arguments.length!==1)snapshotFail('INVOICE_SNAPSHOT_INPUT_INVALID');
+ return snapshotTransactionState(tx);
 }
 
 // Internal, unmounted source metadata for a future same-transaction stock

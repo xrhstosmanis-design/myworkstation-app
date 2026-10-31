@@ -1,0 +1,98 @@
+{
+  "sourcePR": 3293,
+  "sourceHead": "db9b43ddec41939e75bdf0bdd2575c3ff517f181",
+  "claimPR": 3264,
+  "claimMerge": "9ffd833e133295d0f1b87ba1f6d2f305feee7345",
+  "targetNode": "22.23.4",
+  "productionChangedByThisWork": false,
+  "mainWorkflow": 40960756919,
+  "iosWorkflow": 40960756928,
+  "completed": [
+    {
+      "workflow": 40960756915,
+      "job": 123752573291,
+      "kind": "wallet recovery",
+      "node": "22.23.4",
+      "tests": 7,
+      "pass": 7,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "workflow": 40960756879,
+      "job": 123752574196,
+      "kind": "ftext recovery",
+      "node": "22.23.4",
+      "tests": 28,
+      "pass": 28,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "workflow": 40960756945,
+      "job": 123752572649,
+      "kind": "PG18 provisioning",
+      "node": "22.23.4",
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "workflow": 40960756919,
+      "job": 123753006629,
+      "kind": "isolated wholesale Docker/Chromium and offline recovery",
+      "nodeImage": "node:22.23.4-bookworm",
+      "imageDigest": "sha256:18a6d90fd60542269850c80ca03b29b1d9b14d6b221ac7ee8e35b0d33ef904bd",
+      "status": "SUCCESS",
+      "businessAcceptance": "synthetic engineering fixtures only; not physical/production LAB PASS"
+    },
+    {
+      "workflow": 40960756919,
+      "job": 123753006480,
+      "kind": "full native server/build/browser/archive/real HTTP",
+      "node": "22.23.4",
+      "tests": 4634,
+      "pass": 4634,
+      "fail": 0,
+      "skipped": 0,
+      "backupTests": {
+        "pass": 8,
+        "fail": 0,
+        "skipped": 0
+      },
+      "status": "SUCCESS"
+    },
+    {
+      "workflow": 40960756928,
+      "job": 123752573711,
+      "kind": "iOS simulator/native H264+AAC, Node22 server media validation and unsigned iPhone archive",
+      "node": "22.23.4",
+      "status": "SUCCESS",
+      "physicalDevice": "NOT TESTED",
+      "installableIPA": false
+    }
+  ],
+  "local": {
+    "tests": 4413,
+    "pass": 4110,
+    "fail": 0,
+    "skipped": 303,
+    "productionBuild": "PASS",
+    "nativeImageAndPdfSmoke": "PASS",
+    "posVisualLabBuild": "PASS"
+  },
+  "inheritedDependencyAudit": {
+    "highPackageEntries": 8,
+    "critical": 0,
+    "productionDependencyIdentity": "NOT VERIFIED",
+    "exploitation": "NOT CONFIRMED",
+    "fixedByNodeUpgrade": false
+  },
+  "remaining": [
+    "user approval for any production change",
+    "live NODE_VERSION update plus exact approved guarded runtime verification",
+    "actual production CA rejection",
+    "other hosted LAB branches and backup Docker/CA/Python remediation"
+  ]
+}
