@@ -1,0 +1,52 @@
+{
+  "claimPr": 3373,
+  "claimCi": 41204888690,
+  "claimMerge": "4d54a948e96e212334ec5b15b09c2f1aa8739bb3",
+  "sourcePr": 3377,
+  "sourceHead": "205415eb83e4340fc3ee575336cbedaf06961302",
+  "sourceCi": 41206275848,
+  "localFocused": {
+    "pass": 23,
+    "fail": 0,
+    "skipped": 0
+  },
+  "finalLocalBuild": "PASS/TABLE_SERVICE",
+  "hostedAcceptance": "LIMITED HOSTED LAB PASS: shared keyboard unsaved entry/cancel",
+  "sourceBlobs": {
+    "client/src/components/commerce/installTouchKeyboard.js": "5ef3164dd7ae105b73eaffb1a7d92c1e5c136e00",
+    "client/src/components/commerce/touch-keyboard.css": "cb5f8045e6c743fe0b38d3706aafb8ea99e6255a",
+    "client/src/utils/numeric-keyboard-draft.js": "615933a367ebe2fa657a484f39f5a9e7f5b3c689",
+    "server/test/pos-decimal-keyboard.test.js": "41bd900f9d0eec3d6cf33e01cb54960e75fdc9fa"
+  },
+  "sourceCiResult": "success",
+  "sourceServerTests": 4873,
+  "sourceBackupTests": 8,
+  "sourceFail": 0,
+  "sourceSkipped": 0,
+  "sourceMerge": "24948feab416a775f6befeda96f48c1f11441d15",
+  "mainSourceCi": 41207364543,
+  "mainSourceCiResult": "success",
+  "mainSourceServerTests": 4873,
+  "mainSourceBackupTests": 8,
+  "originalDeployAttempt": 41208161578,
+  "originalDeployDecision": "SKIPPED newer production source; not installed proof",
+  "supersedingTarget": "accf3ddd839c1255139dfd181b5ccb4f770555ff",
+  "supersedingManualCi": 41208544864,
+  "supersededMainCi": 41208139847,
+  "supersededCiDecision": "Cancelled only after proving 20db210 and24948fe are ancestors of accf3ddd; exact combined full CI required before deployment. No source/guard change.",
+  "supersedingManualCiResult": "success",
+  "supersedingServerTests": 4885,
+  "supersedingBackupTests": 8,
+  "supersedingFail": 0,
+  "supersedingSkipped": 0,
+  "guardedDeploymentRunsObserved": [
+    41209698959,
+    41209715362,
+    41209736995
+  ],
+  "guardedDeployment": 41209698959,
+  "deploymentJob": 124561955744,
+  "renderDeploy": "dep-dbivj4cs728c738edupg",
+  "renderLiveAt": "2026-10-31T14:24:04.551207Z",
+  "independentHealthRevision": "accf3ddd839c1255139dfd181b5ccb4f770555ff"
+}

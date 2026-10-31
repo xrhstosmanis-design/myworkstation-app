@@ -1,0 +1,59 @@
+{
+  "scope": "Actual hosted shared on-screen keyboard in synthetic LAB product card; unsaved entry/cancel only",
+  "revision": "accf3ddd839c1255139dfd181b5ccb4f770555ff",
+  "operator": "authorized SuperAdmin / cloud Chrome; no physical terminal or open shift",
+  "storeId": "cmuk8gxui000ppabfykdxwb1y",
+  "sku": "LAB-EXCEL-20260909-01",
+  "beforeAt": "2026-10-31T14:32:38.53092Z",
+  "afterAt": "2026-10-31T14:34:40.319346Z",
+  "cases": [
+    {
+      "keys": [
+        "CLEAR",
+        "1",
+        "2",
+        ","
+      ],
+      "field": "12",
+      "readout": "12,"
+    },
+    {
+      "keys": [
+        "5"
+      ],
+      "field": "12.5",
+      "readout": "12,5"
+    },
+    {
+      "keys": [
+        "CLEAR",
+        "1",
+        ",",
+        "2",
+        "0"
+      ],
+      "field": "1.20",
+      "readout": "1,20"
+    },
+    {
+      "keys": [
+        "CLEAR",
+        "0",
+        ",",
+        "0",
+        "5"
+      ],
+      "field": "0.05",
+      "readout": "0,05"
+    }
+  ],
+  "discard": "keyboard CLOSE then product Επιστροφή; no Enter or Καταχώρηση",
+  "changedPersistedControls": [],
+  "persistedControls": "Product entire row including updatedAt; all linked StoreProduct rows and MAIN control; other company products, shifts, ledger, sales, payments, movements, price-history count, bulk-audit count",
+  "result": "LIMITED HOSTED LAB PASS",
+  "notTested": [
+    "specific user POS screen/device and physical keyboard",
+    "saving a changed price",
+    "financial, stock or fiscal action"
+  ]
+}
