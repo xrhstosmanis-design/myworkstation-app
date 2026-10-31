@@ -44,7 +44,7 @@ test('client pins session, actor/store and lifecycle, never falls back to genera
  await assert.rejects(()=>client.api('/api/owner-products/P/card',{method:'PATCH'}));assert.equal(calls.length,0);
  await client.request('/access');await client.api('/api/owner-products/P/card',{method:'PATCH'});assert.equal(calls[1].options.headers['X-Inventory-Generation'],'5');assert.match(calls[1].path,/^\/api\/store-pos\/stores\/S\/inventory\/products\/P\/card$/);
  await assert.rejects(()=>client.api('/api/financial/writer'));assert.equal(calls.length,2);
- token='another-session';await assert.rejects(()=>client.api('/api/inventory-archive?storeId=S'));assert.equal(calls.length,2);client.dispose();assert.equal(lost,0);
+ token='another-session';await assert.rejects(()=>client.api('/api/inventory-archive?storeId=S'));assert.equal(calls.length,2);client.dispose();assert.equal(lost,1);
 });
 test('closed client rejects late read results and cross-store envelopes',async()=>{
  let finish;const client=createPosInventoryClient({api:()=>new Promise(resolve=>finish=resolve),storeId:'S',actorId:'O',sessionToken:'t',currentToken:()=> 't'});

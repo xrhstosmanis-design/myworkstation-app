@@ -2,7 +2,7 @@ export function createPosInventoryClient({api,storeId,actorId,sessionToken,curre
  let active=true,generation=null;
  const controller=new AbortController();
  const stale=()=>Object.assign(new Error('Η Αποθήκη έκλεισε ή άλλαξε η σύνδεση. Άνοιξέ την ξανά.'),{code:'POS_INVENTORY_STALE'});
- const check=()=>{if(!active||!sessionToken||currentToken()!==sessionToken)throw stale()};
+ const check=()=>{if(!active)throw stale();if(!sessionToken||currentToken()!==sessionToken){const failure=stale();active=false;controller.abort();onAccessLost?.(failure);throw failure}};
  const prefix=`/api/store-pos/stores/${encodeURIComponent(storeId)}/inventory`;
  const request=async(path,options={})=>{
   check();
@@ -22,7 +22,7 @@ export function createPosInventoryClient({api,storeId,actorId,sessionToken,curre
    generation=response.lifecycle.generation;
    return response;
   }catch(error){
-   if(active&&(error.status===401||['POS_INVENTORY_ACCESS_DENIED','LICENSE_INACTIVE','MODULE_DISABLED','STORE_LIFECYCLE_STALE_GENERATION','STORE_LIFECYCLE_MAINTENANCE'].includes(error.code))){active=false;controller.abort();onAccessLost?.(error)}
+   if(active&&(error.status===401||['POS_INVENTORY_STALE','POS_INVENTORY_ACCESS_DENIED','LICENSE_INACTIVE','MODULE_DISABLED','STORE_LIFECYCLE_STALE_GENERATION','STORE_LIFECYCLE_MAINTENANCE'].includes(error.code))){active=false;controller.abort();onAccessLost?.(error)}
    throw error;
   }
  };

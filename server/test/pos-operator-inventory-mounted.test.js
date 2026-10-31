@@ -33,6 +33,9 @@ test('actual POS opens its existing scoped Archive, locks stock, preserves baske
  const click=async node=>{assert.ok(node);assert.equal(node.disabled,false);await act(async()=>node.click())};
  try{
   await act(async()=>root.render(React.createElement(module.exports.default,{api,store,operator,runtimeAccess:rights})));
+  const scanner=document.querySelector('[data-pos-scanner]');
+  await act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(scanner,'Fixture');scanner.dispatchEvent(new dom.window.Event('input',{bubbles:true}))});
+  await click(document.querySelector('.pos-modern-product'));const basket=document.querySelector('.standard-line')?.textContent;assert.ok(basket?.includes('Fixture item'));
   await click(document.querySelector('.pos-header-menu-trigger'));await click(button('.pos-aux-actions button','Αποθήκη'));
   assert.ok(document.querySelector('.pos-inventory-overlay'));assert.equal(document.querySelector('.ia-shell').dataset.posInventory,'true');
   assert.match(document.querySelector('.ia-row.data').textContent,/17/);assert.ok(button('.ia-toolbar button','Μεταφορά').disabled);assert.ok(button('.ia-toolbar button','Συγχώνευση').disabled);
@@ -41,7 +44,7 @@ test('actual POS opens its existing scoped Archive, locks stock, preserves baske
   await click(document.querySelector('.ia-modal header button'));await click(document.querySelector('.ia-edit button'));
   const stock=[...document.querySelectorAll('.ia-modal label')].find(label=>label.textContent.startsWith('Stock καταστήματος'))?.querySelector('input');assert.ok(stock);assert.equal(stock.disabled,true);assert.equal(stock.value,'17');
   await click(button('.ia-modal-actions button','Καταχώρηση'));assert.ok(calls.some(call=>call.path.endsWith('/inventory/products/P/card')));assert.equal(calls.filter(call=>/stock-adjustment|destruction|stock-transfer/.test(call.path)).length,0);
-  await click(button('.pos-inventory-overlay>section>header button','Κλείσιμο'));assert.equal(document.querySelector('.pos-inventory-overlay'),null);assert.equal(fetches.length,0);assert.equal(calls.filter(call=>call.path.startsWith('/api/owner-products')||call.path.startsWith('/api/inventory-archive')).length,0);
+  await click(button('.pos-inventory-overlay>section>header button','Κλείσιμο'));assert.equal(document.querySelector('.pos-inventory-overlay'),null);assert.equal(document.querySelector('.standard-line')?.textContent,basket,'the existing basket survives archive editing and closing');assert.equal(calls.filter(call=>/checkout|consumption|stock-adjustment/.test(call.path)).length,0);assert.equal(fetches.length,0);assert.equal(calls.filter(call=>call.path.startsWith('/api/owner-products')||call.path.startsWith('/api/inventory-archive')).length,0);
   await act(async()=>root.render(React.createElement(module.exports.default,{api,store,operator,runtimeAccess:{inventoryPos:false}})));await click(document.querySelector('.pos-header-menu-trigger'));assert.equal(button('.pos-aux-actions button','Αποθήκη'),undefined);
  }finally{await act(async()=>root.unmount());dom.window.close();for(const[key,d]of previous){if(d)Object.defineProperty(globalThis,key,d);else delete globalThis[key]}}
 });
