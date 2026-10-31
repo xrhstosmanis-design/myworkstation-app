@@ -118,6 +118,17 @@ export function getReviewedMonthlySnapshotLifecycleGuardDefinitions(manifest,sch
  const name=guardName(node);
  return [{name,mask:31,body:guardBody(plan,schema,node)},{name:name+'_truncate',mask:34,body:truncateBody}];
 }
+// Pure closed guard identity for the two proposed capture nodes. This does no
+// metadata query, installation, enrollment or execution.
+export function getReviewedMonthlyCaptureLifecycleGuardDefinitions(manifest,schema){
+ const plan=planFor(manifest),names=['MonthlyInventoryCaptureGrant','MonthlyInventoryCaptureJob'];
+ if(typeof schema!=='string'||!schema||schema.length>128||names.some(name=>{const node=plan.nodes.get(name);return !node||JSON.stringify(node.owner)!==JSON.stringify({kind:'DIRECT'})||node.reset!=='REMOVE'||Object.keys(node).some(k=>!['name','owner','reset','existingTriggers'].includes(k))}))fail('Monthly capture guard review differs.');
+ bindDatabaseReferences(plan,schema,[
+  ...names.map(child=>({child,parent:'Store',childSchema:schema,parentSchema:schema,local:['storeId'],remote:['id']})),
+  {child:names[1],parent:names[0],childSchema:schema,parentSchema:schema,local:['grantId','companyId','storeId','lifecycleGeneration','purpose','purposeVersion'],remote:['id','companyId','storeId','lifecycleGeneration','purpose','purposeVersion']}
+ ]);
+ return names.flatMap(table=>{const node=plan.nodes.get(table),name=guardName(node);return [{table,name,mask:31,body:guardBody(plan,schema,node)},{table,name:name+'_truncate',mask:34,body:truncateBody}]});
+}
 async function schemaFor(tx){const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS name'))[0]?.name;if(!schema)fail('Schema unavailable.');return schema}
 async function readForeignKeys(tx,schema){ return await tx.$queryRawUnsafe(`SELECT child.relname AS child,parent.relname AS parent,pn.nspname AS "parentSchema",cn.nspname AS "childSchema",ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.n ORDER BY k.p) AS local,ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY k(n,p) JOIN pg_attribute a ON a.attrelid=c.confrelid AND a.attnum=k.n ORDER BY k.p) AS remote FROM pg_constraint c JOIN pg_class child ON child.oid=c.conrelid JOIN pg_class parent ON parent.oid=c.confrelid JOIN pg_namespace cn ON cn.oid=child.relnamespace JOIN pg_namespace pn ON pn.oid=parent.relnamespace WHERE c.contype='f' AND (cn.nspname=$1 OR pn.nspname=$1) ORDER BY cn.nspname,child.relname,c.conname`,schema);
 }

@@ -206,6 +206,24 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     await db.$executeRaw`INSERT INTO "AiOwnerWalletAudit" ("id","companyId","actorId","event","detail") VALUES (${randomUUID()},'invoice-switch','admin','CONFIGURED','{"version":999999,"invoiceEnabled":"invalid"}'::jsonb)`;
     await assert.rejects(repository.invoiceEnabledFor('invoice-switch',true),e=>e.code==='AI_WALLET_INVOICE_CONFIG_INVALID');
 
+    // Safe diagnostic audit is bound to the original held entry, written once
+    // atomically with REVIEW and never changes company money or business data.
+    await db.$executeRaw`INSERT INTO "Company" VALUES('review-proof','Synthetic review evidence',true)`;
+    await db.$executeRaw`INSERT INTO "Store" VALUES('review-proof-store','Synthetic evidence store','review-proof',true)`;
+    await repository.configure('review-proof',{version:0,enabled:true,emailEnabled:false,notificationOwnerId:''},'admin');
+    await repository.grantTrial('review-proof',{amountMicros:'1000',grantReference:'synthetic-review-proof',reason:'Synthetic diagnostic evidence control'},'admin');
+    const reviewHold=await repository.reserve({companyId:'review-proof',storeId:'review-proof-store',feature:'OWNER_ASSISTANT',amountMicros:'10',reference:'synthetic-review-original',tariff:{model:'synthetic-review-model'}});
+    const reviewControls=async()=>({wallet:await db.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"='review-proof'`,entries:await db.$queryRaw`SELECT * FROM "AiOwnerWalletEntry" WHERE "companyId"='review-proof' ORDER BY "id"`,notices:await db.$queryRaw`SELECT * FROM "AiOwnerWalletNotice" WHERE "companyId"='review-proof'`,audits:await db.$queryRaw`SELECT * FROM "AiOwnerWalletAudit" WHERE "companyId"='review-proof' ORDER BY "id"`,foreign:await db.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"='c'`});
+    const reviewBefore=await reviewControls(),diagnostic={stage:'USAGE',reason:'USAGE_INVALID',responseId:'resp_synthetic_native',model:'synthetic-review-model',reported:{inputTokens:100,outputTokens:5},presence:{inputTokens:'VALID',outputTokens:'VALID',cacheWriteTokens:'MISSING'},limits:{inputTokens:100,outputTokens:30000},secret:'SECRET_native_prompt',headers:{Authorization:'SECRET_native_token'}};
+    await Promise.all([repository.review('review-proof',reviewHold.id,diagnostic),repository.review('review-proof',reviewHold.id,diagnostic)]);
+    const reviewAfter=await reviewControls();assert.deepEqual(reviewAfter.wallet,reviewBefore.wallet);assert.deepEqual(reviewAfter.notices,reviewBefore.notices);assert.deepEqual(reviewAfter.foreign,reviewBefore.foreign);
+    assert.equal(reviewAfter.audits.length,reviewBefore.audits.length+1);const evidenceAudit=reviewAfter.audits.find(x=>x.event==='USAGE_REVIEW');assert.equal(evidenceAudit.actorId,'SYSTEM_AI_METER');assert.equal(evidenceAudit.detail.id,reviewHold.id);assert.equal(evidenceAudit.detail.evidence.reported.inputTokens,100);assert.equal(evidenceAudit.detail.evidence.presence.cacheWriteTokens,'MISSING');assert.doesNotMatch(JSON.stringify(evidenceAudit),/SECRET|Authorization/);
+    assert.deepEqual(reviewAfter.entries,reviewBefore.entries.map(x=>x.id===reviewHold.id?{...x,status:'REVIEW'}:x));
+    await repository.review('c',reviewHold.id,diagnostic);assert.deepEqual(await reviewControls(),reviewAfter);
+    const reviewRollbackHold=await repository.reserve({companyId:'review-proof',storeId:'review-proof-store',feature:'OWNER_ASSISTANT',amountMicros:'10',reference:'synthetic-review-rollback',tariff:{}}),reviewRollbackBefore=await reviewControls();
+    const reviewFailureDb=new Proxy(db,{get(t,k){if(k==='$transaction')return fn=>t.$transaction(tx=>fn(new Proxy(tx,{get(a,b){if(b==='$executeRaw')return (ss,...v)=>{if(ss.join('').includes('INSERT INTO "AiOwnerWalletAudit"'))throw Error('synthetic diagnostic audit rollback');return a.$executeRaw(ss,...v)};const x=a[b];return typeof x==='function'?x.bind(a):x}})));const x=t[k];return typeof x==='function'?x.bind(t):x}});
+    await assert.rejects(createAiOwnerWalletRepository(reviewFailureDb).review('review-proof',reviewRollbackHold.id,diagnostic),/synthetic diagnostic audit rollback/);assert.deepEqual(await reviewControls(),reviewRollbackBefore);
+
     // Internal trial funding never claims a customer receipt. Separate company
     // controls protect all existing fixture counts and real business rows.
     await db.$executeRaw`INSERT INTO "Company" VALUES('trial','Synthetic internal trial',true)`;
