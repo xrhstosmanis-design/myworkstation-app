@@ -160,7 +160,7 @@ Checkpoint CHECKPOINTS/CHANGES/2026-10-30-pos-lock-convoy.md. Publish claim gree
 
 ## 29/10/2026 - CASH CONTROL / REMAINING ONLY / ASSIGNED
 
-Basic automatic-result27Oct, canonical copy, preview-cancel, last-shift29Oct pending and N40 isolation have limited real LAB PASS; these completed steps are no longer pending. Current cloud workbook-download FAIL and all broader source/continuation/real-delivery acceptance remain OPEN under the retained cash owner. Exact receipt and manual: CHECKPOINTS/CHANGES/2026-10-29-cash-automatic-result.md; docs/manual/cash-control/PASS.md. Do not repeat accepted financial actions.
+Basic automatic-result27Oct, canonical copy, preview-cancel, last-shift29Oct pending and N40 isolation have limited real LAB PASS; these completed steps are no longer pending. Completed cloud workbook download for the exact27Oct synthetic report passed31Oct (checkpoint2026-10-31-cash-excel-download.md). Broader source/continuation/real-delivery and other device/nonzero acceptance remain OPEN under the retained cash owner. Exact receipt and manual: CHECKPOINTS/CHANGES/2026-10-29-cash-automatic-result.md; docs/manual/cash-control/PASS.md. Do not repeat accepted financial actions.
 
 ## 29/10/2026 21:52 UTC — CENTRAL-BACKOFFICE-ACCESS-01 / INSTALLED, READ-ONLY UI OBSERVED / AWAITING PERSONAL LAB ACCEPTANCE
 
