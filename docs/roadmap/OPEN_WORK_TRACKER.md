@@ -31,7 +31,19 @@ Required: source/actor/provider separation; authenticated operator/user/support/
 
 Status NOT IMPLEMENTED/NOT TESTED, not PASS. Existing manual unchanged. Checkpoint CHECKPOINTS/CHANGES/2026-10-31-ai-wallet-activity-details.md. Same owner retained for this continuation and prior REVIEW/initial unmetered reader/Owner/email/model residuals. Other owners preserved, including delegated BackOffice actions and POS operator warehouse. Single next action: publish this claim green/main, then implement the bounded provenance and detailed history.
 
-## 31/10/2026 - POS-OPERATOR-INVENTORY-01 / IMPLEMENTATION IN PROGRESS / NOT RELEASED
+## 31/10/2026 - POS-OPERATOR-INVENTORY-01 / SOURCE MERGED / RELEASE BLOCKED / AWAITING OPERATOR LAB
+
+**Authoritative handoff · 01/11/2026 (Europe/Athens).**
+
+Implementation is merged, not deployed. Source PR3427 exact head fb634f5a7a9363883570256e061bae81d6fee952 / full CI41252087179 SUCCESS: 5024 server + 8 backup tests PASS, 0 FAIL, 0 SKIP; native PostgreSQL namespace, unchanged Chromium and real HTTP flows passed. Latest local rights batch 28 PASS / 0 FAIL / 0 SKIP; Work-safe client build PASS. Merge50146f3f094d846f52b2801f1e60de0332aaf1c4 includes intervening monthly Chat lifecycle catalogue work b9ce60a without taking over its ownership.
+
+Exact main CI41253122609 was CANCELLED while pending behind CI41252677187 when newer documentation main33a2d314254618bd25d4378b2c23b189b45daa9f entered the same queue. It did not run a build-and-test job and is not a main PASS. The connector retry endpoint returned HTTP403, "This workflow run cannot be retried"; no workflow-dispatch tool is available. No deploy hook, environment/runtime change, guard bypass or manual deployment was attempted. Independent health read before this handoff: ok=true, revision946fa417b858fbece65c9ded6cb8db506bca91b0; Render dep-dbj7inetlv9c73ceoq0g LIVE, finished2026-10-31T23:29:19.811485Z. This is the previous revision and DOES NOT include the new operator warehouse.
+
+The implemented default-off permissions.inventoryPos checkbox is labelled «Αποθήκη από POS · χωρίς αλλαγή στοκ» and opens the existing archive in Functions POS → Αποθήκη. Actual STORE_OPERATOR identity/session/profile/store/module/object/lifecycle and per-action rights remain binding. The latest hardening requires retail rights for priced SET, barcode transfer and nullable delivery price overrides. Stock is visible/read-only; direct stock writes, count/finalize/transfer/destruction/stock-moving merge and nonzero opening/import stock are denied with transactional rollback and buffered HTTP responses. No real account/module grant, hosted business/stock/financial/fiscal action or new LAB/USER/physical-terminal acceptance occurred. Operator LAB and physical acceptance NOT TESTED. Existing decimal-keyboard and consumption/destruction visual PASS are preserved; no new manual PASS is claimed.
+
+Owner fix/pos-operator-inventory-20261031 retained; not released or transferred. Single next action: run the existing MyWorkStation CI workflow manually on the latest main through GitHub Actions (full-CI workflow_dispatch), then wait for its successful exact build-and-test and the ordinary guarded Render release; verify independent exact health/assets before requesting separately scoped real operator acceptance. Do not rerun old accepted business fixtures or activate an unidentified real operator.
+
+**Historical implementation evidence (superseded by the authoritative handoff above).**
 
 **Source implementation / AWAITING FULL CI AND LAB**
 

@@ -1,7 +1,7 @@
 {
   "task": "POS-OPERATOR-INVENTORY-01",
   "owner": "fix/pos-operator-inventory-20261031",
-  "status": "AWAITING_FULL_CI_AND_LAB",
+  "status": "SOURCE_MERGED_RELEASE_BLOCKED_AWAITING_OPERATOR_LAB",
   "sourcePr": 3427,
   "claimPr": 3421,
   "claimMerge": "6b34016a48eb181f93050360384a8631bbcfb408",
@@ -43,7 +43,13 @@
       "fail": 0,
       "skip": 0
     },
-    "nativeInfrastructure": "unavailable locally; native receipt is from CI"
+    "nativeInfrastructure": "unavailable locally; native receipt is from CI",
+    "latestRightsBatch": {
+      "pass": 28,
+      "fail": 0,
+      "skip": 0
+    },
+    "workSafeClientBuild": "PASS"
   },
   "realAccountGrants": 0,
   "realModuleChanges": 0,
@@ -51,5 +57,25 @@
   "stockOrFinancialLabActions": 0,
   "deployment": null,
   "operatorLabAcceptance": "NOT_TESTED",
-  "physicalTerminalAcceptance": "NOT_TESTED"
+  "physicalTerminalAcceptance": "NOT_TESTED",
+  "finalSource": {
+    "head": "fb634f5a7a9363883570256e061bae81d6fee952",
+    "workflowRun": 41252087179,
+    "job": 124687731623,
+    "conclusion": "SUCCESS",
+    "serverPass": 5024,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "merge": "50146f3f094d846f52b2801f1e60de0332aaf1c4"
+  },
+  "mainCi": {
+    "id": 41253122609,
+    "conclusion": "CANCELLED",
+    "buildAndTestRan": false,
+    "reason": "pending main run replaced by later documentation main in concurrency queue",
+    "retry": "HTTP403 This workflow run cannot be retried"
+  },
+  "previousHealthyRevision": "946fa417b858fbece65c9ded6cb8db506bca91b0",
+  "nextAction": "Workflow-dispatch existing MyWorkStation CI on latest main, then normal guarded deploy and independent exact health/assets; operator acceptance remains NOT_TESTED"
 }
