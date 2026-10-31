@@ -358,8 +358,6 @@ public final class MainActivity extends Activity {
             for (JSONObject row : sorted) {
                 boolean own = row.optString("senderId").equals(identity.optString("id"));
                 String meta = row.optString("senderName") + " · " + time(row.optString("createdAt"));
-                JSONArray readers = row.optJSONArray("readers");
-                if (own && readers != null && readers.length() > 0) meta += " · Διαβάστηκε";
                 bubble(row.optString("body", ""), own, meta, row);
             }
             if (uncertainStoreId.equals(id(selected, "id"))) {
@@ -431,6 +429,7 @@ public final class MainActivity extends Activity {
         });
     }
     private void bubble(String body, boolean own, String meta, JSONObject row) {
+        final ArrayList<String> readers = own && row != null ? ReadReceipts.names(row.optJSONArray("readers"), row.optString("senderId")) : new ArrayList<>();
         LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(14), dp(10), dp(14), dp(10)); card.setBackground(round(own ? 0xffe8defc : Color.WHITE, 18));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2); lp.gravity = own ? Gravity.END : Gravity.START; lp.setMargins(own ? dp(28) : 0, dp(5), own ? 0 : dp(28), dp(5));
         if (!body.isEmpty()) card.addView(text(body, 17, INK));
@@ -440,7 +439,21 @@ public final class MainActivity extends Activity {
             else if (row.optString("attachmentMimeType").equals("audio/wav")) card.addView(chatButton("▶ Φωνητικό · αναπαραγωγή", () -> viewVoice(row), false));
             else card.addView(text("Συνημμένο · Η λήψη αρχείων είναι απενεργοποιημένη σε αυτή την εφαρμογή.", 14, MUTED));
         }
+        if (!readers.isEmpty()) meta += " · Διαβάστηκε";
         if (!meta.isEmpty()) card.addView(text(meta, 12, MUTED));
+        if (own && row != null && selected != null) {
+            final long generation = epoch.capture();
+            final String capturedToken = token, storeId = id(selected, "id"), companyId = id(selected, "companyId");
+            if (!readers.isEmpty()) card.addView(button("Διαβάστηκε από " + readers.size(), () -> {
+                if (!foreground || !epoch.current(generation) || !capturedToken.equals(token)
+                    || storeId.isEmpty() || companyId.isEmpty()
+                    || !storeId.equals(id(selected, "id")) || !companyId.equals(id(selected, "companyId"))) return;
+                dismissImage();
+                imageDialog = new AlertDialog.Builder(this).setTitle("Διαβάστηκε από")
+                    .setItems(readers.toArray(new String[0]), null).setPositiveButton("Κλείσιμο", null).create();
+                imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
+            }));
+        }
         if (row != null && !row.optBoolean("readByMe")) card.addView(button("Σημείωση ως διαβασμένο", () -> call(chatBase() + "/messages/" + enc(row.optString("id")) + "/read", "POST", object(), false, ignored -> loadMessages(false))));
         messages.addView(card, lp);
     }

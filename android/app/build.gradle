@@ -13,8 +13,8 @@ android {
         applicationId 'gr.myworkstation.chat'
         minSdk 26
         targetSdk 35
-        versionCode 12
-        versionName '0.1.11-preview'
+        versionCode 13
+        versionName '0.1.12-preview'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
