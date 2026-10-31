@@ -15,6 +15,9 @@ export function chatReaction(value){
  return value;
 }
 export async function ensureStoreChatInteractions(db){
+ await db.$executeRawUnsafe('ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "forwarded" BOOLEAN NOT NULL DEFAULT false');
+ await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "StoreChatMessage_history_cursor_idx" ON "StoreChatMessage" ("companyId","storeId","createdAt" DESC,"id" DESC)');
+ await db.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "StoreChatForwardIntent" ("userId" TEXT NOT NULL,"requestId" TEXT NOT NULL,"sourceCompanyId" TEXT NOT NULL,"sourceStoreId" TEXT NOT NULL,"sourceMessageId" TEXT NOT NULL,"targetCompanyId" TEXT NOT NULL,"targetStoreId" TEXT NOT NULL,"messageId" TEXT NOT NULL UNIQUE,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY ("userId","requestId"))');
  await db.$executeRawUnsafe('ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "replyToId" TEXT');
  await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreChatMessage_pinned_announcements_idx" ON "StoreChatMessage" ("storeId","createdAt" DESC) WHERE "pinned"=true AND "category"='ANNOUNCEMENT'`);
  await db.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "StoreChatDelivery" ("messageId" TEXT NOT NULL,"userId" TEXT NOT NULL,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"deliveredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY ("messageId","userId"))');
