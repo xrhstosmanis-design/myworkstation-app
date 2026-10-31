@@ -1,3 +1,11 @@
+## First native run / raw-row snapshot correction / NOT INSTALLED
+
+Native recovery41245348755/job124667507559 reached the new three-mode test but its fixture tried structuredClone on a raw Prisma row containing Decimal, which is not cloneable. Retain the independent raw SQL snapshot directly for the unchanged-field comparisons; every assertion, native execution and no-business-write check remains. No production function or schema was changed for this failure. Source remains NOT INSTALLED pending final exact native/Windows/full CI.
+
+## First actual Windows run / fixture correction / NOT INSTALLED
+
+Source3425/head3e1318072fa02d4d0dbadb5ce14b6bddad33240b Windows41245348797/job124667507711 passed existing STATUS29, Cash84, original-report recovery and handoff publication/crash suites, then stopped at the new capability fixture. Its fake Invoke-RestMethod returned a Hashtable, whereas the production REST parser returns PSCustomObject; the protected required-property check correctly refused that incomplete mock. Correct only the mock response type; retain the production validation and every existing assertion. The new terminal-stop matrix has not yet passed this run and no physical acceptance is inferred. Exact final native/Windows/full checks remain required before source deployment or package delivery.
+
 ## Unpublished stop candidate after claim3422 / NOT INSTALLED / AWAITING NATIVE AND WINDOWS CI
 
 Claim3422/head32cadca6 passed docsCI41242894574 and merged76e824b4 before source. Retained continuation fix/ftext-unpublished-stop-20261031. Candidate adds original-cashier PREPARED stop and negotiated stopVersion1 OFFERED stop before any execution authorization. Current authenticated installation, license/store/routing/lifecycle/active-device and immutable original plan/nonce are required; stop/claim/accept share the original row lock. Append bound immutable stop/application-release evidence without changing status/result/hash/plan or posting financial/stock/fiscal data. All claim/offer discovery excludes stopped rows, so an older stopped request cannot starve the next one. ACCEPTED, legacy DISPATCHED, final/foreign/VOID/changed work remain held. Duplicate stop/terminal acknowledgement returns the same proof. Result/finalization cannot resurrect a stopped attempt.

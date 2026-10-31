@@ -23,7 +23,7 @@ test('native unpublished stop: real row-lock stop/accept races, immutable replay
    await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);created=true;await ensureFtextCashSchema(a,{manifest:ftextCashLifecycleReviewProposal()});
    const controlSettings={...f.settings,companyId:'company-control',storeId:'store-control',terminalPos:'POS-CONTROL',serialNumber:'CONTROL01'},controlScope={...f.scope,companyId:controlSettings.companyId,storeId:controlSettings.storeId,terminalPos:controlSettings.terminalPos};
    const control=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...base,settings:controlSettings,scope:controlScope,clientTransactionId:'control-original'}));
-   const prepared=await prepare('prepared-original'),before=structuredClone(prepared);
+   const prepared=await prepare('prepared-original'),before=prepared; // Independent raw SQL snapshot; Prisma Decimal is not structured-cloneable.
    await assert.rejects(stop(a,prepared.id,'foreign'));await assert.rejects(a.$transaction(tx=>stopFtextBeforeExecution(tx,prepared.id,{...f.scope,terminalPos:'FOREIGN'},'cashier',{stopBeforeExecution:true},{context:f.context})));
    const stopped=await stop(a,prepared.id);assert.equal(ftextCashRequestView(stopped).operatorReleaseMode,'RELEASED');
    for(const k of ['status','plan','result','resultHash','saleId','claimedByDeviceId','claimedTokenVersion','dispatchedAt','clientTransactionId'])assert.deepEqual(stopped[k],before[k]);

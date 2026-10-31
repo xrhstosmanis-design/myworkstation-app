@@ -46,7 +46,7 @@ try{
   function script:Read-FtextDeviceToken($Config){return 'synthetic-token'}
   function script:Invoke-RestMethod($Method,$Uri,$Headers,$ContentType,$Body,$TimeoutSec){
    $script:negotiation.body=$Body | ConvertFrom-Json;$c=$script:negotiation.config
-   return @{companyId=$c.companyId;storeId=$c.storeId;terminalPos=$c.terminalPos;settingsHash=$c.settingsHash;settings=$c;fiscalCheckoutEnabled=$false;request=$null;lateReceipt=$null;errorEvidence=$null}
+   return [pscustomobject]@{companyId=$c.companyId;storeId=$c.storeId;terminalPos=$c.terminalPos;settingsHash=$c.settingsHash;settings=$c;fiscalCheckoutEnabled=$false;request=$null;lateReceipt=$null;errorEvidence=$null}
   }
  } $negotiation
  Invoke-FtextCloudPoll $f.config $false | Out-Null
