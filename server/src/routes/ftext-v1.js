@@ -12,8 +12,11 @@ import {prisma} from '../prisma.js';
 import {auth} from '../middleware/auth.js';
 import {companyModuleState,isPlatformSuperAdmin} from '../middleware/module-access.js';
 import {ensureCloudTables} from './cloud-v1.js';
-import {createFtextInstallationService} from '../services/ftext-installation.js';
+import {createFtextInstallationService,ftextSettingsHash} from '../services/ftext-installation.js';
 import {buildFtextInstallationPackage} from '../services/ftext-installation-package.js';
+import {pollFtextDeviceWork} from '../services/ftext-device-work.js';
+import {z} from 'zod';
+import {isDeepStrictEqual} from 'node:util';
 
 export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTables,apiBase='https://myworkstation-app.onrender.com',revision='unknown',clock=()=>Date.now()}){
  const router=Router(),attempts=new Map();
@@ -28,6 +31,16 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
   if(++item.count>10)return res.status(429).json({error:'Πάρα πολλές προσπάθειες ζεύξης. Περίμενε ένα λεπτό.'});next();
  },wrap(async(req,res)=>res.status(201).json(await service.pair(req.body))));
  router.post('/device/ping',wrap(async(req,res)=>res.json(await service.ping(token(req),req.body))));
+ router.post('/device/work-poll',wrap(async(req,res)=>{
+  const body=z.object({readinessVersion:z.literal(1),recovering:z.boolean(),settingsHash:z.string().regex(/^[a-f0-9]{64}$/),settings:z.record(z.unknown())}).strict().parse(req.body);
+  res.json(await service.ping(token(req),{readinessVersion:body.readinessVersion},(t,d,c)=>{
+   // Previously the separate ping verified local identity BEFORE any claim.
+   // Keep that boundary inside the combined transaction, including raw local
+   // values: normalization must not claim work for a mismatched local folder.
+   if(body.settingsHash!==ftextSettingsHash(c)||!isDeepStrictEqual(body.settings,c))throw Object.assign(new Error('Οι τοπικές ρυθμίσεις FTEXT δεν αντιστοιχούν στην ενεργή σύνδεση. Δεν παραδόθηκε νέα εντολή.'),{status:409});
+   return pollFtextDeviceWork(t,d,c,{recovering:body.recovering});
+  }));
+ }));
  router.post('/device/status-result',wrap(async(req,res)=>res.json(await service.report(token(req),req.body))));
  router.post('/device/late-receipt-poll',wrap(async(req,res)=>res.json(await service.authenticated(token(req),async(t,d,c)=>({request:await ftextCashTableExists(t)?await pollFtextLateReceipt(t,d,c):null})))));
  router.post('/device/late-receipt-result',wrap(async(req,res)=>{

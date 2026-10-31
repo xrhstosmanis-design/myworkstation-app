@@ -27,5 +27,6 @@ jobs:
           ./tools/windows-ftext/Test-Smoke.ps1
           ./tools/windows-ftext/Test-Cloud-Smoke.ps1
           ./tools/windows-ftext/Test-Cash-Smoke.ps1
+          ./tools/windows-ftext/Test-Cloud-Recovery-Smoke.ps1
           ./tools/windows-ftext/Test-Void-Smoke.ps1
           ./tools/windows-ftext/Test-Install-Smoke.ps1
