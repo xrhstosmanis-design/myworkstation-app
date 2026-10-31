@@ -75,3 +75,9 @@ test('live access, POS access, module and lifecycle revocations close and disabl
   await assert.rejects(()=>client.request('/access'));assert.equal(closed,1,code);await assert.rejects(()=>client.request('/access'));assert.equal(calls,1,code);
  }
 });
+
+test('barcode transfer and priced SET changes require retail rights independently of metadata/barcode rights',()=>{
+ const restricted={...scope,capabilities:inventoryCapabilities({...rights,changeRetail:false})};
+ for(const [kind,body] of [['barcode-transfer',{}],['set-items',{salePrice:null}],['bulk',{setItem:{relatedProductId:'Q',salePrice:2}}]])assert.throws(()=>assertInventoryPayload(restricted,{kind,write:true},{},body),{code:'POS_INVENTORY_ACTION_DENIED'});
+ assertInventoryPayload(restricted,{kind:'recipe-items',write:true},{},{ingredientProductId:'Q',quantity:1});
+});

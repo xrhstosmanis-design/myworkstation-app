@@ -88,12 +88,14 @@ export function assertInventoryPayload(scope,action,query={},body={}){
  if(action.kind==='lookup')need(scope,'lookup');
  if(action.kind==='create')need(scope,'create');
  if(action.kind==='prices')need(scope,'prices');
- if(action.kind==='barcode-transfer')need(scope,'barcodes');
+ if(action.kind==='barcode-transfer'){need(scope,'barcodes');need(scope,'prices');}
  if(['set-items','recipe-items'].includes(action.kind)&&action.write)need(scope,'edit');
+ if(action.kind==='set-items'&&action.write)need(scope,'prices');
  if(['import','import-preview'].includes(action.kind)){
   for(const key of ['create','edit','prices','barcodes'])need(scope,key);
  }
  if(action.kind==='bulk'){
+  if(body.setItem)need(scope,'prices');
   if(body.priceMode!==undefined||body.priceValue!==undefined||body.allowPosPriceChange!==undefined)need(scope,'prices');
   if(Object.keys(body).some(key=>!['storeId','requestId','productIds','allProducts','priceMode','priceValue','expectedPrices','allowPosPriceChange'].includes(key)))need(scope,'edit');
  }

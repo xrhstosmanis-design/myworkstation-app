@@ -82,6 +82,8 @@ test('native namespace validates live operator rows, commits scoped retail only,
   assert.ok([403,409].includes((await pending).status),'concurrent revocation cannot produce a successful stale grant');
   assert.deepEqual(await controls(),before);
   await db.$executeRawUnsafe('UPDATE "StoreOperatorProfile" SET "permissions"=$1::jsonb',JSON.stringify({...rights,changeRetail:false}));assert.equal((await request('/products/P/prices','PATCH',prices(7))).status,403);
+  for(const value of [0,1])assert.equal((await request('/products/P/delivery','PATCH',{efoodPrice:value,woltPrice:null})).status,403,'metadata grant cannot turn fallback delivery price into zero or another price');
+  assert.equal((await db.$queryRawUnsafe('SELECT \"efoodPrice\" FROM \"Product\" WHERE \"id\"=\'P\''))[0].efoodPrice,null);
   await db.$executeRawUnsafe('UPDATE "StoreOperatorProfile" SET "permissions"=$1::jsonb',JSON.stringify({...rights,inventoryPos:false}));assert.equal((await request('/access')).status,403);
   await db.$executeRawUnsafe('UPDATE "StoreOperatorProfile" SET "permissions"=$1::jsonb',JSON.stringify(rights));await db.$executeRawUnsafe('UPDATE "StoreOperatorSession" SET "revokedAt"=NOW()');assert.equal((await request('/access')).status,403);
   await db.$executeRawUnsafe('UPDATE "StoreOperatorSession" SET "revokedAt"=NULL');await db.$executeRawUnsafe(`UPDATE "CompanyModule" SET "active"=false WHERE "moduleKey"='INVENTORY'`);assert.equal((await request('/access')).json.code,'MODULE_DISABLED');
