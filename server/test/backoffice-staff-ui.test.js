@@ -55,7 +55,7 @@ test('mounted account form saves username and four-digit PIN without a required 
   const api=async(path,options={})=>{if(options.method==='POST'){writes.push(JSON.parse(options.body));return {id:'created'}}return {accounts:[],stores:[{id:'a1',name:'A1'},{id:'a2',name:'A2'}]}};
   const m=await mount(Admin,{api});
   try{
-    await m.act(async()=>button('Νέα προσωπική πρόσβαση').click());
+    await m.act(async()=>button('Νέος χειριστής').click());
     const form=document.querySelector('form'),password=form.elements.password,pin=form.elements.pin;
     assert.equal(password.required,false);assert.equal(password.checkValidity(),true);
     password.value='short';assert.equal(password.minLength,10);password.value='';
@@ -63,10 +63,36 @@ test('mounted account form saves username and four-digit PIN without a required 
     pin.value='0483';assert.equal(pin.checkValidity(),true);
     form.elements.fullName.value='Isolated Counter';form.elements.username.value='counter.fixture';
     await m.act(async()=>document.querySelector('.staff-grant input[type="checkbox"]').click());
+    assert.equal(document.querySelectorAll('.staff-permission-matrix input:checked').length,0);
+    await m.act(async()=>button('Εφαρμογή προτεινόμενων').click());
     assert.equal(form.checkValidity(),true);
     await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
     assert.equal(writes.length,1);assert.equal(Object.hasOwn(writes[0],'password'),false);assert.equal(writes[0].pin,'0483');
     assert.deepEqual(writes[0].grants,[{storeId:'a1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']}]);
     assert.equal(document.querySelector('form'),null);assert.match(document.body.textContent,/Αποθηκεύτηκε/);
+  }finally{await m.close()}
+});
+
+test('owner permission matrix exposes all supported actions regardless of role and preserves explicit choices on role change',async()=>{
+  const Admin=await component('BackofficeStaffAdmin'),writes=[];
+  const api=async(path,options={})=>{if(options.method==='POST'){writes.push(JSON.parse(options.body));return {id:'created'}}return {accounts:[],stores:[{id:'a1',name:'A1'},{id:'a2',name:'A2'}]}};
+  const m=await mount(Admin,{api});
+  try{
+    await m.act(async()=>button('Νέος χειριστής').click());
+    await m.act(async()=>document.querySelector('.staff-grant input[type="checkbox"]').click());
+    const form=document.querySelector('form');
+    form.elements.fullName.value='Owner configured';form.elements.username.value='custom.fixture';form.elements.pin.value='0483';
+    const checkbox=label=>[...document.querySelectorAll('input[type="checkbox"]')].find(el=>el.getAttribute('aria-label')===label);
+    await m.act(async()=>checkbox('A1: Έλεγχος ταμείων — Προβολή αναφοράς').click());
+    await m.act(async()=>{const role=document.querySelector('.staff-grant select');role.value='AUDITOR';role.dispatchEvent(new Event('change',{bubbles:true}))});
+    assert.equal(checkbox('A1: Έλεγχος ταμείων — Προβολή αναφοράς').checked,true);
+    await m.act(async()=>checkbox('A1: Απογραφή — Καταμέτρηση').click());
+    assert.equal(checkbox('A1: Απογραφή — Προβολή').checked,true);
+    await m.act(async()=>{const role=document.querySelector('.staff-grant select');role.value='MANAGER';role.dispatchEvent(new Event('change',{bubbles:true}))});
+    assert.equal(checkbox('A1: Απογραφή — Καταμέτρηση').checked,true);
+    await m.act(async()=>checkbox('A1: Απογραφή — Προβολή').click());
+    assert.equal(checkbox('A1: Απογραφή — Καταμέτρηση').checked,false);
+    await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    assert.deepEqual(writes[0].grants,[{storeId:'a1',profile:'MANAGER',capabilities:['cash.read']}]);
   }finally{await m.close()}
 });

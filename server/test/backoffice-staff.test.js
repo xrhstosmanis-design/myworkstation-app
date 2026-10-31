@@ -5,9 +5,12 @@ import {createStaffInput,updateStaffInput,staffLoginInput} from '../src/services
 import {enforceBackofficeStaff,staffAccount,liveStaff} from '../src/services/backoffice-staff-access.js';
 const grant={storeId:'store-a',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']};
 const account={username:'counter.1',fullName:'Isolated Counter',password:'isolated-test-password',pin:'624918',grants:[grant]};
-test('staff profiles cannot elevate role, cross-profile capabilities or implicitly enable finalization',()=>{
+test('owner chooses explicit rights independently of profile without role elevation or implicit finalization',()=>{
   assert.equal(createStaffInput.parse({...account,username:'Counter.1'}).username,'counter.1');
-  for(const body of [{...account,role:'OWNER'},{...account,grants:[{...grant,capabilities:['cash.read']}]},{...account,grants:[{...grant,capabilities:['inventory.count']}]},{...account,grants:[grant,grant]},{...account,pin:'123'},{...account,password:'short'}])assert.equal(createStaffInput.safeParse(body).success,false);
+  assert.equal(createStaffInput.safeParse({...account,grants:[{...grant,capabilities:['cash.read']}]}).success,true);
+  assert.equal(createStaffInput.safeParse({...account,grants:[{...grant,profile:'AUDITOR',capabilities:['inventory.read','inventory.count']}]}).success,true);
+  assert.equal(createStaffInput.safeParse({...account,grants:[{...grant,profile:'MANAGER',capabilities:[]}]}).success,true);
+  for(const body of [{...account,role:'OWNER'},{...account,grants:[{...grant,capabilities:['inventory.count']}]},{...account,grants:[{...grant,capabilities:['cash.read','cash.read']}]},{...account,grants:[{...grant,capabilities:['inventory.finalize']}]},{...account,grants:[grant,grant]},{...account,pin:'123'},{...account,password:'short'}])assert.equal(createStaffInput.safeParse(body).success,false);
   assert.equal(updateStaffInput.safeParse({expectedRevision:0,active:true,grants:[]}).success,false);
 });
 test('personal login requires exactly one credential and refuses scope/session injection',()=>{

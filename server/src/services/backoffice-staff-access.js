@@ -1,4 +1,4 @@
-import {staffCapabilities,staffProfiles,staffRequestCapability} from '../../../shared/backoffice-staff.mjs';
+import {staffCapabilities,staffProfiles,staffRequestCapability,validStaffCapabilities} from '../../../shared/backoffice-staff.mjs';
 import {companyModuleState,effectiveModuleEnabled} from '../middleware/module-access.js';
 import {assertLifecycleMutation} from './store-lifecycle-generation.js';
 import {lifecycleContext} from './store-lifecycle-context.js';
@@ -24,7 +24,7 @@ export async function requireStaffGrant(db,user,storeId,capability){
   if(typeof storeId!=='string'||!storeId||storeId.length>200||!staffCapabilities.includes(capability))throw staffError();
   const rows=await db.$queryRaw`SELECT g."profile",g."capabilities",g."revision" FROM "BackofficeStaffGrant" g JOIN "Store" s ON s."id"=g."storeId" AND s."companyId"=g."companyId" WHERE g."userId"=${user.id} AND g."companyId"=${user.companyId} AND g."storeId"=${storeId} AND g."active"=true AND s."active"=true LIMIT 1 FOR SHARE OF g,s`;
   const grant=rows[0];
-  if(!grant||!staffProfiles[grant.profile]||!Array.isArray(grant.capabilities)||!grant.capabilities.includes(capability)||grant.capabilities.some(c=>!staffProfiles[grant.profile].capabilities.includes(c)))throw staffError();
+  if(!grant||!staffProfiles[grant.profile]||!validStaffCapabilities(grant.capabilities)||!grant.capabilities.includes(capability))throw staffError();
   const license=await companyModuleState(user.companyId,{db});
   if(!license?.licenseAllowed)throw staffError(403,'LICENSE_INACTIVE','Η άδεια της εταιρείας δεν είναι ενεργή.');
   const modules=capability==='cash.read'?['CASH_CONTROL','STORE_CHAT','AI_READER']:['INVENTORY'];

@@ -171,6 +171,26 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       for(const credential of [{pin:short.pin},{password:optional}]){const r=await request('/api/backoffice-staff/login',{method:'POST',body:{username:'pin.other.fixture',...credential}});assert.equal(r.status,200);assert.equal(r.data.user.staffAccess,true)}
       assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale"`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement"`)[0].quantity),42);
     });
+    await t.test('owner-defined cross-profile rights execute only explicit operations and revoke the existing session on edit',async()=>{
+      const username='custom.rights.fixture';
+      const grants=[{storeId:'a1',profile:'STOCKTAKER',capabilities:['inventory.read','cash.read']}];
+      const created=await createStaffAccount(db,owner,{...input,username,grants});
+      const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});
+      assert.equal(login.status,200);const customToken=login.data.token;
+      assert.equal(jwt.verify(customToken,process.env.JWT_SECRET).role,'EMPLOYEE');
+      assert.equal((await request('/api/backoffice-staff/cash/stores/a1?from=2026-10-29&to=2026-10-29',{token:customToken,storeId:'a1'})).status,200);
+      assert.equal((await request('/api/backoffice-staff/inventory/stores/a1/stocktakes',{token:customToken,storeId:'a1'})).status,200);
+      assert.equal((await request('/api/inventory-v2/stocktakes/sta/count',{token:customToken,storeId:'a1',method:'POST',body:count})).status,403);
+      assert.equal((await request('/api/backoffice-staff/cash/stores/a2?from=2026-10-29&to=2026-10-29',{token:customToken,storeId:'a2'})).status,403);
+      assert.equal((await request('/api/backoffice-staff/admin',{token:customToken})).status,403);
+      await updateStaffAccount(db,owner,created.id,{expectedRevision:1,active:true,grants:[{storeId:'a1',profile:'MANAGER',capabilities:[]}]});
+      assert.equal((await request('/api/backoffice-staff/me',{token:customToken})).status,401);
+      const next=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});assert.equal(next.status,200);
+      assert.equal((await request('/api/backoffice-staff/cash/stores/a1?from=2026-10-29&to=2026-10-29',{token:next.data.token,storeId:'a1'})).status,403);
+      assert.equal((await request('/api/backoffice-staff/inventory/stores/a1/stocktakes',{token:next.data.token,storeId:'a1'})).status,403);
+      assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale"`)[0].amount),77.33);
+      assert.equal(Number((await db.$queryRaw`SELECT "quantity" FROM "StockMovement"`)[0].quantity),42);
+    });
   }finally{
     if(server)await new Promise(resolve=>{server.close(resolve);server.closeAllConnections()});await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();if(oldSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=oldSecret;
   }
