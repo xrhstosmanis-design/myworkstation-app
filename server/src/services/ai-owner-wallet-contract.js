@@ -51,7 +51,10 @@ export function meteredUsage(raw,tariff){
   const details=d?.cache_write_tokens_details,requiresWrites=Boolean(tariff.cacheWriteMicrosPerMillion);
   if(requiresWrites&&!Number.isSafeInteger(d?.cached_tokens))throw walletError('AI_WALLET_USAGE_REVIEW',503);
   let short=0,long=0;
-  if(requiresWrites||details!==undefined){
+  // A provider-reported zero total proves both nonnegative lifetime buckets
+  // are zero. An omitted breakdown is then valid; any supplied breakdown is
+  // still checked, and positive/unknown writes never receive guessed counts.
+  if(writes>0||details!==undefined){
     short=details?.ttl_30m_tokens;long=details?.ttl_12h_tokens;
     if(![short,long].every(n=>Number.isSafeInteger(n)&&n>=0)||short+long!==writes)throw walletError('AI_WALLET_USAGE_REVIEW',503);
   }
