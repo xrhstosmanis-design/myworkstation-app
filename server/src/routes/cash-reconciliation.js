@@ -7,6 +7,7 @@ import {periodSchema,reviewRequestId,reconciliationRequest,reconcileError} from 
 import {createKioskCashImports,kioskImportRequest,kioskRevokeRequest} from '../services/cash-kiosk-imports.js';
 
 const messages={
+  CASH_ISSUE_SOURCE_CHANGED:'Η εκκρεμότητα άλλαξε ή δεν ανήκει στην επιλεγμένη περίοδο. Ανανέωσε τον έλεγχο πριν καταχωρίσεις απάντηση.',
   CASH_KIOSK_INVALID_FILE:'Το αρχείο δεν είναι έγκυρο XLS ή XLSX.',
   CASH_KIOSK_UNREADABLE:'Δεν επιβεβαιώθηκαν η ασφαλής ανάγνωση και η δηλωμένη περίοδος του αρχείου.',
   CASH_KIOSK_LIMIT:'Τα αρχεία υπερβαίνουν το ασφαλές όριο του ελέγχου.',
