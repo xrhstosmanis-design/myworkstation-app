@@ -8,12 +8,11 @@ import {lifecycleContext} from "./store-lifecycle-context.js";
 const fail=(status,message,code)=>{throw Object.assign(new Error(message),{status,code})};
 const cashRuleSchema=z.object({mode:z.enum(["FULL","DIFFERENCE_ONLY","POS_EFTPOS_ONLY"]),deliveryTerminalPattern:z.string().min(1).max(120),carryOverEnabled:z.boolean(),posEftposEnabled:z.boolean()}).strict();
 export const automaticReportConfigurationSchema=z.object({
-  dayStartHour:z.number().int().min(5).max(12),secondShiftStartHour:z.number().int().min(6).max(22),thirdShiftStartHour:z.number().int().min(7).max(23),
+  dayStartHour:z.number().int().min(5).max(12),secondShiftStartHour:z.number().int().min(6).max(22),thirdShiftStartHour:z.number().int().min(7).max(23).nullable(),
   terminals:z.array(z.object({terminalPos:z.string().trim().min(1).max(120),requiredSlots:z.array(z.union([z.literal(1),z.literal(2),z.literal(3)])).min(1).max(3)}).strict()).min(1).max(100),
   cashRule:cashRuleSchema,
   reviewedReconciliation:z.boolean().optional()
 }).strict().superRefine((config,ctx)=>{
-  if(!config.terminals.some(t=>t.requiredSlots.includes(3)))ctx.addIssue({code:"custom",path:["terminals"],message:"Απαιτείται τουλάχιστον ένα ταμείο με τρίτη βάρδια."});
   try{dailyCashReportReadiness([],{...config,companyId:"validation",storeId:"validation",day:"2026-01-01"},new Date("2026-01-02T12:00:00Z"))}catch(error){ctx.addIssue({code:"custom",message:error.message})}
 });
 export const automaticReportSettingsUpdateSchema=z.object({expectedVersion:z.number().int().min(0).max(2147483646),configuration:automaticReportConfigurationSchema}).strict();
