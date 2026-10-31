@@ -1,8 +1,9 @@
 import React,{useEffect,useRef,useState} from 'react';
 
-export default function FtextLateCashRecovery({base,terminalPos,requestId,request,onRecovered}){
+export default function FtextLateCashRecovery({base,terminalPos,requestId,request,onRecovered,rejection=false}){
  const [files,setFiles]=useState([]),[printed,setPrinted]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
- const scope=base+'|'+terminalPos+'|'+requestId,scopeRef=useRef(scope);scopeRef.current=scope;
+ const title=rejection?'Αποδέσμευση απορριφθείσας πρώτης γραμμής':'Ανάκτηση εκδομένης απόδειξης μετρητών';
+ const scope=base+'|'+terminalPos+'|'+requestId+'|'+rejection,scopeRef=useRef(scope);scopeRef.current=scope;
  useEffect(()=>()=>{scopeRef.current=null;},[]);
  const submit=async e=>{
   e.preventDefault();if(busy||!printed)return;const selected=scope;setBusy(true);setError('');
@@ -15,16 +16,16 @@ export default function FtextLateCashRecovery({base,terminalPos,requestId,reques
     const bytes=new Uint8Array(await file.arrayBuffer());selectedFiles[key]=btoa(Array.from(bytes,b=>String.fromCharCode(b)).join(''));
    }
    if(scopeRef.current!==selected)return;
-   const result=await request(`${base}/${encodeURIComponent(terminalPos)}/requests/${encodeURIComponent(requestId)}/late-cash-receipt`,{method:'POST',body:JSON.stringify({...selectedFiles,reason:'Ο Super Admin επιβεβαίωσε την ήδη εκδομένη απόδειξη και ανέβασε τα τρία αρχικά αρχεία.'})});
+   const result=await request(`${base}/${encodeURIComponent(terminalPos)}/requests/${encodeURIComponent(requestId)}/${rejection?'rejected-cash-line':'late-cash-receipt'}`,{method:'POST',body:JSON.stringify({...selectedFiles,...(rejection?{noReceipt:true}:{}),reason:rejection?'Ο Super Admin επιβεβαίωσε ότι δεν εκδόθηκε απόδειξη και ανέβασε τα τρία αρχικά αρχεία για έλεγχο πρώτης γραμμής OVER LIMIT.':'Ο Super Admin επιβεβαίωσε την ήδη εκδομένη απόδειξη και ανέβασε τα τρία αρχικά αρχεία.'})});
    if(scopeRef.current===selected)onRecovered(result);
   }catch(e){if(scopeRef.current===selected)setError(e.message);}finally{if(scopeRef.current===selected)setBusy(false);}
  };
- return <form onSubmit={submit} style={{display:'grid',gap:12,marginTop:16}} aria-label="Ανάκτηση εκδομένης απόδειξης μετρητών">
-  <h4>Ανάκτηση εκδομένης απόδειξης μετρητών</h4>
+ return <form onSubmit={submit} style={{display:'grid',gap:12,marginTop:16}} aria-label={title}>
+  <h4>{title}</h4>
   <p>Εντολή {requestId}. Επίλεξε τα αρχικά αρχεία intent.json, report.json και res από τον φάκελο FTEXT του συγκεκριμένου POS.</p>
   <input aria-label="Αρχικά αρχεία ανάκτησης FTEXT" type="file" multiple accept=".json,.res" disabled={busy} onChange={e=>setFiles(Array.from(e.target.files||[]))}/>
-  <label><input type="checkbox" checked={printed} disabled={busy} onChange={e=>setPrinted(e.target.checked)}/> Επιβεβαίωσα ότι η συγκεκριμένη απόδειξη έχει ήδη εκδοθεί.</label>
-  <button disabled={busy||!printed||files.length!==3}>{busy?'Ανάκτηση…':'Ολοκλήρωση υπάρχουσας πώλησης'}</button>
+  <label><input type="checkbox" checked={printed} disabled={busy} onChange={e=>setPrinted(e.target.checked)}/> {rejection?'Επιβεβαίωσα ότι δεν εκδόθηκε απόδειξη. Επιτρέπεται μόνο επαληθευμένη απόρριψη της πρώτης και μοναδικής γραμμής με OVER LIMIT.':'Επιβεβαίωσα ότι η συγκεκριμένη απόδειξη έχει ήδη εκδοθεί.'}</label>
+  <button disabled={busy||!printed||files.length!==3}>{busy?'Έλεγχος…':rejection?'Αποδέσμευση απορριφθείσας προσπάθειας':'Ολοκλήρωση υπάρχουσας πώλησης'}</button>
   {error&&<p role="alert">{error}</p>}
  </form>;
 }

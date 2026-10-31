@@ -2,10 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
-import {ftextSettingsInput,ftextSettingsHash,rejectReservedFtextPairing,validateFtextReport,createFtextInstallationService} from '../src/services/ftext-installation.js';
+import {ftextSettingsInput,ftextSettingsHash,rejectReservedFtextPairing,validateFtextReport,createFtextInstallationService,ftextRegisterReady,assertFtextRegisterReady} from '../src/services/ftext-installation.js';
 import {buildFtextInstallationPackage} from '../src/services/ftext-installation-package.js';
 const form={terminalPos:'POS-01',serialNumber:'TEST12345',workFolder:'C:\\FText',confirmed:true};
 const config={companyId:'test-company',storeId:'test-store',terminalPos:form.terminalPos,fiscalDeviceCode:'TEST-FISCAL',serialNumber:form.serialNumber,workFolder:form.workFolder,protocol:'SOLIDUS(II)T',configurationId:crypto.randomUUID(),lifecycleGeneration:'0'};
+test('readiness requires a recent real STATUS in addition to heartbeat; old packages cannot substitute a fresh ping',()=>{
+ const now=new Date('2026-10-31T08:00:00Z'),device={status:'ACTIVE',lastSeenAt:now.toISOString(),metadata:{ftextReadinessRequired:true,ftextLastStatus:{ok:true,code:0,serialNumber:config.serialNumber,fiscalExecution:false,receivedAt:now.toISOString(),checkedAt:now.toISOString()}}};
+ assert.equal(ftextRegisterReady(device,config,now),true);assert.doesNotThrow(()=>assertFtextRegisterReady(device,config,now));
+ const old=new Date(Number(now)-21000).toISOString();
+ for(const change of [d=>{d.metadata.ftextLastStatus.receivedAt=old},d=>{d.metadata.ftextLastStatus.checkedAt=old},d=>{d.metadata.ftextLastStatus.ok=false},d=>{d.metadata.ftextLastStatus.code=48},d=>{d.metadata.ftextLastStatus.serialNumber='FOREIGN'},d=>{d.lastSeenAt=old},d=>{d.status='REVOKED'},d=>{d.metadata.ftextLastStatus.fiscalExecution=true}]){
+  const invalid=structuredClone(device);change(invalid);assert.equal(ftextRegisterReady(invalid,config,now),false);assert.throws(()=>assertFtextRegisterReady(invalid,config,now),e=>e.status===503&&e.code==='FTEXT_REGISTER_NOT_READY');
+ }
+ assert.doesNotThrow(()=>assertFtextRegisterReady({...device,metadata:{...device.metadata,ftextReadinessRequired:false}},config,new Date(Number(now)+60000)),'Existing devices activate the new gate only when the updated connector announces readiness support');
+});
 test('ftext accepts explicit Windows settings and rejects path/control/protocol injection',()=>{
  assert.deepEqual(ftextSettingsInput.parse(form),form);
  for(const patch of [{confirmed:false},{workFolder:'C:\\'},{workFolder:'C:\\FText\\..\\other'},{workFolder:'\\\\server\\share'},{workFolder:'relative'},{workFolder:'C:\\x|STATUS'},{workFolder:'C:\\x\nS'},{workFolder:'C:\\😀'},{workFolder:'C:\\�'},{workFolder:'C:\\folder..name'},{serialNumber:'a'.repeat(81)},{serialNumber:'a|S'},{terminalPos:'wrong pos'},{unexpected:'value'}])assert.equal(ftextSettingsInput.safeParse({...form,...patch}).success,false,JSON.stringify(patch));

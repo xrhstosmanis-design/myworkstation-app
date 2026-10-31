@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {effectiveFtextCashReceipt} from './ftext-late-cash-receipt.js';
 import {ftextSettingsHash} from './ftext-installation.js';
 import {ftextPaymentError,ftextUnknownCardError} from './ftext-error-evidence.js';
 const fail=()=>{throw Object.assign(new Error('Η επιβεβαίωση κάρτας δεν αντιστοιχεί στην αρχική συναλλαγή ή χρειάζεται έλεγχο της απόδειξης.'),{status:409,code:'FTEXT_OPERATOR_CARD_REVIEW'})};
@@ -49,7 +50,10 @@ export async function recordFtextOperatorDecision(tx,id,scope,actorId,input,{con
   return complete(row);
  }
  // An operator can attest payment, never turn an error/timeout into a fiscal receipt.
- if(outcome==='YES'&&(row.status!=='CONFIRMED'||row.result.outcome!=='CONFIRMED'||row.result.code!==0||!row.result.qr))fail();
+ if(outcome==='YES'){
+  const receipt=effectiveFtextCashReceipt(row,current.settings);
+  if(row.status!=='CONFIRMED'||receipt?.outcome!=='CONFIRMED'||receipt.code!==0||!receipt.qr)fail();
+ }
  if(row.status==='SALE_COMMITTED'||row.saleId)fail();
  const decision={outcome,actorId,at:clock().toISOString(),resultHash:row.resultHash,settingsHash:row.settingsHash};
  const saved={...row.checkoutJson,ftextCardDecision:decision,ftextCardDecisionHistory:[...(row.checkoutJson.ftextCardDecisionHistory||[]),decision]};

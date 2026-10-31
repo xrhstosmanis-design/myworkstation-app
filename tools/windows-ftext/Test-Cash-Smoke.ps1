@@ -154,5 +154,31 @@ try {
  [IO.File]::WriteAllText((Join-Path $lateFolder 'busy.txt'),'unrelated');MustThrow {Read-FtextLateErrorEvidence $lateConfig $late}
  Assert (@(Get-ChildItem -LiteralPath $lateFolder -File).Count -eq 4) 'Recheck created unexpected files.'
 
+ # Original final receipt recovery is read-only and can retry the same files after a missing/late result.
+ Remove-Item -LiteralPath (Join-Path $lateFolder 'busy.txt')
+ $receiptRequest=$late | ConvertTo-Json -Depth 12 | ConvertFrom-Json;$receiptRequest.kind='FTEXT_LATE_RECEIPT_RECHECK'
+ Assert ($null -eq (Read-FtextLateReceiptEvidence $lateConfig $receiptRequest)) 'PAY error was promoted to final receipt evidence.'
+ $finalLate="0`r`n17`r`n42`r`nTEST12345`r`n31/10/2026 09:32`r`n0`r`nhttps://www1.aade.gr/tameiakes/myweb/q1.php?SIG=TEST12345ABC26103109321.25`r`n`r`n671`r`n"
+ [IO.File]::WriteAllBytes($lateResult,$enc.GetBytes($finalLate))
+ $unchanged=@(Get-ChildItem -LiteralPath $lateFolder -File | Get-FileHash -Algorithm SHA256 | Select-Object Path,Hash) | ConvertTo-Json -Compress
+ $receiptProof=Read-FtextLateReceiptEvidence $lateConfig $receiptRequest
+ Assert ($receiptProof.intentBase64 -ceq [Convert]::ToBase64String($intentBytes) -and $receiptProof.reportBase64 -ceq [Convert]::ToBase64String($reportBytes) -and $receiptProof.rawResultBase64 -ceq [Convert]::ToBase64String($enc.GetBytes($finalLate))) 'Original late receipt files changed during delivery.'
+ Remove-Item -LiteralPath $lateResult;MustThrow {Read-FtextLateReceiptEvidence $lateConfig $receiptRequest};[IO.File]::WriteAllBytes($lateResult,$enc.GetBytes($finalLate))
+ Assert ($null -ne (Read-FtextLateReceiptEvidence $lateConfig $receiptRequest)) 'Missing result permanently suppressed its later retry.'
+ $lateConfig.cardPayment.resultFormat='POS_LINE8_OS7'
+ Assert ($null -eq (Read-FtextLateReceiptEvidence $lateConfig $receiptRequest)) 'Strict CARD late recovery accepted missing POS proof.'
+ [IO.File]::WriteAllBytes($lateResult,$enc.GetBytes($finalLate.Replace("`r`n`r`n671", "`r`n#Visa Debit;1.25;416598******5605`r`n671")))
+ Assert ($null -ne (Read-FtextLateReceiptEvidence $lateConfig $receiptRequest)) 'Strict CARD late receipt with exact masked payment was not read.'
+ $lateConfig.cardPayment.resultFormat='OPERATOR_CONFIRMATION';[IO.File]::WriteAllBytes($lateResult,$enc.GetBytes($finalLate))
+ $cashReceipt=$receiptRequest | ConvertTo-Json -Depth 12 | ConvertFrom-Json;$cashReceipt.plan.payment.method='CASH';$cashReceipt.plan.payment.code=1
+ $cashBytes=New-FtextCashCommand $lateConfig $cashReceipt $lateResult
+ $sha=[Security.Cryptography.SHA256]::Create();try{$cashHash=[BitConverter]::ToString($sha.ComputeHash($cashBytes)).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
+ $cashIntent=$utf8.GetBytes((([ordered]@{commandHash=$cashHash;settingsHash=$lateConfig.settingsHash;requestId=$late.id}) | ConvertTo-Json -Compress))
+ [IO.File]::WriteAllBytes($lateIntentPath,$cashIntent)
+ Assert ($null -ne (Read-FtextLateReceiptEvidence $lateConfig $cashReceipt)) 'CASH late receipt was not recovered.'
+ [IO.File]::WriteAllBytes($lateIntentPath,$intentBytes)
+ $same=@(Get-ChildItem -LiteralPath $lateFolder -File | Get-FileHash -Algorithm SHA256 | Select-Object Path,Hash) | ConvertTo-Json -Compress
+ Assert ($same -ceq $unchanged -and @(Get-ChildItem -LiteralPath $lateFolder -Filter '*.txt').Count -eq 0) 'Late recovery mutated original files or emitted another command.'
+
  Write-Host ('PASS: '+$passed+' cash command/result/scope/timeout/restart/tombstone boundaries; synthetic folder only.')
 } finally {Remove-Item -LiteralPath $root -Recurse -Force}
