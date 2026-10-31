@@ -7,7 +7,7 @@ const grant={storeId:'store-a',profile:'STOCKTAKER',capabilities:['inventory.rea
 const account={username:'counter.1',fullName:'Isolated Counter',password:'isolated-test-password',pin:'624918',grants:[grant]};
 test('staff profiles cannot elevate role, cross-profile capabilities or implicitly enable finalization',()=>{
   assert.equal(createStaffInput.parse({...account,username:'Counter.1'}).username,'counter.1');
-  for(const body of [{...account,role:'OWNER'},{...account,grants:[{...grant,capabilities:['cash.read']}]},{...account,grants:[{...grant,capabilities:['inventory.count']}]},{...account,grants:[grant,grant]},{...account,pin:'1234'},{...account,password:'short'}])assert.equal(createStaffInput.safeParse(body).success,false);
+  for(const body of [{...account,role:'OWNER'},{...account,grants:[{...grant,capabilities:['cash.read']}]},{...account,grants:[{...grant,capabilities:['inventory.count']}]},{...account,grants:[grant,grant]},{...account,pin:'123'},{...account,password:'short'}])assert.equal(createStaffInput.safeParse(body).success,false);
   assert.equal(updateStaffInput.safeParse({expectedRevision:0,active:true,grants:[]}).success,false);
 });
 test('personal login requires exactly one credential and refuses scope/session injection',()=>{
@@ -28,4 +28,17 @@ test('schema absence preserves old account discovery but never admits a signed s
   let queries=0;const db={$queryRaw:async()=>{queries++;return [{relation:null}]}};
   assert.equal(await staffAccount(db,{id:'ordinary-user'}),null);assert.equal(queries,1);
   await assert.rejects(liveStaff({$queryRaw:async()=>[]},{id:'staff',role:'EMPLOYEE',tokenType:'BACKOFFICE_USER',staffAccess:true,sessionId:'session',companyId:'a',sessionVersion:0}),{code:'STAFF_SESSION_INVALID'});
+});
+
+test('PIN-first creation accepts four digits without weakening optional password or existing longer PINs',()=>{
+  const {password,...pinOnly}=account;
+  for(const pin of ['0483','624918','123456789012']){
+    assert.equal(createStaffInput.safeParse({...pinOnly,pin}).success,true);
+    assert.equal(staffLoginInput.safeParse({username:account.username,pin}).success,true);
+    assert.equal(updateStaffInput.safeParse({expectedRevision:1,active:true,grants:[],pin}).success,true);
+  }
+  for(const pin of ['123','1234567890123','12a4',' 1234','１２３４'])assert.equal(createStaffInput.safeParse({...pinOnly,pin}).success,false);
+  assert.equal(createStaffInput.safeParse({...pinOnly,password:'short'}).success,false);
+  assert.equal(createStaffInput.safeParse({...pinOnly,password:''}).success,false);
+  assert.equal(createStaffInput.safeParse({...pinOnly,password}).success,true);
 });

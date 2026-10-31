@@ -20,7 +20,7 @@ export default function BackofficeStaffAdmin({api}){
   const save=async e=>{
     e.preventDefault();if(saving.current)return;saving.current=true;setBusy(true);setError('');setMessage('');
     const form=e.currentTarget,f=new FormData(form),password=String(f.get('password')||''),pin=String(f.get('pin')||'');
-    const body=edit.id?{expectedRevision:edit.revision,active:f.get('active')==='on',grants,...(password?{password}:{}),...(pin?{pin}:{})}:{username:f.get('username'),fullName:f.get('fullName'),password,pin,grants};
+    const body=edit.id?{expectedRevision:edit.revision,active:f.get('active')==='on',grants,...(password?{password}:{}),...(pin?{pin}:{})}:{username:f.get('username'),fullName:f.get('fullName'),...(password?{password}:{}),pin,grants};
     try{
       await api(edit.id?`/api/backoffice-staff/admin/accounts/${encodeURIComponent(edit.id)}`:'/api/backoffice-staff/admin/accounts',{method:edit.id?'PUT':'POST',body:JSON.stringify(body)});
       form.reset();setEdit(null);setGrants([]);setMessage('Αποθηκεύτηκε. Κάθε αλλαγή δικαιωμάτων απαιτεί νέα προσωπική σύνδεση.');await load();
@@ -34,8 +34,9 @@ export default function BackofficeStaffAdmin({api}){
     {data&&<><ul className="staff-accounts">{data.accounts.map(a=><li key={a.id}><b>{a.fullName}</b> · {a.username} · {a.active?'Ενεργός':'Ανενεργός'}<span>{a.grants.length} καταστήματα</span><button type="button" disabled={busy} onClick={()=>open(a)}>Δικαιώματα / Απενεργοποίηση</button></li>)}</ul>{!data.accounts.length&&<p>Δεν έχουν δημιουργηθεί προσωπικές προσβάσεις.</p>}</>}
     {edit&&data&&<form key={edit.id||'new'} onSubmit={save} autoComplete="off"><h3>{edit.id?`${edit.fullName} · ${edit.username}`:'Νέος λογαριασμός'}</h3>
       {!edit.id&&<><label>Ονοματεπώνυμο<input name="fullName" required minLength={2} maxLength={180}/></label><label>Username<input name="username" required pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{2,79}" minLength={3} maxLength={80} autoComplete="off"/></label></>}
-      <label>{edit.id?'Νέος κωδικός (προαιρετικά)':'Προσωπικός κωδικός'}<input name="password" type="password" autoComplete="new-password" required={!edit.id} minLength={10} maxLength={100}/></label>
-      <label>{edit.id?'Νέο PIN (προαιρετικά)':'Προσωπικό PIN, 6–12 ψηφία'}<input name="pin" type="password" inputMode="numeric" autoComplete="new-password" required={!edit.id} pattern="[0-9]{6,12}"/></label>
+      <label>{edit.id?'Νέος κωδικός (προαιρετικά)':'Προσωπικός κωδικός (προαιρετικά)'}<input name="password" type="password" autoComplete="new-password" minLength={10} maxLength={100}/></label>
+      <label>{edit.id?'Νέο PIN (προαιρετικά)':'Προσωπικό PIN, 4–12 ψηφία'}<input name="pin" type="password" inputMode="numeric" autoComplete="new-password" required={!edit.id} pattern="[0-9]{4,12}"/></label>
+      {!edit.id&&<p>Για απλή είσοδο αρκούν το username και το PIN. Ο ξεχωριστός κωδικός είναι προαιρετικός.</p>}
       {edit.id&&<label className="staff-check"><input name="active" type="checkbox" defaultChecked={edit.active}/>Ενεργός λογαριασμός</label>}
       <fieldset><legend>Καταστήματα και δικαιώματα</legend>{data.stores.map(s=>{
         const grant=grants.find(g=>g.storeId===s.id);
