@@ -1,4 +1,14 @@
-## 31/10/2026 - POS-CONSUMPTION-ENTRY-01 / ASSIGNED BEFORE SOURCE / USER VISUAL FAIL
+## 31/10/2026 - POS-CONSUMPTION-ENTRY-01 / TECHNICALLY INSTALLED / USER VISUAL RETEST OPEN
+
+Retained owner fix/pos-consumption-entry-20261031; receipt docs/pos-consumption-entry-release-20261031. Explicit user screenshot/clarification: operations were reachable but the existing store-labelled launcher looked like a heading. Before-source claim3410/head6d45763f/CI41237633802 SUCCESS merged58eb226 before edits. Source3411/head78d5ac1e/fullCI41237884002 SUCCESS merged28f64d8faa9bb4ea4f384c978be895a7684e394c. Exact mainCI41239006235 SUCCESS. Both full runs:4961server+8backup/0FAIL/0SKIP; original security/licensing/HTTP/native/Chromium flows retained. Local Node20 focused7/0/0, Work build/TABLE_SERVICE PASS. Ordinary guarded deploy41239947674/job124651641491 SUCCESS; Render dep-dbj54n4s728c738rrr60 LIVE31Oct20:43:02UTC (22:43Athens), independently healthy exact28f64d8/oktrue. No guard bypass.
+
+Only the existing single Functions POS launcher changed: «Ιδιοκατανάλωση / Καταστροφή», selected-store context underneath, solid green border/tinted background, chevron and64px minimum. Same setStoreMenu(true) callback and original consumption menu, no direct submission. Actual mounted empty-cart test opens both original disabled options, closes and proves zero business writes, preserving scanner focus, per-person calculator preference, recording/radio instances, permissions, Escape and other launchers. Real isolated CI Chromium screenshot1280/FONT20 visually inspected: new button clearly bounded and label/store wraps within it, menu contained;1366/FONT12 evidence retained. These screenshots are synthetic CI only, NOT hosted/physical USER PASS.
+
+Actual hosted Store Mode reached the existing LAB POS2 personal-PIN screen; no credentials requested/entered, no bypass, shift or business operation. New live signed-in menu and physical/touch/device acceptance remain NOT TESTED/OPEN. Manual retains previous9Oct menu-content PASS and qualified historical header position; no CI-only manual entry. Preserve blank removed-WASTE slot, destruction reason, existing stock/turnover business rules, role/store/auth/payment/fiscal boundaries, protected shared decimal keyboard and all other header/appearance owners. Newer Ftext work is a separate owner and source; this receipt does not wait for, change or certify it.
+
+Evidence CHECKPOINTS/EVIDENCE/pos-consumption-entry-20261031/verification.json and CI menu renders; checkpoint CHECKPOINTS/CHANGES/2026-10-31-pos-consumption-entry.md. Same owner retained for only visual acceptance. Single next: refresh the user's empty POS, open Functions POS, verify the clearly outlined «Ιδιοκατανάλωση / Καταστροφή» launcher opens the original two options, then close without submitting either. Do not replay an accepted transaction or close whole POS/header/financial Gates.
+
+## Historical before-source claim (superseded by technical release above)
 
 ### Source candidate after claim3410 green/main
 
