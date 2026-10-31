@@ -1,0 +1,66 @@
+{
+  "scope": "Engineering-only isolated PostgreSQL proof; not hosted or business LAB acceptance",
+  "sourceHead": "d95b8bacd0f1d62d37a5ab4652e02210cf44c4e0",
+  "combinedHead": "cf81ead66c75d986137abb24ce4f9e86816ed6d4",
+  "runtimeBlob": "406fcfb52edb8729cd6dfb686af2560c1d4f9224",
+  "testBlob": "f1a06000eb8f462e13240fe0eb24f249b3b096d9",
+  "runId": 41188314153,
+  "jobId": 124499889574,
+  "nativeObservedAt": "2026-10-31T09:28:54Z",
+  "native": {
+    "identity": "PASS",
+    "completeHandlerResponse": "PASS",
+    "sourceDigests": "PASS",
+    "historicalIsolation": "PASS",
+    "scalePlan": "PASS"
+  },
+  "syntheticPlan": {
+    "materializationLoops": 1,
+    "originalCorrelatedLoops": 141,
+    "originalMilliseconds": 32.443,
+    "candidateMilliseconds": 1.573,
+    "productionTiming": false
+  },
+  "initialFullServer": {
+    "pass": 4763,
+    "fail": 2,
+    "skip": 0,
+    "failures": [
+      "DAILY1920 Chrome CDP startup/render timeout",
+      "device setup Target.createTarget timeout"
+    ]
+  },
+  "localNode20Server": {
+    "pass": 4012,
+    "fail": 0,
+    "infrastructureSkip": 311
+  },
+  "status": "Technically installed and scoped read-only LAB readback passed; no production timing/load capacity claim",
+  "finalSourceCI": {
+    "head": "cf81ead66c75d986137abb24ce4f9e86816ed6d4",
+    "run": 41189607859,
+    "job": 124503899298,
+    "serverPass": 4772,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allFiveJobs": "SUCCESS"
+  },
+  "observedCurrentMainCI": {
+    "revision": "9644e95809ac0f0f1a80b1125dccfbed53aa3bed",
+    "run": 41190777427,
+    "job": 124507145024,
+    "event": "workflow_dispatch initiated independently; observed via authenticated GitHub and actual logs",
+    "serverPass": 4779,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allFiveJobs": "SUCCESS",
+    "syntheticPlan": {
+      "oldLoops": 141,
+      "newLoops": 1,
+      "originalMs": 21.742,
+      "candidateMs": 0.865
+    }
+  }
+}

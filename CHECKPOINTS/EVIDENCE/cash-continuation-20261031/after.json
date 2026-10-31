@@ -1,0 +1,37 @@
+{
+  "recordedAt": "2026-10-31T10:39:58.973244+00:00",
+  "actionTime": "2026-10-31T10:39:41.592Z",
+  "revision": "9644e95809ac0f0f1a80b1125dccfbed53aa3bed",
+  "historyBefore": 0,
+  "historyAfter": 1,
+  "action": "CHECKPOINT",
+  "resumeFrom": "2026-10-28",
+  "period": "2026-10-27",
+  "noteOpen": true,
+  "cashBefore": 0,
+  "cashAfter": 0,
+  "cardBefore": 0,
+  "cardAfter": 0,
+  "manualConfirmationSubmitted": false,
+  "status": "LIMITED LAB PASS",
+  "refreshPersists": true,
+  "reopenPersists": true,
+  "copyEqualsCanonical": true,
+  "completedWorkbook": true,
+  "control": {
+    "store": "N40 CONTROL 20261010",
+    "period": "2026-10-27",
+    "rowsBefore": 0,
+    "rowsAfter": 0,
+    "cashBefore": 0,
+    "cashAfter": 0,
+    "cardBefore": 0,
+    "cardAfter": 0,
+    "foreignNoteVisible": false
+  },
+  "limits": [
+    "No raw stock or global financial/transaction-count reconciliation",
+    "No nonzero completed result, other roles/devices or real email",
+    "No per-issue answer/closure workflow acceptance"
+  ]
+}
