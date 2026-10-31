@@ -90,6 +90,7 @@ test('permission timeout evidence is bounded, private and cannot mask the origin
   assert.equal(messages.length,1);assert.equal(messages[0][0],'INVENTORY_BULK_PERMISSION_TIMEOUT');
   const receipt=JSON.parse(messages[0][1]);assert.equal(receipt.phase,'transaction-start');assert.equal(receipt.selectedCount,null);
   assert(!JSON.stringify(messages).includes('PRIVATE'));assert(!JSON.stringify(messages).includes('synthetic-'));
+  messages.length=0;await assert.rejects(saveInventoryBulkCard(db,user,{...request(),allProducts:undefined,productIds:['PRIVATE_PRODUCT'],active:false}),error=>error===failure);assert.equal(messages.length,1,'an explicit permission write is also diagnosed when another bulk option is present');assert.equal(JSON.parse(messages[0][1]).permissionOnly,false);
   messages.length=0;await assert.rejects(saveInventoryBulkCard(db,user,{...request(),allowPosPriceChange:undefined,allProducts:undefined,productIds:['PRIVATE_PRODUCT'],active:false}),error=>error===failure);assert.equal(messages.length,0,'non-permission operation retains previous logging behavior');
   console.warn=()=>{throw Error('log sink failed')};await assert.rejects(saveInventoryBulkCard(db,user,request()),error=>error===failure);
  }finally{console.warn=original}
