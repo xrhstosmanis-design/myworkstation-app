@@ -102,8 +102,8 @@ router.get("/business-picture",async(req,res,next)=>{
               AND o."companyId"=posted."companyId" AND o."storeId"=posted."storeId" AND o."supplierId" IS NOT DISTINCT FROM posted."supplierId"
               AND o."invoiceNumber"=posted."documentNumber" AND o."status" IN ('FINAL','INVOICED')
             HAVING SUM(l."quantity")=posted.quantity AND ROUND(SUM(l."netAmount"),2)=ROUND(posted."postedNet",2)
-              AND BOOL_AND(l."quantity">0 AND l."netAmount">=0 AND COALESCE(l."exciseTotal",0)>=0 AND l."resolutionStatus"='MATCHED'
-                AND (l."invoiceUnit" IN ('PIECE','KG','LITER') OR (l."invoiceUnit"='PACKAGE' AND l."stockUnitsPerInvoiceUnit">0)))
+              AND BOOL_AND(COALESCE(l."quantity">0 AND l."netAmount">=0 AND COALESCE(l."exciseTotal",0)>=0 AND l."resolutionStatus"='MATCHED'
+                AND (l."invoiceUnit" IN ('PIECE','KG','LITER') OR (l."invoiceUnit"='PACKAGE' AND l."stockUnitsPerInvoiceUnit">0)),false))
           ) original ON true
         ), "purchaseCostTimeline" AS MATERIALIZED (
           SELECT costs.*,LEAD("documentDate") OVER(PARTITION BY "companyId","storeId","productId" ORDER BY "documentDate","createdAt","documentId") AS "validUntil" FROM "purchaseCosts" costs
