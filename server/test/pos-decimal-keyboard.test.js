@@ -10,14 +10,15 @@ const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src
 async function environment(run){
  const dom=new JSDOM('<input id="amount" type="number" step="0.01" value="12"><input id="other" type="number" value="7"><input id="barcode" value="0012"><input id="pin" type="password" value="0012">',{url:'https://isolated.invalid',runScripts:'outside-only'}),w=dom.window;
  // Layout scheduling is irrelevant to key dispatch; no detached-window rAFs.
- w.requestAnimationFrame=()=>0;w.eval(compiled.outputFiles[0].text);w.Keyboard.installTouchKeyboard();
+ const frames=[];w.requestAnimationFrame=callback=>{frames.push(callback);return frames.length};w.eval(compiled.outputFiles[0].text);w.Keyboard.installTouchKeyboard();
  const input=w.document.querySelector('#amount'),events=[];
  input.addEventListener('input',()=>{events.push(input.value);input.value=String(Number(input.value)||0)});
  const pointer=el=>el.dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true,cancelable:true}));
  const open=el=>{el.focus();try{el.setSelectionRange(el.value.length,el.value.length)}catch{}pointer(el);pointer(w.document.querySelector('.mws-touch-field-trigger'))};
  const key=k=>{const b=[...w.document.querySelectorAll('#mws-touch-keyboard button[data-key]')].find(b=>b.dataset.key===k);assert.ok(b,`actual installed keyboard key ${k}`);pointer(b)};
  const draft=()=>w.document.querySelector('[data-numeric-draft]')?.textContent;
- try{await run({w,input,events,open,key,draft})}finally{w.close()}
+ const flush=async()=>{await Promise.resolve();for(const callback of frames.splice(0))callback()};
+ try{await run({w,input,events,open,key,draft,flush})}finally{w.close()}
 }
 test('actual shared numeric keyboard keeps comma pending without clearing or zeroing a controlled amount',async()=>environment(({input,events,open,key,draft})=>{
  open(input);key(',');assert.equal(input.value,'12');assert.equal(draft(),'12,');assert.ok(!events.includes(''));
@@ -83,3 +84,9 @@ test('existing actual POS mixed-payment inline pad retains comma cents without i
   await press('ΚΑΘΑΡΙΣΜΟΣ');for(const k of ['1',',','2','0'])await press(k);assert.equal(w.document.querySelector('.pos-mixed-payment input').value,'1,20');assert.match(w.document.querySelector('.pos-mixed-payment').textContent,/8,80/);assert.equal(writes,0);assert.equal(checkouts,0);
  }finally{await React.act(async()=>root.unmount());w.close();for(const [k,d] of saved)d?Object.defineProperty(globalThis,k,d):delete globalThis[k]}
 });
+
+
+test('removing or disabling a field closes the keyboard and clears its visible numeric draft without another key',async()=>environment(async({w,input,open,key,flush})=>{
+ open(input);key(',');input.remove();await flush();assert.equal(w.document.querySelector('#mws-touch-keyboard').hidden,true);assert.equal(w.document.querySelector('[data-numeric-draft]').textContent,'');
+ const other=w.document.querySelector('#other');open(other);other.disabled=true;await flush();assert.equal(w.document.querySelector('#mws-touch-keyboard').hidden,true);assert.equal(w.document.querySelector('[data-numeric-draft]').textContent,'');
+}));
