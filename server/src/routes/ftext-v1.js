@@ -1,5 +1,6 @@
 import {ftextOperatorCardMode} from '../services/ftext-operator-card.js';
 import {recordLateCashReceipt} from '../services/ftext-late-cash-receipt.js';
+import {pollFtextLateReceipt,recordFtextLateDeviceReceipt} from '../services/ftext-late-device-receipt.js';
 import {pollFtextErrorEvidence,recordFtextErrorEvidence,ftextPaymentError} from '../services/ftext-error-evidence.js';
 import {claimFtextVoid,requestFtextVoid,recordFtextVoidResult} from '../services/ftext-void.js';
 import {Router} from 'express';
@@ -25,8 +26,15 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
   if(!item||item.until<=now){if(attempts.size>=5000){for(const[k,v]of attempts)if(v.until<=now)attempts.delete(k);if(attempts.size>=5000)return res.status(429).json({error:'Δοκίμασε τη ζεύξη αργότερα.'});}item={count:0,until:now+60000};attempts.set(key,item)}
   if(++item.count>10)return res.status(429).json({error:'Πάρα πολλές προσπάθειες ζεύξης. Περίμενε ένα λεπτό.'});next();
  },wrap(async(req,res)=>res.status(201).json(await service.pair(req.body))));
- router.post('/device/ping',wrap(async(req,res)=>res.json(await service.ping(token(req)))));
+ router.post('/device/ping',wrap(async(req,res)=>res.json(await service.ping(token(req),req.body))));
  router.post('/device/status-result',wrap(async(req,res)=>res.json(await service.report(token(req),req.body))));
+ router.post('/device/late-receipt-poll',wrap(async(req,res)=>res.json(await service.authenticated(token(req),async(t,d,c)=>({request:await ftextCashTableExists(t)?await pollFtextLateReceipt(t,d,c):null})))));
+ router.post('/device/late-receipt-result',wrap(async(req,res)=>{
+  const row=await service.authenticated(token(req),async(t,d,c)=>recordFtextLateDeviceReceipt(t,d,c,req.body));
+  const auto=!ftextOperatorCardMode(row);let committed=null;
+  if(row.status==='CONFIRMED'&&auto)try{committed=await finalizeFtextCashRequest(db,row.id,row,{context:service.cashContext})}catch{}
+  res.json({ok:true,requestId:row.id,status:committed?'SALE_COMMITTED':row.status,saleId:committed?.saleId||row.saleId||null,finalizationPending:auto&&row.status==='CONFIRMED'&&!committed,allowResend:false});
+ }));
  router.post('/device/error-evidence-poll',wrap(async(req,res)=>res.json(await service.authenticated(token(req),async(t,d,c)=>({request:c.cashEnabled===true&&await ftextCashTableExists(t)?await pollFtextErrorEvidence(t,d,c):null})))));
  router.post('/device/error-evidence-result',wrap(async(req,res)=>{const row=await service.authenticated(token(req),async(t,d,c)=>recordFtextErrorEvidence(t,d,c,req.body));res.json({ok:true,requestId:row.id,evidenceHash:row.checkoutJson.ftextLateError.evidenceHash,status:row.status})}));
  router.post('/device/void-poll',wrap(async(req,res)=>res.json(await service.authenticated(token(req),async(t,d,c)=>({request:c.cashEnabled===true&&await ftextCashTableExists(t)?await claimFtextVoid(t,d,c):null})))));

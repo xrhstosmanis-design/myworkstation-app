@@ -4,7 +4,7 @@ import {validateFtextCardPayment} from './ftext-card-payment.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {prepareFtextSalePlan} from './ftext-sale-plan.js';
-import {ftextSettingsHash} from './ftext-installation.js';
+import {ftextSettingsHash,ftextRegisterReady} from './ftext-installation.js';
 const fail=(code,message)=>{throw Object.assign(new Error(message),{status:409,code})};
 const hash=s=>createHash('sha256').update(s).digest('hex');
 export async function findPendingFtextCashRequest(tx,scope){
@@ -34,6 +34,8 @@ export async function prepareFtextCashRequest(tx,{settings,scope,sessionId,clien
 }
 export async function claimFtextCashRequest(tx,device,settings){
  if(settings.cashEnabled!==true)return null;
+ // Leave PREPARED untouched while the updated connector obtains a fresh nonfiscal STATUS.
+ if(device.metadata?.ftextReadinessRequired===true&&!ftextRegisterReady(device,settings))return null;
  const row=(await tx.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "companyId"=${settings.companyId} AND "storeId"=${settings.storeId} AND "terminalPos"=${settings.terminalPos} AND "status"='PREPARED' ORDER BY "createdAt" LIMIT 1 FOR UPDATE`)[0];
  if(!row)return null;
  if(row.settingsHash!==ftextSettingsHash(settings)||row.lifecycleGeneration!==settings.lifecycleGeneration)fail('FTEXT_CASH_SETTINGS_CHANGED','Η εκκρεμής εντολή ανήκει σε προηγούμενες ρυθμίσεις.');

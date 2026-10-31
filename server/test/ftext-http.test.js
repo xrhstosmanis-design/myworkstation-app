@@ -18,7 +18,8 @@ test('actual HTTP rejects employee installation access before service or package
 }));
 test('actual HTTP binds manager requests to selected path and routes device credentials separately',()=>fixture(async({calls,request})=>{
  let r=await request('/companies/company-A/stores/store-A/installation/POS-01',{headers:{'x-role':'SUPER_ADMIN'}});assert.equal(r.status,200);assert.deepEqual(calls.pop(),['view',{companyId:'company-A',storeId:'store-A',terminalPos:'POS-01'}]);
- r=await request('/device/ping',{method:'POST',headers:{authorization:'Bearer scoped-device-token'}});assert.equal(r.status,200);assert.deepEqual(calls.pop(),['ping','scoped-device-token']);
+ r=await request('/device/ping',{method:'POST',headers:{authorization:'Bearer scoped-device-token'}});assert.equal(r.status,200);assert.deepEqual(calls.pop(),['ping','scoped-device-token',{}]);
+ r=await request('/device/ping',{method:'POST',headers:{authorization:'Bearer scoped-device-token','content-type':'application/json'},body:JSON.stringify({readinessVersion:1})});assert.equal(r.status,200);assert.deepEqual(calls.pop(),['ping','scoped-device-token',{readinessVersion:1}]);
  r=await request('/device/status-result',{method:'POST',headers:{authorization:'Bearer scoped-device-token','content-type':'application/json'},body:JSON.stringify({requestId:'synthetic'})});assert.equal(r.status,200);assert.deepEqual(calls.pop(),['report','scoped-device-token',{requestId:'synthetic'}]);
  for(const path of ['/device/commands','/device/sale','/device/pay','/device/execute'])assert.equal((await request(path,{method:'POST'})).status,404);
 }));
@@ -30,7 +31,7 @@ test('actual cash HTTP requires purpose-separated device authentication before q
  const {createFtextInstallationService}=await import('../src/services/ftext-installation.js');let touched=0;
  const service=createFtextInstallationService({db:{$transaction:()=>{touched++;throw Error('unauthenticated DB access')}},secret:()=> 'fixture-secret-with-sufficient-length',moduleState:()=>assert.fail('unauthenticated module read')});
  const app=express();app.use(express.json());app.use('/api/ftext/v1',createFtextRouter({service,db:{},ensure:async()=>{}}));app.use((e,_req,res,_next)=>res.status(e.status||500).json({error:e.message}));const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
- try{for(const action of ['cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result'])for(const token of ['', 'wrong-purpose-or-expired']){const response=await fetch('http://127.0.0.1:'+server.address().port+'/api/ftext/v1/device/'+action,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:'{}'});assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'no-store')}assert.equal(touched,0)}finally{await new Promise(r=>server.close(r))}
+ try{for(const action of ['cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result','late-receipt-poll','late-receipt-result'])for(const token of ['', 'wrong-purpose-or-expired']){const response=await fetch('http://127.0.0.1:'+server.address().port+'/api/ftext/v1/device/'+action,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:'{}'});assert.equal(response.status,401);assert.equal(response.headers.get('cache-control'),'no-store')}assert.equal(touched,0)}finally{await new Promise(r=>server.close(r))}
 });
 test('actual separate POS capability route binds company/store/terminal and cannot fall through the catalog mount',async()=>{
  const {readFile}=await import('node:fs/promises'),source=await readFile(new URL('../src/routes/store-pos.js',import.meta.url),'utf8');

@@ -193,4 +193,29 @@ function Read-FtextLateErrorEvidence($Config,$Request) {
   return [pscustomobject]@{requestId=[string]$Request.id;settingsHash=[string]$Config.settingsHash;originalResultHash=[string]$Request.originalResultHash;commandHash=$commandHash;rawResultBase64=[Convert]::ToBase64String($bytes)}
  } finally {if($held){$mutex.ReleaseMutex()};$mutex.Dispose()}
 }
-Export-ModuleMember -Function New-FtextCashCommand,Read-FtextCashResult,Get-FtextCashPending,Invoke-FtextCashRequest,Complete-FtextCashReport,Read-FtextLateErrorEvidence
+function Read-FtextLateReceiptEvidence($Config,$Request) {
+ if([string]$Request.kind -cne 'FTEXT_LATE_RECEIPT_RECHECK' -or [string]$Request.originalResultHash -notmatch '^[a-f0-9]{64}$' -or [string]$Request.plan.payment.method -cnotin @('CASH','CARD')) {throw 'Invalid original receipt recheck.'}
+ $folder=[string]$Config.workFolder
+ $resultPath=Join-Path $folder ('mws-cash-'+$Request.id+'.res')
+ # This validates the original plan and computes bytes; it never publishes them.
+ $commandHash=Get-FtextCashHash (New-FtextCashCommand $Config $Request $resultPath)
+ $hash=Get-FtextCashHash ([Text.Encoding]::UTF8.GetBytes($folder.ToUpperInvariant()))
+ $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtext_'+$hash.ToUpperInvariant()));$held=$false
+ try {
+  try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
+  if(-not $held) {throw 'Another connector is using this ftext folder.'}
+  if((Get-FtextCashPending $Config) -or (Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-status.json')) -or @(Get-ChildItem -LiteralPath $folder -Filter '*.txt' -File).Count -gt 0) {throw 'The ftext folder is busy; evidence retained.'}
+  $intentBytes=Read-FtextEvidenceFile (Join-Path $folder ('mws-cash-'+$Request.id+'.intent.json')) 4096
+  $intent=[Text.Encoding]::UTF8.GetString($intentBytes) | ConvertFrom-Json
+  if(@($intent.PSObject.Properties).Count -ne 3 -or [string]$intent.requestId -cne [string]$Request.id -or [string]$intent.settingsHash -cne [string]$Config.settingsHash -or [string]$intent.commandHash -cne $commandHash) {throw 'Original intent does not match.'}
+  $reportBytes=Read-FtextEvidenceFile (Join-Path $folder ('mws-cash-'+$Request.id+'.report.json')) 4096
+  if((Get-FtextCashHash $reportBytes) -cne [string]$Request.originalResultHash) {throw 'Original report does not match.'}
+  $report=[Text.Encoding]::UTF8.GetString($reportBytes) | ConvertFrom-Json
+  if(@($report.PSObject.Properties).Count -ne 4 -or [string]$report.requestId -cne [string]$Request.id -or [string]$report.settingsHash -cne [string]$Config.settingsHash -or [string]$report.outcome -cne 'REQUIRES_CHECK' -or [string]$report.description -cne 'The physical receipt could not be verified. Do not resend.') {throw 'Only the original unknown report can be rechecked.'}
+  $bytes=Read-FtextEvidenceFile $resultPath 65536
+  $parsed=Read-FtextCashResult $bytes $Config $Request
+  if([string]$parsed.outcome -cne 'CONFIRMED') {return $null}
+  return [pscustomobject]@{requestId=[string]$Request.id;settingsHash=[string]$Config.settingsHash;originalResultHash=[string]$Request.originalResultHash;intentBase64=[Convert]::ToBase64String($intentBytes);reportBase64=[Convert]::ToBase64String($reportBytes);rawResultBase64=[Convert]::ToBase64String($bytes)}
+ } finally {if($held){$mutex.ReleaseMutex()};$mutex.Dispose()}
+}
+Export-ModuleMember -Function New-FtextCashCommand,Read-FtextCashResult,Get-FtextCashPending,Invoke-FtextCashRequest,Complete-FtextCashReport,Read-FtextLateErrorEvidence,Read-FtextLateReceiptEvidence

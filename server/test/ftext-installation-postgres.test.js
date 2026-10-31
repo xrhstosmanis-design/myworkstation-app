@@ -64,7 +64,20 @@ export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
   const pair=await service.createPairing(scope,'fixture-admin'),paired=await service.pair(pairInput(pair.code,c));
   await assert.rejects(a.$transaction(tx=>service.cashContext(tx,scope)),e=>e.status===409);
   await service.report(paired.token,{requestId:'c'.repeat(32),checkedAt:now.toISOString(),ok:true,code:0,serialNumber:input.serialNumber,deviceTime:'fixture clock',fiscalExecution:false});
+  await service.ping(paired.token,{readinessVersion:1});
+  await b.$executeRaw`UPDATE "CloudDevice" SET "metadata"=jsonb_set(jsonb_set("metadata",'{ftextLastStatus,checkedAt}','"2000-01-01T00:00:00Z"'::jsonb),'{ftextLastStatus,receivedAt}','"2000-01-01T00:00:00Z"'::jsonb) WHERE "storeId"='store-A'`;
+  await service.ping(paired.token); // An old heartbeat must not downgrade the readiness requirement.
+  assert.equal((await service.view(scope)).readinessRequired,true);assert.equal((await service.view(scope)).registerReady,false);
+  await assert.rejects(a.$transaction(tx=>service.cashContext(tx,scope)),e=>e.status===503&&e.code==='FTEXT_REGISTER_NOT_READY');
+  assert.equal((await a.$queryRaw`SELECT * FROM "FtextCashRequest"`).length,0,'Stale STATUS creates no request or fiscal instruction');
+  await a.$transaction(tx=>service.cashContext(tx,scope,{requireOnline:false})); // Existing receipt recovery remains available.
+  await service.report(paired.token,{requestId:'d'.repeat(32),checkedAt:now.toISOString(),ok:true,code:0,serialNumber:input.serialNumber,deviceTime:'fresh readiness',fiscalExecution:false});
+  assert.equal((await service.view(scope)).registerReady,true);
   let pending;await a.$transaction(async tx=>{const current=await service.cashContext(tx,scope);pending=await prepareFtextCashRequest(tx,{...current,sessionId:'fixture-shift',clientTransactionId:'fixture-checkout',requestHash:'fixture-hash',checkout:{paymentMethod:'CASH'},items:[{productId:'product-a',name:'SYNTHETIC',quantity:1,effectiveUnitPrice:1.25,discount:0,lineTotal:1.25,fiscalDepartment:4,vatRate:13,fiscalVatCode:'2'}],summary:{subtotal:1.25,discount:0,total:1.25}})});
+  await b.$executeRaw`UPDATE "CloudDevice" SET "metadata"=jsonb_set(jsonb_set("metadata",'{ftextLastStatus,checkedAt}','"2000-01-01T00:00:00Z"'::jsonb),'{ftextLastStatus,receivedAt}','"2000-01-01T00:00:00Z"'::jsonb) WHERE "storeId"='store-A'`;
+  assert.equal(await service.authenticated(paired.token,(tx,d,c)=>claimFtextCashRequest(tx,d,c)),null);
+  assert.equal((await a.$queryRaw`SELECT "status" FROM "FtextCashRequest" WHERE "id"=${pending.id}`)[0].status,'PREPARED','Readiness expiry must not dispatch a prepared payment');
+  await service.report(paired.token,{requestId:'e'.repeat(32),checkedAt:now.toISOString(),ok:true,code:0,serialNumber:input.serialNumber,deviceTime:'fresh dispatch readiness',fiscalExecution:false});
   await assert.rejects(service.configure(scope,{...input,cashEnabled:false},'fixture-admin'),e=>e.status===409);
   await b.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "id"='module-A'`;
   await assert.rejects(service.authenticated(paired.token,(tx,d,c)=>claimFtextCashRequest(tx,d,c)),e=>e.status===403);

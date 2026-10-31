@@ -1,5 +1,6 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
+Import-Module (Join-Path $PSScriptRoot 'Ftext.psm1') -Force
 function Get-FtextCloudConfig([string]$Path) {
     $c=Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
     foreach($key in @('companyId','storeId','terminalPos','serialNumber','workFolder','settingsHash','apiBase','fiscalDeviceCode','protocol','configurationId','lifecycleGeneration')) {
@@ -37,13 +38,26 @@ function Confirm-FtextCloudIdentity($Config,$Response) {
 }
 function Invoke-FtextCloudPing($Config) {
     $token=Read-FtextDeviceToken $Config
-    $response=Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/ping') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body '{}'
+    $response=Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/ping') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body '{"readinessVersion":1}' -TimeoutSec 15
     Confirm-FtextCloudIdentity $Config $response
     return $response
 }
+function Invoke-FtextCloudReadiness([string]$ConfigPath) {
+    $config=Get-FtextCloudConfig $ConfigPath
+    # Authenticate current installation before the nonfiscal STATUS command.
+    Invoke-FtextCloudPing $config | Out-Null
+    $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds 2
+    $result=$evidence.result
+    $report=[ordered]@{requestId=$evidence.requestId;checkedAt=$evidence.checkedAt;ok=$result.ok;code=$result.code;fiscalExecution=$false}
+    foreach($key in @('serialNumber','deviceTime','description')) {if($result.PSObject.Properties[$key]) {$report[$key]=$result.$key}}
+    $token=Read-FtextDeviceToken $config
+    # Local STATUS evidence is durable. An undelivered/stale readiness sample never authorizes checkout.
+    Invoke-RestMethod -Method Post -Uri ($config.apiBase+'/api/ftext/v1/device/status-result') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($report | ConvertTo-Json -Compress) -TimeoutSec 15 | Out-Null
+    return $result.ok
+}
 function Invoke-FtextCashApi($Config,[string]$Action,$Body) {
-    if($Action -notin @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result')) {throw 'Unsupported cash API action.'}
+    if($Action -notin @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result','late-receipt-poll','late-receipt-result')) {throw 'Unsupported cash API action.'}
     $token=Read-FtextDeviceToken $Config
     return Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/'+$Action) -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -TimeoutSec 30
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCashApi
+Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudReadiness,Invoke-FtextCashApi

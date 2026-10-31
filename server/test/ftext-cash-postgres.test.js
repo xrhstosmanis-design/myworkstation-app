@@ -1,3 +1,4 @@
+import {recordFtextLateDeviceReceipt,pollFtextLateReceipt} from '../src/services/ftext-late-device-receipt.js';
 import {recordLateCashReceipt} from '../src/services/ftext-late-cash-receipt.js';
 import {ftextOriginalCommandHash} from '../src/services/ftext-error-evidence.js';
 import {recordFtextOperatorDecision,releaseFtextRejectedAttempt} from '../src/services/ftext-operator-card.js';
@@ -168,6 +169,35 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    assert.equal(Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-control'`)[0].currentStock),20);
    const audit=(await a.$queryRaw`SELECT "details" FROM "StoreOperatorAudit" WHERE "details"->>'requestId'=${late.id}`)[0];assert.equal(audit.details.receipt.dayCounter,'45');assert.equal(audit.details.receipt.outcome,'CONFIRMED');
    const replay=await recover(a);assert.equal(replay.saleId,commits[0].saleId);assert.deepEqual(replay.result,original.result);assert.equal(replay.resultHash,original.resultHash);
+   // Independently authenticated device recovery, including a late operator-card receipt.
+   for(const [method,counter] of [['CASH','46'],['CARD','47']]){
+    const beforePaymentCount=(await a.$queryRaw`SELECT * FROM "Payment"`).length;
+    const beforeStock=Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-a'`)[0].currentStock);
+    const pending=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'device-late-'+method,checkout:{...input.checkout,paymentMethod:method}}));
+    await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+    const timeout={requestId:pending.id,settingsHash:pending.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
+    const old=await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,timeout));
+    assert.equal((await pollFtextLateReceipt(a,device,settings)).id,pending.id);
+    assert.equal(await pollFtextLateReceipt(a,{...device,tokenVersion:4},settings),null);
+    const body={requestId:old.id,settingsHash:old.settingsHash,originalResultHash:old.resultHash,intentBase64:encode(JSON.stringify({requestId:old.id,settingsHash:old.settingsHash,commandHash:ftextOriginalCommandHash(old,settings)})),reportBase64:encode(JSON.stringify(timeout)),rawResultBase64:encode(raw.replace('\r\n45\r\n','\r\n'+counter+'\r\n'))};
+    await assert.rejects(a.$transaction(tx=>recordFtextLateDeviceReceipt(tx,{...device,id:'foreign'},settings,body)));
+    const appended=await Promise.all([a.$transaction(tx=>recordFtextLateDeviceReceipt(tx,device,settings,body)),b.$transaction(tx=>recordFtextLateDeviceReceipt(tx,device,settings,body))]);
+    assert.deepEqual(appended[0].checkoutJson.ftextLateCashReceipt,appended[1].checkoutJson.ftextLateCashReceipt);
+    for(const r of appended){assert.equal(r.resultHash,old.resultHash);assert.deepEqual(r.result,old.result);assert.equal(r.saleId,null);assert.equal(r.checkoutJson.ftextLateCashReceipt.source,'DEVICE');}
+    if(method==='CARD'){
+     await assert.rejects(finalizeFtextCashRequest(a,old.id,scope,opts));
+     await a.$transaction(tx=>recordFtextOperatorDecision(tx,old.id,scope,'operator-a',{outcome:'YES'},{context}));
+    }
+    await a.$executeRaw`UPDATE "CashShiftSession" SET "status"='CLOSED' WHERE "id"='shift-a'`;
+    await assert.rejects(finalizeFtextCashRequest(a,old.id,scope,opts));await a.$executeRaw`UPDATE "CashShiftSession" SET "status"='OPEN' WHERE "id"='shift-a'`;
+    assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,beforePaymentCount);
+    const done=await Promise.all([finalizeFtextCashRequest(a,old.id,scope,opts),finalizeFtextCashRequest(b,old.id,scope,opts)]);assert.equal(done[0].saleId,done[1].saleId);assert.equal(done.filter(r=>r.replay).length,1);
+    const replay=await a.$transaction(tx=>recordFtextLateDeviceReceipt(tx,device,settings,body));assert.equal(replay.saleId,done[0].saleId);assert.equal(replay.resultHash,old.resultHash);
+    assert.equal((await a.$queryRaw`SELECT * FROM "Payment"`).length,beforePaymentCount+1);
+    assert.equal(Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-a'`)[0].currentStock),beforeStock-1);
+    assert.equal(Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-control'`)[0].currentStock),20);
+    assert.equal((await a.$queryRaw`SELECT * FROM "StockMovement" WHERE "sourceId"=${done[0].saleId}`).length,1);
+   }
    const next=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'late-reused'}));await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
    await assert.rejects(a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{...receipt,requestId:next.id,settingsHash:next.settingsHash,dayCounter:'45'})),e=>e.code==='FTEXT_CASH_RECEIPT_REUSED');
   });

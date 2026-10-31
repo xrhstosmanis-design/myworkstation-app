@@ -31,6 +31,15 @@ export function validateFtextReport(input,settings,now=new Date()){
  if(!r.ok&&r.code===0)fail(409,'Ασυνεπής απάντηση ftext.');
  return r;
 }
+// A heartbeat is not proof the vendor driver/register is ready for another sale.
+export function ftextRegisterReady(device,settings,now=new Date()){
+ const status=device?.metadata?.ftextLastStatus,time=Number(now);
+ const fresh=(value,limit,future=0)=>{const age=time-Date.parse(value);return Number.isFinite(age)&&age>=-future&&age<limit;};
+ return Boolean(device?.status==='ACTIVE'&&fresh(device.lastSeenAt,15000,2000)&&status?.ok===true&&status.code===0&&status.serialNumber===settings.serialNumber&&status.fiscalExecution===false&&fresh(status.receivedAt,20000,2000)&&fresh(status.checkedAt,20000,60000));
+}
+export function assertFtextRegisterReady(device,settings,now=new Date()){
+ if(device?.metadata?.ftextReadinessRequired===true&&!ftextRegisterReady(device,settings,now))throw Object.assign(new Error('Η ταμειακή FTEXT δεν έχει πρόσφατη επιβεβαίωση ετοιμότητας. Έλεγξε ότι FTEXT και connector είναι ανοικτά· το καλάθι διατηρήθηκε και δεν στάλθηκε πληρωμή.'),{status:503,code:'FTEXT_REGISTER_NOT_READY'});
+}
 export function createFtextInstallationService({db,moduleState,secret,clock=()=>new Date(),cashSchemaInstaller=ensureFtextCashSchema}){
  const scopeOf=s=>({companyId:identifier.parse(s.companyId),storeId:identifier.parse(s.storeId),terminalPos:terminal.parse(s.terminalPos)});
  const key=s=>'ftext:'+s.terminalPos;
@@ -59,8 +68,8 @@ export function createFtextInstallationService({db,moduleState,secret,clock=()=>
  });}
  return {
   authenticated,
-  async cashContext(t,scope,{requireOnline=true}={}){const s=scopeOf(scope),d=await device(t,s,true),c=config(d,s);await current(t,d,s,c.lifecycleGeneration);if(d.status!=='ACTIVE'||c.cashEnabled!==true)fail(409,'Η έκδοση μετρητών ftext δεν έχει ενεργοποιηθεί/ζευγοποιηθεί.');if(requireOnline&&(!d.lastSeenAt||clock()-new Date(d.lastSeenAt)>=15000))fail(409,'Ο connector ftext είναι εκτός σύνδεσης.');if(!d.metadata?.ftextLastStatus?.ok||d.metadata.ftextLastStatus.serialNumber!==c.serialNumber)fail(409,'Χρειάζεται επιτυχής έλεγχος STATUS με τις τρέχουσες ρυθμίσεις.');return {device:d,settings:c,scope:{...s,fiscalDeviceCode:c.fiscalDeviceCode}};},
-  async view(scope){const s=scopeOf(scope);await store(db,s);const d=await device(db,s);const m=await moduleState(s.companyId,db);if(!d)return {cashActivationReady:cashActivationReady(),settings:null,paired:false,online:false,connectorAllowed:Boolean(m?.licenseAllowed&&m.activeModules.includes('CONNECTOR_FTEXT')),fiscalCheckoutEnabled:false};const c=config(d,s);let valid=true;try{await tx(t=>current(t,d,s,c.lifecycleGeneration))}catch(e){if(![403,404,409].includes(e.status))throw e;valid=false}const last=d.metadata?.ftextLastStatus||null;return {cashActivationReady:cashActivationReady(),settings:c,settingsHash:ftextSettingsHash(c),paired:d.status==='ACTIVE'&&valid,online:Boolean(valid&&d.status==='ACTIVE'&&d.lastSeenAt&&clock()-new Date(d.lastSeenAt)<15000),lastSeenAt:d.lastSeenAt,lastStatus:last,connectorAllowed:Boolean(m?.licenseAllowed&&m.activeModules.includes('CONNECTOR_FTEXT')),settingsCurrent:valid,fiscalCheckoutEnabled:false};},
+  async cashContext(t,scope,{requireOnline=true}={}){const s=scopeOf(scope),d=await device(t,s,true),c=config(d,s);await current(t,d,s,c.lifecycleGeneration);if(d.status!=='ACTIVE'||c.cashEnabled!==true)fail(409,'Η έκδοση μετρητών ftext δεν έχει ενεργοποιηθεί/ζευγοποιηθεί.');if(requireOnline&&(!d.lastSeenAt||clock()-new Date(d.lastSeenAt)>=15000))fail(409,'Ο connector ftext είναι εκτός σύνδεσης.');if(requireOnline)assertFtextRegisterReady(d,c,clock());if(!d.metadata?.ftextLastStatus?.ok||d.metadata.ftextLastStatus.serialNumber!==c.serialNumber)fail(409,'Χρειάζεται επιτυχής έλεγχος STATUS με τις τρέχουσες ρυθμίσεις.');return {device:d,settings:c,scope:{...s,fiscalDeviceCode:c.fiscalDeviceCode}};},
+  async view(scope){const s=scopeOf(scope);await store(db,s);const d=await device(db,s);const m=await moduleState(s.companyId,db);if(!d)return {cashActivationReady:cashActivationReady(),settings:null,paired:false,online:false,connectorAllowed:Boolean(m?.licenseAllowed&&m.activeModules.includes('CONNECTOR_FTEXT')),fiscalCheckoutEnabled:false};const c=config(d,s);let valid=true;try{await tx(t=>current(t,d,s,c.lifecycleGeneration))}catch(e){if(![403,404,409].includes(e.status))throw e;valid=false}const last=d.metadata?.ftextLastStatus||null;return {cashActivationReady:cashActivationReady(),settings:c,settingsHash:ftextSettingsHash(c),paired:d.status==='ACTIVE'&&valid,online:Boolean(valid&&d.status==='ACTIVE'&&d.lastSeenAt&&clock()-new Date(d.lastSeenAt)<15000),lastSeenAt:d.lastSeenAt,lastStatus:last,readinessRequired:d.metadata?.ftextReadinessRequired===true,registerReady:valid&&ftextRegisterReady(d,c,clock()),connectorAllowed:Boolean(m?.licenseAllowed&&m.activeModules.includes('CONNECTOR_FTEXT')),settingsCurrent:valid,fiscalCheckoutEnabled:false};},
   async configure(scope,input,actorId){const b=ftextSettingsInput.parse(input),s=scopeOf({...scope,terminalPos:b.terminalPos});return tx(async t=>{
    await t.$queryRaw`SELECT 1 AS "locked" FROM pg_advisory_xact_lock(hashtextextended(${['ftext-config',s.companyId,s.storeId,s.terminalPos].join(':')},0))`;
    await store(t,s);const lifecycle=await bindFreshLifecycleRead(t,s),fiscalDeviceCode=await route(t,s);
@@ -95,7 +104,12 @@ export function createFtextInstallationService({db,moduleState,secret,clock=()=>
    const paired=(await t.$queryRaw`UPDATE "CloudDevice" SET "status"='ACTIVE',"tokenVersion"="tokenVersion"+1,"metadata"=${JSON.stringify(metadata)}::jsonb,"pairedAt"=NOW(),"lastSeenAt"=NULL,"revokedAt"=NULL WHERE "id"=${d.id} RETURNING *`)[0];
    const token=sign(paired,c);await audit(t,s,{type:'DEVICE',id:d.id},'FTEXT_PAIRED',{terminalPos:s.terminalPos});return {token,settings:c,settingsHash:ftextSettingsHash(c),companyId:s.companyId,storeId:s.storeId,terminalPos:s.terminalPos,fiscalCheckoutEnabled:false};
   });},
-  ping(token){return authenticated(token,async(t,d,c,s)=>{await t.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW() WHERE "id"=${d.id}`;return {...s,settings:c,settingsHash:ftextSettingsHash(c),serialNumber:c.serialNumber,fiscalCheckoutEnabled:false};});},
+  ping(token,input={}){const body=z.object({readinessVersion:z.literal(1).optional()}).strict().parse(input);return authenticated(token,async(t,d,c,s)=>{
+   const metadata=body.readinessVersion===1?{...d.metadata,ftextReadinessRequired:true}:d.metadata;
+   if(body.readinessVersion===1)await t.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW(),"metadata"=${JSON.stringify(metadata)}::jsonb WHERE "id"=${d.id}`;
+   else await t.$executeRaw`UPDATE "CloudDevice" SET "lastSeenAt"=NOW() WHERE "id"=${d.id}`;
+   return {...s,settings:c,settingsHash:ftextSettingsHash(c),serialNumber:c.serialNumber,readinessRequired:metadata?.ftextReadinessRequired===true,registerReady:ftextRegisterReady({...d,metadata,lastSeenAt:clock()},c,clock()),fiscalCheckoutEnabled:false};
+  });},
   report(token,input){return authenticated(token,async(t,d,c,s)=>{
    const body=reportSchema.parse(input),old=d.metadata?.ftextLastStatus;
    if(old?.requestId===body.requestId){if(old.reportHash!==hash(JSON.stringify(body)))fail(409,'Το ίδιο αίτημα έχει διαφορετικό αποτέλεσμα.');return {ok:true,idempotentReplay:true};}
