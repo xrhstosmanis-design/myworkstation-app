@@ -29,7 +29,8 @@ try {
             $request=if($pending) {$pending.request} else {$work.request}
             if($request) {
                 $stage='original cash request/result'
-                $report=Invoke-FtextCashRequest -ConfigPath $ConfigPath -Request $request
+                $acceptHandoff={param($job,$digest,$path);Invoke-FtextCloudHandoff -ConfigPath $path -Request $job -CommandHash $digest}
+                $report=Invoke-FtextCashRequest -ConfigPath $ConfigPath -Request $request -AcceptHandoff $acceptHandoff
                 $endpoint=if($request.PSObject.Properties['kind'] -and [string]$request.kind -ceq 'FTEXT_VOID') {'void-result'} else {'cash-result'}
                 $ack=Invoke-FtextCashApi $c $endpoint $report
                 if($ack.ok -ne $true -or $ack.status -notin @('CONFIRMED','REQUIRES_CHECK','SALE_COMMITTED')) {throw 'Cash result was not acknowledged. The local evidence was retained.'}

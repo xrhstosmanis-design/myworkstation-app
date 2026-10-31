@@ -6,6 +6,8 @@ import {ensureFtextCashSchema,ftextCashLifecycleReviewProposal} from '../src/ser
 import {prepareFtextCashRequest,claimFtextCashRequest} from '../src/services/ftext-cash-requests.js';
 import {companyModuleState} from '../src/middleware/module-access.js';
 import {pollFtextDeviceWork} from '../src/services/ftext-device-work.js';
+import {acceptFtextHandoff} from '../src/services/ftext-handoff.js';
+import {recordFtextCashResult} from '../src/services/ftext-cash-requests.js';
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(decodeURIComponent(u.pathname))}catch{return false}}
 export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
  const sql=[
@@ -108,6 +110,39 @@ export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
   await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"=2 WHERE "storeId"='store-A'`;await assert.rejects(combined(service),e=>e.status===409);
  });
 
+ await subtest('negotiated CASH and both CARD offers recover only before a unique execution grant across real concurrent clients',async()=>{
+  await a.$executeRaw`DELETE FROM "FtextCashRequest" WHERE "clientTransactionId"='fixture-checkout'`;
+  for(const [method,format]of [['CASH','OPERATOR_CONFIRMATION'],['CARD','OPERATOR_CONFIRMATION'],['CARD','POS_LINE8_OS7']]){
+   now=new Date();
+   const configured=await service.configure(scope,{...input,cashEnabled:true,cashDepartments:[{department:4,vatRate:13,vatCode:'2'}],cardEnabled:true,cardPayment:{code:2,posTerminalId:1,transactionType:format==='OPERATOR_CONFIRMATION'?1:6,resultFormat:format,confirmed:true}},'fixture-admin');
+   const pair=await service.createPairing(scope,'fixture-admin'),paired=await service.pair(pairInput(pair.code,configured));
+   await service.report(paired.token,{requestId:randomBytes(16).toString('hex'),checkedAt:now.toISOString(),ok:true,code:0,serialNumber:input.serialNumber,deviceTime:'handoff fixture',fiscalExecution:false});
+   const key='handoff-'+method+'-'+format;
+   let request;await a.$transaction(async tx=>{request=await prepareFtextCashRequest(tx,{...await service.cashContext(tx,scope),sessionId:'fixture-shift',clientTransactionId:key,requestHash:'fixture-hash',checkout:{paymentMethod:method},items:[{productId:'product-a',name:'SYNTHETIC',quantity:1,effectiveUnitPrice:1.25,discount:0,lineTotal:1.25,fiscalDepartment:4,vatRate:13,fiscalVatCode:'2'}],summary:{subtotal:1.25,discount:0,total:1.25}})});
+   const work=svc=>svc.ping(paired.token,{readinessVersion:1},(tx,d,c)=>pollFtextDeviceWork(tx,d,c,{handoffVersion:1}));
+   await assert.rejects(service.ping(paired.token,{readinessVersion:1},async(tx,d,c)=>{assert.equal((await pollFtextDeviceWork(tx,d,c,{handoffVersion:1})).request.id,request.id);throw Error('synthetic lost offer before commit')}),/synthetic lost offer before commit/);
+   const rolledBack=(await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0];assert.equal(rolledBack.status,'PREPARED');assert.equal(Object.hasOwn(rolledBack.checkoutJson,'ftextHandoff'),false);
+   const first=await work(service);assert.equal(first.request.id,request.id);
+   const offers=await Promise.all([work(service),work(other)]);assert.ok(offers.every(w=>JSON.stringify(w.request)===JSON.stringify(first.request)),'Lost delivery must retain the original nonce and plan, not create another request');
+   const unknown={requestId:request.id,settingsHash:request.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
+   await assert.rejects(service.authenticated(paired.token,(tx,d,c)=>recordFtextCashResult(tx,d,c,unknown)),e=>e.code==='FTEXT_HANDOFF_REVIEW');
+   const body={requestId:request.id,settingsHash:request.settingsHash,nonce:first.request.handoff.nonce,commandHash:first.request.handoff.commandHash,readyForExecution:true};
+   const accept=(svc,patch={})=>svc.authenticated(paired.token,(tx,d,c)=>acceptFtextHandoff(tx,d,c,{...body,...patch}));
+   await assert.rejects(accept(service,{commandHash:'b'.repeat(64)}),e=>e.code==='FTEXT_HANDOFF_REVIEW');
+   assert.equal((await accept(service,{readyForExecution:false})).requiresReadiness,true);
+   await assert.rejects(service.authenticated(paired.token,async(tx,d,c)=>{assert.equal((await acceptFtextHandoff(tx,d,c,body)).canExecute,true);throw Error('synthetic lost grant before commit')}),/synthetic lost grant before commit/);
+   assert.equal((await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0].checkoutJson.ftextHandoff.state,'OFFERED');
+   const controlBefore=(await snapshot()).find(r=>r.companyId===control.companyId),grants=await Promise.all([accept(service),accept(other)]);
+   assert.equal(grants.filter(g=>g.canExecute).length,1,'Exactly one transaction may commit execution permission');
+   const accepted=(await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0];assert.equal(accepted.status,'DISPATCHED');assert.equal(accepted.resultHash,null);assert.equal(accepted.saleId,null);
+   assert.equal((await accept(other)).canExecute,false,'Lost grant acknowledgement must never renew permission');
+   assert.deepEqual((await a.$queryRaw`SELECT * FROM "FtextCashRequest" WHERE "id"=${request.id}`)[0],accepted);
+   assert.equal((await work(service)).request,null);assert.deepEqual((await snapshot()).find(r=>r.companyId===control.companyId),controlBefore);
+   const reported=await service.authenticated(paired.token,(tx,d,c)=>recordFtextCashResult(tx,d,c,unknown));assert.equal(reported.status,'REQUIRES_CHECK');
+   await assert.rejects(accept(service),e=>e.code==='FTEXT_HANDOFF_REVIEW');
+   await a.$executeRaw`DELETE FROM "FtextCashRequest" WHERE "id"=${request.id}`; // isolated fixture only; no live fiscal operation
+  }
+ });
 }
 test('native ftext installation: tenant/atomic pairing/rollback/real license/lifecycle/replay/control',{skip:!isolated(),timeout:120000},async t=>{
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='ftext_install_'+randomBytes(12).toString('hex'),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const a=new PrismaClient({datasourceUrl:url.toString()}),b=new PrismaClient({datasourceUrl:url.toString()});let created=false;

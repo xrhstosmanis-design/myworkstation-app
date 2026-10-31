@@ -37,7 +37,7 @@ try {
         param($config)
         function script:Invoke-RestMethod {param($Method,$Uri,$Headers,$ContentType,$Body,$TimeoutSec);if($Headers.Authorization -cne 'Bearer fixture-only-device-token'){throw 'Wrong scoped device credential'};return [pscustomobject]@{uri=$Uri;body=$Body}}
         try {
-            foreach($action in @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result','late-receipt-poll','late-receipt-result')) {
+            foreach($action in @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result','late-receipt-poll','late-receipt-result','cash-handoff-accept')) {
                 $reply=Invoke-FtextCashApi $config $action @{requestId='fixture'}
                 if($reply.uri -cne ($config.apiBase+'/api/ftext/v1/device/'+$action) -or ($reply.body | ConvertFrom-Json).requestId -cne 'fixture'){throw 'Wrong authenticated ftext action'}
             }
@@ -51,7 +51,7 @@ try {
         function script:Invoke-RestMethod {
             param($Method,$Uri,$Headers,$ContentType,$Body,$TimeoutSec)
             $script:pollCalls++;$data=$Body | ConvertFrom-Json
-            if(-not $Uri.EndsWith('/work-poll') -or $Headers.Authorization -cne 'Bearer fixture-only-device-token' -or $data.readinessVersion -ne 1 -or $data.recovering -isnot [bool] -or $data.settingsHash -cne $config.settingsHash -or $data.settings.workFolder -cne $config.workFolder -or $data.settings.configurationId -cne $config.configurationId) {throw 'Wrong combined authenticated request'}
+            if(-not $Uri.EndsWith('/work-poll') -or $Headers.Authorization -cne 'Bearer fixture-only-device-token' -or $data.readinessVersion -ne 1 -or $data.handoffVersion -ne 1 -or $data.recovering -isnot [bool] -or $data.settingsHash -cne $config.settingsHash -or $data.settings.workFolder -cne $config.workFolder -or $data.settings.configurationId -cne $config.configurationId) {throw 'Wrong combined authenticated request'}
             return [pscustomobject]@{companyId=$config.companyId;storeId=$config.storeId;terminalPos=$config.terminalPos;settingsHash=$(if($script:pollForeign){'b'*64}else{$config.settingsHash});settings=$config;fiscalCheckoutEnabled=$false;request=$(if($script:pollWork){@{id='unexpected'}}else{$null});lateReceipt=$null;errorEvidence=$null}
         }
         try {
@@ -95,6 +95,31 @@ try {
             Remove-Item Function:script:Invoke-RestMethod -ErrorAction SilentlyContinue
             Remove-Item Function:script:Invoke-FtextStatus -ErrorAction SilentlyContinue
         }
+    } $readyConfig $readyConfigPath
+    Import-Module (Join-Path $PSScriptRoot 'Cloud-Tools.psm1') -Force
+
+    # Production handoff helper refreshes STATUS only after the authenticated
+    # server proves OFFERED/no grant; ACCEPTED retries never gain permission.
+    & (Get-Module 'Cloud-Tools') {
+        param($config,$path)
+        $script:handoffCalls=0;$script:handoffRefreshes=0;$script:handoffAccepted=$false;$script:handoffBad=$false
+        $script:handoffRequest=[pscustomobject]@{id='370a0232-aeb7-4320-9919-d96c3f9f52d5';handoff=[pscustomobject]@{nonce='370a0232-aeb7-4320-9919-d96c3f9f52d6'}}
+        $script:handoffSettings=$config.settingsHash;$script:handoffFolder=$config.workFolder
+        function script:Invoke-FtextCashApi {
+            param($Config,$Action,$Body)
+            $script:handoffCalls++;if($Action -cne 'cash-handoff-accept' -or $Body.readyForExecution -isnot [bool]){throw 'Unexpected handoff action'}
+            $execute=$false;$refresh=$false;$state='ACCEPTED'
+            if(-not $script:handoffAccepted){if($script:handoffRefreshes -eq 0){$state='OFFERED';$refresh=$true}else{$script:handoffAccepted=$true;$execute=$true}}
+            return [pscustomobject]@{ok=$true;version=1;requestId=$Body.requestId;settingsHash=$script:handoffSettings;nonce=$(if($script:handoffBad){'foreign'}else{$Body.nonce});commandHash=$Body.commandHash;state=$state;canExecute=[bool]$execute;requiresReadiness=[bool]$refresh}
+        }
+        function script:Invoke-FtextCloudReadiness {param($ConfigPath);$script:handoffRefreshes++;Remove-Item -LiteralPath (Join-Path $script:handoffFolder '.mws-ftext-status.json') -ErrorAction SilentlyContinue;return $true}
+        try{
+            if((Invoke-FtextCloudHandoff $path $script:handoffRequest ('a'*64)) -ne $true -or $script:handoffRefreshes -ne 1 -or $script:handoffCalls -ne 2){throw 'OFFERED handoff did not require one fresh STATUS before its first grant'}
+            $marker=Join-Path $config.workFolder '.mws-ftext-status.json';'synthetic' | Set-Content -LiteralPath $marker
+            if((Invoke-FtextCloudHandoff $path $script:handoffRequest ('a'*64)) -ne $false -or $script:handoffRefreshes -ne 1){throw 'Accepted grant was renewed or triggered another STATUS'}
+            $script:handoffBad=$true;$refused=$false;try{Invoke-FtextCloudHandoff $path $script:handoffRequest ('a'*64) | Out-Null}catch{$refused=$true};if(-not $refused){throw 'Foreign handoff acknowledgement was accepted'}
+            Remove-Item -LiteralPath $marker
+        }finally{Remove-Item Function:script:Invoke-FtextCashApi -ErrorAction SilentlyContinue;Remove-Item Function:script:Invoke-FtextCloudReadiness -ErrorAction SilentlyContinue}
     } $readyConfig $readyConfigPath
     Import-Module (Join-Path $PSScriptRoot 'Cloud-Tools.psm1') -Force
 

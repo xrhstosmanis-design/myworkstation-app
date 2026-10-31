@@ -97,7 +97,7 @@ function Get-FtextCashPending($Config) {
  return $pending
 }
 function Invoke-FtextCashRequest {
- param([Parameter(Mandatory=$true)][string]$ConfigPath,[Parameter(Mandatory=$true)]$Request,[ValidateRange(1,120)][int]$TimeoutSeconds=30)
+ param([Parameter(Mandatory=$true)][string]$ConfigPath,[Parameter(Mandatory=$true)]$Request,[ValidateRange(1,120)][int]$TimeoutSeconds=30,[scriptblock]$AcceptHandoff)
  $c=Get-FtextConfig $ConfigPath;$folder=$c.workFolder
  $hash=Get-FtextCashHash ([Text.Encoding]::UTF8.GetBytes($folder.ToUpperInvariant()))
  $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtext_'+$hash.ToUpperInvariant()));$held=$false
@@ -107,10 +107,15 @@ function Invoke-FtextCashRequest {
   $resultPath=Join-Path $folder ('mws-cash-'+$Request.id+'.res')
   $commandBytes=New-FtextCashCommand $c $Request $resultPath
   $digest=Get-FtextCashHash $commandBytes
+  $handoff=$Request.PSObject.Properties['handoff']
+  if($handoff) {
+   if($Request.handoff.version -ne 1 -or [string]$Request.handoff.nonce -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -or [string]$Request.handoff.commandHash -cne $digest -or $null -eq $AcceptHandoff -or ($Request.PSObject.Properties['kind'] -and [string]$Request.kind -ceq 'FTEXT_VOID')) {throw 'Unverified negotiated handoff. No fiscal command was written.'}
+  }
   $intentPath=Join-Path $folder ('mws-cash-'+$Request.id+'.intent.json')
   $reportPath=Join-Path $folder ('mws-cash-'+$Request.id+'.report.json')
   $activePath=Join-Path $folder '.mws-ftext-cash.json'
   $pending=Get-FtextCashPending $c
+  $publish=$false
   if($null -ne $pending -and [string]$pending.request.id -cne [string]$Request.id) {throw 'Another cash request is unresolved.'}
   if(Test-Path -LiteralPath $intentPath) {
    $intent=Get-Content -LiteralPath $intentPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -123,15 +128,26 @@ function Invoke-FtextCashRequest {
     if(-not (Test-Path -LiteralPath $originalPath -PathType Leaf) -or (Get-FtextCashHash ([IO.File]::ReadAllBytes($originalPath))) -cne [string]$Request.originalRawResultHash) {throw 'Original payment result changed or missing. No VOID was written.'}
    }
    $intent=[ordered]@{commandHash=$digest;settingsHash=$c.settingsHash;requestId=$Request.id}
-   # Write the irreversible intent first. A crash at any later point MUST NOT republish.
+   # Legacy intent is irreversible. Negotiated handoff still needs the unique
+   # server grant before its FIRST publication; accepted grants are never renewed.
    Write-FtextCashDurable $intentPath $intent
    Write-FtextCashDurable $activePath ([ordered]@{companyId=$c.companyId;storeId=$c.storeId;terminalPos=$c.terminalPos;serialNumber=$c.serialNumber;settingsHash=$c.settingsHash;request=$Request})
+   $publish=-not $handoff
+  }
+  if(Test-Path -LiteralPath $reportPath) {return Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json}
+  $temp=Join-Path $folder ('mws-cash-'+$Request.id+'.pending');$target=Join-Path $folder ('mws-cash-'+$Request.id+'.txt')
+  if($handoff -and -not (Test-Path -LiteralPath $resultPath) -and -not (Test-Path -LiteralPath $temp) -and -not (Test-Path -LiteralPath $target)) {
+   $grant=& $AcceptHandoff $Request $digest $ConfigPath
+   if($grant -isnot [bool]) {throw 'Handoff permission was not verified. No fiscal command was written.'}
+   $publish=$grant
+  }
+  if($publish) {
+   if((Test-Path -LiteralPath (Join-Path $folder '.mws-ftext-status.json')) -or @(Get-ChildItem -LiteralPath $folder -Filter '*.txt' -File).Count -gt 0 -or (Test-Path -LiteralPath $temp) -or (Test-Path -LiteralPath $resultPath)) {throw 'Input changed before publication. Original handoff retained; no resend.'}
    $temp=Join-Path $folder ('mws-cash-'+$Request.id+'.pending');$target=Join-Path $folder ('mws-cash-'+$Request.id+'.txt')
    $s=[IO.File]::Open($temp,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
    try {$s.Write($commandBytes,0,$commandBytes.Length);$s.Flush($true)} finally {$s.Dispose()}
    [IO.File]::Move($temp,$target)
   }
-  if(Test-Path -LiteralPath $reportPath) {return Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json}
   $deadline=[DateTime]::UtcNow.AddSeconds($TimeoutSeconds);$bytes=$null
   while([DateTime]::UtcNow -lt $deadline) {
    if(Test-Path -LiteralPath $resultPath) {

@@ -48,7 +48,7 @@ function Invoke-FtextCloudPoll($Config,[bool]$Recovering=$false) {
     foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode','serialNumber','workFolder','protocol','configurationId','lifecycleGeneration','cashEnabled','cashDepartments','cardEnabled','cardPayment')) {
         if($Config.PSObject.Properties[$key]) {$settings[$key]=$Config.$key}
     }
-    $body=@{readinessVersion=1;recovering=$Recovering;settingsHash=$Config.settingsHash;settings=$settings} | ConvertTo-Json -Depth 12 -Compress
+    $body=@{readinessVersion=1;recovering=$Recovering;settingsHash=$Config.settingsHash;settings=$settings;handoffVersion=1} | ConvertTo-Json -Depth 12 -Compress
     $response=Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/work-poll') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body $body -TimeoutSec 15
     Confirm-FtextCloudIdentity $Config $response
     foreach($key in @('request','lateReceipt','errorEvidence')) {if(-not $response.PSObject.Properties[$key]) {throw 'Incomplete scoped work response.'}}
@@ -83,8 +83,27 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath) {
     return $result.ok
 }
 function Invoke-FtextCashApi($Config,[string]$Action,$Body) {
-    if($Action -notin @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result','late-receipt-poll','late-receipt-result')) {throw 'Unsupported cash API action.'}
+    if($Action -notin @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result','late-receipt-poll','late-receipt-result','cash-handoff-accept')) {throw 'Unsupported cash API action.'}
     $token=Read-FtextDeviceToken $Config
     return Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/'+$Action) -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -TimeoutSec 30
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Invoke-FtextCashApi
+function Invoke-FtextCloudHandoff([string]$ConfigPath,$Request,[string]$CommandHash) {
+    $config=Get-FtextCloudConfig $ConfigPath
+    for($attempt=0;$attempt -lt 2;$attempt++) {
+        $clear=-not (Test-Path -LiteralPath (Join-Path $config.workFolder '.mws-ftext-status.json')) -and @(Get-ChildItem -LiteralPath $config.workFolder -Filter '*.txt' -File).Count -eq 0
+        $body=@{requestId=[string]$Request.id;settingsHash=[string]$config.settingsHash;nonce=[string]$Request.handoff.nonce;commandHash=$CommandHash;readyForExecution=[bool]$clear}
+        $ack=Invoke-FtextCashApi $config 'cash-handoff-accept' $body
+        if($ack.ok -ne $true -or $ack.version -ne 1 -or [string]$ack.requestId -cne [string]$Request.id -or [string]$ack.settingsHash -cne [string]$config.settingsHash -or [string]$ack.nonce -cne [string]$Request.handoff.nonce -or [string]$ack.commandHash -cne $CommandHash -or $ack.canExecute -isnot [bool] -or $ack.requiresReadiness -isnot [bool]) {throw 'Invalid original handoff acknowledgement.'}
+        if($ack.canExecute -eq $true) {
+            if(-not $clear -or [string]$ack.state -cne 'ACCEPTED' -or $ack.requiresReadiness -ne $false) {throw 'Inconsistent one-shot handoff permission.'}
+            return $true
+        }
+        if([string]$ack.state -ceq 'ACCEPTED' -and $ack.requiresReadiness -eq $false) {return $false}
+        if([string]$ack.state -cne 'OFFERED' -or $ack.requiresReadiness -ne $true) {throw 'Original handoff is not eligible for execution.'}
+        # The authenticated server proved no grant exists. Only in this
+        # pre-execution state may we refresh/resume a nonfiscal STATUS here.
+        Invoke-FtextCloudReadiness $ConfigPath | Out-Null
+    }
+    throw 'Fresh readiness was not acknowledged before handoff. No fiscal command was published.'
+}
+Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff
