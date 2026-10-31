@@ -113,7 +113,7 @@ export async function requireStaffAction(db,req,storeId,capability){
   await requireStaffGrant(db,req.user,storeId,capability);
   if(capability==='payments.expense'){
     const body=req.body||{};
-    if(body.type!=='OTHER_EXPENSE'||Number(body.amount)<=0||body.deferredInvoice||!body.idempotencyKey||!['DOCUMENT','NO_DOCUMENT'].includes(body.evidenceMode)||!['CASH_SHIFT','EXTERNAL'].includes(body.paymentSource)||!['CASH_SHIFT','CORPORATE_CARD','BANK_TRANSFER','EMPLOYEE_REIMBURSEMENT'].includes(body.paymentMethod)||(body.paymentSource==='CASH_SHIFT')!==(body.paymentMethod==='CASH_SHIFT'))throw staffError(400,'STAFF_PAYMENT_INVALID','Έλεγξε το είδος και τον τρόπο πληρωμής.');
+    if(body.supplierId||body.supplierName||body.invoiceDocumentNumber||body.type!=='OTHER_EXPENSE'||Number(body.amount)<=0||body.deferredInvoice||!body.idempotencyKey||!['DOCUMENT','NO_DOCUMENT'].includes(body.evidenceMode)||!['CASH_SHIFT','EXTERNAL'].includes(body.paymentSource)||!['CASH_SHIFT','CORPORATE_CARD','BANK_TRANSFER','EMPLOYEE_REIMBURSEMENT'].includes(body.paymentMethod)||(body.paymentSource==='CASH_SHIFT')!==(body.paymentMethod==='CASH_SHIFT'))throw staffError(400,'STAFF_PAYMENT_INVALID','Έλεγξε το είδος και τον τρόπο πληρωμής.');
     if(body.evidenceMode==='NO_DOCUMENT'&&body.responsibilityAcknowledged!==true)throw staffError(400,'STAFF_PAYMENT_DECLARATION','Επιβεβαίωσε τη δήλωση χωρίς παραστατικό.');
   }
   if(capability.startsWith('payments.')&&(req.body?.paymentSource==='CASH_SHIFT'||req.body?.paymentMethod==='CASH_SHIFT'||req.body?.subtractFromShift===true))await requireStaffGrant(db,req.user,storeId,'payments.cash');

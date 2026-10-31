@@ -74,6 +74,7 @@ test('writer revalidation uses current locked grants, selected terminal, declara
  assert.ok(p.calls.some(c=>c.sql.includes('FOR SHARE OF a,u,s,c')));assert.ok(p.calls.some(c=>c.sql.includes('FOR SHARE OF g,s')));
  await assert.rejects(requireStaffAction(p.db,{...req,body:{...expense,responsibilityAcknowledged:false}},'a1','payments.expense'),{code:'STAFF_PAYMENT_DECLARATION'});
  await assert.rejects(requireStaffAction(p.db,{...req,body:{...expense,paymentMethod:'CASH_SHIFT'}},'a1','payments.expense'),{code:'STAFF_PAYMENT_INVALID'});
+ await assert.rejects(requireStaffAction(p.db,{...req,body:{...expense,supplierId:'foreign'}},'a1','payments.expense'),{code:'STAFF_PAYMENT_INVALID'});
  const cancel={...req,staffGrant:{capability:'sales.cancel'},body:{kind:'CANCEL'},get:()=>''};
  await assert.rejects(requireStaffAction(p.db,cancel,'a1','sales.cancel'),{code:'STAFF_TERMINAL_REQUIRED'});
  const edit={...req,staffGrant:{capability:'invoices.edit'},body:{productId:'foreign'}};

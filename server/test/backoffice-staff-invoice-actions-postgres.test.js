@@ -7,6 +7,7 @@ import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft
 import {installStaffActionPolicy} from './helpers/backoffice-staff-actions-fixture.js';
 import {requireStaffAction,requireStaffOrderAction} from '../src/services/backoffice-staff-access.js';
 import * as common from '../src/lib/invoice-common-draft.js';
+import {purchasePrintedRounding} from '../src/lib/purchase-printed-rounding.js';
 
 test('native delegated invoice metadata and canonical approval preserve one posting, actor, control stock and live withdrawal',{skip:!isolatedInvoiceDb(),timeout:90000},async()=>{
  const f=await invoiceDbFixture(),db=f.db;
@@ -23,10 +24,20 @@ test('native delegated invoice metadata and canonical approval preserve one post
    order:async(companyId,orderId)=>(await db.$queryRaw`SELECT * FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${companyId}`)[0],
    editable:()=>{},lockPurchaseSupplierMetadata:async()=>{},supplier:()=>assert.fail('supplier must not change')};
   new Function(...Object.keys(deps),audit+source.slice(start,end))(...Object.values(deps));
-  const invoke=async(handler,capability,body)=>{let result,failure,status=200;const req={params:{orderId:'pos'},body,user,staffGrant:{capability},get:()=> 'POS2'},res={json:value=>{result=value},status:value=>(status=value,res)};await handler(req,res,error=>failure=error);return {result,failure,status}};
+  const invoke=async(handler,capability,body)=>{let result,failure,status=200;const req={params:{orderId:'pos',lineId:'line-pos'},body,user,staffGrant:{capability},get:()=> 'POS2'},res={json:value=>{result=value},status:value=>(status=value,res)};await handler(req,res,error=>failure=error);return {result,failure,status}};
   const before=await f.snapshot();const edited=await invoke(edit,'invoices.edit',{description:'Native reviewed metadata'});assert.ifError(edited.failure);assert.equal(edited.result.ok,true);
   assert.equal(await f.snapshot(),before);assert.equal((await db.$queryRaw`SELECT "description" FROM "PurchaseOrder" WHERE "id"='pos'`)[0].description,'Native reviewed metadata');
   assert.equal((await db.$queryRaw`SELECT "actorId" FROM "StoreOperatorAudit" WHERE "eventType"='PURCHASE_ORDER_DRAFT_UPDATED'`)[0].actorId,'delegated');
+  await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrderLine" ADD COLUMN "gift" boolean DEFAULT false,ADD COLUMN "markupPercent" numeric DEFAULT 0,ADD COLUMN "updatedAt" timestamptz DEFAULT now(),ADD COLUMN "resolutionStatus" text DEFAULT \'MATCHED\'');
+  const calc=source.slice(source.indexOf('function calc('),source.indexOf('async function learnConfirmedLineCorrection('));
+  const lineSchema=source.slice(source.indexOf('const lineSchema='),source.indexOf('router.get("/report",'));
+  const auditState=source.slice(source.indexOf('const auditLineState='),source.indexOf('async function writePurchaseAudit('));
+  const lineStart=source.indexOf('router.patch("/:orderId/lines/:lineId",'),lineEnd=source.indexOf('\nrouter.delete("/:orderId/lines/:lineId",',lineStart);let editLine;
+  const lineBindings={...deps,router:{patch:(_path,h)=>editLine=h},n:value=>Number(value||0),purchasePrintedRounding,
+   line:async(_company,id)=>(await db.$queryRaw`SELECT * FROM "PurchaseOrderLine" WHERE "id"=${id}`)[0],
+   learnConfirmedLineCorrection:()=>assert.fail('store-only staff edit must not change company supplier learning'),learnCentralInvoiceCorrection:()=>assert.fail('store-only staff edit must not change cross-company learning')};
+  new Function(...Object.keys(lineBindings),calc+lineSchema+auditState+source.slice(lineStart,lineEnd))(...Object.values(lineBindings));
+  const changedLine=await invoke(editLine,'invoices.edit',{description:'Reviewed store-only line',quantity:3});assert.ifError(changedLine.failure);assert.equal(changedLine.result.ok,true);assert.equal(changedLine.result.mappingLearned,false);assert.equal(changedLine.result.centralLearning.learned,false);assert.equal(await f.snapshot(),before);
   const handlers={},router={use:()=>{},post:()=>{},delete:()=>{},patch:(path,h)=>handlers[path]=h};
   const posting=(await readFile(new URL('../src/routes/purchase-order-posting-guard.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
   const bindings={Router:()=>router,crypto,prisma:db,requireStaffAction,...common};new Function(...Object.keys(bindings),posting)(...Object.values(bindings));
