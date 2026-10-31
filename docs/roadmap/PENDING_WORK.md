@@ -37,6 +37,8 @@ Broad correction remains OPEN/ASSIGNED. Next action: full/native PR and main CI,
 
 01/11 00:05 Athens follow-up: exact d8c622a7 full CI41245498251 FAIL4985/1/0; one delegated invoice fixture omitted existing ocrReviewReasons. Test-only column correction; assertions/runtime unchanged, no release/LAB PASS. Full final CI/release still required; retained owner.
 
+01/11 00:22 Athens:3b53cd3a full native4986/0/0 and backup8/0/0; pipeline FAIL in existing HTTP credit-ledger fixture at Athens month rollover. Reproduced exact period exclusion; test request now explicitly uses its credit document day, all original assertions preserved. No runtime change or LAB PASS; final full CI/release pending.
+
 ## 31/10/2026 23:00 Europe/Athens — CENTRAL-BACKOFFICE-ACCESS-01 / ACTION RIGHTS EXTENSION / ASSIGNED BEFORE SOURCE
 
 Same retained Rizareio readiness owner; continuation fix/owner-action-permissions-20261031. Explicit user instruction: proceed with the missing delegated invoice editing/approval, payment entry, sale cancellation and normal shift closing. Current main7a2dbdf5 and intervening common history, active/tracker/checklist/pending, original owner-permissions checkpoint and invoice/payment/POS/session manuals reviewed. Existing ten rights and installed form remain protected; broad correction is OPEN, no advanced writer LAB PASS. Historical login/read evidence is not repeated.
