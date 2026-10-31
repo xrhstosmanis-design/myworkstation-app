@@ -316,6 +316,7 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
       await db.$executeRawUnsafe(sql);assert.deepEqual((await sharedRead()).body.owners,[]);
       assert.equal((await request('/platform/companies/shared','admin','PUT',{...sharedConfig,version:sharedWallet.version})).body.code,'AI_WALLET_OWNER_REQUIRED');
     }
+    {
     // Customer prices use the actual wallet lock/HTTP authorization, not a
     // simulated ledger. Invoice identity is an authorized durable draft.
     await db.$executeRaw`CREATE TABLE "PurchaseDocument" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"status" text,"sourceType" text)`;
@@ -361,6 +362,7 @@ test('native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access
     let paidCalls=0;const pricedProvider=createWalletProvider({repository,enabled:()=>true,tariffs:()=>JSON.stringify([{model:'synthetic',inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:0,outputMicrosPerMillion:1000000,contextTokens:100,maxOutputTokens:20}])});
     await assert.rejects(pricedProvider({companyId:'pricing',storeId:'pricing-store',feature:'OWNER_ASSISTANT'},{model:'synthetic'},async()=>{paidCalls++;throw Error('must not call')}),e=>e.code==='AI_WALLET_INSUFFICIENT');assert.equal(paidCalls,0);
     assert.equal((await repository.read('pricing')).balanceMicros,pw.balanceMicros);assert.equal((await repository.read('pricing')).entries.length,pw.entries.length);
+    }
     assert.deepEqual(await db.$queryRaw`SELECT * FROM "BusinessControl"`,before);
   }finally{if(server)await new Promise(resolve=>server.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

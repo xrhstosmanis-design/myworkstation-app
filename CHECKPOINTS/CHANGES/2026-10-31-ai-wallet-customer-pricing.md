@@ -29,3 +29,6 @@ Local Node20.20.x:21 focused pure/mounted/cache/review tests PASS/0FAIL/0SKIP, i
 
 Next: exact full PR/main native CI, normal guarded exact healthy release, fresh new synthetic LAB D and measured restore. Until actual hosted acceptance this source is AWAITING LAB. Rizareio activation remains separate and requires the user's explicit rates and available real credit; do not copy another company's balance or trial.
 
+## Initial remote check — test declaration corrected
+
+Initial source ef2097cb/PR3381 recovery41206886544 FAIL: the expanded native fixture declared uncertain twice in one test lexical scope. No runtime failure inferred; native recovery/catalog/archive checks themselves passed. New pricing phase is now a separate lexical block, preserving the original notification-dispatch fixture. Re-run exact full/native CI on the new head; no merge/deployment/LAB has occurred. Local syntax checks now explicitly use module mode because this partial scratch checkout has no package.json.
