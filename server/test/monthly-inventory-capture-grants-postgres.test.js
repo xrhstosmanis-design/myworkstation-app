@@ -1,3 +1,4 @@
+import {ensureStoreChatInteractions} from '../src/chat-interactions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes,randomUUID} from 'node:crypto';
@@ -46,6 +47,7 @@ async function fixture(){
   for(const c of metadata.constraints.filter(c=>c.kind==='f'))await db.$executeRawUnsafe(`ALTER TABLE ${q(c.table)} ADD CONSTRAINT ${q(c.name)} ${c.definition}`);
   for(const trigger of metadata.triggers){await db.$executeRawUnsafe(trigger.definition);await db.$executeRawUnsafe(`ALTER TABLE ${q(trigger.table)} ${trigger.enabled==='A'?'ENABLE ALWAYS':trigger.enabled==='D'?'DISABLE':'ENABLE'} TRIGGER ${q(trigger.name)}`)}
   await provisionFtextRecoverySchema(db);await provisionAiWalletRecovery(db);await ensureBackofficeStaffSchema(db);
+  await ensureStoreChatInteractions(db);
   await provisionMonthlyInventorySnapshotSchema(db);await provisionMonthlyInventoryCaptureSchema(db);
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","licenseStatus","subscriptionEndsAt","updatedAt") VALUES ('fixture-company','SYNTHETIC','ACTIVE',NOW()+INTERVAL '1 day',NOW()),('foreign-company','FOREIGN','ACTIVE',NOW()+INTERVAL '1 day',NOW()),('platform-company','PLATFORM','ACTIVE',NOW()+INTERVAL '1 day',NOW())`);
   await db.$executeRawUnsafe(`INSERT INTO "Store"("id","companyId","name","updatedAt") VALUES ('target','fixture-company','SYNTHETIC',NOW()),('sibling','fixture-company','CONTROL',NOW()),('foreign','foreign-company','FOREIGN',NOW())`);

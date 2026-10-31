@@ -1,3 +1,4 @@
+import {ensureStoreChatInteractions} from '../src/chat-interactions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
@@ -48,6 +49,7 @@ async function fixture(){
   for(const c of metadata.constraints.filter(c=>c.kind==='f'))await db.$executeRawUnsafe(`ALTER TABLE ${q(c.table)} ADD CONSTRAINT ${q(c.name)} ${c.definition}`);
   for(const trigger of metadata.triggers){await db.$executeRawUnsafe(trigger.definition);await db.$executeRawUnsafe(`ALTER TABLE ${q(trigger.table)} ${trigger.enabled==='A'?'ENABLE ALWAYS':trigger.enabled==='D'?'DISABLE':'ENABLE'} TRIGGER ${q(trigger.name)}`)}
   await provisionFtextRecoverySchema(db);await provisionAiWalletRecovery(db);await ensureBackofficeStaffSchema(db);
+  await ensureStoreChatInteractions(db);
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","updatedAt") VALUES ('company','SYNTHETIC',NOW()),('foreign-company','CONTROL',NOW())`);
   await db.$executeRawUnsafe(`UPDATE "Company" SET "licenseStatus"='ACTIVE'`);
   await db.$executeRawUnsafe(`INSERT INTO "User"("id","email","passwordHash","fullName","role","companyId","mustChangePassword","updatedAt") VALUES ('owner','jobs@example.invalid','NO_LOGIN','SYNTHETIC','OWNER','company',false,NOW())`);

@@ -28,6 +28,8 @@ async function nativeFlow(){
   for(const trigger of metadata.triggers){await db.$executeRawUnsafe(trigger.definition);await db.$executeRawUnsafe(`ALTER TABLE ${q(trigger.table)} ${trigger.enabled==='A'?'ENABLE ALWAYS':trigger.enabled==='D'?'DISABLE':'ENABLE'} TRIGGER ${q(trigger.name)}`)}
   const {provisionFtextRecoverySchema}=await import('../src/services/ftext-cash-schema.js'),{provisionAiWalletRecovery}=await import('../src/services/ai-owner-wallet-schema.js'),{ensureBackofficeStaffSchema}=await import('../src/backoffice-staff-bootstrap.js');
   await provisionFtextRecoverySchema(db);await provisionAiWalletRecovery(db);await ensureBackofficeStaffSchema(db);
+  const {ensureStoreChatInteractions}=await import('../src/chat-interactions.mjs');
+  await ensureStoreChatInteractions(db);
   const {provisionMonthlyInventorySnapshotSchema}=await import('../src/services/monthly-inventory-snapshot-schema.js'),{provisionMonthlyInventoryCaptureSchema,monthlyInventoryCaptureLifecycleManifestProposal}=await import('../src/services/monthly-inventory-capture-schema.js');
   await provisionMonthlyInventorySnapshotSchema(db);await provisionMonthlyInventoryCaptureSchema(db);
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","licenseStatus","subscriptionEndsAt","updatedAt") VALUES ('fixture-company','SYNTHETIC','ACTIVE',NOW()+INTERVAL '1 day',NOW()),('foreign-company','FOREIGN','ACTIVE',NOW()+INTERVAL '1 day',NOW()),('platform-company','PLATFORM','ACTIVE',NOW()+INTERVAL '1 day',NOW())`);

@@ -1,3 +1,4 @@
+import {ensureStoreChatInteractions} from '../src/chat-interactions.mjs';
 import {ensureBackofficeStaffSchema} from "../src/backoffice-staff-bootstrap.js";
 import {provisionAiWalletRecovery} from '../src/services/ai-owner-wallet-schema.js';
 import test from 'node:test';
@@ -45,7 +46,8 @@ test('full reviewed native schema plus ftext verifies PG18 archive/COPY recovery
   await provisionFtextRecoverySchema(db);
   await provisionAiWalletRecovery(db);
   await ensureBackofficeStaffSchema(db);
-  tables.push("BackofficeStaffAccount","BackofficeStaffGrant","BackofficeStaffAudit","BackofficeStaffLoginGuard");
+  await ensureStoreChatInteractions(db);
+  tables.push("BackofficeStaffAccount","BackofficeStaffGrant","BackofficeStaffAudit","BackofficeStaffLoginGuard","StoreChatDelivery","StoreChatReaction");
   assert.doesNotThrow(()=>assertFtextCashLifecycleApproved(manifest));
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","updatedAt") VALUES ('fixture-company','SYNTHETIC',NOW()),('foreign-company','CONTROL',NOW())`);
   await db.$executeRawUnsafe(`INSERT INTO "Store"("id","name","companyId","updatedAt") VALUES ('target','SYNTHETIC','fixture-company',NOW()),('sibling','CONTROL','fixture-company',NOW()),('foreign','CONTROL','foreign-company',NOW())`);
