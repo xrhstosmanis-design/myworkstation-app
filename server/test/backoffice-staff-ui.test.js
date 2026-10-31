@@ -49,3 +49,24 @@ test('mounted uncertain count freezes the same event identity and preserves coun
     uncertain=false;await m.act(async()=>button('Επαλήθευση ίδιας καταχώρισης').click());assert.equal(writes.length,2);assert.deepEqual(writes[0],writes[1]);assert.equal(button('Επαλήθευση ίδιας καταχώρισης'),undefined);
   }finally{await m.close()}
 });
+
+test('mounted account form saves username and four-digit PIN without a required password or broadened store',async()=>{
+  const Admin=await component('BackofficeStaffAdmin'),writes=[];
+  const api=async(path,options={})=>{if(options.method==='POST'){writes.push(JSON.parse(options.body));return {id:'created'}}return {accounts:[],stores:[{id:'a1',name:'A1'},{id:'a2',name:'A2'}]}};
+  const m=await mount(Admin,{api});
+  try{
+    await m.act(async()=>button('Νέα προσωπική πρόσβαση').click());
+    const form=document.querySelector('form'),password=form.elements.password,pin=form.elements.pin;
+    assert.equal(password.required,false);assert.equal(password.checkValidity(),true);
+    password.value='short';assert.equal(password.minLength,10);password.value='';
+    for(const value of ['123','12a4']){pin.value=value;assert.equal(pin.checkValidity(),false)}
+    pin.value='0483';assert.equal(pin.checkValidity(),true);
+    form.elements.fullName.value='Isolated Counter';form.elements.username.value='counter.fixture';
+    await m.act(async()=>document.querySelector('.staff-grant input[type="checkbox"]').click());
+    assert.equal(form.checkValidity(),true);
+    await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    assert.equal(writes.length,1);assert.equal(Object.hasOwn(writes[0],'password'),false);assert.equal(writes[0].pin,'0483');
+    assert.deepEqual(writes[0].grants,[{storeId:'a1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']}]);
+    assert.equal(document.querySelector('form'),null);assert.match(document.body.textContent,/Αποθηκεύτηκε/);
+  }finally{await m.close()}
+});
