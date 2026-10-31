@@ -118,23 +118,28 @@ router.get("/:sessionId/detail",async(req,res,next)=>{
     // original session instead; mixed payment rows must not multiply sales.
     // Conflicting valid session evidence is excluded rather than guessed.
     const selectedSales=await prisma.$queryRaw`
+      WITH ledger_tokens AS MATERIALIZED (
+        SELECT token."saleId",t."sessionId",t."description"
+        FROM "StoreTransaction" t
+        JOIN "CashShiftSession" sh ON sh."id"=t."sessionId" AND sh."companyId"=t."companyId" AND sh."storeId"=t."storeId"
+        CROSS JOIN LATERAL unnest(regexp_split_to_array(COALESCE(t."description",''),'[^[:alnum:]_-]+')) AS token("saleId")
+        WHERE t."companyId"=${companyId} AND t."storeId"=${shift.storeId}
+      ), evidence AS (
+        SELECT token."saleId",token."sessionId" FROM ledger_tokens token
+        WHERE COALESCE(token."description",'') NOT LIKE ('%αρχική '||token."saleId"||'%')
+          AND COALESCE(token."description",'') NOT LIKE ('%αρχική πώληση '||token."saleId"||'%')
+        UNION ALL
+        SELECT a."details"->>'saleId',a."details"->>'sessionId'
+        FROM "StoreOperatorAudit" a
+        JOIN "CashShiftSession" sh ON sh."id"=a."details"->>'sessionId' AND sh."companyId"=a."companyId" AND sh."storeId"=a."storeId"
+        WHERE a."companyId"=${companyId} AND a."storeId"=${shift.storeId} AND a."eventType"='POS_SALE_COMPLETED'
+      ), unique_sessions AS (
+        SELECT evidence."saleId" FROM evidence GROUP BY evidence."saleId"
+        HAVING COUNT(DISTINCT evidence."sessionId")=1 AND MIN(evidence."sessionId")=${shift.id}
+      )
       SELECT s."id" FROM "Sale" s
+      JOIN unique_sessions evidence ON evidence."saleId"=s."id"
       WHERE s."companyId"=${companyId} AND s."storeId"=${shift.storeId} AND s."status"='COMPLETED'
-        AND EXISTS (
-          SELECT 1 FROM (
-            SELECT t."sessionId" FROM "StoreTransaction" t
-            JOIN "CashShiftSession" sh ON sh."id"=t."sessionId" AND sh."companyId"=s."companyId" AND sh."storeId"=s."storeId"
-            WHERE t."companyId"=s."companyId" AND t."storeId"=s."storeId"
-              AND s."id"=ANY(regexp_split_to_array(COALESCE(t."description",''),'[^[:alnum:]_-]+'))
-              AND COALESCE(t."description",'') NOT LIKE ('%αρχική '||s."id"||'%')
-              AND COALESCE(t."description",'') NOT LIKE ('%αρχική πώληση '||s."id"||'%')
-            UNION
-            SELECT a."details"->>'sessionId' FROM "StoreOperatorAudit" a
-            JOIN "CashShiftSession" sh ON sh."id"=a."details"->>'sessionId' AND sh."companyId"=s."companyId" AND sh."storeId"=s."storeId"
-            WHERE a."companyId"=s."companyId" AND a."storeId"=s."storeId" AND a."eventType"='POS_SALE_COMPLETED' AND a."details"->>'saleId'=s."id"
-          ) evidence
-          HAVING COUNT(DISTINCT evidence."sessionId")=1 AND MIN(evidence."sessionId")=${shift.id}
-        )
     `;
     const saleIds=selectedSales.map(row=>row.id);
     const [transactionsRaw,categoriesRaw,paymentsRaw,salesRaw]=await Promise.all([
