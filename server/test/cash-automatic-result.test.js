@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import XLSX from 'xlsx';
 import {hash} from '../src/services/cash-reconciliation-contract.js';
 import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
-import {canAutomaticallyCalculate,calculateCashResult,assertCalculatedCashResult} from '../src/services/cash-automatic-result.js';
+import {canAutomaticallyCalculate,calculateCashResult,assertCalculatedCashResult,pendingCashContinuationRows} from '../src/services/cash-automatic-result.js';
 import {projectAutomaticReviewedReport,canSendProvisionalCashReport} from '../src/services/cash-reviewed-automatic-contract.js';
 import {cashArchiveWorkbook} from '../src/services/cash-reviewed-archive.js';
 import {createReviewedCashEmailReader,reviewedCashEmailReadiness} from '../src/services/cash-reviewed-email.js';
@@ -79,4 +79,17 @@ test('explicit absent legacy approval accepts current provisional evidence; stal
  assert.equal(reviewedCashEmailReadiness(e,legacy),true);assert.equal(e.report.rows[2].automaticallyCalculated,false);
  for(const patch of [{reviewedAt:'2026-10-21T10:00:00Z'},{reviewDecision:'CONFIRMED'},{reviewedBy:'actor'},{reviewedAt:undefined}])assert.equal(reviewedCashEmailReadiness(e,[{...legacy[0],...patch},...legacy.slice(1)]),false);
  const changed=fixture();changed.sessions.get('a').automaticSnapshot.expectedOperational=99;assert.equal(reviewedCashEmailReadiness(await evidence(complete(changed)),legacy),false);
+});
+
+test('continuation omits current automatic results without trusting flags, approving reviews or closing document questions',()=>{
+ const r=complete(fixture()),before=structuredClone(r);
+ assert.deepEqual(pendingCashContinuationRows(r.rows).map(r=>r.sessionId),['c']);
+ assert.deepEqual(r,before);assert.match(r.text,/χωρίς παραστατικό/);
+ for(const mutate of [v=>{v.automaticAudit.checks=[]},v=>{v.recheck=true},v=>{v.eligible=false},v=>{v.identityRequiresReview=true},v=>{v.remainingCents=0}]){
+  const bad=structuredClone(r.rows[0]);mutate(bad);bad.automaticallyCalculated=true;
+  assert.deepEqual(pendingCashContinuationRows([bad]).map(v=>v.sessionId),['a']);
+ }
+ assert.deepEqual(pendingCashContinuationRows([{...r.rows[2],automaticallyCalculated:true}]).map(v=>v.sessionId),['c']);
+ assert.deepEqual(pendingCashContinuationRows([{...r.rows[2],reviewed:true}]),[],'preserve existing valid manual-review policy');
+ assert.deepEqual(pendingCashContinuationRows([{...r.rows[2],status:'NOT_APPLICABLE'}]),[]);
 });

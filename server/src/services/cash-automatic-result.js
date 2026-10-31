@@ -21,6 +21,10 @@ export function canAutomaticallyCalculate(row){
  if(!cashArithmeticIsCurrent(row)||row.eligible!==true||row.identityRequiresReview!==false||typeof row.operatorId!=='string'||!row.operatorId||row.employeeKey!=='operator:'+row.operatorId||!row.operatorName)return false;
  return row.automaticAudit.checks.filter(c=>c.code.endsWith('_HANDOFF')).every(c=>c.status==='NOT_APPLICABLE'||c.status==='MATCHED'&&c.differenceCents===0);
 }
+// Continuation uses the same current result as the report, never its display flag.
+export function pendingCashContinuationRows(rows){
+ return rows.filter(row=>row.status!=='NOT_APPLICABLE'&&!(row.reviewed===true||canAutomaticallyCalculate(row)));
+}
 const cents=z.number().int().safe().nonnegative();
 const count=z.number().int().min(0).max(200);
 const employee=z.object({key:z.string().min(1).max(200),name:z.string().min(1).max(200),identityRequiresReview:z.boolean(),shortageCents:cents,surplusCents:cents,shifts:count}).strict();

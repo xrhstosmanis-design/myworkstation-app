@@ -1,3 +1,4 @@
+import {pendingCashContinuationRows} from './cash-automatic-result.js';
 import {readLifecycleGeneration,assertLifecycleMutation} from './store-lifecycle-generation.js';
 import {createCashPaperRepository} from './cash-paper-repository.js';
 import {reconciliationEntity,reconciliationLimit,scopeKey,hash,actionId,requestHash,chainState,activeRecords,reconcileError,transactionMatchesPaper,periodSchema} from './cash-reconciliation-contract.js';
@@ -107,10 +108,10 @@ export function createCashReconciliationRepository(db){
         proof={...proof,targetId:d.targetId};
       }else if(d.kind==='CHECKPOINT'){
         if(d.reportHash!==report.reportHash||!report.rows.length)throw reconcileError('CASH_RECONCILIATION_SOURCE_CHANGED');
-        const pending=report.rows.filter(r=>!r.reviewed&&r.status!=='NOT_APPLICABLE').map(r=>r.day).sort();
+        const pendingRows=pendingCashContinuationRows(report.rows),pending=pendingRows.map(r=>r.day).sort();
         const nextDay=new Date(Date.parse(request.period.to+'T12:00:00Z')+86400000).toISOString().slice(0,10);
         if(d.resumeFrom<request.period.from||d.resumeFrom>nextDay||(pending.length&&d.resumeFrom>pending[0]))throw reconcileError('CASH_RECONCILIATION_CHECKPOINT_INVALID');
-        proof={...proof,reportHash:report.reportHash,pendingSessions:report.rows.filter(r=>!r.reviewed).map(r=>r.sessionId)};
+        proof={...proof,reportHash:report.reportHash,pendingSessions:pendingRows.map(r=>r.sessionId)};
       }
       const id=actionId(chain.key,request.requestId),detail={version:1,generation:scope.generation,sequence:chain.records.length+1,previousHead:chain.head,requestId:request.requestId,requestHash:digest,data:d,proof,actorName:String(actor.fullName||actor.email||'Ελεγκτής').slice(0,180)};
       detail.head=hash({id,sequence:detail.sequence,previousHead:detail.previousHead,requestHash:digest,data:d,proof,actorName:detail.actorName});

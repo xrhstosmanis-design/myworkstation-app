@@ -94,3 +94,18 @@ test('review history pages are explicit free GETs and never resubmit an action o
   await click(button('Παλαιότερες καταχωρήσεις'));assert.equal(button('Παλαιότερες καταχωρήσεις').disabled,true);await click(button('Νεότερες καταχωρήσεις'));assert.match(calls.at(-1).path,/historyPage=1/);assert(calls.every(c=>c.path.startsWith('/api/cash-reconciliation/stores/A?')));
  }finally{await m.cleanup();}
 });
+
+test('continuation defaults exclude automatic rows while retaining unresolved rows and explicitly saved notes, including empty lists',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,dom,React,root,Component}=m;let checkpoint=null;
+ const api=async()=>({...report('A',period),rows:[{...row('a','Calculated','b'),automaticallyCalculated:true},{...row('b','Pending',null),automaticallyCalculated:false}],checkpoint});
+ const click=el=>act(async()=>el.click());
+ const choose=async value=>{const el=field('Ενέργεια ελέγχου');await act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLSelectElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});};
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));
+  await click(button('Έλεγχος με επανυπολογισμούς'));await choose('CHECKPOINT');
+  assert.doesNotMatch(field('Εκκρεμότητες').value,/Calculated/);assert.match(field('Εκκρεμότητες').value,/Pending/);
+  checkpoint={resumeFrom:'2026-10-22',pendingNotes:['Λείπει παραστατικό υπολογισμένης βάρδιας.']};
+  await click(button('Ανανέωση ελέγχου'));assert.equal(field('Εκκρεμότητες').value,checkpoint.pendingNotes[0]);
+  checkpoint={...checkpoint,pendingNotes:[]};await click(button('Ανανέωση ελέγχου'));assert.equal(field('Εκκρεμότητες').value,'','a deliberately saved empty list is not overwritten by generated review notes');
+ }finally{await m.cleanup();}
+});
