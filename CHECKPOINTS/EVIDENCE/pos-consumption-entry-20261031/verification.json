@@ -47,5 +47,13 @@
       "label": false,
       "style": " .pos-consumption-entry{min-height:64px;border:2px solid #176b50;background:#e7f3ee;color:#15364f;box-shadow:0 2px 4px #07152c12}.pos-header-menu-panel .pos-consumption-entry:hover{background:#d6eadd;bo"
     }
-  ]
+  ],
+  "userConfirmation": {
+    "statement": "ειναι οκ",
+    "recordedAt": "2026-10-31T21:06:17Z",
+    "recordedAthens": "2026-10-31 23:06",
+    "scope": "LIMITED USER VISUAL PASS of explicit menu entry appearance only",
+    "deviceClientRevisionStoreTerminal": "Not independently identified",
+    "businessSubmissionOrDelta": "NOT TESTED; no replay"
+  }
 }

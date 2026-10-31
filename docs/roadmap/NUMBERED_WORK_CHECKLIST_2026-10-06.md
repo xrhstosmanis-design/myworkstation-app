@@ -713,7 +713,7 @@ Owner codex/n39-inventory-acceptance-20261010. Live BackOffice operations entry 
 
 - **Tracker ID:** `36`
 - **Κατάσταση στο στιγμιότυπο 06/10/2026:** OPEN
-- **Υπόλοιπο / όριο:** 19Oct PLATFORM-OWNER-GROUPS-01: περιορισμένο LIVE PASS πλοήγησης/κύλισης ανά ιδιοκτήτη, source PR2863+2873/revision3fe46f01, manual super-admin/PASS. Η ανεξάρτητη UI εργασία κλείνει· πλήρες εγχειρίδιο και άλλες αναθέσεις παραμένουν OPEN. POS-DECIMAL-KEYBOARD-01 κοινό πληκτρολόγιο οθόνης: πραγματικό hosted LAB entry/cancel12,5/1,20/0,05 PASS, exact accf3ddd/CI41208544864/guard41209698959, unchanged persisted controls. POS manual/checkpoint2026-10-31-pos-decimal-keyboards. Αρχικό POS/συσκευή και hardware keyboard παραμένουν RETEST OPEN με fix/pos-decimal-keyboards-20261031. Πλήρες manual36 παραμένει OPEN.
+- **Υπόλοιπο / όριο:** 19Oct PLATFORM-OWNER-GROUPS-01: περιορισμένο LIVE PASS πλοήγησης/κύλισης ανά ιδιοκτήτη, source PR2863+2873/revision3fe46f01, manual super-admin/PASS. Η ανεξάρτητη UI εργασία κλείνει· πλήρες εγχειρίδιο και άλλες αναθέσεις παραμένουν OPEN. POS-DECIMAL-KEYBOARD-01 κοινό πληκτρολόγιο οθόνης: πραγματικό hosted LAB entry/cancel12,5/1,20/0,05 PASS, exact accf3ddd/CI41208544864/guard41209698959, unchanged persisted controls. POS manual/checkpoint2026-10-31-pos-decimal-keyboards. Αρχικό POS/συσκευή και hardware keyboard παραμένουν RETEST OPEN με fix/pos-decimal-keyboards-20261031. Πλήρες manual36 παραμένει OPEN. 31Oct POS-CONSUMPTION-ENTRY-01: περιορισμένο USER VISUAL PASS νέου σαφούς κουμπιού, επιβεβαίωση «ειναι οκ», checkpoint2026-10-31-pos-consumption-entry/POS manual. Μόνο εμφάνιση εισόδου· πλήρες manual36 και άλλοι owners παραμένουν OPEN.
 
 ## 35 — Κλείσιμο βάρδιας με QR/κάρτα
 
