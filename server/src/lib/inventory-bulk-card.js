@@ -1,5 +1,6 @@
 import {randomUUID,createHash} from 'node:crypto';
 import {z} from 'zod';
+import {performance} from 'node:perf_hooks';
 import {resolveProductCardVat} from './product-card-vat.js';
 
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status})};
@@ -21,15 +22,29 @@ export async function saveInventoryBulkCard(db,user,input){
  if(body.priceMode&&body.priceValue===undefined||!body.priceMode&&body.priceValue!==undefined)fail('Επίλεξε τρόπο και τιμή αλλαγής.');
  if(!body.categoryId&&body.subcategoryId===undefined&&!body.vatDepartmentId&&!body.priceMode&&body.active===undefined&&body.allowPosPriceChange===undefined&&!body.setItem)fail('Διάλεξε τουλάχιστον μία αλλαγή.');
  const fingerprint=createHash('sha256').update(JSON.stringify({...body,productIds:ids})).digest('hex');
+ // Error-only phase evidence. Never log product/company/store/request IDs, the
+ // request, SQL, audit contents or provider error messages. Business semantics,
+ // transaction options and existing lock/replay behavior stay unchanged.
+ const permissionWrite=body.allowPosPriceChange!==undefined;
+ const permissionOnly=permissionWrite&&Object.keys(body).every(key=>['storeId','requestId','productIds','allProducts','allowPosPriceChange'].includes(key));
+ const started=permissionWrite?performance.now():0,loopStart=permissionWrite?performance.eventLoopUtilization():null,phases=[];
+ let phase='transaction-start',phaseStarted=started,selectedCount=null;
+ const mark=next=>{if(permissionWrite){const now=performance.now();phases.push({phase,ms:Math.round(now-phaseStarted)});phase=next;phaseStarted=now;}};
  return db.$transaction(async tx=>{
+  mark('advisory-lock');
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${company+':inventory-bulk:'+body.storeId}))`;
+  mark('store-check');
   if(!await tx.store.findFirst({where:{id:body.storeId,companyId:company,active:true},select:{id:true}}))fail('Μη έγκυρο κατάστημα.',403);
+  mark('replay-read');
   const replay=(await tx.$queryRaw`SELECT "details" FROM "StoreOperatorAudit" WHERE "companyId"=${company} AND "storeId"=${body.storeId} AND "eventType"='INVENTORY_BULK_CARD' AND "details"->>'requestId'=${body.requestId} LIMIT 1`)[0];
-  if(replay){if(replay.details.fingerprint!==fingerprint||replay.details.actorId!==user.id)fail('Το αίτημα έχει ήδη διαφορετικά στοιχεία.',409);return {ok:true,changed:replay.details.changed,idempotent:true};}
+  if(replay){if(replay.details.fingerprint!==fingerprint||replay.details.actorId!==user.id)fail('Το αίτημα έχει ήδη διαφορετικά στοιχεία.',409);mark('commit');return {ok:true,changed:replay.details.changed,idempotent:true};}
+  mark('membership-lock');
   const rows=await tx.$queryRaw`SELECT p."id",p."categoryId",p."subcategoryId",p."vatDepartmentId",p."vatRate",p."isSet",p."allowPosPriceChange",COALESCE(sp."salePrice",p."salePrice",0) AS "salePrice",sp."active" FROM "Product" p JOIN "StoreProduct" sp ON sp."productId"=p."id" AND sp."storeId"=${body.storeId} WHERE p."companyId"=${company} AND (${body.allProducts===true} OR p."id"=ANY(${ids}::text[])) ORDER BY p."id" FOR UPDATE OF p,sp`;
+  selectedCount=rows.length;
   if(body.allProducts)ids=rows.map(row=>row.id);
   if(!ids.length)fail('Δεν υπάρχουν είδη στο επιλεγμένο κατάστημα.');
   if(rows.length!==ids.length)fail('Κάποιο είδος δεν ανήκει στο επιλεγμένο κατάστημα.',409);
+  if(permissionWrite&&!permissionOnly)mark('other-changes');
   if(body.categoryId&&!(await tx.$queryRaw`SELECT "id" FROM "ProductCategory" WHERE "id"=${body.categoryId} AND "companyId"=${company} AND "active"=true FOR SHARE`)[0])fail('Η κατηγορία δεν είναι ενεργή στην εταιρεία.');
   if(body.subcategoryId&&!(await tx.$queryRaw`SELECT "id" FROM "ProductSubcategory" WHERE "id"=${body.subcategoryId} AND "categoryId"=${body.categoryId} AND "companyId"=${company} AND "active"=true FOR SHARE`)[0])fail('Η υποκατηγορία δεν ανήκει στην κατηγορία.');
   let setBefore=null;
@@ -50,7 +65,9 @@ export async function saveInventoryBulkCard(db,user,input){
    if(item.clearPreparationFee)await tx.$executeRaw`UPDATE "PreparationProductSettings" SET "environmentalFee"=0,"updatedAt"=NOW() WHERE "companyId"=${company} AND "productId"=ANY(${ids}::text[]) AND "environmentalFee"<>0`;
   }
   const vat=body.vatDepartmentId?await resolveProductCardVat(tx,company,body.vatDepartmentId,body.vatRate):null,changes=[];
+  mark('permission-update');
   if(body.allowPosPriceChange!==undefined)await tx.$executeRaw`UPDATE "Product" SET "allowPosPriceChange"=${body.allowPosPriceChange},"updatedAt"=NOW() WHERE "companyId"=${company} AND "id"=ANY(${ids}::text[]) AND "allowPosPriceChange" IS DISTINCT FROM ${body.allowPosPriceChange}`;
+  mark('audit-build');
   for(const row of rows){
    let nextPrice;
    if(body.priceMode){if(body.expectedPrices?.[row.id]!==Number(row.salePrice))fail('Η τιμή άλλαξε. Ανανέωσε την επιλογή πριν την καταχώρηση.',409);nextPrice=bulkCardPrice(Number(row.salePrice),body.priceMode,body.priceValue);}
@@ -64,7 +81,17 @@ export async function saveInventoryBulkCard(db,user,input){
    if(body.active!==undefined)await tx.$executeRaw`UPDATE "StoreProduct" SET "active"=${body.active},"updatedAt"=NOW() WHERE "storeId"=${body.storeId} AND "productId"=${row.id}`;
    changes.push({productId:row.id,before:row,after:{categoryId:body.categoryId,subcategoryId:body.categoryId?body.subcategoryId??null:body.subcategoryId,vatDepartmentId:vat?.id,vatRate:vat?.vatRate,salePrice:nextPrice,active:body.active,allowPosPriceChange:body.allowPosPriceChange,setItem:body.setItem}});
   }
+  mark('audit-write');
   await tx.$executeRaw`INSERT INTO "StoreOperatorAudit" ("id","companyId","storeId","operatorId","actorId","eventType","details") VALUES (${randomUUID()},${company},${body.storeId},${user.id},${user.id},'INVENTORY_BULK_CARD',${JSON.stringify({requestId:body.requestId,fingerprint,actorId:user.id,allProducts:body.allProducts===true,changed:ids.length,changes,...(body.setItem?{setBefore,setItem:body.setItem}:{})})}::jsonb)`;
+  mark('commit');
   return {ok:true,changed:ids.length};
+ }).catch(error=>{
+  if(permissionWrite&&['P2028','P2024'].includes(error?.code)){
+   try{
+    const now=performance.now(),loop=performance.eventLoopUtilization(loopStart);
+    console.warn('INVENTORY_BULK_PERMISSION_TIMEOUT',JSON.stringify({version:1,code:error.code,phase,totalMs:Math.round(now-started),phases:[...phases,{phase,ms:Math.round(now-phaseStarted)}].slice(-10),permissionOnly,allProducts:body.allProducts===true,requestedCount:requestedIds.length,selectedCount,eventLoop:{activeMs:Math.round(loop.active),idleMs:Math.round(loop.idle),utilization:Math.round(loop.utilization*10000)/10000}}));
+   }catch{/* Diagnostic delivery must never replace the original failure. */}
+  }
+  throw error;
  });
 }
