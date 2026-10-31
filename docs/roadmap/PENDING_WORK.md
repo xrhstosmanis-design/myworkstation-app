@@ -84,12 +84,6 @@ No claim of true device delivery: server acceptance, device delivery and explici
 
 Correct-store link entry and immediate close/reopen persistence were confirmed by owner and removed from pending. Only independently unmeasured idle/revocation/device/storage limits remain with retained owner; no replay of confirmed steps. See31Oct limited USER PASS and native-chat manual.
 
-## 31/10/2026 — INVENTORY-BULK-POS-PRICE-01 / REMAINING REAL LARGE ACCEPTANCE ONLY
-
-ASSIGNED fix/inventory-bulk-permission-large-20261031. Source3354 and native8000/10000 regression coverage are installed in exact42ae4a3d (full mainCI41199931951/4862server+8backup/0FAIL/0SKIP; guarded41201059265/Renderdep-dbitt4s9v7es738j9bc0 LIVE). New measured hosted one-product ALL enable/selected disable persistence and full restoration PASS31Oct12:49–12:51UTC, two exact receipts, prices/stock/43shifts/finance controls unchanged. Implementation/installation and this bounded LAB acceptance are complete; do not repeat them.
-
-Remaining only: user performs the intended ALL permission change on the actual large store and confirms native successful count; inspect its bound receipt without replaying already successful100 batches. Latest real large result was P2028 LIVE FAIL on old source; this is RETEST OPEN, not large production PASS from CI. No real-store mass write by this page. Preserve current flags/other owners; no whole39 closure. Checkpoint2026-10-31-inventory-bulk-pos-price-large.md, inventory manual and measured evidence/inventory-bulk-permission-large-20261031. Same owner retained until real acceptance/handoff.
-
 ## 31/10/2026 12:51 Europe/Athens — CENTRAL-BACKOFFICE-ACCESS-01 / SHORT PIN INSTALLED, FORM OBSERVED / LIVE ACCOUNT ACCEPTANCE OPEN
 
 Retained owner Rizareio readiness / feat/central-backoffice-access-20261029; continuation fix/backoffice-short-pin-20261031. Source PR3339 merged602ff7ea after exact PR/main CI4782PASS/0FAIL/0SKIP plus backup8PASS. Newest common source802d570dd0048558b53ee77ec753d2252210bd63 passed full mainCI41192839430/job124513994277:4842PASS/0FAIL/0SKIP plus backup8PASS and all five jobs green; native PIN-only case passed again10:35:35UTC. Ordinary guarded deployment41193853815/job124515985808 requested the exact revision10:44:10UTC and confirmed it healthy10:49:04UTC; public health independently confirmed the same revision. No bypass/manual deployment. All later parallel records and source retained.
