@@ -1,0 +1,46 @@
+{
+  "scope": "Synthetic expense issue metadata only; CI is not LAB PASS",
+  "source_pr": 3355,
+  "source_head": "1f747d9753ead30e9fe903e579f6f11f5cd14d9e",
+  "merged": "46814d0f241a41cb08f4ef6d1e721b38b9c99a34",
+  "pr_ci": {
+    "run": 41198151712,
+    "job": 124528694651,
+    "server_pass": 4851,
+    "backup_pass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "main_ci": {
+    "run": 41199931951,
+    "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "job": 124534437975,
+    "server_pass": 4862,
+    "backup_pass": 8,
+    "fail": 0,
+    "skip": 0,
+    "native_case": 792,
+    "native_expense_http_lifecycle": "PASS"
+  },
+  "runtime_blobs": {
+    "client/src/components/shared/CashReconciliationPanel.jsx": "4682dea8c7897dc1a22c2bf8b9e6881c66175d63",
+    "server/src/routes/cash-reconciliation.js": "be09b61cc602f0833176f5a5f48dceedd3329802",
+    "server/src/services/cash-issue-replies.js": "fe43b7876be9b61131f89b824fe375173b3d7cc6",
+    "server/src/services/cash-reconciliation-contract.js": "01df50f67c9d8cd057135711e19d5636f7d725f7",
+    "server/src/services/cash-reconciliation-report.js": "ca13b60436da9f9531df65adf8257fceebdfc694",
+    "server/src/services/cash-reconciliation-repository.js": "7eeb22bc9e6e51430aa94c22fdcb11151b4b5a95",
+    "server/src/services/cash-reconciliation-source.js": "dc9cca005c74679cd199592c1b1787ae7b40b3d1",
+    "server/src/services/cash-reviewed-archive.js": "5062e5a2b34b98401f9ae710f85457ab1d88e4b2",
+    "server/src/services/cash-reviewed-automatic-contract.js": "e8d506059fa0e151b061b438d23fd43845a8616e"
+  },
+  "hosted_issue_lifecycle": "NOT TESTED",
+  "guarded_deploy": {
+    "run": 41201059265,
+    "job": 124536843141,
+    "revision": "42ae4a3db371943fb0109aa815fac8a1b6bd9f33",
+    "pinned_at": "2026-10-31T12:26:59.753Z",
+    "healthy_at": "2026-10-31T12:32:24.574Z",
+    "status": "PASS",
+    "independent_browser_health": "exact42ae4a3; ok:true"
+  }
+}
