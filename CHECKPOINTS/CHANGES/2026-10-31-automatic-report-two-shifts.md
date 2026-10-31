@@ -1,3 +1,9 @@
+## 31/10/2026 — AUTO-REPORT-TWO-SHIFTS-01 / EXACT SOURCE CI PASS / SHARED RECORD RECONCILIATION
+
+Same owner fix/automatic-report-two-shifts-20261031. Source3418/head442940967b88f3645369759c40510f459a601c93 fullCI41241654412 all5jobsSUCCESS; build124656872114 records4972server+8backupPASS/0FAIL/0SKIP. Actual native settings HTTP565 and new mounted598/policy599–602 executed PASS, including null save/GET/READY midnight-close and original/control invariance. Local full Node20 completed4322PASS/0FAIL/326native infrastructureSKIP; Work build/TABLE_SERVICE PASS. Source-only claim3416 remains green/main before edits.
+
+Normal merge correctly refused after documentation-only peer receipts3417/3420 changed shared registries. Reconcile atop main4a1778134bb66bedca7549e6e389933eeaf116df, preserving every newer peer checkpoint/manual/PDF and all eight owned runtime/test blobs byte-for-byte. No forced merge, runtime change, test weakening or guard bypass. Exact combined PR/main full CI and guarded healthy release still required. No hosted write or LAB PASS; recipients/consent/dispatch untouched. Same owner retains this correction. Single next: validate the combined revision before installation, then new two-shift LAB acceptance.
+
 ## 31/10/2026 — AUTO-REPORT-TWO-SHIFTS-01 / SOURCE CANDIDATE / AWAITING NATIVE CI AND HOSTED ACCEPTANCE
 
 Owner fix/automatic-report-two-shifts-20261031 retained after explicit owner-approved transfer. Before-source claim3416/head98e577706cc0b17323d2f638e7b81e76fca941ac passed docsCI41241214024 SUCCESS and merged d06be9e7415b52b786481058902285e33ac6836e BEFORE all runtime/test edits. Reviewed main history since the last scoped19Oct monthly HOLD LAB result: operator summary805fe6cd, overlap3469b7ed, read-only snapshotbaecae11, writer lockad87ec72, dispatch integrationa0b4a8e1 and reviewed-cash0712a85c remain protected. No overlap/lock/auth/dispatch/cash-review writer change.
