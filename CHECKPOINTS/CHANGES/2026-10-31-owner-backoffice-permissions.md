@@ -89,3 +89,7 @@ Frontend and server preparation/build PASS locally. Focused original+new mounted
 
 Broad correction remains OPEN/ASSIGNED. Next action: full/native PR and main CI, ordinary guarded exact healthy deployment, then read-only installed owner matrix and separately authorized measured Owner/operator LAB acceptance. No whole PASS/manual closure, no new live credentials, permission choice or financial/stock action. Checkpoint CHECKPOINTS/CHANGES/2026-10-31-owner-backoffice-permissions.md.
 
+
+## 31/10/2026 — Delegated cancellation launcher visibility / source follow-up
+
+Source PR3423. Review found the existing POS dock CSS intentionally hides the launcher outside its POS parent. Added a staff-only static/flex override; Owner/POS styles stay unchanged. Actual mounted workspace plus both real stylesheets now proves the cancellation entry is visible outside POS, requires explicit terminal, submits one canonical CANCEL with selected store/terminal and never offers RETURN. Mounted suite11PASS/0FAIL/0SKIP; other local full baseline4322/0/328native-envSKIP. Initial combined source58080c3f CI41243826083 started but is superseded by this necessary UI correction; native/full CI and all live actions still pending, no LAB PASS. Latest common tracker PDF retained from main6b34016a while OPEN to preserve concurrent claims and avoid replacing another owner's published PDF.

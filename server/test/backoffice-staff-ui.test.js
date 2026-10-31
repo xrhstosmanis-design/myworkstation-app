@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {JSDOM} from 'jsdom';
 import {createRequire} from 'node:module';
+import {readFile} from 'node:fs/promises';
 const require=createRequire(import.meta.url);
 async function component(name){
   const r=await build({entryPoints:[new URL(`../../client/src/components/${name}.jsx`,import.meta.url).pathname],bundle:true,write:false,platform:'node',format:'cjs',external:['react','react-dom','react-dom/client','react/jsx-runtime','pdfjs-dist/build/pdf.worker.min.mjs?url','pdfjs-dist/build/pdf.mjs'],loader:{'.css':'empty'}});
@@ -17,6 +18,23 @@ async function mount(Component,props){
 }
 const identity={userId:'staff',companyId:'a',fullName:'Fixture',username:'fixture',stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:['cash.read']}]};
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
+test('delegated cancellation is visibly reachable outside POS, uses selected terminal and never offers RETURN',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[],shift={id:'shift',shiftLabel:'Synthetic',terminalPos:'POS2',status:'OPEN'},store={id:'a1',name:'A1'};
+ const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read','sales.cancel']}]};if(path.endsWith('/terminals'))return {storeId:'a1',terminals:['POS2']};if(path.endsWith('/sales/recent'))return {rows:[{id:'sale',total:6,occurredAt:'2026-10-31T08:00Z',lines:[],payments:[]}]};if(path.endsWith('/reverse'))return {total:6};return {store,openSession:shift,openSessions:[shift],recent:[],summaryBySession:{shift:{}},access:{}}};
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  const style=document.createElement('style');style.textContent=await readFile(new URL('../../client/src/components/commerce/pos-sale-actions.css',import.meta.url),'utf8')+await readFile(new URL('../../client/src/components/backoffice-staff.css',import.meta.url),'utf8');document.head.appendChild(style);
+  await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});await m.act(async()=>button('Πωλήσεις και βάρδιες').click());
+  assert.equal(button('ΠΩΛΗΣΕΙΣ / ΑΚΥΡΩΣΗ'),undefined);
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Ταμείο"]');s.value='POS2';s.dispatchEvent(new Event('change',{bubbles:true}))});await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  const dock=document.querySelector('.pos-sale-actions-dock');assert.ok(dock);assert.equal(window.getComputedStyle(dock).display,'flex');assert.equal(window.getComputedStyle(dock).position,'static');
+  await m.act(async()=>button('ΠΩΛΗΣΕΙΣ / ΑΚΥΡΩΣΗ').click());assert.equal(button('Επιστροφή'),undefined);
+  await m.act(async()=>button('Ακύρωση').click());
+  await m.act(async()=>{const input=document.querySelector('.pos-sale-actions-modal textarea');Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value').set.call(input,'Synthetic cancellation');input.dispatchEvent(new Event('input',{bubbles:true}))});
+  await m.act(async()=>button('Καταχώρηση ακύρωσης').click());
+  const writes=calls.filter(c=>c.options.method);assert.equal(writes.length,1);assert.deepEqual(JSON.parse(writes[0].options.body),{kind:'CANCEL',reason:'Synthetic cancellation'});assert.equal(writes[0].options.headers['x-backoffice-store-id'],'a1');assert.equal(writes[0].options.headers['x-mws-terminal-pos'],'POS2');
+ }finally{await m.close()}
+});
 test('actual invoice editor separates read, edit and approval controls and locks navigation while canonical approval is pending',async()=>{
  const Workspace=await component('BackofficeStaffWorkspace');
  for(const action of [null,'invoices.edit','invoices.approve']){
