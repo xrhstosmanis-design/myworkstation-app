@@ -12,9 +12,10 @@ const source=fs.readFileSync(new URL("../src/routes/owner-product-smart-entry.js
 const current=source.match(/const rows=await prisma\.\$queryRaw`([\s\S]*?)`;/)[1];
 const previous=fs.readFileSync(new URL("./fixtures/owner-catalog-before.sql",import.meta.url),"utf8");
 function query(template,companyId,q=""){
-  const parts=template.split(/\$\{(companyId|q===""|like)\}/);
+  const parts=template.split(/\$\{(companyId|q===""|like|scopedStoreId)\}/);
   const strings=[],values=[];
-  for(let i=0;i<parts.length;i++)i%2?values.push(parts[i]==="companyId"?companyId:parts[i]==='q===""'?q==="":`%${q}%`):strings.push(parts[i]);
+  for(let i=0;i<parts.length;i++)i%2?values.push(parts[i]==="scopedStoreId"?null:parts[i]==="companyId"?companyId:parts[i]==='q===""'?q==="":`%${q}%`):strings.push(parts[i]);
+  assert.ok(strings.every(part=>!part.includes("${")),"Every source SQL interpolation must be explicitly bound");
   return Prisma.sql(strings,...values);
 }
 function normalized(value){

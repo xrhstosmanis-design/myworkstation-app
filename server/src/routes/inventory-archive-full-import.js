@@ -7,7 +7,7 @@ const sourceName=name=>name&&!(name.startsWith("_ΧΩΡΙΣ "))?name:null;
 
 // All statements run inside one transaction. Importing a full archive must
 // either persist every row and its relationships or persist none of them.
-export async function importFullArchive(tx,companyId,storeId,rows,{sourceProfile}={}){
+export async function importFullArchive(tx,companyId,storeId,rows,{sourceProfile,operatorScope=null}={}){
   const categoryMap=new Map(),subcategoryMap=new Map(),supplierMap=new Map(),brandMap=new Map(),departmentMap=new Map();
   const [categories,subcategories,suppliers,brands,departments]=await Promise.all([
     tx.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "companyId"=${companyId}`,
@@ -74,9 +74,9 @@ export async function importFullArchive(tx,companyId,storeId,rows,{sourceProfile
       SELECT id,$2,"categoryId","subcategoryId","brandId","departmentId",sku,name,unit,"vatRate",("vatRate">0),COALESCE("salePrice",0),COALESCE("costPrice",0),"staffPrice","discountA","discountB","discountC",true,active FROM r WHERE action='CREATE'`,json,companyId);
     await tx.$executeRawUnsafe(`WITH r AS (SELECT * FROM jsonb_to_recordset($1::jsonb) AS x${record})
       UPDATE "Product" p SET "sku"=CASE WHEN r."renameSku" THEN r.sku ELSE COALESCE(p."sku",r.sku) END,"name"=r.name,"categoryId"=r."categoryId","subcategoryId"=r."subcategoryId","productCompanyId"=r."brandId","vatDepartmentId"=r."departmentId","vatRate"=r."vatRate","vatVerified"=(r."vatRate">0),
-      "salePrice"=COALESCE(r."salePrice",p."salePrice"),"costPrice"=COALESCE(r."costPrice",p."costPrice"),"staffPrice"=COALESCE(r."staffPrice",p."staffPrice"),
-      "discountA"=r."discountA","discountB"=r."discountB","discountC"=r."discountC","active"=r.active,"updatedAt"=CURRENT_TIMESTAMP
-      FROM r WHERE r.action='UPDATE' AND p."id"=r.id AND p."companyId"=$2`,json,companyId);
+      "salePrice"=CASE WHEN $3 THEN p."salePrice" ELSE COALESCE(r."salePrice",p."salePrice") END,"costPrice"=COALESCE(r."costPrice",p."costPrice"),"staffPrice"=COALESCE(r."staffPrice",p."staffPrice"),
+      "discountA"=r."discountA","discountB"=r."discountB","discountC"=r."discountC","active"=CASE WHEN $3 THEN p."active" ELSE r.active END,"updatedAt"=CURRENT_TIMESTAMP
+      FROM r WHERE r.action='UPDATE' AND p."id"=r.id AND p."companyId"=$2`,json,companyId,Boolean(operatorScope));
     await tx.$executeRawUnsafe(`WITH r AS (SELECT * FROM jsonb_to_recordset($1::jsonb) AS x${record})
       INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier")
       SELECT md5(random()::text||clock_timestamp()::text),r.id,b.barcode,1 FROM r CROSS JOIN LATERAL jsonb_array_elements_text(r.barcodes) AS b(barcode) WHERE b.barcode<>''

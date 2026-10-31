@@ -25,8 +25,8 @@ test('isolated PostgreSQL serializes real destruction requests and preserves liv
     const bootstrap=fs.readFileSync(new URL('../src/owner-product-bootstrap.js',import.meta.url),'utf8');
     for(const m of bootstrap.matchAll(/`(CREATE OR REPLACE FUNCTION "mws_adjust_live_stocktake_expected"[\s\S]*?\$\$ LANGUAGE plpgsql|CREATE TRIGGER "mws_live_stocktake_expected_after_movement"[^`]+)`/g))await db.$executeRawUnsafe(m[1]);
     const handlers=new Map(),Router=()=>Object.fromEntries(['get','post','delete','use','patch','put'].map(method=>[method,(path,...hs)=>handlers.set(method+path,hs.at(-1))]));
-    const source=fs.readFileSync(new URL('../src/routes/owner-product-actions.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export .*;\n/gm,'');
-    new Function('Router','prisma','crypto','z','requireCompanyModule','destroyInventoryProduct',source)(Router,db,crypto,z,()=>()=>{},destroyInventoryProduct);
+    const source=fs.readFileSync(new URL('../src/routes/owner-product-actions.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/^export .*;\n/gm,'').replace(/^export function /gm,'function ');
+    new Function('Router','prisma','crypto','z','defaultRequireCompanyModule','destroyInventoryProduct',source)(Router,db,crypto,z,()=>()=>{},destroyInventoryProduct);
     const run=(quantity=1,companyId='company')=>new Promise((resolve,reject)=>handlers.get('post/:productId/destruction')({params:{productId:'product'},user:{companyId,id:'owner'},body:{storeId:'store',quantity,reason:'N39 isolated waste'}},{json:resolve,status(){return this}},reject));
     const reset=async()=>{
       await db.$executeRawUnsafe('TRUNCATE "StocktakeMovementAdjustment","StockMovement","StocktakeLine","Stocktake","StoreProduct","Product","Store"');

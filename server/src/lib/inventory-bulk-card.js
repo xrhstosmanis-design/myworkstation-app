@@ -1,3 +1,4 @@
+import {authorizePosInventory,assertInventoryPayload} from "../services/pos-inventory-access.js";
 import {saveInventoryBulkPermission} from './inventory-bulk-permission.js';
 import {randomUUID,createHash} from 'node:crypto';
 import {z} from 'zod';
@@ -17,7 +18,8 @@ export async function saveInventoryBulkCard(db,user,input){
  if(body.allProducts){
   if(body.allowPosPriceChange===undefined||requestedIds.length||Object.keys(body).some(key=>!['storeId','requestId','productIds','allProducts','allowPosPriceChange'].includes(key)))fail('Η επιλογή όλων των ειδών επιτρέπεται μόνο για την άδεια αλλαγής τιμής POS.');
  }else if(!ids.length)fail('Επίλεξε πρώτα είδη.');
- if(!company||user.tokenType==='STORE_OPERATOR'||!['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(user.role)||(user.storeId&&user.storeId!==body.storeId))fail('Δεν επιτρέπεται το επιλεγμένο κατάστημα.',403);
+ if(user?.tokenType==='STORE_OPERATOR'&&(!user.operatorSessionId||!user.employeeId||!user.storeId))fail('Απαιτείται ενεργή σύνδεση χειριστή.',403);
+ if(!company||user.tokenType!=='STORE_OPERATOR'&&!['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(user.role)||(user.storeId&&user.storeId!==body.storeId))fail('Δεν επιτρέπεται το επιλεγμένο κατάστημα.',403);
  if(body.vatRate!==undefined&&!body.vatDepartmentId)fail('Επίλεξε πραγματικό Τμήμα ΦΠΑ.');
  if(body.subcategoryId&&!body.categoryId)fail('Επίλεξε πρώτα κατηγορία.');
  if(body.priceMode&&body.priceValue===undefined||!body.priceMode&&body.priceValue!==undefined)fail('Επίλεξε τρόπο και τιμή αλλαγής.');
@@ -32,6 +34,7 @@ export async function saveInventoryBulkCard(db,user,input){
  let phase='transaction-start',phaseStarted=started,selectedCount=null;
  const mark=next=>{if(permissionWrite){const now=performance.now();phases.push({phase,ms:Math.round(now-phaseStarted)});phase=next;phaseStarted=now;}};
  return db.$transaction(async tx=>{
+  if(user.tokenType==='STORE_OPERATOR'){const scope=await authorizePosInventory(tx,user,body.storeId);assertInventoryPayload(scope,{kind:'bulk',write:true},{},body);}
   mark('advisory-lock');
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${company+':inventory-bulk:'+body.storeId}))`;
   mark('store-check');
@@ -78,7 +81,7 @@ export async function saveInventoryBulkCard(db,user,input){
    if(vat)await tx.$executeRaw`UPDATE "Product" SET "vatDepartmentId"=${vat.id},"vatRate"=${vat.vatRate},"vatVerified"=true,"updatedAt"=NOW() WHERE "companyId"=${company} AND "id"=${row.id}`;
    if(nextPrice!==undefined&&nextPrice!==Number(row.salePrice)){
     await tx.$executeRaw`UPDATE "StoreProduct" SET "salePrice"=${nextPrice},"updatedAt"=NOW() WHERE "storeId"=${body.storeId} AND "productId"=${row.id}`;
-    await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","storeId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${randomUUID()},${company},${row.id},${body.storeId},${Number(row.salePrice)},${nextPrice},'INVENTORY_BULK_CARD',${user.id})`;
+    await tx.$executeRaw`INSERT INTO "ProductPriceHistory" ("id","companyId","productId","storeId","oldPrice","newPrice","changeType","createdByUserId") VALUES (${randomUUID()},${company},${row.id},${body.storeId},${Number(row.salePrice)},${nextPrice},'INVENTORY_BULK_CARD',${user.tokenType==='STORE_OPERATOR'?null:user.id})`;
    }
    if(body.active!==undefined)await tx.$executeRaw`UPDATE "StoreProduct" SET "active"=${body.active},"updatedAt"=NOW() WHERE "storeId"=${body.storeId} AND "productId"=${row.id}`;
    changes.push({productId:row.id,before:row,after:{categoryId:body.categoryId,subcategoryId:body.categoryId?body.subcategoryId??null:body.subcategoryId,vatDepartmentId:vat?.id,vatRate:vat?.vatRate,salePrice:nextPrice,active:body.active,allowPosPriceChange:body.allowPosPriceChange,setItem:body.setItem}});
