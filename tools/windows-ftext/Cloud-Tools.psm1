@@ -42,13 +42,15 @@ function Invoke-FtextCloudPing($Config) {
     Confirm-FtextCloudIdentity $Config $response
     return $response
 }
-function Invoke-FtextCloudPoll($Config,[bool]$Recovering=$false) {
+function Invoke-FtextCloudPoll($Config,[bool]$Recovering=$false,[ValidateRange(0,1)][int]$UnpublishedStopVersion=0) {
     $token=Read-FtextDeviceToken $Config
     $settings=[ordered]@{}
     foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode','serialNumber','workFolder','protocol','configurationId','lifecycleGeneration','cashEnabled','cashDepartments','cardEnabled','cardPayment')) {
         if($Config.PSObject.Properties[$key]) {$settings[$key]=$Config.$key}
     }
-    $body=@{readinessVersion=1;recovering=$Recovering;settingsHash=$Config.settingsHash;settings=$settings;handoffVersion=1} | ConvertTo-Json -Depth 12 -Compress
+    $payload=@{readinessVersion=1;recovering=$Recovering;settingsHash=$Config.settingsHash;settings=$settings;handoffVersion=1}
+    if($UnpublishedStopVersion -eq 1) {$payload.handoffStopVersion=1}
+    $body=$payload | ConvertTo-Json -Depth 12 -Compress
     $response=Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/work-poll') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body $body -TimeoutSec 15
     Confirm-FtextCloudIdentity $Config $response
     foreach($key in @('request','lateReceipt','errorEvidence')) {if(-not $response.PSObject.Properties[$key]) {throw 'Incomplete scoped work response.'}}
@@ -92,6 +94,7 @@ function Invoke-FtextCloudHandoff([string]$ConfigPath,$Request,[string]$CommandH
     $assertOriginal={
         $prefix=Join-Path $config.workFolder ('mws-cash-'+$Request.id)
         if(Test-Path -LiteralPath ($prefix+'.publish.json')) {throw 'Publication journal exists. Authorization cannot publish again.'}
+        if(Test-Path -LiteralPath ($prefix+'.stop.json')) {throw 'Terminal stop journal exists. Authorization cannot publish again.'}
         $intent=Get-Content -LiteralPath ($prefix+'.intent.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         $active=Get-Content -LiteralPath (Join-Path $config.workFolder '.mws-ftext-cash.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         if([string]$intent.requestId -cne [string]$Request.id -or [string]$intent.commandHash -cne $CommandHash -or [string]$intent.settingsHash -cne [string]$config.settingsHash -or [string]$active.request.id -cne [string]$Request.id -or [string]$active.request.handoff.nonce -cne [string]$Request.handoff.nonce -or [string]$active.request.handoff.commandHash -cne $CommandHash) {throw 'Original local handoff evidence is missing or changed.'}
@@ -104,6 +107,11 @@ function Invoke-FtextCloudHandoff([string]$ConfigPath,$Request,[string]$CommandH
         $body=@{requestId=[string]$Request.id;settingsHash=[string]$config.settingsHash;nonce=[string]$Request.handoff.nonce;commandHash=$CommandHash;readyForExecution=[bool]$clear}
         $ack=Invoke-FtextCashApi $config 'cash-handoff-accept' $body
         if($ack.ok -ne $true -or $ack.version -ne 1 -or [string]$ack.requestId -cne [string]$Request.id -or [string]$ack.settingsHash -cne [string]$config.settingsHash -or [string]$ack.nonce -cne [string]$Request.handoff.nonce -or [string]$ack.commandHash -cne $CommandHash -or $ack.requiresReadiness -isnot [bool]) {throw 'Invalid original handoff acknowledgement.'}
+        if([string]$ack.state -ceq 'STOPPED') {
+            if(-not $Request.handoff.PSObject.Properties['stopVersion'] -or $Request.handoff.stopVersion -ne 1 -or $ack.authorization -ne $null -or $ack.requiresReadiness -ne $false -or $ack.allowResend -ne $false -or $ack.stop.version -ne 1 -or [string]$ack.stop.id -notmatch '^[a-f0-9]{64}$' -or [string]$ack.stop.nonce -cne [string]$Request.handoff.nonce -or [string]$ack.stop.commandHash -cne $CommandHash -or [string]::IsNullOrWhiteSpace([string]$ack.stop.at)) {throw 'Invalid original terminal stop acknowledgement.'}
+            [void][DateTimeOffset]::Parse([string]$ack.stop.at,[Globalization.CultureInfo]::InvariantCulture)
+            return [pscustomobject]@{requestId=$ack.requestId;settingsHash=$ack.settingsHash;nonce=$ack.nonce;commandHash=$ack.commandHash;stopped=$true;stopId=$ack.stop.id;stoppedAt=$ack.stop.at}
+        }
         if([string]$ack.state -ceq 'ACCEPTED') {
             if($null -eq $ack.authorization -or [string]$ack.authorization.id -cne [string]$Request.handoff.nonce -or [string]::IsNullOrWhiteSpace([string]$ack.authorization.acceptedAt)) {throw 'Invalid immutable original authorization.'}
             [void][DateTimeOffset]::Parse([string]$ack.authorization.acceptedAt,[Globalization.CultureInfo]::InvariantCulture)
