@@ -10,6 +10,10 @@ Evidence CHECKPOINTS/CHANGES/2026-10-31-ai-wallet-sol-review.md; CHECKPOINTS/EVI
 
 Residuals remain assigned/OPEN: historical customer REVIEW reconciliation and B hold resolution require original bound evidence, no guessed/manual financial SQL; initial image-reader metering and PDF file_data validation are separate observations; per-customer pricing UI, actual Owner-session detail, delivered email/thresholds, other models/cache12h/mixed/long-context hosted acceptance and OCR/product/approval scope are not closed. Existing Azure/GPT5/configuration PASS and all other owners preserved. No whole-wallet or broader Gate3 PASS. The earlier LIVE FAIL/next-source notes below are historical for this completed bounded correction; do not repeat the paid test or reclaim other assigned work.
 
+### Final retained-owner handoff — 31Oct2026
+
+Bounded Sol correction and measured C acceptance are complete; broader AI-OWNER-WALLET-01 stays with feat/ai-owner-wallet-20261022 until an explicitly named receiving page is recorded. No duplicate assignment or paid C replay. Source/release and protected PASS/residuals are above; central receipt PR3366 publishes all five records together. Single next action for the requested pricing work: resolve the owner's intended per-customer price unit (percentage markup versus fixed invoice/call charge) before a new pricing implementation claim. Historical REVIEW resolution remains a separate evidence-bound financial workflow, never a timestamp guess or direct SQL write.
+
 ### Uniform cache policy source — 31Oct2026 / LOCAL REGRESSION PASS / AWAITING FULL CI AND LAB
 
 Same retained owner/continuation fix/ai-wallet-uniform-cache-20261031; before-source claim3345 merged c816eb14c39de4f854d0d91985e56aaf861c029e. Reviewed main history through2d80052: only unrelated documentation/inventory source, no intervening wallet change. Actual B remains LIVE FAIL; no new hosted or business action.
