@@ -4,6 +4,7 @@ import {z} from "zod";
 import {prisma} from "../prisma.js";
 import {businessPictureCalendarRange} from "../business-picture-dates.js";
 import {finishBusinessPictureRow} from "../business-picture-totals.js";
+import {applyBusinessPictureCostEstimates,collectBusinessPictureMissingCosts} from "../business-picture-cost-estimates.js";
 
 const router=Router();
 const reportQuery=z.object({
@@ -16,6 +17,8 @@ const reportQuery=z.object({
 });
 
 const n=value=>Number(value||0);
+const costEstimateFields=["estimatedCostValue","unestimatedCostLines","categoryEstimatedCostLines","storeEstimatedCostLines","salesAbsNet","missingSalesAbsNet","normalizedPurchaseCostLines","normalizedCatalogCostLines"];
+const costEstimateMetrics=row=>Object.fromEntries(costEstimateFields.map(field=>[field,n(row?.[field])]));
 const isoDay=date=>new Date(date).toISOString().slice(0,10);
 const purchaseDocumentMime="application/vnd.myworkstation.purchase-document";
 const mapMovement=row=>{
@@ -80,26 +83,82 @@ router.get("/business-picture",async(req,res,next)=>{
     const [stores,sales,purchases,expenses]=await Promise.all([
       prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
       prisma.$queryRaw`
-        SELECT TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
-          COUNT(DISTINCT sa."id")::int AS transactions,
-          COUNT(DISTINCT sa."id") FILTER (WHERE sa."source"='POS_REVERSAL' AND sa."reversalKind"='RETURN')::int AS "returnTransactions",
-          COUNT(DISTINCT sa."id") FILTER (WHERE sa."source"='POS_REVERSAL' AND sa."reversalKind"='CANCEL')::int AS "cancelTransactions",COALESCE(SUM(sl."lineTotal"),0) AS "salesGross",
-          COUNT(*)::int AS "salesLines",
-          COUNT(*) FILTER (WHERE (sa."source"='POS_REVERSAL' AND original."id" IS NULL) OR (pc."unitCost" IS NULL AND (p."costPrice" IS NULL OR p."costPrice"<=0)))::int AS "missingCostLines",
-          COALESCE(SUM(CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END),0) AS "salesNet",
-          COALESCE(SUM(sl."lineTotal"-CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END),0) AS "salesVat",
-          COALESCE(SUM(CASE WHEN sa."source"='POS_REVERSAL' AND original."id" IS NULL THEN NULL ELSE sl."quantity"*COALESCE(pc."unitCost",p."costPrice",0) END),0) AS "costValue"
-        FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED'
-        LEFT JOIN "Sale" original ON sa."source"='POS_REVERSAL' AND original."id"=sa."originalSaleId" AND original."companyId"=sa."companyId" AND original."storeId"=sa."storeId" AND original."status"='COMPLETED' AND original."source"<>'POS_REVERSAL'
-        LEFT JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
-        LEFT JOIN LATERAL (
-          SELECT CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END AS "unitCost"
-          FROM "PurchaseDocumentLine" pl JOIN "PurchaseDocument" pd ON pd."id"=pl."purchaseDocumentId"
-          WHERE pd."companyId"=${companyId} AND pd."storeId"=sa."storeId" AND pd."status"='APPROVED' AND pl."productId"=sl."productId" AND pd."documentDate"<=CASE WHEN sa."source"='POS_REVERSAL' THEN original."occurredAt" ELSE sa."occurredAt" END
-          ORDER BY pd."documentDate" DESC,pd."createdAt" DESC LIMIT 1
-        ) pc ON true
-        WHERE sa."occurredAt">=(${from}::timestamptz AT TIME ZONE 'UTC') AND (sa."occurredAt"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND sa."occurredAt"=(${upper}::timestamptz AT TIME ZONE 'UTC'))) AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
-        GROUP BY 1,2 ORDER BY day`,
+        WITH "postedCostGroups" AS MATERIALIZED (
+          SELECT pd."id" AS "documentId",pd."companyId",pd."storeId",pd."supplierId",pd."sourceType",pd."purchaseOrderId",pd."documentNumber",pd."documentDate",pd."createdAt",
+            pl."productId",SUM(pl."quantity") AS quantity,SUM(pl."netAmount") AS "postedNet",
+            (ARRAY_AGG(CASE WHEN pl."unit"='PACKAGE' THEN pl."unitCost"/NULLIF(pl."unitsPerPackage",0) ELSE pl."unitCost" END ORDER BY pl."createdAt" DESC,pl."id" DESC))[1] AS "legacyUnitCost"
+          FROM "PurchaseDocument" pd JOIN "PurchaseDocumentLine" pl ON pl."purchaseDocumentId"=pd."id"
+          WHERE pd."companyId"=${companyId} AND pd."status"='APPROVED' AND (${storeId}::text IS NULL OR pd."storeId"=${storeId})
+          GROUP BY pd."id",pl."productId"
+        ), "purchaseCosts" AS MATERIALIZED (
+          SELECT posted.*,COALESCE(original."pieceCost",posted."legacyUnitCost") AS "unitCost",original."pieceCost",original."rawLandedCost",original.factor
+          FROM "postedCostGroups" posted
+          LEFT JOIN LATERAL (
+            SELECT SUM(l."netAmount"+COALESCE(l."exciseTotal",0))/NULLIF(SUM(l."quantity"*CASE WHEN l."invoiceUnit"='PACKAGE' THEN l."stockUnitsPerInvoiceUnit" ELSE 1 END),0) AS "pieceCost",
+              SUM(l."netAmount"+COALESCE(l."exciseTotal",0))/NULLIF(SUM(l."quantity"),0) AS "rawLandedCost",
+              SUM(l."quantity"*CASE WHEN l."invoiceUnit"='PACKAGE' THEN l."stockUnitsPerInvoiceUnit" ELSE 1 END)/NULLIF(SUM(l."quantity"),0) AS factor
+            FROM "PurchaseOrder" o JOIN "PurchaseOrderLine" l ON l."orderId"=o."id" AND l."productId"=posted."productId"
+            WHERE o."id"=CASE WHEN posted."purchaseOrderId" IS NOT NULL THEN posted."purchaseOrderId" WHEN posted."sourceType"='PURCHASE_ORDER' THEN posted."documentId" END
+              AND o."companyId"=posted."companyId" AND o."storeId"=posted."storeId" AND o."supplierId" IS NOT DISTINCT FROM posted."supplierId"
+              AND o."invoiceNumber"=posted."documentNumber" AND o."status" IN ('FINAL','INVOICED')
+            HAVING SUM(l."quantity")=posted.quantity AND ROUND(SUM(l."netAmount"),2)=ROUND(posted."postedNet",2)
+              AND BOOL_AND(COALESCE(l."quantity">0 AND l."netAmount">=0 AND COALESCE(l."exciseTotal",0)>=0 AND l."resolutionStatus"='MATCHED'
+                AND (l."invoiceUnit" IN ('PIECE','KG','LITER') OR (l."invoiceUnit"='PACKAGE' AND l."stockUnitsPerInvoiceUnit">0)),false))
+          ) original ON true
+        ), "purchaseCostTimeline" AS MATERIALIZED (
+          SELECT costs.*,LEAD("documentDate") OVER(PARTITION BY "companyId","storeId","productId" ORDER BY "documentDate","createdAt","documentId") AS "validUntil" FROM "purchaseCosts" costs
+        ), "catalogCostSources" AS MATERIALIZED (
+          SELECT DISTINCT ON ("companyId","storeId","productId") "companyId","storeId","productId","pieceCost","rawLandedCost",factor
+          FROM "purchaseCosts" ORDER BY "companyId","storeId","productId","documentDate" DESC,"createdAt" DESC,"documentId" DESC
+        ), "saleCostLines" AS MATERIALIZED (
+          SELECT sa."id" AS "saleId",sa."source",sa."reversalKind",sa."storeId",p."categoryId",COALESCE(p."unit",'UNKNOWN') AS "costUnit",
+            TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,
+            TO_CHAR(sa."occurredAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,
+            sl."productId",COALESCE(p."name",sl."description") AS "productName",p."sku",sl."quantity",sl."lineTotal",
+            CASE WHEN sl."vatRate"=0 THEN sl."lineTotal" ELSE sl."lineTotal"/(1+sl."vatRate"/100) END AS "salesNet",
+            CASE WHEN sa."source"='POS_REVERSAL' AND original."id" IS NULL THEN NULL ELSE sl."quantity"*COALESCE(pc."unitCost",catalog."unitCost",0) END AS "lineCost",
+            (COALESCE(sa."source"='POS_REVERSAL' AND original."id" IS NULL,false) OR (pc."unitCost" IS NULL AND (p."costPrice" IS NULL OR p."costPrice"<=0))) AS "missingCost",
+            (COALESCE(sa."source"='POS_REVERSAL' AND original."id" IS NULL,false) OR sl."quantity"*sl."lineTotal"<0 OR sl."quantity"=0) AS "unsafeEstimate",
+            COALESCE(pc."pieceCost" IS NOT NULL AND ABS(pc."pieceCost"-pc."legacyUnitCost")>0.000001,false) AS "purchaseAdjusted",
+            COALESCE(pc."unitCost" IS NULL AND ABS(catalog."unitCost"-p."costPrice")>0.000001,false) AS "catalogAdjusted"
+          FROM "SaleLine" sl JOIN "Sale" sa ON sa."id"=sl."saleId" AND sa."companyId"=${companyId} AND sa."status"='COMPLETED'
+          LEFT JOIN "Sale" original ON sa."source"='POS_REVERSAL' AND original."id"=sa."originalSaleId" AND original."companyId"=sa."companyId" AND original."storeId"=sa."storeId" AND original."status"='COMPLETED' AND original."source"<>'POS_REVERSAL'
+          LEFT JOIN "Product" p ON p."id"=sl."productId" AND p."companyId"=${companyId}
+          LEFT JOIN "purchaseCostTimeline" pc ON pc."companyId"=sa."companyId" AND pc."storeId"=sa."storeId" AND pc."productId"=sl."productId"
+            AND pc."documentDate"<=CASE WHEN sa."source"='POS_REVERSAL' THEN original."occurredAt" ELSE sa."occurredAt" END
+            AND (pc."validUntil" IS NULL OR pc."validUntil">CASE WHEN sa."source"='POS_REVERSAL' THEN original."occurredAt" ELSE sa."occurredAt" END)
+          LEFT JOIN "catalogCostSources" recent ON recent."companyId"=sa."companyId" AND recent."storeId"=sa."storeId" AND recent."productId"=sl."productId"
+          LEFT JOIN LATERAL (
+            SELECT CASE WHEN p."unit"='PIECE' AND p."costPrice">0 AND recent."pieceCost" IS NOT NULL AND recent.factor>1
+              AND ABS(p."costPrice"-recent."rawLandedCost")<=0.000001 THEN recent."pieceCost" ELSE p."costPrice" END AS "unitCost"
+          ) catalog ON true
+          WHERE sa."occurredAt">=(${from}::timestamptz AT TIME ZONE 'UTC') AND (sa."occurredAt"<(${upper}::timestamptz AT TIME ZONE 'UTC') OR (${inclusiveUpper}::boolean AND sa."occurredAt"=(${upper}::timestamptz AT TIME ZONE 'UTC')))
+            AND (${storeId}::text IS NULL OR sa."storeId"=${storeId})
+        ), "costGroups" AS MATERIALIZED (
+          SELECT day,"storeId","categoryId","costUnit",
+            COALESCE(SUM("salesNet") FILTER(WHERE NOT "missingCost" AND quantity>0 AND "salesNet">0 AND "lineCost">=0),0) AS "knownSalesNet",
+            COALESCE(SUM("lineCost") FILTER(WHERE NOT "missingCost" AND quantity>0 AND "salesNet">0 AND "lineCost">=0),0) AS "knownSalesCost",
+            COALESCE(SUM(quantity) FILTER(WHERE NOT "missingCost" AND quantity>0 AND "lineCost">=0),0) AS "knownQuantity",
+            COALESCE(SUM("lineCost") FILTER(WHERE NOT "missingCost" AND quantity>0 AND "lineCost">=0),0) AS "knownUnitCostValue",
+            COALESCE(SUM("salesNet") FILTER(WHERE "missingCost" AND NOT "unsafeEstimate" AND "lineTotal"<>0 AND quantity<>0),0) AS "missingSalesNet",
+            COALESCE(SUM(quantity) FILTER(WHERE "missingCost" AND NOT "unsafeEstimate" AND "lineTotal"=0 AND quantity<>0),0) AS "missingZeroSalesQuantity",
+            COUNT(*) FILTER(WHERE "missingCost" AND NOT "unsafeEstimate" AND "lineTotal"<>0 AND quantity<>0)::int AS "missingPricedLines",
+            COUNT(*) FILTER(WHERE "missingCost" AND NOT "unsafeEstimate" AND "lineTotal"=0 AND quantity<>0)::int AS "missingZeroPriceLines",
+            COUNT(*) FILTER(WHERE "missingCost" AND "unsafeEstimate")::int AS "unsafeMissingLines",
+            COUNT(*) FILTER(WHERE "missingCost")::int AS "missingCostLines"
+          FROM "saleCostLines" GROUP BY day,"storeId","categoryId","costUnit"
+        )
+        SELECT month,day,COUNT(DISTINCT "saleId")::int AS transactions,
+          COUNT(DISTINCT "saleId") FILTER(WHERE source='POS_REVERSAL' AND "reversalKind"='RETURN')::int AS "returnTransactions",
+          COUNT(DISTINCT "saleId") FILTER(WHERE source='POS_REVERSAL' AND "reversalKind"='CANCEL')::int AS "cancelTransactions",
+          COUNT(*)::int AS "salesLines",COUNT(*) FILTER(WHERE "missingCost")::int AS "missingCostLines",
+          COALESCE(SUM("lineTotal"),0) AS "salesGross",COALESCE(SUM("salesNet"),0) AS "salesNet",COALESCE(SUM("lineTotal"-"salesNet"),0) AS "salesVat",COALESCE(SUM("lineCost"),0) AS "costValue",
+          COALESCE(SUM("lineCost") FILTER(WHERE NOT "missingCost"),0) AS "estimateKnownCostValue",
+          COALESCE(SUM(ABS("salesNet")),0) AS "salesAbsNet",COALESCE(SUM(ABS("salesNet")) FILTER(WHERE "missingCost"),0) AS "missingSalesAbsNet",
+          COUNT(*) FILTER(WHERE "purchaseAdjusted")::int AS "normalizedPurchaseCostLines",COUNT(*) FILTER(WHERE "catalogAdjusted")::int AS "normalizedCatalogCostLines",
+          (SELECT JSONB_AGG(TO_JSONB(g)) FROM "costGroups" g WHERE g.day=l.day) AS "costGroups",
+          COALESCE(JSONB_AGG(JSONB_BUILD_OBJECT('storeId',"storeId",'productId',"productId",'name',"productName",'sku',sku,'quantity',quantity,'salesGross',"lineTotal",'salesNet',"salesNet",'reason',CASE WHEN "unsafeEstimate" THEN 'UNSAFE_ORIGINAL' ELSE 'MISSING_COST' END)) FILTER(WHERE "missingCost"),'[]'::jsonb) AS "missingCostDetails"
+        FROM "saleCostLines" l GROUP BY month,day ORDER BY day`,
       prisma.$queryRaw`
         SELECT TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM') AS month,TO_CHAR("documentDate" AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Athens','YYYY-MM-DD') AS day,COUNT(*)::int AS documents,
           COALESCE(SUM("totalNet"),0) AS "purchaseNet",COALESCE(SUM("totalVat"),0) AS "purchaseVat",COALESCE(SUM("totalGross"),0) AS "purchaseGross"
@@ -149,16 +208,16 @@ router.get("/business-picture",async(req,res,next)=>{
           AND (${storeId}::text IS NULL OR tx."storeId"=${storeId})
         GROUP BY 1,2 ORDER BY day`
     ]);
-    const rows=new Map(),key=value=>new Date(value).toISOString().slice(0,10),ensure=(day,month)=>{const id=key(day);if(!rows.has(id))rows.set(id,{day:id,month:key(month).slice(0,7),transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0});return rows.get(id)};
-    for(const row of sales)Object.assign(ensure(row.day,row.month),{transactions:n(row.transactions),returnTransactions:n(row.returnTransactions),cancelTransactions:n(row.cancelTransactions),salesLines:n(row.salesLines),missingCostLines:n(row.missingCostLines),salesGross:n(row.salesGross),salesNet:n(row.salesNet),salesVat:n(row.salesVat),costValue:n(row.costValue)});
+    const rows=new Map(),key=value=>new Date(value).toISOString().slice(0,10),ensure=(day,month)=>{const id=key(day);if(!rows.has(id))rows.set(id,{day:id,month:key(month).slice(0,7),transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0,...costEstimateMetrics()});return rows.get(id)};
+    for(const row of applyBusinessPictureCostEstimates(sales))Object.assign(ensure(row.day,row.month),{transactions:n(row.transactions),returnTransactions:n(row.returnTransactions),cancelTransactions:n(row.cancelTransactions),salesLines:n(row.salesLines),missingCostLines:n(row.missingCostLines),salesGross:n(row.salesGross),salesNet:n(row.salesNet),salesVat:n(row.salesVat),costValue:n(row.costValue),...costEstimateMetrics(row)});
     for(const row of purchases)Object.assign(ensure(row.day,row.month),{documents:n(row.documents),purchaseNet:n(row.purchaseNet),purchaseVat:n(row.purchaseVat),purchaseGross:n(row.purchaseGross)});
     for(const row of expenses)Object.assign(ensure(row.day,row.month),{payments:n(row.payments),expenseGross:n(row.expenseGross),expensePayments:n(row.expensePayments),missingExpenseVatPayments:n(row.missingExpenseVatPayments),knownExpenseVat:n(row.knownExpenseVat),paymentTotal:n(row.paymentTotal)});
     const finish=finishBusinessPictureRow;
     const daily=[...rows.values()].sort((a,b)=>b.day.localeCompare(a.day)).map(finish);
-    const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
-    const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0}));
+    const monthlyMap=new Map();for(const row of daily){const current=monthlyMap.get(row.month)||{month:row.month,transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0,...costEstimateMetrics()};for(const field of Object.keys(current))if(field!=="month")current[field]+=n(row[field]);monthlyMap.set(row.month,current)}
+    const monthly=[...monthlyMap.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(finish),totals=finish(monthly.reduce((acc,row)=>{for(const field of Object.keys(acc))if(field!=="month")acc[field]+=n(row[field]);return acc},{month:"ΣΥΝΟΛΟ",transactions:0,returnTransactions:0,cancelTransactions:0,salesLines:0,missingCostLines:0,salesGross:0,salesNet:0,salesVat:0,costValue:0,documents:0,purchaseNet:0,purchaseVat:0,purchaseGross:0,payments:0,expenseGross:0,expensePayments:0,missingExpenseVatPayments:0,knownExpenseVat:0,paymentTotal:0,...costEstimateMetrics()}));
     res.set("Cache-Control","no-store, private");
-    res.json({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,missingExpenseVatDetails:expenses.flatMap(row=>(row.missingExpenseVatDetails||[]).map(item=>({...item,day:row.day,month:row.month,amount:n(item.amount),storeName:stores.find(store=>store.id===item.storeId)?.name||null}))).sort((a,b)=>String(b.occurredAt).localeCompare(String(a.occurredAt))||b.id.localeCompare(a.id)),calculationNotes:{expenses:"Μικτά έξοδα από καταγεγραμμένες πληρωμές. Κάθε ενεργή πληρωμή εμφανίζεται στην ημερομηνία της. Καθαρό ποσό και ΦΠΑ επιμερίζονται αναλογικά από συνεπές εγκεκριμένο παραστατικό του ίδιου καταστήματος, με συμφωνία στρογγυλοποίησης στην εξόφληση. Όπου δεν υπάρχει έγκυρη ανάλυση ΦΠΑ (χωρίς σύνδεση, μη διαθέσιμο ή ασυνεπές παραστατικό, υπερπληρωμή), ολόκληρο το ποσό υπολογίζεται ως έξοδο με ΦΠΑ 0% στην εικόνα ιδιοκτήτη, σύμφωνα με την οδηγία του. Τα αρχικά παραστατικά δεν τροποποιούνται. Ακυρωμένες πληρωμές δεν προσμετρώνται. Δεν πιστοποιείται έκπτωση ΦΠΑ ή λογιστικό αποτέλεσμα.",reversals:"Επιστροφές και ακυρώσεις περιλαμβάνονται με αντίστροφα ποσά. Η αναζήτηση κόστους αγοράς χρησιμοποιεί την ημερομηνία της αρχικής πώλησης· χωρίς έγκυρο σύνδεσμο το κόστος παραμένει άγνωστο.",costCoverage:"Όπου λείπει κόστος, κέρδος και margin δεν υπολογίζονται. Μηδενικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
+    res.json({generatedAt:new Date().toISOString(),...period,stores,monthly,daily,totals,missingCostDetails:collectBusinessPictureMissingCosts(sales).map(row=>({...row,storeName:stores.find(store=>store.id===row.storeId)?.name||null})),missingExpenseVatDetails:expenses.flatMap(row=>(row.missingExpenseVatDetails||[]).map(item=>({...item,day:row.day,month:row.month,amount:n(item.amount),storeName:stores.find(store=>store.id===item.storeId)?.name||null}))).sort((a,b)=>String(b.occurredAt).localeCompare(String(a.occurredAt))||b.id.localeCompare(a.id)),calculationNotes:{expenses:"Μικτά έξοδα από καταγεγραμμένες πληρωμές. Κάθε ενεργή πληρωμή εμφανίζεται στην ημερομηνία της. Καθαρό ποσό και ΦΠΑ επιμερίζονται αναλογικά από συνεπές εγκεκριμένο παραστατικό του ίδιου καταστήματος, με συμφωνία στρογγυλοποίησης στην εξόφληση. Όπου δεν υπάρχει έγκυρη ανάλυση ΦΠΑ (χωρίς σύνδεση, μη διαθέσιμο ή ασυνεπές παραστατικό, υπερπληρωμή), ολόκληρο το ποσό υπολογίζεται ως έξοδο με ΦΠΑ 0% στην εικόνα ιδιοκτήτη, σύμφωνα με την οδηγία του. Τα αρχικά παραστατικά δεν τροποποιούνται. Ακυρωμένες πληρωμές δεν προσμετρώνται. Δεν πιστοποιείται έκπτωση ΦΠΑ ή λογιστικό αποτέλεσμα.",reversals:"Επιστροφές και ακυρώσεις περιλαμβάνονται με αντίστροφα ποσά. Η αναζήτηση κόστους αγοράς χρησιμοποιεί την ημερομηνία της αρχικής πώλησης· χωρίς έγκυρο σύνδεσμο το κόστος παραμένει άγνωστο.",costCoverage:"Όπου λείπει κόστος, τα οριστικά κέρδη και Margin παραμένουν άγνωστα. Εμφανίζεται χωριστά εκτίμηση από τα γνωστά κόστη της ίδιας κατηγορίας και μονάδας στην επιλεγμένη περίοδο, με εναλλακτική βάση το ίδιο κατάστημα. Οι δωρεάν πωλήσεις εκτιμώνται από γνωστό κόστος ανά μονάδα. Χωρίς επαρκή βάση ή αρχική πώληση επιστροφής δεν παράγεται εκτίμηση. Η κάλυψη αφορά τις πωλήσεις με γνωστό κόστος, όχι εγγύηση ακρίβειας. Μηδενικό πραγματικό κόστος αναγνωρίζεται μόνο από εγκεκριμένη αγορά· το κόστος καταλόγου παραμένει ενδεικτικό.",units:"Στις παλιές εγγραφές συσκευασίας το κόστος μετατρέπεται ανά τεμάχιο μόνο με άμεση σύνδεση στο οριστικοποιημένο αρχικό παραστατικό και συμφωνία ποσοτήτων/καθαρών αξιών. Περιλαμβάνονται οι τελικές εκπτώσεις και ο ΕΦΚ. Τα αρχικά στοιχεία δεν τροποποιούνται.",grossProfit:"Καθαρές πωλήσεις μείον καταγεγραμμένο κόστος πωληθέντων.",netProfit:"Μικτό κέρδος μείον καταγεγραμμένα λοιπά έξοδα. Δεν αποτελεί λογιστικό ή φορολογικό αποτέλεσμα."}});
   }catch(error){next(error)}
 });
 
