@@ -18,6 +18,24 @@ async function mount(Component,props){
 }
 const identity={userId:'staff',companyId:'a',fullName:'Fixture',username:'fixture',stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:['cash.read']}]};
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
+test('delegated expense form exposes only its granted action, requires declaration and sends one scoped stable-key pending-review input',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[],store={id:'a1',name:'A1'};
+ const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read','payments.read','payments.expense']}]};if(path.endsWith('/terminals'))return {storeId:'a1',terminals:['POS2']};if(path.includes('/backoffice-staff/payments/'))return {storeId:'a1',suppliers:[],purchaseDocuments:[]};if(options.method)return {id:'synthetic',amount:2};return {store,openSession:null}};
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});await m.act(async()=>button('Πληρωμές').click());
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Ταμείο"]');s.value='POS2';s.dispatchEvent(new Event('change',{bubbles:true}))});await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+  assert.equal(button('Πληρωμή Προμηθευτή'),undefined);assert.equal(button('Εισαγωγή αρχείου τράπεζας'),undefined);assert.equal(button('Μεταφορά Ποσού'),undefined);
+  await m.act(async()=>button('Λοιπά Έξοδα').click());
+  const form=document.querySelector('form'),amount=form.querySelector('input[inputmode="decimal"]');
+  await m.act(async()=>{Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(amount,'2');amount.dispatchEvent(new Event('input',{bubbles:true}))});
+  await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));assert.equal(calls.filter(c=>c.options.method).length,0);
+  assert.equal(form.querySelector('option[value="CASH_SHIFT"]'),null);
+  await m.act(async()=>form.querySelector('input[type="checkbox"]').click());await m.act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  const writes=calls.filter(c=>c.options.method);assert.equal(writes.length,1);const body=JSON.parse(writes[0].options.body);assert.equal(body.type,'OTHER_EXPENSE');assert.equal(body.amount,2);assert.equal(body.responsibilityAcknowledged,true);assert.equal(body.paymentSource,'EXTERNAL');assert.equal(body.paymentMethod,'CORPORATE_CARD');assert.ok(body.idempotencyKey);assert.equal(body.supplierId,null);assert.equal(writes[0].options.headers['x-backoffice-store-id'],'a1');
+  await m.act(async()=>new Promise(resolve=>setTimeout(resolve,700)));
+ }finally{await m.close()}
+});
 test('delegated cancellation is visibly reachable outside POS, uses selected terminal and never offers RETURN',async()=>{
  const Workspace=await component('BackofficeStaffWorkspace'),calls=[],shift={id:'shift',shiftLabel:'Synthetic',terminalPos:'POS2',status:'OPEN'},store={id:'a1',name:'A1'};
  const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read','sales.cancel']}]};if(path.endsWith('/terminals'))return {storeId:'a1',terminals:['POS2']};if(path.endsWith('/sales/recent'))return {rows:[{id:'sale',total:6,occurredAt:'2026-10-31T08:00Z',lines:[],payments:[]}]};if(path.endsWith('/reverse'))return {total:6};return {store,openSession:shift,openSessions:[shift],recent:[],summaryBySession:{shift:{}},access:{}}};

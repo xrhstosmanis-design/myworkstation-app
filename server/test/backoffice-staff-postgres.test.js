@@ -306,6 +306,32 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       assert.equal((await invoke({idempotencyKey:'revoked-between-admission-and-write'})).status,401);
       assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreTransaction"`)[0].count),1);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "OtherExpenseReview"`)[0].count),1);assert.equal(await controls(),before);
     });
+    await t.test('native delegated supplier settlement stays pending, requires its separate cash right and never duplicates a payment',async()=>{
+      for(const sql of [
+        'CREATE TABLE "Supplier" ("id" text PRIMARY KEY,"companyId" text,"name" text,"active" boolean DEFAULT true)',
+        'CREATE TABLE "PurchaseDocument" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"supplierId" text,"documentNumber" text,"totalGross" numeric,"status" text,"settlementMode" text)',
+        'CREATE TABLE "SupplierPaymentSettlement" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"transactionId" text,"supplierId" text,"status" text,"paymentMethod" text,"paidAt" timestamptz,"note" text,"createdBy" text REFERENCES "User"("id"),"createdByName" text)',
+        'CREATE TABLE "SupplierPaymentAllocation" ("id" text PRIMARY KEY,"companyId" text,"settlementId" text,"purchaseDocumentId" text,"amount" numeric)'
+      ])await db.$executeRawUnsafe(sql);
+      await db.$executeRaw`INSERT INTO "Supplier" ("id","companyId","name") VALUES ('supplier-a','a','Synthetic'),('supplier-b','b','Foreign control')`;
+      const username='actions.supplier.fixture',grants=[{storeId:'a1',profile:'AUDITOR',capabilities:['sales.read','payments.read','payments.supplier']}];
+      const created=await createStaffAccount(db,owner,{...input,username,grants}),login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});assert.equal(login.status,200);
+      const principal={...jwt.verify(login.data.token,process.env.JWT_SECRET),storeId:'a1'};
+      const source=await readFile(new URL('../src/routes/store-transactions.js',import.meta.url),'utf8'),start=source.indexOf('router.post("/stores/:storeId/supplier-settlements",'),end=source.indexOf('\nfunction isSuperAdminReview',start);let handler;
+      const schema=source.slice(source.indexOf('const supplierSettlementSchema='),source.indexOf('function parseAttachment('));
+      const bindings={router:{post:(_path,h)=>handler=h},route:h=>h,z,crypto,prisma:db,requireStaffAction,
+        assertStoreAccess:(req,id)=>assert.equal(req.user.storeId,id),ownedStore:async id=>({id}),requestTerminal:async()=> 'POS2',parseAttachment:()=>null,supplierProofMismatch:()=>null,
+        paymentId:(company,store,key)=>'pay_'+crypto.createHash('sha256').update(`${company}:${store}:${key}`).digest('hex'),normalize:row=>({...row,amount:Number(row.amount)})};
+      new Function(...Object.keys(bindings),schema+source.slice(start,end))(...Object.values(bindings));
+      const body={supplierId:'supplier-a',paymentMethod:'EMPLOYEE_REIMBURSEMENT',totalAmount:2,advanceAcknowledged:true,paidAt:'2026-10-31T08:00:00Z',idempotencyKey:'native-fixed-supplier',evidenceMode:'NO_DOCUMENT',noDocumentAcknowledged:true,allocations:[]};
+      const invoke=async changes=>{const req={user:principal,staffGrant:{capability:'payments.supplier'},params:{storeId:'a1'},body:{...body,...changes},get:()=> 'POS2'},out={status:200},res={status(value){out.status=value;return this},json(value){out.body=value;return this}};try{await handler(req,res)}catch(error){out.status=error.status||500;out.body={error:error.message}}return out};
+      const before=Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreTransaction"`)[0].count);
+      assert.equal((await invoke({paymentMethod:'CASH_SHIFT'})).status,403);assert.equal((await invoke({supplierId:'supplier-b'})).status,404);
+      const saved=await invoke();assert.equal(saved.status,201,JSON.stringify(saved));assert.equal(saved.body.status,'PENDING_REVIEW');assert.equal(saved.body.transaction.actorId,created.id);assert.equal(saved.body.advanceAmount,2);
+      const settlement=(await db.$queryRaw`SELECT * FROM "SupplierPaymentSettlement"`)[0];assert.equal(settlement.status,'PENDING_REVIEW');assert.equal(settlement.createdBy,created.id);
+      assert.equal((await invoke()).status,409);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreTransaction"`)[0].count),before+1);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "SupplierPaymentSettlement"`)[0].count),1);
+      assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale" WHERE "id"='control'`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='a2'`)[0].currentStock),42);
+    });
   }finally{
     if(server)await new Promise(resolve=>{server.close(resolve);server.closeAllConnections()});await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();if(oldSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=oldSecret;
   }
