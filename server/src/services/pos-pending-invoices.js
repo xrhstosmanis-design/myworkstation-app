@@ -4,6 +4,7 @@ import {invoiceToken,findInvoicePayment} from '../lib/invoice-payment-reuse.js';
 import {lockInvoiceStore} from '../lib/invoice-common-draft.js';
 import {assertLifecycleMutation} from './store-lifecycle-generation.js';
 import {lifecycleContext} from './store-lifecycle-context.js';
+import {requireMonthlyCaptureContext} from './monthly-inventory-capture-authorization.js';
 
 const VERSION='POS_DEFERRED_INVOICE_V1',EVENT='POS_INVOICE_PENDING_CREATED';
 const hash=value=>crypto.createHash('sha256').update(typeof value==='string'||Buffer.isBuffer(value)?value:JSON.stringify(value)).digest('hex');
@@ -184,6 +185,11 @@ async function pendingProbe(db,scope){
 
 async function readPendingInvoiceRows(db,scope,full=false){
  scopeCheck(scope);if(operator(scope.user)&&scope.user.storeId!==scope.storeId)fail('Δεν έχεις πρόσβαση στο κατάστημα.','PENDING_INVOICE_SCOPE',403);
+ return readPendingInvoiceRowsCore(db,scope,full);
+}
+
+// Private SQL core: its only callers establish personal or opaque service scope.
+async function readPendingInvoiceRowsCore(db,scope,full=false){
  const capability=await pendingProbe(db,scope);
  if(!capability.hasIntents)return {capability,value:{count:0,missingCount:0,uploadedCount:0,reviewCount:0,digest:'d41d8cd98f00b204e9800998ecf8427e',rows:[]}};
  const actor=operator(scope.user)&&!scope.sessionAll?scope.user.id:null,terminal=operator(scope.user)&&!scope.sessionAll?scope.terminalPos:null,sessionId=scope.sessionId||null;
@@ -287,9 +293,22 @@ export async function readPendingInvoices(db,scope){
 // The payment/source decisions above are shared with the unchanged POS reader.
 export async function readPendingInvoiceSnapshotRows(db,scope){
  if(!scope?.user||scope.user.companyId!==scope.companyId||scope.user.storeId&&scope.user.storeId!==scope.storeId||scope.user.tokenType&&scope.user.tokenType!=='BACKOFFICE_USER'||!['SUPER_ADMIN','OWNER','ADMIN','MANAGER'].includes(scope.user.role))fail('Απαιτείται εξουσιοδοτημένη διαχείριση BackOffice.','PENDING_SNAPSHOT_DENIED',403);
+ return readPendingInvoiceSnapshotCore(db,()=>readPendingInvoiceRows(db,scope,true));
+}
+
+export async function readPendingInvoiceSnapshotRowsForAutomationInTransaction(tx,context){
+ if(arguments.length!==2)fail('Μη έγκυρη ανάθεση απογραφής.','PENDING_SNAPSHOT_DENIED',403);
+ const authority=await requireMonthlyCaptureContext(tx,context,'SOURCE');
+ const scope={companyId:authority.companyId,storeId:authority.storeId};
+ return readPendingInvoiceSnapshotCore(tx,()=>readPendingInvoiceRowsCore(tx,scope,true));
+}
+
+// The reader closure is private and constructed only after the corresponding
+// personal or transaction-bound service admission; no caller can inject it.
+async function readPendingInvoiceSnapshotCore(db,readRows){
  const state=await db.$queryRawUnsafe(`SELECT current_setting('transaction_read_only') AS "readOnly",current_setting('transaction_isolation') AS isolation`);
  if(state[0]?.readOnly!=='on'||!['repeatable read','serializable'].includes(state[0]?.isolation))fail('Απαιτείται κοινό στιγμιότυπο μόνο ανάγνωσης.','PENDING_SNAPSHOT_TRANSACTION_REQUIRED',422);
- const {capability,value}=await readPendingInvoiceRows(db,scope,true),count=Number(value.count),rows=value.rows||[];
+ const {capability,value}=await readRows(),count=Number(value.count),rows=value.rows||[];
  if(!Number.isSafeInteger(count)||count<0||count>20000||!Array.isArray(rows)||rows.length>20000)fail('Η πηγή υπερβαίνει το ασφαλές όριο.','PENDING_SNAPSHOT_LIMIT',422);
  if(value._snapshotMetadataValid===false)fail('Η πηγή περιέχει υπερμεγέθη μεταδεδομένα.','PENDING_SNAPSHOT_TEXT_LIMIT',422);
  if(value._snapshotBytes!==undefined&&(!/^\d+$/.test(value._snapshotBytes)||BigInt(value._snapshotBytes)>4193280n))fail('Η πηγή υπερβαίνει το ασφαλές μέγεθος.','PENDING_SNAPSHOT_PAYLOAD_LIMIT',422);
