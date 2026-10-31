@@ -1,0 +1,25 @@
+Sol uniform cache correction — automated evidence and limited hosted acceptance completed
+Source PR3358/head089c88b0950faba6c1ceb2e373e2bf702c6b47e5; merge32bfe940bf1398c57402d032d8ef1b8555610500.
+Full PR41198974874 all five jobs SUCCESS; recovery41198974751 SUCCESS.
+Node20 RED: actual9399input/9396writes/778output/noTTL -> AI_WALLET_USAGE_REVIEW in original meteredUsage. Corrected isolated fixture capacity40000 >= maxOutput40000 before reproducing that RED.
+Node20 focused GREEN:15PASS/0FAIL/0SKIP.
+Own main41199782907 CANCELLED; not a full-main acceptance. Combined42ae4a3db371943fb0109aa815fac8a1b6bd9f33 full main41199931951 pending at this record; all four affected wallet runtime files byte-identical to source3358.
+No hosted PASS implied. Historical holds untouched. Native SQL includes actual-shaped exact13304microEUR settlement and preserved prior holds/foreign controls.
+
+2026-10-31T12:00:07.7262815Z # Subtest: provider accepts actual positive aggregate shape for a uniformly known default lifetime and returns its original result
+2026-10-31T12:00:07.7263818Z ok 54 - provider accepts actual positive aggregate shape for a uniformly known default lifetime and returns its original result
+2026-10-31T12:00:07.7265795Z # Subtest: explicit uniform 12h preserves request and price version, snapshots policy and charges writes only once
+2026-10-31T12:00:07.7266664Z ok 55 - explicit uniform 12h preserves request and price version, snapshots policy and charges writes only once
+2026-10-31T12:00:08.3905801Z # Subtest: native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access, notifications and unchanged business controls
+2026-10-31T12:00:08.3908468Z ok 67 - native AI wallet: atomic all-store funding/holds/usage, scoped HTTP access, notifications and unchanged business controls
+2026-10-31T12:05:53.5770668Z # tests 4859
+2026-10-31T12:05:53.5770984Z # pass 4859
+2026-10-31T12:05:53.5771136Z # fail 0
+2026-10-31T12:05:53.5771446Z # skipped 0
+2026-10-31T12:06:37.7286275Z # tests 8
+2026-10-31T12:06:37.7286674Z # pass 8
+2026-10-31T12:06:37.7286865Z # fail 0
+2026-10-31T12:06:37.7287760Z # skipped 0
+
+
+Combined main41199931951/42ae SUCCESS:4862server+8backup/0FAIL/0SKIP, all five jobs success. Normal guarded41201059265 SUCCESS; dep-dbitt4s9v7es738j9bc0 LIVE. Independent HTTP/DB health PASS before native C. Native C exactly one settled80973microEUR, original response returned, no new remaining hold; prior B930033microEUR separately retained. LAB restoredOFF/version24.
