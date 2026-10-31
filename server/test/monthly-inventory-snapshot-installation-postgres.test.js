@@ -5,16 +5,18 @@ import {readFileSync} from 'node:fs';
 import {ensureBackofficeStaffSchema} from '../src/backoffice-staff-bootstrap.js';
 import {provisionAiWalletRecovery} from '../src/services/ai-owner-wallet-schema.js';
 import {provisionFtextRecoverySchema} from '../src/services/ftext-cash-schema.js';
-import {createMonthlyInventorySnapshotInstallation as create} from '../src/services/monthly-inventory-snapshot-installation.js';
+import {createMonthlyInventorySnapshotInstallation as createSnapshot,createMonthlyInventoryCaptureInstallation as createCapture} from '../src/services/monthly-inventory-snapshot-installation.js';
 import {createLifecycleExecutionCore,createLifecycleInspectionCore} from '../src/services/store-lifecycle-executor.js';
 import {reviewedFreshStoreManifest} from '../src/services/store-lifecycle-manifest.js';
+import {monthlyInventoryCaptureLifecycleManifestProposal,validateMonthlyInventoryCaptureSchema,createMonthlyInventoryCaptureSchema} from '../src/services/monthly-inventory-capture-schema.js';
+import {createMonthlyInventorySnapshotSchema} from '../src/services/monthly-inventory-snapshot-schema.js';
 import {monthlyInventorySnapshotLifecycleManifestProposal,validateMonthlyInventorySnapshotSchema} from '../src/services/monthly-inventory-snapshot-schema.js';
 import {buildMonthlyInventorySnapshotCandidate,serializeMonthlyInventorySnapshotCandidate} from '../src/services/monthly-inventory-snapshot-payload.js';
 const metadata=JSON.parse(readFileSync(new URL('./fixtures/ftext-full-schema-metadata-20261024.json',import.meta.url)));
 const q=s=>'"'+s.replaceAll('"','""')+'"',literal=s=>"'"+s.replaceAll("'","''")+"'",revision='a'.repeat(40),actor={id:'synthetic-admin',isSuperAdmin:true},scope={companyId:'fixture-company',storeId:'target'};
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&!u.search&&!u.hash&&/^\/[^/]*test[^/]*$/i.test(decodeURIComponent(u.pathname))}catch{return false}};
 const noRecovery=async()=>{assert.fail('Installation must never invoke recovery/reset')};
-async function fixture(){
+async function fixture(capture=false){
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),name='monthly_install_'+randomBytes(10).toString('hex')+'_test';let db,other,created=false;
  try{
   assert.ok(isolated(),'Actual isolated PostgreSQL is mandatory');await admin.$executeRawUnsafe(`CREATE DATABASE ${q(name)}`);created=true;
@@ -60,7 +62,7 @@ async function fixture(){
     `SELECT tablename,rulename,definition FROM pg_rules WHERE schemaname=current_schema() ORDER BY tablename,rulename`
    ];return Promise.all(queries.map(sql=>db.$queryRawUnsafe(sql)));
   };
-  return {db,other,rows,catalogue,service:create(db,{sourceRevision:revision,enabled:true}),close:async()=>{await db.$disconnect();await other.$disconnect();await admin.$executeRawUnsafe(`DROP DATABASE ${q(name)} WITH (FORCE)`);await admin.$disconnect();}};
+  return {db,other,rows,catalogue,service:(capture?createCapture:createSnapshot)(db,{sourceRevision:revision,enabled:true}),close:async()=>{await db.$disconnect();await other.$disconnect();await admin.$executeRawUnsafe(`DROP DATABASE ${q(name)} WITH (FORCE)`);await admin.$disconnect();}};
  }catch(error){await db?.$disconnect();await other?.$disconnect();if(created)await admin.$executeRawUnsafe(`DROP DATABASE ${q(name)} WITH (FORCE)`);await admin.$disconnect();throw error;}
 }
 const state=async f=>({rows:await f.rows(),catalogue:await f.catalogue()});
@@ -69,11 +71,22 @@ const snapshotMissing=async db=>(await db.$queryRawUnsafe(`SELECT to_regclass('"
 const hold=e=>e.status===409||e.status===400;
 
 // This guard never turns an absent CI database into a reported native PASS.
-test('native installation composes exact schema and guards atomically, holds old plans and preserves every business/control row',{
+for(const capture of [false,true])
+test(capture?'native CAPTURE3 installation atomically provisions all three relations and preserves legacy safety boundaries':'native installation composes exact schema and guards atomically, holds old plans and preserves every business/control row',{
  skip:!isolated()&&!process.env.CI?'Actual isolated PostgreSQL unavailable locally':false,timeout:300000
 },async t=>{
- assert.ok(isolated(),'Actual isolated PostgreSQL is mandatory in CI');const f=await fixture();let installed;
+ assert.ok(isolated(),'Actual isolated PostgreSQL is mandatory in CI');const create=capture?createCapture:createSnapshot,targetManifest=capture?monthlyInventoryCaptureLifecycleManifestProposal():monthlyInventorySnapshotLifecycleManifestProposal(),f=await fixture(capture);let installed;
  try{
+  if(capture)await t.test('partial monthly pairs, snapshot-only intermediate enrollment and complete-but-unguarded target are refused without repair',async()=>{
+   for(const variant of ['SNAPSHOT_ONLY','CAPTURE_PAIR','UNGUARDED_THREE','SNAPSHOT_ENROLLED','BASE_WITH_CAPTURE_FENCE']){
+    const partial=await fixture(true);try{
+     if(variant==='BASE_WITH_CAPTURE_FENCE'){const old=createLifecycleExecutionCore(reviewedFreshStoreManifest(),{sourceRevision:revision,persistAndVerifyRecovery:noRecovery});await old.install(partial.db,actor,scope);await partial.db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "planHash"=$1 WHERE "storeId"='target'`,partial.service.describe().targetPlanHash);}
+     else if(variant==='SNAPSHOT_ENROLLED'){const old=createSnapshot(partial.db,{sourceRevision:revision,enabled:true});await old.install(actor,{...scope,packet:(await old.inspect(actor,scope)).packet});}
+     else await partial.db.$transaction(async tx=>{if(variant!=='CAPTURE_PAIR')await createMonthlyInventorySnapshotSchema(tx);if(variant!=='SNAPSHOT_ONLY')await createMonthlyInventoryCaptureSchema(tx)});
+     const before=await state(partial);await assert.rejects(partial.service.inspect(actor,scope));assert.deepEqual(await state(partial),before,'no partial-profile repair or old enrollment migration');
+    }finally{await partial.close();}
+   }
+  });
   await t.test('BASE inspect is readonly and records genuinely absent enrollment without an inferred epoch',async()=>{
    const before=await state(f),inspection=await f.service.inspect(actor,scope);assert.equal(inspection.eligible,true);assert.equal(inspection.packet.profile,'BASE');assert.deepEqual(inspection.packet.enrollment,{enrolled:false,generation:null,planHash:null,maintenance:null,retired:null,operationId:null});assert.match(inspection.packet.catalogueSignature,/^[a-f0-9]{64}$/);assert.match(inspection.packet.globalStateSignature,/^[a-f0-9]{64}$/);assert.equal(await snapshotMissing(f.db),true);assert.deepEqual(await state(f),before);
   });
@@ -93,17 +106,27 @@ test('native installation composes exact schema and guards atomically, holds old
    const input=await request(f),before=await f.rows();let entered,release;const blocked=new Promise(r=>entered=r),resume=new Promise(r=>release=r);
    const first=create({$transaction:(fn,options)=>f.db.$transaction(async tx=>{const result=await fn(tx);entered();await resume;return result},options)},{sourceRevision:revision,enabled:true});
    const a=first.install(actor,input);await Promise.race([blocked,a.then(()=>assert.fail('Installer must reach transaction barrier'))]);
-   const second=create(f.other,{sourceRevision:revision,enabled:true});const b=second.install(actor,input);release();const result=await Promise.allSettled([a,b]);assert.equal(result.filter(r=>r.status==='fulfilled').length,1);assert.equal(result.filter(r=>r.status==='rejected').length,1);installed=result.find(r=>r.status==='fulfilled').value;assert.equal(installed.installed,true);assert.equal(installed.createdSnapshotTable,true);assert.equal(installed.createdEnrollment,true);assert.equal(installed.lifecycleGeneration,'0');assert.equal(installed.productionActivated,false);assert.equal(installed.captureEnabled,false);
+   const second=create(f.other,{sourceRevision:revision,enabled:true});const b=second.install(actor,input);release();const result=await Promise.allSettled([a,b]);assert.equal(result.filter(r=>r.status==='fulfilled').length,1);assert.equal(result.filter(r=>r.status==='rejected').length,1);installed=result.find(r=>r.status==='fulfilled').value;assert.equal(installed.installed,true);if(capture){assert.equal(installed.installationProfile,'CAPTURE3');assert.deepEqual(installed.createdTables,['MonthlyInventorySnapshot','MonthlyInventoryCaptureGrant','MonthlyInventoryCaptureJob']);await validateMonthlyInventoryCaptureSchema(f.db)}else assert.equal(installed.createdSnapshotTable,true);assert.equal(installed.createdEnrollment,true);assert.equal(installed.lifecycleGeneration,'0');assert.equal(installed.productionActivated,false);assert.equal(installed.captureEnabled,false);
    await validateMonthlyInventorySnapshotSchema(f.db);const after=await f.rows();assert.deepEqual(after.filter(r=>!r.table_name.startsWith('StoreLifecycle')),before);assert.deepEqual(after.filter(r=>r.table_name==='StoreLifecycleFence').map(r=>JSON.parse(r.row).storeId),['target']);assert.equal(after.filter(r=>r.table_name==='StoreLifecycleExecution'||r.table_name==='StoreLifecycleTombstone').length,0);
    // Full target validation checks every global scoped row/TRUNCATE guard, not only monthly's table.
-   const inspection=createLifecycleInspectionCore(monthlyInventorySnapshotLifecycleManifestProposal(),{sourceRevision:revision});assert.equal((await inspection.inspect(f.db,actor,scope)).guardsInstalled,true);
+   const inspection=createLifecycleInspectionCore(targetManifest,{sourceRevision:revision});assert.equal((await inspection.inspect(f.db,actor,scope)).guardsInstalled,true);
+  });
+  if(capture)await t.test('capture authority relations and every own/global capture guard are strictly validated without repair',async()=>{
+   for(const table of ['MonthlyInventoryCaptureGrant','MonthlyInventoryCaptureJob']){
+    const input=await request(f);await f.db.$executeRawUnsafe(`ALTER TABLE ${q(table)} ADD COLUMN "unreviewed" text`);
+    try{const before=await state(f);await assert.rejects(f.service.inspect(actor,scope));await assert.rejects(f.service.install(actor,input));assert.deepEqual(await state(f),before)}finally{await f.db.$executeRawUnsafe(`ALTER TABLE ${q(table)} DROP COLUMN "unreviewed"`)}
+    const triggers=await f.db.$queryRawUnsafe(`SELECT tgname AS name FROM pg_trigger WHERE tgrelid=to_regclass($1) AND NOT tgisinternal ORDER BY tgname`,q(table));assert.equal(triggers.length,3);
+    for(const trigger of triggers){const reviewed=await request(f);await f.db.$executeRawUnsafe(`ALTER TABLE ${q(table)} DISABLE TRIGGER ${q(trigger.name)}`);
+     try{const before=await state(f);await assert.rejects(f.service.inspect(actor,scope));await assert.rejects(f.service.install(actor,reviewed));assert.deepEqual(await state(f),before,'unreviewed own/lifecycle guards are never overwritten')}finally{await f.db.$executeRawUnsafe(`ALTER TABLE ${q(table)} ENABLE ALWAYS TRIGGER ${q(trigger.name)}`)}
+    }
+   }
   });
   await t.test('TARGET replay preserves a genuine nonzero generation and exact detached history bytes',async()=>{
    await f.db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "generation"=7 WHERE "storeId"='target'`);
    const observed='2026-10-01T04:00:00.123Z',started='2026-10-01T04:00:00.000Z';
    const candidate=buildMonthlyInventorySnapshotCandidate({companyId:scope.companyId,storeId:scope.storeId,lifecycleGeneration:'7',issueMonth:'2026-09',sourceObservedAt:observed,sourceRevision:revision,valuationBasis:'CURRENT_OPERATIONAL_V1',coverage:{complete:true,productCount:0,invoiceCount:0,pendingOriginalCount:0},products:[],invoices:{period:'2026-09',items:[]},pendingOriginals:{period:'ALL_MONTHS',items:[]}}),text=serializeMonthlyInventorySnapshotCandidate(candidate),hash=createHash('sha256').update(text).digest('hex');
    await f.db.$transaction(async tx=>{await tx.$queryRawUnsafe("SELECT set_config('mws.lifecycle_generations',$1,true)",JSON.stringify({target:'7'}));await tx.$executeRawUnsafe(`INSERT INTO "MonthlyInventorySnapshot"("id","companyId","storeId","lifecycleGeneration","issueMonth","scheduledFor","transactionStartedAt","sourceReadStartedAt","sourceReadFinishedAt","sourceObservedAt","observationStatus","delayMs","sourceRevision","formatVersion","valuationBasis","sourceHash","payloadHash","candidateJsonText","storedBytesSha256","sourceCoverage","capturePrincipal") VALUES ('synthetic-history',$1,$2,7,'2026-09',$3::timestamptz,$4::timestamptz,$4::timestamptz,$5::timestamptz,$5::timestamptz,'LATE',123,$6,1,'CURRENT_OPERATIONAL_V1',$7,$8,$9,$10,$11::jsonb,$12::jsonb)`,scope.companyId,scope.storeId,candidate.period.scheduledFor,started,observed,revision,candidate.sourceHash,candidate.payloadHash,text,hash,JSON.stringify(candidate.coverage),JSON.stringify({type:'BACKOFFICE_USER',userId:'synthetic-user',authorizationBasis:'RECHECKED_IN_FRESH_WRITE_TRANSACTION',sourceBasis:'SUPPLIED_FORMAT_VALIDATED_FACTS'}));});
-   const before=await state(f),input=await request(f);assert.equal(input.packet.profile,'TARGET');assert.equal(input.packet.enrollment.generation,'7');const receipt=await f.service.install(actor,input);assert.equal(receipt.createdEnrollment,false);assert.equal(receipt.createdSnapshotTable,false);assert.equal(receipt.lifecycleGeneration,'7');assert.deepEqual(await state(f),before);
+   const before=await state(f),input=await request(f);assert.equal(input.packet.profile,'TARGET');assert.equal(input.packet.enrollment.generation,'7');const receipt=await f.service.install(actor,input);assert.equal(receipt.createdEnrollment,false);if(capture)assert.deepEqual(receipt.createdTables,[]);else assert.equal(receipt.createdSnapshotTable,false);assert.equal(receipt.lifecycleGeneration,'7');assert.deepEqual(await state(f),before);
    for(const sql of ['UPDATE "MonthlyInventorySnapshot" SET "issueMonth"=\'2026-08\'','DELETE FROM "MonthlyInventorySnapshot"','TRUNCATE "MonthlyInventorySnapshot"'])await assert.rejects(f.db.$executeRawUnsafe(sql),/MONTHLY_SNAPSHOT_IMMUTABLE/);
    assert.deepEqual(await state(f),before);
   });
@@ -162,7 +185,7 @@ test('native installation composes exact schema and guards atomically, holds old
    const input=await request(f),before=await state(f);await f.other.$transaction(async tx=>{await tx.$queryRawUnsafe(`SELECT 1 FROM "StoreLifecycleFence" WHERE "storeId"='target' FOR SHARE`);const started=Date.now();await assert.rejects(f.service.install(actor,input));assert.ok(Date.now()-started<10000,'actual lock contention must be bounded')},{timeout:30000});assert.deepEqual(await state(f),before);
   });
   await t.test('genuine legacy beginDrain excludes installer and its operation state is never reset or overwritten',async()=>{
-   const input=await request(f),core=createLifecycleExecutionCore(monthlyInventorySnapshotLifecycleManifestProposal(),{sourceRevision:revision,persistAndVerifyRecovery:noRecovery});
+   const input=await request(f),core=createLifecycleExecutionCore(targetManifest,{sourceRevision:revision,persistAndVerifyRecovery:noRecovery});
    let entered,release;const blocked=new Promise(r=>entered=r),resume=new Promise(r=>release=r);
    const draining=core.beginDrain({$transaction:(fn,options)=>f.other.$transaction(async tx=>{const result=await fn(tx);entered(result);await resume;throw new Error('SYNTHETIC_ROLLBACK_DRAIN')},options)},actor,scope,'RESET');const drain=await Promise.race([blocked,draining.then(()=>assert.fail('Drain must reach transaction barrier'))]);assert.equal(drain.state,'DRAINING');const started=Date.now();await assert.rejects(f.service.install(actor,input));assert.ok(Date.now()-started<10000);release();await assert.rejects(draining,/SYNTHETIC_ROLLBACK_DRAIN/);assert.equal((await f.db.$queryRawUnsafe(`SELECT count(*)::int AS count FROM "StoreLifecycleExecution"`))[0].count,0);assert.equal((await f.db.$queryRawUnsafe(`SELECT "maintenance" FROM "StoreLifecycleFence" WHERE "storeId"='target'`))[0].maintenance,false);
   });
@@ -171,7 +194,7 @@ test('native installation composes exact schema and guards atomically, holds old
    const delayed=create({$transaction:async(fn,options)=>{entered();await resume;return f.db.$transaction(fn,options)}},{sourceRevision:revision,enabled:true});const promise=delayed.install(mutableActor,mutable);await blocked;mutableActor.isSuperAdmin=false;mutableActor.id='changed';mutable.storeId='foreign';mutable.companyId='foreign-company';mutable.packet.enrollment.generation='999';mutable.packet.catalogueSignature='0'.repeat(64);release();const receipt=await promise;assert.equal(receipt.storeId,'target');assert.equal(receipt.companyId,'fixture-company');assert.equal(receipt.lifecycleGeneration,'7');assert.deepEqual(await state(f),before);
   });
   await t.test('genuine canonical legacy enrollment is HOLD before monthly DDL and preserves the complete OLD catalogue',async()=>{
-   const old=await fixture();try{
+   const old=await fixture(capture);try{
     const core=createLifecycleExecutionCore(reviewedFreshStoreManifest(),{sourceRevision:revision,persistAndVerifyRecovery:noRecovery});await core.install(old.db,actor,scope);await old.db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "generation"=23 WHERE "storeId"='target'`);const before=await state(old),inspection=await old.service.inspect(actor,scope);assert.equal(inspection.eligible,false);assert.equal(inspection.packet.profile,'BASE');assert.equal(inspection.packet.enrollment.generation,'23');assert.ok(inspection.reasons.includes('MONTHLY_INSTALL_PLAN_TRANSITION_REQUIRED'));await assert.rejects(old.service.install(actor,{...scope,packet:inspection.packet}),{code:'MONTHLY_INSTALL_PLAN_TRANSITION_REQUIRED'});assert.equal(await snapshotMissing(old.db),true);assert.deepEqual(await state(old),before);
    }finally{await old.close();}
   });

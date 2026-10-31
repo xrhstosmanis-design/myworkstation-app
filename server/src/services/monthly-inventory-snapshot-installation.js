@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto';
 import {createLifecycleInstallationCore} from './store-lifecycle-executor.js';
 import {reviewedFreshStoreManifest} from './store-lifecycle-manifest.js';
 import {requireLifecycleAdmin} from './store-lifecycle-preview.js';
+import {monthlyInventoryCaptureLifecycleManifestProposal,assertMonthlyInventoryCaptureLifecycleCatalogue,createMonthlyInventoryCaptureSchema,validateMonthlyInventoryCaptureSchema} from './monthly-inventory-capture-schema.js';
 import {monthlyInventorySnapshotLifecycleManifestProposal,assertMonthlySnapshotLifecycleCatalogue,createMonthlyInventorySnapshotSchema,validateMonthlyInventorySnapshotSchema} from './monthly-inventory-snapshot-schema.js';
 const q=v=>'"'+v.replaceAll('"','""')+'"';
 const fail=(code='MONTHLY_INSTALL_INPUT_INVALID')=>{throw Object.assign(new Error('Monthly installation preparation refused.'),{status:409,code})};
@@ -84,6 +85,60 @@ export function createMonthlyInventorySnapshotInstallation(db,{sourceRevision,en
     const after=await observe(tx,a,scope);if(!after.eligible||after.packet.profile!=='TARGET'||!after.packet.enrollment.enrolled)fail('MONTHLY_INSTALL_STATE_CHANGED');
     if(before.packet.enrollment.enrolled&&JSON.stringify(after.packet.enrollment)!==JSON.stringify(before.packet.enrollment))fail('MONTHLY_INSTALL_STATE_CHANGED');
     return freeze({installed:true,enrolled:true,createdSnapshotTable:before.packet.profile==='BASE',createdEnrollment:!before.packet.enrollment.enrolled,companyId:scope.companyId,storeId:scope.storeId,lifecycleGeneration:after.packet.enrollment.generation,sourceRevision,schema,oldPlanHash,targetPlanHash,previousCatalogueSignature:before.packet.catalogueSignature,catalogueSignature:after.packet.catalogueSignature,productionActivated:false,captureEnabled:false});
+   },false)
+  }
+ });
+}
+
+// Separate closed three-relation procedure. The snapshot-only API above retains
+// its original profile, packet contract and outputs. This does not promote the
+// application or recovery worker default profile, nor migrate an existing fence.
+export function createMonthlyInventoryCaptureInstallation(db,{sourceRevision,enabled=false}={}){
+ if(typeof sourceRevision!=='string'||sourceRevision.length!==40||!/^[a-f0-9]{40}$/.test(sourceRevision)||typeof enabled!=='boolean')fail();
+ const old=reviewedFreshStoreManifest(),target=monthlyInventoryCaptureLifecycleManifestProposal();assertMonthlyInventoryCaptureLifecycleCatalogue(target);
+ const baseCore=createLifecycleInstallationCore(old,{sourceRevision}),targetCore=createLifecycleInstallationCore(target,{sourceRevision});const oldPlanHash=baseCore.describe().planHash,targetPlanHash=targetCore.describe().planHash;
+ const description=freeze({installationProfile:'CAPTURE3',sourceRevision,oldPlanHash,targetPlanHash,oldProfileId:old.id,targetProfileId:target.id,productionActivated:false,captureEnabled:false});
+ async function observe(tx,actor,scope){
+  const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS schema'))[0]?.schema;if(!text(schema,128))fail('MONTHLY_INSTALL_UNAVAILABLE');
+  const selected=await tx.$queryRawUnsafe(`SELECT "id" FROM ${q(schema)}."Store" WHERE "id"=$1 AND "companyId"=$2`,scope.storeId,scope.companyId);if(selected.length!==1)fail('MONTHLY_INSTALL_SCOPE_INVALID');
+  const control=await controlMetadata(tx,schema),present=control.names;
+  const monthlyTables=['MonthlyInventorySnapshot','MonthlyInventoryCaptureGrant','MonthlyInventoryCaptureJob'];
+  const relations=await tx.$queryRawUnsafe(`SELECT name,to_regclass(format('%I.%I',$1,name))::text AS relation FROM unnest($2::text[]) name ORDER BY name`,schema,monthlyTables);
+  if(relations.length!==3||relations.some(r=>!monthlyTables.includes(r.name))||new Set(relations.map(r=>r.name)).size!==3)fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');
+  const count=relations.filter(r=>r.relation!==null).length;if(count!==0&&count!==3)fail('MONTHLY_INSTALL_PARTIAL_CAPTURE_PROFILE');
+  const exists=count===3,profile=exists?'TARGET':'BASE';const metadata=await (exists?targetCore:baseCore).inspectInTransaction(tx,actor);
+  if(exists){await validateMonthlyInventorySnapshotSchema(tx);const capture=await validateMonthlyInventoryCaptureSchema(tx);if(capture?.available!==true||capture.lifecycleGuardsInstalled!==true)fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');}
+  if((exists&&!metadata.guardsInstalled)||(metadata.guardsInstalled&&!present.includes('StoreLifecycleFence')))fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');
+  // Refuse detached/overloaded lifecycle functions rather than silently
+  // replacing a partial or unknown installation with CREATE OR REPLACE.
+  const functions=await tx.$queryRawUnsafe(`SELECT p.proname AS name,p.pronargs::int AS arguments,p.prorettype='trigger'::regtype AS trigger,p.prosecdef AS definer,p.prokind::text AS kind,l.lanname AS language FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace JOIN pg_language l ON l.oid=p.prolang WHERE n.nspname=$1 AND left(p.proname,14)='mws_lifecycle_' ORDER BY p.proname LIMIT 601`,schema);
+  const expectedFunctions=metadata.guardsInstalled?(exists?target:old).tables.flatMap(node=>{const name='mws_lifecycle_'+sha(node.name).slice(0,16);return [name,name+'_truncate']}).sort():[];
+  if(JSON.stringify(functions.map(f=>f.name))!==JSON.stringify(expectedFunctions)||functions.some(f=>f.arguments!==0||!f.trigger||f.definer||f.kind!=='f'||f.language!=='plpgsql'))fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');
+  const global=await globalState(tx,schema,present,targetPlanHash);if(!exists&&global.fences.some(f=>f.planHash===targetPlanHash))fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');if(!metadata.guardsInstalled&&global.fences.length)fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');const row=global.fences.find(f=>f.storeId===scope.storeId);if(row&&row.companyId!==scope.companyId)fail('MONTHLY_INSTALL_SCOPE_INVALID');
+  const enrollment=row?{enrolled:true,generation:row.generation,planHash:row.planHash,maintenance:row.maintenance,retired:row.retired,operationId:row.operationId}:{enrolled:false,generation:null,planHash:null,maintenance:null,retired:null,operationId:null};
+  const packet=freeze({companyId:scope.companyId,storeId:scope.storeId,sourceRevision,schema,profile,catalogueSignature:sha({signature:metadata.signature,guardsInstalled:metadata.guardsInstalled,controls:control.signature}),globalStateSignature:sha({state:global.signature,controls:control.signature}),guardsInstalled:metadata.guardsInstalled,oldPlanHash,targetPlanHash,enrollment});
+  return {packet,eligible:global.reasons.length===0,reasons:global.reasons,present};
+ }
+ const transaction=(fn,readOnly)=>{if(!db||typeof db.$transaction!=='function')fail('MONTHLY_INSTALL_UNAVAILABLE');return db.$transaction(async tx=>{if(readOnly)await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');await tx.$executeRawUnsafe("SET LOCAL TimeZone='UTC'");await tx.$executeRawUnsafe("SET LOCAL DateStyle='ISO,YMD'");await tx.$executeRawUnsafe("SET LOCAL lock_timeout='2s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");return fn(tx)},{isolationLevel:readOnly?'RepeatableRead':'ReadCommitted',timeout:120000,maxWait:3000})};
+ return Object.freeze({describe:()=>description,
+  async inspect(actor,input){const a=actorCopy(actor),scope=scopeCopy(input);const result=await transaction(tx=>observe(tx,a,scope),true);return freeze({packet:result.packet,eligible:result.eligible,reasons:result.reasons})},
+  async install(actor,input){if(!enabled)fail('MONTHLY_INSTALL_DISABLED');const a=actorCopy(actor),scope=scopeCopy(input,true);if(scope.packet.companyId!==scope.companyId||scope.packet.storeId!==scope.storeId||scope.packet.sourceRevision!==sourceRevision||scope.packet.oldPlanHash!==oldPlanHash||scope.packet.targetPlanHash!==targetPlanHash)fail('MONTHLY_INSTALL_STATE_CHANGED');
+   return transaction(async tx=>{
+    await tx.$queryRawUnsafe("SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended('mws:monthly-snapshot-install-v1',0))");
+    const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS schema'))[0]?.schema;if(schema!==scope.packet.schema)fail('MONTHLY_INSTALL_STATE_CHANGED');
+    // Real relation locks also exclude legacy installers/reset row locks. A new
+    // advisory key alone would not serialize those existing entry points.
+    const relations=await tx.$queryRawUnsafe(`SELECT c.relname AS name FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') ORDER BY c.relname LIMIT 601`,schema);if(relations.length>600)fail('MONTHLY_INSTALL_UNAVAILABLE');
+    const allowed=new Set([...target.knownTables,...Object.keys(controls)]);if(relations.some(r=>!allowed.has(r.name)))fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');
+    // Fence first conflicts with beginDrain's FOR UPDATE before touching guards.
+    const names=relations.map(r=>r.name),ordered=[...(names.includes('StoreLifecycleFence')?['StoreLifecycleFence']:[]),...names.filter(n=>n!=='StoreLifecycleFence').sort()];
+    for(const name of ordered)await tx.$executeRawUnsafe(`LOCK TABLE ${q(schema)}.${q(name)} IN EXCLUSIVE MODE NOWAIT`);
+    const before=await observe(tx,a,scope);if(JSON.stringify(before.packet)!==JSON.stringify(scope.packet))fail('MONTHLY_INSTALL_STATE_CHANGED');if(!before.eligible)fail(before.reasons[0]);
+    if(before.packet.profile==='BASE'){await createMonthlyInventorySnapshotSchema(tx);await createMonthlyInventoryCaptureSchema(tx);}
+    await targetCore.installInTransaction(tx,a,scope);
+    const after=await observe(tx,a,scope);if(!after.eligible||after.packet.profile!=='TARGET'||!after.packet.enrollment.enrolled)fail('MONTHLY_INSTALL_STATE_CHANGED');
+    if(before.packet.enrollment.enrolled&&JSON.stringify(after.packet.enrollment)!==JSON.stringify(before.packet.enrollment))fail('MONTHLY_INSTALL_STATE_CHANGED');
+    return freeze({installed:true,enrolled:true,installationProfile:'CAPTURE3',createdTables:before.packet.profile==='BASE'?['MonthlyInventorySnapshot','MonthlyInventoryCaptureGrant','MonthlyInventoryCaptureJob']:[],createdEnrollment:!before.packet.enrollment.enrolled,companyId:scope.companyId,storeId:scope.storeId,lifecycleGeneration:after.packet.enrollment.generation,sourceRevision,schema,oldPlanHash,targetPlanHash,previousCatalogueSignature:before.packet.catalogueSignature,catalogueSignature:after.packet.catalogueSignature,productionActivated:false,captureEnabled:false});
    },false)
   }
  });
