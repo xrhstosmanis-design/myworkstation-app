@@ -21,10 +21,17 @@ export function sanitizeWalletReviewEvidence(value={}){
   for(const key of ['inputTokens','outputTokens'])if(numeric(value.limits?.[key]))out.limits[key]=value.limits[key];
   if(Array.isArray(value.acceptedModels))out.acceptedModels=value.acceptedModels.slice(0,20).map(model).filter(Boolean);
   if(typeof value.tariffVersion==='string'&&/^[a-f0-9]{64}$/.test(value.tariffVersion))out.tariffVersion=value.tariffVersion;
+  const policy=value.requestCacheWritePolicy;
+  if(policy?.schemaVersion===1&&['UNIFORM','MIXED','UNKNOWN'].includes(policy.state)){
+    out.requestCacheWritePolicy={schemaVersion:1,state:policy.state};
+    if(policy.state==='UNIFORM'&&['30m','12h'].includes(policy.ttl)&&['REQUEST_DEFAULT','REQUEST_EXPLICIT'].includes(policy.source))
+      Object.assign(out.requestCacheWritePolicy,{ttl:policy.ttl,source:policy.source});
+  }
   return out;
 }
 export function walletReviewEvidence(result,{stage,reason,limits,tariff,maxOutputTokens}){
   const raw=result?.raw,u=raw?.usage,d=u?.input_tokens_details,w=d?.cache_write_tokens_details;
   const values={inputTokens:u?.input_tokens,outputTokens:u?.output_tokens,cachedInputTokens:d?.cached_tokens,cacheWriteTokens:d?.cache_write_tokens,cacheWrite30mTokens:w?.ttl_30m_tokens,cacheWrite12hTokens:w?.ttl_12h_tokens};
-  return sanitizeWalletReviewEvidence({stage,reason,responseId:raw?.id,model:raw?.model,responseOk:result?.response?.ok,httpStatus:result?.response?.status,reported:values,presence:Object.fromEntries(fields.map(key=>[key,state(values[key])])),limits:{inputTokens:limits?.inputTokens??tariff.contextTokens,outputTokens:maxOutputTokens},acceptedModels:tariff.responseModels||[tariff.model],tariffVersion:tariff.version});
+  return sanitizeWalletReviewEvidence({stage,reason,responseId:raw?.id,model:raw?.model,responseOk:result?.response?.ok,httpStatus:result?.response?.status,reported:values,presence:Object.fromEntries(fields.map(key=>[key,state(values[key])])),limits:{inputTokens:limits?.inputTokens??tariff.contextTokens,outputTokens:maxOutputTokens},acceptedModels:tariff.responseModels||[tariff.model],tariffVersion:tariff.version,requestCacheWritePolicy:tariff.requestCacheWritePolicy});
 }
+
