@@ -1,4 +1,8 @@
-## 31/10/2026 - CHAT-NATIVE-READERS-01 / ENGINEERING AVAILABLE / AWAITING NAMED-READERS PHONE ACCEPTANCE
+## 31/10/2026 - CHAT-NATIVE-READERS-01 / PHYSICAL ACCEPTANCE ABSORBED INTO COMBINED0.1.13
+
+Retained owner codex/chat-native-readers-20261031. Owner now requests all agreed Chat additions together and one final check. Named-readers engineering0.1.12 remains historical evidence; the current public release is0.1.13/code14 and its one combined physical check is tracked only as CHAT-VIBER-BATCH-01 in CHECKPOINTS/CHANGES/2026-10-31-chat-viber-batch.md. No separate0.1.12 install/names-only test, no new physical PASS and no replay of accepted media/entry. Older next actions below are superseded by this combined acceptance; other owners retained.
+
+## 31/10/2026 - CHAT-NATIVE-READERS-01 / HISTORICAL0.1.12 ENGINEERING RECEIPT
 
 Owner codex/chat-native-readers-20261031, branch feat/chat-native-readers-20261031. Updated 31/10/2026 15:53:06 Europe/Athens. Android0.1.12/code13 is publicly available at https://myworkstation-app.onrender.com/downloads/chat-android/. Own outgoing messages expose «Διαβάστηκε από N» and a private list of names already reported by the authorized same-store response. Sender/self and duplicate IDs excluded; malformed entries ignored; bounded plain names/fallback; no new API/write, automatic read marking, local message/name storage or device-delivery inference. Token/company/store/epoch/foreground guards and secure dialog cleanup protect navigation/background/logout. Existing voice/media/first-entry/session behavior retained.
 
