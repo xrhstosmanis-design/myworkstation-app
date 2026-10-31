@@ -42,6 +42,15 @@ function Invoke-FtextCloudPing($Config) {
     Confirm-FtextCloudIdentity $Config $response
     return $response
 }
+function Invoke-FtextCloudPoll($Config,[bool]$Recovering=$false) {
+    $token=Read-FtextDeviceToken $Config
+    $body=@{readinessVersion=1;recovering=$Recovering} | ConvertTo-Json -Compress
+    $response=Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/work-poll') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body $body -TimeoutSec 15
+    Confirm-FtextCloudIdentity $Config $response
+    foreach($key in @('request','lateReceipt','errorEvidence')) {if(-not $response.PSObject.Properties[$key]) {throw 'Incomplete scoped work response.'}}
+    if($Recovering -and ($response.request -or $response.lateReceipt -or $response.errorEvidence)) {throw 'Cloud returned new work during original-result recovery.'}
+    return $response
+}
 function Invoke-FtextCloudReadiness([string]$ConfigPath) {
     $config=Get-FtextCloudConfig $ConfigPath
     # Authenticate current installation before the nonfiscal STATUS command.
@@ -51,12 +60,12 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath) {
         $marker=Get-Content -LiteralPath $pendingPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $started=[DateTime]::Parse([string]$marker.createdAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
     }
-    $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds 2
+    $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds 5
     if($null -ne $started) {
         $age=([DateTime]::UtcNow-$started).TotalSeconds
         if($age -ge 20 -or $age -lt -2) {
             # A recovered old STATUS proves history only. Consume it durably, then require a new round trip.
-            $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds 2;$started=$null
+            $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds 5;$started=$null
         }
     }
     $result=$evidence.result
@@ -66,6 +75,7 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath) {
     $token=Read-FtextDeviceToken $config
     # Local STATUS evidence is durable. An undelivered/stale readiness sample never authorizes checkout.
     Invoke-RestMethod -Method Post -Uri ($config.apiBase+'/api/ftext/v1/device/status-result') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($report | ConvertTo-Json -Compress) -TimeoutSec 15 | Out-Null
+    if(-not $result.ok) {Write-Host ('Register STATUS code: '+[int]$result.code+'. No payment was sent.')}
     return $result.ok
 }
 function Invoke-FtextCashApi($Config,[string]$Action,$Body) {
@@ -73,4 +83,4 @@ function Invoke-FtextCashApi($Config,[string]$Action,$Body) {
     $token=Read-FtextDeviceToken $Config
     return Invoke-RestMethod -Method Post -Uri ($Config.apiBase+'/api/ftext/v1/device/'+$Action) -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -TimeoutSec 30
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudReadiness,Invoke-FtextCashApi
+Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Invoke-FtextCashApi

@@ -14,6 +14,8 @@ import {companyModuleState,isPlatformSuperAdmin} from '../middleware/module-acce
 import {ensureCloudTables} from './cloud-v1.js';
 import {createFtextInstallationService} from '../services/ftext-installation.js';
 import {buildFtextInstallationPackage} from '../services/ftext-installation-package.js';
+import {pollFtextDeviceWork} from '../services/ftext-device-work.js';
+import {z} from 'zod';
 
 export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTables,apiBase='https://myworkstation-app.onrender.com',revision='unknown',clock=()=>Date.now()}){
  const router=Router(),attempts=new Map();
@@ -28,6 +30,10 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
   if(++item.count>10)return res.status(429).json({error:'Πάρα πολλές προσπάθειες ζεύξης. Περίμενε ένα λεπτό.'});next();
  },wrap(async(req,res)=>res.status(201).json(await service.pair(req.body))));
  router.post('/device/ping',wrap(async(req,res)=>res.json(await service.ping(token(req),req.body))));
+ router.post('/device/work-poll',wrap(async(req,res)=>{
+  const body=z.object({readinessVersion:z.literal(1),recovering:z.boolean()}).strict().parse(req.body);
+  res.json(await service.ping(token(req),{readinessVersion:body.readinessVersion},(t,d,c)=>pollFtextDeviceWork(t,d,c,{recovering:body.recovering})));
+ }));
  router.post('/device/status-result',wrap(async(req,res)=>res.json(await service.report(token(req),req.body))));
  router.post('/device/late-receipt-poll',wrap(async(req,res)=>res.json(await service.authenticated(token(req),async(t,d,c)=>({request:await ftextCashTableExists(t)?await pollFtextLateReceipt(t,d,c):null})))));
  router.post('/device/late-receipt-result',wrap(async(req,res)=>{

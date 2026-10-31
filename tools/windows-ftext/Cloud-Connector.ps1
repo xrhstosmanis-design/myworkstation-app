@@ -14,16 +14,21 @@ try {
     if($cashEnabled) {Write-Host 'Cash connector enabled for this installation. Keep this window open.'} else {Write-Host 'Communication only. Fiscal checkout is not enabled. Keep this window open.'}
     $recheckAttempted=@{}
     $nextReadiness=[DateTime]::MinValue
+    $nextConnectedLog=[DateTime]::MinValue
     while($true) {
       $connected=$false
+      $stage='cloud work poll'
       try {
-        Invoke-FtextCloudPing $c | Out-Null
+        # A cached local result takes priority. The server must not claim another
+        # fiscal job while an acknowledgement for that original result is pending.
+        $pending=if($cashEnabled) {Get-FtextCashPending $c} else {$null}
+        $work=Invoke-FtextCloudPoll $c ([bool]$pending)
         $connected=$true
         if($cashEnabled) {
             # Recover durable local result first. Neither a network retry nor restart republishes a fiscal file.
-            $pending=Get-FtextCashPending $c
-            $request=if($pending) {$pending.request} else {$voidRequest=(Invoke-FtextCashApi $c 'void-poll' @{}).request;if($voidRequest){$voidRequest}else{(Invoke-FtextCashApi $c 'cash-poll' @{}).request}}
+            $request=if($pending) {$pending.request} else {$work.request}
             if($request) {
+                $stage='original cash request/result'
                 $report=Invoke-FtextCashRequest -ConfigPath $ConfigPath -Request $request
                 $endpoint=if($request.PSObject.Properties['kind'] -and [string]$request.kind -ceq 'FTEXT_VOID') {'void-result'} else {'cash-result'}
                 $ack=Invoke-FtextCashApi $c $endpoint $report
@@ -33,7 +38,8 @@ try {
             }
             if(-not $request) {
                 # Read the original result only; never republish a cash/card command after timeout.
-                $late=(Invoke-FtextCashApi $c 'late-receipt-poll' @{}).request
+                $stage='original late receipt evidence'
+                $late=$work.lateReceipt
                 if($late) {
                     $proof=$null
                     try {$proof=Read-FtextLateReceiptEvidence $c $late} catch { }
@@ -43,7 +49,8 @@ try {
                         Write-Host ('Original receipt recovered: '+$accepted.status+'. No new receipt or payment was sent.')
                     }
                 }
-                $recheck=(Invoke-FtextCashApi $c 'error-evidence-poll' @{}).request
+                $stage='original error evidence'
+                $recheck=$work.errorEvidence
                 if($recheck -and (-not $recheckAttempted.ContainsKey([string]$recheck.id) -or [DateTime]$recheckAttempted[[string]$recheck.id] -le [DateTime]::UtcNow)) {
                     $evidence=$null
                     try {$evidence=Read-FtextLateErrorEvidence $c $recheck} catch {
@@ -58,17 +65,23 @@ try {
                     }
                 }
                 if(-not $late -and -not $recheck -and [DateTime]::UtcNow -ge $nextReadiness) {
-                    $nextReadiness=[DateTime]::UtcNow.AddSeconds(10)
-                    $ready=Invoke-FtextCloudReadiness $ConfigPath
-                    if($ready) {Write-Host 'Register ready: verified nonfiscal STATUS.'} else {Write-Host 'Register is not ready. No payment was sent.'}
+                    $stage='nonfiscal STATUS/readiness report'
+                    try {
+                        $ready=Invoke-FtextCloudReadiness $ConfigPath
+                        $nextReadiness=[DateTime]::UtcNow.AddSeconds(5)
+                        if($ready) {Write-Host 'Register ready: verified nonfiscal STATUS.'} else {Write-Host 'Register is not ready. No payment was sent.'}
+                    } catch {
+                        $nextReadiness=[DateTime]::UtcNow.AddSeconds(1)
+                        Write-Host 'Readiness check pending. Connector stays running; original STATUS retained. No payment was sent.'
+                    }
                 }
             }
         }
       } catch {
         $connected=$false
-        Write-Host 'Connection or recovery pending. Original files retained; retrying without resending payment.'
+        Write-Host ([DateTime]::Now.ToString('HH:mm:ss')+' Pending stage: '+$stage+'. Original files retained; retrying without resending payment.')
       }
-      if($connected) {Write-Host ([DateTime]::Now.ToString('HH:mm:ss')+' connector connected')}
-      Start-Sleep -Seconds 5
+      if($connected -and [DateTime]::UtcNow -ge $nextConnectedLog) {Write-Host ([DateTime]::Now.ToString('HH:mm:ss')+' connector connected');$nextConnectedLog=[DateTime]::UtcNow.AddSeconds(10)}
+      if($connected) {Start-Sleep -Seconds 1} else {Start-Sleep -Seconds 5}
     }
 } finally { if($held) { $mutex.ReleaseMutex() };$mutex.Dispose() }
