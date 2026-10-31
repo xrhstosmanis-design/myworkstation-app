@@ -1,4 +1,5 @@
 import {sanitizeWalletReviewEvidence} from './ai-owner-wallet-review-evidence.js';
+import {publicWalletActivity,reservationWalletActivity} from './ai-wallet-activity.js';
 import {assertAiWalletCatalogue,createAiWalletSchema,validateAiWalletSchema} from './ai-owner-wallet-schema.js';
 import {bindFreshLifecycleRead} from './store-lifecycle-generation.js';
 import {randomUUID} from 'node:crypto';
@@ -52,12 +53,12 @@ export function createAiOwnerWalletRepository(db){
     await ensure();
     const row=(await db.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"=${companyId}`)[0];
     const wallet=row?walletView(row):{companyId,currency:'EUR',enabled:false,emailEnabled:false,notificationOwnerId:'',balanceMicros:'0',reservedMicros:'0',availableMicros:'0',lastCreditMicros:'0',version:0,state:'EMPTY'};
-    const entries=storeId?await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature","usage"->'customerCharge' AS "customerCharge","createdAt","settledAt" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND ("storeId"=${storeId} OR "kind"='CREDIT') ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`:await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature","usage"->'customerCharge' AS "customerCharge","createdAt","settledAt" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`;
+    const entries=storeId?await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature",(SELECT s."name" FROM "Store" s WHERE s."id"=e."storeId" AND s."companyId"=e."companyId") AS "storeName","usage"->'customerCharge' AS "customerCharge","tariff"->'activity' AS "activity","tariff"->>'model' AS "model","usage"->>'inputTokens' AS "inputTokens","usage"->>'outputTokens' AS "outputTokens","usage"->>'cachedInputTokens' AS "cachedInputTokens","usage"->>'pages' AS "pages",("resolutionReference" IS NOT NULL) AS "manuallyResolved",(SELECT jsonb_build_object('id',u."id",'name',u."fullName") FROM "User" u WHERE u."id"=e."actorId" AND (u."companyId"=e."companyId" OR u."role"::text='SUPER_ADMIN' OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=e."companyId"))) AS "actionUser","createdAt","settledAt" FROM "AiOwnerWalletEntry" e WHERE "companyId"=${companyId} AND ("storeId"=${storeId} OR "kind"='CREDIT') ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`:await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature",(SELECT s."name" FROM "Store" s WHERE s."id"=e."storeId" AND s."companyId"=e."companyId") AS "storeName","usage"->'customerCharge' AS "customerCharge","tariff"->'activity' AS "activity","tariff"->>'model' AS "model","usage"->>'inputTokens' AS "inputTokens","usage"->>'outputTokens' AS "outputTokens","usage"->>'cachedInputTokens' AS "cachedInputTokens","usage"->>'pages' AS "pages",("resolutionReference" IS NOT NULL) AS "manuallyResolved",(SELECT jsonb_build_object('id',u."id",'name',u."fullName") FROM "User" u WHERE u."id"=e."actorId" AND (u."companyId"=e."companyId" OR u."role"::text='SUPER_ADMIN' OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=e."companyId"))) AS "actionUser","createdAt","settledAt" FROM "AiOwnerWalletEntry" e WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`;
     const notices=await db.$queryRaw`SELECT "id","kind","balanceMicros","amountMicros","emailStatus","createdAt" FROM "AiOwnerWalletNotice" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 30`;
     const usage=storeId?await db.$queryRaw`SELECT "storeId",SUM("chargedMicros")::text AS "chargedMicros",COUNT(*)::int AS "requests" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "status"='SETTLED' GROUP BY "storeId"`:await db.$queryRaw`SELECT "storeId",SUM("chargedMicros")::text AS "chargedMicros",COUNT(*)::int AS "requests" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "status"='SETTLED' GROUP BY "storeId"`;
     const json=value=>JSON.parse(JSON.stringify(value,(_,v)=>typeof v==='bigint'?v.toString():v));
     const usageSummary=await readWalletUsageSummary(db,companyId,storeId);
-    return {...wallet,customerPricing:await customerPricing(db,companyId),entries:json(entries.map(e=>({...e,customerCharge:publicCustomerCharge(e.customerCharge)}))),notices:json(notices),usage,usageSummary:json(usageSummary),usageScope:storeId?'SELECTED_STORE':'COMPANY',storeId};
+    return {...wallet,customerPricing:await customerPricing(db,companyId),entries:json(entries.map(e=>({...e,customerCharge:publicCustomerCharge(e.customerCharge),activity:publicWalletActivity(e.activity,{companyId,storeId:e.storeId})}))),notices:json(notices),usage,usageSummary:json(usageSummary),usageScope:storeId?'SELECTED_STORE':'COMPANY',storeId};
   }
   async function configurePricing(companyId,{version,policy},actorId){
     const parsed=parseCustomerPricing(policy);
@@ -123,7 +124,8 @@ export function createAiOwnerWalletRepository(db){
       return {id,replayed:false};
     }).catch(e=>{if(e.code==='P2002'||e.meta?.code==='23505')throw walletError('AI_WALLET_TRIAL_CONFLICT');throw e});
   }
-  async function reserve({companyId,storeId,feature,tariff,amountMicros,reference,invoicePolicyFallback=true,invoiceDocumentId=null}){
+  async function reserve({companyId,storeId,feature,tariff,amountMicros,reference,invoicePolicyFallback=true,invoiceDocumentId=null,activity}){
+    const activitySnapshot=reservationWalletActivity(activity,{companyId,storeId});
     const baseAmount=positiveMicros(String(amountMicros));await ensure();
     return db.$transaction(async tx=>{
       const row=await lock(tx,companyId);
@@ -149,6 +151,7 @@ export function createAiOwnerWalletRepository(db){
       const snapshot=pricingSnapshot(policy,{version:policyVersion,invoiceDocumentId,invoiceFeeClaimed});
       const amount=BigInt(customerCharge(baseAmount,policy,invoiceFeeClaimed).totalMicros);
       if(policyVersion>0)tariff={...tariff,customerPricing:snapshot};
+      if(activitySnapshot)tariff={...tariff,activity:activitySnapshot};
       if(BigInt(row.balanceMicros)-BigInt(row.reservedMicros)<amount)throw walletError('AI_WALLET_INSUFFICIENT',402);
       const id=randomUUID();
       await tx.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","storeId","kind","reference","status","reservedMicros","feature","tariff") VALUES (${id},${companyId},${storeId},'USAGE',${reference},'RESERVED',${amount},${feature},${JSON.stringify(tariff)}::jsonb)`;
