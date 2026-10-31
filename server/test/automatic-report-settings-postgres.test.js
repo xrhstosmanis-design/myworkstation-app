@@ -64,7 +64,7 @@ test("native settings HTTP persists one optimistic winner, isolates scope and pr
   assert.equal((await request(base,"GET",undefined,null)).status,401);
   for(const path of [base.replace("/companies/c/","/companies/x/"),base.replace("/stores/s/","/stores/foreign/"),base.replace("/stores/s/","/stores/inactive/")])assert.equal((await request(path)).status,404);
   const control=await request(base.replace("/stores/s/","/stores/control/"));assert.equal(control.body.settings,null);assert.equal(control.body.cashRule.mode,"DIFFERENCE_ONLY");
-  const bad={expectedVersion:2,configuration:{...config,terminals:[{terminalPos:"MAIN",requiredSlots:[1]}]}};assert.equal((await request(base,"PUT",bad)).status,400);
+  const bad={expectedVersion:2,configuration:{...config,thirdShiftStartHour:null}};assert.equal((await request(base,"PUT",bad)).status,400);
   assert.deepEqual(await snapshot(),before);
   await db.$executeRaw`UPDATE "CashControlStoreRule" SET "mode"='DIFFERENCE_ONLY',"carryOverEnabled"=false,"posEftposEnabled"=false WHERE "storeId"='s'`;
   const changed=await request(base+"/preview","POST",{day:"2020-01-15",expectedVersion:previewVersion});assert.equal(changed.body.groups,null);assert.ok(changed.body.holds.some(h=>h.code==="CASH_RULE_CHANGED"));assert.equal((await request(base,"PUT",{expectedVersion:2,configuration:config})).body.code,"CASH_RULE_CHANGED");
@@ -72,6 +72,19 @@ test("native settings HTTP persists one optimistic winner, isolates scope and pr
   await db.$executeRaw`UPDATE "CashShiftSession" SET "status"='OPEN',"closedAt"=NULL WHERE "id"='night'`;
   const open=await request(base+"/preview","POST",{day:"2020-01-15",expectedVersion:previewVersion});assert.equal(open.body.ready,false);assert.equal(open.body.sourceReadiness,"HOLD");assert.equal(open.body.financialFinality,"PROVISIONAL");assert.equal(open.body.financialReconciliationComplete,false);assert.deepEqual(open.body.financialLimitations,preview.body.financialLimitations);assert.equal(open.body.groups,null);assert.ok(open.body.holds.some(h=>h.code==="THIRD_SHIFT_OPEN"));
   const count=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "AutomaticReportSettings"`;assert.equal(count[0].count,1);
+  // Separate isolated two-shift target; the original three-shift store is now
+  // the unchanged control. This is native engineering, never production data.
+  const twoBase=base.replace("/stores/s/","/stores/control/");
+  for(const [id,opened,closed,variance] of [["two-morning","2020-02-15T07:10:00+02:00","2020-02-15T15:10:00+02:00",-10],["two-afternoon","2020-02-15T15:10:00+02:00","2020-02-16T00:20:00+02:00",8]])await db.$executeRaw`INSERT INTO "CashShiftSession"("id","companyId","storeId","terminalPos","status","openedBy","openedByName","openedAt","closedAt","variance") VALUES(${id},'c','control','TWO','CLOSED','employee','Employee',${new Date(opened)},${new Date(closed)},${variance})`;
+  const twoBefore=await snapshot(),originalSettings=await db.$queryRaw`SELECT * FROM "AutomaticReportSettings" WHERE "storeId"='s'`;
+  const twoConfig={...config,cashRule:control.body.cashRule,thirdShiftStartHour:null,terminals:[{terminalPos:"TWO",requiredSlots:[1,2]}]};
+  assert.equal((await request(twoBase,"PUT",{expectedVersion:0,configuration:twoConfig})).status,200);
+  assert.deepEqual((await request(twoBase)).body.settings.configuration,twoConfig);
+  const twoPreview=await request(twoBase+"/preview","POST",{day:"2020-02-15",expectedVersion:1});
+  assert.equal(twoPreview.status,200);assert.equal(twoPreview.body.ready,true);assert.equal(twoPreview.body.sourceCount,2);assert.equal(twoPreview.body.groups[0].netVariance,-2);assert.equal(twoPreview.body.financialFinality,"PROVISIONAL");
+  assert.equal((await request(twoBase,"PUT",{expectedVersion:1,configuration:{...twoConfig,terminals:[{terminalPos:"TWO",requiredSlots:[1,2,3]}]}})).status,400);
+  assert.equal((await request(twoBase,"PUT",{expectedVersion:1,configuration:twoConfig},"owner")).status,403);
+  assert.deepEqual(await snapshot(),twoBefore);assert.deepEqual(await db.$queryRaw`SELECT * FROM "AutomaticReportSettings" WHERE "storeId"='s'`,originalSettings);
   const platform=await readFile(new URL("../src/routes/platform-admin.js",import.meta.url),"utf8");assert.ok(platform.indexOf('router.use(auth)')<platform.indexOf('createAutomaticReportSettingsRouter(prisma)'));assert.ok(platform.indexOf('Απαιτείται πρόσβαση Platform Super Admin.')<platform.indexOf('createAutomaticReportSettingsRouter(prisma)'));
  }finally{if(server)await new Promise(resolve=>server.close(resolve));await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect()}
 });

@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: business days use Greek wall time through both DST transitions
+ok 1 - business days use Greek wall time through both DST transitions
+  ---
+  duration_ms: 38.897913
+  ...
+# Subtest: daily/weekly/monthly periods are fully completed and end exclusive
+ok 2 - daily/weekly/monthly periods are fully completed and end exclusive
+  ---
+  duration_ms: 22.568277
+  ...
+# Subtest: daily report waits for actual third closure and completed business day
+ok 3 - daily report waits for actual third closure and completed business day
+  ---
+  duration_ms: 24.967406
+  ...
+# Subtest: three arbitrary closed rows cannot substitute missing shift/terminal evidence
+ok 4 - three arbitrary closed rows cannot substitute missing shift/terminal evidence
+  ---
+  duration_ms: 13.07539
+  ...
+# Subtest: explicit morning-only delivery cannot replace store third shift and must itself be closed
+ok 5 - explicit morning-only delivery cannot replace store third shift and must itself be closed
+  ---
+  duration_ms: 11.556892
+  ...
+# Subtest: foreign, duplicate, future, unknown variance and unconfigured terminal all hold dispatch
+ok 6 - foreign, duplicate, future, unknown variance and unconfigured terminal all hold dispatch
+  ---
+  duration_ms: 33.597584
+  ...
+# Subtest: cash offsets preserve original employee differences and cannot cross day/terminal/delivery
+ok 7 - cash offsets preserve original employee differences and cannot cross day/terminal/delivery
+  ---
+  duration_ms: 22.962389
+  ...
+# Subtest: mounted report dialog saves explicit store slots, previews saved versions and discards late results after store switch
+ok 8 - mounted report dialog saves explicit store slots, previews saved versions and discards late results after store switch
+  ---
+  duration_ms: 471.307104
+  ...
+# Subtest: platform mounts keyed per-store report settings without changing recipient saving or manual-send guards
+ok 9 - platform mounts keyed per-store report settings without changing recipient saving or manual-send guards
+  ---
+  duration_ms: 4.137886
+  ...
+# Subtest: explicit settings validate slots, terminal identity, ordering, mode and optimistic version without enabling dispatch
+ok 10 - explicit settings validate slots, terminal identity, ordering, mode and optimistic version without enabling dispatch
+  ---
+  duration_ms: 63.170835
+  ...
+# Subtest: shared legacy fallback preserves all three difference-only stores and normal delivery rules
+ok 11 - shared legacy fallback preserves all three difference-only stores and normal delivery rules
+  ---
+  duration_ms: 0.51753
+  ...
+# Subtest: scope rechecks actual role before querying the selected active store
+ok 12 - scope rechecks actual role before querying the selected active store
+  ---
+  duration_ms: 1.159346
+  ...
+# Subtest: confirmed effective legacy rule is explicit and changed rules/settings hold even a complete source
+ok 13 - confirmed effective legacy rule is explicit and changed rules/settings hold even a complete source
+  ---
+  duration_ms: 81.647151
+  ...
+# Subtest: mounted two-shift form saves null, reopens it and requires third hour only when selected
+ok 14 - mounted two-shift form saves null, reopens it and requires third hour only when selected
+  ---
+  duration_ms: 391.273236
+  ...
+# Subtest: explicit two-shift schema accepts absent third boundary but still validates required third, slot identity and hours
+ok 15 - explicit two-shift schema accepts absent third boundary but still validates required third, slot identity and hours
+  ---
+  duration_ms: 42.798841
+  ...
+# Subtest: two actual closed shifts are ready for variable late closing, never require a fabricated third
+ok 16 - two actual closed shifts are ready for variable late closing, never require a fabricated third
+  ---
+  duration_ms: 22.876727
+  ...
+# Subtest: two-shift reporting retains missing, open, unknown, scope, duplicate, overlap and unfinished-day holds
+ok 17 - two-shift reporting retains missing, open, unknown, scope, duplicate, overlap and unfinished-day holds
+  ---
+  duration_ms: 56.61592
+  ...
+# Subtest: two-shift day boundaries retain Greek DST and original source identities
+ok 18 - two-shift day boundaries retain Greek DST and original source identities
+  ---
+  duration_ms: 15.003521
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1045.578876

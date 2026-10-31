@@ -7,6 +7,8 @@ import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft
 import {installStaffActionPolicy} from './helpers/backoffice-staff-actions-fixture.js';
 import {requireStaffAction} from '../src/services/backoffice-staff-access.js';
 import {maybeChangeSameProductStock} from '../src/store-baking-same-product.js';
+const cancellationSource=async()=>(await readFile(new URL('../src/routes/pos-sale-actions.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;').replace(/^export /gm,'');
+test('canonical cancellation fixture preserves the exported bootstrap body and parses before PostgreSQL execution',async()=>{new Function(await cancellationSource())});
 
 test('native actual delegated cancellation preserves fiscal/same-terminal gates and writes one inverse sale, ledger, audit and stock restore',{skip:!isolatedInvoiceDb(),timeout:90000},async()=>{
  const f=await invoiceDbFixture(),db=f.db;
@@ -27,7 +29,7 @@ test('native actual delegated cancellation preserves fiscal/same-terminal gates 
   await db.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES ('cash','sale','CASH',3),('card','sale','CARD',2),('iris','sale','IRIS',1)`;
   await db.$executeRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description") VALUES ('cash','c','s','shift','SALE_CASH',3,'POS πώληση sale · ΜΕΤΡΗΤΑ'),('card','c','s','shift','SALE_CARD',3,'POS πώληση sale · ΚΑΡΤΑ + IRIS'),('control','c','control','control-shift','SALE_CASH',11.11,'Control')`;
   const handlers={},router={use:()=>{},get:()=>{},post:(path,handler)=>handlers[path]=handler};
-  const source=(await readFile(new URL('../src/routes/pos-sale-actions.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export default router;','return router;');
+  const source=await cancellationSource();
   const deps={Router:()=>router,z,crypto,prisma:db,requireStaffAction,maybeChangeSameProductStock};new Function(...Object.keys(deps),source)(...Object.values(deps));
   const invoke=async(kind='CANCEL',terminal='POS2')=>{let result,failure,status=200;const req={user,params:{storeId:'s',saleId:'sale'},staffGrant:{capability:'sales.cancel'},body:{kind,reason:'Synthetic reviewed cancellation'},headers:{'x-mws-terminal-pos':terminal},get:()=>terminal},res={status:value=>(status=value,res),json:value=>{result=value}};await handlers['/stores/:storeId/sales/:saleId/reverse'](req,res,error=>failure=error);return {status:failure?.status||status,result,failure}};
   const snapshot=async()=>{const out={};for(const table of ['Sale','SaleLine','Payment','StoreTransaction','StoreProduct','PosSaleActionAudit','StoreOperatorAudit'])out[table]=await db.$queryRawUnsafe(`SELECT row_to_json(t) AS row FROM "${table}" t ORDER BY "id"`);return JSON.stringify(out)};

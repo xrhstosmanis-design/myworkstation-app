@@ -16,7 +16,7 @@ test('native delegated invoice metadata and canonical approval preserve one post
   await db.$transaction(tx=>common.reconcileInvoiceDrafts(tx,scope,{posOrderId:'pos',expectedVersion:preview.version,confirmSameInvoice:true,confirmMark:preview.mark,confirmPaymentDiscrepancy:true,reason:'Synthetic original comparison',actorId:'owner'}));
   const user=await installStaffActionPolicy(db,{capabilities:['invoices.read','invoices.edit']});
   await db.$executeRawUnsafe('ALTER TABLE "StockMovement" ADD CONSTRAINT "staff_actor_fk" FOREIGN KEY ("createdByUserId") REFERENCES "User"("id")');
-  await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrder" ADD COLUMN "reopenVersion" int DEFAULT 0');
+  await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrder" ADD COLUMN IF NOT EXISTS "reopenVersion" int DEFAULT 0');
   const source=await readFile(new URL('../src/routes/purchase-orders.js',import.meta.url),'utf8');
   const start=source.indexOf('router.patch("/:orderId",'),end=source.indexOf('\nrouter.get("/:orderId/detail",',start);let edit;
   const audit=source.slice(source.indexOf('async function writePurchaseAudit('),source.indexOf('const lineSchema='));
@@ -28,7 +28,7 @@ test('native delegated invoice metadata and canonical approval preserve one post
   const before=await f.snapshot();const edited=await invoke(edit,'invoices.edit',{description:'Native reviewed metadata'});assert.ifError(edited.failure);assert.equal(edited.result.ok,true);
   assert.equal(await f.snapshot(),before);assert.equal((await db.$queryRaw`SELECT "description" FROM "PurchaseOrder" WHERE "id"='pos'`)[0].description,'Native reviewed metadata');
   assert.equal((await db.$queryRaw`SELECT "actorId" FROM "StoreOperatorAudit" WHERE "eventType"='PURCHASE_ORDER_DRAFT_UPDATED'`)[0].actorId,'delegated');
-  await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrderLine" ADD COLUMN "gift" boolean DEFAULT false,ADD COLUMN "markupPercent" numeric DEFAULT 0,ADD COLUMN "updatedAt" timestamptz DEFAULT now(),ADD COLUMN "resolutionStatus" text DEFAULT \'MATCHED\'');
+  await db.$executeRawUnsafe('ALTER TABLE "PurchaseOrderLine" ADD COLUMN IF NOT EXISTS "gift" boolean DEFAULT false,ADD COLUMN IF NOT EXISTS "markupPercent" numeric DEFAULT 0,ADD COLUMN IF NOT EXISTS "updatedAt" timestamptz DEFAULT now(),ADD COLUMN IF NOT EXISTS "resolutionStatus" text DEFAULT \'MATCHED\'');
   const calc=source.slice(source.indexOf('function calc('),source.indexOf('async function learnConfirmedLineCorrection('));
   const lineSchema=source.slice(source.indexOf('const lineSchema='),source.indexOf('router.get("/report",'));
   const auditState=source.slice(source.indexOf('const auditLineState='),source.indexOf('async function writePurchaseAudit('));
