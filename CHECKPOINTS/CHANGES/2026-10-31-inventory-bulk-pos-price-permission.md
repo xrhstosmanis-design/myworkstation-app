@@ -1,3 +1,7 @@
+## Screenshot bridge recovered before final publication
+
+The delayed cloud-browser screenshot synchronized successfully and was inspected: evidence/inventory-bulk-pos-price-20261031/final-ui.jpg shows the actual installed ALL scope and unchanged-permission default. The earlier temporary screenshot synchronization limitation below is historical, not an outstanding blocker. No additional save or business action was performed for this image.
+
 ## 31/10/2026 — INVENTORY-BULK-POS-PRICE-01 — CLOSED SCOPED LAB PASS
 
 Owner work/bulk-pos-price-edit / receipt docs/bulk-pos-price-permission-receipt. Claim3330 merged985d5cff before source; source3334 original1d2e2376 CI41188535663 and synchronizeda75cad68 CI41189455309 full PASS. Shared main advanced; cancelled push runs108e/4285 were NOT treated as release evidence. Exact combined9644e95809ac0f0f1a80b1125dccfbed53aa3bed manual fullCI41190777427 SUCCESS:4779server+8backup/0FAIL/0SKIP, native603-product/tenant/control/KEEP/replay/rollback/POS-denial, build/invariants/HTTP/browser E2E. Ordinary guarded workflow41191604346 verified full CI/freshness, pinned hook and exact health SUCCESS; Renderdep-dbirtcm7bikc73dn0rh0 LIVE31Oct10:12:53UTC. Independent no-cache health verified exact9644. Automatic deployment classification of doc-only head was correctly skipped before this normal guarded workflow dispatch; no direct Render deploy or guard bypass.
