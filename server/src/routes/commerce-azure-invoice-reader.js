@@ -1,3 +1,4 @@
+import {walletActivityFromRequest} from "../services/ai-wallet-activity.js";
 import {withInvoiceWalletScope,throwIfWalletError,meterInvoiceAzure} from "../services/ai-wallet-invoice-metering.js";
 import {Router} from "express";
 import {prisma} from "../prisma.js";
@@ -170,7 +171,7 @@ router.post("/ai-reader/azure-direct",requireCompanyModule("AI_READER"),async(re
     const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
-    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId},async()=>{
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId,activity:walletActivityFromRequest(req,{storeId,purpose:"INVOICE_READ"})},async()=>{
     let parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType}));
     if(!parsed.productLines.length)return res.status(422).json({error:"Το Azure διάβασε το παραστατικό αλλά δεν επέστρεψε γραμμές προϊόντων."});
     await verifyInvoiceDiscounts({contentData:dataUrl,mimeType,filename,productLines:parsed.productLines.filter(line=>!line.sourceColumnsVerified),apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_INVOICE_MODEL||"gpt-5"});
@@ -203,7 +204,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
     // replace resultJson before next(), erasing posHandoff and forcing the
     // durable draft into the wrong provider/recovery loop.
     if(job.resultJson?.posHandoff&&typeof job.resultJson.posHandoff==="object")return next();
-    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:job.storeId},async()=>{
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:job.storeId,activity:walletActivityFromRequest(req,{storeId:job.storeId,purpose:"INVOICE_RECHECK",jobId:job.id,originalActivity:job.resultJson?.posHandoff?.walletActivity})},async()=>{
     let payload;
     try{payload=await callAzure({contentData:job.contentData,mimeType:job.mimeType})}catch(error){throwIfWalletError(error);console.error("Azure Document Intelligence fallback:",error?.message||error);return next()}
     let parsed=normalizeAzure(payload);

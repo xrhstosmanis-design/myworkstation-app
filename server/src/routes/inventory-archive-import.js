@@ -9,7 +9,6 @@ import {ensureVatDepartmentSchema} from "./management-vat-departments.js";
 import {attachSourceWorkbook,validateSourceDepartments} from "./inventory-source-workbook.js";
 import {assertSourceCostStorage,fitsSourcePrice} from "../product-cost-precision.js";
 
-const router=Router();
 const uid=()=>crypto.randomUUID();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN"]);
 const MAX_IMPORT_ROWS=10000;
@@ -24,7 +23,6 @@ const num=value=>{const normalized=String(value??"").replace(/\s/g,"").replace("
 const yes=value=>["1","TRUE","YES","ΝΑΙ","NAI","Ν"].includes(txt(value).toUpperCase());
 
 function requireAccess(req,res,next){if(req.user?.staffAccess===true&&req.staffGrant?.capability==='products.read'&&req.method==='GET'&&req.path==='/')return next('router');if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Η εισαγωγή ειδών επιτρέπεται μόνο σε Super Admin, Ιδιοκτήτη ή Admin."});next()}
-router.use(requireAccess);
 
 export function readWorkbook(dataUrl){
   const match=/^data:[^;]+;base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl||""));
@@ -85,7 +83,7 @@ export function normalizeRows(raw){
       sourceExisting:raw.sourceProfile?.name==='KAT_CATALOG_V1'?(raw.sourceProfile.existing.get(sku)||null):null};
   });
 }
-async function scopedStore(req,storeId){const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true}});if(!store){const e=new Error("Δεν βρέθηκε ενεργό κατάστημα.");e.status=404;throw e}return store}
+async function scopedStore(req,storeId,db=prisma){const store=await db.store.findFirst({where:{id:storeId,companyId:req.user.companyId,active:true},select:{id:true,name:true}});if(!store){const e=new Error("Δεν βρέθηκε ενεργό κατάστημα.");e.status=404;throw e}return store}
 export async function classify(companyId,rows,db=prisma){
   const skus=[...new Set(rows.map(row=>row.sku).filter(Boolean))];
   const barcodes=[...new Set(rows.flatMap(row=>row.barcodes||[row.barcode]).filter(Boolean))];
@@ -129,9 +127,13 @@ export async function prepareArchiveRows(db,companyId,raw,storeId){
   return rows;
 }
 
+export function createInventoryArchiveImportRouter({db=prisma,scope=null}={}){
+const prisma=db;
+const router=Router();
+router.use(scope?.kind==='POS_INVENTORY'?(_req,_res,next)=>next():requireAccess);
 router.post("/import-preview",async(req,res,next)=>{
   try{
-    const body=z.object({storeId:z.string().min(1),dataUrl:z.string().max(12000000)}).parse(req.body||{});await scopedStore(req,body.storeId);
+    const body=z.object({storeId:z.string().min(1),dataUrl:z.string().max(12000000)}).parse(req.body||{});await scopedStore(req,body.storeId,prisma);
     const raw=readWorkbook(body.dataUrl);if(!raw.length||raw.length>MAX_IMPORT_ROWS)return res.status(400).json({error:`Το αρχείο πρέπει να έχει 1 έως ${MAX_IMPORT_ROWS.toLocaleString("el-GR")} γραμμές.`});
     const rows=await prepareArchiveRows(prisma,req.user.companyId,raw,body.storeId);
     res.json({rows,summary:{total:rows.length,create:rows.filter(r=>r.action==="CREATE").length,update:rows.filter(r=>r.action==="UPDATE").length,invalid:rows.filter(r=>r.action==="INVALID").length,barcodes:rows.reduce((n,r)=>n+r.barcodes.length,0),sourceProfile:raw.sourceProfile?.name||null}});
@@ -140,15 +142,15 @@ router.post("/import-preview",async(req,res,next)=>{
 
 router.post("/import",async(req,res,next)=>{
   try{
-    const body=z.object({storeId:z.string().min(1),dataUrl:z.string().max(12000000),applyStock:z.boolean().default(false)}).parse(req.body||{});const store=await scopedStore(req,body.storeId);
+    const body=z.object({storeId:z.string().min(1),dataUrl:z.string().max(12000000),applyStock:z.boolean().default(false)}).parse(req.body||{});const store=await scopedStore(req,body.storeId,prisma);
     const raw=readWorkbook(body.dataUrl);if(!raw.length||raw.length>MAX_IMPORT_ROWS)return res.status(400).json({error:`Το αρχείο πρέπει να έχει 1 έως ${MAX_IMPORT_ROWS.toLocaleString("el-GR")} γραμμές.`});
     const rows=await prepareArchiveRows(prisma,req.user.companyId,raw,store.id);const invalid=rows.filter(r=>r.action==="INVALID");if(invalid.length)return res.status(409).json({error:`Υπάρχουν ${invalid.length} μη έγκυρες γραμμές. Διορθώστε το αρχείο και ξανακάντε preview.`});
     if(raw[0]&&Object.hasOwn(raw[0],"Τμήμα ΦΠΑ")){
       if(body.applyStock)return res.status(400).json({error:"Η πλήρης εισαγωγή δεν ενημερώνει απόθεμα υπαρχόντων ειδών."});
       if(rows.some(row=>!row.sourceDepartment))return res.status(400).json({error:"Λείπει τμήμα ΦΠΑ από γραμμή του αρχείου."});
-      await ensureProductCompanySchema();await ensureVatDepartmentSchema();
+      if(!scope){await ensureProductCompanySchema();await ensureVatDepartmentSchema();}
       const result=await prisma.$transaction(async tx=>{
-        if(!raw.sourceProfile)return importFullArchive(tx,req.user.companyId,store.id,rows);
+        if(!raw.sourceProfile)return importFullArchive(tx,req.user.companyId,store.id,rows,{operatorScope:scope});
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${req.user.companyId+":product-sku"}))`;
         const barcodes=[...new Set(rows.flatMap(row=>row.barcodes))].sort();
         if(barcodes.length)await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext($1||':barcode:'||barcode)) FROM (SELECT unnest($2::text[]) AS barcode ORDER BY barcode) b`,req.user.companyId,barcodes);
@@ -174,7 +176,7 @@ router.post("/import",async(req,res,next)=>{
           if(row.barcode)await tx.$executeRaw`INSERT INTO "ProductBarcode" ("id","productId","barcode","unitMultiplier") VALUES (${uid()},${productId},${row.barcode},1)`;
           await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${uid()},${store.id},${productId},${row.salePrice??0},${row.stock??0},${row.active}) ON CONFLICT ("storeId","productId") DO NOTHING`;created++;
         }else{
-          const p=row.productId;await tx.$executeRaw`UPDATE "Product" SET "name"=${row.name},"categoryId"=COALESCE(${categoryId},"categoryId"),"salePrice"=COALESCE(${row.salePrice},"salePrice"),"costPrice"=COALESCE(${row.costPrice},"costPrice"),"vatRate"=COALESCE(${row.vatRate},"vatRate"),"vatVerified"=CASE WHEN ${row.vatRate}::numeric IS NULL THEN "vatVerified" ELSE TRUE END,"active"=${row.active},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${p} AND "companyId"=${req.user.companyId}`;
+          const p=row.productId;await tx.$executeRaw`UPDATE "Product" SET "name"=${row.name},"categoryId"=COALESCE(${categoryId},"categoryId"),"salePrice"=CASE WHEN ${Boolean(scope)} THEN "salePrice" ELSE COALESCE(${row.salePrice},"salePrice") END,"costPrice"=COALESCE(${row.costPrice},"costPrice"),"vatRate"=COALESCE(${row.vatRate},"vatRate"),"vatVerified"=CASE WHEN ${row.vatRate}::numeric IS NULL THEN "vatVerified" ELSE TRUE END,"active"=CASE WHEN ${Boolean(scope)} THEN "active" ELSE ${row.active} END,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${p} AND "companyId"=${req.user.companyId}`;
           await tx.$executeRaw`INSERT INTO "StoreProduct" ("id","storeId","productId","salePrice","currentStock","active") VALUES (${uid()},${store.id},${p},${row.salePrice??0},${body.applyStock?(row.stock??0):0},${row.active}) ON CONFLICT ("storeId","productId") DO UPDATE SET "salePrice"=COALESCE(${row.salePrice},"StoreProduct"."salePrice"),"currentStock"=CASE WHEN ${body.applyStock} THEN COALESCE(${row.stock},"StoreProduct"."currentStock") ELSE "StoreProduct"."currentStock" END,"active"=${row.active},"updatedAt"=CURRENT_TIMESTAMP`;updated++;
         }
       }
@@ -183,4 +185,7 @@ router.post("/import",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+return router;
+}
+const router=createInventoryArchiveImportRouter();
 export default router;

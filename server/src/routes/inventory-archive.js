@@ -5,11 +5,14 @@ import {prisma} from "../prisma.js";
 import {z} from "zod";
 import crypto from "crypto";
 
+export function createInventoryArchiveRouter({db=prisma,scope=null}={}){
+const prisma=db;
 const router=Router();
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const n=value=>Number(value||0);
 
 function requireAccess(req,res,next){
+  if(scope?.kind==='POS_INVENTORY')return next();
   if(req.user?.staffAccess===true&&req.method==='GET'&&req.staffGrant?.capability==='products.read')return next();
   if(req.user?.tokenType==="STORE_OPERATOR"||!roles.has(req.user?.role))return res.status(403).json({error:"Το Αρχείο ειδών είναι διαθέσιμο μόνο σε Super Admin, Ιδιοκτήτη, Admin ή Manager."});
   next();
@@ -182,4 +185,7 @@ router.get("/",async(req,res,next)=>{
   }catch(error){next(error)}
 });
 
+return router;
+}
+const router=createInventoryArchiveRouter();
 export default router;

@@ -1,0 +1,55 @@
+{
+  "task": "POS-OPERATOR-INVENTORY-01",
+  "owner": "fix/pos-operator-inventory-20261031",
+  "status": "AWAITING_FULL_CI_AND_LAB",
+  "sourcePr": 3427,
+  "claimPr": 3421,
+  "claimMerge": "6b34016a48eb181f93050360384a8631bbcfb408",
+  "nativeReceipt": {
+    "head": "bb6463ce5e913c8da55eb3f7e414ba1e5237095f",
+    "workflowRun": 41246986998,
+    "job": 124672617752,
+    "serverTests": {
+      "pass": 4984,
+      "fail": 0,
+      "skip": 0
+    },
+    "overallWorkflow": "FAIL",
+    "failure": "unchanged Chromium inventory SET footer visibility assertion",
+    "nativeBoundary": "PASS in isolated synthetic PostgreSQL; not LAB",
+    "nativeCoverage": [
+      "live credential/profile/session/store authorization",
+      "own-store retail preserves company base and other-store prices",
+      "barcode transfer between linked own-store products",
+      "bulk card and generic zero-stock import",
+      "stock, movement and financial controls unchanged",
+      "foreign-store/object and forged-stock denial",
+      "trigger-induced stock change rollback",
+      "deferred commit failure never sends HTTP success",
+      "concurrent profile revocation denies stale grant",
+      "module and session revocation"
+    ],
+    "stockAndFinancialControls": "fixture-only quantities P=17,Q=8; other-store=22,50; Sale control total=10; no StockMovement rows; exact before/after assertions in native test",
+    "fix": "remove permission fieldset wrappers; disable original controls individually; retain original SET direct-child layout and E2E assertions"
+  },
+  "localFollowup": {
+    "boundaryAndMountedClient": {
+      "pass": 11,
+      "fail": 0,
+      "skip": 0
+    },
+    "originalArchiveCardMounted": {
+      "pass": 4,
+      "fail": 0,
+      "skip": 0
+    },
+    "nativeInfrastructure": "unavailable locally; native receipt is from CI"
+  },
+  "realAccountGrants": 0,
+  "realModuleChanges": 0,
+  "hostedBusinessActions": 0,
+  "stockOrFinancialLabActions": 0,
+  "deployment": null,
+  "operatorLabAcceptance": "NOT_TESTED",
+  "physicalTerminalAcceptance": "NOT_TESTED"
+}

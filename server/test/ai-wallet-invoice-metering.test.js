@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createInvoiceWalletMeter,throwIfWalletError,invoiceWalletFeatures} from '../src/services/ai-wallet-invoice-metering.js';
+import {walletActivityFromRequest} from '../src/services/ai-wallet-activity.js';
 
 const token={model:'synthetic',inputMicrosPerMillion:1000000,cachedInputMicrosPerMillion:0,outputMicrosPerMillion:1000000,contextTokens:100,maxOutputTokens:20};
 const page={model:'prebuilt-invoice',apiVersion:'2024-11-30',unitMicros:40,maxPages:5};
@@ -8,6 +9,18 @@ const env={AI_OWNER_WALLET_ENABLED:'true',AI_OWNER_WALLET_INVOICES_ENABLED:'true
 const url='https://api.openai.com/v1/responses',options={method:'POST',body:JSON.stringify({model:'synthetic',input:'synthetic private invoice'})},scope={companyId:'c',storeId:'s'};
 const raw=id=>({id,model:'synthetic',usage:{input_tokens:5,output_tokens:3,input_tokens_details:{cached_tokens:0}},output_text:'synthetic answer'});
 const azurePayload={status:'succeeded',analyzeResult:{modelId:page.model,apiVersion:page.apiVersion,pages:[{pageNumber:1},{pageNumber:2}]}};
+test('parallel original callers retain copied activity through provider waits without names or scope leaking',async()=>{
+ const f=fixture(),names=['Synthetic operator A','Synthetic operator B'];
+ const requests=names.map((name,index)=>{
+  const own={companyId:'company-'+index,storeId:'store-'+index};
+  const activity=walletActivityFromRequest({user:{...own,id:'operator-'+index,tokenType:'STORE_OPERATOR',role:'EMPLOYEE',fullName:name}},{storeId:own.storeId,purpose:'INVOICE_ASSISTANT'});
+  const work=f.meter.run({...own,activity},()=>f.meter.responsesFetch(url,options));activity.actor.name='Changed after request';return work;
+ });
+ await Promise.all(requests);
+ const holds=f.events.filter(e=>e.kind==='reserve');assert.deepEqual(holds.map(e=>e.activity.actor.name).sort(),names);
+ for(const hold of holds){assert.equal(hold.activity.companyId,hold.companyId);assert.equal(hold.activity.storeId,hold.storeId)}
+ assert.equal(f.events.filter(e=>e.kind==='settle').length,2);
+});
 test('invoice pricing receives only the server-supplied durable document and parallel scopes cannot leak it',async()=>{
  const f=fixture();
  await Promise.all(['document-a','document-b'].map(invoiceDocumentId=>f.meter.run({...scope,invoiceDocumentId},()=>f.meter.responsesFetch(url,options))));

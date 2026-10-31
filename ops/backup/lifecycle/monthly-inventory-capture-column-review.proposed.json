@@ -2108,6 +2108,26 @@
     {
       "column": "MonthlyInventoryCaptureJob.updatedAt",
       "classification": "SCOPED_MONTHLY_CAPTURE_AUTHORITY_OR_JOB_METADATA_NEVER_AN_OWNERSHIP_SELECTOR"
+    },
+    {
+      "column": "StoreChatDelivery.messageId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreChatDelivery.userId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
+    },
+    {
+      "column": "StoreChatMessage.replyToId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreChatReaction.messageId",
+      "classification": "HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED"
+    },
+    {
+      "column": "StoreChatReaction.userId",
+      "classification": "OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION"
     }
   ]
 }

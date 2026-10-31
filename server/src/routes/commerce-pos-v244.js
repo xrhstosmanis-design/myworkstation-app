@@ -1,3 +1,4 @@
+import {walletActivityFromRequest,walletActivityForJob} from "../services/ai-wallet-activity.js";
 import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import {findUnlinkedMyDataOriginal} from '../lib/pos-unlinked-mydata.js';
 import {assertExpectedPendingInvoice,pendingIntentForPayment,invoicePageManifest} from '../services/pos-pending-invoices.js';
@@ -225,7 +226,7 @@ function scheduleBoundFastBackground({companyId,storeId,jobId,pageJobIds,handoff
           if(handoff.replaceExistingDraft){const rows=await prisma.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"=${jobId} AND "companyId"=${companyId} LIMIT 1`;previousLines=Array.isArray(rows[0]?.resultJson?.productLines)?rows[0].resultJson.productLines:[];requiresCompletePrintedTable=rows[0]?.resultJson?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true;sourceLines=null}
           if(!sourceLines&&handoff.fullReader==="ASSISTANT"){
             operationStage="assistant-read";
-            sourceLines=await readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross:handoff.totalGross});
+            sourceLines=await readPosInvoiceWithAssistant({companyId,storeId,pageJobIds,totalGross:handoff.totalGross,activity:walletActivityForJob({companyId,storeId,purpose:"PAYMENT_INVOICE_READ",jobId,documentNumber:handoff.documentNumber},handoff.walletActivity)});
             requiresCompletePrintedTable=true;
           }
           if(!sourceLines){operationStage="ai-recheck";const ai=await internalCommerceRequest(`/ai-reader/jobs/${encodeURIComponent(jobId)}/ai-recheck`,{backgroundScope,publicOrigin,method:"POST",body:{force:true,additionalPageJobIds}});sourceLines=ai?.result?.productLines;requiresCompletePrintedTable=ai?.result?.supplierReadingProfile?.requireCompletePrintedTableOnMismatch===true}
@@ -600,7 +601,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     const store=await prisma.store.findFirst({where:{id:storeId,companyId:req.user.companyId},select:{id:true}});
     if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});
     if(req.user?.tokenType==="STORE_OPERATOR"&&String(req.user.storeId)!==storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το κατάστημα."});
-    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId},async()=>{
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId,activity:walletActivityFromRequest(req,{storeId,purpose:"PAYMENT_HEADER_READ"})},async()=>{
     const isPdf=mimeType==="application/pdf";
     if(!isPdf&&!/^data:image\/(jpeg|png|webp);base64,/i.test(dataUrl))return res.status(400).json({error:"Το PREMIUM FAST υποστηρίζει εικόνα ή PDF."});
     if(isPdf&&!/^data:application\/pdf;base64,/i.test(dataUrl))return res.status(400).json({error:"Μη έγκυρο PDF."});
@@ -882,7 +883,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
       if(pendingBinding)await assertExpectedPendingInvoice(prisma,pendingScope,req.body);
       let backgroundQueued=false;
       if(!linked.reused){
-        backgroundQueued=await queueEmptyInboxRead(prisma,receiptIdentity,myDataPurchase,existingPayment);
+        backgroundQueued=await queueEmptyInboxRead(prisma,receiptIdentity,myDataPurchase,existingPayment,walletActivityFromRequest(req,{storeId,purpose:"PAYMENT_INVOICE_READ",documentNumber,jobId:myDataPurchase.jobId,documentId:myDataPurchase.documentId}));
         if(backgroundQueued)await enqueueFastBackground({companyId,storeId,jobId:myDataPurchase.jobId,publicOrigin:`${req.get("x-forwarded-proto")||req.protocol}://${req.get("host")}`});
       }
       return res.json({ok:true,accepted:true,draftReady:true,...linked,backgroundQueued,message:backgroundQueued?"Η πληρωμή συνδέθηκε με το ίδιο πρόχειρο. Η ανάγνωση του PDF συνεχίζεται στο παρασκήνιο.":"Η φωτογραφία και η υπάρχουσα πληρωμή POS συνδέθηκαν με την ίδια αγορά myDATA. Οι ελεγμένες γραμμές και η αποθήκη διατηρήθηκαν."});
@@ -967,7 +968,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
         // resume the same draft and payment, never turn into a duplicate file.
         const existingJobs=await tx.$queryRaw`SELECT "id","status" FROM "AiReaderJob" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "attachmentId"=${attachmentId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('POS_DRAFT_READY','POS_PROCESSING','POS_FAILED')) AND "status" NOT IN ('AWAITING_APPROVAL','CONFIRMED') ORDER BY "createdAt" DESC LIMIT 1`;
         const jobId=existingJobs[0]?.id||id();
-        const handoff={...(pendingBinding?{sourceKind:"AI_HANDOFF",pendingInvoiceManifest:invoicePageManifest(req.body.pages)}:{}),version:"POS_FAST_HANDOFF_V1",lifecycleGeneration:lifecycleContext()[storeId]??'0',fullReader:"ASSISTANT",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:index,pageCount:normalizedPages.length,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+        const handoff={walletActivity:walletActivityFromRequest(req,{storeId,purpose:"PAYMENT_INVOICE_READ",documentNumber}),...(pendingBinding?{sourceKind:"AI_HANDOFF",pendingInvoiceManifest:invoicePageManifest(req.body.pages)}:{}),version:"POS_FAST_HANDOFF_V1",lifecycleGeneration:lifecycleContext()[storeId]??'0',fullReader:"ASSISTANT",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:index,pageCount:normalizedPages.length,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
         if(existingJobs[0])await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:handoff,lifecycleGeneration:handoff.lifecycleGeneration})}::jsonb,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${jobId} AND "companyId"=${companyId}`;
         else await tx.$executeRaw`INSERT INTO "AiReaderJob" ("id","companyId","storeId","attachmentId","stage","status","localConfidence","resultJson","requestedByUserId") VALUES (${jobId},${companyId},${storeId},${attachmentId},'LOCAL','POS_QUEUED',0,${JSON.stringify({rawText:"",lines:[],pageCount:normalizedPages.length,posHandoff:handoff,lifecycleGeneration:handoff.lifecycleGeneration})}::jsonb,${req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id})`;
         const existingInbox=await tx.$queryRaw`SELECT "id" FROM "DocumentInbox" WHERE "companyId"=${companyId} AND "attachmentId"=${attachmentId} LIMIT 1 FOR UPDATE`;
@@ -978,7 +979,7 @@ router.post("/ai-reader/fast-handoff",requireCompanyModule("AI_READER"),requireC
         jobs.push({id:jobId,status:existingJobs[0]?.status||"POS_QUEUED"});
       }
       const pageJobIds=jobs.map(job=>job.id);
-      const primaryHandoff={...(pendingBinding?{sourceKind:"AI_HANDOFF",pendingInvoiceManifest:invoicePageManifest(req.body.pages)}:{}),version:"POS_FAST_HANDOFF_V1",lifecycleGeneration:lifecycleContext()[storeId]??'0',fullReader:"ASSISTANT",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],resumeStoredProductLines:false,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
+      const primaryHandoff={walletActivity:walletActivityFromRequest(req,{storeId,purpose:"PAYMENT_INVOICE_READ",documentNumber}),...(pendingBinding?{sourceKind:"AI_HANDOFF",pendingInvoiceManifest:invoicePageManifest(req.body.pages)}:{}),version:"POS_FAST_HANDOFF_V1",lifecycleGeneration:lifecycleContext()[storeId]??'0',fullReader:"ASSISTANT",documentType,supplierId,documentNumber,documentDate,totalGross,settlementMode,paymentTransactionId,pageIndex:0,pageCount:normalizedPages.length,pageJobIds,primaryJobId:pageJobIds[0],resumeStoredProductLines:false,myDataInboundId:myData?.id||null,myDataInboxId:myData?.inboxId||null,queuedAt:new Date().toISOString()};
       await tx.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({posHandoff:primaryHandoff,lifecycleGeneration:primaryHandoff.lifecycleGeneration,...(hasCompleteCachedProductLines?{productLines:cachedProductLines}: {})})}::jsonb,"stage"='LOCAL',"status"='POS_QUEUED',"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${pageJobIds[0]} AND "companyId"=${companyId} AND ("purchaseDocumentId" IS NULL OR "status" IN ('LOCAL_COMPLETE','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED'))`;
       if(myData?.inboxId)await tx.$executeRaw`UPDATE "DocumentInbox" SET "supplierId"=${supplierId},"status"='IN_REVIEW',"note"=${`Συνδέθηκε με παραλαβή POS • ${documentNumber} • ${settlementMode==='PAID'?'Πληρωμένο':'Με πίστωση'}${paymentTransactionId?` • Πληρωμή ${paymentTransactionId}`:''}`},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=${myData.inboxId} AND "companyId"=${companyId}`;
       return jobs;

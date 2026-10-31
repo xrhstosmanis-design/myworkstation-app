@@ -10,8 +10,8 @@ import {lifecycleWorkerCapabilityMac} from '../src/services/store-lifecycle-work
 
 const key='MWS_STORE_LIFECYCLE_PROFILE',full='MONTHLY_INVENTORY_CAPTURE_V1';
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const baseHash='da2844a0cd3d4fe6ae3e78a57ffbcf882277be4aa21eed5a6eb2e7a44df1ecda';
-const fullHash='e60d2f2805e6b585cd1af22d56998db36f64e561d49cb99266a4bfb1e32532b5';
+const baseHash='f47fb7cbcaf6b8d9a7f83b1c9a9244d6f579ad2390f46679bb1646fbbd2ea714';
+const fullHash='f9bcf3516e1b0f846d07503b9674934cc3a43887dc4416658952775a643b6ebe';
 const workerDirectory=path.resolve('../ops/backup/lifecycle');
 const scopedEnv=async(values,fn)=>{const saved=Object.fromEntries(Object.keys(values).map(k=>[k,process.env[k]]));try{for(const [k,v]of Object.entries(values))v===undefined?delete process.env[k]:process.env[k]=v;return await fn()}finally{for(const[k,v]of Object.entries(saved))v===undefined?delete process.env[k]:process.env[k]=v}};
 
@@ -20,7 +20,7 @@ test('BASE accessor remains canonical, selection is closed and returned document
  assert.equal(hash(base),baseHash);
  for(const env of [{},{[key]:'BASE'}])assert.deepEqual(selectedStoreLifecycleManifest(env),base);
  const selected=selectedStoreLifecycleManifest({[key]:full});
- assert.equal(hash(selected),fullHash);assert.equal(selected.knownTables.length,275);assert.equal(base.knownTables.length,272);
+ assert.equal(hash(selected),fullHash);assert.equal(selected.knownTables.length,277);assert.equal(selected.tables.length,194);assert.equal(base.knownTables.length,274);assert.equal(base.tables.length,191);
  selected.tables[0].name='MUTATED';base.knownTables.length=0;
  assert.equal(hash(selectedStoreLifecycleManifest({[key]:full})),fullHash);
  assert.equal(hash(reviewedFreshStoreManifest()),baseHash);

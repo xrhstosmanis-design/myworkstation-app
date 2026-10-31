@@ -1,3 +1,4 @@
+import {walletActivityFromRequest} from "../services/ai-wallet-activity.js";
 import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import crypto from "crypto";
 import {Router} from "express";
@@ -263,7 +264,7 @@ router.post("/ai-reader/jobs/:jobId/ai-recheck",requireCompanyModule("AI_READER"
   const jobs=await prisma.$queryRaw`SELECT j."id",j."storeId",j."status",j."localConfidence",j."purchaseDocumentId",j."resultJson",a."filename",a."mimeType",a."contentData" FROM "AiReaderJob" j JOIN "DocumentAttachment" a ON a."id"=j."attachmentId" WHERE j."id"=${req.params.jobId} AND j."companyId"=${req.user.companyId} LIMIT 1`;
   const job=jobs[0];if(!job)return res.status(404).json({error:"Δεν βρέθηκε η ανάγνωση."});
   if(req.user?.tokenType==="STORE_OPERATOR"&&req.user.storeId!==job.storeId)return res.status(403).json({error:"Δεν έχεις πρόσβαση σε αυτό το τιμολόγιο."});
-    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:job.storeId},async()=>{
+    return await withInvoiceWalletScope({companyId:req.user.companyId,storeId:job.storeId,activity:walletActivityFromRequest(req,{storeId:job.storeId,purpose:req.user.tokenType==="POS_BACKGROUND"&&job.resultJson?.posHandoff?"PAYMENT_INVOICE_READ":"INVOICE_RECHECK",jobId:job.id,documentId:job.purchaseDocumentId,originalActivity:job.resultJson?.posHandoff?.walletActivity})},async()=>{
   if(Number(job.localConfidence||0)>=THRESHOLD&&!body.force&&!body.additionalPageJobIds.length)return res.json({id:job.id,status:job.status,aiCalled:false,reason:"OCR_CONFIDENCE_OK",confidence:Number(job.localConfidence||0),result:job.resultJson});
   if(!job.contentData)return res.status(409).json({error:"Δεν βρέθηκε το αρχικό αρχείο του τιμολογίου για επανέλεγχο AI."});
 

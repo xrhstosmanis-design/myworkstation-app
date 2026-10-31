@@ -1,3 +1,4 @@
+import {ensureStoreChatInteractions} from '../src/chat-interactions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes,createHash} from 'node:crypto';
@@ -36,6 +37,7 @@ async function fixture(capture=false){
   await provisionFtextRecoverySchema(db);
   await provisionAiWalletRecovery(db);
   await ensureBackofficeStaffSchema(db);
+  await ensureStoreChatInteractions(db);
   await db.$executeRawUnsafe(`INSERT INTO "Company"("id","name","updatedAt") VALUES ('fixture-company','SYNTHETIC',NOW()),('foreign-company','CONTROL',NOW())`);
   await db.$executeRawUnsafe(`INSERT INTO "Store"("id","name","companyId","updatedAt") VALUES ('target','SYNTHETIC','fixture-company',NOW()),('sibling','CONTROL','fixture-company',NOW()),('foreign','CONTROL','foreign-company',NOW())`);
   await db.$executeRawUnsafe(`INSERT INTO "Product"("id","companyId","name") VALUES ('shared-product','fixture-company','SYNTHETIC SHARED'),('foreign-product','foreign-company','CONTROL')`);
