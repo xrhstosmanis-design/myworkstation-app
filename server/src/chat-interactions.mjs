@@ -16,6 +16,7 @@ export function chatReaction(value){
 }
 export async function ensureStoreChatInteractions(db){
  await db.$executeRawUnsafe('ALTER TABLE "StoreChatMessage" ADD COLUMN IF NOT EXISTS "replyToId" TEXT');
+ await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StoreChatMessage_pinned_announcements_idx" ON "StoreChatMessage" ("storeId","createdAt" DESC) WHERE "pinned"=true AND "category"='ANNOUNCEMENT'`);
  await db.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "StoreChatDelivery" ("messageId" TEXT NOT NULL,"userId" TEXT NOT NULL,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"deliveredAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY ("messageId","userId"))');
  await db.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "StoreChatReaction" ("messageId" TEXT NOT NULL,"userId" TEXT NOT NULL,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"reaction" TEXT NOT NULL CHECK ("reaction" IN (\'👍\',\'✅\',\'❤️\')),"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY ("messageId","userId"))');
 }

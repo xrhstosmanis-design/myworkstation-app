@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';import jwt from 'jsonwebtoken';import crypto from 'node:crypto';
-import {PrismaClient} from '@prisma/client';
+import {Prisma,PrismaClient} from '@prisma/client';
 import {prisma as sharedDb} from '../src/prisma.js';
 import {issueChatOperatorSession} from '../src/chat-operator-auth.mjs';
 import {ensureStoreChatInteractions} from '../src/chat-interactions.mjs';
@@ -19,6 +19,15 @@ try{
  const staff=await issueChatOperatorSession(operator,{});
  const parent=await call(a.token,store,'','POST',{body:'Parent <script>literal</script> '+'x'.repeat(300),category:'GENERAL'});assert.equal(parent.status,201,JSON.stringify(parent.body));const parentId=parent.body.id;
  const siblingMessage=await call(a.token,sibling,'','POST',{body:'Sibling'}),foreignMessage=await call(b.token,other,'','POST',{body:'Foreign'});
+ // A long history must be bounded before names/reactions/delivery enrichment. Older read pins stay visible.
+ const prefix=`ci-chat-page-${crypto.randomUUID()}-`,oldPin=prefix+'1';
+ await db.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","pinned","createdAt","updatedAt") SELECT ${prefix}||i::text,${company.id},${store.id},${a.u.id},CASE WHEN i=1 THEN 'ANNOUNCEMENT' ELSE 'GENERAL' END,'Synthetic older history',i=1,NOW()-INTERVAL '1 day',NOW() FROM generate_series(1,400) i`;
+ await db.$executeRaw`INSERT INTO "StoreChatRead" ("messageId","userId") VALUES (${oldPin},${operator.id})`;
+ const page=await call(staff,store,'?limit=1');assert.equal(page.status,200,JSON.stringify(page.body));assert.deepEqual(page.body.rows.map(r=>r.id),[parentId]);assert.equal(page.body.pinnedAnnouncements[0].id,oldPin);assert.equal(Object.hasOwn(page.body.rows[0],'inTimeline'),false);
+ const querySource=fs.readFileSync(new URL('../src/routes/store-chat.js',import.meta.url),'utf8').match(/const fetched=await prisma\.\$queryRaw`([\s\S]*?)`;/)[1];
+ const parts=querySource.split(/\$\{([^}]+)\}/),strings=[],values=[],bindings={'req.user.id':operator.id,'store.companyId':company.id,'store.id':store.id,limit:1};
+ for(let i=0;i<parts.length;i++)if(i%2){assert.ok(Object.hasOwn(bindings,parts[i]));values.push(bindings[parts[i]])}else strings.push(parts[i]);
+ const enriched=await db.$queryRaw(Prisma.sql(strings,...values));assert.equal(enriched.length,2,'Only one timeline row plus the older pin are enriched, not the400-row history');assert.equal(enriched.filter(r=>r.inTimeline).length,1);
  const initial=await call(staff,store);assert.equal(initial.status,200,JSON.stringify(initial.body));assert.equal(initial.body.interactionsAvailable,true);assert.match(initial.cache,/no-store/);assert.equal(initial.body.rows.find(r=>r.id===parentId).deliveries.length,0,'server save/GET alone never claims delivery');
  const receipts=await Promise.all(Array.from({length:8},()=>call(staff,store,'/delivered','POST',{messageIds:[parentId,parentId]})));for(const r of receipts)assert.equal(r.status,200,JSON.stringify(r.body));assert.equal(receipts.reduce((sum,r)=>sum+r.body.received,0),1);
  const receipt=await db.$queryRaw`SELECT * FROM "StoreChatDelivery" WHERE "messageId"=${parentId}`;assert.equal(receipt.length,1);assert.equal(receipt[0].userId,operator.id);
@@ -53,5 +62,5 @@ try{
  await db.storePaidModule.create({data:{storeId:store.id,companyId:company.id,moduleKey:'STORE_CHAT',active:false}});assert.equal((await call(a.token,store,'/delivered','POST',{messageIds:[parentId]})).status,403);assert.equal((await call(staff,store)).status,401);
  await db.storePaidModule.update({where:{storeId_moduleKey:{storeId:store.id,moduleKey:'STORE_CHAT'}},data:{active:true}});
  const payload=jwt.decode(staff);await db.$executeRaw`UPDATE "StoreChatMobileSession" SET "revokedAt"=NOW() WHERE "id"=${payload.chatSessionId}`;assert.equal((await call(staff,store,`/${parentId}/reaction`,'PUT',{reaction:'👍'})).status,401);
- console.log('Chat combined interactions real PostgreSQL/HTTP PASS: actual idempotent client receipts distinct from read, atomic same-store quotes including voice/video, reaction set/replace/current-user remove, foreign/sibling/malformed/module/revoked-session rejection, existing owner pin and explicit announcement acknowledgement. Synthetic local data only.');
+ console.log('Chat combined interactions real PostgreSQL/HTTP PASS: bounded-before-enrichment timeline and older read pins across400 rows, actual idempotent client receipts distinct from read, atomic same-store quotes including voice/video, reaction set/replace/current-user remove, foreign/sibling/malformed/module/revoked-session rejection, existing owner pin and explicit announcement acknowledgement. Synthetic local data only.');
 }finally{await db.$disconnect();await sharedDb.$disconnect()}

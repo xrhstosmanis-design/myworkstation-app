@@ -55,9 +55,18 @@ function parseAttachment(value){
 
 router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
   const store=await storeFor(req,res);if(!store)return;
-  const limit=Math.min(Math.max(Number(req.query.limit||100),1),200);
+  const requested=Number(req.query.limit||100),limit=Number.isFinite(requested)?Math.min(Math.max(Math.trunc(requested),1),200):100;
   const fetched=await prisma.$queryRaw`
-    SELECT m."id",m."senderId",COALESCE(NULLIF(su."fullName",''),NULLIF(su."email",''),NULLIF(so."displayName",''),m."senderId") AS "senderName",
+    WITH timeline AS MATERIALIZED (
+      SELECT candidate."id" FROM "StoreChatMessage" candidate
+      WHERE candidate."companyId"=${store.companyId} AND candidate."storeId"=${store.id}
+      ORDER BY (candidate."senderId"=${req.user.id} OR EXISTS(SELECT 1 FROM "StoreChatRead" mine WHERE mine."messageId"=candidate."id" AND mine."userId"=${req.user.id})) ASC,candidate."pinned" DESC,candidate."createdAt" DESC
+      LIMIT ${limit}
+    ), pin_candidates AS MATERIALIZED (
+      SELECT pin."id" FROM "StoreChatMessage" pin WHERE pin."companyId"=${store.companyId} AND pin."storeId"=${store.id} AND pin."pinned"=true AND pin."category"='ANNOUNCEMENT'
+      ORDER BY pin."createdAt" DESC LIMIT 20
+    )
+    SELECT EXISTS(SELECT 1 FROM timeline candidate WHERE candidate."id"=m."id") AS "inTimeline",m."id",m."senderId",COALESCE(NULLIF(su."fullName",''),NULLIF(su."email",''),NULLIF(so."displayName",''),m."senderId") AS "senderName",
       m."category",m."body",m."replyToId",(m."senderId"=${req.user.id}) AS "ownMessage",
       CASE WHEN parent."id" IS NULL THEN NULL ELSE json_build_object('id',parent."id",'senderName',COALESCE(NULLIF(pu."fullName",''),NULLIF(po."displayName",''),'Χρήστης'),'body',LEFT(parent."body",280),'attachmentName',parent."attachmentName") END AS "replyTo",m."important",m."pinned",m."completed",m."completedAt",m."completedBy",m."aiReaderJobId",m."aiReaderSentAt",m."aiReaderSentBy",
       COALESCE(NULLIF(au."fullName",''),NULLIF(au."email",''),NULLIF(ao."displayName",''),m."aiReaderSentBy") AS "aiReaderSentByName",
@@ -105,12 +114,13 @@ router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
     LEFT JOIN "StoreOperatorCredential" to2 ON to2."id"=t."createdBy" AND to2."companyId"=m."companyId" AND to2."storeId"=m."storeId"
     LEFT JOIN "User" tcu ON tcu."id"=t."completedBy" AND tcu."companyId"=m."companyId"
     LEFT JOIN "StoreOperatorCredential" tco ON tco."id"=t."completedBy" AND tco."companyId"=m."companyId" AND tco."storeId"=m."storeId"
-    WHERE m."companyId"=${store.companyId} AND m."storeId"=${store.id}
+    WHERE m."companyId"=${store.companyId} AND m."storeId"=${store.id} AND m."id" IN (SELECT "id" FROM timeline UNION SELECT "id" FROM pin_candidates)
     ORDER BY "readByMe" ASC,m."pinned" DESC,m."createdAt" DESC`;
   res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, private");
   const settings=await chatSettings(store);
   const assignees=canPin(req.user)?await prisma.employee.findMany({where:{storeId:store.id,active:true},select:{id:true,fullName:true},orderBy:[{fullName:"asc"},{id:"asc"}]}):[];
-  res.json({store,rows:fetched.slice(0,limit),interactionsAvailable:true,pinnedAnnouncements:fetched.filter(row=>row.pinned&&row.category==="ANNOUNCEMENT").slice(0,20),settings,voiceMessagesAvailable:true,videoMessagesAvailable:settings.photosEnabled,assignees,permissions:{canPin:canPin(req.user),canDownload:canDownload(req.user,settings),canComplete:canPin(req.user),canCreateTask:canCreateTask(req.user,settings),canManageTask:canPin(req.user),canManageSettings:canPin(req.user)}});
+  const publicRow=({inTimeline,...row})=>row;
+  res.json({store,rows:fetched.filter(row=>row.inTimeline).map(publicRow),interactionsAvailable:true,pinnedAnnouncements:fetched.filter(row=>row.pinned&&row.category==="ANNOUNCEMENT").slice(0,20).map(publicRow),settings,voiceMessagesAvailable:true,videoMessagesAvailable:settings.photosEnabled,assignees,permissions:{canPin:canPin(req.user),canDownload:canDownload(req.user,settings),canComplete:canPin(req.user),canCreateTask:canCreateTask(req.user,settings),canManageTask:canPin(req.user),canManageSettings:canPin(req.user)}});
 }catch(e){next(e)}});
 
 // Delivery is acknowledged by a recipient client after accepting the actual response, never by Push/save.
