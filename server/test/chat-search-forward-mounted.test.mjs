@@ -29,7 +29,7 @@ test('actual forward UI requires destination review then explicit confirmation; 
  try{await h.render('a');await click(h,'Προώθηση');assert.equal(document.querySelector('select[aria-label="Συνομιλία προορισμού"]').value,'');assert.equal(button('Έλεγχος προώθησης').disabled,true);
   await select(h,'destination');await click(h,'Έλεγχος προώθησης');assert.ok(document.querySelector('[aria-label="Προώθηση μηνύματος"]').textContent.includes('CI Company · CI Destination'));assert.equal(attempts,0);
   await click(h,'Επιβεβαίωση προώθησης');assert.ok(button('Επανάληψη επιβεβαίωσης'));await click(h,'Επανάληψη επιβεβαίωσης');
-  const posts=h.calls.filter(c=>c.method==='POST');assert.equal(posts.length,2);assert.equal(posts[0].body.requestId,posts[1].body.requestId);assert.deepEqual(Object.keys(posts[0].body).sort(),['requestId','targetStoreId']);assert.equal(posts[0].body.targetStoreId,'destination');assert.ok(document.body.textContent.includes('Προωθήθηκε στο CI Destination'));
+  const posts=h.calls.filter(c=>c.method==='POST');assert.equal(posts.length,2);assert.equal(posts[0].body.requestId,posts[1].body.requestId);assert.deepEqual(Object.keys(posts[0].body).sort(),['requestId','targetCompanyId','targetStoreId']);assert.equal(posts[0].body.targetStoreId,'destination');assert.ok(document.body.textContent.includes('Προωθήθηκε στο CI Destination'));
   assert.equal(h.calls.some(c=>c.path.endsWith('/read')||c.path.endsWith('/delivered')||c.path.endsWith('/acknowledge')),false);
  }finally{await h.close()}
 });

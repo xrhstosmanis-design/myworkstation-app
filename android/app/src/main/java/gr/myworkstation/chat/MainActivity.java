@@ -574,6 +574,7 @@ public final class MainActivity extends Activity {
         String term = java.text.Normalizer.normalize(query.getText().toString().trim(), java.text.Normalizer.Form.NFC);
         if (expected != null && !expected.equals(term)) return;
         if (term.codePointCount(0,term.length()) < 2 || term.codePointCount(0,term.length()) > 120) { status("Γράψε 2 έως 120 χαρακτήρες."); return; }
+        InputMethodManager keyboard = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE); if (keyboard != null) keyboard.hideSoftInputFromWindow(query.getWindowToken(), 0);
         final int generation = ++searchGeneration; final long scope = epoch.capture(); final String captured = token, storeId = id(selected,"id"), companyId = id(selected,"companyId");
         results.removeAllViews(); results.addView(text("Αναζήτηση…", 15, MUTED));
         call(chatBase() + "/messages/search?q=" + enc(term) + (before.isEmpty() ? "" : "&before=" + enc(before)), "GET", null, false, data -> {
@@ -633,7 +634,7 @@ public final class MainActivity extends Activity {
         imageDialog=dialog;dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);dialog.setCanceledOnTouchOutside(false);dialog.show();
         final Runnable confirm = scopedChatAction(()->{
             if(imageDialog!=dialog||!searchForwardReady||!chatCanForward)return;uncertainForwardStoreId=storeId;
-            call(chatBase()+"/messages/"+enc(row.optString("id"))+"/forward","POST",object("targetStoreId",target.optString("id"),"requestId",requestId),false,result->{
+            call(chatBase()+"/messages/"+enc(row.optString("id"))+"/forward","POST",object("targetStoreId",target.optString("id"),"targetCompanyId",target.optString("companyId"),"requestId",requestId),false,result->{
                 if(!chatScope(scope,captured,storeId,companyId))return;
                 if(!result.optBoolean("ok")||!ChatInteractions.validId(result.optString("id"))||!target.optString("id").equals(result.optString("targetStoreId")))throw new IllegalArgumentException();
                 uncertainForwardStoreId="";if(imageDialog==dialog){dismissImage();status("Προωθήθηκε στο "+target.optString("name"));}

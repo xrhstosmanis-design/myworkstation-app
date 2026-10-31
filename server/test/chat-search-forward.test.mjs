@@ -3,13 +3,13 @@ import {searchInput,forwardInput,forwardAttachment} from '../src/chat-search-for
 test('history input is bounded and literal wildcard/escape characters cannot broaden the search',()=>{
  assert.deepEqual(searchInput('  100%_!  ','message-1'),{q:'100%_!',pattern:'%100!%!_!!%',before:'message-1'});
  assert.equal(searchInput("a' OR 1=1--").pattern,"%a' OR 1=1--%");
- for(const q of [null,{},['test'],'','a','x'.repeat(121)])assert.throws(()=>searchInput(q),{status:400});
+ for(const q of [null,{},['test'],'','a','x'.repeat(121),'bad'+String.fromCharCode(0)+'query'])assert.throws(()=>searchInput(q),{status:400});
  for(const cursor of ['bad/id',{},'x'.repeat(161)])assert.throws(()=>searchInput('valid',cursor),{status:400});
  assert.equal(searchInput('ΚΑΦΕΣ').q,'ΚΑΦΕΣ');
 });
 test('forward intent requires an explicit valid destination and bounded unique key',()=>{
- const value={targetStoreId:'store-b',requestId:crypto.randomUUID()};assert.deepEqual(forwardInput(value),value);
- for(const bad of [null,{}, {...value,targetStoreId:'bad/id'},{...value,requestId:'short'},{...value,requestId:'x'.repeat(81)}])assert.throws(()=>forwardInput(bad),{status:400});
+ const value={targetStoreId:'store-b',targetCompanyId:'company-b',requestId:crypto.randomUUID()};assert.deepEqual(forwardInput(value),value);
+ for(const bad of [null,{}, {...value,targetStoreId:'bad/id'},{...value,targetCompanyId:undefined},{...value,requestId:'short'},{...value,requestId:'x'.repeat(81)}])assert.throws(()=>forwardInput(bad),{status:400});
 });
 const policy={canCopyAttachment:true,photosEnabled:true,pdfEnabled:true};
 function row(mime,bytes){return {attachmentName:'fixture',attachmentMimeType:mime,attachmentData:bytes.toString('base64'),attachmentSize:bytes.length,attachmentChecksum:crypto.createHash('sha256').update(bytes).digest('hex')}}

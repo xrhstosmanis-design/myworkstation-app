@@ -11,7 +11,7 @@ export function searchInput(query,before){
 }
 export function forwardInput(value){
  if(!value||typeof value!=='object'||typeof value.requestId!=='string'||!/^[A-Za-z0-9_-]{16,80}$/.test(value.requestId))throw fail('Μη έγκυρη προώθηση.');
- return {targetStoreId:chatMessageId(value.targetStoreId),requestId:value.requestId};
+ return {targetStoreId:chatMessageId(value.targetStoreId),targetCompanyId:chatMessageId(value.targetCompanyId),requestId:value.requestId};
 }
 export async function searchChatMessages(db,store,query,before){
  const input=searchInput(query,before);
@@ -49,10 +49,13 @@ export function forwardAttachment(row,{canCopyAttachment,photosEnabled,pdfEnable
 }
 // Caller checks both live store/module/session scopes before entering this transaction.
 export async function forwardChatMessage(db,{source,target,user,messageId,requestId,attachmentPolicy},writeAudit){
- chatMessageId(messageId);forwardInput({targetStoreId:target.id,requestId});
+ chatMessageId(messageId);forwardInput({targetStoreId:target.id,targetCompanyId:target.companyId,requestId});
  if(source.id===target.id)throw fail('Επίλεξε διαφορετική συνομιλία.');
  const id='chat-forward-'+crypto.createHash('sha256').update(user.id+'\0'+requestId).digest('hex');
  return db.$transaction(async tx=>{
+  const scopes=await tx.$queryRawUnsafe('SELECT "id","companyId","active" FROM "Store" WHERE "id"=ANY($1::text[]) ORDER BY "id" FOR SHARE',[source.id,target.id]);
+  if(scopes.length!==2||!scopes.some(s=>s.id===source.id&&s.companyId===source.companyId)||!scopes.some(s=>s.id===target.id&&s.companyId===target.companyId&&s.active))throw fail('Η συνομιλία προέλευσης ή προορισμού άλλαξε. Επίλεξε ξανά.',404);
+
   const rows=await tx.$queryRawUnsafe('SELECT * FROM "StoreChatMessage" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3 FOR KEY SHARE',messageId,source.companyId,source.id);
   const row=rows[0];if(!row)throw fail('Δεν βρέθηκε το μήνυμα σε αυτό το κατάστημα.',404);
   const attachment=forwardAttachment(row,attachmentPolicy);

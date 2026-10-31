@@ -62,6 +62,11 @@ async function forwardTargets(req,source){
  const result=await mobileChatStores(req.user),platform=isPlatformSuperAdmin(req.user)&&!req.user.supportContext;
  return result.stores.filter(s=>s.id!==source.id&&(platform||s.companyId===source.companyId)).map(({id,name,companyId,companyName})=>({id,name,companyId,companyName}));
 }
+async function selectedChatStore(req,res){
+ const store=await storeFor(req,res);if(!store)return null;
+ if(req.user.supportContext&&String(req.user.companyId)!==store.companyId){res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});return null;}
+ return store;
+}
 async function checkedChatModule(req,res,id){
  const probe=Object.create(req);Object.defineProperties(probe,{params:{value:{storeId:id}},body:{value:{}},query:{value:{}}});
  let allowed=false;await requireStoreModule("STORE_CHAT")(probe,res,error=>{if(error)throw error;allowed=true});
@@ -69,19 +74,19 @@ async function checkedChatModule(req,res,id){
 }
 router.get("/stores/:storeId/messages/search",async(req,res,next)=>{try{
  res.setHeader("Cache-Control","no-store, private");
- const store=await storeFor(req,res);if(!store)return;
+ const store=await selectedChatStore(req,res);if(!store)return;if(!await checkedChatModule(req,res,store.id))return;
  res.json(await searchChatMessages(prisma,store,req.query.q,req.query.before));
 }catch(e){if(e?.meta?.code==="57014"||e?.code==="57014")return res.status(503).json({error:"Η αναζήτηση χρειάζεται πιο συγκεκριμένο κείμενο. Δοκίμασε ξανά."});next(e)}});
 router.get("/stores/:storeId/forward-targets",async(req,res,next)=>{try{
- res.setHeader("Cache-Control","no-store, private");const store=await storeFor(req,res);if(!store)return;
+ res.setHeader("Cache-Control","no-store, private");const store=await selectedChatStore(req,res);if(!store)return;if(!await checkedChatModule(req,res,store.id))return;
  res.json({store,stores:await forwardTargets(req,store)});
 }catch(e){next(e)}});
 router.post("/stores/:storeId/messages/:messageId/forward",async(req,res,next)=>{try{
  res.setHeader("Cache-Control","no-store, private");
- const source=await storeFor(req,res);if(!source)return;
+ const source=await selectedChatStore(req,res);if(!source)return;
  if(!mayForward(req.user))return res.status(403).json({error:"Δεν υπάρχει δικαίωμα προώθησης σε άλλη συνομιλία."});
  if(!await checkedChatModule(req,res,source.id))return;
- const input=forwardInput(req.body),eligible=await forwardTargets(req,source),candidate=eligible.find(s=>s.id===input.targetStoreId);
+ const input=forwardInput(req.body),eligible=await forwardTargets(req,source),candidate=eligible.find(s=>s.id===input.targetStoreId&&s.companyId===input.targetCompanyId);
  if(!candidate)return res.status(404).json({error:"Δεν βρέθηκε διαθέσιμη συνομιλία προορισμού."});
  const target=await checkedChatModule(req,res,candidate.id);if(!target)return;target.name=candidate.name;
  const sourceSettings=await chatSettings(source),targetSettings=await chatSettings(target);

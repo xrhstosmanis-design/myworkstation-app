@@ -47,7 +47,7 @@ export function ChatForwardDialog({api,store,row,getToken,onClose,onSent,onUncer
  const target=targets.find(s=>s.id===selected);
  const close=()=>{if(unknown&&!window.confirm("Η προώθηση δεν επιβεβαιώθηκε. Έλεγξε τη συνομιλία προορισμού πριν κάνεις νέα προώθηση. Κλείσιμο;"))return;onClose()};
  const send=async()=>{if(!active()||sending.current||!review||!target)return;sending.current=true;setBusy(true);setUnknown(true);onUncertain?.(true);setError("");
-  try{const result=await api("/api/store-chat/stores/"+encodeURIComponent(store.id)+"/messages/"+encodeURIComponent(row.id)+"/forward",{method:"POST",body:JSON.stringify({targetStoreId:target.id,requestId:key.current})});
+  try{const result=await api("/api/store-chat/stores/"+encodeURIComponent(store.id)+"/messages/"+encodeURIComponent(row.id)+"/forward",{method:"POST",body:JSON.stringify({targetStoreId:target.id,targetCompanyId:target.companyId,requestId:key.current})});
    if(!active())return;if(!result?.ok||!validId(result.id)||result.targetStoreId!==target.id)throw Error("Δεν επιβεβαιώθηκε η προώθηση.");
    setUnknown(false);onUncertain?.(false);onSent(target);onClose();
   }catch(e){if(active())setError(e.message+" Μπορείς να επαναλάβεις την επιβεβαίωση για τον ίδιο προορισμό.")}finally{sending.current=false;if(active())setBusy(false)}
