@@ -1,0 +1,65 @@
+{
+  "scope": "Two-shift settings and neutral dispatch header",
+  "claimPr": 3416,
+  "claimHead": "98e577706cc0b17323d2f638e7b81e76fca941ac",
+  "claimCi": 41241214024,
+  "claimMerge": "d06be9e7415b52b786481058902285e33ac6836e",
+  "sourcePr": 3418,
+  "sourceHead": "442940967b88f3645369759c40510f459a601c93",
+  "sourceCi": 41241654412,
+  "combinedHead": "d962bd7e16cdad2ccf0289c32a84385e3af828fc",
+  "combinedCi": 41242839435,
+  "sourceMerge": "c2af89a72cea3b9c8d9964b15172fb9f09a84aea",
+  "mainCi": 41243812623,
+  "fullNative": {
+    "serverPass": 4972,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "local": {
+    "node": "20.20.2",
+    "focusedPass": 18,
+    "automaticReportsPass": 194,
+    "automaticReportsInfrastructureSkip": 13,
+    "fullPass": 4322,
+    "fullInfrastructureSkip": 326,
+    "fail": 0,
+    "workBuild": "PASS/TABLE_SERVICE"
+  },
+  "hosted": {
+    "scope": "limited two-shift settings and retained HOLD PASS",
+    "labVersions": [
+      1,
+      2,
+      3
+    ],
+    "labPreviewSourceCount": 1,
+    "control": "N40 no saved settings,0terminals,previewdisabled,no write",
+    "labRestored": true,
+    "userSettings": "one active terminal,slots1/2,7/15/null,reviewed=false,refresh verified",
+    "userVersion": 1,
+    "userPreviewSourceCount": 5,
+    "userPreview": "HOLD ambiguous/overlap/previous-open",
+    "recipientCount": 2,
+    "verifiedConsentingCount": 0,
+    "dispatch": "OFF",
+    "mailSent": false,
+    "financialActions": false,
+    "financialInvariance": "not independently measured",
+    "notAccepted": [
+      "actual delivery",
+      "whole live complete-day READY",
+      "fully irregular early openings",
+      "physical POS/mobile/other roles"
+    ]
+  },
+  "deployment": {
+    "guardRun": 41245048490,
+    "conclusion": "success",
+    "exactHealthyRevision": "c2af89a72cea3b9c8d9964b15172fb9f09a84aea",
+    "healthyConfirmedUtc": "2026-10-31T21:52:43.9356907Z",
+    "independentHealth": "HTTP200/ok:true/revision matched",
+    "renderApiWorkspace": "not selected; no direct API deploy-state claim"
+  }
+}
