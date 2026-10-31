@@ -11608,6 +11608,14 @@ Bounded correction in the already claimed Platform mount: use existing requestFo
 Shared documentation is published separately through3175, preserving latest camera/scanner claim3174/main231f4a3f and other owners. After its green merge3170 will adopt main documentation unchanged and carry only its eighteen bounded runtime/test paths; future unrelated PDF updates then do not force repeated source conflicts. Reading remains NOT INSTALLED/AWAITING LAB; whole workflow OPEN, same owner retained. No automatic dispatch or mail. Checkpoint CHECKPOINTS/CHANGES/2026-10-26-cash-paper-reading.md.
 
 
+## 01Nov2026 00:56Athens — NODE-SECURITY-20261028 / AUTHORIZED WINDOW HOLD / NO PRODUCTION CHANGE
+
+Retained owner fix/node-security-20261028; approved after-midnight window checked, not awaiting user approval. PR3293 remains DRAFT/UNMERGED exactdb9b43d/all5original workflows SUCCESS. Current live dep-dbj6v68ae00c73dcnih0/exact8e1128e6 independently HTTP200/oktrue; native deployment log31Oct22:46:07UTC still selects Node20.20.2 via NODE_VERSION. No env/hook/restart/source merge/SQL/business/provider/physical action.
+
+BLOCKER: official Render MCP source746a3175/pkg/service/tools.go:859-866 updates env then calls TriggerDeploy; available tool has no SAVE-ONLY flag. Do not call it and create an unguarded/duplicate release. Supported rollback operation and retained-artifact availability are not verified from this executor. Main advanced to47f59e6 (new owner action-rights source), fullCI41250164005 IN_PROGRESS at observation; historical4634+8/0/0 does not validate this combined Node22 tree. No current FTEXT outage established; latest engineering release/packagev6 has physical acceptance OPEN, normal-sale USER PASS preserved. Six recent module-disabled errors are not Node exploit evidence. No whole security/physical LAB/manual PASS;8HIGH local dependency entries and other LAB/backup CA/Python residuals remain separate OPEN.
+
+Full evidence/limits and protected state: CHECKPOINTS/CHANGES/2026-10-28-node-security.md and CHECKPOINTS/EVIDENCE/node-security-20261101/window-hold.md. Single next: documented authenticated SAVE-ONLY env path + verified rollback, then refreshed exact Node22 PR/current-main checks and exactly one guarded release after successful full merged-main CI. One-time task paused; approval/owner retained. Keep peer PDF/manual and assignments unchanged while OPEN; no numbered closure.
+
 ## 29Oct2026 — NODE-SECURITY-20261028 / EXACT PR CI VERIFIED / PRODUCTION HOLD
 
 Retained owner fix/node-security-20261028. Before-source claim3264/fc9f4cac CI40959960348 SUCCESS merged9ffd833e before code. Runtime source PR3293 exact headdb9b43ddec41939e75bdf0bdd2575c3ff517f181 remains DRAFT/UNMERGED. This supersedes historical NO SOURCE YET only for candidate availability; production upgrade and whole security acceptance remain OPEN. No transfer of any business owner.
