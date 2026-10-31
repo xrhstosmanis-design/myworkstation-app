@@ -1,0 +1,138 @@
+# D5 - Monthly inventory capture delegation foundation - ASSIGNED BEFORE SOURCE / NOT IMPLEMENTED / NOT TESTED
+
+30/10/2026 Europe/Athens. Before-source amendment under the explicit approved narrow transfer. Sole receiving owner: the same central coordinating Work-page; branch `codex/central-monthly-inventory-delegation-20261030`. This claim becomes effective only after applicable green CI and main merge, plus independently verified D4 exact delivery. It is no production execution token or assignment to another page; no source or production mutation accompanies this claim.
+
+## Authorization, dependencies and preserved observations
+
+The program owner's explicit **«Εγκρίνω»** for the narrow installation-preparation and monthly-automation transfer is recorded in D4 claim PR3318/main `ead2168fc10107653f103d786077b1dfd6358dcd`. D5 is the promised exact-path amendment under that existing approval, not a new user permission question. The central owner alone receives this monthly slice from the named lifecycle and automatic-dispatch owners; no old-owner release is fabricated. All unrelated global lifecycle/reset/recovery/CASH/recipient/consent/delivery scopes remain retained.
+
+Source baseline is merged D4 main `8a17cfc9c8de2d9e61e729ee234370e0e95e44ef`, tree89da4d94cc2397f138c614115a97203fc8d7a0e1, parent ead2168fc10107653f103d786077b1dfd6358dcd. Final source PR3319/head4678fcb70cd03c44f387f40e1b025f881a6ab81f/tree89da4d94cc2397f138c614115a97203fc8d7a0e1 passed all five exact CI41085403548 jobs with root actual build124165735122:4715server+8backup/0FAIL/0SKIP; installation1946/all17, history/recovery1953, source1969/all9 and storage1976/all9 native proofs PASS. Initial36bd/CI41083634378 actual14fail and single equivalent projection forward fix remain recorded in the D4 receipt; no rerun or weakened assertion. Exact merged-main CI41087527758 is independently VERIFIED all5SUCCESS: root actual build124172981655:4715server+8backup/0FAIL/0SKIP, installation1946/all17PASS45.0578seconds, PG18history1953/source1969all9/storage1976all9PASS. Ordinary guard41089462252/deploy124179386108 pinned that CI and exact8a17; actual Trigger16:25:06.8910921Z and healthy Wait16:27:23.9187791Z BOTH SUCCESS. Root own Render dep-dbic9oifngtc73ctdt1g LIVE exact8a17, finished16:27:19.864467Z/deploy_hook, and independent no-cache HTTP200/oktrue/exact8a17/EXIT0, HTTP Date30Oct16:28:23UTC (18:28:23 Athens) verify internal source delivery. No production schema/enrollment/activation occurred. D4 delivery prerequisite is satisfied; D5 source still requires independent design review AND this exact before-source claim green/main. Preserve incoming FTEXT/AI-wallet scoped real PASS and every retained owner.
+
+D3's dated technical release evidence remains in its checkpoint: exact mainb836/CI41049570166 all five SUCCESS,4688server+8backup/0FAIL/0SKIP, actual nine source and nine storage native cases, guarded release41050673894 and root exact-health30Oct11:54:40UTC. It proves internal code delivery, not production tables/enrollment or an unattended principal. Dated production metadata30Oct10:35:35.663413Z found Fence+Snapshot absent; it is not a refreshed readiness claim. No new LAB/USER/LIVE/manual PASS, actual snapshot or current production state is claimed.
+
+D4's first implementation deliberately refuses ANY old/unknown enrolled planHash globally; no fence plan migration/CAS is part of that increment. D5 does not broaden it. Canonical lifecycle catalogues and the D4 snapshot-only proposed profiles remain unchanged. Any later installation/cross-version web/worker promotion needs its own exact reviewed protocol and production packet.
+
+## Exact D5 source/test paths - no other source allowance
+
+| Path | Bounded source allowance after green claim |
+| --- | --- |
+| NEW server/src/services/monthly-inventory-capture-schema.js | Strict explicit unmounted Grant+Job DDL/validation for isolated fixtures and later operator review only; no import ensure/bootstrap. |
+| NEW server/src/services/monthly-inventory-capture-authorization.js | Typed MONTHLY_INVENTORY_CAPTURE delegation, actual persisted LEASED-job/grant/current authority validation and opaque transaction-bound authorized context. |
+| NEW server/src/services/monthly-inventory-capture-grants.js | Current authorized personal management of the separate grant: strict expected revision/epoch, explicit authorization, default inactive, revoke/readback and no scheduler/job creation. |
+| server/src/services/monthly-invoice-audit.js | Private shared already-authorized source core plus distinct opaque automation entry; existing personal admission/public GET/C2 output remains unchanged. |
+| server/src/services/pos-pending-invoices.js | Reuse the same pending/classification SQL via a separate opaque authorized snapshot entry; preserve personal/POS readers,50-row behavior, all writers and classifiers. |
+| server/src/services/monthly-inventory-snapshot-source.js | Separate typed automation source entry reusing the existing complete bounded source core; no forged personal actor or numeric/date/coverage change. |
+| server/src/services/monthly-inventory-snapshot-capture.js | Separate typed automation coordinator using actual leased-job authority; one unchanged RO/RR source phase then a fresh fenced authorized write. Existing personal entry stays unchanged. |
+| server/src/services/monthly-inventory-snapshot-repository.js | Distinct automation findExisting/store authorization path and strict backward-compatible capturePrincipal union; preserve original receipts, candidate flags/hashes and personal authorization. |
+| NEW ops/backup/lifecycle/monthly-inventory-capture-manifest.proposed.json | Explicit extended future review profile: exact snapshot-only baseline plus two scoped Grant/Job REMOVE nodes, dependencies and reviewed field semantics; not canonical/default selected. |
+| NEW ops/backup/lifecycle/monthly-inventory-capture-column-review.proposed.json | Exact Grant/Job columns and user/job/receipt/application reference classification; no private raw JSON catch-all or unknown-column exclusion. |
+| server/src/services/store-lifecycle-executor.js | ONLY pure getReviewedMonthlyCaptureLifecycleGuardDefinitions(manifest,schema) returning four exact Grant/Job row31/TRUNCATE34 definitions; reuse existing private plan/guard generators and fixed scoped FKs. No metadata/DDL/actor/install/enrollment/recovery/legacy behavior change. |
+| NEW server/test/monthly-inventory-capture-authorization.test.js | Typed/opaque context, input copying, transaction identity, fixed purpose/principal, principal-union and legacy-personal refusal regression. |
+| NEW server/test/monthly-inventory-capture-authorization-postgres.test.js | Actual DB LEASED-job/grant/scope/epoch/current authority/lease-time admission, RO/RR snapshot and fresh-write revocation/race/readback proof. |
+| NEW server/test/monthly-inventory-capture-grants-postgres.test.js | Actual grant create/inactive/explicit enable/revision/revoke management, strict schema/foreign controls and absent schema refusal. |
+| NEW server/test/monthly-inventory-capture-lifecycle-postgres.test.js | Actual proposed-catalogue schema/guard/foreign/history/reset and existing private full/selective archive-recovery composition with unchanged controls. |
+| server/test/monthly-inventory-snapshot-source-capture.test.js | Only necessary regression for unchanged personal coordinator/source behavior and typed entry refusal. |
+| server/test/monthly-inventory-snapshot-source-capture-postgres.test.js | Only necessary actual shared C2/pending/stock source and untouched personal admission/coverage regression. |
+| server/test/monthly-inventory-snapshot-storage.test.js | Only necessary strict backward-compatible principal union/original receipt validation regression. |
+| server/test/monthly-inventory-snapshot-storage-postgres.test.js | Only necessary legacy/new receipt readback and fresh-authority/idempotency regression. |
+
+Exactly19 claimed paths after all gates above. All existing automatic-report/CASH modules, tables, schema checks, activation controls, settings/recipients/consents, payloads/delivery slots, transport and scheduler remain BYTE-FOR-BYTE UNCHANGED. Both canonical manifest/column-review and both D4 snapshot-only proposed profiles remain unchanged. No Prisma, lifecycle installation/CLI, worker/default selection, index/startup/routes/UI/config/HTTP/provider/email edit is included. The sole executor edit is the closed pure guard-definition export listed above; existing executor behavior remains unchanged. Any additional required source/test path needs a named exact before-source amendment, not inferred expansion.
+
+## Two dedicated relations and truthful authority
+
+Proposed fixed purpose is MONTHLY_INVENTORY_CAPTURE; it is not a new CASH reportType value. Existing AutomaticReportAutomationGrant cannot be widened/reused: its CHECK and eligibility are CASH/CASH_CONTROL-bound, with different recipient/consent/period authorization. No generic Audit, CASH payload or snapshot metadata field becomes a durable grant/job store.
+
+MonthlyInventoryCaptureGrant is one dedicated mutable row per company/store/purpose, with positive bounded revision, inactive default, current delegating personal user ID+sessionVersion, original lifecycleGeneration, activation identity, first eligible issue-month/07:00Athens slot and explicit created/granted/revoked/updated identities/times. Create defaults OFF; active enable requires explicit purpose authorization and exact expected revision/state. Revocation increments revision and remains visible. Management checks the actual current admitted OWNER or SUPER_ADMIN, exact selected company/store and current INVENTORY licence/module even for SuperAdmin automation; any supported other role needs explicit design review before widening. No ownership inferred from email or invented login/session. A grant is delegation to a fixed typed service executor, not a long-lived human token.
+
+MonthlyInventoryCaptureJob stores immutable original company/store/generation/issueMonth/nominal slot/grant ID+revision/activation binding, status EXACTLY PENDING/LEASED/SUCCEEDED/HOLD/FAILED, attempts integer0..60, finite optional nextAttemptAt and bounded lease fields; holdReason is null or EXACTLY AUTHORITY_REVOKED/LEASE_EXPIRED/SOURCE_UNAVAILABLE/SCHEMA_UNAVAILABLE/MAINTENANCE/RETRY_LIMIT, and no resultSnapshotId or resultSnapshot FK field in this minimal D5. Unique company/store/generation/issueMonth; mutable lease/status fields are explicitly separate from immutable admission fields. A real lease has LEASED status, an exact cryptographically generated lease-token hash and future finite expiry under DB time. No caller-chosen current generation, grant revision or month can upgrade an old job. Job INSERT schema validation is STRUCTURAL ONLY: stable exact scoped Grant FK including purposeVersion, immutable origin and exact Athens nominal-slot/type/bounds. It must NOT require current grant active/revision/activation/firstEligible state in SQL hooks: legitimate archived old jobs must restore after grant revocation/reactivation. Current active grant revision/activation/first-slot authority is mandatory at the future D6 producer and EVERY SOURCE/LOOKUP/WRITE execution admission, so restored stale jobs remain HOLD. Stale-job cleanup UPDATE may change only permitted lease/status/attempt fields while immutable origin is protected. No generic restore GUC/bypass, ad hoc historical mode or new recovery path is added. The exact21-column Grant and20-column Job layouts and schema API are frozen below; no speculative extra columns. Grants and jobs are reviewed REMOVE on reset, while MonthlyInventorySnapshot remains KEEP; reset never replays a removed old job into the new generation. Exact job scope/grant links and immutable admission need DB constraints/triggers plus current-authority validation; no unbounded JSON record or raw invoice/stock/private data.
+
+Both relations need restrictive Company/Store FKs and actual same-company/store validation under the authoritative parent locks. Store has only id PK plus companyId index, not an existing composite(id,companyId) unique key: do not invent a composite FK or silently alter Store. Both Grant and Job have immutable purposeVersion=1. Job uses a stable scoped Job-to-Grant FK INCLUDING purposeVersion but EXCLUDING mutable grantRevision; authorization independently rechecks the original job revision against the current grant revision. Snapshot KEEP has NO FK to REMOVE Grant/Job. Minimal D5 has NO resultSnapshot field/FK: matching result is identified by existing unique company/store/generation/issueMonth; do not alter Snapshot schema/unique keys. Direct future Store.companyId reassignment is not prevented by new child-table triggers; do not claim otherwise or alter shared Store. Every authorization/readback must HOLD corrupted cross-company/store origin rather than repair it. Foreign/mismatched grant/job scope refuses. Every new identity/raw-link/status/time/lease field is explicitly catalogue-reviewed; actual schema validation covers PK/unique/FK/check/index/trigger/RLS/rules/defaults. Native tests include direct malicious cross-company tuples, not only service-level input checks. No production DDL, catalogue promotion or grant row is created by source release.
+
+## Frozen exact schema API and columns
+
+The schema module exports ONLY `monthlyInventoryCaptureRecoveryColumns()`, `monthlyInventoryCaptureLifecycleManifestProposal()`, `assertMonthlyInventoryCaptureLifecycleCatalogue(manifest=proposal)`, `createMonthlyInventoryCaptureSchema(tx)`, `validateMonthlyInventoryCaptureSchema(tx)` and `provisionMonthlyInventoryCaptureSchema(db,{manifest=proposal}={})`. Recovery columns use existing Snapshot `[name,type,required]` semantics. Explicit provision creates ONLY the two new relations when BOTH absent, validates exact existing pair, and HOLDs partial presence without implicit parent/schema repair. Return exactly `{available:true,productionActivated:false,captureEnabled:false}`; no installation/enrollment or caller-authority assertion.
+
+Frozen column tuples are `[name,PostgreSQL type,required,SQL default or null]`. No omitted default, alias, extra field or generalized JSON record is allowed.
+
+Grant -21columns:
+
+```json
+[
+ ["id","text",true,null],
+ ["companyId","text",true,null],
+ ["storeId","text",true,null],
+ ["purpose","text",true,null],
+ ["purposeVersion","integer",true,"1"],
+ ["lifecycleGeneration","bigint",true,null],
+ ["revision","bigint",true,"1"],
+ ["active","boolean",true,"false"],
+ ["delegatorUserId","text",true,null],
+ ["delegatorSessionVersion","integer",true,null],
+ ["activationId","text",false,null],
+ ["firstIssueMonth","text",false,null],
+ ["firstScheduledFor","timestamp with time zone",false,null],
+ ["createdByUserId","text",true,null],
+ ["createdAt","timestamp with time zone",true,"clock_timestamp()"],
+ ["grantedByUserId","text",false,null],
+ ["grantedAt","timestamp with time zone",false,null],
+ ["revokedByUserId","text",false,null],
+ ["revokedAt","timestamp with time zone",false,null],
+ ["updatedByUserId","text",true,null],
+ ["updatedAt","timestamp with time zone",true,"clock_timestamp()"]
+]
+```
+
+Job -20columns:
+
+```json
+[
+ ["id","text",true,null],
+ ["companyId","text",true,null],
+ ["storeId","text",true,null],
+ ["purpose","text",true,null],
+ ["purposeVersion","integer",true,"1"],
+ ["lifecycleGeneration","bigint",true,null],
+ ["issueMonth","text",true,null],
+ ["scheduledFor","timestamp with time zone",true,null],
+ ["grantId","text",true,null],
+ ["grantRevision","bigint",true,null],
+ ["activationId","text",true,null],
+ ["status","text",true,"'PENDING'::text"],
+ ["attempt","integer",true,"0"],
+ ["leaseTokenHash","text",false,null],
+ ["leaseExpiresAt","timestamp with time zone",false,null],
+ ["claimedSourceRevision","text",false,null],
+ ["holdReason","text",false,null],
+ ["nextAttemptAt","timestamp with time zone",false,null],
+ ["createdAt","timestamp with time zone",true,"clock_timestamp()"],
+ ["updatedAt","timestamp with time zone",true,"clock_timestamp()"]
+]
+```
+
+Stable Grant UNIQUE is exactly `(id,companyId,storeId,lifecycleGeneration,purpose,purposeVersion)` with matching Job FK; mutable `revision` is excluded. Grant scope/purposeVersion is immutable. Job status and `attempt`/holdReason/nextAttemptAt retain the closed bounds above, with finite nullable nextAttemptAt and no result field/FK. The pure helper requires the two exact DIRECT/REMOVE nodes and fixed scoped FK composition: Grant→Store, Job→Store, and Job→Grant via the stable six-column key. It returns exactly four `{table,name,mask,body}` entries (each table row31 and TRUNCATE34). No actor/metadata query or installation occurs. Strict schema validation accepts NO generated lifecycle guards across BOTH new tables for unmounted fixtures, OR ALL FOUR exact ALWAYS guards with matching schema/function/body/mask/plpgsql/nondefiner/condition/attributes; partial, mixed, altered or additional guards HOLD. Mandatory purpose/scope/origin triggers remain independently strict in both states. These definitions are a source contract for isolated engineering proof, not production DDL approval.
+
+## Opaque actual job delegation - no personal actor forgery
+
+The execution request has EXACTLY five keys: `{type:'SERVICE_DELEGATION',purpose:'MONTHLY_INVENTORY_CAPTURE',executor:'MONTHLY_INVENTORY_CAPTURE_V1',jobId,leaseToken}`. jobId obeys the existing160UTF8-byte ID rules; leaseToken is EXACTLY64 lowercase hex characters. NO caller company/store/month/generation/time is accepted; derive all scope from the actual persisted Job. D5 authorization accepts only this request bound to an ACTUAL persisted LEASED job and exact unexpired token. Re-read job and grant in EACH transaction. It must refuse a raw object claiming OWNER/BACKOFFICE_USER, a role cast, unsigned principal JSON, fabricated grant/job, stale/replaced lease, grant revision/session/epoch mismatch, expired lease and wrong company/store/generation/month/revision. No generic skipAuthorization flag, caller-supplied store object, injected always-true validator or publicly serializable authorized context.
+
+After complete actual admission, mint an empty opaque frozen context whose private WeakMap binds the exact transaction object AND stage (SOURCE/LOOKUP/WRITE/MANAGEMENT), fixed purpose/service principal, job/grant/lease identity and original scope. C2/pending/stock private cores accept it only through separate typed internal entrypoints that validate the brand AND transaction identity; serialization/copying/reuse in another transaction fails. The existing personal APIs keep their exact original gates and outputs. Management requires an actual BACKOFFICE_USER UserSession with exact sessionId/version and current unrevoked/unexpired state plus current User/role, never a masked JWT role. Background authority deliberately uses Grant.delegatorSessionVersion against the User global sessionVersion, independent of ordinary browser logout; require the Owner home Company active and User.mustChangePassword=false. SOURCE finish rechecks the actual DB clock against lease/entitlement validUntil, not only entry time. The new service executor is never represented by a fabricated logged-in human, minted JWT, support actor or copied secret. Its persisted delegator is authorization evidence, not a claimed executing human.
+
+RO/RR source admission uses only reads in the held snapshot: actual DB clock, current Job+Grant+delegating User/session/role/company access, active Company+Store, INVENTORY licence and store override, exact enrolled fence/generation and fixed purpose/activation/first-slot checks. No SELECT FOR SHARE/UPDATE or writes inside READ ONLY source transactions. Use unchanged C2/stock/pending classifier/decimal/count/byte limits and D1 build-at-final-read-finish semantics. Source transaction begins at/after nominal due; total source age remains<=30000ms, actual observation separated from storedAt, every positive delay LATE.
+
+Fresh READ COMMITTED existing-success lookup and write independently reload current job/lease/grant/delegator/module/licence/activation and enrolled epoch under a reviewed deterministic NOWAIT lock order; no held snapshot is fresh current authorization. Fresh-write and grant-management transactions acquire actual SHARE table locks on the needed licence/module-override/company-access relations wherever legacy writers do not honor the same parent locks, covering absent override/access rows as well as existing ones. Merely locking a selected Store/User parent does not exclude all legacy INSERTs. Source RO/RR admission remains reads-only and issues no explicit row/table locking statement. Revocation/session/role/module/licence/lease/reset transition after source read refuses write. The source context cannot simply be carried into this new transaction: mint a new private context only after its own full current admission. Required job/lease/grant locks serialize revocation/reassignment against the final write; original scope cannot change. Missing schema/enrollment is HOLD, not ensure or generation0 fallback. The final conditional snapshot INSERT must use the actual DB clock at persistence to require that the exact lease is STILL valid and the computed grant/module/licence validUntil has not passed, not only validate admission time. An expired-between-authorization-and-INSERT lease or entitlement must cause no insert/success. Compute the most restrictive finite validity bound from the actual admitted current records; no caller clock or invented grace. Native tests must deliberately hold execution between admission and INSERT until lease/entitlement expiry, then prove refusal and unchanged original/sibling controls.
+
+CapturePrincipal gains ONLY this exact11-key tagged automation variant: `{type:'SERVICE_DELEGATION',purpose:'MONTHLY_INVENTORY_CAPTURE',executor:'MONTHLY_INVENTORY_CAPTURE_V1',delegatorUserId,delegatorSessionVersion,grantId,grantRevision,jobId,lifecycleGeneration,authorizationBasis:'RECHECKED_IN_FRESH_WRITE_TRANSACTION',sourceBasis:'SUPPLIED_FORMAT_VALIDATED_FACTS'}`. delegatorSessionVersion is an integer0..2147483647; grantRevision is a positive canonical bigint decimal string and lifecycleGeneration a nonnegative canonical bigint decimal string, both bounded by PostgreSQL signed bigint. Every ID is at most160UTF8 bytes with the existing strict text rules. Require exactly these keys; no lease token, token hash, credential or private job bytes appear in principal metadata. Bind principal.lifecycleGeneration to the actual stored snapshot row generation during strict readback. Keep the existing2048-byte metadata cap.
+
+Preserve the exact legacy BACKOFFICE_USER principal form and its bytes, original readback/replay coverage and old snapshot metadata; never rewrite old records. D1 candidate payload/enums/hashes/flags stay unchanged; low-level receipt remains FORMAT_VALIDATED_STORED_ONLY/sourceAuthenticityVerified:false for supplied validated facts. Typed coordinator source provenance is separate and truthful. A new grant/job cannot overwrite the first successful immutable snapshot; authorized ALREADY_CAPTURED returns its original verified receipt without stock reread, never relabels the original principal or coverage.
+
+## Job production/scheduler intentionally deferred to D6
+
+D5 defines strict job schema and admission ONLY. It exposes NO job producer/lease-claim/heartbeat/requeue/sweep/timer/scheduler API or startup wire. Actual native D5 tests seed identified synthetic LEASED fixtures directly inside their isolated DB, preserving full constraints; such fixtures are not production jobs, scheduler proof or an authorization bypass. D5 must not run in production until the separate job-producing D6 amendment is reviewed/implemented and the final installation/activation packet is approved.
+
+The next D6 claim must explicitly amend the unified THREE-relation atomic installer (Snapshot+Grant+Job), with actual old/target catalogue preflight and coordinated cross-version web/worker protocol; the existing D4 snapshot-only installer cannot silently acquire these two new relations. D5 performs no production installation and changes no D4 installer. The next D6 claim will name exact job producer/scheduler/activation/operational entry paths before code. It must retain immutable job origin, finite leases/bounded retries, concurrent-winner/idempotency, current authority checks, shutdown/drain, explicit global OFF and per-store activation/stop. First-day07:00Athens for previous issue month stays agreed; first eligible nominal slot>=actual grant/activation time, not CASH periodFrom>=notBefore. No automatic historical catch-up, slot backdating or grace window. Separate last-day23:59Athens monthly invoice email remains outside D5/D6 capture authority, with no recipients/consent/provider sending changed.
+
+## Required evidence and gates
+
+D5 is NOT IMPLEMENTED/NOT TESTED at this claim. Require independent design/source review; actual native PostgreSQL refusal/current-authority/RO-RR/fresh-write races, direct invalid FK/scope/lease attacks, schema tamper and original-byte readback; legacy personal C/C2/pending/D1/D2/D3 suites unchanged; proposed full-catalogue strict validation and actual private full/selective restore with new grant/job rows and unaffected sibling/foreign/shared/history controls. Mandatory actual full AND selective restore fixtures include grant revision2 inactive and revision3 reactivated with original job revision1; prove exact archived grant/job bytes restored and EVERY restored stale-job authorization refused. Existing verify_restore.py already disables only explicitly reviewed INSERT/nonDELETE hooks with exact body-SHA verification; no generic bypass/GUC is introduced or needed by this structural schema. A local environment skip is not native PASS. Fixtures may not fabricate real authorizer sessions/provider receipts or weaken old assertions.
+
+Publish this claim and synchronized own active/tracker/pending/PDF only after design review, preserving every incoming owner; require applicable green CI/main before source. D4 exact verified delivery is an additional dependency, not replaced by this claim. Source PR updates only own checkpoint/active evidence; final technical receipt synchronizes all common records. No manual/numbered/whole item9 PASS from CI. Production table/grant/job/install/capture/scheduler/email activation and actual acceptance remain OPEN and require the later concrete packet, not another permission question for already approved source preparation.

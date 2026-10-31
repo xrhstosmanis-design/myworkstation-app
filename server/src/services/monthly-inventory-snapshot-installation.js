@@ -1,0 +1,90 @@
+// Explicit, default-off installation preparation. Importing this module does no DB work.
+import {createHash} from 'node:crypto';
+import {createLifecycleInstallationCore} from './store-lifecycle-executor.js';
+import {reviewedFreshStoreManifest} from './store-lifecycle-manifest.js';
+import {requireLifecycleAdmin} from './store-lifecycle-preview.js';
+import {monthlyInventorySnapshotLifecycleManifestProposal,assertMonthlySnapshotLifecycleCatalogue,createMonthlyInventorySnapshotSchema,validateMonthlyInventorySnapshotSchema} from './monthly-inventory-snapshot-schema.js';
+const q=v=>'"'+v.replaceAll('"','""')+'"';
+const fail=(code='MONTHLY_INSTALL_INPUT_INVALID')=>{throw Object.assign(new Error('Monthly installation preparation refused.'),{status:409,code})};
+const sha=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex');
+const plain=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)&&[Object.prototype,null].includes(Object.getPrototypeOf(v));
+const freeze=v=>{if(v&&typeof v==='object'){Object.freeze(v);for(const x of Object.values(v))freeze(x)}return v};
+const text=(v,max=160)=>typeof v==='string'&&v.length>0&&v.length<=max&&Buffer.byteLength(v,'utf8')<=max&&v.trim()===v&&!/[\u0000-\u001f\u007f]/.test(v);
+function copy(v,keys){if(!plain(v))fail();const d=Object.getOwnPropertyDescriptors(v);if(Reflect.ownKeys(d).some(k=>typeof k!=='string'||!keys.includes(k)||!('value'in d[k])))fail();return Object.fromEntries(Object.entries(d).map(([k,x])=>[k,x.value]))}
+function actorCopy(actor){if(!plain(actor))fail();const d=Object.getOwnPropertyDescriptors(actor),out={};for(const k of ['id','isSuperAdmin','platformRole'])if(d[k]){if(!('value'in d[k])||!['string','boolean'].includes(typeof d[k].value))fail();out[k]=d[k].value}if(!text(out.id))fail();requireLifecycleAdmin(out);return freeze(out)}
+function scopeCopy(input,packet=false){const out=copy(input,packet?['companyId','storeId','packet']:['companyId','storeId']);if(!text(out.companyId)||!text(out.storeId)||Object.keys(out).length!==(packet?3:2))fail();if(packet)out.packet=packetCopy(out.packet);return freeze(out)}
+const packetKeys=['companyId','storeId','sourceRevision','schema','profile','catalogueSignature','globalStateSignature','guardsInstalled','oldPlanHash','targetPlanHash','enrollment'];
+function packetCopy(input){const out=copy(input,packetKeys);if(Object.keys(out).length!==packetKeys.length||!text(out.companyId)||!text(out.storeId)||!text(out.sourceRevision,40)||out.sourceRevision.length!==40||!/^[a-f0-9]{40}$/.test(out.sourceRevision)||!text(out.schema,128)||!['BASE','TARGET'].includes(out.profile)||typeof out.guardsInstalled!=='boolean'||['catalogueSignature','globalStateSignature','oldPlanHash','targetPlanHash'].some(k=>typeof out[k]!=='string'||out[k].length!==64||!/^[a-f0-9]{64}$/.test(out[k])))fail();const e=copy(out.enrollment,['enrolled','generation','planHash','maintenance','retired','operationId']);if(Object.keys(e).length!==6||typeof e.enrolled!=='boolean')fail();if(!e.enrolled){if(['generation','planHash','maintenance','retired','operationId'].some(k=>e[k]!==null))fail()}else if(typeof e.generation!=='string'||e.generation.length>19||!/^(0|[1-9][0-9]*)$/.test(e.generation)||BigInt(e.generation)>9223372036854775807n||!text(e.planHash,64)||e.planHash.length!==64||!/^[a-f0-9]{64}$/.test(e.planHash)||typeof e.maintenance!=='boolean'||typeof e.retired!=='boolean'||!(e.operationId===null||text(e.operationId)))fail();out.enrollment=e;return freeze(out)}
+const controls={
+ StoreLifecycleFence:[['storeId','text',true,null],['companyId','text',true,null],['generation','bigint',true,'0'],['maintenance','boolean',true,'false'],['retired','boolean',true,'false'],['operationId','text',false,null],['planHash','text',true,null]],
+ StoreLifecycleExecution:[['id','text',true,null],['companyId','text',true,null],['storeId','text',true,null],['mode','text',true,null],['planHash','text',true,null],['snapshotHash','text',true,null],['state','text',true,null],['expiresAt','timestamp with time zone',true,null],['result','jsonb',false,null]],
+ StoreLifecycleTombstone:[['id','text',true,null],['companyId','text',true,null],['storeId','text',true,null],['schemaName','text',true,null],['parentTable','text',true,null],['refColumns','jsonb',true,null],['refValues','jsonb',true,null],['generation','bigint',true,null],['operationId','text',true,null]],
+ StoreLifecycleRuntime:[['id','text',true,null],['heartbeatJson','text',true,null],['mac','text',true,null]]
+};
+async function controlMetadata(tx,schema){
+ const names=Object.keys(controls);
+ const relations=await tx.$queryRawUnsafe(`SELECT c.relname AS name,c.relowner::text AS owner,c.relowner=(SELECT s.relowner FROM pg_class s JOIN pg_namespace sn ON sn.oid=s.relnamespace WHERE sn.nspname=$1 AND s.relname='Store') AS owner_valid,c.relkind::text AS kind,c.relispartition AS partition,c.relrowsecurity AS rls,c.relforcerowsecurity AS forced,EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhrelid=c.oid OR i.inhparent=c.oid) AS inherited,EXISTS(SELECT 1 FROM pg_rewrite r WHERE r.ev_class=c.oid) AS rules,EXISTS(SELECT 1 FROM pg_trigger t WHERE t.tgrelid=c.oid AND NOT t.tgisinternal) AS triggers FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relname=ANY($2::text[]) ORDER BY c.relname`,schema,names);
+ const primary=relations.filter(r=>r.name!=='StoreLifecycleRuntime');if(primary.length!==0&&primary.length!==3)fail('MONTHLY_INSTALL_CONTROL_SCHEMA_CHANGED');
+ for(const r of relations){if(!r.owner_valid||r.kind!=='r'||r.partition||r.rls||r.forced||r.inherited||r.rules||r.triggers)fail('MONTHLY_INSTALL_CONTROL_SCHEMA_CHANGED');const cols=await tx.$queryRawUnsafe(`SELECT a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,a.attnotnull AS required,a.attidentity::text AS identity,a.attgenerated::text AS generated,pg_get_expr(d.adbin,d.adrelid) AS def FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE n.nspname=$1 AND c.relname=$2 AND a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum`,schema,r.name);if(JSON.stringify(cols.map(c=>[c.name,c.type,c.required,c.def]))!==JSON.stringify(controls[r.name])||cols.some(c=>c.identity||c.generated))fail('MONTHLY_INSTALL_CONTROL_SCHEMA_CHANGED');
+ const keys=await tx.$queryRawUnsafe(`SELECT k.contype::text AS kind,k.convalidated AS valid,k.condeferrable AS deferrable,ARRAY(SELECT a.attname::text FROM unnest(k.conkey) WITH ORDINALITY x(n,p) JOIN pg_attribute a ON a.attrelid=k.conrelid AND a.attnum=x.n ORDER BY x.p) AS columns FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relname=$2 AND k.contype<>'n'`,schema,r.name);if(keys.length!==1||keys[0].kind!=='p'||!keys[0].valid||keys[0].deferrable||JSON.stringify(keys[0].columns)!==JSON.stringify([r.name==='StoreLifecycleFence'?'storeId':'id']))fail('MONTHLY_INSTALL_CONTROL_SCHEMA_CHANGED');
+ const indexes=await tx.$queryRawUnsafe(`SELECT i.indisprimary AS "primary",i.indisunique AS "unique",i.indisvalid AS valid,i.indisready AS ready,i.indimmediate AS immediate,pg_get_expr(i.indpred,i.indrelid) AS predicate,pg_get_expr(i.indexprs,i.indrelid) AS expression,ARRAY(SELECT a.attname::text FROM unnest(i.indkey) WITH ORDINALITY x(n,p) JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=x.n ORDER BY x.p) AS columns FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relname=$2`,schema,r.name);if(indexes.length!==(r.name==='StoreLifecycleTombstone'?2:1)||indexes.some(i=>!i.valid||!i.ready||!i.immediate||i.predicate||i.expression)||indexes.filter(i=>i.primary&&i.unique).length!==1||indexes.some(i=>!i.primary&&(i.unique||JSON.stringify(i.columns)!=='["schemaName","parentTable"]')))fail('MONTHLY_INSTALL_CONTROL_SCHEMA_CHANGED');
+ }
+ return {names:relations.map(r=>r.name),signature:sha(relations)};
+}
+async function globalState(tx,schema,present,targetHash){
+ if(!present.includes('StoreLifecycleFence'))return {signature:sha({fences:[],executions:[]}),fences:[],reasons:[]};
+ const pre=(await tx.$queryRawUnsafe(`SELECT count(*)::text AS count,COALESCE(bool_and(octet_length("storeId")<=160 AND octet_length("companyId")<=160 AND octet_length("planHash")<=64 AND ("operationId" IS NULL OR octet_length("operationId")<=160)),true) AS valid FROM ${q(schema)}."StoreLifecycleFence"`))[0];if(!pre||BigInt(pre.count)>1000n||!pre.valid)fail('MONTHLY_INSTALL_GLOBAL_STATE_LIMIT');
+ if((await tx.$queryRawUnsafe(`SELECT 1 FROM ${q(schema)}."StoreLifecycleFence" f LEFT JOIN ${q(schema)}."Store" s ON s."id"=f."storeId" AND s."companyId"=f."companyId" WHERE s."id" IS NULL LIMIT 1`)).length)fail('MONTHLY_INSTALL_CONTROL_STATE_CHANGED');
+ const fences=await tx.$queryRawUnsafe(`SELECT "storeId","companyId","generation"::text AS generation,"maintenance","retired","operationId","planHash" FROM ${q(schema)}."StoreLifecycleFence" ORDER BY "storeId" LIMIT 1001`);
+ const ep=(await tx.$queryRawUnsafe(`SELECT count(*)::text AS count,COALESCE(bool_and(octet_length("id")<=160 AND octet_length("companyId")<=160 AND octet_length("storeId")<=160 AND octet_length("mode")<=32 AND octet_length("state")<=32 AND octet_length("planHash")<=64 AND octet_length("snapshotHash")<=64),true) AS valid FROM ${q(schema)}."StoreLifecycleExecution" WHERE "state" NOT IN ('COMPLETED','REOPENED','ABORTED')`))[0];if(!ep||BigInt(ep.count)>1000n||!ep.valid)fail('MONTHLY_INSTALL_GLOBAL_STATE_LIMIT');
+ const executions=await tx.$queryRawUnsafe(`SELECT "id","companyId","storeId","mode","state","planHash","snapshotHash","expiresAt"::text AS "expiresAt" FROM ${q(schema)}."StoreLifecycleExecution" WHERE "state" NOT IN ('COMPLETED','REOPENED','ABORTED') ORDER BY "id" LIMIT 1001`);
+ if(fences.some(f=>!text(f.storeId)||!text(f.companyId)||typeof f.generation!=='string'||f.generation.length>19||!/^(0|[1-9][0-9]*)$/.test(f.generation)||BigInt(f.generation)>9223372036854775807n||typeof f.planHash!=='string'||f.planHash.length!==64||!/^[a-f0-9]{64}$/.test(f.planHash)||typeof f.maintenance!=='boolean'||typeof f.retired!=='boolean'||!(f.operationId===null||text(f.operationId))))fail('MONTHLY_INSTALL_CONTROL_STATE_CHANGED');
+ if(fences.length>1000||executions.length>1000)fail('MONTHLY_INSTALL_GLOBAL_STATE_LIMIT');
+ const reasons=[];if(fences.some(f=>f.planHash!==targetHash))reasons.push('MONTHLY_INSTALL_PLAN_TRANSITION_REQUIRED');if(fences.some(f=>f.maintenance||f.retired||f.operationId!==null)||executions.length)reasons.push('MONTHLY_INSTALL_MAINTENANCE');
+ return {signature:sha({fences,executions}),fences,reasons};
+}
+export function createMonthlyInventorySnapshotInstallation(db,{sourceRevision,enabled=false}={}){
+ if(typeof sourceRevision!=='string'||sourceRevision.length!==40||!/^[a-f0-9]{40}$/.test(sourceRevision)||typeof enabled!=='boolean')fail();
+ const old=reviewedFreshStoreManifest(),target=monthlyInventorySnapshotLifecycleManifestProposal();assertMonthlySnapshotLifecycleCatalogue(target);
+ const baseCore=createLifecycleInstallationCore(old,{sourceRevision}),targetCore=createLifecycleInstallationCore(target,{sourceRevision});const oldPlanHash=baseCore.describe().planHash,targetPlanHash=targetCore.describe().planHash;
+ const description=freeze({sourceRevision,oldPlanHash,targetPlanHash,oldProfileId:old.id,targetProfileId:target.id,productionActivated:false,captureEnabled:false});
+ async function observe(tx,actor,scope){
+  const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS schema'))[0]?.schema;if(!text(schema,128))fail('MONTHLY_INSTALL_UNAVAILABLE');
+  const selected=await tx.$queryRawUnsafe(`SELECT "id" FROM ${q(schema)}."Store" WHERE "id"=$1 AND "companyId"=$2`,scope.storeId,scope.companyId);if(selected.length!==1)fail('MONTHLY_INSTALL_SCOPE_INVALID');
+  const control=await controlMetadata(tx,schema),present=control.names;const exists=(await tx.$queryRawUnsafe(`SELECT to_regclass(format('%I.%I',$1,'MonthlyInventorySnapshot'))::text AS name`,schema))[0]?.name;
+  const profile=exists?'TARGET':'BASE';const metadata=await (exists?targetCore:baseCore).inspectInTransaction(tx,actor);if(exists)await validateMonthlyInventorySnapshotSchema(tx);
+  if((exists&&!metadata.guardsInstalled)||(metadata.guardsInstalled&&!present.includes('StoreLifecycleFence')))fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');
+  // Refuse detached/overloaded lifecycle functions rather than silently
+  // replacing a partial or unknown installation with CREATE OR REPLACE.
+  const functions=await tx.$queryRawUnsafe(`SELECT p.proname AS name,p.pronargs::int AS arguments,p.prorettype='trigger'::regtype AS trigger,p.prosecdef AS definer,p.prokind::text AS kind,l.lanname AS language FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace JOIN pg_language l ON l.oid=p.prolang WHERE n.nspname=$1 AND left(p.proname,14)='mws_lifecycle_' ORDER BY p.proname LIMIT 601`,schema);
+  const expectedFunctions=metadata.guardsInstalled?(exists?target:old).tables.flatMap(node=>{const name='mws_lifecycle_'+sha(node.name).slice(0,16);return [name,name+'_truncate']}).sort():[];
+  if(JSON.stringify(functions.map(f=>f.name))!==JSON.stringify(expectedFunctions)||functions.some(f=>f.arguments!==0||!f.trigger||f.definer||f.kind!=='f'||f.language!=='plpgsql'))fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');
+  const global=await globalState(tx,schema,present,targetPlanHash);if(!metadata.guardsInstalled&&global.fences.length)fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');const row=global.fences.find(f=>f.storeId===scope.storeId);if(row&&row.companyId!==scope.companyId)fail('MONTHLY_INSTALL_SCOPE_INVALID');
+  const enrollment=row?{enrolled:true,generation:row.generation,planHash:row.planHash,maintenance:row.maintenance,retired:row.retired,operationId:row.operationId}:{enrolled:false,generation:null,planHash:null,maintenance:null,retired:null,operationId:null};
+  const packet=freeze({companyId:scope.companyId,storeId:scope.storeId,sourceRevision,schema,profile,catalogueSignature:sha({signature:metadata.signature,guardsInstalled:metadata.guardsInstalled,controls:control.signature}),globalStateSignature:sha({state:global.signature,controls:control.signature}),guardsInstalled:metadata.guardsInstalled,oldPlanHash,targetPlanHash,enrollment});
+  return {packet,eligible:global.reasons.length===0,reasons:global.reasons,present};
+ }
+ const transaction=(fn,readOnly)=>{if(!db||typeof db.$transaction!=='function')fail('MONTHLY_INSTALL_UNAVAILABLE');return db.$transaction(async tx=>{if(readOnly)await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');await tx.$executeRawUnsafe("SET LOCAL TimeZone='UTC'");await tx.$executeRawUnsafe("SET LOCAL DateStyle='ISO,YMD'");await tx.$executeRawUnsafe("SET LOCAL lock_timeout='2s'");await tx.$executeRawUnsafe("SET LOCAL statement_timeout='20s'");return fn(tx)},{isolationLevel:readOnly?'RepeatableRead':'ReadCommitted',timeout:120000,maxWait:3000})};
+ return Object.freeze({describe:()=>description,
+  async inspect(actor,input){const a=actorCopy(actor),scope=scopeCopy(input);const result=await transaction(tx=>observe(tx,a,scope),true);return freeze({packet:result.packet,eligible:result.eligible,reasons:result.reasons})},
+  async install(actor,input){if(!enabled)fail('MONTHLY_INSTALL_DISABLED');const a=actorCopy(actor),scope=scopeCopy(input,true);if(scope.packet.companyId!==scope.companyId||scope.packet.storeId!==scope.storeId||scope.packet.sourceRevision!==sourceRevision||scope.packet.oldPlanHash!==oldPlanHash||scope.packet.targetPlanHash!==targetPlanHash)fail('MONTHLY_INSTALL_STATE_CHANGED');
+   return transaction(async tx=>{
+    await tx.$queryRawUnsafe("SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended('mws:monthly-snapshot-install-v1',0))");
+    const schema=(await tx.$queryRawUnsafe('SELECT current_schema() AS schema'))[0]?.schema;if(schema!==scope.packet.schema)fail('MONTHLY_INSTALL_STATE_CHANGED');
+    // Real relation locks also exclude legacy installers/reset row locks. A new
+    // advisory key alone would not serialize those existing entry points.
+    const relations=await tx.$queryRawUnsafe(`SELECT c.relname AS name FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relkind IN ('r','p','f') ORDER BY c.relname LIMIT 601`,schema);if(relations.length>600)fail('MONTHLY_INSTALL_UNAVAILABLE');
+    const allowed=new Set([...target.knownTables,...Object.keys(controls)]);if(relations.some(r=>!allowed.has(r.name)))fail('MONTHLY_INSTALL_PREFLIGHT_FAILED');
+    // Fence first conflicts with beginDrain's FOR UPDATE before touching guards.
+    const names=relations.map(r=>r.name),ordered=[...(names.includes('StoreLifecycleFence')?['StoreLifecycleFence']:[]),...names.filter(n=>n!=='StoreLifecycleFence').sort()];
+    for(const name of ordered)await tx.$executeRawUnsafe(`LOCK TABLE ${q(schema)}.${q(name)} IN EXCLUSIVE MODE NOWAIT`);
+    const before=await observe(tx,a,scope);if(JSON.stringify(before.packet)!==JSON.stringify(scope.packet))fail('MONTHLY_INSTALL_STATE_CHANGED');if(!before.eligible)fail(before.reasons[0]);
+    if(before.packet.profile==='BASE')await createMonthlyInventorySnapshotSchema(tx);
+    await targetCore.installInTransaction(tx,a,scope);
+    const after=await observe(tx,a,scope);if(!after.eligible||after.packet.profile!=='TARGET'||!after.packet.enrollment.enrolled)fail('MONTHLY_INSTALL_STATE_CHANGED');
+    if(before.packet.enrollment.enrolled&&JSON.stringify(after.packet.enrollment)!==JSON.stringify(before.packet.enrollment))fail('MONTHLY_INSTALL_STATE_CHANGED');
+    return freeze({installed:true,enrolled:true,createdSnapshotTable:before.packet.profile==='BASE',createdEnrollment:!before.packet.enrollment.enrolled,companyId:scope.companyId,storeId:scope.storeId,lifecycleGeneration:after.packet.enrollment.generation,sourceRevision,schema,oldPlanHash,targetPlanHash,previousCatalogueSignature:before.packet.catalogueSignature,catalogueSignature:after.packet.catalogueSignature,productionActivated:false,captureEnabled:false});
+   },false)
+  }
+ });
+}
