@@ -144,7 +144,7 @@
     "screenshot": "unavailable: Page.captureScreenshot timed out twice",
     "financialInvariance": "not independently measured"
   },
-  "productionAuthorizationChanged": false,
+  "productionAuthorizationChanged": true,
   "invitationSent": false,
   "financialActions": false,
   "release": {
@@ -155,6 +155,8 @@
     "healthRevision": "55c2d7a912313ad8589f8258ad9dc5084fa8ad49",
     "healthOk": true
   },
-  "configurationApplied": false,
-  "realStoreAuthorizationChanged": false
+  "configurationApplied": true,
+  "realStoreAuthorizationChanged": true,
+  "actualDelivery": "NOT TESTED / FUTURE CUTOFF",
+  "latestActivationEvidence": "activation-control.json"
 }
