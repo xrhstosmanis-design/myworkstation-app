@@ -1,3 +1,7 @@
+## Current ownership reconciliation — 01/11/2026
+
+Newer user-approved narrow transfer3492/6352b57 assigns the audit/investigation/report value-field extension to INVENTORY-RECONCILIATION-01 (active PR3495). Older retained-owner next-action statements below are historical for that transferred extension, not authority for a second implementation. CENTRAL-BACKOFFICE-ACCESS-01 retains the other access integrations. Field classification review: BACKOFFICE_INVENTORY_READ_PERMISSION_CONTRACT.md. Existing21 rights/defaults unchanged; no new executable grant, field or route admission from this review. Report integration remains OPEN/dependent on the canonical contract, no new LAB/USER PASS.
+
 ## 01/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / THREE INDEPENDENT INVENTORY ACTIONS INSTALLED / FULL SCOPE RETAINED OPEN
 
 Same retained owner. Source PR3481 is delivered in exact healthye1fcbe04d3097cc3fd856227307d2ad6cb05df0f. Owner-selected inventory.clear, inventory.bulk-zero and inventory.delete are now independently executable, each requiring inventory.read only. Grant catalogue21; old profiles/accounts receive no automatic new right. Review catalogue55families/342candidates remains non-authorizing. Same real EMPLOYEE identity and native InventoryV2Center/InventoryFastCount controls; ordinary counting, clearing, selected-zero and draft deletion are distinct rights. No role promotion, company authority, schema/worker change or hosted grant/credential/business write by this page.

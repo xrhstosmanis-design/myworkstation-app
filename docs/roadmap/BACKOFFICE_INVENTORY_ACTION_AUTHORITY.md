@@ -1,3 +1,7 @@
+## Current ownership reconciliation — 01/11/2026
+
+Newer user-approved narrow transfer3492/6352b57 assigns the audit/investigation/report value-field extension to INVENTORY-RECONCILIATION-01 (active PR3495). Older retained-owner next-action statements below are historical for that transferred extension, not authority for a second implementation. CENTRAL-BACKOFFICE-ACCESS-01 retains the other access integrations. Field classification review: BACKOFFICE_INVENTORY_READ_PERMISSION_CONTRACT.md. Existing21 rights/defaults unchanged; no new executable grant, field or route admission from this review. Report integration remains OPEN/dependent on the canonical contract, no new LAB/USER PASS.
+
 ## Current engineering delivery — 01/11/2026
 
 Installed exacte1fcbe04 after full5136server+8backup/0FAIL/0SKIP exact PR/main CI and guarded41343627981, independently healthy19:56:32UTC. inventory.clear, inventory.bulk-zero and inventory.delete are explicit executable Owner-selected store rights, each with inventory.read dependency; no new profile default or automatic grant. Strict native draft/object/version/actor/replay guards and durable audit protect the operations. Catalogue21; the original proposal and candidate history below are historical for these three actions only. All other proposed rows remain unadmitted. No schema/company/worker authority added. Hosted acceptance NOT TESTED; this is not a functional PASS. Same full-scope owner retained.
