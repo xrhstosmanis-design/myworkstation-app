@@ -5,6 +5,7 @@ export async function mount(transport){
  let token='fixture-session';const React=await import('react'),{act}=React,{createRoot}=await import('react-dom/client');
  const noop=()=>null,icons=new Proxy({},{get:()=>noop});
  const dependencies={'react':React,'lucide-react':icons,'./store-chat.css':{},'./DocumentScanButton.jsx':noop,'./ChatVideoAttachment.jsx':noop,'./ChatVoicePreview.jsx':noop,'./NativeChatDownload.jsx':noop,'./chat-mobile-session.mjs':{chatToken:()=>token},'./chat-mobile-install.mjs':{mobileChatUrl:id=>'/chat?store='+id,registerChatWorker:async()=>null},'./store-chat-push-diagnostic.mjs':{pushSubscriptionFailure:()=>''}};
+ const photo={exports:{}};new Function('require','module','exports',transformSync(fs.readFileSync(new URL('../../../client/src/components/store/ChatPhotoViewer.jsx',import.meta.url),'utf8'),{loader:'jsx',format:'cjs'}).code)(name=>{if(name!=='react')throw Error(name);return React},photo,photo.exports);dependencies['./ChatPhotoViewer.jsx']=photo.exports;
  const child={exports:{}};
  new Function('require','module','exports',transformSync(fs.readFileSync(new URL('../../../client/src/components/store/ChatHistoryTools.jsx',import.meta.url),'utf8'),{loader:'jsx',format:'cjs'}).code)(name=>{if(name!=='react')throw Error(name);return React},child,child.exports);
  dependencies['./ChatHistoryTools.jsx']=child.exports;

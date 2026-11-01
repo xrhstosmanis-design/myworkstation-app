@@ -322,14 +322,15 @@ public final class MainActivity extends Activity {
         tabs.addView(chatButton(tab.equals("ai") ? "Μηνύματα" : "Βοηθός AI", () -> {
             if (busy) return; navigate(); tab = tab.equals("ai") ? "chat" : "ai"; conversation();
         }, false), toolParams());
+        if (tab.equals("chat")) { Button more=chatButton("⋮", scopedChatAction(this::showChatTools), false); more.setContentDescription("Περισσότερα εργαλεία συνομιλίας"); tabs.addView(more,new LinearLayout.LayoutParams(dp(48),dp(48))); }
         root.addView(tabs, 1);
         if (tab.equals("chat")) {
             LinearLayout options = new LinearLayout(this);
             categoryButton = chatButton("Γενικό", scopedChatAction(() -> { if (!chatCanPin) return; messageCategory = messageCategory.equals("GENERAL") ? "ANNOUNCEMENT" : "GENERAL"; categoryButton.setText(messageCategory.equals("GENERAL") ? "Γενικό" : "Ανακοίνωση"); }), false);
             categoryButton.setContentDescription("Κατηγορία νέου μηνύματος"); categoryButton.setVisibility(View.GONE); options.addView(categoryButton, toolParams());
             announcementSettingsButton = chatButton("Ρυθμίσεις", scopedChatAction(this::showAnnouncementSettings), false); announcementSettingsButton.setVisibility(View.GONE); options.addView(announcementSettingsButton, toolParams());
-            announcementsButton = chatButton("Ανακοινώσεις", scopedChatAction(this::showPinnedAnnouncements), false); announcementsButton.setVisibility(View.GONE); options.addView(announcementsButton, toolParams()); root.addView(options, 2);
-            historySearchButton = chatButton("Αναζήτηση μηνυμάτων", scopedChatAction(this::showHistorySearch), false); historySearchButton.setVisibility(View.GONE); root.addView(historySearchButton, 3);
+            announcementsButton = chatButton("Ανακοινώσεις", scopedChatAction(this::showPinnedAnnouncements), false); announcementsButton.setVisibility(View.GONE); options.addView(announcementsButton, toolParams()); options.setVisibility(View.GONE); root.addView(options, 2);
+            historySearchButton = chatButton("Αναζήτηση μηνυμάτων", scopedChatAction(this::showHistorySearch), false); historySearchButton.setVisibility(View.GONE); options.addView(historySearchButton);
         }
 
         root.removeView(contentScroll); scroll = new ScrollView(this); scroll.setFillViewport(false); scroll.setBackgroundColor(0xfff4f1f8);
@@ -344,12 +345,12 @@ public final class MainActivity extends Activity {
             LinearLayout extras = new LinearLayout(this); extras.setTag("chat-tools"); extras.setPadding(dp(8), dp(6), dp(8), 0);
             Button replies = chatButton("Έτοιμες", this::pickReply, false); replies.setContentDescription("Έτοιμες απαντήσεις"); extras.addView(replies, toolParams());
             voiceButton = chatButton("Φωνητικό", this::recordVoice, false); voiceButton.setContentDescription("Μικρόφωνο · εγγραφή φωνητικού"); voiceButton.setEnabled(false); extras.addView(voiceButton, toolParams());
-            videoButton = chatButton("Βίντεο", this::recordVideo, false); videoButton.setContentDescription("Βίντεο · κάμερα / συλλογή"); videoButton.setEnabled(false); extras.addView(videoButton, toolParams()); root.addView(extras);
+            videoButton = chatButton("Βίντεο", this::recordVideo, false); videoButton.setContentDescription("Βίντεο · κάμερα / συλλογή"); videoButton.setEnabled(false); extras.addView(videoButton, toolParams()); extras.setVisibility(View.GONE); root.addView(extras);
             voiceLabel = text("", 14, MUTED); voiceLabel.setVisibility(View.GONE); voiceLabel.setOnClickListener(v -> reviewVoice()); root.addView(voiceLabel);
             videoLabel = text("", 14, MUTED); videoLabel.setVisibility(View.GONE); videoLabel.setOnClickListener(v -> reviewVideo()); root.addView(videoLabel);
         }
         LinearLayout bar = new LinearLayout(this); bar.setTag("chat-composer"); bar.setGravity(Gravity.CENTER_VERTICAL); bar.setPadding(dp(10), dp(8), dp(10), dp(8));
-        if (tab.equals("chat")) { Button add = chatButton("＋", this::pickPhoto, false); add.setContentDescription("Προσθήκη φωτογραφίας"); bar.addView(add, new LinearLayout.LayoutParams(dp(48), dp(48))); }
+        if (tab.equals("chat")) { Button add = chatButton("＋", this::showAttachmentTools, false); add.setContentDescription("Προσθήκη συνημμένου και έτοιμες απαντήσεις"); bar.addView(add, new LinearLayout.LayoutParams(dp(48), dp(48))); }
         composer = input(tab.equals("ai") ? "Ρώτησε τον βοηθό…" : "Γράψε μήνυμα…", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, tab.equals("ai") ? 600 : 5000);
         composer.setMaxLines(4); composer.setMinHeight(dp(48)); composer.setBackground(round(0xfff4f1f8, 24)); composer.setPadding(dp(14), dp(10), dp(14), dp(10)); LinearLayout.LayoutParams field = new LinearLayout.LayoutParams(0, -2, 1); field.setMargins(dp(6), 0, dp(6), 0); bar.addView(composer, field);
         Button send = chatButton("➤", this::send, true); send.setContentDescription("Αποστολή μηνύματος");
@@ -488,10 +489,11 @@ public final class MainActivity extends Activity {
         }
         if (!readers.isEmpty()) meta += " · Διαβάστηκε";
         if (!meta.isEmpty()) card.addView(text(meta, 12, MUTED));
+        LinearLayout actions=new LinearLayout(this); actions.setOrientation(LinearLayout.VERTICAL); actions.setTag("message-actions");
         if (own && row != null && selected != null) {
             final long generation = epoch.capture();
             final String capturedToken = token, storeId = id(selected, "id"), companyId = id(selected, "companyId");
-            if (!readers.isEmpty()) card.addView(button("Διαβάστηκε από " + readers.size(), () -> {
+            if (!readers.isEmpty()) actions.addView(button("Διαβάστηκε από " + readers.size(), scopedMessageAction(() -> {
                 if (!foreground || !epoch.current(generation) || !capturedToken.equals(token)
                     || storeId.isEmpty() || companyId.isEmpty()
                     || !storeId.equals(id(selected, "id")) || !companyId.equals(id(selected, "companyId"))) return;
@@ -499,27 +501,75 @@ public final class MainActivity extends Activity {
                 imageDialog = new AlertDialog.Builder(this).setTitle("Διαβάστηκε από")
                     .setItems(readers.toArray(new String[0]), null).setPositiveButton("Κλείσιμο", null).create();
                 imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
-            }));
+            })));
         }
         if (row != null && interactionsReady && ChatInteractions.validId(row.optString("id"))) {
-            card.addView(button("Απάντηση", scopedChatAction(() -> chooseChatReply(row))));
-            if (searchForwardReady && chatCanForward) card.addView(button("Προώθηση", scopedChatAction(() -> showForwardTargets(row))));
+            actions.addView(button("Απάντηση", scopedMessageAction(() -> chooseChatReply(row))));
+            if (searchForwardReady && chatCanForward) actions.addView(button("Προώθηση", scopedMessageAction(() -> showForwardTargets(row))));
             LinearLayout reactions = new LinearLayout(this); final String mine = ChatInteractions.mine(row, identity.optString("id"));
             for (String emoji : ChatInteractions.REACTIONS) {
-                int count = ChatInteractions.count(row, emoji); Button reaction = chatButton(emoji + (count == 0 ? "" : " " + count), scopedChatAction(() -> updateReaction(row, mine.equals(emoji) ? null : emoji)), mine.equals(emoji));
+                int count = ChatInteractions.count(row, emoji); Button reaction = chatButton(emoji + (count == 0 ? "" : " " + count), scopedMessageAction(() -> updateReaction(row, mine.equals(emoji) ? null : emoji)), mine.equals(emoji));
                 reaction.setContentDescription("Αντίδραση " + emoji + (mine.equals(emoji) ? " · αφαίρεση" : "")); reactions.addView(reaction, toolParams());
             }
-            card.addView(reactions);
-            if (own) { ArrayList<String> delivered = ReadReceipts.names(row.optJSONArray("deliveries"), row.optString("senderId")); if (!delivered.isEmpty()) card.addView(button("Παραδόθηκε σε " + delivered.size(), scopedChatAction(() -> showChatPeople("Παραδόθηκε σε εφαρμογή", row.optJSONArray("deliveries"), row.optString("senderId"))))); }
+            actions.addView(reactions);
+            if (own) { ArrayList<String> delivered = ReadReceipts.names(row.optJSONArray("deliveries"), row.optString("senderId")); if (!delivered.isEmpty()) actions.addView(button("Παραδόθηκε σε " + delivered.size(), scopedMessageAction(() -> showChatPeople("Παραδόθηκε σε εφαρμογή", row.optJSONArray("deliveries"), row.optString("senderId"))))); }
             if (row.optString("category").equals("ANNOUNCEMENT")) {
-                if (chatCanPin) card.addView(button(row.optBoolean("pinned") ? "Ξεκαρφίτσωμα" : "Καρφίτσωμα", scopedChatAction(() -> pinAnnouncement(row))));
-                if (acknowledgementRequired && !row.optBoolean("acknowledgedByMe")) card.addView(button("Το διάβασα", scopedChatAction(() -> acknowledgeAnnouncement(row))));
+                if (chatCanPin) actions.addView(button(row.optBoolean("pinned") ? "Ξεκαρφίτσωμα" : "Καρφίτσωμα", scopedMessageAction(() -> pinAnnouncement(row))));
+                if (acknowledgementRequired && !row.optBoolean("acknowledgedByMe")) actions.addView(button("Το διάβασα", scopedMessageAction(() -> acknowledgeAnnouncement(row))));
                 ArrayList<String> acknowledgements = ReadReceipts.names(row.optJSONArray("acknowledgements"), row.optString("senderId"));
-                if (!acknowledgements.isEmpty()) card.addView(button("Επιβεβαίωσαν " + acknowledgements.size(), scopedChatAction(() -> showChatPeople("Επιβεβαίωσαν την ανακοίνωση", row.optJSONArray("acknowledgements"), row.optString("senderId")))));
+                if (!acknowledgements.isEmpty()) actions.addView(button("Επιβεβαίωσαν " + acknowledgements.size(), scopedMessageAction(() -> showChatPeople("Επιβεβαίωσαν την ανακοίνωση", row.optJSONArray("acknowledgements"), row.optString("senderId")))));
             }
         }
-        if (row != null && !row.optBoolean("readByMe")) card.addView(button("Σημείωση ως διαβασμένο", () -> call(chatBase() + "/messages/" + enc(row.optString("id")) + "/read", "POST", object(), false, ignored -> loadMessages(false))));
+        if (row != null && !row.optBoolean("readByMe")) actions.addView(button("Σημείωση ως διαβασμένο", scopedMessageAction(() -> call(chatBase() + "/messages/" + enc(row.optString("id")) + "/read", "POST", object(), false, ignored -> loadMessages(false)))));
+        actions.setVisibility(View.GONE); card.addView(actions);
+        if (row != null) {
+            StringBuilder summary=new StringBuilder();
+            for(String emoji:ChatInteractions.REACTIONS){int count=ChatInteractions.count(row,emoji);if(count>0)summary.append(emoji).append(" ").append(count).append("  ");}
+            if(summary.length()>0)card.addView(text(summary.toString(),14,PURPLE));
+            card.setContentDescription("Μήνυμα · πάτησε για ενέργειες");
+            Runnable open=scopedMessageAction(() -> showMessageActions(card,actions));
+            card.setOnClickListener(v -> open.run());card.setOnLongClickListener(v -> {open.run();return true;});
+        }
         messages.addView(card, lp);
+    }
+    private Runnable scopedMessageAction(Runnable action) {
+        final long generation=epoch.capture();final String captured=token,store=id(selected,"id"),company=id(selected,"companyId");
+        return ()->{if(!busy&&chatScope(generation,captured,store,company)){dismissImage();action.run();}};
+    }
+    private void showMessageActions(LinearLayout card, LinearLayout actions) {
+        dismissImage(); card.removeView(actions); actions.setVisibility(View.VISIBLE);
+        ScrollView list=new ScrollView(this);list.addView(actions);
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Ενέργειες μηνύματος").setView(list).setNegativeButton("Κλείσιμο",null).create();
+        imageDialog=dialog;dialog.setOnDismissListener(d -> {list.removeView(actions);actions.setVisibility(View.GONE);card.addView(actions);if(imageDialog==dialog)imageDialog=null;});
+        dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);dialog.show();
+    }
+    private void showChatTools() {
+        ArrayList<Button> available=new ArrayList<>();
+        for(Button b:new Button[]{historySearchButton,announcementsButton,categoryButton,announcementSettingsButton})if(b!=null&&b.getVisibility()==View.VISIBLE)available.add(b);
+        String[] names=new String[available.size()];for(int i=0;i<names.length;i++)names[i]=available.get(i).getText().toString();
+        dismissImage();imageDialog=new AlertDialog.Builder(this).setTitle("Εργαλεία συνομιλίας").setItems(names,(d,i)->{dismissImage();available.get(i).performClick();if(available.get(i)==categoryButton)status("Νέο μήνυμα: "+categoryButton.getText());}).setNegativeButton("Κλείσιμο",null).create();
+        imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);imageDialog.show();
+    }
+    private void showAttachmentTools() {
+        if(!foreground||busy||selected==null)return;
+        final long generation=epoch.capture();final String captured=token,store=id(selected,"id"),company=id(selected,"companyId");
+        ArrayList<String> names=new ArrayList<>();ArrayList<Runnable> choices=new ArrayList<>();
+        if(photosEnabled){names.add("Φωτογραφία");choices.add(this::pickPhoto);}
+        if(voiceAvailable){names.add("Φωνητικό");choices.add(this::recordVoice);}
+        if(videoAvailable){names.add("Βίντεο");choices.add(this::recordVideo);}
+        names.add("Έτοιμες απαντήσεις");choices.add(this::pickReply);
+        dismissImage();imageDialog=new AlertDialog.Builder(this).setTitle("Προσθήκη").setItems(names.toArray(new String[0]),(d,i)->{dismissImage();if(!busy&&chatScope(generation,captured,store,company))choices.get(i).run();}).setNegativeButton("Κλείσιμο",null).create();
+        imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);imageDialog.show();
+    }
+    private void showFullPhoto(String title, Bitmap bitmap) {
+        ZoomPhotoView image=new ZoomPhotoView(this);image.setImageBitmap(bitmap);
+        LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setBackgroundColor(0xff111111);
+        TextView caption=text(title,16,Color.WHITE);box.addView(caption);
+        LinearLayout controls=new LinearLayout(this);Button zoomOut=chatButton("−",image::zoomOut,false),zoomIn=chatButton("＋",image::zoomIn,false);zoomOut.setContentDescription("Σμίκρυνση φωτογραφίας");zoomIn.setContentDescription("Μεγέθυνση φωτογραφίας");controls.addView(zoomOut,new LinearLayout.LayoutParams(dp(48),dp(48)));controls.addView(zoomIn,new LinearLayout.LayoutParams(dp(48),dp(48)));controls.addView(chatButton("Επαναφορά ζουμ",image::resetZoom,false),toolParams());controls.addView(chatButton("Κλείσιμο",this::dismissImage,false),toolParams());box.addView(controls);
+        box.addView(image,new LinearLayout.LayoutParams(-1,0,1));
+        AlertDialog dialog=new AlertDialog.Builder(this).create();imageDialog=dialog;
+        dialog.setOnDismissListener(d->{image.setImageDrawable(null);if(preview==bitmap)preview=null;if(!bitmap.isRecycled())bitmap.recycle();if(imageDialog==dialog)imageDialog=null;});
+        dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);dialog.show();dialog.getWindow().setContentView(box);dialog.getWindow().setLayout(-1,-1);image.post(image::resetZoom);
     }
     private boolean chatScope(long generation, String captured, String store, String company) {
         return foreground && tab.equals("chat") && epoch.current(generation) && captured.equals(token) && !store.isEmpty() && !company.isEmpty() && store.equals(id(selected, "id")) && company.equals(id(selected, "companyId"));
@@ -821,10 +871,7 @@ public final class MainActivity extends Activity {
         while (options.outWidth / options.inSampleSize > 1200 || options.outHeight / options.inSampleSize > 1200) options.inSampleSize *= 2;
         options.inJustDecodeBounds = false; preview = BitmapFactory.decodeByteArray(photo.bytes, 0, photo.bytes.length, options);
         if (preview == null) { status("Δεν είναι έγκυρη εικόνα για προεπισκόπηση."); return; }
-        ImageView image = new ImageView(this); image.setAdjustViewBounds(true); image.setImageBitmap(preview);
-        imageDialog = new AlertDialog.Builder(this).setTitle("Φωτογραφία " + (index + 1)).setView(image).setPositiveButton("Κλείσιμο", null).create();
-        imageDialog.setOnDismissListener(dialog -> { image.setImageDrawable(null); if (preview != null) { preview.recycle(); preview = null; } });
-        imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
+        showFullPhoto("Φωτογραφία " + (index + 1), preview);
     }
     private void viewPhoto(JSONObject row) {
         if (busy) return; busy = true; long generation = epoch.capture(); String captured = token, path = chatBase() + "/messages/" + enc(row.optString("id")) + "/attachment";
@@ -839,9 +886,7 @@ public final class MainActivity extends Activity {
                 ui.post(() -> {
                     if (!foreground || !epoch.current(generation) || !captured.equals(token)) { if (bitmap != null) bitmap.recycle(); return; }
                     busy = false; dismissImage(); if (bitmap == null) { status("Δεν άνοιξε η φωτογραφία."); return; }
-                    preview = bitmap; ImageView image = new ImageView(this); image.setAdjustViewBounds(true); image.setImageBitmap(bitmap);
-                    imageDialog = new AlertDialog.Builder(this).setTitle("Προσωρινή προβολή").setView(image).setPositiveButton("Κλείσιμο", null).create();
-                    imageDialog.setOnDismissListener(dialog -> { image.setImageDrawable(null); if (preview != null) { preview.recycle(); preview = null; } }); imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
+                    preview = bitmap; showFullPhoto("Φωτογραφία · προσωρινή προβολή", bitmap);
                 });
             } catch (Exception ignored) {
                 ui.post(() -> {
