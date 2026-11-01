@@ -1,4 +1,8 @@
-# AI-COST-PASS-THROUGH-01 - SHARED-COST PREVIEW / SOURCE / AWAITING FULL CI AND HOSTED ACCEPTANCE
+# AI-COST-PASS-THROUGH-01 - SHARED-COST PREVIEW / SCOPED HOSTED PASS / REAL-CUSTOMER CONTROL NOT TESTED
+
+Authoritative01Nov2026: hosted synthetic preview PASS at21:15UTC on exact healthy5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e. Fixed50percent once:100EUR/78service days =>150EUR, A31days59.62/B31days59.61/C16days30.77; company totals match, visible no-charge/no-debt label. Fresh LAB measured baseline21:14:03.082UTC and reopened after21:16:10.814UTC match exactly: available3680499/reserved930033/settled409468/credits5020000micro, entries14/requests9/debt0, master/invoice/emailOFF, additive rates0; only existing historical disabled-email notice. Native screenshot and before/acceptance JSON in CHECKPOINTS/EVIDENCE/shared-cost-preview-20261101. No business/provider/financial/email action.
+
+This is PASS ONLY of the synthetic hosted UI and measured virtual LAB invariance. The private real-customer structured comparison was rejected by automatic approval review, was not retried and remains NOT TESTED. Actual customer billing/credit/email, real participant enrollment, external EUR tariffs and monthly cost posting remain OPEN; parent36 and general wallet are not closed. Source has no API/persistence/posting; mounted zero-request and stale-result validation are CI evidence, not extra hosted acceptance. Shared registries/manual/PDF closure synchronized in this receipt. Earlier BEFORE SOURCE/AWAITING entries below are dated engineering history.
 
 Retained owner feat/ai-owner-wallet-20261022; same executor root. User explicitly approved the proposed active-service-day rule for the charge PREVIEW on01Nov2026 after private provider audit and PR3485/CI41342988216/merge9a990bb00ed1fbba9b88bbf9f3f4fd892c984b7c. This authorizes a preview-only implementation, not customer enrollment, financial posting, actual credit, email or provider price guessing.
 
