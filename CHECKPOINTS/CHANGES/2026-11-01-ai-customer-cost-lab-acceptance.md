@@ -1,5 +1,9 @@
 # AI-COST-PASS-THROUGH-01 — LAB NOT EXECUTED / ENVIRONMENT UNAVAILABLE / RESUME PLAN
 
+## COST-LAB-20261101-ENABLE2 AFTER / ASK2 BEFORE
+
+Closed/reopened wallet and reselected LAB: master ON persisted; invoice/email OFF, rates0. Available3683091micro, reserved930033micro, settled406876micro/8calls, credits5020000micro, history13, debt0 unchanged. Empty native full-chat now authorized after normal fresh MFA sign-in, LAB selected and all-stores OFF; message input enabled. Next action ASK2: submit exactly once «Για δοκιμή λειτουργίας, απάντησε μόνο με τη λέξη Έτοιμος.» No data/report mutation, voice, attachment or financial action. Record actual provider rows and wallet delta; no ambiguous retry. Restore OFF after measurement. RecordedUTC:2026-11-01T18:58:49.138496+00:00
+
 ## COST-LAB-20261101-ENABLE2 BEFORE
 
 Native logout followed by fresh secure email/password+MFA sign-in resolved the support-context blocker. Explicit LAB assistant selection now authorizes and enables input; no message sent. No authentication workaround or code change. Fresh wallet reread: master/invoice/email OFF, rates0, available3683091micro, reserved930033micro, settled406876micro/8calls, credits5020000micro, history13, debt0. Identified next action ENABLE2: temporarily save LAB master ON only, then one plain ASK as previously specified, then restore OFF. No replay of financial evidence or real customer action. RecordedUTC:2026-11-01T18:57:59.053456+00:00
