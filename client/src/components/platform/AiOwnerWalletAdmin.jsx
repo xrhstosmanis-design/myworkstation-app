@@ -1,4 +1,5 @@
 import AiWalletPostpaid from './AiWalletPostpaid.jsx';
+import SharedCostPreview from './SharedCostPreview.jsx';
 import AiWalletActivityHistory from "../voice/AiWalletActivityHistory.jsx";
 import React,{useEffect,useRef,useState} from 'react';
 import AiWalletCustomerPricing from './AiWalletCustomerPricing.jsx';
@@ -80,6 +81,7 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
       <AiWalletActivityHistory key={companyId+":activity"} entries={data.entries||[]} stores={companies.find(c=>c.id===companyId)?.stores||[]}/>
       <h2>Ειδοποιήσεις</h2><ul>{(data.notices||[]).map(n=><li key={n.id}>{({CREDIT:'Πίστωση',LOW:'Χαμηλό υπόλοιπο',EMPTY:'Μηδενικό υπόλοιπο'})[n.kind]} · {new Date(n.createdAt).toLocaleString('el-GR',{hour12:false})} · Email: {({ACCEPTED:'Παραλήφθηκε από SMTP',PENDING:'Σε αναμονή',ATTEMPTING:'Η αποστολή χρειάζεται έλεγχο',UNKNOWN:'Αβέβαιο αποτέλεσμα — χωρίς επανάληψη',DISABLED:'Ανενεργό',REVOKED:'Ανακλήθηκε'})[n.emailStatus]||n.emailStatus}</li>)}</ul>
     </>)}
+    <SharedCostPreview companies={companies}/>
     <style>{`[aria-label="Διαχείριση υπολοίπου AI"] form{display:grid;gap:12px;max-width:800px;margin:20px 0;padding:16px;background:#f1f5f9;border-radius:12px}[aria-label="Διαχείριση υπολοίπου AI"] input:not([type=checkbox]),[aria-label="Διαχείριση υπολοίπου AI"] select{padding:10px;max-width:100%;box-sizing:border-box}[aria-label="Διαχείριση υπολοίπου AI"] button{padding:10px;min-height:44px}`}</style>
   </div>;
 }
