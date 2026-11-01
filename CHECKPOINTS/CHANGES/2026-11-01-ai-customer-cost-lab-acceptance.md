@@ -1,5 +1,11 @@
 # AI-COST-PASS-THROUGH-01 — LAB NOT EXECUTED / ENVIRONMENT UNAVAILABLE / RESUME PLAN
 
+## COST-LAB-20261101-ASK BLOCKED / RESTORE BEFORE
+
+Fresh full-chat UI selected LAB, all-stores OFF, but input/send disabled. Native alert: «Βρίσκεσαι σε προβολή υποστήριξης. Πάτησε “Επιστροφή στο Super Admin” και ολοκλήρωσε την κανονική σύνδεση.» No question submitted and no paid call attempted; this is NOT functional acceptance. Reopened LAB wallet: available3683091micro, reserved930033micro, settled406876micro/8calls, credits5020000micro, history13, debt0, rates0 unchanged. Master ON, invoice/email OFF. Next identified action RESTORE: save LAB master OFF only, preserving invoice/email OFF, rates0, balances/history and old REVIEW. No customer activation, credit, repayment or email. Investigate correct native assistant entry separately; do not bypass authorization.
+
+RecordedUTC:2026-11-01T18:47:27.131984+00:00
+
 ## COST-LAB-20261101-ENABLE AFTER / ASK BEFORE
 
 Temporary LAB masterON saved once; native success message "Οι ρυθμίσεις αποθηκεύτηκαν.". Closed/reopened wallet and explicitly reselected LAB: masterON persisted; invoice/email OFF. Available3683091micro, reserved930033micro, settled406876micro, credits5020000micro, history13, debt0 and rates0 unchanged. No credit, repayment, provider call or email from the enable step. This is control setup, not whole-feature PASS.
