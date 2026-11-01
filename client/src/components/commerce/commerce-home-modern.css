@@ -100,3 +100,14 @@
 @media(max-width:650px){.commerce-hub > .panel:first-child .commerce-module-strip,.commerce-hub > .commerce-status-grid.commerce-reference-modules{grid-template-columns:1fr!important}}
 
 .commerce-hub > .commerce-status-grid.commerce-reference-modules > .commerce-reference-card:before{display:none!important}
+
+/* 01/11/2026 - Compact commercial navigation leaves room for the selected function. */
+@media screen{
+ .commerce-hub:not(.order-suggestions-view) > .panel:first-child .commerce-module-strip{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:6px!important;margin:8px 0!important}
+ .commerce-hub:not(.order-suggestions-view) > .panel:first-child .commerce-module-strip button{flex:0 1 auto!important;width:auto!important;max-width:100%!important;min-height:42px!important;padding:7px 10px!important;border-radius:8px!important;line-height:1.25!important;gap:6px!important}
+ .commerce-hub:not(.order-suggestions-view) > .panel:first-child .commerce-module-strip button svg{flex:0 0 18px!important;width:18px!important;height:18px!important}
+ .commerce-hub:not(.order-suggestions-view) > .panel:first-child .commerce-module-strip button:after{position:static!important;top:auto!important;right:auto!important;transform:none!important;margin-left:4px!important;font-size:18px!important;line-height:1!important}
+}
+@media screen and (pointer:coarse){
+ .commerce-hub:not(.order-suggestions-view) > .panel:first-child .commerce-module-strip button{min-height:44px!important}
+}

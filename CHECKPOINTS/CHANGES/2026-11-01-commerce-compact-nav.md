@@ -1,4 +1,12 @@
-## 01/11/2026 - COMMERCE-COMPACT-NAV-01 / ASSIGNED BEFORE SOURCE / NOT IMPLEMENTED
+## 01/11/2026 - COMMERCE-COMPACT-NAV-01 / SOURCE CANDIDATE / AWAITING FULL CI AND USER
+
+**Implementation after green/main claim3449.**
+
+Claim head d40a5abdfa43179ed1e26882cce0fb786a05abfb / docsCI41291243788 SUCCESS merged86b1c667ec57aeee5ef39701d27d9c37c849175b before source. One CSS-only change in commerce-home-modern.css changes the first-panel strip to content-width wrapping buttons with42px minimum,44px on coarse pointers,6px gaps and inline18px icons/arrows. Existing18px readable labels, palette, active/locked/focus/hover states and original handlers/module/store guards remain. Screen-only rules exclude the order-suggestions view and leave print styling untouched.
+
+Work-safe build PASS / TABLE_SERVICE verified. Isolated real Chromium138 on the actual built CSS and synthetic25-button markup:12 before/after cases at1920/1366/1280/1024/768/390px PASS. Nav heights1920:440→186px and1366:800→234px; content starts earlier at every width, all25 buttons remain bounded with no horizontal overflow, font18 unchanged, touch targets≥44px, active/disabled colors and hidden order-suggestions navigation retained. Synthetic local render, not a hosted menu/action/actor PASS. Initial mobile probe needed a viewport meta tag; fixture corrected and all12 cases rerun. Evidence CHECKPOINTS/EVIDENCE/commerce-compact-nav-20261101/ includes geometry, screenshots and verification.json. No account/data/business/stock/financial or runtime change. Exact full PR/main CI and ordinary guarded independent healthy deployment remain required before visual user acceptance. Same owner retained; single next action: exact full source CI and release.
+
+**Historical before-source claim.**
 
 Owner fix/commerce-compact-nav-20261101, claimed 2026-11-01T10:59:31+02:00. Explicit owner screenshots show the 25 commercial navigation buttons at approximately64px height in five full-width columns, consuming five rows and hiding most of the selected function below. Owner requests the compact sizing of the existing upper tabs, preserving readable text and gaining usable content area. Independent CSS/layout scope only: CommerceHub's first-panel .commerce-module-strip, including existing dynamically injected launchers. No ownership of financial/stock/report/Chat workflows, permission/module/store selection, menu handlers or other pages' source.
 
