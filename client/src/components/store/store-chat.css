@@ -92,3 +92,5 @@
 .chat-photo-stage img{display:block;width:100%;height:100%;object-fit:contain;max-height:none;transform-origin:center;pointer-events:none}
 .chat-reaction-summary{display:block;color:#6d28d9}
 @media(max-width:520px){.store-chat-modal>header h2{font-size:17px}.store-chat-modal>header>div>small{display:none}.store-chat-modal>header p{margin:3px 0}.chat-sheet-backdrop{padding:5px}.store-chat-compose>button:last-child{font-size:0}.store-chat-compose>button:last-child svg{width:22px;height:22px}.chat-action-sheet{max-height:90dvh}}
+
+.store-chat-modal>.store-chat-toolbar:not([hidden]){position:absolute;top:70px;left:8px;right:8px;max-height:65%;overflow:auto;z-index:30;border:1px solid #d7c9ee;border-radius:14px;background:#fff;box-shadow:0 8px 30px #24164440}
