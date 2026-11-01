@@ -1,3 +1,7 @@
+## 1 November 2026 — current CASH timing complaint / OPEN
+
+Owner reports a printed CASH receipt with13seconds delay. Exact request and measurement endpoints were not pinned; no repeated sale for evidence. Ordinary issuance remains supported, but previous approximately8second acceptance is historical and does not certify current speed. Keep the original paired connector/FTEXT+ running. If the outcome is uncertain, retain the original request/evidence; do not submit a second payment. Finalization UI delay is under a separately claimed correction; no physical speed improvement or new failure-path acceptance is claimed. Existing historical PASS below retains its exact scope.
+
 ## 31 October 2026 — ordinary sale after reviewed-CASH release / limited USER PASS
 
 Owner reports another ordinary sale completed normally after the update, without displaying a problem. Existing authorized cashier uses the selected POS with FTEXT+ and its paired connector kept open; submit the ordinary purchase once and wait for its original outcome. Do not repeat this sale for documentation. Method, request ID, amount and exact time were not independently pinned, and no before/after/control financial or stock delta was captured. This confirms reported normal operation only. It does not accept the newly added failure-review path, unpublished stop, latency improvement or every hardware/error mode. If the outcome is unclear, preserve the original request/files for reconciliation. Existing tenant/device/settings/fiscal gates remain.
