@@ -39,7 +39,15 @@ function renamePersonnelLeaves(button){
   else button.append(document.createTextNode("Άδειες προσωπικού"));
 }
 
+// Delegated navigation is built from the selected store's live capabilities.
+// Owner-only company licence probes and synthetic disabled-module responses
+// cannot describe that workspace. The server still enforces every entitlement.
+function delegatedStaff(){
+  try{return JSON.parse(localStorage.getItem("user")||"null")?.staffAccess===true}catch{return false}
+}
+
 function applyRules(activeModules){
+  if(delegatedStaff())return;
   const active=new Set(activeModules||[]);
   for(const button of document.querySelectorAll("aside nav button")){
     renamePersonnelLeaves(button);
@@ -146,6 +154,7 @@ export function installModuleUiEnforcement(){
   let licensePromise=null;
 
   const loadLicense=async(token,{force=false}={})=>{
+    if(delegatedStaff())return;
     if(!token){
       activeModules=[];
       activeSet=new Set();
@@ -179,6 +188,7 @@ export function installModuleUiEnforcement(){
   };
 
   window.fetch=async(input,init={})=>{
+    if(delegatedStaff())return originalFetch(input,init);
     const requestUrl=typeof input==="string"?input:input?.url||"";
     const url=new URL(requestUrl,window.location.origin);
     const method=String(init.method||(typeof input!=="string"&&input?.method)||"GET").toUpperCase();
