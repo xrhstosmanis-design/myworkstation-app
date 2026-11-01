@@ -24,7 +24,7 @@
     },
     {
       "path": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "sha256": "a2dc13f2f1f5e8d2741e79a66d68029c5916b3b78115413f9939e6e9cc874530"
+      "sha256": "8120a0ccbf38d6fc2f6b81f4af4016389ee47990eb08ff44466d5d90f8e44642"
     },
     {
       "path": "client/src/components/cloud/BarcodeRadioManagement.jsx",
@@ -771,6 +771,10 @@
       "sha256": "fe048751a42281e29431fc5bf70ad199edb24768421c26925d2aaf3edbd865b0"
     },
     {
+      "path": "client/src/components/store/ChatPhotoViewer.jsx",
+      "sha256": "49f2ed4874a9399f74861868d05ce43f7e0d882a5138fb35dd6d0f82da47d9dd"
+    },
+    {
       "path": "client/src/components/store/ChatVideoAttachment.jsx",
       "sha256": "8aa14ab6ebf634c5b0c45052797da17f0a62dec09b309bd01264c3ef43d0b38f"
     },
@@ -940,7 +944,7 @@
     },
     {
       "path": "client/src/components/store/StoreChatPanel.jsx",
-      "sha256": "7c06f5cb2255794bb8b92866ecd8de8bfefe62c93466e85ef506feb611f9dca3"
+      "sha256": "6873e6023f702effde3990c46067329e7f9d9ea99580189d6375de5dd6cdf34b"
     },
     {
       "path": "client/src/components/store/StoreConsumptionMenu.jsx",
@@ -1568,7 +1572,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 73,
+      "line": 75,
       "tag": "button",
       "label": "Αρχική",
       "handlers": [
@@ -1578,7 +1582,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 73,
+      "line": 75,
       "tag": "button",
       "label": "Καταστήματα",
       "handlers": [
@@ -1588,7 +1592,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 73,
+      "line": 75,
       "tag": "button",
       "label": "Έξοδος",
       "handlers": [
@@ -1598,7 +1602,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 75,
+      "line": 77,
       "tag": "select",
       "label": "Κατάστημα",
       "handlers": [
@@ -1608,7 +1612,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 78,
+      "line": 80,
       "tag": "button",
       "label": "Τιμολόγια",
       "handlers": [
@@ -1618,7 +1622,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 78,
+      "line": 80,
       "tag": "button",
       "label": "Πωλήσεις και βάρδιες",
       "handlers": [
@@ -1628,7 +1632,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 78,
+      "line": 80,
       "tag": "button",
       "label": "Πληρωμές",
       "handlers": [
@@ -1638,7 +1642,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 78,
+      "line": 80,
       "tag": "button",
       "label": "Είδη και αποθήκη",
       "handlers": [
@@ -1648,7 +1652,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 78,
+      "line": 80,
       "tag": "button",
       "label": "Απογραφή",
       "handlers": [
@@ -1658,7 +1662,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 78,
+      "line": 80,
       "tag": "button",
       "label": "Έλεγχος ταμείων",
       "handlers": [
@@ -1668,7 +1672,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 81,
+      "line": 83,
       "tag": "button",
       "label": "Θυρίδα και πρωτότυπα",
       "handlers": [
@@ -1678,7 +1682,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 81,
+      "line": 83,
       "tag": "button",
       "label": "Αγορές και πρόχειρα τιμολογίων",
       "handlers": [
@@ -1688,7 +1692,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 82,
+      "line": 84,
       "tag": "select",
       "label": "Ταμείο",
       "handlers": [
@@ -1698,7 +1702,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 83,
+      "line": 85,
       "tag": "button",
       "label": "",
       "handlers": [
@@ -1708,7 +1712,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 85,
+      "line": 87,
       "tag": "button",
       "label": "Νέο είδος · Πλήρης καρτέλα",
       "handlers": [
@@ -1718,7 +1722,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 86,
+      "line": 88,
       "tag": "input",
       "label": "",
       "handlers": [
@@ -1728,7 +1732,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 86,
+      "line": 88,
       "tag": "input",
       "label": "",
       "handlers": [
@@ -1738,7 +1742,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 87,
+      "line": 89,
       "tag": "form",
       "label": "Όνομα νέας απογραφής Νέα απογραφή",
       "handlers": [
@@ -1748,7 +1752,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 87,
+      "line": 89,
       "tag": "input",
       "label": "",
       "handlers": [],
@@ -1756,7 +1760,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 87,
+      "line": 89,
       "tag": "button",
       "label": "Νέα απογραφή",
       "handlers": [],
@@ -1764,7 +1768,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 88,
+      "line": 90,
       "tag": "button",
       "label": "Φόρτωση / Ανανέωση",
       "handlers": [
@@ -1774,7 +1778,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 89,
+      "line": 91,
       "tag": "button",
       "label": "Επαλήθευση ίδιας δημιουργίας",
       "handlers": [
@@ -1784,7 +1788,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 90,
+      "line": 92,
       "tag": "button",
       "label": "Έλεγχος αποτελέσματος οριστικοποίησης",
       "handlers": [
@@ -1794,7 +1798,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 91,
+      "line": 93,
       "tag": "button",
       "label": "Επαλήθευση ίδιας καταχώρισης",
       "handlers": [
@@ -1804,7 +1808,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 92,
+      "line": 94,
       "tag": "button",
       "label": "Αντιγραφή αναφοράς",
       "handlers": [
@@ -1814,7 +1818,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 93,
+      "line": 95,
       "tag": "button",
       "label": "",
       "handlers": [
@@ -1824,7 +1828,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 95,
+      "line": 97,
       "tag": "form",
       "label": "Οριστικοποίηση απογραφής Η οριστικοποίηση ενημερώνει τα αποθέματα με βάση τις ελεγμένες μετρήσεις. Αιτιολογία Έλεγξα τις μετρήσεις και επιβεβαιώνω την ενημέρωση αποθέματος. Οριστικοποίηση και ενημέρωση αποθέματος",
       "handlers": [
@@ -1834,7 +1838,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 95,
+      "line": 97,
       "tag": "input",
       "label": "",
       "handlers": [],
@@ -1842,7 +1846,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 95,
+      "line": 97,
       "tag": "input",
       "label": "",
       "handlers": [],
@@ -1850,7 +1854,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 95,
+      "line": 97,
       "tag": "button",
       "label": "Οριστικοποίηση και ενημέρωση αποθέματος",
       "handlers": [],
@@ -1858,7 +1862,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 96,
+      "line": 98,
       "tag": "input",
       "label": "",
       "handlers": [
@@ -1868,7 +1872,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 96,
+      "line": 98,
       "tag": "form",
       "label": "· Μετρημένη ποσότητα",
       "handlers": [
@@ -1878,7 +1882,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 96,
+      "line": 98,
       "tag": "input",
       "label": "Ποσότητα ${…}",
       "handlers": [],
@@ -1886,7 +1890,7 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 96,
+      "line": 98,
       "tag": "button",
       "label": "Καταχώρηση μέτρησης",
       "handlers": [],
@@ -23853,6 +23857,46 @@
       "dynamic": true
     },
     {
+      "file": "client/src/components/store/ChatPhotoViewer.jsx",
+      "line": 7,
+      "tag": "button",
+      "label": "Κλείσιμο μενού",
+      "handlers": [
+        "onClick"
+      ],
+      "dynamic": false
+    },
+    {
+      "file": "client/src/components/store/ChatPhotoViewer.jsx",
+      "line": 20,
+      "tag": "button",
+      "label": "Σμίκρυνση",
+      "handlers": [
+        "onClick"
+      ],
+      "dynamic": false
+    },
+    {
+      "file": "client/src/components/store/ChatPhotoViewer.jsx",
+      "line": 20,
+      "tag": "button",
+      "label": "Μεγέθυνση",
+      "handlers": [
+        "onClick"
+      ],
+      "dynamic": false
+    },
+    {
+      "file": "client/src/components/store/ChatPhotoViewer.jsx",
+      "line": 20,
+      "tag": "button",
+      "label": "Επαναφορά",
+      "handlers": [
+        "onClick"
+      ],
+      "dynamic": false
+    },
+    {
       "file": "client/src/components/store/ChatVideoAttachment.jsx",
       "line": 31,
       "tag": "button",
@@ -25283,7 +25327,17 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 77,
+      "line": 83,
+      "tag": "button",
+      "label": "Περισσότερα εργαλεία συνομιλίας",
+      "handlers": [
+        "onClick"
+      ],
+      "dynamic": false
+    },
+    {
+      "file": "client/src/components/store/StoreChatPanel.jsx",
+      "line": 83,
       "tag": "button",
       "label": "Επιστροφή στα καταστήματα",
       "handlers": [
@@ -25293,7 +25347,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "Εκκρεμότητες ( )",
       "handlers": [
@@ -25303,7 +25357,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "Ρυθμίσεις Chat",
       "handlers": [
@@ -25313,7 +25367,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "Ειδική άδεια δημιουργίας εκκρεμοτήτων από μηνύματα για υπαλλήλους",
       "handlers": [
@@ -25323,7 +25377,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "Ενεργοποίηση ή απενεργοποίηση της σύνδεσης τιμολογίων Chat με το AI Reader",
       "handlers": [
@@ -25333,7 +25387,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "Απαίτηση ρητής επιβεβαίωσης ανάγνωσης στις ανακοινώσεις",
       "handlers": [
@@ -25343,7 +25397,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "Ενεργοποίηση ή απενεργοποίηση φωτογραφιών στο Chat",
       "handlers": [
@@ -25353,7 +25407,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "Ενεργοποίηση ή απενεργοποίηση PDF στο Chat",
       "handlers": [
@@ -25363,7 +25417,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "Γενική ενεργοποίηση ή απενεργοποίηση λήψεων αρχείων",
       "handlers": [
@@ -25373,7 +25427,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "Ειδική άδεια λήψης αρχείων για υπαλλήλους",
       "handlers": [
@@ -25383,7 +25437,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "🔔",
       "handlers": [
@@ -25393,7 +25447,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "Αναζήτηση",
       "handlers": [
@@ -25403,7 +25457,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 78,
+      "line": 84,
       "tag": "button",
       "label": "",
       "handlers": [
@@ -25413,7 +25467,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 81,
+      "line": 87,
       "tag": "button",
       "label": "Ανανέωση",
       "handlers": [
@@ -25423,7 +25477,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 81,
+      "line": 87,
       "tag": "input",
       "label": "",
       "handlers": [
@@ -25433,7 +25487,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 81,
+      "line": 87,
       "tag": "input",
       "label": "Φίλτρο ημερομηνίας",
       "handlers": [
@@ -25443,7 +25497,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 81,
+      "line": 87,
       "tag": "select",
       "label": "Φίλτρο αποστολέα",
       "handlers": [
@@ -25453,7 +25507,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 81,
+      "line": 87,
       "tag": "button",
       "label": "Καθαρισμός",
       "handlers": [
@@ -25463,7 +25517,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 82,
+      "line": 88,
       "tag": "button",
       "label": "Αναζήτηση στο ιστορικό",
       "handlers": [
@@ -25473,37 +25527,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 93,
-      "tag": "button",
-      "label": "Απάντηση",
-      "handlers": [
-        "onClick"
-      ],
-      "dynamic": false
-    },
-    {
-      "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 94,
-      "tag": "button",
-      "label": "Προώθηση",
-      "handlers": [
-        "onClick"
-      ],
-      "dynamic": false
-    },
-    {
-      "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 95,
-      "tag": "button",
-      "label": "Αντίδραση ${…}",
-      "handlers": [
-        "onClick"
-      ],
-      "dynamic": false
-    },
-    {
-      "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 97,
+      "line": 98,
       "tag": "button",
       "label": "",
       "handlers": [
@@ -25513,7 +25537,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 97,
+      "line": 98,
       "tag": "button",
       "label": "Κατέβασμα",
       "handlers": [
@@ -25523,7 +25547,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 103,
+      "line": 104,
       "tag": "select",
       "label": "Υπεύθυνος εκκρεμότητας: ${…}",
       "handlers": [
@@ -25533,7 +25557,37 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 115,
+      "tag": "button",
+      "label": "Απάντηση",
+      "handlers": [
+        "onClick"
+      ],
+      "dynamic": false
+    },
+    {
+      "file": "client/src/components/store/StoreChatPanel.jsx",
+      "line": 116,
+      "tag": "button",
+      "label": "Προώθηση",
+      "handlers": [
+        "onClick"
+      ],
+      "dynamic": false
+    },
+    {
+      "file": "client/src/components/store/StoreChatPanel.jsx",
+      "line": 117,
+      "tag": "button",
+      "label": "Αντίδραση ${…}",
+      "handlers": [
+        "onClick"
+      ],
+      "dynamic": false
+    },
+    {
+      "file": "client/src/components/store/StoreChatPanel.jsx",
+      "line": 119,
       "tag": "button",
       "label": "",
       "handlers": [
@@ -25543,7 +25597,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "tag": "button",
       "label": "Επιβεβαίωση ανάγνωσης",
       "handlers": [
@@ -25553,7 +25607,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "tag": "button",
       "label": "Αποστολή στο AI Reader",
       "handlers": [
@@ -25563,7 +25617,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "tag": "button",
       "label": "",
       "handlers": [
@@ -25573,7 +25627,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "tag": "button",
       "label": "",
       "handlers": [
@@ -25583,7 +25637,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "tag": "button",
       "label": "Δημιουργία εκκρεμότητας",
       "handlers": [
@@ -25593,7 +25647,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "tag": "button",
       "label": "",
       "handlers": [
@@ -25603,7 +25657,17 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 114,
+      "line": 120,
+      "tag": "button",
+      "label": "Σημείωση ως διαβασμένο",
+      "handlers": [
+        "onClick"
+      ],
+      "dynamic": false
+    },
+    {
+      "file": "client/src/components/store/StoreChatPanel.jsx",
+      "line": 125,
       "tag": "button",
       "label": "Απόρριψη παλιού προσχεδίου",
       "handlers": [
@@ -25613,7 +25677,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 115,
+      "line": 126,
       "tag": "button",
       "label": "Ακύρωση απάντησης",
       "handlers": [
@@ -25623,9 +25687,9 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 116,
+      "line": 127,
       "tag": "form",
-      "label": "Αποστολή",
+      "label": "+ Αποστολή",
       "handlers": [
         "onSubmit"
       ],
@@ -25633,7 +25697,27 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 116,
+      "line": 127,
+      "tag": "button",
+      "label": "Προσθήκη συνημμένου και κατηγορία",
+      "handlers": [
+        "onClick"
+      ],
+      "dynamic": false
+    },
+    {
+      "file": "client/src/components/store/StoreChatPanel.jsx",
+      "line": 127,
+      "tag": "input",
+      "label": "",
+      "handlers": [
+        "onChange"
+      ],
+      "dynamic": true
+    },
+    {
+      "file": "client/src/components/store/StoreChatPanel.jsx",
+      "line": 127,
       "tag": "select",
       "label": "",
       "handlers": [
@@ -25643,7 +25727,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 116,
+      "line": 127,
       "tag": "input",
       "label": "",
       "handlers": [
@@ -25653,17 +25737,7 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 116,
-      "tag": "input",
-      "label": "",
-      "handlers": [
-        "onChange"
-      ],
-      "dynamic": true
-    },
-    {
-      "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 116,
+      "line": 127,
       "tag": "button",
       "label": "Αποστολή",
       "handlers": [],
@@ -30453,49 +30527,49 @@
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 24,
+      "line": 26,
       "path": "/api/backoffice-staff/me",
       "method": "GET",
       "dynamic": false
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 31,
+      "line": 33,
       "path": null,
       "method": "GET",
       "dynamic": true
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 35,
+      "line": 37,
       "path": "/api/backoffice-staff/sales/stores/${…}/terminals",
       "method": "GET",
       "dynamic": true
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 38,
+      "line": 40,
       "path": null,
       "method": "GET",
       "dynamic": true
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 42,
+      "line": 44,
       "path": "/api/backoffice-staff/inventory/stores/${…}/stocktakes/${…}",
       "method": "GET",
       "dynamic": true
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 49,
+      "line": 51,
       "path": null,
       "method": "POST",
       "dynamic": true
     },
     {
       "file": "client/src/components/BackofficeStaffWorkspace.jsx",
-      "line": 66,
+      "line": 68,
       "path": "/api/inventory-v2/stocktakes/${…}/count",
       "method": "POST",
       "dynamic": true
@@ -36410,133 +36484,133 @@
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 31,
+      "line": 34,
       "path": "/api/store-chat/stores/${…}/messages/${…}/reaction",
       "method": "PUT",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 40,
+      "line": 43,
       "path": null,
       "method": "GET",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 40,
+      "line": 43,
       "path": null,
       "method": "POST",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 43,
+      "line": 46,
       "path": "/api/store-chat/stores/${…}/messages?_ts=${…}",
       "method": "GET",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 50,
+      "line": 53,
       "path": "/api/store-chat/stores/${…}/messages/delivered",
       "method": "POST",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 55,
+      "line": 61,
       "path": "/api/store-chat/stores/${…}/messages/${…}/read",
       "method": "POST",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 60,
+      "line": 66,
       "path": "/api/store-chat/stores/${…}/messages",
       "method": "POST",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 64,
+      "line": 70,
       "path": "/api/store-chat/stores/${…}/messages/${…}/attachment${…}",
       "method": "GET",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 67,
+      "line": 73,
       "path": "/api/store-chat/stores/${…}/settings",
       "method": "PUT",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 68,
+      "line": 74,
       "path": "/api/store-chat/stores/${…}/settings",
       "method": "PUT",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 69,
+      "line": 75,
       "path": "/api/store-chat/stores/${…}/settings",
       "method": "PUT",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 70,
+      "line": 76,
       "path": "/api/store-chat/stores/${…}/messages/${…}/ai-reader",
       "method": "POST",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 71,
+      "line": 77,
       "path": "/api/store-chat/stores/${…}/messages/${…}/acknowledge",
       "method": "POST",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 72,
+      "line": 78,
       "path": "/api/store-chat/stores/${…}/tasks/${…}",
       "method": "PATCH",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "path": "/api/store-chat/stores/${…}/messages/${…}",
       "method": "PATCH",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "path": "/api/store-chat/stores/${…}/messages/${…}",
       "method": "PATCH",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "path": "/api/store-chat/stores/${…}/messages/${…}",
       "method": "PATCH",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "path": "/api/store-chat/stores/${…}/messages/${…}/task",
       "method": "POST",
       "dynamic": true
     },
     {
       "file": "client/src/components/store/StoreChatPanel.jsx",
-      "line": 112,
+      "line": 119,
       "path": "/api/store-chat/stores/${…}/tasks/${…}",
       "method": "PATCH",
       "dynamic": true
@@ -48187,8 +48261,8 @@
   ],
   "totals": {
     "parseErrors": 1,
-    "files": 346,
-    "controls": 2981,
+    "files": 347,
+    "controls": 2988,
     "requests": 1117,
     "routes": 1418,
     "dynamicControls": 1332,

@@ -4,10 +4,10 @@ const store={id:'a',companyId:'company',name:'a'};
 const payload=()=>({store,rows:[row()],interactionsAvailable:true,searchForwardAvailable:true,settings:{},permissions:{canForward:true}});
 const targets=()=>({store,stores:[{id:'destination',companyId:'company',companyName:'CI Company',name:'CI Destination'}]});
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent===text);
-async function click(h,text){await h.act(async()=>{assert.ok(button(text),text);button(text).click();await new Promise(r=>setTimeout(r,0))});}
+async function click(h,text){if(text==='Προώθηση'&&!button(text))await h.act(async()=>document.querySelector('.store-chat-messages article').click());await h.act(async()=>{assert.ok(button(text),text);button(text).click();await new Promise(r=>setTimeout(r,0))});}
 async function type(h,selector,value){const input=document.querySelector(selector);assert.ok(input,selector);await h.act(async()=>{Object.getOwnPropertyDescriptor(h.dom.window.HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new h.dom.window.Event('input',{bubbles:true}));});}
 async function select(h,value){await h.act(async()=>{const input=document.querySelector('select[aria-label="Συνομιλία προορισμού"]');input.value=value;input.dispatchEvent(new h.dom.window.Event('change',{bubbles:true}));});}
-async function openSearch(h){await click(h,'Αναζήτηση');await click(h,'Αναζήτηση στο ιστορικό');}
+async function openSearch(h){await h.act(async()=>document.querySelector('[aria-label="Περισσότερα εργαλεία συνομιλίας"]').click());await click(h,'Αναζήτηση');await click(h,'Αναζήτηση στο ιστορικό');}
 test('actual mounted history search pages older messages, renders literal text and replies without automatic read or delivery writes',async()=>{
  const calls=[];const h=await mount(async(path,options)=>{
   calls.push({path,options});if(path.includes('/messages/search')){const url=new URL(path,'https://fixture.invalid'),before=url.searchParams.get('before');return {store,q:'archive',rows:[row(before?'archive-b':'archive-a',before?'Second old message':'Old <script>literal</script>')],nextCursor:before?null:'archive-a'}}
