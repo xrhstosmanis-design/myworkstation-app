@@ -1,6 +1,6 @@
 ## 1 November 2026 — current CASH timing complaint / OPEN
 
-Owner reports a printed CASH receipt with13seconds delay. Exact request and measurement endpoints were not pinned; no repeated sale for evidence. Ordinary issuance remains supported, but previous approximately8second acceptance is historical and does not certify current speed. Keep the original paired connector/FTEXT+ running. If the outcome is uncertain, retain the original request/evidence; do not submit a second payment. Finalization UI delay is under a separately claimed correction; no physical speed improvement or new failure-path acceptance is claimed. Existing historical PASS below retains its exact scope.
+Owner reports a printed CASH receipt with13seconds delay. Owner clarifies that paper and POS dialog finish approximately together; no independent physical timing under the new UI release has been measured. Exact request and measurement endpoints were not pinned; no repeated sale for evidence. Ordinary issuance remains supported, but previous approximately8second acceptance is historical and does not certify current speed. Keep the original paired connector/FTEXT+ running. If the outcome is uncertain, retain the original request/evidence; do not submit a second payment. Finalization UI delay is under a separately claimed correction; no physical speed improvement or new failure-path acceptance is claimed. Existing historical PASS below retains its exact scope.
 
 ## 31 October 2026 — ordinary sale after reviewed-CASH release / limited USER PASS
 
