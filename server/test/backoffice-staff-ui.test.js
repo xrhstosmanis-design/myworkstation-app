@@ -338,3 +338,53 @@ test('read-only personal inventory loads only the selected redacted endpoints an
   assert.deepEqual(calls.map(c=>c.path),['/api/backoffice-staff/me','/api/backoffice-staff/inventory/stores/a1/stocktakes','/api/backoffice-staff/inventory/stores/a1/stocktakes/st']);
  }finally{await m.close()}
 });
+
+const nativeCashReport=(storeId,period,text)=>({storeId,period,generation:'0',head:'0'.repeat(64),rows:[],context:[],text,historyPage:0,historyPages:2,historyTotal:51,history:[{id:'h',actorName:'Fixture',kind:'CHECKPOINT',note:'Accepted history',createdAt:'2026-10-15T12:00Z'}],issueRegister:{status:'AVAILABLE',issues:[{id:'i',day:'2026-10-15',operatorName:'Fixture',code:'EXPENSE_WITHOUT_DOCUMENT',amountCents:100,status:'OPEN',transactionId:'t',occurredAt:'2026-10-15T12:00Z',current:true,repliesCount:0}]},handoffRegister:{status:'AVAILABLE',issues:[{id:'hi',previousDay:'2026-10-15',nextDay:'2026-10-15',previousOperator:'Fixture',nextOperator:'Fixture',previousSessionId:'p',nextSessionId:'n',terminalPos:'POS1',differenceCents:100,previousClosingCents:10000,nextOpeningCents:9900,status:'OPEN',current:true,repliesCount:0}]}});
+
+test('personal cash read uses real Owner cash frame, period fields and reconciliation report without Owner endpoints or write/export/import controls',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[],copies=[];
+ const api=async(path,options={})=>{
+  calls.push({path,options});assert.equal(options.method||'GET','GET');
+  if(path==='/api/backoffice-staff/me')return {...identity,stores:[{...identity.stores[0],capabilities:['cash.read']}]};
+  assert.equal(options.headers['x-backoffice-store-id'],'a1');assert.ok(path.startsWith('/api/backoffice-staff/cash/stores/a1?'),path);
+  const q=new URL(path,'https://isolated.invalid').searchParams,period={from:q.get('from'),to:q.get('to')};return nativeCashReport('a1',period,`Verified ${period.from} / ${period.to}`);
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+ try{
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>copies.push(value)}});
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Κατάστημα"]');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});await m.act(async()=>button('Έλεγχος ταμείων').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,40)));
+  assert.ok(document.querySelector('.cloud-panel.cash-module .cash-heading'));assert.equal(calls.length,1,'no Owner automatic overview/pending-invoice/daily reads');
+  await m.act(async()=>button('Έλεγχος με επανυπολογισμούς').click());
+  const report=document.querySelector('.cash-reconciliation-panel pre').textContent;assert.match(report,/Verified/);assert.match(document.querySelector('.cash-reconciliation-panel').textContent,/Accepted history/);
+  assert.equal(document.querySelector('.cash-module form'),null);
+  for(const label of ['Απάντηση στην εκκρεμότητα','Απάντηση στην παράδοση','Excel με επανυπολογισμούς','Παλαιότερες καταχωρήσεις','Καταχώριση ελέγχου','Ανάγνωση χειρόγραφων'])assert.equal(button(label),undefined,label);
+  assert.equal(document.querySelector('.cash-kiosk-import-panel'),null);assert.equal(document.querySelector('.cash-module .cash-daily-summary'),null,'unavailable overview is not invented as zero');
+  await m.act(async()=>button('Αντιγραφή ελεγμένης αναφοράς').click());assert.deepEqual(copies,[report]);
+  await m.act(async()=>{const s=document.querySelector('.cash-shift-search select');s.value='MONTH';s.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>{const input=document.querySelector('.cash-shift-search input[type="date"]');Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'2026-10-15');input.dispatchEvent(new Event('input',{bubbles:true}))});
+  assert.equal(document.querySelector('.cash-reconciliation-panel pre'),null);assert.equal(button('Αντιγραφή ελεγμένης αναφοράς'),undefined,'old period cannot be copied');
+  await m.act(async()=>button('Έλεγχος με επανυπολογισμούς').click());
+  const q=new URL(calls.at(-1).path,'https://isolated.invalid').searchParams;assert.equal(q.get('from'),'2026-10-01');assert.equal(q.get('to'),'2026-10-31');assert.match(document.querySelector('.cash-reconciliation-panel pre').textContent,/2026-10-01 \/ 2026-10-31/);
+  assert.ok(calls.slice(1).every(c=>c.path.startsWith('/api/backoffice-staff/cash/stores/a1?')&&c.options.headers['x-backoffice-store-id']==='a1'));
+ }finally{await m.close()}
+});
+
+test('personal native cash discards an old-store response and rejects a wrong-period report before copy',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[];let release,wrong=false;
+ const api=async(path,options={})=>{
+  calls.push({path,options});assert.equal(options.method||'GET','GET');
+  if(path==='/api/backoffice-staff/me')return {...identity,stores:identity.stores.map(s=>({...s,capabilities:['cash.read']}))};
+  const match=/^\/api\/backoffice-staff\/cash\/stores\/(a1|a2)\?/.exec(path);assert.ok(match,path);assert.equal(options.headers['x-backoffice-store-id'],match[1]);
+  const q=new URL(path,'https://isolated.invalid').searchParams,period={from:q.get('from'),to:q.get('to')};
+  if(match[1]==='a1')return new Promise(resolve=>{release=()=>resolve(nativeCashReport('a1',period,'PRIVATE OLD STORE'))});
+  return nativeCashReport('a2',wrong?{...period,to:'2000-01-01'}:period,wrong?'WRONG PERIOD PRIVATE':'CURRENT A2 REPORT');
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+ const choose=async id=>m.act(async()=>{const s=document.querySelector('[aria-label="Κατάστημα"]');s.value=id;s.dispatchEvent(new Event('change',{bubbles:true}))});
+ try{
+  await choose('a1');await m.act(async()=>button('Έλεγχος ταμείων').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,30)));await m.act(async()=>button('Έλεγχος με επανυπολογισμούς').click());assert.equal(typeof release,'function');
+  await choose('a2');await m.act(async()=>release());assert.ok(!document.body.textContent.includes('PRIVATE OLD STORE'));
+  await m.act(async()=>button('Έλεγχος ταμείων').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,30)));await m.act(async()=>button('Έλεγχος με επανυπολογισμούς').click());assert.match(document.body.textContent,/CURRENT A2 REPORT/);
+  wrong=true;await m.act(async()=>button('Ανανέωση ελέγχου').click());assert.ok(!document.body.textContent.includes('CURRENT A2 REPORT'));assert.ok(!document.body.textContent.includes('WRONG PERIOD PRIVATE'));assert.equal(button('Αντιγραφή ελεγμένης αναφοράς'),undefined);assert.match(document.querySelector('[role="alert"]').textContent,/Δεν επιβεβαιώθηκε/);
+ }finally{release?.();await m.close()}
+});

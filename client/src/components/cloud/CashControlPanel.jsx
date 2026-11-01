@@ -17,12 +17,12 @@ const findingLabel=code=>findingLabels[code]||String(code||"").replace(/^AUDIT_/
 // Stable export/audit vocabulary. These labels are intentionally not rendered as aggregate cards.
 const cashControlExportLabels=["ΣΗΜΕΡΙΝΟΣ ΑΥΤΟΜΑΤΟΣ ΕΛΕΓΧΟΣ","Έξοδα χωρίς σωστό παραστατικό","κανόνας: μόνο Διαφορά και POS–EFTPOS","KAT RECONCILIATION 52-57","Store","Delivery","Online","Returns / Voids","Pending fiscalizations","Fail-closed alerts","EFTPOS ανά συσκευή"];
 
-export default function CashControlPanel({api,store}){
+export default function CashControlPanel({api,store,readOnly=false,from,to,onFrom,onTo}){
   const [data,setData]=useState(null);
   const closeContext=useRef(null);closeContext.current={storeId:store.id,sessionId:data?.openSession?.id};
   const [daily,setDaily]=useState(null);
   const loadSequence=useRef(0);
-  const [period,setPeriod]=useState("DAY"),[rangeFrom,setRangeFrom]=useState(""),[rangeTo,setRangeTo]=useState("");
+  const [period,setPeriod]=useState(readOnly?"CUSTOM":"DAY"),[rangeFrom,setRangeFrom]=useState(""),[rangeTo,setRangeTo]=useState("");
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
@@ -37,6 +37,7 @@ export default function CashControlPanel({api,store}){
   const [closeForm,setCloseForm]=useState({cashSales:"0",cardSales:"0",eftposTotal:"0",expenses:"0",transferIn:"0",transferOut:"0",...initialAmounts,note:""});
 
   const load=async()=>{
+    if(readOnly)return;
     const sequence=++loadSequence.current;
     setLoading(true);setError("");
     try{
@@ -73,7 +74,7 @@ export default function CashControlPanel({api,store}){
       }
     }catch(err){if(sequence===loadSequence.current){setDaily(null);setError(err.message)}}finally{if(sequence===loadSequence.current)setLoading(false)}
   };
-  useEffect(()=>{setDaily(null);setInvestigation(null);setBusy(false);investigationSequence.current++;load();return()=>{loadSequence.current++;investigationSequence.current++;}},[store.id,reportDate,period,rangeFrom,rangeTo]);
+  useEffect(()=>{setDaily(null);setInvestigation(null);setBusy(false);investigationSequence.current++;load();return()=>{loadSequence.current++;investigationSequence.current++;}},[store.id,reportDate,period,rangeFrom,rangeTo,readOnly]);
   const visibleSessions=useMemo(()=>[...(daily?.sessions||[])].filter(row=>{const value=new Date(row.closedAt).toLocaleTimeString("el-GR",{timeZone:"Europe/Athens",hour:"2-digit",minute:"2-digit",hour12:false});return value>=fromTime&&value<=toTime}).sort((a,b)=>new Date(a.closedAt)-new Date(b.closedAt)),[daily,fromTime,toTime]);
 
   const openingOperational=useMemo(()=>number(openForm.drawer)+number(openForm.custody)+number(openForm.coins),[openForm]);
@@ -126,12 +127,21 @@ export default function CashControlPanel({api,store}){
     }catch(err){setError(err.message)}finally{setBusy(false)}
   };
 
+  const changeReadPeriod=(nextPeriod,nextDate=reportDate)=>{
+    setPeriod(nextPeriod);setReportDate(nextDate);
+    if(nextPeriod==="CUSTOM")return;
+    try{const range=cashReportPeriod({period:nextPeriod,date:nextDate});onFrom(range.from);onTo(range.to)}catch{onFrom("");onTo("")}
+  };
   return <article className="cloud-panel cash-module">
-    <StorePendingInvoicePanel key={store.id} api={api} store={store} allowCreate={false}/>
+    {!readOnly&&<StorePendingInvoicePanel key={store.id} api={api} store={store} allowCreate={false}/>}
     <div className="cloud-panel-head cash-heading">
       <div><h3><WalletCards/>Αυτόματος Έλεγχος Ταμείων</h3><p>Αυτόματη διασταύρωση βαρδιών, POS–EFTPOS, εξόδων και παραστατικών. Η έναρξη βάρδιας γίνεται μόνο από το POS / Store Mode.</p></div>
-      <button className="cash-refresh" type="button" onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button>
+      {!readOnly&&<button className="cash-refresh" type="button" onClick={load} disabled={loading||busy}><RefreshCw/>Ανανέωση</button>}
     </div>
+    {readOnly?<>
+      <section className="cash-shift-search" aria-label="Περίοδος αναφοράς ταμείων"><CashReportPeriodFields period={period} date={reportDate} from={from} to={to} onPeriod={value=>changeReadPeriod(value)} onDate={value=>changeReadPeriod(period,value)} onFrom={onFrom} onTo={onTo}/></section>
+      <CashReconciliationPanel key={store.id} api={api} storeId={store.id} from={from} to={to} readOnly/>
+    </>:<>
     {error&&<div className="cloud-alert cloud-error">{error}</div>}
     {message&&<div className="cloud-alert cloud-success">{message}</div>}
     {eftposReview&&Math.abs(number(eftposReview.cardVariance))>0.009&&<div className="cloud-alert cloud-error cash-eftpos-review">
@@ -154,6 +164,6 @@ export default function CashControlPanel({api,store}){
       <CashPaperReadingPanel api={api} storeId={store.id}/>
       <CashReconciliationPanel api={api} storeId={store.id} from={daily?.from||daily?.date||reportDate} to={daily?.to||daily?.date||reportDate}/>
       <div className="cloud-alert"><b>Οι βάρδιες ανοίγουν και κλείνουν αποκλειστικά από το POS / Store Mode.</b><br/>Το BackOffice εμφανίζει μόνο τον αυτόματο έλεγχο, τη συμφωνία και τις αποκλίσεις.</div>
-    </>}
+    </>}</>}
   </article>;
 }
