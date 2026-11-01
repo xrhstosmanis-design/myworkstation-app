@@ -1,5 +1,18 @@
 # AI-COST-PASS-THROUGH-01 — LAB NOT EXECUTED / ENVIRONMENT UNAVAILABLE / RESUME PLAN
 
+## RESUMED SAME ROOT — COST-LAB-20261101-ENABLE BEFORE ACTION
+
+Same retained owner/executor; no receiving page or ownership transfer. Browser and workspace restored, MFA sign-in completed through secure browserAuth. Current main201a01a contains documentation only after installed201e; peer owner/source records preserved. Render readback still exact201e4c21cd3c2a480a94b194a7b350523633e9f0 / dep-dbjmpbuc6qcc73c0arv0 LIVE. Existing exact main CI41326081468:5118server+8backup/0FAIL/0SKIP and guarded41327819201 remain valid release evidence. Updated native UI now displays the new service/activity wording.
+
+Fresh native UI before first state-changing action: virtual MYWORKSTATION LAB, available3683091micro, reserved930033micro, gross4613124micro, settled406876micro/8calls, total credits5020000micro, history13, debt0. Master/invoice/email OFF; no notification owner; all3additional prices0. Historical old REVIEW930033 and all original grants/repayments remain untouched. Actual real-company control was privately refreshed: unchanged, unbilled; no actual customer values/contacts copied here. No physical POS terminal/operator/shift, SKU or quantity/payment targeted (N/A); no cash/stock/fiscal delta claimed.
+
+Native added readiness: staff AI requires connection/price; SERPER_GOOGLE and GOOGLE_CSE both explicitly lack verified prices and show paid-search blocked. These are configuration observations, not live provider acceptance. No pricing/environment change made. Only the already priced selected-store SuperAdmin test is next.
+
+Identified action COST-LAB-20261101-ENABLE: temporarily save ONLY LAB masterON, invoice/email OFF and prices0 unchanged; no credit, repayment, paper/invoice read or mail. Expected available/reserved/history/debt unchanged. After readback take a new before snapshot for the one-question ASK, then restore masterOFF. All previous blocks below are chronological history superseded by this resume record.
+
+Before recordedUTC:2026-11-01T18:42:08.083034+00:00
+
+
 ## Final engineering release verification — 2026-11-01T16:50:23.267Z
 
 DEPLOYED ENGINEERING VERIFIED; FUNCTIONAL LAB NOT STARTED. Exact deployed main201e4c21cd3c2a480a94b194a7b350523633e9f0 passed full CI41326081468/job124907694187:5118server+8backup/0FAIL/0SKIP. Ordinary guarded release41327819201/job124911447565 successfully triggered a pinned201e deployment and observed exact healthy201e at2026-11-01T16:47:58.3792866Z. Renderdep-dbjmpbuc6qcc73c0arv0 is live, finished16:47:45.583242Z. All22cost-owned runtime paths are unchanged from accepted source mainef9; peer cash/inventory changes are preserved. See CHECKPOINTS/EVIDENCE/ai-customer-cost-20261101/engineering-release.json. This supersedes the earlier pending-release observations below; health/CI are NOT customer-cost LAB PASS.
