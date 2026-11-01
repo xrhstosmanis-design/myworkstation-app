@@ -1,0 +1,65 @@
+{
+  "verifiedAtUtc": "2026-11-01T21:43:57.185146+00:00",
+  "liveRevision": "5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e"
+  },
+  "healthOk": true,
+  "manifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "version": "0.1.15-preview",
+    "versionCode": 16,
+    "minimumAndroid": 8,
+    "videoCaptureMinimumAndroid": 11,
+    "maximumVideoSeconds": 30,
+    "maximumVideoBytes": 12582912,
+    "videoFormat": "MP4 H264/AAC",
+    "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.15-Preview.apk",
+    "sha256": "2603a8f385e53178fe35c6bcb2a0d81c3c50c082cb9fda859c641ceeb1a6231b",
+    "bytes": 3703820,
+    "sourceCommit": "2625a7913ccfa162dfa2342d976de6e172110a8f",
+    "androidSourceTree": "f9bafe0cb663f77edaca2ca818da40e48aa0e2c2",
+    "ciRun": 41313678816,
+    "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+    "signing": "stable-owner-key",
+    "acceptance": "TECHNICAL CANDIDATE; ONE COMBINED PHONE ACCEPTANCE PENDING: compact conversation/contextual actions/full-photo pinch-pan-reset and pending0.1.14 history/explicit authorized forward/named delivery-read/quoted replies/reactions/announcements/explicit acknowledgement. Prior limited USER PASS retained without replay."
+  },
+  "manifestMatchesRepository": true,
+  "manifestBytesMatchRepository": true,
+  "apkMatchesSignedArtifact": true,
+  "apkSha256": "2603a8f385e53178fe35c6bcb2a0d81c3c50c082cb9fda859c641ceeb1a6231b",
+  "apkBytes": 3703820,
+  "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "binaryManifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "versionCode": 16,
+    "versionName": "0.1.15-preview"
+  },
+  "deployWorkflowRun": 41350280601,
+  "renderDeployId": "dep-dbjqkgu7bikc7389ei10",
+  "distributionPR": 3471,
+  "distributionHead": "0a03d5c73eaff990aa97000a1ff36ed48e4ff918",
+  "distributionMerge": "9d7ebe588ca46742de0ab6f8ace5117ad98afb70",
+  "distributionPRCI": 41315987296,
+  "distributionMainCI": 41317300926,
+  "signingRun": 41313678816,
+  "signingArtifact": 13086882925,
+  "physicalCombinedAcceptance": "NOT TESTED",
+  "realChatSendReadAckPushEmail": "NOT PERFORMED",
+  "priorLimitedUserPass": "retained; device/hash not independently identified",
+  "combinedMainRevision": "5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e",
+  "combinedMainCI": 41348911362,
+  "combinedMainTests": {
+    "server": 5148,
+    "backup": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "publicationFreshnessGuard": {
+    "run": 41318518424,
+    "trigger": "skipped",
+    "reason": "A newer production source revision is on main; await its full CI"
+  }
+}
