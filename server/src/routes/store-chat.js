@@ -1,3 +1,5 @@
+import {searchChatMessages,forwardChatMessage,forwardInput} from "../chat-search-forward.mjs";
+import {mobileChatStores} from "../chat-mobile.mjs";
 import {ensureStoreChatInteractions,requireChatReply,acknowledgeChatDelivery,setChatReaction} from "../chat-interactions.mjs";
 import {sendNativeChatPush,nativePushStatus} from '../native-chat-push.mjs';
 import {renewChatOperatorSession} from '../chat-operator-auth.mjs';
@@ -6,7 +8,7 @@ import {parseVideoAttachment} from '../chat-video.mjs';
 import crypto from "node:crypto";
 import express from "express";
 import {prisma} from "../prisma.js";
-import {companyModuleState,effectiveModuleEnabled,isPlatformSuperAdmin} from "../middleware/module-access.js";
+import {companyModuleState,effectiveModuleEnabled,isPlatformSuperAdmin,requireStoreModule} from "../middleware/module-access.js";
 import {ensureStoreChatPushSchema,saveStoreChatPushSubscription,sendStoreChatPush,storeChatPushPublicKey} from "../store-chat-push.js";
 
 const router=express.Router();
@@ -53,6 +55,50 @@ function parseAttachment(value){
   return {name,mimeType,size:buffer.length,checksum:crypto.createHash("sha256").update(buffer).digest("hex"),data:match[2]};
 }
 
+
+function mayForward(user){return user?.tokenType==="BACKOFFICE_USER"&&(["OWNER","ADMIN","MANAGER"].includes(user.role)||isPlatformSuperAdmin(user))}
+async function forwardTargets(req,source){
+ if(!mayForward(req.user))return [];
+ const result=await mobileChatStores(req.user),platform=isPlatformSuperAdmin(req.user)&&!req.user.supportContext;
+ return result.stores.filter(s=>s.id!==source.id&&(platform||s.companyId===source.companyId)).map(({id,name,companyId,companyName})=>({id,name,companyId,companyName}));
+}
+async function selectedChatStore(req,res){
+ const store=await storeFor(req,res);if(!store)return null;
+ if(req.user.supportContext&&String(req.user.companyId)!==store.companyId){res.status(404).json({error:"Δεν βρέθηκε κατάστημα."});return null;}
+ return store;
+}
+async function checkedChatModule(req,res,id){
+ const probe=Object.create(req);Object.defineProperties(probe,{params:{value:{storeId:id}},body:{value:{}},query:{value:{}}});
+ let allowed=false;await requireStoreModule("STORE_CHAT")(probe,res,error=>{if(error)throw error;allowed=true});
+ return allowed?probe.targetStore:null;
+}
+router.get("/stores/:storeId/messages/search",async(req,res,next)=>{try{
+ res.setHeader("Cache-Control","no-store, private");
+ const store=await selectedChatStore(req,res);if(!store)return;if(!await checkedChatModule(req,res,store.id))return;
+ res.json(await searchChatMessages(prisma,store,req.query.q,req.query.before));
+}catch(e){if(e?.meta?.code==="57014"||e?.code==="57014")return res.status(503).json({error:"Η αναζήτηση χρειάζεται πιο συγκεκριμένο κείμενο. Δοκίμασε ξανά."});next(e)}});
+router.get("/stores/:storeId/forward-targets",async(req,res,next)=>{try{
+ res.setHeader("Cache-Control","no-store, private");const store=await selectedChatStore(req,res);if(!store)return;if(!await checkedChatModule(req,res,store.id))return;
+ res.json({store,stores:await forwardTargets(req,store)});
+}catch(e){next(e)}});
+router.post("/stores/:storeId/messages/:messageId/forward",async(req,res,next)=>{try{
+ res.setHeader("Cache-Control","no-store, private");
+ const source=await selectedChatStore(req,res);if(!source)return;
+ if(!mayForward(req.user))return res.status(403).json({error:"Δεν υπάρχει δικαίωμα προώθησης σε άλλη συνομιλία."});
+ if(!await checkedChatModule(req,res,source.id))return;
+ const input=forwardInput(req.body),eligible=await forwardTargets(req,source),candidate=eligible.find(s=>s.id===input.targetStoreId&&s.companyId===input.targetCompanyId);
+ if(!candidate)return res.status(404).json({error:"Δεν βρέθηκε διαθέσιμη συνομιλία προορισμού."});
+ const target=await checkedChatModule(req,res,candidate.id);if(!target)return;target.name=candidate.name;
+ const sourceSettings=await chatSettings(source),targetSettings=await chatSettings(target);
+ const result=await forwardChatMessage(prisma,{source,target,user:req.user,messageId:req.params.messageId,requestId:input.requestId,attachmentPolicy:{canCopyAttachment:canDownload(req.user,sourceSettings),photosEnabled:targetSettings.photosEnabled,pdfEnabled:targetSettings.pdfEnabled}},
+  (tx,id)=>audit(req,target,"STORE_CHAT_MESSAGE_FORWARDED",{messageId:id,category:"GENERAL"},tx));
+ if(!result.replayed){
+  await sendStoreChatPush({store:target,senderId:req.user.id}).catch(()=>({attempted:0,delivered:0}));
+  if(nativePushStatus().configured)setImmediate(()=>{sendNativeChatPush({store:target,senderId:req.user.id}).catch(()=>{});});
+ }
+ res.status(result.replayed?200:201).json(result);
+}catch(e){next(e)}});
+
 router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
   const store=await storeFor(req,res);if(!store)return;
   const requested=Number(req.query.limit||100),limit=Number.isFinite(requested)?Math.min(Math.max(Math.trunc(requested),1),200):100;
@@ -67,7 +113,7 @@ router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
       ORDER BY pin."createdAt" DESC LIMIT 20
     )
     SELECT EXISTS(SELECT 1 FROM timeline candidate WHERE candidate."id"=m."id") AS "inTimeline",m."id",m."senderId",COALESCE(NULLIF(su."fullName",''),NULLIF(su."email",''),NULLIF(so."displayName",''),m."senderId") AS "senderName",
-      m."category",m."body",m."replyToId",(m."senderId"=${req.user.id}) AS "ownMessage",
+      m."category",m."body",(m."forwardBinding" IS NOT NULL) AS "forwarded",m."replyToId",(m."senderId"=${req.user.id}) AS "ownMessage",
       CASE WHEN parent."id" IS NULL THEN NULL ELSE json_build_object('id',parent."id",'senderName',COALESCE(NULLIF(pu."fullName",''),NULLIF(po."displayName",''),'Χρήστης'),'body',LEFT(parent."body",280),'attachmentName',parent."attachmentName") END AS "replyTo",m."important",m."pinned",m."completed",m."completedAt",m."completedBy",m."aiReaderJobId",m."aiReaderSentAt",m."aiReaderSentBy",
       COALESCE(NULLIF(au."fullName",''),NULLIF(au."email",''),NULLIF(ao."displayName",''),m."aiReaderSentBy") AS "aiReaderSentByName",
       COALESCE(NULLIF(cu."fullName",''),NULLIF(cu."email",''),NULLIF(co."displayName",''),m."completedBy") AS "completedByName",
@@ -120,7 +166,7 @@ router.get("/stores/:storeId/messages",async(req,res,next)=>{try{
   const settings=await chatSettings(store);
   const assignees=canPin(req.user)?await prisma.employee.findMany({where:{storeId:store.id,active:true},select:{id:true,fullName:true},orderBy:[{fullName:"asc"},{id:"asc"}]}):[];
   const publicRow=({inTimeline,...row})=>row;
-  res.json({store,rows:fetched.filter(row=>row.inTimeline).map(publicRow),interactionsAvailable:true,pinnedAnnouncements:fetched.filter(row=>row.pinned&&row.category==="ANNOUNCEMENT").slice(0,20).map(publicRow),settings,voiceMessagesAvailable:true,videoMessagesAvailable:settings.photosEnabled,assignees,permissions:{canPin:canPin(req.user),canDownload:canDownload(req.user,settings),canComplete:canPin(req.user),canCreateTask:canCreateTask(req.user,settings),canManageTask:canPin(req.user),canManageSettings:canPin(req.user)}});
+  res.json({store,rows:fetched.filter(row=>row.inTimeline).map(publicRow),interactionsAvailable:true,searchForwardAvailable:true,pinnedAnnouncements:fetched.filter(row=>row.pinned&&row.category==="ANNOUNCEMENT").slice(0,20).map(publicRow),settings,voiceMessagesAvailable:true,videoMessagesAvailable:settings.photosEnabled,assignees,permissions:{canForward:mayForward(req.user),canPin:canPin(req.user),canDownload:canDownload(req.user,settings),canComplete:canPin(req.user),canCreateTask:canCreateTask(req.user,settings),canManageTask:canPin(req.user),canManageSettings:canPin(req.user)}});
 }catch(e){next(e)}});
 
 // Delivery is acknowledged by a recipient client after accepting the actual response, never by Push/save.

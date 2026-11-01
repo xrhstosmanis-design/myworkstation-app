@@ -10,10 +10,21 @@ import {lifecycleWorkerCapabilityMac} from '../src/services/store-lifecycle-work
 
 const key='MWS_STORE_LIFECYCLE_PROFILE',full='MONTHLY_INVENTORY_CAPTURE_V1';
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const baseHash='f47fb7cbcaf6b8d9a7f83b1c9a9244d6f579ad2390f46679bb1646fbbd2ea714';
-const fullHash='f9bcf3516e1b0f846d07503b9674934cc3a43887dc4416658952775a643b6ebe';
+const oldBaseHash='f47fb7cbcaf6b8d9a7f83b1c9a9244d6f579ad2390f46679bb1646fbbd2ea714';
+const baseHash='ba554503bbb839524a1217af0149a6bf86b11384cb2dcb1bfc41d75a6d4290d4';
+const oldFullHash='f9bcf3516e1b0f846d07503b9674934cc3a43887dc4416658952775a643b6ebe';
+const fullHash='59ca657191a03dfeb751e907d95abe4291a3fc61da30c9d0602a116ed78757c2';
 const workerDirectory=path.resolve('../ops/backup/lifecycle');
 const scopedEnv=async(values,fn)=>{const saved=Object.fromEntries(Object.keys(values).map(k=>[k,process.env[k]]));try{for(const [k,v]of Object.entries(values))v===undefined?delete process.env[k]:process.env[k]=v;return await fn()}finally{for(const[k,v]of Object.entries(saved))v===undefined?delete process.env[k]:process.env[k]=v}};
+
+test('forward retry metadata changes exactly one non-owning column and retains immutable pre-forward profile identities',()=>{
+ for(const[manifest,oldHash]of [[reviewedFreshStoreManifest(),oldBaseHash],[selectedStoreLifecycleManifest({[key]:full}),oldFullHash]]){
+  assert.deepEqual(manifest.knownColumns.StoreChatMessage.filter(c=>c[0]==='forwardBinding'),[['forwardBinding','text',false]]);
+  assert.equal(manifest.reviewedColumns.filter(c=>c==='StoreChatMessage.forwardBinding').length,1);
+  const previous=structuredClone(manifest);previous.knownColumns.StoreChatMessage=previous.knownColumns.StoreChatMessage.filter(c=>c[0]!=='forwardBinding');previous.reviewedColumns=previous.reviewedColumns.filter(c=>c!=='StoreChatMessage.forwardBinding');
+  assert.equal(hash(previous),oldHash,'Any unrelated catalogue/owner/selector/reference change must refuse');
+ }
+});
 
 test('BASE accessor remains canonical, selection is closed and returned documents are independent',()=>{
  const before=JSON.stringify(process.env),base=reviewedFreshStoreManifest();
@@ -50,7 +61,7 @@ test('controller uses the selected signed capability and profile selection never
   const off=createLifecycleController(db,{sourceRevision:'a'.repeat(40),secret:()=>secret});
   await assert.rejects(off.start({id:'sa',isSuperAdmin:true},scope),error=>error.status===503);assert.equal(calls,0);
   const controller=createLifecycleController(db,{sourceRevision:'a'.repeat(40),enabled:()=>true,secret:()=>secret});
-  for(const[receipt,expected]of [[seal(fullHash),true],[seal(baseHash),false],[seal(fullHash,{checkedAt:new Date(Date.now()-13*60000).toISOString()}),false],[{...seal(fullHash),mac:'0'.repeat(64)},false]]){record=receipt;assert.equal((await controller.status({id:'sa',isSuperAdmin:true},scope,operation)).executionAvailable,expected)}
+  for(const[receipt,expected]of [[seal(fullHash),true],[seal(oldFullHash),false],[seal(oldBaseHash),false],[seal(baseHash),false],[seal(fullHash,{checkedAt:new Date(Date.now()-13*60000).toISOString()}),false],[{...seal(fullHash),mac:'0'.repeat(64)},false]]){record=receipt;assert.equal((await controller.status({id:'sa',isSuperAdmin:true},scope,operation)).executionAvailable,expected)}
   assert.equal(hash(reviewedFreshStoreManifest()),baseHash);
  });
  await scopedEnv({[key]:'UNKNOWN'},async()=>assert.throws(()=>createLifecycleController(db,{sourceRevision:'a'.repeat(40)}),/Invalid store lifecycle profile/));

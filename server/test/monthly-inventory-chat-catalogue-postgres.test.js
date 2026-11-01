@@ -56,7 +56,7 @@ async function nativeFacts(){
   const{reviewedFreshStoreManifest}=await import('../src/services/store-lifecycle-manifest.js'),{createLifecycleInspectionCore}=await import('../src/services/store-lifecycle-executor.js');
   // Invert only this reviewed Chat delta, preserving JSON key/array order.
   // This replays the observed old catalogue, not an old installer binary.
-  const manifest=reviewedFreshStoreManifest();manifest.knownTables=manifest.knownTables.filter(n=>!names.includes(n));for(const n of names)delete manifest.knownColumns[n];manifest.knownColumns.StoreChatMessage=manifest.knownColumns.StoreChatMessage.filter(c=>c[0]!=='replyToId');manifest.reviewedColumns=manifest.reviewedColumns.filter(c=>!names.some(n=>c.startsWith(n+'.'))&&c!=='StoreChatMessage.replyToId');manifest.tables=manifest.tables.filter(n=>!names.includes(n.name));const message=manifest.tables.find(n=>n.name==='StoreChatMessage');message.references=message.references.filter(r=>!(r.parent==='StoreChatMessage'&&r.columns.some(c=>c[0]==='replyToId')));
+  const manifest=reviewedFreshStoreManifest();manifest.knownTables=manifest.knownTables.filter(n=>!names.includes(n));for(const n of names)delete manifest.knownColumns[n];manifest.knownColumns.StoreChatMessage=manifest.knownColumns.StoreChatMessage.filter(c=>!['replyToId','forwardBinding'].includes(c[0]));manifest.reviewedColumns=manifest.reviewedColumns.filter(c=>!names.some(n=>c.startsWith(n+'.'))&&!['StoreChatMessage.replyToId','StoreChatMessage.forwardBinding'].includes(c));manifest.tables=manifest.tables.filter(n=>!names.includes(n.name));const message=manifest.tables.find(n=>n.name==='StoreChatMessage');message.references=message.references.filter(r=>!(r.parent==='StoreChatMessage'&&r.columns.some(c=>c[0]==='replyToId')));
   assert.equal(digest(manifest),'da2844a0cd3d4fe6ae3e78a57ffbcf882277be4aa21eed5a6eb2e7a44df1ecda');
   const manifestBefore=JSON.stringify(manifest),actor={id:'isolated-lifecycle-admin',isSuperAdmin:true},scope={companyId:'fixture-company',storeId:'target'};
   assert.ok(names.every(name=>!manifest.knownTables.includes(name)));assert.ok(!manifest.knownColumns.StoreChatMessage.some(c=>c[0]==='replyToId'));
@@ -68,12 +68,13 @@ async function nativeFacts(){
   await ensureStoreChatInteractions(db);
   const after=await observe(db),beforeRelations=new Set(before.relations.map(r=>r.name)),beforeColumns=new Set(before.columns.map(c=>c.table+'.'+c.name)),beforeIndexes=new Set(before.indexes.map(i=>i.name));
   const addedRelations=after.relations.filter(r=>!beforeRelations.has(r.name)),addedColumns=after.columns.filter(c=>!beforeColumns.has(c.table+'.'+c.name)),addedIndexes=after.indexes.filter(i=>!beforeIndexes.has(i.name));
-  assert.deepEqual(addedRelations.map(r=>r.name),names);assert.equal(addedColumns.length,12);assert.equal(addedIndexes.length,3);
+  assert.deepEqual(addedRelations.map(r=>r.name),names);assert.equal(addedColumns.length,13);assert.equal(addedIndexes.length,4);
   assert.deepEqual(after.relations.filter(r=>beforeRelations.has(r.name)),before.relations,'no earlier relation definition changed');
   assert.deepEqual(after.columns.filter(c=>beforeColumns.has(c.table+'.'+c.name)),before.columns,'no earlier column definition changed');
   assert.deepEqual(after.indexes.filter(i=>beforeIndexes.has(i.name)),before.indexes,'no earlier index changed');
   const expected=[...['messageId','userId','companyId','storeId'].map((name,index)=>({table:'StoreChatDelivery',name,ordinal:index+1,type:'text',required:true,identity:'',generated:'',defaultExpression:null})),{table:'StoreChatDelivery',name:'deliveredAt',ordinal:5,type:'timestamp with time zone',required:true,identity:'',generated:'',defaultExpression:'now()'},
    {table:'StoreChatMessage',name:'replyToId',ordinal:22,type:'text',required:false,identity:'',generated:'',defaultExpression:null},
+   {table:'StoreChatMessage',name:'forwardBinding',ordinal:23,type:'text',required:false,identity:'',generated:'',defaultExpression:null},
    ...['messageId','userId','companyId','storeId','reaction'].map((name,index)=>({table:'StoreChatReaction',name,ordinal:index+1,type:'text',required:true,identity:'',generated:'',defaultExpression:null})),{table:'StoreChatReaction',name:'updatedAt',ordinal:6,type:'timestamp with time zone',required:true,identity:'',generated:'',defaultExpression:'now()'}];
   assert.deepEqual(addedColumns,expected);
   const storeOwner=after.relations.find(r=>r.name==='Store').owner;
@@ -89,7 +90,8 @@ async function nativeFacts(){
   // Per-column pg_get_indexdef returns attributes only. Verify btree direction
   // from the actual INDOPTION_DESC (0x0001) flags, retaining raw text as evidence.
   const pinned=addedIndexes.find(i=>i.name==='StoreChatMessage_pinned_announcements_idx');assert.ok(pinned);assert.equal(pinned.table,'StoreChatMessage');assert.equal(pinned.primary,false);assert.equal(pinned.unique,false);assert.deepEqual(pinned.columns,['storeId','createdAt']);assert.equal(normalize(pinned.predicate),"pinned=trueANDcategory='ANNOUNCEMENT'");assert.equal(pinned.expressions,null);assert.equal(pinned.method,'btree');assert.equal(pinned.firstDescending,false);assert.equal(pinned.secondDescending,true);
-  for(const index of addedIndexes){assert.equal(index.valid,true);assert.equal(index.ready,true);assert.equal(index.immediate,true);assert.equal(index.keyCount,2);assert.equal(index.attributeCount,2)}
+  const history=addedIndexes.find(i=>i.name==='StoreChatMessage_history_cursor_idx');assert.ok(history);assert.equal(history.table,'StoreChatMessage');assert.equal(history.primary,false);assert.equal(history.unique,false);assert.deepEqual(history.columns,['companyId','storeId','createdAt','id']);assert.equal(history.predicate,null);assert.equal(history.expressions,null);assert.equal(history.method,'btree');assert.match(history.definition,/"createdAt" DESC, id DESC|"createdAt" DESC, "id" DESC/);
+  for(const index of addedIndexes){assert.equal(index.valid,true);assert.equal(index.ready,true);assert.equal(index.immediate,true);assert.equal(index.keyCount,index===history?4:2);assert.equal(index.attributeCount,index===history?4:2)}
   const afterBootstrapData=await allRows(db);for(const name of Object.keys(beforeData))assert.deepEqual(afterBootstrapData[name],beforeData[name],name);for(const name of names)assert.deepEqual(afterBootstrapData[name],[]);
   let hold;try{await old.inspect(db,actor,scope);assert.fail('Old catalogue accepted unreviewed Chat relations')}catch(error){assert.equal(error.status,409);assert.equal(error.message,'Unreviewed database relation: StoreChatDelivery');hold=error}
   const afterHoldData=await allRows(db);assert.deepEqual(afterHoldData,afterBootstrapData);assert.equal(JSON.stringify(manifest),manifestBefore);
@@ -149,14 +151,14 @@ async function nativeFacts(){
 }
 
 if(process.env[childKey]==='1')await nativeFacts();
-else test('native-first actual Chat bootstrap emits complete twelve-column facts and unchanged old catalogue refuses before installation',{
+else test('native-first actual Chat bootstrap emits complete thirteen-column facts and unchanged old catalogue refuses before installation',{
  skip:!isolated()&&!process.env.CI?'Actual isolated PostgreSQL unavailable locally':false,timeout:300000
 },async()=>{
  assert.ok(isolated(),'Actual isolated PostgreSQL is mandatory in CI');const{PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),name='chat_catalogue_'+randomBytes(10).toString('hex')+'_test';let created=false;
  try{await admin.$executeRawUnsafe(`CREATE DATABASE ${q(name)}`);created=true;const url=new URL(process.env.DATABASE_URL);url.pathname='/'+name;
   const{stdout}=await promisify(execFile)(process.execPath,[fileURLToPath(import.meta.url)],{env:{...process.env,DATABASE_URL:url.href,NODE_ENV:'test',[childKey]:'1'},timeout:270000,maxBuffer:4*1024*1024});
   const factLine=stdout.split('\n').find(line=>line.startsWith(factsMarker+' ')),holdLine=stdout.split('\n').find(line=>line.startsWith(holdMarker+' '));assert.ok(factLine,'Actual native metadata output is required');assert.ok(holdLine,'Actual old-catalogue HOLD output is required');
-  const facts=JSON.parse(factLine.slice(factsMarker.length+1)),hold=JSON.parse(holdLine.slice(holdMarker.length+1));assert.equal(facts.format,factsMarker);assert.equal(facts.columns.length,12);assert.equal(facts.foreignKeyCount,0);assert.equal(hold.oldBaselineAccepted,true);assert.equal(hold.beforeDataSha256,hold.afterDataSha256);assert.equal(hold.installationPerformed,false);
+  const facts=JSON.parse(factLine.slice(factsMarker.length+1)),hold=JSON.parse(holdLine.slice(holdMarker.length+1));assert.equal(facts.format,factsMarker);assert.equal(facts.columns.length,13);assert.equal(facts.foreignKeyCount,0);assert.equal(hold.oldBaselineAccepted,true);assert.equal(hold.beforeDataSha256,hold.afterDataSha256);assert.equal(hold.installationPerformed,false);
   console.log(factLine);console.log(holdLine);
  }finally{if(created)await admin.$executeRawUnsafe(`DROP DATABASE ${q(name)} WITH (FORCE)`);await admin.$disconnect()}
 });
