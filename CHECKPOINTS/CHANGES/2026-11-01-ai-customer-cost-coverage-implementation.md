@@ -23,3 +23,9 @@ Prior postpaid PR3453 and no-send LAB receipt3466 remain protected. Do not repla
 Publish source PR, require full native CI, exact main CI and ordinary guarded healthy deployment, then perform a new narrowly measured no-send LAB acceptance with before/control/after snapshots recorded BEFORE each state-changing action. Unconfigured real external prices are a readiness blocker, not a waived test or assumed PASS. No real customer activation/funding/mail until that acceptance and accurate reviewable email. Completion must synchronize checkpoint/active/tracker/pending/manual and both PDFs; broader parent remains assigned/open. Source paths and PR/CI/revision must be finalized in that receipt.
 
 RecordedUTC:2026-11-01T15:14:27.890471+00:00
+
+## Exact source PR verification / documentation integration
+
+PR3475 source head88235e52ee18a15bbeddc44304e177cc7fcb6d20 passed full CI41320601989:5108server+8backup PASS/0FAIL/0SKIP, including the new native customer-cost HTTP/PG test. Recovery contract41320601762 PASS. Four additional native-auth adapter unit tests PASS; fresh invalid-expiry/principal/role/version/revocation checks are included in that head. No source behavior changed when integrating peer docs-only mainf9ef03e. Preserve that peer's complete BackOffice release records.
+
+This is an implementation/review PR, not a PASS closure. To avoid overwriting concurrent generated shared status PDFs during the long full source CI, this PR retains main's current shared PDFs; regenerate both from the fully merged Markdown in the required scoped LAB/PASS receipt. Before-source claim PDFs were already green/merged in3469. No completed LAB acceptance or manual assertion is being published here; final PDF/manual synchronization remains explicitly pending. Require full CI for this new integration head as well.
