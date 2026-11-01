@@ -142,3 +142,11 @@ Bounded diagnosis: legacy module-ui-enforcement probes /api/license/current, whi
 
 ASSIGNED/OPEN, not fixed or LAB PASS. Required: green exact PR/full combined main CI, ordinary guarded exact healthy release, then read-only personal selected-store/terminal acceptance. No opening/closing shift or transaction to bypass the failure. Final receipt must retain remaining hosted writer acceptance. Checkpoint CHECKPOINTS/CHANGES/2026-10-31-owner-backoffice-permissions.md.
 
+
+## 01/11/2026 — Delegated shift read causal reproduction and source candidate / AWAITING CI + RELEASE + PERSONAL ACCEPTANCE
+
+Claim PR3457/head161cb75e exact full local tree4e3e5fc3 preserved all shared records; docs CI41303094680 SUCCESS (runtime intentionally skipped), merged5c9b34dd before source. Before-fix execution of actual module-ui-enforcement with staff identity, owner-only licence403 and a valid canonical overview returned HTTP200/null and never called the overview. After-fix same fixture returns the server's storeA response and calls the real overview. No actual production credential or grant used.
+
+Bounded source: delegated staff bypasses the legacy Owner-only cached module UI/probe/fallback wrapper, sending unchanged requests to the existing canonical server; this does not grant any server right. Delegated DOM navigation continues to use per-store live capabilities. Ordinary Owner licence UI/fallback behavior retained. Existing strict response store identity guard unchanged. Initial read failure no longer asserts no open shift; verified empty response still does. Previously verified data retains its timestamp/error on refresh failure, preserving existing stale-data contract.
+
+Executed Node20.20.2 actual interceptor + mounted StoreTransactionsPanel regression and existing authoritative cash/foreign-store/late-response/sales tests:11PASS/0FAIL/0SKIP. Authorised read, server403/revocation, foreign identity, verified empty and unchanged Owner disabled/enabled module handling included. Business algorithms/schema/financial writers unchanged. Isolated tests are not hosted USER/LAB acceptance. Full exact PR/combined main CI, normal guarded release and read-only personal Rizareio/terminal confirmation remain OPEN. Remaining18-right financial/stock acceptance unchanged; no transaction repeated for evidence.
