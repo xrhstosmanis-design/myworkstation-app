@@ -1,4 +1,4 @@
-import {customerCostMeter,revalidateCostRequest,customerSearchScope} from '../services/ai-customer-cost-runtime.js';
+import {customerCostMeter,revalidateCostRequest,customerSearchScope,invoiceCostScope} from '../services/ai-customer-cost-runtime.js';
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {internetItemPrice} from "../internet-market-item-price.js";
@@ -145,13 +145,14 @@ router.post("/price-proposals/:id/decision",async(req,res,next)=>{try{const comp
 
 router.get("/options",async(req,res,next)=>{try{
   if(!await requireAdvanced(req,res))return;await ensureSchema();const companyId=req.user.companyId;
+  const searchScope=req.query.orderId?await invoiceCostScope(req,{orderId:String(req.query.orderId)}):null;
   const [categories,subcategories,vats,stores]=await Promise.all([
     prisma.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`,
     prisma.$queryRaw`SELECT "id","categoryId","name" FROM "ProductSubcategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`,
     prisma.$queryRaw`SELECT "id","description","vatRate" FROM "ManagementVatDepartment" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "vatRate","description"`.catch(()=>[]),
     prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}})
   ]);
-  res.json({categories,subcategories,vats:vats.map(v=>({...v,vatRate:Number(v.vatRate||0)})),stores});
+  res.json({searchStoreId:searchScope?.storeId||null,categories,subcategories,vats:vats.map(v=>({...v,vatRate:Number(v.vatRate||0)})),stores});
 }catch(error){next(error)}});
 
 router.get("/search",async(req,res,next)=>{try{
@@ -161,7 +162,8 @@ router.get("/search",async(req,res,next)=>{try{
   const master=(await prisma.$queryRaw`SELECT mp."id" AS "masterProductId",mp."sourceCode",mp."name",mp."categoryName",mp."subcategoryName",mp."vatRate",mp."defaultRetailPrice",mp."defaultCostPrice",mp."brandName",COALESCE((SELECT json_agg(mb."barcode") FROM "MasterProductBarcode" mb WHERE mb."masterProductId"=mp."id"),'[]') AS "barcodes" FROM "MasterProduct" mp WHERE mp."active"=true AND EXISTS(SELECT 1 FROM "MasterProductBarcode" mb WHERE mb."masterProductId"=mp."id" AND mb."barcode"=${q}) LIMIT 1`)[0];
   if(master)return res.json({source:"MASTER_CATALOG",rows:[{...master,vatRate:master.vatRate==null?null:Number(master.vatRate),salePrice:master.defaultRetailPrice==null?0:Number(master.defaultRetailPrice),costPrice:master.defaultCostPrice==null?0:Number(master.defaultCostPrice)}],advanced:{reason:"FOUND_MASTER"}});
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4000);try{const response=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(q)}?fields=code,product_name,product_name_el,brands,categories,categories_tags`,{headers:{"User-Agent":"MyWorkStation/1.0 (https://myworkstation.gr)"},signal:controller.signal});if(response.ok){const data=await response.json(),p=data?.product;if(p&&data?.status!==0){return res.json({source:"OPEN_FOOD_FACTS",rows:[{name:String(p.product_name_el||p.product_name||"").trim()||`Barcode ${q}`,barcodes:[q],brandName:String(p.brands||"").trim(),categoryName:"",subcategoryName:"",vatRate:null,salePrice:0,costPrice:0,source:"OPEN_FOOD_FACTS"}],advanced:{reason:"FOUND_OPEN_FOOD_FACTS"}})}}}catch{}finally{clearTimeout(timer)}
-  const advanced=await advancedOnlineProductSearch({companyId,storeId:String(req.query.storeId||""),actorId:req.user.id,barcode:q,bypassEntitlement:isPlatformSuper(req),usageContext:"INVOICE_PRODUCT_SEARCH",...await customerSearchScope(req,String(req.query.storeId||"")),verifyCostScope:()=>revalidateCostRequest(req,async current=>{await customerSearchScope(current,String(req.query.storeId||""));if(!isPlatformSuper(current)&&!await advancedOnlineSearchEntitlement(current.user.companyId))throw Object.assign(new Error("MODULE_DISABLED"),{code:"MODULE_DISABLED",status:403});})});
+  const costScope=await invoiceCostScope(req,{storeId:String(req.query.storeId||""),orderId:req.query.orderId?String(req.query.orderId):null});
+  const advanced=await advancedOnlineProductSearch({companyId,storeId:String(req.query.storeId||""),actorId:req.user.id,barcode:q,bypassEntitlement:isPlatformSuper(req),usageContext:"INVOICE_PRODUCT_SEARCH",...costScope,verifyCostScope:()=>revalidateCostRequest(req,async current=>{await invoiceCostScope(current,{storeId:costScope.storeId,orderId:req.query.orderId?String(req.query.orderId):null});if(!isPlatformSuper(current)&&!await advancedOnlineSearchEntitlement(current.user.companyId))throw Object.assign(new Error("MODULE_DISABLED"),{code:"MODULE_DISABLED",status:403});})});
   res.json({source:advanced.rows?.length?"GOOGLE_SEARCH":"NONE",rows:advanced.rows||[],advanced});
 }catch(error){next(error)}});
 

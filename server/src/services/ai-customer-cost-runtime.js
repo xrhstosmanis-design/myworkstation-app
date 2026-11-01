@@ -33,3 +33,17 @@ export async function customerSearchScope(req,storeId,companyId=req.user.company
   if(!store)throw walletError('AI_WALLET_SCOPE_DENIED',403);
   return {companyId:store.companyId,storeId:store.id,activity:walletActivityFromRequest({...req,user:{...req.user,companyId}},{storeId:store.id,purpose:'ONLINE_SEARCH'})};
 }
+
+// Bind an invoice search to the persisted order, not another active store the
+// browser could select. A company-level search still requires explicit scope.
+export function createInvoiceCostScope({db=prisma,authorizeStore=customerSearchScope}={}){
+  return async function invoiceCostScope(req,{orderId=null,storeId=null}={}){
+    if(!orderId)return authorizeStore(req,storeId);
+    if(typeof orderId!=='string'||!orderId.trim()||orderId.length>160)throw walletError('AI_WALLET_SCOPE_DENIED',403);
+    const rows=await db.$queryRaw`SELECT "storeId" FROM "PurchaseOrder" WHERE "id"=${orderId} AND "companyId"=${req.user.companyId} LIMIT 1`;
+    const bound=rows[0]?.storeId;
+    if(!bound||(storeId&&storeId!==bound))throw walletError('AI_WALLET_SCOPE_DENIED',403);
+    return authorizeStore(req,bound);
+  };
+}
+export const invoiceCostScope=createInvoiceCostScope();

@@ -1,3 +1,4 @@
+import {createInvoiceCostScope} from '../src/services/ai-customer-cost-runtime.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -15,6 +16,7 @@ test('native customer cost HTTP/PG: real scope/session denial, concurrent funds,
    `CREATE TABLE "Store"("id" text PRIMARY KEY,"name" text,"companyId" text,"active" boolean)`,
    `CREATE TABLE "User"("id" text PRIMARY KEY,"email" text,"fullName" text,"role" text,"companyId" text)`,
    `CREATE TABLE "OwnerCompanyAccess"("ownerId" text,"companyId" text)`,
+   `CREATE TABLE "PurchaseOrder"("id" text PRIMARY KEY,"companyId" text,"storeId" text)`,
    `CREATE TABLE "CostSession"("id" text PRIMARY KEY,"companyId" text,"revoked" boolean)`,
    `CREATE TABLE "BusinessControl"("sales" integer,"cash" integer,"stock" integer)`
   ])await db.$executeRawUnsafe(sql);
@@ -22,6 +24,10 @@ test('native customer cost HTTP/PG: real scope/session denial, concurrent funds,
   await db.$executeRaw`INSERT INTO "Store" VALUES ('a-store','A','a',true),('a-closed','Closed','a',false),('b-store','B','b',true)`;
   await db.$executeRaw`INSERT INTO "CostSession" VALUES ('session-a','a',false),('session-b','b',false),('revoked','a',true)`;
   await db.$executeRaw`INSERT INTO "BusinessControl" VALUES (12,20000,31)`;
+  await db.$executeRaw`INSERT INTO "PurchaseOrder" VALUES ('order-a','a','a-store'),('order-b','b','b-store'),('closed-order','a','a-closed')`;
+  const invoiceScope=createInvoiceCostScope({db,authorizeStore:async(req,storeId)=>{const rows=await db.$queryRaw`SELECT s."id" FROM "Store" s JOIN "Company" c ON c."id"=s."companyId" WHERE s."id"=${storeId} AND s."companyId"=${req.user.companyId} AND s."active" AND c."active"`;if(!rows.length)throw Object.assign(new Error(),{code:'AI_WALLET_SCOPE_DENIED'});return {companyId:req.user.companyId,storeId};}});
+  assert.equal((await invoiceScope({user:{companyId:'a'}},{orderId:'order-a'})).storeId,'a-store');
+  for(const input of [{orderId:'order-b'},{orderId:'missing'},{orderId:'closed-order'},{orderId:'order-a',storeId:'b-store'}])await assert.rejects(invoiceScope({user:{companyId:'a'}},input),e=>e.code==='AI_WALLET_SCOPE_DENIED');
   const repository=createAiOwnerWalletRepository(db);await repository.ensure();
   for(const company of ['a','b']){await repository.configure(company,{version:0,enabled:true,emailEnabled:false,notificationOwnerId:''},'synthetic-admin');await repository.credit(company,{amountMicros:'1000',receiptReference:'synthetic-cost-funding-'+company},'synthetic-admin');}
   const price={provider:'SERPER_GOOGLE',currency:'EUR',providerUnitCostMicros:'100',basisReference:'Synthetic fixture cost only',validFrom:'2020-01-01T00:00:00.000Z',validUntil:'2099-01-01T00:00:00.000Z'};

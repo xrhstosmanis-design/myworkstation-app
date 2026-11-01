@@ -16,11 +16,12 @@ function chooseSearchStore(stores){
 async function openAdvanced(host){
   const input=host.querySelector("[data-product-q]"),barcode=String(input?.value||"").trim();if(!/^\d{6,18}$/.test(barcode)){alert("Για Advanced Online Search γράψε ή σκάναρε barcode 6–18 ψηφίων.");return}
   let options,result;try{
-    options=await api("/api/commerce/advanced-online-search/options");
-    // The search originates in a company invoice modal. Require an explicit
-    // store for cost attribution; never choose its first active store.
-    const storeId=await chooseSearchStore(options.stores||[]);if(!storeId)return;
-    result=await api(`/api/commerce/advanced-online-search/search?q=${encodeURIComponent(barcode)}&storeId=${encodeURIComponent(storeId)}`);
+    const orderId=host.closest('[data-invoice-search-order-id]')?.dataset.invoiceSearchOrderId||'';
+    options=await api(`/api/commerce/advanced-online-search/options${orderId?`?orderId=${encodeURIComponent(orderId)}`:''}`);
+    // The persisted invoice owns its store. Only unbound company-level
+    // searches need a chooser; never choose the first active store.
+    const storeId=options.searchStoreId||await chooseSearchStore(options.stores||[]);if(!storeId)return;
+    result=await api(`/api/commerce/advanced-online-search/search?q=${encodeURIComponent(barcode)}&storeId=${encodeURIComponent(storeId)}${orderId?`&orderId=${encodeURIComponent(orderId)}`:''}`);
   }catch(e){alert(e.message);return}
   const row=(result.rows||[])[0];
   if(result.source==="MYWORKSTATION"&&row){input.value=row.sku||barcode;input.dispatchEvent(new Event("input",{bubbles:true}));host.querySelector("[data-product-search]")?.click();return}
