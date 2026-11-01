@@ -14,7 +14,7 @@ async function mount(Component,props){
   const saved=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
   for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[k]});
   const React=await import('react'),{createRoot}=await import('react-dom/client'),root=createRoot(document.getElementById('root'));await React.act(async()=>root.render(React.createElement(Component,props)));
-  return {dom,act:React.act,async close(){await React.act(async()=>root.unmount());dom.window.close();for(const k of keys){const d=saved.get(k);if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k]}}};
+  return {dom,act:React.act,async render(next){await React.act(async()=>root.render(React.createElement(Component,next)))},async close(){await React.act(async()=>root.unmount());dom.window.close();for(const k of keys){const d=saved.get(k);if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k]}}};
 }
 const identity={userId:'staff',companyId:'a',fullName:'Fixture',username:'fixture',stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:['cash.read']}]};
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
@@ -164,7 +164,7 @@ test('mounted personal workspace requires store selection and discards delayed o
 });
 test('mounted uncertain count freezes the same event identity and preserves count-only UI',async()=>{
   const Workspace=await component('BackofficeStaffWorkspace'),writes=[];let uncertain=true;
-  const detail={storeId:'a1',id:'st',name:'Draft',lines:[{id:'line',name:'Water',sku:'001',barcodes:['01234567'],countVersion:0,countedQuantity:null}]};
+  const detail={storeId:'a1',id:'st',name:'Draft',status:'DRAFT',lines:[{id:'line',name:'Water',sku:'001',barcodes:['01234567'],countVersion:0,countedQuantity:null}]};
   const api=async(path,options={})=>{
     if(path.endsWith('/me'))return identity;
     if(path.endsWith('/count')){writes.push(JSON.parse(options.body));if(uncertain)throw Error('network uncertain');return {replayed:true}}
@@ -175,8 +175,11 @@ test('mounted uncertain count freezes the same event identity and preserves coun
     await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
     await m.act(async()=>button('Απογραφή').click());await m.act(async()=>button('Φόρτωση').click());await m.act(async()=>button('Draft').click());
     assert.ok(!document.body.textContent.includes('Οριστικοποίηση'));assert.ok(!document.body.textContent.includes('Πληρωμή'));
-    await m.act(async()=>{const input=document.querySelector('input[name="quantity"]');input.value='7';input.form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))});
-    assert.equal(writes.length,1);assert.equal(document.querySelector('select').disabled,true);assert.equal(button('Καταχώρηση μέτρησης').disabled,true);assert.ok(button('Επαλήθευση ίδιας καταχώρισης'));
+    assert.ok(document.querySelector('.inv2-layout .inv2-work .inv2-table-wrap'),'actual native inventory layout and count table');
+    await m.act(async()=>document.querySelector('button[title="Διόρθωση"]').click());
+    await m.act(async()=>{const input=document.querySelector('input[name="quantity"]');Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'7');input.dispatchEvent(new Event('input',{bubbles:true}))});
+    await m.act(async()=>document.querySelector('.inv2-quantity-row button').click());
+    assert.equal(writes.length,1);assert.equal(document.querySelector('select').disabled,true);assert.equal(document.querySelector('.inv2-quantity-row button').disabled,true);assert.ok(button('Επαλήθευση ίδιας καταχώρισης'));
     uncertain=false;await m.act(async()=>button('Επαλήθευση ίδιας καταχώρισης').click());assert.equal(writes.length,2);assert.deepEqual(writes[0],writes[1]);assert.equal(button('Επαλήθευση ίδιας καταχώρισης'),undefined);
   }finally{await m.close()}
 });
@@ -249,11 +252,11 @@ test('uncertain stocktake creation reuses one event and finalization verifies by
     assert.equal(writes.length,1);assert.equal(document.querySelector('select').disabled,true);
     await m.act(async()=>button('Επαλήθευση ίδιας δημιουργίας').click());assert.deepEqual(writes[0],writes[1]);assert.equal(document.querySelector('select').disabled,false);
     await m.act(async()=>button('Lifecycle draft').click());
-    assert.match(document.body.textContent,/Αναμενόμενη ποσότητα: 10/);
+    assert.equal(document.querySelector('.inv2-table-wrap tbody tr').children[2].textContent,'10');
     await m.act(async()=>{const r=document.querySelector('input[name="reason"]');r.value='Synthetic correction';r.form.elements.confirm.checked=true;r.form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))});
     assert.equal(writes.length,3);assert.equal(document.querySelector('select').disabled,true);
     await m.act(async()=>button('Έλεγχος αποτελέσματος οριστικοποίησης').click());
-    assert.equal(writes.length,3);assert.equal(document.querySelector('select').disabled,false);assert.equal(button('Οριστικοποίηση και ενημέρωση αποθέματος'),undefined);assert.equal(button('Καταχώρηση μέτρησης'),undefined);assert.equal(document.querySelector('input[name="quantity"]').disabled,true);
+    assert.equal(writes.length,3);assert.equal(document.querySelector('select').disabled,false);assert.equal(button('Οριστικοποίηση και ενημέρωση αποθέματος'),undefined);assert.equal(button('Καταχώρηση μέτρησης'),undefined);assert.equal(document.querySelector('input[name="quantity"]'),null);assert.equal(document.querySelector('button[title="Διόρθωση"]'),null);
     assert.match(document.body.textContent,/Οριστικοποιημένη απογραφή/);
   }finally{await m.close()}
 });
@@ -274,4 +277,64 @@ test('common store commerce shortcut is present only for an explicitly granted c
    assert.ok(calls.every(c=>!c.path.includes('/backoffice-staff/cash/')));
   }finally{await m.close()}
  }
+});
+
+
+test('actual native inventory personal mode denies Owner-only controls and masks cost, price and blind expected data through revocation',async()=>{
+ const Center=await component('inventory/InventoryV2Center'),calls=[],writes=[];
+ const current={id:'st',storeId:'a1',name:'Synthetic blind draft',status:'DRAFT',lines:[{id:'line',name:'Water',sku:'001',barcodes:['11111111','22222222'],countVersion:3,countedQuantity:'4',expectedQuantity:'991',unitCost:873,salePrice:974}]};
+ const api=async(path)=>{calls.push(path);throw Error('Owner endpoint must not be called')};
+ let delegated={storeId:'a1',storeName:'A1',stocktakes:[current],current,canCount:true,canCreate:false,canFinalize:false,locked:false,onLoad:()=>{},onOpen:()=>{},onNew:()=>{},onCount:async r=>{writes.push(r);return false},setError:message=>{if(message)throw Error(message)}};
+ const props=()=>({api,stores:[{id:'a1',name:'A1'}],loadCatalog:()=>assert.fail('no company catalog for personal inventory'),delegated});
+ const m=await mount(Center,props());
+ const type=async(selector,value)=>m.act(async()=>{const input=document.querySelector(selector);Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}))});
+ try{
+  assert.ok(document.querySelector('.inv2-layout .inv2-work .inv2-fast-entry'));
+  for(const text of ['Αξία κόστους','Αξία λιανικής','Απόθεμα','Διαφορά','QR/PIN','Full Audit','Excel / CSV','Εισαγωγή CSV','Νέα ζώνη','Ομαδική καταμέτρηση','Καταχώρηση νέου είδους','Συνέχεια ως ελεύθερη','Οριστικοποίηση'])assert.ok(!document.body.textContent.includes(text),text);
+  assert.equal(document.querySelector('button[title="Διαγραφή καταμέτρησης"]'),null);assert.equal(document.querySelector('button[title="Εκτύπωση barcode"]'),null);assert.equal(document.querySelector('.inv2-history-delete'),null);
+  await type('.inv2-scan-row input','22222222');await m.act(async()=>document.querySelector('.inv2-fast-entry form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  assert.match(document.querySelector('.inv2-selected-product').textContent,/Water/);assert.ok(!document.querySelector('.inv2-selected-product').textContent.includes('991'));
+  await type('input[name="quantity"]','2');await m.act(async()=>document.querySelector('.inv2-quantity-row button').click());
+  assert.equal(writes.length,1);assert.equal(writes[0].stocktakeId,'st');assert.equal(writes[0].body.quantity,6);assert.equal(writes[0].body.expectedVersion,3);assert.equal(writes[0].body.source,'SCANNER');assert.match(writes[0].body.clientEventId,/^[a-f0-9-]{36}$/);
+  delegated={...delegated,locked:true};await m.render(props());assert.equal(document.querySelector('input[name="quantity"]').value,'2','uncertain callback does not clear the draft');assert.equal(document.querySelector('.inv2-quantity-row button').disabled,true);
+  await m.act(async()=>window.dispatchEvent(new CustomEvent('mws:product-created',{detail:{id:'foreign'}})));assert.deepEqual(calls,[]);
+  delegated={...delegated,locked:false,canFinalize:true};await m.render(props());assert.match(document.querySelector('.inv2-table-wrap').textContent,/991/);assert.ok(!document.body.textContent.includes('Αξία κόστους'));
+  delegated={...delegated,canCount:false,canFinalize:false};await m.render(props());assert.equal(document.querySelector('.inv2-fast-entry'),null);assert.equal(document.querySelector('button[title="Διόρθωση"]'),null);assert.ok(!document.querySelector('.inv2-table-wrap').textContent.includes('991'));assert.ok(document.querySelector('input[aria-label="Αναζήτηση είδους"]'));assert.deepEqual(calls,[]);
+ }finally{await m.close()}
+});
+
+test('ordinary Owner inventory retains real count table and native zone, grant, audit, import and destructive controls',async()=>{
+ const Center=await component('inventory/InventoryV2Center'),calls=[];
+ const current={id:'st',storeId:'a1',storeName:'A1',name:'Owner synthetic',status:'DRAFT',scopeType:'FULL',lines:[{id:'line',name:'Water',sku:'001',barcode:'11111111',countVersion:3,countedQuantity:4,expectedQuantity:9,unitCost:2,salePrice:3}]};
+ const api=async(path)=>{calls.push(path);if(path.endsWith('/stocktakes'))return [current];if(path.includes('/zones'))return [];return current};
+ const m=await mount(Center,{api,stores:[{id:'a1',name:'A1'}]});
+ try{
+  await m.act(async()=>button('Owner synthetic').click());
+  assert.ok(document.querySelector('.inv2-layout .inv2-work .inv2-fast-entry'));
+  for(const text of ['Αξία κόστους','Αξία λιανικής','Απόθεμα','Διαφορά','QR/PIN','Full Audit','Excel / CSV','Εισαγωγή CSV','Νέα ζώνη','Ομαδική καταμέτρηση','Συνέχεια ως ελεύθερη','Οριστικοποίηση'])assert.ok(document.body.textContent.includes(text),text);
+  assert.ok(document.querySelector('button[title="Διαγραφή καταμέτρησης"]'));assert.ok(document.querySelector('button[title="Εκτύπωση barcode"]'));assert.ok(document.querySelector('.inv2-history-delete'));
+  assert.deepEqual(calls,['/api/inventory-v2/stocktakes','/api/inventory-v2/stocktakes/st','/api/inventory-v2/zones?storeId=a1']);
+ }finally{await m.close()}
+});
+
+
+test('read-only personal inventory loads only the selected redacted endpoints and never offers a write',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+ const api=async(path,options={})=>{
+  calls.push({path,options});assert.equal(options.method||'GET','GET');
+  if(path==='/api/backoffice-staff/me')return {...identity,stores:[{...identity.stores[0],capabilities:['inventory.read']}]};
+  assert.equal(options.headers['x-backoffice-store-id'],'a1');
+  if(path==='/api/backoffice-staff/inventory/stores/a1/stocktakes')return {storeId:'a1',stocktakes:[{id:'st',name:'Readonly draft',status:'DRAFT'}]};
+  if(path==='/api/backoffice-staff/inventory/stores/a1/stocktakes/st')return {id:'st',storeId:'a1',name:'Readonly draft',status:'DRAFT',lines:[{id:'l',name:'Water',sku:'W',barcodes:['11111111'],countVersion:2,countedQuantity:'4'}]};
+  assert.fail('Unexpected native Owner or foreign read: '+path);
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const s=document.querySelector('[aria-label="Κατάστημα"]');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Απογραφή').click());await m.act(async()=>new Promise(resolve=>setTimeout(resolve,30)));
+  await m.act(async()=>button('Readonly draft').click());
+  assert.match(document.querySelector('.inv2-work tbody').textContent,/Water/);assert.equal(document.querySelector('.inv2-fast-entry'),null);assert.equal(document.querySelector('input[name="name"]'),null);assert.equal(document.querySelector('input[name="reason"]'),null);assert.equal(document.querySelector('button[title="Διόρθωση"]'),null);
+  for(const text of ['Απόθεμα','Διαφορά','Αξία κόστους','Νέα απογραφή','Οριστικοποίηση'])assert.ok(!document.querySelector('.inv2').textContent.includes(text));
+  assert.deepEqual(calls.map(c=>c.path),['/api/backoffice-staff/me','/api/backoffice-staff/inventory/stores/a1/stocktakes','/api/backoffice-staff/inventory/stores/a1/stocktakes/st']);
+ }finally{await m.close()}
 });
