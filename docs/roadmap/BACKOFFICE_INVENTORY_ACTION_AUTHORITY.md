@@ -1,3 +1,7 @@
+## Source continuation 01/11/2026 — first three actions integrated, release/acceptance pending
+
+The review below is preserved as the before-source proposal. The current source candidate implements inventory.clear, inventory.bulk-zero and inventory.delete, with inventory.read dependencies and unchanged legacy defaults. Exact actor/payload replay and transaction-time authority are mandatory, not an inferred role grant. Source21 executable keys; installed revision remains prior18 until exact CI/deploy verification. Other rows below remain proposals, not admitted rights. Hosted acceptance NOT TESTED. Remaining next batch requires native audit/investigation field visibility and exact read/export review before executable grants; no blind expected/cost visibility by default.
+
 # Remaining native inventory actions: review before executable grants
 
 Status: PROPOSAL / NOT AN ALLOWLIST / NO NEW RIGHT INSTALLED. Same retained CENTRAL-BACKOFFICE-ACCESS-01 owner. Existing18 grantable capabilities and defaults remain unchanged. This packet follows the shared InventoryV2Center/InventoryFastCount source integration; it does not certify hosted acceptance.

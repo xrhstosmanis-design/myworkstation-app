@@ -1,6 +1,7 @@
+import {staffInventoryAction} from '../src/services/backoffice-staff-inventory-actions.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {staffRequestCapability,changeStaffCapability,validStaffCapabilities} from '../../shared/backoffice-staff.mjs';
+import {staffProfiles,staffRequestCapability,changeStaffCapability,validStaffCapabilities} from '../../shared/backoffice-staff.mjs';
 import {createStaffInput,updateStaffInput,staffLoginInput} from '../src/services/backoffice-staff-accounts.js';
 import {enforceBackofficeStaff,staffAccount,liveStaff} from '../src/services/backoffice-staff-access.js';
 const grant={storeId:'store-a',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']};
@@ -74,5 +75,29 @@ test('inventory creation and finalization require explicit independent rights pl
   }
   assert.equal(staffRequestCapability('POST','/api/inventory-v2/stocktakes'),'inventory.create');
   assert.equal(staffRequestCapability('POST','/api/inventory-v2/stocktakes/st/finalize'),'inventory.finalize');
-  for(const [method,path] of [['DELETE','/api/inventory-v2/stocktakes/st'],['POST','/api/inventory-v2/stocktakes/st/access-grants'],['POST','/api/inventory-v2/stocktakes/st/count/bulk-zero'],['POST','/api/inventory-v2/stocktakes/st/attach-barcode']])assert.equal(staffRequestCapability(method,path),null);
+  for(const [method,path] of [['POST','/api/inventory-v2/stocktakes/st/access-grants'],['POST','/api/inventory-v2/stocktakes/st/attach-barcode']])assert.equal(staffRequestCapability(method,path),null);
+});
+
+test('clear, selected zero and draft deletion are independent explicit store rights with no profile escalation',()=>{
+  const actions=[['DELETE','/api/inventory-v2/stocktakes/st/count/line','inventory.clear'],['POST','/api/inventory-v2/stocktakes/st/count/bulk-zero','inventory.bulk-zero'],['DELETE','/api/inventory-v2/stocktakes/st','inventory.delete']];
+  for(const [method,path,key] of actions){
+    assert.equal(staffRequestCapability(method,path),key);
+    assert.equal(validStaffCapabilities([key]),false);
+    assert.equal(validStaffCapabilities(['inventory.read',key]),true);
+    assert.deepEqual(new Set(changeStaffCapability([],key,true)),new Set([key,'inventory.read']));
+    assert.equal(staffRequestCapability('PATCH',path),null);
+    assert.equal(staffRequestCapability(method,path+'/unexpected'),null);
+  }
+});
+
+test('destructive inventory payloads reject forged authority, duplicate lines and extra scope before a transaction',async()=>{
+  let transactions=0;const db={$transaction:async()=>{transactions++;throw Error('must not reach database')}};
+  const req={user:{staffAccess:true},staffGrant:{capability:'inventory.delete'},params:{stocktakeId:'take'},body:{clientEventId:'997eb29e-2c24-41f6-aaf6-dc5bff762e21',confirmed:true,storeId:'foreign'}};
+  await assert.rejects(staffInventoryAction(db,req,'inventory.delete'),{name:'ZodError'});
+  await assert.rejects(staffInventoryAction(db,{...req,user:{staffAccess:false}},'inventory.delete'),{status:403});
+  await assert.rejects(staffInventoryAction(db,{...req,staffGrant:{capability:'inventory.count'}},'inventory.delete'),{status:403});
+  const duplicate={lineId:'line',expectedVersion:0};
+  await assert.rejects(staffInventoryAction(db,{...req,staffGrant:{capability:'inventory.bulk-zero'},body:{lines:[duplicate,duplicate],clientBatchId:req.body.clientEventId}},'inventory.bulk-zero'),{status:400});
+  assert.equal(transactions,0);
+  for(const profile of Object.values(staffProfiles))for(const key of ['inventory.clear','inventory.bulk-zero','inventory.delete'])assert.equal(profile.capabilities.includes(key),false);
 });

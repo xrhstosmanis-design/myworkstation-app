@@ -92,7 +92,9 @@ export async function enforceBackofficeStaff(db,req,res){
   const stocktake=path.match(/^\/api\/inventory-v2\/stocktakes\/([^/]+)/);
   if(stocktake){
     const rows=await db.$queryRaw`SELECT "id" FROM "Stocktake" WHERE "id"=${stocktake[1]} AND "companyId"=${user.companyId} AND "storeId"=${storeId} LIMIT 1`;
-    if(!rows[0])throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
+    // A deleted draft can have a durable operation receipt. Its exact scoped
+    // writer rechecks live authority and the actor/payload-bound receipt.
+    if(!rows[0]&&capability!=='inventory.delete')throw staffError(404,'STAFF_OBJECT_NOT_FOUND','Δεν βρέθηκε στο επιλεγμένο κατάστημα.');
   }
   req.staffGrant={...grant,capability};
   req.user={...req.user,storeId,permissions:modulesForCapability(capability)};

@@ -1,3 +1,4 @@
+import {staffInventoryAction} from '../src/services/backoffice-staff-inventory-actions.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -59,9 +60,10 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     const authSource=(await readFile(new URL('../src/middleware/auth.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace('export async function auth','async function auth');
     const auth=new Function('jwt','crypto','prisma','assertCustomerDemoRuntimeClosed','authorizeChatOperator','enforceBackofficeStaff',authSource+'\nreturn auth;')(jwt,crypto,db,assertCustomerDemoRuntimeClosed,async()=>null,enforceBackofficeStaff);
     const inventorySource=(await readFile(new URL('../src/routes/inventory-v2.js',import.meta.url),'utf8')).replace(/^import[\s\S]*?;\n/gm,'').replace(/^export .*;\n/gm,'');
-    let beforeCount;
+    let beforeCount,beforeInventoryAction;
+    const inventoryAction=async(...args)=>{if(beforeInventoryAction){const wait=beforeInventoryAction;beforeInventoryAction=null;await wait()}return staffInventoryAction(...args)};
     const countGrant=async(...args)=>{if(beforeCount){const wait=beforeCount;beforeCount=null;await wait()}return requireStaffGrant(...args)};
-    const inventory=new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed','requireStaffGrant',inventorySource+'\nreturn router;')(express.Router,z,crypto,db,jwt,assertCustomerDemoRuntimeClosed,finalizeInventoryStocktake,lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed,countGrant);
+    const inventory=new Function('Router','z','crypto','prisma','jwt','assertCustomerDemoRuntimeClosed','finalizeInventoryStocktake','lockDraftInventoryStocktake','inventoryStocktakeScopeAllowed','inventoryStoreScopeAllowed','requireStaffGrant','staffInventoryAction',inventorySource+'\nreturn router;')(express.Router,z,crypto,db,jwt,assertCustomerDemoRuntimeClosed,finalizeInventoryStocktake,lockDraftInventoryStocktake,inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed,countGrant,inventoryAction);
     const reportReads=[],repository={generation:async()=>'0',read:async(scope,period)=>{reportReads.push({...scope,period});return {...scope,period,text:'Isolated read-only report',rows:[]}}};
     const commerceSource=await readFile(new URL('../src/routes/commerce-v1.js',import.meta.url),'utf8');
     const fileStart=commerceSource.indexOf('router.get("/documents/inbox/:inboxId/file",');
@@ -331,6 +333,60 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       const settlement=(await db.$queryRaw`SELECT * FROM "SupplierPaymentSettlement"`)[0];assert.equal(settlement.status,'PENDING_REVIEW');assert.equal(settlement.createdBy,created.id);
       assert.equal((await invoke()).status,409);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "StoreTransaction"`)[0].count),before+1);assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS count FROM "SupplierPaymentSettlement"`)[0].count),1);
       assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale" WHERE "id"='control'`)[0].amount),77.33);assert.equal(Number((await db.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='a2'`)[0].currentStock),42);
+    });
+    await t.test('independent inventory actions enforce live scoped authority, atomic versions, exact replay, audit and protected controls',async()=>{
+      await db.$executeRawUnsafe('CREATE TABLE "WorkforceAuditLog" ("id" text PRIMARY KEY,"companyId" text,"storeId" text,"actorUserId" text,"action" text,"entityType" text,"entityId" text,"afterJson" jsonb,"createdAt" timestamptz)');
+      await db.$executeRawUnsafe('ALTER TABLE "StocktakeLine" DROP CONSTRAINT "StocktakeLine_stocktakeId_fkey", ADD CONSTRAINT "StocktakeLine_stocktakeId_fkey" FOREIGN KEY ("stocktakeId") REFERENCES "Stocktake"("id") ON DELETE CASCADE');
+      await db.$executeRawUnsafe('ALTER TABLE "InventoryCountEvent" ADD CONSTRAINT "InventoryCountEvent_stocktake_fkey" FOREIGN KEY ("stocktakeId") REFERENCES "Stocktake"("id") ON DELETE CASCADE');
+      const actors={};
+      for(const key of ['clear','bulk-zero','delete','count','read']){
+        const capabilities=key==='read'?['inventory.read']:['inventory.read','inventory.'+key],username='action.'+key;
+        const created=await createStaffAccount(db,owner,{...input,username,grants:[{storeId:'a1',profile:'AUDITOR',capabilities}]});
+        const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});assert.equal(login.status,200,JSON.stringify(login.data));actors[key]={id:created.id,token:login.data.token};
+      }
+      await db.$executeRaw`INSERT INTO "Product" ("id","companyId","name","sku") VALUES ('action-product-2','a','Second isolated item','ACT-2')`;
+      const path='/api/inventory-v2/stocktakes/action-take';
+      await db.$executeRaw`INSERT INTO "Stocktake" ("id","companyId","storeId","name") VALUES ('action-take','a','a1','Isolated actions'),('foreign-action','a','a2','Control')`;
+      await db.$executeRaw`INSERT INTO "StocktakeLine" ("id","stocktakeId","productId","expectedQuantity","countedQuantity") VALUES ('action-line','action-take','pa',5,3),('action-line-2','action-take','action-product-2',7,4),('foreign-line','foreign-action','pa',9,8)`;
+      const invoke=(who,suffix,method,body,storeId='a1')=>request(path+suffix,{token:actors[who].token,storeId,method,body});
+      const clear={expectedVersion:0,clientEventId:crypto.randomUUID()},bulk={lines:[{lineId:'action-line',expectedVersion:1},{lineId:'action-line-2',expectedVersion:0}],clientBatchId:crypto.randomUUID()},del={clientEventId:crypto.randomUUID(),confirmed:true};
+      const controls=await db.$queryRaw`SELECT "id","quantity" FROM "StockMovement" ORDER BY "id"`;
+      for(const who of ['read','count'])for(const [suffix,method,body] of [['/count/action-line','DELETE',clear],['/count/bulk-zero','POST',bulk],['','DELETE',del]])assert.equal((await invoke(who,suffix,method,body)).status,403);
+      assert.equal((await invoke('clear','/count/foreign-line','DELETE',clear)).status,404);
+      assert.equal((await invoke('clear','/count/action-line','DELETE',clear,'a2')).status,403);
+      const cleared=await invoke('clear','/count/action-line','DELETE',clear);assert.equal(cleared.status,200,JSON.stringify(cleared.data));
+      assert.equal((await invoke('clear','/count/action-line','DELETE',clear)).data.replayed,true);
+      const peer=await createStaffAccount(db,owner,{...input,username:'action.clear.peer',grants:[{storeId:'a1',profile:'AUDITOR',capabilities:['inventory.read','inventory.clear']}]});
+      const peerLogin=await request('/api/backoffice-staff/login',{method:'POST',body:{username:'action.clear.peer',pin:input.pin}});
+      assert.equal((await request(path+'/count/action-line',{token:peerLogin.data.token,storeId:'a1',method:'DELETE',body:clear})).status,409);
+      assert.equal((await request('/api/inventory-v2/stocktakes/stb/count/line-a',{token:actors.clear.token,storeId:'a1',method:'DELETE',body:clear})).status,404);
+
+      assert.equal((await invoke('clear','/count/action-line','DELETE',{...clear,expectedVersion:1})).status,409);
+      assert.equal((await invoke('clear','/count/action-line-2','DELETE',clear)).status,409);
+      const invalid={...bulk,lines:[bulk.lines[0],{lineId:'foreign-line',expectedVersion:0}]};assert.equal((await invoke('bulk-zero','/count/bulk-zero','POST',invalid)).status,404);
+      const before=await db.$queryRaw`SELECT "id","countVersion","countedQuantity" FROM "StocktakeLine" WHERE "stocktakeId"='action-take' ORDER BY "id"`;
+      assert.equal(Number(before[0].countVersion),1);assert.equal(before[0].countedQuantity,null);
+      const saved=await invoke('bulk-zero','/count/bulk-zero','POST',bulk);assert.equal(saved.status,200,JSON.stringify(saved.data));assert.equal(saved.data.updated,2);
+      assert.equal((await invoke('bulk-zero','/count/bulk-zero','POST',{...bulk,lines:[...bulk.lines].reverse()})).data.replayed,true);
+      assert.equal((await invoke('bulk-zero','/count/bulk-zero','POST',{...bulk,lines:[bulk.lines[0]]})).status,409);
+      const competing=await Promise.all([1,2].map(()=>invoke('clear','/count/action-line','DELETE',{expectedVersion:2,clientEventId:crypto.randomUUID()})));assert.deepEqual(competing.map(r=>r.status).sort(),[200,409]);
+      let entered,release;const reached=new Promise(r=>entered=r),wait=new Promise(r=>release=r);
+      beforeInventoryAction=async()=>{entered();await wait};
+      const pending=invoke('clear','/count/action-line-2','DELETE',{expectedVersion:1,clientEventId:crypto.randomUUID()});await reached;
+      await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "active"=false WHERE "userId"=${actors.clear.id}`;release();assert.equal((await pending).status,403);
+      assert.equal((await invoke('delete','','DELETE',{...del,confirmed:false})).status>=400,true);
+      await db.$executeRaw`UPDATE "Stocktake" SET "status"='FINALIZED' WHERE "id"='action-take'`;
+      assert.equal((await invoke('delete','','DELETE',del)).status,409);assert.equal((await invoke('bulk-zero','/count/bulk-zero','POST',bulk)).data.replayed,true);
+      await db.$executeRaw`UPDATE "Stocktake" SET "status"='DRAFT' WHERE "id"='action-take'`;
+      const removed=await invoke('delete','','DELETE',del);assert.equal(removed.status,200,JSON.stringify(removed.data));assert.equal(removed.data.deleted,true);
+      assert.equal((await invoke('delete','','DELETE',del)).data.replayed,true);
+      assert.equal((await invoke('delete','','DELETE',{...del,clientEventId:crypto.randomUUID()})).status,404);
+      await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "active"=false WHERE "userId"=${actors.delete.id}`;assert.equal((await invoke('delete','','DELETE',del)).status,403);
+      assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "WorkforceAuditLog" WHERE "entityType"='BACKOFFICE_INVENTORY_OPERATION'`)[0].n),4);
+      assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "StocktakeLine" WHERE "stocktakeId"='action-take'`)[0].n),0);
+      const foreign=(await db.$queryRaw`SELECT "countVersion","countedQuantity" FROM "StocktakeLine" WHERE "id"='foreign-line'`)[0];assert.equal(foreign.countVersion,0);assert.equal(Number(foreign.countedQuantity),8);
+      assert.deepEqual(await db.$queryRaw`SELECT "id","quantity" FROM "StockMovement" ORDER BY "id"`,controls);
+      assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale" WHERE "id"='control'`)[0].amount),77.33);
     });
   }finally{
     if(server)await new Promise(resolve=>{server.close(resolve);server.closeAllConnections()});await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();if(oldSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=oldSecret;

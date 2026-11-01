@@ -1,8 +1,14 @@
+## 01/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / THREE INDEPENDENT INVENTORY ACTIONS / SOURCE CANDIDATE
+
+Same retained owner feat/backoffice-inventory-actions-20261101, continuation of3480/201a01a. Added inventory.clear, inventory.bulk-zero and inventory.delete independently, each requires inventory.read only. Grant catalogue21 in this source candidate; old profiles and all existing accounts gain no right automatically. Owner editor is data driven and now exposes each implemented checkbox. Real native InventoryV2Center/InventoryFastCount show only each granted action, including clear/selected-zero without ordinary counting. Actual EMPLOYEE/session/store identity retained; exact API admission and fresh transaction-time grant/license/module/lifecycle checks precede replay and writes. Parent/line locks, all-line versions, atomic COUNT/RECOUNT/CLEAR events, durable actor/payload-bound receipts and explicit draft-delete confirmation. Identical retries reuse the exact saved request; uncertain replies freeze navigation. Known rejections refresh scoped state. Owner native handlers/defaults unchanged. No schema, hosted grants/credentials or business writes.
+
+Local mounted/UI suite20PASS/0FAIL/0SKIP; overlapping broader staff/native suite49PASS/0FAIL/3SKIP (isolated PostgreSQL absent locally); Work build PASS. Native PostgreSQL HTTP tests added for independent rights/denial, foreign line/store, atomic versions, normalized exact/conflicting replay, concurrent writers, transaction-time withdrawal, finalization protection and deletion replay with durable audit plus stock/financial controls. These DB checks remain NOT TESTED locally; full CI must execute them. No functional LAB/USER PASS, manual or numbered closure. Full exact PR/main CI and guarded healthy release still required. All-functions scope remains ASSIGNED/OPEN; remaining inventory conversion/audit/value/import/zones/delegation, broader native commerce and separate company authority continue with this owner.
+
 # Common Owner BackOffice: permission integration ledger
 
 Scope: CENTRAL-BACKOFFICE-ACCESS-01, retained owner feat/backoffice-common-permissions-20261101.
 
-This is implementation tracking, not a usage manual or a PASS claim. The 55 families and 340 candidate action names below require native-operation review; a name does not establish that the native module offers that action. Only the existing 18 validated capabilities are currently grantable. No wildcard, role promotion, automatic grant or company authority follows from this ledger.
+This is implementation tracking, not a usage manual or a PASS claim. The 55 families and 342 candidate action names below require native-operation review; a name does not establish that the native module offers that action. The current source candidate has 21 exact validated capability keys; the previous installed version has 18 until the release below is verified. No wildcard, role promotion, automatic grant or company authority follows from this ledger.
 
 The machine discovery snapshot follows the complete entry import graph, including POS/platform/bootstrap candidates, and inventories server route declarations. Those candidates require explicit Owner BackOffice classification. Dynamic HTML and controls, computed requests, route mounts and the recorded parse failure remain manual review items. The snapshot is not an authorization policy and cannot prove complete runtime coverage.
 
@@ -23,7 +29,7 @@ Installed shared UI: BackofficeShell/BackofficeStores, native StoreCloudPage shi
 | Τιμές και τιμοκατάλογοι | STORE | read, edit, bulk-edit, import, export, print | NOT INTEGRATED |
 | Προσφορές | STORE | read, create, edit, activate, delete | NOT INTEGRATED |
 | Αποθήκη και κινήσεις | STORE | read, receive, adjust, waste, reverse, import, export, print | NOT INTEGRATED |
-| Απογραφή | STORE | read, count, create, finalize, reopen, delete, import, export, print | inventory.read, inventory.count, inventory.create, inventory.finalize |
+| Απογραφή | STORE | read, count, clear, bulk-zero, create, finalize, reopen, delete, import, export, print | inventory.read, inventory.count, inventory.clear, inventory.bulk-zero, inventory.delete, inventory.create, inventory.finalize |
 | Μεταφορές αποθήκης | STORE | read, create, approve, dispatch, receive, cancel, export, print | NOT INTEGRATED |
 | Συνταγές | COMPANY | read, create, edit, delete, produce, export | NOT INTEGRATED |
 | Ψησίματα και παραγωγή | STORE | read, create, finalize, cancel, configure, export | NOT INTEGRATED |

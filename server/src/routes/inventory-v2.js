@@ -1,3 +1,4 @@
+import {staffInventoryAction} from "../services/backoffice-staff-inventory-actions.js";
 import {requireStaffGrant} from "../services/backoffice-staff-access.js";
 import {inventoryStocktakeScopeAllowed,inventoryStoreScopeAllowed} from "../lib/inventory-stocktake-scope.js";
 import {lockDraftInventoryStocktake} from "../lib/inventory-stocktake-draft.js";
@@ -14,6 +15,18 @@ const id=()=>crypto.randomUUID(),n=value=>Number(value||0),hash=value=>crypto.cr
 const roles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const owner=(req,res,next)=>roles.has(req.user?.role)||req.user?.isSuperAdmin||req.user?.staffAccess===true&&['inventory.create','inventory.finalize'].includes(req.staffGrant?.capability)?next():res.status(403).json({error:"Η διαχείριση Inventory 2.0 απαιτεί δικαίωμα ιδιοκτήτη ή διαχειριστή."});
 const stocktakeAccess=async(req,stocktakeId)=>{const companyId=req.user.companyId,scoped=req.user.tokenType==="INVENTORY_COUNTER"?req.user.stocktakeId:null;if(scoped&&scoped!==stocktakeId)return null;const rows=await prisma.$queryRaw`SELECT st."id",st."companyId",st."storeId",st."name",st."status",st."scopeType",st."scopeJson",st."liveDuringTrading",st."recountPolicy",st."startedAt",st."finalizedAt",st."snapshotJson",s."name" AS "storeName" FROM "Stocktake" st JOIN "Store" s ON s."id"=st."storeId" WHERE st."id"=${stocktakeId} AND st."companyId"=${companyId} LIMIT 1`;return inventoryStocktakeScopeAllowed(req.user,rows[0])?rows[0]:null};
+
+// These three personal writers retain EMPLOYEE identity and transaction-time
+// authority. Ordinary Owner requests continue into the native handlers below.
+for(const [method,path,capability] of [
+  ['delete','/stocktakes/:stocktakeId/count/:lineId','inventory.clear'],
+  ['post','/stocktakes/:stocktakeId/count/bulk-zero','inventory.bulk-zero'],
+  ['delete','/stocktakes/:stocktakeId','inventory.delete']
+])router[method](path,async(req,res,next)=>{
+  if(req.user?.staffAccess!==true)return next();
+  if(req.staffGrant?.capability!==capability)return res.status(403).json({error:'Δεν επιτρέπεται η ενέργεια.'});
+  try{res.json(await staffInventoryAction(prisma,req,capability))}catch(error){next(error)}
+});
 
 router.get("/zones",owner,async(req,res,next)=>{try{const storeId=String(req.query.storeId||""),boundStoreId=req.user.storeId||"";const rows=await prisma.$queryRaw`SELECT "id","storeId","code","name","active","createdAt" FROM "InventoryZone" WHERE "companyId"=${req.user.companyId} AND (${storeId}='' OR "storeId"=${storeId}) AND (${boundStoreId}='' OR "storeId"=${boundStoreId}) ORDER BY "storeId","name"`;res.json(rows)}catch(e){next(e)}});
 router.post("/zones",owner,async(req,res,next)=>{try{const b=z.object({storeId:z.string().min(1),code:z.string().trim().min(1).max(30).transform(v=>v.toUpperCase()),name:z.string().trim().min(1).max(100)}).parse(req.body||{});if(!inventoryStoreScopeAllowed(req.user,b.storeId))return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const store=await prisma.store.findFirst({where:{id:b.storeId,companyId:req.user.companyId,active:true},select:{id:true}});if(!store)return res.status(404).json({error:"Δεν βρέθηκε το κατάστημα."});const zoneId=id();await prisma.$executeRaw`INSERT INTO "InventoryZone" ("id","companyId","storeId","code","name","createdByUserId") VALUES (${zoneId},${req.user.companyId},${b.storeId},${b.code},${b.name},${req.user.id})`;res.status(201).json({id:zoneId,...b})}catch(e){if(e?.code==="P2010")e.status=409;next(e)}});
