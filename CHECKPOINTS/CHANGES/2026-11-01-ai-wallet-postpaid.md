@@ -1,3 +1,7 @@
+## 01/11/2026 — EXACT FULL CI PASS / PEER RELEASE RECEIPT INTEGRATION
+
+Full PR CI41295791144 and recovery41295791134 PASS at05a20eeb; all six real native postpaid/HTTP subtests PASS unskipped, mounted and pure cases PASS. Work build16.10s/TABLE_SERVICE. No hosted PASS yet. Before merge, peer FTEXT release receipt3455 advanced main to49c2158be and conflicted only in the generated tracker PDF. Preserve all peer receipt/manual/evidence and merged Markdown. The source PR retains the current main PDF byte-for-byte (the before-source claim PDF is already merged); final post-LAB receipt regenerates all required PDFs. Runtime files remain byte-identical to05a20eeb. Exact integrated-head full CI still required; no deploy bypass, real credit, receipt, configuration, external email or paid provider call.
+
 ## 01/11/2026 — NATIVE CI REVIEW / FOREIGN STORE RESPONSE
 
 Initial superseded head b96efd86 full run41295037343 failed one native HTTP assertion (foreign company/store returned503 instead of404); all five remaining native postpaid subtests passed, and recovery run41295037341 passed. Added a non-locking scoped existence check before lifecycle/report locks, retaining the locked scope recheck afterward and all lock ordering. No access was granted and no data was written in the failing case. Re-running the exact corrected/integrated head; no CI or LAB PASS claim yet. Preserved peer monthly infrastructure receipt3454/current mainca922a8d, regenerated tracker PDF from merged Markdown.
