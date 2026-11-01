@@ -1,5 +1,14 @@
 # AI-COST-PASS-THROUGH-01 — LAB NOT EXECUTED / ENVIRONMENT UNAVAILABLE / RESUME PLAN
 
+## COST-LAB-20261101-ENABLE AFTER / ASK BEFORE
+
+Temporary LAB masterON saved once; native success message "Οι ρυθμίσεις αποθηκεύτηκαν.". Closed/reopened wallet and explicitly reselected LAB: masterON persisted; invoice/email OFF. Available3683091micro, reserved930033micro, settled406876micro, credits5020000micro, history13, debt0 and rates0 unchanged. No credit, repayment, provider call or email from the enable step. This is control setup, not whole-feature PASS.
+
+Before next identified action COST-LAB-20261101-ASK: authenticated SuperAdmin, new empty session-only assistant conversation, explicitly selected "MYWORKSTATION LAB · ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ", all-stores checkbox OFF. Same wallet baseline above, pending hold untouched; native query is one plain test message: "Για δοκιμή λειτουργίας, απάντησε μόνο με τη λέξη Έτοιμος." No report, paper, invoice or mutation requested. Expect a positive sum of newly settled PLATFORM_CUSTOMER_ASSISTANT charges equal to available/gross reduction, with historical hold/credits/debt/rates unaffected. Count actual provider rows, not assumed1. No real customer activation/funding/mail. Do not retry an ambiguous result.
+
+ASK before recordedUTC:2026-11-01T18:43:51.213098+00:00
+
+
 ## RESUMED SAME ROOT — COST-LAB-20261101-ENABLE BEFORE ACTION
 
 Same retained owner/executor; no receiving page or ownership transfer. Browser and workspace restored, MFA sign-in completed through secure browserAuth. Current main201a01a contains documentation only after installed201e; peer owner/source records preserved. Render readback still exact201e4c21cd3c2a480a94b194a7b350523633e9f0 / dep-dbjmpbuc6qcc73c0arv0 LIVE. Existing exact main CI41326081468:5118server+8backup/0FAIL/0SKIP and guarded41327819201 remain valid release evidence. Updated native UI now displays the new service/activity wording.
