@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {once} from 'node:events';
 import express from 'express';
-import {readMonthlyInvoiceAudit} from '../src/services/monthly-invoice-audit.js';
+import {readMonthlyInvoiceAudit,readMonthlyInvoiceSnapshotProjectionInTransaction} from '../src/services/monthly-invoice-audit.js';
 import {createMonthlyInvoiceAuditRouter} from '../src/routes/monthly-invoice-audit.js';
 
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
@@ -112,6 +112,43 @@ test('native monthly invoice audit executes the registered reader with complete 
    await db.$executeRawUnsafe('ALTER TABLE "InvoiceDraftAlias" RENAME TO "SavedInvoiceDraftAlias"');
    const r=await read();assert.equal(r.coverage.complete,false);assert.equal(r.summary,null);assert.deepEqual(r.items,[]);assert.equal(r.allClear,false);
    const [exists]=await db.$queryRawUnsafe(`SELECT to_regclass('"InvoiceDraftAlias"') IS NOT NULL AS exists`);assert.equal(exists.exists,false);await db.$executeRawUnsafe('ALTER TABLE "SavedInvoiceDraftAlias" RENAME TO "InvoiceDraftAlias"');
+  });
+
+  await t.test('C2 actual bounded SQL recognizes stored operator date without raw bytes, posting authority or source writes',async()=>{
+   const input={storeId:'control',month:'2026-10'},report=()=>read(input),snapshot=()=>db.$transaction(async tx=>{await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');return readMonthlyInvoiceSnapshotProjectionInTransaction(tx,owner,input)},{isolationLevel:'RepeatableRead',timeout:30000});
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" VALUES('c2-source','c','control','sup','INVOICE','A 4201','2026-10-09',12.34,'DRAFT','POS_OCR_DRAFT','c2-order',NULL,'2026-10-28'),('c2-opaque','c','control','sup','INVOICE','OPAQUE-20261031-E','2026-10-31',1,'DRAFT','POS_OCR_DRAFT','c2-opaque-order',NULL,'2026-10-31')`);
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseOrder" VALUES('c2-order','c','control','sup','NEW','A 4201','c2-source','2026-10-28'),('c2-opaque-order','c','control','sup','NEW','OPAQUE-20261031-E','c2-opaque','2026-10-31')`);
+   await db.$executeRaw`INSERT INTO "DocumentAttachment" VALUES('c2-page0','c','control','image/jpeg',${'c'.repeat(64)},'PRIVATE-PAGE0'),('c2-page1','c','control','image/jpeg',${'d'.repeat(64)},'PRIVATE-PAGE1')`;
+   await db.$executeRawUnsafe(`INSERT INTO "DocumentInbox" VALUES('c2-inbox0','c','control','c2-page0','IN_REVIEW','2026-10-28'),('c2-inbox1','c','control','c2-page1','IN_REVIEW','2026-10-28')`);
+   const header={version:'POS_FAST_HANDOFF_V1',fullReader:'ASSISTANT',lifecycleGeneration:'0',documentType:'INVOICE',supplierId:'sup',documentNumber:'A 4201',documentDate:'2026-10-09',totalGross:12.34,pageCount:2};
+   const primary={rawText:'PRIVATE-RAW-OCR',lines:[{private:'NOT-RETURNED'}],posHandoff:{...header,pageIndex:0,primaryJobId:'c2-primary',pageJobIds:['c2-primary','c2-secondary']},posBackground:{status:'COMPLETED_WITH_REVIEW',reconciliationRequired:true}},secondary={rawText:'PRIVATE-SECONDARY',posHandoff:{...header,pageIndex:1},posBackground:{status:'FAILED'}};
+   const save=async(p=primary,s=secondary)=>{await db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify(p)}::jsonb WHERE "id"='c2-primary'`;await db.$executeRaw`UPDATE "AiReaderJob" SET "resultJson"=${JSON.stringify(s)}::jsonb WHERE "id"='c2-secondary'`};
+   await db.$executeRaw`INSERT INTO "AiReaderJob"("id","companyId","storeId","attachmentId","purchaseDocumentId","status","resultJson") VALUES('c2-primary','c','control','c2-page0','c2-source','AWAITING_APPROVAL',${JSON.stringify(primary)}::jsonb),('c2-secondary','c','control','c2-page1',NULL,'POS_FAILED',${JSON.stringify(secondary)}::jsonb)`;
+   // Original minimal job schema has no stage. Old numeric facts stay complete,
+   // but this optional recognition cannot assert a date or weaken HOLD.
+   let before=await digest(),old=await report();assert.equal(old.coverage.complete,true);assert.equal(old.items.find(x=>x.id==='inbox:c2-inbox1').issueDay,null);assert.equal(old.items.find(x=>x.id==='doc:c2-source').sources.length,2);assert.equal((await snapshot()).freezeEligibility.eligible,false);assert.equal(await digest(),before);
+   await db.$executeRawUnsafe('ALTER TABLE "AiReaderJob" ADD COLUMN "stage" text');
+   await db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "stage"=CASE WHEN "id"='c2-primary' THEN 'POS_BACKGROUND_COMPLETE' WHEN "id"='c2-secondary' THEN 'POS_BACKGROUND_FAILED' ELSE 'LOCAL' END`);
+   before=await digest();const good=await report(),row=good.items.find(x=>x.id==='inbox:c2-inbox1'),candidate=await snapshot();assert.equal(good.coverage.complete,true);assert.equal(good.coverage.sourceCounts.jobs,2);assert.equal(row.issueDay,'2026-10-09');assert.equal(row.status,'IDENTITY_UNKNOWN');assert.equal(row.totalCents,null);assert.equal(row.documentNumber,null);assert.match(row.reasons.join(' '),/κεφαλίδα χειριστή/);assert.match(row.reasons.join(' '),/εκκρεμή έλεγχο/);assert.equal(good.items.find(x=>x.id==='doc:c2-opaque').sources.length,2);assert.equal(good.items.find(x=>x.id==='doc:c2-opaque').status,'UNPOSTED');assert.equal(candidate.freezeEligibility.eligible,true);assert.equal(candidate.invoices.items.find(x=>x.id==='inbox:c2-inbox1').totalAmount,null);assert.equal(JSON.stringify(good).includes('PRIVATE-'),false);assert.equal(JSON.stringify(good).includes('pageJobIds'),false);assert.equal(await digest(),before);
+   // A representation link is never a numeric posting proof, including a
+   // self-target with plausible APPROVED/StockPosting rows.
+   await db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "status"='APPROVED' WHERE "id"='c2-opaque'`);await db.$executeRawUnsafe(`INSERT INTO "PurchaseOrderPosting" VALUES('c2-opaque-order','c','c2-opaque')`);await db.$executeRawUnsafe(`INSERT INTO "InvoiceStockPosting" VALUES('c','control','c2-opaque-order','c2-opaque','c2-opaque','PURCHASE_ORDER')`);
+   before=await digest();assert.equal((await report()).items.find(x=>x.id==='doc:c2-opaque').status,'UNPOSTED');assert.equal(await digest(),before);
+   const invalid=[
+    (p,s)=>{p.posHandoff.pageJobIds='not-an-array'},(p,s)=>{p.posHandoff.pageJobIds=['c2-primary',{}]},(p,s)=>{p.posHandoff.pageJobIds=['c2-primary','x'.repeat(129)]},(p,s)=>{p.posHandoff.pageJobIds=Array(6).fill('c2-secondary')},(p,s)=>{p.posHandoff.pageJobIds=['c2-primary','c2-primary']},
+    (p,s)=>{s.posHandoff.documentNumber='é'.repeat(129)},(p,s)=>{s.posHandoff.documentDate='2026-10-09X'},(p,s)=>{s.posHandoff.documentNumber='A 4202'},(p,s)=>{s.posHandoff.supplierId='foreign'},(p,s)=>{s.posHandoff.totalGross='12.34000001'},(p,s)=>{s.posHandoff.documentDate=null},(p,s)=>{s.posHandoff.pageIndex=0},(p,s)=>{s.posHandoff.primaryJobId=null},(p,s)=>{s.posHandoff.pageJobIds={bad:true}},(p,s)=>{s.posHandoff.documentNumber=4201}
+   ];
+   for(const mutate of invalid){const p=structuredClone(primary),s=structuredClone(secondary);mutate(p,s);await save(p,s);before=await digest();const invalidReport=await report();assert.equal(invalidReport.items.find(x=>x.id==='inbox:c2-inbox1').issueDay,null,mutate.toString());assert.ok((await snapshot()).freezeEligibility.reasons.includes('INVOICE_ISSUE_DATE_UNKNOWN'));assert.equal(await digest(),before)}await save();
+   await db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "stage"='LOCAL' WHERE "id"='c2-secondary'`);assert.equal((await report()).items.find(x=>x.id==='inbox:c2-inbox1').issueDay,null);await db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "stage"='POS_BACKGROUND_FAILED',"companyId"='x',"storeId"='foreign' WHERE "id"='c2-secondary'`);assert.equal((await report()).items.find(x=>x.id==='inbox:c2-inbox1').issueDay,null);await db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "companyId"='c',"storeId"='control' WHERE "id"='c2-secondary'`);
+   // Known issue day controls both month directions; unknown remains receipt-
+   // selected, and no original/source row is deleted by the reader.
+   const oldPrimary=structuredClone(primary),oldSecondary=structuredClone(secondary);oldPrimary.posHandoff.documentDate=oldSecondary.posHandoff.documentDate='2026-09-30';await save(oldPrimary,oldSecondary);await db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "documentDate"='2026-09-30' WHERE "id"='c2-source'`);
+   assert.equal((await report()).items.some(x=>x.id==='inbox:c2-inbox1'),false);assert.equal((await read({...input,month:'2026-09'})).items.find(x=>x.id==='inbox:c2-inbox1').issueDay,'2026-09-30');
+   await save();await db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "documentDate"='2026-10-09' WHERE "id"='c2-source'`);await db.$executeRawUnsafe(`UPDATE "DocumentInbox" SET "receivedAt"='2026-11-01' WHERE "storeId"='control'`);assert.equal((await report()).items.find(x=>x.id==='inbox:c2-inbox1').issueDay,'2026-10-09');
+   await db.$executeRawUnsafe(`INSERT INTO "PurchaseDocument" SELECT 'c2-paged-'||n,'c','control','sup','INVOICE','C2 '||n,'2026-10-10'::timestamp,1,'DRAFT','MANUAL',NULL,NULL,'2026-10-10'::timestamp FROM generate_series(1,51)n`);const paged=await report();assert.ok(paged.nextPage);await save(primary,{...secondary,posHandoff:{...secondary.posHandoff,documentDate:'2026-10-08'}});await assert.rejects(read({...input,page:paged.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');await save();
+   // Missing resultJson also fails closed without referencing the absent column.
+   await db.$executeRawUnsafe(`UPDATE "DocumentInbox" SET "receivedAt"='2026-10-28' WHERE "storeId"='control'`);
+   const beforeCapabilityLoss=await report();await db.$executeRawUnsafe('ALTER TABLE "AiReaderJob" RENAME COLUMN "resultJson" TO "SavedResultJson"');try{const missing=await report();assert.equal(missing.coverage.complete,true);assert.notEqual(missing.fingerprint,beforeCapabilityLoss.fingerprint);assert.ok((await snapshot()).freezeEligibility.reasons.includes('INVOICE_ISSUE_DATE_UNKNOWN'))}finally{await db.$executeRawUnsafe('ALTER TABLE "AiReaderJob" RENAME COLUMN "SavedResultJson" TO "resultJson"')}
   });
 
   await t.test('actual SQL count above safe source cap suppresses findings rather than exposing partial exact totals',async()=>{
