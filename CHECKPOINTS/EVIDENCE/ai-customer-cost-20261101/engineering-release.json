@@ -1,0 +1,70 @@
+{
+  "recordedAt": "2026-11-01T16:50:23.267Z",
+  "scope": "Engineering release only; not functional LAB acceptance",
+  "source": {
+    "pr": 3475,
+    "head": "5a773f3610009f51b390d765d9fcb19c2e19fb62",
+    "merge": "ef9e0e740a574731e76e2188ea7afdc6d5b6cc66",
+    "retainedOwner": "feat/ai-owner-wallet-20261022",
+    "executor": "root"
+  },
+  "ci": {
+    "sourcePr": {
+      "run": 41323373983,
+      "serverPass": 5113,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "sourceMain": {
+      "revision": "ef9e0e740a574731e76e2188ea7afdc6d5b6cc66",
+      "run": 41324777852,
+      "serverPass": 5116,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "deployedMain": {
+      "revision": "201e4c21cd3c2a480a94b194a7b350523633e9f0",
+      "run": 41326081468,
+      "job": 124907694187,
+      "serverPass": 5118,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "recovery": {
+      "run": 41323373986,
+      "job": 124898114632,
+      "result": "SUCCESS"
+    }
+  },
+  "release": {
+    "run": 41327819201,
+    "job": 124911447565,
+    "expectedRevision": "201e4c21cd3c2a480a94b194a7b350523633e9f0",
+    "pinnedTriggerAt": "2026-11-01T16:45:35.3811988Z",
+    "healthyObservedAt": "2026-11-01T16:47:58.3792866Z",
+    "renderDeploy": "dep-dbjmpbuc6qcc73c0arv0",
+    "renderFinishedAt": "2026-11-01T16:47:45.583242Z",
+    "renderStatus": "live",
+    "ownedRuntimePathsCompared": 22,
+    "ownedRuntimeChangesSinceSourceMain": []
+  },
+  "functionalAcceptance": {
+    "state": "NOT STARTED",
+    "reason": "Work environment unavailable; exec-server disconnected and browser namespace removed",
+    "newLabStateChanges": 0,
+    "newLabPaidRequests": 0,
+    "actualCustomerFundingSubmitted": false,
+    "actualCustomerBillingActivated": false,
+    "actualCustomerEmailSent": false
+  },
+  "remaining": [
+    "Restore workspace/browser, verify latest release and refresh before/control values before the planned LAB sequence",
+    "Verified external EUR tariffs; no invented FX/estimated charges",
+    "Shared platform/infrastructure cost allocation",
+    "Unexecuted live service paths and retained broader model/REVIEW residuals",
+    "Manual/shared PDF PASS closure only after real measured functional acceptance"
+  ]
+}
