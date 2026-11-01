@@ -34,7 +34,8 @@ for sec in sections:
  lines=sec.splitlines(); block=[Paragraph(fmt(lines[0]),heading)]
  for line in lines[1:]:
   if not line.strip():continue
-  if line.startswith('## '):continue
+  if line.startswith('## '):
+   block.append(Paragraph(fmt(line[3:]),heading));continue
   style=small if line.startswith('**Ανάληψη') or line.startswith('**Ολοκλήρωση') else body
   block.append(Paragraph(fmt(line),style))
  block.append(Spacer(1,3*mm));story.append(KeepTogether(block))
