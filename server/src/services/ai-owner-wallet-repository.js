@@ -1,3 +1,5 @@
+import {postpaidRecipientMarker} from './ai-wallet-postpaid-recipients.js';
+import {createPostpaidWallet,readPostpaidDebt,publicPostpaidActivity} from './ai-wallet-postpaid.js';
 import {sanitizeWalletReviewEvidence} from './ai-owner-wallet-review-evidence.js';
 import {publicWalletActivity,reservationWalletActivity} from './ai-wallet-activity.js';
 import {assertAiWalletCatalogue,createAiWalletSchema,validateAiWalletSchema} from './ai-owner-wallet-schema.js';
@@ -53,12 +55,12 @@ export function createAiOwnerWalletRepository(db){
     await ensure();
     const row=(await db.$queryRaw`SELECT * FROM "AiOwnerWallet" WHERE "companyId"=${companyId}`)[0];
     const wallet=row?walletView(row):{companyId,currency:'EUR',enabled:false,emailEnabled:false,notificationOwnerId:'',balanceMicros:'0',reservedMicros:'0',availableMicros:'0',lastCreditMicros:'0',version:0,state:'EMPTY'};
-    const entries=storeId?await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature",(SELECT s."name" FROM "Store" s WHERE s."id"=e."storeId" AND s."companyId"=e."companyId") AS "storeName","usage"->'customerCharge' AS "customerCharge","tariff"->'activity' AS "activity","tariff"->>'model' AS "model","usage"->>'inputTokens' AS "inputTokens","usage"->>'outputTokens' AS "outputTokens","usage"->>'cachedInputTokens' AS "cachedInputTokens","usage"->>'pages' AS "pages",("resolutionReference" IS NOT NULL) AS "manuallyResolved",(SELECT jsonb_build_object('id',u."id",'name',u."fullName") FROM "User" u WHERE u."id"=e."actorId" AND (u."companyId"=e."companyId" OR u."role"::text='SUPER_ADMIN' OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=e."companyId"))) AS "actionUser","createdAt","settledAt" FROM "AiOwnerWalletEntry" e WHERE "companyId"=${companyId} AND ("storeId"=${storeId} OR "kind"='CREDIT') ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`:await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature",(SELECT s."name" FROM "Store" s WHERE s."id"=e."storeId" AND s."companyId"=e."companyId") AS "storeName","usage"->'customerCharge' AS "customerCharge","tariff"->'activity' AS "activity","tariff"->>'model' AS "model","usage"->>'inputTokens' AS "inputTokens","usage"->>'outputTokens' AS "outputTokens","usage"->>'cachedInputTokens' AS "cachedInputTokens","usage"->>'pages' AS "pages",("resolutionReference" IS NOT NULL) AS "manuallyResolved",(SELECT jsonb_build_object('id',u."id",'name',u."fullName") FROM "User" u WHERE u."id"=e."actorId" AND (u."companyId"=e."companyId" OR u."role"::text='SUPER_ADMIN' OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=e."companyId"))) AS "actionUser","createdAt","settledAt" FROM "AiOwnerWalletEntry" e WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`;
+    const entries=storeId?await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature",(SELECT s."name" FROM "Store" s WHERE s."id"=e."storeId" AND s."companyId"=e."companyId") AS "storeName","usage"->'customerCharge' AS "customerCharge","usage"->'postpaid' AS "postpaid","tariff"->'activity' AS "activity","tariff"->>'model' AS "model","usage"->>'inputTokens' AS "inputTokens","usage"->>'outputTokens' AS "outputTokens","usage"->>'cachedInputTokens' AS "cachedInputTokens","usage"->>'pages' AS "pages",("resolutionReference" IS NOT NULL) AS "manuallyResolved",(SELECT jsonb_build_object('id',u."id",'name',u."fullName") FROM "User" u WHERE u."id"=e."actorId" AND (u."companyId"=e."companyId" OR u."role"::text='SUPER_ADMIN' OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=e."companyId"))) AS "actionUser","createdAt","settledAt" FROM "AiOwnerWalletEntry" e WHERE "companyId"=${companyId} AND ("storeId"=${storeId} OR "kind"='CREDIT') ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`:await db.$queryRaw`SELECT "id","storeId","kind","status","creditedMicros","chargedMicros","reservedMicros","feature",(SELECT s."name" FROM "Store" s WHERE s."id"=e."storeId" AND s."companyId"=e."companyId") AS "storeName","usage"->'customerCharge' AS "customerCharge","usage"->'postpaid' AS "postpaid","tariff"->'activity' AS "activity","tariff"->>'model' AS "model","usage"->>'inputTokens' AS "inputTokens","usage"->>'outputTokens' AS "outputTokens","usage"->>'cachedInputTokens' AS "cachedInputTokens","usage"->>'pages' AS "pages",("resolutionReference" IS NOT NULL) AS "manuallyResolved",(SELECT jsonb_build_object('id',u."id",'name',u."fullName") FROM "User" u WHERE u."id"=e."actorId" AND (u."companyId"=e."companyId" OR u."role"::text='SUPER_ADMIN' OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=e."companyId"))) AS "actionUser","createdAt","settledAt" FROM "AiOwnerWalletEntry" e WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 100`;
     const notices=await db.$queryRaw`SELECT "id","kind","balanceMicros","amountMicros","emailStatus","createdAt" FROM "AiOwnerWalletNotice" WHERE "companyId"=${companyId} ORDER BY "createdAt" DESC,"id" DESC LIMIT 30`;
     const usage=storeId?await db.$queryRaw`SELECT "storeId",SUM("chargedMicros")::text AS "chargedMicros",COUNT(*)::int AS "requests" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "status"='SETTLED' GROUP BY "storeId"`:await db.$queryRaw`SELECT "storeId",SUM("chargedMicros")::text AS "chargedMicros",COUNT(*)::int AS "requests" FROM "AiOwnerWalletEntry" WHERE "companyId"=${companyId} AND "status"='SETTLED' GROUP BY "storeId"`;
     const json=value=>JSON.parse(JSON.stringify(value,(_,v)=>typeof v==='bigint'?v.toString():v));
     const usageSummary=await readWalletUsageSummary(db,companyId,storeId);
-    return {...wallet,customerPricing:await customerPricing(db,companyId),entries:json(entries.map(e=>({...e,customerCharge:publicCustomerCharge(e.customerCharge),activity:publicWalletActivity(e.activity,{companyId,storeId:e.storeId})}))),notices:json(notices),usage,usageSummary:json(usageSummary),usageScope:storeId?'SELECTED_STORE':'COMPANY',storeId};
+    return {...wallet,postpaid:await readPostpaidDebt(db,companyId),customerPricing:await customerPricing(db,companyId),entries:json(entries.map(e=>({...e,customerCharge:publicCustomerCharge(e.customerCharge),postpaid:publicPostpaidActivity(e.postpaid),activity:publicWalletActivity(e.activity,{companyId,storeId:e.storeId})}))),notices:json(notices),usage,usageSummary:json(usageSummary),usageScope:storeId?'SELECTED_STORE':'COMPANY',storeId};
   }
   async function configurePricing(companyId,{version,policy},actorId){
     const parsed=parseCustomerPricing(policy);
@@ -83,7 +85,7 @@ export function createAiOwnerWalletRepository(db){
       await tx.$executeRaw`UPDATE "AiOwnerWallet" SET "enabled"=${input.enabled},"emailEnabled"=${input.emailEnabled},"notificationOwnerId"=${input.notificationOwnerId||null},"version"="version"+1,"updatedAt"=NOW() WHERE "companyId"=${companyId}`;
       // Revoking email configuration invalidates every unsent notice. Never
       // retarget old notices to a newly selected owner/address.
-      if(!input.emailEnabled||row.notificationOwnerId!==input.notificationOwnerId)await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='REVOKED' WHERE "companyId"=${companyId} AND "emailStatus"='PENDING'`;
+      if(!input.emailEnabled||row.notificationOwnerId!==input.notificationOwnerId)await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='REVOKED' WHERE "companyId"=${companyId} AND "emailStatus"='PENDING' AND ("ownerId" IS NULL OR "ownerId" NOT LIKE ${postpaidRecipientMarker+'%'})`;
       await tx.$executeRaw`INSERT INTO "AiOwnerWalletAudit" ("id","companyId","actorId","event","detail") VALUES (${randomUUID()},${companyId},${actorId},'CONFIGURED',${JSON.stringify(input)}::jsonb)`;
       return {version:row.version+1};
     });
@@ -95,7 +97,10 @@ export function createAiOwnerWalletRepository(db){
     return db.$transaction(async tx=>{
       const row=await lock(tx,companyId);
       const existing=(await tx.$queryRaw`SELECT * FROM "AiOwnerWalletEntry" WHERE "kind"='CREDIT' AND "reference"=${receiptReference}`)[0];
-      if(existing){if(existing.companyId!==companyId||BigInt(existing.creditedMicros)!==amount)throw walletError('AI_WALLET_RECEIPT_CONFLICT');return {id:existing.id,replayed:true}}
+      if(existing){if(existing.feature==='POSTPAID_GRANT')throw walletError('AI_WALLET_RESERVED_REFERENCE',400);if(existing.companyId!==companyId||BigInt(existing.creditedMicros)!==amount)throw walletError('AI_WALLET_RECEIPT_CONFLICT');return {id:existing.id,replayed:true}}
+      // Preserve exact old prepaid replays, including an old user-chosen
+      // prefix, while reserving this namespace for new unpaid grants.
+      if(receiptReference.startsWith('POSTPAID/'))throw walletError('AI_WALLET_RESERVED_REFERENCE',400);
       if(BigInt(row.balanceMicros)+amount>MAX_WALLET_MICROS)throw walletError('AI_WALLET_LIMIT',400);
       const id=randomUUID(),cycleId=randomUUID();
       await tx.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","kind","reference","status","creditedMicros","actorId") VALUES (${id},${companyId},'CREDIT',${receiptReference},'CREDITED',${amount},${actorId})`;
@@ -198,7 +203,7 @@ export function createAiOwnerWalletRepository(db){
   })}
   async function enabledFor(companyId){await ensure();return (await db.$queryRaw`SELECT "enabled" FROM "AiOwnerWallet" WHERE "companyId"=${companyId}`)[0]?.enabled===true}
   async function invoiceEnabledFor(companyId,fallback){await ensure();return invoicePolicy(db,companyId,fallback)}
-  return {ensure,read,configure,configurePricing,credit,grantTrial,reserve,settle,review,enabledFor,invoiceEnabledFor,db};
+  return {ensure,read,configure,configurePricing,credit,grantTrial,reserve,settle,review,enabledFor,invoiceEnabledFor,db,...createPostpaidWallet({db,ensure,lock})};
 }
 
 
