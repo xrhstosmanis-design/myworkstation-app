@@ -6,14 +6,24 @@ export default function useFtextCashCheckout({api,storeId,pending,onRequest,onCo
  const scope=storeId+'|'+requestId,scopeRef=useRef(scope);scopeRef.current=scope;
  useEffect(()=>{
   if(!requestId)return;let cancelled=false,running=false,done=false;
-  const check=async()=>{if(running||done)return;running=true;try{
-   const data=await api(`/api/store-pos/stores/${storeId}/ftext-cash/${encodeURIComponent(requestId)}`);if(cancelled||scopeRef.current!==scope)return;
-   const row=data.request;if(row?.id!==requestId||row.storeId!==storeId||row.kind!=='FTEXT_CASH')throw new Error('Η απάντηση δεν αντιστοιχεί στην εντολή ftext.');
+  const current=()=>!cancelled&&scopeRef.current===scope;
+  const path=`/api/store-pos/stores/${storeId}/ftext-cash/${encodeURIComponent(requestId)}`;
+  const receive=row=>{
+   if(row?.id!==requestId||row.storeId!==storeId||row.kind!=='FTEXT_CASH')throw new Error('Η απάντηση δεν αντιστοιχεί στην εντολή ftext.');
    callbacks.current.onRequest(row);
    if(row.status==='CANCELLED'){done=true;callbacks.current.onCancelled?.(row);}
    else if(row.operatorReleaseMode==='RELEASED'){done=true;callbacks.current.onReleased?.(row);}
    else if(row.status==='SALE_COMMITTED'){done=true;callbacks.current.onCommitted(row);}
-   else if(row.status==='CONFIRMED'&&!row.operatorConfirmationRequired&&(!row.operatorOutcome||row.operatorOutcome==='YES')){await api(`/api/store-pos/stores/${storeId}/ftext-cash/${encodeURIComponent(requestId)}/finalize`,{method:'POST',body:'{}'});}
+  };
+  const check=async()=>{if(running||done)return;running=true;try{
+   const data=await api(path);if(!current())return;
+   const row=data.request;receive(row);
+   if(!done&&row.status==='CONFIRMED'&&!row.operatorConfirmationRequired&&(!row.operatorOutcome||row.operatorOutcome==='YES')){
+    await api(`${path}/finalize`,{method:'POST',body:'{}'});if(!current())return;
+    // Observe this same committed request now, rather than waiting another interval.
+    // The finalize response's bare saleId is not a scoped request confirmation.
+    const finalized=await api(path);if(!current())return;receive(finalized.request);
+   }
   }catch(error){if(!cancelled&&scopeRef.current===scope)callbacks.current.onError(error.message)}finally{running=false}};
   check();const timer=setInterval(check,1800);return()=>{cancelled=true;clearInterval(timer)};
  },[api,storeId,requestId]);
