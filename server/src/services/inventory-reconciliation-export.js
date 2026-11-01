@@ -4,6 +4,9 @@ import {fileURLToPath} from 'node:url';
 const number = x => x === null ? 'Άγνωστο' : String(x);
 const timestamp = x => x && Number.isFinite(new Date(x).getTime()) ? new Intl.DateTimeFormat('el-GR',{timeZone:'Europe/Athens',dateStyle:'short',timeStyle:'medium',hourCycle:'h23'}).format(new Date(x)) : 'Άγνωστο';
 const safeCell = x => typeof x === 'string' && /^[=+\-@\t\r]/.test(x) ? `'${x}` : x;
+// Prisma raw numeric columns may be Decimal objects, which SheetJS otherwise
+// silently drops. Keep missing values empty, but export actual quantities as numbers.
+const quantityCell = x => x === null || x === undefined || x === '' ? null : Number.isFinite(Number(x)) ? Number(x) : null;
 export function inventoryReconciliationWorkbook(report) {
   const wb = XLSX.utils.book_new();
   const append = (name,rows) => XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows.map(row=>row.map(safeCell))),name);
@@ -23,7 +26,7 @@ export function inventoryReconciliationWorkbook(report) {
   append('Κινήσεις',[['Προϊόν','ID κίνησης','Τύπος','Κατάταξη','Ποσότητα','Πριν','Μετά','Ώρα καταχώρησης','Ημερομηνία παραστατικού','Καταχώρηση παραστατικού','Πραγματική ώρα κίνησης','Χειριστής','Παραστατικό','Σύνδεση','Υπολογίστηκε','Ευρήματα'],
     ...report.rows.flatMap(x=>x.movements.map(m=>[x.productId,m.id,m.movementType,m.classification,m.quantity,m.balanceBefore,m.balanceAfter,timestamp(m.postedAt),timestamp(m.documentDate),timestamp(m.documentRecordedAt),null,m.actorName,m.documentNumber,m.sourceId,m.included,m.findings.join(', ')]))]);
   append('Καταμετρήσεις',[['Προϊόν','ID συμβάντος','Απογραφή','Τύπος','Πριν','Καταμέτρηση','Θεωρητικό','Χειριστής','Πηγή','Ώρα'],
-    ...report.rows.flatMap(x=>x.countHistory.map(e=>[x.productId,e.id,e.stocktakeId,e.eventType,e.previousQuantity,e.countedQuantity,e.expectedQuantity,e.actorName,e.source,timestamp(e.createdAt)]))]);
+    ...report.rows.flatMap(x=>x.countHistory.map(e=>[x.productId,e.id,e.stocktakeId,e.eventType,quantityCell(e.previousQuantity),quantityCell(e.countedQuantity),quantityCell(e.expectedQuantity),e.actorName,e.source,timestamp(e.createdAt)]))]);
   if(report.review?.available)append('Ιστορικό ελέγχου',[['Ταυτότητα','Ώρα','Ελεγκτής','Ενέργεια','Προϊόντα ή αναφορά','Ποσότητα διόρθωσης','Αιτιολογία','Τεκμηρίωση','Ενεργή'],
     ...report.review.history.map(r=>[r.id,timestamp(r.createdAt),r.actorName,r.action.kind,r.action.productIds?.join(', ')||r.action.productId||r.action.actionId,r.action.quantity??null,r.action.reason,r.action.evidence,r.active])]);
   return XLSX.write(wb,{bookType:'xlsx',type:'buffer'});

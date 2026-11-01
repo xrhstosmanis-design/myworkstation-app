@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import XLSX from 'xlsx';
+import {Prisma} from '@prisma/client';
 import {inventoryReconciliationWorkbook,inventoryReconciliationPdf} from '../src/services/inventory-reconciliation-export.js';
 const report={previous:{id:'a',name:'Παλιά'},current:{id:'b',name:'Νέα',storeId:'s'},explanation:'Προς έλεγχο',costMethod:'Αποθηκευμένο κόστος',
   summary:{shortageQuantity:23,surplusQuantity:0,netQuantity:-23,shortageValue:null,surplusValue:null,netValue:null,uncomputedItems:0,missingCostItems:1},
@@ -14,4 +15,9 @@ test('real XLSX keeps numeric deficits and unknown values; text cells cannot bec
 });
 test('real Greek PDF export completes and uses the bundled font',async()=>{
   const bytes=await inventoryReconciliationPdf(report);assert.equal(bytes.subarray(0,5).toString(),'%PDF-');assert.ok(bytes.length>5000);
+});
+test('count history exports real Prisma Decimal quantities without silently dropping them',()=>{
+  const r=structuredClone(report);r.rows[0].countHistory=[{id:'event',stocktakeId:'b',eventType:'RECOUNT',previousQuantity:new Prisma.Decimal('5'),countedQuantity:new Prisma.Decimal('4.25'),expectedQuantity:new Prisma.Decimal('6'),createdAt:'2026-10-01T10:03:04Z'}];
+  const sheet=XLSX.read(inventoryReconciliationWorkbook(r),{type:'buffer'}).Sheets['Καταμετρήσεις'];
+  assert.equal(sheet.E2.v,5);assert.equal(sheet.F2.v,4.25);assert.equal(sheet.G2.v,6);assert.equal(sheet.F2.t,'n');
 });
