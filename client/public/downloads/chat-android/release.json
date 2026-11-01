@@ -1,19 +1,19 @@
 {
   "package": "gr.myworkstation.chat.preview",
-  "version": "0.1.14-preview",
-  "versionCode": 15,
+  "version": "0.1.15-preview",
+  "versionCode": 16,
   "minimumAndroid": 8,
   "videoCaptureMinimumAndroid": 11,
   "maximumVideoSeconds": 30,
   "maximumVideoBytes": 12582912,
   "videoFormat": "MP4 H264/AAC",
-  "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.14-Preview.apk",
-  "sha256": "8e7a7c9f088d56f6b02e2732f7b469acf25c8d0b6bb8bebc411d910c7a71599d",
+  "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.15-Preview.apk",
+  "sha256": "2603a8f385e53178fe35c6bcb2a0d81c3c50c082cb9fda859c641ceeb1a6231b",
   "bytes": 3703820,
-  "sourceCommit": "063579c975dc9133890d2974fad8cf9016322cd8",
-  "androidSourceTree": "1a2fc7bcde0e4d643ed6e2a3c6e64b0e2ea11c41",
-  "ciRun": 41257953318,
+  "sourceCommit": "2625a7913ccfa162dfa2342d976de6e172110a8f",
+  "androidSourceTree": "f9bafe0cb663f77edaca2ca818da40e48aa0e2c2",
+  "ciRun": 41313678816,
   "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
   "signing": "stable-owner-key",
-  "acceptance": "TECHNICAL CANDIDATE; ONE EXPANDED PHONE ACCEPTANCE PENDING: history search, explicit authorized forward, named delivery/read receipts, quoted replies, reactions, pinned announcements and explicit acknowledgement; prior first-entry/reopen/media USER PASS retained with device/hash not independently identified"
+  "acceptance": "TECHNICAL CANDIDATE; ONE COMBINED PHONE ACCEPTANCE PENDING: compact conversation/contextual actions/full-photo pinch-pan-reset and pending0.1.14 history/explicit authorized forward/named delivery-read/quoted replies/reactions/announcements/explicit acknowledgement. Prior limited USER PASS retained without replay."
 }
