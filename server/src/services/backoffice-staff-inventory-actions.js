@@ -23,7 +23,7 @@ export async function staffInventoryAction(db,req,capability){
   return db.$transaction(async tx=>{
     const storeId=req.user.storeId,companyId=req.user.companyId;
     await requireStaffAction(tx,req,storeId,capability);
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${companyId}),hashtext(${key}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${companyId}),hashtext(${key}))`;
     const stocks=await tx.$queryRaw`SELECT "id","storeId","status","inventoryVersion","recountPolicy" FROM "Stocktake" WHERE "id"=${stocktakeId} AND "companyId"=${companyId} FOR UPDATE`;
     const st=stocks[0];
     if(st&&(st.storeId!==storeId||st.inventoryVersion!==2))fail(404,'Δεν βρέθηκε η απογραφή.');
