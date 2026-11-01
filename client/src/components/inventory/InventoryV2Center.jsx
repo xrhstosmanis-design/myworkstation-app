@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
   Boxes,
@@ -34,13 +34,16 @@ export default function InventoryV2Center({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [finalizeReason, setFinalizeReason] = useState(""),
-    [finalizing, setFinalizing] = useState(false);
+    [finalizing, setFinalizing] = useState(false),
+    [reviewLocked,setReviewLocked]=useState(false);
+  const reviewLockRef=useRef(false);
+  const handleReviewLock=useCallback(value=>{reviewLockRef.current=value;setReviewLocked(value);},[]);
   // Controlled personal view uses redacted data and existing scoped writers only.
   // This is presentation, never a substitute for the canonical server grant check.
   const stocktakes = delegated ? delegated.stocktakes : ownerStocktakes;
   const current = delegated ? delegated.current : ownerCurrent;
   const storeId = delegated ? delegated.storeId : ownerStoreId;
-  const locked = Boolean(delegated?.locked);
+  const locked = Boolean(delegated?.locked||reviewLocked);
   const finalizingRef = useRef(false);
   const [mobileView,setMobileView]=useState(false);
   useEffect(()=>setMobileView(false),[current?.id,current?.status]);
@@ -61,6 +64,7 @@ export default function InventoryV2Center({
   const loadList = async () =>
       delegated ? delegated.onLoad() : setStocktakes(await api("/api/inventory-v2/stocktakes")),
     open = async (id) => {
+      if(reviewLockRef.current){setError('Επαλήθευσε πρώτα την ενέργεια ελέγχου απογραφής.');return;}
       if (delegated) return locked ? undefined : delegated.onOpen(id);
       const result = await api(`/api/inventory-v2/stocktakes/${id}`);
       setCurrent(result);
@@ -78,6 +82,7 @@ export default function InventoryV2Center({
     loadCatalog?.();
   }, []);
   const loadZones = async (value) => {
+    if(reviewLockRef.current)return;
     if (delegated) return;
     setStoreId(value);
     setSelectedZones([]);
@@ -91,6 +96,7 @@ export default function InventoryV2Center({
   };
   const createZone = async (e) => {
     e.preventDefault();
+    if(reviewLockRef.current)return;
     const f = new FormData(e.currentTarget);
     try {
       await api("/api/inventory-v2/zones", {
@@ -109,6 +115,7 @@ export default function InventoryV2Center({
   };
   const createGrant = async (e) => {
     e.preventDefault();
+    if(reviewLockRef.current)return;
     const f = new FormData(e.currentTarget);
     try {
       setGrant(
@@ -128,6 +135,7 @@ export default function InventoryV2Center({
   };
   const create = async (e) => {
     e.preventDefault();
+    if(reviewLockRef.current)return;
     setBusy(true);
     setError("");
     const f = new FormData(e.currentTarget);
@@ -163,6 +171,7 @@ export default function InventoryV2Center({
     finally { convertingRef.current = false; setBusy(false); }
   };
   const deleteStocktake = async (stocktake) => {
+    if(reviewLockRef.current)return;
     if (stocktake.status !== "DRAFT" || (delegated && (!delegated.canDelete || locked))) return;
     if (!confirm(`Διαγραφή της μη οριστικοποιημένης απογραφής «${stocktake.name}»;`)) return;
     if (delegated) return delegated.onDelete(stocktake.id);
@@ -328,6 +337,7 @@ export default function InventoryV2Center({
     }
   };
   const importCounts = async (file) => {
+    if(reviewLockRef.current)return;
     if (!file || !current) return;
     setError("");
     try {
@@ -379,10 +389,10 @@ export default function InventoryV2Center({
   return (
     <div className="inv2">
       {!delegated && error && <div className="op-alert error">{error}</div>}
-      {!delegated && current?.status === 'FINALIZED' && <InventoryReconciliationPanel key={`${current.storeId}:${current.id}`} api={api} stocktakeId={current.id} storeId={current.storeId} />}
+      {!delegated && current?.status === 'FINALIZED' && <InventoryReconciliationPanel key={`${current.storeId}:${current.id}`} api={api} stocktakeId={current.id} storeId={current.storeId} onReviewLockChange={handleReviewLock} />}
       {!delegated && finalSummary && (
         <div className="inv2-final-summary">
-          <div><b>Αποτέλεσμα Απογραφής</b><small>{finalSummary.countedCount} από {finalSummary.lineCount} είδη</small></div>
+          <div><b>Αρχικό αποτέλεσμα καταμέτρησης</b><small>{finalSummary.countedCount} από {finalSummary.lineCount} είδη</small></div>
           <span><small>Καταμέτρηση</small><b>{finalSummary.countedQuantity}</b></span>
           <span><small>Συνολική διαφορά</small><b>{finalSummary.totalDifference}</b></span>
           <span className="shortage"><small>Έλλειμμα</small><b>{finalSummary.shortageQuantity} · {euro(finalSummary.shortageCostValue)}</b></span>
@@ -441,6 +451,7 @@ export default function InventoryV2Center({
               <select
                 name="storeId"
                 required
+                disabled={locked}
                 value={storeId}
                 onChange={(e) => loadZones(e.target.value)}
               >
