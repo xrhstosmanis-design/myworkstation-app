@@ -520,9 +520,9 @@ export default function InventoryV2Center({
                 <div>
                   <h3>Προσωρινή απογραφή ειδών αποθήκης</h3>
                   <small>
-                    {delegated ? `${current.name} · ${delegated.storeName}` : current.storeName} ·{" "}
-                    {!delegated && (current.scopeType === "FREE" ? "Απογραφή" : current.scopeType === "FULL" ? "Πλήρης" : "Μερική απογραφή")}{" "}
-                    · {current.status}
+                    {delegated ? `${current.name} · ${delegated.storeName} · ${current.status}` : <>{current.storeName} ·{" "}
+                    {current.scopeType === "FREE" ? "Απογραφή" : current.scopeType === "FULL" ? "Πλήρης" : "Μερική απογραφή"}{" "}
+                    · {current.status}</>}
                   </small>
                 </div>
                 <div className="inv2-actions">

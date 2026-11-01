@@ -101,6 +101,7 @@ export default function InventoryFastCount({ api, current, reload, setError, del
 
   const find = (event) => {
     event?.preventDefault();
+    if (!canCount || locked || saving) return;
     const term = lookup.trim();
     if (!term) return barcodeRef.current?.focus();
     const candidates = (current.lines || []).filter((line) =>
@@ -112,7 +113,7 @@ export default function InventoryFastCount({ api, current, reload, setError, del
     if (exact || candidates.length === 1) return choose(exact || candidates[0]);
     setSelected(null);
     setMatches(candidates.slice(0, 12));
-    if (!candidates.length) setError(`Δεν βρέθηκε το barcode «${term}». Μπορείς να καταχωρήσεις νέο είδος.`);
+    if (!candidates.length) setError(delegated ? `Δεν βρέθηκε το barcode «${term}» σε αυτή την απογραφή.` : `Δεν βρέθηκε το barcode «${term}». Μπορείς να καταχωρήσεις νέο είδος.`);
   };
 
   const save = async (event) => {
