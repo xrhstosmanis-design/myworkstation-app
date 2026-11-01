@@ -110,7 +110,7 @@ function StoreChatContents({api,store,onClose,installation=null,mobileOwner=fals
       </div>}
       {row.aiReaderJobId&&<small className="store-chat-ai-badge"><Bot/>Στάλθηκε στο AI Reader από: {row.aiReaderSentByName||row.aiReaderSentBy} · {new Date(row.aiReaderSentAt).toLocaleString("el-GR",{timeZone:"Europe/Athens",hour12:false})}</small>}
       {row.category==="ANNOUNCEMENT"&&settings.announcementAcknowledgementRequired&&acknowledgements.length>0&&<small className="store-chat-ack-list"><BadgeCheck/>Επιβεβαίωσαν: {acknowledgements.map(item=>item.name||item.id).filter(Boolean).join(", ")}</small>}
-      <div hidden={menuRow!==row.id}>{menuRow===row.id&&<ChatActionSheet label="Ενέργειες μηνύματος" onClose={()=>setMenuRow(null)}><div onClickCapture={e=>{if(e.target.closest('button'))setMenuRow(null)}}>
+      <div hidden={menuRow!==row.id}>{menuRow===row.id&&<ChatActionSheet label="Ενέργειες μηνύματος" onClose={()=>{suppressPreview.current=null;setMenuRow(null)}}><div onClickCapture={e=>{if(e.target.closest('button')){suppressPreview.current=null;setMenuRow(null)}}}>
       {interactionsReady&&<div className="store-chat-interactions" onClick={e=>e.stopPropagation()} onKeyDown={e=>e.stopPropagation()}>
         <button type="button" disabled={busy} onClick={()=>{if(active())setReplyTo({id:row.id,senderName:row.senderName,body:(row.body||row.attachmentName||"Μήνυμα").slice(0,280)})}}>Απάντηση</button>
         {searchForwardReady&&permissions.canForward&&<button type="button" disabled={busy} onClick={()=>beginForward(row)}>Προώθηση</button>}
