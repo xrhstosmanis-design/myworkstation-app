@@ -1,4 +1,5 @@
 import AiWalletPostpaid from './AiWalletPostpaid.jsx';
+import SharedCostPreview from './SharedCostPreview.jsx';
 import AiWalletActivityHistory from "../voice/AiWalletActivityHistory.jsx";
 import React,{useEffect,useRef,useState} from 'react';
 import AiWalletCustomerPricing from './AiWalletCustomerPricing.jsx';
@@ -32,6 +33,7 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
   return <div role="dialog" aria-modal="true" aria-label="Διαχείριση υπολοίπου AI" style={{position:'fixed',inset:0,zIndex:1500,background:'#fff',padding:24,overflow:'auto',color:'#173550'}}>
     <button type="button" onClick={onClose} disabled={busy}>Κλείσιμο</button><h1>Υπόλοιπα AI πελατών</h1>
     <label>Εταιρεία <select value={companyId} disabled={busy} onChange={e=>setCompanyId(e.target.value)}><option value="">Επίλεξε εταιρεία</option>{companies.filter(c=>c.active).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+    <SharedCostPreview companies={companies}/>
     {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
     {data?.companyId===companyId&&(data?.runtimeEnabled===false?<p>Η υπηρεσία προπληρωμένης χρέωσης δεν έχει ενεργοποιηθεί στον server.</p>:<>
       <h2>Διαθέσιμο {walletMoney(data.availableMicros)} · Δεσμευμένο {walletMoney(data.reservedMicros)}</h2>
