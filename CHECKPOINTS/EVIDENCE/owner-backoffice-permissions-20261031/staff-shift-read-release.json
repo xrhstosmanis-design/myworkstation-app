@@ -1,0 +1,19 @@
+{
+  "observedAt": "2026-11-01T12:22:00.027386+00:00",
+  "healthUrl": "https://myworkstation-app.onrender.com/api/health",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "ebe022701126f571dc5b5986af05f17935637ea8"
+  },
+  "sourcePr": 3458,
+  "sourceHead": "edb16198139f1040c0491491fe0136d571980e54",
+  "sourceCI": 41303663987,
+  "mainCI": 41304525017,
+  "guardedDeploy": 41305765063,
+  "serverTests": 5084,
+  "backupTests": 8,
+  "failed": 0,
+  "skipped": 0,
+  "hostedPersonalReadAcceptance": "AWAITING USER; no authenticated cloud session; no financial or stock writes"
+}
