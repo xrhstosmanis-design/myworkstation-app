@@ -183,6 +183,8 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "actions": [
       "read",
       "count",
+      "clear",
+      "bulk-zero",
       "create",
       "finalize",
       "reopen",

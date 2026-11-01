@@ -8,7 +8,7 @@ Local mounted/UI suite20PASS/0FAIL/0SKIP; overlapping broader staff/native suite
 
 Scope: CENTRAL-BACKOFFICE-ACCESS-01, retained owner feat/backoffice-common-permissions-20261101.
 
-This is implementation tracking, not a usage manual or a PASS claim. The 55 families and 340 candidate action names below require native-operation review; a name does not establish that the native module offers that action. Only the existing 18 validated capabilities are currently grantable. No wildcard, role promotion, automatic grant or company authority follows from this ledger.
+This is implementation tracking, not a usage manual or a PASS claim. The 55 families and 342 candidate action names below require native-operation review; a name does not establish that the native module offers that action. The current source candidate has 21 exact validated capability keys; the previous installed version has 18 until the release below is verified. No wildcard, role promotion, automatic grant or company authority follows from this ledger.
 
 The machine discovery snapshot follows the complete entry import graph, including POS/platform/bootstrap candidates, and inventories server route declarations. Those candidates require explicit Owner BackOffice classification. Dynamic HTML and controls, computed requests, route mounts and the recorded parse failure remain manual review items. The snapshot is not an authorization policy and cannot prove complete runtime coverage.
 
@@ -29,7 +29,7 @@ Installed shared UI: BackofficeShell/BackofficeStores, native StoreCloudPage shi
 | Τιμές και τιμοκατάλογοι | STORE | read, edit, bulk-edit, import, export, print | NOT INTEGRATED |
 | Προσφορές | STORE | read, create, edit, activate, delete | NOT INTEGRATED |
 | Αποθήκη και κινήσεις | STORE | read, receive, adjust, waste, reverse, import, export, print | NOT INTEGRATED |
-| Απογραφή | STORE | read, count, create, finalize, reopen, delete, import, export, print | inventory.read, inventory.count, inventory.create, inventory.finalize |
+| Απογραφή | STORE | read, count, clear, bulk-zero, create, finalize, reopen, delete, import, export, print | inventory.read, inventory.count, inventory.clear, inventory.bulk-zero, inventory.delete, inventory.create, inventory.finalize |
 | Μεταφορές αποθήκης | STORE | read, create, approve, dispatch, receive, cancel, export, print | NOT INTEGRATED |
 | Συνταγές | COMPANY | read, create, edit, delete, produce, export | NOT INTEGRATED |
 | Ψησίματα και παραγωγή | STORE | read, create, finalize, cancel, configure, export | NOT INTEGRATED |
