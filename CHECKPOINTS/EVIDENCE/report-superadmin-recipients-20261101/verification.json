@@ -27,7 +27,7 @@
     },
     "merge": "55c2d7a912313ad8589f8258ad9dc5084fa8ad49",
     "mainCi": 41254579730,
-    "stage": "INSTALLED / SCOPED HOSTED LAB PASS / REAL ACTIVATION OPEN",
+    "stage": "INSTALLED / SCOPED LAB PASS / REAL RIZAREIO ACTIVATION PASS / FUTURE DELIVERY NOT OBSERVED",
     "ownedRuntimeAndTestBlobs": [
       {
         "path": "client/src/components/platform/AutomaticReportDispatchManager.jsx",
@@ -79,7 +79,8 @@
       "skip": 0,
       "actualBuildJob": 124695174687,
       "note": "attempt1 full build succeeded; wholesale apt update timeout recovered by attempt2"
-    }
+    },
+    "latestHealthyRuntime": "4c05a9442d03941d35585a1e39a0aceef3dc01a1"
   },
   "initialNative": {
     "run": 41251051033,
@@ -142,9 +143,10 @@
     ],
     "centralDispatchEnabled": false,
     "screenshot": "unavailable: Page.captureScreenshot timed out twice",
-    "financialInvariance": "not independently measured"
+    "financialInvariance": "not independently measured",
+    "historicalAcceptanceRuntime": "55c2d7a912313ad8589f8258ad9dc5084fa8ad49"
   },
-  "productionAuthorizationChanged": false,
+  "productionAuthorizationChanged": true,
   "invitationSent": false,
   "financialActions": false,
   "release": {
@@ -155,6 +157,8 @@
     "healthRevision": "55c2d7a912313ad8589f8258ad9dc5084fa8ad49",
     "healthOk": true
   },
-  "configurationApplied": false,
-  "realStoreAuthorizationChanged": false
+  "configurationApplied": true,
+  "realStoreAuthorizationChanged": true,
+  "actualDelivery": "NOT TESTED / FUTURE CUTOFF",
+  "latestActivationEvidence": "activation-control.json"
 }

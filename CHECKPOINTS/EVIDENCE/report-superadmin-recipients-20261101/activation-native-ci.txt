@@ -1,0 +1,76 @@
+2026-11-01T07:31:04.9729690Z  * [new branch]          agent/restore-super-admin-analytics-button-20260830 -> origin/agent/restore-super-admin-analytics-button-20260830
+2026-11-01T07:31:04.9731282Z  * [new branch]          agent/restore-super-admin-analytics-styles-20260830 -> origin/agent/restore-super-admin-analytics-styles-20260830
+2026-11-01T07:31:04.9765836Z  * [new branch]          agent/super-admin-analytics-backend-20260830 -> origin/agent/super-admin-analytics-backend-20260830
+2026-11-01T07:31:04.9767212Z  * [new branch]          agent/super-admin-analytics-backend-fix-20260830 -> origin/agent/super-admin-analytics-backend-fix-20260830
+2026-11-01T07:31:04.9768601Z  * [new branch]          agent/super-admin-analytics-owner-fix-20260830 -> origin/agent/super-admin-analytics-owner-fix-20260830
+2026-11-01T07:31:04.9770075Z  * [new branch]          agent/super-admin-automatic-protection -> origin/agent/super-admin-automatic-protection
+2026-11-01T07:31:04.9771285Z  * [new branch]          agent/super-admin-check-center-foundation -> origin/agent/super-admin-check-center-foundation
+2026-11-01T07:31:04.9772592Z  * [new branch]          agent/super-admin-check-packages -> origin/agent/super-admin-check-packages
+2026-11-01T07:31:04.9773722Z  * [new branch]          agent/super-admin-checks-analytics-20260830 -> origin/agent/super-admin-checks-analytics-20260830
+2026-11-01T07:31:04.9774884Z  * [new branch]          agent/super-admin-full-store-access -> origin/agent/super-admin-full-store-access
+2026-11-01T07:31:04.9776000Z  * [new branch]          agent/super-admin-inspection-launcher -> origin/agent/super-admin-inspection-launcher
+2026-11-01T07:31:04.9777083Z  * [new branch]          agent/super-admin-pos-designer-v1 -> origin/agent/super-admin-pos-designer-v1
+2026-11-01T07:31:04.9778126Z  * [new branch]          agent/super-admin-pos-inspection -> origin/agent/super-admin-pos-inspection
+2026-11-01T07:31:04.9779263Z  * [new branch]          agent/super-admin-remote-schedules-20260828 -> origin/agent/super-admin-remote-schedules-20260828
+2026-11-01T07:31:04.9780506Z  * [new branch]          agent/super-admin-store-mode-launcher-v1 -> origin/agent/super-admin-store-mode-launcher-v1
+2026-11-01T07:31:05.0149518Z  * [new branch]          codex/lab-report-layout-superadmin-20260908 -> origin/codex/lab-report-layout-superadmin-20260908
+2026-11-01T07:31:05.0465536Z  * [new branch]          codex/remove-superadmin-pos-inspection-20260908 -> origin/codex/remove-superadmin-pos-inspection-20260908
+2026-11-01T07:31:05.0482564Z  * [new branch]          codex/superadmin-inspection-store-scope-20260908 -> origin/codex/superadmin-inspection-store-scope-20260908
+2026-11-01T07:31:05.0903339Z  * [new branch]          docs/report-superadmin-recipients-claim-20261101 -> origin/docs/report-superadmin-recipients-claim-20261101
+2026-11-01T07:31:05.0912525Z  * [new branch]          docs/super-admin-ai-command-center-phase2-user-pass-20260928 -> origin/docs/super-admin-ai-command-center-phase2-user-pass-20260928
+2026-11-01T07:31:05.0912922Z  * [new branch]          docs/super-admin-check-button-user-pass-20260928 -> origin/docs/super-admin-check-button-user-pass-20260928
+2026-11-01T07:31:05.1069197Z  * [new branch]          feat/super-admin-ai-command-center-phase1-20260928 -> origin/feat/super-admin-ai-command-center-phase1-20260928
+2026-11-01T07:31:05.1069863Z  * [new branch]          feat/super-admin-ai-command-center-phase2-problems-20260928 -> origin/feat/super-admin-ai-command-center-phase2-problems-20260928
+2026-11-01T07:31:05.1070315Z  * [new branch]          feat/super-admin-ai-command-center-phase3-20260928 -> origin/feat/super-admin-ai-command-center-phase3-20260928
+2026-11-01T07:31:05.1070747Z  * [new branch]          feat/super-admin-analytics-filters-20260831 -> origin/feat/super-admin-analytics-filters-20260831
+2026-11-01T07:31:05.1071254Z  * [new branch]          feat/super-admin-analytics-finding-details-20260831 -> origin/feat/super-admin-analytics-finding-details-20260831
+2026-11-01T07:31:05.1071830Z  * [new branch]          feat/super-admin-analytics-review-status-20260831 -> origin/feat/super-admin-analytics-review-status-20260831
+2026-11-01T07:31:05.1072254Z  * [new branch]          feat/super-admin-analytics-safe -> origin/feat/super-admin-analytics-safe
+2026-11-01T07:31:05.1072698Z  * [new branch]          feat/super-admin-bulk-catalog-targeting -> origin/feat/super-admin-bulk-catalog-targeting
+2026-11-01T07:31:05.1073089Z  * [new branch]          feat/super-admin-bulk-catalog-targeting-v1 -> origin/feat/super-admin-bulk-catalog-targeting-v1
+2026-11-01T07:31:05.1073480Z  * [new branch]          feat/super-admin-bulk-inventory-import -> origin/feat/super-admin-bulk-inventory-import
+2026-11-01T07:31:05.1073801Z  * [new branch]          feat/super-admin-cross-company-audit -> origin/feat/super-admin-cross-company-audit
+2026-11-01T07:31:05.1074248Z  * [new branch]          feat/super-admin-fiscal-dry-run-screen -> origin/feat/super-admin-fiscal-dry-run-screen
+2026-11-01T07:31:05.1074629Z  * [new branch]          feat/super-admin-other-expense-review -> origin/feat/super-admin-other-expense-review
+2026-11-01T07:31:05.1074976Z  * [new branch]          feat/super-admin-promotions-targeting -> origin/feat/super-admin-promotions-targeting
+2026-11-01T07:31:05.1075294Z  * [new branch]          feat/super-admin-radio-center -> origin/feat/super-admin-radio-center
+2026-11-01T07:31:05.1075807Z  * [new branch]          feat/super-admin-supplier-settlement-review -> origin/feat/super-admin-supplier-settlement-review
+2026-11-01T07:31:05.1086886Z  * [new branch]          feat/video-connector-superadmin-installer -> origin/feat/video-connector-superadmin-installer
+2026-11-01T07:31:05.1111819Z  * [new branch]          feature/platform-super-admin -> origin/feature/platform-super-admin
+2026-11-01T07:31:05.1112130Z  * [new branch]          feature/platform-super-admin-2fa -> origin/feature/platform-super-admin-2fa
+2026-11-01T07:31:05.1278717Z  * [new branch]          fix/owner-payments-super-admin -> origin/fix/owner-payments-super-admin
+2026-11-01T07:31:05.1285856Z  * [new branch]          fix/platform-super-admin-settlement-access -> origin/fix/platform-super-admin-settlement-access
+2026-11-01T07:31:05.1344351Z  * [new branch]          fix/report-superadmin-recipients-20261101 -> origin/fix/report-superadmin-recipients-20261101
+2026-11-01T07:31:05.1362371Z  * [new branch]          fix/super-admin-analytics-modal-20260831 -> origin/fix/super-admin-analytics-modal-20260831
+2026-11-01T07:31:05.1362618Z  * [new branch]          fix/super-admin-chat-dropdown -> origin/fix/super-admin-chat-dropdown
+2026-11-01T07:31:05.1363022Z  * [new branch]          fix/super-admin-check-button-container-20260928 -> origin/fix/super-admin-check-button-container-20260928
+2026-11-01T07:31:05.1363403Z  * [new branch]          fix/super-admin-check-button-minwidth-20260928 -> origin/fix/super-admin-check-button-minwidth-20260928
+2026-11-01T07:31:05.1363820Z  * [new branch]          fix/super-admin-check-button-responsive-20260928 -> origin/fix/super-admin-check-button-responsive-20260928
+2026-11-01T07:32:01.2326687Z # Subtest: mounted SuperAdmin invoice switch saves only selected company and refuses stale responses or unavailable activation
+2026-11-01T07:32:01.2328599Z ok 42 - mounted SuperAdmin invoice switch saves only selected company and refuses stale responses or unavailable activation
+2026-11-01T07:32:48.8657626Z # Subtest: explicit administrator provenance authorizes without pretending mailbox verification or recipient consent
+2026-11-01T07:32:48.8658570Z ok 408 - explicit administrator provenance authorizes without pretending mailbox verification or recipient consent
+2026-11-01T07:32:48.8663314Z # Subtest: administrative Save requires explicit current SuperAdmin and rejects injected authority/duplicate periods before writes
+2026-11-01T07:32:48.8665400Z ok 410 - administrative Save requires explicit current SuperAdmin and rejects injected authority/duplicate periods before writes
+2026-11-01T07:32:48.8668162Z # Subtest: SuperAdmin native fixture refuses production, remote and URL overrides
+2026-11-01T07:32:48.8669433Z ok 411 - SuperAdmin native fixture refuses production, remote and URL overrides
+2026-11-01T07:32:48.8691462Z # Subtest: mounted SuperAdmin email/save uses one administrative action, same recipient list, truthful OFF/provenance and revocation
+2026-11-01T07:32:48.8692822Z ok 413 - mounted SuperAdmin email/save uses one administrative action, same recipient list, truthful OFF/provenance and revocation
+2026-11-01T07:32:48.8877448Z # Subtest: separate SuperAdmin authority prepares and starts a report without forged verification or mailbox consent
+2026-11-01T07:32:48.8878023Z ok 503 - separate SuperAdmin authority prepares and starts a report without forged verification or mailbox consent
+2026-11-01T07:36:59.6371471Z # D8 native PASS: actual support-access issued five-key masked-SuperAdmin JWT authorizes without role rewriting
+2026-11-01T07:38:11.6158439Z # Subtest: permanent company deletion stays behind the platform super-admin router guard
+2026-11-01T07:38:11.6159124Z ok 2674 - permanent company deletion stays behind the platform super-admin router guard
+2026-11-01T07:39:53.2984320Z # Subtest: non-super-admin users cannot target another company store
+2026-11-01T07:39:53.2985288Z ok 3345 - non-super-admin users cannot target another company store
+2026-11-01T07:40:46.4089174Z # Subtest: Platform package handler preserves global superadmin and exact company/store/module context
+2026-11-01T07:40:46.4089931Z ok 4277 - Platform package handler preserves global superadmin and exact company/store/module context
+2026-11-01T07:41:15.5915184Z # tests 5050
+2026-11-01T07:41:15.5915564Z # pass 5050
+2026-11-01T07:41:15.5915747Z # fail 0
+2026-11-01T07:41:15.5916120Z # skipped 0
+2026-11-01T07:42:13.6796794Z # tests 8
+2026-11-01T07:42:13.6798059Z # pass 8
+2026-11-01T07:42:13.6798680Z # fail 0
+2026-11-01T07:42:13.6799872Z # skipped 0
+2026-11-01T07:42:53.2229522Z Chat history/forward real PostgreSQL/HTTP PASS:400 timestamp-tied history rows exactly once; literal wildcard/SQL/Greek searches; no implicit Chat writes; source/destination roles/modules/settings; concurrent idempotent forward/conflicting keys/audit rollback; exact text/photo/PDF/audio/video content copying with fresh metadata; explicit existing SuperAdmin cross-company scope. Synthetic only.
