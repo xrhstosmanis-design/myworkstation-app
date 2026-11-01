@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
+import {setTimeout as delay} from 'node:timers/promises';
 
 const childKey='MWS_MONTHLY_CAPTURE_HTTP_TEST_CHILD',purpose='MONTHLY_INVENTORY_CAPTURE';
 const q=value=>'"'+value.replaceAll('"','""')+'"',literal=value=>"'"+value.replaceAll("'","''")+"'";
@@ -14,8 +15,12 @@ async function nativeFlow(){
  // The parent establishes this private URL before this process imports ANY
  // Prisma/auth/router module. Never replace the real auth with req.user stubs.
  assert.ok(isolated(),'Isolated child database required before application import');
+ process.env.RENDER_GIT_COMMIT='a'.repeat(40);
  const {PrismaClient}=await import('@prisma/client'),db=new PrismaClient();let server,globalDb;
  try{
+  const version=(await db.$queryRawUnsafe(`SELECT current_setting('server_version_num')::integer AS version`))[0].version;
+  if(process.env.MWS_MONTHLY_CAPTURE_REQUIRE_PG18==='1')assert.ok(version>=180000&&version<190000,'The same authenticated HTTP/race flow must connect to actual PostgreSQL18');
+  console.log('D8 native PASS: actual database server_version_num='+version);
   const metadata=JSON.parse(readFileSync(new URL('./fixtures/ftext-full-schema-metadata-20261024.json',import.meta.url)));
   for(const e of metadata.enums)await db.$executeRawUnsafe(`CREATE TYPE ${q(e.name)} AS ENUM (${e.labels.map(literal).join(',')})`);
   await db.$executeRawUnsafe('CREATE SEQUENCE "CloudChange_sequence_seq" AS bigint START 1 INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 NO CYCLE');
@@ -116,7 +121,82 @@ async function nativeFlow(){
   await db.$executeRawUnsafe('ALTER TABLE "MonthlyInventoryCaptureGrant" ADD COLUMN "UnreviewedD8Fixture" text');const tampered=await call('',null);assert.equal(tampered.status,409);assert.equal(tampered.data.code,'MONTHLY_CAPTURE_SCHEMA_CHANGED');assert.equal(Object.hasOwn(tampered.data,'grant'),false);await db.$executeRawUnsafe('ALTER TABLE "MonthlyInventoryCaptureGrant" DROP COLUMN "UnreviewedD8Fixture"');await unchanged();
   await db.$executeRawUnsafe('ALTER TABLE "MonthlyInventoryCaptureGrant" RENAME TO "MissingD8FixtureGrant"');const missing=await call('',null);assert.equal(missing.status,409);assert.equal(missing.data.code,'MONTHLY_CAPTURE_SCHEMA_UNAVAILABLE');assert.equal(Object.hasOwn(missing.data,'grant'),false);await db.$executeRawUnsafe('ALTER TABLE "MissingD8FixtureGrant" RENAME TO "MonthlyInventoryCaptureGrant"');await unchanged();
   console.log('D8 native PASS: absent/tampered schema and wrong enrollment remain unavailable, never successful empty grants');
-  assert.equal((await call('',null)).data.grant.revision,'5');await unchanged();console.log('D8 native authenticated HTTP integration passed');
+  assert.equal((await call('',null)).data.grant.revision,'5');await unchanged();
+  // New personal-now cohort follows the original unchanged grant assertions.
+  // All identities originate from the genuine issuer/session flows above.
+  const {createMonthlyPersonalCaptureNowService}=await import('../src/services/monthly-inventory-capture-now.js');
+  const preview=await request(base+'/capture-now?storeId=target',{token:ownerToken});assert.equal(preview.status,200);assert.equal(preview.data.existingReceipt,null);
+  const captureInput={...epoch,expectedIssueMonth:preview.data.issueMonth},capturePath=base+'/capture-now';
+  for(const token of [login.data.token,employeeSession.token,posToken])assert.ok([400,401,403].includes((await request(capturePath,{token,method:'POST',body:captureInput})).status));
+  for(const body of [{...captureInput,lifecycleGeneration:'1'},{...captureInput,expectedIssueMonth:'2000-01'},{...captureInput,month:'2000-01'},{...captureInput,companyId:'foreign-company'}])assert.ok([400,403,409].includes((await request(capturePath,{token:ownerToken,method:'POST',body})).status));
+  for(const store of ['sibling','foreign'])assert.ok([403,404,409].includes((await request(base+'/capture-now?storeId='+store,{token:ownerToken})).status));
+  await unchanged();
+  const captureState=async()=> (await controls()).filter(row=>row.table_name!=='MonthlyInventorySnapshot');
+  const beforeCapture=await captureState();
+  // Coordinate real isolated transactions after held SOURCE commits and before
+  // WRITE begins. This wrapper is test-only; production has no hooks/providers.
+  for(const kind of ['REVOKED','EXPIRED','PAID_SA']){
+   let changed=false;
+   const wrapped={$transaction:async(fn,options)=>{const result=await db.$transaction(fn,options);if(options.isolationLevel==='RepeatableRead'){
+    changed=true;if(kind==='REVOKED')await db.$executeRawUnsafe(`UPDATE "UserSession" SET "revokedAt"=NOW() WHERE "id"=$1`,ownerSession.session.id);
+    else if(kind==='EXPIRED')await db.$executeRawUnsafe(`UPDATE "UserSession" SET "expiresAt"=NOW()-INTERVAL '1 second' WHERE "id"=$1`,ownerSession.session.id);
+    else await db.$executeRawUnsafe(`UPDATE "Company" SET "subscriptionEndsAt"=NOW()-INTERVAL '1 second' WHERE "id"='fixture-company'`);
+   }return result}};
+   try{await assert.rejects(createMonthlyPersonalCaptureNowService(wrapped).capture(kind==='PAID_SA'?supportClaims:ownerClaims,captureInput),error=>/^MONTHLY_CAPTURE_/.test(error.code));assert.equal(changed,true)}
+   finally{await db.$executeRawUnsafe(`UPDATE "UserSession" SET "revokedAt"=NULL,"expiresAt"=$1 WHERE "id"=$2`,sessionExpiry,ownerSession.session.id);await db.$executeRawUnsafe(`UPDATE "Company" SET "subscriptionEndsAt"=$1 WHERE "id"='fixture-company'`,ends)}
+   assert.deepEqual(await captureState(),beforeCapture);assert.equal((await db.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "MonthlyInventorySnapshot"`))[0].n,0);
+  }
+  console.log('D8 native PASS: personal source-to-writer session revoke/expiry and paid-SuperAdmin loss refuse without capture');
+  // Expire only after WRITE has inserted and read its own row: failure must
+  // roll that new row back, not merely reject an immutable replay.
+  let ownInsert=false,ownReadWait=false;
+  const rollbackDb={$transaction:async(fn,options)=>{
+   const result=await db.$transaction(tx=>fn(new Proxy(tx,{get(target,key){if(key==='$queryRawUnsafe')return async(sql,...args)=>{const rows=await target.$queryRawUnsafe(sql,...args);if(sql.startsWith('INSERT INTO "MonthlyInventorySnapshot"'))ownInsert=true;if(ownInsert&&!ownReadWait&&sql.startsWith('SELECT "id","companyId","storeId","lifecycleGeneration"::text')){ownReadWait=true;await target.$queryRawUnsafe('SELECT 1::integer AS waited FROM pg_sleep(3.2)')}return rows};const value=target[key];return typeof value==='function'?value.bind(target):value}})),options);
+   if(options.isolationLevel==='RepeatableRead')await db.$executeRawUnsafe(`UPDATE "UserSession" SET "expiresAt"=clock_timestamp()+INTERVAL '3 seconds' WHERE "id"=$1`,ownerSession.session.id);
+   return result;
+  }};
+  try{await assert.rejects(createMonthlyPersonalCaptureNowService(rollbackDb).capture(ownerClaims,captureInput),{code:'MONTHLY_CAPTURE_AUTHORIZATION_EXPIRED'});assert.equal(ownInsert,true);assert.equal(ownReadWait,true)}finally{await db.$executeRawUnsafe(`UPDATE "UserSession" SET "expiresAt"=$1 WHERE "id"=$2`,sessionExpiry,ownerSession.session.id)}
+  assert.deepEqual(await captureState(),beforeCapture);assert.equal((await db.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "MonthlyInventorySnapshot"`))[0].n,0);
+  console.log('D8 native PASS: real-clock expiry after own INSERT/readback rolls back new snapshot and preserves all controls');
+  let responseLost=false;
+  const lostResponseDb={$transaction:async(fn,options)=>{const result=await db.$transaction(fn,options);if(result?.receipt?.status==='STORED'&&!responseLost){responseLost=true;throw Error('ISOLATED_RESPONSE_LOST_AFTER_COMMIT')}return result}};
+  // Same real router/auth/module middleware, with a test-only database wrapper
+  // that loses the response only AFTER the real insertion committed.
+  app.use('/api/monthly-lost-response',auth,requireStoreModule('INVENTORY'),createMonthlyInventoryCaptureRouter(lostResponseDb));
+  const lost=await request('/api/monthly-lost-response/capture-now',{token:ownerToken,method:'POST',body:captureInput});assert.equal(lost.status,503);assert.equal(responseLost,true);assert.equal(Object.hasOwn(lost.data,'receipt'),false);
+  const captured=await request(base+'/capture-now?storeId=target',{token:ownerToken});assert.equal(captured.status,200);const receipt=captured.data.existingReceipt;assert.ok(receipt);
+  assert.equal(receipt.issueMonth,preview.data.issueMonth);assert.equal(receipt.observationStatus,'LATE');assert.equal(receipt.sourceAuthenticityVerified,false);assert.equal(receipt.receiptBasis,'FORMAT_VALIDATED_STORED_ONLY');assert.match(receipt.storedAt,/\.\d{6}Z$/);assert.equal(Object.keys(receipt).length,16);assert.equal(Object.hasOwn(receipt,'candidateJsonText'),false);
+  const immutable=await db.$queryRawUnsafe(`SELECT row_to_json(s)::text AS row FROM "MonthlyInventorySnapshot" s ORDER BY "id"`);
+  // A lost POST response is reconciled by GET, with no resubmission necessary.
+  const recovered=await request(base+'/capture-now?storeId=target',{token:ownerToken});assert.equal(recovered.status,200);assert.deepEqual(recovered.data.existingReceipt,receipt);
+  const repeated=await request(capturePath,{token:support.data.token,method:'POST',body:captureInput});assert.equal(repeated.data.status,'ALREADY_CAPTURED');assert.deepEqual(repeated.data.receipt,receipt);
+  assert.deepEqual(await captureState(),beforeCapture);assert.deepEqual(await db.$queryRawUnsafe(`SELECT row_to_json(s)::text AS row FROM "MonthlyInventorySnapshot" s ORDER BY "id"`),immutable);
+  // Replay remains freshly authorized AFTER canonical readback and waits.
+  await db.$executeRawUnsafe(`UPDATE "UserSession" SET "expiresAt"=clock_timestamp()+INTERVAL '2 seconds' WHERE "id"=$1`,ownerSession.session.id);
+  let waited=false;
+  const delayed={$transaction:(fn,options)=>db.$transaction(tx=>fn(new Proxy(tx,{get(target,key){if(key==='$queryRawUnsafe')return async(sql,...args)=>{const result=await target.$queryRawUnsafe(sql,...args);if(sql.startsWith('SELECT "id","companyId","storeId","lifecycleGeneration"::text')&&!waited){waited=true;await target.$queryRawUnsafe('SELECT 1::integer AS waited FROM pg_sleep(2.1)')}return result};const value=target[key];return typeof value==='function'?value.bind(target):value}})),options)};
+  try{await assert.rejects(createMonthlyPersonalCaptureNowService(delayed).preview(ownerClaims,{storeId:'target'}),{code:'MONTHLY_CAPTURE_AUTHORIZATION_EXPIRED'});assert.equal(waited,true)}finally{await db.$executeRawUnsafe(`UPDATE "UserSession" SET "expiresAt"=$1 WHERE "id"=$2`,sessionExpiry,ownerSession.session.id)}
+  assert.deepEqual(await captureState(),beforeCapture);assert.deepEqual(await db.$queryRawUnsafe(`SELECT row_to_json(s)::text AS row FROM "MonthlyInventorySnapshot" s ORDER BY "id"`),immutable);
+  // A fixture-only DB-result wrapper models crossing the next Athens07 within
+  // the bounded context. No production clock/provider or arbitrary date input.
+  const {monthlyInventorySnapshotPeriod}=await import('../src/services/monthly-inventory-snapshot-period.js');
+  const nextIssue=new Date(Date.UTC(Number(preview.data.issueMonth.slice(0,4)),Number(preview.data.issueMonth.slice(5)),1)).toISOString().slice(0,7),boundary=monthlyInventorySnapshotPeriod(nextIssue).scheduledFor;
+  const beforeBoundary=new Date(Date.parse(boundary)-1000).toISOString(),afterBoundary=new Date(Date.parse(boundary)+1).toISOString();
+  const farExpiry=new Date(Date.parse(boundary)+86400000);
+  await db.$executeRawUnsafe(`UPDATE "UserSession" SET "expiresAt"=$1 WHERE "id"=$2`,farExpiry,ownerSession.session.id);await db.$executeRawUnsafe(`UPDATE "Company" SET "subscriptionEndsAt"=$1 WHERE "id"='fixture-company'`,farExpiry);
+  let readBack=false;
+  const rollover={$transaction:(fn,options)=>db.$transaction(tx=>fn(new Proxy(tx,{get(target,key){if(key==='$queryRawUnsafe')return async(sql,...args)=>{const rows=await target.$queryRawUnsafe(sql,...args);if(sql.includes("current_setting('transaction_read_only')")&&sql.includes('transaction_timestamp()'))return rows.map(r=>({...r,transactionStartedAt:beforeBoundary,readAt:beforeBoundary}));if(sql.startsWith('SELECT "id","companyId","storeId","lifecycleGeneration"::text'))readBack=true;if(sql.startsWith('SELECT to_char(clock_timestamp()')&&sql.includes('AS valid'))return rows.map(r=>({...r,readAt:readBack?afterBoundary:beforeBoundary}));return rows};const value=target[key];return typeof value==='function'?value.bind(target):value}})),options)};
+  try{await assert.rejects(createMonthlyPersonalCaptureNowService(rollover).preview(ownerClaims,{storeId:'target'}),{code:'MONTHLY_CAPTURE_PERIOD_STALE'});assert.equal(readBack,true)}finally{await db.$executeRawUnsafe(`UPDATE "UserSession" SET "expiresAt"=$1 WHERE "id"=$2`,sessionExpiry,ownerSession.session.id);await db.$executeRawUnsafe(`UPDATE "Company" SET "subscriptionEndsAt"=$1 WHERE "id"='fixture-company'`,ends)}
+  assert.deepEqual(await captureState(),beforeCapture);assert.deepEqual(await db.$queryRawUnsafe(`SELECT row_to_json(s)::text AS row FROM "MonthlyInventorySnapshot" s ORDER BY "id"`),immutable);
+  console.log('D8 native PASS: current actual capture/immutable replay/uncertain-result GET and post-readback real-clock expiry preserve all business/grant/job controls');
+  // The installed database guard must admit a genuine NONZERO epoch, not only
+  // its implicit zero fallback. Old immutable generation-zero bytes stay intact.
+  await db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "generation"=1 WHERE "storeId"='target'`);
+  try{const next=await request(base+'/capture-now?storeId=target',{token:ownerToken});assert.equal(next.data.lifecycleGeneration,'1');assert.equal(next.data.existingReceipt,null);const nonzero=await request(capturePath,{token:ownerToken,method:'POST',body:{...captureInput,lifecycleGeneration:'1'}});assert.equal(nonzero.status,200);assert.equal(nonzero.data.status,'STORED');assert.equal(nonzero.data.receipt.lifecycleGeneration,'1')}
+  finally{await db.$executeRawUnsafe(`UPDATE "StoreLifecycleFence" SET "generation"=0 WHERE "storeId"='target'`)}
+  assert.deepEqual(await captureState(),beforeCapture);assert.equal((await db.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "MonthlyInventorySnapshot"`))[0].n,2);assert.equal((await db.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "MonthlyInventoryCaptureJob"`))[0].n,0);
+  console.log('D8 native PASS: installed mutation guards accept explicit generation1 while stale epoch and all sibling/business state stay protected');
+  console.log('D8 native authenticated HTTP integration passed');
  }finally{if(server)await new Promise(resolve=>{server.close(resolve);server.closeAllConnections()});await globalDb?.$disconnect();await db.$disconnect()}
 }
 
@@ -129,4 +209,30 @@ else test('native authenticated personal capture routes use real JWT/session/iss
   const{stdout}=await promisify(execFile)(process.execPath,[fileURLToPath(import.meta.url)],{env:{...process.env,DATABASE_URL:url.href,NODE_ENV:'test',[childKey]:'1',JWT_SECRET:'isolated-monthly-http-secret-not-production'},timeout:330000,maxBuffer:4*1024*1024});
   assert.match(stdout,/D8 native authenticated HTTP integration passed/);for(const line of stdout.split('\n').filter(line=>line.startsWith('D8 native PASS:')))console.log(line);
  }finally{if(created)await admin.$executeRawUnsafe(`DROP DATABASE ${q(name)} WITH (FORCE)`);await admin.$disconnect()}
+});
+
+if(process.env[childKey]!=='1')test('same genuine personal capture HTTP and transaction races run against actual CI PG18 image',{
+ skip:!process.env.MWS_LIFECYCLE_RECOVERY_IMAGE&&!process.env.CI?'Actual PG18 recovery image unavailable locally':false,timeout:540000
+},async()=>{
+ const image=process.env.MWS_LIFECYCLE_RECOVERY_IMAGE;assert.ok(image,'CI requires the already-built lifecycle recovery image');
+ const run=promisify(execFile),suffix=randomBytes(10).toString('hex'),name='monthly-http-pg18-'+suffix,database='monthly_http_pg18_'+suffix+'_test',password=randomBytes(32).toString('hex');
+ const docker=(args,timeout=30000)=>run('docker',args,{timeout,maxBuffer:4*1024*1024});
+ let created=false;
+ try{
+  // Only synthetic POSTGRES_* values enter the container. Use the official PG18
+  // entrypoint instead of the image's backup runner; no AWS/Render env or mount.
+  await docker(['run','--detach','--name',name,'--label','mws.test=monthly-personal-capture-pg18','--read-only','--memory=512m','--cpus=1','--pids-limit=128','--security-opt','no-new-privileges',
+   '--tmpfs','/var/lib/postgresql:rw,size=512m','--tmpfs','/var/run/postgresql:rw,size=32m','--tmpfs','/tmp:rw,size=64m',
+   '--publish','127.0.0.1::5432','--env','POSTGRES_USER=postgres','--env','POSTGRES_PASSWORD='+password,'--env','POSTGRES_DB='+database,'--env','PGDATA=/var/lib/postgresql/18/docker',
+   '--entrypoint','docker-entrypoint.sh',image,'postgres','-c','shared_buffers=32MB','-c','max_connections=30']);
+  created=true;
+  let ready=false;const readyUntil=Date.now()+30000;while(Date.now()<readyUntil){try{await docker(['exec',name,'pg_isready','-h','127.0.0.1','-U','postgres','-d',database],5000);ready=true;break}catch{await delay(250)}}assert.ok(ready,'Private synthetic PG18 TCP listener must become ready');
+  const published=(await docker(['port',name,'5432/tcp'])).stdout.trim();assert.match(published,/^127\.0\.0\.1:\d+$/);const port=published.slice(published.lastIndexOf(':')+1);
+  const version=Number((await docker(['exec',name,'psql','-U','postgres','-d',database,'-tAc','SHOW server_version_num'])).stdout.trim());assert.ok(version>=180000&&version<190000,'Actual container server must be PG18');
+  const url='postgresql://postgres:'+password+'@127.0.0.1:'+port+'/'+database;
+  const childEnv={PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,NODE_ENV:'test',DATABASE_URL:url,JWT_SECRET:'isolated-pg18-monthly-http-secret-not-production',[childKey]:'1',MWS_MONTHLY_CAPTURE_REQUIRE_PG18:'1'};
+  const {stdout}=await run(process.execPath,[fileURLToPath(import.meta.url)],{env:childEnv,timeout:360000,maxBuffer:4*1024*1024});
+  assert.match(stdout,/D8 native authenticated HTTP integration passed/);assert.match(stdout,new RegExp('actual database server_version_num='+version));
+  for(const line of stdout.split('\n').filter(line=>line.startsWith('D8 native PASS:')))console.log('PG18 '+line);
+ }finally{if(created)await docker(['rm','--force','--volumes',name]);else await docker(['rm','--force','--volumes',name]).catch(()=>{})}
 });

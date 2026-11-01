@@ -5,6 +5,7 @@ import {verifyMonthlyInventorySnapshotCandidateText} from './monthly-inventory-s
 import {authorizeMonthlyInvoiceAuditInTransaction} from './monthly-invoice-audit.js';
 import {assertLifecycleMutation,normalizeLifecycleGeneration} from './store-lifecycle-generation.js';
 import {monthlyInventorySnapshotPeriod} from './monthly-inventory-snapshot-period.js';
+import {authorizeMonthlyPersonalCaptureNowLookupInTransaction,authorizeMonthlyPersonalCaptureNowWriteInTransaction,requireMonthlyPersonalCaptureNowContext,finishMonthlyPersonalCaptureNowInTransaction,normalizeMonthlyPersonalCaptureNowActor,normalizeMonthlyPersonalCaptureNowInput} from './monthly-inventory-capture-authorization.js';
 import {validateMonthlyInventorySnapshotSchema} from './monthly-inventory-snapshot-schema.js';
 import {normalizeMonthlyCaptureExecution,requireMonthlyCaptureAttempt,authorizeMonthlyCaptureLookupInTransaction,authorizeMonthlyCaptureWriteInTransaction,requireMonthlyCaptureContext,monthlyCaptureWriteGuardParameters,finishMonthlyCaptureMutationInTransaction} from './monthly-inventory-capture-authorization.js';
 
@@ -126,8 +127,42 @@ function admittedAutomation(db,execution,sourceRevision,attempt,stage,perform){
  },{isolationLevel:'ReadCommitted',maxWait:2000,timeout:30000});
 }
 
+function admittedPersonalNow(db,actor,input,stage,perform){
+ return db.$transaction(async tx=>{
+  await tx.$executeRawUnsafe("SET LOCAL statement_timeout='8000ms'");
+  const context=await(stage==='LOOKUP'?authorizeMonthlyPersonalCaptureNowLookupInTransaction:authorizeMonthlyPersonalCaptureNowWriteInTransaction)(tx,actor,input);
+  const scope=requireMonthlyPersonalCaptureNowContext(tx,context,stage);
+  const current=await assertLifecycleMutation(tx,{companyId:scope.companyId,storeId:scope.storeId},scope.lifecycleGeneration,{lock:true});
+  if(!current.enrolled)fail('MONTHLY_SNAPSHOT_ENROLLMENT_REQUIRED');
+  await validateMonthlyInventorySnapshotSchema(tx);
+  const result=await perform(tx,scope);
+  const final=await finishMonthlyPersonalCaptureNowInTransaction(tx,context);
+  return {scope:final,receipt:result};
+ },{isolationLevel:'ReadCommitted',maxWait:2000,timeout:30000});
+}
+
 export function createMonthlyInventorySnapshotRepository(db,{sourceRevision=process.env.RENDER_GIT_COMMIT||process.env.GIT_COMMIT,attempt}={}){
  return Object.freeze({
+  async findExistingPersonalNow(actor,input){
+   actor=normalizeMonthlyPersonalCaptureNowActor(actor);input=normalizeMonthlyPersonalCaptureNowInput(input);
+   return admittedPersonalNow(db,actor,input,'LOOKUP',async(tx,scope)=>{
+    const key=[scope.companyId,scope.storeId,scope.lifecycleGeneration,scope.issueMonth],row=(await tx.$queryRawUnsafe(select,...key))[0];
+    return row?verifiedReceipt(row,key,'ALREADY_CAPTURED'):null;
+   });
+  },
+  async storePersonalNow(actor,input,facts){
+   actor=normalizeMonthlyPersonalCaptureNowActor(actor);input=normalizeMonthlyPersonalCaptureNowInput(input,true);
+   const supplied=request(facts),{candidate}=supplied,key=identity(candidate);
+   return admittedPersonalNow(db,actor,input,'WRITE',async(tx,scope)=>{
+    if([scope.companyId,scope.storeId,scope.lifecycleGeneration,scope.issueMonth].some((value,index)=>value!==key[index]))fail('MONTHLY_SNAPSHOT_SCOPE_INVALID');
+    const existing=(await tx.$queryRawUnsafe(select,...key))[0];if(existing)return verifiedReceipt(existing,key,'ALREADY_CAPTURED');
+    const beforeInsert=await clock(tx),age=Date.parse(beforeInsert)-Date.parse(supplied.sourceReadFinishedAt);
+    if(age<0||age>30000)fail('MONTHLY_SNAPSHOT_SOURCE_STALE');
+    const principal={type:'BACKOFFICE_USER',userId:actor.id,authorizationBasis:'RECHECKED_IN_FRESH_WRITE_TRANSACTION',sourceBasis:'SUPPLIED_FORMAT_VALIDATED_FACTS'};
+    const inserted=await tx.$queryRawUnsafe(`INSERT INTO "MonthlyInventorySnapshot" ("id","companyId","storeId","lifecycleGeneration","issueMonth","scheduledFor","transactionStartedAt","sourceReadStartedAt","sourceReadFinishedAt","sourceObservedAt","observationStatus","delayMs","sourceRevision","formatVersion","valuationBasis","sourceHash","payloadHash","candidateJsonText","storedBytesSha256","sourceCoverage","capturePrincipal") VALUES ($1,$2,$3,$4::bigint,$5,$6::timestamptz,$7::timestamptz,$8::timestamptz,$9::timestamptz,$10::timestamptz,$11,$12::bigint,$13,$14,$15,$16,$17,$18,$19,$20::jsonb,$21::jsonb) ON CONFLICT ("companyId","storeId","lifecycleGeneration","issueMonth") DO NOTHING RETURNING "id"`,randomUUID(),...key,candidate.period.scheduledFor,...fields.map(name=>supplied[name]),candidate.period.sourceObservedAt,candidate.period.timing,String(candidate.period.delayMs),candidate.sourceRevision,candidate.schemaVersion,candidate.valuationBasis,candidate.sourceHash,candidate.payloadHash,supplied.candidateJsonText,sha(supplied.candidateJsonText),JSON.stringify(supplied.sourceCoverage),JSON.stringify(principal));
+    const stored=(await tx.$queryRawUnsafe(select,...key))[0];return verifiedReceipt(stored,key,inserted.length?'STORED':'ALREADY_CAPTURED');
+   });
+  },
   async findExisting(actor,input){
    const {storeId,generation,period}=lookupRequest(input);
    return admitted(db,actor,storeId,generation,async(tx,writeAt)=>{
