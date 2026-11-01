@@ -1,0 +1,25 @@
+# AI-COST-PASS-THROUGH-01 — SOURCE IN REVIEW / AWAITING NATIVE CI AND LAB
+
+Owner retained feat/ai-owner-wallet-20261022; executor root, branch feat/ai-customer-cost-coverage-20261101. Before-source claim PR3469 head9ade0199202e4241cf7f884f00a052e304d85ef5 passed docs CI41318041319 and merged as35968eda7b1cef8be50f1d073e648efcb6c32b8e BEFORE the first source edit. Source work is not a LAB PASS or actual customer billing activation.
+
+## Implemented boundary
+
+New customer-cost meter composes existing wallet reservations/settlement around already-authorized staff-rule interpretation, explicitly selected-customer SuperAdmin assistance, POS/invoice barcode and purchase-order description search, and customer internet market searches. Existing token tariffs already include the agreed margin and are reused unchanged. Verified new external provider EUR unit costs apply the agreed50percent exactly once using bounded BigInt ceiling; analytics USD estimates are never debt. New optional AI_OWNER_WALLET_EXTERNAL_COST_TARIFFS requires exactly one provider price with provider SERPER_GOOGLE/GOOGLE_CSE, currency EUR, positive decimal-string providerUnitCostMicros, documented basisReference, ISO validFrom/validUntil; absent/invalid/duplicate/expired/unpriced entries fail before paid I/O. No production price, FX rate or environment value has been guessed or changed.
+
+Native request/session authentication and original scope/module checks are repeated before billed requests. Actual active store/company and selected-store lifecycle remain under the existing atomic reservation. Fresh role/session binding is required for non-POS callers. Invoice search requires an explicit store chooser, never the first store or INVOICE pseudo-store. Global catalogue/learning/all-store platform administration is explicitly PLATFORM_INTERNAL: no unique authorized customer means no invented debtor. Allocating shared infrastructure/platform costs needs a separate explicit allocation rule; it is not implemented by these per-request tariffs.
+
+Provider reply parsing is inside the cost boundary. Missing price/funds/authorization performs no paid call. Ambiguous transport/usage/settlement keeps a durable RESERVED/REVIEW hold and stops automatic paid fallback. A confirmed successful empty query may proceed to a separately metered second provider. Existing disabled-company/global rollout behavior is preserved; other companies are not automatically enabled. Existing additive rates are untouched. No schema, migration, production SQL, catalogue, fiscal, stock, payment, module or licensing changes.
+
+Cash-paper reading was already metered; it now carries the actual request activity. Added service labels/readiness distinguish cash-paper reading, staff AI, selected-customer support and both search providers. Automatic cash arithmetic/report generation contain no AI call; AI analysis through the assistant is separately metered. No paid AI video-analysis path was identified. This is not a claim that commercial subscriptions/hosting/email/video have no cost.
+
+## Validation / protected evidence
+
+Local focused meter/invoice/activity/readiness tests43/43; actual market-route plus invoice-policy tests12/12; actual Platform Ask handler tests13/13. Frontend production build PASS. First full local run found two stale feature/fallback assertions and four handler-harness missing new import bindings; fixed and targeted reruns passed. Final full local regression:4763 tests,4429PASS/0FAIL/334SKIP (isolated database/service prerequisites unavailable locally);33.60second frontend build PASS. Skips explicitly remain NOT TESTED, never native PASS. Native customer-cost PostgreSQL/HTTP fixture is added for authorization/tenant controls, exact-once margin, insufficient concurrent funds, transaction rollback, settlement replay/conflict, durable REVIEW and unchanged foreign wallet/business controls. Native fixture not locally executed without an isolated PostgreSQL URL; local skips are NOT PASS. Full unskipped PR/main CI and exact guarded release remain mandatory.
+
+Prior postpaid PR3453 and no-send LAB receipt3466 remain protected. Do not replay the virtual LAB grant or repayments, historical invoices/paid reads, accepted B/C/D/E or old REVIEW. No actual customer funding amount, contacts, email or pricing change is in this public checkpoint. Requested real funding/email remain paused for corrected disclosure and review.
+
+## Required acceptance / next action
+
+Publish source PR, require full native CI, exact main CI and ordinary guarded healthy deployment, then perform a new narrowly measured no-send LAB acceptance with before/control/after snapshots recorded BEFORE each state-changing action. Unconfigured real external prices are a readiness blocker, not a waived test or assumed PASS. No real customer activation/funding/mail until that acceptance and accurate reviewable email. Completion must synchronize checkpoint/active/tracker/pending/manual and both PDFs; broader parent remains assigned/open. Source paths and PR/CI/revision must be finalized in that receipt.
+
+RecordedUTC:2026-11-01T15:14:27.890471+00:00

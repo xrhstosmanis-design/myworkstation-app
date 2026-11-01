@@ -66,7 +66,10 @@ Installation evidence supersedes only earlier absent-table/no-enrollment/install
 
 ### 01/11/2026 — READ-ONLY BILLING-SCOPE AUDIT / DISCLOSURE REVIEW OPEN
 
-## AI-COST-PASS-THROUGH-01 — USER POLICY / ASSIGNED BEFORE SOURCE / NOT IMPLEMENTED
+## AI-COST-PASS-THROUGH-01 — ASSIGNED / SOURCE IN REVIEW / AWAITING NATIVE CI AND LAB
+
+Current source status: the before-source claim3469 is green and merged35968eda7b1cef8be50f1d073e648efcb6c32b8e. Bounded implementation is now on feat/ai-customer-cost-coverage-20261101; see `CHECKPOINTS/CHANGES/2026-11-01-ai-customer-cost-coverage-implementation.md`. Focused tests/build passed; full native CI/deploy/new LAB remain pending. No actual customer credit/activation/mail. Missing approved external EUR tariffs/shared-cost allocation remain disclosed blockers. Historical claim below records the BEFORE-SOURCE gate, not the current implementation status.
+
 
 Owner retained feat/ai-owner-wallet-20261022; bounded executor root, planned source branch feat/ai-customer-cost-coverage-20261101. User now explicitly requires customer-attributable paid AI/external usage to be transferred to that customer with the already agreed50percent margin. This supersedes the audit's earlier prohibition on expanding billed-service coverage, not protected measured usage/holds/pricing/permissions. No second50percent addition to tariffs that already include it. All3current additive prices remain0. Actual requested funding amount stays private and no actual customer credit, activation, notification or provider call occurs in this claim.
 

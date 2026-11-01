@@ -1,3 +1,4 @@
+import {customerCostMeter,revalidateCostRequest,customerSearchScope} from '../services/ai-customer-cost-runtime.js';
 import {mappingConfirmationUserId} from "../lib/supplier-mapping-confirmation-actor.js";
 import {registerInvoiceProductPreparation} from '../lib/invoice-product-preparation.js';
 import {createInvoiceCatalogLookup} from "../lib/invoice-catalog-lookup.js";
@@ -141,18 +142,20 @@ function extractBarcodes(text){
   const seen=new Set(),out=[];for(const m of String(text||"").matchAll(/(?<!\d)(\d{8}|\d{12,14})(?!\d)/g)){const code=m[1];if(validGtin(code)&&!seen.has(code)){seen.add(code);out.push(code)}}return out.slice(0,8);
 }
 async function canAdvanced(req){return isPlatformSuper(req)||await advancedOnlineSearchEntitlement(req.user.companyId)}
-async function googleDescriptionSearch(req,q){
+async function googleDescriptionSearch(req,q,line){
   if(!await canAdvanced(req))return {enabled:false,reason:"MODULE_DISABLED",rows:[]};
   if(!advancedProviderConfigured())return {enabled:true,reason:"PROVIDER_NOT_CONFIGURED",rows:[]};
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5500);try{
+    const scope=await customerSearchScope(req,line.storeId);
+    const cost=(provider,invoke)=>customerCostMeter.query(scope,provider,invoke,()=>revalidateCostRequest(req,async current=>{await customerSearchScope(current,line.storeId);const fresh=await ownedLine(current.user.companyId,req.params.orderId,req.params.lineId);if(!fresh||fresh.storeId!==line.storeId||!await canAdvanced(current))throw Object.assign(new Error('AI_WALLET_SCOPE_DENIED'),{code:'AI_WALLET_SCOPE_DENIED',status:403});}));
     const serperKey=String(process.env.SERPER_API_KEY||"").trim();let items=[],provider="";
-    if(serperKey){const r=await fetch("https://google.serper.dev/search",{method:"POST",headers:{"X-API-KEY":serperKey,"Content-Type":"application/json"},body:JSON.stringify({q:`${q} barcode EAN`,gl:"gr",hl:"el",num:10}),signal:controller.signal});if(!r.ok)throw new Error(`SERPER_${r.status}`);const d=await r.json();items=d.organic||[];provider="SERPER_GOOGLE"}
-    else{const key=String(process.env.GOOGLE_CSE_API_KEY||"").trim(),cx=String(process.env.GOOGLE_CSE_CX||"").trim();const url=new URL("https://www.googleapis.com/customsearch/v1");url.searchParams.set("key",key);url.searchParams.set("cx",cx);url.searchParams.set("q",`${q} barcode EAN`);url.searchParams.set("gl","gr");url.searchParams.set("hl","el");url.searchParams.set("num","10");const r=await fetch(url,{signal:controller.signal});if(!r.ok)throw new Error(`GOOGLE_CSE_${r.status}`);const d=await r.json();items=d.items||[];provider="GOOGLE_CSE"}
+    if(serperKey){const d=await cost("SERPER_GOOGLE",async()=>{const r=await fetch("https://google.serper.dev/search",{method:"POST",headers:{"X-API-KEY":serperKey,"Content-Type":"application/json"},body:JSON.stringify({q:`${q} barcode EAN`,gl:"gr",hl:"el",num:10}),signal:controller.signal});if(!r.ok)throw new Error(`SERPER_${r.status}`);return r.json();});items=d.organic||[];provider="SERPER_GOOGLE"}
+    else{const key=String(process.env.GOOGLE_CSE_API_KEY||"").trim(),cx=String(process.env.GOOGLE_CSE_CX||"").trim();const url=new URL("https://www.googleapis.com/customsearch/v1");url.searchParams.set("key",key);url.searchParams.set("cx",cx);url.searchParams.set("q",`${q} barcode EAN`);url.searchParams.set("gl","gr");url.searchParams.set("hl","el");url.searchParams.set("num","10");const d=await cost("GOOGLE_CSE",async()=>{const r=await fetch(url,{signal:controller.signal});if(!r.ok)throw new Error(`GOOGLE_CSE_${r.status}`);return r.json();});items=d.items||[];provider="GOOGLE_CSE"}
     const rows=[];for(const item of items){const barcodes=extractBarcodes(`${item.title||""} ${item.snippet||""} ${item.link||""}`);if(!barcodes.length)continue;rows.push({name:String(item.title||q).replace(/\s+[|\-–—]\s+[^|\-–—]{2,60}$/u,"").trim().slice(0,240),barcodes,source:"GOOGLE_SEARCH",provider,sourceUrl:item.link||null,snippet:String(item.snippet||"").slice(0,500)});if(rows.length>=6)break}
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "AdvancedOnlineSearchUsage" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"actorId" TEXT,"query" TEXT NOT NULL,"provider" TEXT NOT NULL,"status" TEXT NOT NULL,"resultCount" INTEGER NOT NULL DEFAULT 0,"durationMs" INTEGER NOT NULL DEFAULT 0,"estimatedCostUsd" NUMERIC(12,6) NOT NULL DEFAULT 0,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`).catch(()=>{});
-    await prisma.$executeRaw`INSERT INTO "AdvancedOnlineSearchUsage" ("id","companyId","storeId","actorId","query","provider","status","resultCount","details") VALUES (${id()},${req.user.companyId},'INVOICE',${req.user.id||null},${q},${provider},${rows.length?'FOUND':'NOT_FOUND'},${rows.length},${JSON.stringify({usageContext:'INVOICE_DESCRIPTION_TO_BARCODE',bypassEntitlement:isPlatformSuper(req)})}::jsonb)`.catch(()=>{});
+    await prisma.$executeRaw`INSERT INTO "AdvancedOnlineSearchUsage" ("id","companyId","storeId","actorId","query","provider","status","resultCount","details") VALUES (${id()},${req.user.companyId},${line.storeId},${req.user.id||null},${q},${provider},${rows.length?'FOUND':'NOT_FOUND'},${rows.length},${JSON.stringify({usageContext:'INVOICE_DESCRIPTION_TO_BARCODE',bypassEntitlement:isPlatformSuper(req)})}::jsonb)`.catch(()=>{});
     return {enabled:true,reason:rows.length?"FOUND":"NOT_FOUND",provider,rows};
-  }catch(error){return {enabled:true,reason:error?.name==="AbortError"?"TIMEOUT":"PROVIDER_ERROR",rows:[]}}finally{clearTimeout(timer)}
+  }catch(error){if(String(error?.code||'').startsWith('AI_WALLET_'))throw error;return {enabled:true,reason:error?.name==="AbortError"?"TIMEOUT":"PROVIDER_ERROR",rows:[]}}finally{clearTimeout(timer)}
 }
 
 router.get("/:orderId/ocr-lines",async(req,res,next)=>{
@@ -185,7 +188,7 @@ router.get("/:orderId/ocr-lines/:lineId/search",async(req,res,next)=>{
 });
 
 router.get("/:orderId/ocr-lines/:lineId/google-barcode-search",async(req,res,next)=>{try{
-  const line=await ownedLine(req.user.companyId,req.params.orderId,req.params.lineId);if(!line)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});const q=String(req.query.q||line.description||line.ocrRawText||"").trim();if(q.length<3)return res.status(400).json({error:"Χρειάζεται περιγραφή προϊόντος για Google αναζήτηση."});res.json(await googleDescriptionSearch(req,q));
+  const line=await ownedLine(req.user.companyId,req.params.orderId,req.params.lineId);if(!line)return res.status(404).json({error:"Δεν βρέθηκε η γραμμή."});const q=String(req.query.q||line.description||line.ocrRawText||"").trim();if(q.length<3)return res.status(400).json({error:"Χρειάζεται περιγραφή προϊόντος για Google αναζήτηση."});res.json(await googleDescriptionSearch(req,q,line));
 }catch(error){next(error)}});
 
 router.post("/:orderId/ocr-lines/:lineId/resolve-existing",async(req,res,next)=>{

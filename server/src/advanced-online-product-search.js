@@ -1,3 +1,4 @@
+import {customerCostMeter} from './services/ai-customer-cost-runtime.js';
 import crypto from "crypto";
 import {prisma} from "./prisma.js";
 
@@ -86,22 +87,22 @@ function normalizeSearchItems(items,barcode,provider){
   }));
 }
 
-async function searchSerper(barcode,signal){
+async function searchSerper(barcode,signal,cost){
   const key=String(process.env.SERPER_API_KEY||"").trim();
   if(!key)return null;
-  const response=await fetch("https://google.serper.dev/search",{method:"POST",headers:{"X-API-KEY":key,"Content-Type":"application/json"},body:JSON.stringify({q:`\"${barcode}\"`,gl:"gr",hl:"el",num:10}),signal});
+  const data=await cost("SERPER_GOOGLE",async()=>{const response=await fetch("https://google.serper.dev/search",{method:"POST",headers:{"X-API-KEY":key,"Content-Type":"application/json"},body:JSON.stringify({q:`\"${barcode}\"`,gl:"gr",hl:"el",num:10}),signal});
   if(!response.ok)throw new Error(`SERPER_${response.status}`);
-  const data=await response.json();
+  return response.json();});
   return {provider:"SERPER_GOOGLE",items:(data.organic||[]).map(x=>({title:x.title,snippet:x.snippet,link:x.link})),estimatedCostUsd:Number(process.env.SERPER_ESTIMATED_COST_PER_QUERY_USD||0.001)};
 }
 
-async function searchGoogleCse(barcode,signal){
+async function searchGoogleCse(barcode,signal,cost){
   const key=String(process.env.GOOGLE_CSE_API_KEY||"").trim(),cx=String(process.env.GOOGLE_CSE_CX||"").trim();
   if(!key||!cx)return null;
   const url=new URL("https://www.googleapis.com/customsearch/v1");url.searchParams.set("key",key);url.searchParams.set("cx",cx);url.searchParams.set("q",`\"${barcode}\"`);url.searchParams.set("gl","gr");url.searchParams.set("hl","el");url.searchParams.set("num","10");
-  const response=await fetch(url,{signal});
+  const data=await cost("GOOGLE_CSE",async()=>{const response=await fetch(url,{signal});
   if(!response.ok)throw new Error(`GOOGLE_CSE_${response.status}`);
-  const data=await response.json();
+  return response.json();});
   return {provider:"GOOGLE_CSE",items:(data.items||[]).map(x=>({title:x.title,snippet:x.snippet,link:x.link})),estimatedCostUsd:Number(process.env.GOOGLE_CSE_ESTIMATED_COST_PER_QUERY_USD||0.005)};
 }
 
@@ -109,7 +110,7 @@ export function advancedProviderConfigured(){
   return Boolean(String(process.env.SERPER_API_KEY||"").trim()||(String(process.env.GOOGLE_CSE_API_KEY||"").trim()&&String(process.env.GOOGLE_CSE_CX||"").trim()));
 }
 
-export async function advancedOnlineProductSearch({companyId,storeId,actorId,barcode,bypassEntitlement=false,usageContext=null}){
+export async function advancedOnlineProductSearch({companyId,storeId,actorId,barcode,bypassEntitlement=false,usageContext=null,activity=null,verifyCostScope}){
   const entitled=bypassEntitlement?true:await advancedOnlineSearchEntitlement(companyId);
   if(!entitled)return {enabled:false,configured:advancedProviderConfigured(),reason:"MODULE_DISABLED",rows:[]};
   if(!advancedProviderConfigured())return {enabled:true,configured:false,reason:"PROVIDER_NOT_CONFIGURED",rows:[]};
@@ -121,14 +122,18 @@ export async function advancedOnlineProductSearch({companyId,storeId,actorId,bar
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5500),started=Date.now();
   let provider="NONE";
   try{
-    let result=await searchSerper(barcode,controller.signal);
-    if(!result)result=await searchGoogleCse(barcode,controller.signal);
+    // Only the central master-catalog route has no customer beneficiary.
+    const internal=companyId==='PLATFORM_SUPER_ADMIN'&&storeId==='MASTER_CATALOG'&&usageContext==='MASTER_CATALOG';
+    const cost=(provider,invoke)=>internal?invoke():customerCostMeter.query({companyId,storeId,activity},provider,invoke,verifyCostScope);
+    let result=await searchSerper(barcode,controller.signal,cost);
+    if(!result)result=await searchGoogleCse(barcode,controller.signal,cost);
     if(!result)return {enabled:true,configured:false,reason:"PROVIDER_NOT_CONFIGURED",rows:[]};
     provider=result.provider;
     const rows=normalizeSearchItems(result.items,barcode,result.provider),durationMs=Date.now()-started;
     await logUsage({companyId,storeId,actorId,query:barcode,provider,status:rows.length?"FOUND":"NOT_FOUND",resultCount:rows.length,durationMs,estimatedCostUsd:result.estimatedCostUsd,details:{exactBarcodeOnly:true,usageContext,bypassEntitlement}});
     return {enabled:true,configured:true,reason:rows.length?"FOUND":"NOT_FOUND",provider,rows,usage:{month:usage.month+1,dayStore:usage.dayStore+1},limits:{monthly:monthlyLimit(),dailyStore:dailyLimit()}};
   }catch(error){
+    if(String(error?.code||'').startsWith('AI_WALLET_'))throw error;
     const durationMs=Date.now()-started;
     await logUsage({companyId,storeId,actorId,query:barcode,provider,status:"PROVIDER_ERROR",durationMs,details:{message:String(error?.message||error).slice(0,180),usageContext,bypassEntitlement}}).catch(()=>{});
     return {enabled:true,configured:true,reason:error?.name==="AbortError"?"TIMEOUT":"PROVIDER_ERROR",provider,rows:[]};

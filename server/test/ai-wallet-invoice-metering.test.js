@@ -38,7 +38,7 @@ test('invoice runtime and feature gates default OFF; original transport/options 
   let calls=0;const response=new Response('original'),f=fixture({configuration,repository:{enabledFor(){throw Error('no DB')}},transport:async(u,o)=>{assert.equal(u,url);assert.equal(o,options);calls++;return response},countPages(){throw Error('no PDF parse')}});
   assert.equal(await f.meter.responsesFetch(url,options),response);assert.equal(await f.meter.azure({},async()=>azurePayload),azurePayload);assert.equal(calls,1);
  }
- assert.deepEqual(invoiceWalletFeatures({}),['OWNER_ASSISTANT']);assert.ok(invoiceWalletFeatures(env).includes('INVOICE_AZURE'));
+ assert.deepEqual(invoiceWalletFeatures({}),['OWNER_ASSISTANT','CASH_PAPER_READING','STAFF_SCHEDULE','PLATFORM_CUSTOMER_ASSISTANT','SERPER_GOOGLE','GOOGLE_CSE']);assert.ok(invoiceWalletFeatures(env).includes('INVOICE_AZURE'));
 });
 test('active invoice calls require a canonical scope and reject arbitrary outbound URL before paid I/O',async()=>{
  let calls=0;const f=fixture({transport:async()=>{calls++;return new Response('{}')}});
@@ -141,7 +141,7 @@ test('company rollout boundary meters only the selected invoice companies and re
  const excluded=fixture({configuration,repository:{enabledFor(){throw Error('unselected invoice must not touch wallet')}},transport:async(u,o)=>{assert.equal(o,options);original++;return 'original'}});
  assert.equal(await excluded.meter.run(scope,()=>excluded.meter.responsesFetch(url,options)),'original');
  assert.equal(await excluded.meter.run(scope,()=>excluded.meter.azure({},async()=>azurePayload)),azurePayload);assert.equal(original,1);assert.equal(excluded.events.length,0);
- assert.deepEqual(invoiceWalletFeatures(configuration,'c'),['OWNER_ASSISTANT']);assert.ok(invoiceWalletFeatures(configuration,'lab').includes('INVOICE_AZURE'));
+ assert.deepEqual(invoiceWalletFeatures(configuration,'c'),['OWNER_ASSISTANT','CASH_PAPER_READING','STAFF_SCHEDULE','PLATFORM_CUSTOMER_ASSISTANT','SERPER_GOOGLE','GOOGLE_CSE']);assert.ok(invoiceWalletFeatures(configuration,'lab').includes('INVOICE_AZURE'));
  const selected=fixture({configuration});await selected.meter.run({companyId:'lab',storeId:'lab1'},()=>selected.meter.responsesFetch(url,options));assert.equal(selected.events[1].amountMicros,8n);
 });
 test('invalid explicit company rollout cannot silently broaden invoice charging or call a provider',async()=>{
@@ -149,7 +149,7 @@ test('invalid explicit company rollout cannot silently broaden invoice charging 
   let called=0;const f=fixture({configuration:{...env,AI_OWNER_WALLET_INVOICE_COMPANIES:value},transport:async()=>{called++}});
   await assert.rejects(f.meter.run(scope,()=>f.meter.responsesFetch(url,options)),e=>e.code==='AI_WALLET_TARIFF_REQUIRED');assert.equal(called,0);assert.equal(f.events.length,0);
  }
- assert.deepEqual(invoiceWalletFeatures({...env,AI_OWNER_WALLET_INVOICE_COMPANIES:'[]'},'c'),['OWNER_ASSISTANT']);
+ assert.deepEqual(invoiceWalletFeatures({...env,AI_OWNER_WALLET_INVOICE_COMPANIES:'[]'},'c'),['OWNER_ASSISTANT','CASH_PAPER_READING','STAFF_SCHEDULE','PLATFORM_CUSTOMER_ASSISTANT','SERPER_GOOGLE','GOOGLE_CSE']);
 });
 
 

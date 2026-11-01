@@ -51,7 +51,7 @@ export default function AiOwnerWallet({api,storeId='',enabled=false}){
           <thead><tr><th scope="col">Ημερομηνία</th><th scope="col">Χρήση</th><th scope="col">Χρέωση</th></tr></thead>
           <tbody>{data.usageSummary.daily.map(row=><tr key={row.date+row.category}><td>{dayLabel(row.date)}</td><td>{categoryLabels[row.category]||categoryLabels.OTHER}</td><td>{walletMoney(row.chargedMicros)}</td></tr>)}</tbody>
         </table></div>}
-        <p>Κατανάλωση επιλεγμένου καταστήματος: {walletMoney(data.usageSummary?.allTimeMicros??data.usage?.[0]?.chargedMicros??'0')} συνολικά. {data.meteredFeatures?.includes('INVOICE_OPENAI')?'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη και τις αναγνώσεις τιμολογίων με AI.':'Η χρέωση καλύπτει προς το παρόν τον Βοηθό Ιδιοκτήτη.'}</p>
+        <p>Χρεώνονται οι διαθέσιμες κλήσεις βοηθών AI, η ανάγνωση χαρτιών ταμείου, οι κανόνες προγράμματος εργαζομένων και οι πληρωμένες αναζητήσεις προϊόντων με έγκυρη τιμή. Κατανάλωση επιλεγμένου καταστήματος: {walletMoney(data.usageSummary?.allTimeMicros??data.usage?.[0]?.chargedMicros??'0')} συνολικά. {data.meteredFeatures?.includes('INVOICE_OPENAI')?'Περιλαμβάνονται οι αναγνώσεις τιμολογίων με AI.':'Η χρέωση αναγνώσεων τιμολογίων είναι ανενεργή.'}</p>
         <AiWalletActivityHistory key={storeId+":activity"} entries={data.entries||[]}/>
         <h4>Ειδοποιήσεις εταιρείας</h4><ul>{(data.notices||[]).map(n=><li key={n.id}>{noticeLabels[n.kind]} · {new Date(n.createdAt).toLocaleString('el-GR',{hour12:false})} · Υπόλοιπο τότε {walletMoney(n.balanceMicros)}</li>)}</ul>
       </>}

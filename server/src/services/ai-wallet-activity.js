@@ -5,8 +5,8 @@ const text=max=>z.string().min(1).max(max).regex(/^[^\u0000-\u001f\u007f]*$/u);
 const optionalText=max=>text(max).nullable();
 export const walletActivitySchema=z.object({
   version:z.literal(1),companyId:text(160),storeId:text(160),
-  purpose:z.enum(['OWNER_ASSISTANT','INVOICE_ASSISTANT','PAYMENT_HEADER_READ','PAYMENT_INVOICE_READ','INVOICE_READ','INVOICE_RECHECK']),
-  surface:z.enum(['OWNER_ASSISTANT','PAYMENT_ENTRY','INVOICE_WORKSPACE','UNKNOWN']),
+  purpose:z.enum(['OWNER_ASSISTANT','INVOICE_ASSISTANT','PAYMENT_HEADER_READ','PAYMENT_INVOICE_READ','INVOICE_READ','INVOICE_RECHECK','STAFF_SCHEDULE','CASH_PAPER_READING','ONLINE_SEARCH','PLATFORM_CUSTOMER_ASSISTANT']),
+  surface:z.enum(['OWNER_ASSISTANT','PAYMENT_ENTRY','INVOICE_WORKSPACE','WORKFORCE_PLANNER','CASH_REVIEW','PRODUCT_SEARCH','PLATFORM_ASSISTANT','UNKNOWN']),
   execution:z.enum(['DIRECT','BACKGROUND']),
   actor:z.object({id:text(160),name:optionalText(160),role:optionalText(60),kind:z.enum(['POS_OPERATOR','BACKOFFICE_USER','DELEGATED_USER','SUPPORT']),profile:optionalText(60)}).strict().nullable(),
   terminalPos:optionalText(80),documentId:optionalText(160),documentNumber:optionalText(160),jobId:optionalText(160),
@@ -15,7 +15,8 @@ const clean=(value,max=160)=>typeof value==='string'?value.replace(/[\u0000-\u00
 // Human labels may be shortened; identity/reference keys must never be
 // normalized into another identifier or silently truncated.
 const identifier=value=>typeof value==='string'&&value.length>0&&value.length<=160&&value===value.trim()&&!/[\u0000-\u001f\u007f]/u.test(value)?value:null;
-const surfaceFor=purpose=>purpose==='OWNER_ASSISTANT'?'OWNER_ASSISTANT':['PAYMENT_HEADER_READ','PAYMENT_INVOICE_READ'].includes(purpose)?'PAYMENT_ENTRY':'INVOICE_WORKSPACE';
+const extraSurfaces={STAFF_SCHEDULE:'WORKFORCE_PLANNER',CASH_PAPER_READING:'CASH_REVIEW',ONLINE_SEARCH:'PRODUCT_SEARCH',PLATFORM_CUSTOMER_ASSISTANT:'PLATFORM_ASSISTANT'};
+const surfaceFor=purpose=>extraSurfaces[purpose]|| (purpose==='OWNER_ASSISTANT'?'OWNER_ASSISTANT':['PAYMENT_HEADER_READ','PAYMENT_INVOICE_READ'].includes(purpose)?'PAYMENT_ENTRY':'INVOICE_WORKSPACE');
 
 // A metadata snapshot is not an authorization grant. Call only after the
 // existing request/job authorization; never pass req.body as an actor/source.
@@ -26,7 +27,7 @@ export function walletActivityFromRequest(req,{storeId,purpose,documentId=null,d
   if(user.tokenType==='POS_BACKGROUND')return walletActivityForJob({companyId,storeId,purpose,documentId,documentNumber,jobId},originalActivity);
   const operator=user.tokenType==='STORE_OPERATOR',support=user.isSuperAdmin===true&&user.platformRole==='SUPER_ADMIN';
   const id=identifier(operator?user.operatorId||user.id:user.id);
-  const known=operator||user.tokenType==='BACKOFFICE_USER';
+  const known=operator||support||user.tokenType==='BACKOFFICE_USER';
   return walletActivitySchema.parse({version:1,companyId,storeId,purpose,surface:surfaceFor(purpose),execution:'DIRECT',
     actor:known&&id?{id,name:clean(user.fullName),role:clean(support?'SUPER_ADMIN':user.role,60),kind:operator?'POS_OPERATOR':support?'SUPPORT':user.staffAccess===true?'DELEGATED_USER':'BACKOFFICE_USER',profile:user.staffAccess===true?clean(req.staffGrant?.profile,60):null}:null,
     terminalPos:operator?clean(user.terminalPos,80):null,documentId:identifier(documentId),documentNumber:clean(documentNumber),jobId:identifier(jobId)});
