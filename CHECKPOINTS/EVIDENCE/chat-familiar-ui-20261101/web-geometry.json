@@ -1,0 +1,464 @@
+[
+  {
+    "width": 390,
+    "height": 844,
+    "header": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 70,
+      "b": 70,
+      "right": 390
+    },
+    "messages": {
+      "x": 0,
+      "y": 112,
+      "w": 390,
+      "h": 671,
+      "b": 783,
+      "right": 390
+    },
+    "compose": {
+      "x": 0,
+      "y": 783,
+      "w": 390,
+      "h": 61,
+      "b": 844,
+      "right": 390
+    },
+    "searchHidden": true,
+    "installText": "Εγκατεστημένη · ΒοήθειαΚοινοποίηση συνδέσμου",
+    "overflow": false,
+    "calls": [
+      "/api/store-chat/stores/VIRTUAL_STORE/messages?_ts=1793542058352"
+    ],
+    "buttons": [
+      {
+        "text": "⋮",
+        "r": {
+          "h": 44,
+          "right": 326
+        }
+      },
+      {
+        "text": "",
+        "r": {
+          "h": 44,
+          "right": 378
+        }
+      }
+    ],
+    "toolGeometry": [
+      {
+        "label": "history",
+        "x": 12,
+        "y": 12,
+        "w": 366,
+        "h": 820,
+        "right": 378,
+        "bottom": 832,
+        "overflow": false,
+        "buttons": [
+          {
+            "text": "Κλείσιμο αναζήτησης",
+            "h": 44,
+            "right": 276.203125
+          },
+          {
+            "text": "Αναζήτηση ιστορικού",
+            "h": 44,
+            "right": 358
+          },
+          {
+            "text": "Απάντηση",
+            "h": 44,
+            "right": 156.125
+          },
+          {
+            "text": "Προώθηση",
+            "h": 44,
+            "right": 279.71875
+          }
+        ],
+        "requests": [
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages?_ts=1793542058352",
+            "method": "GET"
+          },
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages/search?q=archive",
+            "method": "GET"
+          }
+        ]
+      },
+      {
+        "label": "forward",
+        "x": 12,
+        "y": 12,
+        "w": 366,
+        "h": 820,
+        "right": 378,
+        "bottom": 832,
+        "overflow": false,
+        "buttons": [
+          {
+            "text": "Κλείσιμο προώθησης",
+            "h": 44,
+            "right": 269.015625
+          },
+          {
+            "text": "Επιβεβαίωση προώθησης",
+            "h": 44,
+            "right": 358
+          },
+          {
+            "text": "Αλλαγή προορισμού",
+            "h": 44,
+            "right": 358
+          }
+        ],
+        "requests": [
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages?_ts=1793542058352",
+            "method": "GET"
+          },
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages/search?q=archive",
+            "method": "GET"
+          },
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/forward-targets",
+            "method": "GET"
+          }
+        ]
+      }
+    ],
+    "photo": {
+      "x": 19,
+      "y": 127,
+      "w": 352,
+      "h": 658,
+      "right": 371,
+      "bottom": 785,
+      "natural": [
+        600,
+        1600
+      ],
+      "shown": [
+        246.75,
+        658
+      ],
+      "fit": "contain",
+      "transform": "translate(0px, 0px) scale(1)",
+      "zoomed": "translate(0px, 0px) scale(3)"
+    }
+  },
+  {
+    "width": 360,
+    "height": 740,
+    "header": {
+      "x": 0,
+      "y": 0,
+      "w": 360,
+      "h": 70,
+      "b": 70,
+      "right": 360
+    },
+    "messages": {
+      "x": 0,
+      "y": 124.375,
+      "w": 360,
+      "h": 554.625,
+      "b": 679,
+      "right": 360
+    },
+    "compose": {
+      "x": 0,
+      "y": 679,
+      "w": 360,
+      "h": 61,
+      "b": 740,
+      "right": 360
+    },
+    "searchHidden": true,
+    "installText": "Εγκατεστημένη · ΒοήθειαΚοινοποίηση συνδέσμου",
+    "overflow": false,
+    "calls": [
+      "/api/store-chat/stores/VIRTUAL_STORE/messages?_ts=1793542059938"
+    ],
+    "buttons": [
+      {
+        "text": "⋮",
+        "r": {
+          "h": 44,
+          "right": 296
+        }
+      },
+      {
+        "text": "",
+        "r": {
+          "h": 44,
+          "right": 348
+        }
+      }
+    ],
+    "toolGeometry": [
+      {
+        "label": "history",
+        "x": 12,
+        "y": 12,
+        "w": 336,
+        "h": 716,
+        "right": 348,
+        "bottom": 728,
+        "overflow": false,
+        "buttons": [
+          {
+            "text": "Κλείσιμο αναζήτησης",
+            "h": 44,
+            "right": 276.203125
+          },
+          {
+            "text": "Αναζήτηση ιστορικού",
+            "h": 44,
+            "right": 328
+          },
+          {
+            "text": "Απάντηση",
+            "h": 44,
+            "right": 156.125
+          },
+          {
+            "text": "Προώθηση",
+            "h": 44,
+            "right": 279.71875
+          }
+        ],
+        "requests": [
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages?_ts=1793542059938",
+            "method": "GET"
+          },
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages/search?q=archive",
+            "method": "GET"
+          }
+        ]
+      },
+      {
+        "label": "forward",
+        "x": 12,
+        "y": 12,
+        "w": 336,
+        "h": 716,
+        "right": 348,
+        "bottom": 728,
+        "overflow": false,
+        "buttons": [
+          {
+            "text": "Κλείσιμο προώθησης",
+            "h": 44,
+            "right": 269.015625
+          },
+          {
+            "text": "Επιβεβαίωση προώθησης",
+            "h": 44,
+            "right": 328
+          },
+          {
+            "text": "Αλλαγή προορισμού",
+            "h": 44,
+            "right": 328
+          }
+        ],
+        "requests": [
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages?_ts=1793542059938",
+            "method": "GET"
+          },
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages/search?q=archive",
+            "method": "GET"
+          },
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/forward-targets",
+            "method": "GET"
+          }
+        ]
+      }
+    ],
+    "photo": {
+      "x": 19,
+      "y": 127,
+      "w": 322,
+      "h": 554,
+      "right": 341,
+      "bottom": 681,
+      "natural": [
+        600,
+        1600
+      ],
+      "shown": [
+        207.75,
+        554
+      ],
+      "fit": "contain",
+      "transform": "translate(0px, 0px) scale(1)",
+      "zoomed": "translate(0px, 0px) scale(3)"
+    }
+  },
+  {
+    "width": 390,
+    "height": 420,
+    "header": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 58,
+      "b": 58,
+      "right": 390
+    },
+    "messages": {
+      "x": 0,
+      "y": 100,
+      "w": 390,
+      "h": 259,
+      "b": 359,
+      "right": 390
+    },
+    "compose": {
+      "x": 0,
+      "y": 359,
+      "w": 390,
+      "h": 61,
+      "b": 420,
+      "right": 390
+    },
+    "searchHidden": true,
+    "installText": "Εγκατεστημένη · ΒοήθειαΚοινοποίηση συνδέσμου",
+    "overflow": false,
+    "calls": [
+      "/api/store-chat/stores/VIRTUAL_STORE/messages?_ts=1793542061449"
+    ],
+    "buttons": [
+      {
+        "text": "⋮",
+        "r": {
+          "h": 44,
+          "right": 332
+        }
+      },
+      {
+        "text": "",
+        "r": {
+          "h": 44,
+          "right": 380
+        }
+      }
+    ],
+    "toolGeometry": [
+      {
+        "label": "history",
+        "x": 12,
+        "y": 12,
+        "w": 366,
+        "h": 396,
+        "right": 378,
+        "bottom": 408,
+        "overflow": false,
+        "buttons": [
+          {
+            "text": "Κλείσιμο αναζήτησης",
+            "h": 44,
+            "right": 276.203125
+          },
+          {
+            "text": "Αναζήτηση ιστορικού",
+            "h": 44,
+            "right": 358
+          },
+          {
+            "text": "Απάντηση",
+            "h": 44,
+            "right": 156.125
+          },
+          {
+            "text": "Προώθηση",
+            "h": 44,
+            "right": 279.71875
+          }
+        ],
+        "requests": [
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages?_ts=1793542061449",
+            "method": "GET"
+          },
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages/search?q=archive",
+            "method": "GET"
+          }
+        ]
+      },
+      {
+        "label": "forward",
+        "x": 12,
+        "y": 12,
+        "w": 366,
+        "h": 396,
+        "right": 378,
+        "bottom": 408,
+        "overflow": false,
+        "buttons": [
+          {
+            "text": "Κλείσιμο προώθησης",
+            "h": 44,
+            "right": 269.015625
+          },
+          {
+            "text": "Επιβεβαίωση προώθησης",
+            "h": 44,
+            "right": 358
+          },
+          {
+            "text": "Αλλαγή προορισμού",
+            "h": 44,
+            "right": 358
+          }
+        ],
+        "requests": [
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages?_ts=1793542061449",
+            "method": "GET"
+          },
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/messages/search?q=archive",
+            "method": "GET"
+          },
+          {
+            "path": "/api/store-chat/stores/VIRTUAL_STORE/forward-targets",
+            "method": "GET"
+          }
+        ]
+      }
+    ],
+    "photo": {
+      "x": 19,
+      "y": 127,
+      "w": 352,
+      "h": 234,
+      "right": 371,
+      "bottom": 361,
+      "natural": [
+        600,
+        1600
+      ],
+      "shown": [
+        87.75,
+        234
+      ],
+      "fit": "contain",
+      "transform": "translate(0px, 0px) scale(1)",
+      "zoomed": "translate(0px, 0px) scale(3)"
+    }
+  }
+]
