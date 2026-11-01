@@ -25,9 +25,9 @@ export function projectPostpaidDebt(rows){
  for(const row of rows){
   if(row.kind!=='CREDIT'||row.status!=='CREDITED')fail();
   if(row.feature==='POSTPAID_GRANT'){
-   const data=grantMetadata.safeParse(row.postpaid);if(!data.success||grants.has(row.id)||row.storeId!==data.data.storeId)fail();
+   const data=grantMetadata.safeParse(row.postpaid);if(!data.success||grants.has(row.id)||row.storeId!=null)fail();
    const credit=positiveMicros(String(row.creditedMicros));issued+=credit;
-   grants.set(row.id,{id:row.id,storeId:row.storeId,reference:data.data.reference,reason:data.data.reason,amountMicros:String(credit),paidMicros:'0',outstandingMicros:String(credit),createdAt:row.createdAt,status:'UNPAID'});
+   grants.set(row.id,{id:row.id,recipientStoreId:data.data.storeId,reference:data.data.reference,reason:data.data.reason,amountMicros:String(credit),paidMicros:'0',outstandingMicros:String(credit),createdAt:row.createdAt,status:'UNPAID'});
   }else if(row.feature==='POSTPAID_PAYMENT'){
    const data=paymentMetadata.safeParse(row.postpaid);if(!data.success||String(row.creditedMicros)!=='0'||row.storeId!=null)fail();payments.push(data.data);
   }else fail();
@@ -69,7 +69,9 @@ export function createPostpaidWallet({db,ensure,lock}){
    if(BigInt(row.balanceMicros)+value>MAX_WALLET_MICROS||BigInt(debt.outstandingMicros)+value>MAX_WALLET_MICROS)throw walletError('AI_WALLET_LIMIT',400);
    if(source&&(!source.recipients.length||source.fingerprint!==input.recipientFingerprint))throw walletError('AI_WALLET_POSTPAID_RECIPIENTS_CHANGED');
    const id=randomUUID(),cycleId=randomUUID(),nextBalance=BigInt(row.balanceMicros)+value,outstanding=BigInt(debt.outstandingMicros)+value;
-   await tx.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","storeId","kind","reference","status","creditedMicros","feature","usage","actorId") VALUES (${id},${companyId},${input.storeId},'CREDIT',${reference},'CREDITED',${value},'POSTPAID_GRANT',${JSON.stringify({postpaid:metadata})}::jsonb,${actorId})`;
+   // Funding stays company-owned exactly like prepaid/trial credits. The
+   // recipient store is provenance inside metadata, never ledger ownership.
+   await tx.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","kind","reference","status","creditedMicros","feature","usage","actorId") VALUES (${id},${companyId},'CREDIT',${reference},'CREDITED',${value},'POSTPAID_GRANT',${JSON.stringify({postpaid:metadata})}::jsonb,${actorId})`;
    await tx.$executeRaw`UPDATE "AiOwnerWallet" SET "balanceMicros"="balanceMicros"+${value},"lastCreditMicros"=${value},"cycleId"=${cycleId},"version"="version"+1,"updatedAt"=NOW() WHERE "companyId"=${companyId}`;
    await tx.$executeRaw`INSERT INTO "AiOwnerWalletAudit" ("id","companyId","actorId","event","detail") VALUES (${randomUUID()},${companyId},${actorId},'POSTPAID_CREDIT_GRANTED',${JSON.stringify({entryId:id,amountMicros:String(value),outstandingMicros:String(outstanding),...metadata})}::jsonb)`;
    for(const recipient of source?.recipients||[]){
@@ -85,8 +87,8 @@ export function createPostpaidWallet({db,ensure,lock}){
   const input=postpaidPaymentSchema.parse(raw),value=positiveMicros(input.amountMicros),reference=normalized(input.receiptReference);
   if(reference.startsWith('TRIAL/')||reference.startsWith('POSTPAID/'))throw walletError('AI_WALLET_RESERVED_REFERENCE',400);
   await ensure();
-  const [original]=await db.$queryRaw`SELECT "storeId" FROM "AiOwnerWalletEntry" WHERE "id"=${input.creditEntryId} AND "companyId"=${companyId} AND "feature"='POSTPAID_GRANT'`;
-  if(!original?.storeId)throw walletError('AI_WALLET_SCOPE_DENIED',404);
+  const [original]=await db.$queryRaw`SELECT "id" FROM "AiOwnerWalletEntry" WHERE "id"=${input.creditEntryId} AND "companyId"=${companyId} AND "feature"='POSTPAID_GRANT' AND "kind"='CREDIT' AND "status"='CREDITED'`;
+  if(!original)throw walletError('AI_WALLET_SCOPE_DENIED',404);
   const metadata={type:'DEBT_PAYMENT',creditEntryId:input.creditEntryId,amountMicros:String(value),receiptReference:reference};
   return db.$transaction(async tx=>{
    // Repayment belongs to the company, including after the originating store
@@ -124,7 +126,7 @@ export function createPostpaidWallet({db,ensure,lock}){
    if(!item)return null;
    const recipient=source.recipients.find(r=>r.recipientId===p.recipientId&&r.email===p.email);
    const [entry]=await tx.$queryRaw`SELECT "id","companyId","storeId","kind","status","feature","creditedMicros","createdAt","actorId","usage"->'postpaid' AS "postpaid" FROM "AiOwnerWalletEntry" WHERE "id"=${p.entryId} AND "companyId"=${p.companyId}`;
-   if(!recipient||source.fingerprint!==p.recipientFingerprint||item.cycleId!==postpaidHash(['MWS_AI_POSTPAID_NOTICE_V1',p.entryId,p.recipientId])||item.ownerId!==postpaidRecipientMarker+p.recipientId||item.email!==p.email||item.kind!=='CREDIT'||!entry||entry.feature!=='POSTPAID_GRANT'||entry.storeId!==p.storeId||entry.actorId!==p.actorId||entry.postpaid?.generation!==p.generation||entry.postpaid?.storeId!==p.storeId||String(entry.creditedMicros)!==String(item.amountMicros)||entry.postpaid?.sendNotifications!==true||entry.postpaid?.recipientFingerprint!==source.fingerprint){await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='REVOKED' WHERE "id"=${noticeId}`;return {revoked:true}}
+   if(!recipient||source.fingerprint!==p.recipientFingerprint||item.cycleId!==postpaidHash(['MWS_AI_POSTPAID_NOTICE_V1',p.entryId,p.recipientId])||item.ownerId!==postpaidRecipientMarker+p.recipientId||item.email!==p.email||item.kind!=='CREDIT'||!entry||entry.feature!=='POSTPAID_GRANT'||entry.storeId!==null||entry.actorId!==p.actorId||entry.postpaid?.generation!==p.generation||entry.postpaid?.storeId!==p.storeId||String(entry.creditedMicros)!==String(item.amountMicros)||entry.postpaid?.sendNotifications!==true||entry.postpaid?.recipientFingerprint!==source.fingerprint){await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='REVOKED' WHERE "id"=${noticeId}`;return {revoked:true}}
    const debt=await readPostpaidDebt(tx,p.companyId);
    const payments=await tx.$queryRaw`SELECT "id","storeId","kind","status","feature","creditedMicros","createdAt","usage"->'postpaid' AS "postpaid" FROM "AiOwnerWalletEntry" WHERE "companyId"=${p.companyId} AND "feature"='POSTPAID_PAYMENT' AND "usage"->'postpaid'->>'creditEntryId'=${p.entryId}`;
    const ownDebt=projectPostpaidDebt([entry,...payments]);

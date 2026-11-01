@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {projectPostpaidDebt,postpaidGrantSchema,postpaidPaymentSchema,publicPostpaidActivity} from '../src/services/ai-wallet-postpaid.js';
 import {walletNoticeText} from '../src/services/ai-owner-wallet-notifications.js';
 const metadata={type:'CREDIT_ON_ACCOUNT',reason:'Synthetic credit',reference:'SYNTHETIC-ACCOUNT',storeId:'s',generation:'0',sendNotifications:false,recipientFingerprint:null};
-const grant=(id=randomUUID(),value='10000000')=>({id,storeId:'s',kind:'CREDIT',status:'CREDITED',feature:'POSTPAID_GRANT',creditedMicros:value,createdAt:new Date('2026-11-01T00:00:00Z'),postpaid:{...metadata}});
+const grant=(id=randomUUID(),value='10000000')=>({id,storeId:null,kind:'CREDIT',status:'CREDITED',feature:'POSTPAID_GRANT',creditedMicros:value,createdAt:new Date('2026-11-01T00:00:00Z'),postpaid:{...metadata}});
 const payment=(creditEntryId,value='4000000')=>({id:randomUUID(),kind:'CREDIT',status:'CREDITED',feature:'POSTPAID_PAYMENT',creditedMicros:'0',postpaid:{type:'DEBT_PAYMENT',creditEntryId,amountMicros:value,receiptReference:'SYNTHETIC-RECEIPT'}});
 test('postpaid debt is independent of consumption and exact partial/full receipts never double fund balance',()=>{
  const g=grant(),p=payment(g.id);const d=projectPostpaidDebt([g,p]);
@@ -14,7 +14,7 @@ test('postpaid debt is independent of consumption and exact partial/full receipt
 });
 test('postpaid projection refuses orphan, malformed, overpaid, duplicated or falsely credited receipt rows',()=>{
  const g=grant(),p=payment(g.id);
- for(const rows of [[p],[g,g],[g,{...p,creditedMicros:'1'}],[g,payment(g.id,'10000001')],[{...g,creditedMicros:'0'}],[{...g,status:'REVIEW'}],[g,{...p,postpaid:{...p.postpaid,amountMicros:'-1'}}],[g,{...p,postpaid:{...p.postpaid,amountMicros:'1e2'}}],[{...g,postpaid:{...g.postpaid,unknown:true}}]])assert.throws(()=>projectPostpaidDebt(rows));
+ for(const rows of [[p],[g,g],[{...g,storeId:'s'}],[g,{...p,creditedMicros:'1'}],[g,payment(g.id,'10000001')],[{...g,creditedMicros:'0'}],[{...g,status:'REVIEW'}],[g,{...p,postpaid:{...p.postpaid,amountMicros:'-1'}}],[g,{...p,postpaid:{...p.postpaid,amountMicros:'1e2'}}],[{...g,postpaid:{...g.postpaid,unknown:true}}]])assert.throws(()=>projectPostpaidDebt(rows));
 });
 test('all unpaid credits remain selectable beyond latest100 and old payments contribute to company totals',()=>{
  const old=grant(),rows=[old];for(let i=0;i<125;i++){const g=grant();g.createdAt=new Date(Date.UTC(2026,10,2+i));rows.push(g,payment(g.id,'10000000'))}

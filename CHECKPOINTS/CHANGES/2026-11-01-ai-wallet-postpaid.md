@@ -1,3 +1,7 @@
+## 01/11/2026 — PRE-RELEASE RECOVERY REVIEW / COMPANY-OWNED FUNDING PRESERVED
+
+Exact source review identified that the new grant must remain a company-owned CREDIT with NULL storeId, like all existing prepaid/trial funding. Corrected before any release: selected store is only recipient provenance inside strict JSON metadata; both unpaid grants and payments retain NULL ledger storeId. Debt projection refuses store-owned funding; immutable original USER/REVIEW rows are untouched. Native test explicitly asserts NULL funding ownership and payment after source-store retirement. All lifecycle/source checks remain required when granting or claiming a notice. No catalogue/schema change, production write or new user input. Initial source headb96efd86 is superseded and may not count as final CI proof.
+
 ## 01/11/2026 — AI-WALLET-POSTPAID-01 / SOURCE PREPARED / AWAITING FULL CI AND HOSTED ACCEPTANCE
 
 ### 01/11/2026 — POSTPAID SOURCE CANDIDATE / LOCAL PURE-MOUNTED PASS / NATIVE CI REQUIRED
