@@ -1,8 +1,12 @@
 import {reconcileInventory} from './inventory-reconciliation.js';
 import {createHash} from 'node:crypto';
+import {readLifecycleGeneration} from './store-lifecycle-generation.js';
+import {readInventoryReviewState} from './inventory-reconciliation-review-source.js';
+import {projectInventoryReviews} from './inventory-reconciliation-review-contract.js';
 const fail = (message,status=409) => {throw Object.assign(new Error(message),{status});};
-export async function readInventoryReconciliation(db, current, previousId = null) {
-  return db.$transaction(async tx => {
+export async function readInventoryReconciliationBase(tx, current, previousId = null) {
+    const lifecycle=await readLifecycleGeneration(tx,{companyId:current.companyId,storeId:current.storeId});
+    if(lifecycle.maintenance||lifecycle.retired)fail('Το κατάστημα βρίσκεται σε συντήρηση ή έχει αποσυρθεί.');
     const candidates = await tx.$queryRaw`SELECT "id","companyId","storeId","name","status","startedAt","finalizedAt" FROM "Stocktake"
       WHERE "companyId"=${current.companyId} AND "storeId"=${current.storeId} AND "status"='FINALIZED'
       AND "id"<>${current.id} AND "finalizedAt"<=${current.startedAt} ORDER BY "finalizedAt" DESC,"id" LIMIT 200`;
@@ -34,7 +38,13 @@ export async function readInventoryReconciliation(db, current, previousId = null
       ORDER BY sm."createdAt",sm."id" LIMIT 100001`;
     if (movements.length > 100000) fail('Υπερβολικά πολλές κινήσεις. Δεν εκδόθηκε μερικό αποτέλεσμα.',413);
     const report = reconcileInventory({previous,current:fresh,previousLines:lines.filter(x=>x.stocktakeId===previous.id),currentLines:lines.filter(x=>x.stocktakeId===fresh.id),events,movements});
-    return {...report,fingerprint:createHash('sha256').update(JSON.stringify(report)).digest('hex'),
+    return {...report,generation:lifecycle.generation,fingerprint:createHash('sha256').update(JSON.stringify([report,lifecycle.generation])).digest('hex'),
       candidates:candidates.map(({id,name,finalizedAt})=>({id,name,finalizedAt}))};
+}
+export async function readInventoryReconciliation(db, current, previousId = null) {
+  return db.$transaction(async tx => {
+    const base=await readInventoryReconciliationBase(tx,current,previousId);
+    const scope={companyId:base.current.companyId,storeId:base.current.storeId,generation:base.generation,previousId:base.previous.id,currentId:base.current.id};
+    return projectInventoryReviews(base,await readInventoryReviewState(tx,scope));
   },{isolationLevel:'RepeatableRead',maxWait:5000,timeout:20000});
 }

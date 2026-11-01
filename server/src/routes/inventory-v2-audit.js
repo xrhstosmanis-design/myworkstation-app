@@ -1,5 +1,5 @@
 import {inventoryStocktakeScopeAllowed} from "../lib/inventory-stocktake-scope.js";
-import {createInventoryReconciliationHandler} from "../services/inventory-reconciliation-handler.js";
+import {createInventoryReconciliationHandler,createInventoryReviewHandler} from "../services/inventory-reconciliation-handler.js";
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import {
@@ -44,6 +44,7 @@ const requireLossDetection = async (req, res, stocktake) => {
 };
 // Existing count/read grants do not confer cost or loss-investigation access.
 router.get("/stocktakes/:stocktakeId/reconciliation", createInventoryReconciliationHandler({db:prisma,access,requireLossDetection}));
+router.post("/stocktakes/:stocktakeId/reconciliation/reviews",createInventoryReviewHandler({db:prisma,access,requireLossDetection}));
 router.get("/stocktakes/:stocktakeId/audit", async (req, res, next) => {
   try {
     const st = await access(req, req.params.stocktakeId);

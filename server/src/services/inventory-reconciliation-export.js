@@ -16,12 +16,16 @@ export function inventoryReconciliationWorkbook(report) {
     ['Αξία πλεονασμάτων',report.summary.surplusValue],['Καθαρή αξία',report.summary.netValue],
     ['Χωρίς υπολογισμό',report.summary.uncomputedItems],['Χωρίς κόστος',report.summary.missingCostItems]
   ]);
-  append('Είδη',[['Ταυτότητα','SKU','Περιγραφή','Από καταμέτρηση','Έως καταμέτρηση','Προηγούμενη ποσότητα','Εισαγωγές','Εξαγωγές','Διορθώσεις συστήματος','Αναμενόμενο','Καταμέτρηση','Διαφορά προς έλεγχο','Κόστος','Αξία','Ευρήματα'],
+  if(report.groups)append('Τελικό αποτέλεσμα',[['Κύριος κωδικός','SKU','Περιγραφή','Κωδικοί ομάδας','Αρχική διαφορά','Επιβεβαιωμένη διόρθωση','Τελική διαφορά','Κόστος μονάδας','Αρχική αξία','Αξία διόρθωσης','Τελική αξία','Ευρήματα'],
+    ...report.groups.map(x=>[x.canonicalProductId,x.sku,x.name,x.productIds.join(', '),x.initialDifference,x.correctionQuantity,x.finalDifference,x.unitCost,x.initialValue,x.correctionValue,x.finalValue,x.findings.join(', ')])]);
+  append('Είδη',[['Ταυτότητα','SKU','Περιγραφή','Από καταμέτρηση','Έως καταμέτρηση','Προηγούμενη ποσότητα','Εισαγωγές','Εξαγωγές','Διορθώσεις συστήματος','Αναμενόμενο','Καταμέτρηση','Αρχική διαφορά ανά κωδικό','Κόστος','Αρχική αξία','Ευρήματα'],
     ...report.rows.map(x=>[x.productId,x.sku,x.name,timestamp(x.from),timestamp(x.to),x.previousCountedQuantity,x.incoming,x.outgoing,x.systemAdjustments,x.expectedQuantity,x.countedQuantity,x.difference,x.unitCost,x.differenceValue,x.findings.join(', ')])]);
   append('Κινήσεις',[['Προϊόν','ID κίνησης','Τύπος','Κατάταξη','Ποσότητα','Πριν','Μετά','Ώρα καταχώρησης','Ημερομηνία παραστατικού','Καταχώρηση παραστατικού','Πραγματική ώρα κίνησης','Χειριστής','Παραστατικό','Σύνδεση','Υπολογίστηκε','Ευρήματα'],
     ...report.rows.flatMap(x=>x.movements.map(m=>[x.productId,m.id,m.movementType,m.classification,m.quantity,m.balanceBefore,m.balanceAfter,timestamp(m.postedAt),timestamp(m.documentDate),timestamp(m.documentRecordedAt),null,m.actorName,m.documentNumber,m.sourceId,m.included,m.findings.join(', ')]))]);
   append('Καταμετρήσεις',[['Προϊόν','ID συμβάντος','Απογραφή','Τύπος','Πριν','Καταμέτρηση','Θεωρητικό','Χειριστής','Πηγή','Ώρα'],
     ...report.rows.flatMap(x=>x.countHistory.map(e=>[x.productId,e.id,e.stocktakeId,e.eventType,e.previousQuantity,e.countedQuantity,e.expectedQuantity,e.actorName,e.source,timestamp(e.createdAt)]))]);
+  if(report.review?.available)append('Ιστορικό ελέγχου',[['Ταυτότητα','Ώρα','Ελεγκτής','Ενέργεια','Προϊόντα ή αναφορά','Ποσότητα διόρθωσης','Αιτιολογία','Τεκμηρίωση','Ενεργή'],
+    ...report.review.history.map(r=>[r.id,timestamp(r.createdAt),r.actorName,r.action.kind,r.action.productIds?.join(', ')||r.action.productId||r.action.actionId,r.action.quantity??null,r.action.reason,r.action.evidence,r.active])]);
   return XLSX.write(wb,{bookType:'xlsx',type:'buffer'});
 }
 export async function inventoryReconciliationPdf(report) {
@@ -37,13 +41,23 @@ export async function inventoryReconciliationPdf(report) {
     .text(`Πλεονάσματα: ${number(report.summary.surplusQuantity)} τμχ · ${number(report.summary.surplusValue)} €`)
     .text(`Καθαρή διαφορά: ${number(report.summary.netQuantity)} τμχ · ${number(report.summary.netValue)} €`)
     .text(`Χωρίς υπολογισμό: ${report.summary.uncomputedItems} · Χωρίς κόστος: ${report.summary.missingCostItems}`);
+  if(report.groups){
+    doc.moveDown().fontSize(11).text('Τελικό αποτέλεσμα ανά επιβεβαιωμένη ομάδα');
+    for(const group of report.groups)doc.fontSize(8).moveDown().text(`${group.sku || group.id} · ${group.name} · κωδικοί ${group.productIds.join(', ')}`)
+      .text(`Αρχική διαφορά ${number(group.initialDifference)} + διόρθωση ${number(group.correctionQuantity)} = τελική διαφορά ${number(group.finalDifference)} · τελική αξία ${number(group.finalValue)} €`);
+    doc.moveDown().fontSize(10).text('Αρχικές καταμετρήσεις και κινήσεις ανά κωδικό');
+  }
   for (const row of report.rows) {
     doc.moveDown().fontSize(10).text(`${row.sku || row.productId} · ${row.name}`);
     doc.fontSize(8).text(`${timestamp(row.from)} → ${timestamp(row.to)}`)
       .text(`Προηγούμενο ${number(row.previousCountedQuantity)} + εισαγωγές ${row.incoming} − εξαγωγές ${row.outgoing} + διορθώσεις συστήματος ${row.systemAdjustments} = ${number(row.expectedQuantity)}`)
-      .text(`Καταμέτρηση ${number(row.countedQuantity)} · διαφορά ${number(row.difference)} · κόστος ${number(row.unitCost)} · αξία ${number(row.differenceValue)}`)
+      .text(`Αρχική καταμέτρηση ${number(row.countedQuantity)} · αρχική διαφορά ${number(row.difference)} · κόστος ${number(row.unitCost)} · αρχική αξία ${number(row.differenceValue)}`)
       .text(`Ευρήματα: ${row.findings.join(', ') || 'Απαιτείται έλεγχος πληρότητας πηγών'}`);
     for (const m of row.movements) doc.text(`${m.id} · ${timestamp(m.postedAt)} · ${m.movementType} · ${number(m.quantity)} · ${m.sourceId || 'Χωρίς σύνδεση'}${m.included ? '' : ' · Βάση απογραφής, δεν προσμετράται'}`);
+  }
+  if(report.review?.history?.length){doc.moveDown().fontSize(10).text('Ιστορικό επιβεβαιώσεων και διορθώσεων αναφοράς');
+    for(const r of report.review.history)doc.fontSize(8).moveDown().text(`${r.id} · ${timestamp(r.createdAt)} · ${r.actorName} · ${r.action.kind} · ${r.active?'ενεργή':'ιστορική'}`)
+      .text(`${r.action.reason} · ${r.action.evidence}${r.action.quantity===undefined?'':` · διόρθωση ${r.action.quantity}`}`);
   }
   doc.end(); return completed;
 }
