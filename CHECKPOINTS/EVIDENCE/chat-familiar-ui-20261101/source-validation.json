@@ -1,0 +1,36 @@
+{
+  "sourcePR": 3447,
+  "sourceHead": "bdf9c8d315adae9c2c8a4b97617041cd39704463",
+  "sourcePRCI": 41312235220,
+  "sourcePRTests": {
+    "server": 5089,
+    "backup": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "androidPRCI": 41312235219,
+  "androidTests": 55,
+  "sourceMerge": "2625a7913ccfa162dfa2342d976de6e172110a8f",
+  "sourceMainCI": 41313547280,
+  "signingRun": 41313678816,
+  "probeCI": 41312235288,
+  "probeArtifact": 13086390510,
+  "androidSourceTree": "f9bafe0cb663f77edaca2ca818da40e48aa0e2c2",
+  "physicalAcceptance": "NOT TESTED",
+  "initialSigningGuard": {
+    "run": 41313678816,
+    "job": 124869152094,
+    "reason": "Exact source main full CI pending; key access skipped",
+    "keyAccessed": false
+  },
+  "sourceMainTests": {
+    "server": 5089,
+    "backup": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "signingArtifact": 13086882925,
+  "signingArtifactDigest": "28ccd780bb40bf1060c645d143a5b60854a6f76713edd1b91b5d14bb74f3549f",
+  "signingAttempt": 2,
+  "signingNativeTests": 55
+}
