@@ -1,3 +1,7 @@
+## 01/11/2026 — NATIVE CI REVIEW / FOREIGN STORE RESPONSE
+
+Initial superseded head b96efd86 full run41295037343 failed one native HTTP assertion (foreign company/store returned503 instead of404); all five remaining native postpaid subtests passed, and recovery run41295037341 passed. Added a non-locking scoped existence check before lifecycle/report locks, retaining the locked scope recheck afterward and all lock ordering. No access was granted and no data was written in the failing case. Re-running the exact corrected/integrated head; no CI or LAB PASS claim yet. Preserved peer monthly infrastructure receipt3454/current mainca922a8d, regenerated tracker PDF from merged Markdown.
+
 ## 01/11/2026 — PRE-RELEASE RECOVERY REVIEW / COMPANY-OWNED FUNDING PRESERVED
 
 Exact source review identified that the new grant must remain a company-owned CREDIT with NULL storeId, like all existing prepaid/trial funding. Corrected before any release: selected store is only recipient provenance inside strict JSON metadata; both unpaid grants and payments retain NULL ledger storeId. Debt projection refuses store-owned funding; immutable original USER/REVIEW rows are untouched. Native test explicitly asserts NULL funding ownership and payment after source-store retirement. All lifecycle/source checks remain required when granting or claiming a notice. No catalogue/schema change, production write or new user input. Initial source headb96efd86 is superseded and may not count as final CI proof.

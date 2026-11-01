@@ -13,6 +13,8 @@ export const postpaidGeneration=storeId=>lifecycleContext()[storeId];
 // The lifecycle/Store/report locks precede the company wallet lock everywhere.
 // This reader never provisions schemas or changes report approvals.
 export async function lockPostpaidStore(tx,{companyId,storeId,generation}){
+ const [scoped]=await tx.$queryRaw`SELECT s."id" FROM "Store" s JOIN "Company" c ON c."id"=s."companyId" WHERE s."id"=${storeId} AND s."companyId"=${companyId} AND s."active"=TRUE AND c."active"=TRUE`;
+ if(!scoped)throw walletError('AI_WALLET_SCOPE_DENIED',404);
  if(!await dispatchSchemaReady(tx))throw walletError('AI_WALLET_POSTPAID_RECIPIENTS_UNAVAILABLE');
  const state=await lockAutomaticReportBoundary(tx,{companyId,storeId,...(generation===undefined?{}:{expectedGeneration:generation})});
  const [store]=await tx.$queryRaw`SELECT s."id",s."name",s."companyId" FROM "Store" s JOIN "Company" c ON c."id"=s."companyId" WHERE s."id"=${storeId} AND s."companyId"=${companyId} AND s."active"=TRUE AND c."active"=TRUE FOR SHARE OF s,c NOWAIT`;
