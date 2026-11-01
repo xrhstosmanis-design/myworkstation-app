@@ -1,3 +1,9 @@
+## Current engineering delivery — 01/11/2026
+
+Installed exacte1fcbe04 after full5136server+8backup/0FAIL/0SKIP exact PR/main CI and guarded41343627981, independently healthy19:56:32UTC. inventory.clear, inventory.bulk-zero and inventory.delete are explicit executable Owner-selected store rights, each with inventory.read dependency; no new profile default or automatic grant. Strict native draft/object/version/actor/replay guards and durable audit protect the operations. Catalogue21; the original proposal and candidate history below are historical for these three actions only. All other proposed rows remain unadmitted. No schema/company/worker authority added. Hosted acceptance NOT TESTED; this is not a functional PASS. Same full-scope owner retained.
+
+Single next action: native audit/investigation read/export field classification, including expected/cost/actor visibility, before executable grants. Existing blind counter/finalizer fields and every accepted Owner invariant remain protected. Full release evidence: CHECKPOINTS/EVIDENCE/common-backoffice-permissions-20261101/inventory-actions-release.json.
+
 ## Source continuation 01/11/2026 — first three actions integrated, release/acceptance pending
 
 The review below is preserved as the before-source proposal. The current source candidate implements inventory.clear, inventory.bulk-zero and inventory.delete, with inventory.read dependencies and unchanged legacy defaults. Exact actor/payload replay and transaction-time authority are mandatory, not an inferred role grant. Source21 executable keys; installed revision remains prior18 until exact CI/deploy verification. Other rows below remain proposals, not admitted rights. Hosted acceptance NOT TESTED. Remaining next batch requires native audit/investigation field visibility and exact read/export review before executable grants; no blind expected/cost visibility by default.

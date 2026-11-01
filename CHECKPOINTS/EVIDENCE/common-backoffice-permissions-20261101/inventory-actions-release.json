@@ -1,0 +1,111 @@
+{
+  "status": "THREE_STORE_INVENTORY_ACTIONS_INSTALLED_ENGINEERING_VERIFIED; FULL_SCOPE_OPEN",
+  "owner": "CENTRAL-BACKOFFICE-ACCESS-01 same retained owner",
+  "newExplicitCapabilities": [
+    "inventory.clear",
+    "inventory.bulk-zero",
+    "inventory.delete"
+  ],
+  "dependencies": {
+    "each": [
+      "inventory.read"
+    ],
+    "inventory.countNotImplied": true
+  },
+  "grantableCapabilities": 21,
+  "reviewCatalogue": {
+    "families": 55,
+    "candidates": 342,
+    "grantsNothing": true
+  },
+  "source": {
+    "pr": 3481,
+    "head": "2149b4a3ed78ec254a90b534fb99f53dc8868ada",
+    "tree": "8642da3572ce85ea0c2c054163eadc702988d439",
+    "mainMerge": "e1fcbe04d3097cc3fd856227307d2ad6cb05df0f"
+  },
+  "prCI": {
+    "id": 41340962428,
+    "job": 124950965782,
+    "serverPass": 5136,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allJobsSuccess": 5,
+    "fullBuildBrowserHTTP": true
+  },
+  "mainCI": {
+    "id": 41342282483,
+    "job": 124955066416,
+    "revision": "e1fcbe04d3097cc3fd856227307d2ad6cb05df0f",
+    "branch": "main",
+    "event": "push",
+    "serverPass": 5136,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allJobsSuccess": 5,
+    "fullBuildBrowserHTTP": true
+  },
+  "initialFailedCI": {
+    "id": 41338933308,
+    "job": 124944914596,
+    "head": "f68dc6edd02775f282e3474053c3ee354bdb293f",
+    "pass": 5121,
+    "fail": 2,
+    "skip": 0,
+    "nativeInventoryActionsCohortPassed": true,
+    "causes": [
+      "Review catalogue missing two new action names",
+      "Monthly all-rights HTTP fixture expected18 instead21"
+    ],
+    "fixedWithoutAuthorityWeakening": true
+  },
+  "deployment": {
+    "run": 41343627981,
+    "job": 124958750840,
+    "conclusion": "success",
+    "workflowDefinitionHead": "9a990bb00ed1fbba9b88bbf9f3f4fd892c984b7c",
+    "actualPinnedRevision": "e1fcbe04d3097cc3fd856227307d2ad6cb05df0f",
+    "pinnedTriggerAt": "2026-11-01T19:50:25.7747267Z",
+    "exactHealthyAt": "2026-11-01T19:56:22.6175329Z",
+    "rollbackArtifact": {
+      "id": 13097883014,
+      "name": "render-rollback-checkpoint-e1fcbe04d3097cc3fd856227307d2ad6cb05df0f",
+      "digest": "sha256:dff15e060e80f053599e742dd3a859ca71172c2cd1c5e5f03bd2dea7738755bc",
+      "expired": false
+    }
+  },
+  "independentHealth": {
+    "observedAt": "2026-11-01T19:56:32.184749+00:00",
+    "status": 200,
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "e1fcbe04d3097cc3fd856227307d2ad6cb05df0f"
+    }
+  },
+  "priorIndependentHealth": {
+    "observedAt": "2026-11-01T19:51:57.851122+00:00",
+    "status": 200,
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "b5eab88d79cb0a85a89033c22bb0429aaebad3c4"
+    }
+  },
+  "nativeEvidence": "Real scoped HTTP accounts/session/rights, foreign objects, all-line versions/rollback, exact/conflicting actor-bound replay, concurrent writers, live withdrawal and finalized/deleted draft protection; unchanged stock/financial controls",
+  "automaticNewRights": false,
+  "rolePromotion": false,
+  "schemaOrWorkerChange": false,
+  "hostedGrantCredentialOrBusinessWriteByThisPage": false,
+  "hostedFunctionalAcceptance": "NOT TESTED/AWAITING USER; no LAB/USER/manual/numbered PASS closure",
+  "remaining": "Full all-functions coverage remains assigned/open; inventory residual, broader native commerce and separate explicit company/recovery authority",
+  "singleNextAction": "Classify native audit/investigation read/export fields and expected/cost visibility before executable grants",
+  "peerPreservation": [
+    "b5eab88 monthly source and independent DATA HOLD",
+    "3482 C2 date claim",
+    "3483 scoped assistant acceptance, do not replay",
+    "3485 provider/shared-cost audit, no new billing authority"
+  ]
+}

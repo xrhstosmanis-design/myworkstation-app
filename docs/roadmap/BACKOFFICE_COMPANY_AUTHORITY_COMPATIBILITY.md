@@ -1,3 +1,7 @@
+## Current store-action delivery — company authority remains a proposal
+
+01/11/2026: independent inventory clear/selected-zero/draft-delete source installed in exacte1fcbe04 after full5136+8/0/0 CI and guarded41343627981. These three store rights use the existing JSON grant/audit structures; no column, schema/manifest/profile/worker change or company grant is installed. Current store catalogue21, no automatic new right. The proposed company contract below is still NOT IMPLEMENTED/NOT AUTHORITY. Preserve the separately owned monthly source/capability and all recovery/RESET boundaries. Full all-functions ownership remains CENTRAL-BACKOFFICE-ACCESS-01; hosted functional acceptance remains NOT TESTED.
+
 # Company authority: compatibility packet before implementation
 
 Status: PROPOSAL / NOT INSTALLED / NOT A GRANT. Retained CENTRAL-BACKOFFICE-ACCESS-01 owner. This packet supports the requested complete function coverage; it does not add an executable permission or modify production schema, actors, profiles or workers.
