@@ -279,3 +279,43 @@ export async function authorizeMonthlyCaptureGrantManagementInTransaction(tx,inp
  const actor=actorCopy(input),scope=freeze(copy(rawScope,['companyId','storeId']));if(!text(scope.companyId)||!text(scope.storeId))fail('MONTHLY_CAPTURE_INPUT_INVALID');const initial=await clock(tx,'MANAGEMENT');await schema(tx);const hint=await user(tx,actor.id,'SOURCE');await locks(tx);const auth=await authority(tx,hint,scope,'MANAGEMENT',initial.readAt,actor),current=await user(tx,actor.id,'MANAGEMENT');if(JSON.stringify(current)!==JSON.stringify(hint)||current.sessionVersion!==actor.sessionVersion)fail('MONTHLY_CAPTURE_AUTHORITY_DENIED');
  const sessions=await tx.$queryRawUnsafe(`SELECT "id","userId","expiresAt","revokedAt" FROM "UserSession" WHERE "id"=$1 FOR SHARE NOWAIT`,actor.sessionId);if(sessions.length!==1||sessions[0].userId!==current.id||sessions[0].revokedAt!==null)fail('MONTHLY_CAPTURE_AUTHORITY_DENIED');const expiry=iso(sessions[0].expiresAt),f=await fence(tx,scope,'MANAGEMENT'),final=await clock(tx,'MANAGEMENT');if(final.transactionStartedAt!==initial.transactionStartedAt||final.readAt<initial.readAt)fail('MONTHLY_CAPTURE_TRANSACTION_INVALID');if(expiry<=final.readAt||auth.ends.some(end=>end<final.readAt))fail('MONTHLY_CAPTURE_AUTHORIZATION_EXPIRED');return mint(tx,'MANAGEMENT',{public:freeze({...scope,lifecycleGeneration:f.generation,actorId:current.id,sessionVersion:current.sessionVersion,store:auth.store,checkedAt:final.readAt,validUntil:[expiry,...auth.ends].sort()[0]})});
 }
+
+// Personal capture-now has its own opaque authority. It never grants a leased
+// job, changes the process control, or carries source authority into a writer.
+const personalNowContexts=new WeakMap();
+export const normalizeMonthlyPersonalCaptureNowActor=input=>actorCopy(input);
+export function normalizeMonthlyPersonalCaptureNowInput(raw,complete=false){
+ const selected=copy(raw,['storeId','lifecycleGeneration','expectedIssueMonth'],complete?['storeId','lifecycleGeneration','expectedIssueMonth']:['storeId']);
+ if(!text(selected.storeId)||selected.lifecycleGeneration!==undefined&&!integer(selected.lifecycleGeneration)||selected.expectedIssueMonth!==undefined&&(typeof selected.expectedIssueMonth!=='string'||selected.expectedIssueMonth.length!==7||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(selected.expectedIssueMonth)))fail('MONTHLY_CAPTURE_INPUT_INVALID');
+ return freeze(selected);
+}
+async function personalNowAdmission(tx,input,raw,stage){
+ const actor=actorCopy(input),selected=normalizeMonthlyPersonalCaptureNowInput(raw,stage!=='LOOKUP');
+ const initial=await clock(tx,stage==='SOURCE'?'SOURCE':'MANAGEMENT');await schema(tx);
+ const hint=await user(tx,actor.id,'SOURCE');if(stage!=='SOURCE')await locks(tx);
+ const auth=await authority(tx,hint,{companyId:actor.companyId,storeId:selected.storeId},stage==='SOURCE'?'SOURCE':'MANAGEMENT',initial.readAt,actor);
+ const current=await user(tx,actor.id,stage==='SOURCE'?'SOURCE':'MANAGEMENT');
+ if(JSON.stringify(current)!==JSON.stringify(hint)||current.sessionVersion!==actor.sessionVersion)fail('MONTHLY_CAPTURE_AUTHORITY_DENIED');
+ const sessions=await tx.$queryRawUnsafe(`SELECT "id","userId","expiresAt","revokedAt" FROM "UserSession" WHERE "id"=$1${rowLock(stage==='SOURCE'?'SOURCE':'MANAGEMENT')}`,actor.sessionId);
+ if(sessions.length!==1||sessions[0].userId!==current.id||sessions[0].revokedAt!==null)fail('MONTHLY_CAPTURE_AUTHORITY_DENIED');
+ const scope={companyId:actor.companyId,storeId:selected.storeId},f=await fence(tx,scope,stage==='SOURCE'?'SOURCE':'MANAGEMENT'),period=monthlyCaptureLatestDuePeriod(initial.readAt);
+ if(selected.lifecycleGeneration!==undefined&&selected.lifecycleGeneration!==f.generation)fail('MONTHLY_CAPTURE_GENERATION_STALE');
+ if(selected.expectedIssueMonth!==undefined&&selected.expectedIssueMonth!==period.issueMonth)fail('MONTHLY_CAPTURE_PERIOD_STALE');
+ const context=Object.freeze({}),data={tx,stage,actor,selected,scope:{...scope,lifecycleGeneration:f.generation,issueMonth:period.issueMonth,scheduledFor:period.scheduledFor,checkedAt:initial.readAt},startedAt:initial.transactionStartedAt,validUntil:[iso(sessions[0].expiresAt),...auth.ends].sort()[0]};
+ personalNowContexts.set(context,data);await finishMonthlyPersonalCaptureNowInTransaction(tx,context);return context;
+}
+export const authorizeMonthlyPersonalCaptureNowLookupInTransaction=(tx,actor,input)=>personalNowAdmission(tx,actor,input,'LOOKUP');
+export const authorizeMonthlyPersonalCaptureNowSourceInTransaction=(tx,actor,input)=>personalNowAdmission(tx,actor,input,'SOURCE');
+export const authorizeMonthlyPersonalCaptureNowWriteInTransaction=(tx,actor,input)=>personalNowAdmission(tx,actor,input,'WRITE');
+export function requireMonthlyPersonalCaptureNowContext(tx,context,stage){
+ const data=personalNowContexts.get(context);if(!data||data.tx!==tx||data.stage!==stage)fail('MONTHLY_CAPTURE_CONTEXT_INVALID');return freeze({...data.scope});
+}
+export async function finishMonthlyPersonalCaptureNowInTransaction(tx,context){
+ const data=personalNowContexts.get(context);if(!data||data.tx!==tx)fail('MONTHLY_CAPTURE_CONTEXT_INVALID');
+ // The final statement uses the real DB clock after every wait/readback. Writer
+ // row/table locks retain the admitted session, module and fence until commit.
+ const [last]=await tx.$queryRawUnsafe(`SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "readAt",EXISTS(SELECT 1 FROM "UserSession" s JOIN "User" u ON u."id"=s."userId" WHERE s."id"=$1 AND s."userId"=$2 AND s."revokedAt" IS NULL AND s."expiresAt">clock_timestamp() AND u."sessionVersion"=$3 AND u."mustChangePassword"=FALSE) AS valid`,data.actor.sessionId,data.actor.id,data.actor.sessionVersion);
+ if(last?.valid!==true||!stamp(last.readAt)||last.readAt<data.scope.checkedAt||Date.parse(last.readAt)-Date.parse(data.startedAt)>30000||last.readAt>=data.validUntil)fail('MONTHLY_CAPTURE_AUTHORIZATION_EXPIRED');
+ if(monthlyCaptureLatestDuePeriod(last.readAt).issueMonth!==data.scope.issueMonth)fail('MONTHLY_CAPTURE_PERIOD_STALE');
+ return freeze({...data.scope,checkedAt:last.readAt});
+}

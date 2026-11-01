@@ -45,7 +45,38 @@ function mutationView(value,action,data){
  if(value.status==="CREATED_INACTIVE"&&(grant.active||grant.revokedAt!==null)||action==="enable"&&!grant.active||action==="revoke"&&(grant.active||grant.revokedAt===null))invalid();
  return{...data,grant};
 }
-const initial=()=>({data:null,busy:false,ack:false,error:"",notice:"",unavailable:false});
+const msStamp=value=>typeof value==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value;
+const month=value=>typeof value==="string"&&/^20\d{2}-(0[1-9]|1[0-2])$/.test(value);
+const athens=value=>Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date(value)).filter(p=>p.type!=="literal").map(p=>[p.type,p.value]));
+function validPeriod(issueMonth,scheduledFor){
+ if(!month(issueMonth)||!msStamp(scheduledFor)||!scheduledFor.endsWith(".000Z"))return false;
+ const next=new Date(Date.UTC(Number(issueMonth.slice(0,4)),Number(issueMonth.slice(5)),1)).toISOString().slice(0,10),parts=athens(scheduledFor);
+ return`${parts.year}-${parts.month}-${parts.day}`===next&&parts.hour==="07"&&parts.minute==="00"&&parts.second==="00";
+}
+function latestDue(checkedAt){
+ const parts=athens(checkedAt),offset=parts.day==="01"&&Number(parts.hour)<7?2:1;
+ return new Date(Date.UTC(Number(parts.year),Number(parts.month)-1-offset,1)).toISOString().slice(0,7);
+}
+const receiptKeys=["receiptBasis","sourceAuthenticityVerified","id","companyId","storeId","lifecycleGeneration","issueMonth","scheduledFor","sourceObservedAt","storedAt","observationStatus","delayMs","sourceRevision","sourceHash","payloadHash","storedBytesSha256"];
+function receiptView(value,scope){
+ if(!keys(value,receiptKeys)||value.receiptBasis!=="FORMAT_VALIDATED_STORED_ONLY"||value.sourceAuthenticityVerified!==false||!text(value.id)||value.companyId!==scope.companyId||value.storeId!==scope.storeId||value.lifecycleGeneration!==scope.lifecycleGeneration||value.issueMonth!==scope.issueMonth||value.scheduledFor!==scope.scheduledFor||!validPeriod(value.issueMonth,value.scheduledFor)||!msStamp(value.sourceObservedAt)||!stamp(value.storedAt)||Date.parse(value.storedAt)<Date.parse(value.sourceObservedAt)||typeof value.delayMs!=="string"||!/^(0|[1-9][0-9]*)$/.test(value.delayMs)||value.delayMs.length>16||BigInt(value.delayMs)>9007199254740991n||!/^[a-f0-9]{40}$/.test(value.sourceRevision)||["sourceHash","payloadHash","storedBytesSha256"].some(key=>typeof value[key]!=="string"||!/^[a-f0-9]{64}$/.test(value[key])))invalid();
+ const delay=Date.parse(value.sourceObservedAt)-Date.parse(value.scheduledFor);
+ if(delay<0||String(delay)!==value.delayMs||value.observationStatus!==(delay===0?"ON_TIME":"LATE"))invalid();
+ return{...value};
+}
+function previewView(value,view,previous){
+ if(!keys(value,["status","companyId","storeId","lifecycleGeneration","issueMonth","scheduledFor","checkedAt","timing","existingReceipt"])||value.status!=="PREVIEW"||value.companyId!==view.companyId||value.storeId!==view.storeId||!integer(value.lifecycleGeneration)||previous&&value.lifecycleGeneration!==previous.lifecycleGeneration||!validPeriod(value.issueMonth,value.scheduledFor)||!msStamp(value.checkedAt)||value.issueMonth!==latestDue(value.checkedAt)||value.checkedAt<value.scheduledFor||value.timing!==(value.checkedAt===value.scheduledFor?"ON_TIME":"LATE"))invalid();
+ // The server supplies the period. Browser time never selects or rewrites it.
+ const scope={companyId:value.companyId,storeId:value.storeId,lifecycleGeneration:value.lifecycleGeneration,issueMonth:value.issueMonth,scheduledFor:value.scheduledFor};
+ const existingReceipt=value.existingReceipt===null?null:receiptView(value.existingReceipt,scope);
+ if(existingReceipt&&Date.parse(existingReceipt.storedAt)>Date.parse(value.checkedAt))invalid();
+ return{...scope,checkedAt:value.checkedAt,timing:value.timing,existingReceipt};
+}
+function captureView(value,preview){
+ if(!keys(value,["status","receipt"])||!["STORED","ALREADY_CAPTURED"].includes(value.status))invalid();
+ return receiptView(value.receipt,preview);
+}
+const initial=()=>({data:null,preview:null,receipt:null,captureAck:false,busy:false,ack:false,error:"",notice:"",unavailable:false});
 const date=value=>new Intl.DateTimeFormat("el-GR",{timeZone:"Europe/Athens",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value));
 
 export default function MonthlyInventoryCapturePanel({api,storeId="",storeName=""}){
@@ -70,19 +101,22 @@ export default function MonthlyInventoryCapturePanel({api,storeId="",storeName="
  const perform=async action=>{
   if(current.current!==view||!view.mounted||view.busy||!text(view.storeId)||!view.companyId||typeof view.api!=="function")return;
   if(personalContext().key!==view.contextKey){view.boundary?.check();view.invalid=true;refresh(value=>value+1);return}
-  if(action==="read"&&view.invalid){view.invalid=false;makeBoundary(view)}
+  if(["read","preview"].includes(action)&&view.invalid){view.invalid=false;makeBoundary(view)}
   if(!view.boundary?.check())return;
-  const previous=view.snapshot.data;
-  if(action!=="read"&&(!previous||view.invalid))return;
+  const previous=view.snapshot.data,preview=view.snapshot.preview;
+  if(!["read","preview","capture"].includes(action)&&(!previous||view.invalid))return;
+  if(action==="capture"&&(!preview||preview.existingReceipt||!view.snapshot.captureAck||view.invalid))return;
   if(action==="create-inactive"&&previous.grant!==null)return;
   if(action==="enable"&&(!previous.grant||previous.grant.active||view.snapshot.ack!==true))return;
   if(action==="revoke"&&(!previous.grant||!previous.grant.active))return;
   view.busy=true;const serial=++view.serial;view.controller=new AbortController();
-  publish(view,{busy:true,ack:false,error:"",notice:"",unavailable:false,...(action==="read"?{data:null}:{})});
+  publish(view,{busy:true,ack:false,captureAck:false,error:"",notice:"",unavailable:false,...(action==="capture"?{receipt:null}:{preview:null,receipt:null}),...(action==="read"?{data:null}:{})});
   const valid=()=>current.current===view&&view.mounted&&serial===view.serial&&!view.invalid&&personalContext().key===view.contextKey;
   try{
    let response;
-   if(action==="read")response=await view.boundary.request(`/api/monthly-inventory-capture?storeId=${encodeURIComponent(view.storeId)}`,{signal:view.controller.signal});
+   if(action==="preview")response=await view.boundary.request(`/api/monthly-inventory-capture/capture-now?storeId=${encodeURIComponent(view.storeId)}`,{signal:view.controller.signal});
+   else if(action==="capture")response=await view.boundary.request("/api/monthly-inventory-capture/capture-now",{method:"POST",body:JSON.stringify({storeId:view.storeId,lifecycleGeneration:preview.lifecycleGeneration,expectedIssueMonth:preview.issueMonth}),signal:view.controller.signal});
+   else if(action==="read")response=await view.boundary.request(`/api/monthly-inventory-capture?storeId=${encodeURIComponent(view.storeId)}`,{signal:view.controller.signal});
    else{
     const body={storeId:view.storeId,lifecycleGeneration:previous.lifecycleGeneration};
     if(action!=="create-inactive"){body.grantId=previous.grant.id;body.expectedRevision=previous.grant.revision}
@@ -90,12 +124,20 @@ export default function MonthlyInventoryCapturePanel({api,storeId="",storeName="
     response=await view.boundary.request(`/api/monthly-inventory-capture/${action}`,{method:"POST",body:JSON.stringify(body),signal:view.controller.signal});
    }
    if(!valid())return;
+   if(action==="preview"){
+    const next=previewView(response,view,previous);
+    publish(view,{preview:next,receipt:next.existingReceipt,notice:next.existingReceipt?"Βρέθηκε η ήδη αποθηκευμένη λήψη. Δεν χρειάζεται νέα υποβολή.":"Η προεπισκόπηση ανανεώθηκε. Έλεγξε την περίοδο πριν από τη λήψη."});return;
+   }
+   if(action==="capture"){
+    const receipt=captureView(response,preview);
+    publish(view,{preview:{...preview,existingReceipt:receipt},receipt,notice:response.status==="STORED"?"Η λήψη αποθηκεύτηκε.":"Βρέθηκε η ήδη αποθηκευμένη λήψη. Δεν δημιουργήθηκε δεύτερη."});return;
+   }
    const next=action==="read"?readView(response,view):mutationView(response,action,previous);
    publish(view,{data:next,notice:action==="read"?"Η κατάσταση ανανεώθηκε.":action==="create-inactive"?(response.status==="CREATED_INACTIVE"?"Δημιουργήθηκε ανενεργή εξουσιοδότηση.":"Βρέθηκε η υπάρχουσα εξουσιοδότηση."):action==="enable"?"Η προσωπική εξουσιοδότηση είναι ενεργή.":"Η προσωπική εξουσιοδότηση ανακλήθηκε."});
   }catch(error){
    if(!valid())return;
    const missing=unavailable.has(error?.code);
-   publish(view,{data:null,unavailable:missing,error:missing?"Η λειτουργία δεν είναι διαθέσιμη: χρειάζεται ελεγμένη εγκατάσταση για το κατάστημα.":action==="read"?"Η κατάσταση δεν επιβεβαιώθηκε. Κάνε νέο έλεγχο.":"Το αποτέλεσμα της ενέργειας δεν επιβεβαιώθηκε. Κάνε νέο έλεγχο πριν από άλλη ενέργεια."});
+   publish(view,{data:null,preview:null,receipt:null,captureAck:false,unavailable:missing,error:missing?"Η λειτουργία δεν είναι διαθέσιμη: χρειάζεται ελεγμένη εγκατάσταση για το κατάστημα.":["read","preview"].includes(action)?"Η κατάσταση δεν επιβεβαιώθηκε. Κάνε νέο έλεγχο.":action==="capture"?"Το αποτέλεσμα της λήψης δεν επιβεβαιώθηκε. Ανανέωσε την προεπισκόπηση για να ελέγξεις αν αποθηκεύτηκε, πριν από νέα υποβολή.":"Το αποτέλεσμα της ενέργειας δεν επιβεβαιώθηκε. Κάνε νέο έλεγχο πριν από άλλη ενέργεια."});
   }finally{
    view.busy=false;
    if(valid())publish(view,{busy:false});
@@ -125,6 +167,24 @@ export default function MonthlyInventoryCapturePanel({api,storeId="",storeName="
     </div>
     {data.grant&&!data.grant.active&&<label><input type="checkbox" disabled={busy} checked={shown.ack} onChange={event=>{if(current.current===view&&!view.busy&&!view.invalid)publish(view,{ack:event.target.checked})}}/>Εγκρίνω προσωπικά τον σκοπό μηνιαίας παρατήρησης αποθήκης για το εμφανιζόμενο κατάστημα.</label>}
    </div>}
+   <div aria-label="Λήψη τρέχουσας εικόνας αποθήκης" style={{borderTop:"1px solid #ccd5df",marginTop:20,paddingTop:12}}>
+    <h3>Λήψη τώρα</h3>
+    <p>Καταγράφει την τρέχουσα εικόνα αποθέματος για την τελευταία ληξιπρόθεσμη μηνιαία περίοδο. Δεν ανακατασκευάζει την εικόνα στις 07:00, δεν αλλάζει απόθεμα, δεν οριστικοποιεί καταμέτρηση και δεν στέλνει email.</p>
+    <button type="button" disabled={busy} onClick={()=>perform("preview")}>Ανανέωση προεπισκόπησης λήψης</button>
+    {shown.preview&&<div aria-label="Προεπισκόπηση λήψης">
+     <p>Περίοδος: <strong>{shown.preview.issueMonth}</strong>. Ονομαστική ώρα: {date(shown.preview.scheduledFor)} (Ελλάδας).</p>
+     <p>{shown.preview.timing==="LATE"?"Η λήψη θα καταγραφεί ως καθυστερημένη (LATE), με την πραγματική ώρα παρατήρησης.":"Θα καταγραφεί η πραγματική ώρα παρατήρησης."}</p>
+     {!shown.preview.existingReceipt&&<>
+      <label><input type="checkbox" aria-label="Εγκρίνω τη λήψη τώρα για την εμφανιζόμενη περίοδο και το κατάστημα" disabled={busy} checked={shown.captureAck} onChange={event=>{if(current.current===view&&!view.busy&&!view.invalid)publish(view,{captureAck:event.target.checked})}}/>Εγκρίνω τη λήψη τώρα για την εμφανιζόμενη περίοδο και το κατάστημα.</label>
+      <button type="button" disabled={busy||!shown.captureAck} onClick={()=>perform("capture")}>Αποθήκευση λήψης τώρα</button>
+     </>}
+    </div>}
+    {shown.receipt&&<div aria-label="Αποθηκευμένη λήψη">
+     <p><strong>Αποθηκευμένη λήψη · {shown.receipt.issueMonth}</strong></p>
+     <p>Πραγματική ώρα παρατήρησης: {date(shown.receipt.sourceObservedAt)} (Ελλάδας). {shown.receipt.observationStatus==="LATE"?"Καθυστερημένη (LATE).":"Στην ονομαστική ώρα."}</p>
+     <p>Κωδικός καταγραφής: {shown.receipt.id}</p>
+    </div>}
+   </div>
   </>}
  </section>;
 }

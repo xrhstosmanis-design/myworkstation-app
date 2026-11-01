@@ -1,5 +1,6 @@
 import {Router} from 'express';
 import {createMonthlyInventoryCaptureGrantManager} from '../services/monthly-inventory-capture-grants.js';
+import {createMonthlyPersonalCaptureNowService} from '../services/monthly-inventory-capture-now.js';
 
 const purpose='MONTHLY_INVENTORY_CAPTURE',maximum=9223372036854775807n;
 const fail=()=>{throw Object.assign(new Error('Έλεγξε την επιλογή καταστήματος και τα στοιχεία της ενέργειας.'),{status:400,code:'MONTHLY_CAPTURE_HTTP_INPUT_INVALID'})};
@@ -25,9 +26,29 @@ function request(req,action){
  return{companyId,...value};
 }
 
-export function createMonthlyInventoryCaptureRouter(db,{manager=createMonthlyInventoryCaptureGrantManager(db)}={}){
+export function createMonthlyInventoryCaptureRouter(db,{manager=createMonthlyInventoryCaptureGrantManager(db),personalNow=createMonthlyPersonalCaptureNowService(db)}={}){
  const router=Router();
  router.use((_req,res,next)=>{res.set('Cache-Control','no-store');next()});
+ const nowHandle=action=>async(req,res)=>{
+  try{
+   let input;
+   if(action==='preview'){
+    if(req.headers['transfer-encoding']||Number(req.headers['content-length']||0)>0||req.body!==undefined&&(!req.body||typeof req.body!=='object'||Reflect.ownKeys(req.body).length))fail();
+    input=exact(req.query,['storeId']);
+   }else{
+    exact(req.query,[]);input=exact(req.body,['storeId','lifecycleGeneration','expectedIssueMonth']);
+    if(!integer(input.lifecycleGeneration)||typeof input.expectedIssueMonth!=='string'||input.expectedIssueMonth.length!==7||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(input.expectedIssueMonth))fail();
+   }
+   if(!text(input.storeId))fail();
+   if(!text(req.user?.companyId))throw Object.assign(Error('Personal session required'),{status:401,code:'MONTHLY_CAPTURE_AUTHENTICATION_REQUIRED'});
+   res.json(await personalNow[action](req.user,input));
+  }catch(error){
+   if([400,401,403,409,422].includes(error?.status)&&typeof error?.code==='string'&&/^(?:MONTHLY_(?:CAPTURE|SNAPSHOT)|STOCK_SNAPSHOT|INVOICE_SNAPSHOT|INVOICE_MONTH_AUDIT|STORE_LIFECYCLE)_[A-Z_]+$/.test(error.code))return res.status(error.status).json({error:'Η λήψη δεν επιβεβαιώθηκε. Κάνε νέο έλεγχο πριν από άλλη ενέργεια.',code:error.code});
+   return res.status(503).json({error:'Η λήψη δεν είναι προσωρινά διαθέσιμη. Κάνε νέο έλεγχο.',code:'MONTHLY_CAPTURE_REQUEST_UNAVAILABLE'});
+  }
+ };
+ router.get('/capture-now',nowHandle('preview'));
+ router.post('/capture-now',nowHandle('capture'));
  const handle=action=>async(req,res)=>{
   try{if(req.method!==(action==='read'?'GET':'POST'))fail();res.json(await manager[action](req.user,request(req,action)))}
   catch(error){
