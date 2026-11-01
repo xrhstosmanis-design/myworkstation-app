@@ -9,19 +9,20 @@ export const customerCostMeter=createCustomerCostMeter({repository:aiOwnerWallet
 
 // Reuse native authentication, including POS sessions and delegated grants.
 // No alternate permission system or financial operation is introduced here.
-export async function revalidateCostRequest(req,authorize){
+export function createCostRequestRevalidator({authenticate=auth,db=prisma}={}){return async function revalidateCostRequest(req,authorize){
   const before=req.user,copy=Object.create(req);let accepted=false,status=401;
   const response={status(value){status=value;return this;},json(){return this;}};
-  await auth(copy,response,error=>{if(error)throw error;accepted=true;});
+  await authenticate(copy,response,error=>{if(error)throw error;accepted=true;});
   const current=copy.user;
   if(!accepted||!current||current.id!==before.id||current.companyId!==before.companyId||current.role!==before.role||current.sessionId!==before.sessionId||current.operatorSessionId!==before.operatorSessionId)throw walletError('AI_WALLET_SESSION_REQUIRED',status);
   if(current.tokenType!=='STORE_OPERATOR'){
-    const session=await prisma.userSession.findUnique({where:{id:current.sessionId||''},include:{user:{select:{id:true,role:true,sessionVersion:true,mustChangePassword:true}}}});
+    const session=await db.userSession.findUnique({where:{id:current.sessionId||''},include:{user:{select:{id:true,role:true,sessionVersion:true,mustChangePassword:true}}}});
     const expectedRole=current.isSuperAdmin===true&&current.platformRole==='SUPER_ADMIN'?'SUPER_ADMIN':current.role;
-    if(!session||session.userId!==current.id||session.user?.id!==current.id||session.user.role!==expectedRole||session.user.sessionVersion!==current.sessionVersion||session.user.mustChangePassword||session.revokedAt||+new Date(session.expiresAt)<=Date.now())throw walletError('AI_WALLET_SESSION_REQUIRED',401);
+    if(!session||session.userId!==current.id||session.user?.id!==current.id||session.user.role!==expectedRole||session.user.sessionVersion!==current.sessionVersion||session.user.mustChangePassword||session.revokedAt||!Number.isFinite(+new Date(session.expiresAt))||+new Date(session.expiresAt)<=Date.now())throw walletError('AI_WALLET_SESSION_REQUIRED',401);
   }
   await authorize(copy);
-}
+};}
+export const revalidateCostRequest=createCostRequestRevalidator();
 
 // The invoice workspace must provide an explicit store, never "INVOICE" or the
 // first company store. POS is restricted to its authenticated store as usual.
