@@ -1,0 +1,130 @@
+{
+  "status": "SCOPED HOSTED TEMPORARY OWNER REVIEW PASS",
+  "revision": "e950259f665d4e4fea439ecb57221d33c01e7163",
+  "sourcePR": 3491,
+  "claimPR": 3490,
+  "forwardCI": 41354601991,
+  "mainCI": 41355817818,
+  "validation": {
+    "serverPass": 5150,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "guard": 41356901232,
+  "guardJob": 124998855215,
+  "deploy": "dep-dbjrojh42hec73dt3mo0",
+  "healthyAt": "2026-11-01T22:30:56.1174295Z",
+  "operator": "Authenticated Platform SuperAdmin",
+  "surface": "Chrome cloud tab1 / canonical platform-admin",
+  "physicalTerminalShiftSkuQuantityPayment": "N/A - no business transaction",
+  "initial": {
+    "when": "2026-11-01T22:34:08.203Z",
+    "baseCents": "10000",
+    "totalCents": "15000",
+    "days": [
+      31,
+      31,
+      16
+    ],
+    "decisions": [
+      "PENDING",
+      "PENDING",
+      "PENDING"
+    ],
+    "approvedCents": "0",
+    "pendingCents": "15000",
+    "waivedCents": "0"
+  },
+  "decided": {
+    "when": "2026-11-01T22:34:26.082Z",
+    "decisions": [
+      "APPROVED_DRAFT",
+      "WAIVED",
+      "PENDING"
+    ],
+    "originalCompanyCents": [
+      "5962",
+      "5961",
+      "3077"
+    ],
+    "approvedCents": "5962",
+    "pendingCents": "3077",
+    "waivedCents": "5961",
+    "noRedistribution": true,
+    "temporaryNotSavedDisclosure": true,
+    "posted": false
+  },
+  "amountEdit": {
+    "when": "2026-11-01T22:34:48.569Z",
+    "oldResultRemoved": true
+  },
+  "recalculated": {
+    "when": "2026-11-01T22:34:56.100Z",
+    "baseCents": "20000",
+    "totalCents": "30000",
+    "decisions": [
+      "PENDING",
+      "PENDING",
+      "PENDING"
+    ],
+    "approvedCents": "0",
+    "pendingCents": "30000",
+    "waivedCents": "0"
+  },
+  "labBeforeAt": "2026-11-01T22:33:01.067Z",
+  "labAfterAt": "2026-11-01T22:35:29.465Z",
+  "labBefore": {
+    "availableMicros": "3680499",
+    "reservedMicros": "930033",
+    "settledMicros": "409468",
+    "creditsMicros": "5020000",
+    "entries": 14,
+    "requests": 9,
+    "debtMicros": "0",
+    "master": false,
+    "invoice": false,
+    "email": false,
+    "additionalRates": [
+      "0",
+      "0",
+      "0"
+    ],
+    "notices": "Only pre-existing25Oct disabled-email credit notice"
+  },
+  "labAfter": {
+    "availableMicros": "3680499",
+    "reservedMicros": "930033",
+    "settledMicros": "409468",
+    "creditsMicros": "5020000",
+    "entries": 14,
+    "requests": 9,
+    "debtMicros": "0",
+    "master": false,
+    "invoice": false,
+    "email": false,
+    "additionalRates": [
+      "0",
+      "0",
+      "0"
+    ],
+    "notices": "Only pre-existing25Oct disabled-email credit notice"
+  },
+  "measuredValuesEqual": true,
+  "walletReopenDiscardedDraft": true,
+  "realCustomerControl": "NOT TESTED - no attempt",
+  "hostedNotTested": [
+    "catalogue flip-back and other refusals (CI-only)",
+    "durable approval or financial posting",
+    "real customer data and allocation",
+    "funding, repayment, paid providers or email"
+  ],
+  "remainingOpen": [
+    "durable approvals",
+    "actual shared monthly posting",
+    "real customer funding and first email",
+    "external tariffs",
+    "general wallet and parent36"
+  ],
+  "screenshot": "decisions.jpg"
+}
