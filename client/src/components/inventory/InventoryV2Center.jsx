@@ -162,8 +162,9 @@ export default function InventoryV2Center({
     finally { convertingRef.current = false; setBusy(false); }
   };
   const deleteStocktake = async (stocktake) => {
-    if (stocktake.status !== "DRAFT") return;
+    if (stocktake.status !== "DRAFT" || (delegated && (!delegated.canDelete || locked))) return;
     if (!confirm(`Διαγραφή της μη οριστικοποιημένης απογραφής «${stocktake.name}»;`)) return;
+    if (delegated) return delegated.onDelete(stocktake.id);
     try {
       await api(`/api/inventory-v2/stocktakes/${stocktake.id}`, { method: "DELETE" });
       if (current?.id === stocktake.id) {
@@ -508,7 +509,7 @@ export default function InventoryV2Center({
                   <b>{s.name}</b>
                   <small>{delegated ? s.status || "Ανοιχτή απογραφή" : <>{s.scopeType === "FREE" ? "Απογραφή" : s.scopeType === "FULL" ? "Πλήρης" : "Μερική"} · {s.scopeType === "FREE" ? `${s.countedCount} είδη` : `${s.countedCount}/${s.lineCount}`}</>}</small>
                 </button>
-                {!delegated && s.status === "DRAFT" && <button className="inv2-history-delete" title="Διαγραφή μη οριστικοποιημένης απογραφής" onClick={() => deleteStocktake(s)}>×</button>}
+                {(!delegated || delegated.canDelete) && s.status === "DRAFT" && <button className="inv2-history-delete" disabled={locked} title="Διαγραφή μη οριστικοποιημένης απογραφής" onClick={() => deleteStocktake(s)}>×</button>}
               </div>
             ))}
           </div>
@@ -592,7 +593,7 @@ export default function InventoryV2Center({
                   )}
                 </form>
               )}
-              {!delegated && mobileView?<div className="inv2-mobile-preview"><InventoryMobileApp key={current.id} api={api} stocktakeId={current.id}/></div>:<InventoryFastCount key={delegated ? current.id : undefined} api={api} current={current} reload={open} setError={delegated ? delegated.setError : setError} delegated={delegated ? {canCount:delegated.canCount,canSeeExpected:delegated.canFinalize,locked,onCount:delegated.onCount} : null} />}
+              {!delegated && mobileView?<div className="inv2-mobile-preview"><InventoryMobileApp key={current.id} api={api} stocktakeId={current.id}/></div>:<InventoryFastCount key={delegated ? current.id : undefined} api={api} current={current} reload={open} setError={delegated ? delegated.setError : setError} delegated={delegated ? {canCount:delegated.canCount,canClear:delegated.canClear,canBulkZero:delegated.canBulkZero,onClear:delegated.onClear,onBulkZero:delegated.onBulkZero,canSeeExpected:delegated.canFinalize,locked,onCount:delegated.onCount} : null} />}
               <footer>
                 {delegated ? (delegated.canFinalize ? delegated.finalizationForm : null) : <>
                 <span>

@@ -5,7 +5,7 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.count','inventory.create','inventory.finalize','cash.read','products.read','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']);
 export const staffPermissionSections=Object.freeze([
   {key:'invoices',label:'Τιμολόγια',actions:[
     {key:'invoices.read',label:'Προβολή και εξαγωγή παραστατικών',description:'Βλέπει τη θυρίδα, τα πρωτότυπα και τις αγορές του καταστήματος.'},
@@ -31,6 +31,9 @@ export const staffPermissionSections=Object.freeze([
   {key:'inventory',label:'Απογραφή',actions:[
     {key:'inventory.read',label:'Προβολή',description:'Βλέπει τις ανοιχτές απογραφές του καταστήματος.'},
     {key:'inventory.count',label:'Καταμέτρηση',description:'Καταχωρίζει ποσότητες σε ανοιχτή απογραφή.',requires:['inventory.read']},
+    {key:'inventory.clear',label:'Διαγραφή μέτρησης',description:'Αφαιρεί καταμέτρηση γραμμής ανοικτής απογραφής, χωρίς αλλαγή αποθέματος.',requires:['inventory.read']},
+    {key:'inventory.bulk-zero',label:'Μηδενισμός επιλεγμένων μετρήσεων',description:'Καταχωρίζει ποσότητα μηδέν μόνο στις επιλεγμένες γραμμές ανοικτής απογραφής.',requires:['inventory.read']},
+    {key:'inventory.delete',label:'Διαγραφή πρόχειρης απογραφής',description:'Διαγράφει μη οριστικοποιημένη απογραφή μετά από επιβεβαίωση.',requires:['inventory.read']},
     {key:'inventory.create',label:'Νέα απογραφή',description:'Ανοίγει νέα απογραφή στο κατάστημα.',requires:['inventory.read']},
     {key:'inventory.finalize',label:'Οριστικοποίηση και ενημέρωση αποθέματος',description:'Ολοκληρώνει ελεγμένη απογραφή και ενημερώνει τα αποθέματα. Απαιτεί αιτιολογία και επιβεβαίωση.',requires:['inventory.read']}
   ]},
@@ -68,6 +71,9 @@ export function staffRequestCapability(method,path,body={}){
   if(method==='GET'&&/^\/api\/commerce\/purchase-orders\/[^/]+\/ocr-lines\/[^/]+\/catalog-matches$/.test(path))return 'invoices.edit';
   if(method==='PATCH'&&/^\/api\/purchase-orders\/[^/]+$/.test(path))return ['FINAL','INVOICED'].includes(body.status)?'invoices.approve':body.status===undefined?'invoices.edit':null;
   if(['PATCH','DELETE'].includes(method)&&/^\/api\/purchase-orders\/[^/]+\/lines\/[^/]+$/.test(path))return 'invoices.edit';
+  if(method==='DELETE'&&/^\/api\/inventory-v2\/stocktakes\/[^/]+\/count\/[^/]+$/.test(path))return 'inventory.clear';
+  if(method==='POST'&&/^\/api\/inventory-v2\/stocktakes\/[^/]+\/count\/bulk-zero$/.test(path))return 'inventory.bulk-zero';
+  if(method==='DELETE'&&/^\/api\/inventory-v2\/stocktakes\/[^/]+$/.test(path))return 'inventory.delete';
   if(method==='POST'&&path==='/api/inventory-v2/stocktakes')return 'inventory.create';
   if(method==='POST'&&/^\/api\/inventory-v2\/stocktakes\/[^/]+\/finalize$/.test(path))return 'inventory.finalize';
   if(method==='GET'&&(path==='/api/commerce/documents/inbox/archive'||/^\/api\/commerce\/documents\/inbox\/[^/]+\/file$/.test(path)))return 'invoices.read';

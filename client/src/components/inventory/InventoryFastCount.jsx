@@ -23,6 +23,9 @@ export function inventoryTotals(lines = []) {
 
 export default function InventoryFastCount({ api, current, reload, setError, delegated = null }) {
   const canCount = !delegated || delegated.canCount === true;
+  const canClear = !delegated || delegated.canClear === true;
+  const canBulkZero = !delegated || delegated.canBulkZero === true;
+  const actionPending = useRef(false);
   const locked = Boolean(delegated?.locked);
   const showExpected = !delegated || (delegated.canSeeExpected === true && (current.lines || []).length > 0 && current.lines.every(line => line.expectedQuantity !== undefined));
   const showValues = !delegated;
@@ -155,8 +158,12 @@ export default function InventoryFastCount({ api, current, reload, setError, del
   };
 
   const clearCount = async (line) => {
-    if (delegated) return;
+    if (!canClear || locked || actionPending.current) return;
     if (!confirm(`Διαγραφή της καταμέτρησης για «${line.name}»;`)) return;
+    if (delegated) {
+      actionPending.current=true;
+      try{return await delegated.onClear({stocktakeId:current.id,lineId:line.id,body:{expectedVersion:line.countVersion,clientEventId:crypto.randomUUID()}})}finally{actionPending.current=false}
+    }
     try {
       await api(`/api/inventory-v2/stocktakes/${current.id}/count/${line.id}`, {
         method: "DELETE",
@@ -182,8 +189,13 @@ export default function InventoryFastCount({ api, current, reload, setError, del
   });
 
   const bulkZero = async () => {
-    if (delegated) return;
+    if (!canBulkZero || locked || actionPending.current) return;
+    if (selectedRows.length>5000) return setError("Επίλεξε έως 5000 γραμμές.");
     if (!selectedRows.length || !confirm(`Να καταχωριστεί ποσότητα 0 σε ${selectedRows.length} επιλεγμένα είδη; Το stock θα αλλάξει μόνο μετά την οριστικοποίηση της απογραφής.`)) return;
+    if (delegated) {
+      actionPending.current=true;
+      try{const ok=await delegated.onBulkZero({stocktakeId:current.id,body:{lines:selectedRows.map(line=>({lineId:line.id,expectedVersion:line.countVersion})),clientBatchId:crypto.randomUUID()}});if(ok)setSelectedIds(new Set());return ok}finally{actionPending.current=false}
+    }
     setSaving(true);
     setError("");
     try {
@@ -278,33 +290,33 @@ export default function InventoryFastCount({ api, current, reload, setError, del
         <span>{(delegated || current.scopeType === "FREE") ? `${countedLines.length} καταμετρημένα είδη` : `${countedLines.length} από ${current.lines.length} καταμετρήθηκαν`}</span>
         <button type="button" disabled={locked} onClick={() => setShowAll((value) => !value)}>{showAll ? "Μόνο καταμετρημένα" : "Εμφάνιση όλων"}</button>
       </div>
-      {!delegated && current.status === "DRAFT" && (
+      {canBulkZero && current.status === "DRAFT" && (
         <div className="inv2-bulk-tools">
-          <label><input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} /> Επιλογή όλων των εμφανιζόμενων</label>
+          <label><input type="checkbox" checked={allVisibleSelected} disabled={locked || saving} onChange={toggleAllVisible} /> Επιλογή όλων των εμφανιζόμενων</label>
           <span>{selectedRows.length} επιλεγμένα</span>
-          <button type="button" disabled={!selectedRows.length || saving} onClick={bulkZero}>{saving ? "Καταχώρηση…" : "Ομαδική καταμέτρηση: Μηδενισμός"}</button>
+          <button type="button" disabled={!selectedRows.length || saving || locked} onClick={bulkZero}>{saving ? "Καταχώρηση…" : "Ομαδική καταμέτρηση: Μηδενισμός"}</button>
         </div>
       )}
       <div className="inv2-table-wrap">
         <table>
-          <thead><tr>{!delegated && <th className="inv2-select-column">Επιλογή</th>}<th>Barcode</th><th>Περιγραφή</th>{showExpected && <th>Απόθεμα</th>}<th>Καταμέτρηση</th>{showExpected && <th>Διαφορά</th>}{showValues && <><th>Αξία λιανικής</th><th>Αξία κόστους</th></>}<th>Ενέργειες</th></tr></thead>
+          <thead><tr>{canBulkZero && <th className="inv2-select-column">Επιλογή</th>}<th>Barcode</th><th>Περιγραφή</th>{showExpected && <th>Απόθεμα</th>}<th>Καταμέτρηση</th>{showExpected && <th>Διαφορά</th>}{showValues && <><th>Αξία λιανικής</th><th>Αξία κόστους</th></>}<th>Ενέργειες</th></tr></thead>
           <tbody>
             {rows.map((line) => {
               const counted = line.countedQuantity === null ? 0 : n(line.countedQuantity);
               return <tr key={line.id} className={line.recountRequired ? "recount" : ""}>
-                {!delegated && <td className="inv2-select-column"><input type="checkbox" checked={selectedIds.has(line.id)} onChange={() => toggleLine(line.id)} aria-label={`Επιλογή ${line.name}`} /></td>}
+                {canBulkZero && <td className="inv2-select-column"><input type="checkbox" checked={selectedIds.has(line.id)} disabled={locked || saving} onChange={() => toggleLine(line.id)} aria-label={`Επιλογή ${line.name}`} /></td>}
                 <td>{displayBarcode(line) || "—"}</td>
                 <td><b>{line.name}</b><small>{line.sku || "—"} · {line.categoryName || "Χωρίς κατηγορία"}</small></td>
                 {showExpected && <td>{line.expectedQuantity}</td>}<td>{line.countedQuantity ?? "—"}</td>{showExpected && <td>{counted - n(line.expectedQuantity)}</td>}
                 {showValues && <><td>{euro(counted * n(line.salePrice))}</td><td>{euro(counted * n(line.unitCost))}</td></>}
                 <td className="inv2-row-actions">
-                  {canCount && current.status === "DRAFT" && <><button title="Διόρθωση" disabled={locked || saving} onClick={() => choose(line, true)}><Pencil /></button>{!delegated && <button title="Διαγραφή καταμέτρησης" disabled={line.countedQuantity === null} onClick={() => clearCount(line)}><Trash2 /></button>}</>}
+                  {current.status === "DRAFT" && <>{canCount && <button title="Διόρθωση" disabled={locked || saving} onClick={() => choose(line, true)}><Pencil /></button>}{canClear && <button title="Διαγραφή καταμέτρησης" disabled={locked || saving || line.countedQuantity === null} onClick={() => clearCount(line)}><Trash2 /></button>}</>}
                   {!delegated && <button title="Εκτύπωση barcode" onClick={() => window.print()}><Printer /></button>}
                 </td>
               </tr>;
             })}
           </tbody>
-          <tfoot><tr>{!delegated && <th />}<th>ΣΥΝΟΛΑ</th><th>{totals.lines} είδη</th>{showExpected && <th>{totals.expected}</th>}<th>{totals.counted}</th>{showExpected && <th>{totals.difference}</th>}{showValues && <><th>{euro(totals.retail)}</th><th>{euro(totals.cost)}</th></>}<th /></tr></tfoot>
+          <tfoot><tr>{canBulkZero && <th />}<th>ΣΥΝΟΛΑ</th><th>{totals.lines} είδη</th>{showExpected && <th>{totals.expected}</th>}<th>{totals.counted}</th>{showExpected && <th>{totals.difference}</th>}{showValues && <><th>{euro(totals.retail)}</th><th>{euro(totals.cost)}</th></>}<th /></tr></tfoot>
         </table>
       </div>
     </>

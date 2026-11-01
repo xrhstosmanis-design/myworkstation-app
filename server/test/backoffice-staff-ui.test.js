@@ -18,6 +18,54 @@ async function mount(Component,props){
 }
 const identity={userId:'staff',companyId:'a',fullName:'Fixture',username:'fixture',stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:['cash.read']}]};
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
+test('personal destructive inventory retry retains exact request identity and freezes navigation until a verified reply',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ for(const kind of ['clear','bulk-zero','delete']){
+  const writes=[],store={id:'a1',name:'A1'},take={id:'st',storeId:'a1',name:'Draft fixture',status:'DRAFT',lines:[{id:'line',name:'Fixture',countedQuantity:2,countVersion:6,barcodes:['123']}]};let reply=false;
+  const api=async(path,options={})=>{
+   if(options.method){writes.push({path,options});if(!reply)throw Error('Uncertain network reply');return {ok:true,stocktakeId:'st',updated:1,deleted:true}}
+   if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['inventory.read','inventory.'+kind]}]};
+   return path.endsWith('/stocktakes')?{storeId:'a1',stocktakes:[take]}:take;
+  };
+  const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+  try{
+   globalThis.confirm=()=>true;
+   await m.act(async()=>{const select=document.querySelector('select');select.value='a1';select.dispatchEvent(new Event('change',{bubbles:true}))});
+   await m.act(async()=>button('Απογραφή').click());await m.act(async()=>new Promise(r=>setTimeout(r,70)));
+   if(kind!=='delete'){
+    await m.act(async()=>document.querySelector('.inv2-history button').click());
+    if(kind==='bulk-zero')await m.act(async()=>document.querySelector('[aria-label="Επιλογή Fixture"]').click());
+   }
+   const target=kind==='delete'?document.querySelector('.inv2-history-delete'):kind==='clear'?document.querySelector('[title="Διαγραφή καταμέτρησης"]'):button('Ομαδική καταμέτρηση');
+   assert.ok(target,kind);await m.act(async()=>target.click());assert.equal(writes.length,1);
+   assert.equal(document.querySelector('select').disabled,true);assert.ok(button('Επαλήθευση ίδιας ενέργειας'));
+   reply=true;await m.act(async()=>button('Επαλήθευση ίδιας ενέργειας').click());
+   assert.equal(writes.length,2);assert.deepEqual(writes[1],writes[0]);assert.equal(writes[0].options.headers['x-backoffice-store-id'],'a1');
+   assert.equal(document.querySelector('select').disabled,false);assert.equal(button('Επαλήθευση ίδιας ενέργειας'),undefined);
+  }finally{await m.close()}
+ }
+});
+test('native clear and selected-zero controls work independently of ordinary counting and preserve exact versions',async()=>{
+ const Count=await component('inventory/InventoryFastCount'),calls=[];
+ const current={id:'take',status:'DRAFT',lines:[{id:'line',name:'Fixture item',countedQuantity:3,countVersion:4,barcodes:['123']}]};
+ let delegated={canCount:false,canClear:true,canBulkZero:false,onClear:async request=>{calls.push(request);return true}};
+ const m=await mount(Count,{current,api:async()=>{throw Error('Owner API must not run')},setError:()=>{},delegated});
+ try{
+  globalThis.confirm=()=>true;
+  assert.equal(document.querySelector('[title="Διόρθωση"]'),null);
+  assert.equal(document.querySelector('[aria-label="Επιλογή Fixture item"]'),null);
+  await m.act(async()=>document.querySelector('[title="Διαγραφή καταμέτρησης"]').click());
+  assert.equal(calls.length,1);assert.equal(calls[0].body.expectedVersion,4);assert.equal(calls[0].lineId,'line');assert.match(calls[0].body.clientEventId,/^[a-f0-9-]{36}$/);
+  delegated={canCount:false,canBulkZero:true,onBulkZero:async request=>{calls.push(request);return true}};
+  await m.render({current,api:async()=>{throw Error('Owner API must not run')},setError:()=>{},delegated});
+  assert.equal(document.querySelector('[title="Διαγραφή καταμέτρησης"]'),null);
+  await m.act(async()=>document.querySelector('[aria-label="Επιλογή Fixture item"]').click());
+  await m.act(async()=>button('Ομαδική καταμέτρηση').click());
+  assert.deepEqual(calls[1].body.lines,[{lineId:'line',expectedVersion:4}]);assert.match(calls[1].body.clientBatchId,/^[a-f0-9-]{36}$/);
+  await m.render({current,api:async()=>{},setError:()=>{},delegated:{...delegated,locked:true}});
+  assert.equal(document.querySelector('[aria-label="Επιλογή Fixture item"]').disabled,true);
+ }finally{await m.close()}
+});
 test('delegated expense form exposes only its granted action, requires declaration and sends one scoped stable-key pending-review input',async()=>{
  const Workspace=await component('BackofficeStaffWorkspace'),calls=[],store={id:'a1',name:'A1'};
  const api=async(path,options={})=>{calls.push({path,options});if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read','payments.read','payments.expense']}]};if(path.endsWith('/terminals'))return {storeId:'a1',terminals:['POS2']};if(path.includes('/backoffice-staff/payments/'))return {storeId:'a1',suppliers:[],purchaseDocuments:[]};if(options.method)return {id:'synthetic',amount:2};return {store,openSession:null}};
