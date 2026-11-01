@@ -1,3 +1,145 @@
+## 01/11/2026 - D8 FIRST GENUINE CURRENT OBSERVATION / SCOPED LAB PASS / FUTURE AND RECOVERY OPEN
+
+Retained D8 owner codex/central-monthly-capture-personal-ui-20261031; TODAY continuation codex/central-monthly-capture-today-20261101, root operational executor. Earlier13:53native-grant/14:33future-control PASS remains protected and narrower than this new first-capture acceptance.
+
+Installed source5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e, PR3484. Exact main CI41348911362 all5SUCCESS:5148server+8backup,0FAIL/0SKIP with actual C2 native/peer inventory/shared-cost/genuine D8 PostgreSQL16+18/Chromium/full E2E and invariants. Natural guard41350280601 used that exact CI/revision; Renderdep-dbjqkgu7bikc7389ei10 LIVE21:10:13.807941UTC and exact healthy21:10:32.1922161UTC on01Nov. The workflow-definition/documentation head is not substituted for the installed revision. Later peer3489/shared-cost acceptance,3490temporary owner-review claim and3492inventory-reconciliation assignment, with all current owners/history, are preserved.
+
+Genuine personal SuperAdmin Χρήστος Μάνης used the native support issuer and selected MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ, companycmtpopbgk000prhb5qc60zxus/storecmtpopbgo000trhb5ng9ytiru/generation0, in Cloud Chrome cdp browser1/tab3. Actual «Έλεγχος μήνα» for October2026 showed21:15:59UTC (UI-second precision):12logical/7unposted/7uploaded-awaiting-review/0possible-duplicates/9identity-review/0credits; separately all-month pending originals0. All12rows were observed, unknown issue dates0. The four opaque pairs retain31Oct/UNPOSTED/identity review; the orphan retains09Oct stored operator-header date, unknown amount/identity and open reconciliation. No invoice was renamed, edited, reuploaded, reprocessed, paid, approved, posted or deleted for this acceptance. This is actual report observation, not physical-page2 date/OCR/line accuracy, resolved identity or source-authenticity proof. The fresh18business controls below begin AFTER this report observation and certify the subsequent capture window only, not a separately measured before/after report delta.
+
+Root then used the same genuine personal selected-store session for one explicitly acknowledged «Αποθήκευση λήψης τώρα». Native preview showed server-derived October2026, nominal01Nov05:00UTC/07:00Athens, LATE and explicit no existing receipt. Native preview/checkbox was observed in21:17:56.521058→21:20:00.511UTC; the separately recorded native Save POST observation window is21:17:56.521058→21:21:31.903970UTC. Exact click timestamps were not separately captured and are not invented. Exactly one native Save POST returned «Η λήψη αποθηκεύτηκε»/STORED, receiptfd3523ea-f95b-4f9f-bf3c-4e2de0e0e91c. Actual sourceObservedAt2026-11-01T21:20:00.511Z (23:20:00.511Athens on01Nov), storedAt21:20:00.918447UTC, LATE/delay58800511ms. This is actual current stock observed then, not reconstructed07:00 stock or stocktake finalization. Fresh native GET after commit and by21:21:31.903970UTC displayed the same receipt/observation and already-stored/no-resubmission state; no second POST was performed to demonstrate replay.
+
+Actual DB readback21:21:31.903970UTC and independent trusted pure canonical validator verified the same scoped immutable original:46050bytes/SHA25688fb52a28b80384a4d45eef5716bc8ebf462c08bc3b62fcade5a3932696886f1; sourceHashc3150e2b0bbe513dda6edd94c785ec005be72041d32f55847954d9e17f465ada; payloadHash4c58e395f3c35b1cb407161f5f4153a8eeb19857e4d9caf5f3e0ac0486cedb81; sourceRevision5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e. Stored coverage complete with110products/12invoices/0pending originals, preserving unknown amount and review. This coverage plus the successful unchanged internal freeze/count gate is not a claim that raw nine-domain sourceCounts were visible in native UI or stored in the receipt: those independent SQL counts were NOT COLLECTED. Receipt basis remains FORMAT_VALIDATED_STORED_ONLY/sourceAuthenticityVerifiedfalse. No original/customer/canonical-candidate contents, private invoice names/amounts, credential/session payloads or screenshots are committed.
+
+Fresh18count/canonical-row-digest controls (six projections across target and two sibling LAB stores: CashShiftSession, StoreTransaction, Sale, Payment via Sale, StoreProduct, StockMovement) matched exactly21:17:56.521058→21:21:31.820617UTC. Target row counts remain43/134/90/90/110/95 respectively; sibling StoreProduct/StockMovement1each and other controlled sibling rows0 remain unchanged. Snapshot scope0→1 with exactly one current-period original; monthly-purpose jobs0→0, so no monthly scheduler-job execution was created. Other-purpose global lifecycle executions are NOT TESTED. Auth/session/audit metadata and unlisted tables/fields are outside these controls; no whole-database/fiscal/full-system invariance is claimed. Shift/SKU/quantity/payment action fields are N/A for this capture. Active genuine grant11711b36-943f-4b63-906a-499dc4cdd6b4/revision2/activation9560bd7e-f4b3-4d38-95ba-597e40eddb6e/generation0 remains exact before/after, firstIssueMonth2026-11/firstScheduledFor01Dec05:00UTC; native grant UI also showed firsteligible01Dec07:00Athens. No future-control mutation by this work. Current runtime control NOT RETESTED: protected actual14:33/0bc applied-control proof is retained as historical, not invented fresh control/automation PASS.
+
+Completed narrow C2 genuine desktop report/five-date observation and D8 TODAY first-current-observation acceptance are no longer live pending actions. C/report parent, whole numbered items8/9 and retained owners remain OPEN for untested residuals: hosted snapshot original/version/restore/recovery, actual future01Dec scheduled execution, E2/E3 invoice-purpose consent/grants/idempotency/mail/scheduling with codex/cash-chat-reconciliation-20261026, production revocation, independent roles/devices and physical OCR/accounting accuracy. Existing E1 preview manual/PASS remains independent and unchanged. Database SIGKILL/recovery recurrences19:43/19:52UTC regained availability; cause remains OPEN with retained POS-DB-LOCK owner, no capacity upgrade approved and no full-system PASS. No new backup, reset/drain, financial replay, stock write, email or configuration action was performed for this closure. Real-PASS PDF deferral ends here: checkpoints, both relevant manuals, active/tracker/pending and regenerated canonical Open Work PDF are synchronized in this exact8-document packet; no source or other peer PDF changes.
+
+Evidence: root private actual-result.json, before.json, after.json and snapshot-verified.json; independent reviewer checked18controls/grants/receipt/canonical hashes and the private native screenshot. Those private evidence files, raw snapshot readback and screenshots remain outside repository/Library. Public evidence here is restricted to scoped counts/times/receipt IDs/hashes and the declared limits. The matching pre-action baseline below was recorded before the native Save; historical statuses are preserved with their original times and are superseded only for the accepted scope above.
+
+## HISTORICAL PRE-ACTION BASELINE AND D8 ENGINEERING RECORDS
+
+## 01/11/2026 — ACTUAL NATIVE BEFORE CAPTURE / ACTION NOT YET PERFORMED
+
+Real source5c3/mainCI41348911362 all5SUCCESS5148server+8backup0FAIL0SKIP; naturalguard41350280601/Renderdep-dbjqkgu7bikc7389ei10 LIVE21:10:13.807941UTC, exacthealth21:10:32.1922161UTC. Genuine personal SuperAdmin Χρήστος Μάνης selected MYWORKSTATION LAB/ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ through native support issuer. Native October report observed21:15:59UTC (UI-second precision):12logical/7unposted/7uploaded-review/0duplicates/9identity-review/0credits/all-monthpending0; all12rows seen,unknown dates0. Four opaque pairs retain31Oct/unposted/identity review; orphan retains9Oct/operator-header-only/unknown amount/identity and open reconciliation. No physical header/date/line-accuracy or whole-system PASS.
+
+Before the one authorized native personal capture action: {"checked_at":"2026-11-01T21:17:56.505497Z","grants":[{"activationId":"9560bd7e-f4b3-4d38-95ba-597e40eddb6e","active":true,"firstIssueMonth":"2026-11","firstScheduledFor":"2026-12-01T05:00:00+00:00","generation":"0","id":"11711b36-943f-4b63-906a-499dc4cdd6b4","revision":"2","revokedAt":null}],"in_recovery":false,"job_count":0,"snapshot_count":0}. Fresh eighteen six-table count/canonical-row controls across three LAB stores measured21:17:56.521058UTC below. Snapshot capture does not affect a POS shift, SKU, quantity or payment; these fields are N/A. Auth/session/audit metadata are explicitly outside these six business controls. Future control current runtime NOT RETESTED; retain protected actual14:33 configuration proof and no mutation by this work, no invented new control PASS. Capture NOT YET PERFORMED.
+
+```json
+{
+  "checked_at": "2026-11-01T21:17:56.521058Z",
+  "controls": [
+    {
+      "digest": "14814f641d388a4e4f23fdc329affe64",
+      "rows": 43,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "table": "CashShiftSession"
+    },
+    {
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "rows": 0,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "table": "CashShiftSession"
+    },
+    {
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "rows": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "table": "CashShiftSession"
+    },
+    {
+      "digest": "dca5a26fa7341126795bdf8a6ad6524d",
+      "rows": 90,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "table": "Payment"
+    },
+    {
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "rows": 0,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "table": "Payment"
+    },
+    {
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "rows": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "table": "Payment"
+    },
+    {
+      "digest": "7429be79120c9716ec99447f5e344c43",
+      "rows": 90,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "table": "Sale"
+    },
+    {
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "rows": 0,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "table": "Sale"
+    },
+    {
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "rows": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "table": "Sale"
+    },
+    {
+      "digest": "4c3daa3d0a8d1d8a2fcec56379ad5be8",
+      "rows": 95,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "table": "StockMovement"
+    },
+    {
+      "digest": "32b7831b1eb84d0994d627c7f65b1255",
+      "rows": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "table": "StockMovement"
+    },
+    {
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "rows": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "table": "StockMovement"
+    },
+    {
+      "digest": "056f3edb3f8e5d42cb987959383ebf51",
+      "rows": 110,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "table": "StoreProduct"
+    },
+    {
+      "digest": "d828e556838424761a47bf055bf41e83",
+      "rows": 1,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "table": "StoreProduct"
+    },
+    {
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "rows": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "table": "StoreProduct"
+    },
+    {
+      "digest": "9eca820a9633516b11da02fe637c0b28",
+      "rows": 134,
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "table": "StoreTransaction"
+    },
+    {
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "rows": 0,
+      "storeId": "cmuk8gxui000ppabfykdxwb1y",
+      "table": "StoreTransaction"
+    },
+    {
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "rows": 0,
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "table": "StoreTransaction"
+    }
+  ]
+}
+```
+
 ## 01/11/2026 - D8 TODAY / EXACT SOURCE FULL CI GREEN / CURRENT-MAIN FORWARD REVIEW / REAL CAPTURE DATA HOLD
 
 Same retained central owner codex/central-monthly-capture-personal-ui-20261031, source continuation codex/central-monthly-capture-today-20261101; root operational executor. Existing PR3473 head8773ee6f7001c97662abfd8baeddd46d259d73b6 completed actual fullCI41319256166 with all5SUCCESS: 5106server/0FAIL/0SKIP at15:16:42.3735825UTC and8backup/0/0 at15:17:40.7345454UTC; workflow completed15:18:58UTC. Genuine personal HTTP/races executed on hostPG16 actual160015 and the SAME full native flow on the existing PG18 image actual180006 (case2175,24.37s), not merely the old recovery-image proof. Actual Chromium case2211 passed15:12:11.5855751UTC/7.66s. Historical attempt1 FAIL remains below; its typed-wait fixture fix did not weaken assertions.
