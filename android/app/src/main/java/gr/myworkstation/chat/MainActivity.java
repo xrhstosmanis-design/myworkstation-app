@@ -58,6 +58,7 @@ public final class MainActivity extends Activity {
     private EditText composer;
     private Button chatSendButton;
     private AlertDialog imageDialog, replyDialog;
+    private LinearLayout messageActions;
     private final VoicePlayer voicePlayer = new VoicePlayer();
     private byte[] voiceDraft, playingVoice;
     private String voiceBinding = "", voiceToken = "";
@@ -488,7 +489,26 @@ public final class MainActivity extends Activity {
             else card.addView(text("Συνημμένο · Η λήψη αρχείων είναι απενεργοποιημένη σε αυτή την εφαρμογή.", 14, MUTED));
         }
         if (!readers.isEmpty()) meta += " · Διαβάστηκε";
+        else if(own&&row!=null&&!ReadReceipts.names(row.optJSONArray("deliveries"),row.optString("senderId")).isEmpty())meta+=" · Παραδόθηκε σε εφαρμογή";
         if (!meta.isEmpty()) card.addView(text(meta, 12, MUTED));
+        LinearLayout actions=buildMessageActions(row,own);
+        actions.setVisibility(View.GONE); card.addView(actions);
+        if (row != null) {
+            StringBuilder summary=new StringBuilder();
+            for(String emoji:ChatInteractions.REACTIONS){int count=ChatInteractions.count(row,emoji);if(count>0)summary.append(emoji).append(" ").append(count).append("  ");}
+            if(summary.length()>0)card.addView(text(summary.toString(),14,PURPLE));
+            card.setContentDescription("Μήνυμα · πάτησε για ενέργειες");
+            Runnable open=scopedMessageAction(() -> showMessageActions(row,own));
+            card.setOnClickListener(v -> open.run());card.setOnLongClickListener(v -> {open.run();return true;});
+        }
+        messages.addView(card, lp);
+    }
+    private Runnable scopedMessageAction(Runnable action) {
+        final long generation=epoch.capture();final String captured=token,store=id(selected,"id"),company=id(selected,"companyId");
+        return ()->{if(!busy&&chatScope(generation,captured,store,company)){dismissImage();action.run();}};
+    }
+    private LinearLayout buildMessageActions(JSONObject row, boolean own) {
+        final ArrayList<String> readers=own&&row!=null?ReadReceipts.names(row.optJSONArray("readers"),row.optString("senderId")):new ArrayList<>();
         LinearLayout actions=new LinearLayout(this); actions.setOrientation(LinearLayout.VERTICAL); actions.setTag("message-actions");
         if (own && row != null && selected != null) {
             final long generation = epoch.capture();
@@ -521,26 +541,13 @@ public final class MainActivity extends Activity {
             }
         }
         if (row != null && !row.optBoolean("readByMe")) actions.addView(button("Σημείωση ως διαβασμένο", scopedMessageAction(() -> call(chatBase() + "/messages/" + enc(row.optString("id")) + "/read", "POST", object(), false, ignored -> loadMessages(false)))));
-        actions.setVisibility(View.GONE); card.addView(actions);
-        if (row != null) {
-            StringBuilder summary=new StringBuilder();
-            for(String emoji:ChatInteractions.REACTIONS){int count=ChatInteractions.count(row,emoji);if(count>0)summary.append(emoji).append(" ").append(count).append("  ");}
-            if(summary.length()>0)card.addView(text(summary.toString(),14,PURPLE));
-            card.setContentDescription("Μήνυμα · πάτησε για ενέργειες");
-            Runnable open=scopedMessageAction(() -> showMessageActions(card,actions));
-            card.setOnClickListener(v -> open.run());card.setOnLongClickListener(v -> {open.run();return true;});
-        }
-        messages.addView(card, lp);
+        return actions;
     }
-    private Runnable scopedMessageAction(Runnable action) {
-        final long generation=epoch.capture();final String captured=token,store=id(selected,"id"),company=id(selected,"companyId");
-        return ()->{if(!busy&&chatScope(generation,captured,store,company)){dismissImage();action.run();}};
-    }
-    private void showMessageActions(LinearLayout card, LinearLayout actions) {
-        dismissImage(); card.removeView(actions); actions.setVisibility(View.VISIBLE);
+    private void showMessageActions(JSONObject row, boolean own) {
+        dismissImage();LinearLayout actions=buildMessageActions(row,own);messageActions=actions;
         ScrollView list=new ScrollView(this);list.addView(actions);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Ενέργειες μηνύματος").setView(list).setNegativeButton("Κλείσιμο",null).create();
-        imageDialog=dialog;dialog.setOnDismissListener(d -> {list.removeView(actions);actions.setVisibility(View.GONE);card.addView(actions);if(imageDialog==dialog)imageDialog=null;});
+        imageDialog=dialog;dialog.setOnDismissListener(d -> {wipeViews(actions);if(messageActions==actions)messageActions=null;if(imageDialog==dialog)imageDialog=null;});
         dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);dialog.show();
     }
     private void showChatTools() {
@@ -1022,7 +1029,7 @@ public final class MainActivity extends Activity {
             for (int i = 0; i < group.getChildCount(); i++) wipeViews(group.getChildAt(i));
         }
     }
-    private void dismissImage() { videoPlayer.stop(); VideoData.wipe(playingVideo); playingVideo = null; voicePlayer.stop(); VoiceData.wipe(playingVoice); playingVoice = null; if (imageDialog != null) { imageDialog.dismiss(); imageDialog = null; } if (preview != null) { preview.recycle(); preview = null; } }
+    private void dismissImage() { if(messageActions!=null){wipeViews(messageActions);messageActions=null;} videoPlayer.stop(); VideoData.wipe(playingVideo); playingVideo = null; voicePlayer.stop(); VoiceData.wipe(playingVoice); playingVoice = null; if (imageDialog != null) { imageDialog.dismiss(); imageDialog = null; } if (preview != null) { preview.recycle(); preview = null; } }
     private void logout() {
         if (busy) return;
         String path = staff() ? "/api/store-chat/stores/" + enc(identity.optString("storeId")) + "/mobile-logout" : "/api/auth/logout";
