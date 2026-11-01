@@ -1,4 +1,8 @@
-# AI-COST-PASS-THROUGH-01 — SOURCE MERGED / AWAITING LAB / ENVIRONMENT UNAVAILABLE
+# AI-COST-PASS-THROUGH-01 - SOURCE INSTALLED / SCOPED ASSISTANT LAB PASS / REMAINDER OPEN
+
+## Current scoped functional receipt - 01Nov2026
+
+Same root resumed after restored environment; source/release verified, one native selected-store assistant LAB PASS with charge2592micro exactly matching balance delta and one new settled entry. Final persisted LAB master/invoice/emailOFF/rates0, old REVIEW untouched, private foreign control unchanged. Full exact evidence, limits and before/after: CHECKPOINTS/CHANGES/2026-11-01-ai-customer-cost-lab-acceptance.md and CHECKPOINTS/EVIDENCE/ai-customer-cost-20261101/lab-acceptance.json. This supersedes older environment-unavailable/unexecuted/awaiting-CI sections below; they remain historical. Shared-cost allocation/missing provider tariffs/other live paths/real-customer funding and corrected email remain OPEN.
 
 ## Final engineering release verification — 2026-11-01T16:50:23.267Z
 

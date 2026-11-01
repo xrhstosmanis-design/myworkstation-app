@@ -1,5 +1,9 @@
 # AI-COST-PASS-THROUGH-01 — ENVIRONMENT OUTAGE / OWNER RETAINED
 
+## Resolved environment / same root continuation - 01Nov2026
+
+Environment and browser restored; no ownership transfer. Follow CHECKPOINTS/CHANGES/2026-11-01-ai-customer-cost-lab-acceptance.md for authoritative new scoped assistant LAB PASS (one2592micro debit) and persisted masterOFF. Earlier outage/not-executed observations below are historical. Do not replay accepted financial/provider evidence. Broader cost coverage and real-customer actions remain OPEN.
+
 ## Final engineering release verification — 2026-11-01T16:50:23.267Z
 
 DEPLOYED ENGINEERING VERIFIED; FUNCTIONAL LAB NOT STARTED. Exact deployed main201e4c21cd3c2a480a94b194a7b350523633e9f0 passed full CI41326081468/job124907694187:5118server+8backup/0FAIL/0SKIP. Ordinary guarded release41327819201/job124911447565 successfully triggered a pinned201e deployment and observed exact healthy201e at2026-11-01T16:47:58.3792866Z. Renderdep-dbjmpbuc6qcc73c0arv0 is live, finished16:47:45.583242Z. All22cost-owned runtime paths are unchanged from accepted source mainef9; peer cash/inventory changes are preserved. See CHECKPOINTS/EVIDENCE/ai-customer-cost-20261101/engineering-release.json. This supersedes the earlier pending-release observations below; health/CI are NOT customer-cost LAB PASS.
