@@ -1,3 +1,7 @@
+## 01/11/2026 - CHAT-VIBER-BATCH-01 / HISTORICAL0.1.13 ENGINEERING / PHONE CHECK ABSORBED INTO0.1.14
+
+Retained owner codex/chat-native-readers-20261031. Current public delivery is Android0.1.14/code15, with history search and explicit authorized forwarding added. The pending0.1.13 physical check is now part of ONE expanded CHAT-SEARCH-FORWARD-01 check per CHECKPOINTS/CHANGES/2026-11-01-chat-search-forward.md and docs/testing/chat-search-forward-20261101.md. No separate0.1.13 install/check, no inferred physical PASS, no replay of accepted media/entry. Historical source/signing/public receipts below remain valid only for their dated0.1.13 scope; other owners retained.
+
 ## 31/10/2026 - CHAT-VIBER-BATCH-01 / ENGINEERING AVAILABLE / ONE COMBINED PHONE ACCEPTANCE OPEN
 
 CHAT-VIBER-BATCH-01 retained owner codex/chat-native-readers-20261031; branch feat/chat-viber-batch-20261031; updated 31/10/2026 22:10:02 Europe/Athens. Owner instruction remains one combined update and one final check. Android0.1.13/code14 is publicly available at https://myworkstation-app.onrender.com/downloads/chat-android/. Delivered/read names, quoted replies, current-user reactions (thumbs-up/check/heart, replace/remove), and native pinned announcements/explicit «Το διάβασα» are delivered together. Owner/SuperAdmin controls reuse existing pin and acknowledgement settings; no automatic human read/announcement confirmation. Delivery means receipt by an authorized application, not Push/device-universal or human reading.

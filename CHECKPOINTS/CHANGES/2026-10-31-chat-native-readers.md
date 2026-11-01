@@ -1,3 +1,7 @@
+## 01/11/2026 - CHAT-NATIVE-READERS-01 / HISTORICAL ACCEPTANCE PLAN - ABSORBED INTO0.1.14
+
+Retained owner codex/chat-native-readers-20261031. Current public release is Android0.1.14/code15; the single expanded physical check is CHAT-SEARCH-FORWARD-01 in docs/testing/chat-search-forward-20261101.md and CHECKPOINTS/CHANGES/2026-11-01-chat-search-forward.md. Older0.1.12/0.1.13 installation or separate names/interactions-only next actions below are historical and superseded. Physical NOT TESTED; no inferred PASS or replay of accepted media/entry. Other owners retained.
+
 ## 31/10/2026 - CHAT-NATIVE-READERS-01 / PHYSICAL ACCEPTANCE ABSORBED INTO COMBINED0.1.13
 
 Retained owner codex/chat-native-readers-20261031. Owner now requests all agreed Chat additions together and one final check. Named-readers engineering0.1.12 remains historical evidence; the current public release is0.1.13/code14 and its one combined physical check is tracked only as CHAT-VIBER-BATCH-01 in CHECKPOINTS/CHANGES/2026-10-31-chat-viber-batch.md. No separate0.1.12 install/names-only test, no new physical PASS and no replay of accepted media/entry. Older next actions below are superseded by this combined acceptance; other owners retained.

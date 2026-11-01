@@ -1,0 +1,52 @@
+{
+  "verifiedAtUtc": "2026-11-01T01:34:27.743326+00:00",
+  "liveRevision": "aaf3dce10b7d19fb700fb1f30a4e464cf498e67b",
+  "health": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "aaf3dce10b7d19fb700fb1f30a4e464cf498e67b"
+  },
+  "healthOk": true,
+  "manifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "version": "0.1.14-preview",
+    "versionCode": 15,
+    "minimumAndroid": 8,
+    "videoCaptureMinimumAndroid": 11,
+    "maximumVideoSeconds": 30,
+    "maximumVideoBytes": 12582912,
+    "videoFormat": "MP4 H264/AAC",
+    "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.14-Preview.apk",
+    "sha256": "8e7a7c9f088d56f6b02e2732f7b469acf25c8d0b6bb8bebc411d910c7a71599d",
+    "bytes": 3703820,
+    "sourceCommit": "063579c975dc9133890d2974fad8cf9016322cd8",
+    "androidSourceTree": "1a2fc7bcde0e4d643ed6e2a3c6e64b0e2ea11c41",
+    "ciRun": 41257953318,
+    "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+    "signing": "stable-owner-key",
+    "acceptance": "TECHNICAL CANDIDATE; ONE EXPANDED PHONE ACCEPTANCE PENDING: history search, explicit authorized forward, named delivery/read receipts, quoted replies, reactions, pinned announcements and explicit acknowledgement; prior first-entry/reopen/media USER PASS retained with device/hash not independently identified"
+  },
+  "manifestMatchesRepository": true,
+  "manifestBytesMatchRepository": true,
+  "apkMatchesSignedArtifact": true,
+  "apkSha256": "8e7a7c9f088d56f6b02e2732f7b469acf25c8d0b6bb8bebc411d910c7a71599d",
+  "apkBytes": 3703820,
+  "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "binaryManifest": {
+    "package": "gr.myworkstation.chat.preview",
+    "versionCode": 15,
+    "versionName": "0.1.14-preview"
+  },
+  "deployWorkflowRun": 41261365197,
+  "renderDeployId": "dep-dbj9d2ou01pc73eqp6vg",
+  "distributionPR": 3442,
+  "distributionHead": "71f1461180596c5af2faf5063334e48febf2f8f4",
+  "distributionMerge": "aaf3dce10b7d19fb700fb1f30a4e464cf498e67b",
+  "distributionPRCI": 41259646527,
+  "distributionMainCI": 41260513845,
+  "signingRun": 41257953318,
+  "signingArtifact": 13064516297,
+  "physicalCombinedAcceptance": "NOT TESTED",
+  "realChatSendReadAckPushEmail": "NOT PERFORMED",
+  "priorLimitedUserPass": "retained; device/hash not independently identified"
+}
