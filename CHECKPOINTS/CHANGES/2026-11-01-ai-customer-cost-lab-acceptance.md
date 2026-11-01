@@ -1,5 +1,9 @@
 # AI-COST-PASS-THROUGH-01 — LAB NOT EXECUTED / ENVIRONMENT UNAVAILABLE / RESUME PLAN
 
+## COST-LAB-20261101-ENABLE2 BEFORE
+
+Native logout followed by fresh secure email/password+MFA sign-in resolved the support-context blocker. Explicit LAB assistant selection now authorizes and enables input; no message sent. No authentication workaround or code change. Fresh wallet reread: master/invoice/email OFF, rates0, available3683091micro, reserved930033micro, settled406876micro/8calls, credits5020000micro, history13, debt0. Identified next action ENABLE2: temporarily save LAB master ON only, then one plain ASK as previously specified, then restore OFF. No replay of financial evidence or real customer action. RecordedUTC:2026-11-01T18:57:59.053456+00:00
+
 ## COST-LAB-20261101-RESTORE AFTER
 
 Saved LAB master OFF once and closed/reopened the wallet, explicitly reselected LAB. Persisted master/invoice/email OFF; all3rates0. Available3683091micro, reserved930033micro, settled406876micro/8calls, credits5020000micro, history13, debt0 unchanged. No message submitted, no provider request or new wallet entry. Private real-company control refreshed after restore: unchanged; no activation/funding/mail. No credentials, actual customer balances or contacts published. Authentication diagnosis remains open; no bypass. RecordedUTC:2026-11-01T18:48:51.677895+00:00
