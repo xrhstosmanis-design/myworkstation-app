@@ -1,4 +1,16 @@
-## 01/11/2026 - COMMERCE-COMPACT-NAV-01 / SOURCE CANDIDATE / AWAITING FULL CI AND USER
+## 01/11/2026 - COMMERCE-COMPACT-NAV-01 / DEPLOYED / AWAITING USER VISUAL
+
+**Authoritative technical delivery receipt · 2026-11-01T15:33:03+02:00.**
+
+Implementation and release are complete; only owner visual acceptance remains. Source3451 initial00b0bb7 / fullCI41291787489 and reconciled3774b4a81f534b9debf5d1055e018e40abffb475 / fullCI41293119062 both SUCCESS:5050server+8backup PASS,0FAIL/0SKIP. The initial merge was refused for a shared-record conflict after AI wallet claim3452; reconciliation preserved the identical CSS blob e66e32aafade1fe7f0e6918283614e8fdbe48135 and existing local geometry evidence. Source merged650b4dca3d66dc16b5020197e7a2ec475bef4575; exact main CI41293954312 SUCCESS, including the independently owned intervening FTEXT finalize source. No takeover or physical FTEXT acceptance is claimed.
+
+Current independently healthy live revision ad111f6f9c69dee7dcce5713eed39abe72aab122 is19commits ahead/0behind merge650b4dca, with no later edits to commerce-home-modern.css. Exact current fullCI41307061118 / job124849851364 SUCCESS:5084server+8backup PASS,0FAIL/0SKIP. Normal guarded deploy41308575722 / job124854052270 SUCCESS; Render dep-dbjjd0h42hec73d6o0ug LIVE, finished2026-11-01T12:56:25.560308Z. Independent public /api/health observed ok=true and exact ad111f6f. Root-referenced served /assets/entry-D6cIwnBO.css contains the compact .commerce-hub:not(.order-suggestions-view) selectors with42px desktop and44px coarse-pointer minimums. This is independent delivery verification, not a signed-in actor/menu or physical screenshot PASS. No new deployment, CI dispatch, account grant or business action was initiated for this receipt.
+
+The screen-only first-panel navigation uses content-width wrapping buttons,6px gaps and inline18px icons/arrows while keeping the original18px readable text and existing palette, active/locked/focus states. Original menu handlers, module/store/auth guards, hidden order-suggestions navigation, print styling and selected-function content remain unchanged. Local synthetic real-Chromium geometry remains12cases PASS at1920/1366/1280/1024/768/390: nav440→186px at1920 and800→234px at1366, no horizontal overflow, all25buttons bounded and touch targets≥44px. Those measurements are synthetic geometry evidence, not the owner's exact physical viewport.
+
+Same owner fix/commerce-compact-nav-20261101 retained. Single next action: refresh the commercial window and obtain owner visual confirmation that the smaller buttons match the requested reference and leave adequate room below. No stock, financial, fiscal, payment or invoice action is needed for this visual check. USER/hosted actor/physical visual acceptance remains NOT TESTED; do not reuse the separate Diadoxou operator-warehouse USER PASS. Manual unchanged until actual visual acceptance. Prior source-candidate/full-CI/deploy-pending text below is historical and superseded by this receipt.
+
+**Historical source and claim evidence.**
 
 **Implementation after green/main claim3449.**
 
