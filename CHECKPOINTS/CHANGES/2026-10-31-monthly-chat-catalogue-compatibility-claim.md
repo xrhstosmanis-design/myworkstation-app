@@ -1,3 +1,46 @@
+# 01/11/2026 - Actual CAPTURE3 install-only receipt / automation OPEN
+
+Same retained central monthly owner (D6/D9), executor root; documentation continuation docs/monthly-install-receipt-20261101. After the user's explicit final install-only approval, the existing trusted Render Web Shell on srv-d9isenfavr4c73bdh52g ran the reviewed CAPTURE3 operator at actual source4c05a9442d03941d35585a1e39a0aceef3dc01a1. Target only MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ: companycmtpopbgk000prhb5qc60zxus / storecmtpopbgo000trhb5ng9ytiru. Fresh complete in-service inspector returned BASE/eligibletrue/no reasons/guardsfalse/no enrollment. One process-only install enablement and the actual inspector's0600 regular packet admitted one atomic installation: all3MonthlyInventorySnapshot/MonthlyInventoryCaptureGrant/MonthlyInventoryCaptureJob tables plus shared row/TRUNCATE protections across194scoped tables, and selected LAB enrollmentgeneration0 under current FULL59ca657191a03dfeb751e907d95abe4291a3fc61da30c9d0602a116ed78757c2. This was shared production-schema infrastructure, not isolated one-row LAB data.
+
+Actual operator returned installedtrue/enrolledtrue/createdEnrollmenttrue/three createdtables. Independent subsequent in-service inspection returned TARGET/guardstrue/enrolledtrue/eligibletrue/reasons[] with maintenancefalse/retiredfalse/operationIdnull. Read-only SQL2026-11-01T09:50:58.834393Z confirmed exactly the one selected fence, generation0/currentFULL, snapshots0/grants0/jobs0/executions0. Trusted-service public /api/health after installation returned oktrue/exact4c05 (approximately09:53-09:54UTC; no exactHTTPDate measured). No second install, reset/drain/start/capture, personalgrant, scheduler/control activation, email or financial/stock/fiscal action. No business before/after baseline was measured: financial/stock/sibling invariance is NOT TESTED, never inferred from zero monthly rows.
+
+Installation evidence supersedes only earlier absent-table/no-enrollment/install-OPEN facts for this exact target. Overall monthly item9 stays OPEN; no USER/LAB/manual/business PASS or numbered closure. Web still defaultBASE (profileenvUNSET), Nodev20.20.2; pre-existing general execution flagtrue was left untouched, dedicated capturecontrolUNSET and installenableUNSET outside the one command. Actual in-service HMAC verification before installation was BASEtrue/FULLfalse; worker aa1cbcf8ed8461d4abb565376857508217fd6539 still advertised BASE. No secret/MAC readout or profile/deploy change. Next: review the concrete compatible web+worker FULL-profile transition and fresh signed readiness before any separately approved personalgrant/activation/capture. Do not repeat installation or ask again for install-only approval. No retroactive01Nov07:00Athens job/catch-up; natural future eligibility must bind the actual activation. Monthly invoice email remains a distinct purpose. Full receipt: CHECKPOINTS/CHANGES/2026-10-31-monthly-chat-catalogue-compatibility-claim.md.
+
+
+## Exact observed transition
+
+The user explicitly approved the concrete LAB infrastructure packet, including shared protections across194scoped tables. This approval did not cover web/worker profile changes, personal delegation, capture acceptance, scheduler activation or email. The root coordinator performed the action inside the already authenticated correct production service; no sandbox credentials or substituted environment impersonated that service.
+
+- Running revision:4c05a9442d03941d35585a1e39a0aceef3dc01a1.
+- BASE plan:ba554503bbb839524a1217af0149a6bf86b11384cb2dcb1bfc41d75a6d4290d4.
+- FULL CAPTURE3 plan:59ca657191a03dfeb751e907d95abe4291a3fc61da30c9d0602a116ed78757c2.
+- Fresh before catalogueSignature:48e85bc1f43018839f81cb3dff1516715bd69f6d32260861d6d234732c32feb3; globalStateSignature:1b1884ebd0f54afbdada616cf0a321b32c6bccd6679e79d2c64fe1cc6b2bb54e.
+- After catalogueSignature:fde78bff7e280176f53be59dd7ca0891f2e52fed82740dec8db5b296fdd73be2; globalStateSignature:11e193b2877f265c3a6ec801bdde60033583d84c628ea229e2342d6e1a73b5f3.
+- Before:BASE/guardsfalse/enrolledfalse/all enrollment state null. After:TARGET/guardstrue/enrolledtrue/generation0/FULL plan/maintenancefalse/retiredfalse/operationIdnull.
+- All3monthly relations were created atomically; selected initial enrollment created. No existing fence generation was migrated, no existing store reset or retired, and no old jobs/grants were relabelled.
+
+The fresh inspection was produced by runMonthlyInventorySnapshotInstall using inspect --profile CAPTURE3 with the actual service/revision/company/store. Only its returned packet was written directly to a new0600 regular UTF8 file /tmp/mws-capture3-approved-20261101.json, flagwx; it was not reconstructed from separate metadata queries. The actual reviewed command was:
+
+```sh
+MWS_MONTHLY_INVENTORY_CAPTURE_INSTALL_ENABLED=true node server/scripts/monthly-inventory-snapshot-install.mjs install --profile CAPTURE3 --company cmtpopbgk000prhb5qc60zxus --store cmtpopbgo000trhb5ng9ytiru --packet /tmp/mws-capture3-approved-20261101.json --approval MONTHLY-INVENTORY-CAPTURE3-INSTALL-ONLY
+```
+
+The operator's existing fixed-service/current-revision/strict-file/closed-scope admission, global advisory lock, deterministic Fence-first EXCLUSIVE NOWAIT relation locks, fresh packet comparison and atomic before/after validation remained unchanged. Its returned productionActivatedfalse/captureEnabledfalse describe this install-only action; they are not substituted for actual control inspection. Independent post-install inspection and read-only database counts confirmed the committed state. No second install was performed.
+
+## Readiness and operational boundaries retained
+
+Actual pre-install service Nodev20.20.2, MWS_STORE_LIFECYCLE_PROFILE UNSET/defaultBASE; STORE_LIFECYCLE_EXECUTION_ENABLED pre-existingtrue was observed and not changed. MWS_MONTHLY_INVENTORY_CAPTURE_CONTROL was UNSET; installation enablement was unset outside the single command. A read-only transaction invoking the existing readLifecycleWorkerCapability with the real in-process BACKUP_MONITOR_SECRET printed only booleans BASEtrue/FULLfalse; no secret, raw heartbeatMAC or credential was printed. The later readonly metadata timestamp09:39:44.102440UTC identifies worker aa1cbcf8ed8461d4abb565376857508217fd6539, heartbeat09:35:17.362833UTC, currentBASEhash. Actual Render worker dep-dbj90815efls73dpvrbg becameLIVE01Nov01:04:53.920784UTC via new_commit; previous afbf pre-CI provenance deviation stays historical. Matching FULL signed capability and compatible selected web/worker profiles remain unverified, not activation-ready.
+
+This receipt does not authorize fixing that hold by toggling a generic execution flag, deploying/restarting, minting a personal session/grant or changing CASH/report controls. Existing fresh-start controller.start enters RESET drain and must not be used for enrollment. The next operational packet must name the compatible profile transition/window/current source/recovery/readiness and specific action scope. The install-only approval already consumed is not re-requested or broadened.
+
+Read-only database health09:50:16.919001UTC showed lock_waiters0 and active_over20s0. Post-install09:50:58.834393UTC counts were snapshots0/grants0/jobs0/executions0 and exactly one currentFULL selectedLAB fence. Root's trusted service curl -fsS https://myworkstation-app.onrender.com/api/health returned oktrue/version0.22.0+kat-test-pos/exact4c05 at approximately09:53-09:54UTC. No exactHTTPDate was measured. No financial/stock/sibling baseline exists for this metadata action, so such invariance remains NOT TESTED. No accepted transaction was replayed for documentation.
+
+Root's subsequent actual safe-control readback confirmed captureControlUnset:true and installEnableUnset:true after installation; the one-process enablement did not persist. No profile or deployment setting was changed.
+
+Historical code/CI/ordinary delivery receipts and current Chat forwardBinding catalogue alignment remain protected. This receipt records actual infrastructure only and does not relabel isolated native/CI evidence as a physical or whole-automation PASS. No new manual entry is created for untested personal/capture/scheduler workflows; all remaining item9 acceptance stays OPEN.
+
+## Historical engineering/source/delivery records
+
 # D9 - Monthly / Chat compatibility - CODE AND ORDINARY WEB DELIVERY VERIFIED / OPERATIONAL ACCEPTANCE OPEN
 
 01/11/2026 Europe/Athens. Proof dates below span 31/10/2026 and 01/11/2026 UTC. This newest receipt supersedes the historical web-blocked status only after actual combined-main CI and ordinary exact healthy delivery. It does not claim production installation or USER/LAB/manual acceptance.
