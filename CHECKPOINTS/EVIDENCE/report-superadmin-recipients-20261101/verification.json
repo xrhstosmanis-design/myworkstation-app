@@ -1,0 +1,160 @@
+{
+  "scope": "SuperAdmin-managed automatic-report recipient authorization, no invitation",
+  "claim": {
+    "pr": 3430,
+    "head": "89f025dcbdc0ccbbc205dd2a6f44c33bc62869f5",
+    "ci": 41250270846,
+    "merge": "2c9eacce863fce4c6b7946666bdec2b9405265ac"
+  },
+  "source": {
+    "pr": 3432,
+    "acceptedSourceHead": "2e934356740108afd372172164deae0b1680898d",
+    "acceptedSourceCi": 41252374347,
+    "acceptedSourceFullNative": {
+      "serverPass": 5024,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "combinedHead": "96ea8e5ee94f3f5efc184b7a0a37b34f511fd012",
+    "combinedBase": "50146f3f094d846f52b2801f1e60de0332aaf1c4",
+    "combinedCi": 41253507877,
+    "combinedFullNative": {
+      "serverPass": 5039,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "merge": "55c2d7a912313ad8589f8258ad9dc5084fa8ad49",
+    "mainCi": 41254579730,
+    "stage": "INSTALLED / SCOPED HOSTED LAB PASS / REAL ACTIVATION OPEN",
+    "ownedRuntimeAndTestBlobs": [
+      {
+        "path": "client/src/components/platform/AutomaticReportDispatchManager.jsx",
+        "sha": "2884ae1989d64e26b3468cd0c92b9964360af509"
+      },
+      {
+        "path": "server/src/routes/automatic-report-dispatch.js",
+        "sha": "449897eb4215341d2faa25a2d0fa3d39fe088f47"
+      },
+      {
+        "path": "server/src/services/automatic-report-administrator-authorization.js",
+        "sha": "f3821f31ee2972ce6947e437dbb21717327a7f4b"
+      },
+      {
+        "path": "server/src/services/automatic-report-delivery-lifecycle.js",
+        "sha": "ff794def050edc924c2d3c5a50f29c4491d43c47"
+      },
+      {
+        "path": "server/src/services/automatic-report-dispatch-policy.js",
+        "sha": "e32c07c5fb550506a15f97d05a49226090426cc7"
+      },
+      {
+        "path": "server/src/services/automatic-report-eligibility.js",
+        "sha": "38fb2bdf1d30b8a0b5577fb6b4fb72ba8ae44646"
+      },
+      {
+        "path": "server/test/automatic-report-administrator-authorization.test.js",
+        "sha": "a2c80e01a4a4a47bb5a4ded09253ba690d867f0d"
+      },
+      {
+        "path": "server/test/automatic-report-administrator-postgres.test.js",
+        "sha": "6cd88f6c75dda6d485545d2d214d8fa93b822525"
+      },
+      {
+        "path": "server/test/automatic-report-administrator-ui.test.js",
+        "sha": "df693a0ac47af21ddbbad52b2d0033d68fcea956"
+      },
+      {
+        "path": "server/test/automatic-report-eligibility.test.js",
+        "sha": "d39be6e1b28d20556aa9300d3bd39cd5ec2d79dd"
+      }
+    ],
+    "mainCiAttempt": 2,
+    "mainCiConclusion": "success",
+    "mainFullNative": {
+      "serverPass": 5039,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "actualBuildJob": 124695174687,
+      "note": "attempt1 full build succeeded; wholesale apt update timeout recovered by attempt2"
+    }
+  },
+  "initialNative": {
+    "run": 41251051033,
+    "head": "a27434f7909d09b94a41300e80fbb8c5af06c631",
+    "parentTap": 412,
+    "subcasesPassed": 5,
+    "wholeRunConclusion": "cancelled after source review; NOT full CI success"
+  },
+  "local": {
+    "node": "20.20.2",
+    "automaticReports": {
+      "pass": 201,
+      "fail": 0,
+      "nativeInfrastructureSkip": 14
+    },
+    "fullInitialCandidate": {
+      "pass": 4353,
+      "fail": 0,
+      "nativeInfrastructureSkip": 330
+    },
+    "finalProvenanceReview": {
+      "pass": 16,
+      "fail": 0,
+      "nativeInfrastructureSkip": 1
+    },
+    "finalValidProofCutoff": {
+      "pass": 9,
+      "fail": 0,
+      "skip": 0
+    },
+    "workBuild": "PASS/TABLE_SERVICE"
+  },
+  "hosted": {
+    "stage": "SCOPED PASS",
+    "prospectiveStore": "MYWORKSTATION LAB / N40 CONTROL 20261010",
+    "beforeReadOnly": {
+      "settings": "absent",
+      "terminalCount": 0,
+      "activeRecipientCount": 0,
+      "display": "OFF"
+    },
+    "controlReadOnly": {
+      "store": "\u0395\u03a1\u0393\u0391\u03a3\u03a4\u0397\u03a1\u0399\u039f \u0394\u039f\u039a\u0399\u039c\u03a9\u039d",
+      "previewDay": "2026-10-30",
+      "settingsVersion": 3,
+      "sourceCount": 1,
+      "sourceReadiness": "HOLD",
+      "recipientCount": 1,
+      "verifiedConsentingCount": 1,
+      "display": "OFF"
+    },
+    "checks": [
+      "A+B direct authorization without invitation",
+      "three frequencies persisted on reopen",
+      "cutoff not rewound",
+      "A approval revoked/B approval preserved",
+      "legacy recipient removal invalidates other store approvals truthfully",
+      "synthetic rows soft-revoked/zeroactive/OFF",
+      "untouched mainLAB settings3/source1/HOLD/original consent"
+    ],
+    "centralDispatchEnabled": false,
+    "screenshot": "unavailable: Page.captureScreenshot timed out twice",
+    "financialInvariance": "not independently measured"
+  },
+  "productionAuthorizationChanged": false,
+  "invitationSent": false,
+  "financialActions": false,
+  "release": {
+    "guard": 41256506408,
+    "conclusion": "success",
+    "deploy": "dep-dbj8dd0ae00c73dgb2ag",
+    "liveAt": "2026-11-01T00:26:05.583250Z",
+    "healthRevision": "55c2d7a912313ad8589f8258ad9dc5084fa8ad49",
+    "healthOk": true
+  },
+  "configurationApplied": false,
+  "realStoreAuthorizationChanged": false
+}
