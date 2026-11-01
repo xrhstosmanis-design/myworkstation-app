@@ -1,10 +1,10 @@
 import React,{useEffect,useRef,useState} from 'react';
 
 export function ChatActionSheet({label,onClose,children}){
- const box=useRef(null);
+ const box=useRef(null),outsidePress=useRef(false);
  useEffect(()=>{const previous=document.activeElement;box.current?.querySelector('button')?.focus();return()=>previous?.isConnected&&previous.focus()},[]);
  const keys=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose()}if(e.key==='Tab'){const all=[...box.current.querySelectorAll('button,input,select,a[href],[tabindex]')].filter(n=>!n.disabled&&!n.hidden);if(!all.length)return;const first=all[0],last=all.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}};
- return <div className="chat-sheet-backdrop" onClick={e=>{e.stopPropagation();if(e.target===e.currentTarget)onClose()}} onKeyDown={keys}><section className="chat-action-sheet" ref={box} role="dialog" aria-modal="true" aria-label={label} onClick={e=>e.stopPropagation()}><header><b>{label}</b><button type="button" onClick={onClose} aria-label="Κλείσιμο μενού">×</button></header>{children}</section></div>
+ return <div className="chat-sheet-backdrop" onPointerDown={e=>{outsidePress.current=e.target===e.currentTarget}} onPointerCancel={()=>{outsidePress.current=false}} onClick={e=>{e.stopPropagation();const close=outsidePress.current&&e.target===e.currentTarget;outsidePress.current=false;if(close)onClose()}} onKeyDown={keys}><section className="chat-action-sheet" ref={box} role="dialog" aria-modal="true" aria-label={label} onClick={e=>e.stopPropagation()}><header><b>{label}</b><button type="button" onClick={onClose} aria-label="Κλείσιμο μενού">×</button></header>{children}</section></div>
 }
 export default function ChatPhotoViewer({url,name,onClose}){
  const stage=useRef(null),pointers=useRef(new Map()),last=useRef(null),position=useRef({scale:1,x:0,y:0}),[view,setView]=useState(position.current),[natural,setNatural]=useState({w:1,h:1});
