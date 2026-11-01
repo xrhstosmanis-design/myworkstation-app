@@ -20,7 +20,7 @@ export async function searchChatMessages(db,store,query,before){
   if(input.before){const pivot=await tx.$queryRawUnsafe('SELECT "id" FROM "StoreChatMessage" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3',input.before,store.companyId,store.id);if(!pivot.length)throw fail('Η σελίδα αναζήτησης δεν είναι διαθέσιμη.',404);}
   return tx.$queryRawUnsafe(`WITH candidates AS MATERIALIZED (
    SELECT m."id" FROM "StoreChatMessage" m WHERE m."companyId"=$1 AND m."storeId"=$2
-   AND (m."body" ILIKE $3 ESCAPE '!' OR COALESCE(m."attachmentName",'') ILIKE $3 ESCAPE '!')
+   AND (UPPER(m."body") LIKE UPPER($3) ESCAPE '!' OR UPPER(COALESCE(m."attachmentName",'')) LIKE UPPER($3) ESCAPE '!')
    AND ($4::text IS NULL OR (m."createdAt",m."id") < (SELECT p."createdAt",p."id" FROM "StoreChatMessage" p WHERE p."id"=$4 AND p."companyId"=$1 AND p."storeId"=$2))
    ORDER BY m."createdAt" DESC,m."id" DESC LIMIT 21
   ) SELECT m."id",m."senderId",LEFT(m."body",5000) AS "body",m."category",m."createdAt",(m."forwardBinding" IS NOT NULL) AS "forwarded",

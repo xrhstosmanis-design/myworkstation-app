@@ -13,7 +13,7 @@ try{
  const company=await db.company.create({data:{name:'CI Chat batch',active:true,licenseStatus:'ACTIVE',subscriptionEndsAt:new Date(Date.now()+86400000),modules:{create:{moduleKey:'STORE_CHAT',active:true}}}});
  const foreign=await db.company.create({data:{name:'CI Chat foreign',active:true,licenseStatus:'ACTIVE',subscriptionEndsAt:new Date(Date.now()+86400000),modules:{create:{moduleKey:'STORE_CHAT',active:true}}}});
  const store=await db.store.create({data:{name:'CI Chat A',companyId:company.id}}),sibling=await db.store.create({data:{name:'CI Chat sibling',companyId:company.id}}),other=await db.store.create({data:{name:'CI Chat B',companyId:foreign.id}});
- async function owner(co,role="OWNER"){const u=await db.user.create({data:{companyId:co.id,fullName:'CI Owner',email:`chat-${crypto.randomUUID()}@unit.test`,passwordHash:'isolated-no-login',role,mustChangePassword:false}}),s=await db.userSession.create({data:{userId:u.id,expiresAt:new Date(Date.now()+86400000)}});return {u,token:jwt.sign({id:u.id,email:u.email,companyId:co.id,role:u.role,sessionId:s.id,sessionVersion:u.sessionVersion},process.env.JWT_SECRET,{expiresIn:'10m'})};}
+ async function owner(co,role="OWNER"){const u=await db.user.create({data:{companyId:co.id,fullName:'CI Owner',email:`chat-${crypto.randomUUID()}@unit.test`,passwordHash:'isolated-no-login',role,mustChangePassword:false}}),s=await db.userSession.create({data:{userId:u.id,expiresAt:new Date(Date.now()+86400000)}});return {u,token:jwt.sign({id:u.id,email:u.email,companyId:co.id,role:u.role,tokenType:"BACKOFFICE_USER",sessionId:s.id,sessionVersion:u.sessionVersion},process.env.JWT_SECRET,{expiresIn:'10m'})};}
  const a=await owner(company),b=await owner(foreign);
  const employee=await db.employee.create({data:{storeId:store.id,fullName:'CI recipient'}}),operator={id:crypto.randomUUID(),employeeId:employee.id,companyId:company.id,storeId:store.id,role:'EMPLOYEE',displayName:'CI recipient',pinHash:null,cardCodeHash:null};
  await db.$executeRaw`INSERT INTO "StoreOperatorCredential" ("id","companyId","storeId","employeeId","displayName","role","createdBy") VALUES (${operator.id},${company.id},${store.id},${employee.id},${operator.displayName},${operator.role},${a.u.id})`;
@@ -64,7 +64,7 @@ try{
 
  // Expanded batch: history search and explicit authorized forwarding, on actual local HTTP/PostgreSQL.
  const third=await db.store.create({data:{name:'CI Forward third',companyId:company.id}});
- const literal=await call(a.token,store,'','POST',{body:'Literal 100%_! offer and καφές'});
+ const literal=await call(a.token,store,'','POST',{body:'Literal 100%_! offer and καφές'});assert.equal(literal.status,201,JSON.stringify(literal.body));
  const pdf=await call(a.token,store,'','POST',{body:'PDF source',replyToId:parentId,attachment:{name:'fixture.pdf',mimeType:'application/pdf',dataUrl:'data:application/pdf;base64,'+Buffer.from('%PDF-fixture').toString('base64')}});assert.equal(pdf.status,201,JSON.stringify(pdf.body));
  async function chatSnapshot(){return db.$queryRawUnsafe(`SELECT
  (SELECT COUNT(*)::int FROM "StoreChatMessage" WHERE "companyId"=$1) messages,
@@ -77,7 +77,7 @@ try{
  do{const r=await call(a.token,store,'/search?q=older%20history'+(cursor?'&before='+encodeURIComponent(cursor):''));assert.equal(r.status,200,JSON.stringify(r.body));assert.match(r.cache,/no-store/);assert.equal(r.body.store.id,store.id);assert.ok(r.body.rows.length<=20);
  for(const row of r.body.rows){assert.ok(row.id.startsWith(prefix));assert.equal(seen.has(row.id),false);seen.add(row.id);assert.equal(Object.hasOwn(row,'attachmentData'),false);}cursor=r.body.nextCursor;pages++;assert.ok(pages<=20);
  }while(cursor);assert.equal(seen.size,400,'stable keyset must preserve every timestamp tie');assert.equal(pages,20);
- for(const query of ['100%_!','ΚΑΦΈΣ'])assert.equal((await call(a.token,store,'/search?q='+encodeURIComponent(query))).body.rows[0].id,literal.body.id);
+ for(const query of ['100%_!','ΚΑΦΈΣ','καφές','Καφέσ']){const r=await call(a.token,store,'/search?q='+encodeURIComponent(query));assert.equal(r.status,200,JSON.stringify({query,...r}));assert.deepEqual(r.body.rows.map(row=>row.id),[literal.body.id],JSON.stringify({query,...r}));}
  assert.equal((await call(a.token,store,'/search?q='+encodeURIComponent("x' OR 1=1--"))).body.rows.length,0);
  for(const query of ['q=a','q=','q='+('x'.repeat(121)),'q=older&q=history','q=older&before=bad%2Fid'])assert.equal((await call(a.token,store,'/search?'+query)).status,400);
  assert.equal((await call(a.token,store,'/search?q=older&before='+foreignMessage.body.id)).status,404);assert.equal((await call('',store,'/search?q=older')).status,401);assert.ok([403,404].includes((await call(b.token,store,'/search?q=older')).status));
