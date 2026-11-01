@@ -1,7 +1,7 @@
 {
   "task": "POS-OPERATOR-INVENTORY-01",
   "owner": "fix/pos-operator-inventory-20261031",
-  "status": "SOURCE_MERGED_RELEASE_BLOCKED_AWAITING_OPERATOR_LAB",
+  "status": "DEPLOYED_AWAITING_OPERATOR_LAB",
   "sourcePr": 3427,
   "claimPr": 3421,
   "claimMerge": "6b34016a48eb181f93050360384a8631bbcfb408",
@@ -55,7 +55,37 @@
   "realModuleChanges": 0,
   "hostedBusinessActions": 0,
   "stockOrFinancialLabActions": 0,
-  "deployment": null,
+  "deployment": {
+    "revision": "4c05a9442d03941d35585a1e39a0aceef3dc01a1",
+    "renderId": "dep-dbjel48ae00c73e0kqa0",
+    "status": "live",
+    "finishedAt": "2026-11-01T07:32:43.15709Z",
+    "trigger": "api",
+    "initiatedByThisOwner": false,
+    "observedAt": "2026-11-01T09:44:38+02:00",
+    "health": {
+      "ok": true,
+      "revision": "4c05a9442d03941d35585a1e39a0aceef3dc01a1"
+    },
+    "priorGuardedSourceRelease": {
+      "revision": "aaf3dce10b7d19fb700fb1f30a4e464cf498e67b",
+      "ci": 41260513845,
+      "guard": 41261365197,
+      "job": 124715186597,
+      "renderId": "dep-dbj9d2ou01pc73eqp6vg",
+      "finishedAt": "2026-11-01T01:33:45.165289Z",
+      "sourceDiffToLive": "documentation/evidence/PDF only"
+    },
+    "assetProof": {
+      "bootstrap": "main--Q_6fgnJ.js",
+      "entry": "entry-D6nmC0za.js",
+      "permission": "inventoryPos",
+      "overlay": "PosInventoryOverlay-DCurUn_e.js",
+      "boundNamespace": true,
+      "lifecycleHeader": true,
+      "readOnlyStockNote": true
+    }
+  },
   "operatorLabAcceptance": "NOT_TESTED",
   "physicalTerminalAcceptance": "NOT_TESTED",
   "finalSource": {
@@ -69,13 +99,24 @@
     "skip": 0,
     "merge": "50146f3f094d846f52b2801f1e60de0332aaf1c4"
   },
-  "mainCi": {
+  "previousHealthyRevision": "946fa417b858fbece65c9ded6cb8db506bca91b0",
+  "nextAction": "Identified intended operator permission and scoped acceptance with fresh controls; operator LAB and physical terminal remain NOT_TESTED",
+  "historicalCancelledMainCi": {
     "id": 41253122609,
     "conclusion": "CANCELLED",
     "buildAndTestRan": false,
     "reason": "pending main run replaced by later documentation main in concurrency queue",
     "retry": "HTTP403 This workflow run cannot be retried"
   },
-  "previousHealthyRevision": "946fa417b858fbece65c9ded6cb8db506bca91b0",
-  "nextAction": "Workflow-dispatch existing MyWorkStation CI on latest main, then normal guarded deploy and independent exact health/assets; operator acceptance remains NOT_TESTED"
+  "mainCi": {
+    "id": 41284858846,
+    "job": 124784210253,
+    "event": "workflow_dispatch",
+    "head": "4c05a9442d03941d35585a1e39a0aceef3dc01a1",
+    "conclusion": "SUCCESS",
+    "serverPass": 5050,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  }
 }

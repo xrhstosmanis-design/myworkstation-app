@@ -70,7 +70,21 @@ One scoped management transaction validates explicit SuperAdmin action and expec
 Status NOT IMPLEMENTED/NOT TESTED. Existing manual remains historical accepted usage, not new behavior. Checkpoint CHECKPOINTS/CHANGES/2026-11-01-report-superadmin-recipients.md. Single next: publish green/main claim, implement the bounded administrative path, full CI/exact guarded runtime, then isolated LAB no-send acceptance before real destination activation. All unrelated owners preserved.
 
 
-## 31/10/2026 - POS-OPERATOR-INVENTORY-01 / SOURCE MERGED / RELEASE BLOCKED / AWAITING OPERATOR LAB
+## 31/10/2026 - POS-OPERATOR-INVENTORY-01 / DEPLOYED / AWAITING OPERATOR LAB
+
+**Authoritative technical release receipt · 2026-11-01T09:44:38+02:00.**
+
+The former release blocker is resolved. The live revision is 4c05a9442d03941d35585a1e39a0aceef3dc01a1, confirmed by an independent /api/health read (ok=true) on 01/11/2026. Exact main full workflow_dispatch CI41284858846 / build-and-test124784210253 SUCCESS: 5050 server + 8 backup tests PASS, 0 FAIL, 0 SKIP, including native PostgreSQL, Chromium and real HTTP flows. The source PR3427 full CI41252087179 had 5024 server + 8 backup PASS before merge50146f3; the live revision is 28 commits ahead / 0 behind that merge, with no later edits to the operator-inventory files in that comparison.
+
+The prior normal guarded release of source revision aaf3dce10b7d19fb700fb1f30a4e464cf498e67b passed exact full CI41260513845 and deploy workflow41261365197 / job124715186597, reaching Render dep-dbj9d2ou01pc73eqp6vg LIVE at 2026-11-01T01:33:45.165289Z. Current Render dep-dbjel48ae00c73e0kqa0 is LIVE at 2026-11-01T07:32:43.15709Z, trigger api, revision4c05a944. The aaf3dce→4c05a944 comparison contains only checkpoint/evidence/roadmap/PDF changes, no production source. The current API-triggered deployment was independently observed, not initiated by this owner; it is not mislabelled as a new guarded deploy. No duplicate CI dispatch, deploy hook, environment/runtime change or deployment was initiated in this continuation because exact current full CI was already running and the service was already healthy.
+
+Independent served-asset check: /assets/main--Q_6fgnJ.js loads entry-D6nmC0za.js, which contains permissions.inventoryPos, the «Αποθήκη από POS» label and PosInventoryOverlay-DCurUn_e.js. The served overlay contains the bound /api/store-pos/stores/:storeId/inventory namespace, X-Inventory-Generation and «Το στοκ είναι μόνο για προβολή». This verifies technical delivery, not functional operator or physical-terminal acceptance.
+
+The implemented default-off «Αποθήκη από POS · χωρίς αλλαγή στοκ» right opens the existing archive from Functions POS → Αποθήκη. Actual STORE_OPERATOR identity/session/profile/store/object/licence/module/lifecycle and existing per-action rights remain binding; retail rights cover priced SET, barcode transfer and delivery nullable-price overrides. Stock is visible/read-only and direct stock operations, count/finalize/transfer/destruction/stock-moving merge and nonzero opening/import stock are denied. No Owner token bridge or blanket account grant was introduced.
+
+Real account grants=0; real module changes=0; hosted business/stock/financial/fiscal actions=0. Operator LAB, real operator login and physical-terminal acceptance remain NOT TESTED. Existing decimal-keyboard and consumption/destruction visual PASS are preserved and are not reused as acceptance for this feature. Manual unchanged because no functional LAB/USER PASS is claimed. Owner fix/pos-operator-inventory-20261031 retained. Single next action: enable the explicit right only for an identified intended operator, then verify the operator warehouse and action rights with fresh recorded before/after and unaffected controls before any hosted write; never replay old accepted business fixtures. All prior implementation/CI-cancellation notes below are historical and superseded for current technical release status.
+
+**Historical implementation and handoff evidence (superseded by the receipt above).**
 
 **Authoritative handoff · 01/11/2026 (Europe/Athens).**
 
