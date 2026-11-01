@@ -10493,6 +10493,11 @@
         "replyToId",
         "text",
         false
+      ],
+      [
+        "forwardBinding",
+        "text",
+        false
       ]
     ],
     "StoreChatMobilePush": [
@@ -17357,6 +17362,7 @@
     "StoreChatDelivery.userId",
     "StoreChatMessage.aiReaderJobId",
     "StoreChatMessage.attachmentData",
+    "StoreChatMessage.forwardBinding",
     "StoreChatMessage.replyToId",
     "StoreChatMessage.senderId",
     "StoreChatMobilePush.sessionId",

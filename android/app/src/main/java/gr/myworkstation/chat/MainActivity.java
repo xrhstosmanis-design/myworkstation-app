@@ -69,6 +69,10 @@ public final class MainActivity extends Activity {
     private boolean videoAvailable;
     private Button videoButton;
     private TextView videoLabel;
+    private boolean searchForwardReady, chatCanForward;
+    private Button historySearchButton;
+    private int searchGeneration;
+    private String uncertainForwardStoreId = "";
     private boolean interactionsReady, chatCanPin, chatCanManageSettings, acknowledgementRequired;
     private JSONObject quotedMessage;
     private String quoteToken = "", quoteStore = "", quoteCompany = "", messageCategory = "GENERAL";
@@ -325,6 +329,7 @@ public final class MainActivity extends Activity {
             categoryButton.setContentDescription("Κατηγορία νέου μηνύματος"); categoryButton.setVisibility(View.GONE); options.addView(categoryButton, toolParams());
             announcementSettingsButton = chatButton("Ρυθμίσεις", scopedChatAction(this::showAnnouncementSettings), false); announcementSettingsButton.setVisibility(View.GONE); options.addView(announcementSettingsButton, toolParams());
             announcementsButton = chatButton("Ανακοινώσεις", scopedChatAction(this::showPinnedAnnouncements), false); announcementsButton.setVisibility(View.GONE); options.addView(announcementsButton, toolParams()); root.addView(options, 2);
+            historySearchButton = chatButton("Αναζήτηση μηνυμάτων", scopedChatAction(this::showHistorySearch), false); historySearchButton.setVisibility(View.GONE); root.addView(historySearchButton, 3);
         }
 
         root.removeView(contentScroll); scroll = new ScrollView(this); scroll.setFillViewport(false); scroll.setBackgroundColor(0xfff4f1f8);
@@ -367,6 +372,8 @@ public final class MainActivity extends Activity {
             if (voiceButton != null) voiceButton.setEnabled(voiceAvailable);
             interactionsReady = data.optBoolean("interactionsAvailable", false);
             JSONObject permissions = data.optJSONObject("permissions"), settings = data.optJSONObject("settings");
+            searchForwardReady = data.optBoolean("searchForwardAvailable"); chatCanForward = searchForwardReady && permissions != null && permissions.optBoolean("canForward");
+            if (historySearchButton != null) historySearchButton.setVisibility(searchForwardReady ? View.VISIBLE : View.GONE);
             chatCanPin = interactionsReady && permissions != null && permissions.optBoolean("canPin");
             chatCanManageSettings = interactionsReady && permissions != null && permissions.optBoolean("canManageSettings");
             if (announcementSettingsButton != null) announcementSettingsButton.setVisibility(chatCanManageSettings ? View.VISIBLE : View.GONE);
@@ -471,6 +478,7 @@ public final class MainActivity extends Activity {
             card.addView(text(quote == null ? "Το αρχικό μήνυμα δεν είναι διαθέσιμο." : "↪ " + quote.optString("senderName", "Χρήστης") + " · " + ChatInteractions.preview(quote), 14, PURPLE));
         }
         if (row != null && row.optBoolean("pinned")) card.addView(text("ΚΑΡΦΙΤΣΩΜΕΝΗ ΑΝΑΚΟΙΝΩΣΗ", 12, PURPLE));
+        if (row != null && row.optBoolean("forwarded")) card.addView(text("Προωθημένο μήνυμα", 12, PURPLE));
         if (!body.isEmpty()) card.addView(text(body, 17, INK));
         if (row != null && row.optBoolean("hasAttachment")) {
             if (row.optString("attachmentMimeType").startsWith("image/")) card.addView(chatButton("▧ Φωτογραφία · προβολή", () -> viewPhoto(row), false));
@@ -494,11 +502,8 @@ public final class MainActivity extends Activity {
             }));
         }
         if (row != null && interactionsReady && ChatInteractions.validId(row.optString("id"))) {
-            card.addView(button("Απάντηση", scopedChatAction(() -> {
-                quotedMessage = row; quoteEpoch = epoch.capture(); quoteToken = token; quoteStore = id(selected, "id"); quoteCompany = id(selected, "companyId");
-                if (quoteLabel != null) { quoteLabel.setText("× Ακύρωση απάντησης\n" + row.optString("senderName", "Χρήστης") + ": " + ChatInteractions.preview(row)); quoteLabel.setVisibility(View.VISIBLE); }
-                if (composer != null) composer.requestFocus();
-            })));
+            card.addView(button("Απάντηση", scopedChatAction(() -> chooseChatReply(row))));
+            if (searchForwardReady && chatCanForward) card.addView(button("Προώθηση", scopedChatAction(() -> showForwardTargets(row))));
             LinearLayout reactions = new LinearLayout(this); final String mine = ChatInteractions.mine(row, identity.optString("id"));
             for (String emoji : ChatInteractions.REACTIONS) {
                 int count = ChatInteractions.count(row, emoji); Button reaction = chatButton(emoji + (count == 0 ? "" : " " + count), scopedChatAction(() -> updateReaction(row, mine.equals(emoji) ? null : emoji)), mine.equals(emoji));
@@ -524,7 +529,7 @@ public final class MainActivity extends Activity {
         return () -> { if (!busy && interactionsReady && chatScope(generation, captured, store, company)) action.run(); };
     }
     private void clearQuote() { quotedMessage = null; quoteToken = ""; quoteStore = ""; quoteCompany = ""; if (quoteLabel != null) { quoteLabel.setText(""); quoteLabel.setVisibility(View.GONE); } }
-    private void clearChatInteractions() { clearQuote(); pinnedAnnouncements = new JSONArray(); interactionsReady = false; chatCanPin = false; chatCanManageSettings = false; acknowledgementRequired = false; messageCategory = "GENERAL"; quoteLabel = null; categoryButton = null; announcementsButton = null; announcementSettingsButton = null; }
+    private void clearChatInteractions() { searchGeneration++; searchForwardReady = false; chatCanForward = false; historySearchButton = null; clearQuote(); pinnedAnnouncements = new JSONArray(); interactionsReady = false; chatCanPin = false; chatCanManageSettings = false; acknowledgementRequired = false; messageCategory = "GENERAL"; quoteLabel = null; categoryButton = null; announcementsButton = null; announcementSettingsButton = null; }
     private boolean attachQuote(JSONObject body) {
         if (quotedMessage == null) return true;
         if (!interactionsReady || !chatScope(quoteEpoch, quoteToken, quoteStore, quoteCompany) || !ChatInteractions.validId(quotedMessage.optString("id"))) { clearQuote(); status("Η απάντηση έληξε. Επίλεξε ξανά μήνυμα στο σωστό κατάστημα."); return false; }
@@ -540,6 +545,102 @@ public final class MainActivity extends Activity {
     private void acknowledgeAnnouncement(JSONObject row) {
         if (!acknowledgementRequired || row.optBoolean("acknowledgedByMe")) return;
         call(chatBase() + "/messages/" + enc(row.optString("id")) + "/acknowledge", "POST", object(), false, ignored -> loadMessages(false));
+    }
+
+    private void chooseChatReply(JSONObject row) {
+        quotedMessage = row; quoteEpoch = epoch.capture(); quoteToken = token; quoteStore = id(selected, "id"); quoteCompany = id(selected, "companyId");
+        if (quoteLabel != null) { quoteLabel.setText("× Ακύρωση απάντησης\n" + row.optString("senderName", "Χρήστης") + ": " + ChatInteractions.preview(row)); quoteLabel.setVisibility(View.VISIBLE); }
+        if (composer != null) composer.requestFocus();
+    }
+    private void showHistorySearch() {
+        if (!searchForwardReady) return;
+        dismissImage(); searchGeneration++;
+        LinearLayout box = new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(16), dp(8), dp(16), dp(8));
+        EditText query = input("Κείμενο ή όνομα αρχείου (2-120 χαρακτήρες)", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 120);
+        box.addView(query); LinearLayout resultRows = new LinearLayout(this); resultRows.setOrientation(LinearLayout.VERTICAL);
+        ScrollView results = new ScrollView(this); results.addView(resultRows);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Αναζήτηση μηνυμάτων").setView(box).setNegativeButton("Κλείσιμο", (d,w) -> dismissImage()).create();
+        box.addView(chatButton("Αναζήτηση ιστορικού", scopedChatAction(() -> fetchHistory(query, "", resultRows, dialog, null)), false));
+        box.addView(results, new LinearLayout.LayoutParams(-1, dp(280)));
+        query.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence v,int a,int c,int f) {}
+            public void onTextChanged(CharSequence v,int a,int b,int c) { searchGeneration++; resultRows.removeAllViews(); }
+            public void afterTextChanged(android.text.Editable v) {}
+        });
+        imageDialog = dialog; dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); dialog.show();
+    }
+    private void fetchHistory(EditText query, String before, LinearLayout results, AlertDialog dialog, String expected) {
+        if (!searchForwardReady || imageDialog != dialog) return;
+        String term = java.text.Normalizer.normalize(query.getText().toString().trim(), java.text.Normalizer.Form.NFC);
+        if (expected != null && !expected.equals(term)) return;
+        if (term.codePointCount(0,term.length()) < 2 || term.codePointCount(0,term.length()) > 120) { status("Γράψε 2 έως 120 χαρακτήρες."); return; }
+        InputMethodManager keyboard = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE); if (keyboard != null) keyboard.hideSoftInputFromWindow(query.getWindowToken(), 0);
+        final int generation = ++searchGeneration; final long scope = epoch.capture(); final String captured = token, storeId = id(selected,"id"), companyId = id(selected,"companyId");
+        results.removeAllViews(); results.addView(text("Αναζήτηση…", 15, MUTED));
+        call(chatBase() + "/messages/search?q=" + enc(term) + (before.isEmpty() ? "" : "&before=" + enc(before)), "GET", null, false, data -> {
+            if (imageDialog != dialog || generation != searchGeneration || !chatScope(scope,captured,storeId,companyId)
+                || !term.equals(java.text.Normalizer.normalize(query.getText().toString().trim(),java.text.Normalizer.Form.NFC))) return;
+            JSONObject store = data.getJSONObject("store");
+            if (!storeId.equals(store.getString("id")) || !companyId.equals(store.getString("companyId")) || !term.equals(data.getString("q"))) throw new IllegalArgumentException();
+            JSONArray rows = data.getJSONArray("rows"); if (rows.length() > 20) throw new IllegalArgumentException();
+            String cursor = data.isNull("nextCursor") ? "" : data.optString("nextCursor");
+            if (!cursor.isEmpty() && (rows.length() == 0 || !cursor.equals(rows.getJSONObject(rows.length()-1).getString("id")))) throw new IllegalArgumentException();
+            for (int i=0;i<rows.length();i++) { JSONObject row=rows.getJSONObject(i); if (!ChatInteractions.validId(row.optString("id")) || row.optString("body").length()>5000) throw new IllegalArgumentException(); }
+            results.removeAllViews(); if (rows.length()==0) results.addView(text("Δεν βρέθηκαν μηνύματα.",15,MUTED));
+            for (int i=0;i<rows.length();i++) {
+                final JSONObject row=rows.getJSONObject(i);
+                results.addView(button(row.optString("senderName","Χρήστης") + "\n" + ChatInteractions.preview(row), scopedChatAction(() -> showSearchMessage(row))));
+            }
+            if (!cursor.isEmpty()) results.addView(chatButton("Επόμενα αποτελέσματα",scopedChatAction(() -> fetchHistory(query,cursor,results,dialog,term)),false));
+        });
+    }
+    private void showSearchMessage(JSONObject row) {
+        if (!searchForwardReady) return; dismissImage();
+        Runnable reply = scopedChatAction(() -> { chooseChatReply(row); dismissImage(); });
+        AlertDialog.Builder builder = new AlertDialog.Builder(this).setTitle("Μήνυμα αναζήτησης")
+            .setMessage(row.optString("senderName","Χρήστης") + "\n" + row.optString("body") + (row.optBoolean("hasAttachment") ? "\nΣυνημμένο: " + row.optString("attachmentName") : ""))
+            .setNegativeButton("Κλείσιμο",(d,w)->dismissImage()).setPositiveButton("Απάντηση",(d,w)->reply.run());
+        if (chatCanForward) { Runnable forward = scopedChatAction(() -> showForwardTargets(row)); builder.setNeutralButton("Προώθηση",(d,w)->forward.run()); }
+        imageDialog = builder.create(); imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show();
+    }
+    private void showForwardTargets(JSONObject row) {
+        if (!searchForwardReady || !chatCanForward || !ChatInteractions.validId(row.optString("id"))) return;
+        if (uncertainForwardStoreId.equals(id(selected,"id"))) {
+            Runnable checked = scopedChatAction(() -> { uncertainForwardStoreId=""; showForwardTargets(row); });
+            dismissImage(); imageDialog=new AlertDialog.Builder(this).setTitle("Έλεγχος προηγούμενης προώθησης")
+                .setMessage("Η προηγούμενη προώθηση δεν επιβεβαιώθηκε. Έλεγξε τη συνομιλία προορισμού πριν κάνεις νέα προώθηση.")
+                .setPositiveButton("Έλεγξα τον προορισμό",(d,w)->checked.run()).setNegativeButton("Ακύρωση",null).create();
+            imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE); imageDialog.show(); return;
+        }
+        final long scope=epoch.capture();final String captured=token,storeId=id(selected,"id"),companyId=id(selected,"companyId");
+        call(chatBase()+"/forward-targets","GET",null,false,data->{
+            if (!chatScope(scope,captured,storeId,companyId)) return;
+            JSONObject source=data.getJSONObject("store");if(!storeId.equals(source.getString("id"))||!companyId.equals(source.getString("companyId")))throw new IllegalArgumentException();
+            JSONArray targets=data.getJSONArray("stores");if(targets.length()==0){status("Δεν υπάρχουν άλλες διαθέσιμες εξουσιοδοτημένες συνομιλίες.");return;}
+            String[] titles=new String[targets.length()];final Runnable[] choices=new Runnable[targets.length()];
+            for(int i=0;i<targets.length();i++){final JSONObject target=targets.getJSONObject(i);if(!ChatInteractions.validId(target.optString("id"))||storeId.equals(target.optString("id"))||target.optString("companyId").isEmpty())throw new IllegalArgumentException();
+                titles[i]=target.optString("companyName")+" · "+target.optString("name");choices[i]=scopedChatAction(()->confirmForward(row,target));}
+            dismissImage();imageDialog=new AlertDialog.Builder(this).setTitle("Συνομιλία προορισμού").setItems(titles,(d,which)->choices[which].run()).setNegativeButton("Ακύρωση",(d,w)->dismissImage()).create();
+            imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);imageDialog.show();
+        });
+    }
+    private void confirmForward(JSONObject row,JSONObject target) {
+        if(!chatCanForward||!searchForwardReady)return;
+        final String requestId=java.util.UUID.randomUUID().toString(),storeId=id(selected,"id"),companyId=id(selected,"companyId"),captured=token;
+        final long scope=epoch.capture();
+        dismissImage();final AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Επιβεβαίωση προώθησης")
+            .setMessage("Προορισμός: "+target.optString("companyName")+" · "+target.optString("name")+"\n\n"+ChatInteractions.preview(row)+(row.optBoolean("hasAttachment")?"\nΘα συμπεριληφθεί το συνημμένο.":"")+"\n\nΘα σταλεί νέο μήνυμα με ένδειξη «Προωθημένο».")
+            .setPositiveButton("Προώθηση",null).setNegativeButton("Κλείσιμο",(d,w)->{dismissImage();if(uncertainForwardStoreId.equals(storeId))status("Έλεγξε τη συνομιλία προορισμού πριν κάνεις νέα προώθηση.");}).create();
+        imageDialog=dialog;dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);dialog.setCanceledOnTouchOutside(false);dialog.show();
+        final Runnable confirm = scopedChatAction(()->{
+            if(imageDialog!=dialog||!searchForwardReady||!chatCanForward)return;uncertainForwardStoreId=storeId;
+            call(chatBase()+"/messages/"+enc(row.optString("id"))+"/forward","POST",object("targetStoreId",target.optString("id"),"targetCompanyId",target.optString("companyId"),"requestId",requestId),false,result->{
+                if(!chatScope(scope,captured,storeId,companyId))return;
+                if(!result.optBoolean("ok")||!ChatInteractions.validId(result.optString("id"))||!target.optString("id").equals(result.optString("targetStoreId")))throw new IllegalArgumentException();
+                uncertainForwardStoreId="";if(imageDialog==dialog){dismissImage();status("Προωθήθηκε στο "+target.optString("name"));}
+            });
+        });
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->confirm.run());
     }
     private void showChatPeople(String title, JSONArray people, String sender) {
         ArrayList<String> names = ReadReceipts.names(people, sender); if (names.isEmpty()) return; dismissImage();
@@ -885,7 +986,7 @@ public final class MainActivity extends Activity {
         clearSession(); loginScreen();
         worker.execute(() -> { try { api.json(path, "POST", object(), captured); } catch (Exception ignored) { /* Never retain content or credential to retry later. */ } });
     }
-    private void clearSession() { entryStore = ""; NativePush.logout(this); pushStore = ""; pushCompany = ""; navigate(); token = ""; identity = new JSONObject(); selected = null; uncertainStoreId = ""; try { clearTwoFactor(); vault.clear(); } catch (Exception ignored) { finishAndRemoveTask(); } }
+    private void clearSession() { uncertainForwardStoreId = ""; entryStore = ""; NativePush.logout(this); pushStore = ""; pushCompany = ""; navigate(); token = ""; identity = new JSONObject(); selected = null; uncertainStoreId = ""; try { clearTwoFactor(); vault.clear(); } catch (Exception ignored) { finishAndRemoveTask(); } }
     private void enableNativePush() {
         if (busy || token.isEmpty()) return;
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {

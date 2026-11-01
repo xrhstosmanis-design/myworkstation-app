@@ -5,14 +5,14 @@ import {reviewedFreshStoreManifest} from '../src/services/store-lifecycle-manife
 import {createLifecycleExecutionCore} from '../src/services/store-lifecycle-executor.js';
 const read=file=>JSON.parse(readFileSync(new URL(file,import.meta.url),'utf8'));
 const chatTables=['StoreChatDelivery','StoreChatReaction'];
-const chatColumns=['StoreChatDelivery.messageId','StoreChatDelivery.userId','StoreChatMessage.replyToId','StoreChatReaction.messageId','StoreChatReaction.userId'];
+const chatColumns=['StoreChatDelivery.messageId','StoreChatDelivery.userId','StoreChatMessage.forwardBinding','StoreChatMessage.replyToId','StoreChatReaction.messageId','StoreChatReaction.userId'];
 const historicalChatReference={parent:'StoreChatMessage',columns:[['replyToId','id']],historical:true};
 // Exactly undo this reviewed additive delta when comparing immutable older documents.
 function withoutChatDelta(manifest){
  const prior=structuredClone(manifest);
  prior.knownTables=prior.knownTables.filter(name=>!chatTables.includes(name));
  for(const name of chatTables)delete prior.knownColumns[name];
- prior.knownColumns.StoreChatMessage=prior.knownColumns.StoreChatMessage.filter(column=>column[0]!=='replyToId');
+ prior.knownColumns.StoreChatMessage=prior.knownColumns.StoreChatMessage.filter(column=>!['replyToId','forwardBinding'].includes(column[0]));
  prior.tables=prior.tables.filter(node=>!chatTables.includes(node.name));
  const message=prior.tables.find(node=>node.name==='StoreChatMessage');
  message.references=message.references.filter(reference=>JSON.stringify(reference)!==JSON.stringify(historicalChatReference));
@@ -32,7 +32,7 @@ test('canonical new-start manifest covers reviewed ownership and retains both in
   }
   if(table.name==='StoreChatMessage'){
    assert.equal(historical.length,21);assert.equal(historical.some(c=>c[0]==='replyToId'),false);
-   historical.push(['replyToId','text',false]);
+   historical.push(['replyToId','text',false],['forwardBinding','text',false]);
   }
   assert.deepEqual(m.knownColumns[table.name],historical,table.name);
  }
@@ -88,7 +88,7 @@ test('native-observed Chat delta stays identical across BASE, Snapshot and CAPTU
  const profiles=[['manifest.json','column-review.json',274,191],['monthly-inventory-snapshot-manifest.proposed.json','monthly-inventory-snapshot-column-review.proposed.json',275,192],['monthly-inventory-capture-manifest.proposed.json','monthly-inventory-capture-column-review.proposed.json',277,194]];
  const expectedColumns={StoreChatDelivery:[['messageId','text',true],['userId','text',true],['companyId','text',true],['storeId','text',true],['deliveredAt','timestamp with time zone',true]],StoreChatReaction:[['messageId','text',true],['userId','text',true],['companyId','text',true],['storeId','text',true],['reaction','text',true],['updatedAt','timestamp with time zone',true]]};
  const historical='HISTORICAL_NON_OWNING_REFERENCE_FENCED_WHEN_PARENT_EXISTS_RETIRED_KEYS_PROTECTED',external='OWNED_RECORD_PAYLOAD_OR_ACTOR_EXTERNAL_POLYMORPHIC_ID_NEVER_USED_TO_EXPAND_DELETION';
- const classifications=chatColumns.map(column=>({column,classification:column.endsWith('.userId')?external:historical}));
+ const classifications=chatColumns.map(column=>({column,classification:column.endsWith('.userId')||column.endsWith('.forwardBinding')?external:historical}));
  const documents=[],reviews=[];
  for(const[file,reviewFile,known,owned]of profiles){
   const manifest=read('../../ops/backup/lifecycle/'+file),review=read('../../ops/backup/lifecycle/'+reviewFile);documents.push(manifest);reviews.push(review);
@@ -98,7 +98,7 @@ test('native-observed Chat delta stays identical across BASE, Snapshot and CAPTU
    assert.deepEqual(manifest.knownColumns[name],expectedColumns[name],name);
    assert.deepEqual(manifest.tables.filter(node=>node.name===name),[{name,owner:{kind:'DIRECT'},reset:'REMOVE',references:[{parent:'StoreChatMessage',columns:[['messageId','id']],historical:true}]}],name);
   }
-  assert.equal(manifest.knownColumns.StoreChatMessage.length,22);assert.deepEqual(manifest.knownColumns.StoreChatMessage[21],['replyToId','text',false]);
+  assert.equal(manifest.knownColumns.StoreChatMessage.length,23);assert.deepEqual(manifest.knownColumns.StoreChatMessage.slice(21),[['replyToId','text',false],['forwardBinding','text',false]]);
   assert.deepEqual(manifest.tables.find(node=>node.name==='StoreChatMessage'),{name:'StoreChatMessage',owner:{kind:'DIRECT'},reset:'REMOVE',references:[{parent:'AiReaderJob',columns:[['aiReaderJobId','id']],historical:true},historicalChatReference]});
   assert.deepEqual(manifest.reviewedColumns.filter(column=>chatColumns.includes(column)),chatColumns);
   assert.deepEqual(review.columns.filter(entry=>chatColumns.includes(entry.column)).sort((a,b)=>a.column.localeCompare(b.column)),classifications);
