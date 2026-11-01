@@ -1,3 +1,4 @@
+import {walletActivityFromRequest} from '../services/ai-wallet-activity.js';
 import {Router} from 'express';
 import {prisma} from '../prisma.js';
 import {companyModuleState,effectiveModuleEnabled} from '../middleware/module-access.js';
@@ -48,7 +49,7 @@ export function createCashPaperRouter({db=prisma,provider=createCashPaperProvide
   }catch(error){errorResponse(res,error);}});
   router.post('/stores/:storeId/read',async(req,res)=>{try{
     const parsed=paperRequest.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Μη έγκυρα στοιχεία συνημμένου.',code:'CASH_PAPER_INVALID_REQUEST'});
-    const {scope,actor}=await authorize(db,req.user,req.params.storeId);scope.generation=parsed.data.generation;
+    const {scope,actor}=await authorize(db,req.user,req.params.storeId);scope.generation=parsed.data.generation;scope.activity=walletActivityFromRequest({...req,user:{...req.user,companyId:scope.companyId}},{storeId:scope.storeId,purpose:'CASH_PAPER_READING'});
     const result=await reader.read(scope,actor,parsed.data);
     await authorize(db,req.user,req.params.storeId);
     if(await repository.generation(scope)!==scope.generation)throw paperError('STORE_LIFECYCLE_STALE_GENERATION');

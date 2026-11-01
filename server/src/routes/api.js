@@ -1,3 +1,5 @@
+import {customerCostMeter,revalidateCostRequest} from '../services/ai-customer-cost-runtime.js';
+import {walletActivityFromRequest} from '../services/ai-wallet-activity.js';
 import crypto from "crypto";
 
 import { Router } from "express";
@@ -255,8 +257,12 @@ router.post("/schedules/interpret",async(req,res,next)=>{try{
   const dateFrom=body.dateFrom||dateKey(mondayOf(new Date())),dateTo=body.dateTo||dateKey(new Date(new Date(dateFrom).getTime()+6*86400000));
   const context={period:{dateFrom,dateTo},employees:store.employees.map(row=>({id:row.id,name:row.fullName,position:row.position||"",approvedLeaves:row.leaveRequests.map(leave=>({from:dateKey(leave.startDate),to:dateKey(leave.endDate),type:leave.type})),allowedShiftCodes:row.rules.filter(rule=>rule.allowed).map(rule=>store.shifts.find(shift=>shift.id===rule.shiftTypeId)?.code).filter(Boolean)})),shifts:store.shifts.map(row=>({code:row.code,name:row.name,startTime:row.startTime,endTime:row.endTime})),instructions:body.instructions};
   const prompt=`Ανάλυσε τις ελληνικές οδηγίες προγράμματος εργαζομένων χωρίς να εφεύρεις στοιχεία. Τα employees και οι εγκεκριμένες άδειές τους προέρχονται από τις επίσημες σελίδες Προσωπικό και Άδειες προσωπικού και υπερισχύουν των ελεύθερων οδηγιών. Αν μία πρόταση συνδέει δύο εργαζομένους, μετέτρεψέ την σε ξεχωριστό κανόνα για κάθε εργαζόμενο. Αν αναφέρεται συγκεκριμένη ημερομηνία/ώρα, βάλε fixedAssignment. Οι ημέρες είναι 0=Δευτέρα έως 6=Κυριακή. Χρησιμοποίησε μόνο employeeId και shiftCode από το context. Αν κάτι δεν είναι σαφές ή συγκρούεται με εγκεκριμένη άδεια, βάλε το αυτούσιο στο unresolved. Οι ημερομηνίες να είναι YYYY-MM-DD και οι ώρες HH:MM. Context: ${JSON.stringify(context)}`;
-  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_SCHEDULE_MODEL||"gpt-5",input:prompt,text:{format:{type:"json_schema",name:"staff_schedule_rules",strict:true,schema:interpretationJsonSchema}}})});
-  const raw=await response.json().catch(()=>({}));if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε η ανάγνωση των κανόνων.",code:"AI_PROVIDER_ERROR"});
+  const scope={companyId:store.companyId,storeId:store.id,feature:'STAFF_SCHEDULE',activity:walletActivityFromRequest({...req,user:{...req.user,companyId:store.companyId}},{storeId:store.id,purpose:'STAFF_SCHEDULE'})};
+  const {response,raw}=await customerCostMeter.responses(scope,{model:process.env.OPENAI_SCHEDULE_MODEL||"gpt-5",input:prompt,text:{format:{type:"json_schema",name:"staff_schedule_rules",strict:true,schema:interpretationJsonSchema}}},async settings=>{
+    const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(60000),body:JSON.stringify(settings)});
+    return {response,raw:await response.json().catch(()=>({}))};
+  },()=>revalidateCostRequest(req,current=>requireAiStaffScheduler(current,store.id)));
+  if(!response.ok)return res.status(response.status).json({error:raw?.error?.message||"Απέτυχε η ανάγνωση των κανόνων.",code:"AI_PROVIDER_ERROR"});
   let parsed;try{parsed=interpretationSchema.parse(JSON.parse(outputText(raw)))}catch{return res.status(502).json({error:"Το AI δεν επέστρεψε έγκυρη ανάλυση κανόνων."})}
   const employeeIds=new Set(store.employees.map(row=>row.id)),shiftCodes=new Set(store.shifts.map(row=>row.code));parsed.rules=parsed.rules.filter(rule=>employeeIds.has(rule.employeeId)).map(rule=>({...rule,onlyShiftCodes:rule.onlyShiftCodes.filter(code=>shiftCodes.has(code)),fixedAssignments:rule.fixedAssignments.filter(row=>shiftCodes.has(row.shiftCode))}));
   // shiftOverrides are structured, authoritative inputs from the same screen. Do not block confirmation when AI repeats a coverage sentence as unresolved even though the numeric fields already define it.

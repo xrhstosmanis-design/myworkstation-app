@@ -1,3 +1,5 @@
+// Cost classification: PLATFORM_INTERNAL. This central catalogue/learning route
+// has no authorized customer/store beneficiary; never assign a guessed payer.
 import crypto from "crypto";
 import {Router} from "express";
 import {knowledgeForSupplier} from "../lib/invoice-learning-product-knowledge.js";

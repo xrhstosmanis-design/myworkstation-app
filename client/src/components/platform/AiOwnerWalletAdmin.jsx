@@ -40,7 +40,13 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
         <p>{data.activationReadiness.ready?'Ο τιμοκατάλογος είναι διαθέσιμος για ενεργοποίηση.':data.activationReadiness.providerConfigured?'Απαιτείται έγκυρος τιμοκατάλογος πριν ενεργοποιηθεί η χρέωση.':'Απαιτείται ενεργή σύνδεση AI πριν ενεργοποιηθεί η χρέωση.'}</p>
         {data.activationReadiness.maxReservationMicros&&<p>Μέγιστη προσωρινή δέσμευση ανά κλήση: {walletMoney(data.activationReadiness.maxReservationMicros)}. Η τελική χρέωση υπολογίζεται από την πραγματική χρήση.{!data.activationReadiness.availableEnough&&' Το τρέχον υπόλοιπο δεν επαρκεί για τη δέσμευση.'}</p>}
       </section>}
-      <p>{data.meteredFeatures?.includes('INVOICE_OPENAI')?'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη και τις αναγνώσεις τιμολογίων με AI.':'Η χρέωση καλύπτει τον Βοηθό Ιδιοκτήτη. Οι αναγνώσεις τιμολογίων δεν έχουν ενεργοποιηθεί για χρέωση.'}</p>
+      <p>Η χρέωση καλύπτει τις κλήσεις AI του Βοηθού Ιδιοκτήτη, την ανάγνωση χαρτιών ταμείου, τους κανόνες προγράμματος εργαζομένων και την ανάλυση συγκεκριμένου καταστήματος από Super Admin. Κάθε υπηρεσία απαιτεί έγκυρη τιμή και διαθέσιμο υπόλοιπο. {data.meteredFeatures?.includes('INVOICE_OPENAI')?'Περιλαμβάνονται οι αναγνώσεις τιμολογίων με AI.':'Η χρέωση αναγνώσεων τιμολογίων είναι ανενεργή.'}</p>
+      {data.serviceConfiguration?.customerServices&&<section aria-label="Ετοιμότητα πρόσθετων υπηρεσιών">
+        <p>AI πρόγραμμα εργαζομένων: {data.serviceConfiguration.customerServices.staffSchedule.ready?'υπάρχει σύνδεση και τιμή':'απαιτείται σύνδεση ή τιμή'}.</p>
+        <p>Οι πληρωμένες αναζητήσεις προϊόντων απαιτούν επιβεβαιωμένη τιμή ανά πάροχο.</p>
+        <ul>{data.serviceConfiguration.customerServices.externalSearch.map(row=><li key={row.provider}>{row.provider}: {row.ready?'υπάρχει τιμή':'λείπει επιβεβαιωμένη τιμή — η πληρωμένη αναζήτηση μπλοκάρεται'}</li>)}</ul>
+        <p>Οι απλοί υπολογισμοί ελέγχου ταμείων και η δημιουργία αυτόματων αναφορών δεν πραγματοποιούν κλήση AI. Η ανάλυσή τους μέσω βοηθού χρεώνεται ως κλήση AI. Δεν έχει εντοπιστεί υπηρεσία ανάλυσης βίντεο με χρέωση AI.</p>
+      </section>}
       {data.serviceConfiguration&&<section aria-label="Σύνδεση τιμολογίων και email">
         <p>Email: {data.serviceConfiguration.email.enabled?'ενεργά στον server':'ανενεργά στον server'} · {data.serviceConfiguration.email.configured?'υπάρχουν ρυθμίσεις SMTP':'λείπουν ρυθμίσεις SMTP'}. Η παράδοση ελέγχεται χωριστά.</p>
         <p>Τιμολόγια: OpenAI {data.serviceConfiguration.invoices.openaiConfigured?'ρυθμισμένο':'χωρίς σύνδεση'} · Azure {data.serviceConfiguration.invoices.azureConfigured?'ρυθμισμένο':'χωρίς σύνδεση'} · {data.serviceConfiguration.invoices.azureModel} / {data.serviceConfiguration.invoices.azureApiVersion}</p>

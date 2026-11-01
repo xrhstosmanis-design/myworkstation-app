@@ -1,3 +1,4 @@
+import {revalidateCostRequest,customerSearchScope} from '../services/ai-customer-cost-runtime.js';
 import {readLifecycleGeneration} from '../services/store-lifecycle-generation.js';
 import {Router} from "express";
 import crypto from "crypto";
@@ -280,7 +281,7 @@ router.get("/stores/:storeId/online-product-search",async(req,res,next)=>{
         }
       }
     }catch{}finally{clearTimeout(timer)}
-    const advanced=await advancedOnlineProductSearch({companyId:req.user.companyId,storeId:store.id,actorId:req.user.id,barcode:q});
+    const advanced=await advancedOnlineProductSearch({companyId:req.user.companyId,storeId:store.id,actorId:req.user.id,barcode:q,...await customerSearchScope(req,store.id),verifyCostScope:()=>revalidateCostRequest(req,async current=>{await customerSearchScope(current,store.id);if(!(await operatorAccess(current,store.id)).onlineProductSearch)throw Object.assign(new Error('AI_WALLET_SCOPE_DENIED'),{code:'AI_WALLET_SCOPE_DENIED',status:403});})});
     if(advanced.rows?.length){
       await audit(req,store,"POS_ONLINE_PRODUCT_SEARCH",{query:q,source:"GOOGLE_SEARCH",provider:advanced.provider,resultCount:advanced.rows.length,advancedModule:true});
       return res.json({query:q,source:"GOOGLE_SEARCH",rows:advanced.rows,advanced:{enabled:advanced.enabled,configured:advanced.configured,provider:advanced.provider,usage:advanced.usage,limits:advanced.limits}});

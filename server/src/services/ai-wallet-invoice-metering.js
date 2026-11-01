@@ -17,7 +17,7 @@ export function throwIfWalletError(error){
     throw error;
   }
 }
-export function invoiceWalletFeatures(env=process.env,companyId,invoiceEnabled){return ['OWNER_ASSISTANT',...(env.AI_OWNER_WALLET_INVOICES_ENABLED==='true'&&(invoiceEnabled??invoiceWalletCompanyAllowed(companyId,env))?['INVOICE_OPENAI','INVOICE_AZURE']:[])]}
+export function invoiceWalletFeatures(env=process.env,companyId,invoiceEnabled){return ['OWNER_ASSISTANT','CASH_PAPER_READING','STAFF_SCHEDULE','PLATFORM_CUSTOMER_ASSISTANT','SERPER_GOOGLE','GOOGLE_CSE',...(env.AI_OWNER_WALLET_INVOICES_ENABLED==='true'&&(invoiceEnabled??invoiceWalletCompanyAllowed(companyId,env))?['INVOICE_OPENAI','INVOICE_AZURE']:[])]}
 
 // Canonical scope is supplied only AFTER existing route/job authorization, not
 // from headers/body inside a provider helper. AsyncLocalStorage keeps parallel

@@ -1,3 +1,4 @@
+import {customerCostMeter,revalidateCostRequest,customerSearchScope,invoiceCostScope} from '../services/ai-customer-cost-runtime.js';
 import {executeHotTableBootstrap} from "../hot-table-schema.js";
 import crypto from "crypto";
 import {internetItemPrice} from "../internet-market-item-price.js";
@@ -76,17 +77,17 @@ const marketMatch=(own,row)=>{
   return {matchLevel:"NON_COMPARABLE",matchReason:reason,eligibleForOrder:false,unitCount:candidate.unitCount,comparablePrice:null};
 };
 
-async function internetMarketSearch(query){
-  const serperKey=String(process.env.SERPER_API_KEY||"").trim(),googleKey=String(process.env.GOOGLE_CSE_API_KEY||"").trim(),googleCx=String(process.env.GOOGLE_CSE_CX||"").trim();
+export async function internetMarketSearch(query,cost,{env=process.env,transport=(...args)=>globalThis.fetch(...args)}={}){
+  const serperKey=String(env.SERPER_API_KEY||"").trim(),googleKey=String(env.GOOGLE_CSE_API_KEY||"").trim(),googleCx=String(env.GOOGLE_CSE_CX||"").trim();
   if(!serperKey&&!googleKey)return {configured:false,rows:[],reason:"PROVIDER_NOT_CONFIGURED"};
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
   try{
     let items=[],provider="";
-    if(serperKey){const response=await fetch("https://google.serper.dev/search",{method:"POST",headers:{"X-API-KEY":serperKey,"Content-Type":"application/json"},body:JSON.stringify({q:`${query} τιμή προσφορά αγορά Ελλάδα`,gl:"gr",hl:"el",num:10}),signal:controller.signal});if(response.ok){const data=await response.json();items=data.organic||[];provider="SERPER"}}
-    if(!items.length&&googleKey&&googleCx){const url=new URL("https://www.googleapis.com/customsearch/v1");url.searchParams.set("key",googleKey);url.searchParams.set("cx",googleCx);url.searchParams.set("q",`${query} τιμή προσφορά αγορά Ελλάδα`);url.searchParams.set("gl","gr");url.searchParams.set("hl","el");url.searchParams.set("num","10");const response=await fetch(url,{signal:controller.signal});if(response.ok){const data=await response.json();items=data.items||[];provider="GOOGLE_CSE"}}
+    if(serperKey){const data=await cost("SERPER_GOOGLE",async()=>{const response=await transport("https://google.serper.dev/search",{method:"POST",headers:{"X-API-KEY":serperKey,"Content-Type":"application/json"},body:JSON.stringify({q:`${query} τιμή προσφορά αγορά Ελλάδα`,gl:"gr",hl:"el",num:10}),signal:controller.signal});if(!response.ok)throw new Error(`SERPER_${response.status}`);return response.json();});items=data.organic||[];provider="SERPER"}
+    if(!items.length&&googleKey&&googleCx){const url=new URL("https://www.googleapis.com/customsearch/v1");url.searchParams.set("key",googleKey);url.searchParams.set("cx",googleCx);url.searchParams.set("q",`${query} τιμή προσφορά αγορά Ελλάδα`);url.searchParams.set("gl","gr");url.searchParams.set("hl","el");url.searchParams.set("num","10");const data=await cost("GOOGLE_CSE",async()=>{const response=await transport(url,{signal:controller.signal});if(!response.ok)throw new Error(`GOOGLE_CSE_${response.status}`);return response.json();});items=data.items||[];provider="GOOGLE_CSE"}
     if(!items.length)return {configured:true,rows:[],reason:"PROVIDER_ERROR"};
     return {configured:true,provider,reason:"FOUND",rows:items.slice(0,10).map((item,index)=>{const domain=domainOf(item.link),itemPrice=internetItemPrice(`${item.title||""} ${item.snippet||""}`);return {id:`internet:${index}`,productName:String(item.title||query).trim().slice(0,240),barcode:/^\d{6,18}$/.test(query)?query:null,sourceDomain:domain,sourceUrl:item.link||null,sourceType:sourceType(domain),price:itemPrice.price,priceReason:itemPrice.priceReason,offer:offerText(`${item.title||""} ${item.snippet||""}`),offerDate:null,snippet:String(item.snippet||"").trim().slice(0,500)}})};
-  }catch(error){return {configured:true,rows:[],reason:error?.name==="AbortError"?"TIMEOUT":"PROVIDER_ERROR"}
+  }catch(error){if(String(error?.code||'').startsWith('AI_WALLET_'))throw error;return {configured:true,rows:[],reason:error?.name==="AbortError"?"TIMEOUT":"PROVIDER_ERROR"}
   }finally{clearTimeout(timer)}
 }
 
@@ -101,7 +102,9 @@ router.get("/market-search",async(req,res,next)=>{try{
     if(own){const supplier=(await prisma.$queryRaw`SELECT sup."name" FROM "SupplierProductLink" spl JOIN "Supplier" sup ON sup."id"=spl."supplierId" AND sup."companyId"=spl."companyId" WHERE spl."companyId"=${companyId} AND spl."productId"=${own.id} AND spl."active"=true ORDER BY spl."updatedAt" DESC LIMIT 1`.catch(()=>[]))[0];own.supplierName=supplier?.name||"Βασικός προμηθευτής"}
   }
   const providerQuery=own?[query,own.name].filter(Boolean).join(" "):query;
-  const internet=await internetMarketSearch(providerQuery),results=internet.rows.map(row=>({...row,...marketMatch(own,row)})),safePriced=results.filter(row=>row.eligibleForOrder&&row.comparablePrice!=null),cheapest=safePriced.sort((a,b)=>a.comparablePrice-b.comparablePrice)[0]||null;
+  const billingScope=await customerSearchScope(req,storeId,companyId);
+  const queryCost=(provider,invoke)=>customerCostMeter.query(billingScope,provider,invoke,()=>revalidateCostRequest(req,async current=>{await customerSearchScope(current,storeId,companyId);if(!isPlatformSuper(current)&&!await advancedOnlineSearchEntitlement(companyId))throw Object.assign(new Error("MODULE_DISABLED"),{status:403,code:"MODULE_DISABLED"});}));
+  const internet=await internetMarketSearch(providerQuery,queryCost),results=internet.rows.map(row=>({...row,...marketMatch(own,row)})),safePriced=results.filter(row=>row.eligibleForOrder&&row.comparablePrice!=null),cheapest=safePriced.sort((a,b)=>a.comparablePrice-b.comparablePrice)[0]||null;
   const cost=Number(own?.costPrice||0),sale=Number(own?.salePrice||0),margin=internetNetMargin(own?.costPrice,own?.salePrice,own?.vatRate),marketPrice=cheapest?.comparablePrice??null;
   const recommendation=!own?"Σύνδεσε το αποτέλεσμα με προϊόν του καταλόγου για σύγκριση.":marketPrice==null?"Δεν βρέθηκε ακόμη επιβεβαιωμένη τιμή για ασφαλή σύγκριση.":margin!==null&&margin<15?"Προειδοποίηση: χαμηλό περιθώριο κέρδους.":sale>marketPrice*1.15?"Η τιμή μας είναι αισθητά υψηλότερη από τη φθηνότερη επιβεβαιωμένη τιμή.":sale<marketPrice*.85?"Η τιμή μας είναι αισθητά χαμηλότερη από την αγορά — έλεγξε πιθανή απώλεια κέρδους.":"Η τιμή μας βρίσκεται κοντά στις επιβεβαιωμένες τιμές που εντοπίστηκαν.";
   for(const row of results)row.differenceFromOurSale=row.comparablePrice!=null&&sale?Number((row.comparablePrice-sale).toFixed(2)):null;
@@ -142,13 +145,14 @@ router.post("/price-proposals/:id/decision",async(req,res,next)=>{try{const comp
 
 router.get("/options",async(req,res,next)=>{try{
   if(!await requireAdvanced(req,res))return;await ensureSchema();const companyId=req.user.companyId;
+  const searchScope=req.query.orderId?await invoiceCostScope(req,{orderId:String(req.query.orderId)}):null;
   const [categories,subcategories,vats,stores]=await Promise.all([
     prisma.$queryRaw`SELECT "id","name" FROM "ProductCategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`,
     prisma.$queryRaw`SELECT "id","categoryId","name" FROM "ProductSubcategory" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "name"`,
     prisma.$queryRaw`SELECT "id","description","vatRate" FROM "ManagementVatDepartment" WHERE "companyId"=${companyId} AND "active"=true ORDER BY "vatRate","description"`.catch(()=>[]),
     prisma.store.findMany({where:{companyId,active:true},select:{id:true,name:true},orderBy:{name:"asc"}})
   ]);
-  res.json({categories,subcategories,vats:vats.map(v=>({...v,vatRate:Number(v.vatRate||0)})),stores});
+  res.json({searchStoreId:searchScope?.storeId||null,categories,subcategories,vats:vats.map(v=>({...v,vatRate:Number(v.vatRate||0)})),stores});
 }catch(error){next(error)}});
 
 router.get("/search",async(req,res,next)=>{try{
@@ -158,7 +162,8 @@ router.get("/search",async(req,res,next)=>{try{
   const master=(await prisma.$queryRaw`SELECT mp."id" AS "masterProductId",mp."sourceCode",mp."name",mp."categoryName",mp."subcategoryName",mp."vatRate",mp."defaultRetailPrice",mp."defaultCostPrice",mp."brandName",COALESCE((SELECT json_agg(mb."barcode") FROM "MasterProductBarcode" mb WHERE mb."masterProductId"=mp."id"),'[]') AS "barcodes" FROM "MasterProduct" mp WHERE mp."active"=true AND EXISTS(SELECT 1 FROM "MasterProductBarcode" mb WHERE mb."masterProductId"=mp."id" AND mb."barcode"=${q}) LIMIT 1`)[0];
   if(master)return res.json({source:"MASTER_CATALOG",rows:[{...master,vatRate:master.vatRate==null?null:Number(master.vatRate),salePrice:master.defaultRetailPrice==null?0:Number(master.defaultRetailPrice),costPrice:master.defaultCostPrice==null?0:Number(master.defaultCostPrice)}],advanced:{reason:"FOUND_MASTER"}});
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4000);try{const response=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(q)}?fields=code,product_name,product_name_el,brands,categories,categories_tags`,{headers:{"User-Agent":"MyWorkStation/1.0 (https://myworkstation.gr)"},signal:controller.signal});if(response.ok){const data=await response.json(),p=data?.product;if(p&&data?.status!==0){return res.json({source:"OPEN_FOOD_FACTS",rows:[{name:String(p.product_name_el||p.product_name||"").trim()||`Barcode ${q}`,barcodes:[q],brandName:String(p.brands||"").trim(),categoryName:"",subcategoryName:"",vatRate:null,salePrice:0,costPrice:0,source:"OPEN_FOOD_FACTS"}],advanced:{reason:"FOUND_OPEN_FOOD_FACTS"}})}}}catch{}finally{clearTimeout(timer)}
-  const advanced=await advancedOnlineProductSearch({companyId,storeId:String(req.query.storeId||"INVOICE"),actorId:req.user.id,barcode:q,bypassEntitlement:isPlatformSuper(req),usageContext:"INVOICE_PRODUCT_SEARCH"});
+  const costScope=await invoiceCostScope(req,{storeId:String(req.query.storeId||""),orderId:req.query.orderId?String(req.query.orderId):null});
+  const advanced=await advancedOnlineProductSearch({companyId,storeId:String(req.query.storeId||""),actorId:req.user.id,barcode:q,bypassEntitlement:isPlatformSuper(req),usageContext:"INVOICE_PRODUCT_SEARCH",...costScope,verifyCostScope:()=>revalidateCostRequest(req,async current=>{await invoiceCostScope(current,{storeId:costScope.storeId,orderId:req.query.orderId?String(req.query.orderId):null});if(!isPlatformSuper(current)&&!await advancedOnlineSearchEntitlement(current.user.companyId))throw Object.assign(new Error("MODULE_DISABLED"),{code:"MODULE_DISABLED",status:403});})});
   res.json({source:advanced.rows?.length?"GOOGLE_SEARCH":"NONE",rows:advanced.rows||[],advanced});
 }catch(error){next(error)}});
 

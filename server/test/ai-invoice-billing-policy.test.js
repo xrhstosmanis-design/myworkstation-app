@@ -27,8 +27,8 @@ test('durable explicit company decisions override only legacy rollout, not the g
   assert.equal(await resolvedInvoiceWalletCompany(repository,'old',{...env,AI_OWNER_WALLET_INVOICE_COMPANIES:'["old"]'}),false);
   assert.deepEqual(calls,[{company:'new',fallback:false},{company:'old',fallback:true}]);
   assert.ok(invoiceWalletFeatures(env,'new',true).includes('INVOICE_OPENAI'));
-  assert.deepEqual(invoiceWalletFeatures({...env,AI_OWNER_WALLET_INVOICES_ENABLED:'false'},'new',true),['OWNER_ASSISTANT']);
-  assert.deepEqual(invoiceWalletFeatures(env,'old',false),['OWNER_ASSISTANT']);
+  assert.deepEqual(invoiceWalletFeatures({...env,AI_OWNER_WALLET_INVOICES_ENABLED:'false'},'new',true),['OWNER_ASSISTANT','CASH_PAPER_READING','STAFF_SCHEDULE','PLATFORM_CUSTOMER_ASSISTANT','SERPER_GOOGLE','GOOGLE_CSE']);
+  assert.deepEqual(invoiceWalletFeatures(env,'old',false),['OWNER_ASSISTANT','CASH_PAPER_READING','STAFF_SCHEDULE','PLATFORM_CUSTOMER_ASSISTANT','SERPER_GOOGLE','GOOGLE_CSE']);
 });
 
 test('both actual invoice adapters use live company policy and pass legacy fallback to the atomic reservation',async()=>{
