@@ -94,7 +94,9 @@
 
 .store-chat-modal>.store-chat-toolbar:not([hidden]){position:absolute;top:70px;left:8px;right:8px;max-height:65%;overflow:auto;z-index:30;border:1px solid #d7c9ee;border-radius:14px;background:#fff;box-shadow:0 8px 30px #24164440}
 
-.chat-mobile-app .store-chat-modal>header{grid-template-columns:minmax(0,1fr) 44px 44px}
+.chat-mobile-app .store-chat-modal>header{grid-template-columns:minmax(0,1fr) 44px 44px!important}
 .chat-mobile-app .store-chat-modal>header>.chat-overflow{grid-column:2!important;grid-row:1!important;display:grid!important;place-items:center;width:44px;height:44px;padding:0;font-size:26px;text-align:center}
-.chat-mobile-app .store-chat-modal>header>.store-chat-close{grid-column:3}
+.chat-mobile-app .store-chat-modal>header>.store-chat-close{grid-column:3!important}
 .chat-mobile-app .store-chat-compose>button:last-child{font-size:0;width:48px;min-width:48px}
+
+.chat-mobile-app .store-chat-modal>header h2{font-size:17px!important}
