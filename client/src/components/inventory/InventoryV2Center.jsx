@@ -12,6 +12,7 @@ import {
 import "./inventory-v2-center.css";
 import InventoryMobileApp from "./InventoryMobileApp.jsx";
 import InventoryFastCount from "./InventoryFastCount.jsx";
+import InventoryReconciliationPanel from "./InventoryReconciliationPanel.jsx";
 const num = (v) => Number(v || 0),
   euro = (v) => `${num(v).toFixed(2)} €`;
 export default function InventoryV2Center({
@@ -378,6 +379,7 @@ export default function InventoryV2Center({
   return (
     <div className="inv2">
       {!delegated && error && <div className="op-alert error">{error}</div>}
+      {!delegated && current?.status === 'FINALIZED' && <InventoryReconciliationPanel key={`${current.storeId}:${current.id}`} api={api} stocktakeId={current.id} storeId={current.storeId} />}
       {!delegated && finalSummary && (
         <div className="inv2-final-summary">
           <div><b>Αποτέλεσμα Απογραφής</b><small>{finalSummary.countedCount} από {finalSummary.lineCount} είδη</small></div>
