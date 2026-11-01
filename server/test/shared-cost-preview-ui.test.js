@@ -26,14 +26,21 @@ test('mounted wallet preview demonstrates exact allocation without requests and 
     await submit(section.querySelector('form'));
     let result=section.querySelector('[aria-label="Αποτέλεσμα επιμερισμού"]');assert.ok(result);assert.match(result.textContent,/150,00/);
     const rows=result.querySelectorAll('tbody tr');assert.equal(rows.length,3);assert.match(rows[0].textContent,/59,62/);assert.match(rows[1].textContent,/59,61/);assert.match(rows[2].textContent,/30,77/);assert.match(result.textContent,/Δεν έχει καταχωριστεί χρέωση/);
+    const decisions=()=>[...result.querySelectorAll('[aria-label="Έλεγχος προσχεδίου χρέωσης"] select')];
+    const amounts=()=>[...result.querySelectorAll('[aria-label="Σύνολα αποφάσεων προσχεδίου"] dd')].map(x=>x.textContent);
+    assert.equal(decisions().length,3);assert.ok(decisions().every(x=>x.value==='PENDING'));assert.match(amounts()[0],/0,00/);assert.match(amounts()[1],/150,00/);
+    await set(decisions()[0],'APPROVED_DRAFT');await set(decisions()[1],'WAIVED');
+    assert.match(amounts()[0],/59,62/);assert.match(amounts()[1],/30,77/);assert.match(amounts()[2],/59,61/);
+    assert.match(result.textContent,/Οι επιλογές είναι προσωρινές και δεν αποθηκεύονται/);assert.match(result.textContent,/δεν μεταφέρονται σε άλλον πελάτη/);
     await set(section.querySelector('input[inputmode="decimal"]'),'200');assert.equal(section.querySelector('[aria-label="Αποτέλεσμα επιμερισμού"]'),null);
-    await submit(section.querySelector('form'));assert.match(section.textContent,/300,00/);
+    await submit(section.querySelector('form'));assert.match(section.textContent,/300,00/);result=section.querySelector('[aria-label="Αποτέλεσμα επιμερισμού"]');assert.ok(decisions().every(x=>x.value==='PENDING'));assert.match(amounts()[0],/0,00/);assert.match(amounts()[1],/300,00/);
     await act(async()=>button(section,'Καθαρισμός παραδείγματος').click());
     const form=section.querySelector('form');assert.equal(form.querySelector('input[type=checkbox]').checked,false);assert.equal(form.querySelector('select').value,'');
     await set(form.querySelector('input[type=month]'),'2026-10');await set(form.querySelector('input[inputmode="decimal"]'),'1,00');await set(form.querySelector('input[minlength]'),'Synthetic EUR basis');await set(form.querySelector('select'),'one-store');await set(form.querySelector('input[type=number]'),'31');await act(async()=>form.querySelector('input[type=checkbox]').click());await submit(form);
     assert.match(section.querySelector('[aria-label="Αποτέλεσμα επιμερισμού"]').textContent,/Synthetic company/);
     await render([{...companies[0],stores:[{...companies[0].stores[0],active:false}]}]);
     assert.equal(section.querySelector('[aria-label="Αποτέλεσμα επιμερισμού"]'),null);assert.match(section.textContent,/Ο κατάλογος άλλαξε/);
+    await render(companies);assert.equal(section.querySelector('[aria-label="Αποτέλεσμα επιμερισμού"]'),null);assert.match(section.textContent,/Ο κατάλογος άλλαξε/);
     assert.equal(requests,0);assert.equal(document.querySelector('select').value,'');
   }finally{await act(async()=>root.unmount());dom.window.close();for(const [key,descriptor]of prior)descriptor?Object.defineProperty(globalThis,key,descriptor):delete globalThis[key]}
 });
