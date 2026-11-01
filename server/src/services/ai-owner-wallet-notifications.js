@@ -1,3 +1,4 @@
+import {postpaidRecipientMarker} from './ai-wallet-postpaid-recipients.js';
 import {randomUUID} from 'node:crypto';
 import nodemailer from 'nodemailer';
 import {getMailConfig} from './mail.js';
@@ -5,6 +6,10 @@ import {assertCustomerDemoOutboundAllowed} from '../customer-demo-runtime.js';
 
 const euros=micros=>(Number(micros)/1000000).toLocaleString('el-GR',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:6});
 export function walletNoticeText(notice,instructions='Η ανανέωση πληρώνεται στο MyWorkStation. Επικοινώνησε μαζί μας για τα στοιχεία πληρωμής.'){
+  if(notice.postpaid){
+    const paid=BigInt(notice.postpaid.amountDueMicros)===0n;
+    return {subject:paid?'MyWorkStation · Εξοφλημένη πίστωση AI':'MyWorkStation · Πίστωση AI επί πιστώσει — εκκρεμεί εξόφληση',text:`Πιστώθηκαν ${euros(notice.amountMicros)} για χρήση AI επί πιστώσει.\nΑναφορά πίστωσης: ${notice.postpaid.reference}.\n${paid?'Η συγκεκριμένη πίστωση έχει εξοφληθεί.':`Εκκρεμεί η εξόφληση ${euros(notice.postpaid.amountDueMicros)} για αυτή την πίστωση.`}\nΣυνολική ανεξόφλητη οφειλή AI εταιρείας κατά την ενημέρωση: ${euros(notice.postpaid.totalDueMicros)}.\nΔιαθέσιμο υπόλοιπο AI κατά την ενημέρωση: ${euros(notice.postpaid.availableMicros)}.\n${instructions}\nΗ κατανάλωση AI μειώνει το διαθέσιμο υπόλοιπο, όχι την οφειλή. Η εξόφληση καταχωρίζεται χωριστά.`};
+  }
   const intro=notice.kind==='CREDIT'?`Πιστώθηκαν ${euros(notice.amountMicros)} στο υπόλοιπο AI.`:notice.kind==='LOW'?'Το υπόλοιπο AI είναι χαμηλό (20% ή λιγότερο της τελευταίας ανανέωσης).':'Το υπόλοιπο AI εξαντλήθηκε. Χρειάζεται ανανέωση για να συνεχιστεί η χρήση AI.';
   return {subject:notice.kind==='CREDIT'?'MyWorkStation · Επιβεβαίωση πίστωσης AI':notice.kind==='LOW'?'MyWorkStation · Χαμηλό υπόλοιπο AI':'MyWorkStation · Ανανέωση υπολοίπου AI',text:`${intro}\nΥπόλοιπο κατά την ειδοποίηση: ${euros(notice.balanceMicros)}.\nΤο υπόλοιπο αφορά συνολικά την εταιρεία σου.\n${instructions}\nΟι πωλήσεις και το υπόλοιπο πρόγραμμα συνεχίζουν κανονικά.\nΆνοιξε το MyWorkStation για το τρέχον υπόλοιπο.`};
 }
@@ -28,14 +33,17 @@ export function createWalletNotificationDispatcher({repository,send=sendWalletNo
     let attempted=0;
     for(let i=0;i<10;i++){
       if(!enabled())break;
-      const notice=await db.$transaction(async tx=>{
+      let notice=await db.$transaction(async tx=>{
         const rows=await tx.$queryRaw`SELECT n.* FROM "AiOwnerWalletNotice" n WHERE n."emailStatus"='PENDING' ORDER BY n."createdAt",n."id" FOR UPDATE SKIP LOCKED LIMIT 1`;
         const item=rows[0];if(!item)return null;
+        // Release this candidate lock before acquiring lifecycle/Store/wallet.
+        if(item.ownerId?.startsWith(postpaidRecipientMarker))return {postpaidCandidate:item.id};
         const valid=await tx.$queryRaw`SELECT u."id" FROM "AiOwnerWallet" w JOIN "Company" c ON c."id"=w."companyId" JOIN "User" u ON u."id"=w."notificationOwnerId" WHERE w."companyId"=${item.companyId} AND c."active"=TRUE AND (u."companyId"=w."companyId" OR EXISTS (SELECT 1 FROM "OwnerCompanyAccess" a WHERE a."ownerId"=u."id" AND a."companyId"=w."companyId")) AND w."emailEnabled"=TRUE AND u."role"::text='OWNER' AND u."mustChangePassword"=FALSE AND u."id"=${item.ownerId} AND u."email"=${item.email}`;
         if(!valid.length){await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='REVOKED' WHERE "id"=${item.id}`;return {revoked:true}}
         await tx.$executeRaw`UPDATE "AiOwnerWalletNotice" SET "emailStatus"='ATTEMPTING',"attemptedAt"=NOW(),"messageId"=${'attempt-'+randomUUID()} WHERE "id"=${item.id}`;
         return item;
       });
+      if(notice?.postpaidCandidate)notice=await repository.claimPostpaidNotice(notice.postpaidCandidate);
       if(!notice)break;if(notice.revoked)continue;
       // The ATTEMPTING commit precedes SMTP. Crash/timeout or process death
       // cannot requeue this notice and cause a duplicate external message.

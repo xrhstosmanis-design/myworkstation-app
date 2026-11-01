@@ -1,0 +1,32 @@
+{
+  "claim": {
+    "pr": 3452,
+    "head": "5916dcad7a1e73ff1d0584e9c6c61423017dcb29",
+    "ci": 41292410251,
+    "merge": "b0989b4eb179f20f703654996db18ac7cc3d6905"
+  },
+  "combinedBase": "650b4dca3d66dc16b5020197e7a2ec475bef4575",
+  "allWalletBaseline": {
+    "pass": 78,
+    "fail": 0,
+    "nativeInfrastructureSkip": 4
+  },
+  "finalFocused": {
+    "pass": 46,
+    "fail": 0,
+    "nativeInfrastructureSkip": 2
+  },
+  "latestFocused": {
+    "pass": 19,
+    "fail": 0,
+    "nativeInfrastructureSkip": 1
+  },
+  "workBuild": "candidatePASS12.15s/TABLE_SERVICE; exact combined CI pending",
+  "native": "NOT RUN LOCALLY; mandatory actual isolated PG/HTTP cases in full CI",
+  "hosted": "NOT TESTED until exact guarded healthy release",
+  "realFunding": false,
+  "realDebt": false,
+  "externalMail": false,
+  "schemaChanged": false,
+  "additionalPricesChanged": false
+}

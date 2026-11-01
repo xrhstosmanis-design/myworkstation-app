@@ -1,3 +1,4 @@
+import AiWalletDebtSummary from './AiWalletDebtSummary.jsx';
 import AiWalletActivityHistory from "./AiWalletActivityHistory.jsx";
 import React,{useEffect,useState} from 'react';
 import {walletMoney} from './ai-wallet-money.mjs';
@@ -28,6 +29,7 @@ export default function AiOwnerWallet({api,storeId='',enabled=false}){
         <p>Κοινό υπόλοιπο για τα καταστήματα της εταιρείας. Οι πωλήσεις και το υπόλοιπο πρόγραμμα συνεχίζουν κανονικά.</p>
         {data.reservedMicros!=='0'&&<p>Δεσμευμένο για κλήσεις AI σε εξέλιξη ή υπό έλεγχο: {walletMoney(data.reservedMicros)}.</p>}
       </>}
+      <AiWalletDebtSummary summary={data.postpaid}/>
       {data.usageSummary&&<section aria-label="Κόστος χρήσης AI επιλεγμένου καταστήματος">
         <h4>Κόστος χρήσης AI · επιλεγμένο κατάστημα</h4>
         <p>Σήμερα: <strong>{walletMoney(data.usageSummary.todayMicros)}</strong> · Από {dayLabel(data.usageSummary.monthStartDate)} έως σήμερα: <strong>{walletMoney(data.usageSummary.monthMicros)}</strong></p>

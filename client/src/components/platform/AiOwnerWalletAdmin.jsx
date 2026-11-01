@@ -1,3 +1,4 @@
+import AiWalletPostpaid from './AiWalletPostpaid.jsx';
 import AiWalletActivityHistory from "../voice/AiWalletActivityHistory.jsx";
 import React,{useEffect,useRef,useState} from 'react';
 import AiWalletCustomerPricing from './AiWalletCustomerPricing.jsx';
@@ -60,6 +61,7 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
         <button disabled={busy||emailEnabled&&!ownerId}>Αποθήκευση ρυθμίσεων</button>
       </form>
       <AiWalletCustomerPricing key={companyId+':pricing:'+data.version} policy={data.customerPricing} busy={busy} onSave={policy=>execute(()=>api(path+'/pricing',{method:'PUT',body:JSON.stringify({version:data.version,policy,additionalTariffConfirmed:true})}),'Οι τιμές AI αποθηκεύτηκαν για αυτή την εταιρεία.')}/>
+      <AiWalletPostpaid key={companyId+':postpaid:'+data.version} companyId={companyId} version={data.version} stores={companies.find(c=>c.id===companyId)?.stores||[]} summary={data.postpaid} busy={busy} api={api} onGrant={body=>execute(()=>api(path+'/postpaid-credits',{method:'POST',body:JSON.stringify(body)}),body.sendNotifications?'Η πίστωση επί πιστώσει καταγράφηκε. Έλεγξε την κατάσταση email στις ειδοποιήσεις.':'Η πίστωση επί πιστώσει καταγράφηκε χωρίς αποστολή email.')} onPay={body=>execute(()=>api(path+'/postpaid-payments',{method:'POST',body:JSON.stringify(body)}),'Η εξόφληση καταγράφηκε χωρίς νέα πίστωση υπολοίπου AI.')}/>
       <h2>Δοκιμαστική πίστωση από το MyWorkStation</h2>
       <TrialGrantForm key={companyId+':'+data.version} busy={busy} onGrant={input=>execute(()=>api(path+'/trial-grants',{method:'POST',body:JSON.stringify({amountMicros:walletMicrosFromEuros(input.amount),grantReference:input.reference.trim(),reason:input.reason.trim(),trialConfirmed:input.confirmed})}),'Η δοκιμαστική πίστωση καταγράφηκε.')}/>
       <h2>Πίστωση επιβεβαιωμένης είσπραξης</h2><form onSubmit={e=>{e.preventDefault();execute(()=>api(path+'/credits',{method:'POST',body:JSON.stringify({amountMicros:walletMicrosFromEuros(amount),receiptReference:receipt.trim(),receiptConfirmed:confirmed})}),'Η πίστωση καταγράφηκε.')}}>

@@ -1,3 +1,4 @@
+import {postpaidGrantSchema,postpaidPaymentSchema} from '../services/ai-wallet-postpaid.js';
 import {invoiceWalletFeatures} from "../services/ai-wallet-invoice-metering.js";
 import {customerPricingSchema,customerCharge,DEFAULT_CUSTOMER_PRICING} from '../services/ai-wallet-customer-pricing.js';
 import {Router} from 'express';
@@ -15,7 +16,7 @@ const messages={AI_WALLET_INVOICE_DISABLED:'Η χρέωση τιμολογίων
 export function walletHttpError(e,res){
   const code=e instanceof z.ZodError?'AI_WALLET_INVALID_INPUT':String(e.code||'');
   const known=code.startsWith('AI_WALLET_');
-  const extra={AI_WALLET_PROVIDER_REQUIRED:'Η υπάρχουσα σύνδεση AI δεν είναι διαθέσιμη. Η χρέωση δεν ενεργοποιήθηκε.',AI_WALLET_TRIAL_CONFLICT:'Η αναφορά δοκιμαστικής παροχής έχει ήδη χρησιμοποιηθεί με διαφορετικά στοιχεία. Δεν έγινε δεύτερη πίστωση.',AI_WALLET_RESERVED_REFERENCE:'Η αναφορά αυτή προορίζεται για εσωτερική δοκιμαστική παροχή.'};
+  const extra={AI_WALLET_PROVIDER_REQUIRED:'Η υπάρχουσα σύνδεση AI δεν είναι διαθέσιμη. Η χρέωση δεν ενεργοποιήθηκε.',AI_WALLET_TRIAL_CONFLICT:'Η αναφορά δοκιμαστικής παροχής έχει ήδη χρησιμοποιηθεί με διαφορετικά στοιχεία. Δεν έγινε δεύτερη πίστωση.',AI_WALLET_RESERVED_REFERENCE:'Η αναφορά αυτή προορίζεται για διαφορετικό είδος πίστωσης.',AI_WALLET_POSTPAID_RECIPIENTS_CHANGED:'Οι παραλήπτες άλλαξαν ή δεν υπάρχουν εγκεκριμένοι παραλήπτες. Ανανέωσε τη λίστα.',AI_WALLET_POSTPAID_RECIPIENTS_UNAVAILABLE:'Δεν είναι διαθέσιμοι οι εγκεκριμένοι παραλήπτες αυτού του καταστήματος.',AI_WALLET_POSTPAID_OVERPAYMENT:'Το ποσό υπερβαίνει την ανεξόφλητη οφειλή. Δεν καταχωρίστηκε είσπραξη.',AI_WALLET_POSTPAID_INVALID:'Η οφειλή AI χρειάζεται έλεγχο. Δεν έγινε νέα καταχώριση.',AI_WALLET_POSTPAID_BUSY:'Οι ρυθμίσεις χρησιμοποιούνται. Ανανέωσε πριν καταχωρίσεις.'};
   return res.status(e instanceof z.ZodError?400:known?(e.status||409):503).json({code:known?code:'AI_WALLET_UNAVAILABLE',error:messages[code]||extra[code]||(known?'Δεν επιτρέπεται η ενέργεια ή τα στοιχεία δεν είναι έγκυρα.':'Το υπόλοιπο AI δεν είναι διαθέσιμο. Δοκίμασε ξανά αργότερα.')});
 }
 const reference=z.string().trim().min(5).max(160).regex(/^[\p{L}\p{N}_.:/ -]+$/u);
@@ -73,6 +74,19 @@ export function createAiOwnerWalletRoutes({db=prisma,repository=aiOwnerWalletRep
     const keepsActiveInvoices=input.invoiceEnabled===undefined&&input.enabled&&previousInvoice&&env.AI_OWNER_WALLET_INVOICES_ENABLED==='true';
     if(enablesInvoices||keepsActiveInvoices)requireInvoiceWalletReady(env);
     await access.platform(req);res.json(await repository.configure(scope.companyId,input,scope.actorId));
+  }));
+  const postpaidSession=req=>({sessionId:req.user?.sessionId,sessionVersion:req.user?.sessionVersion});
+  router.get(prefix+'/postpaid-recipients',run('platform',async(req,res,scope)=>{
+    const {storeId}=z.object({storeId:z.string().min(1).max(200)}).strict().parse(req.query);
+    res.json(await repository.postpaidRecipients(scope.companyId,storeId,scope.actorId,postpaidSession(req)));
+  }));
+  router.post(prefix+'/postpaid-credits',run('platform',async(req,res,scope)=>{
+    const input=postpaidGrantSchema.parse(req.body);await access.platform(req);
+    res.json(await repository.grantPostpaid(scope.companyId,input,scope.actorId,postpaidSession(req)));
+  }));
+  router.post(prefix+'/postpaid-payments',run('platform',async(req,res,scope)=>{
+    const input=postpaidPaymentSchema.parse(req.body);await access.platform(req);
+    res.json(await repository.payPostpaid(scope.companyId,input,scope.actorId,postpaidSession(req)));
   }));
   router.post(prefix+'/credits',run('platform',async(req,res,scope)=>{const input=creditSchema.parse(req.body);await access.platform(req);res.json(await repository.credit(scope.companyId,input,scope.actorId))}));
   router.post(prefix+'/trial-grants',run('platform',async(req,res,scope)=>{const input=trialSchema.parse(req.body);await access.platform(req);res.json(await repository.grantTrial(scope.companyId,input,scope.actorId))}));
