@@ -1,6 +1,6 @@
 # Native cash screen: authority and data compatibility before integration
 
-Status: READ-ONLY REVIEW / NOT INSTALLED / NOT A NEW GRANT. Same retained CENTRAL-BACKOFFICE-ACCESS-01 owner. Prepare the next common-screen integration without changing the separately owned cash reconciliation algorithms, accepted reviews, stock/financial sources or recovery worker.
+Status: AUTHORITY REVIEW / NO NEW GRANT. Existing cash.read presentation integration installed in201e4c21; hosted functional acceptance remains NOT TESTED. Same retained CENTRAL-BACKOFFICE-ACCESS-01 owner. Prepare the next common-screen integration without changing the separately owned cash reconciliation algorithms, accepted reviews, stock/financial sources or recovery worker.
 
 ## Exact current boundary
 
@@ -29,3 +29,5 @@ Avoid a broad cash URL-prefix bridge or an EMPLOYEE-to-Owner role substitution. 
 Mount the real Owner and personal native components. Verify no Owner-only automatic request or review/import/export child for cash.read, exact selected-store period, delayed old scope/error clearing, no invented zero/success card, history capability boundary, verified-copy behavior and unchanged Owner forms/data. Test direct denied endpoints and live revocation separately. Keep native cash repository arithmetic, accepted review identities and financial totals unchanged. Full exact PR/main CI and normal guarded healthy release precede hosted read-only acceptance. Any future financial/review write acceptance requires a separately recorded fresh baseline and controls; no accepted transaction is repeated for evidence.
 
 This packet is the next-step design only. Native inventory currently has its own source/CI batch; do not claim common cash UI or all-functions permission completion from this review.
+
+Delivery update1Nov2026: source3478 and inventory3477 are installed together in exact healthy201e4c21 after full5118+8/0/0 and guarded41327819201. CashControlPanel and CashReconciliationPanel now implement only the existing scoped cash.read presentation described here. No new authority or review/import/export/overview admission. Earlier future-tense/source-CI statements describe the before-source review. Wider cash operations and all-functions coverage remain OPEN; checkpoint2026-11-01-common-cash-backoffice.md records exact proof.
