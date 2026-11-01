@@ -257,3 +257,21 @@ test('uncertain stocktake creation reuses one event and finalization verifies by
     assert.match(document.body.textContent,/Οριστικοποιημένη απογραφή/);
   }finally{await m.close()}
 });
+
+test('common store commerce shortcut is present only for an explicitly granted commerce function, never an ungranted cash fallback',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ for(const products of [false,true]){
+  const store={id:'a1',name:'A1'},calls=[];
+  const api=async(path,options={})=>{calls.push({path,options});assert.equal(options.method||'GET','GET');if(path.endsWith('/me'))return {...identity,stores:[{...store,profile:'AUDITOR',capabilities:['sales.read',...(products?['products.read']:[])]}]};if(path.endsWith('/terminals'))return {storeId:'a1',terminals:['POS2']};if(path.includes('/sales/recent'))return {rows:[]};return {store,openSession:null,openSessions:[],recent:[],summaryBySession:{}}};
+  const m=await mount(Workspace,{api,user:{fullName:'Synthetic'},onLogout:()=>{}});
+  try{
+   await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+   await m.act(async()=>button('Πωλήσεις και βάρδιες').click());
+   await m.act(async()=>{const s=document.querySelector('[aria-label="Ταμείο"]');s.value='POS2';s.dispatchEvent(new Event('change',{bubbles:true}))});
+   await m.act(async()=>new Promise(resolve=>setTimeout(resolve,100)));
+   assert.equal(Boolean(button('Εμπορική λειτουργία')),products);
+   assert.equal(button('Έλεγχος ταμείων'),undefined);
+   assert.ok(calls.every(c=>!c.path.includes('/backoffice-staff/cash/')));
+  }finally{await m.close()}
+ }
+});
