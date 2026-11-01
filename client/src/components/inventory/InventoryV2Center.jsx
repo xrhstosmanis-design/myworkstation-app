@@ -19,10 +19,11 @@ export default function InventoryV2Center({
   stores = [],
   catalog = [],
   loadCatalog,
+  delegated = null,
 }) {
-  const [stocktakes, setStocktakes] = useState([]),
-    [current, setCurrent] = useState(null),
-    [storeId, setStoreId] = useState(""),
+  const [ownerStocktakes, setStocktakes] = useState([]),
+    [ownerCurrent, setCurrent] = useState(null),
+    [ownerStoreId, setStoreId] = useState(""),
     [zones, setZones] = useState([]),
     [selectedZones, setSelectedZones] = useState([]),
     [grant, setGrant] = useState(null),
@@ -33,11 +34,17 @@ export default function InventoryV2Center({
     [error, setError] = useState(""),
     [finalizeReason, setFinalizeReason] = useState(""),
     [finalizing, setFinalizing] = useState(false);
+  // Controlled personal view uses redacted data and existing scoped writers only.
+  // This is presentation, never a substitute for the canonical server grant check.
+  const stocktakes = delegated ? delegated.stocktakes : ownerStocktakes;
+  const current = delegated ? delegated.current : ownerCurrent;
+  const storeId = delegated ? delegated.storeId : ownerStoreId;
+  const locked = Boolean(delegated?.locked);
   const finalizingRef = useRef(false);
   const [mobileView,setMobileView]=useState(false);
   useEffect(()=>setMobileView(false),[current?.id,current?.status]);
   useEffect(() => { setFinalizeReason(current?.scopeType === "FREE" ? "Καταχώρηση καταμετρημένων ειδών" : ""); }, [current?.id, current?.scopeType]);
-  const grantUrl = grant ? `${window.location.origin}${grant.accessUrl}` : "";
+  const grantUrl = !delegated && grant ? `${window.location.origin}${grant.accessUrl}` : "";
   useEffect(() => {
     if (!grantUrl) return setGrantQr("");
     QRCode.toDataURL(grantUrl, { width: 260, margin: 1, errorCorrectionLevel: "M" })
@@ -51,8 +58,9 @@ export default function InventoryV2Center({
     else await navigator.clipboard.writeText(`${text}\n${grantUrl}`);
   };
   const loadList = async () =>
-      setStocktakes(await api("/api/inventory-v2/stocktakes")),
+      delegated ? delegated.onLoad() : setStocktakes(await api("/api/inventory-v2/stocktakes")),
     open = async (id) => {
+      if (delegated) return locked ? undefined : delegated.onOpen(id);
       const result = await api(`/api/inventory-v2/stocktakes/${id}`);
       setCurrent(result);
       setInvestigation(null);
@@ -64,10 +72,12 @@ export default function InventoryV2Center({
         await loadZones(result.storeId);
     };
   useEffect(() => {
+    if (delegated) return;
     loadList().catch((e) => setError(e.message));
     loadCatalog?.();
   }, []);
   const loadZones = async (value) => {
+    if (delegated) return;
     setStoreId(value);
     setSelectedZones([]);
     setZones(
@@ -366,8 +376,8 @@ export default function InventoryV2Center({
   };
   return (
     <div className="inv2">
-      {error && <div className="op-alert error">{error}</div>}
-      {finalSummary && (
+      {!delegated && error && <div className="op-alert error">{error}</div>}
+      {!delegated && finalSummary && (
         <div className="inv2-final-summary">
           <div><b>Αποτέλεσμα Απογραφής</b><small>{finalSummary.countedCount} από {finalSummary.lineCount} είδη</small></div>
           <span><small>Καταμέτρηση</small><b>{finalSummary.countedQuantity}</b></span>
@@ -380,7 +390,7 @@ export default function InventoryV2Center({
           <button onClick={() => setFinalSummary(null)}>Κλείσιμο</button>
         </div>
       )}
-      {investigation && (
+      {!delegated && investigation && (
         <section className="inv2-investigation">
           <header>
             <div>
@@ -418,9 +428,10 @@ export default function InventoryV2Center({
       <div className="inv2-layout">
         <aside className="op-box">
           <h3>Inventory 2.0</h3>
-          <div className="inv2-new-buttons">
-            <button type="button" onClick={() => { setCurrent(null); setFinalSummary(null); setError(""); }}>Νέα απογραφή</button>
-          </div>
+          {(!delegated || delegated.canCreate) && <div className="inv2-new-buttons">
+            <button type="button" disabled={locked} onClick={() => { if (delegated) return delegated.onNew(); setCurrent(null); setFinalSummary(null); setError(""); }}>Νέα απογραφή</button>
+          </div>}
+          {delegated ? <><p>{delegated.storeName}</p>{delegated.canCreate && delegated.createForm}<button type="button" disabled={locked} onClick={loadList}><RefreshCw/>Φόρτωση / Ανανέωση</button></> : <>
           <form className="op-form" onSubmit={create}>
             <label>
               Κατάστημα
@@ -487,15 +498,17 @@ export default function InventoryV2Center({
               <button>Προσθήκη</button>
             </form>
           )}
+          </>}
           <h4>Απογραφές</h4>
+          {delegated?.listLoaded && !stocktakes.length && <p>Δεν υπάρχουν ανοιχτές απογραφές στο κατάστημα.</p>}
           <div className="inv2-history">
             {stocktakes.map((s) => (
               <div key={s.id} className="inv2-history-row">
-                <button className="inv2-history-open" onClick={() => open(s.id)}>
+                <button className="inv2-history-open" disabled={locked} onClick={() => open(s.id)}>
                   <b>{s.name}</b>
-                  <small>{s.scopeType === "FREE" ? "Απογραφή" : s.scopeType === "FULL" ? "Πλήρης" : "Μερική"} · {s.scopeType === "FREE" ? `${s.countedCount} είδη` : `${s.countedCount}/${s.lineCount}`}</small>
+                  <small>{delegated ? s.status || "Ανοιχτή απογραφή" : <>{s.scopeType === "FREE" ? "Απογραφή" : s.scopeType === "FULL" ? "Πλήρης" : "Μερική"} · {s.scopeType === "FREE" ? `${s.countedCount} είδη` : `${s.countedCount}/${s.lineCount}`}</>}</small>
                 </button>
-                {s.status === "DRAFT" && <button className="inv2-history-delete" title="Διαγραφή μη οριστικοποιημένης απογραφής" onClick={() => deleteStocktake(s)}>×</button>}
+                {!delegated && s.status === "DRAFT" && <button className="inv2-history-delete" title="Διαγραφή μη οριστικοποιημένης απογραφής" onClick={() => deleteStocktake(s)}>×</button>}
               </div>
             ))}
           </div>
@@ -507,17 +520,18 @@ export default function InventoryV2Center({
                 <div>
                   <h3>Προσωρινή απογραφή ειδών αποθήκης</h3>
                   <small>
-                    {current.storeName} ·{" "}
+                    {delegated ? `${current.name} · ${delegated.storeName} · ${current.status}` : <>{current.storeName} ·{" "}
                     {current.scopeType === "FREE" ? "Απογραφή" : current.scopeType === "FULL" ? "Πλήρης" : "Μερική απογραφή"}{" "}
-                    · {current.status}
+                    · {current.status}</>}
                   </small>
                 </div>
                 <div className="inv2-actions">
-                  {current.status === "DRAFT" && <button type="button" onClick={()=>setMobileView(v=>!v)}><Smartphone/>{mobileView?"Προβολή υπολογιστή":"Προβολή κινητού / tablet"}</button>}
-                  <button onClick={() => open(current.id)}>
+                  {!delegated && current.status === "DRAFT" && <button type="button" onClick={()=>setMobileView(v=>!v)}><Smartphone/>{mobileView?"Προβολή υπολογιστή":"Προβολή κινητού / tablet"}</button>}
+                  <button disabled={locked} onClick={() => open(current.id)}>
                     <RefreshCw />
                     Ανανέωση
                   </button>
+                  {!delegated && <>
                   <button onClick={exportCsv}>
                     <Download />
                     Excel / CSV
@@ -540,11 +554,11 @@ export default function InventoryV2Center({
                   <button onClick={() => window.print()}>
                     <Printer />
                     Εκτύπωση
-                  </button>
+                  </button></>}
                 </div>
               </header>
-              {current.status === "DRAFT" && current.scopeType !== "FREE" && <button type="button" disabled={busy} onClick={convertToFree}>Συνέχεια ως ελεύθερη απογραφή</button>}
-              {current.status === "DRAFT" && (
+              {!delegated && current.status === "DRAFT" && current.scopeType !== "FREE" && <button type="button" disabled={busy} onClick={convertToFree}>Συνέχεια ως ελεύθερη απογραφή</button>}
+              {!delegated && current.status === "DRAFT" && (
                 <form className="inv2-grant" onSubmit={createGrant}>
                   <b>QR/PIN καταμετρητή</b>
                   <input
@@ -578,8 +592,9 @@ export default function InventoryV2Center({
                   )}
                 </form>
               )}
-              {mobileView?<div className="inv2-mobile-preview"><InventoryMobileApp key={current.id} api={api} stocktakeId={current.id}/></div>:<InventoryFastCount api={api} current={current} reload={open} setError={setError} />}
+              {!delegated && mobileView?<div className="inv2-mobile-preview"><InventoryMobileApp key={current.id} api={api} stocktakeId={current.id}/></div>:<InventoryFastCount key={delegated ? current.id : undefined} api={api} current={current} reload={open} setError={delegated ? delegated.setError : setError} delegated={delegated ? {canCount:delegated.canCount,canSeeExpected:delegated.canFinalize,locked,onCount:delegated.onCount} : null} />}
               <footer>
+                {delegated ? (delegated.canFinalize ? delegated.finalizationForm : null) : <>
                 <span>
                   <Smartphone />
                   QR/PIN και πολλαπλοί καταμετρητές
@@ -599,7 +614,7 @@ export default function InventoryV2Center({
                   </div>
                 ) : current.snapshotJson?.reason ? (
                   <p className="inv2-finalization-reason"><b>Αιτιολογία οριστικοποίησης:</b> {current.snapshotJson.reason}</p>
-                ) : null}
+                ) : null}</>}
               </footer>
             </>
           ) : (

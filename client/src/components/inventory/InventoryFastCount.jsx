@@ -21,14 +21,20 @@ export function inventoryTotals(lines = []) {
   );
 }
 
-export default function InventoryFastCount({ api, current, reload, setError }) {
+export default function InventoryFastCount({ api, current, reload, setError, delegated = null }) {
+  const canCount = !delegated || delegated.canCount === true;
+  const locked = Boolean(delegated?.locked);
+  const showExpected = !delegated || (delegated.canSeeExpected === true && (current.lines || []).length > 0 && current.lines.every(line => line.expectedQuantity !== undefined));
+  const showValues = !delegated;
+  const barcodes = line => delegated ? (line.barcodes || []) : [line.barcode];
+  const displayBarcode = line => barcodes(line)[0] || "";
   const barcodeRef = useRef(null);
   const quantityRef = useRef(null);
   const [lookup, setLookup] = useState("");
   const [selected, setSelected] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [replaceCount, setReplaceCount] = useState(false);
-  const [showAll, setShowAll] = useState(current.status !== "DRAFT");
+  const [showAll, setShowAll] = useState(Boolean(delegated) || current.status !== "DRAFT");
   const [matches, setMatches] = useState([]);
   const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -48,18 +54,19 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
         })
       : countedLines;
     return base.filter((line) =>
-      matchesGreekSearch(lookup, [line.name, line.sku, line.barcode]),
+      matchesGreekSearch(lookup, [line.name, line.sku, ...barcodes(line)]),
     );
-  }, [current.lines, countedLines, lookup, showAll]);
+  }, [current.lines, countedLines, lookup, showAll, Boolean(delegated)]);
   const totals = useMemo(() => inventoryTotals(rows), [rows]);
   const selectedRows = useMemo(() => (current.lines || []).filter((line) => selectedIds.has(line.id)), [current.lines, selectedIds]);
   const allVisibleSelected = rows.length > 0 && rows.every((line) => selectedIds.has(line.id));
 
   useEffect(() => {
-    if (current.status === "DRAFT") barcodeRef.current?.focus();
-  }, [current.id, current.status]);
+    if (canCount && !locked && current.status === "DRAFT") barcodeRef.current?.focus();
+  }, [current.id, current.status, canCount, locked]);
 
   useEffect(() => {
+    if (delegated) return;
     const productCreated = async (event) => {
       const productId = event.detail?.id;
       if (!productId || current.status !== "DRAFT") return;
@@ -77,12 +84,13 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
     };
     window.addEventListener("mws:product-created", productCreated);
     return () => window.removeEventListener("mws:product-created", productCreated);
-  }, [api, current.id, current.status, reload, setError]);
+  }, [api, current.id, current.status, reload, setError, Boolean(delegated)]);
 
   const choose = (line, replace = false) => {
+    if (!canCount || locked) return;
     setSelected(line);
     setMatches([]);
-    setLookup(line.barcode || line.sku || line.name);
+    setLookup(displayBarcode(line) || line.sku || line.name);
     setReplaceCount(replace);
     setQuantity(replace ? String(line.countedQuantity ?? 0) : "1");
     setTimeout(() => {
@@ -93,38 +101,46 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
 
   const find = (event) => {
     event?.preventDefault();
+    if (!canCount || locked || saving) return;
     const term = lookup.trim();
     if (!term) return barcodeRef.current?.focus();
     const candidates = (current.lines || []).filter((line) =>
-      matchesGreekSearch(term, [line.name, line.sku, line.barcode]),
+      matchesGreekSearch(term, [line.name, line.sku, ...barcodes(line)]),
     );
     const exact = candidates.find(
-      (line) => line.barcode === term || String(line.sku || "") === term,
+      (line) => barcodes(line).includes(term) || String(line.sku || "") === term,
     );
     if (exact || candidates.length === 1) return choose(exact || candidates[0]);
     setSelected(null);
     setMatches(candidates.slice(0, 12));
-    if (!candidates.length) setError(`Δεν βρέθηκε το barcode «${term}». Μπορείς να καταχωρήσεις νέο είδος.`);
+    if (!candidates.length) setError(delegated ? `Δεν βρέθηκε το barcode «${term}» σε αυτή την απογραφή.` : `Δεν βρέθηκε το barcode «${term}». Μπορείς να καταχωρήσεις νέο είδος.`);
   };
 
   const save = async (event) => {
     event?.preventDefault();
-    if (!selected || quantity === "" || !Number.isFinite(Number(quantity))) return;
+    if (!canCount || locked || saving || !selected || quantity === "" || !Number.isFinite(Number(quantity))) return;
+    if (delegated && !/^[0-9]{1,9}(?:\.[0-9]{1,4})?$/.test(quantity)) return setError("Συμπλήρωσε έγκυρη μη αρνητική ποσότητα.");
     setSaving(true);
     setError("");
     try {
       const previous = selected.countedQuantity === null ? 0 : n(selected.countedQuantity);
-      await api(`/api/inventory-v2/stocktakes/${current.id}/count`, {
-        method: "POST",
-        body: JSON.stringify({
+      const body = {
           lineId: selected.id,
           quantity: replaceCount ? Number(quantity) : previous + Number(quantity),
           expectedVersion: selected.countVersion,
           clientEventId: crypto.randomUUID(),
           source: replaceCount ? "BACKOFFICE" : "SCANNER",
-        }),
+      };
+      if (delegated) {
+        const confirmed = await delegated.onCount({stocktakeId:current.id,body});
+        if (confirmed !== true) return;
+      } else {
+      await api(`/api/inventory-v2/stocktakes/${current.id}/count`, {
+        method: "POST",
+        body: JSON.stringify(body),
       });
       await reload(current.id);
+      }
       setLookup("");
       setSelected(null);
       setQuantity("");
@@ -139,6 +155,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
   };
 
   const clearCount = async (line) => {
+    if (delegated) return;
     if (!confirm(`Διαγραφή της καταμέτρησης για «${line.name}»;`)) return;
     try {
       await api(`/api/inventory-v2/stocktakes/${current.id}/count/${line.id}`, {
@@ -165,6 +182,7 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
   });
 
   const bulkZero = async () => {
+    if (delegated) return;
     if (!selectedRows.length || !confirm(`Να καταχωριστεί ποσότητα 0 σε ${selectedRows.length} επιλεγμένα είδη; Το stock θα αλλάξει μόνο μετά την οριστικοποίηση της απογραφής.`)) return;
     setSaving(true);
     setError("");
@@ -187,12 +205,13 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
   };
 
   const createProduct = () => {
+    if (delegated) return;
     window.dispatchEvent(new CustomEvent("mws:new-product", { detail: { barcode: lookup.trim() } }));
   };
 
   return (
     <>
-      {current.status === "DRAFT" && (
+      {canCount && current.status === "DRAFT" && (
         <section className="inv2-fast-entry">
           <form onSubmit={find}>
             <label>
@@ -200,31 +219,34 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
               <span className="inv2-scan-row">
                 <Search />
                 <input
+                  disabled={locked || saving}
                   ref={barcodeRef}
                   value={lookup}
                   onChange={(event) => { setLookup(event.target.value); setSelected(null); setMatches([]); }}
                   placeholder="Barcode, SKU ή περιγραφή"
                   autoComplete="off"
                 />
-                <button type="submit">Αναζήτηση</button>
+                <button type="submit" disabled={locked || saving}>Αναζήτηση</button>
               </span>
             </label>
             <label>
               <b>{replaceCount ? "2. Διόρθωση συνολικής καταμέτρησης" : "2. Νέα ποσότητα που βρήκες"}</b>
               <span className="inv2-quantity-row">
                 <input
+                  name="quantity"
+                  aria-label="Ποσότητα καταμέτρησης"
                   ref={quantityRef}
                   type="number"
                   min="0"
-                  step="0.001"
+                  step={delegated ? "0.0001" : "0.001"}
                   value={quantity}
-                  disabled={!selected}
+                  disabled={!selected || locked || saving}
                   onChange={(event) => setQuantity(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "ArrowDown") save(event);
                   }}
                 />
-                <button type="button" className="primary" disabled={!selected || saving} onClick={save}>
+                <button type="button" className="primary" disabled={!selected || locked || saving} onClick={save}>
                   {saving ? "Αποθήκευση…" : "Καταχώρηση & επόμενο"}
                 </button>
               </span>
@@ -233,29 +255,30 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
           {selected && (
             <div className="inv2-selected-product">
               <b>{selected.name}</b>
-              <span>Απόθεμα {selected.expectedQuantity}</span>
-              <span>Αγορά {euro(selected.unitCost)}</span>
-              <span>Λιανική {euro(selected.salePrice)}</span>
+              {showExpected && <span>Απόθεμα {selected.expectedQuantity}</span>}
+              {showValues && <><span>Αγορά {euro(selected.unitCost)}</span>
+              <span>Λιανική {euro(selected.salePrice)}</span></>}
               {replaceCount ? <strong>Αντικατάσταση καταμέτρησης {selected.countedQuantity ?? "—"} με {n(quantity)}</strong> : selected.countedQuantity !== null && <strong>Προηγούμενα {selected.countedQuantity} + νέα {n(quantity)} = σύνολο {n(selected.countedQuantity) + n(quantity)}</strong>}
             </div>
           )}
           {matches.length > 1 && (
             <div className="inv2-lookup-results">
-              {matches.map((line) => <button key={line.id} onClick={() => choose(line)}><b>{line.name}</b><small>{line.barcode || line.sku || "—"}</small></button>)}
+              {matches.map((line) => <button key={line.id} disabled={locked || saving} onClick={() => choose(line)}><b>{line.name}</b><small>{displayBarcode(line) || line.sku || "—"}</small></button>)}
             </div>
           )}
-          {!selected && lookup.trim() && matches.length === 0 && (
+          {!delegated && !selected && lookup.trim() && matches.length === 0 && (
             <button type="button" className="inv2-new-product" onClick={createProduct}>+ Καταχώρηση νέου είδους με αυτό το barcode</button>
           )}
         </section>
       )}
 
+      {delegated && !canCount && <label>Αναζήτηση είδους<input aria-label="Αναζήτηση είδους" value={lookup} disabled={locked} onChange={event => setLookup(event.target.value)} /></label>}
       <div className="inv2-list-tools">
         <b>{showAll ? "Όλα τα είδη απογραφής" : "Καταμετρημένα είδη"}</b>
-        <span>{current.scopeType === "FREE" ? `${countedLines.length} καταμετρημένα είδη` : `${countedLines.length} από ${current.lines.length} καταμετρήθηκαν`}</span>
-        <button type="button" onClick={() => setShowAll((value) => !value)}>{showAll ? "Μόνο καταμετρημένα" : "Εμφάνιση όλων"}</button>
+        <span>{(delegated || current.scopeType === "FREE") ? `${countedLines.length} καταμετρημένα είδη` : `${countedLines.length} από ${current.lines.length} καταμετρήθηκαν`}</span>
+        <button type="button" disabled={locked} onClick={() => setShowAll((value) => !value)}>{showAll ? "Μόνο καταμετρημένα" : "Εμφάνιση όλων"}</button>
       </div>
-      {current.status === "DRAFT" && (
+      {!delegated && current.status === "DRAFT" && (
         <div className="inv2-bulk-tools">
           <label><input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} /> Επιλογή όλων των εμφανιζόμενων</label>
           <span>{selectedRows.length} επιλεγμένα</span>
@@ -264,24 +287,24 @@ export default function InventoryFastCount({ api, current, reload, setError }) {
       )}
       <div className="inv2-table-wrap">
         <table>
-          <thead><tr><th className="inv2-select-column">Επιλογή</th><th>Barcode</th><th>Περιγραφή</th><th>Απόθεμα</th><th>Καταμέτρηση</th><th>Διαφορά</th><th>Αξία λιανικής</th><th>Αξία κόστους</th><th>Ενέργειες</th></tr></thead>
+          <thead><tr>{!delegated && <th className="inv2-select-column">Επιλογή</th>}<th>Barcode</th><th>Περιγραφή</th>{showExpected && <th>Απόθεμα</th>}<th>Καταμέτρηση</th>{showExpected && <th>Διαφορά</th>}{showValues && <><th>Αξία λιανικής</th><th>Αξία κόστους</th></>}<th>Ενέργειες</th></tr></thead>
           <tbody>
             {rows.map((line) => {
               const counted = line.countedQuantity === null ? 0 : n(line.countedQuantity);
               return <tr key={line.id} className={line.recountRequired ? "recount" : ""}>
-                <td className="inv2-select-column"><input type="checkbox" checked={selectedIds.has(line.id)} onChange={() => toggleLine(line.id)} aria-label={`Επιλογή ${line.name}`} /></td>
-                <td>{line.barcode || "—"}</td>
+                {!delegated && <td className="inv2-select-column"><input type="checkbox" checked={selectedIds.has(line.id)} onChange={() => toggleLine(line.id)} aria-label={`Επιλογή ${line.name}`} /></td>}
+                <td>{displayBarcode(line) || "—"}</td>
                 <td><b>{line.name}</b><small>{line.sku || "—"} · {line.categoryName || "Χωρίς κατηγορία"}</small></td>
-                <td>{line.expectedQuantity}</td><td>{line.countedQuantity ?? "—"}</td><td>{counted - n(line.expectedQuantity)}</td>
-                <td>{euro(counted * n(line.salePrice))}</td><td>{euro(counted * n(line.unitCost))}</td>
+                {showExpected && <td>{line.expectedQuantity}</td>}<td>{line.countedQuantity ?? "—"}</td>{showExpected && <td>{counted - n(line.expectedQuantity)}</td>}
+                {showValues && <><td>{euro(counted * n(line.salePrice))}</td><td>{euro(counted * n(line.unitCost))}</td></>}
                 <td className="inv2-row-actions">
-                  {current.status === "DRAFT" && <><button title="Διόρθωση" onClick={() => choose(line, true)}><Pencil /></button><button title="Διαγραφή καταμέτρησης" disabled={line.countedQuantity === null} onClick={() => clearCount(line)}><Trash2 /></button></>}
-                  <button title="Εκτύπωση barcode" onClick={() => window.print()}><Printer /></button>
+                  {canCount && current.status === "DRAFT" && <><button title="Διόρθωση" disabled={locked || saving} onClick={() => choose(line, true)}><Pencil /></button>{!delegated && <button title="Διαγραφή καταμέτρησης" disabled={line.countedQuantity === null} onClick={() => clearCount(line)}><Trash2 /></button>}</>}
+                  {!delegated && <button title="Εκτύπωση barcode" onClick={() => window.print()}><Printer /></button>}
                 </td>
               </tr>;
             })}
           </tbody>
-          <tfoot><tr><th /><th>ΣΥΝΟΛΑ</th><th>{totals.lines} είδη</th><th>{totals.expected}</th><th>{totals.counted}</th><th>{totals.difference}</th><th>{euro(totals.retail)}</th><th>{euro(totals.cost)}</th><th /></tr></tfoot>
+          <tfoot><tr>{!delegated && <th />}<th>ΣΥΝΟΛΑ</th><th>{totals.lines} είδη</th>{showExpected && <th>{totals.expected}</th>}<th>{totals.counted}</th>{showExpected && <th>{totals.difference}</th>}{showValues && <><th>{euro(totals.retail)}</th><th>{euro(totals.cost)}</th></>}<th /></tr></tfoot>
         </table>
       </div>
     </>
