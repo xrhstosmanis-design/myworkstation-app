@@ -1,3 +1,5 @@
+> Current single phone acceptance is Android0.1.15: docs/testing/chat-familiar-ui-20261101.md and CHECKPOINTS/CHANGES/2026-11-01-chat-familiar-ui.md. This0.1.14 scope is retained in that ONE combined batch, not passed and not a separate intermediate test. Same Chat owner retained; earlier accepted entry/reopen/voice/media are not replayed.
+
 # CHAT-SEARCH-FORWARD-01 — One expanded phone acceptance
 
 Owner: codex/chat-native-readers-20261031. Status: NOT TESTED until actual observed phone outcomes are recorded. This plan covers Android0.1.14-preview/code15 and absorbs the pending0.1.13 interactions and0.1.12 names-only check. It is not a manual/PASS. Engineering CI, emulator and public byte checks are separate evidence.

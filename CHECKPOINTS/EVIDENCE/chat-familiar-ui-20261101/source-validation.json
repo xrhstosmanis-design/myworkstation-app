@@ -32,5 +32,53 @@
   "signingArtifact": 13086882925,
   "signingArtifactDigest": "28ccd780bb40bf1060c645d143a5b60854a6f76713edd1b91b5d14bb74f3549f",
   "signingAttempt": 2,
-  "signingNativeTests": 55
+  "signingNativeTests": 55,
+  "distributionPR": 3471,
+  "distributionHead": "0a03d5c73eaff990aa97000a1ff36ed48e4ff918",
+  "distributionPRCI": 41315987296,
+  "nativeProofArtifact": 13085763727,
+  "nativeProofDigest": "ce46a743ee2691fd8888ca59b9edd4d716eaec0c34b7c37fb4a240d965347718",
+  "sourceMainBrowserArtifact": 13085534996,
+  "sourceMainBrowserDigest": "d050ac2bc5a85c9e147b7b2e7d736d87481d03aa777b69582bd04dffbaca4668",
+  "distributionMerge": "9d7ebe588ca46742de0ab6f8ace5117ad98afb70",
+  "distributionPRTests": {
+    "server": 5092,
+    "backup": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "distributionMainCI": 41317300926,
+  "distributionMainTests": {
+    "server": 5092,
+    "backup": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "publicationFreshnessGuard": {
+    "run": 41318518424,
+    "trigger": "skipped",
+    "reason": "A newer production source revision is on main; await its full CI"
+  },
+  "combinedMainCI": 41348911362,
+  "combinedMainRevision": "5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e",
+  "intermediateCombinedMain": {
+    "revision": "35968eda7b1cef8be50f1d073e648efcb6c32b8e",
+    "fullCI": 41318666982,
+    "tests": {
+      "server": 5093,
+      "backup": 8,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullSuccess": true
+  },
+  "combinedMainTests": {
+    "server": 5148,
+    "backup": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "combinedMainFullSuccess": true,
+  "publicationDeployRun": 41350280601,
+  "publicationRenderDeploy": "dep-dbjqkgu7bikc7389ei10"
 }
