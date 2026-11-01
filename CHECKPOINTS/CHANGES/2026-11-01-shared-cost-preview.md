@@ -1,4 +1,8 @@
-# AI-COST-PASS-THROUGH-01 - SHARED-COST PREVIEW / SOURCE / AWAITING FULL CI AND HOSTED ACCEPTANCE
+# AI-COST-PASS-THROUGH-01 - SHARED-COST PREVIEW / SCOPED HOSTED PASS / REAL-CUSTOMER CONTROL NOT TESTED
+
+Authoritative01Nov2026: hosted synthetic preview PASS at21:15UTC on exact healthy5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e. Fixed50percent once:100EUR/78service days =>150EUR, A31days59.62/B31days59.61/C16days30.77; company totals match, visible no-charge/no-debt label. Fresh LAB measured baseline21:14:03.082UTC and reopened after21:16:10.814UTC match exactly: available3680499/reserved930033/settled409468/credits5020000micro, entries14/requests9/debt0, master/invoice/emailOFF, additive rates0; only existing historical disabled-email notice. Native screenshot and before/acceptance JSON in CHECKPOINTS/EVIDENCE/shared-cost-preview-20261101. No business/provider/financial/email action.
+
+This is PASS ONLY of the synthetic hosted UI and measured virtual LAB invariance. The private real-customer structured comparison was rejected by automatic approval review, was not retried and remains NOT TESTED. Actual customer billing/credit/email, real participant enrollment, external EUR tariffs and monthly cost posting remain OPEN; parent36 and general wallet are not closed. Source has no API/persistence/posting; mounted zero-request and stale-result validation are CI evidence, not extra hosted acceptance. Shared registries/manual/PDF closure synchronized in this receipt. Earlier BEFORE SOURCE/AWAITING entries below are dated engineering history.
 
 Retained owner feat/ai-owner-wallet-20261022; same executor root. User explicitly approved the proposed active-service-day rule for the charge PREVIEW on01Nov2026 after private provider audit and PR3485/CI41342988216/merge9a990bb00ed1fbba9b88bbf9f3f4fd892c984b7c. This authorizes a preview-only implementation, not customer enrollment, financial posting, actual credit, email or provider price guessing.
 
@@ -33,3 +37,19 @@ Node20.20.2 focused validation:8 tests PASS /0FAIL/0SKIP, covering pure arithmet
 PR3488 run41345468760 found2 failures among5141 tests (5139PASS/2FAIL/0SKIP): existing invoice-switch/trial mounted tests use the first checkbox in the wallet. The new preview mounted before the financial controls changed that DOM ordering. No existing financial logic failed or changed; do not weaken those tests. Move the additive preview below the existing wallet content, preserving existing control ordering, then rerun all mounted wallet UI regressions and full CI. Hosted acceptance remains NOT TESTED.
 
 Correction focused validation Node20.20.2:10PASS/0FAIL/0SKIP including both unchanged previously failing mounted suites and previous pricing/postpaid/activity regressions. Full CI rerun required; no hosted or financial action.
+
+## Source merged / exact combined release pending
+
+Corrected source PR3488 headf9cf5440acf5c1c39b00eae20890de5f971392e5 passed full CI41346778506 (5141server+8backup/0FAIL/0SKIP); merged e75883e3e7ac08101381f7906174b5db644bcdf7. Exact main CI41347967171 also5141+8/0/0. Ordinary guard41349242554 correctly skipped Trigger/Wait because independent newer C2 production source was on main; that successful skipped guard is NOT a release.
+
+Combined main5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e preserves this preview and independent stored-invoice-date work. Full exact mainCI41348911362/job124975879056:5148server+8backup/0FAIL/0SKIP; all5jobsSUCCESS. Ordinary pinned guard41350280601 pending. No environment/profile/control changes or Blueprint sync. Existing lifecycle execution overridefalse and independent monthly source-quality HOLD stay protected. This receipt claims no C2/monthly functional acceptance.
+
+Preview remains AWAITING HOSTED ACCEPTANCE until exact healthy release plus fresh recorded wallet/control baseline and synthetic UI test. No real customer financial/provider/email operation.
+
+## BEFORE hosted synthetic preview /21:14:03UTC01Nov2026
+
+Exact guarded release41350280601/job124978836558 actually executed Trigger/Wait, healthy5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e at21:10:32UTC. Renderdep-dbjqkgu7bikc7389ei10 LIVE, finished21:10:13.807941UTC. Fresh ordinary SuperAdmin session, Chrome cloud tab1, canonical platform-admin. Native preview section observed closed by default, original financial selector initially blank.
+
+Fresh MYWORKSTATION LAB baseline21:14:03.082UTC: available3680499micro, reserved930033micro, history14, settled409468micro, credits5020000micro, requests9, debt0; master/invoice/emailOFF, all three additive prices0. Prior REVIEW unchanged, no repeat provider/credit/debt operation. Planned single purely client synthetic example:100EUR,31/31/16service days, fixed50percent once =>150EUR and59.62/59.61/30.77. Physical POS terminal, shift, SKU/quantity/payment N/A: no business transaction.
+
+LIMITATION / scope reduction: automatic approval review rejected structured private real-customer financial/control extraction as outside the synthetic-preview authorization. No retry, indirect read or alternative real-customer extraction. Returned explicitly to LAB; real-customer before/after invariance is NOT TESTED and cannot be claimed by this new receipt. A preceding native company selection occurred read-only, with no mutation; no private values/contact data are published. Continue only the approved synthetic preview and LAB before/after measurement. Wider real-customer acceptance remains OPEN.
