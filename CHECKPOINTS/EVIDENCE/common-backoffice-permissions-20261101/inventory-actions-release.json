@@ -106,6 +106,7 @@
     "b5eab88 monthly source and independent DATA HOLD",
     "3482 C2 date claim",
     "3483 scoped assistant acceptance, do not replay",
-    "3485 provider/shared-cost audit, no new billing authority"
+    "3485 provider/shared-cost audit, no new billing authority",
+    "3486/0f86a7e separate preview-only before-source claim; no new runtime/billing authority"
   ]
 }
