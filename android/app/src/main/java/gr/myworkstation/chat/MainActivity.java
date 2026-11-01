@@ -483,9 +483,9 @@ public final class MainActivity extends Activity {
         if (row != null && row.optBoolean("forwarded")) card.addView(text("Προωθημένο μήνυμα", 12, PURPLE));
         if (!body.isEmpty()) card.addView(text(body, 17, INK));
         if (row != null && row.optBoolean("hasAttachment")) {
-            if (row.optString("attachmentMimeType").startsWith("image/")) card.addView(chatButton("▧ Φωτογραφία · προβολή", () -> viewPhoto(row), false));
-            else if (row.optString("attachmentMimeType").equals("video/mp4")) card.addView(chatButton("▶ Βίντεο · αναπαραγωγή", () -> viewVideo(row), false));
-            else if (row.optString("attachmentMimeType").equals("audio/wav")) card.addView(chatButton("▶ Φωνητικό · αναπαραγωγή", () -> viewVoice(row), false));
+            if (row.optString("attachmentMimeType").startsWith("image/")) card.addView(messageMediaButton("▧ Φωτογραφία · προβολή", () -> viewPhoto(row), row, own));
+            else if (row.optString("attachmentMimeType").equals("video/mp4")) card.addView(messageMediaButton("▶ Βίντεο · αναπαραγωγή", () -> viewVideo(row), row, own));
+            else if (row.optString("attachmentMimeType").equals("audio/wav")) card.addView(messageMediaButton("▶ Φωνητικό · αναπαραγωγή", () -> viewVoice(row), row, own));
             else card.addView(text("Συνημμένο · Η λήψη αρχείων είναι απενεργοποιημένη σε αυτή την εφαρμογή.", 14, MUTED));
         }
         if (!readers.isEmpty()) meta += " · Διαβάστηκε";
@@ -502,6 +502,10 @@ public final class MainActivity extends Activity {
             card.setOnClickListener(v -> open.run());card.setOnLongClickListener(v -> {open.run();return true;});
         }
         messages.addView(card, lp);
+    }
+    private Button messageMediaButton(String label,Runnable previewAction,JSONObject row,boolean own) {
+        Button button=chatButton(label,previewAction,false);Runnable open=scopedMessageAction(() -> showMessageActions(row,own));
+        button.setOnLongClickListener(v->{open.run();return true;});return button;
     }
     private Runnable scopedMessageAction(Runnable action) {
         final long generation=epoch.capture();final String captured=token,store=id(selected,"id"),company=id(selected,"companyId");
