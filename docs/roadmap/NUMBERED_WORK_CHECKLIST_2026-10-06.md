@@ -1,3 +1,7 @@
+## 01/11/2026 - POS-OPERATOR-INVENTORY-01 / SCOPED USER PASS στη Διαδόχου
+
+Ο ιδιοκτήτης επιβεβαίωσε «ΝΑΙ ΕΙΝΑΙ ΟΚ ΤΟ ΔΟΚΙΜΑΣΑ ΣΤΗΝ ΔΙΑΔΟΧΟΥ» για την αποθήκη χειριστή μέσα από το POS, με στοκ μόνο για προβολή. Το ανεξάρτητο αυτό subtask ολοκληρώθηκε ως περιορισμένη επιβεβαίωση χρήστη, αφαιρέθηκε από το pending και καταγράφηκε στο docs/manual/pos/PASS.md και στο checkpoint2026-10-31-pos-operator-inventory. Δεν αλλάζει η υπάρχουσα αρίθμηση άλλων εργασιών. Δεν πιστοποιούνται μη μετρημένα stock/οικονομικά, συγκεκριμένο τερματικό ή ο πλήρης φυσικός πίνακας δικαιωμάτων· δεν επαναλαμβάνεται συναλλαγή για τεκμηρίωση.
+
 ## 31/10/2026 — AUTO-REPORT-TWO-SHIFTS-01 / INSTALLED / SCOPED HOSTED LAB + USER SETTINGS PASS
 
 Bounded correction owner fix/automatic-report-two-shifts-20261031 completed after approved transfer/green claim3416. Source3418 finalhead d962bd7e16cdad2ccf0289c32a84385e3af828fc CI41242839435 SUCCESS; merge c2af89a72cea3b9c8d9964b15172fb9f09a84aea exactmainCI41243812623 SUCCESS (4972server+8backup PASS/0FAIL/0SKIP). Ordinary guarded deploy41245048490 preflight/pinned trigger/exact health SUCCESS, healthy c2af89 confirmed31Oct21:52:43UTC; independent health200/ok/revision matched. No direct hook, force, schema or guard bypass.

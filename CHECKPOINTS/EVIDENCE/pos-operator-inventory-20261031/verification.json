@@ -1,7 +1,7 @@
 {
   "task": "POS-OPERATOR-INVENTORY-01",
   "owner": "fix/pos-operator-inventory-20261031",
-  "status": "DEPLOYED_AWAITING_OPERATOR_LAB",
+  "status": "SCOPED_USER_PASS_DIADOXOU",
   "sourcePr": 3427,
   "claimPr": 3421,
   "claimMerge": "6b34016a48eb181f93050360384a8631bbcfb408",
@@ -86,8 +86,8 @@
       "readOnlyStockNote": true
     }
   },
-  "operatorLabAcceptance": "NOT_TESTED",
-  "physicalTerminalAcceptance": "NOT_TESTED",
+  "operatorLabAcceptance": "OWNER_REPORTED_USER_PASS_NOT_INDEPENDENT_LAB",
+  "physicalTerminalAcceptance": "OWNER_REPORTED_USE; TERMINAL_AND_ACTION_MATRIX_NOT_INDEPENDENTLY_IDENTIFIED",
   "finalSource": {
     "head": "fb634f5a7a9363883570256e061bae81d6fee952",
     "workflowRun": 41252087179,
@@ -100,7 +100,7 @@
     "merge": "50146f3f094d846f52b2801f1e60de0332aaf1c4"
   },
   "previousHealthyRevision": "946fa417b858fbece65c9ded6cb8db506bca91b0",
-  "nextAction": "Identified intended operator permission and scoped acceptance with fresh controls; operator LAB and physical terminal remain NOT_TESTED",
+  "nextAction": "Bounded requirement accepted; no repeat test or business replay. Respond to separately identified new issues.",
   "historicalCancelledMainCi": {
     "id": 41253122609,
     "conclusion": "CANCELLED",
@@ -118,5 +118,19 @@
     "backupPass": 8,
     "fail": 0,
     "skip": 0
+  },
+  "userAcceptance": {
+    "recordedAt": "2026-11-01T10:56:21+02:00",
+    "source": "current owner conversation",
+    "quote": "ΝΑΙ ΕΙΝΑΙ ΟΚ ΤΟ ΔΟΚΙΜΑΣΑ ΣΤΗΝ ΔΙΑΔΟΧΟΥ",
+    "store": "Διαδόχου Παύλου",
+    "scope": "requested operator warehouse from POS, owner reports tested and OK",
+    "exactOperator": null,
+    "exactTerminal": null,
+    "physicalClientRevision": null,
+    "individualActions": null,
+    "stockAndFinancialBeforeAfter": "NOT_MEASURED",
+    "fullPhysicalPermissionMatrix": "NOT_TESTED",
+    "repeatRequested": false
   }
 }

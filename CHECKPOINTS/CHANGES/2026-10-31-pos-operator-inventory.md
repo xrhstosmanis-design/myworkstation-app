@@ -1,4 +1,14 @@
-## 31/10/2026 - POS-OPERATOR-INVENTORY-01 / DEPLOYED / AWAITING OPERATOR LAB
+## 31/10/2026 - POS-OPERATOR-INVENTORY-01 / SCOPED USER PASS / DIADOXOU CONFIRMED
+
+**Authoritative owner confirmation · 2026-11-01T10:56:21+02:00.**
+
+The owner reported exactly: «ΝΑΙ ΕΙΝΑΙ ΟΚ ΤΟ ΔΟΚΙΜΑΣΑ ΣΤΗΝ ΔΙΑΔΟΧΟΥ». This confirms the requested operator warehouse use from POS at Διαδόχου Παύλου as a scoped USER PASS. It supersedes the pending real-user confirmation for this delivered feature; do not request the same acceptance again or replay a business transaction for documentation. Remove this bounded item from PENDING_WORK. The deployed technical receipt, source3427, release verification3444 and full exact live CI41284858846 (5050 server+8 backup PASS/0FAIL/0SKIP) remain evidence of implementation delivery.
+
+Acceptance is owner-reported, not an independently observed transaction or stock-control LAB. Exact operator, physical terminal, client revision at the time of use, individual actions/products, stock or financial before/after and the full per-action/tenant/revocation matrix were not supplied and remain NOT TESTED as physical/live measured claims. The independent health read while recording this confirmation was ok=true, revision4c05a9442d03941d35585a1e39a0aceef3dc01a1; this does not identify the physical client's loaded revision. No new account/module grant, stock/financial/fiscal action, source change or deployment was performed for this closure.
+
+Manual docs/manual/pos/PASS.md now records who may use the feature, the opening flow, default-off right, action rights and visible-stock-only boundary, plus troubleshooting and the exact limits of the USER PASS. Same owner fix/pos-operator-inventory-20261031 closes this bounded delivered requirement. Other assignments and existing decimal-keyboard/consumption-launcher PASS remain unchanged. Single next action: no repeat of the accepted test; address a separately identified new issue if reported.
+
+**Historical technical release and implementation evidence (superseded only for pending user confirmation).**
 
 **Authoritative technical release receipt · 2026-11-01T09:44:38+02:00.**
 
