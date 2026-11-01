@@ -20,6 +20,14 @@ Render MCP confirmed live ad111f6f9c69dee7dcce5713eed39abe72aab122, dep-dbjjd0h4
 | AI staff-schedule instruction interpretation | routes/api.js /schedules/interpret calls global fetch directly to Responses at258, without wallet meter | Provider AI can incur platform cost, but no deduction from this customer wallet is wired on that path. Not a claim of a free commercial module. |
 | Platform SuperAdmin assistant / central invoice-learning fallback | platform-admin.js:1539 and platform-invoice-learning-ai.js:737 have direct provider calls outside customer wallet composition | Internal provider usage exists outside customer wallet. Do not put it on the customer debit list by assumption. |
 
+## Extended cost inventory requested by user
+
+advanced-online-product-search.js invokes Serper/Google CSE and logs AdvancedOnlineSearchUsage. Source defaults are ESTIMATES, not verified provider invoices and not customer-wallet deductions. platform-invoice-barcode-resolver.js, platform-invoice-learning-product-search.js and purchase-order-ocr-resolution.js also contain search-provider entry points. They require customer attribution plus an approved EUR unit tariff/conversion before pass-through; never convert the estimate into debt silently.
+
+Invoice processing can contain additional provider calls inside one document workflow: first image/header read, product-table re-extraction, discount verification, page evidence, fallback/recheck and assistant questions. Each metered external request can be a separate usage debit when enabled. One UI document is not proof of exactly one AI call. Existing caching can avoid new dispatch; a read/view alone is not a paid call.
+
+The wallet writer inventory found the common provider meter and Azure page meter as usage reservation entry points, with the repository settlement reducing balance. Optional per-call/per-invoice/additive pricing exists separately; current selected customer values remain0. A hold/REVIEW is not a second settled charge; debt settlement never funds the wallet again. ModuleCommercialTerms/CompanyManagedControlTerms and online delivery/order prices are separate commercial scopes, not automatic consumption of this AI balance.
+
 ## Corrections and remaining work
 
 The earlier customer-facing two-service list was incomplete. The email must distinguish implemented, enabled customer debits from ordinary calculations/report delivery/video playback and from provider calls not wired to the customer ledger. AI provider cost, module subscription and deduction from customer balance are different facts. Current customer flags remain OFF, so this audit is not activation.
@@ -27,3 +35,7 @@ The earlier customer-facing two-service list was incomplete. The email must dist
 invoiceWalletFeatures() currently lists OWNER_ASSISTANT plus configured invoice features; it omits CASH_PAPER_READING despite the real cash-paper provider using the common master meter. Existing readiness prose similarly describes only Owner/invoices. Record this disclosure/catalogue mismatch as OPEN; do not silently enable another service or expand the charge policy. Broader retained unmetered-reader/REVIEW/model/role acceptance stays with its prior owner. Any source correction requires its own before-source claim and normal CI/release/LAB gate.
 
 Next: provide user with the verified mapping, revise the FIRST EMAIL preview on that basis and wait for their review before actual credit/email. No new tests needed for this documentation-only read audit; no forced paid calls or replay of accepted LAB transactions.
+
+## Subsequent user policy
+
+The user subsequently explicitly requires all customer-attributable paid AI/external usage to pass through with the already agreed margin. Follow CHECKPOINTS/CHANGES/2026-11-01-ai-cost-pass-through-claim.md; audit findings remain facts about livead111f6f, not proof that missing paths are fixed. New source remains blocked until green/main claim publication.
