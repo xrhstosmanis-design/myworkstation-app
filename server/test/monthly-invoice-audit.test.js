@@ -13,7 +13,7 @@ const schema={
  PurchaseDocument:['id','companyId','storeId','supplierId','documentType','documentNumber','documentDate','totalGross','status','sourceType','purchaseOrderId','paymentTransactionId','createdAt'],
  PurchaseOrder:['id','companyId','storeId','supplierId','status','invoiceNumber','sourceDocumentId','createdAt'],
  MyDataInboundDocument:['id','companyId','storeId','inboxId','mark','issuerVat','series','documentNumber','issueDate','invoiceType','totalGross','rawPayload','fetchedAt'],
- DocumentInbox:['id','companyId','storeId','attachmentId','status','receivedAt'],AiReaderJob:['id','companyId','storeId','attachmentId','purchaseDocumentId','status'],
+ DocumentInbox:['id','companyId','storeId','attachmentId','status','receivedAt'],AiReaderJob:['id','companyId','storeId','attachmentId','purchaseDocumentId','status','stage','resultJson'],
  DocumentAttachment:['id','companyId','storeId','mimeType','checksum','contentData'],
  InvoiceDraftAlias:['aliasOrderId','aliasDocumentId','companyId','storeId','canonicalOrderId','canonicalDocumentId','inboxId','mark','details'],
  PurchaseOrderPosting:['orderId','companyId','purchaseDocumentId'],InvoiceStockPosting:['companyId','storeId','orderId','sourceDocumentId','postedDocumentId','path'],
@@ -147,4 +147,50 @@ test('posted order needs its scoped approved target and stock proof; standalone 
  assert.equal(classifyInvoiceMonth(f,period).items[0].status,'UNPOSTED');
  f.stockPostings=[{orderId:'order',sourceDocumentId:'source',postedDocumentId:'source',path:'PURCHASE_ORDER'}];assert.equal(classifyInvoiceMonth(f,period).items[0].status,'POSTED');
  f.orders=[];f.postings=[];f.stockPostings=[];f.documents=[doc('standalone',{status:'APPROVED',documentNumber:'A 1'})];const standalone=classifyInvoiceMonth(f,period);assert.equal(standalone.items[0].status,'POSTED');assert.equal(standalone.counts.identityReview,0);
+});
+
+const opaqueFacts=()=>{
+ const f=empty();f.documents=[doc('opaque',{documentNumber:'ACTIVITY-LAB-20261031-E',issueDay:'2026-10-31',purchaseOrderId:'opaque-order',sourceType:'POS_OCR_DRAFT'})];
+ f.orders=[{id:'opaque-order',supplierId:'sup',invoiceNumber:'ACTIVITY-LAB-20261031-E',sourceDocumentId:'opaque',status:'NEW',createdAt:'2026-10-31'}];return f;
+};
+test('opaque exact bidirectional pairs share only representation and date, never numeric posting authority',()=>{
+ for(const number of ['ACTIVITY-LAB-20261031-E','PRICE-LAB-20261031-D','SOL-LAB-20261031-B','SOL-LAB-20261031-C']){
+  const f=opaqueFacts();f.documents[0].documentNumber=number;f.orders[0].invoiceNumber=number;
+  let r=classifyInvoiceMonth(f,period);assert.equal(r.items.length,1);assert.equal(r.items[0].issueDay,'2026-10-31');assert.equal(r.items[0].sources.length,2);assert.equal(r.items[0].status,'UNPOSTED');assert.ok(r.items[0].categories.includes('IDENTITY_OR_LINK_REVIEW'));
+  f.documents[0].status='APPROVED';f.orders[0].status='INVOICED';f.postings=[{orderId:'opaque-order',purchaseDocumentId:'opaque'}];f.stockPostings=[{orderId:'opaque-order',sourceDocumentId:'opaque',postedDocumentId:'opaque',path:'PURCHASE_ORDER'}];
+  r=classifyInvoiceMonth(f,period);assert.equal(r.items[0].status,'UNPOSTED');
+  f.documents.push(doc('opaque-target',{documentNumber:number,status:'APPROVED',sourceType:'PURCHASE_ORDER',purchaseOrderId:'opaque-order'}));f.postings[0].purchaseDocumentId='opaque-target';f.stockPostings[0].postedDocumentId='opaque-target';
+  r=classifyInvoiceMonth(f,period);assert.equal(r.items.find(x=>x.id==='doc:opaque').status,'UNPOSTED');assert.equal(r.items.find(x=>x.id==='doc:opaque').sources.length,2);assert.ok(r.items.find(x=>x.id==='doc:opaque-target'));
+ }
+});
+test('opaque mismatches, competing links, malformed or inactive originals retain disconnected unknown-date findings',()=>{
+ const cases=[f=>f.documents[0].purchaseOrderId='other',f=>f.orders[0].sourceDocumentId='foreign',f=>f.orders[0].supplierId=null,f=>f.orders[0].supplierId='other',f=>f.orders[0].invoiceNumber+='X',f=>f.orders[0].invoiceNumber=f.orders[0].invoiceNumber.toLowerCase(),f=>f.orders[0].invoiceNumber='A 1',f=>{f.documents[0].documentNumber='X1\u0001Z';f.orders[0].invoiceNumber='X1\u0001Z'},f=>f.documents[0].issueDay=null,f=>f.documents[0].issueDay='2026-02-30',f=>f.documents[0].documentType='UNKNOWN',f=>f.documents[0].sourceType='PURCHASE_ORDER',f=>f.documents[0].status='MERGED',f=>f.documents[0].status='CANCELLED',f=>f.orders.push({...f.orders[0],id:'competing'})];
+ for(const mutate of cases){const f=opaqueFacts();mutate(f);const r=classifyInvoiceMonth(f,period);assert.ok(r.items.some(x=>x.issueDay===null),mutate.toString());assert.ok(r.items.some(x=>x.categories.includes('IDENTITY_OR_LINK_REVIEW')))}
+ const inactive=opaqueFacts();inactive.orders[0].status='REJECTED';const r=classifyInvoiceMonth(inactive,period);assert.equal(r.items.find(x=>x.id==='doc:opaque').sources.length,1);assert.equal(r.counts.inactive,1);
+});
+function pageFacts(date='2026-10-09',received='2026-10-28'){
+ const f=empty();f.documents=[doc('page-source',{documentNumber:'A 4201',issueDay:date,purchaseOrderId:'page-order',sourceType:'POS_OCR_DRAFT'})];f.orders=[{id:'page-order',supplierId:'sup',invoiceNumber:'A 4201',sourceDocumentId:'page-source',status:'NEW'}];
+ f.attachments=[{id:'page0',mimeType:'image/jpeg',checksum:'a'.repeat(64),hasContent:true},{id:'page1',mimeType:'image/jpeg',checksum:'b'.repeat(64),hasContent:true}];
+ const h={version:'POS_FAST_HANDOFF_V1',fullReader:'ASSISTANT',lifecycleGeneration:'0',documentType:'INVOICE',supplierId:'sup',documentNumber:'A 4201',documentDate:date,totalGross:'12.3400',pageCount:2};
+ f.jobs=[{id:'primary',attachmentId:'page0',purchaseDocumentId:'page-source',stage:'POS_BACKGROUND_COMPLETE',status:'AWAITING_APPROVAL',posMetadataAvailable:true,posMetadataPresent:true,posHeader:{...h,pageIndex:0,primaryJobId:'primary',pageJobIds:['primary','secondary'],primaryClaimPresent:true,pageClaimPresent:true},posBackground:{status:'COMPLETED_WITH_REVIEW',reconciliationRequired:true}},{id:'secondary',attachmentId:'page1',purchaseDocumentId:null,stage:'POS_BACKGROUND_FAILED',status:'POS_FAILED',posMetadataAvailable:true,posMetadataPresent:true,posHeader:{...h,pageIndex:1,primaryJobId:null,pageJobIds:null,primaryClaimPresent:false,pageClaimPresent:false},posBackground:{status:'FAILED',reconciliationRequired:null}}];
+ f.inbox=[{id:'page-inbox0',attachmentId:'page0',status:'IN_REVIEW',createdAt:received},{id:'page-inbox1',attachmentId:'page1',status:'IN_REVIEW',createdAt:received}];return f;
+}
+const orphan=(f,p=period)=>classifyInvoiceMonth(f,p).items.find(x=>x.id==='inbox:page-inbox1');
+test('explicit stored multipage header recognizes only operator date and preserves unknown identity/amount/reconciliation',()=>{
+ const f=pageFacts(),before=JSON.stringify(f),row=orphan(f);assert.equal(row.issueDay,'2026-10-09');assert.equal(row.status,'IDENTITY_UNKNOWN');assert.equal(row.totalCents,null);assert.equal(row.documentNumber,null);assert.equal(row.documentType,null);assert.equal(row.supplierTaxId,null);assert.deepEqual(row.categories,['IDENTITY_OR_LINK_REVIEW']);assert.match(row.reasons.join(' '),/κεφαλίδα χειριστή/);assert.match(row.reasons.join(' '),/εκκρεμή έλεγχο/);assert.equal(JSON.stringify(f),before);
+ for(const amount of ['0','-12.3400']){const v=pageFacts();v.documents[0].totalGross=amount;for(const j of v.jobs)j.posHeader.totalGross=amount;assert.equal(orphan(v).issueDay,'2026-10-09')}
+});
+test('stored issue date controls selection before receipt filtering in both month directions; unknown stays receipt-month HOLD',()=>{
+ const september=pageFacts('2026-09-30','2026-10-28');assert.equal(orphan(september),undefined);assert.equal(orphan(september,invoiceAuditMonth('2026-09')).issueDay,'2026-09-30');
+ const october=pageFacts('2026-10-09','2026-11-01');assert.equal(orphan(october).issueDay,'2026-10-09');assert.equal(orphan(october,invoiceAuditMonth('2026-11')),undefined);
+ october.jobs[1].posHeader.documentDate=null;assert.equal(orphan(october),undefined);assert.equal(orphan(october,invoiceAuditMonth('2026-11')).issueDay,null);
+});
+test('untrusted, ambiguous, malformed, foreign and conflicting page metadata fail closed without dropping orphan rows',()=>{
+ const mutations=[f=>f.jobs[0].posMetadataAvailable=false,f=>f.jobs[0].posHeader.version='GENERIC',f=>f.jobs[0].stage='LOCAL',f=>f.jobs[1].stage='LOCAL',f=>f.jobs[0].posHeader.primaryJobId='other',f=>f.jobs[0].posHeader.pageJobIds=['primary','missing'],f=>f.jobs[0].posHeader.pageJobIds=['primary','primary'],f=>f.jobs[0].posHeader.pageJobIds=['primary',{}],f=>f.jobs[0].posHeader.pageCount=6,f=>f.jobs[1].posHeader.pageCount=1,f=>f.jobs[1].posHeader.pageIndex=0,f=>f.jobs[1].posHeader.pageIndex=0.5,f=>f.jobs[1].posHeader.documentDate='2026-10-08',f=>f.jobs[1].posHeader.documentDate='2026-10-09X',f=>f.jobs[1].posHeader.documentNumber='A 4202',f=>f.jobs[1].posHeader.supplierId='foreign',f=>f.jobs[1].posHeader.totalGross='12.34000001',f=>f.jobs[1].posHeader.documentType='CREDIT_NOTE',f=>f.jobs[1].posHeader.lifecycleGeneration='00',f=>f.jobs[1].posHeader.fullReader=null,f=>f.jobs[1].posHeader.documentNumber='é'.repeat(129),f=>f.attachments[1].hasContent=false,f=>f.attachments[1].checksum='invalid',f=>f.attachments[1].checksum=f.attachments[0].checksum,f=>f.jobs[1].posHeader.pageClaimPresent=true,f=>f.jobs[1].posHeader.primaryClaimPresent=true,f=>f.jobs.push({...f.jobs[1],id:'duplicate-attachment'}),f=>f.jobs.push({...structuredClone(f.jobs[0]),id:'competing-primary'}),f=>f.documents[0].purchaseOrderId='missing',f=>f.documents[0].totalGross='12.35',f=>f.jobs[0].posBackground.reconciliationRequired=null];
+ for(const mutate of mutations){const f=pageFacts();mutate(f);const row=orphan(f);assert.ok(row,mutate.toString());assert.equal(row.issueDay,null,mutate.toString());assert.equal(row.totalCents,null);assert.equal(row.status,'IDENTITY_UNKNOWN')}
+});
+test('new projected header and capability facts invalidate report cursors without exposing private metadata',async()=>{
+ const f=pageFacts();for(let i=0;i<55;i++)f.documents.push(doc('paged'+i));const target=fixture({facts:f}),first=await read(target);assert.ok(first.nextPage);
+ f.jobs[1].posHeader.documentDate='2026-10-08';await assert.rejects(read(target,{storeId:'s',month:'2026-10',page:first.nextPage}),e=>e.code==='INVOICE_MONTH_AUDIT_STALE_PAGE');
+ assert.equal(JSON.stringify(first.items).includes('POS_FAST_HANDOFF'),false);assert.equal(JSON.stringify(first.items).includes('pageJobIds'),false);
 });

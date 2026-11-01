@@ -15,6 +15,59 @@ const cents=value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(
 const cancelled=status=>['CANCELLED','DELETED','REJECTED','REVERSED'].includes(status);
 const inboundDocumentType=value=>/^5\.\d+$/.test(String(value||''))?'CREDIT_NOTE':/^[123]\.\d+$/.test(String(value||''))?'INVOICE':null;
 
+// SQL bounds every fixed JSON field before transport. Missing old optional
+// header columns cannot assert a date; the original job domain remains readable.
+const posHeaderLimits={version:32,fullReader:32,lifecycleGeneration:32,documentType:64,supplierId:128,documentNumber:256,documentDate:10,totalGross:40,primaryJobId:128};
+const boundedJsonText=(object,key,max)=>`CASE WHEN jsonb_typeof(${object}->'${key}') IN (${['totalGross','lifecycleGeneration'].includes(key)?"'string','number'":"'string'"}) AND octet_length(${object}->>'${key}')<=${max} THEN ${object}->>'${key}' END`;
+const posJobSql=()=>`SELECT j."id",j."attachmentId",j."purchaseDocumentId",j."status",CASE WHEN octet_length(j."stage")<=64 THEN j."stage" END AS "stage",
+ true AS "posMetadataAvailable",j."resultJson" ? 'posHandoff' AS "posMetadataPresent",
+ CASE WHEN jsonb_typeof(h)='object' THEN jsonb_build_object(${Object.entries(posHeaderLimits).map(([key,max])=>`'${key}',${boundedJsonText('h',key,max)}`).join(',')},
+ 'pageCount',CASE WHEN jsonb_typeof(h->'pageCount')='number' AND octet_length(h->>'pageCount')<=2 THEN h->'pageCount' END,
+ 'pageIndex',CASE WHEN jsonb_typeof(h->'pageIndex')='number' AND octet_length(h->>'pageIndex')<=2 THEN h->'pageIndex' END,
+ 'primaryClaimPresent',h ? 'primaryJobId','pageClaimPresent',h ? 'pageJobIds',
+ 'pageJobIds',CASE WHEN jsonb_typeof(h->'pageJobIds')='array' THEN CASE WHEN jsonb_array_length(h->'pageJobIds') BETWEEN 1 AND 5 AND octet_length((h->'pageJobIds')::text)<=1024 THEN CASE WHEN NOT EXISTS(SELECT 1 FROM jsonb_array_elements(h->'pageJobIds') element WHERE jsonb_typeof(element)<>'string' OR octet_length(element#>>'{}')>128) THEN h->'pageJobIds' END END END) END AS "posHeader",
+ jsonb_build_object('status',${boundedJsonText('b','status',32)},'reconciliationRequired',CASE WHEN jsonb_typeof(b->'reconciliationRequired')='boolean' THEN b->'reconciliationRequired' END) AS "posBackground"
+ FROM "AiReaderJob" j CROSS JOIN LATERAL (SELECT j."resultJson"->'posHandoff' AS h,j."resultJson"->'posBackground' AS b) meta WHERE j."companyId"=$1 AND j."storeId"=$2`;
+const boundedText=(value,max)=>safeText(value,max)&&Buffer.byteLength(value,'utf8')<=max;
+const exactDecimal=value=>{
+ if(typeof value!=='string'||value.length>40||!/^\-?\d{1,30}(?:\.\d{1,8})?$/.test(value))return null;
+ const negative=value.startsWith('-'),[whole,fraction='']=value.replace(/^-/,'').split('.'),integer=whole.replace(/^0+(?=\d)/,''),tail=fraction.replace(/0+$/,'');
+ return (negative&&(integer!=='0'||tail)?'-':'')+integer+(tail?'.'+tail:'');
+};
+function opaqueRepresentation(o,d){
+ const a=o.invoiceNumber,b=d?.documentNumber;
+ return d&&d.purchaseOrderId===o.id&&boundedText(o.supplierId,128)&&o.supplierId===d.supplierId&&boundedText(a,256)&&a===b&&/\p{L}/u.test(a)&&/\d/.test(a)&&!invoiceNumberParts(a).number&&!invoiceNumberParts(b).number&&d.issueDay&&['INVOICE','CREDIT_NOTE'].includes(d.documentType)&&d.sourceType!=='PURCHASE_ORDER'&&![o.status,d.status].some(s=>cancelled(s)||s==='MERGED');
+}
+
+// Recognize only an operator-stored date, never invoice identity, amounts,
+// reconciliation or posting. A failed second page remains its own finding.
+function storedPageDates(facts,docs,validOrders,jobsByAttachment,attachments){
+ const dates=new Map(),jobs=new Map(),duplicateJobIds=new Set(),claims=new Map();
+ for(const j of facts.jobs){if(jobs.has(j.id))duplicateJobIds.add(j.id);jobs.set(j.id,j)}
+ for(const j of facts.jobs)if(Array.isArray(j.posHeader?.pageJobIds))for(const id of j.posHeader.pageJobIds){const list=claims.get(id)||[];list.push(j.id);claims.set(id,list)}
+ const header=j=>{
+  const h=j?.posHeader;if(j?.posMetadataAvailable!==true||!h||Object.entries(posHeaderLimits).some(([key,max])=>!['primaryJobId'].includes(key)&&!boundedText(h[key],max)))return null;
+  if(h.version!=='POS_FAST_HANDOFF_V1'||h.fullReader!=='ASSISTANT'||!/^(0|[1-9]\d{0,15})$/.test(h.lifecycleGeneration)||!['INVOICE','CREDIT_NOTE'].includes(h.documentType)||day(h.documentDate)!==h.documentDate||exactDecimal(h.totalGross)===null||!Number.isInteger(h.pageCount)||h.pageCount<1||h.pageCount>5||!Number.isInteger(h.pageIndex)||h.pageIndex<0||h.pageIndex>=h.pageCount)return null;
+  return h;
+ };
+ const original=j=>{const a=attachments.get(j.attachmentId);return boundedText(j.id,128)&&boundedText(j.attachmentId,128)&&jobsByAttachment.get(j.attachmentId)?.length===1&&a?.hasContent===true&&/^[0-9a-f]{64}$/.test(a.checksum||'')&&['application/pdf','image/jpeg','image/png','image/webp'].includes(a.mimeType)};
+ for(const primary of jobs.values()){
+  const h=header(primary),d=docs.get(primary.purchaseDocumentId),ids=h?.pageJobIds;
+  if(!h||h.primaryJobId!==primary.id||h.pageIndex!==0||primary.stage!=='POS_BACKGROUND_COMPLETE'||!['AWAITING_APPROVAL','CONFIRMED'].includes(primary.status)||!['COMPLETED','COMPLETED_WITH_REVIEW'].includes(primary.posBackground?.status)||typeof primary.posBackground?.reconciliationRequired!=='boolean'||!d||validOrders.get(d.purchaseOrderId)?.id!==d.id||d.sourceType==='PURCHASE_ORDER'||cancelled(d.status)||d.status==='MERGED'||!Array.isArray(ids)||ids.length!==h.pageCount||new Set(ids).size!==ids.length||ids.some(id=>!boundedText(id,128)||duplicateJobIds.has(id)||claims.get(id)?.length!==1)||!ids.includes(primary.id))continue;
+  if(d.issueDay!==h.documentDate||d.documentNumber!==h.documentNumber||d.supplierId!==h.supplierId||d.documentType!==h.documentType||exactDecimal(d.totalGross)!==exactDecimal(h.totalGross))continue;
+  const pages=ids.map(id=>jobs.get(id)),indexes=new Set(),checksums=new Set();let valid=true;
+  for(const page of pages){
+   const p=header(page),secondary=page?.id!==primary.id;
+   if(!p||!original(page)||p.pageCount!==h.pageCount||indexes.has(p.pageIndex)||checksums.has(attachments.get(page.attachmentId)?.checksum)||secondary&&(page.stage!=='POS_BACKGROUND_FAILED'||page.status!=='POS_FAILED'||page.purchaseDocumentId||p.primaryClaimPresent!==false||p.pageClaimPresent!==false||p.primaryJobId!==null&&p.primaryJobId!==undefined||p.pageJobIds!==null&&p.pageJobIds!==undefined)){valid=false;break}
+   indexes.add(p.pageIndex);checksums.add(attachments.get(page.attachmentId).checksum);
+   if(['version','fullReader','lifecycleGeneration','documentType','supplierId','documentNumber','documentDate'].some(key=>p[key]!==h[key])||exactDecimal(p.totalGross)!==exactDecimal(h.totalGross)){valid=false;break}
+  }
+  if(!valid||indexes.size!==h.pageCount)continue;
+  for(const page of pages)if(page.id!==primary.id)dates.set(page.attachmentId,{issueDay:h.documentDate,review:primary.posBackground?.status==='COMPLETED_WITH_REVIEW'||primary.posBackground?.reconciliationRequired===true});
+ }
+ return dates;
+}
+
 export function invoiceAuditMonth(month){
  if(typeof month!=='string'||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month))fail('Επίλεξε έγκυρο μήνα.');
  const first=month+'-01',next=new Date(first+'T12:00:00Z');next.setUTCMonth(next.getUTCMonth()+1);
@@ -39,7 +92,7 @@ const pendingRequired={StoreTransaction:['id','companyId','storeId','supplierId'
 async function capabilities(tx){
  const required={...pendingRequired};for(const definition of Object.values(domains))required[definition.table]=definition.columns;
  const rows=await tx.$queryRawUnsafe(`SELECT c.relname AS "table",a.attname AS "column" FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname=current_schema() AND c.relname=ANY($1::text[]) AND a.attnum>0 AND NOT a.attisdropped`,Object.keys(required));
- const result={};for(const [table,columns] of Object.entries(required))result[table]=columns.every(column=>rows.some(row=>row.table===table&&row.column===column));return result;
+ const result={};for(const [table,columns] of Object.entries(required))result[table]=columns.every(column=>rows.some(row=>row.table===table&&row.column===column));result.posJobMetadata=['stage','resultJson'].every(column=>rows.some(row=>row.table==='AiReaderJob'&&row.column===column));return result;
 }
 
 async function authorize(tx,actor,storeId,now){
@@ -93,17 +146,18 @@ function classifyInvoiceMonthCore(facts,period){
  for(const d of docs.values())parent.set(d.key,d.key);for(const m of inbound)parent.set(m.key,m.key);for(const o of orders.values())parent.set('order:'+o.id,'order:'+o.id);
  const root=key=>{let p=key;while(parent.get(p)&&parent.get(p)!==p)p=parent.get(p);return p};
  const join=(a,b)=>{const x=root(a),y=root(b);if(x!==y)parent.set(y,x)};
- const validOrders=new Map();
+ const validOrders=new Map(),representationOrders=new Map(),sourceOrderClaims=new Map();
+ for(const o of orders.values())if(o.sourceDocumentId)sourceOrderClaims.set(o.sourceDocumentId,(sourceOrderClaims.get(o.sourceDocumentId)||0)+1);
  for(const o of orders.values()){
   if(!o.sourceDocumentId)continue;
   const d=docs.get(o.sourceDocumentId),a=invoiceNumberParts(o.invoiceNumber),b=invoiceNumberParts(d?.documentNumber);
   if(d&&d.purchaseOrderId===o.id&&d.supplierId===o.supplierId&&a.number&&a.number===b.number&&a.series===b.series){validOrders.set(o.id,d);join(d.key,'order:'+o.id)}
-  else{setReason('order:'+o.id,'Η σύνδεση αγοράς και αρχικού παραστατικού χρειάζεται έλεγχο.');if(d)setReason(d.key,'Η σύνδεση αγοράς και αρχικού παραστατικού χρειάζεται έλεγχο.')}
+  else{if(sourceOrderClaims.get(o.sourceDocumentId)===1&&opaqueRepresentation(o,d)){representationOrders.set(o.id,d);join(d.key,'order:'+o.id)}setReason('order:'+o.id,'Η σύνδεση αγοράς και αρχικού παραστατικού χρειάζεται έλεγχο.');if(d)setReason(d.key,'Η σύνδεση αγοράς και αρχικού παραστατικού χρειάζεται έλεγχο.')}
  }
  for(const d of docs.values()){
   if(!d.purchaseOrderId)continue;
   const o=orders.get(d.purchaseOrderId),source=validOrders.get(d.purchaseOrderId);
-  if(source?.id===d.id)continue;
+  if(source?.id===d.id||representationOrders.get(d.purchaseOrderId)?.id===d.id)continue;
   const posted=postingsByOrder.get(o?.id)?.purchaseDocumentId===d.id&&stockPostingKeys.has(JSON.stringify([o?.id,source?.id,d.id,'PURCHASE_ORDER']));
   if(o&&source&&d.sourceType==='PURCHASE_ORDER'&&d.status==='APPROVED'&&d.supplierId===source.supplierId&&sameIdentity(d,source)&&posted)join(source.key,d.key);
   else setReason(d.key,'Η προβολή ή καταχώριση της αγοράς δεν επιβεβαιώνεται από τις συνδέσεις της.');
@@ -175,10 +229,11 @@ function classifyInvoiceMonthCore(facts,period){
   }
  }
  const linkedInbox=new Set([...known,...facts.inbound.map(m=>m.inboxId)]);
+ const pageDates=storedPageDates(facts,docs,validOrders,jobsByAttachment,attachmentsById);
  for(const i of facts.inbox){
-  const received=day(i.createdAt);if(linkedInbox.has(i.id)||!received||received<period.fromDay||received>=period.toDayExclusive||cancelled(i.status))continue;
+  const stored=pageDates.get(i.attachmentId),issueDay=stored?.issueDay||null,selectedDay=issueDay||day(i.createdAt);if(linkedInbox.has(i.id)||!selectedDay||selectedDay<period.fromDay||selectedDay>=period.toDayExclusive||cancelled(i.status))continue;
   const job=(jobsByAttachment.get(i.attachmentId)||[]).find(j=>docs.has(j.purchaseDocumentId)&&!cancelled(j.status));if(job)continue;
-  findings.push({id:'inbox:'+i.id,documentNumber:null,documentType:null,issueDay:null,registeredAt:new Date(i.createdAt).toISOString(),supplierName:null,supplierTaxId:null,totalCents:null,status:'IDENTITY_UNKNOWN',sources:[{kind:'INBOX',id:i.id,status:i.status}],categories:['IDENTITY_OR_LINK_REVIEW'],reasons:['Παραλαβή θυρίδας προς ταυτοποίηση· δεν επιβεβαιώνεται ακόμη ότι είναι τιμολόγιο.']});
+  findings.push({id:'inbox:'+i.id,documentNumber:null,documentType:null,issueDay,registeredAt:new Date(i.createdAt).toISOString(),supplierName:null,supplierTaxId:null,totalCents:null,status:'IDENTITY_UNKNOWN',sources:[{kind:'INBOX',id:i.id,status:i.status}],categories:['IDENTITY_OR_LINK_REVIEW'],reasons:['Παραλαβή θυρίδας προς ταυτοποίηση· δεν επιβεβαιώνεται ακόμη ότι είναι τιμολόγιο.',...(stored?['Η ημερομηνία προέρχεται από αποθηκευμένη κεφαλίδα χειριστή και ρητή σύνδεση σελίδων· η ταυτοποίηση και συμφωνία παραμένουν ανοικτές.',...(stored.review?['Η κύρια ανάγνωση ολοκληρώθηκε με εκκρεμή έλεγχο και απαιτεί συμφωνία.']:[])]:[])]});
  }
  findings.sort((a,b)=>(a.issueDay||'9999').localeCompare(b.issueDay||'9999')||a.id.localeCompare(b.id));
  const counts={logicalRecords:findings.length,unposted:0,uploadedAwaitingReview:0,possibleDuplicates:0,identityReview:0,credits,inactive};
@@ -198,9 +253,11 @@ async function readInvoiceSources(tx,actor,input,now,fullPending=false){
 // Private source/classifier composition, reached only through admitted entries.
 async function readInvoiceSourcesCore(tx,companyId,store,input,readPending){
  const cap=await capabilities(tx),facts={},sourceCounts={},unavailable=[],limited=[];
+ facts.posJobMetadataAvailable=cap.posJobMetadata;
  for(const [name,d]of Object.entries(domains)){
   if(!cap[d.table]||name==='documents'&&!cap.Supplier||name==='postings'&&!cap.PurchaseOrder){facts[name]=[];sourceCounts[name]=null;unavailable.push(name);continue}
-  const rows=await tx.$queryRawUnsafe(`SELECT source.*,COUNT(*) OVER()::text AS "_sourceCount" FROM (${d.sql}) source ORDER BY source."${d.id||'id'}" LIMIT $3`,companyId,input.storeId,MAX_SOURCE_ROWS+1);
+  const sql=name==='jobs'?(cap.posJobMetadata?posJobSql():d.sql.replace(' FROM "AiReaderJob"',',false AS "posMetadataAvailable",false AS "posMetadataPresent",NULL::text AS "stage",NULL::jsonb AS "posHeader",NULL::jsonb AS "posBackground" FROM "AiReaderJob"')):d.sql;
+  const rows=await tx.$queryRawUnsafe(`SELECT source.*,COUNT(*) OVER()::text AS "_sourceCount" FROM (${sql}) source ORDER BY source."${d.id||'id'}" LIMIT $3`,companyId,input.storeId,MAX_SOURCE_ROWS+1);
   const total=rows.length?Number(rows[0]._sourceCount):0;
   if(!Number.isSafeInteger(total)||total<rows.length)fail('Δεν επιβεβαιώθηκε η πληρότητα της πηγής.',502);
   sourceCounts[name]=total;if(total>MAX_SOURCE_ROWS)limited.push(name);
