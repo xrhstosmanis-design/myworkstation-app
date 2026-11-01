@@ -33,7 +33,6 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
   return <div role="dialog" aria-modal="true" aria-label="Διαχείριση υπολοίπου AI" style={{position:'fixed',inset:0,zIndex:1500,background:'#fff',padding:24,overflow:'auto',color:'#173550'}}>
     <button type="button" onClick={onClose} disabled={busy}>Κλείσιμο</button><h1>Υπόλοιπα AI πελατών</h1>
     <label>Εταιρεία <select value={companyId} disabled={busy} onChange={e=>setCompanyId(e.target.value)}><option value="">Επίλεξε εταιρεία</option>{companies.filter(c=>c.active).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-    <SharedCostPreview companies={companies}/>
     {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
     {data?.companyId===companyId&&(data?.runtimeEnabled===false?<p>Η υπηρεσία προπληρωμένης χρέωσης δεν έχει ενεργοποιηθεί στον server.</p>:<>
       <h2>Διαθέσιμο {walletMoney(data.availableMicros)} · Δεσμευμένο {walletMoney(data.reservedMicros)}</h2>
@@ -82,6 +81,7 @@ export default function AiOwnerWalletAdmin({api,companies=[],onClose}){
       <AiWalletActivityHistory key={companyId+":activity"} entries={data.entries||[]} stores={companies.find(c=>c.id===companyId)?.stores||[]}/>
       <h2>Ειδοποιήσεις</h2><ul>{(data.notices||[]).map(n=><li key={n.id}>{({CREDIT:'Πίστωση',LOW:'Χαμηλό υπόλοιπο',EMPTY:'Μηδενικό υπόλοιπο'})[n.kind]} · {new Date(n.createdAt).toLocaleString('el-GR',{hour12:false})} · Email: {({ACCEPTED:'Παραλήφθηκε από SMTP',PENDING:'Σε αναμονή',ATTEMPTING:'Η αποστολή χρειάζεται έλεγχο',UNKNOWN:'Αβέβαιο αποτέλεσμα — χωρίς επανάληψη',DISABLED:'Ανενεργό',REVOKED:'Ανακλήθηκε'})[n.emailStatus]||n.emailStatus}</li>)}</ul>
     </>)}
+    <SharedCostPreview companies={companies}/>
     <style>{`[aria-label="Διαχείριση υπολοίπου AI"] form{display:grid;gap:12px;max-width:800px;margin:20px 0;padding:16px;background:#f1f5f9;border-radius:12px}[aria-label="Διαχείριση υπολοίπου AI"] input:not([type=checkbox]),[aria-label="Διαχείριση υπολοίπου AI"] select{padding:10px;max-width:100%;box-sizing:border-box}[aria-label="Διαχείριση υπολοίπου AI"] button{padding:10px;min-height:44px}`}</style>
   </div>;
 }

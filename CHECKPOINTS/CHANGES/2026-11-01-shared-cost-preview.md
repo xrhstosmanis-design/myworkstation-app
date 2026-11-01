@@ -27,3 +27,9 @@ RecordedUTC:2026-11-01T19:58:46.464655+00:00
 Implemented the five claimed source/test paths after claim3486 merged at0f86a7e3f43be166b3f83609dcf0ecc1329949ff. Pure BigInt allocation, explicit EUR evidence and month/store/day selection, stable largest-remainder rounding, synthetic example, catalogue invalidation and closed-by-default additive wallet UI. No API or persistence. Existing first financial company selector remains unchanged.
 
 Node20.20.2 focused validation:8 tests PASS /0FAIL/0SKIP, covering pure arithmetic/eligibility, mounted preview zero-network and stale-catalogue behavior, and the three existing wallet pricing/postpaid/activity UI suites. Frontend npm run build PASS, existing bundle-size advisory only. Hosted functional acceptance NOT TESTED; full unskipped PR/main CI and exact healthy guarded release remain required. No actual wallet/customer/provider/email action performed. Parent36 and all actual funding/email, external tariffs and shared monthly financial posting remain OPEN.
+
+## Full CI integration correction
+
+PR3488 run41345468760 found2 failures among5141 tests (5139PASS/2FAIL/0SKIP): existing invoice-switch/trial mounted tests use the first checkbox in the wallet. The new preview mounted before the financial controls changed that DOM ordering. No existing financial logic failed or changed; do not weaken those tests. Move the additive preview below the existing wallet content, preserving existing control ordering, then rerun all mounted wallet UI regressions and full CI. Hosted acceptance remains NOT TESTED.
+
+Correction focused validation Node20.20.2:10PASS/0FAIL/0SKIP including both unchanged previously failing mounted suites and previous pricing/postpaid/activity regressions. Full CI rerun required; no hosted or financial action.
