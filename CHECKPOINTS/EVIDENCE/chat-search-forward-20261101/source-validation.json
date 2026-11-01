@@ -1,0 +1,46 @@
+{
+  "status": "EXACT SOURCE PR/MAIN CI AND STABLE SIGNING SUCCESS; PUBLICATION PENDING",
+  "claimPR": 3433,
+  "claimMerge": "946fa417b858fbece65c9ded6cb8db506bca91b0",
+  "sourcePR": 3434,
+  "sourceHead": "84f84dfd099e2b61b413a8205a89f41907c8b6c2",
+  "sourcePRCI": 41256750055,
+  "androidPRCI": 41256750041,
+  "ftextRecoveryCI": 41256750049,
+  "ftextRecoveryTests": 50,
+  "walletRecoveryCI": 41256750053,
+  "walletRecoveryTests": 8,
+  "physicalCombinedAcceptance": "NOT TESTED",
+  "realChatSendReadAckPushEmail": "NOT PERFORMED",
+  "sourceServerTests": 5050,
+  "sourceBackupTests": 8,
+  "androidInstrumentationTests": 52,
+  "actualCaptureTests": 1,
+  "sourceMerge": "063579c975dc9133890d2974fad8cf9016322cd8",
+  "sourceMainCI": 41257899411,
+  "signingRun": 41257953318,
+  "androidSourceTree": "1a2fc7bcde0e4d643ed6e2a3c6e64b0e2ea11c41",
+  "signingFirstAttempt": "REFUSED before key access until exact main full CI SUCCESS; pinned source retained",
+  "browserArtifact": 13063893078,
+  "browserArtifactZipSha256": "5b6a535d6dc6b8b4d8db611d0ed70afa1d86e02127f0f3b70151ecc6bef2bec4",
+  "browserSyntheticViewports": [
+    [
+      390,
+      844
+    ],
+    [
+      360,
+      740
+    ],
+    [
+      390,
+      420
+    ]
+  ],
+  "browserToolsWrites": 0,
+  "sourceMainServerTests": 5050,
+  "sourceMainBackupTests": 8,
+  "signingArtifact": 13064516297,
+  "signingArtifactZipSha256": "9eddc6aa94abce4ee966df12ddb34e75e44e6597f086ab6e8ceb347119895af6",
+  "signingAttempt": 2
+}
