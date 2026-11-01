@@ -1,5 +1,9 @@
 # AI-COST-PASS-THROUGH-01 — LAB NOT EXECUTED / ENVIRONMENT UNAVAILABLE / RESUME PLAN
 
+## COST-LAB-20261101-ASK2 AFTER / RESTORE2 BEFORE
+
+Exactly one message submitted; native answer «Έτοιμος.». One new settled PLATFORM_CUSTOMER_ASSISTANT entry f9a25d29-303a-4b83-8b1e-94f804e9c51b, created20:59:04 and finalized20:59:10 Athens (17:59 UTC), gpt-5-mini, input4918/output352/cached0 tokens; charge2592micro. Actual requester SuperAdmin and selected LAB store shown; source SuperAdmin assistant. All additional components0. Available3683091→3680499micro (delta2592), settled406876→409468micro (delta2592), entries13→14, calls8→9. Reserved930033 unchanged; credits5020000 unchanged; debt0/rates0/invoiceOFF/emailOFF unchanged; masterON. Gross derived4613124→4610532micro. No duplicate call/new REVIEW, credit, repayment, invoice or email. Screenshot ai-cost-lab-answer-20261101.jpg captured from native UI. Limited one-call assistant LAB PASS pending restore, not all-cost acceptance. Next identified RESTORE2: save masterOFF only with other flagsOFF/rates0 and reread wallet; private foreign control read-only. RecordedUTC:2026-11-01T19:00:13.161575+00:00
+
 ## COST-LAB-20261101-ENABLE2 AFTER / ASK2 BEFORE
 
 Closed/reopened wallet and reselected LAB: master ON persisted; invoice/email OFF, rates0. Available3683091micro, reserved930033micro, settled406876micro/8calls, credits5020000micro, history13, debt0 unchanged. Empty native full-chat now authorized after normal fresh MFA sign-in, LAB selected and all-stores OFF; message input enabled. Next action ASK2: submit exactly once «Για δοκιμή λειτουργίας, απάντησε μόνο με τη λέξη Έτοιμος.» No data/report mutation, voice, attachment or financial action. Record actual provider rows and wallet delta; no ambiguous retry. Restore OFF after measurement. RecordedUTC:2026-11-01T18:58:49.138496+00:00
