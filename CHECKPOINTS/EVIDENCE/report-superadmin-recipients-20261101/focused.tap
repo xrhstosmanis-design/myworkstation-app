@@ -1,0 +1,115 @@
+TAP version 13
+# Subtest: explicit administrator provenance authorizes without pretending mailbox verification or recipient consent
+ok 1 - explicit administrator provenance authorizes without pretending mailbox verification or recipient consent
+  ---
+  duration_ms: 5.213633
+  ...
+# Subtest: legacy recipient proof remains distinct and unverified addresses never auto-promote
+ok 2 - legacy recipient proof remains distinct and unverified addresses never auto-promote
+  ---
+  duration_ms: 0.300371
+  ...
+# Subtest: administrative Save requires explicit current SuperAdmin and rejects injected authority/duplicate periods before writes
+ok 3 - administrative Save requires explicit current SuperAdmin and rejects injected authority/duplicate periods before writes
+  ---
+  duration_ms: 6.076806
+  ...
+# Subtest: SuperAdmin native fixture refuses production, remote and URL overrides
+ok 4 - SuperAdmin native fixture refuses production, remote and URL overrides
+  ---
+  duration_ms: 1.830564
+  ...
+# Subtest: native administrative address/grant/policy are atomic, scoped, revocable and do not verify mailboxes or send invitations
+ok 5 - native administrative address/grant/policy are atomic, scoped, revocable and do not verify mailboxes or send invitations # SKIP
+  ---
+  duration_ms: 2.56843
+  ...
+# Subtest: mounted SuperAdmin email/save uses one administrative action, same recipient list, truthful OFF/provenance and revocation
+ok 6 - mounted SuperAdmin email/save uses one administrative action, same recipient list, truthful OFF/provenance and revocation
+  ---
+  duration_ms: 294.269915
+  ...
+# Subtest: mounted dispatch controls separate mailbox verification, consent and grants and discard old-store responses
+ok 7 - mounted dispatch controls separate mailbox verification, consent and grants and discard old-store responses
+  ---
+  duration_ms: 519.288488
+  ...
+# Subtest: mounted email/save sends one invitation action, reuses confirmed state and discards late old-store success
+ok 8 - mounted email/save sends one invitation action, reuses confirmed state and discards late old-store success
+  ---
+  duration_ms: 104.465447
+  ...
+# Subtest: actual source/payload preparation fences configuration and binds real principal, consent and period
+ok 9 - actual source/payload preparation fences configuration and binds real principal, consent and period
+  ---
+  duration_ms: 131.340369
+  ...
+# Subtest: authoritative revocation/role/session/license/settings and activation changes cannot authorize
+ok 10 - authoritative revocation/role/session/license/settings and activation changes cannot authorize
+  ---
+  duration_ms: 185.79545
+  ...
+# Subtest: start compares immutable input and exact stored bytes to freshly rebuilt source
+ok 11 - start compares immutable input and exact stored bytes to freshly rebuilt source
+  ---
+  duration_ms: 283.009683
+  ...
+# Subtest: configuration first-insert lock busy fails before source and no fallback/retry
+ok 12 - configuration first-insert lock busy fails before source and no fallback/retry
+  ---
+  duration_ms: 0.824093
+  ...
+# Subtest: partial installer report-table contention refuses before authorization or financial source
+ok 13 - partial installer report-table contention refuses before authorization or financial source
+  ---
+  duration_ms: 0.873896
+  ...
+# Subtest: scope own-data validation never invokes getters or falls back to company
+ok 14 - scope own-data validation never invokes getters or falls back to company
+  ---
+  duration_ms: 0.711021
+  ...
+# Subtest: fresh consent cannot backfill an older period and activation changes during source work fail closed
+ok 15 - fresh consent cannot backfill an older period and activation changes during source work fail closed
+  ---
+  duration_ms: 78.309659
+  ...
+# Subtest: separate SuperAdmin authority prepares and starts a report without forged verification or mailbox consent
+ok 16 - separate SuperAdmin authority prepares and starts a report without forged verification or mailbox consent
+  ---
+  duration_ms: 117.151832
+  ...
+# Subtest: administrative proof does not bypass tamper, principal, lifecycle, cutoff, closed-day or source HOLD
+ok 17 - administrative proof does not bypass tamper, principal, lifecycle, cutoff, closed-day or source HOLD
+  ---
+  duration_ms: 157.203502
+  ...
+# Subtest: invitation native fixture refuses remote/production/URL override targets
+ok 18 - invitation native fixture refuses remote/production/URL override targets
+  ---
+  duration_ms: 1.986859
+  ...
+# Subtest: native invitation proof, public authority, stale links, rollback and two-client confirmation
+ok 19 - native invitation proof, public authority, stale links, rollback and two-client confirmation # SKIP
+  ---
+  duration_ms: 1.240229
+  ...
+# Subtest: persistence native fixture guard rejects remote, production and URL overrides
+ok 20 - persistence native fixture guard rejects remote, production and URL overrides
+  ---
+  duration_ms: 4.223262
+  ...
+# Subtest: native six-table provisioning, mailbox verification/consent, concurrency, invalidation and rollback
+ok 21 - native six-table provisioning, mailbox verification/consent, concurrency, invalidation and rollback # SKIP
+  ---
+  duration_ms: 0.840496
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 3
+# todo 0
+# duration_ms 1882.290228
