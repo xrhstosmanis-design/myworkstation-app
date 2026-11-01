@@ -1,3 +1,7 @@
+## 01/11/2026 - CHAT-VIBER-BATCH-01 / HISTORICAL ACCEPTANCE PLAN - ABSORBED INTO0.1.14
+
+Retained owner codex/chat-native-readers-20261031. Current public release is Android0.1.14/code15; the single expanded physical check is CHAT-SEARCH-FORWARD-01 in docs/testing/chat-search-forward-20261101.md and CHECKPOINTS/CHANGES/2026-11-01-chat-search-forward.md. Older0.1.12/0.1.13 installation or separate names/interactions-only next actions below are historical and superseded. Physical NOT TESTED; no inferred PASS or replay of accepted media/entry. Other owners retained.
+
 # Chat0.1.13 — μία συγκεντρωτική αποδοχή μετά τη διάθεση
 
 Owner: codex/chat-native-readers-20261031. Scope CHAT-VIBER-BATCH-01. Κατάσταση: σχέδιο ελέγχου, όχι manual/PASS. Εκτελείται μόνο μετά την επαλήθευση της δημόσιας0.1.13/code14. Δεν επαναλαμβάνονται ήδη αποδεκτά φωνητικά/φωτογραφίες/βίντεο/πρώτη είσοδος μόνο για τεκμηρίωση.

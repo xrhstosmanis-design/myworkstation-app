@@ -1,5 +1,5 @@
 {
-  "status": "EXACT SOURCE PR/MAIN CI AND STABLE SIGNING SUCCESS; PUBLICATION PENDING",
+  "status": "ENGINEERING PUBLICATION AND INDEPENDENT BYTE VERIFICATION COMPLETE; ONE EXPANDED PHYSICAL ACCEPTANCE PENDING",
   "claimPR": 3433,
   "claimMerge": "946fa417b858fbece65c9ded6cb8db506bca91b0",
   "sourcePR": 3434,
@@ -42,5 +42,17 @@
   "sourceMainBackupTests": 8,
   "signingArtifact": 13064516297,
   "signingArtifactZipSha256": "9eddc6aa94abce4ee966df12ddb34e75e44e6597f086ab6e8ceb347119895af6",
-  "signingAttempt": 2
+  "signingAttempt": 2,
+  "distributionPR": 3442,
+  "distributionHead": "71f1461180596c5af2faf5063334e48febf2f8f4",
+  "distributionPRCI": 41259646527,
+  "distributionMerge": "aaf3dce10b7d19fb700fb1f30a4e464cf498e67b",
+  "distributionServerTests": 5050,
+  "distributionBackupTests": 8,
+  "distributionMainCI": 41260513845,
+  "distributionMainServerTests": 5050,
+  "distributionMainBackupTests": 8,
+  "deployWorkflowRun": 41261365197,
+  "renderDeployId": "dep-dbj9d2ou01pc73eqp6vg",
+  "liveRevision": "aaf3dce10b7d19fb700fb1f30a4e464cf498e67b"
 }
