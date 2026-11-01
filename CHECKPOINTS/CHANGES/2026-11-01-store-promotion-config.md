@@ -1,3 +1,9 @@
+## 01/11/2026 — STORE-PROMOTION-CONFIG-01 / TWO SCOPED SAVES READ BACK / IDENTITY CLARIFICATION OPEN
+
+Retained owner ops/store-promotions-20261101; receipt docs/store-promotions-handoff-20261101. Claim3467/head28b045191 docsCI41314612988 SUCCESS merged8096c723 BEFORE live configuration. Existing authenticated Platform SuperAdmin, normal canonical support UI, independently healthy ad111f6f9c69dee7dcce5713eed39abe72aab122. Two separate authorized saves, one existing barcode-matched product in each explicitly requested store, returned success and were independently read back active after leaving/reopening Offers. Each target list went0→1 with correct selected scope and period; existing retail displayed unchanged. No new catalogue/barcode or other-store write, sale, stock, payment, fiscal, role, schema or release action. Ongoing real business prevents any financial/stock invariance claim; checkout/physical engine effects NOT TESTED. Commercial terms and exact private baseline/readback journal are retained privately, not published here.
+
+The requested plan is PARTIAL: four source product identities have different recorded barcodes; do not substitute old variants, add barcodes, create new products or duplicate the two completed saves. Same owner retained; remaining work is exact identity resolution, remaining authorized saves and independent readback. One precise user clarification is needed if no canonical exact mapping is found: whether the supplier plan also applies to the existing standard-barcode products or only the new source-coded packaging. No module-wide LAB/LIVE/USER PASS or N47/N48 replay/closure. Manual adds only observed operational guidance. Checkpoint CHECKPOINTS/CHANGES/2026-11-01-store-promotion-config.md. All peer assignments preserved.
+
 # STORE-PROMOTION-CONFIG-01
 
 ## 01/11/2026 — STORE-PROMOTION-CONFIG-01 / ASSIGNED / READ-ONLY PREFLIGHT
