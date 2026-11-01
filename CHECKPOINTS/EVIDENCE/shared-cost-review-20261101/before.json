@@ -1,0 +1,25 @@
+{
+  "observedAt": "2026-11-01T22:33:01.067Z",
+  "revision": "e950259f665d4e4fea439ecb57221d33c01e7163",
+  "scope": "synthetic temporary owner review and virtual LAB only",
+  "lab": {
+    "availableMicros": "3680499",
+    "reservedMicros": "930033",
+    "settledMicros": "409468",
+    "creditsMicros": "5020000",
+    "entries": 14,
+    "requests": 9,
+    "debtMicros": "0",
+    "master": false,
+    "invoice": false,
+    "email": false,
+    "additionalRates": [
+      "0",
+      "0",
+      "0"
+    ],
+    "notices": "Only pre-existing25Oct disabled-email credit notice"
+  },
+  "privateCustomerControl": "NOT TESTED - no attempt after prior automatic approval rejection",
+  "businessTransaction": false
+}
