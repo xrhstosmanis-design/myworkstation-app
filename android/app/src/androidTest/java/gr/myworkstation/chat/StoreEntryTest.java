@@ -52,7 +52,7 @@ public class StoreEntryTest {
                 String value = "header." + Base64.encodeToString(claims.toString().getBytes(StandardCharsets.UTF_8), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING) + ".signature";
                 return new JSONObject().put("token", value);
             }
-            if (path.equals("/api/store-chat/stores/store-b/messages?limit=100")) return new JSONObject().put("store", store).put("rows", new JSONArray());
+            if (path.equals("/api/store-chat/stores/store-b/messages?limit=100&topic=GENERAL")) return new JSONObject().put("store", store).put("rows", new JSONArray());
             throw new AssertionError("Unexpected fixture request: " + method + " " + path);
         }
     }
@@ -86,9 +86,9 @@ public class StoreEntryTest {
             });
             await(scenario, "Isolated store B", false);
             scenario.onActivity(activity -> find(activity.getWindow().getDecorView(), "Isolated store B", false).performClick());
-            await(scenario, "Γράψε μήνυμα…", true);
-            await(scenario, "Δεν υπάρχουν ακόμη μηνύματα.", false);
-            assertTrue(api.requests.contains("GET /api/store-chat/stores/store-b/messages?limit=100"));
+            await(scenario, "Μήνυμα · Συνομιλία", true);
+            await(scenario, "Δεν υπάρχουν ακόμη μηνύματα στο «Συνομιλία».", false);
+            assertTrue(api.requests.contains("GET /api/store-chat/stores/store-b/messages?limit=100&topic=GENERAL"));
             assertEquals(!platform, api.requests.contains("POST /api/auth/owner-companies/select"));
         }
     }

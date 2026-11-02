@@ -1,3 +1,5 @@
+import {chatSendContext} from '../src/chat-interactions.mjs';
+import {chatTopic,topicRow} from '../src/chat-topics.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -27,12 +29,12 @@ test('voice parser rejects wrong MIME, noncanonical base64, missing or mixed pay
 function harness(){
   const routes=new Map(),messages=[],audits=[],pushes=[];let auditFailure=false;
   const db={store:{findUnique:async({where})=>where.id==='store'?{id:'store',companyId:'company',name:'LAB'}:null},employee:{findMany:async()=>[]},$queryRaw:async()=>[],
-    $executeRaw:async(strings,...values)=>{const sql=strings.join('?');if(sql.includes('INSERT INTO "StoreChatMessage"')){messages.push({id:values[0],companyId:values[1],storeId:values[2],sender:values[3],body:values[4],mime:values[6],data:values[9]});return 1;}if(sql.includes('INSERT INTO "WorkforceAuditLog"')){if(auditFailure)throw new Error('audit unavailable');audits.push(JSON.parse(values[6]));return 1;}throw new Error('Unexpected write');},
+    $executeRaw:async(strings,...values)=>{const sql=strings.join('?');if(sql.includes('INSERT INTO "StoreChatMessage"')){messages.push({id:values[0],companyId:values[1],storeId:values[2],sender:values[3],category:values[4],body:values[5],mime:values[7],data:values[10]});return 1;}if(sql.includes('INSERT INTO "WorkforceAuditLog"')){if(auditFailure)throw new Error('audit unavailable');audits.push(JSON.parse(values[6]));return 1;}throw new Error('Unexpected write');},
     $transaction:async callback=>{const m=messages.length,a=audits.length;try{return await callback(db)}catch(error){messages.splice(m);audits.splice(a);throw error;}}
   };
   const router={get:(p,...handlers)=>routes.set('GET '+p,handlers.at(-1)),post:(p,...handlers)=>routes.set('POST '+p,handlers.at(-1)),put(){},patch(){}};
   const source=fs.readFileSync(new URL('../src/routes/store-chat.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'').replace('export async function','async function').replace('export default router;','return router;');
-  new Function('express','prisma','crypto','parseVoiceAttachment','isPlatformSuperAdmin','sendStoreChatPush','nativePushStatus',source)({Router:()=>router},db,crypto,parseVoiceAttachment,u=>u?.role==='SUPER_ADMIN',async value=>{pushes.push(value);return {attempted:0,delivered:0}},()=>({configured:false}));
+  new Function('express','prisma','crypto','parseVoiceAttachment','isPlatformSuperAdmin','sendStoreChatPush','nativePushStatus','chatSendContext','chatTopic','topicRow',source)({Router:()=>router},db,crypto,parseVoiceAttachment,u=>u?.role==='SUPER_ADMIN',async value=>{pushes.push(value);return {attempted:0,delivered:0}},()=>({configured:false}),chatSendContext,chatTopic,topicRow);
   const request=async(body,user={id:'owner',role:'OWNER',companyId:'company'},method='POST',storeId='store')=>{
     const res={statusCode:200,headers:{},status(code){this.statusCode=code;return this},setHeader(k,v){this.headers[k]=v},json(value){this.body=value;return this}};let error;
     await routes.get(method==='GET'?'GET /stores/:storeId/messages':'POST /stores/:storeId/voice-messages')({body,user,params:{storeId},query:{}},res,e=>{error=e});
@@ -58,4 +60,12 @@ test('registered voice handler rejects foreign store/company and malformed reque
 test('voice audit failure rolls back message and suppresses push; existing scoped list advertises support',async()=>{
   const h=harness();h.failAudit();const result=await h.request({attachment:attachment(wave())});assert.match(result.error.message,/audit unavailable/);assert.equal(h.messages.length+h.audits.length+h.pushes.length,0);
   const list=await harness().request(null,{id:'op',companyId:'company',storeId:'store',tokenType:'STORE_OPERATOR'},'GET');assert.equal(list.error,undefined);assert.equal(list.body.voiceMessagesAvailable,true);
+});
+
+test('explicit cash and invoice topics preserve media validator and route to canonical category',async()=>{
+ for(const topic of ['CASH','INVOICE']){
+  const h=harness(),r=await h.request({topic,category:'GENERAL',attachment:attachment(wave())});
+  assert.equal(r.error,undefined);assert.equal(r.statusCode,201);assert.equal(h.messages[0].category,topic);assert.equal(h.audits[0].category,topic);
+ }
+ for(const topic of ['BAD',null]){const h=harness(),r=await h.request({topic,attachment:attachment(wave())});assert.equal(r.error?.status,400);assert.equal(h.messages.length+h.audits.length+h.pushes.length,0);}
 });

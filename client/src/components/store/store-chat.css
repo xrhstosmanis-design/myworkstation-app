@@ -100,3 +100,43 @@
 .chat-mobile-app .store-chat-compose>button:last-child{font-size:0;width:48px;min-width:48px}
 
 .chat-mobile-app .store-chat-modal>header h2{font-size:17px!important}
+
+/* Store topics and calm conversation surfaces; no POS utility styles are changed. */
+.store-chat-modal{background:#f4f8fa;border:1px solid #d7e5eb;border-radius:22px;max-height:92dvh}
+.store-chat-modal>header{align-items:center;padding:14px 18px;background:linear-gradient(115deg,#124b69,#126e78);gap:10px;flex-shrink:0}
+.store-chat-modal>header>div{flex:1;min-width:0}
+.store-chat-modal>header h2{font-size:21px;line-height:1.25;overflow-wrap:anywhere;margin:4px 0}
+.store-chat-modal>header h2 svg{width:22px;height:22px;flex:none}
+.store-chat-modal>header p{font-size:12px;line-height:1.35}
+.store-chat-modal>header>div>small{font-size:10px;letter-spacing:.08em;opacity:.8}
+.store-chat-modal>header>.chat-overflow,.store-chat-modal>header>.store-chat-close{display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;border-radius:14px;background:#ffffff20;color:#fff;padding:0}
+.store-chat-topics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:7px 10px;gap:5px;background:#fff;border-bottom:1px solid #dce8ed;flex-shrink:0}
+.store-chat-topics button{display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:44px;border:1px solid transparent;border-radius:12px;background:transparent;color:#4b6774;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.store-chat-topics button span{font-size:18px;line-height:1}
+.store-chat-topics button[aria-pressed="true"]{background:#e4f3f1;border-color:#b3dcd6;color:#075f59}
+.store-chat-topics button:focus-visible,.store-chat-compose input:focus-visible{outline:3px solid #66b6af;outline-offset:1px}
+.store-chat-messages{flex:1 1 auto;min-height:100px;background:#f1f6f8;padding:18px;scrollbar-width:thin;overscroll-behavior:contain}
+.store-chat-messages article{width:fit-content;max-width:86%;padding:11px 14px;border-radius:4px 17px 17px 17px;border-color:#e0eaed;box-shadow:0 2px 5px #153a4d08;overflow-wrap:anywhere}
+.store-chat-messages article.is-own{margin-left:auto;border-radius:17px 4px 17px 17px;background:#e3f3ee;border-color:#cde6dd}
+.store-chat-messages article>p{font-size:16px;line-height:1.5;color:#173d4b}
+.store-chat-messages article>small{font-size:11px;line-height:1.45}
+.store-chat-messages .store-chat-sender{font-size:12px;color:#1d6970;margin:4px 0}
+.store-chat-messages article.is-unread{border-width:1px;border-left:3px solid #1683ba}
+.store-chat-messages article.is-important{background:#fff6d8;border-color:#e7bf53}
+.store-chat-messages article.is-completed{background:#f0fff7;border-color:#74c69d}
+.store-chat-messages article.is-pinned{border-left:4px solid #6941c6}
+.store-chat-empty{height:100%;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;color:#607c87;padding:20px;box-sizing:border-box}
+.store-chat-empty svg{width:32px;height:32px;color:#73a4aa}.store-chat-empty b{font-size:15px}.store-chat-empty span{font-size:12px}
+.store-chat-compose{background:#fff;padding:10px 12px;border-color:#dce8ed;flex-shrink:0}
+.store-chat-compose>input{border-radius:22px;border-color:#dbe7eb;background:#f4f8fa;min-height:44px;padding:10px 15px}
+.store-chat-compose>.chat-add{background:#e9f4f2;color:#106c64;border-radius:50%;padding:0}
+.store-chat-compose>button:last-child{border-radius:22px;background:#087b70;padding:10px 15px}
+.store-chat-reply-draft{background:#eaf5f2;border-left:3px solid #159488;color:#225e55;font-size:13px;padding:7px 12px;flex-shrink:0}
+.store-chat-modal>.store-chat-toolbar:not([hidden]){top:72px}
+@media(max-width:520px){.store-chat-modal{border-radius:16px}.store-chat-modal>header{padding:9px 10px}.store-chat-modal>header h2{font-size:17px}.store-chat-modal>header p{font-size:11px}.store-chat-topics{padding:5px 7px;gap:3px}.store-chat-topics button{font-size:13px;gap:4px;padding:5px 3px}.store-chat-topics button span{font-size:16px}.store-chat-messages{padding:10px;min-height:60px}.store-chat-messages article{max-width:90%;padding:9px 11px}.store-chat-compose{padding:8px}.store-chat-compose>button:last-child{padding:10px}}
+.store-chat-announcements article{padding:12px;margin:0 0 10px;border:1px solid #dce8ed;border-left:3px solid #7c3aed;border-radius:12px;background:#faf8ff;overflow-wrap:anywhere}.store-chat-announcements article p{white-space:pre-wrap;line-height:1.5}.store-chat-announcements article small{display:block;color:#5b7380}.store-chat-announcements article>div{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.store-chat-announcement-preview{display:block;width:100%;max-height:360px;object-fit:contain}
+@media(max-height:560px){.chat-mobile-app .store-chat-modal>header{padding:2px 8px}.chat-mobile-app .store-chat-modal>header p{display:none}.store-chat-topics{padding:2px 7px}.store-chat-compose{padding-top:6px;padding-bottom:6px}}
+/* A long store title may wrap on narrow phones; keep the subtitle out of its height budget. */
+@media(max-width:380px){.chat-mobile-app .store-chat-modal>header p{display:none}}
+@media(max-height:560px){.chat-mobile-app>.shift-overlay>.store-chat-modal>header{padding:2px 8px}}
