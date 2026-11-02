@@ -1,3 +1,11 @@
+## 2 November 2026 — FTEXT deadline scheduling / before-source continuation
+
+Continue the existing assigned FTEXT scope on fix/ftext-live-latency-20261102, as explicitly requested by the owner. Performance acceptance remains OPEN/FAIL; no new physical PASS or diagnostic financial transaction. Preserve other assignments and accepted behavior.
+
+Bounded implementation: derive the next STATUS refresh from original acknowledged proof timestamps. Permit queued work while that proof remains valid, rather than immediately restarting STATUS after every successful join. Preserve the existing20second readiness and15second heartbeat limits, original evidence timestamps, single-worker/claim exclusion, handoff and idempotency gates. Expired, missing or negative proof triggers immediate refresh; never renew proof artificially. No vendor configuration, automatic archive, pairing or production business-data change.
+
+Source NOT IMPLEMENTED. Require actual Windows fixtures, full PR/main CI and normal guarded exact release before a package. Physical improvement NOT TESTED. Next: merge this before-source record after applicable CI, then implement under the same retained owner. No action requested from the operating store. Regenerated shared PDF remains local pending synchronized release receipt; preserve published PDF bytes in this claim.
+
 ## 02/11/2026 14:34 Ελλάδας — INVENTORY-RECONCILIATION-01 / DIRECT RESULT EVIDENCE SCOPED LAB PASS / FULL REQUEST OPEN
 
 Same retained owner; receipt docs/inventory-result-drilldown-pass-20261102. Actual native SA desktop LAB on exact healthy6d4937a910be74c3a79092aa3a86c81add296611. New result button opened TEST1's original movement details and its two historical correction/revoke records, focused the analysis, returned focus to the precise result, and cleared selection/closed members on explicit report refresh. Reopening remained correct. Actual10−5=5expected/count4, initial−1+correction0=final−1/unknowncost unchanged; six movement rows include one excluded opening baseline and five contributing outflows. No accepted+1/revoke or business fixture replay.

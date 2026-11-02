@@ -1,3 +1,11 @@
+## 2 November 2026 — FTEXT deadline scheduling / before-source continuation
+
+Continue the existing assigned FTEXT scope on fix/ftext-live-latency-20261102, as explicitly requested by the owner. Performance acceptance remains OPEN/FAIL; no new physical PASS or diagnostic financial transaction. Preserve other assignments and accepted behavior.
+
+Bounded implementation: derive the next STATUS refresh from original acknowledged proof timestamps. Permit queued work while that proof remains valid, rather than immediately restarting STATUS after every successful join. Preserve the existing20second readiness and15second heartbeat limits, original evidence timestamps, single-worker/claim exclusion, handoff and idempotency gates. Expired, missing or negative proof triggers immediate refresh; never renew proof artificially. No vendor configuration, automatic archive, pairing or production business-data change.
+
+Source NOT IMPLEMENTED. Require actual Windows fixtures, full PR/main CI and normal guarded exact release before a package. Physical improvement NOT TESTED. Next: merge this before-source record after applicable CI, then implement under the same retained owner. No action requested from the operating store. Regenerated shared PDF remains local pending synchronized release receipt; preserve published PDF bytes in this claim.
+
 ## 02/11/2026 — INVENTORY-RECONCILIATION-01 / RETAINED RESIDUAL AFTER DIRECT NAVIGATION PASS
 
 ASSIGNED same INVENTORY-RECONCILIATION-01 owner. Direct result-to-original-movement/history navigation3524 is now scoped hostedLABPASS on6d4937a; completed source/claim removed below. Preserve3518 correction/revoke and prior read/export/cost PASS, manual and exact evidence. Full task remains OPEN: company-wide confirmed identity reuse, independent physical warehouse/time capture and canonical count/invoice/source/access integrations with retained owners; broader authorized hosted group/scenario acceptance remains separate. Next bounded step is gap review and coordination under retained ownership, not a second claimant or replay of accepted business fixtures. Checkpoint2026-11-02-inventory-result-drilldown.md.

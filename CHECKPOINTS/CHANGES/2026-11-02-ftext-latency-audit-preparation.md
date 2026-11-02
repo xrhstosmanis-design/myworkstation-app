@@ -1,3 +1,11 @@
+## 2 November 2026 — FTEXT deadline scheduling / before-source continuation
+
+Continue the existing assigned FTEXT scope on fix/ftext-live-latency-20261102, as explicitly requested by the owner. Performance acceptance remains OPEN/FAIL; no new physical PASS or diagnostic financial transaction. Preserve other assignments and accepted behavior.
+
+Bounded implementation: derive the next STATUS refresh from original acknowledged proof timestamps. Permit queued work while that proof remains valid, rather than immediately restarting STATUS after every successful join. Preserve the existing20second readiness and15second heartbeat limits, original evidence timestamps, single-worker/claim exclusion, handoff and idempotency gates. Expired, missing or negative proof triggers immediate refresh; never renew proof artificially. No vendor configuration, automatic archive, pairing or production business-data change.
+
+Source NOT IMPLEMENTED. Require actual Windows fixtures, full PR/main CI and normal guarded exact release before a package. Physical improvement NOT TESTED. Next: merge this before-source record after applicable CI, then implement under the same retained owner. No action requested from the operating store. Regenerated shared PDF remains local pending synchronized release receipt; preserve published PDF bytes in this claim.
+
 ## 2 November 2026 — FTEXT source unchanged / shared PDF publication moved to final release receipt
 
 Main continued documentation-only throughf1e0bb745f8129e3d388ce3356864c55e1c24200 (cash-source-batch and inventory result-navigation claims). Preserve all peer claims and records. Retain the latest main output PDF byte-for-byte in the SOURCE PR to avoid repeated binary conflicts during long full CI; the before-source claim/audit already synchronized the PDF in merged3516. This is not a new physical acceptance or a PASS closure. The final engineering-release receipt must regenerate the canonical PDF from the fully merged pending roadmap and synchronize checkpoint/active/tracker/pending/manual limitations before handoff. No physical result is omitted. Runtime/test bytes remain exactly the green18624a7 candidate; new source changes are not introduced by these record merges. Whole FTEXT stays OPEN/assigned and NOT INSTALLED pending exact combined/main CI and guarded release.
