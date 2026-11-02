@@ -516,7 +516,7 @@ export default function InventoryV2Center({
           )}
           </>}
           <h4>Απογραφές</h4>
-          {delegated?.listLoaded && !stocktakes.length && <p>Δεν υπάρχουν ανοιχτές απογραφές στο κατάστημα.</p>}
+          {delegated?.listLoaded && !stocktakes.length && <p>Δεν υπάρχουν διαθέσιμες απογραφές στο κατάστημα.</p>}
           <div className="inv2-history">
             {stocktakes.map((s) => (
               <div key={s.id} className="inv2-history-row">
@@ -608,7 +608,7 @@ export default function InventoryV2Center({
                   )}
                 </form>
               )}
-              {!delegated && mobileView?<div className="inv2-mobile-preview"><InventoryMobileApp key={current.id} api={api} stocktakeId={current.id}/></div>:<InventoryFastCount key={delegated ? current.id : undefined} api={api} current={current} reload={open} setError={delegated ? delegated.setError : setError} delegated={delegated ? {canCount:delegated.canCount,canClear:delegated.canClear,canBulkZero:delegated.canBulkZero,onClear:delegated.onClear,onBulkZero:delegated.onBulkZero,canSeeExpected:delegated.canFinalize,locked,onCount:delegated.onCount} : null} />}
+              {!delegated && mobileView?<div className="inv2-mobile-preview"><InventoryMobileApp key={current.id} api={api} stocktakeId={current.id}/></div>:<InventoryFastCount key={delegated ? current.id : undefined} api={api} current={current} reload={open} setError={delegated ? delegated.setError : setError} delegated={delegated ? {canCount:delegated.canCount,canClear:delegated.canClear,canBulkZero:delegated.canBulkZero,onClear:delegated.onClear,onBulkZero:delegated.onBulkZero,canSeeExpected:delegated.canFinalize||delegated.canSeeExpected,locked,onCount:delegated.onCount} : null} />}
               <footer>
                 {delegated ? (delegated.canFinalize ? delegated.finalizationForm : null) : <>
                 <span>

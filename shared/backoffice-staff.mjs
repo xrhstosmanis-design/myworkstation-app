@@ -5,7 +5,7 @@ export const staffProfiles=Object.freeze({
   STOCKTAKER:{label:'Απογραφέας',capabilities:['inventory.read','inventory.count']},
   AUDITOR:{label:'Ελεγκτής',capabilities:['cash.read']}
 });
-export const staffCapabilities=Object.freeze(['inventory.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']);
+export const staffCapabilities=Object.freeze(['inventory.read','inventory.history.read','inventory.expected.read','inventory.count','inventory.create','inventory.finalize','inventory.clear','inventory.bulk-zero','inventory.delete','cash.read','products.read','products.create','products.opening-stock','sales.read','invoices.read','invoices.edit','invoices.approve','payments.read','payments.supplier','payments.expense','payments.cash','sales.cancel','shifts.close']);
 export const staffPermissionSections=Object.freeze([
   {key:'invoices',label:'Τιμολόγια',actions:[
     {key:'invoices.read',label:'Προβολή και εξαγωγή παραστατικών',description:'Βλέπει τη θυρίδα, τα πρωτότυπα και τις αγορές του καταστήματος.'},
@@ -30,6 +30,8 @@ export const staffPermissionSections=Object.freeze([
   ]},
   {key:'inventory',label:'Απογραφή',actions:[
     {key:'inventory.read',label:'Προβολή',description:'Βλέπει τις ανοιχτές απογραφές του καταστήματος.'},
+    {key:'inventory.history.read',label:'Προβολή ολοκληρωμένων απογραφών',description:'Βλέπει τις ολοκληρωμένες απογραφές και τις καταμετρημένες ποσότητες του καταστήματος. Δεν επιτρέπει αλλαγές, κόστος ή εξαγωγές.',requires:['inventory.read']},
+    {key:'inventory.expected.read',label:'Προβολή θεωρητικού αποθέματος και διαφοράς',description:'Βλέπει τη θεωρητική ποσότητα και τη διαφορά καταμέτρησης. Δεν επιτρέπει οριστικοποίηση ή προβολή κόστους.',requires:['inventory.read']},
     {key:'inventory.count',label:'Καταμέτρηση',description:'Καταχωρίζει ποσότητες σε ανοιχτή απογραφή.',requires:['inventory.read']},
     {key:'inventory.clear',label:'Διαγραφή μέτρησης',description:'Αφαιρεί καταμέτρηση γραμμής ανοικτής απογραφής, χωρίς αλλαγή αποθέματος.',requires:['inventory.read']},
     {key:'inventory.bulk-zero',label:'Μηδενισμός επιλεγμένων μετρήσεων',description:'Καταχωρίζει ποσότητα μηδέν μόνο στις επιλεγμένες γραμμές ανοικτής απογραφής.',requires:['inventory.read']},
