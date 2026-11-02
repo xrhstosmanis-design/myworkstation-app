@@ -1,0 +1,255 @@
+{
+  "scope": "Actual source3 hosted read/display/exports; not original-invoice verification, review write or full-task PASS",
+  "revision": "3bc8734fc112e96312ad66f65b2ac2bbb4d3cba0",
+  "xlsxSheets": [
+    "Αναφορά",
+    "Τελικό αποτέλεσμα",
+    "Είδη",
+    "Κινήσεις",
+    "Καταμετρήσεις",
+    "Ιστορικό ελέγχου",
+    "Πληρότητα πηγών",
+    "Συναλλαγές",
+    "Παραστατικά",
+    "Γραμμές παραστατικών",
+    "Συμβάντα πηγών",
+    "Συνδέσεις πηγών"
+  ],
+  "historyCounted": [
+    10,
+    4,
+    8,
+    4
+  ],
+  "historyTheoretical": [
+    11,
+    5,
+    5,
+    5
+  ],
+  "expected": 5,
+  "counted": 4,
+  "initialDifference": -1,
+  "reviewCorrection": 0,
+  "finalDifference": -1,
+  "unitCost": null,
+  "finalValue": null,
+  "consumptionExactlyOnce": true,
+  "sourceCounts": {
+    "transactions": 1,
+    "invoices": 46,
+    "invoiceLines": 544,
+    "systemEvents": 3
+  },
+  "eventImpacts": [
+    "NONE",
+    "NONE",
+    "TRANSACTION_EVIDENCE_ONLY"
+  ],
+  "reportMetadata": [
+    [
+      "Έλεγχος απογραφής",
+      "ΠΡΟΣ ΕΛΕΓΧΟ",
+      null
+    ],
+    [
+      "Κατάστημα",
+      "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      null
+    ],
+    [
+      "Προηγούμενη απογραφή",
+      "N39-LAB-20261010-0530-STOCKTAKE",
+      "8f6dcacc-3b62-4192-92ba-7d4269f68ab0"
+    ],
+    [
+      "Νεότερη απογραφή",
+      "N39-LAB-20261010-RECOUNT-REASON-01",
+      "d9f81c39-acd5-460c-9ce8-b37c9d849f86"
+    ],
+    [
+      "Πληρότητα",
+      "Προηγούμενη καταμέτρηση + τεκμηριωμένες εισαγωγές − εξαγωγές = αναμενόμενο φυσικό υπόλοιπο. Οι μη φυσικές διορθώσεις παρουσιάζονται χωριστά στο λογιστικό υπόλοιπο. Αβέβαιος χρόνος ή ελλιπής πηγή δεν παράγει επιβεβαιωμένη απώλεια.",
+      null
+    ],
+    [
+      "Αποτίμηση",
+      "Για επιβεβαιωμένη ομάδα ίδιου προϊόντος χρησιμοποιείται το αποθηκευμένο κόστος της νεότερης απογραφής του ρητά επιλεγμένου κύριου κωδικού. Άγνωστο ή μηδενικό κόστος δεν αποτιμάται.",
+      null
+    ],
+    [
+      "Ώρες",
+      "Europe/Athens",
+      null
+    ],
+    [
+      "Ελλείμματα τεμάχια",
+      1,
+      null
+    ],
+    [
+      "Πλεονάσματα τεμάχια",
+      0,
+      null
+    ],
+    [
+      "Καθαρή διαφορά τεμάχια",
+      -1,
+      null
+    ],
+    [
+      "Αξία ελλειμμάτων",
+      null,
+      null
+    ],
+    [
+      "Αξία πλεονασμάτων",
+      null,
+      null
+    ],
+    [
+      "Καθαρή αξία",
+      null,
+      null
+    ],
+    [
+      "Χωρίς υπολογισμό",
+      0,
+      null
+    ],
+    [
+      "Χωρίς κόστος",
+      1,
+      null
+    ],
+    [
+      "Έναρξη προηγούμενης",
+      "10/10/26, 08:31:07",
+      null
+    ],
+    [
+      "Οριστικοποίηση προηγούμενης",
+      "10/10/26, 08:33:44",
+      null
+    ],
+    [
+      "Έναρξη νέας",
+      "10/10/26, 12:58:11",
+      null
+    ],
+    [
+      "Οριστικοποίηση νέας",
+      "10/10/26, 14:49:05",
+      null
+    ],
+    [
+      "Χειριστής νέας",
+      "cms1k1bje001xhn3xulr0rooz",
+      null
+    ],
+    [
+      "Οριστικοποίηση από",
+      "cms1k1bje001xhn3xulr0rooz",
+      null
+    ],
+    [
+      "Αιτιολογία οριστικοποίησης",
+      "N39-LAB-20261010-RECOUNT-REASON-01 · Επιβεβαιωμένη επαναμέτρηση 4 αντί 5.",
+      null
+    ],
+    [
+      "Πεδίο αποθήκης",
+      "Ενιαίο απόθεμα του επιλεγμένου καταστήματος. Δεν υπάρχει ανεξάρτητη ταυτότητα φυσικής αποθήκης στην υπάρχουσα πηγή.",
+      null
+    ]
+  ],
+  "pdfPages": 10,
+  "pdfAllInvoiceLineAndEventIdsPresent": true,
+  "pdfBounds": [
+    {
+      "page": 1,
+      "chars": 4523,
+      "minX": 35.0,
+      "maxX": 558.250000232,
+      "maxBottom": 805.609374752,
+      "height": 841.89
+    },
+    {
+      "page": 2,
+      "chars": 7041,
+      "minX": 35.0,
+      "maxX": 555.2109377119997,
+      "maxBottom": 789.312499752,
+      "height": 841.89
+    },
+    {
+      "page": 3,
+      "chars": 7029,
+      "minX": 35.0,
+      "maxX": 552.5625001999999,
+      "maxBottom": 798.624999752,
+      "height": 841.89
+    },
+    {
+      "page": 4,
+      "chars": 7350,
+      "minX": 35.0,
+      "maxX": 560.0429689599997,
+      "maxBottom": 798.624999752,
+      "height": 841.89
+    },
+    {
+      "page": 5,
+      "chars": 7033,
+      "minX": 35.0,
+      "maxX": 543.0351564639996,
+      "maxBottom": 798.624999752,
+      "height": 841.89
+    },
+    {
+      "page": 6,
+      "chars": 6747,
+      "minX": 35.0,
+      "maxX": 553.2031251999999,
+      "maxBottom": 798.624999752,
+      "height": 841.89
+    },
+    {
+      "page": 7,
+      "chars": 7200,
+      "minX": 35.0,
+      "maxX": 551.0234377199996,
+      "maxBottom": 798.624999752,
+      "height": 841.89
+    },
+    {
+      "page": 8,
+      "chars": 7020,
+      "minX": 35.0,
+      "maxX": 556.7734377039998,
+      "maxBottom": 798.624999752,
+      "height": 841.89
+    },
+    {
+      "page": 9,
+      "chars": 7443,
+      "minX": 35.0,
+      "maxX": 547.8007814559996,
+      "maxBottom": 798.624999752,
+      "height": 841.89
+    },
+    {
+      "page": 10,
+      "chars": 5542,
+      "minX": 35.0,
+      "maxX": 559.2734377120005,
+      "maxBottom": 668.249999752,
+      "height": 841.89
+    }
+  ],
+  "checksums": {
+    "actual-report.pdf": "65b672a9d663d5ece2d409ca92ab01aa752e069b9559b3ec06ad915bf5181968",
+    "actual-report.xlsx": "df15c16ecd24447d09ba215b6d79882a26a7e0d40fb5fd932a30ddf3ff75bafa"
+  },
+  "legacyCostTable": "FAIL: operational table row and total still show0.00 while report/initial-audit summary correctly unknown; bounded presentation follow-up required"
+}

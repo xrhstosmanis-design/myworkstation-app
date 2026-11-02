@@ -1,0 +1,13 @@
+# Inventory missing-cost presentation — same-owner bounded follow-up
+
+## ASSIGNED BEFORE SOURCE — 02Nov2026 01:05 UTC
+
+Same INVENTORY-RECONCILIATION-01 receiving owner after explicit narrow transfer3492; branch feat/inventory-cost-display-20261102. No second owner or permission/writer takeover. This claim must be green/main before source edits.
+
+Actual installed3bc8734f LAB read/source/PDF/XLSX scoped PASS and36unchanged controls are in2026-11-01-inventory-reconciliation-source-evidence.md. New observed LAB FAIL: InventoryFastCount operational row/footer show0.00€ for TEST1 whose unitCost0 is missing/unvalued; initial audit summary and new reconciliation correctly show unknown. Screenshot CHECKPOINTS/EVIDENCE/inventory-reconciliation-source-evidence-20261102/inventory-legacy-cost-fail-20261102.png. Source inspection confirms inventoryTotals and row values multiply Number(unitCost||0); selected-product cost does the same, and legacy local CSV forwards raw zero. FullAudit exports the now-null audit cost as literal null rather than blank.
+
+Exact scope: read-only cost/value projection in client/src/components/inventory/InventoryFastCount.jsx and InventoryV2Center.jsx local export serialization; minimal shared helper only if needed, meaningful actual mounted UI/CSV/totals regression tests. Nonpositive/missing/nonfinite costs remain unknown and flagged. Known positive costs and quantities/retail remain unchanged; known zero monetary exposure for an actual zero quantity may stay0 with missing unit cost still flagged. Partial unknown costs must not silently turn into a complete0 total. Do not change count/recount/finalize, clear/bulk-zero/delete, SKU/warehouse schema, invoice/payment/stock writers, delegated rights/defaults or any retained owner scope.
+
+Protect existing SA/Owner report and blind/delegated value masking, selected-store/request isolation, original history, final reviewed groups, pending receipt/idempotency/authority/races and all measured36controls. Do not replay protected LAB transactions or create new counts/catalogue/stock movements. Isolated regression tests/full exact PR and main CI, ordinary guarded release/independent health required before hosted read-only same-pair row/footer/export retest and immediate manual/register/PDF closure.
+
+No runtime changes or new functional PASS at this claim. Hosted review writes remain separately BLOCKED pending explicit authorization for one synthetic report-only+1 and its revoke; never bypass. Other original full-request residuals/owners remain OPEN/assigned. Single next action green/main this claim, then one bounded missing-cost presentation fix.

@@ -1,0 +1,11 @@
+{
+  "actual-report.xlsx": "df15c16ecd24447d09ba215b6d79882a26a7e0d40fb5fd932a30ddf3ff75bafa",
+  "export-validation.json": "be5f869ecc68e7756b066c5543e1fb82d32b3758cc96974d81d2cf7b56731133",
+  "before.json": "c2a1f6e1ace0bf6df0fbbabefa5f3090806cccba2cd4a2e302021bd0af2297bb",
+  "pre-release-controls.json": "900a0e42a00c6e3c485839b5b0edf4d3ba24b9fa2c333a122db8cacac0aed369",
+  "after.json": "c2cc4f7c0043b6a77c3a91300b5d39c5417c1391c40c9998d12c9180182ac85f",
+  "actual-report.pdf": "65b672a9d663d5ece2d409ca92ab01aa752e069b9559b3ec06ad915bf5181968",
+  "inventory-source-evidence-lab-20261102.png": "83467d3d7f110559eccc16647662b7c073a1f60b61a0c34fd5422790c99bd5de",
+  "inventory-legacy-cost-fail-20261102.png": "2a76003541858d3c1a42e546cb7888838c06ce6ca1de8d5ac5d35ea2446d4a50",
+  "ci-proof.json": "725964c0bd7c5ea4ff03f2a83d600058a957abaf80c0d6aa848e56ebb409d372"
+}
