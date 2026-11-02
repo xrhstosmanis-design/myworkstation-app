@@ -1,3 +1,16 @@
+# Monthly control - listening-process startup configuration observation 02/11/2026
+
+Scoped LIVE observation PASS only for an authorized Render workspace operator using the existing WEB service Shell. PlatformAdmin authority alone is not Render access. This read-only diagnostic confirms allowed configuration fields on the actual listening application PID; it does not activate a scheduler or grant rights.
+
+1. Verify the existing web service srv-d9isenfavr4c73bdh52g and expected live revision. Do not use the backup service Shell as a substitute.
+2. Use the reviewed read-only PID/socket probe: locate the Node src/index.js process and confirm that PID owns a listening socket at its PORT. Privately filter its /proc/PID/environ to the nonsecret service/revision, monthly control, lifecycle profile and general execution flag. Never print raw environment, credentials or argv.
+3. Validate exact canonical control fields/serialization/fingerprints and compare the protected first slot. Actual02Nov18:45:51.801349UTC: instancekgdmj/PID576/PORT10000/source4b134730, enabled valid control with protected303042d6epoch/9d78fingerprint/1e0bactivationFingerprint/notBefore01Dec05UTC; captureprofileMONTHLY_INVENTORY_CAPTURE_V1/generalexecutionfalse. Full fields and hashes are in the linked checkpoint/aggregate evidence.
+4. If no actual listener is observable, record Shell configuration only; do not claim it was applied to the running application. On any mismatch stop and record the observation. Do not save settings, restart, force a sweep/job/capture or change the general execution flag to obtain a positive result.
+
+Limits: /proc/PID/environ represents the actual process startup environment, not later in-memory changes, native parser consumption or the scheduler's private timer/initialized/dormant state. This sample does not verify other service instances or December's future execution. Worker heartbeat metadata is not fresh HMAC validation. These residuals remain OPEN; prior capture and selected-original recovery usage below is unchanged. Evidence: CHECKPOINTS/EVIDENCE/monthly-runtime-control-20261102/listening-process-config.json and the existingD8checkpoint.
+
+---
+
 # Archived monthly original - scoped technical recovery PASS 02/11/2026
 
 Only an authorized Render workspace operator may perform this technical verification in the existing myworkstation-db-backup Shell. Platform SuperAdmin authority alone does not grant Render access. This is recovery of an archived original into an isolated test table, not restoration of production or an application restore button.
