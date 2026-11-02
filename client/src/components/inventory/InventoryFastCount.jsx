@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pencil, Printer, Search, Trash2 } from "lucide-react";
 import { matchesGreekSearch } from "../../utils/greek-search.js";
+import { inventoryCostValue, inventoryUnitCost } from "./inventory-cost.js";
 
 const n = (value) => Number(value || 0);
 const euro = (value) => `${n(value).toFixed(2)} €`;
+const costEuro = (value) => value === null ? 'Άγνωστο' : euro(value);
 
 export function inventoryTotals(lines = []) {
   return lines.reduce(
@@ -14,10 +16,12 @@ export function inventoryTotals(lines = []) {
       sum.counted += counted;
       sum.difference += counted - n(line.expectedQuantity);
       sum.retail += counted * n(line.salePrice);
-      sum.cost += counted * n(line.unitCost);
+      const cost = inventoryCostValue(line);
+      sum.cost = sum.cost === null || cost === null ? null : sum.cost + cost;
+      if (inventoryUnitCost(line.unitCost) === null) sum.missingCostItems += 1;
       return sum;
     },
-    { lines: 0, expected: 0, counted: 0, difference: 0, retail: 0, cost: 0 },
+    { lines: 0, expected: 0, counted: 0, difference: 0, retail: 0, cost: 0, missingCostItems: 0 },
   );
 }
 
@@ -268,7 +272,7 @@ export default function InventoryFastCount({ api, current, reload, setError, del
             <div className="inv2-selected-product">
               <b>{selected.name}</b>
               {showExpected && <span>Απόθεμα {selected.expectedQuantity}</span>}
-              {showValues && <><span>Αγορά {euro(selected.unitCost)}</span>
+              {showValues && <><span>Αγορά {costEuro(inventoryUnitCost(selected.unitCost))}</span>
               <span>Λιανική {euro(selected.salePrice)}</span></>}
               {replaceCount ? <strong>Αντικατάσταση καταμέτρησης {selected.countedQuantity ?? "—"} με {n(quantity)}</strong> : selected.countedQuantity !== null && <strong>Προηγούμενα {selected.countedQuantity} + νέα {n(quantity)} = σύνολο {n(selected.countedQuantity) + n(quantity)}</strong>}
             </div>
@@ -308,7 +312,7 @@ export default function InventoryFastCount({ api, current, reload, setError, del
                 <td>{displayBarcode(line) || "—"}</td>
                 <td><b>{line.name}</b><small>{line.sku || "—"} · {line.categoryName || "Χωρίς κατηγορία"}</small></td>
                 {showExpected && <td>{line.expectedQuantity}</td>}<td>{line.countedQuantity ?? "—"}</td>{showExpected && <td>{counted - n(line.expectedQuantity)}</td>}
-                {showValues && <><td>{euro(counted * n(line.salePrice))}</td><td>{euro(counted * n(line.unitCost))}</td></>}
+                {showValues && <><td>{euro(counted * n(line.salePrice))}</td><td>{costEuro(inventoryCostValue(line))}</td></>}
                 <td className="inv2-row-actions">
                   {current.status === "DRAFT" && <>{canCount && <button title="Διόρθωση" disabled={locked || saving} onClick={() => choose(line, true)}><Pencil /></button>}{canClear && <button title="Διαγραφή καταμέτρησης" disabled={locked || saving || line.countedQuantity === null} onClick={() => clearCount(line)}><Trash2 /></button>}</>}
                   {!delegated && <button title="Εκτύπωση barcode" onClick={() => window.print()}><Printer /></button>}
@@ -316,9 +320,10 @@ export default function InventoryFastCount({ api, current, reload, setError, del
               </tr>;
             })}
           </tbody>
-          <tfoot><tr>{canBulkZero && <th />}<th>ΣΥΝΟΛΑ</th><th>{totals.lines} είδη</th>{showExpected && <th>{totals.expected}</th>}<th>{totals.counted}</th>{showExpected && <th>{totals.difference}</th>}{showValues && <><th>{euro(totals.retail)}</th><th>{euro(totals.cost)}</th></>}<th /></tr></tfoot>
+          <tfoot><tr>{canBulkZero && <th />}<th>ΣΥΝΟΛΑ</th><th>{totals.lines} είδη</th>{showExpected && <th>{totals.expected}</th>}<th>{totals.counted}</th>{showExpected && <th>{totals.difference}</th>}{showValues && <><th>{euro(totals.retail)}</th><th>{costEuro(totals.cost)}</th></>}<th /></tr></tfoot>
         </table>
       </div>
+      {showValues && totals.missingCostItems > 0 && <p className="inv2-cost-warning" role="status">Είδη χωρίς θετικό κόστος: {totals.missingCostItems}. Οι άγνωστες αξίες δεν υπολογίζονται ως μηδενικές.</p>}
     </>
   );
 }
