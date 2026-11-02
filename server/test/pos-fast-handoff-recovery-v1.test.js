@@ -44,12 +44,12 @@ test("Azure may forward a reconciled complete table while OpenAI FAST remains he
   assert.match(route,/const azureProductLines=reconciledFastProductLines\(parsed\.productLines,azureTotalGross\)/);
 });
 
-test("a useful Azure header with an incomplete table continues through FAST OpenAI",()=>{
+test("a partial Azure header without a reconciled table retains FAST OpenAI fallback",()=>{
   const start=route.indexOf('router.post("/ai-reader/fast-header"');
   const body=route.slice(start,route.indexOf('router.post("/ai-reader/fast-duplicate-check"',start));
   assert.match(body,/let azureHeaderFallback=null/);
   assert.match(body,/const azureProductLines=reconciledFastProductLines\(parsed\.productLines,azureTotalGross\)/);
-  assert.match(body,/if\(azureHasUsefulHeader&&azureProductLines\.length\)return res\.json\(azureHeader\)/);
+  assert.match(body,/if\(azureHasUsefulHeader&&\(azureProductLines\.length\|\|azureHasCompleteHeader\)\)return res\.json\(azureHeader\)/);
   assert.match(body,/if\(azureHasUsefulHeader\)azureHeaderFallback=azureHeader/);
   assert.ok(body.indexOf("azureHeaderFallback=azureHeader")<body.indexOf("callFastOpenAiHeader({prompt,filePart})"));
   assert.match(body,/catch\(error\)\{throwIfWalletError\(error\);if\(azureHeaderFallback\)return res\.json\(azureHeaderFallback\);throw error\}/);

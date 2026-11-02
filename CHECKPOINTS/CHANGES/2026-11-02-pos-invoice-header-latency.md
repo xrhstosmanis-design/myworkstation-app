@@ -1,3 +1,19 @@
+## Continuation compatibility check — source still AWAITING CI/LAB
+
+Full local Node20 suite4603PASS/0FAIL/341infrastructureSKIP and frontend/TABLE_SERVICE PASS. Review found the shared interactive page-evidence fallback recognizes legacy photo labels. Attachment labels are therefore opt-in only for the background reader; default image-view output and the interactive consumer remain unchanged. Added actual-consumer two-photo/mixed-PDF regressions and byte equality between modes. No provider/business action or new hosted PASS.
+
+## 02/11/2026 — INVOICE HEADER + PHYSICAL PDF PAGES / SOURCE READY / AWAITING FULL CI AND LAB
+
+Same retained /root owner and remote branch fix/pos-invoice-complete-header-20261102, existing PR3545. Before-source claims3536 and3547 are green/main; latest PDF claim83fbf944 mergedf38c16d07 before source. Existing header90267b0 fullPRCI41506583913 all5jobsSUCCESS/5278server+8backup/0FAIL/0SKIP remains protected; this combined revision requires fresh full PR/main CI. Current main and all peer runtime/manual/records inherited exactly outside owned paths.
+
+Two bounded corrections: complete Azure payment headers return without a redundant provider while partial-header and verified-table paths remain; background PDFs use actual physical-page counts and retain actual attachment index plus internal PDF page on each line. Existing count API delegates to the bounded layout helper; more than5physical pages refuses before layout allocation/provider. Input labels describe attachments instead of claiming one page per file. Media bytes/resource counts, original jobs/files, model/timeouts, payment/handoff/queue/matching/stock and completeness/arithmetic/EFK guards unchanged. No new UI steps.
+
+Validation: Node20 focused151PASS/0FAIL/0SKIP including16new real-PDF/image/recovery-matcher regressions and existing19helper/reader tests. Initial physical-ordinal-as-file-index temporary candidate was rejected by independent review and never published; integrated tests prove singlePDF[0:1,0:2], mixedPDF+photo[0:1,0:2,1:1], unchanged photo/default-converter behavior, wrong counts/malformed/oversized PDFs and duplicate provenance fail closed. Full local suite/build and exact native CI are pending at source preparation. No new live provider or business action.
+
+Actual prior hosted diagnosis: one stored original two-sheet PDF, existing empty draft; durable diagnostic COMPLETED_WITH_REVIEW with supplied1physical page and zero product lines. Opening the existing assistant automatically ran one preview, which proposed38rows with omitted excise and an invalid total; none applied. This remains extractionFAIL and complete requestOPEN; count correction alone does not establish unnumbered-page completeness or EFK accuracy. Normal editor can invoke automatic reconciliation; no global DB/financial/stock invariance claimed. Private identities, numbers, amounts, originals and payloads not published. Preserve retained Gate3, VAT-inbox, second-draft and wallet owners. No manual PASS added.
+
+Next: exact full PR/main CI, ordinary guarded release, then measured authorized synthetic acceptance; never replay a handled real payment. Central PDF is prepared from synchronized current records but published with the final release receipt, retaining the current main PDF during source checks to avoid peer overwrites. Hosted latency/new-draft/row acceptance NOT TESTED. Owner retained.
+
 # POS invoice header latency — 02/11/2026
 
 ## 02/11/2026 — POS-INVOICE-HEADER-LATENCY-01 / ASSIGNED BEFORE SOURCE / NOT TESTED
