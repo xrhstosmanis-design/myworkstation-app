@@ -1,0 +1,66 @@
+{
+  "scope": "Actual hosted legacy exports on2512d6bb; no mutation or review write",
+  "revision": "2512d6bb379b38306838ee449e494256d1f91aa9",
+  "files": {
+    "legacy-count.csv": {
+      "headers": [
+        "Barcode",
+        "SKU",
+        "Περιγραφή",
+        "Απόθεμα",
+        "Καταμέτρηση",
+        "Διαφορά",
+        "Κόστος"
+      ],
+      "rows": 1,
+      "expected": 5,
+      "counted": 4,
+      "difference": -1,
+      "unitCostCell": "",
+      "differenceValueCell": "NOT_PRESENT",
+      "sha256": "ce62417c13489a46ee06bbf5a573317c7ea7a20e58d750d73f8b3923378f3c38"
+    },
+    "legacy-full-audit.csv": {
+      "headers": [
+        "SKU",
+        "Barcode",
+        "Περιγραφή",
+        "Ζώνη",
+        "Θεωρητικό",
+        "Καταμέτρηση",
+        "Διαφορά",
+        "Κόστος",
+        "Αξία διαφοράς",
+        "Καταμετρητής",
+        "Πηγή",
+        "Συμβάντα"
+      ],
+      "rows": 1,
+      "expected": 5,
+      "counted": 4,
+      "difference": -1,
+      "unitCostCell": "",
+      "differenceValueCell": "",
+      "sha256": "56c3c2f03ad63ddd8d3cef697e4b735f4855b175bdf9588d3779c53c552e41a4"
+    }
+  },
+  "uiObserved": {
+    "rowCost": "Άγνωστο",
+    "footerCost": "Άγνωστο",
+    "missingCostItems": 1,
+    "expected": 5,
+    "counted": 4,
+    "difference": -1,
+    "retail": "4.80 €"
+  },
+  "firstFullAuditAttachment": "Original browser path90a156e8 did not synchronize after5seconds; no attachment/content PASS inferred. One new read-only export after failure produced the verified bb88a8bb artifact; no manual transfer or business retry.",
+  "reconciliationPreserved": {
+    "initialDifference": -1,
+    "correction": 0,
+    "finalDifference": -1,
+    "cost": null,
+    "transactionCount": 1,
+    "invoiceCount": 46,
+    "systemEventCount": 3
+  }
+}

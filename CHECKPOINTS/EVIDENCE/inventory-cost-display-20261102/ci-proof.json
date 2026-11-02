@@ -1,0 +1,101 @@
+{
+  "scope": "Exact cost-display source CI; hosted acceptance still NOT TESTED",
+  "pullRequest": 3505,
+  "head": "b6ed568b2cf8123b60c891d787ec499046cd88ec",
+  "tree": "83567660ccea091085661cbf4cd441a29583bf53",
+  "merge": "2512d6bb379b38306838ee449e494256d1f91aa9",
+  "beforeSourceClaim": {
+    "pr": 3504,
+    "ci": 41371187003,
+    "merge": "e307d8380f535b567bf54beaef90332409cbe893"
+  },
+  "prCI": {
+    "run": 41372217192,
+    "job": 125045223227,
+    "requiredJobsSuccess": 5,
+    "serverPass": 5189,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "nativeCases": [
+      1490,
+      1504,
+      1514
+    ],
+    "mountedCases": [
+      1446,
+      1447
+    ]
+  },
+  "local": {
+    "redFailures": 2,
+    "focusedPass": 11,
+    "focusedFail": 0,
+    "focusedSkip": 0,
+    "fullTests": 4846,
+    "fullPass": 4508,
+    "fullFail": 0,
+    "fullInfrastructureSkip": 338,
+    "fullDurationMs": 175776.003793,
+    "workBuildSeconds": 18.12
+  },
+  "exactBlobs": {
+    "checked": 8,
+    "mismatches": 0,
+    "files": [
+      {
+        "path": "client/src/components/inventory/InventoryFastCount.jsx",
+        "gitBlob": "bffed4698a3fe411c45e309bfcac5dcfba4183e2",
+        "sha256": "192cd5e7289c4ceffbf266bdf45dbe66c5cc2599978e81bf8424fab79d8f9e70"
+      },
+      {
+        "path": "client/src/components/inventory/InventoryV2Center.jsx",
+        "gitBlob": "a0d8d40044fc40930acebf72edb2b5e83b3d37a2",
+        "sha256": "ab85d674066b1b9c5279789f07e1226c8a124eca306f3c1469a3ad4653122204"
+      },
+      {
+        "path": "client/src/components/inventory/inventory-cost.js",
+        "gitBlob": "49a657b39c2e2395d65ec410ecb4854741c82531",
+        "sha256": "97605c250e92767cbe5e5ea1815fab8b488a2d699a8db806b28c927e8ef38c6e"
+      },
+      {
+        "path": "server/test/inventory-cost-display-ui.test.js",
+        "gitBlob": "cbeabb23d176061b987393b290cea5f7e89c67f0",
+        "sha256": "a1d9244480a6edf995256b323c8d373d74115cb78bc58cb25f4bf6dcbdb0c574"
+      },
+      {
+        "path": "CHECKPOINTS/CHANGES/2026-11-02-inventory-cost-display.md",
+        "gitBlob": "713f9821b78a8a54c898378e143d4a796e8bc8e8",
+        "sha256": "ea6b4d62f33ec7419e5f9b6760d6a998a16bd190bf578d4c9cfba5dfb9cd0145"
+      },
+      {
+        "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+        "gitBlob": "5223f60e6b652ac8d09410611b160cb5f8e2197b",
+        "sha256": "55f2d058cf0c284b2b689bccfe18adbe7d526b0c9e33e0659d336630b77bc491"
+      },
+      {
+        "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+        "gitBlob": "bb2b9ab0f9e5fd6c4666b5f46f9faef86f736762",
+        "sha256": "e8aff928bdd5b050038942262f69601d4e20be34931772ae9785f727870a2d53"
+      },
+      {
+        "path": "docs/roadmap/PENDING_WORK.md",
+        "gitBlob": "bce9537b1adb97a78b57863656ec8d1e0aa48001",
+        "sha256": "d9dd6d8f807a48a1cb9cae381684c13cca923bcb23e8d1d0d4b9d6e15d058b71"
+      }
+    ]
+  },
+  "mainCI": {
+    "run": 41373653467,
+    "job": 125049468383,
+    "revision": "2512d6bb379b38306838ee449e494256d1f91aa9",
+    "requiredJobsSuccess": 5,
+    "serverPass": 5189,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "nativeCases": [1490, 1504, 1514],
+    "mountedCases": [1446, 1447]
+  },
+  "hostedReviewWrites": "BLOCKED_AUTOMATIC_APPROVAL_READ_ONLY_AUTHORIZATION"
+}
