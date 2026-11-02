@@ -511,9 +511,9 @@ Remaining required work: integrate the owner's operator administration with the 
 
 Draft source PR3370 / head046e65745f1f07f5d83b8e74271cd9d90b77bf2f / full CI41204045733 started; not merged or installed. Keep this a draft until the broader module/action integrations are completed and validated.
 
-## 02/11/2026 - CHAT-FAMILIAR-UI-01 / ASSIGNED - UNCONFIRMED PREVIEW LIFECYCLE ONLY
+## 02/11/2026 - CHAT-FAMILIAR-UI-01 / ASSIGNED - NAVIGATION AND ROTATION ONLY
 
-Retained owner codex/chat-native-readers-20261031. Diadoxou Pavlou USER-REPORTED functional PASS: contextual menu/compact keyboard layout/photo zoom/search/quote/reactions, plus delivery/read, announcement/explicit Το διάβασα and forwarding with two different accounts explicitly confirmed by «ολα». Those checks are completed, NOT pending and must not be replayed. Device/installed hash/account names/forward destination/exact test runtime and before-after counts not independently identified; no LAB/API/financial invariance inferred. Only the earlier unconfirmed photo preview background/navigation/rotation privacy cleanup remains here. Next: obtain that narrow observation when available, no accepted send/read/ack/forward/media replay. Wider API/session/iOS/forensic and overall N16 OPEN retain their other owners. CP2026-11-01-chat-familiar-ui.md, manual/chat/PASS.md and diadoxou-confirmation-20261102.json.
+Retained owner codex/chat-native-readers-20261031. Background/home-return preview closure now USER-REPORTED PASS («εκλεισε»), in addition to the earlier Diadoxou functional/two-account PASS. These completed checks are NOT pending and must not be replayed. Only preview cleanup when navigating away and the already unconfirmed rotation case remain here. Model/OS/installed hash/current action store/account/time/runtime not independently identified; no LAB/API/forensic or financial invariance inferred. Next action: obtain only those remaining observations when available, no accepted send/read/ack/forward/upload/background replay. Other N16/security/iOS owners and overallOPEN retained. CP2026-11-01-chat-familiar-ui.md, manual/chat/PASS.md, background-return-confirmation-20261102.json.
 
 ## 31/10/2026 - CHAT-FIRST-ENTRY-01 / RESIDUALS ONLY / OWNER RETAINED
 
