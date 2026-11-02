@@ -14,7 +14,7 @@ import InventoryMobileApp from "./InventoryMobileApp.jsx";
 import InventoryFastCount from "./InventoryFastCount.jsx";
 import InventoryReconciliationPanel from "./InventoryReconciliationPanel.jsx";
 const num = (v) => Number(v || 0),
-  euro = (v) => `${num(v).toFixed(2)} €`;
+  euro = (v) => v===null||v===undefined?'Άγνωστο':`${num(v).toFixed(2)} €`;
 export default function InventoryV2Center({
   api,
   stores = [],
@@ -399,6 +399,7 @@ export default function InventoryV2Center({
           <span className="surplus"><small>Πλεόνασμα</small><b>{finalSummary.surplusQuantity} · {euro(finalSummary.surplusCostValue)}</b></span>
           <span><small>Λιανική αξία</small><b>{euro(finalSummary.totalRetailValue)}</b></span>
           <span><small>Αξία κόστους</small><b>{euro(finalSummary.totalCostValue)}</b></span>
+          {finalSummary.missingCostItems>0&&<span><small>Είδη χωρίς θετικό κόστος</small><b>{finalSummary.missingCostItems} · μη αποτιμημένα</b></span>}
           <button className="primary" disabled={busy} onClick={loadInvestigation}>Έλεγχος αιτιών διαφορών</button>
           <button onClick={() => setFinalSummary(null)}>Κλείσιμο</button>
         </div>

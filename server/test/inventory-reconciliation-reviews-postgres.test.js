@@ -121,7 +121,7 @@ test('native reviewed inventory: umbrellas, glasses, source invariance, replay, 
     httpReport=await(await fetch(origin+'?reportVersion=2')).json();assert.equal(httpReport.summary.shortageQuantity,33);assert.equal(httpReport.summary.shortageValue,89);assert.deepEqual(await invariant(),original);
     const xlsx=await(await fetch(`${origin}?reportVersion=2&format=xlsx&previousStocktakeId=old&expectedFingerprint=${httpReport.fingerprint}`)).json();
     const wb=XLSX.read(Buffer.from(xlsx.base64,'base64'),{type:'buffer'}),finalRows=XLSX.utils.sheet_to_json(wb.Sheets['Τελικό αποτέλεσμα'],{header:1});
-    assert.equal(finalRows.find(x=>x[0]==='g')[6],-23);assert.equal(finalRows.find(x=>x[0]==='g')[10],-69);assert.equal(wb.SheetNames.length,6);
+    assert.equal(finalRows.find(x=>x[0]==='g')[6],-23);assert.equal(finalRows.find(x=>x[0]==='g')[10],-69);assert.equal(wb.SheetNames.length,12);assert.equal(wb.Sheets['Πληρότητα πηγών'].B2.v,false);
     assert.equal(finalRows.slice(1).reduce((sum,x)=>sum+x[6],0),httpReport.summary.netQuantity);assert.equal(finalRows.slice(1).reduce((sum,x)=>sum+x[10],0),httpReport.summary.netValue);
     const invalid=await fetch(origin+'/reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body(httpReport,actionCorrection),actorId:'spoof'})});assert.equal(invalid.status,400);
     const staff=await fetch(origin+'/reviews',{method:'POST',headers:{'Content-Type':'application/json','x-staff':'yes'},body:JSON.stringify(body(httpReport,actionCorrection))});assert.equal(staff.status,403);
