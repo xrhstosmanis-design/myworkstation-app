@@ -71,17 +71,23 @@ export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,s
  const outside=date=>spans.length?spans.every(s=>date<s.from||date>s.to):period?date<period.from||date>period.to:false;
  let readCount=0;
  for(const source of sources){
-  const base={sourceId:source?.sourceId||null,checksum:source?.checksum||null,sourceKey:source?.reading?.sourceKey||null,readingHash:source?.reading?.extraction?hash(source.reading.extraction):null};
+  const uploaded=source?.references?.[0]?.uploadedAt,uploadedDate=uploaded?new Date(uploaded):null;
+  const base={filename:String(source?.references?.[0]?.filename||'Συνημμένο').replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,180),uploadedAt:uploadedDate&&Number.isFinite(+uploadedDate)?uploadedDate.toISOString():null,sourceId:source?.sourceId||null,checksum:source?.checksum||null,sourceKey:source?.reading?.sourceKey||null,readingHash:source?.reading?.extraction?hash(source.reading.extraction):null};
   if(!validSource(source)||source.reading?.status!=='EXTRACTED_UNVERIFIED'){
    items.push({...base,line:null,status:'UNRESOLVED',reason:source.reading?.status||'INVALID_SOURCE'});continue;
   }
   let extraction;try{const value=source.reading.extraction;extraction=normalizePaper({dateText:value.dateText,documentDate:value.documentDate,operatorText:value.operatorText,shiftText:value.shiftText,notes:value.notes,lines:value.lines.map(({kind,label,amountText,quantityText,timeText,uncertain})=>({kind,label,amountText,quantityText,timeText,uncertain}))});}catch{items.push({...base,line:null,status:'UNRESOLVED',reason:'INVALID_READING'});continue;}
   readCount++;
+  // The extraction schema caps physical lines at60. Reaching that boundary
+  // cannot prove no additional original lines were omitted by the provider.
+  if(extraction.lines.length>=60)items.push({...base,line:null,status:'UNRESOLVED',reason:'SOURCE_LINE_LIMIT'});
+  for(const note of extraction.notes.map(text).filter(Boolean))items.push({...base,line:null,status:'UNRESOLVED',reason:'DOCUMENT_NOTES_REQUIRE_REVIEW',note:note.slice(0,300)});
   if(!extraction.documentDate){items.push({...base,line:null,status:'UNRESOLVED',reason:'DOCUMENT_DATE_UNREADABLE'});continue;}
   if(outside(extraction.documentDate)){items.push({...base,line:null,status:'OUT_OF_PERIOD',reason:'PRINTED_DATE_OUTSIDE_SELECTED_SHIFTS'});continue;}
   if(!extraction.lines.length){items.push({...base,line:null,status:'UNRESOLVED',reason:'NO_DOCUMENT_LINES'});continue;}
+  const documentStart=items.length;
   extraction.lines.forEach((line,index)=>{
-   const detail={...base,line:index,kind:line.kind,amountCents:line.amountCents,date:extraction.documentDate,sessionId:null,transactionId:null,sourceHash:null};
+   const detail={...base,label:line.label,timeText:line.timeText,line:index,kind:line.kind,amountCents:line.amountCents,date:extraction.documentDate,sessionId:null,transactionId:null,sourceHash:null};
    if(line.requiresReview){items.push({...detail,status:'UNRESOLVED',reason:'UNCERTAIN_LINE'});return;}
    const time=printedTime(line.timeText);
    if(!time){items.push({...detail,status:'UNRESOLVED',reason:'LINE_TIME_UNREADABLE'});return;}
@@ -108,6 +114,15 @@ export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,s
    const match=candidates[0];
    items.push({...detail,sessionId:match.original.session.id,transactionId:match.transactionId,evidenceBasis:match.evidenceBasis,sourceHash:match.original.sourceHash,status:selected.has(match.original.session.id)?'MATCHED':'OUT_OF_PERIOD',reason:selected.has(match.original.session.id)?'UNIQUE_RECORDED_CORROBORATION':'CONTEXT_SHIFT_ONLY'});
   });
+  // Multiple physical lines in one document need distinct recorded evidence.
+  // Independent documents may corroborate the same movement; kinds remain
+  // separate (for example POS versus EFTPOS) within the document.
+  const used=new Map();
+  for(const item of items.slice(documentStart))if(item.evidenceBasis&&item.sessionId){
+   const key=JSON.stringify([item.sourceId,item.kind,item.transactionId?['TRANSACTION',item.transactionId]:['AGGREGATE',item.sessionId]]);
+   const group=used.get(key)||[];group.push(item);used.set(key,group);
+  }
+  for(const group of used.values())if(group.length>1)for(const item of group){item.status='UNRESOLVED';item.reason='REPEATED_LINE_MATCH';}
  }
  const result={version:1,storeId:scope.storeId,generation:scope.generation,status:coverage.discoveryComplete&&items.every(i=>i.status!=='UNRESOLVED')?'COMPLETE':'INCOMPLETE',items,coverage:{...coverage,readCount,complete:coverage.discoveryComplete&&items.every(i=>i.status!=='UNRESOLVED')},financialAdjustmentCents:0,humanApproval:false};
  return {...result,hash:hash(result)};

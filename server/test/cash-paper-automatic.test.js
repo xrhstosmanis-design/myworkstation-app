@@ -102,3 +102,33 @@ test('limited discovery never loads all cached originals to imply completed cove
  const runner=createAutomaticPaperRunner({repository:{generation:async()=>scope.generation,get:async()=>reading,source:async()=>{sourceReads++;return {}}},reader:{read:async()=>{throw Error('must reuse')}},discover:async()=>({...discovery,status:'LIMITED'})});
  const result=await runner.readNext(scope,{id:'actor'},{from:'2026-11-01',to:'2026-11-02'});assert.equal(result.status,'REQUIRES_REVIEW');assert.equal(sourceReads,0);
 });
+test('hitting60-line extraction boundary cannot certify all physical original lines examined',()=>{
+ const at=index=>'22:'+String(index).padStart(2,'0');
+ const distinct={...original,transactions:Array.from({length:60},(_,index)=>({...original.transactions[0],id:'t'+index,occurredAt:'2026-11-01T20:'+String(index).padStart(2,'0')+':00Z'}))};
+ const paper=count=>({...source,reading:{...reading,extraction:normalizePaper({...raw,lines:Array.from({length:count},(_,index)=>({...raw.lines[0],timeText:at(index)}))})}});
+ const below=project({sessions:new Map([['night',distinct]]),papers:[paper(59)]});assert.equal(below.coverage.complete,true);assert.equal(below.items.filter(i=>i.reason==='SOURCE_LINE_LIMIT').length,0);
+ const capped=project({sessions:new Map([['night',distinct]]),papers:[paper(60)]});assert.equal(capped.status,'INCOMPLETE');assert.equal(capped.coverage.complete,false);assert.equal(capped.items.filter(i=>i.reason==='SOURCE_LINE_LIMIT').length,1);assert.equal(capped.financialAdjustmentCents,0);
+});
+test('document-level extraction notes remain explicit unresolved evidence without financial effects',()=>{
+ const clean=project();assert.equal(clean.status,'COMPLETE');
+ const note='Δεν διαβάστηκε καθαρά η τελευταία παρατήρηση.';
+ const paper={...source,reading:{...reading,extraction:normalizePaper({...raw,notes:['  ',note]})}};
+ const out=project({papers:[paper]});assert.equal(out.status,'INCOMPLETE');assert.equal(out.coverage.complete,false);assert.equal(out.items.filter(i=>i.reason==='DOCUMENT_NOTES_REQUIRE_REVIEW').length,1);assert.equal(out.items.find(i=>i.reason==='DOCUMENT_NOTES_REQUIRE_REVIEW').note,note);assert.equal(out.financialAdjustmentCents,0);assert.equal(out.humanApproval,false);
+ assert(out.items.some(i=>i.status==='MATCHED'));
+});
+test('two physical same-kind lines cannot reuse one recorded movement within one document',()=>{
+ const duplicate={...source,reading:{...reading,extraction:normalizePaper({...raw,lines:[raw.lines[0],{...raw.lines[0]}]})}};
+ const out=project({papers:[duplicate]});assert.equal(out.status,'INCOMPLETE');assert.equal(out.coverage.complete,false);assert.equal(out.items.filter(i=>i.reason==='REPEATED_LINE_MATCH').length,2);assert(out.items.every(i=>i.status==='UNRESOLVED'));assert.equal(out.financialAdjustmentCents,0);
+ const distinct={...original,transactions:[original.transactions[0],{...original.transactions[0],id:'t2',occurredAt:'2026-11-01T21:20:00Z'}]};
+ const separateLines={...source,reading:{...reading,extraction:normalizePaper({...raw,lines:[raw.lines[0],{...raw.lines[0],timeText:'23:20'}]})}};
+ const complete=project({sessions:new Map([['night',distinct]]),papers:[separateLines]});assert.equal(complete.status,'COMPLETE');assert.deepEqual(complete.items.map(i=>i.transactionId),['t','t2']);
+ const independent={...source,sourceId:'independent',checksum:'d'.repeat(64)};
+ const twoDocs=project({papers:[source,independent],discovery:{...discovery,sources:[source,independent]}});assert.equal(twoDocs.status,'COMPLETE');assert(twoDocs.items.every(i=>i.transactionId==='t'));
+});
+test('repeated same-kind shift aggregates are unresolved while POS and EFTPOS remain separate kinds',()=>{
+ const counted={...original,automaticSnapshot:{cardSales:'120.00',eftposTotal:'120.00'}};
+ const line={...raw.lines[0],kind:'POS',amountText:'120,00',timeText:'05:58'};
+ const paper=lines=>({...source,reading:{...reading,extraction:normalizePaper({...raw,dateText:'02/11/2026',documentDate:'2026-11-02',lines})}});
+ const dup=project({sessions:new Map([['night',counted]]),papers:[paper([line,{...line}])]});assert.equal(dup.items.filter(i=>i.reason==='REPEATED_LINE_MATCH').length,2);
+ const separate=project({sessions:new Map([['night',counted]]),papers:[paper([line,{...line,kind:'EFTPOS'}])]});assert.equal(separate.status,'COMPLETE');
+});

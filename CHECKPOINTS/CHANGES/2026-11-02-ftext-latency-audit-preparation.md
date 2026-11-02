@@ -1,0 +1,76 @@
+# FTEXT latency audit and implementation preparation — 2 November 2026 12:11 Athens
+
+Status: audit of available application/source/metadata evidence complete; implementation prepared, NOT IMPLEMENTED / NOT INSTALLED. Physical performance remains FAIL / OPEN. Retained owner `fix/ftext-rbs-outcome-20261031`, continuation `fix/ftext-readiness-scheduling-20261102`; bounded next implementation branch `fix/ftext-status-history-20261102`. No takeover of another owner's scope. This documentation precedes any new source or state-changing PC action.
+
+## Baseline and evidence
+
+Repository baseline main `7518ca7de62cf09bd62f28692b02b50420321083`; runtime release `a351362f3a5c436126bfcce8b2a547496470c036`. Preserve the exact previous CI/deploy/package evidence in `2026-11-02-ftext-readiness-scheduling.md`. The updated-PC report now independently hashes ALL SEVEN installed modules: every hash matches the released Windows CRLF module bytes. This supersedes the earlier installed-module-hashes NOT TESTED limitation only. Stable all-day operation and physical speed are not PASS.
+
+Scope: Rizareio, company `cmvgtyt64000vh7gt7vfad3h5`, store `cmvgtyt6d000zh7gtbsp1en3p`, terminal `RIZAREIO-POS-01`, serial `DSM24014923`. User later clarified that paper and POS message finish together for the reported WATER0.50 CASH28s. Record as USER timing FAIL, not independent instrumentation of the printer. Exact stopwatch-to-request mapping is still unconfirmed; the two same-value requests remain completed and must not be resent. No new financial/stock/control baseline is inferred.
+
+The V1 09:28UTC metadata report contains twelve original CASH groups. Eight post-update local publication-journal-to-RES intervals are16.304–19.154s; RES-to-local-report0.017–0.159s. These are same-PC intervals; no subtraction of server and PC clocks. Publication journal precedes actual atomic input publication and is not proof of when the vendor read the command.
+
+The V2 report `Rizareio_Ftext_Timing_20261102_095619_1375400.json`, collected09:56:18UTC, Windows5.1.26100.9711, has no watcher warnings. There are18,445 visible files:9,657 JSON and8,788 RES. One enumeration took1,316.6ms. The FTextPlus process was observed; fileVersion was null. Its6204.078125 CPU seconds are cumulative, NOT current CPU utilization. No newer vendor version is verified.
+
+Six complete STATUS cycles were passively observed in60.064s:5.769,6.235,18.439,6.224,6.366,6.543s from TXT appearance to RES appearance. Their summed observed intervals are49.575s (82.5% of the observation window). TXT-deletion-to-RES was1.496–1.647s. File deletion does not establish whether the driver has just read or finished executing the command; do not mislabel this as network-only or input-queue-only latency. No natural sale was observed during this minute. Derived evidence and exact source hash: `CHECKPOINTS/EVIDENCE/ftext-latency-audit-20261102/status-observation.json`.
+
+Read-only production audit correlation independently supports the queue interaction. Request `192b4998-8e05-4fea-8916-30da7969d68a` created08:53:49.442159UTC, STATUS audit08:53:58.455, dispatch08:53:59.038019:pickup9.596s and STATUS-to-dispatch0.583s. Request `6dbd5a3b-b1f3-41bb-8a93-2794fd1348af` created09:48:02.205469, STATUS audit09:48:17.611321, dispatch09:48:18.054382:pickup15.849s and STATUS-to-dispatch0.443s. Across fourteen scoped post-update rows, preceding STATUS-to-dispatch was0.314–1.938s. This is consistent with the inspected serialization mechanism; it does not prove the vendor's internal delay cause. Render request logs and path-latency metrics returned empty, so server HTTP latency percentiles remain NOT MEASURED.
+
+## Application path audit
+
+| Stage | Current behavior | Finding |
+| --- | --- | --- |
+| POS submit | Current store/operator, one client transaction ID, server preflight and original fiscal request | Preserve identity, basket and original-request idempotency. Creation time does not include earlier UI/preflight time. |
+| Server dispatch | `ftext-device-work.js` returns no new work when `recovering=true` | Idle STATUS worker sets recovering=true. Existing waiting sales are withheld until the worker joins. |
+| Connector schedule | `Cloud-Connector.ps1` immediately makes the next STATUS due after a successful worker; one work poll gets first chance | An idle customer arrival can land in the next6–18s nonfiscal wait. Heartbeat stays current. |
+| Handoff | `Cloud-Tools.psm1`, immutable original authorization and publication journal | The observed0.50 examples have roughly0.5–0.7s dispatch-to-acceptance, not the main measured delay. Preserve readiness at authorization. |
+| Local publication/wait | `Cash.psm1`: durable journal, atomic pending→TXT, 200ms result polling, no resend | Local report follows available RES within0.017–0.159s in the eight samples. Poll interval cannot explain16–19s before RES. |
+| Vendor/register | FTEXT watches C:\FText, SOLIDUS(II)T, LAN192.168.1.103 | Large directory is a measurable local cost and a performance hypothesis. Driver polling, LAN and fiscal-device internals are not separately timed. |
+| Result/finalization | `ftext-v1.js` records proof and auto-finalizes eligible CASH; `ftext-cash-finalize.js` is transactional/idempotent | No evidence that finalization explains the earlier local journal→RES interval. Do not remove receipt validation, locking or stock/accounting writes. |
+| UI completion | `useFtextCashCheckout.js` reads same scoped request every1800ms; after finalize immediately reads it again | Can add observation latency; cannot explain delayed physical paper. Preserve the previously released immediate same-request observation fix. |
+| CARD | Operator-confirmation and strict-result profiles have distinct protected decisions | Server completion includes customer/payment time. It is NOT a measurement of terminal activation. The user's35s activation report remains a separate unresolved endpoint. |
+
+## Root cause classification
+
+1. **Confirmed application mechanism:** repeated idle STATUS blocks new claim until completion. Live timing and source agree. This is a source of pre-dispatch latency.
+2. **Measured local load, causal effect not yet established:**18,445 files and1.317s enumeration in the vendor input directory. Repeated STATUS continuously creates JSON/RES history there; unbounded accumulation needs a controlled retention location.
+3. **Unresolved vendor path:** slow STATUS and fiscal response before RES creation. No evidence yet separates driver scanning/polling, LAN and register processing. The Developer Manual25.02 and FAQ240417 provide no performance setting or verified upgrade solution. No driver/firmware/license/protocol change is justified by this audit alone.
+
+## Prepared implementation, one causal change at a time
+
+### First bounded change: closed nonfiscal STATUS history
+
+Exact future code surfaces: `tools/windows-ftext/Ftext.psm1`, `Cloud-Tools.psm1`, existing/new Windows smoke fixtures, and a narrowly scoped read-only STATUS-history acknowledgement lookup in `server/src/services/ftext-installation.js` / `server/src/routes/ftext-v1.js` with native/auth tests. This lookup only establishes archive eligibility and must never authorize payment. Keep the seven-file installer format; helpers may live inside the existing Ftext module. No Cash fiscal-command generation, server business flow, database schema, vendor configuration or pairing change in this first change.
+
+Implement a dry-run inventory and reversible archive for **completed STATUS evidence only**, outside C:\FText, scoped to installation and UTC date. Default dry-run produces eligible/retained/rejected counts and hashes. Select only strict matching `mws-status-<32hex>.json` + `.res` pairs; parse saved evidence and result, verify request ID, company/store/terminal, expected serial and identical semantic result. Reject malformed/partial/mismatched evidence, reparse points, unexpected paths and collisions. Never infer closure from age alone.
+
+Legacy local JSON proves a parsed result but does not prove that the server accepted its delivery. Resolve this explicitly: the paired device submits a bounded batch (maximum100 strict STATUS IDs) to an authenticated read-only history lookup. Match only the current company/store/device actor and FTEXT_STATUS_REPORTED audit records with ok=true/code0, return only matching IDs with current installation identity, and verify that identity locally. Never expose another store or accept caller-supplied identity as authority; no audit/financial writes, schema change, readiness timestamp update or fiscal action in this lookup. Preserve unknown/unacknowledged pairs. Future successful status delivery should also persist a local acknowledged-result hash before archival eligibility. The new response cannot be reused as fresh readiness.
+
+Acquire the existing folder mutex. Refuse maintenance while an active fiscal marker, any TXT/PENDING input, unknown current STATUS marker or unresolved result-delivery work exists. Read the current STATUS marker under the lock and retain its ID, even if old. Never touch CASH/CARD/VOID/intent/publication/report/stop files, credentials, configuration, vendor files or foreign input. Preserve all evidence; do not delete historical receipts or STATUS records.
+
+For archival candidates, retain a recent safety tail (at least100 completed pairs and at least one hour); both conditions must permit the move. Preserve original timestamps, bytes and SHA256 in a durable per-file journal with original and archive paths. Use create-new/no-overwrite destinations, verify durable archive bytes before completing a move, and make partial-move/restart recovery idempotent. Any collision/hash change/copy failure leaves evidence retained and reports a clear failure. Rollback restores only matching unchanged originals with no overwrite and only when the folder is quiescent. No broad recursive cleanup, wildcard deletion or automatic replay.
+
+Bootstrap may move many old pairs: perform it only during a coordinated quiescent maintenance window, not by holding the fiscal mutex through a customer sale. Routine archival must be bounded and infrequent, never a scan/move on each work poll. Preserve unknown/unacknowledged delivery evidence conservatively. If closure/delivery cannot be established for legacy records, retain them rather than guessing; surface the retained reason and do not claim the folder was cleared.
+
+Measure the same read-only enumeration and passive STATUS lifecycle before/after. This is a controlled performance hypothesis, **not a promised fix**. If the slow response persists, stop broadening this change and escalate the vendor/LAN trace with the measured data. Do not bundle an arbitrary timer change into the archive experiment.
+
+### Next scheduling change: constrained by real readiness
+
+The20s checked/received readiness and15s heartbeat limits remain unchanged. A fixed longer STATUS interval can create new stale-readiness refusals when a round trip itself takes18.4s. Therefore prepare a deadline-based scheduler only after the first measured result establishes an achievable response budget. Existing valid proof can allow claim priority before the next refresh; the same proof's original timestamp must be used. A slow/expired/missing/error proof must still hold publication. Never fabricate fresh time, use a heartbeat as readiness, run STATUS and fiscal commands concurrently, cancel/reissue a pending command, or claim fast checkout by weakening the gate.
+
+If the measured vendor latency makes both the availability target and20s proof impossible, record that constraint explicitly; a different readiness contract requires a separate bounded design/claim, not a hidden exception. Do not use old successful receipts as fresh readiness.
+
+### Remaining observability and UI
+
+Add bounded request-correlated monotonic timing for local prepare, handoff, atomic input publication, complete verified result and cloud acknowledgement. No receipt text, card data, credentials or unbounded file-per-poll logging. Observe UI receipt/finalization endpoints separately. Card activation requires its own actual activation timestamp or authorized vendor trace; completion timestamps are insufficient. No diagnostic bank charge or replay of an existing sale.
+
+## Required verification and acceptance
+
+- Read-only history lookup tests: current paired token/settings/license/generation, cross-company/store/device denial, malformed/oversized batch, absent/failed/foreign STATUS IDs retained, exact identity response, no readiness re-dating or business/audit mutation.
+- Actual Windows5.1 archive fixture: completed STATUS-only eligibility; active/foreign/malformed markers; any input; wrong scope/serial; protected fiscal files; reparse/path collision; interrupted two-file move; restart and rollback; destination disk/hash errors. Assert byte preservation and no fiscal writes.
+- Existing real runspace single-worker/heartbeat/claim exclusion/disposal; delayed6s and18.4s STATUS; recovered stale/missing results retain original time and hold safely. CASH, operator CARD, strict CARD, NO/UNCERTAIN, immutable handoff, unpublished stop, lost response/restart and idempotent finalizer regression suites remain required.
+- Full exact PR CI, actual Windows native fixtures, main checks, normal guarded deployment with exact healthy revision before any updated official PC package. Preserve the existing installer identity/settings/token/profile; no new pairing.
+- Separate physical acceptance from CI. First compare passive STATUS/directory measurements without a sale. For ordinary legitimate sales already performed during subsequent use, correlate original request/file times and user paper/terminal/UI endpoints; do not request transactions solely to repair documentation. No financial/stock delta PASS without its before/after/control evidence.
+- First engineering target is removal of unnecessary historical-folder cost, not an invented total receipt-time guarantee. Final performance acceptance requires a marked reduction in both pre-dispatch delay and physical receipt/activation time, with no stale-gate or recovery regression. If only one interval improves, keep the other OPEN.
+
+Single next action after this preparation record is green/main: implement and validate the bounded dry-run/reversible STATUS-history maintenance; ship nothing to the store until the required checks pass. Whole FTEXT remains OPEN/ASSIGNED. No new runtime, production state change, driver upgrade, archive move or receipt has been executed by this audit.
