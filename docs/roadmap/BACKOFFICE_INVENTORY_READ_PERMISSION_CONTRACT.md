@@ -1,3 +1,7 @@
+## 02/11/2026 — canonical report delivered; bounded access-only continuation
+
+The earlier PR3495 dependency is historical: the report and later missing-cost/reviewed-result work are merged, with separately owned scoped PASS3504/3505 recorded in the current inventory manual. Report/value/review/identity corrections remain with INVENTORY-RECONCILIATION-01. CENTRAL-BACKOFFICE-ACCESS-01 now claims ONLY existing personal list/detail history and theoretical-quantity visibility through two independent rights, not audit/report/export/cost admission. Before-source checkpoint2026-11-02-inventory-history-permissions.md must be green/main first. Preserve every old blind-counter/finalizer invariant and all peer PASS; no hosted grant/business write. All new access remains NOT TESTED and uninstalled until exact source CI/release. The detailed field matrix below remains a design, not executable authority.
+
 # Inventory history/report permission boundary — reviewed source map
 
 01/11/2026. DESIGN / NOT EXECUTABLE RIGHTS / NO NEW GRANT. CENTRAL-BACKOFFICE-ACCESS-01 retains BackOffice access integration; INVENTORY-RECONCILIATION-01 owns the explicitly transferred audit/investigation/report value-field extension under merged claim3492/6352b57. This review does not take that implementation back. Current baseline main06a2f95db91c78e5326141d1becbb4167910eca7; independent health5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e. The existing21 exact capabilities and all profile defaults remain unchanged.
