@@ -25,13 +25,13 @@ const throwIfWalletError=new Function(`${walletSource.slice(walletStart,walletEn
 const row={code:'SYNTHETIC-1',description:'SYNTHETIC ITEM',quantity:1,unit:'TEM',unitCost:10,initialAmount:10,discount1:0,discount1Amount:0,netAmount:10,exciseTotal:0,vatRate:24,grossAmount:12.4,sourceColumnsVerified:true,quantitySource:'AI_COMPLETE_PRINTED_TABLE_VERIFIED'};
 const complete=()=>({supplier:{name:'SYNTHETIC SUPPLIER',taxId:'099999999'},documentNumber:'SYN-42',documentDate:'2026-11-02',totalGross:12.4,aiConfidence:98,rawText:'',productLines:[]});
 const fallback=()=>({supplierName:'FALLBACK SUPPLIER',supplierTaxId:'088888888',documentNumber:'FB-43',documentDate:'2026-11-01',totalGross:24.8,confidence:90,documentType:'INVOICE'});
-async function run({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null}={}){
+async function run({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null,mimeType='image/jpeg',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`}={}){
  const calls=[],queries=[];let result,status=200,error,walletScopes=0;
  const deps={Buffer,crypto,process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'https://synthetic.invalid',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic',OPENAI_API_KEY:'synthetic'}},console:{warn(){},error(){}},FAST_AZURE_HEADER_TIMEOUT_MS:35000,POS_STORED_LINES_TOLERANCE:0.05,finalizeV244ProductLines,reconcileInvoiceLines,reusableVerifiedPrintedTable,recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable,throwIfWalletError,
   prisma:{store:{findFirst:async q=>{assert.deepEqual(q,{where:{id:'store-a',companyId:'company-a'},select:{id:true}});return storeExists?{id:'store-a'}:null}},$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join('?'),values});return durable}},
   walletActivityFromRequest:(req,scope)=>{assert.equal(req.user.companyId,'company-a');assert.deepEqual(scope,{storeId:'store-a',purpose:'PAYMENT_HEADER_READ'});return {purpose:scope.purpose}},
   withInvoiceWalletScope:async(scope,work)=>{walletScopes++;assert.deepEqual(scope,{companyId:'company-a',storeId:'store-a',activity:{purpose:'PAYMENT_HEADER_READ'}});return work()},
-  callAzure:async options=>{calls.push('azure');assert.equal(options.contentData,'data:image/jpeg;base64,c3ludGhldGlj');if(azure instanceof Error)throw azure;return azure},
+  callAzure:async options=>{calls.push('azure');assert.equal(options.contentData,dataUrl);assert.equal(options.mimeType,mimeType);if(azure instanceof Error)throw azure;return azure},
   // Provider transport normalization is outside this return-predicate change.
   normalizeAzure:value=>value,
   azureSupplierMatch:async(companyId,supplier)=>{assert.equal(companyId,'company-a');assert.deepEqual(supplier,azure.supplier);return matched},
@@ -39,7 +39,7 @@ async function run({azure=complete(),openai=fallback(),durable=[],operatorStore=
   matchSupplier:async companyId=>{assert.equal(companyId,'company-a');return null},
  };
  const fn=new Function(...Object.keys(deps),`${declarations}\n${source.slice(reconcileStart,reconcileEnd)}\nreturn ${callback}`)(...Object.values(deps));
- const req={body:{storeId:'store-a',filename:'synthetic.jpg',mimeType:'image/jpeg',dataUrl:'data:image/jpeg;base64,c3ludGhldGlj'},user:{companyId:'company-a',tokenType:'STORE_OPERATOR',storeId:operatorStore}};
+ const req={body:{storeId:'store-a',filename:mimeType==='application/pdf'?'synthetic.pdf':'synthetic.jpg',mimeType,dataUrl},user:{companyId:'company-a',tokenType:'STORE_OPERATOR',storeId:operatorStore}};
  const res={status(value){status=value;return this},json(value){assert.equal(result,undefined,'one response only');result=value;return this}};
  await fn(req,res,value=>{error=value});
  return {calls,queries,result,status,error,walletScopes};
@@ -100,4 +100,42 @@ test('complete credit header returns the balanced printed invoice total rather t
 
 test('ordinary Azure failure retains configured header fallback',async()=>{
  const r=await run({azure:new Error('synthetic transport failure')});assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result.documentNumber,'FB-43');
+});
+
+
+test('single-page PDF with known numeric page count keeps complete-header bypass',async()=>{
+ const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:1}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.documentNumber,'SYN-42');assert.equal(r.result.totalGross,12.4);assert.deepEqual(r.result.productLines,[]);
+});
+for(const [name,count]of [['two pages',2],['missing',undefined],['zero',0],['negative',-1],['numeric string','1'],['non-numeric','invalid'],['non-finite',Infinity],['null',null]]){
+ test(`PDF header-only ${name} page count continues to fallback`,async()=>{
+  const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:count}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result.documentNumber,'FB-43');assert.equal(r.result.totalGross,24.8);assert.deepEqual(r.result.productLines,[]);
+ });
+}
+for(const count of [2,undefined,0,'1']){
+ test(`PDF reconciled-table bypass remains available with page count ${String(count)}`,async()=>{
+  const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:count,documentNumber:'',productLines:[row]}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.documentNumber,'');assert.equal(r.result.productLines.length,1);assert.equal(r.result.totalGross,12.4);
+ });
+}
+test('image header-only bypass remains unchanged even when page count is not one',async()=>{
+ const r=await run({azure:{...complete(),azurePageCount:2}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.documentNumber,'SYN-42');assert.deepEqual(r.result.productLines,[]);
+});
+
+
+test('actual two-page PDF text cannot promote a page subtotal through header-only bypass',async()=>{
+ const bytes=readFileSync(path.join(root,'CHECKPOINTS/EVIDENCE/invoice-physical-pages-20261102/fixtures/two-physical-pages.pdf'));
+ const {getDocument}=await load('node_modules/pdfjs-dist/legacy/build/pdf.mjs');
+ const task=getDocument({data:new Uint8Array(bytes),disableWorker:true,useSystemFonts:true});
+ let rawText='',pageCount;
+ try{
+  const pdf=await task.promise;pageCount=pdf.numPages;assert.equal(pageCount,2);
+  for(let index=1;index<=pageCount;index++){
+   const page=await pdf.getPage(index),content=await page.getTextContent();
+   rawText+=content.items.map(item=>item.str||'').join(' ')+'\n';
+  }
+ }finally{await task.destroy();}
+ assert.match(rawText,/LAB-A/);assert.match(rawText,/LAB-B/);assert.match(rawText,/24\.80/);
+ assert.equal(recoverVatSummaryInvoiceTotal(rawText),0);assert.equal(recoverBalancedInvoicePayable(rawText),0);
+ const azure={...complete(),azurePageCount:pageCount,rawText,productLines:[{...row,code:'LAB-A'},{...row,code:'LAB-B'}]};
+ const r=await run({mimeType:'application/pdf',dataUrl:`data:application/pdf;base64,${bytes.toString('base64')}`,azure});
+ assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.queries.length,1);assert.equal(r.result.totalGross,24.8);assert.equal(r.result.documentNumber,'FB-43');assert.deepEqual(r.result.productLines.map(line=>line.code),['LAB-A','LAB-B']);
 });
