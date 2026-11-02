@@ -1,0 +1,111 @@
+{
+  "sourceFilename": "Rizareio_Ftext_Timing_20261102_095619_1375400.json",
+  "sourceSha256": "904d3be8b4fa1995874c76fdfa508dbf3d4d49d987f215ffd53b1d325628360d",
+  "schema": "MWS_FTEXT_TIMING_METADATA_V2",
+  "collectedUtc": "2026-11-02T09:56:18.1536563Z",
+  "inventory": {
+    "fileCount": 18445,
+    "enumerationMs": 1316.6,
+    "extensions": [
+      {
+        "extension": ".json",
+        "count": 9657
+      },
+      {
+        "extension": ".res",
+        "count": 8788
+      }
+    ]
+  },
+  "statusObservations": [
+    {
+      "requestId": "c6405c1035124f6e8a96a7f2b95c6083",
+      "inputObservedUtc": "2026-11-02T09:55:17.305951+00:00",
+      "inputDeletionObservedUtc": "2026-11-02T09:55:21.568491+00:00",
+      "resultObservedUtc": "2026-11-02T09:55:23.074465+00:00",
+      "inputToDeletionSeconds": 4.26254,
+      "deletionToResultSeconds": 1.505974,
+      "inputToResultSeconds": 5.768514
+    },
+    {
+      "requestId": "6f15654879a64acd87c8683b2823ec6f",
+      "inputObservedUtc": "2026-11-02T09:55:24.866080+00:00",
+      "inputDeletionObservedUtc": "2026-11-02T09:55:29.453564+00:00",
+      "resultObservedUtc": "2026-11-02T09:55:31.100605+00:00",
+      "inputToDeletionSeconds": 4.587484,
+      "deletionToResultSeconds": 1.647041,
+      "inputToResultSeconds": 6.234525
+    },
+    {
+      "requestId": "006b66fb8ddb4f47b82350da247b8b3c",
+      "inputObservedUtc": "2026-11-02T09:55:32.655788+00:00",
+      "inputDeletionObservedUtc": "2026-11-02T09:55:49.545559+00:00",
+      "resultObservedUtc": "2026-11-02T09:55:51.094998+00:00",
+      "inputToDeletionSeconds": 16.889771,
+      "deletionToResultSeconds": 1.549439,
+      "inputToResultSeconds": 18.43921
+    },
+    {
+      "requestId": "b415201f18194e2e88ee62bff73abcc1",
+      "inputObservedUtc": "2026-11-02T09:55:52.843699+00:00",
+      "inputDeletionObservedUtc": "2026-11-02T09:55:57.493057+00:00",
+      "resultObservedUtc": "2026-11-02T09:55:59.067715+00:00",
+      "inputToDeletionSeconds": 4.649358,
+      "deletionToResultSeconds": 1.574658,
+      "inputToResultSeconds": 6.224016
+    },
+    {
+      "requestId": "73f1c367f6fe4bd19fe7c8cd4df05346",
+      "inputObservedUtc": "2026-11-02T09:56:00.741951+00:00",
+      "inputDeletionObservedUtc": "2026-11-02T09:56:05.557685+00:00",
+      "resultObservedUtc": "2026-11-02T09:56:07.107661+00:00",
+      "inputToDeletionSeconds": 4.815734,
+      "deletionToResultSeconds": 1.549976,
+      "inputToResultSeconds": 6.36571
+    },
+    {
+      "requestId": "3de8503164094d7fa93032c03eb89c74",
+      "inputObservedUtc": "2026-11-02T09:56:08.537942+00:00",
+      "inputDeletionObservedUtc": "2026-11-02T09:56:13.584419+00:00",
+      "resultObservedUtc": "2026-11-02T09:56:15.080863+00:00",
+      "inputToDeletionSeconds": 5.046477,
+      "deletionToResultSeconds": 1.496444,
+      "inputToResultSeconds": 6.542921
+    }
+  ],
+  "observedStatusSeconds": 49.574895999999995,
+  "watchSeconds": 60.064,
+  "installedModuleHashes": [
+    {
+      "name": "Cloud-Tools.psm1",
+      "sha256": "fa67c6fef07c81046dc907a16de5e24bba1b93d571f1bd78e469f39ddb7fb740"
+    },
+    {
+      "name": "Cloud-Connector.ps1",
+      "sha256": "90ff2e64d2379d401abb16b2165992c2410a11c7b1863790209c47a58ebfff5e"
+    },
+    {
+      "name": "Ftext.psm1",
+      "sha256": "b7f05991e10a953a2f31d2dde8f6d1c20f0ce86f0fccf28ce3d96cfe71e6c612"
+    },
+    {
+      "name": "Cash.psm1",
+      "sha256": "5b75ce63b3a4f6fdbdaa5b0582c3bd3f9e9006ddc4fbdedc5286572260e33750"
+    },
+    {
+      "name": "Pair.ps1",
+      "sha256": "c9ae79e2f7557171334c958ded0c710470b3209d6e5fe730aac4f9146f28be2f"
+    },
+    {
+      "name": "Cloud-Test.ps1",
+      "sha256": "6d4d55184a1abed6337d10d3a76c499d58a45931c525b1a82e0929e686eb50a4"
+    },
+    {
+      "name": "Setup.ps1",
+      "sha256": "8f28358a78eb358babefdb9755bdb8455d7b5e2c22b55379205e74d77f4ff5bc"
+    }
+  ],
+  "moduleComparison": "All seven match a351362f release, canonical Windows CRLF bytes.",
+  "warnings": [],
+  "limits": "Observation timestamps are not LAN packets, input-read timestamps, driver CPU samples or printer timestamps. No natural sale occurred in this watch window. Total process CPU is cumulative and cannot establish current saturation. Folder enumeration is one cold/contended sample, not proof of vendor scanning cost."
+}
