@@ -57,7 +57,24 @@ function Invoke-FtextCloudPoll($Config,[bool]$Recovering=$false,[ValidateRange(0
     if($Recovering -and ($response.request -or $response.lateReceipt -or $response.errorEvidence)) {throw 'Cloud returned new work during original-result recovery.'}
     return $response
 }
+# A scheduling hint only. Server readiness and first-publication checks remain authoritative.
+$script:FtextReadinessRefreshAt=[DateTime]::MinValue
+function Get-FtextCloudReadinessRefreshAt {return $script:FtextReadinessRefreshAt}
+function Get-FtextReadinessRefreshAt([DateTime]$CheckedAt,[DateTime]$PostStarted,[DateTime]$Now,[double]$ElapsedSeconds) {
+    if([double]::IsNaN($ElapsedSeconds) -or [double]::IsInfinity($ElapsedSeconds) -or $ElapsedSeconds -lt 0 -or $CheckedAt -gt $Now.AddSeconds(2) -or $PostStarted -gt $Now) {return $Now}
+    # Reserve the observed complete round trip plus two seconds for poll/join and
+    # network variation. A slow sample consumes its budget, never extends proof.
+    $reserve=[Math]::Max(2,$ElapsedSeconds+2)
+    $expiry=if($CheckedAt -lt $PostStarted){$CheckedAt.AddSeconds(20)}else{$PostStarted.AddSeconds(20)}
+    $refresh=$expiry.AddSeconds(-$reserve)
+    if($refresh -le $Now){return $Now}
+    # Bound idle work opportunity even when the preceding sample was very fast.
+    if($refresh -gt $Now.AddSeconds(10)){return $Now.AddSeconds(10)}
+    return $refresh
+}
 function Invoke-FtextCloudReadiness([string]$ConfigPath,[ValidateRange(1,30)][int]$TimeoutSeconds=5) {
+    $script:FtextReadinessRefreshAt=[DateTime]::MinValue
+    $roundTrip=[Diagnostics.Stopwatch]::StartNew()
     $config=Get-FtextCloudConfig $ConfigPath
     # Authenticate current installation before the nonfiscal STATUS command.
     Invoke-FtextCloudPing $config | Out-Null
@@ -80,7 +97,13 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath,[ValidateRange(1,30)][in
     foreach($key in @('serialNumber','deviceTime','description')) {if($result.PSObject.Properties[$key]) {$report[$key]=$result.$key}}
     $token=Read-FtextDeviceToken $config
     # Local STATUS evidence is durable. An undelivered/stale readiness sample never authorizes checkout.
-    Invoke-RestMethod -Method Post -Uri ($config.apiBase+'/api/ftext/v1/device/status-result') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($report | ConvertTo-Json -Compress) -TimeoutSec 15 | Out-Null
+    $postStarted=[DateTime]::UtcNow
+    $ack=Invoke-RestMethod -Method Post -Uri ($config.apiBase+'/api/ftext/v1/device/status-result') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($report | ConvertTo-Json -Compress) -TimeoutSec 15
+    $roundTrip.Stop()
+    if($result.ok -and $ack.ok -eq $true -and $ack.PSObject.Properties['idempotentReplay'] -and $ack.idempotentReplay -eq $false) {
+        $checked=[DateTime]::Parse([string]$checkedAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
+        $script:FtextReadinessRefreshAt=Get-FtextReadinessRefreshAt $checked $postStarted ([DateTime]::UtcNow) $roundTrip.Elapsed.TotalSeconds
+    }
     if(-not $result.ok) {Write-Host ('Register STATUS code: '+[int]$result.code+'. No payment was sent.')}
     return $result.ok
 }
@@ -93,7 +116,8 @@ function Start-FtextCloudReadiness([string]$ConfigPath) {
             param($ModulePath,$Path)
             $ErrorActionPreference='Stop'
             Import-Module -Name $ModulePath -Force
-            Invoke-FtextCloudReadiness -ConfigPath $Path -TimeoutSeconds 30
+            $ready=Invoke-FtextCloudReadiness -ConfigPath $Path -TimeoutSeconds 30
+            [pscustomobject]@{ready=$ready;refreshAt=(Get-FtextCloudReadinessRefreshAt)}
         }).AddArgument((Join-Path $PSScriptRoot 'Cloud-Tools.psm1')).AddArgument($ConfigPath)
         $async=$pipeline.BeginInvoke()
         return [pscustomobject]@{Pipeline=$pipeline;Async=$async}
@@ -103,8 +127,9 @@ function Receive-FtextCloudReadiness($Worker) {
     if(-not $Worker.Async.IsCompleted) {throw 'Readiness worker is still running.'}
     try {
         $result=$Worker.Pipeline.EndInvoke($Worker.Async)
-        if($Worker.Pipeline.HadErrors -or $result.Count -ne 1 -or $result[0] -isnot [bool]) {throw 'Readiness worker did not return verified readiness.'}
-        return [bool]$result[0]
+        if($Worker.Pipeline.HadErrors -or $result.Count -ne 1 -or $result[0].ready -isnot [bool] -or $result[0].refreshAt -isnot [DateTime]) {throw 'Readiness worker did not return verified readiness.'}
+        $Worker | Add-Member -NotePropertyName RefreshAt -NotePropertyValue $result[0].refreshAt -Force
+        return [bool]$result[0].ready
     } finally { $Worker.Pipeline.Dispose() }
 }
 function Stop-FtextCloudReadiness($Worker) {
@@ -180,4 +205,4 @@ function Invoke-FtextStatusMaintenance {
         return Invoke-FtextStatusArchive -ConfigPath $ConfigPath -Mode $Mode -AcknowledgedIds $approved.ToArray()
     } finally {if($held) {$mutex.ReleaseMutex()};$mutex.Dispose()}
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff,Invoke-FtextStatusMaintenance
+Export-ModuleMember -Function Get-FtextCloudReadinessRefreshAt,Get-FtextReadinessRefreshAt,Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff,Invoke-FtextStatusMaintenance
