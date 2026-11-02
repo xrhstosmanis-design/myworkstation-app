@@ -1,3 +1,5 @@
+> 02/11/2026: User-reported PASS for checklist1–4 (menu/compact keyboard layout/photo zoom/search/quote/reactions). Do not replay these or earlier accepted entry/media. Installed build/hash, model/OS/store/identity/action time remain independently unidentified. Remaining single batch: identify test store/two distinct authorized users; named delivery/read, announcement/pin/explicit acknowledgement, one authorized destination-review-confirm forward, and unconfirmed preview lifecycle/rotation privacy cleanup. No business/real-store diagnostics. The original full plan below is retained historically, not an instruction to repeat accepted steps.
+
 # Chat compact layout and full-photo zoom - one combined physical acceptance
 
 Owner codex/chat-native-readers-20261031 retained. Status NOT TESTED; engineering/CI do not imply physical PASS.
