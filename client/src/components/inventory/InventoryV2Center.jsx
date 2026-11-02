@@ -12,6 +12,7 @@ import {
 import "./inventory-v2-center.css";
 import InventoryMobileApp from "./InventoryMobileApp.jsx";
 import InventoryFastCount from "./InventoryFastCount.jsx";
+import { inventoryUnitCost } from "./inventory-cost.js";
 import InventoryReconciliationPanel from "./InventoryReconciliationPanel.jsx";
 const num = (v) => Number(v || 0),
   euro = (v) => v===null||v===undefined?'Άγνωστο':`${num(v).toFixed(2)} €`;
@@ -238,7 +239,7 @@ export default function InventoryV2Center({
           x.expectedQuantity,
           x.countedQuantity ?? "",
           num(x.countedQuantity) - num(x.expectedQuantity),
-          x.unitCost,
+          inventoryUnitCost(x.unitCost) ?? "",
         ]),
       ],
       blob = new Blob(
@@ -299,7 +300,7 @@ export default function InventoryV2Center({
           line.expectedQuantity,
           line.countedQuantity ?? "",
           line.difference ?? "",
-          line.unitCost,
+          inventoryUnitCost(line.unitCost) ?? "",
           line.differenceValue ?? "",
           line.countedBy,
           line.countSource || "",
