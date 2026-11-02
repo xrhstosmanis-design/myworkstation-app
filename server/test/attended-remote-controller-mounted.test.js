@@ -18,6 +18,7 @@ test('mounted controllers keep three stream identities, stop only the selected s
   await act(async()=>{roots.forEach((root,i)=>root.render(React.createElement(module.exports.default,{id:String(i),request})));});
   assert.equal(streams.size,3);
   await act(async()=>{for(let i=0;i<3;i++)streams.get(`/api/remote-support/controller/${i}/stream`).enqueue(encoder.encode(`data: ${JSON.stringify({storeName:`Store ${i}`,terminalName:`POS ${i}`,frame:{at:Date.now(),jpeg:'/9j/YQ=='},files:[]})}\n\n`));});
+  assert.deepEqual(calls.filter(x=>x.path.endsWith('/heartbeat')).map(x=>x.path).sort(),[0,1,2].map(i=>`/api/remote-support/controller/${i}/heartbeat`));
   for(let i=0;i<3;i++){const host=document.getElementById(['a','b','c'][i]);assert.equal(host.querySelector('img').alt,`Οθόνη Store ${i} POS ${i}`);assert.match(host.querySelector('h2').textContent,new RegExp(`Store ${i}`));}
   await act(async()=>document.getElementById('b').querySelector('button').click());
   assert.deepEqual(calls.filter(x=>x.path.endsWith('/stop')).map(x=>x.path),['/api/remote-support/controller/1/stop']);

@@ -10,7 +10,7 @@ export function createRemoteSessionStore({now=Date.now,ttl=20*60_000,idle=15_000
   device(id,token){const s=current(id);const digest=crypto.createHash('sha256').update(String(token||'')).digest();if(!crypto.timingSafeEqual(digest,s.tokenHash))throw fail(401,'Μη έγκυρη συνεδρία συσκευής.');return s;},
   controller(id,userId){const s=current(id);if(s.createdBy!==userId)throw fail(403,'Η συνεδρία ανήκει σε άλλον διαχειριστή.');return s;},
   frame(s,frame){if(now()-s.lastControllerAt>idle){expire(s.id,s);throw fail(410,'Ο διαχειριστής αποσυνδέθηκε.');}s.lastDeviceAt=now();s.frame={...frame,sequence:++s.sequence,at:now()};const commands=s.commands.splice(0);return {commands,expiresAt:s.expiresAt};},
-  view(s){s.lastControllerAt=now();return {frame:s.frame,expiresAt:s.expiresAt,terminalId:s.terminalId};},
+  view(s,{touch=true}={}){if(touch)s.lastControllerAt=now();return {frame:s.frame,expiresAt:s.expiresAt,terminalId:s.terminalId};},
   command(s,event){s.lastControllerAt=now();if(s.commands.length>=100)throw fail(429,'Πάρα πολλές εντολές.');s.commands.push({...event,sequence:s.sequence,at:now()});},
   stop(id){sessions.delete(id);},
   canStart(){sweep();return sessions.size<maxSessions;},

@@ -20,3 +20,7 @@ Next action: publish source candidate, require full CI plus Windows build/bridge
 Full local server suite on pre-reconciliation candidate: 4,969 tests total / 4,627 PASS / 0 FAIL / 342 environment-dependent SKIP, 171.59s. Exact reconciled PR native database and Windows checks remain required.
 
 Additional actual React-mounted controller test PASS: three concurrent stream identities render the correct store/POS, stopping the middle target leaves the other two visible, changing the logged-in token hides all screens and aborts streams. This is an isolated component result, not physical Windows acceptance. Source PR #3574.
+
+Review correction before acceptance: SSE rendering itself no longer refreshes the controller heartbeat. Each successfully received active packet must be acknowledged by an authenticated, exact-session POST driven by stream delivery, not a browser timer. This prevents an undetected half-open TCP stream from keeping desktop input alive after a lost controller connection. Legacy view heartbeat behavior remains the default. Add regression for silent stream writes not extending access; rerun exact-head CI. Prior-head Windows build/actual bridge tests SUCCESS run41544309944, artifact13185954873; no physical Windows PASS.
+
+After heartbeat correction, focused Node20 checks:25 total /24 PASS /0 FAIL /1 local native-PG SKIP; includes mounted per-store ACKs and deterministic half-open-stream expiry.

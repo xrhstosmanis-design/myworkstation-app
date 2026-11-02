@@ -17,6 +17,7 @@ test('actual mounted HTTP: exact POS consent, one-use pairing, bidirectional tra
   const j=(await invite()).body;assert.ok(j.id);assert.equal((await invite()).status,409);assert.equal((await call('/pos/pending','operator')).body.invitation.id,j.id);assert.equal((await call('/pos/pending','foreign')).status,403);
   assert.equal((await call(`/pos/${j.id}/consent`,'operator',{accepted:false})).status,400);
   const grant=(await call(`/pos/${j.id}/consent`,'operator',{accepted:true})).body.grant;const paired=await call('/pair','anonymous',{grant});assert.equal(paired.status,201);assert.equal(paired.body.expiresAt,null);assert.equal((await call('/pair','anonymous',{grant})).status,410);assert.equal((await call(`/controller/${j.id}/frame`,'other')).status,403);
+  assert.equal((await call(`/controller/${j.id}/heartbeat`,'other',{})).status,403);assert.equal((await call(`/controller/${j.id}/heartbeat`,'admin',{})).status,200);
   const bytes=Buffer.from('driver bytes'),sha256=crypto.createHash('sha256').update(bytes).digest('hex');
   const f=(await call(`/controller/${j.id}/files`,'admin',{name:'driver.zip',size:bytes.length,sha256})).body;
   assert.equal((await call(`/controller/${j.id}/files/${f.id}/chunk`,'admin',{offset:0,data:bytes.toString('base64')})).status,200);

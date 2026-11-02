@@ -57,10 +57,11 @@ export function createAttendedRemoteRouter({db=prisma,authenticate=auth,env=proc
    const drain=()=>{done();resolve();},lost=()=>{done();reject(Error('closed'));};
    const timeout=setTimeout(()=>{done();reject(Error('backpressure'));},10000);timeout.unref();res.once('drain',drain);res.once('close',lost);
   });
-  const tick=async()=>{if(closed||busy)return;busy=true;try{const j=remote.controller(job.id,req.user);await authority(j);if(closed)return;if(j.state!=='ACTIVE')await write({pending:true,storeName:j.storeName,terminalName:j.terminalName,files:[]});else{const s=remote.sessions.controller(j.id,req.user.id);await write({...remote.sessions.view(s),storeName:s.storeName,terminalName:s.terminalName,files:remote.files.list(s.id)});}}catch{if(!closed){try{res.write(`data: ${JSON.stringify({error:'Η πρόσβαση σταμάτησε. Χρειάζεται νέο αίτημα και Αποδοχή.'})}\n\n`);}catch{}close();res.end();}}finally{busy=false;}};
+  const tick=async()=>{if(closed||busy)return;busy=true;try{const j=remote.controller(job.id,req.user);await authority(j);if(closed)return;if(j.state!=='ACTIVE')await write({pending:true,storeName:j.storeName,terminalName:j.terminalName,files:[]});else{const s=remote.sessions.controller(j.id,req.user.id);await write({...remote.sessions.view(s,{touch:false}),storeName:s.storeName,terminalName:s.terminalName,files:remote.files.list(s.id)});}}catch{if(!closed){try{res.write(`data: ${JSON.stringify({error:'Η πρόσβαση σταμάτησε. Χρειάζεται νέο αίτημα και Αποδοχή.'})}\n\n`);}catch{}close();res.end();}}finally{busy=false;}};
   timer=setInterval(tick,1000);timer.unref();await tick();
  }));
  router.get('/controller/:id/frame',wrap(async(req,res)=>{const s=await controller(req);res.json({...remote.sessions.view(s),storeName:s.storeName,terminalName:s.terminalName,files:remote.files.list(s.id)});}));
+ router.post('/controller/:id/heartbeat',wrap(async(req,res)=>{const s=await controller(req);remote.sessions.view(s);res.json({alive:true});}));
  router.post('/controller/:id/input',wrap(async(req,res)=>{const s=await controller(req);remote.sessions.command(s,validateRemoteInput(req.body));res.json({queued:true});}));
  router.post('/controller/:id/stop',wrap(async(req,res)=>{remote.controller(req.params.id,req.user);remote.stop(req.params.id);res.json({stopped:true});}));
  transferRoutes('/controller/:id',controller,'TO_DEVICE');
