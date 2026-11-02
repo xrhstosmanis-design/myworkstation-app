@@ -1,0 +1,76 @@
+{
+  "sourcePR": 3524,
+  "sourceHead": "97ec1d2e9271faaccb35f6bfa348625ee695eeb4",
+  "sourceMerge": "b7225ce9d10ce4f4034685f73229ddf2ab23a63a",
+  "beforeSourceClaim": {
+    "pr": 3522,
+    "head": "477b2a654bef5584f7defbdf14bb1e9945a9302c",
+    "ci": 41435425308,
+    "merge": "f1e0bb745f8129e3d388ce3356864c55e1c24200"
+  },
+  "sourceCI": {
+    "run": 41436507617,
+    "buildJob": 125247921146,
+    "serverPass": 5195,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "firstWholesaleJob": 125247921161,
+    "firstFailure": "Chromium Target.createTarget timeout before application assertions",
+    "singleUnchangedRetryJob": 125254644995,
+    "finalConclusion": "success"
+  },
+  "mainHistory": [
+    {
+      "revision": "b7225ce9d10ce4f4034685f73229ddf2ab23a63a",
+      "run": 41438912777,
+      "status": "cancelled before jobs; superseded pending workflow, not PASS"
+    },
+    {
+      "revision": "5288515d1f61a0ae344991aeaaa4e33f680dc2f5",
+      "run": 41439415075,
+      "buildJob": 125258630107,
+      "serverPass": 5204,
+      "backupPass": 8,
+      "fail": 0,
+      "skip": 0,
+      "deploy": "normal guard41441720973/job125265025788 refused older production source after cash source merge; no bypass"
+    }
+  ],
+  "acceptedCombinedMain": {
+    "revision": "6d4937a910be74c3a79092aa3a86c81add296611",
+    "run": 41442153196,
+    "event": "workflow_dispatch",
+    "buildJob": 125267071278,
+    "serverPass": 5250,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0,
+    "allJobs": "success",
+    "inventoryContent": "ancestor and exact inventory component/service/test equality verified against3524; includes separately owned FTEXT and cash sources"
+  },
+  "release": {
+    "workflow": 41444283424,
+    "job": 125273756732,
+    "deploy": "dep-dbk82fuc6qcc73dq8bmg",
+    "status": "live",
+    "liveAtUTC": "2026-11-02T12:27:26.09531Z",
+    "healthyRevision": "6d4937a910be74c3a79092aa3a86c81add296611",
+    "healthObservedAtUTC": "2026-11-02T12:27:58.246263+00:00",
+    "rollbackArtifact": 13141735924,
+    "rollbackDigest": "sha256:51b77bbb3715a4a1b93d15fd46589da516d012e6aa35ac2da63084f0d23e4bbd"
+  },
+  "local": {
+    "node": "20.20.2",
+    "focusedPass": 3,
+    "focusedFail": 0,
+    "focusedSkip": 0,
+    "serverTests": 4851,
+    "serverPass": 4513,
+    "serverFail": 0,
+    "serverSkip": 338,
+    "durationSeconds": 124.54,
+    "buildSeconds": 27.31,
+    "redRegression": "fails on old source because final result button absent; passes on new source"
+  }
+}
