@@ -288,6 +288,7 @@ const transactionSchema=z.object({
   type:z.enum(["SALE_CASH","SALE_CARD","SUPPLIER_PAYMENT","OTHER_EXPENSE","PERCENTAGES","TRANSFER_AMOUNT"]),
   amount:z.coerce.number().finite().refine(value=>value!==0,{message:"Το ποσό δεν μπορεί να είναι μηδενικό."}).refine(value=>Math.abs(value)<=999999999,{message:"Το ποσό είναι πολύ μεγάλο."}),
   description:z.string().trim().max(500).optional().nullable(),
+  expenseCategoryId:z.string().trim().min(1).max(180).optional().nullable(),
   supplierName:z.string().trim().max(180).optional().nullable(),
   supplierId:z.string().optional().nullable(),
   invoiceDocumentNumber:z.string().trim().min(1).max(80).optional().nullable(),
@@ -1048,6 +1049,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   assertStoreAccess(req,req.params.storeId);
   const store=await ownedStore(req.params.storeId,req.user.companyId);
   const body=transactionSchema.parse(req.body||{});
+  if(body.expenseCategoryId&&(body.type!=="OTHER_EXPENSE"||body.deferredInvoice))return res.status(400).json({error:"Η κατηγορία εξόδου επιτρέπεται μόνο στα λοιπά έξοδα χωρίς αναβολή τιμολογίου."});
   if(body.deferredInvoice){
     const result=await createPendingInvoicePayment(prisma,{companyId:req.user.companyId,storeId:store.id,user:req.user,terminalPos:await requestTerminal(req)},body);
     return res.status(result.duplicate?200:201).json({...normalize(result.transaction),duplicate:result.duplicate,pendingInvoiceId:result.pendingInvoiceId,fingerprint:result.fingerprint,evidenceMode:"NO_DOCUMENT",paymentSource:body.paymentSource,paymentMethod:body.paymentMethod});
@@ -1143,6 +1145,12 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   };
   const persist=async tx=>{
   if(req.user?.staffAccess===true)await requireStaffAction(tx,req,store.id,'payments.expense');
+  // A centrally selected category is read and locked in the same transaction as
+  // this new expense. Deactivation/rename must wait until its binding commits.
+  if(body.expenseCategoryId){
+    const categories=await tx.$queryRaw`SELECT "id" FROM "ManagementExpenseCategory" WHERE "id"=${body.expenseCategoryId} AND "companyId"=${req.user.companyId} AND "active"=true FOR SHARE`;
+    if(!categories[0])return {error:"Η κατηγορία εξόδου δεν είναι διαθέσιμη. Ανανέωσε τις κατηγορίες και επίλεξε ενεργή κατηγορία."};
+  }
   let rows;
   if(invoicePaymentKey){
     const checkInvoicePayment=async tx=>{
@@ -1164,6 +1172,11 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   }else rows=await insertTransaction(tx);
   if(!rows[0])return {error:"Η βάρδια έχει κλείσει ή δεν είναι πλέον ενεργή. Η συναλλαγή δεν αποθηκεύτηκε."};
   const transaction=normalize(rows[0]);
+  if(body.expenseCategoryId){
+    const bound=await tx.$executeRaw`UPDATE "StoreTransaction" SET "expenseCategoryId"=${body.expenseCategoryId} WHERE "id"=${transaction.id} AND "companyId"=${req.user.companyId} AND "storeId"=${store.id} AND "type"='OTHER_EXPENSE' AND "expenseCategoryId" IS NULL`;
+    if(Number(bound)!==1){const error=new Error("Η κατηγορία εξόδου δεν αποθηκεύτηκε. Η πληρωμή δεν καταχωρίστηκε.");error.status=409;throw error}
+    transaction.expenseCategoryId=body.expenseCategoryId;
+  }
   const expenseStatus=req.user.staffAccess===true?"PENDING_REVIEW":expenseReviewStatus(req.user);
   if(body.type==="OTHER_EXPENSE")await tx.$executeRaw`
     INSERT INTO "OtherExpenseReview" ("id","companyId","storeId","transactionId","status","reviewedBy","reviewedAt","reviewNote")
@@ -1181,7 +1194,7 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   };if(tx===prisma)await prisma.$transaction(bankEntry);else await bankEntry(tx);}
   return {transaction};
   };
-  const persisted=req.user?.staffAccess===true?await prisma.$transaction(persist):await persist(prisma);
+  const persisted=req.user?.staffAccess===true||body.expenseCategoryId?await prisma.$transaction(persist):await persist(prisma);
   if(persisted.error)return res.status(409).json(persisted);
   const transaction=persisted.transaction;
   const emailNotification=body.type==="PERCENTAGES"?await notifyLedgerAlert({companyId:req.user.companyId,store,kind:"PERCENTAGES",transaction,actorName}):null;
@@ -1255,4 +1268,5 @@ router.post("/:transactionId/reverse",route(async(req,res)=>{
 }));
 
 export default router;
+
 
