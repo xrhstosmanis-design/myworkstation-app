@@ -78,7 +78,7 @@ function fullFixture(){
  a.automaticSnapshot={openingDrawer:100,openingCustody:0,openingCoins:0,openingOperational:100,closingDrawer:3,closingCustody:0,closingCoins:0,actualOperational:3,expectedOperational:90,variance:-87,cashSales:0,expenses:10,cardSales:0,eftposTotal:0,cardVariance:0};
  a.automaticTransactions=[{id:'expense-a',companyId:'co',storeId:'store',sessionId:'a',type:'OTHER_EXPENSE',amount:10,subtractFromShift:true,reversedAt:null}];
  a.transactions=[{id:'expense-a',type:'OTHER_EXPENSE',amountCents:1000,cashEffect:true,reversed:false,occurredAt:'2026-10-21T10:00:00Z'}];
- a.expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',transactionId:'expense-a',amountCents:1000,occurredAt:'2026-10-21T10:00:00.000Z',evidenceHash:hash('expense')}];
+ a.expenseFindings=[]; // The original expense document check is already independently complete.
  a.eventSales={status:'AVAILABLE',findings:[],financialAdjustmentCents:0,evidenceHash:hash('price-events')};
  a.fullEvidence={events:{status:'AVAILABLE',findings:[],unassignedCount:0,evidenceHash:hash('events')},duplicates:{salesStatus:'LINKED_POS_SCOPE',findings:[],duplicateWindowSeconds:60}};
  source.paperEvidence={version:1,storeId:'store',status:'COMPLETE',items:[{sourceId:'paper',line:0,status:'MATCHED',kind:'EXPENSE',sessionId:'a',transactionId:'expense-a',amountCents:1000,reason:'UNIQUE_RECORDED_CORROBORATION'}],coverage:{discoveryComplete:true,complete:true},financialAdjustmentCents:0,humanApproval:false,hash:hash('papers')};
@@ -113,4 +113,9 @@ test('imported Kiosk findings and incomplete evidence block full finality withou
   const source=fullFixture();source.kioskEventSales={status:incomplete?'UNAVAILABLE':'AVAILABLE',findings:incomplete?[]:[{code:'ZERO_VALUE_SALE',occurredAt:'2026-10-21T10:00:00.000Z',sessionId:'a',quantity:1,totalReductionCents:0,originalPriceCents:0,finalPriceCents:0}],coverage:{missingJournalShiftIds:[],unverifiedEventOverlapCount:0,sourceUnavailable:incomplete}};
   const report=projectReconciliation(source,[]);assert.equal(report.rows[0].fullAudit.status,'PENDING');assert(report.rows[0].fullAudit.pendingChecks.includes('EVENTS'));assert.equal(report.rows[0].remainingCents,-8700);
  }
+});
+
+test('matching a handwritten expense amount does not replace a missing expense receipt or close its question',()=>{
+ const source=fullFixture();source.sessions.get('a').expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',transactionId:'expense-a',amountCents:1000,occurredAt:'2026-10-21T10:00:00.000Z',evidenceHash:hash('missing-receipt')}];
+ const report=projectReconciliation(source,[]),row=report.rows[0];assert.equal(row.fullAudit.status,'PENDING');assert(row.fullAudit.pendingChecks.includes('EXPENSES'));assert.equal(row.remainingCents,-8700);assert.equal(row.explainedCents,0);assert.equal(row.offsetCents,0);assert.equal(report.issueRegister.issues[0].status,'OPEN');assert.match(report.text,/χωρίς παραστατικό/);assert.doesNotMatch(report.text,/ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ/);
 });

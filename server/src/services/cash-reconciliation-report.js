@@ -10,12 +10,11 @@ import {projectFullCashAudit,assertFullCashAudit} from './cash-full-audit.js';
 function fullCoverage(row,papers,kiosk){
   const e=row.fullEvidence,items=papers?.items||[],externalGap=kiosk&&(kiosk.status!=='AVAILABLE'||kiosk.coverage?.sourceUnavailable||kiosk.coverage?.missingJournalShiftIds?.length||kiosk.coverage?.unverifiedEventOverlapCount);
   const externalFindings=kiosk?.findings?.length||0;
-  const corroborated=new Set(items.filter(i=>i.status==='MATCHED'&&i.sessionId===row.sessionId&&i.kind==='EXPENSE'&&i.transactionId).map(i=>i.transactionId));
   return {sessionId:row.sessionId,sourceHash:row.sourceHash,
     events:{status:e?.events?.status==='AVAILABLE'&&row.eventSales?.status==='AVAILABLE'&&!externalGap?'COMPLETE':'INCOMPLETE',unresolvedCount:(e?.events?.findings?.length||0)+(e?.events?.unassignedCount||0)+(row.eventSales?.findings?.length||0)+externalFindings},
     duplicates:{status:e?.duplicates?.salesStatus==='LINKED_POS_SCOPE'?'COMPLETE':'INCOMPLETE',windowSeconds:60,unresolvedCount:(e?.duplicates?.findings||[]).filter(f=>f.code==='SALE_LINE_DUPLICATE_CANDIDATE').length},
     papers:{status:papers?.coverage.complete?'COMPLETE':'INCOMPLETE',unresolvedCount:items.filter(i=>i.status==='UNRESOLVED').length+(row.pendingEvidence?.length||0)},
-    expenses:{status:'COMPLETE',unresolvedCount:row.expenseFindings.filter(f=>f.code!=='EXPENSE_WITHOUT_DOCUMENT'||!corroborated.has(f.transactionId)).length}};
+    expenses:{status:'COMPLETE',unresolvedCount:row.expenseFindings.length}};
 }
 const timestamp=v=>v?new Date(v).getTime():NaN;
 export function immediateCashPair(previous,next,rule){
