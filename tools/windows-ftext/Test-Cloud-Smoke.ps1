@@ -147,6 +147,9 @@ try {
 $script:pings=0;$script:posts=0;$script:done=$false
 function Get-FtextCloudConfig($Path){return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json}
 function Invoke-FtextCloudReadiness($ConfigPath){return $true}
+function Start-FtextCloudReadiness($ConfigPath){return @{Async=@{IsCompleted=$true}}}
+function Receive-FtextCloudReadiness($Worker){return $true}
+function Stop-FtextCloudReadiness($Worker){}
 function Invoke-FtextCloudPing($Config){$script:pings++;if($script:pings -eq 1){throw 'Synthetic lost heartbeat'};return @{ok=$true}}
 function Invoke-FtextCloudPoll($Config,$Recovering){
  Invoke-FtextCloudPing $Config | Out-Null
@@ -164,7 +167,7 @@ function Invoke-FtextCashApi($Config,$Action,$Body){
   default {throw 'Unexpected action in retry harness'}
  }
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Invoke-FtextCashApi
+Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Invoke-FtextCashApi
 '@
     $mockCash=@'
 function Get-FtextCashPending($Config){return $null}
@@ -200,3 +203,5 @@ Export-ModuleMember -Function Get-FtextCashPending,Read-FtextLateReceiptEvidence
     $env:LOCALAPPDATA=$oldLocal
     Remove-Item -LiteralPath $root -Recurse -Force
 }
+
+& (Join-Path $PSScriptRoot 'Test-Readiness-Worker-Smoke.ps1')

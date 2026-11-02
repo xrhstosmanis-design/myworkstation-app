@@ -14,6 +14,9 @@ $script:pings=0
 function Get-FtextCloudConfig($Path){return Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json}
 function Invoke-FtextCloudPing($Config){$script:pings++;if($script:pings -eq 1){throw 'Synthetic heartbeat loss'};return @{ok=$true}}
 function Invoke-FtextCloudReadiness($ConfigPath){return $false}
+function Start-FtextCloudReadiness($ConfigPath){return @{Async=@{IsCompleted=$true}}}
+function Receive-FtextCloudReadiness($Worker){return $false}
+function Stop-FtextCloudReadiness($Worker){}
 function Invoke-FtextCloudPoll($Config,$Recovering){
  Invoke-FtextCloudPing $Config | Out-Null
  [IO.File]::AppendAllText($env:MWS_FTEXT_REPORT_LOG,((@{action='work-poll';body=@{recovering=$Recovering}}|ConvertTo-Json -Compress)+"`n"))
@@ -31,7 +34,7 @@ function Invoke-FtextCashApi($Config,$Action,$Body){
  if($Action -in @('cash-poll','void-poll','late-receipt-poll','error-evidence-poll')){return @{request=$null}}
  throw 'Unexpected API action in original-report recovery fixture'
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Invoke-FtextCashApi
+Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Invoke-FtextCashApi
 '@
  Set-Content -LiteralPath (Join-Path $root 'Cloud-Tools.psm1') -Value $cloud -Encoding UTF8
  $cases=@(@{method='CASH';format='OPERATOR_CONFIRMATION';ack='SALE_COMMITTED'},@{method='CARD';format='OPERATOR_CONFIRMATION';ack='CONFIRMED'},@{method='CARD';format='POS_LINE8_OS7';ack='SALE_COMMITTED'})
