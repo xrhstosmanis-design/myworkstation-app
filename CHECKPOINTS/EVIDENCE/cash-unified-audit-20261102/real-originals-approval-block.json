@@ -1,0 +1,24 @@
+{
+  "observedAt": "2026-11-02",
+  "status": "BLOCKED_BEFORE_DISPATCH",
+  "runtime": "4b1347300850b8082ea5d4eab88dc1259e8b21ab",
+  "syntheticPassReceipt": {
+    "pr": 3537,
+    "merge": "b366bd4b0dfccf8134867ac19313f01319fae068"
+  },
+  "approvedSourceSetCount": 8,
+  "currentSourceSetMatches": true,
+  "attemptsRejectedBeforeExecution": 2,
+  "reason": "Automatic approval review requires fresh user-authored confirmation for private-photo transmission to external OpenAI; retrieved prior approval was not accepted by the reviewer.",
+  "paidRequests": 0,
+  "completedReads": 0,
+  "allFivePrivateMoneyAndControlSnapshotsUnchanged": true,
+  "availableReadingsGET": "SUCCEEDED",
+  "sourceReadStatus": "ALL_EIGHT_NOT_READ",
+  "fullResult": "PENDING",
+  "financialOrReviewWrites": 0,
+  "scopeExpanded": false,
+  "workaround": false,
+  "parent": "OPEN_ASSIGNED",
+  "nextAction": "Fresh explicit user-authored confirmation for these eight photos to OpenAI at existing AI charge; refresh baselines before dispatch."
+}
