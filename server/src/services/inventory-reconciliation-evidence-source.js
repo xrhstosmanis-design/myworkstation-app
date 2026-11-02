@@ -10,7 +10,7 @@ const required={
   InvoiceDraftAlias:['companyId','storeId','aliasDocumentId','canonicalDocumentId'],
   PosSaleActionAudit:['id','companyId','storeId','saleId','relatedSaleId','actionType','actorName','reason','details','createdAt'],
   StoreOperatorAudit:['id','companyId','storeId','eventType','details','createdAt','actorId'],
-  KioskAuditEvent:['id','companyId','storeId','eventType','productId','sourceId','actorName','reason','createdAt'],
+  KioskAuditEvent:['id','companyId','storeId','eventType','productId','sourceId','actorName','reason','createdAt','details'],
   ProductPriceHistory:['id','companyId','storeId','productId','oldPrice','newPrice','changeType','createdByUserId','createdAt'],
   User:['id','companyId','fullName']
 };
@@ -64,14 +64,14 @@ export async function readInventorySourceEvidence(tx,{previous,current,rows,move
       AND(("createdAt">=${from} AND "createdAt"<=${to}) OR "saleId"=ANY(${saleIds}::text[]) OR "relatedSaleId"=ANY(${saleIds}::text[])) ORDER BY "createdAt","id" LIMIT 10001`);
   if(capabilities.operatorEvents){
     const actor=has('User');
-    operatorEvents=checked('ιστορικού χειριστών',await tx.$queryRawUnsafe(`SELECT a."id",a."eventType",a."createdAt",${actor?'u."fullName"':'NULL::text'} AS "actorName",
-      jsonb_build_object('items',a."details"->'items','productId',a."details"->'productId','productIds',COALESCE(a."details"->'productIds',jsonb_path_query_array(a."details",'$.changes[*].productId')),'sourceProductId',a."details"->'sourceProductId','targetProductId',a."details"->'targetProductId','barcode',a."details"->'barcode','saleId',a."details"->'saleId','reversalSaleId',a."details"->'reversalSaleId','oldPrice',a."details"->'oldPrice','newPrice',a."details"->'newPrice','quantity',a."details"->'quantity','discount',a."details"->'discount','oldCode',a."details"->'oldCode','newCode',a."details"->'newCode','oldBarcode',a."details"->'oldBarcode','newBarcode',a."details"->'newBarcode','reason',a."details"->'reason') AS details
+    operatorEvents=checked('ιστορικού χειριστών',await tx.$queryRawUnsafe(`SELECT a."id",a."eventType",a."createdAt",a."actorId",${actor?'u."fullName"':'NULL::text'} AS "actorName",
+      jsonb_build_object('actorName',a."details"->'actorName','items',a."details"->'items','productId',a."details"->'productId','productIds',COALESCE(a."details"->'productIds',jsonb_path_query_array(a."details",'$.changes[*].productId')),'sourceProductId',a."details"->'sourceProductId','targetProductId',a."details"->'targetProductId','barcode',a."details"->'barcode','saleId',a."details"->'saleId','reversalSaleId',a."details"->'reversalSaleId','oldPrice',a."details"->'oldPrice','newPrice',a."details"->'newPrice','quantity',a."details"->'quantity','discount',a."details"->'discount','oldCode',a."details"->'oldCode','newCode',a."details"->'newCode','oldBarcode',a."details"->'oldBarcode','newBarcode',a."details"->'newBarcode','reason',a."details"->'reason') AS details
       FROM "StoreOperatorAudit" a ${actor?'LEFT JOIN "User" u ON u."id"=a."actorId" AND u."companyId"=a."companyId"':''}
       WHERE a."companyId"=$1 AND a."storeId"=$2 AND a."createdAt">=$3 AND a."createdAt"<=$4
       ORDER BY a."createdAt",a."id" LIMIT 10001`,companyId,storeId,from,to));
   }
   if(capabilities.productEvents){
-    const events=checked('ιστορικού προϊόντων',await tx.$queryRaw`SELECT "id","eventType","productId","sourceId" AS "saleId","actorName","reason","createdAt" FROM "KioskAuditEvent" WHERE "companyId"=${companyId} AND "storeId"=${storeId} AND "productId"=ANY(${productIds}::text[]) AND "createdAt">=${from} AND "createdAt"<=${to} ORDER BY "createdAt","id" LIMIT 10001`);
+    const events=checked('ιστορικού προϊόντων',await tx.$queryRaw`SELECT "id","eventType","productId","sourceId" AS "saleId","actorName","reason","createdAt",jsonb_build_object('oldCode',"details"->'oldCode','newCode',"details"->'newCode','oldBarcode',"details"->'oldBarcode','newBarcode',"details"->'newBarcode') AS details FROM "KioskAuditEvent" WHERE "companyId"=${companyId} AND("storeId"=${storeId} OR "storeId" IS NULL) AND "productId"=ANY(${productIds}::text[]) AND "createdAt">=${from} AND "createdAt"<=${to} ORDER BY "createdAt","id" LIMIT 10001`);
     operatorEvents.push(...events.map(x=>({...x,origin:'PRODUCT_AUDIT'})));
   }
   if(capabilities.priceHistory){

@@ -55,6 +55,7 @@ export default function InventoryReconciliationPanel({api,stocktakeId,storeId,on
       <p>{report.explanation}</p><p>{report.costMethod}</p>
       {report.stockScope&&<p>{report.stockScope.explanation}</p>}
       <p>Περίοδος: {date(report.previous.startedAt)} → {date(report.current.finalizedAt)}. Έναρξη νέας: {date(report.current.startedAt)} · χειριστής {report.current.createdByUserId||'Άγνωστος'} · οριστικοποίηση {report.current.finalizedByUserId||'Άγνωστος'}.</p>
+      <p>Αποθηκευμένη αιτιολογία οριστικοποίησης: {report.current.finalizationReason||'Δεν υπάρχει στην πηγή'}.</p>
       <p>Ο πλήρης έλεγχος παραστατικών, συμβάντων και πραγματικών χρόνων διακίνησης παραμένει χωριστός από τον υπολογισμό των καταγεγραμμένων κινήσεων.</p>
       <p>Ελλείμματα προς έλεγχο: <b>{amount(report.summary.shortageQuantity)} τμχ · {amount(report.summary.shortageValue)} €</b> · Πλεονάσματα: <b>{amount(report.summary.surplusQuantity)} τμχ · {amount(report.summary.surplusValue)} €</b> · Καθαρή διαφορά: <b>{amount(report.summary.netQuantity)} τμχ · {amount(report.summary.netValue)} €</b></p>
       <p>Χωρίς υπολογισμό: {report.summary.uncomputedItems} · Χωρίς κόστος: {report.summary.missingCostItems}</p>
@@ -75,6 +76,10 @@ export default function InventoryReconciliationPanel({api,stocktakeId,storeId,on
         <div style={{overflowX:'auto'}}><table><thead><tr><th>Καταχώρηση</th><th>Χρόνος συναλλαγής / φυσικής κίνησης</th><th>Κίνηση</th><th>Ποσότητα</th><th>Φυσικό πριν</th><th>Φυσικό μετά</th><th>Λογιστικό πριν / μετά</th><th>Χειριστής</th><th>Παραστατικό</th></tr></thead>
           <tbody>{row.movements.map(m=><tr key={m.id}><td>{date(m.postedAt)}</td><td>{date(m.transactionOccurredAt||m.physicalAt)}{m.quantityBasis&&<p>{m.quantityBasis}</p>}</td><td>{m.movementType}{!m.included?' · Βάση απογραφής':''}</td><td>{amount(m.quantity)}</td><td>{amount(m.balanceBefore)}</td><td>{amount(m.balanceAfter)}</td><td>{amount(m.recordedBalanceBefore)} / {amount(m.recordedBalanceAfter)}</td><td>{m.actorName||m.actorId||'—'}</td><td>{m.documentNumber||m.sourceId||'—'}{m.documentDate&&` · ${date(m.documentDate)}`}</td></tr>)}</tbody>
         </table></div>
+        <details><summary>Αρχικό ιστορικό καταμετρήσεων ({row.countHistory?.length||0})</summary>
+          <p>Έως 200 συμβάντα στην οθόνη· ολόκληρο το ιστορικό στο Excel. Οι αρχικές μετρήσεις δεν αντικαθίστανται από τις διορθώσεις της αναφοράς.</p>
+          <div style={{overflowX:'auto'}}><table><thead><tr><th>Ταυτότητα</th><th>Ώρα</th><th>Συμβάν</th><th>Πριν</th><th>Καταμέτρηση</th><th>Θεωρητικό τότε</th><th>Χειριστής</th><th>Πηγή</th></tr></thead><tbody>{(row.countHistory||[]).slice(0,200).map(e=><tr key={e.id}><td>{e.id}</td><td>{date(e.createdAt)}</td><td>{e.eventType}</td><td>{amount(e.previousQuantity)}</td><td>{amount(e.countedQuantity)}</td><td>{amount(e.expectedQuantity)}</td><td>{e.actorName||'Άγνωστος'}</td><td>{e.source}</td></tr>)}</tbody></table></div>
+        </details>
         {report.sourceEvidence&&<InventorySourceEvidence evidence={report.sourceEvidence} rows={report.rows} productId={row.productId}/>}
       </details>)}
     </>}

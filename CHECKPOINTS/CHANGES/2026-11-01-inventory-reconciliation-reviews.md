@@ -1,3 +1,17 @@
+## 2026-11-01T23:55Z — INVENTORY-RECONCILIATION-01 / SCOPED READ-ONLY UI + PDF/XLSX + CANCEL LAB PASS / REVIEW WRITES BLOCKED
+
+Same owner, no release/second takeover. Installed1e293f931ec5b0f153ba60dddf4fe5c22181def2 after3500/d942 fullPR41360489566 and exactmain41361950951 all5SUCCESS/5176server+8backup/0FAIL/0SKIP including actual native1493. Normal guard41363154340/job125017681131 Verify/Trigger/WaitSUCCESS; Renderdep-dbjsrqjbc2fs73dpa8rg LIVE23:46:20.376543UTC, independenthealth exact1e293f93. Before-source evidence claim3501/docsCI41362046332 green/main9e26c89 remains assigned; its new source3 adapter is not yet deployed.
+
+Actual native SA support, virtual LABcmtpopbgo000trhb5ng9ytiru, CloudChrome tab3, no POS/payment/physical-terminal transaction. Existing finalized pair8f6dcacc→d9f81c39, TEST1/b1466a68 only read. UI initial-2/correction0/final-2 and unknown money, originalcount4 preserved. Actual Greek PDF legible within page margins; actual XLSX6sheets agrees and now preserves numeric immutable COUNT/RECOUNT history10/4/8/4 (expected11/5/5/5). The earlier Decimal count-history export FAIL is CLOSED by this measured read/export retest. This proves read/display/export and cancelled confirmation only, not complete physical loss: known historical self-consumption is a separate missing source assigned to adapter3; mismatch remains visible and loss UNCONFIRMED.
+
+Fresh before23:50:18.432773UTC/after23:55:13.435484UTC all16 LAB/N40control full-row count/digests identical. LAB counts43shifts/27countEvents/90sales/95moves/4stocktakes/18lines/110stocks/134transactions. Exact TEST1stock4/latestmove10Oct11:49:05.817 unchanged; openMAIN0cash/0cards/0transactions/sum0, IRIS numeric field unavailable but UI0 and complete row/transaction digests unchanged. Other7536WorkforceAuditLog rows same digeste68f8222ae067d7a09981bf532b7563b; controlstoreempty stays0. No stock/count/sale/finalization/payment/charge/email or old fixture replay.
+
+One prepared report-only synthetic+1 confirmation was opened, but automatic approval review rejected accepting it: the actual database session is authorized read-only even for a hosted LAB audit-row write. It was dismissed, form cleared, persistedreviewrows remain0 and no indirect retry/bypass attempted. Hosted LINK/CORRECTION/REVOKE acceptance is BLOCKED/NOT TESTED, not a code FAIL and not granted by the conditional plan. Requires explicit permission for that exact hosted synthetic correction and its revoke. Native isolated write/race/session/idempotency proof remains separate CI evidence.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-11-01-inventory-reconciliation-reviews.md; manual docs/manual/inventory/PASS.md and evidence CHECKPOINTS/EVIDENCE/inventory-reconciliation-reviews-20261101. Only completed read/export/cancel scope leaves active pending; full source3, hosted review-write acceptance and broader requested scope remain OPEN/ASSIGNED to this owner. Do not replay protected inventory fixtures or mark whole task PASS.
+
+
+
 # Reviewed inventory results
 
 ## 01/11/2026 — INVENTORY-RECONCILIATION-REVIEWS-02 / SAME OWNER / ASSIGNED BEFORE SOURCE
@@ -36,3 +50,7 @@ Read-only before2026-11-01T22:59:55.042384Z and after23:05:17.94145Z: all16 coun
 
 PR3500 exactd942aeaca0d202e51caf169ad051fe864f7c4357, fullCI41360489566 all5SUCCESS; job1250100920055176server+8backupPASS/0FAIL/0SKIP, actual native reviewed inventory case1493 executed. Merged1e293f931ec5b0f153ba60dddf4fe5c22181def2. Exact-mainCI41361950951 in progress; no second-feature release or hosted review PASS yet. First read-only FAIL artifacts and16 unchanged before/after controls now included under CHECKPOINTS/EVIDENCE/inventory-reconciliation-20261101. Protected old business fixtures never replayed.
 
+
+## Before hosted report-only CORRECTION — exact installed1e293f93
+
+Full PR41360489566 and exactmain41361950951 all5SUCCESS/5176+8/0FAIL/0SKIP, native1493 executed. Ordinary guard41363154340/job125017681131 Verify/Trigger/WaitSUCCESS; Renderdep-dbjsrqjbc2fs73dpa8rg LIVE2026-11-01T23:46:20.376543Z, independenthealth exact1e293f931ec5b0f153ba60dddf4fe5c22181def2. LAB existing native SA support, CloudChrome tab3. Currentd9f81c39/previous8f6dcacc, exact TEST1 identity in before-correction.json. UI initial-2/correction0/final-2/costunknown, originalcount4 unchanged. Form prepared quantity+1 with explicit synthetic acceptance reason LAB-REVIEW-20261101-01, not an assertion of a physical recount; no submit yet. Fresh16 original/control counts+digests, SKUstock/latestmovement, open-shift and other-audit controls recorded BEFORE action in CHECKPOINTS/EVIDENCE/inventory-reconciliation-reviews-20261101/before-correction.json. Review history0. Only one report-only submission authorized; inspect receipt/result and controls before any separate revoke. No stock/count/sale/payment/finalization/email/charge or unrelated fixture replay.

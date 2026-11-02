@@ -69,7 +69,7 @@ export function reconcileInventory({previous, current, previousLines, currentLin
         postedAt: m.createdAt, physicalAt: m.physicalAt||null, balanceBefore: beforeQuantity, balanceAfter: balance,recordedBalanceBefore:recordedBefore,recordedBalanceAfter:recordedBalance,findings: flags};
     });
     for (const m of ledger) for (const flag of m.findings) if (!findings.includes(flag)) findings.push(flag);
-    const uncertain=findings.some(x=>['INVALID_MOVEMENT_QUANTITY','DUPLICATE_POSTING_KEY','LATE_DOCUMENT','TRANSACTION_CROSSES_COUNT_TIME','INVALID_TRANSACTION_QUANTITY','TRANSACTION_POSTING_QUANTITY_MISMATCH','TRANSACTION_WITHOUT_VERIFIED_STOCK_EFFECT','LATE_DOCUMENT_PHYSICAL_TIME_UNKNOWN','INVOICE_QUANTITY_CHECK_UNRESOLVED'].includes(x));
+    const uncertain=findings.some(x=>['INVALID_MOVEMENT_QUANTITY','DUPLICATE_POSTING_KEY','LATE_DOCUMENT','TRANSACTION_CROSSES_COUNT_TIME','INVALID_TRANSACTION_QUANTITY','TRANSACTION_POSTING_QUANTITY_MISMATCH','TRANSACTION_WITHOUT_VERIFIED_STOCK_EFFECT','STOCK_POSTING_FOR_INCOMPLETE_TRANSACTION','LATE_DOCUMENT_PHYSICAL_TIME_UNKNOWN','INVOICE_QUANTITY_CHECK_UNRESOLVED'].includes(x));
     const expected = uncertain?null:balance;
     if(uncertain)for(const m of ledger){m.balanceBefore=null;m.balanceAfter=null;}
     const difference = countValid && expected !== null ? round(value(after.countedQuantity) - expected) : null;

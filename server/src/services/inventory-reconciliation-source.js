@@ -8,12 +8,12 @@ const fail = (message,status=409) => {throw Object.assign(new Error(message),{st
 export async function readInventoryReconciliationBase(tx, current, previousId = null) {
     const lifecycle=await readLifecycleGeneration(tx,{companyId:current.companyId,storeId:current.storeId});
     if(lifecycle.maintenance||lifecycle.retired)fail('Το κατάστημα βρίσκεται σε συντήρηση ή έχει αποσυρθεί.');
-    const candidates = await tx.$queryRaw`SELECT "id","companyId","storeId","name","status","startedAt","finalizedAt",to_jsonb("Stocktake")->>'createdByUserId' AS "createdByUserId",to_jsonb("Stocktake")->>'finalizedByUserId' AS "finalizedByUserId",to_jsonb("Stocktake")->>'finalizationReason' AS "finalizationReason" FROM "Stocktake"
+    const candidates = await tx.$queryRaw`SELECT "id","companyId","storeId","name","status","startedAt","finalizedAt",to_jsonb("Stocktake")->>'createdByUserId' AS "createdByUserId",to_jsonb("Stocktake")->>'finalizedByUserId' AS "finalizedByUserId",COALESCE(to_jsonb("Stocktake")->>'finalizationReason',to_jsonb("Stocktake")->'snapshotJson'->>'reason') AS "finalizationReason" FROM "Stocktake"
       WHERE "companyId"=${current.companyId} AND "storeId"=${current.storeId} AND "status"='FINALIZED'
       AND "id"<>${current.id} AND "finalizedAt"<=${current.startedAt} ORDER BY "finalizedAt" DESC,"id" LIMIT 200`;
     const previous = previousId ? candidates.find(x => x.id === previousId) : candidates[0];
     if (!previous) fail('Δεν βρέθηκε προηγούμενη οριστικοποιημένη απογραφή στο ίδιο κατάστημα.',previousId ? 404 : 409);
-    const parents = await tx.$queryRaw`SELECT "id","companyId","storeId","name","status","startedAt","finalizedAt",to_jsonb("Stocktake")->>'createdByUserId' AS "createdByUserId",to_jsonb("Stocktake")->>'finalizedByUserId' AS "finalizedByUserId",to_jsonb("Stocktake")->>'finalizationReason' AS "finalizationReason" FROM "Stocktake"
+    const parents = await tx.$queryRaw`SELECT "id","companyId","storeId","name","status","startedAt","finalizedAt",to_jsonb("Stocktake")->>'createdByUserId' AS "createdByUserId",to_jsonb("Stocktake")->>'finalizedByUserId' AS "finalizedByUserId",COALESCE(to_jsonb("Stocktake")->>'finalizationReason',to_jsonb("Stocktake")->'snapshotJson'->>'reason') AS "finalizationReason" FROM "Stocktake"
       WHERE "id"=${current.id} AND "companyId"=${current.companyId} AND "storeId"=${current.storeId} AND "status"='FINALIZED'`;
     const fresh = parents[0]; if (!fresh) fail('Η απογραφή δεν είναι πλέον διαθέσιμη.');
     const lines = await tx.$queryRaw`SELECT sl."id",sl."stocktakeId",sl."productId",sl."countedAt",sl."countedQuantity",sl."unitCost",p."name",p."sku"

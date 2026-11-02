@@ -18,7 +18,7 @@ export function inventoryReconciliationWorkbook(report) {
     ['Καθαρή διαφορά τεμάχια',report.summary.netQuantity],['Αξία ελλειμμάτων',report.summary.shortageValue],
     ['Αξία πλεονασμάτων',report.summary.surplusValue],['Καθαρή αξία',report.summary.netValue],
     ['Χωρίς υπολογισμό',report.summary.uncomputedItems],['Χωρίς κόστος',report.summary.missingCostItems],
-    ['Έναρξη προηγούμενης',timestamp(report.previous.startedAt)],['Οριστικοποίηση προηγούμενης',timestamp(report.previous.finalizedAt)],['Έναρξη νέας',timestamp(report.current.startedAt)],['Οριστικοποίηση νέας',timestamp(report.current.finalizedAt)],['Χειριστής νέας',report.current.createdByUserId],['Οριστικοποίηση από',report.current.finalizedByUserId],['Πεδίο αποθήκης',report.stockScope?.explanation]
+    ['Έναρξη προηγούμενης',timestamp(report.previous.startedAt)],['Οριστικοποίηση προηγούμενης',timestamp(report.previous.finalizedAt)],['Έναρξη νέας',timestamp(report.current.startedAt)],['Οριστικοποίηση νέας',timestamp(report.current.finalizedAt)],['Χειριστής νέας',report.current.createdByUserId],['Οριστικοποίηση από',report.current.finalizedByUserId],['Αιτιολογία οριστικοποίησης',report.current.finalizationReason],['Πεδίο αποθήκης',report.stockScope?.explanation]
   ]);
   if(report.groups)append('Τελικό αποτέλεσμα',[['Κύριος κωδικός','SKU','Περιγραφή','Κωδικοί ομάδας','Αρχική διαφορά','Επιβεβαιωμένη διόρθωση','Τελική διαφορά','Κόστος μονάδας','Αρχική αξία','Αξία διόρθωσης','Τελική αξία','Ευρήματα'],
     ...report.groups.map(x=>[x.canonicalProductId,x.sku,x.name,x.productIds.join(', '),x.initialDifference,x.correctionQuantity,x.finalDifference,x.unitCost,x.initialValue,x.correctionValue,x.finalValue,x.findings.join(', ')])]);
@@ -33,8 +33,8 @@ export function inventoryReconciliationWorkbook(report) {
   if(report.sourceEvidence){
     const e=report.sourceEvidence,links=[];
     append('Πληρότητα πηγών',[['Πηγή','Διαθέσιμη'],...Object.entries(e.coverage),['Συναλλαγές που ελέγχθηκαν',e.checkedCounts.transactions],['Παραστατικά',e.checkedCounts.invoices],['Γραμμές παραστατικών',e.checkedCounts.invoiceLines],['Συμβάντα',e.checkedCounts.systemEvents],['Όρια',e.explanation]]);
-    append('Συναλλαγές',[['Συναλλαγή','Προϊόν','Γραμμή','Πηγή','Κατάσταση','Χρόνος συναλλαγής','Καταχώρηση','Μεταβολή stock','Ποσότητα γραμμής','Τιμή','Έκπτωση','Αξία','Αρχική συναλλαγή','Τεκμήριο','Ευρήματα'],
-      ...e.transactions.flatMap(x=>x.lines.map(l=>[x.id,x.productId,l.id,x.source,x.status,timestamp(x.occurredAt),timestamp(x.recordedAt),x.quantity,l.quantity,l.unitPrice,l.discount,l.lineTotal,x.originalSaleId,x.disposition,x.findings.join(', ')]))]);
+    append('Συναλλαγές',[['Συναλλαγή','Προϊόν','Γραμμή','Πηγή','Κατάσταση','Χρόνος συναλλαγής','Καταχώρηση','Μεταβολή γραμμών (μία φορά ανά είδος)','Ποσότητα γραμμής','Τιμή','Έκπτωση','Αξία','Αρχική συναλλαγή','Τεκμήριο','Ευρήματα','Χειριστής','Ταυτότητα χειριστή'],
+      ...e.transactions.flatMap(x=>x.lines.map((l,i)=>[x.id,x.productId,l.id,x.source,x.status,timestamp(x.occurredAt),timestamp(x.recordedAt),i===0?x.quantity:null,l.quantity,l.unitPrice,l.discount,l.lineTotal,x.originalSaleId,x.disposition,x.findings.join(', '),x.actorName,x.actorId]))]);
     append('Παραστατικά',[['Ταυτότητα','Αριθμός','Τύπος','Κατάσταση','Πηγή','Προμηθευτής','Ημερομηνία παραστατικού','Καταχώρηση','Τελευταία αλλαγή','Κοινό παραστατικό','Ευρήματα'],
       ...e.invoices.map(x=>[x.id,x.documentNumber,x.documentType,x.status,x.sourceType,x.supplierName||x.supplierId,timestamp(x.issueDate),timestamp(x.recordedAt),timestamp(x.lastChangedAt),x.canonicalDocumentId,x.findings.join(', ')] )]);
     append('Γραμμές παραστατικών',[['Παραστατικό','Γραμμή','Προϊόν','Ποσότητα','Μονάδα','Ανά συσκευασία','Βασική ποσότητα','Κόστος','Καθαρή αξία','Ευρήματα'],...e.invoices.flatMap(x=>x.lines.map(l=>[x.id,l.id,l.productId,l.quantity,l.unit,l.unitsPerPackage,l.baseQuantity,l.unitCost,l.netAmount,l.findings.join(', ')]))]);
@@ -47,7 +47,7 @@ export function inventoryReconciliationWorkbook(report) {
   return XLSX.write(wb,{bookType:'xlsx',type:'buffer'});
 }
 export async function inventoryReconciliationPdf(report) {
-  if (report.rows.length > 2000 || report.summary.movementCount > 10000 || report.sourceEvidence&&Object.values(report.sourceEvidence.checkedCounts).reduce((s,x)=>s+x,0)>10000) throw Object.assign(new Error('Η αναφορά υπερβαίνει το όριο PDF. Χρησιμοποίησε Excel για το πλήρες αποτέλεσμα.'),{status:413});
+  if (report.rows.length > 2000 || report.summary.movementCount > 10000 || report.rows.reduce((s,x)=>s+(x.countHistory?.length||0),0)>10000 || report.sourceEvidence&&Object.values(report.sourceEvidence.checkedCounts).reduce((s,x)=>s+x,0)>10000) throw Object.assign(new Error('Η αναφορά υπερβαίνει το όριο PDF. Χρησιμοποίησε Excel για το πλήρες αποτέλεσμα.'),{status:413});
   const doc = new PDFDocument({size:'A4',margin:35,info:{Title:'Έλεγχος απογραφής'}}), chunks=[];
   const completed = new Promise((resolve,reject)=>{doc.on('data',x=>chunks.push(x));doc.on('end',()=>resolve(Buffer.concat(chunks)));doc.on('error',reject);});
   doc.font(fileURLToPath(new URL('../../assets/fonts/DejaVuSans.ttf',import.meta.url)));
@@ -56,6 +56,7 @@ export async function inventoryReconciliationPdf(report) {
     .text(`Από: ${report.previous.name} (${report.previous.id})`).text(`Έως: ${report.current.name} (${report.current.id})`)
     .text(`Περίοδος: ${timestamp(report.previous.startedAt)} → ${timestamp(report.current.finalizedAt)} · νέα έναρξη ${timestamp(report.current.startedAt)}`)
     .text(`Χειριστής ${report.current.createdByUserId||'Άγνωστος'} · οριστικοποίηση ${report.current.finalizedByUserId||'Άγνωστος'}`)
+    .text(`Αιτιολογία οριστικοποίησης: ${report.current.finalizationReason||'Δεν υπάρχει στην πηγή'}`)
     .moveDown().text(report.explanation).text(report.costMethod).text('Όλες οι ώρες: Europe/Athens').moveDown()
     .text(`Ελλείμματα: ${number(report.summary.shortageQuantity)} τμχ · ${number(report.summary.shortageValue)} €`)
     .text(`Πλεονάσματα: ${number(report.summary.surplusQuantity)} τμχ · ${number(report.summary.surplusValue)} €`)
@@ -77,6 +78,8 @@ export async function inventoryReconciliationPdf(report) {
     for (const m of row.movements) doc.moveDown().text(`${m.id} · ${m.movementType} · ${number(m.quantity)} · ${m.sourceId || 'Χωρίς σύνδεση'}${m.included ? '' : ' · Βάση απογραφής, δεν προσμετράται'}`)
       .text(`Καταχώρηση ${timestamp(m.postedAt)} · συναλλαγή ${timestamp(m.transactionOccurredAt)} · παραστατικό ${timestamp(m.documentDate)} · φυσική κίνηση ${timestamp(m.physicalAt)}`)
       .text(`Φυσικό ${number(m.balanceBefore)} → ${number(m.balanceAfter)} · λογιστικό ${number(m.recordedBalanceBefore)} → ${number(m.recordedBalanceAfter)} · χειριστής ${m.actorName||m.actorId||'Άγνωστος'} · ${m.findings.join(', ')}`);
+    if(row.countHistory?.length)doc.moveDown().text('Αρχικό ιστορικό καταμετρήσεων:');
+    for(const e of row.countHistory||[])doc.text(`${e.id} · ${timestamp(e.createdAt)} · ${e.eventType} · ${number(e.previousQuantity)} → ${number(e.countedQuantity)} · θεωρητικό ${number(e.expectedQuantity)} · ${e.actorName||'Άγνωστος'} · ${e.source||'Άγνωστη πηγή'}`);
   }
   if(report.review?.history?.length){doc.moveDown().fontSize(10).text('Ιστορικό επιβεβαιώσεων και διορθώσεων αναφοράς');
     for(const r of report.review.history)doc.fontSize(8).moveDown().text(`${r.id} · ${timestamp(r.createdAt)} · ${r.actorName} · ${r.action.kind} · ${r.active?'ενεργή':'ιστορική'}`)

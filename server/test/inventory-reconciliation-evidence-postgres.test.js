@@ -26,6 +26,7 @@ test('native evidence reader: accepted consumption, exact postings, audited retu
     PosSaleActionAudit:'"id" text primary key,"companyId" text,"storeId" text,"saleId" text,"relatedSaleId" text,"actionType" text,"actorName" text,"reason" text,"details" jsonb,"createdAt" timestamptz',
     StoreOperatorAudit:'"id" text primary key,"companyId" text,"storeId" text,"eventType" text,"details" jsonb,"createdAt" timestamptz,"actorId" text',
     ProductPriceHistory:'"id" text primary key,"companyId" text,"storeId" text,"productId" text,"oldPrice" numeric,"newPrice" numeric,"changeType" text,"createdByUserId" text,"createdAt" timestamp'
+    ,KioskAuditEvent:'"id" text primary key,"companyId" text,"storeId" text,"eventType" text,"productId" text,"sourceId" text,"actorName" text,"reason" text,"createdAt" timestamptz,"details" jsonb'
   };
   try{
     await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
@@ -43,19 +44,22 @@ test('native evidence reader: accepted consumption, exact postings, audited retu
       `INSERT INTO "SaleLine" VALUES('self-line','self','p',1,2,0,0),('foreign-line','foreign-sale','p',999,2,0,0)`,
       `INSERT INTO "PosSaleActionAudit" VALUES('self-audit','c','s','self',NULL,'SELF_CONSUMPTION','Ελεγκτής','Αποδοχή','{"items":[{"productId":"p","quantity":1}]}','2026-10-01 07:00Z')`,
       `INSERT INTO "StoreOperatorAudit" VALUES('cart','c','s','CART_ITEM_REMOVE','{"productId":"p","quantity":244,"customerSecret":"NEVER EXPORT"}','2026-10-01 07:00Z','owner'),('foreign-audit','c','control','PRICE_CHANGE','{"productId":"p","quantity":999}','2026-10-01 07:00Z','owner')`,
-      `INSERT INTO "ProductPriceHistory" VALUES('price','c','s','p',2,3,'STORE_PRICE','owner','2026-10-01 07:00')`
+      `INSERT INTO "ProductPriceHistory" VALUES('price','c','s','p',2,3,'STORE_PRICE','owner','2026-10-01 07:00')`,
+      `INSERT INTO "KioskAuditEvent" VALUES('global-barcode','c',NULL,'BARCODE_CHANGE','p',NULL,'Ελεγκτής','Κωδικός','2026-10-01 07:00Z','{"oldBarcode":"001","newBarcode":"002"}'),('foreign-global','other',NULL,'BARCODE_CHANGE','p',NULL,'PRIVATE',NULL,'2026-10-01 07:00Z','{}')`
     ])await db.$executeRawUnsafe(sql);
     const current=(await db.$queryRaw`SELECT * FROM "Stocktake" WHERE "id"='new'`)[0];
     const snapshot=async()=>{const result={};for(const name of Object.keys(definitions))result[name]=await db.$queryRawUnsafe(`SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb) AS rows FROM "${name}" t`);return result;};
     const read=async()=>{const before=await snapshot(),r=await readInventoryReconciliation(db,current,'old');assert.deepEqual(await snapshot(),before);return r;};
     let report=await read();assert.equal(report.rows[0].expectedQuantity,5);assert.equal(report.rows[0].difference,-1);assert.equal(report.summary.shortageValue,2);assert.equal(report.sourceEvidence.checkedCounts.transactions,1);assert.equal(report.rows[0].movements.filter(x=>x.id==='sale-line:self-line').length,1);assert.equal(report.rows[0].findings.includes('LEDGER_COUNT_EXPECTED_MISMATCH'),false);
-    assert.equal(report.sourceEvidence.systemEvents.find(x=>x.id==='cart').stockImpact,'NONE');assert.equal(report.sourceEvidence.systemEvents.find(x=>x.id==='price').changes.newPrice,3);assert.doesNotMatch(JSON.stringify(report),/NEVER EXPORT|foreign-sale|foreign-audit/);
+    assert.equal(report.sourceEvidence.systemEvents.find(x=>x.id==='cart').stockImpact,'NONE');assert.equal(report.sourceEvidence.systemEvents.find(x=>x.id==='price').changes.newPrice,3);assert.equal(report.sourceEvidence.systemEvents.find(x=>x.id==='global-barcode').changes.newBarcode,'002');assert.doesNotMatch(JSON.stringify(report),/NEVER EXPORT|foreign-sale|foreign-audit|foreign-global|PRIVATE/);
     for(const sql of [
       `INSERT INTO "Sale" VALUES('normal','c','s','COMPLETED','POS','2026-10-01 06:30','2026-10-01 06:30',NULL,NULL,'operator'),('reverse','c','s','COMPLETED','POS_REVERSAL','2026-10-01 08:30','2026-10-01 08:30','normal','RETURN','operator')`,
       `INSERT INTO "SaleLine" VALUES('normal-line','normal','p',2,3,1,5),('reverse-line','reverse','p',-2,3,-1,-5)`,
       `INSERT INTO "StockMovement"("id","storeId","productId","movementType","quantity","sourceType","sourceId","createdAt") VALUES('normal-posting','s','p','SALE',-2,'POS_SALE','normal','2026-10-01 06:30')`,
       `INSERT INTO "PosSaleActionAudit" VALUES('return-audit','c','s','reverse','normal','RETURN','Ελεγκτής','Επιστροφή','{"stockRestoredProductIds":["p"]}','2026-10-01 08:30Z'),('return-audit-copy','c','s','reverse','normal','RETURN','Ελεγκτής','Δεύτερο audit','{"stockRestoredProductIds":["p"]}','2026-10-01 08:30Z')`
     ])await db.$executeRawUnsafe(sql);
+    await db.$executeRawUnsafe(`INSERT INTO "Sale" VALUES('draft','c','s','DRAFT','POS','2026-10-01 08:00','2026-10-01 08:00',NULL,NULL,NULL)`);
+    await db.$executeRawUnsafe(`INSERT INTO "SaleLine" VALUES('draft-line','draft','p',NULL,3,0,0)`);
     report=await read();assert.equal(report.rows[0].difference,-1);assert.equal(report.rows[0].movements.filter(x=>x.sourceId==='normal').length,1);assert.equal(report.rows[0].movements.filter(x=>x.sourceId==='reverse').length,1);
     for(const sql of [
       `INSERT INTO "Supplier" VALUES('supplier','c','Προμηθευτής','123456789')`,

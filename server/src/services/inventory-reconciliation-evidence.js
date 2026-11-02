@@ -32,10 +32,11 @@ export function buildInventorySourceEvidence({movements,sales=[],invoiceLines=[]
     const checks=[];
     if(late){checks.push('TRANSACTION_CROSSES_COUNT_TIME');sourceFlag('TRANSACTION_CROSSES_COUNT_TIME');}
     if(s.status!=='COMPLETED')checks.push('TRANSACTION_NOT_COMPLETED');
-    if(quantity===null){checks.push('INVALID_TRANSACTION_QUANTITY');sourceFlag('INVALID_TRANSACTION_QUANTITY');}
+    if(quantity===null){checks.push('INVALID_TRANSACTION_QUANTITY');if(s.status==='COMPLETED')sourceFlag('INVALID_TRANSACTION_QUANTITY');}
     let disposition='CONTEXT_ONLY';
     if(existing.length){
       disposition='RECORDED_POSTINGS';
+      if(s.status!=='COMPLETED'){checks.push('STOCK_POSTING_FOR_INCOMPLETE_TRANSACTION');sourceFlag('STOCK_POSTING_FOR_INCOMPLETE_TRANSACTION');}
       const total=existing.every(x=>numeric(x.quantity)!==null)?round(existing.reduce((sum,x)=>sum+numeric(x.quantity),0)):null;
       if(total!==quantity){checks.push('TRANSACTION_POSTING_QUANTITY_MISMATCH');sourceFlag('TRANSACTION_POSTING_QUANTITY_MISMATCH');}
       for(const m of existing){m.transactionId=s.saleId;m.transactionOccurredAt=stamp(s.occurredAt);m.transactionRecordedAt=stamp(s.createdAt);m.actorName=m.actorName||s.actorName||audits[0]?.actorName||null;m.actorId=m.actorId||s.actorId||audits[0]?.actorId||null;m.sourceLineIds=lines.map(x=>x.lineId);}
@@ -118,7 +119,7 @@ export function buildInventorySourceEvidence({movements,sales=[],invoiceLines=[]
     const linked=[...(transactionsById.get(saleId)||[]),...(transactionsById.get(details.reversalSaleId)||[])];
     edgeBudget+=ids.size+linked.reduce((sum,s)=>sum+s.postingIds.length,0);if(edgeBudget>100000)evidenceLimit();
     return {id:e.id,origin:e.origin,eventType:e.eventType,productIds:[...ids],saleId,relatedSaleId:e.relatedSaleId||details.reversalSaleId||null,
-      recordedAt:stamp(e.createdAt),actorName:text(e.actorName,200),reason:text(e.reason||details.reason),
+      recordedAt:stamp(e.createdAt),actorName:text(e.actorName||details.actorName,200),actorId:text(e.actorId,160),reason:text(e.reason||details.reason),
       stockImpact:nonStockActions.has(e.eventType)||e.origin==='PRICE_HISTORY'||e.eventType==='PRODUCT_BARCODE_TRANSFERRED'?'NONE':'TRANSACTION_EVIDENCE_ONLY',
       movementIds:[...new Set(linked.flatMap(x=>x.postingIds))],
       changes:{oldPrice:numeric(details.oldPrice),newPrice:numeric(details.newPrice),quantity:numeric(details.quantity),discount:numeric(details.discount),oldCode:text(details.oldCode,120),newCode:text(details.newCode,120),oldBarcode:text(details.oldBarcode,120),newBarcode:text(details.newBarcode||details.barcode,120)}};
