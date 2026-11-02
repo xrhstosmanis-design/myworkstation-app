@@ -8,3 +8,13 @@ Bounded implementation: exact enrolled POS operator/terminal/company/store invit
 
 Required: focused negative and lifecycle/tenant/consent/transfer tests, actual mounted POS/controller tests, Windows compilation, full exact PR/main CI and normal guarded release, then measured two-PC attended LAB acceptance (screen/control/STOP/rejection/late old invitations/revocation/large-file/cancel/hash/path/disconnect). CI is not physical PASS. Known original feature has no completed Windows acceptance. Claim must be green/main before source. Owner retained until completion/named handoff. Checkpoint CHECKPOINTS/CHANGES/2026-11-03-pos-attended-remote.md.
 
+
+## Source candidate — 03/11/2026 / AWAITING CI AND PHYSICAL LAB
+
+Claim PR #3566 merged 214e200240523315c649da2db06bfede1295f099 after CI 41539461914 SUCCESS, before source edits. Owner remains feat/pos-attended-remote-20261103. Expanded user requirement: up to three simultaneous stores, isolated named controller windows and independent STOP. Implemented gated attended invitation/one-use handoff, loopback bridge, optional user-selected Windows startup, no fixed active duration, SSE background-window continuity, creator/operator session revalidation and bounded bidirectional hashed file transfer. Existing PIN trial and its default 20-minute lifetime preserved. Audit failure rolls back new invitations/consents/pairings/file reservations.
+
+Local Node20 focused tests: 23 total, 22 PASS, 0 FAIL, 1 SKIP (native PostgreSQL unavailable locally). Real Express HTTP and mounted POS tests exercised; three-scope isolation/no hard expiry tested in the service. Native PostgreSQL test requires CI localhost fixture and must run unskipped there. Frontend build PASS 10.79 seconds, TABLE_SERVICE verified. Full CI, native PostgreSQL, Windows compilation/actual TCP bridge test and physical three-PC acceptance remain NOT TESTED at this checkpoint. No live grant, registry change, device control, actual store file transfer, feature activation, schema/data/config/fiscal/stock/payment mutation occurred. No manual PASS created.
+
+Next action: publish source candidate, require full CI plus Windows build/bridge tests, reconcile current main and guarded release with flag OFF; then exact-PC supervised LAB activation and physical acceptance. Publishing source or CI is not production remote-support completion.
+
+Full local server suite on pre-reconciliation candidate: 4,969 tests total / 4,627 PASS / 0 FAIL / 342 environment-dependent SKIP, 171.59s. Exact reconciled PR native database and Windows checks remain required.

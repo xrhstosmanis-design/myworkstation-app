@@ -1,4 +1,20 @@
-# MyWorkStation Windows Remote Agent — AWAITING WINDOWS LAB
+# MyWorkStation Windows Remote Agent V2 — AWAITING WINDOWS LAB
+
+## Attended POS invitations (candidate, not physical PASS)
+
+The V2 mode is disabled unless `REMOTE_SUPPORT_ENABLED=true` and the exact enrolled terminal IDs are explicitly listed in `REMOTE_SUPPORT_TERMINALS`. Publishing this source grants no device access. Keep it disabled until the exact revision passes CI, Windows build and supervised physical LAB acceptance. This mode is separate from the legacy PIN trial below.
+
+The Super Admin chooses one store and physical POS in Device Operations, then sends an invitation. The signed-in operator sees the requesting administrator, store and POS in a foreground dialog and chooses Accept or Decline. Accept hands a single-use 60-second transport grant to the already running Windows Agent; no PIN or second consent is required. That transport expiry is not a session duration limit. Each administrator may have up to three independent invitations/sessions, each in its own named browser window. Closing or stopping one revokes only that session.
+
+The Windows Agent must first be installed and opened locally. Its optional local checkbox starts it with the current Windows user in waiting mode; it does not accept requests automatically. Browser local-network permission may require a one-time local approval. The bridge listens only on `127.0.0.1:17861`, accepts only the exact production HTTPS origin and exposes status, accept and stop only. It does not accept shell or filesystem commands. No inbound LAN/public port or new hosting service is added.
+
+An accepted session has no fixed duration while both endpoints and their authorized logins remain connected. Local STOP, closing the controller or Agent, logout, access revocation and server restart end access. Loss of heartbeats closes access within 15 seconds. SSE keeps controller windows active without relying on throttled browser timers. This remains an in-memory single-server implementation; do not enable multiple server replicas without shared session routing.
+
+Files travel in either direction, up to 25 MiB per file, in authenticated 256 KiB chunks. Two in-flight files per session share a global 64 MiB buffer budget. Full length, chunk order and SHA-256 must match; abandoned files expire after 10 minutes. Native file selection and Save As remain explicit. Transfers never execute files automatically. STOP removes server buffers; cancelled native downloads remove their temporary file. No remote directory browser, UAC bypass or unattended acceptance is provided.
+
+Required physical acceptance: three distinct company/store/POS targets at once; reject and accept; named-window identities; primary-screen scaling and Greek input; background-window continuity; STOP each side while other sessions continue; logout/revocation/disconnect; bidirectional near-limit files, cancel, corruption and cleanup. Record the exact build/deploy revision and unchanged business controls. Automated tests or compilation alone are not this acceptance.
+
+## Legacy PIN trial (unchanged)
 
 First attended prototype; not a completed production installation feature. The server refuses all agent routes unless enabled for one exact `REMOTE_AGENT_TRIAL_TERMINAL_ID` with a future `REMOTE_AGENT_TRIAL_UNTIL` no more than30 minutes from process startup; `REMOTE_AGENT_ENABLED=true` alone never opens access. Keep this unset in production until explicit acceptance. No new production session or device permission has been granted by publishing this code.
 

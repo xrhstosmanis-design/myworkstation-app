@@ -1,3 +1,7 @@
+## 03/11/2026 — POS-ATTENDED-REMOTE-02 source candidate / ASSIGNED / AWAITING CI + WINDOWS LAB
+
+Owner `feat/pos-attended-remote-20261103` retained after claim PR #3566/main214e200. Up to three simultaneous isolated store/POS windows, foreground one-click attended consent, no fixed session duration, STOP/revocation/disconnect and bidirectional bounded file transfer prepared; feature OFF. Local focused22 PASS/0 FAIL/1 native-PG SKIP; frontend build10.79s PASS. Windows build/native CI/physical acceptance NOT TESTED; no live session/config/data change and no manual PASS. Evidence and single next action: `CHECKPOINTS/CHANGES/2026-11-03-pos-attended-remote.md`. Other owners unchanged.
+
 ## 03Nov2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / CANDIDATE SELECTION FOLLOW-UP CLAIM / NOT TESTED
 
 Same retained parent owner feat/ai-owner-wallet-20261022 and current /root executor; bounded continuation feat/ai-wallet-commercial-waiver-20261103. Source3563/finalheada0106c304e68579131209bd312353fba6568b9fa passed fullPRCI41538108468:5318server+8backup/0FAIL/0SKIP, all5jobsSUCCESS; separate recovery41538108378 SUCCESS. Merged3a7101767d9205a4e6bbf1238f9a80c3cece5ca4; exact mainCI41540652773 running. No production financial mutation or hosted release acceptance.
