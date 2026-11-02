@@ -68,24 +68,32 @@ function Start-FtextCloudReadiness($Path) {
     if($script:worker -and -not $script:worker.Async.IsCompleted) {throw 'Second concurrent worker'}
     $script:started++;$script:worker=@{Async=@{IsCompleted=$false}};return $script:worker
 }
-function Receive-FtextCloudReadiness($Worker) {$script:received++;return $true}
+function Receive-FtextCloudReadiness($Worker) {$script:received++;if($global:MwsReadinessFixtureSchedule){$Worker | Add-Member -NotePropertyName RefreshAt -NotePropertyValue ([DateTime]::UtcNow.AddSeconds(5)) -Force};return $true}
+function Set-ReadinessFixture($Schedule) {$script:polls=0;$script:worker=$null;$script:started=0;$script:received=0;$script:stopped=0;$script:flags=@();$global:MwsReadinessFixtureSchedule=$Schedule}
 function Stop-FtextCloudReadiness($Worker) {if($Worker){$script:stopped++}}
 function Get-ReadinessFixture {return @{polls=$script:polls;started=$script:started;received=$script:received;stopped=$script:stopped;flags=$script:flags}}
-Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPoll,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Get-ReadinessFixture
+Export-ModuleMember -Function Get-FtextCloudConfig,Invoke-FtextCloudPoll,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Get-ReadinessFixture,Set-ReadinessFixture
 '@
     Set-Content $modulePath $mock -Encoding UTF8
     # Use single-quoted content so no caller variable is interpolated.
     Set-Content (Join-Path $root 'Cash.psm1') 'function Get-FtextCashPending($Config){return $null};Export-ModuleMember -Function Get-FtextCashPending' -Encoding UTF8
+    Import-Module $modulePath -Force
+    foreach($schedule in @($false,$true)) {
+    Set-ReadinessFixture $schedule
     & {
         $global:MwsReadinessFixtureCycles=0
         function Start-Sleep {param($Seconds);$global:MwsReadinessFixtureCycles++;if($global:MwsReadinessFixtureCycles -eq 7) {throw 'Fixture complete'}}
         try {& (Join-Path $root 'Cloud-Connector.ps1') -ConfigPath 'fixture'} catch {if($_.Exception.Message -cne 'Fixture complete') {throw}}
     }
     $observed=Get-ReadinessFixture
-    if($observed.polls -ne 7 -or $observed.started -ne 2 -or $observed.received -ne 1 -or $observed.stopped -ne 1) {throw 'Actual connector did not progress, serialize and dispose readiness'}
-    if($observed.flags[0] -or $observed.flags[4] -or -not $observed.flags[1] -or -not $observed.flags[2] -or -not $observed.flags[3] -or -not $observed.flags[5] -or -not $observed.flags[6]) {throw 'Incorrect original-work recovery/claim fence'}
+    $expectedStarts=if($schedule){1}else{2};$expectedStops=if($schedule){0}else{1}
+    if($observed.polls -ne 7 -or $observed.started -ne $expectedStarts -or $observed.received -ne 1 -or $observed.stopped -ne $expectedStops) {throw 'Actual connector did not progress, serialize and dispose readiness'}
+    if($observed.flags[0] -or $observed.flags[4] -or -not $observed.flags[1] -or -not $observed.flags[2] -or -not $observed.flags[3]) {throw 'Incorrect original-work recovery/claim fence'}
+    if($observed.flags[5] -ne (-not $schedule) -or $observed.flags[6] -ne (-not $schedule)){throw 'Acknowledged proof did not leave work discovery available'}
+    }
     Write-Host 'PASS: actual readiness runspace delayed success/failure/invalid/stop; connector heartbeat progress, no claims while busy, join and disposal.'
 } finally {
+    Remove-Variable MwsReadinessFixtureSchedule -Scope Global -ErrorAction SilentlyContinue
     Remove-Variable MwsReadinessFixtureCycles -Scope Global -ErrorAction SilentlyContinue
     if($worker) {Stop-FtextCloudReadiness $worker}
     Import-Module (Join-Path $PSScriptRoot 'Cloud-Tools.psm1') -Force
