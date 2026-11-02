@@ -1,0 +1,15 @@
+{
+  "synthetic": true,
+  "uploaded": false,
+  "providerDispatched": false,
+  "expected": {
+    "documentDate": "2026-10-27",
+    "operatorText": "LAB POS 2",
+    "terminal": "MAIN",
+    "kind": "CLOSING_CASH",
+    "amountCents": 940,
+    "timeText": "19:24:28"
+  },
+  "fixtureSha256": "5bc50f12d757778ae19897f6cc78549fa244a379e8b830d96d305d97a92b297d",
+  "acceptance": "After explicit upload/provider authorization, read only this new checksum in LAB through the existing per-source reader; compare original text and full-audit projection, repeated read reuse, unchanged financial/control state. Do not bulk-read historical LAB supplier photos. Refresh and record the complete baseline immediately before any upload or read."
+}
