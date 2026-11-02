@@ -1,6 +1,5 @@
 $ErrorActionPreference='Stop'
-Import-Module (Join-Path $PSScriptRoot 'Cloud-Tools.psm1') -Force
-$module=Get-Module Cloud-Tools
+$module=Import-Module (Join-Path $PSScriptRoot 'Cloud-Tools.psm1') -Force -PassThru | Where-Object {$_.Path -ieq (Join-Path $PSScriptRoot 'Cloud-Tools.psm1')} | Select-Object -First 1
 $root=Join-Path ([IO.Path]::GetTempPath()) ('mws-status-history-cloud-'+[Guid]::NewGuid().ToString('N'))
 $null=New-Item -ItemType Directory -Path $root
 try {
