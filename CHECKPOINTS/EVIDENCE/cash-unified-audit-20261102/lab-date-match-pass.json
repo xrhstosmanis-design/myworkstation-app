@@ -1,0 +1,63 @@
+{
+  "observedAt": "2026-11-02T16:57:00Z",
+  "scope": "SYNTHETIC_LAB_ONE_STORED_READING_MATCH_ONLY",
+  "status": "LAB_PASS",
+  "parent": "OPEN_ASSIGNED",
+  "revision": "4b1347300850b8082ea5d4eab88dc1259e8b21ab",
+  "sourcePR": 3535,
+  "sourceHead": "44ee55a05beed880ad76c930e22f3c3a39dc6942",
+  "prCI": 41481021929,
+  "mainCI": 41483259107,
+  "deploy": 41485540793,
+  "renderDeploy": "dep-dbkbvu2jnfac73a6q3q0",
+  "sourceChecksum": "58a1ba5a0071b82341bd4424eb5d6a343605e81b735561e572268dd913d71d8a",
+  "originalRead": {
+    "requested": 1,
+    "completed": 1,
+    "secondProviderCall": false,
+    "secondUpload": false,
+    "rawDocumentDate": null
+  },
+  "derived": {
+    "documentDate": "2026-10-27",
+    "informationHeaders": 5,
+    "matchedClosing": {
+      "amountCents": 940,
+      "time": "19:24:28",
+      "terminal": "MAIN",
+      "operator": "LAB POS 2"
+    },
+    "unreadHistoricalSources": 11,
+    "unresolvedEvents": 1,
+    "fullResult": "PENDING"
+  },
+  "beforeAfter": {
+    "attachments": 14,
+    "fixtureCopies": 1,
+    "target": {
+      "opening": 9.4,
+      "actual": 9.4,
+      "cash": 0,
+      "card": 0,
+      "iris": 0,
+      "transactions": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "control": {
+      "opening": 120,
+      "actual": 97.4,
+      "cash": 1.4,
+      "card": 0,
+      "iris": 0,
+      "transactions": 3,
+      "digest": "1e78213a2831b31871797e42bd653b57"
+    },
+    "unchanged": true
+  },
+  "reviewWrites": 0,
+  "financialWrites": 0,
+  "settingsWrites": 0,
+  "stockFiscalWrites": 0,
+  "email": false,
+  "liveStoreAI": "NOT_YET_DISPATCHED"
+}
