@@ -207,9 +207,9 @@ function Invoke-FtextStatusArchive {
                     if($checked -gt [DateTime]::UtcNow.AddHours(-1)) {$retained++;continue}
                     $parsed=Read-FtextStatusResult ([IO.File]::ReadAllBytes($res)) ([string]$c.serialNumber)
                     if(-not $parsed.ok -or ($parsed | ConvertTo-Json -Compress) -cne ($e.result | ConvertTo-Json -Compress)) {throw 'STATUS evidence mismatch.'}
+                    $resItem=Get-Item -LiteralPath $res
                     $ids.Add($id)
                     $files.Add([ordered]@{name=$item.Name;sha256=$jsonHash;createdUtc=$item.CreationTimeUtc.ToString('o');modifiedUtc=$item.LastWriteTimeUtc.ToString('o')})
-                    $resItem=Get-Item -LiteralPath $res
                     $files.Add([ordered]@{name=('mws-status-'+$id+'.res');sha256=$resHash;createdUtc=$resItem.CreationTimeUtc.ToString('o');modifiedUtc=$resItem.LastWriteTimeUtc.ToString('o')})
                 } catch {$rejected++}
             }
