@@ -120,6 +120,13 @@ function Get-FtextArchiveHash([string]$Path) {
     if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.Length -gt 65536) {throw 'Unsafe STATUS evidence file.'}
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
+function Read-FtextArchiveStatus([string]$Path,[string]$Serial) {
+    $null=Get-FtextArchiveHash $Path
+    $bytes=[IO.File]::ReadAllBytes($Path)
+    $lines=@([Text.Encoding]::GetEncoding(1253).GetString($bytes) -split '\r?\n')
+    if(($lines.Count -gt 6 -and -not [string]::IsNullOrWhiteSpace($lines[6])) -or ($lines.Count -gt 7 -and -not [string]::IsNullOrWhiteSpace($lines[7]))) {throw 'Fiscal receipt/payment evidence must never be archived as STATUS.'}
+    return Read-FtextStatusResult $bytes $Serial
+}
 function Assert-FtextArchivePath([string]$Path) {
     $p=[IO.Path]::GetFullPath($Path)
     while(-not [string]::IsNullOrEmpty($p)) {
@@ -148,7 +155,7 @@ function Assert-FtextArchiveQuiescent($Config) {
         if($m.command -cne 'STATUS' -or [string]$m.id -notmatch '^[a-f0-9]{32}$') {throw 'Unknown STATUS marker retained.'}
         $path=Join-Path $Config.workFolder ('mws-status-'+$m.id+'.res')
         $null=Get-FtextArchiveHash $path
-        $result=Read-FtextStatusResult ([IO.File]::ReadAllBytes($path)) ([string]$Config.serialNumber)
+        $result=Read-FtextArchiveStatus $path ([string]$Config.serialNumber)
         if(-not $result.ok) {throw 'Original STATUS is unresolved. No maintenance is allowed.'}
         return [string]$m.id
     }
@@ -205,7 +212,7 @@ function Invoke-FtextStatusArchive {
                     foreach($key in @('companyId','storeId','terminalPos')) {if([string]$e.$key -cne [string]$c.$key) {throw 'STATUS scope mismatch.'}}
                     $checked=[DateTime]::Parse([string]$e.checkedAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
                     if($checked -gt [DateTime]::UtcNow.AddHours(-1)) {$retained++;continue}
-                    $parsed=Read-FtextStatusResult ([IO.File]::ReadAllBytes($res)) ([string]$c.serialNumber)
+                    $parsed=Read-FtextArchiveStatus $res ([string]$c.serialNumber)
                     if(-not $parsed.ok -or ($parsed | ConvertTo-Json -Compress) -cne ($e.result | ConvertTo-Json -Compress)) {throw 'STATUS evidence mismatch.'}
                     $resItem=Get-Item -LiteralPath $res
                     $ids.Add($id)
@@ -234,6 +241,7 @@ function Invoke-FtextStatusArchive {
         Assert-FtextArchivePath $destination
         if($Mode -ceq 'Apply') {$null=[IO.Directory]::CreateDirectory($destination)}
         # Preflight the entire pinned batch, including partial-move recovery, before moving another file.
+        $proofs=@{};$results=@{}
         foreach($f in @($journal.files)) {
             $source=Join-Path $c.workFolder $f.name;$target=Join-Path $destination $f.name
             Assert-FtextArchivePath $source;Assert-FtextArchivePath $target
@@ -241,7 +249,18 @@ function Invoke-FtextStatusArchive {
             if($hasSource -eq $hasTarget) {throw 'Archive collision or missing evidence. All remaining files retained.'}
             $present=if($hasSource) {$source} else {$target}
             if((Get-FtextArchiveHash $present) -cne $f.sha256) {throw 'STATUS evidence changed. All remaining files retained.'}
+            $id=$f.name.Substring(11,32)
+            if($f.name.EndsWith('.res')) {
+                $parsed=Read-FtextArchiveStatus $present ([string]$c.serialNumber)
+                if(-not $parsed.ok) {throw 'Archived STATUS is not successful.'};$results[$id]=$parsed
+            } else {
+                $e=Get-Content -LiteralPath $present -Raw -Encoding UTF8 | ConvertFrom-Json
+                if($e.requestId -cne $id) {throw 'Archived STATUS identity mismatch.'}
+                foreach($key in @('companyId','storeId','terminalPos')) {if([string]$e.$key -cne [string]$c.$key) {throw 'Archived STATUS scope mismatch.'}}
+                $proofs[$id]=$e.result
+            }
         }
+        foreach($id in $results.Keys) {if(($results[$id] | ConvertTo-Json -Compress) -cne ($proofs[$id] | ConvertTo-Json -Compress)) {throw 'Archived STATUS pair does not reconcile.'}}
         $moved=0
         foreach($f in @($journal.files)) {
             $source=Join-Path $c.workFolder $f.name;$target=Join-Path $destination $f.name

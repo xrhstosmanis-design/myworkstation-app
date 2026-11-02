@@ -37,6 +37,11 @@ try {
  $badPlan=Invoke-FtextStatusArchive -ConfigPath $config
  Assert-Archive ($badPlan.rejectedPairs -eq 1 -and $badPlan.candidatePairs -eq 2) 'Foreign evidence was eligible for archive.'
  [IO.File]::WriteAllBytes($proofPath,$proofBytes);[IO.File]::SetLastWriteTimeUtc($proofPath,$proofTime)
+ $receiptPath=Join-Path $folder ('mws-status-'+$ids[2]+'.res');$savedResult=[IO.File]::ReadAllBytes($receiptPath)
+ [IO.File]::WriteAllText($receiptPath,"0`r`n17`r`n42`r`nARCHIVE123`r`nfixture time`r`n`r`nhttps://www1.aade.gr/dcl/protected-fixture`r`n")
+ $fiscalPlan=Invoke-FtextStatusArchive -ConfigPath $config
+ Assert-Archive ($fiscalPlan.rejectedPairs -eq 1 -and $fiscalPlan.candidatePairs -eq 2) 'Mislabelled fiscal evidence was eligible for STATUS archive.'
+ [IO.File]::WriteAllBytes($receiptPath,$savedResult)
  $only=@($ids[0]);$applied=Invoke-FtextStatusArchive -ConfigPath $config -Mode Apply -AcknowledgedIds $only
  Assert-Archive ($applied.movedFiles -eq 2) 'Unacknowledged history was moved.'
  Assert-Archive ((Get-FileHash -LiteralPath $fiscal).Hash -ceq $fiscalHash) 'Fiscal evidence changed.'
