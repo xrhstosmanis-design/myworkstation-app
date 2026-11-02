@@ -33,7 +33,8 @@
       "revision": "a351362f3a5c436126bfcce8b2a547496470c036"
     }
   },
-  "selectedPCExecution": "NOT TESTED",
+  "selectedPCExecution": "USER screenshot after supplied update; exact installed module hashes NOT INDEPENDENTLY VERIFIED",
   "physicalStability": "OPEN",
-  "physicalSpeed": "OPEN"
+  "physicalSpeed": "FAIL: user CASH0.50 one water28seconds until UI message disappears; paper time NOT TESTED",
+  "currentCommunication": "Scoped USER/LIVE current same-register STATUS observed 10:53 and11:08Athens"
 }
