@@ -1,0 +1,414 @@
+{
+  "scope": "Limited synthetic LAB acceptance; original invoice request remains OPEN",
+  "revision": "404b5719394c55b307c4cb39e209e58fa13dc249",
+  "sourcePR": 3545,
+  "sourceHead": "583994b968e1c98ad644aaae0b5cc30a462cd428",
+  "ci": {
+    "pullRequest": 41519798192,
+    "main": 41522562900,
+    "serverPass": 5296,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "release": {
+    "workflow": 41524482377,
+    "renderDeploy": "dep-dbkfm0qfngtc73f5pvpg",
+    "status": "live",
+    "finishedAt": "2026-11-02T21:11:30.841141Z",
+    "healthRevision": "404b5719394c55b307c4cb39e209e58fa13dc249"
+  },
+  "header": {
+    "fixture": "fixtures/header-only.pdf",
+    "observed": {
+      "supplier": "LAB METER TEST",
+      "number": "LAB-HDR-20261102-2045",
+      "date": "2026-11-02",
+      "total": 24.8
+    },
+    "submitted": false,
+    "beforeAt": "2026-11-02T21:12:53.216048Z",
+    "afterAt": "2026-11-02T21:14:30.142814Z",
+    "labBefore": {
+      "attachments": {
+        "count": 82,
+        "digest": "3d1d901e668aef03ee5e71d589f6add6"
+      },
+      "documents": {
+        "count": 72,
+        "digest": "0c0a6ae780a06060aa3aee1c35f73597"
+      },
+      "inbox": {
+        "count": 64,
+        "digest": "9c0e96b1102e39ced5ca849b8529a7a0"
+      },
+      "jobs": {
+        "count": 80,
+        "digest": "54c522c1989451f24023867b0887ee25"
+      },
+      "movements": {
+        "count": 95,
+        "digest": "5d2e545fc3b4055f52f70e64dd20cbbf"
+      },
+      "order_lines": {
+        "count": 630,
+        "digest": "7ec59de59e7e4ca2e3b8170ac7b0061b"
+      },
+      "orders": {
+        "count": 60,
+        "digest": "3971609b872513de173a715db36daccf"
+      },
+      "shifts": {
+        "count": 43,
+        "digest": "14814f641d388a4e4f23fdc329affe64"
+      },
+      "stock": {
+        "count": 110,
+        "digest": "3f451968739ad2a97282b971c0db48d9"
+      },
+      "transactions": {
+        "count": 134,
+        "digest": "f325173b44807a31d5c9f5c5854bdea7"
+      }
+    },
+    "labAfter": {
+      "attachments": {
+        "count": 82,
+        "digest": "3d1d901e668aef03ee5e71d589f6add6"
+      },
+      "documents": {
+        "count": 72,
+        "digest": "0c0a6ae780a06060aa3aee1c35f73597"
+      },
+      "inbox": {
+        "count": 64,
+        "digest": "9c0e96b1102e39ced5ca849b8529a7a0"
+      },
+      "jobs": {
+        "count": 80,
+        "digest": "54c522c1989451f24023867b0887ee25"
+      },
+      "movements": {
+        "count": 95,
+        "digest": "5d2e545fc3b4055f52f70e64dd20cbbf"
+      },
+      "order_lines": {
+        "count": 630,
+        "digest": "7ec59de59e7e4ca2e3b8170ac7b0061b"
+      },
+      "orders": {
+        "count": 60,
+        "digest": "3971609b872513de173a715db36daccf"
+      },
+      "shifts": {
+        "count": 43,
+        "digest": "14814f641d388a4e4f23fdc329affe64"
+      },
+      "stock": {
+        "count": 110,
+        "digest": "3f451968739ad2a97282b971c0db48d9"
+      },
+      "transactions": {
+        "count": 134,
+        "digest": "f325173b44807a31d5c9f5c5854bdea7"
+      }
+    },
+    "controlBefore": {
+      "attachments": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "documents": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "inbox": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "jobs": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "movements": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "order_lines": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "orders": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "shifts": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "stock": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "transactions": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      }
+    },
+    "controlAfter": {
+      "attachments": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "documents": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "inbox": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "jobs": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "movements": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "order_lines": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "orders": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "shifts": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "stock": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "transactions": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      }
+    },
+    "providerCallCount": "NOT TESTED; wallet disabled; no billing/latency PASS"
+  },
+  "pdf": {
+    "fixture": "fixtures/two-physical-pages.pdf",
+    "sha256": "ef4a97e16b7075e5a5881a151bfae897836bbb4652a749ac849353b0ff8da6a5",
+    "physicalPages": 2,
+    "uploadedFiles": 1,
+    "submissions": 1,
+    "mode": "CREDIT",
+    "automaticHeaderTotal": 12.4,
+    "printedTotal": 24.8,
+    "manualTotalCorrection": true,
+    "backgroundCompletedAt": "2026-11-02T21:16:24.703Z",
+    "background": "COMPLETED",
+    "rowCount": 2,
+    "draftNet": 20,
+    "draftVat": 4.8,
+    "draftGross": 24.8,
+    "paymentTransactionId": null,
+    "documentStatus": "DRAFT",
+    "orderStatus": "NEW",
+    "syntheticJobId": "7d443fe6-b65d-4e9f-9a81-9afc0a685952",
+    "provenance": "Converter/matcher tested locally; stored productLines omit sourceFileIndex/sourcePage. No persisted-provenance PASS.",
+    "storedPageCount": 1,
+    "storedPageCountMeaning": "attachment/job count",
+    "beforeAt": "2026-11-02T21:16:07.202492Z",
+    "afterAt": "2026-11-02T21:16:53.86968Z",
+    "labBefore": {
+      "attachments": {
+        "count": 82,
+        "digest": "3d1d901e668aef03ee5e71d589f6add6"
+      },
+      "documents": {
+        "count": 72,
+        "digest": "0c0a6ae780a06060aa3aee1c35f73597"
+      },
+      "inbox": {
+        "count": 64,
+        "digest": "9c0e96b1102e39ced5ca849b8529a7a0"
+      },
+      "jobs": {
+        "count": 80,
+        "digest": "54c522c1989451f24023867b0887ee25"
+      },
+      "movements": {
+        "count": 95,
+        "digest": "5d2e545fc3b4055f52f70e64dd20cbbf"
+      },
+      "order_lines": {
+        "count": 630,
+        "digest": "7ec59de59e7e4ca2e3b8170ac7b0061b"
+      },
+      "orders": {
+        "count": 60,
+        "digest": "3971609b872513de173a715db36daccf"
+      },
+      "shifts": {
+        "count": 43,
+        "digest": "14814f641d388a4e4f23fdc329affe64"
+      },
+      "stock": {
+        "count": 110,
+        "digest": "3f451968739ad2a97282b971c0db48d9"
+      },
+      "transactions": {
+        "count": 134,
+        "digest": "f325173b44807a31d5c9f5c5854bdea7"
+      }
+    },
+    "labAfter": {
+      "attachments": {
+        "count": 83,
+        "digest": "82b2884beffe9a3a21f6eb6d4800a3b6"
+      },
+      "documents": {
+        "count": 73,
+        "digest": "846c616bb867044c0ef425a9fec2e16c"
+      },
+      "inbox": {
+        "count": 65,
+        "digest": "ae262a418634f39eb54e112d7db826f6"
+      },
+      "jobs": {
+        "count": 81,
+        "digest": "a9297b9a53d28d4bb6df09e984632aa1"
+      },
+      "movements": {
+        "count": 95,
+        "digest": "5d2e545fc3b4055f52f70e64dd20cbbf"
+      },
+      "order_lines": {
+        "count": 632,
+        "digest": "86205f12c232a2103677fa404f3b6611"
+      },
+      "orders": {
+        "count": 61,
+        "digest": "7422300ddbe95e10e38d41552912a22b"
+      },
+      "shifts": {
+        "count": 43,
+        "digest": "14814f641d388a4e4f23fdc329affe64"
+      },
+      "stock": {
+        "count": 110,
+        "digest": "3f451968739ad2a97282b971c0db48d9"
+      },
+      "transactions": {
+        "count": 134,
+        "digest": "f325173b44807a31d5c9f5c5854bdea7"
+      }
+    },
+    "controlBefore": {
+      "attachments": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "documents": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "inbox": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "jobs": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "movements": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "order_lines": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "orders": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "shifts": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "stock": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "transactions": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      }
+    },
+    "controlAfter": {
+      "attachments": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "documents": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "inbox": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "jobs": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "movements": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "order_lines": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "orders": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "shifts": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "stock": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "transactions": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      }
+    }
+  },
+  "limitations": [
+    "Fast header selected page subtotal in two-page fixture: FAIL/OPEN.",
+    "Original unnumbered PDF completeness and EFK: OPEN.",
+    "No approval/finalization/payment/stock posting.",
+    "First full-row snapshot materialized large stored attachments and failed SQLSTATE53100 temporary disk space; replaced by bounded scalar signatures. No full-database invariance claim."
+  ],
+  "signatureScope": {
+    "transactions": "id,amount,type,paymentMethod,sessionId,subtractFromShift,reversedAt,supplierId",
+    "shifts": "full CashShiftSession rows",
+    "stock": "storeId,productId,currentStock",
+    "movements": "id,productId,quantity,movementType,sourceType,sourceId",
+    "documents": "id,status,documentNumber,totalNet,totalVat,totalGross,settlementMode,paymentTransactionId",
+    "orders": "id,status,invoiceNumber,sourceDocumentId",
+    "jobs": "id,stage,status,purchaseDocumentId,updatedAt",
+    "attachments": "id,checksum,mimeType,filename",
+    "inbox": "id,status,attachmentId,supplierId",
+    "order_lines": "id,orderId,quantity,unitCost,netAmount,vatAmount,grossAmount,exciseTotal,productId"
+  }
+}
