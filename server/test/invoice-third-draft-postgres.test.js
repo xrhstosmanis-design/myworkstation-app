@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
 import {previewInvoiceReconciliation,reconcileInvoiceDrafts,invoiceAlias} from '../src/lib/invoice-common-draft.js';
+import {attachMyDataPosReceipt} from '../src/lib/mydata-pos-receipt.js';
 
 const scope={companyId:'c',storeId:'s',inboxId:'inbox'},native={skip:!isolatedInvoiceDb()};
 const confirmation=(preview,posOrderId='pos',extra={})=>({posOrderId,expectedVersion:preview.version,confirmSameInvoice:true,confirmMark:preview.mark,confirmHeaderCorrection:true,confirmPaymentDiscrepancy:true,reason:'Synthetic originals compared and stable table verified',actorId:'synthetic-owner',...extra});
@@ -24,8 +25,9 @@ async function addMember(f,id='third',{lines=true,payment=null}={}){
  await f.db.$executeRaw`INSERT INTO "DocumentAttachment"("id","companyId","storeId","filename","mimeType","contentData","checksum") VALUES(${attachmentId},'c','s',${id+'.jpg'},'image/jpeg','data:image/jpeg;base64,cGhvdG8=',${id+'-hash'})`;
  await f.db.$executeRaw`INSERT INTO "AiReaderJob"("id","companyId","storeId","purchaseDocumentId","attachmentId","createdAt","resultJson") VALUES(${jobId},'c','s',${documentId},${attachmentId},${new Date('2026-10-12T05:00:00Z')},'{}')`;
 }
-async function completedPair(f,{rootLines=true,payment=true}={}){
+async function completedPair(f,{rootLines=true,payment=true,posFirst=false}={}){
  await f.seed({posLines:rootLines?1:0,payment});
+ if(posFirst)await f.db.$executeRawUnsafe(`UPDATE "AiReaderJob" SET "createdAt"='2026-10-12T04:00:00Z' WHERE "id"='j-pos'`);
  const preview=await previewInvoiceReconciliation(f.db,scope);
  await f.db.$transaction(tx=>reconcileInvoiceDrafts(tx,scope,confirmation(preview)));
 }
@@ -146,4 +148,71 @@ test('native existing myDATA row-table canonical remains stable when another POS
   assert.equal(JSON.stringify(await f.db.$queryRawUnsafe(`SELECT row_to_json(t) AS row FROM "PurchaseDocument" t WHERE "id"='d-mydata'`)),root);
   for(const id of ['pos','third'])assert.equal((await invoiceAlias(f.db,'c',{orderId:id})).canonicalOrderId,'mydata');
  }finally{await f.close()}
+});
+
+
+async function firstPaidReceipt(f){
+ await completedPair(f,{payment:false,posFirst:true});
+ await f.db.$executeRawUnsafe(`CREATE TABLE "SupplierPaymentAllocation"("id" text,"companyId" text,"purchaseDocumentId" text,"settlementId" text)`);
+ await f.db.$executeRawUnsafe(`CREATE TABLE "SupplierPaymentSettlement"("id" text,"companyId" text,"transactionId" text,"status" text)`);
+ await f.db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","type","amount","invoiceDocumentNumber") VALUES('first-payment','c','s','sup','SUPPLIER_PAYMENT',3.39,'21-ΤΔΑ 6836')`);
+ const identity={companyId:'c',storeId:'s',supplierId:'sup',supplierTaxId:'099999999',documentNumber:'21-ΤΔΑ 6836',documentDate:'2026-10-12',totalGross:3.39,documentType:'INVOICE'};
+ const linked=await attachMyDataPosReceipt(f.db,identity,[{checksum:'photo-hash',filename:'POS.jpg',mimeType:'image/jpeg',dataUrl:'data:image/jpeg;base64,cGhvdG8='}],{id:'first-payment'},{id:'synthetic-payer'});
+ assert.equal(linked.receiptLinked,true);
+}
+
+test('native continuation freezes recorded nonnull payment and prior nonnull alias payment evidence',native,async()=>{
+ for(const scenario of ['removed','replaced','alias-conflict']){const f=await invoiceDbFixture();try{
+  await completedPair(f);await addMember(f);
+  if(scenario==='removed')await f.db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "paymentTransactionId"=NULL WHERE "id"='d-pos'`);
+  else{
+   await f.db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","type","amount","invoiceDocumentNumber") VALUES('other-payment','c','s','sup','SUPPLIER_PAYMENT',3.39,'21-ΤΔΑ 6836')`);
+   await f.db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "paymentTransactionId"='other-payment' WHERE "id"='d-pos'`);
+   if(scenario==='alias-conflict')await f.db.$executeRawUnsafe(`UPDATE "MyDataInboundDocument" SET "rawPayload"=jsonb_set("rawPayload",'{commonDraft,paymentTransactionId}','"other-payment"')`);
+  }
+  const before=await all(f);await assert.rejects(continueMember(f),e=>e.code==='INVOICE_COMMON_FAMILY_REVIEW_REQUIRED');assert.equal(await all(f),before,scenario);
+ }finally{await f.close()}}
+});
+
+test('native canonical purchase-order invoice number must still certify the inbound full identity',native,async()=>{
+ for(const invoiceNumber of ['OTHER 6836','21-ΤΔΑ 9999','6836']){const f=await invoiceDbFixture();try{
+  await completedPair(f);await addMember(f);await f.db.$executeRaw`UPDATE "PurchaseOrder" SET "invoiceNumber"=${invoiceNumber} WHERE "id"='pos'`;
+  const before=await all(f);await assert.rejects(continueMember(f),e=>e.code==='INVOICE_COMMON_FAMILY_REVIEW_REQUIRED');assert.equal(await all(f),before,invoiceNumber);
+ }finally{await f.close()}}
+});
+
+test('native legitimate first payment linked by existing POS receipt writer can follow an unpaid common pair without rewriting old null audit',native,async()=>{
+ const f=await invoiceDbFixture();try{
+  await firstPaidReceipt(f);await addMember(f);
+  const preview=await previewInvoiceReconciliation(f.db,scope);assert.equal(preview.commonDraft.paymentTransactionId,null);
+  const initialAlias=(await f.db.$queryRawUnsafe(`SELECT "details" FROM "InvoiceDraftAlias" WHERE "aliasOrderId"='mydata'`))[0].details;assert.equal(initialAlias.paymentTransactionId,null);
+  const oldPhoto=(await f.db.$queryRawUnsafe(`SELECT "resultJson" FROM "AiReaderJob" WHERE "id"='j-pos'`))[0].resultJson;
+  assert.equal(oldPhoto.mydataPosReceipt.paymentTransactionId,null,'older photo receipt can remain null before the legitimate transition is reviewed');
+  const before=await protectedState(f),result=await continueMember(f);assert.equal(result.orderId,'pos');assert.equal(result.paymentChanged,false);assert.equal(await protectedState(f),before);
+  const after=await previewInvoiceReconciliation(f.db,scope);assert.equal(after.commonDraft.paymentTransactionId,'first-payment');assert.deepEqual(after.commonDraft.aliasOrderIds,['mydata','third']);
+  assert.equal((await f.db.$queryRawUnsafe(`SELECT "details" FROM "InvoiceDraftAlias" WHERE "aliasOrderId"='mydata'`))[0].details.paymentTransactionId,null);
+ }finally{await f.close()}
+});
+
+test('native bare first-payment link and missing/contradictory dual receipt evidence refuse without writes',native,async()=>{
+ const scenarios=['bare-link','raw-missing','job-missing','receipt-time','receipt-attachments','attachment-scope','ledger-identity'];
+ for(const scenario of scenarios){const f=await invoiceDbFixture();try{
+  if(scenario==='bare-link'){
+   await completedPair(f,{payment:false});
+   await f.db.$executeRawUnsafe(`INSERT INTO "StoreTransaction"("id","companyId","storeId","supplierId","type","amount","invoiceDocumentNumber") VALUES('first-payment','c','s','sup','SUPPLIER_PAYMENT',3.39,'21-ΤΔΑ 6836')`);
+   await f.db.$executeRawUnsafe(`UPDATE "PurchaseDocument" SET "paymentTransactionId"='first-payment',"settlementMode"='PAID' WHERE "id"='d-pos'`);
+  }else{
+   await firstPaidReceipt(f);
+   const mutations={
+    'raw-missing':`UPDATE "MyDataInboundDocument" SET "rawPayload"="rawPayload"-'mydataPosReceipt'`,
+    'job-missing':`UPDATE "AiReaderJob" SET "resultJson"="resultJson"-'mydataPosReceipt' WHERE "id"='j-pdf'`,
+    'receipt-time':`UPDATE "MyDataInboundDocument" SET "rawPayload"=jsonb_set("rawPayload",'{mydataPosReceipt,receivedAt}','"2026-01-01T00:00:00Z"')`,
+    'receipt-attachments':`UPDATE "MyDataInboundDocument" SET "rawPayload"=jsonb_set("rawPayload",'{mydataPosReceipt,attachmentIds}','["pdf"]')`,
+    'attachment-scope':`UPDATE "DocumentAttachment" SET "storeId"='control' WHERE "id"='photo'`,
+    'ledger-identity':`UPDATE "StoreTransaction" SET "invoiceDocumentNumber"='OTHER 9999' WHERE "id"='first-payment'`
+   };
+   await f.db.$executeRawUnsafe(mutations[scenario]);
+  }
+  await addMember(f);const before=await all(f);await assert.rejects(continueMember(f),e=>e.code==='INVOICE_COMMON_FAMILY_REVIEW_REQUIRED');assert.equal(await all(f),before,scenario);
+ }finally{await f.close()}}
 });

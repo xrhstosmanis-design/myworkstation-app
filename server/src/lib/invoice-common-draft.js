@@ -1,5 +1,6 @@
 import {lineEvidenceCandidates,assertNoLineEvidenceDuplicate} from "./invoice-line-evidence.js";
 import crypto from "node:crypto";
+import {assertReusableInvoicePayment} from "./invoice-payment-reuse.js";
 
 const error=(message,code="INVOICE_RECONCILIATION_REQUIRED")=>Object.assign(new Error(message),{status:409,code});
 const tax=value=>String(value||"").replace(/\D/g,"");
@@ -155,11 +156,38 @@ async function postedOrders(tx,companyId,orders){
  const approved=orders.filter(o=>o.documentStatus==="APPROVED"||o.status!=="NEW");
  return [...new Set([...rows.map(o=>o.orderId),...approved.map(o=>o.orderId),...orders.filter(o=>stock.some(p=>p.sourceDocumentId===o.documentId)).map(o=>o.orderId)])];
 }
+// Existing POS receipt writers may legitimately add the first payment after an
+// unpaid common pair. Verify their two persisted proofs without binding or
+// changing anything here; a bare document/ledger link is not receipt evidence.
+async function verifiedFirstCommonPayment(tx,scope,row,original){
+ const paymentId=original.paymentTransactionId,receipt=row.rawPayload?.mydataPosReceipt;
+ const validReceipt=value=>value&&value.paymentTransactionId===paymentId&&value.requiresHumanReceiptReview===true
+  &&typeof value.receivedAt==="string"&&Number.isFinite(Date.parse(value.receivedAt))
+  &&Array.isArray(value.attachmentIds)&&value.attachmentIds.length>0&&value.attachmentIds.length<=5
+  &&value.attachmentIds.every(id=>typeof id==="string"&&id.length>0)&&new Set(value.attachmentIds).size===value.attachmentIds.length;
+ if(!validReceipt(receipt))return false;
+ const jobs=await tx.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}
+  AND "attachmentId"=${row.attachmentId} AND "purchaseDocumentId"=${original.documentId} ORDER BY "createdAt","id" LIMIT 1 FOR SHARE`;
+ const stored=jobs[0]?.resultJson?.mydataPosReceipt;
+ if(!validReceipt(stored)||stored.receivedAt!==receipt.receivedAt||JSON.stringify([...stored.attachmentIds].sort())!==JSON.stringify([...receipt.attachmentIds].sort()))return false;
+ const attachments=await tx.$queryRaw`SELECT "id","mimeType" FROM "DocumentAttachment" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "id"=ANY(${receipt.attachmentIds}::text[]) FOR SHARE`;
+ if(attachments.length!==receipt.attachmentIds.length||attachments.some(a=>!["application/pdf","image/jpeg","image/png","image/webp"].includes(a.mimeType)))return false;
+ const payments=await tx.$queryRaw`SELECT t.*,s."taxId" AS "supplierTaxId" FROM "StoreTransaction" t
+  JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId"
+  WHERE t."id"=${paymentId} AND t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} FOR SHARE OF t`;
+ try{assertReusableInvoicePayment(payments[0],{companyId:scope.companyId,storeId:scope.storeId,supplierId:original.supplierId,supplierTaxId:row.issuerVat,
+  documentNumber:original.documentNumber,totalGross:row.totalGross});return true}catch{return false}
+}
 // A completed common draft may accept another reviewed member, but its root
 // and all existing aliases must stay flat. Never reinterpret an alias chain or
 // an incomplete/cross-scope family as permission to consolidate more records.
 async function stableCommonFamily(tx,scope,row,original,recorded,pos){
  const fail=()=>{throw error("Η κοινή αγορά ή οι ιστορικές συνδέσεις της χρειάζονται χωριστό έλεγχο.","INVOICE_COMMON_FAMILY_REVIEW_REQUIRED")};
+ const official=invoiceNumberParts([row.series,row.documentNumber].filter(Boolean).join(" ")),orderNumber=invoiceNumberParts(original?.invoiceNumber);
+ const recordedPayment=recorded.paymentTransactionId??null,currentPayment=original?.paymentTransactionId??null;
+ const validPaymentId=value=>value===null||typeof value==="string"&&value.length>0;
+ if(!official.number||official.number!==orderNumber.number||official.series!==orderNumber.series
+  ||!validPaymentId(recordedPayment)||!validPaymentId(currentPayment)||recordedPayment!==null&&recordedPayment!==currentPayment)fail();
  if(!original||!original.exact||recorded.orderId!==original.orderId||recorded.documentId!==original.documentId
   ||recorded.inboxId!==scope.inboxId||String(recorded.mark)!==String(row.mark)
   ||row.rawPayload?.mydataDraftOrderId!==recorded.orderId||row.rawPayload?.mydataDraftDocumentId!==recorded.documentId
@@ -186,6 +214,8 @@ async function stableCommonFamily(tx,scope,row,original,recorded,pos){
   ||a.aliasOrderDocumentId!==a.aliasDocumentId||a.aliasDocumentOrderId!==a.aliasOrderId||a.aliasOrderPosted||a.aliasStockPosted
   ||a.details?.completed!==true||a.details?.orderId!==recorded.orderId||a.details?.documentId!==recorded.documentId
   ||a.details?.inboxId!==scope.inboxId||String(a.details?.mark)!==String(row.mark)||!Array.isArray(a.details?.aliasOrderIds)||!a.details.aliasOrderIds.includes(a.aliasOrderId)))fail();
+ if(family.some(a=>{const established=a.details?.paymentTransactionId??null;return !validPaymentId(established)||established!==null&&established!==currentPayment}))fail();
+ if(recordedPayment===null&&currentPayment!==null&&!await verifiedFirstCommonPayment(tx,scope,row,original))fail();
  return family;
 }
 // Caller holds the store lock. A merge changes references, not money or stock.
