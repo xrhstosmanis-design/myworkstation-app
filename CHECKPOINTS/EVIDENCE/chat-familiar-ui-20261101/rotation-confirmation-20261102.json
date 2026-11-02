@@ -1,0 +1,17 @@
+{
+  "confirmationDateEuropeAthens": "2026-11-02",
+  "userStatement": "οταν το γυρναω κλεινει η προβολη",
+  "requestedRotationOutcomes": [
+    "image adapts",
+    "temporary preview closes normally"
+  ],
+  "reportedOutcome": "temporary preview closes on rotation",
+  "classification": "USER-REPORTED PASS for allowed close branch only",
+  "alternateAdaptationOrZoomStatePassInferred": false,
+  "actualDeviceOSInstalledHashAccountCurrentStoreActionTimeRuntime": "NOT INDEPENDENTLY IDENTIFIED",
+  "noRAMForensicServerDeltaOrAllDevicePassInferred": true,
+  "noAgentChatBusinessRuntimeActions": true,
+  "noReplayOfAcceptedChecks": true,
+  "remainingOwnedPhysicalCase": "conversation list and reopen Chat without photo automatically reopening",
+  "otherN16OwnersAndOverallOpenPreserved": true
+}
