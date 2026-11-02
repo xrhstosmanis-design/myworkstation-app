@@ -155,4 +155,29 @@ function Invoke-FtextCloudHandoff([string]$ConfigPath,$Request,[string]$CommandH
     }
     throw 'Fresh readiness was not acknowledged before first publication. Original files retained.'
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff
+function Invoke-FtextStatusMaintenance {
+    param([Parameter(Mandatory=$true)][string]$ConfigPath,[ValidateSet('Plan','Apply','Restore')][string]$Mode='Plan')
+    $c=Get-FtextCloudConfig $ConfigPath
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try {$hash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($c.companyId+'|'+$c.storeId+'|'+$c.terminalPos))).Replace('-','')} finally {$sha.Dispose()}
+    $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtextCloud_'+$hash));$held=$false
+    try {
+        try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
+        if(-not $held) {throw 'Close the connector before STATUS history maintenance. No file was moved.'}
+        # Rollback uses the original local journal and hashes, even when cloud is unavailable.
+        if($Mode -ceq 'Restore') {return Invoke-FtextStatusArchive -ConfigPath $ConfigPath -Mode Restore}
+        $plan=Invoke-FtextStatusArchive -ConfigPath $ConfigPath -Mode Plan
+        $approved=New-Object 'Collections.Generic.List[string]'
+        for($offset=0;$offset -lt $plan.candidateIds.Count;$offset+=100) {
+            $batch=@($plan.candidateIds | Select-Object -Skip $offset -First 100)
+            $token=Read-FtextDeviceToken $c
+            $ack=Invoke-RestMethod -Method Post -Uri ($c.apiBase+'/api/ftext/v1/device/status-history') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body (@{requestIds=$batch} | ConvertTo-Json -Compress) -TimeoutSec 15
+            Confirm-FtextCloudIdentity $c $ack
+            foreach($key in @('companyId','storeId','terminalPos','settingsHash','serialNumber','configurationId','lifecycleGeneration')) {if([string]$ack.$key -cne [string]$c.$key) {throw 'STATUS history acknowledgement belongs to another installation.'}}
+            if($ack.version -ne 1 -or $ack.fiscalExecution -isnot [bool] -or $ack.fiscalExecution -ne $false -or $ack.readinessVerified -isnot [bool] -or $ack.readinessVerified -ne $false -or -not $ack.PSObject.Properties['acknowledgedIds']) {throw 'Invalid STATUS history acknowledgement.'}
+            foreach($id in @($ack.acknowledgedIds)) {if([string]$id -notmatch '^[a-f0-9]{32}$' -or [string]$id -cnotin $batch -or $approved.Contains([string]$id)) {throw 'Unexpected STATUS history identity.'};$approved.Add([string]$id)}
+        }
+        return Invoke-FtextStatusArchive -ConfigPath $ConfigPath -Mode $Mode -AcknowledgedIds $approved.ToArray()
+    } finally {if($held) {$mutex.ReleaseMutex()};$mutex.Dispose()}
+}
+Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff,Invoke-FtextStatusMaintenance

@@ -54,8 +54,18 @@ export async function runFtextRegression(a,b,{subtest=async(_n,f)=>f()}={}){
   await assert.rejects(service.report(token,{...body,requestId:'b'.repeat(32)}),e=>e.status===409);
  });
  await subtest('real license, lifecycle, route and changed configuration revoke access and preserve foreign control',async()=>{
-  await b.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "id"='module-A'`;await assert.rejects(service.ping(token),e=>e.status===403);await b.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "id"='module-A'`;
-  await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=true WHERE "storeId"='store-A'`;await assert.rejects(service.ping(token),e=>e.status===409);await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=false,"generation"=1 WHERE "storeId"='store-A'`;await assert.rejects(service.ping(token),e=>e.status===409);
+  const known='a'.repeat(32),unknown='f'.repeat(32);
+  const foreignIds=['1','2','3','4','5','6'].map(x=>x.repeat(32));
+  const originalDevice=(await snapshot()).find(d=>d.storeId===scope.storeId);
+  for(let i=0;i<foreignIds.length;i++)await a.$executeRaw`INSERT INTO "CloudAudit" ("id","companyId","storeId","actorType","actorId","eventType","details") VALUES (${foreignIds[i]},${i===0?'company-B':scope.companyId},${i===1?'store-B':scope.storeId},'DEVICE',${i===2?'foreign-device':originalDevice.id},${i===3?'FTEXT_PAIRED':'FTEXT_STATUS_REPORTED'},${JSON.stringify({terminalPos:i===4?'POS-02':scope.terminalPos,requestId:foreignIds[i],ok:i!==5,code:i===5?101:0})}::jsonb)`;
+  const before=await snapshot(),auditBefore=await a.$queryRaw`SELECT * FROM "CloudAudit" ORDER BY "id"`;
+  const history=await service.statusHistory(token,{requestIds:[known,unknown,known,...foreignIds]});
+  assert.deepEqual(history.acknowledgedIds,[known]);assert.equal(history.storeId,scope.storeId);assert.equal(history.fiscalExecution,false);assert.equal(history.readinessVerified,false);
+  assert.deepEqual(await snapshot(),before,'History lookup must not renew heartbeat/readiness');
+  assert.deepEqual(await a.$queryRaw`SELECT * FROM "CloudAudit" ORDER BY "id"`,auditBefore,'History lookup must not create audit/business evidence');
+  for(const body of [{requestIds:[]},{requestIds:Array(101).fill(known)},{requestIds:['../x']},{requestIds:[known],storeId:'store-B'}])await assert.rejects(service.statusHistory(token,body));
+  await b.$executeRaw`UPDATE "CompanyModule" SET "active"=false WHERE "id"='module-A'`;await assert.rejects(service.ping(token),e=>e.status===403);await assert.rejects(service.statusHistory(token,{requestIds:[known]}),e=>e.status===403);await b.$executeRaw`UPDATE "CompanyModule" SET "active"=true WHERE "id"='module-A'`;
+  await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=true WHERE "storeId"='store-A'`;await assert.rejects(service.ping(token),e=>e.status===409);await assert.rejects(service.statusHistory(token,{requestIds:[known]}),e=>e.status===409);await b.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=false,"generation"=1 WHERE "storeId"='store-A'`;await assert.rejects(service.ping(token),e=>e.status===409);await assert.rejects(service.statusHistory(token,{requestIds:[known]}),e=>e.status===409);
   const fresh=await service.configure(scope,input,'fixture-admin');assert.notEqual(fresh.settingsHash,configured.settingsHash);await assert.rejects(service.ping(token),e=>e.status===401);
   const pair=await service.createPairing(scope,'fixture-admin'),paired=await service.pair(pairInput(pair.code,fresh));
   await b.$executeRaw`UPDATE "StoreFiscalDevice" SET "deviceCode"='REPLACED' WHERE "storeId"='store-A'`;await assert.rejects(service.ping(paired.token),e=>e.status===409);

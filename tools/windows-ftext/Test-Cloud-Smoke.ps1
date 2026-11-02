@@ -205,3 +205,5 @@ Export-ModuleMember -Function Get-FtextCashPending,Read-FtextLateReceiptEvidence
 }
 
 & (Join-Path $PSScriptRoot 'Test-Readiness-Worker-Smoke.ps1')
+& (Join-Path $PSScriptRoot 'Test-Status-Archive-Smoke.ps1')
+& (Join-Path $PSScriptRoot 'Test-Status-Archive-Cloud-Smoke.ps1')
