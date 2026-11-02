@@ -1,0 +1,39 @@
+{
+  "filename": "Rizareio_Ftext_Cash_Setup.cmd",
+  "bytes": 118028,
+  "sha256": "dc5aadfeddb7382a3e98536d1cdbd7db8884b1c070f43ad3ffdc59d0a88adf1e",
+  "revision": "a351362f3a5c436126bfcce8b2a547496470c036",
+  "settingsHash": "4231356f6dc75c59a8ba083ac779c087681acd2535f77060ffd54eab4348ee89",
+  "moduleHashes": {
+    "Ftext.psm1": "b7f05991e10a953a2f31d2dde8f6d1c20f0ce86f0fccf28ce3d96cfe71e6c612",
+    "Cloud-Tools.psm1": "fa67c6fef07c81046dc907a16de5e24bba1b93d571f1bd78e469f39ddb7fb740",
+    "Pair.ps1": "c9ae79e2f7557171334c958ded0c710470b3209d6e5fe730aac4f9146f28be2f",
+    "Cloud-Test.ps1": "6d4d55184a1abed6337d10d3a76c499d58a45931c525b1a82e0929e686eb50a4",
+    "Cloud-Connector.ps1": "90ff2e64d2379d401abb16b2165992c2410a11c7b1863790209c47a58ebfff5e",
+    "Setup.ps1": "8f28358a78eb358babefdb9755bdb8455d7b5e2c22b55379205e74d77f4ff5bc",
+    "Cash.psm1": "5b75ce63b3a4f6fdbdaa5b0582c3bd3f9e9006ddc4fbdedc5286572260e33750"
+  },
+  "containsCredentials": false,
+  "startsConnectorAutomatically": false,
+  "physicalPCExecution": "NOT TESTED",
+  "libraryFileId": "libfile_597bc5345cd88191a75436df91809309",
+  "libraryVersion": 7,
+  "sourcePR": 3508,
+  "sourceHead": "b4cb87f180b111928f3488b0c0fd59df0f2278a8",
+  "sourceMerge": "b9a312eb77b7a108bccf070351edba7da19be602",
+  "integratedFullCI": 41413300019,
+  "guardedDeploy": 41414916194,
+  "renderDeploy": "dep-dbk4qcnf3r2c738moce0",
+  "health": {
+    "status": 200,
+    "date": "Mon, 02 Nov 2026 08:47:04 GMT",
+    "health": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "a351362f3a5c436126bfcce8b2a547496470c036"
+    }
+  },
+  "selectedPCExecution": "NOT TESTED",
+  "physicalStability": "OPEN",
+  "physicalSpeed": "OPEN"
+}
