@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCashPaperReader} from '../src/services/cash-paper-reader.js';
 import {createCashPaperProvider} from '../src/services/cash-paper-provider.js';
+import {normalizePaper} from '../src/services/cash-paper-contract.js';
 import sharp from 'sharp';
 const raw={dateText:'21/10/2026',documentDate:'2026-10-21',operatorText:'Test',shiftText:'Morning',notes:[],lines:[{kind:'CASHBOX',label:'Cashbox',amountText:'10',quantityText:null,timeText:null,uncertain:false}]};
 const scope={companyId:'c',storeId:'s',generation:'0'},actor={id:'actor'},request={messageId:'m',checksum:'a'.repeat(64)};
@@ -37,4 +38,17 @@ test('provider uses the existing scoped wallet adapter, no tools/storage, strict
  const out=await provider.read(scope,[{type:'input_image',image_url:'data:image/jpeg;base64,SYNTHETIC',detail:'high'}]);assert.deepEqual(out,raw);assert.equal(calls,1);assert.equal(billed.feature,'CASH_PAPER_READING');assert.equal(billed.storeId,'s');assert.equal(settings.store,false);assert.equal(settings.tools,undefined);assert.equal(settings.text.format.strict,true);assert.equal(settings.input[0].content.filter(c=>c.type==='input_image').length,1);
  assert.throws(()=>createCashPaperProvider({env:{}}).configuration(),e=>e.code==='CASH_PAPER_PROVIDER_UNAVAILABLE');
  const invalid=createCashPaperProvider({env:{OPENAI_API_KEY:'synthetic'},meter:async()=>({response:{ok:true},raw:{output_text:'not json'}})});await assert.rejects(invalid.read(scope,[]),e=>e.code==='CASH_PAPER_INVALID_RESULT');
+});
+
+test('provider preserves the original null ISO extraction while deterministic projection can reuse its printed date',async()=>{
+ const original={...raw,dateText:'27/10/2026',documentDate:null};let calls=0,settings;
+ const provider=createCashPaperProvider({env:{OPENAI_API_KEY:'synthetic'},meter:async(_scope,request)=>{
+  calls++;settings=request;return {response:{ok:true},raw:{output_text:JSON.stringify(original)}};
+ }});
+ const result=await provider.read(scope,[]);
+ assert.deepEqual(result,original);assert.equal(result.documentDate,null);assert.equal(calls,1);
+ assert.match(settings.instructions,/DD\/MM\/YYYY/);
+ assert.equal(normalizePaper(result).documentDate,'2026-10-27');
+ assert.equal(normalizePaper(result).documentDate,'2026-10-27');
+ assert.equal(result.documentDate,null);assert.equal(calls,1);
 });
