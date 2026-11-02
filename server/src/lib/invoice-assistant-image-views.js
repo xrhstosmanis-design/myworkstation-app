@@ -20,11 +20,12 @@ async function sidewaysReceipt(image,width,height){
 // Keep the complete page for the header/footer and overlapping enlarged bands
 // for small product codes across the entire printed table.
 // These are only model inputs; the original attachment remains untouched.
-export async function invoiceAssistantImageViews(pages){
+export async function invoiceAssistantImageViews(pages,{attachmentLabels=false}={}){
+  const label=attachmentLabels?"Συνημμένο":"Σελίδα";
   const content=[];
   for(const [index,page] of pages.entries()){
     if(page.mimeType==="application/pdf"){
-      content.push({type:"input_text",text:`Συνημμένο ${index+1} από ${pages.length}: πλήρες αρχείο PDF. Το PDF μπορεί να περιέχει πολλές φυσικές σελίδες· διάβασε όλες τις εσωτερικές του σελίδες. Ο αριθμός συνημμένου δεν δηλώνει αριθμό φυσικής σελίδας`});
+      content.push({type:"input_text",text:attachmentLabels?`Συνημμένο ${index+1} από ${pages.length}: πλήρες αρχείο PDF. Το PDF μπορεί να περιέχει πολλές φυσικές σελίδες· διάβασε όλες τις εσωτερικές του σελίδες. Ο αριθμός συνημμένου δεν δηλώνει αριθμό φυσικής σελίδας`:`Σελίδα ${index+1} από ${pages.length}: πλήρες αρχείο`});
       content.push({type:"input_file",filename:page.filename||`page-${index+1}.pdf`,file_data:`data:application/pdf;base64,${String(page.contentData).split(",").pop()}`});
       continue;
     }
@@ -42,17 +43,17 @@ export async function invoiceAssistantImageViews(pages){
       oriented=await sharp(oriented).rotate(270).toBuffer();
       ({width,height}=await sharp(oriented).metadata());
       const alternate=await sharp(opposite).resize({width:2400,height:2400,fit:"inside",withoutEnlargement:true}).jpeg({quality:80}).toBuffer();
-      content.push({type:"input_text",text:`Συνημμένο ${index+1}: η φωτογραφία ήταν πλάγια. Οι δύο περιστροφές απεικονίζουν ΤΟ ΙΔΙΟ παραστατικό. Επίλεξε μόνο εκείνη όπου οι λέξεις διαβάζονται όρθιες· αγνόησε την ανάποδη. Μη διπλομετρήσεις καμία σειρά.`});
+      content.push({type:"input_text",text:`${label} ${index+1}: η φωτογραφία ήταν πλάγια. Οι δύο περιστροφές απεικονίζουν ΤΟ ΙΔΙΟ παραστατικό. Επίλεξε μόνο εκείνη όπου οι λέξεις διαβάζονται όρθιες· αγνόησε την ανάποδη. Μη διπλομετρήσεις καμία σειρά.`});
       content.push({type:"input_image",image_url:`data:image/jpeg;base64,${alternate.toString("base64")}`,detail:"high"});
     }
     const full=await sharp(oriented).resize({width:3000,height:3000,fit:"inside",withoutEnlargement:true}).flatten({background:"#fff"}).jpeg({quality:83}).toBuffer();
     const left=Math.round(width*.04),cropWidth=Math.min(Math.round(width*.92),width-left);
-    content.push({type:"input_text",text:`Συνημμένο ${index+1} από ${pages.length}: πλήρης φωτογραφία και τρεις επικαλυπτόμενες μεγεθύνσεις του ίδιου φύλλου από πάνω προς τα κάτω. Ανάγνωσε κωδικούς και ονομασίες από τη σχετική μεγέθυνση, και μέτρησε κάθε φυσική γραμμή μόνο μία φορά.`});
+    content.push({type:"input_text",text:`${label} ${index+1} από ${pages.length}: πλήρης φωτογραφία και τρεις επικαλυπτόμενες μεγεθύνσεις του ίδιου φύλλου από πάνω προς τα κάτω. Ανάγνωσε κωδικούς και ονομασίες από τη σχετική μεγέθυνση, και μέτρησε κάθε φυσική γραμμή μόνο μία φορά.`});
     content.push({type:"input_image",image_url:`data:image/jpeg;base64,${full.toString("base64")}`,detail:"high"});
     for(const [band,start,end] of [["επάνω",.17,.43],["μέση",.40,.66],["κάτω",.63,.89]]){
       const top=Math.round(height*start),cropHeight=Math.min(Math.round(height*(end-start)),height-top);
       const table=await sharp(oriented).extract({left,top,width:cropWidth,height:cropHeight}).resize({width:Math.min(2400,Math.max(cropWidth,1600))}).jpeg({quality:90}).toBuffer();
-      content.push({type:"input_text",text:`Συνημμένο ${index+1}, ${band} ζώνη του ίδιου πίνακα. Οι επικαλύψεις δεν είναι νέες γραμμές.`});
+      content.push({type:"input_text",text:`${label} ${index+1}, ${band} ζώνη του ίδιου πίνακα. Οι επικαλύψεις δεν είναι νέες γραμμές.`});
       content.push({type:"input_image",image_url:`data:image/jpeg;base64,${table.toString("base64")}`,detail:"high"});
     }
   }

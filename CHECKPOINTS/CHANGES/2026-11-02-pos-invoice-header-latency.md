@@ -1,3 +1,7 @@
+## Continuation compatibility check — source still AWAITING CI/LAB
+
+Full local Node20 suite4603PASS/0FAIL/341infrastructureSKIP and frontend/TABLE_SERVICE PASS. Review found the shared interactive page-evidence fallback recognizes legacy photo labels. Attachment labels are therefore opt-in only for the background reader; default image-view output and the interactive consumer remain unchanged. Added actual-consumer two-photo/mixed-PDF regressions and byte equality between modes. No provider/business action or new hosted PASS.
+
 ## 02/11/2026 — INVOICE HEADER + PHYSICAL PDF PAGES / SOURCE READY / AWAITING FULL CI AND LAB
 
 Same retained /root owner and remote branch fix/pos-invoice-complete-header-20261102, existing PR3545. Before-source claims3536 and3547 are green/main; latest PDF claim83fbf944 mergedf38c16d07 before source. Existing header90267b0 fullPRCI41506583913 all5jobsSUCCESS/5278server+8backup/0FAIL/0SKIP remains protected; this combined revision requires fresh full PR/main CI. Current main and all peer runtime/manual/records inherited exactly outside owned paths.

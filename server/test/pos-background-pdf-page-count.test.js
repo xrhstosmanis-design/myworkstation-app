@@ -45,7 +45,7 @@ function fixture(attachments,{reading=modelReading(2),totalGross=Number(reading.
    assert.match(strings.join('?'),/^SELECT a\."filename"/);
    return [attachments[queries.length-1]];
   }},
-  invoiceAssistantImageViews:async pages=>{viewCalls.push(pages);return realImageViews(pages)},
+  invoiceAssistantImageViews:async(pages,options)=>{viewCalls.push(pages);assert.deepEqual(options,{attachmentLabels:true});return realImageViews(pages,options)},
   invoiceAssistantProviderError:()=>{throw Error('unexpected provider failure mapper')},
   fetch:async(url,options)=>{
    assert.equal(url,'https://api.openai.com/v1/responses');assert.equal(options.method,'POST');
