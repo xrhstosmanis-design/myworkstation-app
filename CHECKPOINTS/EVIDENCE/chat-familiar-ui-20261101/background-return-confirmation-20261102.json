@@ -1,0 +1,21 @@
+{
+  "confirmationDateEuropeAthens": "2026-11-02",
+  "userReply": "εκλεισε",
+  "requestedSequence": [
+    "open existing Chat photo",
+    "phone home screen",
+    "return to app",
+    "report if temporary photo closed"
+  ],
+  "classification": "USER-REPORTED PASS: temporary preview closed after home/background and return",
+  "storeContext": "previous Diadoxou Pavlou conversation; not independently reidentified for this action",
+  "actualDeviceOSInstalledHashAccountActionTimeRuntime": "NOT INDEPENDENTLY IDENTIFIED",
+  "RAMForensicOrServerDeltasMeasured": false,
+  "noAgentProductionOrChatActions": true,
+  "noReplayOfAcceptedChecks": true,
+  "remainingOwnedPhysicalCases": [
+    "navigation-away preview cleanup",
+    "rotation"
+  ],
+  "otherN16OwnersAndOverallOpenPreserved": true
+}
