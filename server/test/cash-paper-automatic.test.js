@@ -134,10 +134,10 @@ test('repeated same-kind shift aggregates are unresolved while POS and EFTPOS re
 });
 test('LAB closing preserves five verified headers and exactly corroborates numeric-token operator',()=>{
  const header=label=>({kind:'OTHER',label,amountText:null,quantityText:null,timeText:null,uncertain:false});
- const headers=['ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ','ΚΛΕΙΣΙΜΟ ΤΑΜΕΙΟΥ','Ημερομηνία:27/10/2026','Ταμείο:MAIN','Χειριστής:LAB POS 2'].map(header);
- const closing={kind:'CLOSING_CASH',label:'Κλείσιμο',amountText:'9,40€',quantityText:null,timeText:'19:24:28',uncertain:false};
+ const headers=['ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ','ΚΛΕΙΣΙΜΟ ΤΑΜΕΙΟΥ','Ημερομηνία: 27/10/2026','Ταμείο: MAIN','Χειριστής: LAB POS 2'].map(header);
+ const closing={kind:'CLOSING_CASH',label:'ΛΗΞΗ ΜΕΤΡΗΤΩΝ',amountText:'9,40 €',quantityText:null,timeText:'19:24:28',uncertain:false};
  const lab={...original,session:{...original.session,terminalPos:'MAIN',openedByName:'LAB POS 2',openedAt:'2026-10-27T06:00:00Z',closedAt:'2026-10-27T17:24:28.504186Z',actualOperational:'9.40'}};
- const extraction=lines=>normalizePaper({dateText:'27/10/2026',documentDate:'2026-10-27',operatorText:'LAB POS 2',shiftText:null,notes:[],lines});
+ const extraction=lines=>normalizePaper({dateText:'27/10/2026',documentDate:null,operatorText:'LAB POS 2',shiftText:null,notes:[],lines});
  const run=lines=>project({storeName:'ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ',sessions:new Map([['night',lab]]),papers:[{...source,reading:{...reading,extraction:extraction(lines)}}],period:{from:'2026-10-27',to:'2026-10-27'}});
  const out=run([...headers,closing]);assert.equal(out.status,'COMPLETE');assert.equal(out.items.length,6);assert.equal(out.items.filter(i=>i.status==='INFORMATIONAL').length,5);assert.equal(out.items[5].status,'MATCHED');assert.equal(out.items[5].evidenceBasis,'SHIFT_BOUNDARY');
  for(const item of out.items.slice(0,5)){assert.equal(item.reason,'VERIFIED_DOCUMENT_HEADER');assert.equal(item.sessionId,null);assert.equal(item.sourceHash,null);assert.equal(item.checksum,checksum);}

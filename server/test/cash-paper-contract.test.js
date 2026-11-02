@@ -27,12 +27,12 @@ test('original source scope, MIME, actual checksum, declared size and generation
 // The stored one-call LAB shape is replayed locally; this is not a new provider read.
 test('missing model ISO derives only from one complete exact printed date without mutating raw extraction',()=>{
  const stored=raw({dateText:'27/10/2026',documentDate:null,operatorText:'LAB POS 2',shiftText:null,lines:[
-  {kind:'CLOSING_CASH',label:'ΛΗΞΗ ΜΕΤΡΗΤΩΝ',amountText:'9,40€',quantityText:null,timeText:'19:24:28',uncertain:false},
-  ...['MYWORKSTATION LAB','LAB POS 2','MAIN','ΚΛΕΙΣΙΜΟ ΤΑΜΕΙΟΥ','ΗΜΕΡΟΜΗΝΙΑ'].map(label=>({kind:'OTHER',label,amountText:null,quantityText:null,timeText:null,uncertain:false}))]});
+  ...['ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ','ΚΛΕΙΣΙΜΟ ΤΑΜΕΙΟΥ','Ημερομηνία: 27/10/2026','Ταμείο: MAIN','Χειριστής: LAB POS 2'].map(label=>({kind:'OTHER',label,amountText:null,quantityText:null,timeText:null,uncertain:false})),
+  {kind:'CLOSING_CASH',label:'ΛΗΞΗ ΜΕΤΡΗΤΩΝ',amountText:'9,40 €',quantityText:null,timeText:'19:24:28',uncertain:false}]});
  const before=structuredClone(stored),result=normalizePaper(stored);
  assert.equal(result.documentDate,'2026-10-27');assert.deepEqual(stored,before);
- assert.equal(result.dateText,'27/10/2026');assert.equal(result.lines.length,6);assert.equal(result.lines[0].amountCents,940);
- assert.equal(result.lines[0].timeText,'19:24:28');assert.equal(result.associationVerified,false);
+ assert.equal(result.dateText,'27/10/2026');assert.equal(result.lines.length,6);assert.equal(result.lines[5].amountCents,940);
+ assert.equal(result.lines[5].timeText,'19:24:28');assert.equal(result.associationVerified,false);
  assert.equal(result.employeeLiabilityAdjusted,false);assert.equal(result.readingOnly,true);
  for(const dateText of ['2026-10-27','27/10/2026','27.10.2026','27-10-2026',' 27/10/2026 ','7/1/2026'])
   assert.equal(normalizePaper(raw({dateText,documentDate:null})).documentDate,dateText==='7/1/2026'?'2026-01-07':'2026-10-27');
