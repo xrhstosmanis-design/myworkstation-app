@@ -54,11 +54,16 @@ public class ConversationAppearanceTest {
                         View root=(View)get(a,"root");float density=a.getResources().getDisplayMetrics().density;
                         for(int width:new int[]{320,360}){
                             int w=Math.round(width*density),h=Math.round(720*density);root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);
+                            LinearLayout topics=root.findViewWithTag("chat-topics");assertEquals(3,topics.getChildCount());for(int n=0;n<3;n++){Button topic=(Button)topics.getChildAt(n);assertTrue("Topic touch target",topic.getHeight()>=Math.round(48*density));assertTrue("Topic label fits",topic.getLayout().getEllipsisCount(0)==0);}
                             LinearLayout tools=root.findViewWithTag("chat-tools");assertEquals(View.GONE,tools.getVisibility());assertEquals(3,tools.getChildCount());
                             for(String key:new String[]{"categoryButton","announcementSettingsButton","announcementsButton","historySearchButton"}){Button b=(Button)get(a,key);assertEquals(View.VISIBLE,b.getVisibility());assertFalse("Tools must be reachable through overflow, not occupy message height",b.isShown());}
                             assertTrue("Messages should recover phone height",((View)get(a,"scroll")).getHeight()>=Math.round(400*density));
                             for(String label:new String[]{"attachmentLabel","voiceLabel","videoLabel","notice"})assertEquals(label,View.GONE,((View)get(a,label)).getVisibility());
                         }
+                        // Keyboard-sized viewport still leaves actual conversation and composer visible.
+                        int compactW=Math.round(360*density),compactH=Math.round(420*density);root.measure(View.MeasureSpec.makeMeasureSpec(compactW,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(compactH,View.MeasureSpec.EXACTLY));root.layout(0,0,compactW,compactH);
+                        assertTrue("Keyboard viewport retains conversation space",((View)get(a,"scroll")).getHeight()>=Math.round(100*density));
+                        View composerBar=root.findViewWithTag("chat-composer");assertTrue("Composer remains within keyboard viewport",composerBar.getBottom()<=compactH);assertTrue(composerBar.getHeight()>=Math.round(48*density));
                         Method status=MainActivity.class.getDeclaredMethod("status",String.class);status.setAccessible(true);status.invoke(a,"Δοκιμαστική ενημέρωση");assertEquals(View.VISIBLE,((TextView)get(a,"notice")).getVisibility());status.invoke(a,"");assertEquals(View.GONE,((View)get(a,"notice")).getVisibility());
                         set(a,"voiceDraft",VoiceData.fromPcm(new short[]{1,2},2));call(a,"updateVoiceLabel");assertEquals(View.VISIBLE,((View)get(a,"voiceLabel")).getVisibility());call(a,"clearVoice");call(a,"updateVoiceLabel");assertEquals(View.GONE,((View)get(a,"voiceLabel")).getVisibility());
                         int w=Math.round(360*density),h=Math.round(720*density);root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);

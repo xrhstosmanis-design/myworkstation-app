@@ -1,3 +1,4 @@
+import {resolveChatCategory} from './chat-topics.mjs';
 // Additive store Chat interactions. All callers retain the existing auth/module gate.
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 export const CHAT_REACTIONS=Object.freeze(['👍','✅','❤️']);
@@ -27,6 +28,14 @@ export async function requireChatReply(tx,store,value){
  const rows=await tx.$queryRaw`SELECT "id" FROM "StoreChatMessage" WHERE "id"=${id} AND "companyId"=${store.companyId} AND "storeId"=${store.id} FOR KEY SHARE`;
  if(rows.length!==1)throw fail('Δεν βρέθηκε το μήνυμα σε αυτό το κατάστημα.',404);
  return id;
+}
+// Resolve replies under the same scoped parent lock; no additional write or migration.
+export async function chatSendContext(tx,store,value,{topic,category}={}){
+ if(value==null)return {replyToId:null,category:resolveChatCategory({topic,category})};
+ const id=chatMessageId(value);
+ const rows=await tx.$queryRaw`SELECT "id","category" FROM "StoreChatMessage" WHERE "id"=${id} AND "companyId"=${store.companyId} AND "storeId"=${store.id} FOR KEY SHARE`;
+ if(rows.length!==1)throw fail('Δεν βρέθηκε το μήνυμα σε αυτό το κατάστημα.',404);
+ return {replyToId:id,category:resolveChatCategory({topic,category,parentCategory:rows[0].category})};
 }
 export async function acknowledgeChatDelivery(db,store,user,value){
  const ids=deliveryIds(value);if(!ids.length)return {ok:true,received:0};
