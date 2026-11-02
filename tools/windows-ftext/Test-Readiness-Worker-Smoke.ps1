@@ -14,6 +14,7 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath,[int]$TimeoutSeconds) {
     $case=Get-Content -LiteralPath $ConfigPath -Raw
     [IO.File]::WriteAllText(($ConfigPath+'.started'),'started')
     if($case -eq 'stop') {Start-Sleep -Seconds 30;[IO.File]::WriteAllText(($ConfigPath+'.finished'),'unexpected');return $true}
+    if($case -eq 'scheduled') {$script:FtextReadinessRefreshAt=[DateTime]::UtcNow.AddSeconds(5);return $true}
     if($case -eq 'delayed') {Start-Sleep -Seconds 6;return $true}
     Start-Sleep -Milliseconds 300
     switch($case) {'true' {return $true};'false' {return $false};'error' {throw 'Synthetic driver failure'};default{return 'not verified'}}
@@ -21,7 +22,13 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath,[int]$TimeoutSeconds) {
 '@
     $modulePath=Join-Path $root 'Cloud-Tools.psm1';Set-Content $modulePath $source -Encoding UTF8
     Import-Module $modulePath -Force
-    foreach($case in @('true','delayed','false','error','invalid','stop')) {
+    $now=[DateTime]::UtcNow
+    $normal=Get-FtextReadinessRefreshAt $now $now $now 6
+    if(($normal-$now).TotalSeconds -ne 10){throw 'Normal proof did not leave bounded work opportunity'}
+    foreach($elapsed in @(20,30)) {if((Get-FtextReadinessRefreshAt $now $now $now $elapsed) -ne $now){throw 'Slow STATUS extended proof'}}
+    if((Get-FtextReadinessRefreshAt ($now.AddSeconds(-19)) $now $now 6) -ne $now){throw 'Old original proof was re-dated'}
+    if((Get-FtextReadinessRefreshAt ($now.AddSeconds(3)) $now $now 6) -ne $now){throw 'Future proof scheduled a delay'}
+    foreach($case in @('true','scheduled','delayed','false','error','invalid','stop')) {
         $path=Join-Path $root ($case+'.json');[IO.File]::WriteAllText($path,$case)
         $clock=[Diagnostics.Stopwatch]::StartNew();$worker=Start-FtextCloudReadiness $path
         if($clock.Elapsed.TotalSeconds -gt 5) {throw 'Starting worker blocked its caller'}
@@ -37,10 +44,11 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath,[int]$TimeoutSeconds) {
         while(-not $worker.Async.IsCompleted -and [DateTime]::UtcNow -lt $deadline) {$ticks++;Start-Sleep -Milliseconds 20}
         if($case -eq 'delayed' -and $ticks -lt 20) {throw 'Caller did not continue during delayed STATUS'}
         if(-not $worker.Async.IsCompleted) {throw 'Worker did not finish'}
-        $rejected=$false;$value=$null
+        $rejected=$false;$value=$null;$completedWorker=$worker
         try {$value=Receive-FtextCloudReadiness $worker} catch {$rejected=$true} finally {$worker=$null}
         if($case -in @('error','invalid')) {if(-not $rejected) {throw 'Failed/malformed worker was accepted'}}
-        elseif($rejected -or $value -isnot [bool] -or $value -ne ($case -in @('true','delayed'))) {throw 'Worker did not return actual boolean readiness'}
+        elseif($rejected -or $value -isnot [bool] -or $value -ne ($case -in @('true','scheduled','delayed')))  {throw 'Worker did not return actual boolean readiness'}
+        if($case -eq 'scheduled' -and $completedWorker.RefreshAt -le [DateTime]::UtcNow){throw 'Runspace lost its original scheduling hint'}
     }
 
     # Actual connector loop with controlled worker completion, no network or
