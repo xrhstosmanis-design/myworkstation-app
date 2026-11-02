@@ -1,3 +1,9 @@
+## 03/11/2026 — exact native CI exposed legacy fixture isolation/dependency failures / corrected candidate awaiting CI
+
+Exact38936a35 CI41540852046/job125605015745 failed security step:5342tests/5336PASS/6FAIL/0SKIP; other4requiredjobsSUCCESS. All six failure results belong to the existing pos-pending-invoices-postgres umbrella/subtests: extracted generic handler omitted the newly required lock/payment guard dependencies; unrelated later synthetic originals reused numeric suffixes from the same-store/supplier/amount history1..1005. Dedicated new native shell, missing-date/zero, actual precheck/direct-post/race, unpaidmyDATA and description-only cases passed. This is not a full CI/LAB PASS.
+
+Named helper corrected only the fixture: inject actual guards, give independent post-history originals disjoint numeric suffixes, preserve the seeded history, deliberate duplicate test and every business/race/replay/control assertion. No runtime guard was weakened. Local Node20 focused18tests/4PASS/0FAIL/14nativeSKIP; repaired native acceptance remains required on new exact-head CI. Runtime blobs unchanged from38936a35. Do not merge failed/superseded head; next action full exact corrected PR CI, then required main/guard/health and measured LAB. Entire task remains OPEN; historical records untouched.
+
 ## 03/11/2026 — INVOICE-SECOND-DRAFT-01 / REVIEW GAPS ADDRESSED IN CANDIDATE / AWAITING NEW NATIVE CI
 
 Same transferred owner fix/invoice-duplicate-prevention-20261103, source continuation PR3558. Explicit parallel helpers completed read-only review and bounded delegated helper/test work; primary alone integrates. Before-source continuation3565/head6ea12e0 green applicable CI, mergef4272bf preceded shared helper, precheck and supplier-payment backstop edits. Other-expense camera/category schema/insert/UI and all peer owners remain untouched.
