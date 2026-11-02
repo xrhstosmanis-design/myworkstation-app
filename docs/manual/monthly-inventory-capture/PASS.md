@@ -1,3 +1,19 @@
+# Worker heartbeat signature - scoped technical verification 02/11/2026
+
+Only an authorized Render workspace operator may perform this read-only diagnostic in the existing WEB service Shell. It verifies one signed worker heartbeat against the actual listener's startup key; it does not grant execution authority, enable a flag or replace the application available() admission.
+
+1. Verify the current live web source, then bind one actual Node src/index.js PID to its owned listener socket/PORT and recheck PID start time/environment after the read. Old Shell configuration or a previous deactivated instance is not current key binding.
+2. Keep the general execution flag false. Privately select only the actual listener startup key/DB connection/profile needed for this diagnostic. Never print or persist key, MAC, URI, raw environment or heartbeat text. Use clean private child connection fields; preserve supplied recognized TLS/options, refuse unknown/duplicate/target overrides, and never put credentials in argv. PGDATABASE environment URI defaults do not expand like an explicit libpq dbname argument; the accepted helper uses explicit PGHOST/PORT/USER/password/database fields.
+3. Within BEGIN READ ONLY, fetch only the bounded backup-worker heartbeat/MAC and clock_timestamp. Use that DB clock, not an invented host/future clock. Do not run a worker, backup, scheduler, eligibility, capture, installer or controller action to refresh evidence.
+4. Verify installed pure module pins and select the static manifest with the actual listener profile. Call only the existing pure validateLifecycleWorkerCapability with the private record/key and selected manifest. Its signature/protocol/manifest/digest/revision/storage-field and12minute/+30second freshness rules must all pass. A false result is not automatically an invalid-MAC diagnosis.
+5. Emit only approved metadata/booleans/hashes and confirm the same listener and false general flag remain. No raw child errors or private values may leave the service. Application bootstrap/controller/scheduler/worker are not imported or invoked; the trusted pure application validation modules are imported.
+
+Actual02NovDBcheck20:34:13.605UTC/observation20:34:13.666725UTC: WEBPID577/PORT10000/instancel7f6d/source8cd55db4; signed heartbeat20:30:56.923UTC/age196682ms/manifest59ca/workerRevisionaa1/protocolMWS_STORE_RECOVERY_CAPABILITY_V1/rowdigestV1/storagePolicyVerifiedFieldtrue passed. Full hashes and qualified evidence are in CHECKPOINTS/EVIDENCE/monthly-worker-mac-20261102/signature-verification.json and the existingD8checkpoint.
+
+Limits/troubleshooting: the key is bound to that listening process startup environment, not later in-memory key consumption. This diagnostic does not verify actual application available(), other instances, execution readiness, a timer, future monthly execution or new storage/retention/restore results. The authenticated storagePolicy field is the worker's reported assertion, not an independent new storage audit. General execution remains false. Earlier generic/client-descriptor refusals are recorded separately; a harmless dummy established the descriptor cause before the accepted read-only follow-up. Stop on an unknown result; do not rotate keys, drop TLS options, enable flags or call an execution path to manufacture PASS.
+
+---
+
 # Monthly control - listening-process startup configuration observation 02/11/2026
 
 Scoped LIVE observation PASS only for an authorized Render workspace operator using the existing WEB service Shell. PlatformAdmin authority alone is not Render access. This read-only diagnostic confirms allowed configuration fields on the actual listening application PID; it does not activate a scheduler or grant rights.

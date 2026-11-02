@@ -1,0 +1,94 @@
+{
+  "format": "MWS_WORKER_HEARTBEAT_SIGNATURE_OBSERVATION_V1",
+  "status": "SCOPED_WORKER_HEARTBEAT_CRYPTOGRAPHIC_VERIFICATION_PASS",
+  "databaseCheckedAt": "2026-11-02T20:34:13.605Z",
+  "observedAt": "2026-11-02T20:34:13.666725Z",
+  "heartbeatAt": "2026-11-02T20:30:56.923Z",
+  "heartbeatAgeMsAtDatabaseCheck": 196682,
+  "workerMacAndFreshnessVerified": true,
+  "manifestHash": "59ca657191a03dfeb751e907d95abe4291a3fc61da30c9d0602a116ed78757c2",
+  "workerRevision": "aa1cbcf8ed8461d4abb565376857508217fd6539",
+  "protocol": "MWS_STORE_RECOVERY_CAPABILITY_V1",
+  "rowDigestFormat": "MWS_ROW_MULTISET_SHA256_V1",
+  "storagePolicyVerifiedField": true,
+  "web": {
+    "serviceId": "srv-d9isenfavr4c73bdh52g",
+    "instance": "l7f6d",
+    "pid": 577,
+    "port": 10000,
+    "sourceRevision": "8cd55db49e1329c0e697e9a92840729818162afa",
+    "actualListeningProcessStartupKeyBinding": true,
+    "sameListeningPidAfterRead": true,
+    "generalExecutionFlagRemainsFalse": true,
+    "profile": "MONTHLY_INVENTORY_CAPTURE_V1"
+  },
+  "method": {
+    "readOnlyDbTransaction": true,
+    "dbClockInSameHeartbeatSelect": true,
+    "macHexLengthRequired": 64,
+    "allowedPureValidationModulesImported": true,
+    "appOrSchedulerBootstrapImported": false,
+    "availableOrControllerOrWorkerOrSweepInvoked": false,
+    "secretMacUrlOrRawEnvironmentEmittedOrPersisted": false,
+    "sourceOrServiceEnvironmentMutated": false,
+    "hmacKeyAndRecordPassedViaPrivatePipe": true,
+    "heartbeatJsonMaxUtf8Bytes": 4096
+  },
+  "limitations": {
+    "effectiveInMemoryKeyConsumptionVerified": false,
+    "availableAdmissionObserved": false,
+    "executionReadinessOrFutureExecutionVerified": false,
+    "otherInstancesVerified": false,
+    "storageOrRetentionPolicyIndependentlyRetested": false,
+    "heartbeatAgeUsesDbClockNotLaterObservedAt": true,
+    "wholeFinancialStockInvarianceMeasured": false
+  },
+  "diagnosticHistory": {
+    "firstGenericRefusal": "Stage was initially unknown; no MAC failure inferred.",
+    "stagedRefusal": {
+      "stage": "PSQL_READ_ONLY_CLOCK_AND_HEARTBEAT",
+      "childReturnCode": 2,
+      "stdoutBytes": 0,
+      "stderrBytes": 187,
+      "pureMacValidatorReached": false
+    },
+    "causalDummy": {
+      "realDatabaseOrKeyUsed": false,
+      "syntheticDescriptorOnly": true,
+      "returnCode": 2,
+      "defaultLocalSocketObserved": true,
+      "dummyLoopbackUriTargetObserved": false,
+      "stderrBytes": 187
+    },
+    "cause": "Diagnostic helper PGDATABASE environment URI was not expanded; not a production database or worker fault.",
+    "narrowCorrection": "Private child only: explicit PGHOST/PORT/database/user/password from the same bound PID URI, exact recognized TLS/options preserved, unknown/duplicate/target overrides refused. No service config/source change."
+  },
+  "scopeControl": {
+    "beforeAt": "2026-11-02T20:22:12.422026Z",
+    "afterAt": "2026-11-02T20:35:38.502448Z",
+    "independentPostAt": "2026-11-02T20:35:39.004794Z",
+    "grantId": "11711b36-943f-4b63-906a-499dc4cdd6b4",
+    "active": true,
+    "revision": "2",
+    "generation": "0",
+    "activationId": "9560bd7e-f4b3-4d38-95ba-597e40eddb6e",
+    "firstIssueMonth": "2026-11",
+    "firstScheduledFor": "2026-12-01T05:00:00.000Z",
+    "scopedJobs": 0,
+    "scopedSnapshots": 1,
+    "unchangedScopeMetadata": true
+  },
+  "nativeHealth": {
+    "window": "2026-11-02 20:34:13-20:35:38 UTC, second precision",
+    "ok": true,
+    "sourceRevision": "8cd55db49e1329c0e697e9a92840729818162afa",
+    "exactReadTimeAndHttpStatusIndependentlyMeasured": false
+  },
+  "sourcePins": {
+    "store-lifecycle-worker-ready.js": "4ecff34807b77a0b6271e2f17ef5407463f986b2",
+    "store-lifecycle-recovery-stream.js": "b4fbe2becba1d9d3620278f06948be23954bd9e9",
+    "store-lifecycle-recovery.js": "caa983abf9180e228e9bb084c68a25cd6c3b3605",
+    "store-lifecycle-manifest.js": "39f9c0a6101b05d01d65982cfd8506f5c43f5601"
+  },
+  "privateNativeEvidenceRetainedOutsideRepositoryLibrary": true
+}
