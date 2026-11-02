@@ -20,6 +20,7 @@ function field(line){
  let label=normalized(line.label),amount=normalized(line.amountText);
  if(amount&&label.endsWith(amount))label=label.slice(0,-amount.length).trim();
  label=label.replace(/[.\/\s:]/g,'');
+ if(line.kind==='EXPENSE')return ['ΕΞΟΔΑ','ΣΥΝΟΛΟΕΞΟΔΩΝ'].includes(label)?'expenses':null;
  if(['ΑΡΧ','ΑΡΧΙΚΟ','ΑΡΧΙΚΟΤΑΜΕΙΟ','ΑΡΧΤΑΜ','ΑΡΧΤΑΜΕΙΟΥ','ΑΡΧΤΑΜΕΙΟ','ΑΡΧΤ'].includes(label))return 'openingOperational';
  if(line.kind==='EXPENSE')return ['ΕΞΟΔΑ','ΣΥΝΟΛΟΕΞΟΔΩΝ'].includes(label)?'expenses':null;
  return {POS:'cardSales',EFTPOS:'eftposTotal',ΕΞΟΔΑ:'expenses',ΣΥΝΟΛΟΕΞΟΔΩΝ:'expenses'}[label]||null;

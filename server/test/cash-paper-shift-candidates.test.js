@@ -50,6 +50,7 @@ test('repeated physical sections cannot reuse a single shift candidate',()=>{
 test('strict expense aggregate supports a candidate but never proves any expense receipt',()=>{
  const r=raw({lines:[line('OPENING_CASH','Αρχικό','500'),line('EXPENSE','Έξοδα','14,00')]});
  const list=[original('a','500','21.4',{expenses:'14'})],out=run(r,list);assert.equal(out.length,1);assert.equal(out[0].proof[1].field,'expenses');assert.equal(out[0].status,'UNVERIFIED_CANDIDATE');
+ r.lines[0].kind='EXPENSE';assert.deepEqual(run(r,list),[],'expense label cannot create an opening boundary');r.lines[0].kind='OPENING_CASH';
  r.lines[1].label='Supplier invoice';assert.deepEqual(run(r,list),[],'individual expense is not a printed aggregate');
 });
 test('an empty opening heading separates sections instead of attaching later POS to the previous employee',()=>{
