@@ -1,4 +1,4 @@
-> Current single phone acceptance is Android0.1.15: docs/testing/chat-familiar-ui-20261101.md and CHECKPOINTS/CHANGES/2026-11-01-chat-familiar-ui.md. This0.1.14 scope is retained in that ONE combined batch, not passed and not a separate intermediate test. Same Chat owner retained; earlier accepted entry/reopen/voice/media are not replayed.
+> CURRENT02Nov2026: this0.1.14 scope was absorbed into the single0.1.15-context batch and is now part of its scoped USER-REPORTED acceptance, recorded in CP2026-11-01-chat-familiar-ui.md, docs/manual/chat/PASS.md and docs/testing/chat-familiar-ui-20261101.md. No separate/repeated older-version test. Remaining old OPEN/NOT TESTED claims below are historical for that functional batch, not current instructions; independent device/build/API/security/all-device evidence and other N16 residuals remain separate.
 
 ## 01/11/2026 - CHAT-SEARCH-FORWARD-01 / ENGINEERING AVAILABLE / ONE EXPANDED PHONE ACCEPTANCE OPEN
 
