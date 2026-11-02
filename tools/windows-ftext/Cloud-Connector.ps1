@@ -13,6 +13,7 @@ $c=Get-FtextCloudConfig $ConfigPath
 $sha=[Security.Cryptography.SHA256]::Create()
 try { $hash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($c.companyId+'|'+$c.storeId+'|'+$c.terminalPos))).Replace('-','') } finally { $sha.Dispose() }
 $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtextCloud_'+$hash));$held=$false
+$readinessWorker=$null
 try {
     try { $held=$mutex.WaitOne(0) } catch [Threading.AbandonedMutexException] { $held=$true }
     if(-not $held) { throw 'The ftext connector is already running for this POS.' }
@@ -26,15 +27,29 @@ try {
       $connected=$false
       $stage='cloud work poll'
       try {
+        # Join before permitting another claim or any local fiscal transport.
+        # Readiness failures cannot stop heartbeat/work discovery.
+        if($null -ne $readinessWorker -and $readinessWorker.Async.IsCompleted) {
+            try {
+                $ready=Receive-FtextCloudReadiness $readinessWorker
+                $nextReadiness=[DateTime]::UtcNow
+                if($ready) {Write-Host 'Register ready: verified nonfiscal STATUS.'} else {Write-Host 'Register is not ready. No payment was sent.'}
+            } catch {
+                $nextReadiness=[DateTime]::UtcNow.AddSeconds(1)
+                Write-Host 'Readiness check pending. Connector stays running; original STATUS retained. No payment was sent.'
+            } finally { $readinessWorker=$null }
+        }
         # A cached local result takes priority. The server must not claim another
         # fiscal job while an acknowledgement for that original result is pending.
         $pending=if($cashEnabled) {Get-FtextCashPending $c} else {$null}
-        $work=Invoke-FtextCloudPoll $c ([bool]$pending) $stopVersion
+        $recovering=([bool]$pending -or $null -ne $readinessWorker)
+        $work=Invoke-FtextCloudPoll $c $recovering $stopVersion
         $connected=$true
         if($cashEnabled) {
             # Recover durable local result first. Neither a network retry nor restart republishes a fiscal file.
             $request=if($pending) {$pending.request} else {$work.request}
             if($request) {
+                if($null -ne $readinessWorker) {throw 'Readiness is still running. Original fiscal work retained.'}
                 $stage='original cash request/result'
                 $acceptHandoff={param($job,$digest,$path);Invoke-FtextCloudHandoff -ConfigPath $path -Request $job -CommandHash $digest}
                 $report=Invoke-FtextCashRequest -ConfigPath $ConfigPath -Request $request -AcceptHandoff $acceptHandoff
@@ -77,12 +92,10 @@ try {
                         Write-Host 'Original error evidence delivered. No payment or cancellation was sent.'
                     }
                 }
-                if(-not $late -and -not $recheck -and [DateTime]::UtcNow -ge $nextReadiness) {
+                if(-not $late -and -not $recheck -and $null -eq $readinessWorker -and [DateTime]::UtcNow -ge $nextReadiness) {
                     $stage='nonfiscal STATUS/readiness report'
                     try {
-                        $ready=Invoke-FtextCloudReadiness $ConfigPath
-                        $nextReadiness=[DateTime]::UtcNow.AddSeconds(5)
-                        if($ready) {Write-Host 'Register ready: verified nonfiscal STATUS.'} else {Write-Host 'Register is not ready. No payment was sent.'}
+                        $readinessWorker=Start-FtextCloudReadiness $ConfigPath
                     } catch {
                         $nextReadiness=[DateTime]::UtcNow.AddSeconds(1)
                         Write-Host 'Readiness check pending. Connector stays running; original STATUS retained. No payment was sent.'
@@ -97,4 +110,4 @@ try {
       if($connected -and [DateTime]::UtcNow -ge $nextConnectedLog) {Write-Host ([DateTime]::Now.ToString('HH:mm:ss')+' connector connected');$nextConnectedLog=[DateTime]::UtcNow.AddSeconds(10)}
       if($connected) {Start-Sleep -Seconds 1} else {Start-Sleep -Seconds 5}
     }
-} finally { if($held) { $mutex.ReleaseMutex() };$mutex.Dispose() }
+} finally { try { Stop-FtextCloudReadiness $readinessWorker } finally { if($held) { $mutex.ReleaseMutex() };$mutex.Dispose() } }

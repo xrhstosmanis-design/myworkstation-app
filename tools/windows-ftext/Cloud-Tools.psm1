@@ -57,7 +57,7 @@ function Invoke-FtextCloudPoll($Config,[bool]$Recovering=$false,[ValidateRange(0
     if($Recovering -and ($response.request -or $response.lateReceipt -or $response.errorEvidence)) {throw 'Cloud returned new work during original-result recovery.'}
     return $response
 }
-function Invoke-FtextCloudReadiness([string]$ConfigPath) {
+function Invoke-FtextCloudReadiness([string]$ConfigPath,[ValidateRange(1,30)][int]$TimeoutSeconds=5) {
     $config=Get-FtextCloudConfig $ConfigPath
     # Authenticate current installation before the nonfiscal STATUS command.
     Invoke-FtextCloudPing $config | Out-Null
@@ -66,12 +66,12 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath) {
         $marker=Get-Content -LiteralPath $pendingPath -Raw -Encoding UTF8 | ConvertFrom-Json
         $started=[DateTime]::Parse([string]$marker.createdAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
     }
-    $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds 5
+    $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds $TimeoutSeconds
     if($null -ne $started) {
         $age=([DateTime]::UtcNow-$started).TotalSeconds
         if($age -ge 20 -or $age -lt -2) {
             # A recovered old STATUS proves history only. Consume it durably, then require a new round trip.
-            $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds 5;$started=$null
+            $evidence=Invoke-FtextStatus -ConfigPath $ConfigPath -TimeoutSeconds $TimeoutSeconds;$started=$null
         }
     }
     $result=$evidence.result
@@ -83,6 +83,33 @@ function Invoke-FtextCloudReadiness([string]$ConfigPath) {
     Invoke-RestMethod -Method Post -Uri ($config.apiBase+'/api/ftext/v1/device/status-result') -Headers @{Authorization="Bearer $token"} -ContentType 'application/json' -Body ($report | ConvertTo-Json -Compress) -TimeoutSec 15 | Out-Null
     if(-not $result.ok) {Write-Host ('Register STATUS code: '+[int]$result.code+'. No payment was sent.')}
     return $result.ok
+}
+# One owned runspace waits for STATUS while the main loop renews the scoped
+# heartbeat. The caller suppresses all new claims until this worker is joined.
+function Start-FtextCloudReadiness([string]$ConfigPath) {
+    $pipeline=[System.Management.Automation.PowerShell]::Create()
+    try {
+        $null=$pipeline.AddScript({
+            param($ModulePath,$Path)
+            $ErrorActionPreference='Stop'
+            Import-Module -Name $ModulePath -Force
+            Invoke-FtextCloudReadiness -ConfigPath $Path -TimeoutSeconds 30
+        }).AddArgument((Join-Path $PSScriptRoot 'Cloud-Tools.psm1')).AddArgument($ConfigPath)
+        $async=$pipeline.BeginInvoke()
+        return [pscustomobject]@{Pipeline=$pipeline;Async=$async}
+    } catch { $pipeline.Dispose();throw }
+}
+function Receive-FtextCloudReadiness($Worker) {
+    if(-not $Worker.Async.IsCompleted) {throw 'Readiness worker is still running.'}
+    try {
+        $result=$Worker.Pipeline.EndInvoke($Worker.Async)
+        if($Worker.Pipeline.HadErrors -or $result.Count -ne 1 -or $result[0] -isnot [bool]) {throw 'Readiness worker did not return verified readiness.'}
+        return [bool]$result[0]
+    } finally { $Worker.Pipeline.Dispose() }
+}
+function Stop-FtextCloudReadiness($Worker) {
+    if($null -eq $Worker) {return}
+    try { $Worker.Pipeline.Stop() } finally { $Worker.Pipeline.Dispose() }
 }
 function Invoke-FtextCashApi($Config,[string]$Action,$Body) {
     if($Action -notin @('cash-poll','cash-result','void-poll','void-result','error-evidence-poll','error-evidence-result','late-receipt-poll','late-receipt-result','cash-handoff-accept')) {throw 'Unsupported cash API action.'}
@@ -128,4 +155,4 @@ function Invoke-FtextCloudHandoff([string]$ConfigPath,$Request,[string]$CommandH
     }
     throw 'Fresh readiness was not acknowledged before first publication. Original files retained.'
 }
-Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff
+Export-ModuleMember -Function Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff

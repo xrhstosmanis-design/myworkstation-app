@@ -1,0 +1,650 @@
+TAP version 13
+# Subtest: card requires the actual active selected-terminal STORE EFTPOS route, no fallback or unrelated fiscal device
+ok 1 - card requires the actual active selected-terminal STORE EFTPOS route, no fallback or unrelated fiscal device
+  ---
+  duration_ms: 2.511608
+  ...
+# Subtest: one exact full-amount masked-card evidence; no mixed, IRIS, PAN, malformed amount or extra data
+ok 2 - one exact full-amount masked-card evidence; no mixed, IRIS, PAN, malformed amount or extra data
+  ---
+  duration_ms: 1.860801
+  ...
+# Subtest: card evidence remains bound to the original method, request and final fiscal receipt
+ok 3 - card evidence remains bound to the original method, request and final fiscal receipt
+  ---
+  duration_ms: 5.795755
+  ...
+# Subtest: card activation requires explicit reviewed profile and changes binding; legacy hash stays compatible
+ok 4 - card activation requires explicit reviewed profile and changes binding; legacy hash stays compatible
+  ---
+  duration_ms: 8.555177
+  ...
+# Subtest: mounted ftext CASH finalizes only CONFIRMED, never resends checkout, ignores stale stores and commits once
+ok 5 - mounted ftext CASH finalizes only CONFIRMED, never resends checkout, ignores stale stores and commits once
+  ---
+  duration_ms: 749.652794
+  ...
+# Subtest: mounted ftext CARD finalizes only CONFIRMED, never resends checkout, ignores stale stores and commits once
+ok 6 - mounted ftext CARD finalizes only CONFIRMED, never resends checkout, ignores stale stores and commits once
+  ---
+  duration_ms: 129.07844
+  ...
+# Subtest: mounted confirmed cancellation closes only its own request once and never finalizes/resends
+ok 7 - mounted confirmed cancellation closes only its own request once and never finalizes/resends
+  ---
+  duration_ms: 65.146176
+  ...
+# Subtest: historical unknown NO returns without any second confirmation and keeps the same basket
+ok 8 - historical unknown NO returns without any second confirmation and keeps the same basket
+  ---
+  duration_ms: 1105.512588
+  ...
+# Subtest: polling an already reviewed release clears its own stale pending UI without checkout or clearing basket
+ok 9 - polling an already reviewed release clears its own stale pending UI without checkout or clearing basket
+  ---
+  duration_ms: 304.6647
+  ...
+# Subtest: historical rejected ftext returns without a readiness dialog and retains basket
+ok 10 - historical rejected ftext returns without a readiness dialog and retains basket
+  ---
+  duration_ms: 279.399942
+  ...
+# Subtest: actual POS recovers dispatched ftext CASH without RBS continuation, manual confirmation or checkout resend
+ok 11 - actual POS recovers dispatched ftext CASH without RBS continuation, manual confirmation or checkout resend
+  ---
+  duration_ms: 223.493591
+  ...
+# Subtest: actual POS recovers dispatched ftext CARD without RBS continuation, manual confirmation or checkout resend
+ok 12 - actual POS recovers dispatched ftext CARD without RBS continuation, manual confirmation or checkout resend
+  ---
+  duration_ms: 247.170044
+  ...
+# Subtest: actual POS operator card YES uses only its own outcome route and never resends checkout
+ok 13 - actual POS operator card YES uses only its own outcome route and never resends checkout
+  ---
+  duration_ms: 214.578343
+  ...
+# Subtest: actual POS operator card NO uses only its own outcome route and never resends checkout
+ok 14 - actual POS operator card NO uses only its own outcome route and never resends checkout
+  ---
+  duration_ms: 136.48285
+  ...
+# Subtest: actual POS failed YES decision keeps confirmation and original basket
+ok 15 - actual POS failed YES decision keeps confirmation and original basket
+  ---
+  duration_ms: 223.840886
+  ...
+# Subtest: actual POS failed NO decision keeps confirmation and original basket
+ok 16 - actual POS failed NO decision keeps confirmation and original basket
+  ---
+  duration_ms: 286.20728
+  ...
+# Subtest: actual POS generic CASH NO preserves basket and never emits another checkout
+ok 17 - actual POS generic CASH NO preserves basket and never emits another checkout
+  ---
+  duration_ms: 208.46042
+  ...
+# Subtest: actual POS generic CASH UNCERTAIN preserves basket and never emits another checkout
+ok 18 - actual POS generic CASH UNCERTAIN preserves basket and never emits another checkout
+  ---
+  duration_ms: 131.510882
+  ...
+# Subtest: actual POS unpublished stop releases its basket without fiscal resend
+ok 19 - actual POS unpublished stop releases its basket without fiscal resend
+  ---
+  duration_ms: 140.80866
+  ...
+# Subtest: actual POS unpublished stop refusal keeps original hold without fiscal resend
+ok 20 - actual POS unpublished stop refusal keeps original hold without fiscal resend
+  ---
+  duration_ms: 171.218224
+  ...
+# Subtest: actual POS accepted work offers no stop and never treats elapsed waiting as a failure
+ok 21 - actual POS accepted work offers no stop and never treats elapsed waiting as a failure
+  ---
+  duration_ms: 207.564074
+  ...
+# Subtest: native ftext cash: concurrent one-shot dispatch, durable result, real stock/financial atomic commit and replay
+ok 22 - native ftext cash: concurrent one-shot dispatch, durable result, real stock/financial atomic commit and replay # SKIP
+  ---
+  duration_ms: 3.718525
+  ...
+# Subtest: verified first/only CASH S rejection releases app lock once, preserves immutable result/status and never posts business records
+ok 23 - verified first/only CASH S rejection releases app lock once, preserves immutable result/status and never posts business records
+  ---
+  duration_ms: 12.133541
+  ...
+# Subtest: timeouts, PAY, second line, different error/price, final receipt, missing ack, foreign settings/device and existing sale never release
+ok 24 - timeouts, PAY, second line, different error/price, final receipt, missing ack, foreign settings/device and existing sale never release
+  ---
+  duration_ms: 12.243513
+  ...
+# Subtest: CASH original unknown supports uncertain then atomic NO, immutable evidence and replay
+ok 25 - CASH original unknown supports uncertain then atomic NO, immutable evidence and replay
+  ---
+  duration_ms: 12.077328
+  ...
+# Subtest: CASH review refuses missing/changed/fiscal/late/foreign evidence and never grants YES
+ok 26 - CASH review refuses missing/changed/fiscal/late/foreign evidence and never grants YES
+  ---
+  duration_ms: 9.478043
+  ...
+# Subtest: native CASH review races once, preserves immutable evidence, excludes released pending and late results; no business tables
+ok 27 - native CASH review races once, preserves immutable evidence, excludes released pending and late results; no business tables # SKIP
+  ---
+  duration_ms: 0.80038
+  ...
+# Subtest: actual POS outcome HTTP handles CASH without card decision/finalization and enforces original scope
+ok 28 - actual POS outcome HTTP handles CASH without card decision/finalization and enforces original scope
+  ---
+  duration_ms: 294.636358
+  ...
+# Subtest: cash receipt requires final fiscal evidence; STATUS and arbitrary URL never confirm
+ok 29 - cash receipt requires final fiscal evidence; STATUS and arbitrary URL never confirm
+  ---
+  duration_ms: 9.064741
+  ...
+# Subtest: cash first slice refuses mixed/card/customer/online/table/promotion/fractional and discounted sales
+ok 30 - cash first slice refuses mixed/card/customer/online/table/promotion/fractional and discounted sales
+  ---
+  duration_ms: 0.628306
+  ...
+# Subtest: cash settings are explicitly confirmed; optional extension preserves legacy installation hash
+ok 31 - cash settings are explicitly confirmed; optional extension preserves legacy installation hash
+  ---
+  duration_ms: 8.324732
+  ...
+# Subtest: cash runtime cannot create an unreviewed relation or weaken the canonical recovery manifest
+ok 32 - cash runtime cannot create an unreviewed relation or weaken the canonical recovery manifest
+  ---
+  duration_ms: 11.644576
+  ...
+# Subtest: actual checkout preflight selects scoped ftext before offline RBS while retaining RBS guards
+ok 33 - actual checkout preflight selects scoped ftext before offline RBS while retaining RBS guards
+  ---
+  duration_ms: 137.427846
+  ...
+# Subtest: actual transaction rechecks provider selection before any ftext context or sale action
+ok 34 - actual transaction rechecks provider selection before any ftext context or sale action
+  ---
+  duration_ms: 14.29422
+  ...
+# Subtest: combined work preserves fresh-readiness and one-shot dispatch, with no recovery work mixed into a claim
+ok 35 - combined work preserves fresh-readiness and one-shot dispatch, with no recovery work mixed into a claim
+  ---
+  duration_ms: 13.971998
+  ...
+# Subtest: durable local recovery and communication-only devices cannot claim a job or read the fiscal queue
+ok 36 - durable local recovery and communication-only devices cannot claim a job or read the fiscal queue
+  ---
+  duration_ms: 2.485094
+  ...
+# Subtest: one HTTP work poll authenticates once, validates input and keeps old ping compatible
+ok 37 - one HTTP work poll authenticates once, validates input and keeps old ping compatible
+  ---
+  duration_ms: 381.754094
+  ...
+# Subtest: native late error evidence is scoped, immutable and concurrent; only separate verified VOID releases pending
+ok 38 - native late error evidence is scoped, immutable and concurrent; only separate verified VOID releases pending # SKIP
+  ---
+  duration_ms: 2.567698
+  ...
+# Subtest: native operator NO atomically releases once with no second confirmation or invented physical attestation
+ok 39 - native operator NO atomically releases once with no second confirmation or invented physical attestation # SKIP
+  ---
+  duration_ms: 0.253643
+  ...
+# Subtest: actual original bytes are error evidence only; incomplete/final/foreign/extra evidence refused
+ok 40 - actual original bytes are error evidence only; incomplete/final/foreign/extra evidence refused
+  ---
+  duration_ms: 6.007522
+  ...
+# Subtest: append preserves original result, decision and pending status; exact replay and VOID binding
+ok 41 - append preserves original result, decision and pending status; exact replay and VOID binding
+  ---
+  duration_ms: 27.17117
+  ...
+# Subtest: mounted HTTP reads and appends evidence through scoped device auth, never user auth or fiscal execution
+ok 42 - mounted HTTP reads and appends evidence through scoped device auth, never user auth or fiscal execution
+  ---
+  duration_ms: 1640.502434
+  ...
+# Subtest: mounted CASH observes committed original immediately after finalize without a timer tick
+ok 43 - mounted CASH observes committed original immediately after finalize without a timer tick
+  ---
+  duration_ms: 583.39708
+  ...
+# Subtest: mounted CARD observes committed original immediately after finalize without a timer tick
+ok 44 - mounted CARD observes committed original immediately after finalize without a timer tick
+  ---
+  duration_ms: 32.646803
+  ...
+# Subtest: mounted slow finalize remains single-flight through immediate observation
+ok 45 - mounted slow finalize remains single-flight through immediate observation
+  ---
+  duration_ms: 19.047008
+  ...
+# Subtest: mounted immediate observation refuses foreign identity id
+ok 46 - mounted immediate observation refuses foreign identity id
+  ---
+  duration_ms: 24.849422
+  ...
+# Subtest: mounted immediate observation refuses foreign identity storeId
+ok 47 - mounted immediate observation refuses foreign identity storeId
+  ---
+  duration_ms: 27.770423
+  ...
+# Subtest: mounted immediate observation refuses foreign identity kind
+ok 48 - mounted immediate observation refuses foreign identity kind
+  ---
+  duration_ms: 39.044954
+  ...
+# Subtest: mounted store change during finalize ignores old completion
+ok 49 - mounted store change during finalize ignores old completion
+  ---
+  duration_ms: 20.100341
+  ...
+# Subtest: mounted store change during observation ignores old completion
+ok 50 - mounted store change during observation ignores old completion
+  ---
+  duration_ms: 33.602437
+  ...
+# Subtest: mounted unmount while finalize is pending performs no later read or callback
+ok 51 - mounted unmount while finalize is pending performs no later read or callback
+  ---
+  duration_ms: 45.519022
+  ...
+# Subtest: mounted same-store replacement request ignores the old delayed finalize
+ok 52 - mounted same-store replacement request ignores the old delayed finalize
+  ---
+  duration_ms: 33.661522
+  ...
+# Subtest: mounted lost finalize reply recovers same committed request on ordinary poll without another POST
+ok 53 - mounted lost finalize reply recovers same committed request on ordinary poll without another POST
+  ---
+  duration_ms: 21.242272
+  ...
+# Subtest: mounted lost observation reply recovers same committed request on ordinary poll without another POST
+ok 54 - mounted lost observation reply recovers same committed request on ordinary poll without another POST
+  ---
+  duration_ms: 17.462407
+  ...
+# Subtest: mounted bare finalize success and still-CONFIRMED read do not infer completion
+ok 55 - mounted bare finalize success and still-CONFIRMED read do not infer completion
+  ---
+  duration_ms: 22.392022
+  ...
+# Subtest: mounted operator CARD decision required never finalizes or immediately completes
+ok 56 - mounted operator CARD decision required never finalizes or immediately completes
+  ---
+  duration_ms: 21.572605
+  ...
+# Subtest: mounted operator CARD NO never finalizes or immediately completes
+ok 57 - mounted operator CARD NO never finalizes or immediately completes
+  ---
+  duration_ms: 37.876755
+  ...
+# Subtest: mounted operator CARD UNCERTAIN never finalizes or immediately completes
+ok 58 - mounted operator CARD UNCERTAIN never finalizes or immediately completes
+  ---
+  duration_ms: 25.202792
+  ...
+# Subtest: full ftext recovery metadata is schema only and native CI is mandatory
+ok 59 - full ftext recovery metadata is schema only and native CI is mandatory
+  ---
+  duration_ms: 2.395131
+  ...
+# Subtest: full reviewed native schema plus ftext verifies PG18 archive/COPY recovery, pending refusal, reset, stale work and sibling controls
+ok 60 - full reviewed native schema plus ftext verifies PG18 archive/COPY recovery, pending refusal, reset, stale work and sibling controls # SKIP
+  ---
+  duration_ms: 0.685168
+  ...
+# Subtest: negotiated pre-execution offer survives lost delivery; legacy dispatch still cannot be repeated
+ok 61 - negotiated pre-execution offer survives lost delivery; legacy dispatch still cannot be repeated
+  ---
+  duration_ms: 37.776189
+  ...
+# Subtest: one immutable authorization survives lost reply; fresh readiness still precedes publication
+ok 62 - one immutable authorization survives lost reply; fresh readiness still precedes publication
+  ---
+  duration_ms: 36.251774
+  ...
+# Subtest: foreign, altered, released, final and unnegotiated handoffs cannot obtain permission or change a request
+ok 63 - foreign, altered, released, final and unnegotiated handoffs cannot obtain permission or change a request
+  ---
+  duration_ms: 60.949597
+  ...
+# Subtest: actual HTTP handoff is device authenticated and retrieves the same authorization without permitting result before acceptance
+ok 64 - actual HTTP handoff is device authenticated and retrieves the same authorization without permitting result before acceptance
+  ---
+  duration_ms: 1250.706766
+  ...
+# Subtest: actual HTTP rejects employee installation access before service or package action
+ok 65 - actual HTTP rejects employee installation access before service or package action
+  ---
+  duration_ms: 340.613054
+  ...
+# Subtest: actual HTTP binds manager requests to selected path and routes device credentials separately
+ok 66 - actual HTTP binds manager requests to selected path and routes device credentials separately
+  ---
+  duration_ms: 58.751565
+  ...
+# Subtest: actual public HTTP pairing is bounded and passes no arbitrary manager scope
+ok 67 - actual public HTTP pairing is bounded and passes no arbitrary manager scope
+  ---
+  duration_ms: 54.381191
+  ...
+# Subtest: actual cash HTTP requires purpose-separated device authentication before queue access
+ok 68 - actual cash HTTP requires purpose-separated device authentication before queue access
+  ---
+  duration_ms: 98.254381
+  ...
+# Subtest: actual separate POS capability route binds company/store/terminal and cannot fall through the catalog mount
+ok 69 - actual separate POS capability route binds company/store/terminal and cannot fall through the catalog mount
+  ---
+  duration_ms: 27.152135
+  ...
+# Subtest: mounted ftext setup rejects stale store responses/downloads and accepts terminals loaded later
+ok 70 - mounted ftext setup rejects stale store responses/downloads and accepts terminals loaded later
+  ---
+  duration_ms: 508.758306
+  ...
+# Subtest: native ftext installation: tenant/atomic pairing/rollback/real license/lifecycle/replay/control
+ok 71 - native ftext installation: tenant/atomic pairing/rollback/real license/lifecycle/replay/control # SKIP
+  ---
+  duration_ms: 3.970892
+  ...
+# Subtest: readiness requires a recent real STATUS in addition to heartbeat; old packages cannot substitute a fresh ping
+ok 72 - readiness requires a recent real STATUS in addition to heartbeat; old packages cannot substitute a fresh ping
+  ---
+  duration_ms: 5.442415
+  ...
+# Subtest: ftext accepts explicit Windows settings and rejects path/control/protocol injection
+ok 73 - ftext accepts explicit Windows settings and rejects path/control/protocol injection
+  ---
+  duration_ms: 7.836704
+  ...
+# Subtest: signed settings hash is canonical, scoped and excludes unsupported arbitrary keys
+ok 74 - signed settings hash is canonical, scoped and excludes unsupported arbitrary keys
+  ---
+  duration_ms: 8.413684
+  ...
+# Subtest: generic pairing cannot take over ftext codes, namespace, platform or existing device
+ok 75 - generic pairing cannot take over ftext codes, namespace, platform or existing device
+  ---
+  duration_ms: 1.062205
+  ...
+# Subtest: status uploads require coherent fresh nonfiscal evidence and the configured serial
+ok 76 - status uploads require coherent fresh nonfiscal evidence and the configured serial
+  ---
+  duration_ms: 2.383654
+  ...
+# Subtest: ftext package round-trips names as data, pins selected scope and contains no credential
+ok 77 - ftext package round-trips names as data, pins selected scope and contains no credential
+  ---
+  duration_ms: 24.6923
+  ...
+# Subtest: wrong-purpose or absent credentials are refused before any database action
+ok 78 - wrong-purpose or absent credentials are refused before any database action
+  ---
+  duration_ms: 14.840412
+  ...
+# Subtest: actual recovery form sends only three original files after printed attestation, rejects foreign names and withdraws on unmount
+ok 79 - actual recovery form sends only three original files after printed attestation, rejects foreign names and withdraws on unmount
+  ---
+  duration_ms: 409.588962
+  ...
+# Subtest: late CASH verifies all original files and final fiscal evidence, without accepting status/error/card/foreign/amount changes
+ok 80 - late CASH verifies all original files and final fiscal evidence, without accepting status/error/card/foreign/amount changes
+  ---
+  duration_ms: 13.333105
+  ...
+# Subtest: late CASH append is scoped and replayable; immutable original result retained and no business writers available
+ok 81 - late CASH append is scoped and replayable; immutable original result retained and no business writers available
+  ---
+  duration_ms: 4.208674
+  ...
+# Subtest: late device proof accepts CASH and both supported CARD formats; original evidence immutable and same replay writes once
+ok 82 - late device proof accepts CASH and both supported CARD formats; original evidence immutable and same replay writes once
+  ---
+  duration_ms: 29.607867
+  ...
+# Subtest: operator CARD late receipt still requires original-cashier YES, bound to the immutable original result
+ok 83 - operator CARD late receipt still requires original-cashier YES, bound to the immutable original result
+  ---
+  duration_ms: 2.942076
+  ...
+# Subtest: foreign device/token, altered originals, released/NO/VOID and manual CARD upload never append a late receipt
+ok 84 - foreign device/token, altered originals, released/NO/VOID and manual CARD upload never append a late receipt
+  ---
+  duration_ms: 20.737307
+  ...
+# Subtest: actual device HTTP requires device authentication, keeps proof durable when finalization is pending and rejects arbitrary actions
+ok 85 - actual device HTTP requires device authentication, keeps proof durable when finalization is pending and rejects arbitrary actions
+  ---
+  duration_ms: 456.255081
+  ...
+# Subtest: explicit operator profile accepts legacy final receipt but never relaxes strict OS7 or fiscal proof
+ok 86 - explicit operator profile accepts legacy final receipt but never relaxes strict OS7 or fiscal proof
+  ---
+  duration_ms: 5.467166
+  ...
+# Subtest: operator releases only their rejected payment error without sending a fiscal command
+ok 87 - operator releases only their rejected payment error without sending a fiscal command
+  ---
+  duration_ms: 12.103881
+  ...
+# Subtest: only original cashier can decide after response, immutable decisions bind settings/result; NO cannot finalize
+ok 88 - only original cashier can decide after response, immutable decisions bind settings/result; NO cannot finalize
+  ---
+  duration_ms: 7.21905
+  ...
+# Subtest: unknown NO uses only the original operator decision and current configuration; release never invents physical checks
+ok 89 - unknown NO uses only the original operator decision and current configuration; release never invents physical checks
+  ---
+  duration_ms: 10.025159
+  ...
+# Subtest: canonical ftext catalogue covers exact ownership/types/references while actual native recovery acceptance has exact evidence
+ok 90 - canonical ftext catalogue covers exact ownership/types/references while actual native recovery acceptance has exact evidence
+  ---
+  duration_ms: 24.164597
+  ...
+# Subtest: unreviewed provisioning refuses before transaction or DDL; ordinary startup preserves the entire prior command
+ok 91 - unreviewed provisioning refuses before transaction or DDL; ordinary startup preserves the entire prior command
+  ---
+  duration_ms: 1.198068
+  ...
+# Subtest: native provisioning is mandatory in CI
+ok 92 - native provisioning is mandatory in CI
+  ---
+  duration_ms: 0.222189
+  ...
+# Subtest: native empty/installed/drifted queue provisioning preserves immutable cash/card history and controls
+ok 93 - native empty/installed/drifted queue provisioning preserves immutable cash/card history and controls # SKIP
+  ---
+  duration_ms: 0.793651
+  ...
+# Subtest: ftext plan is deterministic, data-only, exact decimal and does not mutate input
+ok 94 - ftext plan is deterministic, data-only, exact decimal and does not mutate input
+  ---
+  duration_ms: 6.654152
+  ...
+# Subtest: ftext zero-rate departments remain distinct from VAT code5 and 5percent
+ok 95 - ftext zero-rate departments remain distinct from VAT code5 and 5percent
+  ---
+  duration_ms: 2.015578
+  ...
+# Subtest: ftext accepts explicit24percent goods/service mappings without inferring by VAT
+ok 96 - ftext accepts explicit24percent goods/service mappings without inferring by VAT
+  ---
+  duration_ms: 1.155643
+  ...
+# Subtest: ftext rejects foreign companyId
+ok 97 - ftext rejects foreign companyId
+  ---
+  duration_ms: 0.651795
+  ...
+# Subtest: ftext rejects foreign storeId
+ok 98 - ftext rejects foreign storeId
+  ---
+  duration_ms: 4.124099
+  ...
+# Subtest: ftext rejects foreign terminalPos
+ok 99 - ftext rejects foreign terminalPos
+  ---
+  duration_ms: 0.463185
+  ...
+# Subtest: ftext rejects foreign fiscalDeviceCode
+ok 100 - ftext rejects foreign fiscalDeviceCode
+  ---
+  duration_ms: 0.616908
+  ...
+# Subtest: ftext rejects unsafe description "A|PAY"
+ok 101 - ftext rejects unsafe description "A|PAY"
+  ---
+  duration_ms: 0.31555
+  ...
+# Subtest: ftext rejects unsafe description "A\\nPAY"
+ok 102 - ftext rejects unsafe description "A\\nPAY"
+  ---
+  duration_ms: 0.361257
+  ...
+# Subtest: ftext rejects unsafe description "A\\rPAY"
+ok 103 - ftext rejects unsafe description "A\\rPAY"
+  ---
+  duration_ms: 0.340514
+  ...
+# Subtest: ftext rejects unsafe description "A\\tB"
+ok 104 - ftext rejects unsafe description "A\\tB"
+  ---
+  duration_ms: 0.197926
+  ...
+# Subtest: ftext rejects unsafe description "{h}text"
+ok 105 - ftext rejects unsafe description "{h}text"
+  ---
+  duration_ms: 0.981527
+  ...
+# Subtest: ftext rejects unsafe description "😀"
+ok 106 - ftext rejects unsafe description "😀"
+  ---
+  duration_ms: 0.344542
+  ...
+# Subtest: ftext rejects unsafe description "A\\u0000B"
+ok 107 - ftext rejects unsafe description "A\\u0000B"
+  ---
+  duration_ms: 0.302014
+  ...
+# Subtest: ftext rejects unsafe description ""
+ok 108 - ftext rejects unsafe description ""
+  ---
+  duration_ms: 0.181093
+  ...
+# Subtest: ftext reconciles fractional quantity and discount using integer arithmetic
+ok 109 - ftext reconciles fractional quantity and discount using integer arithmetic
+  ---
+  duration_ms: 0.377438
+  ...
+# Subtest: ftext rejects unexplained totals, discounts, duplicate identities and precision
+ok 110 - ftext rejects unexplained totals, discounts, duplicate identities and precision
+  ---
+  duration_ms: 2.949212
+  ...
+# Subtest: ftext requires exact confirmed single payment mapping; never guesses card2
+ok 111 - ftext requires exact confirmed single payment mapping; never guesses card2
+  ---
+  duration_ms: 3.921627
+  ...
+# Subtest: ftext refuses missing, ambiguous and unconfirmed department profiles
+ok 112 - ftext refuses missing, ambiguous and unconfirmed department profiles
+  ---
+  duration_ms: 0.695122
+  ...
+# Subtest: ftext VAT group codes are explicit1to5, never a percent or arbitrary identifier
+ok 113 - ftext VAT group codes are explicit1to5, never a percent or arbitrary identifier
+  ---
+  duration_ms: 0.910465
+  ...
+# Subtest: unpublished context may read an offline/failed-STATUS installation but preserves every current identity/license/lifecycle gate
+ok 114 - unpublished context may read an offline/failed-STATUS installation but preserves every current identity/license/lifecycle gate
+  ---
+  duration_ms: 20.284601
+  ...
+# Subtest: actual employee stop and device terminal acknowledgement enforce separate authentication, exact scope and no execution
+ok 115 - actual employee stop and device terminal acknowledgement enforce separate authentication, exact scope and no execution
+  ---
+  duration_ms: 179.307079
+  ...
+# Subtest: native unpublished stop: real row-lock stop/accept races, immutable replay, live next claim and zero financial writers
+ok 116 - native unpublished stop: real row-lock stop/accept races, immutable replay, live next claim and zero financial writers # SKIP
+  ---
+  duration_ms: 3.414503
+  ...
+# Subtest: CASH/OPERATOR_CONFIRMATION/PREPARED: original stop preserves evidence and replay, never grants execution
+ok 117 - CASH/OPERATOR_CONFIRMATION/PREPARED: original stop preserves evidence and replay, never grants execution
+  ---
+  duration_ms: 21.568676
+  ...
+# Subtest: CASH/OPERATOR_CONFIRMATION/OFFERED: original stop preserves evidence and replay, never grants execution
+ok 118 - CASH/OPERATOR_CONFIRMATION/OFFERED: original stop preserves evidence and replay, never grants execution
+  ---
+  duration_ms: 8.921157
+  ...
+# Subtest: CARD/OPERATOR_CONFIRMATION/PREPARED: original stop preserves evidence and replay, never grants execution
+ok 119 - CARD/OPERATOR_CONFIRMATION/PREPARED: original stop preserves evidence and replay, never grants execution
+  ---
+  duration_ms: 13.975919
+  ...
+# Subtest: CARD/OPERATOR_CONFIRMATION/OFFERED: original stop preserves evidence and replay, never grants execution
+ok 120 - CARD/OPERATOR_CONFIRMATION/OFFERED: original stop preserves evidence and replay, never grants execution
+  ---
+  duration_ms: 9.470757
+  ...
+# Subtest: CARD/POS_LINE8_OS7/PREPARED: original stop preserves evidence and replay, never grants execution
+ok 121 - CARD/POS_LINE8_OS7/PREPARED: original stop preserves evidence and replay, never grants execution
+  ---
+  duration_ms: 6.848859
+  ...
+# Subtest: CARD/POS_LINE8_OS7/OFFERED: original stop preserves evidence and replay, never grants execution
+ok 122 - CARD/POS_LINE8_OS7/OFFERED: original stop preserves evidence and replay, never grants execution
+  ---
+  duration_ms: 12.991307
+  ...
+# Subtest: accepted authorization wins; stop refuses without changing it
+ok 123 - accepted authorization wins; stop refuses without changing it
+  ---
+  duration_ms: 3.516287
+  ...
+# Subtest: old/foreign/final/altered/partly claimed work cannot be stopped or produce a terminal ack
+ok 124 - old/foreign/final/altered/partly claimed work cannot be stopped or produce a terminal ack
+  ---
+  duration_ms: 26.577861
+  ...
+# Subtest: terminal stop proof is immutable and bound to the original request/settings/device/plan
+ok 125 - terminal stop proof is immutable and bound to the original request/settings/device/plan
+  ---
+  duration_ms: 28.282894
+  ...
+# Subtest: native VOID single dispatch, immutable result, scoped refusal, pending release and exact legacy index upgrade
+ok 126 - native VOID single dispatch, immutable result, scoped refusal, pending release and exact legacy index upgrade # SKIP
+  ---
+  duration_ms: 3.831547
+  ...
+# Subtest: VOID requires original explicit PAY error and never accepts uncertainty or issued/cash sale
+ok 127 - VOID requires original explicit PAY error and never accepts uncertainty or issued/cash sale
+  ---
+  duration_ms: 5.53076
+  ...
+# Subtest: VOID proof binds action, original request, settings and exact serial; no receipt/payment fields allowed
+ok 128 - VOID proof binds action, original request, settings and exact serial; no receipt/payment fields allowed
+  ---
+  duration_ms: 4.321345
+  ...
+1..128
+# tests 128
+# suites 0
+# pass 119
+# fail 0
+# cancelled 0
+# skipped 9
+# todo 0
+# duration_ms 6609.075197
