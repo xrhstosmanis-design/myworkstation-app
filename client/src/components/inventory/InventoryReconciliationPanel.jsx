@@ -1,4 +1,4 @@
-import React, {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import React, {useCallback,useEffect,useId,useMemo,useRef,useState} from 'react';
 import InventoryReviewControls from './InventoryReviewControls.jsx';
 import InventorySourceEvidence from './InventorySourceEvidence.jsx';
 const amount = x => x === null || x === undefined ? 'Άγνωστο' : Number(x).toLocaleString('el-GR',{maximumFractionDigits:4});
@@ -16,15 +16,36 @@ export default function InventoryReconciliationPanel({api,stocktakeId,storeId,on
   const [report,setReport]=useState(null),[previous,setPrevious]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const generation=useRef(0),alive=useRef(true);
   const [reviewLocked,setReviewLocked]=useState(false),reviewLockRef=useRef(false);
+  const [selection,setSelection]=useState(null),detailRefs=useRef(new Map()),resultRefs=useRef(new Map()),detailHeading=useRef(null),navigationId=useId();
+  const selectedGroup=selection?.fingerprint===report?.fingerprint?report?.groups?.find(g=>g.id===selection.groupId):null;
+  const selectedHistory=useMemo(()=>{
+    if(!selectedGroup)return [];
+    const members=new Set(selectedGroup.productIds),history=report.review?.history||[];
+    const ids=new Set(history.filter(r=>r.action.kind==='CORRECTION'?members.has(r.action.productId):r.action.kind==='LINK'&&r.action.productIds.some(id=>members.has(id))).map(r=>r.id));
+    return history.filter(r=>ids.has(r.id)||r.action.kind==='REVOKE'&&ids.has(r.action.actionId));
+  },[selectedGroup,report]);
+  useEffect(()=>{
+    if(!selectedGroup)return;
+    const members=new Set(selectedGroup.productIds);
+    for(const [id,element]of detailRefs.current)element.open=members.has(id);
+    detailHeading.current?.focus({preventScroll:true});
+    detailHeading.current?.scrollIntoView?.({block:'nearest'});
+  },[selectedGroup,selection]);
+  const openResult=group=>{if(busy||reviewLockRef.current)return;setSelection({fingerprint:report.fingerprint,groupId:group.id});};
+  const returnToResult=()=>{
+    if(!selectedGroup)return;
+    const target=resultRefs.current.get(selectedGroup.id);setSelection(null);
+    target?.focus({preventScroll:true});target?.scrollIntoView?.({block:'nearest'});
+  };
   const codes=useMemo(()=>new Map((report?.rows||[]).map(r=>[r.productId,r.sku])),[report?.rows]);
   const code=id=>codes.get(id)||id;
   const actionLabel=action=>action.kind==='LINK'?`Σύνδεση ${action.productIds.map(code).join(' + ')} · κύριος ${code(action.canonicalProductId)}`:action.kind==='CORRECTION'?`Διόρθωση ${code(action.productId)} · ${amount(action.quantity)} τμχ`:'Ανάκληση προηγούμενης επιβεβαίωσης';
   const reviewLock=useCallback(value=>{reviewLockRef.current=value;setReviewLocked(value);onReviewLockChange?.(value);},[onReviewLockChange]);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;generation.current++;};},[]);
-  useEffect(()=>{generation.current++;setReport(null);setPrevious('');setError('');setBusy(false);},[stocktakeId,storeId]);
+  useEffect(()=>{generation.current++;setReport(null);setPrevious('');setSelection(null);setError('');setBusy(false);},[stocktakeId,storeId]);
   const load=async(selected=previous)=>{
     if(reviewLockRef.current)return;
-    const request=++generation.current;setReport(null);setBusy(true);setError('');
+    const request=++generation.current;setReport(null);setSelection(null);setBusy(true);setError('');
     try {
       const result=await api(`/api/inventory-v2/stocktakes/${encodeURIComponent(stocktakeId)}/reconciliation?reportVersion=2${selected?`&previousStocktakeId=${encodeURIComponent(selected)}`:''}`);
       if(!alive.current||request!==generation.current)return;
@@ -62,13 +83,20 @@ export default function InventoryReconciliationPanel({api,stocktakeId,storeId,on
       <p>Χωρίς υπολογισμό: {report.summary.uncomputedItems} · Χωρίς κόστος: {report.summary.missingCostItems}</p>
       <button disabled={busy||reviewLocked} onClick={()=>download('pdf')}>PDF</button> <button disabled={busy||reviewLocked} onClick={()=>download('xlsx')}>Excel</button>
       {report.groups&&<div style={{overflowX:'auto'}}><h4>Αρχική διαφορά, επιβεβαιωμένες διορθώσεις και τελικό αποτέλεσμα</h4><table><thead><tr><th>Προϊόν / ομάδα</th><th>Αρχική διαφορά</th><th>Διόρθωση</th><th>Τελική διαφορά</th><th>Κόστος</th><th>Τελική αξία</th></tr></thead><tbody>
-        {report.groups.map(g=><tr key={g.id}><td>{g.sku} · {g.name}<br/>{g.productIds.map(code).join(', ')}</td><td>{amount(g.initialDifference)}</td><td>{amount(g.correctionQuantity)}</td><td>{amount(g.finalDifference)}</td><td>{amount(g.unitCost)}</td><td>{amount(g.finalValue)} €{g.staleCorrectionIds.length>0&&<p>{labels.STALE_REVIEW_CORRECTION}</p>}</td></tr>)}
+        {report.groups.map(g=><tr key={g.id}><td><button type="button" ref={el=>{if(el)resultRefs.current.set(g.id,el);else resultRefs.current.delete(g.id);}} disabled={busy||reviewLocked} aria-expanded={selectedGroup?.id===g.id} aria-controls={g.productIds.map(id=>`${navigationId}-${id}`).join(' ')} onClick={()=>openResult(g)}>Ανάλυση κινήσεων: {g.sku} · {g.name}</button><br/>{g.productIds.map(code).join(', ')}</td><td>{amount(g.initialDifference)}</td><td>{amount(g.correctionQuantity)}</td><td>{amount(g.finalDifference)}</td><td>{amount(g.unitCost)}</td><td>{amount(g.finalValue)} €{g.staleCorrectionIds.length>0&&<p>{labels.STALE_REVIEW_CORRECTION}</p>}</td></tr>)}
       </tbody></table></div>}
       {report.review?.canWrite&&<InventoryReviewControls key={`${report.previous.id}:${report.viewerId}:${report.generation}`} api={api} report={report} stocktakeId={stocktakeId} storeId={storeId} onRefresh={()=>load(report.previous.id)} onLockChange={reviewLock}/>}
       {report.review?.history?.length>0&&<details><summary>Ιστορικό επιβεβαιώσεων και διορθώσεων ({report.review.history.length})</summary>{report.review.history.map(r=><p key={r.id}>{date(r.createdAt)} · {r.actorName} · {actionLabel(r.action)} · {r.action.reason} · {r.action.evidence} · {r.active?'Ενεργή':'Ιστορική'}</p>)}</details>}
       {report.sourceEvidence&&<InventorySourceEvidence evidence={report.sourceEvidence} rows={report.rows}/>}
       <h4>Αρχικές καταμετρήσεις και αναλυτικές κινήσεις ανά κωδικό</h4>
-      {report.rows.map(row=><details key={row.productId}>
+      {selectedGroup&&<section aria-label="Ανάλυση επιλεγμένου αποτελέσματος">
+        <h4 tabIndex={-1} ref={detailHeading}>Ανάλυση αποτελέσματος: {selectedGroup.sku} · {selectedGroup.name}</h4>
+        <p>Αρχική διαφορά {amount(selectedGroup.initialDifference)} + διόρθωση {amount(selectedGroup.correctionQuantity)} = τελική διαφορά {amount(selectedGroup.finalDifference)}. Ανοίχθηκαν οι κινήσεις των κωδικών: {selectedGroup.productIds.map(code).join(', ')}.</p>
+        <button type="button" onClick={returnToResult}>Επιστροφή στο αποτέλεσμα</button>
+        <h5>Ιστορικό διορθώσεων και συνδέσεων αυτού του αποτελέσματος</h5>
+        {selectedHistory.length?selectedHistory.map(r=><p key={r.id}>{date(r.createdAt)} · {r.actorName} · {actionLabel(r.action)} · {r.action.reason} · {r.action.evidence} · {r.active?'Ενεργή':'Ιστορική'}</p>):<p>Δεν υπάρχουν επιβεβαιώσεις για αυτό το αποτέλεσμα.</p>}
+      </section>}
+      {report.rows.map(row=><details key={row.productId} id={`${navigationId}-${row.productId}`} ref={el=>{if(el)detailRefs.current.set(row.productId,el);else detailRefs.current.delete(row.productId);}}>
         <summary>{row.sku} · {row.name} · Αρχική διαφορά: {amount(row.difference)} · Αρχική αξία: {amount(row.differenceValue)} €</summary>
         <p>{date(row.from)} → {date(row.to)}</p>
         <p>Φυσικό: {amount(row.previousCountedQuantity)} + {amount(row.incoming)} − {amount(row.outgoing)} = {amount(row.expectedQuantity)} · Καταμέτρηση {amount(row.countedQuantity)}</p>
