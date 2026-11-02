@@ -3,7 +3,7 @@ import {walletMoney} from '../voice/ai-wallet-money.mjs';
 
 export default function AiWalletCommercialWaiver({companyId,entries=[],busy,api,onWaive}){
  const [selected,setSelected]=useState([]),[reason,setReason]=useState(''),[preview,setPreview]=useState(null),[confirmed,setConfirmed]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[submitted,setSubmitted]=useState(null);
- const inFlight=useRef(false),epoch=useRef(0);
+ const inFlight=useRef(false),epoch=useRef(0),submission=useRef(null);
  const eligible=entries.filter(e=>e.kind==='USAGE'&&e.status==='REVIEW'&&e.storeId&&String(e.chargedMicros)==='0');
  const invalidate=()=>{epoch.current++;setPreview(null);setConfirmed(false);setError('')};
  const choose=id=>{invalidate();setSelected(old=>old.includes(id)?old.filter(v=>v!==id):[...old,id])};
@@ -17,7 +17,8 @@ export default function AiWalletCommercialWaiver({companyId,entries=[],busy,api,
  };
  const submit=()=>{
   if(busy||inFlight.current||!preview||!confirmed||reason.trim().length<5)return;
-  const body=submitted||{storeId:preview.storeId,entryIds:preview.entryIds,version:preview.version,generation:preview.generation,fingerprint:preview.fingerprint,requestId:crypto.randomUUID(),reason:reason.trim(),customerWaiverConfirmed:true};
+  const body=submission.current||{storeId:preview.storeId,entryIds:preview.entryIds,version:preview.version,generation:preview.generation,fingerprint:preview.fingerprint,requestId:crypto.randomUUID(),reason:reason.trim(),customerWaiverConfirmed:true};
+  submission.current=body;
   setSubmitted(body);onWaive(body);
  };
  return <section aria-label="Εμπορική απαλλαγή δεσμεύσεων AI">
