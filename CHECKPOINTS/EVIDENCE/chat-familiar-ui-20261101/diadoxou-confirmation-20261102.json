@@ -1,0 +1,24 @@
+{
+  "confirmationDateEuropeAthens": "2026-11-02",
+  "sourceStatements": [
+    "το δοκιμασα στην διαδοχου ειναι οκ",
+    "ολα"
+  ],
+  "specificQuestion": "Στη Διαδόχου Παύλου, παραλαβή/ανάγνωση, ανακοίνωση με Το διάβασα και προώθηση με δύο διαφορετικούς λογαριασμούς;",
+  "classification": "USER-REPORTED FUNCTIONAL PASS; specific store scope",
+  "storeUserReported": "Διαδόχου Παύλου",
+  "distinctAccountsUserReported": 2,
+  "accountNamesAndRoles": "NOT INDEPENDENTLY IDENTIFIED",
+  "forwardDestination": "NOT INDEPENDENTLY IDENTIFIED",
+  "deviceModelAndroidInstalledHash": "NOT INDEPENDENTLY IDENTIFIED",
+  "actualActionTimeAndRuntime": "NOT INDEPENDENTLY IDENTIFIED",
+  "independentAuditAndBeforeAfterCounts": false,
+  "LABPassInferred": false,
+  "financialOrStockInvariantClaimed": false,
+  "noReplayRequired": true,
+  "newProductionActionsByAgent": false,
+  "remainingOwnedPhysicalResidual": [
+    "unconfirmed photo preview background/navigation/rotation cleanup"
+  ],
+  "otherN16OwnersAndOverallOpenPreserved": true
+}
