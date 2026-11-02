@@ -44,7 +44,7 @@ test('native read-only two-stocktake SQL/HTTP: scope, count boundary, exports, f
     assert.equal((await get('?format=xlsx')).status,409);assert.equal((await get('?format=csv')).status,400);
     assert.equal((await get('',{'x-staff':'yes'})).status,403);assert.equal((await get('',{'x-disabled':'yes'})).status,403);
     const file=await(await get(`?format=xlsx&expectedFingerprint=${report.fingerprint}`)).json();
-    const wb=XLSX.read(Buffer.from(file.base64,'base64'),{type:'buffer'});assert.equal(wb.SheetNames.length,4);
+    const wb=XLSX.read(Buffer.from(file.base64,'base64'),{type:'buffer'});assert.equal(wb.SheetNames.length,10);assert.equal(wb.Sheets['Πληρότητα πηγών'].B2.v,false);
     const rows=XLSX.utils.sheet_to_json(wb.Sheets['Είδη'],{header:1});assert.equal(rows[1][11],-10);assert.equal(rows[1][13],-20);
     const pdf=await(await get(`?format=pdf&expectedFingerprint=${report.fingerprint}`)).json();assert.equal(Buffer.from(pdf.base64,'base64').subarray(0,5).toString(),'%PDF-');
     assert.deepEqual(await db.$queryRaw`SELECT (SELECT json_agg(t ORDER BY "id") FROM "Stocktake" t) AS parents,(SELECT json_agg(t ORDER BY "id") FROM "StocktakeLine" t) AS lines,(SELECT json_agg(t ORDER BY "id") FROM "StockMovement" t) AS movements,(SELECT json_agg(t ORDER BY "id") FROM "InventoryCountEvent" t) AS events`,baseline);

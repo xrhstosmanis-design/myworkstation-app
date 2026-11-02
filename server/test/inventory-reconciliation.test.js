@@ -37,12 +37,15 @@ test('zero, null and invalid cost do not become zero-valued losses or definitive
 test('late invoice, missing reference and duplicate key are findings; actual postings are not silently removed',()=>{
   const input=fixture();input.movements[2].documentDate='2026-09-01';input.movements[1].sourceId=null;
   input.movements[1].idempotencyKey='same';input.movements[2].idempotencyKey='same';
-  const row=reconcileInventory(input).rows[0];assert.equal(row.expectedQuantity,80);
+  const row=reconcileInventory(input).rows[0];assert.equal(row.expectedQuantity,null);assert.equal(row.recordedExpectedQuantity,80);assert.equal(row.difference,null);
   for(const flag of ['LATE_DOCUMENT','MISSING_MOVEMENT_REFERENCE','DUPLICATE_POSTING_KEY'])assert.ok(row.findings.includes(flag));
+});
+test('an invoice issued on the opening count calendar day is not late just because its date stores midnight',()=>{
+  const input=fixture();input.movements[2].documentDate=t(0);const row=reconcileInventory(input).rows[0];assert.equal(row.expectedQuantity,80);assert.equal(row.findings.includes('LATE_DOCUMENT'),false);
 });
 test('system stock zeroing is visible as nonphysical correction, never physical receipt',()=>{
   const input=fixture();input.movements.push({id:'zero',productId:'p',movementType:'STOCK_ADJUSTMENT',quantity:12,sourceId:'zero1',createdAt:t(9)});
-  const row=reconcileInventory(input).rows[0];assert.equal(row.incoming,5);assert.equal(row.systemAdjustments,12);assert.equal(row.expectedQuantity,92);assert.ok(row.findings.includes('NON_PHYSICAL_ADJUSTMENT'));
+  const row=reconcileInventory(input).rows[0];assert.equal(row.incoming,5);assert.equal(row.systemAdjustments,12);assert.equal(row.expectedQuantity,80);assert.equal(row.recordedExpectedQuantity,92);assert.equal(row.difference,-10);assert.ok(row.findings.includes('NON_PHYSICAL_ADJUSTMENT'));
 });
 test('recount is immutable history, CLEAR and inconsistent history cannot produce a computed result',()=>{
   const input=fixture();input.events.push({...input.events[1],id:'recount',eventType:'RECOUNT',previousQuantity:70,countedQuantity:75,createdAt:t(11)});

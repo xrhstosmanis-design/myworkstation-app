@@ -31,3 +31,13 @@ test('actual store-bound Inventory2.0 handlers reject foreign store before reads
   for(const [path,body] of [['post/zones',{storeId:'store',code:'TEST',name:'Virtual'}],['post/stocktakes',{storeId:'store',name:'Virtual'}]]){let status,error;const req={user:{companyId:'company',storeId:'control',role:'OWNER'},body};const res={status(value){status=value;return this},json(){return this}};for(const fn of handlers.get(path)){let proceed=false;await fn(req,res,e=>{if(e)error=e;else proceed=true});if(error||!proceed)break}assert.equal(error,undefined);assert.equal(status,404)}
   assert.equal(writes,0);assert.equal(transactions,0);
 });
+test('actual initial audit preserves shortage and surplus while unknown cost stays unvalued',async()=>{
+  const handlers=new Map(),Router=()=>({get:(path,...hs)=>handlers.set('get'+path,hs),post:(path,...hs)=>handlers.set('post'+path,hs)});
+  const lines=[{id:'unknown',sku:'U',name:'Χωρίς κόστος',expectedQuantity:5,countedQuantity:4,unitCost:0,salePrice:3},{id:'known',sku:'K',name:'Με κόστος',expectedQuantity:8,countedQuantity:10,unitCost:2,salePrice:4}];
+  const prisma={$queryRaw:async(strings)=>{const sql=strings.join('?');if(sql.includes('SELECT st.*'))return[{id:'take',companyId:'company',storeId:'store',status:'FINALIZED'}];if(sql.includes('FROM "StocktakeLine"'))return lines;return[];},$executeRaw:async()=>{throw Error('audit must not write')}};
+  const source=fs.readFileSync(new URL('../src/routes/inventory-v2-audit.js',import.meta.url),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export .*;\n/gm,'');
+  new Function('Router','prisma','inventoryStocktakeScopeAllowed','createInventoryReconciliationHandler','createInventoryReviewHandler',source)(Router,prisma,inventoryStocktakeScopeAllowed,createInventoryReconciliationHandler,createInventoryReviewHandler);
+  let result,error;const req={user:{id:'owner',companyId:'company',storeId:'store',role:'OWNER'},params:{stocktakeId:'take'}},res={json(x){result=x;return this},status(){throw Error('unexpected access denial')}};
+  await handlers.get('get/stocktakes/:stocktakeId/audit')[0](req,res,e=>{error=e});assert.equal(error,undefined);
+  assert.equal(result.lines[0].unitCost,null);assert.equal(result.lines[0].differenceValue,null);assert.equal(result.summary.shortageQuantity,1);assert.equal(result.summary.shortageCostValue,null);assert.equal(result.summary.surplusQuantity,2);assert.equal(result.summary.surplusCostValue,4);assert.equal(result.summary.totalDifferenceValue,null);assert.equal(result.summary.totalCostValue,null);assert.equal(result.summary.missingCostItems,1);
+});

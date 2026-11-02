@@ -72,16 +72,16 @@ router.get("/stocktakes/:stocktakeId/audit", async (req, res, next) => {
       const expected = n(x.expectedQuantity),
         counted = x.countedQuantity === null ? null : n(x.countedQuantity),
         difference = counted === null ? null : counted - expected,
-        unitCost = n(x.unitCost),
+        unitCost = n(x.unitCost)>0?n(x.unitCost):null,
         salePrice = n(x.salePrice);
       return {
         ...x,
         expectedQuantity: expected,
         countedQuantity: counted,
         difference,
-        differenceValue: difference === null ? null : difference * unitCost,
+        differenceValue: difference === null || unitCost===null ? null : difference * unitCost,
         differenceRetailValue: difference === null ? null : difference * salePrice,
-        unitCost,
+        unitCost,costMissing:unitCost===null,
         salePrice,
         events: grouped.get(x.id) || [],
       };
@@ -112,14 +112,15 @@ router.get("/stocktakes/:stocktakeId/audit", async (req, res, next) => {
         expectedQuantity: total(counted,"expectedQuantity"),
         countedQuantity: total(counted,"countedQuantity"),
         totalDifference: total(counted,"difference"),
-        totalDifferenceValue: total(counted,"differenceValue"),
+        totalDifferenceValue: counted.every(x=>x.difference===0||x.differenceValue!==null)?total(counted,"differenceValue"):null,
         totalRetailValue: counted.reduce((sum,x)=>sum+n(x.countedQuantity)*n(x.salePrice),0),
-        totalCostValue: counted.reduce((sum,x)=>sum+n(x.countedQuantity)*n(x.unitCost),0),
+        totalCostValue: counted.every(x=>x.countedQuantity===0||x.unitCost!==null)?counted.reduce((sum,x)=>sum+n(x.countedQuantity)*n(x.unitCost),0):null,
         shortageQuantity: Math.abs(total(shortages,"difference")),
-        shortageCostValue: Math.abs(total(shortages,"differenceValue")),
+        shortageCostValue: shortages.every(x=>x.differenceValue!==null)?Math.abs(total(shortages,"differenceValue")):null,
         shortageRetailValue: Math.abs(total(shortages,"differenceRetailValue")),
         surplusQuantity: total(surpluses,"difference"),
-        surplusCostValue: total(surpluses,"differenceValue"),
+        surplusCostValue: surpluses.every(x=>x.differenceValue!==null)?total(surpluses,"differenceValue"):null,
+        missingCostItems:counted.filter(x=>x.costMissing).length,
         surplusRetailValue: total(surpluses,"differenceRetailValue"),
       };})(),
       lines: normalized,
@@ -133,7 +134,7 @@ router.get("/stocktakes/:stocktakeId/audit.csv", async (req, res, next) => {
     const st = await access(req, req.params.stocktakeId);
     if (!st) return res.status(404).json({ error: "Δεν βρέθηκε η απογραφή." });
     const rows =
-      await prisma.$queryRaw`SELECT p."sku",p."name",pb."barcode",COALESCE(z."name",'') AS "zone",sl."expectedQuantity",sl."countedQuantity",(sl."countedQuantity"-sl."expectedQuantity") AS "difference",sl."unitCost",((sl."countedQuantity"-sl."expectedQuantity")*sl."unitCost") AS "differenceValue",COALESCE(u."fullName",'') AS "counter",sl."countSource",sl."countedAt" FROM "StocktakeLine" sl JOIN "Product" p ON p."id"=sl."productId" LEFT JOIN "InventoryZone" z ON z."id"=sl."zoneId" LEFT JOIN "User" u ON u."id"=sl."countedByUserId" LEFT JOIN LATERAL(SELECT "barcode" FROM "ProductBarcode" x WHERE x."productId"=p."id" ORDER BY x."createdAt" LIMIT 1)pb ON TRUE WHERE sl."stocktakeId"=${st.id} ORDER BY p."name"`;
+      await prisma.$queryRaw`SELECT p."sku",p."name",pb."barcode",COALESCE(z."name",'') AS "zone",sl."expectedQuantity",sl."countedQuantity",(sl."countedQuantity"-sl."expectedQuantity") AS "difference",CASE WHEN sl."unitCost">0 THEN sl."unitCost" END AS "unitCost",CASE WHEN sl."unitCost">0 THEN ((sl."countedQuantity"-sl."expectedQuantity")*sl."unitCost") END AS "differenceValue",COALESCE(u."fullName",'') AS "counter",sl."countSource",sl."countedAt" FROM "StocktakeLine" sl JOIN "Product" p ON p."id"=sl."productId" LEFT JOIN "InventoryZone" z ON z."id"=sl."zoneId" LEFT JOIN "User" u ON u."id"=sl."countedByUserId" LEFT JOIN LATERAL(SELECT "barcode" FROM "ProductBarcode" x WHERE x."productId"=p."id" ORDER BY x."createdAt" LIMIT 1)pb ON TRUE WHERE sl."stocktakeId"=${st.id} ORDER BY p."name"`;
     const quote = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`,
       header = [
         "SKU",

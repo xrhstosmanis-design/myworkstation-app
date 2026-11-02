@@ -1,3 +1,19 @@
+
+
+## 02Nov2026 — INVENTORY-RECONCILIATION-EVIDENCE-03 / CALENDAR DAY CORRECTION / AWAITING EXACT NEW CI
+
+Same owner. Real new regression proved invoice-midnight falsely became late on the opening count day; red expectednull vs80 before, green after using existing shared Greece calendar-day utility. Actual count/transaction/posting instants remain separate, old documents remain uncertain; invoice issue days have no invented clock time. Cross-offset same-Greek-day duplicate/VAT candidate and native package-invoice midnight regression included. No writer/schema/rights change. Prior exact8d1170ad local full4843/4505PASS/0FAIL/338SKIP, full solo repass after unchanged DAILY QR timing; new focused39/36PASS/0FAIL/3nativeSKIP, Work build PASS, new full rerun pending.41366137645 is superseded, not final CI proof. Exact new full/native CI, main/guard/health and read-only LAB required. All source3502 read/export/cancel PASS and retained owners protected; hosted review mutations remain BLOCKED/NOT TESTED after automatic approval rejection on read-only actual DB authorization. No retry/bypass. Checkpoint2026-11-01-inventory-reconciliation-source-evidence.md; full remaining request OPEN/ASSIGNED.
+
+
+
+## 02Nov2026 — INVENTORY-RECONCILIATION-EVIDENCE-03 / IMPLEMENTED / AWAITING EXACT NATIVE CI AND LAB
+
+Same retained owner feat/inventory-source-evidence-20261101; claim3501/151044ae/docsCI41362046332/merge9e26c89 before source. Read-only completed consumption/audited-return sources, exact posting precedence/late-sync identity, invoice quantities/packages/gifts/value-credit/canonical/duplicate checks and non-stock operational/price/barcode context implemented. Physical versus recorded-book expectations separate system zeroing; ambiguous/missing evidence does not produce a confirmed physical loss. Original count history/operator/source metadata, matching detailed UI/PDF/XLSX and explicit store-pool/unknown-warehouse scope. No count/invoice/stock/financial/schema/right writer takeover or email/charge.
+
+Protected source3500 exact1e293f93 fullPR/main5176+8/0/0 and normal guard41363154340/live23:46:20UTC retained. Actual read/export/cancel scoped PASS3502/befd5fcf/docsCI41365053415/merge7e4e8374/manual/evidence/both PDF mirrors is complete and must not be replayed as a business transaction. Hosted LINK/CORRECTION/REVOKE write acceptance remains BLOCKED/NOT TESTED after automatic approval rejected accepting its confirmation on a read-only actual DB session; dismissed/form cleared/0reviews/all controls unchanged. No workaround authorized.
+
+New local focused38/35PASS/0FAIL/3nativeSKIP; Work build/PDF QA passed. Prior local full4504PASS/0FAIL/338SKIP; later unchanged DAILY QR timing failure passes isolation, solo rerun pending. New native SQL/read invariance, direct+derived dedup, audited returns, boxes/gifts/value-credit/alias, late facts, foreign/global context and limits plus prior review authority/races must execute in full CI. Exact-main/ordinary guarded release/health before read-only LAB. No whole-task PASS; remaining independent warehouse/time capture, reusable identity beyond pair and retained writer/original-evidence scope OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-11-01-inventory-reconciliation-source-evidence.md. Single next action publish candidate/run full unskipped CI.
+
 ## 2026-11-01T23:55Z — INVENTORY-RECONCILIATION-01 / SCOPED READ-ONLY UI + PDF/XLSX + CANCEL LAB PASS / REVIEW WRITES BLOCKED
 
 Same owner, no release/second takeover. Installed1e293f931ec5b0f153ba60dddf4fe5c22181def2 after3500/d942 fullPR41360489566 and exactmain41361950951 all5SUCCESS/5176server+8backup/0FAIL/0SKIP including actual native1493. Normal guard41363154340/job125017681131 Verify/Trigger/WaitSUCCESS; Renderdep-dbjsrqjbc2fs73dpa8rg LIVE23:46:20.376543UTC, independenthealth exact1e293f93. Before-source evidence claim3501/docsCI41362046332 green/main9e26c89 remains assigned; its new source3 adapter is not yet deployed.
