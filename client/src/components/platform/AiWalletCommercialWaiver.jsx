@@ -1,7 +1,7 @@
 import React,{useRef,useState} from 'react';
 import {walletMoney} from '../voice/ai-wallet-money.mjs';
 
-export default function AiWalletCommercialWaiver({companyId,entries=[],busy,api,onWaive}){
+export default function AiWalletCommercialWaiver({companyId,entries=[],more=false,busy,api,onWaive}){
  const [selected,setSelected]=useState([]),[reason,setReason]=useState(''),[preview,setPreview]=useState(null),[confirmed,setConfirmed]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[submitted,setSubmitted]=useState(null);
  const inFlight=useRef(false),epoch=useRef(0),submission=useRef(null);
  const eligible=entries.filter(e=>e.kind==='USAGE'&&e.status==='REVIEW'&&e.storeId&&String(e.chargedMicros)==='0');
@@ -24,8 +24,9 @@ export default function AiWalletCommercialWaiver({companyId,entries=[],busy,api,
  return <section aria-label="Εμπορική απαλλαγή δεσμεύσεων AI">
   <h2>Απαλλαγή πελάτη από δεσμεύσεις AI</h2>
   <p>Το MyWorkStation αναλαμβάνει το άγνωστο κόστος παρόχου. Απελευθερώνεται μόνο η επιλεγμένη δέσμευση, χωρίς νέα πίστωση ή επιστροφή σε κάρτα. Το αρχικό ιστορικό διατηρείται.</p>
-  {!eligible.length?<p>Δεν υπάρχουν διαθέσιμες κινήσεις υπό έλεγχο στη λίστα.</p>:<>
-   <p>Επίλεξε συγκεκριμένες κινήσεις ενός καταστήματος από τις τελευταίες έως 100 κινήσεις.</p>
+  {!eligible.length?<p>Δεν υπάρχουν διαθέσιμες εκκρεμείς κινήσεις για απαλλαγή.</p>:<>
+   <p>Επίλεξε συγκεκριμένες κινήσεις ενός καταστήματος. Εμφανίζονται έως 100 παλαιότερες εκκρεμείς δεσμεύσεις, ανεξάρτητα από το πρόσφατο ιστορικό.</p>
+   {more&&<p>Υπάρχουν και νεότερες εκκρεμείς κινήσεις πέρα από αυτό το όριο. Δεν επιλέγονται ούτε απαλλάσσονται αυτόματα.</p>}
    <ul>{eligible.map(e=><li key={e.id}><label><input type="checkbox" checked={selected.includes(e.id)} disabled={disabled} onChange={()=>choose(e.id)}/>{new Date(e.createdAt).toLocaleString('el-GR',{timeZone:'Europe/Athens',hour12:false})} · {e.storeName||e.storeId} · {walletMoney(e.reservedMicros)} · {e.id}</label></li>)}</ul>
    {stores.size>1&&<p role="alert">Επίλεξε κινήσεις μόνο ενός καταστήματος.</p>}
    <label>Αιτιολογία απαλλαγής <input value={reason} minLength={5} maxLength={300} disabled={disabled} onChange={e=>{invalidate();setReason(e.target.value)}}/></label>

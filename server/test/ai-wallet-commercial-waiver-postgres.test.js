@@ -82,6 +82,12 @@ test('native commercial waiver is atomic, selected, authenticated and idempotent
    await assert.rejects(rollback.waiveCommercialReviews('c',input(preview),'admin',session),/commit refusal/);assert.deepEqual(await baseline(),before);
    await db.$executeRaw`UPDATE "UserSession" SET "revokedAt"=NOW() WHERE "id"='admin-session'`;assert.ok((await request('',body)).status>=400);assert.deepEqual(await baseline(),before);
   });
+  await t.test('old pending holds remain selectable beyond100 newer settled entries without expanding recent history or crossing stores',async()=>{
+   const old=await add('s','c','1000');await db.$executeRaw`UPDATE "AiOwnerWalletEntry" SET "createdAt"='2020-01-01T00:00:00Z' WHERE "id"=${old}`;
+   await db.$executeRaw`INSERT INTO "AiOwnerWalletEntry" ("id","companyId","storeId","kind","reference","status","feature","settledAt") SELECT 'history-'||n,'c','s','USAGE','SYNTHETIC-HISTORY-'||n,'SETTLED','OWNER_ASSISTANT',NOW() FROM generate_series(1,105) n`;
+   const selected=await repo.read('c','s');assert.equal(selected.entries.length,100);assert.equal(selected.entries.some(e=>e.id===old),false);assert.equal(selected.waiverCandidates[0].id,old);assert.equal(selected.waiverCandidatesMore,false);assert.ok(selected.waiverCandidates.every(e=>e.storeId==='s'&&e.status==='REVIEW'&&e.chargedMicros==='0'));assert.equal(selected.waiverCandidates.some(e=>e.id===control||e.id===foreign),false);
+   const company=await repo.read('c');assert.ok(company.waiverCandidates.some(e=>e.id===control));assert.equal(company.waiverCandidates.some(e=>e.id===foreign),false);
+  });
   assert.deepEqual(await db.$queryRaw`SELECT * FROM "BusinessControl"`,business);
  }finally{if(server)await new Promise(r=>server.close(r));await db.$disconnect();await other.$disconnect();if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect()}
 });
