@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {z} from 'zod';
 import {invoiceDbFixture,isolatedInvoiceDb} from './helpers/invoice-common-draft-fixture.js';
 import {lockInvoiceStore} from '../src/lib/invoice-common-draft.js';
 
@@ -53,5 +54,25 @@ test('native exact-number company-wide prevention is retained outside the select
   await f.seed({mydata:false});const before=await snapshot(f);
   const result=await guard(f.db,{...identity,storeId:'control',documentNumber:'21-ΤΔΑ 006836'});
   assert.equal(result.id,'d-pos');assert.equal(result.reviewRequired,undefined);assert.equal(await snapshot(f),before);
+ }finally{await f.close()}
+});
+
+
+test('native actual new POS shell route refuses competing padded draft before any insert or financial helper',native,async()=>{
+ const f=await invoiceDbFixture();try{
+  await f.seed({mydata:false,posLines:1});
+  await f.db.$executeRawUnsafe(`INSERT INTO "AiReaderJob"("id","companyId","storeId","attachmentId") VALUES('new-job','c','s','photo')`);
+  const before=await snapshot(f);
+  const a=source.indexOf('router.post("/ai-reader/jobs/:jobId/pos-draft"'),b=source.indexOf('\n});',a)+4;
+  const body=source.slice(a,b),handler=body.slice(body.indexOf('async(req,res,next)=>'),-2).trim();
+  const forbidden=()=>{throw new Error('Unexpected payment or insertion')};
+  const deps={z,prisma:f.db,id:forbidden,ensureInvoiceCommonDraftSchema:async()=>{},lockInvoiceStore,
+   assertNoUnresolvedInbound:async()=>{},findInvoicePayment:forbidden,assertReusableInvoicePayment:forbidden,
+   reuseInboundDraftForPosJob:async()=>null,findUnlinkedMyDataOriginal:async()=>null,bindUnlinkedMyDataOriginal:forbidden,duplicateInvoice:guard};
+  const route=new Function(...Object.keys(deps),'return '+handler)(...Object.values(deps));
+  let error,result;const res={status:()=>res,json:value=>{result=value;return res}};
+  await route({params:{jobId:'new-job'},user:{companyId:'c',id:'synthetic-owner'},body:{...identity,settlementMode:'CREDIT'}},res,e=>{error=e});
+  assert.equal(error?.status,409);assert.equal(error?.code,'INVOICE_DUPLICATE_REVIEW_REQUIRED');assert.equal(result,undefined);
+  assert.equal(await snapshot(f),before,'original/new job, all documents, rows, original files, money and stock remain unchanged');
  }finally{await f.close()}
 });
