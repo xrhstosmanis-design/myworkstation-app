@@ -50,4 +50,5 @@ test('ftext package round-trips names as data, pins selected scope and contains 
 test('wrong-purpose or absent credentials are refused before any database action',async()=>{
  const service=createFtextInstallationService({db:{$transaction:()=>assert.fail('Unauthenticated request touched DB')},secret:()=> 'a'.repeat(32),moduleState:()=>assert.fail('no module read')});
  for(const token of ['', 'not.a.token',jwt.sign({tokenType:'CLOUD_DEVICE',deviceId:'foreign'},'a'.repeat(32)),jwt.sign({tokenType:'FTEXT_DEVICE',deviceId:'foreign'},'a'.repeat(32)+':FTEXT_DEVICE',{issuer:'wrong-issuer',audience:'ftext-device-v1'})])await assert.rejects(service.ping(token),e=>e.status===401);
+ for(const token of ['', 'not.a.token'])await assert.rejects(service.statusHistory(token,{requestIds:['a'.repeat(32)]}),e=>e.status===401);
 });

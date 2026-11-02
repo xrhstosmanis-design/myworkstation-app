@@ -21,6 +21,7 @@ test('actual HTTP binds manager requests to selected path and routes device cred
  r=await request('/device/ping',{method:'POST',headers:{authorization:'Bearer scoped-device-token'}});assert.equal(r.status,200);assert.deepEqual(calls.pop(),['ping','scoped-device-token',{}]);
  r=await request('/device/ping',{method:'POST',headers:{authorization:'Bearer scoped-device-token','content-type':'application/json'},body:JSON.stringify({readinessVersion:1})});assert.equal(r.status,200);assert.deepEqual(calls.pop(),['ping','scoped-device-token',{readinessVersion:1}]);
  r=await request('/device/status-result',{method:'POST',headers:{authorization:'Bearer scoped-device-token','content-type':'application/json'},body:JSON.stringify({requestId:'synthetic'})});assert.equal(r.status,200);assert.deepEqual(calls.pop(),['report','scoped-device-token',{requestId:'synthetic'}]);
+ r=await request('/device/status-history',{method:'POST',headers:{authorization:'Bearer scoped-device-token','content-type':'application/json'},body:JSON.stringify({requestIds:['a'.repeat(32)]})});assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'no-store');assert.deepEqual(calls.pop(),['statusHistory','scoped-device-token',{requestIds:['a'.repeat(32)]}]);
  for(const path of ['/device/commands','/device/sale','/device/pay','/device/execute'])assert.equal((await request(path,{method:'POST'})).status,404);
 }));
 test('actual public HTTP pairing is bounded and passes no arbitrary manager scope',()=>fixture(async({calls,request})=>{
