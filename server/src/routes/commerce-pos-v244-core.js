@@ -1,3 +1,4 @@
+import {findCompetingPosDraftReview} from "../lib/pos-invoice-duplicate-review.js";
 import {findUnlinkedMyDataOriginal,bindUnlinkedMyDataOriginal} from '../lib/pos-unlinked-mydata.js';
 import {creditCashReadSettlement} from "../lib/supplier-credit-cash.js";
 import {assertEmptyInboxRead} from "../lib/pos-inbox-original.js";
@@ -198,7 +199,7 @@ const lineSchema=z.object({
   packRule:z.string().max(120).optional().default("")
 });
 
-async function duplicateInvoice(tx,{companyId,supplierId,documentNumber,storeId=null,documentDate=null,documentType="INVOICE",totalGross=null,excludeDocumentId=null}){
+async function duplicateInvoice(tx,{companyId,supplierId,documentNumber,storeId=null,documentDate=null,documentType="INVOICE",totalGross=null,excludeDocumentId=null,supplierTaxId=""}){
   const normalized=normalizeDocumentNumber(documentNumber);
   if(!normalized)return null;
   const rows=await tx.$queryRaw`
@@ -219,27 +220,7 @@ async function duplicateInvoice(tx,{companyId,supplierId,documentNumber,storeId=
       AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${normalized}
     ORDER BY o."updatedAt" DESC LIMIT 1`;
   if(orders[0])return orders[0];
-  // A number/series discrepancy is review evidence, never permission to reuse
-  // or merge a draft. Compare only one selected store/day/type/supplier and a
-  // corroborating positive total; preserve company-wide exact checks above.
-  const number=String(documentNumber||"").trim().match(/(\d+)\s*$/)?.[1]?.replace(/^0+(?=\d)/,"");
-  const date=documentDate?new Date(documentDate):null,gross=Number(totalGross);
-  if(!storeId||!number||!date||!Number.isFinite(date.getTime())||!Number.isFinite(gross)||gross<=0)return null;
-  const issueDay=date.toISOString().slice(0,10);
-  const candidates=await tx.$queryRaw`
-    SELECT d."id",d."status",d."documentNumber"
-    FROM "PurchaseDocument" d
-    JOIN "PurchaseOrder" o ON o."sourceDocumentId"=d."id" AND o."companyId"=d."companyId" AND o."storeId"=d."storeId"
-    WHERE d."companyId"=${companyId} AND d."storeId"=${storeId} AND d."supplierId"=${supplierId}
-      AND o."supplierId"=${supplierId} AND d."sourceType"='POS_OCR_DRAFT'
-      AND d."status" IN ('DRAFT','APPROVED') AND o."status" IN ('NEW','FINAL','INVOICED')
-      AND (CAST(${excludeDocumentId} AS text) IS NULL OR d."id"<>${excludeDocumentId})
-      AND d."documentType"=${documentType}
-      AND (d."documentDate" AT TIME ZONE 'UTC')::date=${issueDay}::date
-      AND d."totalGross">0 AND ABS(d."totalGross"-${gross})<=0.050001
-      AND COALESCE(NULLIF(LTRIM(SUBSTRING(d."documentNumber" FROM '([0-9]+)[^0-9]*$'),'0'),''),'0')=${number}
-    ORDER BY d."id" LIMIT 1`;
-  return candidates[0]?{...candidates[0],reviewRequired:true}:null;
+  return findCompetingPosDraftReview(tx,{companyId,storeId,supplierId,supplierTaxId,documentNumber,documentDate,documentType,totalGross},{excludeDocumentId});
 }
 
 async function productsForLines(tx,companyId,supplierId,lines){
@@ -295,7 +276,7 @@ router.post("/ai-reader/jobs/:jobId/pos-draft",requireCompanyModule("AI_READER")
       if(common)return common;
       const originalIdentity={companyId:req.user.companyId,storeId:job.storeId,supplierId:body.supplierId,supplierTaxId:String(supplier.taxId||" ").replace(/\D/g,""),documentNumber:body.documentNumber,documentDate:body.documentDate,documentType:body.documentType,totalGross:body.totalGross};
       const unlinkedOriginal=await findUnlinkedMyDataOriginal(tx,originalIdentity,{paymentTransactionId:payment?.id||null});
-      const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber,storeId:job.storeId,documentDate:body.documentDate,documentType:body.documentType,totalGross:body.totalGross});
+      const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber,storeId:job.storeId,supplierTaxId:supplier.taxId,documentDate:body.documentDate,documentType:body.documentType,totalGross:body.totalGross});
       if(duplicate)throw Object.assign(new Error(duplicate.reviewRequired?"Υπάρχει πιθανό ίδιο τιμολόγιο με διαφορετική γραφή αριθμού ή σειράς. Έλεγξε τα πρωτότυπα στο υπάρχον πρόχειρο. Δεν δημιουργήθηκε δεύτερη εγγραφή.":`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`),{status:409,code:duplicate.reviewRequired?"INVOICE_DUPLICATE_REVIEW_REQUIRED":"DUPLICATE_INVOICE"});
       const documentId=id(),orderId=id(),actor=req.user.fullName||"Χειριστής",createdByUserId=req.user?.tokenType==="STORE_OPERATOR"?null:req.user.id;
       await tx.$executeRaw`INSERT INTO "PurchaseDocument" ("id","companyId","storeId","supplierId","documentType","documentNumber","documentDate","totalNet","totalVat","totalGross","sourceType","status","createdByUserId","settlementMode","purchaseOrderId","paymentTransactionId") VALUES (${documentId},${req.user.companyId},${job.storeId},${body.supplierId},${body.documentType},${body.documentNumber},${body.documentDate},0,0,${body.totalGross},'POS_OCR_DRAFT','DRAFT',${createdByUserId},${body.settlementMode},${orderId},${payment?.id||null})`;
@@ -391,7 +372,7 @@ router.post("/ai-reader/jobs/:jobId/pos-intake",requireCompanyModule("AI_READER"
       // already linked to the same shell; a link to any other document remains
       // a hard conflict.
       if(additionalPageJobs.length!==pageJobIds.length||additionalPageJobs.some(pageJob=>pageJob.storeId!==job.storeId||(!lockedReplacement&&pageJob.purchaseDocumentId)||(lockedReplacement&&pageJob.purchaseDocumentId&&pageJob.purchaseDocumentId!==skeletonDocumentId)||!pageJob.attachmentId)){const error=new Error("Δεν επιβεβαιώθηκαν όλες οι πρόσθετες σελίδες του τιμολογίου. Δεν έγινε καταχώριση.");error.status=409;throw error;}
-      const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber,storeId:job.storeId,documentDate:body.documentDate,documentType:body.documentType,totalGross:body.totalGross,excludeDocumentId:skeletonDocumentId});
+      const duplicate=await duplicateInvoice(tx,{companyId:req.user.companyId,supplierId:body.supplierId,documentNumber:body.documentNumber,storeId:job.storeId,supplierTaxId:supplier[0].taxId,documentDate:body.documentDate,documentType:body.documentType,totalGross:body.totalGross,excludeDocumentId:skeletonDocumentId});
       if(duplicate&&duplicate.id!==skeletonDocumentId){const error=new Error(duplicate.reviewRequired?"Υπάρχει πιθανό ίδιο τιμολόγιο με διαφορετική γραφή αριθμού ή σειράς. Έλεγξε τα πρωτότυπα πριν συνεχίσεις. Δεν δημιουργήθηκε δεύτερη εγγραφή.":`Το τιμολόγιο ${body.documentNumber} υπάρχει ήδη (${duplicate.status}). Δεν δημιουργήθηκε δεύτερη εγγραφή.`);error.status=409;error.code=duplicate.reviewRequired?"INVOICE_DUPLICATE_REVIEW_REQUIRED":"DUPLICATE_INVOICE";throw error;}
       let shift=null,existingPayment=null;
       // Shared POS/BackOffice intake: a reread of an already paid invoice must

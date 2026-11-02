@@ -1,3 +1,4 @@
+import {findCompetingPosDraftReview} from "../src/lib/pos-invoice-duplicate-review.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -65,6 +66,14 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
    await assert.rejects(createPendingInvoicePayment(db,scope,{...base,amount:3}));await assert.rejects(createPendingInvoicePayment(db,{...scope,user:{...scope.user,id:'foreign'}},{...base,idempotencyKey:'foreign-new-key'}));
    const snapshot=await readPendingInvoices(db,scope);assert.equal(snapshot.count,1);assert.equal(snapshot.rows[0].id,original.transaction.id);assert.equal((await readPendingInvoices(db,{...scope,user:{...scope.user,id:'different'}})).count,0);
   });
+  await t.test('padded or uncertain-series deferred requests cannot bypass the transactional prior-payment guard',async()=>{
+   const before=await db.$queryRaw`SELECT row_to_json(t) AS row FROM "StoreTransaction" t ORDER BY t."id"`;
+   const audit=await db.$queryRaw`SELECT row_to_json(a) AS row FROM "StoreOperatorAudit" a ORDER BY a."id"`;
+   for(const [index,invoiceDocumentNumber] of ['A-000100','OTHER-100'].entries())await assert.rejects(createPendingInvoicePayment(db,scope,{...base,supplierId:'alias',invoiceDocumentNumber,idempotencyKey:'padded-deferred-'+index}),e=>e.code==='INVOICE_PAYMENT_REVIEW_REQUIRED');
+   assert.deepEqual(await db.$queryRaw`SELECT row_to_json(t) AS row FROM "StoreTransaction" t ORDER BY t."id"`,before);
+   assert.deepEqual(await db.$queryRaw`SELECT row_to_json(a) AS row FROM "StoreOperatorAudit" a ORDER BY a."id"`,audit);
+   assert.equal((await createPendingInvoicePayment(db,scope,base)).duplicate,true,'same original idempotency key remains read-only');
+  });
   await t.test('marker failure rolls back payment and external financial session stays NULL with contextual original session',async()=>{
    await db.$executeRawUnsafe(`CREATE FUNCTION reject_pending() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."details"->>'documentNumber'='FAIL-999' THEN RAISE EXCEPTION 'fixture rollback'; END IF; RETURN NEW; END $$`);await db.$executeRawUnsafe(`CREATE TRIGGER reject_pending BEFORE INSERT ON "StoreOperatorAudit" FOR EACH ROW EXECUTE FUNCTION reject_pending()`);
    await assert.rejects(createPendingInvoicePayment(db,scope,{...base,invoiceDocumentNumber:'FAIL-999',idempotencyKey:'failure-new-key'}));assert.equal((await db.$queryRaw`SELECT COUNT(*)::int AS n FROM "StoreTransaction" WHERE "invoiceDocumentNumber"='FAIL-999'`)[0].n,0);
@@ -77,7 +86,7 @@ test('native atomic deferred payment, actual HTTP pending binding, original uplo
   const route=await readFile(new URL('../src/routes/store-transactions.js',import.meta.url),'utf8'),commerce=await readFile(new URL('../src/routes/commerce-pos-v244.js',import.meta.url),'utf8'),core=await readFile(new URL('../src/routes/commerce-pos-v244-core.js',import.meta.url),'utf8');
   const schemaStart=route.indexOf('const transactionSchema='),schemaEnd=route.indexOf('const supplierSettlementSchema=',schemaStart),transactionSchema=new Function('z',route.slice(schemaStart,schemaEnd)+';return transactionSchema')(z);
   const normalize=v=>JSON.parse(JSON.stringify(v)),noop=async()=>{},normalizeDocumentNumber=v=>String(v||'').trim().toLocaleUpperCase('el-GR').replace(/\s+/g,'');
-  const duplicateStart=core.indexOf('async function duplicateInvoice'),duplicateEnd=core.indexOf('async function productsForLines',duplicateStart),duplicateInvoice=new Function('normalizeDocumentNumber',core.slice(duplicateStart,duplicateEnd)+';return duplicateInvoice')(normalizeDocumentNumber);
+  const duplicateStart=core.indexOf('async function duplicateInvoice'),duplicateEnd=core.indexOf('async function productsForLines',duplicateStart),duplicateInvoice=new Function('findCompetingPosDraftReview','normalizeDocumentNumber',core.slice(duplicateStart,duplicateEnd)+';return duplicateInvoice')(findCompetingPosDraftReview,normalizeDocumentNumber);
   const coreDeps={z,prisma:db,ensureInvoiceCommonDraftSchema:noop,lockInvoiceStore,assertNoUnresolvedInbound:noop,findInvoicePayment,assertReusableInvoicePayment,reuseInboundDraftForPosJob:async()=>null,findUnlinkedMyDataOriginal:async()=>null,bindUnlinkedMyDataOriginal:noop,duplicateInvoice,id:()=>crypto.randomUUID()};
   const draftHandler=extract(core,'/ai-reader/jobs/:jobId/pos-draft',coreDeps);
   let queueCalls=0,crashBeforeDraft=false,schemaRecoveryCalls=0;
