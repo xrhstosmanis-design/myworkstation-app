@@ -24,8 +24,8 @@ using(var socket=new System.Net.Sockets.TcpClient()){
  await socket.ConnectAsync(IPAddress.Loopback,17861);using var stream=socket.GetStream();
  using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(4));
  var headers=Encoding.ASCII.GetBytes("POST /accept HTTP/1.1\r\nHost: 127.0.0.1:17861\r\nOrigin: https://myworkstation-app.onrender.com\r\nX-MWS-Local: remote-v2\r\nContent-Length: 9000\r\n\r\n");
- await stream.WriteAsync(headers,timeout.Token);var response=new byte[1024];int n=await stream.ReadAsync(response,timeout.Token);
- Check(Encoding.ASCII.GetString(response,0,n).StartsWith("HTTP/1.1 400 "),"oversized declared body rejected before reading/allocation");
+ await stream.WriteAsync(headers,timeout.Token);using var reader=new StreamReader(stream,Encoding.ASCII);var statusLine=await reader.ReadLineAsync(timeout.Token);
+ Check(statusLine?.StartsWith("HTTP/1.1 400 ")==true,"oversized declared body rejected before reading/allocation");
 }
 try{using var r=await Call("/accept",HttpMethod.Post,new string('a',9000));Check(r.StatusCode==HttpStatusCode.BadRequest,"bounded request body");}
 catch(HttpRequestException e)when(e.InnerException is System.IO.IOException){/* TCP reset is a fail-closed oversized-body rejection. */}
