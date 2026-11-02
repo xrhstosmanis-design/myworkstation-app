@@ -1,0 +1,72 @@
+{
+  "status": "SOURCE_INSTALLED_AWAITING_NATIVE_PLATFORM_LOGIN_AND_SYNTHETIC_ACCEPTANCE",
+  "revision": "6d4937a910be74c3a79092aa3a86c81add296611",
+  "sourcePR": 3523,
+  "sourcePRCI": 41435461954,
+  "sourceMainCI": 41437653435,
+  "combinedCI": 41439415075,
+  "exactInstalledFullCI": 41442153196,
+  "counts": {
+    "serverPass": 5250,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "release": {
+    "run": 41444283424,
+    "job": 125273756732,
+    "healthyAt": "2026-11-02T12:27:38.4086267Z",
+    "trigger": "SUCCESS",
+    "wait": "SUCCESS"
+  },
+  "beforeWallet": {
+    "at": "2026-11-02T12:28:54.807Z",
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "availableMicros": "3680499",
+    "reservedMicros": "930033",
+    "settledMicros": "409468",
+    "creditsMicros": "5020000",
+    "entries": 14,
+    "calls": 9,
+    "debtCents": "0",
+    "masterEnabled": false,
+    "invoiceEnabled": false,
+    "emailEnabled": false,
+    "additiveRates": [
+      "0",
+      "0",
+      "0"
+    ],
+    "notice": "only historical 25Oct disabled-email credit notice"
+  },
+  "observation": {
+    "proposalReference": "SYNTHETIC-OWNER-20261102-1229",
+    "mode": "SYNTHETIC",
+    "period": "2026-10",
+    "historyRead": "generic denial displayed twice; no record count obtained",
+    "recordCount": null,
+    "saveAttempted": false,
+    "scope": "UI support banner explicitly MYWORKSTATION LAB / ERGASTIRIO DOKIMON; normal Return to Super Admin led to native 2FA login",
+    "next": "secure native Platform Super Admin login, then NEW fresh published before values before one identified synthetic save/reopen",
+    "afterWallet": "NOT MEASURED; no financial or review save attempted"
+  },
+  "notTested": [
+    "hosted native preview/save/replay/reopen",
+    "real commercial allocation",
+    "actual posting",
+    "50EUR funding",
+    "financial email",
+    "real-customer financial control"
+  ],
+  "noOperations": [
+    "paid AI replay",
+    "wallet grant/debit/repayment",
+    "billing activation",
+    "SMTP",
+    "schema mutation",
+    "direct Render deploy",
+    "guard bypass"
+  ],
+  "authAudit": "normal support-access exit may add its existing authentication audit; not a financial or review event",
+  "recordedAt": "2026-11-02T12:52:22.965661+00:00"
+}
