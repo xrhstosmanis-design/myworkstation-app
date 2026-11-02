@@ -1,3 +1,4 @@
+import {handwrittenShiftCandidates} from './cash-paper-shift-candidates.js';
 import {z} from 'zod';
 import {periodSchema,hash,transactionMatchesPaper,exactCents} from './cash-reconciliation-contract.js';
 import {paperError,normalizePaper} from './cash-paper-contract.js';
@@ -64,7 +65,7 @@ const sameTime=(printed,at,date)=>{const c=clock(at);return c&&printed&&c.day===
 // Corroboration is derived evidence, not a manual review, new expense or change
 // to employee liability. Every match retains the exact original source hash.
 export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,selectedIds=[...sessions.keys()],period,storeName}){
- const selected=new Set(selectedIds),items=[],sources=Array.isArray(papers)?papers:[],coverage=automaticPaperCoverage(discovery,sources);
+ const selected=new Set(selectedIds),items=[],shiftCandidates=[],sources=Array.isArray(papers)?papers:[],coverage=automaticPaperCoverage(discovery,sources);
  const all=[...sessions.values()].filter(s=>s?.session?.companyId===scope.companyId&&s.session.storeId===scope.storeId);
  const selectedSessions=all.filter(s=>selected.has(s.session.id));
  const spans=selectedSessions.map(s=>({from:clock(s.session.openedAt)?.day,to:clock(s.session.closedAt)?.day})).filter(s=>s.from&&s.to);
@@ -78,6 +79,7 @@ export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,s
   }
   let extraction;try{const value=source.reading.extraction;extraction=normalizePaper({dateText:value.dateText,documentDate:value.documentDate,operatorText:value.operatorText,shiftText:value.shiftText,notes:value.notes,lines:value.lines.map(({kind,label,amountText,quantityText,timeText,uncertain})=>({kind,label,amountText,quantityText,timeText,uncertain}))});}catch{items.push({...base,line:null,status:'UNRESOLVED',reason:'INVALID_READING'});continue;}
   readCount++;
+  shiftCandidates.push(...handwrittenShiftCandidates({scope,extraction,modelDocumentDate:source.reading.extraction.documentDate,originals:all,selectedIds}).map(candidate=>({...base,...candidate})));
   // The extraction schema caps physical lines at60. Reaching that boundary
   // cannot prove no additional original lines were omitted by the provider.
   if(extraction.lines.length>=60)items.push({...base,line:null,status:'UNRESOLVED',reason:'SOURCE_LINE_LIMIT'});
@@ -134,6 +136,6 @@ export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,s
   }
   for(const group of used.values())if(group.length>1)for(const item of group){item.status='UNRESOLVED';item.reason='REPEATED_LINE_MATCH';}
  }
- const result={version:1,storeId:scope.storeId,generation:scope.generation,status:coverage.discoveryComplete&&items.every(i=>i.status!=='UNRESOLVED')?'COMPLETE':'INCOMPLETE',items,coverage:{...coverage,readCount,complete:coverage.discoveryComplete&&items.every(i=>i.status!=='UNRESOLVED')},financialAdjustmentCents:0,humanApproval:false};
+ const result={version:1,storeId:scope.storeId,generation:scope.generation,shiftCandidates,status:coverage.discoveryComplete&&items.every(i=>i.status!=='UNRESOLVED')?'COMPLETE':'INCOMPLETE',items,coverage:{...coverage,readCount,complete:coverage.discoveryComplete&&items.every(i=>i.status!=='UNRESOLVED')},financialAdjustmentCents:0,humanApproval:false};
  return {...result,hash:hash(result)};
 }

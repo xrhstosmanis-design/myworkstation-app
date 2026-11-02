@@ -11,6 +11,12 @@ function fixture(){
 }
 const offset=(source,a,b,amount,id='offset')=>({id,sequence:1,actorName:'Χρήστος Μάνης',data:{kind:'OFFSET',previousSessionId:a,nextSessionId:b,previousHash:source.sessions.get(a).sourceHash,nextHash:source.sessions.get(b).sourceHash,amountCents:amount},proof:{previousHash:source.sessions.get(a).sourceHash,nextHash:source.sessions.get(b).sourceHash}});
 const confirmation=(row,id='confirm',sequence=2)=>({id,sequence,actorName:'Χρήστος Μάνης',data:{kind:'CONFIRM',sessionId:row.sessionId,sourceHash:row.sourceHash,planHash:row.planHash},proof:{}});
+test('joint handwritten candidates render as unverified with ledger date provenance and cannot close finality',()=>{
+ const source=fullFixture();source.paperEvidence.coverage.complete=false;source.paperEvidence.items=[{status:'UNRESOLVED',reason:'DOCUMENT_DATE_UNREADABLE',line:null}];
+ source.paperEvidence.shiftCandidates=[{filename:'synthetic.jpg',fromLine:0,toLine:3,operatorName:'Synthetic Operator',terminalPos:'MAIN',candidateDate:'2026-10-21',dateBasis:'LEDGER_DAY_MONTH_CANDIDATE',selected:true,proof:[{field:'openingOperational',amountCents:10000},{field:'cardSales',amountCents:2200}]}];
+ const before=projectReconciliation(source,[]);assert.match(before.text,/Προτεινόμενη βάρδια — ΠΡΟΣ ΕΛΕΓΧΟ/);assert.match(before.text,/έτος από την υποψήφια καταχωρισμένη βάρδια, όχι από το χειρόγραφο/);assert.match(before.text,/αρχικό ταμείο 100,00/);assert.match(before.text,/POS 22,00/);assert.doesNotMatch(before.text,/ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ/);assert.equal(before.rows[0].fullAudit.status,'PENDING');assert.equal(before.rows[0].reviewed,false);
+ source.paperEvidence.shiftCandidates[0].proof[1].amountCents=2300;assert.notEqual(projectReconciliation(source,[]).reportHash,before.reportHash);
+});
 test('equal opposite cash amounts alone do not offset; reviewed immediate pairs consume both sides once and never cards or other employee days',()=>{
  const source=fixture(),before=projectReconciliation(source,[]);assert.deepEqual(before.rows.map(r=>r.remainingCents),[-8700,8000,-1000]);assert.equal(before.totals.shortageCents,0);assert.equal(before.totals.pending,3);
  const review=offset(source,'a','b',8000),draft=projectReconciliation(source,[review]);assert.deepEqual(draft.rows.map(r=>r.remainingCents),[-700,0,-1000]);assert.deepEqual(draft.rows.map(r=>r.cardCents),[20000,-1000,-1000]);
