@@ -1,3 +1,11 @@
+## 2 November 2026 — FTEXT validation execution budget / bounded before-source claim
+
+Same retained FTEXT continuation owner. Source PR3540 headd377946 remains NOT INSTALLED/OPEN. Actual Windows5.1 CI41501034299 passed the runtime and scheduling/real-loop fixtures. General CI41501034223 attempts1/2 both passed5256server+8backup/0FAIL/0SKIP, build/browser checks and many realHTTP flows, but each full job was CANCELLED before all E2E completed. Attempt2 job125478319622 started18:48:03UTC and completed19:03:04UTC:15minutes1second, matching the existing15minute build-and-test budget. Neither attempt is fullCI PASS. Only one unchanged retry was attempted; do not repeat an identical insufficient budget.
+
+Bounded necessary validation-support change after this claim merges: change only build-and-test.timeout-minutes from15to25 in .github/workflows/ci.yml. All test commands, required jobs, assertions, deployment guard, fiscal/readiness/heartbeat/business timeouts and production settings remain unchanged. This permits the complete existing validation; it does not waive a gate or mark cancelled work successful. No takeover of unrelated CI/feature scope, no new fiscal operation or store interruption. Physical speed remains FAIL/OPEN. The published PDF is retained during candidate validation; regenerate the synchronized final receipt after validation and release.
+
+Single next action: merge this documentation claim after applicable green CI, apply the one-line job execution budget change to the existing FTEXT candidate, then require exact complete PR/main CI and guarded release before package delivery.
+
 ## 2 November 2026 — FTEXT deadline scheduling / before-source continuation
 
 Continue the existing assigned FTEXT scope on fix/ftext-live-latency-20261102, as explicitly requested by the owner. Performance acceptance remains OPEN/FAIL; no new physical PASS or diagnostic financial transaction. Preserve other assignments and accepted behavior.
