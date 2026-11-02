@@ -1,3 +1,4 @@
+import {findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
 import crypto from 'node:crypto';
 import {Prisma} from '@prisma/client';
 import {invoiceToken,findInvoicePayment} from '../lib/invoice-payment-reuse.js';
@@ -43,6 +44,8 @@ export async function createPendingInvoicePayment(db,scope,body){
   await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
   const existing=await findInvoicePayment(tx,{companyId:scope.companyId,supplierId:h.supplierId,supplierTaxId,documentNumber:h.documentNumber});
   if(existing)fail('Η πληρωμή αυτού του τιμολογίου υπάρχει ήδη. Δεν έγινε δεύτερη πληρωμή.','DUPLICATE_INVOICE_PAYMENT');
+  const review=await findExistingInvoicePaymentReview(tx,{companyId:scope.companyId,storeId:scope.storeId,supplierId:h.supplierId,supplierTaxId,documentNumber:h.documentNumber,totalGross:h.amountCents/100});
+  if(review)fail('Υπάρχει πιθανή πληρωμή του ίδιου τιμολογίου με διαφορετική γραφή αριθμού ή σειράς. Απαιτείται έλεγχος στο BackOffice. Δεν έγινε νέα πληρωμή.','INVOICE_PAYMENT_REVIEW_REQUIRED');
   const shifts=await tx.$queryRaw`SELECT "id","openedBy","terminalPos" FROM "CashShiftSession" WHERE "id"=${sessionId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "terminalPos"=${scope.terminalPos} AND "status"='OPEN' FOR UPDATE`;
   if(!shifts[0]||operator(scope.user)&&shifts[0].openedBy!==scope.user.id)fail('Η αρχική βάρδια του χειριστή δεν είναι πλέον ενεργή.');
   const rows=await tx.$queryRaw`INSERT INTO "StoreTransaction" ("id","companyId","storeId","sessionId","type","amount","description","supplierId","supplierName","invoiceDocumentNumber","invoicePaymentKey","subtractFromShift","paymentMethod","actorId","actorName","attachmentChecksum") VALUES (${id},${scope.companyId},${scope.storeId},${body.paymentSource==='CASH_SHIFT'?sessionId:null},'SUPPLIER_PAYMENT',${h.amountCents/100},${`Τιμολόγιο ${h.documentNumber} — αναμονή ανεβάσματος παραστατικού`},${h.supplierId},${suppliers[0].name},${h.documentNumber},${invoicePaymentKey},${body.paymentSource==='CASH_SHIFT'},${body.paymentMethod},${scope.user.id},${scope.user.fullName||'Χειριστής'},${hash(`supplier-invoice:${invoicePaymentKey}`)}) RETURNING *`;

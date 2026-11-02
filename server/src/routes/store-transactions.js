@@ -1,3 +1,5 @@
+import {findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
+import {lockInvoiceStore} from "../lib/invoice-common-draft.js";
 import {requireStaffAction} from '../services/backoffice-staff-access.js';
 import {supplierAdvanceContext,associateExpenseAsAdvance,allocateSupplierAdvance} from "../lib/supplier-advance.js";
 import {requireStaffGrant} from '../services/backoffice-staff-access.js';
@@ -1154,6 +1156,8 @@ router.post("/stores/:storeId",route(async(req,res)=>{
   let rows;
   if(invoicePaymentKey){
     const checkInvoicePayment=async tx=>{
+      // Same lock order as invoice creation: store first, exact key second.
+      await lockInvoiceStore(tx,req.user.companyId,store.id);
       await tx.$queryRaw`SELECT (pg_advisory_xact_lock(hashtext(${`supplier-invoice-payment:${invoicePaymentKey}`})) IS NULL) AS locked`;
       const duplicate=await tx.$queryRaw`
         SELECT t."id",t."storeId",t."occurredAt",t."amount",t."actorName"
@@ -1164,9 +1168,12 @@ router.post("/stores/:storeId",route(async(req,res)=>{
           AND (t."invoicePaymentKey"=${invoicePaymentKey} OR POSITION(${invoiceReference} IN UPPER(REGEXP_REPLACE(COALESCE(t."description",''),'[^A-ZΑ-Ω0-9]','','g')))>0)
         ORDER BY t."occurredAt" ASC LIMIT 1`;
       if(duplicate[0])return {duplicate:duplicate[0],rows:null};
+      const review=Number(body.amount)>0?await findExistingInvoicePaymentReview(tx,{companyId:req.user.companyId,storeId:store.id,supplierId:body.supplierId,supplierTaxId,documentNumber:body.invoiceDocumentNumber||invoiceReference,totalGross:body.amount}):null;
+      if(review)return {review,rows:null};
       return {duplicate:null,rows:await insertTransaction(tx)};
     };
     const outcome=tx===prisma?await prisma.$transaction(checkInvoicePayment):await checkInvoicePayment(tx);
+    if(outcome.review)return {error:"Υπάρχει πιθανή πληρωμή του ίδιου τιμολογίου με διαφορετική γραφή αριθμού ή σειράς. Απαιτείται έλεγχος στο BackOffice. Δεν έγινε νέα πληρωμή.",code:"INVOICE_PAYMENT_REVIEW_REQUIRED"};
     if(outcome.duplicate)return {error:`Η πληρωμή του τιμολογίου ${body.invoiceDocumentNumber||invoiceReference} υπάρχει ήδη. Δεν δημιουργήθηκε δεύτερη οικονομική κίνηση.`,code:"DUPLICATE_INVOICE_PAYMENT",existing:outcome.duplicate};
     rows=outcome.rows;
   }else rows=await insertTransaction(tx);

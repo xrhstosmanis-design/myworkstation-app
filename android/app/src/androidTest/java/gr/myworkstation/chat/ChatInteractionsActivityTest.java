@@ -19,7 +19,7 @@ public class ChatInteractionsActivityTest {
   final CopyOnWriteArrayList<Request> calls=new CopyOnWriteArrayList<>();boolean delivered,acknowledged,pinned=true,manager=true,ackRequired=true;String reaction="";
   @Override synchronized JSONObject json(String path,String method,JSONObject body,String token)throws Exception{
    assertEquals("fixture-token",token);calls.add(new Request(path,method,body));
-   if(method.equals("GET")&&path.endsWith("/messages?limit=100")){
+   if(method.equals("GET")&&path.endsWith("/messages?limit=100&topic=GENERAL")){
     JSONObject row=new JSONObject().put("id","fixture-message").put("senderId","other").put("senderName","CI Other").put("body","Original announcement").put("createdAt","2026-10-31T12:00:00Z").put("category","ANNOUNCEMENT").put("pinned",pinned).put("readByMe",false).put("deliveredByMe",delivered).put("acknowledgedByMe",acknowledged);
     row.put("reactions",reaction.isEmpty()?new JSONArray():new JSONArray().put(new JSONObject().put("id","actor").put("name","CI actor").put("reaction",reaction)));
     row.put("acknowledgements",acknowledged?new JSONArray().put(new JSONObject().put("id","actor").put("name","CI actor")):new JSONArray());
@@ -53,7 +53,7 @@ public class ChatInteractionsActivityTest {
   Api api=new Api();try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){start(s,api);click(s,"👍");click(s,"✅");click(s,"❤️");click(s,"❤️ 1");ArrayList<String> values=new ArrayList<>();for(Request r:api.calls)if(r.path.endsWith("/reaction"))values.add(r.body.isNull("reaction")?"remove":r.body.getString("reaction"));assertEquals(Arrays.asList("👍","✅","❤️","remove"),values);assertEquals(0,api.count("/read"));assertEquals(0,api.count("/acknowledge"));}
  }
  @Test public void pinnedAnnouncementDialogIsSecureAndAcknowledgesOnlyOnExplicitPress()throws Exception{
-  Api api=new Api();try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){start(s,api);click(s,"Ανακοινώσεις (1)");assertEquals(0,api.count("/acknowledge"));
+  Api api=new Api();try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){start(s,api);click(s,"Ανακοινώσεις καταστήματος (1)");assertEquals(0,api.count("/acknowledge"));
    s.onActivity(a->{try{AlertDialog d=(AlertDialog)get(a,"imageDialog");assertTrue((d.getWindow().getAttributes().flags&WindowManager.LayoutParams.FLAG_SECURE)!=0);assertEquals(1,d.getListView().getAdapter().getCount());d.getListView().performItemClick(null,0,0);}catch(Exception e){throw new AssertionError(e);}});
    s.onActivity(a->{try{AlertDialog d=(AlertDialog)get(a,"imageDialog");assertEquals("Το διάβασα",d.getButton(AlertDialog.BUTTON_POSITIVE).getText().toString());d.getButton(AlertDialog.BUTTON_POSITIVE).performClick();}catch(Exception e){throw new AssertionError(e);}});idle(s);assertEquals(1,api.count("/acknowledge"));assertEquals(0,api.count("/read"));click(s,"Ξεκαρφίτσωμα");assertFalse(api.pinned);
   }

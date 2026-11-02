@@ -1,3 +1,4 @@
+import {findCompetingPosDraftReview,findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
 import {walletActivityFromRequest,walletActivityForJob} from "../services/ai-wallet-activity.js";
 import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import {findUnlinkedMyDataOriginal} from '../lib/pos-unlinked-mydata.js';
@@ -805,6 +806,11 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
         AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${documentNumber}
       ORDER BY o."updatedAt" DESC LIMIT 1`;
     if(orders[0])return res.status(409).json({error:"Το ίδιο τιμολόγιο υπάρχει ήδη και η δεύτερη καταχώριση μπλοκαρίστηκε.",code:"DUPLICATE_INVOICE",existing:orders[0]});
+    // The original myDATA first-payment/reuse branch above stays authoritative.
+    // A conservative review must stop before the client can write money.
+    const competingDraft=await findCompetingPosDraftReview(prisma,identity);
+    const competingPayment=await findExistingInvoicePaymentReview(prisma,identity,{excludePaymentId:payment?.id||null});
+    if(competingDraft||competingPayment)return res.status(409).json({error:"Υπάρχει πιθανό ίδιο τιμολόγιο ή πληρωμή με διαφορετική γραφή αριθμού ή σειράς. Έλεγξε τα πρωτότυπα στο BackOffice πριν συνεχίσεις. Δεν ξεκίνησε νέα πληρωμή.",code:"INVOICE_DUPLICATE_REVIEW_REQUIRED"});
     const unlinked=await findUnlinkedMyDataOriginal(prisma,identity,{paymentTransactionId:payment?.id||null});
     res.json({ok:true,duplicate:false,...resume,...(unlinked?{myDataHeaderMatched:true,canonicalDocumentNumber:unlinked.canonicalDocumentNumber,myDataMark:unlinked.mark}:{}),paymentTransactionId:payment?.id||null,paymentReused:Boolean(payment),
       ...(payment?{settlementMode:"PAID",message:"Η υπάρχουσα πληρωμή διατηρείται. Θα γίνει μόνο νέα ανάγνωση του τιμολογίου."}:{})});
