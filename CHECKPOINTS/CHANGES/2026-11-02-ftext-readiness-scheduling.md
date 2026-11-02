@@ -1,3 +1,7 @@
+## 2 November 2026 — FTEXT exact source checks PASS / shared-record reconciliation
+
+Same retained owner. Source3508/head2a456fd00de46c5162b3fff2b1d28541961b5ae3 passed exact Windows5.1 CI41407616600/job125153108963, including new real runspace/loop and all original CASH/operator/strict-CARD lost-reply/restart/stop/handoff/installer fixtures. Exact fullPR41407616657/job125153533590 all5SUCCESS:5189server+8backupPASS/0FAIL/0SKIP and full HTTP E2E. Main concurrently advanced with inventory-history permission documentation14a0dcae only; merge was correctly refused for the shared PDF. Preserve those owner records, auto-merge text and regenerate canonical PDF. All owned runtime/test bytes remain identical to green2a456fd; no changed source, relaxed check or forced merge. Require exact combined PR/main CI and normal guarded exact health before PC package. Engineering NOT INSTALLED, physical stable readiness/speed OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-11-02-ftext-readiness-scheduling.md.
+
 ## 2 November 2026 — FTEXT readiness scheduling candidate / NOT INSTALLED / AWAITING WINDOWS CI
 
 Retained fix/ftext-rbs-outcome-20261031, continuation fix/ftext-readiness-scheduling-20261102. Before-source claim3507/d7ee7ed0 passed docsCI41401821017 (3SUCCESS/2correctSKIP) and merged3bdc80302b0ba2f59245f601606cdbe1faa06cee before all runtime edits. No other owner scope changed.
