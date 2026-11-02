@@ -1,3 +1,7 @@
+## Superseded 02/11/2026 — normal login and exact authorized test completed
+
+Read2026-11-02-inventory-review-hosted-acceptance.md for actual CORRECTION+1/REVOKE receipts, restored result and unchanged36controls. No longer waiting login or consent. Historical blockers below retained, not current status.
+
 # Inventory report review — explicit authorization received, login pending
 
 ## Current status — 02/11/2026, same retained owner, NOT TESTED
