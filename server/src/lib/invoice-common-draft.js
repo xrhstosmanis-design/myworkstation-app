@@ -1,5 +1,6 @@
 import {lineEvidenceCandidates,assertNoLineEvidenceDuplicate} from "./invoice-line-evidence.js";
 import crypto from "node:crypto";
+import {assertReusableInvoicePayment} from "./invoice-payment-reuse.js";
 
 const error=(message,code="INVOICE_RECONCILIATION_REQUIRED")=>Object.assign(new Error(message),{status:409,code});
 const tax=value=>String(value||"").replace(/\D/g,"");
@@ -145,7 +146,7 @@ export async function previewInvoiceReconciliation(db,scope){
   WHERE j."companyId"=${scope.companyId} AND j."storeId"=${scope.storeId}
    AND j."purchaseDocumentId"=ANY(${orders.map(o=>o.documentId)}::text[]) ORDER BY a."id"`:[];
  const registered=orders.find(o=>o.isMyData&&(o.status==="INVOICED"||o.documentStatus==="APPROVED"));
- return {registered:Boolean(registered),registeredOrderId:registered?.orderId||null,inboxId:row.inboxId,mark:row.mark,issuerVat:row.issuerVat,documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),
+ return {additionalDraftReviewSupported:true,registered:Boolean(registered),registeredOrderId:registered?.orderId||null,inboxId:row.inboxId,mark:row.mark,issuerVat:row.issuerVat,documentNumber:[row.series,row.documentNumber].filter(Boolean).join(" "),
   issueDate:day(row.issueDate),totalGross:amount(row.totalGross),originalAvailable:row.mimeType==="application/pdf",commonDraft:row.rawPayload?.commonDraft||null,version:version(row,orders),orders,files,verifiedSuppliers,lines:lines.map(l=>l.row)};
 }
 async function postedOrders(tx,companyId,orders){
@@ -155,12 +156,74 @@ async function postedOrders(tx,companyId,orders){
  const approved=orders.filter(o=>o.documentStatus==="APPROVED"||o.status!=="NEW");
  return [...new Set([...rows.map(o=>o.orderId),...approved.map(o=>o.orderId),...orders.filter(o=>stock.some(p=>p.sourceDocumentId===o.documentId)).map(o=>o.orderId)])];
 }
+// Existing POS receipt writers may legitimately add the first payment after an
+// unpaid common pair. Verify their two persisted proofs without binding or
+// changing anything here; a bare document/ledger link is not receipt evidence.
+async function verifiedFirstCommonPayment(tx,scope,row,original){
+ const paymentId=original.paymentTransactionId,receipt=row.rawPayload?.mydataPosReceipt;
+ const validReceipt=value=>value&&value.paymentTransactionId===paymentId&&value.requiresHumanReceiptReview===true
+  &&typeof value.receivedAt==="string"&&Number.isFinite(Date.parse(value.receivedAt))
+  &&Array.isArray(value.attachmentIds)&&value.attachmentIds.length>0&&value.attachmentIds.length<=5
+  &&value.attachmentIds.every(id=>typeof id==="string"&&id.length>0)&&new Set(value.attachmentIds).size===value.attachmentIds.length;
+ if(!validReceipt(receipt))return false;
+ const jobs=await tx.$queryRaw`SELECT "resultJson" FROM "AiReaderJob" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}
+  AND "attachmentId"=${row.attachmentId} AND "purchaseDocumentId"=${original.documentId} ORDER BY "createdAt","id" LIMIT 1 FOR SHARE`;
+ const stored=jobs[0]?.resultJson?.mydataPosReceipt;
+ if(!validReceipt(stored)||stored.receivedAt!==receipt.receivedAt||JSON.stringify([...stored.attachmentIds].sort())!==JSON.stringify([...receipt.attachmentIds].sort()))return false;
+ const attachments=await tx.$queryRaw`SELECT "id","mimeType" FROM "DocumentAttachment" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "id"=ANY(${receipt.attachmentIds}::text[]) FOR SHARE`;
+ if(attachments.length!==receipt.attachmentIds.length||attachments.some(a=>!["application/pdf","image/jpeg","image/png","image/webp"].includes(a.mimeType)))return false;
+ const payments=await tx.$queryRaw`SELECT t.*,s."taxId" AS "supplierTaxId" FROM "StoreTransaction" t
+  JOIN "Supplier" s ON s."id"=t."supplierId" AND s."companyId"=t."companyId"
+  WHERE t."id"=${paymentId} AND t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} FOR SHARE OF t`;
+ try{assertReusableInvoicePayment(payments[0],{companyId:scope.companyId,storeId:scope.storeId,supplierId:original.supplierId,supplierTaxId:row.issuerVat,
+  documentNumber:original.documentNumber,totalGross:row.totalGross});return true}catch{return false}
+}
+// A completed common draft may accept another reviewed member, but its root
+// and all existing aliases must stay flat. Never reinterpret an alias chain or
+// an incomplete/cross-scope family as permission to consolidate more records.
+async function stableCommonFamily(tx,scope,row,original,recorded,pos){
+ const fail=()=>{throw error("Η κοινή αγορά ή οι ιστορικές συνδέσεις της χρειάζονται χωριστό έλεγχο.","INVOICE_COMMON_FAMILY_REVIEW_REQUIRED")};
+ const official=invoiceNumberParts([row.series,row.documentNumber].filter(Boolean).join(" ")),orderNumber=invoiceNumberParts(original?.invoiceNumber);
+ const recordedPayment=recorded.paymentTransactionId??null,currentPayment=original?.paymentTransactionId??null;
+ const validPaymentId=value=>value===null||typeof value==="string"&&value.length>0;
+ if(!official.number||official.number!==orderNumber.number||official.series!==orderNumber.series
+  ||!validPaymentId(recordedPayment)||!validPaymentId(currentPayment)||recordedPayment!==null&&recordedPayment!==currentPayment)fail();
+ if(!original||!original.exact||recorded.orderId!==original.orderId||recorded.documentId!==original.documentId
+  ||recorded.inboxId!==scope.inboxId||String(recorded.mark)!==String(row.mark)
+  ||row.rawPayload?.mydataDraftOrderId!==recorded.orderId||row.rawPayload?.mydataDraftDocumentId!==recorded.documentId
+  ||row.jobDocumentId!==recorded.documentId||tax(original.taxId)!==tax(row.issuerVat)||!tax(original.taxId)
+  ||original.supplierId!==original.documentSupplierId||!Array.isArray(recorded.aliasOrderIds)
+  ||recorded.aliasOrderIds.some(id=>typeof id!=="string"||!id||id===recorded.orderId)
+  ||new Set(recorded.aliasOrderIds).size!==recorded.aliasOrderIds.length)fail();
+ const documents=await tx.$queryRaw`SELECT "id","purchaseOrderId","sourceType" FROM "PurchaseDocument" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "id"=ANY(${[original.documentId,pos.documentId]}::text[])`;
+ if(documents.length!==2||documents.some(d=>d.sourceType!=="POS_OCR_DRAFT"||d.purchaseOrderId!==(d.id===original.documentId?original.orderId:pos.orderId)))fail();
+ const family=await tx.$queryRaw`SELECT a.*,o."status" AS "aliasOrderStatus",o."sourceDocumentId" AS "aliasOrderDocumentId",
+   d."status" AS "aliasDocumentStatus",d."purchaseOrderId" AS "aliasDocumentOrderId",
+   EXISTS(SELECT 1 FROM "PurchaseOrderPosting" p WHERE p."companyId"=a."companyId" AND p."orderId"=a."aliasOrderId") AS "aliasOrderPosted",
+   EXISTS(SELECT 1 FROM "InvoiceStockPosting" p WHERE p."companyId"=a."companyId" AND p."sourceDocumentId"=a."aliasDocumentId") AS "aliasStockPosted"
+  FROM "InvoiceDraftAlias" a
+  LEFT JOIN "PurchaseOrder" o ON o."id"=a."aliasOrderId" AND o."companyId"=a."companyId" AND o."storeId"=a."storeId"
+  LEFT JOIN "PurchaseDocument" d ON d."id"=a."aliasDocumentId" AND d."companyId"=a."companyId" AND d."storeId"=a."storeId"
+  WHERE a."companyId"=${scope.companyId} AND (a."canonicalOrderId"=${recorded.orderId} OR a."canonicalDocumentId"=${recorded.documentId}
+   OR a."aliasOrderId"=ANY(${recorded.aliasOrderIds}::text[]) OR a."aliasOrderId"=${recorded.orderId} OR a."aliasDocumentId"=${recorded.documentId}
+   OR a."canonicalOrderId"=${pos.orderId} OR a."canonicalDocumentId"=${pos.documentId} OR a."aliasDocumentId"=${pos.documentId})
+  ORDER BY a."aliasOrderId" FOR UPDATE OF a`;
+ if(family.length!==recorded.aliasOrderIds.length||family.some(a=>a.storeId!==scope.storeId||a.canonicalOrderId!==recorded.orderId||a.canonicalDocumentId!==recorded.documentId
+  ||a.inboxId!==scope.inboxId||String(a.mark)!==String(row.mark)||!recorded.aliasOrderIds.includes(a.aliasOrderId)
+  ||a.aliasOrderId===recorded.orderId||a.aliasDocumentId===recorded.documentId||a.aliasOrderStatus!=="MERGED"||a.aliasDocumentStatus!=="MERGED"
+  ||a.aliasOrderDocumentId!==a.aliasDocumentId||a.aliasDocumentOrderId!==a.aliasOrderId||a.aliasOrderPosted||a.aliasStockPosted
+  ||a.details?.completed!==true||a.details?.orderId!==recorded.orderId||a.details?.documentId!==recorded.documentId
+  ||a.details?.inboxId!==scope.inboxId||String(a.details?.mark)!==String(row.mark)||!Array.isArray(a.details?.aliasOrderIds)||!a.details.aliasOrderIds.includes(a.aliasOrderId)))fail();
+ if(family.some(a=>{const established=a.details?.paymentTransactionId??null;return !validPaymentId(established)||established!==null&&established!==currentPayment}))fail();
+ if(recordedPayment===null&&currentPayment!==null&&!await verifiedFirstCommonPayment(tx,scope,row,original))fail();
+ return family;
+}
 // Caller holds the store lock. A merge changes references, not money or stock.
 export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersion,confirmSameInvoice=false,confirmMark,confirmPaymentDiscrepancy=false,verifiedSupplierId=null,confirmSupplierCorrection=false,confirmPaymentSupplierCorrection=false,selectedRowsOrderId=null,confirmHeaderCorrection=false,reason="",automatic=false,actorId=null}){
  await lockInvoiceStore(tx,scope.companyId,scope.storeId);
  const row=await inbound(tx,scope);
  const previous=await invoiceAlias(tx,scope.companyId,{orderId:posOrderId});
- if(previous){if(previous.storeId!==scope.storeId||previous.inboxId!==scope.inboxId)throw error("Η παλιά αντιστοίχιση ανήκει σε άλλη εγγραφή.");return {ok:true,reused:true,orderId:previous.canonicalOrderId,documentId:previous.canonicalDocumentId,stockUpdated:false,paymentChanged:false};}
+ if(previous){if(previous.storeId!==scope.storeId||previous.inboxId!==scope.inboxId||(row.rawPayload?.commonDraft?.completed&&(previous.canonicalOrderId!==row.rawPayload.commonDraft.orderId||previous.canonicalDocumentId!==row.rawPayload.commonDraft.documentId)))throw error("Η παλιά αντιστοίχιση ανήκει σε άλλη εγγραφή.");return {ok:true,reused:true,orderId:previous.canonicalOrderId,documentId:previous.canonicalDocumentId,stockUpdated:false,paymentChanged:false};}
  let orders=await candidateOrders(tx,row);
  if((row.rawPayload?.mydataDraftOrderId||row.jobDocumentId)&&!orders.some(o=>o.isMyData))throw error("Το συνδεδεμένο πρόχειρο έχει διαγραφεί. Δεν δημιουργείται δεύτερο.");
  const pos=orders.find(o=>o.orderId===posOrderId);
@@ -175,6 +238,9 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
  // After a completed merge, opening its canonical order is idempotent as well.
  const recorded=row.rawPayload?.commonDraft;
  if(recorded?.orderId===posOrderId&&recorded?.completed===true)return {ok:true,reused:true,orderId:recorded.orderId,documentId:recorded.documentId,stockUpdated:false,paymentChanged:false};
+ const continuing=recorded?.completed===true;
+ if(continuing&&(automatic||!expectedVersion))throw error("Η προσθήκη επιπλέον προχείρου απαιτεί νέα χειροκίνητη προεπισκόπηση.","INVOICE_COMMON_CONTINUATION_REVIEW_REQUIRED");
+ if(continuing&&(pos.status!=="NEW"||pos.documentStatus!=="DRAFT"||original?.status!=="NEW"||original?.documentStatus!=="DRAFT"))throw error("Η προσθήκη επιπλέον προχείρου επιτρέπεται μόνο πριν από οριστικοποίηση ή καταχώρηση.","INVOICE_COMMON_CONTINUATION_POSTED");
  if(pos.isMyData)throw error("Επίλεξε το υπάρχον πρόχειρο POS για αντιστοίχιση.");
  if(expectedVersion&&version(row,orders)!==expectedVersion)throw error("Τα πρόχειρα άλλαξαν. Άνοιξε νέα προεπισκόπηση πριν από την αντιστοίχιση.","INVOICE_RECONCILIATION_STALE");
  if(!automatic&&(!confirmSameInvoice||String(confirmMark)!==String(row.mark)||String(reason).trim().length<5))throw error("Επιβεβαίωσε τα δύο πρωτότυπα, το MARK και την αιτιολογία της αντιστοίχισης.");
@@ -186,7 +252,12 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
  await tx.$queryRaw`SELECT "id" FROM "StoreTransaction" WHERE "companyId"=${scope.companyId} AND "id"=ANY(${pair.map(o=>o.paymentTransactionId).filter(Boolean).sort()}::text[]) ORDER BY "id" FOR UPDATE`;
  const refreshed=await candidateOrders(tx,row);
  if(version(row,refreshed)!==initialVersion)throw error("Τα πρόχειρα άλλαξαν κατά τον έλεγχο. Ανανέωσε την προεπισκόπηση.","INVOICE_RECONCILIATION_STALE");
+ const family=continuing?await stableCommonFamily(tx,scope,row,original,recorded,pos):[];
  const posted=await postedOrders(tx,scope.companyId,pair);
+ if(continuing&&posted.length)throw error("Η κοινή αγορά έχει ήδη οριστικοποιηθεί ή καταχωρηθεί. Δεν έγινε ενοποίηση.","INVOICE_COMMON_CONTINUATION_POSTED");
+ if(continuing&&selectedRowsOrderId&&selectedRowsOrderId!==recorded.orderId)throw error("Διατηρείται ο ήδη ελεγμένος πίνακας της κοινής αγοράς. Δεν επιτρέπεται αλλαγή πηγής γραμμών.","INVOICE_COMMON_CANONICAL_CHANGE");
+ const extraDocumentLines=continuing&&!original.lineCount?await tx.$queryRaw`SELECT "id" FROM "PurchaseDocumentLine" WHERE "purchaseDocumentId"=${pos.documentId} LIMIT 1`:[];
+ if(continuing&&(pos.lineCount>0||extraDocumentLines.length)&&!original.lineCount)throw error("Ο πίνακας της κοινής αγοράς είναι κενός. Απαιτείται χωριστός έλεγχος γραμμών πριν προστεθεί άλλο πρόχειρο.","INVOICE_COMMON_EMPTY_ROWS");
  if((supplierCorrection||selectedRowsOrderId)&&posted.length)throw error("Η διόρθωση προμηθευτή ή επιλογή πίνακα επιτρέπεται μόνο σε δύο μη καταχωρημένα πρόχειρα.");
  let verifiedSupplier=null;
  if(supplierCorrection){
@@ -195,6 +266,7 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
   if(!verifiedSupplier||tax(verifiedSupplier.taxId)!==tax(row.issuerVat))throw error("Ο επιλεγμένος ενεργός προμηθευτής πρέπει να έχει το ΑΦΜ myDATA στην ίδια εταιρεία.");
  }
  if(posted.length>1)throw error("Και τα δύο παραστατικά έχουν ήδη καταχώρηση. Απαιτείται χωριστός έλεγχος κινήσεων αποθήκης· δεν έγινε νέα κίνηση.","INVOICE_ALREADY_DOUBLE_POSTED");
+ if(continuing&&pos.paymentTransactionId&&pos.paymentTransactionId!==original.paymentTransactionId)throw error("Το επιπλέον πρόχειρο έχει χωριστή σύνδεση πληρωμής. Η πληρωμή της κοινής αγοράς δεν αλλάζει.","INVOICE_COMMON_CONTINUATION_PAYMENT");
  const payments=pair.filter(o=>o.paymentTransactionId);
  if(new Set(payments.map(o=>o.paymentTransactionId)).size>1)throw error("Υπάρχουν διαφορετικές πληρωμές στα δύο πρόχειρα. Απαιτείται έλεγχος πριν από την ενοποίηση.");
  for(const p of payments){
@@ -208,7 +280,7 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
  const selectedRows=selectedRowsOrderId?pair.find(o=>o.orderId===selectedRowsOrderId&&o.lineCount>0):null;
  if(selectedRowsOrderId&&!selectedRows)throw error("Επίλεξε έναν υπάρχοντα πίνακα γραμμών αυτής της αντιστοίχισης.");
  if(populated.length>1&&(automatic||!selectedRows))throw error("Και τα δύο πρόχειρα περιέχουν γραμμές. Επίλεξε τον σωστό πίνακα· ο άλλος διατηρείται στο ιστορικό.","INVOICE_REVIEWED_ROWS_CONFLICT");
- const canonical=selectedRows||pair.find(o=>posted.includes(o.orderId))||payment||pos;
+ const canonical=continuing?original:selectedRows||pair.find(o=>posted.includes(o.orderId))||payment||pos;
  let inheritedSupplier=null;
  if(pos.headerReviewRequired&&!supplierCorrection&&!posted.length&&(!canonical.supplierId||!canonical.documentSupplierId)){
   if(canonical.supplierId&&canonical.supplierId!==pos.supplierId||canonical.documentSupplierId&&canonical.documentSupplierId!==pos.supplierId)throw error("Ο προμηθευτής του επιλεγμένου πίνακα χρειάζεται χωριστή επιβεβαίωση.");
@@ -229,8 +301,9 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
   if(pages.length!==photoIds.length||pages.some(p=>!['application/pdf','image/jpeg','image/png','image/webp'].includes(p.mimeType)))throw error("Δεν βρέθηκαν όλα τα πρωτότυπα POS στο ίδιο κατάστημα και εταιρεία.");
  }
  const common={completed:true,orderId:canonical.orderId,documentId:canonical.documentId,inboxId:row.inboxId,mark:row.mark,
-  aliasOrderIds:aliases.map(o=>o.orderId),paymentTransactionId:payment?.paymentTransactionId||null,paymentDifference:difference,requiresPaymentReview:Math.abs(difference)>.050001};
+  aliasOrderIds:continuing?[...new Set([...family.map(a=>a.aliasOrderId),...aliases.map(o=>o.orderId)])].sort():aliases.map(o=>o.orderId),paymentTransactionId:payment?.paymentTransactionId||null,paymentDifference:difference,requiresPaymentReview:Math.abs(difference)>.050001};
  const paymentSupplierCorrection=Boolean(payment&&tax(payment.paymentTaxId)!==tax(row.issuerVat));
+ if(continuing&&paymentSupplierCorrection)throw error("Η αρχική πληρωμή απαιτεί χωριστό έλεγχο προμηθευτή. Δεν μεταβλήθηκε.","INVOICE_COMMON_CONTINUATION_PAYMENT");
  if(paymentSupplierCorrection){
   const settlementTable=await tx.$queryRaw`SELECT to_regclass('"SupplierPaymentSettlement"') IS NOT NULL AS "exists"`;
   if(settlementTable[0]?.exists){const settlements=await tx.$queryRaw`SELECT "id" FROM "SupplierPaymentSettlement" WHERE "companyId"=${scope.companyId} AND "transactionId"=${payment.paymentTransactionId} LIMIT 1`;if(settlements.length)throw error("Η πληρωμή έχει ήδη διακανονισμό ή κατανομή. Απαιτείται χωριστός έλεγχος προμηθευτή· δεν μεταβλήθηκε.");}
@@ -239,16 +312,16 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
  }
  const paymentRows=payment?await tx.$queryRaw`SELECT row_to_json(t) AS "row" FROM "StoreTransaction" t WHERE "id"=${payment.paymentTransactionId} AND "companyId"=${scope.companyId}`:[];
  const details={...common,headerCorrection:Boolean(pos.headerReviewRequired),lineEvidence:pos.lineEvidence||null,inheritedSupplier,reason:automatic?"Exact verified invoice identity":String(reason).trim(),automatic,actorId,before:pair,selectedRowsOrderId:selectedRows?.orderId||null,verifiedSupplier:verifiedSupplier||null,supplierCorrection,paymentSupplierCorrection,paymentBefore:paymentRows[0]?.row||null,photoAttachmentIds:photoIds,pdfAttachmentId:row.attachmentId,stockChanged:false,paymentChanged:false};
- if(inheritedSupplier){
+ if(inheritedSupplier&&!continuing){
   await tx.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"=${inheritedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.orderId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='NEW'`;
   await tx.$executeRaw`UPDATE "PurchaseDocument" SET "supplierId"=${inheritedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.documentId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='DRAFT'`;
  }
- if(supplierCorrection){
+ if(supplierCorrection&&!continuing){
   await tx.$executeRaw`UPDATE "PurchaseOrder" SET "supplierId"=${verifiedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.orderId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='NEW'`;
   await tx.$executeRaw`UPDATE "PurchaseDocument" SET "supplierId"=${verifiedSupplier.id},"updatedAt"=NOW() WHERE "id"=${canonical.documentId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "status"='DRAFT'`;
   if(paymentSupplierCorrection)await tx.$executeRaw`UPDATE "StoreTransaction" SET "supplierId"=${verifiedSupplier.id} WHERE "id"=${payment.paymentTransactionId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "type"='SUPPLIER_PAYMENT' AND "reversedAt" IS NULL`;
  }
- if(!posted.length){
+ if(!posted.length&&!continuing){
   await tx.$executeRaw`UPDATE "PurchaseDocument" SET "documentNumber"=${[row.series,row.documentNumber].filter(Boolean).join(" ")},"documentDate"=${new Date(row.issueDate)},"totalGross"=${amount(row.totalGross)},
    "paymentTransactionId"=COALESCE("paymentTransactionId",${payment?.paymentTransactionId||null}),"settlementMode"=CASE WHEN ${Boolean(payment)} THEN 'PAID' ELSE "settlementMode" END,"updatedAt"=NOW()
    WHERE "id"=${canonical.documentId} AND "companyId"=${scope.companyId} AND "status"='DRAFT'`;
@@ -256,7 +329,7 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
   await tx.$executeRaw`UPDATE "PurchaseOrder" SET "invoiceNumber"=${[row.series,row.documentNumber].filter(Boolean).join(" ")},"description"=COALESCE("description",'')||${` • Κοινό POS/myDATA • MARK ${row.mark}${paymentNote}`},"updatedAt"=NOW() WHERE "id"=${canonical.orderId} AND "companyId"=${scope.companyId}`;
  }
  for(const alias of aliases){
-  if(alias.lineCount>0&&!selectedRows)await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "orderId"=${canonical.orderId} WHERE "orderId"=${alias.orderId}`;
+  if(alias.lineCount>0&&!selectedRows&&!continuing)await tx.$executeRaw`UPDATE "PurchaseOrderLine" SET "orderId"=${canonical.orderId} WHERE "orderId"=${alias.orderId}`;
   await tx.$executeRaw`INSERT INTO "InvoiceDraftAlias"("aliasOrderId","aliasDocumentId","companyId","storeId","canonicalOrderId","canonicalDocumentId","inboxId","mark","details","actorId")
    VALUES(${alias.orderId},${alias.documentId},${scope.companyId},${scope.storeId},${canonical.orderId},${canonical.documentId},${row.inboxId},${row.mark},${JSON.stringify(details)}::jsonb,${actorId})`;
   await tx.$executeRaw`UPDATE "PurchaseOrder" SET "status"='MERGED',"updatedAt"=NOW() WHERE "id"=${alias.orderId} AND "companyId"=${scope.companyId}`;
@@ -265,7 +338,7 @@ export async function reconcileInvoiceDrafts(tx,scope,{posOrderId,expectedVersio
  const receipt={attachmentIds:photoIds,paymentTransactionId:payment?.paymentTransactionId||null,receivedAt:jobRows.find(j=>j.resultJson?.posHandoff)?.createdAt||new Date().toISOString(),requiresHumanReceiptReview:true};
  for(const j of jobRows)await tx.$executeRaw`UPDATE "AiReaderJob" SET "purchaseDocumentId"=${canonical.documentId},"resultJson"=COALESCE("resultJson",'{}'::jsonb)||${JSON.stringify({commonDraft:common,...(j.id===primary.id&&photoIds.length?{mydataPosReceipt:receipt}:{})})}::jsonb,"updatedAt"=NOW() WHERE "id"=${j.id} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
  await tx.$executeRaw`UPDATE "MyDataInboundDocument" SET "rawPayload"=COALESCE("rawPayload",'{}'::jsonb)||${JSON.stringify({mydataDraftOrderId:canonical.orderId,mydataDraftDocumentId:canonical.documentId,commonDraft:common,...(supplierCorrection||selectedRows?{reconciliationAudit:details}:{})})}::jsonb WHERE "inboxId"=${row.inboxId} AND "companyId"=${scope.companyId} AND "storeId"=${scope.storeId}`;
- return {ok:true,reused:false,orderId:canonical.orderId,documentId:canonical.documentId,aliasOrderIds:aliases.map(o=>o.orderId),paymentDifference:difference,requiresPaymentReview:common.requiresPaymentReview,supplierCorrection,paymentSupplierCorrection,stockUpdated:false,paymentChanged:false};
+ return {ok:true,reused:false,orderId:canonical.orderId,documentId:canonical.documentId,aliasOrderIds:common.aliasOrderIds,paymentDifference:difference,requiresPaymentReview:common.requiresPaymentReview,supplierCorrection,paymentSupplierCorrection,stockUpdated:false,paymentChanged:false};
 }
 // Called during original acquisition. Exact POS-first headers can reuse its
 // existing draft; uncertain candidates keep the PDF for the review screen.
