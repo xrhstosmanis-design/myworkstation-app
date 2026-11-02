@@ -7,6 +7,7 @@ import {createCashPaperRepository} from '../services/cash-paper-repository.js';
 import {createCashPaperReader} from '../services/cash-paper-reader.js';
 import {createCashPaperProvider} from '../services/cash-paper-provider.js';
 import {paperRequest,paperError} from '../services/cash-paper-contract.js';
+import {automaticPaperRequest,createAutomaticPaperRunner,boundAutomaticPaperDiscovery} from '../services/cash-paper-automatic.js';
 
 export async function authorizeCashPaper(db,user,storeId){
   if(!user?.id||user.tokenType==='STORE_OPERATOR'||user.tokenType==='STORE_CHAT_OPERATOR')throw paperError('CASH_PAPER_ACCESS_DENIED',403);
@@ -38,6 +39,16 @@ const errorResponse=(res,error)=>{
 };
 export function createCashPaperRouter({db=prisma,provider=createCashPaperProvider(),authorize=authorizeCashPaper}={}){
   const router=Router(),repository=createCashPaperRepository(db),reader=createCashPaperReader({repository,provider});
+  const automatic=createAutomaticPaperRunner({repository,reader,discover:async scope=>boundAutomaticPaperDiscovery(await readCashChatEvidence(db,scope))});
+  router.post('/stores/:storeId/read-next',async(req,res)=>{try{
+    const parsed=automaticPaperRequest.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Επίλεξε έγκυρη περίοδο και κατάσταση καταστήματος.',code:'CASH_PAPER_INVALID_REQUEST'});
+    const {scope,actor}=await authorize(db,req.user,req.params.storeId);scope.generation=parsed.data.generation;
+    scope.activity=walletActivityFromRequest({...req,user:{...req.user,companyId:scope.companyId}},{storeId:scope.storeId,purpose:'CASH_PAPER_READING'});
+    const result=await automatic.readNext(scope,actor,parsed.data.period);
+    await authorize(db,req.user,req.params.storeId);
+    if(await repository.generation(scope)!==scope.generation)throw paperError('STORE_LIFECYCLE_STALE_GENERATION');
+    res.setHeader('Cache-Control','private, no-store');res.json(result);
+  }catch(error){errorResponse(res,error);}});
   router.get('/stores/:storeId',async(req,res)=>{try{
     const {scope}=await authorize(db,req.user,req.params.storeId);scope.generation=await repository.generation(scope);
     const discovery=await readCashChatEvidence(db,scope);

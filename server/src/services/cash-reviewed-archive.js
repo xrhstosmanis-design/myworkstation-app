@@ -10,7 +10,7 @@ import {normalizeLifecycleGeneration} from './store-lifecycle-generation.js';
 import {reconciliationText} from './cash-reconciliation-report.js';
 
 const sha=z.string().regex(/^[a-f0-9]{64}$/);
-export const archiveArguments=z.object({from:z.string(),to:z.string(),generation:z.string().refine(v=>{try{return normalizeLifecycleGeneration(v)!==null}catch{return false}}),reportHash:sha,previewHash:sha,head:z.union([sha,z.literal('ROOT')])}).strict().refine(v=>periodSchema.safeParse({from:v.from,to:v.to}).success);
+export const archiveArguments=z.object({fullAudit:z.literal('1').optional(),from:z.string(),to:z.string(),generation:z.string().refine(v=>{try{return normalizeLifecycleGeneration(v)!==null}catch{return false}}),reportHash:sha,previewHash:sha,head:z.union([sha,z.literal('ROOT')])}).strict().refine(v=>periodSchema.safeParse({from:v.from,to:v.to}).success);
 export const cashArchiveSourceHash=report=>createHash('sha256').update(cashArchivePreviewPayload(report),'utf8').digest('hex');
 export const archiveMime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const invalid=()=>{throw reconcileError('CASH_ARCHIVE_INVALID_SOURCE',502)};
@@ -76,7 +76,7 @@ export function cashArchiveWorkbook(report,scope){
 }
 export async function readCashReviewedArchive({db,authorize,repository,req}){
   const parsed=archiveArguments.safeParse(req.query);if(!parsed.success)throw reconcileError('CASH_ARCHIVE_INVALID_REQUEST',400);
-  const q=parsed.data,{scope}=await authorize(db,req.user,req.params.storeId);scope.generation=await repository.generation(scope);
+  const q=parsed.data,{scope}=await authorize(db,req.user,req.params.storeId);scope.generation=await repository.generation(scope);if(q.fullAudit==='1')scope.fullAudit=true;
   if(scope.storeId!==req.params.storeId||scope.generation!==q.generation)throw reconcileError('CASH_ARCHIVE_STALE');
   const period={from:q.from,to:q.to},report=await repository.read(scope,period);if(!sameReceipt(report,q))throw reconcileError('CASH_ARCHIVE_STALE');
   const buffer=cashArchiveWorkbook(report,scope);

@@ -44,7 +44,8 @@ test('recorded actual LAB source pair and both existing corrections produce zero
  const evidence=JSON.parse(readFileSync(new URL('../../CHECKPOINTS/EVIDENCE/cash-central-review-20261016/source-reconciliation.json',import.meta.url),'utf8'));
  const sales=evidence.results.sourceSaleResult.flat(),reversals=evidence.results.sourceReturnSaleResult.flat(),movements=evidence.results.sourceRawMovementResult.flat();
  const scope={companyId:evidence.companyId,storeId:evidence.storeId,sessionId:sales[0].ledger[0].sessionId};
- const candidate=consecutiveSaleCandidates(sales.map(s=>({...s,saleId:s.id,linked:true})))[0];assert.equal(candidate.secondsApart,76.229);
+ const current=consecutiveSaleCandidates(sales.map(s=>({...s,saleId:s.id,linked:true})));assert.deepEqual(current,[],'historical 76-second pair is outside the newly requested one-minute detector');
+ const candidate={code:'SALE_LINE_DUPLICATE_CANDIDATE',amount:Number(sales[1].total),requiresConfirmation:true,secondsApart:76.229,transactions:sales.map(s=>({...s,saleId:s.id,products:s.lines}))}; // Preserve the accepted historical correction receipt independently of new detection policy.
  const rows=movements.filter(t=>Number(t.amount)<0).map(t=>{const id=t.description.match(/^POS (?:ΑΚΥΡΩΣΗ|ΕΠΙΣΤΡΟΦΗ) ([^ ]+)/)[1],r=reversals.find(r=>r.id===id);return {...scope,...t,transactionId:t.id,correctionSaleId:id,source:r.source,status:r.status,total:r.total,occurredAt:r.occurredAt,payments:r.payments};});
  const result=linkRecordedCorrections(candidate,rows,scope);assert.equal(result.recordedCorrectionSummary.recordedNet,0);assert.equal(result.transactions.length,2);assert(result.transactions.every(t=>t.recordedCorrections.status==='FULL_AMOUNT_CORRECTED'));assert.equal(evidence.results.sourceShiftResult.flat().find(s=>s.id==='4d853b34-4ce3-4086-970e-14537cf1fd7b').variance,-5.5);
 });

@@ -42,41 +42,57 @@ const messages={
   CASH_PAPER_ACCESS_DENIED:'Δεν υπάρχει πρόσβαση στον έλεγχο χειρόγραφων και βαρδιών.',
   CASH_PAPER_NOT_FOUND:'Δεν βρέθηκε το κατάστημα ή το συνημμένο.'
 };
-const failed=(res,error)=>{const code=Object.hasOwn(messages,error?.code)?error.code:'CASH_RECONCILIATION_UNAVAILABLE';res.status(Number.isInteger(error?.status)&&error.status>=400&&error.status<=503?error.status:503).json({code,error:messages[code]||'Δεν ολοκληρώθηκε ο έλεγχος. Ανανέωσε για να δεις αν καταχωρίστηκε η ενέργεια.'});};
-export function createCashReconciliationRouter({db=prisma,authorize=authorizeCashPaper,repository=createCashReconciliationRepository(db),imports=createKioskCashImports(db)}={}){
-  const router=Router();
+const diagnosticCodes=new Set(['P2010','P2024','P2028','57014','42P01','42703']);
+const failed=(res,error,{onError,operation,elapsedMs}={})=>{
+  const known=Object.hasOwn(messages,error?.code),code=known?error.code:'CASH_RECONCILIATION_UNAVAILABLE';
+  const status=Number.isInteger(error?.status)&&error.status>=400&&error.status<=503?error.status:503;
+  if(!known&&onError){
+    // Never log the exception message, stack, meta, request or financial source.
+    // Prisma/raw-query diagnostic codes are useful without exposing SQL/data.
+    const causeCode=diagnosticCodes.has(error?.code)?error.code:diagnosticCodes.has(error?.meta?.code)?error.meta.code:'UNKNOWN';
+    try{onError({event:'cash_reconciliation_failed',operation,code,causeCode,status,elapsedMs:Math.max(0,Math.min(3600000,Math.round(elapsedMs||0)))});}catch{}
+  }
+  res.status(status).json({code,error:messages[code]||'Δεν ολοκληρώθηκε ο έλεγχος. Ανανέωσε για να δεις αν καταχωρίστηκε η ενέργεια.'});
+};
+export function createCashReconciliationRouter({db=prisma,authorize=authorizeCashPaper,repository=createCashReconciliationRepository(db),imports=createKioskCashImports(db),onError=details=>console.error('[cash-reconciliation]',details)}={}){
+  const router=Router(),startedAt=Symbol('cash-reconciliation-start');
+  router.use((req,res,next)=>{res.locals[startedAt]=Date.now();next();});
+  const fail=(res,error,operation)=>failed(res,error,{onError,operation,elapsedMs:Date.now()-res.locals[startedAt]});
   const current=async(req,scope)=>{await authorize(db,req.user,req.params.storeId);if(await repository.generation(scope)!==scope.generation)throw reconcileError('STORE_LIFECYCLE_STALE_GENERATION');};
   const freshAuthorization=(req,scope)=>async tx=>{const fresh=await authorize(tx,req.user,req.params.storeId);if(fresh.scope.companyId!==scope.companyId||fresh.scope.storeId!==scope.storeId)throw reconcileError('CASH_PAPER_NOT_FOUND',404);};
   router.get('/stores/:storeId/kiosk-sources',async(req,res)=>{try{
     const parsed=periodSchema.safeParse({from:req.query.from,to:req.query.to});if(!parsed.success)return res.status(400).json({error:'Επίλεξε έγκυρη περίοδο έως 31 ημέρες.'});
     const {scope}=await authorize(db,req.user,req.params.storeId);scope.generation=await repository.generation(scope);
     const result=await imports.list(scope,parsed.data);await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
-  }catch(error){failed(res,error);}});
+  }catch(error){fail(res,error,'KIOSK_LIST');}});
   router.post('/stores/:storeId/kiosk-sources',async(req,res)=>{try{
     const parsed=kioskImportRequest.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Έλεγξε αρχείο, περίοδο και στοιχεία βάρδιας.'});
     const {scope,actor}=await authorize(db,req.user,req.params.storeId);scope.generation=parsed.data.generation;
     const result=await imports.importFile(scope,actor,parsed.data,freshAuthorization(req,scope));await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
-  }catch(error){failed(res,error);}});
+  }catch(error){fail(res,error,'KIOSK_IMPORT');}});
   router.post('/stores/:storeId/kiosk-sources/revoke',async(req,res)=>{try{
     const parsed=kioskRevokeRequest.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Επίλεξε αρχείο και αιτιολόγησε την αφαίρεση από την ανάλυση.'});
     const {scope,actor}=await authorize(db,req.user,req.params.storeId);scope.generation=parsed.data.generation;
     const result=await imports.revoke(scope,actor,parsed.data,freshAuthorization(req,scope));await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
-  }catch(error){failed(res,error);}});
+  }catch(error){fail(res,error,'KIOSK_REVOKE');}});
   router.get('/stores/:storeId',async(req,res)=>{try{
     const period=periodSchema.safeParse({from:req.query.from,to:req.query.to});if(!period.success)return res.status(400).json({error:'Επίλεξε έγκυρη περίοδο έως 31 ημέρες.',code:'CASH_RECONCILIATION_INVALID_REQUEST'});
+    if(req.query.fullAudit!==undefined&&req.query.fullAudit!=='1')return res.status(400).json({error:'Μη έγκυρη επιλογή πλήρους ελέγχου.',code:'CASH_RECONCILIATION_INVALID_REQUEST'});
     const historyPage=req.query.historyPage===undefined?0:Number(req.query.historyPage),requestId=req.query.requestId??null;
     if(!Number.isInteger(historyPage)||historyPage<0||historyPage>199||(requestId!==null&&!reviewRequestId.safeParse(requestId).success))return res.status(400).json({error:'Μη έγκυρη επιλογή ιστορικού.',code:'CASH_RECONCILIATION_INVALID_REQUEST'});
     const {scope}=await authorize(db,req.user,req.params.storeId);scope.generation=await repository.generation(scope);
+    if(req.query.fullAudit==='1')scope.fullAudit=true;
     const result=await repository.read(scope,period.data,{historyPage,requestId});await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
-  }catch(error){failed(res,error);}});
+  }catch(error){fail(res,error,'READ');}});
   router.get('/stores/:storeId/archive',async(req,res)=>{try{
     const result=await readCashReviewedArchive({db,authorize,repository,req});res.setHeader('Cache-Control','private, no-store');res.json(result);
-  }catch(error){failed(res,error);}});
+  }catch(error){fail(res,error,'ARCHIVE');}});
   router.post('/stores/:storeId/reviews',async(req,res)=>{try{
+    if(req.query.fullAudit!==undefined&&req.query.fullAudit!=='1')return res.status(400).json({error:'Μη έγκυρη επιλογή πλήρους ελέγχου.',code:'CASH_RECONCILIATION_INVALID_REQUEST'});
     const request=reconciliationRequest.safeParse(req.body);if(!request.success)return res.status(400).json({error:'Τα στοιχεία ελέγχου δεν είναι έγκυρα.',code:'CASH_RECONCILIATION_INVALID_REQUEST'});
-    const {scope,actor}=await authorize(db,req.user,req.params.storeId);scope.generation=request.data.generation;
+    const {scope,actor}=await authorize(db,req.user,req.params.storeId);scope.generation=request.data.generation;if(req.query.fullAudit==='1')scope.fullAudit=true;
     const result=await repository.apply(scope,actor,request.data);await current(req,scope);res.setHeader('Cache-Control','private, no-store');res.json(result);
-  }catch(error){failed(res,error);}});
+  }catch(error){fail(res,error,'REVIEW');}});
   return router;
 }
 export default createCashReconciliationRouter();

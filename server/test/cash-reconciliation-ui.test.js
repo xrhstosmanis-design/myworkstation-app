@@ -147,3 +147,63 @@ test('original handoff reply selects both exact shifts, requires explicit decisi
   assert.equal(posts().length,2);assert.equal(JSON.parse(posts()[1].body).data.status,'OPEN');assert(!posts().some(p=>JSON.parse(p.body).data.kind==='CONFIRM'));
  }finally{await m.cleanup();}
 });
+
+const automaticButton='Αυτόματος έλεγχος με χειρόγραφα και συμβάντα';
+const paperList=(store='A')=>({storeId:store,generation:'0',status:'AWAITING_READING',sources:[{checksum:'a'.repeat(64),reading:{status:'EXTRACTED_UNVERIFIED'}},{checksum:'b'.repeat(64),reading:{status:'NOT_READ'}},{checksum:'c'.repeat(64),reading:{status:'NOT_READ'}}]});
+const paperStep=(status,checksum,remaining,p=period)=>({storeId:'A',generation:'0',period:p,status,processedChecksum:checksum,remaining});
+test('mounted automatic check explicitly discovers papers, processes next unread originals and requests full evidence once with no review mutation',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];let step=0,copied;
+ Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>copied=text}});
+ const api=async(path,options={})=>{calls.push({path,...options});
+  if(path.endsWith('/read-next')){assert.equal(options.method,'POST');assert.deepEqual(JSON.parse(options.body),{generation:'0',period});return ++step===1?paperStep('MORE','b'.repeat(64),1):paperStep('COMPLETE','c'.repeat(64),0);}
+  if(path==='/api/cash-papers/stores/A')return paperList();
+  const url=new URL(path,'https://isolated.invalid'),store=url.pathname.split('/').at(-1);return {...report(store,period),text:url.searchParams.has('fullAudit')?'FULL EVIDENCE REPORT':'BASIC REPORT'};
+ };
+ const render=store=>act(async()=>root.render(React.createElement(Component,{api,storeId:store,...period}))),click=el=>act(async()=>el.click());
+ try{
+  await render('A');assert.equal(calls.length,0);await click(button('Έλεγχος με επανυπολογισμούς'));assert.equal(calls.length,1);assert(!calls[0].path.includes('fullAudit'));
+  await click(button(automaticButton));assert.deepEqual(calls.slice(1).map(c=>new URL(c.path,'https://isolated.invalid').pathname),['/api/cash-papers/stores/A','/api/cash-papers/stores/A/read-next','/api/cash-papers/stores/A/read-next','/api/cash-reconciliation/stores/A']);
+  assert.equal(new URL(calls.at(-1).path,'https://isolated.invalid').searchParams.get('fullAudit'),'1');assert.equal(step,2,'existing extraction needs no separate AI read');assert(!calls.some(c=>c.path.endsWith('/read')||c.path.endsWith('/reviews')));
+  await click(button('Αντιγραφή ελεγμένης αναφοράς'));assert.equal(copied,'FULL EVIDENCE REPORT');
+  await click(button('Ανανέωση ελέγχου'));assert.match(calls.at(-1).path,/fullAudit=1/);assert.equal(step,2,'refresh reuses completed evidence without another POST');
+  await render('B');await click(button('Έλεγχος με επανυπολογισμούς'));assert.match(calls.at(-1).path,/stores\/B\?/);assert(!calls.at(-1).path.includes('fullAudit'),'another store starts with its basic view until explicitly requested');
+ }finally{await m.cleanup();}
+});
+test('mounted automatic check stops a stale discovery or read-next response after store or period changes',async()=>{
+ for(const phase of ['discovery','read-next']){
+  const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];let release;
+  const api=async(path,options={})=>{calls.push({path,...options});
+   if(path==='/api/cash-papers/stores/A')return phase==='discovery'?new Promise(resolve=>release=()=>resolve(paperList())):paperList();
+   if(path.endsWith('/read-next'))return new Promise(resolve=>release=()=>resolve(paperStep('MORE','b'.repeat(64),1)));
+   const url=new URL(path,'https://isolated.invalid');return report(url.pathname.split('/').at(-1),{from:url.searchParams.get('from'),to:url.searchParams.get('to')});
+  };
+  const render=(store,p=period)=>act(async()=>root.render(React.createElement(Component,{api,storeId:store,...p}))),click=el=>act(async()=>el.click());
+  try{
+   await render('A');await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(automaticButton));assert.equal(typeof release,'function');
+   await render(phase==='discovery'?'B':'A',{from:'2026-10-24',to:'2026-10-25'});await act(async()=>release());await act(async()=>Promise.resolve());
+   assert.equal(calls.filter(c=>c.method==='POST').length,phase==='discovery'?0:1);assert(!calls.some(c=>c.path.includes('fullAudit')));assert.doesNotMatch(document.body.textContent,/SERVER REPORT A|Ανάγνωση χειρόγραφων:/);assert.equal(button('Έλεγχος με επανυπολογισμούς').getAttribute('aria-expanded'),'false');
+  }finally{await m.cleanup();}
+ }
+});
+test('mounted automatic check never retries uncertain provider requests and a normal refresh remains a read',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];
+ const api=async(path,options={})=>{calls.push({path,...options});if(path==='/api/cash-papers/stores/A')return paperList();if(options.method==='POST')throw Error('Uncertain response');return report('A',period);};
+ const click=el=>act(async()=>el.click());
+ try{
+  await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(automaticButton));
+  assert.equal(calls.filter(c=>c.method==='POST').length,1);assert.match(document.body.textContent,/Δεν επαναλαμβάνεται αυτόματα αβέβαιο αίτημα/);
+  await act(async()=>Promise.resolve());assert.equal(calls.filter(c=>c.method==='POST').length,1);assert(!calls.some(c=>c.path.includes('fullAudit')));
+  await click(button('Ανανέωση ελέγχου'));assert.equal(calls.filter(c=>c.method==='POST').length,1);assert(!calls.at(-1).path.includes('fullAudit'));
+ }finally{await m.cleanup();}
+});
+test('mounted automatic check bounds a malformed MORE stream to at most fifty paid requests and refuses duplicate checksums',async()=>{
+ for(const duplicate of [false,true]){
+  const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];let posts=0;
+  const api=async(path,options={})=>{calls.push({path,...options});if(path==='/api/cash-papers/stores/A')return paperList();if(options.method==='POST'){posts++;return paperStep('MORE',String(duplicate?1:posts).padStart(64,'0'),50);}return report('A',period);};
+  const click=el=>act(async()=>el.click());
+  try{
+   await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await click(button('Έλεγχος με επανυπολογισμούς'));await click(button(automaticButton));
+   assert.equal(posts,duplicate?2:50);assert(!calls.some(c=>c.path.includes('fullAudit')));assert.match(document.body.textContent,/Δεν επαναλαμβάνεται αυτόματα αβέβαιο αίτημα/);
+  }finally{await m.cleanup();}
+ }
+});

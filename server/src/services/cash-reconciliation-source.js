@@ -3,6 +3,11 @@ import {readCashExpenseEvidence,cashExpenseFindings,purchaseDocumentMime} from '
 import {readCashReviewState} from './cash-review-balance.js';
 import {readCashControlRule} from './cash-control-rules.js';
 import {exactCents,hash,reconcileError} from './cash-reconciliation-contract.js';
+import {readCashChatEvidence} from './cash-chat-evidence.js';
+import {createCashPaperRepository} from './cash-paper-repository.js';
+import {projectAutomaticPaperEvidence,boundAutomaticPaperDiscovery} from './cash-paper-automatic.js';
+import {readCashReviewEvidence} from './cash-review-evidence.js';
+import {readFullCashEventEvidence} from './cash-full-audit.js';
 
 export const cashReconciliationSourceLimit=200;
 export async function readReconciliationSession(db,scope,id,rule){
@@ -47,5 +52,14 @@ export async function readReconciliationSources(db,scope,period,extraIds=[]){
   const neighbours=[...new Set([...sessions.values()].flatMap(s=>[s.session.previousSession?.id,s.session.nextSession?.id]).filter(Boolean))];
   if(new Set([...ids,...neighbours]).size>500)throw reconcileError('CASH_RECONCILIATION_LIMIT');
   for(const id of neighbours)if(!sessions.has(id))sessions.set(id,await readReconciliationSession(db,scope,id,rule));
-  return {store:stores,rule,sessions,selectedIds,period,coverage:'BOUNDED_CLOSED_SHIFTS',limit:cashReconciliationSourceLimit};
+  let paperEvidence;
+  if(scope.fullAudit===true){
+    const discovery=boundAutomaticPaperDiscovery(await readCashChatEvidence(db,scope)),repository=createCashPaperRepository(db),papers=[];
+    for(const source of discovery.sources||[]){let reading={status:'REQUIRES_REVIEW'};if(source.checksum&&source.references?.[0]?.messageId){try{await repository.source(scope,source.references[0].messageId,source.checksum);reading=await repository.get(scope,source.checksum);}catch{}}papers.push({...source,reading});}
+    paperEvidence=projectAutomaticPaperEvidence({scope,sessions,papers,discovery,selectedIds,period});
+    for(const id of selectedIds){const original=sessions.get(id);
+      original.fullEvidence={duplicates:await readCashReviewEvidence(db,{...original.session,sessionId:id},{includeChat:false}),events:await readFullCashEventEvidence(db,scope,original.session,original.automaticTransactions||[])};
+    }
+  }
+  return {store:stores,rule,sessions,selectedIds,period,coverage:'BOUNDED_CLOSED_SHIFTS',limit:cashReconciliationSourceLimit,...(paperEvidence?{paperEvidence}:{})};
 }

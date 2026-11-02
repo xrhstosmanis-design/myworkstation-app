@@ -23,8 +23,11 @@ export function createCashReconciliationRepository(db){
     if(!line)throw reconcileError('CASH_RECONCILIATION_PAPER_UNAVAILABLE');
     return {paperLineHash:hash(line),rawLine:line,printedDate:reading.extraction.dateText,modelDocumentDate:reading.extraction.documentDate};
   }
-  async function materialize(tx,scope,period,chain,extraIds=[],selection=null){
-    const active=activeRecords(chain.records),source=await readReconciliationSources(tx,scope,period,extraIds);
+  async function materialize(tx,scope,period,chain,extraIds=[],selection=null,preparedSource=null){
+    // Reuse only a source read by this call in the same transaction. This is
+    // deliberately not a cross-request cache: source hashes and lifecycle
+    // generation still come from the current RepeatableRead snapshot.
+    const active=activeRecords(chain.records),source=preparedSource||await readReconciliationSources(tx,scope,period,extraIds);
     if(selection){source.selectedIds=selection.ids;source.period=selection.displayPeriod;}
     const connected=new Set(source.sessions.keys());let expanded=true;
     while(expanded){expanded=false;for(const r of active.filter(r=>r.data.kind==='OFFSET')){
@@ -73,7 +76,7 @@ export function createCashReconciliationRepository(db){
     const displayPeriod={from:days[0],to:days.at(-1)};
     if(!days.every(d=>typeof d==='string')||(Date.parse(displayPeriod.to)-Date.parse(displayPeriod.from))/86400000>=32)throw reconcileError('CASH_RECONCILIATION_LIMIT');
     const ids=chosen.map(s=>s.session.id);
-    const {report}=await materialize(tx,scope,scanPeriod,chain,ids,{ids,displayPeriod});
+    const {report}=await materialize(tx,scope,scanPeriod,chain,ids,{ids,displayPeriod},source);
     return {report,head:chain.head,generation:scope.generation};
   }
   async function apply(scope,actor,request){

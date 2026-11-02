@@ -14,6 +14,17 @@ test('different items, pack quantity, repeated lines, discounts, missing identit
  assert.equal(consecutiveSaleCandidates([sale('a'),sale('b',121)]).length,0);
  assert.equal(consecutiveSaleCandidates([sale('a'),sale('b',20,{lines:[]})]).length,0);
 });
+test('consecutive identical card and mixed-method receipts use an inclusive one-minute window',()=>{
+ for(const methods of [['CARD','CARD'],['CASH','CARD'],['CARD','CASH']]){
+  for(const seconds of [59,60,61]){
+   const first=sale('first',0,{payments:[{method:methods[0],amount:5}]}),second=sale('second',seconds,{payments:[{method:methods[1],amount:5}]});
+   const before=structuredClone([first,second]),result=consecutiveSaleCandidates([first,second]);
+   assert.equal(result.length,seconds<=60?1:0);
+   if(result.length){assert.equal(result[0].secondsApart,seconds);assert.equal(result[0].requiresConfirmation,true);assert.deepEqual(result[0].transactions.map(t=>t.saleId),['first','second']);}
+   assert.deepEqual([first,second],before);
+  }
+ }
+});
 test('same-chain next two and preceding context cross dates without including other tenants, terminals or overlapping sessions',()=>{
  const current=shift('current',22,-27.3),next=shift('next',30,29.4);const before=JSON.stringify(current);
  const result=shiftChainEvidence(current,[shift('previous',14),next,shift('second',38),shift('foreign',30,27.3,{companyId:'x'}),shift('delivery',30,27.3,{terminalPos:'DELIVERY'})]);
