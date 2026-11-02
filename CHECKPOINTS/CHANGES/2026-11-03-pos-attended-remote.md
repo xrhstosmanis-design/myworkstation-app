@@ -18,3 +18,5 @@ Local Node20 focused tests: 23 total, 22 PASS, 0 FAIL, 1 SKIP (native PostgreSQL
 Next action: publish source candidate, require full CI plus Windows build/bridge tests, reconcile current main and guarded release with flag OFF; then exact-PC supervised LAB activation and physical acceptance. Publishing source or CI is not production remote-support completion.
 
 Full local server suite on pre-reconciliation candidate: 4,969 tests total / 4,627 PASS / 0 FAIL / 342 environment-dependent SKIP, 171.59s. Exact reconciled PR native database and Windows checks remain required.
+
+Additional actual React-mounted controller test PASS: three concurrent stream identities render the correct store/POS, stopping the middle target leaves the other two visible, changing the logged-in token hides all screens and aborts streams. This is an isolated component result, not physical Windows acceptance. Source PR #3574.
