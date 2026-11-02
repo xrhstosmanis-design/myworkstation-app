@@ -1,0 +1,117 @@
+{
+  "format": "MWS_MONTHLY_TABLE_ORIGINAL_RECOVERY_EVIDENCE_V1",
+  "status": "ISOLATED_MONTHLY_TABLE_ORIGINAL_RESTORE_VERIFIED",
+  "serviceId": "crn-dau2gdbncjis73agfh30",
+  "workerRevision": "aa1cbcf8ed8461d4abb565376857508217fd6539",
+  "archive": {
+    "runId": "20261102T090030Z-9764",
+    "key": "myworkstation/2026/11/02/backup-20261102T090030Z-9764.dump",
+    "versionId": "4_z217a89158062f23bad000f16_f246285cda0e86aee_d20261102_m090211_c003_v0312046_t0042_u01793610131232",
+    "bytes": 369731641,
+    "sha256": "b96f09f447b4777505fbfaf2ebc35400faad43039055097d0c1ba58561ebcb63",
+    "encryption": "AES256",
+    "versionSpecificReadbackVerified": true,
+    "bucketVersioningObserved": "Enabled"
+  },
+  "phases": {
+    "downloadStartedAt": "2026-11-02T11:35:55.200687Z",
+    "downloadReadbackVerifiedAt": "2026-11-02T11:36:29.865089Z",
+    "selectedTocVerifiedAt": "2026-11-02T11:36:35.597786Z",
+    "privateTableRestoreStartedAt": "2026-11-02T11:36:35.597882Z",
+    "privateTableRestoreExitZeroAt": "2026-11-02T11:36:36.099038Z",
+    "selectedCopyVerifiedAt": "2026-11-02T11:36:36.724069Z",
+    "originalBytesVerifiedAt": "2026-11-02T11:36:36.893524Z",
+    "finalVerifiedAt": "2026-11-02T11:36:37.100363Z"
+  },
+  "restoreScope": {
+    "table": "public.MonthlyInventorySnapshot",
+    "preDataAndDataOnly": true,
+    "postDataRestored": false,
+    "dependentTablesRestored": false,
+    "privatePublicTableCount": 1,
+    "privateTableRows": 1,
+    "privateCandidateBytes": 46050,
+    "localSocket": true,
+    "listenAddresses": "",
+    "serverVersionNum": "180006",
+    "applicationWorkersStarted": false,
+    "productionRestore": false
+  },
+  "copyAudit": {
+    "format": "MWS_COPY_ROUNDTRIP_AUDIT_V1",
+    "dataMatches": true,
+    "tables": 1,
+    "rows": 1,
+    "copyBytes": 46952,
+    "sequences": 0,
+    "rowOrder": "UNORDERED_MULTISET",
+    "sha256": "2eb1882f157860a05d71755358abc91808d9a3fd22193954024c7f2f7553eeb1",
+    "executionAuthorized": false
+  },
+  "snapshot": {
+    "id": "fd3523ea-f95b-4f9f-bf3c-4e2de0e0e91c",
+    "companyId": "cmtpopbgk000prhb5qc60zxus",
+    "storeId": "cmtpopbgo000trhb5ng9ytiru",
+    "lifecycleGeneration": "0",
+    "issueMonth": "2026-10",
+    "candidateUtf8Bytes": 46050,
+    "storedBytesSha256": "88fb52a28b80384a4d45eef5716bc8ebf462c08bc3b62fcade5a3932696886f1",
+    "sourceHash": "c3150e2b0bbe513dda6edd94c785ec005be72041d32f55847954d9e17f465ada",
+    "payloadHash": "4c58e395f3c35b1cb407161f5f4153a8eeb19857e4d9caf5f3e0ac0486cedb81",
+    "sourceRevision": "5c3e9eacb69ce2c0df801eb5dd9aecf04506d69e",
+    "sourceObservedAt": "2026-11-01T21:20:00.511Z",
+    "storedAt": "2026-11-01T21:20:00.918447Z",
+    "scheduledFor": "2026-11-01T05:00:00.000Z",
+    "observationStatus": "LATE",
+    "delayMs": "58800511",
+    "uniqueScopedSlotCount": 1,
+    "sourceAuthenticityVerified": false
+  },
+  "sampledResourceObservation": {
+    "cgroupLimitBytes": 268435456,
+    "peakCurrentBytes": 268447744,
+    "peakWorkingSetBytes": 88170496,
+    "workingSetDefinition": "memory.current minus inactive_file, sampled; not an absolute memory/no-OOM guarantee"
+  },
+  "temporaryCleanupVerified": true,
+  "previousFullArchiveAttempt": {
+    "status": "PARTIAL_OBSERVATION_NOT_ACCEPTED",
+    "fullCopyComparison": "NOT_TESTED_NO_RESULT_OBSERVED",
+    "snapshotBytesResult": "NOT_TESTED_NO_RESULT_OBSERVED",
+    "oldInstanceTemporaryCleanupVerified": null,
+    "shellResetCause": "UNESTABLISHED",
+    "supersededByThisSelectedTableTest": false
+  },
+  "limits": [
+    "This acceptance covers version-specific existing-archive readback, selected-table COPY roundtrip and original snapshot bytes only.",
+    "No full-archive roundtrip, post-data/dependent-schema/FK/index/immutability-trigger, production restore, app/disaster recovery or physical-source truth acceptance.",
+    "Cleanup is proven only for the separately identified selected-table attempt, not the earlier unknown Shell instance.",
+    "No new backup, production reset, lifecycle execution, paid resource or financial/stock/provider/mail action."
+  ],
+  "sameSelectedTableShellPostCheck": {
+    "lastDriverExit": 0,
+    "newTestPrivateDirectories": [],
+    "memoryEvents": {
+      "low": 0,
+      "high": 0,
+      "max": 3405,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "scope": "Only this separately identified selected-table Shell; no old-instance conclusion"
+  },
+  "postProductionOriginalReadOnlyControl": {
+    "observedAt": "2026-11-02T11:39:14.935891Z",
+    "inRecovery": false,
+    "candidateUtf8Bytes": 46050,
+    "actualCandidateSha256": "88fb52a28b80384a4d45eef5716bc8ebf462c08bc3b62fcade5a3932696886f1",
+    "storedBytesSha256": "88fb52a28b80384a4d45eef5716bc8ebf462c08bc3b62fcade5a3932696886f1",
+    "sourceHash": "c3150e2b0bbe513dda6edd94c785ec005be72041d32f55847954d9e17f465ada",
+    "payloadHash": "4c58e395f3c35b1cb407161f5f4153a8eeb19857e4d9caf5f3e0ac0486cedb81",
+    "storedAt": "2026-11-01T21:20:00.918447Z",
+    "sourceObservedAt": "2026-11-01T21:20:00.511Z",
+    "wholeFinancialOrStockInvarianceMeasured": false
+  }
+}
