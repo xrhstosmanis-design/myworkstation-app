@@ -1,0 +1,297 @@
+{
+  "scope": "Fresh before hosted source3 read-only UI/PDF/XLSX acceptance",
+  "release": {
+    "observedAt": "2026-11-02T01:00:10.813753+00:00",
+    "ok": true,
+    "revision": "3bc8734fc112e96312ad66f65b2ac2bbb4d3cba0",
+    "version": "0.22.0+kat-test-pos"
+  },
+  "business": [
+    {
+      "count": 43,
+      "digest": "aa65e721ebbcea5c78f7b7f34465a510",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "CashShiftSession",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "CashShiftSession",
+      "storeId": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "count": 27,
+      "digest": "d5da878a66a3f6a2240d45d171dde8a6",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "InventoryCountEvent",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "InventoryCountEvent",
+      "storeId": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "count": 90,
+      "digest": "396bb5f85cec9f0eb7c19cad610e36b9",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "Sale",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "Sale",
+      "storeId": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "count": 95,
+      "digest": "c58921fcc1c2eb689dc90c722b05eda5",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "StockMovement",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "StockMovement",
+      "storeId": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "count": 4,
+      "digest": "9829f46cd8485d5488ec466d5689756f",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "Stocktake",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "Stocktake",
+      "storeId": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "count": 18,
+      "digest": "eb8abb5ef4226ad73ecdc430f297d242",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "StocktakeLine",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "StocktakeLine",
+      "storeId": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "count": 110,
+      "digest": "b49d7249521c0d87ddc3e088f45e8832",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "StoreProduct",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "StoreProduct",
+      "storeId": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "count": 134,
+      "digest": "9224b3833cbd0de0f5f13236d31d235d",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "StoreTransaction",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:46.115982Z",
+      "source": "StoreTransaction",
+      "storeId": "cmv2qanca000psigeizep8o9m"
+    }
+  ],
+  "evidence": [
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmtpopbgo000trhb5ng9ytiru",
+      "source": "InvoiceDraftAlias"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmv2qanca000psigeizep8o9m",
+      "source": "InvoiceDraftAlias"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmtpopbgo000trhb5ng9ytiru",
+      "source": "InvoiceStockPosting"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmv2qanca000psigeizep8o9m",
+      "source": "InvoiceStockPosting"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmtpopbgo000trhb5ng9ytiru",
+      "source": "KioskAuditEvent"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmv2qanca000psigeizep8o9m",
+      "source": "KioskAuditEvent"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "COMPANY_BASE",
+      "source": "KioskAuditEvent"
+    },
+    {
+      "count": 465,
+      "digest": "355f6734432c5eeae8e93e38c445c755",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmtpopbgo000trhb5ng9ytiru",
+      "source": "PosSaleActionAudit"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmv2qanca000psigeizep8o9m",
+      "source": "PosSaleActionAudit"
+    },
+    {
+      "count": 4,
+      "digest": "27ea5318b773f5982c3d40d81de9cb9e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmtpopbgo000trhb5ng9ytiru",
+      "source": "ProductPriceHistory"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmv2qanca000psigeizep8o9m",
+      "source": "ProductPriceHistory"
+    },
+    {
+      "count": 7,
+      "digest": "ce54197596533e19c49238e452f36835",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "COMPANY_BASE",
+      "source": "ProductPriceHistory"
+    },
+    {
+      "count": 72,
+      "digest": "9f67ce09e95c4ff08a3989d7fa9d3a49",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmtpopbgo000trhb5ng9ytiru",
+      "source": "PurchaseDocument"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmv2qanca000psigeizep8o9m",
+      "source": "PurchaseDocument"
+    },
+    {
+      "count": 714,
+      "digest": "fa0e4d7a04eee730d092e4016a55b613",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmtpopbgo000trhb5ng9ytiru",
+      "source": "PurchaseDocumentLine"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmv2qanca000psigeizep8o9m",
+      "source": "PurchaseDocumentLine"
+    },
+    {
+      "count": 99,
+      "digest": "6ecce223cf9c18bfd00e044a68a65a4f",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmtpopbgo000trhb5ng9ytiru",
+      "source": "SaleLine"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmv2qanca000psigeizep8o9m",
+      "source": "SaleLine"
+    },
+    {
+      "count": 908,
+      "digest": "617ef0926c20474c9cbd4bbf4e4bc376",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmtpopbgo000trhb5ng9ytiru",
+      "source": "StoreOperatorAudit"
+    },
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:00:48.233424Z",
+      "scope": "cmv2qanca000psigeizep8o9m",
+      "source": "StoreOperatorAudit"
+    }
+  ],
+  "auxiliary": [
+    {
+      "observedAt": "2026-11-02T01:00:50.239359Z",
+      "otherAudit": {
+        "count": 7536,
+        "digest": "e68f8222ae067d7a09981bf532b7563b"
+      },
+      "shifts": [
+        {
+          "cards": 0,
+          "cash": 0,
+          "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
+          "iris": null,
+          "status": "OPEN",
+          "sum": 0,
+          "terminal": "MAIN",
+          "transactions": 0
+        }
+      ],
+      "stock": {
+        "latestMovement": "2026-10-10T11:49:05.817",
+        "stock": 4
+      }
+    }
+  ],
+  "reviews": [
+    {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "observedAt": "2026-11-02T01:01:10.931534Z"
+    }
+  ]
+}

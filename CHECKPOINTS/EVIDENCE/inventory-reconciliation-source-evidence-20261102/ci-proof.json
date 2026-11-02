@@ -1,0 +1,20 @@
+{
+  "scope": "Exact source PR CI; not hosted LAB acceptance",
+  "pullRequest": 3503,
+  "sourceHead": "0c2073a5de27847a24e9aba14e2531d810b3b974",
+  "sourceTree": "55c3c3a1e9132b7316665f715b3d0c6680a07027",
+  "merge": "3bc8734fc112e96312ad66f65b2ac2bbb4d3cba0",
+  "pullRequestCI": 41367109177,
+  "buildJob": 125029850291,
+  "exactMainCI": {"run": 41368593139, "buildJob": 125034279385, "revision": "3bc8734fc112e96312ad66f65b2ac2bbb4d3cba0", "requiredJobsSucceeded": 5, "serverPass": 5187, "backupPass": 8, "fail": 0, "skip": 0, "nativeCases": [1488, 1502, 1512]},
+  "requiredJobsSucceeded": 5,
+  "server": {"tests": 5187, "pass": 5187, "fail": 0, "skip": 0},
+  "backup": {"tests": 8, "pass": 8, "fail": 0, "skip": 0},
+  "nativeCases": [
+    {"number": 1488, "name": "native evidence reader: accepted consumption, exact postings, audited returns, invoices, late facts, scope and unchanged sources", "status": "PASS", "skipped": false},
+    {"number": 1502, "name": "native reviewed inventory: umbrellas, glasses, source invariance, replay, races, live authority and exports", "status": "PASS", "skipped": false},
+    {"number": 1512, "name": "native read-only two-stocktake SQL/HTTP: scope, count boundary, exports, fingerprint and original invariance", "status": "PASS", "skipped": false}
+  ],
+  "sourceMutations": "No production migration, seed, stock/count/financial action, email or fixture replay",
+  "hostedReviewWrites": "BLOCKED_AUTOMATIC_APPROVAL_READ_ONLY_AUTHORIZATION"
+}
