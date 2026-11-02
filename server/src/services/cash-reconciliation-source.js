@@ -56,7 +56,7 @@ export async function readReconciliationSources(db,scope,period,extraIds=[]){
   if(scope.fullAudit===true){
     const discovery=boundAutomaticPaperDiscovery(await readCashChatEvidence(db,scope)),repository=createCashPaperRepository(db),papers=[];
     for(const source of discovery.sources||[]){let reading={status:'REQUIRES_REVIEW'};if(source.checksum&&source.references?.[0]?.messageId){try{await repository.source(scope,source.references[0].messageId,source.checksum);reading=await repository.get(scope,source.checksum);}catch{}}papers.push({...source,reading});}
-    paperEvidence=projectAutomaticPaperEvidence({scope,sessions,papers,discovery,selectedIds,period});
+    paperEvidence=projectAutomaticPaperEvidence({scope,sessions,papers,discovery,selectedIds,period,storeName:stores.name});
     for(const id of selectedIds){const original=sessions.get(id);
       original.fullEvidence={duplicates:await readCashReviewEvidence(db,{...original.session,sessionId:id},{includeChat:false}),events:await readFullCashEventEvidence(db,scope,original.session,original.automaticTransactions||[])};
     }

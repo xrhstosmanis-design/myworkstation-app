@@ -132,3 +132,19 @@ test('full-audit event and document upload times use midnight 00 with the correc
   assert.doesNotMatch(report.text,/24:25:26/);assert.equal(report.rows[0].remainingCents,-8700);assert.equal(report.rows[0].cardCents,0);assert.deepEqual(source,before);
  }
 });
+
+
+test('verified paper headings render as information while unknown or metadata-only documents keep finality pending',()=>{
+ const source=fullFixture();
+ source.paperEvidence.items.unshift({sourceId:'paper',line:0,status:'INFORMATIONAL',kind:'OTHER',label:'Χειριστής: LAB POS 2',amountCents:null,reason:'VERIFIED_DOCUMENT_HEADER'});
+ const before=structuredClone(source),report=projectReconciliation(source,[]);
+ assert.match(report.text,/Πληροφορία εγγράφου · Συνημμένο · γραμμή 1 · Χειριστής: LAB POS 2 · επαληθευμένη επικεφαλίδα εγγράφου/);
+ assert.equal(report.rows[0].fullAudit.status,'FINAL');assert.equal(report.rows[0].fullCoverage.papers.unresolvedCount,0);
+ assert.equal(report.rows[0].remainingCents,-8700);assert.equal(report.rows[0].cardCents,0);assert.equal(report.originalFinancialLedgerChanged,false);assert.deepEqual(source,before);
+ for(const reason of ['NO_FINANCIAL_DOCUMENT_LINES','LINE_TIME_UNREADABLE']){
+  const unknown=structuredClone(source);unknown.paperEvidence.items.push({sourceId:'unknown',line:null,status:'UNRESOLVED',reason});unknown.paperEvidence.coverage.complete=false;
+  const pending=projectReconciliation(unknown,[]);assert.equal(pending.rows[0].fullAudit.status,'PENDING');assert.equal(pending.rows[0].fullCoverage.papers.unresolvedCount,1);assert.equal(pending.rows[0].remainingCents,-8700);
+  if(reason==='NO_FINANCIAL_DOCUMENT_LINES')assert.match(pending.text,/Χρειάζεται διευκρίνιση.*δεν αναγνωρίστηκαν οικονομικές γραμμές/);
+ }
+ const forged=structuredClone(report);forged.paperEvidence.items[0].status='UNRESOLVED';assert.throws(()=>reconciliationText(forged),/coverage changed/);
+});

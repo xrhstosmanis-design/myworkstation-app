@@ -23,6 +23,8 @@ export function paperCents(value){
 }
 function printedDate(text){
   if(typeof text!=='string')return null;
+  // Multiple printed candidates, even repeated ones, cannot establish one document date.
+  if([...text.matchAll(/\b(?:20\d{2}-\d{2}-\d{2}|\d{1,2}[/.\-]\d{1,2}[/.\-]20\d{2})\b/g)].length!==1)return null;
   const iso=text.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/),local=text.match(/\b(\d{1,2})[/.\-](\d{1,2})[/.\-](20\d{2})\b/);
   if(!iso&&!local)return null;
   const [year,month,day]=iso?iso.slice(1):[local[3],local[2].padStart(2,'0'),local[1].padStart(2,'0')];
@@ -32,7 +34,10 @@ function printedDate(text){
 export function normalizePaper(raw){
   if(JSON.stringify(raw).length>25000)throw paperError('CASH_PAPER_INVALID_RESULT',502);
   const data=rawPaperSchema.parse(raw),date=printedDate(data.dateText);
-  const documentDate=date&&date===data.documentDate?date:null;
+  // Only a complete, unadorned printed date can fill a missing model ISO value.
+  // Keep the raw extraction intact; conflicting model dates remain unverified.
+  const explicitDate=typeof data.dateText==='string'&&/^(?:20\d{2}-\d{2}-\d{2}|\d{1,2}(?<separator>[/.\-])\d{1,2}\k<separator>20\d{2})$/.test(data.dateText.trim());
+  const documentDate=date&&(date===data.documentDate||data.documentDate===null&&explicitDate)?date:null;
   return {...data,documentDate,lines:data.lines.map(line=>({...line,amountCents:paperCents(line.amountText),requiresReview:line.uncertain||(line.kind!=='OTHER'||line.amountText!==null)&&paperCents(line.amountText)===null})),
     associationVerified:false,employeeLiabilityAdjusted:false,readingOnly:true};
 }
