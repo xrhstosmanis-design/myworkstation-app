@@ -18,7 +18,7 @@ while($true) {
             '2' { & (Join-Path $PSScriptRoot 'Cloud-Test.ps1') -ConfigPath $ConfigPath }
             '3' { Start-Process powershell.exe -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+(Join-Path $PSScriptRoot 'Cloud-Connector.ps1')+'"'),'-ConfigPath',('"'+$ConfigPath+'"')) }
             '4' { return }
-            '5' { Invoke-FtextStatusMaintenance -ConfigPath $ConfigPath -Mode Plan | Format-List }
+            '5' { Invoke-FtextStatusMaintenance -ConfigPath $ConfigPath -Mode Plan | Select-Object candidatePairs,acknowledgedPairs,retainedPairs,rejectedPairs,resuming | Format-List }
             '6' { Invoke-FtextStatusMaintenance -ConfigPath $ConfigPath -Mode Apply | Format-List }
             '7' { Invoke-FtextStatusMaintenance -ConfigPath $ConfigPath -Mode Restore | Format-List }
         }

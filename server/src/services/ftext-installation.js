@@ -69,7 +69,7 @@ export function createFtextInstallationService({db,moduleState,secret,clock=()=>
  async function currentCashContext(t,scope,{requireOnline=true,requireStatus=true}={}){const s=scopeOf(scope),d=await device(t,s,true),c=config(d,s);await current(t,d,s,c.lifecycleGeneration);if(d.status!=='ACTIVE'||c.cashEnabled!==true)fail(409,'Η έκδοση μετρητών ftext δεν έχει ενεργοποιηθεί/ζευγοποιηθεί.');if(requireOnline&&(!d.lastSeenAt||clock()-new Date(d.lastSeenAt)>=15000))fail(409,'Ο connector ftext είναι εκτός σύνδεσης.');if(requireOnline)assertFtextRegisterReady(d,c,clock());if(requireStatus&&(!d.metadata?.ftextLastStatus?.ok||d.metadata.ftextLastStatus.serialNumber!==c.serialNumber))fail(409,'Χρειάζεται επιτυχής έλεγχος STATUS με τις τρέχουσες ρυθμίσεις.');return {device:d,settings:c,scope:{...s,fiscalDeviceCode:c.fiscalDeviceCode}};}
  return {
   authenticated,
-  statusHistory(token,input){
+  async statusHistory(token,input){
    const body=z.object({requestIds:z.array(z.string().regex(/^[a-f0-9]{32}$/)).min(1).max(100)}).strict().parse(input);
    return authenticated(token,async(t,d,c,s)=>{
     // Historical acknowledgement is archive eligibility only, never new readiness.
