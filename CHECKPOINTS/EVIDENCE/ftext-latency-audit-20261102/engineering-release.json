@@ -1,0 +1,91 @@
+{
+  "stage": "ENGINEERING_LIVE_PC_UPDATE_AWAITING_USER",
+  "claimPr": 3516,
+  "claimMerge": "2d3d7625cff9ccd4b95e5f5350ea34100ef00912",
+  "sourcePr": 3517,
+  "finalSourceHead": "f8118953018e49d185d3bd164b161b1b953b6de6",
+  "sourceMerge": "5288515d1f61a0ae344991aeaaa4e33f680dc2f5",
+  "prCI": {
+    "run": 41436892431,
+    "job": 125249984010,
+    "serverPass": 5194,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "windowsCI": {
+    "run": 41436892483,
+    "job": 125248795541,
+    "result": "SUCCESS"
+  },
+  "nativeRecoveryCI": {
+    "run": 41436892452,
+    "job": 125248796459,
+    "pass": 50,
+    "fail": 0,
+    "skip": 0
+  },
+  "sourceMainCI": {
+    "run": 41439415075,
+    "job": 125258630107,
+    "serverPass": 5204,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "healthyIntegratedRevision": "dbb46c0ca655d139ac6ff76bd7f4d1949cd17c15",
+  "healthyIntegratedCI": {
+    "run": 41448555878,
+    "job": 125288379978,
+    "serverPass": 5251,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "normalGuardedDeploy": {
+    "run": 41450771906,
+    "job": 125295221354,
+    "exactHealthSucceededUtc": "2026-11-02T13:15:31Z"
+  },
+  "independentHealth": {
+    "ok": true,
+    "revision": "dbb46c0ca655d139ac6ff76bd7f4d1949cd17c15",
+    "checkedUtc": "2026-11-02T15:16:28.572499+00:00",
+    "method": "direct no-cache HTTPS health GET"
+  },
+  "runtimeComparison": "All FTEXT runtime and tests unchanged from source merge through healthy integrated revision; seven package module bytes match healthy source.",
+  "installation": {
+    "status": "ACTIVE",
+    "tokenVersion": 6,
+    "settingsHash": "4231356f6dc75c59a8ba083ac779c087681acd2535f77060ffd54eab4348ee89",
+    "samePairing": true
+  },
+  "package": {
+    "revision": "dbb46c0ca655d139ac6ff76bd7f4d1949cd17c15",
+    "settingsHash": "4231356f6dc75c59a8ba083ac779c087681acd2535f77060ffd54eab4348ee89",
+    "bytes": 148112,
+    "sha256": "4ff1dd509a479f41c0e5af5071359f5a5497c132019057334fcd09ee153efd27",
+    "modules": {
+      "Ftext.psm1": "4110dde7af86f34d4cc03d14569c290a59a0bb1faef594ab900f247e1fc58610",
+      "Cloud-Tools.psm1": "919a050bb37d2cb41c88dace6661c918cc6052f74db1a085d8e7f8c58f7148f7",
+      "Pair.ps1": "c9ae79e2f7557171334c958ded0c710470b3209d6e5fe730aac4f9146f28be2f",
+      "Cloud-Test.ps1": "6d4d55184a1abed6337d10d3a76c499d58a45931c525b1a82e0929e686eb50a4",
+      "Cloud-Connector.ps1": "90ff2e64d2379d401abb16b2165992c2410a11c7b1863790209c47a58ebfff5e",
+      "Setup.ps1": "15b820fac46560f0560a0721486beb6a46fdb0fff57ee1647e9fab1dabadbbbd",
+      "Cash.psm1": "5b75ce63b3a4f6fdbdaa5b0582c3bd3f9e9006ddc4fbdedc5286572260e33750"
+    },
+    "credentials": false,
+    "automaticStart": false,
+    "libraryFileId": "libfile_597bc5345cd88191a75436df91809309",
+    "libraryVersion": 8,
+    "fileId": "file_0000000070e08246a9ada071441ce67b"
+  },
+  "physical": {
+    "installedOnPC": "NOT TESTED",
+    "archivalExecuted": false,
+    "latencyImprovement": "NOT TESTED",
+    "latestUserBaseline": "CASH approximately17s; CARD terminal activation35s. Prior WATER0.50 paper/UI28s USER FAIL remains recorded.",
+    "financialStockDelta": "NOT TESTED; no diagnostic sale"
+  },
+  "remaining": "Selected-PC preview/archive/restart and passive before/after timing. Then bounded scheduling correction only with an achievable measured readiness budget."
+}
