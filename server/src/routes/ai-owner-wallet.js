@@ -1,3 +1,4 @@
+import {createSharedCostReviewRoutes} from './shared-cost-reviews.js';
 import {postpaidGrantSchema,postpaidPaymentSchema} from '../services/ai-wallet-postpaid.js';
 import {invoiceWalletFeatures} from "../services/ai-wallet-invoice-metering.js";
 import {customerPricingSchema,customerCharge,DEFAULT_CUSTOMER_PRICING} from '../services/ai-wallet-customer-pricing.js';
@@ -25,6 +26,7 @@ const creditSchema=z.object({amountMicros:z.string().regex(/^\d{1,13}$/),receipt
 const trialSchema=z.object({amountMicros:z.string().regex(/^\d{1,13}$/),grantReference:reference,reason:z.string().trim().min(5).max(300),trialConfirmed:z.literal(true)}).strict();
 export function createAiOwnerWalletRoutes({db=prisma,repository=aiOwnerWalletRepository,authenticate=auth,access=createWalletAccess(db),enabled=()=>process.env.AI_OWNER_WALLET_ENABLED==='true',env=process.env}={}){
   const router=Router();router.use(authenticate);
+  router.use('/platform/shared-cost-reviews',createSharedCostReviewRoutes({db}));
   const run=(mode,fn)=>async(req,res)=>{try{
     res.set('Cache-Control','no-store');const scope=await access[mode](req);
     if(!enabled()){
