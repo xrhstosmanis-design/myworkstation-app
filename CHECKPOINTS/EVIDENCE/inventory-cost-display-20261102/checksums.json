@@ -1,0 +1,11 @@
+{
+  "ci-proof.json": "6d2337a0116cde82ab845e5eac8c17a8881fd69f72a36956086901424e0b8cd8",
+  "pre-release-line.json": "f025118f795265ff47f2cb8e0037ebfc97588849813837c3aeed918cd24096d9",
+  "before.json": "c308afe431fa2c726138746a42b472c6c82802627544ba0ddc9c898154baa34d",
+  "after.json": "17af4106d55fc0f11b1786185512ecfad002c6d987349c0a9cd2098dff9bb6f1",
+  "legacy-count.csv": "ce62417c13489a46ee06bbf5a573317c7ea7a20e58d750d73f8b3923378f3c38",
+  "legacy-full-audit.csv": "56c3c2f03ad63ddd8d3cef697e4b735f4855b175bdf9588d3779c53c552e41a4",
+  "export-validation.json": "4d4230c07cf0e87f0da5c6f4603cc4f8d57b7cd0a0ae4a60db9b876f9b9ff063",
+  "inventory-cost-table-verified-20261102.jpg": "a60b7293cb4a13a3551044b9d12c7c9a626c84dd95a5d4deca2401f561250791",
+  "inventory-reconciliation-final-20261102.jpg": "8fda5cd990115a4738c2df5148f35e76ca753e0134efbd32b125bbbee83ce16d"
+}
