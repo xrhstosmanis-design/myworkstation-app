@@ -182,6 +182,8 @@ export const backofficeFunctionCatalogue=Object.freeze([
     "scope": "STORE",
     "actions": [
       "read",
+      "history.read",
+      "expected.read",
       "count",
       "clear",
       "bulk-zero",

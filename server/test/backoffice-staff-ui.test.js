@@ -18,6 +18,38 @@ async function mount(Component,props){
 }
 const identity={userId:'staff',companyId:'a',fullName:'Fixture',username:'fixture',stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:['cash.read']}]};
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
+test('actual personal workspace wires the independent theory flag and does not invent a difference for an uncounted row',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace');
+ const calls=[],row={id:'st',storeId:'a1',name:'Theory-only draft',status:'DRAFT',lines:[{id:'line',name:'Not counted',sku:'NC',barcodes:[],countedQuantity:null,expectedQuantity:'7',countVersion:0}]};
+ const api=async(path,options={})=>{calls.push({path,options});assert.equal(options.method||'GET','GET');if(path.endsWith('/me'))return {...identity,stores:[{id:'a1',name:'A1',profile:'AUDITOR',capabilities:['inventory.read','inventory.expected.read']}]};return path.endsWith('/stocktakes')?{storeId:'a1',stocktakes:[row]}:row};
+ const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Απογραφή').click());await m.act(async()=>new Promise(r=>setTimeout(r,50)));await m.act(async()=>document.querySelector('.inv2-history-open').click());
+  const table=document.querySelector('.inv2-table-wrap');assert.ok(table);assert.match(table.textContent,/Απόθεμα/);assert.match(table.textContent,/Διαφορά/);assert.ok(!table.textContent.includes('-7'));
+  assert.equal(table.querySelector('tfoot th:nth-last-child(2)').textContent,'—');
+  assert.equal(document.querySelector('[title="Διόρθωση"]'),null);assert.equal(button('Οριστικοποίηση'),undefined);assert.ok(!table.textContent.includes('Αξία κόστους'));
+  assert.ok(calls.filter(x=>!x.path.endsWith('/me')).every(x=>x.options.headers['x-backoffice-store-id']==='a1'));
+ }finally{await m.close()}
+});
+test('native personal finalized history separates theoretical visibility from all edits and financial fields',async()=>{
+ const Center=await component('inventory/InventoryV2Center');
+ const current={id:'st',name:'History fixture',status:'FINALIZED',lines:[{id:'line',name:'Fixture',sku:'SKU',barcodes:['123'],countVersion:4,countedQuantity:'4',expectedQuantity:'991',unitCost:879,salePrice:982}]};
+ for(const expected of [false,true]){
+  const delegated={storeId:'a1',storeName:'A1',stocktakes:[current],listLoaded:true,current,canCount:true,canClear:true,canBulkZero:true,canFinalize:false,canSeeExpected:expected,onLoad:()=>{},onOpen:()=>{},setError:()=>{}};
+  const m=await mount(Center,{current,stores:[{id:'a1',name:'A1'}],delegated,api:async()=>assert.fail('personal history must not call Owner endpoints')});
+  try{
+   assert.ok(document.querySelector('.inv2-table-wrap'));
+   assert.equal(document.body.textContent.includes('991'),expected);
+   assert.equal(document.querySelector('[title="Διόρθωση"]'),null);assert.equal(document.querySelector('[title="Διαγραφή καταμέτρησης"]'),null);
+   assert.equal(document.querySelector('[aria-label="Επιλογή Fixture"]'),null);
+   assert.equal(button('Οριστικοποίηση'),undefined);assert.equal(button('Ομαδική καταμέτρηση'),undefined);
+   assert.equal(button('Full Audit'),undefined);assert.equal(button('Excel / CSV'),undefined);
+   assert.ok(document.querySelector('[aria-label="Αναζήτηση είδους"]'));
+   for(const hidden of ['879','982','Αξία κόστους','Αξία λιανικής'])assert.ok(!document.body.textContent.includes(hidden));
+  }finally{await m.close()}
+ }
+});
 test('personal destructive inventory retry retains exact request identity and freezes navigation until a verified reply',async()=>{
  const Workspace=await component('BackofficeStaffWorkspace');
  for(const kind of ['clear','bulk-zero','delete']){

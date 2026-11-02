@@ -70,7 +70,15 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     const fileEnd=commerceSource.indexOf('\nrouter.get("/ai-reader/status",',fileStart);
     assert.ok(fileStart>=0&&fileEnd>fileStart);let fileHandlers;
     new Function('router','requireCompanyModule','prisma','requireStaffGrant',commerceSource.slice(fileStart,fileEnd))({get:(_path,...handlers)=>{fileHandlers=handlers}},()=> (_req,_res,next)=>next(),db,requireStaffGrant);
-    const app=express();app.use(express.json());app.use('/api/backoffice-staff',createBackofficeStaffRouter({db,authenticate:auth,issueSession,repository}));app.use('/api/inventory-v2',auth,inventory);app.get('/api/lifecycle/stores/:storeId',auth,lifecycleStateHandler(db));app.get('/api/platform/companies',auth,(_req,res)=>res.json({leak:true}));app.get(['/api/transactions/stores/:storeId/overview','/api/cash/stores/:storeId/overview','/api/store-pos/stores/:storeId/sales/recent'],auth,(req,res)=>res.json({storeId:req.user.storeId,capability:req.staffGrant.capability}));app.post('/api/transactions/stores/:storeId',auth,(_req,res)=>res.json({leak:true}));app.get('/api/commerce/documents/inbox/:inboxId/file',auth,...fileHandlers);app.use((e,_req,res,_next)=>res.status(e.status||500).json({code:e.code,error:e.message}));
+    let beforeInventoryRead;
+    const staffReadDb=new Proxy(db,{get(target,key){
+      if(key==='$queryRaw')return async(strings,...values)=>{
+        if(beforeInventoryRead&&strings.join('?').includes('FROM "StocktakeLine"')){const run=beforeInventoryRead;beforeInventoryRead=null;await run()}
+        return target.$queryRaw(strings,...values);
+      };
+      const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;
+    }});
+    const app=express();app.use(express.json());app.use('/api/backoffice-staff',createBackofficeStaffRouter({db:staffReadDb,authenticate:auth,issueSession,repository}));app.use('/api/inventory-v2',auth,inventory);app.get('/api/lifecycle/stores/:storeId',auth,lifecycleStateHandler(db));app.get('/api/platform/companies',auth,(_req,res)=>res.json({leak:true}));app.get(['/api/transactions/stores/:storeId/overview','/api/cash/stores/:storeId/overview','/api/store-pos/stores/:storeId/sales/recent'],auth,(req,res)=>res.json({storeId:req.user.storeId,capability:req.staffGrant.capability}));app.post('/api/transactions/stores/:storeId',auth,(_req,res)=>res.json({leak:true}));app.get('/api/commerce/documents/inbox/:inboxId/file',auth,...fileHandlers);app.use((e,_req,res,_next)=>res.status(e.status||500).json({code:e.code,error:e.message}));
     server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s))});
     const request=async(path,{token,method='GET',body,storeId}={})=>{
       const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{method,signal:AbortSignal.timeout(15000),headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{}),...(storeId?{'x-backoffice-store-id':storeId}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json(),headers:r.headers};
@@ -385,6 +393,46 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "WorkforceAuditLog" WHERE "entityType"='BACKOFFICE_INVENTORY_OPERATION'`)[0].n),4);
       assert.equal(Number((await db.$queryRaw`SELECT COUNT(*) AS n FROM "StocktakeLine" WHERE "stocktakeId"='action-take'`)[0].n),0);
       const foreign=(await db.$queryRaw`SELECT "countVersion","countedQuantity" FROM "StocktakeLine" WHERE "id"='foreign-line'`)[0];assert.equal(foreign.countVersion,0);assert.equal(Number(foreign.countedQuantity),8);
+      assert.deepEqual(await db.$queryRaw`SELECT "id","quantity" FROM "StockMovement" ORDER BY "id"`,controls);
+      assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale" WHERE "id"='control'`)[0].amount),77.33);
+    });
+    await t.test('personal history and theory are independent scoped reads, revalidate grants/epochs and never expose report money or writers',async()=>{
+      await db.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "StoreLifecycleFence" ("storeId" text PRIMARY KEY,"companyId" text NOT NULL,"generation" bigint NOT NULL DEFAULT 0,"maintenance" boolean NOT NULL DEFAULT false,"retired" boolean NOT NULL DEFAULT false)');
+      await db.$executeRaw`INSERT INTO "StoreLifecycleFence" ("storeId","companyId") VALUES ('a1','a') ON CONFLICT ("storeId") DO NOTHING`;
+      await db.$executeRaw`INSERT INTO "Stocktake" ("id","companyId","storeId","name","status","snapshotJson") VALUES ('history-d','a','a1','Draft history','DRAFT','{"privateCost":999}'::jsonb),('history-f','a','a1','Final history','FINALIZED','{"privateCost":999}'::jsonb),('history-other','a','a2','Other store history','FINALIZED','{}'::jsonb),('history-foreign','b','b1','Other company history','FINALIZED','{}'::jsonb)`;
+      await db.$executeRaw`INSERT INTO "StocktakeLine" ("id","stocktakeId","productId","expectedQuantity","countedQuantity","unitCost") VALUES ('history-line-d','history-d','pa',5,4,879),('history-line-f','history-f','pa',7,6,879)`;
+      await db.$executeRaw`INSERT INTO "Stocktake" ("id","companyId","storeId","name","status","scopeType") VALUES ('history-free','a','a1','Free history','FINALIZED','FREE')`;
+      await db.$executeRaw`INSERT INTO "StocktakeLine" ("id","stocktakeId","productId","expectedQuantity","countedQuantity") VALUES ('free-uncounted','history-free','pa',999,NULL),('free-counted','history-free','action-product-2',3,2)`;
+      const users={},caps={read:['inventory.read'],history:['inventory.read','inventory.history.read'],expected:['inventory.read','inventory.expected.read'],both:['inventory.read','inventory.history.read','inventory.expected.read'],finalizer:['inventory.read','inventory.finalize']};
+      for(const [kind,capabilities] of Object.entries(caps)){
+        const username='history.'+kind,created=await createStaffAccount(db,owner,{...input,username,grants:[{storeId:'a1',profile:'AUDITOR',capabilities}]});
+        const login=await request('/api/backoffice-staff/login',{method:'POST',body:{username,pin:input.pin}});assert.equal(login.status,200,JSON.stringify(login.data));users[kind]={id:created.id,token:login.data.token};
+      }
+      const base='/api/backoffice-staff/inventory/stores/a1/stocktakes',get=(kind,suffix='')=>request(base+suffix,{token:users[kind].token,storeId:'a1'});
+      const controls=await db.$queryRaw`SELECT "id","quantity" FROM "StockMovement" ORDER BY "id"`;
+      const linesBefore=await db.$queryRaw`SELECT "id","expectedQuantity","countedQuantity","countVersion","unitCost" FROM "StocktakeLine" WHERE "stocktakeId" IN ('history-d','history-f') ORDER BY "id"`;
+      const forbidden=['unitCost','salePrice','differenceValue','totalCostValue','snapshotJson','snapshot','scopeJson','createdBy','finalizedBy','actorName','deviceId','events'];
+      const check=(value)=>{if(!value||typeof value!=='object')return;for(const [key,item] of Object.entries(value)){assert.ok(!forbidden.includes(key),key);check(item)}};
+      for(const kind of Object.keys(caps)){
+        const list=await get(kind);assert.equal(list.status,200,JSON.stringify(list.data));assert.equal(list.data.stocktakes.some(x=>x.id==='history-f'),['history','both'].includes(kind));assert.ok(list.data.stocktakes.some(x=>x.id==='history-d'));assert.ok(list.data.stocktakes.every(x=>!['history-other','history-foreign'].includes(x.id)));check(list.data);
+        const draft=await get(kind,'/history-d');assert.equal(draft.status,200,JSON.stringify(draft.data));check(draft.data);assert.equal(Object.hasOwn(draft.data.lines[0],'expectedQuantity'),['expected','both','finalizer'].includes(kind));assert.equal(draft.data.lines[0].countedQuantity,'4');
+        const final=await get(kind,'/history-f');assert.equal(final.status,['history','both','finalizer'].includes(kind)?200:404,JSON.stringify(final.data));if(final.status===200){check(final.data);assert.equal(Object.hasOwn(final.data.lines[0],'expectedQuantity'),['both','finalizer'].includes(kind))}
+        for(const id of ['history-other','history-foreign'])assert.equal((await get(kind,'/'+id)).status,404);
+        assert.equal((await request(base,{token:users[kind].token,storeId:'a2'})).status,403);
+      }
+      const free=await get('both','/history-free');assert.equal(free.status,200,JSON.stringify(free.data));assert.deepEqual(free.data.lines.map(x=>x.id),['free-counted']);assert.equal(free.data.scopeType,'FREE');
+      for(const suffix of ['audit','audit.csv','investigation','reconciliation'])assert.equal((await request('/api/inventory-v2/stocktakes/history-f/'+suffix,{token:users.both.token,storeId:'a1'})).status,403);
+      for(const [suffix,method,body] of [['/count','POST',{lineId:'history-line-d',quantity:9,expectedVersion:0,clientEventId:crypto.randomUUID()}],['/finalize','POST',{reason:'must be denied'}],['','DELETE',{clientEventId:crypto.randomUUID(),confirmed:true}]])assert.equal((await request('/api/inventory-v2/stocktakes/history-d'+suffix,{token:users.both.token,storeId:'a1',method,body})).status,403);
+      beforeInventoryRead=()=>db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["inventory.read","inventory.history.read"]'::jsonb WHERE "userId"=${users.both.id}`;
+      const revoked=await get('both','/history-f');assert.equal(revoked.status,409);assert.equal(revoked.data.lines,undefined);
+      await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"=${JSON.stringify(caps.both)}::jsonb WHERE "userId"=${users.both.id}`;
+      beforeInventoryRead=()=>db.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"="generation"+1 WHERE "storeId"='a1'`;
+      assert.equal((await get('both','/history-f')).status,409);
+      await db.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"=0,"maintenance"=true WHERE "storeId"='a1'`;
+      assert.equal((await get('history')).status,409);
+      await db.$executeRaw`UPDATE "StoreLifecycleFence" SET "maintenance"=false WHERE "storeId"='a1'`;
+      assert.equal((await get('both','/history-f')).status,200);
+      assert.deepEqual(await db.$queryRaw`SELECT "id","expectedQuantity","countedQuantity","countVersion","unitCost" FROM "StocktakeLine" WHERE "stocktakeId" IN ('history-d','history-f') ORDER BY "id"`,linesBefore);
       assert.deepEqual(await db.$queryRaw`SELECT "id","quantity" FROM "StockMovement" ORDER BY "id"`,controls);
       assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale" WHERE "id"='control'`)[0].amount),77.33);
     });

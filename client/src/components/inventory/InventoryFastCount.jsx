@@ -26,9 +26,9 @@ export function inventoryTotals(lines = []) {
 }
 
 export default function InventoryFastCount({ api, current, reload, setError, delegated = null }) {
-  const canCount = !delegated || delegated.canCount === true;
-  const canClear = !delegated || delegated.canClear === true;
-  const canBulkZero = !delegated || delegated.canBulkZero === true;
+  const canCount = !delegated || (delegated.canCount === true && current.status === "DRAFT");
+  const canClear = !delegated || (delegated.canClear === true && current.status === "DRAFT");
+  const canBulkZero = !delegated || (delegated.canBulkZero === true && current.status === "DRAFT");
   const actionPending = useRef(false);
   const locked = Boolean(delegated?.locked);
   const showExpected = !delegated || (delegated.canSeeExpected === true && (current.lines || []).length > 0 && current.lines.every(line => line.expectedQuantity !== undefined));
@@ -311,7 +311,7 @@ export default function InventoryFastCount({ api, current, reload, setError, del
                 {canBulkZero && <td className="inv2-select-column"><input type="checkbox" checked={selectedIds.has(line.id)} disabled={locked || saving} onChange={() => toggleLine(line.id)} aria-label={`Επιλογή ${line.name}`} /></td>}
                 <td>{displayBarcode(line) || "—"}</td>
                 <td><b>{line.name}</b><small>{line.sku || "—"} · {line.categoryName || "Χωρίς κατηγορία"}</small></td>
-                {showExpected && <td>{line.expectedQuantity}</td>}<td>{line.countedQuantity ?? "—"}</td>{showExpected && <td>{counted - n(line.expectedQuantity)}</td>}
+                {showExpected && <td>{line.expectedQuantity}</td>}<td>{line.countedQuantity ?? "—"}</td>{showExpected && <td>{delegated && line.countedQuantity === null ? "—" : counted - n(line.expectedQuantity)}</td>}
                 {showValues && <><td>{euro(counted * n(line.salePrice))}</td><td>{costEuro(inventoryCostValue(line))}</td></>}
                 <td className="inv2-row-actions">
                   {current.status === "DRAFT" && <>{canCount && <button title="Διόρθωση" disabled={locked || saving} onClick={() => choose(line, true)}><Pencil /></button>}{canClear && <button title="Διαγραφή καταμέτρησης" disabled={locked || saving || line.countedQuantity === null} onClick={() => clearCount(line)}><Trash2 /></button>}</>}
@@ -320,7 +320,7 @@ export default function InventoryFastCount({ api, current, reload, setError, del
               </tr>;
             })}
           </tbody>
-          <tfoot><tr>{canBulkZero && <th />}<th>ΣΥΝΟΛΑ</th><th>{totals.lines} είδη</th>{showExpected && <th>{totals.expected}</th>}<th>{totals.counted}</th>{showExpected && <th>{totals.difference}</th>}{showValues && <><th>{euro(totals.retail)}</th><th>{costEuro(totals.cost)}</th></>}<th /></tr></tfoot>
+          <tfoot><tr>{canBulkZero && <th />}<th>ΣΥΝΟΛΑ</th><th>{totals.lines} είδη</th>{showExpected && <th>{totals.expected}</th>}<th>{totals.counted}</th>{showExpected && <th>{delegated && rows.some(line => line.countedQuantity === null) ? "—" : totals.difference}</th>}{showValues && <><th>{euro(totals.retail)}</th><th>{costEuro(totals.cost)}</th></>}<th /></tr></tfoot>
         </table>
       </div>
       {showValues && totals.missingCostItems > 0 && <p className="inv2-cost-warning" role="status">Είδη χωρίς θετικό κόστος: {totals.missingCostItems}. Οι άγνωστες αξίες δεν υπολογίζονται ως μηδενικές.</p>}
