@@ -1,3 +1,11 @@
+## 02/11/2026 — POS-INVOICE-HEADER-LATENCY-01 / SOURCE READY / AWAITING FULL CI AND LAB
+
+Same continuation owner /root, source branch fix/pos-invoice-complete-header-20261102. Before-source PR3536/headb3dc6741 passed applicable CI41505573336 and merged7693dad6 before edits. Complete Azure supplier identity + digit-bearing number + ISO-shaped date + finite positive total now returns without requiring product rows; existing reconciled-table bypass, partial fallback, wallet failures and scoped exact-file reuse remain unchanged. No client/payment/draft/job/stock/schema/provider-model/deadline change. Three user-requested parallel read-only audits completed; primary page alone integrates source.
+
+Validation: Node20.20.2 focused116PASS/0FAIL/0SKIP, including22 actual-route cases with real reconciliation/footer/wallet helpers and synthetic transport results. Existing provider normalization is explicitly stubbed; this is not real OCR or hosted acceptance. Added balanced VAT footer/adjacent receipt and CREDIT_NOTE preservation. Independent review found no blocking issue. Frontend build/TABLE_SERVICE PASS. Initial local broad tests encountered omitted sparse-checkout shared files; corrected checkout full suite is running, not a PASS. Full native PR/main CI, normal guarded exact release and measured header/draft LAB acceptance required. Shared PDF regenerated with this receipt; no new manual PASS. Original row accuracy and retained second-draft/new-receipt owners remain OPEN. Never replay a handled real payment or infer an excess allocation.
+
+Next: full CI on exact source, normal release, then authorized synthetic header/draft acceptance with fresh before/after/control evidence. Entire request remains OPEN / NOT TESTED hosted.
+
 # POS invoice header latency — 02/11/2026
 
 ## 02/11/2026 — POS-INVOICE-HEADER-LATENCY-01 / ASSIGNED BEFORE SOURCE / NOT TESTED
