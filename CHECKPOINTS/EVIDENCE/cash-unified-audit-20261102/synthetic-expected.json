@@ -10,6 +10,8 @@
     "amountCents": 940,
     "timeText": "19:24:28"
   },
-  "fixtureSha256": "5bc50f12d757778ae19897f6cc78549fa244a379e8b830d96d305d97a92b297d",
-  "acceptance": "After explicit upload/provider authorization, read only this new checksum in LAB through the existing per-source reader; compare original text and full-audit projection, repeated read reuse, unchanged financial/control state. Do not bulk-read historical LAB supplier photos. Refresh and record the complete baseline immediately before any upload or read."
+  "fixtureSha256": "58a1ba5a0071b82341bd4424eb5d6a343605e81b735561e572268dd913d71d8a",
+  "acceptance": "After explicit upload/provider authorization, read only this new checksum in LAB through the existing per-source reader; compare original text and full-audit projection, repeated read reuse, unchanged financial/control state. Do not bulk-read historical LAB supplier photos. Refresh and record the complete baseline immediately before any upload or read.",
+  "fixtureVersion": 2,
+  "layout": "One financial row contains the printed clock, closing-cash label and amount. The file is generated synthetic printed test data, not a real receipt or handwriting-accuracy proof."
 }
