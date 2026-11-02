@@ -19,15 +19,42 @@ export default function CashReconciliationPanel({api,storeId,from,to,readOnly=fa
   const [mode,setMode]=useState('OFFSET'),[first,setFirst]=useState(''),[second,setSecond]=useState(''),[amount,setAmount]=useState(''),[note,setNote]=useState(''),[verified,setVerified]=useState(false),[target,setTarget]=useState('');
   const [papers,setPapers]=useState([]),[paperId,setPaperId]=useState(''),[lineIndex,setLineIndex]=useState(''),[confirmedKind,setConfirmedKind]=useState(''),[confirmedDate,setConfirmedDate]=useState(''),[operatorContext,setOperatorContext]=useState(''),[transactionId,setTransactionId]=useState(''),[resumeFrom,setResumeFrom]=useState(''),[pendingNotes,setPendingNotes]=useState('');
   const scope=JSON.stringify([storeId,from,to]),selected=useRef(scope),sequence=useRef(0),busyRef=useRef(false),pendingRequest=useRef(null);selected.current=scope;
-  useEffect(()=>{sequence.current++;busyRef.current=false;pendingRequest.current=null;setOpened(false);setData(null);setBusy(false);setError('');setMessage('');setNeedsRefresh(false);setPapers([]);setPaperId('');setLineIndex('');setVerified(false);setNote('');setFirst('');setSecond('');setTarget('');setIssueId('');setIssueStatus('OPEN');return()=>{sequence.current++;};},[scope,readOnly]);
+  const fullMode=useRef(false);
+  useEffect(()=>{fullMode.current=false;sequence.current++;busyRef.current=false;pendingRequest.current=null;setOpened(false);setData(null);setBusy(false);setError('');setMessage('');setNeedsRefresh(false);setPapers([]);setPaperId('');setLineIndex('');setVerified(false);setNote('');setFirst('');setSecond('');setTarget('');setIssueId('');setIssueStatus('OPEN');return()=>{sequence.current++;};},[scope,readOnly]);
   const validReply=result=>result?.storeId===storeId&&result.period?.from===from&&result.period?.to===to&&typeof result.generation==='string'&&typeof result.head==='string'&&Array.isArray(result.rows)&&typeof result.text==='string';
   const accept=result=>{setIssueId('');setIssueStatus('OPEN');setData(result);setNeedsRefresh(false);setResumeFrom(result.checkpoint?.resumeFrom||from);setPendingNotes(result.checkpoint?.pendingNotes?.join('\n')??result.rows.filter(r=>!r.reviewed&&r.automaticallyCalculated!==true&&r.status!=='NOT_APPLICABLE').map(r=>`${r.day} · ${r.operatorName}: εκκρεμεί ο έλεγχος βάρδιας.`).join('\n'));setVerified(false);};
   const load=async(historyPage=0)=>{
     if(!storeId||!from||!to||busyRef.current||readOnly&&historyPage!==0)return;const own=scope,id=++sequence.current;busyRef.current=true;setBusy(true);setError('');setMessage('');setData(null);
-    try{const pendingId=pendingRequest.current?.requestId,result=await api(readOnly?`/api/backoffice-staff/cash/stores/${encodeURIComponent(storeId)}?${new URLSearchParams({from,to})}`:`/api/cash-reconciliation/stores/${encodeURIComponent(storeId)}?${new URLSearchParams({from,to,historyPage:String(historyPage),...(pendingId?{requestId:pendingId}:{})})}`);if(id!==sequence.current||selected.current!==own)return;if(!validReply(result))throw Error('Δεν επιβεβαιώθηκε το κατάστημα και η περίοδος.');
+    try{const pendingId=pendingRequest.current?.requestId,result=await api(readOnly?`/api/backoffice-staff/cash/stores/${encodeURIComponent(storeId)}?${new URLSearchParams({from,to})}`:`/api/cash-reconciliation/stores/${encodeURIComponent(storeId)}?${new URLSearchParams({from,to,historyPage:String(historyPage),...(fullMode.current?{fullAudit:'1'}:{}),...(pendingId?{requestId:pendingId}:{})})}`);if(id!==sequence.current||selected.current!==own)return;if(!validReply(result))throw Error('Δεν επιβεβαιώθηκε το κατάστημα και η περίοδος.');
       if(Number(result.historyPage||0)!==historyPage)throw Error('Δεν επιβεβαιώθηκε η σελίδα ιστορικού.');if(pendingId){if(result.requestId!==pendingId||!['APPLIED','NOT_FOUND'].includes(result.requestStatus))throw Error('Δεν επιβεβαιώθηκε η προηγούμενη ενέργεια.');if(result.requestStatus==='APPLIED'){setMessage('Η προηγούμενη ενέργεια είχε ήδη καταχωριστεί.');pendingRequest.current=null;setNote('');}else setMessage('Η προηγούμενη ενέργεια δεν βρέθηκε. Έλεγξε τα στοιχεία πριν την υποβάλεις ξανά.');}accept(result);
     }catch(e){if(id===sequence.current&&selected.current===own){setError(e.message||'Δεν φορτώθηκε ο έλεγχος.');setNeedsRefresh(true);}}
     finally{if(id===sequence.current&&selected.current===own){busyRef.current=false;setBusy(false);}}
+  };
+  const automaticCheck=async()=>{
+    if(readOnly||busyRef.current||!storeId||!from||!to)return;
+    const own=scope,id=++sequence.current,current=()=>id===sequence.current&&selected.current===own;
+    busyRef.current=true;setBusy(true);setError('');setData(null);setMessage('Αναζήτηση χειρόγραφων από το τσατ…');
+    let finished=false;
+    try{
+      const list=await api(`/api/cash-papers/stores/${encodeURIComponent(storeId)}`);
+      if(!current())return;
+      if(list.storeId!==storeId||typeof list.generation!=='string'||!Array.isArray(list.sources)||list.status==='UNAVAILABLE')throw Error('Δεν επιβεβαιώθηκαν τα χειρόγραφα του καταστήματος.');
+      const seen=new Set();let result;
+      for(let step=0;step<50;step++){
+        if(!current())return;
+        result=await api(`/api/cash-papers/stores/${encodeURIComponent(storeId)}/read-next`,{method:'POST',body:JSON.stringify({generation:list.generation,period:{from,to}})});
+        if(!current())return;
+        if(result.storeId!==storeId||result.generation!==list.generation||result.period?.from!==from||result.period?.to!==to||!['MORE','COMPLETE','REQUIRES_REVIEW'].includes(result.status))throw Error('Δεν επιβεβαιώθηκε η ανάγνωση στην επιλεγμένη περίοδο.');
+        if(result.processedChecksum){if(seen.has(result.processedChecksum))throw Error('Η προηγούμενη ανάγνωση χρειάζεται έλεγχο.');seen.add(result.processedChecksum);}
+        setMessage(`Ανάγνωση χειρόγραφων: ${seen.size} · απομένουν ${result.remaining}.`);
+        if(result.status!=='MORE'){finished=true;break;}
+        if(!result.processedChecksum)throw Error('Υπάρχει ανάγνωση σε αναμονή. Ανανέωσε πριν από νέο αίτημα.');
+      }
+      if(!finished)throw Error('Συμπληρώθηκε το όριο αυτόματων αναγνώσεων. Απαιτείται έλεγχος κάλυψης.');
+      fullMode.current=true;
+    }catch(e){if(current()){setError((e.message||'Δεν ολοκληρώθηκε η ανάγνωση.')+' Δεν επαναλαμβάνεται αυτόματα αβέβαιο αίτημα.');setNeedsRefresh(true);}}
+    finally{if(current()){busyRef.current=false;setBusy(false);}}
+    if(finished&&current())await load(0);
   };
   const allRows=[...(data?.rows||[]),...(data?.context||[])],row=allRows.find(r=>r.sessionId===first),next=allRows.find(r=>r.sessionId===second),paper=papers.find(p=>p.checksum===paperId),line=paper?.reading?.extraction?.lines?.[Number(lineIndex)];
   const issueRegister=mode==='HANDOFF_ISSUE'?data?.handoffRegister:data?.issueRegister;
@@ -50,7 +77,7 @@ export default function CashReconciliationPanel({api,storeId,from,to,readOnly=fa
     else if(mode==='CHECKPOINT')action={kind:mode,resumeFrom,reportHash:data.reportHash,pendingNotes:pendingNotes.split('\n').map(v=>v.trim()).filter(Boolean),note:note.trim(),reviewed:true};
     else{if(!target)return setError('Επίλεξε την καταχώρηση που αναιρείται.');action={kind:mode,targetId:target,note:note.trim()};}
     const request={requestId:pendingRequest.current?.requestId||crypto.randomUUID(),generation:data.generation,head:data.head,period:{from,to},data:action},own=scope,id=++sequence.current;pendingRequest.current=request;busyRef.current=true;setBusy(true);setError('');setMessage('');
-    try{const result=await api(`/api/cash-reconciliation/stores/${encodeURIComponent(storeId)}/reviews`,{method:'POST',body:JSON.stringify(request)});if(id!==sequence.current||selected.current!==own)return;if(!validReply(result)||result.generation!==request.generation)throw Error('Δεν επιβεβαιώθηκε η καταχώρηση στην ίδια κατάσταση καταστήματος.');accept(result);pendingRequest.current=null;setNote('');setMessage(result.reused?'Η ενέργεια είχε ήδη καταχωριστεί.':'Ο έλεγχος καταχωρίστηκε.');}
+    try{const result=await api(`/api/cash-reconciliation/stores/${encodeURIComponent(storeId)}/reviews${fullMode.current?'?fullAudit=1':''}`,{method:'POST',body:JSON.stringify(request)});if(id!==sequence.current||selected.current!==own)return;if(!validReply(result)||result.generation!==request.generation)throw Error('Δεν επιβεβαιώθηκε η καταχώρηση στην ίδια κατάσταση καταστήματος.');accept(result);pendingRequest.current=null;setNote('');setMessage(result.reused?'Η ενέργεια είχε ήδη καταχωριστεί.':'Ο έλεγχος καταχωρίστηκε.');}
     catch(e){if(id===sequence.current&&selected.current===own){setNeedsRefresh(true);setError((e.message||'Δεν επιβεβαιώθηκε η καταχώρηση.')+' Πάτησε Ανανέωση ελέγχου πριν από νέα ενέργεια.');}}
     finally{if(id===sequence.current&&selected.current===own){busyRef.current=false;setBusy(false);}}
   };
@@ -66,7 +93,7 @@ export default function CashReconciliationPanel({api,storeId,from,to,readOnly=fa
   const toggle=()=>{if(opened){sequence.current++;busyRef.current=false;setOpened(false);setData(null);setBusy(false);}else{setOpened(true);load();}};
   return <section className="cash-reconciliation-panel" aria-label="Έλεγχος και επανυπολογισμός">
     <button type="button" onClick={toggle} disabled={!storeId||!from||!to||busy} aria-expanded={opened}>Έλεγχος με επανυπολογισμούς</button>
-    {opened&&<div><p>{from} έως {to}</p><button type="button" onClick={()=>load(0)} disabled={busy}>Ανανέωση ελέγχου</button>{busy&&<p role="status">Αναμονή αποτελέσματος…</p>}{error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
+    {opened&&<div><p>{from} έως {to}</p><button type="button" onClick={()=>load(0)} disabled={busy}>Ανανέωση ελέγχου</button>{!readOnly&&<><button type="button" onClick={()=>{if(busyRef.current)return;fullMode.current=true;load(0);}} disabled={busy}>Έλεγχος με διαθέσιμες αναγνώσεις</button><button type="button" onClick={automaticCheck} disabled={busy}>Αυτόματος έλεγχος με χειρόγραφα και συμβάντα</button><p>Διαβάζει τα υποστηριζόμενα συνημμένα του τσατ με AI και διασταυρώνει τα στοιχεία. Οι προηγούμενες αναγνώσεις επαναχρησιμοποιούνται. Η ανάγνωση AI ακολουθεί την υπάρχουσα χρέωση της υπηρεσίας.</p></>}{busy&&<p role="status">Αναμονή αποτελέσματος…</p>}{error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
       {data&&<><pre style={{whiteSpace:'pre-wrap',fontFamily:'inherit'}}>{data.text}</pre><button type="button" disabled={busy||needsRefresh} onClick={()=>navigator.clipboard.writeText(data.text)}>Αντιγραφή ελεγμένης αναφοράς</button>
         {!readOnly&&<button type="button" disabled={busy||needsRefresh} onClick={exportArchive}>Excel με επανυπολογισμούς</button>}
         {data.issueRegister&&<details open><summary>Εκκρεμότητες παραστατικών</summary>

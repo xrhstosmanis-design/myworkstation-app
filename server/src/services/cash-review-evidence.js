@@ -4,7 +4,7 @@ import {readCashChatEvidence} from './cash-chat-evidence.js';
 const number=value=>Number(value);
 const cents=value=>Math.round(number(value)*100);
 const instant=value=>new Date(value).getTime();
-export const cashEvidenceLimits=Object.freeze({sales:2000,linesPerSale:1000,duplicateSeconds:120});
+export const cashEvidenceLimits=Object.freeze({sales:2000,linesPerSale:1000,duplicateSeconds:60});
 
 export function consecutiveSaleCandidates(sales){
   const ordered=[...sales].sort((a,b)=>instant(a.occurredAt)-instant(b.occurredAt)||String(a.saleId).localeCompare(String(b.saleId)));

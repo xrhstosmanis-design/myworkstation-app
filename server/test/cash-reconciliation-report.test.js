@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {hash} from '../src/services/cash-reconciliation-contract.js';
-import {projectReconciliation,immediateCashPair} from '../src/services/cash-reconciliation-report.js';
+import {projectReconciliation,immediateCashPair,reconciliationText} from '../src/services/cash-reconciliation-report.js';
 const period={from:'2026-10-21',to:'2026-10-23'};
 function fixture(){
  const sessions=new Map();for(const [i,id,amount,name]of [[0,'a',-8700,'Χρυσάνθη'],[1,'b',8000,'Γιάννης'],[2,'c',-1000,'Χρυσάνθη']]){
@@ -71,4 +71,51 @@ test('automatic arithmetic is carried in canonical prose without closing documen
  const oldHash=report.reportHash,oldSource=r.sourceHash,oldPlan=r.planHash;
  a.automaticSnapshot.expectedOperational=101;
  const changed=projectReconciliation(source,[]);assert.equal(changed.rows[0].automaticAudit.status,'INCOMPLETE');assert.notEqual(changed.reportHash,oldHash);assert.equal(changed.rows[0].sourceHash,oldSource);assert.equal(changed.rows[0].planHash,oldPlan);
+});
+
+function fullFixture(){
+ const source=fixture(),a=source.sessions.get('a');source.selectedIds=['a'];source.rule.carryOverEnabled=false;a.cardCents=0;
+ a.automaticSnapshot={openingDrawer:100,openingCustody:0,openingCoins:0,openingOperational:100,closingDrawer:3,closingCustody:0,closingCoins:0,actualOperational:3,expectedOperational:90,variance:-87,cashSales:0,expenses:10,cardSales:0,eftposTotal:0,cardVariance:0};
+ a.automaticTransactions=[{id:'expense-a',companyId:'co',storeId:'store',sessionId:'a',type:'OTHER_EXPENSE',amount:10,subtractFromShift:true,reversedAt:null}];
+ a.transactions=[{id:'expense-a',type:'OTHER_EXPENSE',amountCents:1000,cashEffect:true,reversed:false,occurredAt:'2026-10-21T10:00:00Z'}];
+ a.expenseFindings=[]; // The original expense document check is already independently complete.
+ a.eventSales={status:'AVAILABLE',findings:[],financialAdjustmentCents:0,evidenceHash:hash('price-events')};
+ a.fullEvidence={events:{status:'AVAILABLE',findings:[],unassignedCount:0,evidenceHash:hash('events')},duplicates:{salesStatus:'LINKED_POS_SCOPE',findings:[],duplicateWindowSeconds:60}};
+ source.paperEvidence={version:1,storeId:'store',status:'COMPLETE',items:[{sourceId:'paper',line:0,status:'MATCHED',kind:'EXPENSE',sessionId:'a',transactionId:'expense-a',amountCents:1000,reason:'UNIQUE_RECORDED_CORROBORATION'}],coverage:{discoveryComplete:true,complete:true},financialAdjustmentCents:0,humanApproval:false,hash:hash('papers')};
+ return source;
+}
+test('full evidence integration reaches final only with complete current sources, retaining expense arithmetic and separate original results',()=>{
+ const source=fullFixture(),before=structuredClone(source),report=projectReconciliation(source,[]),row=report.rows[0];
+ assert.equal(row.fullAudit.status,'FINAL');assert.equal(row.fullAudit.remainingCents,-8700);assert.equal(row.fullAudit.shortageCents,8700);assert.equal(row.fullCoverage.expenses.unresolvedCount,0);
+ assert.equal(row.initialCents,-8700);assert.equal(row.explainedCents,0);assert.equal(row.offsetCents,0);assert.equal(row.remainingCents,-8700,'matched paper corroborates an already-subtracted expense, never subtracts it again');
+ assert.equal(row.cardCents,0);assert.equal(row.reviewed,false);assert.equal(report.calculatedResult.shortageCents,8700);assert.equal(report.calculatedResult.surplusCents,0);assert.equal(report.originalFinancialLedgerChanged,false);
+ assert.match(report.text,/ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ.*Χρυσάνθη: Έλλειμμα 87,00/);assert.deepEqual(source,before);
+ const arithmeticOnly=structuredClone(source);delete arithmeticOnly.paperEvidence;delete arithmeticOnly.sessions.get('a').fullEvidence;
+ const old=projectReconciliation(arithmeticOnly,[]);assert.equal(old.rows[0].fullAudit,undefined);assert.deepEqual(report.calculatedResult,old.calculatedResult);assert.equal(row.remainingCents,old.rows[0].remainingCents);
+});
+test('paper ambiguity, event ambiguity, duplicate candidates or missing source coverage hold full finality without changing cash',()=>{
+ for(const mutate of [s=>{s.paperEvidence.items.push({sourceId:'ambiguous',line:0,status:'UNRESOLVED',reason:'AMBIGUOUS_MATCH'});s.paperEvidence.coverage.complete=false},s=>{s.sessions.get('a').fullEvidence.events.unassignedCount=1},s=>{s.sessions.get('a').fullEvidence.events.status='UNAVAILABLE'},s=>{s.sessions.get('a').fullEvidence.duplicates.findings=[{code:'SALE_LINE_DUPLICATE_CANDIDATE',transactions:[{saleId:'one'},{saleId:'two'}],secondsApart:30}]},s=>{delete s.sessions.get('a').fullEvidence}]){
+  const source=fullFixture();mutate(source);const report=projectReconciliation(source,[]),row=report.rows[0];assert.equal(row.fullAudit.status,'PENDING');assert.equal(row.fullAudit.remainingCents,null);assert.equal(row.remainingCents,-8700);assert.equal(row.automaticallyCalculated,true);assert.equal(report.calculatedResult.shortageCents,8700);assert.doesNotMatch(report.text,/ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ/);
+ }
+});
+test('paper and event coverage changes invalidate the report fingerprint and forged rendered full results reject',()=>{
+ const source=fullFixture(),report=projectReconciliation(source,[]);
+ for(const mutate of [s=>{s.paperEvidence.coverage.complete=false},s=>{s.paperEvidence.items[0].status='UNRESOLVED'},s=>{s.sessions.get('a').fullEvidence.events.evidenceHash=hash('changed-events')},s=>{s.sessions.get('a').fullEvidence.events.unassignedCount=1}]){
+  const changed=structuredClone(source);mutate(changed);assert.notEqual(projectReconciliation(changed,[]).reportHash,report.reportHash);
+ }
+ for(const mutate of [r=>{r.rows[0].fullAudit.remainingCents=0},r=>{r.rows[0].fullAudit.shortageCents=0},r=>{r.rows[0].fullCoverage.events.unresolvedCount=1},r=>{r.rows[0].fullEvidence.events.unassignedCount=1},r=>{r.paperEvidence.items[0].status='UNRESOLVED'},r=>{r.rows[0].pendingEvidence=[{id:'old',kind:'EFTPOS',label:'stale',date:'2026-10-21',amountCents:100}]},r=>{r.rows[0].fullAudit.humanApproval=true}]){
+  const forged=structuredClone(report);mutate(forged);assert.throws(()=>reconciliationText(forged));
+ }
+});
+
+test('imported Kiosk findings and incomplete evidence block full finality without changing recorded amounts',()=>{
+ for(const incomplete of [false,true]){
+  const source=fullFixture();source.kioskEventSales={status:incomplete?'UNAVAILABLE':'AVAILABLE',findings:incomplete?[]:[{code:'ZERO_VALUE_SALE',occurredAt:'2026-10-21T10:00:00.000Z',sessionId:'a',quantity:1,totalReductionCents:0,originalPriceCents:0,finalPriceCents:0}],coverage:{missingJournalShiftIds:[],unverifiedEventOverlapCount:0,sourceUnavailable:incomplete}};
+  const report=projectReconciliation(source,[]);assert.equal(report.rows[0].fullAudit.status,'PENDING');assert(report.rows[0].fullAudit.pendingChecks.includes('EVENTS'));assert.equal(report.rows[0].remainingCents,-8700);
+ }
+});
+
+test('matching a handwritten expense amount does not replace a missing expense receipt or close its question',()=>{
+ const source=fullFixture();source.sessions.get('a').expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',transactionId:'expense-a',amountCents:1000,occurredAt:'2026-10-21T10:00:00.000Z',evidenceHash:hash('missing-receipt')}];
+ const report=projectReconciliation(source,[]),row=report.rows[0];assert.equal(row.fullAudit.status,'PENDING');assert(row.fullAudit.pendingChecks.includes('EXPENSES'));assert.equal(row.remainingCents,-8700);assert.equal(row.explainedCents,0);assert.equal(row.offsetCents,0);assert.equal(report.issueRegister.issues[0].status,'OPEN');assert.match(report.text,/χωρίς παραστατικό/);assert.doesNotMatch(report.text,/ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ/);
 });

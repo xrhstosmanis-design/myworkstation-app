@@ -20,7 +20,42 @@ test('registered review HTTP rejects stale token roles, foreign store, inactive 
   assert.equal(sourceCalls,0,'denied or invalid requests never read financial/paper sources or write audit');
  }finally{await new Promise(resolve=>server.close(resolve));}
 });
-test('review HTTP never returns private source/provider diagnostics as a user error',async()=>{
- const app=express();app.use(createCashReconciliationRouter({db:{},authorize:async()=>{throw Error('PRIVATE_SOURCE_TOKEN account amount detail');}}));const server=createServer(app);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
- try{const response=await fetch(`http://127.0.0.1:${server.address().port}/stores/store?from=2026-10-21&to=2026-10-23`);assert.equal(response.status,503);assert.doesNotMatch(await response.text(),/PRIVATE_SOURCE_TOKEN|account amount/);}finally{await new Promise(resolve=>server.close(resolve));}
+test('unknown review source failures emit bounded diagnostic codes without private error/request/source fields',async()=>{
+ const diagnostics=[];let error=Object.assign(Error('PRIVATE_SOURCE_TOKEN account amount detail'),{code:'P2028',meta:{code:'57014',query:'PRIVATE_SQL'},stack:'PRIVATE_STACK'});
+ const app=express();app.use(createCashReconciliationRouter({db:{},onError:record=>diagnostics.push(record),authorize:async()=>{throw error;}}));const server=createServer(app);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const call=()=>fetch(`http://127.0.0.1:${server.address().port}/stores/PRIVATE_STORE?from=2026-10-21&to=2026-10-23`);
+ try{
+  const response=await call();assert.equal(response.status,503);assert.doesNotMatch(await response.text(),/PRIVATE_|account amount|P2028/);
+  assert.equal(diagnostics.length,1);assert.deepEqual(Object.keys(diagnostics[0]).sort(),['causeCode','code','elapsedMs','event','operation','status']);
+  assert.equal(diagnostics[0].event,'cash_reconciliation_failed');assert.equal(diagnostics[0].operation,'READ');assert.equal(diagnostics[0].causeCode,'P2028');assert.equal(diagnostics[0].status,503);assert(Number.isInteger(diagnostics[0].elapsedMs)&&diagnostics[0].elapsedMs>=0&&diagnostics[0].elapsedMs<=3600000);
+  error=Object.assign(Error('PRIVATE_EXCEPTION'),{code:'PRIVATE_CODE',meta:{code:'42703',detail:'PRIVATE_DETAIL'}});await call();assert.equal(diagnostics[1].causeCode,'42703');
+  error=Object.assign(Error('PRIVATE_EXCEPTION'),{code:'PRIVATE_CODE',meta:{code:'PRIVATE_META'}});await call();assert.equal(diagnostics[2].causeCode,'UNKNOWN');assert.doesNotMatch(JSON.stringify(diagnostics),/PRIVATE_|account amount/);
+  error={code:'CASH_RECONCILIATION_LIMIT',status:409};const known=await call();assert.equal(known.status,409);assert.equal((await known.json()).code,'CASH_RECONCILIATION_LIMIT');assert.equal(diagnostics.length,3,'known guarded failures do not emit unknown-source diagnostics');
+ }finally{await new Promise(resolve=>server.close(resolve));}
+});
+test('diagnostic sink failure cannot replace or expose a source failure',async()=>{
+ const app=express();app.use(createCashReconciliationRouter({db:{},onError:()=>{throw Error('PRIVATE_LOGGER');},authorize:async()=>{throw Error('PRIVATE_SOURCE');}}));const server=createServer(app);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{const response=await fetch(`http://127.0.0.1:${server.address().port}/stores/store?from=2026-10-21&to=2026-10-23`);assert.equal(response.status,503);const body=await response.json();assert.equal(body.code,'CASH_RECONCILIATION_UNAVAILABLE');assert.doesNotMatch(JSON.stringify(body),/PRIVATE_/);}finally{await new Promise(resolve=>server.close(resolve));}
+});
+test('full-audit GET is an explicit validated selected-store projection, default reads remain unchanged',async()=>{
+ let authorizations=0;const scopes=[];
+ const repository={generation:async()=> '0',read:async(scope,period)=>{scopes.push({...scope});return {storeId:scope.storeId,period,rows:[],text:'report'};}};
+ const app=express();app.use(createCashReconciliationRouter({db:{},repository,authorize:async(db,user,storeId)=>{authorizations++;return {scope:{companyId:'co',storeId}};}}));
+ const server=createServer(app);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin=`http://127.0.0.1:${server.address().port}/stores/store?from=2026-10-21&to=2026-10-23`;
+ try{
+  for(const suffix of ['&fullAudit=0','&fullAudit=true','&fullAudit=1&fullAudit=1','&fullAudit[flag]=1'])assert.equal((await fetch(origin+suffix)).status,400);
+  assert.equal(authorizations,0,'invalid projection never authorizes or reads a source');
+  assert.equal((await fetch(origin)).status,200);assert.equal(Object.hasOwn(scopes[0],'fullAudit'),false);
+  assert.equal((await fetch(origin+'&fullAudit=1')).status,200);assert.deepEqual(scopes[1],{companyId:'co',storeId:'store',generation:'0',fullAudit:true});
+  assert.equal((await fetch(origin)).status,200);assert.equal(Object.hasOwn(scopes[2],'fullAudit'),false,'opt-in flag does not survive into a subsequent basic read');
+ }finally{await new Promise(resolve=>server.close(resolve));}
+});
+
+test('full-mode review requests preserve the report mode and reject invalid mode before writes',async()=>{
+ const scopes=[];let auth=0;
+ const repository={generation:async()=> '0',apply:async(scope)=>{scopes.push({...scope});return {storeId:scope.storeId,period:request.period,rows:[],text:'report'};}};
+ const app=express();app.use(express.json());app.use(createCashReconciliationRouter({db:{},repository,authorize:async()=>{auth++;return {scope:{companyId:'co',storeId:'store'},actor:{id:'u'}};}}));
+ const server=createServer(app);await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ const send=mode=>fetch(`http://127.0.0.1:${server.address().port}/stores/store/reviews${mode}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request)});
+ try{assert.equal((await send('?fullAudit=0')).status,400);assert.equal(auth,0);assert.equal((await send('?fullAudit=1')).status,200);assert.equal(scopes[0].fullAudit,true);assert.equal((await send('')).status,200);assert.equal(Object.hasOwn(scopes[1],'fullAudit'),false);}finally{await new Promise(r=>server.close(r));}
 });

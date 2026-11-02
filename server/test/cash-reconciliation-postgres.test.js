@@ -11,6 +11,43 @@ import {readReconciliationSources} from '../src/services/cash-reconciliation-sou
 import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 
+test('native full cash source integrates complete chat, sale and audit receipts; linked events hold finality without changing original or control finance',{skip:!isolated()},async()=>{
+ const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_full_source_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const db=new PrismaClient({datasourceUrl:url.toString()});
+ try{
+  await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
+  for(const sql of [
+   'CREATE TABLE "Store"("id" text primary key,"companyId" text,"name" text)',
+   'CREATE TABLE "CashControlStoreRule"("storeId" text,"companyId" text,"mode" text,"deliveryTerminalPattern" text,"carryOverEnabled" boolean,"posEftposEnabled" boolean,"updatedAt" timestamp)',
+   'CREATE TABLE "CashShiftSession"("id" text primary key,"companyId" text,"storeId" text,"terminalPos" text,"status" text,"openedBy" text,"openedByName" text,"shiftLabel" text,"openedAt" timestamptz,"closedAt" timestamptz,"variance" numeric(14,2),"cardVariance" numeric(14,2),"openingDrawer" numeric,"openingCustody" numeric,"openingCoins" numeric,"openingOperational" numeric,"closingDrawer" numeric,"closingCustody" numeric,"closingCoins" numeric,"actualOperational" numeric,"expectedOperational" numeric,"cashSales" numeric,"expenses" numeric,"cardSales" numeric,"eftposTotal" numeric,"updatedAt" timestamp)',
+   'CREATE TABLE "StoreTransaction"("id" text primary key,"companyId" text,"storeId" text,"sessionId" text,"type" text,"amount" numeric,"description" text,"actorId" text,"actorName" text,"subtractFromShift" boolean,"attachmentData" text,"occurredAt" timestamptz,"createdAt" timestamptz,"reversedAt" timestamptz)',
+   'CREATE TABLE "CashControlReview"("id" text,"companyId" text,"storeId" text,"sessionId" text,"decision" text,"amount" numeric,"note" text,"actorId" text,"actorName" text,"snapshotJson" jsonb,"createdAt" timestamp)',
+   'CREATE TABLE "StoreChatMessage"("id" text primary key,"companyId" text,"storeId" text,"category" text,"createdAt" timestamptz,"attachmentName" text,"attachmentMimeType" text,"attachmentSize" integer,"attachmentChecksum" text,"attachmentData" text)',
+   'CREATE TABLE "WorkforceAuditLog"("id" text primary key,"companyId" text,"storeId" text,"actorUserId" text,"action" text,"entityType" text,"entityId" text,"afterJson" jsonb,"createdAt" timestamp default NOW())',
+   'CREATE TABLE "StoreOperatorAudit"("id" text primary key,"companyId" text,"storeId" text,"eventType" text,"actorId" text,"operatorId" text,"details" jsonb,"createdAt" timestamptz)',
+   'CREATE TABLE "PosSaleActionAudit"("id" text primary key,"companyId" text,"storeId" text,"saleId" text,"relatedSaleId" text,"actionType" text,"reason" text,"actorId" text,"actorName" text,"details" jsonb,"createdAt" timestamptz)',
+   'CREATE TABLE "PosSaleSafetyAudit"("id" text primary key,"companyId" text,"storeId" text,"saleId" text,"relatedSaleId" text,"eventType" text,"actorId" text,"actorName" text,"details" jsonb,"createdAt" timestamptz)',
+   'CREATE TABLE "Sale"("id" text primary key,"companyId" text,"storeId" text,"status" text,"source" text,"receiptNumber" text,"occurredAt" timestamptz,"total" numeric)',
+   'CREATE TABLE "SaleLine"("id" text primary key,"saleId" text,"productId" text,"description" text,"quantity" numeric,"unitPrice" numeric,"discount" numeric,"lineTotal" numeric)',
+   'CREATE TABLE "Payment"("id" text primary key,"saleId" text,"method" text,"amount" numeric)'
+  ])await db.$executeRawUnsafe(sql);
+  await db.$executeRaw`INSERT INTO "Store" VALUES ('store','co','LAB'),('control','other','Control')`;
+  for(const [id,store,company,opening,closing,variance,opened,closed]of [
+   ['a','store','co',100,95,-5,'2026-10-21T06:00Z','2026-10-21T14:00Z'],
+   ['b','store','co',95,95,0,'2026-10-21T14:01Z','2026-10-21T22:00Z'],
+   ['control','control','other',0,0,0,'2026-10-21T06:00Z','2026-10-21T14:00Z']
+  ])await db.$executeRaw`INSERT INTO "CashShiftSession" VALUES (${id},${company},${store},'MAIN','CLOSED',${'operator-'+id},${id},'Βάρδια',${new Date(opened)},${new Date(closed)},${variance},0,${opening},0,0,${opening},${closing},0,0,${closing},${opening},0,0,0,0,NOW())`;
+  await db.$executeRaw`INSERT INTO "PosSaleActionAudit" VALUES ('foreign','other','control',NULL,NULL,'CANCEL','control only','operator-control','control','{"sessionId":"control"}'::jsonb,'2026-10-21T12:00Z')`;
+  const financial=async()=>({sessions:await db.$queryRaw`SELECT to_jsonb(s) AS row FROM "CashShiftSession" s ORDER BY "id"`,transactions:await db.$queryRaw`SELECT * FROM "StoreTransaction"`,reviews:await db.$queryRaw`SELECT * FROM "CashControlReview"`,papers:await db.$queryRaw`SELECT * FROM "StoreChatMessage"`,audit:await db.$queryRaw`SELECT * FROM "WorkforceAuditLog"`});
+  const before=await financial(),scope={companyId:'co',storeId:'store',generation:'0',fullAudit:true},period={from:'2026-10-21',to:'2026-10-21'};
+  const read=async()=>projectReconciliation(await readReconciliationSources(db,scope,period),[]),initial=await read(),row=initial.rows[0];
+  assert.equal(initial.paperEvidence.status,'COMPLETE');assert.equal(initial.paperEvidence.coverage.complete,true);assert.equal(row.fullEvidence.events.status,'AVAILABLE');assert.equal(row.fullEvidence.duplicates.salesStatus,'LINKED_POS_SCOPE');assert.equal(row.eventSales.status,'AVAILABLE');assert.equal(row.fullAudit.status,'FINAL');assert.equal(row.fullAudit.remainingCents,-500);assert.equal(row.remainingCents,-500);assert.equal(row.reviewed,false);assert.equal(initial.calculatedResult.shortageCents,500);assert.equal(initial.rows.length,1);assert.equal(row.sessionId,'a');
+  assert.deepEqual(await financial(),before);
+  await db.$executeRaw`INSERT INTO "PosSaleActionAudit" VALUES ('linked','co','store',NULL,NULL,'CANCEL','requires explanation','operator-a','a','{"sessionId":"a","terminalPos":"MAIN"}'::jsonb,'2026-10-21T12:00Z')`;
+  const changed=await read();assert.equal(changed.rows[0].fullAudit.status,'PENDING');assert.equal(changed.rows[0].fullEvidence.events.findings.length,1);assert(changed.rows[0].fullAudit.pendingChecks.includes('EVENTS'));assert.notEqual(changed.reportHash,initial.reportHash);assert.equal(changed.rows[0].remainingCents,-500);assert.equal(changed.calculatedResult.shortageCents,500);assert.deepEqual(await financial(),before);
+  const controlSource=await readReconciliationSources(db,{companyId:'other',storeId:'control',generation:'0',fullAudit:true},period),control=projectReconciliation(controlSource,[]);assert.equal(control.rows.length,1);assert.equal(control.rows[0].sessionId,'control');assert.equal(control.rows[0].remainingCents,0);assert(control.rows[0].fullEvidence.events.findings.every(f=>f.eventId==='foreign'));assert.deepEqual(await financial(),before);
+ }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();}
+});
+
 test('native original handoff HTTP lifecycle: concurrent once-only replies, both-half freshness, close/reopen and unchanged finance/control',{skip:!isolated()},async()=>{
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_handoff_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);const db=new PrismaClient({datasourceUrl:url.toString()});let server;
  try{

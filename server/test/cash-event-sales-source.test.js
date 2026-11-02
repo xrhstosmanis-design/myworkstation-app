@@ -6,10 +6,10 @@ const scope={companyId:'co',storeId:'store'},session={...scope,id:'shift',status
 test('native reader uses explicit scope, completed ledger linkage and safe projection, with no approval flags or writers',async()=>{
  const calls=[];const sale={...scope,sessionId:'shift',saleId:'sale',status:'COMPLETED',source:'POS',occurredAt:'2026-10-22T16:00:00.000Z',actorId:'user',total:0,linked:true,lines:[{lineId:'l',productId:'p',description:'Σοκολάτα',quantity:1,unitPrice:0,lineTotal:0}]};
  const event={...scope,id:'e',actionType:'PRICE_CHANGE',actorId:'user',actorName:'Α',createdAt:'2026-10-22T15:59:50.000Z',details:{sessionId:'shift',productId:'p',productName:'Σοκολάτα',previousQuantity:1,oldPrice:2,newPrice:0,newTotal:0,automaticDiscountConfirmed:true,attachmentData:'SECRET'}};
- const db={$queryRaw:async(strings,...values)=>{const sql=strings.join('?');calls.push({sql,values});if(sql.includes('to_regclass'))return [{auditTable:'PosSaleActionAudit',completionTable:'StoreOperatorAudit'}];if(sql.includes('FROM "Sale"'))return [sale];if(sql.includes('FROM "PosSaleActionAudit"'))return [event];throw Error(sql)}};
+ const db={$queryRaw:async(strings,...values)=>{const sql=strings.join('?');calls.push({sql,values});if(sql.includes('to_regclass'))return [{auditTable:'PosSaleActionAudit',completionTable:'StoreOperatorAudit'}];if(sql.includes('SELECT s."id" FROM "Sale"'))return [{id:sale.saleId}];if(sql.includes('FROM "Sale"'))return [sale];if(sql.includes('FROM "PosSaleActionAudit"'))return [event];throw Error(sql)}};
  const before=JSON.stringify({sale,event});const result=await readCashEventSales(db,scope,session);assert.equal(result.status,'AVAILABLE');assert.equal(result.findings.length,1);assert.equal(result.findings[0].code,'ZERO_VALUE_SALE');assert.equal(result.findings[0].originalPriceCents,200);assert.match(result.evidenceHash,/^[a-f0-9]{64}$/);assert(!JSON.stringify(result).includes('SECRET'));assert.equal(JSON.stringify({sale,event}),before);
- for(const c of calls.slice(1)){assert(c.values.includes('co'));assert(c.values.includes('store'));assert(c.values.includes('shift'));assert.doesNotMatch(c.sql,/INSERT|UPDATE|DELETE|ALTER|CREATE/);}
- assert(calls[1].sql.includes('t."reversedAt" IS NULL'));assert(calls[1].sql.includes('HAVING COUNT(*)>0'));assert(calls[2].sql.includes('LIMIT 2001'));
+ for(const c of calls.slice(1)){assert(c.values.includes('co'));assert(c.values.includes('store'));if(!c.sql.includes('SELECT s."id" FROM "Sale"'))assert(c.values.includes('shift'));assert.doesNotMatch(c.sql,/INSERT|UPDATE|DELETE|ALTER|CREATE/);}
+ assert(calls[2].sql.includes('t."reversedAt" IS NULL'));assert(calls[2].sql.includes('HAVING COUNT(*)>0'));assert(calls[3].sql.includes('LIMIT 2001'));assert(calls[2].sql.includes('ledger_identity AS MATERIALIZED'));assert(calls[2].sql.includes('completion_identity AS MATERIALIZED'));assert(!calls[2].sql.includes('to_jsonb(a)'));assert(calls[2].sql.includes('a.position<=1001'));
  event.details.newPrice=1;assert.notEqual((await readCashEventSales(db,scope,session)).evidenceHash,result.evidenceHash);
 });
 test('foreign/open scopes never read; missing audit table and source limits are explicitly unavailable',async()=>{
@@ -17,6 +17,14 @@ test('foreign/open scopes never read; missing audit table and source limits are 
  for(const s of [{...session,storeId:'foreign'},{...session,status:'OPEN'},{...session,openedAt:'invalid'},{...session,closedAt:'2026-10-21T00:00:00Z'}])assert.equal((await readCashEventSales(db,scope,s)).status,'UNAVAILABLE');assert.equal(calls,0);
  assert.equal((await readCashEventSales(db,scope,session)).status,'UNAVAILABLE');assert.equal(calls,1);
  const overflow={$queryRaw:async strings=>strings.join('').includes('to_regclass')?[{auditTable:'present',completionTable:'present'}]:strings.join('').includes('FROM "Sale"')?Array(2001).fill({}):[]};assert.equal((await readCashEventSales(overflow,scope,session)).status,'LIMITED');
+});
+test('unsafe, duplicate or overflowing raw candidate identities fail explicitly before linkage, including when no linked sales exist',async()=>{
+ for(const candidates of [[{id:'unsafe%id'}],[{id:'unsafe_id'}],[{id:'unsafe id'}],[{id:'a'},{id:'a'}],Array.from({length:2001},(_,i)=>({id:'sale-'+i}))]){
+  const calls=[],db={$queryRaw:async(strings)=>{const sql=strings.join('?');calls.push(sql);if(sql.includes('to_regclass'))return [{auditTable:'present',completionTable:'present'}];if(sql.includes('SELECT s."id" FROM "Sale"'))return candidates;throw Error('No expensive source query allowed');}};
+  assert.equal((await readCashEventSales(db,scope,session)).status,'LIMITED');assert.equal(calls.length,2);
+ }
+ const calls=[],db={$queryRaw:async(strings)=>{const sql=strings.join('?');calls.push(sql);if(sql.includes('to_regclass'))return [{auditTable:'present',completionTable:'present'}];return[];}};
+ assert.equal((await readCashEventSales(db,scope,session)).status,'AVAILABLE');assert.equal(calls.length,3);assert(!calls.some(sql=>sql.includes('ledger_identity AS MATERIALIZED')));
 });
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 test('native PostgreSQL: zero-total sale is linked through completion, automatic proof is exact, ambiguous session and foreign records stay out; no original changes',{skip:!isolated()},async()=>{
