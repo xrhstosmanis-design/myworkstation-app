@@ -1,3 +1,19 @@
+# Archived monthly original - scoped technical recovery PASS 02/11/2026
+
+Only an authorized Render workspace operator may perform this technical verification in the existing myworkstation-db-backup Shell. Platform SuperAdmin authority alone does not grant Render access. This is recovery of an archived original into an isolated test table, not restoration of production or an application restore button.
+
+1. Identify an already successful scheduled archive after the original capture. Verify its exact VersionId, monitored SHA256/bytes, AES256 and version-specific download inside the existing service. Do not create another backup or export private archive/SQL/payloads.
+2. Confirm the reviewed installed private-PG/COPY-auditor hashes, resource headroom and fresh one-row source baseline. Record the identified test before action. Start a new private PG18 cluster with a clean environment, private socket/no TCP and no application or workers. Never give a production DATABASE_URL to its clients.
+3. Verify exact archive TOC TABLE and TABLE DATA entries. Use pg_restore schema public, exact table MonthlyInventorySnapshot and strict names; restore only pre-data+data. Do not load post-data/dependencies or invoke a lifecycle RESET worker. For pg_dump preserve case with the literal pattern public."MonthlyInventorySnapshot".
+4. Require exactly one private public table/one row/46050candidate bytes. Compare selected archive data-only COPY against independently dumped selected private COPY with the existing auditor. Require exact headers/multiset/duplicate/sequence agreement.
+5. Verify the stored original's exact scope/month/generation/id/unique slot,46050UTF8bytes/hash, sourceHash/payloadHash/revision and observation/stored/nominal/LATE/delay metadata. Emit only aggregate proof. Stop/check the new private cluster/socket/pid and verify deletion of only its owned temporary directory. Retain the original encrypted object.
+
+Actual02Nov11:36:37.100363UTC PASS: archive20261102T090030Z-9764/version-specific369731641bytes/SHA b96f09f4...cb63; selectedCOPY1table/1row/46952bytes/0sequences/digest2eb1882f...53eeb1; originalfd3523ea candidate46050bytes/SHA88fb52a2...8686f1 with all original metadata unchanged; new temporaryCleanuptrue. Full hashes/times and exact usage evidence are in CHECKPOINTS/EVIDENCE/monthly-original-recovery-20261102/selected-table-original.json and the existingD8checkpoint.
+
+Limits/troubleshooting: selected table data/original-byte verification does not certify dependent schema/FKs/indexes/immutability triggers, whole archive, production/application/disaster recovery or physical source authenticity. The earlier full-archive attempt reached restore exit0 but lost its Shell before later results; old-instance cleanup/cause remain UNKNOWN. A Shell reset, pg_restore exit0 or archive checksum alone never means complete recovery. Stop on uncertainty; do not blindly retry, enlarge parser/resource limits, create paid resources or replace production. Sampled memory metrics are not an absolute capacity/noOOM guarantee. This new cleanup proves only the separately identified selected-table test.
+
+---
+
 # Monthly inventory capture - verified LAB authorization and first current observation
 
 ## Current accepted scope, 01/11/2026
@@ -21,7 +37,7 @@ Native grant UI and DB before/after retained the same active revision2 grant/act
 
 ## Limits and troubleshooting
 
-Changing store/identity requires a fresh scoped read. Missing/unknown source dates or incomplete coverage must remain a refusal, never zero/all-clear. Do not invent dates, reupload/reprocess/pay accepted invoices or repeat Save for documentation. Hosted original/version/restore/recovery, actual future execution, production revoke and other roles/devices remain OPEN. DB SIGKILL/recovery recurrences19:43/19:52UTC recovered availability but cause remains OPEN/POS-DB-LOCK; no capacity upgrade or whole-system readiness PASS is implied.
+Changing store/identity requires a fresh scoped read. Missing/unknown source dates or incomplete coverage must remain a refusal, never zero/all-clear. Do not invent dates, reupload/reprocess/pay accepted invoices or repeat Save for documentation. Selected-table archived original/version/readback is verified only by the narrow technical procedure above; whole-archive/production-controlled recovery, actual future execution, production revoke and other roles/devices remain OPEN. DB SIGKILL/recovery recurrences19:43/19:52UTC recovered availability but cause remains OPEN/POS-DB-LOCK; no capacity upgrade or whole-system readiness PASS is implied.
 
 Canonical evidence: CHECKPOINTS/CHANGES/2026-10-31-monthly-inventory-capture-personal-ui-claim.md, including the real pre-action baseline and verified scoped receipt. Private originals/candidate/customer payloads/screenshots remain outside repository/Library. Historical grant-only exclusions below describe that earlier test only; they do not negate the newer narrow first-capture acceptance above. The old engineering NOT RELEASED/data-HOLD statements below are explicitly historical and superseded only for this accepted capture.
 
