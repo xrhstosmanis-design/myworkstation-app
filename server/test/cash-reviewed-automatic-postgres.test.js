@@ -5,6 +5,7 @@ import {createCashReconciliationRepository} from '../src/services/cash-reconcili
 import {readAutomaticCashPreviewInTransaction} from '../src/services/automatic-report-source.js';
 import {buildAutomaticCashPayload} from '../src/services/automatic-report-cash-payload.js';
 import {reportWallTime} from '../src/services/automatic-report-policy.js';
+import {projectAutomaticReviewedReport} from '../src/services/cash-reviewed-automatic-contract.js';
 const isolated=()=>{try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&/test/i.test(u.pathname)}catch{return false}};
 test('isolated postgres reviewed offset and confirmations feed exact business shifts without writes',{skip:!isolated()},async()=>{
  const {PrismaClient}=await import('@prisma/client'),admin=new PrismaClient(),schema='cash_auto_'+randomUUID().replaceAll('-',''),url=new URL(process.env.DATABASE_URL);url.searchParams.set('schema',schema);
@@ -72,7 +73,13 @@ test('isolated postgres reviewed offset and confirmations feed exact business sh
    assert.deepEqual(calls,{periodScans:1,sessionReads:4},'one source scan and one read per selected/context session, not duplicated materialization');
    return result;
   };
-  const reused=await counted();assert.deepEqual(reused.report,p.reviewedCash.report);assert.deepEqual(await counted(),reused,'reuse is local to one transaction, with a fresh identical report on the next read');
+  const reused=await counted();
+  // The automatic consumer deliberately strips canonical context/transactions
+  // and normalizes Date values. Compare through that actual production DTO,
+  // not a full repository response against the intentionally redacted result.
+  assert.deepEqual(projectAutomaticReviewedReport(reused.report),p.reviewedCash.report);
+  assert.equal(reused.report.text,p.reviewedCash.report.text);assert.equal(reused.report.reportHash,p.reviewedCash.report.reportHash);
+  assert.deepEqual(await counted(),reused,'reuse is local to one transaction, with a fresh identical canonical report on the next read');
   const payload=buildAutomaticCashPayload({preview:p,companyId:'co',storeId:'store',settingsVersion:1});assert.equal(buildAutomaticCashPayload({preview:await read(),companyId:'co',storeId:'store',settingsVersion:1}).payloadFingerprint,payload.payloadFingerprint);
   await assert.rejects(db.$transaction(tx=>repo.readSelectedInTransaction(tx,scope,period,['foreign'])),e=>e.code==='CASH_RECONCILIATION_NOT_FOUND');
   assert.deepEqual(await db.$queryRaw`SELECT * FROM "CashShiftSession" ORDER BY "id"`,before);assert.deepEqual(await db.$queryRaw`SELECT * FROM "CashControlReview"`,beforeReview);assert.deepEqual(await db.$queryRaw`SELECT * FROM "WorkforceAuditLog" ORDER BY "id"`,beforeAudit);
