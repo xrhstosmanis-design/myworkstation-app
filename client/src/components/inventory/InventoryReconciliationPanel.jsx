@@ -2,6 +2,7 @@ import React, {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import InventoryReviewControls from './InventoryReviewControls.jsx';
 import InventorySourceEvidence from './InventorySourceEvidence.jsx';
 const amount = x => x === null || x === undefined ? 'Άγνωστο' : Number(x).toLocaleString('el-GR',{maximumFractionDigits:4});
+const invoiceDay=x=>x?new Date(x).toLocaleDateString('el-GR',{timeZone:'Europe/Athens'}):'Άγνωστο';
 const date = x => x ? new Date(x).toLocaleString('el-GR') : 'Άγνωστο';
 const labels = {
   MISSING_PREVIOUS_COUNT:'Λείπει προηγούμενη καταμέτρηση',MISSING_CURRENT_COUNT:'Λείπει νέα καταμέτρηση',
@@ -74,7 +75,7 @@ export default function InventoryReconciliationPanel({api,stocktakeId,storeId,on
         <p>Χωριστές διορθώσεις συστήματος: {amount(row.systemAdjustments)} · ανακατασκευασμένο λογιστικό υπόλοιπο: {amount(row.recordedExpectedQuantity)} · λογιστική διαφορά: {amount(row.recordedDifference)}. Οι διορθώσεις δεν παρουσιάζονται ως φυσικές παραλαβές.</p>
         <p>{row.findings.map(x=>labels[x]||x).join(' · ')}</p>
         <div style={{overflowX:'auto'}}><table><thead><tr><th>Καταχώρηση</th><th>Χρόνος συναλλαγής / φυσικής κίνησης</th><th>Κίνηση</th><th>Ποσότητα</th><th>Φυσικό πριν</th><th>Φυσικό μετά</th><th>Λογιστικό πριν / μετά</th><th>Χειριστής</th><th>Παραστατικό</th></tr></thead>
-          <tbody>{row.movements.map(m=><tr key={m.id}><td>{date(m.postedAt)}</td><td>{date(m.transactionOccurredAt||m.physicalAt)}{m.quantityBasis&&<p>{m.quantityBasis}</p>}</td><td>{m.movementType}{!m.included?' · Βάση απογραφής':''}</td><td>{amount(m.quantity)}</td><td>{amount(m.balanceBefore)}</td><td>{amount(m.balanceAfter)}</td><td>{amount(m.recordedBalanceBefore)} / {amount(m.recordedBalanceAfter)}</td><td>{m.actorName||m.actorId||'—'}</td><td>{m.documentNumber||m.sourceId||'—'}{m.documentDate&&` · ${date(m.documentDate)}`}</td></tr>)}</tbody>
+          <tbody>{row.movements.map(m=><tr key={m.id}><td>{date(m.postedAt)}</td><td>{date(m.transactionOccurredAt||m.physicalAt)}{m.quantityBasis&&<p>{m.quantityBasis}</p>}</td><td>{m.movementType}{!m.included?' · Βάση απογραφής':''}</td><td>{amount(m.quantity)}</td><td>{amount(m.balanceBefore)}</td><td>{amount(m.balanceAfter)}</td><td>{amount(m.recordedBalanceBefore)} / {amount(m.recordedBalanceAfter)}</td><td>{m.actorName||m.actorId||'—'}</td><td>{m.documentNumber||m.sourceId||'—'}{m.documentDate&&` · ${invoiceDay(m.documentDate)}`}</td></tr>)}</tbody>
         </table></div>
         <details><summary>Αρχικό ιστορικό καταμετρήσεων ({row.countHistory?.length||0})</summary>
           <p>Έως 200 συμβάντα στην οθόνη· ολόκληρο το ιστορικό στο Excel. Οι αρχικές μετρήσεις δεν αντικαθίστανται από τις διορθώσεις της αναφοράς.</p>

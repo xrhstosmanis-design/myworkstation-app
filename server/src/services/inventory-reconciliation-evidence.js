@@ -1,6 +1,8 @@
 // Read projections only: these sources never authorize a stock posting.
+import {greeceDateInput} from '../../../shared/greece-time.mjs';
 const numeric=x=>x===null||x===undefined||x===''?null:Number.isFinite(Number(x))?Number(x):null;
 const stamp=x=>x&&Number.isFinite(new Date(x).getTime())?new Date(x).toISOString():null;
+const civilDay=x=>stamp(x)?greeceDateInput(x):null;
 const text=(x,max=500)=>typeof x==='string'?x.slice(0,max):null;
 const round=x=>Math.round((x+Number.EPSILON)*10000)/10000;
 const within=(at,w)=>at&&w&&new Date(at)>new Date(w.from)&&new Date(at)<=new Date(w.to);
@@ -98,8 +100,9 @@ export function buildInventorySourceEvidence({movements,sales=[],invoiceLines=[]
     if(d.documentType==='CREDIT_NOTE'&&!normalized.some(x=>x.productId&&x.baseQuantity>0))checks.push('VALUE_CREDIT_NO_MERCHANDISE_QUANTITY');
     if(d.documentType==='CREDIT_NOTE'&&related.length&&!normalized.some(x=>x.productId&&x.baseQuantity>0))checks.push('VALUE_CREDIT_WITH_STOCK_POSTING_REQUIRES_REVIEW');
     if(['CANCELLED','VOID','MERGED'].includes(d.status)&&related.length)checks.push('INACTIVE_DOCUMENT_HAS_STOCK_POSTING');
-    for(const productId of productIds){const w=byWindow.get(productId);if(w&&new Date(d.documentDate)<new Date(w.from)&&related.some(m=>m.productId===productId&&within(m.createdAt,w))){checks.push('LATE_DOCUMENT_PHYSICAL_TIME_UNKNOWN');flag(productId,'LATE_DOCUMENT_PHYSICAL_TIME_UNKNOWN');}}
-    const identity=d.documentNumber&&d.supplierId&&stamp(d.documentDate)?JSON.stringify([d.supplierVat||d.supplierId,d.documentType,String(d.documentNumber).trim().toLocaleUpperCase('el-GR'),stamp(d.documentDate).slice(0,10)]):null;
+    for(const productId of productIds){const w=byWindow.get(productId);if(w&&civilDay(d.documentDate)&&civilDay(w.from)&&civilDay(d.documentDate)<civilDay(w.from)&&related.some(m=>m.productId===productId&&within(m.createdAt,w))){checks.push('LATE_DOCUMENT_PHYSICAL_TIME_UNKNOWN');flag(productId,'LATE_DOCUMENT_PHYSICAL_TIME_UNKNOWN');}}
+    const supplierIdentity=d.supplierVat?String(d.supplierVat).replace(/\D/g,'')||d.supplierId:d.supplierId;
+    const identity=d.documentNumber&&supplierIdentity&&civilDay(d.documentDate)?JSON.stringify([supplierIdentity,d.documentType,String(d.documentNumber).trim().toLocaleUpperCase('el-GR'),civilDay(d.documentDate)]):null;
     if(identity){if(!identities.has(identity))identities.set(identity,[]);identities.get(identity).push(id);}else checks.push('INVOICE_IDENTITY_INCOMPLETE');
     invoiceChecks.push({id,documentNumber:d.documentNumber||null,documentType:d.documentType,status:d.status,sourceType:d.sourceType,supplierId:d.supplierId||null,supplierName:d.supplierName||null,
       issueDate:stamp(d.documentDate),recordedAt:stamp(d.createdAt),lastChangedAt:stamp(d.updatedAt),purchaseOrderId:d.purchaseOrderId||null,

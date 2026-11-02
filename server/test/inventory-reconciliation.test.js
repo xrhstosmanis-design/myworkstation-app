@@ -40,6 +40,9 @@ test('late invoice, missing reference and duplicate key are findings; actual pos
   const row=reconcileInventory(input).rows[0];assert.equal(row.expectedQuantity,null);assert.equal(row.recordedExpectedQuantity,80);assert.equal(row.difference,null);
   for(const flag of ['LATE_DOCUMENT','MISSING_MOVEMENT_REFERENCE','DUPLICATE_POSTING_KEY'])assert.ok(row.findings.includes(flag));
 });
+test('an invoice issued on the opening count calendar day is not late just because its date stores midnight',()=>{
+  const input=fixture();input.movements[2].documentDate=t(0);const row=reconcileInventory(input).rows[0];assert.equal(row.expectedQuantity,80);assert.equal(row.findings.includes('LATE_DOCUMENT'),false);
+});
 test('system stock zeroing is visible as nonphysical correction, never physical receipt',()=>{
   const input=fixture();input.movements.push({id:'zero',productId:'p',movementType:'STOCK_ADJUSTMENT',quantity:12,sourceId:'zero1',createdAt:t(9)});
   const row=reconcileInventory(input).rows[0];assert.equal(row.incoming,5);assert.equal(row.systemAdjustments,12);assert.equal(row.expectedQuantity,80);assert.equal(row.recordedExpectedQuantity,92);assert.equal(row.difference,-10);assert.ok(row.findings.includes('NON_PHYSICAL_ADJUSTMENT'));

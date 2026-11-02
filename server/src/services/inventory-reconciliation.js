@@ -1,5 +1,6 @@
 // A read-only projection of recorded stock postings. Never posts stock, charges
 // people, merges product cards or treats a possible duplicate as proven loss.
+import {greeceDateInput} from '../../../shared/greece-time.mjs';
 const value = x => x === null || x === undefined || x === '' ? null : Number.isFinite(Number(x)) ? Number(x) : null;
 const time = x => x ? new Date(x).getTime() : NaN;
 const round = x => Math.round((x + Number.EPSILON) * 10000) / 10000;
@@ -62,7 +63,7 @@ export function reconcileInventory({previous, current, previousLines, currentLin
         else if (quantity >= 0) incoming = round(incoming + quantity);
         else outgoing = round(outgoing - quantity);
       }
-      if (m.documentDate && time(m.documentDate) < time(from)) flags.push('LATE_DOCUMENT');
+      if (Number.isFinite(time(m.documentDate))&&Number.isFinite(time(from))&&greeceDateInput(m.documentDate)<greeceDateInput(from)) flags.push('LATE_DOCUMENT');
       if (!baseline && system) flags.push('NON_PHYSICAL_ADJUSTMENT');
       // createdAt is the posting timestamp; do not invent a physical receipt date.
       return {...m, quantity, included: !baseline, classification: baseline ? 'BASELINE_POSTING' : system ? 'SYSTEM_ADJUSTMENT' : 'POSTED_MOVEMENT',
