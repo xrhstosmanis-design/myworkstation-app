@@ -541,10 +541,6 @@ Remaining required work: integrate the owner's operator administration with the 
 
 Draft source PR3370 / head046e65745f1f07f5d83b8e74271cd9d90b77bf2f / full CI41204045733 started; not merged or installed. Keep this a draft until the broader module/action integrations are completed and validated.
 
-## 02/11/2026 - CHAT-FAMILIAR-UI-01 / ASSIGNED - NAVIGATION ONLY
-
-Retained owner codex/chat-native-readers-20261031. Rotation now USER-REPORTED PASS for the allowed preview-close branch, in addition to background-return and earlier functional/two-account PASS. Those checks are completed, NOT pending and not replayed. Only return to conversation list and reopen Chat without the old photo reopening remains here. Independent model/OS/installed hash/current store/account/action time/runtime and forensic/server deltas remain unidentified. Next: obtain only that navigation observation when available; no accepted upload/send/read/ack/forward/background/rotation replay. Other N16/security/iOS owners and overallOPEN preserved. CP2026-11-01-chat-familiar-ui.md, manual/chat/PASS.md, rotation-confirmation-20261102.json.
-
 ## 31/10/2026 - CHAT-FIRST-ENTRY-01 / RESIDUALS ONLY / OWNER RETAINED
 
 Correct-store link entry and immediate close/reopen persistence were confirmed by owner and removed from pending. Only independently unmeasured idle/revocation/device/storage limits remain with retained owner; no replay of confirmed steps. See31Oct limited USER PASS and native-chat manual.
