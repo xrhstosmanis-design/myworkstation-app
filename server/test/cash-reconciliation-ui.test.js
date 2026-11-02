@@ -207,3 +207,9 @@ test('mounted automatic check bounds a malformed MORE stream to at most fifty pa
   }finally{await m.cleanup();}
  }
 });
+
+test('explicit available-reading view uses only GET and full evidence without dispatching an AI read',async()=>{
+ const m=await mount('shared/CashReconciliationPanel.jsx'),{act,React,root,Component}=m,calls=[];
+ const api=async(path,options={})=>{calls.push({path,...options});assert.equal(options.method,undefined,'preview must never POST or charge a provider');return report('A',period);};
+ try{await act(async()=>root.render(React.createElement(Component,{api,storeId:'A',...period})));await act(async()=>button('Έλεγχος με επανυπολογισμούς').click());await act(async()=>button('Έλεγχος με διαθέσιμες αναγνώσεις').click());assert.equal(calls.length,2);assert.equal(new URL(calls[1].path,'https://isolated.invalid').searchParams.get('fullAudit'),'1');assert(calls.every(c=>c.path.startsWith('/api/cash-reconciliation/')));assert.match(document.body.textContent,/SERVER REPORT A/);}finally{await m.cleanup();}
+});

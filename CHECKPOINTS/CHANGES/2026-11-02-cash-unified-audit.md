@@ -1,3 +1,7 @@
+## 02/11/2026 — CASH-UNIFIED-AUDIT-15 / EXPLICIT FREE EVIDENCE PREVIEW / SOURCE CANDIDATE
+
+Owner may explicitly select Έλεγχος με διαθέσιμες αναγνώσεις to rebuild the complete evidence projection with GET only and no new AI request. The separate automatic button still reads unread originals before rebuilding. This permits reviewing current coverage or an uncertain reading without paying or repeating a provider dispatch; staff read-only admission/default basic requests remain unchanged. Actual mounted assertion verifies two scoped GETs, fullAudit1 and no paper/read-next/review POST. Full mounted reconciliation suite13PASS/0FAIL/0SKIP Node20. Combined exact CI remains mandatory; no runtime or LAB PASS inferred. No new source beyond shared panel and its existing mounted test.
+
 ## 02/11/2026 — CASH-UNIFIED-AUDIT-15 + CASH-SOURCE-BATCH-16 / COMBINED CANDIDATE / AWAITING EXACT NATIVE CI
 
 Same retained cash owner. Full feature foundationb6ad3d4f40c683edb7975840d63826c7a5e904d4 passed exact fullPRCI41432877097/job125236826378:5233server+8backupPASS/0FAIL/0SKIP, all5SUCCESS and complete frontend/browser/HTTP E2E. This is engineering proof, not installed/LAB PASS. Before-source batch claim3520/e16a2232329974001e297d648af952ac377f55f6 passed applicable docsCI41434865365, mergedb73ba28e1daec206c1e9e595cd05ba52f55b60ad BEFORE batching edits. New combined source preserves current FTEXT/Chat/inventory/cost-approval peer records and PDFs; no other runtime owner is taken.
