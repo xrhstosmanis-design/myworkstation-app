@@ -9,7 +9,7 @@ test('cash-paper contract keeps exact cents and rejects ambiguous, absent and ex
  const out=normalizePaper(raw());assert.equal(out.lines[0].amountCents,123456);assert.equal(out.associationVerified,false);assert.equal(out.employeeLiabilityAdjusted,false);
  const unknown=normalizePaper(raw({lines:[{...raw().lines[0],amountText:null}]}));assert.equal(unknown.lines[0].amountCents,null);assert.equal(unknown.lines[0].requiresReview,true);
 });
-test('paper date requires an explicit valid printed year and matching ISO; upload context and invented dates cannot verify it',()=>{
+test('paper date requires an explicit valid printed year and rejects conflicting ISO; upload context and invented dates cannot verify it',()=>{
  assert.equal(normalizePaper(raw()).documentDate,'2026-10-21');
  for(const [dateText,documentDate] of [['21/10','2026-10-21'],['31/02/2026','2026-02-31'],['21/10/2026','2026-10-22'],[null,'2026-10-21']])assert.equal(normalizePaper(raw({dateText,documentDate})).documentDate,null);
  assert.equal(normalizePaper(raw({dateText:'29/02/2024',documentDate:'2024-02-29'})).documentDate,'2024-02-29');
@@ -22,4 +22,27 @@ test('original source scope, MIME, actual checksum, declared size and generation
  for(const changed of [{storeId:'other'},{companyId:'other'},{attachmentChecksum:'a'.repeat(64)},{attachmentSize:1},{attachmentMimeType:'audio/webm'},{attachmentData:'invalid!'}])assert.throws(()=>validatePaperSource({...row,...changed},scope,checksum));
  assert.notEqual(paperKey(scope,checksum),paperKey({...scope,storeId:'other'},checksum));assert.notEqual(paperKey(scope,checksum),paperKey({...scope,generation:'1'},checksum));
  assert.throws(()=>paperKey({...scope,generation:'9223372036854775808'},checksum));assert.equal(paperRequest.safeParse({messageId:'m',checksum,generation:'0',role:'SUPER_ADMIN'}).success,false);
+});
+
+// The stored one-call LAB shape is replayed locally; this is not a new provider read.
+test('missing model ISO derives only from one complete exact printed date without mutating raw extraction',()=>{
+ const stored=raw({dateText:'27/10/2026',documentDate:null,operatorText:'LAB POS 2',shiftText:null,lines:[
+  ...['ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ','ΚΛΕΙΣΙΜΟ ΤΑΜΕΙΟΥ','Ημερομηνία: 27/10/2026','Ταμείο: MAIN','Χειριστής: LAB POS 2'].map(label=>({kind:'OTHER',label,amountText:null,quantityText:null,timeText:null,uncertain:false})),
+  {kind:'CLOSING_CASH',label:'ΛΗΞΗ ΜΕΤΡΗΤΩΝ',amountText:'9,40 €',quantityText:null,timeText:'19:24:28',uncertain:false}]});
+ const before=structuredClone(stored),result=normalizePaper(stored);
+ assert.equal(result.documentDate,'2026-10-27');assert.deepEqual(stored,before);
+ assert.equal(result.dateText,'27/10/2026');assert.equal(result.lines.length,6);assert.equal(result.lines[5].amountCents,940);
+ assert.equal(result.lines[5].timeText,'19:24:28');assert.equal(result.associationVerified,false);
+ assert.equal(result.employeeLiabilityAdjusted,false);assert.equal(result.readingOnly,true);
+ for(const dateText of ['2026-10-27','27/10/2026','27.10.2026','27-10-2026',' 27/10/2026 ','7/1/2026'])
+  assert.equal(normalizePaper(raw({dateText,documentDate:null})).documentDate,dateText==='7/1/2026'?'2026-01-07':'2026-10-27');
+ assert.equal(normalizePaper(raw({dateText:'29/02/2024',documentDate:null})).documentDate,'2024-02-29');
+ for(const dateText of [null,'','27/10','27/10/26','31/02/2026','29/02/2026','00/10/2026','27/13/2026','27/10-2026','27/10/2026?','?27/10/2026','Ημερομηνία: 27/10/2026','27/10/2026 19:24:28','27/10/2026 ή 28/10/2026'])
+  assert.equal(normalizePaper(raw({dateText,documentDate:null})).documentDate,null,JSON.stringify(dateText));
+ assert.equal(normalizePaper(raw({dateText:'27/10/2026',documentDate:'2026-10-28'})).documentDate,null);
+});
+test('single embedded model-confirmed date stays compatible but multiple printed candidates fail closed',()=>{
+ assert.equal(normalizePaper(raw({dateText:'Ημερομηνία: 21/10/2026'})).documentDate,'2026-10-21');
+ for(const dateText of ['21/10/2026 22/10/2026','21/10/2026 21/10/2026','2026-10-21 / 22/10/2026','21/10/2026 31/02/2026'])
+  for(const documentDate of [null,'2026-10-21'])assert.equal(normalizePaper(raw({dateText,documentDate})).documentDate,null,dateText);
 });

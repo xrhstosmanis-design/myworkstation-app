@@ -6,7 +6,7 @@ export const automaticPaperRequest=z.object({generation:z.string().regex(/^(0|[1
 const discoveryStatuses=new Set(['AWAITING_READING','NO_ATTACHMENTS_IN_DISCOVERY','LIMITED','UNAVAILABLE']);
 const text=v=>typeof v==='string'?v.trim():'';
 const normalized=v=>text(v).normalize('NFD').replace(/\p{M}/gu,'').toLocaleUpperCase('el-GR').replace(/\s+/g,' ');
-const operatorMatches=(printed,recorded)=>{const a=normalized(printed),b=normalized(recorded);if(!a)return true;const words=new Set(b.split(' '));return Boolean(b)&&a.split(' ').every(word=>word.length>=2&&words.has(word));};
+const operatorMatches=(printed,recorded)=>{const a=normalized(printed),b=normalized(recorded);if(!a)return true;if(a===b&&a.split(' ').some(word=>/\p{L}{2}/u.test(word)))return true;const words=new Set(b.split(' '));return Boolean(b)&&a.split(' ').every(word=>word.length>=2&&words.has(word));};
 const validSource=s=>s&&typeof s.sourceId==='string'&&/^[a-f0-9]{64}$/.test(s.checksum||'')&&Array.isArray(s.references)&&s.references.length>0&&s.references.every(r=>text(r.messageId));
 export const automaticPaperByteLimit=25*1024*1024;
 // Metadata-only admission before any original bytes or paid extraction. Missing
@@ -63,7 +63,7 @@ const sameTime=(printed,at,date)=>{const c=clock(at);return c&&printed&&c.day===
 
 // Corroboration is derived evidence, not a manual review, new expense or change
 // to employee liability. Every match retains the exact original source hash.
-export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,selectedIds=[...sessions.keys()],period}){
+export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,selectedIds=[...sessions.keys()],period,storeName}){
  const selected=new Set(selectedIds),items=[],sources=Array.isArray(papers)?papers:[],coverage=automaticPaperCoverage(discovery,sources);
  const all=[...sessions.values()].filter(s=>s?.session?.companyId===scope.companyId&&s.session.storeId===scope.storeId);
  const selectedSessions=all.filter(s=>selected.has(s.session.id));
@@ -85,10 +85,20 @@ export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,s
   if(!extraction.documentDate){items.push({...base,line:null,status:'UNRESOLVED',reason:'DOCUMENT_DATE_UNREADABLE'});continue;}
   if(outside(extraction.documentDate)){items.push({...base,line:null,status:'OUT_OF_PERIOD',reason:'PRINTED_DATE_OUTSIDE_SELECTED_SHIFTS'});continue;}
   if(!extraction.lines.length){items.push({...base,line:null,status:'UNRESOLVED',reason:'NO_DOCUMENT_LINES'});continue;}
+  const hasFinancialLines=extraction.lines.some(line=>line.kind!=='OTHER'&&line.amountCents!==null);
+  if(!hasFinancialLines)items.push({...base,line:null,status:'UNRESOLVED',reason:'NO_FINANCIAL_DOCUMENT_LINES'});
+  const closingDocument=extraction.lines.some(line=>line.kind==='CLOSING_CASH'&&line.amountCents!==null&&!line.uncertain);
+  const headerLabels=new Set([normalized(storeName)].filter(Boolean));
+  if(closingDocument)headerLabels.add('ΚΛΕΙΣΙΜΟ ΤΑΜΕΙΟΥ');
+  if(/^(?:20\d{2}-\d{2}-\d{2}|\d{1,2}[/.-]\d{1,2}[/.-]20\d{2})$/.test(text(extraction.dateText)))headerLabels.add(normalized('Ημερομηνία:'+extraction.dateText).replace(/\s*:\s*/g,':'));
+  if(text(extraction.operatorText)&&all.some(original=>normalized(original.session.openedByName)===normalized(extraction.operatorText)))headerLabels.add(normalized('Χειριστής:'+extraction.operatorText).replace(/\s*:\s*/g,':'));
+  for(const original of all)if(text(original.session.terminalPos))headerLabels.add(normalized('Ταμείο:'+original.session.terminalPos).replace(/\s*:\s*/g,':'));
   const documentStart=items.length;
   extraction.lines.forEach((line,index)=>{
    const detail={...base,label:line.label,timeText:line.timeText,line:index,kind:line.kind,amountCents:line.amountCents,date:extraction.documentDate,sessionId:null,transactionId:null,sourceHash:null};
    if(line.requiresReview){items.push({...detail,status:'UNRESOLVED',reason:'UNCERTAIN_LINE'});return;}
+   // Exact scoped metadata remains visible, but never claims a ledger match.
+   if(line.kind==='OTHER'&&line.amountText===null&&line.quantityText===null&&line.timeText===null&&headerLabels.has(normalized(line.label).replace(/\s*:\s*/g,':'))){items.push({...detail,status:'INFORMATIONAL',reason:'VERIFIED_DOCUMENT_HEADER'});return;}
    const time=printedTime(line.timeText);
    if(!time){items.push({...detail,status:'UNRESOLVED',reason:'LINE_TIME_UNREADABLE'});return;}
    const candidates=[];

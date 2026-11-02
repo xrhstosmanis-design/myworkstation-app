@@ -132,3 +132,26 @@ test('repeated same-kind shift aggregates are unresolved while POS and EFTPOS re
  const dup=project({sessions:new Map([['night',counted]]),papers:[paper([line,{...line}])]});assert.equal(dup.items.filter(i=>i.reason==='REPEATED_LINE_MATCH').length,2);
  const separate=project({sessions:new Map([['night',counted]]),papers:[paper([line,{...line,kind:'EFTPOS'}])]});assert.equal(separate.status,'COMPLETE');
 });
+test('LAB closing preserves five verified headers and exactly corroborates numeric-token operator',()=>{
+ const header=label=>({kind:'OTHER',label,amountText:null,quantityText:null,timeText:null,uncertain:false});
+ const headers=['ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ','ΚΛΕΙΣΙΜΟ ΤΑΜΕΙΟΥ','Ημερομηνία: 27/10/2026','Ταμείο: MAIN','Χειριστής: LAB POS 2'].map(header);
+ const closing={kind:'CLOSING_CASH',label:'ΛΗΞΗ ΜΕΤΡΗΤΩΝ',amountText:'9,40 €',quantityText:null,timeText:'19:24:28',uncertain:false};
+ const lab={...original,session:{...original.session,terminalPos:'MAIN',openedByName:'LAB POS 2',openedAt:'2026-10-27T06:00:00Z',closedAt:'2026-10-27T17:24:28.504186Z',actualOperational:'9.40'}};
+ const extraction=lines=>normalizePaper({dateText:'27/10/2026',documentDate:null,operatorText:'LAB POS 2',shiftText:null,notes:[],lines});
+ const run=lines=>project({storeName:'ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ',sessions:new Map([['night',lab]]),papers:[{...source,reading:{...reading,extraction:extraction(lines)}}],period:{from:'2026-10-27',to:'2026-10-27'}});
+ const out=run([...headers,closing]);assert.equal(out.status,'COMPLETE');assert.equal(out.items.length,6);assert.equal(out.items.filter(i=>i.status==='INFORMATIONAL').length,5);assert.equal(out.items[5].status,'MATCHED');assert.equal(out.items[5].evidenceBasis,'SHIFT_BOUNDARY');
+ for(const item of out.items.slice(0,5)){assert.equal(item.reason,'VERIFIED_DOCUMENT_HEADER');assert.equal(item.sessionId,null);assert.equal(item.sourceHash,null);assert.equal(item.checksum,checksum);}
+ assert.equal(out.financialAdjustmentCents,0);assert.equal(out.humanApproval,false);
+ for(const row of [header('Αγνωστη γραμμή'),header('Ταμείο:OTHER'),header('Χειριστής:LAB POS 3'),header('Ημερομηνία:28/10/2026'),header('ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ 9,40€'),{...headers[1],uncertain:true},{...headers[1],amountText:'9,40'},{...headers[1],quantityText:'1'},{...headers[1],timeText:'19:24:28'},{...headers[1],amountText:''}]){
+  const result=run([row,closing]);assert.equal(result.status,'INCOMPLETE');assert.equal(result.items[0].status,'UNRESOLVED');assert.equal(result.items[1].status,'MATCHED');
+ }
+ const onlyHeaders=run(headers);assert.equal(onlyHeaders.status,'INCOMPLETE');assert(onlyHeaders.items.some(i=>i.reason==='NO_FINANCIAL_DOCUMENT_LINES'));assert.equal(onlyHeaders.items.find(i=>i.label==='ΚΛΕΙΣΙΜΟ ΤΑΜΕΙΟΥ').status,'UNRESOLVED');
+ const onlyUnknown=run([header('Αγνωστη γραμμή')]);assert.equal(onlyUnknown.coverage.complete,false);
+ const wrongName={...lab,session:{...lab.session,openedByName:'LAB POS 3'}};
+ assert.equal(project({sessions:new Map([['night',wrongName]]),papers:[{...source,reading:{...reading,extraction:extraction([closing])}}]}).items[0].status,'UNRESOLVED');
+ const duplicateLab={...lab,session:{...lab.session,id:'other'}};
+ assert.equal(project({sessions:new Map([['night',lab],['other',duplicateLab]]),papers:[{...source,reading:{...reading,extraction:extraction([closing])}}]}).items[0].reason,'AMBIGUOUS_MATCH');
+ const foreign={...lab,session:{...lab.session,id:'foreign',companyId:'elsewhere',terminalPos:'OTHER'}};
+ const foreignHeader=project({sessions:new Map([['night',lab],['foreign',foreign]]),papers:[{...source,reading:{...reading,extraction:extraction([header('Ταμείο:OTHER'),closing])}}]});assert.equal(foreignHeader.items[0].status,'UNRESOLVED');
+ const loneNumber={...raw,operatorText:'2'};assert.equal(project({sessions:new Map([['night',{...original,session:{...original.session,openedByName:'2'}}]]),papers:[{...source,reading:{...reading,extraction:normalizePaper(loneNumber)}}]}).items[0].status,'UNRESOLVED');
+});
