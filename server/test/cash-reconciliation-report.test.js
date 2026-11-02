@@ -119,3 +119,16 @@ test('matching a handwritten expense amount does not replace a missing expense r
  const source=fullFixture();source.sessions.get('a').expenseFindings=[{code:'EXPENSE_WITHOUT_DOCUMENT',transactionId:'expense-a',amountCents:1000,occurredAt:'2026-10-21T10:00:00.000Z',evidenceHash:hash('missing-receipt')}];
  const report=projectReconciliation(source,[]),row=report.rows[0];assert.equal(row.fullAudit.status,'PENDING');assert(row.fullAudit.pendingChecks.includes('EXPENSES'));assert.equal(row.remainingCents,-8700);assert.equal(row.explainedCents,0);assert.equal(row.offsetCents,0);assert.equal(report.issueRegister.issues[0].status,'OPEN');assert.match(report.text,/χωρίς παραστατικό/);assert.doesNotMatch(report.text,/ΤΕΛΙΚΟ ΤΕΚΜΗΡΙΩΜΕΝΟ/);
 });
+
+
+test('full-audit event and document upload times use midnight 00 with the correct Athens day in summer and winter',()=>{
+ for(const [occurredAt,day] of [['2026-10-20T21:25:26.000Z','21/10/2026'],['2026-10-26T22:25:26.000Z','27/10/2026']]){
+  const source=fullFixture(),a=source.sessions.get('a');
+  a.fullEvidence.events.findings=[{code:'AUDIT_IDEMPOTENT_REPLAY',eventId:'midnight-event',occurredAt}];
+  source.paperEvidence.items[0].filename='midnight-source.png';source.paperEvidence.items[0].uploadedAt=occurredAt;
+  const before=structuredClone(source),report=projectReconciliation(source,[]);
+  assert(report.text.includes(`Συμβάν AUDIT_IDEMPOTENT_REPLAY · ${day}, 00:25:26 · αναφορά midnight-event`));
+  assert(report.text.includes(`midnight-source.png (ανέβηκε ${day}, 00:25:26)`));
+  assert.doesNotMatch(report.text,/24:25:26/);assert.equal(report.rows[0].remainingCents,-8700);assert.equal(report.rows[0].cardCents,0);assert.deepEqual(source,before);
+ }
+});
