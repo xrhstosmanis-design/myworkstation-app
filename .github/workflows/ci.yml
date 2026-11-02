@@ -176,7 +176,7 @@ jobs:
     needs: classify-changes
     if: needs.classify-changes.outputs.full_ci == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     services:
       postgres:
         # Docker Official PostgreSQL 16; ECR mirror hit a data limit on 11 Oct.
