@@ -1,3 +1,5 @@
+Shared tracker PDF remains the current-main acceptance baseline during technical validation; regenerate with the final release/acceptance receipt. No new physical PASS is claimed.
+
 ## Validated runtime35ad3b76 / documentation-only main reconciliation
 
 Exact source35ad3b76623a282fbdd4c484df6cac5af41e9a95 passed fullPRCI41688582630/all5SUCCESS, server5485+backup8PASS/0FAIL/0SKIP; native recovery41688582669/job126100815669 passed59/0FAIL/0SKIP including concurrent promotion CASH/CARD commit, rollback, tamper refusal and controls; actual Windows41688582666/job126100815307 SUCCESS. Final focused29/0/0 also covers POS toFixed half-cent display parity while fiscal allocation remains exact BigInt cents. Earlier heads/runs superseded or cancelled are not counted as this final validation.
