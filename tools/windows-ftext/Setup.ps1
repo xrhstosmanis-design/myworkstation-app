@@ -11,7 +11,8 @@ while($true) {
     Write-Host '5. Preview completed STATUS history (connector must be closed)'
     Write-Host '6. Archive verified completed STATUS history (no receipt/payment files)'
     Write-Host '7. Restore the last STATUS history archive'
-    $choice=Read-Host 'Select 1-7'
+    if($c.PSObject.Properties['outputVersion'] -and $c.outputVersion -eq 1) {Write-Host '8. Prepare existing OUTPUT history automatically (FTEXT+ and connector closed)'}
+    $choice=Read-Host 'Select 1-8'
     try {
         switch($choice) {
             '1' { & (Join-Path $PSScriptRoot 'Pair.ps1') -ConfigPath $ConfigPath }
@@ -21,6 +22,7 @@ while($true) {
             '5' { Invoke-FtextStatusMaintenance -ConfigPath $ConfigPath -Mode Plan | Select-Object candidatePairs,acknowledgedPairs,retainedPairs,rejectedPairs,resuming | Format-List }
             '6' { Invoke-FtextStatusMaintenance -ConfigPath $ConfigPath -Mode Apply | Format-List }
             '7' { Invoke-FtextStatusMaintenance -ConfigPath $ConfigPath -Mode Restore | Format-List }
+            '8' { Invoke-FtextOutputPreparation -ConfigPath $ConfigPath | Format-List }
         }
     } catch { Write-Host ('STOP: '+$_.Exception.Message) -ForegroundColor Red }
 }

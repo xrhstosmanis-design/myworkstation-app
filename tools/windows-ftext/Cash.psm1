@@ -104,6 +104,7 @@ function Invoke-FtextCashRequest {
  try {
   try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
   if(-not $held) {throw 'Another connector is using this ftext folder.'}
+  Assert-FtextOutputRequestNotArchived $c ([string]$Request.id)
   $resultPath=Join-Path $folder ('mws-cash-'+$Request.id+'.res')
   $commandBytes=New-FtextCashCommand $c $Request $resultPath
   $digest=Get-FtextCashHash $commandBytes

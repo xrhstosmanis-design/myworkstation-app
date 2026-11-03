@@ -44,3 +44,5 @@ jobs:
           ./tools/windows-ftext/Test-Unpublished-Stop-Smoke.ps1
           ./tools/windows-ftext/Test-Void-Smoke.ps1
           ./tools/windows-ftext/Test-Install-Smoke.ps1
+          ./tools/windows-ftext/Test-Output-Smoke.ps1
+          ./tools/windows-ftext/Test-Output-Cloud-Smoke.ps1

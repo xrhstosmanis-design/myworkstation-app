@@ -3,20 +3,20 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {ftextSettingsHash} from '../src/services/ftext-installation.js';
 import {recordFtextOperatorDecision} from '../src/services/ftext-operator-card.js';
-import {ftextCashRequestView} from '../src/services/ftext-cash-requests.js';
+import {ftextCashRequestView,validateFtextCashResult} from '../src/services/ftext-cash-requests.js';
 const settings={companyId:'company-a',storeId:'store-a',fiscalDeviceCode:'FISCAL-01',terminalPos:'POS-01',serialNumber:'SYNTHETIC',workFolder:'C:\\FText',protocol:'SOLIDUS(II)T',configurationId:'38cc2dfa-365a-4c00-aa0a-e713555352cd',lifecycleGeneration:'0',cashEnabled:true,cashDepartments:[{department:4,vatRate:13,vatCode:'2'}]};
 const device={id:'device-a',tokenVersion:3};
-function fixture(){
+function fixture(code101=false){
  const row={id:'370a0232-aeb7-4320-9919-d96c3f9f52d5',...settings,settingsHash:ftextSettingsHash(settings),status:'REQUIRES_CHECK',saleId:null,claimedByDeviceId:device.id,claimedTokenVersion:3,plan:{payment:{method:'CASH',code:1}},checkoutJson:{actorId:'cashier',paymentMethod:'CASH'}};
- row.result={requestId:row.id,settingsHash:row.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};row.resultHash=createHash('sha256').update(JSON.stringify(row.result)).digest('hex');return row;
+ row.result={requestId:row.id,settingsHash:row.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};if(code101)row.result=validateFtextCashResult({...row.result,rawResultHash:'b'.repeat(64),code:101},row);row.resultHash=createHash('sha256').update(JSON.stringify(row.result)).digest('hex');return row;
 }
 function harness(row=fixture()){
  let saved=structuredClone(row),writes=0;
  const tx={$queryRaw:async(parts,...values)=>{if(parts.join('?').startsWith('SELECT'))return values[1]===settings.companyId&&values[2]===settings.storeId&&values[3]===settings.terminalPos?[saved]:[];writes++;saved={...saved,checkoutJson:JSON.parse(values[0])};return [saved]}};
  return {get row(){return saved},get writes(){return writes},decide:(outcome,actor='cashier',scope=settings,current={settings,device})=>recordFtextOperatorDecision(tx,row.id,scope,actor,{outcome},{context:async()=>current})};
 }
-test('CASH original unknown supports uncertain then atomic NO, immutable evidence and replay',async()=>{
- const h=harness(),before=structuredClone(h.row);assert.equal(ftextCashRequestView(h.row).operatorReviewMode,'CASH_UNKNOWN');
+for(const code101 of [false,true])test(`CASH original unknown ${code101?'device101':'generic'} supports uncertain then atomic NO, immutable evidence and replay`,async()=>{
+ const h=harness(fixture(code101)),before=structuredClone(h.row);assert.equal(ftextCashRequestView(h.row).operatorReviewMode,'CASH_UNKNOWN');
  await h.decide('UNCERTAIN');await h.decide('UNCERTAIN');assert.equal(h.writes,1);assert.equal(ftextCashRequestView(h.row).operatorReleaseMode,null);
  await h.decide('NO');assert.equal(h.writes,2);assert.equal(ftextCashRequestView(h.row).operatorReleaseMode,'RELEASED');assert.equal(ftextCashRequestView(h.row).operatorOutcome,'NO');
  await h.decide('NO');assert.equal(h.writes,2);assert.equal(h.row.checkoutJson.ftextCashDecisionHistory.length,2);
@@ -34,7 +34,7 @@ test('CASH review refuses missing/changed/fiscal/late/foreign evidence and never
 });
 
 function isolated(){try{const u=new URL(process.env.DATABASE_URL);return process.env.NODE_ENV==='test'&&['postgres:','postgresql:'].includes(u.protocol)&&['localhost','127.0.0.1','postgres'].includes(u.hostname)&&!u.search&&!u.hash&&/^\/[^/]*test[^/]*$/i.test(decodeURIComponent(u.pathname))}catch{return false}}
-test('native CASH review races once, preserves immutable evidence, excludes released pending and late results; no business tables',{skip:!isolated(),timeout:60000},async()=>{
+for(const code101 of [false,true])test(`native CASH ${code101?'device101':'generic'} review races once, preserves immutable evidence, excludes released pending and late results; no business tables`,{skip:!isolated(),timeout:60000},async()=>{
  const {PrismaClient}=await import('@prisma/client');
  const {ensureFtextCashSchema,ftextCashLifecycleReviewProposal}=await import('../src/services/ftext-cash-schema.js');
  const {prepareFtextCashRequest,claimFtextCashRequest,recordFtextCashResult,findPendingFtextCashRequest}=await import('../src/services/ftext-cash-requests.js');
@@ -44,7 +44,7 @@ test('native CASH review races once, preserves immutable evidence, excludes rele
  try{
   await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);created=true;await ensureFtextCashSchema(a,{manifest:ftextCashLifecycleReviewProposal()});
   const row=await a.$transaction(tx=>prepareFtextCashRequest(tx,input));await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
-  const unknown={requestId:row.id,settingsHash:row.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
+  const unknown={requestId:row.id,settingsHash:row.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.',...(code101?{code:101,rawResultHash:'b'.repeat(64)}:{})};
   const before=await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,unknown));
   const decide=(db,outcome,actor='cashier')=>db.$transaction(tx=>recordFtextOperatorDecision(tx,row.id,settings,actor,{outcome},{context}));
   await assert.rejects(decide(a,'NO','foreign'));await assert.rejects(decide(a,'YES'));
@@ -59,11 +59,11 @@ test('native CASH review races once, preserves immutable evidence, excludes rele
  }finally{await Promise.all([a.$disconnect(),b.$disconnect()]);if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect()}
 });
 
-test('actual POS outcome HTTP handles CASH without card decision/finalization and enforces original scope',async()=>{
+for(const code101 of [false,true])test(`actual POS outcome HTTP handles CASH ${code101?'device101':'generic'} without card decision/finalization and enforces original scope`,async()=>{
  const {default:express}=await import('express'),{readFile}=await import('node:fs/promises');
  const source=await readFile(new URL('../src/routes/store-pos.js',import.meta.url),'utf8');
  const start=source.indexOf("router.post('/stores/:storeId/ftext-cash/:requestId/outcome'"),end=source.indexOf("router.post('/stores/:storeId/ftext-cash/:requestId/finalize'",start);
- assert.ok(start>=0&&end>start);let saved=fixture(),writes=0;
+ assert.ok(start>=0&&end>start);let saved=fixture(code101),writes=0;
  const db={store:{findFirst:async({where})=>where.id===settings.storeId&&where.companyId===settings.companyId?{id:settings.storeId}:null},$transaction:async fn=>fn({$queryRaw:async(parts,...v)=>{if(parts.join('?').startsWith('SELECT'))return v[0]===saved.id&&v[1]===settings.companyId&&v[2]===settings.storeId&&v[3]===settings.terminalPos?[saved]:[];writes++;saved={...saved,checkoutJson:JSON.parse(v[0])};return [saved]}})};
  const router=express.Router(),helpers=source.split('\n').filter(l=>l.startsWith('function assertStore(')||l.startsWith('async function storeFor(')).join('\n');
  new Function('router','prisma','requestTerminal','recordFtextOperatorDecision','ftextCashService','finalizeFtextCashRequest','ftextCashRequestView',helpers+'\n'+source.slice(start,end))(router,db,async req=>req.headers['x-terminal']||settings.terminalPos,recordFtextOperatorDecision,{cashContext:async()=>({settings,device})},()=>assert.fail('review finalized a sale'),ftextCashRequestView);
@@ -77,3 +77,15 @@ test('actual POS outcome HTTP handles CASH without card decision/finalization an
   assert.equal((await send('NO')).status,200);assert.equal(writes,2);
  }finally{await new Promise(r=>server.close(r))}
 });
+
+ test('device101 CASH requires the complete immutable result and never accepts other fiscal/error shapes',async()=>{
+ const original=fixture(true);
+ for(const patch of [{code:0},{code:2},{code:48},{code:100},{code:102},{code:'101'},{rawResultHash:'A'.repeat(64)},{rawResultHash:'b'.repeat(63)},{rawResultHash:null},{rawResultHash:undefined},{description:'No response from device'},{serialNumber:settings.serialNumber},{dayId:'1'},{qr:'https://www1.aade.gr/dcl/fixture'},{failedCommand:'PAY||2'},{extra:true}]){
+  const row=structuredClone(original);Object.assign(row.result,patch);row.resultHash=createHash('sha256').update(JSON.stringify(row.result)).digest('hex');
+  const h=harness(row);await assert.rejects(h.decide('NO'));assert.equal(h.writes,0,JSON.stringify(patch));assert.equal(ftextCashRequestView(row).operatorReviewMode,null);
+ }
+ const changed=structuredClone(original);changed.result.rawResultHash='c'.repeat(64);await assert.rejects(harness(changed).decide('NO'));
+ const partial=structuredClone(original);const {code,rawResultHash,...generic}=partial.result;partial.resultHash=createHash('sha256').update(JSON.stringify(generic)).digest('hex');await assert.rejects(harness(partial).decide('NO'));
+ const unordered=structuredClone(original);unordered.result=Object.fromEntries(Object.entries(unordered.result).reverse());const h=harness(unordered);assert.equal(ftextCashRequestView(h.row).operatorReviewMode,'CASH_UNKNOWN');await assert.rejects(h.decide('YES'));assert.equal(h.writes,0);await h.decide('NO');assert.equal(h.writes,1);
+ for(const patch of [{saleId:'sale'},{status:'CONFIRMED'},{checkoutJson:{...original.checkoutJson,ftextLateCashReceipt:{result:{outcome:'CONFIRMED'}}}},{checkoutJson:{...original.checkoutJson,ftextVoid:{status:'CONFIRMED'}}},{claimedByDeviceId:'foreign'},{claimedTokenVersion:4}]){const denied=harness({...original,...patch});await assert.rejects(denied.decide('NO'));assert.equal(denied.writes,0);}
+ });
