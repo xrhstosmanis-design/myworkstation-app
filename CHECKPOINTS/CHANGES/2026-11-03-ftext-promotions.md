@@ -1,3 +1,9 @@
+## Validated runtime35ad3b76 / documentation-only main reconciliation
+
+Exact source35ad3b76623a282fbdd4c484df6cac5af41e9a95 passed fullPRCI41688582630/all5SUCCESS, server5485+backup8PASS/0FAIL/0SKIP; native recovery41688582669/job126100815669 passed59/0FAIL/0SKIP including concurrent promotion CASH/CARD commit, rollback, tamper refusal and controls; actual Windows41688582666/job126100815307 SUCCESS. Final focused29/0/0 also covers POS toFixed half-cent display parity while fiscal allocation remains exact BigInt cents. Earlier heads/runs superseded or cancelled are not counted as this final validation.
+
+Merge was blocked only by concurrent peer documentation in main840525502f6bb7ce0b6cf74e871e1478b14cf745. All peer changes are preserved; no runtime source differs from the validated35ad3b76. Combined-head validation and exact main/normal guarded release still required. Promotion physical issuance remains NOT TESTED and parent remains OPEN under the same owner. No production payment, fiscal command, schema or settings change by this work.
+
 ## Source candidate — FTEXT-PROMOTIONS-01 / AWAITING CI AND LAB
 
 Before-source claim3608/head1a350279 passed applicable CI41684329371 and merged8aeabf1eab664998c427b1526d20f8a21208481b before runtime edits. Same retained owner/continuation. Candidate uses only server-resolved current-store LEAFLET/GIFT snapshots. Exact integer cents reconcile retail subtotal, original discount, final line totals and payment; at most two zero-discount existing S lines per product conserve quantity, department and VAT for cent remainders. No second discount subtraction or new vendor command. Current checkout rejects customer/loyalty/audience/mixed/fractional/general independent discounts as before. Existing Windows runtime and pairing need no replacement.
