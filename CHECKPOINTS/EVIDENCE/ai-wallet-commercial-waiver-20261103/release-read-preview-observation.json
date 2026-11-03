@@ -1,0 +1,39 @@
+{
+  "scope": "installed historical pending read-model and native preview only",
+  "revision": "f0f8439442112d180f7546ff29ac2dced785b108",
+  "sourcePR": 3571,
+  "finalHead": "64b24a49df8aa615b0665683a1355e0b4d335dd5",
+  "ci": {
+    "pr": 41609525311,
+    "main": 41611891549,
+    "nativeRecovery": 41609525358,
+    "serverPass": 5421,
+    "backupPass": 8,
+    "fail": 0,
+    "skip": 0
+  },
+  "release": {
+    "run": 41614134154,
+    "job": 125843318185,
+    "renderDeploy": "dep-dbkqt3jbc2fs73a4n1q0",
+    "liveAt": "2026-11-03T09:53:08.730297Z",
+    "independentHealthExact": true
+  },
+  "observations": {
+    "separateHistoricalPendingList": true,
+    "explicitSelection": true,
+    "matchingPreview": true,
+    "customerChargeZeroPreview": true,
+    "providerCostStatus": "UNKNOWN",
+    "realSubmitExecuted": false,
+    "autoReviewRejectedSubmit": true,
+    "readOnlyAfterRejectUnchanged": true,
+    "privateScreenshotExported": false,
+    "realDataExcluded": true,
+    "providerReplay": false,
+    "privateBrowserHandoff": false
+  },
+  "status": "SCOPED_READ_PREVIEW_PASS_REAL_SUBMISSION_OPEN",
+  "owner": "feat/ai-owner-wallet-20261022",
+  "continuation": "feat/ai-wallet-commercial-waiver-20261103"
+}
