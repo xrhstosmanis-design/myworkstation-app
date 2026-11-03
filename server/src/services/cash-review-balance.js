@@ -27,11 +27,49 @@ export async function readCashReviewSnapshot(db,companyId,storeId,sessionId){
   const row=rows[0]||{};if(![row.activeTotal??0,row.expenseTotal??0,row.transactionCount??0,row.reversedCount??0].every(value=>Number.isFinite(Number(value))))throw new Error("Invalid cash review snapshot");return {transactionCount:Number(row.transactionCount||0),activeTotal:Number(row.activeTotal||0),expenseTotal:Number(row.expenseTotal||0),reversedCount:Number(row.reversedCount||0),lastMovementAt:row.lastMovementAt?new Date(row.lastMovementAt).toISOString():null};
 }
 
-export async function readCashReviewState(db,session,{enabled=true}={}){
+// The existing ledger read carries amount::text separately from its JSON DTO.
+// JSON numbers may lose decimal precision; never sum them or round them into a
+// new review proof. Unsupported representations use the original SQL below.
+export function cashReviewSnapshotFromLoadedTransactions(session,loaded){
+  if(!Array.isArray(loaded)||loaded.length>500||!session?.companyId||!session.storeId||!(session.sessionId||session.id))return null;
   try{
+    const active=[],expenses=[];let reversedCount=0,lastMovement=null;
+    for(const input of loaded){
+      const r=input?.record;
+      if(!r||!['type','createdAt','reversedAt'].every(key=>Object.hasOwn(r,key))||r.companyId!==session.companyId||r.storeId!==session.storeId||r.sessionId!==(session.sessionId||session.id))return null;
+      const times=[r.createdAt,r.reversedAt].filter(v=>v!==null&&v!==undefined).map(v=>{
+        if(!(v instanceof Date)&&typeof v!=='string')throw Error('Invalid movement time');
+        const at=new Date(v).getTime();if(!Number.isFinite(at))throw Error('Invalid movement time');return at;
+      });
+      // PostgreSQL GREATEST ignores NULLs. Date normalizes only at the same
+      // millisecond boundary used by the established driver's toISOString().
+      if(times.length){const at=Math.max(...times);if(lastMovement===null||at>lastMovement)lastMovement=at;}
+      if(r.reversedAt!==null&&r.reversedAt!==undefined){reversedCount++;continue;}
+      if(!Object.hasOwn(input,'snapshotAmount'))return null;
+      const amount=input.snapshotAmount;
+      if(amount===null){if(r.amount!==null&&r.amount!==undefined)return null;continue;}
+      if(typeof amount!=='string'||amount.length>1000||!/^[+-]?\d+(?:\.\d+)?$/.test(amount)||typeof r.amount==='boolean'||Number(amount)!==Number(r.amount))return null;
+      const negative=amount.startsWith('-'),[whole,fraction='']=amount.replace(/^[+-]/,'').split('.');
+      const part={coefficient:BigInt((negative?'-':'')+whole+fraction),scale:fraction.length};
+      active.push(part);if(['SUPPLIER_PAYMENT','OTHER_EXPENSE'].includes(r.type))expenses.push(part);
+    }
+    const sum=parts=>{
+      const scale=Math.max(0,...parts.map(p=>p.scale));
+      const total=parts.reduce((value,p)=>value+p.coefficient*10n**BigInt(scale-p.scale),0n),negative=total<0n;
+      const digits=(negative?-total:total).toString().padStart(scale+1,'0');
+      const value=Number((negative?'-':'')+(scale?digits.slice(0,-scale)+'.'+digits.slice(-scale):digits));
+      if(!Number.isFinite(value))throw Error('Invalid cash review snapshot');return value;
+    };
+    return {transactionCount:loaded.length,activeTotal:sum(active),expenseTotal:sum(expenses),reversedCount,lastMovementAt:lastMovement===null?null:new Date(lastMovement).toISOString()};
+  }catch{return null;}
+}
+
+export async function readCashReviewState(db,session,{enabled=true,loadedTransactions,reviewRows}={}){
+  try{
+    const loadedSnapshot=cashReviewSnapshotFromLoadedTransactions(session,loadedTransactions);
     const [currentSnapshot,rows]=await Promise.all([
-      readCashReviewSnapshot(db,session.companyId,session.storeId,session.sessionId||session.id),
-      db.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.sessionId||session.id} ORDER BY "createdAt","id"`
+      loadedSnapshot||readCashReviewSnapshot(db,session.companyId,session.storeId,session.sessionId||session.id),
+      reviewRows!==undefined?reviewRows:db.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${session.companyId} AND "storeId"=${session.storeId} AND "sessionId"=${session.sessionId||session.id} ORDER BY "createdAt","id"`
     ]);
     const reviews=rows.map(row=>({...row,amount:Number(row.amount||0)})),validReviews=reviews.filter(row=>sameCashReviewSnapshot(row.snapshotJson,currentSnapshot)),confirmedExplanations=validReviews.filter(row=>row.decision==='EXPLANATION');
     const balance=confirmedExplanationBalance(session.variance,confirmedExplanations,{enabled}),latest=reviews.at(-1),stale=Boolean(latest&&!sameCashReviewSnapshot(latest.snapshotJson,currentSnapshot));

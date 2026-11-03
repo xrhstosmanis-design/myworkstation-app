@@ -11,7 +11,7 @@ import {readFullCashEventEvidence} from './cash-full-audit.js';
 
 export const cashReconciliationSourceLimit=200;
 export async function readReconciliationSession(db,scope,id,rule){
-  const rows=await db.$queryRaw`SELECT s."id",s."companyId",s."storeId",s."terminalPos",s."status",s."openedBy",s."openedByName",s."shiftLabel",s."openedAt",s."closedAt",s."variance",s."cardVariance",s."openingOperational",s."actualOperational",s."updatedAt",to_jsonb(s) AS "automaticSnapshot",to_jsonb(n) AS "nextSession",to_jsonb(p) AS "previousSession" FROM "CashShiftSession" s LEFT JOIN LATERAL (
+  const rows=await db.$queryRaw`SELECT s."id",s."companyId",s."storeId",s."terminalPos",s."status",s."openedBy",s."openedByName",s."shiftLabel",s."openedAt",s."closedAt",s."variance",s."cardVariance",s."openingOperational",s."actualOperational",s."updatedAt",to_jsonb(s) AS "automaticSnapshot",to_jsonb(n) AS "nextSession",to_jsonb(p) AS "previousSession",current_setting('transaction_isolation') AS "sourceIsolation" FROM "CashShiftSession" s LEFT JOIN LATERAL (
     SELECT next."id",next."companyId",next."storeId",next."terminalPos",next."status",next."openedAt",next."closedAt",next."openedByName"
     FROM "CashShiftSession" next WHERE next."companyId"=s."companyId" AND next."storeId"=s."storeId" AND next."terminalPos"=s."terminalPos"
       AND (next."openedAt">s."openedAt" OR (next."openedAt"=s."openedAt" AND next."id">s."id")) ORDER BY next."openedAt",next."id" LIMIT 1
@@ -20,13 +20,30 @@ export async function readReconciliationSession(db,scope,id,rule){
     FROM "CashShiftSession" previous WHERE previous."companyId"=s."companyId" AND previous."storeId"=s."storeId" AND previous."terminalPos"=s."terminalPos"
       AND (previous."openedAt"<s."openedAt" OR (previous."openedAt"=s."openedAt" AND previous."id"<s."id")) ORDER BY previous."openedAt" DESC,previous."id" DESC LIMIT 1
   ) p ON TRUE WHERE s."id"=${id} AND s."companyId"=${scope.companyId} AND s."storeId"=${scope.storeId} LIMIT 1`;
-  const {automaticSnapshot,...session}=rows[0]||{};
+  const {automaticSnapshot,sourceIsolation,...session}=rows[0]||{};
   if(!session||session.companyId!==scope.companyId||session.storeId!==scope.storeId||session.id!==id||!session.terminalPos)throw reconcileError('CASH_RECONCILIATION_NOT_FOUND',404);
-  const transactions=await db.$queryRaw`SELECT to_jsonb(t)-'attachmentData' AS record,md5(COALESCE(to_jsonb(t)->>'attachmentData','')) AS "attachmentDigest",(t."attachmentData" IS NOT NULL) AS "hasAttachment" FROM "StoreTransaction" t WHERE t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} AND t."sessionId"=${id} ORDER BY t."id" LIMIT 501`;
+  const transactions=await db.$queryRaw`SELECT to_jsonb(t)-'attachmentData' AS record,t."amount"::text AS "snapshotAmount",md5(COALESCE(to_jsonb(t)->>'attachmentData','')) AS "attachmentDigest",(t."attachmentData" IS NOT NULL) AS "hasAttachment" FROM "StoreTransaction" t WHERE t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} AND t."sessionId"=${id} ORDER BY t."id" LIMIT 501`;
   if(transactions.length>500||transactions.some(t=>t.record?.companyId!==scope.companyId||t.record?.storeId!==scope.storeId||t.record?.sessionId!==id))throw reconcileError('CASH_RECONCILIATION_LIMIT');
-  const count=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "CashControlReview" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sessionId"=${id}`;
-  if(!Number.isInteger(count[0]?.count)||count[0].count>500)throw reconcileError('CASH_RECONCILIATION_LIMIT');
-  const review=await readCashReviewState(db,{...session,sessionId:id},{enabled:rule.mode!=='POS_EFTPOS_ONLY'});
+  let review;
+  if(['repeatable read','serializable'].includes(sourceIsolation)){
+    let reviewRows;
+    try{reviewRows=await db.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sessionId"=${id} ORDER BY "createdAt","id" LIMIT 501`;}
+    catch{
+      // Retain the exceptional legacy limit/error boundary. PostgreSQL SQL
+      // errors may already have aborted the transaction; this is not a retry.
+      const count=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "CashControlReview" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sessionId"=${id}`;
+      if(!Number.isInteger(count[0]?.count)||count[0].count>500)throw reconcileError('CASH_RECONCILIATION_LIMIT');
+      reviewRows=null;
+    }
+    if(reviewRows!==null&&(!Array.isArray(reviewRows)||reviewRows.length>500))throw reconcileError('CASH_RECONCILIATION_LIMIT');
+    review=await readCashReviewState(db,{...session,sessionId:id},{enabled:rule.mode!=='POS_EFTPOS_ONLY',loadedTransactions:transactions,reviewRows});
+  }else{
+    // apply() and unknown callers can use ReadCommitted. Keep their original
+    // COUNT + fresh SQL snapshot/read sequence, with no earlier-row reuse.
+    const count=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "CashControlReview" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sessionId"=${id}`;
+    if(!Number.isInteger(count[0]?.count)||count[0].count>500)throw reconcileError('CASH_RECONCILIATION_LIMIT');
+    review=await readCashReviewState(db,{...session,sessionId:id},{enabled:rule.mode!=='POS_EFTPOS_ONLY'});
+  }
   const initialCents=exactCents(session.variance),cardCents=exactCents(session.cardVariance),basisCents=review.balance.status==='VALID'?exactCents(review.balance.unexplainedVariance):null;
   const originalTransactions=transactions.map(({record,attachmentDigest})=>({record,attachmentDigest}));
   const sourceHash=hash({version:1,session,transactions:originalTransactions,review,rule});

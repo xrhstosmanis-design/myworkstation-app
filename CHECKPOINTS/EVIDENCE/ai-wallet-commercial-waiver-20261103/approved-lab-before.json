@@ -157,19 +157,7 @@
         "enabled": false,
         "reservedMicros": "930033",
         "version": 45
-      },
-      "openShifts": [
-        {
-          "cardSales": 0,
-          "cashSales": 0,
-          "id": "4caf44ac-f3f4-4e45-bd62-649457502745",
-          "status": "OPEN",
-          "storeId": "cmtpopbgo000trhb5ng9ytiru",
-          "terminalPos": "MAIN",
-          "total": 0,
-          "transactionCount": 0
-        }
-      ]
+      }
     }
   ]
 }
