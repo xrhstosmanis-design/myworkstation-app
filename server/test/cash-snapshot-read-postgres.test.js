@@ -41,7 +41,7 @@ async function legacyReconciliationSession(db,scope,id,rule){
     transactions:transactions.map(t=>({id:t.record.id,type:t.record.type,amountCents:exactCents(t.record.amount),reversed:Boolean(t.record.reversedAt),cashEffect:t.record.subtractFromShift===true,occurredAt:t.record.occurredAt}))};
 }
 test('source keeps the hard review bound outside swallowed state errors and falls back to legacy count only when detailed read fails',async()=>{
- const row={id:'shift',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',variance:0,cardVariance:0,openedAt:new Date('2026-11-01T06:00:00Z'),closedAt:new Date('2026-11-01T14:00:00Z'),nextSession:null,previousSession:null};
+ const row={sourceIsolation:'repeatable read',id:'shift',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',variance:0,cardVariance:0,openedAt:new Date('2026-11-01T06:00:00Z'),closedAt:new Date('2026-11-01T14:00:00Z'),nextSession:null,previousSession:null};
  for(const scenario of ['500','501','read-error','read-error-limit','read-error-invalid-count']){
   const calls=[],db={$queryRaw:async(strings)=>{const sql=strings.join('');calls.push(sql);
    if(sql.includes('FROM "CashShiftSession" s'))return [row];if(sql.includes('AS "attachmentDigest"'))return [];
@@ -76,17 +76,17 @@ test('native exact loaded-ledger review snapshot preserves legacy source/report 
   const rows=()=>Promise.all(['CashShiftSession','StoreTransaction','CashControlReview'].map(table=>db.$queryRawUnsafe(`SELECT to_jsonb(x) AS record FROM "${table}" x ORDER BY "id"`)));
   const before=await rows();
   const trace=tx=>{const calls=[];return {calls,db:new Proxy(tx,{get(target,key){if(key==='$queryRaw')return async(strings,...values)=>{calls.push(strings.join(''));return target.$queryRaw(strings,...values);};const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value;}})};};
-  const compare=id=>db.$transaction(async tx=>{
+  const compare=(id,isolationLevel='RepeatableRead')=>db.$transaction(async tx=>{
    await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');const actual=trace(tx),old=trace(tx);
    const result=await readReconciliationSession(actual.db,scope,id,rule),legacy=await legacyReconciliationSession(old.db,scope,id,rule);
    assert.deepEqual(result,legacy,'full source and sourceHash match the pre-reuse native reader');
    const source=s=>({store:{id:'store',companyId:'co',name:'Synthetic'},rule,period:{from:'2026-11-01',to:'2026-11-01'},selectedIds:[id],sessions:new Map([[id,s]]),coverage:'BOUNDED_CLOSED_SHIFTS',limit:200});
    assert.deepEqual(projectReconciliation(source(result),[]),projectReconciliation(source(legacy),[]),'canonical report values/text/hash retain exact parity');
-   assert.equal(actual.calls.filter(s=>s.includes('COUNT(*)::int AS count')&&s.includes('CashControlReview')).length,0);assert.equal(actual.calls.filter(s=>s.includes('COUNT(*)::int AS "transactionCount"')).length,0);assert.equal(actual.calls.filter(s=>s.includes('FROM "CashControlReview"')).length,1);
-   assert.equal(old.calls.filter(s=>s.includes('COUNT(*)::int AS count')&&s.includes('CashControlReview')).length,1);assert.equal(old.calls.filter(s=>s.includes('COUNT(*)::int AS "transactionCount"')).length,1);assert.equal(actual.calls.length,old.calls.length-2);
-   assert(!JSON.stringify(result).includes('snapshotAmount'),'the exact sidecar stays out of every source/DTO/hash projection');return result;
-  },{isolationLevel:'RepeatableRead',timeout:15000});
-  for(const id of ids)await compare(id);assert.deepEqual(await rows(),before);
+   const reused=isolationLevel!=='ReadCommitted';assert.equal(actual.calls.filter(s=>s.includes('COUNT(*)::int AS count')&&s.includes('CashControlReview')).length,reused?0:1);assert.equal(actual.calls.filter(s=>s.includes('COUNT(*)::int AS "transactionCount"')).length,reused?0:1);assert.equal(actual.calls.filter(s=>s.includes('FROM "CashControlReview"')).length,1);
+   assert.equal(old.calls.filter(s=>s.includes('COUNT(*)::int AS count')&&s.includes('CashControlReview')).length,1);assert.equal(old.calls.filter(s=>s.includes('COUNT(*)::int AS "transactionCount"')).length,1);assert.equal(actual.calls.length,old.calls.length-(reused?2:0));
+   assert(!JSON.stringify(result).includes('snapshotAmount'),'the exact amount sidecar stays out of every source/DTO/hash projection');assert(!JSON.stringify(result).includes('sourceIsolation'),'the internal isolation sidecar is excluded too');return result;
+  },{isolationLevel,timeout:15000});
+  for(const id of ids)await compare(id);await compare('decimal','ReadCommitted');await compare('precision','Serializable');assert.deepEqual(await rows(),before);
   const exactRows=await db.$queryRaw`SELECT to_jsonb(t) AS record,t."amount"::text AS "snapshotAmount" FROM "StoreTransaction" t WHERE t."companyId"='co' AND t."storeId"='store' AND t."sessionId"='precision' ORDER BY t."id"`;
   assert.equal(exactRows[0].record.amount,1);assert.equal(cashReviewSnapshotFromLoadedTransactions({companyId:'co',storeId:'store',id:'precision'},exactRows).activeTotal,1e-20);
   const first=await compare('decimal');await movement('decimal','0.01');const fresh=await compare('decimal');assert.notEqual(fresh.sourceHash,first.sourceHash);assert.equal(fresh.reviewStatus,'RECHECK_REQUIRED','later requests cannot reuse an earlier snapshot');
@@ -94,4 +94,11 @@ test('native exact loaded-ledger review snapshot preserves legacy source/report 
   await compare('guard');await db.$executeRaw`INSERT INTO "CashControlReview" VALUES ('guard-501','co','store','guard','REVIEWED_NO_CHANGE',0,'Synthetic bound','auditor','Synthetic','{}'::jsonb,'2026-11-01T15:00:00Z')`;
   const limitedBefore=await rows();for(const reader of [readReconciliationSession,legacyReconciliationSession])await assert.rejects(db.$transaction(tx=>reader(tx,scope,'guard',rule),{isolationLevel:'RepeatableRead',timeout:15000}),e=>e.code==='CASH_RECONCILIATION_LIMIT');assert.deepEqual(await rows(),limitedBefore);
  }finally{await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();}
+});
+test('ReadCommitted and unknown isolation retain the complete original count and fresh SQL snapshot sequence',async()=>{
+ for(const sourceIsolation of ['read committed',undefined,'unexpected']){
+  const calls=[],row={id:'shift',companyId:'co',storeId:'store',terminalPos:'MAIN',status:'CLOSED',variance:0,cardVariance:0,openedAt:new Date('2026-11-01T06:00:00Z'),closedAt:new Date('2026-11-01T14:00:00Z'),nextSession:null,previousSession:null,...(sourceIsolation?{sourceIsolation}:{})};
+  const db={$queryRaw:async(strings)=>{const sql=strings.join('');calls.push(sql);if(sql.includes('FROM "CashShiftSession" s'))return[row];if(sql.includes('AS "attachmentDigest"'))return[];if(sql.includes('COUNT(*)::int AS count'))return[{count:0}];if(sql.includes('COUNT(*)::int AS "transactionCount"'))return[{transactionCount:0,activeTotal:0,expenseTotal:0,reversedCount:0,lastMovementAt:null}];if(sql.includes('FROM "CashControlReview"'))return[];if(sql.includes('to_regclass'))return[{auditTable:null,completionTable:null}];throw Error('Unexpected source read');}};
+  const result=await readReconciliationSession(db,scope,'shift',rule);assert.equal(result.reviewStatus,'VALID');assert.equal(calls.filter(s=>s.includes('COUNT(*)::int AS count')).length,1);assert.equal(calls.filter(s=>s.includes('COUNT(*)::int AS "transactionCount"')).length,1);assert(!calls.some(s=>s.includes('FROM "CashControlReview"')&&s.includes('LIMIT 501')));assert(!Object.hasOwn(result.session,'sourceIsolation'));
+ }
 });
