@@ -15,6 +15,7 @@ internal sealed partial class AgentForm:Form {
  readonly Label status=new(){Text="Δεν υπάρχει ενεργή σύνδεση.",AutoSize=true};
  readonly Button connect=new(){Text="Αποδοχή και σύνδεση",AutoSize=true},stop=new(){Text="ΔΙΑΚΟΠΗ ΠΡΟΣΒΑΣΗΣ",AutoSize=true,Enabled=false,BackColor=Color.LightCoral};
  readonly HttpClient http=new(){BaseAddress=new Uri(Origin),Timeout=TimeSpan.FromSeconds(5)};
+ readonly HttpClient commandHttp=new(){BaseAddress=new Uri(Origin),Timeout=TimeSpan.FromSeconds(15)};
  CancellationTokenSource? session;string? token,sessionJob;
  public AgentForm(){
   Text="MyWorkStation · Remote Assist";
@@ -52,13 +53,20 @@ internal sealed partial class AgentForm:Form {
   if(session!=null||(grant==null&&!consent.Checked)){status.Text="Απαιτείται τοπική αποδοχή.";return;}
   if(grant==null&&(code.Text.Length!=6||code.Text.Any(c=>c<'0'||c>'9'))){status.Text="Συμπληρώστε μόνο τον εξαψήφιο κωδικό.";return;}
   if(grant!=null){consent.Checked=true;TopMost=true;WindowState=FormWindowState.Normal;Show();Activate();BringToFront();}
-  supportGeneration++;fileBusy=false;invitedMode=grant!=null;connect.Enabled=false;code.Enabled=false;session=new CancellationTokenSource();var ct=session.Token;
+  supportGeneration++;fileBusy=false;invitedMode=grant!=null;connect.Enabled=false;code.Enabled=false;session=new CancellationTokenSource();var ct=session.Token;RemoteCommandChannel? commandChannel=null;var generation=supportGeneration;var ownerSession=session;
   try{
    var paired=grant==null?await http.PostAsJsonAsync("/api/remote-agent/pair-code",new{code=code.Text,localConsent=true},ct):await http.PostAsJsonAsync("/api/remote-support/pair",new{grant},ct);
    paired.EnsureSuccessStatusCode();var pair=await paired.Content.ReadFromJsonAsync<JsonElement>(cancellationToken:ct);
    token=pair.GetProperty("token").GetString();sessionJob=pair.GetProperty("jobId").GetString()??throw new InvalidOperationException("Λείπει η συνεδρία.");code.Clear();stop.Enabled=true;status.Text="ΕΝΕΡΓΗ ΠΡΟΣΒΑΣΗ · Πατήστε ΔΙΑΚΟΠΗ οποιαδήποτε στιγμή.";
    activeBase=invitedMode?$"/api/remote-support/device/{Uri.EscapeDataString(sessionJob)}":$"/api/remote-agent/{Uri.EscapeDataString(sessionJob)}";
    sendFile.Enabled=invitedMode;
+   if(invitedMode){
+    var commandPath=activeBase+"/commands";var commandToken=token;
+    commandChannel=new RemoteCommandChannel(async cancellation=>{
+     using var request=new HttpRequestMessage(HttpMethod.Get,commandPath);request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",commandToken);
+     using var response=await commandHttp.SendAsync(request,cancellation);response.EnsureSuccessStatusCode();return await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken:cancellation);
+    },command=>NativeInput.Apply(command,Screen.PrimaryScreen?.Bounds??throw new InvalidOperationException("Δεν υπάρχει οθόνη.")),()=>!ct.IsCancellationRequested&&consent.Checked&&supportGeneration==generation,()=>ownerSession.Cancel(),ct);
+   }
    long? expiresAt=pair.GetProperty("expiresAt").ValueKind==JsonValueKind.Null?null:pair.GetProperty("expiresAt").GetInt64();
    while(!ct.IsCancellationRequested&&(!expiresAt.HasValue||DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()<expiresAt.Value)){
     var bounds=Screen.PrimaryScreen?.Bounds??throw new InvalidOperationException("Δεν υπάρχει οθόνη.");
@@ -66,7 +74,7 @@ internal sealed partial class AgentForm:Form {
     int width=Math.Min(1600,bounds.Width),height=(int)Math.Round(bounds.Height*(double)width/bounds.Width);
     using var resized=new Bitmap(capture,new Size(width,height));using var stream=new MemoryStream();
     var codec=ImageCodecInfo.GetImageEncoders().First(c=>c.MimeType=="image/jpeg");using var parameters=new EncoderParameters(1);parameters.Param[0]=new EncoderParameter(System.Drawing.Imaging.Encoder.Quality,45L);resized.Save(stream,codec,parameters);
-    using var request=new HttpRequestMessage(HttpMethod.Post,$"{activeBase}/frame"){Content=JsonContent.Create(new{jpeg=Convert.ToBase64String(stream.ToArray()),width=bounds.Width,height=bounds.Height})};request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);
+    using var request=new HttpRequestMessage(HttpMethod.Post,$"{activeBase}/frame"){Content=JsonContent.Create(new{jpeg=Convert.ToBase64String(stream.ToArray()),width=bounds.Width,height=bounds.Height,separateCommands=invitedMode})};request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);
     using var response=await http.SendAsync(request,ct);response.EnsureSuccessStatusCode();var result=await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken:ct);
     bool appliedInput=false;
     foreach(var command in result.GetProperty("commands").EnumerateArray()){
@@ -77,15 +85,16 @@ internal sealed partial class AgentForm:Form {
     }
     if(invitedMode&&result.TryGetProperty("files",out var files))UpdateIncoming(files,ct);
     // Show the result of an input promptly without increasing idle capture traffic.
-    await Task.Delay(appliedInput?75:900,ct);
+    if(commandChannel!=null)await commandChannel.WaitForCapture(ct);else await Task.Delay(appliedInput?75:900,ct);
    }
   }catch(OperationCanceledException){}catch(Exception){status.Text="Η σύνδεση σταμάτησε. Ελέγξτε τον κωδικό/διαθεσιμότητα με τον διαχειριστή.";}
   finally{
+   ownerSession.Cancel();if(commandChannel!=null)await commandChannel.DisposeAsync();
    if(token!=null&&sessionJob!=null)try{using var request=new HttpRequestMessage(HttpMethod.Post,$"{activeBase}/{(invitedMode?"stop":"device-stop")}");request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);using var response=await http.SendAsync(request);}catch{}
    session?.Cancel();sendFile.Enabled=false;incoming.Controls.Clear();handledFiles.Clear();activeBase=null;token=null;sessionJob=null;session?.Dispose();session=null;stop.Enabled=false;connect.Enabled=true;code.Enabled=true;consent.Checked=false;http.DefaultRequestHeaders.Authorization=null;
   }
  }
- protected override void Dispose(bool disposing){if(disposing){session?.Cancel();bridgeServer?.Dispose();http.Dispose();}base.Dispose(disposing);}
+ protected override void Dispose(bool disposing){if(disposing){session?.Cancel();bridgeServer?.Dispose();http.Dispose();commandHttp.Dispose();}base.Dispose(disposing);}
 }
 internal static class NativeInput {
  [StructLayout(LayoutKind.Sequential)] struct INPUT{public uint type;public UNION u;}

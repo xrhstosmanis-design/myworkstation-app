@@ -4,18 +4,20 @@ import {createRemoteTransfers} from './attended-remote-transfers.js';
 const error=(status,message)=>Object.assign(new Error(message),{status});
 export function attendedRemoteGate(env){
  const terminals=new Set(String(env.REMOTE_SUPPORT_TERMINALS||'').split(',').map(x=>x.trim()).filter(x=>/^[A-Za-z0-9_-]{1,100}$/.test(x)));
- return id=>env.REMOTE_SUPPORT_ENABLED==='true'&&terminals.has(id);
+ return id=>env.REMOTE_SUPPORT_ENABLED==='true'&&typeof id==='string'&&/^[A-Za-z0-9_-]{1,100}$/.test(id)&&(env.REMOTE_SUPPORT_ALL_ENROLLED==='true'||terminals.has(id));
 }
 export function createAttendedRemote({now=Date.now,onStop=()=>{}}={}){
- const invitations=new Map(),grants=new Map(),listeners=new Map(),files=createRemoteTransfers({now});
+ const invitations=new Map(),grants=new Map(),listeners=new Map(),commandListeners=new Map(),files=createRemoteTransfers({now});
  const stopReasons=new Set(['STOP','AUDIT_FAILED','DEVICE_STOP','OPERATOR_STOP','CONTROLLER_STOP','AUTHORITY_REVOKED','STREAM_CLOSED','STREAM_ERROR','STREAM_BACKPRESSURE','DEVICE_IDLE','CONTROLLER_IDLE','SESSION_EXPIRED']);
- const close=(id,reason='STOP')=>{const j=invitations.get(id);invitations.delete(id);for(const[g,v]of grants)if(v.id===id)grants.delete(g);files.stop(id);listeners.delete(id);if(j)onStop(j,stopReasons.has(reason)?reason:'STOP');};
+ const close=(id,reason='STOP')=>{const j=invitations.get(id);invitations.delete(id);for(const[g,v]of grants)if(v.id===id)grants.delete(g);files.stop(id);listeners.delete(id);const wake=commandListeners.get(id);commandListeners.delete(id);wake?.();if(j)onStop(j,stopReasons.has(reason)?reason:'STOP');};
  const sessions=createRemoteSessionStore({now,ttl:null,maxSessions:30,onExpire:(s,reason)=>close(s.id,reason)});
  const publicJob=j=>({id:j.id,companyId:j.companyId,storeId:j.storeId,terminalId:j.terminalId,storeName:j.storeName,terminalName:j.terminalName,requester:j.requester,state:j.state});
  const same=(j,s)=>j&&j.companyId===s.companyId&&j.storeId===s.storeId&&j.terminalId===s.terminalId;
  const pending=(scope)=>[...invitations.values()].find(j=>same(j,scope)&&j.state==='PENDING');
  return {
   sessions,files,
+  onCommands(id,fn){if(commandListeners.has(id))throw error(409,'Υπάρχει ήδη κανάλι εντολών.');commandListeners.set(id,fn);return()=>{if(commandListeners.get(id)===fn)commandListeners.delete(id);};},
+  commandsAvailable(id){commandListeners.get(id)?.();},
   onFrame(id,fn){let set=listeners.get(id);if(!set){set=new Set();listeners.set(id,set);}set.add(fn);return()=>{set.delete(fn);if(!set.size&&listeners.get(id)===set)listeners.delete(id);};},
   frameAvailable(id){for(const fn of listeners.get(id)||[])fn();},
   invite(scope,creator){sessions.sweep();if(invitations.size>=100)throw error(429,'Πάρα πολλά αιτήματα υποστήριξης.');if([...invitations.values()].filter(j=>j.createdBy===creator.id).length>=3)throw error(409,'Έχεις ήδη τρία ανοικτά καταστήματα ή αιτήματα.');if([...invitations.values()].some(j=>same(j,scope)))throw error(409,'Υπάρχει ήδη αίτημα ή συνεδρία για αυτό το POS.');const j={...scope,id:crypto.randomUUID(),createdBy:creator.id,creatorSessionId:creator.sessionId,creatorSessionVersion:creator.sessionVersion,requester:creator.fullName||'Υποστήριξη MyWorkStation',state:'PENDING'};invitations.set(j.id,j);return publicJob(j);},
