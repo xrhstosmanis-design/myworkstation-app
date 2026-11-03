@@ -1,0 +1,21 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "[{\"attachments\":{\"count\":83,\"digest\":\"82b2884beffe9a3a21f6eb6d4800a3b6\"},\"captured_at\":\"2026-11-03T17:26:38.832799Z\",\"documents\":{\"count\":73,\"digest\":\"846c616bb867044c0ef425a9fec2e16c\"},\"id\":\"cmtpopbgo000trhb5ng9ytiru\",\"inbox\":{\"count\":65,\"digest\":\"ae262a418634f39eb54e112d7db826f6\"},\"jobs\":{\"count\":81,\"digest\":\"a9297b9a53d28d4bb6df09e984632aa1\"},\"movements\":{\"count\":95,\"digest\":\"5d2e545fc3b4055f52f70e64dd20cbbf\"},\"name\":\"\u0395\u03a1\u0393\u0391\u03a3\u03a4\u0397\u03a1\u0399\u039f \u0394\u039f\u039a\u0399\u039c\u03a9\u039d\",\"order_lines\":{\"count\":632,\"digest\":\"86205f12c232a2103677fa404f3b6611\"},\"orders\":{\"count\":61,\"digest\":\"7422300ddbe95e10e38d41552912a22b\"},\"shifts\":{\"count\":43,\"digest\":\"14814f641d388a4e4f23fdc329affe64\"},\"stock\":{\"count\":110,\"digest\":\"3f451968739ad2a97282b971c0db48d9\"},\"transactions\":{\"count\":134,\"digest\":\"f325173b44807a31d5c9f5c5854bdea7\"}},{\"attachments\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"captured_at\":\"2026-11-03T17:26:38.832799Z\",\"documents\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"id\":\"cmv2qanca000psigeizep8o9m\",\"inbox\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"jobs\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"movements\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"name\":\"N40 CONTROL 20261010\",\"order_lines\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"orders\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"shifts\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"stock\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"transactions\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"}}]"
+    }
+  ],
+  "structuredContent": null,
+  "isError": false,
+  "visibleActiveShift": {
+    "store": "\u0395\u03a1\u0393\u0391\u03a3\u03a4\u0397\u03a1\u0399\u039f \u0394\u039f\u039a\u0399\u039c\u03a9\u039d",
+    "terminal": "MAIN",
+    "openedBy": "LAB POS 2",
+    "openedAtAthens": "2026-10-29 19:04",
+    "transactionCount": 0,
+    "cash": 0,
+    "cardAndIRIS": 0,
+    "total": 0,
+    "evidence": "Native selected-store shift view before planned CREDIT draft; no payment action"
+  }
+}
