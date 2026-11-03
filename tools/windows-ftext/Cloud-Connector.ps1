@@ -14,6 +14,7 @@ $sha=[Security.Cryptography.SHA256]::Create()
 try { $hash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($c.companyId+'|'+$c.storeId+'|'+$c.terminalPos))).Replace('-','') } finally { $sha.Dispose() }
 $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtextCloud_'+$hash));$held=$false
 $readinessWorker=$null
+$outputWorker=$null;$outputQueue=New-Object 'Collections.Generic.Queue[object]';$nextOutput=[DateTime]::MinValue;$cashOutputCursor='';$statusOutputCursor=''
 try {
     try { $held=$mutex.WaitOne(0) } catch [Threading.AbandonedMutexException] { $held=$true }
     if(-not $held) { throw 'The ftext connector is already running for this POS.' }
@@ -27,6 +28,9 @@ try {
       $connected=$false
       $stage='cloud work poll'
       try {
+        if($null -ne $outputWorker -and $outputWorker.Async.IsCompleted) {
+            try {$found=Receive-FtextOutputDiscovery $outputWorker;$cashOutputCursor=[string]$found.cashCursor;$statusOutputCursor=[string]$found.statusCursor;foreach($entry in @($found.entries)) {$outputQueue.Enqueue($entry)}} catch {Write-Host 'OUTPUT history check deferred. Original files retained.'} finally {$outputWorker=$null;$nextOutput=[DateTime]::UtcNow.AddSeconds(30)}
+        }
         # Join before permitting another claim or any local fiscal transport.
         # Readiness failures cannot stop heartbeat/work discovery.
         if($null -ne $readinessWorker -and $readinessWorker.Async.IsCompleted) {
@@ -95,6 +99,13 @@ try {
                         Write-Host 'Original error evidence delivered. No payment or cancellation was sent.'
                     }
                 }
+                if(-not $late -and -not $recheck -and $null -eq $readinessWorker -and $c.PSObject.Properties['outputVersion'] -and $c.outputVersion -eq 1) {
+                    if($outputQueue.Count -gt 0 -and [DateTime]::UtcNow -lt $nextReadiness) {
+                        $entry=$outputQueue.Dequeue()
+                        try {$moved=Invoke-FtextCloudOutputArchive $c ([string]$entry.kind) $entry.proof;Write-Host ('OUTPUT: '+$moved.movedFiles+' completed evidence files preserved.')} catch {Write-Host 'OUTPUT group retained for later verification.'}
+                    }
+                    if($null -eq $outputWorker -and $outputQueue.Count -eq 0 -and [DateTime]::UtcNow -ge $nextOutput) {try {$outputWorker=Start-FtextOutputDiscovery $ConfigPath $cashOutputCursor $statusOutputCursor} catch {$nextOutput=[DateTime]::UtcNow.AddMinutes(1)}}
+                }
                 if(-not $late -and -not $recheck -and $null -eq $readinessWorker -and [DateTime]::UtcNow -ge $nextReadiness) {
                     $stage='nonfiscal STATUS/readiness report'
                     try {
@@ -113,4 +124,4 @@ try {
       if($connected -and [DateTime]::UtcNow -ge $nextConnectedLog) {Write-Host ([DateTime]::Now.ToString('HH:mm:ss')+' connector connected');$nextConnectedLog=[DateTime]::UtcNow.AddSeconds(10)}
       if($connected) {Start-Sleep -Seconds 1} else {Start-Sleep -Seconds 5}
     }
-} finally { try { Stop-FtextCloudReadiness $readinessWorker } finally { if($held) { $mutex.ReleaseMutex() };$mutex.Dispose() } }
+} finally { try { Stop-FtextCloudReadiness $readinessWorker;Stop-FtextCloudReadiness $outputWorker } finally { if($held) { $mutex.ReleaseMutex() };$mutex.Dispose() } }

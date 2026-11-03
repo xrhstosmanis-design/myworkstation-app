@@ -9,8 +9,14 @@ const fail=()=>{throw Object.assign(new Error('Η αρχική απόδειξη 
 export function ftextCashReviewable(row){
  const r=row?.result,c=row?.checkoutJson;
  if(!row||row.status!=='REQUIRES_CHECK'||row.saleId||row.plan?.payment?.method!=='CASH'||c?.paymentMethod!=='CASH'||!c.actorId||c.ftextVoid||c.ftextLateCashReceipt||c.ftextCardDecision||c.ftextOperatorRelease)return false;
- if(r?.requestId!==row.id||r.settingsHash!==row.settingsHash||r.outcome!=='REQUIRES_CHECK'||r.description!==unknown||Object.keys(r).sort().join(',')!=='description,outcome,requestId,settingsHash')return false;
- const canonical={requestId:r.requestId,settingsHash:r.settingsHash,outcome:r.outcome,description:r.description};
+ if(r?.requestId!==row.id||r.settingsHash!==row.settingsHash||r.outcome!=='REQUIRES_CHECK'||r.description!==unknown)return false;
+ const keys=Object.keys(r).sort().join(',');
+ const deviceTimeout=keys==='code,description,outcome,rawResultHash,requestId,settingsHash'&&r.code===101&&typeof r.rawResultHash==='string'&&/^[a-f0-9]{64}$/.test(r.rawResultHash);
+ if(keys!=='description,outcome,requestId,settingsHash'&&!deviceTimeout)return false;
+ // Match validateFtextCashResult's canonical field order, including the device
+ // evidence. JSONB key order is not the original signed result order. Code101
+ // permits explicit review only; it never proves failure or releases by itself.
+ const canonical={requestId:r.requestId,settingsHash:r.settingsHash,outcome:r.outcome,...(deviceTimeout?{code:r.code,rawResultHash:r.rawResultHash}:{}),description:r.description};
  return createHash('sha256').update(JSON.stringify(canonical)).digest('hex')===row.resultHash;
 }
 

@@ -18,6 +18,7 @@ import {pollFtextDeviceWork} from '../services/ftext-device-work.js';
 import {z} from 'zod';
 import {isDeepStrictEqual} from 'node:util';
 import {acceptFtextHandoff} from '../services/ftext-handoff.js';
+import {ftextOutputHistory} from '../services/ftext-output-history.js';
 
 export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTables,apiBase='https://myworkstation-app.onrender.com',revision='unknown',clock=()=>Date.now()}){
  const router=Router(),attempts=new Map();
@@ -45,6 +46,7 @@ export function createFtextRouter({service,db,userAuth=auth,ensure=ensureCloudTa
  router.post('/device/cash-handoff-accept',wrap(async(req,res)=>res.json(await service.authenticated(token(req),(t,d,c)=>acceptFtextHandoff(t,d,c,req.body)))));
  router.post('/device/status-result',wrap(async(req,res)=>res.json(await service.report(token(req),req.body))));
  router.post('/device/status-history',wrap(async(req,res)=>res.json(await service.statusHistory(token(req),req.body))));
+ router.post('/device/output-history',wrap(async(req,res)=>res.json(await service.authenticated(token(req),(t,d,c)=>ftextOutputHistory(t,d,c,req.body)))));
  router.post('/device/late-receipt-poll',wrap(async(req,res)=>res.json(await service.authenticated(token(req),async(t,d,c)=>({request:await ftextCashTableExists(t)?await pollFtextLateReceipt(t,d,c):null})))));
  router.post('/device/late-receipt-result',wrap(async(req,res)=>{
   const row=await service.authenticated(token(req),async(t,d,c)=>recordFtextLateDeviceReceipt(t,d,c,req.body));

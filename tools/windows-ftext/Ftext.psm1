@@ -282,4 +282,119 @@ function Invoke-FtextStatusArchive {
         return [pscustomobject]@{mode=$Mode;movedFiles=$moved;archiveId=$journal.id}
     } finally {if($held) {$mutex.ReleaseMutex()};$mutex.Dispose()}
 }
-Export-ModuleMember -Function Get-FtextConfig,Read-FtextStatusResult,Invoke-FtextStatus,Invoke-FtextStatusArchive
+function Get-FtextOutputRoot($Config) {
+    if([string]$Config.settingsHash -notmatch '^[a-f0-9]{64}$') {throw 'Output requires the original installation settings hash.'}
+    foreach($key in @('companyId','storeId','terminalPos')) {if([string]$Config.$key -notmatch '^[A-Za-z0-9_-]{2,80}$') {throw 'Invalid output identity.'}}
+    $input=[IO.Path]::GetFullPath([string]$Config.workFolder).TrimEnd('\','/')
+    if($input.Length -lt 4 -or [IO.Path]::GetPathRoot($input) -eq $input) {throw 'Unsafe output input folder.'}
+    $root=Join-Path ($input+'_OUTPUT') ($Config.companyId+'\'+$Config.storeId+'\'+$Config.terminalPos+'\'+$Config.settingsHash)
+    if([IO.Path]::GetPathRoot($root) -ine [IO.Path]::GetPathRoot($input) -or $root.StartsWith($input+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) {throw 'Output must be on the same volume outside input.'}
+    Assert-FtextArchivePath $root;Assert-FtextArchivePath $input
+    return $root
+}
+function Write-FtextOutputJournal([string]$Path,$Value) {
+    $bytes=[Text.Encoding]::UTF8.GetBytes(($Value | ConvertTo-Json -Depth 20 -Compress))
+    $s=[IO.File]::Open($Path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+    try {$s.Write($bytes,0,$bytes.Length);$s.Flush($true)} finally {$s.Dispose()}
+}
+function Get-FtextOutputPending($Config) {
+    $path=Join-Path (Get-FtextOutputRoot $Config) 'active-output.json'
+    if(-not (Test-Path -LiteralPath $path)) {return $null}
+    $null=Get-FtextArchiveHash $path
+    $j=Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
+    if($j.schema -cne 'MWS_FTEXT_OUTPUT_V1' -or $j.kind -cnotin @('STATUS','CASH')) {throw 'Unknown output journal retained.'}
+    foreach($key in @('companyId','storeId','terminalPos','serialNumber','settingsHash','workFolder')) {if([string]$j.$key -cne [string]$Config.$key) {throw 'Output journal belongs to another installation.'}}
+    $pattern=if($j.kind -ceq 'STATUS') {'^[a-f0-9]{32}$'} else {'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'}
+    if([string]$j.requestId -notmatch $pattern -or [string]$j.proof.requestId -cne [string]$j.requestId) {throw 'Invalid output request identity.'}
+    $prefix=if($j.kind -ceq 'STATUS') {'mws-status-'} else {'mws-cash-'}
+    $suffixes=if($j.kind -ceq 'STATUS') {@('.json','.res')} else {@('.intent.json','.publish.json','.report.json','.res')}
+    $names=@($j.files | ForEach-Object {$_.name})
+    if($names.Count -ne $suffixes.Count) {throw 'Incomplete output journal.'}
+    foreach($suffix in $suffixes) {if(@($names | Where-Object {$_ -ceq ($prefix+$j.requestId+$suffix)}).Count -ne 1) {throw 'Unexpected output file.'}}
+    foreach($f in @($j.files)) {if([string]$f.sha256 -notmatch '^[a-f0-9]{64}$') {throw 'Invalid output hash.'};foreach($time in @('createdUtc','modifiedUtc')) {$null=[DateTimeOffset]::Parse([string]$f.$time,[Globalization.CultureInfo]::InvariantCulture)}}
+    return $j
+}
+function Assert-FtextOutputRequestNotArchived($Config,[string]$RequestId) {
+    if($RequestId -notmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$') {throw 'Invalid fiscal request identity.'}
+    $root=Get-FtextOutputRoot $Config
+    # A directory is a permanent no-replay barrier even after an interrupted move.
+    if(Test-Path -LiteralPath (Join-Path $root ('CASH\'+$RequestId))) {throw 'Original request is archived or archiving. No fiscal resend is permitted.'}
+    $j=Get-FtextOutputPending $Config
+    if($j -and $j.kind -ceq 'CASH' -and [string]$j.requestId -ceq $RequestId) {throw 'Original request is archiving. No fiscal resend is permitted.'}
+}
+function Invoke-FtextOutputArchive {
+    param([Parameter(Mandatory=$true)]$Config,[Parameter(Mandatory=$true)][ValidateSet('STATUS','CASH')][string]$Kind,[Parameter(Mandatory=$true)]$Proof)
+    $root=Get-FtextOutputRoot $Config;$id=[string]$Proof.requestId
+    $pattern=if($Kind -ceq 'STATUS') {'^[a-f0-9]{32}$'} else {'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'}
+    if($id -notmatch $pattern) {throw 'Invalid acknowledged output request.'}
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try {$hash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes(([string]$Config.workFolder).ToUpperInvariant()))).Replace('-','')} finally {$sha.Dispose()}
+    $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtext_'+$hash));$held=$false
+    try {
+        try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
+        if(-not $held) {throw 'Input folder is busy. Output deferred.'}
+        $null=Assert-FtextArchiveQuiescent $Config
+        # An unresolved STATUS marker is never moved, even if its result exists.
+        if(Test-Path -LiteralPath (Join-Path $Config.workFolder '.mws-ftext-status.json')) {throw 'STATUS marker retained. Output deferred.'}
+        $destination=Join-Path $root ($Kind+'\'+$id);$active=Join-Path $root 'active-output.json'
+        $journal=Get-FtextOutputPending $Config
+        if($journal -and ($journal.kind -cne $Kind -or [string]$journal.requestId -cne $id)) {throw 'Earlier output recovery is pending.'}
+        if($journal -and ($journal.proof | ConvertTo-Json -Depth 15 -Compress) -cne ($Proof | ConvertTo-Json -Depth 15 -Compress)) {throw 'Original output acknowledgement changed.'}
+        $prefix=if($Kind -ceq 'STATUS') {'mws-status-'} else {'mws-cash-'}
+        $suffixes=if($Kind -ceq 'STATUS') {@('.json','.res')} else {@('.intent.json','.publish.json','.report.json','.res')}
+        if(-not $journal) {
+            if(Test-Path -LiteralPath $destination) {throw 'Output destination already exists. No overwrite.'}
+            $files=@(foreach($suffix in $suffixes) {
+                $name=$prefix+$id+$suffix;$path=Join-Path $Config.workFolder $name
+                Assert-FtextArchivePath $path;$digest=Get-FtextArchiveHash $path;$item=Get-Item -LiteralPath $path
+                [ordered]@{name=$name;sha256=$digest;createdUtc=$item.CreationTimeUtc.ToString('o');modifiedUtc=$item.LastWriteTimeUtc.ToString('o')}
+            })
+            $journal=[pscustomobject]@{schema='MWS_FTEXT_OUTPUT_V1';kind=$Kind;requestId=$id;companyId=$Config.companyId;storeId=$Config.storeId;terminalPos=$Config.terminalPos;serialNumber=$Config.serialNumber;settingsHash=$Config.settingsHash;workFolder=$Config.workFolder;createdAt=[DateTime]::UtcNow.ToString('o');proof=$Proof;files=$files}
+        }
+        $paths=@{}
+        foreach($f in @($journal.files)) {
+            $source=Join-Path $Config.workFolder $f.name;$target=Join-Path $destination $f.name
+            Assert-FtextArchivePath $source;Assert-FtextArchivePath $target
+            $hasSource=Test-Path -LiteralPath $source;$hasTarget=Test-Path -LiteralPath $target
+            if($hasSource -eq $hasTarget) {throw 'Output collision or missing evidence. Remaining files retained.'}
+            $present=if($hasSource) {$source} else {$target}
+            if((Get-FtextArchiveHash $present) -cne [string]$f.sha256) {throw 'Original output evidence changed.'}
+            $paths[$f.name]=$present
+        }
+        $readJson={param($suffix);Get-Content -LiteralPath $paths[($prefix+$id+$suffix)] -Raw -Encoding UTF8 | ConvertFrom-Json}
+        if($Kind -ceq 'STATUS') {
+            $e=& $readJson '.json';$parsed=Read-FtextArchiveStatus $paths[($prefix+$id+'.res')] ([string]$Config.serialNumber)
+            if($e.requestId -cne $id -or -not $parsed.ok -or ($e.result | ConvertTo-Json -Compress) -cne ($parsed | ConvertTo-Json -Compress)) {throw 'STATUS output does not match acknowledged success.'}
+            foreach($key in @('companyId','storeId','terminalPos')) {if([string]$e.$key -cne [string]$Config.$key) {throw 'Foreign STATUS retained.'}}
+        } else {
+            $intent=& $readJson '.intent.json';$publish=& $readJson '.publish.json';$report=& $readJson '.report.json'
+            if([string]$Proof.resultHash -notmatch '^[a-f0-9]{64}$' -or [string]$Proof.saleId -eq '' -or $Proof.result.outcome -cne 'CONFIRMED' -or $Proof.result.code -ne 0 -or [string]$Proof.result.settingsHash -cne [string]$Config.settingsHash -or [string]$Proof.result.requestId -cne $id -or [string]$Proof.result.serialNumber -cne [string]$Config.serialNumber -or [string]$Proof.commandHash -notmatch '^[a-f0-9]{64}$') {throw 'No matching committed fiscal output proof.'}
+            foreach($e in @($intent,$publish,$report)) {if([string]$e.requestId -cne $id -or [string]$e.settingsHash -cne [string]$Config.settingsHash) {throw 'Foreign fiscal output retained.'}}
+            if([string]$intent.commandHash -cne [string]$Proof.commandHash -or [string]$publish.commandHash -cne [string]$Proof.commandHash -or [string]$publish.nonce -cne [string]$Proof.nonce -or [string]$Proof.nonce -notmatch '^[a-f0-9-]{36}$') {throw 'Original publication changed.'}
+            $keys=@($report.PSObject.Properties.Name | Sort-Object);$expected=@($Proof.result.PSObject.Properties.Name | Sort-Object)
+            if(($keys -join ',') -cne ($expected -join ',')) {throw 'Original fiscal report shape changed.'}
+            foreach($key in $keys) {if(($report.$key | ConvertTo-Json -Depth 10 -Compress) -cne ($Proof.result.$key | ConvertTo-Json -Depth 10 -Compress)) {throw 'Original fiscal report changed.'}}
+            if((Get-FtextArchiveHash $paths[($prefix+$id+'.res')]) -cne [string]$Proof.result.rawResultHash) {throw 'Original fiscal bytes changed.'}
+        }
+        if(-not (Test-Path -LiteralPath $active)) {
+            $null=[IO.Directory]::CreateDirectory($root);Assert-FtextArchivePath $root
+            Write-FtextOutputJournal $active $journal
+        }
+        $null=[IO.Directory]::CreateDirectory($destination);Assert-FtextArchivePath $destination
+        $moved=0
+        foreach($f in @($journal.files)) {
+            $source=Join-Path $Config.workFolder $f.name;$target=Join-Path $destination $f.name
+            if(Test-Path -LiteralPath $source) {
+                Assert-FtextArchivePath $source;Assert-FtextArchivePath $target
+                if((Get-FtextArchiveHash $source) -cne [string]$f.sha256 -or (Test-Path -LiteralPath (Join-Path $Config.workFolder '.mws-ftext-cash.json')) -or (Test-Path -LiteralPath (Join-Path $Config.workFolder '.mws-ftext-status.json'))) {throw 'Input changed. Output recovery retained.'}
+                [IO.File]::Move($source,$target);$moved++
+            }
+            if((Get-FtextArchiveHash $target) -cne [string]$f.sha256) {throw 'Output verification failed. Journal retained.'}
+            [IO.File]::SetCreationTimeUtc($target,([DateTimeOffset]::Parse([string]$f.createdUtc,[Globalization.CultureInfo]::InvariantCulture).UtcDateTime))
+            [IO.File]::SetLastWriteTimeUtc($target,([DateTimeOffset]::Parse([string]$f.modifiedUtc,[Globalization.CultureInfo]::InvariantCulture).UtcDateTime))
+        }
+        [IO.File]::Move($active,(Join-Path $destination 'journal.json'))
+        return [pscustomobject]@{requestId=$id;movedFiles=$moved;outputPath=$destination}
+    } finally {if($held) {$mutex.ReleaseMutex()};$mutex.Dispose()}
+}
+Export-ModuleMember -Function Get-FtextConfig,Read-FtextStatusResult,Invoke-FtextStatus,Invoke-FtextStatusArchive,Get-FtextOutputRoot,Get-FtextOutputPending,Assert-FtextOutputRequestNotArchived,Invoke-FtextOutputArchive
