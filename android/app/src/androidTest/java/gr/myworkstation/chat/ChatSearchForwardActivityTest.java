@@ -17,17 +17,17 @@ public class ChatSearchForwardActivityTest {
  private static JSONObject row(String id,String body)throws Exception{return new JSONObject().put("id",id).put("senderId","other").put("senderName","CI Other").put("body",body).put("category","GENERAL").put("createdAt","2026-11-01T00:00:00Z").put("readByMe",true).put("deliveredByMe",true);}
  private static class Request{final String path,method;final JSONObject body;Request(String p,String m,JSONObject b)throws Exception{path=p;method=m;body=b==null?null:new JSONObject(b.toString());}}
  private static class Api extends ChatApi{
-  final CopyOnWriteArrayList<Request> calls=new CopyOnWriteArrayList<>();boolean canForward=true,failFirstForward,foreignSearch;int forwards;CountDownLatch entered,release;
+  final CopyOnWriteArrayList<Request> calls=new CopyOnWriteArrayList<>();boolean canForward=true,failFirstForward,foreignSearch,wrongForwardTopic;int forwards;CountDownLatch entered,release;
   @Override public JSONObject json(String path,String method,JSONObject body,String token)throws Exception{
    assertEquals("fixture-token",token);calls.add(new Request(path,method,body));
-   if(path.endsWith("/messages?limit=100"))return new JSONObject().put("store",store()).put("rows",new JSONArray().put(row("current","Current message"))).put("interactionsAvailable",true).put("searchForwardAvailable",true).put("settings",new JSONObject()).put("permissions",new JSONObject().put("canForward",canForward));
+   if(path.endsWith("/messages?limit=100&topic=GENERAL"))return new JSONObject().put("store",store()).put("rows",new JSONArray().put(row("current","Current message"))).put("interactionsAvailable",true).put("searchForwardAvailable",true).put("settings",new JSONObject()).put("permissions",new JSONObject().put("canForward",canForward));
    if(path.contains("/messages/search?")){
     if(entered!=null){entered.countDown();if(!release.await(5,TimeUnit.SECONDS))throw new AssertionError("Search fixture was not released");}
     android.net.Uri uri=android.net.Uri.parse("https://fixture.invalid"+path);boolean next=uri.getQueryParameter("before")!=null;
     return new JSONObject().put("store",foreignSearch?store().put("companyId","foreign-company"):store()).put("q",uri.getQueryParameter("q")).put("rows",new JSONArray().put(row(next?"older-b":"older-a",next?"Second page":"Old archive"))).put("nextCursor",next?JSONObject.NULL:"older-a");
    }
    if(path.endsWith("/forward-targets"))return new JSONObject().put("store",store()).put("stores",new JSONArray().put(new JSONObject().put("id","target").put("companyId","fixture-company").put("companyName","CI Company").put("name","CI Destination")));
-   if(path.endsWith("/forward")){forwards++;if(failFirstForward&&forwards==1)throw new java.io.IOException("Synthetic loss after commit");return new JSONObject().put("ok",true).put("id","forwarded-fixture").put("targetStoreId","target").put("replayed",forwards>1);}
+   if(path.endsWith("/forward")){forwards++;if(failFirstForward&&forwards==1)throw new java.io.IOException("Synthetic loss after commit");return new JSONObject().put("ok",true).put("id","forwarded-fixture").put("targetStoreId","target").put("topic",wrongForwardTopic?"INVOICE":body.getString("topic")).put("replayed",forwards>1);}
    throw new AssertionError("Unexpected mutation or transport: "+method+" "+path);
   }
   int posts(){int n=0;for(Request r:calls)if(r.method.equals("POST"))n++;return n;}
@@ -49,7 +49,13 @@ public class ChatSearchForwardActivityTest {
   Api api=new Api();api.failFirstForward=true;try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)){start(s,api);clickRoot(s,"Προώθηση");assertEquals(0,api.posts());
    s.onActivity(a->{try{assertEquals(1,dialog(a).getListView().getAdapter().getCount());assertTrue((dialog(a).getWindow().getAttributes().flags&WindowManager.LayoutParams.FLAG_SECURE)!=0);dialog(a).getListView().performItemClick(null,0,0);}catch(Exception e){throw new AssertionError(e);}});assertEquals(0,api.posts());
    for(int i=0;i<2;i++){s.onActivity(a->{try{dialog(a).getButton(AlertDialog.BUTTON_POSITIVE).performClick();}catch(Exception e){throw new AssertionError(e);}});idle(s);}
-   assertEquals(2,api.posts());Request first=null;for(Request r:api.calls)if(r.method.equals("POST")){assertEquals("target",r.body.getString("targetStoreId"));assertEquals(3,r.body.length());assertEquals("fixture-company",r.body.getString("targetCompanyId"));if(first==null)first=r;else assertEquals(first.body.getString("requestId"),r.body.getString("requestId"));}s.onActivity(a->{try{assertNull(get(a,"imageDialog"));assertEquals("",get(a,"uncertainForwardStoreId"));}catch(Exception e){throw new AssertionError(e);}});
+   assertEquals(2,api.posts());Request first=null;for(Request r:api.calls)if(r.method.equals("POST")){assertEquals("target",r.body.getString("targetStoreId"));assertEquals(4,r.body.length());assertEquals("GENERAL",r.body.getString("topic"));assertEquals("fixture-company",r.body.getString("targetCompanyId"));if(first==null)first=r;else assertEquals(first.body.getString("requestId"),r.body.getString("requestId"));}s.onActivity(a->{try{assertNull(get(a,"imageDialog"));assertEquals("",get(a,"uncertainForwardStoreId"));}catch(Exception e){throw new AssertionError(e);}});
+  }
+ }
+ @Test public void wrongTopicForwardReceiptStaysUncertainWithoutAutomaticReplay()throws Exception{
+  Api api=new Api();api.wrongForwardTopic=true;try(ActivityScenario<MainActivity>s=ActivityScenario.launch(MainActivity.class)){start(s,api);clickRoot(s,"Προώθηση");
+   s.onActivity(a->{try{dialog(a).getListView().performItemClick(null,0,0);dialog(a).getButton(AlertDialog.BUTTON_POSITIVE).performClick();}catch(Exception e){throw new AssertionError(e);}});idle(s);
+   assertEquals(1,api.forwards);assertEquals(1,api.posts());s.onActivity(a->{try{assertEquals("fixture-store",get(a,"uncertainForwardStoreId"));assertNotNull(get(a,"imageDialog"));assertFalse(((TextView)get(a,"notice")).getText().toString().startsWith("Προωθήθηκε"));dialog(a).getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals("fixture-store",get(a,"uncertainForwardStoreId"));}catch(Exception e){throw new AssertionError(e);}});assertEquals(1,api.forwards);
   }
  }
  @Test public void changedQueryRejectsLateResultsAndBackgroundClosesPrivateSearch()throws Exception{

@@ -70,7 +70,8 @@ public final class MainActivity extends Activity {
     private boolean videoAvailable;
     private Button videoButton;
     private TextView videoLabel;
-    private boolean searchForwardReady, chatCanForward;
+    private boolean searchForwardReady, chatCanForward, topicsReady;
+    private String activeTopic = "GENERAL";
     private Button historySearchButton;
     private int searchGeneration;
     private String uncertainForwardStoreId = "";
@@ -304,7 +305,7 @@ public final class MainActivity extends Activity {
     }
     private void chooseStore(JSONObject store) {
         if (busy) return;
-        navigate();
+        activeTopic = "GENERAL"; navigate();
         if (SessionAccess.switchOwnerCompany(identity, store.optString("companyId"))) {
             call("/api/auth/owner-companies/select", "POST", object("companyId", store.optString("companyId")), false, result -> {
                 String next = result.getString("token"); JSONObject decoded = claims(next);
@@ -316,8 +317,9 @@ public final class MainActivity extends Activity {
     private void conversation() {
         view = "conversation"; layout(selected.optString("name"), tab.equals("ai") ? "Βοηθός AI · επιλεγμένο κατάστημα" : "Μηνύματα καταστήματος");
         LinearLayout header = (LinearLayout) root.getChildAt(0);
-        header.setPadding(dp(16), dp(12), dp(16), dp(10));
-        ((TextView) header.getChildAt(0)).setTextSize(20);
+        header.setPadding(dp(16), dp(7), dp(16), dp(6));
+        ((TextView) header.getChildAt(0)).setTextSize(19);
+        header.getChildAt(1).setVisibility(View.GONE);
         LinearLayout tabs = new LinearLayout(this); tabs.setPadding(dp(8), dp(4), dp(8), dp(4));
         tabs.addView(chatButton("‹ Συνομιλίες", () -> { navigate(); selected = null; stores(); }, false), toolParams());
         tabs.addView(chatButton(tab.equals("ai") ? "Μηνύματα" : "Βοηθός AI", () -> {
@@ -326,11 +328,16 @@ public final class MainActivity extends Activity {
         if (tab.equals("chat")) { Button more=chatButton("⋮", scopedChatAction(this::showChatTools), false); more.setContentDescription("Περισσότερα εργαλεία συνομιλίας"); tabs.addView(more,new LinearLayout.LayoutParams(dp(48),dp(48))); }
         root.addView(tabs, 1);
         if (tab.equals("chat")) {
+            LinearLayout topics = new LinearLayout(this); topics.setTag("chat-topics"); topics.setPadding(dp(8),0,dp(8),dp(4));
+            for (String topic : ChatTopics.VALUES) { Button topicTab=chatButton(ChatTopics.label(topic), () -> changeTopic(topic), activeTopic.equals(topic)); topicTab.setTag("topic-"+topic); topicTab.setSelected(activeTopic.equals(topic)); topicTab.setContentDescription("Θέμα: "+ChatTopics.label(topic)); topics.addView(topicTab,toolParams()); }
+            root.addView(topics,2);
+        }
+        if (tab.equals("chat")) {
             LinearLayout options = new LinearLayout(this);
-            categoryButton = chatButton("Γενικό", scopedChatAction(() -> { if (!chatCanPin) return; messageCategory = messageCategory.equals("GENERAL") ? "ANNOUNCEMENT" : "GENERAL"; categoryButton.setText(messageCategory.equals("GENERAL") ? "Γενικό" : "Ανακοίνωση"); }), false);
+            categoryButton = chatButton("Γενικό", scopedChatAction(() -> { if (!chatCanPin || !activeTopic.equals("GENERAL")) return; messageCategory = messageCategory.equals("GENERAL") ? "ANNOUNCEMENT" : "GENERAL"; categoryButton.setText(messageCategory.equals("GENERAL") ? "Γενικό" : "Ανακοίνωση"); }), false);
             categoryButton.setContentDescription("Κατηγορία νέου μηνύματος"); categoryButton.setVisibility(View.GONE); options.addView(categoryButton, toolParams());
             announcementSettingsButton = chatButton("Ρυθμίσεις", scopedChatAction(this::showAnnouncementSettings), false); announcementSettingsButton.setVisibility(View.GONE); options.addView(announcementSettingsButton, toolParams());
-            announcementsButton = chatButton("Ανακοινώσεις", scopedChatAction(this::showPinnedAnnouncements), false); announcementsButton.setVisibility(View.GONE); options.addView(announcementsButton, toolParams()); options.setVisibility(View.GONE); root.addView(options, 2);
+            announcementsButton = chatButton("Ανακοινώσεις καταστήματος", scopedChatAction(this::showPinnedAnnouncements), false); announcementsButton.setVisibility(View.GONE); options.addView(announcementsButton, toolParams()); options.setVisibility(View.GONE); root.addView(options);
             historySearchButton = chatButton("Αναζήτηση μηνυμάτων", scopedChatAction(this::showHistorySearch), false); historySearchButton.setVisibility(View.GONE); options.addView(historySearchButton);
         }
 
@@ -352,7 +359,7 @@ public final class MainActivity extends Activity {
         }
         LinearLayout bar = new LinearLayout(this); bar.setTag("chat-composer"); bar.setGravity(Gravity.CENTER_VERTICAL); bar.setPadding(dp(10), dp(8), dp(10), dp(8));
         if (tab.equals("chat")) { Button add = chatButton("＋", this::showAttachmentTools, false); add.setContentDescription("Προσθήκη συνημμένου και έτοιμες απαντήσεις"); bar.addView(add, new LinearLayout.LayoutParams(dp(48), dp(48))); }
-        composer = input(tab.equals("ai") ? "Ρώτησε τον βοηθό…" : "Γράψε μήνυμα…", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, tab.equals("ai") ? 600 : 5000);
+        composer = input(tab.equals("ai") ? "Ρώτησε τον βοηθό…" : "Μήνυμα · "+ChatTopics.label(activeTopic), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, tab.equals("ai") ? 600 : 5000);
         composer.setMaxLines(4); composer.setMinHeight(dp(48)); composer.setBackground(round(0xfff4f1f8, 24)); composer.setPadding(dp(14), dp(10), dp(14), dp(10)); LinearLayout.LayoutParams field = new LinearLayout.LayoutParams(0, -2, 1); field.setMargins(dp(6), 0, dp(6), 0); bar.addView(composer, field);
         Button send = chatButton("➤", this::send, true); send.setContentDescription("Αποστολή μηνύματος");
         if (tab.equals("chat")) { chatSendButton = send; send.setEnabled(!busy); }
@@ -362,9 +369,24 @@ public final class MainActivity extends Activity {
         updateVoiceLabel(); updateVideoLabel();
         if (tab.equals("chat")) loadMessages(true); else checkAssistant();
     }
+    private void changeTopic(String topic) {
+        if (!ChatTopics.valid(topic) || topic.equals(activeTopic) || busy || selected==null || !tab.equals("chat")) return;
+        if (uncertainStoreId.equals(id(selected,"id"))) { status("Έλεγξε πρώτα την προηγούμενη αβέβαιη αποστολή."); return; }
+        final long generation=epoch.capture(); final String captured=token,store=id(selected,"id"),company=id(selected,"companyId");
+        Runnable change=()->{if(!busy&&chatScope(generation,captured,store,company)){navigate();activeTopic=topic;conversation();}};
+        if ((composer!=null&&composer.length()>0)||photos.size()>0||voiceDraft!=null||videoDraft!=null||quotedMessage!=null) {
+            dismissImage();imageDialog=new AlertDialog.Builder(this).setTitle("Αλλαγή θέματος")
+                .setMessage("Το πρόχειρο ανήκει στο «"+ChatTopics.label(activeTopic)+"». Απόρριψη πριν ανοίξει το «"+ChatTopics.label(topic)+"»;")
+                .setPositiveButton("Απόρριψη και αλλαγή",(d,w)->change.run()).setNegativeButton("Παραμονή",null).create();
+            imageDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);imageDialog.show();
+        } else change.run();
+    }
     private void loadMessages(boolean initial) {
         if (selected == null || busy) return;
-        call(chatBase() + "/messages?limit=100", "GET", null, false, data -> {
+        final String requestedTopic=activeTopic;
+        call(chatBase() + "/messages?limit=100&topic="+enc(requestedTopic), "GET", null, false, data -> {
+            if (!activeTopic.equals(requestedTopic)) return;
+            topicsReady = ChatTopics.response(data, requestedTopic);
             JSONObject store = data.getJSONObject("store");
             if (!id(store, "id").equals(id(selected, "id")) || !id(store, "companyId").equals(id(selected, "companyId"))) throw new IllegalArgumentException();
             photosEnabled = data.optJSONObject("settings") == null || data.getJSONObject("settings").optBoolean("photosEnabled", true);
@@ -380,20 +402,20 @@ public final class MainActivity extends Activity {
             chatCanManageSettings = interactionsReady && permissions != null && permissions.optBoolean("canManageSettings");
             if (announcementSettingsButton != null) announcementSettingsButton.setVisibility(chatCanManageSettings ? View.VISIBLE : View.GONE);
             acknowledgementRequired = interactionsReady && settings != null && settings.optBoolean("announcementAcknowledgementRequired");
-            if (categoryButton != null) categoryButton.setVisibility(chatCanPin ? View.VISIBLE : View.GONE);
+            if (categoryButton != null) categoryButton.setVisibility(chatCanPin && activeTopic.equals("GENERAL") ? View.VISIBLE : View.GONE);
             if (!chatCanPin) { messageCategory = "GENERAL"; if (categoryButton != null) categoryButton.setText("Γενικό"); }
             pinnedAnnouncements = new JSONArray(); JSONArray suppliedPins = data.optJSONArray("pinnedAnnouncements");
             if (interactionsReady && suppliedPins != null) for (int i = 0; i < suppliedPins.length() && pinnedAnnouncements.length() < 20; i++) { JSONObject item = suppliedPins.optJSONObject(i); if (item != null && item.optBoolean("pinned") && item.optString("category").equals("ANNOUNCEMENT") && ChatInteractions.validId(item.optString("id"))) pinnedAnnouncements.put(item); }
-            if (announcementsButton != null) { announcementsButton.setText("Ανακοινώσεις (" + pinnedAnnouncements.length() + ")"); announcementsButton.setVisibility(pinnedAnnouncements.length() == 0 ? View.GONE : View.VISIBLE); }
+            if (announcementsButton != null) { announcementsButton.setText("Ανακοινώσεις καταστήματος (" + pinnedAnnouncements.length() + ")"); announcementsButton.setVisibility(pinnedAnnouncements.length() == 0 ? View.GONE : View.VISIBLE); }
             JSONArray rows = data.getJSONArray("rows"); ArrayList<JSONObject> sorted = new ArrayList<>();
-            for (int n = 0; n < rows.length(); n++) sorted.add(rows.getJSONObject(n));
+            for (int n = 0; n < rows.length(); n++) { JSONObject row=rows.getJSONObject(n); if (ChatTopics.matches(row,requestedTopic)) sorted.add(row); else if(topicsReady) throw new IllegalArgumentException(); }
             sorted.sort(Comparator.comparing(row -> row.optString("createdAt")));
             int oldY = scroll.getScrollY(); boolean atBottom = scroll.getChildAt(0).getHeight() - scroll.getHeight() - oldY < dp(90);
             messages.removeAllViews();
-            if (sorted.isEmpty()) bubble("Δεν υπάρχουν ακόμη μηνύματα.", false, "", null);
+            if (sorted.isEmpty()) bubble("Δεν υπάρχουν ακόμη μηνύματα στο «"+ChatTopics.label(activeTopic)+"».", false, "", null);
             for (JSONObject row : sorted) {
                 boolean own = row.optString("senderId").equals(identity.optString("id"));
-                String meta = row.optString("senderName") + " · " + time(row.optString("createdAt"));
+                String meta = time(row.optString("createdAt"));
                 bubble(row.optString("body", ""), own, meta, row);
             }
             if (uncertainStoreId.equals(id(selected, "id"))) {
@@ -452,7 +474,7 @@ public final class MainActivity extends Activity {
     }
     private void sendPhotoMessage(String value) {
         if (busy || !foreground || selected == null || !tab.equals("chat")) return;
-        JSONObject body = object("body", value, "category", messageCategory);
+        JSONObject body = object("body", value, "category", messageCategory, "topic", activeTopic);
         if (!attachQuote(body)) return;
         final PhotoBatch.Photo first = photos.size() == 0 ? null : photos.get(0);
         if (first != null) {
@@ -473,7 +495,8 @@ public final class MainActivity extends Activity {
     }
     private void bubble(String body, boolean own, String meta, JSONObject row) {
         final ArrayList<String> readers = own && row != null ? ReadReceipts.names(row.optJSONArray("readers"), row.optString("senderId")) : new ArrayList<>();
-        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(14), dp(10), dp(14), dp(10)); card.setBackground(round(own ? 0xffe8defc : Color.WHITE, 18));
+        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(14), dp(10), dp(14), dp(10)); GradientDrawable bubbleFill=round(own ? 0xffe8defc : Color.WHITE, 18); bubbleFill.setStroke(dp(1),own?0xffded0f5:0xffece7f1); card.setBackground(bubbleFill);
+        if(row!=null&&!own){TextView sender=text(row.optString("senderName","Χρήστης"),14,PURPLE);sender.setTypeface(null,android.graphics.Typeface.BOLD);card.addView(sender);}
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2); lp.gravity = own ? Gravity.END : Gravity.START; lp.setMargins(own ? dp(28) : 0, dp(5), own ? 0 : dp(28), dp(5));
         if (row != null && !row.optString("replyToId").isEmpty() && !row.isNull("replyToId")) {
             JSONObject quote = row.optJSONObject("replyTo");
@@ -590,11 +613,12 @@ public final class MainActivity extends Activity {
         return () -> { if (!busy && interactionsReady && chatScope(generation, captured, store, company)) action.run(); };
     }
     private void clearQuote() { quotedMessage = null; quoteToken = ""; quoteStore = ""; quoteCompany = ""; if (quoteLabel != null) { quoteLabel.setText(""); quoteLabel.setVisibility(View.GONE); } }
-    private void clearChatInteractions() { searchGeneration++; searchForwardReady = false; chatCanForward = false; historySearchButton = null; clearQuote(); pinnedAnnouncements = new JSONArray(); interactionsReady = false; chatCanPin = false; chatCanManageSettings = false; acknowledgementRequired = false; messageCategory = "GENERAL"; quoteLabel = null; categoryButton = null; announcementsButton = null; announcementSettingsButton = null; }
+    private void clearChatInteractions() { searchGeneration++; topicsReady=false; searchForwardReady = false; chatCanForward = false; historySearchButton = null; clearQuote(); pinnedAnnouncements = new JSONArray(); interactionsReady = false; chatCanPin = false; chatCanManageSettings = false; acknowledgementRequired = false; messageCategory = "GENERAL"; quoteLabel = null; categoryButton = null; announcementsButton = null; announcementSettingsButton = null; }
     private boolean attachQuote(JSONObject body) {
+        if (!activeTopic.equals("GENERAL") && !topicsReady) { status("Ο διαχωρισμός θεμάτων δεν είναι ακόμη διαθέσιμος. Ανανέωσε πριν την αποστολή."); return false; }
         if (quotedMessage == null) return true;
-        if (!interactionsReady || !chatScope(quoteEpoch, quoteToken, quoteStore, quoteCompany) || !ChatInteractions.validId(quotedMessage.optString("id"))) { clearQuote(); status("Η απάντηση έληξε. Επίλεξε ξανά μήνυμα στο σωστό κατάστημα."); return false; }
-        try { body.put("replyToId", quotedMessage.getString("id")); return true; } catch (Exception ignored) { return false; }
+        if (!interactionsReady || !chatScope(quoteEpoch, quoteToken, quoteStore, quoteCompany) || !ChatInteractions.validId(quotedMessage.optString("id")) || !ChatTopics.matches(quotedMessage,activeTopic)) { clearQuote(); status("Η απάντηση έληξε. Επίλεξε ξανά μήνυμα στο σωστό κατάστημα."); return false; }
+        try { body.put("replyToId", quotedMessage.getString("id")); String parentCategory=quotedMessage.optString("category","GENERAL"); body.put("category",parentCategory.equals("ANNOUNCEMENT")?"GENERAL":parentCategory); return true; } catch (Exception ignored) { return false; }
     }
     private void updateReaction(JSONObject row, String emoji) {
         call(chatBase() + "/messages/" + enc(row.optString("id")) + "/reaction", "PUT", object("reaction", emoji == null ? JSONObject.NULL : emoji), false, result -> { if (!result.optBoolean("ok")) throw new IllegalArgumentException(); loadMessages(false); });
@@ -609,6 +633,7 @@ public final class MainActivity extends Activity {
     }
 
     private void chooseChatReply(JSONObject row) {
+        if (!ChatTopics.matches(row, activeTopic)) return;
         quotedMessage = row; quoteEpoch = epoch.capture(); quoteToken = token; quoteStore = id(selected, "id"); quoteCompany = id(selected, "companyId");
         if (quoteLabel != null) { quoteLabel.setText("× Ακύρωση απάντησης\n" + row.optString("senderName", "Χρήστης") + ": " + ChatInteractions.preview(row)); quoteLabel.setVisibility(View.VISIBLE); }
         if (composer != null) composer.requestFocus();
@@ -638,15 +663,16 @@ public final class MainActivity extends Activity {
         InputMethodManager keyboard = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE); if (keyboard != null) keyboard.hideSoftInputFromWindow(query.getWindowToken(), 0);
         final int generation = ++searchGeneration; final long scope = epoch.capture(); final String captured = token, storeId = id(selected,"id"), companyId = id(selected,"companyId");
         results.removeAllViews(); results.addView(text("Αναζήτηση…", 15, MUTED));
-        call(chatBase() + "/messages/search?q=" + enc(term) + (before.isEmpty() ? "" : "&before=" + enc(before)), "GET", null, false, data -> {
+        call(chatBase() + "/messages/search?q=" + enc(term) + "&topic="+enc(activeTopic) + (before.isEmpty() ? "" : "&before=" + enc(before)), "GET", null, false, data -> {
             if (imageDialog != dialog || generation != searchGeneration || !chatScope(scope,captured,storeId,companyId)
                 || !term.equals(java.text.Normalizer.normalize(query.getText().toString().trim(),java.text.Normalizer.Form.NFC))) return;
+            ChatTopics.response(data,activeTopic);
             JSONObject store = data.getJSONObject("store");
             if (!storeId.equals(store.getString("id")) || !companyId.equals(store.getString("companyId")) || !term.equals(data.getString("q"))) throw new IllegalArgumentException();
             JSONArray rows = data.getJSONArray("rows"); if (rows.length() > 20) throw new IllegalArgumentException();
             String cursor = data.isNull("nextCursor") ? "" : data.optString("nextCursor");
             if (!cursor.isEmpty() && (rows.length() == 0 || !cursor.equals(rows.getJSONObject(rows.length()-1).getString("id")))) throw new IllegalArgumentException();
-            for (int i=0;i<rows.length();i++) { JSONObject row=rows.getJSONObject(i); if (!ChatInteractions.validId(row.optString("id")) || row.optString("body").length()>5000) throw new IllegalArgumentException(); }
+            for (int i=0;i<rows.length();i++) { JSONObject row=rows.getJSONObject(i); if (!ChatInteractions.validId(row.optString("id")) || !ChatTopics.matches(row,activeTopic) || row.optString("body").length()>5000) throw new IllegalArgumentException(); }
             results.removeAllViews(); if (rows.length()==0) results.addView(text("Δεν βρέθηκαν μηνύματα.",15,MUTED));
             for (int i=0;i<rows.length();i++) {
                 final JSONObject row=rows.getJSONObject(i);
@@ -687,17 +713,17 @@ public final class MainActivity extends Activity {
     }
     private void confirmForward(JSONObject row,JSONObject target) {
         if(!chatCanForward||!searchForwardReady)return;
-        final String requestId=java.util.UUID.randomUUID().toString(),storeId=id(selected,"id"),companyId=id(selected,"companyId"),captured=token;
+        final String requestId=java.util.UUID.randomUUID().toString(),storeId=id(selected,"id"),companyId=id(selected,"companyId"),captured=token,requestedTopic=activeTopic;
         final long scope=epoch.capture();
         dismissImage();final AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Επιβεβαίωση προώθησης")
-            .setMessage("Προορισμός: "+target.optString("companyName")+" · "+target.optString("name")+"\n\n"+ChatInteractions.preview(row)+(row.optBoolean("hasAttachment")?"\nΘα συμπεριληφθεί το συνημμένο.":"")+"\n\nΘα σταλεί νέο μήνυμα με ένδειξη «Προωθημένο».")
+            .setMessage("Προορισμός: "+target.optString("companyName")+" · "+target.optString("name")+"\n\n"+ChatInteractions.preview(row)+(row.optBoolean("hasAttachment")?"\nΘα συμπεριληφθεί το συνημμένο.":"")+"\n\nΘέμα: "+ChatTopics.label(requestedTopic)+" · Θα σταλεί νέο μήνυμα με ένδειξη «Προωθημένο».")
             .setPositiveButton("Προώθηση",null).setNegativeButton("Κλείσιμο",(d,w)->{dismissImage();if(uncertainForwardStoreId.equals(storeId))status("Έλεγξε τη συνομιλία προορισμού πριν κάνεις νέα προώθηση.");}).create();
         imageDialog=dialog;dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);dialog.setCanceledOnTouchOutside(false);dialog.show();
         final Runnable confirm = scopedChatAction(()->{
-            if(imageDialog!=dialog||!searchForwardReady||!chatCanForward)return;uncertainForwardStoreId=storeId;
-            call(chatBase()+"/messages/"+enc(row.optString("id"))+"/forward","POST",object("targetStoreId",target.optString("id"),"targetCompanyId",target.optString("companyId"),"requestId",requestId),false,result->{
-                if(!chatScope(scope,captured,storeId,companyId))return;
-                if(!result.optBoolean("ok")||!ChatInteractions.validId(result.optString("id"))||!target.optString("id").equals(result.optString("targetStoreId")))throw new IllegalArgumentException();
+            if(imageDialog!=dialog||!searchForwardReady||!chatCanForward||!requestedTopic.equals(activeTopic))return;uncertainForwardStoreId=storeId;
+            call(chatBase()+"/messages/"+enc(row.optString("id"))+"/forward","POST",object("targetStoreId",target.optString("id"),"targetCompanyId",target.optString("companyId"),"requestId",requestId,"topic",requestedTopic),false,result->{
+                if(!chatScope(scope,captured,storeId,companyId)||!requestedTopic.equals(activeTopic))return;
+                if(!result.optBoolean("ok")||!ChatInteractions.validId(result.optString("id"))||!target.optString("id").equals(result.optString("targetStoreId"))||!requestedTopic.equals(result.optString("topic")))throw new IllegalArgumentException();
                 uncertainForwardStoreId="";if(imageDialog==dialog){dismissImage();status("Προωθήθηκε στο "+target.optString("name"));}
             });
         });
@@ -937,7 +963,7 @@ public final class MainActivity extends Activity {
     private void sendVideoMessage(String value){
         if(busy||!foreground||selected==null||!tab.equals("chat")||!videoAvailable||!VideoData.valid(videoDraft)||voiceDraft!=null||photos.size()!=0){status("Το βίντεο δεν μπορεί να σταλεί τώρα.");return;}
         dismissImage();final byte[] first=videoDraft;
-        JSONObject body=object("body",value,"category","GENERAL","attachment",object("name","video.mp4","mimeType","video/mp4","dataUrl","data:video/mp4;base64,"+Base64.encodeToString(first,Base64.NO_WRAP)));
+        JSONObject body=object("body",value,"category","GENERAL","topic",activeTopic,"attachment",object("name","video.mp4","mimeType","video/mp4","dataUrl","data:video/mp4;base64,"+Base64.encodeToString(first,Base64.NO_WRAP)));
         if (!attachQuote(body)) return;
         uncertainStoreId=id(selected,"id");call(chatBase()+"/video-messages","POST",body,false,result->{if(!result.optBoolean("ok")||result.optString("id").trim().isEmpty())throw new IllegalArgumentException();uncertainStoreId="";clearQuote();if(composer.getText().toString().trim().equals(value))composer.setText("");VideoData.wipe(first);if(videoDraft==first)videoDraft=null;updateVideoLabel();loadMessages(true);});
     }
@@ -1011,7 +1037,7 @@ public final class MainActivity extends Activity {
             status("Το φωνητικό δεν μπορεί να σταλεί τώρα. Έλεγξε την ανανέωση και τη διαθεσιμότητα."); return;
         }
         dismissImage(); final byte[] first = voiceDraft;
-        JSONObject body = object("body", value, "category", "GENERAL", "attachment", object("name", "voice.wav", "mimeType", "audio/wav", "dataUrl", "data:audio/wav;base64," + Base64.encodeToString(first, Base64.NO_WRAP)));
+        JSONObject body = object("body", value, "category", "GENERAL", "topic", activeTopic, "attachment", object("name", "voice.wav", "mimeType", "audio/wav", "dataUrl", "data:audio/wav;base64," + Base64.encodeToString(first, Base64.NO_WRAP)));
         if (!attachQuote(body)) return;
         uncertainStoreId = id(selected, "id");
         call(chatBase() + "/voice-messages", "POST", body, false, result -> {
@@ -1042,7 +1068,7 @@ public final class MainActivity extends Activity {
         clearSession(); loginScreen();
         worker.execute(() -> { try { api.json(path, "POST", object(), captured); } catch (Exception ignored) { /* Never retain content or credential to retry later. */ } });
     }
-    private void clearSession() { uncertainForwardStoreId = ""; entryStore = ""; NativePush.logout(this); pushStore = ""; pushCompany = ""; navigate(); token = ""; identity = new JSONObject(); selected = null; uncertainStoreId = ""; try { clearTwoFactor(); vault.clear(); } catch (Exception ignored) { finishAndRemoveTask(); } }
+    private void clearSession() { activeTopic = "GENERAL"; uncertainForwardStoreId = ""; entryStore = ""; NativePush.logout(this); pushStore = ""; pushCompany = ""; navigate(); token = ""; identity = new JSONObject(); selected = null; uncertainStoreId = ""; try { clearTwoFactor(); vault.clear(); } catch (Exception ignored) { finishAndRemoveTask(); } }
     private void enableNativePush() {
         if (busy || token.isEmpty()) return;
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {

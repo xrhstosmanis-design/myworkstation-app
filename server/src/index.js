@@ -1,3 +1,4 @@
+import attendedRemoteRoutes from './routes/attended-remote.js';
 import ftextRoutes from './routes/ftext-v1.js';
 import {storeLifecycleErrors} from "./middleware/store-lifecycle-errors.js";
 import storeLifecycleStateRoutes from "./routes/store-lifecycle-state.js";
@@ -232,6 +233,7 @@ app.use("/api/platform",platformAdminRoutes);
 app.use("/api/platform",platformStoreIntegrationsRoutes);
 app.use("/api/platform",platformEfoodIntegrationRoutes);
 app.use("/api/platform/device-operations",platformDeviceOperationsRoutes);
+app.use("/api/remote-support",attendedRemoteRoutes);
 app.use("/api/remote-agent",remoteAgentRoutes);
 app.use("/api/platform/mail",mailRoutes);
 app.use("/api/license",licenseRoutes);

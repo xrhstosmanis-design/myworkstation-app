@@ -32,3 +32,9 @@ test('forwarding retains the existing canonical audio/video validators and bound
  assert.throws(()=>forwardAttachment(row('video/mp4',Buffer.from('not MP4')),policy),{status:400});
  assert.throws(()=>forwardAttachment(row('video/mp4',video),{...policy,photosEnabled:false}),{status:403});
 });
+
+test('forward intent validates its explicit destination topic without changing legacy omitted shape',()=>{
+ const value={targetStoreId:'store-b',targetCompanyId:'company-b',requestId:crypto.randomUUID()};
+ for(const topic of ['GENERAL','CASH','INVOICE'])assert.deepEqual(forwardInput({...value,topic}),{...value,topic});
+ for(const topic of [null,'cash','',[],{},'ALL'])assert.throws(()=>forwardInput({...value,topic}),{status:400});
+});

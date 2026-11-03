@@ -1,7 +1,7 @@
 import {staffProfiles} from "../../../../shared/backoffice-staff.mjs";
 import React,{useMemo,useState} from 'react';
 import {walletMoney} from './ai-wallet-money.mjs';
-import {purposeLabels,statusLabels,sourceLabels,roleLabels,surfaceLabels,activityPurpose,activityActor,activityActorKey,activitySource,activityProvider,filterWalletActivity,walletActivityTotals} from './ai-wallet-activity.mjs';
+import {purposeLabels,statusLabels,activityStatus,sourceLabels,roleLabels,surfaceLabels,activityPurpose,activityActor,activityActorKey,activitySource,activityProvider,filterWalletActivity,walletActivityTotals} from './ai-wallet-activity.mjs';
 
 const unknown='Δεν έχει καταγραφεί';
 const dateLabel=value=>value&&!Number.isNaN(new Date(value).getTime())?new Date(value).toLocaleString('el-GR',{timeZone:'Europe/Athens',hourCycle:'h23'}):'—';
@@ -11,7 +11,7 @@ export default function AiWalletActivityHistory({entries=[],stores=[]}){
   const visible=useMemo(()=>filterWalletActivity(entries,filters),[entries,filters]);
   const totals=walletActivityTotals(visible);
   const storeLabel=e=>!e.storeId?'Εταιρική πίστωση':stores.find(s=>s.id===e.storeId)?.name||e.storeName||'Παλιό / μη διαθέσιμο κατάστημα';
-  const selects=[['purpose','Λειτουργία AI',choices(entries,activityPurpose,e=>purposeLabels[activityPurpose(e)])],['actor','Χρήστης / χειριστής',choices(entries,activityActorKey,e=>activityActor(e)?.name||unknown)],['store','Κατάστημα κίνησης',choices(entries,e=>e.storeId||'COMPANY',storeLabel)],['status','Κατάσταση κίνησης',choices(entries,e=>e.status,e=>statusLabels[e.status]||unknown)],['source','Προέλευση χρήσης',choices(entries,activitySource,e=>sourceLabels[activitySource(e)])]];
+  const selects=[['purpose','Λειτουργία AI',choices(entries,activityPurpose,e=>purposeLabels[activityPurpose(e)])],['actor','Χρήστης / χειριστής',choices(entries,activityActorKey,e=>activityActor(e)?.name||unknown)],['store','Κατάστημα κίνησης',choices(entries,e=>e.storeId||'COMPANY',storeLabel)],['status','Κατάσταση κίνησης',choices(entries,activityStatus,e=>statusLabels[activityStatus(e)]||unknown)],['source','Προέλευση χρήσης',choices(entries,activitySource,e=>sourceLabels[activitySource(e)])]];
   const grouped=choices(visible,activityPurpose,e=>purposeLabels[activityPurpose(e)]);
   return <section className="ai-wallet-activity" aria-label="Αναλυτικές κινήσεις AI">
     <h2>Αναλυτικές κινήσεις AI</h2>
@@ -21,13 +21,13 @@ export default function AiWalletActivityHistory({entries=[],stores=[]}){
     {grouped.length>0&&<details><summary>Σύνολα λίστας ανά λειτουργία</summary><ul>{grouped.map(([key,label])=>{const rows=visible.filter(e=>activityPurpose(e)===key),sum=walletActivityTotals(rows);return <li key={key}>{label}: {rows.length} κινήσεις · χρεώσεις {walletMoney(sum.charged)} · δεσμεύσεις {walletMoney(sum.reserved)}{rows.some(e=>e.kind==='CREDIT')&&<> · πιστώσεις {walletMoney(sum.credited)}</>}</li>})}</ul></details>}
     {!visible.length&&<p>Δεν υπάρχουν κινήσεις με αυτά τα φίλτρα.</p>}
     <ul className="ai-wallet-activity-list">{visible.map(e=>{const actor=activityActor(e),activity=e.activity;return <li key={e.id}>
-      <div className="ai-wallet-activity-heading"><strong>{e.postpaid?.type==='DEBT_PAYMENT'?'Εξόφληση οφειλής AI':e.postpaid?.type==='CREDIT_ON_ACCOUNT'?'Πίστωση AI επί πιστώσει':purposeLabels[activityPurpose(e)]}</strong><span>{e.postpaid?.type==='DEBT_PAYMENT'?'Καταχωρισμένη είσπραξη':statusLabels[e.status]||unknown}</span></div>
-      <p className="ai-wallet-activity-amount">{e.postpaid?.type==='DEBT_PAYMENT'?<>Εξόφληση {walletMoney(e.postpaid.amountMicros)} · Δεν προστέθηκε νέο υπόλοιπο AI.</>:e.kind==='CREDIT'?<>Πίστωση {walletMoney(e.creditedMicros)}</>:e.status==='SETTLED'?<>Τελική χρέωση {walletMoney(e.chargedMicros)}</>:<>Δέσμευση {walletMoney(e.reservedMicros)}<small>Το ποσό δεν είναι οριστική χρέωση.</small></>}</p>
+      <div className="ai-wallet-activity-heading"><strong>{e.postpaid?.type==='DEBT_PAYMENT'?'Εξόφληση οφειλής AI':e.postpaid?.type==='CREDIT_ON_ACCOUNT'?'Πίστωση AI επί πιστώσει':purposeLabels[activityPurpose(e)]}</strong><span>{e.postpaid?.type==='DEBT_PAYMENT'?'Καταχωρισμένη είσπραξη':statusLabels[activityStatus(e)]||unknown}</span></div>
+      <p className="ai-wallet-activity-amount">{e.postpaid?.type==='DEBT_PAYMENT'?<>Εξόφληση {walletMoney(e.postpaid.amountMicros)} · Δεν προστέθηκε νέο υπόλοιπο AI.</>:e.commercialWaiver?<>Αποδέσμευση {walletMoney(e.commercialWaiver.releasedMicros)} · Χρέωση πελάτη 0,00 €<small>Εμπορική απαλλαγή με κόστος του MyWorkStation. Το κόστος παρόχου παραμένει άγνωστο.</small></>:e.kind==='CREDIT'?<>Πίστωση {walletMoney(e.creditedMicros)}</>:e.status==='SETTLED'?<>Τελική χρέωση {walletMoney(e.chargedMicros)}</>:<>Δέσμευση {walletMoney(e.reservedMicros)}<small>Το ποσό δεν είναι οριστική χρέωση.</small></>}</p>
       <p><strong>{e.kind==='CREDIT'?'Καταχωρίστηκε από':'Αρχικός αιτών'}:</strong> {actor?.name||unknown}{actor?.role&&<> · Ρόλος συνεδρίας: {roleLabels[actor.role]||actor.role}</>}{actor?.kind==='POS_OPERATOR'&&' · Χειριστής POS'}{actor?.kind==='SUPPORT'&&' · Πρόσβαση υποστήριξης'}{actor?.kind==='DELEGATED_USER'&&' · Προσωπική πρόσβαση'}</p>
       <p>{storeLabel(e)} · {dateLabel(e.createdAt)}{activity?.terminalPos&&<> · Ταμείο {activity.terminalPos}</>}</p>
       <p>Προέλευση: {sourceLabels[activitySource(e)]}{activity&&<> · Οθόνη / ροή: {surfaceLabels[activity.surface]||unknown}</>}</p>
       {e.kind!=='CREDIT'&&<p>Υπηρεσία AI: {activityProvider(e)}{e.model&&<> · Μοντέλο: {e.model}</>}</p>}
-      {e.status==='SETTLED'&&e.customerCharge&&<p>Χρήση {walletMoney(e.customerCharge.baseMicros)} + προσαύξηση {walletMoney(e.customerCharge.additionalMarkupMicros)} + κλήση {walletMoney(e.customerCharge.callFeeMicros)} + τιμολόγιο {walletMoney(e.customerCharge.invoiceFeeMicros)}</p>}
+      {e.status==='SETTLED'&&!e.commercialWaiver&&e.customerCharge&&<p>Χρήση {walletMoney(e.customerCharge.baseMicros)} + προσαύξηση {walletMoney(e.customerCharge.additionalMarkupMicros)} + κλήση {walletMoney(e.customerCharge.callFeeMicros)} + τιμολόγιο {walletMoney(e.customerCharge.invoiceFeeMicros)}</p>}
       {!activity&&e.kind!=='CREDIT'&&<p>Παλιά κίνηση χωρίς καταγεγραμμένο αρχικό χρήστη ή επιμέρους προέλευση. Δεν αποδίδεται σε κάποιον από εκτίμηση.</p>}
       <details><summary>Στοιχεία κίνησης</summary><dl>
         <dt>Αναφορά κίνησης</dt><dd>{e.id}</dd>

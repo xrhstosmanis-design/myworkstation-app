@@ -1,0 +1,24 @@
+{
+  "confirmationDateEuropeAthens": "2026-11-02",
+  "userReply": "nai einai kleisth",
+  "requestedSequence": [
+    "return to conversation list",
+    "reopen same Chat",
+    "do not tap photo",
+    "report if old photo remains closed"
+  ],
+  "reportedOutcome": "old photo remains closed",
+  "classification": "SCOPED USER-REPORTED PASS; narrow familiar Chat/full-photo batch complete with prior reports",
+  "priorReports": [
+    "user-confirmation-20261102.json",
+    "diadoxou-confirmation-20261102.json",
+    "background-return-confirmation-20261102.json",
+    "rotation-confirmation-20261102.json"
+  ],
+  "actualDeviceOSInstalledHashAccountCurrentStoreActionTimeRuntime": "NOT INDEPENDENTLY IDENTIFIED",
+  "noLABAPIAllDeviceForensicFinancialPassInferred": true,
+  "agentProductionChatOrBusinessActions": false,
+  "noReplayOfCompletedBatch": true,
+  "removeCompletedChatFamiliarScopeFromPending": true,
+  "otherOwnersAndOverallN16OpenPreserved": true
+}
