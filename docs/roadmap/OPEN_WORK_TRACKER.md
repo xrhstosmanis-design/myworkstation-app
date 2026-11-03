@@ -1,8 +1,8 @@
-## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / OLD PENDING CANDIDATES / RECONCILED SOURCE CANDIDATE
+## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / OLD PENDING CANDIDATES / EXACT RECONCILED CANDIDATE
 
-Same retained owner/continuation. Original source3571/04a98b73 retryCI41542186927 all5SUCCESS:5319server+8backup/0FAIL/0SKIP including native historical pending beyond105 newer settled entries. This reconciliation retains the SAME five source/test blobs and every current peer source/record, invoice3581 receipt and one-entry LAB PASS closure3582/manual/evidence/PDF. No transaction/permission/deployment gate change.
+Same retained owner/continuation. Original source3571/04a98b73 full retryCI41542186927 all5SUCCESS:5319server+8backup/0FAIL/0SKIP including real native historical pending beyond105 newer settled entries. Reconciliation retains the SAME five source/test blobs, every peer source/record, invoice3581 and camera receipts, and single-entry LAB PASS closure3582/manual/evidence. Both canonical PDFs retain complete bytes verified by Git blob hashes. No transaction/permission/deploy gate change.
 
-Exact reconciled PR/main full CI and normal guarded healthy installation still required before hosted pending-list and actual approved batch acceptance. Completed LAB B action must not be replayed; supplier cost UNKNOWN. Actual batch not released, broader wallet/manual36 and hosted retry/concurrency OPEN.
+Exact reconciled PR/main full CI and normal guarded healthy installation remain required before hosted pending-list and approved actual batch acceptance. Completed LAB B action must not be replayed; supplier cost UNKNOWN. Actual batch not released; broader wallet/manual36 and hosted retry/concurrency OPEN.
 
 ## 03/11/2026 10:45:48 Ελλάδας — AI-WALLET-COMMERCIAL-WAIVER-01 / SCOPED HOSTED LAB PASS
 
@@ -143,6 +143,14 @@ Single next action: publish this continuation with applicable green CI, then imp
 Continuation of the retained Rizareio readiness / central BackOffice access owner. Receipt branch docs/backoffice-lab31-observation-20261102. The user explicitly approved adding inventory.history.read and inventory.expected.read to existing lab31 in MYWORKSTATION LAB / ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ (cmtpopbgo000trhb5ng9ytiru). Existing inventory.read and inventory.count remained; other stores and rights remained unselected in the saved form. User personally entered/submitted a replacement PIN after credential uncertainty. No credential value is recorded here. Saving was visibly confirmed; an initial subsequent login was rejected, then user-completed login succeeded. Shared-session changes interrupted the form on earlier attempts; no cause beyond the displayed session-change message was proven.
 
 Observed combined-right personal UI: FINALIZED history and expected5/count4/difference−1; no cost or mutation controls. Refresh cleared selection and reopen remained correct. Exact loaded client revision was not captured; later healthy28755b6b is not substituted. Formal acceptance and full all-functions scope remain OPEN. Next: separately authorized minimal history-only/theory-only LAB checks. Checkpoint CHECKPOINTS/CHANGES/2026-11-02-lab31-history-observation.md.
+
+## 03/11/2026 - POS-OTHER-EXPENSE-CAMERA-CATEGORIES-01 / LIMITED USER PASS - CAMERA OPENING
+
+Same retained root central owner. On 03Nov2026 Europe/Athens the owner replied exactly "ΕΙΝΑΙ ΟΚ" to the preceding instruction to refresh an empty-cart POS, open Payments > Other expenses > Capture from camera and test without submitting a payment. Record this as a scoped USER-reported PASS for camera opening/the requested non-payment start test. It is user confirmation, not an independently witnessed hardware or financial LAB test.
+
+Source3564/e9314faa7d9457bc3cce95593a76ed2482d3351c is the previously verified delivered implementation, with its exact CI/guard/Render and limited empty-catalogue LAB evidence retained below. The user's exact loaded revision, device, store, operator and test time were not supplied; do not substitute current main or the prior LAB identities. No separately measured photograph capture, focus/image quality, populated central-category choice/refresh, category-linked hosted expense persistence, ordinary-role matrix or accounting/stock/fiscal result is inferred from this short confirmation.
+
+Remove only camera opening from active pending work. Retain the existing owner and the untested residuals; preserve historical cloud "Requested device not found" as the earlier remote-device observation. No repeat camera test, payment, upload, category seed, source/runtime/configuration change, deploy or financial replay was performed to document this confirmation. The same receipt updates checkpoint, active list, tracker, payments manual, residual-only pending roadmap and regenerated canonical PDF. The following earlier PHYSICAL CAMERA OPEN receipt is superseded only for the user-confirmed opening scope.
 
 ## 03/11/2026 — POS-OTHER-EXPENSE-CAMERA-CATEGORIES-01 / ENGINEERING INSTALLED / LIMITED READ-ONLY LAB PASS / PHYSICAL CAMERA OPEN
 

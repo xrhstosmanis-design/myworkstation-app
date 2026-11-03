@@ -1,8 +1,8 @@
-## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / OLD PENDING CANDIDATES / RECONCILED SOURCE CANDIDATE
+## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / OLD PENDING CANDIDATES / EXACT RECONCILED CANDIDATE
 
-Same retained owner/continuation. Original source3571/04a98b73 retryCI41542186927 all5SUCCESS:5319server+8backup/0FAIL/0SKIP including native historical pending beyond105 newer settled entries. This reconciliation retains the SAME five source/test blobs and every current peer source/record, invoice3581 receipt and one-entry LAB PASS closure3582/manual/evidence/PDF. No transaction/permission/deployment gate change.
+Same retained owner/continuation. Original source3571/04a98b73 full retryCI41542186927 all5SUCCESS:5319server+8backup/0FAIL/0SKIP including real native historical pending beyond105 newer settled entries. Reconciliation retains the SAME five source/test blobs, every peer source/record, invoice3581 and camera receipts, and single-entry LAB PASS closure3582/manual/evidence. Both canonical PDFs retain complete bytes verified by Git blob hashes. No transaction/permission/deploy gate change.
 
-Exact reconciled PR/main full CI and normal guarded healthy installation still required before hosted pending-list and actual approved batch acceptance. Completed LAB B action must not be replayed; supplier cost UNKNOWN. Actual batch not released, broader wallet/manual36 and hosted retry/concurrency OPEN.
+Exact reconciled PR/main full CI and normal guarded healthy installation remain required before hosted pending-list and approved actual batch acceptance. Completed LAB B action must not be replayed; supplier cost UNKNOWN. Actual batch not released; broader wallet/manual36 and hosted retry/concurrency OPEN.
 
 ## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / REMAINING ONLY / ASSIGNED
 
@@ -130,7 +130,7 @@ Observed combined-right personal UI: FINALIZED history and expected5/count4/diff
 
 ASSIGNED root central coordinator, fix/pos-other-expense-camera-categories-20261103. Engineering3564 installed exacte9314faa with full PR41540229707/main41542861415 and normal guarded release41545173954; selected-store empty-catalogue selector/guidance/one refresh received limited read-only SuperAdmin-support LAB PASS03Nov2026. That completed review is removed from pending; do not repeat it or an accepted payment for documentation.
 
-Remaining: physical PC camera/photo/focus/quality acceptance (cloud test had no camera and returned Requested device not found); actual populated central-category choices/refresh and hosted category-linked expense acceptance only under separately authorized fresh before/after/control; independent ordinary Owner/operator and physical devices. Native PostgreSQL atomic active same-company category binding/replay/lock proof is exact-CI PASS, not a hosted financial PASS. Preserve no-document/evidence, payroll/refund/bank/supplier/rights/stale-shift/idempotency and all other owners. No source change or business replay is implied by this residual. Current evidence/limits: CHECKPOINTS/CHANGES/2026-11-03-pos-other-expense-camera-categories.md and docs/manual/payments/PASS.md.
+Remaining: separately measured photograph capture/focus/image-quality acceptance beyond the user-confirmed camera opening; actual populated central-category choices/refresh and hosted category-linked expense acceptance only under separately authorized fresh before/after/control; independent ordinary Owner/operator and other physical devices. The owner confirmed camera opening with "ΕΙΝΑΙ ΟΚ" on03Nov2026; no further opening test or payment replay is pending for documentation. Native PostgreSQL atomic active same-company category binding/replay/lock proof is exact-CI PASS, not a hosted financial PASS. Preserve no-document/evidence, payroll/refund/bank/supplier/rights/stale-shift/idempotency and all other owners. No source change or business replay is implied by this residual. Current evidence/limits: CHECKPOINTS/CHANGES/2026-11-03-pos-other-expense-camera-categories.md and docs/manual/payments/PASS.md.
 
 ## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / ASSIGNED BEFORE SOURCE / NOT TESTED
 
