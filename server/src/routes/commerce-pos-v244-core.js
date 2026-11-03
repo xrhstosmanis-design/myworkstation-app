@@ -174,6 +174,9 @@ export async function ensureV244IntakeSchema(){
 }
 
 const lineSchema=z.object({
+  // Keep physical source coordinates without inventing them for legacy rows.
+  sourceFileIndex:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+  sourcePage:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).optional(),
   rawText:z.string().max(4000).optional().default(""),
   code:z.string().trim().max(80).optional().default(""),
   barcode:z.string().trim().max(80).optional().default(""),
