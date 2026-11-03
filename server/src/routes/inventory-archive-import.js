@@ -32,7 +32,8 @@ export function readWorkbook(dataUrl){
 }
 export function normalizeRows(raw){
   return raw.map((r,index)=>{
-    const sku=txt(val(r,["SKU","Κωδικός","ΚΩΔΙΚΟΣ","Εσωτ. κωδικός","Εσωτερικός κωδικός","Code"]));
+    const acharnon=raw.sourceProfile?.name==='ACHARNON_CATALOG_V1';
+    const sku=acharnon?'':txt(val(r,["SKU","Κωδικός","ΚΩΔΙΚΟΣ","Εσωτ. κωδικός","Εσωτερικός κωδικός","Code"]));
     const name=txt(val(r,["Περιγραφή είδους","Περιγραφή","ΠΕΡΙΓΡΑΦΗ","Όνομα","ΟΝΟΜΑ","Name","Product"]));
     const barcode=raw.sourceProfile?.name==='KAT_CATALOG_V1'?txt(r.Barcode):txt(val(r,["Barcode","BARCODE","barcode","EAN"]));
     const categoryName=txt(val(r,["Κατηγορία","ΚΑΤΗΓΟΡΙΑ","Category"]));
@@ -45,7 +46,7 @@ export function normalizeRows(raw){
     const vatRate=raw.sourceProfile?(sourceDefinition?.vatRate??null):sourceVatCode&&Object.hasOwn(SOURCE_VAT_RATES,sourceVatCode)?SOURCE_VAT_RATES[sourceVatCode]:sourceDepartment&&Object.hasOwn(SOURCE_DEPARTMENT_RATES,sourceDepartment)?SOURCE_DEPARTMENT_RATES[sourceDepartment]:explicitVat;
     const stock=num(val(r,["Απόθεμα","Stock","STOCK","Ποσότητα"]));
     const activeRaw=val(r,["Ενεργό","Active","ACTIVE"]);const active=activeRaw===""?true:yes(activeRaw);
-    const errors=[];if(!name)errors.push("Λείπει περιγραφή");if(!sku&&!barcode)errors.push("Χρειάζεται SKU ή Barcode");if(salePrice!==null&&salePrice<0)errors.push("Μη έγκυρη λιανική");if(costPrice!==null&&costPrice<0)errors.push("Μη έγκυρο κόστος");if(vatRate!==null&&(vatRate<0||vatRate>100))errors.push("Μη έγκυρο ΦΠΑ");if(stock!==null&&stock<0)errors.push("Μη έγκυρο απόθεμα");
+    const errors=[];if(!name)errors.push("Λείπει περιγραφή");if(!sku&&!barcode&&!acharnon)errors.push("Χρειάζεται SKU ή Barcode");if(salePrice!==null&&salePrice<0)errors.push("Μη έγκυρη λιανική");if(costPrice!==null&&costPrice<0)errors.push("Μη έγκυρο κόστος");if(vatRate!==null&&(vatRate<0||vatRate>100))errors.push("Μη έγκυρο ΦΠΑ");if(stock!==null&&stock<0)errors.push("Μη έγκυρο απόθεμα");
     const supplierName=txt(val(r,["Βασικός Προμηθευτής","Προμηθευτής"]));
     const supplierCode=txt(val(r,["Κωδ. Τιμολογίου","Κωδικός προμηθευτή"]));
     const subcategoryName=txt(val(r,["Υποκατηγορία"]));
@@ -71,7 +72,7 @@ export function normalizeRows(raw){
       if(sourceVatCode&&!Object.hasOwn(SOURCE_VAT_RATES,sourceVatCode))errors.push(`Άγνωστος κωδικός ΦΠΑ ${sourceVatCode}`);
       if(sourceDepartment&&!Object.hasOwn(SOURCE_DEPARTMENT_RATES,sourceDepartment))errors.push(`Άγνωστο τμήμα ΦΠΑ ${sourceDepartment}`);
     }
-    if(categoryName.toUpperCase().includes("ΤΥΠΟΣ")||sourceDepartment.toUpperCase().includes("ΤΥΠΟΣ"))errors.push("Ο Τύπος εξαιρείται από αυτή την εισαγωγή");
+    if(!acharnon&&(categoryName.toUpperCase().includes("ΤΥΠΟΣ")||sourceDepartment.toUpperCase().includes("ΤΥΠΟΣ")))errors.push("Ο Τύπος εξαιρείται από αυτή την εισαγωγή");
     if(sourceVatCode&&explicitVat!==null&&explicitVat!==vatRate)errors.push("Ο κωδικός ΦΠΑ διαφωνεί με το ποσοστό ΦΠΑ");
     if(sourceDepartment&&explicitVat!==null&&explicitVat!==vatRate)errors.push("Το τμήμα ΦΠΑ διαφωνεί με το ποσοστό ΦΠΑ");
     // The legacy importer below cannot persist these fields. Keep the final
@@ -79,6 +80,7 @@ export function normalizeRows(raw){
     if(!sourceDepartment&&(supplierName||supplierCode||subcategoryName||brandName||staffPrice!==null||minStock!==null||discountA!==null||discountB!==null||discountC!==null))errors.push("Εκκρεμεί πλήρης αντιστοίχιση στοιχείων καρτέλας είδους");
     if(sourceDepartment&&vatRate===null)errors.push("Λείπει αντιστοίχιση τμήματος ΦΠΑ");
     return {row:index+2,sku,name,barcode,barcodes:r.sourceBarcodes||[barcode].filter(Boolean),categoryName,subcategoryName,supplierName,supplierCode,brandName,staffPrice,minStock,discountA,discountB,discountC,salePrice,costPrice,vatRate,sourceVatCode,sourceDepartment,stock,active,errors,
+      ...(acharnon?{sourceKey:r.SourceKey}:{}),
       unit:raw.sourceProfile?.name==='KAT_CATALOG_V1'&&txt(r['Μονάδα Kiosk'])==='KGR'?'KG':'PIECE',
       sourceExisting:raw.sourceProfile?.name==='KAT_CATALOG_V1'?(raw.sourceProfile.existing.get(sku)||null):null};
   });
@@ -113,7 +115,8 @@ export async function classify(companyId,rows,db=prisma){
 }
 
 export async function prepareArchiveRows(db,companyId,raw,storeId){
-  if(['KAT_CATALOG_V1','RIZAREIO_CATALOG_V1'].includes(raw.sourceProfile?.name))raw.sourceProfile.assertTarget(companyId,storeId);
+  if(['KAT_CATALOG_V1','RIZAREIO_CATALOG_V1','ACHARNON_CATALOG_V1'].includes(raw.sourceProfile?.name))raw.sourceProfile.assertTarget(companyId,storeId);
+  if(raw.sourceProfile?.name==='ACHARNON_CATALOG_V1')await raw.sourceProfile.assertEmptyStore(db,companyId,storeId);
   if(raw.sourceProfile){
     await assertSourceCostStorage(db);
     const departments=await db.$queryRaw`SELECT "id","description","vatRate","legacyVatCode","cashRegisterDepartment","commerce","active","exemptionCode","exemptionDescription" FROM "ManagementVatDepartment" WHERE "companyId"=${companyId}`;
@@ -135,6 +138,7 @@ router.post("/import-preview",async(req,res,next)=>{
   try{
     const body=z.object({storeId:z.string().min(1),dataUrl:z.string().max(12000000)}).parse(req.body||{});await scopedStore(req,body.storeId,prisma);
     const raw=readWorkbook(body.dataUrl);if(!raw.length||raw.length>MAX_IMPORT_ROWS)return res.status(400).json({error:`Το αρχείο πρέπει να έχει 1 έως ${MAX_IMPORT_ROWS.toLocaleString("el-GR")} γραμμές.`});
+    if(raw.sourceProfile?.name==='ACHARNON_CATALOG_V1'&&(scope||req.user?.staffAccess===true))return res.status(403).json({error:'Η πρώτη εισαγωγή Αχαρνών απαιτεί διαχείριση ιδιοκτήτη ή admin.'});
     const rows=await prepareArchiveRows(prisma,req.user.companyId,raw,body.storeId);
     res.json({rows,summary:{total:rows.length,create:rows.filter(r=>r.action==="CREATE").length,update:rows.filter(r=>r.action==="UPDATE").length,invalid:rows.filter(r=>r.action==="INVALID").length,barcodes:rows.reduce((n,r)=>n+r.barcodes.length,0),sourceProfile:raw.sourceProfile?.name||null}});
   }catch(error){next(error)}
@@ -144,6 +148,7 @@ router.post("/import",async(req,res,next)=>{
   try{
     const body=z.object({storeId:z.string().min(1),dataUrl:z.string().max(12000000),applyStock:z.boolean().default(false)}).parse(req.body||{});const store=await scopedStore(req,body.storeId,prisma);
     const raw=readWorkbook(body.dataUrl);if(!raw.length||raw.length>MAX_IMPORT_ROWS)return res.status(400).json({error:`Το αρχείο πρέπει να έχει 1 έως ${MAX_IMPORT_ROWS.toLocaleString("el-GR")} γραμμές.`});
+    if(raw.sourceProfile?.name==='ACHARNON_CATALOG_V1'&&(scope||req.user?.staffAccess===true))return res.status(403).json({error:'Η πρώτη εισαγωγή Αχαρνών απαιτεί διαχείριση ιδιοκτήτη ή admin.'});
     const rows=await prepareArchiveRows(prisma,req.user.companyId,raw,store.id);const invalid=rows.filter(r=>r.action==="INVALID");if(invalid.length)return res.status(409).json({error:`Υπάρχουν ${invalid.length} μη έγκυρες γραμμές. Διορθώστε το αρχείο και ξανακάντε preview.`});
     if(raw[0]&&Object.hasOwn(raw[0],"Τμήμα ΦΠΑ")){
       if(body.applyStock)return res.status(400).json({error:"Η πλήρης εισαγωγή δεν ενημερώνει απόθεμα υπαρχόντων ειδών."});
