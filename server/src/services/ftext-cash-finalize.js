@@ -1,3 +1,4 @@
+import {hasFtextPromotion} from './ftext-promotion-lines.js';
 import {assertFtextOperatorCardApproved} from './ftext-operator-card.js';
 import {randomUUID} from 'node:crypto';
 import {insertPosSaleSafetyAudit} from '../pos-sale-safety.js';
@@ -26,6 +27,7 @@ export async function finalizeFtextCashRequest(db,id,scope,{context,reserveStock
   if(!items?.length||!summary||Number(summary.total)!==Number(row.total)||Number(row.plan.total)!==Number(row.total)||Number(row.plan.payment.amount)!==Number(row.total)||(saved.ftextPromotionVersion!==1&&Number(summary.discount||0)!==0))fail('Το αρχικό καλάθι δεν συμφωνεί με την απόδειξη.');
   const promoted=saved.ftextPromotionVersion===1;
   if(promoted){
+   if(!hasFtextPromotion(items))fail('Λείπει η αρχική προσφορά από το αποθηκευμένο καλάθι.');
    assertFtextSimpleCash({...saved,paymentMethod:'CASH'},items);
    const rebuilt=prepareFtextCheckoutPlan({settings:current.settings,scope:{...scope,fiscalDeviceCode:current.settings.fiscalDeviceCode},clientTransactionId:row.clientTransactionId,checkout:saved,items,summary});
    if(!isDeepStrictEqual(rebuilt,row.plan))fail('Η αρχική προσφορά δεν συμφωνεί με την επιβεβαιωμένη απόδειξη.');
