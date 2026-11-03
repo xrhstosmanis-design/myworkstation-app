@@ -1,0 +1,166 @@
+{
+  "scope": "LIMITED LAB PASS: durable source-file and physical-page provenance for two synthetic rows",
+  "revisionBefore": "35d6840e43080dd519a730a27437100b277a3404",
+  "revisionAfter": "35d6840e43080dd519a730a27437100b277a3404",
+  "beforePublishedPR": 3611,
+  "beforeMerge": "3276fc630569b631b3664cc9c34c3f00037ca2e4",
+  "sourcePR": 3604,
+  "submittedOnceAt": "2026-11-03T17:45:17.775Z",
+  "fixture": "provenance-20261103-D.pdf",
+  "header": {
+    "result": "FAIL",
+    "startedAt": "2026-11-03T17:42:23.612Z",
+    "readyObservedAt": "2026-11-03T17:42:35.723Z",
+    "elapsedMs": 12111,
+    "supplier": "LAB METER TEST",
+    "documentNumber": "LAB-PROVENANCE-20261103-D",
+    "date": "2026-11-03",
+    "automaticGross": "12.40",
+    "printedGross": "24.80",
+    "confidencePercent": 89,
+    "manualCorrectionBeforeSubmission": "24.80"
+  },
+  "observed": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"attachment_id\":\"02964d39-86b3-43cb-86e8-f3181e141186\",\"background\":{\"lineCount\":2,\"pageCount\":1,\"reconciliationDifference\":0,\"status\":\"COMPLETED\"},\"captured_at\":\"2026-11-03T17:45:30.598559Z\",\"checksum\":\"40f3a10801cd4d949258735c650fc645fc9884add316b363c6d6c75bf9df064c\",\"documentNumber\":\"LAB-PROVENANCE-20261103-D\",\"document_id\":\"a158e252-88d2-4753-b52f-e4a0409fd65c\",\"document_status\":\"DRAFT\",\"draft_lines\":[{\"code\":\"LAB-A\",\"description\":\"SYNTHETIC ITEM 1\",\"exciseTotal\":0,\"grossAmount\":12.4,\"id\":\"c81a0b8f-2173-4a5b-892b-a9d3b78344b6\",\"netAmount\":10,\"quantity\":1,\"resolutionStatus\":\"UNRESOLVED\",\"sequence\":1,\"vatAmount\":2.4},{\"code\":\"LAB-B\",\"description\":\"SYNTHETIC ITEM 2\",\"exciseTotal\":0,\"grossAmount\":12.4,\"id\":\"2ad1a989-6fdd-4917-b0fa-44e43a18235e\",\"netAmount\":10,\"quantity\":1,\"resolutionStatus\":\"UNRESOLVED\",\"sequence\":2,\"vatAmount\":2.4}],\"filename\":\"provenance-20261103-D.pdf\",\"job_id\":\"ee559d2e-1807-48c2-852a-ff2bd78a6dba\",\"job_stage\":\"POS_BACKGROUND_COMPLETE\",\"job_status\":\"AWAITING_APPROVAL\",\"order_id\":\"52b59efa-869d-48b3-8f99-f3f6e98ace94\",\"order_status\":\"NEW\",\"paymentTransactionId\":null,\"product_lines\":[{\"code\":\"LAB-A\",\"description\":\"SYNTHETIC ITEM 1\",\"grossAmount\":12.4,\"netAmount\":10,\"quantity\":1,\"sequence\":1,\"sourceFileIndex\":0,\"sourcePage\":1,\"vatRate\":24},{\"code\":\"LAB-B\",\"description\":\"SYNTHETIC ITEM 2\",\"grossAmount\":12.4,\"netAmount\":10,\"quantity\":1,\"sequence\":2,\"sourceFileIndex\":0,\"sourcePage\":2,\"vatRate\":24}],\"settlementMode\":\"CREDIT\",\"totalGross\":24.8000,\"totalNet\":20.0000,\"totalVat\":4.8000}]"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "publishedBefore": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"attachments\":{\"count\":83,\"digest\":\"82b2884beffe9a3a21f6eb6d4800a3b6\"},\"captured_at\":\"2026-11-03T17:26:38.832799Z\",\"documents\":{\"count\":73,\"digest\":\"846c616bb867044c0ef425a9fec2e16c\"},\"id\":\"cmtpopbgo000trhb5ng9ytiru\",\"inbox\":{\"count\":65,\"digest\":\"ae262a418634f39eb54e112d7db826f6\"},\"jobs\":{\"count\":81,\"digest\":\"a9297b9a53d28d4bb6df09e984632aa1\"},\"movements\":{\"count\":95,\"digest\":\"5d2e545fc3b4055f52f70e64dd20cbbf\"},\"name\":\"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ\",\"order_lines\":{\"count\":632,\"digest\":\"86205f12c232a2103677fa404f3b6611\"},\"orders\":{\"count\":61,\"digest\":\"7422300ddbe95e10e38d41552912a22b\"},\"shifts\":{\"count\":43,\"digest\":\"14814f641d388a4e4f23fdc329affe64\"},\"stock\":{\"count\":110,\"digest\":\"3f451968739ad2a97282b971c0db48d9\"},\"transactions\":{\"count\":134,\"digest\":\"f325173b44807a31d5c9f5c5854bdea7\"}},{\"attachments\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"captured_at\":\"2026-11-03T17:26:38.832799Z\",\"documents\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"id\":\"cmv2qanca000psigeizep8o9m\",\"inbox\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"jobs\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"movements\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"name\":\"N40 CONTROL 20261010\",\"order_lines\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"orders\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"shifts\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"stock\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"transactions\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"}}]"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "immediateBefore": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"attachments\":{\"count\":83,\"digest\":\"82b2884beffe9a3a21f6eb6d4800a3b6\"},\"captured_at\":\"2026-11-03T17:44:09.498552Z\",\"documents\":{\"count\":73,\"digest\":\"846c616bb867044c0ef425a9fec2e16c\"},\"id\":\"cmtpopbgo000trhb5ng9ytiru\",\"inbox\":{\"count\":65,\"digest\":\"ae262a418634f39eb54e112d7db826f6\"},\"jobs\":{\"count\":81,\"digest\":\"a9297b9a53d28d4bb6df09e984632aa1\"},\"movements\":{\"count\":95,\"digest\":\"5d2e545fc3b4055f52f70e64dd20cbbf\"},\"name\":\"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ\",\"order_lines\":{\"count\":632,\"digest\":\"86205f12c232a2103677fa404f3b6611\"},\"orders\":{\"count\":61,\"digest\":\"7422300ddbe95e10e38d41552912a22b\"},\"shifts\":{\"count\":43,\"digest\":\"14814f641d388a4e4f23fdc329affe64\"},\"stock\":{\"count\":110,\"digest\":\"3f451968739ad2a97282b971c0db48d9\"},\"transactions\":{\"count\":134,\"digest\":\"f325173b44807a31d5c9f5c5854bdea7\"}},{\"attachments\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"captured_at\":\"2026-11-03T17:44:09.498552Z\",\"documents\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"id\":\"cmv2qanca000psigeizep8o9m\",\"inbox\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"jobs\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"movements\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"name\":\"N40 CONTROL 20261010\",\"order_lines\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"orders\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"shifts\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"stock\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"transactions\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"}}]"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "after": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"attachments\":{\"count\":84,\"digest\":\"cbcad0b25f4e0d4c791d374b31fc6164\"},\"captured_at\":\"2026-11-03T17:46:03.398561Z\",\"documents\":{\"count\":74,\"digest\":\"0d582910485f8575b49e338a115c857c\"},\"id\":\"cmtpopbgo000trhb5ng9ytiru\",\"inbox\":{\"count\":66,\"digest\":\"57736b1295d3263fd03c56c1f417df32\"},\"jobs\":{\"count\":82,\"digest\":\"fe5f606539bdbba66b4c98786dfb201e\"},\"movements\":{\"count\":95,\"digest\":\"5d2e545fc3b4055f52f70e64dd20cbbf\"},\"name\":\"ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ\",\"order_lines\":{\"count\":634,\"digest\":\"72de884eb096be0c93d9cf44906ac130\"},\"orders\":{\"count\":62,\"digest\":\"e4613ce33abd0d3292401fc28ac648fb\"},\"shifts\":{\"count\":43,\"digest\":\"14814f641d388a4e4f23fdc329affe64\"},\"stock\":{\"count\":110,\"digest\":\"3f451968739ad2a97282b971c0db48d9\"},\"transactions\":{\"count\":134,\"digest\":\"f325173b44807a31d5c9f5c5854bdea7\"}},{\"attachments\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"captured_at\":\"2026-11-03T17:46:03.398561Z\",\"documents\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"id\":\"cmv2qanca000psigeizep8o9m\",\"inbox\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"jobs\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"movements\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"name\":\"N40 CONTROL 20261010\",\"order_lines\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"orders\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"shifts\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"stock\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"},\"transactions\":{\"count\":0,\"digest\":\"d41d8cd98f00b204e9800998ecf8427e\"}}]"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "delta": [
+    {
+      "store": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "captured": "2026-11-03T17:46:03.398561Z",
+      "tables": {
+        "attachments": {
+          "countDelta": 1,
+          "sameSignature": false
+        },
+        "documents": {
+          "countDelta": 1,
+          "sameSignature": false
+        },
+        "inbox": {
+          "countDelta": 1,
+          "sameSignature": false
+        },
+        "jobs": {
+          "countDelta": 1,
+          "sameSignature": false
+        },
+        "movements": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "order_lines": {
+          "countDelta": 2,
+          "sameSignature": false
+        },
+        "orders": {
+          "countDelta": 1,
+          "sameSignature": false
+        },
+        "shifts": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "stock": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "transactions": {
+          "countDelta": 0,
+          "sameSignature": true
+        }
+      }
+    },
+    {
+      "store": "N40 CONTROL 20261010",
+      "captured": "2026-11-03T17:46:03.398561Z",
+      "tables": {
+        "attachments": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "documents": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "inbox": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "jobs": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "movements": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "order_lines": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "orders": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "shifts": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "stock": {
+          "countDelta": 0,
+          "sameSignature": true
+        },
+        "transactions": {
+          "countDelta": 0,
+          "sameSignature": true
+        }
+      }
+    }
+  ],
+  "limits": [
+    "No payment, approval, stock/fiscal/myDATA action; both catalog items remain UNRESOLVED",
+    "UI connection changed after submission and withdrew the view; UI completion/handoff timing NOT TESTED",
+    "One PDF is still displayed as one page/file, and posBackground.pageCount1 is attachment count",
+    "No purchase-item provenance columns or UI added",
+    "Header correctness reopened; 12.111s is an incorrect-header sample, not a performance PASS",
+    "Prior11.642s correct-header sample is retained as historical scoped evidence",
+    "Actual fast-header producer trace not captured; separate actual-handler reproduction proves unsafe multi-page PDF reconciled-table bypass"
+  ]
+}
