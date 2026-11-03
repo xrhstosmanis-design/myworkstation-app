@@ -1,19 +1,19 @@
 {
   "package": "gr.myworkstation.chat.preview",
-  "version": "0.1.15-preview",
-  "versionCode": 16,
+  "version": "0.1.16-preview",
+  "versionCode": 17,
   "minimumAndroid": 8,
   "videoCaptureMinimumAndroid": 11,
   "maximumVideoSeconds": 30,
   "maximumVideoBytes": 12582912,
   "videoFormat": "MP4 H264/AAC",
-  "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.15-Preview.apk",
-  "sha256": "2603a8f385e53178fe35c6bcb2a0d81c3c50c082cb9fda859c641ceeb1a6231b",
+  "path": "/downloads/chat-android/MyWorkStation-Chat-Android-0.1.16-Preview.apk",
+  "sha256": "6aa390d0c24ce37fd7f84fac0c20f8d4304a62c159e739bb175036e746fb98d8",
   "bytes": 3703820,
-  "sourceCommit": "2625a7913ccfa162dfa2342d976de6e172110a8f",
-  "androidSourceTree": "f9bafe0cb663f77edaca2ca818da40e48aa0e2c2",
-  "ciRun": 41313678816,
+  "sourceCommit": "0c352c2ecafe386f6c6af324bb9db736b8cd70d3",
+  "androidSourceTree": "50f19594555504fe380f35b8c907d182b7f4bcb9",
+  "ciRun": 41680412136,
   "signerCertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
   "signing": "stable-owner-key",
-  "acceptance": "TECHNICAL CANDIDATE; ONE COMBINED PHONE ACCEPTANCE PENDING: compact conversation/contextual actions/full-photo pinch-pan-reset and pending0.1.14 history/explicit authorized forward/named delivery-read/quoted replies/reactions/announcements/explicit acknowledgement. Prior limited USER PASS retained without replay."
+  "acceptance": "TECHNICAL CANDIDATE; new topic partition and appearance physical acceptance NOT TESTED. ONE combined phone check for Συνομιλία/Ταμεία/Τιμολόγια and topic switching. Prior scoped familiarUI/media/login/functional USER PASS preserved; do not replay accepted actions for paperwork."
 }
