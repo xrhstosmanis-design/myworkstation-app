@@ -1,3 +1,15 @@
+## 03/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / THEORY-ONLY PERSONAL UI OBSERVED / FULL ACCEPTANCE OPEN
+
+Same retained owner; receipt docs/lab31-theory-observation-20261103. Claim3621 exact head1e7fe18 CI41709166435 success, merged e06ba2ef85b65c1d0f9de5d275b6d3c3001c3df7 before new action. Explicit user authorization covers all LAB tests.
+
+One canonical native UI creation at20:29:46.4UTC: LAB31-THEORY-20261103-01, id8925a034-cd4f-4e05-a14b-d4d96881a1bf, DRAFT/FREE (native form),109snapshot lines,0counted. Not FULL as the preliminary baseline action label had anticipated. No counting, finalization, financial or stock action. Fresh before20:28:46 and after20:30:01/20:38:32: 43shift/27count-event/90sale/95movement/110store-product/1CloudAudit counts AND content digests unchanged. Stocktake4→5 only. Fresh product quantity/latest movement baseline and zero N40 sale/movement/stocktake control retained.
+
+Secure form genuine personal login verified welcome Δοκιμή απογραφέα LAB, sole store and sole Απογραφή action. Existing saved inventory.read + inventory.expected.read only; no new rights changed. Personal list shows only the new DRAFT and hides four prior FINALIZED stocktakes. Opened109uncounted rows: expected visible, e.g. TEST1 current snapshot4; counted and difference are unknown em-dash, not false zero. No cost/retail or count/clear/zero/delete/finalize/export controls. SKU search selects TEST1 without write. Screenshot viewport clips right columns; accessibility tree separately confirms4/—/—. No API-denial/revocation/mobile acceptance inferred.
+
+This is a limited hosted UI observation, not formal revision-bound/full LAB PASS: exact loaded client revision was not captured; difference for an actually counted draft, direct API denials and broader rights remain NOT TESTED. Do not repeat earlier accepted counts/finalizations to close documentation. No functional manual/PDF closure. Existing prior PASS/manual and all peer ownership protected. Draft remains open for future separately identified tests; lab31 remains theory-read-only.
+
+Whole all-functions BackOffice scope ASSIGNED/OPEN to retained CENTRAL-BACKOFFICE-ACCESS-01. INVENTORY-RECONCILIATION-01 keeps report/value/correction/export ownership. Next: preserve this observation centrally, then review next independent native permission adapter without replaying accepted operations. Checkpoint CHECKPOINTS/CHANGES/2026-11-03-lab31-theory-observation.md.
+
 ## 03/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / INDEPENDENT PERSONAL UI OBSERVATIONS / DRAFT PREPARATION CLAIM
 
 Same retained access owner; branch docs/lab31-independent-reads-20261103. Explicit user approval covers all LAB tests. No transfer of INVENTORY-RECONCILIATION-01 or any other owner.
