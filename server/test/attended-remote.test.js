@@ -31,3 +31,9 @@ test('fresh-frame notifications stay scoped and unsubscribe on STOP',()=>{
  const r=createAttendedRemote(),j0=r.invite(scope(0),actor),j1=r.invite(scope(1),actor);let a=0,b=0;
  const remove=r.onFrame(j0.id,()=>a++);r.onFrame(j1.id,()=>b++);r.frameAvailable(j0.id);assert.equal(a,1);assert.equal(b,0);remove();r.frameAvailable(j0.id);assert.equal(a,1);r.stop(j1.id);r.frameAvailable(j1.id);assert.equal(b,0);
 });
+
+test('all-enrolled eligibility requires explicit master and mode; malformed IDs never qualify',()=>{
+ for(const env of [{REMOTE_SUPPORT_ALL_ENROLLED:'true'},{REMOTE_SUPPORT_ENABLED:'false',REMOTE_SUPPORT_ALL_ENROLLED:'true'},{REMOTE_SUPPORT_ENABLED:'true',REMOTE_SUPPORT_ALL_ENROLLED:'TRUE'}])assert.equal(attendedRemoteGate(env)('new-terminal'),false);
+ const gate=attendedRemoteGate({REMOTE_SUPPORT_ENABLED:'true',REMOTE_SUPPORT_ALL_ENROLLED:'true'});assert.equal(gate('new-terminal'),true);
+ for(const id of ['',null,undefined,{},'with space','x'.repeat(101)])assert.equal(gate(id),false);
+});

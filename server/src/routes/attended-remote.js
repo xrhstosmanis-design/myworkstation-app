@@ -25,7 +25,17 @@ export function createAttendedRemoteRouter({db=prisma,authenticate=auth,env=proc
  // The browser has already recorded a fresh, exact-terminal local consent. This one-use
  // handoff reaches only the loopback agent; it is not a reusable operator credential.
  router.post('/pair',wrap(async(req,res)=>{const grant=req.body?.grant;if(typeof grant!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(grant))throw fail(400,'Μη έγκυρη αποδοχή.');const j=remote.grantJob(grant);await authority(j);const result=remote.pair(grant);try{await audit(j,'ATTENDED_REMOTE_CONNECTED');}catch(e){remote.stop(j.id,'AUDIT_FAILED');throw e;}res.status(201).json(result);}));
- router.post('/device/:id/frame',wrap(async(req,res)=>{const s=await device(req),b=req.body||{};if(typeof b.jpeg!=='string'||b.jpeg.length>750000||!/^\/9j\/[A-Za-z0-9+/=]+$/.test(b.jpeg)||!Number.isInteger(b.width)||!Number.isInteger(b.height)||b.width<1||b.height<1||b.width>8192||b.height>8192)throw fail(400,'Μη έγκυρη εικόνα.');const result=remote.sessions.frame(s,{jpeg:b.jpeg,width:b.width,height:b.height});remote.frameAvailable(s.id);res.json({...result,files:remote.files.list(s.id)});}));
+ router.post('/device/:id/frame',wrap(async(req,res)=>{const s=await device(req),b=req.body||{};if(typeof b.jpeg!=='string'||b.jpeg.length>750000||!/^\/9j\/[A-Za-z0-9+/=]+$/.test(b.jpeg)||!Number.isInteger(b.width)||!Number.isInteger(b.height)||b.width<1||b.height<1||b.width>8192||b.height>8192)throw fail(400,'Μη έγκυρη εικόνα.');const result=remote.sessions.frame(s,{jpeg:b.jpeg,width:b.width,height:b.height},{drainCommands:b.separateCommands!==true});remote.frameAvailable(s.id);res.json({...result,files:remote.files.list(s.id)});}));
+ // A separate single-consumer long poll delivers input without waiting for capture/upload.
+ // It never renews either heartbeat and revalidates authority AFTER waking, before drain.
+ router.get('/device/:id/commands',wrap(async(req,res)=>{
+  let s=await device(req),timer,unsubscribe=()=>{},wake;
+  try{
+   await new Promise(resolve=>{wake=resolve;unsubscribe=remote.onCommands(s.id,resolve);res.once('close',resolve);timer=setTimeout(resolve,10000);timer.unref();if(s.commands.length)resolve();});
+  }finally{clearTimeout(timer);unsubscribe();if(wake)res.off('close',wake);}
+  if(res.destroyed)return;
+  s=await device(req);res.json({commands:remote.sessions.takeCommands(s)});
+ }));
  router.post('/device/:id/stop',wrap(async(req,res)=>{const s=remote.sessions.device(req.params.id,String(req.headers.authorization||'').replace(/^Bearer /,''));remote.stop(s.id,'DEVICE_STOP');res.json({stopped:true});}));
  const transferRoutes=(prefix,resolve,sender)=>{
   router.post(`${prefix}/files`,wrap(async(req,res)=>{const s=await resolve(req);const file=remote.files.create(s.id,sender,req.body||{});try{await audit(s,'ATTENDED_REMOTE_FILE_STARTED');}catch(e){remote.files.remove(s.id,file.id);throw e;}res.status(201).json(file);}));
@@ -63,7 +73,7 @@ export function createAttendedRemoteRouter({db=prisma,authenticate=auth,env=proc
  }));
  router.get('/controller/:id/frame',wrap(async(req,res)=>{const s=await controller(req);res.json({...remote.sessions.view(s),storeName:s.storeName,terminalName:s.terminalName,files:remote.files.list(s.id)});}));
  router.post('/controller/:id/heartbeat',wrap(async(req,res)=>{const s=await controller(req);remote.sessions.view(s);res.json({alive:true});}));
- router.post('/controller/:id/input',wrap(async(req,res)=>{const s=await controller(req);remote.sessions.command(s,validateRemoteInput(req.body));res.json({queued:true});}));
+ router.post('/controller/:id/input',wrap(async(req,res)=>{const s=await controller(req);remote.sessions.command(s,validateRemoteInput(req.body));remote.commandsAvailable(s.id);res.json({queued:true});}));
  router.post('/controller/:id/stop',wrap(async(req,res)=>{remote.controller(req.params.id,req.user);remote.stop(req.params.id,'CONTROLLER_STOP');res.json({stopped:true});}));
  transferRoutes('/controller/:id',controller,'TO_DEVICE');
  const timer=setInterval(()=>remote.sweep(),5000);timer.unref();

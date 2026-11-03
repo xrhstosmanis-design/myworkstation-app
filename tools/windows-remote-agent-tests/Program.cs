@@ -31,3 +31,35 @@ try{using var r=await Call("/accept",HttpMethod.Post,new string('a',9000));Check
 catch(HttpRequestException e)when(e.InnerException is System.IO.IOException){/* TCP reset is a fail-closed oversized-body rejection. */}
 Check(accepted==1,"oversized bytes never invoke consent");
 Console.WriteLine("Remote Agent actual loopback HTTP tests PASS; desktop/Windows consent remains NOT TESTED.");
+
+// Exercise the exact native command/capture lifecycle without operating a desktop.
+{
+ using var cancel=new CancellationTokenSource();
+ var first=new TaskCompletionSource<System.Text.Json.JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+ var next=new TaskCompletionSource<System.Text.Json.JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+ var applied=new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+ int polls=0,inputs=0,failures=0;
+ await using var channel=new RemoteCommandChannel(ct=>++polls==1?first.Task:next.Task.WaitAsync(ct),_=>{inputs++;applied.TrySetResult(true);},()=>true,()=>failures++,cancel.Token);
+ long now=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+ first.SetResult(System.Text.Json.JsonSerializer.SerializeToElement(new{commands=new object[]{new{type="key",key="Enter",at=now-5000},new{type="text",text="Ελληνικά",at=now}}}));
+ await applied.Task.WaitAsync(TimeSpan.FromSeconds(2));Check(inputs==1,"stale native input discarded");
+ var watch=System.Diagnostics.Stopwatch.StartNew();await channel.WaitForCapture(cancel.Token);Check(watch.ElapsedMilliseconds<700,"input wakes screenshot before the 900ms idle wait");
+ using(var quiet=new CancellationTokenSource(100)){
+  try{await channel.WaitForCapture(quiet.Token);throw new Exception("duplicate capture wake");}catch(OperationCanceledException)when(quiet.IsCancellationRequested){}
+ }
+ cancel.Cancel();await channel.Completion.WaitAsync(TimeSpan.FromSeconds(2));Check(failures==0,"STOP cancellation is not a reconnect or input retry");
+}
+{
+ using var cancel=new CancellationTokenSource();
+ var delayed=new TaskCompletionSource<System.Text.Json.JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);int inputs=0,failures=0;
+ var channel=new RemoteCommandChannel(_=>delayed.Task,_=>inputs++,()=>true,()=>failures++,cancel.Token);
+ var closing=channel.DisposeAsync();
+ delayed.SetResult(System.Text.Json.JsonSerializer.SerializeToElement(new{commands=new[]{new{type="key",key="Enter",at=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}}}));
+ await closing;Check(inputs==0&&failures==0,"late command response after STOP never applies");
+}
+{
+ using var cancel=new CancellationTokenSource();int failures=0,inputs=0;
+ await using var channel=new RemoteCommandChannel(_=>Task.FromException<System.Text.Json.JsonElement>(new HttpRequestException("uncertain transport")),_=>inputs++,()=>true,()=>{failures++;cancel.Cancel();},cancel.Token);
+ await channel.Completion;Check(failures==1&&inputs==0&&cancel.IsCancellationRequested,"uncertain command transport stops session without retry");
+}
+Console.WriteLine("Remote command wake, stale input, cancellation and uncertain transport tests PASS; physical speed remains NOT TESTED.");
