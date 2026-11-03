@@ -1,7 +1,6 @@
 const nativeFetch=window.fetch.bind(window);
 const managerRoles=new Set(["SUPER_ADMIN","OWNER","ADMIN","MANAGER"]);
 const TOLERANCE=0.05;
-const nonProductPattern=/(ΤΙΜΟΛΟΓΙΟ|INVOICE|ΗΜΕΡΟΜΗΝΙΑ|DATE|ΩΡΑ|ΑΦΜ|ΔΟΥ|ΕΠΩΝΥΜΙΑ|ΔΙΕΥΘΥΝΣΗ|ΤΗΛ|EMAIL|URL|IBAN|ΠΕΛΑΤ|ΣΤΟΙΧΕΙΑ|ΣΥΝΟΛΟ|SUBTOTAL|TOTAL|ΠΛΗΡΩΤΕΟ|ΦΠΑ|VAT|ΕΚΠΤΩΣΗ|DISCOUNT|ΤΡΑΠΕΖ|BANK)/i;
 let activeOrderId="";
 
 const user=()=>{try{return JSON.parse(localStorage.getItem("user")||"null")}catch{return null}};
@@ -21,7 +20,9 @@ function economicProduct(row){
   // παραμένει μόνο fallback, ώστε παλιό/θορυβώδες OCR να μην κρύβει προϊόν που
   // έχει ήδη διορθωθεί ή αντιστοιχιστεί από τον χρήστη.
   const text=String(row?.description||row?.ocrRawText||"").replace(/\s+/g," ").trim();
-  return Boolean(text)&&!nonProductPattern.test(text)&&Number(row?.quantity||0)>0&&(Number(row?.unitCost||0)>0||Number(row?.grossAmount||0)>0);
+  // Η ταξινόμηση έρχεται από το API· λέξεις κεφαλίδας μπορεί να είναι μέρος
+  // γνήσιας περιγραφής προϊόντος, όπως «μαντηλάκια».
+  return row?.ocrLineType==="PRODUCT"&&Boolean(text)&&Number(row?.quantity||0)>0&&(Number(row?.unitCost||0)>0||Number(row?.grossAmount||0)>0);
 }
 
 function invoiceNumberFromModal(modal){
