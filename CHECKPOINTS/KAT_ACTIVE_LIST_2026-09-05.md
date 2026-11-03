@@ -49,8 +49,6 @@ Single next action: identify the actual Windows LAB PC(s)/terminal IDs and obtai
 
 
 
-
-
 Source update PR #3574: attended three-store controller/POS consent/files prepared, feature OFF. Candidate373db7 passed CI41545888753:5370 PASS/0 FAIL/0 SKIP including native remote PostgreSQL; Windows run41545888599 SUCCESS. Main advanced to21e60c0; peer source/records preserved, combined revision requires CI. Physical Windows/LAB NOT TESTED; owner feat/pos-attended-remote-20261103 retained. Evidence/current next action: CHECKPOINTS/CHANGES/2026-11-03-pos-attended-remote.md. This update is inside the owned claim, without competing top insertions.
 
 User explicitly requests foreground POS Remote Agent, administrator invitations accepted with one local action/no PIN, no fixed session duration, and bidirectional file transfer for register support. ΑΝΑΛΗΨΗ ΑΠΟ codex/remote-windows-agent-20261001 — ASSIGNED feat/pos-attended-remote-20261103 for this expanded attended-only scope; original October trial/layout FAIL and NOT TESTED physical screen/control/STOP evidence remain historical, not PASS. Current mainf4272bf read with AGENTS/active/tracker/pending/remote checkpoint and Windows README; no newer remote acceptance found. No concurrent takeover of cash-register, invoice/payment, Chat, lifecycle or other owners.
@@ -212,6 +210,14 @@ Same retained FTEXT continuation owner. Source PR3540 headd377946 remains NOT IN
 Bounded necessary validation-support change after this claim merges: change only build-and-test.timeout-minutes from15to25 in .github/workflows/ci.yml. All test commands, required jobs, assertions, deployment guard, fiscal/readiness/heartbeat/business timeouts and production settings remain unchanged. This permits the complete existing validation; it does not waive a gate or mark cancelled work successful. No takeover of unrelated CI/feature scope, no new fiscal operation or store interruption. Physical speed remains FAIL/OPEN. The published PDF is retained during candidate validation; regenerate the synchronized final receipt after validation and release.
 
 Single next action: merge this documentation claim after applicable green CI, apply the one-line job execution budget change to the existing FTEXT candidate, then require exact complete PR/main CI and guarded release before package delivery.
+
+## 03/11/2026 — INVOICE-HEADER-PDF-SAFETY-01 / CONTINUATION / AWAITING FULL CI AND LAB
+
+Same retained /root owner and PR3554, remote branch fix/invoice-pdf-header-safety-20261102. Before-source claim3552 is green/main (d3bf7a5a2). Previous head0e8208b36475a48dc2fc0edf192837da62069690 CI41529406558 failed solely at Verify active list and checkpoint were updated: the active-list file was missing from the PR diff. Full build/server/browser/HTTP checks did not run; no full CI PASS claimed. This continuation adds the required active record and reconciles onto current main preserving all peer source, especially the newer competing-draft/payment-review guards. No change to the already reviewed PDF predicate/test behavior.
+
+Source remains bounded to header-only bypass: images or PDF normalized numeric physical-page count1; multi/unknown PDF count follows ordinary fallback. Legacy reconciled-table bypass, durable file reuse, wallet fail-stop, tenant/store scope, sequential pages and financial/stock/draft identities protected. Historical Node20 focused135PASS/0FAIL/0SKIP, including37 actual-handler tests and the real synthetic two-page PDF regression. Fresh validation and exact full PR/main CI required after reconciliation. No model, timeout, UI, parser, schema or financial writer change. No new provider/business action, CREDIT submission, payment replay, approval or stock posting. Existing physical-count-to-draft limited LAB PASS404b571 retained; automatic subtotal selection remains FAIL/OPEN until header-only acceptance on the guarded release. Original EFK, unnumbered completeness and persisted provenance remain OPEN with their existing owners.
+
+Next: full final PR CI, expected-head merge, exact full main CI, ordinary guarded release, then one fresh synthetic two-page header-only read with before/after/control; do not resubmit the already handled CREDIT draft. Central PDF/manual latest real LAB receipt3552 retained during source validation; synchronize final release evidence after actual acceptance. No new PASS.
 
 ## 02/11/2026 — INVOICE HEADER + PHYSICAL PDF PAGES / ENGINEERING RELEASE / LIMITED LAB PASS / RESIDUAL OPEN
 
