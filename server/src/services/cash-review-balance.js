@@ -36,7 +36,7 @@ export function cashReviewSnapshotFromLoadedTransactions(session,loaded){
     const active=[],expenses=[];let reversedCount=0,lastMovement=null;
     for(const input of loaded){
       const r=input?.record;
-      if(!r||r.companyId!==session.companyId||r.storeId!==session.storeId||r.sessionId!==(session.sessionId||session.id))return null;
+      if(!r||!['type','createdAt','reversedAt'].every(key=>Object.hasOwn(r,key))||r.companyId!==session.companyId||r.storeId!==session.storeId||r.sessionId!==(session.sessionId||session.id))return null;
       const times=[r.createdAt,r.reversedAt].filter(v=>v!==null&&v!==undefined).map(v=>{
         if(!(v instanceof Date)&&typeof v!=='string')throw Error('Invalid movement time');
         const at=new Date(v).getTime();if(!Number.isFinite(at))throw Error('Invalid movement time');return at;

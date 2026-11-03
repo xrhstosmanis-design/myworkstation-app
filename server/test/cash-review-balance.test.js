@@ -73,7 +73,7 @@ test('loaded snapshot and bounded preloaded reviews retain the exact legacy proj
 });
 test('unsupported exact sidecars, foreign scope or invalid timestamps fall back to established scoped SQL, never guessed rounding',async()=>{
  const base={record:{companyId:'c',storeId:'s',sessionId:'shift',type:'SALE_CASH',amount:10,createdAt:snapshot.lastMovementAt,reversedAt:null},snapshotAmount:'10.00'};
- for(const mutate of [x=>delete x.snapshotAmount,x=>{x.snapshotAmount='1e1'},x=>{x.snapshotAmount='NaN'},x=>{x.snapshotAmount='Infinity'},x=>{x.snapshotAmount='1'.repeat(1001)},x=>{x.snapshotAmount='11'},x=>{x.record.storeId='foreign'},x=>{x.record.createdAt='invalid'},x=>{x.record.amount=true}]){
+ for(const mutate of [x=>delete x.snapshotAmount,x=>delete x.record.createdAt,x=>delete x.record.reversedAt,x=>delete x.record.type,x=>{x.snapshotAmount='1e1'},x=>{x.snapshotAmount='NaN'},x=>{x.snapshotAmount='Infinity'},x=>{x.snapshotAmount='1'.repeat(1001)},x=>{x.snapshotAmount='11'},x=>{x.record.storeId='foreign'},x=>{x.record.createdAt='invalid'},x=>{x.record.amount=true}]){
   const input=structuredClone(base);mutate(input);assert.equal(cashReviewSnapshotFromLoadedTransactions(session,[input]),null);let calls=0;
   const result=await readCashReviewState({$queryRaw:async(strings,...values)=>{calls++;assert(strings.join('').includes('COUNT(*)::int AS "transactionCount"'));assert.deepEqual(values,['c','s','shift']);return [snapshot];}},session,{loadedTransactions:[input],reviewRows:[]});assert.deepEqual(result.currentSnapshot,snapshot);assert.equal(calls,1);
  }
