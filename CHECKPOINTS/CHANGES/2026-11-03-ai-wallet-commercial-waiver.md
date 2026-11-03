@@ -1,8 +1,8 @@
-## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / OLD PENDING CANDIDATES / PEER RECONCILIATION
+## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / OLD PENDING CANDIDATES / RECONCILED SOURCE CANDIDATE
 
-Same retained owner and continuation. Source3571 original final04a98b73 passed retryCI41542186927 all5SUCCESS:5319server+8backup/0FAIL/0SKIP, including actual native old pending beyond105 newer settled rows and unchanged recent100/store boundaries. Merge conflicts concern shared records only. Reconcile against closure3582/6d5f916c with the SAME five source/test blobs; retain every current-main peer runtime path, completed one-entry LAB PASS/manual/evidence and both synchronized PDFs. No waiver transaction logic or permission/gate changes.
+Same retained owner/continuation. Original source3571/04a98b73 retryCI41542186927 all5SUCCESS:5319server+8backup/0FAIL/0SKIP including native historical pending beyond105 newer settled entries. This reconciliation retains the SAME five source/test blobs and every current peer source/record, invoice3581 receipt and one-entry LAB PASS closure3582/manual/evidence/PDF. No transaction/permission/deployment gate change.
 
-Required next: complete exact reconciled head PR CI, merge and exact main CI, normal guarded healthy release, then measured pending-list/preview acceptance before the already approved real historical batch. No real batch mutation yet. The successful LAB B transaction must NOT be repeated; its supplier cost stays UNKNOWN. Broader wallet/manual36 and unobserved hosted concurrency/retry remain OPEN.
+Exact reconciled PR/main full CI and normal guarded healthy installation still required before hosted pending-list and actual approved batch acceptance. Completed LAB B action must not be replayed; supplier cost UNKNOWN. Actual batch not released, broader wallet/manual36 and hosted retry/concurrency OPEN.
 
 ## 03/11/2026 10:45:48 Ελλάδας — AI-WALLET-COMMERCIAL-WAIVER-01 / SCOPED HOSTED LAB PASS
 

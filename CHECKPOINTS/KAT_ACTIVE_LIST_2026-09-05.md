@@ -1,8 +1,8 @@
-## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / OLD PENDING CANDIDATES / PEER RECONCILIATION
+## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / OLD PENDING CANDIDATES / RECONCILED SOURCE CANDIDATE
 
-Same retained owner and continuation. Source3571 original final04a98b73 passed retryCI41542186927 all5SUCCESS:5319server+8backup/0FAIL/0SKIP, including actual native old pending beyond105 newer settled rows and unchanged recent100/store boundaries. Merge conflicts concern shared records only. Reconcile against closure3582/6d5f916c with the SAME five source/test blobs; retain every current-main peer runtime path, completed one-entry LAB PASS/manual/evidence and both synchronized PDFs. No waiver transaction logic or permission/gate changes.
+Same retained owner/continuation. Original source3571/04a98b73 retryCI41542186927 all5SUCCESS:5319server+8backup/0FAIL/0SKIP including native historical pending beyond105 newer settled entries. This reconciliation retains the SAME five source/test blobs and every current peer source/record, invoice3581 receipt and one-entry LAB PASS closure3582/manual/evidence/PDF. No transaction/permission/deployment gate change.
 
-Required next: complete exact reconciled head PR CI, merge and exact main CI, normal guarded healthy release, then measured pending-list/preview acceptance before the already approved real historical batch. No real batch mutation yet. The successful LAB B transaction must NOT be repeated; its supplier cost stays UNKNOWN. Broader wallet/manual36 and unobserved hosted concurrency/retry remain OPEN.
+Exact reconciled PR/main full CI and normal guarded healthy installation still required before hosted pending-list and actual approved batch acceptance. Completed LAB B action must not be replayed; supplier cost UNKNOWN. Actual batch not released, broader wallet/manual36 and hosted retry/concurrency OPEN.
 
 ## 03/11/2026 10:45:48 Ελλάδας — AI-WALLET-COMMERCIAL-WAIVER-01 / SCOPED HOSTED LAB PASS
 
@@ -106,6 +106,15 @@ Exact owned paths: server/src/routes/store-chat.js, server/src/chat-topics.mjs (
 Current new scope NOT IMPLEMENTED / NOT TESTED / NOT INSTALLED. Existing familiar UI batch remains scoped USER-reported complete (PR3556), not overall N16 PASS. Required before one final combined phone check: real isolated PostgreSQL/HTTP topic-before-limit/search/invalid/tenant tests, old-client compatibility, reply/media/forward category correctness and no financial/provider side effects; mounted web and actual Android lifecycle/keyboard/geometry/topic-switch tests, existing source/media regressions, full exact PR/main CI, unchanged guarded exact web deployment and same-signer verified APK/public manifest. No intermediate user installation/test requests. No production DB/migration/seed/grant/Chat send/read/ack/Push/provider/business action authorized for diagnosis. Remaining overall N16 and independent owners unchanged. Checkpoint CHECKPOINTS/CHANGES/2026-11-03-chat-topics-visual.md. Next: publish this claim green/main, then implement the three coordinated slices and deliver ONE combined update.
 
 ## 03/11/2026 — INVOICE-SECOND-DRAFT-01 / PARALLEL REVIEW HOLD / PREPAYMENT CONTINUATION CLAIM
+
+### 03/11/2026 - authoritative duplicate release receipt / INSTALLED / AWAITING LAB
+
+Owner fix/invoice-duplicate-prevention-20261103 /root retained after the explicitly approved limited transfer. Prevention PR3558/head80fedb0 merged9e1a3db: exact PR41543218800 and main41545520174 passed all five jobs, 5,359 server +8 auxiliary tests, 0 failures/skips. Additional-member PR3573/head398107c merged21e60c0: exact PR41545507284 passed all five jobs/every step, 5,348 server +8 auxiliary tests, 0 failures/skips. Combined main21e60c0 CI41547911770/build125633171721 passed all jobs/every step, 5,388 server +8 auxiliary tests, 0 failures/skips. Independent review corrections freeze canonical order number and established payment/audit identity; real native receipt-writer, drift, retry/race and source-preservation cases passed. These are engineering proofs, not LAB acceptance.
+
+Effective unchanged invoice source is installed in descendant2a8db9d5c4fcfa2742d8601c54f747bf1d918e53. Exact main CI41550612219/build125638852498 passed: 5,399 server +8 auxiliary tests, 0 failures/skips. Ordinary guarded deployment41553003858/job125645124405 pinned that revision at03Nov00:29:38UTC and confirmed exact healthy revision00:32:00UTC (02:32 Europe/Athens). This page independently reread /api/health: ok=true, version0.22.0+kat-test-pos, exact2a8db9d. Earlier9e1 and21e guards correctly skipped actual deployment for newer production source; skipped-success never established release. No manual/force deploy or guard bypass.
+
+Current source holds uncertain duplicate variants before another supplier-payment insertion/draft creation and preserves exact checks, trusted payment reuse and first unpaid myDATA payment. Additional-member manual review retains one established canonical order/document/table/header/supplier/payment, all physical rows/originals and flat alias history; rejects posted/drifting/unknown families and unproven first-payment links. No actual customer invoice merge/delete/replay/approval, payment, stock, billing or email action occurred. Hosted measured LAB acceptance remains NOT TESTED; the whole duplicate task stays OPEN. No manual or functional PASS closure. Single next action: identify an eligible synthetic LAB family, publish fresh terminal/operator/shift/payment/stock/control baseline before one controlled action, then verify immutable originals/payment/stock and control. Never seed production SQL or replay the real trio for evidence. Other invoice/reopen/reader/report/inventory owners remain assigned. Full handoff: CHECKPOINTS/CHANGES/2026-11-03-invoice-duplicate-release-handoff.md.
+
 
 ## 03/11/2026 — INVOICE-SECOND-DRAFT-01 / REVIEW GAPS ADDRESSED IN CANDIDATE / AWAITING NEW NATIVE CI
 
@@ -18057,6 +18066,11 @@ Node20 local full4964tests/4620PASS/0FAIL/344infrastructureSKIP; frontend/TABLE_
 
 
 ## 03/11/2026 — INVOICE-TRIPLE-CONSOLIDATION-01 / ASSIGNED BEFORE SOURCE / NOT TESTED
+
+### Current status: installed engineering / AWAITING LAB
+
+PR3573/head398107c is included in exact healthy2a8db9d after full native PR/combined-main/effective-main CI. Actual historical consolidation and measured LAB remain unperformed. Authoritative release/retained-owner receipt: CHECKPOINTS/CHANGES/2026-11-03-invoice-duplicate-release-handoff.md. Older candidate headings below are historical.
+
 
 ### 03/11/2026 — stable-canonical additional-member source ready / AWAITING FULL NATIVE CI AND LAB
 
