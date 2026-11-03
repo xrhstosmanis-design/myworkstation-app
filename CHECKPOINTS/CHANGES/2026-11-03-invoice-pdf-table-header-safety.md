@@ -10,3 +10,5 @@ Known limit explicitly retained: ordinary fallback failure or absent fallback ke
 
 Required next: exact full PR/main CI (all native/build/invariant/E2E gates), ordinary guarded deploy and exact healthy revision; then publish bounded LAB/control baseline before ONE fresh synthetic two-page header-only no-submit read. Require correct supplier/number/date/printed24.80 and measure continuous file-upload-to-ready duration. No payment/CREDIT/approval/finalization/stock/fiscal action, no old invoice replay. New code is NOT INSTALLED / AWAITING LAB until those steps; CI alone never closes the actual header FAIL. Checkpoint CHECKPOINTS/CHANGES/2026-11-03-invoice-pdf-table-header-safety.md. Owner retained until exact recorded completion or named handoff; every peer owner preserved.
 
+Combined-revision reconciliation: peer mainb74773485fd2e6f21b3c0792ec8d662a35674c95 added FTEXT promotion and independent import/cash-event claims. Preserve all peer records and every owned runtime/test blob unchanged. The first PR CI41698976232 was still running when superseded, not recorded as full PASS. Exact combined CI is required before merge/release.
+
