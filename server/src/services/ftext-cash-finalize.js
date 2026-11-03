@@ -1,9 +1,11 @@
+import {hasFtextPromotion} from './ftext-promotion-lines.js';
 import {assertFtextOperatorCardApproved} from './ftext-operator-card.js';
 import {randomUUID} from 'node:crypto';
 import {insertPosSaleSafetyAudit} from '../pos-sale-safety.js';
 import {lockActiveSaleProducts} from '../lib/inventory-sale-product-lock.js';
 import {ftextSettingsHash} from './ftext-installation.js';
-import {validateFtextCashResult} from './ftext-cash-requests.js';
+import {isDeepStrictEqual} from 'node:util';
+import {validateFtextCashResult,prepareFtextCheckoutPlan,assertFtextSimpleCash} from './ftext-cash-requests.js';
 import {effectiveFtextCashReceipt} from './ftext-late-cash-receipt.js';
 const fail=message=>{throw Object.assign(new Error(message),{status:409,code:'FTEXT_CASH_FINALIZE_REVIEW'})};
 export async function finalizeFtextCashRequest(db,id,scope,{context,reserveStock}={}){
@@ -22,7 +24,14 @@ export async function finalizeFtextCashRequest(db,id,scope,{context,reserveStock
   const saved=row.checkoutJson,items=saved?.resolvedItems,summary=saved?.baseSummary;
   const method=saved?.paymentMethod;
   if(!['CASH','CARD'].includes(method)||method!==row.plan?.payment?.method||(method==='CARD'&&(current.settings.cardEnabled!==true||current.settings.cardPayment?.code!==row.plan.payment.code)))fail('Δεν επιβεβαιώθηκε ο αρχικός τρόπος πληρωμής.');
-  if(!items?.length||!summary||Number(summary.total)!==Number(row.total)||Number(row.plan.total)!==Number(row.total)||Number(row.plan.payment.amount)!==Number(row.total)||Number(summary.discount||0)!==0)fail('Το αρχικό καλάθι δεν συμφωνεί με την απόδειξη.');
+  if(!items?.length||!summary||Number(summary.total)!==Number(row.total)||Number(row.plan.total)!==Number(row.total)||Number(row.plan.payment.amount)!==Number(row.total)||(saved.ftextPromotionVersion!==1&&Number(summary.discount||0)!==0))fail('Το αρχικό καλάθι δεν συμφωνεί με την απόδειξη.');
+  const promoted=saved.ftextPromotionVersion===1;
+  if(promoted){
+   if(!hasFtextPromotion(items))fail('Λείπει η αρχική προσφορά από το αποθηκευμένο καλάθι.');
+   assertFtextSimpleCash({...saved,paymentMethod:'CASH'},items);
+   const rebuilt=prepareFtextCheckoutPlan({settings:current.settings,scope:{...scope,fiscalDeviceCode:current.settings.fiscalDeviceCode},clientTransactionId:row.clientTransactionId,checkout:saved,items,summary});
+   if(!isDeepStrictEqual(rebuilt,row.plan))fail('Η αρχική προσφορά δεν συμφωνεί με την επιβεβαιωμένη απόδειξη.');
+  }
   const existing=(await tx.$queryRaw`SELECT "id" FROM "Sale" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "clientTransactionId"=${row.clientTransactionId} LIMIT 1`)[0];
   // An unrelated existing business sale is NOT evidence this receipt committed.
   if(existing)fail('Υπάρχει ήδη διαφορετική καταχώριση με το ίδιο αναγνωριστικό. Απαιτείται έλεγχος.');
@@ -31,10 +40,12 @@ export async function finalizeFtextCashRequest(db,id,scope,{context,reserveStock
   await lockActiveSaleProducts(tx,{companyId:scope.companyId,storeId:scope.storeId,productIds:items.map(i=>i.productId)});
   await tx.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "StoreOperatorAudit" ("id" TEXT PRIMARY KEY,"companyId" TEXT NOT NULL,"storeId" TEXT NOT NULL,"operatorId" TEXT,"actorId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"details" JSONB NOT NULL DEFAULT '{}'::jsonb,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   const saleId=randomUUID(),inventoryWarnings=[];
-  await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source","clientTransactionId","saleFingerprint","duplicateConfirmed","transactionMode","operationChannel","audience") VALUES (${saleId},${scope.companyId},${scope.storeId},${saved.operatorEmployeeId||null},'ISSUED',${summary.subtotal},0,${row.total},'COMPLETED','POS',${row.clientTransactionId},${row.requestHash},${Boolean(saved.duplicateConfirmed)},'NORMAL','COUNTER','NORMAL')`;
+  await tx.$executeRaw`INSERT INTO "Sale" ("id","companyId","storeId","operatorEmployeeId","fiscalStatus","subtotal","discount","total","status","source","clientTransactionId","saleFingerprint","duplicateConfirmed","transactionMode","operationChannel","audience") VALUES (${saleId},${scope.companyId},${scope.storeId},${saved.operatorEmployeeId||null},'ISSUED',${summary.subtotal},${promoted?summary.discount:0},${row.total},'COMPLETED','POS',${row.clientTransactionId},${row.requestHash},${Boolean(saved.duplicateConfirmed)},'NORMAL','COUNTER','NORMAL')`;
   const stock=reserveStock||(await import('../routes/store-pos.js')).reserveSharedStock;
   for(const item of items){
-   const lineId=randomUUID();await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal","scannedBarcode") VALUES (${lineId},${saleId},${item.productId},${item.name},${item.quantity},${item.effectiveUnitPrice},0,${item.vatRate},${item.lineTotal},${item.barcode||null})`;
+   const lineId=randomUUID();
+   if(promoted)await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal","scannedBarcode","promotionId","promotionType") VALUES (${lineId},${saleId},${item.productId},${item.name},${item.quantity},${item.unitPrice??item.effectiveUnitPrice},${item.discount||0},${item.vatRate},${item.lineTotal},${item.barcode||null},${item.promotionId||null},${item.promotionType||null})`;
+   else await tx.$executeRaw`INSERT INTO "SaleLine" ("id","saleId","productId","description","quantity","unitPrice","discount","vatRate","lineTotal","scannedBarcode") VALUES (${lineId},${saleId},${item.productId},${item.name},${item.quantity},${item.effectiveUnitPrice},0,${item.vatRate},${item.lineTotal},${item.barcode||null})`;
    const stockResult=await stock(tx,{...scope,productId:item.productId,quantity:item.quantity,productName:item.name,saleId,saleLineId:lineId,priceSource:item.priceSource,actorId:saved.actorId,actorName:saved.actorName});if(stockResult?.warning)inventoryWarnings.push(stockResult.warning);
   }
   await tx.$executeRaw`INSERT INTO "Payment" ("id","saleId","method","amount") VALUES (${randomUUID()},${saleId},${method},${row.total})`;

@@ -28,6 +28,17 @@ try {
  Assert (-not $nested.PSObject.Properties['failedCommand']) 'Nested input label was accepted as exact PAY.'
  $command=$enc.GetString((New-FtextCashCommand $c $r $resultPath))
  Assert ($command -ceq "RESULT_FILENAME|$resultPath`r`nS|SYNTHETIC|1.000|1.25||4`r`nPAY||1`r`n") 'Unexpected cash command.'
+ # Server-projected promotion rounding uses existing integer/zero-discount S lines.
+ $promo=$r | ConvertTo-Json -Depth 10 | ConvertFrom-Json
+ $low=$promo.plan.lines[0] | ConvertTo-Json | ConvertFrom-Json;$high=$promo.plan.lines[0] | ConvertTo-Json | ConvertFrom-Json
+ $low.quantity='2.000';$low.unitPrice='1.33';$low.lineTotal='2.66'
+ $high.quantity='1.000';$high.unitPrice='1.34';$high.lineTotal='1.34'
+ $promo.plan.lines=@($low,$high);$promo.plan.total='4.00';$promo.plan.payment.amount='4.00'
+ $promoCommand=$enc.GetString((New-FtextCashCommand $c $promo $resultPath))
+ Assert ($promoCommand -ceq "RESULT_FILENAME|$resultPath`r`nS|SYNTHETIC|2.000|1.33||4`r`nS|SYNTHETIC|1.000|1.34||4`r`nPAY||1`r`n") 'Promotion cents or quantities changed in the unchanged driver.'
+ $gift=$high | ConvertTo-Json | ConvertFrom-Json;$gift.unitPrice='0.00';$gift.lineTotal='0.00'
+ $promo.plan.lines=@($low,$high,$gift)
+ Assert ($enc.GetString((New-FtextCashCommand $c $promo $resultPath)).Contains("S|SYNTHETIC|1.000|0.00||4`r`n")) 'Zero-price gift quantity was lost.'
  foreach($key in @('companyId','storeId','terminalPos','fiscalDeviceCode')) {
   $wrong=$r | ConvertTo-Json -Depth 10 | ConvertFrom-Json;$wrong.scope.$key='foreign';MustThrow {New-FtextCashCommand $c $wrong $resultPath}
  }
