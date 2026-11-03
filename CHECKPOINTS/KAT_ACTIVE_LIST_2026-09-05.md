@@ -73,6 +73,8 @@ Local Node20 focused combined47PASS/0FAIL/0SKIP; earlier backend36 and web24 pas
 
 ## 03/11/2026 — POS-ATTENDED-REMOTE-02 / SOURCE INSTALLED / ASSIGNED / RIZAREIOU ENABLED / AWAITING USER TEST
 
+Newest USER FAIL03Nov10:00UTC: owner reports unexpected termination and requests direct keyboard input. Same retained remote owner, bounded fix/remote-direct-keyboard-20261103. Assistant desktop tests stopped at owner request; no remote input/file test performed. Cause of09:59:14STOP remains unknown (no reason in old audit); earlier09:53deployment predates user09:54:59connection. Continue isolated source keyboard/focus/order tests and diagnosis, preserve consent/STOP/revocation; no overall PASS. See owned checkpoint2026-11-03-pos-attended-remote.
+
 ### 03/11/2026 — RIZAREIO-POS-01 configuration APPLIED / physical remote test NOT TESTED
 
 Owner-approved first-test location is Rizareiou, not LAB. Pre-action claim #3584/final9489df6dab304fad0ffeadcc2a05554e16fd2c94 passed docsCI41607219959 and mergedc35659c197cc4f34d9a02cdd44662ec0e0be51d8 BEFORE configuration. In confirmed My Workspace, the merge-only Render update set ONLY REMOTE_SUPPORT_ENABLED=true and REMOTE_SUPPORT_TERMINALS=0afcf84e-af94-4f05-b894-828b346f6f8b for service srv-d9isenfavr4c73bdh52g. This permits only Ταμείο1 — Ριζαρείου / RIZAREIO-POS-01, companycmvgtyt64000vh7gt7vfad3h5/storecmvgtyt6d000zh7gtbsp1en3p. Other terminal IDs remain outside this allowlist; existing operator/creator validation and local Accept remain compulsory. No invitation, screen/input/file action or PC registry change was performed here.
