@@ -28,9 +28,15 @@ test('FTEXT promotion totals, precision, metadata, VAT and checkout exclusions f
 });
 test('cent allocation invariant over bounded quantities and final amounts, mixed VAT stays distinct',()=>{
  for(let q=1;q<=50;q++)for(const n of [0,1,q-1,q,q+1,Math.min(137,q*200),q*200]){
- const effective=Math.round(n/q)/100,total=n/100,discount=(q*200-n)/100;
+ const total=n/100,effective=Number((total/q).toFixed(2)),discount=(q*200-n)/100;
  const f=input([{...item(),quantity:q,unitPrice:2,effectiveUnitPrice:effective,discount,lineTotal:total,promotionType:'GIFT',priceSource:'GIFT'}],{subtotal:q*2,discount,total});
  const projected=projectFtextPromotionItems(f.items,f.summary);assert.equal(projected.reduce((s,l)=>s+l.quantity,0),q);assert.equal(projected.reduce((s,l)=>s+Math.round(Number(l.lineTotal)*100),0),n);assert.ok(projected.length<=2);
  }
  const second={...item(),productId:'product-b',fiscalDepartment:4,vatRate:13};const p=prepareFtextCheckoutPlan(input([item(),second],{subtotal:38.4,discount:6.4,total:32}));assert.deepEqual(p.lines.map(l=>[l.department,l.vatRate,l.vatCode]),[['5','24.00','3'],['4','13.00','2']]);
+});
+
+test('POS half-cent display rounding never changes final fiscal cents',()=>{
+ const f=input([{...item(),quantity:2,unitPrice:1.5,effectiveUnitPrice:Number((2.01/2).toFixed(2)),discount:.99,lineTotal:2.01}],{subtotal:3,discount:.99,total:2.01});
+ assert.equal(f.items[0].effectiveUnitPrice,1);
+ assert.deepEqual(prepareFtextCheckoutPlan(f).lines.map(l=>[l.quantity,l.unitPrice,l.lineTotal]),[['1.000','1.00','1.00'],['1.000','1.01','1.01']]);
 });

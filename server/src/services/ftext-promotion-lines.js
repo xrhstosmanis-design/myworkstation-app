@@ -27,7 +27,9 @@ export function projectFtextPromotionItems(items,summary){
   const original4=scaled(item.unitPrice??item.effectiveUnitPrice,4);
   const gross=(qty*original4+50n)/100n;
   if(discount>gross||gross-discount!==total)fail();
-  if(promo&&cents(item.effectiveUnitPrice)!==(total+qty/2n)/qty)fail();
+  // Match the existing POS display rounding only. It never supplies fiscal
+  // amounts: final cents below are allocated exclusively with BigInt.
+  if(promo&&cents(item.effectiveUnitPrice)!==cents(Number((Number(item.lineTotal)/quantity).toFixed(2))))fail();
   subtotal4+=qty*original4;discountSum+=discount;totalSum+=total;
   if(!promo){projected.push({...item,unitPrice:item.effectiveUnitPrice});continue;}
   // At most two integer-quantity, zero-discount lines represent the exact final
