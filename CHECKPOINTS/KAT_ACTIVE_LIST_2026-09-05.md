@@ -101,6 +101,15 @@ Current new scope NOT IMPLEMENTED / NOT TESTED / NOT INSTALLED. Existing familia
 
 ## 03/11/2026 — INVOICE-SECOND-DRAFT-01 / PARALLEL REVIEW HOLD / PREPAYMENT CONTINUATION CLAIM
 
+### 03/11/2026 - authoritative duplicate release receipt / INSTALLED / AWAITING LAB
+
+Owner fix/invoice-duplicate-prevention-20261103 /root retained after the explicitly approved limited transfer. Prevention PR3558/head80fedb0 merged9e1a3db: exact PR41543218800 and main41545520174 passed all five jobs, 5,359 server +8 auxiliary tests, 0 failures/skips. Additional-member PR3573/head398107c merged21e60c0: exact PR41545507284 passed all five jobs/every step, 5,348 server +8 auxiliary tests, 0 failures/skips. Combined main21e60c0 CI41547911770/build125633171721 passed all jobs/every step, 5,388 server +8 auxiliary tests, 0 failures/skips. Independent review corrections freeze canonical order number and established payment/audit identity; real native receipt-writer, drift, retry/race and source-preservation cases passed. These are engineering proofs, not LAB acceptance.
+
+Effective unchanged invoice source is installed in descendant2a8db9d5c4fcfa2742d8601c54f747bf1d918e53. Exact main CI41550612219/build125638852498 passed: 5,399 server +8 auxiliary tests, 0 failures/skips. Ordinary guarded deployment41553003858/job125645124405 pinned that revision at03Nov00:29:38UTC and confirmed exact healthy revision00:32:00UTC (02:32 Europe/Athens). This page independently reread /api/health: ok=true, version0.22.0+kat-test-pos, exact2a8db9d. Earlier9e1 and21e guards correctly skipped actual deployment for newer production source; skipped-success never established release. No manual/force deploy or guard bypass.
+
+Current source holds uncertain duplicate variants before another supplier-payment insertion/draft creation and preserves exact checks, trusted payment reuse and first unpaid myDATA payment. Additional-member manual review retains one established canonical order/document/table/header/supplier/payment, all physical rows/originals and flat alias history; rejects posted/drifting/unknown families and unproven first-payment links. No actual customer invoice merge/delete/replay/approval, payment, stock, billing or email action occurred. Hosted measured LAB acceptance remains NOT TESTED; the whole duplicate task stays OPEN. No manual or functional PASS closure. Single next action: identify an eligible synthetic LAB family, publish fresh terminal/operator/shift/payment/stock/control baseline before one controlled action, then verify immutable originals/payment/stock and control. Never seed production SQL or replay the real trio for evidence. Other invoice/reopen/reader/report/inventory owners remain assigned. Full handoff: CHECKPOINTS/CHANGES/2026-11-03-invoice-duplicate-release-handoff.md.
+
+
 ## 03/11/2026 — INVOICE-SECOND-DRAFT-01 / REVIEW GAPS ADDRESSED IN CANDIDATE / AWAITING NEW NATIVE CI
 
 Same transferred owner fix/invoice-duplicate-prevention-20261103, source continuation PR3558. Explicit parallel helpers completed read-only review and bounded delegated helper/test work; primary alone integrates. Before-source continuation3565/head6ea12e0 green applicable CI, mergef4272bf preceded shared helper, precheck and supplier-payment backstop edits. Other-expense camera/category schema/insert/UI and all peer owners remain untouched.
@@ -18051,6 +18060,11 @@ Node20 local full4964tests/4620PASS/0FAIL/344infrastructureSKIP; frontend/TABLE_
 
 
 ## 03/11/2026 — INVOICE-TRIPLE-CONSOLIDATION-01 / ASSIGNED BEFORE SOURCE / NOT TESTED
+
+### Current status: installed engineering / AWAITING LAB
+
+PR3573/head398107c is included in exact healthy2a8db9d after full native PR/combined-main/effective-main CI. Actual historical consolidation and measured LAB remain unperformed. Authoritative release/retained-owner receipt: CHECKPOINTS/CHANGES/2026-11-03-invoice-duplicate-release-handoff.md. Older candidate headings below are historical.
+
 
 ### 03/11/2026 — stable-canonical additional-member source ready / AWAITING FULL NATIVE CI AND LAB
 
