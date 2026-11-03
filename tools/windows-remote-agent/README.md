@@ -14,6 +14,14 @@ Files travel in either direction, up to 25 MiB per file, in authenticated 256 Ki
 
 Required physical acceptance: three distinct company/store/POS targets at once; reject and accept; named-window identities; primary-screen scaling and Greek input; background-window continuity; STOP each side while other sessions continue; logout/revocation/disconnect; bidirectional near-limit files, cancel, corruption and cleanup. Record the exact build/deploy revision and unchanged business controls. Automated tests or compilation alone are not this acceptance.
 
+## Version 2.0.1 controller changes — awaiting physical user acceptance
+
+After local Accept, click the displayed remote desktop to focus plain/Greek typing and the supported Enter/Tab/Backspace/Delete/Escape/arrows/Home/End/PageUp/PageDown keys. The controller displays keyboard focus and an explicit release button. Clicking another control, changing windows, logout, stale frames or STOP discards unsent keys. The existing text field and key buttons remain as alternatives. Ctrl/Alt/Windows shortcuts and dragging are not implemented. Explicit Ctrl+V paste supports a single control-free text fragment up to200 characters; there is no background clipboard read or automatic clipboard synchronization. Uncertain requests are never replayed.
+
+Fresh frames are forwarded on arrival; the one-second quiet-stream fallback continues fresh authority/liveness checks. Windows2.0.1 keeps idle capture900ms and takes a follow-up image after75ms when input was applied. The isolated localhost relay benchmark is not a physical Windows/Internet latency claim. Install the complete verified2.0.1 ZIP on the attended store PC for this follow-up behavior;2.0.0 is still protocol-compatible. Close the old Agent before starting the new executable, keeping the published DLLs together. Reopen a controller with a fresh invitation and local Accept after a terminated session.
+
+STOP audit events now carry a fixed reason suffix, covering stream closure/error/backpressure, device/controller idle, local operator/controller/device stop, authority checks and audit rollback. No desktop, typed text, file contents or device bearer is logged. The historical03Nov09:59termination cause remains unknown; this telemetry does not prove a fix for it. The15-second disconnect closure and attended consent boundaries remain unchanged. All new physical keyboard/speed/disconnect acceptance belongs to the owner; automated tests are not USER/LAB PASS.
+
 ## Legacy PIN trial (unchanged)
 
 First attended prototype; not a completed production installation feature. The server refuses all agent routes unless enabled for one exact `REMOTE_AGENT_TRIAL_TERMINAL_ID` with a future `REMOTE_AGENT_TRIAL_UNTIL` no more than30 minutes from process startup; `REMOTE_AGENT_ENABLED=true` alone never opens access. Keep this unset in production until explicit acceptance. No new production session or device permission has been granted by publishing this code.
