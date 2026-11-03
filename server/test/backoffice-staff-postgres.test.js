@@ -449,7 +449,8 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       const first=await get('read');assert.equal(first.status,200);assert.equal(first.data.stocktakes.length,200);assert.ok(first.data.stocktakes.every(x=>x.status==='DRAFT'));
       const second=await get('read','?after='+encodeURIComponent(first.data.nextCursor));assert.equal(second.status,200);assert.ok(second.data.stocktakes.every(x=>x.status==='DRAFT'));
       for(const hidden of ['history-f','history-other','history-foreign','missing']){const r=await get('read','?after='+hidden);assert.equal(r.status,409);assert.equal(r.data.stocktakes,undefined)}
-      for(const suffix of ['?after=','?after[]=page-0001','?after=page-0001&after=page-0002','?after='+ 'x'.repeat(121),'?after=%27%20OR%201=1','?storeId=b1'])assert.equal((await get('both',suffix)).status,400,suffix);
+      for(const suffix of ['?after=','?after[]=page-0001','?after=page-0001&after=page-0002','?after='+ 'x'.repeat(121),'?after=%27%20OR%201=1'])assert.equal((await get('both',suffix)).status,400,suffix);
+      const injected=await get('both','?storeId=b1');assert.equal(injected.status,403);assert.equal(injected.data.stocktakes,undefined);
       const pageOne=await get('both');
       beforeInventoryList=()=>db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["inventory.read"]'::jsonb WHERE "userId"=${users.both.id}`;
       const stale=await get('both','?after='+pageOne.data.nextCursor);assert.equal(stale.status,409);assert.equal(stale.data.stocktakes,undefined);
