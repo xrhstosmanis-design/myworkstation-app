@@ -642,11 +642,11 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
         const azureHasUsefulHeader=Boolean(azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4||azureHeader.documentNumber||azureHeader.documentDate||azureHeader.totalGross>0);
         // Payment-header readiness does not require the product table, which
         // remains the existing durable background reader's responsibility.
-        // Keep the reconciled-table bypass and partial-header fallback intact.
-        // Multi-page PDF headers can contain a page subtotal. Keep the
-        // existing fallback unless Azure confirms a single physical page.
-        const azureHasCompleteHeader=Boolean((azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4)&&azureHeader.documentNumber&&azureHeader.documentDate&&Number.isFinite(azureHeader.totalGross)&&azureHeader.totalGross>0&&(!isPdf||parsed.azurePageCount===1));
-        if(azureHasUsefulHeader&&(azureProductLines.length||azureHasCompleteHeader))return res.json(azureHeader);
+        // A reconciled table can still be only a PDF page subtotal. Both
+        // shortcuts require a known single physical page for PDFs; otherwise
+        // continue to the existing configured header fallback.
+        const azureHasCompleteHeader=Boolean((azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4)&&azureHeader.documentNumber&&azureHeader.documentDate&&Number.isFinite(azureHeader.totalGross)&&azureHeader.totalGross>0);
+        if(azureHasUsefulHeader&&(!isPdf||parsed.azurePageCount===1)&&(azureProductLines.length||azureHasCompleteHeader))return res.json(azureHeader);
         if(azureHasUsefulHeader)azureHeaderFallback=azureHeader;
         console.warn("FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
         if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback)return res.json(azureHeaderFallback);const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
