@@ -1,0 +1,476 @@
+{
+  "scope": "synthetic LAB one-entry commercial waiver only",
+  "before": {
+    "audits": {
+      "count": 27,
+      "digest": "20ebbf5eeebdd465d053672fa53a5378"
+    },
+    "controls": [
+      {
+        "movements": {
+          "count": 95,
+          "digest": "4c3daa3d0a8d1d8a2fcec56379ad5be8",
+          "latest": "2026-10-12T20:42:11.404"
+        },
+        "sales": {
+          "count": 90,
+          "digest": "7429be79120c9716ec99447f5e344c43"
+        },
+        "shifts": {
+          "count": 43,
+          "digest": "14814f641d388a4e4f23fdc329affe64"
+        },
+        "stock": {
+          "count": 110,
+          "digest": "056f3edb3f8e5d42cb987959383ebf51",
+          "latest": "2026-10-22T08:48:06.264"
+        },
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "transactions": {
+          "card": 0,
+          "cash": 0,
+          "count": 134,
+          "digest": "8dcec716fce067ed98bd8b6237b52bf8",
+          "iris": 0,
+          "total": 5600.8
+        }
+      },
+      {
+        "movements": {
+          "count": 1,
+          "digest": "32b7831b1eb84d0994d627c7f65b1255",
+          "latest": "2026-10-10T08:15:01.673"
+        },
+        "sales": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "shifts": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "stock": {
+          "count": 1,
+          "digest": "d828e556838424761a47bf055bf41e83",
+          "latest": "2026-10-10T08:15:01.673"
+        },
+        "storeId": "cmuk8gxui000ppabfykdxwb1y",
+        "transactions": {
+          "card": 0,
+          "cash": 0,
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e",
+          "iris": 0,
+          "total": 0
+        }
+      },
+      {
+        "movements": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e",
+          "latest": null
+        },
+        "sales": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "shifts": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "stock": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e",
+          "latest": null
+        },
+        "storeId": "cmv2qanca000psigeizep8o9m",
+        "transactions": {
+          "card": 0,
+          "cash": 0,
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e",
+          "iris": 0,
+          "total": 0
+        }
+      }
+    ],
+    "entries": {
+      "count": 14,
+      "digest": "034f796c7a85b2876782d801490a3194"
+    },
+    "notices": {
+      "count": 1,
+      "digest": "b398a1cf8ed8bc99977edaaf1d1993f9"
+    },
+    "observedAt": "2026-11-03T08:44:49.804939Z",
+    "target": {
+      "actorId": null,
+      "chargedMicros": 0,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-10-31T10:27:18.625932+00:00",
+      "creditedMicros": 0,
+      "feature": "INVOICE_OPENAI",
+      "id": "a2f1bc84-8d6a-43c9-96ea-a3e51e9577f3",
+      "kind": "USAGE",
+      "reference": "444d9d9d-f7c0-4c1f-b227-5bbea87cf8e5",
+      "reservedMicros": 930033,
+      "resolutionReference": null,
+      "settledAt": null,
+      "status": "REVIEW",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "tariff": {
+        "cacheWriteMicrosPerMillion": {
+          "ttl12h": 13401233,
+          "ttl30m": 6700617
+        },
+        "cachedInputMicrosPerMillion": 536050,
+        "contextTokens": 1050000,
+        "currency": "EUR",
+        "inputMicrosPerMillion": 5360494,
+        "longContext": {
+          "cacheWriteMicrosPerMillion": {
+            "ttl12h": 26802466,
+            "ttl30m": 13401233
+          },
+          "cachedInputMicrosPerMillion": 1072099,
+          "inputMicrosPerMillion": 10720987,
+          "outputMicrosPerMillion": 40203699,
+          "thresholdTokens": 272000
+        },
+        "maxOutputTokens": 128000,
+        "model": "gpt-5.6-sol",
+        "outputMicrosPerMillion": 26802466,
+        "responseModels": [
+          "gpt-5.6-sol"
+        ],
+        "version": "c712792131de3f07abd437917c7072b74d47a71c126730f9a732754cccdd3056"
+      },
+      "usage": null
+    },
+    "wallet": {
+      "balanceMicros": "4610532",
+      "emailEnabled": false,
+      "enabled": false,
+      "reservedMicros": "930033",
+      "version": 45
+    }
+  },
+  "after": {
+    "audits": {
+      "count": 28,
+      "digest": "e07645bc22d47704ecfd4993654f636b"
+    },
+    "controls": [
+      {
+        "movements": {
+          "count": 95,
+          "digest": "4c3daa3d0a8d1d8a2fcec56379ad5be8",
+          "latest": "2026-10-12T20:42:11.404"
+        },
+        "sales": {
+          "count": 90,
+          "digest": "7429be79120c9716ec99447f5e344c43"
+        },
+        "shifts": {
+          "count": 43,
+          "digest": "14814f641d388a4e4f23fdc329affe64"
+        },
+        "stock": {
+          "count": 110,
+          "digest": "056f3edb3f8e5d42cb987959383ebf51",
+          "latest": "2026-10-22T08:48:06.264"
+        },
+        "storeId": "cmtpopbgo000trhb5ng9ytiru",
+        "transactions": {
+          "card": 0,
+          "cash": 0,
+          "count": 134,
+          "digest": "8dcec716fce067ed98bd8b6237b52bf8",
+          "iris": 0,
+          "total": 5600.8
+        }
+      },
+      {
+        "movements": {
+          "count": 1,
+          "digest": "32b7831b1eb84d0994d627c7f65b1255",
+          "latest": "2026-10-10T08:15:01.673"
+        },
+        "sales": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "shifts": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "stock": {
+          "count": 1,
+          "digest": "d828e556838424761a47bf055bf41e83",
+          "latest": "2026-10-10T08:15:01.673"
+        },
+        "storeId": "cmuk8gxui000ppabfykdxwb1y",
+        "transactions": {
+          "card": 0,
+          "cash": 0,
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e",
+          "iris": 0,
+          "total": 0
+        }
+      },
+      {
+        "movements": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e",
+          "latest": null
+        },
+        "sales": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "shifts": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "stock": {
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e",
+          "latest": null
+        },
+        "storeId": "cmv2qanca000psigeizep8o9m",
+        "transactions": {
+          "card": 0,
+          "cash": 0,
+          "count": 0,
+          "digest": "d41d8cd98f00b204e9800998ecf8427e",
+          "iris": 0,
+          "total": 0
+        }
+      }
+    ],
+    "entries": {
+      "count": 14,
+      "digest": "814fd91616fbd779534f93239d63fc09"
+    },
+    "notices": {
+      "count": 1,
+      "digest": "b398a1cf8ed8bc99977edaaf1d1993f9"
+    },
+    "observedAt": "2026-11-03T08:46:09.58762Z",
+    "target": {
+      "actorId": "cms1k1bje001xhn3xulr0rooz",
+      "chargedMicros": 0,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-10-31T10:27:18.625932+00:00",
+      "creditedMicros": 0,
+      "feature": "INVOICE_OPENAI",
+      "id": "a2f1bc84-8d6a-43c9-96ea-a3e51e9577f3",
+      "kind": "USAGE",
+      "reference": "444d9d9d-f7c0-4c1f-b227-5bbea87cf8e5",
+      "reservedMicros": 930033,
+      "resolutionReference": "WAIVER/9b383bef-86e4-4fd3-b8d9-f7c09bfe94a9",
+      "settledAt": "2026-11-03T08:45:48.812623+00:00",
+      "status": "SETTLED",
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "tariff": {
+        "cacheWriteMicrosPerMillion": {
+          "ttl12h": 13401233,
+          "ttl30m": 6700617
+        },
+        "cachedInputMicrosPerMillion": 536050,
+        "contextTokens": 1050000,
+        "currency": "EUR",
+        "inputMicrosPerMillion": 5360494,
+        "longContext": {
+          "cacheWriteMicrosPerMillion": {
+            "ttl12h": 26802466,
+            "ttl30m": 13401233
+          },
+          "cachedInputMicrosPerMillion": 1072099,
+          "inputMicrosPerMillion": 10720987,
+          "outputMicrosPerMillion": 40203699,
+          "thresholdTokens": 272000
+        },
+        "maxOutputTokens": 128000,
+        "model": "gpt-5.6-sol",
+        "outputMicrosPerMillion": 26802466,
+        "responseModels": [
+          "gpt-5.6-sol"
+        ],
+        "version": "c712792131de3f07abd437917c7072b74d47a71c126730f9a732754cccdd3056"
+      },
+      "usage": {
+        "commercialWaiver": {
+          "previousActorId": null,
+          "providerCostStatus": "UNKNOWN",
+          "reason": "Δοκιμαστική εμπορική απαλλαγή LAB με κόστος MyWorkStation",
+          "releasedMicros": "930033",
+          "requestId": "9b383bef-86e4-4fd3-b8d9-f7c09bfe94a9",
+          "type": "COMMERCIAL_WAIVER"
+        }
+      }
+    },
+    "wallet": {
+      "balanceMicros": "4610532",
+      "emailEnabled": false,
+      "enabled": false,
+      "reservedMicros": "0",
+      "version": 46
+    }
+  },
+  "beforeEntryHashes": [
+    {
+      "digest": "848eab055fc32165e26cd871a128df9b",
+      "id": "08ca105d-0fb9-432c-b941-de6e3f5a83f8"
+    },
+    {
+      "digest": "fea94299df5210bcfc48aba26b308217",
+      "id": "1782e745-9b1a-4a0e-9e8b-b3c53d1fa6df"
+    },
+    {
+      "digest": "fe98a84e48dd7ea944f1447cfc0598d0",
+      "id": "54ca6aaa-b2d2-4fce-9916-c870b86224f1"
+    },
+    {
+      "digest": "0fe79cd8bb81ef6b68c71f952485b46f",
+      "id": "80c904a8-0ef1-43d2-b4a9-b8d92a2c6bc2"
+    },
+    {
+      "digest": "d757496807d898a8e294604acabdf49d",
+      "id": "83333a4c-dc3f-4b93-8e0c-b11c1ee59ba7"
+    },
+    {
+      "digest": "1d8f670d8f39bb26f176fb8c89e84e8a",
+      "id": "86cc2b4c-7cdf-48e8-93c2-5d5241220582"
+    },
+    {
+      "digest": "04b49104d784338e9fcfcec57b66a1b6",
+      "id": "9a589306-a47d-4b40-a62f-dbfac5f099d7"
+    },
+    {
+      "digest": "2618dfdd6261a7ad326a4227afc96ba3",
+      "id": "a2f1bc84-8d6a-43c9-96ea-a3e51e9577f3"
+    },
+    {
+      "digest": "55d0f6d2d84e38414af096c12a97703f",
+      "id": "a467fc58-b598-4738-a113-f792f0b9b101"
+    },
+    {
+      "digest": "bcb484cca7a47119539fbfb5cd8910c0",
+      "id": "af62a21b-2263-4b5d-82b1-e202cd4dcaba"
+    },
+    {
+      "digest": "f3643b55cc4aa0d56116c7e76f214036",
+      "id": "cdac4c32-ddaf-4d98-8003-f3e3946e5047"
+    },
+    {
+      "digest": "32bb60e2d74bcdaea8600b215fc38168",
+      "id": "db81bfdb-b149-4ecc-9339-7b5320224979"
+    },
+    {
+      "digest": "e286b54267cbcb5e1a813412e261bbe1",
+      "id": "f9a25d29-303a-4b83-8b1e-94f804e9c51b"
+    },
+    {
+      "digest": "5e92911fe58cdbf20cdcdeff32ad9bf4",
+      "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e"
+    }
+  ],
+  "afterEntryHashes": [
+    {
+      "digest": "848eab055fc32165e26cd871a128df9b",
+      "id": "08ca105d-0fb9-432c-b941-de6e3f5a83f8"
+    },
+    {
+      "digest": "fea94299df5210bcfc48aba26b308217",
+      "id": "1782e745-9b1a-4a0e-9e8b-b3c53d1fa6df"
+    },
+    {
+      "digest": "fe98a84e48dd7ea944f1447cfc0598d0",
+      "id": "54ca6aaa-b2d2-4fce-9916-c870b86224f1"
+    },
+    {
+      "digest": "0fe79cd8bb81ef6b68c71f952485b46f",
+      "id": "80c904a8-0ef1-43d2-b4a9-b8d92a2c6bc2"
+    },
+    {
+      "digest": "d757496807d898a8e294604acabdf49d",
+      "id": "83333a4c-dc3f-4b93-8e0c-b11c1ee59ba7"
+    },
+    {
+      "digest": "1d8f670d8f39bb26f176fb8c89e84e8a",
+      "id": "86cc2b4c-7cdf-48e8-93c2-5d5241220582"
+    },
+    {
+      "digest": "04b49104d784338e9fcfcec57b66a1b6",
+      "id": "9a589306-a47d-4b40-a62f-dbfac5f099d7"
+    },
+    {
+      "digest": "60d2912b0caa12154373cffd2f918d46",
+      "id": "a2f1bc84-8d6a-43c9-96ea-a3e51e9577f3"
+    },
+    {
+      "digest": "55d0f6d2d84e38414af096c12a97703f",
+      "id": "a467fc58-b598-4738-a113-f792f0b9b101"
+    },
+    {
+      "digest": "bcb484cca7a47119539fbfb5cd8910c0",
+      "id": "af62a21b-2263-4b5d-82b1-e202cd4dcaba"
+    },
+    {
+      "digest": "f3643b55cc4aa0d56116c7e76f214036",
+      "id": "cdac4c32-ddaf-4d98-8003-f3e3946e5047"
+    },
+    {
+      "digest": "32bb60e2d74bcdaea8600b215fc38168",
+      "id": "db81bfdb-b149-4ecc-9339-7b5320224979"
+    },
+    {
+      "digest": "e286b54267cbcb5e1a813412e261bbe1",
+      "id": "f9a25d29-303a-4b83-8b1e-94f804e9c51b"
+    },
+    {
+      "digest": "5e92911fe58cdbf20cdcdeff32ad9bf4",
+      "id": "fbea3fde-da10-4e95-b5c0-30604136fd8e"
+    }
+  ],
+  "audit": [
+    {
+      "audit": {
+        "actorId": "cms1k1bje001xhn3xulr0rooz",
+        "companyId": "cmtpopbgk000prhb5qc60zxus",
+        "createdAt": "2026-11-03T08:45:48.812623+00:00",
+        "detail": {
+          "customerChargeMicros": "0",
+          "identity": {
+            "entryIds": [
+              "a2f1bc84-8d6a-43c9-96ea-a3e51e9577f3"
+            ],
+            "fingerprint": "79b74f2a20017b9037cc68a5be815b15ae966b5a10ae930e5a72a63697af33f4",
+            "generation": "0",
+            "reason": "Δοκιμαστική εμπορική απαλλαγή LAB με κόστος MyWorkStation",
+            "storeId": "cmtpopbgo000trhb5ng9ytiru"
+          },
+          "providerCostStatus": "UNKNOWN",
+          "releasedMicros": "930033",
+          "requestId": "9b383bef-86e4-4fd3-b8d9-f7c09bfe94a9",
+          "version": 46
+        },
+        "event": "COMMERCIAL_WAIVER",
+        "id": "95630930-8123-410a-ae40-9b0a8bcde98d"
+      }
+    }
+  ],
+  "revision": "2a8db9d5c4fcfa2742d8601c54f747bf1d918e53",
+  "beforeClaimMerge": "97fb72fd16f1f8051dda7067f0333c4720e38ab9",
+  "nativeObserved": {
+    "singleSubmit": true,
+    "successMessage": true,
+    "availableMicros": "4610532",
+    "reservedMicros": "0",
+    "historyLabel": "Απαλλαγή πελάτη",
+    "providerReplay": false,
+    "realCustomerMutation": false
+  }
+}

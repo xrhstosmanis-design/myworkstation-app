@@ -1,3 +1,4 @@
+import {chatTopic,topicRow} from './chat-topics.mjs';
 import crypto from 'node:crypto';
 import {VOICE_MAX_BYTES,validateVoiceWave} from './chat-voice.mjs';
 import {parseVideoAttachment} from './chat-video.mjs';
@@ -11,15 +12,16 @@ export function searchInput(query,before){
 }
 export function forwardInput(value){
  if(!value||typeof value!=='object'||typeof value.requestId!=='string'||!/^[A-Za-z0-9_-]{16,80}$/.test(value.requestId))throw fail('Μη έγκυρη προώθηση.');
- return {targetStoreId:chatMessageId(value.targetStoreId),targetCompanyId:chatMessageId(value.targetCompanyId),requestId:value.requestId};
+ return {targetStoreId:chatMessageId(value.targetStoreId),targetCompanyId:chatMessageId(value.targetCompanyId),requestId:value.requestId,...(value.topic===undefined?{}:{topic:chatTopic(value.topic)})};
 }
-export async function searchChatMessages(db,store,query,before){
- const input=searchInput(query,before);
+export async function searchChatMessages(db,store,query,before,rawTopic){
+ const topic=chatTopic(rawTopic),input=searchInput(query,before);
  const found=await db.$transaction(async tx=>{
   await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '1500ms'");
   if(input.before){const pivot=await tx.$queryRawUnsafe('SELECT "id" FROM "StoreChatMessage" WHERE "id"=$1 AND "companyId"=$2 AND "storeId"=$3',input.before,store.companyId,store.id);if(!pivot.length)throw fail('Η σελίδα αναζήτησης δεν είναι διαθέσιμη.',404);}
   return tx.$queryRawUnsafe(`WITH candidates AS MATERIALIZED (
    SELECT m."id" FROM "StoreChatMessage" m WHERE m."companyId"=$1 AND m."storeId"=$2
+   AND ($5::text IS NULL OR CASE WHEN m."category" IN ('CASH','SHIFT') THEN 'CASH' WHEN m."category"='INVOICE' THEN 'INVOICE' ELSE 'GENERAL' END=$5)
    AND (UPPER(m."body") LIKE UPPER($3) ESCAPE '!' OR UPPER(COALESCE(m."attachmentName",'')) LIKE UPPER($3) ESCAPE '!')
    AND ($4::text IS NULL OR (m."createdAt",m."id") < (SELECT p."createdAt",p."id" FROM "StoreChatMessage" p WHERE p."id"=$4 AND p."companyId"=$1 AND p."storeId"=$2))
    ORDER BY m."createdAt" DESC,m."id" DESC LIMIT 21
@@ -29,10 +31,10 @@ export async function searchChatMessages(db,store,query,before){
    FROM candidates c JOIN "StoreChatMessage" m ON m."id"=c."id" AND m."companyId"=$1 AND m."storeId"=$2
    LEFT JOIN "User" u ON u."id"=m."senderId" AND u."companyId"=m."companyId"
    LEFT JOIN "StoreOperatorCredential" o ON o."id"=m."senderId" AND o."companyId"=m."companyId" AND o."storeId"=m."storeId"
-   ORDER BY m."createdAt" DESC,m."id" DESC`,store.companyId,store.id,input.pattern,input.before);
+   ORDER BY m."createdAt" DESC,m."id" DESC`,store.companyId,store.id,input.pattern,input.before,topic);
  });
- const rows=found.slice(0,20);
- return {store,q:input.q,rows,nextCursor:found.length>20?rows.at(-1).id:null};
+ const rows=found.slice(0,20).map(topicRow);
+ return {store,topic,topicsAvailable:true,q:input.q,rows,nextCursor:found.length>20?rows.at(-1).id:null};
 }
 export function forwardAttachment(row,{canCopyAttachment,photosEnabled,pdfEnabled}){
  if(row.attachmentData==null)return null;
@@ -48,7 +50,8 @@ export function forwardAttachment(row,{canCopyAttachment,photosEnabled,pdfEnable
  return {name:row.attachmentName,mime,size:bytes.length,checksum:row.attachmentChecksum,data:row.attachmentData};
 }
 // Caller checks both live store/module/session scopes before entering this transaction.
-export async function forwardChatMessage(db,{source,target,user,messageId,requestId,attachmentPolicy},writeAudit){
+export async function forwardChatMessage(db,{source,target,user,messageId,requestId,topic:rawTopic,attachmentPolicy},writeAudit){
+ const topic=chatTopic(rawTopic)||'GENERAL';
  chatMessageId(messageId);forwardInput({targetStoreId:target.id,targetCompanyId:target.companyId,requestId});
  if(source.id===target.id)throw fail('Επίλεξε διαφορετική συνομιλία.');
  const id='chat-forward-'+crypto.createHash('sha256').update(user.id+'\0'+requestId).digest('hex');
@@ -62,15 +65,17 @@ export async function forwardChatMessage(db,{source,target,user,messageId,reques
   if(typeof row.body!=='string'||row.body.length>5000||!row.body.trim()&&!attachment)throw fail('Δεν επιβεβαιώθηκε το αρχικό μήνυμα.');
   // Bind the retry to immutable source/destination IDs without retaining an
   // owning cross-store relation or exposing source metadata to recipients.
-  const binding=crypto.createHash('sha256').update(JSON.stringify([source.companyId,source.id,messageId,target.companyId,target.id])).digest('hex');
+  const bindingFields=[source.companyId,source.id,messageId,target.companyId,target.id];
+  if(topic!=='GENERAL')bindingFields.push(topic); // Preserve existing GENERAL retry receipts.
+  const binding=crypto.createHash('sha256').update(JSON.stringify(bindingFields)).digest('hex');
   const inserted=await tx.$queryRawUnsafe(`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","forwardBinding","attachmentName","attachmentMimeType","attachmentSize","attachmentChecksum","attachmentData","createdAt","updatedAt")
-   VALUES ($1,$2,$3,$4,'GENERAL',$5,$11,$6,$7,$8,$9,$10,NOW(),NOW()) ON CONFLICT ("id") DO NOTHING RETURNING "id"`,id,target.companyId,target.id,user.id,row.body,attachment?.name??null,attachment?.mime??null,attachment?.size??null,attachment?.checksum??null,attachment?.data??null,binding);
+   VALUES ($1,$2,$3,$4,$12,$5,$11,$6,$7,$8,$9,$10,NOW(),NOW()) ON CONFLICT ("id") DO NOTHING RETURNING "id"`,id,target.companyId,target.id,user.id,row.body,attachment?.name??null,attachment?.mime??null,attachment?.size??null,attachment?.checksum??null,attachment?.data??null,binding,topic);
   if(!inserted.length){
    const previous=(await tx.$queryRawUnsafe('SELECT "id","companyId","storeId","senderId","forwardBinding" FROM "StoreChatMessage" WHERE "id"=$1',id))[0];
    if(!previous||previous.senderId!==user.id||previous.companyId!==target.companyId||previous.storeId!==target.id||previous.forwardBinding!==binding)throw fail('Το αίτημα προώθησης χρησιμοποιήθηκε για διαφορετικό μήνυμα ή προορισμό.',409);
-   return {ok:true,id,targetStoreId:target.id,replayed:true};
+   return {ok:true,id,targetStoreId:target.id,topic,replayed:true};
   }
   await writeAudit(tx,id);
-  return {ok:true,id,targetStoreId:target.id,replayed:false};
+  return {ok:true,id,targetStoreId:target.id,topic,replayed:false};
  });
 }

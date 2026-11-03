@@ -1,3 +1,4 @@
+import {findCompetingPosDraftReview,findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
 import {walletActivityFromRequest,walletActivityForJob} from "../services/ai-wallet-activity.js";
 import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import {findUnlinkedMyDataOriginal} from '../lib/pos-unlinked-mydata.js';
@@ -642,7 +643,9 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
         // Payment-header readiness does not require the product table, which
         // remains the existing durable background reader's responsibility.
         // Keep the reconciled-table bypass and partial-header fallback intact.
-        const azureHasCompleteHeader=Boolean((azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4)&&azureHeader.documentNumber&&azureHeader.documentDate&&Number.isFinite(azureHeader.totalGross)&&azureHeader.totalGross>0);
+        // Multi-page PDF headers can contain a page subtotal. Keep the
+        // existing fallback unless Azure confirms a single physical page.
+        const azureHasCompleteHeader=Boolean((azureHeader.supplierId||cleanTaxId(azureHeader.supplierTaxId)||norm(azureHeader.supplierName).length>=4)&&azureHeader.documentNumber&&azureHeader.documentDate&&Number.isFinite(azureHeader.totalGross)&&azureHeader.totalGross>0&&(!isPdf||parsed.azurePageCount===1));
         if(azureHasUsefulHeader&&(azureProductLines.length||azureHasCompleteHeader))return res.json(azureHeader);
         if(azureHasUsefulHeader)azureHeaderFallback=azureHeader;
         console.warn("FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
@@ -805,6 +808,11 @@ router.post("/ai-reader/fast-duplicate-check",requireCompanyModule("AI_READER"),
         AND UPPER(REGEXP_REPLACE(TRIM(COALESCE(o."invoiceNumber",'')),'\\s+','','g'))=${documentNumber}
       ORDER BY o."updatedAt" DESC LIMIT 1`;
     if(orders[0])return res.status(409).json({error:"Το ίδιο τιμολόγιο υπάρχει ήδη και η δεύτερη καταχώριση μπλοκαρίστηκε.",code:"DUPLICATE_INVOICE",existing:orders[0]});
+    // The original myDATA first-payment/reuse branch above stays authoritative.
+    // A conservative review must stop before the client can write money.
+    const competingDraft=await findCompetingPosDraftReview(prisma,identity);
+    const competingPayment=await findExistingInvoicePaymentReview(prisma,identity,{excludePaymentId:payment?.id||null});
+    if(competingDraft||competingPayment)return res.status(409).json({error:"Υπάρχει πιθανό ίδιο τιμολόγιο ή πληρωμή με διαφορετική γραφή αριθμού ή σειράς. Έλεγξε τα πρωτότυπα στο BackOffice πριν συνεχίσεις. Δεν ξεκίνησε νέα πληρωμή.",code:"INVOICE_DUPLICATE_REVIEW_REQUIRED"});
     const unlinked=await findUnlinkedMyDataOriginal(prisma,identity,{paymentTransactionId:payment?.id||null});
     res.json({ok:true,duplicate:false,...resume,...(unlinked?{myDataHeaderMatched:true,canonicalDocumentNumber:unlinked.canonicalDocumentNumber,myDataMark:unlinked.mark}:{}),paymentTransactionId:payment?.id||null,paymentReused:Boolean(payment),
       ...(payment?{settlementMode:"PAID",message:"Η υπάρχουσα πληρωμή διατηρείται. Θα γίνει μόνο νέα ανάγνωση του τιμολογίου."}:{})});

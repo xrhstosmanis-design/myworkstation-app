@@ -6,9 +6,9 @@ using System.Text.Json;
 
 namespace MyWorkStation.RemoteAgent;
 internal static class Program {
- [STAThread] static void Main(){ApplicationConfiguration.Initialize();Application.Run(new AgentForm());}
+ [STAThread] static void Main(){using var singleton=new Mutex(true,@"Local\MyWorkStationRemoteAgentV2",out bool first);if(!first){MessageBox.Show("Το MyWorkStation Remote Agent είναι ήδη ανοικτό σε αυτό το PC.");return;}ApplicationConfiguration.Initialize();Application.Run(new AgentForm());}
 }
-internal sealed class AgentForm:Form {
+internal sealed partial class AgentForm:Form {
  const string Origin="https://myworkstation-app.onrender.com";
  readonly TextBox code=new(){Width=120,MaxLength=6,UseSystemPasswordChar=true};
  readonly CheckBox consent=new(){Text="Επιτρέπω προβολή οθόνης και ποντίκι/πληκτρολόγιο τώρα.",AutoSize=true};
@@ -42,26 +42,31 @@ internal sealed class AgentForm:Form {
    status.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-footer.Padding.Horizontal-12),0);
   }
   panel.Resize+=(_,_)=>FitText();footer.Resize+=(_,_)=>FitText();Shown+=(_,_)=>FitText();
+  ConfigureAttended(panel);
   connect.Click+=async(_,_)=>await Start();stop.Click+=(_,_)=>Stop();consent.CheckedChanged+=(_,_)=>{if(!consent.Checked)Stop();};FormClosing+=(_,_)=>Stop();
  }
 
  void Stop(){session?.Cancel();status.Text="Η πρόσβαση διακόπηκε.";stop.Enabled=false;}
- async Task Start(){
-  if(session!=null||!consent.Checked){status.Text="Απαιτείται τοπική αποδοχή.";return;}
-  if(code.Text.Length!=6||code.Text.Any(c=>c<'0'||c>'9')){status.Text="Συμπληρώστε μόνο τον εξαψήφιο κωδικό.";return;}
-  connect.Enabled=false;code.Enabled=false;session=new CancellationTokenSource();var ct=session.Token;
+ async Task Start()=>await StartRemote(null);
+ async Task StartRemote(string? grant){
+  if(session!=null||(grant==null&&!consent.Checked)){status.Text="Απαιτείται τοπική αποδοχή.";return;}
+  if(grant==null&&(code.Text.Length!=6||code.Text.Any(c=>c<'0'||c>'9'))){status.Text="Συμπληρώστε μόνο τον εξαψήφιο κωδικό.";return;}
+  if(grant!=null){consent.Checked=true;TopMost=true;WindowState=FormWindowState.Normal;Show();Activate();BringToFront();}
+  supportGeneration++;fileBusy=false;invitedMode=grant!=null;connect.Enabled=false;code.Enabled=false;session=new CancellationTokenSource();var ct=session.Token;
   try{
-   var paired=await http.PostAsJsonAsync("/api/remote-agent/pair-code",new{code=code.Text,localConsent=true},ct);
+   var paired=grant==null?await http.PostAsJsonAsync("/api/remote-agent/pair-code",new{code=code.Text,localConsent=true},ct):await http.PostAsJsonAsync("/api/remote-support/pair",new{grant},ct);
    paired.EnsureSuccessStatusCode();var pair=await paired.Content.ReadFromJsonAsync<JsonElement>(cancellationToken:ct);
    token=pair.GetProperty("token").GetString();sessionJob=pair.GetProperty("jobId").GetString()??throw new InvalidOperationException("Λείπει η συνεδρία.");code.Clear();stop.Enabled=true;status.Text="ΕΝΕΡΓΗ ΠΡΟΣΒΑΣΗ · Πατήστε ΔΙΑΚΟΠΗ οποιαδήποτε στιγμή.";
-   var expiresAt=pair.GetProperty("expiresAt").GetInt64();
-   while(!ct.IsCancellationRequested&&DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()<expiresAt){
+   activeBase=invitedMode?$"/api/remote-support/device/{Uri.EscapeDataString(sessionJob)}":$"/api/remote-agent/{Uri.EscapeDataString(sessionJob)}";
+   sendFile.Enabled=invitedMode;
+   long? expiresAt=pair.GetProperty("expiresAt").ValueKind==JsonValueKind.Null?null:pair.GetProperty("expiresAt").GetInt64();
+   while(!ct.IsCancellationRequested&&(!expiresAt.HasValue||DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()<expiresAt.Value)){
     var bounds=Screen.PrimaryScreen?.Bounds??throw new InvalidOperationException("Δεν υπάρχει οθόνη.");
     using var capture=new Bitmap(bounds.Width,bounds.Height);using(var graphics=Graphics.FromImage(capture))graphics.CopyFromScreen(bounds.Location,Point.Empty,bounds.Size);
     int width=Math.Min(1600,bounds.Width),height=(int)Math.Round(bounds.Height*(double)width/bounds.Width);
     using var resized=new Bitmap(capture,new Size(width,height));using var stream=new MemoryStream();
     var codec=ImageCodecInfo.GetImageEncoders().First(c=>c.MimeType=="image/jpeg");using var parameters=new EncoderParameters(1);parameters.Param[0]=new EncoderParameter(System.Drawing.Imaging.Encoder.Quality,45L);resized.Save(stream,codec,parameters);
-    using var request=new HttpRequestMessage(HttpMethod.Post,$"/api/remote-agent/{Uri.EscapeDataString(sessionJob)}/frame"){Content=JsonContent.Create(new{jpeg=Convert.ToBase64String(stream.ToArray()),width=bounds.Width,height=bounds.Height})};request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);
+    using var request=new HttpRequestMessage(HttpMethod.Post,$"{activeBase}/frame"){Content=JsonContent.Create(new{jpeg=Convert.ToBase64String(stream.ToArray()),width=bounds.Width,height=bounds.Height})};request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);
     using var response=await http.SendAsync(request,ct);response.EnsureSuccessStatusCode();var result=await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken:ct);
     foreach(var command in result.GetProperty("commands").EnumerateArray()){
      if(ct.IsCancellationRequested||!consent.Checked)break;
@@ -69,15 +74,16 @@ internal sealed class AgentForm:Form {
      if(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()-command.GetProperty("at").GetInt64()>3000)continue;
      NativeInput.Apply(command,bounds);
     }
-    await Task.Delay(700,ct);
+    if(invitedMode&&result.TryGetProperty("files",out var files))UpdateIncoming(files,ct);
+    await Task.Delay(900,ct);
    }
   }catch(OperationCanceledException){}catch(Exception){status.Text="Η σύνδεση σταμάτησε. Ελέγξτε τον κωδικό/διαθεσιμότητα με τον διαχειριστή.";}
   finally{
-   if(token!=null&&sessionJob!=null)try{using var request=new HttpRequestMessage(HttpMethod.Post,$"/api/remote-agent/{Uri.EscapeDataString(sessionJob)}/device-stop");request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);using var response=await http.SendAsync(request);}catch{}
-   token=null;sessionJob=null;session?.Dispose();session=null;stop.Enabled=false;connect.Enabled=true;code.Enabled=true;consent.Checked=false;http.DefaultRequestHeaders.Authorization=null;
+   if(token!=null&&sessionJob!=null)try{using var request=new HttpRequestMessage(HttpMethod.Post,$"{activeBase}/{(invitedMode?"stop":"device-stop")}");request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);using var response=await http.SendAsync(request);}catch{}
+   session?.Cancel();sendFile.Enabled=false;incoming.Controls.Clear();handledFiles.Clear();activeBase=null;token=null;sessionJob=null;session?.Dispose();session=null;stop.Enabled=false;connect.Enabled=true;code.Enabled=true;consent.Checked=false;http.DefaultRequestHeaders.Authorization=null;
   }
  }
- protected override void Dispose(bool disposing){if(disposing){session?.Cancel();http.Dispose();}base.Dispose(disposing);}
+ protected override void Dispose(bool disposing){if(disposing){session?.Cancel();bridgeServer?.Dispose();http.Dispose();}base.Dispose(disposing);}
 }
 internal static class NativeInput {
  [StructLayout(LayoutKind.Sequential)] struct INPUT{public uint type;public UNION u;}

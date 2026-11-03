@@ -1,3 +1,5 @@
+import {chatSendContext} from '../src/chat-interactions.mjs';
+import {chatTopic,topicRow} from '../src/chat-topics.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,13 +30,13 @@ function harness(){
  $transaction:async fn=>{const m=messages.length,a=audits.length;try{return await fn(db)}catch(e){messages.splice(m);audits.splice(a);throw e;}}};
  const router={get:(p,...h)=>routes.set('GET '+p,h.at(-1)),post:(p,...h)=>routes.set('POST '+p,h.at(-1)),put(){},patch(){}};
  const source=fs.readFileSync(new URL('../src/routes/store-chat.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'').replace('export async function','async function').replace('export default router;','return router;');
- new Function('express','prisma','crypto','parseVideoAttachment','isPlatformSuperAdmin','sendStoreChatPush','nativePushStatus',source)({Router:()=>router},db,crypto,parseVideoAttachment,u=>u?.role==='SUPER_ADMIN',async value=>{pushes.push(value);return {}},()=>({configured:false}));
+ new Function('express','prisma','crypto','parseVideoAttachment','isPlatformSuperAdmin','sendStoreChatPush','nativePushStatus','chatSendContext','chatTopic','topicRow',source)({Router:()=>router},db,crypto,parseVideoAttachment,u=>u?.role==='SUPER_ADMIN',async value=>{pushes.push(value);return {}},()=>({configured:false}),chatSendContext,chatTopic,topicRow);
  return {messages,audits,pushes,fail(){fail=true},disable(){disabled=true},async request(body,user={id:'owner',role:'OWNER',companyId:'company'},storeId='store'){
   const res={statusCode:200,headers:{},status(code){this.statusCode=code;return this},setHeader(k,v){this.headers[k]=v},json(body){this.body=body;return this}};let error;await routes.get('POST /stores/:storeId/video-messages')({body,user,params:{storeId},query:{}},res,e=>{error=e});return {...res,error};
  }};
 }
 test('registered video route commits scoped GENERAL attachment and metadata audit before generic push',async()=>{
- const h=harness(),r=await h.request({body:'Private caption',attachment:attachment(original)});assert.equal(r.error,undefined);assert.equal(r.statusCode,201);assert.equal(r.body.ok,true);assert.equal(h.messages.length,1);assert.deepEqual(h.messages[0].slice(1,4),['company','store','owner']);assert.equal(h.messages[0][6],'video/mp4');assert.equal(h.audits.length,1);assert.equal(h.audits[0].durationMs,1000);assert.doesNotMatch(JSON.stringify(h.audits),/Private caption|base64/);assert.equal(h.pushes.length,1);assert.match(r.headers['Cache-Control'],/no-store/);
+ const h=harness(),r=await h.request({body:'Private caption',attachment:attachment(original)});assert.equal(r.error,undefined);assert.equal(r.statusCode,201);assert.equal(r.body.ok,true);assert.equal(h.messages.length,1);assert.deepEqual(h.messages[0].slice(1,4),['company','store','owner']);assert.equal(h.messages[0][7],'video/mp4');assert.equal(h.audits.length,1);assert.equal(h.audits[0].durationMs,1000);assert.doesNotMatch(JSON.stringify(h.audits),/Private caption|base64/);assert.equal(h.pushes.length,1);assert.match(r.headers['Cache-Control'],/no-store/);
 });
 test('video route rejects foreign tenants/stores/settings/invalid requests without writes or pushes',async()=>{
  for(const [user,store] of [[{id:'x',companyId:'foreign'},'store'],[{id:'op',companyId:'company',tokenType:'STORE_OPERATOR',storeId:'other'},'store'],[{id:'owner',companyId:'company'},'missing']]){const h=harness(),r=await h.request({attachment:attachment(original)},user,store);assert.equal(r.statusCode,404);assert.equal(h.messages.length+h.audits.length+h.pushes.length,0);}
@@ -42,3 +44,11 @@ test('video route rejects foreign tenants/stores/settings/invalid requests witho
  const h=harness();h.disable();assert.equal((await h.request({attachment:attachment(original)})).statusCode,403);assert.equal(h.messages.length+h.audits.length+h.pushes.length,0);
 });
 test('audit failure rolls back video before any push',async()=>{const h=harness();h.fail();const r=await h.request({attachment:attachment(original)});assert.match(r.error.message,/audit unavailable/);assert.equal(h.messages.length+h.audits.length+h.pushes.length,0);});
+
+test('explicit cash and invoice topics preserve media validator and route to canonical category',async()=>{
+ for(const topic of ['CASH','INVOICE']){
+  const h=harness(),r=await h.request({topic,category:'GENERAL',attachment:attachment(original)});
+  assert.equal(r.error,undefined);assert.equal(r.statusCode,201);assert.equal(h.messages[0][4],topic);assert.equal(h.audits[0].category,topic);
+ }
+ for(const topic of ['BAD',null]){const h=harness(),r=await h.request({topic,attachment:attachment(original)});assert.equal(r.error?.status,400);assert.equal(h.messages.length+h.audits.length+h.pushes.length,0);}
+});

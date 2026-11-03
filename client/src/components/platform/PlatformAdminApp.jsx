@@ -1,3 +1,4 @@
+import AttendedRemoteController from "./AttendedRemoteController.jsx";
 import CashPaperReadingPanel from "../shared/CashPaperReadingPanel.jsx";
 import CashReconciliationPanel from "../shared/CashReconciliationPanel.jsx";
 import AiOwnerWalletAdmin from "./AiOwnerWalletAdmin.jsx";
@@ -130,7 +131,7 @@ async function request(path,options={}){
   return rawPlatformRequest(path,options);
 }
 async function rawPlatformRequest(path,options={}){
-  const {n40Scope,...fetchOptions}=options;
+  const {n40Scope,remoteStream,...fetchOptions}=options;
   const trace=n40ReadHeaders(path,n40Scope,options.method||"GET");
   const token=localStorage.getItem("token");
   const response=await fetch(path,{
@@ -138,6 +139,7 @@ async function rawPlatformRequest(path,options={}){
     headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{}),...(trace?.headers||{})}
   });
   if(trace)n40PublishRead(path,n40Scope,trace.traceId,response.status);
+  if(remoteStream===true&&/^\/api\/remote-support\/controller\/[a-f0-9-]{36}\/stream$/.test(path)&&response.ok)return response.body;
   const text=await response.text();
   let data={};
   if(text){try{data=JSON.parse(text)}catch{data={error:"Ο server επέστρεψε μη αναμενόμενη απάντηση."}}}
@@ -629,6 +631,8 @@ export default function PlatformAdminApp(){
 
   if(!user)return <PlatformSecureLogin onLogin={setUser}/>;
 
+  const remoteSupportId=new URLSearchParams(window.location.search).get("remoteSupport");
+  if(remoteSupportId&&/^[a-f0-9-]{36}$/.test(remoteSupportId))return <AttendedRemoteController id={remoteSupportId} request={request}/>;
   return <div className="platform-shell platform-organized">
     <header className="platform-header">
       <div className="platform-brand"><div className="platform-logo">MW</div><div><b>MyWorkStation Platform Admin</b><span>Κεντρική εμπορική διαχείριση</span></div></div>

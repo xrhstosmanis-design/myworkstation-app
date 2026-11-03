@@ -26,7 +26,7 @@ try{
  await db.$executeRaw`INSERT INTO "StoreChatRead" ("messageId","userId") VALUES (${oldPin},${operator.id})`;
  const page=await call(staff,store,'?limit=1');assert.equal(page.status,200,JSON.stringify(page.body));assert.deepEqual(page.body.rows.map(r=>r.id),[parentId]);assert.equal(page.body.pinnedAnnouncements[0].id,oldPin);assert.equal(Object.hasOwn(page.body.rows[0],'inTimeline'),false);
  const querySource=fs.readFileSync(new URL('../src/routes/store-chat.js',import.meta.url),'utf8').match(/const fetched=await prisma\.\$queryRaw`([\s\S]*?)`;/)[1];
- const parts=querySource.split(/\$\{([^}]+)\}/),strings=[],values=[],bindings={'req.user.id':operator.id,'store.companyId':company.id,'store.id':store.id,limit:1};
+ const parts=querySource.split(/\$\{([^}]+)\}/),strings=[],values=[],bindings={'req.user.id':operator.id,'store.companyId':company.id,'store.id':store.id,limit:1,topic:null};
  for(let i=0;i<parts.length;i++)if(i%2){assert.ok(Object.hasOwn(bindings,parts[i]));values.push(bindings[parts[i]])}else strings.push(parts[i]);
  const enriched=await db.$queryRaw(Prisma.sql(strings,...values));assert.equal(enriched.length,2,'Only one timeline row plus the older pin are enriched, not the400-row history');assert.equal(enriched.filter(r=>r.inTimeline).length,1);
  const initial=await call(staff,store);assert.equal(initial.status,200,JSON.stringify(initial.body));assert.equal(initial.body.interactionsAvailable,true);assert.match(initial.cache,/no-store/);assert.equal(initial.body.rows.find(r=>r.id===parentId).deliveries.length,0,'server save/GET alone never claims delivery');
@@ -62,6 +62,29 @@ try{
   response=await fetch(`${base}/api/store-chat/stores/${store.id}/${endpoint}`,{method:'POST',headers:{authorization:`Bearer ${staff}`,'content-type':'application/json'},body:JSON.stringify({body:'Media reply',replyToId:parentId,attachment:{mimeType:mime,dataUrl:`data:${mime};base64,${bytes.toString('base64')}`}})});const value=await response.json();assert.equal(response.status,201,JSON.stringify(value));forwardedMedia.push(value.id);assert.equal((await call(a.token,store)).body.rows.find(r=>r.id===value.id).replyTo.id,parentId);
  }
 
+ // Three topics partition immutable categories BEFORE the bounded timeline/search window.
+ const cashParent=await call(a.token,store,'','POST',{body:'Topic cash evidence',topic:'CASH'}),invoiceParent=await call(a.token,store,'','POST',{body:'Topic invoice evidence',topic:'INVOICE'}),shiftParent=await call(a.token,store,'','POST',{body:'Topic shift evidence',category:'SHIFT'});
+ for(const r of [cashParent,invoiceParent,shiftParent])assert.equal(r.status,201,JSON.stringify(r.body));
+ await db.$executeRaw`INSERT INTO "StoreChatMessage" ("id","companyId","storeId","senderId","category","body","createdAt","updatedAt") SELECT ${prefix+'new-'}||i::text,${company.id},${store.id},${a.u.id},'GENERAL','Topic newer ordinary',NOW()+INTERVAL '1 minute',NOW() FROM generate_series(1,220) i`;
+ for(const [topic,expected] of [['CASH',[cashParent.body.id,shiftParent.body.id]],['INVOICE',[invoiceParent.body.id]]]){
+  const r=await call(staff,store,'?limit=2&topic='+topic);assert.equal(r.status,200,JSON.stringify(r.body));assert.equal(r.body.topic,topic);assert.equal(r.body.topicsAvailable,true);assert.deepEqual(r.body.rows.map(row=>row.id).sort(),expected.sort());assert.ok(r.body.rows.every(row=>row.topic===topic));assert.ok(r.body.pinnedAnnouncements.some(row=>row.id===oldPin),'global announcement remains available in every topic');
+  const search=await call(staff,store,'/search?q=Topic&topic='+topic);assert.equal(search.status,200,JSON.stringify(search.body));assert.deepEqual(search.body.rows.map(row=>row.id).sort(),expected.sort());assert.equal(search.body.topic,topic);
+ }
+ assert.ok((await call(staff,store,'?limit=1&topic=GENERAL')).body.rows.every(row=>row.topic==='GENERAL'));
+ assert.equal((await call(staff,store)).body.topic,null,'old clients retain unfiltered timeline');
+ for(const topic of ['BAD','cash','', 'CASH&topic=INVOICE'])assert.equal((await call(staff,store,'?topic='+topic)).status,400);
+ assert.equal((await call(staff,store,'/search?q=Topic&topic=BAD')).status,400);
+ const topicBefore=(await db.$queryRaw`SELECT COUNT(*)::int n FROM "StoreChatMessage" WHERE "storeId"=${store.id}`)[0].n;
+ for(const body of [{body:'bad',topic:'CASH',category:'INVOICE'},{body:'bad',topic:'INVOICE',replyToId:cashParent.body.id},{body:'bad',topic:'CASH',category:'ANNOUNCEMENT'}])assert.equal((await call(staff,store,'','POST',body)).status,400);
+ assert.equal((await db.$queryRaw`SELECT COUNT(*)::int n FROM "StoreChatMessage" WHERE "storeId"=${store.id}`)[0].n,topicBefore);
+ const topicReply=await call(staff,store,'','POST',{body:'Cash reply default',topic:'CASH',replyToId:shiftParent.body.id});assert.equal(topicReply.status,201);
+ const topicRow=(await call(staff,store,'?topic=CASH')).body.rows.find(row=>row.id===topicReply.body.id);assert.equal(topicRow.category,'SHIFT');assert.equal(topicRow.replyTo.category,'SHIFT');assert.equal(topicRow.replyTo.topic,'CASH');
+ const annReply=await call(staff,store,'','POST',{body:'Ordinary announcement reply',topic:'GENERAL',replyToId:ann});assert.equal(annReply.status,201);assert.equal((await db.$queryRaw`SELECT "category" FROM "StoreChatMessage" WHERE "id"=${annReply.body.id}`)[0].category,'GENERAL');
+ for(const [endpoint,mime,bytes] of [['voice-messages','audio/wav',wave],['video-messages','video/mp4',fs.readFileSync(new URL('../test/fixtures/chat-video/one-second.mp4',import.meta.url))]]){
+  const r=await fetch(`${base}/api/store-chat/stores/${store.id}/${endpoint}`,{method:'POST',headers:{authorization:`Bearer ${staff}`,'content-type':'application/json'},body:JSON.stringify({body:'Invoice media',topic:'INVOICE',category:'GENERAL',replyToId:invoiceParent.body.id,attachment:{mimeType:mime,dataUrl:`data:${mime};base64,${bytes.toString('base64')}`}})});const value=await r.json();assert.equal(r.status,201,JSON.stringify(value));assert.equal((await db.$queryRaw`SELECT "category" FROM "StoreChatMessage" WHERE "id"=${value.id}`)[0].category,'INVOICE');
+ }
+ console.log('Chat topics real HTTP/PostgreSQL PASS: partition before limits,220 newer unrelated rows, independent pins, immutable SHIFT reply inheritance, malformed/cross-topic zero-write rejection and categorized voice/video.');
+
  // Expanded batch: history search and explicit authorized forwarding, on actual local HTTP/PostgreSQL.
  const third=await db.store.create({data:{name:'CI Forward third',companyId:company.id}});
  const literal=await call(a.token,store,'','POST',{body:'Literal 100%_! offer and καφές'});assert.equal(literal.status,201,JSON.stringify(literal.body));
@@ -93,6 +116,11 @@ try{
  assert.equal((await db.$queryRawUnsafe('SELECT COUNT(*)::int n FROM "WorkforceAuditLog" WHERE "entityId"=$1 AND "action"=$2',forwardedId,'STORE_CHAT_MESSAGE_FORWARDED'))[0].n,1);
  for(const table of ['StoreChatRead','StoreChatDelivery','StoreChatAcknowledgement','StoreChatReaction','StoreChatTask'])assert.equal((await db.$queryRawUnsafe('SELECT COUNT(*)::int n FROM "'+table+'" WHERE "messageId"=$1',forwardedId))[0].n,0);
  assert.equal((await forward(a.token,sent.body.id,sibling,intent)).status,409);assert.equal((await forward(a.token,parentId,third,intent)).status,409);
+ const topicIntent=crypto.randomUUID(),topicForward=await forward(a.token,parentId,sibling,topicIntent,{topic:'INVOICE'});assert.equal(topicForward.status,201);assert.equal(topicForward.body.topic,'INVOICE');
+ assert.equal((await db.$queryRaw`SELECT "category" FROM "StoreChatMessage" WHERE "id"=${topicForward.body.id}`)[0].category,'INVOICE');
+ assert.equal((await forward(a.token,parentId,sibling,topicIntent,{topic:'INVOICE'})).status,200);assert.equal((await forward(a.token,parentId,sibling,topicIntent,{topic:'CASH'})).status,409);assert.equal((await forward(a.token,parentId,sibling,topicIntent)).status,409);
+ assert.equal((await forward(a.token,parentId,sibling,intent,{topic:'GENERAL'})).status,200,'explicit GENERAL preserves legacy retry binding');
+ assert.equal((await forward(a.token,parentId,sibling,crypto.randomUUID(),{topic:'BAD'})).status,400);
  const publicForward=(await call(a.token,sibling)).body.rows.find(r=>r.id===forwardedId);assert.equal(publicForward.forwarded,true);for(const key of ['sourceStoreId','sourceCompanyId','sourceMessageId','originalSenderId','forwardBinding'])assert.equal(Object.hasOwn(publicForward,key),false);
  const announcementForward=await forward(a.token,ann,sibling);assert.equal(announcementForward.status,201);assert.deepEqual((await db.$queryRawUnsafe('SELECT "category","pinned","replyToId" FROM "StoreChatMessage" WHERE "id"=$1',announcementForward.body.id))[0],{category:'GENERAL',pinned:false,replyToId:null});
  for(const message of [photo.body.id,pdf.body.id,...forwardedMedia]){const r=await forward(a.token,message,sibling);assert.equal(r.status,201,JSON.stringify(r.body));const original=(await db.$queryRawUnsafe('SELECT * FROM "StoreChatMessage" WHERE "id"=$1',message))[0],copy=(await db.$queryRawUnsafe('SELECT * FROM "StoreChatMessage" WHERE "id"=$1',r.body.id))[0];for(const key of ['attachmentName','attachmentMimeType','attachmentSize','attachmentChecksum','attachmentData','body'])assert.equal(copy[key],original[key]);assert.equal(copy.replyToId,null);}
