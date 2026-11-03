@@ -68,14 +68,16 @@ internal sealed partial class AgentForm:Form {
     var codec=ImageCodecInfo.GetImageEncoders().First(c=>c.MimeType=="image/jpeg");using var parameters=new EncoderParameters(1);parameters.Param[0]=new EncoderParameter(System.Drawing.Imaging.Encoder.Quality,45L);resized.Save(stream,codec,parameters);
     using var request=new HttpRequestMessage(HttpMethod.Post,$"{activeBase}/frame"){Content=JsonContent.Create(new{jpeg=Convert.ToBase64String(stream.ToArray()),width=bounds.Width,height=bounds.Height})};request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);
     using var response=await http.SendAsync(request,ct);response.EnsureSuccessStatusCode();var result=await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken:ct);
+    bool appliedInput=false;
     foreach(var command in result.GetProperty("commands").EnumerateArray()){
      if(ct.IsCancellationRequested||!consent.Checked)break;
      // Never apply delayed input after an interruption or against an old screen.
      if(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()-command.GetProperty("at").GetInt64()>3000)continue;
-     NativeInput.Apply(command,bounds);
+     NativeInput.Apply(command,bounds);appliedInput=true;
     }
     if(invitedMode&&result.TryGetProperty("files",out var files))UpdateIncoming(files,ct);
-    await Task.Delay(900,ct);
+    // Show the result of an input promptly without increasing idle capture traffic.
+    await Task.Delay(appliedInput?75:900,ct);
    }
   }catch(OperationCanceledException){}catch(Exception){status.Text="Η σύνδεση σταμάτησε. Ελέγξτε τον κωδικό/διαθεσιμότητα με τον διαχειριστή.";}
   finally{
