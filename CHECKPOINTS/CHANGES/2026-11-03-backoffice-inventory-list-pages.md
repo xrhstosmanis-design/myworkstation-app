@@ -1,3 +1,7 @@
+## Exact CI correction — 03/11/2026
+
+Initial full PR run41716817787 on8e488689 ended5515serverPASS/2FAIL/0SKIP (one native assertion plus its parent). The only native mismatch was foreign-store query injection: existing authentication correctly rejected it with403 before the new reader, while the new test expected400. Keep that earlier denial unchanged and assert exact403/no list separately; malformed cursor cases still require400. Native page completeness/tie/masking cases before that assertion executed; withdrawal/epoch cases after it remain awaiting the corrected run. Independent wholesale Chromium job126199502055 failed Target.createTarget timeout before role readiness; no related source modified. An attempted targeted rerun was refused because the overall run was still active. Corrected test source8e2477b76092b45a0daaa1cffcee1827fcf9a6a9; final combined-head full CI still required. No runtime workaround, weakened assertion, merge, deployment or LAB PASS.
+
 ## 03/11/2026 — CENTRAL-BACKOFFICE-ACCESS-01 / PERSONAL INVENTORY LIST PAGES / SOURCE CANDIDATE AWAITING CI
 
 Same retained owner; feat/backoffice-inventory-list-pages-20261103. Claim3625 head ec6e489087f718ecd06a9ac2d8e7096a44534f22 passed docsCI41715627365 and merged68949e87d0d8598475787bbe1e6c7b54e1eb43c4 BEFORE source.
