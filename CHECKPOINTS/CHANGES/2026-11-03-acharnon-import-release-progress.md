@@ -1,0 +1,18 @@
+# ACHARNON-CATALOG-IMPORT-01 — release progress, no business import yet
+
+Recorded 2026-11-03, Europe/Athens. Same owner /root.
+
+## 03/11/2026 — ACHARNON-CATALOG-IMPORT-01 / CODE CI GREEN / IMPORT WAITING FOR RELEASE
+
+Same owner /root; runtime PR #3620 merged as `0bbdf8a485a608bfadcf67d2d5e7e338dcf865eb`. Exact PR CI 41708117358 and main CI 41710179007 passed every job, including real isolated PostgreSQL atomic rollback, concurrent repeat, same-company cross-store generated SKU allocation and barcode-less replay. Later shared main `059f18a122aea21353c92311c8f20911334e2875` also passed full CI 41713216507. **CI evidence only: no positive separate-tenant LAB PASS and no LIVE catalogue import.** Existing owners and protected PASS scopes remain intact.
+
+The owner delegated duplicate choices and repeatedly authorized final import into the existing store. Private catalogue is cleaned and saved: 3310 products / 4387 unique numeric text aliases, all stock0, generated program SKUs still blank; actual new parser/normalizer reports zero invalid and every category/subcategory belongs to the Rizareio taxonomy. Audits retain 13 merged source rows,196 excluded nonnumeric strings,2 negative-price system rows; one packaged item unit corrected with source evidence. The original-stock filter retains 939 positive and2371 negative source records, with no source-zero item. No private catalogue or record identifiers are committed.
+
+**OPEN / release and business write pending.** Ordinary guarded deployment deferred the validated imports while newer independent production changes arrived on main. Deploy workflows 41713323189 and41715260986 ran the freshness guard and skipped triggering Render; do not mistake their overall success for a live release. Preserve the other pages' changes and deployment safeguards. Official checkout blob filters retain full history and all checks while avoiding historical file downloads. The superseded already-failing main run41702074420 was cancelled to unblock newer main CI; no test gate was removed.
+
+The owner explicitly declined creating any new test company/tenant. Do not retry that rejected action or ask for another import approval. Existing-store session was restored through secure password and2FA; final workbook is loaded in the selected-store import form. Next: verify the actual healthy release containing #3620, run authenticated preview (3310 CREATE /0 UPDATE /0 INVALID), final import once, independently compare every persisted item/price/department/relationship/alias and stock0, then synchronize acceptance evidence. Checkpoint: `CHECKPOINTS/CHANGES/2026-11-03-acharnon-import-release-progress.md`. No overall PASS or manual completion claim.
+
+
+The private workbook remains outside Git and has Library version5. Actual read-only target baseline was zero StoreProduct records. The full-file offline normalization was run with observed saved department identities. Expected-record digest tooling is prepared for an independent post-import comparison, including numeric SKU sequence, names, unit, all costs/prices, tax department/rate, category/subcategory parent and tenant, supplier/code, brand, staff price, discount fields, store minStock and every numeric alias/multiplier. No digest is claimed to match a business write before that write occurs.
+
+The implementation checkpoint records the local-before-claim-main preparation deviation. No further code or schema change is part of this documentation update. The existing implementation remains covered by the exact CI references above. New source changes from other owners are not taken over; use their newer guarded main release when available.
