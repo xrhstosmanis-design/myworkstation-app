@@ -10,7 +10,7 @@ test('cash receipt requires final fiscal evidence; STATUS and arbitrary URL neve
  assert.equal(validateFtextCashResult({requestId:row.id,settingsHash:row.settingsHash,outcome:'REQUIRES_CHECK'},row).outcome,'REQUIRES_CHECK');
  assert.throws(()=>validateFtextCashResult({...good(),fiscalExecution:false},row));
 });
-test('cash first slice refuses mixed/card/customer/online/table/promotion/fractional and discounted sales',()=>{
+test('cash gate refuses mixed/card/customer/online/table, incomplete promotion metadata, fractional and independent discounts',()=>{
  const checkout={paymentMethod:'CASH'},items=[{quantity:1,discount:0}];assert.doesNotThrow(()=>assertFtextSimpleCash(checkout,items));
  for(const patch of [{paymentMethod:'CARD'},{payments:[{method:'CASH',amount:1}]},{customerId:'customer'},{onlineOrderId:'order'},{tableOrderId:'table'},{redeemPoints:1},{operationChannel:'DELIVERY_DELAYED'},{audience:'STAFF'}])assert.throws(()=>assertFtextSimpleCash({...checkout,...patch},items));
  for(const patch of [{quantity:.5},{quantity:0},{discount:.01},{promotionId:'promotion'},{promotionType:'GIFT'}])assert.throws(()=>assertFtextSimpleCash(checkout,[{...items[0],...patch}]));
