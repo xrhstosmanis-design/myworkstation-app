@@ -528,6 +528,11 @@ export default function InventoryV2Center({
               </div>
             ))}
           </div>
+          {delegated?.pagination && <nav className="inv2-list-pages" aria-label="Σελίδες απογραφών">
+            <small>Σελίδα {delegated.pagination.page}</small>
+            <button type="button" disabled={locked||!delegated.pagination.hasPrevious} onClick={delegated.pagination.onPrevious}>Προηγούμενες απογραφές</button>
+            <button type="button" disabled={locked||!delegated.pagination.hasNext} onClick={delegated.pagination.onNext}>Επόμενες απογραφές</button>
+          </nav>}
         </aside>
         <section className="op-box inv2-work">
           {current ? (

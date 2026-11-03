@@ -1,4 +1,5 @@
 import {captureInventoryRead,verifyInventoryRead,personalInventoryLine} from '../services/backoffice-staff-inventory-read.js';
+import {inventoryListCursor,personalInventoryListPage} from '../services/backoffice-staff-inventory-list.js';
 import {Router} from 'express';
 import {staffProfiles} from '../../../shared/backoffice-staff.mjs';
 import {liveStaff,requireStaffGrant,staffError} from '../services/backoffice-staff-access.js';
@@ -65,11 +66,9 @@ export function createBackofficeStaffRouter({db,authenticate,issueSession,reposi
     const {storeId}=req.params;
     if(req.user.storeId!==storeId)throw staffError();
     const read=await captureInventoryRead(db,req.user,storeId);
-    const canSeeHistory=read.visibility.history;
-    const rows=await db.$queryRaw`SELECT "id","name","status","startedAt" FROM "Stocktake" WHERE "companyId"=${req.user.companyId} AND "storeId"=${storeId} AND "inventoryVersion"=2 AND ("status"='DRAFT' OR (${canSeeHistory} AND "status"='FINALIZED')) ORDER BY "startedAt" DESC,"id" LIMIT 201`;
-    if(rows.length>200)throw staffError(503,'STAFF_LIMIT','Οι απογραφές υπερβαίνουν το όριο της προσωπικής προβολής.');
+    const page=await personalInventoryListPage(db,req.user,storeId,read.visibility.history,inventoryListCursor(req.query));
     await verifyInventoryRead(db,req.user,storeId,read);
-    res.json({storeId,stocktakes:rows.map(({id,name,status,startedAt})=>({id,name,status,startedAt}))});
+    res.json({storeId,...page});
   }catch(error){failure(res,error)}});
   router.get('/inventory/stores/:storeId/stocktakes/:stocktakeId',async(req,res)=>{try{
     const {storeId,stocktakeId}=req.params;
