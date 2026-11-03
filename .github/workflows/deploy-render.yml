@@ -57,6 +57,7 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
+          filter: blob:none
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
