@@ -1,6 +1,6 @@
 // Only server-resolved checkout items enter this projection. No offer lookup or
 // client price is trusted here, and no fiscal command or business write occurs.
-const fail=()=>{throw Object.assign(new Error('Η τελική αξία της προσφοράς δεν συμφωνεί με το αρχικό καλάθι. Δεν στάλθηκε πληρωμή.'),{code:'FTEXT_PROMOTION_MISMATCH',status:409})};
+const fail=()=>{throw Object.assign(new Error('Η τελική αξία της προσφοράς δεν συμφωνεί με το αρχικό καλάθι. Απαιτείται έλεγχος.'),{code:'FTEXT_PROMOTION_MISMATCH',status:409})};
 function scaled(value,places){
  const s=typeof value==='number'&&Number.isFinite(value)?String(value):value;
  if(typeof s!=='string'||!new RegExp(`^(0|[1-9]\\d{0,8})(?:\\.\\d{1,${places}})?$`).test(s))fail();
