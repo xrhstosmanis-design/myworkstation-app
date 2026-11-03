@@ -1,3 +1,9 @@
+## 03/11/2026 — FTEXT-PROMOTIONS-01 / ASSIGNED BEFORE SOURCE
+
+Retained FTEXT-RESILIENCE-01 owner, bounded continuation fix/ftext-promotions-20261103. Owner reports promotion products refused by the current first-slice gate and explicitly authorizes correction. Current simple CASH/CARD latency USER PASS (6s CASH close,12s CARD paper), original101 NO, readiness/handoff/recovery and automatic OUTPUT remain protected; promotion issuance is FAIL/NOT IMPLEMENTED, not new LAB PASS.
+
+Bounded scope after this claim merges: validate server-resolved LEAFLET/GIFT promotion snapshots and project their final values into existing zero-discount integer-quantity fiscal lines, exact cents and bounded deterministic splitting where division has a remainder. Preserve original business promotion/discount evidence and exact summary during fiscal finalization; no double subtraction, fake full-price sale, client-selected price or cross-store promotion. No vendor protocol/Windows transport/settings change, pairing, schema, production data write or diagnostic fiscal transaction. Customer/loyalty/audience/mixed/credit/IRIS/fractional/general manual discount remain outside scope. Exact source validation, native monetary/finalization/idempotency tests and existing full regression CI, normal guarded deployment then controlled LAB acceptance required. No promotion manual PASS until physical acceptance. Same owner retained, peers unchanged. Next: source only after this claim is merged.
+
 ## 03/11/2026 — FTEXT: κοινός τρόπος διασύνδεσης / Ριζαρείου USER PASS
 
 Αρμόδιος παραμένει ο υπάρχων owner FTEXT-RESILIENCE-01 (fix/ftext-output-review-20261103). Αυτή είναι καταγραφή της εγκατεστημένης ροής, όχι νέα αλλαγή κώδικα. Server/package revision 6ebd9a423b492e5d32061aa68bb8297a396cce01, ιδιωτικό ενιαίο installer v10. Δεν αντιγράφουμε ρυθμίσεις, pairing ή διαπιστευτήρια άλλου καταστήματος.
