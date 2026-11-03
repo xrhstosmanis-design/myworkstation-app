@@ -257,4 +257,33 @@ function Receive-FtextOutputDiscovery($Worker) {
     try {$r=$Worker.Pipeline.EndInvoke($Worker.Async);if($Worker.Pipeline.HadErrors -or $r.Count -ne 1) {throw 'Output history unavailable; original files retained.'};return $r[0]} finally {$Worker.Pipeline.Dispose()}
 }
 function Invoke-FtextCloudOutputArchive($Config,[string]$Kind,$Proof) {return Invoke-FtextOutputArchive -Config $Config -Kind $Kind -Proof $Proof}
-Export-ModuleMember -Function Get-FtextCloudReadinessRefreshAt,Get-FtextReadinessRefreshAt,Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff,Invoke-FtextStatusMaintenance,Start-FtextOutputDiscovery,Receive-FtextOutputDiscovery,Invoke-FtextOutputDiscovery,Invoke-FtextCloudOutputArchive
+function Invoke-FtextOutputPreparation([string]$ConfigPath,[ValidateRange(1,200)][int]$MaxBatches=200) {
+    $c=Get-FtextCloudConfig $ConfigPath
+    if(-not $c.PSObject.Properties['outputVersion'] -or $c.outputVersion -ne 1) {throw 'Install the current OUTPUT package first.'}
+    if(@(Get-Process -Name FTextPlus -ErrorAction SilentlyContinue).Count -gt 0) {throw 'Close FTEXT+ before preparing existing OUTPUT history.'}
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try {$hash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($c.companyId+'|'+$c.storeId+'|'+$c.terminalPos))).Replace('-','')} finally {$sha.Dispose()}
+    $mutex=New-Object Threading.Mutex($false,('Global\MyWorkStationFtextCloud_'+$hash));$held=$false
+    try {
+        try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
+        if(-not $held) {throw 'Close the connector before preparing OUTPUT.'}
+        Assert-FtextOutputIdle $c
+        $cashCursor='';$statusCursor='';$seen=New-Object 'Collections.Generic.HashSet[string]';$moved=0;$retained=0;$batches=0
+        Write-Host 'Preparing verified OUTPUT history. FTEXT+ and connector must stay closed. No fiscal command is sent.'
+        for($i=0;$i -lt $MaxBatches;$i++) {
+            if(@(Get-Process -Name FTextPlus -ErrorAction SilentlyContinue).Count -gt 0) {throw 'FTEXT+ started. Preparation stopped with evidence preserved.'}
+            $found=Invoke-FtextOutputDiscovery $ConfigPath $cashCursor $statusCursor
+            $cashCursor=[string]$found.cashCursor;$statusCursor=[string]$found.statusCursor
+            if(-not $seen.Add($cashCursor+'|'+$statusCursor)) {break}
+            $batches++
+            foreach($entry in @($found.entries)) {
+                try {$r=Invoke-FtextOutputArchive -Config $c -Kind ([string]$entry.kind) -Proof $entry.proof;$moved+=$r.movedFiles}
+                catch {$retained++;if($null -ne (Get-FtextOutputPending $c)) {throw};Write-Host 'One original group retained: its local evidence did not verify.'}
+            }
+            Write-Host ('OUTPUT progress: '+$moved+' files preserved; '+$batches+' batches checked.')
+            if([string]::IsNullOrEmpty($cashCursor) -and [string]::IsNullOrEmpty($statusCursor)) {break}
+        }
+        return [pscustomobject]@{movedFiles=$moved;retainedGroups=$retained;batches=$batches;outputRoot=(Get-FtextOutputRoot $c);fiscalExecution=$false}
+    } finally {if($held) {$mutex.ReleaseMutex()};$mutex.Dispose()}
+}
+Export-ModuleMember -Function Get-FtextCloudReadinessRefreshAt,Get-FtextReadinessRefreshAt,Get-FtextCloudConfig,Get-FtextCredentialPath,Read-FtextDeviceToken,Confirm-FtextCloudIdentity,Invoke-FtextCloudPing,Invoke-FtextCloudPoll,Invoke-FtextCloudReadiness,Start-FtextCloudReadiness,Receive-FtextCloudReadiness,Stop-FtextCloudReadiness,Invoke-FtextCashApi,Invoke-FtextCloudHandoff,Invoke-FtextStatusMaintenance,Start-FtextOutputDiscovery,Receive-FtextOutputDiscovery,Invoke-FtextOutputDiscovery,Invoke-FtextCloudOutputArchive,Invoke-FtextOutputPreparation

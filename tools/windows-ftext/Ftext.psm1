@@ -287,7 +287,9 @@ function Get-FtextOutputRoot($Config) {
     foreach($key in @('companyId','storeId','terminalPos')) {if([string]$Config.$key -notmatch '^[A-Za-z0-9_-]{2,80}$') {throw 'Invalid output identity.'}}
     $input=[IO.Path]::GetFullPath([string]$Config.workFolder).TrimEnd('\','/')
     if($input.Length -lt 4 -or [IO.Path]::GetPathRoot($input) -eq $input) {throw 'Unsafe output input folder.'}
-    $root=Join-Path ($input+'_OUTPUT') ($Config.companyId+'\'+$Config.storeId+'\'+$Config.terminalPos+'\'+$Config.settingsHash)
+    # The settings digest already binds company/store/POS. Avoid repeating long
+    # identifiers: Windows PowerShell 5.1 must keep receipt paths below MAX_PATH.
+    $root=Join-Path ($input+'_OUTPUT') $Config.settingsHash
     if([IO.Path]::GetPathRoot($root) -ine [IO.Path]::GetPathRoot($input) -or $root.StartsWith($input+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) {throw 'Output must be on the same volume outside input.'}
     Assert-FtextArchivePath $root;Assert-FtextArchivePath $input
     return $root
@@ -296,6 +298,10 @@ function Write-FtextOutputJournal([string]$Path,$Value) {
     $bytes=[Text.Encoding]::UTF8.GetBytes(($Value | ConvertTo-Json -Depth 20 -Compress))
     $s=[IO.File]::Open($Path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
     try {$s.Write($bytes,0,$bytes.Length);$s.Flush($true)} finally {$s.Dispose()}
+}
+function Assert-FtextOutputIdle($Config) {
+    $null=Assert-FtextArchiveQuiescent $Config
+    if(Test-Path -LiteralPath (Join-Path $Config.workFolder '.mws-ftext-status.json')) {throw 'Original STATUS is pending. OUTPUT deferred.'}
 }
 function Get-FtextOutputPending($Config) {
     $path=Join-Path (Get-FtextOutputRoot $Config) 'active-output.json'
@@ -333,6 +339,10 @@ function Invoke-FtextOutputArchive {
     try {
         try {$held=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$held=$true}
         if(-not $held) {throw 'Input folder is busy. Output deferred.'}
+        if(-not [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+            $manual=Join-Path $env:LOCALAPPDATA ('MyWorkStation\FtextStatusArchive\'+$Config.companyId+'\'+$Config.storeId+'\'+$Config.terminalPos+'\active-maintenance.json')
+            if(Test-Path -LiteralPath $manual) {throw 'Manual STATUS archive recovery is pending. OUTPUT deferred.'}
+        }
         $null=Assert-FtextArchiveQuiescent $Config
         # An unresolved STATUS marker is never moved, even if its result exists.
         if(Test-Path -LiteralPath (Join-Path $Config.workFolder '.mws-ftext-status.json')) {throw 'STATUS marker retained. Output deferred.'}
@@ -397,4 +407,4 @@ function Invoke-FtextOutputArchive {
         return [pscustomobject]@{requestId=$id;movedFiles=$moved;outputPath=$destination}
     } finally {if($held) {$mutex.ReleaseMutex()};$mutex.Dispose()}
 }
-Export-ModuleMember -Function Get-FtextConfig,Read-FtextStatusResult,Invoke-FtextStatus,Invoke-FtextStatusArchive,Get-FtextOutputRoot,Get-FtextOutputPending,Assert-FtextOutputRequestNotArchived,Invoke-FtextOutputArchive
+Export-ModuleMember -Function Get-FtextConfig,Read-FtextStatusResult,Invoke-FtextStatus,Invoke-FtextStatusArchive,Get-FtextOutputRoot,Get-FtextOutputPending,Assert-FtextOutputRequestNotArchived,Invoke-FtextOutputArchive,Assert-FtextOutputIdle

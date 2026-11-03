@@ -9,7 +9,7 @@ try {
  $id='22222222-2222-4222-8222-222222222222';[IO.File]::WriteAllText((Join-Path $folder ('mws-cash-'+$id+'.report.json')),'retained original')
  foreach($i in 1..3) {[IO.File]::WriteAllText((Join-Path $folder ('mws-status-'+$i.ToString('x32')+'.json')),'retained original')}
  $before=@(Get-ChildItem -LiteralPath $folder -File | ForEach-Object {(Get-FileHash -LiteralPath $_.FullName).Hash})
- & (Get-Module 'Cloud-Tools') {
+ & (Get-Command Invoke-FtextOutputDiscovery).Module {
   param($ConfigPath,$Config,$CashId)
   $script:OutputFixtureConfig=$Config;$script:OutputWrong=$false;$script:OutputDuplicate=$false;$script:OutputCalls=0
   function script:Read-FtextDeviceToken($Config) {return 'fixture-token'}
@@ -34,6 +34,24 @@ try {
  } $config $c $id
  $after=@(Get-ChildItem -LiteralPath $folder -File | ForEach-Object {(Get-FileHash -LiteralPath $_.FullName).Hash})
  Check-OutputCloud (($before -join ',') -ceq ($after -join ',')) 'Metadata worker changed input evidence.'
+ & (Get-Command Invoke-FtextOutputPreparation).Module {
+  param($ConfigPath)
+  $script:OutputPrepCalls=0;$script:OutputPrepMoves=0;$script:OutputPrepDriver=$true
+  function script:Get-Process {param($Name,$ErrorAction);if($script:OutputPrepDriver) {return @{Id=1}}}
+  function script:Invoke-FtextOutputDiscovery {
+   param($Path,$Cash,$Status)
+   $script:OutputPrepCalls++;$cursor=if($script:OutputPrepCalls -eq 1){'batch1'}else{'batch2'}
+   return [pscustomobject]@{cashCursor='';statusCursor=$cursor;entries=@([pscustomobject]@{kind='STATUS';proof=@{requestId=('1'*32)}})}
+  }
+  function script:Invoke-FtextOutputArchive {param($Config,$Kind,$Proof);$script:OutputPrepMoves++;return @{movedFiles=2}}
+  try {
+   $refused=$false;try {Invoke-FtextOutputPreparation $ConfigPath -MaxBatches 5 | Out-Null} catch {$refused=$true}
+   if(-not $refused -or $script:OutputPrepCalls -ne 0) {throw 'Preparation did not require closed FTEXT.'}
+   $script:OutputPrepDriver=$false
+   $result=Invoke-FtextOutputPreparation $ConfigPath -MaxBatches 5
+   if($result.movedFiles -ne 4 -or $result.batches -ne 2 -or $script:OutputPrepCalls -ne 3 -or $script:OutputPrepMoves -ne 2 -or $result.fiscalExecution -ne $false) {throw 'Automatic preparation did not iterate, report progress and stop on a completed cursor cycle.'}
+  } finally {Remove-Item Function:script:Get-Process,Function:script:Invoke-FtextOutputDiscovery,Function:script:Invoke-FtextOutputArchive -ErrorAction SilentlyContinue}
+ } $config
  foreach($name in @('Cloud-Connector.ps1','Cash.psm1','Ftext.psm1')) {Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $root $name)}
  $fake=@'
 function Get-FtextCloudConfig($Path) {return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json}
