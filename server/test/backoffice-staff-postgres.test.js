@@ -70,9 +70,10 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
     const fileEnd=commerceSource.indexOf('\nrouter.get("/ai-reader/status",',fileStart);
     assert.ok(fileStart>=0&&fileEnd>fileStart);let fileHandlers;
     new Function('router','requireCompanyModule','prisma','requireStaffGrant',commerceSource.slice(fileStart,fileEnd))({get:(_path,...handlers)=>{fileHandlers=handlers}},()=> (_req,_res,next)=>next(),db,requireStaffGrant);
-    let beforeInventoryRead;
+    let beforeInventoryRead,beforeInventoryList;
     const staffReadDb=new Proxy(db,{get(target,key){
       if(key==='$queryRaw')return async(strings,...values)=>{
+        if(beforeInventoryList&&strings.join('?').includes('FROM "Stocktake" s')){const run=beforeInventoryList;beforeInventoryList=null;await run()}
         if(beforeInventoryRead&&strings.join('?').includes('FROM "StocktakeLine"')){const run=beforeInventoryRead;beforeInventoryRead=null;await run()}
         return target.$queryRaw(strings,...values);
       };
@@ -435,6 +436,28 @@ test('native personal BackOffice identities, hashed PIN, scoped HTTP count, revo
       assert.deepEqual(await db.$queryRaw`SELECT "id","expectedQuantity","countedQuantity","countVersion","unitCost" FROM "StocktakeLine" WHERE "stocktakeId" IN ('history-d','history-f') ORDER BY "id"`,linesBefore);
       assert.deepEqual(await db.$queryRaw`SELECT "id","quantity" FROM "StockMovement" ORDER BY "id"`,controls);
       assert.equal(Number((await db.$queryRaw`SELECT "amount" FROM "Sale" WHERE "id"='control'`)[0].amount),77.33);
+
+      // Real PostgreSQL ordering, including identical microsecond timestamps, across >2 pages.
+      await db.$executeRaw`INSERT INTO "Stocktake" ("id","companyId","storeId","name","status","startedAt") SELECT 'page-'||lpad(i::text,4,'0'),'a','a1','Page fixture '||i,CASE WHEN i%2=0 THEN 'DRAFT' ELSE 'FINALIZED' END,'2030-01-01T00:00:00.123456Z'::timestamptz FROM generate_series(0,424) i`;
+      const expected=await db.$queryRaw`SELECT "id" FROM "Stocktake" WHERE "companyId"='a' AND "storeId"='a1' AND "inventoryVersion"=2 AND "status" IN ('DRAFT','FINALIZED') ORDER BY "startedAt" DESC,"id"`;
+      let cursor=null,seen=[],pages=0;
+      do {
+        const r=await get('both',cursor?'?after='+encodeURIComponent(cursor):'');assert.equal(r.status,200,JSON.stringify(r.data));check(r.data);
+        assert.ok(r.data.stocktakes.length<=200);seen.push(...r.data.stocktakes.map(x=>x.id));cursor=r.data.nextCursor;pages++;assert.ok(pages<10);
+      } while(cursor);
+      assert.ok(pages>=3);assert.deepEqual(seen,expected.map(x=>x.id));assert.equal(new Set(seen).size,seen.length);
+      const first=await get('read');assert.equal(first.status,200);assert.equal(first.data.stocktakes.length,200);assert.ok(first.data.stocktakes.every(x=>x.status==='DRAFT'));
+      const second=await get('read','?after='+encodeURIComponent(first.data.nextCursor));assert.equal(second.status,200);assert.ok(second.data.stocktakes.every(x=>x.status==='DRAFT'));
+      for(const hidden of ['history-f','history-other','history-foreign','missing']){const r=await get('read','?after='+hidden);assert.equal(r.status,409);assert.equal(r.data.stocktakes,undefined)}
+      for(const suffix of ['?after=','?after[]=page-0001','?after=page-0001&after=page-0002','?after='+ 'x'.repeat(121),'?after=%27%20OR%201=1'])assert.equal((await get('both',suffix)).status,400,suffix);
+      const injected=await get('both','?storeId=b1');assert.equal(injected.status,403);assert.equal(injected.data.stocktakes,undefined);
+      const pageOne=await get('both');
+      beforeInventoryList=()=>db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"='["inventory.read"]'::jsonb WHERE "userId"=${users.both.id}`;
+      const stale=await get('both','?after='+pageOne.data.nextCursor);assert.equal(stale.status,409);assert.equal(stale.data.stocktakes,undefined);
+      await db.$executeRaw`UPDATE "BackofficeStaffGrant" SET "capabilities"=${JSON.stringify(caps.both)}::jsonb WHERE "userId"=${users.both.id}`;
+      beforeInventoryList=()=>db.$executeRaw`UPDATE "StoreLifecycleFence" SET "generation"="generation"+1 WHERE "storeId"='a1'`;
+      assert.equal((await get('both')).status,409);
+      assert.deepEqual(await db.$queryRaw`SELECT "id","quantity" FROM "StockMovement" ORDER BY "id"`,controls);
     });
   }finally{
     if(server)await new Promise(resolve=>{server.close(resolve);server.closeAllConnections()});await db.$disconnect();await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);await admin.$disconnect();if(oldSecret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=oldSecret;

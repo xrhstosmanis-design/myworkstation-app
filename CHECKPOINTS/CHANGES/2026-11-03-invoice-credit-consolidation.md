@@ -14,7 +14,6 @@ Fresh selected-store preview on exact healthyc7830ad loaded the new existing-cre
 
 Scope remains OPEN / AWAITING MEASURED LAB. Single next action: identify an eligible existing synthetic applied-credit family and publish its measured original/financial/audit/stock/control baseline before one reviewed consolidation. If no such family is available, retain that prerequisite rather than reuse a real customer credit, seed production SQL or claim CI as LAB PASS. Real historical consolidation remains unexecuted. Owner retained until exact recorded completion or a named handoff. Checkpoint CHECKPOINTS/CHANGES/2026-11-03-invoice-credit-consolidation.md.
 
-
 ## 03/11/2026 — INVOICE-CREDIT-CONSOLIDATION-01 / SOURCE CANDIDATE / AWAITING NATIVE CI
 
 Before-source claim3614/head4fb7cec passed applicable docs classification and both Windows jobs and merged9faefa31e80f8d48eced3cb6ad2105b23483fb6b before runtime edits. Reconciled with already accepted main CI history/blob optimization; no validation gate removed. Same retained /root owner, source continuation work/invoice-credit-implementation-20261103.
