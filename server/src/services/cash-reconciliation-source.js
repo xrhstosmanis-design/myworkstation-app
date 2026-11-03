@@ -22,11 +22,20 @@ export async function readReconciliationSession(db,scope,id,rule){
   ) p ON TRUE WHERE s."id"=${id} AND s."companyId"=${scope.companyId} AND s."storeId"=${scope.storeId} LIMIT 1`;
   const {automaticSnapshot,...session}=rows[0]||{};
   if(!session||session.companyId!==scope.companyId||session.storeId!==scope.storeId||session.id!==id||!session.terminalPos)throw reconcileError('CASH_RECONCILIATION_NOT_FOUND',404);
-  const transactions=await db.$queryRaw`SELECT to_jsonb(t)-'attachmentData' AS record,md5(COALESCE(to_jsonb(t)->>'attachmentData','')) AS "attachmentDigest",(t."attachmentData" IS NOT NULL) AS "hasAttachment" FROM "StoreTransaction" t WHERE t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} AND t."sessionId"=${id} ORDER BY t."id" LIMIT 501`;
+  const transactions=await db.$queryRaw`SELECT to_jsonb(t)-'attachmentData' AS record,t."amount"::text AS "snapshotAmount",md5(COALESCE(to_jsonb(t)->>'attachmentData','')) AS "attachmentDigest",(t."attachmentData" IS NOT NULL) AS "hasAttachment" FROM "StoreTransaction" t WHERE t."companyId"=${scope.companyId} AND t."storeId"=${scope.storeId} AND t."sessionId"=${id} ORDER BY t."id" LIMIT 501`;
   if(transactions.length>500||transactions.some(t=>t.record?.companyId!==scope.companyId||t.record?.storeId!==scope.storeId||t.record?.sessionId!==id))throw reconcileError('CASH_RECONCILIATION_LIMIT');
-  const count=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "CashControlReview" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sessionId"=${id}`;
-  if(!Number.isInteger(count[0]?.count)||count[0].count>500)throw reconcileError('CASH_RECONCILIATION_LIMIT');
-  const review=await readCashReviewState(db,{...session,sessionId:id},{enabled:rule.mode!=='POS_EFTPOS_ONLY'});
+  let reviewRows;
+  try{reviewRows=await db.$queryRaw`SELECT "id","decision","amount","note","actorId","actorName","snapshotJson","createdAt" FROM "CashControlReview" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sessionId"=${id} ORDER BY "createdAt","id" LIMIT 501`;}
+  catch{
+    // Preserve the old hard-limit/error path if the detailed review read is
+    // unavailable. The normal path needs one bounded read rather than COUNT
+    // followed by another read of the same review rows.
+    const count=await db.$queryRaw`SELECT COUNT(*)::int AS count FROM "CashControlReview" WHERE "companyId"=${scope.companyId} AND "storeId"=${scope.storeId} AND "sessionId"=${id}`;
+    if(!Number.isInteger(count[0]?.count)||count[0].count>500)throw reconcileError('CASH_RECONCILIATION_LIMIT');
+    reviewRows=null;
+  }
+  if(reviewRows!==null&&(!Array.isArray(reviewRows)||reviewRows.length>500))throw reconcileError('CASH_RECONCILIATION_LIMIT');
+  const review=await readCashReviewState(db,{...session,sessionId:id},{enabled:rule.mode!=='POS_EFTPOS_ONLY',loadedTransactions:transactions,reviewRows});
   const initialCents=exactCents(session.variance),cardCents=exactCents(session.cardVariance),basisCents=review.balance.status==='VALID'?exactCents(review.balance.unexplainedVariance):null;
   const originalTransactions=transactions.map(({record,attachmentDigest})=>({record,attachmentDigest}));
   const sourceHash=hash({version:1,session,transactions:originalTransactions,review,rule});
