@@ -1,9 +1,3 @@
-## 03/11/2026 — AI-WALLET-COMMERCIAL-WAIVER-01 / OLD PENDING CANDIDATES / EXACT RECONCILED CANDIDATE
-
-Same retained owner/continuation. Original source3571/04a98b73 full retryCI41542186927 all5SUCCESS:5319server+8backup/0FAIL/0SKIP including real native historical pending beyond105 newer settled entries. Reconciliation retains the SAME five source/test blobs, every peer source/record, invoice3581 and camera receipts, and single-entry LAB PASS closure3582/manual/evidence. Both canonical PDFs retain complete bytes verified by Git blob hashes. No transaction/permission/deploy gate change.
-
-Exact reconciled PR/main full CI and normal guarded healthy installation remain required before hosted pending-list and approved actual batch acceptance. Completed LAB B action must not be replayed; supplier cost UNKNOWN. Actual batch not released; broader wallet/manual36 and hosted retry/concurrency OPEN.
-
 ## 03/11/2026 10:45:48 Ελλάδας — AI-WALLET-COMMERCIAL-WAIVER-01 / SCOPED HOSTED LAB PASS
 
 Same retained owner feat/ai-owner-wallet-20261022 / current /root / feat/ai-wallet-commercial-waiver-20261103; no transfer. Explicit owner approval and synthetic before record PR3580/head01759810 passed applicable docs CI (3SUCCESS/2classifiedSKIP) and merged97fb72fd16f1f8051dda7067f0333c4720e38ab9 BEFORE the action. Live revision2a8db9d5c4fcfa2742d8601c54f747bf1d918e53 / Renderdep-dbkilsnb9u1s73fgenpg verified native health; four affected runtime files byte-identical to source3563/accepted3a710176.
