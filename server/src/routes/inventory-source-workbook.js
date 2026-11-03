@@ -1,5 +1,6 @@
 import {attachKatWorkbook,validateKatDepartments} from './inventory-kat-source.js';
 import {attachRizareioWorkbook,validateRizareioDepartments} from './inventory-rizareio-source.js';
+import {attachAcharnonWorkbook,validateAcharnonDepartments} from './inventory-acharnon-source.js';
 const text=value=>String(value??"").trim();
 const fail=message=>{const error=new Error(message);error.status=400;throw error};
 const requiredDepartments=[
@@ -13,6 +14,7 @@ const requiredDepartments=[
 // This explicit source profile does not broaden the legacy Diadochou mappings.
 // Only the import sheet participates; review/excluded/reference sheets never do.
 export function attachSourceWorkbook(workbook,raw,XLSX){
+  if(workbook.SheetNames[0]==='ACHARNON_IMPORT')return attachAcharnonWorkbook(workbook,raw,XLSX);
   if(workbook.SheetNames[0]==='RIZAREIO_IMPORT')return attachRizareioWorkbook(workbook,raw,XLSX);
   if(workbook.SheetNames[0]==='ΚΑΤ_IMPORT')return attachKatWorkbook(workbook,raw,XLSX);
   if(workbook.SheetNames[0]!=="ΠΡΟΪΟΝΤΑ_IMPORT")return raw;
@@ -55,6 +57,7 @@ export function attachSourceWorkbook(workbook,raw,XLSX){
 
 export function validateSourceDepartments(profile,departments){
   if(!profile)return;
+  if(profile.name==='ACHARNON_CATALOG_V1')return validateAcharnonDepartments(profile,departments);
   if(profile.name==='RIZAREIO_CATALOG_V1')return validateRizareioDepartments(profile,departments);
   if(profile.name==='KAT_CATALOG_V1')return validateKatDepartments(profile,departments);
   for(const expected of profile.departments){
