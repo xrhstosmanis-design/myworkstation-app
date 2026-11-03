@@ -41,7 +41,18 @@ export function createAiOwnerWalletRoutes({db=prisma,repository=aiOwnerWalletRep
     const invoiceEnabled=await resolvedInvoiceWalletCompany(repository,scope.companyId,env);await access.owner(req);
     res.json({...result,runtimeEnabled:true,balanceScope:'COMPANY',paymentInstructions:process.env.AI_OWNER_WALLET_PAYMENT_INSTRUCTIONS||'Η ανανέωση υπολοίπου AI πληρώνεται στο MyWorkStation. Επικοινώνησε μαζί μας για τα στοιχεία πληρωμής. Η πίστωση γίνεται μετά την επιβεβαίωση της είσπραξης.',meteredFeatures:invoiceWalletFeatures(env,scope.companyId,invoiceEnabled)});
   }));
+  const historyQuery=z.object({cursor:z.string().min(1).max(4096).optional()}).strict();
+  router.get('/stores/:storeId/history',run('owner',async(req,res,scope)=>{
+    const {cursor}=historyQuery.parse(req.query);
+    const result=await repository.history(scope.companyId,scope.storeId,cursor??null);await access.owner(req);
+    res.json({...result,runtimeEnabled:true});
+  }));
   const prefix='/platform/companies/:companyId';
+  router.get(prefix+'/history',run('platform',async(req,res,scope)=>{
+    const {cursor}=historyQuery.parse(req.query);
+    const result=await repository.history(scope.companyId,null,cursor??null);await access.platform(req);
+    res.json({...result,runtimeEnabled:true});
+  }));
   router.put(prefix+'/pricing',run('platform',async(req,res,scope)=>{
     const input=z.object({version:z.number().int().nonnegative(),policy:customerPricingSchema,additionalTariffConfirmed:z.literal(true)}).strict().parse(req.body);
     await access.platform(req);res.json(await repository.configurePricing(scope.companyId,input,scope.actorId));
@@ -105,6 +116,7 @@ export function createAiOwnerWalletRoutes({db=prisma,repository=aiOwnerWalletRep
   return router;
 }
 export default createAiOwnerWalletRoutes();
+
 
 
 

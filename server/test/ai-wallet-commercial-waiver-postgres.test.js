@@ -88,6 +88,14 @@ test('native commercial waiver is atomic, selected, authenticated and idempotent
    const selected=await repo.read('c','s');assert.equal(selected.entries.length,100);assert.equal(selected.entries.some(e=>e.id===old),false);assert.equal(selected.waiverCandidates[0].id,old);assert.equal(selected.waiverCandidatesMore,false);assert.ok(selected.waiverCandidates.every(e=>e.storeId==='s'&&e.status==='REVIEW'&&e.chargedMicros==='0'));assert.equal(selected.waiverCandidates.some(e=>e.id===control||e.id===foreign),false);
    const company=await repo.read('c');assert.ok(company.waiverCandidates.some(e=>e.id===control));assert.equal(company.waiverCandidates.some(e=>e.id===foreign),false);
   });
+  await t.test('paginated repository keeps public waiver projection and revoked HTTP access refuses without mutation',async()=>{
+   const before=await baseline(),ids=[],entries=[];let cursor=null;
+   do{const page=await repo.history('c','s',cursor);assert.equal(page.companyId,'c');assert.equal(page.storeId,'s');assert.equal(page.pageSize,100);ids.push(...page.entries.map(e=>e.id));entries.push(...page.entries);cursor=page.nextCursor;}while(cursor);
+   assert.equal(new Set(ids).size,ids.length);assert.ok(ids.includes(a));assert.equal(ids.includes(control),false);assert.equal(ids.includes(foreign),false);
+   const waived=entries.find(e=>e.id===a);assert.equal(waived.chargedMicros,'0');assert.equal(waived.commercialWaiver.providerCostStatus,'UNKNOWN');assert.equal(waived.cursorCreatedAt,undefined);assert.equal(waived.tariff,undefined);assert.equal(waived.usage,undefined);
+   const response=await fetch(base.replace('/commercial-waivers','/history'));assert.ok(response.status>=400);assert.equal(response.headers.get('cache-control'),'no-store');assert.deepEqual(await baseline(),before);
+  });
   assert.deepEqual(await db.$queryRaw`SELECT * FROM "BusinessControl"`,business);
  }finally{if(server)await new Promise(r=>server.close(r));await db.$disconnect();await other.$disconnect();if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect()}
 });
+
