@@ -1,3 +1,11 @@
+## 04/11/2026 — FTEXT-OVER-LIMIT-REPORT-01 / ASSIGNED BEFORE SOURCE / NOT TESTED
+
+ΑΝΑΛΗΨΗ ΑΠΟ FTEXT-RESILIENCE-01 — ASSIGNED fix/ftext-over-limit-report-20261104 /root. Owner explicitly requests this bounded verifier compatibility fix. Preserve other FTEXT assignments and scoped PASS.
+
+Public-source diagnosis: verifyFtextOriginalUnknownFiles accepts only four-field reports, while the existing connector may emit code/rawResultHash. Add rejection-specific support for the canonical six-field code2 report, preserving complete original report bytes, stored result digest, raw RES digest, command/settings/scope/lifecycle/device checks, exact first/only CASH S OVER LIMIT and app-only idempotent audited release. Do not broaden late printed receipt, CARD, timeout or any financial/fiscal execution.
+
+Required synthetic tests: legacy/current reports, full hashes, tamper/code/command/refusal and native no-business-write/idempotency regression. No private incident IDs, original files, customer data, amounts or local configuration included. New compatibility NOT TESTED/AWAITING IMPLEMENTATION; no live or manual PASS. Exact full CI/main and ordinary guarded release precede user acceptance. Next: publish this before-source claim green/main, then source/test edits. Checkpoint CHECKPOINTS/CHANGES/2026-11-04-ftext-over-limit-report.md.
+
 ## 04/11/2026 — INVOICE-FAST-PDF-TRANSPORT-03 / EXACT GUARDED RELEASE / BEFORE NEW HEADER LAB
 
 Retained /root owner. Source3633/c3badc0d passed fullPRCI41845161776 and merged0d57653f03d2425189d1ae6ef3744e32e6b7b279. Exact fullmainCI41847674040 SUCCESS. Normal guarded deployment41850110142/job126643968501 SUCCESS; exact health became0d57653f at14:44:36Z and independent health confirmed before this record. No guard bypass/direct hook/schema or financial write. Source changes exactly one PDF dataUrl payload value; independent56handlerPASS/focused199PASS. Previous F12346ms/wrong12.40 vs24.80 remains historical FAIL with captured providerHTTP400; new transport acceptance NOT TESTED.
