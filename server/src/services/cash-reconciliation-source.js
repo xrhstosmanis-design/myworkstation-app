@@ -5,7 +5,8 @@ import {readCashControlRule} from './cash-control-rules.js';
 import {exactCents,hash,reconcileError} from './cash-reconciliation-contract.js';
 import {readCashChatEvidence} from './cash-chat-evidence.js';
 import {createCashPaperRepository} from './cash-paper-repository.js';
-import {projectAutomaticPaperEvidence,boundAutomaticPaperDiscovery} from './cash-paper-automatic.js';
+import {projectAutomaticPaperEvidence,boundAutomaticPaperDiscovery,automaticPaperByteLimit} from './cash-paper-automatic.js';
+import {readStoredCashPaperPreview} from './cash-paper-stored-preview.js';
 import {readCashReviewEvidence} from './cash-review-evidence.js';
 import {readFullCashEventEvidence} from './cash-full-audit.js';
 
@@ -84,8 +85,8 @@ export async function readReconciliationSources(db,scope,period,extraIds=[]){
   }
   let paperEvidence;
   if(scope.fullAudit===true){
-    const discovery=boundAutomaticPaperDiscovery(await readCashChatEvidence(db,scope)),repository=createCashPaperRepository(db),papers=[];
-    for(const source of discovery.sources||[]){let reading={status:'REQUIRES_REVIEW'};if(source.checksum&&source.references?.[0]?.messageId){try{await repository.source(scope,source.references[0].messageId,source.checksum);reading=await repository.get(scope,source.checksum);}catch{}}papers.push({...source,reading});}
+    const discovered=await readCashChatEvidence(db,scope),repository=createCashPaperRepository(db);
+    const {discovery,papers}=await readStoredCashPaperPreview({repository,scope,discovery:discovered,admitted:boundAutomaticPaperDiscovery(discovered),byteLimit:automaticPaperByteLimit});
     paperEvidence=projectAutomaticPaperEvidence({scope,sessions,papers,discovery,selectedIds,period,storeName:stores.name});
     for(const id of selectedIds){const original=sessions.get(id);
       original.fullEvidence={duplicates:await readCashReviewEvidence(db,{...original.session,sessionId:id},{includeChat:false}),events:await readFullCashEventEvidence(db,scope,original.session,original.automaticTransactions||[])};
