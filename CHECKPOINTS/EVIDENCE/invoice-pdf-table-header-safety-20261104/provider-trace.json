@@ -1,0 +1,255 @@
+[
+  {
+    "id": "0172167e-7c24-4b0a-9cdc-edda5131b627",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "info"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "FAST Azure header incomplete; trying configured fallback { confidence: 87.3 }",
+    "timestamp": "2026-11-04T14:02:20.916614774Z"
+  },
+  {
+    "id": "f293025c-2b46-4c16-980d-5bc818e7fa30",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "info"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "}",
+    "timestamp": "2026-11-04T14:02:20.973926808Z"
+  },
+  {
+    "id": "8fcd32bc-cacf-40ed-aa10-5aae2d7115c4",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "info"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "FAST OpenAI header attempt failed {",
+    "timestamp": "2026-11-04T14:02:22.073932956Z"
+  },
+  {
+    "id": "b126f0bd-e876-4e78-a300-435245b0d483",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "info"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "  attempt: 2,",
+    "timestamp": "2026-11-04T14:02:22.073951637Z"
+  },
+  {
+    "id": "9b85bb64-c4af-4d9b-866c-e008953bff5a",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "info"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "  message: 'HTTP 400: {\\n' +",
+    "timestamp": "2026-11-04T14:02:22.073955917Z"
+  },
+  {
+    "id": "ba553920-7cac-4863-a3a6-e17fba2721af",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "error"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "    '  \"error\": {\\n' +",
+    "timestamp": "2026-11-04T14:02:22.073959157Z"
+  },
+  {
+    "id": "38df7e19-14d5-4fa3-ada5-94824f8090de",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "info"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "    `    \"message\": \"Invalid 'input[0].content[1].file_data'.\",\\n` +",
+    "timestamp": "2026-11-04T14:02:22.073962657Z"
+  },
+  {
+    "id": "9b1b85a7-caf9-4ff3-9b6a-487a528f4211",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "info"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "    '    \"type\": \"invalid_request_error\",\\n' +",
+    "timestamp": "2026-11-04T14:02:22.073965857Z"
+  },
+  {
+    "id": "0f7e8bdf-eeb5-49d1-917f-26f7b7537e00",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "info"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "    '    \"param\": \"input[0].content[1].file_data\",\\n' +",
+    "timestamp": "2026-11-04T14:02:22.073969227Z"
+  },
+  {
+    "id": "b0d5f884-692e-45a3-8e31-c1c077f60633",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "info"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "    '   '",
+    "timestamp": "2026-11-04T14:02:22.073971947Z"
+  },
+  {
+    "id": "d9da0ee0-29ae-49f6-b783-d5f829613b9b",
+    "labels": [
+      {
+        "name": "resource",
+        "value": "srv-d9isenfavr4c73bdh52g"
+      },
+      {
+        "name": "instance",
+        "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+      },
+      {
+        "name": "level",
+        "value": "info"
+      },
+      {
+        "name": "type",
+        "value": "app"
+      }
+    ],
+    "message": "}",
+    "timestamp": "2026-11-04T14:02:22.073974597Z"
+  }
+]
