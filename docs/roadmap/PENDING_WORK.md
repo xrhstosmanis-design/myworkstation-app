@@ -1,3 +1,23 @@
+## 05/11/2026 — CASH-ADJACENT-COUNT-21 / RETAINED OWNER / BEFORE-SOURCE CLAIM / AWAITING LAB
+
+Parent: CASH-UNIFIED-AUDIT-15 remains OPEN and assigned to the retained cash audit owner. This owner-directed bounded task continues PR #3657 (DRAFT; no merge) to detect potential cash-counting errors between immediately consecutive CLOSED shifts of the same company/store/terminal, with strict carried closing/opening equality, current six-check cash arithmetic, opposite nonzero cash differences and no existing manual OFFSET. No secondary owner or competing scope.
+
+Read-only example: night -344.00 EUR / next morning +343.08 EUR; candidate common amount 343.08 EUR, separate night residual -0.92 EUR and morning residual 0.00 EUR. This is a *candidate*, not proof of a physical counting mistake, not a final balance adjustment, employee charge or automatic OFFSET. Ambiguous triple overlaps must not be allocated.
+
+Evidence as at 05Nov: 8 isolated helper tests PASS in V8; full Node20/DB/HTTP CI and MYWORKSTATION LAB NOT TESTED. PR CI run 41927565706 FAIL at the mandatory active-list checkpoint gate; its native tests SKIPPED. The source PR stays DRAFT. Protect all actual cash/card/IRIS values, raw audit, immutable reviews/ledgers, roles/store permissions, fiscal, stock, invoice, provider, paid-AI and outbound actions. No production operation was performed.
+
+Sequence: publish this intact documentation claim and relevant checkpoint to main with applicable green CI; synchronize all three central registries and generated tracker PDF; then rebase PR #3657 and run complete Node20/native/PG/HTTP CI, isolated LAB, guarded release and separately verified read-only selected-store acceptance. Parent CASH-UNIFIED-AUDIT-15 remains OPEN until all evidence and final audit criteria are met.
+
+Checkpoint: CHECKPOINTS/CHANGES/2026-11-05-cash-adjacent-counting.md.
+
+## 05/11/2026 — INVOICE-HEADER-LATENCY / PR3655 CONTINUATION / FULL CI REQUIRED
+
+User-directed continuation on the same retained owner and fix/invoice-header-timing-20261104. Reconciled the three shared registry prepends against main4fa7ffa4, retaining all peer records and every historical byte. Exact source/test/fixture blobs remain those reviewed and tested at c0419bb3 (108 PASS, 0 FAIL, 0 SKIP). The former head had no CI run because its merge state was dirty; no full CI or hosted speed PASS is inferred. Next: full exact PR/main CI, ordinary guarded exact healthy release, then one fresh H header-only read with refreshed ten-table LAB/control evidence. H/I remain unused; no payment/draft/stock action. Checkpoint CHECKPOINTS/CHANGES/2026-11-04-invoice-header-timing.md.
+
+## 05/11/2026 — INVOICE-HEADER-LATENCY / TIMING SOURCE CANDIDATE / ASSIGNED
+
+Retained /root, fix/invoice-header-timing-20261104; claim #3648 green/main f131f00c before source. Added sanitized request/stage/attempt timing without changing provider or business behavior. Node20 targeted108PASS/0FAIL/0SKIP; independent review no blocker. Full exact PR/main CI and guarded healthy release required. Fresh H prepared for one no-submit header timing read with ten-table LAB/control baseline; I reserved for a separately claimed speed candidate. G limited header PASS protected; latency OPEN, no new LAB/manual/performance PASS. Checkpoint: CHECKPOINTS/CHANGES/2026-11-04-invoice-header-timing.md. All peer owners and existing accepted manuals/PDFs preserved. Next: full CI/release, then correlated H measurement.
+
 ## 04/11/2026 — INVOICE-CREDIT-THIRD-HEADER-01 / RETAINED OWNER / ASSIGNED BEFORE SOURCE
 
 Same retained INVOICE-CREDIT-CONSOLIDATION-01 and duplicate owner /root; bounded continuation fix/invoice-credit-third-header-20261104. Owner explicitly requested continuation after the measured blocked third-member review. No transfer of credit issuance, OFFSET/CASH_RETURN writers, reader/header latency, posting, inventory or reporting scopes.

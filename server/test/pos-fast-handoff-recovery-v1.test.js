@@ -51,7 +51,7 @@ test("a partial Azure header without a reconciled table retains FAST OpenAI fall
   assert.match(body,/const azureProductLines=reconciledFastProductLines\(parsed\.productLines,azureTotalGross\)/);
   assert.match(body,/if\(azureHasUsefulHeader&&\(!isPdf\|\|parsed\.azurePageCount===1\)&&\(azureProductLines\.length\|\|azureHasCompleteHeader\)\)return res\.json\(azureHeader\)/);
   assert.match(body,/if\(azureHasUsefulHeader\)azureHeaderFallback=azureHeader/);
-  assert.ok(body.indexOf("azureHeaderFallback=azureHeader")<body.indexOf("callFastOpenAiHeader({prompt,filePart})"));
+  assert.ok(body.indexOf("azureHeaderFallback=azureHeader")<body.indexOf("callFastOpenAiHeader({prompt,filePart,timing})"));
   assert.match(body,/catch\(error\)\{throwIfWalletError\(error\);if\(azureHeaderFallback\)return res\.json\(azureHeaderFallback\);throw error\}/);
 });
 

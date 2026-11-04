@@ -1,0 +1,40 @@
+{
+  "H": {
+    "file": "header-timing-H.pdf",
+    "supplier": "LAB METER TEST",
+    "documentNumber": "LAB-HEADER-TIMING-20261105-H",
+    "documentDate": "2026-11-05",
+    "totalGross": 24.8,
+    "documentType": "INVOICE",
+    "physicalPages": 2,
+    "physicalRows": 2,
+    "quantityPerRow": 1,
+    "netPerRow": 10,
+    "vatPerRow": 2.4,
+    "grossPerRow": 12.4,
+    "finalNet": 20,
+    "finalVat": 4.8,
+    "exciseTotal": 0,
+    "status": "PREPARED_NOT_UPLOADED",
+    "origin": "Original G layout copied with new invoice identity and date only; not a replay of G."
+  },
+  "I": {
+    "file": "header-timing-I.pdf",
+    "supplier": "LAB METER TEST",
+    "documentNumber": "LAB-HEADER-TIMING-20261105-I",
+    "documentDate": "2026-11-05",
+    "totalGross": 24.8,
+    "documentType": "INVOICE",
+    "physicalPages": 2,
+    "physicalRows": 2,
+    "quantityPerRow": 1,
+    "netPerRow": 10,
+    "vatPerRow": 2.4,
+    "grossPerRow": 12.4,
+    "finalNet": 20,
+    "finalVat": 4.8,
+    "exciseTotal": 0,
+    "status": "PREPARED_NOT_UPLOADED",
+    "origin": "Original G layout copied with new invoice identity and date only; not a replay of G."
+  }
+}
