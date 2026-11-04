@@ -1,0 +1,12 @@
+## 04/11/2026 — INVOICE-HEADER-LATENCY / RETAINED OWNER / TIMING-ONLY SOURCE CLAIM
+
+ASSIGNED /root, continuation docs/invoice-header-timing-20261104, then fix/invoice-header-timing-20261104. Owner explicitly requested continuation and publication in this repository. Parent INVOICE-HEADER-LATENCY stays OPEN. Preserve every peer ownership and prior limited G correct-header PASS; do not replay G/F/D or any paid invoice.
+
+Read-only diagnosis on main bf6b04884: FAST source unchanged from accepted transport repair. Render workspace explicitly confirmed by owner. Existing G logs show fallback entry 2026-11-04T14:50:46.281470519Z, 5477ms after browser selection14:50:40.804Z; this includes upload/authorization/wallet/durable lookup/Azure and is NOT Azure-only latency. No completion timing exists. Current healthy source independently reports bc19fb45cfd24ef83385ff60383ae59ec148b1cb. Existing actual-handler suite56PASS/0FAIL; no new provider request or business action.
+
+Bounded next source after this claim is green/main: sanitized monotonic timing events for FAST header route total, exact-file lookup, Azure header operation, OpenAI header operation/attempt and supplier matching. Include random per-request correlation, fixed stage/outcome, elapsed milliseconds only; never input bytes/text, filename, supplier/customer/store/company/document IDs, amounts, credentials or error bodies. Observe response finish/close and failures without changing returned fields, provider order/models/prompt/retries/timeouts, wallet/access/tenant or business semantics. Tests must exercise actual handler success/fallback/wallet refusal and concurrent timing isolation; no real provider call. Timing is diagnostic overhead, not a speed fix.
+
+Hosted G readiness remains imprecise:83920ms is observation upper bound only. Main history, current registries, invoice manual and relevant header-only/timeout/transport checkpoints reviewed. Prior wrong subtotalF/D, EFK/general accuracy/UI counts and physical POS latency remain OPEN. No new LAB/manual/PDF PASS. Required next: publish green claim, implement bounded instrumentation, exact full PR/main CI and ordinary guarded healthy release, then separately identified fresh no-submit synthetic read with before/after/control; never repair old evidence by replay. Existing accepted PDFs/manuals retain their baseline during this pre-change claim.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-11-04-invoice-header-timing.md. Owner retained until recorded completion or named handoff.
+
