@@ -1,3 +1,25 @@
+## 04/11/2026 — CASH-TASK5-HANDOFF-79C17B22 / OWNER-DIRECTED CONTINUATION / OPEN
+
+ΑΝΑΛΗΨΗ ΑΠΟ current Work conversation e8472385bb29 / request04139b87-94d8-482b-832a-8712b90184ba — ASSIGNED receiving Work page /root, request79c17b22-8971-4df8-addc-a6a8f9714206. Owner answered «συνεχισε» to the explicit question whether task5 should transfer here. Reuse existing PR3643 and branch fix/cash-stored-preview-budget-20261104. This receipt supersedes the receiving-page identity below; earlier evidence and every peer assignment remain preserved. Previous page is released from this scope upon green/main transfer; no parallel implementation.
+
+Scope remains CASH-UNIFIED-AUDIT-15 and bounded CASH-STORED-PREVIEW-19 first. Exact prior head620f570ff0bb81a4f879a15688f0bd094c799af2 has successful applicable CI41896583223. New receipt requires its own applicable CI before merge. No runtime or business-state change and no new functional PASS. Full shift/card/handwritten/event/invoice financial agreement and large-period coverage remain OPEN.
+
+Next: publish this receipt green/main, then inspect current preview source and protected regressions before one bounded correction. Preserve current-original checks, unchanged50-source/25MiB limits, company/store/lifecycle fencing, paid admission and INCOMPLETE coverage for omitted/unread/uncertain sources. No provider replay, financial/stock/fiscal/settings change or email. Existing manual and accepted PDF baseline retained for this identity-only handoff.
+
+## 04/11/2026 — CASH-TASK5-HANDOFF-04139B87 / OWNER-APPROVED TRANSFER / OPEN
+
+ΑΝΑΛΗΨΗ ΑΠΟ codex/cash-chat-reconciliation-20261026 και fix/cash-stored-preview-budget-20261104 — ASSIGNED current Work conversation e8472385bb29 /root, request04139b87-94d8-482b-832a-8712b90184ba. Owner explicitly approved «να μεταφερθει» after the duplicate-assignment check on04/11/2026. Receiving page retains existing PR3643 and branch fix/cash-stored-preview-budget-20261104; no competing implementation branch. Upon merge of this receipt, the previous page is released from this transferred task5 scope and must not continue it in parallel.
+
+Scope: CASH-UNIFIED-AUDIT-15 remaining shift/card/handwritten/event/invoice reconciliation, complete financial acceptance and larger-period coverage, beginning with CASH-STORED-PREVIEW-19 bounded stored-reading preview diagnosis already recorded below. Previous evidence/manual/performance17–18 acceptance and all unrelated peer assignments remain protected. PR3643 currently contains documentation only; its diagnosis is inherited evidence, not a newly repeated live observation. No new runtime change or LAB/LIVE/USER PASS.
+
+Single next action: publish this transfer with applicable green CI/main, then review the existing preview source and regressions before the bounded correction; original checks, unchanged50-source/25MiB limits and incomplete coverage must remain. Uncertain dates/amounts remain unresolved; no new paid source/retry, financial/stock/fiscal/settings change, approval, issue closure or email is authorized by this transfer. Full final financial agreement remains OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-11-04-cash-stored-preview-budget.md.
+
+## 04/11/2026 — CASH-STORED-PREVIEW-19 / TASK5 CONTINUATION / BEFORE SOURCE
+
+ΑΝΑΛΗΨΗ ΑΠΟ codex/cash-chat-reconciliation-20261026 — ASSIGNED fix/cash-stored-preview-budget-20261104 / current task5 Work page /root after owner task5 and ΞΕΚΙΝΑ. Bounded GET-only stored-preview continuation; parent CASH-UNIFIED-AUDIT-15 remains OPEN, accepted performance18/manual and all peer scopes retained.
+
+Read-only UI/source plus aggregate metadata diagnosis confirms a collection over25MiB suppresses all stored readings because the automatic intake bound clears discovery.sources before preview repository.get. No private originals/identities/amounts are published. After this claim is green/main, design bounded reuse of existing readings with current-original checks within unchanged50/25MiB limits; omitted/unread/uncertain sources preserve incomplete coverage and prevent FINAL. Paid runner, provider, financial/review/stock/fiscal/schema/settings behavior remains unchanged. No runtime or state-changing LAB action yet. Checkpoint CHECKPOINTS/CHANGES/2026-11-04-cash-stored-preview-budget.md. Single next: green/main diagnosis claim before source; new functional acceptance NOT TESTED.
+
 ## 04/11/2026 — CENTRAL-POS-AI-ANDROID-TAKEOVER-01 / OWNER-DIRECTED HANDOFF / OPEN
 
 ΑΝΑΛΗΨΗ ΑΠΟ «Ανάθεση πρακτόρων POS AI Render Chat Android» — ASSIGNED docs/central-pos-ai-android-takeover-20261104 / current Work coordinator /root. The owner explicitly requests takeover because the previous conversation stalled. This transfers its coordination and unfinished delivery work, not independently retained invoice, reporting, bandwidth, fiscal or other peer scopes. Claim time 2026-11-04T19:41:23+02:00.
