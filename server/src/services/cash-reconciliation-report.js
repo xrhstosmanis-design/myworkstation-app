@@ -1,9 +1,10 @@
 import {projectHandoffIssues,assertHandoffIssues,handoffIssueText} from './cash-handoff-issues.js';
-import {canAutomaticallyCalculate,hasCashNumericContradiction,calculateCashResult,assertCalculatedCashResult} from './cash-automatic-result.js';
+import {canAutomaticallyCalculate,cashArithmeticIsCurrent,hasCashNumericContradiction,calculateCashResult,assertCalculatedCashResult} from './cash-automatic-result.js';
 import {projectCashIssues,assertCashIssues,cashIssueText,isExpenseIssueClosed} from './cash-issue-replies.js';
 import {assessAutomaticCash,automaticCashAuditText} from './cash-automatic-audit.js';
 import {cashEventSalesText} from './cash-event-sales.js';
-import {hash,activeRecords,reconcileError} from './cash-reconciliation-contract.js';
+import {projectAdjacentCashCountingCandidates,adjacentCashCountingText} from './cash-adjacent-counting-errors.js';
+import {hash,exactCents,activeRecords,reconcileError} from './cash-reconciliation-contract.js';
 import {cashReportRowDay} from '../../../client/src/lib/cash-report-period.js';
 import {projectFullCashAudit,assertFullCashAudit} from './cash-full-audit.js';
 
@@ -96,13 +97,15 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
   const calculatedResult=calculateCashResult(selected);
   const issueRegister=projectCashIssues(source.store.id,selected,records);
   const handoffRegister=projectHandoffIssues(source,records,immediateCashPair);
+  const countingErrorCandidates=projectAdjacentCashCountingCandidates({source,rows,immediatePair:immediateCashPair,cashCurrent:cashArithmeticIsCurrent,exactCents,localDay:cashReportRowDay});
   for(const row of selected){const ids=handoffRegister?.status==='AVAILABLE'?handoffRegister.issues.filter(q=>q.current&&[q.previousSessionId,q.nextSessionId].includes(row.sessionId)).map(q=>q.id):[];if(ids.length)row.handoffIssueIds=ids;}
-  const reportHash=hash({sourceReportHash,calculatedResult,...(source.paperEvidence?{paperEvidence:source.paperEvidence,fullEvidence:selected.map(r=>({sessionId:r.sessionId,fullEvidence:r.fullEvidence,fullCoverage:r.fullCoverage,fullAudit:r.fullAudit}))}:{}),...(handoffRegister?{handoffRegister}:{}),...(issueRegister?{issueRegister}:{}),identities:selected.map(r=>({sessionId:r.sessionId,employeeKey:r.employeeKey,operatorName:r.operatorName,identityRequiresReview:r.identityRequiresReview,automaticallyCalculated:r.automaticallyCalculated}))});
+  const reportHash=hash({sourceReportHash,calculatedResult,...(source.paperEvidence?{paperEvidence:source.paperEvidence,fullEvidence:selected.map(r=>({sessionId:r.sessionId,fullEvidence:r.fullEvidence,fullCoverage:r.fullCoverage,fullAudit:r.fullAudit}))}:{}),...(handoffRegister?{handoffRegister}:{}),...(countingErrorCandidates.length?{countingErrorCandidates}:{}),...(issueRegister?{issueRegister}:{}),identities:selected.map(r=>({sessionId:r.sessionId,employeeKey:r.employeeKey,operatorName:r.operatorName,identityRequiresReview:r.identityRequiresReview,automaticallyCalculated:r.automaticallyCalculated}))});
   const sameCheckpointPeriod=checkpoint?.proof.period?.from===source.period.from&&checkpoint?.proof.period?.to===source.period.to;
   const result={storeId:source.store.id,storeName:source.store.name,period:source.period,rows:selected,context:[...rows.values()].filter(r=>!source.selectedIds.includes(r.sessionId)),totals,employees:[...employees.values()],calculatedResult,reportHash,checkpoint:checkpoint?{resumeFrom:checkpoint.data.resumeFrom,pendingNotes:checkpoint.data.pendingNotes,period:checkpoint.proof.period,createdAt:checkpoint.createdAt,reviewedBy:checkpoint.actorName,current:sameCheckpointPeriod?checkpoint.data.reportHash===reportHash:null}:null,coverage:source.coverage,financialFinality:'REVIEWED_CASH_ROWS_ONLY',originalFinancialLedgerChanged:false};
   if(source.kioskEventSales)result.kioskEventSales=source.kioskEventSales;
   if(issueRegister)result.issueRegister=issueRegister;
   if(handoffRegister)result.handoffRegister=handoffRegister;
+  if(countingErrorCandidates.length)result.countingErrorCandidates=countingErrorCandidates;
   if(source.paperEvidence)result.paperEvidence=source.paperEvidence;
   result.text=reconciliationText(result);if(result.text.length>140000)throw reconcileError('CASH_RECONCILIATION_LIMIT');return result;
 }
@@ -175,7 +178,7 @@ export function reconciliationText(report){
   const pending=effective?.pending??report.totals.pending;
   if(pending)lines.push(`Εκκρεμούν ${pending} βάρδιες· δεν περιλαμβάνονται στα ελεγμένα σύνολα.`);
   for(const employee of effective?.employees??report.employees)lines.push(`${employee.name}: ελλείμματα ${money(employee.shortageCents)} · πλεονάσματα ${money(employee.surplusCents)}${employee.identityRequiresReview?' · απαιτείται ταυτοποίηση της βάρδιας':''}.`);
-  lines.push(...cashIssueText(report.issueRegister),...handoffIssueText(report.handoffRegister));
+  lines.push(...cashIssueText(report.issueRegister),...handoffIssueText(report.handoffRegister),...adjacentCashCountingText(report.countingErrorCandidates));
   if(report.checkpoint){lines.push('',`Συνέχεια από ${report.checkpoint.resumeFrom}${report.checkpoint.current===false?' — το σημείο συνέχειας χρειάζεται ενημέρωση':''}. Έλεγχος ${report.checkpoint.period.from} έως ${report.checkpoint.period.to}.`,...report.checkpoint.pendingNotes.map(n=>'Εκκρεμότητα: '+n));}
   return lines.join('\n');
 }
