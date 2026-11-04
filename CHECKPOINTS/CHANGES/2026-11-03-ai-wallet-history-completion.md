@@ -1,3 +1,7 @@
+## 04Nov2026 — PR3612 integration continuation / AWAITING LAB
+
+04Nov2026 continuation: source PR #3612 exact head d7ac495 passed full PR CI41685034134 attempt2 and native recovery; attempt1 hit the 25-minute job limit after approximately19-minute all-history checkout, not a recorded source-test failure. Reconcile latest main and preserve peer blob-filter CI optimization and all unrelated source/docs. No wallet runtime path overlap found. Same bounded history implementation; re-run exact reconciled full PR/main CI and normal guarded deploy before hosted read-only acceptance. Pagination remains AWAITING LAB. The separately approved private residual waiver is still unexecuted: final native submit was stopped by automatic review requiring the human owner to perform the financial action. Native form is prepared; no SQL/provider/alternate-channel execution or false financial PASS.
+
 ## 03/11/2026 - AI-WALLET-HISTORY-02 / RETAINED OWNER / ASSIGNED BEFORE SOURCE
 
 Same retained parent owner feat/ai-owner-wallet-20261022 / current /root; bounded continuation feat/ai-wallet-history-20261103. Owner requests completion of the remaining wallet-history and legacy-evidence work. Previous commercial-waiver source3571, synthetic LAB PASS, explicitly approved private release and closure3602/mainffc8bb6 remain protected and must not be replayed. Current active/pending/tracker/checklists/manual and intervening history reviewed; no wallet runtime takeover found.
@@ -8,3 +12,8 @@ Bounded source AFTER this claim is green/main: additive authenticated cursor-pag
 
 Acceptance: native isolated data beyond100 with timestamp ties/microseconds, exact coverage/no duplication, foreign company/store/credit boundaries, invalid and foreign cursor refusal, and read-only immutability; mounted navigation/loading/error/context-race tests. Full exact PR/main CI and normal guarded healthy release before hosted read-only acceptance. No paid provider replay, new reservation/settlement/waiver/credit/payment/email, pricing/settings, stock/fiscal/schema action. All runtime and hosted new-pagination acceptance NOT TESTED at claim time; no new manual/PDF PASS claim. Unresolved financial disposition requires exact evidence or separately specific approval, never this broad task instruction alone. Broader wallet/manual36 stays OPEN.
 
+
+
+### Cursor history implementation — 2026-11-03
+
+Same retained wallet owner, branch `feat/ai-wallet-history-20261103`; claim PR #3607 merged. Additive authenticated read-only history pages (100 + continuation) preserve recent100 balance read, pricing, pending selection and protected financial PASS. Exact company/selected-store scope and company shared credits; full PostgreSQL microsecond timestamp/id boundary; existing sanitized public caller/purpose/waiver projection only. UI labels page-local totals and filters, aborts late scope/version results, clears private pages on errors. Local Node20 cursor and mounted navigation/error/context tests PASS; native PostgreSQL locally NOT TESTED (no isolated DB); full PR/main CI/native read-only proof and normal guarded deployment/hosted acceptance required. No financial/provider call, production write/schema/settings/email mutation. Hosted pagination AWAITING LAB; unknown legacy provenance/cost stays explicit. Broader wallet OPEN.

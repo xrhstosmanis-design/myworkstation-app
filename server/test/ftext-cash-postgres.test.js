@@ -5,7 +5,7 @@ import {ftextOriginalCommandHash} from '../src/services/ftext-error-evidence.js'
 import {recordFtextOperatorDecision,releaseFtextRejectedAttempt} from '../src/services/ftext-operator-card.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {randomBytes} from 'node:crypto';
+import {randomBytes,createHash} from 'node:crypto';
 import {ensureFtextCashSchema,ftextCashLifecycleReviewProposal} from '../src/services/ftext-cash-schema.js';
 import {prepareFtextCashRequest,claimFtextCashRequest,recordFtextCashResult,findPendingFtextCashRequest} from '../src/services/ftext-cash-requests.js';
 import {finalizeFtextCashRequest} from '../src/services/ftext-cash-finalize.js';
@@ -202,7 +202,8 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    const next=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'late-reused'}));await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
    await assert.rejects(a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{...receipt,requestId:next.id,settingsHash:next.settingsHash,dayCounter:'45'})),e=>e.code==='FTEXT_CASH_RECEIPT_REUSED');
    {
-   const unknown={requestId:next.id,settingsHash:next.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
+   const rejectedLine=next.plan.lines[0],originalRaw=' 2\r\nOVER LIMIT\r\nInputLine: S|'+rejectedLine.description+'|'+rejectedLine.quantity+'|'+rejectedLine.unitPrice+'||'+rejectedLine.department+'\r\n\r\n';
+   const unknown={requestId:next.id,settingsHash:next.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.',code:2,rawResultHash:createHash('sha256').update(originalRaw).digest('hex')};
    const rejected=await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,unknown));
    const l=rejected.plan.lines[0],files={intentBase64:encode(JSON.stringify({requestId:rejected.id,settingsHash:rejected.settingsHash,commandHash:ftextOriginalCommandHash(rejected,settings)})),reportBase64:encode(JSON.stringify(unknown)),rawResultBase64:encode(' 2\r\nOVER LIMIT\r\nInputLine: S|'+l.description+'|'+l.quantity+'|'+l.unitPrice+'||'+l.department+'\r\n\r\n'),reason:'Verified first line rejection',noReceipt:true};
    const snapshot=async()=>({counts:await Promise.all(['Sale','Payment','StockMovement','StoreTransaction','StoreOperatorAudit'].map(table=>a.$queryRawUnsafe(`SELECT COUNT(*)::int AS n FROM "${table}"`))),stock:await a.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"`});
@@ -214,6 +215,33 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    assert.equal(await findPendingFtextCashRequest(a,scope),null);assert.deepEqual(await snapshot(),before);
    await assert.rejects(finalizeFtextCashRequest(a,next.id,scope,opts));assert.deepEqual(await snapshot(),before);
 
+   }
+  });
+
+
+  await t.test('promotion CASH/CARD preserves exact final totals, original discounts, stock once and concurrent replay',async()=>{
+   await a.$executeRawUnsafe('ALTER TABLE "SaleLine" ADD COLUMN "promotionId" TEXT, ADD COLUMN "promotionType" TEXT');
+   settings.cardPayment={code:2,posTerminalId:1,transactionType:6,resultFormat:'POS_LINE8_OS7',confirmed:true};
+   for(const [index,method]of ['CASH','CARD'].entries()){
+    const promoItems=[{...input.items[0],unitPrice:2,effectiveUnitPrice:1.33,quantity:3,discount:2,lineTotal:4,promotionId:'promotion-a',promotionType:'GIFT',priceSource:'GIFT'}];
+    const f={...input,clientTransactionId:'promotion-'+index,checkout:{...input.checkout,paymentMethod:method},items:promoItems,summary:{subtotal:6,discount:2,total:4}};
+    const original=await a.$transaction(tx=>prepareFtextCashRequest(tx,f));assert.equal(original.checkoutJson.ftextPromotionVersion,1);assert.equal(original.plan.lines.length,2);
+    await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
+    const evidence={...receipt,requestId:original.id,settingsHash:original.settingsHash,dayCounter:String(800+index),...(method==='CARD'?{posPayments:[{cardType:'VISA',amount:'4.00',cardNumberMasked:'************1234'}]}:{})};
+    await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,evidence));
+    const before=Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-a'`)[0].currentStock);
+    await assert.rejects(finalizeFtextCashRequest(a,original.id,scope,{context,reserveStock:async()=>{throw Error('promotion rollback')}}));assert.equal((await a.$queryRaw`SELECT * FROM "Sale" WHERE "clientTransactionId"=${f.clientTransactionId}`).length,0);
+    const bad={...original.checkoutJson,baseSummary:{subtotal:6,discount:1,total:4}};
+    await a.$executeRaw`UPDATE "FtextCashRequest" SET "checkoutJson"=${JSON.stringify(bad)}::jsonb WHERE "id"=${original.id}`;
+    await assert.rejects(finalizeFtextCashRequest(a,original.id,scope,opts));
+    await a.$executeRaw`UPDATE "FtextCashRequest" SET "checkoutJson"=${JSON.stringify(original.checkoutJson)}::jsonb WHERE "id"=${original.id}`;
+    const done=await Promise.all([finalizeFtextCashRequest(a,original.id,scope,opts),finalizeFtextCashRequest(b,original.id,scope,opts)]);assert.equal(done[0].saleId,done[1].saleId);assert.equal(done.filter(r=>r.replay).length,1);
+    const sale=(await a.$queryRaw`SELECT * FROM "Sale" WHERE "id"=${done[0].saleId}`)[0];assert.deepEqual([Number(sale.subtotal),Number(sale.discount),Number(sale.total)],[6,2,4]);
+    const lines=await a.$queryRaw`SELECT * FROM "SaleLine" WHERE "saleId"=${sale.id}`;assert.equal(lines.length,1);assert.deepEqual([Number(lines[0].quantity),Number(lines[0].unitPrice),Number(lines[0].discount),Number(lines[0].lineTotal),lines[0].promotionId,lines[0].promotionType],[3,2,2,4,'promotion-a','GIFT']);
+    const payments=await a.$queryRaw`SELECT * FROM "Payment" WHERE "saleId"=${sale.id}`;assert.equal(payments.length,1);assert.equal(payments[0].method,method);assert.equal(Number(payments[0].amount),4);
+    const ledger=await a.$queryRaw`SELECT * FROM "StoreTransaction" WHERE "description" LIKE ${'POS πώληση '+sale.id+'%'}`;assert.equal(ledger.length,1);assert.equal(Number(ledger[0].amount),4);assert.equal(ledger[0].type,method==='CASH'?'SALE_CASH':'SALE_CARD');
+    assert.equal(Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-a'`)[0].currentStock),before-3);assert.equal(Number((await a.$queryRaw`SELECT "currentStock" FROM "StoreProduct" WHERE "storeId"='store-control'`)[0].currentStock),20);
+    assert.equal((await a.$queryRaw`SELECT * FROM "StockMovement" WHERE "sourceId"=${sale.id}`).length,1);
    }
   });
 

@@ -20,6 +20,10 @@ export async function importFullArchive(tx,companyId,storeId,rows,{sourceProfile
   const kat=sourceProfile?.name==='KAT_CATALOG_V1';
   if(kat&&rows.some(row=>!['PIECE','KG'].includes(row.unit)))throw new Error('Μη υποστηριζόμενη μονάδα ΚΑΤ. Δεν έγινε εισαγωγή.');
   if(sourceProfile&&rows.some(row=>(row.action!=="CREATE"&&!(kat&&row.action==='UPDATE'&&row.sourceExisting&&Number.isFinite(row.expectedStock)))||row.stock!==0))throw new Error("Η εισαγωγή απαιτεί νέα είδη ή επιβεβαιωμένες αντιστοιχίσεις ΚΑΤ, χωρίς μεταβολή αποθέματος.");
+  if(sourceProfile?.name==='ACHARNON_CATALOG_V1'){
+    sourceProfile.assertTarget(companyId,storeId);
+    rows=await sourceProfile.allocateSkus(tx,companyId,storeId,rows);
+  }
   for(const c of categories)categoryMap.set(c.name,c.id);
   for(const s of subcategories)subcategoryMap.set(`${s.categoryName}\0${s.name}`,s.id);
   for(const s of suppliers){if(supplierMap.has(s.name))throw new Error(`Πολλαπλοί προμηθευτές με όνομα ${s.name}. Χρειάζεται επιλογή πριν την εισαγωγή.`);supplierMap.set(s.name,s.id)}

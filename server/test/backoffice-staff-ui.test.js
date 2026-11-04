@@ -18,6 +18,32 @@ async function mount(Component,props){
 }
 const identity={userId:'staff',companyId:'a',fullName:'Fixture',username:'fixture',stores:[{id:'a1',name:'A1',profile:'STOCKTAKER',capabilities:['inventory.read','inventory.count']},{id:'a2',name:'A2',profile:'AUDITOR',capabilities:['cash.read']}]};
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
+test('personal inventory page navigation clears old detail, uses scoped cursors and refresh resets to page one',async()=>{
+ const Workspace=await component('BackofficeStaffWorkspace'),calls=[];
+ const row=id=>({id,name:'PAGE '+id,status:'DRAFT',storeId:'a1',lines:[]});
+ const api=async(path,options={})=>{
+  calls.push({path,options});assert.equal(options.method||'GET','GET');
+  if(path.endsWith('/me'))return identity;
+  assert.equal(options.headers['x-backoffice-store-id'],'a1');
+  if(path.endsWith('/stocktakes'))return {storeId:'a1',stocktakes:[row('first')],nextCursor:'first'};
+  if(path.endsWith('?after=first'))return {storeId:'a1',stocktakes:[row('second')],nextCursor:null};
+  return row('first');
+ };
+ const m=await mount(Workspace,{api,user:{fullName:'Fixture'},onLogout:()=>{}});
+ try{
+  await m.act(async()=>{const s=document.querySelector('select');s.value='a1';s.dispatchEvent(new Event('change',{bubbles:true}))});
+  await m.act(async()=>button('Απογραφή').click());await m.act(async()=>new Promise(r=>setTimeout(r,60)));
+  assert.equal(button('Προηγούμενες απογραφές').disabled,true);
+  await m.act(async()=>document.querySelector('.inv2-history-open').click());assert.match(document.querySelector('.inv2-work').textContent,/PAGE first/);
+  await m.act(async()=>button('Επόμενες απογραφές').click());
+  assert.equal(document.querySelector('.inv2-work h3'),null);assert.match(document.querySelector('.inv2-history').textContent,/PAGE second/);
+  assert.equal(button('Επόμενες απογραφές').disabled,true);assert.match(document.querySelector('.inv2-list-pages').textContent,/Σελίδα 2/);
+  await m.act(async()=>button('Προηγούμενες απογραφές').click());assert.match(document.querySelector('.inv2-history').textContent,/PAGE first/);
+  await m.act(async()=>button('Επόμενες απογραφές').click());await m.act(async()=>button('Φόρτωση / Ανανέωση').click());
+  assert.match(document.querySelector('.inv2-list-pages').textContent,/Σελίδα 1/);assert.equal(button('Προηγούμενες απογραφές').disabled,true);
+  assert.ok(calls.some(x=>x.path.endsWith('?after=first')));
+ }finally{await m.close()}
+});
 test('actual personal workspace wires the independent theory flag and does not invent a difference for an uncounted row',async()=>{
  const Workspace=await component('BackofficeStaffWorkspace');
  const calls=[],row={id:'st',storeId:'a1',name:'Theory-only draft',status:'DRAFT',lines:[{id:'line',name:'Not counted',sku:'NC',barcodes:[],countedQuantity:null,expectedQuantity:'7',countVersion:0}]};

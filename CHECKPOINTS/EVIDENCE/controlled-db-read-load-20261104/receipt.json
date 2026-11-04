@@ -1,0 +1,4829 @@
+{
+  "case": "ACHARNON-POST-UPGRADE-READ-CONCURRENCY-20261104",
+  "summary": {
+    "start": "2026-11-03T22:27:46.230Z",
+    "end": "2026-11-03T22:37:46.285Z",
+    "elapsedSeconds": 600.055,
+    "total": 215,
+    "errors": 0,
+    "stopped": null,
+    "byParallel": [
+      {
+        "parallel": 1,
+        "n": 5,
+        "rows": [
+          3310
+        ],
+        "sqlMs": {
+          "p50": 17.516,
+          "p95": 22.536,
+          "p99": 22.536,
+          "max": 22.536
+        },
+        "connectorMs": {
+          "p95": 1197,
+          "max": 1197
+        }
+      },
+      {
+        "parallel": 3,
+        "n": 60,
+        "rows": [
+          3310
+        ],
+        "sqlMs": {
+          "p50": 15.677,
+          "p95": 48.874,
+          "p99": 182.606,
+          "max": 182.606
+        },
+        "connectorMs": {
+          "p95": 1590,
+          "max": 2573
+        }
+      },
+      {
+        "parallel": 6,
+        "n": 150,
+        "rows": [
+          3310
+        ],
+        "sqlMs": {
+          "p50": 18.951,
+          "p95": 117.439,
+          "p99": 183.507,
+          "max": 186.633
+        },
+        "connectorMs": {
+          "p95": 1339,
+          "max": 2180
+        }
+      }
+    ],
+    "monitor": {
+      "samples": 13,
+      "maxConnections": 20,
+      "maxLockWaiters": 0,
+      "maxActiveOver15s": 0
+    }
+  },
+  "sql": "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) WITH limits AS MATERIALIZED (SELECT set_config('statement_timeout','3000',true),set_config('lock_timeout','500',true)) SELECT sp.id,sp.\"productId\",sp.\"salePrice\",sp.\"currentStock\",p.name FROM limits CROSS JOIN \"StoreProduct\" sp JOIN \"Product\" p ON p.id=sp.\"productId\" WHERE sp.\"storeId\"='cmw0pwyvo000uokg2jrjm1p0c' AND sp.active ORDER BY sp.id LIMIT 5001",
+  "readPlan": {
+    "case": "ACHARNON-POST-UPGRADE-READ-CONCURRENCY-20261104",
+    "scope": "Short controlled production read-only SQL catalogue concurrency; not full POS/endurance certification",
+    "store": "cmw0pwyvo000uokg2jrjm1p0c",
+    "before": {
+      "at": "2026-11-03T22:25:28.505908Z",
+      "products": 3310,
+      "transactions": 0,
+      "shifts": 1,
+      "movements": 0,
+      "stockSum": "0.0000"
+    },
+    "phases": [
+      {
+        "parallel": 1,
+        "rounds": 5
+      },
+      {
+        "parallel": 3,
+        "rounds": 20
+      },
+      {
+        "parallel": 6,
+        "rounds": 25
+      }
+    ],
+    "intervalMs": 12000,
+    "capRows": 5001,
+    "stopOn": "Any query failure, SQL execution >1000ms, rows>5000, or observed connections>60/lock waiters>0",
+    "mutations": false
+  },
+  "results": [
+    {
+      "parallel": 1,
+      "round": 0,
+      "startUtc": "2026-11-03T22:27:46.230Z",
+      "endUtc": "2026-11-03T22:27:47.324Z",
+      "roundTripMs": 1094,
+      "sqlMs": 18.04,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 1,
+      "round": 1,
+      "startUtc": "2026-11-03T22:27:58.232Z",
+      "endUtc": "2026-11-03T22:27:59.140Z",
+      "roundTripMs": 908,
+      "sqlMs": 12.859,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 1,
+      "round": 2,
+      "startUtc": "2026-11-03T22:28:10.233Z",
+      "endUtc": "2026-11-03T22:28:11.252Z",
+      "roundTripMs": 1019,
+      "sqlMs": 17.516,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 1,
+      "round": 3,
+      "startUtc": "2026-11-03T22:28:22.234Z",
+      "endUtc": "2026-11-03T22:28:23.140Z",
+      "roundTripMs": 906,
+      "sqlMs": 13.342,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 1,
+      "round": 4,
+      "startUtc": "2026-11-03T22:28:34.234Z",
+      "endUtc": "2026-11-03T22:28:35.431Z",
+      "roundTripMs": 1197,
+      "sqlMs": 22.536,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 0,
+      "startUtc": "2026-11-03T22:28:46.235Z",
+      "endUtc": "2026-11-03T22:28:47.256Z",
+      "roundTripMs": 1021,
+      "sqlMs": 48.874,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 0,
+      "startUtc": "2026-11-03T22:28:46.235Z",
+      "endUtc": "2026-11-03T22:28:47.825Z",
+      "roundTripMs": 1590,
+      "sqlMs": 34.864,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 0,
+      "startUtc": "2026-11-03T22:28:46.235Z",
+      "endUtc": "2026-11-03T22:28:47.252Z",
+      "roundTripMs": 1017,
+      "sqlMs": 20.312,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 1,
+      "startUtc": "2026-11-03T22:28:58.235Z",
+      "endUtc": "2026-11-03T22:28:59.240Z",
+      "roundTripMs": 1005,
+      "sqlMs": 13.608,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 1,
+      "startUtc": "2026-11-03T22:28:58.235Z",
+      "endUtc": "2026-11-03T22:28:59.173Z",
+      "roundTripMs": 938,
+      "sqlMs": 16.395,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 1,
+      "startUtc": "2026-11-03T22:28:58.235Z",
+      "endUtc": "2026-11-03T22:28:59.159Z",
+      "roundTripMs": 924,
+      "sqlMs": 16.288,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 2,
+      "startUtc": "2026-11-03T22:29:10.236Z",
+      "endUtc": "2026-11-03T22:29:11.531Z",
+      "roundTripMs": 1295,
+      "sqlMs": 13.456,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 2,
+      "startUtc": "2026-11-03T22:29:10.236Z",
+      "endUtc": "2026-11-03T22:29:11.360Z",
+      "roundTripMs": 1124,
+      "sqlMs": 19.889,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 2,
+      "startUtc": "2026-11-03T22:29:10.236Z",
+      "endUtc": "2026-11-03T22:29:11.428Z",
+      "roundTripMs": 1192,
+      "sqlMs": 55.782,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 3,
+      "startUtc": "2026-11-03T22:29:22.238Z",
+      "endUtc": "2026-11-03T22:29:23.255Z",
+      "roundTripMs": 1017,
+      "sqlMs": 13.922,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 3,
+      "startUtc": "2026-11-03T22:29:22.238Z",
+      "endUtc": "2026-11-03T22:29:23.301Z",
+      "roundTripMs": 1063,
+      "sqlMs": 14.195,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 3,
+      "startUtc": "2026-11-03T22:29:22.238Z",
+      "endUtc": "2026-11-03T22:29:23.171Z",
+      "roundTripMs": 933,
+      "sqlMs": 16.829,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 4,
+      "startUtc": "2026-11-03T22:29:34.240Z",
+      "endUtc": "2026-11-03T22:29:35.543Z",
+      "roundTripMs": 1303,
+      "sqlMs": 13.679,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 4,
+      "startUtc": "2026-11-03T22:29:34.240Z",
+      "endUtc": "2026-11-03T22:29:35.445Z",
+      "roundTripMs": 1205,
+      "sqlMs": 14.637,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 4,
+      "startUtc": "2026-11-03T22:29:34.240Z",
+      "endUtc": "2026-11-03T22:29:35.760Z",
+      "roundTripMs": 1520,
+      "sqlMs": 13.603,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 5,
+      "startUtc": "2026-11-03T22:29:46.241Z",
+      "endUtc": "2026-11-03T22:29:47.163Z",
+      "roundTripMs": 922,
+      "sqlMs": 13.851,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 5,
+      "startUtc": "2026-11-03T22:29:46.241Z",
+      "endUtc": "2026-11-03T22:29:47.222Z",
+      "roundTripMs": 981,
+      "sqlMs": 16.898,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 5,
+      "startUtc": "2026-11-03T22:29:46.241Z",
+      "endUtc": "2026-11-03T22:29:47.066Z",
+      "roundTripMs": 825,
+      "sqlMs": 13.303,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 6,
+      "startUtc": "2026-11-03T22:29:58.242Z",
+      "endUtc": "2026-11-03T22:29:59.205Z",
+      "roundTripMs": 963,
+      "sqlMs": 14.734,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 6,
+      "startUtc": "2026-11-03T22:29:58.242Z",
+      "endUtc": "2026-11-03T22:30:00.815Z",
+      "roundTripMs": 2573,
+      "sqlMs": 14.705,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 6,
+      "startUtc": "2026-11-03T22:29:58.242Z",
+      "endUtc": "2026-11-03T22:29:59.169Z",
+      "roundTripMs": 927,
+      "sqlMs": 14.375,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 7,
+      "startUtc": "2026-11-03T22:30:10.243Z",
+      "endUtc": "2026-11-03T22:30:11.365Z",
+      "roundTripMs": 1122,
+      "sqlMs": 17.905,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 7,
+      "startUtc": "2026-11-03T22:30:10.244Z",
+      "endUtc": "2026-11-03T22:30:11.708Z",
+      "roundTripMs": 1464,
+      "sqlMs": 17.947,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 7,
+      "startUtc": "2026-11-03T22:30:10.244Z",
+      "endUtc": "2026-11-03T22:30:11.691Z",
+      "roundTripMs": 1447,
+      "sqlMs": 15.677,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 8,
+      "startUtc": "2026-11-03T22:30:22.244Z",
+      "endUtc": "2026-11-03T22:30:23.545Z",
+      "roundTripMs": 1301,
+      "sqlMs": 14.504,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 8,
+      "startUtc": "2026-11-03T22:30:22.244Z",
+      "endUtc": "2026-11-03T22:30:23.254Z",
+      "roundTripMs": 1010,
+      "sqlMs": 27.42,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 8,
+      "startUtc": "2026-11-03T22:30:22.244Z",
+      "endUtc": "2026-11-03T22:30:23.257Z",
+      "roundTripMs": 1013,
+      "sqlMs": 32.58,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 9,
+      "startUtc": "2026-11-03T22:30:34.246Z",
+      "endUtc": "2026-11-03T22:30:35.732Z",
+      "roundTripMs": 1486,
+      "sqlMs": 182.606,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 9,
+      "startUtc": "2026-11-03T22:30:34.246Z",
+      "endUtc": "2026-11-03T22:30:35.620Z",
+      "roundTripMs": 1374,
+      "sqlMs": 13.46,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 9,
+      "startUtc": "2026-11-03T22:30:34.246Z",
+      "endUtc": "2026-11-03T22:30:35.797Z",
+      "roundTripMs": 1551,
+      "sqlMs": 180.217,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 10,
+      "startUtc": "2026-11-03T22:30:46.247Z",
+      "endUtc": "2026-11-03T22:30:47.597Z",
+      "roundTripMs": 1350,
+      "sqlMs": 14.062,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 10,
+      "startUtc": "2026-11-03T22:30:46.247Z",
+      "endUtc": "2026-11-03T22:30:47.385Z",
+      "roundTripMs": 1138,
+      "sqlMs": 16.843,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 10,
+      "startUtc": "2026-11-03T22:30:46.247Z",
+      "endUtc": "2026-11-03T22:30:47.631Z",
+      "roundTripMs": 1384,
+      "sqlMs": 15.021,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 11,
+      "startUtc": "2026-11-03T22:30:58.249Z",
+      "endUtc": "2026-11-03T22:30:59.214Z",
+      "roundTripMs": 965,
+      "sqlMs": 13.763,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 11,
+      "startUtc": "2026-11-03T22:30:58.249Z",
+      "endUtc": "2026-11-03T22:31:00.484Z",
+      "roundTripMs": 2235,
+      "sqlMs": 14.606,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 11,
+      "startUtc": "2026-11-03T22:30:58.249Z",
+      "endUtc": "2026-11-03T22:30:59.489Z",
+      "roundTripMs": 1240,
+      "sqlMs": 14.412,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 12,
+      "startUtc": "2026-11-03T22:31:10.250Z",
+      "endUtc": "2026-11-03T22:31:11.264Z",
+      "roundTripMs": 1014,
+      "sqlMs": 14.035,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 12,
+      "startUtc": "2026-11-03T22:31:10.250Z",
+      "endUtc": "2026-11-03T22:31:11.233Z",
+      "roundTripMs": 983,
+      "sqlMs": 28.371,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 12,
+      "startUtc": "2026-11-03T22:31:10.250Z",
+      "endUtc": "2026-11-03T22:31:11.278Z",
+      "roundTripMs": 1028,
+      "sqlMs": 13.506,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 13,
+      "startUtc": "2026-11-03T22:31:22.252Z",
+      "endUtc": "2026-11-03T22:31:23.376Z",
+      "roundTripMs": 1124,
+      "sqlMs": 13.941,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 13,
+      "startUtc": "2026-11-03T22:31:22.252Z",
+      "endUtc": "2026-11-03T22:31:23.253Z",
+      "roundTripMs": 1001,
+      "sqlMs": 25.043,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 13,
+      "startUtc": "2026-11-03T22:31:22.252Z",
+      "endUtc": "2026-11-03T22:31:23.215Z",
+      "roundTripMs": 963,
+      "sqlMs": 19.126,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 14,
+      "startUtc": "2026-11-03T22:31:34.253Z",
+      "endUtc": "2026-11-03T22:31:35.301Z",
+      "roundTripMs": 1048,
+      "sqlMs": 15.259,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 14,
+      "startUtc": "2026-11-03T22:31:34.253Z",
+      "endUtc": "2026-11-03T22:31:35.223Z",
+      "roundTripMs": 970,
+      "sqlMs": 17.316,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 14,
+      "startUtc": "2026-11-03T22:31:34.253Z",
+      "endUtc": "2026-11-03T22:31:35.339Z",
+      "roundTripMs": 1086,
+      "sqlMs": 39.413,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 15,
+      "startUtc": "2026-11-03T22:31:46.254Z",
+      "endUtc": "2026-11-03T22:31:47.212Z",
+      "roundTripMs": 958,
+      "sqlMs": 13.235,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 15,
+      "startUtc": "2026-11-03T22:31:46.254Z",
+      "endUtc": "2026-11-03T22:31:47.142Z",
+      "roundTripMs": 888,
+      "sqlMs": 21.162,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 15,
+      "startUtc": "2026-11-03T22:31:46.254Z",
+      "endUtc": "2026-11-03T22:31:47.188Z",
+      "roundTripMs": 934,
+      "sqlMs": 14.594,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 16,
+      "startUtc": "2026-11-03T22:31:58.256Z",
+      "endUtc": "2026-11-03T22:31:59.177Z",
+      "roundTripMs": 921,
+      "sqlMs": 14.356,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 16,
+      "startUtc": "2026-11-03T22:31:58.256Z",
+      "endUtc": "2026-11-03T22:31:59.381Z",
+      "roundTripMs": 1125,
+      "sqlMs": 17.842,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 16,
+      "startUtc": "2026-11-03T22:31:58.256Z",
+      "endUtc": "2026-11-03T22:31:59.206Z",
+      "roundTripMs": 950,
+      "sqlMs": 14.476,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 17,
+      "startUtc": "2026-11-03T22:32:10.258Z",
+      "endUtc": "2026-11-03T22:32:11.208Z",
+      "roundTripMs": 950,
+      "sqlMs": 17.634,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 17,
+      "startUtc": "2026-11-03T22:32:10.258Z",
+      "endUtc": "2026-11-03T22:32:11.306Z",
+      "roundTripMs": 1048,
+      "sqlMs": 19.642,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 17,
+      "startUtc": "2026-11-03T22:32:10.258Z",
+      "endUtc": "2026-11-03T22:32:11.345Z",
+      "roundTripMs": 1087,
+      "sqlMs": 38.963,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 18,
+      "startUtc": "2026-11-03T22:32:22.259Z",
+      "endUtc": "2026-11-03T22:32:23.347Z",
+      "roundTripMs": 1088,
+      "sqlMs": 13.501,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 18,
+      "startUtc": "2026-11-03T22:32:22.259Z",
+      "endUtc": "2026-11-03T22:32:23.877Z",
+      "roundTripMs": 1618,
+      "sqlMs": 19,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 18,
+      "startUtc": "2026-11-03T22:32:22.259Z",
+      "endUtc": "2026-11-03T22:32:23.596Z",
+      "roundTripMs": 1337,
+      "sqlMs": 21.843,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 19,
+      "startUtc": "2026-11-03T22:32:34.259Z",
+      "endUtc": "2026-11-03T22:32:35.287Z",
+      "roundTripMs": 1028,
+      "sqlMs": 16.578,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 19,
+      "startUtc": "2026-11-03T22:32:34.259Z",
+      "endUtc": "2026-11-03T22:32:35.473Z",
+      "roundTripMs": 1214,
+      "sqlMs": 25.211,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 3,
+      "round": 19,
+      "startUtc": "2026-11-03T22:32:34.259Z",
+      "endUtc": "2026-11-03T22:32:35.352Z",
+      "roundTripMs": 1093,
+      "sqlMs": 15.427,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 0,
+      "startUtc": "2026-11-03T22:32:46.261Z",
+      "endUtc": "2026-11-03T22:32:47.333Z",
+      "roundTripMs": 1072,
+      "sqlMs": 88.277,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 0,
+      "startUtc": "2026-11-03T22:32:46.261Z",
+      "endUtc": "2026-11-03T22:32:47.361Z",
+      "roundTripMs": 1100,
+      "sqlMs": 92.474,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 0,
+      "startUtc": "2026-11-03T22:32:46.261Z",
+      "endUtc": "2026-11-03T22:32:47.150Z",
+      "roundTripMs": 889,
+      "sqlMs": 13.884,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 0,
+      "startUtc": "2026-11-03T22:32:46.261Z",
+      "endUtc": "2026-11-03T22:32:47.351Z",
+      "roundTripMs": 1090,
+      "sqlMs": 91.802,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 0,
+      "startUtc": "2026-11-03T22:32:46.261Z",
+      "endUtc": "2026-11-03T22:32:47.451Z",
+      "roundTripMs": 1190,
+      "sqlMs": 64.264,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 0,
+      "startUtc": "2026-11-03T22:32:46.261Z",
+      "endUtc": "2026-11-03T22:32:47.160Z",
+      "roundTripMs": 899,
+      "sqlMs": 13.923,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 1,
+      "startUtc": "2026-11-03T22:32:58.262Z",
+      "endUtc": "2026-11-03T22:32:59.331Z",
+      "roundTripMs": 1069,
+      "sqlMs": 94.608,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 1,
+      "startUtc": "2026-11-03T22:32:58.262Z",
+      "endUtc": "2026-11-03T22:32:59.445Z",
+      "roundTripMs": 1183,
+      "sqlMs": 61.071,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 1,
+      "startUtc": "2026-11-03T22:32:58.262Z",
+      "endUtc": "2026-11-03T22:32:59.348Z",
+      "roundTripMs": 1086,
+      "sqlMs": 14.974,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 1,
+      "startUtc": "2026-11-03T22:32:58.262Z",
+      "endUtc": "2026-11-03T22:32:59.237Z",
+      "roundTripMs": 975,
+      "sqlMs": 16.117,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 1,
+      "startUtc": "2026-11-03T22:32:58.262Z",
+      "endUtc": "2026-11-03T22:32:59.516Z",
+      "roundTripMs": 1254,
+      "sqlMs": 13.048,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 1,
+      "startUtc": "2026-11-03T22:32:58.262Z",
+      "endUtc": "2026-11-03T22:32:59.251Z",
+      "roundTripMs": 989,
+      "sqlMs": 17.199,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 2,
+      "startUtc": "2026-11-03T22:33:10.263Z",
+      "endUtc": "2026-11-03T22:33:11.621Z",
+      "roundTripMs": 1358,
+      "sqlMs": 13.896,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 2,
+      "startUtc": "2026-11-03T22:33:10.263Z",
+      "endUtc": "2026-11-03T22:33:11.283Z",
+      "roundTripMs": 1020,
+      "sqlMs": 13.596,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 2,
+      "startUtc": "2026-11-03T22:33:10.263Z",
+      "endUtc": "2026-11-03T22:33:11.465Z",
+      "roundTripMs": 1202,
+      "sqlMs": 15.852,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 2,
+      "startUtc": "2026-11-03T22:33:10.263Z",
+      "endUtc": "2026-11-03T22:33:11.442Z",
+      "roundTripMs": 1179,
+      "sqlMs": 83.058,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 2,
+      "startUtc": "2026-11-03T22:33:10.263Z",
+      "endUtc": "2026-11-03T22:33:11.197Z",
+      "roundTripMs": 934,
+      "sqlMs": 14.933,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 2,
+      "startUtc": "2026-11-03T22:33:10.263Z",
+      "endUtc": "2026-11-03T22:33:11.347Z",
+      "roundTripMs": 1084,
+      "sqlMs": 16.418,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 3,
+      "startUtc": "2026-11-03T22:33:22.263Z",
+      "endUtc": "2026-11-03T22:33:23.154Z",
+      "roundTripMs": 891,
+      "sqlMs": 15.539,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 3,
+      "startUtc": "2026-11-03T22:33:22.263Z",
+      "endUtc": "2026-11-03T22:33:23.462Z",
+      "roundTripMs": 1199,
+      "sqlMs": 13.18,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 3,
+      "startUtc": "2026-11-03T22:33:22.263Z",
+      "endUtc": "2026-11-03T22:33:23.421Z",
+      "roundTripMs": 1158,
+      "sqlMs": 151.22,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 3,
+      "startUtc": "2026-11-03T22:33:22.263Z",
+      "endUtc": "2026-11-03T22:33:23.339Z",
+      "roundTripMs": 1076,
+      "sqlMs": 159.376,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 3,
+      "startUtc": "2026-11-03T22:33:22.263Z",
+      "endUtc": "2026-11-03T22:33:23.337Z",
+      "roundTripMs": 1074,
+      "sqlMs": 67.064,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 3,
+      "startUtc": "2026-11-03T22:33:22.263Z",
+      "endUtc": "2026-11-03T22:33:23.339Z",
+      "roundTripMs": 1076,
+      "sqlMs": 103.846,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 4,
+      "startUtc": "2026-11-03T22:33:34.264Z",
+      "endUtc": "2026-11-03T22:33:35.176Z",
+      "roundTripMs": 912,
+      "sqlMs": 12.938,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 4,
+      "startUtc": "2026-11-03T22:33:34.264Z",
+      "endUtc": "2026-11-03T22:33:36.291Z",
+      "roundTripMs": 2027,
+      "sqlMs": 17.879,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 4,
+      "startUtc": "2026-11-03T22:33:34.264Z",
+      "endUtc": "2026-11-03T22:33:35.250Z",
+      "roundTripMs": 986,
+      "sqlMs": 13.359,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 4,
+      "startUtc": "2026-11-03T22:33:34.264Z",
+      "endUtc": "2026-11-03T22:33:35.169Z",
+      "roundTripMs": 905,
+      "sqlMs": 13.663,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 4,
+      "startUtc": "2026-11-03T22:33:34.264Z",
+      "endUtc": "2026-11-03T22:33:35.489Z",
+      "roundTripMs": 1225,
+      "sqlMs": 13.733,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 4,
+      "startUtc": "2026-11-03T22:33:34.264Z",
+      "endUtc": "2026-11-03T22:33:35.546Z",
+      "roundTripMs": 1282,
+      "sqlMs": 19.852,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 5,
+      "startUtc": "2026-11-03T22:33:46.266Z",
+      "endUtc": "2026-11-03T22:33:47.537Z",
+      "roundTripMs": 1271,
+      "sqlMs": 103.433,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 5,
+      "startUtc": "2026-11-03T22:33:46.266Z",
+      "endUtc": "2026-11-03T22:33:47.556Z",
+      "roundTripMs": 1290,
+      "sqlMs": 101.003,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 5,
+      "startUtc": "2026-11-03T22:33:46.266Z",
+      "endUtc": "2026-11-03T22:33:47.278Z",
+      "roundTripMs": 1012,
+      "sqlMs": 17.948,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 5,
+      "startUtc": "2026-11-03T22:33:46.266Z",
+      "endUtc": "2026-11-03T22:33:47.179Z",
+      "roundTripMs": 913,
+      "sqlMs": 15.343,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 5,
+      "startUtc": "2026-11-03T22:33:46.266Z",
+      "endUtc": "2026-11-03T22:33:47.267Z",
+      "roundTripMs": 1001,
+      "sqlMs": 19.483,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 5,
+      "startUtc": "2026-11-03T22:33:46.266Z",
+      "endUtc": "2026-11-03T22:33:47.520Z",
+      "roundTripMs": 1254,
+      "sqlMs": 34.586,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 6,
+      "startUtc": "2026-11-03T22:33:58.266Z",
+      "endUtc": "2026-11-03T22:33:59.191Z",
+      "roundTripMs": 925,
+      "sqlMs": 14.457,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 6,
+      "startUtc": "2026-11-03T22:33:58.266Z",
+      "endUtc": "2026-11-03T22:33:59.373Z",
+      "roundTripMs": 1107,
+      "sqlMs": 14.494,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 6,
+      "startUtc": "2026-11-03T22:33:58.266Z",
+      "endUtc": "2026-11-03T22:33:59.333Z",
+      "roundTripMs": 1067,
+      "sqlMs": 16.644,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 6,
+      "startUtc": "2026-11-03T22:33:58.266Z",
+      "endUtc": "2026-11-03T22:33:59.234Z",
+      "roundTripMs": 968,
+      "sqlMs": 74.584,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 6,
+      "startUtc": "2026-11-03T22:33:58.266Z",
+      "endUtc": "2026-11-03T22:33:59.843Z",
+      "roundTripMs": 1577,
+      "sqlMs": 20.528,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 6,
+      "startUtc": "2026-11-03T22:33:58.266Z",
+      "endUtc": "2026-11-03T22:33:59.429Z",
+      "roundTripMs": 1163,
+      "sqlMs": 13.186,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 7,
+      "startUtc": "2026-11-03T22:34:10.266Z",
+      "endUtc": "2026-11-03T22:34:11.361Z",
+      "roundTripMs": 1095,
+      "sqlMs": 13.898,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 7,
+      "startUtc": "2026-11-03T22:34:10.266Z",
+      "endUtc": "2026-11-03T22:34:11.239Z",
+      "roundTripMs": 973,
+      "sqlMs": 33.146,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 7,
+      "startUtc": "2026-11-03T22:34:10.266Z",
+      "endUtc": "2026-11-03T22:34:11.489Z",
+      "roundTripMs": 1223,
+      "sqlMs": 15.649,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 7,
+      "startUtc": "2026-11-03T22:34:10.266Z",
+      "endUtc": "2026-11-03T22:34:11.439Z",
+      "roundTripMs": 1173,
+      "sqlMs": 74.793,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 7,
+      "startUtc": "2026-11-03T22:34:10.266Z",
+      "endUtc": "2026-11-03T22:34:11.340Z",
+      "roundTripMs": 1074,
+      "sqlMs": 64.823,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 7,
+      "startUtc": "2026-11-03T22:34:10.266Z",
+      "endUtc": "2026-11-03T22:34:11.264Z",
+      "roundTripMs": 998,
+      "sqlMs": 13.62,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 8,
+      "startUtc": "2026-11-03T22:34:22.267Z",
+      "endUtc": "2026-11-03T22:34:23.181Z",
+      "roundTripMs": 914,
+      "sqlMs": 16.274,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 8,
+      "startUtc": "2026-11-03T22:34:22.267Z",
+      "endUtc": "2026-11-03T22:34:23.346Z",
+      "roundTripMs": 1079,
+      "sqlMs": 28.924,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 8,
+      "startUtc": "2026-11-03T22:34:22.267Z",
+      "endUtc": "2026-11-03T22:34:23.492Z",
+      "roundTripMs": 1225,
+      "sqlMs": 14.093,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 8,
+      "startUtc": "2026-11-03T22:34:22.267Z",
+      "endUtc": "2026-11-03T22:34:23.251Z",
+      "roundTripMs": 984,
+      "sqlMs": 53.448,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 8,
+      "startUtc": "2026-11-03T22:34:22.267Z",
+      "endUtc": "2026-11-03T22:34:23.192Z",
+      "roundTripMs": 925,
+      "sqlMs": 12.87,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 8,
+      "startUtc": "2026-11-03T22:34:22.267Z",
+      "endUtc": "2026-11-03T22:34:23.492Z",
+      "roundTripMs": 1225,
+      "sqlMs": 14.051,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 9,
+      "startUtc": "2026-11-03T22:34:34.269Z",
+      "endUtc": "2026-11-03T22:34:35.258Z",
+      "roundTripMs": 989,
+      "sqlMs": 14.907,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 9,
+      "startUtc": "2026-11-03T22:34:34.269Z",
+      "endUtc": "2026-11-03T22:34:35.638Z",
+      "roundTripMs": 1369,
+      "sqlMs": 53.494,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 9,
+      "startUtc": "2026-11-03T22:34:34.269Z",
+      "endUtc": "2026-11-03T22:34:35.447Z",
+      "roundTripMs": 1178,
+      "sqlMs": 68.058,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 9,
+      "startUtc": "2026-11-03T22:34:34.269Z",
+      "endUtc": "2026-11-03T22:34:35.452Z",
+      "roundTripMs": 1183,
+      "sqlMs": 102.114,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 9,
+      "startUtc": "2026-11-03T22:34:34.269Z",
+      "endUtc": "2026-11-03T22:34:35.253Z",
+      "roundTripMs": 984,
+      "sqlMs": 61.845,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 9,
+      "startUtc": "2026-11-03T22:34:34.269Z",
+      "endUtc": "2026-11-03T22:34:35.339Z",
+      "roundTripMs": 1070,
+      "sqlMs": 105.603,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 10,
+      "startUtc": "2026-11-03T22:34:46.271Z",
+      "endUtc": "2026-11-03T22:34:47.226Z",
+      "roundTripMs": 955,
+      "sqlMs": 14.11,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 10,
+      "startUtc": "2026-11-03T22:34:46.271Z",
+      "endUtc": "2026-11-03T22:34:47.379Z",
+      "roundTripMs": 1108,
+      "sqlMs": 14.986,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 10,
+      "startUtc": "2026-11-03T22:34:46.271Z",
+      "endUtc": "2026-11-03T22:34:47.390Z",
+      "roundTripMs": 1119,
+      "sqlMs": 15.036,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 10,
+      "startUtc": "2026-11-03T22:34:46.271Z",
+      "endUtc": "2026-11-03T22:34:47.270Z",
+      "roundTripMs": 999,
+      "sqlMs": 14.801,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 10,
+      "startUtc": "2026-11-03T22:34:46.271Z",
+      "endUtc": "2026-11-03T22:34:47.834Z",
+      "roundTripMs": 1563,
+      "sqlMs": 14.539,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 10,
+      "startUtc": "2026-11-03T22:34:46.271Z",
+      "endUtc": "2026-11-03T22:34:47.725Z",
+      "roundTripMs": 1454,
+      "sqlMs": 14.255,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 11,
+      "startUtc": "2026-11-03T22:34:58.271Z",
+      "endUtc": "2026-11-03T22:34:59.318Z",
+      "roundTripMs": 1047,
+      "sqlMs": 95.466,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 11,
+      "startUtc": "2026-11-03T22:34:58.271Z",
+      "endUtc": "2026-11-03T22:34:59.423Z",
+      "roundTripMs": 1152,
+      "sqlMs": 15.638,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 11,
+      "startUtc": "2026-11-03T22:34:58.271Z",
+      "endUtc": "2026-11-03T22:34:59.258Z",
+      "roundTripMs": 987,
+      "sqlMs": 94.307,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 11,
+      "startUtc": "2026-11-03T22:34:58.271Z",
+      "endUtc": "2026-11-03T22:34:59.440Z",
+      "roundTripMs": 1169,
+      "sqlMs": 95.888,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 11,
+      "startUtc": "2026-11-03T22:34:58.271Z",
+      "endUtc": "2026-11-03T22:34:59.339Z",
+      "roundTripMs": 1068,
+      "sqlMs": 186.633,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 11,
+      "startUtc": "2026-11-03T22:34:58.271Z",
+      "endUtc": "2026-11-03T22:34:59.442Z",
+      "roundTripMs": 1171,
+      "sqlMs": 96.794,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 12,
+      "startUtc": "2026-11-03T22:35:10.272Z",
+      "endUtc": "2026-11-03T22:35:11.536Z",
+      "roundTripMs": 1264,
+      "sqlMs": 80.974,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 12,
+      "startUtc": "2026-11-03T22:35:10.272Z",
+      "endUtc": "2026-11-03T22:35:11.242Z",
+      "roundTripMs": 970,
+      "sqlMs": 19.997,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 12,
+      "startUtc": "2026-11-03T22:35:10.272Z",
+      "endUtc": "2026-11-03T22:35:11.560Z",
+      "roundTripMs": 1288,
+      "sqlMs": 88.03,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 12,
+      "startUtc": "2026-11-03T22:35:10.272Z",
+      "endUtc": "2026-11-03T22:35:11.346Z",
+      "roundTripMs": 1074,
+      "sqlMs": 14.806,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 12,
+      "startUtc": "2026-11-03T22:35:10.272Z",
+      "endUtc": "2026-11-03T22:35:11.523Z",
+      "roundTripMs": 1251,
+      "sqlMs": 14.474,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 12,
+      "startUtc": "2026-11-03T22:35:10.272Z",
+      "endUtc": "2026-11-03T22:35:11.353Z",
+      "roundTripMs": 1081,
+      "sqlMs": 98.013,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 13,
+      "startUtc": "2026-11-03T22:35:22.271Z",
+      "endUtc": "2026-11-03T22:35:23.348Z",
+      "roundTripMs": 1077,
+      "sqlMs": 15.381,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 13,
+      "startUtc": "2026-11-03T22:35:22.272Z",
+      "endUtc": "2026-11-03T22:35:23.349Z",
+      "roundTripMs": 1077,
+      "sqlMs": 14.248,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 13,
+      "startUtc": "2026-11-03T22:35:22.272Z",
+      "endUtc": "2026-11-03T22:35:23.436Z",
+      "roundTripMs": 1164,
+      "sqlMs": 91.237,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 13,
+      "startUtc": "2026-11-03T22:35:22.272Z",
+      "endUtc": "2026-11-03T22:35:23.224Z",
+      "roundTripMs": 952,
+      "sqlMs": 15.418,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 13,
+      "startUtc": "2026-11-03T22:35:22.272Z",
+      "endUtc": "2026-11-03T22:35:23.585Z",
+      "roundTripMs": 1313,
+      "sqlMs": 22.475,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 13,
+      "startUtc": "2026-11-03T22:35:22.272Z",
+      "endUtc": "2026-11-03T22:35:23.258Z",
+      "roundTripMs": 986,
+      "sqlMs": 14.304,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 14,
+      "startUtc": "2026-11-03T22:35:34.273Z",
+      "endUtc": "2026-11-03T22:35:35.584Z",
+      "roundTripMs": 1311,
+      "sqlMs": 13.459,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 14,
+      "startUtc": "2026-11-03T22:35:34.273Z",
+      "endUtc": "2026-11-03T22:35:35.341Z",
+      "roundTripMs": 1068,
+      "sqlMs": 82.287,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 14,
+      "startUtc": "2026-11-03T22:35:34.273Z",
+      "endUtc": "2026-11-03T22:35:35.262Z",
+      "roundTripMs": 989,
+      "sqlMs": 14.176,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 14,
+      "startUtc": "2026-11-03T22:35:34.273Z",
+      "endUtc": "2026-11-03T22:35:35.509Z",
+      "roundTripMs": 1236,
+      "sqlMs": 17.054,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 14,
+      "startUtc": "2026-11-03T22:35:34.273Z",
+      "endUtc": "2026-11-03T22:35:35.441Z",
+      "roundTripMs": 1168,
+      "sqlMs": 92.25,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 14,
+      "startUtc": "2026-11-03T22:35:34.273Z",
+      "endUtc": "2026-11-03T22:35:35.250Z",
+      "roundTripMs": 977,
+      "sqlMs": 13.555,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 15,
+      "startUtc": "2026-11-03T22:35:46.274Z",
+      "endUtc": "2026-11-03T22:35:47.242Z",
+      "roundTripMs": 968,
+      "sqlMs": 58.112,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 15,
+      "startUtc": "2026-11-03T22:35:46.274Z",
+      "endUtc": "2026-11-03T22:35:47.437Z",
+      "roundTripMs": 1163,
+      "sqlMs": 99.998,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 15,
+      "startUtc": "2026-11-03T22:35:46.274Z",
+      "endUtc": "2026-11-03T22:35:47.258Z",
+      "roundTripMs": 984,
+      "sqlMs": 14.814,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 15,
+      "startUtc": "2026-11-03T22:35:46.274Z",
+      "endUtc": "2026-11-03T22:35:47.336Z",
+      "roundTripMs": 1062,
+      "sqlMs": 99.107,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 15,
+      "startUtc": "2026-11-03T22:35:46.274Z",
+      "endUtc": "2026-11-03T22:35:47.595Z",
+      "roundTripMs": 1321,
+      "sqlMs": 16.008,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 15,
+      "startUtc": "2026-11-03T22:35:46.274Z",
+      "endUtc": "2026-11-03T22:35:47.541Z",
+      "roundTripMs": 1267,
+      "sqlMs": 63.94,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 16,
+      "startUtc": "2026-11-03T22:35:58.275Z",
+      "endUtc": "2026-11-03T22:35:59.488Z",
+      "roundTripMs": 1213,
+      "sqlMs": 16.706,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 16,
+      "startUtc": "2026-11-03T22:35:58.275Z",
+      "endUtc": "2026-11-03T22:35:59.232Z",
+      "roundTripMs": 957,
+      "sqlMs": 64.656,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 16,
+      "startUtc": "2026-11-03T22:35:58.275Z",
+      "endUtc": "2026-11-03T22:35:59.227Z",
+      "roundTripMs": 952,
+      "sqlMs": 66.854,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 16,
+      "startUtc": "2026-11-03T22:35:58.275Z",
+      "endUtc": "2026-11-03T22:35:59.343Z",
+      "roundTripMs": 1068,
+      "sqlMs": 92.266,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 16,
+      "startUtc": "2026-11-03T22:35:58.275Z",
+      "endUtc": "2026-11-03T22:35:59.452Z",
+      "roundTripMs": 1177,
+      "sqlMs": 69.699,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 16,
+      "startUtc": "2026-11-03T22:35:58.275Z",
+      "endUtc": "2026-11-03T22:35:59.604Z",
+      "roundTripMs": 1329,
+      "sqlMs": 14.566,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 17,
+      "startUtc": "2026-11-03T22:36:10.277Z",
+      "endUtc": "2026-11-03T22:36:11.321Z",
+      "roundTripMs": 1044,
+      "sqlMs": 15.069,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 17,
+      "startUtc": "2026-11-03T22:36:10.277Z",
+      "endUtc": "2026-11-03T22:36:11.322Z",
+      "roundTripMs": 1045,
+      "sqlMs": 42.909,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 17,
+      "startUtc": "2026-11-03T22:36:10.277Z",
+      "endUtc": "2026-11-03T22:36:11.343Z",
+      "roundTripMs": 1066,
+      "sqlMs": 103.507,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 17,
+      "startUtc": "2026-11-03T22:36:10.277Z",
+      "endUtc": "2026-11-03T22:36:11.479Z",
+      "roundTripMs": 1202,
+      "sqlMs": 13.846,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 17,
+      "startUtc": "2026-11-03T22:36:10.277Z",
+      "endUtc": "2026-11-03T22:36:11.246Z",
+      "roundTripMs": 969,
+      "sqlMs": 45.652,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 17,
+      "startUtc": "2026-11-03T22:36:10.277Z",
+      "endUtc": "2026-11-03T22:36:11.505Z",
+      "roundTripMs": 1228,
+      "sqlMs": 13.689,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 18,
+      "startUtc": "2026-11-03T22:36:22.279Z",
+      "endUtc": "2026-11-03T22:36:23.370Z",
+      "roundTripMs": 1091,
+      "sqlMs": 14.797,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 18,
+      "startUtc": "2026-11-03T22:36:22.279Z",
+      "endUtc": "2026-11-03T22:36:23.241Z",
+      "roundTripMs": 962,
+      "sqlMs": 69.241,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 18,
+      "startUtc": "2026-11-03T22:36:22.279Z",
+      "endUtc": "2026-11-03T22:36:23.463Z",
+      "roundTripMs": 1184,
+      "sqlMs": 13.66,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 18,
+      "startUtc": "2026-11-03T22:36:22.279Z",
+      "endUtc": "2026-11-03T22:36:23.354Z",
+      "roundTripMs": 1075,
+      "sqlMs": 17.844,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 18,
+      "startUtc": "2026-11-03T22:36:22.279Z",
+      "endUtc": "2026-11-03T22:36:23.171Z",
+      "roundTripMs": 892,
+      "sqlMs": 14.038,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 18,
+      "startUtc": "2026-11-03T22:36:22.279Z",
+      "endUtc": "2026-11-03T22:36:23.258Z",
+      "roundTripMs": 979,
+      "sqlMs": 15.494,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 19,
+      "startUtc": "2026-11-03T22:36:34.279Z",
+      "endUtc": "2026-11-03T22:36:35.342Z",
+      "roundTripMs": 1063,
+      "sqlMs": 71.581,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 19,
+      "startUtc": "2026-11-03T22:36:34.280Z",
+      "endUtc": "2026-11-03T22:36:35.504Z",
+      "roundTripMs": 1224,
+      "sqlMs": 12.96,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 19,
+      "startUtc": "2026-11-03T22:36:34.280Z",
+      "endUtc": "2026-11-03T22:36:35.226Z",
+      "roundTripMs": 946,
+      "sqlMs": 91.798,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 19,
+      "startUtc": "2026-11-03T22:36:34.280Z",
+      "endUtc": "2026-11-03T22:36:35.359Z",
+      "roundTripMs": 1079,
+      "sqlMs": 72.306,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 19,
+      "startUtc": "2026-11-03T22:36:34.280Z",
+      "endUtc": "2026-11-03T22:36:35.241Z",
+      "roundTripMs": 961,
+      "sqlMs": 89.303,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 19,
+      "startUtc": "2026-11-03T22:36:34.280Z",
+      "endUtc": "2026-11-03T22:36:35.352Z",
+      "roundTripMs": 1072,
+      "sqlMs": 14.416,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 20,
+      "startUtc": "2026-11-03T22:36:46.280Z",
+      "endUtc": "2026-11-03T22:36:47.347Z",
+      "roundTripMs": 1067,
+      "sqlMs": 15.638,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 20,
+      "startUtc": "2026-11-03T22:36:46.280Z",
+      "endUtc": "2026-11-03T22:36:47.305Z",
+      "roundTripMs": 1025,
+      "sqlMs": 13.74,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 20,
+      "startUtc": "2026-11-03T22:36:46.280Z",
+      "endUtc": "2026-11-03T22:36:47.249Z",
+      "roundTripMs": 969,
+      "sqlMs": 13.992,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 20,
+      "startUtc": "2026-11-03T22:36:46.280Z",
+      "endUtc": "2026-11-03T22:36:47.440Z",
+      "roundTripMs": 1160,
+      "sqlMs": 94.601,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 20,
+      "startUtc": "2026-11-03T22:36:46.280Z",
+      "endUtc": "2026-11-03T22:36:47.570Z",
+      "roundTripMs": 1290,
+      "sqlMs": 67.367,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 20,
+      "startUtc": "2026-11-03T22:36:46.280Z",
+      "endUtc": "2026-11-03T22:36:47.448Z",
+      "roundTripMs": 1168,
+      "sqlMs": 14.771,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 21,
+      "startUtc": "2026-11-03T22:36:58.281Z",
+      "endUtc": "2026-11-03T22:36:59.455Z",
+      "roundTripMs": 1174,
+      "sqlMs": 92.194,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 21,
+      "startUtc": "2026-11-03T22:36:58.281Z",
+      "endUtc": "2026-11-03T22:36:59.352Z",
+      "roundTripMs": 1071,
+      "sqlMs": 105.724,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 21,
+      "startUtc": "2026-11-03T22:36:58.281Z",
+      "endUtc": "2026-11-03T22:36:59.246Z",
+      "roundTripMs": 965,
+      "sqlMs": 46.411,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 21,
+      "startUtc": "2026-11-03T22:36:58.281Z",
+      "endUtc": "2026-11-03T22:36:59.486Z",
+      "roundTripMs": 1205,
+      "sqlMs": 13.637,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 21,
+      "startUtc": "2026-11-03T22:36:58.281Z",
+      "endUtc": "2026-11-03T22:36:59.352Z",
+      "roundTripMs": 1071,
+      "sqlMs": 139.801,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 21,
+      "startUtc": "2026-11-03T22:36:58.281Z",
+      "endUtc": "2026-11-03T22:36:59.316Z",
+      "roundTripMs": 1035,
+      "sqlMs": 50.841,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 22,
+      "startUtc": "2026-11-03T22:37:10.282Z",
+      "endUtc": "2026-11-03T22:37:11.453Z",
+      "roundTripMs": 1171,
+      "sqlMs": 117.439,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 22,
+      "startUtc": "2026-11-03T22:37:10.282Z",
+      "endUtc": "2026-11-03T22:37:11.241Z",
+      "roundTripMs": 959,
+      "sqlMs": 86.347,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 22,
+      "startUtc": "2026-11-03T22:37:10.282Z",
+      "endUtc": "2026-11-03T22:37:11.553Z",
+      "roundTripMs": 1271,
+      "sqlMs": 18.951,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 22,
+      "startUtc": "2026-11-03T22:37:10.282Z",
+      "endUtc": "2026-11-03T22:37:11.611Z",
+      "roundTripMs": 1329,
+      "sqlMs": 183.507,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 22,
+      "startUtc": "2026-11-03T22:37:10.282Z",
+      "endUtc": "2026-11-03T22:37:11.451Z",
+      "roundTripMs": 1169,
+      "sqlMs": 116.98,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 22,
+      "startUtc": "2026-11-03T22:37:10.282Z",
+      "endUtc": "2026-11-03T22:37:11.541Z",
+      "roundTripMs": 1259,
+      "sqlMs": 181.135,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 23,
+      "startUtc": "2026-11-03T22:37:22.283Z",
+      "endUtc": "2026-11-03T22:37:23.440Z",
+      "roundTripMs": 1157,
+      "sqlMs": 16.671,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 23,
+      "startUtc": "2026-11-03T22:37:22.283Z",
+      "endUtc": "2026-11-03T22:37:24.463Z",
+      "roundTripMs": 2180,
+      "sqlMs": 13.4,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 23,
+      "startUtc": "2026-11-03T22:37:22.283Z",
+      "endUtc": "2026-11-03T22:37:23.562Z",
+      "roundTripMs": 1279,
+      "sqlMs": 14.437,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 23,
+      "startUtc": "2026-11-03T22:37:22.283Z",
+      "endUtc": "2026-11-03T22:37:23.192Z",
+      "roundTripMs": 909,
+      "sqlMs": 13.661,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 23,
+      "startUtc": "2026-11-03T22:37:22.283Z",
+      "endUtc": "2026-11-03T22:37:23.621Z",
+      "roundTripMs": 1339,
+      "sqlMs": 59.403,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 23,
+      "startUtc": "2026-11-03T22:37:22.283Z",
+      "endUtc": "2026-11-03T22:37:23.445Z",
+      "roundTripMs": 1162,
+      "sqlMs": 54.902,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 24,
+      "startUtc": "2026-11-03T22:37:34.284Z",
+      "endUtc": "2026-11-03T22:37:35.186Z",
+      "roundTripMs": 902,
+      "sqlMs": 14.181,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 24,
+      "startUtc": "2026-11-03T22:37:34.284Z",
+      "endUtc": "2026-11-03T22:37:35.432Z",
+      "roundTripMs": 1148,
+      "sqlMs": 140.324,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 24,
+      "startUtc": "2026-11-03T22:37:34.284Z",
+      "endUtc": "2026-11-03T22:37:35.349Z",
+      "roundTripMs": 1065,
+      "sqlMs": 49.047,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 24,
+      "startUtc": "2026-11-03T22:37:34.284Z",
+      "endUtc": "2026-11-03T22:37:35.541Z",
+      "roundTripMs": 1257,
+      "sqlMs": 45.57,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 24,
+      "startUtc": "2026-11-03T22:37:34.284Z",
+      "endUtc": "2026-11-03T22:37:35.476Z",
+      "roundTripMs": 1192,
+      "sqlMs": 104.932,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    },
+    {
+      "parallel": 6,
+      "round": 24,
+      "startUtc": "2026-11-03T22:37:34.284Z",
+      "endUtc": "2026-11-03T22:37:35.212Z",
+      "roundTripMs": 928,
+      "sqlMs": 12.974,
+      "rows": 3310,
+      "sharedRead": 0,
+      "sharedHit": 1307,
+      "tempWritten": 0
+    }
+  ],
+  "monitorSamples": [
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:27:48.205387Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:28:36.211836Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:28:48.649298Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:29:48.268798Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:30:48.473287Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:31:48.264988Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:32:36.330368Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:32:48.369429Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:33:48.274189Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:34:48.612422Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:35:48.394887Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:36:48.705686Z"
+    },
+    {
+      "active_over_15s": 0,
+      "connections": 20,
+      "lock_waiters": 0,
+      "observed_at": "2026-11-03T22:37:36.398834Z"
+    }
+  ],
+  "metrics": {
+    "db": {
+      "resourceId": "dpg-d9isee7avr4c73bdglog-a",
+      "timeRange": {
+        "start": "2026-11-03T22:27:46.23Z",
+        "end": "2026-11-03T22:37:46.285Z"
+      },
+      "metrics": [
+        {
+          "type": "cpu_usage",
+          "data": [
+            {
+              "labels": [],
+              "unit": "cpu",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 0.034155235
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0.052273966
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0.042844366
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0.034194235
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0.053164765
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0.0441902
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 0.026342267
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0.10311737
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0.0309772
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0.059120532
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 0.0576918
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0.0562999
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0.08684743
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0.0391845
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0.0696358
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0.044204768
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0.071674064
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0.0300279
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0.0540513
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0.047298033
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0.047298033
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "cpu_limit",
+          "data": [
+            {
+              "labels": [
+                {
+                  "field": "resource",
+                  "value": "dpg-d9isee7avr4c73bdglog-a"
+                }
+              ],
+              "unit": "cpu",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0.5
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "memory_usage",
+          "data": [
+            {
+              "labels": [
+                {
+                  "field": "resource",
+                  "value": "dpg-d9isee7avr4c73bdglog-a"
+                }
+              ],
+              "unit": "bytes",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 269774850
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 276008960
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 270962700
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 264495100
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 271224830
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 267694080
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 264142850
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 247566340
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 252862460
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 254730240
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 255606780
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 369709060
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 369508350
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 371589120
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 371626000
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 366149630
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 362319870
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 348839940
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 353636350
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 341606400
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 341606400
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "memory_limit",
+          "data": [
+            {
+              "labels": [
+                {
+                  "field": "resource",
+                  "value": "dpg-d9isee7avr4c73bdglog-a"
+                }
+              ],
+              "unit": "bytes",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 1073741800
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 1073741800
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "active_connections",
+          "data": [
+            {
+              "labels": [
+                {
+                  "field": "resource",
+                  "value": "dpg-d9isee7avr4c73bdglog-a"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 10
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "app": {
+      "resourceId": "srv-d9isenfavr4c73bdh52g",
+      "timeRange": {
+        "start": "2026-11-03T22:27:46.23Z",
+        "end": "2026-11-03T22:37:46.285Z"
+      },
+      "metrics": [
+        {
+          "type": "cpu_usage",
+          "data": [
+            {
+              "labels": [],
+              "unit": "cpu",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 0.07569507
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0.069903634
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0.032759935
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0.043706466
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0.026863
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0.043727066
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 0.051772233
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0.073392436
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0.052031666
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0.0588619
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 0.061085533
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0.0682192
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0.054411765
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0.0376245
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0.0233571
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0.048997335
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0.0278147
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0.031805534
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0.042816933
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0.043932468
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0.043932468
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "cpu_limit",
+          "data": [
+            {
+              "labels": [
+                {
+                  "field": "instance",
+                  "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+                },
+                {
+                  "field": "service",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                },
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                }
+              ],
+              "unit": "cpu",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "memory_usage",
+          "data": [
+            {
+              "labels": [
+                {
+                  "field": "instance",
+                  "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+                },
+                {
+                  "field": "service",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                },
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                }
+              ],
+              "unit": "bytes",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 251277310
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 244203520
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 247431170
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 249987070
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 250888200
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 250691580
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 250400770
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 244047870
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 258846720
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 262066180
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 245731330
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 260861950
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 265146370
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 265371650
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 266145800
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 268197890
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 268853250
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 269266940
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 269406200
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 270303230
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 270303230
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "memory_limit",
+          "data": [
+            {
+              "labels": [
+                {
+                  "field": "instance",
+                  "value": "srv-d9isenfavr4c73bdh52g-fkc7z"
+                },
+                {
+                  "field": "service",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                },
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                }
+              ],
+              "unit": "bytes",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 2147483600
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 2147483600
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "http_request_count",
+          "data": [
+            {
+              "labels": [
+                {
+                  "field": "statusCode",
+                  "value": "200"
+                },
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 191
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 52
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 189
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 47
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 183
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 47
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 191
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 63
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 152
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 88
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 145
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 95
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 142
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 95
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 126
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 117
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 117
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 106
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 126
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 125
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 125
+                }
+              ]
+            },
+            {
+              "labels": [
+                {
+                  "field": "statusCode",
+                  "value": "201"
+                },
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "labels": [
+                {
+                  "field": "statusCode",
+                  "value": "202"
+                },
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "labels": [
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                },
+                {
+                  "field": "statusCode",
+                  "value": "304"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 25
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 2
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 9
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 7
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 5
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 16
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 5
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 10
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 7
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 28
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 9
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 6
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 6
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 4
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 3
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 4
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 6
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 4
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 3
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "labels": [
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                },
+                {
+                  "field": "statusCode",
+                  "value": "400"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "labels": [
+                {
+                  "field": "statusCode",
+                  "value": "401"
+                },
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "labels": [
+                {
+                  "field": "statusCode",
+                  "value": "403"
+                },
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "labels": [
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                },
+                {
+                  "field": "statusCode",
+                  "value": "404"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "labels": [
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                },
+                {
+                  "field": "statusCode",
+                  "value": "409"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 1
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "labels": [
+                {
+                  "field": "statusCode",
+                  "value": "500"
+                },
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "labels": [
+                {
+                  "field": "statusCode",
+                  "value": "503"
+                },
+                {
+                  "field": "resource",
+                  "value": "srv-d9isenfavr4c73bdh52g"
+                }
+              ],
+              "unit": "unitless",
+              "values": [
+                {
+                  "timestamp": "2026-11-03T22:27:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:28:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:29:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:30:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:31:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:32:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:33:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:34:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:35:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:36:46.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:16.23Z",
+                  "value": 0
+                },
+                {
+                  "timestamp": "2026-11-03T22:37:46.23Z",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "after": [
+    {
+      "connections": 22,
+      "lock_waiters": 0,
+      "movements": 0,
+      "observed_at": "2026-11-03T22:38:15.229265Z",
+      "products": 3310,
+      "recovery": false,
+      "shifts": 1,
+      "stock_sum": "0.0000",
+      "transactions": 0
+    }
+  ],
+  "healthAfter": {
+    "ok": true,
+    "version": "0.22.0+kat-test-pos",
+    "revision": "6088b7b2d1eb1b404205f15e93a7503bfcea268b"
+  },
+  "healthBeforeRevision": "6088b7b2d1eb1b404205f15e93a7503bfcea268b",
+  "healthAfterRecordedUtc": "2026-11-03T22:38:49.487Z",
+  "logs": [
+    {
+      "count": 0,
+      "hasMore": false
+    },
+    {
+      "count": 0,
+      "hasMore": false
+    }
+  ],
+  "limits": [
+    "SQL SELECT projection only; no authenticated POS/HTTP/Prisma pool/UI/financial/fiscal/provider workload",
+    "Client-request parallelism 1/3/6 does not independently prove six SQL statements simultaneously executing",
+    "Counts and stock aggregate only; not whole-row/whole-database financial invariance",
+    "10-minute read test does not replace historical failed 84-action/20-store burst or unstarted 120-minute endurance",
+    "Independent Acharnon import/device/operator readiness remains with retained owner; 3310 active rows is observed cardinality only"
+  ]
+}

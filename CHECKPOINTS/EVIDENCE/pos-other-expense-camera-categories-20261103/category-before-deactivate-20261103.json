@@ -1,0 +1,95 @@
+{
+  "caseId": "LAB-CATEGORY-20261103-ROOT-01",
+  "phase": "before-soft-deactivate",
+  "actor": "genuine SUPER_ADMIN Χρήστος Μάνης, normal LAB support",
+  "companyId": "cmtpopbgk000prhb5qc60zxus",
+  "storeId": "cmtpopbgo000trhb5ng9ytiru",
+  "row": [
+    {
+      "active": true,
+      "companyId": "cmtpopbgk000prhb5qc60zxus",
+      "createdAt": "2026-11-03T17:21:57.932Z",
+      "description": "LAB-CATEGORY-20261103-ROOT-01",
+      "id": "0b3618e5-7549-4907-a5e9-01f94d1b9bf6",
+      "observed_at": "2026-11-03T17:23:16.913028Z",
+      "updatedAt": "2026-11-03T17:21:57.932Z"
+    }
+  ],
+  "scalarControls": [
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:17.335776Z",
+      "projected_rows": 43,
+      "projection": "CashShiftSession",
+      "scalar_projection_digest": "01e2aaec3a6dbee5095c279fe49aa401",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:17.335776Z",
+      "projected_rows": 95,
+      "projection": "StockMovement",
+      "scalar_projection_digest": "182c6d86da53a8435ff976e89e5c5b4f",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:17.335776Z",
+      "projected_rows": 110,
+      "projection": "StoreProduct",
+      "scalar_projection_digest": "a11573f6cd4bdea44fae983ffe71f19c",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:17.335776Z",
+      "projected_rows": 134,
+      "projection": "StoreTransaction",
+      "scalar_projection_digest": "b7821cb230dcb6de75880b4b89dff9a5",
+      "store_id": "cmtpopbgo000trhb5ng9ytiru"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:17.335776Z",
+      "projected_rows": 0,
+      "projection": "CashShiftSession",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:17.335776Z",
+      "projected_rows": 0,
+      "projection": "StockMovement",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:17.335776Z",
+      "projected_rows": 0,
+      "projection": "StoreProduct",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    },
+    {
+      "complete": true,
+      "observed_at": "2026-11-03T17:23:17.335776Z",
+      "projected_rows": 0,
+      "projection": "StoreTransaction",
+      "scalar_projection_digest": "d41d8cd98f00b204e9800998ecf8427e",
+      "store_id": "cmv2qanca000psigeizep8o9m"
+    }
+  ],
+  "pos": {
+    "selectedId": "0b3618e5-7549-4907-a5e9-01f94d1b9bf6",
+    "selectionRetainedAfterRefresh": true,
+    "amount": "",
+    "comments": "",
+    "attachments": 0,
+    "ack": false,
+    "submitted": false
+  },
+  "plannedAction": "Native central UI soft-deactivate exact row once, retain row, refresh mounted POS and verify stale selection cleared",
+  "recordedAt": "2026-11-03T17:23:17.525Z"
+}

@@ -1,4 +1,4 @@
-import {readCashEventSales} from './cash-event-sales-source.js';
+import {readCashEventSales,readCashEventSalesBatch,cashEventSessionBatchLimit} from './cash-event-sales-source.js';
 import {readCashExpenseEvidence,cashExpenseFindings,purchaseDocumentMime} from './cash-expense-evidence.js';
 import {readCashReviewState} from './cash-review-balance.js';
 import {readCashControlRule} from './cash-control-rules.js';
@@ -10,7 +10,7 @@ import {readCashReviewEvidence} from './cash-review-evidence.js';
 import {readFullCashEventEvidence} from './cash-full-audit.js';
 
 export const cashReconciliationSourceLimit=200;
-export async function readReconciliationSession(db,scope,id,rule){
+export async function readReconciliationSession(db,scope,id,rule,eventCollector){
   const rows=await db.$queryRaw`SELECT s."id",s."companyId",s."storeId",s."terminalPos",s."status",s."openedBy",s."openedByName",s."shiftLabel",s."openedAt",s."closedAt",s."variance",s."cardVariance",s."openingOperational",s."actualOperational",s."updatedAt",to_jsonb(s) AS "automaticSnapshot",to_jsonb(n) AS "nextSession",to_jsonb(p) AS "previousSession",current_setting('transaction_isolation') AS "sourceIsolation" FROM "CashShiftSession" s LEFT JOIN LATERAL (
     SELECT next."id",next."companyId",next."storeId",next."terminalPos",next."status",next."openedAt",next."closedAt",next."openedByName"
     FROM "CashShiftSession" next WHERE next."companyId"=s."companyId" AND next."storeId"=s."storeId" AND next."terminalPos"=s."terminalPos"
@@ -50,11 +50,14 @@ export async function readReconciliationSession(db,scope,id,rule){
   const expenseInputs=transactions.map(({record,hasAttachment})=>({...record,hasAttachment,purchaseDocumentId:record.attachmentMimeType===purchaseDocumentMime?record.attachmentFilename:null}));
   const expenseChecks=await readCashExpenseEvidence(db,scope,expenseInputs);
   const expenseFindings=cashExpenseFindings(expenseChecks).map(f=>({code:f.code,amountCents:exactCents(f.amount),occurredAt:f.at?new Date(f.at).toISOString():null,transactionId:f.transactionId,evidenceHash:hash(f)}));
-  const eventSales=await readCashEventSales(db,scope,session);
+  const deferEvents=eventCollector&&['repeatable read','serializable'].includes(sourceIsolation);
+  const eventSales=deferEvents?null:await readCashEventSales(db,scope,session);
   const next=session.nextSession;
   const nextClosed=Boolean(next&&next.companyId===scope.companyId&&next.storeId===scope.storeId&&next.terminalPos===session.terminalPos&&next.status==='CLOSED'&&next.closedAt&&new Date(next.closedAt)>=new Date(next.openedAt)&&new Date(session.closedAt)<=new Date(next.openedAt));
-  return {session,sourceHash,...(automaticSnapshot?{automaticSnapshot,automaticTransactions:transactions.map(t=>t.record)}:{}),expenseFindings,eventSales,initialCents,cardCents,basisCents,reviewStatus:review.balance.status,explainedCents:exactCents(review.balance.explainedAmount),nextClosed,
+  const result={session,sourceHash,...(automaticSnapshot?{automaticSnapshot,automaticTransactions:transactions.map(t=>t.record)}:{}),expenseFindings,eventSales,initialCents,cardCents,basisCents,reviewStatus:review.balance.status,explainedCents:exactCents(review.balance.explainedAmount),nextClosed,
     transactions:transactions.map(t=>({id:t.record.id,type:t.record.type,amountCents:exactCents(t.record.amount),reversed:Boolean(t.record.reversedAt),cashEffect:t.record.subtractFromShift===true,occurredAt:t.record.occurredAt}))};
+  if(deferEvents)eventCollector.push(result);
+  return result;
 }
 export async function readReconciliationSources(db,scope,period,extraIds=[]){
   const stores=await db.store.findUnique({where:{id:scope.storeId},select:{id:true,companyId:true,name:true}});
@@ -64,11 +67,21 @@ export async function readReconciliationSources(db,scope,period,extraIds=[]){
   if(rows.length>cashReconciliationSourceLimit)throw reconcileError('CASH_RECONCILIATION_LIMIT');
   const selectedIds=rows.map(r=>r.id),ids=[...new Set([...selectedIds,...extraIds])];
   if(ids.length>500||selectedIds.some(id=>typeof id!=='string')||new Set(selectedIds).size!==selectedIds.length)throw reconcileError('CASH_RECONCILIATION_LIMIT');
-  const sessions=new Map();let cursor=0;
-  await Promise.all(Array.from({length:Math.min(2,ids.length)},async()=>{while(cursor<ids.length){const id=ids[cursor++];sessions.set(id,await readReconciliationSession(db,scope,id,rule));}}));
+  const sessions=new Map(),eventCollector=[];let cursor=0;
+  await Promise.all(Array.from({length:Math.min(2,ids.length)},async()=>{while(cursor<ids.length){const id=ids[cursor++];sessions.set(id,await readReconciliationSession(db,scope,id,rule,eventCollector));}}));
   const neighbours=[...new Set([...sessions.values()].flatMap(s=>[s.session.previousSession?.id,s.session.nextSession?.id]).filter(Boolean))];
   if(new Set([...ids,...neighbours]).size>500)throw reconcileError('CASH_RECONCILIATION_LIMIT');
-  for(const id of neighbours)if(!sessions.has(id))sessions.set(id,await readReconciliationSession(db,scope,id,rule));
+  for(const id of neighbours)if(!sessions.has(id))sessions.set(id,await readReconciliationSession(db,scope,id,rule,eventCollector));
+  // Collector lifetime is this source invocation only. Unknown/ReadCommitted
+  // callers and standalone reads retain their original query sequence.
+  for(let index=0;index<eventCollector.length;index+=cashEventSessionBatchLimit){
+    const batch=eventCollector.slice(index,index+cashEventSessionBatchLimit);
+    const events=await readCashEventSalesBatch(db,scope,batch.map(s=>s.session));
+    for(const source of batch){
+      if(!events.has(source.session.id))throw new Error('Incomplete cash event batch');
+      source.eventSales=events.get(source.session.id);
+    }
+  }
   let paperEvidence;
   if(scope.fullAudit===true){
     const discovery=boundAutomaticPaperDiscovery(await readCashChatEvidence(db,scope)),repository=createCashPaperRepository(db),papers=[];

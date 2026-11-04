@@ -1,0 +1,108 @@
+{
+  "classification": "VERIFIED COMPUTE UPGRADE / LIMITED OPERATIONAL VERIFICATION",
+  "approvedWindowAthens": "2026-11-04T00:00:00+02:00/2026-11-04T01:00:00+02:00",
+  "before": {
+    "observedUtc": "2026-11-03T22:05:19.238Z",
+    "plan": "basic_256mb",
+    "diskSizeGB": 5,
+    "sql": {
+      "observedUtc": "2026-11-03T22:04:08.958896Z",
+      "recovery": false,
+      "connections": 22,
+      "maxConnections": 103,
+      "lockWaiters": 0,
+      "activeOver15s": 0
+    },
+    "appRevision": "c7830ad2108603bdbab8739e8ce78164cc234b5f"
+  },
+  "result": {
+    "actionUtc": "2026-11-03T22:06:00.870Z",
+    "actionAthens": "2026-11-04T00:06:00.870+02:00",
+    "actionCount": 1,
+    "targetDatabase": "dpg-d9isee7avr4c73bdglog-a",
+    "targetWorkspace": "tea-d9ie26vaqgkc739uudqg",
+    "beforePlan": "basic_256mb",
+    "afterPlan": "0.5c-1g",
+    "cpu": 0.5,
+    "ramGB": 1,
+    "diskSizeGB": 5,
+    "computeUSD": 19,
+    "deltaComputeUSD": 13,
+    "storageMonthlyUSDUnchanged": 1.5,
+    "totalMonthlyUSD": 20.5,
+    "firstAvailableRecordedUtc": "2026-11-03T22:08:01.907Z",
+    "finalAvailableRecordedUtc": "2026-11-03T22:09:30.479Z",
+    "sqlAfter": [
+      {
+        "active_over_15s": 0,
+        "connections": 20,
+        "lock_waiters": 0,
+        "max_connections": "103",
+        "observed_at": "2026-11-03T22:09:30.400005Z",
+        "recovery": false
+      }
+    ],
+    "sqlFirstAfter": [
+      {
+        "active_over_15s": 0,
+        "connections": 19,
+        "lock_waiters": 0,
+        "max_connections": "103",
+        "observed_at": "2026-11-03T22:08:18.379164Z",
+        "recovery": false
+      }
+    ],
+    "backup": {
+      "appRevision": "aa1cbcf8ed8461d4abb565376857508217fd6539",
+      "checksum": "9c23d90bad5cd64a56a1565b02b086626293565e252d477f6b151d4a18b5bb0b",
+      "completedAt": "2026-11-03T21:03:47Z",
+      "dryRunStatus": "PASSED",
+      "errorCode": null,
+      "runId": "20261103T210055Z-6437",
+      "sizeBytes": 429442124,
+      "startedAt": "2026-11-03T21:00:55Z",
+      "status": "SUCCEEDED"
+    },
+    "healthAfter": {
+      "ok": true,
+      "version": "0.22.0+kat-test-pos",
+      "revision": "c7830ad2108603bdbab8739e8ce78164cc234b5f"
+    },
+    "healthRecordedAfterUtc": "2026-11-03T22:10:24.057Z",
+    "healthBeforeRevision": "c7830ad2108603bdbab8739e8ce78164cc234b5f",
+    "duringTransition": {
+      "unavailableReadUtc": "2026-11-03T22:07:19.914Z",
+      "sqlState": "08004",
+      "downtimeDuration": "not continuously measured"
+    },
+    "errors": {
+      "databasePatternScanStart": "2026-11-03T22:05:45Z",
+      "databasePatternMatchCount": 0,
+      "hasMore": false,
+      "errorLevelScanStart": "2026-11-03T22:08:00Z",
+      "otherError": {
+        "time": "2026-11-03T22:08:33.382405926Z",
+        "kind": "Table-service module not active for selected store; no DB error code",
+        "notModified": true
+      }
+    },
+    "scope": "Compute-only change; no app source deploy/restart/reset/restore/migration/credentials/permissions/stock/payments/fiscal. SIGKILL cause and long-term capacity/whole recovery remain unproven."
+  },
+  "otherConfigurationUnchanged": {
+    "connectionPooling": "none",
+    "highAvailability": false,
+    "storageAutoscaling": false
+  },
+  "screenshot": {
+    "file": "plan-after.jpg",
+    "sizeBytes": 86161,
+    "sha256": "14eed3d504d92909a7ab12501277af93430204fbc720dddd51242b243e44af60",
+    "observation": "Authenticated native Render Plan reload shows selected 0.5 CPU / 1 GB / USD19 and unchanged 5 GB storage"
+  },
+  "limits": [
+    "A short connection outage was sampled, not continuously timed; downtime duration is unknown.",
+    "The backup dry-run result is not an independent full archive/schema/application restore.",
+    "A successful compute change and current readback do not establish the historical SIGKILL cause, long-term capacity, backup Shell memory or whole-system recovery.",
+    "No functional LAB/LIVE/USER PASS, business delta or future monthly execution is inferred."
+  ]
+}
