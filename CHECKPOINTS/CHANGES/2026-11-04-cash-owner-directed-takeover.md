@@ -24,6 +24,6 @@ Single next: green synchronized handoff/main publication, then inspect existing 
 
 ## Retrieval and continuation evidence
 
-The complete active list was retrieved by immutable blob54f8b803a5ddbe5958618db8e8311de931e1700a (4,990,892 characters); tracker d887bb6ec3441ee808660032ea15a49a06f6c19b and pending68a80f02da8a2a065efdeb4491d3f5c08b1c6bda recovered likewise. Contents responses with empty content did not represent empty repository files. Current main at reconciliation bc19fb45cfd24ef83385ff603ae59ec148b1cb. Preserve every original byte below the new handoff blocks.
+The complete active list was retrieved by immutable blob54f8b803a5ddbe5958618db8e8311de931e1700a (4,990,892 characters); tracker d887bb6ec3441ee808660032ea15a49a06f6c19b and pending68a80f02da8a2a065efdeb4491d3f5c08b1c6bda recovered likewise. Contents responses with empty content did not represent empty repository files. Current main at reconciliation bc19fb45cfd24ef83385ff60383ae59ec148b1cb. Preserve every original byte below the new handoff blocks.
 
 Previous turn authenticated native Platform Admin and selected cash controls. Ordinary selected-store listing was provisional only; no fresh original-reading or financial acceptance. A date-fill attempt did not persist; do not claim the intended October selection or use displayed November values as October evidence. No customer details are published.
