@@ -1,3 +1,13 @@
+## 04/11/2026 — CASH-OWNER-DIRECTED-TAKEOVER-19 / ASSIGNED / PARENT OPEN
+
+ΑΝΑΛΗΨΗ ΑΠΟ codex/cash-chat-reconciliation-20261026 — ASSIGNED docs/cash-takeover-20261104 / current Work page /root, explicitly directed by the owner in this conversation. This transfers only remaining cash reconciliation source/matching and final agreement work; all independent peer scopes remain with their owners. Historical owner records below remain evidence, superseded only for this ownership transfer after merge. Claim publication PR3646.
+
+Protect CASH-EVENT-SNAPSHOT-18 scoped 04Nov LIVE PASS for multi-session basic and existing-readings GET completion, prior manuals and immutable eight-original paid-read outcomes. No repeat of accepted tests or paid sources. Parent CASH-UNIFIED-AUDIT-15 stays OPEN: uncertain original/transcription accuracy, handwritten date/section/shift proof, document/payment/expense relevance, card/event/bank/custody/handoff evidence and final non-netted financial acceptance.
+
+Full oversized active/tracker/pending originals recovered through their Git blob SHAs after the contents adapter returned empty bodies/transport failures. This resolves the retrieval blocker in the initial PR3646 draft. This handoff changes documentation only; no source/config/schema, paid provider, upload, financial/stock/fiscal/review/issue/settings or email action. No new LAB/LIVE/financial PASS. Existing accepted PDFs/manuals retain their baseline; before-source claim is not completion.
+
+Single next: green synchronized handoff/main publication, then inspect existing stored unresolved evidence and current matching without paid retries. Any bounded runtime fix requires its own causal pre-change scope, tests and normal exact CI/release/acceptance. Checkpoint CHECKPOINTS/CHANGES/2026-11-04-cash-owner-directed-takeover.md.
+
 ## 04/11/2026 — CENTRAL-POS-AI-ANDROID-TAKEOVER-01 / OWNER-DIRECTED HANDOFF / OPEN
 
 ΑΝΑΛΗΨΗ ΑΠΟ «Ανάθεση πρακτόρων POS AI Render Chat Android» — ASSIGNED docs/central-pos-ai-android-takeover-20261104 / current Work coordinator /root. The owner explicitly requests takeover because the previous conversation stalled. This transfers its coordination and unfinished delivery work, not independently retained invoice, reporting, bandwidth, fiscal or other peer scopes. Claim time 2026-11-04T19:41:23+02:00.
