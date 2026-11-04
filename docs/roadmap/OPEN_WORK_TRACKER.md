@@ -1,3 +1,7 @@
+## 05/11/2026 — INVOICE-HEADER-LATENCY / TIMING SOURCE CANDIDATE / ASSIGNED
+
+Retained /root, fix/invoice-header-timing-20261104; claim #3648 green/main f131f00c before source. Added sanitized request/stage/attempt timing without changing provider or business behavior. Node20 targeted108PASS/0FAIL/0SKIP; independent review no blocker. Full exact PR/main CI and guarded healthy release required. Fresh H prepared for one no-submit header timing read with ten-table LAB/control baseline; I reserved for a separately claimed speed candidate. G limited header PASS protected; latency OPEN, no new LAB/manual/performance PASS. Checkpoint: CHECKPOINTS/CHANGES/2026-11-04-invoice-header-timing.md. All peer owners and existing accepted manuals/PDFs preserved. Next: full CI/release, then correlated H measurement.
+
 ## 04/11/2026 — INVOICE-HEADER-LATENCY / TASK 2 CONTINUATION / READ-ONLY TIMING EVIDENCE
 
 Current user explicitly assigns task2, initial PDF reading speed. Continue the existing retained /root owner and PR3648/docs/invoice-header-timing-20261104, then fix/invoice-header-timing-20261104; no parallel claim. Reconcile the existing documentation-only conflict onto current main8f558f094776fb4e2b0d1bfc7616bf48b0a7af53, preserving all peer content/source. FAST route/test/Azure/metering sources have no changes since accepted transport0d57653f. Fresh Node20.20.2 actual-handler baseline56PASS/0FAIL/0SKIP, no provider call. G four-field limited header PASS remains protected; latency OPEN.
