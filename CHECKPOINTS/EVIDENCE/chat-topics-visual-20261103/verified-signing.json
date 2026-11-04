@@ -1,0 +1,17 @@
+{
+  "sourceSha": "0c352c2ecafe386f6c6af324bb9db736b8cd70d3",
+  "package": "gr.myworkstation.chat.preview",
+  "sha256": "6aa390d0c24ce37fd7f84fac0c20f8d4304a62c159e739bb175036e746fb98d8",
+  "bytes": 3703820,
+  "certificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "status": "TECHNICAL CANDIDATE; PHYSICAL ACCEPTANCE PENDING",
+  "publicDistributionChanged": false,
+  "version": "0.1.16-preview",
+  "versionCode": 17,
+  "independentApkV2CertificateSha256": "17c4d56123c6015a58343faba73d26a8b7d085a1baff7e680500767ae084ea97",
+  "artifactZipSha256": "891f665784ebecc86409cb98b5d78a68612dd0e64ffa74846317f1b091344547",
+  "fullCiRun": 41680791674,
+  "signingRun": 41680412136,
+  "artifactId": 13257496000,
+  "physicalTopicAcceptance": "NOT TESTED"
+}
