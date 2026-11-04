@@ -5,7 +5,7 @@ import {ftextOriginalCommandHash} from '../src/services/ftext-error-evidence.js'
 import {recordFtextOperatorDecision,releaseFtextRejectedAttempt} from '../src/services/ftext-operator-card.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {randomBytes} from 'node:crypto';
+import {randomBytes,createHash} from 'node:crypto';
 import {ensureFtextCashSchema,ftextCashLifecycleReviewProposal} from '../src/services/ftext-cash-schema.js';
 import {prepareFtextCashRequest,claimFtextCashRequest,recordFtextCashResult,findPendingFtextCashRequest} from '../src/services/ftext-cash-requests.js';
 import {finalizeFtextCashRequest} from '../src/services/ftext-cash-finalize.js';
@@ -202,7 +202,8 @@ test('native ftext cash: concurrent one-shot dispatch, durable result, real stoc
    const next=await a.$transaction(tx=>prepareFtextCashRequest(tx,{...input,clientTransactionId:'late-reused'}));await a.$transaction(tx=>claimFtextCashRequest(tx,device,settings));
    await assert.rejects(a.$transaction(tx=>recordFtextCashResult(tx,device,settings,{...receipt,requestId:next.id,settingsHash:next.settingsHash,dayCounter:'45'})),e=>e.code==='FTEXT_CASH_RECEIPT_REUSED');
    {
-   const unknown={requestId:next.id,settingsHash:next.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.'};
+   const rejectedLine=next.plan.lines[0],originalRaw=' 2\r\nOVER LIMIT\r\nInputLine: S|'+rejectedLine.description+'|'+rejectedLine.quantity+'|'+rejectedLine.unitPrice+'||'+rejectedLine.department+'\r\n\r\n';
+   const unknown={requestId:next.id,settingsHash:next.settingsHash,outcome:'REQUIRES_CHECK',description:'The physical receipt could not be verified. Do not resend.',code:2,rawResultHash:createHash('sha256').update(originalRaw).digest('hex')};
    const rejected=await a.$transaction(tx=>recordFtextCashResult(tx,device,settings,unknown));
    const l=rejected.plan.lines[0],files={intentBase64:encode(JSON.stringify({requestId:rejected.id,settingsHash:rejected.settingsHash,commandHash:ftextOriginalCommandHash(rejected,settings)})),reportBase64:encode(JSON.stringify(unknown)),rawResultBase64:encode(' 2\r\nOVER LIMIT\r\nInputLine: S|'+l.description+'|'+l.quantity+'|'+l.unitPrice+'||'+l.department+'\r\n\r\n'),reason:'Verified first line rejection',noReceipt:true};
    const snapshot=async()=>({counts:await Promise.all(['Sale','Payment','StockMovement','StoreTransaction','StoreOperatorAudit'].map(table=>a.$queryRawUnsafe(`SELECT COUNT(*)::int AS n FROM "${table}"`))),stock:await a.$queryRaw`SELECT "storeId","currentStock" FROM "StoreProduct" ORDER BY "storeId"`});
