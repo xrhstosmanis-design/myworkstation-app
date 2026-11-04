@@ -4,12 +4,14 @@ import {readFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import {EventEmitter} from 'node:events';
 
 const root=new URL('../../',import.meta.url).pathname;
 const load=relative=>import(pathToFileURL(path.join(root,relative)).href);
 const {finalizeV244ProductLines}=await load('client/src/lib/invoice-v244.js');
 const {reconcileInvoiceLines,reusableVerifiedPrintedTable}=await load('server/src/invoice-line-reconciliation.js');
 const {recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable}=await load('server/src/lib/invoice-total-reading.js');
+const {createFastHeaderTiming}=await load('server/src/lib/pos-fast-header-timing.js');
 const source=readFileSync(path.join(root,'server/src/routes/commerce-pos-v244.js'),'utf8');
 const a=source.indexOf('router.post("/ai-reader/fast-header"'),b=source.indexOf('\nrouter.post("/ai-reader/fast-duplicate-check"',a);
 assert.ok(a>=0&&b>a);
@@ -25,16 +27,18 @@ const throwIfWalletError=new Function(`${walletSource.slice(walletStart,walletEn
 const row={code:'SYNTHETIC-1',description:'SYNTHETIC ITEM',quantity:1,unit:'TEM',unitCost:10,initialAmount:10,discount1:0,discount1Amount:0,netAmount:10,exciseTotal:0,vatRate:24,grossAmount:12.4,sourceColumnsVerified:true,quantitySource:'AI_COMPLETE_PRINTED_TABLE_VERIFIED'};
 const complete=()=>({supplier:{name:'SYNTHETIC SUPPLIER',taxId:'099999999'},documentNumber:'SYN-42',documentDate:'2026-11-02',totalGross:12.4,aiConfidence:98,rawText:'',productLines:[]});
 const fallback=()=>({supplierName:'FALLBACK SUPPLIER',supplierTaxId:'088888888',documentNumber:'FB-43',documentDate:'2026-11-01',totalGross:24.8,confidence:90,documentType:'INVOICE'});
-async function run({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null,openaiConfigured=true,transport=false,mimeType='image/jpeg',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`}={}){
- const calls=[],queries=[],requests=[];let result,status=200,error,walletScopes=0;
+function createHarness({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null,openaiConfigured=true,transport=false,transportResponses=[],transportNow,transportTimeout,mimeType='image/jpeg',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`,timingOptions={},autoFinish=true,onResponse}={}){
+ const calls=[],queries=[],requests=[],timings=[],responses=[];let walletScopes=0;
+ const responseTimings=new WeakMap();
  const deps={Buffer,crypto,process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'https://synthetic.invalid',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic',OPENAI_API_KEY:openaiConfigured?'synthetic':''}},console:{warn(){},error(){}},FAST_AZURE_HEADER_TIMEOUT_MS:35000,POS_STORED_LINES_TOLERANCE:0.05,finalizeV244ProductLines,reconcileInvoiceLines,reusableVerifiedPrintedTable,recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable,throwIfWalletError,
-  prisma:{store:{findFirst:async q=>{assert.deepEqual(q,{where:{id:'store-a',companyId:'company-a'},select:{id:true}});return storeExists?{id:'store-a'}:null}},$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join('?'),values});return durable}},
+  createFastHeaderTiming:res=>createFastHeaderTiming(res,{...timingOptions,emit:event=>{timings.push(event);responseTimings.get(res).push(event);return timingOptions.emit?.(event)}}),
+  prisma:{store:{findFirst:async q=>{assert.deepEqual(q,{where:{id:'store-a',companyId:'company-a'},select:{id:true}});return storeExists?{id:'store-a'}:null}},$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join('?'),values});if(durable instanceof Error)throw durable;return durable}},
   walletActivityFromRequest:(req,scope)=>{assert.equal(req.user.companyId,'company-a');assert.deepEqual(scope,{storeId:'store-a',purpose:'PAYMENT_HEADER_READ'});return {purpose:scope.purpose}},
   withInvoiceWalletScope:async(scope,work)=>{walletScopes++;assert.deepEqual(scope,{companyId:'company-a',storeId:'store-a',activity:{purpose:'PAYMENT_HEADER_READ'}});return work()},
-  callAzure:async options=>{calls.push('azure');assert.equal(options.contentData,dataUrl);assert.equal(options.mimeType,mimeType);if(azure instanceof Error)throw azure;return azure},
+  callAzure:async options=>{calls.push('azure');assert.equal(options.mimeType,mimeType);if(typeof azure==='function')return azure(options);assert.equal(options.contentData,dataUrl);if(azure instanceof Error)throw azure;return azure},
   // Provider transport normalization is outside this return-predicate change.
   normalizeAzure:value=>value,
-  azureSupplierMatch:async(companyId,supplier)=>{assert.equal(companyId,'company-a');assert.deepEqual(supplier,azure.supplier);return matched},
+  azureSupplierMatch:async(companyId,supplier)=>{assert.equal(companyId,'company-a');if(typeof azure!=='function')assert.deepEqual(supplier,azure.supplier);return matched},
   callFastOpenAiHeader:async()=>{calls.push('openai');if(openai instanceof Error)throw openai;return openai},
   matchSupplier:async companyId=>{assert.equal(companyId,'company-a');return null},
  };
@@ -43,15 +47,28 @@ async function run({azure=complete(),openai=fallback(),durable=[],operatorStore=
   const schemaStart=source.indexOf('const fastHeaderSchema='),schemaEnd=source.indexOf('\nconst reconciledFastProductLines=',schemaStart);
   const outputStart=source.indexOf('function outputText('),outputEnd=source.indexOf('\nasync function callFastOpenAiHeader(',outputStart);
   assert.ok(start>=0&&end>start&&schemaStart>=0&&schemaEnd>schemaStart&&outputStart>=0);
-  const fetch=async(url,options)=>{calls.push('openai');requests.push({url,method:options.method,body:JSON.parse(options.body)});return {ok:true,json:async()=>({output_text:JSON.stringify(openai)})}};
-  deps.callFastOpenAiHeader=new Function('fetch','process','AbortSignal','console','throwIfWalletError',`const FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS=30000,FAST_OPENAI_HEADER_ATTEMPTS=2;\n${source.slice(schemaStart,schemaEnd)}\n${source.slice(outputStart,outputEnd)}\n${source.slice(start,end)}\nreturn callFastOpenAiHeader;`)(fetch,deps.process,AbortSignal,deps.console,throwIfWalletError);
+  const fetch=async(url,options)=>{calls.push('openai');requests.push({url,method:options.method,body:JSON.parse(options.body)});const response=transportResponses[requests.length-1];if(response instanceof Error)throw response;return response||{ok:true,json:async()=>({output_text:JSON.stringify(openai)})}};
+  const providerLimits=['FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS','FAST_OPENAI_HEADER_ATTEMPTS'].map(name=>{const line=source.split('\n').find(value=>value.startsWith(`const ${name}=`));assert.ok(line,name);return line}).join('\n');
+  deps.callFastOpenAiHeader=new Function('fetch','process','AbortSignal','console','throwIfWalletError','Date',`${providerLimits}\n${source.slice(schemaStart,schemaEnd)}\n${source.slice(outputStart,outputEnd)}\n${source.slice(start,end)}\nreturn callFastOpenAiHeader;`)(fetch,deps.process,transportTimeout?{timeout:transportTimeout}:AbortSignal,deps.console,throwIfWalletError,transportNow?{now:transportNow}:Date);
  }
  const fn=new Function(...Object.keys(deps),`${declarations}\n${source.slice(reconcileStart,reconcileEnd)}\nreturn ${callback}`)(...Object.values(deps));
- const req={body:{storeId:'store-a',filename:mimeType==='application/pdf'?'synthetic.pdf':'synthetic.jpg',mimeType,dataUrl},user:{companyId:'company-a',tokenType:'STORE_OPERATOR',storeId:operatorStore}};
- const res={status(value){status=value;return this},json(value){assert.equal(result,undefined,'one response only');result=value;return this}};
- await fn(req,res,value=>{error=value});
- return {calls,queries,requests,result,status,error,walletScopes};
+ return {handler:fn,calls,queries,requests,timings,responses,async execute({body={}}={}){
+  let result,status=200,error;
+  const events=[];
+  const req={body:{storeId:'store-a',filename:mimeType==='application/pdf'?'synthetic.pdf':'synthetic.jpg',mimeType,dataUrl,...body},user:{companyId:'company-a',tokenType:'STORE_OPERATOR',storeId:operatorStore}};
+  const res=new EventEmitter();res.statusCode=200;
+  res.status=value=>{status=value;res.statusCode=value;return res};
+  res.finish=()=>{res.writableFinished=true;res.emit('finish')};
+  res.json=value=>{assert.equal(result,undefined,'one response only');result=value;if(autoFinish)res.finish();return res};
+  responseTimings.set(res,events);responses.push(res);onResponse?.(res);
+  await fn(req,res,value=>{error=value});
+  // Express's error middleware finishes the response after next(error). No
+  // business response is fabricated here; the original error remains visible.
+  if(error&&autoFinish){res.statusCode=error.status||500;res.finish()}
+  return {calls,queries,requests,result,status,error,walletScopes,timings:events,res};
+ }};
 }
+const run=async options=>createHarness(options).execute();
 
 test('actual FAST PDF fallback sends original PDF data URL through actual Responses request body',async()=>{
  const bytes=readFileSync(path.join(root,'CHECKPOINTS/EVIDENCE/invoice-physical-pages-20261102/fixtures/two-physical-pages.pdf'));
@@ -175,4 +192,157 @@ test('actual two-page PDF text cannot promote a page subtotal through header-onl
  const azure={...complete(),azurePageCount:pageCount,rawText,productLines:[{...row,code:'LAB-A'},{...row,code:'LAB-B'}]};
  const r=await run({mimeType:'application/pdf',dataUrl:`data:application/pdf;base64,${bytes.toString('base64')}`,azure});
  assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.queries.length,1);assert.equal(r.result.totalGross,24.8);assert.equal(r.result.documentNumber,'FB-43');assert.deepEqual(r.result.productLines.map(line=>line.code),['LAB-A','LAB-B']);
+});
+
+const timingStages=new Set(['request_total','exact_file_lookup','azure_header','azure_supplier_match','openai_header','openai_attempt','openai_supplier_match']);
+function assertSanitizedTimings(events){
+ assert.ok(events.length,'actual handler must emit diagnostics');
+ for(const event of events){
+  const expected=['correlationId','elapsedMs','outcome','stage'];
+  if(event.stage==='openai_attempt')expected.push('attempt');
+  assert.deepEqual(Object.keys(event).sort(),expected.sort(),'only the fixed diagnostic schema is logged');
+  assert.match(event.correlationId,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,'correlation is a new random UUID, never an invoice/request ID');
+  assert.ok(timingStages.has(event.stage));
+  assert.ok((event.stage==='request_total'?['finished','closed']:['ok','error']).includes(event.outcome));
+  assert.equal(typeof event.elapsedMs,'number');assert.ok(Number.isFinite(event.elapsedMs)&&event.elapsedMs>=0);
+  if(event.stage==='openai_attempt')assert.ok([1,2].includes(event.attempt));
+ }
+ assert.equal(new Set(events.map(event=>event.correlationId)).size,1,'one correlation per request');
+ assert.doesNotMatch(JSON.stringify(events),/SYNTHETIC|synthetic|company-a|store-a|supplier-a|SYN-42|FB-43|099999999|088888888|secret|data:|base64|filename|taxId|totalGross|documentNumber|Authorization/i);
+}
+const stageOutcomes=events=>events.map(({stage,outcome,attempt})=>[stage,outcome,...(attempt===undefined?[]:[attempt])]);
+const deferred=()=>{let resolve;const promise=new Promise(done=>{resolve=done});return {promise,resolve}};
+
+test('actual FAST Azure response emits sanitized stage spans and one total through finish then close',async()=>{
+ const r=await run();assert.ifError(r.error);
+ assertSanitizedTimings(r.timings);
+ assert.deepEqual(stageOutcomes(r.timings),[['exact_file_lookup','ok'],['azure_header','ok'],['azure_supplier_match','ok'],['request_total','finished']]);
+ assert.deepEqual(r.calls,['azure']);assert.equal(r.result.provider,'AZURE_DOCUMENT_INTELLIGENCE');assert.equal(r.result.documentNumber,'SYN-42');assert.equal(r.result.totalGross,12.4);
+ const total=r.timings.at(-1).elapsedMs;
+ assert.ok(r.timings.slice(0,-1).every(event=>event.elapsedMs<=total));
+ r.res.emit('close');r.res.emit('finish');
+ assert.equal(r.timings.filter(event=>event.stage==='request_total').length,1);
+});
+
+test('actual durable-header reuse logs only lookup and response completion with no provider call',async()=>{
+ const durable=[{supplierId:'supplier-a',supplierName:'STORED SUPPLIER',supplierTaxId:'099999999',resultJson:{posHandoff:{documentNumber:'STORED-42',documentDate:'2026-11-02',totalGross:12.4},productLines:[row]}}];
+ const r=await run({durable});assert.ifError(r.error);assertSanitizedTimings(r.timings);
+ assert.deepEqual(stageOutcomes(r.timings),[['exact_file_lookup','ok'],['request_total','finished']]);
+ assert.deepEqual(r.calls,[]);assert.equal(r.result.provider,'DURABLE_POS_JOB');assert.equal(r.result.productLines.length,1);
+});
+
+test('actual PDF fallback correlates both providers and matching without changing the Responses payload',async()=>{
+ const r=await run({transport:true,mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]}});
+ assert.ifError(r.error);assertSanitizedTimings(r.timings);
+ assert.deepEqual(stageOutcomes(r.timings),[['exact_file_lookup','ok'],['azure_header','ok'],['azure_supplier_match','ok'],['openai_attempt','ok',1],['openai_header','ok'],['openai_supplier_match','ok'],['request_total','finished']]);
+ assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result.totalGross,24.8);assert.equal(r.result.documentNumber,'FB-43');assert.equal(r.requests.length,1);
+ assert.deepEqual(Object.keys(r.requests[0].body).sort(),['input','model','text']);
+ assert.equal(r.requests[0].body.model,'gpt-5-mini');
+ assert.equal(r.requests[0].body.input[0].content[1].file_data,'data:application/pdf;base64,c3ludGhldGlj');
+ assert.equal(r.requests[0].body.text.format.strict,true);
+});
+
+test('actual fallback retry keeps the shared 70-second deadline and exactly two bounded attempt events',async()=>{
+ let current=1000;const budgets=[];
+ const first={ok:false,status:503,text:async()=>{current=51000;return 'secret-provider-body'}};
+ const r=await run({transport:true,azure:{...complete(),documentNumber:''},transportResponses:[first],transportNow:()=>current,transportTimeout:milliseconds=>{budgets.push(milliseconds);return undefined}});
+ assert.ifError(r.error);assertSanitizedTimings(r.timings);
+ assert.deepEqual(budgets,[70000,20000],'second attempt receives only the remaining original deadline');
+ assert.deepEqual(r.calls,['azure','openai','openai']);assert.equal(r.requests.length,2);assert.deepEqual(r.requests[0].body,r.requests[1].body);
+ assert.deepEqual(stageOutcomes(r.timings.filter(event=>event.stage==='openai_attempt')),[['openai_attempt','error',1],['openai_attempt','ok',2]]);
+ assert.equal(r.timings.filter(event=>event.stage==='openai_header').length,1);
+ assert.equal(r.result.documentNumber,'FB-43');assert.equal(r.result.totalGross,24.8);
+});
+
+test('actual fallback emits no phantom attempt after the shared budget is exhausted',async()=>{
+ let current=1000;const budgets=[];
+ const first={ok:false,status:503,text:async()=>{current=70500;return 'secret-provider-body'}};
+ const r=await run({transport:true,azure:{...complete(),documentNumber:''},transportResponses:[first],transportNow:()=>current,transportTimeout:milliseconds=>{budgets.push(milliseconds);return undefined}});
+ assert.ifError(r.error);assertSanitizedTimings(r.timings);
+ assert.deepEqual(budgets,[70000]);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.requests.length,1);
+ assert.deepEqual(stageOutcomes(r.timings.filter(event=>event.stage==='openai_attempt')),[['openai_attempt','error',1]]);
+ assert.deepEqual(stageOutcomes(r.timings.filter(event=>event.stage==='openai_header')),[['openai_header','error']]);
+ assert.equal(r.result.provider,'AZURE_DOCUMENT_INTELLIGENCE');assert.equal(r.result.totalGross,12.4,'existing useful-Azure fallback is preserved');
+});
+
+test('actual two-attempt failure preserves its original wrapped error and last cause',async()=>{
+ const first=new Error('secret first provider failure'),last=new Error('secret last provider failure');
+ const r=await run({transport:true,azure:new Error('secret Azure failure'),transportResponses:[first,last]});
+ assert.equal(r.error.status,502);assert.equal(r.error.cause,last);assert.equal(r.result,undefined);assertSanitizedTimings(r.timings);
+ assert.deepEqual(r.calls,['azure','openai','openai']);assert.equal(r.requests.length,2);
+ assert.deepEqual(stageOutcomes(r.timings),[['exact_file_lookup','ok'],['azure_header','error'],['openai_attempt','error',1],['openai_attempt','error',2],['openai_header','error'],['request_total','finished']]);
+});
+
+test('actual Azure wallet refusal preserves the same error and stops before supplier or fallback work',async()=>{
+ const failure=Object.assign(new Error('secret funding refusal'),{code:'AI_WALLET_LOW_BALANCE',status:402});
+ const r=await run({azure:failure});assert.equal(r.error,failure);assert.equal(r.result,undefined);assertSanitizedTimings(r.timings);
+ assert.deepEqual(r.calls,['azure']);assert.equal(r.walletScopes,1);
+ assert.deepEqual(stageOutcomes(r.timings),[['exact_file_lookup','ok'],['azure_header','error'],['request_total','finished']]);
+});
+
+test('actual OpenAI wallet refusal preserves the same normalized error without retry or useful-Azure success',async()=>{
+ const failure=Object.assign(new Error('secret wallet review'),{code:'AI_WALLET_USAGE_REVIEW',status:503});
+ const r=await run({transport:true,azure:{...complete(),documentNumber:''},transportResponses:[failure]});
+ assert.equal(r.error,failure);assert.equal(r.error.status,409);assert.equal(r.result,undefined);assertSanitizedTimings(r.timings);
+ assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.requests.length,1);
+ assert.deepEqual(stageOutcomes(r.timings.filter(event=>event.stage.startsWith('openai'))),[['openai_attempt','error',1],['openai_header','error']]);
+});
+
+test('actual exact-file lookup failure preserves its original error and makes no provider call',async()=>{
+ const failure=new Error('secret database lookup failure');const r=await run({durable:failure});
+ assert.equal(r.error,failure);assert.equal(r.result,undefined);assert.deepEqual(r.calls,[]);assert.equal(r.queries.length,1);assertSanitizedTimings(r.timings);
+ assert.deepEqual(stageOutcomes(r.timings),[['exact_file_lookup','error'],['request_total','finished']]);
+});
+
+test('actual access refusal logs only response completion and still performs no wallet, lookup or provider work',async()=>{
+ const r=await run({operatorStore:'store-other'});assert.ifError(r.error);assert.equal(r.status,403);assertSanitizedTimings(r.timings);
+ assert.deepEqual(stageOutcomes(r.timings),[['request_total','finished']]);assert.equal(r.walletScopes,0);assert.deepEqual(r.calls,[]);assert.deepEqual(r.queries,[]);
+});
+
+test('diagnostic sink failure cannot replace actual successful fallback fields or add provider attempts',async()=>{
+ const options={transport:true,mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]}};
+ const reference=await run(options);let emitted=0;
+ const r=await run({...options,timingOptions:{emit(){emitted++;throw new Error('secret logger unavailable')}}});
+ assert.ifError(r.error);assert.ok(emitted>0);assert.deepEqual(r.result,reference.result);assert.deepEqual(r.calls,reference.calls);assert.deepEqual(r.requests,reference.requests);assert.equal(r.walletScopes,reference.walletScopes);assertSanitizedTimings(r.timings);
+});
+
+test('diagnostic sink failure cannot replace an actual wallet error or resume provider work',async()=>{
+ const failure=Object.assign(new Error('secret funding refusal'),{code:'AI_WALLET_LOW_BALANCE',status:402});
+ const r=await run({azure:failure,timingOptions:{emit(){throw new Error('secret logger unavailable')}}});
+ assert.equal(r.error,failure);assert.equal(r.result,undefined);assert.deepEqual(r.calls,['azure']);assertSanitizedTimings(r.timings);
+});
+
+test('actual response close during Azure work records one interrupted total and does not cancel or duplicate the existing provider operation',async()=>{
+ const started=deferred(),release=deferred();let res,current=100;
+ const harness=createHarness({azure:async()=>{started.resolve();await release.promise;return complete()},timingOptions:{now:()=>current},onResponse:value=>{res=value}});
+ const pending=harness.execute();await started.promise;
+ current=140;res.emit('close');
+ assert.deepEqual(stageOutcomes(harness.timings.filter(event=>event.stage==='request_total')),[['request_total','closed']]);
+ assert.equal(harness.timings.find(event=>event.stage==='request_total').elapsedMs,40);
+ current=170;release.resolve();const r=await pending;
+ assert.ifError(r.error);assertSanitizedTimings(r.timings);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.documentNumber,'SYN-42');
+ assert.equal(r.timings.filter(event=>event.stage==='request_total').length,1);res.emit('finish');res.emit('close');assert.equal(r.timings.filter(event=>event.stage==='request_total').length,1);
+});
+
+test('two concurrent calls to the same actual FAST handler retain independent random correlations and elapsed times',async()=>{
+ const firstEntered=deferred(),secondEntered=deferred(),releaseFirst=deferred(),releaseSecond=deferred();let current=1000;
+ const firstData='data:image/jpeg;base64,Zmlyc3Q=',secondData='data:image/jpeg;base64,c2Vjb25k';
+ const harness=createHarness({timingOptions:{now:()=>current},azure:async({contentData})=>{
+  if(contentData===firstData){firstEntered.resolve();await releaseFirst.promise;return {...complete(),documentNumber:'FIRST-1'}}
+  assert.equal(contentData,secondData);secondEntered.resolve();await releaseSecond.promise;return {...complete(),documentNumber:'SECOND-2'};
+ }});
+ // Both calls execute the one compiled function, with overlapping provider
+ // awaits. A mutable module/global current-request timer would mix these spans.
+ const sharedHandler=harness.handler;
+ const first=harness.execute({body:{dataUrl:firstData,filename:'secret-first.jpg',correlationId:'secret-client-id'}});await firstEntered.promise;
+ current=1500;const second=harness.execute({body:{dataUrl:secondData,filename:'secret-second.jpg',correlationId:'secret-client-id'}});await secondEntered.promise;
+ assert.equal(harness.handler,sharedHandler);
+ current=1700;releaseFirst.resolve();const a=await first;
+ current=1800;releaseSecond.resolve();const b=await second;
+ assert.ifError(a.error);assert.ifError(b.error);assert.equal(a.result.documentNumber,'FIRST-1');assert.equal(b.result.documentNumber,'SECOND-2');
+ assertSanitizedTimings(a.timings);assertSanitizedTimings(b.timings);assert.notEqual(a.timings[0].correlationId,b.timings[0].correlationId);
+ assert.equal(a.timings.find(event=>event.stage==='request_total').elapsedMs,700);assert.equal(b.timings.find(event=>event.stage==='request_total').elapsedMs,300);
+ assert.equal(a.timings.find(event=>event.stage==='azure_header').elapsedMs,700);assert.equal(b.timings.find(event=>event.stage==='azure_header').elapsedMs,300);
+ assert.deepEqual(harness.calls,['azure','azure']);assert.equal(harness.queries.length,2);assert.equal(harness.responses.length,2);
+ assert.equal(harness.timings.filter(event=>event.stage==='request_total').length,2);
 });

@@ -1,5 +1,6 @@
 import {findCompetingPosDraftReview,findExistingInvoicePaymentReview} from "../lib/pos-invoice-duplicate-review.js";
 import {walletActivityFromRequest,walletActivityForJob} from "../services/ai-wallet-activity.js";
+import {createFastHeaderTiming} from "../lib/pos-fast-header-timing.js";
 import {withInvoiceWalletScope,throwIfWalletError,invoiceWalletResponsesFetch as fetch} from "../services/ai-wallet-invoice-metering.js";
 import {findUnlinkedMyDataOriginal} from '../lib/pos-unlinked-mydata.js';
 import {assertExpectedPendingInvoice,pendingIntentForPayment,invoicePageManifest} from '../services/pos-pending-invoices.js';
@@ -527,11 +528,13 @@ function outputText(response){
   return "";
 }
 
-async function callFastOpenAiHeader({prompt,filePart}){
+async function callFastOpenAiHeader({prompt,filePart,timing}){
   let lastError;const deadline=Date.now()+FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS;
   for(let attempt=1;attempt<=FAST_OPENAI_HEADER_ATTEMPTS;attempt++){
+    let finishAttempt;
     try{
       const remainingMs=deadline-Date.now();if(remainingMs<1000)break;
+      finishAttempt=timing?.start("openai_attempt",attempt);
       const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(remainingMs),body:JSON.stringify({
         model:process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini",
         input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
@@ -542,8 +545,9 @@ async function callFastOpenAiHeader({prompt,filePart}){
       if(!raw.trim())throw new Error("empty structured response");
       const parsed=JSON.parse(raw);
       if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw new Error("invalid structured response");
+      finishAttempt?.("ok");
       return parsed;
-    }catch(error){throwIfWalletError(error);
+    }catch(error){finishAttempt?.("error");throwIfWalletError(error);
       lastError=error;
       console.warn("FAST OpenAI header attempt failed",{attempt,message:String(error?.message||error)});
     }
@@ -593,6 +597,7 @@ router.get("/ai-reader/capability",requireCompanyModule("AI_READER"),(req,res)=>
 });
 
 router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req,res,next)=>{
+  const timing=createFastHeaderTiming(res);
   try{
     const storeId=String(req.body?.storeId||"");
     const filename=String(req.body?.filename||"invoice.jpg").slice(0,180);
@@ -612,14 +617,14 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     // invoice-total arithmetic; otherwise continue through the normal reader.
     const fileBytes=Buffer.from(String(dataUrl).split(",").pop()||"","base64");
     const attachmentChecksum=crypto.createHash("sha256").update(fileBytes).digest("hex");
-    const durableRows=await prisma.$queryRaw`
+    const durableRows=await timing.measure("exact_file_lookup",()=>prisma.$queryRaw`
       SELECT j."resultJson",s."id" AS "supplierId",s."name" AS "supplierName",s."taxId" AS "supplierTaxId"
       FROM "DocumentAttachment" a
       JOIN "AiReaderJob" j ON j."attachmentId"=a."id" AND j."companyId"=a."companyId" AND j."storeId"=a."storeId"
       JOIN "Supplier" s ON s."id"=(j."resultJson"->'posHandoff'->>'supplierId') AND s."companyId"=j."companyId" AND s."active"=true
       WHERE a."companyId"=${req.user.companyId} AND a."storeId"=${storeId} AND a."checksum"=${attachmentChecksum}
         AND j."status" IN ('LOCAL_COMPLETE','POS_QUEUED','POS_DRAFT_READY','POS_PROCESSING','POS_FAILED','AI_COMPLETE')
-      ORDER BY j."updatedAt" DESC LIMIT 5`;
+      ORDER BY j."updatedAt" DESC LIMIT 5`);
     for(const row of durableRows){
       const handoff=row.resultJson?.posHandoff&&typeof row.resultJson.posHandoff==="object"?row.resultJson.posHandoff:{};
       const productLines=finalizeV244ProductLines(Array.isArray(row.resultJson?.productLines)?row.resultJson.productLines:[]);
@@ -632,10 +637,10 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     let azureHeaderFallback=null,azureRawText="",azureCandidateProductLines=[];
     if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
       try{
-        const parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS}));
+        const parsed=normalizeAzure(await timing.measure("azure_header",()=>callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS})));
         azureRawText=String(parsed.rawText||"");
         azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];
-        const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
+        const supplier=await timing.measure("azure_supplier_match",()=>azureSupplierMatch(req.user.companyId,parsed.supplier));
         const azureTotalGross=round2(recoverVatSummaryInvoiceTotal(azureRawText)||recoverBalancedInvoicePayable(azureRawText)||parsed.totalGross||0);
         const azureProductLines=reconciledFastProductLines(parsed.productLines,azureTotalGross);
         const azureHeader={confidence:Number(parsed.aiConfidence||0),supplierId:supplier?.id||"",supplierName:supplier?.name||parsed.supplier?.name||"",supplierTaxId:supplier?.taxId||parsed.supplier?.taxId||"",documentNumber:/\d/.test(String(parsed.documentNumber||""))?String(parsed.documentNumber):"",documentDate:/^\d{4}-\d{2}-\d{2}$/.test(String(parsed.documentDate||""))?String(parsed.documentDate):"",totalGross:azureTotalGross,documentType:parsed.documentType==="CREDIT_NOTE"||/ΠΙΣΤΩΤΙΚ|CREDIT\s*NOTE/i.test(azureRawText)?"CREDIT_NOTE":"INVOICE",provider:"AZURE_DOCUMENT_INTELLIGENCE",productLines:azureProductLines};
@@ -672,11 +677,11 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 
 Αν ένα βασικό στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα για το αποτέλεσμα.`;
     let parsed;
-    try{parsed=await callFastOpenAiHeader({prompt,filePart})}
+    try{parsed=await timing.measure("openai_header",()=>callFastOpenAiHeader({prompt,filePart,timing}))}
     catch(error){throwIfWalletError(error);if(azureHeaderFallback)return res.json(azureHeaderFallback);throw error}
     const supplierName=String(parsed.supplierName||azureHeaderFallback?.supplierName||"");
     const supplierTaxId=String(parsed.supplierTaxId||azureHeaderFallback?.supplierTaxId||"");
-    const supplier=await matchSupplier(req.user.companyId,{name:supplierName,taxId:supplierTaxId});
+    const supplier=await timing.measure("openai_supplier_match",()=>matchSupplier(req.user.companyId,{name:supplierName,taxId:supplierTaxId}));
     const parsedDocumentNumber=String(parsed.documentNumber||"").trim();
     const documentNumber=/\d/.test(parsedDocumentNumber)?parsedDocumentNumber:String(azureHeaderFallback?.documentNumber||"");
     const parsedDocumentDate=String(parsed.documentDate||"");
