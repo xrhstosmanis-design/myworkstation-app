@@ -1,3 +1,11 @@
+## 04/11/2026 - CHAT-TOPICS-VISUAL-01 / ANDROID 0.1.16 PUBLICATION VERIFIED / PHYSICAL OPEN
+
+Same retained central continuation owner /root; receipt docs/android-0.1.16-publication-receipt-20261104. PR3618 exact head1223dc602098acfec9839ad4f2b261d5ef8dfc80 passed full CI41896129043 with all5 jobs SUCCESS and merged bc19fb45cfd24ef83385ff60383ae59ec148b1cb. Exact main full CI41898514235 also completed all5 jobs SUCCESS. Ordinary guarded deploy41900834297/job126822589998 completed SUCCESS after CI/freshness checks and preserved the previous healthy rollback checkpoint. No guard or timeout change.
+
+Independent public verification 04Nov2026 19:54:01UTC / 21:54:01 Europe/Athens: /api/health ok=true and exact bc19fb45cfd24ef83385ff60383ae59ec148b1cb. Public /downloads/chat-android/release.json is byte-identical to the merged manifest, version0.1.16-preview/code17. Downloaded public APK is byte-identical to the repository and verified signed candidate:3703820bytes/SHA2566aa390d0c24ce37fd7f84fac0c20f8d4304a62c159e739bb175036e746fb98d8. Existing pinned signer evidence remains unchanged. This supersedes historical PUBLICATION PENDING for this bounded delivery only.
+
+Engineering publication is verified; physical/LAB/USER acceptance of new topics and appearance remains NOT TESTED. Overall N16 and all independent owners/residuals remain OPEN. Prior accepted familiarUI/media/login/actions remain protected without replay. No business transaction, real Chat send/read/ack/forward, credential, infrastructure setting or application-source change in this receipt. No functional manual PASS claimed. Evidence CHECKPOINTS/EVIDENCE/chat-topics-visual-20261103/publication-verification-20261104.json. Single next: ONE combined phone check of Συνομιλία/Ταμεία/Τιμολόγια and topic switching on installed0.1.16; do not repeat accepted actions for paperwork.
+
 ## 04/11/2026 — CENTRAL-POS-AI-ANDROID-TAKEOVER-01 / OWNER-DIRECTED HANDOFF / OPEN
 
 ΑΝΑΛΗΨΗ ΑΠΟ «Ανάθεση πρακτόρων POS AI Render Chat Android» — ASSIGNED docs/central-pos-ai-android-takeover-20261104 / current Work coordinator /root. The owner explicitly requests takeover because the previous conversation stalled. This transfers its coordination and unfinished delivery work, not independently retained invoice, reporting, bandwidth, fiscal or other peer scopes. Claim time 2026-11-04T19:41:23+02:00.
