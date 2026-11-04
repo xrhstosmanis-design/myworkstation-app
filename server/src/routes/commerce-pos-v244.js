@@ -658,7 +658,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     }
     if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"Δεν έχει συνδεθεί ο AI provider για PREMIUM FAST ανάγνωση.",code:"AI_PROVIDER_NOT_CONFIGURED"});
     const filePart=isPdf
-      ?{type:"input_file",filename,file_data:dataUrl.split(",").pop()}
+      ?{type:"input_file",filename,file_data:dataUrl}
       :{type:"input_image",image_url:dataUrl,detail:"high"};
     const prompt=`Είσαι FAST ελεγκτής ελληνικού τιμολογίου προμηθευτή για πληρωμή στο POS. Κοίτα ολόκληρο το πρωτότυπο παραστατικό, ιδίως την επάνω περιοχή για στοιχεία εκδότη/παραστατικού, τον πίνακα ειδών και την κάτω περιοχή για τα τελικά σύνολα.
 
