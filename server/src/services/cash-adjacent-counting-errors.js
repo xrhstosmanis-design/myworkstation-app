@@ -3,8 +3,8 @@
 const integer=value=>Number.isSafeInteger(value);
 const signedResidual=(v,matched)=>Math.sign(v)*(Math.abs(v)-matched);
 const compare=(a,b)=>new Date(a.previousClosedAt)-new Date(b.previousClosedAt)||a.previousSessionId.localeCompare(b.previousSessionId);
-export function projectAdjacentCashCountingCandidates({source,rows,immediatePair,cashCurrent,exactCents}){
-  if(!(source?.sessions instanceof Map)||!(rows instanceof Map)||typeof immediatePair!=='function'||typeof cashCurrent!=='function'||typeof exactCents!=='function')throw new TypeError('Invalid adjacent cash report inputs');
+export function projectAdjacentCashCountingCandidates({source,rows,immediatePair,cashCurrent,exactCents,localDay}){
+  if(!(source?.sessions instanceof Map)||!(rows instanceof Map)||typeof immediatePair!=='function'||typeof cashCurrent!=='function'||typeof exactCents!=='function'||typeof localDay!=='function')throw new TypeError('Invalid adjacent cash report inputs');
   const selected=new Set(source.selectedIds);
   const proposed=[];
   for(const previous of source.sessions.values()){
@@ -26,6 +26,7 @@ export function projectAdjacentCashCountingCandidates({source,rows,immediatePair
       terminalPos:previous.session.terminalPos,
       previousClosedAt:new Date(previous.session.closedAt).toISOString(),
       nextClosedAt:new Date(next.session.closedAt).toISOString(),
+      previousDay:localDay(previous.session.closedAt),nextDay:localDay(next.session.closedAt),
       previousOperatorName:a.operatorName,nextOperatorName:b.operatorName,
       previousDifferenceCents:x,nextDifferenceCents:y,
       commonCents:overlap,previousResidualCents:signedResidual(x,overlap),nextResidualCents:signedResidual(y,overlap),
@@ -43,7 +44,7 @@ export function adjacentCashCountingText(pairs){
   if(!Array.isArray(pairs)||pairs.length===0)return [];
   const lines=['','ΕΝΔΕΙΞΕΙΣ ΛΑΘΟΥΣ ΚΑΤΑΜΕΤΡΗΣΗΣ — ΔΙΑΔΟΧΙΚΕΣ ΒΑΡΔΙΕΣ'];
   for(const p of pairs){
-    const label=`${p.previousClosedAt.slice(0,10)} · ${p.previousOperatorName} → ${p.nextOperatorName} (${p.terminalPos})`;
+    const label=`${p.previousDay} · ${p.previousOperatorName} → ${p.nextDay} · ${p.nextOperatorName} (${p.terminalPos})`;
     const signs=`${p.previousDifferenceCents<0?'-':'+'}${money(p.previousDifferenceCents)} / ${p.nextDifferenceCents<0?'-':'+'}${money(p.nextDifferenceCents)}`;
     if(p.status==='AMBIGUOUS_OVERLAP'){lines.push(`ΑΜΦΙΒΟΛΗ ΑΛΛΗΛΟΥΧΙΑ: ${label}, ${signs}. Η ίδια βάρδια συμμετέχει σε περισσότερα από ένα ζεύγη· απαιτείται ανθρώπινη διασταύρωση, χωρίς κατανομή ποσού.`);continue;}
     lines.push(`ΠΡΟΤΕΙΝΟΜΕΝΟ ΛΑΘΟΣ ΚΑΤΑΜΕΤΡΗΣΗΣ: ${label}, διαφορές ${signs}, κοινό ποσό ${money(p.commonCents)}, υπόλοιπο προηγούμενης ${p.previousResidualCents<0?'-':'+'}${money(p.previousResidualCents)}, επόμενης ${p.nextResidualCents<0?'-':'+'}${money(p.nextResidualCents)}. Προς τεκμηρίωση — όχι οριστικός συμψηφισμός.`);
