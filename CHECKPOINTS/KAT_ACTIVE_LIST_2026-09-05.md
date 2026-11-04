@@ -1,3 +1,11 @@
+## 05/11/2026 — CASH-ADJACENT-COUNT-21 / SOURCE PR #3657 / AWAITING FULL NATIVE CI AND LAB
+
+Retained owner CASH-UNIFIED-AUDIT-15. Green documentation claim PR #3660 merged as ee3551474e169f5d4d24b450f804163b04b653a4 before this source validation. Draft PR #3657 proposes a read-only report flag only for genuinely immediately consecutive CLOSED shifts of one company/store/terminal with matching closing/opening, current audited cash, opposite differences and no manually applied offset. The -344.00/+343.08 EUR synthetic case suggests a 343.08 EUR overlap and leaves -0.92 EUR to investigate; no automatic financial netting or employee charge. Ambiguous triple overlaps receive no allocation.
+
+Eight scoped V8 helper tests passed previously; actual full Node20 server, native PostgreSQL/HTTP CI and MYWORKSTATION LAB are NOT TESTED as of this record. Separate evidence and isolated store acceptance are mandatory. Do not touch source cash/cards/IRIS/bank/fiscal/stock/invoice/provider, paid AI, review history or real-store financial state. Source PR remains DRAFT and must not merge unless its complete CI passes and release/LAB gates are satisfied.
+
+Checkpoint: CHECKPOINTS/CHANGES/2026-11-05-cash-adjacent-counting.md. Parent CASH-UNIFIED-AUDIT-15 remains OPEN.
+
 ## 05/11/2026 — CASH-ADJACENT-COUNT-21 / RETAINED OWNER / BEFORE-SOURCE CLAIM / AWAITING LAB
 
 Parent: CASH-UNIFIED-AUDIT-15 remains OPEN and assigned to the retained cash audit owner. This owner-directed bounded task continues PR #3657 (DRAFT; no merge) to detect potential cash-counting errors between immediately consecutive CLOSED shifts of the same company/store/terminal, with strict carried closing/opening equality, current six-check cash arithmetic, opposite nonzero cash differences and no existing manual OFFSET. No secondary owner or competing scope.
