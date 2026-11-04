@@ -1,0 +1,45 @@
+{
+  "status": "PUBLISHED_EVIDENCE_CANDIDATE_NOT_APPLIED_TO_APPLICATION",
+  "date_athens": "2026-11-05",
+  "runtime": "Node.js v22.16.0",
+  "base_commit": "8f558f094776fb4e2b0d1bfc7616bf48b0a7af53",
+  "existing_candidate_preserved": true,
+  "original_tests_before_rerun": {"tests":78,"pass":18,"fail":60,"cancelled":0,"skipped":0},
+  "real_helper_tests_before_rerun": {"tests":77,"pass":34,"fail":43,"cancelled":0,"skipped":0},
+  "combined_after_rerun": {"tests":155,"pass":155,"fail":0,"cancelled":0,"skipped":0},
+  "rerun_log_sha256": {
+    "rechecked-before-78.tap": "3344eaf834fa9f19353362e8e1abb00362c49a660318b8a734f2772a8c9c2ed7",
+    "rechecked-before-77.tap": "ee7de27fb3d050443f9e86133db4915a5c61c4d4d2994943d27389e5dfddc0f5",
+    "rechecked-155.tap": "248f56b5b94721b084fb02ac27e4dd9f42f4b4bbc19f3fa150b9235b7ed9929d"
+  },
+  "published_real_helper_test_git_blob": "4ec90e06f7d84d42f74c7c83fe50dd93b3746689",
+  "published_real_helper_test_sha256": "90bd908326a12f0b1dda48e12e626b981e282aa10cf5ea665af4a879374f62d5",
+  "reassembled_v2_patch": {
+    "bytes":40671,
+    "sha256":"54fa54128c8030e11c17bd66583dab61b78fce1e4af6ae8904cd7b4baeadd956",
+    "git_blob":"d556b2d82c76d6282688215e16441058776e847c",
+    "byte_equal_to_previously_tested_archive":true,
+    "tampered_candidate_refused":true,
+    "tampered_test_refused":true,
+    "existing_output_preserved":true,
+    "application_patch_applied":false
+  },
+  "timing_peer": {
+    "pr":3655,
+    "observed_head":"593bde47efc3a6bdd5824946157931e1c807afcd",
+    "observed_route_blob":"919672b42e1b4fb286011c693c2651316242ac43",
+    "review":"STATIC_OVERLAP_IDENTIFIED_NOT_COMBINED_EXECUTION",
+    "remaining":"Reconcile patch contexts and test dependencies with createFastHeaderTiming; preserve peer instrumentation and validate the combined candidate before full exact Node20 PR/main CI. Do not treat the 155 isolated tests as validation of the timing branch."
+  },
+  "real_code_exercised":["registered FAST handler excerpt","footer parsers","wallet error guard","Responses wrapper and schema","reconciled-table return predicate"],
+  "mocked_dependencies":["provider network and responses","Azure normalization","database","supplier matching","wallet settlement","line finalization and arithmetic"],
+  "full_checkout_build_or_native_suite_executed":false,
+  "independent_review_executed":false,
+  "application_source_changed":false,
+  "main_changed":false,
+  "production_deployed":false,
+  "lab_executed":false,
+  "real_provider_or_business_operation":false,
+  "retained_owner_transferred":false,
+  "next_gate":"Retained invoice/header owner publishes synchronized bounded before-source claim, reconciles with timing peer, runs exact full PR/main CI, ordinary guarded release, then one fresh synthetic no-submit LAB check. Never replay F/D/G, paid or CREDIT originals."
+}
