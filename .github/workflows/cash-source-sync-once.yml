@@ -1,0 +1,71 @@
+name: Cash PR 3657 registry sync (single use)
+on:
+  pull_request:
+    types: [synchronize]
+permissions:
+  contents: write
+  pull-requests: read
+jobs:
+  synchronize-cash-source-checkpoint:
+    if: ${{ github.event.pull_request.number == 3657 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feat/cash-adjacent-count-20261105-chat' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout only original draft PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/cash-adjacent-count-20261105-chat
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Preserve every peer entry and prepend exact source status
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          checkpoint=Path('CHECKPOINTS/CHANGES/2026-11-05-cash-adjacent-counting.md')
+          assert checkpoint.exists(), 'Source checkpoint missing'
+          marker='## 05/11/2026 — CASH-ADJACENT-COUNT-21 / SOURCE PR #3657 / AWAITING FULL NATIVE CI AND LAB'
+          addition=(marker+'\n\n'
+            'Retained owner CASH-UNIFIED-AUDIT-15. Green documentation claim PR #3660 merged as ee3551474e169f5d4d24b450f804163b04b653a4 before this source validation. Draft PR #3657 proposes a read-only report flag only for genuinely immediately consecutive CLOSED shifts of one company/store/terminal with matching closing/opening, current audited cash, opposite differences and no manually applied offset. The -344.00/+343.08 EUR synthetic case suggests a 343.08 EUR overlap and leaves -0.92 EUR to investigate; no automatic financial netting or employee charge. Ambiguous triple overlaps receive no allocation.\n\n'
+            'Eight scoped V8 helper tests passed previously; actual full Node20 server, native PostgreSQL/HTTP CI and MYWORKSTATION LAB are NOT TESTED as of this record. Separate evidence and isolated store acceptance are mandatory. Do not touch source cash/cards/IRIS/bank/fiscal/stock/invoice/provider, paid AI, review history or real-store financial state. Source PR remains DRAFT and must not merge unless its complete CI passes and release/LAB gates are satisfied.\n\n'
+            'Checkpoint: CHECKPOINTS/CHANGES/2026-11-05-cash-adjacent-counting.md. Parent CASH-UNIFIED-AUDIT-15 remains OPEN.\n\n')
+          prefix=addition.encode('utf-8')
+          for name in (
+              'CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md',
+              'docs/roadmap/OPEN_WORK_TRACKER.md',
+              'docs/roadmap/PENDING_WORK.md',
+          ):
+              p=Path(name);before=p.read_bytes()
+              assert before.startswith(b'## ') and marker.encode('utf-8') not in before, f'Duplicate or invalid registry {name}'
+              after=prefix+before
+              assert after.endswith(before) and len(after)==len(before)+len(prefix)
+              p.write_bytes(after)
+              print(f'Preserved {name}: {len(before)} bytes plus {len(prefix)} bytes')
+          PY
+      - name: Generate canonical status tracker PDF without removing any entries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+          python -m pip install --disable-pip-version-check 'reportlab==4.4.0'
+          python docs/roadmap/generate-open-work-tracker.py
+          cp output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf
+          cmp output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf
+      - name: Commit source documentation and remove this temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -- .github/workflows/cash-source-sync-once.yml
+          git add -- CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md \
+                     docs/roadmap/OPEN_WORK_TRACKER.md \
+                     docs/roadmap/PENDING_WORK.md \
+                     output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf \
+                     docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf
+          git diff --cached --stat
+          git commit -m 'docs(cash): synchronize source checkpoint preserving all registries'
+          git push origin HEAD:feat/cash-adjacent-count-20261105-chat
