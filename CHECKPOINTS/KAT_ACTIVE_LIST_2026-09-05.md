@@ -1,3 +1,9 @@
+## 04/11/2026 — CASH-STORED-PREVIEW-19 / TASK5 CONTINUATION / BEFORE SOURCE
+
+ΑΝΑΛΗΨΗ ΑΠΟ codex/cash-chat-reconciliation-20261026 — ASSIGNED fix/cash-stored-preview-budget-20261104 / current task5 Work page /root after owner task5 and ΞΕΚΙΝΑ. Bounded GET-only stored-preview continuation; parent CASH-UNIFIED-AUDIT-15 remains OPEN, accepted performance18/manual and all peer scopes retained.
+
+Read-only UI/source plus aggregate metadata diagnosis confirms a collection over25MiB suppresses all stored readings because the automatic intake bound clears discovery.sources before preview repository.get. No private originals/identities/amounts are published. After this claim is green/main, design bounded reuse of existing readings with current-original checks within unchanged50/25MiB limits; omitted/unread/uncertain sources preserve incomplete coverage and prevent FINAL. Paid runner, provider, financial/review/stock/fiscal/schema/settings behavior remains unchanged. No runtime or state-changing LAB action yet. Checkpoint CHECKPOINTS/CHANGES/2026-11-04-cash-stored-preview-budget.md. Single next: green/main diagnosis claim before source; new functional acceptance NOT TESTED.
+
 ## 04/11/2026 — CENTRAL-POS-AI-ANDROID-TAKEOVER-01 / OWNER-DIRECTED HANDOFF / OPEN
 
 ΑΝΑΛΗΨΗ ΑΠΟ «Ανάθεση πρακτόρων POS AI Render Chat Android» — ASSIGNED docs/central-pos-ai-android-takeover-20261104 / current Work coordinator /root. The owner explicitly requests takeover because the previous conversation stalled. This transfers its coordination and unfinished delivery work, not independently retained invoice, reporting, bandwidth, fiscal or other peer scopes. Claim time 2026-11-04T19:41:23+02:00.
