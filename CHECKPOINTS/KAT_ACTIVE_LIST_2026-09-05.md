@@ -1,3 +1,13 @@
+## 04/11/2026 — CASH-STORED-PREVIEW-20 / ASSIGNED BEFORE SOURCE / NOT TESTED
+
+Retained receiving owner /root; bounded branch fix/cash-stored-preview-20261104, within transferred CASH-UNIFIED-AUDIT-15. Handoff3646 and diagnostic3647 are merged. Current owner explicitly requests continuation; existing sanitized technical/code publication authorization retained. No second owner or peer scope is taken.
+
+Source-supported defect: full-report GET bounds all attachment metadata before looking up existing readings, so unrelated over-budget or unknown-size metadata can erase valid stored evidence. Diagnostic3647 records the observation, not financial acceptance or a proven live admission reason. Earlier scoped LIVE/manual/PDF PASS and eight original paid-read outcomes remain protected.
+
+AFTER this synchronized claim is green/main: add one bounded stored-preview collector and integrate only cash-reconciliation-source.js. Preserve the legacy admissible path and its source/report hashes. For rejected aggregate admission only, inspect at most50 metadata entries and retrieve existing reading state first; revalidate only extracted current originals with known positive sizes within a cumulative25MiB byte budget, preserving checksum/company/store/generation and7MiB original validation. Unknown, pending, unread, tampered, changed or over-budget originals remain unresolved and coverage remains LIMITED. No AI dispatch, paid-admission change, raw-reading/review mutation, monetary adjustment, schema/index/timeout/config change or deployment in this candidate.
+
+Required focused/native regressions: valid cached original survives unrelated oversized/unknown metadata; unread originals never fetched or dispatched; cumulative budget,50-source limit, missing/changed/foreign originals, deterministic ordering, original metadata/reading immutability and legacy admissible source/report/hash parity. Exact native PR/main CI and ordinary guarded release precede GET-only acceptance; full financial/handwriting acceptance remains OPEN. No new manual/PDF PASS. Single next: green/main this before-source claim, then implementation and regression.
+
 ## 04/11/2026 — CASH-OWNER-DIRECTED-TAKEOVER-19 / ASSIGNED / PARENT OPEN
 
 ΑΝΑΛΗΨΗ ΑΠΟ codex/cash-chat-reconciliation-20261026 — ASSIGNED docs/cash-takeover-20261104 / current Work page /root, explicitly directed by the owner in this conversation. This transfers only remaining cash reconciliation source/matching and final agreement work; all independent peer scopes remain with their owners. Historical owner records below remain evidence, superseded only for this ownership transfer after merge. Claim publication PR3646.
