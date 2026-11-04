@@ -97,7 +97,7 @@ export function projectReconciliation(source,records,paperValidity=new Map()){
   const calculatedResult=calculateCashResult(selected);
   const issueRegister=projectCashIssues(source.store.id,selected,records);
   const handoffRegister=projectHandoffIssues(source,records,immediateCashPair);
-  const countingErrorCandidates=projectAdjacentCashCountingCandidates({source,rows,immediatePair:immediateCashPair,cashCurrent:cashArithmeticIsCurrent,exactCents});
+  const countingErrorCandidates=projectAdjacentCashCountingCandidates({source,rows,immediatePair:immediateCashPair,cashCurrent:cashArithmeticIsCurrent,exactCents,localDay:cashReportRowDay});
   for(const row of selected){const ids=handoffRegister?.status==='AVAILABLE'?handoffRegister.issues.filter(q=>q.current&&[q.previousSessionId,q.nextSessionId].includes(row.sessionId)).map(q=>q.id):[];if(ids.length)row.handoffIssueIds=ids;}
   const reportHash=hash({sourceReportHash,calculatedResult,...(source.paperEvidence?{paperEvidence:source.paperEvidence,fullEvidence:selected.map(r=>({sessionId:r.sessionId,fullEvidence:r.fullEvidence,fullCoverage:r.fullCoverage,fullAudit:r.fullAudit}))}:{}),...(handoffRegister?{handoffRegister}:{}),...(countingErrorCandidates.length?{countingErrorCandidates}:{}),...(issueRegister?{issueRegister}:{}),identities:selected.map(r=>({sessionId:r.sessionId,employeeKey:r.employeeKey,operatorName:r.operatorName,identityRequiresReview:r.identityRequiresReview,automaticallyCalculated:r.automaticallyCalculated}))});
   const sameCheckpointPeriod=checkpoint?.proof.period?.from===source.period.from&&checkpoint?.proof.period?.to===source.period.to;
