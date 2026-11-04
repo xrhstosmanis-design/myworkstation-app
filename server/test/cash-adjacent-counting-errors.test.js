@@ -19,7 +19,7 @@ const base=(x=-34400,y=34308)=>{
   const rows=new Map([['a',{sessionId:'a',sourceHash:'hash-a',operatorName:'Night',remainingCents:x,offsetCents:0,offsets:[],recheck:false,reviewed:false,auditValid:true,cardCents:-22750}],['b',{sessionId:'b',sourceHash:'hash-b',operatorName:'Morning',remainingCents:y,offsetCents:0,offsets:[],recheck:false,reviewed:false,auditValid:true,cardCents:22750}]]);
   return {source:{sessions,rule:{mode:'FULL',carryOverEnabled:true},selectedIds:['a','b']},rows};
 };
-const project=input=>projectAdjacentCashCountingCandidates({...input,immediatePair:immediately,cashCurrent:current,exactCents:cents});
+const project=input=>projectAdjacentCashCountingCandidates({...input,immediatePair:immediately,cashCurrent:current,exactCents:cents,localDay:x=>new Date(x).toISOString().slice(0,10)});
 
 test('unequal adjacent opposite signs produce a counting candidate plus exact residual without touching cash or cards',()=>{
   const input=base(),before=structuredClone(input),pairs=project(input);
@@ -88,4 +88,9 @@ test('selected period boundary keeps only the linked pair, with deterministic or
   const input=base();input.source.selectedIds=['b'];assert.equal(project(input).length,1);
   input.source.selectedIds=['other'];assert.deepEqual(project(input),[]);
   assert.deepEqual(adjacentCashCountingText([]),[]);
+});
+
+test('business-day label comes from injected Athens date policy, not UTC prefix',()=>{
+ const input=base(),pairs=projectAdjacentCashCountingCandidates({...input,immediatePair:immediately,cashCurrent:current,exactCents:cents,localDay:()=> '2026-10-24'});
+ const summary=adjacentCashCountingText(pairs).join('\n');assert.match(summary,/2026-10-24/);
 });
