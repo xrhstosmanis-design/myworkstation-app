@@ -1,3 +1,11 @@
+## 04/11/2026 — CASH-TASK5-HANDOFF-04139B87 / OWNER-APPROVED TRANSFER / OPEN
+
+ΑΝΑΛΗΨΗ ΑΠΟ codex/cash-chat-reconciliation-20261026 και fix/cash-stored-preview-budget-20261104 — ASSIGNED current Work conversation e8472385bb29 /root, request04139b87-94d8-482b-832a-8712b90184ba. Owner explicitly approved «να μεταφερθει» after the duplicate-assignment check on04/11/2026. Receiving page retains existing PR3643 and branch fix/cash-stored-preview-budget-20261104; no competing implementation branch. Upon merge of this receipt, the previous page is released from this transferred task5 scope and must not continue it in parallel.
+
+Scope: CASH-UNIFIED-AUDIT-15 remaining shift/card/handwritten/event/invoice reconciliation, complete financial acceptance and larger-period coverage, beginning with CASH-STORED-PREVIEW-19 bounded stored-reading preview diagnosis already recorded below. Previous evidence/manual/performance17–18 acceptance and all unrelated peer assignments remain protected. PR3643 currently contains documentation only; its diagnosis is inherited evidence, not a newly repeated live observation. No new runtime change or LAB/LIVE/USER PASS.
+
+Single next action: publish this transfer with applicable green CI/main, then review the existing preview source and regressions before the bounded correction; original checks, unchanged50-source/25MiB limits and incomplete coverage must remain. Uncertain dates/amounts remain unresolved; no new paid source/retry, financial/stock/fiscal/settings change, approval, issue closure or email is authorized by this transfer. Full final financial agreement remains OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-11-04-cash-stored-preview-budget.md.
+
 ## 04/11/2026 — CASH-STORED-PREVIEW-19 / BEFORE-SOURCE DIAGNOSIS / OPEN
 
 Owner-directed continuation of CASH-UNIFIED-AUDIT-15 after the explicit task5 assignment and ΞΕΚΙΝΑ. ΑΝΑΛΗΨΗ ΑΠΟ codex/cash-chat-reconciliation-20261026 — ASSIGNED fix/cash-stored-preview-budget-20261104 / current task5 Work page /root for this bounded preview correction. Previous performance18 and all accepted/manual behavior remain protected; no independent peer scope is transferred.
