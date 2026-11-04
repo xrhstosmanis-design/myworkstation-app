@@ -1,3 +1,9 @@
+## 05/11/2026 — PR3655 RESUMED / SHARED-REGISTRY CONFLICT RESOLVED
+
+The user explicitly continued task2 from the 108-test checkpoint. Same retained owner and source branch; no duplicate assignment. GitHub integration independently verified source head c0419bb3a80d1dde2ed452945c1141a58df32a91, dirty merge state, zero exact-head check runs and zero workflow runs. Main4fa7ffa4bb0420487b072770a61080ee8bd9bd6f adds only peer claim3652 documentation/PDFs after common parentf131f00c. The only conflicts were simultaneous prepends in active/tracker/pending. Reconciliation preserves both prefixes and the complete prior bodies byte-for-byte; current peer checkpoint/PDFs are retained. Source, tests and H/I fixtures remain byte-identical to reviewedc0419bb3. A new read-only independent review found no blocker in the diagnostic delta; it does not substitute for full CI.
+
+Latest read-only Render confirmation: service srv-d9isenfavr4c73bdh52g is live on8f558f094776fb4e2b0d1bfc7616bf48b0a7af53, deploydep-dblqhrm417fc73b8rkf0 finished04Nov21:53:30.581164Z, direct auto-deploy off. Explicit workspace-scoped read-only SQL and log access are available. No new source installation, OCR/provider request, payment/draft/stock action or hosted performance result occurred during reconciliation. H/I remain PREPARED_NOT_UPLOADED. Next: require full exact PR CI, ordinary merge/main CI and guarded exact healthy release; then refresh before/control, measure H once continuously with four-field accuracy and correlated stages, and capture after/control. Performance remains OPEN.
+
 ## 05/11/2026 — INVOICE-HEADER-LATENCY / TIMING SOURCE CANDIDATE / AWAITING FULL CI
 
 Retained /root owner, fix/invoice-header-timing-20261104. The existing claim PR #3648 passed applicable docs CI 41920232591 at head 0921b044c02bd208ff88e23b992d4f5b89bf7081 and merged f131f00c30e1435234b8d685721f7db5c425e54e before source edits. Main history, complete shared registries and relevant invoice manual/checkpoints were retrieved. The route before editing still matched accepted blob 0863792a4572d940098d831e29870087205e712f. Latest observed production was 8f558f094776fb4e2b0d1bfc7616bf48b0a7af53, live 04Nov21:53:30 UTC, with direct Render auto-deploy off and the ordinary guarded GitHub release workflow preserved.
@@ -35,5 +41,3 @@ Bounded next source after this claim is green/main: sanitized monotonic timing e
 Hosted G readiness remains imprecise:83920ms is observation upper bound only. Main history, current registries, invoice manual and relevant header-only/timeout/transport checkpoints reviewed. Prior wrong subtotalF/D, EFK/general accuracy/UI counts and physical POS latency remain OPEN. No new LAB/manual/PDF PASS. Required next: publish green claim, implement bounded instrumentation, exact full PR/main CI and ordinary guarded healthy release, then separately identified fresh no-submit synthetic read with before/after/control; never repair old evidence by replay. Existing accepted PDFs/manuals retain their baseline during this pre-change claim.
 
 Checkpoint CHECKPOINTS/CHANGES/2026-11-04-invoice-header-timing.md. Owner retained until recorded completion or named handoff.
-
-
