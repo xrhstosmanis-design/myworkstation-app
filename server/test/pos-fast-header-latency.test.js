@@ -25,9 +25,9 @@ const throwIfWalletError=new Function(`${walletSource.slice(walletStart,walletEn
 const row={code:'SYNTHETIC-1',description:'SYNTHETIC ITEM',quantity:1,unit:'TEM',unitCost:10,initialAmount:10,discount1:0,discount1Amount:0,netAmount:10,exciseTotal:0,vatRate:24,grossAmount:12.4,sourceColumnsVerified:true,quantitySource:'AI_COMPLETE_PRINTED_TABLE_VERIFIED'};
 const complete=()=>({supplier:{name:'SYNTHETIC SUPPLIER',taxId:'099999999'},documentNumber:'SYN-42',documentDate:'2026-11-02',totalGross:12.4,aiConfidence:98,rawText:'',productLines:[]});
 const fallback=()=>({supplierName:'FALLBACK SUPPLIER',supplierTaxId:'088888888',documentNumber:'FB-43',documentDate:'2026-11-01',totalGross:24.8,confidence:90,documentType:'INVOICE'});
-async function run({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null,mimeType='image/jpeg',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`}={}){
- const calls=[],queries=[];let result,status=200,error,walletScopes=0;
- const deps={Buffer,crypto,process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'https://synthetic.invalid',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic',OPENAI_API_KEY:'synthetic'}},console:{warn(){},error(){}},FAST_AZURE_HEADER_TIMEOUT_MS:35000,POS_STORED_LINES_TOLERANCE:0.05,finalizeV244ProductLines,reconcileInvoiceLines,reusableVerifiedPrintedTable,recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable,throwIfWalletError,
+async function run({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null,openaiConfigured=true,transport=false,mimeType='image/jpeg',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`}={}){
+ const calls=[],queries=[],requests=[];let result,status=200,error,walletScopes=0;
+ const deps={Buffer,crypto,process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'https://synthetic.invalid',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic',OPENAI_API_KEY:openaiConfigured?'synthetic':''}},console:{warn(){},error(){}},FAST_AZURE_HEADER_TIMEOUT_MS:35000,POS_STORED_LINES_TOLERANCE:0.05,finalizeV244ProductLines,reconcileInvoiceLines,reusableVerifiedPrintedTable,recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable,throwIfWalletError,
   prisma:{store:{findFirst:async q=>{assert.deepEqual(q,{where:{id:'store-a',companyId:'company-a'},select:{id:true}});return storeExists?{id:'store-a'}:null}},$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join('?'),values});return durable}},
   walletActivityFromRequest:(req,scope)=>{assert.equal(req.user.companyId,'company-a');assert.deepEqual(scope,{storeId:'store-a',purpose:'PAYMENT_HEADER_READ'});return {purpose:scope.purpose}},
   withInvoiceWalletScope:async(scope,work)=>{walletScopes++;assert.deepEqual(scope,{companyId:'company-a',storeId:'store-a',activity:{purpose:'PAYMENT_HEADER_READ'}});return work()},
@@ -38,12 +38,32 @@ async function run({azure=complete(),openai=fallback(),durable=[],operatorStore=
   callFastOpenAiHeader:async()=>{calls.push('openai');if(openai instanceof Error)throw openai;return openai},
   matchSupplier:async companyId=>{assert.equal(companyId,'company-a');return null},
  };
+ if(transport){
+  const start=source.indexOf('async function callFastOpenAiHeader('),end=source.indexOf('\nasync function matchSupplier(',start);
+  const schemaStart=source.indexOf('const fastHeaderSchema='),schemaEnd=source.indexOf('\nconst reconciledFastProductLines=',schemaStart);
+  const outputStart=source.indexOf('function outputText('),outputEnd=source.indexOf('\nasync function callFastOpenAiHeader(',outputStart);
+  assert.ok(start>=0&&end>start&&schemaStart>=0&&schemaEnd>schemaStart&&outputStart>=0);
+  const fetch=async(url,options)=>{calls.push('openai');requests.push({url,method:options.method,body:JSON.parse(options.body)});return {ok:true,json:async()=>({output_text:JSON.stringify(openai)})}};
+  deps.callFastOpenAiHeader=new Function('fetch','process','AbortSignal','console','throwIfWalletError',`const FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS=30000,FAST_OPENAI_HEADER_ATTEMPTS=2;\n${source.slice(schemaStart,schemaEnd)}\n${source.slice(outputStart,outputEnd)}\n${source.slice(start,end)}\nreturn callFastOpenAiHeader;`)(fetch,deps.process,AbortSignal,deps.console,throwIfWalletError);
+ }
  const fn=new Function(...Object.keys(deps),`${declarations}\n${source.slice(reconcileStart,reconcileEnd)}\nreturn ${callback}`)(...Object.values(deps));
  const req={body:{storeId:'store-a',filename:mimeType==='application/pdf'?'synthetic.pdf':'synthetic.jpg',mimeType,dataUrl},user:{companyId:'company-a',tokenType:'STORE_OPERATOR',storeId:operatorStore}};
  const res={status(value){status=value;return this},json(value){assert.equal(result,undefined,'one response only');result=value;return this}};
  await fn(req,res,value=>{error=value});
- return {calls,queries,result,status,error,walletScopes};
+ return {calls,queries,requests,result,status,error,walletScopes};
 }
+
+test('actual FAST PDF fallback sends original PDF data URL through actual Responses request body',async()=>{
+ const bytes=readFileSync(path.join(root,'CHECKPOINTS/EVIDENCE/invoice-physical-pages-20261102/fixtures/two-physical-pages.pdf'));
+ const dataUrl=`data:application/pdf;base64,${bytes.toString('base64')}`;
+ const r=await run({transport:true,mimeType:'application/pdf',dataUrl,azure:{...complete(),azurePageCount:2,productLines:[row]}});
+ assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.requests.length,1);assert.equal(r.requests[0].url,'https://api.openai.com/v1/responses');assert.equal(r.requests[0].method,'POST');
+ const file=r.requests[0].body.input[0].content[1];assert.equal(file.type,'input_file');assert.equal(file.filename,'synthetic.pdf');assert.equal(file.file_data,dataUrl);assert.deepEqual(Buffer.from(file.file_data.split(',')[1],'base64'),bytes);assert.equal(r.result.totalGross,24.8);
+ assert.equal(r.requests[0].body.text.format.name,'invoice_fast_header');assert.equal(r.requests[0].body.text.format.strict,true);
+});
+test('actual FAST image fallback keeps image data URL through actual Responses request body',async()=>{
+ const dataUrl='data:image/jpeg;base64,c3ludGhldGlj';const r=await run({transport:true,dataUrl,azure:{...complete(),documentNumber:''}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.deepEqual(r.requests[0].body.input[0].content[1],{type:'input_image',image_url:dataUrl,detail:'high'});assert.equal(r.result.totalGross,24.8);
+});
 
 test('actual FAST route returns complete Azure header without a second provider or fabricated rows',async()=>{
  const r=await run();assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.provider,'AZURE_DOCUMENT_INTELLIGENCE');assert.equal(r.result.documentNumber,'SYN-42');assert.equal(r.result.totalGross,12.4);assert.deepEqual(r.result.productLines,[]);assert.equal(r.walletScopes,1);
@@ -111,11 +131,28 @@ for(const [name,count]of [['two pages',2],['missing',undefined],['zero',0],['neg
   const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:count}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result.documentNumber,'FB-43');assert.equal(r.result.totalGross,24.8);assert.deepEqual(r.result.productLines,[]);
  });
 }
-for(const count of [2,undefined,0,'1']){
- test(`PDF reconciled-table bypass remains available with page count ${String(count)}`,async()=>{
-  const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:count,documentNumber:'',productLines:[row]}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.documentNumber,'');assert.equal(r.result.productLines.length,1);assert.equal(r.result.totalGross,12.4);
+for(const count of [2,undefined,0,-1,'1','invalid',Infinity,null]){
+ for(const documentNumber of ['SYN-42','']){
+  test(`PDF reconciled subtotal with page count ${String(count)} and ${documentNumber?'complete':'partial'} header continues to fallback`,async()=>{
+   const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:count,documentNumber,productLines:[row]}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result.documentNumber,'FB-43');assert.equal(r.result.totalGross,24.8);assert.deepEqual(r.result.productLines,[]);
+  });
+ }
+}
+for(const documentNumber of ['SYN-42','']){
+ test(`single-page PDF keeps reconciled-table shortcut with ${documentNumber?'complete':'partial'} header`,async()=>{
+  const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:1,documentNumber,productLines:[row]}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.documentNumber,documentNumber);assert.equal(r.result.productLines.length,1);assert.equal(r.result.totalGross,12.4);
  });
 }
+test('multi-page PDF fallback failure retains the existing useful Azure fallback limit',async()=>{
+ const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openai:new Error('synthetic unavailable')});assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result.provider,'AZURE_DOCUMENT_INTELLIGENCE');assert.equal(r.result.totalGross,12.4);
+});
+test('multi-page PDF without configured fallback retains the existing useful Azure fallback limit',async()=>{
+ const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openaiConfigured:false});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.provider,'AZURE_DOCUMENT_INTELLIGENCE');assert.equal(r.result.totalGross,12.4);
+});
+test('multi-page PDF fallback wallet refusal cannot return a useful reconciled subtotal',async()=>{
+ const failure=Object.assign(new Error('synthetic funding required'),{code:'AI_WALLET_LOW_BALANCE',status:402});
+ const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openai:failure});assert.equal(r.error,failure);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result,undefined);
+});
 test('image header-only bypass remains unchanged even when page count is not one',async()=>{
  const r=await run({azure:{...complete(),azurePageCount:2}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.documentNumber,'SYN-42');assert.deepEqual(r.result.productLines,[]);
 });

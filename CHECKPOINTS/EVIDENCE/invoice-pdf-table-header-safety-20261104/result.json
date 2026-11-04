@@ -1,0 +1,16 @@
+{
+  "revision": "6088b7b2d1eb1b404205f15e93a7503bfcea268b",
+  "result": "FAIL",
+  "elapsedMs": 12346,
+  "startedAt": "2026-11-04T14:02:09.795Z",
+  "readyAt": "2026-11-04T14:02:22.141Z",
+  "supplier": "LAB METER TEST",
+  "invoice": "LAB-HEADER-TABLE-20261104-F",
+  "date": "2026-11-04",
+  "expectedTotal": 24.8,
+  "actualTotal": 12.4,
+  "confidence": 87,
+  "submitted": false,
+  "nineMeasuredTablesAndControlUnchanged": true,
+  "providerTrace": "NOT CAPTURED"
+}

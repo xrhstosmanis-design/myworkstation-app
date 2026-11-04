@@ -1,3 +1,7 @@
+## 04Nov2026 — PR3612 integration continuation / AWAITING LAB
+
+04Nov2026 continuation: source PR #3612 exact head d7ac495 passed full PR CI41685034134 attempt2 and native recovery; attempt1 hit the 25-minute job limit after approximately19-minute all-history checkout, not a recorded source-test failure. Reconcile latest main and preserve peer blob-filter CI optimization and all unrelated source/docs. No wallet runtime path overlap found. Same bounded history implementation; re-run exact reconciled full PR/main CI and normal guarded deploy before hosted read-only acceptance. Pagination remains AWAITING LAB. The separately approved private residual waiver is still unexecuted: final native submit was stopped by automatic review requiring the human owner to perform the financial action. Native form is prepared; no SQL/provider/alternate-channel execution or false financial PASS.
+
 ## 03/11/2026 - AI-WALLET-HISTORY-02 / RETAINED OWNER / ASSIGNED BEFORE SOURCE
 
 Same retained parent owner feat/ai-owner-wallet-20261022 / current /root; bounded continuation feat/ai-wallet-history-20261103. Owner requests completion of the remaining wallet-history and legacy-evidence work. Previous commercial-waiver source3571, synthetic LAB PASS, explicitly approved private release and closure3602/mainffc8bb6 remain protected and must not be replayed. Current active/pending/tracker/checklists/manual and intervening history reviewed; no wallet runtime takeover found.

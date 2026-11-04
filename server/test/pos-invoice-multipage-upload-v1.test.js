@@ -77,7 +77,7 @@ test("fast header falls back from Azure without blocking payment",()=>{
 test("fast header also falls back when Azure succeeds with an empty header",()=>{
   assert.match(wrapper,/const azureHeader=/);
   assert.match(wrapper,/const azureHasUsefulHeader=Boolean/);
-  assert.match(wrapper,/if\(azureHasUsefulHeader&&\(azureProductLines\.length\|\|azureHasCompleteHeader\)\)return res\.json\(azureHeader\)/);
+  assert.match(wrapper,/if\(azureHasUsefulHeader&&\(!isPdf\|\|parsed\.azurePageCount===1\)&&\(azureProductLines\.length\|\|azureHasCompleteHeader\)\)return res\.json\(azureHeader\)/);
   assert.match(wrapper,/if\(azureHasUsefulHeader\)azureHeaderFallback=azureHeader/);
   assert.match(wrapper,/FAST Azure header incomplete; trying configured fallback/);
   assert.match(wrapper,/δεν επέστρεψε ασφαλή βασικά στοιχεία/);
