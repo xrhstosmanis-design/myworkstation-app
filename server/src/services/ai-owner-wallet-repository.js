@@ -66,6 +66,12 @@ export function createAiOwnerWalletRepository(db){
     const usageSummary=await readWalletUsageSummary(db,companyId,storeId);
     return {...wallet,waiverCandidates:json(waiverCandidates.slice(0,100)),waiverCandidatesMore:waiverCandidates.length>100,postpaid:await readPostpaidDebt(db,companyId),customerPricing:await customerPricing(db,companyId),entries:json(entries.map(e=>({...e,customerCharge:publicCustomerCharge(e.customerCharge),postpaid:publicPostpaidActivity(e.postpaid),commercialWaiver:publicCommercialWaiver(e.commercialWaiver),activity:publicWalletActivity(e.activity,{companyId,storeId:e.storeId})}))),notices:json(notices),usage,usageSummary:json(usageSummary),usageScope:storeId?'SELECTED_STORE':'COMPANY',storeId};
   }
+  async function history(companyId,storeId=null,cursor=null){
+    await ensure();
+    const page=await readWalletHistoryPage(db,companyId,storeId,cursor);
+    const entries=page.entries.map(e=>({...e,customerCharge:publicCustomerCharge(e.customerCharge),postpaid:publicPostpaidActivity(e.postpaid),commercialWaiver:publicCommercialWaiver(e.commercialWaiver),activity:publicWalletActivity(e.activity,{companyId,storeId:e.storeId})}));
+    return {companyId,storeId,pageSize:100,nextCursor:page.nextCursor,entries:JSON.parse(JSON.stringify(entries,(_,v)=>typeof v==='bigint'?v.toString():v))};
+  }
   async function configurePricing(companyId,{version,policy},actorId){
     const parsed=parseCustomerPricing(policy);
     await ensure();return db.$transaction(async tx=>{
@@ -207,7 +213,9 @@ export function createAiOwnerWalletRepository(db){
   })}
   async function enabledFor(companyId){await ensure();return (await db.$queryRaw`SELECT "enabled" FROM "AiOwnerWallet" WHERE "companyId"=${companyId}`)[0]?.enabled===true}
   async function invoiceEnabledFor(companyId,fallback){await ensure();return invoicePolicy(db,companyId,fallback)}
-  return {ensure,read,configure,configurePricing,credit,grantTrial,reserve,settle,review,enabledFor,invoiceEnabledFor,db,...createPostpaidWallet({db,ensure,lock}),...createCommercialWaiver({db,ensure,lock})};
+  return {ensure,read,history,configure,configurePricing,credit,grantTrial,reserve,settle,review,enabledFor,invoiceEnabledFor,db,...createPostpaidWallet({db,ensure,lock}),...createCommercialWaiver({db,ensure,lock})};
 }
 
 
+
+import {readWalletHistoryPage} from './ai-wallet-history.js';
