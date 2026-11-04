@@ -1,0 +1,18 @@
+{
+  "status": "ISOLATED_TESTED_CANDIDATE_NOT_APPLIED_TO_APPLICATION_SOURCE",
+  "base_commit": "8f558f094776fb4e2b0d1bfc7616bf48b0a7af53",
+  "runtime": "Node.js v22.16.0",
+  "before": {"tests":78,"pass":18,"fail":60,"skip":0},
+  "after": {"tests":78,"pass":78,"fail":0,"skip":0},
+  "exact_patch_application_on_copied_excerpts": "PASS",
+  "added_test_repo_relative_execution": {"tests":78,"pass":78,"fail":0,"skip":0},
+  "patch_git_blob": "fc4287b31e6c5d3a9f8513ea59c11445adbf5e45",
+  "patch_sha256": "3254e85967745ada000a1bcf4be46ced88df787c37bf67f681012b801679b3fa",
+  "full_existing_suite_executed": false,
+  "independent_review_executed": false,
+  "application_source_changed": false,
+  "production_deployed": false,
+  "lab_executed": false,
+  "real_provider_or_business_operation": false,
+  "scope": "Actual-handler return policy with isolated provider, normalization, database, wallet and arithmetic test doubles; not OCR or financial acceptance."
+}

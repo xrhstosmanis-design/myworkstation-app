@@ -1,0 +1,202 @@
+diff --git a/server/src/routes/commerce-pos-v244.js b/server/src/routes/commerce-pos-v244.js
+--- a/server/src/routes/commerce-pos-v244.js
++++ b/server/src/routes/commerce-pos-v244.js
+@@ -630,9 +630,13 @@
+       return res.json({confidence:100,supplierId:row.supplierId,supplierName:row.supplierName||"",supplierTaxId:row.supplierTaxId||"",documentNumber,documentDate,totalGross,documentType:row.resultJson?.documentType==="CREDIT_NOTE"||handoff.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE",provider:"DURABLE_POS_JOB",productLines});
+     }
+     let azureHeaderFallback=null,azureRawText="",azureCandidateProductLines=[];
++    // Page arithmetic cannot establish a whole-document PDF amount.
++    // Keep the existing known-one-page rule for every Azure amount reuse.
++    let azureCanVerifyDocumentTotal=!isPdf;
+     if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
+       try{
+         const parsed=normalizeAzure(await callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS}));
++        azureCanVerifyDocumentTotal=!isPdf||parsed.azurePageCount===1;
+         azureRawText=String(parsed.rawText||"");
+         azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];
+         const supplier=await azureSupplierMatch(req.user.companyId,parsed.supplier);
+@@ -649,7 +653,7 @@
+         if(azureHasUsefulHeader&&(!isPdf||parsed.azurePageCount===1)&&(azureProductLines.length||azureHasCompleteHeader))return res.json(azureHeader);
+         if(azureHasUsefulHeader)azureHeaderFallback=azureHeader;
+         console.warn("FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
+-        if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback)return res.json(azureHeaderFallback);const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
++        if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback&&azureCanVerifyDocumentTotal)return res.json(azureHeaderFallback);const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
+       }catch(error){throwIfWalletError(error);
+         if(String(error?.message||"").includes("δεν επέστρεψε ασφαλή βασικά στοιχεία"))throw error;
+         console.error("FAST Azure header failed; trying configured fallback",{message:String(error?.message||error)});
+@@ -673,7 +677,7 @@
+ Αν ένα βασικό στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα για το αποτέλεσμα.`;
+     let parsed;
+     try{parsed=await callFastOpenAiHeader({prompt,filePart})}
+-    catch(error){throwIfWalletError(error);if(azureHeaderFallback)return res.json(azureHeaderFallback);throw error}
++    catch(error){throwIfWalletError(error);if(azureHeaderFallback&&azureCanVerifyDocumentTotal)return res.json(azureHeaderFallback);throw error}
+     const supplierName=String(parsed.supplierName||azureHeaderFallback?.supplierName||"");
+     const supplierTaxId=String(parsed.supplierTaxId||azureHeaderFallback?.supplierTaxId||"");
+     const supplier=await matchSupplier(req.user.companyId,{name:supplierName,taxId:supplierTaxId});
+@@ -687,9 +691,15 @@
+     // existing cent-balanced footer proof to every supplier when Azure has
+     // actually transcribed it; an absent/unbalanced footer still falls back
+     // to the FAST header and leaves the normal review path intact.
+-    const verifiedVatSummaryTotal=recoverVatSummaryInvoiceTotal(azureRawText);
+-    const verifiedPayableTotal=recoverBalancedInvoicePayable(azureRawText);
+-    const totalGross=verifiedVatSummaryTotal>0?verifiedVatSummaryTotal:verifiedPayableTotal>0?verifiedPayableTotal:parsedTotalGross>0?parsedTotalGross:round2(azureHeaderFallback?.totalGross||0);
++    // A balanced footer may still belong to only one of several PDF pages.
++    // It must neither replace the full-document result nor fill its gaps.
++    const verifiedVatSummaryTotal=azureCanVerifyDocumentTotal?recoverVatSummaryInvoiceTotal(azureRawText):0;
++    const verifiedPayableTotal=azureCanVerifyDocumentTotal?recoverBalancedInvoicePayable(azureRawText):0;
++    const totalGross=verifiedVatSummaryTotal>0?verifiedVatSummaryTotal:verifiedPayableTotal>0?verifiedPayableTotal:parsedTotalGross>0?parsedTotalGross:azureCanVerifyDocumentTotal?round2(azureHeaderFallback?.totalGross||0):0;
++    if(isPdf&&!azureCanVerifyDocumentTotal&&!(Number.isFinite(totalGross)&&totalGross>0)){
++      const error=new Error("Δεν επιβεβαιώθηκε το τελικό ποσό όλων των σελίδων του PDF. Ελέγξτε το πρωτότυπο πριν από την πληρωμή.");
++      error.status=502;error.code="FAST_HEADER_PDF_TOTAL_UNVERIFIED";throw error;
++    }
+     // FAST rows may bypass the unavailable full-table provider only when the
+     // complete table proves itself against the printed/confirmed invoice total.
+     // A partial table is discarded and the existing fail-closed background
+ diff --git a/server/test/pos-fast-header-latency.test.js b/server/test/pos-fast-header-latency.test.js
+--- a/server/test/pos-fast-header-latency.test.js
++++ b/server/test/pos-fast-header-latency.test.js
+@@ -143,11 +143,12 @@
+   const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:1,documentNumber,productLines:[row]}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.documentNumber,documentNumber);assert.equal(r.result.productLines.length,1);assert.equal(r.result.totalGross,12.4);
+  });
+ }
+-test('multi-page PDF fallback failure retains the existing useful Azure fallback limit',async()=>{
+- const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openai:new Error('synthetic unavailable')});assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result.provider,'AZURE_DOCUMENT_INTELLIGENCE');assert.equal(r.result.totalGross,12.4);
++test('multi-page PDF fallback failure cannot return the Azure page subtotal',async()=>{
++ const failure=new Error('synthetic unavailable');
++ const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openai:failure});assert.equal(r.error,failure);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result,undefined);
+ });
+-test('multi-page PDF without configured fallback retains the existing useful Azure fallback limit',async()=>{
+- const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openaiConfigured:false});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.provider,'AZURE_DOCUMENT_INTELLIGENCE');assert.equal(r.result.totalGross,12.4);
++test('multi-page PDF without configured fallback cannot return the Azure page subtotal',async()=>{
++ const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openaiConfigured:false});assert.ok(r.error);assert.equal(r.error.status,502);assert.deepEqual(r.calls,['azure']);assert.equal(r.result,undefined);
+ });
+ test('multi-page PDF fallback wallet refusal cannot return a useful reconciled subtotal',async()=>{
+  const failure=Object.assign(new Error('synthetic funding required'),{code:'AI_WALLET_LOW_BALANCE',status:402});
+diff --git a/server/test/pos-fast-header-pdf-total-safety.test.js b/server/test/pos-fast-header-pdf-total-safety.test.js
+new file mode 100644
+--- /dev/null
++++ b/server/test/pos-fast-header-pdf-total-safety.test.js
+@@ -0,0 +1,123 @@
++/**
++ * Execute the actual registered FAST handler, with isolated I/O and arithmetic
++ * test doubles. These tests prove return-policy/control-flow only, NOT OCR,
++ * footer parsing, taxation arithmetic, billing settlement, HTTP/UI, or full CI.
++ *
++ * From a complete repo after applying the source patch:
++ *   node --test server/test/pos-fast-header-pdf-total-safety.test.js
++ * From the evidence package:
++ *   OCR_SOURCE=fixtures/fast-header.after.js node --test tests/*.test.mjs
++ */
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import {readFileSync} from 'node:fs';
++import crypto from 'node:crypto';
++import {resolve} from 'node:path';
++
++const source=readFileSync(process.env.OCR_SOURCE?resolve(process.env.OCR_SOURCE):new URL('../src/routes/commerce-pos-v244.js',import.meta.url),'utf8');
++const start=source.indexOf('router.post("/ai-reader/fast-header"');
++assert.ok(start>=0,'registered FAST route exists');
++const end=source.indexOf('\nrouter.post("/ai-reader/fast-duplicate-check"',start);
++const registration=source.slice(start,end<0?source.length:end);
++const snapshot=value=>value instanceof Error?{name:value.name,message:value.message,code:value.code,status:value.status}:structuredClone(value);
++const round2=value=>Math.round((Number(value||0)+Number.EPSILON)*100)/100;
++const complete=()=>({supplier:{name:'SYNTHETIC SUPPLIER',taxId:'099999999'},documentNumber:'SYN-42',documentDate:'2026-11-04',totalGross:12.4,aiConfidence:98,rawText:'',productLines:[]});
++const fallback=()=>({supplierName:'FULL DOCUMENT SUPPLIER',supplierTaxId:'088888888',documentNumber:'FULL-43',documentDate:'2026-11-04',totalGross:24.8,confidence:90,documentType:'INVOICE'});
++const row=()=>({code:'SYNTHETIC-1',quantity:1,grossAmount:12.4,sourceColumnsVerified:true});
++const unknownCounts=[['two pages',2],['three pages',3],['missing',undefined],['zero',0],['negative',-1],['string one','1'],['string two','2'],['null',null],['NaN',NaN],['Infinity',Infinity],['boolean',true]];
++
++async function run({azure={...complete(),azurePageCount:2},openai=fallback(),openaiConfigured=true,azureConfigured=true,mimeType='application/pdf',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`,durable=[],operatorStore='store-a',storeExists=true,footerVat=0,footerPayable=0}={}){
++  let handler,result,error,status=200,walletScopes=0;
++  const calls=[],requests=[],queries=[],originalAzure=snapshot(azure),originalDurable=structuredClone(durable);
++  const sum=lines=>round2(lines.reduce((n,line)=>n+Number(line.grossAmount||0),0));
++  const deps={
++    Buffer,crypto,round2,
++    process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:azureConfigured?'https://synthetic.invalid':'',AZURE_DOCUMENT_INTELLIGENCE_KEY:azureConfigured?'synthetic':'',OPENAI_API_KEY:openaiConfigured?'synthetic':''}},
++    console:{warn(){},error(){}},FAST_AZURE_HEADER_TIMEOUT_MS:20000,POS_STORED_LINES_TOLERANCE:0.05,
++    router:{post(path,_guard,fn){assert.equal(path,'/ai-reader/fast-header');assert.equal(handler,undefined);handler=fn;}},
++    requireCompanyModule:key=>{assert.equal(key,'AI_READER');return ()=>{};},
++    cleanTaxId:value=>String(value||'').replace(/\D/g,''),
++    norm:value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleUpperCase('el-GR').replace(/[^A-ZΑ-Ω0-9]/g,''),
++    normalizeIntakeDate:value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))?value:null,
++    finalizeV244ProductLines:lines=>structuredClone(lines),
++    reconcileInvoiceLines:lines=>({grossTotal:sum(lines)}),
++    reusableVerifiedPrintedTable:(lines,total)=>lines.length>0&&lines.every(x=>x.sourceColumnsVerified===true)&&Math.abs(sum(lines)-total)<=0.05,
++    reconciledFastProductLines:(lines,total)=>Array.isArray(lines)&&lines.length&&total>0&&Math.abs(sum(lines)-total)<=0.05?structuredClone(lines):[],
++    recoverVatSummaryInvoiceTotal:()=>footerVat,
++    recoverBalancedInvoicePayable:()=>footerPayable,
++    throwIfWalletError:err=>{if(String(err?.code||'').startsWith('AI_WALLET_'))throw err;},
++    prisma:new Proxy({
++      store:{findFirst:async q=>{assert.deepEqual(q,{where:{id:'store-a',companyId:'company-a'},select:{id:true}});return storeExists?{id:'store-a'}:null;}},
++      $queryRaw:async(strings,...values)=>{const sql=strings.join('?');assert.match(sql,/^\s*SELECT/);assert.doesNotMatch(sql,/\b(INSERT|UPDATE|DELETE)\b/);queries.push({sql,values});return durable;},
++    },{get(target,key){if(!(key in target))throw new Error(`Unexpected database operation: ${String(key)}`);return target[key];}}),
++    walletActivityFromRequest:(req,scope)=>{assert.equal(req.user.companyId,'company-a');assert.deepEqual(scope,{storeId:'store-a',purpose:'PAYMENT_HEADER_READ'});return scope;},
++    withInvoiceWalletScope:async(scope,work)=>{assert.equal(scope.companyId,'company-a');assert.equal(scope.storeId,'store-a');walletScopes++;return work();},
++    callAzure:async options=>{calls.push('azure');assert.equal(options.contentData,dataUrl);assert.equal(options.mimeType,mimeType);assert.equal(options.timeoutMs,20000);if(azure instanceof Error)throw azure;return azure;},
++    normalizeAzure:value=>value,
++    azureSupplierMatch:async companyId=>{assert.equal(companyId,'company-a');return null;},
++    callFastOpenAiHeader:async request=>{calls.push('openai');requests.push(request);if(openai instanceof Error)throw openai;return openai;},
++    matchSupplier:async companyId=>{assert.equal(companyId,'company-a');return null;},
++  };
++  new Function(...Object.keys(deps),registration)(...Object.values(deps));
++  assert.equal(typeof handler,'function');
++  const req={body:{storeId:'store-a',filename:'synthetic.pdf',mimeType,dataUrl},user:{companyId:'company-a',tokenType:'STORE_OPERATOR',storeId:operatorStore}};
++  const res={status(value){status=value;return this;},json(value){assert.equal(result,undefined,'one response only');result=value;return this;}};
++  await handler(req,res,value=>{assert.equal(error,undefined);error=value;});
++  assert.deepEqual(snapshot(azure),originalAzure,'original provider object unchanged');
++  assert.deepEqual(durable,originalDurable,'durable source unchanged');
++  assert.ok(calls.filter(x=>x==='azure').length<=1,'no added Azure call');
++  assert.ok(calls.filter(x=>x==='openai').length<=1,'no added fallback call at route boundary');
++  for(const query of queries)assert.deepEqual(query.values,['company-a','store-a',crypto.createHash('sha256').update(Buffer.from('synthetic')).digest('hex')]);
++  return {result,error,status,calls,requests,queries,walletScopes};
++}
++
++for(const [name,count]of unknownCounts){
++  test(`PDF ${name}: absent fallback key cannot expose the Azure subtotal`,async()=>{
++    const r=await run({azure:{...complete(),azurePageCount:count,productLines:[row()]},openaiConfigured:false});
++    assert.ok(r.error,'unsafe PDF must not silently succeed');assert.equal(r.error.status,502);assert.equal(r.result,undefined);assert.deepEqual(r.calls,['azure']);
++  });
++  test(`PDF ${name}: fallback failure cannot expose the Azure subtotal`,async()=>{
++    const failure=new Error('synthetic fallback failure');
++    const r=await run({azure:{...complete(),azurePageCount:count,productLines:[row()]},openai:failure});
++    assert.equal(r.error,failure);assert.equal(r.result,undefined);assert.deepEqual(r.calls,['azure','openai']);
++  });
++  test(`PDF ${name}: missing fallback amount cannot inherit Azure money`,async()=>{
++    const r=await run({azure:{...complete(),azurePageCount:count},openai:{...fallback(),totalGross:0}});
++    assert.equal(r.result,undefined);assert.equal(r.error?.code,'FAST_HEADER_PDF_TOTAL_UNVERIFIED');assert.equal(r.error?.status,502);
++  });
++  for(const footer of ['vat','payable'])test(`PDF ${name}: balanced partial ${footer} footer cannot overwrite the full-reader amount`,async()=>{
++    const r=await run({azure:{...complete(),azurePageCount:count,productLines:[row()]},footerVat:footer==='vat'?12.4:0,footerPayable:footer==='payable'?12.4:0});
++    assert.ifError(r.error);assert.equal(r.result.totalGross,24.8);assert.deepEqual(r.result.productLines,[]);assert.deepEqual(r.calls,['azure','openai']);
++  });
++}
++
++for(const [name,value]of [['missing',undefined],['negative',-1],['NaN',NaN],['Infinity',Infinity]])test(`PDF fallback ${name} amount is not successful`,async()=>{
++  const r=await run({openai:{...fallback(),totalGross:value}});assert.equal(r.result,undefined);assert.equal(r.error?.code,'FAST_HEADER_PDF_TOTAL_UNVERIFIED');
++});
++for(const [label,options]of [['image',{mimeType:'image/jpeg'}],['one-page PDF',{azure:{...complete(),azurePageCount:1}}]]){
++  test(`${label}: complete Azure shortcut preserved`,async()=>{const r=await run(options);assert.ifError(r.error);assert.equal(r.result.totalGross,12.4);assert.deepEqual(r.calls,['azure']);});
++  for(const cause of ['no key','failure'])test(`${label}: legacy useful-header fallback preserved on ${cause}`,async()=>{
++    const r=await run({...options,azure:{...(options.azure||complete()),documentNumber:''},...(cause==='no key'?{openaiConfigured:false}:{openai:new Error('synthetic failure')})});
++    assert.ifError(r.error);assert.equal(r.result.totalGross,12.4);assert.equal(r.result.provider,'AZURE_DOCUMENT_INTELLIGENCE');assert.deepEqual(r.calls,cause==='no key'?['azure']:['azure','openai']);
++  });
++  test(`${label}: existing invoice-footer correction remains intact`,async()=>{
++    const r=await run({...options,azure:{...(options.azure||complete()),documentNumber:''},footerVat:75.6});assert.ifError(r.error);assert.equal(r.result.totalGross,75.6);
++  });
++}
++test('PDF success retains full data URL, filename, identity and existing provider-call count',async()=>{
++  const r=await run({openai:{...fallback(),supplierName:'',supplierTaxId:'',documentNumber:'',documentDate:''}});assert.ifError(r.error);assert.equal(r.result.totalGross,24.8);assert.equal(r.result.documentNumber,'SYN-42');assert.equal(r.result.documentDate,'2026-11-04');assert.equal(r.result.supplierTaxId,'099999999');assert.deepEqual(r.requests[0].filePart,{type:'input_file',filename:'synthetic.pdf',file_data:'data:application/pdf;base64,c3ludGhldGlj'});assert.deepEqual(r.calls,['azure','openai']);
++});
++test('PDF credit identity is retained without a credit transaction',async()=>{const r=await run({azure:{...complete(),azurePageCount:2,documentType:'CREDIT_NOTE'},openai:{...fallback(),documentType:'INVOICE'}});assert.ifError(r.error);assert.equal(r.result.documentType,'CREDIT_NOTE');assert.equal(r.result.totalGross,24.8);});
++for(const provider of ['azure','openai'])test(`${provider} wallet failure remains fail-stop`,async()=>{
++  const failure=Object.assign(new Error('synthetic wallet hold'),{code:'AI_WALLET_USAGE_REVIEW',status:409});const r=await run({[provider]:failure});assert.equal(r.error,failure);assert.equal(r.result,undefined);assert.deepEqual(r.calls,provider==='azure'?['azure']:['azure','openai']);
++});
++test('verified exact-file durable result still bypasses providers',async()=>{
++  const durable=[{supplierId:'supplier-a',supplierName:'DURABLE SYNTHETIC',resultJson:{posHandoff:{documentNumber:'SYN-42',documentDate:'2026-11-04',totalGross:12.4},productLines:[row()]}}];
++  const r=await run({durable});assert.ifError(r.error);assert.deepEqual(r.calls,[]);assert.equal(r.result.provider,'DURABLE_POS_JOB');assert.equal(r.result.totalGross,12.4);
++});
++test('foreign-store operator is denied before wallet, cache or provider access',async()=>{const r=await run({operatorStore:'store-other'});assert.equal(r.status,403);assert.equal(r.walletScopes,0);assert.deepEqual(r.calls,[]);assert.deepEqual(r.queries,[]);});
++test('unknown company/store is denied before wallet, cache or provider access',async()=>{const r=await run({storeExists:false});assert.equal(r.status,404);assert.equal(r.walletScopes,0);assert.deepEqual(r.calls,[]);assert.deepEqual(r.queries,[]);});
++test('invalid PDF input is denied before cache/provider access',async()=>{const r=await run({dataUrl:'data:image/jpeg;base64,c3ludGhldGlj'});assert.equal(r.status,400);assert.deepEqual(r.calls,[]);assert.deepEqual(r.queries,[]);});
++test('Azure unavailable still uses the existing full-document fallback',async()=>{const r=await run({azure:new Error('synthetic unavailable')});assert.ifError(r.error);assert.equal(r.result.totalGross,24.8);assert.deepEqual(r.calls,['azure','openai']);});
++test('Azure not configured still permits a valid full-document result',async()=>{const r=await run({azureConfigured:false});assert.ifError(r.error);assert.equal(r.result.totalGross,24.8);assert.deepEqual(r.calls,['openai']);});
++test('Azure not configured cannot turn an unknown PDF amount into a success',async()=>{const r=await run({azureConfigured:false,openai:{...fallback(),totalGross:0}});assert.equal(r.result,undefined);assert.equal(r.error?.code,'FAST_HEADER_PDF_TOTAL_UNVERIFIED');});
