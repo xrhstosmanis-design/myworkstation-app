@@ -5,6 +5,7 @@ import {ftextSettingsHash} from '../src/services/ftext-installation.js';
 import {ftextOriginalCommandHash} from '../src/services/ftext-error-evidence.js';
 import {releaseFtextCashFirstLine,verifyFtextCashFirstLineRejection,ftextCashFirstLineReleased} from '../src/services/ftext-cash-rejection.js';
 import {ftextCashRequestView} from '../src/services/ftext-cash-requests.js';
+import {verifyFtextOriginalUnknownFiles} from '../src/services/ftext-late-cash-receipt.js';
 const hash=x=>createHash('sha256').update(x).digest('hex'),b64=x=>Buffer.from(x).toString('base64');
 function fixture(){
  const settings={companyId:'company-a',storeId:'store-b',terminalPos:'POS-01',fiscalDeviceCode:'FISCAL-01',protocol:'SOLIDUS(II)T',configurationId:'38cc2dfa-365a-4c00-aa0a-e713555352cd',serialNumber:'TEST01',workFolder:'C:\\Test',lifecycleGeneration:'0'},device={id:'device',tokenVersion:1};
@@ -15,6 +16,22 @@ function fixture(){
  const tx={$queryRaw:async(parts,...v)=>{const sql=parts.join('?');if(sql.includes('pg_advisory'))return [];if(sql.startsWith('SELECT *'))return [row];if(sql.startsWith('SELECT "id" FROM "Sale"'))return sale?[{id:'existing'}]:[];if(sql.startsWith('UPDATE "FtextCashRequest"')){writes++;row={...row,checkoutJson:JSON.parse(v[0])};return [row];}assert.fail('Unexpected financial write/query: '+sql)}};
  return {settings,device,input,tx,context:async()=>({settings,device}),get row(){return row},set row(r){row=r},get writes(){return writes},set sale(s){sale=s}};
 }
+function connectorReport(f,patch={}){
+ f.row.result={...f.row.result,rawResultHash:hash(Buffer.from(f.input.rawResultBase64,'base64')),code:2,...patch};
+ const original=JSON.stringify(f.row.result);f.row.resultHash=hash(original);f.input.reportBase64=b64(original);
+}
+test('six-field connector rejection releases once with original report/raw digests and survives JSONB key order',async()=>{
+ const f=fixture();connectorReport(f);const original=structuredClone(f.row);
+ assert.throws(()=>verifyFtextOriginalUnknownFiles(f.row,f.settings,{intentBase64:f.input.intentBase64,reportBase64:f.input.reportBase64,rawResultBase64:f.input.rawResultBase64,reason:f.input.reason}));
+ f.row.result=Object.fromEntries(Object.entries(f.row.result).reverse());
+ const result=await releaseFtextCashFirstLine(f.tx,f.settings,f.row.id,'admin',f.input,{context:f.context});
+ assert.equal(ftextCashFirstLineReleased(result),true);assert.deepEqual(result.result,original.result);assert.equal(result.resultHash,original.resultHash);assert.equal(result.status,original.status);assert.equal(result.saleId,null);
+ await releaseFtextCashFirstLine(f.tx,f.settings,f.row.id,'admin',f.input,{context:f.context});assert.equal(f.writes,1);
+});
+test('six-field rejection refuses altered raw/report, code, schema, stored value and intent without writes',async()=>{
+ const mutations=[f=>{f.input.rawResultBase64=b64(Buffer.from(f.input.rawResultBase64,'base64').toString()+'\r\n')},f=>{f.input.reportBase64=b64(Buffer.from(f.input.reportBase64,'base64').toString()+' ')},f=>connectorReport(f,{code:'2'}),f=>connectorReport(f,{code:101}),f=>connectorReport(f,{rawResultHash:'a'.repeat(64)}),f=>connectorReport(f,{rawResultHash:'A'.repeat(64)}),f=>connectorReport(f,{extra:true}),f=>{delete f.row.result.code;const s=JSON.stringify(f.row.result);f.row.resultHash=hash(s);f.input.reportBase64=b64(s)},f=>{f.row.result.code=3},f=>{delete f.row.result.rawResultHash},f=>{const x=JSON.parse(Buffer.from(f.input.intentBase64,'base64'));x.commandHash='a'.repeat(64);f.input.intentBase64=b64(JSON.stringify(x))},f=>{f.row.plan.payment.method='CARD'}];
+ for(const mutate of mutations){const f=fixture();connectorReport(f);mutate(f);await assert.rejects(releaseFtextCashFirstLine(f.tx,f.settings,f.row.id,'admin',f.input,{context:f.context}));assert.equal(f.writes,0);}
+});
 test('verified first/only CASH S rejection releases app lock once, preserves immutable result/status and never posts business records',async()=>{
  const f=fixture(),before=structuredClone(f.row);
  const released=await releaseFtextCashFirstLine(f.tx,f.settings,f.row.id,'admin',f.input,{context:f.context});

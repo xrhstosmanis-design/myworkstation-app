@@ -8,7 +8,7 @@ export function verifyFtextCashFirstLineRejection(row,settings,input){
  const {noReceipt,...files}=inputSchema.parse(input);
  if(row?.status!=='REQUIRES_CHECK'||row.saleId||row.plan?.payment?.method!=='CASH'||row.plan.lines?.length!==1||row.checkoutJson?.ftextLateCashReceipt)fail();
  const candidate={...row,checkoutJson:{...row.checkoutJson}};delete candidate.checkoutJson.ftextOperatorRelease;
- const proof=verifyFtextOriginalUnknownFiles(candidate,settings,files);
+ const proof=verifyFtextOriginalUnknownFiles(candidate,settings,files,{allowFirstLineRejectionReport:true});
  let text;try{text=new TextDecoder('windows-1253',{fatal:true}).decode(proof.raw)}catch{fail();}
  const lines=text.split(/\r?\n/),l=row.plan.lines[0],expected='InputLine: S|'+l.description+'|'+l.quantity+'|'+l.unitPrice+'||'+l.department;
  if(!/[\r\n]$/.test(text)||lines[0]?.trim()!=='2'||lines[1]!=='OVER LIMIT'||lines[2]!==expected||lines.slice(3).some(s=>s.trim()))fail();
