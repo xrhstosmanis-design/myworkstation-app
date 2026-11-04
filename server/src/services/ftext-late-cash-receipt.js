@@ -18,12 +18,20 @@ function eligible(row,settings,allowCard){
  return allowCard&&method==='CARD'&&settings.cardEnabled===true&&settings.cardPayment?.confirmed===true&&settings.cardPayment.code===row.plan.payment.code&&settings.cardPayment.resultFormat===row.checkoutJson?.ftextCardMode&&['POS_LINE8_OS7','OPERATOR_CONFIRMATION'].includes(settings.cardPayment.resultFormat)&&row.checkoutJson?.ftextCardDecision?.outcome!=='NO';
 }
 
-export function verifyFtextOriginalUnknownFiles(row,settings,input,{allowCard=false}={}){
+export function verifyFtextOriginalUnknownFiles(row,settings,input,{allowCard=false,allowFirstLineRejectionReport=false}={}){
  const value=inputSchema.parse(input);
  if(!eligible(row,settings,allowCard)||row.settingsHash!==ftextSettingsHash(settings)||row.lifecycleGeneration!==settings.lifecycleGeneration||row.serialNumber!==settings.serialNumber||!row.resultHash||row.result?.description!==unknown||row.result?.outcome!=='REQUIRES_CHECK')fail();
  const intentBytes=bytes(value.intentBase64,4096),reportBytes=bytes(value.reportBase64,4096),raw=bytes(value.rawResultBase64,65536);
  let intent,report;try{intent=JSON.parse(intentBytes.toString('utf8'));report=JSON.parse(reportBytes.toString('utf8'));}catch{fail();}
- if(Object.keys(intent).sort().join(',')!=='commandHash,requestId,settingsHash'||Object.keys(report).sort().join(',')!=='description,outcome,requestId,settingsHash'||intent.requestId!==row.id||intent.settingsHash!==row.settingsHash||report.requestId!==row.id||report.settingsHash!==row.settingsHash||report.outcome!=='REQUIRES_CHECK'||report.description!==unknown||hash(reportBytes)!==row.resultHash||Object.keys(row.result).sort().join(',')!=='description,outcome,requestId,settingsHash'||Object.entries(report).some(([k,v])=>row.result[k]!==v))fail();
+ const reportKeys=Object.keys(report).sort().join(','),legacyKeys='description,outcome,requestId,settingsHash';
+ // Only the explicit first-line CASH rejection path accepts this connector shape.
+ // The unchanged caller still verifies the exact rejected S command and error text.
+ const rejectionReport=allowFirstLineRejectionReport===true&&!allowCard&&row.plan.payment.method==='CASH'&&reportKeys==='code,description,outcome,rawResultHash,requestId,settingsHash'&&report.code===2&&typeof report.rawResultHash==='string'&&/^[a-f0-9]{64}$/.test(report.rawResultHash)&&report.rawResultHash===hash(raw);
+ // Ingestion hashes the validated object, whose key order differs from the
+ // connector JSON. Preserve original bytes in evidence; compare the same full
+ // validated serialization that recordFtextCashResult originally hashed.
+ const reportHash=rejectionReport?hash(JSON.stringify(validateFtextCashResult(report,row))):hash(reportBytes);
+ if(Object.keys(intent).sort().join(',')!=='commandHash,requestId,settingsHash'||(!rejectionReport&&reportKeys!==legacyKeys)||intent.requestId!==row.id||intent.settingsHash!==row.settingsHash||report.requestId!==row.id||report.settingsHash!==row.settingsHash||report.outcome!=='REQUIRES_CHECK'||report.description!==unknown||reportHash!==row.resultHash||Object.keys(row.result).sort().join(',')!==reportKeys||Object.entries(report).some(([k,v])=>row.result[k]!==v))fail();
  const command=['RESULT_FILENAME|'+path.win32.join(settings.workFolder,'mws-cash-'+row.id+'.res'),...row.plan.lines.map(l=>'S|'+l.description+'|'+l.quantity+'|'+l.unitPrice+'||'+l.department),'PAY||'+row.plan.payment.code].join('\r\n')+'\r\n';
  const commandBytes=Buffer.from(Array.from(command,c=>{if(!cp1253.has(c))fail();return cp1253.get(c);}));
  if(hash(commandBytes)!==intent.commandHash||Number(row.plan.total)!==Number(row.total)||Number(row.plan.payment.amount)!==Number(row.total))fail();
