@@ -1,3 +1,11 @@
+## 04/11/2026 — CASH-TASK5-HANDOFF-79C17B22 / OWNER-DIRECTED CONTINUATION / OPEN
+
+ΑΝΑΛΗΨΗ ΑΠΟ current Work conversation e8472385bb29 / request04139b87-94d8-482b-832a-8712b90184ba — ASSIGNED receiving Work page /root, request79c17b22-8971-4df8-addc-a6a8f9714206. Owner answered «συνεχισε» to the explicit question whether task5 should transfer here. Reuse existing PR3643 and branch fix/cash-stored-preview-budget-20261104. This receipt supersedes the receiving-page identity below; earlier evidence and every peer assignment remain preserved. Previous page is released from this scope upon green/main transfer; no parallel implementation.
+
+Scope remains CASH-UNIFIED-AUDIT-15 and bounded CASH-STORED-PREVIEW-19 first. Exact prior head620f570ff0bb81a4f879a15688f0bd094c799af2 has successful applicable CI41896583223. New receipt requires its own applicable CI before merge. No runtime or business-state change and no new functional PASS. Full shift/card/handwritten/event/invoice financial agreement and large-period coverage remain OPEN.
+
+Next: publish this receipt green/main, then inspect current preview source and protected regressions before one bounded correction. Preserve current-original checks, unchanged50-source/25MiB limits, company/store/lifecycle fencing, paid admission and INCOMPLETE coverage for omitted/unread/uncertain sources. No provider replay, financial/stock/fiscal/settings change or email. Existing manual and accepted PDF baseline retained for this identity-only handoff.
+
 ## 04/11/2026 — CASH-TASK5-HANDOFF-04139B87 / OWNER-APPROVED TRANSFER / OPEN
 
 ΑΝΑΛΗΨΗ ΑΠΟ codex/cash-chat-reconciliation-20261026 και fix/cash-stored-preview-budget-20261104 — ASSIGNED current Work conversation e8472385bb29 /root, request04139b87-94d8-482b-832a-8712b90184ba. Owner explicitly approved «να μεταφερθει» after the duplicate-assignment check on04/11/2026. Receiving page retains existing PR3643 and branch fix/cash-stored-preview-budget-20261104; no competing implementation branch. Upon merge of this receipt, the previous page is released from this transferred task5 scope and must not continue it in parallel.
