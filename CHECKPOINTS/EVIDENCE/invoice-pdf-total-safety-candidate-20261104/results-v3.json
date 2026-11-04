@@ -1,0 +1,61 @@
+{
+  "status": "TIMING_COMPATIBLE_ISOLATED_CANDIDATE_NOT_INSTALLED",
+  "date_athens": "2026-11-05",
+  "runtime": "Node.js v22.16.0",
+  "reviewed_main": "0aef945fdff1b1f3808e9b1a28c1e6fdaba6750d",
+  "reviewed_main_route_blob": "919672b42e1b4fb286011c693c2651316242ac43",
+  "timing_peer_3655": "MERGED",
+  "before": {
+    "tests": 172,
+    "pass": 59,
+    "fail": 113,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "after": {
+    "tests": 172,
+    "pass": 172,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "repository_relative_excerpt_layout": {
+    "tests": 172,
+    "pass": 172,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "composition": {
+    "adapted_existing_safety": 155,
+    "unchanged_peer_helper_tests": 6,
+    "new_combined_timing_safety": 11
+  },
+  "patch": {
+    "bytes": 59784,
+    "sha256": "528afc2c440164dc089e5cb62d451212edb7f13573b3a8a50687c85250512def",
+    "git_apply_check_on_copied_excerpts": "PASS",
+    "all_five_target_excerpts_or_new_tests_byte_match": "PASS"
+  },
+  "production_helper_exact_blob": "7b16ed709102d79ced482329e1664b11e0cc728e",
+  "peer_test_exact_blob": "0b11aca922aefd6ea142fa6d201fc2c659ed4ee3",
+  "single_handler_concurrent_policy_and_correlation_test": "PASS",
+  "early_close_single_total_test": "PASS",
+  "logger_faults_do_not_enable_partial_money": "PASS",
+  "shared_70_second_budget_preserved": "PASS",
+  "full_main_route_not_replaced": true,
+  "runtime_fix_expanded": false,
+  "full_existing_70_handler_tests_executed": false,
+  "full_native_node20_or_postgres_build_CI_executed": false,
+  "actual_OCR_or_LAB_executed": false,
+  "production_deployed": false,
+  "real_provider_or_business_state_operation": false,
+  "retained_owner_transferred": false,
+  "limits": "Handler/provider excerpts plus actual timing/parser/wallet error helpers. Network, Azure normalization, DB, supplier matching, wallet settlement and line math simulated. Not full app or OCR acceptance.",
+  "remaining": "Retained-owner synchronized bounded claim/main publication; actual source integration/review/full exact Node20 PR/main CI/guarded release/fresh synthetic no-submit LAB.",
+  "log_sha256": {
+    "v3-repo-relative-172.tap": "5c1ac42fb94e560e5fa183334381f849f2cc45646d323e48a9bc1f455ae528db",
+    "v3-before.tap": "b445c9f4924ea99c3114d02d5349f1d159ac82ee85fd1340fdb0b4a7c413d5cf",
+    "v3-after.tap": "49e0e02c5cd816cca36ebc0d3fdac36c3cbee5364f380dc75bd848462da5ec41"
+  }
+}
