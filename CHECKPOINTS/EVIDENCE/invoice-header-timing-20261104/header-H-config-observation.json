@@ -1,0 +1,19 @@
+{
+  "source": "Existing Super Admin UI > Υπόλοιπα AI πελατών > MYWORKSTATION LAB > Σύνδεση τιμολογίων και email",
+  "generalInvoiceModel": "gpt-5",
+  "fastModelDisplay": "προεπιλογή εφαρμογής",
+  "fullModelDisplay": "προεπιλογή εφαρμογής",
+  "assistantModelDisplay": "προεπιλογή εφαρμογής",
+  "configuredFastModelInference": "gpt-5 under the existing FAST/general/default precedence",
+  "providerReturnedSnapshot": "UNKNOWN_FOR_H",
+  "openaiConfigured": true,
+  "azureConfigured": true,
+  "azureModel": "prebuilt-invoice",
+  "azureApiVersion": "2024-11-30",
+  "companyAiBillingEnabled": false,
+  "companyInvoiceAiBillingEnabled": false,
+  "configurationSavedOrChanged": false,
+  "providerProbeInvoked": false,
+  "note": "UI modelOverrides is an allowlisted display. The FAST application-default display can also represent an invalid hidden override; the successful OpenAI H operation and the valid general model support gpt-5 selection, but the response snapshot is not persisted for this unmetered H run.",
+  "recordedAt": "2026-11-04 23:23:24 UTC"
+}
