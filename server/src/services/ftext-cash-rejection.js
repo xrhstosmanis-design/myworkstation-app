@@ -12,7 +12,7 @@ export function verifyFtextCashFirstLineRejection(row,settings,input){
  let text;try{text=new TextDecoder('windows-1253',{fatal:true}).decode(proof.raw)}catch{fail();}
  const lines=text.split(/\r?\n/),l=row.plan.lines[0],expected='InputLine: S|'+l.description+'|'+l.quantity+'|'+l.unitPrice+'||'+l.department;
  if(!/[\r\n]$/.test(text)||lines[0]?.trim()!=='2'||lines[1]!=='OVER LIMIT'||lines[2]!==expected||lines.slice(3).some(s=>s.trim()))fail();
- return {...proof.value,noReceipt,rawResultHash:hash(proof.raw),code:2,failedCommand:'S',failedLine:expected};
+ return {...proof.value,noReceipt,originalReportHash:hash(Buffer.from(proof.value.reportBase64,'base64')),rawResultHash:hash(proof.raw),code:2,failedCommand:'S',failedLine:expected};
 }
 export function ftextCashFirstLineReleased(row){
  const p=row?.checkoutJson?.ftextCashFirstLineRejection,r=row?.checkoutJson?.ftextOperatorRelease;

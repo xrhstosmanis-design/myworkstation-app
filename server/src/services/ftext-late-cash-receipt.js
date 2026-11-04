@@ -27,7 +27,11 @@ export function verifyFtextOriginalUnknownFiles(row,settings,input,{allowCard=fa
  // Only the explicit first-line CASH rejection path accepts this connector shape.
  // The unchanged caller still verifies the exact rejected S command and error text.
  const rejectionReport=allowFirstLineRejectionReport===true&&!allowCard&&row.plan.payment.method==='CASH'&&reportKeys==='code,description,outcome,rawResultHash,requestId,settingsHash'&&report.code===2&&typeof report.rawResultHash==='string'&&/^[a-f0-9]{64}$/.test(report.rawResultHash)&&report.rawResultHash===hash(raw);
- if(Object.keys(intent).sort().join(',')!=='commandHash,requestId,settingsHash'||(!rejectionReport&&reportKeys!==legacyKeys)||intent.requestId!==row.id||intent.settingsHash!==row.settingsHash||report.requestId!==row.id||report.settingsHash!==row.settingsHash||report.outcome!=='REQUIRES_CHECK'||report.description!==unknown||hash(reportBytes)!==row.resultHash||Object.keys(row.result).sort().join(',')!==reportKeys||Object.entries(report).some(([k,v])=>row.result[k]!==v))fail();
+ // Ingestion hashes the validated object, whose key order differs from the
+ // connector JSON. Preserve original bytes in evidence; compare the same full
+ // validated serialization that recordFtextCashResult originally hashed.
+ const reportHash=rejectionReport?hash(JSON.stringify(validateFtextCashResult(report,row))):hash(reportBytes);
+ if(Object.keys(intent).sort().join(',')!=='commandHash,requestId,settingsHash'||(!rejectionReport&&reportKeys!==legacyKeys)||intent.requestId!==row.id||intent.settingsHash!==row.settingsHash||report.requestId!==row.id||report.settingsHash!==row.settingsHash||report.outcome!=='REQUIRES_CHECK'||report.description!==unknown||reportHash!==row.resultHash||Object.keys(row.result).sort().join(',')!==reportKeys||Object.entries(report).some(([k,v])=>row.result[k]!==v))fail();
  const command=['RESULT_FILENAME|'+path.win32.join(settings.workFolder,'mws-cash-'+row.id+'.res'),...row.plan.lines.map(l=>'S|'+l.description+'|'+l.quantity+'|'+l.unitPrice+'||'+l.department),'PAY||'+row.plan.payment.code].join('\r\n')+'\r\n';
  const commandBytes=Buffer.from(Array.from(command,c=>{if(!cp1253.has(c))fail();return cp1253.get(c);}));
  if(hash(commandBytes)!==intent.commandHash||Number(row.plan.total)!==Number(row.total)||Number(row.plan.payment.amount)!==Number(row.total))fail();
