@@ -1,3 +1,13 @@
+## 04/11/2026 — INVOICE-HEADER-LATENCY / TASK 2 CONTINUATION / READ-ONLY TIMING EVIDENCE
+
+Current user explicitly assigns task2, initial PDF reading speed. Continue the existing retained /root owner and PR3648/docs/invoice-header-timing-20261104, then fix/invoice-header-timing-20261104; no parallel claim. Reconcile the existing documentation-only conflict onto current main8f558f094776fb4e2b0d1bfc7616bf48b0a7af53, preserving all peer content/source. FAST route/test/Azure/metering sources have no changes since accepted transport0d57653f. Fresh Node20.20.2 actual-handler baseline56PASS/0FAIL/0SKIP, no provider call. G four-field limited header PASS remains protected; latency OPEN.
+
+Read-only 04Nov production wallet evidence explicitly has purpose PAYMENT_HEADER_READ, surface PAYMENT_ENTRY, execution DIRECT and status SETTLED. UTC16:45:54.248249–16:46:16.352881: Azure reserve-to-settle9.310s, gap1.286s, OpenAI11.509s; sequence22.105s. UTC16:56:08.887167–16:56:35.133567: Azure7.314s, gap0.757s, OpenAI18.176s; sequence26.246s. Each window contains two recorded header operations with identical activity and an immediately following FAST Azure fallback log. They have separate provider references and no unique shared request/document identifier: pairing is a temporal inference, not proven request correlation. These are wallet-inclusive operation spans, not frontend/provider-only stopwatches, and neither identifies the accepted G fixture or proves field accuracy. OpenAI recorded gpt-5-2025-08-07; reasoning-token counts absent. No logged OpenAI attempt failure in the bounded window is not a universal retry-count claim.
+
+Minute-resolution CPU0.077–0.125/1CPU and memory244–276MB/2GiB in the two windows do not indicate sustained resource exhaustion; short unsampled spikes remain unknown. Current production remains healthy bc19fb45cfd24ef83385ff60383ae59ec148b1cb, automatic deploy OFF; this read-only work changed no production setting or state.
+
+Proceed with the existing bounded timing-only source claim below after this reconciled PR is green/main. New diagnostic events need a request-local random correlation and fixed stage/outcome plus nonnegative monotonic elapsedMs (bounded attempt ordinal when applicable), response finish/close coverage, original errors/results/provider counts preserved even if logging fails, and same-handler concurrent isolation tests. All model/prompt/provider order/retry/deadline/response/UI/wallet/access/payment/draft/stock/fiscal behavior stays under its existing contract. No new LAB/manual/PDF PASS or performance improvement claimed. Single next: finish green claim publication, then implement/test this diagnostic change before any separate causal performance change.
+
 ## 04/11/2026 — INVOICE-HEADER-LATENCY / RETAINED OWNER / TIMING-ONLY SOURCE CLAIM
 
 ASSIGNED /root, continuation docs/invoice-header-timing-20261104, then fix/invoice-header-timing-20261104. Owner explicitly requested continuation and publication in this repository. Parent INVOICE-HEADER-LATENCY stays OPEN. Preserve every peer ownership and prior limited G correct-header PASS; do not replay G/F/D or any paid invoice.
@@ -9,6 +19,16 @@ Bounded next source after this claim is green/main: sanitized monotonic timing e
 Hosted G readiness remains imprecise:83920ms is observation upper bound only. Main history, current registries, invoice manual and relevant header-only/timeout/transport checkpoints reviewed. Prior wrong subtotalF/D, EFK/general accuracy/UI counts and physical POS latency remain OPEN. No new LAB/manual/PDF PASS. Required next: publish green claim, implement bounded instrumentation, exact full PR/main CI and ordinary guarded healthy release, then separately identified fresh no-submit synthetic read with before/after/control; never repair old evidence by replay. Existing accepted PDFs/manuals retain their baseline during this pre-change claim.
 
 Checkpoint CHECKPOINTS/CHANGES/2026-11-04-invoice-header-timing.md. Owner retained until recorded completion or named handoff.
+
+## 04/11/2026 — CASH-STORED-PREVIEW-20 / SOURCE CANDIDATE / CI RECHECK / PARENT OPEN
+
+Same owner-directed cash continuation from PR3646 and merged causal scope PR3649; execution branch fix/cash-stored-preview-20261104-chat. Draft PR3650, source candidate 0415ca0ea8f7fe835f5c1e995205aff68ce8a93b. Checkpoint: CHECKPOINTS/CHANGES/2026-11-04-cash-stored-preview-source.md. No parallel ownership or peer scope change.
+
+Candidate preserves validated existing paper readings in full-report previews when unrelated attachment metadata rejects aggregate admission. Original validation, 50-source / 25 MiB aggregate / 7 MiB individual limits, failed-attempt accounting, incomplete coverage and zero financial adjustment remain mandatory. Paid reader/admission, financial arithmetic, permissions and business writers are unchanged.
+
+Initial exact PR CI41910734089 stopped at Verify checkpoint policy because this required active-list update was missing; runtime build and native cash tests did not execute. This header repairs that documentation omission, not the policy. The earlier 12 focused local-test results remain limited evidence, not full Node20/PostgreSQL, LAB, LIVE or financial acceptance. Preserve all original active-list text below without alteration.
+
+Single next: rerun normal exact PR CI with this active update, resolve genuine failures, then the ordinary guarded merge/release and GET-only acceptance gates. PR remains DRAFT; no source merge, installation, paid call, production mutation or final cash PASS is claimed. Parent CASH-UNIFIED-AUDIT-15 and unresolved handwritten/document/card/event/handoff/final agreement work remain OPEN. Existing accepted manuals and PDF baselines are unchanged.
 
 ## 04/11/2026 — CASH-OWNER-DIRECTED-TAKEOVER-19 / ASSIGNED / PARENT OPEN
 
