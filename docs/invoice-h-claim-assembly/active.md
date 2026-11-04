@@ -1,1 +1,9 @@
+## 05/11/2026 - INVOICE-HEADER-LATENCY / H MEASURED / FAST LOW REASONING CLAIM / ASSIGNED
+
+Retained /root; docs/invoice-header-h-result-20261105 then fix/invoice-fast-low-reasoning-20261105. Timing PR3655 is full PR/main green5562+8/0FAIL/0SKIP and exact healthy0aef945f via ordinary guarded release41931055526. Fresh H automatically matched all4fields/24.80, browser21959ms/server21746.166ms, Azure14839.447ms/OpenAI6884.620ms/oneattempt; all ten-table LAB/control counts/hashes and active shift unchanged. H consumed, no submission/payment/draft/stock. This is a measured baseline and limited header confirmation, NOT speed improvement. G accepted evidence and all peer assignments preserved.
+
+Bounded next source only AFTER this claim is green/main: keep configured model/prompt/schema/PDF bytes/provider order/deadlines/wallet/total safety unchanged and add reasoning low solely for exactgpt-5/gpt-5-2025-08-07 inside the existing FAST request. Config UI generalgpt-5/FASTapplicationdefault supports this target; H provider snapshot unrecorded because LAB invoice billing is OFF. This targets only H's31.66% OpenAI component, not dominant Azure wait. Required actual transport/precedence/excluded-model/retry regressions, full PR/main CI, guarded healthy release, then one new I no-submit4-field/timing/before-after-control acceptance. No source or model/config change yet. Parent latency, No15 broad OCR, physical POS and other scopes remain OPEN.
+
+Current checkpoint CHECKPOINTS/CHANGES/2026-11-05-invoice-fast-low-reasoning.md; H evidence CHECKPOINTS/CHANGES/2026-11-04-invoice-header-timing.md. Manual/No15 residual and central PDFs synchronize only the real H baseline; I remains unused. Next: publish this bounded claim green/main, then implement. Owner retained.
+
 ## 05/11/2026 — CASH-ADJACENT-COUNT-21 / RETAINED OWNER / BEFORE-SOURCE CLAIM / AWAITING LAB
