@@ -9,3 +9,5 @@ Evidence as at 05Nov: 8 isolated helper tests PASS in V8; full Node20/DB/HTTP CI
 Sequence: publish this intact documentation claim and relevant checkpoint to main with applicable green CI; synchronize all three central registries and generated tracker PDF; then rebase PR #3657 and run complete Node20/native/PG/HTTP CI, isolated LAB, guarded release and separately verified read-only selected-store acceptance. Parent CASH-UNIFIED-AUDIT-15 remains OPEN until all evidence and final audit criteria are met.
 
 Checkpoint: CHECKPOINTS/CHANGES/2026-11-05-cash-adjacent-counting.md.
+
+Documentation synchronization on PR #3660: one-use GitHub Actions run 41930032981 SUCCESS. All three registry originals were preserved byte-for-byte after the bounded new prefix; both tracker PDF copies were regenerated from the canonical Markdown and compared. The one-use workflow removed itself from the PR. This is documentary evidence only; native CI and MYWORKSTATION LAB remain untested for the separate source PR #3657.
