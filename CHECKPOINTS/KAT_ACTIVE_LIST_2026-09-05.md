@@ -1,3 +1,13 @@
+## 04/11/2026 — INVENTORY-RECONCILIATION-01 / RESIDUAL REVIEW / FULL REQUEST OPEN
+
+Retained report/value/review/correction/export owner, continuation docs/inventory-residual-review-20261104 /root; source baseline bc19fb45. Existing source-evidence, unknown-cost, report-only correction/revoke and result-navigation LAB PASS remain protected. No accepted business action repeated; no new hosted or manual PASS.
+
+Six unchanged local suites now34PASS/0FAIL/0SKIP including actual XLSX/GreekPDF after isolated local Prisma client generation. Node24.22.1 differs from requiredNode20: local technical evidence only, not native CI/release/LAB. Previous export loading failure was absent generated client, not established product failure. No source/schema/package/test or production data change.
+
+Ordered remaining: (1) measured hosted synthetic multi-code LINK/group and exports; (2) reusable company-wide confirmed identity beyond pair-scoped review links; (3) independent physical warehouse/receipt chronology, while current report explicitly uses STORE_STOCK_POOL/warehouseIdentityAvailable:false and immutable count timestamps; (4) verified physical originals/packaging and retained canonical writer/access integrations. Prior accepted N39 recount is not reopened. Do not replace missing physical evidence or cost with inferred values.
+
+Single next: read-only native LAB inspection for an eligible EXISTING synthetic two-code finalized comparison, exact client/store identity first; publish pair/member and fresh controls before any separately reviewed report-only LINK. If no safe fixture exists, retain that prerequisite; no SQL seed, business replay or peer-scope takeover. Full request OPEN/ASSIGNED. Checkpoint CHECKPOINTS/CHANGES/2026-11-04-inventory-residual-review.md; evidence CHECKPOINTS/EVIDENCE/inventory-residual-review-20261104/local-tests.log.
+
 ## 04/11/2026 — CENTRAL-POS-AI-ANDROID-TAKEOVER-01 / OWNER-DIRECTED HANDOFF / OPEN
 
 ΑΝΑΛΗΨΗ ΑΠΟ «Ανάθεση πρακτόρων POS AI Render Chat Android» — ASSIGNED docs/central-pos-ai-android-takeover-20261104 / current Work coordinator /root. The owner explicitly requests takeover because the previous conversation stalled. This transfers its coordination and unfinished delivery work, not independently retained invoice, reporting, bandwidth, fiscal or other peer scopes. Claim time 2026-11-04T19:41:23+02:00.

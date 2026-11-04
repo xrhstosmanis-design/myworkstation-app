@@ -1,0 +1,44 @@
+Source: bc19fb45cfd24ef83385ff60383ae59ec148b1cb
+Runtime: Node24.22.1 (required Node20 native CI not executed)
+✔ accepted consumption without StockMovement is derived once, without changing any source (4.129963ms)
+✔ matching direct postings and repeated audit records never synthesize another sale or return (1.392241ms)
+✔ only audited restored products generate return quantities, original and reversal remain separate (0.527727ms)
+✔ a backdated transaction crossing a count boundary is uncertain, not an invented shortage (0.400615ms)
+✔ boxes, gifts, value credits and same-identity duplicate invoices are evidence, never synthetic receipts (1.300001ms)
+✔ cart removal, price and barcode audit never add physical quantities or expose arbitrary details (0.288856ms)
+✔ an unfinished transaction with an empty quantity remains context and cannot invalidate physical inventory (0.574927ms)
+✔ real XLSX keeps numeric deficits and unknown values; text cells cannot become formulas (27.952325ms)
+✔ real Greek PDF export completes and uses the bundled font (72.487072ms)
+✔ count history exports real Prisma Decimal quantities without silently dropping them (8.327928ms)
+✔ source workbook retains all transaction line amounts and non-stock audit linkage with formula-safe text (9.836276ms)
+✔ actual reconciliation panel rejects old store replies and never loads or exports automatically (156.095208ms)
+✔ result navigation opens only group members and relevant correction/revoke evidence without requests or changed totals (183.52802ms)
+✔ actual review controls keep one actor-scoped UUID across lost reply, remount, verification and explicit retry (183.941589ms)
+✔ confirmed umbrellas -244/+233 form one -11 group; unconfirmed codes stay separate and original rows survive (7.848796ms)
+✔ glasses -263 plus reviewed +240 yields -23, with intervening sales retained only in original movement detail (1.099619ms)
+✔ revocation preserves the old correction and restores the uncorrected result without deleting history (1.203216ms)
+✔ transitive identity has an explicit latest canonical cost, and link revocation splits groups (2.662228ms)
+✔ changed source never silently reapplies an old count correction or reports a partial final total (0.612594ms)
+✔ missing or zero canonical cost stays unknown even when the corrected quantity is known (3.248663ms)
+✔ cross-scope rows, tampered payloads, unknown fields and broken sequence/head refuse the whole history (1.102264ms)
+✔ unknown and already revoked actions cannot disappear into a partial projection (0.952177ms)
+✔ strict normalized requests bind the same semantic payload and reject unsafe quantities and identities (1.752575ms)
+✔ count-time reconciliation excludes opening adjustment and sales after individual count; retains input (4.939299ms)
+✔ sale during the previous count-to-finalization interval belongs in the interval once (0.482669ms)
+✔ each product uses its own count boundary and missing count never becomes a zero shortage (0.739917ms)
+✔ zero, null and invalid cost do not become zero-valued losses or definitive totals (0.703272ms)
+✔ late invoice, missing reference and duplicate key are findings; actual postings are not silently removed (0.508087ms)
+✔ an invoice issued on the opening count calendar day is not late just because its date stores midnight (0.328946ms)
+✔ system stock zeroing is visible as nonphysical correction, never physical receipt (0.286031ms)
+✔ recount is immutable history, CLEAR and inconsistent history cannot produce a computed result (2.309385ms)
+✔ returns, gifts, transfers and cancellation postings retain signs without double synthesis (1.29238ms)
+✔ reject foreign stores/companies, same draft, reversed and overlapping periods (0.681018ms)
+✔ opposite differences remain separate for distinct stable product identities (1.586775ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 696.485617
