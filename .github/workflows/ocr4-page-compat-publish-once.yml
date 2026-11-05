@@ -1,0 +1,134 @@
+name: OCR4 verified compatibility publication (isolated)
+on:
+  push:
+    branches: [build/ocr4-page-bundler-compat-20261105]
+    paths: [.github/workflows/ocr4-page-compat-publish-once.yml]
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE: d6046198273018a2f14b1a65890ef6b2a3c7345d
+      MAIN: f1830f3470c05741d920891159362b8f01a6a938
+      COMMON: 3b33cc2998dc366cc44f9bd9e65dadf77a343651
+      TARGET: fix/ocr4-physical-page-display-20261105
+      OUT: /tmp/ocr4-compat-publication
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: d6046198273018a2f14b1a65890ef6b2a3c7345d
+          fetch-depth: 100
+      - name: Recover exact tested files, without rerunning or claiming full CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUT"
+          test "$(git ls-remote origin refs/heads/$TARGET | cut -f1)" = "$BASE"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$MAIN"
+          python3 - <<'PY'
+          import os,json,hashlib,urllib.request,zipfile,io,subprocess
+          from pathlib import Path
+          root=Path(os.environ['OUT']);base='https://api.github.com/repos/xrhstosmanis-design/myworkstation-app'
+          request=urllib.request.Request(base+'/actions/artifacts/13408722602/zip',headers={'Accept':'application/vnd.github+json'})
+          request.add_unredirected_header('Authorization','Bearer '+os.environ['GH_TOKEN'])
+          with urllib.request.urlopen(request,timeout=90) as r:data=r.read()
+          assert hashlib.sha256(data).hexdigest()=='228b143f43715798b327a79ef80452f6c4940c5823bd9b68b04c746a415515b5'
+          z=zipfile.ZipFile(io.BytesIO(data));ids=json.loads(z.read('tested-blobs.json'));result=json.loads(z.read('results.json'))
+          assert result['targeted_after']=={'tests':137,'pass':137,'fail':0,'cancelled':0,'skipped':0}
+          assert result['normal_client_build']=='PASS' and result['unchanged_runtime_files']==1330
+          assert hashlib.sha256(z.read('results.json')).hexdigest()=='264be6a3b6861f931578eb1e2b9aa2ace3895454db5ef7fa5bcbf8ebc47c4c69'
+          allowed={'CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md','CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md','docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf','server/test/helpers/pdf-worker-url-plugin.mjs','server/test/pdf-worker-url-plugin.test.js','server/test/pos-decimal-keyboard.test.js','server/test/pos-direct-credit-payment.test.js','server/test/pos-internal-return-ui.test.js'}
+          assert set(ids)==allowed
+          for name,h in ids.items():
+            b=z.read('tested/'+name);assert hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()==h,name
+            p=Path(name);p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b)
+          assert ids['server/test/pdf-worker-url-plugin.test.js']=='611cdd72795ff36cc2628a98e9ac97fbab0e4a9a'
+          for name,meta in result['registries'].items():
+            old=subprocess.check_output(['git','show',os.environ['BASE']+':'+name]);assert Path(name).read_bytes()[meta['prefix_bytes']:]==old
+          p=Path('CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/bundler-compatibility-results.json');p.write_bytes(z.read('results.json'))
+          for n in ['results.json','before.tap','combined.tap','client-build.log','node-version.txt','chromium-version.txt']:(root/n).write_bytes(z.read(n))
+          (root/'tested-input-blobs.json').write_text(json.dumps(ids,indent=2)+'\n')
+          PY
+          git diff --exit-code -- client server/src package.json server/package.json
+          git config user.name 'xrhstosmanis-design'
+          git config user.email '309145615+xrhstosmanis-design@users.noreply.github.com'
+          git add server/test/helpers/pdf-worker-url-plugin.mjs server/test/pdf-worker-url-plugin.test.js server/test/pos-decimal-keyboard.test.js server/test/pos-direct-credit-payment.test.js server/test/pos-internal-return-ui.test.js CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/bundler-compatibility-results.json CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          test "$(git diff --cached --name-only | wc -l)" = 12
+          git commit -m 'test(invoice): honor real PDF worker URL assets in existing POS fixture bundlers'
+          git rev-parse HEAD > "$OUT/tested-commit.txt"
+      - name: Reconcile only concurrent documentation without changing tested runtime or tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$MAIN" --depth=100
+          test "$(git merge-base HEAD "$MAIN")" = "$COMMON"
+          test -z "$(git diff --name-only "$COMMON" "$MAIN" -- client server .github)"
+          python3 -m pip install reportlab==4.2.5 PyMuPDF==1.25.3
+          python3 - <<'PY'
+          import os,subprocess,json,hashlib
+          from pathlib import Path
+          out=Path(os.environ['OUT']);source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip();main=os.environ['MAIN'];common=os.environ['COMMON']
+          registry=['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']
+          pdf=['docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf']
+          def read(ref,name):return subprocess.check_output(['git','show',ref+':'+name])
+          parts={}
+          for name in registry:
+            old=read(common,name);ours=read(source,name);theirs=read(main,name)
+            assert ours.endswith(old) and theirs.endswith(old),name
+            parts[name]=(ours[:-len(old)],theirs)
+            for kind,body in [('before-source',ours),('before-main',theirs)]:
+              dest=out/kind/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(body)
+          status=subprocess.run(['git','merge','--no-commit','--no-ff',main]).returncode
+          assert status in [0,1]
+          conflicts=subprocess.check_output(['git','diff','--name-only','--diff-filter=U'],text=True).splitlines()
+          assert set(conflicts)<=set(registry+pdf),conflicts
+          note=('## 05/11/2026 - OCR4 / VERIFIED TEST COMPATIBILITY / CURRENT-MAIN RECORDS PRESERVED\n\nRetained task4 owner /root, PR3673. Recovered the exact137/137-tested compatibility files from artifact13408722602 after its publication-only PDF text check stopped on a normal title line break. Normalized text verifies the unchanged PDF title; no application or test assertion was relaxed. The initial new helper tests were corrected to resolve the client package, not the separate server PDF.js package. Original15-test reproduction remains12PASS/3FAIL; corrected combined137PASS/0FAIL/0SKIP and normal client build are verified, not full CI or hosted PASS.\n\nMerged concurrent documentation main'+main+' into this source branch only. Preserve all peer R01-R05 results, Azure-timing claim, manual/numbered records and the entire current-main registries as exact suffixes after unchanged task4 prefixes. All tested runtime/test bytes remain unchanged. Require exact new-head full CI and independent review; no merge to main, deployment, OCR/provider request, invoice/payment/draft/stock/fiscal operation or old-fixture replay. Broad OCR completeness stays OPEN.\n\n').encode()
+          receipts={}
+          def blob(data):return hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+          for name,(prefix,theirs) in parts.items():
+            data=note+prefix+theirs;Path(name).write_bytes(data);assert data.endswith(theirs)
+            receipts[name]={'main_blob':blob(theirs),'retained_task4_prefix_bytes':len(prefix),'new_prefix_bytes':len(note),'after_blob':blob(data),'complete_main_suffix_preserved':True}
+          checkpoint=Path('CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md');checkpoint.write_bytes(note+checkpoint.read_bytes())
+          subprocess.run(['python3','docs/roadmap/generate-open-work-tracker.py'],check=True)
+          Path(pdf[0]).write_bytes(Path(pdf[1]).read_bytes())
+          import fitz
+          doc=fitz.open(pdf[0]);assert 'VERIFIED TEST COMPATIBILITY' in ' '.join(doc[0].get_text().split())
+          for i in range(2):doc[i].get_pixmap(matrix=fitz.Matrix(1.25,1.25)).save(out/f'tracker-page-{i+1}.png')
+          report={'status':'TESTED_COMPATIBILITY_AND_MAIN_DOCUMENTATION_SYNCHRONIZED','source_commit':source,'main_commit':main,'common_commit':common,'targeted_tests':137,'source_runtime_and_tests_unchanged_by_sync':True,'registries':receipts,'tracker_pages':len(doc),'full_ci':'PENDING','independent_review':'PENDING','deployment':False,'hosted_acceptance':False}
+          path=Path('CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/bundler-compatibility-main-sync.json');path.write_text(json.dumps(report,indent=2)+'\n');(out/'main-sync.json').write_bytes(path.read_bytes())
+          subprocess.run(['git','add',*registry,*pdf,str(checkpoint),str(path)],check=True)
+          subprocess.run(['git','diff','--cached','--exit-code',source,'--','client','server','.github'],check=True)
+          assert not subprocess.check_output(['git','diff','--name-only','--diff-filter=U'],text=True).strip()
+          subprocess.run(['git','commit','-m','Merge current main records without changing validated OCR4 compatibility files'],check=True)
+          PY
+      - name: Verify guarded fast-forward and publish this existing source branch only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/$TARGET | cut -f1)" = "$BASE"
+          test -z "$(git diff "$BASE" HEAD -- client server/src .github/workflows)"
+          git push origin HEAD:refs/heads/$TARGET
+          git rev-parse HEAD > "$OUT/published-commit.txt"
+          git diff --binary "$BASE" HEAD > "$OUT/published.patch"
+          python3 - <<'PY'
+          import subprocess,os,json,hashlib,shutil
+          from pathlib import Path
+          out=Path(os.environ['OUT']);names=subprocess.check_output(['git','diff','--name-only',os.environ['BASE'],'HEAD'],text=True).splitlines();ids={}
+          for name in names:
+            p=Path(name)
+            if not p.is_file():continue
+            b=p.read_bytes();dest=out/'published'/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(b);ids[name]=hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
+          (out/'published-blobs.json').write_text(json.dumps(ids,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocr4-compatibility-publication-proof
+          path: /tmp/ocr4-compat-publication
+          if-no-files-found: error
+          retention-days: 7
