@@ -93,7 +93,20 @@ test("MANTZILAS FAST total uses the balanced VAT summary and ignores the account
   assert.equal(recoverVatSummaryInvoiceTotal(printed),318.74);
   assert.equal(recoverVatSummaryInvoiceTotal("ΝΕΟ ΥΠΟΛΟΙΠΟ 4.531,01"),0,"an account balance alone is never an invoice total proof");
   assert.equal(recoverVatSummaryInvoiceTotal("ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ ΦΠΑ ΣΥΝΟΛΑ 264,27 54,47 319,74"),0,"an unbalanced summary is rejected");
-  assert.match(wrapper,/verifiedVatSummaryTotal=recoverVatSummaryInvoiceTotal\(azureRawText\)/);
+  const headerStart=wrapper.indexOf('router.post("/ai-reader/fast-header"');
+  const headerEnd=wrapper.indexOf('\nrouter.post("/ai-reader/fast-duplicate-check"',headerStart);
+  assert.ok(headerStart>=0&&headerEnd>headerStart);
+  const header=wrapper.slice(headerStart,headerEnd);
+  assert.match(header,/let azureCanVerifyDocumentTotal=!isPdf;/);
+  assert.match(header,/azureCanVerifyDocumentTotal=!isPdf\|\|parsed\.azurePageCount===1;/);
+  assert.match(header,/const verifiedVatSummaryTotal=azureCanVerifyDocumentTotal\?recoverVatSummaryInvoiceTotal\(azureRawText\):0;/);
+  // Execute the production assignment: image/known-one-page reuse remains,
+  // but a balanced page footer cannot certify a multi-page or unknown PDF.
+  const assignment=header.split('\n').find(line=>line.trim().startsWith('const verifiedVatSummaryTotal='));
+  assert.ok(assignment);
+  const readFooter=new Function('azureCanVerifyDocumentTotal','recoverVatSummaryInvoiceTotal','azureRawText',`${assignment}\nreturn verifiedVatSummaryTotal;`);
+  assert.equal(readFooter(true,recoverVatSummaryInvoiceTotal,printed),318.74);
+  assert.equal(readFooter(false,recoverVatSummaryInvoiceTotal,printed),0);
   assert.match(wrapper,/ΠΟΤΕ μην επιλέξεις ΠΡΟΗΓΟΥΜΕΝΟ ΥΠΟΛΟΙΠΟ, ΝΕΟ ΥΠΟΛΟΙΠΟ/);
 });
 

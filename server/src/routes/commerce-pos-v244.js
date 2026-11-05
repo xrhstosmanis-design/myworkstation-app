@@ -637,9 +637,13 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
       return res.json({confidence:100,supplierId:row.supplierId,supplierName:row.supplierName||"",supplierTaxId:row.supplierTaxId||"",documentNumber,documentDate,totalGross,documentType:row.resultJson?.documentType==="CREDIT_NOTE"||handoff.documentType==="CREDIT_NOTE"?"CREDIT_NOTE":"INVOICE",provider:"DURABLE_POS_JOB",productLines});
     }
     let azureHeaderFallback=null,azureRawText="",azureCandidateProductLines=[];
+    // Page arithmetic cannot establish a whole-document PDF amount.
+    // Keep the existing known-one-page rule for every Azure amount reuse.
+    let azureCanVerifyDocumentTotal=!isPdf;
     if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
       try{
         const parsed=normalizeAzure(await timing.measure("azure_header",()=>callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS})));
+        azureCanVerifyDocumentTotal=!isPdf||parsed.azurePageCount===1;
         azureRawText=String(parsed.rawText||"");
         azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];
         const supplier=await timing.measure("azure_supplier_match",()=>azureSupplierMatch(req.user.companyId,parsed.supplier));
@@ -656,7 +660,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
         if(azureHasUsefulHeader&&(!isPdf||parsed.azurePageCount===1)&&(azureProductLines.length||azureHasCompleteHeader))return res.json(azureHeader);
         if(azureHasUsefulHeader)azureHeaderFallback=azureHeader;
         console.warn("FAST Azure header incomplete; trying configured fallback",{confidence:azureHeader.confidence});
-        if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback)return res.json(azureHeaderFallback);const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
+        if(!process.env.OPENAI_API_KEY){if(azureHeaderFallback&&azureCanVerifyDocumentTotal)return res.json(azureHeaderFallback);const wrapped=new Error("Η γρήγορη ανάγνωση Azure δεν επέστρεψε ασφαλή βασικά στοιχεία και δεν υπάρχει διαθέσιμο FAST fallback. Η πληρωμή δεν έγινε.");wrapped.status=502;throw wrapped;}
       }catch(error){throwIfWalletError(error);
         if(String(error?.message||"").includes("δεν επέστρεψε ασφαλή βασικά στοιχεία"))throw error;
         console.error("FAST Azure header failed; trying configured fallback",{message:String(error?.message||error)});
@@ -680,7 +684,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
 Αν ένα βασικό στοιχείο δεν φαίνεται καθαρά, επέστρεψε κενό string ή 0. ΜΗΝ εφευρίσκεις στοιχεία. confidence = συνολική βεβαιότητα για το αποτέλεσμα.`;
     let parsed;
     try{parsed=await timing.measure("openai_header",()=>callFastOpenAiHeader({prompt,filePart,timing}))}
-    catch(error){throwIfWalletError(error);if(azureHeaderFallback)return res.json(azureHeaderFallback);throw error}
+    catch(error){throwIfWalletError(error);if(azureHeaderFallback&&azureCanVerifyDocumentTotal)return res.json(azureHeaderFallback);throw error}
     const supplierName=String(parsed.supplierName||azureHeaderFallback?.supplierName||"");
     const supplierTaxId=String(parsed.supplierTaxId||azureHeaderFallback?.supplierTaxId||"");
     const supplier=await timing.measure("openai_supplier_match",()=>matchSupplier(req.user.companyId,{name:supplierName,taxId:supplierTaxId}));
@@ -694,9 +698,15 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     // existing cent-balanced footer proof to every supplier when Azure has
     // actually transcribed it; an absent/unbalanced footer still falls back
     // to the FAST header and leaves the normal review path intact.
-    const verifiedVatSummaryTotal=recoverVatSummaryInvoiceTotal(azureRawText);
-    const verifiedPayableTotal=recoverBalancedInvoicePayable(azureRawText);
-    const totalGross=verifiedVatSummaryTotal>0?verifiedVatSummaryTotal:verifiedPayableTotal>0?verifiedPayableTotal:parsedTotalGross>0?parsedTotalGross:round2(azureHeaderFallback?.totalGross||0);
+    // A balanced footer may still belong to only one of several PDF pages.
+    // It must neither replace the full-document result nor fill its gaps.
+    const verifiedVatSummaryTotal=azureCanVerifyDocumentTotal?recoverVatSummaryInvoiceTotal(azureRawText):0;
+    const verifiedPayableTotal=azureCanVerifyDocumentTotal?recoverBalancedInvoicePayable(azureRawText):0;
+    const totalGross=verifiedVatSummaryTotal>0?verifiedVatSummaryTotal:verifiedPayableTotal>0?verifiedPayableTotal:parsedTotalGross>0?parsedTotalGross:azureCanVerifyDocumentTotal?round2(azureHeaderFallback?.totalGross||0):0;
+    if(isPdf&&!azureCanVerifyDocumentTotal&&!(Number.isFinite(totalGross)&&totalGross>0)){
+      const error=new Error("Δεν επιβεβαιώθηκε το τελικό ποσό όλων των σελίδων του PDF. Ελέγξτε το πρωτότυπο πριν από την πληρωμή.");
+      error.status=502;error.code="FAST_HEADER_PDF_TOTAL_UNVERIFIED";throw error;
+    }
     // FAST rows may bypass the unavailable full-table provider only when the
     // complete table proves itself against the printed/confirmed invoice total.
     // A partial table is discarded and the existing fail-closed background
