@@ -1,0 +1,15 @@
+## 05/11/2026 - INVOICE-PHYSICAL-PAGE-DISPLAY-01 / OCR4 / BEFORE-SOURCE CLAIM / OPEN
+
+Retained invoice/task4 owner /root; continuation of POS-BACKGROUND-PDF-PAGES-01 and installed INVOICE-PDF-TOTAL-SAFETY-01, not an ownership transfer. Documentation branch docs/ocr4-physical-page-display-20261105; subsequent bounded source branch fix/ocr4-physical-page-display-20261105. User requests continued correction. Source edits begin only after this synchronized claim passes normal applicable CI and is merged to main.
+
+Observed defect: accepted I has two physical PDF pages but the FAST form displays "1 σελίδα έτοιμη (1%)" because nextPages.length counts uploaded files. I's four-field/24.80 limited PASS, original timing, snapshots and ownership remain protected; no replay of I/H/G/F/D, paid or CREDIT documents. J37.20 remains unused. A count is not proof of complete OCR or row coverage.
+
+Bounded source scope: separate uploaded-file/image counts from locally measured original PDF page counts in the existing FAST invoice form. Reuse the installed PDF library without rendering/OCR/provider calls; retain original bytes and source order. Show pending/unknown explicitly for unreadable, encrypted, invalid, cancelled or stale PDF counts; never silently substitute one page. Use request/source/store lifetime fencing and cleanup; counting must not delay or change existing OCR requests. Keep file-count wording accurate throughout status/removal controls. Verify actual multi-page PDFs, invalid input, cleanup, removal/replacement and store/unmount isolation with focused tests and the normal build/browser checks.
+
+Protected: existing five-file selection/physical-page server bounds, original attachments/jobs, supplier/number/date/amount/confidence fields, models/reasoning/provider order/deadlines, wallet/access/tenant/module/licence checks, payment/credit/draft/stock/fiscal writers and the installed subtotal guard. No new upload endpoint, authentication workaround, source preparation route, business write, hosted provider call or unrelated refactor. Peer task3 preparation/navigation and task2 latency scopes remain separate. No feature or general OCR PASS from this claim or a display count.
+
+Publication: prepend this identical entry to complete active/tracker/pending records, preserving every prior byte; regenerate both canonical tracker PDF copies. Existing numbered acceptance and manuals remain unchanged because no new functional acceptance exists. Checkpoint CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md. Next: publish this claim, then implement the narrow source/test change, independent review, exact full PR/main CI and ordinary guarded release; hosted page-display acceptance stays NOT TESTED until independently observed. General suppliers/rows/packages/discounts/VAT/EFK remains OPEN.
+
+## Claim receipt
+
+Prepared at 2026-11-05T11:50:25+02:00 from exact main 401f6a1f5dad3a8c5f38b65ab5d7c9115b6cee6f. No application source or LAB action was performed. This entry becomes authoritative only after normal documentation CI and main integration.
