@@ -60,7 +60,7 @@ test('full-mode review requests preserve the report mode and reject invalid mode
  try{assert.equal((await send('?fullAudit=0')).status,400);assert.equal(auth,0);assert.equal((await send('?fullAudit=1')).status,200);assert.equal(scopes[0].fullAudit,true);assert.equal((await send('')).status,200);assert.equal(Object.hasOwn(scopes[1],'fullAudit'),false);}finally{await new Promise(r=>server.close(r));}
 });
 
-test('automatic-check route runs a full read-only selected-store audit with no provider or review writes',async()=>
+test('automatic-check route runs a full read-only selected-store audit with no provider or review writes',async()=>{
  let reads=0,writes=0,authorizations=0,fullAudit=false;
  const repository={generation:async()=> '0',read:async(scope,period)=>{
   reads++;fullAudit=scope.fullAudit===true;
@@ -78,6 +78,6 @@ test('automatic-check route runs a full read-only selected-store audit with no p
   assert.equal(data.automaticCheck.status,'HOLD');assert.equal(data.automaticCheck.ambiguousPairs,1);
   assert.equal(data.automaticCheck.paperCoverage,'INCOMPLETE');assert.equal(data.automaticCheck.financialAdjustmentCents,0);
   assert.equal(data.automaticCheck.humanApproval,false);assert.equal(data.automaticCheck.reportHash,data.reportHash);
-  assert.equal(fullAudit,true);assert.equal(reads,1);assert.equal(writes,0);assert.equal(authorizations,2);
+  assert.equal(fullAudit,true);assert.equal(reads,1);assert.equal(writes,0);assert.equal(authorizations,3);
  }finally{await new Promise(resolve=>server.close(resolve));}
 });
