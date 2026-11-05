@@ -1,0 +1,54 @@
+name: Task3 isolated full-CI compatibility
+on:
+  push:
+    branches: [tools/task3-ci-compatibility-20261105]
+    paths: [.github/workflows/task3-ci-compatibility.yml, tools/task3-ci-compatibility.py]
+permissions:
+  contents: write
+jobs:
+  reproduce-and-verify:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app' && github.ref == 'refs/heads/tools/task3-ci-compatibility-20261105'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install isolated dependencies without application startup
+        run: |
+          mkdir -p /tmp/task3-ci-compatibility
+          node --version > /tmp/task3-ci-compatibility/node-version.txt
+          npm install --ignore-scripts
+      - name: Reproduce original failures with unchanged existing tests
+        run: |
+          set +e
+          timeout 120s node --test server/test/kat-shift-reconciliation-v1.test.js server/test/wholesale-launcher-lock.test.js server/test/wholesale-seller-launcher.test.js server/test/wholesale-suite-access-ui.test.js > /tmp/task3-ci-compatibility/red.tap 2>&1
+          status=$?
+          set -e
+          test "$status" -eq 1
+          python3 tools/task3-ci-compatibility.py verify-red
+      - name: Apply bounded fix and retain latest peer implementation
+        run: python3 tools/task3-ci-compatibility.py apply
+      - name: Run expanded unchanged native regressions
+        run: |
+          set -o pipefail
+          timeout 120s node --test server/test/store-invoice-entry-mounted.test.mjs server/test/backoffice-workspace-stability.test.js server/test/backoffice-common-store-ui.test.js server/test/backoffice-session-boundary-mounted.test.mjs server/test/invoice-inbox-day-archive-ui.test.js server/test/invoice-common-credit-ui.test.js server/test/kat-shift-reconciliation-v1.test.js server/test/wholesale-launcher-lock.test.js server/test/wholesale-seller-launcher.test.js server/test/wholesale-suite-access-ui.test.js 2>&1 | tee /tmp/task3-ci-compatibility/green.tap
+      - name: Generate history-preserving records and publish scoped blobs only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          python3 -m pip install --disable-pip-version-check reportlab==4.4.9 PyMuPDF==1.26.7
+          python3 tools/task3-ci-compatibility.py records 2>&1 | tee /tmp/task3-ci-compatibility/records.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: task3-ci-compatibility
+          path: /tmp/task3-ci-compatibility/
+          if-no-files-found: error
+          retention-days: 7
