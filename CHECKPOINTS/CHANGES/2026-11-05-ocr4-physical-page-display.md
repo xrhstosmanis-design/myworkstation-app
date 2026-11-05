@@ -23,3 +23,7 @@ Publication: prepend this identical entry to complete active/tracker/pending rec
 ## Claim receipt
 
 Prepared at 2026-11-05T11:50:25+02:00 from exact main 401f6a1f5dad3a8c5f38b65ab5d7c9115b6cee6f. No application source or LAB action was performed. This entry becomes authoritative only after normal documentation CI and main integration.
+
+## Current-main documentation reconciliation
+
+Source head2853be00 was synchronized with peer documentation main3b33cc29. All nine runtime/test files remain byte-identical to the119/119 focused and16-case browser-validated candidate. Three shared records preserve the entire current main as an exact suffix after the unchanged task4 source prefix; peer latency R01-R05 preparation and consumed I evidence remain intact. Tracker copies regenerated. No runtime policy, OCR/provider request, deployment or business operation. Exact combined-head full CI/review remain required; previous focused results do not replace those gates.

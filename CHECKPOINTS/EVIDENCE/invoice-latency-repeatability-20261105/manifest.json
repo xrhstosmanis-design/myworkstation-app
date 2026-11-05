@@ -1,0 +1,72 @@
+{
+  "scope": "FIVE_FRESH_TWO_PAGE_HEADER_ONLY_READS",
+  "sourceLayout": "Consumed I layout, NEW identities and bytes; original not replayed",
+  "supplierCoverage": "ONE_SYNTHETIC_SUPPLIER_ONLY",
+  "trials": [
+    {
+      "trial": "R01",
+      "file": "latency-R01.pdf",
+      "sha256": "e8ff509e6f01d4abe44d7614b064b5d078a35962f710291a2c854586bb18ea5c",
+      "expected": {
+        "supplier": "LAB METER TEST",
+        "documentNumber": "LAB-LATENCY-20261105-R01",
+        "documentDate": "2026-11-05",
+        "totalGross": 24.8
+      },
+      "physicalPages": 2,
+      "status": "PREPARED_NOT_UPLOADED"
+    },
+    {
+      "trial": "R02",
+      "file": "latency-R02.pdf",
+      "sha256": "59b9a9f2ca563f6f4427c5f39a98d2790a7baddf0baedffd3144f1edf7e1d004",
+      "expected": {
+        "supplier": "LAB METER TEST",
+        "documentNumber": "LAB-LATENCY-20261105-R02",
+        "documentDate": "2026-11-05",
+        "totalGross": 24.8
+      },
+      "physicalPages": 2,
+      "status": "PREPARED_NOT_UPLOADED"
+    },
+    {
+      "trial": "R03",
+      "file": "latency-R03.pdf",
+      "sha256": "752cd14cc1f82ee7373ef58434435dbb795d0b9a9a22685a7bbf21ad3ca7ddcf",
+      "expected": {
+        "supplier": "LAB METER TEST",
+        "documentNumber": "LAB-LATENCY-20261105-R03",
+        "documentDate": "2026-11-05",
+        "totalGross": 24.8
+      },
+      "physicalPages": 2,
+      "status": "PREPARED_NOT_UPLOADED"
+    },
+    {
+      "trial": "R04",
+      "file": "latency-R04.pdf",
+      "sha256": "26ad3f61dd034629f335b9cca7b64fbe3564a4bfeba3b00a0aeeff874897148c",
+      "expected": {
+        "supplier": "LAB METER TEST",
+        "documentNumber": "LAB-LATENCY-20261105-R04",
+        "documentDate": "2026-11-05",
+        "totalGross": 24.8
+      },
+      "physicalPages": 2,
+      "status": "PREPARED_NOT_UPLOADED"
+    },
+    {
+      "trial": "R05",
+      "file": "latency-R05.pdf",
+      "sha256": "32ae1756e79a987f64406173aaa7716133a5ac73d31b51f6d21b8df90af8066d",
+      "expected": {
+        "supplier": "LAB METER TEST",
+        "documentNumber": "LAB-LATENCY-20261105-R05",
+        "documentDate": "2026-11-05",
+        "totalGross": 24.8
+      },
+      "physicalPages": 2,
+      "status": "PREPARED_NOT_UPLOADED"
+    }
+  ]
+}
