@@ -1,0 +1,411 @@
+name: CASH PR3657 isolated source CI
+
+on:
+  push:
+    branches: [feat/cash-adjacent-count-20261105-chat]
+  workflow_dispatch:
+
+concurrency:
+  group: cash-pr3657-validation-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  classify-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      full_ci: ${{ steps.scope.outputs.full_ci }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - name: Detect documentation-only change
+        id: scope
+        env:
+          BASE_SHA: origin/main
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          FORCE_FULL_CI: 'true'
+        run: |
+          if [ "$FORCE_FULL_CI" = "true" ] || [ -z "$BASE_SHA" ] || echo "$BASE_SHA" | grep -Eq '^0+$'; then
+            echo "full_ci=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          full_ci=false
+          while IFS= read -r path; do
+            case "$path" in
+              docs/*|CHECKPOINTS/*|output/*|*.md) ;;
+              *) full_ci=true; break ;;
+            esac
+          done <<EOF
+          $(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          EOF
+          echo "full_ci=$full_ci" >> "$GITHUB_OUTPUT"
+
+  rbs-capdriver-windows-script-parse:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Parse production printer connector with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/windows-production-printer/Connector.ps1'),[ref]$tokens,[ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
+      - name: Test actual production ticket bytes and feed/cut on Windows PowerShell 5.1
+        shell: powershell
+        run: ./tools/windows-production-printer/Test-NetworkTicket.ps1
+      - name: Parse CAP Driver scripts with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $scriptPaths = @(
+            'tools/windows-rbs-capdriver-v1/Pair.ps1',
+            'tools/windows-rbs-capdriver-v1/Writer.ps1'
+          )
+          foreach ($scriptPath in $scriptPaths) {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $scriptPath),
+              [ref]$tokens,
+              [ref]$parseErrors
+            ) | Out-Null
+            if ($parseErrors.Count -gt 0) {
+              $parseErrors | ForEach-Object { Write-Error $_.Message }
+              exit 1
+            }
+            Write-Host "Parsed $scriptPath successfully."
+          }
+      - name: Run isolated CAP Driver pairing and writer smoke test
+        shell: powershell
+        run: ./tools/windows-rbs-capdriver-v1/Test-Smoke.ps1
+      - name: Run isolated guided installation and startup smoke test
+        shell: powershell
+        run: ./tools/windows-rbs-capdriver-v1/Test-GuidedSmoke.ps1
+      - name: Test read-only physical spool inspection with isolated files
+        shell: powershell
+        run: ./tools/windows-rbs-capdriver-v1/Test-SpoolInspection.ps1
+      - name: Preserve guided Windows setup preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: rbs-guided-setup-preview
+          path: ${{ runner.temp }}/mws-guided-setup-preview.png
+          if-no-files-found: error
+          retention-days: 7
+
+  hikvision-preflight-windows:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse and test read-only Hikvision preflight on Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ChildItem tools/windows-video-connector/hikvision -Include *.ps1,*.psm1 -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+          }
+          ./tools/windows-video-connector/hikvision/Test-Preflight.ps1
+
+  wholesale-isolated-lab:
+    needs: classify-changes
+    if: needs.classify-changes.outputs.full_ci == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build isolated wholesale runtime and embedded database
+        run: docker build --file ops/wholesale-lab/Dockerfile --tag mws-wholesale-lab:ci .
+      - name: Start synthetic-only wholesale lab
+        run: |
+          docker run --detach --name mws-wholesale-lab --publish 127.0.0.1:18081:8080 --env PORT=8080 --env LAB_PUBLIC_ORIGIN=http://127.0.0.1:18081 --env LAB_REVISION=${{ github.event.pull_request.head.sha || github.sha }} mws-wholesale-lab:ci
+          for attempt in $(seq 1 120); do
+            if curl --fail --silent http://127.0.0.1:18081/api/lab/health > /tmp/wholesale-lab-health.json; then exit 0; fi
+            if [ "$(docker inspect --format '{{.State.Running}}' mws-wholesale-lab)" != true ]; then break; fi
+            sleep 2
+          done
+          docker logs mws-wholesale-lab
+          exit 1
+      - name: Verify delayed wholesale role initialization in Chromium
+        run: node server/e2e/wholesale-lab-role-readiness.mjs
+      - name: Exercise actual wholesale lab interfaces in Chromium
+        env:
+          LAB_E2E_URL: http://127.0.0.1:18081
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends poppler-utils
+          node server/e2e/wholesale-lab-flow.mjs
+      - name: Exercise actual wholesale application offline and recover one original order
+        env:
+          LAB_E2E_URL: http://127.0.0.1:18081
+        run: node server/e2e/wholesale-offline-app-flow.mjs
+      - name: Preserve actual wholesale offline application evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-wholesale-offline-application
+          path: /tmp/mws-wholesale-offline-application/*
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Preserve isolated wholesale browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-wholesale-lab-browser
+          path: /tmp/mws-wholesale-lab-browser/*
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Stop only the isolated lab container
+        if: always()
+        run: |
+          docker logs mws-wholesale-lab || true
+          docker rm --force mws-wholesale-lab || true
+
+  build-and-test:
+    needs: classify-changes
+    if: needs.classify-changes.outputs.full_ci == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        # Docker Official PostgreSQL 16; ECR mirror hit a data limit on 11 Oct.
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: myworkstation_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d myworkstation_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      NODE_ENV: test
+      MWS_CUSTOMER_DEMO_PREPARATION_ENABLED: "true"
+      JWT_SECRET: test-only-ci-jwt-secret-with-sufficient-length
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myworkstation_test
+      INITIAL_ADMIN_EMAIL: ci-admin@myworkstation.test
+      INITIAL_ADMIN_PASSWORD: ci-only-password-not-for-production
+      KAT_OWNER_EMAIL: ci-kat-owner@myworkstation.test
+      KAT_OWNER_NAME: CI KAT Owner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Verify active list and checkpoint were updated
+        env:
+          BASE_SHA: origin/main
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node tools/verify-checkpoint-policy.mjs "$BASE_SHA" "$HEAD_SHA"
+      - name: Prepare server sources and generate Prisma client
+        run: npm run build:server
+      - name: Build the actual PostgreSQL 18 recovery image
+        run: docker build --file ops/backup/Dockerfile --tag mws-lifecycle-recovery:ci .
+      - name: Use matching native PostgreSQL 16 recovery tools
+        run: |
+          test -x /usr/lib/postgresql/16/bin/pg_dump
+          echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
+      - name: Run security and licensing tests
+        env:
+          MWS_LIFECYCLE_RECOVERY_IMAGE: mws-lifecycle-recovery:ci
+        run: npm test -w server
+      - name: Build Work-compatible client bundle
+        run: npm run build
+      - name: Preserve isolated encrypted wholesale offline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-wholesale-commercial-offline
+          path: /tmp/mws-wholesale-commercial-offline/*
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Verify document camera pointer access in Chromium
+        run: node server/e2e/document-camera-browser-flow.mjs
+      - name: Preserve document camera geometry
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-document-camera-browser
+          path: /tmp/mws-document-camera-browser/*
+          retention-days: 7
+      - name: Render isolated POS header in Chromium
+        run: node server/e2e/pos-header-browser-flow.mjs
+      - name: Verify report dialog pointer access in Chromium
+        run: node server/e2e/automatic-report-settings-browser-flow.mjs
+      - name: Render isolated Inventory SET search in Chromium
+        run: node server/e2e/inventory-set-search-browser-flow.mjs
+      - name: Preserve Inventory SET browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-inventory-set-browser
+          path: /tmp/mws-inventory-set-browser/*
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Render isolated mobile Chat in Chromium
+        run: node server/e2e/chat-mobile-device-browser-flow.mjs
+      - name: Preserve mobile Chat browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-chat-mobile-browser
+          path: |
+            /tmp/mws-chat-mobile-browser/*.png
+            /tmp/mws-chat-mobile-browser/geometry.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Preserve POS header browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-pos-header-browser
+          path: |
+            /tmp/mws-pos-header-browser/**/*.png
+            /tmp/mws-pos-header-browser/geometry.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Verify Work and Render build contracts
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const scripts = pkg.scripts || {};
+          const fail = message => {
+            console.error(message);
+            process.exit(1);
+          };
+
+          if (scripts.build !== "npm run build:client") {
+            fail("The default build must remain the Work-compatible client build.");
+          }
+          if (!scripts["build:client"]?.includes("npm run build -w client")) {
+            fail("build:client must produce the client workspace bundle.");
+          }
+          if (/prisma|database|db push/i.test(scripts.build + " " + scripts["build:client"])) {
+            fail("The Work-compatible build must not require Prisma or a database.");
+          }
+          if (!scripts["build:production"]?.includes("build:client") || !scripts["build:production"]?.includes("build:server")) {
+            fail("The production build must include both client and server preparation.");
+          }
+
+          const render = fs.readFileSync("render.yaml", "utf8");
+          if (!render.includes("buildCommand: npm install && npm run build:production")) {
+            fail("Render must use the full production build contract.");
+          }
+
+          console.log("Work and Render build contracts are separated correctly.");
+          NODE
+      - name: Verify KAT production preparation invariants
+        run: node server/e2e/kat-preparation-source-invariants.mjs
+      - name: Verify KAT Windows observer safety invariants
+        run: node server/e2e/kat-windows-observer-source-invariants.mjs
+      - name: Verify KAT Windows pilot preflight safety invariants
+        run: node server/e2e/kat-windows-preflight-source-invariants.mjs
+      - name: Verify KAT backup restore safety invariants
+        run: node server/e2e/pilot-backup-restore-source-invariants.mjs
+      - name: Verify backup monitor delivery through transient failures
+        run: node --test ops/backup/test/monitor-delivery-retry.test.mjs
+      - name: Verify KAT safe vault adjustment invariants
+        run: node server/e2e/kat-safe-vault-adjustment-invariants.mjs
+      - name: Verify KAT aggregate pre-install readiness
+        run: node server/e2e/kat-preinstall-readiness-invariants.mjs
+      - name: Verify pilot installation readiness workbook
+        run: node server/e2e/pilot-installation-readiness-v1.mjs
+      - name: Prepare isolated E2E database
+        run: |
+          npm run prisma:push -w server
+          ./node_modules/.bin/prisma db execute --file server/prisma/migrations/20260825130500_netlink_prepaid_storage/migration.sql --schema server/prisma/schema.prisma
+          ./node_modules/.bin/prisma db execute --file server/prisma/migrations/20260826210000_netlink_fiscal_receipt_gate/migration.sql --schema server/prisma/schema.prisma
+          npm run seed -w server
+      - name: Verify full archive import against isolated PostgreSQL
+        run: node server/e2e/diadoxou-archive-import.mjs
+      - name: Run real HTTP E2E flows
+        run: |
+          MWS_E2E_TERMINAL_OVERRIDE=1 NETLINK_TEST_MODE=true NETLINK_MOCK_PROVIDER=true NETLINK_ENABLE_EXECUTE=true PORT=8080 npm run start -w server > /tmp/myworkstation-e2e-server.log 2>&1 &
+          SERVER_PID=$!
+          cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
+          on_error() { status=$?; echo "--- MyWorkStation E2E server log ---"; cat /tmp/myworkstation-e2e-server.log || true; exit "$status"; }
+          trap cleanup EXIT
+          trap on_error ERR
+          node --input-type=module <<'NODE'
+          const url="http://127.0.0.1:8080/api/health";
+          let lastError;
+          for(let attempt=0;attempt<40;attempt++){
+            try{
+              const response=await fetch(url);
+              if(response.ok){
+                const body=await response.json();
+                if(body?.ok===true){
+                  console.log("Real HTTP health check passed",body);
+                  process.exit(0);
+                }
+              }
+            }catch(error){lastError=error}
+            await new Promise(resolve=>setTimeout(resolve,500));
+          }
+          console.error("Server did not become healthy",lastError);
+          process.exit(1);
+          NODE
+          run_flow() { echo "Running $1"; node "$1" || { echo "::error title=E2E flow failed::$1"; return 1; }; }
+          run_flow server/e2e/payment-shift-flow.mjs
+          run_flow server/e2e/ai-reader-payment-flow.mjs
+          run_flow server/e2e/live-operator-permissions-flow.mjs
+          run_flow server/e2e/label-tenant-isolation-flow.mjs
+          run_flow server/e2e/barcode-transfer-flow.mjs
+          run_flow server/e2e/reversal-tenant-isolation-flow.mjs
+          run_flow server/e2e/operator-ledger-visibility-flow.mjs
+          run_flow server/e2e/payment-boundaries-flow.mjs
+          run_flow server/e2e/operator-shift-close-audit-flow.mjs
+          run_flow server/e2e/close-shift-permission-separation-flow.mjs
+          run_flow server/e2e/eftpos-shift-close-flow.mjs
+          run_flow server/e2e/pos-to-shift-backoffice-flow.mjs
+          run_flow server/e2e/kat-pos-regression-flow.mjs
+          run_flow server/e2e/kat-final-volume-regression-flow.mjs
+          run_flow server/e2e/multi-pos-shift-isolation-flow.mjs
+          run_flow server/e2e/kat-online-ordering-flow.mjs
+          run_flow server/e2e/kat-preparation-milk-stock-flow.mjs
+          run_flow server/e2e/netlink-prepaid-flow.mjs
+          run_flow server/e2e/workforce-v2-employees-roles-preview-flow.mjs
+          run_flow server/e2e/workforce-v2-rules-shift-templates-flow.mjs
+          run_flow server/e2e/workforce-v2-schedules-flow.mjs
+          run_flow server/e2e/rbs-installation-settings-flow.mjs
+          run_flow server/e2e/pos-audience-credit-settings-flow.mjs
+          run_flow server/e2e/ai-credit-alerts-flow.mjs
+          run_flow server/e2e/owner-catalog-read-flow.mjs
+          run_flow server/e2e/chat-interactions-flow.mjs
+          run_flow server/e2e/hot-table-schema-lock-flow.mjs
+          run_flow server/e2e/server-shutdown-flow.mjs
+          MWS_CAPACITY_ISOLATED=1 MWS_CAPACITY_MODE=smoke MWS_CAPACITY_OUTPUT=/tmp/myworkstation-capacity-result run_flow server/e2e/pos-capacity-flow.mjs
+          run_flow server/e2e/customer-demo-preparation-flow.mjs
+          run_flow server/e2e/customer-demo-runtime-flow.mjs
+          cat /tmp/myworkstation-e2e-server.log
+      - name: Preserve isolated capacity harness results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-pos-capacity-harness
+          path: /tmp/myworkstation-capacity-result/result.json
+          if-no-files-found: ignore
+          retention-days: 14
+
