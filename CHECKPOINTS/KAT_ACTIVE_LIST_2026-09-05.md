@@ -6,3 +6,7 @@ Code adds ONLY Acharnon internal legacyVatCode → department/VAT profiles: 1/1/
 
 Tests added in `server/test/rbs-capdriver-acharnon-profile.test.js`: all eleven pairings, wrong/missing authenticated owner-store identity, foreign store profile cross-over, invalid VAT/code/department, and actual checkout command statement for NERO 500ML 0.50EUR department5 VAT13 with one CASH1 or CARD2 final CR; body-provided foreign identity cannot select profile. Source PR #3682 initially failed CI checkpoint policy because this log was missing; remediation recorded here. FULL PR CI / main CI / deployed exact revision / physical receipt / financial, payment, stock and audit deltas all OPEN until verified; no claim of successful sale. No repeat of older attempted or paid transactions.
 
+
+## CASH-ADJACENT-COUNT-21 — Clean integration from current main (2026-11-05)
+
+DRAFT review-only integration branch `feat/cash-audit-clean-main-20261105` copies precisely the cash audit source/tests from validated source PR #3657 onto main SHA `c09981151631b5c35bb92649c667eed3dfccae40`. It leaves all main-owned registry and roadmap PDFs untouched. Under source PR #3657, exact-head CI run 42036572920 passed all five jobs, Node server 5589/5589 and extra 8/8, but the clean branch needs its **own** full CI and fresh review before release. No production deploy, human approval, paid OCR or financial mutation.
