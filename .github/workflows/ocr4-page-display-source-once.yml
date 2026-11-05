@@ -1,0 +1,190 @@
+name: OCR4 page display source validation (isolated)
+on:
+  push:
+    branches: [build/ocr4-page-display-source-20261105]
+    paths: [.github/workflows/ocr4-page-display-source-once.yml, client/src/lib/invoice-file-page-count.js, client/src/lib/invoice-pdf-count-loader.js, client/src/components/store/InvoiceFilePageSummary.jsx, server/test/invoice-file-page-count.test.js, server/test/invoice-file-page-summary.test.js, server/e2e/invoice-file-page-count-flow.mjs]
+permissions:
+  contents: write
+concurrency:
+  group: ocr4-page-display-source-20261105
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE: 7851efe9889621553790fe920316c6b0a5bdbfcd
+      TARGET: fix/ocr4-physical-page-display-20261105
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Verify published claim and original form
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = build/ocr4-page-display-source-20261105
+          git fetch origin main --depth=30
+          git merge-base --is-ancestor "$BASE" origin/main
+          test "$(git rev-parse "$BASE:client/src/components/store/StoreSupplierInvoicePremiumFast.jsx")" = b7fa21517e3337230c17d6e6fc526bc125d11cea
+          test "$(git hash-object client/src/components/store/StoreSupplierInvoicePremiumFast.jsx)" = b7fa21517e3337230c17d6e6fc526bc125d11cea
+          test -z "$(git ls-remote origin refs/heads/$TARGET)"
+          mkdir -p "$RUNNER_TEMP/ocr4-page-display-source"
+          node --version | tee "$RUNNER_TEMP/ocr4-page-display-source/node-version.txt"
+          git rev-parse HEAD > "$RUNNER_TEMP/ocr4-page-display-source/runner-commit.txt"
+      - name: Install declared dependencies without lifecycle execution or manifest changes
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Generate existing Prisma client without database writes
+        run: npm run prisma:generate -w server
+      - name: Require actual Chromium for this focused validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
+          test -n "$CHROME"
+          echo "CHROME_BIN=$CHROME" >> "$GITHUB_ENV"
+          echo "OCR4_PDF_COUNT_SCREENSHOTS=$RUNNER_TEMP/ocr4-page-display-source/screenshots" >> "$GITHUB_ENV"
+          "$CHROME" --version | tee "$RUNNER_TEMP/ocr4-page-display-source/chromium-version.txt"
+      - name: Baseline existing invoice page and original-preview contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test server/test/document-page-preview.test.js server/test/supplier-five-photos.test.js server/test/pos-background-pdf-page-count.test.js server/test/pos-invoice-multipage-upload-v1.test.js | tee "$RUNNER_TEMP/ocr4-page-display-source/baseline.tap"
+      - name: Apply only reviewed display wiring and wording
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          p=Path('client/src/components/store/StoreSupplierInvoicePremiumFast.jsx')
+          s=p.read_text()
+          def replace(old,new,n=1):
+            global s
+            assert s.count(old)==n,(old,s.count(old),n)
+            s=s.replace(old,new)
+          replace('import DocumentPagePreview from "./DocumentPagePreview.jsx";','import DocumentPagePreview from "./DocumentPagePreview.jsx";\nimport InvoiceFilePageSummary from "./InvoiceFilePageSummary.jsx";')
+          replace('Επίλεξε ή φωτογράφισε έως 5 σελίδες του ίδιου τιμολογίου.','Επίλεξε έως 5 αρχεία του ίδιου τιμολογίου (εικόνες ή PDF).',2)
+          replace('Μπορείς να ανεβάσεις μέχρι 5 σελίδες για το ίδιο τιμολόγιο.','Μπορείς να ανεβάσεις μέχρι 5 αρχεία για το ίδιο τιμολόγιο.')
+          replace('Προετοιμασία σελίδων και γρήγορη ανάγνωση βασικών στοιχείων…','Προετοιμασία αρχείων και γρήγορη ανάγνωση βασικών στοιχείων…')
+          replace('Δεν διαβάστηκαν βασικά στοιχεία από τις επιλεγμένες σελίδες.','Δεν διαβάστηκαν βασικά στοιχεία από τα επιλεγμένα αρχεία.')
+          replace('"σελίδα επιλέχθηκε":"σελίδες επιλέχθηκαν"','"αρχείο επιλέχθηκε":"αρχεία επιλέχθηκαν"')
+          replace('"σελίδα έτοιμη":"σελίδες έτοιμες"','"αρχείο έτοιμο":"αρχεία έτοιμα"',2)
+          replace('Δεν ολοκληρώθηκε η επιλογή/ανάγνωση των σελίδων.','Δεν ολοκληρώθηκε η επιλογή/ανάγνωση των αρχείων.')
+          replace('Δεν διαβάστηκαν οι σελίδες.','Δεν διαβάστηκαν τα αρχεία.')
+          replace('Επιλογή έως 5 σελίδων / PDF','Επιλογή έως 5 αρχείων (εικόνες / PDF)')
+          replace('"σελίδα":"σελίδες"','"αρχείο":"αρχεία"')
+          replace('>Σελίδα {index+1}</b>','>Αρχείο {index+1}</b>')
+          replace('title="Αφαίρεση σελίδας"','title="Αφαίρεση αρχείου"')
+          replace('<MobileDocumentPhotosQr mobile={mobile}/>','<InvoiceFilePageSummary pages={pages} scopeKey={store.id}/><MobileDocumentPhotosQr mobile={mobile}/>')
+          replace('setStatus("Επίλεξε έως 5 αρχεία του ίδιου τιμολογίου (εικόνες ή PDF).")}};','setStatus("Επίλεξε έως 5 αρχεία του ίδιου τιμολογίου (εικόνες ή PDF).а")}else setStatus("Η λίστα αρχείων άλλαξε. Έλεγξε τα 4 βασικά στοιχεία με τα εναπομείναντα πρωτότυπα.")};'.replace('.а','.'),1)
+          assert hashlib.sha256(s.encode()).hexdigest()=='6b9988c55c61194481e6177cd4f3939d2e48cf7fa5b40a2a4c7486c407705203'
+          p.write_text(s)
+          PY
+      - name: Combined focused tests including actual React form and sixteen real-PDF browser cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test server/test/invoice-file-page-count.test.js server/test/invoice-file-page-summary.test.js server/test/document-page-preview.test.js server/test/supplier-five-photos.test.js server/test/pos-background-pdf-page-count.test.js server/test/pos-invoice-multipage-upload-v1.test.js | tee "$RUNNER_TEMP/ocr4-page-display-source/combined.tap"
+      - name: Build normal production client
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build:client | tee "$RUNNER_TEMP/ocr4-page-display-source/client-build.log"
+          test "$(sha256sum client/src/components/store/StoreSupplierInvoicePremiumFast.jsx | cut -d' ' -f1)" = 6b9988c55c61194481e6177cd4f3939d2e48cf7fa5b40a2a4c7486c407705203
+      - name: Install document-generation dependencies only
+        run: python -m pip install reportlab==4.2.5 pypdf==5.1.0 PyMuPDF==1.25.3
+      - name: Record measured source evidence and preserve complete registries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,os,re,subprocess
+          from datetime import datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+          out=Path(os.environ['RUNNER_TEMP'])/'ocr4-page-display-source'
+          stamp=datetime.now(ZoneInfo('Europe/Athens')).isoformat(timespec='seconds')
+          def counts(name):
+            text=(out/name).read_text()
+            result={key:int(re.search(r'^# '+key+r' (\d+)$',text,re.M)[1]) for key in ['tests','pass','fail','cancelled','skipped']}
+            assert result['fail']==result['cancelled']==result['skipped']==0,result
+            return result
+          before=counts('baseline.tap');after=counts('combined.tap')
+          observed=json.loads((out/'screenshots/observations.json').read_text());assert len(observed)==16
+          entry=f'''## 05/11/2026 - INVOICE-PHYSICAL-PAGE-DISPLAY-01 / SOURCE CANDIDATE / AWAITING FULL CI AND LAB
+
+          Retained invoice/task4 owner /root; fix/ocr4-physical-page-display-20261105. Before-source claim3670 merged at7851efe9889621553790fe920316c6b0a5bdbfcd after normal exact documentation CI42005942223. No overlap with task2 latency or task3 preparation/navigation.
+
+          Existing FAST form now distinguishes selected files/images from physical PDF page metadata. The installed client PDF.js reads copied retained-original bytes without rendering or provider calls. Unknown, malformed, encrypted, oversized, timed-out or cancelled counts never silently become one page. Request/source/store lifetime fencing rejects late counts and destroys parser tasks. Counting is asynchronous and not awaited by FAST; original source order/bytes, four header fields, five-file bound, backend limits, amount-return guard, billing, roles/modules/tenant and every payment/credit/draft/stock/fiscal writer remain unchanged. File-based status/removal wording is accurate. A page count is not complete OCR or row coverage.
+
+          Complete-checkout Node20 focused baseline: {before['pass']}/{before['tests']} PASS; combined {after['pass']}/{after['tests']} PASS, zeroFAIL/SKIP/CANCELLED. Includes actual React summary lifecycle and FAST form with mocked header I/O, plus actual client PDF.js worker/Chromium16 synthetic cases (1/2/5/6-page, invalid, encrypted, image and mixed at desktop/narrow widths). Normal production client build succeeded. This is not full native security/PostgreSQL/HTTP CI, independent review, live OCR or hosted LAB acceptance. Screenshots require separate visual inspection. Existing I/H/G originals were not replayed; J remains unused.
+
+          Preserve all previous registry bytes; regenerate canonical tracker PDF copies. Accepted invoice manuals and numbered acceptance remain unchanged. Checkpoint CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md; evidence CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/source-results.json. Source PR must remain DRAFT until independent review and exact full CI; then main CI/ordinary guarded release and fresh separately scoped display acceptance. General suppliers/rows/packages/discounts/VAT/EFK remains OPEN. No production configuration/deployment or business mutation occurred.
+
+          '''
+          entry='\n'.join(line[10:] if line.startswith('          ') else line for line in entry.split('\n'))
+          def blob(data):return hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+          receipt={'status':'SOURCE_CANDIDATE_AWAITING_FULL_CI_REVIEW_LAB','base_claim':os.environ['BASE'],'recorded_at':stamp,'runtime':(out/'node-version.txt').read_text().strip(),'baseline':before,'combined':after,'actual_chromium_cases':len(observed),'normal_client_build':'PASS','hosted_ocr':False,'deployed':False,'business_mutation':False,'visual_review':'PENDING','registries':{}}
+          for name in ['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']:
+            p=Path(name);old=p.read_bytes();expected=subprocess.check_output(['git','rev-parse',os.environ['BASE']+':'+name],text=True).strip();assert blob(old)==expected
+            new=entry.encode()+old;p.write_bytes(new);assert new[len(entry.encode()):]==old
+            receipt['registries'][name]={'before_blob':expected,'after_blob':blob(new),'prefix_bytes':len(entry.encode()),'old_suffix_preserved':True}
+          checkpoint=Path('CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md');checkpoint.write_bytes(entry.encode()+checkpoint.read_bytes())
+          evidence=Path('CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105');(evidence/'source-results.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          (out/'results.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+          python docs/roadmap/generate-open-work-tracker.py
+          cp output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import fitz
+          a=Path('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf');b=Path('docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf');assert a.read_bytes()==b.read_bytes()
+          doc=fitz.open(a);out=Path(os.environ['RUNNER_TEMP'])/'ocr4-page-display-source'
+          assert 'INVOICE-PHYSICAL-PAGE-DISPLAY-01' in doc[0].get_text()
+          for i in [0,1]:doc[i].get_pixmap(matrix=fitz.Matrix(1.2,1.2)).save(out/f'tracker-page-{i+1}.png')
+          PY
+      - name: Publish clean bounded source tree, never helper workflow or main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git ls-remote origin refs/heads/$TARGET)"
+          git read-tree "$BASE"
+          git add client/src/lib/invoice-pdf-count-loader.js client/src/lib/invoice-file-page-count.js client/src/components/store/InvoiceFilePageSummary.jsx client/src/components/store/StoreSupplierInvoicePremiumFast.jsx server/test/invoice-file-page-count.test.js server/test/invoice-file-page-summary.test.js server/e2e/invoice-file-page-count-flow.mjs CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/source-results.json CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          test "$(git diff --cached "$BASE" --name-only | wc -l)" -eq 14
+          test -z "$(git diff --cached "$BASE" --name-only | grep '^.github/' || true)"
+          git config user.name 'MyWorkStation coordination bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          TREE=$(git write-tree)
+          COMMIT=$(printf '%s\n' 'fix(invoice): distinguish uploaded files from physical PDF pages' | git commit-tree "$TREE" -p "$BASE")
+          git push origin "$COMMIT:refs/heads/$TARGET"
+          printf '%s\n' "$COMMIT" | tee "$RUNNER_TEMP/ocr4-page-display-source/published-commit.txt"
+          git diff "$BASE" "$COMMIT" -- client server > "$RUNNER_TEMP/ocr4-page-display-source/source.patch"
+      - name: Preserve exact tested files and diagnostics even on failure
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib,json,os,shutil
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'ocr4-page-display-source';out.mkdir(exist_ok=True)
+          files=['client/src/lib/invoice-pdf-count-loader.js','client/src/lib/invoice-file-page-count.js','client/src/components/store/InvoiceFilePageSummary.jsx','client/src/components/store/StoreSupplierInvoicePremiumFast.jsx','server/test/invoice-file-page-count.test.js','server/test/invoice-file-page-summary.test.js','server/e2e/invoice-file-page-count-flow.mjs','CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md','CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/source-results.json','CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md','docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf']
+          ids={}
+          for name in files:
+            p=Path(name)
+            if not p.is_file():continue
+            dest=out/'tested'/p;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,dest);d=p.read_bytes();ids[name]=hashlib.sha1(b'blob '+str(len(d)).encode()+b'\0'+d).hexdigest()
+          (out/'tested-blobs.json').write_text(json.dumps(ids,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocr4-page-display-source-validation
+          path: ${{ runner.temp }}/ocr4-page-display-source
+          retention-days: 7
+          if-no-files-found: error
