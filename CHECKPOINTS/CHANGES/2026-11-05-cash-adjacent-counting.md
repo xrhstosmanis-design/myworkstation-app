@@ -62,3 +62,20 @@ Post-100MiB review of the BackOffice automatic summary identified that the sourc
 ## 2026-11-05 — Empty selected-store period fail-closed handling
 
 Reviewed authenticated selected-store GET `/api/cash-reconciliation/stores/:storeId/automatic-check`: the route is authenticated, uses existing tenant/store authorization, rechecks store lifecycle, restricts period to <=31 days, reads canonical full audit and never performs paid extraction or financial writes. Found a legitimate empty-period defect: the derived automatic summary threw a `TypeError` for `rows:[]` despite the source report explicitly supporting a no-closed-shift date range. Fixed read-only summary to return `status:'HOLD'`, `checkedShifts:0`, `paperCoverage:'UNAVAILABLE'`, with no zero-differences claim, no adjustment and no approval. Added regression. This is a source CI fixture check, not hosted authenticated UI acceptance. Exact new branch head requires new CI run; branch remains DRAFT/unmerged, no deploy/money action. Render services currently have no dedicated cash branch LAB; unrelated POS/wholesale services were left untouched.
+
+## 2026-11-05 — PR #3683 conflict reconciliation / CI PASS / DRAFT
+
+The clean cash source PR #3683, exact head `0dddb73771aa4ab9dc70a56710ea8feb74846083`, passed rerun [42064325969](https://github.com/xrhstosmanis-design/myworkstation-app/actions/runs/42064325969), attempt 2, all five jobs SUCCESS. Its original first attempt failed only isolated wholesale Chromium `Target.createTarget timeout`; retry passed with no source changes. This is source CI, not authenticated LAB financial acceptance or release.
+
+Current main `759311ed86ad3d58f77b6819fb408043a60f6031` changed 69 paths against PR #3683's merge base; the sole overlap among this PR's 16 paths is the central `CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md` file, updated additively by peer tasks. It must be retained exactly as in current main. Direct GitHub API rewrite of this large (5,078,088-character) active file with the 740-character cash entry failed with `h2 protocol error`; DO NOT replace or truncate it. The exact omitted cash entry is preserved verbatim below for later lossless server-side registry insertion. This checkpoint remains an authoritative task-local pointer until that central sync succeeds.
+
+The integration branch can be synchronized by taking the exact current-main tree and applying only the 15 otherwise non-overlapping cash-specific source/test/checkpoint blobs, with a two-parent merge commit. No main production changes, deployment, paper paid OCR, financial adjustments, approval or cash employee charges are authorized by this source-only operation. Retain DRAFT until fresh exact-head CI, review, registry sync and authenticated read-only LAB acceptance.
+
+### Verbatim pending central active-list prefix (740 characters)
+
+```markdown
+## CASH-ADJACENT-COUNT-21 — Clean integration from current main (2026-11-05)
+
+DRAFT review-only integration branch `feat/cash-audit-clean-main-20261105` copies precisely the cash audit source/tests from validated source PR #3657 onto main SHA `c09981151631b5c35bb92649c667eed3dfccae40`. It leaves all main-owned registry and roadmap PDFs untouched. Under source PR #3657, exact-head CI run 42036572920 passed all five jobs, Node server 5589/5589 and extra 8/8, and clean PR #3683 at `393e7fc` passed all five jobs in run 42056462157. This branch now incorporates main `fc8d80106f27e37e854247c92c9e0af0dee50fc6`. Fresh CI and isolated BackOffice acceptance are pending. No production deploy, human approval, paid OCR or financial mutation.
+
+```

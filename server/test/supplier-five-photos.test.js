@@ -87,14 +87,15 @@ test("actual Basic, Premium and open-payment forms retain/count/order five photo
     for(const key of keys)Object.defineProperty(globalThis,key,{configurable:true,writable:true,value:key==="IS_REACT_ACT_ENVIRONMENT"?true:dom.window[key]});
     const React=await import("react"),{createRoot}=await import("react-dom/client"),root=createRoot(document.getElementById("root")),messages=[],calls=[];
     const api=async(path,options)=>{calls.push({path,options});return {supplierId:"supplier",supplierName:"LAB",supplierTaxId:"123456789",documentNumber:"A-001",documentDate:"2026-10-11",totalGross:10,documentType:"INVOICE",confidence:95}};
+    const removeSelector=name==="StoreSupplierInvoicePremiumFast"?'[title="Αφαίρεση αρχείου"]':'[title="Αφαίρεση σελίδας"]';
     const select=async numbers=>React.act(async()=>{const input=document.querySelector('input[type="file"]');Object.defineProperty(input,"files",{configurable:true,value:numbers.map(i=>new File([`fixture ${i}`],`p${i}.jpg`,{type:"image/jpeg"}))});input.dispatchEvent(new dom.window.Event("change",{bubbles:true}));await new Promise(resolve=>setTimeout(resolve,20))});
     try{
       await React.act(async()=>root.render(React.createElement(Form,{api,store:{id:"own"},suppliers:[{id:"supplier",name:"LAB",taxId:"123456789"}],setMessage:value=>messages.push(value)})));
-      await select([0,1,2,3,4]);assert.equal(document.querySelectorAll('[title="Αφαίρεση σελίδας"]').length,5,name);assert.match(document.body.textContent,/5\/5/);
+      await select([0,1,2,3,4]);assert.equal(document.querySelectorAll(removeSelector).length,5,name);assert.match(document.body.textContent,/5\/5/);
       assert.equal([...document.querySelectorAll("button")].find(button=>button.textContent.includes("Λήψη")&&button.textContent.includes("κάμερα")).disabled,true);
-      await select([5]);assert.equal(document.querySelectorAll('[title="Αφαίρεση σελίδας"]').length,5);assert.ok(messages.some(message=>message.includes("μέχρι 5")));
+      await select([5]);assert.equal(document.querySelectorAll(removeSelector).length,5);assert.ok(messages.some(message=>message.includes("μέχρι 5")));
       await React.act(async()=>document.querySelectorAll('[title="Μετακίνηση πάνω"]')[1].click());assert.ok(document.body.textContent.indexOf("p1.jpg")<document.body.textContent.indexOf("p0.jpg"));
-      await React.act(async()=>document.querySelectorAll('[title="Αφαίρεση σελίδας"]')[4].click());await select([5]);assert.equal(document.querySelectorAll('[title="Αφαίρεση σελίδας"]').length,5);assert.ok(document.body.textContent.includes("p5.jpg"));
+      await React.act(async()=>document.querySelectorAll(removeSelector)[4].click());await select([5]);assert.equal(document.querySelectorAll(removeSelector).length,5);assert.ok(document.body.textContent.includes("p5.jpg"));
       assert.ok(calls.every(call=>call.path.endsWith("/fast-header")),"selection never writes payment, handoff, inbox or job");
     }finally{await React.act(async()=>root.unmount());dom.window.close();for(const [key,descriptor]of saved){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key]}}
   }

@@ -1,0 +1,495 @@
+TAP version 13
+# Subtest: measured invoice input plus unchanged requested output replaces the full capacity hold
+ok 1 - measured invoice input plus unchanged requested output replaces the full capacity hold
+  ---
+  duration_ms: 4.83577
+  ...
+# Subtest: request holds cover every cache partition and the precise long-context boundary
+ok 2 - request holds cover every cache partition and the precise long-context boundary
+  ---
+  duration_ms: 0.149245
+  ...
+# Subtest: no measurement and unsupported mutable requests keep the original full hold
+ok 3 - no measurement and unsupported mutable requests keep the original full hold
+  ---
+  duration_ms: 0.566643
+  ...
+# Subtest: invalid counts/caps stop before hold and generation without reducing the requested output
+ok 4 - invalid counts/caps stop before hold and generation without reducing the requested output
+  ---
+  duration_ms: 1.217382
+  ...
+# Subtest: insufficient balance and input counting failure never generate or silently fall back
+ok 5 - insufficient balance and input counting failure never generate or silently fall back
+  ---
+  duration_ms: 0.614546
+  ...
+# Subtest: provider usage over the measured input or requested output retains REVIEW and cannot settle
+ok 6 - provider usage over the measured input or requested output retains REVIEW and cannot settle
+  ---
+  duration_ms: 1.087797
+  ...
+# Subtest: runtime/company OFF preserve legacy invocation and never count or initialize a wallet
+ok 7 - runtime/company OFF preserve legacy invocation and never count or initialize a wallet
+  ---
+  duration_ms: 0.21939
+  ...
+# Subtest: input-count request preserves inline invoice and JSON schema, credentials/signal; generation-only cap is excluded
+ok 8 - input-count request preserves inline invoice and JSON schema, credentials/signal; generation-only cap is excluded
+  ---
+  duration_ms: 16.247238
+  ...
+# Subtest: PDF data is countable; remote URL, conversation, tool, prompt and unknown inputs keep full holds without preflight I/O
+ok 9 - PDF data is countable; remote URL, conversation, tool, prompt and unknown inputs keep full holds without preflight I/O
+  ---
+  duration_ms: 0.62432
+  ...
+# Subtest: invalid/unavailable/aborted count responses fail safely without leaking provider details
+ok 10 - invalid/unavailable/aborted count responses fail safely without leaking provider details
+  ---
+  duration_ms: 1.945219
+  ...
+# Subtest: invoice reference candidate validates exact aliases/cache tiers and bounds a small request without reducing model capacity
+ok 11 - invoice reference candidate validates exact aliases/cache tiers and bounds a small request without reducing model capacity
+  ---
+  duration_ms: 2.108705
+  ...
+# Subtest: production parser: VAT summary
+ok 12 - production parser: VAT summary
+  ---
+  duration_ms: 1.369181
+  ...
+# Subtest: production parser: labelled payable
+ok 13 - production parser: labelled payable
+  ---
+  duration_ms: 0.52466
+  ...
+# Subtest: production parser: full VAT summary
+ok 14 - production parser: full VAT summary
+  ---
+  duration_ms: 0.155584
+  ...
+# Subtest: production parser: thousands separator
+ok 15 - production parser: thousands separator
+  ---
+  duration_ms: 0.107212
+  ...
+# Subtest: production parser: accented/lowercase
+ok 16 - production parser: accented/lowercase
+  ---
+  duration_ms: 0.112259
+  ...
+# Subtest: production parser: unbalanced VAT
+ok 17 - production parser: unbalanced VAT
+  ---
+  duration_ms: 0.115304
+  ...
+# Subtest: production parser: unlabelled values
+ok 18 - production parser: unlabelled values
+  ---
+  duration_ms: 0.490369
+  ...
+# Subtest: production parser: receipt section excluded
+ok 19 - production parser: receipt section excluded
+  ---
+  duration_ms: 0.131338
+  ...
+# Subtest: production parser: receipt/account VAT correction
+ok 20 - production parser: receipt/account VAT correction
+  ---
+  duration_ms: 0.86382
+  ...
+# Subtest: production parser can accept the FIRST balanced page footer: regression is not a constant-return mock
+ok 21 - production parser can accept the FIRST balanced page footer: regression is not a constant-return mock
+  ---
+  duration_ms: 0.224698
+  ...
+# Subtest: actual parsers / multi-page / VAT: partial footer must not replace full-reader 24.80
+ok 22 - actual parsers / multi-page / VAT: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 5.17425
+  ...
+# Subtest: actual parsers / multi-page / VAT: missing full-reader amount cannot inherit 12.40
+ok 23 - actual parsers / multi-page / VAT: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 2.289356
+  ...
+# Subtest: actual parsers / multi-page / VAT: no key cannot return partial money
+ok 24 - actual parsers / multi-page / VAT: no key cannot return partial money
+  ---
+  duration_ms: 1.364023
+  ...
+# Subtest: actual parsers / multi-page / VAT: two real wrapper failures cannot return partial money
+ok 25 - actual parsers / multi-page / VAT: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 1.863996
+  ...
+# Subtest: actual parsers / multi-page / payable: partial footer must not replace full-reader 24.80
+ok 26 - actual parsers / multi-page / payable: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 1.630985
+  ...
+# Subtest: actual parsers / multi-page / payable: missing full-reader amount cannot inherit 12.40
+ok 27 - actual parsers / multi-page / payable: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 2.282006
+  ...
+# Subtest: actual parsers / multi-page / payable: no key cannot return partial money
+ok 28 - actual parsers / multi-page / payable: no key cannot return partial money
+  ---
+  duration_ms: 1.569713
+  ...
+# Subtest: actual parsers / multi-page / payable: two real wrapper failures cannot return partial money
+ok 29 - actual parsers / multi-page / payable: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 1.73391
+  ...
+# Subtest: actual parsers / unknown / VAT: partial footer must not replace full-reader 24.80
+ok 30 - actual parsers / unknown / VAT: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 1.942754
+  ...
+# Subtest: actual parsers / unknown / VAT: missing full-reader amount cannot inherit 12.40
+ok 31 - actual parsers / unknown / VAT: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 1.597134
+  ...
+# Subtest: actual parsers / unknown / VAT: no key cannot return partial money
+ok 32 - actual parsers / unknown / VAT: no key cannot return partial money
+  ---
+  duration_ms: 2.582117
+  ...
+# Subtest: actual parsers / unknown / VAT: two real wrapper failures cannot return partial money
+ok 33 - actual parsers / unknown / VAT: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 2.114042
+  ...
+# Subtest: actual parsers / unknown / payable: partial footer must not replace full-reader 24.80
+ok 34 - actual parsers / unknown / payable: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 1.452857
+  ...
+# Subtest: actual parsers / unknown / payable: missing full-reader amount cannot inherit 12.40
+ok 35 - actual parsers / unknown / payable: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 2.364279
+  ...
+# Subtest: actual parsers / unknown / payable: no key cannot return partial money
+ok 36 - actual parsers / unknown / payable: no key cannot return partial money
+  ---
+  duration_ms: 1.646308
+  ...
+# Subtest: actual parsers / unknown / payable: two real wrapper failures cannot return partial money
+ok 37 - actual parsers / unknown / payable: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 1.772889
+  ...
+# Subtest: actual parsers / string-one / VAT: partial footer must not replace full-reader 24.80
+ok 38 - actual parsers / string-one / VAT: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 2.605883
+  ...
+# Subtest: actual parsers / string-one / VAT: missing full-reader amount cannot inherit 12.40
+ok 39 - actual parsers / string-one / VAT: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 1.523614
+  ...
+# Subtest: actual parsers / string-one / VAT: no key cannot return partial money
+ok 40 - actual parsers / string-one / VAT: no key cannot return partial money
+  ---
+  duration_ms: 1.402131
+  ...
+# Subtest: actual parsers / string-one / VAT: two real wrapper failures cannot return partial money
+ok 41 - actual parsers / string-one / VAT: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 1.688802
+  ...
+# Subtest: actual parsers / string-one / payable: partial footer must not replace full-reader 24.80
+ok 42 - actual parsers / string-one / payable: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 3.609313
+  ...
+# Subtest: actual parsers / string-one / payable: missing full-reader amount cannot inherit 12.40
+ok 43 - actual parsers / string-one / payable: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 1.584595
+  ...
+# Subtest: actual parsers / string-one / payable: no key cannot return partial money
+ok 44 - actual parsers / string-one / payable: no key cannot return partial money
+  ---
+  duration_ms: 1.679558
+  ...
+# Subtest: actual parsers / string-one / payable: two real wrapper failures cannot return partial money
+ok 45 - actual parsers / string-one / payable: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 1.409162
+  ...
+# Subtest: actual parsers / zero / VAT: partial footer must not replace full-reader 24.80
+ok 46 - actual parsers / zero / VAT: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 1.593459
+  ...
+# Subtest: actual parsers / zero / VAT: missing full-reader amount cannot inherit 12.40
+ok 47 - actual parsers / zero / VAT: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 1.307308
+  ...
+# Subtest: actual parsers / zero / VAT: no key cannot return partial money
+ok 48 - actual parsers / zero / VAT: no key cannot return partial money
+  ---
+  duration_ms: 1.264964
+  ...
+# Subtest: actual parsers / zero / VAT: two real wrapper failures cannot return partial money
+ok 49 - actual parsers / zero / VAT: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 1.224934
+  ...
+# Subtest: actual parsers / zero / payable: partial footer must not replace full-reader 24.80
+ok 50 - actual parsers / zero / payable: partial footer must not replace full-reader 24.80
+  ---
+  duration_ms: 1.622062
+  ...
+# Subtest: actual parsers / zero / payable: missing full-reader amount cannot inherit 12.40
+ok 51 - actual parsers / zero / payable: missing full-reader amount cannot inherit 12.40
+  ---
+  duration_ms: 1.808192
+  ...
+# Subtest: actual parsers / zero / payable: no key cannot return partial money
+ok 52 - actual parsers / zero / payable: no key cannot return partial money
+  ---
+  duration_ms: 1.360118
+  ...
+# Subtest: actual parsers / zero / payable: two real wrapper failures cannot return partial money
+ok 53 - actual parsers / zero / payable: two real wrapper failures cannot return partial money
+  ---
+  duration_ms: 2.894858
+  ...
+# Subtest: two successive balanced page footers do not displace the full-document result
+ok 54 - two successive balanced page footers do not displace the full-document result
+  ---
+  duration_ms: 1.238104
+  ...
+# Subtest: full-page table is retained only after the actual return predicate agrees with 24.80
+ok 55 - full-page table is retained only after the actual return predicate agrees with 24.80
+  ---
+  duration_ms: 1.436082
+  ...
+# Subtest: image: real VAT parser still corrects adjacent receipt/account amount without fallback
+ok 56 - image: real VAT parser still corrects adjacent receipt/account amount without fallback
+  ---
+  duration_ms: 1.205245
+  ...
+# Subtest: image: real payable parser still corrects a wrong full-reader amount after fallback
+ok 57 - image: real payable parser still corrects a wrong full-reader amount after fallback
+  ---
+  duration_ms: 1.429232
+  ...
+# Subtest: image: ordinary two-attempt failure retains the prior useful-header policy
+ok 58 - image: ordinary two-attempt failure retains the prior useful-header policy
+  ---
+  duration_ms: 1.686899
+  ...
+# Subtest: known single-page PDF: real VAT parser still corrects adjacent receipt/account amount without fallback
+ok 59 - known single-page PDF: real VAT parser still corrects adjacent receipt/account amount without fallback
+  ---
+  duration_ms: 1.305265
+  ...
+# Subtest: known single-page PDF: real payable parser still corrects a wrong full-reader amount after fallback
+ok 60 - known single-page PDF: real payable parser still corrects a wrong full-reader amount after fallback
+  ---
+  duration_ms: 1.482692
+  ...
+# Subtest: known single-page PDF: ordinary two-attempt failure retains the prior useful-header policy
+ok 61 - known single-page PDF: ordinary two-attempt failure retains the prior useful-header policy
+  ---
+  duration_ms: 1.431625
+  ...
+# Subtest: actual Responses wrapper retries HTTP 400, then keeps 24.80 not partial footer
+ok 62 - actual Responses wrapper retries HTTP 400, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.364984
+  ...
+# Subtest: actual Responses wrapper retries empty content, then keeps 24.80 not partial footer
+ok 63 - actual Responses wrapper retries empty content, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.408921
+  ...
+# Subtest: actual Responses wrapper retries malformed JSON, then keeps 24.80 not partial footer
+ok 64 - actual Responses wrapper retries malformed JSON, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.454349
+  ...
+# Subtest: actual Responses wrapper retries array JSON, then keeps 24.80 not partial footer
+ok 65 - actual Responses wrapper retries array JSON, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.609593
+  ...
+# Subtest: actual Responses wrapper retries null JSON, then keeps 24.80 not partial footer
+ok 66 - actual Responses wrapper retries null JSON, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.350593
+  ...
+# Subtest: actual Responses wrapper retries network failure, then keeps 24.80 not partial footer
+ok 67 - actual Responses wrapper retries network failure, then keeps 24.80 not partial footer
+  ---
+  duration_ms: 1.512377
+  ...
+# Subtest: actual Responses wrapper valid JSON with zero total stays blocked
+ok 68 - actual Responses wrapper valid JSON with zero total stays blocked
+  ---
+  duration_ms: 1.472987
+  ...
+# Subtest: actual Responses wrapper valid JSON with missing total stays blocked
+ok 69 - actual Responses wrapper valid JSON with missing total stays blocked
+  ---
+  duration_ms: 1.30146
+  ...
+# Subtest: actual Responses wrapper valid JSON with null amount total stays blocked
+ok 70 - actual Responses wrapper valid JSON with null amount total stays blocked
+  ---
+  duration_ms: 1.491545
+  ...
+# Subtest: actual Responses request retains complete PDF data URL and strict production header schema
+ok 71 - actual Responses request retains complete PDF data URL and strict production header schema
+  ---
+  duration_ms: 1.490413
+  ...
+# Subtest: actual Responses request retains image transport unchanged
+ok 72 - actual Responses request retains image transport unchanged
+  ---
+  duration_ms: 1.327118
+  ...
+# Subtest: actual Responses wrapper accepts nested output text as before
+ok 73 - actual Responses wrapper accepts nested output text as before
+  ---
+  duration_ms: 1.300788
+  ...
+# Subtest: actual wallet guard: azure status 400 refuses fallback success/retry
+ok 74 - actual wallet guard: azure status 400 refuses fallback success/retry
+  ---
+  duration_ms: 1.602082
+  ...
+# Subtest: actual wallet guard: azure status 402 refuses fallback success/retry
+ok 75 - actual wallet guard: azure status 402 refuses fallback success/retry
+  ---
+  duration_ms: 1.112645
+  ...
+# Subtest: actual wallet guard: azure status 403 refuses fallback success/retry
+ok 76 - actual wallet guard: azure status 403 refuses fallback success/retry
+  ---
+  duration_ms: 0.977581
+  ...
+# Subtest: actual wallet guard: azure status 404 refuses fallback success/retry
+ok 77 - actual wallet guard: azure status 404 refuses fallback success/retry
+  ---
+  duration_ms: 1.226857
+  ...
+# Subtest: actual wallet guard: azure status 409 refuses fallback success/retry
+ok 78 - actual wallet guard: azure status 409 refuses fallback success/retry
+  ---
+  duration_ms: 2.223537
+  ...
+# Subtest: actual wallet guard: azure status 503 refuses fallback success/retry
+ok 79 - actual wallet guard: azure status 503 refuses fallback success/retry
+  ---
+  duration_ms: 1.006165
+  ...
+# Subtest: actual wallet guard: openai status 400 refuses fallback success/retry
+ok 80 - actual wallet guard: openai status 400 refuses fallback success/retry
+  ---
+  duration_ms: 1.591526
+  ...
+# Subtest: actual wallet guard: openai status 402 refuses fallback success/retry
+ok 81 - actual wallet guard: openai status 402 refuses fallback success/retry
+  ---
+  duration_ms: 1.259937
+  ...
+# Subtest: actual wallet guard: openai status 403 refuses fallback success/retry
+ok 82 - actual wallet guard: openai status 403 refuses fallback success/retry
+  ---
+  duration_ms: 1.165344
+  ...
+# Subtest: actual wallet guard: openai status 404 refuses fallback success/retry
+ok 83 - actual wallet guard: openai status 404 refuses fallback success/retry
+  ---
+  duration_ms: 1.226957
+  ...
+# Subtest: actual wallet guard: openai status 409 refuses fallback success/retry
+ok 84 - actual wallet guard: openai status 409 refuses fallback success/retry
+  ---
+  duration_ms: 1.250532
+  ...
+# Subtest: actual wallet guard: openai status 503 refuses fallback success/retry
+ok 85 - actual wallet guard: openai status 503 refuses fallback success/retry
+  ---
+  duration_ms: 1.217322
+  ...
+# Subtest: foreign store cannot reach real parsers/provider/wallet scope
+ok 86 - foreign store cannot reach real parsers/provider/wallet scope
+  ---
+  duration_ms: 0.663188
+  ...
+# Subtest: foreign company/store cannot reach real parsers/provider/wallet scope
+ok 87 - foreign company/store cannot reach real parsers/provider/wallet scope
+  ---
+  duration_ms: 0.818993
+  ...
+# Subtest: verified durable cache retains bypass without reaching actual provider wrapper
+ok 88 - verified durable cache retains bypass without reaching actual provider wrapper
+  ---
+  duration_ms: 1.197463
+  ...
+# Subtest: V3 successful full-document total retains the complete timing trace and one request total
+ok 89 - V3 successful full-document total retains the complete timing trace and one request total
+  ---
+  duration_ms: 1.420178
+  ...
+# Subtest: V3 missing full-document amount is a policy error even when provider transport finishes
+ok 90 - V3 missing full-document amount is a policy error even when provider transport finishes
+  ---
+  duration_ms: 1.570604
+  ...
+# Subtest: V3 two failed provider attempts preserve wrapped error, timing and no successful subtotal
+ok 91 - V3 two failed provider attempts preserve wrapped error, timing and no successful subtotal
+  ---
+  duration_ms: 1.404624
+  ...
+# Subtest: V3 missing fallback configuration records no phantom fallback span and returns no subtotal
+ok 92 - V3 missing fallback configuration records no phantom fallback span and returns no subtotal
+  ---
+  duration_ms: 1.096571
+  ...
+# Subtest: V3 wallet hold remains original normalized error and a single failed attempt
+ok 93 - V3 wallet hold remains original normalized error and a single failed attempt
+  ---
+  duration_ms: 1.392336
+  ...
+# Subtest: V3 synchronous telemetry failure cannot enable unsafe money
+ok 94 - V3 synchronous telemetry failure cannot enable unsafe money
+  ---
+  duration_ms: 24.466031
+  ...
+# Subtest: V3 asynchronous telemetry failure cannot enable unsafe money
+ok 95 - V3 asynchronous telemetry failure cannot enable unsafe money
+  ---
+  duration_ms: 2.250498
+  ...
+# Subtest: V3 shared 70-second provider budget is unchanged on retry
+ok 96 - V3 shared 70-second provider budget is unchanged on retry
+  ---
+  duration_ms: 1.620629
+  ...
+# Subtest: V3 exhausted shared provider budget cannot return partial money or emit a phantom attempt
+ok 97 - V3 exhausted shared provider budget cannot return partial money or emit a phantom attempt
+  ---
+  duration_ms: 1.346647
+  ...
+1..97
+# tests 97
+# suites 0
+# pass 97
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 238.444693

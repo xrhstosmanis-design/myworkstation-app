@@ -39,7 +39,7 @@ test("mounted original-image preview is explicit, local, bounded and scope/sourc
 test("actual Premium Fast with real scanner control appends five pages and previews without extra header/payment calls",async()=>{
   const entry=fileURLToPath(new URL("../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx",import.meta.url));
   const output=await build({entryPoints:[entry],bundle:true,write:false,format:"cjs",platform:"node",packages:"external",plugins:[{name:"isolated-media-and-reader",setup(b){
-    b.onResolve({filter:/^\./},args=>args.importer===entry&&!["./DocumentPagePreview.jsx","./DocumentScanButton.jsx"].includes(args.path)?{path:args.path,namespace:"fixture"}:undefined);
+    b.onResolve({filter:/^\./},args=>args.importer===entry&&!["./DocumentPagePreview.jsx","./DocumentScanButton.jsx","../../lib/invoice-fast-header-request.js"].includes(args.path)?{path:args.path,namespace:"fixture"}:undefined);
     b.onResolve({filter:/^lucide-react$/},()=>({path:"icons",namespace:"fixture"}));
     b.onLoad({filter:/.*/,namespace:"fixture"},args=>{
       let contents="export default function Stub(){return null}";
@@ -59,7 +59,7 @@ test("actual Premium Fast with real scanner control appends five pages and previ
   for(const name of ["window","document","navigator","HTMLElement","File","FileReader","IS_REACT_ACT_ENVIRONMENT","localStorage","sessionStorage","fetch"]){saved.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{configurable:true,writable:true,value:name==="IS_REACT_ACT_ENVIRONMENT"?true:dom.window[name]})}
   const React=await import("react"),{createRoot}=await import("react-dom/client"),root=createRoot(document.getElementById("root")),calls=[];
   localStorage.setItem("myworkstation:document-scanner:v1","a".repeat(64));const transfers=[];globalThis.fetch=async(url,options)=>{assert.equal(url,"http://127.0.0.1:17839/scan");transfers.push(JSON.parse(options.body));return{ok:true,status:200,text:async()=>JSON.stringify({pages:[{jpeg:"/9j/2Q=="}]})}};
-  const api=async(url)=>{calls.push(url);assert.equal(url,"/api/commerce/ai-reader/fast-header");return{}};
+  const api=async(url,options)=>{calls.push(url);assert.equal(url,"/api/commerce/ai-reader/fast-header");const request=JSON.parse(options.body);assert.equal(request.storeId,"A");assert.equal(request.mimeType,"image/jpeg");assert.equal(request.dataUrl,"data:image/jpeg;base64,/9j/2Q==");assert.equal(request.pdfHeaderPriority,undefined,"Scanner images retain the legacy provider path");return{}};
   const render=async id=>React.act(async()=>root.render(React.createElement(Parent,{key:id,store:{id},api,suppliers:[]})));
   const click=async text=>React.act(async()=>{const b=[...document.querySelectorAll("button")].find(b=>b.textContent===text||b.getAttribute("aria-label")===text);assert.ok(b,text);b.click();await new Promise(r=>setTimeout(r,20))});
   try{
