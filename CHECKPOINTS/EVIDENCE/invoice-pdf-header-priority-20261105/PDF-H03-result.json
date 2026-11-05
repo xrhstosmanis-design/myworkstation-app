@@ -1,0 +1,218 @@
+{
+  "trial": "PDF-H03",
+  "revision": "2b13a8419c3ec82fb14c67902b6bb06bfef8752b",
+  "beforeCommit": "13c1ddd69ace3b7dad8d20755a7986e0a6e4a19c",
+  "ui": {
+    "trial": "PDF-H03",
+    "started": "2026-11-05T17:22:24.878Z",
+    "observed": "2026-11-05T17:22:27.858Z",
+    "uiElapsedMs": 2980,
+    "ready": true,
+    "supplier": "LAB METER TEST",
+    "documentNumber": "LAB-PDF-HEADER-PRIORITY-20261105-H03",
+    "documentDate": "2026-11-05",
+    "amountText": "74,40",
+    "documentType": "CREDIT_NOTE",
+    "totalGross": 74.4,
+    "screenshot": "PDF-H03-confirmed.jpg"
+  },
+  "after": [
+    {
+      "active_shifts": [
+        {
+          "cardSales": 0,
+          "cashSales": 0,
+          "expenses": 0,
+          "id": "a2270849-bbc1-41ea-bdf9-9dd6be69d3bd",
+          "openedAt": "2026-11-04T06:54:12.460629+00:00",
+          "openingDrawer": 10,
+          "operator": "LAB POS 2",
+          "terminal": "MAIN",
+          "transactionCount": 1
+        }
+      ],
+      "attachments": {
+        "count": 84,
+        "digest": "0a4a0a1762bf23b78cfff38a584db2e0"
+      },
+      "captured_at": "2026-11-05T17:23:10.766815Z",
+      "documents": {
+        "count": 74,
+        "digest": "3e01b7765cf10f514bc6dfe0e3ca7349"
+      },
+      "id": "cmtpopbgo000trhb5ng9ytiru",
+      "inbox": {
+        "count": 66,
+        "digest": "7c36baf34fbba338023d68f29da1d815"
+      },
+      "jobs": {
+        "count": 82,
+        "digest": "e37197486ba26fd36c13d3be6cd94620"
+      },
+      "movements": {
+        "count": 95,
+        "digest": "f69aa9d0bec0bf377f1b9645262e5aba"
+      },
+      "name": "\u0395\u03a1\u0393\u0391\u03a3\u03a4\u0397\u03a1\u0399\u039f \u0394\u039f\u039a\u0399\u039c\u03a9\u039d",
+      "order_lines": {
+        "count": 634,
+        "digest": "baf3fbae09a8316af68135bcab820ffd"
+      },
+      "orders": {
+        "count": 62,
+        "digest": "b5df83ff0ce9892378f070c8bfbf1640"
+      },
+      "shifts": {
+        "count": 44,
+        "digest": "5a2d5f3a434b0154b99f8d1386571aed"
+      },
+      "stock": {
+        "count": 110,
+        "digest": "3c3739c172f7acfdb0939e52d06bed8d"
+      },
+      "transactions": {
+        "count": 135,
+        "digest": "ec25965ae7f73cc4796bf0f67e04b955"
+      },
+      "wallet": {
+        "balanceMicros": "4610532",
+        "enabled": false,
+        "invoiceEnabled": false,
+        "reservedMicros": "0"
+      }
+    },
+    {
+      "active_shifts": [],
+      "attachments": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "captured_at": "2026-11-05T17:23:10.766815Z",
+      "documents": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "id": "cmv2qanca000psigeizep8o9m",
+      "inbox": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "jobs": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "movements": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "name": "N40 CONTROL 20261010",
+      "order_lines": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "orders": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "shifts": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "stock": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "transactions": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "wallet": {
+        "balanceMicros": "4610532",
+        "enabled": false,
+        "invoiceEnabled": false,
+        "reservedMicros": "0"
+      }
+    }
+  ],
+  "uiShiftAfter": {
+    "terminal": "MAIN",
+    "openedBy": "LAB POS 2",
+    "transactions": 1,
+    "cash": 40,
+    "cardsAndIris": 0,
+    "total": 0
+  },
+  "checks": {
+    "fourFields": true,
+    "creditAutoDetected": true,
+    "unchangedSnapshot": true,
+    "completeLogs": true,
+    "uniqueCorrelation": true,
+    "exactStageOrder": true,
+    "finite": true,
+    "oneOpenAiAttempt": true,
+    "noAzure": true,
+    "safeKeys": true,
+    "successfulOutcomes": true,
+    "uuidCorrelation": true
+  },
+  "events": [
+    {
+      "timestamp": "2026-11-05T17:22:25.010239596Z",
+      "correlationId": "2da2e939-70de-4b56-9165-c8b88054c207",
+      "stage": "exact_file_lookup",
+      "outcome": "ok",
+      "elapsedMs": 4.03
+    },
+    {
+      "timestamp": "2026-11-05T17:22:25.018245079Z",
+      "correlationId": "2da2e939-70de-4b56-9165-c8b88054c207",
+      "stage": "pdf_header_page_probe",
+      "outcome": "ok",
+      "elapsedMs": 7.883
+    },
+    {
+      "timestamp": "2026-11-05T17:22:27.796530649Z",
+      "correlationId": "2da2e939-70de-4b56-9165-c8b88054c207",
+      "stage": "openai_attempt",
+      "outcome": "ok",
+      "elapsedMs": 2778.147,
+      "attempt": 1
+    },
+    {
+      "timestamp": "2026-11-05T17:22:27.796558261Z",
+      "correlationId": "2da2e939-70de-4b56-9165-c8b88054c207",
+      "stage": "openai_header",
+      "outcome": "ok",
+      "elapsedMs": 2778.292
+    },
+    {
+      "timestamp": "2026-11-05T17:22:27.798753137Z",
+      "correlationId": "2da2e939-70de-4b56-9165-c8b88054c207",
+      "stage": "openai_supplier_match",
+      "outcome": "ok",
+      "elapsedMs": 1.855
+    },
+    {
+      "timestamp": "2026-11-05T17:22:27.799685972Z",
+      "correlationId": "2da2e939-70de-4b56-9165-c8b88054c207",
+      "stage": "request_total",
+      "outcome": "finished",
+      "elapsedMs": 2795.611
+    }
+  ],
+  "sumsMs": {
+    "exact_file_lookup": 4.03,
+    "pdf_header_page_probe": 7.883,
+    "openai_attempt": 2778.147,
+    "openai_header": 2778.292,
+    "openai_supplier_match": 1.855,
+    "request_total": 2795.611
+  },
+  "consumed": true,
+  "noReplay": true,
+  "status": "SCOPED_HEADER_PASS",
+  "physicalPOS": "NOT_TESTED",
+  "submission": false,
+  "settlementChoice": false
+}
