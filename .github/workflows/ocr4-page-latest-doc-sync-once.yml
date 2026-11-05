@@ -1,0 +1,107 @@
+name: OCR4 page-display source/main synchronization (isolated)
+on:
+  push:
+    branches: [build/ocr4-page-latest-doc-sync-20261105]
+    paths: [.github/workflows/ocr4-page-latest-doc-sync-once.yml]
+permissions:
+  contents: write
+concurrency:
+  group: ocr4-page-latest-doc-sync-20261105
+  cancel-in-progress: true
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MAIN_HEAD: 833ecadf3f4eaedaeea00f62d9d502ba328a4028
+      PR_HEAD: 8d0cb59026abcec24f6cd7d34f3550b105b08146
+      DOC_BASE: c182e18767016ea2645dc538537d7ba3e81215d3
+      TARGET: fix/ocr4-physical-page-display-20261105
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 60
+      - name: Verify pinned branch heads and preserve all concurrent registry history
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main "$TARGET"
+          test "$(git rev-parse origin/main)" = "$MAIN_HEAD"
+          test "$(git rev-parse "origin/$TARGET")" = "$PR_HEAD"
+          python3 - <<'PY'
+          import os,subprocess,pathlib
+          paths=['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']
+          def show(ref,p): return subprocess.check_output(['git','show',f'{ref}:{p}'])
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'ocr4-preserved';out.mkdir()
+          prefixes=[]
+          for i,p in enumerate(paths):
+            old=show('origin/'+os.environ['TARGET'],p)
+            base=show(os.environ['DOC_BASE'],p)
+            main=show('origin/main',p)
+            assert old.endswith(base),('Prior registry history changed',p)
+            prefix=old[:-len(base)]
+            assert b'INVOICE-PHYSICAL-PAGE-DISPLAY-01' in prefix and len(prefix)>100,('Task4 claim missing',p)
+            prefixes.append(prefix)
+            (out/f'{i}.md').write_bytes(prefix+main)
+            print('Retained',p,'task4-prefix',len(prefix),'complete-current-main',len(main))
+          assert prefixes[0]==prefixes[1]==prefixes[2],'Inconsistent task4 prefix'
+          PY
+      - name: Merge main and resolve only specified registry and binary-PDF conflicts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "OCR4 guarded sync"
+          git config user.email "actions@users.noreply.github.com"
+          git switch -C ocr4-sync "origin/$TARGET"
+          git merge --no-commit --no-ff origin/main || :
+          test -f .git/MERGE_HEAD
+          python3 - <<'PY'
+          import subprocess
+          unmerged=set(subprocess.check_output(['git','diff','--name-only','--diff-filter=U']).decode().splitlines())
+          allowed={'CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md','docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf'}
+          assert unmerged<=allowed,('Refusing any conflicting source/test/peer file',sorted(unmerged))
+          print('Allowed documentation conflict set',sorted(unmerged))
+          PY
+          for p in docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf; do
+            if test -n "$(git ls-files -u -- "$p")"; then git checkout --ours -- "$p"; git add "$p"; fi
+          done
+          cp "$RUNNER_TEMP/ocr4-preserved/0.md" CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md
+          cp "$RUNNER_TEMP/ocr4-preserved/1.md" docs/roadmap/OPEN_WORK_TRACKER.md
+          cp "$RUNNER_TEMP/ocr4-preserved/2.md" docs/roadmap/PENDING_WORK.md
+          git add CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md
+          test -z "$(git diff --name-only --diff-filter=U)"
+      - name: Rebuild the existing two canonical tracker PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check reportlab==4.2.5 pypdf==5.1.0 PyMuPDF==1.25.3
+          python3 docs/roadmap/generate-open-work-tracker.py
+          cp output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf
+          cmp docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          git add docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+      - name: Check original source, peer source and complete histories are unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,subprocess,pathlib
+          def blob(ref,p):return subprocess.check_output(['git','rev-parse',f'{ref}:{p}']).decode().strip()
+          def actual(p):return subprocess.check_output(['git','hash-object',p]).decode().strip()
+          pr=['client/src/components/store/InvoiceFilePageSummary.jsx','client/src/components/store/StoreSupplierInvoicePremiumFast.jsx','client/src/lib/invoice-file-page-count.js','client/src/lib/invoice-pdf-count-loader.js','server/e2e/invoice-file-page-count-flow.mjs','server/test/helpers/pdf-worker-url-plugin.mjs','server/test/invoice-file-page-count.test.js','server/test/invoice-file-page-summary.test.js','server/test/pdf-worker-url-plugin.test.js','server/test/pos-decimal-keyboard.test.js','server/test/pos-direct-credit-payment.test.js','server/test/pos-internal-return-ui.test.js','server/test/supplier-five-photos.test.js']
+          peer=['server/src/lib/pos-fast-header-timing.js','server/src/rbs-capdriver-v1.js','server/src/routes/commerce-azure-invoice-reader.js','server/src/routes/commerce-pos-v244.js','server/src/routes/store-pos.js','server/test/pos-azure-operation-timing.test.js','server/test/pos-fast-header-latency.test.js','server/test/pos-fast-header-timing.test.js','server/test/rbs-capdriver-acharnon-profile.test.js']
+          for p in pr:assert actual(p)==blob('origin/'+os.environ['TARGET'],p),('PR source overwritten',p)
+          for p in peer:assert actual(p)==blob('origin/main',p),('Peer source overwritten',p)
+          for i,p in enumerate(['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']):
+            assert pathlib.Path(p).read_bytes()==(pathlib.Path(os.environ['RUNNER_TEMP'])/'ocr4-preserved'/f'{i}.md').read_bytes(),('Registry mismatch',p)
+          print('PR files',len(pr),'peer files',len(peer),'three complete main histories kept')
+          PY
+      - name: Push only a fast-forwarded source PR merge, never main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git commit -m "chore(ocr4): merge current main, preserve task4 and peer source/records"
+          git merge-base --is-ancestor "$PR_HEAD" HEAD
+          git merge-base --is-ancestor "$MAIN_HEAD" HEAD
+          git ls-remote origin "refs/heads/$TARGET" | grep -E "^$PR_HEAD[[:space:]]"
+          git push origin "HEAD:refs/heads/$TARGET"
+          echo "PUBLISHED_PR_HEAD=$(git rev-parse HEAD)"
