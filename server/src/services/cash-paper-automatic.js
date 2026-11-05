@@ -9,7 +9,7 @@ const text=v=>typeof v==='string'?v.trim():'';
 const normalized=v=>text(v).normalize('NFD').replace(/\p{M}/gu,'').toLocaleUpperCase('el-GR').replace(/\s+/g,' ');
 const operatorMatches=(printed,recorded)=>{const a=normalized(printed),b=normalized(recorded);if(!a)return true;if(a===b&&a.split(' ').some(word=>/\p{L}{2}/u.test(word)))return true;const words=new Set(b.split(' '));return Boolean(b)&&a.split(' ').every(word=>word.length>=2&&words.has(word));};
 const validSource=s=>s&&typeof s.sourceId==='string'&&/^[a-f0-9]{64}$/.test(s.checksum||'')&&Array.isArray(s.references)&&s.references.length>0&&s.references.every(r=>text(r.messageId));
-export const automaticPaperByteLimit=25*1024*1024;
+export const automaticPaperByteLimit=100*1024*1024;
 // Metadata-only admission before any original bytes or paid extraction. Missing
 // sizes are unavailable evidence, never zero-byte sources or a complete scan.
 export function boundAutomaticPaperDiscovery(discovery){
