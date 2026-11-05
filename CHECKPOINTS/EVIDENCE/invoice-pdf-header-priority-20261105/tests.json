@@ -1,0 +1,28 @@
+{
+  "status": "LOCAL_PASS_AWAITING_FULL_SOURCE_CI_AND_LAB",
+  "base": "fc8d80106f27e37e854247c92c9e0af0dee50fc6",
+  "claim": {
+    "pr": 3685,
+    "merge": "fc8d80106f27e37e854247c92c9e0af0dee50fc6",
+    "prCI": 42061903324,
+    "mainCI": 42062131042
+  },
+  "node": "20.20.2",
+  "baselineTests": 378,
+  "finalTests": 422,
+  "fail": 0,
+  "skip": 0,
+  "frontendBuild": "PASS",
+  "routeSyntax": "PASS",
+  "artifacts": {
+    "pdf-priority-before.tap": "dc03dd6b244a758dce37db27f74ef23011ce0475107637f38c79c6bca1337aef",
+    "pdf-priority-extra-before.tap": "cc89e3f49000bca5ab32d832eb600abbade16304a3e386e92e5fe142ee5d881b",
+    "pdf-priority-regression-final.tap": "31004118e71a2f3d1fa01faba86ef4d1a6473d1af9fa7d953d42d037e5bd37b6",
+    "pdf-priority-build.log": "786561a392a72fbe7f65245d18195dcb0b315556fb6a1453e7cbe755b674ebc5"
+  },
+  "notes": [
+    "Initial obsolete static legacy-order/eligibility assertions retargeted to stronger priority guard; dynamic legacy behavior preserved.",
+    "Test PDF fake-worker version conflict isolated in child process using actual existing server parser; production parser unchanged.",
+    "No provider read/new LAB consumption yet."
+  ]
+}

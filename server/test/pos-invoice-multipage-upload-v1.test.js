@@ -77,7 +77,7 @@ test("fast header falls back from Azure without blocking payment",()=>{
 test("fast header also falls back when Azure succeeds with an empty header",()=>{
   assert.match(wrapper,/const azureHeader=/);
   assert.match(wrapper,/const azureHasUsefulHeader=Boolean/);
-  assert.match(wrapper,/if\(azureHasUsefulHeader&&\(!isPdf\|\|parsed\.azurePageCount===1\)&&\(azureProductLines\.length\|\|azureHasCompleteHeader\)\)return res\.json\(azureHeader\)/);
+  assert.match(wrapper,/if\(azureHasUsefulHeader&&azureCanVerifyDocumentTotal&&\(azureProductLines\.length\|\|azureHasCompleteHeader\)\)return res\.json\(azureHeader\)/);
   assert.match(wrapper,/if\(azureHasUsefulHeader\)azureHeaderFallback=azureHeader/);
   assert.match(wrapper,/FAST Azure header incomplete; trying configured fallback/);
   assert.match(wrapper,/δεν επέστρεψε ασφαλή βασικά στοιχεία/);
@@ -98,7 +98,7 @@ test("MANTZILAS FAST total uses the balanced VAT summary and ignores the account
   assert.ok(headerStart>=0&&headerEnd>headerStart);
   const header=wrapper.slice(headerStart,headerEnd);
   assert.match(header,/let azureCanVerifyDocumentTotal=!isPdf;/);
-  assert.match(header,/azureCanVerifyDocumentTotal=!isPdf\|\|parsed\.azurePageCount===1;/);
+  assert.match(header,/azureCanVerifyDocumentTotal=!isPdf\|\|\(!pdfHeaderPriority&&parsed\.azurePageCount===1\);/);
   assert.match(header,/const verifiedVatSummaryTotal=azureCanVerifyDocumentTotal\?recoverVatSummaryInvoiceTotal\(azureRawText\):0;/);
   // Execute the production assignment: image/known-one-page reuse remains,
   // but a balanced page footer cannot certify a multi-page or unknown PDF.

@@ -5,6 +5,8 @@ import {pathToFileURL} from 'node:url';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {EventEmitter} from 'node:events';
+import {execFileSync} from 'node:child_process';
+import {fastInvoiceHeaderRequest} from '../../client/src/lib/invoice-fast-header-request.js';
 
 const root=new URL('../../',import.meta.url).pathname;
 const load=relative=>import(pathToFileURL(path.join(root,relative)).href);
@@ -12,6 +14,14 @@ const {finalizeV244ProductLines}=await load('client/src/lib/invoice-v244.js');
 const {reconcileInvoiceLines,reusableVerifiedPrintedTable}=await load('server/src/invoice-line-reconciliation.js');
 const {recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable}=await load('server/src/lib/invoice-total-reading.js');
 const {createFastHeaderTiming}=await load('server/src/lib/pos-fast-header-timing.js');
+// The server uses pdfjs4 while a pre-existing text fixture below uses root
+// pdfjs5. Keep each real parser's process-global fake worker isolated.
+function actualPdfPageCount(pages){
+ const moduleUrl=pathToFileURL(path.join(root,'server/src/lib/invoice-assistant-page-count.js')).href;
+ const script=`import {invoiceAssistantPageCount} from ${JSON.stringify(moduleUrl)};let raw='';for await(const chunk of process.stdin)raw+=chunk;console.log(JSON.stringify(await invoiceAssistantPageCount(JSON.parse(raw))));`;
+ const output=execFileSync(process.execPath,['--input-type=module','--eval',script],{input:JSON.stringify(pages),encoding:'utf8',timeout:10000});
+ return JSON.parse(output.trim().split('\n').at(-1));
+}
 const source=readFileSync(path.join(root,'server/src/routes/commerce-pos-v244.js'),'utf8');
 const a=source.indexOf('router.post("/ai-reader/fast-header"'),b=source.indexOf('\nrouter.post("/ai-reader/fast-duplicate-check"',a);
 assert.ok(a>=0&&b>a);
@@ -27,7 +37,7 @@ const throwIfWalletError=new Function(`${walletSource.slice(walletStart,walletEn
 const row={code:'SYNTHETIC-1',description:'SYNTHETIC ITEM',quantity:1,unit:'TEM',unitCost:10,initialAmount:10,discount1:0,discount1Amount:0,netAmount:10,exciseTotal:0,vatRate:24,grossAmount:12.4,sourceColumnsVerified:true,quantitySource:'AI_COMPLETE_PRINTED_TABLE_VERIFIED'};
 const complete=()=>({supplier:{name:'SYNTHETIC SUPPLIER',taxId:'099999999'},documentNumber:'SYN-42',documentDate:'2026-11-02',totalGross:12.4,aiConfidence:98,rawText:'',productLines:[]});
 const fallback=()=>({supplierName:'FALLBACK SUPPLIER',supplierTaxId:'088888888',documentNumber:'FB-43',documentDate:'2026-11-01',totalGross:24.8,confidence:90,documentType:'INVOICE'});
-function createHarness({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null,openaiConfigured=true,transport=false,transportResponses=[],transportNow,transportTimeout,fastModel,generalModel,mimeType='image/jpeg',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`,timingOptions={},autoFinish=true,onResponse}={}){
+function createHarness({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null,openaiConfigured=true,transport=false,transportResponses=[],transportNow,transportTimeout,fastModel,generalModel,mimeType='image/jpeg',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`,timingOptions={},autoFinish=true,onResponse,pdfCount=2}={}){
  const calls=[],queries=[],requests=[],timings=[],responses=[];let walletScopes=0;
  const responseTimings=new WeakMap();
  const deps={Buffer,crypto,process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'https://synthetic.invalid',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic',OPENAI_API_KEY:openaiConfigured?'synthetic':'',...(fastModel===undefined?{}:{OPENAI_INVOICE_FAST_MODEL:fastModel}),...(generalModel===undefined?{}:{OPENAI_INVOICE_MODEL:generalModel})}},console:{warn(){},error(){}},FAST_AZURE_HEADER_TIMEOUT_MS:35000,POS_STORED_LINES_TOLERANCE:0.05,finalizeV244ProductLines,reconcileInvoiceLines,reusableVerifiedPrintedTable,recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable,throwIfWalletError,
@@ -35,6 +45,7 @@ function createHarness({azure=complete(),openai=fallback(),durable=[],operatorSt
   prisma:{store:{findFirst:async q=>{assert.deepEqual(q,{where:{id:'store-a',companyId:'company-a'},select:{id:true}});return storeExists?{id:'store-a'}:null}},$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join('?'),values});if(durable instanceof Error)throw durable;return durable}},
   walletActivityFromRequest:(req,scope)=>{assert.equal(req.user.companyId,'company-a');assert.deepEqual(scope,{storeId:'store-a',purpose:'PAYMENT_HEADER_READ'});return {purpose:scope.purpose}},
   withInvoiceWalletScope:async(scope,work)=>{walletScopes++;assert.deepEqual(scope,{companyId:'company-a',storeId:'store-a',activity:{purpose:'PAYMENT_HEADER_READ'}});return work()},
+  invoiceAssistantPageCount:async pages=>{calls.push('pdf_probe');assert.deepEqual(pages,[{contentData:dataUrl,mimeType}]);if(pdfCount==='actual')return actualPdfPageCount(pages);if(pdfCount instanceof Error)throw pdfCount;return pdfCount},
   callAzure:async options=>{calls.push('azure');assert.equal(options.mimeType,mimeType);if(typeof azure==='function')return azure(options);assert.equal(options.contentData,dataUrl);if(azure instanceof Error)throw azure;return azure},
   // Provider transport normalization is outside this return-predicate change.
   normalizeAzure:value=>value,
@@ -69,6 +80,100 @@ function createHarness({azure=complete(),openai=fallback(),durable=[],operatorSt
  }};
 }
 const run=async options=>createHarness(options).execute();
+
+test('priority PDF uses actual server page parser and actual Responses body, without Azure or FAST rows',async()=>{
+ const bytes=readFileSync(path.join(root,'CHECKPOINTS/EVIDENCE/invoice-physical-pages-20261102/fixtures/two-physical-pages.pdf'));
+ const dataUrl=`data:application/pdf;base64,${bytes.toString('base64')}`;
+ const body=fastInvoiceHeaderRequest({storeId:'store-a',sourcePage:{file:{name:'original.pdf',type:'application/pdf'},dataUrl}});
+ const h=createHarness({transport:true,mimeType:'application/pdf',dataUrl,pdfCount:'actual',fastModel:'gpt-5',azure:new Error('Azure must not be invoked')});
+ const r=await h.execute({body});assert.ifError(r.error);assert.deepEqual(r.calls,['pdf_probe','openai']);assert.equal(r.result.totalGross,24.8);assert.equal(r.result.documentNumber,'FB-43');assert.deepEqual(r.result.productLines,[]);
+ assert.equal(r.requests.length,1);assert.deepEqual(r.requests[0].body.reasoning,{effort:'minimal'});assert.equal(r.requests[0].body.input[0].content[1].file_data,dataUrl);assert.equal(r.requests[0].body.input[0].content[1].filename,'original.pdf');
+ assert.equal(r.requests[0].body.text.format.strict,true);assert.equal(r.timings.filter(e=>e.stage==='pdf_header_page_probe').length,1);assert.equal(r.timings.filter(e=>e.stage.startsWith('azure_')).length,0);assertSanitizedTimings(r.timings);
+});
+
+for(const count of [2,3,4,5])test(`priority verified ${count}-page PDF uses one full-document read`,async()=>{
+ const h=createHarness({mimeType:'application/pdf',pdfCount:count,azure:new Error('must not call Azure')});const r=await h.execute({body:{pdfHeaderPriority:true}});
+ assert.ifError(r.error);assert.deepEqual(r.calls,['pdf_probe','openai']);assert.equal(r.result.totalGross,24.8);assert.deepEqual(r.result.productLines,[]);
+});
+
+for(const flag of [undefined,false,'true',1,{},null])test(`non-explicit priority ${String(flag)} keeps legacy PDF order`,async()=>{
+ const h=createHarness({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2}});const r=await h.execute({body:{pdfHeaderPriority:flag}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result.totalGross,24.8);
+});
+
+for(const count of [1,0,-1,6,'2',NaN,Infinity,new Error('unreadable PDF')])test(`priority probe ${String(count)} preserves legacy safe fallback`,async()=>{
+ const h=createHarness({mimeType:'application/pdf',pdfCount:count,azure:{...complete(),azurePageCount:2}});const r=await h.execute({body:{pdfHeaderPriority:true}});assert.ifError(r.error);assert.deepEqual(r.calls,['pdf_probe','azure','openai']);assert.equal(r.result.totalGross,24.8);
+});
+
+test('priority hint cannot change image/one-page shortcuts or their complete verified rows',async()=>{
+ for(const opts of [{},{mimeType:'application/pdf',pdfCount:1,azure:{...complete(),azurePageCount:1,productLines:[row]}}]){
+  const r=await createHarness(opts).execute({body:{pdfHeaderPriority:true}});assert.ifError(r.error);assert.deepEqual(r.calls,opts.mimeType?['pdf_probe','azure']:['azure']);assert.equal(r.result.totalGross,12.4);if(opts.mimeType)assert.equal(r.result.productLines.length,1);
+ }
+});
+
+test('without OpenAI key a priority hint cannot invoke probe/OpenAI or bypass legacy Azure rules',async()=>{
+ const r=await createHarness({mimeType:'application/pdf',openaiConfigured:false,azure:{...complete(),azurePageCount:1}}).execute({body:{pdfHeaderPriority:true}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.totalGross,12.4);
+ const unsafe=await createHarness({mimeType:'application/pdf',openaiConfigured:false,azure:{...complete(),azurePageCount:2}}).execute({body:{pdfHeaderPriority:true}});assert.ok(unsafe.error);assert.equal(unsafe.result,undefined);assert.deepEqual(unsafe.calls,['azure']);
+});
+
+for(const totalGross of [0,-1,NaN,Infinity,undefined])test(`priority missing/invalid whole-PDF total ${String(totalGross)} fails closed without Azure subtotal`,async()=>{
+ const r=await createHarness({mimeType:'application/pdf',openai:{...fallback(),totalGross},azure:{...complete(),azurePageCount:1,productLines:[row]}}).execute({body:{pdfHeaderPriority:true}});assert.equal(r.result,undefined);assert.equal(r.error?.code,'FAST_HEADER_PDF_TOTAL_UNVERIFIED');assert.deepEqual(r.calls,['pdf_probe','openai']);
+});
+
+test('priority positive total rescues missing metadata once, even when Azure falsely reports one page',async()=>{
+ const r=await createHarness({mimeType:'application/pdf',openai:{...fallback(),documentNumber:'',documentDate:'',supplierName:'',supplierTaxId:''},azure:{...complete(),azurePageCount:1,productLines:[row]}}).execute({body:{pdfHeaderPriority:true}});
+ assert.ifError(r.error);assert.deepEqual(r.calls,['pdf_probe','openai','azure']);assert.equal(r.result.totalGross,24.8);assert.equal(r.result.documentNumber,'SYN-42');assert.equal(r.result.documentDate,'2026-11-02');assert.deepEqual(r.result.productLines,[]);assert.equal(r.timings.filter(e=>e.stage==='openai_header').length,1);
+});
+
+test('priority metadata rescue cannot replace whole-PDF money with a balanced VAT footer or account balance',async()=>{
+ const rawText='ΑΝΑΛΥΣΗ ΥΠΟΛΟΓΙΣΜΟΥ Φ.Π.Α.\nΚΑΘΑΡΗ ΑΞΙΑ ΦΠΑ ΣΥΝΟΛΟ\nΣΥΝΟΛΑ 10,00 2,40 12,40\nΝΕΟ ΥΠΟΛΟΙΠΟ 99,99';
+ const r=await createHarness({mimeType:'application/pdf',openai:{...fallback(),documentNumber:''},azure:{...complete(),azurePageCount:1,rawText,productLines:[row]}}).execute({body:{pdfHeaderPriority:true}});assert.ifError(r.error);assert.equal(r.result.totalGross,24.8);assert.deepEqual(r.calls,['pdf_probe','openai','azure']);
+});
+
+test('priority credit type remains explicit and never becomes a settlement or writer',async()=>{
+ const r=await createHarness({mimeType:'application/pdf',openai:{...fallback(),documentType:'CREDIT_NOTE'}}).execute({body:{pdfHeaderPriority:true}});assert.ifError(r.error);assert.equal(r.result.documentType,'CREDIT_NOTE');assert.equal(r.result.totalGross,24.8);assert.deepEqual(r.calls,['pdf_probe','openai']);assert.ok(r.queries.every(q=>/^\s*SELECT/.test(q.sql)));
+});
+
+test('priority provider failure retains original identity without a wasted unsafe Azure fallback',async()=>{
+ const failure=new Error('private full-PDF provider failure');const r=await createHarness({mimeType:'application/pdf',openai:failure}).execute({body:{pdfHeaderPriority:true}});assert.equal(r.error,failure);assert.equal(r.result,undefined);assert.deepEqual(r.calls,['pdf_probe','openai']);
+});
+
+test('priority wallet denials stop at the failing stage, including a later metadata rescue',async()=>{
+ for(const stage of ['probe','openai','azure']){
+  const failure=Object.assign(new Error('private wallet denial'),{code:'AI_WALLET_USAGE_REVIEW',status:503});
+  const opts={mimeType:'application/pdf',...(stage==='probe'?{pdfCount:failure}:stage==='openai'?{openai:failure}:{openai:{...fallback(),documentNumber:''},azure:failure})};
+  const r=await createHarness(opts).execute({body:{pdfHeaderPriority:true}});assert.equal(r.error,failure);assert.equal(r.error.status,409);assert.equal(r.result,undefined);assert.deepEqual(r.calls,stage==='probe'?['pdf_probe']:stage==='openai'?['pdf_probe','openai']:['pdf_probe','openai','azure']);
+ }
+});
+
+test('priority still rejects foreign/missing stores before probe or providers',async()=>{
+ for(const opts of [{operatorStore:'store-b'},{storeExists:false}]){const r=await createHarness({mimeType:'application/pdf',...opts}).execute({body:{pdfHeaderPriority:true}});assert.deepEqual(r.calls,[]);assert.equal(r.walletScopes,0);assert.equal(r.status,opts.storeExists===false?404:403);}
+});
+
+test('priority actual retry still shares the original70s budget and identical whole-PDF body',async()=>{
+ let current=1000;const budgets=[];const first={ok:false,status:503,text:async()=>{current=51000;return 'synthetic failure'}};
+ const r=await createHarness({mimeType:'application/pdf',transport:true,fastModel:'gpt-5',transportResponses:[first],transportNow:()=>current,transportTimeout:ms=>{budgets.push(ms);return undefined}}).execute({body:{pdfHeaderPriority:true}});assert.ifError(r.error);assert.deepEqual(budgets,[70000,20000]);assert.deepEqual(r.calls,['pdf_probe','openai','openai']);assert.deepEqual(r.requests[0].body,r.requests[1].body);assert.equal(r.timings.filter(e=>e.stage==='openai_header').length,1);
+});
+
+test('priority exact-file durable hit still bypasses probe and all paid providers with verified rows',async()=>{
+ const durable=[{supplierId:'supplier-a',supplierName:'STORED SUPPLIER',supplierTaxId:'099999999',resultJson:{posHandoff:{documentNumber:'STORED-42',documentDate:'2026-11-02',totalGross:12.4},productLines:[row]}}];
+ const r=await createHarness({mimeType:'application/pdf',durable,pdfCount:new Error('must not probe')}).execute({body:{pdfHeaderPriority:true}});assert.ifError(r.error);assert.deepEqual(r.calls,[]);assert.equal(r.result.provider,'DURABLE_POS_JOB');assert.equal(r.result.productLines.length,1);assert.deepEqual(r.timings.map(e=>e.stage),['exact_file_lookup','request_total']);
+});
+
+test('client-supplied page counts cannot enable priority for a server-verified single-page PDF',async()=>{
+ const r=await createHarness({mimeType:'application/pdf',pdfCount:1,azure:{...complete(),azurePageCount:1}}).execute({body:{pdfHeaderPriority:true,pageCount:5,pdfPageCount:5,physicalPages:5}});assert.ifError(r.error);assert.deepEqual(r.calls,['pdf_probe','azure']);assert.equal(r.result.totalGross,12.4);
+});
+
+test('failed metadata rescue preserves the full-PDF total and never fabricates missing fields or rereads OpenAI',async()=>{
+ const r=await createHarness({mimeType:'application/pdf',openai:{...fallback(),documentNumber:''},azure:new Error('synthetic Azure timeout')}).execute({body:{pdfHeaderPriority:true}});assert.ifError(r.error);assert.deepEqual(r.calls,['pdf_probe','openai','azure']);assert.equal(r.result.totalGross,24.8);assert.equal(r.result.documentNumber,'');assert.equal(r.timings.filter(e=>e.stage==='openai_header').length,1);
+});
+
+test('one handler keeps overlapping priority and legacy PDF requests and their timing correlations independent',async()=>{
+ const h=createHarness({mimeType:'application/pdf',transport:true,azure:{...complete(),azurePageCount:2}});
+ const [priority,legacy]=await Promise.all([h.execute({body:{pdfHeaderPriority:true,filename:'A.pdf'}}),h.execute({body:{pdfHeaderPriority:false,filename:'B.pdf'}})]);
+ assert.ifError(priority.error);assert.ifError(legacy.error);assert.equal(h.requests.length,2);assert.deepEqual(h.requests.map(r=>r.body.input[0].content[1].filename).sort(),['A.pdf','B.pdf']);assert.equal(h.calls.filter(x=>x==='pdf_probe').length,1);assert.equal(h.calls.filter(x=>x==='azure').length,1);
+ assert.ok(priority.timings.some(e=>e.stage==='pdf_header_page_probe'));assert.ok(!priority.timings.some(e=>e.stage.startsWith('azure_')));assert.ok(legacy.timings.some(e=>e.stage==='azure_header'));assert.ok(!legacy.timings.some(e=>e.stage==='pdf_header_page_probe'));
+ assert.notEqual(priority.timings[0].correlationId,legacy.timings[0].correlationId);assertSanitizedTimings(priority.timings);assertSanitizedTimings(legacy.timings);
+});
 
 test('actual FAST PDF fallback sends original PDF data URL through actual Responses request body',async()=>{
  const bytes=readFileSync(path.join(root,'CHECKPOINTS/EVIDENCE/invoice-physical-pages-20261102/fixtures/two-physical-pages.pdf'));
@@ -240,7 +345,7 @@ test('actual two-page PDF text cannot promote a page subtotal through header-onl
  assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.queries.length,1);assert.equal(r.result.totalGross,24.8);assert.equal(r.result.documentNumber,'FB-43');assert.deepEqual(r.result.productLines.map(line=>line.code),['LAB-A','LAB-B']);
 });
 
-const timingStages=new Set(['request_total','exact_file_lookup','azure_header','azure_submit','azure_poll_wait','azure_poll_request','azure_supplier_match','openai_header','openai_attempt','openai_supplier_match']);
+const timingStages=new Set(['request_total','exact_file_lookup','pdf_header_page_probe','azure_header','azure_submit','azure_poll_wait','azure_poll_request','azure_supplier_match','openai_header','openai_attempt','openai_supplier_match']);
 function assertSanitizedTimings(events){
  assert.ok(events.length,'actual handler must emit diagnostics');
  for(const event of events){

@@ -10,6 +10,7 @@ import {Camera,FileUp,Wallet} from "lucide-react";
 import useMobileDocumentPhotos from "./useMobileDocumentPhotos.js";
 import MobileDocumentPhotosQr from "./MobileDocumentPhotosQr.jsx";
 import {mergeFastInvoiceHeaders} from "../../lib/invoice-fast-header-merge.js";
+import {fastInvoiceHeaderRequest} from "../../lib/invoice-fast-header-request.js";
 import {knownSupplierFromFastHeaders} from "../../lib/invoice-fast-supplier-match.js";
 import {prepareDocumentFile} from "../../lib/document-image-quality.js";
 import InvoiceQrCamera from "./InvoiceQrCamera.jsx";
@@ -89,7 +90,7 @@ export default function StoreSupplierInvoicePremiumFast({api,store,suppliers=[],
       // requests exhausted the shared provider and made both pages fail.
       for(const sourcePage of headerPages){
         try{
-          const result=await api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:100000,body:JSON.stringify({storeId:store.id,filename:sourcePage.file.name||"timologio.jpg",mimeType:sourcePage.file.type||"image/jpeg",dataUrl:sourcePage.dataUrl})});
+          const result=await api("/api/commerce/ai-reader/fast-header",{method:"POST",timeoutMs:100000,body:JSON.stringify(fastInvoiceHeaderRequest({storeId:store.id,sourcePage}))});
           if(!result)continue;
           headerResults.push(result);
           const pageIndex=processedPages.indexOf(sourcePage);
