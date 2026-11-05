@@ -63,8 +63,8 @@
     }
   ],
   "pdf": {
-    "pages": 962,
-    "sha256": "e4b0f1bd946640d76839df55f3e01f6c07bfe077e597a5b6f8b75239999e29ab",
+    "pages": 963,
+    "sha256": "3562844d9f80140f9fc3f11296c7e264fc596e2c1789af3d511561d85fa6773c",
     "copiesIdentical": true,
     "visualReview": "PENDING"
   },
@@ -72,5 +72,57 @@
   "independentReReview": "PENDING",
   "deployment": "NOT EXECUTED",
   "hostedAcceptance": "NOT TESTED",
-  "businessMutations": false
+  "businessMutations": false,
+  "reconciledMain": "27b756ef28fe417ede7bdf122fab183214e8cb85",
+  "reviewFixCandidate": "bee87b99e1357b77b9de31134ffb79611fcf14f0",
+  "peerReconciliation": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "mainBeforeBlob": "24200ee842ae74771761b442344580905279bc34",
+      "afterBlob": "a3303ebfff59e367127157d1b2acc847c713aa13",
+      "mainBytes": 5248850,
+      "preservedMainSuffix": true,
+      "unchangedTask3Prefix": true
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "mainBeforeBlob": "f8ae968e6913297e55715354b2e8f9d38036e901",
+      "afterBlob": "f18b5932ef0412fb9997fd2e5007832a630c1928",
+      "mainBytes": 4072924,
+      "preservedMainSuffix": true,
+      "unchangedTask3Prefix": true
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "mainBeforeBlob": "8939cf88b9a561908b3f02f143efb1bc3af0838c",
+      "afterBlob": "f172b318c5692bb97358f39ed1f66da7e12b98d5",
+      "mainBytes": 3600677,
+      "preservedMainSuffix": true,
+      "unchangedTask3Prefix": true
+    }
+  ],
+  "priorRedGreenRun": 42010240985,
+  "priorArtifact": {
+    "id": 13406537500,
+    "sha256": "d28bb91b85b5118e671824b5bb5183fc07e51beecb8b5150dcb3ff9a7aa47b16",
+    "rawAssertionsAndBlobsVerified": true
+  },
+  "unchangedRuntimeAndTestBlobs": [
+    {
+      "path": "client/src/components/cloud/StoreCloudPage.jsx",
+      "blob": "6782d3cc93c828f97056223ae6d5968fb907b777"
+    },
+    {
+      "path": "client/src/components/commerce/CommerceHub.jsx",
+      "blob": "72c1d7757fdfcbefdea09d423c6038ee59b40857"
+    },
+    {
+      "path": "client/src/components/cloud/StoreInvoiceEntry.jsx",
+      "blob": "1a1c536cae5ec5e85d8e09620e71de12419cb855"
+    },
+    {
+      "path": "server/test/store-invoice-entry-mounted.test.mjs",
+      "blob": "a15ce1e14b2a7cd2c00af1dabde913423947d4f5"
+    }
+  ]
 }
