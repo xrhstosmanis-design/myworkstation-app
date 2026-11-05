@@ -25,8 +25,30 @@ jobs:
           node-version: 20
       - name: Prepare exact candidate and history-preserving records
         run: |
+          set -o pipefail
+          mkdir -p /tmp/task3-entry-candidate/debug
           python3 -m pip install --disable-pip-version-check reportlab==4.4.9 PyMuPDF==1.26.7
-          python3 tools/task3-entry-assembly.py
+          python3 tools/task3-entry-assembly.py 2>&1 | tee /tmp/task3-entry-candidate/debug/raw-assembly.log
+      - name: Retain actual checked-out and generated diagnostics
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,shutil,json
+          out=Path('/tmp/task3-entry-candidate/debug');out.mkdir(parents=True,exist_ok=True)
+          paths=['tools/task3-entry-assembly.py','client/src/components/cloud/StoreCloudPage.jsx','client/src/components/commerce/CommerceHub.jsx','docs/roadmap/generate-open-work-tracker.py']
+          for p in paths:
+              if Path(p).exists():shutil.copyfile(p,out/Path(p).name)
+          (out/'git-status.txt').write_bytes(subprocess.check_output(['git','status','--short']))
+          (out/'actual-head.txt').write_bytes(subprocess.check_output(['git','rev-parse','HEAD']))
+          source=Path('docs/roadmap/OPEN_WORK_TRACKER.md')
+          if source.exists():(out/'tracker-prefix.txt').write_bytes(source.read_bytes()[:18000])
+          pdf=Path('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf')
+          if pdf.exists():
+              import fitz
+              with fitz.open(pdf) as doc:
+                  (out/'first-pages.txt').write_text(''.join(doc[i].get_text() for i in range(min(3,len(doc)))))
+          PY
       - name: Install test dependencies without startup or database scripts
         run: npm install --ignore-scripts
       - name: Run native focused mounted regressions
@@ -44,6 +66,7 @@ jobs:
           out=Path('/tmp/task3-entry-candidate')
           paths=json.loads((out/'allowed.json').read_text())
           subprocess.run(['git','add','--',*paths],check=True)
+          assert set(subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines())==set(paths)
           subprocess.run(['git','diff','--cached','--check','--',*[p for p in paths if not p.endswith('.pdf')]],check=True)
           PY
           test "$(git ls-remote origin refs/heads/tools/task3-entry-inspection-20261105 | cut -f1)" = "$EXPECTED_HEAD"
