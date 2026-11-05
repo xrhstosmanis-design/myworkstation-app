@@ -32,6 +32,36 @@ jobs:
         run: python3 -m py_compile docs/roadmap/task3-document-assembly.py
       - name: Assemble complete registries and regenerate canonical PDF
         run: python3 docs/roadmap/task3-document-assembly.py
+      - name: Retain actual PDF diagnostics even when validation fails
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, shutil, subprocess
+          import fitz
+          out=Path('/tmp/task3-document-assembly/debug')
+          out.mkdir(parents=True,exist_ok=True)
+          source=Path('docs/roadmap/OPEN_WORK_TRACKER.md')
+          pdf=Path('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf')
+          generator=Path('docs/roadmap/generate-open-work-tracker.py')
+          if source.exists():
+              raw=source.read_bytes()
+              (out/'tracker-prefix.txt').write_bytes(raw[:20000])
+              print('TRACKER_START='+repr(raw[:200]))
+          if generator.exists():
+              shutil.copyfile(generator,out/'canonical-generator.py')
+              print('GENERATOR_BLOB='+subprocess.check_output(['git','hash-object',str(generator)],text=True).strip())
+          if pdf.exists():
+              shutil.copyfile(pdf,out/'actual-generated-tracker.pdf')
+              doc=fitz.open(pdf)
+              first='\n'.join(doc[i].get_text() for i in range(min(4,doc.page_count)))
+              (out/'first-four-pages.txt').write_text(first,encoding='utf-8')
+              for i in sorted(set([0,1,2,doc.page_count-1])):
+                  if 0<=i<doc.page_count:
+                      doc[i].get_pixmap(matrix=fitz.Matrix(1.2,1.2)).save(out/('actual-page-%04d.png'%(i+1)))
+              print('PDF_DIAGNOSTICS='+json.dumps({'pages':doc.page_count,'bytes':pdf.stat().st_size,'sha256':hashlib.sha256(pdf.read_bytes()).hexdigest(),'firstText':first[:2400]},ensure_ascii=False))
+              doc.close()
+          PY
       - name: Retain generated blobs on this helper branch only
         env:
           EXPECTED_HELPER_HEAD: ${{ github.sha }}
