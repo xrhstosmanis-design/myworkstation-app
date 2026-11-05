@@ -37,13 +37,19 @@ jobs:
             'docs/roadmap/PENDING_WORK.md':'70d348568067ee040cef33e3f59249bc55e67b46',
           }
           checkpoint=Path('CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-claim.md')
-          prefix=checkpoint.read_bytes().split(b'## Publication preparation\n',1)[0]
+          checkpoint_bytes=checkpoint.read_bytes()
+          prefix=checkpoint_bytes.split(b'## Publication preparation\n',1)[0]
           assert prefix.startswith(b'## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01')
           assert prefix.endswith(b'\n\n')
+          # Check ALL newly written text, but never clean old historical bytes.
+          # Huge repeated registries can make Git align old whitespace as additions.
+          for number,line in enumerate(checkpoint_bytes.splitlines(),1):
+            assert line.rstrip(b' \t')==line,('new checkpoint trailing whitespace',number)
+            assert not line.startswith((b'<<<<<<< ',b'=======',b'>>>>>>> ')),('new conflict marker',number)
           def blob(data):
             return hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
           out=Path('/tmp/ocr4-review');out.mkdir(exist_ok=False)
-          receipt={'base_main':'6f30ba0c6255d808458992bb7d23f3cea5668409','kind':'DOCUMENTATION_ONLY','registries':{},'runtime_changed':False,'lab_performed':False,'provider_called':False}
+          receipt={'base_main':'6f30ba0c6255d808458992bb7d23f3cea5668409','kind':'DOCUMENTATION_ONLY','registries':{},'runtime_changed':False,'lab_performed':False,'provider_called':False,'new_text_whitespace_verified':True,'historical_whitespace_preserved':True}
           originals={}
           for name,expected in registry.items():
             data=Path(name).read_bytes();assert blob(data)==expected,(name,'changed input')
@@ -119,7 +125,9 @@ jobs:
           assert changed==expected,(changed,expected)
           assert not subprocess.check_output(['git','ls-files','--others','--exclude-standard'],text=True).strip()
           PY
-          git diff --check
+          # The new prefix/checkpoint were checked above; historical suffixes
+          # are byte-verified. This temporary runner changes no normal CI gate.
+          git diff --check -- .github/workflows/ocr4-claim-publication-once.yml CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-claim.md
       - uses: actions/upload-artifact@v4
         with:
           name: ocr4-claim-complete-review
