@@ -1,0 +1,58 @@
+name: OCR4 exact CI log evidence
+on:
+  push:
+    branches: [diagnostics/ocr4-exact-ci-logs-20261105]
+    paths: [.github/workflows/ocr4-exact-ci-logs-once.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  read-existing-evidence:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app' && github.ref == 'refs/heads/diagnostics/ocr4-exact-ci-logs-20261105'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 012de5401900c55feb03fffb35ef3bd484768a88
+          fetch-depth: 1
+          filter: blob:none
+          persist-credentials: false
+      - name: Download existing CI evidence only, with no application execution
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir /tmp/ocr4-ci-raw
+          for job in 127068324620 127077517536; do
+            curl --fail --location --silent --show-error --max-time 120 --retry 2 -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/xrhstosmanis-design/myworkstation-app/actions/jobs/$job" -o "/tmp/ocr4-ci-raw/$job.metadata.json"
+            curl --fail --location --silent --show-error --max-time 120 --retry 2 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/xrhstosmanis-design/myworkstation-app/actions/jobs/$job/logs" -o "/tmp/ocr4-ci-raw/$job.raw.log"
+          done
+          git ls-tree -r HEAD server/test > /tmp/ocr4-ci-raw/source-inventory.txt
+          python - <<'PY'
+          from pathlib import Path
+          import json,hashlib,re,subprocess
+          root=Path('/tmp/ocr4-ci-raw');receipt={'source_revision':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'read_only':True,'tests_executed':False,'application_source_changed':False,'jobs':{}}
+          assert receipt['source_revision']=='012de5401900c55feb03fffb35ef3bd484768a88'
+          for job in [127068324620,127077517536]:
+            meta=json.loads((root/f'{job}.metadata.json').read_text());assert meta['id']==job and meta['run_id']==41973921759
+            data=(root/f'{job}.raw.log').read_bytes();text=data.decode('utf-8-sig',errors='replace')
+            assert 'npm test' in text or 'node --test' in text,'unexpected log content'
+            matches=re.findall(r'(?:server/)?test/[A-Za-z0-9_./-]+\.(?:mjs|js)',text)
+            found={}
+            for relative in sorted(set(matches)):
+              name=relative if relative.startswith('server/') else 'server/'+relative
+              p=Path(name);exists=p.is_file();found[name]={'exists_at_revision':exists}
+              if exists:
+                b=p.read_bytes();dest=root/'source'/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(b);found[name]['sha256']=hashlib.sha256(b).hexdigest()
+            receipt['jobs'][str(job)]={'metadata_conclusion':meta['conclusion'],'raw_bytes':len(data),'raw_sha256':hashlib.sha256(data).hexdigest(),'referenced_test_sources':found}
+          (root/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocr4-exact-ci-raw-logs
+          path: /tmp/ocr4-ci-raw
+          retention-days: 14
+          if-no-files-found: error
