@@ -1,3 +1,9 @@
+## 05/11/2026 16:01 Europe/Athens - MIN-P01 RESULT / MIN-P02 BEFORE
+
+MIN-P01 selected once13:58:18.269Z UTC after BEFORE commitadca90e43745bb2c3881ac3401689a5efeda7928. Four exact fields24.80EUR and full ten-table/active-shift/wallet/N40 control unchanged AFTER13:59:17.976228Z. UI22052ms continuous observed interval. Server21863.067ms: Azure18868.872ms ERROR with separately observed AZURE_TIMEOUT, then OpenAI2983.772ms/one successful attempt. Existing Azure deadline/polling/fallback behavior preserved. This is scoped header/state PASS, not total-speed PASS. Correlation181fd1ed-74ae-427a-8e67-7c7c3a799ef3,14ordered paired polls. Actual confirmed screenshot saved after stale first busy frame; no replay. Refreshed UI MAIN1transaction/cash40/cardsIRIS0/total0. P01 consumed; original provider model/usage not captured.
+
+MIN-P02 BEFORE 2026-11-05T14:01:36.398759Z: new full snapshot MIN-P02-before.json and refreshed same selected LAB UI. New2page49.60EUR invoice has separate10EURreceipt; ONE header-only selection after this commit, no type/PAID/CREDIT/submit/payment/draft/stock/fiscal action. Existing revisionc255548 unchanged. MIN-P03 remains NOT UPLOADED. General speed/No15 OPEN.
+
 ## 05/11/2026 15:57 Europe/Athens - MIN-P01 BEFORE / INSTALLED / NOT UPLOADED
 
 Source PR3680 exactafc318b0 full CI42035492775 attempt2 SUCCESS (unchanged wholesale Chrome startup retry passed); native5813PASS/0FAIL/0SKIP. Normal mergec255548a17cfa4d21c024a76bfae6148d76bb3cd identical reviewed tree, full main CI42037512760 SUCCESS/native5813PASS/0FAIL/0SKIP. Coordinating review complete; no formal independent review claimed. Guarded deploy42039640153 SUCCESS, Render dep-dbm8kdijnfac738oebu0 LIVE and direct health exactc255548. Previous healthyfca291dcc retained by normal rollback capture. Existing key reuse authorized; no configuration change.

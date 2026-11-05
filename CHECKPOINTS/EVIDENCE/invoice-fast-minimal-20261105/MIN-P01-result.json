@@ -1,0 +1,475 @@
+{
+  "trial": "MIN-P01",
+  "revision": "c255548a17cfa4d21c024a76bfae6148d76bb3cd",
+  "beforeCommit": "adca90e43745bb2c3881ac3401689a5efeda7928",
+  "ui": {
+    "trial": "MIN-P01",
+    "started": "2026-11-05T13:58:18.269Z",
+    "observed": "2026-11-05T13:58:40.321Z",
+    "uiElapsedMs": 22052,
+    "ready": true,
+    "supplier": "LAB METER TEST",
+    "documentNumber": "LAB-FAST-MINIMAL-20261105-P01",
+    "documentDate": "2026-11-05",
+    "totalGross": 24.8,
+    "screenshot": "MIN-P01-confirmed.jpg",
+    "uiNotes": "One continuous observation loop; first screenshot frame lagged busy state, subsequent DOM read and confirmed screenshot show actual ready fields. No upload replay."
+  },
+  "after": [
+    {
+      "active_shifts": [
+        {
+          "cardSales": 0,
+          "cashSales": 0,
+          "expenses": 0,
+          "id": "a2270849-bbc1-41ea-bdf9-9dd6be69d3bd",
+          "openedAt": "2026-11-04T06:54:12.460629+00:00",
+          "openingDrawer": 10,
+          "operator": "LAB POS 2",
+          "terminal": "MAIN",
+          "transactionCount": 1
+        }
+      ],
+      "attachments": {
+        "count": 84,
+        "digest": "0a4a0a1762bf23b78cfff38a584db2e0"
+      },
+      "captured_at": "2026-11-05T13:59:17.976228Z",
+      "documents": {
+        "count": 74,
+        "digest": "3e01b7765cf10f514bc6dfe0e3ca7349"
+      },
+      "id": "cmtpopbgo000trhb5ng9ytiru",
+      "inbox": {
+        "count": 66,
+        "digest": "7c36baf34fbba338023d68f29da1d815"
+      },
+      "jobs": {
+        "count": 82,
+        "digest": "e37197486ba26fd36c13d3be6cd94620"
+      },
+      "movements": {
+        "count": 95,
+        "digest": "f69aa9d0bec0bf377f1b9645262e5aba"
+      },
+      "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "order_lines": {
+        "count": 634,
+        "digest": "baf3fbae09a8316af68135bcab820ffd"
+      },
+      "orders": {
+        "count": 62,
+        "digest": "b5df83ff0ce9892378f070c8bfbf1640"
+      },
+      "shifts": {
+        "count": 44,
+        "digest": "5a2d5f3a434b0154b99f8d1386571aed"
+      },
+      "stock": {
+        "count": 110,
+        "digest": "3c3739c172f7acfdb0939e52d06bed8d"
+      },
+      "transactions": {
+        "count": 135,
+        "digest": "ec25965ae7f73cc4796bf0f67e04b955"
+      },
+      "wallet": {
+        "balanceMicros": "4610532",
+        "enabled": false,
+        "invoiceEnabled": false,
+        "reservedMicros": "0"
+      }
+    },
+    {
+      "active_shifts": [],
+      "attachments": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "captured_at": "2026-11-05T13:59:17.976228Z",
+      "documents": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "id": "cmv2qanca000psigeizep8o9m",
+      "inbox": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "jobs": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "movements": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "name": "N40 CONTROL 20261010",
+      "order_lines": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "orders": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "shifts": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "stock": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "transactions": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "wallet": {
+        "balanceMicros": "4610532",
+        "enabled": false,
+        "invoiceEnabled": false,
+        "reservedMicros": "0"
+      }
+    }
+  ],
+  "uiShiftAfter": {
+    "terminal": "MAIN",
+    "openedBy": "LAB POS 2",
+    "transactions": 1,
+    "cash": 40,
+    "cardsAndIris": 0,
+    "total": 0
+  },
+  "checks": {
+    "fourFields": true,
+    "unchangedSnapshot": true,
+    "completeLogs": true,
+    "uniqueCorrelation": true,
+    "oneRequestTotal": true,
+    "finite": true,
+    "orderedBoundedPolls": true,
+    "safeKeys": true
+  },
+  "events": [
+    {
+      "timestamp": "2026-11-05T13:58:18.407821627Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "exact_file_lookup",
+      "outcome": "ok",
+      "elapsedMs": 4.683
+    },
+    {
+      "timestamp": "2026-11-05T13:58:19.209332401Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_submit",
+      "outcome": "ok",
+      "elapsedMs": 798.264
+    },
+    {
+      "timestamp": "2026-11-05T13:58:19.910730193Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 701.178,
+      "poll": 1
+    },
+    {
+      "timestamp": "2026-11-05T13:58:20.078785234Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 167.898,
+      "poll": 1
+    },
+    {
+      "timestamp": "2026-11-05T13:58:20.779327624Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 700.31,
+      "poll": 2
+    },
+    {
+      "timestamp": "2026-11-05T13:58:20.942939741Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 163.475,
+      "poll": 2
+    },
+    {
+      "timestamp": "2026-11-05T13:58:22.143168818Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.126,
+      "poll": 3
+    },
+    {
+      "timestamp": "2026-11-05T13:58:22.304256735Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 160.935,
+      "poll": 3
+    },
+    {
+      "timestamp": "2026-11-05T13:58:23.504569045Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.039,
+      "poll": 4
+    },
+    {
+      "timestamp": "2026-11-05T13:58:23.664749296Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 160.106,
+      "poll": 4
+    },
+    {
+      "timestamp": "2026-11-05T13:58:24.865709294Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.776,
+      "poll": 5
+    },
+    {
+      "timestamp": "2026-11-05T13:58:25.026528053Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 160.561,
+      "poll": 5
+    },
+    {
+      "timestamp": "2026-11-05T13:58:26.227176522Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.485,
+      "poll": 6
+    },
+    {
+      "timestamp": "2026-11-05T13:58:26.384728411Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 157.027,
+      "poll": 6
+    },
+    {
+      "timestamp": "2026-11-05T13:58:27.585665308Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.931,
+      "poll": 7
+    },
+    {
+      "timestamp": "2026-11-05T13:58:27.752769142Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 166.941,
+      "poll": 7
+    },
+    {
+      "timestamp": "2026-11-05T13:58:28.953459522Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.485,
+      "poll": 8
+    },
+    {
+      "timestamp": "2026-11-05T13:58:29.11349988Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 159.976,
+      "poll": 8
+    },
+    {
+      "timestamp": "2026-11-05T13:58:30.314619232Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.895,
+      "poll": 9
+    },
+    {
+      "timestamp": "2026-11-05T13:58:30.473385874Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 158.609,
+      "poll": 9
+    },
+    {
+      "timestamp": "2026-11-05T13:58:31.674221279Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.714,
+      "poll": 10
+    },
+    {
+      "timestamp": "2026-11-05T13:58:31.83366384Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 159.318,
+      "poll": 10
+    },
+    {
+      "timestamp": "2026-11-05T13:58:33.033810595Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.042,
+      "poll": 11
+    },
+    {
+      "timestamp": "2026-11-05T13:58:33.191546319Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 157.635,
+      "poll": 11
+    },
+    {
+      "timestamp": "2026-11-05T13:58:34.392671111Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.929,
+      "poll": 12
+    },
+    {
+      "timestamp": "2026-11-05T13:58:34.555098765Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 162.35,
+      "poll": 12
+    },
+    {
+      "timestamp": "2026-11-05T13:58:35.755373013Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.107,
+      "poll": 13
+    },
+    {
+      "timestamp": "2026-11-05T13:58:35.915791142Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 160.292,
+      "poll": 13
+    },
+    {
+      "timestamp": "2026-11-05T13:58:37.116598203Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.686,
+      "poll": 14
+    },
+    {
+      "timestamp": "2026-11-05T13:58:37.276671428Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 159.932,
+      "poll": 14
+    },
+    {
+      "timestamp": "2026-11-05T13:58:37.27673993Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "azure_header",
+      "outcome": "error",
+      "elapsedMs": 18868.872
+    },
+    {
+      "timestamp": "2026-11-05T13:58:40.260840084Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "openai_attempt",
+      "outcome": "ok",
+      "elapsedMs": 2983.437,
+      "attempt": 1
+    },
+    {
+      "timestamp": "2026-11-05T13:58:40.260861875Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "openai_header",
+      "outcome": "ok",
+      "elapsedMs": 2983.772
+    },
+    {
+      "timestamp": "2026-11-05T13:58:40.262603553Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "openai_supplier_match",
+      "outcome": "ok",
+      "elapsedMs": 1.65
+    },
+    {
+      "timestamp": "2026-11-05T13:58:40.263504108Z",
+      "correlationId": "181fd1ed-74ae-427a-8e67-7c7c3a799ef3",
+      "stage": "request_total",
+      "outcome": "finished",
+      "elapsedMs": 21863.067
+    }
+  ],
+  "sumsMs": {
+    "exact_file_lookup": 4.683,
+    "azure_submit": 798.264,
+    "azure_poll_wait": 15807.703,
+    "azure_poll_request": 2255.0549999999994,
+    "azure_header": 18868.872,
+    "openai_attempt": 2983.437,
+    "openai_header": 2983.772,
+    "openai_supplier_match": 1.65,
+    "request_total": 21863.067
+  },
+  "azureFailureCode": "AZURE_TIMEOUT",
+  "azureFailureEvidence": {
+    "hasMore": false,
+    "logs": [
+      {
+        "id": "606d565a-f157-480a-b325-2576cbf7aa00",
+        "labels": [
+          {
+            "name": "resource",
+            "value": "srv-d9isenfavr4c73bdh52g"
+          },
+          {
+            "name": "instance",
+            "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+          },
+          {
+            "name": "level",
+            "value": "info"
+          },
+          {
+            "name": "type",
+            "value": "app"
+          }
+        ],
+        "message": "FAST Azure header failed; trying configured fallback { message: 'AZURE_TIMEOUT' }",
+        "timestamp": "2026-11-05T13:58:37.277035229Z"
+      }
+    ],
+    "nextEndTime": "2026-11-05T13:58:45Z",
+    "nextStartTime": "2026-11-05T13:58:37.27703523Z"
+  },
+  "assessment": "Four fields/unchanged state scoped PASS. Existing Azure20s deadline policy exhausted and fell back to one successful OpenAI attempt. No total-latency PASS; only observed OpenAI stage2983.772ms. Provider response model/usage not captured. Configured gpt5, existing connection; no new key/config. No financial/stock mutation.",
+  "consumed": true,
+  "noReplay": true
+}

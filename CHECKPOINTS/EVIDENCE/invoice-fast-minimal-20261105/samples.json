@@ -10,7 +10,8 @@
       "documentDate": "2026-11-05",
       "totalGross": 24.8
     },
-    "status": "PREPARED_NOT_UPLOADED"
+    "status": "CONSUMED_ONCE_NO_REPLAY",
+    "consumedAt": "2026-11-05T13:58:18.269Z"
   },
   {
     "trial": "MIN-P02",
