@@ -9,6 +9,8 @@
     "documentDate": "2026-11-05",
     "totalGross": 24.8
   },
-  "status": "PREPARED_NOT_UPLOADED",
-  "mustWaitFor": "Full exact source/main CI, review, guarded exact healthy revision and fresh committed BEFORE/control"
+  "status": "CONSUMED_ONCE_NO_REPLAY",
+  "mustWaitFor": "Full exact source/main CI, review, guarded exact healthy revision and fresh committed BEFORE/control",
+  "consumedAt": "2026-11-05T11:34:52.532Z",
+  "result": "T01-result.json"
 }
