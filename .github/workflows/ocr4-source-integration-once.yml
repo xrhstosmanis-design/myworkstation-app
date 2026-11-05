@@ -138,7 +138,9 @@ jobs:
           out=Path('/tmp/ocr4-source-review');r=json.loads((out/'receipt.json').read_text())
           names=['docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf']
           b=Path(names[0]).read_bytes();assert b==Path(names[1]).read_bytes()
-          doc=fitz.open(stream=b,filetype='pdf');assert 'SOURCE CANDIDATE' in doc[0].get_text()
+          doc=fitz.open(stream=b,filetype='pdf')
+          first_text=' '.join(doc[0].get_text().split())
+          assert 'SOURCE CANDIDATE' in first_text and 'INVOICE-PDF-TOTAL-SAFETY-01' in first_text,first_text[:1000]
           for n in sorted(set([0,min(1,len(doc)-1),len(doc)-1])):doc[n].get_pixmap(matrix=fitz.Matrix(1.25,1.25)).save(str(out/f'after-page-{n+1}.png'))
           for name in names:
             dst=out/'after'/name;dst.parent.mkdir(parents=True,exist_ok=True);dst.write_bytes(b)
