@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      EXPECTED_MAIN: 833ecadf3f4eaedaeea00f62d9d502ba328a4028
+      EXPECTED_MAIN: 759311ed86ad3d58f77b6819fb408043a60f6031
     steps:
       - name: Checkout exact existing PR branch and full history
         uses: actions/checkout@v4
@@ -67,7 +67,7 @@ jobs:
           import hashlib, subprocess, re
           base="69c9a14f3ec00ad044e4fa1d7d08aa4894248836"
           task="723d1a3cdd2fe45675c92a3dbe60c2511489a6ac"
-          peer="833ecadf3f4eaedaeea00f62d9d502ba328a4028"
+          peer="759311ed86ad3d58f77b6819fb408043a60f6031"
           docs=("CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md","docs/roadmap/OPEN_WORK_TRACKER.md","docs/roadmap/PENDING_WORK.md")
           def show(ref,path): return subprocess.check_output(("git","show",f"{ref}:{path}"))
           for path in docs:
