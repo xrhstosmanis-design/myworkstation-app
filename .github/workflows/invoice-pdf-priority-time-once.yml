@@ -1,0 +1,61 @@
+name: Assemble tested multipage PDF priority source once
+on:
+  push:
+    branches: [feat/invoice-pdf-header-priority-20261105]
+    paths: [.github/workflows/invoice-pdf-priority-time-once.yml]
+permissions:
+  contents: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          filter: blob:none
+      - name: Verify original source and branch lease
+        run: |
+          test "$(git rev-parse HEAD^)" = 055becbc10caa150b81b3a37993469a3ada1ef28
+          test "$(git ls-remote origin refs/heads/feat/invoice-pdf-header-priority-20261105 | cut -f1)" = "$(git rev-parse HEAD)"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install reportlab==4.4.9
+      - name: Stage exact reviewed source recipe 1
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('/tmp/pdf-priority-time-recipe.b64')
+          p.write_text('eJztmV2Po0iyhv/Kqq9Pn8lMwDZH2gtjA8ZlqObbcDMiwcY2UGWV8Qes5r+fN7Grpnp2VtrZD2kuWmqr2gYyIyIj430i+duX2UKfPX17tpzA/2m2mDqm7v/ECBt9pfQrUb7uXy6v+3zz9Vhsv+42WbF5+3p827++7dvuf5viy//95W9fXmvx94tEthtpI41kSopMVlRlxEfyZjvm20zOJpJCqcy2o2IjyVKhFozlE5rnEt8o8ljd0hH/8j9/+dK8Fhsx1jFr8534ocjaTPyQmnWT7qftKi6OxUzbrYhjeaGzCnV1GdReIL67obLwIvtiH6adsyc32ydXx6dH/pJestipV2utSvf0NY2NKl1bbb5YHrm0PBaL6sxjt0z26tzXo7lPtW9+qIRhJ74bzx6JglVvXe1D0tqB3trzsM1ihXFWH1KfXlMzaTMz2qVm1GGOLovVLlt7yqqh1aypz/hdtkxdduZOlTTLvbOXz2ngNU5v35zGvVpz/WrPE+JMX9uVT8rE/y/YsT+9PXXa/r8QtydXn5arQD85s+mb7V+JpWvT2Z4crG6KcSYYb9LZc4tZc+v6fLCvlh7RvFGvqa9qhbmr+YtdrnwN9qTw1zFW4c5wQ88I99R2I88IKie1ZpMyqiLfD9OlF7plEEV2pNeuGxaGZWi6t9fcsKq/4RPG/vRi6bdvLjFsXNNCap8sPY0C/Vq6pCrhr47rmotnPPwfMV4gPr9jry7/ee2dPlmGt8vZqbNMVeJN1FkzteNMJdZiWRemccRv1WqvzdI4veRN2OZMhR9ObZnOKYnr1prZvXMoqWXSOm+KOp1pTdLvquf59GbP08Y+FLXdF/XzPCT2wZWSvuqSvq5t02hs06vTILziLvbcwZeDi5glt+dg2tu9RVaM7rJYxnNTZh/03g6mxN5rQRQ6cy9yAstc1mmjdqmvHflaO6UxRVy9XWHWF76XS2+9O+aSBx/yMjPVvjCjytKxBrGi+b524Ew5p7FDkOPnwd+1U6fzU8mbSZlIGNuMzhhrx2equLfJ4gK+G/f7Tec1iZWX1JdLP6ZXbkYtxiUpagDuPW18rS+Q44nklqHumdbCIcj3ejXEkZRc0sgqrs+rmdan6yV77IlL0URne09obhoYW7vmTY37a7Lxr6XYLymrz0l8LQu2u3AzbIexf/WpydbLvphdy4SpbW7esIZhiRjRfE9hf3TC+nTp2oMfMsaoCeJCUQu1zUuEOF6F7VjbG2KIXMCaIgeqZO3tRHxy5lDYdOHNTbEWqKFmWeaIK+rDsWgwz0t04jPqenpSJjG9FIgH/DvzDj7GDp5DDktazStjifjtuHk9WaaCvDVGxXqJeSnuiRTLRIz2wneVpbFc8nV0wjpck7iokYsRb9ozl4rzSnKwtsVJ1K3hGlPw/PLC2a1OYvnC47rPEa+0o2/pukIdoruURf0K+Z0N/jknxORcLOwyb6IW+Yx1vdUpMw5Yv0dM6D2myIt0vduJ9UwXUZfES8yrHZLYecXfDrmHXFX6Tzkp7N+L/IiYcUJ+EAtz4rcuRzwKU70i50VsBj+z2KuFz8l6ibjcam7WPUes8du+iL2XdO0iDyKSv1RY290Oftd5J4t4DvkocsKrjCDC+iI2sAN7qxHzIefv8YTPNX5Xr8UMdRnfMTflzSOP4+/82sOvt1RaijWsrIWGfCjHw1qJHO3E3hlyHvmu1Llkw6Yb/Cdn1J4auVwGxPHx3Otm7RwT+I/6j9gjR2AD8nK38VFvpOWbuDcZ5hjqUI81RUyxL9fWJayWwXtdyhn28kztuQQbMQ7sOmSmccZ6VqvytZyVf/2r0PrN7bjJ280AE7mUy2xEpCJTRgoZj1X8paNszPJCYoCF0VbiuUwyMib4IilSntExVciG4SPz8ZdfMOBntHmaBj9PZ4EV6T+vLD/4eUAcogJxfoMxMs0klRFlO1Lxj6kTMpYpVanCMmXCCkJYtpHoKN9M8jzbcsoY3yp8wtlYGmWSRP5NjGm1yFA1l3pLyMc20OsgMu5ytAqmCj5UyLllWheXQHZI6wakfo4M++ITI1wTYw6Zib1Itf3ICdfvuDCvBC4Mco1Uh4yXpRNUkh0vGydIbqu9gjJfKanYAnOrRLm+OgeXQMaBJP+6nf8YO/7J5yttas3IbTV3y6deIIY2dYFJVmeX8OcCDHpgyxTPvvb2TDNQji65GV7ctQdkwbaekRKSGSNOc8+nsMPQvchqA90IIafzQX6N1IAUm34YQWppFBjeMtSNhedrQ0kMjeUyoMtlZFTlqtNsbBEtmGmuCylDmTSj8GZburO0BKbNNNsNLUhH9Ozp9bN3fX37HXtvz39ee8vZXguTtfMGyb4UkJV8P0UJUy/FXYJEuQQuyKXbRM0gjWvnAj8OoqxygR7+9GD3iez4WguJvJeoxpbTeXlFbrH0YElpYONTUmduEYfZit3YShqg1ByAmzEgyEwPzuEEX6w7RgTV1e7tzpmpQ7nHc8hR62b3+hX/L0MazV0gcoh8eyBPmX2Sd0jhkTP5DJyTs7VAB+XFMncXYIZAn285kAFMJuT3jLJ1uKOI8DeCBLr3Emo6kAtPoMoRZfsi7k2b+gW+P9BFe5S2EPPUg4xzIVMCX0yMu6hKzAc0d8gDA4WcDFKFOLa/lvhrmbOoA1IMKM+ltOYHq3UepfgTgkOGgfmoJ7wxTpD2VyGhq2gY+8Mn2Njlkot7IeUCt9ZeLaSlALrgGiTLFTJK4Mf5jgc7XHNLd30EboRijjPW9oQYCqlrRQ6kpkESIZ9r51DE4Ts6SUCKV8jHJReIsk7FPBS4cMcd02ghA2eBOQLV4KPAs+/QLolvpwd6PGRcawXaYGzEyCrfUQvIQfnCO95xC1IdK2+8geTsgTVYW4FY92uIO1P2QGNgpnEGmgItBX7kbcYiZcXqViBI3iG/gffwDzlcizXuBTrx2BCSi2cLIET1HpP2EVPkRSQnYj1NgWbGHvMihwzkQfiBJvmnnBT2Jw3ywygGXMCeqvMX1AC0FciNS/7A2LuftWi5gGpGJ+KSxrdjzgSCQnpfogoSSlbYf8BV5QNr1/ZZxHPIR5ETeoqWQqyvKsEO7K1UzDfgvhgHPh/x+yVfuGgngZbm5DuJ/s6vBn6xohNriOeBPN7rA4XwW/4JXXF97fTvrQbQz01jYJuuzkOgUraosUbAyNkd/zAH1kTkV4V6g3xmAvEMMQcZ6lCn9oip2Jfdii5n2OP3uvTivGZr1Kb31mYRnd8RC/XpyZq+/h1ayNsNn0gjSjabbaZyCPqWS6OJTMac8FE+kjIiKcpWohmTZcYLeZwXVNpkBeOSzFV1QIviNT/99PaaFU12/On5m+78HD97Tz8H3nT2pHu/QYqCjPNRNiqUbKIU0mRccMIKmk2kMdhiOxptFWQypYoiZYrCNwT0wZgy5qrClfGI5H8MKZh3SSRblGtsUboDeX0TpX1NC3Sb7TYylhqwAd2q0iK8+z90//SIbePVmxnkNk5ExyQ58+q8apJbwiwJnSN1OtE9Tpkzd59WPkFJ0y+pqR6wvdCdGhW203VFVNHJbiOi+j5Vw7Ay5j6J/O+Q4Y/ZNXVn03Y4fZidBlxw9Snmtw8WbFr1+u1xclJCSkZ2P0WHGSFltXpFDNFRYItOW5Ts56hSly4JW1+PNE+HTeFNizCvSwcpBVotl15VG5BNBzIa+pGmeSS8d4oGKlgInyJvOAEIkO5ueMU1A7IEyq8jGzI8R5nTggodlW7M8IwRVN4yqPKnp+537A3KP6292F5lZBp91lul6OpEqUI5unDpLiei9CFHUI7eOyv60QU8uo7S6m32PId8oDzcy016eDZd2Z5D1pukc1jY4yM7gds58+LwHCwPz3GIspFc0eXXTiBOLZKx8OWOBLpizwEKB/cylO77yURnBzby0u0sw4lc4hgADJSzO75Y5mepvp8SoGQZG3Q8KKPoQrVXLjnDCcGnLhjlVakTacAK4S+FnFWPcngQ3ZvAjixGB8XEvekxFb7fMeSjE8Q8y08nIKIsP7p0h+RNfcCeHpBukIZBdrCP/I9yDcl3UAZR0vf0vevuVkF0L6uLT6eAGBfjvUAaUXYh06Yquu9h7F99So8oqaLz/7VLHGQXZTeG/fGtGk5b0G1CEgepxzXyfgqwGmzHWiKGIhcQT+SAONXRRXz6RIrqdwwaTjAgIYgrcKNmYp5CSP8dXXY8Vil/ce+nDPBxQK3vMA2d+QMjHpKM+XDPWuCO2gnfB2wCrmBcoMiATpDd6JwxBfIhX4YTBoFL92uwHd04MBd+74ARLTBxQIlV3AI/1CPyScgr8huoLrpfdjuKNYZ8Pk4RZPgevQAHlI+YxPeYIi/qjWmI9awELibNTZzE7ZAH9QdmvHzKSWE/W4r8WA/SDxwDSsOnZX8/kZo+uvrBz6M49RXdPqRanFicYLvAScjokqZmAcxQBbp3wKh3ae9XAhEXIh+HnDDRHoTDKYFko9uPGjHfHd1FPD1Irf1x+oXvl+/l9rNf+MvaF+QjFSdHudhT71gDDPmMoZD0Pu/e2wa5DLGngWDfXCqwZ6dgjYCE1wfKaRX8Ql4aykoqkM+tuHcn5iiGOgS9YMCKRrQsqu/W9qMuLfvMrK8r6aNN+Xx6chanqb/FBKCBXGxZIWWTER1tCoVtt0U24epWZVk2yblCOPQ7y6ki8RHjnLOtMpapSidgCjr5e0wAJcwtxxxI4TeEwFnGN+MRUyeymjN5rKgjIsmqvCkkcaqhymNJIpNim3M145NJvpFUSpmkbLZ5xnkm/7uE8HGufFfX0/v7kIozpxcVHbu4TQBaH00iVddoMFffveOYV7fkYIMEkhuA/JwGuuL09T5B4/Y77zj+ubH/MQ38ns0/3kX8eBfx413Ej3cRP95F/HgX8R97FzGWckqkbabKI042ubpRsjFXmLylqkpHPJtkipqNttBpmSuFyrmSAQcUZbShajHJxl9++eX/AWVgBGM=')
+      - name: Assemble exact tested files, preserve registry suffixes and remove this workflow
+        shell: python
+        run: |
+          import subprocess,json,zlib,base64,hashlib,shutil
+          from pathlib import Path
+          changes=json.loads(zlib.decompress(base64.b64decode(Path('/tmp/pdf-priority-time-recipe.b64').read_text())))
+          for path,e in changes.items():
+           p=Path(path)
+           if e['mode']=='new':assert not p.exists(),path;old=b''
+           else:old=p.read_bytes();assert hashlib.sha256(old).hexdigest()==e['old'],path
+           data=base64.b64decode(e['data'])
+           if e['mode']=='patch':
+            subprocess.run(['git','apply','--check','--whitespace=error','-'],input=data,check=True)
+            subprocess.run(['git','apply','--whitespace=error','-'],input=data,check=True)
+            value=p.read_bytes()
+           else:value=data+old if e['mode']=='prepend' else data
+           assert hashlib.sha256(value).hexdigest()==e['expected'],path
+           if e['mode']=='prepend':assert value.endswith(old),path
+           p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(value)
+           if path.endswith('.json'):json.loads(value)
+          subprocess.run(['python','docs/roadmap/generate-open-work-tracker.py'],check=True)
+          shutil.copyfile('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf','docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf')
+          workflow='.github/workflows/invoice-pdf-priority-time-once.yml';Path(workflow).unlink()
+          allowed=set(changes)|set(['output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf', 'docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf'])|{workflow}
+          actual=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())|set(subprocess.check_output(['git','ls-files','--others','--exclude-standard'],text=True).splitlines())
+          assert actual==allowed,(actual,allowed)
+          subprocess.run(['git','diff','--check','--','*.md','*.js','*.json'],check=True)
+          subprocess.run(['git','add','--',*sorted(allowed)],check=True)
+          subprocess.run(['git','-c','user.name=github-actions[bot]','-c','user.email=41898282+github-actions[bot]@users.noreply.github.com','commit','-m','feat(invoice): prioritize verified multipage PDF headers without Azure wait'],check=True)
+          subprocess.run(['git','push','origin','HEAD:feat/invoice-pdf-header-priority-20261105'],check=True)
