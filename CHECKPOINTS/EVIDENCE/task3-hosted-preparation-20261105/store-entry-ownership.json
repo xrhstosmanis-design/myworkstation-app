@@ -9,7 +9,11 @@
       "embedded inbox refuses a second launcher hub and explicit close restores native installers",
       "existing launcher refuses embedded entry without discarding its mounted state"
     ],
-    "infrastructureFailureAccepted": false
+    "infrastructureFailureAccepted": false,
+    "observedFailedSubtests": 8,
+    "tapFailedIncludingParent": 9,
+    "cancelled": 0,
+    "skipped": 0
   },
   "tests": {
     "tests": 40,
@@ -66,8 +70,8 @@
     }
   ],
   "pdf": {
-    "pages": 963,
-    "sha256": "29d0e19cd2b5c753933db50b9d186960d6bf4bec39041f181c25384246c5f20d",
+    "pages": 964,
+    "sha256": "18659d4fca42e988211106c237776c4ce87f7adc558afc465a2b1802db10309e",
     "copiesIdentical": true,
     "visualReview": "PENDING"
   },
@@ -75,5 +79,61 @@
   "independentReview": "PENDING",
   "deployment": "NOT EXECUTED",
   "hostedAcceptance": "NOT TESTED",
-  "businessMutations": false
+  "businessMutations": false,
+  "reconciledMain": "f1830f3470c05741d920891159362b8f01a6a938",
+  "reviewFixCandidate": "22124318c956f4ba9999936ca7d66562dc7cb513",
+  "peerReconciliation": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "mainBeforeBlob": "28aef041eb9f98c5a3fd8c50db84ec39c0c09c42",
+      "afterBlob": "39bf20624daa89015a4522571f9e0ce4f2f31b83",
+      "mainBytes": 5252308,
+      "preservedMainSuffix": true,
+      "unchangedTask3Prefix": true
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "mainBeforeBlob": "87991019b553305e1ebbc7c5dd6c11dc87a9f643",
+      "afterBlob": "d2169cf3d8a8746ca02282b80c6a9014eea1bf9b",
+      "mainBytes": 4076382,
+      "preservedMainSuffix": true,
+      "unchangedTask3Prefix": true
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "mainBeforeBlob": "5a6d1941216182dc64c118892e4ee5b0973aab40",
+      "afterBlob": "8ae6f0cf25a893a38c3b1999fcd819e9ee9767fa",
+      "mainBytes": 3604135,
+      "preservedMainSuffix": true,
+      "unchangedTask3Prefix": true
+    }
+  ],
+  "priorRedGreenRun": 42014472390,
+  "priorArtifact": {
+    "id": 13407784843,
+    "sha256": "593601626f236a814ef0eecd92e457d6884cd02eac5b2a1ba0c2cf9258054a9b",
+    "rawAssertionsAndAllTenBlobsVerified": true
+  },
+  "unchangedRuntimeAndTestBlobs": [
+    {
+      "path": "client/src/components/cloud/StoreCloudPage.jsx",
+      "blob": "bf32b33691307c41d414561565ee11123e93907d"
+    },
+    {
+      "path": "client/src/components/cloud/StoreInvoiceEntry.jsx",
+      "blob": "1a1c536cae5ec5e85d8e09620e71de12419cb855"
+    },
+    {
+      "path": "client/src/components/commerce/CommerceHub.jsx",
+      "blob": "72c1d7757fdfcbefdea09d423c6038ee59b40857"
+    },
+    {
+      "path": "client/src/components/commerce/CommerceLauncher.jsx",
+      "blob": "b4a117445acc4c0481ca0b2e0490c3aceaa92133"
+    },
+    {
+      "path": "server/test/store-invoice-entry-mounted.test.mjs",
+      "blob": "eb5428d8ca5fd40b5b191556288036faccfccdd6"
+    }
+  ]
 }
