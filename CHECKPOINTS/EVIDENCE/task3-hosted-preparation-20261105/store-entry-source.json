@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7851efe9889621553790fe920316c6b0a5bdbfcd",
+  "baseCommit": "3b33cc2998dc366cc44f9bd9e65dadf77a343651",
   "previousSourcePR": 3672,
-  "previousCandidateCommit": "6d7981ae4e4c2eb752a98d06e1b85c6903513857",
+  "previousCandidateCommit": "d23f79490db91b1d793c15c0211fe154b195a568",
   "sourceFiles": [
     {
       "path": "client/src/components/cloud/StoreCloudPage.jsx",
@@ -24,23 +24,23 @@
   "registryHistory": [
     {
       "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
-      "beforeBlob": "6bc44b54e7212d0a2b6c88fa2afdfae6ca531ec6",
-      "afterBlob": "2d4c332aad13a4270e7973272f53fe5a5031aeed",
-      "oldBytes": 5242500,
+      "beforeBlob": "728f320ae4cb1fc445fc23b157ddce65256a1b5c",
+      "afterBlob": "12bfb5a13fef884ea3ad4c636d4a28d01e621f17",
+      "oldBytes": 5245504,
       "preservedSuffix": true
     },
     {
       "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
-      "beforeBlob": "b32bbefeb12b7fe9ecc1feca3098a1d630cdfa1f",
-      "afterBlob": "dce1b04dea4cec06b85797f14a98231db5e4c961",
-      "oldBytes": 4066574,
+      "beforeBlob": "f23abe0e6e33a5c004841c5e2e56746c48b607d8",
+      "afterBlob": "c436e64a2890f58a7812924dffa47fb4ffc2d40a",
+      "oldBytes": 4069578,
       "preservedSuffix": true
     },
     {
       "path": "docs/roadmap/PENDING_WORK.md",
-      "beforeBlob": "e3e32fbc598d2088834e628421e1cffa66ad2e44",
-      "afterBlob": "3b9dc43f3b68ec7246bf5976de48160e6c24f2df",
-      "oldBytes": 3594327,
+      "beforeBlob": "fa81bac23931066aec1247393c7a171fcd102b02",
+      "afterBlob": "038c4c2d35bb1ef8cc83072a04a524e59fdb8605",
+      "oldBytes": 3597331,
       "preservedSuffix": true
     },
     {
@@ -53,7 +53,8 @@
   ],
   "previousFocusedRuns": [
     42005553465,
-    42006172236
+    42006172236,
+    42006739191
   ],
   "tests": {
     "pass": 29,
@@ -62,8 +63,8 @@
     "kind": "isolated mounted components with fake API transport; unchanged source blobs"
   },
   "pdf": {
-    "pages": 960,
-    "sha256": "65bd1668712546f0e54780f482e1030d356727297b58e65d2983d2023c2f4103",
+    "pages": 961,
+    "sha256": "4fa80cda51326e32679c41d18d26affd04fa18eb68b7745ec9d331011ffa0132",
     "identicalCopies": [
       "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf",
       "docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf"
@@ -76,5 +77,5 @@
   "hostedAcceptance": "NOT EXECUTED",
   "businessMutationsSubmitted": false,
   "task3": "OPEN; retained owner /root",
-  "peerPageCountClaim": "PRESERVED; no edits to peer checkpoint, source or ownership"
+  "peerClaims": "PRESERVED: physical-page display and latency repeatability; no edits to peer checkpoints, evidence, source or ownership"
 }
