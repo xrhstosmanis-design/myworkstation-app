@@ -17,7 +17,7 @@ export function summarizeAutomaticCashCheck(report){
   const pending=report.rows.filter(r=>r.status!=='NOT_APPLICABLE'&&r.fullAudit?.status!=='FINAL').length;
   const cashDifferences=report.rows.filter(r=>safeNumber(r.remainingCents)&&r.remainingCents!==0).length;
   const cardDifferences=report.rows.filter(r=>safeNumber(r.cardCents)&&r.cardCents!==0).length;
-  const paperCoverage=paper?.coverage?.discoveryComplete===true?'COMPLETE':paper?'INCOMPLETE':'UNAVAILABLE';
+  const paperCoverage=paper?.coverage?.complete===true&&paper?.status==='COMPLETE'?'COMPLETE':paper?'INCOMPLETE':'UNAVAILABLE';
   const paperIssueCode=typeof paper?.coverage?.discoveryReason==='string'?paper.coverage.discoveryReason:null;
   const status=incompleteEvidence||paperCoverage!=='COMPLETE'||ambiguous>0?'HOLD':proposed>0||cashDifferences>0||cardDifferences>0?'REVIEW_REQUIRED':'NO_DIFFERENCES';
   return {
