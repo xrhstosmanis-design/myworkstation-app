@@ -7,7 +7,7 @@ permissions:
   contents: write
 concurrency:
   group: ocr4-page-current-main-sync-20261105
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 60
       - name: Verify pinned branch heads and preserve all concurrent registry history
         shell: bash
         run: |
