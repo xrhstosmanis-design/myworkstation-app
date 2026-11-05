@@ -1,6 +1,6 @@
 // GET-only stored evidence. The caller supplies the unchanged paid-admission
 // result and budget. No provider, writer or cross-request cache is available here.
-const maxByteLimit=25*1024*1024;
+const maxByteLimit=100*1024*1024;
 const maxOriginalBytes=7*1024*1024; // Existing validatePaperSource ceiling.
 const reasons=new Set(['ATTACHMENT_BYTE_LIMIT','ATTACHMENT_SIZE_UNAVAILABLE']);
 const discoverable=new Set(['AWAITING_READING','LIMITED']);
