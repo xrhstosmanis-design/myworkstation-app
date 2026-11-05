@@ -1,0 +1,102 @@
+{
+  "fixture": "I",
+  "revision": "b7c75d4ec908919acaa21d967ae81f29b4d6aadf",
+  "startedAt": "2026-11-05T07:53:56.963Z",
+  "readyObservedAt": "2026-11-05T07:54:05.501Z",
+  "uiObservedElapsedMs": 8538,
+  "uiTimingMethod": "Wall-clock immediately before chooser.setFiles to first successful hidden-busy-state observation; includes upload/automation overhead.",
+  "fields": {
+    "supplier": "LAB METER TEST",
+    "documentNumber": "LAB-HEADER-TIMING-20261105-I",
+    "documentDate": "2026-11-05",
+    "totalGross": 24.8
+  },
+  "manualCorrection": false,
+  "documentTypeSelected": false,
+  "paidSelected": false,
+  "creditSelected": false,
+  "submitted": false,
+  "physicalPdfPages": 2,
+  "uiFileCount": 1,
+  "statusText": "1 σελίδα έτοιμη (1%). Έλεγξε τα 4 στοιχεία και συνέχισε.",
+  "events": [
+    {
+      "timestamp": "2026-11-05T07:53:57.114622587Z",
+      "correlationId": "02dc1be9-ac4c-4536-acee-509427dc9592",
+      "stage": "exact_file_lookup",
+      "outcome": "ok",
+      "elapsedMs": 3.848
+    },
+    {
+      "timestamp": "2026-11-05T07:54:02.496083612Z",
+      "correlationId": "02dc1be9-ac4c-4536-acee-509427dc9592",
+      "stage": "azure_header",
+      "outcome": "ok",
+      "elapsedMs": 5381.341
+    },
+    {
+      "timestamp": "2026-11-05T07:54:02.50152144Z",
+      "correlationId": "02dc1be9-ac4c-4536-acee-509427dc9592",
+      "stage": "azure_supplier_match",
+      "outcome": "ok",
+      "elapsedMs": 2.623
+    },
+    {
+      "timestamp": "2026-11-05T07:54:05.423863418Z",
+      "correlationId": "02dc1be9-ac4c-4536-acee-509427dc9592",
+      "stage": "openai_attempt",
+      "outcome": "ok",
+      "elapsedMs": 2919.731,
+      "attempt": 1
+    },
+    {
+      "timestamp": "2026-11-05T07:54:05.423897629Z",
+      "correlationId": "02dc1be9-ac4c-4536-acee-509427dc9592",
+      "stage": "openai_header",
+      "outcome": "ok",
+      "elapsedMs": 2920.083
+    },
+    {
+      "timestamp": "2026-11-05T07:54:05.42593263Z",
+      "correlationId": "02dc1be9-ac4c-4536-acee-509427dc9592",
+      "stage": "openai_supplier_match",
+      "outcome": "ok",
+      "elapsedMs": 1.979
+    },
+    {
+      "timestamp": "2026-11-05T07:54:05.426752346Z",
+      "correlationId": "02dc1be9-ac4c-4536-acee-509427dc9592",
+      "stage": "request_total",
+      "outcome": "finished",
+      "elapsedMs": 8317.927
+    }
+  ],
+  "controlComparison": [
+    {
+      "storeId": "cmtpopbgo000trhb5ng9ytiru",
+      "unchanged": true
+    },
+    {
+      "storeId": "cmv2qanca000psigeizep8o9m",
+      "unchanged": true
+    }
+  ],
+  "walletBefore": {
+    "enabled": false,
+    "balanceMicros": 4610532,
+    "reservedMicros": 0
+  },
+  "comparison": {
+    "baselineHBrowserMs": 21959,
+    "observedBrowserReductionPercent": 61.12,
+    "baselineHServerMs": 21746.166,
+    "serverMs": 8317.927,
+    "note": "One fresh synthetic sample on combined3665+3667 revision. Azure also accelerated significantly; cannot attribute entire improvement to reasoning low or establish universal latency/accuracy."
+  },
+  "limitations": [
+    "Effective provider-returned model not captured in unmetered operation",
+    "No product-row or broad OCR acceptance",
+    "No physical POS tested",
+    "Administrative PASS synchronization pending"
+  ]
+}

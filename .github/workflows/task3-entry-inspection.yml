@@ -4,9 +4,7 @@ on:
     branches: [tools/task3-entry-inspection-20261105]
     paths:
       - .github/workflows/task3-entry-inspection.yml
-      - tools/task3-entry-assembly.py
-      - client/src/components/cloud/StoreInvoiceEntry.jsx
-      - server/test/store-invoice-entry-mounted.test.mjs
+      - tools/task3-entry-sync.py
 permissions:
   contents: write
 jobs:
@@ -23,32 +21,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Prepare exact candidate and history-preserving records
+      - name: Preserve current main history and verify exact tested source
         run: |
           set -o pipefail
           mkdir -p /tmp/task3-entry-candidate/debug
           python3 -m pip install --disable-pip-version-check reportlab==4.4.9 PyMuPDF==1.26.7
-          python3 tools/task3-entry-assembly.py 2>&1 | tee /tmp/task3-entry-candidate/debug/raw-assembly.log
-      - name: Retain actual checked-out and generated diagnostics
+          python3 tools/task3-entry-sync.py 2>&1 | tee /tmp/task3-entry-candidate/debug/raw-assembly.log
+      - name: Retain exact input diagnostics
         if: always()
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import subprocess,shutil,json
-          out=Path('/tmp/task3-entry-candidate/debug');out.mkdir(parents=True,exist_ok=True)
-          paths=['tools/task3-entry-assembly.py','client/src/components/cloud/StoreCloudPage.jsx','client/src/components/commerce/CommerceHub.jsx','docs/roadmap/generate-open-work-tracker.py']
-          for p in paths:
-              if Path(p).exists():shutil.copyfile(p,out/Path(p).name)
-          (out/'git-status.txt').write_bytes(subprocess.check_output(['git','status','--short']))
-          (out/'actual-head.txt').write_bytes(subprocess.check_output(['git','rev-parse','HEAD']))
-          source=Path('docs/roadmap/OPEN_WORK_TRACKER.md')
-          if source.exists():(out/'tracker-prefix.txt').write_bytes(source.read_bytes()[:18000])
-          pdf=Path('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf')
-          if pdf.exists():
-              import fitz
-              with fitz.open(pdf) as doc:
-                  (out/'first-pages.txt').write_text(''.join(doc[i].get_text() for i in range(min(3,len(doc)))))
-          PY
+          mkdir -p /tmp/task3-entry-candidate/debug
+          cp tools/task3-entry-sync.py /tmp/task3-entry-candidate/debug/
+          git rev-parse HEAD > /tmp/task3-entry-candidate/debug/actual-head.txt
+          git status --short > /tmp/task3-entry-candidate/debug/git-status.txt
       - name: Install test dependencies without startup or database scripts
         run: npm install --ignore-scripts
       - name: Run native focused mounted regressions
@@ -65,16 +50,15 @@ jobs:
           import json,subprocess
           out=Path('/tmp/task3-entry-candidate')
           paths=json.loads((out/'allowed.json').read_text())
-          inputs={'client/src/components/cloud/StoreInvoiceEntry.jsx','server/test/store-invoice-entry-mounted.test.mjs'}
           subprocess.run(['git','add','--',*paths],check=True)
           staged=set(subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines())
-          assert staged==set(paths)-inputs,(staged,paths)
+          assert staged==set(json.loads((out/'staged.json').read_text())),staged
           subprocess.run(['git','diff','--cached','--check','--',*[p for p in paths if not p.endswith('.pdf')]],check=True)
           PY
           test "$(git ls-remote origin refs/heads/tools/task3-entry-inspection-20261105 | cut -f1)" = "$EXPECTED_HEAD"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'task3: validated entry candidate outputs; helper only'
+          git commit -m 'task3: reconciled and tested entry outputs; helper only'
           git push origin HEAD:refs/heads/tools/task3-entry-inspection-20261105
           python3 - <<'PY'
           from pathlib import Path
