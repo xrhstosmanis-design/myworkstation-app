@@ -94,8 +94,11 @@ jobs:
             lines=[line for line in text.splitlines(keepends=True) if needle in line]
             assert len(lines)==1,('Nonunique assertion',needle,len(lines))
             return lines[0]
-          for needle in ['assert.match(wrapper,/if\\(azureHasUsefulHeader','assert.match(header,/azureCanVerifyDocumentTotal']:
-            ours=ours.replace(match_line(ours,needle),match_line(main,needle))
+          for old_needle,new_needle in [
+            ('assert.match(wrapper,/if\\(azureHasUsefulHeader&&\\(!isPdf','assert.match(wrapper,/if\\(azureHasUsefulHeader&&azureCanVerifyDocumentTotal'),
+            ('assert.match(header,/azureCanVerifyDocumentTotal=!isPdf\\|\\|parsed','assert.match(header,/azureCanVerifyDocumentTotal=!isPdf\\|\\|\\(!pdfHeaderPriority')
+          ]:
+            ours=ours.replace(match_line(ours,old_needle),match_line(main,new_needle))
           before='  assert.match(client,/Σελίδα \\{index\\+1\\}/);\n'
           after='  assert.match(client,/Αρχείο \\{index\\+1\\}/);\n  assert.match(client,/<InvoiceFilePageSummary pages=\\{pages\\} scopeKey=\\{store.id\\}/);\n'
           assert main.count(before)==1
