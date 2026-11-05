@@ -24,3 +24,10 @@ Owner requires MyWorkStation itself, not chat-side SQL, to run selected-store ca
 - Real selected-store Diadochou data and stored photo readings were previously inspected read-only; this does not establish that this newly wired UI has passed authenticated LIVE acceptance. All unclear photo associations remain pending rather than automatically confirmed.
 
 Protected: PR #3657 remains OPEN/DRAFT/unmerged; production, money, employee charges, bank, cards, invoices and prior reviews are unchanged. Next: complete native CI on the exact new head; resolve any regressions, validate authenticated selected-store read-only acceptance and preserve all central registry history while reconciling current main before guarded merge/release.
+
+
+## 2026-11-05 — Owner-approved 100 MiB aggregate cash-paper cap (DRAFT)
+
+Owner explicitly requested increasing the automatic-handwriting aggregate admission limit, after read-only evidence showed **37 current Διαδόχου chat attachments, 76,755,299 metadata bytes**, exceeding the former 25 MiB limit. The owner-approved implementation increases only the aggregate budget to 100 MiB (104,857,600 bytes), in both `cash-paper-automatic.js` and `cash-paper-stored-preview.js`. It **retains** the maximum 50-source discovery, existing 7 MiB per-original revalidation ceiling, exact checksum/size binding, serial stored-original verification, strict FAIL-CLOSED coverage, and no implicit paid OCR / financial write. BackOffice HOLD explanation now uses 100 MiB.
+
+Added focused regression for 37 synthetic entries totaling 77 MiB, over-limit and >50-source admission, 100 MiB sequential stored-source checks, preserved per-original 7 MiB limit, and no provider or writer invocation. Full source CI required on the exact new head; tests are authored but not claimed green without a run result. Successful metadata admission is NOT proof that all physical handwritings are legible or that report coverage is COMPLETE; missing/unread/uncertain remain HOLD. No production, fiscal, bank, inventory, cash, employee charge or service mutation occurred.
