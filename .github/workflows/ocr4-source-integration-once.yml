@@ -1,0 +1,199 @@
+name: OCR4 one-use source integration
+on:
+  push:
+    branches: [fix/ocr4-pdf-total-safety-20261105]
+    paths: [.github/workflows/ocr4-source-integration-once.yml]
+permissions:
+  contents: write
+concurrency:
+  group: ocr4-source-integration-20261105
+  cancel-in-progress: false
+jobs:
+  integrate-and-verify:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app' && github.ref == 'refs/heads/fix/ocr4-pdf-total-safety-20261105'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify published claim and exact evidence before any source change
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node -p 'process.versions.node.split(".")[0]')" = 20
+          git fetch --no-tags --depth=50 origin main
+          git merge-base --is-ancestor f0d45edfd0628557f7a1a545355faa928d631240 FETCH_HEAD
+          git show FETCH_HEAD:CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-claim.md > /tmp/ocr4-published-claim.md
+          cmp /tmp/ocr4-published-claim.md CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-claim.md
+          git fetch --no-tags --depth=1 origin ce589169a353c07190bc2dd891a66aba1515dd5f
+          mkdir /tmp/ocr4-v3 /tmp/ocr4-source-review
+          evidence=CHECKPOINTS/EVIDENCE/invoice-pdf-total-safety-candidate-20261104
+          for file in assemble-v3.py candidate.patch v2-real-helpers.test.mjs v3-timing-cases.mjs v3-shared-cases.mjs; do
+            git show "ce589169a353c07190bc2dd891a66aba1515dd5f:$evidence/$file" > "/tmp/ocr4-v3/$file"
+          done
+          python /tmp/ocr4-v3/assemble-v3.py --repository "$PWD" --output /tmp/ocr4-v3.patch
+          cp /tmp/ocr4-v3.patch /tmp/ocr4-source-review/
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,json
+          expected={
+            'CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md':'9f581e26ee876b476fa740dd1274ff007783521f',
+            'docs/roadmap/OPEN_WORK_TRACKER.md':'f6286f716c04912e4dc132603070e54b1bc51c0c',
+            'docs/roadmap/PENDING_WORK.md':'eb1fe4f43421422c5fee33a7e24f126eacbbac04',
+          }
+          out=Path('/tmp/ocr4-source-review');r={'claim_main':'f0d45edfd0628557f7a1a545355faa928d631240','candidate':'ce589169a353c07190bc2dd891a66aba1515dd5f','registries':{}}
+          def blob(b):return hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
+          for name,sha in expected.items():
+            b=Path(name).read_bytes();assert blob(b)==sha,(name,'registry drift requires review')
+            dst=out/'before'/name;dst.parent.mkdir(parents=True,exist_ok=True);dst.write_bytes(b)
+            r['registries'][name]={'before_blob':sha,'old_bytes':len(b)}
+          for name in ['server/src/routes/commerce-pos-v244.js','server/test/pos-fast-header-latency.test.js','server/src/lib/pos-fast-header-timing.js']:
+            dst=out/'before'/name;dst.parent.mkdir(parents=True,exist_ok=True);dst.write_bytes(Path(name).read_bytes())
+          (out/'receipt.json').write_text(json.dumps(r,indent=2)+'\n')
+          PY
+      - name: Install locked test dependencies without application lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Execute existing header timing and handoff tests on unchanged source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test server/test/pos-fast-header-latency.test.js server/test/pos-fast-header-timing.test.js server/test/pos-fast-handoff-recovery-v1.test.js | tee /tmp/ocr4-source-review/baseline.tap
+      - name: Apply exact V3 patch to complete checkout and run combined regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --check --whitespace=error /tmp/ocr4-v3.patch
+          git apply --whitespace=error /tmp/ocr4-v3.patch
+          node --check server/src/routes/commerce-pos-v244.js
+          node --test server/test/pos-fast-header-latency.test.js server/test/pos-fast-header-timing.test.js server/test/pos-fast-handoff-recovery-v1.test.js server/test/pos-fast-header-pdf-total-safety.test.js server/test/pos-fast-header-pdf-real-helpers.test.js server/test/pos-fast-header-pdf-timing-shared.test.js | tee /tmp/ocr4-source-review/after.tap
+      - name: Record verified results and lossless source-candidate registries
+        shell: bash
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,json,subprocess,os,re
+          out=Path('/tmp/ocr4-source-review');receipt=json.loads((out/'receipt.json').read_text())
+          def stats(name):
+            text=(out/name).read_text();result={}
+            for field in ['tests','pass','fail','cancelled','skipped']:
+              match=re.search(r'^# '+field+r' (\d+)$',text,re.M);assert match,(name,field)
+              result[field]=int(match[1])
+            assert result['pass']==result['tests'] and result['fail']==result['cancelled']==result['skipped']==0,(name,result)
+            result['tap_sha256']=hashlib.sha256((out/name).read_bytes()).hexdigest()
+            return result
+          before=stats('baseline.tap');after=stats('after.tap')
+          assert before['tests']>=108 and after['tests']==before['tests']+166,(before,after)
+          receipt.update({'node':subprocess.check_output(['node','--version'],text=True).strip(),'baseline':before,'after':after,'workflow_run_id':os.environ['RUN_ID'],'scope':'Complete-checkout targeted Node20 tests; provider/database/wallet I/O simulated. Not full native/database/build/browser CI or OCR/LAB acceptance.','runtime_source_candidate':True,'main_changed':False,'production_deployed':False,'provider_called':False,'lab_performed':False,'independent_review':'PENDING'})
+          prefix=f'''## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01 / SOURCE CANDIDATE / AWAITING FULL CI AND LAB
+
+Retained invoice/task4 owner /root; branch fix/ocr4-pdf-total-safety-20261105. Before-source claim PR3666 passed applicable documentation CI41972028360 and merged f0d45edfd0628557f7a1a545355faa928d631240 BEFORE source integration. Candidate3654 V3 is now applied to the complete checkout, not only stored as an evidence patch. No ownership transfer or low-reasoning/latency change; peer3665 remains separate.
+
+Bounded source change: multi-page or unknown-count PDFs cannot return Azure page money after absent key or failed fallback, cannot fill a missing full-reader total from Azure, and cannot overwrite a complete-reader amount with a partial Azure footer. Missing/non-finite positive full-reader money fails explicitly. Image/known single-page policy, durable reuse, original wallet/access behavior, full PDF transport, provider models/prompts/retries/deadlines and request-local timing remain unchanged. This guard does not independently prove provider OCR accuracy.
+
+Complete-checkout {receipt['node']} targeted execution: original header/timing/handoff tests {before['pass']} PASS/0FAIL/0SKIP; after the guard and its new regressions {after['pass']} PASS/0FAIL/0SKIP. Exact published patch SHA256528afc2c440164dc089e5cb62d451212edb7f13573b3a8a50687c85250512def passed git apply --check, source syntax and the combined suites. Provider/DB/settlement are simulated; full native PostgreSQL/build/browser/HTTP/security CI, independent review and actual OCR/LAB remain NOT TESTED here. No new functional/manual PASS.
+
+Protect H/G limited correct-header results and H21.959s baseline; never replay F/D/G/H, latency-reserved I, paid or CREDIT originals. No real provider request/charge, payment, draft submission, posting, stock/fiscal operation or production configuration/deployment. All prior registry bytes and peer evidence are retained. Parent OCR4/supplier/pages/packages/discount/VAT/EFK and latency remain OPEN.
+
+Next: review actual source PR and require exact full Node20/native PR/main CI before ordinary guarded release, then one separately identified fresh synthetic no-submit LAB read with before/after/control evidence. Checkpoint CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md; results CHECKPOINTS/EVIDENCE/ocr4-pdf-total-safety-source-20261105/results.json. Owner retained until recorded completion or named handoff.
+
+'''
+          assert all(line.rstrip()==line for line in prefix.splitlines())
+          checkpoint='CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md'
+          assert not Path(checkpoint).exists()
+          Path(checkpoint).write_text(prefix+'''## Validation and publication boundaries
+
+The one-use source-integration runner checked the published claim on main, exact current route/test/timing blobs and all three registry blobs before modifying source. It fetched the pinned evidence commit, verified and applied the unchanged V3 patch, used the locked dependency graph with lifecycle scripts disabled, and ran existing tests before and combined tests after. The source/registry artifact contains the complete before/after files and TAP logs for independent verification. No production credentials, SQL, provider or UI operation was used.
+
+The local read-only preflight in this conversation had75/76 tests pass; its one failure was missing pdfjs-dist in the partial local artifact layout, not an application assertion. The complete runner install and execution above supersede that environment limitation. Full project CI remains a separate required gate; no test skip or assertion relaxation was introduced to manufacture a pass.
+
+Only two old tests intentionally change their expectation from unsafe multi-page Azure fallback success to refusal. All timing-helper source, provider request construction, full-file input, wallet error propagation and other existing cases remain protected. Independent review is still pending and is not represented by this author's own inspection.
+
+Final publication must contain no one-use workflow. The runner may push this source branch only; it must not merge, deploy or update main. The source candidate remains AWAITING FULL CI AND LAB. The invoice manual and numbered acceptance statuses remain unchanged.
+''')
+          def blob(b):return hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
+          for name,old in receipt['registries'].items():
+            b=Path(name).read_bytes();assert blob(b)==old['before_blob']
+            changed=prefix.encode()+b;Path(name).write_bytes(changed)
+            assert Path(name).read_bytes()[len(prefix.encode()):]==b
+            old.update({'after_blob':blob(changed),'new_bytes':len(changed),'prefix_bytes':len(prefix.encode()),'old_suffix_preserved':True})
+          paths=['server/src/routes/commerce-pos-v244.js','server/test/pos-fast-header-latency.test.js','server/test/pos-fast-header-pdf-total-safety.test.js','server/test/pos-fast-header-pdf-real-helpers.test.js','server/test/pos-fast-header-pdf-timing-shared.test.js',checkpoint,*receipt['registries']]
+          receipt['source_blobs']={}
+          for name in paths:
+            b=Path(name).read_bytes();dst=out/'after'/name;dst.parent.mkdir(parents=True,exist_ok=True);dst.write_bytes(b)
+            if name.startswith('server/'):receipt['source_blobs'][name]=blob(b)
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - name: Regenerate matching tracker PDF copies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install 'reportlab>=4,<5' 'PyMuPDF>=1.24,<2'
+          python docs/roadmap/generate-open-work-tracker.py
+          cp output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf
+          python - <<'PY'
+          from pathlib import Path
+          import fitz,json,hashlib
+          out=Path('/tmp/ocr4-source-review');r=json.loads((out/'receipt.json').read_text())
+          names=['docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf']
+          b=Path(names[0]).read_bytes();assert b==Path(names[1]).read_bytes()
+          doc=fitz.open(stream=b,filetype='pdf');assert 'SOURCE CANDIDATE' in doc[0].get_text()
+          for n in sorted(set([0,min(1,len(doc)-1),len(doc)-1])):doc[n].get_pixmap(matrix=fitz.Matrix(1.25,1.25)).save(str(out/f'after-page-{n+1}.png'))
+          for name in names:
+            dst=out/'after'/name;dst.parent.mkdir(parents=True,exist_ok=True);dst.write_bytes(b)
+          r['pdf']={'pages':len(doc),'sha256':hashlib.sha256(b).hexdigest(),'two_copies_equal':True,'visual_review':'PENDING'}
+          text=json.dumps(r,indent=2)+'\n';(out/'receipt.json').write_text(text)
+          dest=Path('CHECKPOINTS/EVIDENCE/ocr4-pdf-total-safety-source-20261105/results.json');dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(text)
+          PY
+      - name: Remove helper and enforce exact bounded publication paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/ocr4-source-integration-once.yml
+          python - <<'PY'
+          import subprocess
+          expected={
+            '.github/workflows/ocr4-source-integration-once.yml',
+            'server/src/routes/commerce-pos-v244.js','server/test/pos-fast-header-latency.test.js',
+            'server/test/pos-fast-header-pdf-total-safety.test.js','server/test/pos-fast-header-pdf-real-helpers.test.js','server/test/pos-fast-header-pdf-timing-shared.test.js',
+            'CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md',
+            'CHECKPOINTS/EVIDENCE/ocr4-pdf-total-safety-source-20261105/results.json',
+            'CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md',
+            'docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf',
+          }
+          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())|set(subprocess.check_output(['git','ls-files','--others','--exclude-standard'],text=True).splitlines())
+          assert changed==expected,(changed,expected)
+          subprocess.check_call(['git','diff','--check','--','server/','CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md'])
+          subprocess.check_call(['git','add','--',*sorted(expected)])
+          assert set(subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines())==expected
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocr4-source-complete-review
+          path: /tmp/ocr4-source-review
+          retention-days: 7
+          if-no-files-found: error
+      - name: Commit verified candidate only to its existing source branch
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          branch=fix/ocr4-pdf-total-safety-20261105
+          test "$(git ls-remote origin "refs/heads/$branch" | cut -f1)" = "$EXPECTED_HEAD"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix(invoice): prevent partial PDF totals after fallback failure; retain timing and verified original paths'
+          git push origin "HEAD:refs/heads/$branch"
