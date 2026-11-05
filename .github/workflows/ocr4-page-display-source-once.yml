@@ -18,11 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 3
+          fetch-depth: 5
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
       - name: Verify published claim and original form
         shell: bash
         run: |
@@ -37,7 +36,7 @@ jobs:
           node --version | tee "$RUNNER_TEMP/ocr4-page-display-source/node-version.txt"
           git rev-parse HEAD > "$RUNNER_TEMP/ocr4-page-display-source/runner-commit.txt"
       - name: Install declared dependencies without lifecycle execution or manifest changes
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund
       - name: Generate existing Prisma client without database writes
         run: npm run prisma:generate -w server
       - name: Require actual Chromium for this focused validation
@@ -81,7 +80,7 @@ jobs:
           replace('>Σελίδα {index+1}</b>','>Αρχείο {index+1}</b>')
           replace('title="Αφαίρεση σελίδας"','title="Αφαίρεση αρχείου"')
           replace('<MobileDocumentPhotosQr mobile={mobile}/>','<InvoiceFilePageSummary pages={pages} scopeKey={store.id}/><MobileDocumentPhotosQr mobile={mobile}/>')
-          replace('setStatus("Επίλεξε έως 5 αρχεία του ίδιου τιμολογίου (εικόνες ή PDF).")}};','setStatus("Επίλεξε έως 5 αρχεία του ίδιου τιμολογίου (εικόνες ή PDF).а")}else setStatus("Η λίστα αρχείων άλλαξε. Έλεγξε τα 4 βασικά στοιχεία με τα εναπομείναντα πρωτότυπα.")};'.replace('.а','.'),1)
+          replace('setStatus("Επίλεξε έως 5 αρχεία του ίδιου τιμολογίου (εικόνες ή PDF).")}};','setStatus("Επίλεξε έως 5 αρχεία του ίδιου τιμολογίου (εικόνες ή PDF).")}else setStatus("Η λίστα αρχείων άλλαξε. Έλεγξε τα 4 βασικά στοιχεία με τα εναπομείναντα πρωτότυπα.")};')
           assert hashlib.sha256(s.encode()).hexdigest()=='6b9988c55c61194481e6177cd4f3939d2e48cf7fa5b40a2a4c7486c407705203'
           p.write_text(s)
           PY
