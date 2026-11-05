@@ -1,0 +1,308 @@
+{
+  "trial": "MIN-P02",
+  "revision": "c255548a17cfa4d21c024a76bfae6148d76bb3cd",
+  "beforeCommit": "db21f364bbba3c43ea9fdc9b164a0eb58889ec30",
+  "ui": {
+    "trial": "MIN-P02",
+    "started": "2026-11-05T14:02:30.309Z",
+    "observed": "2026-11-05T14:02:40.345Z",
+    "uiElapsedMs": 10036,
+    "ready": true,
+    "supplier": "LAB METER TEST",
+    "documentNumber": "LAB-FAST-MINIMAL-20261105-P02",
+    "documentDate": "2026-11-05",
+    "totalGross": 49.6,
+    "screenshot": "MIN-P02-confirmed.jpg",
+    "uiNotes": "One continuous observation loop; confirmed screenshot and refreshed shift; no upload replay."
+  },
+  "after": [
+    {
+      "active_shifts": [
+        {
+          "cardSales": 0,
+          "cashSales": 0,
+          "expenses": 0,
+          "id": "a2270849-bbc1-41ea-bdf9-9dd6be69d3bd",
+          "openedAt": "2026-11-04T06:54:12.460629+00:00",
+          "openingDrawer": 10,
+          "operator": "LAB POS 2",
+          "terminal": "MAIN",
+          "transactionCount": 1
+        }
+      ],
+      "attachments": {
+        "count": 84,
+        "digest": "0a4a0a1762bf23b78cfff38a584db2e0"
+      },
+      "captured_at": "2026-11-05T14:03:18.218279Z",
+      "documents": {
+        "count": 74,
+        "digest": "3e01b7765cf10f514bc6dfe0e3ca7349"
+      },
+      "id": "cmtpopbgo000trhb5ng9ytiru",
+      "inbox": {
+        "count": 66,
+        "digest": "7c36baf34fbba338023d68f29da1d815"
+      },
+      "jobs": {
+        "count": 82,
+        "digest": "e37197486ba26fd36c13d3be6cd94620"
+      },
+      "movements": {
+        "count": 95,
+        "digest": "f69aa9d0bec0bf377f1b9645262e5aba"
+      },
+      "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "order_lines": {
+        "count": 634,
+        "digest": "baf3fbae09a8316af68135bcab820ffd"
+      },
+      "orders": {
+        "count": 62,
+        "digest": "b5df83ff0ce9892378f070c8bfbf1640"
+      },
+      "shifts": {
+        "count": 44,
+        "digest": "5a2d5f3a434b0154b99f8d1386571aed"
+      },
+      "stock": {
+        "count": 110,
+        "digest": "3c3739c172f7acfdb0939e52d06bed8d"
+      },
+      "transactions": {
+        "count": 135,
+        "digest": "ec25965ae7f73cc4796bf0f67e04b955"
+      },
+      "wallet": {
+        "balanceMicros": "4610532",
+        "enabled": false,
+        "invoiceEnabled": false,
+        "reservedMicros": "0"
+      }
+    },
+    {
+      "active_shifts": [],
+      "attachments": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "captured_at": "2026-11-05T14:03:18.218279Z",
+      "documents": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "id": "cmv2qanca000psigeizep8o9m",
+      "inbox": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "jobs": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "movements": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "name": "N40 CONTROL 20261010",
+      "order_lines": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "orders": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "shifts": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "stock": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "transactions": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "wallet": {
+        "balanceMicros": "4610532",
+        "enabled": false,
+        "invoiceEnabled": false,
+        "reservedMicros": "0"
+      }
+    }
+  ],
+  "uiShiftAfter": {
+    "terminal": "MAIN",
+    "openedBy": "LAB POS 2",
+    "transactions": 1,
+    "cash": 40,
+    "cardsAndIris": 0,
+    "total": 0
+  },
+  "checks": {
+    "fourFields": true,
+    "unchangedSnapshot": true,
+    "completeLogs": true,
+    "uniqueCorrelation": true,
+    "oneRequestTotal": true,
+    "finite": true,
+    "orderedBoundedPolls": true,
+    "safeKeys": true
+  },
+  "events": [
+    {
+      "timestamp": "2026-11-05T14:02:30.456173102Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "exact_file_lookup",
+      "outcome": "ok",
+      "elapsedMs": 4.361
+    },
+    {
+      "timestamp": "2026-11-05T14:02:31.186136281Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_submit",
+      "outcome": "ok",
+      "elapsedMs": 727.519
+    },
+    {
+      "timestamp": "2026-11-05T14:02:31.886409181Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 700.028,
+      "poll": 1
+    },
+    {
+      "timestamp": "2026-11-05T14:02:32.048476203Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 161.919,
+      "poll": 1
+    },
+    {
+      "timestamp": "2026-11-05T14:02:32.748872096Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 700.241,
+      "poll": 2
+    },
+    {
+      "timestamp": "2026-11-05T14:02:32.920376171Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 171.089,
+      "poll": 2
+    },
+    {
+      "timestamp": "2026-11-05T14:02:34.120606811Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.097,
+      "poll": 3
+    },
+    {
+      "timestamp": "2026-11-05T14:02:34.274360582Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 153.702,
+      "poll": 3
+    },
+    {
+      "timestamp": "2026-11-05T14:02:35.473856022Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1199.455,
+      "poll": 4
+    },
+    {
+      "timestamp": "2026-11-05T14:02:35.633843206Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 159.827,
+      "poll": 4
+    },
+    {
+      "timestamp": "2026-11-05T14:02:36.835356522Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1199.977,
+      "poll": 5
+    },
+    {
+      "timestamp": "2026-11-05T14:02:37.144525199Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 310.446,
+      "poll": 5
+    },
+    {
+      "timestamp": "2026-11-05T14:02:37.144550849Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_header",
+      "outcome": "ok",
+      "elapsedMs": 6688.361
+    },
+    {
+      "timestamp": "2026-11-05T14:02:37.149167728Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "azure_supplier_match",
+      "outcome": "ok",
+      "elapsedMs": 2.735
+    },
+    {
+      "timestamp": "2026-11-05T14:02:40.220624675Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "openai_attempt",
+      "outcome": "ok",
+      "elapsedMs": 3067.761,
+      "attempt": 1
+    },
+    {
+      "timestamp": "2026-11-05T14:02:40.220652416Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "openai_header",
+      "outcome": "ok",
+      "elapsedMs": 3067.921
+    },
+    {
+      "timestamp": "2026-11-05T14:02:40.222466577Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "openai_supplier_match",
+      "outcome": "ok",
+      "elapsedMs": 1.792
+    },
+    {
+      "timestamp": "2026-11-05T14:02:40.223160756Z",
+      "correlationId": "86df06b6-7265-4df7-935c-06703f063125",
+      "stage": "request_total",
+      "outcome": "finished",
+      "elapsedMs": 9773.883
+    }
+  ],
+  "sumsMs": {
+    "exact_file_lookup": 4.361,
+    "azure_submit": 727.519,
+    "azure_poll_wait": 4999.798,
+    "azure_poll_request": 956.9830000000001,
+    "azure_header": 6688.361,
+    "azure_supplier_match": 2.735,
+    "openai_attempt": 3067.761,
+    "openai_header": 3067.921,
+    "openai_supplier_match": 1.792,
+    "request_total": 9773.883
+  },
+  "assessment": "Four fields correct, including49.60EUR invoice instead of separate10EURreceipt; unchanged measured state. Both providers successful,5polls, one OpenAI attempt. Observational timing only; response model/usage not captured. No business writer.",
+  "consumed": true,
+  "noReplay": true
+}

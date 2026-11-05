@@ -1,3 +1,9 @@
+## 05/11/2026 16:04 Europe/Athens - MIN-P02 RESULT / MIN-P03 BEFORE
+
+MIN-P02 selected once14:02:30.309Z UTC after BEFORE commitdb21f364bbba3c43ea9fdc9b164a0eb58889ec30. Four exact fields including49.60EUR invoice (not separate10EURreceipt) and all ten-table/active-shift/wallet/N40 control unchanged AFTER14:03:18.218279Z. UI10036ms continuous observed interval. Server9773.883ms/Azure6688.361ms/OpenAI3067.921ms; both providers OK, one OpenAI attempt,5ordered paired polls, unique correlation86df06b6-7265-4df7-935c-06703f063125. Refreshed UI MAIN1transaction/cash40/cardsIRIS0/total0; confirmed screenshot preserved. P02 consumed, no submission or replay.
+
+MIN-P03 BEFORE 2026-11-05T14:04:02.814993Z: fresh complete MIN-P03-before.json and same refreshed LAB UI. New2page74.40EUR invoice contains previous120/new194.40EURaccount balances; ONE header-only selection after this commit, no type/PAID/CREDIT/submit/payment/draft/stock/fiscal action. Existing revisionc255548 retained. All earlier samples consumed/protected. General speed/No15 OPEN; no SLA or general OCR claim.
+
 ## 05/11/2026 16:01 Europe/Athens - MIN-P01 RESULT / MIN-P02 BEFORE
 
 MIN-P01 selected once13:58:18.269Z UTC after BEFORE commitadca90e43745bb2c3881ac3401689a5efeda7928. Four exact fields24.80EUR and full ten-table/active-shift/wallet/N40 control unchanged AFTER13:59:17.976228Z. UI22052ms continuous observed interval. Server21863.067ms: Azure18868.872ms ERROR with separately observed AZURE_TIMEOUT, then OpenAI2983.772ms/one successful attempt. Existing Azure deadline/polling/fallback behavior preserved. This is scoped header/state PASS, not total-speed PASS. Correlation181fd1ed-74ae-427a-8e67-7c7c3a799ef3,14ordered paired polls. Actual confirmed screenshot saved after stale first busy frame; no replay. Refreshed UI MAIN1transaction/cash40/cardsIRIS0/total0. P01 consumed; original provider model/usage not captured.
