@@ -78,7 +78,7 @@ test('actual FAST PDF fallback sends original PDF data URL through actual Respon
  const file=r.requests[0].body.input[0].content[1];assert.equal(file.type,'input_file');assert.equal(file.filename,'synthetic.pdf');assert.equal(file.file_data,dataUrl);assert.deepEqual(Buffer.from(file.file_data.split(',')[1],'base64'),bytes);assert.equal(r.result.totalGross,24.8);
  assert.equal(r.requests[0].body.text.format.name,'invoice_fast_header');assert.equal(r.requests[0].body.text.format.strict,true);
 });
-test('actual FAST GPT-5 exact models receive low reasoning without changing PDF transport or schema',async()=>{
+test('actual FAST GPT-5 exact models receive minimal reasoning without changing PDF transport or schema',async()=>{
   const bytes=readFileSync(path.join(root,'CHECKPOINTS/EVIDENCE/invoice-physical-pages-20261102/fixtures/two-physical-pages.pdf'));
   const dataUrl=`data:application/pdf;base64,${bytes.toString('base64')}`;
   for(const model of ['gpt-5','gpt-5-2025-08-07']){
@@ -86,7 +86,7 @@ test('actual FAST GPT-5 exact models receive low reasoning without changing PDF 
     assert.ifError(r.error);assert.equal(r.requests.length,1);
     const body=r.requests[0].body;
     assert.deepEqual(Object.keys(body).sort(),['input','model','reasoning','text']);
-    assert.equal(body.model,model);assert.deepEqual(body.reasoning,{effort:'low'});
+    assert.equal(body.model,model);assert.deepEqual(body.reasoning,{effort:'minimal'});
     assert.deepEqual(body.input,[{role:'user',content:[{type:'input_text',text:body.input[0].content[0].text},{type:'input_file',filename:'synthetic.pdf',file_data:dataUrl}]}]);
     assert.equal(typeof body.input[0].content[0].text,'string');assert.ok(body.input[0].content[0].text.length>0);
     assert.equal(body.text.format.name,'invoice_fast_header');assert.equal(body.text.format.strict,true);
@@ -95,28 +95,31 @@ test('actual FAST GPT-5 exact models receive low reasoning without changing PDF 
 });
 test('actual FAST model resolution changes reasoning only for exact GPT-5 targets',async()=>{
   const cases=[
-    {fastModel:'gpt-5',generalModel:'gpt-5-mini',expected:'gpt-5',low:true},
-    {fastModel:'',generalModel:'gpt-5-2025-08-07',expected:'gpt-5-2025-08-07',low:true},
-    {fastModel:'gpt-5-mini',generalModel:'gpt-5',expected:'gpt-5-mini',low:false},
-    {fastModel:'',generalModel:'',expected:'gpt-5-mini',low:false},
-    {fastModel:'gpt-5-2025-08-07-preview',generalModel:'gpt-5',expected:'gpt-5-2025-08-07-preview',low:false},
-    {fastModel:'gpt-5.1',generalModel:'gpt-5',expected:'gpt-5.1',low:false},
-    {fastModel:'GPT-5',generalModel:'gpt-5',expected:'GPT-5',low:false}
+    {fastModel:'gpt-5',generalModel:'gpt-5-mini',expected:'gpt-5',minimal:true},
+    {fastModel:'',generalModel:'gpt-5-2025-08-07',expected:'gpt-5-2025-08-07',minimal:true},
+    {fastModel:'gpt-5-mini',generalModel:'gpt-5',expected:'gpt-5-mini',minimal:false},
+    {fastModel:'',generalModel:'',expected:'gpt-5-mini',minimal:false},
+    {fastModel:'gpt-5-2025-08-07-preview',generalModel:'gpt-5',expected:'gpt-5-2025-08-07-preview',minimal:false},
+    {fastModel:'gpt-5.1',generalModel:'gpt-5',expected:'gpt-5.1',minimal:false},
+    {fastModel:'GPT-5',generalModel:'gpt-5',expected:'GPT-5',minimal:false},
+    {fastModel:'gpt-5-nano',generalModel:'gpt-5',expected:'gpt-5-nano',minimal:false},
+    {fastModel:'gpt-5-codex',generalModel:'gpt-5',expected:'gpt-5-codex',minimal:false},
+    {fastModel:' gpt-5',generalModel:'gpt-5',expected:' gpt-5',minimal:false}
   ];
   for(const option of cases){
     const r=await run({transport:true,azure:{...complete(),documentNumber:''},...option});
     assert.ifError(r.error);assert.equal(r.requests.length,1);
     const body=r.requests[0].body;assert.equal(body.model,option.expected);
-    assert.deepEqual(Object.keys(body).sort(),option.low?['input','model','reasoning','text']:['input','model','text']);
-    if(option.low)assert.deepEqual(body.reasoning,{effort:'low'});
+    assert.deepEqual(Object.keys(body).sort(),option.minimal?['input','model','reasoning','text']:['input','model','text']);
+    if(option.minimal)assert.deepEqual(body.reasoning,{effort:'minimal'});
   }
 });
-test('actual GPT-5 retry preserves identical low-reasoning body and original shared deadline',async()=>{
+test('actual GPT-5 retry preserves identical minimal-reasoning body and original shared deadline',async()=>{
   let current=1000;const budgets=[];
   const first={ok:false,status:503,text:async()=>{current=51000;return 'synthetic provider failure'}};
   const r=await run({transport:true,fastModel:'gpt-5',azure:{...complete(),documentNumber:''},transportResponses:[first],transportNow:()=>current,transportTimeout:milliseconds=>{budgets.push(milliseconds);return undefined}});
   assert.ifError(r.error);assert.deepEqual(budgets,[70000,20000]);assert.equal(r.requests.length,2);
-  assert.deepEqual(r.requests[0].body,r.requests[1].body);assert.deepEqual(r.requests[0].body.reasoning,{effort:'low'});
+  assert.deepEqual(r.requests[0].body,r.requests[1].body);assert.deepEqual(r.requests[0].body.reasoning,{effort:'minimal'});
   assert.deepEqual(stageOutcomes(r.timings.filter(event=>event.stage==='openai_attempt')),[['openai_attempt','error',1],['openai_attempt','ok',2]]);
 });
 
