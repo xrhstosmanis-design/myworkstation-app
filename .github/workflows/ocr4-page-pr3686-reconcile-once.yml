@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      MAIN_HEAD: 2b13a8419c3ec82fb14c67902b6bb06bfef8752b
+      MAIN_HEAD: c182e18767016ea2645dc538537d7ba3e81215d3
       PR_HEAD: bd9a338fdb6dfc5b7721f6bc8532bad3b3d64805
       DOC_BASE: fc8d80106f27e37e854247c92c9e0af0dee50fc6
       TARGET: fix/ocr4-physical-page-display-20261105
