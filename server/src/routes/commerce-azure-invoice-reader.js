@@ -1,3 +1,4 @@
+import {measureFastHeaderPhase} from "../lib/pos-fast-header-timing.js";
 import {walletActivityFromRequest} from "../services/ai-wallet-activity.js";
 import {withInvoiceWalletScope,throwIfWalletError,meterInvoiceAzure} from "../services/ai-wallet-invoice-metering.js";
 import {Router} from "express";
@@ -113,7 +114,7 @@ function normalizeItem(item,index){
   const confidence=confidences.length?Math.max(...confidences):0;
   return {rawText,code,barcode:"",description,quantity,retailPrice,sourcePage,sourceY,unit,unitsPerPackage:0,unitCost,discount1,discount2,discount3,netAmount,vatRate,grossAmount,confidence,azureUnitCostDerivedFromNet,azureSequence:index+1,azureTax:tax,azureTaxRateConfidence:Math.max(pct(p.TaxRate?.confidence),pct(p.VATRate?.confidence),pct(p.VatRate?.confidence))};
 }
-export async function callAzure({contentData,mimeType,timeoutMs=0}){
+export async function callAzure({contentData,mimeType,timeoutMs=0,timing}){
   return await meterInvoiceAzure({contentData,mimeType,model:MODEL_ID,apiVersion:API_VERSION},async markOperation=>{
   const endpoint=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT||"").trim().replace(/\/+$/g,"");
   const key=String(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY||"").trim();
@@ -122,18 +123,23 @@ export async function callAzure({contentData,mimeType,timeoutMs=0}){
   const {bytes,mimeType:detected}=parseDataUrl(contentData,mimeType);
   if(bytes.length<20)throw new Error("AZURE_EMPTY_DOCUMENT");
   const url=`${endpoint}/documentintelligence/documentModels/${MODEL_ID}:analyze?api-version=${API_VERSION}`;
-  const start=await fetch(url,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":key,"Content-Type":detected},body:bytes,signal:requestSignal()});
-  if(!start.ok)throw new Error(`AZURE_ANALYZE_${start.status}:${(await start.text()).slice(0,300)}`);
-  const operation=start.headers.get("operation-location");
-  if(!operation)throw new Error("AZURE_NO_OPERATION_LOCATION");
+  const operation=await measureFastHeaderPhase(timing,"azure_submit",async()=>{
+    const start=await fetch(url,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":key,"Content-Type":detected},body:bytes,signal:requestSignal()});
+    if(!start.ok)throw new Error(`AZURE_ANALYZE_${start.status}:${(await start.text()).slice(0,300)}`);
+    const operation=start.headers.get("operation-location");
+    if(!operation)throw new Error("AZURE_NO_OPERATION_LOCATION");
+    return operation;
+  });
   markOperation(operation);
   for(let i=0;i<30;i++){
     const delay=i<2?700:1200;
     if(deadline&&Date.now()+delay>=deadline)throw new Error("AZURE_TIMEOUT");
-    await new Promise(resolve=>setTimeout(resolve,delay));
-    const poll=await fetch(operation,{headers:{"Ocp-Apim-Subscription-Key":key},signal:requestSignal()});
-    if(!poll.ok)throw new Error(`AZURE_POLL_${poll.status}`);
-    const payload=await poll.json();
+    await measureFastHeaderPhase(timing,"azure_poll_wait",()=>new Promise(resolve=>setTimeout(resolve,delay)),i+1);
+    const payload=await measureFastHeaderPhase(timing,"azure_poll_request",async()=>{
+      const poll=await fetch(operation,{headers:{"Ocp-Apim-Subscription-Key":key},signal:requestSignal()});
+      if(!poll.ok)throw new Error(`AZURE_POLL_${poll.status}`);
+      return await poll.json();
+    },i+1);
     if(payload.status==="succeeded")return payload;
     if(payload.status==="failed"||payload.status==="canceled")throw new Error(`AZURE_${String(payload.status).toUpperCase()}`);
   }
