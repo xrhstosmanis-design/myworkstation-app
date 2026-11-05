@@ -1,0 +1,79 @@
+{
+  "source": "b465ac68436e43bc6d6ecff7703165481052d29d",
+  "finding": 4479218886,
+  "previousExactFullCI": 42011116582,
+  "previousIndependentReceipt": 6655731621,
+  "red": {
+    "source": "b465ac68436e43bc6d6ecff7703165481052d29d",
+    "requiredAssertionFailures": [
+      "embedded inbox refuses a second launcher hub and explicit close restores native installers",
+      "existing launcher refuses embedded entry without discarding its mounted state"
+    ],
+    "infrastructureFailureAccepted": false
+  },
+  "tests": {
+    "tests": 40,
+    "pass": 40,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "sourceFiles": [
+    {
+      "path": "client/src/components/cloud/StoreCloudPage.jsx",
+      "beforeBlob": "6782d3cc93c828f97056223ae6d5968fb907b777",
+      "afterBlob": "bf32b33691307c41d414561565ee11123e93907d"
+    },
+    {
+      "path": "client/src/components/commerce/CommerceLauncher.jsx",
+      "beforeBlob": "b6bea3c69bd545f033f9d6781f6132771285a7b5",
+      "afterBlob": "b4a117445acc4c0481ca0b2e0490c3aceaa92133"
+    },
+    {
+      "path": "server/test/store-invoice-entry-mounted.test.mjs",
+      "beforeBlob": "a15ce1e14b2a7cd2c00af1dabde913423947d4f5",
+      "afterBlob": "eb5428d8ca5fd40b5b191556288036faccfccdd6"
+    }
+  ],
+  "registryHistory": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "beforeBlob": "a3303ebfff59e367127157d1b2acc847c713aa13",
+      "afterBlob": "627a2dd8e9997021766aaa28afbace26aed5b729",
+      "preservedSuffix": true,
+      "priorBytes": 5253790
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "beforeBlob": "f18b5932ef0412fb9997fd2e5007832a630c1928",
+      "afterBlob": "52e7eb639977d2ca3b040d657b2b4da6f71260f3",
+      "preservedSuffix": true,
+      "priorBytes": 4077864
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "beforeBlob": "f172b318c5692bb97358f39ed1f66da7e12b98d5",
+      "afterBlob": "8bc2720fdb9e83c6b22db4d25dd0ab967599d7a5",
+      "preservedSuffix": true,
+      "priorBytes": 3605617
+    },
+    {
+      "path": "CHECKPOINTS/CHANGES/2026-11-05-task3-hosted-preparation-design.md",
+      "beforeBlob": "29ae19ce9b32698a4f040fe74eed216c2666bcc2",
+      "afterBlob": "01abc62404f464fee5fd7be452d4ba3bbc625542",
+      "preservedSuffix": true,
+      "priorBytes": 18508
+    }
+  ],
+  "pdf": {
+    "pages": 963,
+    "sha256": "29d0e19cd2b5c753933db50b9d186960d6bf4bec39041f181c25384246c5f20d",
+    "copiesIdentical": true,
+    "visualReview": "PENDING"
+  },
+  "replacementFullCI": "PENDING",
+  "independentReview": "PENDING",
+  "deployment": "NOT EXECUTED",
+  "hostedAcceptance": "NOT TESTED",
+  "businessMutations": false
+}
