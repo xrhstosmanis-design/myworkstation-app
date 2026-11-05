@@ -160,11 +160,12 @@ for(const documentNumber of ['SYN-42','']){
   const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:1,documentNumber,productLines:[row]}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.documentNumber,documentNumber);assert.equal(r.result.productLines.length,1);assert.equal(r.result.totalGross,12.4);
  });
 }
-test('multi-page PDF fallback failure retains the existing useful Azure fallback limit',async()=>{
- const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openai:new Error('synthetic unavailable')});assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result.provider,'AZURE_DOCUMENT_INTELLIGENCE');assert.equal(r.result.totalGross,12.4);
+test('multi-page PDF fallback failure cannot return the Azure page subtotal',async()=>{
+ const failure=new Error('synthetic unavailable');
+ const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openai:failure});assert.equal(r.error,failure);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.result,undefined);
 });
-test('multi-page PDF without configured fallback retains the existing useful Azure fallback limit',async()=>{
- const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openaiConfigured:false});assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.provider,'AZURE_DOCUMENT_INTELLIGENCE');assert.equal(r.result.totalGross,12.4);
+test('multi-page PDF without configured fallback cannot return the Azure page subtotal',async()=>{
+ const r=await run({mimeType:'application/pdf',azure:{...complete(),azurePageCount:2,productLines:[row]},openaiConfigured:false});assert.ok(r.error);assert.equal(r.error.status,502);assert.deepEqual(r.calls,['azure']);assert.equal(r.result,undefined);
 });
 test('multi-page PDF fallback wallet refusal cannot return a useful reconciled subtotal',async()=>{
  const failure=Object.assign(new Error('synthetic funding required'),{code:'AI_WALLET_LOW_BALANCE',status:402});

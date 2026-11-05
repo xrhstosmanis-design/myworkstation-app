@@ -1,3 +1,15 @@
+## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01 / SOURCE CANDIDATE / AWAITING FULL CI AND LAB
+
+Retained invoice/task4 owner /root; branch fix/ocr4-pdf-total-safety-20261105. Before-source claim3666 passed documentation CI41972028360 and merged f0d45edfd0628557f7a1a545355faa928d631240 BEFORE source integration. The exact V3 candidate3654 is applied to the complete checkout. No ownership transfer or low-reasoning change; peer3665 stays separate.
+
+Multi-page or unknown-count PDFs cannot return Azure page money after absent key or failed fallback, fill missing full-reader money from Azure, or replace a complete-reader amount with a partial footer. Missing/non-finite positive full-reader money fails explicitly. Image/known-single-page policy, durable reuse, wallet/access, PDF transport, models/prompts/retries/deadlines and request-local timing remain protected. Provider OCR accuracy is not independently proven by this guard.
+
+Complete-checkout v20.20.2: original header/timing/handoff tests 108 PASS/0FAIL/0SKIP; after source integration 274 PASS/0FAIL/0SKIP. Exact V3 patch SHA256528afc2c440164dc089e5cb62d451212edb7f13573b3a8a50687c85250512def applied with syntax and combined regression checks. Provider/DB/settlement are simulated. Full native PostgreSQL/build/browser/HTTP/security CI, independent review and OCR/LAB remain NOT TESTED here.
+
+Protect H/G and H21.959s baseline. Never replay F/D/G/H, latency-reserved I, paid or CREDIT originals. No real provider request/charge, payment, draft submission, posting, stock/fiscal operation, production configuration or deployment. Preserve all prior registry bytes and peers. General supplier/pages/packages/discount/VAT/EFK and latency remain OPEN; no manual/PASS closure.
+
+Next: source PR review and exact full Node20/native PR/main CI before ordinary guarded release; then one separately identified fresh synthetic no-submit LAB read with before/after/control. Checkpoint CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md; results CHECKPOINTS/EVIDENCE/ocr4-pdf-total-safety-source-20261105/results.json. Owner retained until recorded completion or named handoff.
+
 ## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01 / OCR4 / BEFORE-SOURCE CLAIM / OPEN
 
 Retained invoice owner /root, current task4 continuation; publication branch docs/ocr4-pdf-total-safety-20261105, then bounded source branch fix/ocr4-pdf-total-safety-20261105. This continues candidate PR3654, not a transfer or duplicate of the latency/low-reasoning owner and PR3665. Only the FAST handler's PDF fallback amount-return policy and its regression expectations are assigned here; configured models, request construction, reasoning, timings, provider order, deadlines, wallet and all business writers stay outside this scope. No source integration before this synchronized claim is green and merged on main.
