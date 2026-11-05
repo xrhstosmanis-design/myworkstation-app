@@ -34,7 +34,9 @@
     "finalNet": 20,
     "finalVat": 4.8,
     "exciseTotal": 0,
-    "status": "PREPARED_NOT_UPLOADED",
-    "origin": "Original G layout copied with new invoice identity and date only; not a replay of G."
+    "status": "CONSUMED_HEADER_ONLY_NO_SUBMISSION",
+    "origin": "Original G layout copied with new invoice identity and date only; not a replay of G.",
+    "observation": "header-I-observation.json",
+    "publicationPr": 3668
   }
 }
