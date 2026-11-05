@@ -1,0 +1,68 @@
+name: Task3 isolated documentation assembly
+
+on:
+  push:
+    branches: [tools/task3-document-assembly-20261105]
+    paths:
+      - .github/workflows/task3-document-assembly.yml
+      - docs/roadmap/task3-document-assembly.py
+
+permissions:
+  contents: write
+
+concurrency:
+  group: task3-isolated-document-assembly
+  cancel-in-progress: false
+
+jobs:
+  assemble-documents:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app' && github.ref == 'refs/heads/tools/task3-document-assembly-20261105'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout isolated helper commit only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          filter: blob:none
+      - name: Install documentation rendering dependencies only
+        run: python3 -m pip install --disable-pip-version-check reportlab==4.4.9 PyMuPDF==1.26.7
+      - name: Validate helper syntax
+        run: python3 -m py_compile docs/roadmap/task3-document-assembly.py
+      - name: Assemble complete registries and regenerate canonical PDF
+        run: python3 docs/roadmap/task3-document-assembly.py
+      - name: Retain generated blobs on this helper branch only
+        env:
+          EXPECTED_HELPER_HEAD: ${{ github.sha }}
+        run: |
+          set -eu
+          target=refs/heads/tools/task3-document-assembly-20261105
+          test "$GITHUB_REF" = "$target"
+          test "$(git ls-remote origin "$target" | cut -f1)" = "$EXPECTED_HELPER_HEAD"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'docs(task3): generated lossless registry and PDF output; helper only'
+          git push origin "HEAD:$target"
+          git rev-parse HEAD > /tmp/task3-document-assembly/output-commit.txt
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          out=Path('/tmp/task3-document-assembly')
+          paths=json.loads((out/'allowed-output-paths.json').read_text())
+          rows=[]
+          for path in paths:
+              sha=subprocess.check_output(['git','rev-parse','HEAD:'+path],text=True).strip()
+              rows.append({'path':path,'mode':'100644','type':'blob','sha':sha})
+          (out/'output-tree-entries.json').write_text(json.dumps(rows,indent=2)+'\n')
+          print('TASK3_OUTPUT_COMMIT='+subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
+          print(json.dumps(rows,indent=2))
+          PY
+      - name: Preserve full documents, proof and rendered review samples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: task3-document-assembly
+          path: /tmp/task3-document-assembly/
+          if-no-files-found: error
+          retention-days: 7
