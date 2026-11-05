@@ -18,7 +18,7 @@ jobs:
           filter: blob:none
       - name: Verify exact parent and branch lease
         run: |
-          test "$(git rev-parse HEAD^)" = 31e26ab324a1e107fabf5078586c0aac6e981ed1
+          test "$(git rev-parse HEAD^)" = a1663c1bb9d5128241043a273bd35506976e7810
           test "$(git ls-remote origin refs/heads/docs/invoice-header-i-result-20261105 | cut -f1)" = "$(git rev-parse HEAD)"
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = 2618f358a9d6613d6d6044cc9d9253c0c345792e
       - uses: actions/setup-python@v5
@@ -35,7 +35,7 @@ jobs:
           base='b7c75d4ec908919acaa21d967ae81f29b4d6aadf'
           ours='31e26ab324a1e107fabf5078586c0aac6e981ed1'
           subprocess.run(['git','fetch','origin',main],check=True)
-          res=subprocess.run(['git','merge','--no-commit','--no-ff',main])
+          res=subprocess.run(['git','-c','user.name=github-actions[bot]','-c','user.email=41898282+github-actions[bot]@users.noreply.github.com','merge','--no-commit','--no-ff',main])
           assert res.returncode==1,res.returncode
           conflicts=set(subprocess.check_output(['git','diff','--name-only','--diff-filter=U'],text=True).splitlines())
           assert conflicts==set(p['registry']+['output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf']),conflicts
