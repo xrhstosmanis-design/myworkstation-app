@@ -1,0 +1,90 @@
+name: OCR4 page display source main synchronization (isolated)
+on:
+  push:
+    branches: [build/ocr4-page-display-source-20261105]
+    paths: [.github/workflows/ocr4-page-display-sync-once.yml]
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE: 7851efe9889621553790fe920316c6b0a5bdbfcd
+      MAIN: 3b33cc2998dc366cc44f9bd9e65dadf77a343651
+      SOURCE: 2853be00dd8b6bb423107cb5520a894351aad09c
+      TARGET: fix/ocr4-physical-page-display-20261105
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ocr4-physical-page-display-20261105
+          fetch-depth: 30
+      - name: Verify exact parents and merge without publishing
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$MAIN"
+          git fetch origin main --depth=30
+          git config user.name 'MyWorkStation coordination bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git merge --no-commit --no-ff "$MAIN" || test -f .git/MERGE_HEAD
+          mkdir -p "$RUNNER_TEMP/ocr4-page-display-sync"
+      - run: python -m pip install reportlab==4.2.5 PyMuPDF==1.25.3
+      - name: Preserve source prefix and every byte of current peer main records
+        run: |
+          python - <<'PY'
+          import hashlib,json,os,subprocess
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'ocr4-page-display-sync'
+          regs=['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']
+          pdfs=['docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf']
+          conflicts=subprocess.check_output(['git','diff','--name-only','--diff-filter=U'],text=True).splitlines()
+          assert set(conflicts)<=set(regs+pdfs),conflicts
+          def get(ref,name):return subprocess.check_output(['git','show',ref+':'+name])
+          def blob(d):return hashlib.sha1(b'blob '+str(len(d)).encode()+b'\0'+d).hexdigest()
+          receipt={'source_parent':os.environ['SOURCE'],'main_parent':os.environ['MAIN'],'base_claim':os.environ['BASE'],'registries':{},'source_unchanged':{},'visual_review':'PENDING','full_combined_ci':'NOT_RUN'}
+          for name in regs:
+            base=get(os.environ['BASE'],name);ours=get(os.environ['SOURCE'],name);theirs=get(os.environ['MAIN'],name)
+            assert ours.endswith(base) and theirs.endswith(base),name
+            prefix=ours[:-len(base)];assert len(prefix)==2432
+            merged=prefix+theirs;Path(name).write_bytes(merged);assert merged[len(prefix):]==theirs
+            receipt['registries'][name]={'main_blob':blob(theirs),'merged_blob':blob(merged),'prefix_bytes':len(prefix),'main_suffix_preserved':True,'common_history_preserved':True}
+            for label,data in [('main',theirs),('merged',merged)]:
+              dest=out/label/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data)
+          changed=subprocess.check_output(['git','diff','--name-only',os.environ['BASE'],os.environ['SOURCE'],'--','client','server'],text=True).splitlines();assert len(changed)==9
+          for name in changed:
+            before=get(os.environ['SOURCE'],name);after=Path(name).read_bytes();assert before==after,name;receipt['source_unchanged'][name]=blob(after)
+          note='\n## Current-main documentation reconciliation\n\nSource head2853be00 was synchronized with peer documentation main3b33cc29. All nine runtime/test files remain byte-identical to the119/119 focused and16-case browser-validated candidate. Three shared records preserve the entire current main as an exact suffix after the unchanged task4 source prefix; peer latency R01-R05 preparation and consumed I evidence remain intact. Tracker copies regenerated. No runtime policy, OCR/provider request, deployment or business operation. Exact combined-head full CI/review remain required; previous focused results do not replace those gates.\n'
+          p=Path('CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md');p.write_bytes(p.read_bytes()+note.encode())
+          ev=Path('CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/main-sync.json');ev.write_text(json.dumps(receipt,indent=2)+'\n');(out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+          python docs/roadmap/generate-open-work-tracker.py
+          cp output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf
+          python - <<'PY'
+          import os,shutil
+          from pathlib import Path
+          import fitz
+          out=Path(os.environ['RUNNER_TEMP'])/'ocr4-page-display-sync'
+          a=Path('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf');assert a.read_bytes()==Path('docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf').read_bytes()
+          doc=fitz.open(a)
+          for i in [0,1]:doc[i].get_pixmap(matrix=fitz.Matrix(1.2,1.2)).save(out/f'page-{i+1}.png')
+          shutil.copyfile(a,out/'tracker.pdf')
+          PY
+      - name: Publish merge only to source branch
+        run: |
+          set -euo pipefail
+          git add CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/main-sync.json
+          test -z "$(git diff --name-only --diff-filter=U)"
+          test -z "$(git diff --cached "$SOURCE" --name-only -- client server .github)"
+          test "$(git ls-remote origin refs/heads/$TARGET | cut -f1)" = "$SOURCE"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$MAIN"
+          git commit -m 'Merge current main documentation into OCR4 page-display source; preserve validated code'
+          git push origin HEAD:"$TARGET"
+          git rev-parse HEAD | tee "$RUNNER_TEMP/ocr4-page-display-sync/published-commit.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocr4-page-display-main-sync
+          path: ${{ runner.temp }}/ocr4-page-display-sync
+          retention-days: 7
+          if-no-files-found: error
