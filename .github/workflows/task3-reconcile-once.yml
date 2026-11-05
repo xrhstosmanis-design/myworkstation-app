@@ -87,7 +87,7 @@ jobs:
           git checkout 69c9a14f3ec00ad044e4fa1d7d08aa4894248836 -- CHECKPOINTS/CHANGES/2026-11-05-acharnon-rbs-fiscal-profile.md
           git add -- CHECKPOINTS/CHANGES/2026-11-05-acharnon-rbs-fiscal-profile.md CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
           git rm -- .github/workflows/task3-reconcile-once.yml
-          git diff --cached --check -- CHECKPOINTS/CHANGES/2026-11-05-acharnon-rbs-fiscal-profile.md CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md
+          git diff --cached --check -- CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md
           git diff --cached --name-only
           git commit -m "docs(task3): reconcile canonical registries and regenerate matching PDF copies"
           git merge --no-ff -s ours -m "merge(task3): incorporate verified peer main without losing scoped Task3 records" 69c9a14f3ec00ad044e4fa1d7d08aa4894248836
