@@ -98,7 +98,10 @@ def main():
     subprocess.run(['git', 'add', '--', *allowed], cwd=ROOT, check=True)
     staged = git('diff', '--cached', '--name-only').decode().splitlines()
     require(set(staged) == set(allowed), 'Unexpected staged paths')
-    subprocess.run(['git', 'diff', '--cached', '--check'], cwd=ROOT, check=True)
+    # PDF syntax has significant trailing spaces (including xref entries).
+    # Keep strict whitespace checks on every UTF-8 output; validate the PDF
+    # using its parser, content marker, exact source hash and rendered pages.
+    subprocess.run(['git', 'diff', '--cached', '--check', '--', *EXPECTED, EVIDENCE], cwd=ROOT, check=True)
     for path in allowed:
         dest = OUT / path
         dest.parent.mkdir(parents=True, exist_ok=True)
