@@ -8,6 +8,11 @@ export function summarizeAutomaticCashCheck(report){
   const proposed=candidates.filter(p=>p.status==='COUNTING_ERROR_CANDIDATE').length;
   const paper=report.paperEvidence;
   const unresolvedPapers=paper?.items?.filter(item=>item.status==='UNRESOLVED').length??null;
+  // Document-level source statuses; not the count of all unresolved text lines.
+  const sourceIssues=(paper?.items||[]).filter(item=>item.line===null&&item.status==='UNRESOLVED');
+  const unreadPaperSources=paper?sourceIssues.filter(item=>item.reason==='NOT_READ').length:null;
+  const pendingPaperSources=paper?sourceIssues.filter(item=>item.reason==='PENDING').length:null;
+  const reviewPaperSources=paper?sourceIssues.filter(item=>['REQUIRES_REVIEW','INVALID_SOURCE','INVALID_READING'].includes(item.reason)).length:null;
   const incompleteEvidence=report.rows.some(r=>!r.fullAudit||r.fullAudit.status!=='FINAL');
   const pending=report.rows.filter(r=>r.status!=='NOT_APPLICABLE'&&r.fullAudit?.status!=='FINAL').length;
   const cashDifferences=report.rows.filter(r=>safeNumber(r.remainingCents)&&r.remainingCents!==0).length;
@@ -19,7 +24,7 @@ export function summarizeAutomaticCashCheck(report){
     version:1,status,storeId:report.storeId,period:report.period,reportHash:report.reportHash,
     checkedShifts:report.rows.length,pendingShifts:pending,cashDifferenceShifts:cashDifferences,
     cardDifferenceShifts:cardDifferences,countingCandidates:proposed,ambiguousPairs:ambiguous,
-    paperCoverage,paperIssueCode,unresolvedPapers,
+    paperCoverage,paperIssueCode,unresolvedPapers,unreadPaperSources,pendingPaperSources,reviewPaperSources,
     financialAdjustmentCents:0,humanApproval:false,
     note:'Αυτόματη ένδειξη μόνο — χωρίς συμψηφισμό, καταλογισμό ή οριστική οικονομική αποδοχή.'
   };
