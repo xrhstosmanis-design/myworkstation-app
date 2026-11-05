@@ -16,3 +16,9 @@ Owner: retained /root. Parent task 2 stays OPEN. Before-source claim: #3664 merg
 4. Only after that, perform one synthetic I header-only, no-submit/no-payment/no-stock LAB measurement with fresh ten-table before/after/control, four fields, stage timing and no H replay. Improvements NOT PROVEN.
 
 No real invoice submitted, paid reader call, provider configuration edit, financial transaction, deploy or merge of source PR was performed during this checkpoint.
+
+## Task 2 continuation through ordinary Git — 05/11/2026
+
+At 997c109, follow-up CI 41969689976 passed all gates except the active-list checkpoint policy; wholesale Chromium passed. Added the missing source entry by lossless byte prepend, verifying the old complete registry is the exact suffix. No source behavior changed in this continuation. Full new-head CI remains required and speed improvement remains NOT PROVEN. Retained owner and synthetic I reservation preserved.
+
+Validation after merging current main f0d45ed: active-list conflict resolved by preserving the entire main registry as an exact byte suffix after the source entry. Node20.20.2 actual-handler suite: 73 PASS, 0 FAIL, 0 SKIP (including real two-page PDF text fixture). First local run lacked pdfjs-dist; rerun with existing workspace dependencies passed all cases, without source/test changes. Checkpoint policy passed. Full GitHub CI still required; no hosted read or speed claim.
