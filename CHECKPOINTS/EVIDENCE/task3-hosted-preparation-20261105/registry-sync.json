@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-11-05T09:22:54.964105+00:00",
+  "sourceCommit": "f3135fac766371807d219f0e4c32df2d777de3be",
+  "sourceMain": "b7c75d4ec908919acaa21d967ae81f29b4d6aadf",
+  "documentationPR": 3669,
+  "helperBranch": "tools/task3-document-assembly-20261105",
+  "applicationSourceChanged": false,
+  "businessMutationsSubmitted": false,
+  "hostedConsolidation": "NOT EXECUTED",
+  "prefixSha256": "7014a65c0ac2bb065ecfc77d2ab1e8a0c3a35805684c99c88d92ac1c14291d90",
+  "files": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "beforeBlob": "1b4758594b5de6cd7150c8482ad4cd048040aef1",
+      "afterBlob": "fe7d2fb9ae71651f944a946b8e8516de2bd34be9",
+      "beforeBytes": 5233016,
+      "afterBytes": 5237318,
+      "preservedSuffix": true,
+      "sha256": "ee0df9564617f5f68877554df9cd98a52b495b127c8ed590854bd51b3b4bbbb1"
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "beforeBlob": "4789f4201abf7bb9a43f724b9bd214f68f68019c",
+      "afterBlob": "474137a5f4ae4d5f7f873cdb46a1ac65da08c5b0",
+      "beforeBytes": 4057090,
+      "afterBytes": 4061392,
+      "preservedSuffix": true,
+      "sha256": "c1ca53b7d70c81b7d838c8596461deab37dbeb788b8521fdf919393b5cf62561"
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "beforeBlob": "7d1d0367cab2a7398be876330ae2672f939e7657",
+      "afterBlob": "2adfe85be3f5e9ce0a38a4c48085f6bfa09308ac",
+      "beforeBytes": 3584843,
+      "afterBytes": 3589145,
+      "preservedSuffix": true,
+      "sha256": "34beecf83995f3f9da942725e18d4e4e6c05f82595c78707c69c78f3b5936d63"
+    },
+    {
+      "path": "CHECKPOINTS/CHANGES/2026-11-04-invoice-credit-third-header.md",
+      "beforeBlob": "706eee0e3a0845a654b61cd1cd77f048ceb97a77",
+      "afterBlob": "30a9f59a073cc0db5b27ce62e0af632507aac8e4",
+      "beforeBytes": 7045,
+      "afterBytes": 11347,
+      "preservedSuffix": true,
+      "sha256": "f7c259c093cc9414d1aa905790b56a60a6ea813eacc29b9290d0ee7ed6db4b3b"
+    },
+    {
+      "path": "CHECKPOINTS/CHANGES/2026-11-05-task3-hosted-preparation-design.md",
+      "beforeBlob": "6f266cf08b06504e2318cba3fce724fafaf6b40c",
+      "afterBlob": "80708ebbbdee01081986de31789e09b669bfdb77",
+      "beforeBytes": 9266,
+      "afterBytes": 13568,
+      "preservedSuffix": true,
+      "sha256": "7abd3ef5f73952f4eff01411a9afd42aade021ec45f6371aa6f46c3797f4d4eb"
+    }
+  ],
+  "pdf": {
+    "path": "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf",
+    "beforeBlob": "c9e7e79518c885343937a76cdaa9a55ebf93b401",
+    "afterBlob": "ba0b59518ffc5812f798b6df01da9481c22935b4",
+    "sha256": "60fa57f888dd6e5e6241987361687c8427cec237d6d7eb44404773ac8e5a218d",
+    "pages": 959,
+    "source": "docs/roadmap/OPEN_WORK_TRACKER.md",
+    "sourceSha256": "c1ca53b7d70c81b7d838c8596461deab37dbeb788b8521fdf919393b5cf62561",
+    "generatorBlob": "e27a1aefdfe23f1312c9b84605a7323ec273196b",
+    "renderedSamplePages": [
+      1,
+      2,
+      3,
+      959
+    ],
+    "humanVisualReview": "PENDING"
+  },
+  "claimPublication": "AWAITING FINAL DOCUMENTATION CI AND MAIN MERGE"
+}
