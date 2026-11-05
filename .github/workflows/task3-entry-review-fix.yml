@@ -1,0 +1,84 @@
+name: Task3 isolated review regression
+on:
+  push:
+    branches: [tools/task3-entry-review-fix-20261105]
+    paths:
+      - .github/workflows/task3-entry-review-fix.yml
+      - tools/task3-entry-review-fix.py
+permissions:
+  contents: write
+jobs:
+  reproduce-and-fix:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app' && github.ref == 'refs/heads/tools/task3-entry-review-fix-20261105'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install isolated test dependencies without startup or database scripts
+        run: |
+          mkdir -p /tmp/task3-entry-review-fix
+          node --version > /tmp/task3-entry-review-fix/node-version.txt
+          git rev-parse HEAD > /tmp/task3-entry-review-fix/helper-input.txt
+          npm install --ignore-scripts
+      - name: Reproduce both exact assertions against unchanged reviewed application source
+        run: |
+          python3 tools/task3-entry-review-fix.py tests
+          set +e
+          node --test server/test/store-invoice-entry-mounted.test.mjs > /tmp/task3-entry-review-fix/red.tap 2>&1
+          status=$?
+          set -e
+          cat /tmp/task3-entry-review-fix/red.tap
+          test "$status" -ne 0
+          python3 tools/task3-entry-review-fix.py verify-red
+      - name: Apply bounded controlled-module correction and run focused regressions
+        run: |
+          set -o pipefail
+          python3 tools/task3-entry-review-fix.py fix
+          node --test server/test/store-invoice-entry-mounted.test.mjs server/test/backoffice-workspace-stability.test.js server/test/backoffice-common-store-ui.test.js server/test/backoffice-session-boundary-mounted.test.mjs server/test/invoice-inbox-day-archive-ui.test.js server/test/invoice-common-credit-ui.test.js 2>&1 | tee /tmp/task3-entry-review-fix/green.tap
+      - name: Synchronize lossless records only after verified green regression
+        run: |
+          set -o pipefail
+          python3 -m pip install --disable-pip-version-check reportlab==4.4.9 PyMuPDF==1.26.7
+          python3 tools/task3-entry-review-fix.py records 2>&1 | tee /tmp/task3-entry-review-fix/records.log
+      - name: Retain allowed outputs on this helper branch only
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,subprocess
+          out=Path('/tmp/task3-entry-review-fix')
+          paths=json.loads((out/'allowed.json').read_text())
+          subprocess.run(['git','add','--',*paths],check=True)
+          staged=set(subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines())
+          assert staged==set(paths),staged
+          subprocess.run(['git','diff','--cached','--check','--',*[p for p in paths if not p.endswith('.pdf')]],check=True)
+          PY
+          test "$(git ls-remote origin refs/heads/tools/task3-entry-review-fix-20261105 | cut -f1)" = "$EXPECTED_HEAD"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'task3: reproduced and corrected module regression; helper outputs only'
+          git push origin HEAD:refs/heads/tools/task3-entry-review-fix-20261105
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,subprocess
+          out=Path('/tmp/task3-entry-review-fix')
+          paths=json.loads((out/'allowed.json').read_text())
+          rows=[{'path':p,'mode':'100644','type':'blob','sha':subprocess.check_output(['git','rev-parse','HEAD:'+p],text=True).strip()} for p in paths]
+          (out/'output-tree.json').write_text(json.dumps(rows,indent=2))
+          (out/'output-commit.txt').write_text(subprocess.check_output(['git','rev-parse','HEAD'],text=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: task3-entry-review-fix
+          path: /tmp/task3-entry-review-fix/
+          if-no-files-found: error
+          retention-days: 7
