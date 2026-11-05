@@ -29,7 +29,7 @@ jobs:
           import subprocess
           base='fcbf02372d57dc22f006f1fa8906b52717374380'
           task='11fdcaf6e336df4cb25d1d655005c4c9f7f03f1f'
-          peer='c255548a17cfa4d21c024a76bfae6148d76bb3cd'
+          peer='69c9a14f3ec00ad044e4fa1d7d08aa4894248836'
           paths=[
               'CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md',
               'docs/roadmap/OPEN_WORK_TRACKER.md',
@@ -37,6 +37,16 @@ jobs:
           ]
           def blob(rev,path):
               return subprocess.check_output(['git','show',f'{rev}:{path}'])
+          peer_changed=set(subprocess.check_output(['git','diff','--name-only','c255548a17cfa4d21c024a76bfae6148d76bb3cd',peer]).decode().splitlines())
+          expected={
+              'CHECKPOINTS/CHANGES/2026-11-05-acharnon-rbs-fiscal-profile.md',
+              'CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md',
+              'docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf',
+              'docs/roadmap/OPEN_WORK_TRACKER.md',
+              'docs/roadmap/PENDING_WORK.md',
+              'output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf',
+          }
+          if peer_changed!=expected: raise SystemExit(f'ABORT: peer scope changed: {peer_changed.symmetric_difference(expected)}')
           for path in paths:
               old=blob(base,path); ours=blob(task,path); theirs=blob(peer,path)
               current=Path(path).read_bytes()
@@ -74,9 +84,11 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          git checkout 69c9a14f3ec00ad044e4fa1d7d08aa4894248836 -- CHECKPOINTS/CHANGES/2026-11-05-acharnon-rbs-fiscal-profile.md
+          git add -- CHECKPOINTS/CHANGES/2026-11-05-acharnon-rbs-fiscal-profile.md CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
           git rm -- .github/workflows/task3-reconcile-once.yml
-          git diff --cached --check
+          git diff --cached --check -- CHECKPOINTS/CHANGES/2026-11-05-acharnon-rbs-fiscal-profile.md CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md
           git diff --cached --name-only
           git commit -m "docs(task3): reconcile canonical registries and regenerate matching PDF copies"
+          git merge --no-ff -s ours -m "merge(task3): incorporate verified peer main without losing scoped Task3 records" 69c9a14f3ec00ad044e4fa1d7d08aa4894248836
           git push origin HEAD:fix/task3-lab-preparation-20261105
