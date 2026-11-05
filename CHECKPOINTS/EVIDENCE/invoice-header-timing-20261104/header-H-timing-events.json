@@ -1,0 +1,52 @@
+[
+  {
+    "timestamp": "2026-11-04T23:15:50.027843384Z",
+    "correlationId": "b5043cec-dff2-44d3-93ae-fbbd59d0ed3d",
+    "stage": "exact_file_lookup",
+    "outcome": "ok",
+    "elapsedMs": 5.777
+  },
+  {
+    "timestamp": "2026-11-04T23:16:04.867403999Z",
+    "correlationId": "b5043cec-dff2-44d3-93ae-fbbd59d0ed3d",
+    "stage": "azure_header",
+    "outcome": "ok",
+    "elapsedMs": 14839.447
+  },
+  {
+    "timestamp": "2026-11-04T23:16:04.872883655Z",
+    "correlationId": "b5043cec-dff2-44d3-93ae-fbbd59d0ed3d",
+    "stage": "azure_supplier_match",
+    "outcome": "ok",
+    "elapsedMs": 2.842
+  },
+  {
+    "timestamp": "2026-11-04T23:16:11.761275182Z",
+    "correlationId": "b5043cec-dff2-44d3-93ae-fbbd59d0ed3d",
+    "stage": "openai_attempt",
+    "outcome": "ok",
+    "elapsedMs": 6884.301,
+    "attempt": 1
+  },
+  {
+    "timestamp": "2026-11-04T23:16:11.761337415Z",
+    "correlationId": "b5043cec-dff2-44d3-93ae-fbbd59d0ed3d",
+    "stage": "openai_header",
+    "outcome": "ok",
+    "elapsedMs": 6884.62
+  },
+  {
+    "timestamp": "2026-11-04T23:16:11.763311219Z",
+    "correlationId": "b5043cec-dff2-44d3-93ae-fbbd59d0ed3d",
+    "stage": "openai_supplier_match",
+    "outcome": "ok",
+    "elapsedMs": 1.907
+  },
+  {
+    "timestamp": "2026-11-04T23:16:11.764620135Z",
+    "correlationId": "b5043cec-dff2-44d3-93ae-fbbd59d0ed3d",
+    "stage": "request_total",
+    "outcome": "finished",
+    "elapsedMs": 21746.166
+  }
+]
