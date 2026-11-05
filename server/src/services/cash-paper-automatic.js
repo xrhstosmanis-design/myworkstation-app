@@ -136,6 +136,6 @@ export function projectAutomaticPaperEvidence({scope,sessions,papers,discovery,s
   }
   for(const group of used.values())if(group.length>1)for(const item of group){item.status='UNRESOLVED';item.reason='REPEATED_LINE_MATCH';}
  }
- const result={version:1,storeId:scope.storeId,generation:scope.generation,shiftCandidates,status:coverage.discoveryComplete&&items.every(i=>i.status!=='UNRESOLVED')?'COMPLETE':'INCOMPLETE',items,coverage:{...coverage,readCount,complete:coverage.discoveryComplete&&items.every(i=>i.status!=='UNRESOLVED')},financialAdjustmentCents:0,humanApproval:false};
+ const result={version:1,storeId:scope.storeId,generation:scope.generation,shiftCandidates,status:coverage.discoveryComplete&&items.every(i=>i.status!=='UNRESOLVED')?'COMPLETE':'INCOMPLETE',items,coverage:{...coverage,readCount,discoveryReason:typeof discovery?.reason==='string'?discovery.reason:null,complete:coverage.discoveryComplete&&items.every(i=>i.status!=='UNRESOLVED')},financialAdjustmentCents:0,humanApproval:false};
  return {...result,hash:hash(result)};
 }
