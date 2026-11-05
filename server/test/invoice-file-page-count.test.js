@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {fastInvoiceHeaderRequest} from '../../client/src/lib/invoice-fast-header-request.js';
 import {MAX_PAGE_COUNT_BYTES,countInvoicePdfPages,invoiceFileSource,invoiceFileKind,
   sameInvoiceFileSources,invoiceFileCountLabel,invoiceFileCountModel} from '../../client/src/lib/invoice-file-page-count.js';
 const pdf='data:application/pdf;base64,'+Buffer.from('%PDF-1.7\nsynthetic').toString('base64');
@@ -82,6 +83,11 @@ test('FAST uses independent display metadata, keeps source-based transport and n
   assert.doesNotMatch(source,/await\s+countInvoicePdfPages|numPages|countedPdfPages/);
   assert.doesNotMatch(source,/σελίδα έτοιμη|σελίδες έτοιμες|Επιλογή έως 5 σελίδων \/ PDF/);
   assert.match(source,/Επιλογή έως 5 αρχείων \(εικόνες \/ PDF\)/);
-  assert.match(source,/dataUrl:sourcePage.dataUrl/);assert.match(source,/dataUrl:page.originalDataUrl\|\|page.dataUrl/);
+  assert.match(source,/fastInvoiceHeaderRequest\(\{storeId:store\.id,sourcePage\}\)/);
+  const sourcePage={file:{name:'two.pdf',type:'application/pdf'},dataUrl:pdf,originalDataUrl:'data:application/pdf;base64,original'};
+  const unchanged=structuredClone(sourcePage);
+  assert.deepEqual(fastInvoiceHeaderRequest({storeId:'LAB',sourcePage}),{storeId:'LAB',filename:'two.pdf',mimeType:'application/pdf',dataUrl:pdf,pdfHeaderPriority:true});
+  assert.deepEqual(sourcePage,unchanged);
+  assert.match(source,/dataUrl:page.originalDataUrl\|\|page.dataUrl/);
   assert.match(source,/incoming.length>5-pages.length/);assert.match(source,/Η λίστα αρχείων άλλαξε/);
 });
