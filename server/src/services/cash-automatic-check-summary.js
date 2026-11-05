@@ -18,7 +18,8 @@ export function summarizeAutomaticCashCheck(report){
   const cashDifferences=report.rows.filter(r=>safeNumber(r.remainingCents)&&r.remainingCents!==0).length;
   const cardDifferences=report.rows.filter(r=>safeNumber(r.cardCents)&&r.cardCents!==0).length;
   const paperCoverage=paper?.coverage?.complete===true&&paper?.status==='COMPLETE'?'COMPLETE':paper?'INCOMPLETE':'UNAVAILABLE';
-  const paperIssueCode=typeof paper?.coverage?.discoveryReason==='string'?paper.coverage.discoveryReason:null;
+  const actionablePaperReasons=new Set(['ATTACHMENT_BYTE_LIMIT','ATTACHMENT_SIZE_UNAVAILABLE','CHAT_SOURCE_UNAVAILABLE','INVALID_SOURCE_SCOPE','DUPLICATE_MESSAGE_ID']);
+  const paperIssueCode=paperCoverage!=='COMPLETE'&&actionablePaperReasons.has(paper?.coverage?.discoveryReason)?paper.coverage.discoveryReason:null;
   const status=incompleteEvidence||paperCoverage!=='COMPLETE'||ambiguous>0?'HOLD':proposed>0||cashDifferences>0||cardDifferences>0?'REVIEW_REQUIRED':'NO_DIFFERENCES';
   return {
     version:1,status,storeId:report.storeId,period:report.period,reportHash:report.reportHash,
