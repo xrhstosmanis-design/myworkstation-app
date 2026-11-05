@@ -27,10 +27,10 @@ const throwIfWalletError=new Function(`${walletSource.slice(walletStart,walletEn
 const row={code:'SYNTHETIC-1',description:'SYNTHETIC ITEM',quantity:1,unit:'TEM',unitCost:10,initialAmount:10,discount1:0,discount1Amount:0,netAmount:10,exciseTotal:0,vatRate:24,grossAmount:12.4,sourceColumnsVerified:true,quantitySource:'AI_COMPLETE_PRINTED_TABLE_VERIFIED'};
 const complete=()=>({supplier:{name:'SYNTHETIC SUPPLIER',taxId:'099999999'},documentNumber:'SYN-42',documentDate:'2026-11-02',totalGross:12.4,aiConfidence:98,rawText:'',productLines:[]});
 const fallback=()=>({supplierName:'FALLBACK SUPPLIER',supplierTaxId:'088888888',documentNumber:'FB-43',documentDate:'2026-11-01',totalGross:24.8,confidence:90,documentType:'INVOICE'});
-function createHarness({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null,openaiConfigured=true,transport=false,transportResponses=[],transportNow,transportTimeout,mimeType='image/jpeg',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`,timingOptions={},autoFinish=true,onResponse}={}){
+function createHarness({azure=complete(),openai=fallback(),durable=[],operatorStore='store-a',storeExists=true,matched=null,openaiConfigured=true,transport=false,transportResponses=[],transportNow,transportTimeout,fastModel,generalModel,mimeType='image/jpeg',dataUrl=`data:${mimeType};base64,c3ludGhldGlj`,timingOptions={},autoFinish=true,onResponse}={}){
  const calls=[],queries=[],requests=[],timings=[],responses=[];let walletScopes=0;
  const responseTimings=new WeakMap();
- const deps={Buffer,crypto,process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'https://synthetic.invalid',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic',OPENAI_API_KEY:openaiConfigured?'synthetic':''}},console:{warn(){},error(){}},FAST_AZURE_HEADER_TIMEOUT_MS:35000,POS_STORED_LINES_TOLERANCE:0.05,finalizeV244ProductLines,reconcileInvoiceLines,reusableVerifiedPrintedTable,recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable,throwIfWalletError,
+ const deps={Buffer,crypto,process:{env:{AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:'https://synthetic.invalid',AZURE_DOCUMENT_INTELLIGENCE_KEY:'synthetic',OPENAI_API_KEY:openaiConfigured?'synthetic':'',...(fastModel===undefined?{}:{OPENAI_INVOICE_FAST_MODEL:fastModel}),...(generalModel===undefined?{}:{OPENAI_INVOICE_MODEL:generalModel})}},console:{warn(){},error(){}},FAST_AZURE_HEADER_TIMEOUT_MS:35000,POS_STORED_LINES_TOLERANCE:0.05,finalizeV244ProductLines,reconcileInvoiceLines,reusableVerifiedPrintedTable,recoverVatSummaryInvoiceTotal,recoverBalancedInvoicePayable,throwIfWalletError,
   createFastHeaderTiming:res=>createFastHeaderTiming(res,{...timingOptions,emit:event=>{timings.push(event);responseTimings.get(res).push(event);return timingOptions.emit?.(event)}}),
   prisma:{store:{findFirst:async q=>{assert.deepEqual(q,{where:{id:'store-a',companyId:'company-a'},select:{id:true}});return storeExists?{id:'store-a'}:null}},$queryRaw:async(strings,...values)=>{queries.push({sql:strings.join('?'),values});if(durable instanceof Error)throw durable;return durable}},
   walletActivityFromRequest:(req,scope)=>{assert.equal(req.user.companyId,'company-a');assert.deepEqual(scope,{storeId:'store-a',purpose:'PAYMENT_HEADER_READ'});return {purpose:scope.purpose}},
@@ -78,6 +78,48 @@ test('actual FAST PDF fallback sends original PDF data URL through actual Respon
  const file=r.requests[0].body.input[0].content[1];assert.equal(file.type,'input_file');assert.equal(file.filename,'synthetic.pdf');assert.equal(file.file_data,dataUrl);assert.deepEqual(Buffer.from(file.file_data.split(',')[1],'base64'),bytes);assert.equal(r.result.totalGross,24.8);
  assert.equal(r.requests[0].body.text.format.name,'invoice_fast_header');assert.equal(r.requests[0].body.text.format.strict,true);
 });
+test('actual FAST GPT-5 exact models receive low reasoning without changing PDF transport or schema',async()=>{
+  const bytes=readFileSync(path.join(root,'CHECKPOINTS/EVIDENCE/invoice-physical-pages-20261102/fixtures/two-physical-pages.pdf'));
+  const dataUrl=`data:application/pdf;base64,${bytes.toString('base64')}`;
+  for(const model of ['gpt-5','gpt-5-2025-08-07']){
+    const r=await run({transport:true,fastModel:model,generalModel:'gpt-5-mini',mimeType:'application/pdf',dataUrl,azure:{...complete(),azurePageCount:2,productLines:[row]}});
+    assert.ifError(r.error);assert.equal(r.requests.length,1);
+    const body=r.requests[0].body;
+    assert.deepEqual(Object.keys(body).sort(),['input','model','reasoning','text']);
+    assert.equal(body.model,model);assert.deepEqual(body.reasoning,{effort:'low'});
+    assert.deepEqual(body.input,[{role:'user',content:[{type:'input_text',text:body.input[0].content[0].text},{type:'input_file',filename:'synthetic.pdf',file_data:dataUrl}]}]);
+    assert.equal(typeof body.input[0].content[0].text,'string');assert.ok(body.input[0].content[0].text.length>0);
+    assert.equal(body.text.format.name,'invoice_fast_header');assert.equal(body.text.format.strict,true);
+    assert.deepEqual(body.text.format.schema.required,['confidence','documentType','supplierName','supplierTaxId','documentNumber','documentDate','totalGross']);
+  }
+});
+test('actual FAST model resolution changes reasoning only for exact GPT-5 targets',async()=>{
+  const cases=[
+    {fastModel:'gpt-5',generalModel:'gpt-5-mini',expected:'gpt-5',low:true},
+    {fastModel:'',generalModel:'gpt-5-2025-08-07',expected:'gpt-5-2025-08-07',low:true},
+    {fastModel:'gpt-5-mini',generalModel:'gpt-5',expected:'gpt-5-mini',low:false},
+    {fastModel:'',generalModel:'',expected:'gpt-5-mini',low:false},
+    {fastModel:'gpt-5-2025-08-07-preview',generalModel:'gpt-5',expected:'gpt-5-2025-08-07-preview',low:false},
+    {fastModel:'gpt-5.1',generalModel:'gpt-5',expected:'gpt-5.1',low:false},
+    {fastModel:'GPT-5',generalModel:'gpt-5',expected:'GPT-5',low:false}
+  ];
+  for(const option of cases){
+    const r=await run({transport:true,azure:{...complete(),documentNumber:''},...option});
+    assert.ifError(r.error);assert.equal(r.requests.length,1);
+    const body=r.requests[0].body;assert.equal(body.model,option.expected);
+    assert.deepEqual(Object.keys(body).sort(),option.low?['input','model','reasoning','text']:['input','model','text']);
+    if(option.low)assert.deepEqual(body.reasoning,{effort:'low'});
+  }
+});
+test('actual GPT-5 retry preserves identical low-reasoning body and original shared deadline',async()=>{
+  let current=1000;const budgets=[];
+  const first={ok:false,status:503,text:async()=>{current=51000;return 'synthetic provider failure'}};
+  const r=await run({transport:true,fastModel:'gpt-5',azure:{...complete(),documentNumber:''},transportResponses:[first],transportNow:()=>current,transportTimeout:milliseconds=>{budgets.push(milliseconds);return undefined}});
+  assert.ifError(r.error);assert.deepEqual(budgets,[70000,20000]);assert.equal(r.requests.length,2);
+  assert.deepEqual(r.requests[0].body,r.requests[1].body);assert.deepEqual(r.requests[0].body.reasoning,{effort:'low'});
+  assert.deepEqual(stageOutcomes(r.timings.filter(event=>event.stage==='openai_attempt')),[['openai_attempt','error',1],['openai_attempt','ok',2]]);
+});
+
 test('actual FAST image fallback keeps image data URL through actual Responses request body',async()=>{
  const dataUrl='data:image/jpeg;base64,c3ludGhldGlj';const r=await run({transport:true,dataUrl,azure:{...complete(),documentNumber:''}});assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.deepEqual(r.requests[0].body.input[0].content[1],{type:'input_image',image_url:dataUrl,detail:'high'});assert.equal(r.result.totalGross,24.8);
 });

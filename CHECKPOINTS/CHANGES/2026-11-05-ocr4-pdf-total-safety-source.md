@@ -17,3 +17,14 @@ The one-use runner verified the published claim, exact route/test/timing and reg
 The local partial-layout preflight had75/76 PASS; one missing pdfjs-dist dependency prevented the PDF fixture test. The complete runner results above supersede that environment limitation, not the full project CI gate. No tests were skipped or weakened.
 
 Two old behavioral expectations change from unsafe multi-page Azure fallback success to refusal. Complete-checkout run41972933214 then exposed one additional static test still requiring the old unconditional fallback:273/274 passed. Its exact assertion now requires the guarded fallback and both predicate bindings; no test was removed or weakened. The V3 runtime delta is unchanged. No other runtime function or peer source is changed. Independent review is pending; the author review is not independent acceptance. Invoice manual and numbered acceptance status remain unchanged.
+
+## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01 / PR3667 MAIN SYNC / AWAITING FULL CI AND REVIEW
+
+Retained task4 owner /root; fix/ocr4-pdf-total-safety-20261105. Before-source claim3666 remains published. Merged peer3665 main723b167 into this SOURCE BRANCH only. Both the exact-model low-reasoning provider change and PDF amount-return guards are preserved; no new runtime policy, transfer of peer ownership or release is performed.
+
+The sole active-registry merge conflict is resolved by preserving the entire main registry as an exact suffix after the existing2137-byte task4 source prefix. Common history and both owners survive. Node20 complete-checkout focused six-suite result:277PASS/0FAIL/0SKIP; provider/DB/wallet I/O remains simulated. Exact full native CI and independent review remain required.
+
+The previous CI41973921759 attempts failed at the server-test stage. Retrieved diagnostics conflicted with verified source files; no causal test attribution, flaky classification or full-suite count is asserted. No existing test, expected amount, guard or threshold was weakened. Fresh exact-head normal CI must determine release eligibility.
+
+No production deployment, paid provider read, invoice submission/payment, stock or fiscal operation. H/G and H21.959s are protected; F/D/G/H and reserved I are not replayed. General supplier/pages/packages/discount/VAT/EFK completeness and latency remain OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md. Next: exact full CI and read-only independent review, then guarded release and a separately identified fresh no-submit LAB read.
+

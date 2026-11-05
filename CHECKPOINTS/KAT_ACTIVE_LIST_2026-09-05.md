@@ -1,3 +1,13 @@
+## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01 / PR3667 MAIN SYNC / AWAITING FULL CI AND REVIEW
+
+Retained task4 owner /root; fix/ocr4-pdf-total-safety-20261105. Before-source claim3666 remains published. Merged peer3665 main723b167 into this SOURCE BRANCH only. Both the exact-model low-reasoning provider change and PDF amount-return guards are preserved; no new runtime policy, transfer of peer ownership or release is performed.
+
+The sole active-registry merge conflict is resolved by preserving the entire main registry as an exact suffix after the existing2137-byte task4 source prefix. Common history and both owners survive. Node20 complete-checkout focused six-suite result:277PASS/0FAIL/0SKIP; provider/DB/wallet I/O remains simulated. Exact full native CI and independent review remain required.
+
+The previous CI41973921759 attempts failed at the server-test stage. Retrieved diagnostics conflicted with verified source files; no causal test attribution, flaky classification or full-suite count is asserted. No existing test, expected amount, guard or threshold was weakened. Fresh exact-head normal CI must determine release eligibility.
+
+No production deployment, paid provider read, invoice submission/payment, stock or fiscal operation. H/G and H21.959s are protected; F/D/G/H and reserved I are not replayed. General supplier/pages/packages/discount/VAT/EFK completeness and latency remain OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md. Next: exact full CI and read-only independent review, then guarded release and a separately identified fresh no-submit LAB read.
+
 ## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01 / SOURCE CANDIDATE / AWAITING FULL CI AND LAB
 
 Retained invoice/task4 owner /root; branch fix/ocr4-pdf-total-safety-20261105. Before-source claim3666 passed documentation CI41972028360 and merged f0d45edfd0628557f7a1a545355faa928d631240 BEFORE source integration. The exact V3 candidate3654 is applied to the complete checkout. No ownership transfer or low-reasoning change; peer3665 stays separate.
@@ -9,6 +19,14 @@ Complete-checkout v20.20.2: original header/timing/handoff tests 108 PASS/0FAIL/
 Protect H/G and H21.959s baseline. Never replay F/D/G/H, latency-reserved I, paid or CREDIT originals. No real provider request/charge, payment, draft submission, posting, stock/fiscal operation, production configuration or deployment. Preserve all prior registry bytes and peers. General supplier/pages/packages/discount/VAT/EFK and latency remain OPEN; no manual/PASS closure.
 
 Next: source PR review and exact full Node20/native PR/main CI before ordinary guarded release; then one separately identified fresh synthetic no-submit LAB read with before/after/control. Checkpoint CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md; results CHECKPOINTS/EVIDENCE/ocr4-pdf-total-safety-source-20261105/results.json. Owner retained until recorded completion or named handoff.
+
+## 05/11/2026 — INVOICE-HEADER-LATENCY / PR #3665 SOURCE / RETAINED TASK 2 OWNER
+
+Continuation of retained /root, fix/invoice-fast-low-reasoning-20261105; before-source claim #3664 is on main. Source adds reasoning low only for exact gpt-5 and gpt-5-2025-08-07 in callFastOpenAiHeader; transport regression tests protect model precedence, excluded models, PDF/schema and retry budget. Configured models, provider order, deadlines, wallet, business writers and all peer assignments remain unchanged.
+
+At 997c109, CI 41969689976 passed classify-changes, Windows checks and wholesale-isolated-lab; build-and-test failed only at the missing active-list update. This continuation applies that update through ordinary Git and preserves the complete previous registry byte-for-byte as a suffix. Native source tests and full new-head CI remain pending; no latency improvement or LAB PASS is asserted. H 21.959s baseline and accepted G/H fields stay protected. I remains unused. No payment, submitted invoice, paid provider call, merge, deployment or production mutation.
+
+Checkpoint: CHECKPOINTS/CHANGES/2026-11-05-invoice-fast-low-reasoning-source.md. Next: exact full green PR CI and independent review before any guarded integration/release; only then fresh I with no submission and measured before/after/control. Parent latency and broader OCR remain OPEN.
 
 ## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01 / OCR4 / BEFORE-SOURCE CLAIM / OPEN
 
