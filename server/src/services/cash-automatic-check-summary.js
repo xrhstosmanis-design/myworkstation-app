@@ -13,12 +13,13 @@ export function summarizeAutomaticCashCheck(report){
   const cashDifferences=report.rows.filter(r=>safeNumber(r.remainingCents)&&r.remainingCents!==0).length;
   const cardDifferences=report.rows.filter(r=>safeNumber(r.cardCents)&&r.cardCents!==0).length;
   const paperCoverage=paper?.coverage?.discoveryComplete===true?'COMPLETE':paper?'INCOMPLETE':'UNAVAILABLE';
+  const paperIssueCode=typeof paper?.coverage?.discoveryReason==='string'?paper.coverage.discoveryReason:null;
   const status=incompleteEvidence||paperCoverage!=='COMPLETE'||ambiguous>0?'HOLD':proposed>0||cashDifferences>0||cardDifferences>0?'REVIEW_REQUIRED':'NO_DIFFERENCES';
   return {
     version:1,status,storeId:report.storeId,period:report.period,reportHash:report.reportHash,
     checkedShifts:report.rows.length,pendingShifts:pending,cashDifferenceShifts:cashDifferences,
     cardDifferenceShifts:cardDifferences,countingCandidates:proposed,ambiguousPairs:ambiguous,
-    paperCoverage,unresolvedPapers,
+    paperCoverage,paperIssueCode,unresolvedPapers,
     financialAdjustmentCents:0,humanApproval:false,
     note:'Αυτόματη ένδειξη μόνο — χωρίς συμψηφισμό, καταλογισμό ή οριστική οικονομική αποδοχή.'
   };
