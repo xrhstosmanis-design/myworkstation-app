@@ -18,11 +18,19 @@
     "pdf-priority-before.tap": "dc03dd6b244a758dce37db27f74ef23011ce0475107637f38c79c6bca1337aef",
     "pdf-priority-extra-before.tap": "cc89e3f49000bca5ab32d832eb600abbade16304a3e386e92e5fe142ee5d881b",
     "pdf-priority-regression-final.tap": "31004118e71a2f3d1fa01faba86ef4d1a6473d1af9fa7d953d42d037e5bd37b6",
-    "pdf-priority-build.log": "786561a392a72fbe7f65245d18195dcb0b315556fb6a1453e7cbe755b674ebc5"
+    "pdf-priority-build.log": "786561a392a72fbe7f65245d18195dcb0b315556fb6a1453e7cbe755b674ebc5",
+    "pdf-priority-mounted-preview.tap": "6f7cc7a25a8a875185acbe35adcbc8bd747a72b861e1b3d042d793b527d305b6"
   },
   "notes": [
     "Initial obsolete static legacy-order/eligibility assertions retargeted to stronger priority guard; dynamic legacy behavior preserved.",
     "Test PDF fake-worker version conflict isolated in child process using actual existing server parser; production parser unchanged.",
-    "No provider read/new LAB consumption yet."
-  ]
+    "No provider read/new LAB consumption yet.",
+    "First full source CI found document-page-preview test importer stubbing the new helper. Allow real helper and assert unchanged original JPEG request/store/no PDF flag; mounted scanner regression passes locally. Runtime source unchanged. Chrome startup Target.createTarget timeout in separate job also observed; initial run not accepted."
+  ],
+  "mountedPreview": {
+    "pass": 2,
+    "fail": 0,
+    "skip": 1,
+    "skipReason": "No local Chromium; mandatory real Chromium remains in full CI"
+  }
 }
