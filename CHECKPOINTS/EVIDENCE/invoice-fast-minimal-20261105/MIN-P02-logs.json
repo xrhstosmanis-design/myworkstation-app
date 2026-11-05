@@ -1,0 +1,421 @@
+{
+  "hasMore": false,
+  "logs": [
+    {
+      "id": "6f327881-054d-43c1-a6e2-7c87e8aa4d0f",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"exact_file_lookup\",\"outcome\":\"ok\",\"elapsedMs\":4.361}",
+      "timestamp": "2026-11-05T14:02:30.456173102Z"
+    },
+    {
+      "id": "9e83de36-e9e9-4d97-a27e-ffa43ed3d1b0",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_submit\",\"outcome\":\"ok\",\"elapsedMs\":727.519}",
+      "timestamp": "2026-11-05T14:02:31.186136281Z"
+    },
+    {
+      "id": "71bec0cf-b841-4811-aa06-41baa81c5dd0",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":700.028,\"poll\":1}",
+      "timestamp": "2026-11-05T14:02:31.886409181Z"
+    },
+    {
+      "id": "c0334b95-8b08-46ea-a2d6-772d2b516844",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":161.919,\"poll\":1}",
+      "timestamp": "2026-11-05T14:02:32.048476203Z"
+    },
+    {
+      "id": "d70cfa75-23aa-436b-a099-481037e7311b",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":700.241,\"poll\":2}",
+      "timestamp": "2026-11-05T14:02:32.748872096Z"
+    },
+    {
+      "id": "de26d9b1-439c-4f4b-bdb5-66797949e70e",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":171.089,\"poll\":2}",
+      "timestamp": "2026-11-05T14:02:32.920376171Z"
+    },
+    {
+      "id": "5ded1f88-7df4-45c1-8aa0-c2126e4ad834",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":1200.097,\"poll\":3}",
+      "timestamp": "2026-11-05T14:02:34.120606811Z"
+    },
+    {
+      "id": "745f6736-f03e-41ed-a6e1-f7fdfbb8c206",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":153.702,\"poll\":3}",
+      "timestamp": "2026-11-05T14:02:34.274360582Z"
+    },
+    {
+      "id": "8d6173c2-fde9-414f-aef9-182e838d67ed",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":1199.455,\"poll\":4}",
+      "timestamp": "2026-11-05T14:02:35.473856022Z"
+    },
+    {
+      "id": "58a0716a-79aa-414a-b0d0-dbe22871f465",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":159.827,\"poll\":4}",
+      "timestamp": "2026-11-05T14:02:35.633843206Z"
+    },
+    {
+      "id": "8074e1aa-ca00-4d11-8e55-6985058251bd",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_poll_wait\",\"outcome\":\"ok\",\"elapsedMs\":1199.977,\"poll\":5}",
+      "timestamp": "2026-11-05T14:02:36.835356522Z"
+    },
+    {
+      "id": "5518e62d-3189-418b-8f2c-d56565a412ee",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_poll_request\",\"outcome\":\"ok\",\"elapsedMs\":310.446,\"poll\":5}",
+      "timestamp": "2026-11-05T14:02:37.144525199Z"
+    },
+    {
+      "id": "ba8fe261-811f-4f3b-b6ea-ef99eeb01148",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_header\",\"outcome\":\"ok\",\"elapsedMs\":6688.361}",
+      "timestamp": "2026-11-05T14:02:37.144550849Z"
+    },
+    {
+      "id": "ab5dc8dc-91e6-41a4-bd99-cb7bf0c436cd",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"azure_supplier_match\",\"outcome\":\"ok\",\"elapsedMs\":2.735}",
+      "timestamp": "2026-11-05T14:02:37.149167728Z"
+    },
+    {
+      "id": "e7de26cb-8249-420f-b4bb-db88b06d01d8",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"openai_attempt\",\"outcome\":\"ok\",\"elapsedMs\":3067.761,\"attempt\":1}",
+      "timestamp": "2026-11-05T14:02:40.220624675Z"
+    },
+    {
+      "id": "03ee445b-04a9-4873-ae88-90486f1f2526",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"openai_header\",\"outcome\":\"ok\",\"elapsedMs\":3067.921}",
+      "timestamp": "2026-11-05T14:02:40.220652416Z"
+    },
+    {
+      "id": "3638f436-6b60-4f4f-915d-d57de3545979",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"openai_supplier_match\",\"outcome\":\"ok\",\"elapsedMs\":1.792}",
+      "timestamp": "2026-11-05T14:02:40.222466577Z"
+    },
+    {
+      "id": "80398f38-924f-4f84-a3de-3bf60b12c695",
+      "labels": [
+        {
+          "name": "resource",
+          "value": "srv-d9isenfavr4c73bdh52g"
+        },
+        {
+          "name": "instance",
+          "value": "srv-d9isenfavr4c73bdh52g-99v7p"
+        },
+        {
+          "name": "level",
+          "value": "info"
+        },
+        {
+          "name": "type",
+          "value": "app"
+        }
+      ],
+      "message": "POS_FAST_HEADER_TIMING {\"correlationId\":\"86df06b6-7265-4df7-935c-06703f063125\",\"stage\":\"request_total\",\"outcome\":\"finished\",\"elapsedMs\":9773.883}",
+      "timestamp": "2026-11-05T14:02:40.223160756Z"
+    }
+  ],
+  "nextEndTime": "2026-11-05T14:02:45Z",
+  "nextStartTime": "2026-11-05T14:02:40.223160757Z"
+}

@@ -10,7 +10,8 @@
       "documentDate": "2026-11-05",
       "totalGross": 24.8
     },
-    "status": "PREPARED_NOT_UPLOADED"
+    "status": "CONSUMED_ONCE_NO_REPLAY",
+    "consumedAt": "2026-11-05T13:58:18.269Z"
   },
   {
     "trial": "MIN-P02",
@@ -23,7 +24,8 @@
       "documentDate": "2026-11-05",
       "totalGross": 49.6
     },
-    "status": "PREPARED_NOT_UPLOADED"
+    "status": "CONSUMED_ONCE_NO_REPLAY",
+    "consumedAt": "2026-11-05T14:02:30.309Z"
   },
   {
     "trial": "MIN-P03",
@@ -36,6 +38,7 @@
       "documentDate": "2026-11-05",
       "totalGross": 74.4
     },
-    "status": "PREPARED_NOT_UPLOADED"
+    "status": "CONSUMED_ONCE_NO_REPLAY",
+    "consumedAt": "2026-11-05T14:04:49.387Z"
   }
 ]

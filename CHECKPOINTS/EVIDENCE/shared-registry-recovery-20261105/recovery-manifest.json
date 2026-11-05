@@ -1,0 +1,60 @@
+{
+  "purpose": "Protect current main's canonical historical registries during Task3 source integration, without modifying live financial data",
+  "date": "2026-11-05",
+  "task3Head": "7c8476ace42206cd3a16b0c28aafeb508b57bc2c",
+  "latestPeerMain": "c09981151631b5c35bb92649c667eed3dfccae40",
+  "earlierHealthyMain": "152589093b756e58248428232721c866f072d782",
+  "earlierTask3ReconciledMain": "69c9a14f3ec00ad044e4fa1d7d08aa4894248836",
+  "currentMainTruncation": {
+    "sharedBlobSha": "abe93f20bd41be1628b20ff9ed41848061eab111",
+    "bytesPerRegistry": 1745,
+    "records": "Acharnon source PR #3682",
+    "exactOriginalArchivedAt": "CHECKPOINTS/EVIDENCE/shared-registry-recovery-20261105/acharnon-source-claim-from-truncated-main.md"
+  },
+  "recoveredTask3LongRegistryBlobs": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "sha": "4897bb23de19a245c6bca21d9d3d8336913685b2",
+      "bytes": 5277305
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "sha": "bce6b6bb6e08c38afab7cbc4471cf7af484fc636",
+      "bytes": 4101379
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "sha": "b5d89c580e8e3c6c728ca9e68aca06bdf7e91fb0",
+      "bytes": 3629132
+    }
+  ],
+  "recentPeerHealthyRegistryBlobs": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "sha": "62c52542c97200c015d61ad832f71dd298f27576",
+      "bytes": 5271752
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "sha": "e5210447145f846b1e274565ed344dbbaf9412d7",
+      "bytes": 4095826
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "sha": "f027e8800f22da127990b3fb7dc5edeebb6b9e4a",
+      "bytes": 3623579
+    }
+  ],
+  "recoveryLimit": "Restoring full Task3-plus-earlier-main registries; later healthy peer addendum remains in original Git history and invoice manual/checkpoint, and exact Acharnon-only blob is archived here. Latest healthy peer addendum is NOT YET concatenated into canonical registry text.",
+  "sourceFilesUnchangedFromIndependentlyReviewedTask3": {
+    "client/src/components/cloud/StoreCloudPage.jsx": "6bc73caf1f41642fd8485f35f7256d5c1c5fd85e",
+    "client/src/components/cloud/StoreInvoiceEntry.jsx": "1a1c536cae5ec5e85d8e09620e71de12419cb855",
+    "client/src/components/commerce/CommerceHub.jsx": "72c1d7757fdfcbefdea09d423c6038ee59b40857",
+    "client/src/components/commerce/CommerceLauncher.jsx": "789e26ed3936061c40e303361c0da6d13205ad1e",
+    "server/test/store-invoice-entry-mounted.test.mjs": "eb5428d8ca5fd40b5b191556288036faccfccdd6"
+  },
+  "needsNewCombinedHeadCI": true,
+  "needsNewIndependentReview": true,
+  "hostedAcceptance": "NOT EXECUTED",
+  "businessWrites": false
+}
