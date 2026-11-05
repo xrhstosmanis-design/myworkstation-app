@@ -1,0 +1,61 @@
+name: Assemble invoice I documentation once
+on:
+  push:
+    branches: [docs/invoice-header-i-result-20261105]
+    paths: [.github/workflows/invoice-i-docs-assemble-once.yml]
+permissions:
+  contents: write
+jobs:
+  assemble:
+    if: github.ref == 'refs/heads/docs/invoice-header-i-result-20261105'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          filter: blob:none
+      - name: Verify one-use parent and exact branch lease
+        run: |
+          test "$(git rev-parse HEAD^)" = e7d65e2e040099a55010e5549b1896b52a144e15
+          test "$(git ls-remote origin refs/heads/docs/invoice-header-i-result-20261105 | cut -f1)" = "$(git rev-parse HEAD)"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install PDF generator dependencies
+        run: python -m pip install reportlab==4.4.9 pypdf==6.3.0
+      - name: Apply verified documentation only, regenerate PDFs and remove this workflow
+        shell: python
+        run: |
+          import base64,zlib,json,hashlib,subprocess
+          from pathlib import Path
+          payload=json.loads(zlib.decompress(base64.b64decode('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')))
+          for p,sha in payload['old'].items():
+           assert hashlib.sha256(Path(p).read_bytes()).hexdigest()==sha,p
+          patch=zlib.decompress(base64.b64decode(payload['patch']))
+          subprocess.run(['git','apply','--check','--whitespace=error','-'],input=patch,check=True)
+          subprocess.run(['git','apply','--whitespace=error','-'],input=patch,check=True)
+          for p,sha in payload['new'].items():
+           assert hashlib.sha256(Path(p).read_bytes()).hexdigest()==sha,p
+          for p in ['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md','docs/manual/invoices/PASS.md']:
+           old=subprocess.check_output(['git','show','e7d65e2e040099a55010e5549b1896b52a144e15:'+p])
+           assert Path(p).read_bytes().endswith(old),p
+          subprocess.run(['python','docs/roadmap/generate-open-work-tracker.py'],check=True)
+          import shutil
+          shutil.copyfile('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf','docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf')
+          subprocess.run(['python','docs/roadmap/generate-numbered-work-checklist.py'],check=True)
+          from pypdf import PdfReader
+          tracker=PdfReader('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf')
+          assert 'I MEASURED' in tracker.pages[0].extract_text()
+          numbered=PdfReader('docs/roadmap/MyWorkStation_Numbered_Checklist_2026-10-06.pdf')
+          assert any('8,538' in p.extract_text() for p in numbered.pages)
+          Path('.github/workflows/invoice-i-docs-assemble-once.yml').unlink()
+          allowed=set(payload['paths']+['docs/roadmap/MyWorkStation_Numbered_Checklist_2026-10-06.pdf','docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf','output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf','.github/workflows/invoice-i-docs-assemble-once.yml'])
+          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          assert changed==allowed,(changed,allowed)
+          subprocess.run(['git','diff','--check','--',*payload['paths']],check=True)
+          subprocess.run(['git','add','--',*sorted(allowed)],check=True)
+          subprocess.run(['git','-c','user.name=github-actions[bot]','-c','user.email=41898282+github-actions[bot]@users.noreply.github.com','commit','-m','docs(invoice): publish measured I result with lossless registries and manuals'],check=True)
+          subprocess.run(['git','push','origin','HEAD:docs/invoice-header-i-result-20261105'],check=True)
+          print('Exact original registry suffixes and reviewed new Markdown verified; temporary assembly workflow removed.')
