@@ -1,0 +1,57 @@
+name: OCR4 PDF worker compatibility verified retry (isolated)
+on:
+  push:
+    branches: [build/ocr4-page-bundler-compat-20261105]
+    paths: [.github/workflows/ocr4-page-bundler-retry-once.yml]
+permissions:
+  contents: write
+concurrency:
+  group: ocr4-page-bundler-compat-20261105
+  cancel-in-progress: false
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE: d6046198273018a2f14b1a65890ef6b2a3c7345d
+      TARGET: fix/ocr4-physical-page-display-20261105
+      OUT: /tmp/ocr4-page-bundler-compat
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: d6046198273018a2f14b1a65890ef6b2a3c7345d
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run exact pinned recipe with expected-failure shell handling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install PyYAML==6.0.2
+          git fetch --no-tags --depth=1 origin 29ec90a859c0a091f5186e3c116c59159eec4a11
+          python3 - <<'PY'
+          import subprocess,yaml
+          raw=subprocess.check_output(['git','show','29ec90a859c0a091f5186e3c116c59159eec4a11:.github/workflows/ocr4-page-bundler-compat-once.yml'],text=True)
+          steps=yaml.safe_load(raw)['jobs']['compatibility']['steps']
+          failed=False
+          try:
+            for step in steps:
+              if 'run' not in step or step.get('if')=='always()':continue
+              command=step['run']
+              if step['name']=='Reproduce the three exact existing bundler failures':
+                assert command.count('set -uo pipefail')==1
+                command=command.replace('set -uo pipefail','set +e\nset -uo pipefail')
+              print('RUN '+step['name'],flush=True)
+              subprocess.run(['bash','--noprofile','--norc','-eo','pipefail','-c',command],check=True)
+          finally:
+            for step in steps:
+              if 'run' in step and step.get('if')=='always()':subprocess.run(['bash','--noprofile','--norc','-eo','pipefail','-c',step['run']],check=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocr4-page-bundler-compatibility-proof
+          path: /tmp/ocr4-page-bundler-compat
+          if-no-files-found: error
+          retention-days: 7
