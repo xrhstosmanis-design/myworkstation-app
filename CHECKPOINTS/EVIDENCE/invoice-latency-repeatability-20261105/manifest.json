@@ -14,7 +14,9 @@
         "totalGross": 24.8
       },
       "physicalPages": 2,
-      "status": "PREPARED_NOT_UPLOADED"
+      "status": "CONSUMED_HEADER_ONLY_NO_SUBMISSION",
+      "beforeEvidence": "R01-before.json",
+      "resultEvidence": "R01-result.json"
     },
     {
       "trial": "R02",
@@ -27,7 +29,9 @@
         "totalGross": 24.8
       },
       "physicalPages": 2,
-      "status": "PREPARED_NOT_UPLOADED"
+      "status": "CONSUMED_HEADER_ONLY_NO_SUBMISSION",
+      "beforeEvidence": "R02-before.json",
+      "resultEvidence": "R02-result.json"
     },
     {
       "trial": "R03",
@@ -40,7 +44,9 @@
         "totalGross": 24.8
       },
       "physicalPages": 2,
-      "status": "PREPARED_NOT_UPLOADED"
+      "status": "CONSUMED_HEADER_ONLY_NO_SUBMISSION",
+      "beforeEvidence": "R03-before.json",
+      "resultEvidence": "R03-result.json"
     },
     {
       "trial": "R04",
@@ -53,7 +59,9 @@
         "totalGross": 24.8
       },
       "physicalPages": 2,
-      "status": "PREPARED_NOT_UPLOADED"
+      "status": "CONSUMED_HEADER_ONLY_NO_SUBMISSION",
+      "beforeEvidence": "R04-before.json",
+      "resultEvidence": "R04-result.json"
     },
     {
       "trial": "R05",
@@ -66,7 +74,9 @@
         "totalGross": 24.8
       },
       "physicalPages": 2,
-      "status": "PREPARED_NOT_UPLOADED"
+      "status": "CONSUMED_HEADER_ONLY_NO_SUBMISSION",
+      "beforeEvidence": "R05-before.json",
+      "resultEvidence": "R05-result.json"
     }
   ]
 }

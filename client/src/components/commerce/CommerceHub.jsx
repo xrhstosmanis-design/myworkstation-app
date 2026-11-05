@@ -23,8 +23,11 @@ const number=value=>Number(value||0);
 
 function readActive(){try{return JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{return []}}
 
-export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",initialActiveModules}){
-  const [activeModules,setActiveModules]=useState(()=>Array.isArray(initialActiveModules)?initialActiveModules:readActive());
+export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",verifiedActiveModules}){
+  const [cachedActiveModules,setActiveModules]=useState(readActive);
+  // The selected-store entry owns fresh module checks. Events/catalog reads
+  // must not replace that verified scope or remount an in-progress inbox.
+  const activeModules=Array.isArray(verifiedActiveModules)?verifiedActiveModules:cachedActiveModules;
   const [catalog,setCatalog]=useState([]);
   const [tab,setTab]=useState(()=>initialTab==="documents"?"documents":"modules");
   const [storeId,setStoreId]=useState(stores[0]?.id||"");

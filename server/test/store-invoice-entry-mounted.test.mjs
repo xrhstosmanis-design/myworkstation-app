@@ -24,14 +24,14 @@ test("selected-store direct invoice entry retains native view and boundaries",as
   window.setInterval=interval;window.clearInterval=clear;
   const React=await import("react"),{act}=React,{createRoot}=await import("react-dom/client"),root=createRoot(document.getElementById("root"));
   const stores=[{id:"A",name:"Store A",active:true},{id:"B",name:"Store B",active:true}];
-  const calls=[];let rows=stores,modules=["DOCUMENTS"],responses=[],denied=null,boundary,stopWatch=()=>{};
+  const calls=[];let rows=stores,modules=["DOCUMENTS"],responses=[],licenseResponses=[],denied=null,boundary,stopWatch=()=>{};
   const token=session=>`fixture.${Buffer.from(JSON.stringify({id:"owner",companyId:"company",sessionId:session,tokenType:"BACKOFFICE_USER",role:"OWNER"})).toString("base64url")}.fixture`;
   const raw=async(url,options={})=>{
     calls.push({url,method:options.method||"GET"});
     assert.equal(options.method||"GET","GET","opening/refreshing must not write");
     assert.ok(url.startsWith("/api/"),"no outbound provider request");
     if(url==="/api/stores"){if(denied)throw Object.assign(new Error("Fixture denied"),{status:denied});return responses.length?await responses.shift():rows;}
-    if(url==="/api/license/current")return {activeModules:modules,modules:[]};
+    if(url==="/api/license/current")return licenseResponses.length?await licenseResponses.shift():{activeModules:modules,modules:[]};
     if(url.includes("/documents/inbox/archive?"))return {items:[],total:0,archiveTotal:0,suppliers:[]};
     if(url.includes("/documents/mydata/status?"))return {enabled:true,labLocked:true,serverAutomatic:true};
     if(url.includes("/overview?"))return {devices:[],recent:[],summary:{}};
@@ -39,7 +39,7 @@ test("selected-store direct invoice entry retains native view and boundaries",as
   };
   const render=async(storeId="B",extra={})=>act(async()=>root.render(React.createElement(mod.exports.default,{api:boundary.request,store:{id:storeId,name:`Store ${storeId}`},onBack:()=>{},...extra})));
   const reset=async()=>{
-    stopWatch();await act(async()=>root.render(null));rows=stores;modules=["DOCUMENTS"];responses=[];denied=null;
+    stopWatch();await act(async()=>root.render(null));rows=stores;modules=["DOCUMENTS"];responses=[];licenseResponses=[];denied=null;
     localStorage.clear();localStorage.setItem("token",token("session-A"));localStorage.setItem("user",JSON.stringify({id:"owner",companyId:"company",role:"OWNER"}));localStorage.setItem("activeModules",JSON.stringify(["DOCUMENTS"]));
     const next=createBackofficeSessionBoundary({readContext:()=>readBackofficeContext(localStorage),request:raw,isCurrent:()=>boundary===next,onInvalidated:()=>root.render(React.createElement("p",{"data-session-blocked":"true"},"Session stopped"))});boundary=next;stopWatch=watchBackofficeContext(boundary,window,document);
   };
@@ -49,7 +49,7 @@ test("selected-store direct invoice entry retains native view and boundaries",as
   const close=()=>click("Κλείσιμο θυρίδας τιμολογίων");
   const settle=()=>act(async()=>new Promise(resolve=>setTimeout(resolve,280)));
   const inbox=()=>document.querySelector(".invoice-inbox-head");
-  const emit=event=>act(async()=>window.dispatchEvent(new CustomEvent(event)));
+  const emit=(event,detail)=>act(async()=>window.dispatchEvent(new CustomEvent(event,{detail})));
   try{
     await t.test("one direct click opens the actual inbox for B, never the first available A",async()=>{
       await reset();await render();const start=calls.length;await open();await settle();assert.ok(inbox());
@@ -64,6 +64,36 @@ test("selected-store direct invoice entry retains native view and boundaries",as
       await open();await settle();const first=inbox(),count=calls.length;await open();assert.equal(inbox(),first);assert.equal(calls.length,count);
       await emit("focus");assert.equal(inbox(),first);assert.equal(document.querySelector('[data-fixture="OwnerPaymentQuickActions.jsx"]'),draft);assert.equal(draft.value,"unsent input");
       await close();assert.equal(inbox(),null);assert.equal(document.querySelector('[data-fixture="OwnerPaymentQuickActions.jsx"]'),draft);
+    });
+    await t.test("fresh entry modules ignore stale module events without remounting working state",async()=>{
+      await reset();await render();await click("Πληρωμές Ιδιοκτήτη / Διαχειριστή");
+      const draft=document.querySelector('[data-fixture="OwnerPaymentQuickActions.jsx"]');draft.value="preserved draft";
+      await open();await settle();await click("Παλιά τιμολόγια");const first=inbox();assert.ok(first);
+      localStorage.setItem("activeModules","[]");
+      for(const detail of [{activeModules:[]},undefined]){
+        const before=calls.filter(c=>c.url==="/api/license/current").length;
+        await emit("myworkstation:modules-updated",detail);await emit("focus");
+        assert.ok(calls.filter(c=>c.url==="/api/license/current").length>=before+2);
+        assert.equal(inbox(),first,"fresh server permission must preserve the mounted inbox");
+        assert.equal(document.querySelector('[aria-label="Προβολή τιμολογίων"] button[aria-pressed="true"]').textContent,"Παλιά τιμολόγια");
+        assert.equal(document.querySelector('[data-fixture="OwnerPaymentQuickActions.jsx"]'),draft);assert.equal(draft.value,"preserved draft");
+      }
+    });
+    await t.test("late catalog response cannot overwrite freshly verified entry modules",async()=>{
+      await reset();await render();let release;
+      licenseResponses=[{activeModules:["DOCUMENTS"],modules:[]},new Promise(r=>{release=r})];
+      await open();await settle();const first=inbox();assert.ok(first);await click("Παλιά τιμολόγια");
+      await emit("focus");await act(async()=>release({activeModules:[],modules:[]}));
+      assert.equal(inbox(),first,"older catalog data must not overwrite the entry's newer verification");
+      assert.equal(document.querySelector('[aria-label="Προβολή τιμολογίων"] button[aria-pressed="true"]').textContent,"Παλιά τιμολόγια");
+    });
+    await t.test("stale granting events cannot restore a freshly revoked entry",async()=>{
+      await reset();await render();await open();await settle();assert.ok(inbox());modules=[];
+      await emit("myworkstation:modules-updated",{activeModules:["DOCUMENTS"]});
+      assert.equal(inbox(),null);const count=calls.length;
+      await emit("myworkstation:modules-updated",{activeModules:["DOCUMENTS"]});await emit("focus");await settle();
+      assert.equal(inbox(),null);assert.ok(document.querySelector('[aria-label="Θυρίδα επιλεγμένου καταστήματος"] [role="alert"]'));
+      assert.ok(!calls.slice(count).some(c=>c.url.includes("/documents/")));
     });
     await t.test("missing, foreign, inactive and ambiguous stores fail closed without invoice reads",async()=>{
       for(const kind of ["missing","foreign","inactive","ambiguous"]){
