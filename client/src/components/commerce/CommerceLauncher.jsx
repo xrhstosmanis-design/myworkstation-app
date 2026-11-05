@@ -130,7 +130,7 @@ export default function CommerceLauncher(){
     if(visibleRef.current&&!operations&&!explicitStoreChange)return;
     // Set it synchronously as events can be emitted twice before React commits
     // the visible state. A second open must not reset the workspace.
-    if(!window.dispatchEvent(new CustomEvent("mws:commerce-entry-request",{cancelable:true})))return;
+    if(!window.dispatchEvent(new window.CustomEvent("mws:commerce-entry-request",{cancelable:true})))return;
     visibleRef.current=true;refreshWholesaleAccess();
     const requestId=++openRequestRef.current;
     setMode(operations?"legacy":"products");setLegacyView("operations");setVisible(true);setMinimized(false);setMaximized(true);setParametersOpen(false);

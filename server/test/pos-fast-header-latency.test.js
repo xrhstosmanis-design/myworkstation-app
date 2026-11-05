@@ -237,18 +237,20 @@ test('actual two-page PDF text cannot promote a page subtotal through header-onl
  assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.queries.length,1);assert.equal(r.result.totalGross,24.8);assert.equal(r.result.documentNumber,'FB-43');assert.deepEqual(r.result.productLines.map(line=>line.code),['LAB-A','LAB-B']);
 });
 
-const timingStages=new Set(['request_total','exact_file_lookup','azure_header','azure_supplier_match','openai_header','openai_attempt','openai_supplier_match']);
+const timingStages=new Set(['request_total','exact_file_lookup','azure_header','azure_submit','azure_poll_wait','azure_poll_request','azure_supplier_match','openai_header','openai_attempt','openai_supplier_match']);
 function assertSanitizedTimings(events){
  assert.ok(events.length,'actual handler must emit diagnostics');
  for(const event of events){
   const expected=['correlationId','elapsedMs','outcome','stage'];
   if(event.stage==='openai_attempt')expected.push('attempt');
+  if(event.stage==='azure_poll_wait'||event.stage==='azure_poll_request')expected.push('poll');
   assert.deepEqual(Object.keys(event).sort(),expected.sort(),'only the fixed diagnostic schema is logged');
   assert.match(event.correlationId,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,'correlation is a new random UUID, never an invoice/request ID');
   assert.ok(timingStages.has(event.stage));
   assert.ok((event.stage==='request_total'?['finished','closed']:['ok','error']).includes(event.outcome));
   assert.equal(typeof event.elapsedMs,'number');assert.ok(Number.isFinite(event.elapsedMs)&&event.elapsedMs>=0);
   if(event.stage==='openai_attempt')assert.ok([1,2].includes(event.attempt));
+  if(event.stage==='azure_poll_wait'||event.stage==='azure_poll_request')assert.ok(Number.isInteger(event.poll)&&event.poll>=1&&event.poll<=30);
  }
  assert.equal(new Set(events.map(event=>event.correlationId)).size,1,'one correlation per request');
  assert.doesNotMatch(JSON.stringify(events),/SYNTHETIC|synthetic|company-a|store-a|supplier-a|SYN-42|FB-43|099999999|088888888|secret|data:|base64|filename|taxId|totalGross|documentNumber|Authorization/i);
@@ -370,7 +372,8 @@ test('actual response close during Azure work records one interrupted total and 
 test('two concurrent calls to the same actual FAST handler retain independent random correlations and elapsed times',async()=>{
  const firstEntered=deferred(),secondEntered=deferred(),releaseFirst=deferred(),releaseSecond=deferred();let current=1000;
  const firstData='data:image/jpeg;base64,Zmlyc3Q=',secondData='data:image/jpeg;base64,c2Vjb25k';
- const harness=createHarness({timingOptions:{now:()=>current},azure:async({contentData})=>{
+ const harness=createHarness({timingOptions:{now:()=>current},azure:async({contentData,timing})=>{
+  timing.start('azure_submit')('ok');
   if(contentData===firstData){firstEntered.resolve();await releaseFirst.promise;return {...complete(),documentNumber:'FIRST-1'}}
   assert.equal(contentData,secondData);secondEntered.resolve();await releaseSecond.promise;return {...complete(),documentNumber:'SECOND-2'};
  }});
@@ -388,4 +391,18 @@ test('two concurrent calls to the same actual FAST handler retain independent ra
  assert.equal(a.timings.find(event=>event.stage==='azure_header').elapsedMs,700);assert.equal(b.timings.find(event=>event.stage==='azure_header').elapsedMs,300);
  assert.deepEqual(harness.calls,['azure','azure']);assert.equal(harness.queries.length,2);assert.equal(harness.responses.length,2);
  assert.equal(harness.timings.filter(event=>event.stage==='request_total').length,2);
+});
+
+
+test('actual FAST handler forwards its request-local observer to the existing Azure invocation',async()=>{
+ let observer;
+ const r=await run({azure:async options=>{
+  assert.deepEqual(Object.keys(options).sort(),['contentData','mimeType','timeoutMs','timing']);assert.equal(options.timeoutMs,35000);
+  observer=options.timing;assert.equal(typeof observer.start,'function');
+  observer.start('azure_submit')('ok');observer.start('azure_poll_wait',1)('ok');observer.start('azure_poll_request',1)('ok');
+  return complete();
+ }});
+ assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.totalGross,12.4);assertSanitizedTimings(r.timings);
+ assert.deepEqual(r.timings.filter(e=>e.stage.startsWith('azure_poll_')).map(e=>[e.stage,e.poll]),[['azure_poll_wait',1],['azure_poll_request',1]]);
+ assert.equal(r.timings.find(e=>e.stage==='azure_submit').correlationId,r.timings.find(e=>e.stage==='request_total').correlationId);
 });
