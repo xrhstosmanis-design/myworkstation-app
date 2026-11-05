@@ -58,3 +58,11 @@ test('automatic cash report separates unread and uncertain stored papers without
  assert.equal(out.unresolvedPapers,4);assert.equal(out.financialAdjustmentCents,0);
  assert.equal(out.humanApproval,false);assert.deepEqual(input,copy);
 });
+
+test('informational upload-date metadata is not an actionable paper error',()=>{
+ const input=report({paperEvidence:{status:'INCOMPLETE',coverage:{discoveryComplete:true,complete:false,discoveryReason:'UPLOAD_TIME_IS_NOT_DOCUMENT_DATE'},items:[{line:null,status:'UNRESOLVED',reason:'NOT_READ'}]}});
+ const out=summarizeAutomaticCashCheck(input);
+ assert.equal(out.status,'HOLD');assert.equal(out.paperCoverage,'INCOMPLETE');
+ assert.equal(out.paperIssueCode,null,'upload timestamps alone cannot establish printed document dates');
+ assert.equal(out.unreadPaperSources,1);assert.equal(out.financialAdjustmentCents,0);
+});
