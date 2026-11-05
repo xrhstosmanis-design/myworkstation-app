@@ -1,3 +1,9 @@
+## 05/11/2026 15:57 Europe/Athens - MIN-P01 BEFORE / INSTALLED / NOT UPLOADED
+
+Source PR3680 exactafc318b0 full CI42035492775 attempt2 SUCCESS (unchanged wholesale Chrome startup retry passed); native5813PASS/0FAIL/0SKIP. Normal mergec255548a17cfa4d21c024a76bfae6148d76bb3cd identical reviewed tree, full main CI42037512760 SUCCESS/native5813PASS/0FAIL/0SKIP. Coordinating review complete; no formal independent review claimed. Guarded deploy42039640153 SUCCESS, Render dep-dbm8kdijnfac738oebu0 LIVE and direct health exactc255548. Previous healthyfca291dcc retained by normal rollback capture. Existing key reuse authorized; no configuration change.
+
+MIN-P01 BEFORE snapshot2026-11-05T13:56:40.052956Z: CHECKPOINTS/EVIDENCE/invoice-fast-minimal-20261105/MIN-P01-before.json; all ten LAB/control digests, active shifts and wallet recorded. Refreshed selected LAB MAIN openedByLAB POS2:1transaction/cash40/cardsIRIS0/total0. Wallet billing/invoices OFF, balance4610532/reserved0. ONE new2page MIN-P01.pdf24.80EUR header read after this commit; acting authorized SuperAdmin/CloudChrome, no physical POS/payment method. LAB-1/LAB-2 quantity1 each. No type/PAID/CREDIT/submit/payment/draft/stock/fiscal action; earlier consumed files/peer J protected. State BEFORE_NOT_UPLOADED. Parent speed/No15 OPEN.
+
 ## 05/11/2026 15:23 Europe/Athens - INVOICE-HEADER-LATENCY / FAST MINIMAL SOURCE / TARGETED281 PASS / AWAITING FULL CI AND LAB
 
 Retained owner /root; feat/invoice-fast-minimal-20261105. Claim PR3679 main93889ed64e788c1fdbb4e1a7dd6591a59242542c, exact claim docs CI42034792534 and main42034912532 SUCCESS. Existing hosted API connection explicitly approved; no key/configuration change. Production change is ONE request-field value low to minimal, only exact gpt-5/gpt-5-2025-08-07. All original Azure-first/provider/wallet/bytes/prompt/schema/model/70s-two-attempt/20s/polling/amount/row/handoff behavior remains. No business or fiscal writer.
