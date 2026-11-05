@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {hash} from '../src/services/cash-reconciliation-contract.js';
 import {projectReconciliation} from '../src/services/cash-reconciliation-report.js';
+import {projectAutomaticReviewedReport} from '../src/services/cash-reviewed-automatic-contract.js';
 
 function shift({id,name,opened,closed,opening,actual,expected,variance,cashSales,expenses=0,cardSales=0,eftposTotal=0,cardVariance=0}){
  const session={id,companyId:'company',storeId:'store',terminalPos:'POS1',status:'CLOSED',openedBy:'user-'+id,openedByName:name,shiftLabel:'Βάρδια',openedAt:opened,closedAt:closed,
@@ -55,4 +56,16 @@ test('card-only sign alternation does not create counting mistake or change sour
  b.session.openingOperational=a.session.actualOperational;b.automaticSnapshot.openingOperational=b.session.openingOperational;b.session.openingDrawer=b.session.openingOperational;b.automaticSnapshot.openingDrawer=b.session.openingDrawer;
  a.cardCents=-22750;b.cardCents=22750;
  const out=projectReconciliation(s,[]);assert.equal(out.countingErrorCandidates,undefined);assert.doesNotMatch(out.text,/ΠΡΟΤΕΙΝΟΜΕΝΟ ΛΑΘΟΣ ΚΑΤΑΜΕΤΡΗΣΗΣ/);
+});
+
+test('automatic reviewed projection preserves candidate text and fingerprint without modifying financial rows',()=>{
+ const canonical=projectReconciliation(fixture(),[]),automatic=projectAutomaticReviewedReport(canonical);
+ assert.deepEqual(automatic.countingErrorCandidates,canonical.countingErrorCandidates);
+ assert.equal(automatic.reportHash,canonical.reportHash);
+ assert.equal(automatic.text,canonical.text);
+ assert.deepEqual(automatic.rows.map(r=>[r.initialCents,r.remainingCents,r.offsetCents,r.cardCents]),canonical.rows.map(r=>[r.initialCents,r.remainingCents,r.offsetCents,r.cardCents]));
+ const malformed=structuredClone(canonical);malformed.countingErrorCandidates[0].commonCents=1;
+ assert.throws(()=>projectAutomaticReviewedReport(malformed));
+ const missing=structuredClone(canonical);delete missing.countingErrorCandidates;
+ assert.throws(()=>projectAutomaticReviewedReport(missing),/Cash report text changed/);
 });
