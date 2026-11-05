@@ -1,5 +1,21 @@
 # 04/11/2026 — INVENTORY-RECONCILIATION-01 / RESIDUAL REVIEW / FULL REQUEST OPEN
 
+
+## 05/11/2026 20:34 Europe/Athens — task 6, first bounded read-only prerequisite inspection
+
+User assigned **6 — Αυτόματος έλεγχος απογραφής** and explicitly requested work **in pieces**. Continue the retained INVENTORY-RECONCILIATION-01 scope. This receipt completes only the first prerequisite inspection; it is **not a new functional LAB PASS**, full-request closure or a source change.
+
+- Native authenticated Platform Admin → MYWORKSTATION LAB → ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ (store `cmtpopbgo000trhb5ng9ytiru`) → full BackOffice → commercial Inventory 2.0. Explicitly selected the same LAB store. Cloud browser tab 6; no physical POS action.
+- Observed list: unfinalized `LAB31-THEORY-20261103-01` with 0 items; the two N39 10/10 stocktakes with 1/1 each; finalized 11/09 full stocktake with 15/15; 09/09 partial stocktake with 1/1.
+- Opened existing 11/09 finalized result and its previous-stocktake comparison. The available preceding option was 09/09. Report shows **14 uncomputed items and 4 without positive cost**. TEST1 has a computable historical difference; TEST2 (`LAB-EXCEL-20260909-02`) stays unknown.
+- Opened TEST2 result drilldown: prior count/time unknown, current count 0 at 11/09/2026 18:57:09 in the UI; explicit missing previous count, invalid time basis, missing count event and unknown/nonpositive cost. No confirmations and no per-item source transactions/documents/events were displayed.
+- Therefore the available list/comparison did **not provide an eligible numeric two-code finalized comparison** for the next hosted LINK/group acceptance. This is a missing fixture prerequisite, not evidence of a calculation defect. It is not an exhaustive database or other-store search.
+- No LINK, CORRECTION, REVOKE, count, finalization, stock, invoice, sale, payment, role or schema operation was submitted. No independent database-control digest comparison or exact deployed-revision check was performed, so neither is claimed. Source review used main `759311ed86ad3d58f77b6819fb408043a60f6031`; this is not asserted as the loaded production revision.
+- Existing accepted November 2 flows remain protected. Enter/scanner PRs #3689–#3692 remain separate. Existing PR #3645 was still open/unmerged/conflicted at this receipt; this update does not claim publication to main or release.
+
+**Single next piece:** prepare a bounded synthetic fixture specification for the retained product/count writers: two new explicitly equivalent test codes, known equal unit cost, two new stocktakes containing both codes (example counts 10/10 → 8/11, no intervening merchandise movement; expected -2/+1, grouped -1). Fixture creation must be a separately recorded ordinary LAB operation, with exact IDs/count times/revision and fresh controls, before any report-only LINK and PDF/XLSX acceptance. This paragraph is a specification, not a created fixture or authorization to seed SQL, reuse unrelated products, replay protected stock actions or claim physical equivalence from names.
+
+
 Retained inventory report/value/review/correction/export ownership; documentation continuation `docs/inventory-residual-review-20261104`, current coordinator `/root`. Reviewed source baseline `bc19fb45cfd24ef83385ff60383ae59ec148b1cb`. This is a gap review, not a takeover of canonical warehouse, product, count, invoice, access or lifecycle writers and not a new functional PASS.
 
 ## Protected acceptance
