@@ -14,16 +14,22 @@ test('automatic audit flags incomplete paper and shifts, never financially adjus
  assert.deepEqual(input,before);
 });
 test('overlapping pair blocks finality even with otherwise complete evidence',()=>{
- const out=summarizeAutomaticCashCheck(report({rows:[row({fullAudit:{status:'FINAL'}})],paperEvidence:{coverage:{discoveryComplete:true},items:[]},countingErrorCandidates:[{status:'AMBIGUOUS_OVERLAP'}]}));
+ const out=summarizeAutomaticCashCheck(report({rows:[row({fullAudit:{status:'FINAL'}})],paperEvidence:{status:'COMPLETE',coverage:{discoveryComplete:true,complete:true},items:[]},countingErrorCandidates:[{status:'AMBIGUOUS_OVERLAP'}]}));
  assert.equal(out.status,'HOLD');assert.equal(out.ambiguousPairs,1);
 });
 test('possible counting pair only requests review, never an offset',()=>{
- const out=summarizeAutomaticCashCheck(report({rows:[row({fullAudit:{status:'FINAL'},remainingCents:-92,cardCents:0})],paperEvidence:{coverage:{discoveryComplete:true},items:[]},countingErrorCandidates:[{status:'COUNTING_ERROR_CANDIDATE'}]}));
+ const out=summarizeAutomaticCashCheck(report({rows:[row({fullAudit:{status:'FINAL'},remainingCents:-92,cardCents:0})],paperEvidence:{status:'COMPLETE',coverage:{discoveryComplete:true,complete:true},items:[]},countingErrorCandidates:[{status:'COUNTING_ERROR_CANDIDATE'}]}));
  assert.equal(out.status,'REVIEW_REQUIRED');assert.equal(out.countingCandidates,1);assert.equal(out.financialAdjustmentCents,0);
 });
 test('complete clean report may say no differences but cannot approve financial finality',()=>{
- const out=summarizeAutomaticCashCheck(report({rows:[row({fullAudit:{status:'FINAL'},remainingCents:0,cardCents:0})],paperEvidence:{coverage:{discoveryComplete:true},items:[]}}));
+ const out=summarizeAutomaticCashCheck(report({rows:[row({fullAudit:{status:'FINAL'},remainingCents:0,cardCents:0})],paperEvidence:{status:'COMPLETE',coverage:{discoveryComplete:true,complete:true},items:[]}}));
  assert.equal(out.status,'NO_DIFFERENCES');assert.equal(out.humanApproval,false);
+});
+test('discovery alone cannot certify unread photographs as complete',()=>{
+ const input=report({rows:[row({fullAudit:{status:'FINAL'},remainingCents:0,cardCents:0})],paperEvidence:{status:'INCOMPLETE',coverage:{discoveryComplete:true,complete:false},items:[{line:null,status:'UNRESOLVED',reason:'NOT_READ'}]}});
+ const out=summarizeAutomaticCashCheck(input);
+ assert.equal(out.status,'HOLD');assert.equal(out.paperCoverage,'INCOMPLETE');assert.equal(out.unreadPaperSources,1);
+ assert.equal(out.financialAdjustmentCents,0);assert.equal(out.humanApproval,false);
 });
 test('missing paper scope or empty/invalid source never claims completion',()=>{
  assert.equal(summarizeAutomaticCashCheck(report({paperEvidence:undefined})).status,'HOLD');
