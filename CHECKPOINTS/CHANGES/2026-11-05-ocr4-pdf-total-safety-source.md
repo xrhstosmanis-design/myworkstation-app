@@ -28,3 +28,14 @@ The previous CI41973921759 attempts failed at the server-test stage. Retrieved d
 
 No production deployment, paid provider read, invoice submission/payment, stock or fiscal operation. H/G and H21.959s are protected; F/D/G/H and reserved I are not replayed. General supplier/pages/packages/discount/VAT/EFK completeness and latency remain OPEN. Checkpoint: CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md. Next: exact full CI and read-only independent review, then guarded release and a separately identified fresh no-submit LAB read.
 
+
+## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01 / VERIFIED CI CAUSE / LEGACY TEST ALIGNED / AWAITING FULL CI
+
+Retained task4 owner /root, source PR3667. Main723b167 is already synchronized without losing peer3665. Exact downloaded raw CI logs for jobs127068324620 and127077517536 both show the same single failure: pos-invoice-multipage-upload-v1.test.js, MANTZILAS FAST total. Previous contradictory tool diagnoses remain withdrawn. Raw evidence artifact13393140796 SHA25658634e5970e05d6336322ba32e014c3246b9c960ea0dee50daec759eeb4e238e; test-before blob7bd1c5f087f7d74762db88ce37ac196d8aaaef41 verified.
+
+Cause: one historical static regex required unconditional VAT-footer reuse. The test now requires the numeric-one-page eligibility binding and guarded production assignment. All original parser/account-balance/unbalanced-footer assertions remain. The actual production assignment is also executed: eligible full-document reuse returns318.74; ineligible multi-page/unknown-page reuse returns0. No runtime edit, amount relaxation, deleted test, skip or threshold change.
+
+Initial staging run stopped before test edits because the imported verifier required a generated Prisma client (277PASS plus one module-load failure); standard client generation fixes only that setup, with no database connection. Complete-checkout Node20 targeted seven suites: before324PASS/1FAIL; after325PASS/0FAIL/0SKIP. Runtime SHA25632e1f56f985603aaa7c819a490c9dc2d846884c0c43dbd7e4f22f8fd9d5653e8 unchanged. Provider/database/wallet I/O simulated. This is not full native CI, independent approval or OCR/LAB acceptance. Keep source PR DRAFT until review and full exact checks.
+
+No paid provider request, invoice submission/payment, stock/fiscal operation, main change or deployment. Protect H/G, H21.959s and reserved I; no historical replay. General OCR, supplier/pages/packages/discount/VAT/EFK and latency remain OPEN. Checkpoint CHECKPOINTS/CHANGES/2026-11-05-ocr4-pdf-total-safety-source.md. Next: exact full PR/main CI and independent read-only review before guarded release and fresh no-submit LAB acceptance.
+
