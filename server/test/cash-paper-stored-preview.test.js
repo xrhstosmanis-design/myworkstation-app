@@ -96,3 +96,15 @@ test('100 MiB fallback still caps a single original at 7 MiB and reports LIMITED
  assert.deepEqual(result.papers.map(p=>p.reading.status),['REQUIRES_REVIEW','EXTRACTED_UNVERIFIED']);
  assert.deepEqual(f.calls.filter(c=>c[0]==='source'),[['source',sources[1].checksum]]);
 });
+
+test('large admitted Diadochou-like set validates only seven cached originals, never 29 unread bytes',async()=>{
+ const sources=Array.from({length:37},(_,i)=>source(i+1,i===36?5*MiB:2*MiB));
+ const states=new Map(sources.map((item,index)=>[item.checksum,index<29?{status:'NOT_READ'}:index===29?{status:'REQUIRES_REVIEW'}:extracted]));
+ const f=fixture(sources,{states}),discovery={status:'AWAITING_READING',sources};
+ const out=await run(f,{discovery,admitted:discovery},{byteLimit:maxBudget});
+ assert.equal(out.discovery,discovery,'admitted source set is not silently downgraded or promoted');
+ assert.deepEqual(out.papers.map(p=>p.reading.status).reduce((counts,status)=>(counts[status]=(counts[status]||0)+1,counts),{}),{'NOT_READ':29,'REQUIRES_REVIEW':1,'EXTRACTED_UNVERIFIED':7});
+ assert.equal(f.calls.filter(c=>c[0]==='get').length,37);
+ assert.equal(f.calls.filter(c=>c[0]==='source').length,7,'do not fetch 30 raw unread/uncertain originals');
+ assert.equal(out.papers.every(p=>p.reading.extraction===undefined||p.reading.status==='EXTRACTED_UNVERIFIED'),true);
+});
