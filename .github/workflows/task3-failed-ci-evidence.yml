@@ -1,0 +1,61 @@
+name: Task3 pinned failed CI evidence
+on:
+  push:
+    branches: [tools/task3-failed-ci-evidence-20261105]
+    paths: [.github/workflows/task3-failed-ci-evidence.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  evidence:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app' && github.ref == 'refs/heads/tools/task3-failed-ci-evidence-20261105'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 4ba3a9868670e0958aa533bdb116d3f9b67ee54f
+          persist-credentials: false
+      - name: Retrieve exact failed job logs without executing application code
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/task3-failed-ci-evidence
+          test "$(git rev-parse HEAD)" = 4ba3a9868670e0958aa533bdb116d3f9b67ee54f
+          gh api repos/xrhstosmanis-design/myworkstation-app/actions/runs/42016014254 > /tmp/task3-failed-ci-evidence/run.json
+          gh api repos/xrhstosmanis-design/myworkstation-app/actions/jobs/127206724281 > /tmp/task3-failed-ci-evidence/job.json
+          gh api repos/xrhstosmanis-design/myworkstation-app/actions/jobs/127206724281/logs > /tmp/task3-failed-ci-evidence/job.log
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,re,subprocess
+          out=Path('/tmp/task3-failed-ci-evidence')
+          run=json.loads((out/'run.json').read_text());job=json.loads((out/'job.json').read_text())
+          assert run['head_sha']=='4ba3a9868670e0958aa533bdb116d3f9b67ee54f'
+          assert job['run_id']==42016014254 and job['id']==127206724281
+          files=subprocess.check_output(['git','ls-files'],text=True).splitlines()
+          (out/'source-test-paths.txt').write_text('\n'.join(p for p in files if p.startswith('server/test/'))+'\n')
+          lines=(out/'job.log').read_text(errors='replace').splitlines()
+          failures=[i for i,line in enumerate(lines) if re.search(r'\bnot ok \d+',line)]
+          pieces=[]
+          for i in failures:pieces.append('\n'.join(lines[max(0,i-3):i+65]))
+          pieces.append('\n'.join(lines[-100:]))
+          (out/'failure-context.txt').write_text('\n\n'.join(pieces)+'\n')
+          sources={'AGENTS.md','package.json','.github/workflows/ci.yml','docs/roadmap/OPEN_WORK_TRACKER.md','CHECKPOINTS/CHANGES/2026-11-05-task3-hosted-preparation-design.md'}
+          for line in lines:
+              sources.update(re.findall(r'(?:server/test|server/e2e)/[A-Za-z0-9_./-]+\.(?:js|mjs|ts)',line))
+          copied=[]
+          for p in sorted(sources):
+              if p in files:
+                  dest=out/'source'/p;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(Path(p).read_bytes());copied.append(p)
+          receipt={'source':run['head_sha'],'run':run['id'],'attempt':run['run_attempt'],'job':job['id'],'status':job['conclusion'],'logBytes':(out/'job.log').stat().st_size,'logSha256':hashlib.sha256((out/'job.log').read_bytes()).hexdigest(),'failureLines':len(failures),'reportedPathExists':'server/test/mobile-chat-layout-browser.test.js' in files,'copiedSourcePaths':copied,'applicationCodeExecuted':False,'productionAccess':False}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: task3-failed-ci-evidence
+          path: /tmp/task3-failed-ci-evidence/
+          if-no-files-found: error
+          retention-days: 3
