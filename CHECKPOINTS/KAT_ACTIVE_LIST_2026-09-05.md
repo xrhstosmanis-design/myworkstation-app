@@ -1,3 +1,11 @@
+## 05/11/2026 — INVOICE-HEADER-LATENCY / PR #3665 SOURCE / RETAINED TASK 2 OWNER
+
+Continuation of retained /root, fix/invoice-fast-low-reasoning-20261105; before-source claim #3664 is on main. Source adds reasoning low only for exact gpt-5 and gpt-5-2025-08-07 in callFastOpenAiHeader; transport regression tests protect model precedence, excluded models, PDF/schema and retry budget. Configured models, provider order, deadlines, wallet, business writers and all peer assignments remain unchanged.
+
+At 997c109, CI 41969689976 passed classify-changes, Windows checks and wholesale-isolated-lab; build-and-test failed only at the missing active-list update. This continuation applies that update through ordinary Git and preserves the complete previous registry byte-for-byte as a suffix. Native source tests and full new-head CI remain pending; no latency improvement or LAB PASS is asserted. H 21.959s baseline and accepted G/H fields stay protected. I remains unused. No payment, submitted invoice, paid provider call, merge, deployment or production mutation.
+
+Checkpoint: CHECKPOINTS/CHANGES/2026-11-05-invoice-fast-low-reasoning-source.md. Next: exact full green PR CI and independent review before any guarded integration/release; only then fresh I with no submission and measured before/after/control. Parent latency and broader OCR remain OPEN.
+
 ## 05/11/2026 - INVOICE-PDF-TOTAL-SAFETY-01 / OCR4 / BEFORE-SOURCE CLAIM / OPEN
 
 Retained invoice owner /root, current task4 continuation; publication branch docs/ocr4-pdf-total-safety-20261105, then bounded source branch fix/ocr4-pdf-total-safety-20261105. This continues candidate PR3654, not a transfer or duplicate of the latency/low-reasoning owner and PR3665. Only the FAST handler's PDF fallback amount-return policy and its regression expectations are assigned here; configured models, request construction, reasoning, timings, provider order, deadlines, wallet and all business writers stay outside this scope. No source integration before this synchronized claim is green and merged on main.
