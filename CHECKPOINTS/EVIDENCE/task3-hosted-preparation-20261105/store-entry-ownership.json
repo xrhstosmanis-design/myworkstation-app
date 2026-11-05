@@ -1,0 +1,139 @@
+{
+  "source": "b465ac68436e43bc6d6ecff7703165481052d29d",
+  "finding": 4479218886,
+  "previousExactFullCI": 42011116582,
+  "previousIndependentReceipt": 6655731621,
+  "red": {
+    "source": "b465ac68436e43bc6d6ecff7703165481052d29d",
+    "requiredAssertionFailures": [
+      "embedded inbox refuses a second launcher hub and explicit close restores native installers",
+      "existing launcher refuses embedded entry without discarding its mounted state"
+    ],
+    "infrastructureFailureAccepted": false,
+    "observedFailedSubtests": 8,
+    "tapFailedIncludingParent": 9,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "tests": {
+    "tests": 40,
+    "pass": 40,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "sourceFiles": [
+    {
+      "path": "client/src/components/cloud/StoreCloudPage.jsx",
+      "beforeBlob": "6782d3cc93c828f97056223ae6d5968fb907b777",
+      "afterBlob": "bf32b33691307c41d414561565ee11123e93907d"
+    },
+    {
+      "path": "client/src/components/commerce/CommerceLauncher.jsx",
+      "beforeBlob": "b6bea3c69bd545f033f9d6781f6132771285a7b5",
+      "afterBlob": "b4a117445acc4c0481ca0b2e0490c3aceaa92133"
+    },
+    {
+      "path": "server/test/store-invoice-entry-mounted.test.mjs",
+      "beforeBlob": "a15ce1e14b2a7cd2c00af1dabde913423947d4f5",
+      "afterBlob": "eb5428d8ca5fd40b5b191556288036faccfccdd6"
+    }
+  ],
+  "registryHistory": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "beforeBlob": "a3303ebfff59e367127157d1b2acc847c713aa13",
+      "afterBlob": "627a2dd8e9997021766aaa28afbace26aed5b729",
+      "preservedSuffix": true,
+      "priorBytes": 5253790
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "beforeBlob": "f18b5932ef0412fb9997fd2e5007832a630c1928",
+      "afterBlob": "52e7eb639977d2ca3b040d657b2b4da6f71260f3",
+      "preservedSuffix": true,
+      "priorBytes": 4077864
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "beforeBlob": "f172b318c5692bb97358f39ed1f66da7e12b98d5",
+      "afterBlob": "8bc2720fdb9e83c6b22db4d25dd0ab967599d7a5",
+      "preservedSuffix": true,
+      "priorBytes": 3605617
+    },
+    {
+      "path": "CHECKPOINTS/CHANGES/2026-11-05-task3-hosted-preparation-design.md",
+      "beforeBlob": "29ae19ce9b32698a4f040fe74eed216c2666bcc2",
+      "afterBlob": "01abc62404f464fee5fd7be452d4ba3bbc625542",
+      "preservedSuffix": true,
+      "priorBytes": 18508
+    }
+  ],
+  "pdf": {
+    "pages": 964,
+    "sha256": "18659d4fca42e988211106c237776c4ce87f7adc558afc465a2b1802db10309e",
+    "copiesIdentical": true,
+    "visualReview": "PENDING"
+  },
+  "replacementFullCI": "PENDING",
+  "independentReview": "PENDING",
+  "deployment": "NOT EXECUTED",
+  "hostedAcceptance": "NOT TESTED",
+  "businessMutations": false,
+  "reconciledMain": "f1830f3470c05741d920891159362b8f01a6a938",
+  "reviewFixCandidate": "22124318c956f4ba9999936ca7d66562dc7cb513",
+  "peerReconciliation": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "mainBeforeBlob": "28aef041eb9f98c5a3fd8c50db84ec39c0c09c42",
+      "afterBlob": "39bf20624daa89015a4522571f9e0ce4f2f31b83",
+      "mainBytes": 5252308,
+      "preservedMainSuffix": true,
+      "unchangedTask3Prefix": true
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "mainBeforeBlob": "87991019b553305e1ebbc7c5dd6c11dc87a9f643",
+      "afterBlob": "d2169cf3d8a8746ca02282b80c6a9014eea1bf9b",
+      "mainBytes": 4076382,
+      "preservedMainSuffix": true,
+      "unchangedTask3Prefix": true
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "mainBeforeBlob": "5a6d1941216182dc64c118892e4ee5b0973aab40",
+      "afterBlob": "8ae6f0cf25a893a38c3b1999fcd819e9ee9767fa",
+      "mainBytes": 3604135,
+      "preservedMainSuffix": true,
+      "unchangedTask3Prefix": true
+    }
+  ],
+  "priorRedGreenRun": 42014472390,
+  "priorArtifact": {
+    "id": 13407784843,
+    "sha256": "593601626f236a814ef0eecd92e457d6884cd02eac5b2a1ba0c2cf9258054a9b",
+    "rawAssertionsAndAllTenBlobsVerified": true
+  },
+  "unchangedRuntimeAndTestBlobs": [
+    {
+      "path": "client/src/components/cloud/StoreCloudPage.jsx",
+      "blob": "bf32b33691307c41d414561565ee11123e93907d"
+    },
+    {
+      "path": "client/src/components/cloud/StoreInvoiceEntry.jsx",
+      "blob": "1a1c536cae5ec5e85d8e09620e71de12419cb855"
+    },
+    {
+      "path": "client/src/components/commerce/CommerceHub.jsx",
+      "blob": "72c1d7757fdfcbefdea09d423c6038ee59b40857"
+    },
+    {
+      "path": "client/src/components/commerce/CommerceLauncher.jsx",
+      "blob": "b4a117445acc4c0481ca0b2e0490c3aceaa92133"
+    },
+    {
+      "path": "server/test/store-invoice-entry-mounted.test.mjs",
+      "blob": "eb5428d8ca5fd40b5b191556288036faccfccdd6"
+    }
+  ]
+}
