@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readStoredCashPaperPreview} from '../src/services/cash-paper-stored-preview.js';
-const MiB=1024*1024,byteLimit=25*MiB,scope={companyId:'c',storeId:'s',generation:'0'};
+const MiB=1024*1024,byteLimit=25*MiB,maxBudget=100*MiB,scope={companyId:'c',storeId:'s',generation:'0'};
 const source=(n,sizeBytes=12)=>({sourceId:'source-'+n,checksum:n.toString(16).padStart(64,'0'),sizeBytes,references:[{messageId:'message-'+n}]});
 const extracted={status:'EXTRACTED_UNVERIFIED',sourceKey:'stored',extraction:{lines:[{label:'synthetic'}]}};
 const limited=(sources,reason='ATTACHMENT_BYTE_LIMIT',status='AWAITING_READING')=>({discovery:{status,sources},admitted:{status:'UNAVAILABLE',reason,sources:[]}});
@@ -74,5 +74,25 @@ test('empty admitted discovery performs no query',async()=>{
  const f=fixture([]),discovery={status:'NO_ATTACHMENTS_IN_DISCOVERY',sources:[]},out=await run(f,{discovery,admitted:discovery});assert.deepEqual(out,{discovery,papers:[]});assert.equal(f.calls.length,0);
 });
 test('budget cannot be omitted, coerced, nonfinite or increased',async()=>{
- const f=fixture([]);for(const budget of [undefined,null,0,-1,NaN,Infinity,1.5,'100',byteLimit+1])await assert.rejects(run(f,limited([]),{byteLimit:budget}),TypeError);assert.equal(f.calls.length,0);
+ const f=fixture([]);for(const budget of [undefined,null,0,-1,NaN,Infinity,1.5,'100',maxBudget+1])await assert.rejects(run(f,limited([]),{byteLimit:budget}),TypeError);assert.equal(f.calls.length,0);
+});
+
+test('100 MiB stored-paper budget validates 37 originals sequentially without paid reader or writes',async()=>{
+ const sources=Array.from({length:37},(_,i)=>source(i+1,i===36?5*MiB:2*MiB));
+ const f=fixture(sources),discovery={status:'AWAITING_READING',sources};
+ const result=await run(f,{discovery,admitted:discovery},{byteLimit:maxBudget});
+ assert.equal(result.discovery.status,'AWAITING_READING');
+ assert.equal(result.papers.length,37);
+ assert(result.papers.every(p=>p.reading.status==='EXTRACTED_UNVERIFIED'));
+ assert.equal(f.calls.filter(call=>call[0]==='source').length,37);
+ assert.equal(f.calls.filter(call=>call[0]==='get').length,37);
+ assert.equal(f.calls.length,74,'one original validation and cached read per file, no provider invocation');
+});
+test('100 MiB fallback still caps a single original at 7 MiB and reports LIMITED',async()=>{
+ const sources=[source(1,8*MiB),source(2,6*MiB)],f=fixture(sources);
+ const result=await run(f,limited(sources),{byteLimit:maxBudget});
+ assert.equal(result.discovery.status,'LIMITED');
+ assert.equal(result.discovery.complete,false);
+ assert.deepEqual(result.papers.map(p=>p.reading.status),['REQUIRES_REVIEW','EXTRACTED_UNVERIFIED']);
+ assert.deepEqual(f.calls.filter(c=>c[0]==='source'),[['source',sources[1].checksum]]);
 });
