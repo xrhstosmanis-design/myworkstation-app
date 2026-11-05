@@ -45,7 +45,9 @@ elif step=='apply':
  own=set(git('diff','--name-only',BASE,SOURCE).decode().splitlines())
  peers=git('diff','--name-only',BASE,MAIN).decode().splitlines()
  overlap=set(peers)&own;assert overlap==set([*REG,PDF,COPY]),overlap
- for p in ['package.json','package-lock.json','server/package.json','client/package.json']:
+ manifests=lambda ref:{p for p in git('ls-tree','-r','--name-only',ref).decode().splitlines() if Path(p).name in {'package.json','package-lock.json','npm-shrinkwrap.json'}}
+ assert manifests(SOURCE)==manifests(MAIN),'Package manifest inventory changed'
+ for p in sorted(manifests(SOURCE)):
   assert data(SOURCE,p)==data(MAIN,p),p
  for p in peers:
   if p not in overlap:
