@@ -94,3 +94,16 @@ test('partially registered response observers cannot emit or replace an error af
  assert.deepEqual(events,[]);
  await assert.rejects(timing.measure('openai_header',()=>{throw failure}),error=>error===failure);
 });
+
+test('Azure phase events accept only bounded poll ordinals and retain the separate OpenAI attempt contract',()=>{
+ const events=[],res=new EventEmitter(),timing=createFastHeaderTiming(res,{emit:e=>events.push(e),now:()=>123});
+ for(const stage of ['azure_poll_wait','azure_poll_request']){
+  for(const poll of [0,31,-1,1.5,Infinity,NaN,'1',{},null,undefined])timing.start(stage,poll)('ok');
+  for(const poll of [1,30]){const end=timing.start(stage,poll);end('ok');end('error')}
+ }
+ timing.start('azure_submit',1)('ok');timing.start('azure_submit')('ok');
+ timing.start('openai_attempt',3)('ok');timing.start('openai_attempt',2)('ok');res.emit('finish');res.emit('close');
+ assert.equal(events.length,7);
+ for(const event of events.filter(e=>e.stage.startsWith('azure_poll_'))){assert.deepEqual(Object.keys(event).sort(),['correlationId','elapsedMs','outcome','poll','stage']);assert.ok([1,30].includes(event.poll));assert.equal(event.elapsedMs,0);assert.equal(event.outcome,'ok');assert.equal('attempt' in event,false)}
+ assert.equal(events.find(e=>e.stage==='openai_attempt').attempt,2);assert.equal('poll' in events.find(e=>e.stage==='openai_attempt'),false);assert.equal(events.filter(e=>e.stage==='request_total').length,1);
+});

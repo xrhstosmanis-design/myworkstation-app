@@ -1,0 +1,324 @@
+{
+  "trial": "MIN-P03",
+  "revision": "c255548a17cfa4d21c024a76bfae6148d76bb3cd",
+  "beforeCommit": "6fa07a22f798984bf0a56e35146a257414b5fe40",
+  "ui": {
+    "trial": "MIN-P03",
+    "started": "2026-11-05T14:04:49.387Z",
+    "observed": "2026-11-05T14:04:59.969Z",
+    "uiElapsedMs": 10582,
+    "ready": true,
+    "supplier": "LAB METER TEST",
+    "documentNumber": "LAB-FAST-MINIMAL-20261105-P03",
+    "documentDate": "2026-11-05",
+    "totalGross": 74.4,
+    "screenshot": "MIN-P03-confirmed.jpg",
+    "uiNotes": "One continuous observation loop; confirmed screenshot and refreshed shift; no upload replay."
+  },
+  "after": [
+    {
+      "active_shifts": [
+        {
+          "cardSales": 0,
+          "cashSales": 0,
+          "expenses": 0,
+          "id": "a2270849-bbc1-41ea-bdf9-9dd6be69d3bd",
+          "openedAt": "2026-11-04T06:54:12.460629+00:00",
+          "openingDrawer": 10,
+          "operator": "LAB POS 2",
+          "terminal": "MAIN",
+          "transactionCount": 1
+        }
+      ],
+      "attachments": {
+        "count": 84,
+        "digest": "0a4a0a1762bf23b78cfff38a584db2e0"
+      },
+      "captured_at": "2026-11-05T14:05:34.526712Z",
+      "documents": {
+        "count": 74,
+        "digest": "3e01b7765cf10f514bc6dfe0e3ca7349"
+      },
+      "id": "cmtpopbgo000trhb5ng9ytiru",
+      "inbox": {
+        "count": 66,
+        "digest": "7c36baf34fbba338023d68f29da1d815"
+      },
+      "jobs": {
+        "count": 82,
+        "digest": "e37197486ba26fd36c13d3be6cd94620"
+      },
+      "movements": {
+        "count": 95,
+        "digest": "f69aa9d0bec0bf377f1b9645262e5aba"
+      },
+      "name": "ΕΡΓΑΣΤΗΡΙΟ ΔΟΚΙΜΩΝ",
+      "order_lines": {
+        "count": 634,
+        "digest": "baf3fbae09a8316af68135bcab820ffd"
+      },
+      "orders": {
+        "count": 62,
+        "digest": "b5df83ff0ce9892378f070c8bfbf1640"
+      },
+      "shifts": {
+        "count": 44,
+        "digest": "5a2d5f3a434b0154b99f8d1386571aed"
+      },
+      "stock": {
+        "count": 110,
+        "digest": "3c3739c172f7acfdb0939e52d06bed8d"
+      },
+      "transactions": {
+        "count": 135,
+        "digest": "ec25965ae7f73cc4796bf0f67e04b955"
+      },
+      "wallet": {
+        "balanceMicros": "4610532",
+        "enabled": false,
+        "invoiceEnabled": false,
+        "reservedMicros": "0"
+      }
+    },
+    {
+      "active_shifts": [],
+      "attachments": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "captured_at": "2026-11-05T14:05:34.526712Z",
+      "documents": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "id": "cmv2qanca000psigeizep8o9m",
+      "inbox": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "jobs": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "movements": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "name": "N40 CONTROL 20261010",
+      "order_lines": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "orders": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "shifts": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "stock": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "transactions": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "wallet": {
+        "balanceMicros": "4610532",
+        "enabled": false,
+        "invoiceEnabled": false,
+        "reservedMicros": "0"
+      }
+    }
+  ],
+  "uiShiftAfter": {
+    "terminal": "MAIN",
+    "openedBy": "LAB POS 2",
+    "transactions": 1,
+    "cash": 40,
+    "cardsAndIris": 0,
+    "total": 0
+  },
+  "checks": {
+    "fourFields": true,
+    "unchangedSnapshot": true,
+    "completeLogs": true,
+    "uniqueCorrelation": true,
+    "oneRequestTotal": true,
+    "finite": true,
+    "orderedBoundedPolls": true,
+    "safeKeys": true
+  },
+  "events": [
+    {
+      "timestamp": "2026-11-05T14:04:49.509741435Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "exact_file_lookup",
+      "outcome": "ok",
+      "elapsedMs": 3.932
+    },
+    {
+      "timestamp": "2026-11-05T14:04:50.257195313Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_submit",
+      "outcome": "ok",
+      "elapsedMs": 745.557
+    },
+    {
+      "timestamp": "2026-11-05T14:04:50.958388887Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 700.017,
+      "poll": 1
+    },
+    {
+      "timestamp": "2026-11-05T14:04:51.117853924Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 160.21,
+      "poll": 1
+    },
+    {
+      "timestamp": "2026-11-05T14:04:51.81840115Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 700.41,
+      "poll": 2
+    },
+    {
+      "timestamp": "2026-11-05T14:04:51.973224407Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 154.686,
+      "poll": 2
+    },
+    {
+      "timestamp": "2026-11-05T14:04:53.175672516Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.278,
+      "poll": 3
+    },
+    {
+      "timestamp": "2026-11-05T14:04:53.33216132Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 158.291,
+      "poll": 3
+    },
+    {
+      "timestamp": "2026-11-05T14:04:54.53538722Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1202.485,
+      "poll": 4
+    },
+    {
+      "timestamp": "2026-11-05T14:04:54.704658399Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 169.139,
+      "poll": 4
+    },
+    {
+      "timestamp": "2026-11-05T14:04:55.905524073Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.692,
+      "poll": 5
+    },
+    {
+      "timestamp": "2026-11-05T14:04:56.062408298Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 156.698,
+      "poll": 5
+    },
+    {
+      "timestamp": "2026-11-05T14:04:57.263055016Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_wait",
+      "outcome": "ok",
+      "elapsedMs": 1200.472,
+      "poll": 6
+    },
+    {
+      "timestamp": "2026-11-05T14:04:57.57621851Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_poll_request",
+      "outcome": "ok",
+      "elapsedMs": 312.978,
+      "poll": 6
+    },
+    {
+      "timestamp": "2026-11-05T14:04:57.577177836Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_header",
+      "outcome": "ok",
+      "elapsedMs": 8066.456
+    },
+    {
+      "timestamp": "2026-11-05T14:04:57.581361122Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "azure_supplier_match",
+      "outcome": "ok",
+      "elapsedMs": 2.673
+    },
+    {
+      "timestamp": "2026-11-05T14:04:59.826511995Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "openai_attempt",
+      "outcome": "ok",
+      "elapsedMs": 2240.865,
+      "attempt": 1
+    },
+    {
+      "timestamp": "2026-11-05T14:04:59.826532245Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "openai_header",
+      "outcome": "ok",
+      "elapsedMs": 2241.032
+    },
+    {
+      "timestamp": "2026-11-05T14:04:59.828556161Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "openai_supplier_match",
+      "outcome": "ok",
+      "elapsedMs": 1.946
+    },
+    {
+      "timestamp": "2026-11-05T14:04:59.829713623Z",
+      "correlationId": "747686ff-701e-40f6-be18-978457d48f49",
+      "stage": "request_total",
+      "outcome": "finished",
+      "elapsedMs": 10326.47
+    }
+  ],
+  "sumsMs": {
+    "exact_file_lookup": 3.932,
+    "azure_submit": 745.557,
+    "azure_poll_wait": 6204.353999999999,
+    "azure_poll_request": 1112.002,
+    "azure_header": 8066.456,
+    "azure_supplier_match": 2.673,
+    "openai_attempt": 2240.865,
+    "openai_header": 2241.032,
+    "openai_supplier_match": 1.946,
+    "request_total": 10326.47
+  },
+  "assessment": "Four fields correct, including74.40EUR instead of previous120/new194.40EURaccount balances; unchanged measured state. Both providers successful,6polls, one OpenAI attempt. Observational timing only; response model/usage not captured. No business writer.",
+  "consumed": true,
+  "noReplay": true
+}

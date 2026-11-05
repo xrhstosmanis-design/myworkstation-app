@@ -78,7 +78,7 @@ test('actual FAST PDF fallback sends original PDF data URL through actual Respon
  const file=r.requests[0].body.input[0].content[1];assert.equal(file.type,'input_file');assert.equal(file.filename,'synthetic.pdf');assert.equal(file.file_data,dataUrl);assert.deepEqual(Buffer.from(file.file_data.split(',')[1],'base64'),bytes);assert.equal(r.result.totalGross,24.8);
  assert.equal(r.requests[0].body.text.format.name,'invoice_fast_header');assert.equal(r.requests[0].body.text.format.strict,true);
 });
-test('actual FAST GPT-5 exact models receive low reasoning without changing PDF transport or schema',async()=>{
+test('actual FAST GPT-5 exact models receive minimal reasoning without changing PDF transport or schema',async()=>{
   const bytes=readFileSync(path.join(root,'CHECKPOINTS/EVIDENCE/invoice-physical-pages-20261102/fixtures/two-physical-pages.pdf'));
   const dataUrl=`data:application/pdf;base64,${bytes.toString('base64')}`;
   for(const model of ['gpt-5','gpt-5-2025-08-07']){
@@ -86,7 +86,7 @@ test('actual FAST GPT-5 exact models receive low reasoning without changing PDF 
     assert.ifError(r.error);assert.equal(r.requests.length,1);
     const body=r.requests[0].body;
     assert.deepEqual(Object.keys(body).sort(),['input','model','reasoning','text']);
-    assert.equal(body.model,model);assert.deepEqual(body.reasoning,{effort:'low'});
+    assert.equal(body.model,model);assert.deepEqual(body.reasoning,{effort:'minimal'});
     assert.deepEqual(body.input,[{role:'user',content:[{type:'input_text',text:body.input[0].content[0].text},{type:'input_file',filename:'synthetic.pdf',file_data:dataUrl}]}]);
     assert.equal(typeof body.input[0].content[0].text,'string');assert.ok(body.input[0].content[0].text.length>0);
     assert.equal(body.text.format.name,'invoice_fast_header');assert.equal(body.text.format.strict,true);
@@ -95,28 +95,31 @@ test('actual FAST GPT-5 exact models receive low reasoning without changing PDF 
 });
 test('actual FAST model resolution changes reasoning only for exact GPT-5 targets',async()=>{
   const cases=[
-    {fastModel:'gpt-5',generalModel:'gpt-5-mini',expected:'gpt-5',low:true},
-    {fastModel:'',generalModel:'gpt-5-2025-08-07',expected:'gpt-5-2025-08-07',low:true},
-    {fastModel:'gpt-5-mini',generalModel:'gpt-5',expected:'gpt-5-mini',low:false},
-    {fastModel:'',generalModel:'',expected:'gpt-5-mini',low:false},
-    {fastModel:'gpt-5-2025-08-07-preview',generalModel:'gpt-5',expected:'gpt-5-2025-08-07-preview',low:false},
-    {fastModel:'gpt-5.1',generalModel:'gpt-5',expected:'gpt-5.1',low:false},
-    {fastModel:'GPT-5',generalModel:'gpt-5',expected:'GPT-5',low:false}
+    {fastModel:'gpt-5',generalModel:'gpt-5-mini',expected:'gpt-5',minimal:true},
+    {fastModel:'',generalModel:'gpt-5-2025-08-07',expected:'gpt-5-2025-08-07',minimal:true},
+    {fastModel:'gpt-5-mini',generalModel:'gpt-5',expected:'gpt-5-mini',minimal:false},
+    {fastModel:'',generalModel:'',expected:'gpt-5-mini',minimal:false},
+    {fastModel:'gpt-5-2025-08-07-preview',generalModel:'gpt-5',expected:'gpt-5-2025-08-07-preview',minimal:false},
+    {fastModel:'gpt-5.1',generalModel:'gpt-5',expected:'gpt-5.1',minimal:false},
+    {fastModel:'GPT-5',generalModel:'gpt-5',expected:'GPT-5',minimal:false},
+    {fastModel:'gpt-5-nano',generalModel:'gpt-5',expected:'gpt-5-nano',minimal:false},
+    {fastModel:'gpt-5-codex',generalModel:'gpt-5',expected:'gpt-5-codex',minimal:false},
+    {fastModel:' gpt-5',generalModel:'gpt-5',expected:' gpt-5',minimal:false}
   ];
   for(const option of cases){
     const r=await run({transport:true,azure:{...complete(),documentNumber:''},...option});
     assert.ifError(r.error);assert.equal(r.requests.length,1);
     const body=r.requests[0].body;assert.equal(body.model,option.expected);
-    assert.deepEqual(Object.keys(body).sort(),option.low?['input','model','reasoning','text']:['input','model','text']);
-    if(option.low)assert.deepEqual(body.reasoning,{effort:'low'});
+    assert.deepEqual(Object.keys(body).sort(),option.minimal?['input','model','reasoning','text']:['input','model','text']);
+    if(option.minimal)assert.deepEqual(body.reasoning,{effort:'minimal'});
   }
 });
-test('actual GPT-5 retry preserves identical low-reasoning body and original shared deadline',async()=>{
+test('actual GPT-5 retry preserves identical minimal-reasoning body and original shared deadline',async()=>{
   let current=1000;const budgets=[];
   const first={ok:false,status:503,text:async()=>{current=51000;return 'synthetic provider failure'}};
   const r=await run({transport:true,fastModel:'gpt-5',azure:{...complete(),documentNumber:''},transportResponses:[first],transportNow:()=>current,transportTimeout:milliseconds=>{budgets.push(milliseconds);return undefined}});
   assert.ifError(r.error);assert.deepEqual(budgets,[70000,20000]);assert.equal(r.requests.length,2);
-  assert.deepEqual(r.requests[0].body,r.requests[1].body);assert.deepEqual(r.requests[0].body.reasoning,{effort:'low'});
+  assert.deepEqual(r.requests[0].body,r.requests[1].body);assert.deepEqual(r.requests[0].body.reasoning,{effort:'minimal'});
   assert.deepEqual(stageOutcomes(r.timings.filter(event=>event.stage==='openai_attempt')),[['openai_attempt','error',1],['openai_attempt','ok',2]]);
 });
 
@@ -237,18 +240,20 @@ test('actual two-page PDF text cannot promote a page subtotal through header-onl
  assert.ifError(r.error);assert.deepEqual(r.calls,['azure','openai']);assert.equal(r.queries.length,1);assert.equal(r.result.totalGross,24.8);assert.equal(r.result.documentNumber,'FB-43');assert.deepEqual(r.result.productLines.map(line=>line.code),['LAB-A','LAB-B']);
 });
 
-const timingStages=new Set(['request_total','exact_file_lookup','azure_header','azure_supplier_match','openai_header','openai_attempt','openai_supplier_match']);
+const timingStages=new Set(['request_total','exact_file_lookup','azure_header','azure_submit','azure_poll_wait','azure_poll_request','azure_supplier_match','openai_header','openai_attempt','openai_supplier_match']);
 function assertSanitizedTimings(events){
  assert.ok(events.length,'actual handler must emit diagnostics');
  for(const event of events){
   const expected=['correlationId','elapsedMs','outcome','stage'];
   if(event.stage==='openai_attempt')expected.push('attempt');
+  if(event.stage==='azure_poll_wait'||event.stage==='azure_poll_request')expected.push('poll');
   assert.deepEqual(Object.keys(event).sort(),expected.sort(),'only the fixed diagnostic schema is logged');
   assert.match(event.correlationId,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,'correlation is a new random UUID, never an invoice/request ID');
   assert.ok(timingStages.has(event.stage));
   assert.ok((event.stage==='request_total'?['finished','closed']:['ok','error']).includes(event.outcome));
   assert.equal(typeof event.elapsedMs,'number');assert.ok(Number.isFinite(event.elapsedMs)&&event.elapsedMs>=0);
   if(event.stage==='openai_attempt')assert.ok([1,2].includes(event.attempt));
+  if(event.stage==='azure_poll_wait'||event.stage==='azure_poll_request')assert.ok(Number.isInteger(event.poll)&&event.poll>=1&&event.poll<=30);
  }
  assert.equal(new Set(events.map(event=>event.correlationId)).size,1,'one correlation per request');
  assert.doesNotMatch(JSON.stringify(events),/SYNTHETIC|synthetic|company-a|store-a|supplier-a|SYN-42|FB-43|099999999|088888888|secret|data:|base64|filename|taxId|totalGross|documentNumber|Authorization/i);
@@ -370,7 +375,8 @@ test('actual response close during Azure work records one interrupted total and 
 test('two concurrent calls to the same actual FAST handler retain independent random correlations and elapsed times',async()=>{
  const firstEntered=deferred(),secondEntered=deferred(),releaseFirst=deferred(),releaseSecond=deferred();let current=1000;
  const firstData='data:image/jpeg;base64,Zmlyc3Q=',secondData='data:image/jpeg;base64,c2Vjb25k';
- const harness=createHarness({timingOptions:{now:()=>current},azure:async({contentData})=>{
+ const harness=createHarness({timingOptions:{now:()=>current},azure:async({contentData,timing})=>{
+  timing.start('azure_submit')('ok');
   if(contentData===firstData){firstEntered.resolve();await releaseFirst.promise;return {...complete(),documentNumber:'FIRST-1'}}
   assert.equal(contentData,secondData);secondEntered.resolve();await releaseSecond.promise;return {...complete(),documentNumber:'SECOND-2'};
  }});
@@ -388,4 +394,18 @@ test('two concurrent calls to the same actual FAST handler retain independent ra
  assert.equal(a.timings.find(event=>event.stage==='azure_header').elapsedMs,700);assert.equal(b.timings.find(event=>event.stage==='azure_header').elapsedMs,300);
  assert.deepEqual(harness.calls,['azure','azure']);assert.equal(harness.queries.length,2);assert.equal(harness.responses.length,2);
  assert.equal(harness.timings.filter(event=>event.stage==='request_total').length,2);
+});
+
+
+test('actual FAST handler forwards its request-local observer to the existing Azure invocation',async()=>{
+ let observer;
+ const r=await run({azure:async options=>{
+  assert.deepEqual(Object.keys(options).sort(),['contentData','mimeType','timeoutMs','timing']);assert.equal(options.timeoutMs,35000);
+  observer=options.timing;assert.equal(typeof observer.start,'function');
+  observer.start('azure_submit')('ok');observer.start('azure_poll_wait',1)('ok');observer.start('azure_poll_request',1)('ok');
+  return complete();
+ }});
+ assert.ifError(r.error);assert.deepEqual(r.calls,['azure']);assert.equal(r.result.totalGross,12.4);assertSanitizedTimings(r.timings);
+ assert.deepEqual(r.timings.filter(e=>e.stage.startsWith('azure_poll_')).map(e=>[e.stage,e.poll]),[['azure_poll_wait',1],['azure_poll_request',1]]);
+ assert.equal(r.timings.find(e=>e.stage==='azure_submit').correlationId,r.timings.find(e=>e.stage==='request_total').correlationId);
 });

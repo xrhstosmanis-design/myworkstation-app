@@ -165,7 +165,7 @@ test("fast header preserves a readable fallback inside its dedicated POS request
   const operator=await readFile(new URL("../../client/src/components/store/StoreOperatorApp.jsx",import.meta.url),"utf8");
   assert.match(wrapper,/FAST_AZURE_HEADER_TIMEOUT_MS=20000/);
   assert.match(wrapper,/FAST_OPENAI_HEADER_TOTAL_TIMEOUT_MS=70000/);
-  assert.match(wrapper,/callAzure\(\{contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS\}\)/);
+  assert.match(wrapper,/callAzure\(\{contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS,timing\}\)/);
   assert.match(wrapper,/const remainingMs=deadline-Date\.now\(\)/);
   assert.match(wrapper,/signal:AbortSignal\.timeout\(remainingMs\)/);
   assert.match(wrapper,/detail:"high"/);

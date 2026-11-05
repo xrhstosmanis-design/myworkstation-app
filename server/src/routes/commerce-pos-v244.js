@@ -538,7 +538,7 @@ async function callFastOpenAiHeader({prompt,filePart,timing}){
       const model=process.env.OPENAI_INVOICE_FAST_MODEL||process.env.OPENAI_INVOICE_MODEL||"gpt-5-mini";
       const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:AbortSignal.timeout(remainingMs),body:JSON.stringify({
         model,
-        ...(model==="gpt-5"||model==="gpt-5-2025-08-07"?{reasoning:{effort:"low"}}:{}),
+        ...(model==="gpt-5"||model==="gpt-5-2025-08-07"?{reasoning:{effort:"minimal"}}:{}),
         input:[{role:"user",content:[{type:"input_text",text:prompt},filePart]}],
         text:{format:{type:"json_schema",name:"invoice_fast_header",strict:true,schema:fastHeaderSchema}}
       })});
@@ -642,7 +642,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     let azureCanVerifyDocumentTotal=!isPdf;
     if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
       try{
-        const parsed=normalizeAzure(await timing.measure("azure_header",()=>callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS})));
+        const parsed=normalizeAzure(await timing.measure("azure_header",()=>callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS,timing})));
         azureCanVerifyDocumentTotal=!isPdf||parsed.azurePageCount===1;
         azureRawText=String(parsed.rawText||"");
         azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];

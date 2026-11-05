@@ -1,0 +1,44 @@
+[
+  {
+    "trial": "MIN-P01",
+    "file": "MIN-P01.pdf",
+    "physicalPages": 2,
+    "sha256": "f22a44786299fec2739bd8ea00d6c4788fe696791bb93c75c8e7dda332eadecf",
+    "expected": {
+      "supplier": "LAB METER TEST",
+      "documentNumber": "LAB-FAST-MINIMAL-20261105-P01",
+      "documentDate": "2026-11-05",
+      "totalGross": 24.8
+    },
+    "status": "CONSUMED_ONCE_NO_REPLAY",
+    "consumedAt": "2026-11-05T13:58:18.269Z"
+  },
+  {
+    "trial": "MIN-P02",
+    "file": "MIN-P02.pdf",
+    "physicalPages": 2,
+    "sha256": "27a451688b8517528af9fbfcbd309669969ae378dcd88152c7088112227fbe51",
+    "expected": {
+      "supplier": "LAB METER TEST",
+      "documentNumber": "LAB-FAST-MINIMAL-20261105-P02",
+      "documentDate": "2026-11-05",
+      "totalGross": 49.6
+    },
+    "status": "CONSUMED_ONCE_NO_REPLAY",
+    "consumedAt": "2026-11-05T14:02:30.309Z"
+  },
+  {
+    "trial": "MIN-P03",
+    "file": "MIN-P03.pdf",
+    "physicalPages": 2,
+    "sha256": "b4ff38e5dfc4a64b4df5d330107177854cb476ca707845aabfcbcd2aacf2052b",
+    "expected": {
+      "supplier": "LAB METER TEST",
+      "documentNumber": "LAB-FAST-MINIMAL-20261105-P03",
+      "documentDate": "2026-11-05",
+      "totalGross": 74.4
+    },
+    "status": "CONSUMED_ONCE_NO_REPLAY",
+    "consumedAt": "2026-11-05T14:04:49.387Z"
+  }
+]
