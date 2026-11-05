@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "401f6a1f5dad3a8c5f38b65ab5d7c9115b6cee6f",
-  "previousCandidateCommit": "05bbde0ea7f6d0b423418523136de826a8ebe0b3",
+  "baseCommit": "7851efe9889621553790fe920316c6b0a5bdbfcd",
+  "previousSourcePR": 3672,
+  "previousCandidateCommit": "6d7981ae4e4c2eb752a98d06e1b85c6903513857",
   "sourceFiles": [
     {
       "path": "client/src/components/cloud/StoreCloudPage.jsx",
@@ -23,23 +24,23 @@
   "registryHistory": [
     {
       "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
-      "beforeBlob": "6c71ce49d31652a8120176d53652d0f74597966b",
-      "afterBlob": "55b0777c73d6a5c5aba2c6d4ab66683f563ad0ee",
-      "oldBytes": 5239661,
+      "beforeBlob": "6bc44b54e7212d0a2b6c88fa2afdfae6ca531ec6",
+      "afterBlob": "2d4c332aad13a4270e7973272f53fe5a5031aeed",
+      "oldBytes": 5242500,
       "preservedSuffix": true
     },
     {
       "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
-      "beforeBlob": "3c5fdf81b4ba479cbfbeba7296a1872d6828e403",
-      "afterBlob": "dd926c22cdf94da0fda2640e9a0ba353b1a4f3c7",
-      "oldBytes": 4063735,
+      "beforeBlob": "b32bbefeb12b7fe9ecc1feca3098a1d630cdfa1f",
+      "afterBlob": "dce1b04dea4cec06b85797f14a98231db5e4c961",
+      "oldBytes": 4066574,
       "preservedSuffix": true
     },
     {
       "path": "docs/roadmap/PENDING_WORK.md",
-      "beforeBlob": "2a129b647371dd056ffadeec3e2d8cf8d4ef298a",
-      "afterBlob": "bd2373dcb0ee52046487da24c0e2f859181ca52a",
-      "oldBytes": 3591488,
+      "beforeBlob": "e3e32fbc598d2088834e628421e1cffa66ad2e44",
+      "afterBlob": "3b9dc43f3b68ec7246bf5976de48160e6c24f2df",
+      "oldBytes": 3594327,
       "preservedSuffix": true
     },
     {
@@ -50,26 +51,30 @@
       "preservedSuffix": true
     }
   ],
-  "previousFocusedRun": 42005553465,
+  "previousFocusedRuns": [
+    42005553465,
+    42006172236
+  ],
   "tests": {
     "pass": 29,
     "fail": 0,
     "skip": 0,
-    "kind": "isolated mounted components with fake API transport"
+    "kind": "isolated mounted components with fake API transport; unchanged source blobs"
   },
   "pdf": {
     "pages": 960,
-    "sha256": "5d2425917cf8f12449130dddc41331575bdcc1f4fb7834fda61ed742d5950ec5",
+    "sha256": "65bd1668712546f0e54780f482e1030d356727297b58e65d2983d2023c2f4103",
     "identicalCopies": [
       "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf",
       "docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf"
     ],
     "visualReviewAtBuild": "PENDING"
   },
-  "fullNativeCI": "REQUIRED ON SOURCE PR AND MAIN",
+  "fullNativeCI": "REQUIRED ON RECONCILED SOURCE PR AND MAIN",
   "independentReview": "PENDING",
   "runtimeInstallation": "NOT SUBMITTED",
   "hostedAcceptance": "NOT EXECUTED",
   "businessMutationsSubmitted": false,
-  "task3": "OPEN; retained owner /root"
+  "task3": "OPEN; retained owner /root",
+  "peerPageCountClaim": "PRESERVED; no edits to peer checkpoint, source or ownership"
 }
