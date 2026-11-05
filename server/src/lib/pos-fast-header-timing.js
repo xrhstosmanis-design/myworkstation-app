@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
 
-const stages=new Set(['request_total','exact_file_lookup','azure_header','azure_submit','azure_poll_wait','azure_poll_request','azure_supplier_match','openai_header','openai_attempt','openai_supplier_match']);
+const stages=new Set(['request_total','exact_file_lookup','pdf_header_page_probe','azure_header','azure_submit','azure_poll_wait','azure_poll_request','azure_supplier_match','openai_header','openai_attempt','openai_supplier_match']);
 const azurePollStages=new Set(['azure_poll_wait','azure_poll_request']);
 const noTiming=()=>{};
 const silentTiming=Object.freeze({start:()=>noTiming,measure:async(_stage,work)=>await work()});
