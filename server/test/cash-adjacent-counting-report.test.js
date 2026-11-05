@@ -66,6 +66,15 @@ test('automatic reviewed projection preserves candidate text and fingerprint wit
  assert.deepEqual(automatic.rows.map(r=>[r.initialCents,r.remainingCents,r.offsetCents,r.cardCents]),canonical.rows.map(r=>[r.initialCents,r.remainingCents,r.offsetCents,r.cardCents]));
  const malformed=structuredClone(canonical);malformed.countingErrorCandidates[0].commonCents=1;
  assert.throws(()=>projectAutomaticReviewedReport(malformed));
+ const wrongStatus=structuredClone(canonical);
+ wrongStatus.countingErrorCandidates[0].status='AMBIGUOUS_OVERLAP';
+ assert.throws(()=>projectAutomaticReviewedReport(wrongStatus),'ambiguous overlap cannot carry an allocated candidate amount');
+ const wrongResidual=structuredClone(canonical);
+ wrongResidual.countingErrorCandidates[0].previousResidualCents=0;
+ assert.throws(()=>projectAutomaticReviewedReport(wrongResidual),'candidate residual must equal immutable source difference minus overlap');
+ const wrongSign=structuredClone(canonical);
+ wrongSign.countingErrorCandidates[0].nextDifferenceCents=-34308;
+ assert.throws(()=>projectAutomaticReviewedReport(wrongSign),'same-sign adjacent cash differences cannot become candidates');
  const missing=structuredClone(canonical);delete missing.countingErrorCandidates;
  assert.throws(()=>projectAutomaticReviewedReport(missing),/Cash report text changed/);
 });
