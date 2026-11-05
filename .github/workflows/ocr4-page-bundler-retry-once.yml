@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Run exact pinned recipe with expected-failure shell handling
+      - name: Run exact pinned recipe with expected-failure and client-package context checks
         shell: bash
         run: |
           set -euo pipefail
@@ -34,7 +34,6 @@ jobs:
           import subprocess,yaml
           raw=subprocess.check_output(['git','show','29ec90a859c0a091f5186e3c116c59159eec4a11:.github/workflows/ocr4-page-bundler-compat-once.yml'],text=True)
           steps=yaml.safe_load(raw)['jobs']['compatibility']['steps']
-          failed=False
           try:
             for step in steps:
               if 'run' not in step or step.get('if')=='always()':continue
@@ -42,6 +41,11 @@ jobs:
               if step['name']=='Reproduce the three exact existing bundler failures':
                 assert command.count('set -uo pipefail')==1
                 command=command.replace('set -uo pipefail','set +e\nset -uo pipefail')
+              if step['name']=='Add exact asset-import semantics to the test bundlers only':
+                changes=[("import {existsSync} from 'node:fs';","import {existsSync} from 'node:fs';\nimport {dirname} from 'node:path';"),("const require=createRequire(import.meta.url);","const clientLoader=fileURLToPath(new URL('../../client/src/lib/invoice-pdf-count-loader.js',import.meta.url));\nconst require=createRequire(clientLoader);"),("resolveDir:process.cwd(),sourcefile:","resolveDir:dirname(clientLoader),sourcefile:"),("entryPoints:[fileURLToPath(new URL('../../client/src/lib/invoice-pdf-count-loader.js',import.meta.url))]","entryPoints:[clientLoader]"),("assert.ok(existsSync(fileURLToPath(module.exports.default)));","assert.ok(existsSync(fileURLToPath(module.exports.default)));\nassert.equal(dirname(worker),dirname(require.resolve('pdfjs-dist/build/pdf.mjs')));")]
+                for old,new in changes:
+                  assert command.count(old)==1,(old,command.count(old))
+                  command=command.replace(old,new)
               print('RUN '+step['name'],flush=True)
               subprocess.run(['bash','--noprofile','--norc','-eo','pipefail','-c',command],check=True)
           finally:
