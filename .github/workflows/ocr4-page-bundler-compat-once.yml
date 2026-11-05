@@ -1,0 +1,228 @@
+name: OCR4 PDF worker test compatibility (isolated)
+on:
+  push:
+    branches: [build/ocr4-page-bundler-compat-20261105]
+    paths: [.github/workflows/ocr4-page-bundler-compat-once.yml]
+permissions:
+  contents: write
+concurrency:
+  group: ocr4-page-bundler-compat-20261105
+  cancel-in-progress: false
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE: d6046198273018a2f14b1a65890ef6b2a3c7345d
+      TARGET: fix/ocr4-physical-page-display-20261105
+      OUT: /tmp/ocr4-page-bundler-compat
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: d6046198273018a2f14b1a65890ef6b2a3c7345d
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verify exact existing source and claim
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$BASE"
+          test "$(git ls-remote origin refs/heads/$TARGET | cut -f1)" = "$BASE"
+          test "$(git hash-object server/test/pos-decimal-keyboard.test.js)" = 41bd900f9d0eec3d6cf33e01cb54960e75fdc9fa
+          test "$(git hash-object server/test/pos-direct-credit-payment.test.js)" = 8b96f8f2722dc41b28ab974bbe382bc90d7d34eb
+          test "$(git hash-object server/test/pos-internal-return-ui.test.js)" = b1e563d244d33ce0abfbdccc8126e907a6c7f57d
+          grep -q INVOICE-PHYSICAL-PAGE-DISPLAY-01 docs/roadmap/OPEN_WORK_TRACKER.md
+          mkdir -p "$OUT"
+          node --version | tee "$OUT/node-version.txt"
+          git ls-tree -r HEAD client server/src > "$OUT/runtime-before.txt"
+      - name: Install declared packages and generate existing client without database access
+        run: |
+          npm install --ignore-scripts --package-lock=false --no-audit --no-fund
+          npm run prisma:generate -w server
+      - name: Reproduce the three exact existing bundler failures
+        shell: bash
+        run: |
+          set -uo pipefail
+          node --test server/test/pos-decimal-keyboard.test.js server/test/pos-direct-credit-payment.test.js server/test/pos-internal-return-ui.test.js > "$OUT/before.tap" 2>&1
+          code=$?
+          test "$code" = 1 || exit 1
+          grep -q '^# fail 3$' "$OUT/before.tap" || exit 1
+          grep -q 'No matching export' "$OUT/before.tap" || exit 1
+          grep -q 'pdf.worker.min.mjs?url' "$OUT/before.tap" || exit 1
+          tail -10 "$OUT/before.tap"
+      - name: Add exact asset-import semantics to the test bundlers only
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os,hashlib
+          from pathlib import Path
+          out=Path(os.environ['OUT'])
+          helper=Path('server/test/helpers/pdf-worker-url-plugin.mjs');helper.parent.mkdir(exist_ok=True)
+          assert not helper.exists()
+          helper.write_text(r'''// Node/esbuild fixtures need Vite's ?url asset-import contract.
+          // Resolve the real local worker file to a URL; do not execute or stub PDF.js.
+          import {createRequire} from 'node:module';
+          import {join} from 'node:path';
+          import {pathToFileURL} from 'node:url';
+          export function pdfWorkerUrlPlugin(){
+            return {name:'pdf-worker-url-for-node-tests',setup(builder){
+              builder.onResolve({filter:/^pdfjs-dist\/build\/pdf\.worker\.min\.mjs\?url$/},args=>({
+                path:createRequire(join(args.resolveDir||process.cwd(),'pdf-worker-fixture.cjs')).resolve('pdfjs-dist/build/pdf.worker.min.mjs'),
+                namespace:'mws-pdf-worker-url'
+              }));
+              builder.onLoad({filter:/.*/,namespace:'mws-pdf-worker-url'},args=>({
+                contents:`export default ${JSON.stringify(pathToFileURL(args.path).href)};`,loader:'js'
+              }));
+            }};
+          }
+          ''')
+          intro="import {pdfWorkerUrlPlugin} from './helpers/pdf-worker-url-plugin.mjs';\n"
+          for name in ['pos-decimal-keyboard.test.js','pos-direct-credit-payment.test.js','pos-internal-return-ui.test.js']:
+            p=Path('server/test')/name;old=p.read_bytes();s=old.decode()
+            before=out/'before'/p;before.parent.mkdir(parents=True,exist_ok=True);before.write_bytes(old)
+            if name=='pos-direct-credit-payment.test.js':
+              find="plugins:[{name:'camera-input-only'";replacement="plugins:[pdfWorkerUrlPlugin(),{name:'camera-input-only'"
+            else:
+              find="loader:{'.css':'empty'}";replacement="loader:{'.css':'empty'},plugins:[pdfWorkerUrlPlugin()]"
+            assert s.count(find)==1,(name,s.count(find))
+            new=intro+s.replace(find,replacement)
+            assert new[len(intro):].replace(replacement,find).encode()==old,'Every existing assertion and test body must remain exact'
+            p.write_text(new)
+          check=Path('server/test/pdf-worker-url-plugin.test.js');assert not check.exists()
+          check.write_text(r'''import test from 'node:test';
+          import assert from 'node:assert/strict';
+          import {build} from 'esbuild';
+          import {createRequire} from 'node:module';
+          import {fileURLToPath,pathToFileURL} from 'node:url';
+          import {existsSync} from 'node:fs';
+          import {pdfWorkerUrlPlugin} from './helpers/pdf-worker-url-plugin.mjs';
+          const require=createRequire(import.meta.url);
+          const worker=require.resolve('pdfjs-dist/build/pdf.worker.min.mjs');
+          const options={stdin:{contents:'import url from "pdfjs-dist/build/pdf.worker.min.mjs?url";export default url;',resolveDir:process.cwd(),sourcefile:'worker-asset-fixture.mjs'},bundle:true,write:false,format:'cjs',platform:'node',logLevel:'silent'};
+          test('negative control: plain esbuild cannot interpret the Vite worker URL default import',async()=>{
+            await assert.rejects(build(options),error=>error.errors?.some(item=>/No matching export/.test(item.text))===true);
+          });
+          test('test bundler exports the real local worker URL without executing or substituting its code',async()=>{
+            const result=await build({...options,plugins:[pdfWorkerUrlPlugin()]}),module={exports:{}};
+            new Function('module','exports',result.outputFiles[0].text)(module,module.exports);
+            assert.equal(module.exports.default,pathToFileURL(worker).href);
+            assert.ok(existsSync(fileURLToPath(module.exports.default)));
+            assert.doesNotMatch(result.outputFiles[0].text,/WorkerMessageHandler/);
+          });
+          test('the actual production PDF count loader still compiles with real PDF.js, not a parser stub',async()=>{
+            const result=await build({entryPoints:[fileURLToPath(new URL('../../client/src/lib/invoice-pdf-count-loader.js',import.meta.url))],bundle:true,write:false,format:'esm',platform:'browser',logLevel:'silent',plugins:[pdfWorkerUrlPlugin()]});
+            assert.match(result.outputFiles[0].text,/getDocument/);
+            assert.ok(result.outputFiles[0].text.includes(pathToFileURL(worker).href));
+          });
+          ''')
+          PY
+      - name: Run combined actual-form, parser and browser regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
+          test -n "$CHROME"
+          export CHROME_BIN="$CHROME"
+          export OCR4_PDF_COUNT_SCREENSHOTS="$OUT/screenshots"
+          "$CHROME" --version | tee "$OUT/chromium-version.txt"
+          node --test server/test/pdf-worker-url-plugin.test.js server/test/pos-decimal-keyboard.test.js server/test/pos-direct-credit-payment.test.js server/test/pos-internal-return-ui.test.js server/test/invoice-file-page-count.test.js server/test/invoice-file-page-summary.test.js server/test/document-page-preview.test.js server/test/supplier-five-photos.test.js server/test/pos-background-pdf-page-count.test.js server/test/pos-invoice-multipage-upload-v1.test.js 2>&1 | tee "$OUT/combined.tap"
+      - name: Preserve normal production build and every runtime byte
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build:client 2>&1 | tee "$OUT/client-build.log"
+          git diff --exit-code -- client server/src package.json server/package.json
+      - name: Synchronize evidence and complete shared records
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install reportlab==4.2.5 pypdf==5.1.0 PyMuPDF==1.25.3
+          python3 - <<'PY'
+          import os,json,re,hashlib,subprocess
+          from pathlib import Path
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          out=Path(os.environ['OUT']);ev=Path('CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105')
+          def counters(path):
+            s=path.read_text();return {k:int(re.findall(r'^# '+k+r' (\d+)$',s,re.M)[-1]) for k in ['tests','pass','fail','cancelled','skipped']}
+          before=counters(out/'before.tap');after=counters(out/'combined.tap')
+          assert before['fail']==3 and after['fail']==after['skipped']==after['cancelled']==0
+          runtime=[]
+          for line in subprocess.check_output(['git','ls-tree','-r','HEAD','client','server/src'],text=True).splitlines():
+            meta,name=line.split('\t',1);old=meta.split()[2]
+            assert subprocess.check_output(['git','hash-object',name],text=True).strip()==old,name
+            runtime.append(name)
+          stamp=datetime.now(ZoneInfo('Europe/Athens')).isoformat(timespec='seconds')
+          prefix=f'''## 05/11/2026 - INVOICE-PHYSICAL-PAGE-DISPLAY-01 / TEST BUNDLER COMPATIBILITY / AWAITING FULL CI
+
+          Retained task4 owner /root; source PR3673, branch fix/ocr4-physical-page-display-20261105. Exact full CI42009262448 on d604619 failed3 of5835 server tests (5832PASS,0SKIP). Independently downloaded original job127183902392 log SHA256738ac499dee72b45b64ba1bcd7b0b722237553b3c765e8e2722b0511552d3a32 identifies the SAME build-time error in pos-decimal-keyboard, pos-direct-credit-payment and pos-internal-return-ui: plain esbuild interpreted the Vite PDF worker ?url import as worker JavaScript with no default export. This is not a failed monetary assertion. Raw-log artifact13407993190 is retained; no diagnosis inferred from truncated logs.
+
+          Bounded compatibility change: a test-only esbuild plugin resolves exactly the real local PDF worker ?url asset to its URL, without executing worker code or substituting the parser. Three existing fixture builders use it. Every original test body/assertion remains byte-exact after reversing only the import/plugin-option additions. Added negative control reproduces the unadapted compiler failure; positive tests verify real URL resolution and actual production loader compilation. No application runtime file, dependency, CI policy, payment/credit/stock/fiscal writer or acceptance threshold changed.
+
+          Complete-checkout Node20 targeted reproduction: before{before['pass']}PASS/{before['fail']}FAIL; combined after{after['pass']}PASS/0FAIL/0SKIP. Existing actual Chromium/PDF.js16 cases and normal client build passed again; all{len(runtime)} tracked client/server-runtime files remain equal to d604619. Provider/DB/business I/O in mounted-form tests is simulated, not hosted acceptance. Recorded {stamp}. Earlier119 focused tests and independent d604 review remain historical; exact NEW-head full PR/main CI and review are required before normal guarded release. Source remains DRAFT/AWAITING LAB. No new OCR or old-fixture replay; I/H/G and peer R01-R05 remain protected, J37.20 unused. Broad supplier/rows/packages/discount/VAT/EFK completeness remains OPEN.
+
+          Checkpoint CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md; evidence bundler-compatibility-results.json in the existing evidence directory. Next: exact new-head full CI/review, reconcile concurrent main without losing peer records, ordinary guarded release, then separately observed hosted display acceptance. All prior registry bytes are retained as exact suffixes; no new manual or numbered PASS.
+
+          '''
+          prefix='\n'.join(line[10:] if line.startswith('          ') else line for line in prefix.split('\n')).encode()
+          records={}
+          def blob(b):return hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
+          for name in ['CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md','docs/roadmap/OPEN_WORK_TRACKER.md','docs/roadmap/PENDING_WORK.md']:
+            p=Path(name);old=p.read_bytes();new=prefix+old;p.write_bytes(new);assert new[len(prefix):]==old
+            dest=out/'before'/p;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(old)
+            records[name]={'before_blob':blob(old),'after_blob':blob(new),'prefix_bytes':len(prefix),'old_suffix_preserved':True}
+          checkpoint=Path('CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md');old=checkpoint.read_bytes();checkpoint.write_bytes(prefix+old)
+          result={'status':'TEST_COMPATIBILITY_CORRECTED_AWAITING_FULL_CI_REVIEW_LAB','base':os.environ['BASE'],'recorded_at':stamp,'runtime':subprocess.check_output(['node','--version'],text=True).strip(),'original_full_ci':{'run':42009262448,'tests':5835,'pass':5832,'fail':3,'skip':0,'raw_log_sha256':'738ac499dee72b45b64ba1bcd7b0b722237553b3c765e8e2722b0511552d3a32'},'targeted_before':before,'targeted_after':after,'actual_chromium_cases':16,'normal_client_build':'PASS','unchanged_runtime_files':len(runtime),'original_assertions_preserved':True,'registries':records,'deployed':False,'hosted_test':False,'business_mutation':False}
+          (ev/'bundler-compatibility-results.json').write_text(json.dumps(result,indent=2)+'\n')
+          (out/'results.json').write_text(json.dumps(result,indent=2)+'\n')
+          PY
+          python3 docs/roadmap/generate-open-work-tracker.py
+          cp output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf
+          python3 - <<'PY'
+          import fitz,os
+          from pathlib import Path
+          a=Path('output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf');b=Path('docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf');assert a.read_bytes()==b.read_bytes()
+          doc=fitz.open(a);assert 'TEST BUNDLER COMPATIBILITY' in doc[0].get_text()
+          for i in range(2):doc[i].get_pixmap(matrix=fitz.Matrix(1.5,1.5)).save(Path(os.environ['OUT'])/f'tracker-page-{i+1}.png')
+          PY
+      - name: Publish only this tested compatibility delta to the existing source branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/$TARGET | cut -f1)" = "$BASE"
+          git config user.name 'xrhstosmanis-design'
+          git config user.email '309145615+xrhstosmanis-design@users.noreply.github.com'
+          git add server/test/helpers/pdf-worker-url-plugin.mjs server/test/pdf-worker-url-plugin.test.js server/test/pos-decimal-keyboard.test.js server/test/pos-direct-credit-payment.test.js server/test/pos-internal-return-ui.test.js CHECKPOINTS/CHANGES/2026-11-05-ocr4-physical-page-display.md CHECKPOINTS/EVIDENCE/ocr4-physical-page-display-20261105/bundler-compatibility-results.json CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md docs/roadmap/OPEN_WORK_TRACKER.md docs/roadmap/PENDING_WORK.md docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf
+          test "$(git diff --cached --name-only | wc -l)" = 12
+          git diff --cached --binary > "$OUT/candidate.patch"
+          git commit -m 'test(invoice): honor PDF worker URL assets in existing POS fixture bundlers'
+          test "$(git rev-parse HEAD^)" = "$BASE"
+          git push origin HEAD:refs/heads/$TARGET
+          git rev-parse HEAD > "$OUT/published-commit.txt"
+      - name: Preserve evidence and exact tested files
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os,json,hashlib,subprocess,shutil
+          from pathlib import Path
+          out=Path(os.environ['OUT']);out.mkdir(exist_ok=True)
+          names=subprocess.check_output(['git','diff','--name-only',os.environ['BASE']],text=True).splitlines()
+          names+=['server/test/helpers/pdf-worker-url-plugin.mjs','server/test/pdf-worker-url-plugin.test.js']
+          hashes={}
+          for name in sorted(set(names)):
+            p=Path(name)
+            if not p.is_file():continue
+            dest=out/'tested'/p;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,dest);data=p.read_bytes()
+            hashes[name]=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+          (out/'tested-blobs.json').write_text(json.dumps(hashes,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ocr4-page-bundler-compatibility-proof
+          path: /tmp/ocr4-page-bundler-compat
+          if-no-files-found: error
+          retention-days: 7
