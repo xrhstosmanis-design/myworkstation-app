@@ -31,7 +31,8 @@ const v244Client=await readFile(new URL("../../client/src/lib/invoice-v244-core.
 test("POS accepts and visibly orders up to five pages for one invoice",()=>{
   assert.match(client,/type="file" multiple accept="image\/\*,application\/pdf"/);
   assert.match(client,/incoming\.length>5-pages\.length/);
-  assert.match(client,/Σελίδα \{index\+1\}/);
+  assert.match(client,/Αρχείο \{index\+1\}/);
+  assert.match(client,/<InvoiceFilePageSummary pages=\{pages\} scopeKey=\{store.id\}/);
   assert.match(client,/movePage\(index,-1\)/);
   assert.match(client,/movePage\(index,1\)/);
 });

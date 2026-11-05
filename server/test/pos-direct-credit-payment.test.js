@@ -1,3 +1,4 @@
+import {pdfWorkerUrlPlugin} from './helpers/pdf-worker-url-plugin.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -20,7 +21,7 @@ test('uploaded credit reuses the exact signed request after a lost response and 
 });
 
 test('mounted original POS upload shows negative/net before one confirmation, retries no handoff or positive payment',async()=>{
- const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react/jsx-runtime'],loader:{'.css':'empty'},plugins:[{name:'camera-input-only',setup(b){
+ const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StoreSupplierInvoicePremiumFast.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react/jsx-runtime'],loader:{'.css':'empty'},plugins:[pdfWorkerUrlPlugin(),{name:'camera-input-only',setup(b){
   b.onResolve({filter:/\/InvoiceVatInbox\.jsx$/},()=>({path:'header',namespace:'synthetic-input'}));
   b.onResolve({filter:/\/useMobileDocumentPhotos\.js$/},()=>({path:'mobile',namespace:'synthetic-input'}));
   b.onResolve({filter:/\/(DocumentCameraFocus|MobileDocumentPhotosQr|InvoiceQrCamera|InvoiceQrScanner)\.jsx$/},()=>({path:'unused',namespace:'synthetic-input'}));

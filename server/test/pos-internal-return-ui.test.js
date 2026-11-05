@@ -1,3 +1,4 @@
+import {pdfWorkerUrlPlugin} from './helpers/pdf-worker-url-plugin.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -18,7 +19,7 @@ test('actual mounted RBS refund modal uses exact dropdown, explicit refund metho
  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid'}),keys=['window','document','navigator','HTMLElement','Event','IS_REACT_ACT_ENVIRONMENT'];
  const old=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:dom.window[k]});
  const React=await import('react'),{createRoot}=await import('react-dom/client'),{act}=React;
- const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StorePosStandardModals.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react/jsx-runtime'],loader:{'.css':'empty'}});
+ const compiled=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StorePosStandardModals.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react/jsx-runtime'],loader:{'.css':'empty'},plugins:[pdfWorkerUrlPlugin()]});
  const m={exports:{}};new Function('require','module','exports',compiled.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);
  const sale={id:'receipt',sessionId:'shift',source:'POS',fiscalStatus:'ISSUED',canInternalReturn:true,total:3,lines:[{id:'line',description:'VIRTUAL WATER',quantity:3,unitPrice:1,lineTotal:3}],payments:[{method:'CASH',amount:3}]};
  const posts=[],messages=[],errors=[];let closed=0,confirmation=false;

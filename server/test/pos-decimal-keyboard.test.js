@@ -1,3 +1,4 @@
+import {pdfWorkerUrlPlugin} from './helpers/pdf-worker-url-plugin.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -74,7 +75,7 @@ test('real mounted React numeric state keeps 0.05 and 1.20 while the keyboard re
 });
 
 test('existing actual POS mixed-payment inline pad retains comma cents without issuing payment',async()=>{
- const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StorePosStandardModals.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime'],loader:{'.css':'empty'}}),m={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);
+ const built=await build({entryPoints:[fileURLToPath(new URL('../../client/src/components/store/StorePosStandardModals.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',external:['react','react-dom','react-dom/client','react/jsx-runtime'],loader:{'.css':'empty'},plugins:[pdfWorkerUrlPlugin()]}),m={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);
  const dom=new JSDOM('<div id="root"></div>',{url:'https://isolated.invalid'}),w=dom.window,keys=['window','document','navigator','HTMLElement','MutationObserver','IS_REACT_ACT_ENVIRONMENT'],saved=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));for(const k of keys)Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:k==='IS_REACT_ACT_ENVIRONMENT'?true:w[k]});
  const React=await import('react'),{createRoot}=await import('react-dom/client'),root=createRoot(w.document.querySelector('#root'));let writes=0,checkouts=0;
  const press=async text=>React.act(async()=>[...w.document.querySelectorAll('.pos-inline-keypad button')].find(b=>b.textContent===text).click());
