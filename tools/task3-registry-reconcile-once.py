@@ -9,7 +9,15 @@ import shutil
 
 BASE="69c9a14f3ec00ad044e4fa1d7d08aa4894248836"
 TASK="723d1a3cdd2fe45675c92a3dbe60c2511489a6ac"
-PEER="c182e18767016ea2645dc538537d7ba3e81215d3"
+# The peer SHA is deliberately passed at execution time: main moves frequently.
+if "--expected-main" not in sys.argv:
+ raise SystemExit("ABORT: pass --expected-main <full reviewed main commit SHA>")
+idx=sys.argv.index("--expected-main")
+if idx+1>=len(sys.argv):
+ raise SystemExit("ABORT: --expected-main has no SHA")
+PEER=sys.argv[idx+1]
+if not re.fullmatch(r"[0-9a-f]{40}", PEER):
+ raise SystemExit("ABORT: invalid main commit SHA")
 DOCS=(
  "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
  "docs/roadmap/OPEN_WORK_TRACKER.md",
