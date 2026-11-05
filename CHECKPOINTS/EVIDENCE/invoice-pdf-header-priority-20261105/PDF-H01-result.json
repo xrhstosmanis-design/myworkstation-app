@@ -1,0 +1,215 @@
+{
+  "trial": "PDF-H01",
+  "revision": "2b13a8419c3ec82fb14c67902b6bb06bfef8752b",
+  "beforeCommit": "29c4624d3da3b28cf60ad683b70cdca38a47fcd4",
+  "ui": {
+    "trial": "PDF-H01",
+    "started": "2026-11-05T17:18:20.012Z",
+    "observed": "2026-11-05T17:18:23.732Z",
+    "uiElapsedMs": 3720,
+    "ready": true,
+    "supplier": "LAB METER TEST",
+    "documentNumber": "LAB-PDF-HEADER-PRIORITY-20261105-H01",
+    "documentDate": "2026-11-05",
+    "amountText": "24,80",
+    "totalGross": 24.8,
+    "screenshot": "PDF-H01-confirmed.jpg"
+  },
+  "after": [
+    {
+      "active_shifts": [
+        {
+          "cardSales": 0,
+          "cashSales": 0,
+          "expenses": 0,
+          "id": "a2270849-bbc1-41ea-bdf9-9dd6be69d3bd",
+          "openedAt": "2026-11-04T06:54:12.460629+00:00",
+          "openingDrawer": 10,
+          "operator": "LAB POS 2",
+          "terminal": "MAIN",
+          "transactionCount": 1
+        }
+      ],
+      "attachments": {
+        "count": 84,
+        "digest": "0a4a0a1762bf23b78cfff38a584db2e0"
+      },
+      "captured_at": "2026-11-05T17:19:00.287238Z",
+      "documents": {
+        "count": 74,
+        "digest": "3e01b7765cf10f514bc6dfe0e3ca7349"
+      },
+      "id": "cmtpopbgo000trhb5ng9ytiru",
+      "inbox": {
+        "count": 66,
+        "digest": "7c36baf34fbba338023d68f29da1d815"
+      },
+      "jobs": {
+        "count": 82,
+        "digest": "e37197486ba26fd36c13d3be6cd94620"
+      },
+      "movements": {
+        "count": 95,
+        "digest": "f69aa9d0bec0bf377f1b9645262e5aba"
+      },
+      "name": "\u0395\u03a1\u0393\u0391\u03a3\u03a4\u0397\u03a1\u0399\u039f \u0394\u039f\u039a\u0399\u039c\u03a9\u039d",
+      "order_lines": {
+        "count": 634,
+        "digest": "baf3fbae09a8316af68135bcab820ffd"
+      },
+      "orders": {
+        "count": 62,
+        "digest": "b5df83ff0ce9892378f070c8bfbf1640"
+      },
+      "shifts": {
+        "count": 44,
+        "digest": "5a2d5f3a434b0154b99f8d1386571aed"
+      },
+      "stock": {
+        "count": 110,
+        "digest": "3c3739c172f7acfdb0939e52d06bed8d"
+      },
+      "transactions": {
+        "count": 135,
+        "digest": "ec25965ae7f73cc4796bf0f67e04b955"
+      },
+      "wallet": {
+        "balanceMicros": "4610532",
+        "enabled": false,
+        "invoiceEnabled": false,
+        "reservedMicros": "0"
+      }
+    },
+    {
+      "active_shifts": [],
+      "attachments": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "captured_at": "2026-11-05T17:19:00.287238Z",
+      "documents": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "id": "cmv2qanca000psigeizep8o9m",
+      "inbox": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "jobs": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "movements": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "name": "N40 CONTROL 20261010",
+      "order_lines": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "orders": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "shifts": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "stock": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "transactions": {
+        "count": 0,
+        "digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "wallet": {
+        "balanceMicros": "4610532",
+        "enabled": false,
+        "invoiceEnabled": false,
+        "reservedMicros": "0"
+      }
+    }
+  ],
+  "uiShiftAfter": {
+    "terminal": "MAIN",
+    "openedBy": "LAB POS 2",
+    "transactions": 1,
+    "cash": 40,
+    "cardsAndIris": 0,
+    "total": 0
+  },
+  "checks": {
+    "fourFields": true,
+    "unchangedSnapshot": true,
+    "completeLogs": true,
+    "uniqueCorrelation": true,
+    "exactStageOrder": true,
+    "finite": true,
+    "oneOpenAiAttempt": true,
+    "noAzure": true,
+    "safeKeys": true,
+    "successfulOutcomes": true,
+    "uuidCorrelation": true
+  },
+  "events": [
+    {
+      "timestamp": "2026-11-05T17:18:20.143083625Z",
+      "correlationId": "c44ac0c2-e3cc-43b0-8db4-2fe81e3851cf",
+      "stage": "exact_file_lookup",
+      "outcome": "ok",
+      "elapsedMs": 10.832
+    },
+    {
+      "timestamp": "2026-11-05T17:18:20.489257288Z",
+      "correlationId": "c44ac0c2-e3cc-43b0-8db4-2fe81e3851cf",
+      "stage": "pdf_header_page_probe",
+      "outcome": "ok",
+      "elapsedMs": 346.074
+    },
+    {
+      "timestamp": "2026-11-05T17:18:23.590514606Z",
+      "correlationId": "c44ac0c2-e3cc-43b0-8db4-2fe81e3851cf",
+      "stage": "openai_attempt",
+      "outcome": "ok",
+      "elapsedMs": 3100.96,
+      "attempt": 1
+    },
+    {
+      "timestamp": "2026-11-05T17:18:23.590533028Z",
+      "correlationId": "c44ac0c2-e3cc-43b0-8db4-2fe81e3851cf",
+      "stage": "openai_header",
+      "outcome": "ok",
+      "elapsedMs": 3101.277
+    },
+    {
+      "timestamp": "2026-11-05T17:18:23.592947932Z",
+      "correlationId": "c44ac0c2-e3cc-43b0-8db4-2fe81e3851cf",
+      "stage": "openai_supplier_match",
+      "outcome": "ok",
+      "elapsedMs": 2.03
+    },
+    {
+      "timestamp": "2026-11-05T17:18:23.593763617Z",
+      "correlationId": "c44ac0c2-e3cc-43b0-8db4-2fe81e3851cf",
+      "stage": "request_total",
+      "outcome": "finished",
+      "elapsedMs": 3464.58
+    }
+  ],
+  "sumsMs": {
+    "exact_file_lookup": 10.832,
+    "pdf_header_page_probe": 346.074,
+    "openai_attempt": 3100.96,
+    "openai_header": 3101.277,
+    "openai_supplier_match": 2.03,
+    "request_total": 3464.58
+  },
+  "consumed": true,
+  "noReplay": true,
+  "status": "SCOPED_HEADER_PASS",
+  "physicalPOS": "NOT_TESTED",
+  "submission": false
+}

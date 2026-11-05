@@ -1,0 +1,150 @@
+{
+  "status": "INSTALLED_SCOPED_HEADER_PASS_GENERAL_SPEED_OPEN",
+  "revision": "2b13a8419c3ec82fb14c67902b6bb06bfef8752b",
+  "sourcePR": 3686,
+  "sourceCI": 42067246727,
+  "mainCI": 42069768057,
+  "deployCI": 42072372148,
+  "deployId": "dep-dbmbic3m8hqs73f9c5vg",
+  "samples": [
+    {
+      "trial": "PDF-H01",
+      "beforeCommit": "29c4624d3da3b28cf60ad683b70cdca38a47fcd4",
+      "ui": {
+        "trial": "PDF-H01",
+        "started": "2026-11-05T17:18:20.012Z",
+        "observed": "2026-11-05T17:18:23.732Z",
+        "uiElapsedMs": 3720,
+        "ready": true,
+        "supplier": "LAB METER TEST",
+        "documentNumber": "LAB-PDF-HEADER-PRIORITY-20261105-H01",
+        "documentDate": "2026-11-05",
+        "amountText": "24,80",
+        "totalGross": 24.8
+      },
+      "sumsMs": {
+        "exact_file_lookup": 10.832,
+        "pdf_header_page_probe": 346.074,
+        "openai_attempt": 3100.96,
+        "openai_header": 3101.277,
+        "openai_supplier_match": 2.03,
+        "request_total": 3464.58
+      },
+      "checks": {
+        "fourFields": true,
+        "unchangedSnapshot": true,
+        "completeLogs": true,
+        "uniqueCorrelation": true,
+        "exactStageOrder": true,
+        "finite": true,
+        "oneOpenAiAttempt": true,
+        "noAzure": true,
+        "safeKeys": true
+      },
+      "status": "SCOPED_HEADER_PASS",
+      "consumed": true
+    },
+    {
+      "trial": "PDF-H02",
+      "beforeCommit": "0097d4ebc7cc3ffb67c3423bfa150085f0e9e780",
+      "ui": {
+        "trial": "PDF-H02",
+        "started": "2026-11-05T17:20:37.863Z",
+        "observed": "2026-11-05T17:20:40.218Z",
+        "uiElapsedMs": 2355,
+        "ready": true,
+        "supplier": "LAB METER TEST",
+        "documentNumber": "LAB-PDF-HEADER-PRIORITY-20261105-H02",
+        "documentDate": "2026-11-05",
+        "amountText": "49,60",
+        "totalGross": 49.6
+      },
+      "sumsMs": {
+        "exact_file_lookup": 16.38,
+        "pdf_header_page_probe": 8.105,
+        "openai_attempt": 2069.129,
+        "openai_header": 2069.295,
+        "openai_supplier_match": 1.818,
+        "request_total": 2100.953
+      },
+      "checks": {
+        "fourFields": true,
+        "unchangedSnapshot": true,
+        "completeLogs": true,
+        "uniqueCorrelation": true,
+        "exactStageOrder": true,
+        "finite": true,
+        "oneOpenAiAttempt": true,
+        "noAzure": true,
+        "safeKeys": true
+      },
+      "status": "SCOPED_HEADER_PASS",
+      "consumed": true
+    },
+    {
+      "trial": "PDF-H03",
+      "beforeCommit": "13c1ddd69ace3b7dad8d20755a7986e0a6e4a19c",
+      "ui": {
+        "trial": "PDF-H03",
+        "started": "2026-11-05T17:22:24.878Z",
+        "observed": "2026-11-05T17:22:27.858Z",
+        "uiElapsedMs": 2980,
+        "ready": true,
+        "supplier": "LAB METER TEST",
+        "documentNumber": "LAB-PDF-HEADER-PRIORITY-20261105-H03",
+        "documentDate": "2026-11-05",
+        "amountText": "74,40",
+        "documentType": "CREDIT_NOTE",
+        "totalGross": 74.4
+      },
+      "sumsMs": {
+        "exact_file_lookup": 4.03,
+        "pdf_header_page_probe": 7.883,
+        "openai_attempt": 2778.147,
+        "openai_header": 2778.292,
+        "openai_supplier_match": 1.855,
+        "request_total": 2795.611
+      },
+      "checks": {
+        "fourFields": true,
+        "creditAutoDetected": true,
+        "unchangedSnapshot": true,
+        "completeLogs": true,
+        "uniqueCorrelation": true,
+        "exactStageOrder": true,
+        "finite": true,
+        "oneOpenAiAttempt": true,
+        "noAzure": true,
+        "safeKeys": true
+      },
+      "status": "SCOPED_HEADER_PASS",
+      "consumed": true
+    }
+  ],
+  "metrics": {
+    "serverMs": {
+      "min": 2100.953,
+      "median": 2795.611,
+      "max": 3464.58
+    },
+    "uiObservationMs": {
+      "min": 2355,
+      "median": 2980,
+      "max": 3720
+    },
+    "priorMinimalHistoricalServerMedianMs": 10326.47,
+    "comparison": "Different new document IDs/layouts/times; observational historical comparison, no controlled percentage or latency SLA."
+  },
+  "proof": "Three unique complete timing correlations: exact file lookup, server physical PDF probe, one successful OpenAI attempt, header, supplier match, request total. No Azure stages. All four fields exact, H03 auto CREDIT_NOTE; no settlement choice or submission. Fresh committed BEFORE and fresh AFTER/control match all ten full-table digests/counts, shifts and wallet each.",
+  "scope": "Only these three synthetic two-page headers; general supplier/row accuracy, physical POS and stable latency remain OPEN. Explicit priority initially defers optional FAST product rows to existing durable path; no row completeness claim.",
+  "credentialChange": false,
+  "customerInvoiceBilling": "OFF unchanged; does not mean zero upstream provider cost",
+  "returnedModelAndUsage": "NOT_CAPTURED",
+  "actingOperator": "Authorized SuperAdmin/Owner using existing Cloud Chrome session; LAB POS2 is shift opener, not acting operator",
+  "consumedNoReplay": [
+    "PDF-H01",
+    "PDF-H02",
+    "PDF-H03"
+  ],
+  "next": "Retained task2 /root: separately claim representative new-layout/cold-and-warm latency acceptance with same financial/tenant/wallet guards; no old sample replay and no task3/task4 takeover."
+}

@@ -11,7 +11,9 @@
       "totalGross": 24.8,
       "documentType": "INVOICE"
     },
-    "status": "PREPARED_NOT_UPLOADED"
+    "status": "CONSUMED_SCOPED_HEADER_PASS_NO_REPLAY",
+    "beforeCommit": "29c4624d3da3b28cf60ad683b70cdca38a47fcd4",
+    "resultFile": "PDF-H01-result.json"
   },
   {
     "trial": "PDF-H02",
@@ -25,7 +27,9 @@
       "totalGross": 49.6,
       "documentType": "INVOICE"
     },
-    "status": "PREPARED_NOT_UPLOADED"
+    "status": "CONSUMED_SCOPED_HEADER_PASS_NO_REPLAY",
+    "beforeCommit": "0097d4ebc7cc3ffb67c3423bfa150085f0e9e780",
+    "resultFile": "PDF-H02-result.json"
   },
   {
     "trial": "PDF-H03",
@@ -39,6 +43,8 @@
       "totalGross": 74.4,
       "documentType": "CREDIT_NOTE"
     },
-    "status": "PREPARED_NOT_UPLOADED"
+    "status": "CONSUMED_SCOPED_HEADER_PASS_NO_REPLAY",
+    "beforeCommit": "13c1ddd69ace3b7dad8d20755a7986e0a6e4a19c",
+    "resultFile": "PDF-H03-result.json"
   }
 ]
