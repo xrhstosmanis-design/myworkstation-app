@@ -15,7 +15,7 @@ async function component(name,parent=false){
   const result=await build({entryPoints:[entry],bundle:true,write:false,platform:'node',format:'cjs',packages:'external',plugins:[{name:'metadata-test-dependencies',setup(builder){
     builder.onResolve({filter:/invoice-pdf-count-loader\.js$/},()=>({path:'pdf-loader',namespace:'fixture'}));
     if(parent){
-      builder.onResolve({filter:/^\./},args=>args.importer===entry&&!['./InvoiceFilePageSummary.jsx','./DocumentPagePreview.jsx'].includes(args.path)?{path:args.path,namespace:'fixture'}:undefined);
+      builder.onResolve({filter:/^\./},args=>args.importer===entry&&!['./InvoiceFilePageSummary.jsx','./DocumentPagePreview.jsx','../../lib/invoice-fast-header-request.js'].includes(args.path)?{path:args.path,namespace:'fixture'}:undefined);
       builder.onResolve({filter:/^lucide-react$/},()=>({path:'icons',namespace:'fixture'}));
     }
     builder.onLoad({filter:/.*/,namespace:'fixture'},args=>{
@@ -84,7 +84,7 @@ test('actual FAST form counts independently of its one pending header request an
     Object.defineProperty(input,'files',{configurable:true,value:[file]});await React.act(()=>input.dispatchEvent(new dom.window.Event('change',{bubbles:true})));
     for(let i=0;i<40&&(!calls.length||!document.body.textContent.includes('2 φυσικές σελίδες PDF'));i++)await tick();
     assert.equal(calls.length,1);assert.equal(counts,1);assert.match(document.body.textContent,/2 φυσικές σελίδες PDF/);assert.match(document.body.textContent,/FAST AI ανάγνωση/);
-    assert.equal(calls[0].body.storeId,'LAB');assert.equal(calls[0].body.filename,'two.pdf');assert.equal(calls[0].body.dataUrl,pdf('synthetic'));
+    assert.equal(calls[0].body.storeId,'LAB');assert.equal(calls[0].body.filename,'two.pdf');assert.equal(calls[0].body.dataUrl,pdf('synthetic'));assert.equal(calls[0].body.mimeType,'application/pdf');assert.equal(calls[0].body.pdfHeaderPriority,true);
     await React.act(async()=>header.resolve({supplierId:'synthetic',supplierName:'SYNTHETIC',documentNumber:'SYN-2',documentDate:'2026-11-05',totalGross:24.8,confidence:99,productLines:[]}));await tick();
     assert.equal(calls.length,1);assert.equal(counts,1);assert.match(document.body.textContent,/1 αρχείο έτοιμο/);assert.doesNotMatch(document.body.textContent,/1 σελίδα έτοιμη/);
     assert.equal(document.querySelector('input[placeholder="0,00"]').value,'24,80');assert.equal(document.querySelector('input[type=date]').value,'2026-11-05');
