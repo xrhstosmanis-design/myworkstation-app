@@ -1,0 +1,14 @@
+{
+  "trial": "AZURE-PHASE-T01",
+  "file": "azure-phase-T01.pdf",
+  "sha256": "3335c26395db11c7c3d53a73b0cf086d6e8e19921327a373ae0c3b699d1308c6",
+  "physicalPages": 2,
+  "expected": {
+    "supplier": "LAB METER TEST",
+    "documentNumber": "LAB-AZURE-PHASE-20261105-T01",
+    "documentDate": "2026-11-05",
+    "totalGross": 24.8
+  },
+  "status": "PREPARED_NOT_UPLOADED",
+  "mustWaitFor": "Full exact source/main CI, review, guarded exact healthy revision and fresh committed BEFORE/control"
+}
