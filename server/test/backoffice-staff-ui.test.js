@@ -494,3 +494,25 @@ test('personal native cash discards an old-store response and rejects a wrong-pe
   wrong=true;await m.act(async()=>button('Ανανέωση ελέγχου').click());assert.ok(!document.body.textContent.includes('CURRENT A2 REPORT'));assert.ok(!document.body.textContent.includes('WRONG PERIOD PRIVATE'));assert.equal(button('Αντιγραφή ελεγμένης αναφοράς'),undefined);assert.match(document.querySelector('[role="alert"]').textContent,/Δεν επιβεβαιώθηκε/);
  }finally{release?.();await m.close()}
 });
+
+
+test('inventory counted-only filter follows parent preference across detail refresh',async()=>{
+ const Count=await component('inventory/InventoryFastCount');
+ const base={id:'take-1',status:'DRAFT',lines:[
+  {id:'a',name:'Already counted',sku:'COUNT',barcodes:['111'],countedQuantity:2,countVersion:1},
+  {id:'b',name:'Not counted',sku:'UNC',barcodes:['222'],countedQuantity:null,countVersion:0},
+ ]};
+ let preference=true;
+ const baseProps={api:async()=>{throw Error('No stock writes')},setError:()=>{},delegated:{canCount:false,canClear:false,canBulkZero:false}};
+ const props=(current)=>({...baseProps,current,showAllPreference:preference,onShowAllPreferenceChange:value=>{preference=value}});
+ const m=await mount(Count,props(base));
+ try{
+  assert.match(document.body.textContent,/Όλα τα είδη απογραφής/);
+  await m.act(async()=>{[...document.querySelectorAll('button')].find(x=>x.textContent==='Μόνο καταμετρημένα').click()});
+  assert.equal(preference,false);
+  await m.render(props({...base,lines:base.lines.map(line=>({...line}))}));
+  assert.match(document.body.textContent,/Καταμετρημένα είδη/);
+  assert.equal(document.body.textContent.includes('Not counted'),false);
+  assert.equal(document.body.textContent.includes('Already counted'),true);
+ }finally{await m.close()}
+});
