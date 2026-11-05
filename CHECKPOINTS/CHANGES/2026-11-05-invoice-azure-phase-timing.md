@@ -1,3 +1,21 @@
+## 05/11/2026 - INVOICE-HEADER-LATENCY / AZURE PHASE SOURCE / TARGETED281 PASS / AWAITING FULL CI AND LAB
+
+Retained task2 owner /root; feat/invoice-azure-phase-timing-20261105. Before-source claim PR3675 is mainf1830f3470c05741d920891159362b8f01a6a938 after exact documentation CI42013750967 SUCCESS; main CI42013985981 also SUCCESS. The protected R01-R05 results and all peer claims remain intact. Parent task2/No15 stays OPEN; source is NOT INSTALLED / hosted diagnostics NOT TESTED.
+
+Optional FAST-only observer forwarding now distinguishes azure_submit, azure_poll_wait and azure_poll_request with existing random request correlation, monotonic finite elapsed and bounded poll1-30. Existing OpenAI attempt1-2 schema stays unchanged. Shared callAzure consumers without an observer remain silent. Faulty start/getter/finish/clock/logger or rejected asynchronous observer cannot replace the provider value/error or introduce a retry. No raw provider URL/operation, key, content/amount/supplier/tenant/store/user identifiers or exception text is accepted by diagnostic payloads.
+
+Preserved source contracts: original PDF bytes, POST/header/API version/model, operation marking and wallet fail-stop/settlement, Azure20s FAST timeout, OpenAI shared70s/two-attempt budget,700/700/1200ms waits,max30polls, request cancellation, provider order and full-PDF monetary safety. No extra fetch, polling optimization, business writer or configuration change. This is telemetry, not a speed fix.
+
+Local Node20.20.2: original timing6 and actual-handler73 baseline passed; new three-suite104/104 and combined eight-suite281/281 PASS,0FAIL/0SKIP. The new23-case actual-transport suite covers exact bytes/headers/waits/deadline/marking, HTTP/decode/status/network/cancel/timeout/wallet errors, thirty-poll cap, observer faults and two overlapping calls through one compiled transport. Existing FAST forwarding/privacy/concurrency and strict poll-ordinal regressions pass. Initial combined280PASS/1FAIL was an obsolete exact call-options regex; it now requires timing forwarding while all actual20s/70s/client budget assertions remain. No test/threshold/amount guard was relaxed.
+
+Checkpoint CHECKPOINTS/CHANGES/2026-11-05-invoice-azure-phase-timing.md; evidence CHECKPOINTS/EVIDENCE/invoice-azure-phase-timing-20261105/results.json with exact commands and SHA256s. Provider/DB/wallet I/O in focused tests is simulated. Full native source PR/main CI, review and ordinary guarded healthy release remain required before one fresh T01 header-only/no-submit LAB read with committed BEFORE/AFTER/control. All F/D/G/H/I/R01-R05, paid/CREDIT originals and peer J stay protected from replay. No live provider read, payment/draft/stock/fiscal operation or source deployment occurred. Single next: exact full source CI and review.
+
+## Source semantics
+
+azure_submit includes POST response and required operation-location validation, before original wallet marking. azure_poll_wait measures the unchanged scheduled wait. azure_poll_request includes GET and JSON decoding; a parsed failed/canceled provider status is still rejected by the unchanged outer branch, even though its transport span is OK. Whole azure_header also includes existing parse/wallet work and gaps; phase sums need not equal the whole span. No URLs/payload/status strings are logged. Maximum new phase events per invocation is61 (one POST and two per30polls).
+
+## Published before-source claim (historical, unchanged)
+
 ## 05/11/2026 - INVOICE-HEADER-LATENCY / AZURE PHASE TIMING / RETAINED OWNER / BEFORE SOURCE
 
 Retained task2 owner /root; docs/invoice-azure-timing-claim-20261105, subsequent source branch feat/invoice-azure-phase-timing-20261105. Parent task2/No15 remains OPEN. Five R01-R05 results are centrally published by PR3674/main27b756ef2 with exact PR/main documentation CI SUCCESS; all5 correct fields/unchanged before-after-control. Median server11.499s, Azure span3.943-13.558s, OpenAI3.322-4.768s. These are measured spans, not proof of where Azure spends its wait or a general speed PASS.

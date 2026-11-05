@@ -642,7 +642,7 @@ router.post("/ai-reader/fast-header",requireCompanyModule("AI_READER"),async(req
     let azureCanVerifyDocumentTotal=!isPdf;
     if(process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT&&process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY){
       try{
-        const parsed=normalizeAzure(await timing.measure("azure_header",()=>callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS})));
+        const parsed=normalizeAzure(await timing.measure("azure_header",()=>callAzure({contentData:dataUrl,mimeType,timeoutMs:FAST_AZURE_HEADER_TIMEOUT_MS,timing})));
         azureCanVerifyDocumentTotal=!isPdf||parsed.azurePageCount===1;
         azureRawText=String(parsed.rawText||"");
         azureCandidateProductLines=Array.isArray(parsed.productLines)?parsed.productLines:[];
