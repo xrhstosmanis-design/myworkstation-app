@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "401f6a1f5dad3a8c5f38b65ab5d7c9115b6cee6f",
+  "previousCandidateCommit": "05bbde0ea7f6d0b423418523136de826a8ebe0b3",
+  "sourceFiles": [
+    {
+      "path": "client/src/components/cloud/StoreCloudPage.jsx",
+      "blob": "6782d3cc93c828f97056223ae6d5968fb907b777"
+    },
+    {
+      "path": "client/src/components/commerce/CommerceHub.jsx",
+      "blob": "74c52aa823d26a96abe0fb6af50bcbd4acfcc272"
+    },
+    {
+      "path": "client/src/components/cloud/StoreInvoiceEntry.jsx",
+      "blob": "427f9864d5ccec1bf697caf93718ae06d2a6db15"
+    },
+    {
+      "path": "server/test/store-invoice-entry-mounted.test.mjs",
+      "blob": "3abbbd59e78cc3a41bbae23fae86cc082d54506c"
+    }
+  ],
+  "registryHistory": [
+    {
+      "path": "CHECKPOINTS/KAT_ACTIVE_LIST_2026-09-05.md",
+      "beforeBlob": "6c71ce49d31652a8120176d53652d0f74597966b",
+      "afterBlob": "55b0777c73d6a5c5aba2c6d4ab66683f563ad0ee",
+      "oldBytes": 5239661,
+      "preservedSuffix": true
+    },
+    {
+      "path": "docs/roadmap/OPEN_WORK_TRACKER.md",
+      "beforeBlob": "3c5fdf81b4ba479cbfbeba7296a1872d6828e403",
+      "afterBlob": "dd926c22cdf94da0fda2640e9a0ba353b1a4f3c7",
+      "oldBytes": 4063735,
+      "preservedSuffix": true
+    },
+    {
+      "path": "docs/roadmap/PENDING_WORK.md",
+      "beforeBlob": "2a129b647371dd056ffadeec3e2d8cf8d4ef298a",
+      "afterBlob": "bd2373dcb0ee52046487da24c0e2f859181ca52a",
+      "oldBytes": 3591488,
+      "preservedSuffix": true
+    },
+    {
+      "path": "CHECKPOINTS/CHANGES/2026-11-05-task3-hosted-preparation-design.md",
+      "beforeBlob": "80708ebbbdee01081986de31789e09b669bfdb77",
+      "afterBlob": "a0095affecffb55610951f31d1f25a852874f99e",
+      "oldBytes": 13568,
+      "preservedSuffix": true
+    }
+  ],
+  "previousFocusedRun": 42005553465,
+  "tests": {
+    "pass": 29,
+    "fail": 0,
+    "skip": 0,
+    "kind": "isolated mounted components with fake API transport"
+  },
+  "pdf": {
+    "pages": 960,
+    "sha256": "5d2425917cf8f12449130dddc41331575bdcc1f4fb7834fda61ed742d5950ec5",
+    "identicalCopies": [
+      "output/pdf/MyWorkStation_Open_Work_2026-10-07.pdf",
+      "docs/roadmap/MyWorkStation_Open_Work_2026-10-07.pdf"
+    ],
+    "visualReviewAtBuild": "PENDING"
+  },
+  "fullNativeCI": "REQUIRED ON SOURCE PR AND MAIN",
+  "independentReview": "PENDING",
+  "runtimeInstallation": "NOT SUBMITTED",
+  "hostedAcceptance": "NOT EXECUTED",
+  "businessMutationsSubmitted": false,
+  "task3": "OPEN; retained owner /root"
+}
