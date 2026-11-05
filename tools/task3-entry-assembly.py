@@ -46,7 +46,8 @@ for p in [*REG,CHECK]:
 subprocess.run([sys.executable,'docs/roadmap/generate-open-work-tracker.py'],check=True)
 import fitz
 with fitz.open(PDF) as doc:
- assert 'DIRECT STORE ENTRY' in ''.join(doc[i].get_text() for i in range(min(3,len(doc))))
+ first=' '.join(' '.join(doc[i].get_text() for i in range(min(3,len(doc)))).split())
+ assert 'INVOICE-CREDIT-HOSTED-PREP-01 / DIRECT STORE ENTRY CANDIDATE' in first
  for i in sorted({0,1,2,len(doc)-1}):doc[i].get_pixmap(matrix=fitz.Matrix(1.2,1.2)).save(OUT/('page-%04d.png'%(i+1)))
  pages=len(doc)
 allowed=[S,H,W,T,*REG,CHECK,PDF]
