@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/task3-entry-ownership.yml
       - tools/task3-entry-ownership.py
+      - tools/task3-entry-ownership-assets.py
 permissions:
   contents: write
 jobs:
@@ -30,6 +31,7 @@ jobs:
       - name: Reproduce both-root ownership failures on unchanged reviewed source
         run: |
           python3 tools/task3-entry-ownership.py tests
+          python3 tools/task3-entry-ownership-assets.py
           set +e
           node --test server/test/store-invoice-entry-mounted.test.mjs > /tmp/task3-entry-ownership/red.tap 2>&1
           status=$?
