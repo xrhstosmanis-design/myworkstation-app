@@ -1,0 +1,31 @@
+name: Task3 pinned source inspection
+on:
+  push:
+    branches: [tools/task3-entry-inspection-20261105]
+    paths: [.github/workflows/task3-entry-inspection.yml]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    if: github.repository == 'xrhstosmanis-design/myworkstation-app' && github.ref == 'refs/heads/tools/task3-entry-inspection-20261105'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 2618f358a9d6613d6d6044cc9d9253c0c345792e
+          persist-credentials: false
+      - name: Archive exact tracked source only
+        run: |
+          test "$(git rev-parse HEAD)" = 2618f358a9d6613d6d6044cc9d9253c0c345792e
+          mkdir -p /tmp/task3-entry-source
+          git archive --format=tar.gz --output=/tmp/task3-entry-source/source.tar.gz HEAD
+          git rev-parse HEAD > /tmp/task3-entry-source/source-commit.txt
+          git ls-tree -r HEAD > /tmp/task3-entry-source/source-tree.txt
+          cd /tmp/task3-entry-source && sha256sum source.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: task3-entry-pinned-source
+          path: /tmp/task3-entry-source/
+          if-no-files-found: error
+          retention-days: 3
