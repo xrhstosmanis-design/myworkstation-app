@@ -23,10 +23,10 @@ const number=value=>Number(value||0);
 
 function readActive(){try{return JSON.parse(localStorage.getItem("activeModules")||"[]")}catch{return []}}
 
-export default function CommerceHub({api,stores=[],activeStoreId=""}){
-  const [activeModules,setActiveModules]=useState(readActive);
+export default function CommerceHub({api,stores=[],activeStoreId="",initialTab="modules",initialActiveModules}){
+  const [activeModules,setActiveModules]=useState(()=>Array.isArray(initialActiveModules)?initialActiveModules:readActive());
   const [catalog,setCatalog]=useState([]);
-  const [tab,setTab]=useState("modules");
+  const [tab,setTab]=useState(()=>initialTab==="documents"?"documents":"modules");
   const [storeId,setStoreId]=useState(stores[0]?.id||"");
   const [assistantStoreId,setAssistantStoreId]=useState(()=>stores.find(s=>s.id===activeStoreId)?.id||"");
   const [overview,setOverview]=useState(null);
@@ -222,7 +222,7 @@ export default function CommerceHub({api,stores=[],activeStoreId=""}){
       setMessage(`Κατάστημα: ${row.storeName} · Αναγνωριστικό: ${row.sourceId}`);
     }}/>}
 
-    {tab==="documents"&&<InvoiceInboxPanel key={pendingSourceStoreId} api={api} stores={pendingSourceStoreId?[...stores].sort((a,b)=>(a.id===pendingSourceStoreId?-1:b.id===pendingSourceStoreId?1:0)):stores} onOpenAi={jobId=>{setAiFocusJobId(jobId);setTab("ai")}}/>}
+    {tab==="documents"&&(initialTab!=="documents"||active.has("DOCUMENTS"))&&<InvoiceInboxPanel key={pendingSourceStoreId} api={api} stores={pendingSourceStoreId?[...stores].sort((a,b)=>(a.id===pendingSourceStoreId?-1:b.id===pendingSourceStoreId?1:0)):stores} onOpenAi={jobId=>{setAiFocusJobId(jobId);setTab("ai")}}/>}
 
     {tab==="ai"&&aiStatus&&<AiReaderPanel api={api} storeId={storeId} status={aiStatus} onStatus={loadAi} focusJobId={aiFocusJobId}/>}
 

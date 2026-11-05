@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from "react";
 import {ArrowLeft,BriefcaseBusiness,Barcode,Copy,KeyRound,RefreshCw,ShieldCheck,Users,WalletCards} from "lucide-react";
+import StoreInvoiceEntry from "./StoreInvoiceEntry.jsx";
 import ScreenRecorderWindowLauncher from "../commerce/ScreenRecorderWindowLauncher.jsx";
 import CashControlPanel from "./CashControlPanel.jsx";
 import OwnerPaymentQuickActions from "./OwnerPaymentQuickActions.jsx";
@@ -47,6 +48,7 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
   const [pairingCopied,setPairingCopied]=useState(false);
   const [writerState,setWriterState]=useState({loading:true,configured:false,online:false,lastSeenAt:null});
   const [toolOpen,setToolOpen]=useState("");
+  const [invoiceOpen,setInvoiceOpen]=useState(false);
   const [primary,setPrimary]=useState(can("sales.read")?"shifts":"payments");
   const currentPrimary=primaryView??primary;
   const choosePrimary=value=>{if(navigationLocked)return;onPrimaryChange?onPrimaryChange(value):setPrimary(value)};
@@ -139,6 +141,7 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
       <div className="cloud-titlebar-actions">
         <button className="cloud-refresh" onClick={refresh}><RefreshCw/>Ανανέωση</button>
         {(!delegated||onOpenCommerce)&&<button className="cloud-refresh" type="button" disabled={navigationLocked} onClick={()=>onOpenCommerce?onOpenCommerce():window.dispatchEvent(new CustomEvent("mws:commerce-open",{detail:{view:"products",storeId:store.id}}))}><BriefcaseBusiness/>Εμπορική λειτουργία</button>}
+        {!delegated&&<button className="cloud-refresh" type="button" aria-expanded={invoiceOpen} disabled={navigationLocked} onClick={()=>{if(!navigationLocked)setInvoiceOpen(true)}}>Θυρίδα τιμολογίων καταστήματος</button>}
         {!delegated&&<ScreenRecorderWindowLauncher/>}
       </div>
     </div>
@@ -150,6 +153,11 @@ function StoreWorkspace({api,store,onBack,onWorkforce,capabilities=null,onOpenCo
         <p>Ενεργή βάρδια, συναλλαγές, έλεγχος ταμείου και πληρωμές Ιδιοκτήτη / Διαχειριστή. Όλα χρησιμοποιούν την υπάρχουσα Εμπορική λειτουργία και την ενιαία βάση.</p>
       </div>
     </div>
+
+    {!delegated&&invoiceOpen&&<section aria-label="Θυρίδα επιλεγμένου καταστήματος">
+      <button className="owner-tool-close" type="button" disabled={navigationLocked} onClick={()=>{if(!navigationLocked)setInvoiceOpen(false)}}>Κλείσιμο θυρίδας τιμολογίων</button>
+      <StoreInvoiceEntry api={api} storeId={store.id}/>
+    </section>}
 
     <nav className="owner-primary-nav" aria-label="Βάρδιες και πληρωμές">
       {can("sales.read")&&<button type="button" aria-pressed={currentPrimary==="shifts"} disabled={navigationLocked} onClick={()=>choosePrimary("shifts")}><WalletCards/>Βάρδιες & ταμεία</button>}
